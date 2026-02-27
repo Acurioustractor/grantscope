@@ -33,7 +33,6 @@ export class GrantRepository {
       program: grant.program,
       amount_min: grant.amountMin,
       amount_max: grant.amountMax,
-      currency: grant.currency,
       closes_at: grant.closesAt,
       url: grant.url,
       categories: grant.categories,
@@ -43,6 +42,7 @@ export class GrantRepository {
         ? new Date().toISOString()
         : null,
       discovered_by: 'grant_engine',
+      source: grant.discoveryMethod || 'grant_engine',
     };
 
     // Try insert first
@@ -51,6 +51,9 @@ export class GrantRepository {
       .insert(row);
 
     if (!error) return 'inserted';
+
+    // Log insert error for debugging
+    console.error(`[repository] Insert failed for "${grant.name}": ${error.message} (code: ${error.code})`);
 
     // Duplicate URL — try to update with new source info
     if (error.code === '23505' && grant.url) {

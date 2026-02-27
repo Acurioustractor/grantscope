@@ -5,72 +5,169 @@
  * and filters to foundations, PAFs, PuAFs, and trusts.
  *
  * Data source: https://data.gov.au/data/dataset/acnc-register
- * CSV is ~15MB with 53,000+ charities.
+ * CSV is ~14MB with 65,000+ charities.
+ *
+ * Actual CSV columns (verified):
+ *   ABN, Charity_Legal_Name, Other_Organisation_Names, Address_Type, Address_Line_1..3,
+ *   Town_City, State, Postcode, Country, Charity_Website, Registration_Date,
+ *   Date_Organisation_Established, Charity_Size, Number_of_Responsible_Persons,
+ *   Financial_Year_End, Operates_in_{ACT,NSW,NT,QLD,SA,TAS,VIC,WA},
+ *   Operating_Countries, PBI, HPC, [purpose boolean columns], [beneficiary boolean columns]
  */
 
 import { parse } from 'csv-parse';
 import { Readable } from 'stream';
-import type { ACNCRecord, Foundation, FoundationType } from './types.js';
+import type { Foundation, FoundationType } from './types.js';
 
-// ACNC subtypes that indicate a foundation/trust (vs regular charity)
-const FOUNDATION_SUBTYPES = new Set([
-  'Private Ancillary Fund',
-  'Public Ancillary Fund',
-  'Trust',
-]);
-
-// Keywords in org name or subtype that indicate a foundation
-const FOUNDATION_KEYWORDS = [
-  'foundation',
-  'ancillary fund',
-  'trust',
-  'endowment',
-  'philanthropic',
-  'giving',
+// Keywords in org name that indicate a foundation/trust/PAF
+const FOUNDATION_NAME_PATTERNS = [
+  /\bfoundation\b/i,
+  /\bancillary fund\b/i,
+  /\bpaf\b/i,       // Private Ancillary Fund
+  /\bpuaf\b/i,      // Public Ancillary Fund
+  /\btrust\b/i,
+  /\bendowment\b/i,
+  /\bphilanthrop/i,
+  /\bgiving\b/i,
+  /\bcommunity fund\b/i,
+  /\bcharitable fund\b/i,
+  /\bgrant.?making\b/i,
 ];
 
+// False positive patterns to exclude (trusts that aren't grant-making)
+const EXCLUDE_PATTERNS = [
+  /\bunit trust\b/i,
+  /\bliving trust\b/i,
+  /\bfamily trust\b/i,       // Keep if it also has 'foundation' or 'charitable'
+  /\bsuperannuation\b/i,
+  /\bsuper fund\b/i,
+  /\bstrata\b/i,
+  /\bproperty trust\b/i,
+  /\binvestment trust\b/i,
+  /\btrustee (company|services)\b/i,
+];
+
+interface ACNCRow {
+  ABN: string;
+  Charity_Legal_Name: string;
+  Other_Organisation_Names: string;
+  Charity_Website: string;
+  Charity_Size: string;
+  Registration_Date: string;
+  Date_Organisation_Established: string;
+  Operates_in_ACT: string;
+  Operates_in_NSW: string;
+  Operates_in_NT: string;
+  Operates_in_QLD: string;
+  Operates_in_SA: string;
+  Operates_in_TAS: string;
+  Operates_in_VIC: string;
+  Operates_in_WA: string;
+  PBI: string;
+  HPC: string;
+  // Purpose booleans
+  Advancing_Culture: string;
+  Advancing_Education: string;
+  Advancing_Health: string;
+  Advancing_natual_environment: string;
+  Promoting_reconciliation__mutual_respect_and_tolerance: string;
+  Advancing_social_or_public_welfare: string;
+  Promoting_or_protecting_human_rights: string;
+  Purposes_beneficial_to_ther_general_public_and_other_analogous: string;
+  // Beneficiary booleans
+  Aboriginal_or_TSI: string;
+  General_Community_in_Australia: string;
+  Children: string;
+  Youth: string;
+  Aged_Persons: string;
+  Financially_Disadvantaged: string;
+  People_with_Disabilities: string;
+  Rural_Regional_Remote_Communities: string;
+  [key: string]: string;
+}
+
 /**
- * Map ACNC charity subtype to our foundation type.
+ * Determine foundation type from name.
  */
-function mapFoundationType(subtype: string, name: string): FoundationType | null {
-  const lower = subtype.toLowerCase();
-  if (lower.includes('private ancillary')) return 'private_ancillary_fund';
-  if (lower.includes('public ancillary')) return 'public_ancillary_fund';
-  if (lower.includes('trust') || name.toLowerCase().includes('trust')) return 'trust';
-  if (name.toLowerCase().includes('foundation')) return 'corporate_foundation';
+function classifyFoundationType(name: string): FoundationType | null {
+  const lower = name.toLowerCase();
+  if (/\bprivate ancillary fund\b/.test(lower) || /\bpaf\b/.test(lower)) return 'private_ancillary_fund';
+  if (/\bpublic ancillary fund\b/.test(lower) || /\bpuaf\b/.test(lower)) return 'public_ancillary_fund';
+  if (/\bfoundation\b/.test(lower)) return 'corporate_foundation';
+  if (/\btrust\b/.test(lower)) return 'trust';
   return null;
 }
 
 /**
  * Determine if an ACNC record represents a foundation/trust.
  */
-function isFoundation(record: ACNCRecord): boolean {
-  // Check subtype
-  const subtype = record['Charity_Subtype'] || '';
-  if (FOUNDATION_SUBTYPES.has(subtype)) return true;
+function isFoundation(record: ACNCRow): boolean {
+  const name = record.Charity_Legal_Name || '';
+  const otherNames = record.Other_Organisation_Names || '';
+  const combined = `${name} ${otherNames}`;
 
-  // Check name keywords
-  const name = (record['Charity_Legal_Name'] || '').toLowerCase();
-  const otherNames = (record['Other_Organisation_Names'] || '').toLowerCase();
-  const combined = `${name} ${otherNames} ${subtype.toLowerCase()}`;
+  // Check if name matches any foundation pattern
+  const matchesFoundation = FOUNDATION_NAME_PATTERNS.some(p => p.test(combined));
+  if (!matchesFoundation) return false;
 
-  return FOUNDATION_KEYWORDS.some(kw => combined.includes(kw));
+  // Check for false positives (but keep if explicitly charitable)
+  const isExcluded = EXCLUDE_PATTERNS.some(p => p.test(combined));
+  if (isExcluded) {
+    // Still include if the name also includes charitable/foundation keywords
+    if (/\bcharitable\b/i.test(combined) || /\bfoundation\b/i.test(combined)) {
+      return true;
+    }
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Extract thematic focus from ACNC purpose boolean columns.
+ */
+function extractThematicFocus(record: ACNCRow): string[] {
+  const focus: string[] = [];
+  if (record.Advancing_Culture === 'Y') focus.push('arts');
+  if (record.Advancing_Education === 'Y') focus.push('education');
+  if (record.Advancing_Health === 'Y') focus.push('health');
+  if (record.Advancing_natual_environment === 'Y') focus.push('environment');
+  if (record.Promoting_reconciliation__mutual_respect_and_tolerance === 'Y') focus.push('indigenous');
+  if (record.Advancing_social_or_public_welfare === 'Y') focus.push('community');
+  if (record.Promoting_or_protecting_human_rights === 'Y') focus.push('human_rights');
+  if (record.Aboriginal_or_TSI === 'Y') focus.push('indigenous');
+  return [...new Set(focus)];
+}
+
+/**
+ * Extract target recipients from ACNC beneficiary boolean columns.
+ */
+function extractTargetRecipients(record: ACNCRow): string[] {
+  const recipients: string[] = [];
+  if (record.General_Community_in_Australia === 'Y') recipients.push('community');
+  if (record.Children === 'Y' || record.Youth === 'Y') recipients.push('youth');
+  if (record.Aged_Persons === 'Y') recipients.push('aged');
+  if (record.Financially_Disadvantaged === 'Y') recipients.push('disadvantaged');
+  if (record.People_with_Disabilities === 'Y') recipients.push('disability');
+  if (record.Rural_Regional_Remote_Communities === 'Y') recipients.push('rural_remote');
+  if (record.Aboriginal_or_TSI === 'Y') recipients.push('indigenous');
+  return [...new Set(recipients)];
 }
 
 /**
  * Extract geographic focus from ACNC operating state columns.
  */
-function extractGeography(record: ACNCRecord): string[] {
+function extractGeography(record: ACNCRow): string[] {
   const geo: string[] = [];
   const stateMap: Record<string, string> = {
-    'Operates_in_ACT': 'AU-ACT',
-    'Operates_in_NSW': 'AU-NSW',
-    'Operates_in_NT': 'AU-NT',
-    'Operates_in_QLD': 'AU-QLD',
-    'Operates_in_SA': 'AU-SA',
-    'Operates_in_TAS': 'AU-TAS',
-    'Operates_in_VIC': 'AU-VIC',
-    'Operates_in_WA': 'AU-WA',
+    Operates_in_ACT: 'AU-ACT',
+    Operates_in_NSW: 'AU-NSW',
+    Operates_in_NT: 'AU-NT',
+    Operates_in_QLD: 'AU-QLD',
+    Operates_in_SA: 'AU-SA',
+    Operates_in_TAS: 'AU-TAS',
+    Operates_in_VIC: 'AU-VIC',
+    Operates_in_WA: 'AU-WA',
   };
 
   let stateCount = 0;
@@ -81,11 +178,7 @@ function extractGeography(record: ACNCRecord): string[] {
     }
   }
 
-  // If operating in all states, simplify to national
-  if (stateCount >= 7) {
-    return ['AU-National'];
-  }
-
+  if (stateCount >= 7) return ['AU-National'];
   return geo.length > 0 ? geo : ['AU-National'];
 }
 
@@ -108,26 +201,25 @@ function estimateGivingFromSize(size: string): { avg: number | null; min: number
 /**
  * Convert an ACNC record into a Foundation object.
  */
-export function acncToFoundation(record: ACNCRecord): Foundation {
-  const name = record['Charity_Legal_Name'] || '';
-  const subtype = record['Charity_Subtype'] || '';
-  const size = record['Charity_Size'] || '';
+export function acncToFoundation(record: ACNCRow): Foundation {
+  const name = record.Charity_Legal_Name || '';
+  const size = record.Charity_Size || '';
   const giving = estimateGivingFromSize(size);
 
   return {
-    acnc_abn: record['ABN'],
+    acnc_abn: record.ABN,
     name,
-    type: mapFoundationType(subtype, name),
-    website: record['Website'] || null,
+    type: classifyFoundationType(name),
+    website: record.Charity_Website || null,
     description: null,
     total_giving_annual: giving.avg,
     giving_history: null,
     avg_grant_size: null,
     grant_range_min: giving.min,
     grant_range_max: giving.max,
-    thematic_focus: [],
+    thematic_focus: extractThematicFocus(record),
     geographic_focus: extractGeography(record),
-    target_recipients: [],
+    target_recipients: extractTargetRecipients(record),
     endowment_size: null,
     investment_returns: null,
     giving_ratio: null,
@@ -143,9 +235,6 @@ export function acncToFoundation(record: ACNCRecord): Foundation {
 
 /**
  * Parse ACNC CSV data and yield Foundation records for foundation/trust entities.
- *
- * @param csvData - Raw CSV string or Buffer
- * @param onProgress - Optional progress callback
  */
 export async function* parseACNCRegister(
   csvData: string | Buffer,
@@ -169,15 +258,12 @@ export async function* parseACNCRegister(
   for await (const record of parser) {
     total++;
 
-    // Only include registered charities
-    if (record['Registration_Status'] !== 'Registered') continue;
-
-    if (isFoundation(record as ACNCRecord)) {
+    if (isFoundation(record as ACNCRow)) {
       foundations++;
-      if (onProgress && foundations % 100 === 0) {
+      if (onProgress && foundations % 500 === 0) {
         onProgress(`Parsed ${total} records, found ${foundations} foundations`);
       }
-      yield acncToFoundation(record as ACNCRecord);
+      yield acncToFoundation(record as ACNCRow);
     }
   }
 
@@ -186,13 +272,10 @@ export async function* parseACNCRegister(
 
 /**
  * Download ACNC register CSV from data.gov.au.
- * Returns the raw CSV text.
  */
 export async function downloadACNCRegister(
   onProgress?: (message: string) => void,
 ): Promise<string> {
-  // The ACNC register is available as a CSV from data.gov.au
-  // We first need to find the actual download URL from the CKAN API
   const datasetUrl = 'https://data.gov.au/data/api/3/action/package_show?id=b050b242-4487-4306-abf5-07ca073e5594';
 
   onProgress?.('Fetching ACNC dataset metadata from data.gov.au...');
@@ -208,7 +291,6 @@ export async function downloadACNCRegister(
     };
   };
 
-  // Find the main CSV resource
   const csvResource = meta.result.resources.find(
     (r) => r.format?.toUpperCase() === 'CSV' && r.name?.toLowerCase().includes('register')
   ) || meta.result.resources.find(

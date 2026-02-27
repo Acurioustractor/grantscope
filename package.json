@@ -7,8 +7,8 @@
     "dev": "pnpm --filter @grantscope/web dev",
     "build": "pnpm --filter @grantscope/web build",
     "typecheck": "pnpm -r typecheck",
-    "discover": "node scripts/grantscope-discovery.mjs",
-    "sync-acnc": "node scripts/sync-acnc-register.mjs"
+    "discover": "tsx scripts/grantscope-discovery.mjs",
+    "sync-acnc": "tsx scripts/sync-acnc-register.mjs"
   },
   "keywords": [
     "grants",
@@ -17,10 +17,17 @@
     "transparency",
     "open-data"
   ],
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.1",
+    "csv-parse": "^5.6.0"
+  },
   "author": "A Curious Tractor",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/Acurioustractor/grantscope.git"
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0"
   }
 }

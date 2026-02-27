@@ -47,31 +47,3 @@ export interface FoundationProgram {
   deadline?: string;
   description?: string;
 }
-
-export interface ACNCRecord {
-  ABN: string;
-  'Charity_Legal_Name': string;
-  'Other_Organisation_Names': string;
-  'Address_Type': string;
-  'Address_Line_1': string;
-  'Town_City': string;
-  'State': string;
-  'Postcode': string;
-  'Country': string;
-  'Charity_Size': string;
-  'Charity_Type': string;
-  'Charity_Subtype': string;
-  'Registration_Date': string;
-  'Registration_Status': string;
-  'Date_Organisation_Established': string;
-  'Website': string;
-  'Operates_in_ACT': string;
-  'Operates_in_NSW': string;
-  'Operates_in_NT': string;
-  'Operates_in_QLD': string;
-  'Operates_in_SA': string;
-  'Operates_in_TAS': string;
-  'Operates_in_VIC': string;
-  'Operates_in_WA': string;
-  [key: string]: string;
-}

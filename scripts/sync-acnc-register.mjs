@@ -39,17 +39,25 @@ async function main() {
     foundations.push(foundation);
   }
 
-  log(`Found ${foundations.length} foundations/trusts`);
+  // Dedup by ABN (CSV has multiple rows per org for different address types)
+  const byAbn = new Map();
+  for (const f of foundations) {
+    if (!byAbn.has(f.acnc_abn)) {
+      byAbn.set(f.acnc_abn, f);
+    }
+  }
+  const unique = [...byAbn.values()];
+  log(`Found ${foundations.length} rows → ${unique.length} unique foundations (deduped by ABN)`);
 
   if (DRY_RUN) {
     log('DRY RUN — showing first 20:');
-    for (const f of foundations.slice(0, 20)) {
+    for (const f of unique.slice(0, 20)) {
       log(`  ${f.acnc_abn} | ${f.name} | ${f.type} | ${f.website || 'no website'}`);
     }
 
     // Summary by type
     const byType = {};
-    for (const f of foundations) {
+    for (const f of unique) {
       const t = f.type || 'unknown';
       byType[t] = (byType[t] || 0) + 1;
     }
@@ -59,8 +67,8 @@ async function main() {
     }
 
     // Count with websites
-    const withWebsite = foundations.filter(f => f.website).length;
-    log(`With websites: ${withWebsite} (${((withWebsite / foundations.length) * 100).toFixed(1)}%)`);
+    const withWebsite = unique.filter(f => f.website).length;
+    log(`With websites: ${withWebsite} (${((withWebsite / unique.length) * 100).toFixed(1)}%)`);
 
     return;
   }
@@ -71,8 +79,8 @@ async function main() {
   let inserted = 0;
   let errors = 0;
 
-  for (let i = 0; i < foundations.length; i += BATCH_SIZE) {
-    const batch = foundations.slice(i, i + BATCH_SIZE).map(f => ({
+  for (let i = 0; i < unique.length; i += BATCH_SIZE) {
+    const batch = unique.slice(i, i + BATCH_SIZE).map(f => ({
       acnc_abn: f.acnc_abn,
       name: f.name,
       type: f.type,
@@ -110,7 +118,7 @@ async function main() {
     }
 
     if ((i + BATCH_SIZE) % 500 === 0) {
-      log(`  Progress: ${Math.min(i + BATCH_SIZE, foundations.length)}/${foundations.length}`);
+      log(`  Progress: ${Math.min(i + BATCH_SIZE, unique.length)}/${unique.length}`);
     }
   }
 

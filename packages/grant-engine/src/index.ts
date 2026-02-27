@@ -44,7 +44,7 @@ export { SourceRegistry } from './sources/registry.js';
 // Foundations
 export { parseACNCRegister, downloadACNCRegister, acncToFoundation } from './foundations/acnc-importer.js';
 export { FoundationRepository } from './foundations/repository.js';
-export type { Foundation, FoundationType, FoundationProgram, ACNCRecord } from './foundations/types.js';
+export type { Foundation, FoundationType, FoundationProgram } from './foundations/types.js';
 
 // Utilities
 export { normalize, normalizeDate, normalizeAmount, normalizeCategories, generateDedupKey } from './normalizer.js';
