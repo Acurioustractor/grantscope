@@ -13,7 +13,7 @@ const QLD_CKAN_BASE = 'https://www.data.qld.gov.au/api/3/action';
 
 // Known resource IDs for QLD grants datasets
 const GRANTS_RESOURCE_IDS = [
-  'd54f7b60-8153-44a4-8a2d-055234703372', // QLD Grants Finder
+  'cca41845-9898-4efe-9ca0-17fbd44a3321', // QLD Grants Finder (updated 2026-02)
 ];
 
 interface QLDGrantRecord {
