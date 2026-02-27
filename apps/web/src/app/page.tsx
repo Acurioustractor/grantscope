@@ -3,19 +3,21 @@ import { getServiceSupabase } from '@/lib/supabase';
 async function getStats() {
   const supabase = getServiceSupabase();
 
-  const [grantsResult, foundationsResult] = await Promise.all([
+  const [grantsResult, foundationsResult, profiledResult] = await Promise.all([
     supabase.from('grant_opportunities').select('*', { count: 'exact', head: true }),
     supabase.from('foundations').select('*', { count: 'exact', head: true }),
+    supabase.from('foundations').select('*', { count: 'exact', head: true }).not('enriched_at', 'is', null),
   ]);
 
   return {
     totalGrants: grantsResult.count || 0,
     totalFoundations: foundationsResult.count || 0,
+    profiledFoundations: profiledResult.count || 0,
   };
 }
 
 export default async function HomePage() {
-  let stats = { totalGrants: 0, totalFoundations: 0 };
+  let stats = { totalGrants: 0, totalFoundations: 0, profiledFoundations: 0 };
   try {
     stats = await getStats();
   } catch {
@@ -68,6 +70,9 @@ export default async function HomePage() {
           <div style={{ background: '#fff', border: '1px solid #e0e0e0', borderRadius: '12px', padding: '24px', textAlign: 'center' }}>
             <div style={{ fontSize: '36px', fontWeight: 800, color: '#059669' }}>{stats.totalFoundations.toLocaleString()}</div>
             <div style={{ fontSize: '14px', color: '#666', marginTop: '4px' }}>Foundations &amp; Trusts</div>
+            {stats.profiledFoundations > 0 && (
+              <div style={{ fontSize: '12px', color: '#059669', marginTop: '4px' }}>{stats.profiledFoundations} with AI profiles</div>
+            )}
           </div>
         </a>
         <a href="/corporate" style={{ textDecoration: 'none', color: 'inherit' }}>

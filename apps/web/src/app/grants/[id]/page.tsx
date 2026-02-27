@@ -8,7 +8,6 @@ interface Grant {
   program: string | null;
   amount_min: number | null;
   amount_max: number | null;
-  currency: string;
   closes_at: string | null;
   url: string | null;
   description: string | null;

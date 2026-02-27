@@ -5,10 +5,12 @@ interface FoundationRow {
   name: string;
   type: string | null;
   website: string | null;
+  description: string | null;
   total_giving_annual: number | null;
   thematic_focus: string[];
   geographic_focus: string[];
   profile_confidence: string;
+  enriched_at: string | null;
 }
 
 function formatGiving(amount: number | null): string {
@@ -28,11 +30,12 @@ function typeLabel(type: string | null): string {
   return type ? labels[type] || type : 'Foundation';
 }
 
-export default async function FoundationsPage({ searchParams }: { searchParams: Promise<{ q?: string; type?: string; focus?: string; page?: string }> }) {
+export default async function FoundationsPage({ searchParams }: { searchParams: Promise<{ q?: string; type?: string; focus?: string; profiled?: string; page?: string }> }) {
   const params = await searchParams;
   const query = params.q || '';
   const typeFilter = params.type || '';
   const focusFilter = params.focus || '';
+  const profiledOnly = params.profiled === '1';
   const page = parseInt(params.page || '1', 10);
   const pageSize = 25;
   const offset = (page - 1) * pageSize;
@@ -40,7 +43,7 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
   const supabase = getServiceSupabase();
   let dbQuery = supabase
     .from('foundations')
-    .select('id, name, type, website, total_giving_annual, thematic_focus, geographic_focus, profile_confidence', { count: 'exact' });
+    .select('id, name, type, website, description, total_giving_annual, thematic_focus, geographic_focus, profile_confidence, enriched_at', { count: 'exact' });
 
   if (query) {
     dbQuery = dbQuery.or(`name.ilike.%${query}%,description.ilike.%${query}%`);
@@ -50,6 +53,9 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
   }
   if (focusFilter) {
     dbQuery = dbQuery.contains('thematic_focus', [focusFilter]);
+  }
+  if (profiledOnly) {
+    dbQuery = dbQuery.not('enriched_at', 'is', null);
   }
 
   dbQuery = dbQuery
@@ -87,6 +93,10 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
             <option key={f} value={f}>{f.charAt(0).toUpperCase() + f.slice(1)}</option>
           ))}
         </select>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', color: '#555', cursor: 'pointer' }}>
+          <input type="checkbox" name="profiled" value="1" defaultChecked={profiledOnly} />
+          Profiled only
+        </label>
         <button type="submit" style={{ padding: '10px 20px', background: '#1a1a2e', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
           Filter
         </button>
@@ -99,9 +109,21 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div style={{ flex: 1 }}>
                   <h3 style={{ margin: '0 0 4px', fontSize: '16px' }}>{f.name}</h3>
-                  <div style={{ fontSize: '13px', color: '#666' }}>{typeLabel(f.type)}</div>
+                  <div style={{ fontSize: '13px', color: '#666' }}>
+                    {typeLabel(f.type)}
+                    {f.enriched_at && (
+                      <span style={{ marginLeft: '8px', fontSize: '11px', padding: '1px 6px', background: f.profile_confidence === 'high' ? '#ecfdf5' : f.profile_confidence === 'medium' ? '#fffbeb' : '#f5f5f5', borderRadius: '4px', color: f.profile_confidence === 'high' ? '#059669' : f.profile_confidence === 'medium' ? '#d97706' : '#999' }}>
+                        {f.profile_confidence} profile
+                      </span>
+                    )}
+                  </div>
+                  {f.description && (
+                    <div style={{ fontSize: '13px', color: '#888', marginTop: '4px', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const }}>
+                      {f.description}
+                    </div>
+                  )}
                 </div>
-                <div style={{ textAlign: 'right' }}>
+                <div style={{ textAlign: 'right', minWidth: '100px' }}>
                   <div style={{ fontSize: '16px', fontWeight: 700, color: '#059669' }}>
                     {formatGiving(f.total_giving_annual)}/yr
                   </div>
@@ -125,11 +147,11 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
       {totalPages > 1 && (
         <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '24px' }}>
           {page > 1 && (
-            <a href={`/foundations?q=${query}&type=${typeFilter}&focus=${focusFilter}&page=${page - 1}`} style={{ padding: '8px 16px', border: '1px solid #ddd', borderRadius: '6px', textDecoration: 'none', color: '#555' }}>Previous</a>
+            <a href={`/foundations?q=${query}&type=${typeFilter}&focus=${focusFilter}${profiledOnly ? '&profiled=1' : ''}&page=${page - 1}`} style={{ padding: '8px 16px', border: '1px solid #ddd', borderRadius: '6px', textDecoration: 'none', color: '#555' }}>Previous</a>
           )}
           <span style={{ padding: '8px 16px', color: '#666' }}>Page {page} of {totalPages}</span>
           {page < totalPages && (
-            <a href={`/foundations?q=${query}&type=${typeFilter}&focus=${focusFilter}&page=${page + 1}`} style={{ padding: '8px 16px', border: '1px solid #ddd', borderRadius: '6px', textDecoration: 'none', color: '#555' }}>Next</a>
+            <a href={`/foundations?q=${query}&type=${typeFilter}&focus=${focusFilter}${profiledOnly ? '&profiled=1' : ''}&page=${page + 1}`} style={{ padding: '8px 16px', border: '1px solid #ddd', borderRadius: '6px', textDecoration: 'none', color: '#555' }}>Next</a>
           )}
         </div>
       )}
