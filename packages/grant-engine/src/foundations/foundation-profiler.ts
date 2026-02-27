@@ -1,7 +1,7 @@
 /**
  * Foundation Profiler
  *
- * Uses Claude to synthesize scraped website data + ACNC records into
+ * Uses LLM (OpenAI or Anthropic) to synthesize scraped website data + ACNC records into
  * rich foundation profiles. Extracts:
  * - Giving philosophy and approach
  * - Focus areas with confidence levels
@@ -11,7 +11,6 @@
  * - Grant size ranges and typical recipients
  */
 
-import Anthropic from '@anthropic-ai/sdk';
 import type { Foundation } from './types.js';
 import type { ScrapedFoundationData } from './annual-report-scraper.js';
 
@@ -39,7 +38,7 @@ export interface EnrichedProfile {
   }> | null;
   profile_confidence: 'low' | 'medium' | 'high';
 
-  // New rich fields stored in acnc_data or separate
+  // Rich fields
   giving_philosophy: string | null;
   wealth_source: string | null;
   application_tips: string | null;
@@ -48,39 +47,36 @@ export interface EnrichedProfile {
 }
 
 interface ProfilerConfig {
+  provider?: 'anthropic' | 'openai';
   model?: string;
   maxTokens?: number;
 }
 
 export class FoundationProfiler {
-  private anthropic: Anthropic;
+  private provider: 'anthropic' | 'openai';
   private model: string;
   private maxTokens: number;
 
   constructor(config: ProfilerConfig = {}) {
-    this.anthropic = new Anthropic();
-    this.model = config.model || 'claude-sonnet-4-5-20250929';
+    // Auto-detect provider based on available API keys
+    if (config.provider) {
+      this.provider = config.provider;
+    } else if (process.env.OPENAI_API_KEY) {
+      this.provider = 'openai';
+    } else {
+      this.provider = 'anthropic';
+    }
+
+    if (this.provider === 'openai') {
+      this.model = config.model || 'gpt-4o';
+    } else {
+      this.model = config.model || 'claude-sonnet-4-5-20250929';
+    }
     this.maxTokens = config.maxTokens || 4000;
   }
 
-  /**
-   * Build a rich profile from ACNC data + scraped website content.
-   */
-  async profileFoundation(
-    foundation: Foundation,
-    scraped: ScrapedFoundationData,
-  ): Promise<EnrichedProfile> {
-    const allContent = [
-      scraped.websiteContent,
-      scraped.aboutContent,
-      scraped.programsContent,
-      scraped.annualReportContent,
-    ].filter(Boolean).join('\n\n---\n\n');
-
-    // Truncate to ~50K chars to fit in context
-    const content = allContent.slice(0, 50000);
-
-    const prompt = `You are analyzing an Australian philanthropic foundation to build a comprehensive profile.
+  private buildPrompt(foundation: Foundation, content: string): string {
+    return `You are analyzing an Australian philanthropic foundation to build a comprehensive profile.
 
 ## Foundation Information (from ACNC Register)
 - **Name**: ${foundation.name}
@@ -128,18 +124,34 @@ Rules:
 - For giving amounts, use AUD
 - Be specific in descriptions — don't use generic platitudes
 - If no website content was scraped, work with ACNC data only and set confidence to "low"`;
+  }
+
+  /**
+   * Build a rich profile from ACNC data + scraped website content.
+   */
+  async profileFoundation(
+    foundation: Foundation,
+    scraped: ScrapedFoundationData,
+  ): Promise<EnrichedProfile> {
+    const allContent = [
+      scraped.websiteContent,
+      scraped.aboutContent,
+      scraped.programsContent,
+      scraped.annualReportContent,
+    ].filter(Boolean).join('\n\n---\n\n');
+
+    // Truncate to ~50K chars to fit in context
+    const content = allContent.slice(0, 50000);
+    const prompt = this.buildPrompt(foundation, content);
 
     try {
-      const response = await this.anthropic.messages.create({
-        model: this.model,
-        max_tokens: this.maxTokens,
-        messages: [{ role: 'user', content: prompt }],
-      });
+      let text: string;
 
-      const text = response.content
-        .filter((b): b is Anthropic.TextBlock => b.type === 'text')
-        .map(b => b.text)
-        .join('\n');
+      if (this.provider === 'openai') {
+        text = await this.callOpenAI(prompt);
+      } else {
+        text = await this.callAnthropic(prompt);
+      }
 
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
@@ -174,6 +186,50 @@ Rules:
       console.error(`[profiler] Error profiling ${foundation.name}: ${err instanceof Error ? err.message : String(err)}`);
       return this.fallbackProfile(foundation);
     }
+  }
+
+  private async callOpenAI(prompt: string): Promise<string> {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) throw new Error('OPENAI_API_KEY required');
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: this.model,
+        max_tokens: this.maxTokens,
+        messages: [{ role: 'user', content: prompt }],
+        response_format: { type: 'json_object' },
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error(`OpenAI API error ${response.status}: ${err}`);
+    }
+
+    const data = await response.json() as {
+      choices: Array<{ message: { content: string } }>;
+    };
+    return data.choices[0]?.message?.content || '';
+  }
+
+  private async callAnthropic(prompt: string): Promise<string> {
+    const Anthropic = (await import('@anthropic-ai/sdk')).default;
+    const anthropic = new Anthropic();
+    const response = await anthropic.messages.create({
+      model: this.model,
+      max_tokens: this.maxTokens,
+      messages: [{ role: 'user', content: prompt }],
+    });
+
+    return response.content
+      .filter(b => b.type === 'text')
+      .map(b => (b as { type: 'text'; text: string }).text)
+      .join('\n');
   }
 
   private fallbackProfile(foundation: Foundation): EnrichedProfile {
