@@ -1,0 +1,26 @@
+{
+  "name": "grantscope",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Open-source Australian funding transparency platform",
+  "scripts": {
+    "dev": "pnpm --filter @grantscope/web dev",
+    "build": "pnpm --filter @grantscope/web build",
+    "typecheck": "pnpm -r typecheck",
+    "discover": "node scripts/grantscope-discovery.mjs",
+    "sync-acnc": "node scripts/sync-acnc-register.mjs"
+  },
+  "keywords": [
+    "grants",
+    "australia",
+    "philanthropy",
+    "transparency",
+    "open-data"
+  ],
+  "author": "A Curious Tractor",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Acurioustractor/grantscope.git"
+  }
+}
