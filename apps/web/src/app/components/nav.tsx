@@ -8,6 +8,7 @@ const links = [
   { href: '/corporate', label: 'Corporate' },
   { href: '/community', label: 'Community' },
   { href: '/reports', label: 'Reports', accent: true },
+  { href: '/how-it-works', label: 'How It Works' },
 ];
 
 export function NavBar() {
