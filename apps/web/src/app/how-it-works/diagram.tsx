@@ -162,7 +162,7 @@ export function ArchitectureDiagram({ stats }: { stats: Stats }) {
 
       {/* === DESKTOP SVG DIAGRAM (md+) === */}
       <div className="hidden md:block">
-        <svg viewBox="0 0 1100 680" className="w-full" style={{ maxWidth: 1100 }}>
+        <svg viewBox="0 0 1200 700" className="w-full" style={{ maxWidth: 1200 }}>
           <defs>
             <marker id="ag" viewBox="0 0 10 6" refX="10" refY="3" markerWidth="8" markerHeight="6" orient="auto"><path d="M0,0 L10,3 L0,6" fill="#059669"/></marker>
             <marker id="ab" viewBox="0 0 10 6" refX="10" refY="3" markerWidth="8" markerHeight="6" orient="auto"><path d="M0,0 L10,3 L0,6" fill="#2563eb"/></marker>
@@ -173,8 +173,8 @@ export function ArchitectureDiagram({ stats }: { stats: Stats }) {
           <text x="80" y="24" className="fill-navy-400 text-[11px] font-semibold uppercase tracking-widest">Data Sources</text>
           <text x="380" y="24" className="fill-navy-400 text-[11px] font-semibold uppercase tracking-widest">Grant Engine</text>
           <text x="380" y="390" className="fill-navy-400 text-[11px] font-semibold uppercase tracking-widest">Database</text>
-          <text x="780" y="24" className="fill-navy-400 text-[11px] font-semibold uppercase tracking-widest">Web App</text>
-          <text x="780" y="390" className="fill-navy-400 text-[11px] font-semibold uppercase tracking-widest">Agents</text>
+          <text x="770" y="24" className="fill-navy-400 text-[11px] font-semibold uppercase tracking-widest">Web App</text>
+          <text x="770" y="390" className="fill-navy-400 text-[11px] font-semibold uppercase tracking-widest">Agents</text>
 
           {/* === SOURCES === */}
           {sources.map((s, i) => {
@@ -224,27 +224,28 @@ export function ArchitectureDiagram({ stats }: { stats: Stats }) {
               'Plus: agent_runs, government_programs',
             ], e)}
             onMouseMove={moveTip} onMouseLeave={hideTip}>
-            <rect x="300" y="410" width="260" height="120" rx="12" fill="#fff" stroke="#2563eb" strokeWidth="2.5"/>
+            <rect x="280" y="410" width="300" height="120" rx="12" fill="#fff" stroke="#2563eb" strokeWidth="2.5"/>
             <text x="430" y="436" textAnchor="middle" className="fill-link text-[15px] font-extrabold">Supabase</text>
             <text x="430" y="452" textAnchor="middle" className="fill-navy-400 text-[10px]">PostgreSQL — live data</text>
 
-            <text x="320" y="474" className="fill-navy-500 text-[10px]">foundations</text>
-            <text x="415" y="474" className="fill-money text-[10px] font-bold">{fmt(stats.foundations)}</text>
-            <text x="320" y="489" className="fill-navy-500 text-[10px]">grants</text>
-            <text x="415" y="489" className="fill-money text-[10px] font-bold">{fmt(stats.grants)}</text>
-            <text x="320" y="504" className="fill-navy-500 text-[10px]">programs</text>
-            <text x="415" y="504" className="fill-money text-[10px] font-bold">{fmt(stats.programs)}</text>
-            <text x="320" y="519" className="fill-navy-500 text-[10px]">community_orgs, money_flows, agent_runs</text>
+            <text x="300" y="474" className="fill-navy-500 text-[10px]">foundations</text>
+            <text x="380" y="474" className="fill-money text-[10px] font-bold">{fmt(stats.foundations)}</text>
+            <text x="300" y="489" className="fill-navy-500 text-[10px]">grants</text>
+            <text x="380" y="489" className="fill-money text-[10px] font-bold">{fmt(stats.grants)}</text>
+            <text x="300" y="504" className="fill-navy-500 text-[10px]">programs</text>
+            <text x="380" y="504" className="fill-money text-[10px] font-bold">{fmt(stats.programs)}</text>
+            <text x="300" y="519" className="fill-navy-500 text-[10px]">community_orgs, money_flows</text>
 
-            <text x="470" y="474" className="fill-navy-400 text-[10px]">profiled</text>
-            <text x="540" y="474" className="fill-purple text-[10px] font-bold">{fmt(stats.profiled)} ({profiledPct}%)</text>
+            <text x="440" y="474" className="fill-navy-400 text-[10px]">profiled</text>
+            <text x="440" y="489" className="fill-purple text-[10px] font-bold">{fmt(stats.profiled)} ({profiledPct}%)</text>
+            <text x="440" y="504" className="fill-navy-400 text-[10px]">agent_runs</text>
           </g>
 
           {/* Engine → DB lines */}
-          <line x1="372" y1="98" x2="390" y2="408" className="flow-line" stroke="#2563eb" strokeWidth="1.3" markerEnd="url(#ab)"/>
-          <line x1="372" y1="178" x2="410" y2="408" className="flow-line" stroke="#2563eb" strokeWidth="1.3" markerEnd="url(#ab)"/>
-          <line x1="372" y1="258" x2="430" y2="408" className="flow-line" stroke="#2563eb" strokeWidth="1.3" markerEnd="url(#ab)"/>
-          <line x1="372" y1="338" x2="450" y2="408" className="flow-line" stroke="#2563eb" strokeWidth="1.3" markerEnd="url(#ab)"/>
+          <line x1="372" y1="98" x2="380" y2="408" className="flow-line" stroke="#2563eb" strokeWidth="1.3" markerEnd="url(#ab)"/>
+          <line x1="372" y1="178" x2="400" y2="408" className="flow-line" stroke="#2563eb" strokeWidth="1.3" markerEnd="url(#ab)"/>
+          <line x1="372" y1="258" x2="420" y2="408" className="flow-line" stroke="#2563eb" strokeWidth="1.3" markerEnd="url(#ab)"/>
+          <line x1="372" y1="338" x2="440" y2="408" className="flow-line" stroke="#2563eb" strokeWidth="1.3" markerEnd="url(#ab)"/>
 
           {/* === WEB APP === */}
           <g className="node-g"
@@ -255,9 +256,9 @@ export function ArchitectureDiagram({ stats }: { stats: Stats }) {
               'Deployed to Vercel',
             ], e)}
             onMouseMove={moveTip} onMouseLeave={hideTip}>
-            <rect x="710" y="42" width="200" height="56" rx="10" fill="#fff" stroke="#059669" strokeWidth="2"/>
-            <text x="810" y="65" textAnchor="middle" className="fill-navy-900 text-[13px] font-bold">14 Pages + 7 APIs</text>
-            <text x="810" y="82" textAnchor="middle" className="fill-navy-400 text-[10px]">Next.js + Tailwind CSS</text>
+            <rect x="700" y="42" width="230" height="56" rx="10" fill="#fff" stroke="#059669" strokeWidth="2"/>
+            <text x="815" y="65" textAnchor="middle" className="fill-navy-900 text-[13px] font-bold">14 Pages + 7 APIs</text>
+            <text x="815" y="82" textAnchor="middle" className="fill-navy-400 text-[10px]">Next.js + Tailwind CSS</text>
           </g>
 
           <g className="node-g"
@@ -269,28 +270,28 @@ export function ArchitectureDiagram({ stats }: { stats: Stats }) {
               'Interactive Recharts visualizations',
             ], e)}
             onMouseMove={moveTip} onMouseLeave={hideTip}>
-            <rect x="710" y="116" width="200" height="56" rx="10" fill="#fff" stroke="#059669" strokeWidth="1.5"/>
-            <text x="810" y="140" textAnchor="middle" className="fill-navy-900 text-[13px] font-bold">4 Living Reports</text>
-            <text x="810" y="157" textAnchor="middle" className="fill-danger text-[10px]">Youth Justice &middot; Money Flow &middot; Power &middot; Access</text>
+            <rect x="700" y="116" width="230" height="56" rx="10" fill="#fff" stroke="#059669" strokeWidth="1.5"/>
+            <text x="815" y="140" textAnchor="middle" className="fill-navy-900 text-[13px] font-bold">4 Living Reports</text>
+            <text x="815" y="157" textAnchor="middle" className="fill-danger text-[9px]">Youth Justice · Money Flow · Power · Access</text>
           </g>
 
           {/* Vercel */}
           <g className="node-g"
             onMouseEnter={(e) => showTip('Vercel', ['Auto-deploys from GitHub main', 'Server-side rendering', 'Edge network'], e)}
             onMouseMove={moveTip} onMouseLeave={hideTip}>
-            <rect x="940" y="56" width="130" height="40" rx="8" fill="#fff" stroke="#94a3b8" strokeWidth="1.5"/>
-            <text x="1005" y="78" textAnchor="middle" className="fill-navy-900 text-[12px] font-semibold">Vercel</text>
-            <text x="1005" y="91" textAnchor="middle" className="fill-navy-400 text-[9px]">Auto-deploy</text>
+            <rect x="960" y="56" width="130" height="40" rx="8" fill="#fff" stroke="#94a3b8" strokeWidth="1.5"/>
+            <text x="1025" y="78" textAnchor="middle" className="fill-navy-900 text-[12px] font-semibold">Vercel</text>
+            <text x="1025" y="91" textAnchor="middle" className="fill-navy-400 text-[9px]">Auto-deploy</text>
           </g>
-          <line x1="910" y1="70" x2="938" y2="72" className="flow-line" stroke="#94a3b8" strokeWidth="1" markerEnd="url(#ag)"/>
+          <line x1="930" y1="70" x2="958" y2="72" className="flow-line" stroke="#94a3b8" strokeWidth="1" markerEnd="url(#ag)"/>
 
           {/* Planned: Public API */}
           <g className="node-g planned-node"
             onMouseEnter={(e) => showTip('Public API', ['REST API for third-party access', 'OpenAPI spec, rate limiting', 'Not yet built'], e)}
             onMouseMove={moveTip} onMouseLeave={hideTip}>
-            <rect x="710" y="190" width="200" height="45" rx="8" fill="#fff" stroke="#94a3b8" strokeWidth="1.5" strokeDasharray="4 3"/>
-            <text x="810" y="210" textAnchor="middle" className="fill-navy-400 text-[12px] font-semibold">Public API</text>
-            <text x="810" y="226" textAnchor="middle" className="fill-navy-400 text-[10px]">Planned</text>
+            <rect x="700" y="190" width="230" height="45" rx="8" fill="#fff" stroke="#94a3b8" strokeWidth="1.5" strokeDasharray="4 3"/>
+            <text x="815" y="210" textAnchor="middle" className="fill-navy-400 text-[12px] font-semibold">Public API</text>
+            <text x="815" y="226" textAnchor="middle" className="fill-navy-400 text-[10px]">Planned</text>
           </g>
 
           {/* Planned: Eligibility Matcher */}
@@ -303,8 +304,8 @@ export function ArchitectureDiagram({ stats }: { stats: Stats }) {
           </g>
 
           {/* DB → Web App lines */}
-          <line x1="560" y1="450" x2="708" y2="70" className="flow-line" stroke="#2563eb" strokeWidth="1.3" markerEnd="url(#ab)"/>
-          <line x1="560" y1="460" x2="708" y2="144" className="flow-line" stroke="#2563eb" strokeWidth="1.3" markerEnd="url(#ab)"/>
+          <line x1="560" y1="450" x2="698" y2="70" className="flow-line" stroke="#2563eb" strokeWidth="1.3" markerEnd="url(#ab)"/>
+          <line x1="560" y1="460" x2="698" y2="144" className="flow-line" stroke="#2563eb" strokeWidth="1.3" markerEnd="url(#ab)"/>
 
           {/* === AGENTS === */}
           {agents.map((a, i) => {
@@ -313,10 +314,10 @@ export function ArchitectureDiagram({ stats }: { stats: Stats }) {
               <g key={a.id} className="node-g"
                 onMouseEnter={(e) => showTip(a.label, a.tip, e)}
                 onMouseMove={moveTip} onMouseLeave={hideTip}>
-                <rect x="710" y={y} width="200" height="42" rx="8" fill="#fff" stroke="#059669" strokeWidth="1.5"/>
-                <text x="810" y={y + 18} textAnchor="middle" className="fill-navy-900 text-[12px] font-semibold">{a.label}</text>
-                <text x="810" y={y + 33} textAnchor="middle" className="fill-navy-400 text-[10px]">{a.sub}</text>
-                <circle cx="902" cy={y + 6} r="4" fill="#059669"/>
+                <rect x="700" y={y} width="230" height="42" rx="8" fill="#fff" stroke="#059669" strokeWidth="1.5"/>
+                <text x="815" y={y + 18} textAnchor="middle" className="fill-navy-900 text-[12px] font-semibold">{a.label}</text>
+                <text x="815" y={y + 33} textAnchor="middle" className="fill-navy-400 text-[10px]">{a.sub}</text>
+                <circle cx="922" cy={y + 6} r="4" fill="#059669"/>
               </g>
             );
           })}
@@ -324,7 +325,7 @@ export function ArchitectureDiagram({ stats }: { stats: Stats }) {
           {/* Agent → DB lines */}
           {agents.map((a, i) => {
             const y = 431 + i * 55;
-            return <line key={a.id} x1="708" y1={y} x2="562" y2={460 + i * 8} className="flow-rev" stroke="#059669" strokeWidth="1.2" markerEnd="url(#ag)"/>;
+            return <line key={a.id} x1="698" y1={y} x2="562" y2={460 + i * 8} className="flow-rev" stroke="#059669" strokeWidth="1.2" markerEnd="url(#ag)"/>;
           })}
 
           {/* Coverage summary */}
@@ -336,20 +337,20 @@ export function ArchitectureDiagram({ stats }: { stats: Stats }) {
               'Public API not started',
             ], e)}
             onMouseMove={moveTip} onMouseLeave={hideTip}>
-            <rect x="710" y="580" width="360" height="70" rx="10" fill="#fff" stroke="#e2e8f0" strokeWidth="1"/>
-            <text x="730" y="602" className="fill-money text-[12px] font-bold">{fmt(stats.profiled)}</text>
-            <text x="780" y="602" className="fill-navy-400 text-[11px]">profiled ({profiledPct}%)</text>
-            <text x="730" y="620" className="fill-warning text-[12px] font-bold">{fmt(needProfiling)}</text>
-            <text x="790" y="620" className="fill-navy-400 text-[11px]">need profiling</text>
-            <text x="730" y="638" className="fill-navy-400 text-[12px] font-bold">5 states</text>
-            <text x="790" y="638" className="fill-navy-400 text-[11px]">need scrapers</text>
+            <rect x="700" y="580" width="400" height="75" rx="10" fill="#fff" stroke="#e2e8f0" strokeWidth="1"/>
+            <text x="720" y="604" className="fill-money text-[11px] font-bold">{fmt(stats.profiled)}</text>
+            <text x="760" y="604" className="fill-navy-400 text-[10px]">profiled ({profiledPct}%)</text>
+            <text x="720" y="621" className="fill-warning text-[11px] font-bold">{fmt(needProfiling)}</text>
+            <text x="770" y="621" className="fill-navy-400 text-[10px]">need profiling</text>
+            <text x="720" y="638" className="fill-navy-400 text-[11px] font-bold">5 states</text>
+            <text x="775" y="638" className="fill-navy-400 text-[10px]">need scrapers</text>
 
-            <text x="910" y="602" className="fill-navy-400 text-[12px] font-bold">ASX200</text>
-            <text x="960" y="602" className="fill-navy-400 text-[11px]">not started</text>
-            <text x="910" y="620" className="fill-navy-400 text-[12px] font-bold">Public API</text>
-            <text x="975" y="620" className="fill-navy-400 text-[11px]">not started</text>
-            <text x="910" y="638" className="fill-navy-400 text-[12px] font-bold">Matching</text>
-            <text x="965" y="638" className="fill-navy-400 text-[11px]">not started</text>
+            <text x="910" y="604" className="fill-navy-400 text-[11px] font-bold">ASX200</text>
+            <text x="960" y="604" className="fill-navy-400 text-[10px]">not started</text>
+            <text x="910" y="621" className="fill-navy-400 text-[11px] font-bold">Public API</text>
+            <text x="980" y="621" className="fill-navy-400 text-[10px]">not started</text>
+            <text x="910" y="638" className="fill-navy-400 text-[11px] font-bold">Matching</text>
+            <text x="970" y="638" className="fill-navy-400 text-[10px]">not started</text>
           </g>
 
           <text x="550" y="670" textAnchor="middle" className="fill-navy-300 text-[10px]">Animated lines show data flow. Dashed borders = planned features.</text>
