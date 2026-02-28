@@ -1,14 +1,9 @@
 /**
- * Foundation Profiler
+ * Foundation Profiler — Multi-Provider
  *
- * Uses LLM (OpenAI or Anthropic) to synthesize scraped website data + ACNC records into
- * rich foundation profiles. Extracts:
- * - Giving philosophy and approach
- * - Focus areas with confidence levels
- * - Open programs and how to apply
- * - Source of wealth / how they make money
- * - Giving history and patterns
- * - Grant size ranges and typical recipients
+ * Round-robins across all available LLM providers to avoid quota limits.
+ * Providers: OpenAI, Anthropic, Groq, Perplexity
+ * Falls back automatically on quota/rate errors.
  */
 
 import type { Foundation } from './types.js';
@@ -46,33 +41,99 @@ export interface EnrichedProfile {
   board_members: string[] | null;
 }
 
+type ProviderName = 'openai' | 'anthropic' | 'groq' | 'perplexity' | 'minimax';
+
+interface ProviderConfig {
+  name: ProviderName;
+  envKey: string;
+  baseUrl: string;
+  model: string;
+  maxTokens: number;
+  supportsJsonMode: boolean;
+}
+
+const PROVIDERS: ProviderConfig[] = [
+  {
+    name: 'groq',
+    envKey: 'GROQ_API_KEY',
+    baseUrl: 'https://api.groq.com/openai/v1/chat/completions',
+    model: 'llama-3.3-70b-versatile',
+    maxTokens: 4000,
+    supportsJsonMode: true,
+  },
+  {
+    name: 'minimax',
+    envKey: 'MINIMAX_API_KEY',
+    baseUrl: 'https://api.minimax.io/v1/chat/completions',
+    model: 'MiniMax-M2.5',
+    maxTokens: 4000,
+    supportsJsonMode: false, // M2.5 reasoning model, parse JSON from response
+  },
+  {
+    name: 'openai',
+    envKey: 'OPENAI_API_KEY',
+    baseUrl: 'https://api.openai.com/v1/chat/completions',
+    model: 'gpt-4o-mini',
+    maxTokens: 4000,
+    supportsJsonMode: true,
+  },
+  {
+    name: 'perplexity',
+    envKey: 'PERPLEXITY_API_KEY',
+    baseUrl: 'https://api.perplexity.ai/chat/completions',
+    model: 'sonar-pro',
+    maxTokens: 4000,
+    supportsJsonMode: false,
+  },
+  {
+    name: 'anthropic',
+    envKey: 'ANTHROPIC_API_KEY',
+    baseUrl: '', // Uses SDK
+    model: 'claude-sonnet-4-5-20250929',
+    maxTokens: 4000,
+    supportsJsonMode: false,
+  },
+];
+
 interface ProfilerConfig {
-  provider?: 'anthropic' | 'openai';
+  provider?: ProviderName;
   model?: string;
   maxTokens?: number;
 }
 
 export class FoundationProfiler {
-  private provider: 'anthropic' | 'openai';
-  private model: string;
-  private maxTokens: number;
+  private availableProviders: ProviderConfig[];
+  private callIndex = 0;
+  private disabledProviders = new Set<ProviderName>();
 
   constructor(config: ProfilerConfig = {}) {
-    // Auto-detect provider based on available API keys
     if (config.provider) {
-      this.provider = config.provider;
-    } else if (process.env.OPENAI_API_KEY) {
-      this.provider = 'openai';
+      // Single provider mode
+      const p = PROVIDERS.find(p => p.name === config.provider);
+      if (!p) throw new Error(`Unknown provider: ${config.provider}`);
+      this.availableProviders = [{ ...p, model: config.model || p.model, maxTokens: config.maxTokens || p.maxTokens }];
     } else {
-      this.provider = 'anthropic';
+      // Auto-detect all available providers
+      this.availableProviders = PROVIDERS.filter(p => process.env[p.envKey]).map(p => ({
+        ...p,
+        model: config.model || p.model,
+        maxTokens: config.maxTokens || p.maxTokens,
+      }));
     }
 
-    if (this.provider === 'openai') {
-      this.model = config.model || 'gpt-4o';
-    } else {
-      this.model = config.model || 'claude-sonnet-4-5-20250929';
+    if (this.availableProviders.length === 0) {
+      throw new Error('No LLM API keys found. Set OPENAI_API_KEY, GROQ_API_KEY, PERPLEXITY_API_KEY, or ANTHROPIC_API_KEY');
     }
-    this.maxTokens = config.maxTokens || 4000;
+
+    console.log(`[profiler] Providers available: ${this.availableProviders.map(p => p.name).join(', ')}`);
+  }
+
+  private getNextProvider(): ProviderConfig | null {
+    const active = this.availableProviders.filter(p => !this.disabledProviders.has(p.name));
+    if (active.length === 0) return null;
+    const provider = active[this.callIndex % active.length];
+    this.callIndex++;
+    return provider;
   }
 
   private buildPrompt(foundation: Foundation, content: string): string {
@@ -127,6 +188,104 @@ Rules:
   }
 
   /**
+   * Call any OpenAI-compatible API (OpenAI, Groq, Perplexity).
+   */
+  private async callOpenAICompatible(prompt: string, provider: ProviderConfig): Promise<string> {
+    const apiKey = process.env[provider.envKey];
+    if (!apiKey) throw new Error(`${provider.envKey} required`);
+
+    const body: Record<string, unknown> = {
+      model: provider.model,
+      max_tokens: provider.maxTokens,
+      messages: [{ role: 'user', content: prompt }],
+    };
+
+    if (provider.supportsJsonMode) {
+      body.response_format = { type: 'json_object' };
+    }
+
+    const response = await fetch(provider.baseUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      // Check for quota/rate limit errors
+      if (response.status === 429 || err.includes('insufficient_quota') || err.includes('rate_limit') || err.includes('insufficient_balance')) {
+        throw new Error(`QUOTA:${provider.name}:${response.status}: ${err.slice(0, 200)}`);
+      }
+      throw new Error(`${provider.name} API error ${response.status}: ${err.slice(0, 200)}`);
+    }
+
+    const data = await response.json() as {
+      choices: Array<{ message: { content: string } }>;
+    };
+    let content = data.choices[0]?.message?.content || '';
+
+    // Strip <think> blocks from reasoning models (Minimax M2.5, DeepSeek, etc.)
+    content = content.replace(/<think>[\s\S]*?<\/think>\s*/g, '').trim();
+
+    return content;
+  }
+
+  private async callAnthropic(prompt: string, provider: ProviderConfig): Promise<string> {
+    const Anthropic = (await import('@anthropic-ai/sdk')).default;
+    const anthropic = new Anthropic();
+    const response = await anthropic.messages.create({
+      model: provider.model,
+      max_tokens: provider.maxTokens,
+      messages: [{ role: 'user', content: prompt }],
+    });
+
+    return response.content
+      .filter(b => b.type === 'text')
+      .map(b => (b as { type: 'text'; text: string }).text)
+      .join('\n');
+  }
+
+  /**
+   * Call an LLM with automatic provider rotation and fallback.
+   */
+  private async callLLM(prompt: string): Promise<string> {
+    const triedProviders: string[] = [];
+
+    for (let attempt = 0; attempt < this.availableProviders.length; attempt++) {
+      const provider = this.getNextProvider();
+      if (!provider) break;
+
+      triedProviders.push(provider.name);
+
+      try {
+        if (provider.name === 'anthropic') {
+          return await this.callAnthropic(prompt, provider);
+        } else {
+          return await this.callOpenAICompatible(prompt, provider);
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+
+        if (msg.startsWith('QUOTA:')) {
+          // Disable this provider for the rest of the session
+          console.log(`[profiler]     ${provider.name} quota exceeded — disabling, trying next provider`);
+          this.disabledProviders.add(provider.name);
+          continue;
+        }
+
+        // For other errors, try next provider
+        console.log(`[profiler]     ${provider.name} error: ${msg.slice(0, 100)} — trying next`);
+        continue;
+      }
+    }
+
+    throw new Error(`All providers failed (tried: ${triedProviders.join(', ')})`);
+  }
+
+  /**
    * Build a rich profile from ACNC data + scraped website content.
    */
   async profileFoundation(
@@ -145,20 +304,55 @@ Rules:
     const prompt = this.buildPrompt(foundation, content);
 
     try {
-      let text: string;
-
-      if (this.provider === 'openai') {
-        text = await this.callOpenAI(prompt);
-      } else {
-        text = await this.callAnthropic(prompt);
-      }
+      const text = await this.callLLM(prompt);
 
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
         return this.fallbackProfile(foundation);
       }
 
-      const parsed = JSON.parse(jsonMatch[0]) as EnrichedProfile;
+      let jsonStr = jsonMatch[0];
+      // Fix common JSON issues from LLMs
+      jsonStr = jsonStr.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']'); // trailing commas
+      jsonStr = jsonStr.replace(/[\x00-\x1f]/g, ' '); // control characters
+      // Fix unescaped newlines inside strings
+      jsonStr = jsonStr.replace(/(?<="[^"]*)\n(?=[^"]*")/g, '\\n');
+      // Fix single-quoted strings (convert to double)
+      jsonStr = jsonStr.replace(/:\s*'([^']*)'/g, ': "$1"');
+
+      let parsed: EnrichedProfile;
+      try {
+        parsed = JSON.parse(jsonStr) as EnrichedProfile;
+      } catch {
+        // Try to extract just the first complete JSON object, respecting strings
+        let depth = 0;
+        let end = -1;
+        let inString = false;
+        let escaped = false;
+        for (let i = 0; i < jsonStr.length; i++) {
+          const ch = jsonStr[i];
+          if (escaped) { escaped = false; continue; }
+          if (ch === '\\') { escaped = true; continue; }
+          if (ch === '"') { inString = !inString; continue; }
+          if (inString) continue;
+          if (ch === '{') depth++;
+          else if (ch === '}') { depth--; if (depth === 0) { end = i; break; } }
+        }
+        if (end > 0) {
+          let extracted = jsonStr.slice(0, end + 1);
+          // One more cleanup pass
+          extracted = extracted.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
+          try {
+            parsed = JSON.parse(extracted) as EnrichedProfile;
+          } catch {
+            // Last resort: try to fix common issues and parse again
+            extracted = extracted.replace(/"\s*\n\s*"/g, '", "'); // newlines between array elements
+            parsed = JSON.parse(extracted) as EnrichedProfile;
+          }
+        } else {
+          return this.fallbackProfile(foundation);
+        }
+      }
       return {
         description: parsed.description || null,
         thematic_focus: parsed.thematic_focus || foundation.thematic_focus || [],
@@ -186,50 +380,6 @@ Rules:
       console.error(`[profiler] Error profiling ${foundation.name}: ${err instanceof Error ? err.message : String(err)}`);
       return this.fallbackProfile(foundation);
     }
-  }
-
-  private async callOpenAI(prompt: string): Promise<string> {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) throw new Error('OPENAI_API_KEY required');
-
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: this.model,
-        max_tokens: this.maxTokens,
-        messages: [{ role: 'user', content: prompt }],
-        response_format: { type: 'json_object' },
-      }),
-    });
-
-    if (!response.ok) {
-      const err = await response.text();
-      throw new Error(`OpenAI API error ${response.status}: ${err}`);
-    }
-
-    const data = await response.json() as {
-      choices: Array<{ message: { content: string } }>;
-    };
-    return data.choices[0]?.message?.content || '';
-  }
-
-  private async callAnthropic(prompt: string): Promise<string> {
-    const Anthropic = (await import('@anthropic-ai/sdk')).default;
-    const anthropic = new Anthropic();
-    const response = await anthropic.messages.create({
-      model: this.model,
-      max_tokens: this.maxTokens,
-      messages: [{ role: 'user', content: prompt }],
-    });
-
-    return response.content
-      .filter(b => b.type === 'text')
-      .map(b => (b as { type: 'text'; text: string }).text)
-      .join('\n');
   }
 
   private fallbackProfile(foundation: Foundation): EnrichedProfile {

@@ -16,6 +16,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <a href="/grants" style={{ textDecoration: 'none', color: '#555' }}>Grants</a>
           <a href="/foundations" style={{ textDecoration: 'none', color: '#555' }}>Foundations</a>
           <a href="/corporate" style={{ textDecoration: 'none', color: '#555' }}>Corporate Giving</a>
+          <a href="/community" style={{ textDecoration: 'none', color: '#555' }}>Community</a>
+          <a href="/reports" style={{ textDecoration: 'none', color: '#dc2626', fontWeight: 600 }}>Reports</a>
         </nav>
         <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px' }}>
           {children}

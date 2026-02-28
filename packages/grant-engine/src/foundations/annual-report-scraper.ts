@@ -1,16 +1,16 @@
 /**
  * Foundation Website & Annual Report Scraper
  *
- * Uses Firecrawl to scrape foundation websites and extract:
+ * Multi-provider scraping: Jina Reader (free) with Firecrawl fallback.
+ * - Firecrawl: site mapping (discover pages) + JS-heavy site scraping
+ * - Jina Reader: free page-level scraping (no key needed)
+ *
+ * Extracts:
  * - Open programs and application guidelines
  * - Focus areas and giving philosophy
  * - Annual report data (giving amounts, recipients)
  * - Board members, governance
- *
- * Rate-limited to respect Firecrawl quotas.
  */
-
-import FirecrawlApp from '@mendable/firecrawl-js';
 
 export interface ScrapedFoundationData {
   websiteContent: string | null;
@@ -25,6 +25,7 @@ interface ScrapeConfig {
   firecrawlApiKey?: string;
   requestDelayMs?: number;
   maxPagesPerFoundation?: number;
+  preferJina?: boolean; // Use Jina Reader as primary (saves Firecrawl credits)
 }
 
 /**
@@ -53,17 +54,31 @@ const IMPORTANT_PATHS = [
 ];
 
 export class FoundationScraper {
-  private firecrawl: FirecrawlApp;
+  private firecrawl: { map: (url: string) => Promise<unknown>; scrape: (url: string, opts: unknown) => Promise<{ markdown?: string }> } | null = null;
+  private _firecrawlApiKey: string | null = null;
+  private _firecrawlLoaded = false;
   private delayMs: number;
   private maxPages: number;
   private lastRequest = 0;
+  private preferJina: boolean;
+  private jinaFailCount = 0;
 
   constructor(config: ScrapeConfig = {}) {
-    const apiKey = config.firecrawlApiKey || process.env.FIRECRAWL_API_KEY;
-    if (!apiKey) throw new Error('FIRECRAWL_API_KEY required');
-    this.firecrawl = new FirecrawlApp({ apiKey });
-    this.delayMs = config.requestDelayMs || 2000;
+    this._firecrawlApiKey = config.firecrawlApiKey || process.env.FIRECRAWL_API_KEY || null;
+    this.delayMs = config.requestDelayMs || 1500;
     this.maxPages = config.maxPagesPerFoundation || 5;
+    this.preferJina = config.preferJina ?? true; // Default: save Firecrawl credits
+  }
+
+  private async ensureFirecrawl(): Promise<void> {
+    if (this._firecrawlLoaded || !this._firecrawlApiKey) return;
+    this._firecrawlLoaded = true;
+    try {
+      const { default: FirecrawlApp } = await import('@mendable/firecrawl-js');
+      this.firecrawl = new FirecrawlApp({ apiKey: this._firecrawlApiKey });
+    } catch {
+      console.log('[scraper] Firecrawl SDK not available, using Jina Reader only');
+    }
   }
 
   private async rateLimit(): Promise<void> {
@@ -75,8 +90,112 @@ export class FoundationScraper {
   }
 
   /**
+   * Scrape a single URL via Jina Reader (free, no API key).
+   * Returns markdown content or null on failure.
+   */
+  private async scrapeViaJina(url: string): Promise<string | null> {
+    try {
+      const response = await fetch(`https://r.jina.ai/${url}`, {
+        headers: {
+          'Accept': 'text/markdown',
+          'X-No-Cache': 'true',
+        },
+        signal: AbortSignal.timeout(15000),
+      });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const text = await response.text();
+      // Jina returns markdown with metadata header, extract just the content
+      const contentMatch = text.match(/Markdown Content:\n([\s\S]*)/);
+      return contentMatch ? contentMatch[1].trim() : text.trim();
+    } catch {
+      this.jinaFailCount++;
+      return null;
+    }
+  }
+
+  /**
+   * Scrape a single URL via Firecrawl (paid, handles JS).
+   */
+  private async scrapeViaFirecrawl(url: string): Promise<string | null> {
+    await this.ensureFirecrawl();
+    if (!this.firecrawl) return null;
+    try {
+      const page = await this.firecrawl.scrape(url, { formats: ['markdown'] });
+      return page.markdown || null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Scrape a single page — tries Jina first (free), falls back to Firecrawl.
+   */
+  private async scrapePage(url: string): Promise<string | null> {
+    await this.rateLimit();
+
+    if (this.preferJina && this.jinaFailCount < 3) {
+      const jina = await this.scrapeViaJina(url);
+      if (jina && jina.length >= 100) return jina;
+      // Fall back to Firecrawl
+    }
+
+    if (this.firecrawl) {
+      await this.rateLimit();
+      const fc = await this.scrapeViaFirecrawl(url);
+      if (fc && fc.length >= 100) return fc;
+    }
+
+    // If Jina wasn't tried first, try it as fallback
+    if (!this.preferJina || this.jinaFailCount >= 3) {
+      const jina = await this.scrapeViaJina(url);
+      if (jina && jina.length >= 100) return jina;
+    }
+
+    return null;
+  }
+
+  /**
+   * Discover pages on a foundation website.
+   * Uses Firecrawl map if available, otherwise generates URLs from common paths.
+   */
+  private async discoverPages(baseUrl: string): Promise<string[]> {
+    const discovered: string[] = [];
+
+    // Try Firecrawl map first (discovers actual site structure)
+    await this.ensureFirecrawl();
+    if (this.firecrawl) {
+      try {
+        await this.rateLimit();
+        const mapResult = await this.firecrawl.map(baseUrl);
+        const rawLinks = (mapResult as unknown as { links?: Array<string | { url: string }> }).links || [];
+        const links = rawLinks.map((l: string | { url: string }) => typeof l === 'string' ? l : l.url);
+
+        // Score and return top links
+        const scored = links
+          .map((link: string) => ({ url: link, score: scoreUrl(link) }))
+          .filter((l: { score: number }) => l.score > 0)
+          .sort((a: { score: number }, b: { score: number }) => b.score - a.score)
+          .slice(0, this.maxPages);
+
+        return scored.map((l: { url: string }) => l.url);
+      } catch {
+        // Map failed, fall through to common paths
+      }
+    }
+
+    // Fallback: generate URLs from common paths
+    for (const path of IMPORTANT_PATHS) {
+      discovered.push(`${baseUrl}${path}`);
+    }
+    return discovered;
+  }
+
+  /**
    * Scrape a foundation's website for key content.
-   * Tries homepage + important subpages, returns combined markdown.
    */
   async scrapeFoundation(websiteUrl: string): Promise<ScrapedFoundationData> {
     const result: ScrapedFoundationData = {
@@ -95,81 +214,39 @@ export class FoundationScraper {
 
     let pagesScraped = 0;
 
-    // First: try to map the site to find available pages
-    try {
-      await this.rateLimit();
-      const mapResult = await this.firecrawl.map(baseUrl);
-      const rawLinks = (mapResult as unknown as { links?: Array<string | { url: string }> }).links || [];
-      const links = rawLinks.map(l => typeof l === 'string' ? l : l.url);
+    // Discover pages
+    const pages = await this.discoverPages(baseUrl);
 
-      // Score links by relevance
-      const scoredLinks = links
-        .map(link => ({
-          url: link,
-          score: scoreUrl(link),
-        }))
-        .filter(l => l.score > 0)
-        .sort((a, b) => b.score - a.score)
-        .slice(0, this.maxPages);
+    // Scrape discovered pages
+    for (const url of pages) {
+      if (pagesScraped >= this.maxPages) break;
 
-      // Scrape the most relevant pages
-      for (const { url } of scoredLinks) {
-        if (pagesScraped >= this.maxPages) break;
+      try {
+        const markdown = await this.scrapePage(url);
+        if (!markdown) continue;
 
-        try {
-          await this.rateLimit();
-          const page = await this.firecrawl.scrape(url, { formats: ['markdown'] });
-          const markdown = page.markdown || '';
-          if (!markdown || markdown.length < 100) continue;
-
-          result.scrapedUrls.push(url);
-          pagesScraped++;
-
-          // Categorize content
-          const urlLower = url.toLowerCase();
-          if (urlLower.includes('annual-report') || urlLower.includes('annual_report')) {
-            result.annualReportContent = (result.annualReportContent || '') + '\n\n---\n\n' + markdown;
-          } else if (urlLower.includes('about') || urlLower.includes('story') || urlLower.includes('philosophy')) {
-            result.aboutContent = (result.aboutContent || '') + '\n\n---\n\n' + markdown;
-          } else if (urlLower.includes('grant') || urlLower.includes('program') || urlLower.includes('fund') || urlLower.includes('apply')) {
-            result.programsContent = (result.programsContent || '') + '\n\n---\n\n' + markdown;
-          } else {
-            result.websiteContent = (result.websiteContent || '') + '\n\n---\n\n' + markdown;
-          }
-        } catch (err) {
-          result.errors.push(`Failed to scrape ${url}: ${err instanceof Error ? err.message : String(err)}`);
-        }
+        result.scrapedUrls.push(url);
+        pagesScraped++;
+        categorizeContent(result, url, markdown);
+      } catch (err) {
+        result.errors.push(`Failed to scrape ${url}: ${err instanceof Error ? err.message : String(err)}`);
       }
-    } catch {
-      // Map failed, fallback to direct scraping of common paths
     }
 
-    // Fallback: if map didn't work or got few pages, try common paths
+    // If we got few pages from discovery, try common paths directly
     if (pagesScraped < 2) {
       for (const path of IMPORTANT_PATHS) {
         if (pagesScraped >= this.maxPages) break;
-
         const url = `${baseUrl}${path}`;
         if (result.scrapedUrls.includes(url)) continue;
 
         try {
-          await this.rateLimit();
-          const page = await this.firecrawl.scrape(url, { formats: ['markdown'] });
-          const markdown = page.markdown || '';
-          if (!markdown || markdown.length < 100) continue;
+          const markdown = await this.scrapePage(url);
+          if (!markdown) continue;
 
           result.scrapedUrls.push(url);
           pagesScraped++;
-
-          if (path.includes('about') || path.includes('story') || path.includes('philosophy')) {
-            result.aboutContent = (result.aboutContent || '') + '\n\n---\n\n' + markdown;
-          } else if (path.includes('grant') || path.includes('program') || path.includes('apply')) {
-            result.programsContent = (result.programsContent || '') + '\n\n---\n\n' + markdown;
-          } else if (path.includes('annual') || path.includes('report')) {
-            result.annualReportContent = (result.annualReportContent || '') + '\n\n---\n\n' + markdown;
-          } else {
-            result.websiteContent = (result.websiteContent || '') + '\n\n---\n\n' + markdown;
-          }
+          categorizeContent(result, url, markdown);
         } catch {
           // Page doesn't exist, skip
         }
@@ -177,6 +254,22 @@ export class FoundationScraper {
     }
 
     return result;
+  }
+}
+
+/**
+ * Categorize scraped content by URL pattern.
+ */
+function categorizeContent(result: ScrapedFoundationData, url: string, markdown: string): void {
+  const urlLower = url.toLowerCase();
+  if (urlLower.includes('annual-report') || urlLower.includes('annual_report')) {
+    result.annualReportContent = (result.annualReportContent || '') + '\n\n---\n\n' + markdown;
+  } else if (urlLower.includes('about') || urlLower.includes('story') || urlLower.includes('philosophy')) {
+    result.aboutContent = (result.aboutContent || '') + '\n\n---\n\n' + markdown;
+  } else if (urlLower.includes('grant') || urlLower.includes('program') || urlLower.includes('fund') || urlLower.includes('apply')) {
+    result.programsContent = (result.programsContent || '') + '\n\n---\n\n' + markdown;
+  } else {
+    result.websiteContent = (result.websiteContent || '') + '\n\n---\n\n' + markdown;
   }
 }
 

@@ -46,6 +46,29 @@ export { parseACNCRegister, downloadACNCRegister, acncToFoundation } from './fou
 export { FoundationRepository } from './foundations/repository.js';
 export type { Foundation, FoundationType, FoundationProgram } from './foundations/types.js';
 
+// Reports
+export { buildSankeyData, buildYouthJusticeReport } from './reports/money-flow.js';
+export type { SankeyNode, SankeyLink, SankeyData, ProgramComparison, YouthJusticeReport } from './reports/money-flow.js';
+
+export { buildPowerReport } from './reports/power-analysis.js';
+export type { PowerMetrics, FoundationPowerProfile, PowerReport } from './reports/power-analysis.js';
+export { buildAdminBurdenReport } from './reports/admin-burden.js';
+export type { AdminBurdenReport, AdminTier, GrantComplexityEstimate } from './reports/admin-burden.js';
+
+// Data sources (non-grant)
+export { ingestYouthJusticeData, searchQLDYouthJusticeDatasets, QLD_YOUTH_JUSTICE_PROGRAMS, QLD_YOUTH_JUSTICE_FLOWS } from './sources/qld-youth-justice.js';
+
+// Community
+export { importCommunityOrgs, estimateAdminBurden } from './foundations/community-profiler.js';
+export type { CommunityOrgProfile } from './foundations/community-profiler.js';
+
+// Agents
+export { runAllAgents, runAgent, shouldRun } from './agents/agent-runner.js';
+export type { AgentConfig, AgentRunResult, AgentRunLog } from './agents/agent-runner.js';
+export { createGrantMonitor } from './agents/grant-monitor.js';
+export { createFoundationWatcher } from './agents/foundation-watcher.js';
+export { createGovernmentSpendWatcher } from './agents/government-spend.js';
+
 // Utilities
 export { normalize, normalizeDate, normalizeAmount, normalizeCategories, generateDedupKey } from './normalizer.js';
 export { deduplicateGrants, filterExisting } from './deduplicator.js';

@@ -29,6 +29,9 @@ const TOP_ONLY = process.argv.includes('--top-only');
 const limitArg = process.argv.find(a => a.startsWith('--limit='));
 const LIMIT = limitArg ? parseInt(limitArg.split('=')[1], 10) : 50;
 
+const offsetArg = process.argv.find(a => a.startsWith('--offset='));
+const OFFSET = offsetArg ? parseInt(offsetArg.split('=')[1], 10) : 0;
+
 if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
   process.exit(1);
@@ -145,13 +148,20 @@ async function getFoundationsToProfile() {
 
   if (!TOP_ONLY) {
     // Get foundations with websites, ordered by estimated giving, that haven't been profiled yet
-    const { data, error } = await supabase
+    let query = supabase
       .from('foundations')
       .select('*')
       .not('website', 'is', null)
       .is('enriched_at', null)
-      .order('total_giving_annual', { ascending: false, nullsFirst: false })
-      .limit(LIMIT);
+      .order('total_giving_annual', { ascending: false, nullsFirst: false });
+
+    if (OFFSET > 0) {
+      query = query.range(OFFSET, OFFSET + LIMIT - 1);
+    } else {
+      query = query.limit(LIMIT);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       log(`Error fetching foundations: ${error.message}`);
@@ -183,6 +193,7 @@ async function getFoundationsToProfile() {
 async function main() {
   log('Starting foundation profiling...');
   log(`  Limit: ${LIMIT}`);
+  log(`  Offset: ${OFFSET}`);
   log(`  Dry run: ${DRY_RUN}`);
   log(`  Top only: ${TOP_ONLY}`);
 
