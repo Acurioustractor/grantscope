@@ -9,7 +9,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { ingestYouthJusticeData, searchQLDYouthJusticeDatasets } from '@grantscope/engine/src/sources/qld-youth-justice.js';
+import { ingestYouthJusticeData, searchQLDYouthJusticeDatasets } from '../packages/grant-engine/src/sources/qld-youth-justice.ts';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '',

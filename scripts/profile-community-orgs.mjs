@@ -12,7 +12,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { importCommunityOrgs } from '@grantscope/engine/src/foundations/community-profiler.js';
+import { importCommunityOrgs } from '../packages/grant-engine/src/foundations/community-profiler.ts';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '',

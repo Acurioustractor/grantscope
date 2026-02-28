@@ -12,10 +12,10 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { runAllAgents, runAgent } from '@grantscope/engine/src/agents/agent-runner.js';
-import { createGrantMonitor } from '@grantscope/engine/src/agents/grant-monitor.js';
-import { createFoundationWatcher } from '@grantscope/engine/src/agents/foundation-watcher.js';
-import { createGovernmentSpendWatcher } from '@grantscope/engine/src/agents/government-spend.js';
+import { runAllAgents, runAgent } from '../packages/grant-engine/src/agents/agent-runner.ts';
+import { createGrantMonitor } from '../packages/grant-engine/src/agents/grant-monitor.ts';
+import { createFoundationWatcher } from '../packages/grant-engine/src/agents/foundation-watcher.ts';
+import { createGovernmentSpendWatcher } from '../packages/grant-engine/src/agents/government-spend.ts';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '',
