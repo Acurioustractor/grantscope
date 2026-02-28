@@ -14,7 +14,7 @@ interface CorporateFoundation {
 }
 
 function formatMoney(amount: number | null): string {
-  if (!amount) return '—';
+  if (!amount) return '\u2014';
   if (amount >= 1000000) return `$${(amount / 1000000).toFixed(1)}M`;
   if (amount >= 1000) return `$${(amount / 1000).toFixed(0)}K`;
   return `$${amount.toLocaleString()}`;
@@ -32,51 +32,57 @@ export default async function CorporatePage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: '32px', marginBottom: '8px' }}>Corporate Giving Transparency</h1>
-      <p style={{ color: '#666', marginBottom: '32px' }}>
-        How much do Australia's biggest companies give back? {count || 0} corporate foundations tracked.
-      </p>
+      <div className="mb-8">
+        <h1 className="text-3xl font-extrabold text-navy-900 mb-2">Corporate Giving Transparency</h1>
+        <p className="text-navy-500">
+          How much do Australia&apos;s biggest companies give back? {count || 0} corporate foundations tracked.
+        </p>
+      </div>
 
-      <div style={{ background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: '8px', padding: '16px', marginBottom: '24px' }}>
-        <strong>Phase E — Coming Soon</strong>
-        <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#666' }}>
-          We're building ASX200 company-to-foundation mapping, sustainability report scraping,
+      <div className="bg-warning-light border border-amber-300 rounded-lg p-4 mb-6">
+        <div className="font-semibold text-sm text-navy-900">Phase E — Coming Soon</div>
+        <p className="text-sm text-navy-600 mt-1">
+          We&apos;re building ASX200 company-to-foundation mapping, sustainability report scraping,
           and revenue-vs-giving ratio calculations. The data below is from ACNC foundations
           identified as corporate foundations.
         </p>
       </div>
 
       {(foundations as CorporateFoundation[] || []).length > 0 ? (
-        <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff', borderRadius: '8px', overflow: 'hidden' }}>
-          <thead>
-            <tr style={{ borderBottom: '2px solid #e0e0e0', textAlign: 'left' }}>
-              <th style={{ padding: '12px 16px', fontSize: '13px', color: '#888' }}>Foundation</th>
-              <th style={{ padding: '12px 16px', fontSize: '13px', color: '#888' }}>Parent</th>
-              <th style={{ padding: '12px 16px', fontSize: '13px', color: '#888' }}>ASX</th>
-              <th style={{ padding: '12px 16px', fontSize: '13px', color: '#888', textAlign: 'right' }}>Annual Giving</th>
-              <th style={{ padding: '12px 16px', fontSize: '13px', color: '#888', textAlign: 'right' }}>Giving Ratio</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(foundations as CorporateFoundation[]).map(f => (
-              <tr key={f.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
-                <td style={{ padding: '10px 16px' }}>
-                  <a href={`/foundations/${f.id}`} style={{ textDecoration: 'none', color: '#2563eb', fontWeight: 500 }}>{f.name}</a>
-                </td>
-                <td style={{ padding: '10px 16px', color: '#666', fontSize: '14px' }}>{f.parent_company || '—'}</td>
-                <td style={{ padding: '10px 16px', fontFamily: 'monospace', fontSize: '13px' }}>{f.asx_code || '—'}</td>
-                <td style={{ padding: '10px 16px', textAlign: 'right', fontWeight: 600, color: '#059669' }}>{formatMoney(f.total_giving_annual)}</td>
-                <td style={{ padding: '10px 16px', textAlign: 'right', fontWeight: 600, color: f.giving_ratio ? '#2563eb' : '#ccc' }}>
-                  {f.giving_ratio ? `${f.giving_ratio}%` : '—'}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="bg-white border border-navy-200 rounded-lg overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b-2 border-navy-200 text-left">
+                  <th className="px-4 py-3 text-xs font-semibold text-navy-500 uppercase tracking-wider">Foundation</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-navy-500 uppercase tracking-wider">Parent</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-navy-500 uppercase tracking-wider">ASX</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-navy-500 uppercase tracking-wider text-right">Annual Giving</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-navy-500 uppercase tracking-wider text-right">Giving Ratio</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-navy-100">
+                {(foundations as CorporateFoundation[]).map(f => (
+                  <tr key={f.id} className="hover:bg-navy-50 transition-colors">
+                    <td className="px-4 py-3">
+                      <a href={`/foundations/${f.id}`} className="text-link hover:underline font-medium text-sm">{f.name}</a>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-navy-500">{f.parent_company || '\u2014'}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-navy-500">{f.asx_code || '\u2014'}</td>
+                    <td className="px-4 py-3 text-right font-semibold text-money text-sm tabular-nums">{formatMoney(f.total_giving_annual)}</td>
+                    <td className={`px-4 py-3 text-right font-semibold text-sm tabular-nums ${f.giving_ratio ? 'text-link' : 'text-navy-300'}`}>
+                      {f.giving_ratio ? `${f.giving_ratio}%` : '\u2014'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       ) : (
-        <div style={{ textAlign: 'center', padding: '60px 20px', color: '#999' }}>
-          <p>No corporate foundations loaded yet.</p>
-          <p style={{ fontSize: '14px' }}>Run the ACNC import to populate foundation data.</p>
+        <div className="text-center py-16 text-navy-400">
+          <p className="text-lg">No corporate foundations loaded yet.</p>
+          <p className="text-sm mt-1">Run the ACNC import to populate foundation data.</p>
         </div>
       )}
     </div>

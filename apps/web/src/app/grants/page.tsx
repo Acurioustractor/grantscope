@@ -60,54 +60,56 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
 
   return (
     <div>
-      <h1 style={{ fontSize: '32px', marginBottom: '8px' }}>Government Grants</h1>
-      <p style={{ color: '#666', marginBottom: '24px' }}>{(count || 0).toLocaleString()} grants from GrantConnect, data.gov.au, QLD, and more</p>
+      <div className="mb-8">
+        <h1 className="text-3xl font-extrabold text-navy-900 mb-2">Government Grants</h1>
+        <p className="text-navy-500">{(count || 0).toLocaleString()} grants from GrantConnect, data.gov.au, QLD, and more</p>
+      </div>
 
-      <form method="get" style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+      <form method="get" className="flex flex-col sm:flex-row gap-2 mb-6">
         <input
           type="text"
           name="q"
           defaultValue={query}
           placeholder="Search grants..."
-          style={{ flex: 1, padding: '10px 16px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px' }}
+          className="flex-1 px-4 py-2.5 border border-navy-200 rounded-lg text-sm focus:border-link focus:outline-none bg-white"
         />
-        <select name="category" defaultValue={category} style={{ padding: '10px 16px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px' }}>
+        <select name="category" defaultValue={category} className="px-4 py-2.5 border border-navy-200 rounded-lg text-sm bg-white focus:border-link focus:outline-none">
           <option value="">All categories</option>
           {categories.map(c => (
             <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
           ))}
         </select>
-        <button type="submit" style={{ padding: '10px 20px', background: '#1a1a2e', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
+        <button type="submit" className="px-5 py-2.5 bg-navy-900 text-white text-sm font-medium rounded-lg hover:bg-navy-800 transition-colors cursor-pointer">
           Filter
         </button>
       </form>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <div className="space-y-3">
         {(grants as Grant[] || []).map((grant) => (
           <a
             key={grant.id}
             href={`/grants/${grant.id}`}
-            style={{ textDecoration: 'none', color: 'inherit' }}
+            className="block group"
           >
-            <div style={{ background: '#fff', border: '1px solid #e0e0e0', borderRadius: '8px', padding: '16px 20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div style={{ flex: 1 }}>
-                  <h3 style={{ margin: '0 0 4px', fontSize: '16px' }}>{grant.name}</h3>
-                  <div style={{ fontSize: '13px', color: '#666' }}>{grant.provider}</div>
+            <div className="bg-white border border-navy-200 rounded-lg p-4 sm:px-5 transition-all group-hover:border-navy-300 group-hover:shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-navy-900 text-[15px] group-hover:text-link transition-colors">{grant.name}</h3>
+                  <div className="text-sm text-navy-500 mt-0.5">{grant.provider}</div>
                 </div>
-                <div style={{ textAlign: 'right', minWidth: '150px' }}>
-                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#2563eb' }}>
+                <div className="sm:text-right sm:ml-4 flex-shrink-0">
+                  <div className="text-sm font-semibold text-link tabular-nums">
                     {formatAmount(grant.amount_min, grant.amount_max)}
                   </div>
-                  <div style={{ fontSize: '12px', color: grant.closes_at ? '#d97706' : '#666', marginTop: '2px' }}>
+                  <div className={`text-xs mt-0.5 ${grant.closes_at ? 'text-warning' : 'text-navy-400'}`}>
                     {grant.closes_at ? `Closes ${formatDate(grant.closes_at)}` : 'Ongoing'}
                   </div>
                 </div>
               </div>
               {grant.categories?.length > 0 && (
-                <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
+                <div className="flex gap-1.5 mt-2.5 flex-wrap">
                   {grant.categories.map(c => (
-                    <span key={c} style={{ fontSize: '11px', padding: '2px 8px', background: '#f0f0f0', borderRadius: '4px', color: '#555' }}>
+                    <span key={c} className="text-[11px] px-2 py-0.5 bg-navy-100 text-navy-600 rounded">
                       {c}
                     </span>
                   ))}
@@ -119,13 +121,17 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
       </div>
 
       {totalPages > 1 && (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '24px' }}>
+        <div className="flex justify-center items-center gap-2 mt-8">
           {page > 1 && (
-            <a href={`/grants?q=${query}&category=${category}&page=${page - 1}`} style={{ padding: '8px 16px', border: '1px solid #ddd', borderRadius: '6px', textDecoration: 'none', color: '#555' }}>Previous</a>
+            <a href={`/grants?q=${query}&category=${category}&page=${page - 1}`} className="px-4 py-2 text-sm border border-navy-200 rounded-lg text-navy-600 hover:bg-navy-100 transition-colors">
+              Previous
+            </a>
           )}
-          <span style={{ padding: '8px 16px', color: '#666' }}>Page {page} of {totalPages}</span>
+          <span className="px-4 py-2 text-sm text-navy-500">Page {page} of {totalPages}</span>
           {page < totalPages && (
-            <a href={`/grants?q=${query}&category=${category}&page=${page + 1}`} style={{ padding: '8px 16px', border: '1px solid #ddd', borderRadius: '6px', textDecoration: 'none', color: '#555' }}>Next</a>
+            <a href={`/grants?q=${query}&category=${category}&page=${page + 1}`} className="px-4 py-2 text-sm border border-navy-200 rounded-lg text-navy-600 hover:bg-navy-100 transition-colors">
+              Next
+            </a>
           )}
         </div>
       )}

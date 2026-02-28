@@ -47,43 +47,45 @@ export default async function GrantDetailPage({ params }: { params: Promise<{ id
   const g = grant as Grant;
 
   return (
-    <div style={{ maxWidth: '800px' }}>
-      <a href="/grants" style={{ color: '#666', fontSize: '14px' }}>Back to grants</a>
+    <div className="max-w-3xl">
+      <a href="/grants" className="text-sm text-navy-500 hover:text-navy-900 transition-colors">
+        &larr; Back to grants
+      </a>
 
-      <h1 style={{ fontSize: '28px', marginTop: '16px', marginBottom: '8px' }}>{g.name}</h1>
-      <div style={{ fontSize: '16px', color: '#666', marginBottom: '24px' }}>{g.provider}</div>
+      <h1 className="text-2xl sm:text-3xl font-extrabold text-navy-900 mt-4 mb-2">{g.name}</h1>
+      <div className="text-base text-navy-500 mb-6">{g.provider}</div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '32px' }}>
-        <div style={{ background: '#fff', border: '1px solid #e0e0e0', borderRadius: '8px', padding: '16px' }}>
-          <div style={{ fontSize: '12px', color: '#888', marginBottom: '4px' }}>Amount</div>
-          <div style={{ fontSize: '18px', fontWeight: 700, color: '#2563eb' }}>{formatAmount(g.amount_min, g.amount_max)}</div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
+        <div className="bg-white border border-navy-200 rounded-lg p-4">
+          <div className="text-xs text-navy-400 mb-1">Amount</div>
+          <div className="text-lg font-bold text-link tabular-nums">{formatAmount(g.amount_min, g.amount_max)}</div>
         </div>
-        <div style={{ background: '#fff', border: '1px solid #e0e0e0', borderRadius: '8px', padding: '16px' }}>
-          <div style={{ fontSize: '12px', color: '#888', marginBottom: '4px' }}>Closes</div>
-          <div style={{ fontSize: '18px', fontWeight: 700, color: g.closes_at ? '#d97706' : '#666' }}>{formatDate(g.closes_at)}</div>
+        <div className="bg-white border border-navy-200 rounded-lg p-4">
+          <div className="text-xs text-navy-400 mb-1">Closes</div>
+          <div className={`text-lg font-bold ${g.closes_at ? 'text-warning' : 'text-navy-500'}`}>{formatDate(g.closes_at)}</div>
         </div>
-        <div style={{ background: '#fff', border: '1px solid #e0e0e0', borderRadius: '8px', padding: '16px' }}>
-          <div style={{ fontSize: '12px', color: '#888', marginBottom: '4px' }}>Status</div>
-          <div style={{ fontSize: '18px', fontWeight: 700, color: '#059669' }}>{g.status || 'Open'}</div>
+        <div className="bg-white border border-navy-200 rounded-lg p-4">
+          <div className="text-xs text-navy-400 mb-1">Status</div>
+          <div className="text-lg font-bold text-money">{g.status || 'Open'}</div>
         </div>
       </div>
 
       {g.description && (
-        <div style={{ marginBottom: '24px' }}>
-          <h2 style={{ fontSize: '18px', marginBottom: '8px' }}>Description</h2>
-          <p style={{ color: '#444', lineHeight: 1.6 }}>{g.description}</p>
-        </div>
+        <section className="mb-6">
+          <h2 className="text-lg font-semibold text-navy-900 mb-2 pb-1.5 border-b border-navy-100">Description</h2>
+          <p className="text-navy-600 leading-relaxed">{g.description}</p>
+        </section>
       )}
 
       {g.categories?.length > 0 && (
-        <div style={{ marginBottom: '24px' }}>
-          <h2 style={{ fontSize: '18px', marginBottom: '8px' }}>Categories</h2>
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        <section className="mb-6">
+          <h2 className="text-lg font-semibold text-navy-900 mb-2 pb-1.5 border-b border-navy-100">Categories</h2>
+          <div className="flex gap-2 flex-wrap">
             {g.categories.map(c => (
-              <span key={c} style={{ fontSize: '13px', padding: '4px 12px', background: '#e8f4fd', borderRadius: '16px', color: '#2563eb' }}>{c}</span>
+              <span key={c} className="text-sm px-3 py-1 bg-link-light text-link rounded-full">{c}</span>
             ))}
           </div>
-        </div>
+        </section>
       )}
 
       {g.url && (
@@ -91,16 +93,13 @@ export default async function GrantDetailPage({ params }: { params: Promise<{ id
           href={g.url}
           target="_blank"
           rel="noopener noreferrer"
-          style={{
-            display: 'inline-block', padding: '12px 24px', background: '#2563eb',
-            color: '#fff', borderRadius: '8px', textDecoration: 'none', fontWeight: 600,
-          }}
+          className="inline-block px-6 py-3 bg-link text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
         >
-          Apply Now
+          Apply Now &rarr;
         </a>
       )}
 
-      <div style={{ marginTop: '40px', padding: '16px', background: '#f5f5f5', borderRadius: '8px', fontSize: '12px', color: '#888' }}>
+      <div className="mt-10 p-4 bg-navy-100 rounded-lg text-xs text-navy-500 space-y-1">
         <div>Discovery method: {g.discovery_method || 'Unknown'}</div>
         {g.last_verified_at && <div>Last verified: {formatDate(g.last_verified_at)}</div>}
         <div>Added: {formatDate(g.created_at)}</div>

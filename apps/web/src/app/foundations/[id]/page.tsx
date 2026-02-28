@@ -65,15 +65,20 @@ function typeLabel(type: string | null): string {
   return type ? labels[type] || type : 'Foundation';
 }
 
-const confidenceColor = (c: string) =>
-  c === 'high' ? '#059669' : c === 'medium' ? '#d97706' : '#999';
+function confidenceClasses(c: string) {
+  if (c === 'high') return 'text-money bg-money-light';
+  if (c === 'medium') return 'text-warning bg-warning-light';
+  return 'text-navy-500 bg-navy-100';
+}
 
-const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
-  <div style={{ marginBottom: '28px' }}>
-    <h2 style={{ fontSize: '18px', marginBottom: '10px', borderBottom: '1px solid #eee', paddingBottom: '6px' }}>{title}</h2>
-    {children}
-  </div>
-);
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="mb-7">
+      <h2 className="text-lg font-semibold text-navy-900 mb-2.5 pb-1.5 border-b border-navy-100">{title}</h2>
+      {children}
+    </section>
+  );
+}
 
 export default async function FoundationDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -95,96 +100,97 @@ export default async function FoundationDetailPage({ params }: { params: Promise
     .order('deadline', { ascending: true, nullsFirst: false });
 
   return (
-    <div style={{ maxWidth: '800px' }}>
-      <a href="/foundations" style={{ color: '#666', fontSize: '14px' }}>Back to foundations</a>
+    <div className="max-w-3xl">
+      <a href="/foundations" className="text-sm text-navy-500 hover:text-navy-900 transition-colors">
+        &larr; Back to foundations
+      </a>
 
-      <h1 style={{ fontSize: '28px', marginTop: '16px', marginBottom: '4px' }}>{f.name}</h1>
-      <div style={{ fontSize: '14px', color: '#666', marginBottom: '24px' }}>
-        {typeLabel(f.type)} | ABN: {f.acnc_abn}
+      <h1 className="text-2xl sm:text-3xl font-extrabold text-navy-900 mt-4 mb-1">{f.name}</h1>
+      <div className="text-sm text-navy-500 mb-6 flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span>{typeLabel(f.type)}</span>
+        <span className="text-navy-300">|</span>
+        <span>ABN: {f.acnc_abn}</span>
         {f.website && (
-          <> | <a href={f.website.startsWith('http') ? f.website : `https://${f.website}`} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb' }}>{f.website}</a></>
+          <>
+            <span className="text-navy-300">|</span>
+            <a href={f.website.startsWith('http') ? f.website : `https://${f.website}`} target="_blank" rel="noopener noreferrer" className="text-link hover:underline">{f.website}</a>
+          </>
         )}
       </div>
 
       {/* Key stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '32px' }}>
-        <div style={{ background: '#fff', border: '1px solid #e0e0e0', borderRadius: '8px', padding: '14px' }}>
-          <div style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>Annual Giving</div>
-          <div style={{ fontSize: '20px', fontWeight: 700, color: '#059669' }}>{formatMoney(f.total_giving_annual)}</div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+        <div className="bg-white border border-navy-200 rounded-lg p-3.5">
+          <div className="text-[11px] text-navy-400 mb-1">Annual Giving</div>
+          <div className="text-xl font-bold text-money tabular-nums">{formatMoney(f.total_giving_annual)}</div>
         </div>
-        <div style={{ background: '#fff', border: '1px solid #e0e0e0', borderRadius: '8px', padding: '14px' }}>
-          <div style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>Grant Range</div>
-          <div style={{ fontSize: '14px', fontWeight: 600 }}>
+        <div className="bg-white border border-navy-200 rounded-lg p-3.5">
+          <div className="text-[11px] text-navy-400 mb-1">Grant Range</div>
+          <div className="text-sm font-semibold text-navy-900 tabular-nums">
             {f.grant_range_min || f.grant_range_max
               ? `${formatMoney(f.grant_range_min)} – ${formatMoney(f.grant_range_max)}`
               : 'Unknown'}
           </div>
         </div>
-        <div style={{ background: '#fff', border: '1px solid #e0e0e0', borderRadius: '8px', padding: '14px' }}>
-          <div style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>Giving Ratio</div>
-          <div style={{ fontSize: '20px', fontWeight: 700, color: f.giving_ratio ? '#2563eb' : '#ccc' }}>
-            {f.giving_ratio ? `${f.giving_ratio}%` : '—'}
+        <div className="bg-white border border-navy-200 rounded-lg p-3.5">
+          <div className="text-[11px] text-navy-400 mb-1">Giving Ratio</div>
+          <div className={`text-xl font-bold tabular-nums ${f.giving_ratio ? 'text-link' : 'text-navy-300'}`}>
+            {f.giving_ratio ? `${f.giving_ratio}%` : '\u2014'}
           </div>
         </div>
-        <div style={{ background: '#fff', border: '1px solid #e0e0e0', borderRadius: '8px', padding: '14px' }}>
-          <div style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>Profile Quality</div>
-          <div style={{ fontSize: '14px', fontWeight: 600, color: confidenceColor(f.profile_confidence) }}>
+        <div className="bg-white border border-navy-200 rounded-lg p-3.5">
+          <div className="text-[11px] text-navy-400 mb-1">Profile Quality</div>
+          <div className={`text-sm font-semibold inline-block px-2 py-0.5 rounded ${confidenceClasses(f.profile_confidence)}`}>
             {f.profile_confidence.charAt(0).toUpperCase() + f.profile_confidence.slice(1)}
           </div>
         </div>
       </div>
 
-      {/* Description */}
       {f.description && (
         <Section title="About">
-          <p style={{ color: '#444', lineHeight: 1.6, margin: 0 }}>{f.description}</p>
+          <p className="text-navy-600 leading-relaxed">{f.description}</p>
         </Section>
       )}
 
-      {/* Giving Philosophy */}
       {f.giving_philosophy && (
         <Section title="Giving Philosophy">
-          <p style={{ color: '#444', lineHeight: 1.6, margin: 0, fontStyle: 'italic' }}>{f.giving_philosophy}</p>
+          <p className="text-navy-600 leading-relaxed italic">{f.giving_philosophy}</p>
         </Section>
       )}
 
-      {/* Wealth Source */}
       {f.wealth_source && (
         <Section title="Source of Wealth">
-          <p style={{ color: '#444', lineHeight: 1.6, margin: 0 }}>{f.wealth_source}</p>
+          <p className="text-navy-600 leading-relaxed">{f.wealth_source}</p>
         </Section>
       )}
 
-      {/* Application Tips */}
       {f.application_tips && (
         <Section title="Tips for Applicants">
-          <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '16px' }}>
-            <p style={{ color: '#166534', lineHeight: 1.6, margin: 0 }}>{f.application_tips}</p>
+          <div className="bg-money-light border border-emerald-200 rounded-lg p-4">
+            <p className="text-emerald-800 leading-relaxed">{f.application_tips}</p>
           </div>
         </Section>
       )}
 
-      {/* Focus areas */}
       {(f.thematic_focus?.length > 0 || f.geographic_focus?.length > 0 || f.target_recipients?.length > 0) && (
         <Section title="Focus Areas">
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <div className="flex gap-2 flex-wrap">
             {f.thematic_focus?.map(t => (
-              <span key={t} style={{ fontSize: '13px', padding: '4px 12px', background: '#ecfdf5', borderRadius: '16px', color: '#059669' }}>{t}</span>
+              <span key={t} className="text-sm px-3 py-1 bg-money-light text-money rounded-full">{t}</span>
             ))}
             {f.geographic_focus?.map(g => (
-              <span key={g} style={{ fontSize: '13px', padding: '4px 12px', background: '#f0f4ff', borderRadius: '16px', color: '#2563eb' }}>{g}</span>
+              <span key={g} className="text-sm px-3 py-1 bg-link-light text-link rounded-full">{g}</span>
             ))}
             {f.target_recipients?.map(r => (
-              <span key={r} style={{ fontSize: '13px', padding: '4px 12px', background: '#fef3c7', borderRadius: '16px', color: '#d97706' }}>{r}</span>
+              <span key={r} className="text-sm px-3 py-1 bg-warning-light text-warning rounded-full">{r}</span>
             ))}
           </div>
         </Section>
       )}
 
-      {/* Notable Grants */}
       {f.notable_grants && f.notable_grants.length > 0 && (
         <Section title="Notable Grants">
-          <ul style={{ margin: 0, paddingLeft: '20px', color: '#444', lineHeight: 1.8 }}>
+          <ul className="list-disc pl-5 text-navy-600 leading-loose">
             {f.notable_grants.map((g, i) => (
               <li key={i}>{g}</li>
             ))}
@@ -192,84 +198,82 @@ export default async function FoundationDetailPage({ params }: { params: Promise
         </Section>
       )}
 
-      {/* Board Members */}
       {f.board_members && f.board_members.length > 0 && (
         <Section title="Board & Leadership">
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <div className="flex gap-2 flex-wrap">
             {f.board_members.map((m, i) => (
-              <span key={i} style={{ fontSize: '13px', padding: '4px 12px', background: '#f5f5f5', borderRadius: '16px', color: '#555' }}>{m}</span>
+              <span key={i} className="text-sm px-3 py-1 bg-navy-100 text-navy-600 rounded-full">{m}</span>
             ))}
           </div>
         </Section>
       )}
 
-      {/* Giving history */}
       {f.giving_history && f.giving_history.length > 0 && (
         <Section title="Giving History">
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          <div className="flex gap-3 flex-wrap">
             {f.giving_history.map(entry => (
-              <div key={entry.year} style={{ background: '#fff', border: '1px solid #e0e0e0', borderRadius: '6px', padding: '8px 16px', textAlign: 'center' }}>
-                <div style={{ fontSize: '12px', color: '#888' }}>{entry.year}</div>
-                <div style={{ fontSize: '16px', fontWeight: 600 }}>{formatMoney(entry.amount)}</div>
+              <div key={entry.year} className="bg-white border border-navy-200 rounded-lg px-4 py-2 text-center">
+                <div className="text-xs text-navy-400">{entry.year}</div>
+                <div className="text-base font-semibold text-navy-900 tabular-nums">{formatMoney(entry.amount)}</div>
               </div>
             ))}
           </div>
         </Section>
       )}
 
-      {/* Open programs from foundation_programs table */}
       {(programs as ProgramRow[] || []).length > 0 && (
         <Section title="Open Programs">
-          {(programs as ProgramRow[]).map(p => (
-            <div key={p.id} style={{ background: '#fff', border: '1px solid #e0e0e0', borderRadius: '8px', padding: '14px 18px', marginBottom: '8px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <h3 style={{ margin: 0, fontSize: '15px' }}>{p.name}</h3>
-                <span style={{ fontSize: '13px', color: p.status === 'open' ? '#059669' : '#999' }}>{p.status}</span>
+          <div className="space-y-2">
+            {(programs as ProgramRow[]).map(p => (
+              <div key={p.id} className="bg-white border border-navy-200 rounded-lg p-4">
+                <div className="flex justify-between items-start">
+                  <h3 className="font-semibold text-[15px] text-navy-900">{p.name}</h3>
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded ${p.status === 'open' ? 'bg-money-light text-money' : 'bg-navy-100 text-navy-500'}`}>{p.status}</span>
+                </div>
+                {p.description && <p className="text-sm text-navy-500 mt-1">{p.description}</p>}
+                <div className="text-xs text-navy-400 mt-2 flex gap-3 flex-wrap">
+                  {p.amount_max && <span>Up to {formatMoney(p.amount_max)}</span>}
+                  {p.deadline && <span>Closes {new Date(p.deadline).toLocaleDateString('en-AU')}</span>}
+                  {p.url && <a href={p.url} target="_blank" rel="noopener noreferrer" className="text-link hover:underline">Apply</a>}
+                </div>
               </div>
-              {p.description && <p style={{ fontSize: '13px', color: '#555', margin: '4px 0' }}>{p.description}</p>}
-              <div style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>
-                {p.amount_max && <span>Up to {formatMoney(p.amount_max)}</span>}
-                {p.deadline && <span> | Closes {new Date(p.deadline).toLocaleDateString('en-AU')}</span>}
-                {p.url && <> | <a href={p.url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb' }}>Apply</a></>}
-              </div>
-            </div>
-          ))}
-        </Section>
-      )}
-
-      {/* Open programs from JSON (scraped, not yet in separate table) */}
-      {f.open_programs && f.open_programs.length > 0 && !(programs as ProgramRow[] || []).length && (
-        <Section title="Programs (from website)">
-          {f.open_programs.map((p, i) => (
-            <div key={i} style={{ background: '#fff', border: '1px solid #e0e0e0', borderRadius: '8px', padding: '14px 18px', marginBottom: '8px' }}>
-              <h3 style={{ margin: 0, fontSize: '15px' }}>{p.name}</h3>
-              {p.description && <p style={{ fontSize: '13px', color: '#555', margin: '4px 0' }}>{p.description}</p>}
-              <div style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>
-                {p.amount && <span>Up to {formatMoney(p.amount)}</span>}
-                {p.deadline && <span> | Deadline: {p.deadline}</span>}
-                {p.url && <> | <a href={p.url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb' }}>More info</a></>}
-              </div>
-            </div>
-          ))}
-        </Section>
-      )}
-
-      {/* Transparency */}
-      {(f.parent_company || f.asx_code || f.endowment_size || f.revenue_sources?.length > 0) && (
-        <Section title="Financial Transparency">
-          <div style={{ background: '#fff', border: '1px solid #e0e0e0', borderRadius: '8px', padding: '16px', display: 'grid', gap: '8px' }}>
-            {f.parent_company && <div><span style={{ color: '#888', fontSize: '13px' }}>Parent company:</span> <strong>{f.parent_company}</strong></div>}
-            {f.asx_code && <div><span style={{ color: '#888', fontSize: '13px' }}>ASX code:</span> <strong>{f.asx_code}</strong></div>}
-            {f.endowment_size && <div><span style={{ color: '#888', fontSize: '13px' }}>Endowment:</span> <strong>{formatMoney(f.endowment_size)}</strong></div>}
-            {f.investment_returns && <div><span style={{ color: '#888', fontSize: '13px' }}>Investment returns:</span> <strong>{formatMoney(f.investment_returns)}</strong></div>}
-            {f.revenue_sources?.length > 0 && <div><span style={{ color: '#888', fontSize: '13px' }}>Revenue sources:</span> {f.revenue_sources.join(', ')}</div>}
+            ))}
           </div>
         </Section>
       )}
 
-      {/* Metadata footer */}
-      <div style={{ marginTop: '40px', padding: '16px', background: '#f5f5f5', borderRadius: '8px', fontSize: '12px', color: '#888' }}>
-        <div>Profile confidence: <span style={{ color: confidenceColor(f.profile_confidence), fontWeight: 600 }}>{f.profile_confidence}</span></div>
+      {f.open_programs && f.open_programs.length > 0 && !(programs as ProgramRow[] || []).length && (
+        <Section title="Programs (from website)">
+          <div className="space-y-2">
+            {f.open_programs.map((p, i) => (
+              <div key={i} className="bg-white border border-navy-200 rounded-lg p-4">
+                <h3 className="font-semibold text-[15px] text-navy-900">{p.name}</h3>
+                {p.description && <p className="text-sm text-navy-500 mt-1">{p.description}</p>}
+                <div className="text-xs text-navy-400 mt-2 flex gap-3 flex-wrap">
+                  {p.amount && <span>Up to {formatMoney(p.amount)}</span>}
+                  {p.deadline && <span>Deadline: {p.deadline}</span>}
+                  {p.url && <a href={p.url} target="_blank" rel="noopener noreferrer" className="text-link hover:underline">More info</a>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {(f.parent_company || f.asx_code || f.endowment_size || f.revenue_sources?.length > 0) && (
+        <Section title="Financial Transparency">
+          <div className="bg-white border border-navy-200 rounded-lg p-4 space-y-2 text-sm">
+            {f.parent_company && <div><span className="text-navy-400">Parent company:</span> <strong className="text-navy-900">{f.parent_company}</strong></div>}
+            {f.asx_code && <div><span className="text-navy-400">ASX code:</span> <strong className="text-navy-900 font-mono">{f.asx_code}</strong></div>}
+            {f.endowment_size && <div><span className="text-navy-400">Endowment:</span> <strong className="text-navy-900 tabular-nums">{formatMoney(f.endowment_size)}</strong></div>}
+            {f.investment_returns && <div><span className="text-navy-400">Investment returns:</span> <strong className="text-navy-900 tabular-nums">{formatMoney(f.investment_returns)}</strong></div>}
+            {f.revenue_sources?.length > 0 && <div><span className="text-navy-400">Revenue sources:</span> {f.revenue_sources.join(', ')}</div>}
+          </div>
+        </Section>
+      )}
+
+      <div className="mt-10 p-4 bg-navy-100 rounded-lg text-xs text-navy-500 space-y-1">
+        <div>Profile confidence: <span className={`font-semibold ${f.profile_confidence === 'high' ? 'text-money' : f.profile_confidence === 'medium' ? 'text-warning' : 'text-navy-500'}`}>{f.profile_confidence}</span></div>
         {f.enriched_at && <div>Last profiled: {new Date(f.enriched_at).toLocaleDateString('en-AU')}</div>}
         {f.scraped_urls && f.scraped_urls.length > 0 && <div>Sources scraped: {f.scraped_urls.length} pages</div>}
         <div>Added to GrantScope: {new Date(f.created_at).toLocaleDateString('en-AU')}</div>

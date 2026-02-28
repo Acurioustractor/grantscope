@@ -63,14 +63,13 @@ export default async function YouthJusticePage() {
 
   return (
     <div>
-      <div style={{ marginBottom: '32px' }}>
-        <div style={{ fontSize: '14px', fontWeight: 600, color: '#dc2626', marginBottom: '4px' }}>
-          LIVING REPORT
-        </div>
-        <h1 style={{ fontSize: '36px', fontWeight: 800, margin: '0 0 8px' }}>
+      <div className="mb-8">
+        <a href="/reports" className="text-sm text-navy-500 hover:text-navy-900 transition-colors">&larr; All reports</a>
+        <div className="text-xs font-bold text-danger mt-4 mb-1 uppercase tracking-wider">Living Report</div>
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-navy-900 mb-3">
           QLD Youth Justice: Follow the Money
         </h1>
-        <p style={{ color: '#666', fontSize: '16px', margin: 0, maxWidth: '700px' }}>
+        <p className="text-navy-500 text-base sm:text-lg max-w-2xl leading-relaxed">
           Queensland spends ${(report.totalBudget / 1_000_000).toFixed(0)}M per year on youth justice.
           {' '}${(report.detentionCostPerChild / 1_000_000).toFixed(1)}M per child in detention,
           with a {Math.round(report.detentionRecidivism * 100)}% reoffending rate.

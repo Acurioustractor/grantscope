@@ -42,14 +42,13 @@ export default async function PowerDynamicsPage() {
 
   return (
     <div>
-      <div style={{ marginBottom: '32px' }}>
-        <div style={{ fontSize: '14px', fontWeight: 600, color: '#7c3aed', marginBottom: '4px' }}>
-          LIVING REPORT
-        </div>
-        <h1 style={{ fontSize: '36px', fontWeight: 800, margin: '0 0 8px' }}>
+      <div className="mb-8">
+        <a href="/reports" className="text-sm text-navy-500 hover:text-navy-900 transition-colors">&larr; All reports</a>
+        <div className="text-xs font-bold text-purple mt-4 mb-1 uppercase tracking-wider">Living Report</div>
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-navy-900 mb-3">
           Power Dynamics in Australian Philanthropy
         </h1>
-        <p style={{ color: '#666', fontSize: '16px', margin: 0, maxWidth: '700px' }}>
+        <p className="text-navy-500 text-base sm:text-lg max-w-2xl leading-relaxed">
           {report.metrics.givingFoundationCount > 0
             ? `Analyzing ${report.metrics.givingFoundationCount.toLocaleString()} foundations with giving data. The top 10 control ${report.metrics.top10Share}% of all tracked philanthropic giving.`
             : 'Foundation data loading. Run profiling scripts to populate giving data.'}

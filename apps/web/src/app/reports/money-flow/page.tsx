@@ -65,14 +65,13 @@ export default async function MoneyFlowPage() {
 
   return (
     <div>
-      <div style={{ marginBottom: '32px' }}>
-        <div style={{ fontSize: '14px', fontWeight: 600, color: '#2563eb', marginBottom: '4px' }}>
-          LIVING REPORT
-        </div>
-        <h1 style={{ fontSize: '36px', fontWeight: 800, margin: '0 0 8px' }}>
+      <div className="mb-8">
+        <a href="/reports" className="text-sm text-navy-500 hover:text-navy-900 transition-colors">&larr; All reports</a>
+        <div className="text-xs font-bold text-link mt-4 mb-1 uppercase tracking-wider">Living Report</div>
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-navy-900 mb-3">
           Follow the Dollar
         </h1>
-        <p style={{ color: '#666', fontSize: '16px', margin: 0, maxWidth: '700px' }}>
+        <p className="text-navy-500 text-base sm:text-lg max-w-2xl leading-relaxed">
           Trace funding flows from source to outcome. See where public money goes,
           which foundations give to whom, and what results.
         </p>
