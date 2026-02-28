@@ -1,5 +1,7 @@
 import { getServiceSupabase } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 interface CommunityOrg {
   id: string;
   name: string;

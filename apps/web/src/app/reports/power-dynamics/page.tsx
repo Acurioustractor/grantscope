@@ -2,6 +2,8 @@ import { getServiceSupabase } from '@/lib/supabase';
 import { buildPowerReport } from '@grantscope/engine/src/reports/power-analysis';
 import { PowerDynamicsCharts } from './charts';
 
+export const dynamic = 'force-dynamic';
+
 async function getReport() {
   try {
     const supabase = getServiceSupabase();

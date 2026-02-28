@@ -1,5 +1,7 @@
 import { getServiceSupabase } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 interface Grant {
   id: string;
   name: string;

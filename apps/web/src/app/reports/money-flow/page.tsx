@@ -2,6 +2,8 @@ import { getServiceSupabase } from '@/lib/supabase';
 import { buildSankeyData } from '@grantscope/engine';
 import { MoneyFlowCharts } from './charts';
 
+export const dynamic = 'force-dynamic';
+
 async function getReport() {
   try {
     const supabase = getServiceSupabase();

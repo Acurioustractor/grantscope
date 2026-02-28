@@ -1,5 +1,7 @@
 import { getServiceSupabase } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 async function getStats() {
   const supabase = getServiceSupabase();
 

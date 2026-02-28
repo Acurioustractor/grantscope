@@ -1,6 +1,8 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import { notFound } from 'next/navigation';
 
+export const dynamic = 'force-dynamic';
+
 interface FoundationDetail {
   id: string;
   name: string;

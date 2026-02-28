@@ -2,6 +2,8 @@ import { getServiceSupabase } from '@/lib/supabase';
 import { buildYouthJusticeReport } from '@grantscope/engine';
 import { YouthJusticeCharts } from './charts';
 
+export const dynamic = 'force-dynamic';
+
 // Fallback data when DB tables don't exist yet
 import { QLD_YOUTH_JUSTICE_PROGRAMS, QLD_YOUTH_JUSTICE_FLOWS } from '@grantscope/engine';
 
