@@ -58,8 +58,8 @@ const STEPS = [
   {
     id: 'profile',
     name: 'Foundation Profiling',
-    cmd: ['npx', 'tsx', 'scripts/build-foundation-profiles.mjs', '--limit=10'],
-    timeout: 600_000,
+    cmd: ['npx', 'tsx', 'scripts/build-foundation-profiles.mjs', '--limit=5'],
+    timeout: 1_200_000, // 20 min
   },
   {
     id: 'sync',

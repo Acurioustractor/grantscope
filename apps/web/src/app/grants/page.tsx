@@ -53,6 +53,8 @@ interface SearchParams {
   amount_max?: string;
   geo?: string;
   closing?: string;
+  sort?: string;
+  hide_ongoing?: string;
 }
 
 export default async function GrantsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
@@ -65,6 +67,8 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
   const amountMax = params.amount_max ? parseInt(params.amount_max, 10) : null;
   const geoFilter = params.geo || '';
   const closingFilter = params.closing || '';
+  const sortOrder = params.sort || 'newest';
+  const hideOngoing = params.hide_ongoing === '1';
   const page = parseInt(params.page || '1', 10);
   const pageSize = 25;
   const offset = (page - 1) * pageSize;
@@ -164,9 +168,20 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
       dbQuery = dbQuery.or(`closes_at.gt.${new Date().toISOString()},closes_at.is.null`);
     }
 
-    dbQuery = dbQuery
-      .order('created_at', { ascending: false })
-      .range(offset, offset + pageSize - 1);
+    if (hideOngoing) {
+      dbQuery = dbQuery.not('closes_at', 'is', null);
+    }
+
+    if (sortOrder === 'closing_asc') {
+      dbQuery = dbQuery.order('closes_at', { ascending: true, nullsFirst: false });
+    } else if (sortOrder === 'closing_desc') {
+      dbQuery = dbQuery.order('closes_at', { ascending: false, nullsFirst: false });
+    } else {
+      // Default: newest first
+      dbQuery = dbQuery.order('created_at', { ascending: false });
+    }
+
+    dbQuery = dbQuery.range(offset, offset + pageSize - 1);
 
     const result = await dbQuery;
     grants = (result.data || []) as Grant[];
@@ -192,6 +207,8 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
   if (amountMax) filterParams.set('amount_max', String(amountMax));
   if (geoFilter) filterParams.set('geo', geoFilter);
   if (closingFilter) filterParams.set('closing', closingFilter);
+  if (sortOrder !== 'newest') filterParams.set('sort', sortOrder);
+  if (hideOngoing) filterParams.set('hide_ongoing', '1');
   const filterQS = filterParams.toString();
 
   return (
@@ -308,6 +325,32 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
           </button>
         </form>
       </FilterBar>
+
+      {/* Sort & filter controls */}
+      <div className="flex items-center gap-3 mb-4 flex-wrap">
+        <div className="flex items-center gap-1">
+          <span className="text-[11px] font-black text-bauhaus-muted uppercase tracking-wider mr-1">Sort</span>
+          {[
+            { v: 'newest', label: 'Newest' },
+            { v: 'closing_asc', label: 'Closing Soon' },
+            { v: 'closing_desc', label: 'Closing Last' },
+          ].map(({ v, label }) => (
+            <a
+              key={v}
+              href={`/grants?${new URLSearchParams({ type: grantType, mode: searchMode, ...(query ? { q: query } : {}), ...(category ? { category } : {}), ...(closingFilter ? { closing: closingFilter } : {}), ...(geoFilter ? { geo: geoFilter } : {}), ...(amountMin ? { amount_min: String(amountMin) } : {}), ...(amountMax ? { amount_max: String(amountMax) } : {}), ...(hideOngoing ? { hide_ongoing: '1' } : {}), sort: v }).toString()}`}
+              className={`px-2 py-0.5 text-[11px] font-black uppercase tracking-wider border-2 border-bauhaus-black/20 ${sortOrder === v ? 'bg-bauhaus-black text-white border-bauhaus-black' : 'bg-bauhaus-canvas text-bauhaus-black hover:bg-bauhaus-black/10'}`}
+            >
+              {label}
+            </a>
+          ))}
+        </div>
+        <a
+          href={`/grants?${new URLSearchParams({ type: grantType, mode: searchMode, ...(query ? { q: query } : {}), ...(category ? { category } : {}), ...(closingFilter ? { closing: closingFilter } : {}), ...(geoFilter ? { geo: geoFilter } : {}), ...(amountMin ? { amount_min: String(amountMin) } : {}), ...(amountMax ? { amount_max: String(amountMax) } : {}), ...(sortOrder !== 'newest' ? { sort: sortOrder } : {}), ...(!hideOngoing ? { hide_ongoing: '1' } : {}) }).toString()}`}
+          className={`px-2 py-0.5 text-[11px] font-black uppercase tracking-wider border-2 ${hideOngoing ? 'bg-bauhaus-black text-white border-bauhaus-black' : 'border-bauhaus-black/20 bg-bauhaus-canvas text-bauhaus-black hover:bg-bauhaus-black/10'}`}
+        >
+          {hideOngoing ? 'Show Ongoing' : 'Hide Ongoing'}
+        </a>
+      </div>
 
       {/* Semantic search banner */}
       {usedSemantic && (
