@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>About — Australian Grant Flow Simulator</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #faf9f7;
+    --surface: #ffffff;
+    --border: #e8e6e1;
+    --text: #1a1a1a;
+    --muted: #6b6b6b;
+    --accent: #1a6b5a;
+    --accent-light: #e8f5f0;
+    --warm: #f5f0eb;
+    --highlight: #d4a843;
+  }
+
+  body {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ─── Header ─── */
+  .hero {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 80px 24px 48px;
+  }
+  .hero .label {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 16px;
+  }
+  .hero h1 {
+    font-size: 42px;
+    font-weight: 400;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    margin-bottom: 24px;
+  }
+  .hero h1 em {
+    font-style: italic;
+    color: var(--accent);
+  }
+  .hero .intro {
+    font-size: 20px;
+    color: var(--muted);
+    line-height: 1.6;
+    max-width: 600px;
+  }
+
+  /* ─── Content ─── */
+  .content {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+  }
+
+  .section {
+    margin-bottom: 56px;
+  }
+  .section h2 {
+    font-size: 13px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section p {
+    font-size: 17px;
+    margin-bottom: 16px;
+    color: var(--text);
+  }
+  .section p.muted {
+    color: var(--muted);
+    font-size: 16px;
+  }
+
+  /* ─── Stats strip ─── */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin: 40px 0;
+  }
+  .stat {
+    background: var(--surface);
+    padding: 24px 16px;
+    text-align: center;
+  }
+  .stat .number {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--accent);
+  }
+  .stat .desc {
+    font-size: 12px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  /* ─── How it works steps ─── */
+  .steps {
+    counter-reset: step;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    margin: 24px 0;
+  }
+  .step {
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    gap: 16px;
+    align-items: start;
+  }
+  .step-num {
+    counter-increment: step;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .step h3 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  .step p {
+    font-size: 15px;
+    color: var(--muted);
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  /* ─── Data source cards ─── */
+  .source-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 24px 0;
+  }
+  .source-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+  .source-card h4 {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .source-card .meta {
+    font-size: 13px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .source-card p {
+    font-size: 13px;
+    color: var(--muted);
+    margin: 6px 0 0;
+    line-height: 1.5;
+  }
+
+  /* ─── Why it matters callout ─── */
+  .callout {
+    background: var(--accent-light);
+    border-left: 4px solid var(--accent);
+    border-radius: 0 10px 10px 0;
+    padding: 24px 28px;
+    margin: 32px 0;
+  }
+  .callout p {
+    font-size: 17px;
+    color: var(--accent);
+    margin: 0;
+    line-height: 1.6;
+  }
+  .callout p + p {
+    margin-top: 12px;
+  }
+
+  /* ─── Feature tabs ─── */
+  .features {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    margin: 24px 0;
+  }
+  .feature {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: 16px;
+    align-items: start;
+    padding: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .feature-icon {
+    width: 80px;
+    height: 64px;
+    border-radius: 8px;
+    background: var(--warm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+  }
+  .feature h3 {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .feature p {
+    font-size: 14px;
+    color: var(--muted);
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  /* ─── Simple diagram ─── */
+  .diagram {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    margin: 32px 0;
+    text-align: center;
+  }
+  .diagram-flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .diagram-node {
+    background: var(--accent-light);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+  }
+  .diagram-arrow {
+    color: var(--muted);
+    font-size: 18px;
+  }
+  .diagram-caption {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 16px;
+  }
+
+  /* ─── Footer ─── */
+  .footer {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 32px 24px 64px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .footer-left {
+    font-size: 13px;
+    color: var(--muted);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  .footer-link {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    text-decoration: none;
+    padding: 8px 20px;
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    transition: all 0.15s;
+  }
+  .footer-link:hover {
+    background: var(--accent);
+    color: white;
+  }
+
+  @media (max-width: 640px) {
+    .hero h1 { font-size: 30px; }
+    .stats { grid-template-columns: 1fr 1fr; }
+    .source-grid { grid-template-columns: 1fr; }
+    .feature { grid-template-columns: 1fr; }
+    .feature-icon { width: 48px; height: 48px; font-size: 22px; }
+    .diagram-flow { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="label">GrantScope</div>
+  <h1>See where <em>every dollar</em> goes in Australian philanthropy</h1>
+  <p class="intro">The Grant Flow Simulator maps the full journey of funding — from government and foundations to the communities that need it — using real, open data. It shows where money is flowing, where it isn't, and what that means for your organisation.</p>
+</div>
+
+<div class="content">
+
+  <!-- ─── The numbers ─── -->
+  <div class="stats">
+    <div class="stat">
+      <div class="number">14,841</div>
+      <div class="desc">Grants tracked</div>
+    </div>
+    <div class="stat">
+      <div class="number">9,120</div>
+      <div class="desc">Foundations profiled</div>
+    </div>
+    <div class="stat">
+      <div class="number">$5.8B</div>
+      <div class="desc">Total funding mapped</div>
+    </div>
+    <div class="stat">
+      <div class="number">12</div>
+      <div class="desc">Sectors covered</div>
+    </div>
+  </div>
+
+  <!-- ─── The Problem ─── -->
+  <div class="section">
+    <h2>The Problem</h2>
+    <p>Australia has no central register of where philanthropic money goes. Grants data is scattered across hundreds of government portals, foundation websites, and annual reports. Small organisations — especially those working with First Nations communities — spend weeks searching for the right grants, often competing for the same oversubscribed pools while other funding sits underused.</p>
+    <p class="muted">The information asymmetry is stark: 24 major foundations control 62% of all tracked philanthropy ($1.3B). Most community organisations don't know this, and can't see the full picture of what's available.</p>
+  </div>
+
+  <!-- ─── What It Does ─── -->
+  <div class="section">
+    <h2>What the Simulator Shows</h2>
+
+    <div class="features">
+      <div class="feature">
+        <div class="feature-icon">$</div>
+        <div>
+          <h3>Money Flow</h3>
+          <p>Where philanthropy actually goes. See total giving broken down by sector (health, community, environment, arts) and by state/territory. Spot the power law: a handful of mega-foundations dominate, while thousands of smaller ones give modestly.</p>
+        </div>
+      </div>
+
+      <div class="feature">
+        <div class="feature-icon">&#9635;</div>
+        <div>
+          <h3>Funding Landscape</h3>
+          <p>Government versus foundation funding, side by side. A sector-by-region heatmap reveals where money clusters (national programs, WA mining wealth) and where it thins out (NT, Tasmania, regional communities).</p>
+        </div>
+      </div>
+
+      <div class="feature">
+        <div class="feature-icon">&#8644;</div>
+        <div>
+          <h3>Grant Simulator</h3>
+          <p>A Monte Carlo engine that runs 10,000 simulated years of grant applications for your organisation. Set your application volume, target grant size, alignment score, and source diversity — see your expected revenue, win rate, and confidence intervals.</p>
+        </div>
+      </div>
+
+      <div class="feature">
+        <div class="feature-icon">&#9678;</div>
+        <div>
+          <h3>Gap Analysis</h3>
+          <p>Where money <em>isn't</em> going. Highlights sectors with many foundations but little total giving, underserved regions, and low-competition areas — revealing the best opportunities for organisations willing to look beyond the obvious.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── How It Works ─── -->
+  <div class="section">
+    <h2>How It Works</h2>
+
+    <div class="diagram">
+      <div class="diagram-flow">
+        <div class="diagram-node">Public Data Sources</div>
+        <div class="diagram-arrow">&rarr;</div>
+        <div class="diagram-node">GrantScope Engine</div>
+        <div class="diagram-arrow">&rarr;</div>
+        <div class="diagram-node">AI Enrichment</div>
+        <div class="diagram-arrow">&rarr;</div>
+        <div class="diagram-node">Simulator</div>
+      </div>
+      <div class="diagram-caption">All data is from public, open sources. No private or paywalled information.</div>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div>
+          <h3>Collect from public sources</h3>
+          <p>We pull grants data from government portals (GrantConnect, ARC, state programs) and foundation annual reports (via ACNC). Every source is open and free.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div>
+          <h3>Enrich with AI</h3>
+          <p>Raw data often has just a name and a dollar figure. We use AI to scrape programme websites, extract descriptions, categorise by sector, and identify eligibility criteria — turning sparse records into something you can actually search.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div>
+          <h3>Build semantic embeddings</h3>
+          <p>Every grant and foundation programme gets a mathematical fingerprint (an "embedding") that captures <em>what it's about</em>, not just the keywords. This lets you search by describing your needs in plain language, not by guessing the right search term.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div>
+          <h3>Simulate and analyse</h3>
+          <p>The Monte Carlo engine uses real win-rate data by source type, log-normal grant size distributions, and your organisation's parameters to simulate thousands of possible years — giving you a realistic picture of grant revenue potential, not just a best-case fantasy.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Data Sources ─── -->
+  <div class="section">
+    <h2>Where the Data Comes From</h2>
+    <p class="muted">Every data source is publicly available. We aggregate and enrich — we don't gatekeep.</p>
+
+    <div class="source-grid">
+      <div class="source-card">
+        <h4>ACNC Register</h4>
+        <div class="meta">359,678 charities</div>
+        <p>Australian Charities and Not-for-profits Commission — complete register of all registered charities including annual financial statements.</p>
+      </div>
+      <div class="source-card">
+        <h4>ARC Data Portal</h4>
+        <div class="meta">5,598 research grants</div>
+        <p>Australian Research Council grants — full history of nationally competitive research funding with amounts, FOR codes, and researchers.</p>
+      </div>
+      <div class="source-card">
+        <h4>State Portals</h4>
+        <div class="meta">7,800+ grants</div>
+        <p>QLD, NSW, VIC, TAS, ACT, and NT government grant programmes — from arts funding to community development.</p>
+      </div>
+      <div class="source-card">
+        <h4>Foundation Programs</h4>
+        <div class="meta">722 programmes</div>
+        <p>Scraped and enriched foundation giving programmes linked to 9,120 profiled foundations, with sector tags and geographic focus.</p>
+      </div>
+      <div class="source-card">
+        <h4>GrantConnect</h4>
+        <div class="meta">Federal grants</div>
+        <p>Department of Finance — the official listing of Australian Government grant opportunities and awarded contracts.</p>
+      </div>
+      <div class="source-card">
+        <h4>Brisbane Open Data</h4>
+        <div class="meta">5,500+ records</div>
+        <p>Brisbane City Council community grant awards — one of the best structured local government datasets in Australia.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Why It Matters ─── -->
+  <div class="section">
+    <h2>Why This Matters</h2>
+
+    <div class="callout">
+      <p>Australia gives $13 billion a year to charity. But the organisations closest to communities — the small ones, the regional ones, the culturally led ones — often can't find the funding that's meant for them.</p>
+      <p>This tool makes the invisible visible. When you can see the full map of where money flows, you can plan a smarter path to sustainability — not just chase the same grants as everyone else.</p>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num" style="background:var(--highlight);font-size:14px;">&#8599;</div>
+        <div>
+          <h3>Find what others miss</h3>
+          <p>The gap analysis reveals sectors and regions where many foundations operate but total giving is low — meaning less competition for available funds. Disability, aged care, and rural/remote consistently show up as underserved.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:var(--highlight);font-size:14px;">&#9881;</div>
+        <div>
+          <h3>Plan with real numbers</h3>
+          <p>Instead of guessing, simulate your year. The Monte Carlo engine shows your expected revenue, worst case, and best case — so you can set realistic budgets and diversify your funding mix before you start writing applications.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:var(--highlight);font-size:14px;">&#9878;</div>
+        <div>
+          <h3>Level the playing field</h3>
+          <p>Large organisations have grant researchers and consultants. Community-based groups have passion and local knowledge. This tool gives both the same view of the funding landscape — freely and openly.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Technical note ─── -->
+  <div class="section">
+    <h2>A Note on the Simulation</h2>
+    <p>The Monte Carlo simulator is a planning tool, not a prediction. It uses historical win rates by funding source type (local government: ~35%, small foundations: ~25%, federal programs: ~8%), applies your alignment score as a modifier, and samples grant sizes from a log-normal distribution calibrated to real averages.</p>
+    <p class="muted">Running 10,000 simulations gives you a distribution of outcomes — from the bottom 10% (tough year) to the top 10% (great year). The median is your most realistic planning number. The spread tells you how much uncertainty your current mix carries.</p>
+    <p class="muted">More diverse funding sources = narrower spread = more predictable revenue. That's the single most useful insight the simulator reveals.</p>
+  </div>
+
+</div>
+
+<div class="footer">
+  <div class="footer-left">GrantScope &middot; Open data for Australian philanthropy &middot; March 2026</div>
+  <a href="grant-flow-simulator.html" class="footer-link">Open the Simulator &rarr;</a>
+</div>
+
+</body>
+</html>

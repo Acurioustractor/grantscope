@@ -4,7 +4,6 @@ import { YouthJusticeCharts } from './charts';
 
 export const dynamic = 'force-dynamic';
 
-// Fallback data when DB tables don't exist yet
 import { QLD_YOUTH_JUSTICE_PROGRAMS, QLD_YOUTH_JUSTICE_FLOWS } from '@grantscope/engine';
 
 async function getReport() {
@@ -12,7 +11,6 @@ async function getReport() {
     const supabase = getServiceSupabase();
     return await buildYouthJusticeReport(supabase);
   } catch {
-    // Tables may not exist yet — build from static data
     return buildFallbackReport();
   }
 }
@@ -27,7 +25,6 @@ function buildFallbackReport() {
     budgetHistory: p.budget_history,
   }));
 
-  // Build sankey from static flows
   const nodeMap = new Map<string, { id: string; label: string; type: string }>();
   const links = QLD_YOUTH_JUSTICE_FLOWS.map(f => {
     const sourceId = `${f.source_type}:${f.source_name}`;
@@ -64,12 +61,12 @@ export default async function YouthJusticePage() {
   return (
     <div>
       <div className="mb-8">
-        <a href="/reports" className="text-sm text-navy-500 hover:text-navy-900 transition-colors">&larr; All reports</a>
-        <div className="text-xs font-bold text-danger mt-4 mb-1 uppercase tracking-wider">Living Report</div>
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-navy-900 mb-3">
+        <a href="/reports" className="text-xs font-black text-bauhaus-muted uppercase tracking-widest hover:text-bauhaus-black">&larr; All Reports</a>
+        <div className="text-xs font-black text-bauhaus-red mt-4 mb-1 uppercase tracking-widest">Living Report</div>
+        <h1 className="text-3xl sm:text-4xl font-black text-bauhaus-black mb-3">
           QLD Youth Justice: Follow the Money
         </h1>
-        <p className="text-navy-500 text-base sm:text-lg max-w-2xl leading-relaxed">
+        <p className="text-bauhaus-muted text-base sm:text-lg max-w-2xl leading-relaxed font-medium">
           Queensland spends ${(report.totalBudget / 1_000_000).toFixed(0)}M per year on youth justice.
           {' '}${(report.detentionCostPerChild / 1_000_000).toFixed(1)}M per child in detention,
           with a {Math.round(report.detentionRecidivism * 100)}% reoffending rate.

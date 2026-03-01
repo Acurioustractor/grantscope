@@ -39,6 +39,13 @@ export { createGrantConnectPlugin } from './sources/grantconnect.js';
 export { createDataGovAuPlugin } from './sources/data-gov-au.js';
 export { createQLDGrantsPlugin } from './sources/qld-grants.js';
 export { createBusinessGovAuPlugin } from './sources/business-gov-au.js';
+export { createNSWGrantsPlugin } from './sources/nsw-grants.js';
+export { createVICGrantsPlugin } from './sources/vic-grants.js';
+export { createARCGrantsPlugin } from './sources/arc-grants.js';
+export { createNHMRCGrantsPlugin } from './sources/nhmrc-grants.js';
+export { createTASGrantsPlugin } from './sources/tas-grants.js';
+export { createACTGrantsPlugin } from './sources/act-grants.js';
+export { createNTGrantsPlugin } from './sources/nt-grants.js';
 export { SourceRegistry } from './sources/registry.js';
 
 // Foundations
@@ -68,6 +75,11 @@ export type { AgentConfig, AgentRunResult, AgentRunLog } from './agents/agent-ru
 export { createGrantMonitor } from './agents/grant-monitor.js';
 export { createFoundationWatcher } from './agents/foundation-watcher.js';
 export { createGovernmentSpendWatcher } from './agents/government-spend.js';
+
+// Embeddings & Enrichment
+export { buildEmbeddingText, generateEmbeddings, embedQuery, backfillEmbeddings, searchGrantsSemantic } from './embeddings.js';
+export { enrichGrant, batchEnrich } from './enrichment.js';
+export { enrichGrantFree, batchEnrichFree } from './enrichment-free.js';
 
 // Utilities
 export { normalize, normalizeDate, normalizeAmount, normalizeCategories, generateDedupKey } from './normalizer.js';

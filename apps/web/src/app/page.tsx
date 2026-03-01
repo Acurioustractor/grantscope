@@ -29,95 +29,119 @@ export default async function HomePage() {
   return (
     <div>
       {/* Hero */}
-      <section className="text-center py-16 sm:py-24">
-        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-navy-900 mb-4 tracking-tight">
-          Where does Australia&apos;s<br className="hidden sm:block" /> funding go?
+      <section className="py-16 sm:py-24">
+        <p className="text-xs font-black text-bauhaus-red uppercase tracking-[0.3em] mb-4">
+          Funding Transparency Platform
+        </p>
+        <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-bauhaus-black mb-6 tracking-tight leading-[0.9]">
+          Where Does<br />Australia&apos;s<br /><span className="text-bauhaus-blue">Funding Go?</span>
         </h1>
-        <p className="text-lg sm:text-xl text-navy-500 max-w-2xl mx-auto mb-10 leading-relaxed">
+        <p className="text-lg text-bauhaus-muted max-w-xl mb-10 leading-relaxed font-medium">
           Every government grant, every foundation, every corporate giving program
           — searchable, current, and free. Open-source funding transparency.
         </p>
 
-        <form action="/grants" method="get" className="max-w-xl mx-auto flex gap-2 mb-6">
+        <form action="/grants" method="get" className="max-w-xl flex gap-0 mb-6">
           <input
             type="text"
             name="q"
             placeholder="Search grants, foundations, programs..."
-            className="flex-1 px-5 py-3.5 text-base border-2 border-navy-200 rounded-lg focus:border-link focus:outline-none transition-colors bg-white"
+            className="flex-1 px-5 py-3.5 text-sm font-bold border-4 border-bauhaus-black bg-white focus:bg-bauhaus-yellow focus:outline-none uppercase tracking-wider placeholder:text-bauhaus-muted placeholder:normal-case placeholder:tracking-normal"
           />
           <button
             type="submit"
-            className="px-7 py-3.5 text-base font-semibold bg-navy-900 text-white rounded-lg hover:bg-navy-800 transition-colors cursor-pointer"
+            className="px-7 py-3.5 text-sm font-black bg-bauhaus-black text-white uppercase tracking-widest hover:bg-bauhaus-red cursor-pointer border-4 border-bauhaus-black"
           >
             Search
           </button>
         </form>
-        <p className="text-xs text-navy-400">
+        <div className="flex gap-0 mb-6">
+          <a href="/dashboard" className="px-6 py-3 bg-bauhaus-blue text-white font-black text-xs uppercase tracking-widest border-4 border-bauhaus-black hover:bg-bauhaus-black bauhaus-shadow-sm">
+            Explore the Data
+          </a>
+        </div>
+        <div className="flex gap-2 flex-wrap mb-6 max-w-xl">
+          <span className="text-xs font-black text-bauhaus-muted uppercase tracking-widest self-center mr-1">Try AI:</span>
+          {[
+            'Find grants for First Nations arts in QLD',
+            'What foundations fund environmental regeneration?',
+            'Grants for youth mental health programs',
+          ].map(q => (
+            <a
+              key={q}
+              href={`/grants?mode=semantic&q=${encodeURIComponent(q)}`}
+              className="text-xs px-3 py-1.5 bg-link-light text-bauhaus-blue font-bold border-2 border-bauhaus-blue/20 hover:border-bauhaus-blue transition-colors"
+            >
+              &ldquo;{q}&rdquo;
+            </a>
+          ))}
+        </div>
+        <p className="text-xs text-bauhaus-muted uppercase tracking-widest font-bold">
           Data from ACNC, GrantConnect, data.gov.au, QLD Grants Finder
         </p>
       </section>
 
       {/* Stats */}
-      <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 max-w-3xl mx-auto mb-20">
-        <a href="/grants" className="group block">
-          <div className="bg-white border border-navy-200 rounded-xl p-6 text-center transition-all group-hover:border-link group-hover:shadow-md">
-            <div className="text-3xl sm:text-4xl font-extrabold text-link tabular-nums">{stats.totalGrants.toLocaleString()}</div>
-            <div className="text-sm text-navy-500 mt-1">Government Grants</div>
+      <section className="grid grid-cols-1 sm:grid-cols-3 gap-0 max-w-3xl mb-20 border-4 border-bauhaus-black">
+        <a href="/grants" className="group block border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black">
+          <div className="bg-white p-6 text-center transition-all group-hover:bg-bauhaus-blue group-hover:text-white">
+            <div className="text-3xl sm:text-4xl font-black tabular-nums group-hover:text-white">{stats.totalGrants.toLocaleString()}</div>
+            <div className="text-xs font-black uppercase tracking-widest mt-1 text-bauhaus-muted group-hover:text-white/70">Government Grants</div>
           </div>
         </a>
-        <a href="/foundations" className="group block">
-          <div className="bg-white border border-navy-200 rounded-xl p-6 text-center transition-all group-hover:border-money group-hover:shadow-md">
-            <div className="text-3xl sm:text-4xl font-extrabold text-money tabular-nums">{stats.totalFoundations.toLocaleString()}</div>
-            <div className="text-sm text-navy-500 mt-1">Foundations &amp; Trusts</div>
+        <a href="/foundations" className="group block border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black">
+          <div className="bg-white p-6 text-center transition-all group-hover:bg-bauhaus-red group-hover:text-white">
+            <div className="text-3xl sm:text-4xl font-black tabular-nums group-hover:text-white">{stats.totalFoundations.toLocaleString()}</div>
+            <div className="text-xs font-black uppercase tracking-widest mt-1 text-bauhaus-muted group-hover:text-white/70">Foundations &amp; Trusts</div>
             {stats.profiledFoundations > 0 && (
-              <div className="text-xs text-money mt-1">{stats.profiledFoundations} with AI profiles</div>
+              <div className="text-xs font-bold text-bauhaus-blue mt-1 group-hover:text-white/80">{stats.profiledFoundations} with AI profiles</div>
             )}
           </div>
         </a>
         <a href="/corporate" className="group block">
-          <div className="bg-white border border-navy-200 rounded-xl p-6 text-center transition-all group-hover:border-warning group-hover:shadow-md">
-            <div className="text-3xl sm:text-4xl font-extrabold text-warning">ASX200</div>
-            <div className="text-sm text-navy-500 mt-1">Corporate Giving</div>
+          <div className="bg-white p-6 text-center transition-all group-hover:bg-bauhaus-yellow">
+            <div className="text-3xl sm:text-4xl font-black">ASX200</div>
+            <div className="text-xs font-black uppercase tracking-widest mt-1 text-bauhaus-muted">Corporate Giving</div>
           </div>
         </a>
       </section>
 
       {/* Three pillars */}
-      <section className="border-t border-navy-200 pt-16 pb-12">
-        <h2 className="text-2xl font-bold text-center text-navy-900 mb-10">Three layers of funding intelligence</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-          <div className="text-center">
-            <div className="w-12 h-12 rounded-full bg-link-light flex items-center justify-center mx-auto mb-4">
-              <svg className="w-6 h-6 text-link" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+      <section className="border-t-4 border-bauhaus-black pt-16 pb-12">
+        <h2 className="text-2xl font-black text-center text-bauhaus-black mb-10">Three Layers of Funding Intelligence</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-0">
+          <div className="border-4 border-bauhaus-black p-8 bg-white bauhaus-shadow-sm">
+            <div className="w-12 h-12 bg-bauhaus-blue flex items-center justify-center mb-4 border-3 border-bauhaus-black">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="square" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
               </svg>
             </div>
-            <h3 className="font-semibold text-navy-900 mb-2">Government Grants</h3>
-            <p className="text-sm text-navy-500 leading-relaxed">
+            <h3 className="font-black text-bauhaus-black mb-2 text-sm tracking-widest">Government Grants</h3>
+            <p className="text-sm text-bauhaus-muted leading-relaxed">
               Federal, state, and local grants from GrantConnect, data.gov.au,
               QLD Grants Finder, and business.gov.au. Updated daily.
             </p>
           </div>
-          <div className="text-center">
-            <div className="w-12 h-12 rounded-full bg-money-light flex items-center justify-center mx-auto mb-4">
-              <svg className="w-6 h-6 text-money" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <div className="border-4 border-l-0 border-bauhaus-black p-8 bg-white bauhaus-shadow-sm">
+            <div className="w-12 h-12 bg-bauhaus-red flex items-center justify-center mb-4 border-3 border-bauhaus-black rounded-full">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="square" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h3 className="font-semibold text-navy-900 mb-2">Philanthropic Foundations</h3>
-            <p className="text-sm text-navy-500 leading-relaxed">
+            <h3 className="font-black text-bauhaus-black mb-2 text-sm tracking-widest">Philanthropic Foundations</h3>
+            <p className="text-sm text-bauhaus-muted leading-relaxed">
               ACNC register data on every Australian foundation, PAF, and trust.
               Giving profiles, open programs, and focus areas.
             </p>
           </div>
-          <div className="text-center">
-            <div className="w-12 h-12 rounded-full bg-warning-light flex items-center justify-center mx-auto mb-4">
-              <svg className="w-6 h-6 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+          <div className="border-4 border-l-0 border-bauhaus-black p-8 bg-white bauhaus-shadow-sm">
+            <div className="w-12 h-12 bg-bauhaus-yellow flex items-center justify-center mb-4 border-3 border-bauhaus-black">
+              <svg className="w-6 h-6 text-bauhaus-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="square" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
               </svg>
             </div>
-            <h3 className="font-semibold text-navy-900 mb-2">Corporate Transparency</h3>
-            <p className="text-sm text-navy-500 leading-relaxed">
+            <h3 className="font-black text-bauhaus-black mb-2 text-sm tracking-widest">Corporate Transparency</h3>
+            <p className="text-sm text-bauhaus-muted leading-relaxed">
               ASX200 company foundations mapped to giving vs revenue.
               Who gives what, and is it enough?
             </p>
@@ -126,29 +150,37 @@ export default async function HomePage() {
       </section>
 
       {/* Reports teasers */}
-      <section className="border-t border-navy-200 pt-16 pb-8">
-        <h2 className="text-2xl font-bold text-center text-navy-900 mb-2">Living Reports</h2>
-        <p className="text-center text-navy-500 mb-10">Data-driven investigations, updated as new data arrives</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl mx-auto">
-          <a href="/reports/youth-justice" className="group block bg-white border-2 border-danger rounded-xl p-5 hover:shadow-md transition-all">
-            <div className="text-xs font-bold text-danger mb-1 uppercase tracking-wide">Flagship</div>
-            <h3 className="font-bold text-navy-900 mb-1">QLD Youth Justice</h3>
-            <p className="text-sm text-navy-500">$343M/year on detention. $1.3M per child. 73% reoffend.</p>
+      <section className="border-t-4 border-bauhaus-black pt-16 pb-8">
+        <h2 className="text-2xl font-black text-center text-bauhaus-black mb-2">Living Reports</h2>
+        <p className="text-center text-bauhaus-muted mb-10 text-sm font-medium">Data-driven investigations, updated as new data arrives</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-3xl mx-auto">
+          <a href="/reports/youth-justice" className="group block">
+            <div className="bg-white border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-red group-hover:text-white">
+              <div className="text-xs font-black text-bauhaus-red mb-1 uppercase tracking-widest group-hover:text-bauhaus-yellow">Flagship</div>
+              <h3 className="font-black text-bauhaus-black mb-1 group-hover:text-white">QLD Youth Justice</h3>
+              <p className="text-sm text-bauhaus-muted group-hover:text-white/80">$343M/year on detention. $1.3M per child. 73% reoffend.</p>
+            </div>
           </a>
-          <a href="/reports/money-flow" className="group block bg-white border-2 border-link rounded-xl p-5 hover:shadow-md transition-all">
-            <div className="text-xs font-bold text-link mb-1 uppercase tracking-wide">Live</div>
-            <h3 className="font-bold text-navy-900 mb-1">Follow the Dollar</h3>
-            <p className="text-sm text-navy-500">Trace funding flows from taxpayer to outcome.</p>
+          <a href="/reports/money-flow" className="group block">
+            <div className="bg-white border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-blue group-hover:text-white">
+              <div className="text-xs font-black text-bauhaus-blue mb-1 uppercase tracking-widest group-hover:text-bauhaus-yellow">Live</div>
+              <h3 className="font-black text-bauhaus-black mb-1 group-hover:text-white">Follow the Dollar</h3>
+              <p className="text-sm text-bauhaus-muted group-hover:text-white/80">Trace funding flows from taxpayer to outcome.</p>
+            </div>
           </a>
-          <a href="/reports/access-gap" className="group block bg-white border-2 border-warning rounded-xl p-5 hover:shadow-md transition-all">
-            <div className="text-xs font-bold text-warning mb-1 uppercase tracking-wide">Live</div>
-            <h3 className="font-bold text-navy-900 mb-1">The Access Gap</h3>
-            <p className="text-sm text-navy-500">Small orgs spend 40% on admin. Large orgs spend 15%.</p>
+          <a href="/reports/access-gap" className="group block">
+            <div className="bg-white border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-yellow">
+              <div className="text-xs font-black text-bauhaus-yellow mb-1 uppercase tracking-widest group-hover:text-bauhaus-black">Live</div>
+              <h3 className="font-black text-bauhaus-black mb-1">The Access Gap</h3>
+              <p className="text-sm text-bauhaus-muted group-hover:text-bauhaus-black/70">Small orgs spend 40% on admin. Large orgs spend 15%.</p>
+            </div>
           </a>
-          <a href="/reports/power-dynamics" className="group block bg-white border-2 border-purple rounded-xl p-5 hover:shadow-md transition-all">
-            <div className="text-xs font-bold text-purple mb-1 uppercase tracking-wide">Live</div>
-            <h3 className="font-bold text-navy-900 mb-1">Power Dynamics</h3>
-            <p className="text-sm text-navy-500">Who controls Australia&apos;s philanthropy?</p>
+          <a href="/reports/power-dynamics" className="group block">
+            <div className="bg-white border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-black group-hover:text-white">
+              <div className="text-xs font-black text-purple mb-1 uppercase tracking-widest group-hover:text-bauhaus-yellow">Live</div>
+              <h3 className="font-black text-bauhaus-black mb-1 group-hover:text-white">Power Dynamics</h3>
+              <p className="text-sm text-bauhaus-muted group-hover:text-white/80">Who controls Australia&apos;s philanthropy?</p>
+            </div>
           </a>
         </div>
       </section>

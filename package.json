@@ -32,6 +32,7 @@
     "url": "https://github.com/Acurioustractor/grantscope.git"
   },
   "devDependencies": {
+    "dotenv": "^17.3.1",
     "tsx": "^4.21.0"
   }
 }

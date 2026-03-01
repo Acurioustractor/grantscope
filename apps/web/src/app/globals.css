@@ -1,29 +1,42 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-navy-50: #f8fafc;
-  --color-navy-100: #f1f5f9;
-  --color-navy-200: #e2e8f0;
-  --color-navy-300: #cbd5e1;
-  --color-navy-400: #94a3b8;
-  --color-navy-500: #64748b;
-  --color-navy-600: #475569;
-  --color-navy-700: #334155;
-  --color-navy-800: #1e293b;
-  --color-navy-900: #0f172a;
-  --color-navy-950: #020617;
+  /* Bauhaus primary palette */
+  --color-bauhaus-red: #D02020;
+  --color-bauhaus-blue: #1040C0;
+  --color-bauhaus-yellow: #F0C020;
+  --color-bauhaus-black: #121212;
+  --color-bauhaus-canvas: #F0F0F0;
+  --color-bauhaus-white: #FFFFFF;
+  --color-bauhaus-muted: #777777;
+
+  /* Semantic aliases mapped to Bauhaus palette */
+  --color-navy-50: #F0F0F0;
+  --color-navy-100: #E8E8E8;
+  --color-navy-200: #D0D0D0;
+  --color-navy-300: #B0B0B0;
+  --color-navy-400: #888888;
+  --color-navy-500: #777777;
+  --color-navy-600: #555555;
+  --color-navy-700: #333333;
+  --color-navy-800: #1A1A1A;
+  --color-navy-900: #121212;
+  --color-navy-950: #0A0A0A;
 
   --color-money: #059669;
   --color-money-light: #ecfdf5;
-  --color-link: #2563eb;
-  --color-link-light: #eff6ff;
-  --color-warning: #d97706;
-  --color-warning-light: #fffbeb;
-  --color-danger: #dc2626;
-  --color-danger-light: #fef2f2;
+  --color-link: #1040C0;
+  --color-link-light: #E8EEFF;
+  --color-warning: #F0C020;
+  --color-warning-light: #FFF8E0;
+  --color-danger: #D02020;
+  --color-danger-light: #FFE8E8;
   --color-purple: #7c3aed;
   --color-purple-light: #f5f3ff;
 }
+
+/* Outfit font from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700;900&display=swap');
 
 /* Base typography */
 html {
@@ -33,9 +46,9 @@ html {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   color: var(--color-navy-900);
-  background: var(--color-navy-50);
+  background: var(--color-bauhaus-canvas);
   line-height: 1.6;
 }
 
@@ -44,8 +57,28 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Headings */
+/* Bauhaus headings */
 h1, h2, h3, h4 {
   letter-spacing: -0.025em;
-  line-height: 1.2;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+/* Bauhaus hard shadow utility */
+.bauhaus-shadow {
+  box-shadow: 8px 8px 0px 0px var(--color-bauhaus-black);
+}
+
+.bauhaus-shadow-sm {
+  box-shadow: 4px 4px 0px 0px var(--color-bauhaus-black);
+}
+
+/* Override all border-radius globally */
+* {
+  border-radius: 0 !important;
+}
+
+/* Bauhaus button base */
+a, button {
+  transition: all 0.15s ease;
 }

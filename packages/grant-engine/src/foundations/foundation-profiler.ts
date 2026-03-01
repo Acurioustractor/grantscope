@@ -41,7 +41,7 @@ export interface EnrichedProfile {
   board_members: string[] | null;
 }
 
-type ProviderName = 'openai' | 'anthropic' | 'groq' | 'perplexity' | 'minimax';
+type ProviderName = 'openai' | 'anthropic' | 'groq' | 'perplexity' | 'minimax' | 'gemini' | 'gemini-grounded' | 'deepseek' | 'kimi';
 
 interface ProviderConfig {
   name: ProviderName;
@@ -53,6 +53,38 @@ interface ProviderConfig {
 }
 
 const PROVIDERS: ProviderConfig[] = [
+  {
+    name: 'gemini-grounded',
+    envKey: 'GEMINI_API_KEY',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+    model: 'gemini-2.5-flash',
+    maxTokens: 4000,
+    supportsJsonMode: false, // Uses native API with Google Search grounding
+  },
+  {
+    name: 'gemini',
+    envKey: 'GEMINI_API_KEY',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+    model: 'gemini-2.5-flash',
+    maxTokens: 4000,
+    supportsJsonMode: true,
+  },
+  {
+    name: 'deepseek',
+    envKey: 'DEEPSEEK_API_KEY',
+    baseUrl: 'https://api.deepseek.com/chat/completions',
+    model: 'deepseek-chat',
+    maxTokens: 4000,
+    supportsJsonMode: true,
+  },
+  {
+    name: 'kimi',
+    envKey: 'KIMI_API_KEY',
+    baseUrl: 'https://api.moonshot.cn/v1/chat/completions',
+    model: 'moonshot-v1-32k',
+    maxTokens: 4000,
+    supportsJsonMode: true,
+  },
   {
     name: 'groq',
     envKey: 'GROQ_API_KEY',
@@ -149,11 +181,11 @@ export class FoundationProfiler {
 - **Thematic focus from ACNC**: ${foundation.thematic_focus?.join(', ') || 'None identified'}
 
 ## Scraped Website Content
-${content || 'No website content available.'}
+${content || 'No website content was pre-scraped. Use your training data and any available search/grounding tools to find information about this foundation.'}
 
 ---
 
-Based on ALL available information, build a comprehensive foundation profile. Return ONLY a JSON object (no markdown):
+Based on ALL available information (scraped content, your knowledge, and any web search results), build a comprehensive foundation profile. Return ONLY a JSON object (no markdown):
 
 {
   "description": "2-3 sentence description of who they are and what they do",
@@ -176,7 +208,7 @@ Based on ALL available information, build a comprehensive foundation profile. Re
   "application_tips": "Practical advice for applicants based on what we learned about this foundation",
   "notable_grants": ["$X to Org for purpose", ...] or null,
   "board_members": ["Name - Role", ...] or null,
-  "profile_confidence": "low" if mostly guessing, "medium" if some data, "high" if rich data
+  "profile_confidence": "low" if mostly guessing, "medium" if some data from reliable sources, "high" if rich verified data
 }
 
 Rules:
@@ -184,7 +216,8 @@ Rules:
 - Only include thematic_focus categories that are clearly supported
 - For giving amounts, use AUD
 - Be specific in descriptions — don't use generic platitudes
-- If no website content was scraped, work with ACNC data only and set confidence to "low"`;
+- If you found real data (ACNC filings, news articles, annual reports, charity register), set confidence to "medium" or "high" even if no website was pre-scraped
+- Only set "low" if you truly have no reliable information beyond the foundation name`;
   }
 
   /**
@@ -216,8 +249,14 @@ Rules:
     if (!response.ok) {
       const err = await response.text();
       // Check for quota/rate limit errors
-      if (response.status === 429 || err.includes('insufficient_quota') || err.includes('rate_limit') || err.includes('insufficient_balance')) {
+      if (err.includes('insufficient_quota') || err.includes('insufficient_balance') || err.includes('Insufficient Balance') || err.includes('credit balance is too lo')) {
         throw new Error(`QUOTA:${provider.name}:${response.status}: ${err.slice(0, 200)}`);
+      }
+      if (response.status === 429 || err.includes('rate_limit')) {
+        // Rate limit — wait and retry, don't disable
+        console.log(`[profiler]     ${provider.name} rate limited — waiting 30s`);
+        await new Promise(r => setTimeout(r, 30000));
+        throw new Error(`RATELIMIT:${provider.name}: ${err.slice(0, 200)}`);
       }
       throw new Error(`${provider.name} API error ${response.status}: ${err.slice(0, 200)}`);
     }
@@ -231,6 +270,41 @@ Rules:
     content = content.replace(/<think>[\s\S]*?<\/think>\s*/g, '').trim();
 
     return content;
+  }
+
+  /**
+   * Call Gemini native API with Google Search grounding — free web research.
+   */
+  private async callGeminiGrounded(prompt: string, provider: ProviderConfig): Promise<string> {
+    const apiKey = process.env[provider.envKey];
+    if (!apiKey) throw new Error(`${provider.envKey} required`);
+
+    const url = `${provider.baseUrl}/models/${provider.model}:generateContent?key=${apiKey}`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        tools: [{ google_search: {} }],
+        generationConfig: { maxOutputTokens: provider.maxTokens },
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      if (response.status === 429 || err.includes('rate_limit') || err.includes('RESOURCE_EXHAUSTED')) {
+        console.log(`[profiler]     gemini-grounded rate limited — waiting 30s`);
+        await new Promise(r => setTimeout(r, 30000));
+        throw new Error(`RATELIMIT:gemini-grounded: ${err.slice(0, 200)}`);
+      }
+      throw new Error(`gemini-grounded API error ${response.status}: ${err.slice(0, 200)}`);
+    }
+
+    const data = await response.json() as {
+      candidates: Array<{ content: { parts: Array<{ text?: string }> } }>;
+    };
+    const parts = data.candidates?.[0]?.content?.parts || [];
+    return parts.filter(p => p.text).map(p => p.text!).join('\n');
   }
 
   private async callAnthropic(prompt: string, provider: ProviderConfig): Promise<string> {
@@ -263,6 +337,8 @@ Rules:
       try {
         if (provider.name === 'anthropic') {
           return await this.callAnthropic(prompt, provider);
+        } else if (provider.name === 'gemini-grounded') {
+          return await this.callGeminiGrounded(prompt, provider);
         } else {
           return await this.callOpenAICompatible(prompt, provider);
         }
@@ -273,6 +349,11 @@ Rules:
           // Disable this provider for the rest of the session
           console.log(`[profiler]     ${provider.name} quota exceeded — disabling, trying next provider`);
           this.disabledProviders.add(provider.name);
+          continue;
+        }
+
+        if (msg.startsWith('RATELIMIT:')) {
+          // Rate limited — don't disable, just try next provider (already waited)
           continue;
         }
 

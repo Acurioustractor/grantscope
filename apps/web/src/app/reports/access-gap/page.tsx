@@ -27,7 +27,6 @@ async function getReport() {
       domain: o.domain || [],
     }));
 
-    // Admin burden by size tier
     const tiers = [
       { size: '<$50K', min: 0, max: 50_000 },
       { size: '$50K-$250K', min: 50_000, max: 250_000 },
@@ -43,7 +42,6 @@ async function getReport() {
       return { size: tier.size, avgAdminPercent: avgAdmin, count: inTier.length };
     });
 
-    // Funding concentration (deciles)
     const sorted = [...orgsBySize].sort((a, b) => a.revenue - b.revenue);
     const chunkSize = Math.ceil(sorted.length / 5);
     const fundingConcentration = [];
@@ -109,12 +107,12 @@ export default async function AccessGapPage() {
   return (
     <div>
       <div className="mb-8">
-        <a href="/reports" className="text-sm text-navy-500 hover:text-navy-900 transition-colors">&larr; All reports</a>
-        <div className="text-xs font-bold text-warning mt-4 mb-1 uppercase tracking-wider">Living Report</div>
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-navy-900 mb-3">
+        <a href="/reports" className="text-xs font-black text-bauhaus-muted uppercase tracking-widest hover:text-bauhaus-black">&larr; All Reports</a>
+        <div className="text-xs font-black text-bauhaus-yellow mt-4 mb-1 uppercase tracking-widest">Living Report</div>
+        <h1 className="text-3xl sm:text-4xl font-black text-bauhaus-black mb-3">
           The Access Gap
         </h1>
-        <p className="text-navy-500 text-base sm:text-lg max-w-2xl leading-relaxed">
+        <p className="text-bauhaus-muted text-base sm:text-lg max-w-2xl leading-relaxed font-medium">
           Small community organizations spend up to {report.avgSmallOrgAdminPercent}% of their
           revenue on compliance and administration — while large organizations spend just{' '}
           {report.avgLargeOrgAdminPercent}%. The system structurally disadvantages those

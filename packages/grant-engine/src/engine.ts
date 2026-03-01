@@ -28,6 +28,13 @@ import { createGrantConnectPlugin } from './sources/grantconnect.js';
 import { createDataGovAuPlugin } from './sources/data-gov-au.js';
 import { createQLDGrantsPlugin } from './sources/qld-grants.js';
 import { createBusinessGovAuPlugin } from './sources/business-gov-au.js';
+import { createNSWGrantsPlugin } from './sources/nsw-grants.js';
+import { createVICGrantsPlugin } from './sources/vic-grants.js';
+import { createARCGrantsPlugin } from './sources/arc-grants.js';
+import { createNHMRCGrantsPlugin } from './sources/nhmrc-grants.js';
+import { createTASGrantsPlugin } from './sources/tas-grants.js';
+import { createACTGrantsPlugin } from './sources/act-grants.js';
+import { createNTGrantsPlugin } from './sources/nt-grants.js';
 
 export class GrantEngine {
   private registry: SourceRegistry;
@@ -46,6 +53,13 @@ export class GrantEngine {
     this.registry.register(createDataGovAuPlugin());
     this.registry.register(createQLDGrantsPlugin());
     this.registry.register(createBusinessGovAuPlugin());
+    this.registry.register(createNSWGrantsPlugin());
+    this.registry.register(createVICGrantsPlugin());
+    this.registry.register(createARCGrantsPlugin());
+    this.registry.register(createNHMRCGrantsPlugin());
+    this.registry.register(createTASGrantsPlugin());
+    this.registry.register(createACTGrantsPlugin());
+    this.registry.register(createNTGrantsPlugin());
   }
 
   private log(message: string): void {

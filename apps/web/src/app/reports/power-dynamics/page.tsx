@@ -43,12 +43,12 @@ export default async function PowerDynamicsPage() {
   return (
     <div>
       <div className="mb-8">
-        <a href="/reports" className="text-sm text-navy-500 hover:text-navy-900 transition-colors">&larr; All reports</a>
-        <div className="text-xs font-bold text-purple mt-4 mb-1 uppercase tracking-wider">Living Report</div>
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-navy-900 mb-3">
+        <a href="/reports" className="text-xs font-black text-bauhaus-muted uppercase tracking-widest hover:text-bauhaus-black">&larr; All Reports</a>
+        <div className="text-xs font-black text-purple mt-4 mb-1 uppercase tracking-widest">Living Report</div>
+        <h1 className="text-3xl sm:text-4xl font-black text-bauhaus-black mb-3">
           Power Dynamics in Australian Philanthropy
         </h1>
-        <p className="text-navy-500 text-base sm:text-lg max-w-2xl leading-relaxed">
+        <p className="text-bauhaus-muted text-base sm:text-lg max-w-2xl leading-relaxed font-medium">
           {report.metrics.givingFoundationCount > 0
             ? `Analyzing ${report.metrics.givingFoundationCount.toLocaleString()} foundations with giving data. The top 10 control ${report.metrics.top10Share}% of all tracked philanthropic giving.`
             : 'Foundation data loading. Run profiling scripts to populate giving data.'}

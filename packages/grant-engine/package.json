@@ -13,9 +13,11 @@
     "@mendable/firecrawl-js": "^4.15.0",
     "@supabase/supabase-js": "^2.49.1",
     "cheerio": "^1.0.0",
-    "csv-parse": "^5.6.0"
+    "csv-parse": "^5.6.0",
+    "openai": "^6.25.0"
   },
   "devDependencies": {
+    "playwright": "^1.58.2",
     "typescript": "^5.0.0"
   },
   "keywords": [

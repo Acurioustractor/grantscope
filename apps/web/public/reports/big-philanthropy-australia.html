@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Where Does Australia's $222 Billion Go? — GrantScope</title>
+  <meta name="description" content="A data investigation into 359,678 charity records revealing the concentration of philanthropic power in Australia.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --red: #D02020;
+      --blue: #1040C0;
+      --yellow: #F0C020;
+      --black: #121212;
+      --canvas: #F0F0F0;
+      --white: #FFFFFF;
+      --muted: #777;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Outfit', sans-serif; background: var(--canvas); color: var(--black); -webkit-font-smoothing: antialiased; }
+
+    /* Borders & Shadows */
+    .bb { border: 4px solid var(--black); }
+    .bb-2 { border: 2px solid var(--black); }
+    .bb-b { border-bottom: 4px solid var(--black); }
+    .bb-t { border-top: 4px solid var(--black); }
+    .bb-l { border-left: 4px solid var(--black); }
+    .bb-r { border-right: 4px solid var(--black); }
+    .hs { box-shadow: 8px 8px 0px 0px var(--black); }
+    .hs-sm { box-shadow: 4px 4px 0px 0px var(--black); }
+
+    /* Layout */
+    .wrap { max-width: 1400px; margin: 0 auto; }
+    .pad { padding: 40px 24px; }
+    .pad-lg { padding: 64px 24px; }
+    @media (min-width: 768px) { .pad { padding: 64px 48px; } .pad-lg { padding: 96px 48px; } }
+    @media (min-width: 1024px) { .pad { padding: 80px 64px; } .pad-lg { padding: 120px 64px; } }
+
+    /* Typography */
+    .t-massive { font-size: clamp(48px, 8vw, 140px); font-weight: 900; text-transform: uppercase; line-height: 0.88; letter-spacing: -0.04em; }
+    .t-huge { font-size: clamp(36px, 5vw, 80px); font-weight: 900; text-transform: uppercase; line-height: 0.9; letter-spacing: -0.03em; }
+    .t-big { font-size: clamp(28px, 4vw, 56px); font-weight: 900; text-transform: uppercase; line-height: 0.95; letter-spacing: -0.02em; }
+    .t-stat { font-size: clamp(48px, 7vw, 120px); font-weight: 900; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+    .t-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.2em; }
+    .t-body { font-size: 16px; font-weight: 500; line-height: 1.6; }
+    .t-bold { font-weight: 700; }
+    .t-black { font-weight: 900; }
+    .t-upper { text-transform: uppercase; }
+    .t-track { letter-spacing: 0.15em; }
+
+    /* Colors */
+    .c-red { color: var(--red); }
+    .c-blue { color: var(--blue); }
+    .c-yellow { color: var(--yellow); }
+    .c-white { color: var(--white); }
+    .c-muted { color: var(--muted); }
+    .bg-red { background: var(--red); }
+    .bg-blue { background: var(--blue); }
+    .bg-yellow { background: var(--yellow); }
+    .bg-black { background: var(--black); }
+    .bg-white { background: var(--white); }
+    .bg-canvas { background: var(--canvas); }
+
+    /* Flex/Grid */
+    .flex { display: flex; }
+    .flex-col { flex-direction: column; }
+    .flex-wrap { flex-wrap: wrap; }
+    .items-center { align-items: center; }
+    .items-end { align-items: flex-end; }
+    .justify-between { justify-content: space-between; }
+    .justify-center { justify-content: center; }
+    .gap-2 { gap: 8px; }
+    .gap-3 { gap: 12px; }
+    .gap-4 { gap: 16px; }
+    .gap-6 { gap: 24px; }
+    .gap-8 { gap: 32px; }
+    .w-full { width: 100%; }
+
+    /* Ticker */
+    .ticker-wrap { overflow: hidden; }
+    .ticker-content { display: inline-block; white-space: nowrap; animation: ticker 40s linear infinite; }
+    @keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
+    /* Sections */
+    section { overflow: hidden; }
+
+    /* Table */
+    .data-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .data-table th { padding: 16px; text-align: left; font-weight: 900; font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; }
+    .data-table th.r { text-align: right; }
+    .data-table td { padding: 14px 16px; border-bottom: 2px solid var(--black); font-weight: 700; font-variant-numeric: tabular-nums; }
+    .data-table td.r { text-align: right; }
+    .data-table tr:hover { background: rgba(0,0,0,0.03); }
+    .type-dot { width: 10px; height: 10px; display: inline-block; border: 2px solid var(--black); margin-right: 6px; vertical-align: middle; }
+    .type-edu { background: var(--blue); border-radius: 50%; }
+    .type-rel { background: var(--yellow); }
+    .type-fdn { background: var(--red); border-radius: 50%; }
+    .type-hosp { background: var(--white); border-radius: 50%; }
+    .type-other { background: var(--canvas); }
+
+    /* Cards */
+    .card { background: var(--white); border: 4px solid var(--black); box-shadow: 8px 8px 0px 0px var(--black); padding: 28px; position: relative; transition: transform 0.2s; }
+    .card:hover { transform: translateY(-4px); }
+    .card-badge { position: absolute; top: -14px; right: -14px; width: 36px; height: 36px; border: 3px solid var(--black); display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14px; }
+
+    /* Sparkline */
+    .sparkline { display: flex; align-items: flex-end; gap: 3px; height: 40px; }
+    .spark-bar { flex: 1; border-radius: 0; min-width: 0; transition: height 0.4s ease; }
+
+    /* Search */
+    .search-input { width: 100%; border: 4px solid var(--black); background: var(--white); padding: 14px 18px; font-family: inherit; font-weight: 900; font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em; outline: none; }
+    .search-input:focus { background: var(--yellow); }
+    .search-input::placeholder { color: var(--muted); }
+
+    /* Link buttons */
+    .link-out { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; font-weight: 900; font-size: 12px; text-transform: uppercase; letter-spacing: 0.15em; text-decoration: none; color: var(--black); border: 3px solid var(--black); box-shadow: 4px 4px 0px 0px var(--black); background: var(--white); transition: all 0.15s; }
+    .link-out:hover { transform: translate(2px, 2px); box-shadow: 2px 2px 0px 0px var(--black); }
+    .link-out:active { transform: translate(4px, 4px); box-shadow: none; }
+    .link-out.on-dark { color: var(--white); border-color: var(--white); box-shadow: 4px 4px 0px 0px rgba(255,255,255,0.3); background: transparent; }
+
+    /* Responsive grid */
+    .grid-2 { display: grid; grid-template-columns: 1fr; gap: 20px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr; gap: 20px; }
+    @media (min-width: 640px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
+    @media (min-width: 768px) { .grid-3 { grid-template-columns: 1fr 1fr; } }
+    @media (min-width: 1024px) { .grid-3 { grid-template-columns: 1fr 1fr 1fr; } }
+
+    /* Stacked bar */
+    .stacked { display: flex; height: 48px; border: 4px solid var(--black); overflow: hidden; }
+    .stacked > div { height: 100%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; color: var(--white); text-transform: uppercase; overflow: hidden; }
+
+    /* Bar chart */
+    .bar-h { height: 44px; border: 3px solid var(--black); background: var(--white); display: flex; overflow: hidden; }
+    .bar-h-fill { height: 100%; display: flex; align-items: center; padding: 0 12px; font-size: 12px; font-weight: 900; color: var(--white); white-space: nowrap; }
+
+    /* Mobile helpers */
+    .hide-mobile { display: none; }
+    @media (min-width: 768px) { .hide-mobile { display: table-cell; } }
+
+    /* Scroll anchor offset */
+    [id] { scroll-margin-top: 88px; }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="bg-white bb-b" style="position: sticky; top: 0; z-index: 50;">
+    <nav class="wrap flex items-center justify-between" style="padding: 0 24px; height: 80px;">
+      <div class="flex items-center gap-3">
+        <div style="width: 36px; height: 36px; background: var(--red); border: 3px solid var(--black); display: flex; align-items: center; justify-content: center;">
+          <div style="width: 16px; height: 16px; background: var(--white); border-radius: 50%;"></div>
+        </div>
+        <span class="t-black" style="font-size: 20px; letter-spacing: -0.03em;">GRANTSCOPE</span>
+      </div>
+      <div class="flex gap-6 items-center" style="font-size: 12px;">
+        <a href="#concentration" class="t-black t-upper t-track" style="text-decoration: none; color: inherit; display: none;">Data</a>
+        <a href="https://grantscope.vercel.app" class="link-out" style="font-size: 11px;">Explore All Data</a>
+      </div>
+    </nav>
+  </header>
+
+  <!-- HERO -->
+  <section class="bb-b">
+    <div class="wrap flex flex-col" style="min-height: 75vh;">
+      <div class="flex" style="flex: 1; flex-direction: column;">
+        <!-- Main hero area -->
+        <div style="display: grid; grid-template-columns: 1fr; min-height: 60vh;" class="bb-b">
+          <div class="pad-lg flex flex-col" style="justify-content: flex-end;">
+            <p class="t-label c-red" style="margin-bottom: 20px; font-size: 13px; letter-spacing: 0.3em;">Vol. 07 / ACNC Data Investigation / 2017–2023</p>
+            <h1 class="t-massive" style="margin-bottom: 32px;">
+              Where Does<br>Australia's<br><span class="c-blue">$222B</span> Go?
+            </h1>
+            <p class="t-body" style="max-width: 480px; margin-bottom: 32px; color: var(--muted);">
+              An investigation into 359,678 charity financial records across 7 years, revealing who gives, who receives,
+              and the growing concentration of philanthropic power.
+            </p>
+          </div>
+        </div>
+        <!-- Stats strip -->
+        <div class="flex flex-wrap bb-b" style="font-variant-numeric: tabular-nums;">
+          <div style="flex: 1; min-width: 160px; padding: 24px 28px;" class="bb-r">
+            <p class="t-label c-muted" style="margin-bottom: 4px;">Records</p>
+            <p class="t-black" style="font-size: 28px;">359,678</p>
+          </div>
+          <div style="flex: 1; min-width: 160px; padding: 24px 28px;" class="bb-r">
+            <p class="t-label c-muted" style="margin-bottom: 4px;">Charities</p>
+            <p class="t-black" style="font-size: 28px;">53,207</p>
+          </div>
+          <div style="flex: 1; min-width: 160px; padding: 24px 28px;" class="bb-r">
+            <p class="t-label c-muted" style="margin-bottom: 4px;">Grants Out</p>
+            <p class="t-black" style="font-size: 28px;">$11.3B</p>
+          </div>
+          <div style="flex: 1; min-width: 160px; padding: 24px 28px;" class="bb-r">
+            <p class="t-label c-muted" style="margin-bottom: 4px;">Assets Held</p>
+            <p class="t-black" style="font-size: 28px;">$494B</p>
+          </div>
+          <div style="flex: 1; min-width: 160px; padding: 24px 28px;">
+            <p class="t-label c-muted" style="margin-bottom: 4px;">Volunteers</p>
+            <p class="t-black" style="font-size: 28px;">3.9M</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TICKER -->
+  <div class="bg-black bb-b ticker-wrap" style="padding: 14px 0;">
+    <div class="ticker-content">
+      <span class="c-white t-black t-upper" style="font-size: 18px; padding: 0 24px;">Top 10% capture 90.3% of donations</span>
+      <span class="c-yellow t-black t-upper" style="font-size: 18px; padding: 0 24px;">&bull;</span>
+      <span class="c-white t-black t-upper" style="font-size: 18px; padding: 0 24px;">$222 Billion total revenue</span>
+      <span class="c-red t-black t-upper" style="font-size: 18px; padding: 0 24px;">&bull;</span>
+      <span class="c-white t-black t-upper" style="font-size: 18px; padding: 0 24px;">89% of charities pay execs more than they give</span>
+      <span class="c-yellow t-black t-upper" style="font-size: 18px; padding: 0 24px;">&bull;</span>
+      <span class="c-white t-black t-upper" style="font-size: 18px; padding: 0 24px;">Medium charities posted -$1.84B deficit in 2023</span>
+      <span class="c-red t-black t-upper" style="font-size: 18px; padding: 0 24px;">&bull;</span>
+      <span class="c-white t-black t-upper" style="font-size: 18px; padding: 0 24px;">Top 10% capture 90.3% of donations</span>
+      <span class="c-yellow t-black t-upper" style="font-size: 18px; padding: 0 24px;">&bull;</span>
+      <span class="c-white t-black t-upper" style="font-size: 18px; padding: 0 24px;">$222 Billion total revenue</span>
+      <span class="c-red t-black t-upper" style="font-size: 18px; padding: 0 24px;">&bull;</span>
+      <span class="c-white t-black t-upper" style="font-size: 18px; padding: 0 24px;">89% of charities pay execs more than they give</span>
+      <span class="c-yellow t-black t-upper" style="font-size: 18px; padding: 0 24px;">&bull;</span>
+      <span class="c-white t-black t-upper" style="font-size: 18px; padding: 0 24px;">Medium charities posted -$1.84B deficit in 2023</span>
+      <span class="c-red t-black t-upper" style="font-size: 18px; padding: 0 24px;">&bull;</span>
+    </div>
+  </div>
+
+  <!-- PART I: THE CONCENTRATION PROBLEM (YELLOW) -->
+  <section id="concentration" class="bg-yellow bb-b">
+    <div class="wrap pad-lg">
+      <div style="display: grid; grid-template-columns: 1fr; gap: 48px;">
+        <div>
+          <p class="t-label" style="margin-bottom: 12px; letter-spacing: 0.3em;">Part I</p>
+          <h2 class="t-huge" style="margin-bottom: 24px;">The Inequality<br>Curve</h2>
+          <p class="t-body" style="max-width: 520px; margin-bottom: 32px;">
+            Of the 30,166 charities that received donations in 2023, the top 10% captured 90.3% of all donation dollars.
+            The bottom 50% shared less than 0.004%. And it's getting worse every year.
+          </p>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr; gap: 32px;">
+          <!-- Big stat -->
+          <div class="bg-red bb hs" style="padding: 32px; display: inline-block; align-self: start; max-width: 320px;">
+            <p class="t-stat c-white">90.3%</p>
+            <p class="t-label c-white" style="margin-top: 4px;">Of donations go to top 10%</p>
+          </div>
+
+          <!-- Trend: getting worse -->
+          <div class="bg-white bb hs-sm" style="padding: 24px; overflow-x: auto;">
+            <p class="t-label" style="margin-bottom: 12px;">Concentration trend — top 10% share rising</p>
+            <div class="flex gap-4 items-end" style="font-variant-numeric: tabular-nums; min-width: 500px;">
+              <div style="text-align: center; flex: 1;">
+                <div class="bb-2" style="height: 80px; background: var(--black); display: flex; align-items: flex-end;">
+                  <div style="width: 100%; background: var(--yellow); height: 86.7%;"></div>
+                </div>
+                <p class="t-black" style="font-size: 14px; margin-top: 6px;">86.7%</p>
+                <p class="t-label c-muted">2017</p>
+              </div>
+              <div style="text-align: center; flex: 1;">
+                <div class="bb-2" style="height: 80px; background: var(--black); display: flex; align-items: flex-end;">
+                  <div style="width: 100%; background: var(--yellow); height: 87.5%;"></div>
+                </div>
+                <p class="t-black" style="font-size: 14px; margin-top: 6px;">87.5%</p>
+                <p class="t-label c-muted">2018</p>
+              </div>
+              <div style="text-align: center; flex: 1;">
+                <div class="bb-2" style="height: 80px; background: var(--black); display: flex; align-items: flex-end;">
+                  <div style="width: 100%; background: var(--yellow); height: 88.3%;"></div>
+                </div>
+                <p class="t-black" style="font-size: 14px; margin-top: 6px;">88.3%</p>
+                <p class="t-label c-muted">2019</p>
+              </div>
+              <div style="text-align: center; flex: 1;">
+                <div class="bb-2" style="height: 80px; background: var(--black); display: flex; align-items: flex-end;">
+                  <div style="width: 100%; background: var(--yellow); height: 88.9%;"></div>
+                </div>
+                <p class="t-black" style="font-size: 14px; margin-top: 6px;">88.9%</p>
+                <p class="t-label c-muted">2020</p>
+              </div>
+              <div style="text-align: center; flex: 1;">
+                <div class="bb-2" style="height: 80px; background: var(--black); display: flex; align-items: flex-end;">
+                  <div style="width: 100%; background: var(--yellow); height: 88.4%;"></div>
+                </div>
+                <p class="t-black" style="font-size: 14px; margin-top: 6px;">88.4%</p>
+                <p class="t-label c-muted">2021</p>
+              </div>
+              <div style="text-align: center; flex: 1;">
+                <div class="bb-2" style="height: 80px; background: var(--black); display: flex; align-items: flex-end;">
+                  <div style="width: 100%; background: var(--yellow); height: 87.4%;"></div>
+                </div>
+                <p class="t-black" style="font-size: 14px; margin-top: 6px;">87.4%</p>
+                <p class="t-label c-muted">2022</p>
+              </div>
+              <div style="text-align: center; flex: 1;">
+                <div class="bb-2" style="height: 80px; background: var(--red); display: flex; align-items: flex-end;">
+                  <div style="width: 100%; background: var(--red); height: 90.3%;"></div>
+                </div>
+                <p class="t-black c-red" style="font-size: 14px; margin-top: 6px;">90.3%</p>
+                <p class="t-label c-muted">2023</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PART II: ASSET HOLDERS (WHITE) -->
+  <section id="assets" class="bg-white bb-b">
+    <div class="wrap pad-lg">
+      <p class="t-label" style="margin-bottom: 12px; letter-spacing: 0.3em;">Part II</p>
+      <h2 class="t-huge" style="margin-bottom: 12px;">The Asset<br>Giants</h2>
+      <p class="t-body c-muted" style="max-width: 520px; margin-bottom: 32px;">
+        The 30 largest charities hold over $130 billion. Only 2 are philanthropic foundations.
+        The rest are universities, religious institutions, and hospitals.
+      </p>
+
+      <input type="text" class="search-input" id="searchInput" placeholder="Search organisations..." oninput="filterTable()" style="max-width: 400px; margin-bottom: 24px;">
+
+      <div style="overflow-x: auto;">
+        <table class="data-table bb" id="assetTable">
+          <thead class="bg-black c-white">
+            <tr>
+              <th>#</th>
+              <th>Organisation</th>
+              <th class="hide-mobile">Type</th>
+              <th class="r">Assets</th>
+              <th class="r">Grants</th>
+              <th class="r hide-mobile">Ratio</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>1</td><td>Uni of Melbourne (Group)</td><td class="hide-mobile"><span class="type-dot type-edu"></span>EDU</td><td class="r">$12.0B</td><td class="r">$266M</td><td class="r hide-mobile">8.1%</td></tr>
+            <tr><td>2</td><td>University of Sydney</td><td class="hide-mobile"><span class="type-dot type-edu"></span>EDU</td><td class="r">$10.1B</td><td class="r">$341M</td><td class="r hide-mobile">10.3%</td></tr>
+            <tr><td>3</td><td>Wildlife Land Fund</td><td class="hide-mobile"><span class="type-dot type-other"></span>ENV</td><td class="r">$8.5B</td><td class="r c-red">$0</td><td class="r hide-mobile c-red">0.0%</td></tr>
+            <tr><td>4</td><td>Minderoo Foundation (Group)</td><td class="hide-mobile"><span class="type-dot type-fdn"></span>FDN</td><td class="r">$7.6B</td><td class="r">$156M</td><td class="r hide-mobile c-red">3.1%</td></tr>
+            <tr><td>5</td><td>Monash University</td><td class="hide-mobile"><span class="type-dot type-edu"></span>EDU</td><td class="r">$6.5B</td><td class="r">$138M</td><td class="r hide-mobile">4.6%</td></tr>
+            <tr><td>6</td><td>UNSW (Group)</td><td class="hide-mobile"><span class="type-dot type-edu"></span>EDU</td><td class="r">$6.4B</td><td class="r">$326M</td><td class="r hide-mobile">12.2%</td></tr>
+            <tr><td>7</td><td>ANU</td><td class="hide-mobile"><span class="type-dot type-edu"></span>EDU</td><td class="r">$5.5B</td><td class="r">$124M</td><td class="r hide-mobile">7.8%</td></tr>
+            <tr><td>8</td><td>UQ (Group)</td><td class="hide-mobile"><span class="type-dot type-edu"></span>EDU</td><td class="r">$5.4B</td><td class="r">$117M</td><td class="r hide-mobile">4.6%</td></tr>
+            <tr><td>9</td><td>Western Sydney Uni</td><td class="hide-mobile"><span class="type-dot type-edu"></span>EDU</td><td class="r">$4.7B</td><td class="r">$23M</td><td class="r hide-mobile c-red">2.4%</td></tr>
+            <tr><td>10</td><td>Melb Catholic Schools (Group)</td><td class="hide-mobile"><span class="type-dot type-rel"></span>REL</td><td class="r">$4.3B</td><td class="r c-red">$0</td><td class="r hide-mobile c-red">0.0%</td></tr>
+            <tr><td>11</td><td>Paul Ramsay Foundation</td><td class="hide-mobile"><span class="type-dot type-fdn"></span>FDN</td><td class="r">$3.0B</td><td class="r" style="color: green;">$184M</td><td class="r hide-mobile" style="color: green;">176%</td></tr>
+            <tr><td>12</td><td>Sydney Catholic Schools</td><td class="hide-mobile"><span class="type-dot type-rel"></span>REL</td><td class="r">$2.8B</td><td class="r c-red">$0</td><td class="r hide-mobile c-red">0.0%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="margin-top: 24px;">
+        <a href="https://grantscope.vercel.app/foundations" class="link-out">View all foundations &rarr;</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- PART III: SCORECARD (CANVAS) -->
+  <section id="scorecard" class="bg-canvas bb-b">
+    <div class="wrap pad-lg">
+      <p class="t-label" style="margin-bottom: 12px; letter-spacing: 0.3em;">Part III</p>
+      <h2 class="t-huge" style="margin-bottom: 12px;">Philanthropy<br>Scorecard</h2>
+      <p class="t-body c-muted" style="max-width: 520px; margin-bottom: 40px;">
+        How do Australia's most prominent foundations actually perform? We tracked 8 foundations across 7 years.
+      </p>
+
+      <div class="grid-3" style="gap: 28px;">
+        <!-- Paul Ramsay -->
+        <div class="card">
+          <div class="card-badge" style="background: var(--yellow); border-radius: 50%;">A+</div>
+          <p class="t-black t-upper" style="font-size: 22px; margin-bottom: 2px;">Paul Ramsay</p>
+          <p class="t-label c-muted" style="margin-bottom: 16px;">Largest private foundation</p>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+            <div><p class="t-black" style="font-size: 24px; color: green;">$184M</p><p class="t-label c-muted">Grants</p></div>
+            <div><p class="t-black" style="font-size: 24px;">$3.0B</p><p class="t-label c-muted">Assets</p></div>
+            <div><p class="t-black" style="font-size: 24px; color: green;">176%</p><p class="t-label c-muted">Giving ratio</p></div>
+            <div><p class="t-black" style="font-size: 24px;">$1.7M</p><p class="t-label c-muted">KMP Pay</p></div>
+          </div>
+          <p class="t-label c-muted" style="margin-bottom: 4px;">7yr grant trend</p>
+          <div class="sparkline">
+            <div class="spark-bar" style="height: 45%; background: var(--black);"></div>
+            <div class="spark-bar" style="height: 47%; background: var(--black);"></div>
+            <div class="spark-bar" style="height: 22%; background: var(--black);"></div>
+            <div class="spark-bar" style="height: 100%; background: green;"></div>
+            <div class="spark-bar" style="height: 52%; background: var(--black);"></div>
+            <div class="spark-bar" style="height: 39%; background: var(--black);"></div>
+            <div class="spark-bar" style="height: 66%; background: var(--blue);"></div>
+          </div>
+        </div>
+
+        <!-- Minderoo -->
+        <div class="card">
+          <div class="card-badge" style="background: var(--red); color: var(--white);">D</div>
+          <p class="t-black t-upper" style="font-size: 22px; margin-bottom: 2px;">Minderoo</p>
+          <p class="t-label c-muted" style="margin-bottom: 16px;">Forrest family</p>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+            <div><p class="t-black" style="font-size: 24px;">$156M</p><p class="t-label c-muted">Grants</p></div>
+            <div><p class="t-black" style="font-size: 24px;">$7.6B</p><p class="t-label c-muted">Assets</p></div>
+            <div><p class="t-black c-red" style="font-size: 24px;">3.1%</p><p class="t-label c-muted">Giving ratio</p></div>
+            <div><p class="t-black" style="font-size: 24px;">$3.4M</p><p class="t-label c-muted">KMP Pay</p></div>
+          </div>
+          <p class="t-label c-muted" style="margin-bottom: 4px;">Assets: $640M &rarr; $7.6B</p>
+          <div class="sparkline">
+            <div class="spark-bar" style="height: 5%; background: var(--canvas);"></div>
+            <div class="spark-bar" style="height: 30%; background: var(--black);"></div>
+            <div class="spark-bar" style="height: 39%; background: var(--black);"></div>
+            <div class="spark-bar" style="height: 35%; background: var(--black);"></div>
+            <div class="spark-bar" style="height: 30%; background: var(--black);"></div>
+            <div class="spark-bar" style="height: 49%; background: var(--black);"></div>
+            <div class="spark-bar" style="height: 100%; background: var(--red);"></div>
+          </div>
+        </div>
+
+        <!-- Ian Potter -->
+        <div class="card">
+          <div class="card-badge" style="background: var(--yellow); border-radius: 50%;">A</div>
+          <p class="t-black t-upper" style="font-size: 22px; margin-bottom: 2px;">Ian Potter</p>
+          <p class="t-label c-muted" style="margin-bottom: 16px;">Est. 1964 — iconic</p>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+            <div><p class="t-black" style="font-size: 24px; color: green;">$46M</p><p class="t-label c-muted">Grants</p></div>
+            <div><p class="t-black" style="font-size: 24px;">$888M</p><p class="t-label c-muted">Assets</p></div>
+            <div><p class="t-black" style="font-size: 24px; color: green;">112%</p><p class="t-label c-muted">Giving ratio</p></div>
+            <div><p class="t-black" style="font-size: 24px;">$0</p><p class="t-label c-muted">KMP Pay</p></div>
+          </div>
+          <p class="t-label c-muted" style="margin-bottom: 4px;">Consistent ~5% payout</p>
+          <div class="sparkline">
+            <div class="spark-bar" style="height: 78%; background: green;"></div>
+            <div class="spark-bar" style="height: 53%; background: green;"></div>
+            <div class="spark-bar" style="height: 100%; background: green;"></div>
+            <div class="spark-bar" style="height: 93%; background: green;"></div>
+            <div class="spark-bar" style="height: 58%; background: green;"></div>
+            <div class="spark-bar" style="height: 93%; background: green;"></div>
+            <div class="spark-bar" style="height: 100%; background: green;"></div>
+          </div>
+        </div>
+
+        <!-- Pratt -->
+        <div class="card">
+          <div class="card-badge" style="background: var(--yellow); border-radius: 50%;">A+</div>
+          <p class="t-black t-upper" style="font-size: 22px; margin-bottom: 2px;">Pratt</p>
+          <p class="t-label c-muted" style="margin-bottom: 16px;">100% pass-through</p>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+            <div><p class="t-black" style="font-size: 24px; color: green;">$11M</p><p class="t-label c-muted">Grants</p></div>
+            <div><p class="t-black" style="font-size: 24px;">$0</p><p class="t-label c-muted">Assets</p></div>
+            <div><p class="t-black" style="font-size: 24px; color: green;">100%</p><p class="t-label c-muted">Giving ratio</p></div>
+            <div><p class="t-black" style="font-size: 24px;">$0</p><p class="t-label c-muted">KMP Pay</p></div>
+          </div>
+          <p class="t-label c-muted" style="margin-bottom: 4px;">Holds nothing — gives all</p>
+          <div class="sparkline">
+            <div class="spark-bar" style="height: 9%; background: green;"></div>
+            <div class="spark-bar" style="height: 36%; background: green;"></div>
+            <div class="spark-bar" style="height: 82%; background: green;"></div>
+            <div class="spark-bar" style="height: 73%; background: green;"></div>
+            <div class="spark-bar" style="height: 91%; background: green;"></div>
+            <div class="spark-bar" style="height: 91%; background: green;"></div>
+            <div class="spark-bar" style="height: 100%; background: green;"></div>
+          </div>
+        </div>
+
+        <!-- Lowy -->
+        <div class="card">
+          <div class="card-badge" style="background: var(--red); color: var(--white);">F</div>
+          <p class="t-black t-upper" style="font-size: 22px; margin-bottom: 2px;">Lowy Institute</p>
+          <p class="t-label c-muted" style="margin-bottom: 16px;">Think tank — zero grants</p>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+            <div><p class="t-black c-red" style="font-size: 24px;">$0</p><p class="t-label c-muted">Grants</p></div>
+            <div><p class="t-black" style="font-size: 24px;">$31M</p><p class="t-label c-muted">Assets</p></div>
+            <div><p class="t-black c-red" style="font-size: 24px;">0%</p><p class="t-label c-muted">Giving ratio</p></div>
+            <div><p class="t-black" style="font-size: 24px;">$1.6M</p><p class="t-label c-muted">KMP Pay</p></div>
+          </div>
+          <p class="t-label c-muted" style="margin-bottom: 4px;">No grants — ever</p>
+          <div class="sparkline">
+            <div class="spark-bar" style="height: 3%; background: var(--canvas);"></div>
+            <div class="spark-bar" style="height: 3%; background: var(--canvas);"></div>
+            <div class="spark-bar" style="height: 3%; background: var(--canvas);"></div>
+            <div class="spark-bar" style="height: 3%; background: var(--canvas);"></div>
+            <div class="spark-bar" style="height: 3%; background: var(--canvas);"></div>
+            <div class="spark-bar" style="height: 3%; background: var(--canvas);"></div>
+            <div class="spark-bar" style="height: 3%; background: var(--canvas);"></div>
+          </div>
+        </div>
+
+        <!-- Myer -->
+        <div class="card">
+          <div class="card-badge" style="background: var(--yellow); border-radius: 50%;">B+</div>
+          <p class="t-black t-upper" style="font-size: 22px; margin-bottom: 2px;">Myer</p>
+          <p class="t-label c-muted" style="margin-bottom: 16px;">Est. 1959 — steady giver</p>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+            <div><p class="t-black" style="font-size: 24px; color: green;">$4M</p><p class="t-label c-muted">Grants</p></div>
+            <div><p class="t-black" style="font-size: 24px;">$85M</p><p class="t-label c-muted">Assets</p></div>
+            <div><p class="t-black" style="font-size: 24px; color: green;">100%</p><p class="t-label c-muted">Giving ratio</p></div>
+            <div><p class="t-black" style="font-size: 24px;">$0</p><p class="t-label c-muted">KMP Pay</p></div>
+          </div>
+          <p class="t-label c-muted" style="margin-bottom: 4px;">Steady ~$5M/yr</p>
+          <div class="sparkline">
+            <div class="spark-bar" style="height: 100%; background: green;"></div>
+            <div class="spark-bar" style="height: 100%; background: green;"></div>
+            <div class="spark-bar" style="height: 83%; background: green;"></div>
+            <div class="spark-bar" style="height: 50%; background: var(--black);"></div>
+            <div class="spark-bar" style="height: 67%; background: green;"></div>
+            <div class="spark-bar" style="height: 83%; background: green;"></div>
+            <div class="spark-bar" style="height: 67%; background: green;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: 32px;">
+        <a href="https://grantscope.vercel.app/foundations" class="link-out">Explore all foundation profiles &rarr;</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- PART IV: EXECUTIVE PAY (RED) -->
+  <section id="pay" class="bg-red bb-b">
+    <div class="wrap" style="display: grid; grid-template-columns: 1fr; gap: 0;">
+      <div class="pad-lg c-white" style="max-width: 100%;">
+        <p class="t-label c-white" style="margin-bottom: 12px; letter-spacing: 0.3em; opacity: 0.7;">Part IV</p>
+        <h2 class="t-huge c-white" style="margin-bottom: 24px;">The Pay<br>Gap</h2>
+        <p class="t-stat c-white" style="margin-bottom: 8px;">89%</p>
+        <p class="t-body c-white" style="max-width: 480px; margin-bottom: 32px; opacity: 0.9;">
+          of charities with KMP executives paid them more than they distributed as grants. Total executive compensation: $3.75 billion.
+        </p>
+        <p class="t-label c-white" style="max-width: 480px; margin-bottom: 32px; opacity: 0.5; font-size: 10px; letter-spacing: 0.12em; line-height: 1.6;">
+          KMP = Key Management Personnel — the ACNC term for a charity's senior executives and directors. All charities must report total KMP compensation in their Annual Information Statement.
+        </p>
+
+        <div style="max-width: 600px;">
+          <div style="margin-bottom: 20px;">
+            <p class="t-label c-white" style="margin-bottom: 6px; opacity: 0.7;">Little Co. of Mary — KMP $17.5M vs Grants $0.5M</p>
+            <div class="bar-h"><div class="bar-h-fill bg-black" style="width: 97%;">34:1</div></div>
+          </div>
+          <div style="margin-bottom: 20px;">
+            <p class="t-label c-white" style="margin-bottom: 6px; opacity: 0.7;">RMIT — KMP $9.9M vs Grants $4M</p>
+            <div class="bar-h"><div class="bar-h-fill bg-black" style="width: 71%;">2.5:1</div></div>
+          </div>
+          <div style="margin-bottom: 20px;">
+            <p class="t-label c-white" style="margin-bottom: 6px; opacity: 0.7;">CBH Group — KMP $9.4M vs Grants $3.4M</p>
+            <div class="bar-h"><div class="bar-h-fill bg-black" style="width: 73%;">2.8:1</div></div>
+          </div>
+          <div style="margin-bottom: 20px;">
+            <p class="t-label c-white" style="margin-bottom: 6px; opacity: 0.7;">Paul Ramsay — KMP $1.7M vs Grants $184M</p>
+            <div class="bar-h"><div class="bar-h-fill" style="width: 2%; background: green; min-width: 50px;">1:108</div></div>
+          </div>
+        </div>
+
+        <div style="margin-top: 32px;">
+          <a href="https://grantscope.vercel.app/foundations" class="link-out on-dark">Full KMP analysis &rarr;</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PART V: REVENUE SOURCES (WHITE) -->
+  <section id="revenue" class="bg-white bb-b">
+    <div class="wrap pad-lg">
+      <p class="t-label" style="margin-bottom: 12px; letter-spacing: 0.3em;">Part V</p>
+      <h2 class="t-huge" style="margin-bottom: 12px;">Follow The<br>Money</h2>
+      <p class="t-body c-muted" style="max-width: 520px; margin-bottom: 32px;">
+        Small charities depend on donations. Large charities depend on government. The funding model determines who holds the power.
+      </p>
+
+      <div class="flex gap-4 flex-wrap" style="margin-bottom: 24px;">
+        <div class="flex items-center gap-2"><div style="width: 14px; height: 14px; background: var(--yellow); border: 2px solid var(--black);"></div><span class="t-label">Govt</span></div>
+        <div class="flex items-center gap-2"><div style="width: 14px; height: 14px; background: var(--blue); border: 2px solid var(--black);"></div><span class="t-label">Earned</span></div>
+        <div class="flex items-center gap-2"><div style="width: 14px; height: 14px; background: var(--red); border: 2px solid var(--black);"></div><span class="t-label">Donations</span></div>
+        <div class="flex items-center gap-2"><div style="width: 14px; height: 14px; background: var(--black); border: 2px solid var(--black);"></div><span class="t-label">Other</span></div>
+      </div>
+
+      <div style="max-width: 700px;">
+        <div style="margin-bottom: 24px;">
+          <p class="t-label" style="margin-bottom: 8px;">Large (5,628 charities — $209B revenue)</p>
+          <div class="stacked">
+            <div style="width: 49%; background: var(--yellow); color: var(--black);">49%</div>
+            <div style="width: 34%; background: var(--blue);">34%</div>
+            <div style="width: 7%; background: var(--red);">7%</div>
+            <div style="width: 10%; background: var(--black);">10%</div>
+          </div>
+        </div>
+        <div style="margin-bottom: 24px;">
+          <p class="t-label" style="margin-bottom: 8px;">Medium (8,116 charities — $9.6B revenue)</p>
+          <div class="stacked">
+            <div style="width: 35%; background: var(--yellow); color: var(--black);">35%</div>
+            <div style="width: 30%; background: var(--blue);">30%</div>
+            <div style="width: 22%; background: var(--red);">22%</div>
+            <div style="width: 13%; background: var(--black);">13%</div>
+          </div>
+        </div>
+        <div>
+          <p class="t-label" style="margin-bottom: 8px;">Small (39,460 charities — $3.3B revenue)</p>
+          <div class="stacked">
+            <div style="width: 17%; background: var(--yellow); color: var(--black);">17%</div>
+            <div style="width: 25%; background: var(--blue);">25%</div>
+            <div style="width: 38%; background: var(--red);">38%</div>
+            <div style="width: 20%; background: var(--black);">20%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PART VI: SMALL CHARITY SQUEEZE (BLUE) -->
+  <section id="squeeze" class="bg-blue bb-b">
+    <div class="wrap pad-lg c-white">
+      <p class="t-label c-white" style="margin-bottom: 12px; letter-spacing: 0.3em; opacity: 0.7;">Part VI</p>
+      <h2 class="t-huge c-white" style="margin-bottom: 24px;">The Small<br>Squeeze</h2>
+      <p class="t-body c-white" style="max-width: 520px; margin-bottom: 40px; opacity: 0.9;">
+        While large charities posted a $13.7 billion surplus in 2023, medium charities went into deficit for the first time.
+      </p>
+
+      <div class="grid-2" style="gap: 24px; max-width: 700px;">
+        <div class="bg-white bb hs" style="padding: 28px; color: var(--black);">
+          <p class="t-stat" style="font-size: 48px; color: var(--red);">-$1.84B</p>
+          <p class="t-label" style="margin-top: 4px;">Medium charity deficit (2023)</p>
+        </div>
+        <div class="bg-white bb hs" style="padding: 28px; color: var(--black);">
+          <p class="t-stat" style="font-size: 48px; color: green;">+$13.7B</p>
+          <p class="t-label" style="margin-top: 4px;">Large charity surplus (2023)</p>
+        </div>
+        <div class="bg-white bb hs" style="padding: 28px; color: var(--black);">
+          <p class="t-stat" style="font-size: 48px;">$425B</p>
+          <p class="t-label" style="margin-top: 4px;">Large assets (up from $241B)</p>
+        </div>
+        <div class="bg-white bb hs" style="padding: 28px; color: var(--black);">
+          <p class="t-stat" style="font-size: 48px;">$35B</p>
+          <p class="t-label" style="margin-top: 4px;">Small assets (up from $10B)</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CLOSING (YELLOW) -->
+  <section class="bg-yellow bb-b" style="position: relative; overflow: hidden;">
+    <div style="position: absolute; top: -20px; left: -20px; width: 100px; height: 100px; background: var(--red);"></div>
+    <div style="position: absolute; bottom: -30px; right: -30px; width: 120px; height: 120px; background: var(--blue); border-radius: 50%;"></div>
+    <div class="wrap pad-lg" style="position: relative; z-index: 1; text-align: center;">
+      <h2 class="t-big" style="max-width: 800px; margin: 0 auto 32px; font-size: clamp(24px, 4vw, 48px); line-height: 1.1;">
+        Is a system that holds $494 billion in assets while distributing $11.3 billion in grants really working for the communities it claims to serve?
+      </h2>
+      <p class="t-body" style="max-width: 600px; margin: 0 auto 40px;">
+        This data is public. Published by the ACNC under CC BY 4.0.
+        Every number can be verified, queried, and challenged.
+        Transparency isn't just about publishing data — it's about making it legible.
+      </p>
+      <div class="flex gap-4 justify-center flex-wrap">
+        <a href="https://grantscope.vercel.app" class="link-out" style="font-size: 14px; padding: 14px 28px;">Explore the data &rarr;</a>
+        <a href="https://data.gov.au" class="link-out" style="font-size: 14px; padding: 14px 28px;">ACNC source data &rarr;</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- METHODOLOGY -->
+  <section class="bg-white bb-b">
+    <div class="wrap pad">
+      <p class="t-label" style="margin-bottom: 12px; letter-spacing: 0.3em;">Methodology</p>
+      <div class="t-body c-muted" style="max-width: 640px;">
+        <p style="margin-bottom: 12px;"><strong style="color: var(--black);">359,678 AIS records</strong> from the ACNC, spanning 2017–2023. Data via CKAN API from data.gov.au. All figures AUD.</p>
+        <p style="margin-bottom: 12px;"><strong style="color: var(--black);">Giving ratio</strong> = grants / revenue. Above 100% = endowment drawdown. <strong style="color: var(--black);">KMP</strong> (Key Management Personnel) = senior executives and directors as defined by the ACNC. KMP compensation data only available 2022–2023.</p>
+        <p><strong style="color: var(--black);">Limitations:</strong> Self-reported data. University "grants" include research passthrough. Religious orgs may classify internal transfers as grants.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="bg-black" style="padding: 48px 24px;">
+    <div class="wrap flex justify-between items-center flex-wrap gap-4">
+      <div class="flex items-center gap-3">
+        <div style="width: 28px; height: 28px; background: var(--red); border: 2px solid var(--white);"></div>
+        <span class="t-black c-white" style="font-size: 18px;">GRANTSCOPE</span>
+      </div>
+      <p class="t-label c-white" style="opacity: 0.5;">Data: ACNC via data.gov.au (CC BY 4.0) &bull; 53,207 charities &bull; 7 years</p>
+    </div>
+  </footer>
+
+  <script>
+    function filterTable() {
+      const q = document.getElementById('searchInput').value.toLowerCase();
+      document.querySelectorAll('#assetTable tbody tr').forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(q) ? '' : 'none';
+      });
+    }
+  </script>
+</body>
+</html>

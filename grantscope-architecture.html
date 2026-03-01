@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GrantScope — Architecture & Data Flow</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; overflow-x: hidden; }
+
+  .header { text-align: center; padding: 40px 20px 20px; }
+  .header h1 { font-size: 32px; font-weight: 800; letter-spacing: -0.03em; }
+  .header h1 span { color: #059669; }
+  .header p { color: #94a3b8; margin-top: 8px; font-size: 14px; }
+
+  .legend { display: flex; justify-content: center; gap: 24px; padding: 12px 20px 30px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #94a3b8; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  svg { display: block; margin: 0 auto; }
+
+  .node { cursor: pointer; transition: filter 0.2s; }
+  .node:hover { filter: brightness(1.2) drop-shadow(0 0 8px rgba(255,255,255,0.15)); }
+  .node rect, .node circle { transition: stroke-width 0.2s; }
+  .node:hover rect, .node:hover circle { stroke-width: 3; }
+
+  .flow-line { stroke-dasharray: 8 4; animation: flow 1.5s linear infinite; }
+  .flow-line-reverse { stroke-dasharray: 8 4; animation: flow-reverse 1.5s linear infinite; }
+  @keyframes flow { to { stroke-dashoffset: -24; } }
+  @keyframes flow-reverse { to { stroke-dashoffset: 24; } }
+
+  .planned { opacity: 0.4; stroke-dasharray: 4 4; }
+  .planned-fill { opacity: 0.35; }
+
+  .tooltip {
+    position: fixed; background: #1e293b; border: 1px solid #334155; border-radius: 8px;
+    padding: 12px 16px; font-size: 13px; max-width: 320px; pointer-events: none;
+    opacity: 0; transition: opacity 0.15s; z-index: 100; line-height: 1.5;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  .tooltip.show { opacity: 1; }
+  .tooltip h4 { font-size: 14px; margin-bottom: 4px; color: #f8fafc; }
+  .tooltip .stat { color: #059669; font-weight: 600; }
+  .tooltip .planned-tag { color: #d97706; font-style: italic; }
+
+  .section-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; fill: #475569; font-weight: 600; }
+  .count-badge { font-size: 10px; fill: #f8fafc; font-weight: 700; }
+  .status-live { fill: #059669; }
+  .status-partial { fill: #d97706; }
+  .status-planned { fill: #64748b; }
+
+  .phase-box { fill: none; stroke-dasharray: 6 3; rx: 12; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Grant<span>Scope</span> Architecture</h1>
+  <p>Data flow from source → scraper → database → API → frontend</p>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#059669"></div> Live & operational</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#d97706"></div> Partial / in progress</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#64748b"></div> Planned / not yet built</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#2563eb"></div> Database / storage</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#7c3aed"></div> AI / LLM processing</div>
+</div>
+
+<svg viewBox="0 0 1200 900" width="100%" style="max-width:1200px">
+  <defs>
+    <marker id="arrow-green" viewBox="0 0 10 6" refX="10" refY="3" markerWidth="8" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,3 L0,6" fill="#059669"/>
+    </marker>
+    <marker id="arrow-blue" viewBox="0 0 10 6" refX="10" refY="3" markerWidth="8" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,3 L0,6" fill="#2563eb"/>
+    </marker>
+    <marker id="arrow-purple" viewBox="0 0 10 6" refX="10" refY="3" markerWidth="8" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,3 L0,6" fill="#7c3aed"/>
+    </marker>
+    <marker id="arrow-gray" viewBox="0 0 10 6" refX="10" refY="3" markerWidth="8" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,3 L0,6" fill="#64748b"/>
+    </marker>
+    <filter id="glow"><feGaussianBlur stdDeviation="2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- SECTION LABELS -->
+  <!-- ═══════════════════════════════════════ -->
+  <text x="80" y="30" class="section-label">External Data Sources</text>
+  <text x="460" y="30" class="section-label">Grant Engine (Scrapers + AI)</text>
+  <text x="460" y="420" class="section-label">Supabase Database</text>
+  <text x="820" y="30" class="section-label">Web App (Next.js)</text>
+  <text x="820" y="420" class="section-label">Autonomous Agents</text>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- COLUMN 1: DATA SOURCES -->
+  <!-- ═══════════════════════════════════════ -->
+
+  <!-- GrantConnect -->
+  <g class="node" data-tip="GrantConnect|Federal government grants via RSS feed + Firecrawl deep scraping|~200 grants tracked|Status: Live">
+    <rect x="30" y="50" width="170" height="50" rx="8" fill="#1e293b" stroke="#059669" stroke-width="1.5"/>
+    <text x="115" y="72" text-anchor="middle" fill="#f8fafc" font-size="13" font-weight="600">GrantConnect</text>
+    <text x="115" y="88" text-anchor="middle" fill="#94a3b8" font-size="10">RSS + Firecrawl</text>
+    <circle cx="190" cy="55" r="5" class="status-live"/>
+  </g>
+
+  <!-- QLD Grants -->
+  <g class="node" data-tip="QLD Grants Finder|Queensland state grants via CKAN API|Direct API integration|Status: Live">
+    <rect x="30" y="115" width="170" height="50" rx="8" fill="#1e293b" stroke="#059669" stroke-width="1.5"/>
+    <text x="115" y="137" text-anchor="middle" fill="#f8fafc" font-size="13" font-weight="600">QLD Grants Finder</text>
+    <text x="115" y="153" text-anchor="middle" fill="#94a3b8" font-size="10">CKAN API</text>
+    <circle cx="190" cy="120" r="5" class="status-live"/>
+  </g>
+
+  <!-- data.gov.au -->
+  <g class="node" data-tip="data.gov.au|National open data portal|CKAN search API for grant datasets|Status: Live">
+    <rect x="30" y="180" width="170" height="50" rx="8" fill="#1e293b" stroke="#059669" stroke-width="1.5"/>
+    <text x="115" y="202" text-anchor="middle" fill="#f8fafc" font-size="13" font-weight="600">data.gov.au</text>
+    <text x="115" y="218" text-anchor="middle" fill="#94a3b8" font-size="10">CKAN Search</text>
+    <circle cx="190" cy="185" r="5" class="status-live"/>
+  </g>
+
+  <!-- business.gov.au -->
+  <g class="node" data-tip="business.gov.au|Business grants and assistance programs|Web scraper (HTML parsing)|Status: Live">
+    <rect x="30" y="245" width="170" height="50" rx="8" fill="#1e293b" stroke="#059669" stroke-width="1.5"/>
+    <text x="115" y="267" text-anchor="middle" fill="#f8fafc" font-size="13" font-weight="600">business.gov.au</text>
+    <text x="115" y="283" text-anchor="middle" fill="#94a3b8" font-size="10">Web scraper</text>
+    <circle cx="190" cy="250" r="5" class="status-live"/>
+  </g>
+
+  <!-- ACNC Register -->
+  <g class="node" data-tip="ACNC Charity Register|Australian Charities and Not-for-profits Commission|9,875 foundations imported|Bulk CSV download + API|Status: Live">
+    <rect x="30" y="310" width="170" height="50" rx="8" fill="#1e293b" stroke="#059669" stroke-width="1.5"/>
+    <text x="115" y="332" text-anchor="middle" fill="#f8fafc" font-size="13" font-weight="600">ACNC Register</text>
+    <text x="115" y="348" text-anchor="middle" fill="#94a3b8" font-size="10">9,875 foundations</text>
+    <circle cx="190" cy="315" r="5" class="status-live"/>
+  </g>
+
+  <!-- AI Web Search -->
+  <g class="node" data-tip="AI Web Search|Claude web_search tool for grant discovery|Discovers grants not in any registry|Status: Live">
+    <rect x="30" y="375" width="170" height="50" rx="8" fill="#1e293b" stroke="#7c3aed" stroke-width="1.5"/>
+    <text x="115" y="397" text-anchor="middle" fill="#f8fafc" font-size="13" font-weight="600">AI Web Search</text>
+    <text x="115" y="413" text-anchor="middle" fill="#94a3b8" font-size="10">Claude web_search</text>
+    <circle cx="190" cy="380" r="5" class="status-live"/>
+  </g>
+
+  <!-- State portals (planned) -->
+  <g class="node" data-tip="State Grant Portals|NSW, VIC, WA, SA, TAS grant portals|Not yet built — scrapers needed for each state|Status: Planned">
+    <rect x="30" y="445" width="170" height="50" rx="8" fill="#1e293b" stroke="#64748b" stroke-width="1.5" class="planned"/>
+    <text x="115" y="467" text-anchor="middle" fill="#64748b" font-size="13" font-weight="600" class="planned-fill">State Portals</text>
+    <text x="115" y="483" text-anchor="middle" fill="#475569" font-size="10">NSW, VIC, WA, SA, TAS</text>
+    <circle cx="190" cy="450" r="5" class="status-planned"/>
+  </g>
+
+  <!-- ASX200 (planned) -->
+  <g class="node" data-tip="ASX200 Sustainability Reports|Corporate giving data from annual reports|Company-to-foundation mapping + revenue ratios|Status: Planned (Phase E)">
+    <rect x="30" y="510" width="170" height="50" rx="8" fill="#1e293b" stroke="#64748b" stroke-width="1.5" class="planned"/>
+    <text x="115" y="532" text-anchor="middle" fill="#64748b" font-size="13" font-weight="600" class="planned-fill">ASX200 Reports</text>
+    <text x="115" y="548" text-anchor="middle" fill="#475569" font-size="10">Corporate giving data</text>
+    <circle cx="190" cy="515" r="5" class="status-planned"/>
+  </g>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- COLUMN 2: GRANT ENGINE -->
+  <!-- ═══════════════════════════════════════ -->
+
+  <!-- Discovery Engine -->
+  <g class="node" data-tip="Discovery Engine|Multi-source grant discovery with deduplication|Plugin architecture: each source is a plugin|Merges results, assigns confidence scores|packages/grant-engine/src/discovery/">
+    <rect x="280" y="60" width="200" height="60" rx="10" fill="#1e293b" stroke="#059669" stroke-width="2"/>
+    <text x="380" y="85" text-anchor="middle" fill="#f8fafc" font-size="14" font-weight="700">Discovery Engine</text>
+    <text x="380" y="103" text-anchor="middle" fill="#94a3b8" font-size="11">6 source plugins</text>
+  </g>
+
+  <!-- Foundation Profiler -->
+  <g class="node" data-tip="Foundation Profiler|AI-powered foundation analysis|Scrapes foundation websites via Firecrawl|LLM extracts: giving philosophy, focus areas, application tips|777 foundations profiled (high + medium confidence)|8 LLM providers with round-robin fallback">
+    <rect x="280" y="150" width="200" height="60" rx="10" fill="#1e293b" stroke="#7c3aed" stroke-width="2"/>
+    <text x="380" y="175" text-anchor="middle" fill="#f8fafc" font-size="14" font-weight="700">Foundation Profiler</text>
+    <text x="380" y="193" text-anchor="middle" fill="#c4b5fd" font-size="11">AI enrichment (8 LLMs)</text>
+  </g>
+
+  <!-- Community Profiler -->
+  <g class="node" data-tip="Community Profiler|Profiles grassroots organizations|Estimates admin burden vs program spend|Links orgs to funding received|Status: Live">
+    <rect x="280" y="240" width="200" height="60" rx="10" fill="#1e293b" stroke="#059669" stroke-width="1.5"/>
+    <text x="380" y="265" text-anchor="middle" fill="#f8fafc" font-size="14" font-weight="700">Community Profiler</text>
+    <text x="380" y="283" text-anchor="middle" fill="#94a3b8" font-size="11">Admin burden analysis</text>
+  </g>
+
+  <!-- Report Builders -->
+  <g class="node" data-tip="Report Builders|4 analysis engines:|• Money Flow Sankey diagrams|• Youth Justice cost comparison|• Power Analysis (HHI + Gini)|• Admin burden by org size|All feed into Living Reports pages">
+    <rect x="280" y="330" width="200" height="60" rx="10" fill="#1e293b" stroke="#059669" stroke-width="1.5"/>
+    <text x="380" y="355" text-anchor="middle" fill="#f8fafc" font-size="14" font-weight="700">Report Builders</text>
+    <text x="380" y="373" text-anchor="middle" fill="#94a3b8" font-size="11">4 analysis engines</text>
+  </g>
+
+  <!-- Multi-LLM Router -->
+  <g class="node" data-tip="Multi-LLM Router|Round-robins across 8 providers:|Gemini, DeepSeek, Kimi, Groq, MiniMax, OpenAI, Anthropic, Perplexity|Auto-fallback on quota/rate errors|Uses free tiers first for cost efficiency|~$10/month total operating cost">
+    <rect x="290" y="155" width="30" height="50" rx="4" fill="#7c3aed" opacity="0.3"/>
+    <text x="305" y="183" text-anchor="middle" fill="#c4b5fd" font-size="8" transform="rotate(-90 305 183)">8 LLMs</text>
+  </g>
+
+  <!-- Eligibility Matcher (planned) -->
+  <g class="node" data-tip="Eligibility Matcher|Match organizations to eligible grants|Based on focus areas, size, location, ABN type|Status: Planned">
+    <rect x="530" y="240" width="170" height="50" rx="8" fill="#1e293b" stroke="#64748b" stroke-width="1.5" class="planned"/>
+    <text x="615" y="262" text-anchor="middle" fill="#64748b" font-size="13" font-weight="600" class="planned-fill">Eligibility Matcher</text>
+    <text x="615" y="278" text-anchor="middle" fill="#475569" font-size="10">Org → Grant matching</text>
+    <circle cx="690" cy="245" r="5" class="status-planned"/>
+  </g>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- FLOW LINES: Sources → Engine -->
+  <!-- ═══════════════════════════════════════ -->
+  <line x1="200" y1="75" x2="278" y2="82" class="flow-line" stroke="#059669" stroke-width="1.5" marker-end="url(#arrow-green)"/>
+  <line x1="200" y1="140" x2="278" y2="88" class="flow-line" stroke="#059669" stroke-width="1.5" marker-end="url(#arrow-green)"/>
+  <line x1="200" y1="205" x2="278" y2="90" class="flow-line" stroke="#059669" stroke-width="1.5" marker-end="url(#arrow-green)"/>
+  <line x1="200" y1="270" x2="278" y2="92" class="flow-line" stroke="#059669" stroke-width="1.5" marker-end="url(#arrow-green)"/>
+  <line x1="200" y1="335" x2="278" y2="180" class="flow-line" stroke="#059669" stroke-width="1.5" marker-end="url(#arrow-green)"/>
+  <line x1="200" y1="400" x2="278" y2="88" class="flow-line" stroke="#7c3aed" stroke-width="1.5" marker-end="url(#arrow-purple)"/>
+
+  <!-- Planned source lines -->
+  <line x1="200" y1="470" x2="278" y2="95" class="planned" stroke="#64748b" stroke-width="1" marker-end="url(#arrow-gray)"/>
+  <line x1="200" y1="535" x2="278" y2="185" class="planned" stroke="#64748b" stroke-width="1" marker-end="url(#arrow-gray)"/>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- DATABASE (center bottom) -->
+  <!-- ═══════════════════════════════════════ -->
+  <g class="node" data-tip="Supabase (PostgreSQL)|7 core tables:|• foundations (9,875 rows)|• foundation_programs (472 rows)|• grant_opportunities (~400 rows)|• community_orgs|• government_programs|• money_flows|• agent_runs|Plus: reports, views, indexes">
+    <rect x="350" y="440" width="260" height="120" rx="12" fill="#1e293b" stroke="#2563eb" stroke-width="2.5" filter="url(#glow)"/>
+    <text x="480" y="468" text-anchor="middle" fill="#60a5fa" font-size="16" font-weight="800">Supabase</text>
+    <text x="480" y="488" text-anchor="middle" fill="#94a3b8" font-size="11">PostgreSQL</text>
+
+    <text x="370" y="510" fill="#94a3b8" font-size="10">foundations</text>
+    <text x="463" y="510" fill="#059669" font-size="10" font-weight="600">9,875</text>
+    <text x="370" y="524" fill="#94a3b8" font-size="10">grant_opportunities</text>
+    <text x="497" y="524" fill="#059669" font-size="10" font-weight="600">~400</text>
+    <text x="370" y="538" fill="#94a3b8" font-size="10">foundation_programs</text>
+    <text x="497" y="538" fill="#059669" font-size="10" font-weight="600">472</text>
+    <text x="370" y="552" fill="#94a3b8" font-size="10">community_orgs, money_flows, agent_runs</text>
+  </g>
+
+  <!-- Flow: Engine → DB -->
+  <line x1="380" y1="120" x2="420" y2="438" class="flow-line" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <line x1="380" y1="210" x2="450" y2="438" class="flow-line" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <line x1="380" y1="300" x2="460" y2="438" class="flow-line" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <line x1="380" y1="390" x2="470" y2="438" class="flow-line" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- COLUMN 3: WEB APP -->
+  <!-- ═══════════════════════════════════════ -->
+
+  <!-- API Routes -->
+  <g class="node" data-tip="Next.js API Routes|7 API endpoints:|/api/data — bulk data export|/api/data/export — CSV/JSON|/api/discover — run discovery|/api/foundations — foundation CRUD|/api/reports/money-flow|/api/reports/youth-justice|/api/search — full-text search">
+    <rect x="770" y="50" width="200" height="60" rx="10" fill="#1e293b" stroke="#059669" stroke-width="2"/>
+    <text x="870" y="75" text-anchor="middle" fill="#f8fafc" font-size="14" font-weight="700">API Routes</text>
+    <text x="870" y="93" text-anchor="middle" fill="#94a3b8" font-size="11">7 endpoints</text>
+  </g>
+
+  <!-- Pages -->
+  <g class="node" data-tip="Frontend Pages|14 pages total:|/ — Homepage with live stats|/grants — Government grants directory|/grants/[id] — Grant detail|/foundations — Foundation directory|/foundations/[id] — Foundation profile|/corporate — Corporate giving table|/community — Community orgs|/reports — Report index|+ 4 Living Report pages|All server-rendered with Tailwind CSS">
+    <rect x="770" y="130" width="200" height="80" rx="10" fill="#1e293b" stroke="#059669" stroke-width="2"/>
+    <text x="870" y="158" text-anchor="middle" fill="#f8fafc" font-size="14" font-weight="700">Frontend Pages</text>
+    <text x="870" y="176" text-anchor="middle" fill="#94a3b8" font-size="11">14 pages (Tailwind CSS)</text>
+    <text x="870" y="198" text-anchor="middle" fill="#059669" font-size="10">grantscope.vercel.app</text>
+  </g>
+
+  <!-- Living Reports -->
+  <g class="node" data-tip="Living Reports|4 data-driven investigations:|🔴 Youth Justice — $1.3M/child detention|🔵 Follow the Dollar — Sankey flows|🟡 Access Gap — Admin burden analysis|🟣 Power Dynamics — HHI + Gini|Charts via Recharts (interactive)">
+    <rect x="770" y="230" width="200" height="70" rx="10" fill="#1e293b" stroke="#059669" stroke-width="1.5"/>
+    <text x="870" y="258" text-anchor="middle" fill="#f8fafc" font-size="14" font-weight="700">Living Reports</text>
+    <text x="870" y="276" text-anchor="middle" fill="#94a3b8" font-size="11">4 investigations (Recharts)</text>
+    <text x="870" y="290" text-anchor="middle" fill="#dc2626" font-size="9">Youth Justice • Money Flow • Access Gap • Power</text>
+  </g>
+
+  <!-- Public API (planned) -->
+  <g class="node" data-tip="Public API|REST API for third-party access|OpenAPI spec, rate limiting, API keys|Status: Planned">
+    <rect x="770" y="320" width="200" height="50" rx="8" fill="#1e293b" stroke="#64748b" stroke-width="1.5" class="planned"/>
+    <text x="870" y="342" text-anchor="middle" fill="#64748b" font-size="13" font-weight="600" class="planned-fill">Public API</text>
+    <text x="870" y="358" text-anchor="middle" fill="#475569" font-size="10">REST for third parties</text>
+    <circle cx="960" cy="325" r="5" class="status-planned"/>
+  </g>
+
+  <!-- DB → API flow -->
+  <line x1="610" y1="480" x2="768" y2="80" class="flow-line" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <line x1="610" y1="490" x2="768" y2="170" class="flow-line" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <line x1="610" y1="500" x2="768" y2="265" class="flow-line" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- AUTONOMOUS AGENTS (bottom right) -->
+  <!-- ═══════════════════════════════════════ -->
+
+  <g class="node" data-tip="Grant Monitor Agent|Runs daily to discover new grants|Checks all 6 sources for updates|Logs runs to agent_runs table|Status: Live">
+    <rect x="770" y="440" width="200" height="45" rx="8" fill="#1e293b" stroke="#059669" stroke-width="1.5"/>
+    <text x="870" y="460" text-anchor="middle" fill="#f8fafc" font-size="12" font-weight="600">Grant Monitor</text>
+    <text x="870" y="476" text-anchor="middle" fill="#94a3b8" font-size="10">Daily discovery</text>
+    <circle cx="960" cy="445" r="5" class="status-live"/>
+  </g>
+
+  <g class="node" data-tip="Foundation Watcher|Weekly check of foundation websites|Detects changes in programs, deadlines, amounts|Re-profiles if significant changes found|Status: Live">
+    <rect x="770" y="495" width="200" height="45" rx="8" fill="#1e293b" stroke="#059669" stroke-width="1.5"/>
+    <text x="870" y="515" text-anchor="middle" fill="#f8fafc" font-size="12" font-weight="600">Foundation Watcher</text>
+    <text x="870" y="531" text-anchor="middle" fill="#94a3b8" font-size="10">Weekly website checks</text>
+    <circle cx="960" cy="500" r="5" class="status-live"/>
+  </g>
+
+  <g class="node" data-tip="Spend Watcher|Quarterly government budget tracking|Monitors budget allocations and spending|Feeds into money_flows table|Status: Live">
+    <rect x="770" y="550" width="200" height="45" rx="8" fill="#1e293b" stroke="#059669" stroke-width="1.5"/>
+    <text x="870" y="570" text-anchor="middle" fill="#f8fafc" font-size="12" font-weight="600">Spend Watcher</text>
+    <text x="870" y="586" text-anchor="middle" fill="#94a3b8" font-size="10">Quarterly budget tracking</text>
+    <circle cx="960" cy="555" r="5" class="status-live"/>
+  </g>
+
+  <!-- Agent → DB flow -->
+  <line x1="768" y1="462" x2="612" y2="490" class="flow-line-reverse" stroke="#059669" stroke-width="1.5" marker-end="url(#arrow-green)"/>
+  <line x1="768" y1="517" x2="612" y2="500" class="flow-line-reverse" stroke="#059669" stroke-width="1.5" marker-end="url(#arrow-green)"/>
+  <line x1="768" y1="572" x2="612" y2="510" class="flow-line-reverse" stroke="#059669" stroke-width="1.5" marker-end="url(#arrow-green)"/>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- OPERATIONAL SCRIPTS (bottom left) -->
+  <!-- ═══════════════════════════════════════ -->
+  <text x="80" y="620" class="section-label">Operational Scripts (11)</text>
+
+  <g class="node" data-tip="11 Operational Scripts|• import-acnc-foundations — bulk ACNC import|• profile-foundations — AI enrichment|• profile-vip-foundations — top 46 funders|• reprofile-low-confidence — quality improvement|• discover-grants — multi-source discovery|• scrape-foundation-programs — website scraping|• discover-community-orgs — grassroots profiling|• seed-money-flows — financial flow data|• seed-youth-justice — QLD data seeding|• tag-normalize — standardize categories|• export-data — CSV/JSON export">
+    <rect x="30" y="640" width="320" height="100" rx="10" fill="#1e293b" stroke="#059669" stroke-width="1.5"/>
+    <text x="190" y="666" text-anchor="middle" fill="#f8fafc" font-size="13" font-weight="600">scripts/</text>
+    <text x="50" y="686" fill="#94a3b8" font-size="10">import-acnc    profile-foundations    discover-grants</text>
+    <text x="50" y="702" fill="#94a3b8" font-size="10">scrape-programs    seed-money-flows    seed-youth-justice</text>
+    <text x="50" y="718" fill="#94a3b8" font-size="10">profile-vip    reprofile-low    community-orgs    export</text>
+    <text x="50" y="734" fill="#059669" font-size="10" font-weight="600">1,403 lines of operational code</text>
+  </g>
+
+  <!-- Scripts → DB -->
+  <line x1="350" y1="690" x2="400" y2="562" class="flow-line" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- VERCEL DEPLOYMENT -->
+  <!-- ═══════════════════════════════════════ -->
+  <g class="node" data-tip="Vercel|Production deployment|Auto-deploys from GitHub main branch|Server-side rendering for all data pages|Edge network for global performance">
+    <rect x="1000" y="140" width="150" height="60" rx="10" fill="#1e293b" stroke="#f8fafc" stroke-width="1.5"/>
+    <text x="1075" y="168" text-anchor="middle" fill="#f8fafc" font-size="14" font-weight="700">Vercel</text>
+    <text x="1075" y="186" text-anchor="middle" fill="#94a3b8" font-size="10">Auto-deploy from GitHub</text>
+  </g>
+  <line x1="970" y1="170" x2="998" y2="170" class="flow-line" stroke="#f8fafc" stroke-width="1" marker-end="url(#arrow-green)"/>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- DATA STATS SUMMARY (bottom right) -->
+  <!-- ═══════════════════════════════════════ -->
+  <text x="770" y="640" class="section-label">Coverage Summary</text>
+
+  <g class="node" data-tip="Current data coverage across all sources">
+    <rect x="770" y="658" width="380" height="90" rx="10" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+    <text x="790" y="682" fill="#059669" font-size="13" font-weight="700">9,875</text>
+    <text x="840" y="682" fill="#94a3b8" font-size="12">foundations imported</text>
+    <text x="790" y="702" fill="#059669" font-size="13" font-weight="700">777</text>
+    <text x="825" y="702" fill="#94a3b8" font-size="12">AI-profiled (8% coverage)</text>
+    <text x="790" y="722" fill="#059669" font-size="13" font-weight="700">~400</text>
+    <text x="830" y="722" fill="#94a3b8" font-size="12">government grants tracked</text>
+    <text x="790" y="742" fill="#059669" font-size="13" font-weight="700">472</text>
+    <text x="825" y="742" fill="#94a3b8" font-size="12">foundation programs discovered</text>
+
+    <text x="1000" y="682" fill="#d97706" font-size="13" font-weight="700">4,360</text>
+    <text x="1042" y="682" fill="#94a3b8" font-size="12">need profiling</text>
+    <text x="1000" y="702" fill="#d97706" font-size="13" font-weight="700">5 states</text>
+    <text x="1055" y="702" fill="#94a3b8" font-size="12">need scrapers</text>
+    <text x="1000" y="722" fill="#64748b" font-size="13" font-weight="700">ASX200</text>
+    <text x="1055" y="722" fill="#94a3b8" font-size="12">not started</text>
+    <text x="1000" y="742" fill="#64748b" font-size="13" font-weight="700">Public API</text>
+    <text x="1072" y="742" fill="#94a3b8" font-size="12">not started</text>
+  </g>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- FLOW LABEL -->
+  <!-- ═══════════════════════════════════════ -->
+  <text x="600" y="870" text-anchor="middle" fill="#334155" font-size="11" font-style="italic">
+    Animated lines show data flow direction. Dashed gray = planned/not yet built.
+  </text>
+
+</svg>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+const tooltip = document.getElementById('tooltip');
+
+document.querySelectorAll('[data-tip]').forEach(el => {
+  el.addEventListener('mouseenter', e => {
+    const parts = el.dataset.tip.split('|');
+    let html = `<h4>${parts[0]}</h4>`;
+    for (let i = 1; i < parts.length; i++) {
+      const line = parts[i].trim();
+      if (line.startsWith('Status:')) {
+        const status = line.replace('Status: ', '');
+        const cls = status === 'Live' ? 'stat' : status === 'Planned' ? 'planned-tag' : 'stat';
+        html += `<div class="${cls}">${line}</div>`;
+      } else if (line.match(/^\d/) || line.match(/^\~/)) {
+        html += `<div class="stat">${line}</div>`;
+      } else {
+        html += `<div>${line}</div>`;
+      }
+    }
+    tooltip.innerHTML = html;
+    tooltip.classList.add('show');
+  });
+
+  el.addEventListener('mousemove', e => {
+    const x = Math.min(e.clientX + 12, window.innerWidth - 340);
+    const y = Math.min(e.clientY + 12, window.innerHeight - 200);
+    tooltip.style.left = x + 'px';
+    tooltip.style.top = y + 'px';
+  });
+
+  el.addEventListener('mouseleave', () => {
+    tooltip.classList.remove('show');
+  });
+});
+</script>
+
+</body>
+</html>

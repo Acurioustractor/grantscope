@@ -53,48 +53,49 @@ export default async function CommunityPage({
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-extrabold text-navy-900 mb-2">Community Organizations</h1>
-        <p className="text-navy-500">
+        <p className="text-xs font-black text-bauhaus-blue uppercase tracking-[0.3em] mb-2">Directory</p>
+        <h1 className="text-3xl font-black text-bauhaus-black mb-2">Community Organizations</h1>
+        <p className="text-bauhaus-muted font-medium">
           {total.toLocaleString()} grassroots and community organizations tracked.
           See how much they spend on admin vs programs.
         </p>
       </div>
 
-      <form action="/community" method="get" className="flex gap-2 mb-6">
+      <form action="/community" method="get" className="flex gap-0 mb-6">
         <input
           type="text"
           name="q"
           defaultValue={params.q}
           placeholder="Search organizations..."
-          className="flex-1 px-4 py-2.5 text-sm border border-navy-200 rounded-lg focus:border-link focus:outline-none bg-white"
+          className="flex-1 px-4 py-2.5 text-sm font-bold border-4 border-bauhaus-black bg-white focus:bg-bauhaus-yellow focus:outline-none"
         />
-        <button type="submit" className="px-5 py-2.5 bg-navy-900 text-white text-sm font-semibold rounded-lg hover:bg-navy-800 transition-colors cursor-pointer">
+        <button type="submit" className="px-5 py-2.5 bg-bauhaus-black text-white text-xs font-black uppercase tracking-widest hover:bg-bauhaus-red cursor-pointer border-4 border-bauhaus-black">
           Search
         </button>
       </form>
 
-      <div className="space-y-2">
+      <div className="space-y-3">
         {orgs.map(org => (
-          <div key={org.id} className="bg-white border border-navy-200 rounded-lg p-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 hover:border-navy-300 hover:shadow-sm transition-all">
+          <div key={org.id} className="bg-white border-4 border-bauhaus-black p-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 hover:-translate-y-1 bauhaus-shadow-sm transition-all">
             <div className="flex-1 min-w-0">
-              <div className="font-semibold text-[15px]">
+              <div className="font-bold text-[15px]">
                 {org.website ? (
-                  <a href={org.website} target="_blank" rel="noopener noreferrer" className="text-link hover:underline">
+                  <a href={org.website} target="_blank" rel="noopener noreferrer" className="text-bauhaus-blue hover:text-bauhaus-red">
                     {org.name}
                   </a>
                 ) : (
-                  <span className="text-navy-900">{org.name}</span>
+                  <span className="text-bauhaus-black">{org.name}</span>
                 )}
               </div>
               {org.description && (
-                <div className="text-sm text-navy-500 mt-1 line-clamp-2 max-w-xl">
+                <div className="text-sm text-bauhaus-muted mt-1 line-clamp-2 max-w-xl">
                   {org.description}
                 </div>
               )}
               {org.domain?.length > 0 && (
                 <div className="flex gap-1.5 mt-2 flex-wrap">
                   {org.domain.map(d => (
-                    <span key={d} className="text-[11px] px-2 py-0.5 rounded-full bg-navy-100 text-navy-600 capitalize">
+                    <span key={d} className="text-[11px] px-2 py-0.5 bg-bauhaus-canvas text-bauhaus-black font-black uppercase tracking-wider border-2 border-bauhaus-black/20 capitalize">
                       {d.replace('_', ' ')}
                     </span>
                   ))}
@@ -102,10 +103,10 @@ export default async function CommunityPage({
               )}
             </div>
             <div className="sm:text-right flex-shrink-0">
-              <div className="text-base font-bold text-navy-900 tabular-nums">{formatDollars(org.annual_revenue)}</div>
-              <div className="text-[11px] text-navy-500">annual revenue</div>
+              <div className="text-base font-black text-bauhaus-black tabular-nums">{formatDollars(org.annual_revenue)}</div>
+              <div className="text-[11px] text-bauhaus-muted font-bold uppercase tracking-wider">annual revenue</div>
               {org.admin_burden_cost && org.annual_revenue && (
-                <div className="text-xs text-danger font-medium mt-0.5 tabular-nums">
+                <div className="text-xs text-bauhaus-red font-black mt-0.5 tabular-nums">
                   {Math.round((org.admin_burden_cost / org.annual_revenue) * 100)}% admin
                 </div>
               )}
@@ -114,8 +115,9 @@ export default async function CommunityPage({
         ))}
 
         {orgs.length === 0 && (
-          <div className="text-center py-16 text-navy-400">
-            No community organizations found. Run the profiling script first.
+          <div className="text-center py-16 text-bauhaus-muted border-4 border-bauhaus-black bg-white">
+            <p className="font-black uppercase">No community organizations found.</p>
+            <p className="text-sm mt-1">Run the profiling script first.</p>
           </div>
         )}
       </div>
