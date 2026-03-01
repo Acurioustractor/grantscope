@@ -13,7 +13,7 @@ export async function GET() {
     .from('saved_grants')
     .select(`
       *,
-      grant:grant_opportunities(id, name, provider, amount_min, amount_max, closes_at, categories, url, status)
+      grant:grant_opportunities(id, name, provider, amount_min, amount_max, closes_at, categories, url, application_status)
     `)
     .eq('user_id', user.id)
     .order('updated_at', { ascending: false });

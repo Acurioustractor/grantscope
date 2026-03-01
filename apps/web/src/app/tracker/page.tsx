@@ -20,7 +20,7 @@ export interface SavedGrantRow {
     closes_at: string | null;
     categories: string[];
     url: string | null;
-    status: string;
+    application_status: string;
   };
 }
 
