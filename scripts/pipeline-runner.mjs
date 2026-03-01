@@ -46,19 +46,19 @@ const STEPS = [
   {
     id: 'discovery',
     name: 'Grant Discovery',
-    cmd: ['node', '--env-file=.env', 'scripts/grantscope-discovery.mjs'],
+    cmd: ['npx', 'tsx', 'scripts/grantscope-discovery.mjs'],
     timeout: 600_000, // 10 min
   },
   {
     id: 'enrich',
     name: 'Grant Enrichment',
-    cmd: ['node', '--env-file=.env', 'scripts/enrich-grants-free.mjs', '--limit=100'],
+    cmd: ['npx', 'tsx', 'scripts/enrich-grants-free.mjs', '--limit=100'],
     timeout: 600_000,
   },
   {
     id: 'profile',
     name: 'Foundation Profiling',
-    cmd: ['node', '--env-file=.env', 'scripts/build-foundation-profiles.mjs', '--limit=10'],
+    cmd: ['npx', 'tsx', 'scripts/build-foundation-profiles.mjs', '--limit=10'],
     timeout: 600_000,
   },
   {
