@@ -103,6 +103,11 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
       }));
 
       // Apply client-side filters to semantic results
+      // Exclude expired grants by default
+      if (closingFilter !== 'all') {
+        const now = new Date().toISOString();
+        grants = grants.filter(g => !g.closes_at || g.closes_at > now);
+      }
       if (amountMin) grants = grants.filter(g => (g.amount_max || 0) >= amountMin);
       if (amountMax) grants = grants.filter(g => (g.amount_min || 0) <= amountMax);
       if (closingFilter === '30') {
@@ -154,10 +159,13 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
     } else if (closingFilter === '90') {
       dbQuery = dbQuery.gt('closes_at', new Date().toISOString());
       dbQuery = dbQuery.lt('closes_at', new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString());
+    } else if (closingFilter !== 'all') {
+      // Default: exclude expired grants (past close date)
+      dbQuery = dbQuery.or(`closes_at.gt.${new Date().toISOString()},closes_at.is.null`);
     }
 
     dbQuery = dbQuery
-      .order('closes_at', { ascending: true, nullsFirst: false })
+      .order('created_at', { ascending: false })
       .range(offset, offset + pageSize - 1);
 
     const result = await dbQuery;
@@ -285,13 +293,13 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
           </div>
           <div className="flex items-center px-3 py-2 border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black gap-1">
             <span className="text-[11px] font-black text-bauhaus-muted uppercase tracking-wider mr-1">Closing</span>
-            {['30', '90', ''].map(v => (
+            {[{ v: '', label: 'Upcoming' }, { v: '30', label: '30 Days' }, { v: '90', label: '90 Days' }, { v: 'all', label: 'All' }].map(({ v, label }) => (
               <a
                 key={v}
                 href={`/grants?${new URLSearchParams({ type: grantType, mode: searchMode, ...(query ? { q: query } : {}), ...(category ? { category } : {}), ...(amountMin ? { amount_min: String(amountMin) } : {}), ...(amountMax ? { amount_max: String(amountMax) } : {}), ...(geoFilter ? { geo: geoFilter } : {}), closing: v }).toString()}`}
                 className={`px-2 py-0.5 text-[11px] font-black uppercase tracking-wider border-2 border-bauhaus-black/20 ${closingFilter === v ? 'bg-bauhaus-black text-white border-bauhaus-black' : 'bg-bauhaus-canvas text-bauhaus-black hover:bg-bauhaus-black/10'}`}
               >
-                {v === '30' ? '30 Days' : v === '90' ? '90 Days' : 'All'}
+                {label}
               </a>
             ))}
           </div>
