@@ -29,8 +29,8 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  // Protect /tracker routes
-  if (pathname.startsWith('/tracker') && !user) {
+  // Protect /tracker and /ops routes
+  if ((pathname.startsWith('/tracker') || pathname.startsWith('/ops')) && !user) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);
@@ -47,5 +47,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/tracker/:path*', '/login'],
+  matcher: ['/tracker/:path*', '/ops/:path*', '/ops', '/login'],
 };

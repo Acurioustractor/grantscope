@@ -20,6 +20,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { FoundationScraper } from '../packages/grant-engine/src/foundations/annual-report-scraper.ts';
 import { FoundationProfiler } from '../packages/grant-engine/src/foundations/foundation-profiler.ts';
+import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -205,6 +206,8 @@ async function main() {
     return;
   }
 
+  const run = await logStart(supabase, 'build-foundation-profiles', 'Profile Foundations');
+
   const scraper = new FoundationScraper({ requestDelayMs: 2000, maxPagesPerFoundation: 5 });
   const profiler = new FoundationProfiler();
 
@@ -305,6 +308,12 @@ async function main() {
       errors++;
     }
   }
+
+  await logComplete(supabase, run.id, {
+    items_found: foundations.length,
+    items_new: profiled,
+    items_updated: 0,
+  });
 
   log(`\nComplete: ${profiled} profiled, ${errors} errors`);
 }

@@ -14,6 +14,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { batchEnrichFree } from '../packages/grant-engine/src/enrichment-free.ts';
+import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -53,13 +54,26 @@ async function main() {
     return;
   }
 
-  const result = await batchEnrichFree(supabase, {
-    limit: LIMIT,
-    source: SOURCE,
-    onProgress: console.log,
-  });
+  const run = await logStart(supabase, 'enrich-grants-free', 'Enrich Grants (Free)');
 
-  console.log(`\nDone: ${result.enriched} enriched, ${result.scraped} scraped, ${result.skipped} skipped, ${result.errors} errors`);
+  try {
+    const result = await batchEnrichFree(supabase, {
+      limit: LIMIT,
+      source: SOURCE,
+      onProgress: console.log,
+    });
+
+    await logComplete(supabase, run.id, {
+      items_found: result.enriched + result.skipped + result.errors,
+      items_new: result.enriched,
+      items_updated: result.scraped,
+    });
+
+    console.log(`\nDone: ${result.enriched} enriched, ${result.scraped} scraped, ${result.skipped} skipped, ${result.errors} errors`);
+  } catch (err) {
+    await logFailed(supabase, run.id, err);
+    throw err;
+  }
 }
 
 main().catch(err => {

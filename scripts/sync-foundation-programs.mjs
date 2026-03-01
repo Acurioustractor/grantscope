@@ -14,6 +14,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -65,6 +66,18 @@ async function main() {
 
   console.log(`  ${existingKeys.size} already synced`);
 
+  const run = await logStart(supabase, 'sync-foundation-programs', 'Sync Foundation Programs');
+
+  function detectProgramType(name, description) {
+    const text = `${name} ${description || ''}`.toLowerCase();
+    if (/fellowship/.test(text)) return 'fellowship';
+    if (/scholarship|bursary|bursaries/.test(text)) return 'scholarship';
+    if (/award|prize/.test(text)) return 'award';
+    if (/grant/.test(text)) return 'grant';
+    if (/program|programme|initiative|project/.test(text)) return 'program';
+    return 'grant';
+  }
+
   let synced = 0;
   let skipped = 0;
   let errors = 0;
@@ -96,6 +109,7 @@ async function main() {
       source: 'foundation_program',
       grant_type: 'foundation',
       foundation_id: foundation.id,
+      program_type: detectProgramType(program.name, program.description),
       categories,
     };
 
@@ -121,6 +135,12 @@ async function main() {
       synced++;
     }
   }
+
+  await logComplete(supabase, run.id, {
+    items_found: programs.length,
+    items_new: synced,
+    items_updated: skipped,
+  });
 
   console.log(`\nComplete: ${synced} synced, ${skipped} skipped (already exist), ${errors} errors`);
   console.log(`Total foundation programs in grants: ${existingKeys.size + synced}`);

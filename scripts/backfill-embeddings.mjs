@@ -13,6 +13,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -108,6 +109,8 @@ if (allGrants.length === 0) {
 
 console.log(`${allGrants.length} grants need embeddings`);
 
+const run = await logStart(supabase, 'backfill-embeddings', 'Backfill Embeddings');
+
 let embedded = 0;
 let errors = 0;
 
@@ -147,6 +150,12 @@ for (let i = 0; i < allGrants.length; i += batchSize) {
     errors += batch.length;
   }
 }
+
+await logComplete(supabase, run.id, {
+  items_found: allGrants.length,
+  items_new: embedded,
+  items_updated: 0,
+});
 
 console.log(`\nDone: ${embedded} embedded, ${errors} errors`);
 process.exit(errors > 0 ? 1 : 0);
