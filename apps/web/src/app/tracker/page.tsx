@@ -1,4 +1,5 @@
 import { createSupabaseServer } from '@/lib/supabase-server';
+import { getServiceSupabase } from '@/lib/supabase';
 import { redirect } from 'next/navigation';
 import { KanbanBoard } from './kanban-board';
 
@@ -31,7 +32,9 @@ export default async function TrackerPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const { data } = await supabase
+  // Use service role to bypass RLS — route is already auth-gated by middleware
+  const serviceDb = getServiceSupabase();
+  const { data } = await serviceDb
     .from('saved_grants')
     .select(`
       *,

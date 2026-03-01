@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase-server';
+import { getServiceSupabase } from '@/lib/supabase';
 import { STAGE_TO_GHL } from '@/lib/ghl';
 
 type RouteContext = { params: Promise<{ grantId: string }> };
@@ -13,10 +14,12 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
   const { grantId } = await context.params;
   const body = await request.json();
-
   const { stars, color, stage, notes } = body;
 
-  const { data, error } = await supabase
+  // Use service role to bypass RLS — user authenticated above
+  const serviceDb = getServiceSupabase();
+
+  const { data, error } = await serviceDb
     .from('saved_grants')
     .upsert(
       {
@@ -37,7 +40,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
   // Fire-and-forget GHL sync when stage reaches "pursuing" or later
   if (stage && GHL_SYNC_STAGES.has(stage) && process.env.GHL_API_KEY) {
-    syncToGHL(grantId, stage, data as { ghl_opportunity_id: string | null }, supabase, user.id).catch(
+    syncToGHL(grantId, stage, data as { ghl_opportunity_id: string | null }, serviceDb, user.id).catch(
       (err) => console.error('[GHL sync]', err)
     );
   }
@@ -49,12 +52,11 @@ async function syncToGHL(
   grantId: string,
   stage: string,
   savedGrant: { ghl_opportunity_id: string | null },
-  supabase: Awaited<ReturnType<typeof createSupabaseServer>>,
+  serviceDb: ReturnType<typeof getServiceSupabase>,
   userId: string
 ) {
   const { createOpportunity, updateOpportunity, getPipelines } = await import('@/lib/ghl');
 
-  // Get pipeline info
   const { pipelines } = await getPipelines();
   const pipeline = pipelines?.[0];
   if (!pipeline) return;
@@ -66,14 +68,12 @@ async function syncToGHL(
   if (!pipelineStage) return;
 
   if (savedGrant.ghl_opportunity_id) {
-    // Update existing opportunity
     await updateOpportunity(savedGrant.ghl_opportunity_id, {
       pipelineStageId: pipelineStage.id,
       status: stage === 'lost' || stage === 'expired' ? 'lost' : stage === 'realized' ? 'won' : 'open',
     });
   } else {
-    // Fetch grant name for the opportunity
-    const { data: grant } = await supabase
+    const { data: grant } = await serviceDb
       .from('grant_opportunities')
       .select('name, amount_max')
       .eq('id', grantId)
@@ -87,9 +87,8 @@ async function syncToGHL(
       pipelineStageId: pipelineStage.id,
     });
 
-    // Store the GHL opportunity ID
     if (result?.opportunity?.id) {
-      await supabase
+      await serviceDb
         .from('saved_grants')
         .update({ ghl_opportunity_id: result.opportunity.id })
         .eq('user_id', userId)
@@ -105,7 +104,8 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
 
   const { grantId } = await context.params;
 
-  const { error } = await supabase
+  const serviceDb = getServiceSupabase();
+  const { error } = await serviceDb
     .from('saved_grants')
     .delete()
     .eq('user_id', user.id)

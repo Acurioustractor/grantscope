@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase-server';
+import { getServiceSupabase } from '@/lib/supabase';
 
 export async function GET() {
   const supabase = await createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { data, error } = await supabase
+  // Use service role to bypass RLS — user is already authenticated above
+  const serviceDb = getServiceSupabase();
+  const { data, error } = await serviceDb
     .from('saved_grants')
     .select(`
       *,
