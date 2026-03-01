@@ -1,0 +1,88 @@
+/**
+ * GoHighLevel API service for grant pipeline sync.
+ * Maps saved_grants stages ↔ GHL opportunity stages.
+ */
+
+const BASE_URL = 'https://services.leadconnectorhq.com';
+
+const STAGE_TO_GHL: Record<string, string> = {
+  pursuing: 'Application In Progress',
+  submitted: 'Grant Submitted',
+  approved: 'Approved',
+  realized: 'Won',
+  lost: 'Lost',
+};
+
+const GHL_TO_STAGE: Record<string, string> = {};
+for (const [stage, ghl] of Object.entries(STAGE_TO_GHL)) {
+  GHL_TO_STAGE[ghl.toLowerCase()] = stage;
+}
+
+async function ghlFetch(endpoint: string, options: RequestInit = {}) {
+  const apiKey = process.env.GHL_API_KEY;
+  if (!apiKey) throw new Error('GHL_API_KEY not set');
+
+  const res = await fetch(`${BASE_URL}${endpoint}`, {
+    ...options,
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      Version: '2021-07-28',
+      ...options.headers,
+    },
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`GHL API ${res.status}: ${text}`);
+  }
+
+  return res.json();
+}
+
+export async function createOpportunity(opts: {
+  name: string;
+  stage: string;
+  monetaryValue?: number;
+  pipelineId: string;
+  pipelineStageId: string;
+  contactId?: string;
+}) {
+  const locationId = process.env.GHL_LOCATION_ID;
+  return ghlFetch('/opportunities/', {
+    method: 'POST',
+    body: JSON.stringify({
+      locationId,
+      name: opts.name,
+      pipelineId: opts.pipelineId,
+      pipelineStageId: opts.pipelineStageId,
+      status: 'open',
+      monetaryValue: opts.monetaryValue ?? 0,
+      ...(opts.contactId && { contactId: opts.contactId }),
+    }),
+  });
+}
+
+export async function updateOpportunity(
+  opportunityId: string,
+  updates: { pipelineStageId?: string; status?: string; monetaryValue?: number }
+) {
+  return ghlFetch(`/opportunities/${opportunityId}`, {
+    method: 'PUT',
+    body: JSON.stringify(updates),
+  });
+}
+
+export async function getOpportunities(pipelineId: string) {
+  const locationId = process.env.GHL_LOCATION_ID;
+  return ghlFetch(
+    `/opportunities/search?location_id=${locationId}&pipeline_id=${pipelineId}&limit=100`
+  );
+}
+
+export async function getPipelines() {
+  const locationId = process.env.GHL_LOCATION_ID;
+  return ghlFetch(`/opportunities/pipelines?locationId=${locationId}`);
+}
+
+export { STAGE_TO_GHL, GHL_TO_STAGE };

@@ -12,6 +12,7 @@ const links = [
   { href: '/reports', label: 'Reports' },
   { href: '/how-it-works', label: 'How It Works' },
   { href: '/process', label: 'Process' },
+  { href: '/tracker', label: 'Tracker', accent: true },
 ];
 
 export function NavBar() {
