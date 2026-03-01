@@ -9,14 +9,12 @@ const nextConfig: NextConfig = {
       '.js': ['.ts', '.tsx', '.js'],
     };
 
-    // Exclude playwright from client bundle — it's server-only (used for scraping)
-    if (!isServer) {
-      config.resolve.alias = {
-        ...config.resolve.alias,
-        'playwright': false,
-        'playwright-core': false,
-      };
-    }
+    // Exclude playwright from all bundles — it's only used in standalone scripts
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      'playwright': false,
+      'playwright-core': false,
+    };
 
     return config;
   },
