@@ -17,8 +17,12 @@ export async function GET() {
     const serviceDb = getServiceSupabase();
     const { data, error } = await serviceDb
       .from('saved_grants')
-      .select('id, grant_id, stars, stage')
-      .eq('user_id', user.id);
+      .select(`
+        *,
+        grant:grant_opportunities(id, name, provider, amount_min, amount_max, closes_at, categories, url, status)
+      `)
+      .eq('user_id', user.id)
+      .order('updated_at', { ascending: false });
 
     return NextResponse.json({
       auth: 'ok',
@@ -26,7 +30,7 @@ export async function GET() {
       email: user.email,
       savedGrants: data?.length ?? 0,
       queryError: error?.message || null,
-      grants: data,
+      firstGrant: data?.[0] || null,
     });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
