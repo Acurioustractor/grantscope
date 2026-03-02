@@ -47,6 +47,37 @@ interface ProgramRow {
   deadline: string | null;
   status: string;
   categories: string[];
+  program_type: string | null;
+}
+
+interface LinkedGrant {
+  id: string;
+  name: string;
+  amount_min: number | null;
+  amount_max: number | null;
+  closes_at: string | null;
+  program_type: string | null;
+  source: string | null;
+  description: string | null;
+}
+
+interface AcncFinancials {
+  abn: string;
+  charity_name: string;
+  ais_year: number;
+  total_revenue: string | null;
+  total_expenses: string | null;
+  total_assets: string | null;
+  grants_donations_au: string | null;
+  grants_donations_intl: string | null;
+  net_surplus_deficit: string | null;
+  donations_and_bequests: string | null;
+  revenue_from_investments: string | null;
+  employee_expenses: string | null;
+  net_assets_liabilities: string | null;
+  charity_size: string | null;
+  fin_report_from: string | null;
+  fin_report_to: string | null;
 }
 
 interface SimilarFoundation {
@@ -82,6 +113,16 @@ function confidenceBadge(c: string) {
   return { cls: 'border-bauhaus-black/20 bg-bauhaus-canvas text-bauhaus-muted', label: 'Low' };
 }
 
+function programTypeBadge(type: string | null) {
+  switch (type) {
+    case 'fellowship': return { cls: 'border-bauhaus-blue bg-link-light text-bauhaus-blue', label: 'Fellowship' };
+    case 'scholarship': return { cls: 'border-bauhaus-yellow bg-warning-light text-bauhaus-black', label: 'Scholarship' };
+    case 'award': return { cls: 'border-bauhaus-red bg-error-light text-bauhaus-red', label: 'Award' };
+    case 'program': return { cls: 'border-bauhaus-black/30 bg-bauhaus-canvas text-bauhaus-black', label: 'Program' };
+    default: return { cls: 'border-money bg-money-light text-money', label: 'Grant' };
+  }
+}
+
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="mb-8">
@@ -97,13 +138,49 @@ export default async function FoundationDetailPage({ params }: { params: Promise
   const { id } = await params;
   const supabase = getServiceSupabase();
 
-  const [{ data: foundation }, { data: programs }] = await Promise.all([
+  const [{ data: foundation }, { data: programs }, { data: linkedGrants }] = await Promise.all([
     supabase.from('foundations').select('*').eq('id', id).single(),
     supabase.from('foundation_programs').select('*').eq('foundation_id', id).order('deadline', { ascending: true, nullsFirst: false }),
+    supabase.from('grant_opportunities').select('id, name, amount_min, amount_max, closes_at, program_type, source, description').eq('foundation_id', id).order('closes_at', { ascending: true, nullsFirst: false }),
   ]);
 
   if (!foundation) notFound();
   const f = foundation as FoundationDetail;
+
+  // Fetch ACNC financials — try by ABN first, then by name match for group reporting
+  const acncQueries = [
+    supabase.from('acnc_ais')
+      .select('abn, charity_name, ais_year, total_revenue, total_expenses, total_assets, grants_donations_au, grants_donations_intl, net_surplus_deficit, donations_and_bequests, revenue_from_investments, employee_expenses, net_assets_liabilities, charity_size, fin_report_from, fin_report_to')
+      .eq('abn', f.acnc_abn)
+      .order('ais_year', { ascending: false }),
+  ];
+  // Also search by name for ACNC group entries (e.g. "Minderoo Foundation_ACNC GROUP")
+  const simpleName = f.name.split(/\s+(Limited|Ltd|Pty|as trustee|Incorporated|Inc)\b/i)[0].trim();
+  if (simpleName.length > 3) {
+    acncQueries.push(
+      supabase.from('acnc_ais')
+        .select('abn, charity_name, ais_year, total_revenue, total_expenses, total_assets, grants_donations_au, grants_donations_intl, net_surplus_deficit, donations_and_bequests, revenue_from_investments, employee_expenses, net_assets_liabilities, charity_size, fin_report_from, fin_report_to')
+        .ilike('charity_name', `%${simpleName}%`)
+        .neq('abn', f.acnc_abn)
+        .order('ais_year', { ascending: false })
+    );
+  }
+  const acncResults = await Promise.all(acncQueries);
+  // Merge and deduplicate, preferring larger entity (group reporting) for each year
+  const allAcnc: AcncFinancials[] = acncResults.flatMap(r => (r.data || []) as AcncFinancials[]);
+  // Group by year, keep the entry with highest total_assets for each year
+  const acncByYear = new Map<number, AcncFinancials>();
+  for (const row of allAcnc) {
+    const existing = acncByYear.get(row.ais_year);
+    const rowAssets = Number(row.total_assets) || 0;
+    const existingAssets = existing ? Number(existing.total_assets) || 0 : 0;
+    if (!existing || rowAssets > existingAssets) {
+      acncByYear.set(row.ais_year, row);
+    }
+  }
+  const acncFinancials = Array.from(acncByYear.values())
+    .filter(r => Number(r.total_assets) > 0)
+    .sort((a, b) => b.ais_year - a.ais_year);
 
   let similarFoundations: SimilarFoundation[] = [];
   if (f.thematic_focus?.length > 0) {
@@ -141,7 +218,16 @@ export default async function FoundationDetailPage({ params }: { params: Promise
 
   const badge = confidenceBadge(f.profile_confidence);
   const allPrograms = programs as ProgramRow[] || [];
+  const allLinkedGrants = (linkedGrants || []) as LinkedGrant[];
   const hasFinancials = f.parent_company || f.asx_code || f.endowment_size || f.revenue_sources?.length > 0 || f.giving_ratio;
+
+  // Group programs by type
+  const programsByType = allPrograms.reduce((acc, p) => {
+    const type = p.program_type || 'grant';
+    if (!acc[type]) acc[type] = [];
+    acc[type].push(p);
+    return acc;
+  }, {} as Record<string, ProgramRow[]>);
 
   return (
     <div className="max-w-4xl">
@@ -263,23 +349,145 @@ export default async function FoundationDetailPage({ params }: { params: Promise
             </Section>
           )}
 
+          {acncFinancials.length > 0 && (
+            <Section title="ACNC Financial History">
+              <div className="overflow-x-auto -mx-2">
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <tr className="border-b-4 border-bauhaus-black">
+                      <th className="text-left text-[11px] font-black uppercase tracking-widest text-bauhaus-muted py-2 px-2">Year</th>
+                      <th className="text-right text-[11px] font-black uppercase tracking-widest text-bauhaus-muted py-2 px-2">Grants Given</th>
+                      <th className="text-right text-[11px] font-black uppercase tracking-widest text-bauhaus-muted py-2 px-2">Revenue</th>
+                      <th className="text-right text-[11px] font-black uppercase tracking-widest text-bauhaus-muted py-2 px-2">Total Assets</th>
+                      <th className="text-right text-[11px] font-black uppercase tracking-widest text-bauhaus-muted py-2 px-2">Net Assets</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {acncFinancials.map((row, i) => {
+                      const grantsAu = Number(row.grants_donations_au) || 0;
+                      const grantsIntl = Number(row.grants_donations_intl) || 0;
+                      const totalGrants = grantsAu + grantsIntl;
+                      const maxGrants = Math.max(...acncFinancials.map(r => (Number(r.grants_donations_au) || 0) + (Number(r.grants_donations_intl) || 0)));
+                      const barWidth = maxGrants > 0 ? (totalGrants / maxGrants) * 100 : 0;
+                      return (
+                        <tr key={row.ais_year} className={`border-b-2 border-bauhaus-black/10 ${i === 0 ? 'bg-money-light/30' : ''}`}>
+                          <td className="py-2.5 px-2 font-black text-bauhaus-black">
+                            FY{row.ais_year}
+                          </td>
+                          <td className="py-2.5 px-2 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <div className="w-16 h-2 bg-bauhaus-black/5 hidden sm:block">
+                                <div className="h-full bg-money" style={{ width: `${barWidth}%` }} />
+                              </div>
+                              <span className="font-black text-money tabular-nums whitespace-nowrap">
+                                {totalGrants > 0 ? formatMoney(totalGrants) : '\u2014'}
+                              </span>
+                            </div>
+                            {grantsIntl > 0 && (
+                              <div className="text-[10px] text-bauhaus-muted mt-0.5">
+                                {formatMoney(grantsAu)} AU + {formatMoney(grantsIntl)} intl
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-2 text-right font-medium text-bauhaus-black tabular-nums whitespace-nowrap">
+                            {Number(row.total_revenue) ? formatMoney(Number(row.total_revenue)) : '\u2014'}
+                          </td>
+                          <td className="py-2.5 px-2 text-right font-medium text-bauhaus-black tabular-nums whitespace-nowrap">
+                            {Number(row.total_assets) ? formatMoney(Number(row.total_assets)) : '\u2014'}
+                          </td>
+                          <td className="py-2.5 px-2 text-right font-medium text-bauhaus-black tabular-nums whitespace-nowrap">
+                            {Number(row.net_assets_liabilities) ? formatMoney(Number(row.net_assets_liabilities)) : '\u2014'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t-4 border-bauhaus-black">
+                      <td className="py-2.5 px-2 font-black text-bauhaus-black text-xs uppercase tracking-wider">
+                        {acncFinancials.length}yr total
+                      </td>
+                      <td className="py-2.5 px-2 text-right font-black text-money tabular-nums">
+                        {formatMoney(acncFinancials.reduce((sum, r) => sum + (Number(r.grants_donations_au) || 0) + (Number(r.grants_donations_intl) || 0), 0))}
+                      </td>
+                      <td colSpan={3} className="py-2.5 px-2 text-right text-[10px] text-bauhaus-muted font-bold uppercase tracking-wider">
+                        Source: ACNC Annual Information Statements
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </Section>
+          )}
+
           {allPrograms.length > 0 && (
-            <Section title={`Open Programs (${allPrograms.length})`}>
+            <Section title={`Programs & Opportunities (${allPrograms.length})`}>
+              {/* Program type summary */}
+              {Object.keys(programsByType).length > 1 && (
+                <div className="flex gap-2 mb-4 flex-wrap">
+                  {Object.entries(programsByType).map(([type, progs]) => {
+                    const tb = programTypeBadge(type);
+                    return (
+                      <span key={type} className={`text-[11px] font-black px-2.5 py-1 border-2 uppercase tracking-widest ${tb.cls}`}>
+                        {progs.length} {tb.label}{progs.length !== 1 ? 's' : ''}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
               <div className="space-y-3">
-                {allPrograms.map(p => (
-                  <div key={p.id} className="bg-white border-4 border-bauhaus-black p-4 hover:-translate-y-1 bauhaus-shadow-sm transition-all">
-                    <div className="flex justify-between items-start">
-                      <h3 className="font-black text-bauhaus-black">{p.name}</h3>
-                      <span className={`text-[11px] font-black px-2 py-0.5 uppercase tracking-wider border-2 ${p.status === 'open' ? 'border-money bg-money-light text-money' : 'border-bauhaus-black/20 bg-bauhaus-canvas text-bauhaus-muted'}`}>{p.status}</span>
+                {allPrograms.map(p => {
+                  const tb = programTypeBadge(p.program_type);
+                  return (
+                    <div key={p.id} className="bg-white border-4 border-bauhaus-black p-4 hover:-translate-y-1 bauhaus-shadow-sm transition-all">
+                      <div className="flex justify-between items-start gap-2">
+                        <h3 className="font-black text-bauhaus-black">{p.name}</h3>
+                        <div className="flex gap-1.5 flex-shrink-0">
+                          <span className={`text-[11px] font-black px-2 py-0.5 uppercase tracking-wider border-2 ${tb.cls}`}>{tb.label}</span>
+                          <span className={`text-[11px] font-black px-2 py-0.5 uppercase tracking-wider border-2 ${p.status === 'open' ? 'border-money bg-money-light text-money' : 'border-bauhaus-black/20 bg-bauhaus-canvas text-bauhaus-muted'}`}>{p.status}</span>
+                        </div>
+                      </div>
+                      {p.description && <p className="text-sm text-bauhaus-muted mt-1.5 leading-relaxed font-medium">{p.description}</p>}
+                      <div className="text-xs text-bauhaus-muted mt-2 flex gap-4 flex-wrap font-bold">
+                        {(p.amount_min || p.amount_max) && (
+                          <span>{p.amount_min && p.amount_max ? `${formatMoney(p.amount_min)} – ${formatMoney(p.amount_max)}` : p.amount_max ? `Up to ${formatMoney(p.amount_max)}` : formatMoney(p.amount_min)}</span>
+                        )}
+                        {p.deadline && <span>Closes {new Date(p.deadline).toLocaleDateString('en-AU')}</span>}
+                        {p.url && <a href={p.url} target="_blank" rel="noopener noreferrer" className="text-bauhaus-blue hover:text-bauhaus-red uppercase tracking-wider">Apply &rarr;</a>}
+                      </div>
                     </div>
-                    {p.description && <p className="text-sm text-bauhaus-muted mt-1.5 leading-relaxed font-medium">{p.description}</p>}
-                    <div className="text-xs text-bauhaus-muted mt-2 flex gap-4 flex-wrap font-bold">
-                      {p.amount_max && <span>Up to {formatMoney(p.amount_max)}</span>}
-                      {p.deadline && <span>Closes {new Date(p.deadline).toLocaleDateString('en-AU')}</span>}
-                      {p.url && <a href={p.url} target="_blank" rel="noopener noreferrer" className="text-bauhaus-blue hover:text-bauhaus-red uppercase tracking-wider">Apply &rarr;</a>}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
+              </div>
+            </Section>
+          )}
+
+          {allLinkedGrants.length > 0 && (
+            <Section title={`Grants in Database (${allLinkedGrants.length})`}>
+              <div className="space-y-2">
+                {allLinkedGrants.map(g => {
+                  const tb = programTypeBadge(g.program_type);
+                  const isExpired = g.closes_at && new Date(g.closes_at) < new Date();
+                  return (
+                    <a key={g.id} href={`/grants/${g.id}`} className="block bg-white border-4 border-bauhaus-black p-3 hover:-translate-y-0.5 bauhaus-shadow-sm transition-all group">
+                      <div className="flex justify-between items-start gap-2">
+                        <h4 className="font-black text-bauhaus-black text-sm group-hover:text-bauhaus-blue">{g.name}</h4>
+                        <span className={`text-[10px] font-black px-2 py-0.5 uppercase tracking-wider border-2 flex-shrink-0 ${tb.cls}`}>{tb.label}</span>
+                      </div>
+                      <div className="text-xs text-bauhaus-muted mt-1 flex gap-3 flex-wrap font-bold">
+                        {(g.amount_min || g.amount_max) && (
+                          <span className="tabular-nums">{g.amount_min && g.amount_max ? `${formatMoney(g.amount_min)} – ${formatMoney(g.amount_max)}` : g.amount_max ? `Up to ${formatMoney(g.amount_max)}` : formatMoney(g.amount_min)}</span>
+                        )}
+                        {g.closes_at && (
+                          <span className={isExpired ? 'text-bauhaus-muted line-through' : 'text-bauhaus-red'}>
+                            {isExpired ? 'Closed' : `Closes ${new Date(g.closes_at).toLocaleDateString('en-AU')}`}
+                          </span>
+                        )}
+                        {g.source && <span className="text-bauhaus-muted/50">{g.source}</span>}
+                      </div>
+                    </a>
+                  );
+                })}
               </div>
             </Section>
           )}
