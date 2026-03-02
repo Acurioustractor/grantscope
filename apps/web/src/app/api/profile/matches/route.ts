@@ -1,0 +1,75 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createSupabaseServer } from '@/lib/supabase-server';
+import { getServiceSupabase } from '@/lib/supabase';
+
+export async function GET(request: NextRequest) {
+  const supabase = await createSupabaseServer();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const { searchParams } = request.nextUrl;
+  const threshold = parseFloat(searchParams.get('threshold') || '0.65');
+  const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10), 100);
+
+  const serviceDb = getServiceSupabase();
+
+  // Fetch user's org profile with embedding
+  const { data: profile, error: profileError } = await serviceDb
+    .from('org_profiles')
+    .select('embedding, domains, geographic_focus')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (profileError) return NextResponse.json({ error: profileError.message }, { status: 500 });
+  if (!profile) return NextResponse.json({ error: 'No profile found. Create one first.' }, { status: 404 });
+  if (!profile.embedding) return NextResponse.json({ error: 'Profile has no embedding. Save your profile to generate one.' }, { status: 400 });
+
+  // Vector similarity search via the match function
+  const { data: matches, error: matchError } = await serviceDb
+    .rpc('match_grants_for_org', {
+      org_embedding: profile.embedding,
+      threshold,
+      match_limit: limit,
+    });
+
+  if (matchError) return NextResponse.json({ error: matchError.message }, { status: 500 });
+
+  // Boost scores for domain/geography overlap
+  const orgDomains = new Set((profile.domains || []).map((d: string) => d.toLowerCase()));
+  const orgGeo = new Set((profile.geographic_focus || []).map((g: string) => g.toLowerCase()));
+
+  const scored = (matches || []).map((grant: {
+    id: string;
+    name: string;
+    provider: string;
+    description: string;
+    amount_max: number | null;
+    closes_at: string | null;
+    categories: string[];
+    url: string | null;
+    grant_type: string;
+    similarity: number;
+  }) => {
+    let score = grant.similarity;
+
+    // Domain overlap boost (up to +0.05)
+    if (grant.categories?.length && orgDomains.size > 0) {
+      const overlap = grant.categories.filter(c => orgDomains.has(c.toLowerCase())).length;
+      score += Math.min(overlap * 0.025, 0.05);
+    }
+
+    return {
+      ...grant,
+      fit_score: Math.min(Math.round(score * 100), 100),
+    };
+  });
+
+  scored.sort((a: { fit_score: number }, b: { fit_score: number }) => b.fit_score - a.fit_score);
+
+  return NextResponse.json({
+    matches: scored,
+    count: scored.length,
+    profile_domains: profile.domains,
+    profile_geo: profile.geographic_focus,
+  });
+}

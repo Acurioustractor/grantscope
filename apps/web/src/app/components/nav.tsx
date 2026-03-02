@@ -12,6 +12,7 @@ const links = [
   { href: '/reports', label: 'Reports' },
   { href: '/how-it-works', label: 'How It Works' },
   { href: '/process', label: 'Process' },
+  { href: '/profile', label: 'Profile', accent: true },
   { href: '/tracker', label: 'Tracker', accent: true },
   { href: '/ops', label: 'Ops', accent: true },
 ];
