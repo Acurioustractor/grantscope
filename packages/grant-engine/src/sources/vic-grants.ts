@@ -1,23 +1,40 @@
 /**
  * VIC Grants Source Plugin
  *
- * Scrapes Victorian grants from vic.gov.au/grants.
- * The VIC portal is a JS-rendered SPA, so we use Firecrawl
- * (already in deps) for scraping. Falls back to direct HTTP attempt.
+ * Victoria's grants portal at vic.gov.au/grants is a JS-rendered SPA.
+ * Strategy:
+ * 1. Try Firecrawl to crawl multiple pages (handles JS rendering)
+ * 2. Also scrape individual department portals for additional coverage
+ * 3. Fall back to direct HTTP if Firecrawl unavailable
  *
- * URL: https://www.vic.gov.au/grants
+ * Victorian departments with grants:
+ * - vic.gov.au/grants (main portal)
+ * - Creative Victoria, VicHealth, Sport & Rec Victoria
+ * - DJCS, DEECA, DTP, etc.
  */
 
 import * as cheerio from 'cheerio';
 import type { SourcePlugin, DiscoveryQuery, RawGrant } from '../types.js';
 
-const VIC_GRANTS_URL = 'https://www.vic.gov.au/grants';
+const VIC_MAIN_URL = 'https://www.vic.gov.au/grants';
 const BROWSER_UA = 'GrantScope/1.0 (research; contact@act.place)';
+
+const VIC_DEPARTMENT_URLS = [
+  { url: 'https://www.vic.gov.au/grants', name: 'VIC Gov Main' },
+  { url: 'https://creative.vic.gov.au/funding', name: 'Creative Victoria' },
+  { url: 'https://www.vichealth.vic.gov.au/funding', name: 'VicHealth' },
+  { url: 'https://sport.vic.gov.au/grants-and-funding', name: 'Sport & Rec VIC' },
+  { url: 'https://www.environment.vic.gov.au/grants', name: 'DEECA Grants' },
+  { url: 'https://www.rdv.vic.gov.au/grants-and-programs', name: 'Regional Development VIC' },
+  { url: 'https://www.business.vic.gov.au/grants-and-programs', name: 'Business VIC' },
+  { url: 'https://www.aboriginalvictoria.vic.gov.au/grants-and-funding', name: 'Aboriginal Victoria' },
+  { url: 'https://www.localgovernment.vic.gov.au/grants', name: 'Local Gov VIC' },
+  { url: 'https://www.health.vic.gov.au/funding-and-grants', name: 'Health VIC' },
+];
 
 function inferCategories(title: string, description: string): string[] {
   const text = `${title} ${description}`.toLowerCase();
   const cats: string[] = [];
-
   if (/indigenous|first nations|aboriginal|torres strait/.test(text)) cats.push('indigenous');
   if (/arts?|cultur|creative|heritage/.test(text)) cats.push('arts');
   if (/health|wellbeing|medical|hospital/.test(text)) cats.push('health');
@@ -31,7 +48,7 @@ function inferCategories(title: string, description: string): string[] {
   if (/research|science|innovation/.test(text)) cats.push('research');
   if (/technolog|digital/.test(text)) cats.push('technology');
   if (/agricult|farm|rural|regional/.test(text)) cats.push('regenerative');
-
+  if (/screen|film|media/.test(text)) cats.push('arts');
   return cats;
 }
 
@@ -62,147 +79,145 @@ function extractDeadline(text: string): string | undefined {
   return undefined;
 }
 
-/** Try Firecrawl first (handles JS rendering) */
-async function tryFirecrawl(): Promise<RawGrant[] | null> {
+async function fetchPage(url: string): Promise<string | null> {
   try {
-    const { default: FirecrawlApp } = await import('@mendable/firecrawl-js');
-    const apiKey = process.env.FIRECRAWL_API_KEY;
-    if (!apiKey) {
-      console.log('[vic-grants] No FIRECRAWL_API_KEY, skipping Firecrawl');
-      return null;
-    }
-
-    const firecrawl = new FirecrawlApp({ apiKey });
-    console.log('[vic-grants] Scraping with Firecrawl...');
-
-    const result = await firecrawl.scrape(VIC_GRANTS_URL, { formats: ['markdown', 'html'] });
-    const html = result.html || '';
-    const markdown = result.markdown || '';
-
-    if (!html && !markdown) return null;
-
-    const grants: RawGrant[] = [];
-
-    if (html) {
-      const $ = cheerio.load(html);
-      const seen = new Set<string>();
-
-      $('a[href*="/grants"]').each((_, el) => {
-        const $el = $(el);
-        const href = $el.attr('href') || '';
-        const title = $el.text().trim();
-
-        if (!title || title.length < 5) return;
-        if (seen.has(title.toLowerCase())) return;
-        seen.add(title.toLowerCase());
-
-        if (href === '/grants' || !href.includes('/')) return;
-        if (/privacy|contact|sitemap|login|search/i.test(title)) return;
-
-        const fullUrl = href.startsWith('http') ? href : `https://www.vic.gov.au${href}`;
-        const parentText = $el.parent().text() || '';
-
-        grants.push({
-          title: title.slice(0, 200),
-          provider: 'Victorian Government',
-          sourceUrl: fullUrl,
-          amount: extractAmounts(parentText),
-          deadline: extractDeadline(parentText),
-          description: parentText.replace(/\s+/g, ' ').trim().slice(0, 500) || undefined,
-          categories: inferCategories(title, parentText),
-          sourceId: 'vic-grants',
-          geography: ['AU-VIC'],
-        });
-      });
-    }
-
-    // Fallback: parse markdown
-    if (grants.length === 0 && markdown) {
-      const lines = markdown.split('\n');
-      for (const line of lines) {
-        const linkMatch = line.match(/\[([^\]]+)\]\(([^)]+)\)/);
-        if (!linkMatch) continue;
-
-        const title = linkMatch[1].trim();
-        const url = linkMatch[2].trim();
-        if (title.length < 5 || !url.includes('grant')) continue;
-
-        const fullUrl = url.startsWith('http') ? url : `https://www.vic.gov.au${url}`;
-
-        grants.push({
-          title: title.slice(0, 200),
-          provider: 'Victorian Government',
-          sourceUrl: fullUrl,
-          categories: inferCategories(title, line),
-          sourceId: 'vic-grants',
-          geography: ['AU-VIC'],
-        });
-      }
-    }
-
-    return grants.length > 0 ? grants : null;
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.log(`[vic-grants] Firecrawl error: ${msg}`);
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': BROWSER_UA,
+        'Accept': 'text/html,application/xhtml+xml',
+      },
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!res.ok) return null;
+    return res.text();
+  } catch {
     return null;
   }
 }
 
-/** Fallback: direct HTTP (may not get JS-rendered content) */
-async function tryDirectHTTP(): Promise<RawGrant[]> {
+function getBaseUrl(url: string): string {
+  const u = new URL(url);
+  return `${u.protocol}//${u.host}`;
+}
+
+/** Try Firecrawl for the main VIC portal (JS SPA) */
+async function tryFirecrawl(): Promise<RawGrant[]> {
   const grants: RawGrant[] = [];
 
   try {
-    console.log('[vic-grants] Trying direct HTTP fetch...');
-    const res = await fetch(VIC_GRANTS_URL, {
-      headers: {
-        'User-Agent': BROWSER_UA,
-        'Accept': 'text/html',
-      },
-    });
+    const { default: FirecrawlApp } = await import('@mendable/firecrawl-js');
+    const apiKey = process.env.FIRECRAWL_API_KEY;
+    if (!apiKey) return grants;
 
-    if (!res.ok) {
-      console.error(`[vic-grants] HTTP ${res.status}`);
-      return grants;
+    console.log('[vic-grants] Crawling vic.gov.au/grants with Firecrawl...');
+    const firecrawl = new FirecrawlApp({ apiKey });
+
+    // Use map to discover all grant URLs, then scrape individually
+    const mapResult = await firecrawl.map(VIC_MAIN_URL);
+    const rawLinks: unknown[] = mapResult.links || [];
+    const grantUrls = rawLinks
+      .map((link: unknown) => typeof link === 'string' ? link : (link as { url?: string })?.url || '')
+      .filter((url: string) =>
+        url.includes('/grants') && !url.endsWith('/grants') && url.includes('vic.gov.au')
+      ).slice(0, 200);
+
+    console.log(`[vic-grants] Firecrawl map found ${grantUrls.length} grant URLs`);
+
+    // Scrape each grant page
+    for (const url of grantUrls.slice(0, 100)) {
+      try {
+        const result = await firecrawl.scrape(url, { formats: ['markdown'] });
+        const md = result.markdown || '';
+        if (!md) continue;
+
+        // Extract title from first heading
+        const titleMatch = md.match(/^#\s+(.+)$/m);
+        const title = titleMatch ? titleMatch[1].trim() : '';
+        if (!title || title.length < 5) continue;
+
+        const amounts = extractAmounts(md);
+        const deadline = extractDeadline(md);
+
+        grants.push({
+          title: title.slice(0, 200),
+          provider: 'Victorian Government',
+          sourceUrl: url,
+          amount: amounts.min || amounts.max ? amounts : undefined,
+          deadline,
+          description: md.replace(/^#.+$/gm, '').replace(/\n+/g, ' ').trim().slice(0, 500) || undefined,
+          categories: inferCategories(title, md),
+          sourceId: 'vic-grants',
+          geography: ['AU-VIC'],
+        });
+      } catch {
+        continue;
+      }
+
+      // Polite delay
+      await new Promise(r => setTimeout(r, 200));
     }
-
-    const html = await res.text();
-    const $ = cheerio.load(html);
-    const seen = new Set<string>();
-
-    // Look for any grant-like links
-    $('a[href]').each((_, el) => {
-      const $el = $(el);
-      const href = $el.attr('href') || '';
-      const title = $el.text().trim();
-
-      if (!title || title.length < 5) return;
-      if (!/grant|fund|program|subsid/i.test(title) && !/grant|fund/i.test(href)) return;
-      if (/privacy|contact|login|search|menu/i.test(title)) return;
-      if (seen.has(title.toLowerCase())) return;
-      seen.add(title.toLowerCase());
-
-      const fullUrl = href.startsWith('http') ? href : `https://www.vic.gov.au${href}`;
-      const parentText = $el.closest('li, div, article').text() || '';
-
-      grants.push({
-        title: title.slice(0, 200),
-        provider: 'Victorian Government',
-        sourceUrl: fullUrl,
-        amount: extractAmounts(parentText),
-        deadline: extractDeadline(parentText),
-        description: parentText.replace(/\s+/g, ' ').trim().slice(0, 500) || undefined,
-        categories: inferCategories(title, parentText),
-        sourceId: 'vic-grants',
-        geography: ['AU-VIC'],
-      });
-    });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[vic-grants] Direct fetch error: ${msg}`);
+    console.log(`[vic-grants] Firecrawl error: ${msg}`);
   }
 
   return grants;
+}
+
+/** Scrape department portals via direct HTTP */
+async function scrapeDepartments(): Promise<RawGrant[]> {
+  const allGrants: RawGrant[] = [];
+
+  for (const source of VIC_DEPARTMENT_URLS) {
+    try {
+      const html = await fetchPage(source.url);
+      if (!html) continue;
+
+      const $ = cheerio.load(html);
+      const baseUrl = getBaseUrl(source.url);
+      const seen = new Set<string>();
+
+      $('a[href]').each((_, el) => {
+        const $el = $(el);
+        const href = $el.attr('href') || '';
+        const title = $el.text().trim();
+
+        if (!title || title.length < 5 || title.length > 200) return;
+        if (seen.has(title.toLowerCase())) return;
+        if (/privacy|contact|sitemap|login|search|menu|home|back|skip/i.test(title)) return;
+
+        const context = $el.closest('li, div, article, tr').text() || '';
+        const isGrantContext = /grant|fund|program|subsid|scheme|support|initiative/i.test(title) ||
+          /grant|fund|program|subsid/i.test(href);
+
+        if (!isGrantContext) return;
+        seen.add(title.toLowerCase());
+
+        const fullUrl = href.startsWith('http') ? href : `${baseUrl}${href.startsWith('/') ? '' : '/'}${href}`;
+
+        allGrants.push({
+          title: title.slice(0, 200),
+          provider: `Victorian Government — ${source.name}`,
+          sourceUrl: fullUrl,
+          amount: extractAmounts(context),
+          deadline: extractDeadline(context),
+          description: context.replace(/\s+/g, ' ').trim().slice(0, 500) || undefined,
+          categories: inferCategories(title, context),
+          sourceId: 'vic-grants',
+          geography: ['AU-VIC'],
+        });
+      });
+
+      console.log(`[vic-grants] ${source.name}: found ${seen.size} grant links`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[vic-grants] Error scraping ${source.name}: ${msg}`);
+    }
+
+    await new Promise(r => setTimeout(r, 500));
+  }
+
+  return allGrants;
 }
 
 export function createVICGrantsPlugin(): SourcePlugin {
@@ -215,18 +230,19 @@ export function createVICGrantsPlugin(): SourcePlugin {
     async *discover(query: DiscoveryQuery): AsyncGenerator<RawGrant> {
       console.log('[vic-grants] Fetching Victorian grants...');
 
-      // Try Firecrawl first (handles JS SPA), fall back to direct HTTP
-      let grants = await tryFirecrawl();
-      if (!grants) {
-        grants = await tryDirectHTTP();
-      }
+      // Combine Firecrawl (main SPA portal) + department scraping
+      const [firecrawlGrants, deptGrants] = await Promise.all([
+        tryFirecrawl(),
+        scrapeDepartments(),
+      ]);
 
-      console.log(`[vic-grants] Found ${grants.length} grants`);
+      const allGrants = [...firecrawlGrants, ...deptGrants];
+      console.log(`[vic-grants] Total: ${allGrants.length} (Firecrawl: ${firecrawlGrants.length}, Depts: ${deptGrants.length})`);
 
       const seen = new Set<string>();
       let yielded = 0;
 
-      for (const grant of grants) {
+      for (const grant of allGrants) {
         const key = grant.title.toLowerCase();
         if (seen.has(key)) continue;
         seen.add(key);

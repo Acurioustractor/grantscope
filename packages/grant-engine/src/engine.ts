@@ -35,6 +35,8 @@ import { createNHMRCGrantsPlugin } from './sources/nhmrc-grants.js';
 import { createTASGrantsPlugin } from './sources/tas-grants.js';
 import { createACTGrantsPlugin } from './sources/act-grants.js';
 import { createNTGrantsPlugin } from './sources/nt-grants.js';
+import { createSAGrantsPlugin } from './sources/sa-grants.js';
+import { createWAGrantsPlugin } from './sources/wa-grants.js';
 
 export class GrantEngine {
   private registry: SourceRegistry;
@@ -60,6 +62,8 @@ export class GrantEngine {
     this.registry.register(createTASGrantsPlugin());
     this.registry.register(createACTGrantsPlugin());
     this.registry.register(createNTGrantsPlugin());
+    this.registry.register(createSAGrantsPlugin());
+    this.registry.register(createWAGrantsPlugin());
   }
 
   private log(message: string): void {

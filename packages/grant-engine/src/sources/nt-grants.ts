@@ -1,58 +1,46 @@
 /**
- * NT (GrantsNT) Source Plugin
+ * NT (Northern Territory) Grants Source Plugin
  *
- * Fetches Northern Territory grants from the GrantsNT portal.
- * Tries REST API first, falls back to Playwright scrape if needed.
+ * Strategy:
+ * 1. Scrape the NT Government Grants Directory (100+ grants across 24 categories)
+ *    URL: https://nt.gov.au/community/grants-and-volunteers/grants/grants-directory
+ * 2. Also try the GrantsNT search portal for additional results
+ *    URL: https://grantsnt.nt.gov.au/grants
  *
- * Portal: https://grantsnt.nt.gov.au/grants
+ * The grants directory is a structured accordion page with categories,
+ * each containing links to individual grant programs. No JS rendering needed.
  */
 
 import * as cheerio from 'cheerio';
 import type { SourcePlugin, DiscoveryQuery, RawGrant } from '../types.js';
 
-const GRANTS_NT_URL = 'https://grantsnt.nt.gov.au/grants';
-const API_URL = 'https://grantsnt.nt.gov.au/api/v1/grants';
+const NT_DIRECTORY_URL = 'https://nt.gov.au/community/grants-and-volunteers/grants/grants-directory';
+const GRANTS_NT_SEARCH = 'https://grantsnt.nt.gov.au/grants';
 const BROWSER_UA = 'GrantScope/1.0 (research; contact@act.place)';
 
-interface NTGrantAPI {
-  id?: string | number;
-  title?: string;
-  name?: string;
-  description?: string;
-  summary?: string;
-  organisation?: string;
-  agency?: string;
-  department?: string;
-  amount_min?: number;
-  amount_max?: number;
-  funding_amount?: string | number;
-  close_date?: string;
-  closing_date?: string;
-  status?: string;
-  category?: string;
-  url?: string;
-  link?: string;
-  [key: string]: unknown;
-}
-
-function inferCategories(title: string, description: string, category?: string): string[] {
-  const text = `${title} ${description} ${category || ''}`.toLowerCase();
+function inferCategories(title: string, description: string, sectionName?: string): string[] {
+  const text = `${title} ${description} ${sectionName || ''}`.toLowerCase();
   const cats: string[] = [];
 
   if (/indigenous|first nations|aboriginal|torres strait/.test(text)) cats.push('indigenous');
   if (/arts?|cultur|creative|heritage/.test(text)) cats.push('arts');
   if (/health|wellbeing|medical/.test(text)) cats.push('health');
   if (/communit/.test(text)) cats.push('community');
-  if (/environment|climate|water|sustainab|conservation|land/.test(text)) cats.push('regenerative');
+  if (/environment|climate|water|sustainab|conservation|land care/.test(text)) cats.push('regenerative');
   if (/business|enterprise|economic|industry|trade|export/.test(text)) cats.push('enterprise');
-  if (/education|training|school|university|skill/.test(text)) cats.push('education');
+  if (/education|training|school|university|skill|scholarship/.test(text)) cats.push('education');
   if (/justice|youth/.test(text)) cats.push('justice');
-  if (/sport|recreation/.test(text)) cats.push('sport');
-  if (/disaster|recovery|cyclone/.test(text)) cats.push('disaster_relief');
+  if (/sport|recreation|athlete/.test(text)) cats.push('sport');
+  if (/disaster|recovery|cyclone|flood/.test(text)) cats.push('disaster_relief');
   if (/research|science|innovation/.test(text)) cats.push('research');
   if (/technolog|digital/.test(text)) cats.push('technology');
   if (/remote|outback|regional/.test(text)) cats.push('community');
   if (/housing|infrastructure/.test(text)) cats.push('community');
+  if (/tourism|visitor/.test(text)) cats.push('enterprise');
+  if (/screen|film/.test(text)) cats.push('arts');
+  if (/women|equality/.test(text)) cats.push('community');
+  if (/history|heritage|museum/.test(text)) cats.push('arts');
+  if (/suicide|mental/.test(text)) cats.push('health');
 
   return cats;
 }
@@ -85,270 +73,158 @@ function extractDeadline(text: string): string | undefined {
   return undefined;
 }
 
-/** Try the REST API first — structured data, no scraping needed */
-async function tryAPIFetch(): Promise<RawGrant[] | null> {
+async function fetchPage(url: string): Promise<string | null> {
   try {
-    const response = await fetch(API_URL, {
+    const res = await fetch(url, {
       headers: {
-        'Accept': 'application/json',
         'User-Agent': BROWSER_UA,
+        'Accept': 'text/html,application/xhtml+xml',
       },
+      signal: AbortSignal.timeout(15000),
     });
-
-    if (!response.ok) {
-      console.log(`[nt-grants] API returned ${response.status}, falling back to scrape`);
-      return null;
-    }
-
-    const data = await response.json() as Record<string, unknown>;
-    const grants: NTGrantAPI[] = Array.isArray(data)
-      ? data
-      : ((data.data || data.grants || data.results || []) as NTGrantAPI[]);
-
-    if (!Array.isArray(grants) || grants.length === 0) {
-      console.log('[nt-grants] API returned empty/invalid data, falling back to scrape');
-      return null;
-    }
-
-    console.log(`[nt-grants] API returned ${grants.length} grants`);
-
-    return grants.map(g => {
-      const title = g.title || g.name || '';
-      const description = g.description || g.summary || '';
-      const amount = g.amount_max || g.amount_min || (typeof g.funding_amount === 'number' ? g.funding_amount : undefined);
-
-      return {
-        title: title.slice(0, 200),
-        provider: g.organisation || g.agency || g.department || 'Northern Territory Government',
-        sourceUrl: g.url || g.link || undefined,
-        amount: amount ? { min: g.amount_min, max: g.amount_max || amount } : undefined,
-        deadline: g.close_date || g.closing_date || undefined,
-        description: description.slice(0, 1000) || undefined,
-        categories: inferCategories(title, description, g.category),
-        sourceId: 'nt-grants',
-        geography: ['AU-NT'],
-      } satisfies RawGrant;
-    }).filter(g => g.title.length > 0);
+    if (!res.ok) return null;
+    return res.text();
   } catch {
     return null;
   }
 }
 
-/** Try Firecrawl (handles JS-rendered SPAs) */
-async function tryFirecrawl(): Promise<RawGrant[]> {
-  try {
-    const { default: FirecrawlApp } = await import('@mendable/firecrawl-js');
-    const apiKey = process.env.FIRECRAWL_API_KEY;
-    if (!apiKey) return [];
-
-    console.log('[nt-grants] Trying Firecrawl for JS-rendered content...');
-    const firecrawl = new FirecrawlApp({ apiKey });
-    const result = await firecrawl.scrape(GRANTS_NT_URL, { formats: ['markdown', 'html'] });
-    const html = result.html || '';
-    const markdown = result.markdown || '';
-
-    if (!html && !markdown) return [];
-
-    const grants: RawGrant[] = [];
-
-    if (html) {
-      const $ = cheerio.load(html);
-      $('a[href]').each((_, el) => {
-        const $el = $(el);
-        const href = $el.attr('href') || '';
-        const title = $el.text().trim();
-        if (!title || title.length < 5) return;
-        if (!/grant|fund|program/i.test(title) && !/grant/i.test(href)) return;
-
-        const fullUrl = href.startsWith('http') ? href : `https://grantsnt.nt.gov.au${href}`;
-        const parentText = $el.closest('li, div, article').text() || '';
-
-        grants.push({
-          title: title.slice(0, 200),
-          provider: 'Northern Territory Government',
-          sourceUrl: fullUrl,
-          amount: extractAmounts(parentText),
-          deadline: extractDeadline(parentText),
-          description: parentText.replace(/\s+/g, ' ').trim().slice(0, 500) || undefined,
-          categories: inferCategories(title, parentText),
-          sourceId: 'nt-grants',
-          geography: ['AU-NT'],
-        });
-      });
-    }
-
-    if (grants.length === 0 && markdown) {
-      const lines = markdown.split('\n');
-      for (const line of lines) {
-        const linkMatch = line.match(/\[([^\]]+)\]\(([^)]+)\)/);
-        if (!linkMatch) continue;
-        const title = linkMatch[1].trim();
-        const url = linkMatch[2].trim();
-        if (title.length < 5) continue;
-
-        grants.push({
-          title: title.slice(0, 200),
-          provider: 'Northern Territory Government',
-          sourceUrl: url.startsWith('http') ? url : `https://grantsnt.nt.gov.au${url}`,
-          categories: inferCategories(title, line),
-          sourceId: 'nt-grants',
-          geography: ['AU-NT'],
-        });
-      }
-    }
-
-    return grants;
-  } catch {
-    return [];
-  }
-}
-
-/** Fallback: scrape the HTML portal */
-async function scrapeFallback(): Promise<RawGrant[]> {
+/** Scrape the NT Government Grants Directory — structured accordion with 100+ grants */
+async function scrapeGrantsDirectory(): Promise<RawGrant[]> {
   const grants: RawGrant[] = [];
-
-  // Try Firecrawl first (handles JS SPA)
-  const firecrawlGrants = await tryFirecrawl();
-  if (firecrawlGrants.length > 0) return firecrawlGrants;
-
-  try {
-    // Try direct HTML fetch
-    const response = await fetch(GRANTS_NT_URL, {
-      headers: {
-        'User-Agent': BROWSER_UA,
-        'Accept': 'text/html,application/xhtml+xml',
-      },
-    });
-
-    if (!response.ok) {
-      console.error(`[nt-grants] HTML fetch failed: HTTP ${response.status}`);
-      return await playwrightFallback();
-    }
-
-    const html = await response.text();
-    const $ = cheerio.load(html);
-
-    // Look for grant listings
-    $('a[href]').each((_, el) => {
-      const $el = $(el);
-      const href = $el.attr('href') || '';
-      const title = $el.text().trim();
-
-      if (!title || title.length < 5) return;
-      if (/privacy|contact|sitemap|login|search|menu/i.test(title)) return;
-
-      const isGrantLink = /grant|fund|program/i.test(title) || /grant/i.test(href);
-      if (!isGrantLink) return;
-
-      const fullUrl = href.startsWith('http') ? href : `https://grantsnt.nt.gov.au${href}`;
-      if (fullUrl === GRANTS_NT_URL) return;
-
-      const parentText = $el.closest('li, div, article, tr').text() || '';
-      const description = parentText.replace(/\s+/g, ' ').trim();
-      const amounts = extractAmounts(description);
-      const deadline = extractDeadline(description);
-
-      grants.push({
-        title: title.slice(0, 200),
-        provider: 'Northern Territory Government',
-        sourceUrl: fullUrl,
-        amount: amounts.min || amounts.max ? amounts : undefined,
-        deadline,
-        description: description.slice(0, 500) || undefined,
-        categories: inferCategories(title, description),
-        sourceId: 'nt-grants',
-        geography: ['AU-NT'],
-      });
-    });
-
-    // Also check for structured content
-    $('.grant-item, .card, .listing-item, article, .views-row').each((_, el) => {
-      const $el = $(el);
-      const link = $el.find('a').first();
-      const title = link.text().trim() || $el.find('h2, h3, h4').first().text().trim();
-      const href = link.attr('href') || '';
-      const description = $el.text().replace(/\s+/g, ' ').trim();
-
-      if (!title || title.length < 5) return;
-
-      const fullUrl = href
-        ? (href.startsWith('http') ? href : `https://grantsnt.nt.gov.au${href}`)
-        : undefined;
-      const amounts = extractAmounts(description);
-      const deadline = extractDeadline(description);
-
-      grants.push({
-        title: title.slice(0, 200),
-        provider: 'Northern Territory Government',
-        sourceUrl: fullUrl,
-        amount: amounts.min || amounts.max ? amounts : undefined,
-        deadline,
-        description: description.slice(0, 500) || undefined,
-        categories: inferCategories(title, description),
-        sourceId: 'nt-grants',
-        geography: ['AU-NT'],
-      });
-    });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[nt-grants] Scrape error: ${msg}`);
+  const html = await fetchPage(NT_DIRECTORY_URL);
+  if (!html) {
+    console.log('[nt-grants] Could not fetch grants directory');
+    return grants;
   }
+
+  const $ = cheerio.load(html);
+
+  // The directory uses accordion sections with category headings
+  // Each section has <h2> or <h3> category name, then <ul><li><a> grant links
+  let currentSection = '';
+
+  $('h2, h3, h4').each((_, heading) => {
+    const $heading = $(heading);
+    const sectionTitle = $heading.text().trim();
+
+    // Check if this is a category heading (not a page-level heading)
+    if (sectionTitle.length > 2 && sectionTitle.length < 60) {
+      currentSection = sectionTitle;
+    }
+  });
+
+  // Find all grant links in the page
+  $('a[href]').each((_, el) => {
+    const $el = $(el);
+    const href = $el.attr('href') || '';
+    const title = $el.text().trim();
+
+    if (!title || title.length < 5 || title.length > 200) return;
+    if (/privacy|contact|sitemap|login|search|menu|home|back|skip|expand|close|top of page/i.test(title)) return;
+
+    // Must be a grant-related link
+    const parentText = $el.closest('li, dd, div').text() || '';
+    const context = parentText.replace(/\s+/g, ' ').trim();
+
+    // Get the section this link belongs to by finding the closest preceding heading
+    const $section = $el.closest('.accordion-content, .field-item, section, details');
+    const sectionHeading = $section.prevAll('h2, h3, h4, summary').first().text().trim() ||
+      $section.closest('details').find('summary').first().text().trim() || '';
+
+    // Filter: link text or context should mention grant/fund/program
+    const isGrant = /grant|fund|program|scheme|subsid|scholarship|initiative|rebate|support/i.test(title) ||
+      /grant|fund|program|scheme/i.test(href) ||
+      /grant|fund|program/i.test(sectionHeading);
+
+    if (!isGrant) return;
+
+    const fullUrl = href.startsWith('http') ? href
+      : href.startsWith('/') ? `https://nt.gov.au${href}`
+        : `https://nt.gov.au/community/grants-and-volunteers/grants/${href}`;
+
+    grants.push({
+      title: title.slice(0, 200),
+      provider: 'Northern Territory Government',
+      sourceUrl: fullUrl,
+      description: context.slice(0, 500) || undefined,
+      categories: inferCategories(title, context, sectionHeading),
+      sourceId: 'nt-grants',
+      geography: ['AU-NT'],
+    });
+  });
 
   return grants;
 }
 
-/** Last resort: use Playwright for JS-rendered content */
-async function playwrightFallback(): Promise<RawGrant[]> {
+/** Also try the GrantsNT search portal */
+async function scrapeGrantsNTPortal(): Promise<RawGrant[]> {
   const grants: RawGrant[] = [];
 
+  // Try Firecrawl first if available (GrantsNT is likely JS-rendered)
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let chromium: any;
-    try {
-      chromium = (await import('playwright')).chromium;
-    } catch {
-      console.error('[nt-grants] Playwright not available — skipping');
+    const { default: FirecrawlApp } = await import('@mendable/firecrawl-js');
+    const apiKey = process.env.FIRECRAWL_API_KEY;
+    if (apiKey) {
+      console.log('[nt-grants] Trying GrantsNT portal via Firecrawl...');
+      const firecrawl = new FirecrawlApp({ apiKey });
+      const result = await firecrawl.scrape(GRANTS_NT_SEARCH, { formats: ['markdown'] });
+      const md = result.markdown || '';
+
+      if (md) {
+        // Parse markdown for grant links
+        const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+        let match;
+        while ((match = linkRegex.exec(md)) !== null) {
+          const title = match[1].trim();
+          const url = match[2].trim();
+          if (title.length < 5 || !/grant/i.test(title + url)) continue;
+
+          const fullUrl = url.startsWith('http') ? url : `https://grantsnt.nt.gov.au${url}`;
+
+          grants.push({
+            title: title.slice(0, 200),
+            provider: 'Northern Territory Government',
+            sourceUrl: fullUrl,
+            categories: inferCategories(title, ''),
+            sourceId: 'nt-grants',
+            geography: ['AU-NT'],
+          });
+        }
+      }
+
       return grants;
     }
-
-    console.log('[nt-grants] Using Playwright fallback...');
-    const browser = await chromium.launch({ headless: true });
-    const page = await browser.newPage();
-    await page.setExtraHTTPHeaders({ 'User-Agent': BROWSER_UA });
-
-    await page.goto(GRANTS_NT_URL, { waitUntil: 'networkidle', timeout: 30000 });
-    await page.waitForTimeout(3000);
-
-    const html = await page.content();
-    await browser.close();
-
-    const $ = cheerio.load(html);
-
-    $('a[href*="grant"]').each((_, el) => {
-      const $el = $(el);
-      const href = $el.attr('href') || '';
-      const title = $el.text().trim();
-
-      if (!title || title.length < 5) return;
-
-      const fullUrl = href.startsWith('http') ? href : `https://grantsnt.nt.gov.au${href}`;
-      const parentText = $el.closest('li, div, article').text() || '';
-      const description = parentText.replace(/\s+/g, ' ').trim();
-
-      grants.push({
-        title: title.slice(0, 200),
-        provider: 'Northern Territory Government',
-        sourceUrl: fullUrl,
-        description: description.slice(0, 500) || undefined,
-        categories: inferCategories(title, description),
-        sourceId: 'nt-grants',
-        geography: ['AU-NT'],
-      });
-    });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[nt-grants] Playwright error: ${msg}`);
+  } catch {
+    // Firecrawl not available, try direct HTTP
   }
+
+  // Direct HTTP fallback
+  const html = await fetchPage(GRANTS_NT_SEARCH);
+  if (!html) return grants;
+
+  const $ = cheerio.load(html);
+  $('a[href*="grant"]').each((_, el) => {
+    const $el = $(el);
+    const href = $el.attr('href') || '';
+    const title = $el.text().trim();
+    if (!title || title.length < 5) return;
+
+    const fullUrl = href.startsWith('http') ? href : `https://grantsnt.nt.gov.au${href}`;
+    const context = $el.closest('li, div, article').text() || '';
+
+    grants.push({
+      title: title.slice(0, 200),
+      provider: 'Northern Territory Government',
+      sourceUrl: fullUrl,
+      amount: extractAmounts(context),
+      deadline: extractDeadline(context),
+      description: context.replace(/\s+/g, ' ').trim().slice(0, 500) || undefined,
+      categories: inferCategories(title, context),
+      sourceId: 'nt-grants',
+      geography: ['AU-NT'],
+    });
+  });
 
   return grants;
 }
@@ -356,31 +232,30 @@ async function playwrightFallback(): Promise<RawGrant[]> {
 export function createNTGrantsPlugin(): SourcePlugin {
   return {
     id: 'nt-grants',
-    name: 'GrantsNT (Northern Territory)',
-    type: 'api',
+    name: 'Northern Territory Grants',
+    type: 'scraper',
     geography: ['AU-NT'],
 
     async *discover(query: DiscoveryQuery): AsyncGenerator<RawGrant> {
       console.log('[nt-grants] Fetching NT grants...');
 
-      // Try API first, fall back to scraping
-      let grants = await tryAPIFetch();
-      if (!grants) {
-        grants = await scrapeFallback();
-      }
+      // Scrape both sources in parallel
+      const [directoryGrants, portalGrants] = await Promise.all([
+        scrapeGrantsDirectory(),
+        scrapeGrantsNTPortal(),
+      ]);
 
-      console.log(`[nt-grants] Found ${grants.length} grants`);
+      const allGrants = [...directoryGrants, ...portalGrants];
+      console.log(`[nt-grants] Found ${allGrants.length} (directory: ${directoryGrants.length}, portal: ${portalGrants.length})`);
 
-      // Deduplicate by title
       const seen = new Set<string>();
       let yielded = 0;
 
-      for (const grant of grants) {
+      for (const grant of allGrants) {
         const key = grant.title.toLowerCase();
         if (seen.has(key)) continue;
         seen.add(key);
 
-        // Apply query filters
         if (query.categories?.length) {
           const queryLower = query.categories.map(c => c.toLowerCase());
           if (grant.categories?.length && !grant.categories.some(c => queryLower.includes(c))) continue;

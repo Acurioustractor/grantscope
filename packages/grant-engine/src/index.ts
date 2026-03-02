@@ -46,6 +46,8 @@ export { createNHMRCGrantsPlugin } from './sources/nhmrc-grants.js';
 export { createTASGrantsPlugin } from './sources/tas-grants.js';
 export { createACTGrantsPlugin } from './sources/act-grants.js';
 export { createNTGrantsPlugin } from './sources/nt-grants.js';
+export { createSAGrantsPlugin } from './sources/sa-grants.js';
+export { createWAGrantsPlugin } from './sources/wa-grants.js';
 export { SourceRegistry } from './sources/registry.js';
 
 // Foundations
