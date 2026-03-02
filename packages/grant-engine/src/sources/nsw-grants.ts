@@ -1,9 +1,11 @@
 /**
  * NSW Grants Source Plugin
  *
- * Uses the NSW.gov.au Elasticsearch API to fetch all 468+ grants.
- * The portal exposes an internal API at /api/v1/elasticsearch/prod_content
- * used by the grant-finder frontend.
+ * Uses the NSW.gov.au Elasticsearch API to fetch all 1600+ grants.
+ * The portal exposes an internal ES _search API at:
+ *   POST /api/v1/elasticsearch/prod_content/_search
+ * Filter by type: "grant" to get structured grant documents with
+ * rich fields: grant_amount_max, grant_category, grant_audience, etc.
  *
  * Falls back to HTML scraping if the API is unavailable.
  */
@@ -12,20 +14,24 @@ import * as cheerio from 'cheerio';
 import type { SourcePlugin, DiscoveryQuery, RawGrant } from '../types.js';
 
 const NSW_GRANTS_URL = 'https://www.nsw.gov.au/grants-and-funding';
-const NSW_ES_API = 'https://www.nsw.gov.au/api/v1/elasticsearch/prod_content';
+const NSW_ES_SEARCH = 'https://www.nsw.gov.au/api/v1/elasticsearch/prod_content/_search';
 const BROWSER_UA = 'GrantScope/1.0 (research; contact@act.place)';
 
 interface NSWESHit {
   _source: {
-    title?: string;
-    field_body_text_processed?: string;
-    field_metatag_description?: string;
-    url?: string;
-    field_grant_status?: string;
-    field_grant_audience?: string[];
-    field_grant_category?: string[];
-    field_landing_page_summary?: string;
-    changed?: string;
+    title?: string | string[];
+    url?: string | string[];
+    field_summary?: string | string[];
+    content?: string | string[];
+    grant_amount?: string | string[];
+    grant_amount_max?: number | number[];
+    grant_amount_single?: number | number[];
+    grant_category?: string | string[];
+    grant_audience?: string | string[];
+    grant_is_ongoing?: boolean | boolean[];
+    grant_dates_end?: string | string[];
+    agency_name?: string | string[];
+    name_topic?: string | string[];
     [key: string]: unknown;
   };
 }
@@ -84,41 +90,58 @@ function extractDeadline(text: string): string | undefined {
   return undefined;
 }
 
-/** Try the internal Elasticsearch API first — structured data, fast, all grants */
+/** Unwrap ES array fields — NSW stores most values as single-element arrays */
+function unwrap(val: unknown): string {
+  if (Array.isArray(val)) return String(val[0] ?? '');
+  return String(val ?? '');
+}
+
+function unwrapNum(val: unknown): number | undefined {
+  if (Array.isArray(val)) return typeof val[0] === 'number' ? val[0] : undefined;
+  return typeof val === 'number' ? val : undefined;
+}
+
+function unwrapArr(val: unknown): string[] {
+  if (Array.isArray(val)) return val.map(String);
+  if (typeof val === 'string') return [val];
+  return [];
+}
+
+/** Try the internal Elasticsearch _search API — structured data, 1600+ grants */
 async function tryElasticsearchAPI(): Promise<RawGrant[] | null> {
   try {
-    console.log('[nsw-grants] Trying Elasticsearch API...');
+    console.log('[nsw-grants] Trying Elasticsearch _search API...');
 
     const grants: RawGrant[] = [];
-    const PAGE_SIZE = 100;
+    const PAGE_SIZE = 200;
     let from = 0;
 
     while (true) {
       const body = {
-        index: 'prod_content',
-        body: {
-          from,
-          size: PAGE_SIZE,
-          query: {
-            bool: {
-              must: [
-                { term: { 'content_type': 'grant_finder' } },
-              ],
-            },
-          },
-          sort: [{ changed: { order: 'desc' } }],
+        from,
+        size: PAGE_SIZE,
+        query: {
+          term: { type: 'grant' },
         },
+        sort: [{ utc_changed: { order: 'desc' } }],
+        _source: [
+          'title', 'url', 'field_summary', 'content',
+          'grant_amount', 'grant_amount_max', 'grant_amount_single',
+          'grant_category', 'grant_audience', 'grant_is_ongoing',
+          'grant_dates_end', 'agency_name', 'name_topic',
+        ],
       };
 
-      const res = await fetch(NSW_ES_API, {
+      const res = await fetch(NSW_ES_SEARCH, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'User-Agent': BROWSER_UA,
           'Accept': 'application/json',
+          'Origin': 'https://www.nsw.gov.au',
         },
         body: JSON.stringify(body),
-        signal: AbortSignal.timeout(15000),
+        signal: AbortSignal.timeout(30000),
       });
 
       if (!res.ok) {
@@ -133,41 +156,49 @@ async function tryElasticsearchAPI(): Promise<RawGrant[] | null> {
 
       for (const hit of hits) {
         const src = hit._source;
-        const title = src.title || '';
+        const title = unwrap(src.title);
         if (!title || title.length < 5) continue;
 
-        const description = src.field_landing_page_summary ||
-          src.field_metatag_description ||
-          src.field_body_text_processed?.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 500) || '';
+        const description = unwrap(src.field_summary) ||
+          unwrap(src.content).slice(0, 500);
 
-        const url = src.url
-          ? `https://www.nsw.gov.au${src.url}`
-          : undefined;
+        const urlPath = unwrap(src.url);
+        const url = urlPath ? `https://www.nsw.gov.au${urlPath}` : undefined;
 
-        const categories = [
+        // Use structured grant amount fields when available
+        const amountMax = unwrapNum(src.grant_amount_max) || unwrapNum(src.grant_amount_single);
+        const amount = amountMax ? { max: amountMax } : extractAmounts(description);
+
+        // Use structured categories from ES + inferred
+        const esCategories = unwrapArr(src.grant_category).map(c => c.toLowerCase().replace(/_/g, ' '));
+        const categories = [...new Set([
           ...inferCategories(title, description),
-          ...(src.field_grant_category || []).map((c: string) => c.toLowerCase()),
-        ];
+          ...esCategories,
+        ])];
 
-        const amounts = extractAmounts(description);
-        const deadline = extractDeadline(description);
+        // Deadline from structured field
+        const endDate = unwrap(src.grant_dates_end);
+        const deadline = endDate || extractDeadline(description);
+
+        const agency = unwrap(src.agency_name);
+        const provider = agency ? `NSW Government — ${agency}` : 'NSW Government';
 
         grants.push({
           title: title.slice(0, 200),
-          provider: 'NSW Government',
+          provider,
           sourceUrl: url,
-          amount: amounts.min || amounts.max ? amounts : undefined,
-          deadline,
+          amount: amount.min || amount.max ? amount : undefined,
+          deadline: deadline || undefined,
           description: description.slice(0, 500) || undefined,
-          categories: [...new Set(categories)],
+          categories,
           sourceId: 'nsw-grants',
           geography: ['AU-NSW'],
         });
       }
 
       const total = typeof data.hits?.total === 'object'
-        ? data.hits.total.value || 0
-        : data.hits?.total || 0;
+        ? (data.hits.total as { value?: number }).value || 0
+        : (data.hits?.total as number) || 0;
 
       from += PAGE_SIZE;
       if (from >= total || hits.length < PAGE_SIZE) break;
@@ -176,6 +207,7 @@ async function tryElasticsearchAPI(): Promise<RawGrant[] | null> {
       await new Promise(r => setTimeout(r, 300));
     }
 
+    console.log(`[nsw-grants] ES API returned ${grants.length} grants`);
     return grants.length > 0 ? grants : null;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -255,7 +287,7 @@ export function createNSWGrantsPlugin(): SourcePlugin {
     async *discover(query: DiscoveryQuery): AsyncGenerator<RawGrant> {
       console.log('[nsw-grants] Fetching NSW grants...');
 
-      // Try ES API first (all 468+ grants), fall back to HTML scraping
+      // Try ES _search API first (1600+ grants), fall back to HTML scraping
       let grants = await tryElasticsearchAPI();
       if (!grants) {
         grants = await scrapeHTMLPages(query);
