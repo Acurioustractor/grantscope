@@ -38,9 +38,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <div className="font-black text-xs text-bauhaus-yellow mb-3 uppercase tracking-widest">Data Sources</div>
                 <ul className="space-y-2 text-sm text-bauhaus-muted">
                   <li>ACNC Charity Register</li>
-                  <li>GrantConnect</li>
-                  <li>data.gov.au</li>
-                  <li>QLD Grants Finder</li>
+                  <li>GrantConnect &middot; ARC &middot; NHMRC</li>
+                  <li>All 8 state/territory portals</li>
+                  <li>data.gov.au &middot; business.gov.au</li>
                 </ul>
               </div>
             </div>
