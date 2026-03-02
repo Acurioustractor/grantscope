@@ -26,6 +26,7 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const DRY_RUN = process.argv.includes('--dry-run');
 const TOP_ONLY = process.argv.includes('--top-only');
+const SKIP_SCRAPE = process.argv.includes('--skip-scrape');
 
 const limitArg = process.argv.find(a => a.startsWith('--limit='));
 const LIMIT = limitArg ? parseInt(limitArg.split('=')[1], 10) : 50;
@@ -197,6 +198,7 @@ async function main() {
   log(`  Offset: ${OFFSET}`);
   log(`  Dry run: ${DRY_RUN}`);
   log(`  Top only: ${TOP_ONLY}`);
+  log(`  Skip scrape: ${SKIP_SCRAPE}`);
 
   const foundations = await getFoundationsToProfile();
   log(`${foundations.length} foundations to process`);
@@ -208,7 +210,7 @@ async function main() {
 
   const run = await logStart(supabase, 'build-foundation-profiles', 'Profile Foundations');
 
-  const scraper = new FoundationScraper({ requestDelayMs: 2000, maxPagesPerFoundation: 5 });
+  const scraper = SKIP_SCRAPE ? null : new FoundationScraper({ requestDelayMs: 2000, maxPagesPerFoundation: 5 });
   const profiler = new FoundationProfiler();
 
   let profiled = 0;
@@ -223,7 +225,7 @@ async function main() {
       continue;
     }
 
-    log(`  [${profiled + 1}/${foundations.length}] Profiling: ${name} (${website})`);
+    log(`  [${profiled + errors + 1}/${foundations.length}] Profiling: ${name} (${website})`);
 
     if (DRY_RUN) {
       log(`    Would scrape ${website} and profile with Claude`);
@@ -232,15 +234,20 @@ async function main() {
     }
 
     try {
-      // Step 1: Scrape website
-      const scraped = await scraper.scrapeFoundation(website);
-      log(`    Scraped ${scraped.scrapedUrls.length} pages`);
-
-      if (scraped.errors.length > 0) {
-        log(`    ${scraped.errors.length} scrape errors`);
+      // Step 1: Scrape website (or skip if --skip-scrape)
+      let scraped;
+      if (SKIP_SCRAPE) {
+        scraped = { websiteContent: null, aboutContent: null, programsContent: null, annualReportContent: null, scrapedUrls: [], errors: [] };
+        log(`    Skipping scrape — using LLM web search/knowledge only`);
+      } else {
+        scraped = await scraper.scrapeFoundation(website);
+        log(`    Scraped ${scraped.scrapedUrls.length} pages`);
+        if (scraped.errors.length > 0) {
+          log(`    ${scraped.errors.length} scrape errors`);
+        }
       }
 
-      // Step 2: Profile with Claude
+      // Step 2: Profile with LLM
       const profile = await profiler.profileFoundation(foundation, scraped);
       log(`    Profile confidence: ${profile.profile_confidence}`);
       if (profile.description) log(`    "${profile.description.slice(0, 100)}..."`);

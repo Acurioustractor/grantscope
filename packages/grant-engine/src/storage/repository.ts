@@ -31,6 +31,7 @@ export class GrantRepository {
       name: grant.name,
       provider: grant.provider,
       program: grant.program,
+      description: grant.description,
       amount_min: grant.amountMin,
       amount_max: grant.amountMax,
       closes_at: grant.closesAt,
@@ -57,13 +58,17 @@ export class GrantRepository {
 
     // Duplicate URL — try to update with new source info
     if (error.code === '23505' && grant.url) {
-      const { error: updateError } = await this.supabase
-        .from('grant_opportunities')
-        .update({
+      const updateRow: Record<string, unknown> = {
           sources: JSON.stringify(grant.sources),
           discovery_method: grant.discoveryMethod,
           last_verified_at: new Date().toISOString(),
-        })
+        };
+      // Backfill description and geography if missing
+      if (grant.description) updateRow.description = grant.description;
+
+      const { error: updateError } = await this.supabase
+        .from('grant_opportunities')
+        .update(updateRow)
         .eq('url', grant.url);
 
       if (!updateError) return 'updated';
