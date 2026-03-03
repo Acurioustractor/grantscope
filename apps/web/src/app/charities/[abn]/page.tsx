@@ -1,4 +1,5 @@
 import { getServiceSupabase } from '@/lib/supabase';
+import { createSupabaseServer } from '@/lib/supabase-server';
 import { notFound } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
@@ -122,8 +123,28 @@ export default async function CharityDetailPage({ params }: { params: Promise<{ 
     .filter(r => Number(r.total_revenue) > 0 || Number(r.total_assets) > 0)
     .sort((a, b) => b.ais_year - a.ais_year);
 
-  // Generate description from ACNC data if not enriched
-  const aboutText = c.enriched_description || generateAbout(c);
+  // Fetch verified claim for this ABN
+  const { data: claimData } = await supabase
+    .from('charity_claims')
+    .select('*')
+    .eq('abn', abn)
+    .eq('status', 'verified')
+    .maybeSingle();
+
+  // Check if current user owns the claim
+  let isClaimOwner = false;
+  try {
+    const userSupabase = await createSupabaseServer();
+    const { data: { user } } = await userSupabase.auth.getUser();
+    if (user && claimData && claimData.user_id === user.id) {
+      isClaimOwner = true;
+    }
+  } catch {
+    // Not logged in — fine
+  }
+
+  // Use claimed description if available, then enriched, then generated
+  const aboutText = claimData?.profile_description || c.enriched_description || generateAbout(c);
 
   return (
     <div className="max-w-4xl">
@@ -147,6 +168,9 @@ export default async function CharityDetailPage({ params }: { params: Promise<{ 
             )}
             {isEnriched && (
               <span className="text-[11px] px-2 py-1 font-black uppercase tracking-widest border-2 border-bauhaus-yellow bg-warning-light text-bauhaus-black">Enriched</span>
+            )}
+            {claimData?.featured && (
+              <span className="text-[11px] px-2 py-1 font-black uppercase tracking-widest border-2 border-bauhaus-red bg-bauhaus-red text-white">Featured</span>
             )}
           </div>
         </div>
@@ -207,6 +231,13 @@ export default async function CharityDetailPage({ params }: { params: Promise<{ 
           {aboutText && (
             <Section title="About">
               <p className="text-bauhaus-muted leading-relaxed text-[15px] font-medium">{aboutText}</p>
+            </Section>
+          )}
+
+          {/* Their Story (claimed) */}
+          {claimData?.profile_story && (
+            <Section title="Their Story">
+              <p className="text-bauhaus-muted leading-relaxed text-[15px] font-medium">{claimData.profile_story}</p>
             </Section>
           )}
 
@@ -368,19 +399,34 @@ export default async function CharityDetailPage({ params }: { params: Promise<{ 
             </div>
           )}
 
-          {/* Claim CTA */}
-          <div className="bg-bauhaus-yellow border-4 border-bauhaus-black p-4">
-            <h3 className="text-xs font-black text-bauhaus-black mb-2 uppercase tracking-widest">Is this your organisation?</h3>
-            <p className="text-sm text-bauhaus-black/70 font-medium mb-3">
-              Claim this profile to update your information, share your story, and get featured.
-            </p>
-            <a
-              href={`/charities/claim?abn=${c.abn}`}
-              className="block text-center px-4 py-2.5 bg-bauhaus-black text-white text-xs font-black uppercase tracking-widest hover:bg-bauhaus-red transition-colors"
-            >
-              Claim This Profile
-            </a>
-          </div>
+          {/* Claim CTA / Edit Link */}
+          {isClaimOwner ? (
+            <div className="bg-green-50 border-4 border-money p-4">
+              <h3 className="text-xs font-black text-money mb-2 uppercase tracking-widest">Your Profile</h3>
+              <p className="text-sm text-bauhaus-black/70 font-medium mb-3">
+                You manage this charity&apos;s profile on GrantScope.
+              </p>
+              <a
+                href={`/charities/${c.abn}/edit`}
+                className="block text-center px-4 py-2.5 bg-money text-white text-xs font-black uppercase tracking-widest hover:bg-bauhaus-black transition-colors"
+              >
+                Edit Profile
+              </a>
+            </div>
+          ) : (
+            <div className="bg-bauhaus-yellow border-4 border-bauhaus-black p-4">
+              <h3 className="text-xs font-black text-bauhaus-black mb-2 uppercase tracking-widest">Is this your organisation?</h3>
+              <p className="text-sm text-bauhaus-black/70 font-medium mb-3">
+                Claim this profile to update your information, share your story, and get featured.
+              </p>
+              <a
+                href={`/charities/claim?abn=${c.abn}`}
+                className="block text-center px-4 py-2.5 bg-bauhaus-black text-white text-xs font-black uppercase tracking-widest hover:bg-bauhaus-red transition-colors"
+              >
+                Claim This Profile
+              </a>
+            </div>
+          )}
 
           {/* Data Sources */}
           <div className="bg-bauhaus-canvas border-4 border-bauhaus-black p-4 text-xs text-bauhaus-muted space-y-1.5 font-medium">
