@@ -184,6 +184,35 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* Why This Exists */}
+      <section className="border-4 border-bauhaus-black mb-16 bg-bauhaus-black text-white">
+        <div className="p-8 sm:p-12">
+          <h2 className="text-2xl sm:text-3xl font-black mb-6 leading-tight">
+            Why This Exists
+          </h2>
+          <div className="space-y-4 text-base font-medium leading-relaxed text-white/85 max-w-2xl">
+            <p>
+              <strong className="text-bauhaus-yellow">94%</strong> of charitable donations in Australia go to just 10% of organisations.
+              First Nations communities receive <strong className="text-bauhaus-yellow">0.5%</strong> of philanthropic funding.
+              Women and girls get <strong className="text-bauhaus-yellow">12%</strong>.
+              The 16,000 smallest charities posted a collective net loss of <strong className="text-bauhaus-yellow">$144 million</strong> last year.
+            </p>
+            <p>
+              GrantScope makes the invisible visible &mdash; tracing where money flows, who holds
+              power, and what communities actually need. Every number is live. Every data source is open.
+            </p>
+          </div>
+          <div className="flex gap-4 flex-wrap mt-8">
+            <a href="/reports/community-parity" className="px-6 py-3 bg-bauhaus-red text-white font-black text-xs uppercase tracking-widest border-4 border-white hover:bg-white hover:text-bauhaus-black transition-colors">
+              Read the Investigation
+            </a>
+            <a href="/reports/community-power" className="px-6 py-3 bg-transparent text-white font-black text-xs uppercase tracking-widest border-4 border-white/40 hover:border-white hover:bg-white hover:text-bauhaus-black transition-colors">
+              Explore Alternatives
+            </a>
+          </div>
+        </div>
+      </section>
+
       {/* Live Stats Dashboard */}
       <section className="border-4 border-bauhaus-black mb-16">
         <div className="bg-bauhaus-black px-6 py-3">
@@ -208,10 +237,10 @@ export default async function HomePage() {
               <div className="text-xs font-black uppercase tracking-widest mt-1 text-bauhaus-muted">ACNC Records</div>
             </div>
           </div>
-          <a href="/community" className="group">
+          <a href="/charities?enriched=1" className="group">
             <div className="p-6 text-center transition-all group-hover:bg-bauhaus-yellow">
               <div className="text-3xl sm:text-4xl font-black tabular-nums">{stats.communityOrgs.toLocaleString()}</div>
-              <div className="text-xs font-black uppercase tracking-widest mt-1 text-bauhaus-muted">Community Orgs</div>
+              <div className="text-xs font-black uppercase tracking-widest mt-1 text-bauhaus-muted">Enriched Profiles</div>
             </div>
           </a>
         </div>
@@ -387,7 +416,28 @@ export default async function HomePage() {
       <section className="border-t-4 border-bauhaus-black pt-16 pb-8">
         <h2 className="text-2xl font-black text-center text-bauhaus-black mb-2">Living Reports</h2>
         <p className="text-center text-bauhaus-muted mb-10 text-sm font-medium">Data-driven investigations, updated as new data arrives</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-3xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 max-w-4xl mx-auto">
+          <a href="/reports/big-philanthropy" className="group block sm:col-span-2 lg:col-span-3">
+            <div className="bg-bauhaus-black border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1" style={{ boxShadow: '6px 6px 0px 0px var(--color-bauhaus-red)' }}>
+              <div className="text-xs font-black text-bauhaus-yellow mb-1 uppercase tracking-widest">Data Investigation</div>
+              <h3 className="font-black text-white mb-1">Where Does Australia&apos;s $222 Billion Go?</h3>
+              <p className="text-sm text-bauhaus-muted group-hover:text-white/60">359,678 charity records. 53,207 charities. 7 years of ACNC data.</p>
+            </div>
+          </a>
+          <a href="/reports/community-parity" className="group block">
+            <div className="bg-white border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-red group-hover:text-white">
+              <div className="text-xs font-black text-bauhaus-red mb-1 uppercase tracking-widest group-hover:text-bauhaus-yellow">New</div>
+              <h3 className="font-black text-bauhaus-black mb-1 group-hover:text-white">Community Parity</h3>
+              <p className="text-sm text-bauhaus-muted group-hover:text-white/80">0.5% to First Nations. 12% to women. Who misses out.</p>
+            </div>
+          </a>
+          <a href="/reports/community-power" className="group block">
+            <div className="bg-white border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-blue group-hover:text-white">
+              <div className="text-xs font-black text-bauhaus-blue mb-1 uppercase tracking-widest group-hover:text-bauhaus-yellow">New</div>
+              <h3 className="font-black text-bauhaus-black mb-1 group-hover:text-white">Community Power Playbook</h3>
+              <p className="text-sm text-bauhaus-muted group-hover:text-white/80">Co-ops, social enterprise, and alternatives to grants.</p>
+            </div>
+          </a>
           <a href="/reports/youth-justice" className="group block">
             <div className="bg-white border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-red group-hover:text-white">
               <div className="text-xs font-black text-bauhaus-red mb-1 uppercase tracking-widest group-hover:text-bauhaus-yellow">Flagship</div>
@@ -395,11 +445,11 @@ export default async function HomePage() {
               <p className="text-sm text-bauhaus-muted group-hover:text-white/80">$343M/year on detention. $1.3M per child. 73% reoffend.</p>
             </div>
           </a>
-          <a href="/reports/money-flow" className="group block">
-            <div className="bg-white border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-blue group-hover:text-white">
-              <div className="text-xs font-black text-bauhaus-blue mb-1 uppercase tracking-widest group-hover:text-bauhaus-yellow">Live</div>
-              <h3 className="font-black text-bauhaus-black mb-1 group-hover:text-white">Follow the Dollar</h3>
-              <p className="text-sm text-bauhaus-muted group-hover:text-white/80">Trace funding flows from taxpayer to outcome.</p>
+          <a href="/reports/power-dynamics" className="group block">
+            <div className="bg-white border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-black group-hover:text-white">
+              <div className="text-xs font-black text-purple mb-1 uppercase tracking-widest group-hover:text-bauhaus-yellow">Live</div>
+              <h3 className="font-black text-bauhaus-black mb-1 group-hover:text-white">Power Dynamics</h3>
+              <p className="text-sm text-bauhaus-muted group-hover:text-white/80">Who controls Australia&apos;s philanthropy?</p>
             </div>
           </a>
           <a href="/reports/access-gap" className="group block">
@@ -409,11 +459,11 @@ export default async function HomePage() {
               <p className="text-sm text-bauhaus-muted group-hover:text-bauhaus-black/70">Small orgs spend 40% on admin. Large orgs spend 15%.</p>
             </div>
           </a>
-          <a href="/reports/power-dynamics" className="group block">
-            <div className="bg-white border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-black group-hover:text-white">
-              <div className="text-xs font-black text-purple mb-1 uppercase tracking-widest group-hover:text-bauhaus-yellow">Live</div>
-              <h3 className="font-black text-bauhaus-black mb-1 group-hover:text-white">Power Dynamics</h3>
-              <p className="text-sm text-bauhaus-muted group-hover:text-white/80">Who controls Australia&apos;s philanthropy?</p>
+          <a href="/reports/money-flow" className="group block">
+            <div className="bg-white border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-blue group-hover:text-white">
+              <div className="text-xs font-black text-bauhaus-blue mb-1 uppercase tracking-widest group-hover:text-bauhaus-yellow">Live</div>
+              <h3 className="font-black text-bauhaus-black mb-1 group-hover:text-white">Follow the Dollar</h3>
+              <p className="text-sm text-bauhaus-muted group-hover:text-white/80">Trace funding flows from taxpayer to outcome.</p>
             </div>
           </a>
         </div>

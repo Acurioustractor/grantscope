@@ -522,7 +522,7 @@ export default async function BigPhilanthropyPage() {
           <div className="my-8 p-4 bg-bauhaus-canvas border-4 border-bauhaus-black">
             <p className="text-xs font-black uppercase tracking-widest text-bauhaus-muted mb-2">Explore further</p>
             <div className="flex gap-3 flex-wrap">
-              <a href="/community" className="text-sm font-black text-bauhaus-blue hover:text-bauhaus-red uppercase tracking-wider">Community Organisations &rarr;</a>
+              <a href="/charities" className="text-sm font-black text-bauhaus-blue hover:text-bauhaus-red uppercase tracking-wider">Charities Directory &rarr;</a>
               <a href="/reports/access-gap" className="text-sm font-black text-bauhaus-blue hover:text-bauhaus-red uppercase tracking-wider">The Access Gap Report &rarr;</a>
             </div>
           </div>
@@ -595,11 +595,14 @@ export default async function BigPhilanthropyPage() {
           </Prose>
 
           <div className="my-12 flex gap-4 flex-wrap">
-            <a href="/foundations" className="inline-flex items-center gap-2 px-6 py-3 font-black text-sm bg-bauhaus-black text-white uppercase tracking-widest hover:bg-bauhaus-red border-4 border-bauhaus-black bauhaus-shadow-sm">
-              Explore All Foundations &rarr;
+            <a href="/reports/community-parity" className="inline-flex items-center gap-2 px-6 py-3 font-black text-sm bg-bauhaus-black text-white uppercase tracking-widest hover:bg-bauhaus-red border-4 border-bauhaus-black bauhaus-shadow-sm">
+              Community Parity Report &rarr;
             </a>
-            <a href="/reports/power-dynamics" className="inline-flex items-center gap-2 px-6 py-3 font-black text-sm bg-white text-bauhaus-black uppercase tracking-widest hover:bg-bauhaus-canvas border-4 border-bauhaus-black bauhaus-shadow-sm">
-              Power Dynamics Report &rarr;
+            <a href="/reports/community-power" className="inline-flex items-center gap-2 px-6 py-3 font-black text-sm bg-white text-bauhaus-black uppercase tracking-widest hover:bg-bauhaus-canvas border-4 border-bauhaus-black bauhaus-shadow-sm">
+              Community Power Playbook &rarr;
+            </a>
+            <a href="/foundations" className="inline-flex items-center gap-2 px-6 py-3 font-black text-sm bg-white text-bauhaus-black uppercase tracking-widest hover:bg-bauhaus-canvas border-4 border-bauhaus-black bauhaus-shadow-sm">
+              Explore All Foundations &rarr;
             </a>
           </div>
 

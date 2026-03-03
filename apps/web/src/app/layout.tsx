@@ -30,8 +30,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <ul className="space-y-2 text-sm">
                   <li><a href="/grants" className="text-bauhaus-muted hover:text-white transition-colors">Government Grants</a></li>
                   <li><a href="/foundations" className="text-bauhaus-muted hover:text-white transition-colors">Foundations</a></li>
+                  <li><a href="/charities" className="text-bauhaus-muted hover:text-white transition-colors">All Charities</a></li>
                   <li><a href="/corporate" className="text-bauhaus-muted hover:text-white transition-colors">Corporate Giving</a></li>
-                  <li><a href="/community" className="text-bauhaus-muted hover:text-white transition-colors">Community Orgs</a></li>
+                  <li><a href="/charities?enriched=1" className="text-bauhaus-muted hover:text-white transition-colors">Enriched Profiles</a></li>
                 </ul>
               </div>
               <div>
@@ -46,6 +47,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
             <div className="mt-8 pt-6 border-t-2 border-white/10 text-center text-xs text-bauhaus-muted uppercase tracking-widest">
               Built by ACT &middot; Open source &middot; Data updated daily
+              <a href="/ops/health" className="ml-4 text-white/20 hover:text-white/60 transition-colors">&middot;</a>
             </div>
           </div>
         </footer>
