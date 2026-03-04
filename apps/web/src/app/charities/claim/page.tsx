@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createSupabaseBrowser } from '@/lib/supabase-browser';
 
@@ -14,6 +14,14 @@ interface Claim {
 }
 
 export default function ClaimPage() {
+  return (
+    <Suspense fallback={<div className="max-w-xl mx-auto py-16 flex items-center justify-center min-h-[40vh]"><div className="text-sm font-black text-bauhaus-muted uppercase tracking-widest">Loading...</div></div>}>
+      <ClaimForm />
+    </Suspense>
+  );
+}
+
+function ClaimForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const abn = searchParams.get('abn') || '';

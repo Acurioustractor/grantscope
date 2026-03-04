@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { createSupabaseBrowser } from '@/lib/supabase-browser';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function LoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -40,10 +40,10 @@ export default function LoginPage() {
         <div className="border-4 border-bauhaus-black bg-white">
           <div className="bg-bauhaus-black px-6 py-4">
             <h1 className="text-lg font-black text-white uppercase tracking-widest">
-              Grant Tracker
+              GrantScope
             </h1>
             <p className="text-xs text-bauhaus-muted mt-1 uppercase tracking-wider">
-              Team access only
+              Sign in to your account
             </p>
           </div>
 
@@ -98,5 +98,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-[60vh] flex items-center justify-center"><div className="text-sm font-black text-bauhaus-muted uppercase tracking-widest">Loading...</div></div>}>
+      <LoginForm />
+    </Suspense>
   );
 }
