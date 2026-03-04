@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await request.json();
-  const { abn, contact_email, contact_name, organisation_name } = body;
+  const { abn, contact_email, contact_name, organisation_name, message } = body;
 
   if (!abn) return NextResponse.json({ error: 'ABN is required' }, { status: 400 });
 
@@ -52,6 +52,7 @@ export async function POST(request: NextRequest) {
       contact_email: contact_email || user.email,
       contact_name: contact_name || null,
       organisation_name: organisation_name || null,
+      message: message || null,
       status: 'pending',
     })
     .select()

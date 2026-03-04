@@ -134,6 +134,14 @@ export function NavBar() {
                 <div className="w-px h-6 bg-bauhaus-black/20 mx-1" />
                 {userEmail ? (
                   <div className="flex items-center gap-2">
+                    <a href="/charities/claim" className="px-2 py-1 text-[10px] font-black uppercase tracking-wider text-bauhaus-blue hover:text-bauhaus-red">
+                      My Claims
+                    </a>
+                    {['benjamin@act.place', 'hello@grantscope.au'].includes(userEmail) && (
+                      <a href="/ops/claims" className="px-2 py-1 text-[10px] font-black uppercase tracking-wider text-bauhaus-red hover:text-bauhaus-black">
+                        Admin
+                      </a>
+                    )}
                     <span className="px-2 text-[10px] font-bold text-bauhaus-muted truncate max-w-[140px]">{userEmail}</span>
                     <form action="/api/auth/signout" method="POST">
                       <button

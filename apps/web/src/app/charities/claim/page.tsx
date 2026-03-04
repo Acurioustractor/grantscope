@@ -32,6 +32,7 @@ function ClaimForm() {
   const [orgName, setOrgName] = useState('');
   const [contactName, setContactName] = useState('');
   const [contactEmail, setContactEmail] = useState('');
+  const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -63,7 +64,7 @@ function ClaimForm() {
     const res = await fetch('/api/charities/claim', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ abn, contact_email: contactEmail, contact_name: contactName, organisation_name: orgName }),
+      body: JSON.stringify({ abn, contact_email: contactEmail, contact_name: contactName, organisation_name: orgName, message }),
     });
 
     if (!res.ok) {
@@ -298,6 +299,19 @@ function ClaimForm() {
               onChange={e => setContactEmail(e.target.value)}
               required
               className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">
+              Message (Optional)
+            </label>
+            <textarea
+              value={message}
+              onChange={e => setMessage(e.target.value)}
+              rows={3}
+              placeholder="Tell us about your connection to this organisation, or any questions you have..."
+              className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue resize-y"
             />
           </div>
 

@@ -10,6 +10,8 @@ interface Claim {
   contact_email: string;
   contact_name: string;
   status: string;
+  message: string | null;
+  organisation_name: string | null;
   admin_notes: string | null;
   created_at: string;
   verified_at: string | null;
@@ -125,6 +127,9 @@ export default function ClaimsAdminPage() {
                   <td className="px-4 py-3">
                     <div className="font-bold">{claim.contact_name || '\u2014'}</div>
                     <div className="text-xs text-bauhaus-muted">{claim.contact_email}</div>
+                    {claim.message && (
+                      <div className="text-xs text-bauhaus-black/70 mt-1 italic max-w-[200px]">&ldquo;{claim.message}&rdquo;</div>
+                    )}
                   </td>
                   <td className="px-4 py-3"><StatusBadge status={claim.status} /></td>
                   <td className="px-4 py-3 text-right text-xs text-bauhaus-muted">{timeAgo(claim.created_at)}</td>
