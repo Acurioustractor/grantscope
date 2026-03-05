@@ -13,12 +13,39 @@ export async function GET(request: NextRequest) {
 
   const serviceDb = getServiceSupabase();
 
-  // Fetch user's org profile with embedding
-  const { data: profile, error: profileError } = await serviceDb
+  // Fetch user's org profile with embedding (owner or team member)
+  let profile = null;
+  let profileError = null;
+
+  // First check if user owns a profile
+  const { data: ownProfile, error: ownError } = await serviceDb
     .from('org_profiles')
     .select('embedding, domains, geographic_focus')
     .eq('user_id', user.id)
     .maybeSingle();
+
+  if (ownProfile) {
+    profile = ownProfile;
+    profileError = ownError;
+  } else {
+    // Check if user is a team member of another org
+    const { data: membership } = await serviceDb
+      .from('org_members')
+      .select('org_profile_id')
+      .eq('user_id', user.id)
+      .limit(1)
+      .maybeSingle();
+
+    if (membership) {
+      const { data: orgProfile, error: orgError } = await serviceDb
+        .from('org_profiles')
+        .select('embedding, domains, geographic_focus')
+        .eq('id', membership.org_profile_id)
+        .single();
+      profile = orgProfile;
+      profileError = orgError;
+    }
+  }
 
   if (profileError) return NextResponse.json({ error: profileError.message }, { status: 500 });
   if (!profile) return NextResponse.json({ error: 'No profile found. Create one first.' }, { status: 404 });

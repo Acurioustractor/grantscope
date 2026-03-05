@@ -11,15 +11,32 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
   const { foundationId } = await context.params;
   const body = await request.json();
-  const { stars, stage, notes, last_contact_date } = body;
+  const { stars, stage, notes, last_contact_date, org_profile_id } = body;
 
   const serviceDb = getServiceSupabase();
+
+  // If saving for org, verify user has edit access
+  if (org_profile_id) {
+    const { data: membership } = await serviceDb
+      .from('org_members')
+      .select('role')
+      .eq('org_profile_id', org_profile_id)
+      .eq('user_id', user.id)
+      .in('role', ['admin', 'editor'])
+      .maybeSingle();
+
+    if (!membership) {
+      return NextResponse.json({ error: 'Not authorized to edit org foundations' }, { status: 403 });
+    }
+  }
+
   const { data, error } = await serviceDb
     .from('saved_foundations')
     .upsert(
       {
         user_id: user.id,
         foundation_id: foundationId,
+        ...(org_profile_id && { org_profile_id }),
         ...(stars !== undefined && { stars }),
         ...(stage !== undefined && { stage }),
         ...(notes !== undefined && { notes }),
