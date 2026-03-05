@@ -2,6 +2,9 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { createSupabaseBrowser } from '@/lib/supabase-browser';
+import { AccountDropdown } from './account-dropdown';
+
+const ADMIN_EMAILS = ['benjamin@act.place', 'hello@grantscope.au'];
 
 const primaryLinks = [
   { href: '/grants', label: 'Grants' },
@@ -37,6 +40,15 @@ const megaMenuSections = [
       { href: '/reports/community-parity', label: 'Community Parity', desc: 'Who benefits, who misses out' },
       { href: '/reports/community-power', label: 'Community Power', desc: 'Alternatives to grant dependency' },
       { href: '/reports/power-dynamics', label: 'Power Dynamics', desc: 'Concentration & inequality' },
+    ],
+  },
+  {
+    title: 'For',
+    links: [
+      { href: '/for/community', label: 'Community Orgs', desc: 'Find grants, track applications' },
+      { href: '/for/foundations', label: 'Foundations', desc: 'Peer comparison & gap analysis' },
+      { href: '/for/researchers', label: 'Researchers', desc: 'Open data & living reports' },
+      { href: '/for/government', label: 'Government', desc: 'Program tracking & insights' },
     ],
   },
   {
@@ -117,7 +129,7 @@ export function NavBar() {
             </a>
             <button
               ref={btnRef}
-              onClick={() => setMegaOpen(!megaOpen)}
+              onClick={() => { setMegaOpen(!megaOpen); }}
               className={`px-3 py-2 text-xs font-black uppercase tracking-widest transition-colors flex items-center gap-1.5 ${
                 megaOpen
                   ? 'bg-bauhaus-black text-white'
@@ -133,25 +145,11 @@ export function NavBar() {
               <>
                 <div className="w-px h-6 bg-bauhaus-black/20 mx-1" />
                 {userEmail ? (
-                  <div className="flex items-center gap-2">
-                    <a href="/charities/claim" className="px-2 py-1 text-[10px] font-black uppercase tracking-wider text-bauhaus-blue hover:text-bauhaus-red">
-                      My Claims
-                    </a>
-                    {['benjamin@act.place', 'hello@grantscope.au'].includes(userEmail) && (
-                      <a href="/ops/claims" className="px-2 py-1 text-[10px] font-black uppercase tracking-wider text-bauhaus-red hover:text-bauhaus-black">
-                        Admin
-                      </a>
-                    )}
-                    <span className="px-2 text-[10px] font-bold text-bauhaus-muted truncate max-w-[140px]">{userEmail}</span>
-                    <form action="/api/auth/signout" method="POST">
-                      <button
-                        type="submit"
-                        className="px-3 py-2 text-xs font-black uppercase tracking-widest text-bauhaus-muted hover:bg-bauhaus-black hover:text-white transition-colors"
-                      >
-                        Sign Out
-                      </button>
-                    </form>
-                  </div>
+                  <AccountDropdown
+                    userEmail={userEmail}
+                    isAdmin={ADMIN_EMAILS.includes(userEmail)}
+                    onToggle={(open) => { if (open) setMegaOpen(false); }}
+                  />
                 ) : (
                   <a
                     href="/login"
@@ -185,7 +183,7 @@ export function NavBar() {
       {megaOpen && (
         <div ref={megaRef} className="hidden md:block border-t-4 border-bauhaus-black bg-white shadow-[0_8px_0_0_rgba(0,0,0,0.08)]">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <div className="grid grid-cols-4 gap-8">
+            <div className="grid grid-cols-5 gap-8">
               {megaMenuSections.map((section) => (
                 <div key={section.title}>
                   <h3 className="text-[10px] font-black text-bauhaus-muted uppercase tracking-[0.3em] mb-3">{section.title}</h3>
@@ -231,8 +229,26 @@ export function NavBar() {
             {!authLoading && (
               <div className="mt-4 pt-4 border-t-2 border-bauhaus-black/20">
                 {userEmail ? (
-                  <div className="px-3">
-                    <div className="text-[10px] font-bold text-bauhaus-muted mb-2 truncate">{userEmail}</div>
+                  <div>
+                    <h3 className="text-[10px] font-black text-bauhaus-muted uppercase tracking-[0.3em] mb-1 px-3">Account</h3>
+                    <div className="px-3 py-2 text-[11px] font-bold text-bauhaus-muted truncate">{userEmail}</div>
+                    <a href="/profile" className="block px-3 py-3 text-sm font-black uppercase tracking-widest text-bauhaus-black hover:bg-bauhaus-black hover:text-white border-b-2 border-bauhaus-black/10 transition-colors" onClick={() => setMobileOpen(false)}>
+                      My Organisation
+                    </a>
+                    <a href="/tracker" className="block px-3 py-3 text-sm font-black uppercase tracking-widest text-bauhaus-black hover:bg-bauhaus-black hover:text-white border-b-2 border-bauhaus-black/10 transition-colors" onClick={() => setMobileOpen(false)}>
+                      My Grants
+                    </a>
+                    <a href="/foundations/tracker" className="block px-3 py-3 text-sm font-black uppercase tracking-widest text-bauhaus-black hover:bg-bauhaus-black hover:text-white border-b-2 border-bauhaus-black/10 transition-colors" onClick={() => setMobileOpen(false)}>
+                      My Foundations
+                    </a>
+                    <a href="/charities/claim" className="block px-3 py-3 text-sm font-black uppercase tracking-widest text-bauhaus-black hover:bg-bauhaus-black hover:text-white border-b-2 border-bauhaus-black/10 transition-colors" onClick={() => setMobileOpen(false)}>
+                      My Claims
+                    </a>
+                    {ADMIN_EMAILS.includes(userEmail) && (
+                      <a href="/ops/claims" className="block px-3 py-3 text-sm font-black uppercase tracking-widest text-bauhaus-red hover:bg-bauhaus-black hover:text-white border-b-2 border-bauhaus-black/10 transition-colors" onClick={() => setMobileOpen(false)}>
+                        Admin
+                      </a>
+                    )}
                     <form action="/api/auth/signout" method="POST">
                       <button
                         type="submit"
