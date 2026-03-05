@@ -1,0 +1,105 @@
+'use client';
+
+import { useState, useRef, useEffect } from 'react';
+
+interface AccountDropdownProps {
+  userEmail: string;
+  isAdmin: boolean;
+  onToggle?: (open: boolean) => void;
+}
+
+const menuItems = [
+  { href: '/profile', label: 'My Organisation', desc: 'Your charity profile & settings' },
+  { href: '/tracker', label: 'My Grants', desc: 'Track grant applications' },
+  { href: '/foundations/tracker', label: 'My Foundations', desc: 'Track foundation relationships' },
+  { href: '/charities/claim', label: 'My Claims', desc: 'Claimed charity profiles' },
+];
+
+export function AccountDropdown({ userEmail, isAdmin, onToggle }: AccountDropdownProps) {
+  const [open, setOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        dropdownRef.current && !dropdownRef.current.contains(e.target as Node) &&
+        triggerRef.current && !triggerRef.current.contains(e.target as Node)
+      ) {
+        setOpen(false);
+      }
+    }
+    if (open) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [open]);
+
+  function toggle() {
+    const next = !open;
+    setOpen(next);
+    onToggle?.(next);
+  }
+
+  return (
+    <div className="relative">
+      <button
+        ref={triggerRef}
+        onClick={toggle}
+        className={`px-3 py-2 text-xs font-black uppercase tracking-widest transition-colors flex items-center gap-1.5 ${
+          open
+            ? 'bg-bauhaus-black text-white'
+            : 'text-bauhaus-black hover:bg-bauhaus-black hover:text-white'
+        }`}
+      >
+        <span className="truncate max-w-[140px]">{userEmail}</span>
+        <svg className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
+          <path strokeLinecap="square" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {open && (
+        <div
+          ref={dropdownRef}
+          className="absolute right-0 top-full mt-1 w-64 border-4 border-bauhaus-black bg-white bauhaus-shadow-sm z-50"
+        >
+          {menuItems.map((item) => (
+            <a
+              key={item.href}
+              href={item.href}
+              className="block px-4 py-3 hover:bg-bauhaus-black hover:text-white transition-colors group"
+              onClick={() => setOpen(false)}
+            >
+              <div className="text-xs font-black uppercase tracking-widest group-hover:text-white">{item.label}</div>
+              <div className="text-[11px] text-bauhaus-muted group-hover:text-white/70 font-medium mt-0.5">{item.desc}</div>
+            </a>
+          ))}
+
+          {isAdmin && (
+            <>
+              <div className="border-t-2 border-bauhaus-black/20" />
+              <a
+                href="/ops/claims"
+                className="block px-4 py-3 hover:bg-bauhaus-black hover:text-white transition-colors group"
+                onClick={() => setOpen(false)}
+              >
+                <div className="text-xs font-black uppercase tracking-widest text-bauhaus-red group-hover:text-white">Admin</div>
+                <div className="text-[11px] text-bauhaus-muted group-hover:text-white/70 font-medium mt-0.5">Manage claims & operations</div>
+              </a>
+            </>
+          )}
+
+          <div className="border-t-2 border-bauhaus-black/20" />
+          <form action="/api/auth/signout" method="POST">
+            <button
+              type="submit"
+              className="w-full text-left px-4 py-3 text-xs font-black uppercase tracking-widest text-bauhaus-muted hover:bg-bauhaus-black hover:text-white transition-colors"
+            >
+              Sign Out
+            </button>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}
