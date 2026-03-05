@@ -31,15 +31,29 @@ async function main() {
   console.log('=== Sync Foundation Programs → Grant Opportunities ===');
   console.log(`  Dry run: ${DRY_RUN}`);
 
-  // Fetch all foundation programs with their foundation details
-  const { data: programs, error: fetchError } = await supabase
-    .from('foundation_programs')
-    .select(`
-      id, name, url, description, amount_min, amount_max, deadline,
-      status, categories, eligibility,
-      foundations!inner(id, name, website, thematic_focus, geographic_focus)
-    `)
-    .order('created_at', { ascending: false });
+  // Fetch all foundation programs with their foundation details (paginated)
+  let programs = [];
+  let page = 0;
+  const pageSize = 1000;
+  while (true) {
+    const { data, error: pageError } = await supabase
+      .from('foundation_programs')
+      .select(`
+        id, name, url, description, amount_min, amount_max, deadline,
+        status, categories, eligibility,
+        foundations!inner(id, name, website, thematic_focus, geographic_focus)
+      `)
+      .order('created_at', { ascending: false })
+      .range(page * pageSize, (page + 1) * pageSize - 1);
+    if (pageError) {
+      console.error('Failed to fetch foundation programs:', pageError.message);
+      process.exit(1);
+    }
+    programs = programs.concat(data || []);
+    if (!data || data.length < pageSize) break;
+    page++;
+  }
+  const fetchError = null;
 
   if (fetchError) {
     console.error('Failed to fetch foundation programs:', fetchError.message);
@@ -48,20 +62,27 @@ async function main() {
 
   console.log(`  Found ${programs.length} foundation programs`);
 
-  // Check which programs are already synced
-  const { data: existing, error: existError } = await supabase
-    .from('grant_opportunities')
-    .select('name, foundation_id')
-    .eq('source', 'foundation_program')
-    .not('foundation_id', 'is', null);
-
-  if (existError) {
-    console.error('Failed to check existing:', existError.message);
-    process.exit(1);
+  // Check which programs are already synced (paginated)
+  let existing = [];
+  let ePage = 0;
+  while (true) {
+    const { data, error: existError } = await supabase
+      .from('grant_opportunities')
+      .select('name, foundation_id')
+      .eq('source', 'foundation_program')
+      .not('foundation_id', 'is', null)
+      .range(ePage * 1000, (ePage + 1) * 1000 - 1);
+    if (existError) {
+      console.error('Failed to check existing:', existError.message);
+      process.exit(1);
+    }
+    existing = existing.concat(data || []);
+    if (!data || data.length < 1000) break;
+    ePage++;
   }
 
   const existingKeys = new Set(
-    (existing || []).map(e => `${e.foundation_id}::${e.name}`)
+    existing.map(e => `${e.foundation_id}::${e.name}`)
   );
 
   console.log(`  ${existingKeys.size} already synced`);
