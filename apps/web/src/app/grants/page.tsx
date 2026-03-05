@@ -1,6 +1,7 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import { searchGrantsSemantic } from '@grantscope/engine/src/embeddings.js';
 import { FilterBar } from '../components/filter-bar';
+import { GrantActionsProvider, GrantCardActions } from '../components/grant-card-actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,11 +10,14 @@ interface Grant {
   name: string;
   provider: string;
   program: string | null;
+  program_type: string | null;
   amount_min: number | null;
   amount_max: number | null;
   closes_at: string | null;
   url: string | null;
+  description: string | null;
   categories: string[];
+  source: string | null;
   status: string;
   sources: unknown;
   similarity?: number;
@@ -43,6 +47,26 @@ const STATES = [
   { value: 'AU-NT', label: 'Northern Territory' },
 ];
 
+const GEO_SOURCE_MAP: Record<string, string[]> = {
+  'AU-National': ['arc-grants', 'grantconnect', 'nhmrc', 'data-gov-au'],
+  'AU-QLD': ['qld-grants', 'qld-arts-data', 'brisbane-grants'],
+  'AU-NSW': ['nsw-grants'],
+  'AU-VIC': ['vic-grants'],
+  'AU-WA': ['wa-grants'],
+  'AU-SA': ['sa-grants'],
+  'AU-TAS': ['tas-grants'],
+  'AU-ACT': ['act-grants'],
+  'AU-NT': ['nt-grants'],
+};
+
+const SOURCES = [
+  { value: 'foundation_program', label: 'Foundation Programs' },
+  { value: 'grantconnect', label: 'GrantConnect' },
+  { value: 'arc-grants', label: 'ARC Grants' },
+  { value: 'nhmrc', label: 'NHMRC' },
+  { value: 'ghl_sync', label: 'Curated' },
+];
+
 interface SearchParams {
   q?: string;
   category?: string;
@@ -55,6 +79,7 @@ interface SearchParams {
   closing?: string;
   sort?: string;
   hide_ongoing?: string;
+  source?: string;
 }
 
 export default async function GrantsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
@@ -69,6 +94,7 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
   const closingFilter = params.closing || '';
   const sortOrder = params.sort || 'newest';
   const hideOngoing = params.hide_ongoing === '1';
+  const sourceFilter = params.source || '';
   const page = parseInt(params.page || '1', 10);
   const pageSize = 25;
   const offset = (page - 1) * pageSize;
@@ -95,12 +121,15 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
         id: r.id,
         name: r.name,
         provider: r.provider,
-        program: null,
+        program: (r as Record<string, unknown>).program as string | null ?? null,
+        program_type: (r as Record<string, unknown>).program_type as string | null ?? null,
         amount_min: r.amount_min,
         amount_max: r.amount_max,
         closes_at: r.closes_at,
         url: r.url,
+        description: (r as Record<string, unknown>).description as string | null ?? null,
         categories: r.categories || [],
+        source: (r as Record<string, unknown>).source as string | null ?? null,
         status: 'open',
         sources: null,
         similarity: r.similarity,
@@ -114,6 +143,13 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
       }
       if (amountMin) grants = grants.filter(g => (g.amount_max || 0) >= amountMin);
       if (amountMax) grants = grants.filter(g => (g.amount_min || 0) <= amountMax);
+      if (sourceFilter) {
+        grants = grants.filter(g => g.source === sourceFilter);
+      }
+      if (geoFilter) {
+        const sources = GEO_SOURCE_MAP[geoFilter];
+        if (sources) grants = grants.filter(g => g.source && sources.includes(g.source));
+      }
       if (closingFilter === '30') {
         const cutoff = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
         grants = grants.filter(g => g.closes_at && g.closes_at <= cutoff);
@@ -153,8 +189,15 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
       dbQuery = dbQuery.lte('amount_min', amountMax);
     }
 
+    if (sourceFilter) {
+      dbQuery = dbQuery.eq('source', sourceFilter);
+    }
+
     if (geoFilter) {
-      dbQuery = dbQuery.contains('geography', [geoFilter]);
+      const sources = GEO_SOURCE_MAP[geoFilter];
+      if (sources) {
+        dbQuery = dbQuery.in('source', sources);
+      }
     }
 
     if (closingFilter === '30') {
@@ -176,6 +219,12 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
       dbQuery = dbQuery.order('closes_at', { ascending: true, nullsFirst: false });
     } else if (sortOrder === 'closing_desc') {
       dbQuery = dbQuery.order('closes_at', { ascending: false, nullsFirst: false });
+    } else if (sortOrder === 'amount_desc') {
+      dbQuery = dbQuery.order('amount_max', { ascending: false, nullsFirst: false });
+    } else if (sortOrder === 'amount_asc') {
+      dbQuery = dbQuery.order('amount_max', { ascending: true, nullsFirst: false });
+    } else if (sortOrder === 'name_asc') {
+      dbQuery = dbQuery.order('name', { ascending: true });
     } else {
       // Default: newest first
       dbQuery = dbQuery.order('created_at', { ascending: false });
@@ -209,13 +258,14 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
   if (closingFilter) filterParams.set('closing', closingFilter);
   if (sortOrder !== 'newest') filterParams.set('sort', sortOrder);
   if (hideOngoing) filterParams.set('hide_ongoing', '1');
+  if (sourceFilter) filterParams.set('source', sourceFilter);
   const filterQS = filterParams.toString();
 
   return (
     <div>
       <div className="mb-8">
         <p className="text-xs font-black text-bauhaus-blue uppercase tracking-[0.3em] mb-2">Directory</p>
-        <h1 className="text-3xl font-black text-bauhaus-black mb-2">Government Grants</h1>
+        <h1 className="text-3xl font-black text-bauhaus-black mb-2">Grants &amp; Opportunities</h1>
         <p className="text-bauhaus-muted font-medium">
           {count.toLocaleString()} {grantType === 'historical_award' ? 'historical awards' : grantType === 'all' ? 'grants' : 'open opportunities'}
         </p>
@@ -308,12 +358,21 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
               ))}
             </select>
           </div>
+          <div className="flex items-center px-3 py-2 border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black">
+            <span className="text-[11px] font-black text-bauhaus-muted uppercase tracking-wider mr-2">Source</span>
+            <select name="source" defaultValue={sourceFilter} className="text-xs font-bold bg-bauhaus-canvas border-2 border-bauhaus-black/20 px-2 py-1 focus:outline-none uppercase">
+              <option value="">All</option>
+              {SOURCES.map(s => (
+                <option key={s.value} value={s.value}>{s.label}</option>
+              ))}
+            </select>
+          </div>
           <div className="flex items-center px-3 py-2 border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black gap-1">
             <span className="text-[11px] font-black text-bauhaus-muted uppercase tracking-wider mr-1">Closing</span>
             {[{ v: '', label: 'Upcoming' }, { v: '30', label: '30 Days' }, { v: '90', label: '90 Days' }, { v: 'all', label: 'All' }].map(({ v, label }) => (
               <a
                 key={v}
-                href={`/grants?${new URLSearchParams({ type: grantType, mode: searchMode, ...(query ? { q: query } : {}), ...(category ? { category } : {}), ...(amountMin ? { amount_min: String(amountMin) } : {}), ...(amountMax ? { amount_max: String(amountMax) } : {}), ...(geoFilter ? { geo: geoFilter } : {}), closing: v }).toString()}`}
+                href={`/grants?${new URLSearchParams({ type: grantType, mode: searchMode, ...(query ? { q: query } : {}), ...(category ? { category } : {}), ...(amountMin ? { amount_min: String(amountMin) } : {}), ...(amountMax ? { amount_max: String(amountMax) } : {}), ...(geoFilter ? { geo: geoFilter } : {}), ...(sourceFilter ? { source: sourceFilter } : {}), closing: v }).toString()}`}
                 className={`px-2 py-0.5 text-[11px] font-black uppercase tracking-wider border-2 border-bauhaus-black/20 ${closingFilter === v ? 'bg-bauhaus-black text-white border-bauhaus-black' : 'bg-bauhaus-canvas text-bauhaus-black hover:bg-bauhaus-black/10'}`}
               >
                 {label}
@@ -334,10 +393,13 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
             { v: 'newest', label: 'Newest' },
             { v: 'closing_asc', label: 'Closing Soon' },
             { v: 'closing_desc', label: 'Closing Last' },
+            { v: 'amount_desc', label: '$ High' },
+            { v: 'amount_asc', label: '$ Low' },
+            { v: 'name_asc', label: 'A-Z' },
           ].map(({ v, label }) => (
             <a
               key={v}
-              href={`/grants?${new URLSearchParams({ type: grantType, mode: searchMode, ...(query ? { q: query } : {}), ...(category ? { category } : {}), ...(closingFilter ? { closing: closingFilter } : {}), ...(geoFilter ? { geo: geoFilter } : {}), ...(amountMin ? { amount_min: String(amountMin) } : {}), ...(amountMax ? { amount_max: String(amountMax) } : {}), ...(hideOngoing ? { hide_ongoing: '1' } : {}), sort: v }).toString()}`}
+              href={`/grants?${new URLSearchParams({ type: grantType, mode: searchMode, ...(query ? { q: query } : {}), ...(category ? { category } : {}), ...(closingFilter ? { closing: closingFilter } : {}), ...(geoFilter ? { geo: geoFilter } : {}), ...(amountMin ? { amount_min: String(amountMin) } : {}), ...(amountMax ? { amount_max: String(amountMax) } : {}), ...(hideOngoing ? { hide_ongoing: '1' } : {}), ...(sourceFilter ? { source: sourceFilter } : {}), sort: v }).toString()}`}
               className={`px-2 py-0.5 text-[11px] font-black uppercase tracking-wider border-2 border-bauhaus-black/20 ${sortOrder === v ? 'bg-bauhaus-black text-white border-bauhaus-black' : 'bg-bauhaus-canvas text-bauhaus-black hover:bg-bauhaus-black/10'}`}
             >
               {label}
@@ -345,7 +407,7 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
           ))}
         </div>
         <a
-          href={`/grants?${new URLSearchParams({ type: grantType, mode: searchMode, ...(query ? { q: query } : {}), ...(category ? { category } : {}), ...(closingFilter ? { closing: closingFilter } : {}), ...(geoFilter ? { geo: geoFilter } : {}), ...(amountMin ? { amount_min: String(amountMin) } : {}), ...(amountMax ? { amount_max: String(amountMax) } : {}), ...(sortOrder !== 'newest' ? { sort: sortOrder } : {}), ...(!hideOngoing ? { hide_ongoing: '1' } : {}) }).toString()}`}
+          href={`/grants?${new URLSearchParams({ type: grantType, mode: searchMode, ...(query ? { q: query } : {}), ...(category ? { category } : {}), ...(closingFilter ? { closing: closingFilter } : {}), ...(geoFilter ? { geo: geoFilter } : {}), ...(amountMin ? { amount_min: String(amountMin) } : {}), ...(amountMax ? { amount_max: String(amountMax) } : {}), ...(sortOrder !== 'newest' ? { sort: sortOrder } : {}), ...(sourceFilter ? { source: sourceFilter } : {}), ...(!hideOngoing ? { hide_ongoing: '1' } : {}) }).toString()}`}
           className={`px-2 py-0.5 text-[11px] font-black uppercase tracking-wider border-2 ${hideOngoing ? 'bg-bauhaus-black text-white border-bauhaus-black' : 'border-bauhaus-black/20 bg-bauhaus-canvas text-bauhaus-black hover:bg-bauhaus-black/10'}`}
         >
           {hideOngoing ? 'Show Ongoing' : 'Hide Ongoing'}
@@ -361,6 +423,7 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
         </div>
       )}
 
+      <GrantActionsProvider>
       <div className="space-y-0">
         {grants.map((grant) => (
           <a
@@ -371,8 +434,27 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
             <div className="bg-white border-4 border-b-0 border-bauhaus-black p-4 sm:px-5 transition-all group-hover:bg-bauhaus-blue group-hover:text-white last:border-b-4">
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-bauhaus-black text-[15px] group-hover:text-white">{grant.name}</h3>
-                  <div className="text-sm text-bauhaus-muted mt-0.5 group-hover:text-white/70">{grant.provider}</div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-bauhaus-black text-[15px] group-hover:text-white">{grant.name}</h3>
+                    {grant.program_type && grant.program_type !== 'open_opportunity' && (
+                      <span className={`text-[10px] font-black px-1.5 py-0.5 uppercase tracking-wider border-2 flex-shrink-0 ${
+                        grant.program_type === 'fellowship' ? 'border-bauhaus-blue bg-link-light text-bauhaus-blue' :
+                        grant.program_type === 'scholarship' ? 'border-bauhaus-yellow bg-warning-light text-bauhaus-black' :
+                        grant.program_type === 'historical_award' ? 'border-bauhaus-black/20 bg-bauhaus-canvas text-bauhaus-muted' :
+                        'border-money bg-money-light text-money'
+                      } group-hover:border-white/30 group-hover:bg-white/20 group-hover:text-white`}>
+                        {grant.program_type.replace('_', ' ')}
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-sm text-bauhaus-muted mt-0.5 group-hover:text-white/70">
+                    {grant.provider}{grant.program ? ` — ${grant.program}` : ''}
+                  </div>
+                  {grant.description && (
+                    <div className="text-sm text-bauhaus-muted/70 mt-1 line-clamp-1 group-hover:text-white/50">
+                      {grant.description}
+                    </div>
+                  )}
                 </div>
                 <div className="sm:text-right sm:ml-4 flex-shrink-0">
                   <div className="text-sm font-black text-bauhaus-blue tabular-nums group-hover:text-bauhaus-yellow">
@@ -393,20 +475,22 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
                   )}
                 </div>
               </div>
-              {grant.categories?.length > 0 && (
-                <div className="flex gap-1.5 mt-2.5 flex-wrap">
-                  {grant.categories.map(c => (
+              <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
+                {grant.categories?.length > 0 && grant.categories.map(c => (
                     <span key={c} className="text-[11px] px-2 py-0.5 bg-bauhaus-canvas text-bauhaus-black font-black uppercase tracking-wider border-2 border-bauhaus-black/20 group-hover:bg-white/20 group-hover:text-white group-hover:border-white/30">
                       {c}
                     </span>
                   ))}
+                <div className="ml-auto">
+                  <GrantCardActions grantId={grant.id} />
                 </div>
-              )}
+              </div>
             </div>
           </a>
         ))}
         {grants.length > 0 && <div className="border-b-4 border-bauhaus-black -mt-0"></div>}
       </div>
+      </GrantActionsProvider>
 
       {totalPages > 1 && (
         <div className="flex justify-center items-center gap-0 mt-8">

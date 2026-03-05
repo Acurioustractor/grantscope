@@ -54,6 +54,14 @@ interface ProviderConfig {
 
 const PROVIDERS: ProviderConfig[] = [
   {
+    name: 'minimax',
+    envKey: 'MINIMAX_API_KEY',
+    baseUrl: 'https://api.minimax.io/v1/chat/completions',
+    model: 'MiniMax-M2.5',
+    maxTokens: 4000,
+    supportsJsonMode: false, // M2.5 reasoning model, parse JSON from response
+  },
+  {
     name: 'gemini-grounded',
     envKey: 'GEMINI_API_KEY',
     baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
@@ -92,14 +100,6 @@ const PROVIDERS: ProviderConfig[] = [
     model: 'llama-3.3-70b-versatile',
     maxTokens: 4000,
     supportsJsonMode: true,
-  },
-  {
-    name: 'minimax',
-    envKey: 'MINIMAX_API_KEY',
-    baseUrl: 'https://api.minimax.io/v1/chat/completions',
-    model: 'MiniMax-M2.5',
-    maxTokens: 4000,
-    supportsJsonMode: false, // M2.5 reasoning model, parse JSON from response
   },
   {
     name: 'openai',

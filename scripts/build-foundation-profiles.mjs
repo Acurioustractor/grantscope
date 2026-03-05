@@ -12,9 +12,20 @@
  * 3. Has website but no description yet
  *
  * Usage:
- *   npx tsx scripts/build-foundation-profiles.mjs [--limit=50] [--dry-run] [--top-only]
+ *   npx tsx scripts/build-foundation-profiles.mjs [--limit=50] [--concurrency=5] [--dry-run]
+ *   npx tsx scripts/build-foundation-profiles.mjs --include-no-website --skip-scrape --limit=100
+ *   npx tsx scripts/build-foundation-profiles.mjs --top-only
  *
- * Costs: ~$0.05/foundation (Firecrawl scraping + Claude Sonnet)
+ * Options:
+ *   --limit=N              Max foundations to process (default: 50)
+ *   --concurrency=N        Parallel batch size (default: 5)
+ *   --offset=N             Skip first N results
+ *   --include-no-website   Also profile foundations without websites (LLM-only)
+ *   --skip-scrape          Skip website scraping, use LLM knowledge/search only
+ *   --top-only             Only process the curated top foundations list
+ *   --dry-run              Preview without making changes
+ *
+ * Costs: ~$0.05/foundation with scraping, ~$0.01/foundation LLM-only
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -27,12 +38,16 @@ const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const DRY_RUN = process.argv.includes('--dry-run');
 const TOP_ONLY = process.argv.includes('--top-only');
 const SKIP_SCRAPE = process.argv.includes('--skip-scrape');
+const INCLUDE_NO_WEBSITE = process.argv.includes('--include-no-website');
 
 const limitArg = process.argv.find(a => a.startsWith('--limit='));
 const LIMIT = limitArg ? parseInt(limitArg.split('=')[1], 10) : 50;
 
 const offsetArg = process.argv.find(a => a.startsWith('--offset='));
 const OFFSET = offsetArg ? parseInt(offsetArg.split('=')[1], 10) : 0;
+
+const concurrencyArg = process.argv.find(a => a.startsWith('--concurrency='));
+const CONCURRENCY = concurrencyArg ? parseInt(concurrencyArg.split('=')[1], 10) : 5;
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
@@ -149,13 +164,17 @@ async function getFoundationsToProfile() {
   const topFoundations = [];
 
   if (!TOP_ONLY) {
-    // Get foundations with websites, ordered by estimated giving, that haven't been profiled yet
+    // Get foundations ordered by estimated giving, that haven't been profiled yet
+    // Prioritise those with websites first, then no-website if flag set
     let query = supabase
       .from('foundations')
       .select('*')
-      .not('website', 'is', null)
       .is('enriched_at', null)
       .order('total_giving_annual', { ascending: false, nullsFirst: false });
+
+    if (!INCLUDE_NO_WEBSITE) {
+      query = query.not('website', 'is', null);
+    }
 
     if (OFFSET > 0) {
       query = query.range(OFFSET, OFFSET + LIMIT - 1);
@@ -192,13 +211,119 @@ async function getFoundationsToProfile() {
   return topFoundations.slice(0, LIMIT);
 }
 
+/**
+ * Process a single foundation: scrape (if has website) → LLM profile → DB update.
+ * Returns 'profiled' | 'error'.
+ */
+async function profileOne(foundation, scraper, profiler, index, total) {
+  const name = foundation.name;
+  const website = foundation.website;
+
+  const label = website
+    ? `${name} (${website})`
+    : `${name} (no website — LLM only)`;
+
+  log(`  [${index}/${total}] ${label}`);
+
+  if (DRY_RUN) {
+    log(`    Would profile ${name}`);
+    return 'profiled';
+  }
+
+  try {
+    // Step 1: Scrape website (skip if no website or --skip-scrape)
+    let scraped;
+    if (!website || SKIP_SCRAPE) {
+      scraped = { websiteContent: null, aboutContent: null, programsContent: null, annualReportContent: null, scrapedUrls: [], errors: [] };
+      if (!website) log(`    No website — relying on LLM web search/knowledge`);
+      else log(`    Skipping scrape — using LLM web search/knowledge only`);
+    } else {
+      scraped = await scraper.scrapeFoundation(website);
+      log(`    Scraped ${scraped.scrapedUrls.length} pages`);
+      if (scraped.errors.length > 0) {
+        log(`    ${scraped.errors.length} scrape errors`);
+      }
+    }
+
+    // Step 2: Profile with LLM
+    const profile = await profiler.profileFoundation(foundation, scraped);
+    log(`    Profile confidence: ${profile.profile_confidence}`);
+    if (profile.description) log(`    "${profile.description.slice(0, 100)}..."`);
+    if (profile.open_programs) log(`    ${profile.open_programs.length} open programs found`);
+
+    // Step 3: Update database
+    // Ensure array fields are actually arrays (LLMs sometimes return strings)
+    const ensureArray = (v) => Array.isArray(v) ? v : (v ? [v] : []);
+    const updateData = {
+      description: profile.description,
+      thematic_focus: ensureArray(profile.thematic_focus),
+      geographic_focus: ensureArray(profile.geographic_focus),
+      target_recipients: ensureArray(profile.target_recipients),
+      total_giving_annual: profile.total_giving_annual,
+      avg_grant_size: profile.avg_grant_size,
+      grant_range_min: profile.grant_range_min,
+      grant_range_max: profile.grant_range_max,
+      giving_history: profile.giving_history,
+      giving_ratio: profile.giving_ratio,
+      endowment_size: profile.endowment_size,
+      revenue_sources: ensureArray(profile.revenue_sources),
+      parent_company: profile.parent_company,
+      asx_code: profile.asx_code,
+      open_programs: profile.open_programs,
+      profile_confidence: profile.profile_confidence,
+      giving_philosophy: profile.giving_philosophy,
+      wealth_source: profile.wealth_source,
+      application_tips: profile.application_tips,
+      notable_grants: profile.notable_grants,
+      board_members: profile.board_members,
+      scraped_urls: scraped.scrapedUrls,
+      enrichment_source: website ? 'scrape+llm' : 'llm-only',
+      enriched_at: new Date().toISOString(),
+      last_scraped_at: website ? new Date().toISOString() : undefined,
+    };
+
+    const { error: updateError } = await supabase
+      .from('foundations')
+      .update(updateData)
+      .eq('id', foundation.id);
+
+    if (updateError) {
+      log(`    DB update error: ${updateError.message}`);
+      return 'error';
+    }
+
+    // Also insert open programs into foundation_programs table
+    if (profile.open_programs && profile.open_programs.length > 0) {
+      for (const program of profile.open_programs) {
+        await supabase.from('foundation_programs').upsert({
+          foundation_id: foundation.id,
+          name: program.name,
+          url: program.url || null,
+          description: program.description || null,
+          amount_max: program.amount || null,
+          deadline: program.deadline || null,
+          status: 'open',
+          scraped_at: new Date().toISOString(),
+        }, { onConflict: 'foundation_id,name' }).select();
+      }
+    }
+
+    return 'profiled';
+  } catch (err) {
+    log(`    Error: ${err instanceof Error ? err.message : String(err)}`);
+    return 'error';
+  }
+}
+
 async function main() {
   log('Starting foundation profiling...');
   log(`  Limit: ${LIMIT}`);
   log(`  Offset: ${OFFSET}`);
+  log(`  Concurrency: ${CONCURRENCY}`);
   log(`  Dry run: ${DRY_RUN}`);
   log(`  Top only: ${TOP_ONLY}`);
   log(`  Skip scrape: ${SKIP_SCRAPE}`);
+  log(`  Include no-website: ${INCLUDE_NO_WEBSITE}`);
 
   const foundations = await getFoundationsToProfile();
   log(`${foundations.length} foundations to process`);
@@ -215,105 +340,25 @@ async function main() {
 
   let profiled = 0;
   let errors = 0;
+  let processed = 0;
 
-  for (const foundation of foundations) {
-    const name = foundation.name;
-    const website = foundation.website;
+  // Process in parallel batches
+  for (let i = 0; i < foundations.length; i += CONCURRENCY) {
+    const batch = foundations.slice(i, i + CONCURRENCY);
+    const results = await Promise.allSettled(
+      batch.map((f, j) => profileOne(f, scraper, profiler, i + j + 1, foundations.length))
+    );
 
-    if (!website) {
-      log(`  Skip ${name} — no website`);
-      continue;
-    }
-
-    log(`  [${profiled + errors + 1}/${foundations.length}] Profiling: ${name} (${website})`);
-
-    if (DRY_RUN) {
-      log(`    Would scrape ${website} and profile with Claude`);
-      profiled++;
-      continue;
-    }
-
-    try {
-      // Step 1: Scrape website (or skip if --skip-scrape)
-      let scraped;
-      if (SKIP_SCRAPE) {
-        scraped = { websiteContent: null, aboutContent: null, programsContent: null, annualReportContent: null, scrapedUrls: [], errors: [] };
-        log(`    Skipping scrape — using LLM web search/knowledge only`);
-      } else {
-        scraped = await scraper.scrapeFoundation(website);
-        log(`    Scraped ${scraped.scrapedUrls.length} pages`);
-        if (scraped.errors.length > 0) {
-          log(`    ${scraped.errors.length} scrape errors`);
-        }
-      }
-
-      // Step 2: Profile with LLM
-      const profile = await profiler.profileFoundation(foundation, scraped);
-      log(`    Profile confidence: ${profile.profile_confidence}`);
-      if (profile.description) log(`    "${profile.description.slice(0, 100)}..."`);
-      if (profile.open_programs) log(`    ${profile.open_programs.length} open programs found`);
-
-      // Step 3: Update database
-      const updateData = {
-        description: profile.description,
-        thematic_focus: profile.thematic_focus,
-        geographic_focus: profile.geographic_focus,
-        target_recipients: profile.target_recipients,
-        total_giving_annual: profile.total_giving_annual,
-        avg_grant_size: profile.avg_grant_size,
-        grant_range_min: profile.grant_range_min,
-        grant_range_max: profile.grant_range_max,
-        giving_history: profile.giving_history,
-        giving_ratio: profile.giving_ratio,
-        endowment_size: profile.endowment_size,
-        revenue_sources: profile.revenue_sources,
-        parent_company: profile.parent_company,
-        asx_code: profile.asx_code,
-        open_programs: profile.open_programs,
-        profile_confidence: profile.profile_confidence,
-        giving_philosophy: profile.giving_philosophy,
-        wealth_source: profile.wealth_source,
-        application_tips: profile.application_tips,
-        notable_grants: profile.notable_grants,
-        board_members: profile.board_members,
-        scraped_urls: scraped.scrapedUrls,
-        enrichment_source: 'firecrawl+claude',
-        enriched_at: new Date().toISOString(),
-        last_scraped_at: new Date().toISOString(),
-      };
-
-      const { error: updateError } = await supabase
-        .from('foundations')
-        .update(updateData)
-        .eq('id', foundation.id);
-
-      if (updateError) {
-        log(`    DB update error: ${updateError.message}`);
-        errors++;
-      } else {
+    for (const result of results) {
+      processed++;
+      if (result.status === 'fulfilled' && result.value === 'profiled') {
         profiled++;
+      } else {
+        errors++;
       }
-
-      // Also insert open programs into foundation_programs table
-      if (profile.open_programs && profile.open_programs.length > 0) {
-        for (const program of profile.open_programs) {
-          await supabase.from('foundation_programs').upsert({
-            foundation_id: foundation.id,
-            name: program.name,
-            url: program.url || null,
-            description: program.description || null,
-            amount_max: program.amount || null,
-            deadline: program.deadline || null,
-            status: 'open',
-            scraped_at: new Date().toISOString(),
-          }, { onConflict: 'foundation_id,name' }).select();
-        }
-      }
-
-    } catch (err) {
-      log(`    Error: ${err instanceof Error ? err.message : String(err)}`);
-      errors++;
     }
+
+    log(`  --- Batch complete: ${processed}/${foundations.length} (${profiled} profiled, ${errors} errors) ---`);
   }
 
   await logComplete(supabase, run.id, {
@@ -322,7 +367,7 @@ async function main() {
     items_updated: 0,
   });
 
-  log(`\nComplete: ${profiled} profiled, ${errors} errors`);
+  log(`\nComplete: ${profiled} profiled, ${errors} errors out of ${foundations.length}`);
 }
 
 main().catch(err => {
