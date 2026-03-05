@@ -14,10 +14,25 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
   const { grantId } = await context.params;
   const body = await request.json();
-  const { stars, color, stage, notes, partner_contact_ids } = body;
+  const { stars, color, stage, notes, partner_contact_ids, org_profile_id } = body;
 
   // Use service role to bypass RLS — user authenticated above
   const serviceDb = getServiceSupabase();
+
+  // If saving for org, verify user is a member with edit access
+  if (org_profile_id) {
+    const { data: membership } = await serviceDb
+      .from('org_members')
+      .select('role')
+      .eq('org_profile_id', org_profile_id)
+      .eq('user_id', user.id)
+      .in('role', ['admin', 'editor'])
+      .maybeSingle();
+
+    if (!membership) {
+      return NextResponse.json({ error: 'Not authorized to edit org grants' }, { status: 403 });
+    }
+  }
 
   const { data, error } = await serviceDb
     .from('saved_grants')
@@ -25,6 +40,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       {
         user_id: user.id,
         grant_id: grantId,
+        ...(org_profile_id && { org_profile_id }),
         ...(stars !== undefined && { stars }),
         ...(color !== undefined && { color }),
         ...(stage !== undefined && { stage }),
