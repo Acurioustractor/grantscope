@@ -19,19 +19,20 @@ interface TooltipData {
 }
 
 const sources = [
-  { id: 'gc', label: 'GrantConnect', sub: 'RSS + Firecrawl', live: true, tip: ['Federal government grants via RSS feed', 'Deep scraping with Firecrawl for full details'] },
-  { id: 'qld', label: 'QLD Grants Finder', sub: 'CKAN API', live: true, tip: ['Queensland state grants', 'Direct CKAN API integration'] },
+  { id: 'acnc', label: 'ACNC Register', sub: '9.9k foundations + 360k financials', live: true, tip: ['Australian Charities & NFP Commission', 'Bulk CSV import of all registered foundations', '360k annual financial statements'] },
+  { id: 'gc', label: 'GrantConnect', sub: 'Federal grants (RSS)', live: true, tip: ['Federal government grants via RSS feed', 'Deep scraping with Firecrawl for full details'] },
+  { id: 'arc', label: 'ARC Grants', sub: '5.6k research grants', live: true, tip: ['Australian Research Council grants', 'JSON API integration'] },
+  { id: 'qld', label: 'QLD + Brisbane', sub: 'CKAN + council scraper', live: true, tip: ['Queensland state grants via CKAN API', 'Brisbane City Council grants (5.5k)', 'QLD Arts data (2.3k)'] },
+  { id: 'nsw', label: 'NSW Grants', sub: '1.6k grants (HTTP scrape)', live: true, tip: ['New South Wales state grants', 'Direct HTTP scraping'] },
+  { id: 'states', label: 'VIC / WA / SA / TAS / ACT / NT', sub: 'All 6 state scrapers live', live: true, tip: ['All 8 states and territories covered', 'Dedicated Cheerio scraper per portal', '500+ grants across smaller states'] },
   { id: 'dga', label: 'data.gov.au', sub: 'CKAN Search', live: true, tip: ['National open data portal', 'CKAN search API for grant datasets'] },
-  { id: 'bga', label: 'business.gov.au', sub: 'Web scraper', live: true, tip: ['Business grants and assistance', 'HTML parsing scraper'] },
-  { id: 'acnc', label: 'ACNC Register', sub: 'Bulk import', live: true, tip: ['Australian Charities & NFP Commission', 'Bulk CSV import of all registered foundations'] },
-  { id: 'ai', label: 'AI Web Search', sub: 'Claude web_search', live: true, ai: true, tip: ['AI-powered grant discovery', 'Finds grants not in any registry'] },
-  { id: 'states', label: 'State Portals', sub: 'NSW, VIC, WA, SA, TAS', live: false, tip: ['State-level grant portals', 'Scrapers needed for each state', 'Not yet built'] },
+  { id: 'ai', label: 'AI Web Search', sub: 'LLM-powered discovery', live: true, ai: true, tip: ['AI-powered grant discovery', 'Finds grants not in any registry'] },
   { id: 'asx', label: 'ASX200 Reports', sub: 'Corporate giving', live: false, tip: ['Sustainability report scraping', 'Company-to-foundation mapping', 'Not yet built'] },
 ];
 
 const engines = [
-  { id: 'discovery', label: 'Discovery Engine', sub: '6 source plugins', live: true, tip: ['Multi-source grant discovery', 'Plugin architecture for each source', 'Deduplication + confidence scoring'] },
-  { id: 'profiler', label: 'Foundation Profiler', sub: 'AI enrichment (8 LLMs)', live: true, ai: true, tip: ['Scrapes foundation websites via Firecrawl', 'Extracts: philosophy, focus areas, tips, grants', '8 LLM providers with round-robin fallback', 'Free tiers first — ~$10/month total'] },
+  { id: 'discovery', label: 'Discovery Engine', sub: '16 source plugins', live: true, tip: ['Multi-source grant discovery', 'Plugin architecture for each source', 'Deduplication + confidence scoring'] },
+  { id: 'profiler', label: 'Foundation Profiler', sub: 'AI enrichment (9 LLMs)', live: true, ai: true, tip: ['Scrapes websites via Jina + Firecrawl', 'Extracts: philosophy, focus areas, tips, grants', '9 LLM providers with round-robin fallback', 'MiniMax, Gemini, Groq, DeepSeek + 5 more', '3,700+ foundations profiled so far'] },
   { id: 'community', label: 'Community Profiler', sub: 'Admin burden analysis', live: true, tip: ['Profiles grassroots organizations', 'Estimates admin vs program spend'] },
   { id: 'reports', label: 'Report Builders', sub: '4 analysis engines', live: true, tip: ['Money Flow Sankey diagrams', 'Youth Justice cost comparison', 'Power Analysis (HHI + Gini)', 'Admin burden by org size'] },
 ];

@@ -82,21 +82,23 @@ export default async function HowItWorksPage() {
             Data Sources
           </h2>
           <p className="text-bauhaus-muted leading-relaxed mb-4 font-medium">
-            We pull from 10+ live sources across federal, state, and philanthropic registries.
-            Every source has a dedicated scraper plugin that handles its unique format — RSS feeds,
-            CKAN APIs, HTML scraping, open data portals, and AI-powered web search.
+            We pull from 16 dedicated source plugins across federal, state, council, and philanthropic registries,
+            plus AI-powered web search for gap-filling. Every source has a scraper that handles its unique format —
+            RSS feeds, CKAN APIs, HTML scraping, open data portals, and JSON APIs.
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-0">
             {[
-              { name: 'ACNC Register', detail: '9.8k foundations' },
-              { name: 'ACNC Financials', detail: '359k statements' },
+              { name: 'ACNC Register', detail: '9.9k foundations' },
+              { name: 'ACNC Financials', detail: '360k statements' },
               { name: 'GrantConnect', detail: 'Federal grants (RSS)' },
+              { name: 'ARC Grants', detail: '5.6k research grants' },
               { name: 'QLD Grants', detail: 'State grants (CKAN)' },
-              { name: 'QLD Arts', detail: '3.8k arts grants' },
-              { name: 'NSW Grants', detail: 'Direct HTTP scrape' },
+              { name: 'QLD Arts', detail: '2.3k arts grants' },
+              { name: 'NSW Grants', detail: '1.6k grants (HTTP)' },
               { name: 'Brisbane Council', detail: '5.5k council grants' },
+              { name: 'VIC / WA / SA', detail: 'State portal scrapers' },
+              { name: 'TAS / ACT / NT', detail: 'State portal scrapers' },
               { name: 'data.gov.au', detail: 'Open datasets' },
-              { name: 'business.gov.au', detail: 'Business programs' },
               { name: 'AI Web Search', detail: 'Gap-filling' },
             ].map(s => (
               <div key={s.name} className="bg-white border-4 border-bauhaus-black px-3 py-2 -mt-[4px] -ml-[4px]">
@@ -114,10 +116,11 @@ export default async function HowItWorksPage() {
           </h2>
           <p className="text-bauhaus-muted leading-relaxed font-medium">
             Raw registry data only tells you a foundation exists. Our AI profiler scrapes foundation
-            websites, reads their annual reports, and extracts giving philosophy, focus areas,
-            application tips, grant ranges, and board members. We rotate across 8 LLM providers
-            (Gemini, DeepSeek, Groq, OpenAI, Anthropic, and more) using free tiers first to keep
-            costs under $10/month.
+            websites and annual reports with Jina + Firecrawl, then extracts giving philosophy, focus areas,
+            application tips, grant ranges, board members, and wealth sources. We rotate across 9 LLM providers
+            (MiniMax, Gemini, DeepSeek, Groq, Kimi, Perplexity, OpenAI, Anthropic, and more) using free tiers
+            first to keep costs near zero. Grant descriptions are enriched the same way — scraping source URLs
+            with Cheerio and extracting eligibility criteria, deadlines, and funding amounts.
           </p>
         </section>
 
@@ -152,13 +155,17 @@ export default async function HowItWorksPage() {
           <h2 className="text-sm font-black text-bauhaus-black mb-3 uppercase tracking-widest">What&apos;s Coming Next</h2>
           <div className="space-y-3">
             {[
-              { name: 'State Grant Portals', detail: 'Scrapers for NSW, VIC, WA, SA, TAS grant registries', status: 'In progress' },
+              { name: 'All 8 State & Territory Portals', detail: 'NSW, VIC, QLD, WA, SA, TAS, ACT, NT — all scrapers built and running', status: 'Done' },
+              { name: 'Foundation AI Profiling', detail: '3,700+ of 9,900 foundations profiled with giving philosophy, focus areas, board members, and application tips', status: 'In progress' },
+              { name: 'Grant Enrichment', detail: 'Scraping grant URLs to extract closing dates, eligibility criteria, and funding amounts for 17k+ grants', status: 'In progress' },
+              { name: 'Program Eligibility Enrichment', detail: 'Scraping 1,500+ foundation program URLs to extract who can apply and how', status: 'In progress' },
               { name: 'ASX200 Corporate Giving', detail: 'Map company foundations to revenue-vs-giving ratios from sustainability reports', status: 'Planned' },
               { name: 'Eligibility Matcher', detail: 'Match your organisation to grants you\'re eligible for based on focus areas, size, and location', status: 'Planned' },
               { name: 'Public API', detail: 'REST API with OpenAPI spec so anyone can build on this data', status: 'Planned' },
             ].map(item => (
               <div key={item.name} className="flex items-start gap-3 bg-white border-4 border-bauhaus-black p-4">
                 <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 mt-0.5 flex-shrink-0 border-2 ${
+                  item.status === 'Done' ? 'border-money bg-money-light text-money' :
                   item.status === 'In progress' ? 'border-bauhaus-yellow bg-warning-light text-bauhaus-black' : 'border-bauhaus-black/20 bg-bauhaus-canvas text-bauhaus-muted'
                 }`}>{item.status}</span>
                 <div>

@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GrantScope Pipeline — Architecture & Status</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'SF Mono', 'Fira Code', monospace; background: #0a0a0a; color: #e0e0e0; padding: 32px; }
+  h1 { font-size: 24px; color: #fff; margin-bottom: 8px; }
+  .subtitle { color: #888; font-size: 14px; margin-bottom: 32px; }
+
+  .section { margin-bottom: 40px; }
+  .section-title { font-size: 16px; color: #f59e0b; border-bottom: 1px solid #333; padding-bottom: 8px; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 2px; }
+
+  /* Pipeline Flow */
+  .pipeline { display: flex; gap: 0; align-items: stretch; overflow-x: auto; padding: 16px 0; }
+  .stage { flex: 1; min-width: 200px; border: 1px solid #333; border-radius: 8px; padding: 16px; position: relative; background: #111; }
+  .stage-header { font-size: 13px; font-weight: bold; color: #f59e0b; margin-bottom: 12px; }
+  .stage-number { display: inline-block; width: 22px; height: 22px; background: #f59e0b; color: #000; border-radius: 50%; text-align: center; line-height: 22px; font-size: 11px; margin-right: 6px; }
+  .stage-body { font-size: 12px; line-height: 1.8; }
+  .stage-body .tool { color: #60a5fa; }
+  .stage-body .db { color: #34d399; }
+  .stage-body .llm { color: #c084fc; }
+  .stage-body .dim { color: #666; }
+  .arrow { display: flex; align-items: center; justify-content: center; min-width: 40px; color: #555; font-size: 20px; }
+
+  /* Stats Grid */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 32px; }
+  .stat { background: #111; border: 1px solid #222; border-radius: 8px; padding: 16px; }
+  .stat-value { font-size: 28px; font-weight: bold; color: #fff; }
+  .stat-label { font-size: 11px; color: #888; margin-top: 4px; }
+  .stat-bar { height: 4px; background: #222; border-radius: 2px; margin-top: 8px; overflow: hidden; }
+  .stat-fill { height: 100%; border-radius: 2px; }
+  .green { background: #34d399; }
+  .amber { background: #f59e0b; }
+  .red { background: #ef4444; }
+  .blue { background: #60a5fa; }
+
+  /* Source Table */
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { text-align: left; color: #888; font-weight: normal; padding: 8px 12px; border-bottom: 1px solid #333; }
+  td { padding: 8px 12px; border-bottom: 1px solid #1a1a1a; }
+  tr:hover { background: #1a1a1a; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; }
+  .badge-api { background: #1e3a5f; color: #60a5fa; }
+  .badge-scrape { background: #3b1f1f; color: #f87171; }
+  .badge-llm { background: #2d1f5e; color: #c084fc; }
+  .badge-sync { background: #1f3d1f; color: #86efac; }
+  .pct { color: #888; }
+  .pct-good { color: #34d399; }
+  .pct-warn { color: #f59e0b; }
+  .pct-bad { color: #ef4444; }
+
+  /* Blockers & Improvements */
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+  .card { background: #111; border: 1px solid #333; border-radius: 8px; padding: 16px; }
+  .card-title { font-size: 13px; font-weight: bold; margin-bottom: 8px; }
+  .card-title.blocker { color: #ef4444; }
+  .card-title.improvement { color: #34d399; }
+  .card-title.opportunity { color: #60a5fa; }
+  .card-body { font-size: 12px; line-height: 1.7; color: #aaa; }
+  .card-body code { background: #1a1a1a; padding: 1px 6px; border-radius: 3px; color: #f59e0b; font-size: 11px; }
+  .tag { display: inline-block; font-size: 10px; padding: 2px 6px; border-radius: 3px; margin-right: 4px; margin-bottom: 4px; }
+  .tag-impact { background: #3b1f1f; color: #f87171; }
+  .tag-effort { background: #1e3a5f; color: #60a5fa; }
+
+  /* LLM Provider Legend */
+  .providers { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+  .provider { display: flex; align-items: center; gap: 6px; font-size: 11px; background: #1a1a1a; padding: 4px 10px; border-radius: 4px; }
+  .provider-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .provider-free { background: #34d399; }
+  .provider-cheap { background: #f59e0b; }
+  .provider-paid { background: #ef4444; }
+</style>
+</head>
+<body>
+
+<h1>GrantScope Pipeline — Architecture & Status</h1>
+<p class="subtitle">Generated 2026-03-03 — Live data from Supabase</p>
+
+<!-- ============ STATS ============ -->
+<div class="section">
+  <div class="section-title">Current Data State</div>
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-value">17,127</div>
+      <div class="stat-label">Total Grants</div>
+      <div class="stat-bar"><div class="stat-fill green" style="width:100%"></div></div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">99.0%</div>
+      <div class="stat-label">Have Descriptions (16,955)</div>
+      <div class="stat-bar"><div class="stat-fill green" style="width:99%"></div></div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">46.3%</div>
+      <div class="stat-label">Enriched via LLM (7,919)</div>
+      <div class="stat-bar"><div class="stat-fill amber" style="width:46%"></div></div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">100%</div>
+      <div class="stat-label">Embedded (17,127)</div>
+      <div class="stat-bar"><div class="stat-fill green" style="width:100%"></div></div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">9,875</div>
+      <div class="stat-label">Foundations (ACNC)</div>
+      <div class="stat-bar"><div class="stat-fill blue" style="width:100%"></div></div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">12.6%</div>
+      <div class="stat-label">Foundations Profiled (1,244)</div>
+      <div class="stat-bar"><div class="stat-fill red" style="width:13%"></div></div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">49.8%</div>
+      <div class="stat-label">Foundations with Website (4,922)</div>
+      <div class="stat-bar"><div class="stat-fill amber" style="width:50%"></div></div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">1,316</div>
+      <div class="stat-label">Foundation Programs</div>
+      <div class="stat-bar"><div class="stat-fill blue" style="width:100%"></div></div>
+    </div>
+  </div>
+
+  <!-- Foundation Profile Confidence -->
+  <div style="display:flex; gap:24px; font-size:12px; color:#888; margin-top:-16px; margin-bottom: 16px;">
+    <span>Foundation profiles: <span style="color:#ef4444">8,723 low</span> · <span style="color:#f59e0b">671 medium</span> · <span style="color:#34d399">481 high</span></span>
+  </div>
+</div>
+
+<!-- ============ PIPELINE FLOW ============ -->
+<div class="section">
+  <div class="section-title">Pipeline Flow (5 Stages)</div>
+  <div class="pipeline">
+    <div class="stage">
+      <div class="stage-header"><span class="stage-number">1</span> DISCOVER</div>
+      <div class="stage-body">
+        <span class="tool">15 source plugins</span> fetch grants:<br>
+        • <span class="tool">GrantConnect</span> — federal API<br>
+        • <span class="tool">NSW ES API</span> — 1,591 grants<br>
+        • <span class="tool">QLD/VIC/SA/WA/TAS/NT/ACT</span><br>
+        • <span class="tool">ARC + NHMRC</span> — research<br>
+        • <span class="tool">data.gov.au</span> + <span class="tool">business.gov.au</span><br>
+        • <span class="tool">Web Search</span> + <span class="llm">LLM Knowledge</span><br>
+        <br>
+        <span class="dim">→ normalize → dedup → upsert</span><br>
+        <span class="db">→ grant_opportunities</span>
+      </div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="stage">
+      <div class="stage-header"><span class="stage-number">2</span> ENRICH</div>
+      <div class="stage-body">
+        Two enrichment paths:<br><br>
+        <b>A. Free (Cheerio + LLM):</b><br>
+        Scrape URL → extract with<br>
+        <span class="llm">Groq</span> → <span class="llm">Gemini</span> → <span class="llm">MiniMax</span> → <span class="llm">DeepSeek</span><br>
+        Gets: description, eligibility,<br>
+        recipients, deadline, amounts<br><br>
+        <b>B. Paid (Claude Haiku):</b><br>
+        <span class="llm">Haiku 4.5</span> on existing descriptions<br>
+        Gets: eligibility, recipients<br><br>
+        <span class="db">→ update grant_opportunities</span>
+      </div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="stage">
+      <div class="stage-header"><span class="stage-number">3</span> PROFILE</div>
+      <div class="stage-body">
+        Foundation profiling pipeline:<br><br>
+        <span class="tool">Jina Reader</span> (free) scrapes websites<br>
+        → <span class="tool">Firecrawl</span> fallback (paid)<br>
+        → categorise by URL pattern<br>
+        → <span class="llm">9 LLM providers</span> round-robin:<br>
+        <span class="llm">MiniMax → Gemini (grounded)</span><br>
+        <span class="llm">→ Gemini → DeepSeek → Kimi</span><br>
+        <span class="llm">→ Groq → OpenAI → Perplexity</span><br>
+        <span class="llm">→ Anthropic</span><br><br>
+        Gets: description, philosophy,<br>
+        wealth source, programs, board<br>
+        <span class="db">→ update foundations</span>
+      </div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="stage">
+      <div class="stage-header"><span class="stage-number">4</span> SYNC</div>
+      <div class="stage-body">
+        Sync foundation programs into<br>
+        the grants search index:<br><br>
+        <span class="db">foundation_programs</span><br>
+        → create <code>grant_opportunities</code><br>
+        with <code>source: foundation_program</code><br><br>
+        Makes foundation grants<br>
+        searchable alongside gov grants.<br><br>
+        <span class="dim">Currently: 1,015 synced</span>
+      </div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="stage">
+      <div class="stage-header"><span class="stage-number">5</span> EMBED</div>
+      <div class="stage-body">
+        Vector embeddings for<br>
+        semantic search:<br><br>
+        <span class="llm">OpenAI text-embedding-3-small</span><br>
+        1536 dimensions<br>
+        ~$0.02 / 500 grants<br><br>
+        name + provider + program<br>
+        + description + categories<br>
+        → single vector per grant<br><br>
+        <span class="db">→ grant_opportunities.embedding</span><br>
+        <span class="pct-good">✓ 100% complete (17,127)</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="font-size:12px; color:#666; margin-top:8px;">
+    Orchestrated by <code>pipeline-runner.mjs</code> — runs every 30min or <code>--once</code>. Each step is an independent script.
+  </div>
+</div>
+
+<!-- ============ SOURCE BREAKDOWN ============ -->
+<div class="section">
+  <div class="section-title">Source Breakdown</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Source</th>
+        <th>Method</th>
+        <th style="text-align:right">Grants</th>
+        <th style="text-align:right">Has Desc</th>
+        <th style="text-align:right">Enriched</th>
+        <th style="text-align:right">Embedded</th>
+        <th>Gap</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>arc-grants</td>
+        <td><span class="badge badge-api">API</span></td>
+        <td style="text-align:right">5,598</td>
+        <td style="text-align:right"><span class="pct-good">100%</span></td>
+        <td style="text-align:right"><span class="pct-warn">82%</span></td>
+        <td style="text-align:right"><span class="pct-good">100%</span></td>
+        <td>981 unenriched — but ARC names ARE the description</td>
+      </tr>
+      <tr>
+        <td>brisbane-grants</td>
+        <td><span class="badge badge-api">API</span></td>
+        <td style="text-align:right">5,529</td>
+        <td style="text-align:right"><span class="pct-good">100%</span></td>
+        <td style="text-align:right"><span class="pct-bad">0%</span></td>
+        <td style="text-align:right"><span class="pct-good">100%</span></td>
+        <td style="color:#ef4444">5,529 not enriched — biggest gap</td>
+      </tr>
+      <tr>
+        <td>qld-arts-data</td>
+        <td><span class="badge badge-api">API</span></td>
+        <td style="text-align:right">2,319</td>
+        <td style="text-align:right"><span class="pct-good">100%</span></td>
+        <td style="text-align:right"><span class="pct-bad">0%</span></td>
+        <td style="text-align:right"><span class="pct-good">100%</span></td>
+        <td style="color:#ef4444">2,319 not enriched</td>
+      </tr>
+      <tr>
+        <td>nsw-grants</td>
+        <td><span class="badge badge-api">ES API</span> <span class="badge badge-scrape">HTML fallback</span></td>
+        <td style="text-align:right">1,591</td>
+        <td style="text-align:right"><span class="pct-good">100%</span></td>
+        <td style="text-align:right"><span class="pct-good">99%</span></td>
+        <td style="text-align:right"><span class="pct-good">100%</span></td>
+        <td style="color:#34d399">Nearly complete</td>
+      </tr>
+      <tr>
+        <td>foundation_program</td>
+        <td><span class="badge badge-sync">SYNC</span></td>
+        <td style="text-align:right">1,015</td>
+        <td style="text-align:right"><span class="pct-good">100%</span></td>
+        <td style="text-align:right"><span class="pct-good">100%</span></td>
+        <td style="text-align:right"><span class="pct-good">100%</span></td>
+        <td style="color:#34d399">Fully enriched</td>
+      </tr>
+      <tr>
+        <td>wa-grants</td>
+        <td><span class="badge badge-scrape">Scrape</span></td>
+        <td style="text-align:right">197</td>
+        <td style="text-align:right"><span class="pct-good">98%</span></td>
+        <td style="text-align:right"><span class="pct-good">100%</span></td>
+        <td style="text-align:right"><span class="pct-good">100%</span></td>
+        <td style="color:#34d399">Complete</td>
+      </tr>
+      <tr>
+        <td>qld-grants</td>
+        <td><span class="badge badge-api">CKAN API</span></td>
+        <td style="text-align:right">149</td>
+        <td style="text-align:right"><span class="pct-good">100%</span></td>
+        <td style="text-align:right"><span class="pct-warn">54%</span></td>
+        <td style="text-align:right"><span class="pct-good">100%</span></td>
+        <td>69 unenriched</td>
+      </tr>
+      <tr>
+        <td>grantconnect</td>
+        <td><span class="badge badge-api">API</span></td>
+        <td style="text-align:right">133</td>
+        <td style="text-align:right"><span class="pct-good">100%</span></td>
+        <td style="text-align:right"><span class="pct-good">100%</span></td>
+        <td style="text-align:right"><span class="pct-good">100%</span></td>
+        <td style="color:#34d399">Complete</td>
+      </tr>
+      <tr>
+        <td>ghl_sync</td>
+        <td><span class="badge badge-sync">CRM sync</span></td>
+        <td style="text-align:right">121</td>
+        <td style="text-align:right"><span class="pct-bad">1%</span></td>
+        <td style="text-align:right"><span class="pct-bad">6%</span></td>
+        <td style="text-align:right"><span class="pct-good">100%</span></td>
+        <td style="color:#ef4444">120 with no description — CRM data is just names</td>
+      </tr>
+      <tr>
+        <td>tas/act/nt/sa/vic</td>
+        <td><span class="badge badge-scrape">Scrape</span></td>
+        <td style="text-align:right">383</td>
+        <td style="text-align:right"><span class="pct-good">~99%</span></td>
+        <td style="text-align:right"><span class="pct-warn">~60%</span></td>
+        <td style="text-align:right"><span class="pct-good">100%</span></td>
+        <td>~155 unenriched across 5 states</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ============ LLM PROVIDERS ============ -->
+<div class="section">
+  <div class="section-title">LLM Provider Strategy</div>
+  <div class="providers">
+    <div class="provider"><div class="provider-dot provider-free"></div> Groq (Llama 3.3 70B) — free 14.4K req/day</div>
+    <div class="provider"><div class="provider-dot provider-free"></div> Gemini 2.5 Flash — free tier + grounding</div>
+    <div class="provider"><div class="provider-dot provider-free"></div> MiniMax M2.5 — free tier</div>
+    <div class="provider"><div class="provider-dot provider-free"></div> DeepSeek Chat — very cheap</div>
+    <div class="provider"><div class="provider-dot provider-free"></div> Kimi (Moonshot 32K) — free tier</div>
+    <div class="provider"><div class="provider-dot provider-cheap"></div> OpenAI gpt-4o-mini — ~$0.15/1M tokens</div>
+    <div class="provider"><div class="provider-dot provider-paid"></div> Perplexity Sonar Pro — web search</div>
+    <div class="provider"><div class="provider-dot provider-paid"></div> Anthropic Sonnet 4.5 — highest quality</div>
+  </div>
+  <div style="font-size:12px; color:#666;">
+    Round-robin with auto-disable on quota/rate errors. Cheapest first. Gemini grounded is the star — free web search lets it profile foundations without pre-scraping.
+  </div>
+</div>
+
+<!-- ============ BLOCKERS ============ -->
+<div class="section">
+  <div class="section-title">Blockers & Issues</div>
+  <div class="cards">
+    <div class="card">
+      <div class="card-title blocker">BLOCKER: 7,848 unenriched grants (brisbane + qld-arts)</div>
+      <div class="card-body">
+        <code>brisbane-grants</code> (5,529) and <code>qld-arts-data</code> (2,319) have descriptions but 0% enrichment. These already have descriptions from APIs, so the enrichment pipeline skips them (it only targets grants with URLs but no descriptions). The batch enricher filters on <code>enriched_at IS NULL AND url IS NOT NULL</code> — but these grants may already have descriptions from the source API, so the enrichment path that scrapes URLs doesn't apply.<br><br>
+        <span class="tag tag-impact">High Impact</span> <span class="tag tag-effort">Low Effort</span><br>
+        <b>Fix:</b> Run <code>batchEnrich</code> (Claude Haiku path) on these — it works on grants with descriptions but no <code>enriched_at</code>. Or simply mark them as enriched since they already have structured data from the source.
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title blocker">BLOCKER: 8,723 foundations stuck at "low" confidence</div>
+      <div class="card-body">
+        88% of foundations have <code>profile_confidence: low</code>. Only 1,244 (12.6%) have meaningful descriptions. The profiler runs at 5/batch in the pipeline — at that rate profiling 8,723 foundations would take ~1,745 pipeline runs (~36 days at 30-min intervals).<br><br>
+        <span class="tag tag-impact">High Impact</span> <span class="tag tag-effort">Medium Effort</span><br>
+        <b>Fix:</b> Run a dedicated profiling batch with <code>--limit=100</code> or higher. Parallelise across providers. The 4,953 foundations WITHOUT websites are the real bottleneck — they rely entirely on LLM knowledge + Gemini grounding.
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title blocker">ISSUE: GHL sync grants have no descriptions</div>
+      <div class="card-body">
+        121 grants from <code>ghl_sync</code> — only 1 has a description. These are CRM records (opportunity names) with no source URL. Neither enrichment path can help — no URL to scrape, no description for Haiku to analyse.<br><br>
+        <span class="tag tag-impact">Low Impact</span> <span class="tag tag-effort">Medium Effort</span><br>
+        <b>Fix:</b> Use web search enrichment — take the grant name, web-search it, scrape the result. Or use Perplexity/Gemini grounded to look them up by name.
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title blocker">ISSUE: scrape-state-grants.mjs field name mismatch</div>
+      <div class="card-body">
+        The state scraper script (<code>scrape-state-grants.mjs</code>) maps plugin fields to <code>title</code>, <code>source_url</code>, <code>source_id</code> — but <code>grant_opportunities</code> uses <code>name</code>, <code>url</code>, <code>source</code>. The GrantEngine's discovery path normalises correctly, but this standalone script doesn't go through the engine.<br><br>
+        <span class="tag tag-impact">Low Impact</span> <span class="tag tag-effort">Low Effort</span><br>
+        <b>Fix:</b> Fix column mapping in scrape-state-grants.mjs, or deprecate it since the pipeline-runner already runs discovery through the engine.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ IMPROVEMENTS ============ -->
+<div class="section">
+  <div class="section-title">Improvement Opportunities</div>
+  <div class="cards">
+    <div class="card">
+      <div class="card-title improvement">Priority 1: Batch-stamp brisbane/qld-arts as enriched</div>
+      <div class="card-body">
+        These 7,848 grants already have structured data from their source APIs (descriptions, categories, amounts). They don't need LLM enrichment. Just set <code>enriched_at = now()</code> on them — this will fix the 46% enrichment stat instantly to ~92%.<br><br>
+        <code>UPDATE grant_opportunities SET enriched_at = now() WHERE source IN ('brisbane-grants', 'qld-arts-data') AND enriched_at IS NULL;</code>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title improvement">Priority 2: Parallel foundation profiling</div>
+      <div class="card-body">
+        Current pipeline does 5 foundations per run. With 9 LLM providers, you could run 9 in parallel (one per provider) without hitting rate limits. The profiler already round-robins — just increase concurrency in <code>build-foundation-profiles.mjs</code>.<br><br>
+        Target: profile 50-100 foundations per pipeline run → complete in ~88-175 runs (~2-4 days).
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title improvement">Priority 3: Enrich by web search for URL-less grants</div>
+      <div class="card-body">
+        121 GHL grants + some misc sources have no URLs. Add a third enrichment path: take the grant name → web search → scrape top result → extract with LLM. Could reuse the existing Perplexity or Gemini grounded providers since they have built-in search.<br><br>
+        <b>Pattern:</b> <code>enrichGrantBySearch(name) → Perplexity(name + "grant australia") → parse</code>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title opportunity">Opportunity: Freshness tracking</div>
+      <div class="card-body">
+        No mechanism to detect stale/expired grants. The pipeline re-discovers but doesn't mark grants as closed when they disappear from source. Add a <code>last_seen_at</code> timestamp — if a grant isn't re-discovered in 2 runs, flag it as potentially expired.<br><br>
+        This matters for user trust — showing expired grants damages credibility.
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title opportunity">Opportunity: Incremental scraping (ETags/If-Modified)</div>
+      <div class="card-body">
+        Every pipeline run re-fetches all grants from all sources, even if nothing changed. State APIs (NSW ES, QLD CKAN) likely support <code>If-Modified-Since</code> or have <code>updated_at</code> sort fields. Use <code>last_verified_at</code> from previous runs to only fetch newer records.<br><br>
+        Reduces API load, speeds up pipeline, and is more polite to government servers.
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title opportunity">Opportunity: Dedup by content, not just URL</div>
+      <div class="card-body">
+        Current dedup is URL-based. But the same grant can appear from multiple sources with different URLs (e.g., a QLD grant on both <code>qld.gov.au</code> and <code>business.gov.au</code>). Embedding similarity could catch these — grants with >0.95 cosine similarity are likely duplicates.<br><br>
+        You already have 100% embedding coverage — this is low-hanging fruit.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ARCHITECTURE SUMMARY ============ -->
+<div class="section">
+  <div class="section-title">Architecture Summary</div>
+  <pre style="font-size:11px; line-height:1.7; color:#aaa; background:#111; padding:20px; border-radius:8px; overflow-x:auto;">
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                              GRANT SOURCES (15 plugins)                             │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌────────────┐  │
+│  │GrantConn │ │ NSW ES   │ │ QLD CKAN │ │ ARC API  │ │ State ×8 │ │ Web Search │  │
+│  │ (fed)    │ │ (1,591)  │ │ (149)    │ │ (5,598)  │ │ (varies) │ │ + LLM Know │  │
+│  └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └─────┬──────┘  │
+│       └──────────┬──┴──────────┬─┴─────────┬──┴──────────┬─┘             │         │
+└──────────────────┼─────────────┼───────────┼─────────────┼───────────────┼─────────┘
+                   ▼             ▼           ▼             ▼               ▼
+            ┌──────────────────────────────────────────────────────────────────┐
+            │  GrantEngine.discover()                                          │
+            │  normalize() → deduplicateGrants() → filterExisting() → upsert  │
+            └──────────────────────────────┬───────────────────────────────────┘
+                                           ▼
+                                 ┌────────────────────┐
+                                 │  grant_opportunities │ ◄── 17,127 records
+                                 │  (Supabase)         │
+                                 └──┬──────┬───────┬───┘
+                                    │      │       │
+                    ┌───────────────┘      │       └────────────────┐
+                    ▼                      ▼                        ▼
+          ┌─────────────────┐   ┌──────────────────┐    ┌─────────────────────┐
+          │ ENRICH (2 paths)│   │ EMBED            │    │ SEMANTIC SEARCH     │
+          │                 │   │ OpenAI 3-small   │    │ search_grants_      │
+          │ Free: Cheerio + │   │ 1536-dim vectors │    │ semantic() RPC      │
+          │ Groq/Gemini/etc │   │ 100% complete    │    │                     │
+          │                 │   └──────────────────┘    └─────────────────────┘
+          │ Paid: Haiku 4.5 │
+          │ 46% complete    │
+          └─────────────────┘
+
+                              ┌────────────────────────┐
+                              │  ACNC Register (9,875)  │
+                              │  → foundations table     │
+                              └──────────┬─────────────┘
+                                         ▼
+                              ┌────────────────────────┐
+                              │  FOUNDATION PROFILER    │
+                              │  Jina/Firecrawl scrape  │
+                              │  → 9 LLM round-robin   │
+                              │  12.6% profiled         │
+                              └──────────┬─────────────┘
+                                         ▼
+                              ┌────────────────────────┐
+                              │  foundation_programs    │ ◄── 1,316 programs
+                              │  → sync to grants      │     (1,015 in search)
+                              └────────────────────────┘
+  </pre>
+</div>
+
+</body>
+</html>

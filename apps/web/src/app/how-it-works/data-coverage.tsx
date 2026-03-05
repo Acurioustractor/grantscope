@@ -12,10 +12,10 @@ interface CoverageStats {
 
 // Known universe sizes for Australian philanthropy/grants data
 const UNIVERSE = {
-  acncCharities: 60000,       // ~60k active registered charities (ACNC)
-  foundations: 5000,           // ~4-5k active giving foundations (PAFs + PuAFs + trusts)
+  acncCharities: 63000,       // ~63k active registered charities (ACNC)
+  foundations: 10000,          // ~10k foundations (PAFs + PuAFs + trusts + ancillary funds)
   grantsConnect: 50000,        // ~50k+ grant awards published since 2017
-  stateGrants: 5000,           // Estimated state-level grants across 6 states
+  stateGrants: 15000,         // All 8 state/territory portals + councils
   communityOrgs: 30000,        // Estimated grassroots/community orgs
   corporateGiving: 200,        // ASX200 corporate giving programs
 };
@@ -105,7 +105,7 @@ export function DataCoverage({ coverage }: { coverage: CoverageStats }) {
               total={UNIVERSE.grantsConnect + UNIVERSE.stateGrants}
               color="yellow"
               label="Grant Opportunities"
-              sublabel={`Federal, state, council — NSW, QLD, Brisbane + more`}
+              sublabel={`All 8 states/territories + federal + council`}
             />
           </div>
           <div className="-mb-[4px] -mr-[4px] sm:-mr-0">
@@ -114,7 +114,7 @@ export function DataCoverage({ coverage }: { coverage: CoverageStats }) {
               total={UNIVERSE.acncCharities * 7}
               color="blue"
               label="Financial Statements"
-              sublabel={`ACNC Annual Information Statements (2017–2023)`}
+              sublabel={`ACNC Annual Information Statements (2013–2024)`}
             />
           </div>
           <div className="-mb-[4px] -mr-[4px] lg:-mr-0">
@@ -138,21 +138,29 @@ export function DataCoverage({ coverage }: { coverage: CoverageStats }) {
         </div>
 
         <div className="bg-bauhaus-canvas border-4 border-bauhaus-black p-4 mt-6">
-          <h3 className="text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">Coming Next</h3>
+          <h3 className="text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">Data Pipeline Status</h3>
           <div className="flex flex-wrap gap-3">
             {[
-              { label: 'VIC Grants', est: '~1,500' },
-              { label: 'WA Grants', est: '~800' },
-              { label: 'SA Grants', est: '~500' },
-              { label: 'TAS Grants', est: '~200' },
-              { label: 'ASX200 Corporate', est: '~200' },
-              { label: 'Fellowships', est: '~500' },
-              { label: 'GrantConnect Full', est: '~50k' },
+              { label: 'All 8 State Portals', status: 'live' as const },
+              { label: 'Federal (ARC + GrantConnect)', status: 'live' as const },
+              { label: 'Council Grants', status: 'live' as const },
+              { label: 'Foundation Profiling', status: 'running' as const, est: '3,700+ done' },
+              { label: 'Grant Enrichment', status: 'running' as const, est: '14k+ grants' },
+              { label: 'Program Eligibility', status: 'running' as const, est: '866 programs' },
+              { label: 'ASX200 Corporate', status: 'planned' as const, est: '~200' },
+              { label: 'Eligibility Matcher', status: 'planned' as const },
+              { label: 'Public API', status: 'planned' as const },
             ].map(item => (
-              <div key={item.label} className="bg-white border-2 border-bauhaus-black/20 px-3 py-1.5 flex items-center gap-2">
-                <span className="w-2 h-2 bg-bauhaus-muted" />
-                <span className="text-xs font-bold text-bauhaus-muted">{item.label}</span>
-                <span className="text-[10px] text-bauhaus-muted/60">{item.est}</span>
+              <div key={item.label} className={`bg-white border-2 px-3 py-1.5 flex items-center gap-2 ${
+                item.status === 'live' ? 'border-money' : item.status === 'running' ? 'border-bauhaus-yellow' : 'border-bauhaus-black/20'
+              }`}>
+                <span className={`w-2 h-2 ${
+                  item.status === 'live' ? 'bg-money rounded-full' : item.status === 'running' ? 'bg-bauhaus-yellow rounded-full' : 'bg-bauhaus-muted'
+                }`} />
+                <span className={`text-xs font-bold ${
+                  item.status === 'live' ? 'text-money' : item.status === 'running' ? 'text-bauhaus-black' : 'text-bauhaus-muted'
+                }`}>{item.label}</span>
+                {'est' in item && item.est && <span className="text-[10px] text-bauhaus-muted/60">{item.est}</span>}
               </div>
             ))}
           </div>

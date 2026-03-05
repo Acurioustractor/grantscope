@@ -3,416 +3,446 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GrantScope — Architecture & Data Flow</title>
+<title>GrantScope — Architecture Diagram</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; overflow-x: hidden; }
+  body { font-family: 'SF Mono', 'Fira Code', monospace; background: #f5f0e8; color: #1a1a1a; min-height: 100vh; }
 
-  .header { text-align: center; padding: 40px 20px 20px; }
-  .header h1 { font-size: 32px; font-weight: 800; letter-spacing: -0.03em; }
-  .header h1 span { color: #059669; }
-  .header p { color: #94a3b8; margin-top: 8px; font-size: 14px; }
+  .header { background: #1a1a1a; color: #f5f0e8; padding: 32px 40px; border-bottom: 6px solid #e63946; }
+  .header h1 { font-size: 28px; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; }
+  .header p { font-size: 12px; color: #999; margin-top: 6px; letter-spacing: 0.08em; text-transform: uppercase; }
 
-  .legend { display: flex; justify-content: center; gap: 24px; padding: 12px 20px 30px; flex-wrap: wrap; }
-  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #94a3b8; }
-  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .stats-bar { display: flex; gap: 0; border-bottom: 4px solid #1a1a1a; background: #fff; flex-wrap: wrap; }
+  .stat { flex: 1; padding: 16px 20px; border-right: 3px solid #1a1a1a; text-align: center; min-width: 120px; }
+  .stat:last-child { border-right: none; }
+  .stat-val { font-size: 22px; font-weight: 900; color: #1a1a1a; }
+  .stat-label { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.15em; color: #666; margin-top: 2px; }
 
-  svg { display: block; margin: 0 auto; }
+  .container { max-width: 1400px; margin: 0 auto; padding: 32px 24px; }
 
-  .node { cursor: pointer; transition: filter 0.2s; }
-  .node:hover { filter: brightness(1.2) drop-shadow(0 0 8px rgba(255,255,255,0.15)); }
-  .node rect, .node circle { transition: stroke-width 0.2s; }
-  .node:hover rect, .node:hover circle { stroke-width: 3; }
+  .section-title { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; color: #666; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 3px solid #1a1a1a; }
 
-  .flow-line { stroke-dasharray: 8 4; animation: flow 1.5s linear infinite; }
-  .flow-line-reverse { stroke-dasharray: 8 4; animation: flow-reverse 1.5s linear infinite; }
-  @keyframes flow { to { stroke-dashoffset: -24; } }
-  @keyframes flow-reverse { to { stroke-dashoffset: 24; } }
+  .diagram { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; margin-bottom: 40px; }
 
-  .planned { opacity: 0.4; stroke-dasharray: 4 4; }
-  .planned-fill { opacity: 0.35; }
+  .col { display: flex; flex-direction: column; gap: 16px; }
 
-  .tooltip {
-    position: fixed; background: #1e293b; border: 1px solid #334155; border-radius: 8px;
-    padding: 12px 16px; font-size: 13px; max-width: 320px; pointer-events: none;
-    opacity: 0; transition: opacity 0.15s; z-index: 100; line-height: 1.5;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-  }
-  .tooltip.show { opacity: 1; }
-  .tooltip h4 { font-size: 14px; margin-bottom: 4px; color: #f8fafc; }
-  .tooltip .stat { color: #059669; font-weight: 600; }
-  .tooltip .planned-tag { color: #d97706; font-style: italic; }
+  .card { background: #fff; border: 4px solid #1a1a1a; position: relative; }
+  .card-header { padding: 10px 14px; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; color: #fff; }
+  .card-body { padding: 14px; }
 
-  .section-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; fill: #475569; font-weight: 600; }
-  .count-badge { font-size: 10px; fill: #f8fafc; font-weight: 700; }
-  .status-live { fill: #059669; }
-  .status-partial { fill: #d97706; }
-  .status-planned { fill: #64748b; }
+  .bg-red { background: #e63946; }
+  .bg-blue { background: #457b9d; }
+  .bg-black { background: #1a1a1a; }
+  .bg-yellow { background: #e9c46a; color: #1a1a1a !important; }
+  .bg-green { background: #2d6a4f; }
+  .bg-purple { background: #6c4f82; }
+  .bg-orange { background: #d4651a; }
 
-  .phase-box { fill: none; stroke-dasharray: 6 3; rx: 12; }
+  .item { font-size: 11px; padding: 6px 0; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+  .item:last-child { border-bottom: none; }
+  .item-name { font-weight: 700; }
+  .item-detail { font-size: 10px; color: #888; font-weight: 600; }
+
+  .badge { display: inline-block; font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; padding: 2px 6px; border: 2px solid; margin-left: 6px; }
+  .badge-auth { border-color: #e63946; color: #e63946; }
+
+  .flow-section { margin-bottom: 40px; }
+
+  .flow-diagram { display: flex; align-items: stretch; gap: 0; overflow-x: auto; padding: 8px 0; }
+  .flow-node { background: #fff; border: 4px solid #1a1a1a; padding: 12px 16px; min-width: 130px; text-align: center; flex-shrink: 0; }
+  .flow-node-title { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; }
+  .flow-node-detail { font-size: 9px; color: #666; margin-top: 4px; }
+  .flow-arrow { display: flex; align-items: center; font-size: 18px; color: #1a1a1a; padding: 0 4px; font-weight: 900; flex-shrink: 0; }
+
+  .db-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-bottom: 40px; }
+  .db-card { background: #fff; border: 3px solid #1a1a1a; padding: 10px 14px; }
+  .db-name { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; }
+  .db-count { font-size: 18px; font-weight: 900; color: #e63946; }
+  .db-cols { font-size: 9px; color: #888; }
+
+  .legend { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 20px; padding: 16px; background: #fff; border: 3px solid #1a1a1a; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+  .legend-swatch { width: 16px; height: 16px; border: 2px solid #1a1a1a; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 40px; }
+  @media (max-width: 900px) { .diagram, .two-col { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
 
 <div class="header">
-  <h1>Grant<span>Scope</span> Architecture</h1>
-  <p>Data flow from source → scraper → database → API → frontend</p>
+  <h1>GrantScope Architecture</h1>
+  <p>Australia's Open Grants Infrastructure — Data + Routes + Engine &mdash; 2 Mar 2026</p>
 </div>
 
-<div class="legend">
-  <div class="legend-item"><div class="legend-dot" style="background:#059669"></div> Live & operational</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#d97706"></div> Partial / in progress</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#64748b"></div> Planned / not yet built</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#2563eb"></div> Database / storage</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#7c3aed"></div> AI / LLM processing</div>
+<div class="stats-bar">
+  <div class="stat"><div class="stat-val">16,947</div><div class="stat-label">Grants</div></div>
+  <div class="stat"><div class="stat-val">9,875</div><div class="stat-label">Foundations</div></div>
+  <div class="stat"><div class="stat-val">359,385</div><div class="stat-label">ACNC Records</div></div>
+  <div class="stat"><div class="stat-val">1,036</div><div class="stat-label">Programs</div></div>
+  <div class="stat"><div class="stat-val">503</div><div class="stat-label">Community Orgs</div></div>
+  <div class="stat"><div class="stat-val">13</div><div class="stat-label">Data Sources</div></div>
 </div>
 
-<svg viewBox="0 0 1200 900" width="100%" style="max-width:1200px">
-  <defs>
-    <marker id="arrow-green" viewBox="0 0 10 6" refX="10" refY="3" markerWidth="8" markerHeight="6" orient="auto">
-      <path d="M0,0 L10,3 L0,6" fill="#059669"/>
-    </marker>
-    <marker id="arrow-blue" viewBox="0 0 10 6" refX="10" refY="3" markerWidth="8" markerHeight="6" orient="auto">
-      <path d="M0,0 L10,3 L0,6" fill="#2563eb"/>
-    </marker>
-    <marker id="arrow-purple" viewBox="0 0 10 6" refX="10" refY="3" markerWidth="8" markerHeight="6" orient="auto">
-      <path d="M0,0 L10,3 L0,6" fill="#7c3aed"/>
-    </marker>
-    <marker id="arrow-gray" viewBox="0 0 10 6" refX="10" refY="3" markerWidth="8" markerHeight="6" orient="auto">
-      <path d="M0,0 L10,3 L0,6" fill="#64748b"/>
-    </marker>
-    <filter id="glow"><feGaussianBlur stdDeviation="2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-  </defs>
+<div class="container">
 
-  <!-- ═══════════════════════════════════════ -->
-  <!-- SECTION LABELS -->
-  <!-- ═══════════════════════════════════════ -->
-  <text x="80" y="30" class="section-label">External Data Sources</text>
-  <text x="460" y="30" class="section-label">Grant Engine (Scrapers + AI)</text>
-  <text x="460" y="420" class="section-label">Supabase Database</text>
-  <text x="820" y="30" class="section-label">Web App (Next.js)</text>
-  <text x="820" y="420" class="section-label">Autonomous Agents</text>
+  <!-- PAGES & API ROUTES -->
+  <div class="section-title">Pages & API Routes</div>
+  <div class="diagram">
 
-  <!-- ═══════════════════════════════════════ -->
-  <!-- COLUMN 1: DATA SOURCES -->
-  <!-- ═══════════════════════════════════════ -->
+    <!-- Col 1: Public Pages -->
+    <div class="col">
+      <div class="card">
+        <div class="card-header bg-green">Public Pages (11)</div>
+        <div class="card-body">
+          <div class="item"><span class="item-name">/</span><span class="item-detail">Homepage + live stats</span></div>
+          <div class="item"><span class="item-name">/grants</span><span class="item-detail">Search + filter all grants</span></div>
+          <div class="item"><span class="item-name">/grants/[id]</span><span class="item-detail">Grant detail page</span></div>
+          <div class="item"><span class="item-name">/foundations</span><span class="item-detail">Browse foundations</span></div>
+          <div class="item"><span class="item-name">/foundations/[id]</span><span class="item-detail">Foundation detail + programs</span></div>
+          <div class="item"><span class="item-name">/corporate</span><span class="item-detail">Corporate giving tracker</span></div>
+          <div class="item"><span class="item-name">/community</span><span class="item-detail">Community orgs directory</span></div>
+          <div class="item"><span class="item-name">/simulator</span><span class="item-detail">Grant application simulator</span></div>
+          <div class="item"><span class="item-name">/how-it-works</span><span class="item-detail">Data coverage diagram</span></div>
+          <div class="item"><span class="item-name">/process</span><span class="item-detail">Data pipeline explainer</span></div>
+          <div class="item"><span class="item-name">/login</span><span class="item-detail">Team sign-in</span></div>
+        </div>
+      </div>
 
-  <!-- GrantConnect -->
-  <g class="node" data-tip="GrantConnect|Federal government grants via RSS feed + Firecrawl deep scraping|~200 grants tracked|Status: Live">
-    <rect x="30" y="50" width="170" height="50" rx="8" fill="#1e293b" stroke="#059669" stroke-width="1.5"/>
-    <text x="115" y="72" text-anchor="middle" fill="#f8fafc" font-size="13" font-weight="600">GrantConnect</text>
-    <text x="115" y="88" text-anchor="middle" fill="#94a3b8" font-size="10">RSS + Firecrawl</text>
-    <circle cx="190" cy="55" r="5" class="status-live"/>
-  </g>
+      <div class="card">
+        <div class="card-header bg-green">Reports (5 public)</div>
+        <div class="card-body">
+          <div class="item"><span class="item-name">/reports</span><span class="item-detail">Reports index</span></div>
+          <div class="item"><span class="item-name">/reports/big-philanthropy</span><span class="item-detail">Top 50 foundations</span></div>
+          <div class="item"><span class="item-name">/reports/money-flow</span><span class="item-detail">Extraction → community</span></div>
+          <div class="item"><span class="item-name">/reports/power-dynamics</span><span class="item-detail">Who controls the money</span></div>
+          <div class="item"><span class="item-name">/reports/access-gap</span><span class="item-detail">Regional vs metro</span></div>
+          <div class="item"><span class="item-name">/reports/youth-justice</span><span class="item-detail">QLD youth justice</span></div>
+        </div>
+      </div>
+    </div>
 
-  <!-- QLD Grants -->
-  <g class="node" data-tip="QLD Grants Finder|Queensland state grants via CKAN API|Direct API integration|Status: Live">
-    <rect x="30" y="115" width="170" height="50" rx="8" fill="#1e293b" stroke="#059669" stroke-width="1.5"/>
-    <text x="115" y="137" text-anchor="middle" fill="#f8fafc" font-size="13" font-weight="600">QLD Grants Finder</text>
-    <text x="115" y="153" text-anchor="middle" fill="#94a3b8" font-size="10">CKAN API</text>
-    <circle cx="190" cy="120" r="5" class="status-live"/>
-  </g>
+    <!-- Col 2: Auth Pages + Search APIs -->
+    <div class="col">
+      <div class="card">
+        <div class="card-header bg-red">Auth-Gated Pages (5)</div>
+        <div class="card-body">
+          <div class="item"><span class="item-name">/dashboard</span><span class="item-detail">Overview metrics</span><span class="badge badge-auth">Auth</span></div>
+          <div class="item"><span class="item-name">/profile</span><span class="item-detail">Org profile + matching</span><span class="badge badge-auth">Auth</span></div>
+          <div class="item"><span class="item-name">/profile/matches</span><span class="item-detail">Matched grants feed</span><span class="badge badge-auth">Auth</span></div>
+          <div class="item"><span class="item-name">/tracker</span><span class="item-detail">Saved grants pipeline</span><span class="badge badge-auth">Auth</span></div>
+          <div class="item"><span class="item-name">/ops</span><span class="item-detail">Operations dashboard</span><span class="badge badge-auth">Auth</span></div>
+        </div>
+      </div>
 
-  <!-- data.gov.au -->
-  <g class="node" data-tip="data.gov.au|National open data portal|CKAN search API for grant datasets|Status: Live">
-    <rect x="30" y="180" width="170" height="50" rx="8" fill="#1e293b" stroke="#059669" stroke-width="1.5"/>
-    <text x="115" y="202" text-anchor="middle" fill="#f8fafc" font-size="13" font-weight="600">data.gov.au</text>
-    <text x="115" y="218" text-anchor="middle" fill="#94a3b8" font-size="10">CKAN Search</text>
-    <circle cx="190" cy="185" r="5" class="status-live"/>
-  </g>
+      <div class="card">
+        <div class="card-header bg-blue">Search & Discovery APIs (7)</div>
+        <div class="card-body">
+          <div class="item"><span class="item-name">GET /api/search</span><span class="item-detail">Text search grants</span></div>
+          <div class="item"><span class="item-name">GET /api/search/semantic</span><span class="item-detail">Vector similarity</span></div>
+          <div class="item"><span class="item-name">GET /api/discover</span><span class="item-detail">Discovery feed</span></div>
+          <div class="item"><span class="item-name">GET /api/foundations</span><span class="item-detail">Foundation listing</span></div>
+          <div class="item"><span class="item-name">GET /api/dashboard</span><span class="item-detail">Dashboard metrics</span></div>
+          <div class="item"><span class="item-name">GET /api/data</span><span class="item-detail">Data export (JSON)</span></div>
+          <div class="item"><span class="item-name">GET /api/data/export</span><span class="item-detail">CSV/Excel export</span></div>
+        </div>
+      </div>
+    </div>
 
-  <!-- business.gov.au -->
-  <g class="node" data-tip="business.gov.au|Business grants and assistance programs|Web scraper (HTML parsing)|Status: Live">
-    <rect x="30" y="245" width="170" height="50" rx="8" fill="#1e293b" stroke="#059669" stroke-width="1.5"/>
-    <text x="115" y="267" text-anchor="middle" fill="#f8fafc" font-size="13" font-weight="600">business.gov.au</text>
-    <text x="115" y="283" text-anchor="middle" fill="#94a3b8" font-size="10">Web scraper</text>
-    <circle cx="190" cy="250" r="5" class="status-live"/>
-  </g>
+    <!-- Col 3: Auth APIs -->
+    <div class="col">
+      <div class="card">
+        <div class="card-header bg-red">Profile & Tracker APIs (6)</div>
+        <div class="card-body">
+          <div class="item"><span class="item-name">GET /api/profile</span><span class="item-detail">Fetch org profile</span><span class="badge badge-auth">Auth</span></div>
+          <div class="item"><span class="item-name">PUT /api/profile</span><span class="item-detail">Save + embed profile</span><span class="badge badge-auth">Auth</span></div>
+          <div class="item"><span class="item-name">GET /api/profile/matches</span><span class="item-detail">Vector match grants</span><span class="badge badge-auth">Auth</span></div>
+          <div class="item"><span class="item-name">GET /api/tracker</span><span class="item-detail">Saved grants list</span><span class="badge badge-auth">Auth</span></div>
+          <div class="item"><span class="item-name">PUT /api/tracker/[id]</span><span class="item-detail">Save/update grant</span><span class="badge badge-auth">Auth</span></div>
+          <div class="item"><span class="item-name">POST /api/auth/signout</span><span class="item-detail">Sign out</span></div>
+        </div>
+      </div>
 
-  <!-- ACNC Register -->
-  <g class="node" data-tip="ACNC Charity Register|Australian Charities and Not-for-profits Commission|9,875 foundations imported|Bulk CSV download + API|Status: Live">
-    <rect x="30" y="310" width="170" height="50" rx="8" fill="#1e293b" stroke="#059669" stroke-width="1.5"/>
-    <text x="115" y="332" text-anchor="middle" fill="#f8fafc" font-size="13" font-weight="600">ACNC Register</text>
-    <text x="115" y="348" text-anchor="middle" fill="#94a3b8" font-size="10">9,875 foundations</text>
-    <circle cx="190" cy="315" r="5" class="status-live"/>
-  </g>
+      <div class="card">
+        <div class="card-header bg-purple">Reports & Other APIs (5)</div>
+        <div class="card-body">
+          <div class="item"><span class="item-name">GET /api/reports/money-flow</span><span class="item-detail">Money flow data</span></div>
+          <div class="item"><span class="item-name">GET /api/reports/youth-justice</span><span class="item-detail">Youth justice data</span></div>
+          <div class="item"><span class="item-name">POST /api/chat</span><span class="item-detail">AI grants chat</span></div>
+          <div class="item"><span class="item-name">POST /api/simulator</span><span class="item-detail">Application scoring</span></div>
+          <div class="item"><span class="item-name">POST /api/feedback</span><span class="item-detail">User feedback</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-  <!-- AI Web Search -->
-  <g class="node" data-tip="AI Web Search|Claude web_search tool for grant discovery|Discovers grants not in any registry|Status: Live">
-    <rect x="30" y="375" width="170" height="50" rx="8" fill="#1e293b" stroke="#7c3aed" stroke-width="1.5"/>
-    <text x="115" y="397" text-anchor="middle" fill="#f8fafc" font-size="13" font-weight="600">AI Web Search</text>
-    <text x="115" y="413" text-anchor="middle" fill="#94a3b8" font-size="10">Claude web_search</text>
-    <circle cx="190" cy="380" r="5" class="status-live"/>
-  </g>
+  <!-- DATA PIPELINE -->
+  <div class="section-title">Data Pipeline — Grants</div>
+  <div class="flow-section">
+    <div class="flow-diagram">
+      <div class="flow-node" style="border-color: #2d6a4f;">
+        <div class="flow-node-title" style="color: #2d6a4f;">13 Sources</div>
+        <div class="flow-node-detail">NSW, VIC, QLD, SA, WA,<br>TAS, ACT, NT, ARC, NHMRC,<br>GrantConnect, data.gov.au,<br>business.gov.au</div>
+      </div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-node">
+        <div class="flow-node-title">Scrapers</div>
+        <div class="flow-node-detail">grant-engine/sources/*<br>13 TypeScript scrapers</div>
+      </div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-node">
+        <div class="flow-node-title">Normalizer</div>
+        <div class="flow-node-detail">RawGrant &rarr; CanonicalGrant<br>Deduplication</div>
+      </div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-node" style="border-color: #e63946;">
+        <div class="flow-node-title" style="color: #e63946;">Repository</div>
+        <div class="flow-node-detail">Upsert to Supabase<br>16,947 grants</div>
+      </div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-node" style="border-color: #457b9d;">
+        <div class="flow-node-title" style="color: #457b9d;">Embeddings</div>
+        <div class="flow-node-detail">OpenAI text-embedding-3-small<br>1536d vectors &middot; 99.9%</div>
+      </div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-node" style="border-color: #6c4f82;">
+        <div class="flow-node-title" style="color: #6c4f82;">Enrichment</div>
+        <div class="flow-node-detail">LLM descriptions<br>Groq + free tiers<br>95.5% coverage</div>
+      </div>
+    </div>
+  </div>
 
-  <!-- State portals (planned) -->
-  <g class="node" data-tip="State Grant Portals|NSW, VIC, WA, SA, TAS grant portals|Not yet built — scrapers needed for each state|Status: Planned">
-    <rect x="30" y="445" width="170" height="50" rx="8" fill="#1e293b" stroke="#64748b" stroke-width="1.5" class="planned"/>
-    <text x="115" y="467" text-anchor="middle" fill="#64748b" font-size="13" font-weight="600" class="planned-fill">State Portals</text>
-    <text x="115" y="483" text-anchor="middle" fill="#475569" font-size="10">NSW, VIC, WA, SA, TAS</text>
-    <circle cx="190" cy="450" r="5" class="status-planned"/>
-  </g>
+  <div class="section-title">Data Pipeline — Foundations</div>
+  <div class="flow-section">
+    <div class="flow-diagram">
+      <div class="flow-node" style="border-color: #2d6a4f;">
+        <div class="flow-node-title" style="color: #2d6a4f;">ACNC Register</div>
+        <div class="flow-node-detail">359,385 charities<br>Annual info statements</div>
+      </div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-node">
+        <div class="flow-node-title">Foundation Filter</div>
+        <div class="flow-node-detail">Type: ancillary fund,<br>foundation, trust</div>
+      </div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-node" style="border-color: #e63946;">
+        <div class="flow-node-title" style="color: #e63946;">Foundations</div>
+        <div class="flow-node-detail">9,875 foundations<br>34 columns</div>
+      </div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-node" style="border-color: #d4651a;">
+        <div class="flow-node-title" style="color: #d4651a;">AI Profiler</div>
+        <div class="flow-node-detail">Multi-LLM (9 providers)<br>Skip-scrape mode<br>518 profiled</div>
+      </div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-node" style="border-color: #6c4f82;">
+        <div class="flow-node-title" style="color: #6c4f82;">Programs Sync</div>
+        <div class="flow-node-detail">1,036 foundation<br>grant programs</div>
+      </div>
+    </div>
+  </div>
 
-  <!-- ASX200 (planned) -->
-  <g class="node" data-tip="ASX200 Sustainability Reports|Corporate giving data from annual reports|Company-to-foundation mapping + revenue ratios|Status: Planned (Phase E)">
-    <rect x="30" y="510" width="170" height="50" rx="8" fill="#1e293b" stroke="#64748b" stroke-width="1.5" class="planned"/>
-    <text x="115" y="532" text-anchor="middle" fill="#64748b" font-size="13" font-weight="600" class="planned-fill">ASX200 Reports</text>
-    <text x="115" y="548" text-anchor="middle" fill="#475569" font-size="10">Corporate giving data</text>
-    <circle cx="190" cy="515" r="5" class="status-planned"/>
-  </g>
+  <!-- MATCHING FLOW -->
+  <div class="section-title">Org Profile &rarr; Grant Matching Flow</div>
+  <div class="flow-section">
+    <div class="flow-diagram">
+      <div class="flow-node" style="border-color: #e63946;">
+        <div class="flow-node-title" style="color: #e63946;">Org Profile</div>
+        <div class="flow-node-detail">Name, mission, domains,<br>geography, projects</div>
+      </div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-node" style="border-color: #457b9d;">
+        <div class="flow-node-title" style="color: #457b9d;">Embed</div>
+        <div class="flow-node-detail">OpenAI<br>text-embedding-3-small<br>1536 dimensions</div>
+      </div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-node" style="border-color: #6c4f82;">
+        <div class="flow-node-title" style="color: #6c4f82;">match_grants_for_org</div>
+        <div class="flow-node-detail">Postgres RPC<br>pgvector cosine distance<br>threshold &ge; 0.6</div>
+      </div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-node" style="border-color: #d4651a;">
+        <div class="flow-node-title" style="color: #d4651a;">Boost</div>
+        <div class="flow-node-detail">Domain overlap +2.5%<br>Max boost +5%</div>
+      </div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-node" style="border-color: #2d6a4f;">
+        <div class="flow-node-title" style="color: #2d6a4f;">Fit Score</div>
+        <div class="flow-node-detail">0-100% ranked<br>Top 50 matches<br>Save to tracker</div>
+      </div>
+    </div>
+  </div>
 
-  <!-- ═══════════════════════════════════════ -->
-  <!-- COLUMN 2: GRANT ENGINE -->
-  <!-- ═══════════════════════════════════════ -->
+  <!-- DATABASE TABLES -->
+  <div class="section-title">Core Database Tables</div>
+  <div class="db-grid">
+    <div class="db-card">
+      <div class="db-name">grant_opportunities</div>
+      <div class="db-count">16,947</div>
+      <div class="db-cols">43 cols &middot; embeddings &middot; descriptions &middot; sources</div>
+    </div>
+    <div class="db-card">
+      <div class="db-name">acnc_ais</div>
+      <div class="db-count">359,385</div>
+      <div class="db-cols">66 cols &middot; annual info statements</div>
+    </div>
+    <div class="db-card">
+      <div class="db-name">foundations</div>
+      <div class="db-count">9,875</div>
+      <div class="db-cols">34 cols &middot; AI profiles &middot; confidence</div>
+    </div>
+    <div class="db-card">
+      <div class="db-name">foundation_programs</div>
+      <div class="db-count">1,036</div>
+      <div class="db-cols">15 cols &middot; open/closed programs</div>
+    </div>
+    <div class="db-card">
+      <div class="db-name">community_orgs</div>
+      <div class="db-count">503</div>
+      <div class="db-cols">18 cols &middot; directory listings</div>
+    </div>
+    <div class="db-card">
+      <div class="db-name">money_flows</div>
+      <div class="db-count">406</div>
+      <div class="db-cols">12 cols &middot; extraction &rarr; community</div>
+    </div>
+    <div class="db-card">
+      <div class="db-name">org_profiles</div>
+      <div class="db-count">2</div>
+      <div class="db-cols">19 cols &middot; user profiles &middot; embeddings</div>
+    </div>
+    <div class="db-card">
+      <div class="db-name">saved_grants</div>
+      <div class="db-count">3</div>
+      <div class="db-cols">10 cols &middot; tracked grant pipeline</div>
+    </div>
+    <div class="db-card">
+      <div class="db-name">grant_discovery_runs</div>
+      <div class="db-count">41</div>
+      <div class="db-cols">9 cols &middot; scraper run history</div>
+    </div>
+    <div class="db-card">
+      <div class="db-name">search_history</div>
+      <div class="db-count">0</div>
+      <div class="db-cols">6 cols &middot; user search log</div>
+    </div>
+  </div>
 
-  <!-- Discovery Engine -->
-  <g class="node" data-tip="Discovery Engine|Multi-source grant discovery with deduplication|Plugin architecture: each source is a plugin|Merges results, assigns confidence scores|packages/grant-engine/src/discovery/">
-    <rect x="280" y="60" width="200" height="60" rx="10" fill="#1e293b" stroke="#059669" stroke-width="2"/>
-    <text x="380" y="85" text-anchor="middle" fill="#f8fafc" font-size="14" font-weight="700">Discovery Engine</text>
-    <text x="380" y="103" text-anchor="middle" fill="#94a3b8" font-size="11">6 source plugins</text>
-  </g>
+  <!-- GRANT ENGINE -->
+  <div class="section-title">Grant Engine (packages/grant-engine/src)</div>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-header bg-blue">Data Sources (13 scrapers)</div>
+      <div class="card-body">
+        <div class="item"><span class="item-name">nsw-grants.ts</span><span class="item-detail">ES _search API</span></div>
+        <div class="item"><span class="item-name">vic-grants.ts</span><span class="item-detail">Vic govt portal</span></div>
+        <div class="item"><span class="item-name">qld-grants.ts</span><span class="item-detail">QLD data portal</span></div>
+        <div class="item"><span class="item-name">sa-grants.ts</span><span class="item-detail">SA grants portal</span></div>
+        <div class="item"><span class="item-name">wa-grants.ts</span><span class="item-detail">WA Tenders portal</span></div>
+        <div class="item"><span class="item-name">tas-grants.ts</span><span class="item-detail">TAS grants</span></div>
+        <div class="item"><span class="item-name">act-grants.ts</span><span class="item-detail">ACT govt grants</span></div>
+        <div class="item"><span class="item-name">nt-grants.ts</span><span class="item-detail">NT grants portal</span></div>
+        <div class="item"><span class="item-name">arc-grants.ts</span><span class="item-detail">Australian Research Council</span></div>
+        <div class="item"><span class="item-name">nhmrc-grants.ts</span><span class="item-detail">NHMRC health grants</span></div>
+        <div class="item"><span class="item-name">grantconnect.ts</span><span class="item-detail">Federal GrantConnect</span></div>
+        <div class="item"><span class="item-name">data-gov-au.ts</span><span class="item-detail">data.gov.au datasets</span></div>
+        <div class="item"><span class="item-name">business-gov-au.ts</span><span class="item-detail">business.gov.au</span></div>
+      </div>
+    </div>
 
-  <!-- Foundation Profiler -->
-  <g class="node" data-tip="Foundation Profiler|AI-powered foundation analysis|Scrapes foundation websites via Firecrawl|LLM extracts: giving philosophy, focus areas, application tips|777 foundations profiled (high + medium confidence)|8 LLM providers with round-robin fallback">
-    <rect x="280" y="150" width="200" height="60" rx="10" fill="#1e293b" stroke="#7c3aed" stroke-width="2"/>
-    <text x="380" y="175" text-anchor="middle" fill="#f8fafc" font-size="14" font-weight="700">Foundation Profiler</text>
-    <text x="380" y="193" text-anchor="middle" fill="#c4b5fd" font-size="11">AI enrichment (8 LLMs)</text>
-  </g>
+    <div class="card">
+      <div class="card-header bg-orange">Engine Modules (13)</div>
+      <div class="card-body">
+        <div class="item"><span class="item-name">engine.ts</span><span class="item-detail">Main orchestrator</span></div>
+        <div class="item"><span class="item-name">normalizer.ts</span><span class="item-detail">Raw &rarr; Canonical</span></div>
+        <div class="item"><span class="item-name">deduplicator.ts</span><span class="item-detail">Name/URL dedup</span></div>
+        <div class="item"><span class="item-name">embeddings.ts</span><span class="item-detail">OpenAI embeddings</span></div>
+        <div class="item"><span class="item-name">enrichment.ts</span><span class="item-detail">LLM enrichment (paid)</span></div>
+        <div class="item"><span class="item-name">enrichment-free.ts</span><span class="item-detail">Groq/free enrichment</span></div>
+        <div class="item"><span class="item-name">storage/repository.ts</span><span class="item-detail">Supabase upsert</span></div>
+        <div class="item"><span class="item-name">foundations/foundation-profiler.ts</span><span class="item-detail">9-provider LLM profiler</span></div>
+        <div class="item"><span class="item-name">foundations/acnc-importer.ts</span><span class="item-detail">ACNC register sync</span></div>
+        <div class="item"><span class="item-name">foundations/community-profiler.ts</span><span class="item-detail">Community org profiler</span></div>
+        <div class="item"><span class="item-name">reports/money-flow.ts</span><span class="item-detail">Money flow analysis</span></div>
+        <div class="item"><span class="item-name">reports/power-analysis.ts</span><span class="item-detail">Power dynamics report</span></div>
+        <div class="item"><span class="item-name">reports/admin-burden.ts</span><span class="item-detail">Admin burden analysis</span></div>
+      </div>
+    </div>
+  </div>
 
-  <!-- Community Profiler -->
-  <g class="node" data-tip="Community Profiler|Profiles grassroots organizations|Estimates admin burden vs program spend|Links orgs to funding received|Status: Live">
-    <rect x="280" y="240" width="200" height="60" rx="10" fill="#1e293b" stroke="#059669" stroke-width="1.5"/>
-    <text x="380" y="265" text-anchor="middle" fill="#f8fafc" font-size="14" font-weight="700">Community Profiler</text>
-    <text x="380" y="283" text-anchor="middle" fill="#94a3b8" font-size="11">Admin burden analysis</text>
-  </g>
+  <!-- SCRIPTS -->
+  <div class="section-title">Operational Scripts (20)</div>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-header bg-black">Discovery & Ingestion (9)</div>
+      <div class="card-body">
+        <div class="item"><span class="item-name">grantscope-discovery.mjs</span><span class="item-detail">Main discovery runner</span></div>
+        <div class="item"><span class="item-name">scrape-state-grants.mjs</span><span class="item-detail">State-level scraping</span></div>
+        <div class="item"><span class="item-name">import-gov-grants.mjs</span><span class="item-detail">Government imports</span></div>
+        <div class="item"><span class="item-name">sync-acnc-register.mjs</span><span class="item-detail">ACNC bulk sync</span></div>
+        <div class="item"><span class="item-name">import-acnc-financials.mjs</span><span class="item-detail">ACNC annual statements</span></div>
+        <div class="item"><span class="item-name">massive-import-run.mjs</span><span class="item-detail">Full pipeline run</span></div>
+        <div class="item"><span class="item-name">pipeline-runner.mjs</span><span class="item-detail">Orchestrated pipeline</span></div>
+        <div class="item"><span class="item-name">ingest-youth-justice-data.mjs</span><span class="item-detail">QLD youth justice</span></div>
+        <div class="item"><span class="item-name">build-money-flow-data.mjs</span><span class="item-detail">Money flow reports</span></div>
+      </div>
+    </div>
 
-  <!-- Report Builders -->
-  <g class="node" data-tip="Report Builders|4 analysis engines:|• Money Flow Sankey diagrams|• Youth Justice cost comparison|• Power Analysis (HHI + Gini)|• Admin burden by org size|All feed into Living Reports pages">
-    <rect x="280" y="330" width="200" height="60" rx="10" fill="#1e293b" stroke="#059669" stroke-width="1.5"/>
-    <text x="380" y="355" text-anchor="middle" fill="#f8fafc" font-size="14" font-weight="700">Report Builders</text>
-    <text x="380" y="373" text-anchor="middle" fill="#94a3b8" font-size="11">4 analysis engines</text>
-  </g>
+    <div class="card">
+      <div class="card-header bg-black">Enrichment & Profiling (11)</div>
+      <div class="card-body">
+        <div class="item"><span class="item-name">enrich-grants.mjs</span><span class="item-detail">Paid LLM enrichment</span></div>
+        <div class="item"><span class="item-name">enrich-grants-free.mjs</span><span class="item-detail">Free-tier enrichment</span></div>
+        <div class="item"><span class="item-name">backfill-embeddings.mjs</span><span class="item-detail">Embedding backfill</span></div>
+        <div class="item"><span class="item-name">build-foundation-profiles.mjs</span><span class="item-detail">Foundation AI profiling</span></div>
+        <div class="item"><span class="item-name">profile-vip-foundations.mjs</span><span class="item-detail">Top foundation profiles</span></div>
+        <div class="item"><span class="item-name">profile-community-orgs.mjs</span><span class="item-detail">Community org profiling</span></div>
+        <div class="item"><span class="item-name">reprofile-low-confidence.mjs</span><span class="item-detail">Re-profile low confidence</span></div>
+        <div class="item"><span class="item-name">sync-foundation-programs.mjs</span><span class="item-detail">Foundation programs sync</span></div>
+        <div class="item"><span class="item-name">sync-ghl-to-tracker.mjs</span><span class="item-detail">GHL &rarr; tracker sync</span></div>
+        <div class="item"><span class="item-name">run-scraping-agents.mjs</span><span class="item-detail">Agent-based scraping</span></div>
+        <div class="item"><span class="item-name">log-agent-run.mjs</span><span class="item-detail">Agent run logging (lib)</span></div>
+      </div>
+    </div>
+  </div>
 
-  <!-- Multi-LLM Router -->
-  <g class="node" data-tip="Multi-LLM Router|Round-robins across 8 providers:|Gemini, DeepSeek, Kimi, Groq, MiniMax, OpenAI, Anthropic, Perplexity|Auto-fallback on quota/rate errors|Uses free tiers first for cost efficiency|~$10/month total operating cost">
-    <rect x="290" y="155" width="30" height="50" rx="4" fill="#7c3aed" opacity="0.3"/>
-    <text x="305" y="183" text-anchor="middle" fill="#c4b5fd" font-size="8" transform="rotate(-90 305 183)">8 LLMs</text>
-  </g>
+  <!-- LLM PROVIDERS -->
+  <div class="section-title">Multi-Provider LLM Rotation (Foundation Profiler)</div>
+  <div class="flow-section">
+    <div class="flow-diagram">
+      <div class="flow-node" style="border-color: #2d6a4f; background: #f0f9f4;"><div class="flow-node-title">Minimax</div><div class="flow-node-detail">Priority 1 &middot; Working</div></div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-node" style="border-color: #2d6a4f; background: #f0f9f4;"><div class="flow-node-title">Gemini Grounded</div><div class="flow-node-detail">Google Search</div></div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-node" style="border-color: #2d6a4f; background: #f0f9f4;"><div class="flow-node-title">Gemini</div><div class="flow-node-detail">Standard</div></div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-node" style="border-color: #e9c46a; background: #fdf8ec;"><div class="flow-node-title">DeepSeek</div><div class="flow-node-detail">Quota exceeded</div></div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-node" style="border-color: #e9c46a; background: #fdf8ec;"><div class="flow-node-title">Kimi</div><div class="flow-node-detail">Auth error</div></div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-node" style="border-color: #e9c46a; background: #fdf8ec;"><div class="flow-node-title">Groq</div><div class="flow-node-detail">Rate limited</div></div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-node" style="border-color: #2d6a4f; background: #f0f9f4;"><div class="flow-node-title">OpenAI</div><div class="flow-node-detail">Working</div></div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-node" style="border-color: #e63946; background: #fef2f2;"><div class="flow-node-title">Perplexity</div><div class="flow-node-detail">401 Auth</div></div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-node" style="border-color: #e63946; background: #fef2f2;"><div class="flow-node-title">Anthropic</div><div class="flow-node-detail">Low credits</div></div>
+    </div>
+  </div>
 
-  <!-- Eligibility Matcher (planned) -->
-  <g class="node" data-tip="Eligibility Matcher|Match organizations to eligible grants|Based on focus areas, size, location, ABN type|Status: Planned">
-    <rect x="530" y="240" width="170" height="50" rx="8" fill="#1e293b" stroke="#64748b" stroke-width="1.5" class="planned"/>
-    <text x="615" y="262" text-anchor="middle" fill="#64748b" font-size="13" font-weight="600" class="planned-fill">Eligibility Matcher</text>
-    <text x="615" y="278" text-anchor="middle" fill="#475569" font-size="10">Org → Grant matching</text>
-    <circle cx="690" cy="245" r="5" class="status-planned"/>
-  </g>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-swatch" style="background: #2d6a4f;"></div>Public</div>
+    <div class="legend-item"><div class="legend-swatch" style="background: #e63946;"></div>Auth-gated</div>
+    <div class="legend-item"><div class="legend-swatch" style="background: #457b9d;"></div>Search & APIs</div>
+    <div class="legend-item"><div class="legend-swatch" style="background: #6c4f82;"></div>Reports</div>
+    <div class="legend-item"><div class="legend-swatch" style="background: #d4651a;"></div>AI / LLM</div>
+    <div class="legend-item"><div class="legend-swatch" style="background: #1a1a1a;"></div>Scripts & Ops</div>
+    <div class="legend-item"><div class="legend-swatch" style="background: #f0f9f4; border-color: #2d6a4f;"></div>Provider OK</div>
+    <div class="legend-item"><div class="legend-swatch" style="background: #fdf8ec; border-color: #e9c46a;"></div>Provider Degraded</div>
+    <div class="legend-item"><div class="legend-swatch" style="background: #fef2f2; border-color: #e63946;"></div>Provider Down</div>
+  </div>
 
-  <!-- ═══════════════════════════════════════ -->
-  <!-- FLOW LINES: Sources → Engine -->
-  <!-- ═══════════════════════════════════════ -->
-  <line x1="200" y1="75" x2="278" y2="82" class="flow-line" stroke="#059669" stroke-width="1.5" marker-end="url(#arrow-green)"/>
-  <line x1="200" y1="140" x2="278" y2="88" class="flow-line" stroke="#059669" stroke-width="1.5" marker-end="url(#arrow-green)"/>
-  <line x1="200" y1="205" x2="278" y2="90" class="flow-line" stroke="#059669" stroke-width="1.5" marker-end="url(#arrow-green)"/>
-  <line x1="200" y1="270" x2="278" y2="92" class="flow-line" stroke="#059669" stroke-width="1.5" marker-end="url(#arrow-green)"/>
-  <line x1="200" y1="335" x2="278" y2="180" class="flow-line" stroke="#059669" stroke-width="1.5" marker-end="url(#arrow-green)"/>
-  <line x1="200" y1="400" x2="278" y2="88" class="flow-line" stroke="#7c3aed" stroke-width="1.5" marker-end="url(#arrow-purple)"/>
-
-  <!-- Planned source lines -->
-  <line x1="200" y1="470" x2="278" y2="95" class="planned" stroke="#64748b" stroke-width="1" marker-end="url(#arrow-gray)"/>
-  <line x1="200" y1="535" x2="278" y2="185" class="planned" stroke="#64748b" stroke-width="1" marker-end="url(#arrow-gray)"/>
-
-  <!-- ═══════════════════════════════════════ -->
-  <!-- DATABASE (center bottom) -->
-  <!-- ═══════════════════════════════════════ -->
-  <g class="node" data-tip="Supabase (PostgreSQL)|7 core tables:|• foundations (9,875 rows)|• foundation_programs (472 rows)|• grant_opportunities (~400 rows)|• community_orgs|• government_programs|• money_flows|• agent_runs|Plus: reports, views, indexes">
-    <rect x="350" y="440" width="260" height="120" rx="12" fill="#1e293b" stroke="#2563eb" stroke-width="2.5" filter="url(#glow)"/>
-    <text x="480" y="468" text-anchor="middle" fill="#60a5fa" font-size="16" font-weight="800">Supabase</text>
-    <text x="480" y="488" text-anchor="middle" fill="#94a3b8" font-size="11">PostgreSQL</text>
-
-    <text x="370" y="510" fill="#94a3b8" font-size="10">foundations</text>
-    <text x="463" y="510" fill="#059669" font-size="10" font-weight="600">9,875</text>
-    <text x="370" y="524" fill="#94a3b8" font-size="10">grant_opportunities</text>
-    <text x="497" y="524" fill="#059669" font-size="10" font-weight="600">~400</text>
-    <text x="370" y="538" fill="#94a3b8" font-size="10">foundation_programs</text>
-    <text x="497" y="538" fill="#059669" font-size="10" font-weight="600">472</text>
-    <text x="370" y="552" fill="#94a3b8" font-size="10">community_orgs, money_flows, agent_runs</text>
-  </g>
-
-  <!-- Flow: Engine → DB -->
-  <line x1="380" y1="120" x2="420" y2="438" class="flow-line" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <line x1="380" y1="210" x2="450" y2="438" class="flow-line" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <line x1="380" y1="300" x2="460" y2="438" class="flow-line" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <line x1="380" y1="390" x2="470" y2="438" class="flow-line" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-
-  <!-- ═══════════════════════════════════════ -->
-  <!-- COLUMN 3: WEB APP -->
-  <!-- ═══════════════════════════════════════ -->
-
-  <!-- API Routes -->
-  <g class="node" data-tip="Next.js API Routes|7 API endpoints:|/api/data — bulk data export|/api/data/export — CSV/JSON|/api/discover — run discovery|/api/foundations — foundation CRUD|/api/reports/money-flow|/api/reports/youth-justice|/api/search — full-text search">
-    <rect x="770" y="50" width="200" height="60" rx="10" fill="#1e293b" stroke="#059669" stroke-width="2"/>
-    <text x="870" y="75" text-anchor="middle" fill="#f8fafc" font-size="14" font-weight="700">API Routes</text>
-    <text x="870" y="93" text-anchor="middle" fill="#94a3b8" font-size="11">7 endpoints</text>
-  </g>
-
-  <!-- Pages -->
-  <g class="node" data-tip="Frontend Pages|14 pages total:|/ — Homepage with live stats|/grants — Government grants directory|/grants/[id] — Grant detail|/foundations — Foundation directory|/foundations/[id] — Foundation profile|/corporate — Corporate giving table|/community — Community orgs|/reports — Report index|+ 4 Living Report pages|All server-rendered with Tailwind CSS">
-    <rect x="770" y="130" width="200" height="80" rx="10" fill="#1e293b" stroke="#059669" stroke-width="2"/>
-    <text x="870" y="158" text-anchor="middle" fill="#f8fafc" font-size="14" font-weight="700">Frontend Pages</text>
-    <text x="870" y="176" text-anchor="middle" fill="#94a3b8" font-size="11">14 pages (Tailwind CSS)</text>
-    <text x="870" y="198" text-anchor="middle" fill="#059669" font-size="10">grantscope.vercel.app</text>
-  </g>
-
-  <!-- Living Reports -->
-  <g class="node" data-tip="Living Reports|4 data-driven investigations:|🔴 Youth Justice — $1.3M/child detention|🔵 Follow the Dollar — Sankey flows|🟡 Access Gap — Admin burden analysis|🟣 Power Dynamics — HHI + Gini|Charts via Recharts (interactive)">
-    <rect x="770" y="230" width="200" height="70" rx="10" fill="#1e293b" stroke="#059669" stroke-width="1.5"/>
-    <text x="870" y="258" text-anchor="middle" fill="#f8fafc" font-size="14" font-weight="700">Living Reports</text>
-    <text x="870" y="276" text-anchor="middle" fill="#94a3b8" font-size="11">4 investigations (Recharts)</text>
-    <text x="870" y="290" text-anchor="middle" fill="#dc2626" font-size="9">Youth Justice • Money Flow • Access Gap • Power</text>
-  </g>
-
-  <!-- Public API (planned) -->
-  <g class="node" data-tip="Public API|REST API for third-party access|OpenAPI spec, rate limiting, API keys|Status: Planned">
-    <rect x="770" y="320" width="200" height="50" rx="8" fill="#1e293b" stroke="#64748b" stroke-width="1.5" class="planned"/>
-    <text x="870" y="342" text-anchor="middle" fill="#64748b" font-size="13" font-weight="600" class="planned-fill">Public API</text>
-    <text x="870" y="358" text-anchor="middle" fill="#475569" font-size="10">REST for third parties</text>
-    <circle cx="960" cy="325" r="5" class="status-planned"/>
-  </g>
-
-  <!-- DB → API flow -->
-  <line x1="610" y1="480" x2="768" y2="80" class="flow-line" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <line x1="610" y1="490" x2="768" y2="170" class="flow-line" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <line x1="610" y1="500" x2="768" y2="265" class="flow-line" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-
-  <!-- ═══════════════════════════════════════ -->
-  <!-- AUTONOMOUS AGENTS (bottom right) -->
-  <!-- ═══════════════════════════════════════ -->
-
-  <g class="node" data-tip="Grant Monitor Agent|Runs daily to discover new grants|Checks all 6 sources for updates|Logs runs to agent_runs table|Status: Live">
-    <rect x="770" y="440" width="200" height="45" rx="8" fill="#1e293b" stroke="#059669" stroke-width="1.5"/>
-    <text x="870" y="460" text-anchor="middle" fill="#f8fafc" font-size="12" font-weight="600">Grant Monitor</text>
-    <text x="870" y="476" text-anchor="middle" fill="#94a3b8" font-size="10">Daily discovery</text>
-    <circle cx="960" cy="445" r="5" class="status-live"/>
-  </g>
-
-  <g class="node" data-tip="Foundation Watcher|Weekly check of foundation websites|Detects changes in programs, deadlines, amounts|Re-profiles if significant changes found|Status: Live">
-    <rect x="770" y="495" width="200" height="45" rx="8" fill="#1e293b" stroke="#059669" stroke-width="1.5"/>
-    <text x="870" y="515" text-anchor="middle" fill="#f8fafc" font-size="12" font-weight="600">Foundation Watcher</text>
-    <text x="870" y="531" text-anchor="middle" fill="#94a3b8" font-size="10">Weekly website checks</text>
-    <circle cx="960" cy="500" r="5" class="status-live"/>
-  </g>
-
-  <g class="node" data-tip="Spend Watcher|Quarterly government budget tracking|Monitors budget allocations and spending|Feeds into money_flows table|Status: Live">
-    <rect x="770" y="550" width="200" height="45" rx="8" fill="#1e293b" stroke="#059669" stroke-width="1.5"/>
-    <text x="870" y="570" text-anchor="middle" fill="#f8fafc" font-size="12" font-weight="600">Spend Watcher</text>
-    <text x="870" y="586" text-anchor="middle" fill="#94a3b8" font-size="10">Quarterly budget tracking</text>
-    <circle cx="960" cy="555" r="5" class="status-live"/>
-  </g>
-
-  <!-- Agent → DB flow -->
-  <line x1="768" y1="462" x2="612" y2="490" class="flow-line-reverse" stroke="#059669" stroke-width="1.5" marker-end="url(#arrow-green)"/>
-  <line x1="768" y1="517" x2="612" y2="500" class="flow-line-reverse" stroke="#059669" stroke-width="1.5" marker-end="url(#arrow-green)"/>
-  <line x1="768" y1="572" x2="612" y2="510" class="flow-line-reverse" stroke="#059669" stroke-width="1.5" marker-end="url(#arrow-green)"/>
-
-  <!-- ═══════════════════════════════════════ -->
-  <!-- OPERATIONAL SCRIPTS (bottom left) -->
-  <!-- ═══════════════════════════════════════ -->
-  <text x="80" y="620" class="section-label">Operational Scripts (11)</text>
-
-  <g class="node" data-tip="11 Operational Scripts|• import-acnc-foundations — bulk ACNC import|• profile-foundations — AI enrichment|• profile-vip-foundations — top 46 funders|• reprofile-low-confidence — quality improvement|• discover-grants — multi-source discovery|• scrape-foundation-programs — website scraping|• discover-community-orgs — grassroots profiling|• seed-money-flows — financial flow data|• seed-youth-justice — QLD data seeding|• tag-normalize — standardize categories|• export-data — CSV/JSON export">
-    <rect x="30" y="640" width="320" height="100" rx="10" fill="#1e293b" stroke="#059669" stroke-width="1.5"/>
-    <text x="190" y="666" text-anchor="middle" fill="#f8fafc" font-size="13" font-weight="600">scripts/</text>
-    <text x="50" y="686" fill="#94a3b8" font-size="10">import-acnc    profile-foundations    discover-grants</text>
-    <text x="50" y="702" fill="#94a3b8" font-size="10">scrape-programs    seed-money-flows    seed-youth-justice</text>
-    <text x="50" y="718" fill="#94a3b8" font-size="10">profile-vip    reprofile-low    community-orgs    export</text>
-    <text x="50" y="734" fill="#059669" font-size="10" font-weight="600">1,403 lines of operational code</text>
-  </g>
-
-  <!-- Scripts → DB -->
-  <line x1="350" y1="690" x2="400" y2="562" class="flow-line" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-
-  <!-- ═══════════════════════════════════════ -->
-  <!-- VERCEL DEPLOYMENT -->
-  <!-- ═══════════════════════════════════════ -->
-  <g class="node" data-tip="Vercel|Production deployment|Auto-deploys from GitHub main branch|Server-side rendering for all data pages|Edge network for global performance">
-    <rect x="1000" y="140" width="150" height="60" rx="10" fill="#1e293b" stroke="#f8fafc" stroke-width="1.5"/>
-    <text x="1075" y="168" text-anchor="middle" fill="#f8fafc" font-size="14" font-weight="700">Vercel</text>
-    <text x="1075" y="186" text-anchor="middle" fill="#94a3b8" font-size="10">Auto-deploy from GitHub</text>
-  </g>
-  <line x1="970" y1="170" x2="998" y2="170" class="flow-line" stroke="#f8fafc" stroke-width="1" marker-end="url(#arrow-green)"/>
-
-  <!-- ═══════════════════════════════════════ -->
-  <!-- DATA STATS SUMMARY (bottom right) -->
-  <!-- ═══════════════════════════════════════ -->
-  <text x="770" y="640" class="section-label">Coverage Summary</text>
-
-  <g class="node" data-tip="Current data coverage across all sources">
-    <rect x="770" y="658" width="380" height="90" rx="10" fill="#1e293b" stroke="#334155" stroke-width="1"/>
-    <text x="790" y="682" fill="#059669" font-size="13" font-weight="700">9,875</text>
-    <text x="840" y="682" fill="#94a3b8" font-size="12">foundations imported</text>
-    <text x="790" y="702" fill="#059669" font-size="13" font-weight="700">777</text>
-    <text x="825" y="702" fill="#94a3b8" font-size="12">AI-profiled (8% coverage)</text>
-    <text x="790" y="722" fill="#059669" font-size="13" font-weight="700">~400</text>
-    <text x="830" y="722" fill="#94a3b8" font-size="12">government grants tracked</text>
-    <text x="790" y="742" fill="#059669" font-size="13" font-weight="700">472</text>
-    <text x="825" y="742" fill="#94a3b8" font-size="12">foundation programs discovered</text>
-
-    <text x="1000" y="682" fill="#d97706" font-size="13" font-weight="700">4,360</text>
-    <text x="1042" y="682" fill="#94a3b8" font-size="12">need profiling</text>
-    <text x="1000" y="702" fill="#d97706" font-size="13" font-weight="700">5 states</text>
-    <text x="1055" y="702" fill="#94a3b8" font-size="12">need scrapers</text>
-    <text x="1000" y="722" fill="#64748b" font-size="13" font-weight="700">ASX200</text>
-    <text x="1055" y="722" fill="#94a3b8" font-size="12">not started</text>
-    <text x="1000" y="742" fill="#64748b" font-size="13" font-weight="700">Public API</text>
-    <text x="1072" y="742" fill="#94a3b8" font-size="12">not started</text>
-  </g>
-
-  <!-- ═══════════════════════════════════════ -->
-  <!-- FLOW LABEL -->
-  <!-- ═══════════════════════════════════════ -->
-  <text x="600" y="870" text-anchor="middle" fill="#334155" font-size="11" font-style="italic">
-    Animated lines show data flow direction. Dashed gray = planned/not yet built.
-  </text>
-
-</svg>
-
-<div class="tooltip" id="tooltip"></div>
-
-<script>
-const tooltip = document.getElementById('tooltip');
-
-document.querySelectorAll('[data-tip]').forEach(el => {
-  el.addEventListener('mouseenter', e => {
-    const parts = el.dataset.tip.split('|');
-    let html = `<h4>${parts[0]}</h4>`;
-    for (let i = 1; i < parts.length; i++) {
-      const line = parts[i].trim();
-      if (line.startsWith('Status:')) {
-        const status = line.replace('Status: ', '');
-        const cls = status === 'Live' ? 'stat' : status === 'Planned' ? 'planned-tag' : 'stat';
-        html += `<div class="${cls}">${line}</div>`;
-      } else if (line.match(/^\d/) || line.match(/^\~/)) {
-        html += `<div class="stat">${line}</div>`;
-      } else {
-        html += `<div>${line}</div>`;
-      }
-    }
-    tooltip.innerHTML = html;
-    tooltip.classList.add('show');
-  });
-
-  el.addEventListener('mousemove', e => {
-    const x = Math.min(e.clientX + 12, window.innerWidth - 340);
-    const y = Math.min(e.clientY + 12, window.innerHeight - 200);
-    tooltip.style.left = x + 'px';
-    tooltip.style.top = y + 'px';
-  });
-
-  el.addEventListener('mouseleave', () => {
-    tooltip.classList.remove('show');
-  });
-});
-</script>
+</div>
 
 </body>
 </html>

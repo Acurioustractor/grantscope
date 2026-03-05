@@ -3,6 +3,14 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 
+interface ClaimedCharity {
+  id: string;
+  abn: string;
+  status: string;
+  organisation_name: string | null;
+  created_at: string;
+}
+
 const DOMAIN_OPTIONS = [
   'indigenous', 'youth', 'education', 'environment', 'health',
   'disability', 'housing', 'arts', 'community', 'justice',
@@ -85,6 +93,7 @@ export function ProfileClient() {
   const [matches, setMatches] = useState<MatchedGrant[]>([]);
   const [matchesLoading, setMatchesLoading] = useState(false);
   const [savingGrant, setSavingGrant] = useState<string | null>(null);
+  const [claims, setClaims] = useState<ClaimedCharity[]>([]);
 
   useEffect(() => {
     fetch('/api/profile')
@@ -102,6 +111,12 @@ export function ProfileClient() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
+
+    // Load claimed charities
+    fetch('/api/charities/claim')
+      .then(r => r.ok ? r.json() : [])
+      .then((data: ClaimedCharity[]) => setClaims(data))
+      .catch(() => {});
   }, []);
 
   const loadMatches = useCallback(async () => {
@@ -217,6 +232,55 @@ export function ProfileClient() {
           Describe your organisation to find grants matched to your mission
         </p>
       </div>
+
+      {/* Claimed Charities */}
+      {claims.length > 0 && (
+        <section className="border-4 border-bauhaus-black bg-white">
+          <div className="bg-green-600 px-5 py-3 flex items-center justify-between">
+            <h2 className="text-sm font-black text-white uppercase tracking-widest">Claimed Profiles</h2>
+            <Link href="/charities/claim" className="text-xs font-black text-white/80 uppercase tracking-widest hover:text-white">
+              View All
+            </Link>
+          </div>
+          <div className="divide-y-2 divide-bauhaus-black/10">
+            {claims.map(claim => (
+              <div key={claim.id} className="px-5 py-4 flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-black text-bauhaus-black truncate">
+                      {claim.organisation_name || `ABN ${claim.abn}`}
+                    </span>
+                    <span className={`inline-block px-2 py-0.5 text-[10px] font-black uppercase tracking-widest border-2 border-bauhaus-black ${
+                      claim.status === 'verified' ? 'bg-green-500 text-white' :
+                      claim.status === 'rejected' ? 'bg-bauhaus-red text-white' :
+                      'bg-bauhaus-yellow text-bauhaus-black'
+                    }`}>
+                      {claim.status}
+                    </span>
+                  </div>
+                  <div className="text-xs text-bauhaus-muted font-medium mt-0.5">ABN {claim.abn}</div>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {claim.status === 'verified' && (
+                    <Link
+                      href={`/charities/${claim.abn}/edit`}
+                      className="px-3 py-1.5 text-[10px] font-black uppercase tracking-widest bg-bauhaus-red text-white hover:bg-bauhaus-black transition-colors border-2 border-bauhaus-black"
+                    >
+                      Edit Profile
+                    </Link>
+                  )}
+                  <Link
+                    href={`/charities/${claim.abn}`}
+                    className="px-3 py-1.5 text-[10px] font-black uppercase tracking-widest bg-bauhaus-black text-white hover:bg-bauhaus-red transition-colors"
+                  >
+                    View
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Profile Form */}
       <form onSubmit={handleSave} className="space-y-6">

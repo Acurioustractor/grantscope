@@ -85,4 +85,56 @@ export async function getPipelines() {
   return ghlFetch(`/opportunities/pipelines?locationId=${locationId}`);
 }
 
+export async function addTagToContact(contactId: string, tag: string) {
+  // Add tag in GHL
+  await ghlFetch(`/contacts/${contactId}/tags`, {
+    method: 'POST',
+    body: JSON.stringify({ tags: [tag] }),
+  });
+
+  // Sync to Supabase
+  const { createClient } = await import('@supabase/supabase-js');
+  const sb = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '',
+    process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+  );
+  const { data: contact } = await sb
+    .from('ghl_contacts')
+    .select('tags')
+    .eq('id', contactId)
+    .single();
+  const existing: string[] = contact?.tags || [];
+  if (!existing.includes(tag)) {
+    await sb
+      .from('ghl_contacts')
+      .update({ tags: [...existing, tag] })
+      .eq('id', contactId);
+  }
+}
+
+export async function removeTagFromContact(contactId: string, tag: string) {
+  // Remove tag in GHL
+  await ghlFetch(`/contacts/${contactId}/tags`, {
+    method: 'DELETE',
+    body: JSON.stringify({ tags: [tag] }),
+  });
+
+  // Sync to Supabase
+  const { createClient } = await import('@supabase/supabase-js');
+  const sb = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '',
+    process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+  );
+  const { data: contact } = await sb
+    .from('ghl_contacts')
+    .select('tags')
+    .eq('id', contactId)
+    .single();
+  const existing: string[] = contact?.tags || [];
+  await sb
+    .from('ghl_contacts')
+    .update({ tags: existing.filter((t) => t !== tag) })
+    .eq('id', contactId);
+}
+
 export { STAGE_TO_GHL, GHL_TO_STAGE };

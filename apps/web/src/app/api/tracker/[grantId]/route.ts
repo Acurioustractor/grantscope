@@ -14,7 +14,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
   const { grantId } = await context.params;
   const body = await request.json();
-  const { stars, color, stage, notes } = body;
+  const { stars, color, stage, notes, partner_contact_ids } = body;
 
   // Use service role to bypass RLS — user authenticated above
   const serviceDb = getServiceSupabase();
@@ -29,6 +29,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
         ...(color !== undefined && { color }),
         ...(stage !== undefined && { stage }),
         ...(notes !== undefined && { notes }),
+        ...(partner_contact_ids !== undefined && { partner_contact_ids }),
         updated_at: new Date().toISOString(),
       },
       { onConflict: 'user_id,grant_id' }

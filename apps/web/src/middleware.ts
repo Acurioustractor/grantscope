@@ -30,7 +30,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Protect /tracker, /ops, and /profile routes
-  if ((pathname.startsWith('/tracker') || pathname.startsWith('/ops') || pathname.startsWith('/profile')) && !user) {
+  if ((pathname.startsWith('/tracker') || pathname.startsWith('/foundations/tracker') || pathname.startsWith('/ops') || pathname.startsWith('/profile')) && !user) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);
@@ -47,5 +47,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/tracker/:path*', '/ops/:path*', '/ops', '/profile/:path*', '/profile', '/login'],
+  matcher: ['/tracker/:path*', '/foundations/tracker/:path*', '/foundations/tracker', '/ops/:path*', '/ops', '/profile/:path*', '/profile', '/login'],
 };

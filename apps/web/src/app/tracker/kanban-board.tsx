@@ -53,6 +53,16 @@ export function KanbanBoard({ initialGrants }: { initialGrants: SavedGrantRow[] 
 
   const byStage = (stage: string) => filtered.filter((g) => g.stage === stage);
 
+  const handleRemove = useCallback(
+    (grantId: string) => {
+      setGrants((prev) => prev.filter((g) => g.grant_id !== grantId));
+      fetch(`/api/tracker/${grantId}`, { method: 'DELETE' }).catch(() => {
+        setGrants(initialGrants);
+      });
+    },
+    [initialGrants]
+  );
+
   const handleDragEnd = useCallback(
     (result: DropResult) => {
       if (!result.destination) return;
@@ -119,7 +129,7 @@ export function KanbanBoard({ initialGrants }: { initialGrants: SavedGrantRow[] 
                     </div>
                     <div className="p-2 space-y-2">
                       {byStage(stage).map((g, i) => (
-                        <KanbanCard key={g.grant_id} grant={g} index={i} />
+                        <KanbanCard key={g.grant_id} grant={g} index={i} onRemove={handleRemove} />
                       ))}
                       {provided.placeholder}
                     </div>
@@ -153,7 +163,7 @@ export function KanbanBoard({ initialGrants }: { initialGrants: SavedGrantRow[] 
                     </div>
                     <div className="px-2 pb-2 space-y-2">
                       {byStage(stage).map((g, i) => (
-                        <KanbanCard key={g.grant_id} grant={g} index={i} />
+                        <KanbanCard key={g.grant_id} grant={g} index={i} onRemove={handleRemove} />
                       ))}
                       {provided.placeholder}
                     </div>
