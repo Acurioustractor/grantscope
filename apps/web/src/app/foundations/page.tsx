@@ -1,5 +1,6 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import { FilterBar } from '../components/filter-bar';
+import { FoundationActionsProvider, FoundationCardActions } from '../components/foundation-card-actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,6 +15,7 @@ interface FoundationRow {
   geographic_focus: string[];
   profile_confidence: string;
   enriched_at: string | null;
+  created_at: string;
 }
 
 function formatGiving(amount: number | null): string {
@@ -29,6 +31,7 @@ function typeLabel(type: string | null): string {
     public_ancillary_fund: 'Public Ancillary Fund',
     trust: 'Trust',
     corporate_foundation: 'Corporate Foundation',
+    grantmaker: 'Grantmaker',
   };
   return type ? labels[type] || type : 'Foundation';
 }
@@ -74,7 +77,7 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
   const supabase = getServiceSupabase();
   let dbQuery = supabase
     .from('foundations')
-    .select('id, name, type, website, description, total_giving_annual, thematic_focus, geographic_focus, profile_confidence, enriched_at', { count: 'exact' });
+    .select('id, name, type, website, description, total_giving_annual, thematic_focus, geographic_focus, profile_confidence, enriched_at, created_at', { count: 'exact' });
 
   if (query) {
     dbQuery = dbQuery.or(`name.ilike.%${query}%,description.ilike.%${query}%`);
@@ -103,20 +106,46 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
     dbQuery = dbQuery.order('enriched_at', { ascending: false, nullsFirst: false });
   } else if (sortBy === 'name') {
     dbQuery = dbQuery.order('name', { ascending: true });
+  } else if (sortBy === 'giving_asc') {
+    dbQuery = dbQuery.order('total_giving_annual', { ascending: true, nullsFirst: false });
+  } else if (sortBy === 'newest') {
+    dbQuery = dbQuery.order('created_at', { ascending: false });
   } else {
     dbQuery = dbQuery.order('total_giving_annual', { ascending: false, nullsFirst: false });
   }
 
   dbQuery = dbQuery.range(offset, offset + pageSize - 1);
 
-  const { data: foundations, count } = await dbQuery;
+  const [{ data: foundations, count }, { data: programCounts }, { data: acncSummary }] = await Promise.all([
+    dbQuery,
+    supabase.rpc('get_foundation_program_counts'),
+    supabase.rpc('get_foundation_acnc_summary'),
+  ]);
   const totalPages = Math.ceil((count || 0) / pageSize);
 
-  const types = ['private_ancillary_fund', 'public_ancillary_fund', 'trust', 'corporate_foundation'];
+  // Build lookup map for program counts
+  const progCountMap = new Map<string, { programs: number; open: number }>();
+  if (programCounts) {
+    for (const pc of programCounts as Array<{ foundation_id: string; program_count: number; open_count: number }>) {
+      progCountMap.set(pc.foundation_id, { programs: Number(pc.program_count), open: Number(pc.open_count) });
+    }
+  }
+
+  // Build lookup map for ACNC financials
+  const acncMap = new Map<string, { total_assets: number; grants_given: number; latest_year: number }>();
+  if (acncSummary) {
+    for (const row of acncSummary as Array<{ foundation_id: string; total_assets: number; grants_given: number; latest_year: number }>) {
+      acncMap.set(row.foundation_id, { total_assets: Number(row.total_assets), grants_given: Number(row.grants_given), latest_year: row.latest_year });
+    }
+  }
+
+  const types = ['private_ancillary_fund', 'public_ancillary_fund', 'trust', 'corporate_foundation', 'grantmaker'];
   const focuses = ['arts', 'indigenous', 'health', 'education', 'community', 'environment', 'research'];
   const sortOptions = [
     { value: 'giving', label: 'Highest Giving' },
+    { value: 'giving_asc', label: 'Lowest Giving' },
     { value: 'profiled', label: 'Recently Profiled' },
+    { value: 'newest', label: 'Newest Added' },
     { value: 'name', label: 'Name A-Z' },
   ];
 
@@ -133,11 +162,16 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
   const filterQS = filterParams.toString();
 
   return (
+    <FoundationActionsProvider>
     <div>
       <div className="mb-8">
         <p className="text-xs font-black text-bauhaus-red uppercase tracking-[0.3em] mb-2">Directory</p>
         <h1 className="text-3xl font-black text-bauhaus-black mb-2">Australian Foundations</h1>
-        <p className="text-bauhaus-muted font-medium">{(count || 0).toLocaleString()} foundations, trusts, and ancillary funds from the ACNC register</p>
+        <p className="text-bauhaus-muted font-medium">
+          {(count || 0).toLocaleString()} foundations, trusts, and ancillary funds from the ACNC register
+          {' '}&middot;{' '}
+          <a href="/charities" className="text-bauhaus-blue hover:underline font-bold">See all 64,000+ charities &rarr;</a>
+        </p>
       </div>
 
       <form method="get" className="flex flex-col sm:flex-row gap-0 mb-4 flex-wrap">
@@ -216,7 +250,10 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
       </FilterBar>
 
       <div className="space-y-3">
-        {(foundations as FoundationRow[] || []).map((f) => (
+        {(foundations as FoundationRow[] || []).map((f) => {
+          const pc = progCountMap.get(f.id);
+          const acnc = acncMap.get(f.id);
+          return (
           <a key={f.id} href={`/foundations/${f.id}`} className="block group">
             <div className="bg-white border-4 border-bauhaus-black p-4 sm:px-5 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm">
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
@@ -233,6 +270,16 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
                         {f.profile_confidence}
                       </span>
                     )}
+                    {pc && pc.programs > 0 && (
+                      <span className={`text-[11px] px-1.5 py-0.5 font-black uppercase tracking-wider border-2 ${
+                        pc.open > 0 ? 'border-money bg-money-light text-money' : 'border-bauhaus-black/20 bg-bauhaus-canvas text-bauhaus-muted'
+                      }`}>
+                        {pc.open > 0 ? `${pc.open} open` : `${pc.programs} program${pc.programs !== 1 ? 's' : ''}`}
+                      </span>
+                    )}
+                    {f.website && (
+                      <span className="text-[11px] px-1.5 py-0.5 font-black uppercase tracking-wider border-2 border-bauhaus-blue/20 bg-link-light text-bauhaus-blue">Web</span>
+                    )}
                   </div>
                   {f.description && (
                     <div className="text-sm text-bauhaus-muted mt-1 line-clamp-2">
@@ -240,10 +287,21 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
                     </div>
                   )}
                 </div>
-                <div className="sm:text-right sm:ml-4 flex-shrink-0">
+                <div className="sm:text-right sm:ml-4 flex-shrink-0 flex flex-col items-end gap-1">
+                  <FoundationCardActions foundationId={f.id} />
                   <div className="text-base font-black text-money tabular-nums">
                     {formatGiving(f.total_giving_annual)}/yr
                   </div>
+                  {acnc && acnc.total_assets > 0 && (
+                    <div className="text-[11px] text-bauhaus-muted font-bold tabular-nums mt-0.5">
+                      {formatGiving(acnc.total_assets)} assets
+                    </div>
+                  )}
+                  {acnc && acnc.grants_given > 0 && (
+                    <div className="text-[11px] text-money/70 font-bold tabular-nums">
+                      {formatGiving(acnc.grants_given)} granted (FY{acnc.latest_year})
+                    </div>
+                  )}
                 </div>
               </div>
               {(f.thematic_focus?.length > 0 || f.geographic_focus?.length > 0) && (
@@ -258,7 +316,8 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
               )}
             </div>
           </a>
-        ))}
+          );
+        })}
       </div>
 
       {totalPages > 1 && (
@@ -277,5 +336,6 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
         </div>
       )}
     </div>
+    </FoundationActionsProvider>
   );
 }

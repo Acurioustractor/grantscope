@@ -1,6 +1,9 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import { notFound } from 'next/navigation';
 import { GivingHistoryChart } from './giving-chart';
+import { GrantActionsProvider, GrantCardActions } from '@/app/components/grant-card-actions';
+import { FoundationActionsProvider, FoundationCardActions } from '@/app/components/foundation-card-actions';
+import { FoundationDetailActions } from './foundation-detail-actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,6 +51,8 @@ interface ProgramRow {
   status: string;
   categories: string[];
   program_type: string | null;
+  eligibility: string | null;
+  application_process: string | null;
 }
 
 interface LinkedGrant {
@@ -103,6 +108,7 @@ function typeLabel(type: string | null): string {
     public_ancillary_fund: 'Public Ancillary Fund',
     trust: 'Trust',
     corporate_foundation: 'Corporate Foundation',
+    grantmaker: 'Grantmaker',
   };
   return type ? labels[type] || type : 'Foundation';
 }
@@ -147,28 +153,41 @@ export default async function FoundationDetailPage({ params }: { params: Promise
   if (!foundation) notFound();
   const f = foundation as FoundationDetail;
 
-  // Fetch ACNC financials — try by ABN first, then by name match for group reporting
-  const acncQueries = [
+  // Fetch ACNC financials, similar foundations, and matching grants in parallel
+  interface MatchingGrant {
+    id: string;
+    name: string;
+    provider: string;
+    amount_max: number | null;
+    closes_at: string | null;
+    categories: string[];
+  }
+
+  const [{ data: acncData }, { data: similarData }, { data: matchingData }] = await Promise.all([
     supabase.from('acnc_ais')
       .select('abn, charity_name, ais_year, total_revenue, total_expenses, total_assets, grants_donations_au, grants_donations_intl, net_surplus_deficit, donations_and_bequests, revenue_from_investments, employee_expenses, net_assets_liabilities, charity_size, fin_report_from, fin_report_to')
       .eq('abn', f.acnc_abn)
       .order('ais_year', { ascending: false }),
-  ];
-  // Also search by name for ACNC group entries (e.g. "Minderoo Foundation_ACNC GROUP")
-  const simpleName = f.name.split(/\s+(Limited|Ltd|Pty|as trustee|Incorporated|Inc)\b/i)[0].trim();
-  if (simpleName.length > 3) {
-    acncQueries.push(
-      supabase.from('acnc_ais')
-        .select('abn, charity_name, ais_year, total_revenue, total_expenses, total_assets, grants_donations_au, grants_donations_intl, net_surplus_deficit, donations_and_bequests, revenue_from_investments, employee_expenses, net_assets_liabilities, charity_size, fin_report_from, fin_report_to')
-        .ilike('charity_name', `%${simpleName}%`)
-        .neq('abn', f.acnc_abn)
-        .order('ais_year', { ascending: false })
-    );
-  }
-  const acncResults = await Promise.all(acncQueries);
-  // Merge and deduplicate, preferring larger entity (group reporting) for each year
-  const allAcnc: AcncFinancials[] = acncResults.flatMap(r => (r.data || []) as AcncFinancials[]);
-  // Group by year, keep the entry with highest total_assets for each year
+    f.thematic_focus?.length > 0
+      ? supabase.from('foundations')
+          .select('id, name, total_giving_annual, profile_confidence, thematic_focus, type')
+          .neq('id', f.id)
+          .not('enriched_at', 'is', null)
+          .overlaps('thematic_focus', f.thematic_focus)
+          .order('total_giving_annual', { ascending: false, nullsFirst: false })
+          .limit(6)
+      : Promise.resolve({ data: [] }),
+    f.thematic_focus?.length > 0
+      ? supabase.from('grant_opportunities')
+          .select('id, name, provider, amount_max, closes_at, categories')
+          .overlaps('categories', f.thematic_focus)
+          .gt('closes_at', new Date().toISOString())
+          .order('closes_at', { ascending: true })
+          .limit(8)
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const allAcnc: AcncFinancials[] = (acncData || []) as AcncFinancials[];
   const acncByYear = new Map<number, AcncFinancials>();
   for (const row of allAcnc) {
     const existing = acncByYear.get(row.ais_year);
@@ -182,39 +201,8 @@ export default async function FoundationDetailPage({ params }: { params: Promise
     .filter(r => Number(r.total_assets) > 0)
     .sort((a, b) => b.ais_year - a.ais_year);
 
-  let similarFoundations: SimilarFoundation[] = [];
-  if (f.thematic_focus?.length > 0) {
-    const { data: similar } = await supabase
-      .from('foundations')
-      .select('id, name, total_giving_annual, profile_confidence, thematic_focus, type')
-      .neq('id', f.id)
-      .not('enriched_at', 'is', null)
-      .overlaps('thematic_focus', f.thematic_focus)
-      .order('total_giving_annual', { ascending: false, nullsFirst: false })
-      .limit(6);
-    similarFoundations = (similar || []) as SimilarFoundation[];
-  }
-
-  // Matching grants — grants whose categories overlap with this foundation's thematic focus
-  interface MatchingGrant {
-    id: string;
-    name: string;
-    provider: string;
-    amount_max: number | null;
-    closes_at: string | null;
-    categories: string[];
-  }
-  let matchingGrants: MatchingGrant[] = [];
-  if (f.thematic_focus?.length > 0) {
-    const { data: grants } = await supabase
-      .from('grant_opportunities')
-      .select('id, name, provider, amount_max, closes_at, categories')
-      .overlaps('categories', f.thematic_focus)
-      .gt('closes_at', new Date().toISOString())
-      .order('closes_at', { ascending: true })
-      .limit(8);
-    matchingGrants = (grants || []) as MatchingGrant[];
-  }
+  const similarFoundations = (similarData || []) as SimilarFoundation[];
+  const matchingGrants = (matchingData || []) as MatchingGrant[];
 
   const badge = confidenceBadge(f.profile_confidence);
   const allPrograms = programs as ProgramRow[] || [];
@@ -230,6 +218,7 @@ export default async function FoundationDetailPage({ params }: { params: Promise
   }, {} as Record<string, ProgramRow[]>);
 
   return (
+    <FoundationActionsProvider>
     <div className="max-w-4xl">
       <a href="/foundations" className="text-xs font-black text-bauhaus-muted uppercase tracking-widest hover:text-bauhaus-black">
         &larr; Back to Foundations
@@ -239,9 +228,12 @@ export default async function FoundationDetailPage({ params }: { params: Promise
       <div className="mt-4 mb-8">
         <div className="flex items-start justify-between gap-4 mb-2">
           <h1 className="text-2xl sm:text-3xl font-black text-bauhaus-black">{f.name}</h1>
-          <span className={`text-[11px] font-black px-2.5 py-1 flex-shrink-0 border-2 uppercase tracking-widest ${badge.cls}`}>
-            {badge.label}
-          </span>
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <FoundationCardActions foundationId={f.id} />
+            <span className={`text-[11px] font-black px-2.5 py-1 border-2 uppercase tracking-widest ${badge.cls}`}>
+              {badge.label}
+            </span>
+          </div>
         </div>
         <div className="text-sm text-bauhaus-muted flex flex-wrap items-center gap-x-3 gap-y-1 font-medium">
           <span className="font-bold text-bauhaus-black">{typeLabel(f.type)}</span>
@@ -261,35 +253,38 @@ export default async function FoundationDetailPage({ params }: { params: Promise
         </div>
       </div>
 
-      {/* Key stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-0 mb-8 border-4 border-bauhaus-black">
-        <div className="bg-white p-4 border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black sm:col-span-1">
-          <div className="text-[11px] text-bauhaus-muted mb-1 uppercase tracking-widest font-black">Annual Giving</div>
-          <div className="text-2xl font-black text-money tabular-nums">{formatMoney(f.total_giving_annual)}</div>
-        </div>
-        <div className="bg-white p-4 border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black">
-          <div className="text-[11px] text-bauhaus-muted mb-1 uppercase tracking-widest font-black">Avg Grant</div>
-          <div className="text-lg font-black text-bauhaus-black tabular-nums">{formatMoney(f.avg_grant_size)}</div>
-        </div>
-        <div className="bg-white p-4 border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black">
-          <div className="text-[11px] text-bauhaus-muted mb-1 uppercase tracking-widest font-black">Grant Range</div>
-          <div className="text-sm font-black text-bauhaus-black tabular-nums">
-            {f.grant_range_min || f.grant_range_max
-              ? `${formatMoney(f.grant_range_min)} – ${formatMoney(f.grant_range_max)}`
-              : '\u2014'}
+      {/* Key stats — adaptive, only show fields with data */}
+      {(() => {
+        const stats: Array<{ label: string; value: string; cls?: string; large?: boolean }> = [];
+        stats.push({ label: 'Annual Giving', value: formatMoney(f.total_giving_annual), cls: 'text-money', large: true });
+        if (f.grant_range_min || f.grant_range_max) {
+          stats.push({ label: 'Grant Range', value: `${formatMoney(f.grant_range_min)} – ${formatMoney(f.grant_range_max)}` });
+        }
+        if (f.avg_grant_size) {
+          stats.push({ label: 'Avg Grant', value: formatMoney(f.avg_grant_size) });
+        }
+        if (f.endowment_size) {
+          stats.push({ label: 'Endowment', value: formatMoney(f.endowment_size) });
+        }
+        if (f.giving_ratio) {
+          stats.push({ label: 'Giving Ratio', value: `${f.giving_ratio}%`, cls: 'text-bauhaus-blue' });
+        }
+        if (allPrograms.length > 0) {
+          const openCount = allPrograms.filter(p => p.status === 'open').length;
+          stats.push({ label: 'Programs', value: `${allPrograms.length}${openCount > 0 ? ` (${openCount} open)` : ''}` });
+        }
+        const cols = Math.min(stats.length, 5);
+        return (
+          <div className={`grid grid-cols-2 sm:grid-cols-${cols} gap-0 mb-8 border-4 border-bauhaus-black`}>
+            {stats.map((s, i) => (
+              <div key={s.label} className={`bg-white p-4 ${i < stats.length - 1 ? 'border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black' : ''}`}>
+                <div className="text-[11px] text-bauhaus-muted mb-1 uppercase tracking-widest font-black">{s.label}</div>
+                <div className={`${s.large ? 'text-2xl' : 'text-lg'} font-black tabular-nums ${s.cls || 'text-bauhaus-black'}`}>{s.value}</div>
+              </div>
+            ))}
           </div>
-        </div>
-        <div className="bg-white p-4 border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black">
-          <div className="text-[11px] text-bauhaus-muted mb-1 uppercase tracking-widest font-black">Giving Ratio</div>
-          <div className={`text-lg font-black tabular-nums ${f.giving_ratio ? 'text-bauhaus-blue' : 'text-bauhaus-muted/30'}`}>
-            {f.giving_ratio ? `${f.giving_ratio}%` : '\u2014'}
-          </div>
-        </div>
-        <div className="bg-white p-4">
-          <div className="text-[11px] text-bauhaus-muted mb-1 uppercase tracking-widest font-black">Endowment</div>
-          <div className="text-lg font-black text-bauhaus-black tabular-nums">{f.endowment_size ? formatMoney(f.endowment_size) : '\u2014'}</div>
-        </div>
-      </div>
+        );
+      })()}
 
       {/* Two-column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -301,18 +296,18 @@ export default async function FoundationDetailPage({ params }: { params: Promise
             </Section>
           )}
 
-          {f.giving_philosophy && (
-            <Section title="Giving Philosophy">
-              <div className="bg-bauhaus-yellow border-4 border-bauhaus-black p-4 bauhaus-shadow-sm">
-                <p className="text-bauhaus-black leading-relaxed italic font-medium">{f.giving_philosophy}</p>
-              </div>
-            </Section>
-          )}
-
           {f.application_tips && (
             <Section title="Tips for Applicants">
               <div className="bg-money-light border-4 border-money p-4 bauhaus-shadow-sm">
                 <p className="text-bauhaus-black leading-relaxed font-medium">{f.application_tips}</p>
+              </div>
+            </Section>
+          )}
+
+          {f.giving_philosophy && (
+            <Section title="Giving Philosophy">
+              <div className="bg-bauhaus-yellow border-4 border-bauhaus-black p-4 bauhaus-shadow-sm">
+                <p className="text-bauhaus-black leading-relaxed italic font-medium">{f.giving_philosophy}</p>
               </div>
             </Section>
           )}
@@ -448,6 +443,18 @@ export default async function FoundationDetailPage({ params }: { params: Promise
                         </div>
                       </div>
                       {p.description && <p className="text-sm text-bauhaus-muted mt-1.5 leading-relaxed font-medium">{p.description}</p>}
+                      {p.eligibility && (
+                        <div className="mt-2 text-sm">
+                          <span className="text-xs font-black text-bauhaus-muted uppercase tracking-wider">Eligibility: </span>
+                          <span className="text-bauhaus-black font-medium">{p.eligibility}</span>
+                        </div>
+                      )}
+                      {p.application_process && (
+                        <div className="mt-1 text-sm">
+                          <span className="text-xs font-black text-bauhaus-muted uppercase tracking-wider">How to apply: </span>
+                          <span className="text-bauhaus-black font-medium">{p.application_process}</span>
+                        </div>
+                      )}
                       <div className="text-xs text-bauhaus-muted mt-2 flex gap-4 flex-wrap font-bold">
                         {(p.amount_min || p.amount_max) && (
                           <span>{p.amount_min && p.amount_max ? `${formatMoney(p.amount_min)} – ${formatMoney(p.amount_max)}` : p.amount_max ? `Up to ${formatMoney(p.amount_max)}` : formatMoney(p.amount_min)}</span>
@@ -464,6 +471,7 @@ export default async function FoundationDetailPage({ params }: { params: Promise
 
           {allLinkedGrants.length > 0 && (
             <Section title={`Grants in Database (${allLinkedGrants.length})`}>
+              <GrantActionsProvider>
               <div className="space-y-2">
                 {allLinkedGrants.map(g => {
                   const tb = programTypeBadge(g.program_type);
@@ -474,7 +482,7 @@ export default async function FoundationDetailPage({ params }: { params: Promise
                         <h4 className="font-black text-bauhaus-black text-sm group-hover:text-bauhaus-blue">{g.name}</h4>
                         <span className={`text-[10px] font-black px-2 py-0.5 uppercase tracking-wider border-2 flex-shrink-0 ${tb.cls}`}>{tb.label}</span>
                       </div>
-                      <div className="text-xs text-bauhaus-muted mt-1 flex gap-3 flex-wrap font-bold">
+                      <div className="text-xs text-bauhaus-muted mt-1 flex gap-3 flex-wrap font-bold items-center">
                         {(g.amount_min || g.amount_max) && (
                           <span className="tabular-nums">{g.amount_min && g.amount_max ? `${formatMoney(g.amount_min)} – ${formatMoney(g.amount_max)}` : g.amount_max ? `Up to ${formatMoney(g.amount_max)}` : formatMoney(g.amount_min)}</span>
                         )}
@@ -484,11 +492,13 @@ export default async function FoundationDetailPage({ params }: { params: Promise
                           </span>
                         )}
                         {g.source && <span className="text-bauhaus-muted/50">{g.source}</span>}
+                        <span className="ml-auto"><GrantCardActions grantId={g.id} /></span>
                       </div>
                     </a>
                   );
                 })}
               </div>
+              </GrantActionsProvider>
             </Section>
           )}
 
@@ -513,6 +523,8 @@ export default async function FoundationDetailPage({ params }: { params: Promise
 
         {/* Sidebar */}
         <div className="space-y-6">
+          <FoundationDetailActions foundationId={f.id} />
+
           {(f.thematic_focus?.length > 0 || f.geographic_focus?.length > 0) && (
             <div className="bg-white border-4 border-bauhaus-black p-4">
               <h3 className="text-xs font-black text-bauhaus-black mb-3 uppercase tracking-widest">Focus Areas</h3>
@@ -637,5 +649,6 @@ export default async function FoundationDetailPage({ params }: { params: Promise
         </div>
       </div>
     </div>
+    </FoundationActionsProvider>
   );
 }
