@@ -87,6 +87,182 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
+interface OrgProfile {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string | null;
+  mission: string | null;
+  abn: string | null;
+  website: string | null;
+  domains: string[] | null;
+  geographic_focus: string[] | null;
+  org_type: string | null;
+  annual_revenue: number | null;
+  team_size: number | null;
+  projects: Array<{ name: string; description?: string }> | null;
+}
+
+function orgTypeBadgeClass(orgType: string | null): string {
+  switch (orgType) {
+    case 'charity': return 'border-money bg-money-light text-money';
+    case 'social_enterprise': return 'border-bauhaus-blue bg-link-light text-bauhaus-blue';
+    case 'nfp': return 'border-bauhaus-yellow bg-warning-light text-bauhaus-black';
+    case 'business': return 'border-bauhaus-black/30 bg-bauhaus-canvas text-bauhaus-muted';
+    default: return 'border-bauhaus-black/20 bg-bauhaus-canvas text-bauhaus-muted';
+  }
+}
+
+function formatOrgType(orgType: string | null): string {
+  switch (orgType) {
+    case 'charity': return 'Charity';
+    case 'social_enterprise': return 'Social Enterprise';
+    case 'nfp': return 'Not-for-Profit';
+    case 'business': return 'Business';
+    case 'government': return 'Government';
+    default: return 'Organisation';
+  }
+}
+
+function OrgProfileView({ profile, claimData, isClaimOwner }: { profile: OrgProfile; claimData: Record<string, unknown> | null; isClaimOwner: boolean }) {
+  return (
+    <div className="max-w-4xl">
+      <a href="/charities" className="text-xs font-black text-bauhaus-muted uppercase tracking-widest hover:text-bauhaus-black">
+        &larr; Back to Organisations
+      </a>
+
+      {/* Header */}
+      <div className="mt-4 mb-8">
+        <div className="flex items-start justify-between gap-4 mb-2">
+          <h1 className="text-2xl sm:text-3xl font-black text-bauhaus-black">{profile.name}</h1>
+          <div className="flex gap-1.5 flex-shrink-0">
+            <span className={`text-[11px] font-black px-2.5 py-1 border-2 uppercase tracking-widest ${orgTypeBadgeClass(profile.org_type)}`}>
+              {formatOrgType(profile.org_type)}
+            </span>
+            {claimData && (
+              <span className="text-[11px] px-2 py-1 font-black uppercase tracking-widest border-2 border-money bg-money-light text-money">Verified</span>
+            )}
+          </div>
+        </div>
+        <div className="text-sm text-bauhaus-muted flex flex-wrap items-center gap-x-3 gap-y-1 font-medium">
+          {profile.abn && <span className="font-bold text-bauhaus-black">ABN {profile.abn}</span>}
+          {profile.website && (
+            <>
+              {profile.abn && <span className="text-bauhaus-muted/30">|</span>}
+              <a href={profile.website.startsWith('http') ? profile.website : `https://${profile.website}`} target="_blank" rel="noopener noreferrer" className="text-bauhaus-blue hover:text-bauhaus-red font-bold">
+                {profile.website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}
+              </a>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Stats grid */}
+      {(() => {
+        const stats: Array<{ label: string; value: string }> = [];
+        if (profile.team_size) stats.push({ label: 'Team Size', value: String(profile.team_size) });
+        if (profile.annual_revenue) stats.push({ label: 'Annual Revenue', value: formatMoney(profile.annual_revenue) });
+        if (stats.length === 0) return null;
+        return (
+          <div className={`grid grid-cols-${stats.length} gap-0 mb-8 border-4 border-bauhaus-black`}>
+            {stats.map((s, i) => (
+              <div key={s.label} className={`bg-white p-4 ${i < stats.length - 1 ? 'border-r-4 border-bauhaus-black' : ''}`}>
+                <div className="text-[11px] text-bauhaus-muted mb-1 uppercase tracking-widest font-black">{s.label}</div>
+                <div className="text-lg font-black tabular-nums text-bauhaus-black">{s.value}</div>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
+
+      {/* Two-column layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2">
+          {(profile.description || profile.mission) && (
+            <Section title="About">
+              {profile.description && <p className="text-bauhaus-muted leading-relaxed text-[15px] font-medium">{profile.description}</p>}
+              {profile.mission && (
+                <p className="text-bauhaus-muted leading-relaxed text-[15px] font-medium mt-3">
+                  <span className="font-black text-bauhaus-black">Mission:</span> {profile.mission}
+                </p>
+              )}
+            </Section>
+          )}
+
+          {profile.projects && Array.isArray(profile.projects) && profile.projects.length > 0 && (
+            <Section title={`Projects (${profile.projects.length})`}>
+              <div className="space-y-3">
+                {profile.projects.map((p, i) => (
+                  <div key={i} className="bg-white border-4 border-bauhaus-black p-4">
+                    <h3 className="font-black text-bauhaus-black">{p.name}</h3>
+                    {p.description && <p className="text-sm text-bauhaus-muted mt-1.5 leading-relaxed font-medium">{p.description}</p>}
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-6">
+          {/* Focus Areas */}
+          {((profile.domains && profile.domains.length > 0) || (profile.geographic_focus && profile.geographic_focus.length > 0)) && (
+            <div className="bg-white border-4 border-bauhaus-black p-4">
+              <h3 className="text-xs font-black text-bauhaus-black mb-3 uppercase tracking-widest">Focus Areas</h3>
+              {profile.domains && profile.domains.length > 0 && (
+                <div className="flex gap-1.5 flex-wrap mb-3">
+                  {profile.domains.map(d => (
+                    <span key={d} className="text-xs px-2.5 py-1 bg-money-light text-money font-black border-2 border-money/20 capitalize">{d.replace(/_/g, ' ')}</span>
+                  ))}
+                </div>
+              )}
+              {profile.geographic_focus && profile.geographic_focus.length > 0 && (
+                <div className="mt-3 pt-3 border-t-2 border-bauhaus-black/20">
+                  <div className="text-xs text-bauhaus-muted mb-1.5 font-black uppercase tracking-wider">Geographic Focus</div>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {profile.geographic_focus.map(g => (
+                      <span key={g} className="text-xs px-2.5 py-1 bg-link-light text-bauhaus-blue font-black border-2 border-bauhaus-blue/20">{g}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Claim CTA / Edit Link */}
+          {isClaimOwner ? (
+            <div className="bg-green-50 border-4 border-money p-4">
+              <h3 className="text-xs font-black text-money mb-2 uppercase tracking-widest">Your Profile</h3>
+              <p className="text-sm text-bauhaus-black/70 font-medium mb-3">
+                You manage this organisation&apos;s profile on GrantScope.
+              </p>
+              <a
+                href="/profile"
+                className="block text-center px-4 py-2.5 bg-money text-white text-xs font-black uppercase tracking-widest hover:bg-bauhaus-black transition-colors"
+              >
+                Edit Profile
+              </a>
+            </div>
+          ) : (
+            <div className="bg-bauhaus-yellow border-4 border-bauhaus-black p-4">
+              <h3 className="text-xs font-black text-bauhaus-black mb-2 uppercase tracking-widest">Is this your organisation?</h3>
+              <p className="text-sm text-bauhaus-black/70 font-medium mb-3">
+                Claim this profile to update your information, share your story, and get featured.
+              </p>
+              <a
+                href={`/charities/claim?abn=${profile.abn}`}
+                className="block text-center px-4 py-2.5 bg-bauhaus-black text-white text-xs font-black uppercase tracking-widest hover:bg-bauhaus-red transition-colors"
+              >
+                Claim This Profile
+              </a>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default async function CharityDetailPage({ params }: { params: Promise<{ abn: string }> }) {
   const { abn } = await params;
   const supabase = getServiceSupabase();
@@ -97,7 +273,42 @@ export default async function CharityDetailPage({ params }: { params: Promise<{ 
     .eq('abn', abn)
     .single();
 
-  if (!charity) notFound();
+  // If not in ACNC, check org_profiles for this ABN
+  // org_profiles may store ABN with spaces (e.g. "21 591 780 066") while URL uses no spaces
+  if (!charity) {
+    const abnWithSpaces = abn.replace(/(\d{2})(\d{3})(\d{3})(\d{3})/, '$1 $2 $3 $4');
+    const { data: orgProfile } = await supabase
+      .from('org_profiles')
+      .select('*')
+      .or(`abn.eq.${abn},abn.eq.${abnWithSpaces}`)
+      .limit(1)
+      .maybeSingle();
+
+    if (!orgProfile) notFound();
+    const profile = orgProfile as OrgProfile;
+
+    // Fetch verified claim for this ABN
+    const { data: claimData } = await supabase
+      .from('charity_claims')
+      .select('*')
+      .eq('abn', abn)
+      .eq('status', 'verified')
+      .maybeSingle();
+
+    let isClaimOwner = false;
+    try {
+      const userSupabase = await createSupabaseServer();
+      const { data: { user } } = await userSupabase.auth.getUser();
+      if (user && claimData && claimData.user_id === user.id) {
+        isClaimOwner = true;
+      }
+    } catch {
+      // Not logged in
+    }
+
+    return <OrgProfileView profile={profile} claimData={claimData} isClaimOwner={isClaimOwner} />;
+  }
+
   const c = charity as CharityDetail;
 
   const isEnriched = !!c.community_org_id;

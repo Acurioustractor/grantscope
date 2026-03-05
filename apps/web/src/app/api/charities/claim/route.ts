@@ -32,6 +32,14 @@ export async function POST(request: NextRequest) {
 
   const db = getServiceSupabase();
 
+  // Look up the official ACNC name for this ABN
+  const { data: acncRecord } = await db
+    .from('acnc_charities')
+    .select('name')
+    .eq('abn', abn)
+    .maybeSingle();
+  const officialName = acncRecord?.name || organisation_name || null;
+
   // Check for existing claim by this user
   const { data: existing } = await db
     .from('charity_claims')
@@ -51,7 +59,7 @@ export async function POST(request: NextRequest) {
       abn,
       contact_email: contact_email || user.email,
       contact_name: contact_name || null,
-      organisation_name: organisation_name || null,
+      organisation_name: officialName,
       message: message || null,
       status: 'pending',
     })
@@ -59,5 +67,28 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Auto-create org_profile if one doesn't exist for this user, or update ABN if missing
+  const { data: existingProfile } = await db
+    .from('org_profiles')
+    .select('id, abn')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (!existingProfile) {
+    await db
+      .from('org_profiles')
+      .insert({
+        user_id: user.id,
+        name: officialName || `Organisation (ABN ${abn})`,
+        abn,
+      });
+  } else if (!existingProfile.abn) {
+    await db
+      .from('org_profiles')
+      .update({ abn })
+      .eq('id', existingProfile.id);
+  }
+
   return NextResponse.json(data, { status: 201 });
 }

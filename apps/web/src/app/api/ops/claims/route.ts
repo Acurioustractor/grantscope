@@ -33,13 +33,39 @@ export async function GET() {
     .select('abn, name')
     .in('abn', abns);
 
+  // Also fetch org_profiles for non-ACNC ABNs
+  const { data: orgProfiles } = await db
+    .from('org_profiles')
+    .select('abn, name, org_type')
+    .in('abn', abns);
+
   const nameMap = new Map((charities || []).map(c => [c.abn, c.name]));
+  const orgMap = new Map((orgProfiles || []).map(p => [p.abn, p]));
+
   const enriched = (data || []).map(claim => ({
     ...claim,
-    charity_name: nameMap.get(claim.abn) || claim.organisation_name || `ABN ${claim.abn} (not in ACNC)`,
+    charity_name: nameMap.get(claim.abn) || orgMap.get(claim.abn)?.name || claim.organisation_name || `ABN ${claim.abn} (not in ACNC)`,
+    org_type: nameMap.has(claim.abn) ? 'charity' : (orgMap.get(claim.abn)?.org_type || null),
+    is_acnc: nameMap.has(claim.abn),
   }));
 
-  return NextResponse.json(enriched);
+  // Fetch org type summary stats
+  const { data: orgTypeStats } = await db
+    .from('org_profiles')
+    .select('org_type');
+
+  const typeCounts: Record<string, number> = {};
+  for (const row of orgTypeStats || []) {
+    const t = row.org_type || 'unset';
+    typeCounts[t] = (typeCounts[t] || 0) + 1;
+  }
+
+  const statusCounts: Record<string, number> = {};
+  for (const claim of data || []) {
+    statusCounts[claim.status] = (statusCounts[claim.status] || 0) + 1;
+  }
+
+  return NextResponse.json({ claims: enriched, stats: { org_types: typeCounts, claim_statuses: statusCounts } });
 }
 
 export async function PUT(request: NextRequest) {

@@ -10,25 +10,29 @@ interface Claim {
   status: string;
   contact_email: string;
   contact_name: string;
+  organisation_name: string | null;
   created_at: string;
 }
 
 export default function ClaimPage() {
   return (
     <Suspense fallback={<div className="max-w-xl mx-auto py-16 flex items-center justify-center min-h-[40vh]"><div className="text-sm font-black text-bauhaus-muted uppercase tracking-widest">Loading...</div></div>}>
-      <ClaimForm />
+      <ClaimContent />
     </Suspense>
   );
 }
 
-function ClaimForm() {
+function ClaimContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const abn = searchParams.get('abn') || '';
 
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
   const [loading, setLoading] = useState(true);
-  const [existingClaim, setExistingClaim] = useState<Claim | null>(null);
+  const [claims, setClaims] = useState<Claim[]>([]);
+  const [showForm, setShowForm] = useState(false);
+
+  // Form state
   const [orgName, setOrgName] = useState('');
   const [contactName, setContactName] = useState('');
   const [contactEmail, setContactEmail] = useState('');
@@ -43,12 +47,14 @@ function ClaimForm() {
       setUser(u ? { id: u.id, email: u.email } : null);
       if (u) {
         setContactEmail(u.email || '');
-        // Check for existing claims
         fetch('/api/charities/claim')
           .then(r => r.json())
-          .then((claims: Claim[]) => {
-            const match = claims.find(c => c.abn === abn);
-            if (match) setExistingClaim(match);
+          .then((data: Claim[]) => {
+            setClaims(data);
+            // If ABN provided and no existing claim for it, show form
+            if (abn && !data.find(c => c.abn === abn)) {
+              setShowForm(true);
+            }
           })
           .catch(() => {});
       }
@@ -74,8 +80,11 @@ function ClaimForm() {
       return;
     }
 
+    const newClaim = await res.json();
+    setClaims(prev => [newClaim, ...prev]);
     setSuccess(true);
     setSubmitting(false);
+    setShowForm(false);
   }
 
   if (loading) {
@@ -109,13 +118,13 @@ function ClaimForm() {
           )}
           <div className="flex gap-3">
             <a
-              href={`/login?redirect=${encodeURIComponent(`/charities/claim?abn=${abn}`)}`}
+              href={`/login?redirect=${encodeURIComponent(`/charities/claim${abn ? `?abn=${abn}` : ''}`)}`}
               className="inline-block px-5 py-2.5 bg-bauhaus-red text-white text-xs font-black uppercase tracking-widest hover:bg-bauhaus-black transition-colors border-4 border-bauhaus-black"
             >
               Sign In
             </a>
             <a
-              href={`/register?redirect=${encodeURIComponent(`/charities/claim?abn=${abn}`)}`}
+              href={`/register?redirect=${encodeURIComponent(`/charities/claim${abn ? `?abn=${abn}` : ''}`)}`}
               className="inline-block px-5 py-2.5 bg-bauhaus-black text-white text-xs font-black uppercase tracking-widest hover:bg-bauhaus-blue transition-colors"
             >
               Create Account
@@ -126,73 +135,76 @@ function ClaimForm() {
     );
   }
 
-  // Has existing claim
-  if (existingClaim) {
+  // Success toast after submission
+  const successBanner = success && (
+    <div className="border-4 border-green-600 bg-green-50 p-4 mb-6 bauhaus-shadow-sm">
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 bg-green-500 border-2 border-bauhaus-black flex items-center justify-center flex-shrink-0">
+          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+            <path strokeLinecap="square" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <div>
+          <div className="text-xs font-black text-green-800 uppercase tracking-widest">Claim Submitted</div>
+          <div className="text-sm text-green-700 font-medium">We&apos;ll review it and get back to you.</div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Show claim form (when ABN provided and no existing claim)
+  if (showForm && abn) {
     return (
       <div className="max-w-xl mx-auto py-16">
+        {successBanner}
         <div className="border-4 border-bauhaus-black bg-white p-8 bauhaus-shadow-sm">
-          <div className={`w-12 h-12 border-3 border-bauhaus-black flex items-center justify-center mb-6 ${
-            existingClaim.status === 'verified' ? 'bg-green-500' :
-            existingClaim.status === 'rejected' ? 'bg-bauhaus-red' : 'bg-bauhaus-yellow'
-          }`}>
-            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-              {existingClaim.status === 'verified' ? (
-                <path strokeLinecap="square" d="M5 13l4 4L19 7" />
-              ) : existingClaim.status === 'rejected' ? (
-                <path strokeLinecap="square" d="M6 18L18 6M6 6l12 12" />
-              ) : (
-                <path strokeLinecap="square" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              )}
+          <div className="w-12 h-12 bg-bauhaus-yellow border-3 border-bauhaus-black flex items-center justify-center mb-6">
+            <svg className="w-6 h-6 text-bauhaus-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+              <path strokeLinecap="square" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
           </div>
 
-          <p className="text-xs font-black uppercase tracking-[0.3em] mb-2" style={{
-            color: existingClaim.status === 'verified' ? '#22c55e' :
-                   existingClaim.status === 'rejected' ? '#ef4444' : '#eab308'
-          }}>
-            {existingClaim.status === 'verified' ? 'Verified' :
-             existingClaim.status === 'rejected' ? 'Rejected' : 'Pending Verification'}
+          <p className="text-xs font-black text-bauhaus-blue uppercase tracking-[0.3em] mb-2">Verification</p>
+          <h1 className="text-2xl font-black text-bauhaus-black mb-4">Claim Your Profile</h1>
+          <p className="text-bauhaus-muted font-medium leading-relaxed mb-6">
+            Submit a claim to manage this charity&apos;s profile on GrantScope. We&apos;ll verify your connection to the organisation.
           </p>
-          <h1 className="text-2xl font-black text-bauhaus-black mb-4">
-            {existingClaim.status === 'verified' ? 'Profile Claimed' :
-             existingClaim.status === 'rejected' ? 'Claim Rejected' : 'Claim Pending'}
-          </h1>
 
-          <div className="bg-bauhaus-canvas border-2 border-bauhaus-black/20 px-4 py-3 mb-6">
-            <div className="text-[11px] font-black text-bauhaus-muted uppercase tracking-widest">ABN</div>
-            <div className="text-sm font-black text-bauhaus-black">{existingClaim.abn}</div>
-            <div className="text-xs text-bauhaus-muted mt-1">
-              Submitted {new Date(existingClaim.created_at).toLocaleDateString('en-AU', { year: 'numeric', month: 'long', day: 'numeric' })}
+          {error && (
+            <div className="bg-danger-light border-4 border-bauhaus-red p-3 text-sm font-bold text-bauhaus-red mb-4">
+              {error}
             </div>
-          </div>
-
-          {existingClaim.status === 'pending' && (
-            <p className="text-bauhaus-muted font-medium leading-relaxed mb-6">
-              Your claim is being reviewed. We&apos;ll verify your connection to this charity and update the status.
-            </p>
           )}
 
-          {existingClaim.status === 'rejected' && (
-            <p className="text-bauhaus-muted font-medium leading-relaxed mb-6">
-              Your claim was not approved. If you believe this was in error, please contact us at{' '}
-              <a href="mailto:hello@grantscope.au" className="text-bauhaus-blue hover:text-bauhaus-red font-bold">hello@grantscope.au</a>
-            </p>
-          )}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">ABN</label>
+              <input type="text" value={abn} disabled className="w-full border-4 border-bauhaus-black/30 bg-bauhaus-canvas px-3 py-2 text-sm font-bold text-bauhaus-muted" />
+            </div>
+            <div>
+              <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">Organisation Name</label>
+              <input type="text" value={orgName} onChange={e => setOrgName(e.target.value)} required placeholder="e.g. A Curious Tractor Foundation" className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue" />
+            </div>
+            <div>
+              <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">Your Name</label>
+              <input type="text" value={contactName} onChange={e => setContactName(e.target.value)} required placeholder="Your full name" className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue" />
+            </div>
+            <div>
+              <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">Contact Email</label>
+              <input type="email" value={contactEmail} onChange={e => setContactEmail(e.target.value)} required className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue" />
+            </div>
+            <div>
+              <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">Message (Optional)</label>
+              <textarea value={message} onChange={e => setMessage(e.target.value)} rows={3} placeholder="Tell us about your connection to this organisation..." className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue resize-y" />
+            </div>
+            <button type="submit" disabled={submitting || !abn} className="w-full bg-bauhaus-red text-white font-black uppercase tracking-widest py-3 text-sm border-4 border-bauhaus-black hover:bg-bauhaus-black disabled:opacity-50 bauhaus-shadow-sm">
+              {submitting ? 'Submitting...' : 'Submit Claim'}
+            </button>
+          </form>
 
-          <div className="flex gap-3">
-            {existingClaim.status === 'verified' && (
-              <a
-                href={`/charities/${existingClaim.abn}/edit`}
-                className="inline-block px-5 py-2.5 bg-bauhaus-red text-white text-xs font-black uppercase tracking-widest hover:bg-bauhaus-black transition-colors border-4 border-bauhaus-black"
-              >
-                Edit Profile
-              </a>
-            )}
-            <a
-              href={`/charities/${existingClaim.abn}`}
-              className="inline-block px-5 py-2.5 bg-bauhaus-black text-white text-xs font-black uppercase tracking-widest hover:bg-bauhaus-red transition-colors"
-            >
-              View Profile
+          <div className="mt-6 pt-4 border-t-2 border-bauhaus-black/10">
+            <a href={`/charities/${abn}`} className="text-xs font-black text-bauhaus-muted uppercase tracking-widest hover:text-bauhaus-black">
+              &larr; Back to Profile
             </a>
           </div>
         </div>
@@ -200,136 +212,97 @@ function ClaimForm() {
     );
   }
 
-  // Success state
-  if (success) {
-    return (
-      <div className="max-w-xl mx-auto py-16">
-        <div className="border-4 border-bauhaus-black bg-white p-8 bauhaus-shadow-sm">
-          <div className="w-12 h-12 bg-bauhaus-yellow border-3 border-bauhaus-black flex items-center justify-center mb-6">
-            <svg className="w-6 h-6 text-bauhaus-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-              <path strokeLinecap="square" d="M5 13l4 4L19 7" />
+  // Claims list view (main view for /charities/claim)
+  return (
+    <div className="max-w-2xl mx-auto py-16 px-4">
+      {successBanner}
+
+      <div className="mb-8">
+        <p className="text-xs font-black text-bauhaus-blue uppercase tracking-[0.3em] mb-2">Account</p>
+        <h1 className="text-2xl font-black text-bauhaus-black">My Claims</h1>
+      </div>
+
+      {claims.length === 0 ? (
+        <div className="border-4 border-bauhaus-black bg-white p-8 bauhaus-shadow-sm text-center">
+          <div className="w-12 h-12 bg-bauhaus-canvas border-3 border-bauhaus-black/20 flex items-center justify-center mb-4 mx-auto">
+            <svg className="w-6 h-6 text-bauhaus-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <path strokeLinecap="square" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
             </svg>
           </div>
-          <p className="text-xs font-black text-money uppercase tracking-[0.3em] mb-2">Submitted</p>
-          <h1 className="text-2xl font-black text-bauhaus-black mb-4">Claim Submitted</h1>
-          <p className="text-bauhaus-muted font-medium leading-relaxed mb-6">
-            Your claim has been submitted for verification. We&apos;ll review it and get back to you.
-          </p>
+          <p className="text-bauhaus-muted font-medium mb-4">You haven&apos;t claimed any charity profiles yet.</p>
           <a
-            href={abn ? `/charities/${abn}` : '/charities'}
-            className="inline-block px-5 py-2.5 bg-bauhaus-black text-white text-xs font-black uppercase tracking-widest hover:bg-bauhaus-red transition-colors"
+            href="/charities"
+            className="inline-block px-5 py-2.5 bg-bauhaus-red text-white text-xs font-black uppercase tracking-widest hover:bg-bauhaus-black transition-colors border-4 border-bauhaus-black"
           >
-            &larr; Back to Profile
+            Find Your Charity
           </a>
         </div>
-      </div>
-    );
-  }
+      ) : (
+        <div className="space-y-4">
+          {claims.map((claim) => (
+            <ClaimCard key={claim.id} claim={claim} />
+          ))}
 
-  // Claim form
-  return (
-    <div className="max-w-xl mx-auto py-16">
-      <div className="border-4 border-bauhaus-black bg-white p-8 bauhaus-shadow-sm">
-        <div className="w-12 h-12 bg-bauhaus-yellow border-3 border-bauhaus-black flex items-center justify-center mb-6">
-          <svg className="w-6 h-6 text-bauhaus-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-            <path strokeLinecap="square" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-          </svg>
+          <div className="pt-4">
+            <a
+              href="/charities"
+              className="inline-block px-5 py-2.5 bg-bauhaus-black text-white text-xs font-black uppercase tracking-widest hover:bg-bauhaus-red transition-colors"
+            >
+              Claim Another Charity
+            </a>
+          </div>
         </div>
+      )}
+    </div>
+  );
+}
 
-        <p className="text-xs font-black text-bauhaus-blue uppercase tracking-[0.3em] mb-2">Verification</p>
-        <h1 className="text-2xl font-black text-bauhaus-black mb-4">Claim Your Profile</h1>
-        <p className="text-bauhaus-muted font-medium leading-relaxed mb-6">
-          Submit a claim to manage this charity&apos;s profile on GrantScope. We&apos;ll verify your connection to the organisation.
-        </p>
+function StatusBadge({ status }: { status: string }) {
+  const config = {
+    verified: { bg: 'bg-green-500', text: 'text-white', label: 'Verified' },
+    rejected: { bg: 'bg-bauhaus-red', text: 'text-white', label: 'Rejected' },
+    pending: { bg: 'bg-bauhaus-yellow', text: 'text-bauhaus-black', label: 'Pending' },
+  }[status] ?? { bg: 'bg-bauhaus-canvas', text: 'text-bauhaus-muted', label: status };
 
-        {error && (
-          <div className="bg-danger-light border-4 border-bauhaus-red p-3 text-sm font-bold text-bauhaus-red mb-4">
-            {error}
+  return (
+    <span className={`inline-block px-2.5 py-1 text-[10px] font-black uppercase tracking-widest ${config.bg} ${config.text} border-2 border-bauhaus-black`}>
+      {config.label}
+    </span>
+  );
+}
+
+function ClaimCard({ claim }: { claim: Claim }) {
+  return (
+    <div className="border-4 border-bauhaus-black bg-white p-5 bauhaus-shadow-sm hover:translate-y-[-1px] transition-transform">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="flex items-center gap-3 mb-1">
+            <h3 className="text-sm font-black text-bauhaus-black truncate">
+              {claim.organisation_name || `ABN ${claim.abn}`}
+            </h3>
+            <StatusBadge status={claim.status} />
           </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">
-              ABN
-            </label>
-            <input
-              type="text"
-              value={abn}
-              disabled
-              className="w-full border-4 border-bauhaus-black/30 bg-bauhaus-canvas px-3 py-2 text-sm font-bold text-bauhaus-muted"
-            />
+          <div className="text-xs text-bauhaus-muted font-medium">
+            ABN {claim.abn}
           </div>
-
-          <div>
-            <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">
-              Organisation Name
-            </label>
-            <input
-              type="text"
-              value={orgName}
-              onChange={e => setOrgName(e.target.value)}
-              required
-              placeholder="e.g. A Curious Tractor Foundation"
-              className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue"
-            />
+          <div className="text-xs text-bauhaus-muted font-medium mt-1">
+            Submitted {new Date(claim.created_at).toLocaleDateString('en-AU', { year: 'numeric', month: 'long', day: 'numeric' })}
           </div>
-
-          <div>
-            <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">
-              Your Name
-            </label>
-            <input
-              type="text"
-              value={contactName}
-              onChange={e => setContactName(e.target.value)}
-              required
-              placeholder="Your full name"
-              className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">
-              Contact Email
-            </label>
-            <input
-              type="email"
-              value={contactEmail}
-              onChange={e => setContactEmail(e.target.value)}
-              required
-              className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">
-              Message (Optional)
-            </label>
-            <textarea
-              value={message}
-              onChange={e => setMessage(e.target.value)}
-              rows={3}
-              placeholder="Tell us about your connection to this organisation, or any questions you have..."
-              className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue resize-y"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={submitting || !abn}
-            className="w-full bg-bauhaus-red text-white font-black uppercase tracking-widest py-3 text-sm border-4 border-bauhaus-black hover:bg-bauhaus-black disabled:opacity-50 bauhaus-shadow-sm"
-          >
-            {submitting ? 'Submitting...' : 'Submit Claim'}
-          </button>
-        </form>
-
-        <div className="mt-6 pt-4 border-t-2 border-bauhaus-black/10">
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {claim.status === 'verified' && (
+            <a
+              href={`/charities/${claim.abn}/edit`}
+              className="px-3 py-1.5 text-[10px] font-black uppercase tracking-widest bg-bauhaus-red text-white hover:bg-bauhaus-black transition-colors border-2 border-bauhaus-black"
+            >
+              Edit
+            </a>
+          )}
           <a
-            href={abn ? `/charities/${abn}` : '/charities'}
-            className="text-xs font-black text-bauhaus-muted uppercase tracking-widest hover:text-bauhaus-black"
+            href={`/charities/${claim.abn}`}
+            className="px-3 py-1.5 text-[10px] font-black uppercase tracking-widest bg-bauhaus-black text-white hover:bg-bauhaus-red transition-colors"
           >
-            &larr; Back to {abn ? 'Profile' : 'Charities'}
+            View
           </a>
         </div>
       </div>

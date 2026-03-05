@@ -16,6 +16,13 @@ interface Claim {
   created_at: string;
   verified_at: string | null;
   rejected_at: string | null;
+  org_type: string | null;
+  is_acnc: boolean;
+}
+
+interface Stats {
+  org_types: Record<string, number>;
+  claim_statuses: Record<string, number>;
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -44,6 +51,7 @@ function timeAgo(iso: string): string {
 
 export default function ClaimsAdminPage() {
   const [claims, setClaims] = useState<Claim[]>([]);
+  const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
@@ -56,7 +64,14 @@ export default function ClaimsAdminPage() {
         if (r.status === 401) { router.push('/login'); return null; }
         return r.json();
       })
-      .then(d => { if (d && Array.isArray(d)) setClaims(d); })
+      .then(d => {
+        if (d && d.claims) {
+          setClaims(d.claims);
+          setStats(d.stats || null);
+        } else if (d && Array.isArray(d)) {
+          setClaims(d);
+        }
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [router]);
@@ -92,11 +107,41 @@ export default function ClaimsAdminPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight">Charity Claims</h1>
+        <h1 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight">Organisation Claims</h1>
         <div className="text-xs text-bauhaus-muted font-bold">
           {pending.length} pending
         </div>
       </div>
+
+      {/* Stats Summary */}
+      {stats && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {/* Claim status breakdown */}
+          <div className="border-4 border-bauhaus-black bg-white p-4">
+            <div className="text-[11px] text-bauhaus-muted mb-2 uppercase tracking-widest font-black">By Status</div>
+            <div className="space-y-1">
+              {Object.entries(stats.claim_statuses).map(([status, count]) => (
+                <div key={status} className="flex justify-between text-sm">
+                  <span className="font-medium capitalize">{status}</span>
+                  <span className="font-black">{count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* Org type breakdown */}
+          <div className="border-4 border-bauhaus-black bg-white p-4 col-span-2 lg:col-span-3">
+            <div className="text-[11px] text-bauhaus-muted mb-2 uppercase tracking-widest font-black">Organisations by Type</div>
+            <div className="flex flex-wrap gap-3">
+              {Object.entries(stats.org_types).map(([type, count]) => (
+                <div key={type} className="flex items-center gap-2 bg-bauhaus-canvas border-2 border-bauhaus-black/10 px-3 py-1.5">
+                  <span className="text-sm font-medium capitalize">{type === 'unset' ? 'Not set' : type.replace(/_/g, ' ')}</span>
+                  <span className="text-sm font-black">{count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {claims.length === 0 ? (
         <div className="border-4 border-dashed border-bauhaus-black/20 p-8 text-center">
@@ -122,6 +167,11 @@ export default function ClaimsAdminPage() {
                     <a href={`/charities/${claim.abn}`} className="text-bauhaus-blue hover:text-bauhaus-red">
                       {claim.charity_name}
                     </a>
+                    {claim.org_type && !claim.is_acnc && (
+                      <span className="ml-2 text-[10px] px-1.5 py-0.5 bg-bauhaus-canvas border border-bauhaus-black/10 text-bauhaus-muted font-black uppercase tracking-wider">
+                        {claim.org_type.replace(/_/g, ' ')}
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3 font-mono text-xs">{claim.abn}</td>
                   <td className="px-4 py-3">
