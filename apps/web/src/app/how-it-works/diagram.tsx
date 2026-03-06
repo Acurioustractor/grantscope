@@ -9,6 +9,8 @@ interface Stats {
   programs: number;
   communityOrgs: number;
   moneyFlows: number;
+  socialEnterprises: number;
+  socialEnterprisesEnriched: number;
 }
 
 interface TooltipData {
@@ -27,6 +29,7 @@ const sources = [
   { id: 'states', label: 'VIC / WA / SA / TAS / ACT / NT', sub: 'All 6 state scrapers live', live: true, tip: ['All 8 states and territories covered', 'Dedicated Cheerio scraper per portal', '500+ grants across smaller states'] },
   { id: 'dga', label: 'data.gov.au', sub: 'CKAN Search', live: true, tip: ['National open data portal', 'CKAN search API for grant datasets'] },
   { id: 'ai', label: 'AI Web Search', sub: 'LLM-powered discovery', live: true, ai: true, tip: ['AI-powered grant discovery', 'Finds grants not in any registry'] },
+  { id: 'se', label: 'SE Directories', sub: 'ORIC, Social Traders, B Corp +', live: true, tip: ['ORIC Register (3,300+ Indigenous corps)', 'Social Traders certified directory', 'BuyAbility disability enterprises', 'B Corp Australia', 'Kinaway & state SE networks'] },
   { id: 'asx', label: 'ASX200 Reports', sub: 'Corporate giving', live: false, tip: ['Sustainability report scraping', 'Company-to-foundation mapping', 'Not yet built'] },
 ];
 
@@ -141,7 +144,7 @@ export function ArchitectureDiagram({ stats }: { stats: Stats }) {
               <div><span className="text-money font-bold tabular-nums">{fmt(stats.foundations)}</span> <span className="text-navy-400">foundations</span></div>
               <div><span className="text-money font-bold tabular-nums">{fmt(stats.grants)}</span> <span className="text-navy-400">grants</span></div>
               <div><span className="text-money font-bold tabular-nums">{fmt(stats.programs)}</span> <span className="text-navy-400">programs</span></div>
-              <div><span className="text-money font-bold tabular-nums">{fmt(stats.moneyFlows)}</span> <span className="text-navy-400">money flows</span></div>
+              <div><span className="text-money font-bold tabular-nums">{fmt(stats.socialEnterprises)}</span> <span className="text-navy-400">social enterprises</span></div>
             </div>
           </div>
 
@@ -220,6 +223,7 @@ export function ArchitectureDiagram({ stats }: { stats: Stats }) {
               `${fmt(stats.foundations)} foundations`,
               `${fmt(stats.grants)} grant opportunities`,
               `${fmt(stats.programs)} foundation programs`,
+              `${fmt(stats.socialEnterprises)} social enterprises`,
               `${fmt(stats.communityOrgs)} community orgs`,
               `${fmt(stats.moneyFlows)} money flow records`,
               'Plus: agent_runs, government_programs',
@@ -239,7 +243,9 @@ export function ArchitectureDiagram({ stats }: { stats: Stats }) {
 
             <text x="440" y="474" className="fill-navy-400 text-[10px]">profiled</text>
             <text x="440" y="489" className="fill-purple text-[10px] font-bold">{fmt(stats.profiled)} ({profiledPct}%)</text>
-            <text x="440" y="504" className="fill-navy-400 text-[10px]">agent_runs</text>
+            <text x="440" y="504" className="fill-navy-500 text-[10px]">social_enterprises</text>
+            <text x="540" y="504" className="fill-money text-[10px] font-bold">{fmt(stats.socialEnterprises)}</text>
+            <text x="440" y="519" className="fill-navy-400 text-[10px]">agent_runs</text>
           </g>
 
           {/* Engine → DB lines */}

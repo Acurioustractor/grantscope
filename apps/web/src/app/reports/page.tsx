@@ -30,6 +30,10 @@ export default function ReportsPage() {
             <span className="text-bauhaus-red font-black">4.</span>
             <span><a href="/reports/community-power" className="font-bold text-bauhaus-blue hover:text-bauhaus-red">Community Power Playbook</a> &mdash; The alternative: what communities are building</span>
           </li>
+          <li className="flex gap-2">
+            <span className="text-bauhaus-red font-black">5.</span>
+            <span><a href="/reports/social-enterprise" className="font-bold text-bauhaus-blue hover:text-bauhaus-red">Social Enterprise in Australia</a> &mdash; The invisible $21 billion sector and the register that doesn&apos;t exist</span>
+          </li>
         </ol>
       </div>
 
@@ -146,6 +150,18 @@ export default function ReportsPage() {
                 Cooperatives, revolving funds, social enterprise, timebanking, and the models that
                 are already building community economic sovereignty across Australia.
                 1,819 co-ops. 20,000 social enterprises. $21.3B in revenue.
+              </p>
+            </div>
+          </a>
+
+          <a href="/reports/social-enterprise" className="group block sm:col-span-2">
+            <div className="bg-white border-4 border-bauhaus-black p-6 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-red group-hover:text-white">
+              <div className="text-xs font-black text-bauhaus-red mb-2 uppercase tracking-widest group-hover:text-bauhaus-yellow">New Report</div>
+              <h3 className="text-xl font-black text-bauhaus-black mb-2 group-hover:text-white">Social Enterprise in Australia</h3>
+              <p className="text-sm text-bauhaus-muted leading-relaxed group-hover:text-white/80">
+                20,000 businesses trading for purpose. $21 billion in revenue. 300,000 jobs.
+                No legal structure. No central register. The landscape, the gaps, and why GrantScope
+                is building the directory that doesn&apos;t exist.
               </p>
             </div>
           </a>

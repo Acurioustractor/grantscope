@@ -32,6 +32,7 @@ interface CharityDetail {
   total_grants_given: number | null;
   latest_financial_year: number | null;
   community_org_id: string | null;
+  is_social_enterprise: boolean;
   enriched_description: string | null;
   enriched_domains: string[] | null;
   enriched_programs: Array<{ name: string; description?: string; outcomes?: string }> | null;
@@ -376,6 +377,9 @@ export default async function CharityDetailPage({ params }: { params: Promise<{ 
             )}
             {c.hpc && (
               <span className="text-[11px] px-2 py-1 font-black uppercase tracking-widest border-2 border-bauhaus-blue bg-link-light text-bauhaus-blue">HPC</span>
+            )}
+            {c.is_social_enterprise && (
+              <a href="/social-enterprises" className="text-[11px] px-2 py-1 font-black uppercase tracking-widest border-2 border-bauhaus-blue bg-link-light text-bauhaus-blue hover:bg-bauhaus-blue hover:text-white transition-colors">Social Enterprise</a>
             )}
             {isEnriched && (
               <span className="text-[11px] px-2 py-1 font-black uppercase tracking-widest border-2 border-bauhaus-yellow bg-warning-light text-bauhaus-black">Enriched</span>

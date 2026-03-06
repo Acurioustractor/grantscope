@@ -10,8 +10,8 @@ const primaryLinks = [
   { href: '/grants', label: 'Grants' },
   { href: '/foundations', label: 'Foundations' },
   { href: '/charities', label: 'Charities' },
+  { href: '/social-enterprises', label: 'Social Enterprises' },
   { href: '/corporate', label: 'Corporate' },
-  { href: '/pricing', label: 'Pricing' },
 ];
 
 const megaMenuSections = [
@@ -21,6 +21,7 @@ const megaMenuSections = [
       { href: '/grants', label: 'Grants', desc: 'Search 14k+ grant opportunities' },
       { href: '/foundations', label: 'Foundations', desc: '9,800+ giving foundations' },
       { href: '/charities', label: 'Charities', desc: '64,000+ charities, 500+ enriched profiles' },
+      { href: '/social-enterprises', label: 'Social Enterprises', desc: 'B Corps, indigenous & disability enterprises' },
       { href: '/corporate', label: 'Corporate Giving', desc: 'ASX200 philanthropy' },
     ],
   },
@@ -40,12 +41,17 @@ const megaMenuSections = [
       { href: '/reports/big-philanthropy', label: '$222 Billion', desc: 'Where charity money goes' },
       { href: '/reports/community-parity', label: 'Community Parity', desc: 'Who benefits, who misses out' },
       { href: '/reports/community-power', label: 'Community Power', desc: 'Alternatives to grant dependency' },
+      { href: '/reports/social-enterprise', label: 'Social Enterprise', desc: 'The invisible $21B sector' },
       { href: '/reports/power-dynamics', label: 'Power Dynamics', desc: 'Concentration & inequality' },
     ],
   },
   {
     title: 'For',
     links: [
+      { href: '/for/funders', label: 'Funders', desc: 'Portfolio intelligence & discovery' },
+      { href: '/for/philanthropy', label: 'Philanthropy', desc: 'System-level transparency' },
+      { href: '/for/corporate', label: 'Corporates & Sponsors', desc: 'Find who to support' },
+      { href: '/for/social-enterprises', label: 'Social Enterprises', desc: 'Get visible, find funding' },
       { href: '/for/community', label: 'Community Orgs', desc: 'Find grants, track applications' },
       { href: '/for/foundations', label: 'Foundations', desc: 'Peer comparison & gap analysis' },
       { href: '/for/researchers', label: 'Researchers', desc: 'Open data & living reports' },

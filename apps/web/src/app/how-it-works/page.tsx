@@ -7,13 +7,15 @@ export const dynamic = 'force-dynamic';
 async function getLiveStats() {
   try {
     const supabase = getServiceSupabase();
-    const [foundations, grants, profiled, programs, communityOrgs, flows] = await Promise.all([
+    const [foundations, grants, profiled, programs, communityOrgs, flows, seTotal, seEnriched] = await Promise.all([
       supabase.from('foundations').select('*', { count: 'exact', head: true }),
       supabase.from('grant_opportunities').select('*', { count: 'exact', head: true }),
       supabase.from('foundations').select('*', { count: 'exact', head: true }).not('enriched_at', 'is', null),
       supabase.from('foundation_programs').select('*', { count: 'exact', head: true }),
       supabase.from('community_orgs').select('*', { count: 'exact', head: true }),
       supabase.from('money_flows').select('*', { count: 'exact', head: true }),
+      supabase.from('social_enterprises').select('*', { count: 'exact', head: true }),
+      supabase.from('social_enterprises').select('*', { count: 'exact', head: true }).not('enriched_at', 'is', null),
     ]);
 
     return {
@@ -23,16 +25,18 @@ async function getLiveStats() {
       programs: programs.count || 0,
       communityOrgs: communityOrgs.count || 0,
       moneyFlows: flows.count || 0,
+      socialEnterprises: seTotal.count || 0,
+      socialEnterprisesEnriched: seEnriched.count || 0,
     };
   } catch {
-    return { foundations: 0, grants: 0, profiled: 0, programs: 0, communityOrgs: 0, moneyFlows: 0 };
+    return { foundations: 0, grants: 0, profiled: 0, programs: 0, communityOrgs: 0, moneyFlows: 0, socialEnterprises: 0, socialEnterprisesEnriched: 0 };
   }
 }
 
 async function getCoverageStats() {
   try {
     const supabase = getServiceSupabase();
-    const [acncCharities, foundationsTotal, foundationsProfiled, grantsTotal, communityTotal, aisTotal, flowsTotal] = await Promise.all([
+    const [acncCharities, foundationsTotal, foundationsProfiled, grantsTotal, communityTotal, aisTotal, flowsTotal, seTotal, seEnriched] = await Promise.all([
       supabase.from('acnc_ais').select('abn', { count: 'exact', head: true }),
       supabase.from('foundations').select('*', { count: 'exact', head: true }),
       supabase.from('foundations').select('*', { count: 'exact', head: true }).not('enriched_at', 'is', null),
@@ -40,6 +44,8 @@ async function getCoverageStats() {
       supabase.from('community_orgs').select('*', { count: 'exact', head: true }),
       supabase.from('acnc_ais').select('*', { count: 'exact', head: true }),
       supabase.from('money_flows').select('*', { count: 'exact', head: true }),
+      supabase.from('social_enterprises').select('*', { count: 'exact', head: true }),
+      supabase.from('social_enterprises').select('*', { count: 'exact', head: true }).not('enriched_at', 'is', null),
     ]);
 
     return {
@@ -50,9 +56,11 @@ async function getCoverageStats() {
       community: communityTotal.count || 0,
       aisRecords: aisTotal.count || 0,
       moneyFlows: flowsTotal.count || 0,
+      socialEnterprises: seTotal.count || 0,
+      socialEnterprisesEnriched: seEnriched.count || 0,
     };
   } catch {
-    return { acncRecords: 0, foundations: 0, foundationsProfiled: 0, grants: 0, community: 0, aisRecords: 0, moneyFlows: 0 };
+    return { acncRecords: 0, foundations: 0, foundationsProfiled: 0, grants: 0, community: 0, aisRecords: 0, moneyFlows: 0, socialEnterprises: 0, socialEnterprisesEnriched: 0 };
   }
 }
 
@@ -82,9 +90,9 @@ export default async function HowItWorksPage() {
             Data Sources
           </h2>
           <p className="text-bauhaus-muted leading-relaxed mb-4 font-medium">
-            We pull from 16 dedicated source plugins across federal, state, council, and philanthropic registries,
-            plus AI-powered web search for gap-filling. Every source has a scraper that handles its unique format —
-            RSS feeds, CKAN APIs, HTML scraping, open data portals, and JSON APIs.
+            We pull from 20+ dedicated source plugins across federal, state, council, philanthropic registries,
+            and social enterprise directories, plus AI-powered web search for gap-filling. Every source has a scraper
+            that handles its unique format — RSS feeds, CKAN APIs, HTML scraping, open data portals, and JSON APIs.
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-0">
             {[
@@ -99,6 +107,11 @@ export default async function HowItWorksPage() {
               { name: 'VIC / WA / SA', detail: 'State portal scrapers' },
               { name: 'TAS / ACT / NT', detail: 'State portal scrapers' },
               { name: 'data.gov.au', detail: 'Open datasets' },
+              { name: 'ORIC Register', detail: '3,300+ Indigenous corps' },
+              { name: 'Social Traders', detail: 'Certified SEs' },
+              { name: 'BuyAbility', detail: 'Disability enterprises' },
+              { name: 'B Corp Australia', detail: 'Certified B Corps' },
+              { name: 'Kinaway / State SEs', detail: 'State directories' },
               { name: 'AI Web Search', detail: 'Gap-filling' },
             ].map(s => (
               <div key={s.name} className="bg-white border-4 border-bauhaus-black px-3 py-2 -mt-[4px] -ml-[4px]">
@@ -115,12 +128,14 @@ export default async function HowItWorksPage() {
             AI Enrichment
           </h2>
           <p className="text-bauhaus-muted leading-relaxed font-medium">
-            Raw registry data only tells you a foundation exists. Our AI profiler scrapes foundation
-            websites and annual reports with Jina + Firecrawl, then extracts giving philosophy, focus areas,
+            Raw registry data only tells you an organisation exists. Our AI profiler scrapes websites
+            and annual reports with Jina + Firecrawl, then extracts giving philosophy, focus areas,
             application tips, grant ranges, board members, and wealth sources. We rotate across 9 LLM providers
             (MiniMax, Gemini, DeepSeek, Groq, Kimi, Perplexity, OpenAI, Anthropic, and more) using free tiers
             first to keep costs near zero. Grant descriptions are enriched the same way — scraping source URLs
-            with Cheerio and extracting eligibility criteria, deadlines, and funding amounts.
+            with Cheerio and extracting eligibility criteria, deadlines, and funding amounts. Social enterprises
+            get the same treatment — AI-generated profiles with sectors, services, impact areas, and certifications
+            from ORIC, Social Traders, BuyAbility, B Corp, and state directories.
           </p>
         </section>
 
@@ -156,7 +171,9 @@ export default async function HowItWorksPage() {
           <div className="space-y-3">
             {[
               { name: 'All 8 State & Territory Portals', detail: 'NSW, VIC, QLD, WA, SA, TAS, ACT, NT — all scrapers built and running', status: 'Done' },
+              { name: 'Social Enterprise Directory', detail: `${stats.socialEnterprises.toLocaleString()} enterprises from ORIC, Social Traders, BuyAbility, B Corp, Kinaway, and state directories`, status: 'Done' },
               { name: 'Foundation AI Profiling', detail: '3,700+ of 9,900 foundations profiled with giving philosophy, focus areas, board members, and application tips', status: 'In progress' },
+              { name: 'Social Enterprise AI Enrichment', detail: `${stats.socialEnterprisesEnriched.toLocaleString()} of ${stats.socialEnterprises.toLocaleString()} enterprises enriched with AI-generated profiles`, status: 'In progress' },
               { name: 'Grant Enrichment', detail: 'Scraping grant URLs to extract closing dates, eligibility criteria, and funding amounts for 17k+ grants', status: 'In progress' },
               { name: 'Program Eligibility Enrichment', detail: 'Scraping 1,500+ foundation program URLs to extract who can apply and how', status: 'In progress' },
               { name: 'ASX200 Corporate Giving', detail: 'Map company foundations to revenue-vs-giving ratios from sustainability reports', status: 'Planned' },

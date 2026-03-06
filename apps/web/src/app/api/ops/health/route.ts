@@ -26,6 +26,8 @@ export async function GET() {
       foundationsWithWebsite,
       foundationPrograms,
       communityOrgs,
+      seTotal,
+      seEnriched,
       sourceBreakdownResult,
       confidenceBreakdownResult,
       recentRuns,
@@ -47,6 +49,8 @@ export async function GET() {
         .not('website', 'is', null),
       db.from('foundation_programs').select('*', { count: 'exact', head: true }),
       db.from('community_orgs').select('*', { count: 'exact', head: true }),
+      db.from('social_enterprises').select('*', { count: 'exact', head: true }),
+      db.from('social_enterprises').select('*', { count: 'exact', head: true }).not('enriched_at', 'is', null),
       // Source breakdown — raw SQL via RPC not available, do it with group query
       db.rpc('get_grant_source_breakdown'),
       db.rpc('get_foundation_confidence_breakdown'),
@@ -77,6 +81,10 @@ export async function GET() {
         },
         community: {
           orgs: communityOrgs.count ?? 0,
+        },
+        socialEnterprises: {
+          total: seTotal.count ?? 0,
+          enriched: seEnriched.count ?? 0,
         },
       },
       sourceBreakdown: sourceBreakdownResult.data ?? [],

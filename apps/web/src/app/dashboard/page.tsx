@@ -51,6 +51,7 @@ async function getDashboardData() {
     profiledResult,
     embeddedResult,
     communityResult,
+    socialEnterprisesResult,
     topFoundationsResult,
     closingSoonResult,
   ] = await Promise.all([
@@ -59,6 +60,7 @@ async function getDashboardData() {
     supabase.from('foundations').select('*', { count: 'exact', head: true }).not('enriched_at', 'is', null),
     supabase.from('grant_opportunities').select('*', { count: 'exact', head: true }).not('embedding', 'is', null),
     supabase.from('community_orgs').select('*', { count: 'exact', head: true }),
+    supabase.from('social_enterprises').select('*', { count: 'exact', head: true }),
     supabase
       .from('foundations')
       .select('name, total_giving_annual, type, profile_confidence')
@@ -151,6 +153,7 @@ async function getDashboardData() {
       profiledFoundations: profiledResult.count || 0,
       embeddedGrants: embeddedResult.count || 0,
       communityOrgs: communityResult.count || 0,
+      socialEnterprises: socialEnterprisesResult.count || 0,
       totalDollarsTracked,
     },
     sectors,
@@ -178,6 +181,7 @@ export default async function DashboardPage() {
     { label: 'Foundations Profiled', value: `${profiledPct}%`, sub: `${stats.profiledFoundations.toLocaleString()} of ${stats.totalFoundations.toLocaleString()}`, color: 'bg-money' },
     { label: 'Grants Embedded', value: `${embeddedPct}%`, sub: `${stats.embeddedGrants.toLocaleString()} of ${stats.totalGrants.toLocaleString()}`, color: 'bg-bauhaus-yellow' },
     { label: 'Community Orgs', value: stats.communityOrgs.toLocaleString(), color: 'bg-purple' },
+    { label: 'Social Enterprises', value: stats.socialEnterprises.toLocaleString(), color: 'bg-bauhaus-red' },
     { label: 'Total $ Tracked', value: formatMoney(stats.totalDollarsTracked), color: 'bg-bauhaus-black' },
   ];
 

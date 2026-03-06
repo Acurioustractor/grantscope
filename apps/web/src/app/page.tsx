@@ -15,6 +15,7 @@ async function getStats() {
     acncResult,
     communityResult,
     withAmountsResult,
+    socialEnterprisesResult,
   ] = await Promise.all([
     supabase.from('grant_opportunities').select('*', { count: 'exact', head: true }),
     supabase.from('foundations').select('*', { count: 'exact', head: true }),
@@ -25,6 +26,7 @@ async function getStats() {
     supabase.from('acnc_ais').select('*', { count: 'exact', head: true }),
     supabase.from('community_orgs').select('*', { count: 'exact', head: true }),
     supabase.from('grant_opportunities').select('*', { count: 'exact', head: true }).not('amount_max', 'is', null),
+    supabase.from('social_enterprises').select('*', { count: 'exact', head: true }),
   ]);
 
   // Grants by state — fetch source column for state scrapers and count client-side
@@ -67,6 +69,7 @@ async function getStats() {
     totalPrograms: programsResult.count || 0,
     acncCharities: acncResult.count || 0,
     communityOrgs: communityResult.count || 0,
+    socialEnterprises: socialEnterprisesResult.count || 0,
     withAmounts: withAmountsResult.count || 0,
     byState,
     sourceCount,
@@ -116,7 +119,7 @@ export default async function HomePage() {
   let stats = {
     totalGrants: 0, totalFoundations: 0, profiledFoundations: 0,
     embeddedGrants: 0, openGrants: 0, totalPrograms: 0,
-    acncCharities: 0, communityOrgs: 0, withAmounts: 0,
+    acncCharities: 0, communityOrgs: 0, socialEnterprises: 0, withAmounts: 0,
     byState: null as Array<{ source: string; cnt: number }> | null,
     sourceCount: 0,
     categories: null as Array<{ cat: string; cnt: number }> | null,
@@ -218,7 +221,7 @@ export default async function HomePage() {
         <div className="bg-bauhaus-black px-6 py-3">
           <h2 className="text-xs font-black text-white uppercase tracking-[0.3em]">Live Platform Stats</h2>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-0">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-0">
           <a href="/grants" className="group border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black">
             <div className="p-6 text-center transition-all group-hover:bg-bauhaus-blue group-hover:text-white">
               <div className="text-3xl sm:text-4xl font-black tabular-nums">{stats.totalGrants.toLocaleString()}</div>
@@ -237,6 +240,12 @@ export default async function HomePage() {
               <div className="text-xs font-black uppercase tracking-widest mt-1 text-bauhaus-muted">ACNC Records</div>
             </div>
           </div>
+          <a href="/social-enterprises" className="group border-r-4 border-bauhaus-black">
+            <div className="p-6 text-center transition-all group-hover:bg-bauhaus-red group-hover:text-white">
+              <div className="text-3xl sm:text-4xl font-black tabular-nums">{stats.socialEnterprises.toLocaleString()}</div>
+              <div className="text-xs font-black uppercase tracking-widest mt-1 text-bauhaus-muted group-hover:text-white/70">Social Enterprises</div>
+            </div>
+          </a>
           <a href="/charities?enriched=1" className="group">
             <div className="p-6 text-center transition-all group-hover:bg-bauhaus-yellow">
               <div className="text-3xl sm:text-4xl font-black tabular-nums">{stats.communityOrgs.toLocaleString()}</div>
@@ -436,6 +445,13 @@ export default async function HomePage() {
               <div className="text-xs font-black text-bauhaus-blue mb-1 uppercase tracking-widest group-hover:text-bauhaus-yellow">New</div>
               <h3 className="font-black text-bauhaus-black mb-1 group-hover:text-white">Community Power Playbook</h3>
               <p className="text-sm text-bauhaus-muted group-hover:text-white/80">Co-ops, social enterprise, and alternatives to grants.</p>
+            </div>
+          </a>
+          <a href="/reports/social-enterprise" className="group block">
+            <div className="bg-white border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-red group-hover:text-white">
+              <div className="text-xs font-black text-bauhaus-red mb-1 uppercase tracking-widest group-hover:text-bauhaus-yellow">New</div>
+              <h3 className="font-black text-bauhaus-black mb-1 group-hover:text-white">Social Enterprise in Australia</h3>
+              <p className="text-sm text-bauhaus-muted group-hover:text-white/80">20,000 businesses. $21B revenue. No register. Until now.</p>
             </div>
           </a>
           <a href="/reports/youth-justice" className="group block">

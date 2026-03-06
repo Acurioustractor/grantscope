@@ -8,6 +8,7 @@ interface OpsData {
     grants: { total: number; embedded: number; enriched: number; open: number };
     foundations: { total: number; profiled: number; withWebsite: number; programs: number };
     community: { orgs: number; acncRecords: number };
+    socialEnterprises: { total: number; enriched: number };
   };
   recentRuns: AgentRun[];
   lastUpdated: string;
@@ -33,6 +34,8 @@ const TOOL_INVENTORY = [
   { stage: 'Grant Embedding', tools: 'OpenAI text-embedding-3-small', cost: '~$0.02/500' },
   { stage: 'Foundation Profiling', tools: 'Firecrawl + 9 LLM providers (Gemini-grounded first)', cost: '~$0.05/ea' },
   { stage: 'ACNC Import', tools: 'data.gov.au CSV parser', cost: 'Free' },
+  { stage: 'SE Directory Import', tools: 'ORIC CSV + Cheerio scrapers (Social Traders, BuyAbility, B Corp, Kinaway)', cost: 'Free' },
+  { stage: 'SE AI Enrichment', tools: 'Jina Reader + multi-LLM profiler (same as foundations)', cost: '~$0.03/ea' },
 ];
 
 const QUICK_ACTIONS = [
@@ -41,6 +44,8 @@ const QUICK_ACTIONS = [
   { label: 'Backfill Embeddings', cmd: 'node --env-file=.env scripts/backfill-embeddings.mjs --limit=500', desc: 'Generate missing vectors' },
   { label: 'Run Discovery', cmd: 'node --env-file=.env scripts/grantscope-discovery.mjs', desc: 'Full multi-source grant discovery' },
   { label: 'Sync ACNC', cmd: 'node --env-file=.env scripts/sync-acnc-register.mjs', desc: 'Download + update ACNC register' },
+  { label: 'Import ORIC', cmd: 'node --env-file=.env scripts/import-oric-register.mjs', desc: 'Indigenous corp register (data.gov.au)' },
+  { label: 'Enrich SEs', cmd: 'node --env-file=.env scripts/enrich-social-enterprises.mjs --limit=100', desc: 'AI-profile social enterprises' },
 ];
 
 function pct(n: number, total: number): string {
@@ -157,7 +162,7 @@ export function OpsClient() {
         <h2 className="text-sm font-black uppercase tracking-widest text-bauhaus-muted mb-4 border-b-2 border-bauhaus-black pb-2">
           Pipeline Health
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <HealthCard
             label="Grants Embedded"
             value={health.grants.embedded}
@@ -174,6 +179,12 @@ export function OpsClient() {
             value={health.foundations.profiled}
             total={health.foundations.total}
             sub={`${health.foundations.withWebsite} have websites · ${health.foundations.programs} programs`}
+          />
+          <HealthCard
+            label="SEs Enriched"
+            value={health.socialEnterprises.enriched}
+            total={health.socialEnterprises.total}
+            sub="ORIC, Social Traders, BuyAbility, B Corp"
           />
           <div className="border-4 border-bauhaus-black p-5">
             <div className="text-xs font-black uppercase tracking-widest text-bauhaus-muted mb-2">Community Orgs</div>

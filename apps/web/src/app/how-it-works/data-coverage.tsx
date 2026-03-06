@@ -8,15 +8,19 @@ interface CoverageStats {
   community: number;
   aisRecords: number;
   moneyFlows: number;
+  socialEnterprises: number;
+  socialEnterprisesEnriched: number;
 }
 
 // Known universe sizes for Australian philanthropy/grants data
+// These are conservative upper-bound estimates for "what exists in Australia"
 const UNIVERSE = {
-  acncCharities: 63000,       // ~63k active registered charities (ACNC)
+  acncCharities: 64000,       // ~64k active registered charities (ACNC 2024)
   foundations: 10000,          // ~10k foundations (PAFs + PuAFs + trusts + ancillary funds)
   grantsConnect: 50000,        // ~50k+ grant awards published since 2017
-  stateGrants: 15000,         // All 8 state/territory portals + councils
+  stateGrants: 20000,         // All 8 state/territory portals + councils
   communityOrgs: 30000,        // Estimated grassroots/community orgs
+  socialEnterprises: 20000,    // ~20k social enterprises in Australia (FASES estimate)
   corporateGiving: 200,        // ASX200 corporate giving programs
 };
 
@@ -59,9 +63,19 @@ function ProgressBar({ current, total, color, label, sublabel }: {
 }
 
 export function DataCoverage({ coverage }: { coverage: CoverageStats }) {
-  const totalHave = coverage.acncRecords + coverage.foundations + coverage.grants + coverage.community + coverage.aisRecords + coverage.moneyFlows;
-  const totalUniverse = UNIVERSE.acncCharities + UNIVERSE.foundations + (UNIVERSE.grantsConnect + UNIVERSE.stateGrants) + UNIVERSE.communityOrgs + (UNIVERSE.acncCharities * 7) + 5000;
-  const overallPct = Math.round((totalHave / totalUniverse) * 100);
+  // Calculate overall as weighted average of individual coverage percentages
+  // This avoids mixing record counts of vastly different scales
+  const categories = [
+    { have: coverage.acncRecords, universe: UNIVERSE.acncCharities },
+    { have: coverage.foundationsProfiled, universe: coverage.foundations || UNIVERSE.foundations },
+    { have: coverage.grants, universe: UNIVERSE.grantsConnect + UNIVERSE.stateGrants },
+    { have: coverage.community, universe: UNIVERSE.communityOrgs },
+    { have: coverage.socialEnterprises, universe: UNIVERSE.socialEnterprises },
+  ];
+  const overallPct = Math.min(
+    Math.round(categories.reduce((sum, c) => sum + Math.min(c.have / (c.universe || 1), 1), 0) / categories.length * 100),
+    100,
+  );
 
   return (
     <div className="max-w-4xl mx-auto mt-16">
@@ -128,11 +142,11 @@ export function DataCoverage({ coverage }: { coverage: CoverageStats }) {
           </div>
           <div className="-mb-[4px]">
             <ProgressBar
-              current={coverage.moneyFlows}
-              total={5000}
+              current={coverage.socialEnterprises}
+              total={UNIVERSE.socialEnterprises}
               color="red"
-              label="Money Flows"
-              sublabel={`Tracked funding flows between foundations and recipients`}
+              label="Social Enterprises"
+              sublabel={`ORIC, Social Traders, BuyAbility, B Corp, state directories`}
             />
           </div>
         </div>
@@ -147,6 +161,8 @@ export function DataCoverage({ coverage }: { coverage: CoverageStats }) {
               { label: 'Foundation Profiling', status: 'running' as const, est: '3,700+ done' },
               { label: 'Grant Enrichment', status: 'running' as const, est: '14k+ grants' },
               { label: 'Program Eligibility', status: 'running' as const, est: '866 programs' },
+              { label: 'SE Directory', status: 'live' as const, est: `${fmt(coverage.socialEnterprises)} listed` },
+              { label: 'SE AI Enrichment', status: 'running' as const, est: `${fmt(coverage.socialEnterprisesEnriched)} done` },
               { label: 'ASX200 Corporate', status: 'planned' as const, est: '~200' },
               { label: 'Eligibility Matcher', status: 'planned' as const },
               { label: 'Public API', status: 'planned' as const },

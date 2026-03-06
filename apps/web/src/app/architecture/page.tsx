@@ -10,7 +10,7 @@ export const metadata = {
 async function getArchStats() {
   const supabase = getServiceSupabase();
 
-  const [grants, foundations, acnc, programs, community, orgProfiles, savedGrants, discoveryRuns, moneyFlows, descriptions, embedded, profiled] = await Promise.all([
+  const [grants, foundations, acnc, programs, community, orgProfiles, savedGrants, discoveryRuns, moneyFlows, descriptions, embedded, profiled, seTotal, seEnriched] = await Promise.all([
     supabase.from('grant_opportunities').select('*', { count: 'exact', head: true }),
     supabase.from('foundations').select('*', { count: 'exact', head: true }),
     supabase.from('acnc_ais').select('*', { count: 'exact', head: true }),
@@ -23,6 +23,8 @@ async function getArchStats() {
     supabase.from('grant_opportunities').select('*', { count: 'exact', head: true }).not('description', 'is', null),
     supabase.from('grant_opportunities').select('*', { count: 'exact', head: true }).not('embedding', 'is', null),
     supabase.from('foundations').select('*', { count: 'exact', head: true }).not('description', 'is', null),
+    supabase.from('social_enterprises').select('*', { count: 'exact', head: true }),
+    supabase.from('social_enterprises').select('*', { count: 'exact', head: true }).not('enriched_at', 'is', null),
   ]);
 
   return {
@@ -38,6 +40,8 @@ async function getArchStats() {
     descriptions: descriptions.count || 0,
     embedded: embedded.count || 0,
     profiled: profiled.count || 0,
+    socialEnterprises: seTotal.count || 0,
+    socialEnterprisesEnriched: seEnriched.count || 0,
   };
 }
 
@@ -73,7 +77,8 @@ export default async function ArchitecturePage() {
           { val: fmt(s.acnc), label: 'ACNC Records' },
           { val: fmt(s.programs), label: 'Programs' },
           { val: fmt(s.community), label: 'Community Orgs' },
-          { val: '13', label: 'Data Sources' },
+          { val: fmt(s.socialEnterprises), label: 'Social Enterprises' },
+          { val: '20+', label: 'Data Sources' },
         ].map((stat) => (
           <div key={stat.label} className="flex-1 min-w-[100px] px-4 py-4 text-center border-r-3 border-bauhaus-black last:border-r-0">
             <div className="text-xl font-black">{stat.val}</div>
@@ -87,17 +92,20 @@ export default async function ArchitecturePage() {
         {/* Pages & API Routes */}
         <Section title="Pages & API Routes">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card header="Public Pages (11)" color="bg-[#2d6a4f]">
+            <Card header="Public Pages (14)" color="bg-[#2d6a4f]">
               <RouteItem path="/" detail="Homepage + live stats" />
               <RouteItem path="/grants" detail="Search + filter all grants" />
               <RouteItem path="/grants/[id]" detail="Grant detail page" />
               <RouteItem path="/foundations" detail="Browse foundations" />
               <RouteItem path="/foundations/[id]" detail="Foundation detail" />
+              <RouteItem path="/social-enterprises" detail="Browse social enterprises" />
+              <RouteItem path="/social-enterprises/[id]" detail="SE detail page" />
               <RouteItem path="/corporate" detail="Corporate giving" />
               <RouteItem path="/charities/[abn]" detail="Charity detail" />
               <RouteItem path="/simulator" detail="Application simulator" />
               <RouteItem path="/how-it-works" detail="Data coverage" />
               <RouteItem path="/process" detail="Pipeline explainer" />
+              <RouteItem path="/for/*" detail="8 audience landing pages" />
               <RouteItem path="/login" detail="Team sign-in" />
             </Card>
 
@@ -109,22 +117,26 @@ export default async function ArchitecturePage() {
               <RouteItem path="/ops" detail="Operations dashboard" auth />
             </Card>
 
-            <Card header="Reports (6)" color="bg-[#2d6a4f]">
+            <Card header="Reports (9)" color="bg-[#2d6a4f]">
               <RouteItem path="/reports" detail="Reports index" />
               <RouteItem path="/reports/big-philanthropy" detail="Top 50 foundations" />
               <RouteItem path="/reports/money-flow" detail="Extraction to community" />
               <RouteItem path="/reports/power-dynamics" detail="Who controls the money" />
               <RouteItem path="/reports/access-gap" detail="Regional vs metro" />
               <RouteItem path="/reports/youth-justice" detail="QLD youth justice" />
+              <RouteItem path="/reports/community-parity" detail="Who benefits, who misses out" />
+              <RouteItem path="/reports/community-power" detail="Alternatives to grant dependency" />
+              <RouteItem path="/reports/social-enterprise" detail="The invisible $21B sector" />
             </Card>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-            <Card header="Search & Discovery APIs (7)" color="bg-[#457b9d]">
+            <Card header="Search & Discovery APIs (8)" color="bg-[#457b9d]">
               <RouteItem path="GET /api/search" detail="Text search grants" />
               <RouteItem path="GET /api/search/semantic" detail="Vector similarity" />
               <RouteItem path="GET /api/discover" detail="Discovery feed" />
               <RouteItem path="GET /api/foundations" detail="Foundation listing" />
+              <RouteItem path="GET /api/social-enterprises" detail="SE listing + filters" />
               <RouteItem path="GET /api/dashboard" detail="Dashboard metrics" />
               <RouteItem path="GET /api/data" detail="Data export (JSON)" />
               <RouteItem path="GET /api/data/export" detail="CSV/Excel export" />
@@ -177,6 +189,21 @@ export default async function ArchitecturePage() {
           </div>
         </Section>
 
+        {/* Social Enterprise Pipeline */}
+        <Section title="Data Pipeline — Social Enterprises">
+          <div className="flex items-stretch gap-0 overflow-x-auto pb-2">
+            <FlowNode title="5 Directories" detail="ORIC, Social Traders, BuyAbility, B Corp, Kinaway" borderColor="border-[#2d6a4f]" />
+            <FlowArrow />
+            <FlowNode title="Import Scripts" detail="CSV + HTML scrapers per source" />
+            <FlowArrow />
+            <FlowNode title="Dedup + Merge" detail="Name+state dedup, multi-source tracking" />
+            <FlowArrow />
+            <FlowNode title="Repository" detail={`${fmt(s.socialEnterprises)} social enterprises`} borderColor="border-bauhaus-red" />
+            <FlowArrow />
+            <FlowNode title="AI Enrichment" detail={`${fmt(s.socialEnterprisesEnriched)} enriched — ${pct(s.socialEnterprisesEnriched, s.socialEnterprises)}%`} borderColor="border-[#6c4f82]" />
+          </div>
+        </Section>
+
         {/* Matching Flow */}
         <Section title="Org Profile → Grant Matching">
           <div className="flex items-stretch gap-0 overflow-x-auto pb-2">
@@ -200,6 +227,7 @@ export default async function ArchitecturePage() {
             <DbCard name="foundations" count={s.foundations} cols={34} detail="AI profiles, confidence" />
             <DbCard name="foundation_programs" count={s.programs} cols={15} detail="open/closed programs" />
             <DbCard name="community_orgs" count={s.community} cols={18} detail="directory listings" />
+            <DbCard name="social_enterprises" count={s.socialEnterprises} cols={22} detail="ORIC, B Corp, Social Traders +" />
             <DbCard name="money_flows" count={s.moneyFlows} cols={12} detail="extraction → community" />
             <DbCard name="org_profiles" count={s.orgProfiles} cols={19} detail="user profiles, embeddings" />
             <DbCard name="saved_grants" count={s.savedGrants} cols={10} detail="tracked grant pipeline" />
@@ -253,8 +281,8 @@ export default async function ArchitecturePage() {
         </Section>
 
         {/* Scripts */}
-        <Section title="Operational Scripts (20)">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Section title="Operational Scripts (30+)">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Card header="Discovery & Ingestion (9)" color="bg-bauhaus-black">
               {[
                 ['grantscope-discovery.mjs', 'Main discovery runner'],
@@ -284,6 +312,22 @@ export default async function ArchitecturePage() {
                 ['sync-ghl-to-tracker.mjs', 'GHL → tracker sync'],
                 ['run-scraping-agents.mjs', 'Agent-based scraping'],
                 ['log-agent-run.mjs', 'Agent run logging (lib)'],
+              ].map(([name, detail]) => (
+                <RouteItem key={name} path={name} detail={detail} />
+              ))}
+            </Card>
+
+            <Card header="Social Enterprise (9)" color="bg-bauhaus-red">
+              {[
+                ['import-oric-register.mjs', 'ORIC Indigenous corps'],
+                ['import-social-traders.mjs', 'Social Traders directory'],
+                ['import-bcorp-au.mjs', 'B Corp Australia'],
+                ['import-buyability.mjs', 'BuyAbility disability SEs'],
+                ['import-state-se-networks.mjs', '6 state SE networks'],
+                ['import-indigenous-directories.mjs', 'Kinaway, BBF'],
+                ['import-gov-procurement-se.mjs', 'NSW/VIC procurement'],
+                ['flag-acnc-social-enterprises.mjs', 'ACNC cross-reference'],
+                ['enrich-social-enterprises.mjs', 'AI enrichment'],
               ].map(([name, detail]) => (
                 <RouteItem key={name} path={name} detail={detail} />
               ))}

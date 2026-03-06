@@ -26,6 +26,8 @@ export async function GET() {
       communityOrgs,
       acncDistinctAbns,
       foundationPrograms,
+      seTotal,
+      seEnriched,
       recentRuns,
     ] = await Promise.all([
       db.from('grant_opportunities').select('*', { count: 'exact', head: true }),
@@ -39,6 +41,8 @@ export async function GET() {
       db.from('community_orgs').select('*', { count: 'exact', head: true }),
       db.from('acnc_ais').select('abn', { count: 'exact', head: true }),
       db.from('foundation_programs').select('*', { count: 'exact', head: true }),
+      db.from('social_enterprises').select('*', { count: 'exact', head: true }),
+      db.from('social_enterprises').select('*', { count: 'exact', head: true }).not('enriched_at', 'is', null),
       db.from('agent_runs')
         .select('*')
         .order('completed_at', { ascending: false })
@@ -62,6 +66,10 @@ export async function GET() {
         community: {
           orgs: communityOrgs.count ?? 0,
           acncRecords: acncDistinctAbns.count ?? 0,
+        },
+        socialEnterprises: {
+          total: seTotal.count ?? 0,
+          enriched: seEnriched.count ?? 0,
         },
       },
       recentRuns: recentRuns.data ?? [],

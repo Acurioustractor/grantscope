@@ -48,6 +48,7 @@ const SOURCE_LABELS: Record<string, string> = {
 interface PipelineStats {
   grants: { total: number; embedded: number; described: number; expired: number; noCloseDate: number };
   foundations: { total: number; enriched: number; unenriched: number; high: number; medium: number; low: number; recent7: number; recent30: number };
+  socialEnterprises: { total: number; enriched: number; indigenous: number };
   communityOrgs: number;
   foundationPrograms: number;
   acncRecords: number;
@@ -77,6 +78,7 @@ async function getPipelineStats(): Promise<PipelineStats> {
     return {
       grants: { total: d.grants_total, embedded: d.grants_embedded, described: d.grants_described, expired: d.grants_expired, noCloseDate: d.grants_no_close },
       foundations: { total: d.foundations_total, enriched: d.foundations_enriched, unenriched: d.foundations_unenriched, high: d.foundations_high, medium: d.foundations_medium, low: d.foundations_low, recent7: d.foundations_recent_7d, recent30: d.foundations_recent_30d },
+      socialEnterprises: { total: d.se_total ?? 0, enriched: d.se_enriched ?? 0, indigenous: d.se_indigenous ?? 0 },
       communityOrgs: d.community_orgs,
       foundationPrograms: d.foundation_programs,
       acncRecords: d.acnc_records,
@@ -92,6 +94,7 @@ async function getPipelineStats(): Promise<PipelineStats> {
     foundationsHigh, foundationsMedium, foundationsLow,
     foundationsRecent7, foundationsRecent30,
     communityOrgs, foundationPrograms, acncRecords,
+    seTotal, seEnriched, seIndigenous,
   ] = await Promise.all([
     supabase.from('grant_opportunities').select('*', { count: 'exact', head: true }),
     supabase.from('grant_opportunities').select('*', { count: 'exact', head: true }).not('description', 'is', null),
@@ -106,6 +109,9 @@ async function getPipelineStats(): Promise<PipelineStats> {
     supabase.from('community_orgs').select('*', { count: 'exact', head: true }),
     supabase.from('foundation_programs').select('*', { count: 'exact', head: true }),
     supabase.from('acnc_ais').select('*', { count: 'exact', head: true }),
+    supabase.from('social_enterprises').select('*', { count: 'exact', head: true }),
+    supabase.from('social_enterprises').select('*', { count: 'exact', head: true }).not('enriched_at', 'is', null),
+    supabase.from('social_enterprises').select('*', { count: 'exact', head: true }).eq('org_type', 'indigenous_business'),
   ]);
 
   return {
@@ -115,6 +121,7 @@ async function getPipelineStats(): Promise<PipelineStats> {
       high: foundationsHigh.count || 0, medium: foundationsMedium.count || 0, low: foundationsLow.count || 0,
       recent7: foundationsRecent7.count || 0, recent30: foundationsRecent30.count || 0,
     },
+    socialEnterprises: { total: seTotal.count || 0, enriched: seEnriched.count || 0, indigenous: seIndigenous.count || 0 },
     communityOrgs: communityOrgs.count || 0,
     foundationPrograms: foundationPrograms.count || 0,
     acncRecords: acncRecords.count || 0,
@@ -237,8 +244,22 @@ export default async function ProcessPage() {
               </p>
             </div>
 
-            <div className="mt-6">
-              <StatCard label="Community Orgs" value={s.communityOrgs} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 mt-6 border-4 border-bauhaus-black">
+              <div className="bg-white p-5 border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black">
+                <div className="text-2xl font-black tabular-nums text-bauhaus-black">{s.communityOrgs.toLocaleString()}</div>
+                <div className="text-xs font-black uppercase tracking-widest text-bauhaus-muted mt-1">Community Orgs</div>
+              </div>
+              <a href="/social-enterprises" className="group bg-white p-5 transition-all hover:bg-bauhaus-red">
+                <div className="text-2xl font-black tabular-nums text-bauhaus-black group-hover:text-white">{s.socialEnterprises.total.toLocaleString()}</div>
+                <div className="text-xs font-black uppercase tracking-widest text-bauhaus-muted mt-1 group-hover:text-white/70">Social Enterprises</div>
+                <div className="text-[10px] text-bauhaus-muted mt-1 font-medium group-hover:text-white/60">
+                  {s.socialEnterprises.enriched.toLocaleString()} enriched &middot; {s.socialEnterprises.indigenous.toLocaleString()} Indigenous corps
+                </div>
+              </a>
+            </div>
+
+            <div className="max-w-2xl mt-6">
+              <ProgressBar label="Social Enterprises Enriched" value={s.socialEnterprises.enriched} total={s.socialEnterprises.total} color="bg-bauhaus-red" />
             </div>
           </section>
 
@@ -353,6 +374,8 @@ export default async function ProcessPage() {
         </p>
         <div className="space-y-3 max-w-2xl">
           {[
+            { item: 'Social enterprise directory — aggregating ORIC, Social Traders, BuyAbility, B Corp', status: 'live' as const },
+            { item: 'Social enterprise AI enrichment (3,500+ records)', status: 'building' as const },
             { item: 'Scale foundation enrichment (3,300+ with websites un-profiled)', status: 'building' as const },
             { item: 'Grant description enrichment via web scraping + AI', status: 'building' as const },
             { item: 'Foundation embeddings for semantic search', status: 'planned' as const },

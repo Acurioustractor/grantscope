@@ -13,6 +13,7 @@ export async function GET() {
       profiledResult,
       embeddedResult,
       communityResult,
+      socialEnterprisesResult,
       sectorResult,
       geoResult,
       topFoundationsResult,
@@ -24,6 +25,7 @@ export async function GET() {
       supabase.from('foundations').select('*', { count: 'exact', head: true }).not('enriched_at', 'is', null),
       supabase.from('grant_opportunities').select('*', { count: 'exact', head: true }).not('embedding', 'is', null),
       supabase.from('community_orgs').select('*', { count: 'exact', head: true }),
+      supabase.from('social_enterprises').select('*', { count: 'exact', head: true }),
       supabase.rpc('dashboard_sector_distribution'),
       supabase.rpc('dashboard_geographic_distribution'),
       supabase
@@ -49,6 +51,7 @@ export async function GET() {
         profiledFoundations: profiledResult.count || 0,
         embeddedGrants: embeddedResult.count || 0,
         communityOrgs: communityResult.count || 0,
+        socialEnterprises: socialEnterprisesResult.count || 0,
       },
       sectors: sectorResult.data || [],
       geography: geoResult.data || [],
