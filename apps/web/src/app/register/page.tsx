@@ -44,6 +44,13 @@ function RegisterForm() {
       return;
     }
 
+    // Sync to GHL (fire-and-forget)
+    fetch('/api/contacts/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    }).catch(() => {});
+
     setSuccess(true);
     setLoading(false);
   }

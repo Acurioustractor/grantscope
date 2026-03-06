@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase-server';
 import { getServiceSupabase } from '@/lib/supabase';
+import { upsertContact, addTagToContact } from '@/lib/ghl';
+import { sendEmail } from '@/lib/gmail';
 
 export const dynamic = 'force-dynamic';
 
@@ -89,6 +91,46 @@ export async function POST(request: NextRequest) {
       .update({ abn })
       .eq('id', existingProfile.id);
   }
+
+  // Fire-and-forget: GHL tagging + admin notification
+  (async () => {
+    try {
+      const claimantEmail = contact_email || user.email || '';
+      if (claimantEmail) {
+        // Upsert contact and tag
+        const { id: contactId } = await upsertContact({
+          email: claimantEmail,
+          firstName: contact_name || undefined,
+          companyName: officialName || undefined,
+          tags: ['grantscope-user'],
+          source: 'grantscope-claim',
+        });
+        await addTagToContact(contactId, 'grantscope-claim-pending');
+        if (officialName) {
+          await addTagToContact(contactId, `claimed:${officialName}`);
+        }
+      }
+
+      // Notify admin
+      await sendEmail({
+        to: 'hello@grantscope.au',
+        subject: `New charity claim: ${officialName || 'Unknown'} (ABN ${abn})`,
+        body: [
+          `A new charity claim has been submitted.`,
+          '',
+          `Claimant: ${contact_name || 'Not provided'}`,
+          `Email: ${claimantEmail}`,
+          `Charity: ${officialName || 'Not provided'}`,
+          `ABN: ${abn}`,
+          ...(message ? [`Message: ${message}`] : []),
+          '',
+          `Review at: https://grantscope.au/ops/claims`,
+        ].join('\n'),
+      });
+    } catch (e) {
+      console.error('Claim submission notification failed:', e);
+    }
+  })();
 
   return NextResponse.json(data, { status: 201 });
 }

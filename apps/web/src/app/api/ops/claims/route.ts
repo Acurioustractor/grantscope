@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase-server';
 import { getServiceSupabase } from '@/lib/supabase';
+import { sendEmail } from '@/lib/gmail';
+import { findContactByEmail, addTagToContact, removeTagFromContact } from '@/lib/ghl';
 
 export const dynamic = 'force-dynamic';
 
@@ -99,5 +101,63 @@ export async function PUT(request: NextRequest) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Fire-and-forget: send notification email + GHL tagging
+  (async () => {
+    try {
+      // Look up user email
+      const { data: { user: claimUser } } = await db.auth.admin.getUserById(data.user_id);
+      if (!claimUser?.email) return;
+
+      const charityName = data.organisation_name || `ABN ${data.abn}`;
+
+      if (status === 'verified') {
+        await sendEmail({
+          to: claimUser.email,
+          subject: 'Your charity claim has been approved — GrantScope',
+          body: [
+            `Hi,`,
+            '',
+            `Your claim for ${charityName} (ABN ${data.abn}) has been verified.`,
+            `You can now manage your charity's profile at https://grantscope.au/charities/${data.abn}`,
+            ...(admin_notes ? ['', admin_notes] : []),
+            '',
+            'Best regards,',
+            'GrantScope',
+          ].join('\n'),
+        });
+      } else if (status === 'rejected') {
+        await sendEmail({
+          to: claimUser.email,
+          subject: 'Update on your charity claim — GrantScope',
+          body: [
+            `Hi,`,
+            '',
+            `Your claim for ${charityName} (ABN ${data.abn}) was not approved.`,
+            ...(admin_notes ? ['', `Reason: ${admin_notes}`] : []),
+            '',
+            'If you believe this is an error, contact hello@grantscope.au',
+            '',
+            'Best regards,',
+            'GrantScope',
+          ].join('\n'),
+        });
+      }
+
+      // GHL tagging
+      const ghlContact = await findContactByEmail(claimUser.email);
+      if (ghlContact) {
+        await removeTagFromContact(ghlContact.id, 'grantscope-claim-pending').catch(() => {});
+        if (status === 'verified') {
+          await addTagToContact(ghlContact.id, 'grantscope-verified');
+        } else {
+          await addTagToContact(ghlContact.id, 'grantscope-claim-rejected');
+        }
+      }
+    } catch (e) {
+      console.error('Claim notification failed:', e);
+    }
+  })();
+
   return NextResponse.json(data);
 }

@@ -137,4 +137,59 @@ export async function removeTagFromContact(contactId: string, tag: string) {
     .eq('id', contactId);
 }
 
+export async function findContactByEmail(email: string): Promise<{ id: string } | null> {
+  const locationId = process.env.GHL_LOCATION_ID;
+  const data = await ghlFetch(
+    `/contacts/search/duplicate?locationId=${locationId}&email=${encodeURIComponent(email)}`
+  );
+  const contact = data?.contact;
+  return contact?.id ? { id: contact.id } : null;
+}
+
+export async function upsertContact(opts: {
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  companyName?: string;
+  tags?: string[];
+  source?: string;
+}): Promise<{ id: string }> {
+  const locationId = process.env.GHL_LOCATION_ID;
+  const data = await ghlFetch('/contacts/upsert', {
+    method: 'POST',
+    body: JSON.stringify({
+      locationId,
+      email: opts.email,
+      firstName: opts.firstName,
+      lastName: opts.lastName,
+      companyName: opts.companyName,
+      tags: opts.tags,
+      source: opts.source,
+    }),
+  });
+
+  const contactId = data?.contact?.id;
+  if (!contactId) throw new Error('GHL upsert did not return a contact ID');
+
+  // Sync to local ghl_contacts table
+  const { createClient } = await import('@supabase/supabase-js');
+  const sb = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '',
+    process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+  );
+  await sb.from('ghl_contacts').upsert(
+    {
+      id: contactId,
+      email: opts.email,
+      first_name: opts.firstName || null,
+      last_name: opts.lastName || null,
+      company_name: opts.companyName || null,
+      tags: data.contact.tags || opts.tags || [],
+    },
+    { onConflict: 'id' }
+  );
+
+  return { id: contactId };
+}
+
 export { STAGE_TO_GHL, GHL_TO_STAGE };

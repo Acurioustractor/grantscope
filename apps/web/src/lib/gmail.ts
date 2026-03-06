@@ -48,6 +48,77 @@ interface GrantEmailData {
   url: string;
 }
 
+export async function sendEmail(opts: {
+  to: string;
+  subject: string;
+  body: string;
+  html?: string;
+  senderName?: string;
+}): Promise<void> {
+  const serviceKeyJson = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
+  const delegatedUser = process.env.GOOGLE_DELEGATED_USER;
+  if (!serviceKeyJson || !delegatedUser) {
+    throw new Error('GOOGLE_SERVICE_ACCOUNT_KEY and GOOGLE_DELEGATED_USER must be set');
+  }
+
+  const credentials = JSON.parse(serviceKeyJson);
+  const accessToken = await getGoogleAccessToken(credentials, delegatedUser, [
+    'https://www.googleapis.com/auth/gmail.send',
+  ]);
+
+  const sender = opts.senderName || 'GrantScope';
+  const boundary = `boundary_${Date.now()}`;
+
+  let message: string;
+  if (opts.html) {
+    message = [
+      `From: ${sender} <${delegatedUser}>`,
+      `To: ${opts.to}`,
+      `Subject: ${opts.subject}`,
+      `MIME-Version: 1.0`,
+      `Content-Type: multipart/alternative; boundary="${boundary}"`,
+      '',
+      `--${boundary}`,
+      `Content-Type: text/plain; charset=utf-8`,
+      '',
+      opts.body,
+      `--${boundary}`,
+      `Content-Type: text/html; charset=utf-8`,
+      '',
+      opts.html,
+      `--${boundary}--`,
+    ].join('\r\n');
+  } else {
+    message = [
+      `From: ${sender} <${delegatedUser}>`,
+      `To: ${opts.to}`,
+      `Subject: ${opts.subject}`,
+      `Content-Type: text/plain; charset=utf-8`,
+      '',
+      opts.body,
+    ].join('\r\n');
+  }
+
+  const encodedMessage = Buffer.from(message).toString('base64url');
+
+  const res = await fetch(
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages/send`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ raw: encodedMessage }),
+    }
+  );
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Gmail send failed (${res.status}): ${text}`);
+  }
+}
+
 export async function sendGrantEmail(
   to: string,
   grant: GrantEmailData,
