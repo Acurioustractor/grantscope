@@ -128,7 +128,7 @@ async function main() {
       closes_at: program.deadline,
       url: program.url || (foundation.website?.startsWith('http') ? foundation.website : `https://${foundation.website}`),
       source: 'foundation_program',
-      grant_type: 'foundation',
+      grant_type: 'open_opportunity',
       foundation_id: foundation.id,
       program_type: detectProgramType(program.name, program.description),
       categories,

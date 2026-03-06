@@ -3,6 +3,16 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 
+interface TeamMember {
+  id: string;
+  user_id: string | null;
+  invited_email: string | null;
+  email: string | null;
+  role: string;
+  invited_at: string | null;
+  accepted_at: string | null;
+}
+
 interface ClaimedCharity {
   id: string;
   abn: string;
@@ -94,6 +104,14 @@ export function ProfileClient() {
   const [matchesLoading, setMatchesLoading] = useState(false);
   const [savingGrant, setSavingGrant] = useState<string | null>(null);
   const [claims, setClaims] = useState<ClaimedCharity[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [teamLoading, setTeamLoading] = useState(false);
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState('viewer');
+  const [inviting, setInviting] = useState(false);
+  const [inviteMessage, setInviteMessage] = useState('');
+  const [removingMember, setRemovingMember] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/profile')
@@ -133,6 +151,70 @@ export function ProfileClient() {
       setMatchesLoading(false);
     }
   }, []);
+
+  const loadTeam = useCallback(async () => {
+    setTeamLoading(true);
+    try {
+      const r = await fetch('/api/team');
+      if (r.ok) {
+        const data = await r.json();
+        setTeamMembers(data.members || []);
+        setCurrentUserRole(data.currentUserRole || null);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setTeamLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (profile.id) loadTeam();
+  }, [profile.id, loadTeam]);
+
+  async function handleInvite(e: React.FormEvent) {
+    e.preventDefault();
+    if (!inviteEmail.trim()) return;
+    setInviting(true);
+    setInviteMessage('');
+    try {
+      const r = await fetch('/api/team', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: inviteEmail.trim(), role: inviteRole }),
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        setInviteMessage(data.error || 'Failed to invite');
+      } else {
+        setInviteMessage(data.message || 'Team member added');
+        setInviteEmail('');
+        loadTeam();
+      }
+    } catch {
+      setInviteMessage('Failed to invite');
+    } finally {
+      setInviting(false);
+    }
+  }
+
+  async function handleRemoveMember(memberId: string) {
+    setRemovingMember(memberId);
+    try {
+      const r = await fetch('/api/team', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberId }),
+      });
+      if (r.ok) {
+        loadTeam();
+      }
+    } catch {
+      // ignore
+    } finally {
+      setRemovingMember(null);
+    }
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -517,6 +599,115 @@ export function ProfileClient() {
             ))}
           </div>
         </section>
+
+        {/* Team Management */}
+        {profile.id && (
+          <section className="border-4 border-bauhaus-black bg-white">
+            <div className="bg-green-600 px-5 py-3 flex items-center justify-between">
+              <h2 className="text-sm font-black text-white uppercase tracking-widest">Team</h2>
+              <span className="text-xs font-black text-white/80 uppercase tracking-widest">
+                {teamMembers.length} member{teamMembers.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+            <div className="p-5 space-y-4">
+              {/* Member List */}
+              {teamLoading ? (
+                <div className="text-sm font-black uppercase tracking-widest text-bauhaus-muted animate-pulse">
+                  Loading team...
+                </div>
+              ) : teamMembers.length === 0 ? (
+                <p className="text-sm text-bauhaus-muted">
+                  No team members yet. Invite colleagues to share your grant tracker.
+                </p>
+              ) : (
+                <div className="divide-y-2 divide-bauhaus-black/10">
+                  {teamMembers.map(member => {
+                    const isPending = !member.user_id;
+                    return (
+                      <div key={member.id} className="py-3 flex items-center justify-between gap-4">
+                        <div className="min-w-0">
+                          <span className={`text-sm font-black truncate block ${isPending ? 'text-bauhaus-muted' : 'text-bauhaus-black'}`}>
+                            {member.email || member.invited_email || (member.user_id ? member.user_id.slice(0, 8) + '...' : 'Unknown')}
+                          </span>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            {isPending ? (
+                              <span className="inline-block px-2 py-0.5 text-[10px] font-black uppercase tracking-widest border-2 border-bauhaus-black bg-gray-200 text-bauhaus-muted">
+                                Pending
+                              </span>
+                            ) : (
+                              <span className={`inline-block px-2 py-0.5 text-[10px] font-black uppercase tracking-widest border-2 border-bauhaus-black ${
+                                member.role === 'admin' ? 'bg-bauhaus-red text-white' :
+                                member.role === 'editor' ? 'bg-bauhaus-blue text-white' :
+                                'bg-bauhaus-yellow text-bauhaus-black'
+                              }`}>
+                                {member.role}
+                              </span>
+                            )}
+                            {member.accepted_at && (
+                              <span className="text-[10px] text-bauhaus-muted">
+                                Joined {new Date(member.accepted_at).toLocaleDateString('en-AU')}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {currentUserRole === 'admin' && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveMember(member.id)}
+                            disabled={removingMember === member.id}
+                            className="text-xs font-black text-bauhaus-red uppercase tracking-widest hover:text-bauhaus-black disabled:opacity-50"
+                          >
+                            {removingMember === member.id ? '...' : isPending ? 'Cancel' : 'Remove'}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Invite Form (admin only) */}
+              {currentUserRole === 'admin' && (
+                <div className="border-t-2 border-bauhaus-black/10 pt-4">
+                  <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">
+                    Invite Team Member
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="email"
+                      value={inviteEmail}
+                      onChange={e => setInviteEmail(e.target.value)}
+                      placeholder="colleague@org.au"
+                      className="flex-1 border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue"
+                    />
+                    <select
+                      value={inviteRole}
+                      onChange={e => setInviteRole(e.target.value)}
+                      className="border-4 border-bauhaus-black px-2 py-2 text-xs font-black uppercase tracking-widest bg-white focus:outline-none focus:border-bauhaus-blue"
+                    >
+                      <option value="viewer">Viewer</option>
+                      <option value="editor">Editor</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                    <button
+                      type="button"
+                      onClick={handleInvite}
+                      disabled={inviting || !inviteEmail.trim()}
+                      className="px-4 py-2 text-xs font-black uppercase tracking-widest bg-bauhaus-black text-white hover:bg-bauhaus-blue disabled:opacity-50 border-4 border-bauhaus-black"
+                    >
+                      {inviting ? '...' : 'Invite'}
+                    </button>
+                  </div>
+                  {inviteMessage && (
+                    <p className={`text-xs font-bold mt-2 ${inviteMessage.includes('Failed') || inviteMessage.includes('error') ? 'text-bauhaus-red' : 'text-green-700'}`}>
+                      {inviteMessage}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
 
         {/* Save */}
         <div className="flex items-center gap-4">

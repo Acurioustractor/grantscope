@@ -3,10 +3,27 @@ import { createSupabaseServer } from '@/lib/supabase-server';
 import { getServiceSupabase } from '@/lib/supabase';
 
 /**
- * GET /api/team — list team members for user's org
+ * GET /api/team — list team members for user's org (with emails)
  * POST /api/team — invite a new member by email
  * DELETE /api/team — remove a member (admin only)
  */
+
+async function enrichMembersWithEmails(
+  serviceDb: ReturnType<typeof getServiceSupabase>,
+  members: { id: string; user_id: string | null; invited_email: string | null; role: string; invited_at: string | null; accepted_at: string | null }[],
+) {
+  const enriched = await Promise.all(
+    (members || []).map(async (m) => {
+      if (!m.user_id) {
+        // Pending invitation — use invited_email
+        return { ...m, email: m.invited_email || null };
+      }
+      const { data } = await serviceDb.auth.admin.getUserById(m.user_id);
+      return { ...m, email: data?.user?.email || null };
+    }),
+  );
+  return enriched;
+}
 
 export async function GET() {
   const supabase = await createSupabaseServer();
@@ -22,41 +39,41 @@ export async function GET() {
     .eq('user_id', user.id)
     .maybeSingle();
 
+  let orgProfileId: string | null = null;
+  let currentUserRole: string | null = null;
+
   if (!profile) {
     // Check if user is a member of someone else's org
     const { data: membership } = await serviceDb
       .from('org_members')
-      .select('org_profile_id')
+      .select('org_profile_id, role')
       .eq('user_id', user.id)
       .limit(1)
       .maybeSingle();
 
     if (!membership) {
-      return NextResponse.json({ members: [], orgProfileId: null });
+      return NextResponse.json({ members: [], orgProfileId: null, currentUserRole: null });
     }
 
-    const { data: members } = await serviceDb
-      .from('org_members')
-      .select('id, user_id, role, invited_at, accepted_at')
-      .eq('org_profile_id', membership.org_profile_id)
-      .order('created_at');
-
-    return NextResponse.json({
-      members: members || [],
-      orgProfileId: membership.org_profile_id,
-    });
+    orgProfileId = membership.org_profile_id;
+    currentUserRole = membership.role;
+  } else {
+    orgProfileId = profile.id;
+    currentUserRole = 'admin'; // org owner is always admin
   }
 
-  // User owns an org — list all members
   const { data: members } = await serviceDb
     .from('org_members')
-    .select('id, user_id, role, invited_at, accepted_at')
-    .eq('org_profile_id', profile.id)
+    .select('id, user_id, invited_email, role, invited_at, accepted_at')
+    .eq('org_profile_id', orgProfileId)
     .order('created_at');
 
+  const enrichedMembers = await enrichMembersWithEmails(serviceDb, members || []);
+
   return NextResponse.json({
-    members: members || [],
-    orgProfileId: profile.id,
+    members: enrichedMembers,
+    orgProfileId,
+    currentUserRole,
   });
 }
 
@@ -100,11 +117,41 @@ export async function POST(request: NextRequest) {
 
   if (!invitedUsers || invitedUsers.length === 0) {
     // User doesn't exist yet — create a pending invitation
-    // They'll be linked when they sign up with this email
+    // Check for existing pending invite
+    const { data: existingPending } = await serviceDb
+      .from('org_members')
+      .select('id')
+      .eq('org_profile_id', profile.id)
+      .eq('invited_email', email)
+      .is('user_id', null)
+      .maybeSingle();
+
+    if (existingPending) {
+      return NextResponse.json({ error: 'An invitation is already pending for this email' }, { status: 409 });
+    }
+
+    const { data: member, error } = await serviceDb
+      .from('org_members')
+      .insert({
+        org_profile_id: profile.id,
+        user_id: null,
+        invited_email: email,
+        role: role || 'viewer',
+        invited_by: user.id,
+        invited_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
     return NextResponse.json({
+      member,
       status: 'pending',
-      message: `Invitation sent to ${email}. They'll join your team when they create a GrantScope account.`,
-    });
+      message: `Invitation saved for ${email}. They'll join your team when they create a GrantScope account.`,
+    }, { status: 201 });
   }
 
   const invitedUserId = invitedUsers[0].id;
@@ -177,8 +224,8 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'Only admins can remove team members' }, { status: 403 });
   }
 
-  // Don't allow removing yourself if you're the only admin
-  if (member.user_id === user.id) {
+  // Don't allow removing yourself if you're the only admin (only for active members)
+  if (member.user_id && member.user_id === user.id) {
     const { count } = await serviceDb
       .from('org_members')
       .select('id', { count: 'exact', head: true })

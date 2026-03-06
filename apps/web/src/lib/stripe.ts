@@ -6,6 +6,9 @@ if (!process.env.STRIPE_SECRET_KEY) {
 
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
+// Annual discount: 2 months free = ~17% off
+export const ANNUAL_DISCOUNT = 0.17
+
 // Tier configuration — single source of truth
 // Cross-subsidy model: large orgs + foundations fund free community access
 export const TIERS = {
@@ -27,7 +30,7 @@ export const TIERS = {
     name: 'Professional',
     tagline: 'Stop guessing, start winning',
     description: 'For established NFPs and social enterprises',
-    price: 49,
+    price: 79,
     stripePriceId: process.env.STRIPE_PRICE_PROFESSIONAL,
     features: [
       'Everything in Community',
@@ -43,7 +46,7 @@ export const TIERS = {
     name: 'Organisation',
     tagline: 'Your whole funding operation in one place',
     description: 'For larger NFPs, peak bodies, and multi-program orgs',
-    price: 199,
+    price: 249,
     stripePriceId: process.env.STRIPE_PRICE_ORGANISATION,
     features: [
       'Everything in Professional',
@@ -70,6 +73,22 @@ export const TIERS = {
       'Data API access',
       'White-label option',
       'Unlimited team members',
+    ],
+  },
+  enterprise: {
+    name: 'Enterprise',
+    tagline: 'The full platform, your way.',
+    description: 'For state/federal government, large foundations, and sector-wide deployments',
+    price: 1999,
+    stripePriceId: process.env.STRIPE_PRICE_ENTERPRISE,
+    features: [
+      'Everything in Funder',
+      'Full API access',
+      'Custom reports & dashboards',
+      'White-label deployment',
+      'Dedicated support & onboarding',
+      'SSO / SAML integration',
+      'Unlimited everything',
     ],
   },
 } as const

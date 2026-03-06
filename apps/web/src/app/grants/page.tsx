@@ -67,6 +67,14 @@ const SOURCES = [
   { value: 'ghl_sync', label: 'Curated' },
 ];
 
+const PROGRAM_TYPES = [
+  { value: 'fellowship', label: 'Fellowships' },
+  { value: 'scholarship', label: 'Scholarships' },
+  { value: 'grant', label: 'Grants' },
+  { value: 'program', label: 'Programs' },
+  { value: 'award', label: 'Awards' },
+];
+
 interface SearchParams {
   q?: string;
   category?: string;
@@ -80,6 +88,7 @@ interface SearchParams {
   sort?: string;
   hide_ongoing?: string;
   source?: string;
+  program_type?: string;
 }
 
 export default async function GrantsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
@@ -95,6 +104,7 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
   const sortOrder = params.sort || 'newest';
   const hideOngoing = params.hide_ongoing === '1';
   const sourceFilter = params.source || '';
+  const programTypeFilter = params.program_type || '';
   const page = parseInt(params.page || '1', 10);
   const pageSize = 25;
   const offset = (page - 1) * pageSize;
@@ -146,6 +156,9 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
       if (sourceFilter) {
         grants = grants.filter(g => g.source === sourceFilter);
       }
+      if (programTypeFilter) {
+        grants = grants.filter(g => g.program_type === programTypeFilter);
+      }
       if (geoFilter) {
         const sources = GEO_SOURCE_MAP[geoFilter];
         if (sources) grants = grants.filter(g => g.source && sources.includes(g.source));
@@ -191,6 +204,10 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
 
     if (sourceFilter) {
       dbQuery = dbQuery.eq('source', sourceFilter);
+    }
+
+    if (programTypeFilter) {
+      dbQuery = dbQuery.eq('program_type', programTypeFilter);
     }
 
     if (geoFilter) {
@@ -259,6 +276,7 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
   if (sortOrder !== 'newest') filterParams.set('sort', sortOrder);
   if (hideOngoing) filterParams.set('hide_ongoing', '1');
   if (sourceFilter) filterParams.set('source', sourceFilter);
+  if (programTypeFilter) filterParams.set('program_type', programTypeFilter);
   const filterQS = filterParams.toString();
 
   return (
@@ -367,12 +385,21 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
               ))}
             </select>
           </div>
+          <div className="flex items-center px-3 py-2 border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black">
+            <span className="text-[11px] font-black text-bauhaus-muted uppercase tracking-wider mr-2">Type</span>
+            <select name="program_type" defaultValue={programTypeFilter} className="text-xs font-bold bg-bauhaus-canvas border-2 border-bauhaus-black/20 px-2 py-1 focus:outline-none uppercase">
+              <option value="">All</option>
+              {PROGRAM_TYPES.map(t => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </select>
+          </div>
           <div className="flex items-center px-3 py-2 border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black gap-1">
             <span className="text-[11px] font-black text-bauhaus-muted uppercase tracking-wider mr-1">Closing</span>
             {[{ v: '', label: 'Upcoming' }, { v: '30', label: '30 Days' }, { v: '90', label: '90 Days' }, { v: 'all', label: 'All' }].map(({ v, label }) => (
               <a
                 key={v}
-                href={`/grants?${new URLSearchParams({ type: grantType, mode: searchMode, ...(query ? { q: query } : {}), ...(category ? { category } : {}), ...(amountMin ? { amount_min: String(amountMin) } : {}), ...(amountMax ? { amount_max: String(amountMax) } : {}), ...(geoFilter ? { geo: geoFilter } : {}), ...(sourceFilter ? { source: sourceFilter } : {}), closing: v }).toString()}`}
+                href={`/grants?${new URLSearchParams({ type: grantType, mode: searchMode, ...(query ? { q: query } : {}), ...(category ? { category } : {}), ...(amountMin ? { amount_min: String(amountMin) } : {}), ...(amountMax ? { amount_max: String(amountMax) } : {}), ...(geoFilter ? { geo: geoFilter } : {}), ...(sourceFilter ? { source: sourceFilter } : {}), ...(programTypeFilter ? { program_type: programTypeFilter } : {}), closing: v }).toString()}`}
                 className={`px-2 py-0.5 text-[11px] font-black uppercase tracking-wider border-2 border-bauhaus-black/20 ${closingFilter === v ? 'bg-bauhaus-black text-white border-bauhaus-black' : 'bg-bauhaus-canvas text-bauhaus-black hover:bg-bauhaus-black/10'}`}
               >
                 {label}
@@ -399,7 +426,7 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
           ].map(({ v, label }) => (
             <a
               key={v}
-              href={`/grants?${new URLSearchParams({ type: grantType, mode: searchMode, ...(query ? { q: query } : {}), ...(category ? { category } : {}), ...(closingFilter ? { closing: closingFilter } : {}), ...(geoFilter ? { geo: geoFilter } : {}), ...(amountMin ? { amount_min: String(amountMin) } : {}), ...(amountMax ? { amount_max: String(amountMax) } : {}), ...(hideOngoing ? { hide_ongoing: '1' } : {}), ...(sourceFilter ? { source: sourceFilter } : {}), sort: v }).toString()}`}
+              href={`/grants?${new URLSearchParams({ type: grantType, mode: searchMode, ...(query ? { q: query } : {}), ...(category ? { category } : {}), ...(closingFilter ? { closing: closingFilter } : {}), ...(geoFilter ? { geo: geoFilter } : {}), ...(amountMin ? { amount_min: String(amountMin) } : {}), ...(amountMax ? { amount_max: String(amountMax) } : {}), ...(hideOngoing ? { hide_ongoing: '1' } : {}), ...(sourceFilter ? { source: sourceFilter } : {}), ...(programTypeFilter ? { program_type: programTypeFilter } : {}), sort: v }).toString()}`}
               className={`px-2 py-0.5 text-[11px] font-black uppercase tracking-wider border-2 border-bauhaus-black/20 ${sortOrder === v ? 'bg-bauhaus-black text-white border-bauhaus-black' : 'bg-bauhaus-canvas text-bauhaus-black hover:bg-bauhaus-black/10'}`}
             >
               {label}
@@ -407,7 +434,7 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
           ))}
         </div>
         <a
-          href={`/grants?${new URLSearchParams({ type: grantType, mode: searchMode, ...(query ? { q: query } : {}), ...(category ? { category } : {}), ...(closingFilter ? { closing: closingFilter } : {}), ...(geoFilter ? { geo: geoFilter } : {}), ...(amountMin ? { amount_min: String(amountMin) } : {}), ...(amountMax ? { amount_max: String(amountMax) } : {}), ...(sortOrder !== 'newest' ? { sort: sortOrder } : {}), ...(sourceFilter ? { source: sourceFilter } : {}), ...(!hideOngoing ? { hide_ongoing: '1' } : {}) }).toString()}`}
+          href={`/grants?${new URLSearchParams({ type: grantType, mode: searchMode, ...(query ? { q: query } : {}), ...(category ? { category } : {}), ...(closingFilter ? { closing: closingFilter } : {}), ...(geoFilter ? { geo: geoFilter } : {}), ...(amountMin ? { amount_min: String(amountMin) } : {}), ...(amountMax ? { amount_max: String(amountMax) } : {}), ...(sortOrder !== 'newest' ? { sort: sortOrder } : {}), ...(sourceFilter ? { source: sourceFilter } : {}), ...(programTypeFilter ? { program_type: programTypeFilter } : {}), ...(!hideOngoing ? { hide_ongoing: '1' } : {}) }).toString()}`}
           className={`px-2 py-0.5 text-[11px] font-black uppercase tracking-wider border-2 ${hideOngoing ? 'bg-bauhaus-black text-white border-bauhaus-black' : 'border-bauhaus-black/20 bg-bauhaus-canvas text-bauhaus-black hover:bg-bauhaus-black/10'}`}
         >
           {hideOngoing ? 'Show Ongoing' : 'Hide Ongoing'}

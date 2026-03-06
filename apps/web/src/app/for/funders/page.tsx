@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 async function getStats() {
   const supabase = getServiceSupabase();
   const [charities, foundations, grants, enriched, acnc] = await Promise.all([
-    supabase.from('community_orgs').select('*', { count: 'exact', head: true }),
+    supabase.from('v_charity_explorer').select('*', { count: 'exact', head: true }),
     supabase.from('foundations').select('*', { count: 'exact', head: true }),
     supabase.from('grant_opportunities').select('*', { count: 'exact', head: true }),
     supabase.from('foundations').select('*', { count: 'exact', head: true }).not('enriched_at', 'is', null),

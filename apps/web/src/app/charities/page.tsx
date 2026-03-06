@@ -1,7 +1,13 @@
+import type { Metadata } from 'next';
 import { getServiceSupabase } from '@/lib/supabase';
 import { FilterBar } from '../components/filter-bar';
 
 export const dynamic = 'force-dynamic';
+
+export const metadata: Metadata = {
+  title: 'Search 64,000+ Australian Charities | GrantScope',
+  description: 'Search every registered charity in Australia by mission alignment, geography, cause area, organisation size, and financial health. Open data from the ACNC register.',
+};
 
 const PURPOSES = [
   { value: 'Education', label: 'Education' },
@@ -210,7 +216,7 @@ export default async function CharitiesPage({ searchParams }: { searchParams: Pr
         <p className="text-xs font-black text-bauhaus-red uppercase tracking-[0.3em] mb-2">Directory</p>
         <h1 className="text-3xl font-black text-bauhaus-black mb-2">Australian Charities</h1>
         <p className="text-bauhaus-muted font-medium">
-          {(count || 0).toLocaleString()} charities from the ACNC register — every registered charity in Australia
+          {(count || 0).toLocaleString()} charities from the ACNC register — every registered charity in Australia. Search by mission, geography, cause area, size, and financial health.
         </p>
       </div>
 

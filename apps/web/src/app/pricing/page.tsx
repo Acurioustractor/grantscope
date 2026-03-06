@@ -8,7 +8,7 @@ const tiers = [
     key: 'community',
     name: 'COMMUNITY',
     tagline: 'Your work matters more than your budget',
-    price: 'Free',
+    price: 0,
     priceNote: 'forever',
     description: 'For grassroots NFPs, First Nations orgs, and CLCs under $500K revenue',
     features: [
@@ -26,7 +26,7 @@ const tiers = [
     key: 'professional',
     name: 'PROFESSIONAL',
     tagline: 'Stop guessing, start winning',
-    price: '$49',
+    price: 79,
     priceNote: '/month',
     description: 'For established NFPs and social enterprises',
     features: [
@@ -45,7 +45,7 @@ const tiers = [
     key: 'organisation',
     name: 'ORGANISATION',
     tagline: 'Your whole funding operation',
-    price: '$199',
+    price: 249,
     priceNote: '/month',
     description: 'For larger NFPs, peak bodies, and multi-program orgs',
     features: [
@@ -65,7 +65,7 @@ const tiers = [
     key: 'funder',
     name: 'FUNDER',
     tagline: 'See the whole system. Fund what works.',
-    price: '$499',
+    price: 499,
     priceNote: '/month',
     description: 'For foundations, corporate giving, philanthropic advisors, and government',
     features: [
@@ -82,10 +82,39 @@ const tiers = [
     ctaHref: 'mailto:hello@grantscope.au?subject=Funder%20tier%20enquiry',
     highlight: false,
   },
+  {
+    key: 'enterprise',
+    name: 'ENTERPRISE',
+    tagline: 'The full platform, your way.',
+    price: 1999,
+    priceNote: '/month',
+    description: 'For state/federal government, large foundations, and sector-wide deployments',
+    features: [
+      'Everything in Funder',
+      'Full API access',
+      'Custom reports & dashboards',
+      'White-label deployment',
+      'Dedicated support & onboarding',
+      'SSO / SAML integration',
+      'Unlimited everything',
+    ],
+    cta: 'Contact Us',
+    ctaHref: 'mailto:hello@grantscope.au?subject=Enterprise%20enquiry',
+    highlight: false,
+  },
 ]
+
+const ANNUAL_DISCOUNT = 0.17
+
+function formatPrice(price: number, annual: boolean): string {
+  if (price === 0) return 'Free'
+  const effective = annual ? Math.round(price * (1 - ANNUAL_DISCOUNT)) : price
+  return `$${effective}`
+}
 
 export default function PricingPage() {
   const [loading, setLoading] = useState<string | null>(null)
+  const [annual, setAnnual] = useState(false)
 
   const handleSubscribe = async (tier: string) => {
     setLoading(tier)
@@ -93,7 +122,7 @@ export default function PricingPage() {
       const res = await fetch('/api/billing/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tier }),
+        body: JSON.stringify({ tier, billing: annual ? 'annual' : 'monthly' }),
       })
       const data = await res.json()
       if (data.url) {
@@ -172,22 +201,22 @@ export default function PricingPage() {
               <h3 className="text-xl font-black mb-2">IF YOU&apos;RE A CHARITY</h3>
               <p className="text-sm text-bauhaus-muted mb-4">You already know this:</p>
               <ul className="space-y-3 text-sm">
-                <li className="flex gap-3"><span className="text-bauhaus-red font-black">✕</span> You spend 40% of your time chasing grants instead of doing the work</li>
-                <li className="flex gap-3"><span className="text-bauhaus-red font-black">✕</span> You apply to 30 grants, win 3, and can&apos;t tell why</li>
-                <li className="flex gap-3"><span className="text-bauhaus-red font-black">✕</span> AI tools write generic applications that funders can smell from a mile away</li>
-                <li className="flex gap-3"><span className="text-bauhaus-red font-black">✕</span> You have no idea what other funders exist for your work</li>
-                <li className="flex gap-3"><span className="text-bauhaus-red font-black">✕</span> The orgs with the biggest grant teams win, not the best programs</li>
+                <li className="flex gap-3"><span className="text-bauhaus-red font-black">&#10005;</span> You spend 40% of your time chasing grants instead of doing the work</li>
+                <li className="flex gap-3"><span className="text-bauhaus-red font-black">&#10005;</span> You apply to 30 grants, win 3, and can&apos;t tell why</li>
+                <li className="flex gap-3"><span className="text-bauhaus-red font-black">&#10005;</span> AI tools write generic applications that funders can smell from a mile away</li>
+                <li className="flex gap-3"><span className="text-bauhaus-red font-black">&#10005;</span> You have no idea what other funders exist for your work</li>
+                <li className="flex gap-3"><span className="text-bauhaus-red font-black">&#10005;</span> The orgs with the biggest grant teams win, not the best programs</li>
               </ul>
             </div>
             <div className="border-4 border-bauhaus-black p-8 bg-white bauhaus-shadow">
               <h3 className="text-xl font-black mb-2">IF YOU&apos;RE A FUNDER</h3>
               <p className="text-sm text-bauhaus-muted mb-4">You probably know this too:</p>
               <ul className="space-y-3 text-sm">
-                <li className="flex gap-3"><span className="text-bauhaus-red font-black">✕</span> You get 500 applications per round and fund 12</li>
-                <li className="flex gap-3"><span className="text-bauhaus-red font-black">✕</span> The best community orgs never apply — they don&apos;t know you exist</li>
-                <li className="flex gap-3"><span className="text-bauhaus-red font-black">✕</span> You can&apos;t see where your funding overlaps with other foundations</li>
-                <li className="flex gap-3"><span className="text-bauhaus-red font-black">✕</span> Your grant process selects for grant-writing skill, not impact</li>
-                <li className="flex gap-3"><span className="text-bauhaus-red font-black">✕</span> You have no benchmark for your giving ratio, executive pay, or impact</li>
+                <li className="flex gap-3"><span className="text-bauhaus-red font-black">&#10005;</span> You get 500 applications per round and fund 12</li>
+                <li className="flex gap-3"><span className="text-bauhaus-red font-black">&#10005;</span> The best community orgs never apply — they don&apos;t know you exist</li>
+                <li className="flex gap-3"><span className="text-bauhaus-red font-black">&#10005;</span> You can&apos;t see where your funding overlaps with other foundations</li>
+                <li className="flex gap-3"><span className="text-bauhaus-red font-black">&#10005;</span> Your grant process selects for grant-writing skill, not impact</li>
+                <li className="flex gap-3"><span className="text-bauhaus-red font-black">&#10005;</span> You have no benchmark for your giving ratio, executive pay, or impact</li>
               </ul>
             </div>
           </div>
@@ -196,14 +225,14 @@ export default function PricingPage() {
             <h3 className="text-xl font-black text-money mb-4 text-center">GRANTSCOPE PUTS YOU ON THE SAME SIDE</h3>
             <div className="grid md:grid-cols-2 gap-6">
               <ul className="space-y-3 text-sm">
-                <li className="flex gap-3"><span className="text-money font-black">✓</span> <strong>Charities:</strong> AI matches grants to your mission with a 0\u2013100 score. Stop guessing.</li>
-                <li className="flex gap-3"><span className="text-money font-black">✓</span> <strong>Charities:</strong> AI writes in YOUR voice, tailored to THEIR language and priorities.</li>
-                <li className="flex gap-3"><span className="text-money font-black">✓</span> <strong>Charities:</strong> Track every foundation relationship. Know your history before they do.</li>
+                <li className="flex gap-3"><span className="text-money font-black">&#10003;</span> <strong>Charities:</strong> AI matches grants to your mission with a 0–100 score. Stop guessing.</li>
+                <li className="flex gap-3"><span className="text-money font-black">&#10003;</span> <strong>Charities:</strong> AI writes in YOUR voice, tailored to THEIR language and priorities.</li>
+                <li className="flex gap-3"><span className="text-money font-black">&#10003;</span> <strong>Charities:</strong> Track every foundation relationship. Know your history before they do.</li>
               </ul>
               <ul className="space-y-3 text-sm">
-                <li className="flex gap-3"><span className="text-money font-black">✓</span> <strong>Funders:</strong> Search 64,000+ charities by alignment, geography, and track record.</li>
-                <li className="flex gap-3"><span className="text-money font-black">✓</span> <strong>Funders:</strong> See your giving ratio, executive pay benchmarks, and portfolio gaps.</li>
-                <li className="flex gap-3"><span className="text-money font-black">✓</span> <strong>Funders:</strong> Find the orgs doing the work — don&apos;t wait for them to find you.</li>
+                <li className="flex gap-3"><span className="text-money font-black">&#10003;</span> <strong>Funders:</strong> Search 64,000+ charities by alignment, geography, and track record.</li>
+                <li className="flex gap-3"><span className="text-money font-black">&#10003;</span> <strong>Funders:</strong> See your giving ratio, executive pay benchmarks, and portfolio gaps.</li>
+                <li className="flex gap-3"><span className="text-money font-black">&#10003;</span> <strong>Funders:</strong> Find the orgs doing the work — don&apos;t wait for them to find you.</li>
               </ul>
             </div>
           </div>
@@ -299,32 +328,32 @@ export default function PricingPage() {
               {
                 before: 'Charities apply blindly to hundreds of grants',
                 after: 'AI scores every grant against your mission. Apply to the ones you\'ll win.',
-                icon: '🎯',
+                icon: '\uD83C\uDFAF',
               },
               {
                 before: 'Funders advertise and wait for applications',
                 after: 'Search 64,000+ charities. Find the orgs already doing the work you want to fund.',
-                icon: '🔍',
+                icon: '\uD83D\uDD0D',
               },
               {
                 before: 'Nobody knows where the money actually goes',
                 after: 'Every dollar tracked from source through foundation to community. Gaps visible.',
-                icon: '📊',
+                icon: '\uD83D\uDCCA',
               },
               {
                 before: 'Grant writing is a professional sport for the privileged',
                 after: 'AI writes in your voice. Community orgs compete on impact, not prose.',
-                icon: '✍️',
+                icon: '\u270D\uFE0F',
               },
               {
                 before: 'Relationships are transactional — submit, wait, reject',
                 after: 'Track every conversation, every application, every outcome. Build trust over years.',
-                icon: '🤝',
+                icon: '\uD83E\uDD1D',
               },
               {
                 before: 'Small orgs can\'t afford the tools that big orgs take for granted',
                 after: 'Cross-subsidy: funders pay, community access is free. The way it should be.',
-                icon: '⚖️',
+                icon: '\u2696\uFE0F',
               },
             ].map((item) => (
               <div key={item.before} className="border-4 border-bauhaus-black bg-white p-6">
@@ -343,13 +372,41 @@ export default function PricingPage() {
           <h2 className="text-3xl md:text-4xl font-black tracking-tight mb-4">
             CHOOSE YOUR ROLE IN THE SYSTEM
           </h2>
-          <p className="text-bauhaus-muted max-w-2xl mx-auto">
+          <p className="text-bauhaus-muted max-w-2xl mx-auto mb-8">
             Large organisations and foundations pay. Community orgs use it free.
             That&apos;s not a business model — it&apos;s a belief about how the world should work.
           </p>
+
+          {/* Annual/Monthly Toggle */}
+          <div className="flex items-center justify-center gap-4 mb-8">
+            <span className={`text-sm font-black uppercase tracking-widest ${!annual ? 'text-bauhaus-black' : 'text-bauhaus-muted'}`}>
+              Monthly
+            </span>
+            <button
+              onClick={() => setAnnual(!annual)}
+              className={`relative w-14 h-7 rounded-full border-2 border-bauhaus-black transition-colors ${
+                annual ? 'bg-money' : 'bg-white'
+              }`}
+              aria-label="Toggle annual billing"
+            >
+              <span
+                className={`absolute top-0.5 w-5 h-5 rounded-full bg-bauhaus-black transition-transform ${
+                  annual ? 'translate-x-7' : 'translate-x-1'
+                }`}
+              />
+            </button>
+            <span className={`text-sm font-black uppercase tracking-widest ${annual ? 'text-bauhaus-black' : 'text-bauhaus-muted'}`}>
+              Annual
+            </span>
+            {annual && (
+              <span className="text-xs font-black text-money bg-money/10 px-2 py-1 border-2 border-money">
+                2 MONTHS FREE
+              </span>
+            )}
+          </div>
         </div>
-        <div className="max-w-6xl mx-auto">
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6">
             {tiers.map((tier) => (
               <div
                 key={tier.key}
@@ -365,20 +422,21 @@ export default function PricingPage() {
 
                 <div className={`p-6 border-b-4 border-bauhaus-black ${
                   tier.key === 'community' ? 'bg-bauhaus-black text-white' :
-                  tier.key === 'funder' ? 'bg-bauhaus-yellow' : 'bg-white'
+                  tier.key === 'funder' ? 'bg-bauhaus-yellow' :
+                  tier.key === 'enterprise' ? 'bg-bauhaus-blue text-white' : 'bg-white'
                 }`}>
                   <h3 className="text-lg font-black tracking-widest">{tier.name}</h3>
                   <p className={`text-xs mt-1 ${
-                    tier.key === 'community' ? 'text-white/60' : 'text-bauhaus-muted'
+                    tier.key === 'community' || tier.key === 'enterprise' ? 'text-white/60' : 'text-bauhaus-muted'
                   }`}>
                     {tier.tagline}
                   </p>
                   <div className="mt-4">
-                    <span className="text-4xl font-black">{tier.price}</span>
+                    <span className="text-4xl font-black">{formatPrice(tier.price, annual)}</span>
                     <span className={`text-sm ml-1 ${
-                      tier.key === 'community' ? 'text-white/60' : 'text-bauhaus-muted'
+                      tier.key === 'community' || tier.key === 'enterprise' ? 'text-white/60' : 'text-bauhaus-muted'
                     }`}>
-                      {tier.priceNote}
+                      {tier.price === 0 ? 'forever' : annual ? '/mo (billed annually)' : '/month'}
                     </span>
                   </div>
                 </div>
@@ -405,6 +463,8 @@ export default function PricingPage() {
                       className={`block w-full py-3 text-center font-black text-sm uppercase tracking-widest border-4 border-bauhaus-black transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none ${
                         tier.key === 'community'
                           ? 'bg-bauhaus-black text-white hover:bg-bauhaus-black/90'
+                          : tier.key === 'enterprise'
+                          ? 'bg-bauhaus-blue text-white bauhaus-shadow-sm'
                           : tier.key === 'funder'
                           ? 'bg-bauhaus-yellow text-bauhaus-black bauhaus-shadow-sm'
                           : 'bg-white text-bauhaus-black bauhaus-shadow-sm'
@@ -534,7 +594,7 @@ export default function PricingPage() {
                 </div>
                 {i < 3 && (
                   <div className="flex justify-center py-2 md:hidden">
-                    <span className="text-xl font-black">↓</span>
+                    <span className="text-xl font-black">&darr;</span>
                   </div>
                 )}
               </div>
@@ -641,6 +701,10 @@ export default function PricingPage() {
             {
               q: 'Why should our foundation pay when the data is public?',
               a: 'The data is public. The intelligence isn\'t. We\'ve spent thousands of hours aggregating, cleaning, enriching, and cross-referencing data that exists in dozens of disconnected registries. And your subscription funds free access for community orgs — that\'s part of the value.',
+            },
+            {
+              q: 'Is there an annual discount?',
+              a: 'Yes — pay annually and get 2 months free (17% off). Toggle the billing switch above the pricing cards to see annual prices.',
             },
           ].map((faq) => (
             <div key={faq.q} className="border-b-2 border-bauhaus-black/10 py-6">
