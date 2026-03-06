@@ -11,6 +11,7 @@ const primaryLinks = [
   { href: '/foundations', label: 'Foundations' },
   { href: '/charities', label: 'Charities' },
   { href: '/corporate', label: 'Corporate' },
+  { href: '/pricing', label: 'Pricing' },
 ];
 
 const megaMenuSections = [

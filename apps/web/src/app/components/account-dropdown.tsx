@@ -13,6 +13,7 @@ const menuItems = [
   { href: '/tracker', label: 'My Grants', desc: 'Track grant applications' },
   { href: '/foundations/tracker', label: 'My Foundations', desc: 'Track foundation relationships' },
   { href: '/charities/claim', label: 'My Claims', desc: 'Claimed charity profiles' },
+  { href: '/pricing', label: 'Billing & Plan', desc: 'Manage your subscription' },
 ];
 
 export function AccountDropdown({ userEmail, isAdmin, onToggle }: AccountDropdownProps) {
