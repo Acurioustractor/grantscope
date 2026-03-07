@@ -100,6 +100,54 @@ async function scrapeWebsite(url) {
 async function enrichWithLLM(foundation, scrapedText) {
   const acncData = foundation.acnc_data || {};
 
+  // Extract ACNC beneficiaries (fields with "Y" value)
+  const beneficiaries = [];
+  const beneficiaryMap = {
+    'Youth': 'Youth', 'Children': 'Children', 'Adults': 'Adults',
+    'Aged_Persons': 'Aged persons', 'Families': 'Families',
+    'Aboriginal_or_TSI': 'Aboriginal & Torres Strait Islander peoples',
+    'People_with_Disabilities': 'People with disabilities',
+    'Financially_Disadvantaged': 'Financially disadvantaged',
+    'People_at_risk_of_homelessness': 'People at risk of homelessness',
+    'Rural_Regional_Remote_Communities': 'Rural/regional/remote communities',
+    'Migrants_Refugees_or_Asylum_Seekers': 'Migrants, refugees & asylum seekers',
+    'Veterans_or_their_families': 'Veterans & families',
+    'Victims_of_crime': 'Victims of crime',
+    'Victims_of_Disasters': 'Victims of disasters',
+    'People_with_Chronic_Illness': 'People with chronic illness',
+    'Pre_Post_Release_Offenders': 'Pre/post release offenders',
+    'Ethnic_Groups': 'Ethnic groups',
+    'Early_Childhood': 'Early childhood',
+    'Unemployed_Person': 'Unemployed persons',
+    'Males': 'Males', 'Females': 'Females',
+    'LGBTIQA+': 'LGBTIQA+', 'General_Community_in_Australia': 'General community',
+    'Communities_Overseas': 'Communities overseas',
+  };
+  for (const [key, label] of Object.entries(beneficiaryMap)) {
+    if (acncData[key] === 'Y') beneficiaries.push(label);
+  }
+
+  // Extract ACNC purposes
+  const purposes = [];
+  const purposeMap = {
+    'Advancing_Health': 'Health', 'Advancing_Education': 'Education',
+    'Advancing_Culture': 'Culture', 'Advancing_Religion': 'Religion',
+    'Advancing_natual_environment': 'Environment',
+    'Advancing_social_or_public_welfare': 'Social welfare',
+    'Promoting_or_protecting_human_rights': 'Human rights',
+    'Promoting_reconciliation__mutual_respect_and_tolerance': 'Reconciliation',
+    'Advancing_security_or_safety_of_Australia_or_Australian_public': 'Security/safety',
+  };
+  for (const [key, label] of Object.entries(purposeMap)) {
+    if (acncData[key] === 'Y') purposes.push(label);
+  }
+
+  // Extract operating states
+  const states = [];
+  for (const st of ['NSW', 'VIC', 'QLD', 'SA', 'WA', 'TAS', 'NT', 'ACT']) {
+    if (acncData[`Operates_in_${st}`] === 'Y') states.push(st);
+  }
+
   const contextParts = [
     `Foundation Name: ${foundation.name}`,
     `Type: ${foundation.type || 'Unknown'}`,
@@ -109,10 +157,14 @@ async function enrichWithLLM(foundation, scrapedText) {
     foundation.avg_grant_size ? `Average Grant Size: $${Number(foundation.avg_grant_size).toLocaleString()}` : null,
     foundation.parent_company ? `Parent Company: ${foundation.parent_company}` : null,
     foundation.asx_code ? `ASX Code: ${foundation.asx_code}` : null,
-    acncData.charity_size ? `Charity Size: ${acncData.charity_size}` : null,
-    acncData.activities ? `ACNC Activities: ${acncData.activities}` : null,
-    acncData.beneficiaries ? `ACNC Beneficiaries: ${JSON.stringify(acncData.beneficiaries)}` : null,
-    acncData.countries ? `Countries: ${JSON.stringify(acncData.countries)}` : null,
+    acncData.Charity_Size ? `Charity Size: ${acncData.Charity_Size}` : null,
+    acncData.Town_City ? `Location: ${acncData.Town_City}, ${acncData.State}` : (acncData.State ? `State: ${acncData.State}` : null),
+    acncData.Registration_Date ? `ACNC Registered: ${acncData.Registration_Date}` : null,
+    acncData.Date_Organisation_Established ? `Established: ${acncData.Date_Organisation_Established}` : null,
+    purposes.length ? `ACNC Purposes: ${purposes.join(', ')}` : null,
+    beneficiaries.length ? `Beneficiaries: ${beneficiaries.join(', ')}` : null,
+    states.length ? `Operates in: ${states.join(', ')}` : null,
+    acncData.Operating_Countries ? `Operating Countries: ${acncData.Operating_Countries}` : null,
   ].filter(Boolean);
 
   if (scrapedText) {
@@ -225,8 +277,25 @@ If information is very limited, make reasonable inferences from the name. Never 
       try {
         parsed = JSON.parse(cleaned);
       } catch {
-        log(`${provider.name} JSON parse error. Raw: ${cleaned.slice(0, 200)}`);
-        return { provider: provider.name, ...emptyResult() };
+        // Try to salvage description from truncated JSON
+        const descMatch = cleaned.match(/"description"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+        if (descMatch) {
+          log(`${provider.name} JSON truncated — salvaged description (${descMatch[1].length} chars)`);
+          const salvaged = { description: descMatch[1] };
+          // Try to extract arrays too
+          for (const field of ['thematic_focus', 'geographic_focus', 'target_recipients']) {
+            const arrMatch = cleaned.match(new RegExp(`"${field}"\\s*:\\s*(\\[[^\\]]*\\])`));
+            if (arrMatch) try { salvaged[field] = JSON.parse(arrMatch[1]); } catch {}
+          }
+          for (const field of ['giving_philosophy', 'wealth_source', 'application_tips']) {
+            const strMatch = cleaned.match(new RegExp(`"${field}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"`));
+            if (strMatch) salvaged[field] = strMatch[1];
+          }
+          parsed = salvaged;
+        } else {
+          log(`${provider.name} JSON parse error. Raw: ${cleaned.slice(0, 200)}`);
+          return { provider: provider.name, ...emptyResult() };
+        }
       }
 
       return {
@@ -314,8 +383,8 @@ async function main() {
     const f = foundations[i];
 
     try {
-      // Scrape website
-      const scrapedText = await scrapeWebsite(f.website);
+      // Scrape website (skip if no website)
+      const scrapedText = f.website ? await scrapeWebsite(f.website) : null;
       if (scrapedText) scraped++;
 
       // Enrich with LLM

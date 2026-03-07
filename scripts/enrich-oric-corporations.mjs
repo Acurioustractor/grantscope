@@ -21,6 +21,7 @@ const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const DRY_RUN = process.argv.includes('--dry-run');
 const LIMIT = parseInt(process.argv.find(a => a.startsWith('--limit='))?.split('=')[1] || '500');
 const PREFERRED_PROVIDER = process.argv.find(a => a.startsWith('--provider='))?.split('=')[1] || 'minimax';
+const RE_ENRICH = process.argv.includes('--re-enrich');
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
@@ -200,8 +201,22 @@ If information is limited, make reasonable inferences from the name (many Indige
       try {
         parsed = JSON.parse(cleaned);
       } catch (parseErr) {
-        log(`${provider.name} JSON parse error. Raw: ${cleaned.slice(0, 200)}`);
-        return { provider: provider.name, ...emptyResult() };
+        // Try to salvage description from truncated JSON
+        const descMatch = cleaned.match(/"description"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+        if (descMatch) {
+          log(`${provider.name} JSON truncated — salvaged description (${descMatch[1].length} chars)`);
+          const salvaged = { description: descMatch[1] };
+          for (const field of ['focus_areas']) {
+            const arrMatch = cleaned.match(new RegExp(`"${field}"\\s*:\\s*(\\[[^\\]]*\\])`));
+            if (arrMatch) try { salvaged[field] = JSON.parse(arrMatch[1]); } catch {}
+          }
+          const csMatch = cleaned.match(/"community_served"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+          if (csMatch) salvaged.community_served = csMatch[1];
+          parsed = salvaged;
+        } else {
+          log(`${provider.name} JSON parse error. Raw: ${cleaned.slice(0, 200)}`);
+          return { provider: provider.name, ...emptyResult() };
+        }
       }
       return {
         provider: provider.name,
@@ -223,23 +238,32 @@ function emptyResult() {
 }
 
 async function main() {
-  log(`Starting ORIC enrichment (limit=${LIMIT}, preferred=${PREFERRED_PROVIDER}, dry-run=${DRY_RUN})`);
+  log(`Starting ORIC enrichment (limit=${LIMIT}, preferred=${PREFERRED_PROVIDER}, dry-run=${DRY_RUN}${RE_ENRICH ? ', re-enrich=true' : ''})`);
 
-  // Fetch un-enriched corporations (registered only)
-  const { data: corps, error } = await supabase
+  // Fetch corporations to enrich
+  let query = supabase
     .from('oric_corporations')
     .select('*')
-    .is('enriched_at', null)
     .eq('status', 'Registered')
     .order('corporation_size', { ascending: false, nullsFirst: false })
     .limit(LIMIT);
+
+  if (RE_ENRICH) {
+    // Re-enrich: previously enriched but got no description (truncated JSON)
+    query = query.not('enriched_at', 'is', null)
+      .or('enriched_description.is.null,enriched_description.eq.');
+  } else {
+    query = query.is('enriched_at', null);
+  }
+
+  const { data: corps, error } = await query;
 
   if (error) {
     log(`DB error: ${error.message}`);
     process.exit(1);
   }
 
-  log(`Found ${corps.length} un-enriched registered corporations`);
+  log(`Found ${corps.length} ${RE_ENRICH ? 're-enrichable (enriched but no desc)' : 'un-enriched'} registered corporations`);
 
   if (DRY_RUN) {
     log('DRY RUN — showing first 5:');
