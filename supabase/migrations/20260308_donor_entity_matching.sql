@@ -124,6 +124,7 @@ SELECT 'grant_opportunities'::text, COUNT(*)::int,
   ROUND(100.0 * COUNT(*) FILTER (WHERE url IS NOT NULL AND url != '') / NULLIF(COUNT(*), 0), 1),
   NULL::numeric, ROUND(100.0 * COUNT(*) FILTER (WHERE amount_max IS NOT NULL AND amount_max > 0) / NULLIF(COUNT(*), 0), 1), NULL::numeric
 FROM grant_opportunities
+WHERE source != 'ghl_sync'  -- Exclude CRM pipeline data
 UNION ALL
 SELECT 'acnc_charities'::text, COUNT(*)::int,
   ROUND(100.0 * COUNT(*) FILTER (WHERE name IS NOT NULL AND name != '') / NULLIF(COUNT(*), 0), 1),
