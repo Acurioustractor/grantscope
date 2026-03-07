@@ -24,14 +24,18 @@ export default function ReportsPage() {
           </li>
           <li className="flex gap-2">
             <span className="text-bauhaus-red font-black">3.</span>
-            <span><a href="/reports/power-dynamics" className="font-bold text-bauhaus-blue hover:text-bauhaus-red">Power Dynamics</a> &mdash; Concentration, inequality, and who controls the levers</span>
+            <span><a href="/reports/funding-equity" className="font-bold text-bauhaus-blue hover:text-bauhaus-red">Funding Equity</a> &mdash; The most disadvantaged postcodes get 12.9% of charity income. The least get 46%.</span>
           </li>
           <li className="flex gap-2">
             <span className="text-bauhaus-red font-black">4.</span>
-            <span><a href="/reports/community-power" className="font-bold text-bauhaus-blue hover:text-bauhaus-red">Community Power Playbook</a> &mdash; The alternative: what communities are building</span>
+            <span><a href="/reports/power-dynamics" className="font-bold text-bauhaus-blue hover:text-bauhaus-red">Power Dynamics</a> &mdash; Concentration, inequality, and who controls the levers</span>
           </li>
           <li className="flex gap-2">
             <span className="text-bauhaus-red font-black">5.</span>
+            <span><a href="/reports/community-power" className="font-bold text-bauhaus-blue hover:text-bauhaus-red">Community Power Playbook</a> &mdash; The alternative: what communities are building</span>
+          </li>
+          <li className="flex gap-2">
+            <span className="text-bauhaus-red font-black">6.</span>
             <span><a href="/reports/social-enterprise" className="font-bold text-bauhaus-blue hover:text-bauhaus-red">Social Enterprise in Australia</a> &mdash; The invisible $21 billion sector and the register that doesn&apos;t exist</span>
           </li>
         </ol>
@@ -74,6 +78,18 @@ export default function ReportsPage() {
               <p className="text-sm text-bauhaus-muted leading-relaxed group-hover:text-white/80">
                 Who controls Australia&apos;s philanthropy? HHI concentration,
                 Gini inequality, and funding distribution analysis.
+              </p>
+            </div>
+          </a>
+
+          <a href="/reports/funding-equity" className="group block sm:col-span-2">
+            <div className="bg-bauhaus-yellow border-4 border-bauhaus-black p-6 transition-all group-hover:-translate-y-1" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-red)' }}>
+              <div className="text-xs font-black text-bauhaus-black mb-2 uppercase tracking-widest">New Investigation</div>
+              <h3 className="text-xl font-black text-bauhaus-black mb-2">Funding Equity: Who Gets What</h3>
+              <p className="text-sm text-bauhaus-black/70 leading-relaxed">
+                12.9% of charity income reaches the most disadvantaged postcodes.
+                46% flows to the least disadvantaged. Political donations, government contracts,
+                and SEIFA disadvantage data — connected for the first time.
               </p>
             </div>
           </a>
