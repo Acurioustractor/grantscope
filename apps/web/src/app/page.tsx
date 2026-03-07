@@ -412,6 +412,11 @@ export default async function HomePage() {
             { name: 'ARC', color: 'bg-bauhaus-blue' },
             { name: 'NHMRC', color: 'bg-bauhaus-red' },
             { name: 'business.gov.au', color: 'bg-bauhaus-black' },
+            { name: 'ORIC', color: 'bg-bauhaus-red' },
+            { name: 'AusTender', color: 'bg-bauhaus-blue' },
+            { name: 'ASIC', color: 'bg-bauhaus-black' },
+            { name: 'ATO', color: 'bg-bauhaus-yellow' },
+            { name: 'ASX', color: 'bg-bauhaus-red' },
           ].map(src => (
             <span key={src.name} className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-bauhaus-black">
               <span className={`w-2.5 h-2.5 ${src.color} border border-bauhaus-black`} />
@@ -480,6 +485,20 @@ export default async function HomePage() {
               <div className="text-xs font-black text-bauhaus-blue mb-1 uppercase tracking-widest group-hover:text-bauhaus-yellow">Live</div>
               <h3 className="font-black text-bauhaus-black mb-1 group-hover:text-white">Follow the Dollar</h3>
               <p className="text-sm text-bauhaus-muted group-hover:text-white/80">Trace funding flows from taxpayer to outcome.</p>
+            </div>
+          </a>
+          <a href="/reports/state-of-the-nation" className="group block sm:col-span-2 lg:col-span-3">
+            <div className="bg-bauhaus-red border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1" style={{ boxShadow: '6px 6px 0px 0px var(--color-bauhaus-black)' }}>
+              <div className="text-xs font-black text-bauhaus-yellow mb-1 uppercase tracking-widest">Live Data</div>
+              <h3 className="font-black text-white mb-1">State of the Nation</h3>
+              <p className="text-sm text-white/80">Every entity in Australia — charities, companies, Indigenous corporations, contracts, tax data. Live numbers.</p>
+            </div>
+          </a>
+          <a href="/reports/power-map" className="group block sm:col-span-2 lg:col-span-3">
+            <div className="bg-white border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-black group-hover:text-white">
+              <div className="text-xs font-black text-bauhaus-black mb-1 uppercase tracking-widest group-hover:text-bauhaus-yellow">Deep Research</div>
+              <h3 className="font-black text-bauhaus-black mb-1 group-hover:text-white">Australia&apos;s Power Map</h3>
+              <p className="text-sm text-bauhaus-muted group-hover:text-white/80">How open data can reshape who holds power. Concentration, procurement, tax, and the case for radical transparency.</p>
             </div>
           </a>
         </div>

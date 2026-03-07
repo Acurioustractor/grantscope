@@ -43,6 +43,9 @@ const megaMenuSections = [
       { href: '/reports/community-power', label: 'Community Power', desc: 'Alternatives to grant dependency' },
       { href: '/reports/social-enterprise', label: 'Social Enterprise', desc: 'The invisible $21B sector' },
       { href: '/reports/power-dynamics', label: 'Power Dynamics', desc: 'Concentration & inequality' },
+      { href: '/reports/state-of-the-nation', label: 'State of the Nation', desc: 'Live data on every entity in Australia' },
+      { href: '/reports/power-map', label: 'Power Map', desc: 'How open data reshapes power' },
+      { href: '/reports/cross-reference', label: '$74B Question', desc: 'Who gets government contracts?' },
     ],
   },
   {

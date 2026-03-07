@@ -11,6 +11,9 @@ interface Claim {
   contact_email: string;
   contact_name: string;
   organisation_name: string | null;
+  admin_notes: string | null;
+  verified_at: string | null;
+  rejected_at: string | null;
   created_at: string;
 }
 
@@ -272,8 +275,11 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function ClaimCard({ claim }: { claim: Claim }) {
+  const decisionDate = claim.verified_at || claim.rejected_at;
   return (
-    <div className="border-4 border-bauhaus-black bg-white p-5 bauhaus-shadow-sm hover:translate-y-[-1px] transition-transform">
+    <div className={`border-4 bg-white p-5 bauhaus-shadow-sm hover:translate-y-[-1px] transition-transform ${
+      claim.status === 'rejected' ? 'border-bauhaus-red' : 'border-bauhaus-black'
+    }`}>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex items-center gap-3 mb-1">
@@ -287,6 +293,9 @@ function ClaimCard({ claim }: { claim: Claim }) {
           </div>
           <div className="text-xs text-bauhaus-muted font-medium mt-1">
             Submitted {new Date(claim.created_at).toLocaleDateString('en-AU', { year: 'numeric', month: 'long', day: 'numeric' })}
+            {decisionDate && (
+              <> &middot; {claim.status === 'verified' ? 'Verified' : 'Reviewed'} {new Date(decisionDate).toLocaleDateString('en-AU', { year: 'numeric', month: 'long', day: 'numeric' })}</>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -295,7 +304,7 @@ function ClaimCard({ claim }: { claim: Claim }) {
               href={`/charities/${claim.abn}/edit`}
               className="px-3 py-1.5 text-[10px] font-black uppercase tracking-widest bg-bauhaus-red text-white hover:bg-bauhaus-black transition-colors border-2 border-bauhaus-black"
             >
-              Edit
+              Edit Profile
             </a>
           )}
           <a
@@ -306,6 +315,31 @@ function ClaimCard({ claim }: { claim: Claim }) {
           </a>
         </div>
       </div>
+      {/* Admin feedback visible to claimant */}
+      {claim.admin_notes && (
+        <div className={`mt-3 pt-3 border-t-2 ${claim.status === 'rejected' ? 'border-bauhaus-red/20' : 'border-bauhaus-black/10'}`}>
+          <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted mb-1">
+            {claim.status === 'verified' ? 'Reviewer Note' : claim.status === 'rejected' ? 'Reason' : 'Note'}
+          </div>
+          <p className="text-sm text-bauhaus-black font-medium">{claim.admin_notes}</p>
+        </div>
+      )}
+      {/* Verified next steps */}
+      {claim.status === 'verified' && !claim.admin_notes && (
+        <div className="mt-3 pt-3 border-t-2 border-money/20">
+          <p className="text-xs text-money font-bold">
+            Your claim is verified. You can now edit your charity&apos;s profile, story, and description.
+          </p>
+        </div>
+      )}
+      {/* Rejected guidance */}
+      {claim.status === 'rejected' && !claim.admin_notes && (
+        <div className="mt-3 pt-3 border-t-2 border-bauhaus-red/20">
+          <p className="text-xs text-bauhaus-red font-bold">
+            This claim was not approved. If you believe this is an error, please contact hello@grantscope.au.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
