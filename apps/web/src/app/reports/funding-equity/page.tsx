@@ -43,6 +43,7 @@ interface DonorRow {
   total_donated: number;
   donation_count: number;
   parties_donated_to: string;
+  name_variants: number;
   contract_count: number;
   total_contract_value: number;
   buyers: string | null;

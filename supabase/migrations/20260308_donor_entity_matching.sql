@@ -60,28 +60,40 @@ CREATE TABLE IF NOT EXISTS asic_name_lookup (
 CREATE INDEX IF NOT EXISTS idx_asic_lookup_trgm ON asic_name_lookup USING gin (name_normalized gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS idx_asic_lookup_exact ON asic_name_lookup (name_normalized);
 
--- 4. Materialized view: donor-to-contract cross-reference
+-- 4. Materialized view: donor-to-contract cross-reference (deduped by ABN)
 -- Shows political donors who also hold government contracts (via ABN matching)
+-- Aggregates across name variants (e.g. "Thales Australia" + "THALES AUSTRALIA LIMITED")
 CREATE MATERIALIZED VIEW IF NOT EXISTS mv_donor_contract_crossref AS
 SELECT
-  d.donor_name,
   d.donor_abn,
+  d.primary_donor_name as donor_name,
   d.total_donated,
   d.donation_count,
   d.parties_donated_to,
+  d.name_variants,
   c.contract_count,
   c.total_contract_value,
   c.buyers
 FROM (
   SELECT
-    donor_name,
     donor_abn,
-    SUM(amount) as total_donated,
-    COUNT(*) as donation_count,
-    STRING_AGG(DISTINCT donation_to, ', ' ORDER BY donation_to) as parties_donated_to
-  FROM political_donations
-  WHERE donor_abn IS NOT NULL AND donor_abn != '' AND donor_abn != '0'
-  GROUP BY donor_name, donor_abn
+    (ARRAY_AGG(donor_name ORDER BY cnt DESC))[1] as primary_donor_name,
+    SUM(total_amount) as total_donated,
+    SUM(cnt) as donation_count,
+    STRING_AGG(DISTINCT party, ', ' ORDER BY party) as parties_donated_to,
+    COUNT(DISTINCT donor_name)::int as name_variants
+  FROM (
+    SELECT
+      donor_abn,
+      donor_name,
+      SUM(amount) as total_amount,
+      COUNT(*) as cnt,
+      UNNEST(ARRAY_AGG(DISTINCT donation_to)) as party
+    FROM political_donations
+    WHERE donor_abn IS NOT NULL AND donor_abn != '' AND donor_abn != '0'
+    GROUP BY donor_abn, donor_name
+  ) sub
+  GROUP BY donor_abn
 ) d
 JOIN (
   SELECT
