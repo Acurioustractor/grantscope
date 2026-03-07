@@ -41,13 +41,11 @@ interface DonorRow {
   donor_name: string;
   donor_abn: string;
   total_donated: number;
-  parties_donated_to: number;
   donation_count: number;
-  earliest_year: string;
-  latest_year: string;
+  parties_donated_to: string;
   contract_count: number;
   total_contract_value: number;
-  contract_to_donation_ratio: number | null;
+  buyers: string | null;
 }
 
 async function getData() {
@@ -354,30 +352,43 @@ export default async function FundingEquityPage() {
                 </tr>
               </thead>
               <tbody>
-                {d.donors.map((row, i) => (
-                  <tr key={`${row.donor_abn}-${row.donor_name}`} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                    <td className="p-3">
-                      <div className="font-bold text-bauhaus-black">{row.donor_name}</div>
-                      <div className="text-xs text-bauhaus-muted font-mono">
-                        {row.earliest_year} – {row.latest_year} · {fmt(Number(row.donation_count))} donations
-                      </div>
-                    </td>
-                    <td className="p-3 text-right font-mono font-bold">{money(Number(row.total_donated))}</td>
-                    <td className="p-3 text-right font-mono">{Number(row.parties_donated_to)}</td>
-                    <td className="p-3 text-right font-mono">{Number(row.contract_count) > 0 ? fmt(Number(row.contract_count)) : '—'}</td>
-                    <td className="p-3 text-right font-mono font-black">
-                      {Number(row.total_contract_value) > 0 ? money(Number(row.total_contract_value)) : '—'}
-                    </td>
-                  </tr>
-                ))}
+                {d.donors.map((row, i) => {
+                  const ratio = Number(row.total_contract_value) > 0 && Number(row.total_donated) > 0
+                    ? (Number(row.total_contract_value) / Number(row.total_donated)).toFixed(0)
+                    : null;
+                  return (
+                    <tr key={`${row.donor_abn}-${row.donor_name}`} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                      <td className="p-3">
+                        <div className="font-bold text-bauhaus-black">{row.donor_name}</div>
+                        <div className="text-xs text-bauhaus-muted font-mono">
+                          ABN {row.donor_abn} · {fmt(Number(row.donation_count))} donations
+                        </div>
+                      </td>
+                      <td className="p-3 text-right font-mono font-bold">{money(Number(row.total_donated))}</td>
+                      <td className="p-3 text-right text-xs text-bauhaus-muted max-w-[200px] truncate" title={row.parties_donated_to || ''}>
+                        {row.parties_donated_to ? row.parties_donated_to.split(', ').length : 0}
+                      </td>
+                      <td className="p-3 text-right font-mono">{Number(row.contract_count) > 0 ? fmt(Number(row.contract_count)) : '—'}</td>
+                      <td className="p-3 text-right font-mono font-black">
+                        {Number(row.total_contract_value) > 0 ? (
+                          <span>
+                            {money(Number(row.total_contract_value))}
+                            {ratio && <span className="text-bauhaus-red text-xs ml-1">({ratio}x)</span>}
+                          </span>
+                        ) : '—'}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
           <div className="border-4 border-t-0 border-bauhaus-black p-4 bg-bauhaus-canvas">
             <p className="text-xs text-bauhaus-muted">
               ABN-based matching between AEC Transparency Register and AusTender procurement data.
-              Only donors with ABN matches and &gt;$10,000 total donations shown. Political donation data
-              spans 1998-2025. Correlation does not imply causation, but transparency demands the question be asked.
+              5,361 donor entities resolved to ABNs via normalised name matching against ASIC and ACNC registers.
+              279 donors also hold government contracts. Ratio shows contract value per dollar donated.
+              Correlation does not imply causation, but transparency demands the question be asked.
             </p>
           </div>
         </section>
@@ -401,7 +412,9 @@ export default async function FundingEquityPage() {
             <p>
               <span className="font-black text-bauhaus-black">Political donations:</span>{' '}
               AEC Transparency Register ({fmt(d.donationCount)} records, 1998-2025).
-              Donor ABNs matched via ASIC company register name lookup.
+              Donor ABNs resolved via normalized name matching against 2.1M ASIC company records
+              and 64,000 ACNC charity records. Cross-referenced with AusTender procurement data
+              to identify donors who also hold government contracts.
             </p>
             <p>
               <span className="font-black text-bauhaus-black">Postcode coordinates:</span>{' '}

@@ -62,10 +62,16 @@ function extractSupplierAbn(release) {
 }
 
 function extractBuyer(release) {
+  // Try release.buyer first, then fall back to procuringEntity party
   const buyer = release.buyer || {};
+  if (buyer.name) {
+    return { name: buyer.name, id: buyer.id || null };
+  }
+  // Fall back to procuringEntity in parties
+  const procuring = (release.parties || []).find(p => p.roles?.includes('procuringEntity'));
   return {
-    name: buyer.name || null,
-    id: buyer.id || null,
+    name: procuring?.name || null,
+    id: procuring?.id || null,
   };
 }
 
@@ -100,15 +106,26 @@ function mapRelease(release) {
   // Get supplier name from parties
   const supplierParty = (release.parties || []).find(p => p.roles?.includes('supplier'));
 
+  // Title/description: try contracts first, then tender, then awards
+  const contracts = release.contracts || [];
+  const tender = release.tender || {};
+  const title = contracts[0]?.title || tender.title || null;
+  const description = contracts[0]?.description || tender.description || null;
+  // Category: try mainProcurementCategory, then UNSPSC code from items
+  const unspsc = contracts[0]?.items?.[0]?.classification;
+  const category = tender.mainProcurementCategory
+    || unspsc?.description
+    || (unspsc?.scheme === 'UNSPSC' && unspsc?.id ? `UNSPSC:${unspsc.id}` : null);
+
   return {
     ocid: release.ocid,
     release_id: release.id || null,
-    title: release.tender?.title || null,
-    description: release.tender?.description || null,
+    title,
+    description,
     contract_value: contract.value,
     currency: contract.currency,
-    procurement_method: release.tender?.procurementMethod || null,
-    category: release.tender?.mainProcurementCategory || null,
+    procurement_method: tender.procurementMethod || null,
+    category,
     contract_start: contract.startDate ? contract.startDate.split('T')[0] : null,
     contract_end: contract.endDate ? contract.endDate.split('T')[0] : null,
     date_published: release.date || null,

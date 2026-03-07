@@ -183,6 +183,38 @@ export default function ReportsPage() {
           </a>
         </div>
       </section>
+
+      {/* ===== SECTION D: INFRASTRUCTURE ===== */}
+      <section className="mb-12">
+        <div className="mb-5">
+          <h2 className="text-xl font-black text-bauhaus-black mb-1">Infrastructure</h2>
+          <p className="text-sm text-bauhaus-muted font-medium">How the data platform works and how we measure quality.</p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <a href="/reports/data-quality" className="group block">
+            <div className="bg-white border-4 border-bauhaus-black p-6 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-black group-hover:text-white">
+              <div className="text-xs font-black text-green-600 mb-2 uppercase tracking-widest group-hover:text-bauhaus-yellow">Live</div>
+              <h3 className="text-xl font-black text-bauhaus-black mb-2 group-hover:text-white">Data Quality Scorecard</h3>
+              <p className="text-sm text-bauhaus-muted leading-relaxed group-hover:text-white/80">
+                Live completeness metrics and cross-reference linkage rates across
+                all datasets. Real-time transparency on what we know and what&apos;s missing.
+              </p>
+            </div>
+          </a>
+
+          <a href="/reports/power-map" className="group block">
+            <div className="bg-white border-4 border-bauhaus-black p-6 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-blue group-hover:text-white">
+              <div className="text-xs font-black text-bauhaus-blue mb-2 uppercase tracking-widest group-hover:text-bauhaus-yellow">Deep Research</div>
+              <h3 className="text-xl font-black text-bauhaus-black mb-2 group-hover:text-white">Australia&apos;s Power Map</h3>
+              <p className="text-sm text-bauhaus-muted leading-relaxed group-hover:text-white/80">
+                How open data can reshape who holds power. The concentration of economic
+                and political influence, and the case for radical transparency.
+              </p>
+            </div>
+          </a>
+        </div>
+      </section>
     </div>
   );
 }
