@@ -36,10 +36,11 @@ function log(msg) {
 
 // LLM Providers — Minimax first (user preference), then fallbacks
 const PROVIDERS = [
-  { name: 'minimax', baseUrl: 'https://api.minimaxi.chat/v1/chat/completions', model: 'MiniMax-M2.5', envKey: 'MINIMAX_API_KEY', disabled: false },
+  { name: 'minimax', baseUrl: 'https://api.minimaxi.chat/v1/chat/completions', model: 'MiniMax-M2.5', envKey: 'MINIMAX_API_KEY', disabled: true },
   { name: 'groq', baseUrl: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.3-70b-versatile', envKey: 'GROQ_API_KEY', disabled: false },
   { name: 'gemini', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', model: 'gemini-2.5-flash', envKey: 'GEMINI_API_KEY', disabled: false },
-  { name: 'deepseek', baseUrl: 'https://api.deepseek.com/chat/completions', model: 'deepseek-chat', envKey: 'DEEPSEEK_API_KEY', disabled: false },
+  { name: 'deepseek', baseUrl: 'https://api.deepseek.com/chat/completions', model: 'deepseek-chat', envKey: 'DEEPSEEK_API_KEY', disabled: true },
+  { name: 'anthropic', baseUrl: 'https://api.anthropic.com/v1/messages', model: 'claude-haiku-4-5-20251001', envKey: 'ANTHROPIC_API_KEY', disabled: false, isAnthropic: true },
 ];
 
 // Move preferred provider to front
@@ -124,18 +125,32 @@ If information is limited, make reasonable inferences from the name (many Indige
     if (!apiKey) continue;
 
     try {
-      const response = await fetch(provider.baseUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
+      const headers = { 'Content-Type': 'application/json' };
+      let body;
+
+      if (provider.isAnthropic) {
+        headers['x-api-key'] = apiKey;
+        headers['anthropic-version'] = '2023-06-01';
+        body = JSON.stringify({
           model: provider.model,
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.2,
           max_tokens: 1200,
-        }),
+        });
+      } else {
+        headers['Authorization'] = `Bearer ${apiKey}`;
+        body = JSON.stringify({
+          model: provider.model,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.2,
+          max_tokens: 1200,
+        });
+      }
+
+      const response = await fetch(provider.baseUrl, {
+        method: 'POST',
+        headers,
+        body,
         signal: AbortSignal.timeout(60000),
       });
 
@@ -161,7 +176,10 @@ If information is limited, make reasonable inferences from the name (many Indige
         continue;
       }
 
-      const text = json.choices?.[0]?.message?.content || '';
+      // Anthropic returns content[0].text, OpenAI-compat returns choices[0].message.content
+      const text = provider.isAnthropic
+        ? (json.content?.[0]?.text || '')
+        : (json.choices?.[0]?.message?.content || '');
 
       // Advance round-robin
       currentProviderIndex = (currentProviderIndex + attempt + 1) % PROVIDERS.length;

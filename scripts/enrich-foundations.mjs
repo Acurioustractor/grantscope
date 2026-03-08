@@ -39,8 +39,9 @@ function log(msg) {
 const PROVIDERS = [
   { name: 'groq', baseUrl: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.3-70b-versatile', envKey: 'GROQ_API_KEY', disabled: false },
   { name: 'gemini', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', model: 'gemini-2.5-flash', envKey: 'GEMINI_API_KEY', disabled: false },
-  { name: 'minimax', baseUrl: 'https://api.minimaxi.chat/v1/chat/completions', model: 'MiniMax-M2.5', envKey: 'MINIMAX_API_KEY', disabled: false },
-  { name: 'deepseek', baseUrl: 'https://api.deepseek.com/chat/completions', model: 'deepseek-chat', envKey: 'DEEPSEEK_API_KEY', disabled: false },
+  { name: 'minimax', baseUrl: 'https://api.minimaxi.chat/v1/chat/completions', model: 'MiniMax-M2.5', envKey: 'MINIMAX_API_KEY', disabled: true },
+  { name: 'deepseek', baseUrl: 'https://api.deepseek.com/chat/completions', model: 'deepseek-chat', envKey: 'DEEPSEEK_API_KEY', disabled: true },
+  { name: 'anthropic', baseUrl: 'https://api.anthropic.com/v1/messages', model: 'claude-haiku-4-5-20251001', envKey: 'ANTHROPIC_API_KEY', disabled: false, isAnthropic: true },
 ];
 
 // Move preferred provider to front
@@ -53,6 +54,7 @@ if (PREFERRED_PROVIDER !== 'groq') {
 }
 
 let currentProviderIndex = 0;
+let anthropicTokens = { input: 0, output: 0 };
 
 const RATE_LIMIT_DELAY_MS = 1500;
 const SCRAPE_TIMEOUT_MS = 15000;
@@ -202,18 +204,32 @@ If information is very limited, make reasonable inferences from the name. Never 
     if (!apiKey) continue;
 
     try {
-      const response = await fetch(provider.baseUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
+      const headers = { 'Content-Type': 'application/json' };
+      let body;
+
+      if (provider.isAnthropic) {
+        headers['x-api-key'] = apiKey;
+        headers['anthropic-version'] = '2023-06-01';
+        body = JSON.stringify({
           model: provider.model,
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.2,
           max_tokens: 1500,
-        }),
+        });
+      } else {
+        headers['Authorization'] = `Bearer ${apiKey}`;
+        body = JSON.stringify({
+          model: provider.model,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.2,
+          max_tokens: 1500,
+        });
+      }
+
+      const response = await fetch(provider.baseUrl, {
+        method: 'POST',
+        headers,
+        body,
         signal: AbortSignal.timeout(60000),
       });
 
@@ -239,7 +255,16 @@ If information is very limited, make reasonable inferences from the name. Never 
         continue;
       }
 
-      const text = json.choices?.[0]?.message?.content || '';
+      // Track Anthropic token usage
+      if (provider.isAnthropic && json.usage) {
+        anthropicTokens.input += json.usage.input_tokens || 0;
+        anthropicTokens.output += json.usage.output_tokens || 0;
+      }
+
+      // Anthropic returns content[0].text, OpenAI-compat returns choices[0].message.content
+      const text = provider.isAnthropic
+        ? (json.content?.[0]?.text || '')
+        : (json.choices?.[0]?.message?.content || '');
 
       // Advance round-robin
       currentProviderIndex = (currentProviderIndex + attempt + 1) % PROVIDERS.length;
@@ -415,6 +440,10 @@ async function main() {
       if ((i + 1) % 50 === 0 || i === foundations.length - 1) {
         log(`Progress: ${i + 1}/${foundations.length} (enriched=${enriched}, scraped=${scraped}, errors=${errors})`);
         log(`  Providers: ${Object.entries(providerCounts).map(([k, v]) => `${k}=${v}`).join(', ')}`);
+        if (anthropicTokens.input > 0) {
+          const cost = (anthropicTokens.input * 0.80 + anthropicTokens.output * 4.00) / 1_000_000;
+          log(`  Anthropic: ${anthropicTokens.input} in / ${anthropicTokens.output} out — $${cost.toFixed(4)}`);
+        }
       }
 
       // Rate limit
@@ -432,6 +461,10 @@ async function main() {
 
   log(`\nComplete: ${enriched} enriched, ${scraped} scraped, ${errors} errors`);
   log(`Providers: ${Object.entries(providerCounts).map(([k, v]) => `${k}=${v}`).join(', ')}`);
+  if (anthropicTokens.input > 0) {
+    const cost = (anthropicTokens.input * 0.80 + anthropicTokens.output * 4.00) / 1_000_000;
+    log(`Anthropic total: ${anthropicTokens.input} in / ${anthropicTokens.output} out — $${cost.toFixed(4)}`);
+  }
 }
 
 main().catch(err => {
