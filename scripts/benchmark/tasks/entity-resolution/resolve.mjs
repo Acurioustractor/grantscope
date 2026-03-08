@@ -9,7 +9,7 @@
  *
  * Returns: { matched_abn, matched_name, confidence, method } or null
  *
- * VERSION: 6 — Better punctuation handling and length-based filtering to reduce false positives
+ * VERSION: 7 — Better punctuation handling to catch "PTY LTD" vs "PTY. LIMITED" variations
  */
 
 /**
@@ -40,21 +40,19 @@ export function normalizeName(name) {
 }
 
 /**
- * Normalize for suffix variations only.
- * Handles: "PTY LTD" vs "PTY. LTD.", "LTD" vs "LIMITED", parentheses, etc.
+ * Aggressively normalize punctuation and legal suffixes.
+ * This catches variations like "PTY LTD" vs "PTY. LIMITED" vs "Pty Ltd"
  */
-function suffixNormalize(name) {
+function punctuationNormalize(name) {
   return name
     .toUpperCase()
     .trim()
-    // Remove all periods
-    .replace(/\./g, '')
-    // Remove parentheses but keep content
-    .replace(/[()]/g, '')
-    // Normalize PTY LIMITED variations
+    // Remove all punctuation except spaces
+    .replace(/[^\w\s]/g, '')
+    // Normalize all forms of PTY LIMITED
     .replace(/\bPTY\s+LIMITED\b/g, 'PTY LTD')
     .replace(/\bPTY\s+LTD\b/g, 'PTY LTD')
-    // Normalize standalone LIMITED/LTD
+    // Normalize standalone LIMITED to LTD
     .replace(/\bLIMITED\b/g, 'LTD')
     // Normalize whitespace
     .replace(/\s+/g, ' ')
@@ -128,7 +126,7 @@ export function resolve(donorName, entityIndex) {
 
   const upperName = donorName.toUpperCase().trim();
   const normalizedName = normalizeName(donorName);
-  const suffixNormName = suffixNormalize(donorName);
+  const punctNormName = punctuationNormalize(donorName);
   const coreName = getCoreName(donorName);
 
   // Tier 1: Exact match (case-insensitive)
@@ -155,20 +153,25 @@ export function resolve(donorName, entityIndex) {
     }
   }
 
-  // Tier 1c: Suffix-normalized match (catch "PTY LTD" vs "PTY. LIMITED")
-  if (suffixNormName !== upperName) {
+  // Tier 1c: Punctuation-normalized match (catch "PTY LTD" vs "PTY. LIMITED")
+  // This is the key improvement to fix the false negatives
+  if (punctNormName !== upperName && punctNormName.length >= 5) {
+    const punctMatches = [];
     for (const [canonicalName, entity] of entityIndex.byExact) {
-      if (suffixNormalize(canonicalName) === suffixNormName) {
-        // Check for false positive risk
-        if (!isLikelyFalsePositive(donorName, canonicalName)) {
-          return {
-            matched_abn: entity.abn,
-            matched_name: entity.canonical_name,
-            confidence: 0.92,
-            method: 'suffix_normalized',
-          };
-        }
+      if (punctuationNormalize(canonicalName) === punctNormName) {
+        punctMatches.push({ entity, canonicalName });
       }
+    }
+    
+    // Only return if we have exactly one match (avoid ambiguity)
+    if (punctMatches.length === 1) {
+      const match = punctMatches[0];
+      return {
+        matched_abn: match.entity.abn,
+        matched_name: match.entity.canonical_name,
+        confidence: 0.92,
+        method: 'punctuation_normalized',
+      };
     }
   }
 
