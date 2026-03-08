@@ -408,6 +408,8 @@ export default async function HomePage() {
             { name: 'ATO', color: 'bg-bauhaus-yellow' },
             { name: 'ASX', color: 'bg-bauhaus-red' },
             { name: 'AEC Donations', color: 'bg-bauhaus-red' },
+            { name: 'Modern Slavery Register', color: 'bg-bauhaus-black' },
+            { name: 'Lobbying Register', color: 'bg-bauhaus-blue' },
           ].map(src => (
             <span key={src.name} className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-bauhaus-black">
               <span className={`w-2.5 h-2.5 ${src.color} border border-bauhaus-black`} />

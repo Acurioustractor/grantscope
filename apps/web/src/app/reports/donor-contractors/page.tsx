@@ -1,7 +1,23 @@
+import type { Metadata } from 'next';
 import { getServiceSupabase } from '@/lib/supabase';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
+
+export const metadata: Metadata = {
+  title: 'Donate. Win Contracts. Repeat. | GrantScope',
+  description: '140 entities in Australia donate to political parties AND hold government contracts. $80M donated to 28 parties, $4.7B in contracts. See the data.',
+  openGraph: {
+    title: 'Donate. Win Contracts. Repeat.',
+    description: '140 entities donate to political parties AND hold government contracts. $80M to 28 parties, $4.7B in contracts. Cross-referenced by ABN from AEC + AusTender data.',
+    type: 'article',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Donate. Win Contracts. Repeat.',
+    description: '140 entities donate to political parties AND hold government contracts. $80M donated, $4.7B in contracts. See every entity.',
+  },
+};
 
 function fmt(n: number) { return n.toLocaleString(); }
 function money(n: number): string {

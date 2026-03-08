@@ -1,4 +1,5 @@
 import { getServiceSupabase } from '@/lib/supabase';
+import { createSupabaseServer } from '@/lib/supabase-server';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 
@@ -25,6 +26,30 @@ interface Entity {
   latest_assets: number | null;
   latest_tax_payable: number | null;
   financial_year: string | null;
+  is_community_controlled: boolean | null;
+}
+
+interface JusticeFundingRecord {
+  id: string;
+  recipient_name: string;
+  recipient_abn: string | null;
+  program_name: string;
+  amount_dollars: number | null;
+  sector: string | null;
+  source: string;
+  financial_year: string | null;
+  location: string | null;
+  project_description: string | null;
+}
+
+interface PlaceContext {
+  postcode: string;
+  locality: string | null;
+  state: string | null;
+  remoteness: string | null;
+  seifa_irsd_decile: number | null;
+  seifa_irsd_score: number | null;
+  entity_count: number;
 }
 
 interface Relationship {
@@ -100,6 +125,13 @@ function relTypeLabel(type: string): string {
     subsidiary_of: 'Subsidiary Of',
     charity_link: 'Charity Link',
     registered_as: 'Registered As',
+    lobbies_for: 'Lobbies For',
+    member_of: 'Member Of',
+    ownership: 'Ownership',
+    directorship: 'Directorship',
+    program_funding: 'Program Funding',
+    tax_record: 'Tax Record',
+    listed_as: 'Listed As',
   };
   return labels[type] || type.replace(/_/g, ' ');
 }
@@ -114,6 +146,8 @@ function datasetLabel(ds: string): string {
     ato_tax: 'ATO Tax',
     asx: 'ASX',
     social_enterprises: 'Social Enterprises',
+    modern_slavery: 'Modern Slavery Register',
+    lobbying_register: 'Lobbying Register',
   };
   return labels[ds] || ds;
 }
@@ -142,8 +176,33 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
   if (!entity) notFound();
   const e = entity as Entity;
 
-  // Fetch relationships, ACNC financials, and grants in parallel
-  const [{ data: outbound }, { data: inbound }, { data: acncData }, { data: grantData }] = await Promise.all([
+  // Check auth status for premium gating
+  let isPremium = false;
+  try {
+    const supabaseAuth = await createSupabaseServer();
+    const { data: { user } } = await supabaseAuth.auth.getUser();
+    if (user) {
+      const { data: profile } = await supabase
+        .from('org_profiles')
+        .select('stripe_customer_id')
+        .eq('user_id', user.id)
+        .single();
+      isPremium = !!profile?.stripe_customer_id;
+    }
+  } catch {
+    // Not logged in — free tier
+  }
+
+  // Fetch relationships, ACNC financials, grants, justice funding, and place context in parallel
+  const [
+    { data: outbound },
+    { data: inbound },
+    { data: acncData },
+    { data: grantData },
+    { data: justiceFundingData },
+    { data: placeGeoData },
+    { data: seifaData },
+  ] = await Promise.all([
     supabase
       .from('gs_relationships')
       .select('*')
@@ -172,6 +231,36 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
           .order('amount', { ascending: false, nullsFirst: false })
           .limit(20)
       : Promise.resolve({ data: [] }),
+    // Justice funding received (cross-platform — JusticeHub data in same Supabase)
+    e.abn
+      ? supabase
+          .from('justice_funding')
+          .select('id, recipient_name, recipient_abn, program_name, amount_dollars, sector, source, financial_year, location, project_description')
+          .eq('recipient_abn', e.abn)
+          .order('amount_dollars', { ascending: false, nullsFirst: false })
+      : supabase
+          .from('justice_funding')
+          .select('id, recipient_name, recipient_abn, program_name, amount_dollars, sector, source, financial_year, location, project_description')
+          .ilike('recipient_name', `%${e.canonical_name.replace(/[%_]/g, '')}%`)
+          .order('amount_dollars', { ascending: false, nullsFirst: false })
+          .limit(50),
+    // Place context — postcode geo
+    e.postcode
+      ? supabase
+          .from('postcode_geo')
+          .select('postcode, locality, state, remoteness_2021')
+          .eq('postcode', e.postcode)
+          .limit(1)
+      : Promise.resolve({ data: [] }),
+    // SEIFA disadvantage index
+    e.postcode
+      ? supabase
+          .from('seifa_2021')
+          .select('decile_national, score')
+          .eq('postcode', e.postcode)
+          .eq('index_type', 'IRSD')
+          .limit(1)
+      : Promise.resolve({ data: [] }),
   ]);
 
   // Deduplicate ACNC financials by year (keep richest record)
@@ -199,6 +288,22 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
   }
   const financialYears = Array.from(acncByYear.values()).sort((a, b) => b.ais_year - a.ais_year);
   const grants = (grantData || []) as Relationship[];
+  const justiceFunding = (justiceFundingData || []) as JusticeFundingRecord[];
+  const totalJusticeFunding = justiceFunding.reduce((sum, r) => sum + (r.amount_dollars || 0), 0);
+
+  // Build place context
+  const placeGeo = (placeGeoData || [])[0] as { postcode: string; locality: string; state: string; remoteness_2021: string } | undefined;
+  const seifa = (seifaData || [])[0] as { decile_national: number; score: number } | undefined;
+
+  // Count entities in same postcode (for place context card)
+  let postcodeEntityCount = 0;
+  if (e.postcode) {
+    const { count } = await supabase
+      .from('gs_entities')
+      .select('id', { count: 'exact', head: true })
+      .eq('postcode', e.postcode);
+    postcodeEntityCount = count || 0;
+  }
 
   const allRels = [...(outbound || []), ...(inbound || [])] as Relationship[];
 
@@ -329,7 +434,8 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
                     byParty.set(name, existing);
                   }
                   const sorted = Array.from(byParty.values()).sort((a, b) => b.total - a.total);
-                  return sorted.map((p, i) => (
+                  const display = isPremium ? sorted : sorted.slice(0, 3);
+                  const items = display.map((p, i) => (
                     <div key={i} className="flex items-center justify-between py-3 border-b-2 border-bauhaus-black/5 last:border-b-0">
                       <div>
                         {p.gsId ? (
@@ -348,6 +454,16 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
                       </div>
                     </div>
                   ));
+                  if (!isPremium && sorted.length > 3) {
+                    items.push(
+                      <div key="unlock" className="mt-3 text-center">
+                        <Link href="/pricing" className="inline-block px-4 py-2 bg-bauhaus-black text-white font-black text-xs uppercase tracking-widest hover:bg-bauhaus-blue transition-colors">
+                          + {sorted.length - 3} more — Unlock Full Dossier
+                        </Link>
+                      </div>
+                    );
+                  }
+                  return items;
                 })()}
               </div>
             </Section>
@@ -357,7 +473,7 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
           {contracts.length > 0 && (
             <Section title={`Government Contracts (${contracts.length})`}>
               <div className="space-y-0">
-                {contracts.slice(0, 20).map((c, i) => {
+                {contracts.slice(0, isPremium ? 20 : 5).map((c, i) => {
                   const otherId = c.source_entity_id === e.id ? c.target_entity_id : c.source_entity_id;
                   return (
                     <div key={i} className="flex items-center justify-between py-3 border-b-2 border-bauhaus-black/5 last:border-b-0">
@@ -383,10 +499,18 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
                     </div>
                   );
                 })}
-                {contracts.length > 20 && (
-                  <div className="text-xs font-bold text-bauhaus-muted mt-3">
-                    + {contracts.length - 20} more contracts
-                  </div>
+                {contracts.length > (isPremium ? 20 : 5) && (
+                  isPremium ? (
+                    <div className="text-xs font-bold text-bauhaus-muted mt-3">
+                      + {contracts.length - 20} more contracts
+                    </div>
+                  ) : (
+                    <div className="mt-3 text-center">
+                      <Link href="/pricing" className="inline-block px-4 py-2 bg-bauhaus-black text-white font-black text-xs uppercase tracking-widest hover:bg-bauhaus-blue transition-colors">
+                        + {contracts.length - 5} more — Unlock Full Dossier
+                      </Link>
+                    </div>
+                  )
                 )}
               </div>
             </Section>
@@ -416,6 +540,88 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
                 ))}
               </div>
             </Section>
+          )}
+
+          {/* Justice Funding */}
+          {justiceFunding.length > 0 && (
+            isPremium ? (
+              <Section title={`Justice Funding (${justiceFunding.length} records — ${formatMoney(totalJusticeFunding)})`}>
+                {/* Year-by-year breakdown */}
+                {(() => {
+                  const byYear = new Map<string, { total: number; records: JusticeFundingRecord[] }>();
+                  for (const jf of justiceFunding) {
+                    const yr = jf.financial_year || 'Unknown';
+                    const existing = byYear.get(yr) || { total: 0, records: [] };
+                    existing.total += jf.amount_dollars || 0;
+                    existing.records.push(jf);
+                    byYear.set(yr, existing);
+                  }
+                  const sorted = Array.from(byYear.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+                  return sorted.map(([year, data]) => (
+                    <div key={year} className="mb-4">
+                      <div className="flex items-center justify-between py-2 border-b-2 border-bauhaus-black/10">
+                        <span className="text-xs font-black text-bauhaus-black uppercase tracking-widest">{year}</span>
+                        <span className="font-black text-bauhaus-black">{formatMoney(data.total)}</span>
+                      </div>
+                      {data.records.map((jf, i) => (
+                        <div key={i} className="flex items-center justify-between py-2 pl-4 border-b border-bauhaus-black/5 last:border-b-0">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-bold text-bauhaus-black text-sm truncate">{jf.program_name}</div>
+                            <div className="text-[11px] text-bauhaus-muted font-medium">
+                              {jf.sector && <span className="capitalize">{jf.sector.replace(/_/g, ' ')}</span>}
+                              {jf.source && <span> &middot; {jf.source.replace(/_/g, ' ')}</span>}
+                              {jf.location && <span> &middot; {jf.location}</span>}
+                            </div>
+                          </div>
+                          {jf.amount_dollars && (
+                            <div className="text-right ml-4">
+                              <div className="font-black text-bauhaus-black">{formatMoney(jf.amount_dollars)}</div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ));
+                })()}
+                {/* Sector breakdown */}
+                {(() => {
+                  const bySector = new Map<string, number>();
+                  for (const jf of justiceFunding) {
+                    const sec = jf.sector || 'other';
+                    bySector.set(sec, (bySector.get(sec) || 0) + (jf.amount_dollars || 0));
+                  }
+                  const sorted = Array.from(bySector.entries()).sort((a, b) => b[1] - a[1]);
+                  return (
+                    <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {sorted.map(([sector, total]) => (
+                        <div key={sector} className="bg-bauhaus-canvas p-3">
+                          <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest capitalize">{sector.replace(/_/g, ' ')}</div>
+                          <div className="text-lg font-black text-bauhaus-black">{formatMoney(total)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </Section>
+            ) : (
+              <Section title={`Justice Funding (${justiceFunding.length} records)`}>
+                <div className="relative">
+                  <div className="blur-sm pointer-events-none select-none">
+                    {justiceFunding.slice(0, 3).map((jf, i) => (
+                      <div key={i} className="flex items-center justify-between py-3 border-b-2 border-bauhaus-black/5">
+                        <div className="font-bold text-bauhaus-black">{jf.program_name}</div>
+                        <div className="font-black text-bauhaus-black">{formatMoney(jf.amount_dollars)}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Link href="/pricing" className="px-6 py-3 bg-bauhaus-black text-white font-black text-sm uppercase tracking-widest hover:bg-bauhaus-blue transition-colors">
+                      Unlock Full Dossier
+                    </Link>
+                  </div>
+                </div>
+              </Section>
+            )
           )}
 
           {/* ACNC Financial History */}
@@ -651,6 +857,73 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
               ))}
             </div>
           </div>
+
+          {/* Place Context */}
+          {(placeGeo || seifa) && (
+            <div className="bg-white border-4 border-bauhaus-black p-4">
+              <h3 className="text-sm font-black text-bauhaus-black mb-3 pb-2 border-b-4 border-bauhaus-black uppercase tracking-widest">
+                Location Intelligence
+              </h3>
+              <dl className="space-y-2">
+                {e.postcode && (
+                  <div className="flex justify-between">
+                    <dt className="text-xs font-bold text-bauhaus-muted">Postcode</dt>
+                    <dd className="text-sm font-black text-bauhaus-black">
+                      <Link href={`/places/${e.postcode}`} className="hover:text-bauhaus-blue">
+                        {e.postcode}
+                      </Link>
+                    </dd>
+                  </div>
+                )}
+                {placeGeo?.locality && (
+                  <div className="flex justify-between">
+                    <dt className="text-xs font-bold text-bauhaus-muted">Locality</dt>
+                    <dd className="text-sm font-bold text-bauhaus-black">{placeGeo.locality}</dd>
+                  </div>
+                )}
+                {placeGeo?.remoteness_2021 && (
+                  <div className="flex justify-between">
+                    <dt className="text-xs font-bold text-bauhaus-muted">Remoteness</dt>
+                    <dd className={`text-sm font-black ${
+                      placeGeo.remoteness_2021.includes('Very Remote') ? 'text-bauhaus-red' :
+                      placeGeo.remoteness_2021.includes('Remote') ? 'text-orange-600' :
+                      placeGeo.remoteness_2021.includes('Outer') ? 'text-bauhaus-yellow' :
+                      'text-bauhaus-black'
+                    }`}>{placeGeo.remoteness_2021}</dd>
+                  </div>
+                )}
+                {seifa && (
+                  <div className="flex justify-between">
+                    <dt className="text-xs font-bold text-bauhaus-muted">SEIFA Disadvantage</dt>
+                    <dd className={`text-sm font-black ${
+                      seifa.decile_national <= 2 ? 'text-bauhaus-red' :
+                      seifa.decile_national <= 4 ? 'text-orange-600' :
+                      'text-bauhaus-black'
+                    }`}>
+                      Decile {seifa.decile_national}/10
+                    </dd>
+                  </div>
+                )}
+                {postcodeEntityCount > 1 && (
+                  <div className="flex justify-between">
+                    <dt className="text-xs font-bold text-bauhaus-muted">Entities in Area</dt>
+                    <dd className="text-sm font-black text-bauhaus-black">
+                      <Link href={`/places/${e.postcode}`} className="hover:text-bauhaus-blue">
+                        {postcodeEntityCount.toLocaleString()}
+                      </Link>
+                    </dd>
+                  </div>
+                )}
+              </dl>
+              {seifa && seifa.decile_national <= 3 && (
+                <div className="mt-3 pt-3 border-t border-bauhaus-black/10">
+                  <p className="text-[10px] text-bauhaus-muted leading-relaxed">
+                    This entity is in a postcode ranked in the most disadvantaged {seifa.decile_national * 10}% nationally (SEIFA Index of Relative Socio-economic Disadvantage, ABS 2021 Census).
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Donor-Contractor Alert */}
           {isDonorContractor && (
