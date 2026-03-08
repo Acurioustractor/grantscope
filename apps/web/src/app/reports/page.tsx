@@ -41,6 +41,28 @@ export default function ReportsPage() {
         </ol>
       </div>
 
+      {/* ===== FLAGSHIP: DONOR-CONTRACTORS ===== */}
+      <section className="mb-12">
+        <a href="/reports/donor-contractors" className="group block">
+          <div className="bg-bauhaus-red border-4 border-bauhaus-black p-8 transition-all group-hover:-translate-y-1" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-black)' }}>
+            <div className="text-xs font-black text-bauhaus-yellow mb-2 uppercase tracking-widest">Entity Graph Investigation</div>
+            <h3 className="text-2xl font-black text-white mb-3">Donate. Win Contracts. Repeat.</h3>
+            <p className="text-base text-white/80 leading-relaxed mb-4">
+              140 entities donate to political parties AND hold government contracts.
+              $80M donated. $4.7B received. For the first time, we connected AEC donation records
+              with AusTender contracts across 80,000 entities to reveal who benefits from both sides.
+            </p>
+            <div className="flex gap-6 text-white/60 text-sm font-bold">
+              <span>140 donor-contractors</span>
+              <span>&middot;</span>
+              <span>80,000 entities</span>
+              <span>&middot;</span>
+              <span>50,000+ relationships</span>
+            </div>
+          </div>
+        </a>
+      </section>
+
       {/* ===== SECTION A: THE PROBLEM ===== */}
       <section className="mb-12">
         <div className="mb-5">

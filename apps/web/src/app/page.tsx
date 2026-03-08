@@ -16,6 +16,9 @@ async function getStats() {
     communityResult,
     withAmountsResult,
     socialEnterprisesResult,
+    entitiesResult,
+    relationshipsResult,
+    donorContractorsResult,
   ] = await Promise.all([
     supabase.from('grant_opportunities').select('*', { count: 'exact', head: true }),
     supabase.from('foundations').select('*', { count: 'exact', head: true }),
@@ -27,6 +30,9 @@ async function getStats() {
     supabase.from('community_orgs').select('*', { count: 'exact', head: true }),
     supabase.from('grant_opportunities').select('*', { count: 'exact', head: true }).not('amount_max', 'is', null),
     supabase.from('social_enterprises').select('*', { count: 'exact', head: true }),
+    supabase.from('gs_entities').select('*', { count: 'exact', head: true }),
+    supabase.from('gs_relationships').select('*', { count: 'exact', head: true }),
+    supabase.from('mv_gs_donor_contractors').select('total_donated, total_contract_value').order('total_donated', { ascending: false }).limit(200),
   ]);
 
   // Grants by state — fetch source column for state scrapers and count client-side
@@ -60,6 +66,14 @@ async function getStats() {
   );
   const categories = catCountsArr.filter(c => c.cnt > 0).sort((a, b) => b.cnt - a.cnt).slice(0, 10);
 
+  // Aggregate donor-contractor stats
+  const dcRows = (donorContractorsResult.data || []) as Array<{ total_donated: string; total_contract_value: string }>;
+  let dcTotalDonated = 0, dcTotalContracts = 0;
+  for (const dc of dcRows) {
+    dcTotalDonated += Number(dc.total_donated);
+    dcTotalContracts += Number(dc.total_contract_value);
+  }
+
   return {
     totalGrants: grantsResult.count || 0,
     totalFoundations: foundationsResult.count || 0,
@@ -71,6 +85,11 @@ async function getStats() {
     communityOrgs: communityResult.count || 0,
     socialEnterprises: socialEnterprisesResult.count || 0,
     withAmounts: withAmountsResult.count || 0,
+    totalEntities: entitiesResult.count || 0,
+    totalRelationships: relationshipsResult.count || 0,
+    donorContractorCount: dcRows.length,
+    dcTotalDonated,
+    dcTotalContracts,
     byState,
     sourceCount,
     categories,
@@ -115,11 +134,20 @@ const CAT_LABELS: Record<string, string> = {
   disaster_relief: 'Disaster Relief',
 };
 
+function money(n: number): string {
+  if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}B`;
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
+  if (n >= 1e3) return `$${(n / 1e3).toFixed(0)}K`;
+  return `$${n.toLocaleString()}`;
+}
+
 export default async function HomePage() {
   let stats = {
     totalGrants: 0, totalFoundations: 0, profiledFoundations: 0,
     embeddedGrants: 0, openGrants: 0, totalPrograms: 0,
     acncCharities: 0, communityOrgs: 0, socialEnterprises: 0, withAmounts: 0,
+    totalEntities: 0, totalRelationships: 0,
+    donorContractorCount: 0, dcTotalDonated: 0, dcTotalContracts: 0,
     byState: null as Array<{ source: string; cnt: number }> | null,
     sourceCount: 0,
     categories: null as Array<{ cat: string; cnt: number }> | null,
@@ -130,10 +158,7 @@ export default async function HomePage() {
     // DB not yet configured
   }
 
-  const embeddedPct = stats.totalGrants > 0
-    ? Math.round((stats.embeddedGrants / stats.totalGrants) * 100) : 0;
-  const maxStateCnt = stats.byState?.length ? Math.max(...stats.byState.map(s => s.cnt)) : 1;
-  const maxCatCnt = stats.categories?.length ? Math.max(...stats.categories.map(c => c.cnt)) : 1;
+  // unused after homepage cleanup: embeddedPct, maxStateCnt, maxCatCnt
 
   return (
     <div>
@@ -216,11 +241,49 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Live Stats Dashboard */}
+      {/* Entity Graph — the flagship finding */}
+      {stats.donorContractorCount > 0 && (
+        <section className="mb-16">
+          <a href="/reports/donor-contractors" className="group block">
+            <div className="border-4 border-bauhaus-black bg-bauhaus-red transition-all group-hover:-translate-y-1" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-black)' }}>
+              <div className="p-8 sm:p-12">
+                <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-3">Entity Graph Investigation</div>
+                <h2 className="text-2xl sm:text-4xl font-black text-white mb-4 leading-tight">
+                  {stats.donorContractorCount} Entities Donate to Political Parties<br />
+                  AND Hold Government Contracts
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-6">
+                  <div>
+                    <div className="text-3xl sm:text-4xl font-black text-white">{money(stats.dcTotalDonated)}</div>
+                    <div className="text-white/60 text-sm font-bold mt-1">donated to parties</div>
+                  </div>
+                  <div>
+                    <div className="text-3xl sm:text-4xl font-black text-white">{money(stats.dcTotalContracts)}</div>
+                    <div className="text-white/60 text-sm font-bold mt-1">received in contracts</div>
+                  </div>
+                  <div>
+                    <div className="text-3xl sm:text-4xl font-black text-bauhaus-yellow">
+                      {stats.dcTotalDonated > 0 ? `${Math.round(stats.dcTotalContracts / stats.dcTotalDonated)}x` : '—'}
+                    </div>
+                    <div className="text-white/60 text-sm font-bold mt-1">return per dollar donated</div>
+                  </div>
+                </div>
+                <p className="text-white/70 text-sm font-medium max-w-2xl mb-4">
+                  Built from {stats.totalEntities.toLocaleString()} entities and {stats.totalRelationships.toLocaleString()} relationships
+                  — cross-referencing AEC political donations, AusTender contracts, ACNC charities,
+                  ORIC Indigenous corporations, ATO tax data, and ASIC company records by ABN.
+                </p>
+                <span className="inline-block px-6 py-2.5 bg-white text-bauhaus-black font-black text-xs uppercase tracking-widest group-hover:bg-bauhaus-yellow transition-colors">
+                  Read the Full Investigation &rarr;
+                </span>
+              </div>
+            </div>
+          </a>
+        </section>
+      )}
+
+      {/* Live Stats — clean, 5 numbers only */}
       <section className="border-4 border-bauhaus-black mb-16">
-        <div className="bg-bauhaus-black px-6 py-3">
-          <h2 className="text-xs font-black text-white uppercase tracking-[0.3em]">Live Platform Stats</h2>
-        </div>
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-0">
           <a href="/grants" className="group border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black">
             <div className="p-6 text-center transition-all group-hover:bg-bauhaus-blue group-hover:text-white">
@@ -234,121 +297,36 @@ export default async function HomePage() {
               <div className="text-xs font-black uppercase tracking-widest mt-1 text-bauhaus-muted group-hover:text-white/70">Foundations</div>
             </div>
           </a>
-          <div className="border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black">
-            <div className="p-6 text-center">
+          <a href="/charities" className="group border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black">
+            <div className="p-6 text-center transition-all group-hover:bg-bauhaus-black group-hover:text-white">
               <div className="text-3xl sm:text-4xl font-black tabular-nums">{stats.acncCharities.toLocaleString()}</div>
-              <div className="text-xs font-black uppercase tracking-widest mt-1 text-bauhaus-muted">ACNC Records</div>
-            </div>
-          </div>
-          <a href="/social-enterprises" className="group border-r-4 border-bauhaus-black">
-            <div className="p-6 text-center transition-all group-hover:bg-bauhaus-red group-hover:text-white">
-              <div className="text-3xl sm:text-4xl font-black tabular-nums">{stats.socialEnterprises.toLocaleString()}</div>
-              <div className="text-xs font-black uppercase tracking-widest mt-1 text-bauhaus-muted group-hover:text-white/70">Social Enterprises</div>
+              <div className="text-xs font-black uppercase tracking-widest mt-1 text-bauhaus-muted group-hover:text-white/70">Charities</div>
             </div>
           </a>
-          <a href="/charities?enriched=1" className="group">
+          <a href="/entities" className="group border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black">
             <div className="p-6 text-center transition-all group-hover:bg-bauhaus-yellow">
-              <div className="text-3xl sm:text-4xl font-black tabular-nums">{stats.communityOrgs.toLocaleString()}</div>
-              <div className="text-xs font-black uppercase tracking-widest mt-1 text-bauhaus-muted">Enriched Profiles</div>
+              <div className="text-3xl sm:text-4xl font-black tabular-nums">{stats.totalEntities.toLocaleString()}</div>
+              <div className="text-xs font-black uppercase tracking-widest mt-1 text-bauhaus-muted group-hover:text-bauhaus-black">Entities</div>
+            </div>
+          </a>
+          <a href="/reports" className="group">
+            <div className="p-6 text-center transition-all group-hover:bg-bauhaus-red group-hover:text-white">
+              <div className="text-3xl sm:text-4xl font-black tabular-nums">{stats.totalRelationships.toLocaleString()}</div>
+              <div className="text-xs font-black uppercase tracking-widest mt-1 text-bauhaus-muted group-hover:text-white/70">Relationships</div>
             </div>
           </a>
         </div>
-
-        {/* Secondary stats row */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-0 border-t-4 border-bauhaus-black">
-          <div className="p-4 text-center border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black">
-            <div className="text-xl font-black tabular-nums text-bauhaus-blue">{stats.openGrants.toLocaleString()}</div>
-            <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Open Now</div>
-          </div>
-          <div className="p-4 text-center border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black">
-            <div className="text-xl font-black tabular-nums text-bauhaus-red">{stats.profiledFoundations.toLocaleString()}</div>
-            <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">AI Profiled</div>
-          </div>
-          <div className="p-4 text-center border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black">
-            <div className="text-xl font-black tabular-nums">{stats.totalPrograms.toLocaleString()}</div>
-            <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Programs</div>
-          </div>
-          <div className="p-4 text-center border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black">
-            <div className="text-xl font-black tabular-nums">{stats.withAmounts.toLocaleString()}</div>
-            <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">With $ Amounts</div>
-          </div>
-          <div className="p-4 text-center">
-            <div className="text-xl font-black tabular-nums">{stats.sourceCount}</div>
-            <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Data Sources</div>
-          </div>
-        </div>
-
-        {/* Embedding coverage bar */}
-        <div className="border-t-4 border-bauhaus-black p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">AI Search Coverage</span>
-            <span className="text-xs font-black tabular-nums">{embeddedPct}%</span>
-          </div>
-          <div className="h-3 bg-bauhaus-black/10 border-2 border-bauhaus-black">
-            <div
-              className="h-full bg-bauhaus-blue transition-all"
-              style={{ width: `${embeddedPct}%` }}
-            />
-          </div>
-          <p className="text-[10px] text-bauhaus-muted mt-1">
-            {stats.embeddedGrants.toLocaleString()} of {stats.totalGrants.toLocaleString()} grants have vector embeddings for semantic search
+        <div className="border-t-4 border-bauhaus-black p-3 bg-bauhaus-canvas text-center">
+          <p className="text-[11px] text-bauhaus-muted font-bold">
+            {stats.sourceCount} data sources &middot; {stats.openGrants.toLocaleString()} grants open now &middot; {stats.profiledFoundations.toLocaleString()} AI-profiled foundations &middot; Updated daily
           </p>
-        </div>
-      </section>
-
-      {/* State Coverage + Categories side by side */}
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-0 mb-16">
-        {/* State Coverage */}
-        <div className="border-4 border-bauhaus-black">
-          <div className="bg-bauhaus-blue px-6 py-3">
-            <h2 className="text-xs font-black text-white uppercase tracking-[0.3em]">State Coverage</h2>
-          </div>
-          <div className="p-6 space-y-3">
-            {stats.byState?.map(({ source, cnt }) => (
-              <div key={source} className="flex items-center gap-3">
-                <span className="text-xs font-black w-8 text-right tabular-nums">{STATE_LABELS[source] || source}</span>
-                <div className="flex-1 h-6 bg-bauhaus-black/5 border-2 border-bauhaus-black relative">
-                  <div
-                    className={`h-full ${STATE_COLORS[source] || 'bg-bauhaus-blue'} transition-all`}
-                    style={{ width: `${Math.max((cnt / maxStateCnt) * 100, 2)}%` }}
-                  />
-                </div>
-                <span className="text-xs font-black tabular-nums w-14 text-right">{cnt.toLocaleString()}</span>
-              </div>
-            )) || (
-              <p className="text-sm text-bauhaus-muted">Loading...</p>
-            )}
-          </div>
-        </div>
-
-        {/* Category Breakdown */}
-        <div className="border-4 border-l-0 max-md:border-l-4 max-md:border-t-0 border-bauhaus-black">
-          <div className="bg-bauhaus-red px-6 py-3">
-            <h2 className="text-xs font-black text-white uppercase tracking-[0.3em]">Grant Categories</h2>
-          </div>
-          <div className="p-6 space-y-3">
-            {stats.categories?.map(({ cat, cnt }) => (
-              <div key={cat} className="flex items-center gap-3">
-                <span className="text-[10px] font-black w-20 text-right uppercase tracking-wider truncate">{CAT_LABELS[cat] || cat}</span>
-                <div className="flex-1 h-5 bg-bauhaus-black/5 border-2 border-bauhaus-black relative">
-                  <div
-                    className="h-full bg-bauhaus-red transition-all"
-                    style={{ width: `${Math.max((cnt / maxCatCnt) * 100, 2)}%` }}
-                  />
-                </div>
-                <span className="text-[10px] font-black tabular-nums w-12 text-right">{cnt.toLocaleString()}</span>
-              </div>
-            )) || (
-              <p className="text-sm text-bauhaus-muted">Loading...</p>
-            )}
-          </div>
         </div>
       </section>
 
       {/* Three pillars */}
       <section className="border-t-4 border-bauhaus-black pt-16 pb-12">
-        <h2 className="text-2xl font-black text-center text-bauhaus-black mb-10">Three Layers of Funding Intelligence</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-0">
+        <h2 className="text-2xl font-black text-center text-bauhaus-black mb-10">Four Layers of Funding Intelligence</h2>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-0">
           <div className="border-4 border-bauhaus-black p-8 bg-white bauhaus-shadow-sm">
             <div className="w-12 h-12 bg-bauhaus-blue flex items-center justify-center mb-4 border-3 border-bauhaus-black">
               <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -386,6 +364,18 @@ export default async function HomePage() {
               Who gives what, and is it enough?
             </p>
           </div>
+          <div className="border-4 border-l-0 max-md:border-l-4 max-md:border-t-0 border-bauhaus-black p-8 bg-bauhaus-black bauhaus-shadow-sm">
+            <div className="w-12 h-12 bg-bauhaus-red flex items-center justify-center mb-4 border-3 border-white rounded-full">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="square" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+            </div>
+            <h3 className="font-black text-white mb-2 text-sm tracking-widest">Entity Graph</h3>
+            <p className="text-sm text-white/70 leading-relaxed">
+              {stats.totalEntities.toLocaleString()} entities, {stats.totalRelationships.toLocaleString()} relationships.
+              Donations, contracts, grants, and corporate data — connected by ABN.
+            </p>
+          </div>
         </div>
       </section>
 
@@ -417,6 +407,7 @@ export default async function HomePage() {
             { name: 'ASIC', color: 'bg-bauhaus-black' },
             { name: 'ATO', color: 'bg-bauhaus-yellow' },
             { name: 'ASX', color: 'bg-bauhaus-red' },
+            { name: 'AEC Donations', color: 'bg-bauhaus-red' },
           ].map(src => (
             <span key={src.name} className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-bauhaus-black">
               <span className={`w-2.5 h-2.5 ${src.color} border border-bauhaus-black`} />
@@ -431,6 +422,13 @@ export default async function HomePage() {
         <h2 className="text-2xl font-black text-center text-bauhaus-black mb-2">Living Reports</h2>
         <p className="text-center text-bauhaus-muted mb-10 text-sm font-medium">Data-driven investigations, updated as new data arrives</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 max-w-4xl mx-auto">
+          <a href="/reports/donor-contractors" className="group block sm:col-span-2 lg:col-span-3">
+            <div className="bg-bauhaus-red border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1" style={{ boxShadow: '6px 6px 0px 0px var(--color-bauhaus-black)' }}>
+              <div className="text-xs font-black text-bauhaus-yellow mb-1 uppercase tracking-widest">Entity Graph Investigation</div>
+              <h3 className="font-black text-white mb-1">Donate. Win Contracts. Repeat.</h3>
+              <p className="text-sm text-white/80">{stats.donorContractorCount} entities donated {money(stats.dcTotalDonated)} to political parties and received {money(stats.dcTotalContracts)} in government contracts.</p>
+            </div>
+          </a>
           <a href="/reports/big-philanthropy" className="group block sm:col-span-2 lg:col-span-3">
             <div className="bg-bauhaus-black border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1" style={{ boxShadow: '6px 6px 0px 0px var(--color-bauhaus-red)' }}>
               <div className="text-xs font-black text-bauhaus-yellow mb-1 uppercase tracking-widest">Data Investigation</div>

@@ -7,11 +7,9 @@ import { AccountDropdown } from './account-dropdown';
 const ADMIN_EMAILS = ['benjamin@act.place', 'hello@grantscope.au'];
 
 const primaryLinks = [
-  { href: '/grants', label: 'Grants' },
-  { href: '/foundations', label: 'Foundations' },
-  { href: '/charities', label: 'Charities' },
-  { href: '/social-enterprises', label: 'Social Enterprises' },
-  { href: '/corporate', label: 'Corporate' },
+  { href: '/grants', label: 'Explore' },
+  { href: '/entities', label: 'Entities' },
+  { href: '/reports', label: 'Reports' },
 ];
 
 const megaMenuSections = [
@@ -20,43 +18,37 @@ const megaMenuSections = [
     links: [
       { href: '/grants', label: 'Grants', desc: 'Search 14k+ grant opportunities' },
       { href: '/foundations', label: 'Foundations', desc: '9,800+ giving foundations' },
-      { href: '/charities', label: 'Charities', desc: '64,000+ charities, 500+ enriched profiles' },
+      { href: '/charities', label: 'Charities', desc: '64,000+ charities' },
       { href: '/social-enterprises', label: 'Social Enterprises', desc: 'B Corps, indigenous & disability enterprises' },
       { href: '/corporate', label: 'Corporate Giving', desc: 'ASX200 philanthropy' },
-    ],
-  },
-  {
-    title: 'Analyse',
-    links: [
       { href: '/dashboard', label: 'Dashboard', desc: 'Overview & key metrics' },
-      { href: '/reports', label: 'Reports', desc: 'Living data investigations' },
-      { href: '/charities/insights', label: 'Insights', desc: 'Charity sector visualisations' },
-      { href: '/simulator', label: 'Simulator', desc: 'Funding scenario modelling' },
-      { href: '/tracker', label: 'Tracker', desc: 'Grant application tracking' },
     ],
   },
   {
-    title: 'Research',
+    title: 'Entities',
     links: [
+      { href: '/entities', label: 'Entity Graph', desc: '80K entities, 50K relationships' },
+      { href: '/entities?view=donor-contractors', label: 'Donor-Contractors', desc: 'Donate AND hold contracts' },
+      { href: '/entities?view=search', label: 'Search Entities', desc: 'Find any entity by name or ABN' },
+      { href: '/charities/insights', label: 'Charity Insights', desc: 'Sector visualisations' },
+    ],
+  },
+  {
+    title: 'Investigations',
+    links: [
+      { href: '/reports/donor-contractors', label: 'Donor-Contractors', desc: '140 entities, $80M donated, $4.7B in contracts' },
+      { href: '/reports/cross-reference', label: '$74B Question', desc: 'Who gets government contracts?' },
       { href: '/reports/big-philanthropy', label: '$222 Billion', desc: 'Where charity money goes' },
       { href: '/reports/community-parity', label: 'Community Parity', desc: 'Who benefits, who misses out' },
-      { href: '/reports/community-power', label: 'Community Power', desc: 'Alternatives to grant dependency' },
-      { href: '/reports/social-enterprise', label: 'Social Enterprise', desc: 'The invisible $21B sector' },
+      { href: '/reports/funding-equity', label: 'Funding Equity', desc: 'Who gets what, by postcode' },
       { href: '/reports/power-dynamics', label: 'Power Dynamics', desc: 'Concentration & inequality' },
-      { href: '/reports/state-of-the-nation', label: 'State of the Nation', desc: 'Live data on every entity in Australia' },
-      { href: '/reports/power-map', label: 'Power Map', desc: 'How open data reshapes power' },
-      { href: '/reports/cross-reference', label: '$74B Question', desc: 'Who gets government contracts?' },
     ],
   },
   {
     title: 'For',
     links: [
-      { href: '/for/funders', label: 'Funders', desc: 'Portfolio intelligence & discovery' },
-      { href: '/for/philanthropy', label: 'Philanthropy', desc: 'System-level transparency' },
-      { href: '/for/corporate', label: 'Corporates & Sponsors', desc: 'Find who to support' },
-      { href: '/for/social-enterprises', label: 'Social Enterprises', desc: 'Get visible, find funding' },
       { href: '/for/community', label: 'Community Orgs', desc: 'Find grants, track applications' },
-      { href: '/for/foundations', label: 'Foundations', desc: 'Peer comparison & gap analysis' },
+      { href: '/for/funders', label: 'Funders', desc: 'Portfolio intelligence & discovery' },
       { href: '/for/researchers', label: 'Researchers', desc: 'Open data & living reports' },
       { href: '/for/government', label: 'Government', desc: 'Program tracking & insights' },
     ],
@@ -64,11 +56,10 @@ const megaMenuSections = [
   {
     title: 'About',
     links: [
-      { href: '/how-it-works', label: 'How It Works', desc: 'Architecture & data sources' },
-      { href: '/process', label: 'Process', desc: 'Our methodology' },
-      { href: '/profile', label: 'Profile', desc: 'Your organisation profile' },
-      { href: '/ops', label: 'Ops', desc: 'Operational status' },
-      { href: '/architecture', label: 'Architecture', desc: 'System design' },
+      { href: '/how-it-works', label: 'How It Works', desc: 'Data sources & methodology' },
+      { href: '/process', label: 'Methodology', desc: 'Matching, confidence & gaps' },
+      { href: '/tracker', label: 'Tracker', desc: 'Grant application tracking' },
+      { href: '/profile', label: 'Profile', desc: 'Your organisation' },
     ],
   },
 ];
