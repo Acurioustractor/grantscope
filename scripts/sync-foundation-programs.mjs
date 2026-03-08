@@ -13,6 +13,7 @@
  * Run daily to pick up newly discovered programs from foundation enrichment.
  */
 
+import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
 

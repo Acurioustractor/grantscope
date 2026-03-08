@@ -8,6 +8,7 @@
  * Usage: tsx scripts/ingest-youth-justice-data.mjs
  */
 
+import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { ingestYouthJusticeData, searchQLDYouthJusticeDatasets } from '../packages/grant-engine/src/sources/qld-youth-justice.ts';
 

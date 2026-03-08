@@ -10,6 +10,7 @@
  * Usage: node scripts/sync-oric-corporations.mjs [--dry-run]
  */
 
+import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { parse } from 'csv-parse/sync';
 

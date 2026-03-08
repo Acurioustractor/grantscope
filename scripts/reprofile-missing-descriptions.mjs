@@ -18,6 +18,7 @@
  *   --dry-run          Preview without making changes
  */
 
+import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { FoundationScraper } from '../packages/grant-engine/src/foundations/annual-report-scraper.ts';
 import { FoundationProfiler } from '../packages/grant-engine/src/foundations/foundation-profiler.ts';

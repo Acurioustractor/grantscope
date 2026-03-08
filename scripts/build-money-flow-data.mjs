@@ -10,6 +10,7 @@
  * Usage: tsx scripts/build-money-flow-data.mjs [--domain <domain>] [--dry-run]
  */
 
+import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(

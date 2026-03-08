@@ -9,6 +9,7 @@
  * Usage: node scripts/sync-asic-companies.mjs [--dry-run] [--limit=1000]
  */
 
+import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { createReadStream } from 'fs';
 import { writeFile, unlink } from 'fs/promises';

@@ -10,6 +10,7 @@
  *   node --env-file=.env scripts/enrich-programs.mjs [--limit=100] [--dry-run]
  */
 
+import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);

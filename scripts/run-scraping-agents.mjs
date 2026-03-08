@@ -11,6 +11,7 @@
  *   tsx scripts/run-scraping-agents.mjs --agent grant-monitor  # Run specific agent
  */
 
+import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { runAllAgents, runAgent } from '../packages/grant-engine/src/agents/agent-runner.ts';
 import { createGrantMonitor } from '../packages/grant-engine/src/agents/grant-monitor.ts';

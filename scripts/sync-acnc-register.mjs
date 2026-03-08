@@ -9,6 +9,7 @@
  * Usage: node scripts/sync-acnc-register.mjs [--dry-run]
  */
 
+import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { downloadACNCRegister, parseACNCRegister } from '../packages/grant-engine/src/foundations/acnc-importer.ts';
 

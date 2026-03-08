@@ -12,6 +12,7 @@
  * Cost: $0 (Groq free tier: 14,400 req/day)
  */
 
+import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { batchEnrichFree } from '../packages/grant-engine/src/enrichment-free.ts';
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';

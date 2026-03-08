@@ -10,6 +10,7 @@
  *   node scripts/grantscope-discovery.mjs [--dry-run] [--sources=grantconnect,data-gov-au]
  */
 
+import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { GrantEngine } from '../packages/grant-engine/src/index.ts';
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';

@@ -14,6 +14,7 @@
  *   - Migration 20260308_rogs_justice_spending.sql applied
  */
 
+import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { createReadStream } from 'fs';
 import { createInterface } from 'readline';

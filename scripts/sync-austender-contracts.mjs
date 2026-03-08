@@ -11,6 +11,7 @@
  * Default: last 3 months of contracts
  */
 
+import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 
 const API_BASE = 'https://api.tenders.gov.au/ocds';

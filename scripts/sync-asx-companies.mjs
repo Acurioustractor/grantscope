@@ -6,6 +6,7 @@
  * Usage: node scripts/sync-asx-companies.mjs [--dry-run]
  */
 
+import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { parse } from 'csv-parse/sync';
 

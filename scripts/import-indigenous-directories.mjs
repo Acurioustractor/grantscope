@@ -14,6 +14,7 @@
  *   node scripts/import-indigenous-directories.mjs --dry-run
  */
 
+import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import * as cheerio from 'cheerio';
 

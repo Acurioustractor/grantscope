@@ -13,6 +13,7 @@
  *   node scripts/import-gov-procurement-se.mjs --dry-run
  */
 
+import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import * as cheerio from 'cheerio';
 

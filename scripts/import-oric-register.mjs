@@ -14,6 +14,7 @@
  *   node scripts/import-oric-register.mjs --limit=100
  */
 
+import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { parse } from 'csv-parse/sync';
 

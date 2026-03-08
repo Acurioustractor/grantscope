@@ -21,6 +21,7 @@
  *   --skip=a,b     Skip specific steps (discovery,enrich,profile,sync,embed)
  */
 
+import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { execFile } from 'child_process';
 import { promisify } from 'util';

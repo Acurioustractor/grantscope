@@ -18,6 +18,8 @@
  *   3. discovery       — Run all grant discovery sources
  *   4. profiling       — AI-profile unprofiled foundations (slow, costs ~$0.05/each)
  *   5. community       — Profile community organisations
+
+import 'dotenv/config';
  *   6. agents          — Run all scraping agents
  *   7. state-grants    — Scrape state grant portals (NSW, VIC, QLD, SA, TAS)
  *

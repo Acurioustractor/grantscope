@@ -12,6 +12,7 @@
  * Usage: node --env-file=.env scripts/backfill-embeddings.mjs [--batch-size 100] [--source foundation_program]
  */
 
+import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
 

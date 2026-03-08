@@ -7,6 +7,7 @@
  * Usage: node scripts/sync-ato-tax-transparency.mjs [--dry-run] [--year=2022-23]
  */
 
+import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { read, utils } from 'xlsx';
 

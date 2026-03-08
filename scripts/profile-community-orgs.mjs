@@ -11,6 +11,7 @@
  *   tsx scripts/profile-community-orgs.mjs --limit 100        # Limit batch size
  */
 
+import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { importCommunityOrgs } from '../packages/grant-engine/src/foundations/community-profiler.ts';
 

@@ -10,6 +10,7 @@
  *   node --env-file=.env scripts/sync-ghl-to-tracker.mjs [--dry-run]
  */
 
+import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 
 const BASE_URL = 'https://services.leadconnectorhq.com';

@@ -11,6 +11,7 @@
  * Usage: node scripts/enrich-grants.mjs [--limit 500]
  */
 
+import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { batchEnrich } from '../packages/grant-engine/src/index.ts';
 

@@ -12,6 +12,7 @@
  *   node scripts/scrape-state-grants.mjs --dry-run          # Preview only
  */
 
+import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { createNSWGrantsPlugin } from '../packages/grant-engine/src/sources/nsw-grants.ts';
 import { createVICGrantsPlugin } from '../packages/grant-engine/src/sources/vic-grants.ts';

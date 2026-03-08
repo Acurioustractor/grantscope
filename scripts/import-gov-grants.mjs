@@ -16,6 +16,7 @@
  *   node scripts/import-gov-grants.mjs --dry-run          # Preview only
  */
 
+import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { parse } from 'csv-parse/sync';
 

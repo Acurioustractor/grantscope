@@ -12,6 +12,7 @@
  *   node scripts/import-buyability.mjs --limit=50
  */
 
+import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import * as cheerio from 'cheerio';
 import https from 'node:https';
