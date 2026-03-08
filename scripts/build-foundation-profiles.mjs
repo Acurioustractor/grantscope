@@ -28,6 +28,7 @@
  * Costs: ~$0.05/foundation with scraping, ~$0.01/foundation LLM-only
  */
 
+import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { FoundationScraper } from '../packages/grant-engine/src/foundations/annual-report-scraper.ts';
 import { FoundationProfiler } from '../packages/grant-engine/src/foundations/foundation-profiler.ts';
