@@ -3,11 +3,12 @@
  *
  * Strategy:
  * 1. Scrape wa.gov.au grants and subsidies pages
- * 2. Scrape Lotterywest grant opportunities (~$200M/yr biggest WA funder)
- * 3. Scrape Healthway grants
- * 4. Scrape department-specific portals (GSDC, DPIRD, DLGSC)
+ * 2. Fetch Lotterywest approved grants via JSON API (~512 grants/year, $100M+)
+ * 3. Scrape Lotterywest grant opportunities (evergreen streams)
+ * 4. Scrape Healthway grants
+ * 5. Scrape department-specific portals (GSDC, DPIRD, DLGSC)
  *
- * Combined: should yield 100+ grants across WA government + Lotterywest.
+ * Combined: should yield 500+ grants across WA government + Lotterywest.
  */
 
 import * as cheerio from 'cheerio';
@@ -169,6 +170,79 @@ async function scrapeGrantPage(source: { url: string; name: string }): Promise<R
   return grants;
 }
 
+/**
+ * Fetch approved grants from Lotterywest's JSON API.
+ * Returns ~512 grants with org, amount, purpose, location, date.
+ * API: https://www.lotterywest.wa.gov.au/api/grants/approved?page=N&pageSize=100
+ */
+async function fetchLotterywestApproved(): Promise<RawGrant[]> {
+  const grants: RawGrant[] = [];
+  const PAGE_SIZE = 100;
+  let page = 1;
+  let hasMore = true;
+
+  while (hasMore) {
+    try {
+      const res = await fetch(
+        `https://www.lotterywest.wa.gov.au/api/grants/approved?page=${page}&pageSize=${PAGE_SIZE}`,
+        {
+          headers: {
+            'User-Agent': BROWSER_UA,
+            'Accept': 'application/json',
+          },
+          signal: AbortSignal.timeout(15000),
+        }
+      );
+      if (!res.ok) {
+        console.error(`[wa-grants] Lotterywest API page ${page}: ${res.status}`);
+        break;
+      }
+
+      const json = await res.json() as {
+        data: Array<{
+          date: string;
+          organisation: string;
+          purpose: string;
+          amount: string;
+          location: string;
+          state: string;
+        }>;
+        hasNextPage: boolean;
+        totalCount: number;
+      };
+
+      for (const item of json.data) {
+        // Parse amount string like "$15,000.00"
+        const amountNum = parseFloat(item.amount.replace(/[$,]/g, ''));
+        const roundedAmount = Math.round(amountNum);
+
+        grants.push({
+          title: `${item.organisation} — ${item.purpose}`.slice(0, 200),
+          provider: 'Lotterywest',
+          sourceUrl: 'https://www.lotterywest.wa.gov.au/grants/grant-recipients',
+          amount: roundedAmount > 0 ? { max: roundedAmount } : undefined,
+          description: item.purpose.slice(0, 500),
+          categories: inferCategories(item.organisation, item.purpose),
+          sourceId: 'wa-grants',
+          geography: ['AU-WA'],
+          program: `Lotterywest ${item.location}`,
+        });
+      }
+
+      hasMore = json.hasNextPage;
+      page++;
+      // Polite delay between API pages
+      await new Promise(r => setTimeout(r, 300));
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[wa-grants] Lotterywest API error page ${page}: ${msg}`);
+      break;
+    }
+  }
+
+  return grants;
+}
+
 export function createWAGrantsPlugin(): SourcePlugin {
   return {
     id: 'wa-grants',
@@ -177,10 +251,21 @@ export function createWAGrantsPlugin(): SourcePlugin {
     geography: ['AU-WA'],
 
     async *discover(query: DiscoveryQuery): AsyncGenerator<RawGrant> {
-      console.log(`[wa-grants] Scraping ${WA_SOURCES.length} WA government sources...`);
+      console.log(`[wa-grants] Scraping ${WA_SOURCES.length} WA government sources + Lotterywest API...`);
 
       const allGrants: RawGrant[] = [];
 
+      // 1. Fetch Lotterywest approved grants via JSON API (biggest source: ~512 grants)
+      try {
+        const lotterywestGrants = await fetchLotterywestApproved();
+        allGrants.push(...lotterywestGrants);
+        console.log(`[wa-grants] Lotterywest API: ${lotterywestGrants.length} approved grants`);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`[wa-grants] Lotterywest API error: ${msg}`);
+      }
+
+      // 2. Scrape HTML sources (department pages, Healthway, etc.)
       for (const source of WA_SOURCES) {
         try {
           const grants = await scrapeGrantPage(source);
@@ -215,7 +300,7 @@ export function createWAGrantsPlugin(): SourcePlugin {
         yielded++;
       }
 
-      console.log(`[wa-grants] Yielded ${yielded} grants from ${WA_SOURCES.length} sources`);
+      console.log(`[wa-grants] Yielded ${yielded} grants (${WA_SOURCES.length} HTML sources + Lotterywest API)`);
     },
   };
 }

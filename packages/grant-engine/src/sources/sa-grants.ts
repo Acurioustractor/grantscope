@@ -6,7 +6,10 @@
  * 2. Scrape Grants SA (DHS) available grants
  * 3. Scrape individual department grants pages (PIRSA, Tourism SA, DPC, DIT)
  *
- * Combined: should yield 100+ grants across all SA departments.
+ * Note: Many SA gov sites return 403 (WAF/bot protection) as of Mar 2026.
+ * GRANTassist (grantassist.sa.gov.au) DNS no longer resolves.
+ * DHS grants page works but often shows "no future grants scheduled".
+ * The scraper handles failures gracefully — it logs and continues.
  */
 
 import * as cheerio from 'cheerio';
