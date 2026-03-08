@@ -9,7 +9,7 @@
  *
  * Returns: { matched_abn, matched_name, confidence, method } or null
  *
- * VERSION: 4 — Add suffix-aware matching tier for "Group" vs "Group Limited" cases
+ * VERSION: 6 — Better punctuation handling and length-based filtering to reduce false positives
  */
 
 /**
@@ -41,14 +41,16 @@ export function normalizeName(name) {
 
 /**
  * Normalize for suffix variations only.
- * Handles: "PTY LTD" vs "PTY LIMITED", "LTD" vs "LIMITED", but preserves base name structure
+ * Handles: "PTY LTD" vs "PTY. LTD.", "LTD" vs "LIMITED", parentheses, etc.
  */
 function suffixNormalize(name) {
   return name
     .toUpperCase()
     .trim()
-    // Remove periods
+    // Remove all periods
     .replace(/\./g, '')
+    // Remove parentheses but keep content
+    .replace(/[()]/g, '')
     // Normalize PTY LIMITED variations
     .replace(/\bPTY\s+LIMITED\b/g, 'PTY LTD')
     .replace(/\bPTY\s+LTD\b/g, 'PTY LTD')
@@ -68,6 +70,7 @@ function getCoreName(name) {
     .toUpperCase()
     .trim()
     .replace(/\./g, '')
+    .replace(/[()]/g, '')
     // Remove trailing corporate suffixes
     .replace(/\s+(PTY\s+)?(LIMITED|LTD)$/g, '')
     .replace(/\s+PTY$/g, '')
@@ -79,6 +82,35 @@ function getCoreName(name) {
     // Normalize whitespace
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+/**
+ * Check if a match is likely a false positive based on name length difference.
+ * Prevents matching "ASG Group" to "ASG Limited" when "ASG GROUP LIMITED" exists.
+ */
+function isLikelyFalsePositive(donorName, canonicalName) {
+  const donorUpper = donorName.toUpperCase().trim();
+  const canonicalUpper = canonicalName.toUpperCase().trim();
+  
+  // If donor name is much shorter and doesn't contain key suffixes, be cautious
+  const donorCore = getCoreName(donorName);
+  const canonicalCore = getCoreName(canonicalName);
+  
+  // If core names are different, it's suspicious
+  if (donorCore !== canonicalCore) {
+    return true;
+  }
+  
+  // If donor has "Group" but canonical has "Limited" instead, suspicious
+  const donorHasGroup = /\bGROUP\b/i.test(donorUpper);
+  const canonicalHasGroup = /\bGROUP\b/i.test(canonicalUpper);
+  const canonicalHasLimited = /\bLIMITED\b/i.test(canonicalUpper);
+  
+  if (donorHasGroup && !canonicalHasGroup && canonicalHasLimited) {
+    return true;
+  }
+  
+  return false;
 }
 
 /**
@@ -123,16 +155,19 @@ export function resolve(donorName, entityIndex) {
     }
   }
 
-  // Tier 1c: Suffix-normalized match (catch "PTY LTD" vs "PTY LIMITED")
+  // Tier 1c: Suffix-normalized match (catch "PTY LTD" vs "PTY. LIMITED")
   if (suffixNormName !== upperName) {
     for (const [canonicalName, entity] of entityIndex.byExact) {
       if (suffixNormalize(canonicalName) === suffixNormName) {
-        return {
-          matched_abn: entity.abn,
-          matched_name: entity.canonical_name,
-          confidence: 0.92,
-          method: 'suffix_normalized',
-        };
+        // Check for false positive risk
+        if (!isLikelyFalsePositive(donorName, canonicalName)) {
+          return {
+            matched_abn: entity.abn,
+            matched_name: entity.canonical_name,
+            confidence: 0.92,
+            method: 'suffix_normalized',
+          };
+        }
       }
     }
   }
@@ -143,18 +178,21 @@ export function resolve(donorName, entityIndex) {
     for (const [canonicalName, entity] of entityIndex.byExact) {
       const entityCoreName = getCoreName(canonicalName);
       if (entityCoreName === coreName) {
-        coreMatches.push(entity);
+        coreMatches.push({ entity, canonicalName });
       }
     }
     
     // Only return if we have exactly one match (avoid ambiguity)
     if (coreMatches.length === 1) {
-      return {
-        matched_abn: coreMatches[0].abn,
-        matched_name: coreMatches[0].canonical_name,
-        confidence: 0.88,
-        method: 'core_name',
-      };
+      const match = coreMatches[0];
+      if (!isLikelyFalsePositive(donorName, match.canonicalName)) {
+        return {
+          matched_abn: match.entity.abn,
+          matched_name: match.entity.canonical_name,
+          confidence: 0.88,
+          method: 'core_name',
+        };
+      }
     }
   }
 
