@@ -1,0 +1,802 @@
+{
+  "task": "entity-resolution",
+  "timestamp": "2026-03-08T06:07:08.126Z",
+  "metrics": {
+    "precision": 0.6777251184834123,
+    "recall": 0.89375,
+    "f1": 0.77088948787062,
+    "accuracy": 0.6517626827171109,
+    "matchRate": 0.9071367153912295
+  },
+  "counts": {
+    "truePositives": 715,
+    "falsePositives": 340,
+    "trueNegatives": 43,
+    "falseNegatives": 65,
+    "totalPairs": 1163
+  },
+  "calibration": {
+    "1": {
+      "correct": 350,
+      "total": 353
+    },
+    "0.9": {
+      "correct": 365,
+      "total": 382
+    }
+  },
+  "topFalsePositives": [
+    {
+      "donor_name": "Settlement Services International",
+      "expected_abn": "0",
+      "expected_name": "SETTLEMENT SERVICES INTERNATIONAL LIMITED",
+      "got_abn": "38031375761",
+      "got_name": "Settlement Services International Limited",
+      "confidence": 0.85,
+      "method": "normalized",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Palliative Care Tasmania Ltd",
+      "expected_abn": "0",
+      "expected_name": "PALLIATIVE CARE TASMANIA LIMITED",
+      "got_abn": "26595047105",
+      "got_name": "Palliative Care Tasmania Limited",
+      "confidence": 0.92,
+      "method": "punctuation_normalized",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "The Union Education Foundation Limited",
+      "expected_abn": "0",
+      "expected_name": "THE UNION EDUCATION FOUNDATION LIMITED",
+      "got_abn": "56469208528",
+      "got_name": "The Union Education Foundation",
+      "confidence": 0.85,
+      "method": "normalized",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Accenture Australia Limited",
+      "expected_abn": "49096776895",
+      "expected_name": "ACCENTURE AUSTRALIA PTY LIMITED",
+      "got_abn": "61096995649",
+      "got_name": "ACCENTURE AUSTRALIA HOLDINGS PTY LIMITED",
+      "confidence": 0.85,
+      "method": "normalized",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "the union education foundation",
+      "expected_abn": "0",
+      "expected_name": "THE UNION EDUCATION FOUNDATION LIMITED",
+      "got_abn": "56469208528",
+      "got_name": "The Union Education Foundation",
+      "confidence": 1,
+      "method": "exact",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Royal Automobile Association of South Australia",
+      "expected_abn": "0",
+      "expected_name": "ROYAL AUTOMOBILE ASSOCIATION OF SOUTH AUSTRALIA INCORPORATED",
+      "got_abn": "90020001807",
+      "got_name": "ROYAL AUTOMOBILE ASSOCIATION OF SOUTH AUSTRALIA INC",
+      "confidence": 0.85,
+      "method": "normalized",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Villa World Limited",
+      "expected_abn": "94010621226",
+      "expected_name": "VILLA WORLD LIMITED",
+      "got_abn": "38117546326",
+      "got_name": "VILLA WORLD LIMITED",
+      "confidence": 1,
+      "method": "exact",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "TXU Limited",
+      "expected_abn": "99086014968",
+      "expected_name": "TXU PTY LTD",
+      "got_abn": "96071611017",
+      "got_name": "TXU Australia Pty Ltd",
+      "confidence": 0.85,
+      "method": "normalized",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Treasury Wine Estates Limited",
+      "expected_abn": "78145321320",
+      "expected_name": "TREASURY WINE ESTATES LIMITED",
+      "got_abn": "24004373862",
+      "got_name": "TREASURY WINE ESTATES LIMITED",
+      "confidence": 1,
+      "method": "exact",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Built",
+      "expected_abn": "24083928045",
+      "expected_name": "Built Pty Ltd",
+      "got_abn": "88163462637",
+      "got_name": "BUILT GROUP HOLDINGS PTY LIMITED",
+      "confidence": 0.85,
+      "method": "normalized",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "Jacobs Group (Australia) Pty",
+      "expected_abn": "37001024095",
+      "expected_name": "Jacobs Group (Australia) Pty Limited",
+      "got_abn": "12079749287",
+      "got_name": "JACOBS AUSTRALIA PTY LIMITED",
+      "confidence": 0.85,
+      "method": "normalized",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "ASG Group",
+      "expected_abn": "57070045117",
+      "expected_name": "ASG GROUP LIMITED",
+      "got_abn": "51094096965",
+      "got_name": "ASG Limited",
+      "confidence": 0.85,
+      "method": "normalized",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "PETER WARREN AUTOMOTIVE",
+      "expected_abn": "67000293621",
+      "expected_name": "Peter Warren Automotive Pty Ltd",
+      "got_abn": "57615674185",
+      "got_name": "PETER WARREN AUTOMOTIVE HOLDINGS LIMITED",
+      "confidence": 0.85,
+      "method": "normalized",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "Orica",
+      "expected_abn": "24004145868",
+      "expected_name": "Orica Limited",
+      "got_abn": "99004117828",
+      "got_name": "Orica Australia Pty Limited",
+      "confidence": 0.85,
+      "method": "normalized",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "AstraZeneca",
+      "expected_abn": "54009682311",
+      "expected_name": "AstraZeneca Pty Ltd",
+      "got_abn": "59066876962",
+      "got_name": "ASTRAZENECA HOLDINGS PTY LIMITED",
+      "confidence": 0.85,
+      "method": "normalized",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "Grocon",
+      "expected_abn": "50006703091",
+      "expected_name": "Grocon Pty Ltd",
+      "got_abn": "82148964890",
+      "got_name": "GROCON GROUP HOLDINGS PTY LTD",
+      "confidence": 0.85,
+      "method": "normalized",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "Macquarie Telecom",
+      "expected_abn": "21082930916",
+      "expected_name": "Macquarie Telecom Pty Limited",
+      "got_abn": "72056712228",
+      "got_name": "Macquarie Telecom Group",
+      "confidence": 0.85,
+      "method": "normalized",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "Our Community",
+      "expected_abn": "24094608705",
+      "expected_name": "Our Community Pty Ltd",
+      "got_abn": "75438812872",
+      "got_name": "OUR COMMUNITY AUSTRALIA INC",
+      "confidence": 0.85,
+      "method": "normalized",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "Transfield",
+      "expected_abn": "76000854688",
+      "expected_name": "Transfield Pty Ltd",
+      "got_abn": "57001241265",
+      "got_name": "Transfield Holdings Pty Ltd",
+      "confidence": 0.85,
+      "method": "normalized",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "Resmed",
+      "expected_abn": "46064514852",
+      "expected_name": "Resmed Inc",
+      "got_abn": "28003765133",
+      "got_name": "RESMED HOLDINGS PTY LTD",
+      "confidence": 0.85,
+      "method": "normalized",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "Settlement Services International",
+      "expected": "no match",
+      "got_abn": "38031375761",
+      "got_name": "Settlement Services International Limited",
+      "confidence": 0.85,
+      "method": "normalized",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "Vivienne Court Trading Pty LTD",
+      "expected": "no match",
+      "got_abn": "86153821571",
+      "got_name": "Vivienne Court Trading Pty LTD",
+      "confidence": 1,
+      "method": "exact",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "Palliative Care Tasmania Ltd",
+      "expected": "no match",
+      "got_abn": "26595047105",
+      "got_name": "Palliative Care Tasmania Limited",
+      "confidence": 0.92,
+      "method": "punctuation_normalized",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "McMillan Shakespeare Limited",
+      "expected": "no match",
+      "got_abn": "74107233983",
+      "got_name": "McMillan Shakespeare Limited",
+      "confidence": 1,
+      "method": "exact",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "Pamberth Pty Ltd",
+      "expected": "no match",
+      "got_abn": "51003999844",
+      "got_name": "Pamberth Pty Ltd",
+      "confidence": 1,
+      "method": "exact",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "Terrazzo (Aust) Marble Pty Ltd",
+      "expected": "no match",
+      "got_abn": "93074591021",
+      "got_name": "Terrazzo (Aust) Marble Pty Ltd",
+      "confidence": 1,
+      "method": "exact",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "Sydney Markets Ltd",
+      "expected": "no match",
+      "got_abn": "51077119290",
+      "got_name": "Sydney Markets Limited",
+      "confidence": 0.92,
+      "method": "punctuation_normalized",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "Page Research Centre Limited",
+      "expected": "no match",
+      "got_abn": "81100263063",
+      "got_name": "The Page Research Centre Limited",
+      "confidence": 0.85,
+      "method": "normalized",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "Spantech Pty Ltd",
+      "expected": "no match",
+      "got_abn": "53010544108",
+      "got_name": "Spantech Pty Ltd",
+      "confidence": 1,
+      "method": "exact",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "Mitsubishi Motors Australia",
+      "expected": "no match",
+      "got_abn": "53007870395",
+      "got_name": "Mitsubishi Motors Australia Limited",
+      "confidence": 0.85,
+      "method": "normalized",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "Paz No 11 Pty Ltd",
+      "expected": "no match",
+      "got_abn": "86006485427",
+      "got_name": "Paz No 11 Pty Ltd",
+      "confidence": 1,
+      "method": "exact",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "Top Knot Carpentry Services Pty Ltd",
+      "expected": "no match",
+      "got_abn": "67137425908",
+      "got_name": "Top Knot Carpentry Services Pty Ltd",
+      "confidence": 1,
+      "method": "exact",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "MODERN PAINTING PROJECTS PTY LTD",
+      "expected": "no match",
+      "got_abn": "41628675445",
+      "got_name": "MODERN PAINTING PROJECTS PTY LTD",
+      "confidence": 1,
+      "method": "exact",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "Micah Australia",
+      "expected": "no match",
+      "got_abn": "98604737733",
+      "got_name": "Micah Australia Limited",
+      "confidence": 0.85,
+      "method": "normalized",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "Pacific Equity Partners Pty Limited",
+      "expected": "no match",
+      "got_abn": "60082283949",
+      "got_name": "Pacific Equity Partners",
+      "confidence": 0.85,
+      "method": "normalized",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "Perron Investments Pty Ltd",
+      "expected": "no match",
+      "got_abn": "48000003976",
+      "got_name": "Perron Investments Pty Ltd",
+      "confidence": 1,
+      "method": "exact",
+      "difficulty": "hard"
+    },
+    {
+      "donor_name": "Paxford Pty Ltd",
+      "expected": "no match",
+      "got_abn": "68011014396",
+      "got_name": "Paxford Pty Ltd",
+      "confidence": 1,
+      "method": "exact",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "Pathology Technology Australia",
+      "expected": "no match",
+      "got_abn": "31137771638",
+      "got_name": "Pathology Technology Australia Limited",
+      "confidence": 0.85,
+      "method": "normalized",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "MJD Foundation Ltd",
+      "expected": "no match",
+      "got_abn": "65159208867",
+      "got_name": "Mjd Foundation Limited",
+      "confidence": 0.92,
+      "method": "punctuation_normalized",
+      "difficulty": "hard"
+    },
+    {
+      "donor_name": "Media Entertainment Group Ltd",
+      "expected": "no match",
+      "got_abn": "81007290539",
+      "got_name": "Media Entertainment Group Ltd",
+      "confidence": 1,
+      "method": "exact",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "True North Investments",
+      "expected": "no match",
+      "got_abn": "14093576795",
+      "got_name": "True North Investments",
+      "confidence": 1,
+      "method": "exact",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "MERT Pty Limited",
+      "expected": "no match",
+      "got_abn": "25003743244",
+      "got_name": "M.E.R.T. PTY. LTD",
+      "confidence": 0.92,
+      "method": "punctuation_normalized",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "TTF Australia Pty Ltd",
+      "expected": "no match",
+      "got_abn": "54050036041",
+      "got_name": "TTF Australia Limited",
+      "confidence": 0.85,
+      "method": "normalized",
+      "difficulty": "hard"
+    },
+    {
+      "donor_name": "Thorn Group Limited",
+      "expected": "no match",
+      "got_abn": "54072507147",
+      "got_name": "Thorn Group Limited",
+      "confidence": 1,
+      "method": "exact",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "Toga Pty. Ltd.",
+      "expected": "no match",
+      "got_abn": "27000926947",
+      "got_name": "TOGA PTY LTD",
+      "confidence": 0.92,
+      "method": "punctuation_normalized",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "Panthera Finance Pty Ltd",
+      "expected": "no match",
+      "got_abn": "99147634482",
+      "got_name": "Panthera Finance Pty Ltd",
+      "confidence": 1,
+      "method": "exact",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "Teachers Federation Health Limited",
+      "expected": "no match",
+      "got_abn": "86097030414",
+      "got_name": "Teachers Federation Health Limited",
+      "confidence": 1,
+      "method": "exact",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "Miller Property Corporation Pty Ltd",
+      "expected": "no match",
+      "got_abn": "80167433669",
+      "got_name": "Miller Property Corporation Pty Ltd",
+      "confidence": 1,
+      "method": "exact",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "Mitsubishi Motors Australia Ltd",
+      "expected": "no match",
+      "got_abn": "53007870395",
+      "got_name": "Mitsubishi Motors Australia Limited",
+      "confidence": 0.92,
+      "method": "punctuation_normalized",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "Resourceco  Pty Ltd",
+      "expected": "no match",
+      "got_abn": "45068976803",
+      "got_name": "Resourceco  Pty Ltd",
+      "confidence": 1,
+      "method": "exact",
+      "difficulty": "medium"
+    }
+  ],
+  "topFalseNegatives": [
+    {
+      "donor_name": "MTM CONTROLS PTY LTD",
+      "expected_abn": "0",
+      "expected_name": "MTM CONTROLS PTY. LIMITED",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Pearson Property Group Pty Ltd",
+      "expected_abn": "0",
+      "expected_name": "PEARSON PROPERTY GROUP PTY LTD",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Tastevin Pty Ltd",
+      "expected_abn": "0",
+      "expected_name": "TASTEVIN PTY LIMITED",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Medical Ancillary Services",
+      "expected_abn": "0",
+      "expected_name": "MEDICAL ANCILLARY SERVICES PTY. LTD.",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "The Sun Foundation",
+      "expected_abn": "0",
+      "expected_name": "THE SUN FOUNDATION PTY LTD",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Tradeflex Services Group Pty.Ltd.",
+      "expected_abn": "0",
+      "expected_name": "TRADEFLEX SERVICES GROUP PTY. LTD.",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Smorgon Steel Group Ltd",
+      "expected_abn": "0",
+      "expected_name": "SMORGON STEEL GROUP PTY LTD",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Randazzo Properties NT Pty Ltd",
+      "expected_abn": "0",
+      "expected_name": "RANDAZZO PROPERTIES (NT) PTY LTD",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Ralhaven Pty Ltd",
+      "expected_abn": "0",
+      "expected_name": "RALHAVEN PTY LTD",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Tufferie Pty Ltd",
+      "expected_abn": "0",
+      "expected_name": "TUFFERIE PTY LTD",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "SOVORI PTY LTD - THE TRUSTEE FOR THE SOVORI TRUST",
+      "expected_abn": "0",
+      "expected_name": "SOVORI PTY LTD",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "AMW Projects Pty Ltd",
+      "expected_abn": "0",
+      "expected_name": "A.M.W. PROJECTS PTY LTD",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "FCK Consulting Pty Ltd",
+      "expected_abn": "0",
+      "expected_name": "FCK CONSULTING PTY LTD",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "JIREH International Pty Ltd",
+      "expected_abn": "0",
+      "expected_name": "JIREH INTERNATIONAL PTY LTD",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Australian Banking Association",
+      "expected_abn": "0",
+      "expected_name": "AUSTRALIAN BANKING ASSOCIATION LIMITED",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "ACCORD Australasia Limited",
+      "expected_abn": "0",
+      "expected_name": "ACCORD AUSTRALASIA LIMITED",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Jape Nominees Pty Ltd",
+      "expected_abn": "0",
+      "expected_name": "JAPE NOMINEES PTY. LTD.",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Expansive Pty Ltd",
+      "expected_abn": "0",
+      "expected_name": "EXPANSIVE PTY. LTD.",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "R 4 Risk Pty Ltd",
+      "expected_abn": "0",
+      "expected_name": "R 4 RISK PTY LTD",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Raylan Pty Ltd",
+      "expected_abn": "0",
+      "expected_name": "RAYLAN PTY LTD",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Alikana Pty Ltd",
+      "expected_abn": "0",
+      "expected_name": "ALIKANA PTY LTD",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Berryman Pty Ltd",
+      "expected_abn": "0",
+      "expected_name": "BERRYMAN PTY LTD",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "La Pasta Pty Ltd",
+      "expected_abn": "0",
+      "expected_name": "LA PASTA PTY. LTD.",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Fitzroys Pty Ltd",
+      "expected_abn": "0",
+      "expected_name": "FITZROYS PTY LIMITED",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Windamurah Pty Ltd",
+      "expected_abn": "0",
+      "expected_name": "WINDAMURAH PTY LTD",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Zamotown Pty Ltd ATF M H McGuiness Family Trust",
+      "expected_abn": "0",
+      "expected_name": "ZAMOTOWN PTY. LTD",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Pelcorp Pty Ltd",
+      "expected_abn": "0",
+      "expected_name": "PELCORP PTY. LTD.",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Alfa Omega Nominees Pty Ltd",
+      "expected_abn": "0",
+      "expected_name": "ALFA OMEGA NOMINEES PTY. LTD.",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Annapurna Pty Ltd",
+      "expected_abn": "0",
+      "expected_name": "ANNAPURNA PTY. LIMITED",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Kerr Enterprises (Qld) Pty Ltd",
+      "expected_abn": "0",
+      "expected_name": "KERR ENTERPRISES (QLD) PTY LTD",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "HTT Associates Pty Ltd",
+      "expected_abn": "0",
+      "expected_name": "HTT ASSOCIATES PTY LTD",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Fentmont Pty Ltd",
+      "expected_abn": "0",
+      "expected_name": "FENTMONT PTY. LTD.",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Altum Pty Ltd ATF The HQ Trust (Associated Entity)",
+      "expected_abn": "0",
+      "expected_name": "ALTUM PTY. LTD.",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Blueleaf Corporation Pty Ltd",
+      "expected_abn": "0",
+      "expected_name": "BLUELEAF PTY. LTD.",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Reserve Hotels Pty Limited",
+      "expected_abn": "0",
+      "expected_name": "RESERVE HOTELS PTY LIMITED",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Jalouise Pty Ltd",
+      "expected_abn": "0",
+      "expected_name": "JALOUISE PTY LTD",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "FKP Pty Ltd",
+      "expected_abn": "0",
+      "expected_name": "FKP PTY LTD",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Protect Services",
+      "expected_abn": "0",
+      "expected_name": "PROTECT SERVICES PTY LTD",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Strzelecki Holdings Pty Ltd",
+      "expected_abn": "0",
+      "expected_name": "STRZELECKI HOLDINGS PTY LTD",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Goakes Investments Pty Ltd",
+      "expected_abn": "0",
+      "expected_name": "GOAKES INVESTMENTS PTY LTD",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Seafirst Australia Pty Ltd",
+      "expected_abn": "0",
+      "expected_name": "SEAFIRST AUSTRALIA PTY LIMITED",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "WESTPAC BANKING CORPORATION",
+      "expected_abn": "33007457141",
+      "expected_name": "WESTPAC BANKING CORPORATION",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Goldworthy Pty Ltd",
+      "expected_abn": "0",
+      "expected_name": "GOLDWORTHY PTY. LTD.",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Marston Pty Ltd",
+      "expected_abn": "0",
+      "expected_name": "MARSTON PTY LTD",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Silvada Pty Ltd",
+      "expected_abn": "0",
+      "expected_name": "SILVADA PTY LTD",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "VG Projects Pty Ltd",
+      "expected_abn": "0",
+      "expected_name": "VG PROJECTS PTY. LTD.",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Heilbronn & Partners Pty Ltd",
+      "expected_abn": "0",
+      "expected_name": "HEILBRONN & PARTNERS PTY. LTD.",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "De Pasquale Bros Pty Ltd",
+      "expected_abn": "0",
+      "expected_name": "DE PASQUALE BROS. PTY. LTD.",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "LHC CAPITAL PTY LTD",
+      "expected_abn": "0",
+      "expected_name": "LHC CAPITAL PTY LTD",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Maplecourt Pty Ltd",
+      "expected_abn": "0",
+      "expected_name": "MAPLECOURT PTY. LTD.",
+      "difficulty": "easy"
+    }
+  ]
+}

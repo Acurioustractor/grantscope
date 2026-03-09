@@ -626,18 +626,18 @@ JusticeHub leads revenue because government contracts are larger and the $3.9B N
 
 ### The Market Is Real
 
-| Segment | Size | GrantScope's Share |
-|---------|------|--------------------|
-| Australian charity sector revenue | **$222B/year** | Data about where this money goes |
-| Charitable giving | **$13B+/year** | Data about who gives and who receives |
-| Private Ancillary Funds | **~3,200 funds, $10B+ capital** | Primary data users — need to know where to grant |
-| Federal government procurement | **$105B/year** | Cross-reference with donations and charity data |
-| State government procurement | **$31B+/year** | Same cross-reference opportunity |
-| ESG/GRC compliance market | **$996M, growing 12.7% CAGR** | Demand driver for due diligence data |
-| Management consulting | **$47.6B market** | Paying customer segment for government advisory |
-| Youth justice spending (JH market) | **$26.5B/year** | JusticeHub's primary market |
-| QLD Youth Justice budget alone | **$770.9M** | First JH government contract target |
-| NAJP federal justice package | **$3.9B over 5 years** | JH procurement window — open NOW |
+| Segment                            | Size                            | GrantScope's Share                               |
+| ---------------------------------- | ------------------------------- | ------------------------------------------------ |
+| Australian charity sector revenue  | **$222B/year**                  | Data about where this money goes                 |
+| Charitable giving                  | **$13B+/year**                  | Data about who gives and who receives            |
+| Private Ancillary Funds            | **~3,200 funds, $10B+ capital** | Primary data users — need to know where to grant |
+| Federal government procurement     | **$105B/year**                  | Cross-reference with donations and charity data  |
+| State government procurement       | **$31B+/year**                  | Same cross-reference opportunity                 |
+| ESG/GRC compliance market          | **$996M, growing 12.7% CAGR**   | Demand driver for due diligence data             |
+| Management consulting              | **$47.6B market**               | Paying customer segment for government advisory  |
+| Youth justice spending (JH market) | **$26.5B/year**                 | JusticeHub's primary market                      |
+| QLD Youth Justice budget alone     | **$770.9M**                     | First JH government contract target              |
+| NAJP federal justice package       | **$3.9B over 5 years**          | JH procurement window — open NOW                 |
 
 ### What Comparable Companies Are Worth
 

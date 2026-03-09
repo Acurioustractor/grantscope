@@ -36,7 +36,7 @@ function log(msg) {
 
 // LLM Providers — Minimax first (user preference), then fallbacks
 const PROVIDERS = [
-  { name: 'minimax', baseUrl: 'https://api.minimaxi.chat/v1/chat/completions', model: 'MiniMax-M2.5', envKey: 'MINIMAX_API_KEY', disabled: true },
+  { name: 'minimax', baseUrl: 'https://api.minimaxi.chat/v1/chat/completions', model: 'MiniMax-M2.5', envKey: 'MINIMAX_API_KEY', disabled: false },
   { name: 'groq', baseUrl: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.3-70b-versatile', envKey: 'GROQ_API_KEY', disabled: false },
   { name: 'gemini', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', model: 'gemini-2.5-flash', envKey: 'GEMINI_API_KEY', disabled: false },
   { name: 'deepseek', baseUrl: 'https://api.deepseek.com/chat/completions', model: 'deepseek-chat', envKey: 'DEEPSEEK_API_KEY', disabled: true },

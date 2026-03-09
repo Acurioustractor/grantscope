@@ -22,7 +22,7 @@ const DRY_RUN = process.argv.includes('--dry-run');
 const NO_WEBSITE = process.argv.includes('--no-website');
 const RE_ENRICH = process.argv.includes('--re-enrich'); // Re-enrich those with enriched_at but no description
 const LIMIT = parseInt(process.argv.find(a => a.startsWith('--limit='))?.split('=')[1] || '500');
-const PREFERRED_PROVIDER = process.argv.find(a => a.startsWith('--provider='))?.split('=')[1] || 'groq';
+const PREFERRED_PROVIDER = process.argv.find(a => a.startsWith('--provider='))?.split('=')[1] || 'minimax';
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
@@ -37,15 +37,15 @@ function log(msg) {
 
 // LLM Providers — round-robin with fallback
 const PROVIDERS = [
+  { name: 'minimax', baseUrl: 'https://api.minimaxi.chat/v1/chat/completions', model: 'MiniMax-M2.5', envKey: 'MINIMAX_API_KEY', disabled: false },
   { name: 'groq', baseUrl: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.3-70b-versatile', envKey: 'GROQ_API_KEY', disabled: false },
   { name: 'gemini', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', model: 'gemini-2.5-flash', envKey: 'GEMINI_API_KEY', disabled: false },
-  { name: 'minimax', baseUrl: 'https://api.minimaxi.chat/v1/chat/completions', model: 'MiniMax-M2.5', envKey: 'MINIMAX_API_KEY', disabled: true },
-  { name: 'deepseek', baseUrl: 'https://api.deepseek.com/chat/completions', model: 'deepseek-chat', envKey: 'DEEPSEEK_API_KEY', disabled: true },
+  { name: 'deepseek', baseUrl: 'https://api.deepseek.com/chat/completions', model: 'deepseek-chat', envKey: 'DEEPSEEK_API_KEY', disabled: false },
   { name: 'anthropic', baseUrl: 'https://api.anthropic.com/v1/messages', model: 'claude-haiku-4-5-20251001', envKey: 'ANTHROPIC_API_KEY', disabled: false, isAnthropic: true },
 ];
 
 // Move preferred provider to front
-if (PREFERRED_PROVIDER !== 'groq') {
+if (PREFERRED_PROVIDER !== 'minimax') {
   const idx = PROVIDERS.findIndex(p => p.name === PREFERRED_PROVIDER);
   if (idx > 0) {
     const [prov] = PROVIDERS.splice(idx, 1);

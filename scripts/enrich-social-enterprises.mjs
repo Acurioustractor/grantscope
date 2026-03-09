@@ -47,6 +47,7 @@ function log(msg) {
 // ─── Multi-provider LLM ─────────────────────────────────────
 
 const PROVIDERS = [
+  { name: 'minimax', envKey: 'MINIMAX_API_KEY', model: 'MiniMax-M2.5', baseUrl: 'https://api.minimaxi.chat/v1/chat/completions' },
   { name: 'groq', envKey: 'GROQ_API_KEY', model: 'llama-3.3-70b-versatile' },
   { name: 'gemini', envKey: 'GEMINI_API_KEY', model: 'gemini-2.5-flash' },
   { name: 'anthropic', envKey: 'ANTHROPIC_API_KEY', model: 'claude-3-5-haiku-20241022' },
