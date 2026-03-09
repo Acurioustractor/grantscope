@@ -2,13 +2,50 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+
+function tableToSlug(table: string): string {
+  return table.replace(/_/g, '-');
+}
 
 interface HealthData {
   stats: {
     grants: { total: number; withDescription: number; enriched: number; embedded: number; open: number };
     foundations: { total: number; profiled: number; withWebsite: number; programs: number };
     community: { orgs: number };
+    socialEnterprises: { total: number; enriched: number };
   };
+  entityGraph: {
+    totalEntities: number;
+    totalRelationships: number;
+    entityTypes: Array<{ entity_type: string; count: number }>;
+    relationshipTypes: Array<{ relationship_type: string; count: number }>;
+    donorContractors: { count: number; totalDonated: number; totalContractValue: number };
+  };
+  tableCounts: {
+    acncCharities: number;
+    politicalDonations: number;
+    austenderContracts: number;
+    oricCorporations: number;
+    seifaPostcodes: number;
+    asicCompanies: number;
+    atoTaxTransparency: number;
+    rogsJusticeSpending: number;
+    asxCompanies: number;
+    moneyFlows: number;
+    justiceFunding: number;
+    almaInterventions: number;
+    almaOutcomes: number;
+    almaEvidence: number;
+  };
+  totalRecords: number;
+  dataFreshness: Array<{
+    dataset: string;
+    table: string;
+    count: number;
+    lastUpdated: string | null;
+    static?: boolean;
+  }>;
   sourceBreakdown: Array<{
     source: string;
     total: number;
@@ -53,7 +90,7 @@ function pctNum(n: number, total: number): number {
   return (n / total) * 100;
 }
 
-function timeAgo(iso: string): string {
+function timeAgo(iso: string | null): string {
   if (!iso) return 'never';
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60_000);
@@ -65,11 +102,23 @@ function timeAgo(iso: string): string {
   return `${days}d ago`;
 }
 
+function ageInDays(iso: string | null): number {
+  if (!iso) return Infinity;
+  return (Date.now() - new Date(iso).getTime()) / 86_400_000;
+}
+
 function formatDuration(ms: number): string {
   if (!ms) return '-';
   if (ms < 1000) return `${ms}ms`;
   if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
   return `${(ms / 60_000).toFixed(1)}m`;
+}
+
+function formatCurrency(n: number): string {
+  if (n >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(1)}B`;
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
+  return `$${n.toFixed(0)}`;
 }
 
 function StatusColor({ value, total, thresholds }: { value: number; total: number; thresholds?: [number, number] }) {
@@ -88,6 +137,44 @@ function BarFill({ value, total, thresholds }: { value: number; total: number; t
       <div className={`h-full transition-all ${bg}`} style={{ width: `${p}%` }} />
     </div>
   );
+}
+
+function freshnessStatus(iso: string | null): { label: string; color: string } {
+  const days = ageInDays(iso);
+  if (days < 1) return { label: 'FRESH', color: 'bg-green-600 text-white' };
+  if (days < 7) return { label: 'OK', color: 'bg-gray-200 text-bauhaus-black' };
+  if (days < 30) return { label: 'STALE', color: 'bg-yellow-500 text-bauhaus-black' };
+  return { label: 'CRITICAL', color: 'bg-red-500 text-white' };
+}
+
+function computeHealthScore(data: HealthData): number {
+  const { stats, entityGraph, dataFreshness } = data;
+
+  // Data completeness (40%)
+  const grantsEmbedPct = pctNum(stats.grants.embedded, stats.grants.total);
+  const foundationsProfiledPct = pctNum(stats.foundations.profiled, stats.foundations.total);
+  const entityPopulated = entityGraph.totalEntities > 0 ? 100 : 0;
+  const completeness = (grantsEmbedPct + foundationsProfiledPct + entityPopulated) / 3;
+
+  // Data freshness (40%)
+  const freshnessScores = dataFreshness
+    .filter(d => d.lastUpdated !== null)
+    .map(d => {
+      const days = ageInDays(d.lastUpdated);
+      if (days < 1) return 100;
+      if (days < 7) return 80;
+      if (days < 30) return 40;
+      return 10;
+    });
+  const avgFreshness = freshnessScores.length > 0
+    ? freshnessScores.reduce((a, b) => a + b, 0) / freshnessScores.length
+    : 0;
+
+  // Enrichment quality (20%)
+  const grantsEnrichedPct = pctNum(stats.grants.enriched, stats.grants.total);
+  const quality = grantsEnrichedPct;
+
+  return Math.round(completeness * 0.4 + avgFreshness * 0.4 + quality * 0.2);
 }
 
 const PIPELINE_STAGES = [
@@ -151,10 +238,24 @@ const IMPROVEMENTS = [
   { title: 'Web-search enrichment path', desc: 'For URL-less grants: name → Perplexity/Gemini search → parse result. Unblocks GHL and manual entries.' },
 ];
 
+const REFRESH_COMMANDS = [
+  { label: 'Pipeline (all stages)', cmd: 'node scripts/pipeline-runner.mjs --once' },
+  { label: 'Entity Graph', cmd: 'node scripts/build-entity-graph.mjs' },
+  { label: 'AEC Donations', cmd: 'node scripts/import-aec-donations.mjs' },
+  { label: 'AusTender Contracts', cmd: 'node scripts/sync-austender-contracts.mjs' },
+  { label: 'ACNC Charities', cmd: 'node scripts/sync-acnc-charities.mjs' },
+  { label: 'ORIC Register', cmd: 'node scripts/import-oric-register.mjs' },
+  { label: 'Modern Slavery', cmd: 'node scripts/import-modern-slavery.mjs' },
+  { label: 'Lobbying Register', cmd: 'node scripts/import-lobbying-register.mjs' },
+  { label: 'Materialized Views', cmd: 'node scripts/refresh-materialized-views.mjs' },
+  { label: 'SEIFA Postcodes', cmd: 'node scripts/import-seifa-postcodes.mjs' },
+];
+
 export function HealthClient() {
   const [data, setData] = useState<HealthData | null>(null);
   const [loading, setLoading] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [copiedCmd, setCopiedCmd] = useState<string | null>(null);
   const router = useRouter();
 
   const fetchData = useCallback(() => {
@@ -195,8 +296,15 @@ export function HealthClient() {
     );
   }
 
-  const { stats, sourceBreakdown, confidenceBreakdown, recentRuns, discoveryRuns } = data;
+  const { stats, entityGraph, totalRecords, dataFreshness, sourceBreakdown, confidenceBreakdown, recentRuns, discoveryRuns } = data;
   const confMap = Object.fromEntries(confidenceBreakdown.map(c => [c.confidence, c.total]));
+  const healthScore = computeHealthScore(data);
+
+  const copyToClipboard = (cmd: string) => {
+    navigator.clipboard.writeText(cmd);
+    setCopiedCmd(cmd);
+    setTimeout(() => setCopiedCmd(null), 2000);
+  };
 
   return (
     <div>
@@ -205,7 +313,7 @@ export function HealthClient() {
         <div>
           <h1 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight">Pipeline Health</h1>
           <p className="text-xs text-bauhaus-muted mt-1">
-            Comprehensive view of data quality, enrichment gaps, and pipeline status
+            {totalRecords ? `${totalRecords.toLocaleString()} total records across ${dataFreshness.length} datasets` : 'Comprehensive view of data quality, enrichment gaps, and pipeline status'}
           </p>
         </div>
         <div className="flex items-center gap-4">
@@ -230,21 +338,59 @@ export function HealthClient() {
         </div>
       </div>
 
+      {/* ===== COMPOSITE HEALTH SCORE ===== */}
+      <section className="mb-10">
+        <div className="border-4 border-bauhaus-black p-6 flex items-center gap-8">
+          <div className="flex-shrink-0">
+            <div className={`w-24 h-24 rounded-full flex items-center justify-center text-3xl font-black text-white ${
+              healthScore >= 80 ? 'bg-green-500' : healthScore >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+            }`}>
+              {healthScore}
+            </div>
+          </div>
+          <div className="flex-1">
+            <h2 className="text-sm font-black uppercase tracking-widest text-bauhaus-muted mb-3">Composite Health Score</h2>
+            <div className="grid grid-cols-3 gap-4 text-xs">
+              <div>
+                <div className="font-black uppercase tracking-wider text-bauhaus-muted mb-1">Data Completeness (40%)</div>
+                <div className="font-mono">
+                  Grants embedded: {pct(stats.grants.embedded, stats.grants.total)}% |
+                  Foundations profiled: {pct(stats.foundations.profiled, stats.foundations.total)}% |
+                  Entity graph: {entityGraph.totalEntities > 0 ? 'populated' : 'empty'}
+                </div>
+              </div>
+              <div>
+                <div className="font-black uppercase tracking-wider text-bauhaus-muted mb-1">Data Freshness (40%)</div>
+                <div className="font-mono">
+                  {dataFreshness.filter(d => d.lastUpdated !== null && ageInDays(d.lastUpdated) < 7).length}/{dataFreshness.filter(d => d.lastUpdated !== null).length} sources updated this week
+                </div>
+              </div>
+              <div>
+                <div className="font-black uppercase tracking-wider text-bauhaus-muted mb-1">Enrichment Quality (20%)</div>
+                <div className="font-mono">
+                  Grants enriched: {pct(stats.grants.enriched, stats.grants.total)}%
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ===== OVERALL STATS ===== */}
       <section className="mb-10">
         <h2 className="text-sm font-black uppercase tracking-widest text-bauhaus-muted mb-4 border-b-2 border-bauhaus-black pb-2">
           Data Completeness
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          <StatCard label="Total Grants" value={stats.grants.total} />
+          <StatCard label="Total Grants" value={stats.grants.total} href="/ops/health/grant-opportunities" />
           <StatCard label="Have Description" value={stats.grants.withDescription} total={stats.grants.total} thresholds={[80, 95]} />
           <StatCard label="LLM Enriched" value={stats.grants.enriched} total={stats.grants.total} thresholds={[40, 80]} />
           <StatCard label="Embedded" value={stats.grants.embedded} total={stats.grants.total} />
           <StatCard label="Open (Future Close)" value={stats.grants.open} />
-          <StatCard label="Foundation Programs" value={stats.foundations.programs} />
+          <StatCard label="Foundation Programs" value={stats.foundations.programs} href="/ops/health/foundation-programs" />
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mt-3">
-          <StatCard label="Foundations" value={stats.foundations.total} />
+          <StatCard label="Foundations" value={stats.foundations.total} href="/ops/health/foundations" />
           <StatCard label="Profiled" value={stats.foundations.profiled} total={stats.foundations.total} thresholds={[30, 70]} />
           <StatCard label="Have Website" value={stats.foundations.withWebsite} total={stats.foundations.total} thresholds={[40, 70]} />
           <div className="border-4 border-bauhaus-black p-4">
@@ -265,7 +411,156 @@ export function HealthClient() {
               })()}
             </div>
           </div>
-          <StatCard label="Community Orgs" value={stats.community.orgs} />
+          <StatCard label="Community Orgs" value={stats.community.orgs} href="/ops/health/community-orgs" />
+          <StatCard label="Social Enterprises" value={stats.socialEnterprises?.total ?? 0} total={undefined} href="/ops/health/social-enterprises" />
+        </div>
+      </section>
+
+      {/* ===== ENTITY GRAPH ===== */}
+      <section className="mb-10">
+        <h2 className="text-sm font-black uppercase tracking-widest text-bauhaus-muted mb-4 border-b-2 border-bauhaus-black pb-2">
+          Entity Graph
+        </h2>
+        {/* Headline numbers */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3 mb-4">
+          <StatCard label="Total Entities" value={entityGraph.totalEntities} href="/ops/health/gs-entities" />
+          <StatCard label="Total Relationships" value={entityGraph.totalRelationships} href="/ops/health/gs-relationships" />
+          <StatCard label="Donor-Contractors" value={entityGraph.donorContractors.count} />
+          <StatCard label="Total Donated" value={0} customValue={formatCurrency(entityGraph.donorContractors.totalDonated)} />
+          <StatCard label="Total Contract Value" value={0} customValue={formatCurrency(entityGraph.donorContractors.totalContractValue)} />
+        </div>
+
+        {/* Entity types grid */}
+        {entityGraph.entityTypes.length > 0 && (
+          <div className="mb-4">
+            <h3 className="text-xs font-black uppercase tracking-widest text-bauhaus-muted mb-2">By Entity Type</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2">
+              {entityGraph.entityTypes
+                .sort((a, b) => b.count - a.count)
+                .map(et => (
+                  <div key={et.entity_type} className="border-2 border-bauhaus-black/30 p-3">
+                    <div className="text-xs font-black uppercase tracking-wider text-bauhaus-muted truncate">{et.entity_type.replace(/_/g, ' ')}</div>
+                    <div className="text-lg font-black">{et.count.toLocaleString()}</div>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+
+        {/* Relationship types grid */}
+        {entityGraph.relationshipTypes.length > 0 && (
+          <div>
+            <h3 className="text-xs font-black uppercase tracking-widest text-bauhaus-muted mb-2">By Relationship Type</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2">
+              {entityGraph.relationshipTypes
+                .sort((a, b) => b.count - a.count)
+                .map(rt => (
+                  <div key={rt.relationship_type} className="border-2 border-bauhaus-black/30 p-3">
+                    <div className="text-xs font-black uppercase tracking-wider text-bauhaus-muted truncate">{rt.relationship_type.replace(/_/g, ' ')}</div>
+                    <div className="text-lg font-black">{rt.count.toLocaleString()}</div>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+
+        {/* Additional table counts */}
+        <div className="mt-4">
+          <h3 className="text-xs font-black uppercase tracking-widest text-bauhaus-muted mb-2">Dataset Counts</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+            <StatCardSmall label="ASIC Companies" value={data.tableCounts.asicCompanies} href="/ops/health/asic-companies" />
+            <StatCardSmall label="Political Donations" value={data.tableCounts.politicalDonations} href="/ops/health/political-donations" />
+            <StatCardSmall label="ACNC Charities" value={data.tableCounts.acncCharities} href="/ops/health/acnc-charities" />
+            <StatCardSmall label="AusTender Contracts" value={data.tableCounts.austenderContracts} href="/ops/health/austender-contracts" />
+            <StatCardSmall label="ATO Tax Transparency" value={data.tableCounts.atoTaxTransparency} href="/ops/health/ato-tax-transparency" />
+            <StatCardSmall label="SEIFA Postcodes" value={data.tableCounts.seifaPostcodes} href="/ops/health/seifa-2021" />
+            <StatCardSmall label="ROGS Justice Spending" value={data.tableCounts.rogsJusticeSpending} href="/ops/health/rogs-justice-spending" />
+            <StatCardSmall label="ORIC Corporations" value={data.tableCounts.oricCorporations} href="/ops/health/oric-corporations" />
+            <StatCardSmall label="ASX Companies" value={data.tableCounts.asxCompanies} href="/ops/health/asx-companies" />
+            <StatCardSmall label="Money Flows" value={data.tableCounts.moneyFlows} href="/ops/health/money-flows" />
+            <StatCardSmall label="Justice Funding" value={data.tableCounts.justiceFunding ?? 0} href="/ops/health/justice-funding" />
+            <StatCardSmall label="ALMA Interventions" value={data.tableCounts.almaInterventions ?? 0} href="/ops/health/alma-interventions" />
+            <StatCardSmall label="ALMA Outcomes" value={data.tableCounts.almaOutcomes ?? 0} href="/ops/health/alma-outcomes" />
+            <StatCardSmall label="ALMA Evidence" value={data.tableCounts.almaEvidence ?? 0} href="/ops/health/alma-evidence" />
+          </div>
+        </div>
+      </section>
+
+      {/* ===== DATA FRESHNESS ===== */}
+      <section className="mb-10">
+        <h2 className="text-sm font-black uppercase tracking-widest text-bauhaus-muted mb-4 border-b-2 border-bauhaus-black pb-2">
+          Data Freshness
+        </h2>
+        <div className="border-4 border-bauhaus-black overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-bauhaus-black text-white">
+                <th className="text-left px-4 py-2 font-black uppercase tracking-wider text-xs">Dataset</th>
+                <th className="text-right px-4 py-2 font-black uppercase tracking-wider text-xs">Records</th>
+                <th className="text-right px-4 py-2 font-black uppercase tracking-wider text-xs">Last Updated</th>
+                <th className="text-right px-4 py-2 font-black uppercase tracking-wider text-xs">Age</th>
+                <th className="text-center px-4 py-2 font-black uppercase tracking-wider text-xs">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {dataFreshness
+                .sort((a, b) => b.count - a.count)
+                .map(d => {
+                const isStatic = 'static' in d && d.static;
+                const status = isStatic
+                  ? { label: 'STATIC', color: 'bg-blue-100 text-blue-700' }
+                  : freshnessStatus(d.lastUpdated);
+                return (
+                  <tr key={d.table} className="border-t-2 border-bauhaus-black/10 hover:bg-gray-50 cursor-pointer">
+                    <td className="px-4 py-2 font-bold text-xs">
+                      <Link href={`/ops/health/${tableToSlug(d.table)}`} className="hover:text-bauhaus-red transition-colors">
+                        {d.dataset}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-2 text-right font-mono">{d.count.toLocaleString()}</td>
+                    <td className="px-4 py-2 text-right font-mono text-xs text-bauhaus-muted">
+                      {d.lastUpdated ? new Date(d.lastUpdated).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }) : isStatic ? 'Census 2021' : '-'}
+                    </td>
+                    <td className="px-4 py-2 text-right font-mono text-xs">
+                      {isStatic ? '-' : timeAgo(d.lastUpdated)}
+                    </td>
+                    <td className="px-4 py-2 text-center">
+                      <span className={`px-2 py-0.5 text-xs font-black uppercase tracking-wider ${status.color}`}>
+                        {status.label}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* ===== REFRESH COMMANDS ===== */}
+      <section className="mb-10">
+        <h2 className="text-sm font-black uppercase tracking-widest text-bauhaus-muted mb-4 border-b-2 border-bauhaus-black pb-2">
+          Refresh Commands
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+          {REFRESH_COMMANDS.map(rc => (
+            <div key={rc.cmd} className="border-2 border-bauhaus-black/20 p-3 flex items-center justify-between gap-3">
+              <div>
+                <div className="text-xs font-black uppercase tracking-wider text-bauhaus-muted">{rc.label}</div>
+                <code className="text-xs font-mono text-bauhaus-black/70 break-all">{rc.cmd}</code>
+              </div>
+              <button
+                onClick={() => copyToClipboard(rc.cmd)}
+                className={`text-xs font-black uppercase tracking-wider px-2 py-1 border-2 flex-shrink-0 transition-colors ${
+                  copiedCmd === rc.cmd
+                    ? 'border-green-500 bg-green-500 text-white'
+                    : 'border-bauhaus-black/30 hover:bg-bauhaus-black hover:text-white'
+                }`}
+              >
+                {copiedCmd === rc.cmd ? 'Copied' : 'Copy'}
+              </button>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -510,11 +805,11 @@ export function HealthClient() {
   );
 }
 
-function StatCard({ label, value, total, thresholds }: { label: string; value: number; total?: number; thresholds?: [number, number] }) {
-  return (
-    <div className="border-4 border-bauhaus-black p-4">
+function StatCard({ label, value, total, thresholds, customValue, href }: { label: string; value: number; total?: number; thresholds?: [number, number]; customValue?: string; href?: string }) {
+  const inner = (
+    <>
       <div className="text-xs font-black uppercase tracking-widest text-bauhaus-muted mb-1">{label}</div>
-      <div className="text-2xl font-black text-bauhaus-black">{value.toLocaleString()}</div>
+      <div className="text-2xl font-black text-bauhaus-black">{customValue ?? value.toLocaleString()}</div>
       {total !== undefined && (
         <>
           <div className="text-xs text-bauhaus-muted mt-1">
@@ -523,6 +818,39 @@ function StatCard({ label, value, total, thresholds }: { label: string; value: n
           <BarFill value={value} total={total} thresholds={thresholds} />
         </>
       )}
+    </>
+  );
+  if (href) {
+    return (
+      <Link href={href} className="border-4 border-bauhaus-black p-4 hover:bg-gray-50 transition-colors block">
+        {inner}
+      </Link>
+    );
+  }
+  return (
+    <div className="border-4 border-bauhaus-black p-4">
+      {inner}
+    </div>
+  );
+}
+
+function StatCardSmall({ label, value, href }: { label: string; value: number; href?: string }) {
+  const inner = (
+    <>
+      <div className="text-xs font-black uppercase tracking-wider text-bauhaus-muted truncate">{label}</div>
+      <div className="text-lg font-black">{value.toLocaleString()}</div>
+    </>
+  );
+  if (href) {
+    return (
+      <Link href={href} className="border-2 border-bauhaus-black/30 p-3 hover:border-bauhaus-black hover:bg-gray-50 transition-colors block">
+        {inner}
+      </Link>
+    );
+  }
+  return (
+    <div className="border-2 border-bauhaus-black/30 p-3">
+      {inner}
     </div>
   );
 }
