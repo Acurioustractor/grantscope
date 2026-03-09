@@ -11,12 +11,45 @@ function formatMoney(amount: number | null): string {
   return `$${amount.toLocaleString()}`;
 }
 
+const ENTITY_TYPES = [
+  { value: 'charity', label: 'Charity' },
+  { value: 'foundation', label: 'Foundation' },
+  { value: 'company', label: 'Company' },
+  { value: 'indigenous_corp', label: 'Indigenous Corp' },
+  { value: 'government_body', label: 'Government' },
+  { value: 'political_party', label: 'Political Party' },
+  { value: 'social_enterprise', label: 'Social Enterprise' },
+  { value: 'trust', label: 'Trust' },
+  { value: 'person', label: 'Person' },
+];
+
+const STATES = ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'];
+
+const SORT_OPTIONS = [
+  { value: 'source_count', label: 'Most Data Sources' },
+  { value: 'latest_revenue', label: 'Revenue' },
+  { value: 'canonical_name', label: 'Name A-Z' },
+];
+
+function entityTypeBadge(type: string): string {
+  const styles: Record<string, string> = {
+    charity: 'border-money bg-money-light text-money',
+    foundation: 'border-bauhaus-blue bg-link-light text-bauhaus-blue',
+    company: 'border-bauhaus-black/30 bg-bauhaus-canvas text-bauhaus-black',
+    government_body: 'border-bauhaus-yellow bg-warning-light text-bauhaus-black',
+    indigenous_corp: 'border-bauhaus-red bg-error-light text-bauhaus-red',
+    political_party: 'border-bauhaus-red bg-error-light text-bauhaus-red',
+    social_enterprise: 'border-money bg-money-light text-money',
+  };
+  return styles[type] || 'border-bauhaus-black/20 bg-bauhaus-canvas text-bauhaus-muted';
+}
+
 export default async function EntityGraphPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; type?: string; view?: string }>;
+  searchParams: Promise<{ q?: string; type?: string; view?: string; state?: string; sort?: string }>;
 }) {
-  const { q, type, view } = await searchParams;
+  const { q, type, view, state: stateFilter, sort } = await searchParams;
   const supabase = getServiceSupabase();
 
   // Default view: donor-contractors (the flagship)
@@ -91,23 +124,31 @@ export default async function EntityGraphPage({
     );
   }
 
-  // Search view
+  // Search view with filters
+  const sortField = sort || 'source_count';
+  const sortAsc = sortField === 'canonical_name';
+
   let results: Record<string, unknown>[] = [];
-  if (q) {
-    const { data } = await supabase
+  const needsQuery = q || type || stateFilter;
+
+  if (needsQuery) {
+    let dbQuery = supabase
       .from('gs_entities')
-      .select('id, gs_id, canonical_name, entity_type, abn, state, source_count, latest_revenue')
-      .or(`canonical_name.ilike.%${q}%,abn.eq.${q}`)
-      .order('source_count', { ascending: false })
-      .limit(50);
-    results = (data || []) as Record<string, unknown>[];
-  } else if (type) {
-    const { data } = await supabase
-      .from('gs_entities')
-      .select('id, gs_id, canonical_name, entity_type, abn, state, source_count, latest_revenue')
-      .eq('entity_type', type)
-      .order('source_count', { ascending: false })
-      .limit(50);
+      .select('id, gs_id, canonical_name, entity_type, abn, state, source_count, latest_revenue, latest_assets, sector');
+
+    if (q) {
+      const escapedQ = q.replace(/[%_]/g, '');
+      dbQuery = dbQuery.or(`canonical_name.ilike.%${escapedQ}%,abn.eq.${escapedQ}`);
+    }
+    if (type) {
+      dbQuery = dbQuery.eq('entity_type', type);
+    }
+    if (stateFilter) {
+      dbQuery = dbQuery.eq('state', stateFilter);
+    }
+
+    dbQuery = dbQuery.order(sortField, { ascending: sortAsc, nullsFirst: false }).limit(50);
+    const { data } = await dbQuery;
     results = (data || []) as Record<string, unknown>[];
   }
 
@@ -148,14 +189,54 @@ export default async function EntityGraphPage({
         </div>
       </form>
 
-      {/* Type filters */}
-      <div className="flex flex-wrap gap-2 mb-6">
-        {['charity', 'foundation', 'company', 'indigenous_corp', 'government_body', 'political_party'].map(t => (
-          <Link key={t} href={`/entities?view=search&type=${t}`}
-            className={`text-[11px] font-black px-2.5 py-1 border-2 uppercase tracking-widest ${type === t ? 'border-bauhaus-black bg-bauhaus-black text-white' : 'border-bauhaus-black/20 bg-bauhaus-canvas text-bauhaus-black hover:border-bauhaus-black'}`}>
-            {t.replace(/_/g, ' ')}
-          </Link>
-        ))}
+      {/* Filters row */}
+      <div className="flex flex-wrap gap-4 mb-6">
+        {/* Type filters */}
+        <div>
+          <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1.5">Entity Type</div>
+          <div className="flex flex-wrap gap-1.5">
+            <Link href={`/entities?view=search${q ? `&q=${q}` : ''}${stateFilter ? `&state=${stateFilter}` : ''}${sort ? `&sort=${sort}` : ''}`}
+              className={`text-[11px] font-black px-2.5 py-1 border-2 uppercase tracking-widest ${!type ? 'border-bauhaus-black bg-bauhaus-black text-white' : 'border-bauhaus-black/20 bg-bauhaus-canvas text-bauhaus-black hover:border-bauhaus-black'}`}>
+              All
+            </Link>
+            {ENTITY_TYPES.map(t => (
+              <Link key={t.value} href={`/entities?view=search&type=${t.value}${q ? `&q=${q}` : ''}${stateFilter ? `&state=${stateFilter}` : ''}${sort ? `&sort=${sort}` : ''}`}
+                className={`text-[11px] font-black px-2.5 py-1 border-2 uppercase tracking-widest ${type === t.value ? 'border-bauhaus-black bg-bauhaus-black text-white' : 'border-bauhaus-black/20 bg-bauhaus-canvas text-bauhaus-black hover:border-bauhaus-black'}`}>
+                {t.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* State filter */}
+        <div>
+          <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1.5">State</div>
+          <div className="flex flex-wrap gap-1.5">
+            <Link href={`/entities?view=search${q ? `&q=${q}` : ''}${type ? `&type=${type}` : ''}${sort ? `&sort=${sort}` : ''}`}
+              className={`text-[11px] font-black px-2.5 py-1 border-2 uppercase tracking-widest ${!stateFilter ? 'border-bauhaus-black bg-bauhaus-black text-white' : 'border-bauhaus-black/20 bg-bauhaus-canvas text-bauhaus-black hover:border-bauhaus-black'}`}>
+              All
+            </Link>
+            {STATES.map(s => (
+              <Link key={s} href={`/entities?view=search&state=${s}${q ? `&q=${q}` : ''}${type ? `&type=${type}` : ''}${sort ? `&sort=${sort}` : ''}`}
+                className={`text-[11px] font-black px-2.5 py-1 border-2 uppercase tracking-widest ${stateFilter === s ? 'border-bauhaus-black bg-bauhaus-black text-white' : 'border-bauhaus-black/20 bg-bauhaus-canvas text-bauhaus-black hover:border-bauhaus-black'}`}>
+                {s}
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* Sort */}
+        <div>
+          <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1.5">Sort By</div>
+          <div className="flex flex-wrap gap-1.5">
+            {SORT_OPTIONS.map(s => (
+              <Link key={s.value} href={`/entities?view=search&sort=${s.value}${q ? `&q=${q}` : ''}${type ? `&type=${type}` : ''}${stateFilter ? `&state=${stateFilter}` : ''}`}
+                className={`text-[11px] font-black px-2.5 py-1 border-2 uppercase tracking-widest ${(sort || 'source_count') === s.value ? 'border-bauhaus-black bg-bauhaus-black text-white' : 'border-bauhaus-black/20 bg-bauhaus-canvas text-bauhaus-black hover:border-bauhaus-black'}`}>
+                {s.label}
+              </Link>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Results */}
@@ -165,22 +246,43 @@ export default async function EntityGraphPage({
             <Link key={i} href={`/entities/${r.gs_id}`}
               className="flex items-center justify-between px-4 py-3 hover:bg-bauhaus-canvas transition-colors">
               <div className="flex-1 min-w-0">
-                <div className="font-bold text-bauhaus-black truncate">{r.canonical_name as string}</div>
-                <div className="text-[11px] text-bauhaus-muted font-medium">
-                  {(r.entity_type as string).replace(/_/g, ' ')} &middot; {r.abn as string || 'No ABN'}
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-bauhaus-black truncate">{r.canonical_name as string}</span>
+                  <span className={`text-[10px] font-black px-1.5 py-0.5 border uppercase tracking-widest shrink-0 ${entityTypeBadge(r.entity_type as string)}`}>
+                    {(r.entity_type as string).replace(/_/g, ' ')}
+                  </span>
+                </div>
+                <div className="text-[11px] text-bauhaus-muted font-medium mt-0.5">
+                  {r.abn ? <span>ABN {String(r.abn)}</span> : <span>No ABN</span>}
                   {r.state ? <span> &middot; {String(r.state)}</span> : null}
+                  {r.sector ? <span> &middot; {String(r.sector)}</span> : null}
                 </div>
               </div>
-              <div className="text-right ml-4">
-                <div className="text-xs font-bold text-bauhaus-muted">{r.source_count as number} source{(r.source_count as number) !== 1 ? 's' : ''}</div>
+              <div className="text-right ml-4 shrink-0">
+                {(r.latest_revenue as number) ? (
+                  <div className="text-sm font-black text-bauhaus-black">{formatMoney(r.latest_revenue as number)}</div>
+                ) : null}
+                <div className="text-[10px] font-bold text-bauhaus-muted">
+                  {r.source_count as number} source{(r.source_count as number) !== 1 ? 's' : ''}
+                </div>
               </div>
             </Link>
           ))}
         </div>
       )}
 
-      {q && results.length === 0 && (
-        <p className="text-bauhaus-muted font-medium">No entities found for &ldquo;{q}&rdquo;</p>
+      {needsQuery && results.length === 0 && (
+        <p className="text-bauhaus-muted font-medium">
+          {q ? <>No entities found for &ldquo;{q}&rdquo;</> : 'No entities match these filters'}
+          {type || stateFilter ? ' — try broadening your filters' : ''}
+        </p>
+      )}
+
+      {!needsQuery && (
+        <div className="text-center py-12">
+          <p className="text-bauhaus-muted font-medium mb-2">Search by name or ABN, or select a type filter above</p>
+          <p className="text-xs text-bauhaus-muted">Tip: Use <kbd className="px-1.5 py-0.5 border border-bauhaus-black/20 font-black">&#8984;K</kbd> for global search from anywhere</p>
+        </div>
       )}
     </div>
   );

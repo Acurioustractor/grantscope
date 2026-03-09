@@ -3,12 +3,14 @@
 import { useState, useRef, useEffect } from 'react';
 import { createSupabaseBrowser } from '@/lib/supabase-browser';
 import { AccountDropdown } from './account-dropdown';
+import { GlobalSearch } from './global-search';
 
 const ADMIN_EMAILS = ['benjamin@act.place', 'hello@grantscope.au'];
 
 const primaryLinks = [
   { href: '/grants', label: 'Explore' },
   { href: '/entities', label: 'Entities' },
+  { href: '/power', label: 'Power' },
   { href: '/reports', label: 'Reports' },
 ];
 
@@ -42,6 +44,7 @@ const megaMenuSections = [
       { href: '/reports/community-parity', label: 'Community Parity', desc: 'Who benefits, who misses out' },
       { href: '/reports/funding-equity', label: 'Funding Equity', desc: 'Who gets what, by postcode' },
       { href: '/reports/power-dynamics', label: 'Power Dynamics', desc: 'Concentration & inequality' },
+      { href: '/power', label: 'Power Page', desc: 'Map + Sankey: where the money goes' },
     ],
   },
   {
@@ -67,6 +70,7 @@ const megaMenuSections = [
 export function NavBar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [megaOpen, setMegaOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const megaRef = useRef<HTMLDivElement>(null);
@@ -82,6 +86,18 @@ export function NavBar() {
       setUserEmail(session?.user?.email ?? null);
     });
     return () => subscription.unsubscribe();
+  }, []);
+
+  // Cmd+K / Ctrl+K to open search
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   useEffect(() => {
@@ -121,12 +137,23 @@ export function NavBar() {
                 {link.label}
               </a>
             ))}
+            <button
+              onClick={() => setSearchOpen(true)}
+              className="px-3 py-2 text-xs font-black uppercase tracking-widest text-bauhaus-black hover:bg-bauhaus-black hover:text-white transition-colors flex items-center gap-1.5"
+              aria-label="Search"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
+                <path strokeLinecap="square" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <span className="hidden lg:inline">Search</span>
+              <kbd className="hidden lg:inline-block px-1.5 py-0.5 text-[9px] font-black text-bauhaus-muted border border-bauhaus-black/20 ml-1">&#8984;K</kbd>
+            </button>
             <div className="w-px h-6 bg-bauhaus-black/20 mx-1" />
             <a
-              href="/dashboard"
+              href="/mission-control"
               className="px-3 py-2 text-xs font-black uppercase tracking-widest text-bauhaus-red hover:bg-bauhaus-red hover:text-white transition-colors"
             >
-              Dashboard
+              Mission Control
             </a>
             <button
               ref={btnRef}
@@ -273,6 +300,7 @@ export function NavBar() {
           </div>
         </div>
       )}
+      <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
     </nav>
   );
 }

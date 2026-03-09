@@ -202,6 +202,10 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
     { data: justiceFundingData },
     { data: placeGeoData },
     { data: seifaData },
+    { data: foundationData },
+    { data: foundationProgramsData },
+    { data: charityData },
+    { data: socialEnterpriseData },
   ] = await Promise.all([
     supabase
       .from('gs_relationships')
@@ -261,7 +265,101 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
           .eq('index_type', 'IRSD')
           .limit(1)
       : Promise.resolve({ data: [] }),
+    // Foundation enrichment (if entity has ABN matching a foundation)
+    e.abn
+      ? supabase
+          .from('foundations')
+          .select('id, name, description, thematic_focus, geographic_focus, target_recipients, giving_philosophy, application_tips, notable_grants, total_giving_annual, wealth_source, parent_company, board_members, endowment_size, giving_ratio')
+          .eq('acnc_abn', e.abn)
+          .limit(1)
+      : Promise.resolve({ data: [] }),
+    // Foundation programs — fetched after Promise.all using foundation ID
+    Promise.resolve({ data: [] }),
+    // Charity enrichment (ACNC register data)
+    e.abn
+      ? supabase
+          .from('acnc_charities')
+          .select('abn, name, charity_size, pbi, hpc, purposes, beneficiaries, operating_states')
+          .eq('abn', e.abn)
+          .limit(1)
+      : Promise.resolve({ data: [] }),
+    // Social enterprise enrichment
+    e.abn
+      ? supabase
+          .from('social_enterprises')
+          .select('id, name, org_type, certifications, sector, source_primary')
+          .eq('abn', e.abn)
+          .limit(1)
+      : Promise.resolve({ data: [] }),
   ]);
+
+  // Process enrichment data
+  interface FoundationEnrichment {
+    id: string;
+    name: string;
+    description: string | null;
+    thematic_focus: string[];
+    geographic_focus: string[];
+    target_recipients: string[];
+    giving_philosophy: string | null;
+    application_tips: string | null;
+    notable_grants: string[] | null;
+    total_giving_annual: number | null;
+    wealth_source: string | null;
+    parent_company: string | null;
+    board_members: string[] | null;
+    endowment_size: number | null;
+    giving_ratio: number | null;
+  }
+  const foundation = (foundationData || [])[0] as FoundationEnrichment | undefined;
+
+  // Fetch foundation programs if we found a foundation
+  interface FoundationProgram {
+    id: string;
+    name: string;
+    url: string | null;
+    description: string | null;
+    amount_min: number | null;
+    amount_max: number | null;
+    deadline: string | null;
+    status: string;
+    categories: string[];
+    program_type: string | null;
+    eligibility: string | null;
+    application_process: string | null;
+  }
+  let foundationPrograms: FoundationProgram[] = [];
+  if (foundation?.id) {
+    const { data: progData } = await supabase
+      .from('foundation_programs')
+      .select('id, name, url, description, amount_min, amount_max, deadline, status, categories, program_type, eligibility, application_process')
+      .eq('foundation_id', foundation.id)
+      .eq('status', 'active')
+      .order('deadline', { ascending: true, nullsFirst: false });
+    foundationPrograms = (progData || []) as FoundationProgram[];
+  }
+
+  interface CharityEnrichment {
+    abn: string;
+    name: string;
+    charity_size: string | null;
+    pbi: boolean | null;
+    hpc: boolean | null;
+    purposes: string[] | null;
+    beneficiaries: string[] | null;
+    operating_states: string[] | null;
+  }
+  const charity = (charityData || [])[0] as CharityEnrichment | undefined;
+
+  interface SocialEnterpriseEnrichment {
+    id: string;
+    name: string;
+    org_type: string | null;
+    certifications: string[] | null;
+    sector: string | null;
+    source_primary: string | null;
+  }
+  const socialEnterprise = (socialEnterpriseData || [])[0] as SocialEnterpriseEnrichment | undefined;
 
   // Deduplicate ACNC financials by year (keep richest record)
   interface AcncYear {
@@ -369,6 +467,21 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
           <span className={`text-[11px] font-black px-2.5 py-1 border-2 uppercase tracking-widest ${badge.cls}`}>
             {badge.label}
           </span>
+          {charity?.pbi && (
+            <span className="text-[11px] font-black px-2.5 py-1 border-2 border-money bg-money-light text-money uppercase tracking-widest">
+              PBI
+            </span>
+          )}
+          {charity?.hpc && (
+            <span className="text-[11px] font-black px-2.5 py-1 border-2 border-bauhaus-blue bg-link-light text-bauhaus-blue uppercase tracking-widest">
+              HPC
+            </span>
+          )}
+          {socialEnterprise && (
+            <span className="text-[11px] font-black px-2.5 py-1 border-2 border-money bg-money-light text-money uppercase tracking-widest">
+              Social Enterprise
+            </span>
+          )}
           {e.abn && (
             <span className="text-xs font-bold text-bauhaus-muted">ABN {e.abn}</span>
           )}
@@ -414,6 +527,86 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
           {e.description && (
             <Section title="About">
               <p className="text-bauhaus-muted leading-relaxed font-medium">{e.description}</p>
+            </Section>
+          )}
+
+          {/* Foundation: Giving Philosophy */}
+          {foundation?.giving_philosophy && (
+            <Section title="Giving Philosophy">
+              <p className="text-bauhaus-muted leading-relaxed font-medium">{foundation.giving_philosophy}</p>
+              {foundation.wealth_source && (
+                <div className="mt-3 flex items-center gap-2">
+                  <span className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest">Wealth Source:</span>
+                  <span className="text-sm font-bold text-bauhaus-black">{foundation.wealth_source}</span>
+                </div>
+              )}
+              {foundation.parent_company && (
+                <div className="mt-1 flex items-center gap-2">
+                  <span className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest">Parent:</span>
+                  <span className="text-sm font-bold text-bauhaus-black">{foundation.parent_company}</span>
+                </div>
+              )}
+            </Section>
+          )}
+
+          {/* Foundation: Tips for Applicants */}
+          {foundation?.application_tips && (
+            <Section title="Tips for Applicants">
+              <p className="text-bauhaus-muted leading-relaxed font-medium">{foundation.application_tips}</p>
+            </Section>
+          )}
+
+          {/* Foundation: Programs & Opportunities */}
+          {foundationPrograms.length > 0 && (
+            <Section title={`Programs & Opportunities (${foundationPrograms.length})`}>
+              <div className="space-y-0">
+                {foundationPrograms.map((p) => (
+                  <div key={p.id} className="py-3 border-b-2 border-bauhaus-black/5 last:border-b-0">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        {p.url ? (
+                          <a href={p.url} target="_blank" rel="noopener noreferrer" className="font-bold text-bauhaus-blue hover:underline truncate block">
+                            {p.name}
+                          </a>
+                        ) : (
+                          <div className="font-bold text-bauhaus-black truncate">{p.name}</div>
+                        )}
+                        <div className="text-[11px] text-bauhaus-muted font-medium mt-0.5">
+                          {p.program_type && <span>{p.program_type} &middot; </span>}
+                          {p.categories?.length > 0 && <span>{p.categories.join(', ')} &middot; </span>}
+                          {p.deadline && <span>Closes {p.deadline}</span>}
+                        </div>
+                      </div>
+                      {(p.amount_min || p.amount_max) && (
+                        <div className="text-right ml-4 shrink-0">
+                          <div className="font-black text-bauhaus-black">
+                            {p.amount_min && p.amount_max
+                              ? `${formatMoney(p.amount_min)}-${formatMoney(p.amount_max)}`
+                              : formatMoney(p.amount_max || p.amount_min)}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    {p.description && (
+                      <p className="text-xs text-bauhaus-muted font-medium mt-1 line-clamp-2">{p.description}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {/* Foundation: Notable Grants */}
+          {foundation?.notable_grants && foundation.notable_grants.length > 0 && (
+            <Section title="Notable Grants">
+              <ul className="space-y-1">
+                {foundation.notable_grants.map((g, i) => (
+                  <li key={i} className="text-sm text-bauhaus-muted font-medium flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 bg-bauhaus-blue mt-2 shrink-0" />
+                    {g}
+                  </li>
+                ))}
+              </ul>
             </Section>
           )}
 
@@ -774,6 +967,142 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
               )}
             </dl>
           </div>
+
+          {/* Focus Areas (foundation thematic + charity purposes/beneficiaries) */}
+          {((foundation?.thematic_focus && foundation.thematic_focus.length > 0) ||
+            (foundation?.geographic_focus && foundation.geographic_focus.length > 0) ||
+            (foundation?.target_recipients && foundation.target_recipients.length > 0) ||
+            (charity?.purposes && charity.purposes.length > 0) ||
+            (charity?.beneficiaries && charity.beneficiaries.length > 0)) && (
+            <div className="bg-white border-4 border-bauhaus-black p-4">
+              <h3 className="text-sm font-black text-bauhaus-black mb-3 pb-2 border-b-4 border-bauhaus-black uppercase tracking-widest">
+                Focus Areas
+              </h3>
+              {foundation?.thematic_focus && foundation.thematic_focus.length > 0 && (
+                <div className="mb-3">
+                  <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1.5">Themes</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {foundation.thematic_focus.map((t, i) => (
+                      <span key={i} className="text-[11px] font-bold px-2 py-0.5 border-2 border-bauhaus-blue/20 bg-link-light text-bauhaus-blue">
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {foundation?.geographic_focus && foundation.geographic_focus.length > 0 && (
+                <div className="mb-3">
+                  <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1.5">Geography</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {foundation.geographic_focus.map((g, i) => (
+                      <span key={i} className="text-[11px] font-bold px-2 py-0.5 border-2 border-bauhaus-black/20 bg-bauhaus-canvas text-bauhaus-black">
+                        {g}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {foundation?.target_recipients && foundation.target_recipients.length > 0 && (
+                <div className="mb-3">
+                  <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1.5">Target Recipients</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {foundation.target_recipients.map((r, i) => (
+                      <span key={i} className="text-[11px] font-bold px-2 py-0.5 border-2 border-money/20 bg-money-light text-money">
+                        {r}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {charity?.purposes && charity.purposes.length > 0 && (
+                <div className="mb-3">
+                  <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1.5">Purposes</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {charity.purposes.map((p, i) => (
+                      <span key={i} className="text-[11px] font-bold px-2 py-0.5 border-2 border-bauhaus-blue/20 bg-link-light text-bauhaus-blue">
+                        {p}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {charity?.beneficiaries && charity.beneficiaries.length > 0 && (
+                <div>
+                  <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1.5">Beneficiaries</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {charity.beneficiaries.map((b, i) => (
+                      <span key={i} className="text-[11px] font-bold px-2 py-0.5 border-2 border-money/20 bg-money-light text-money">
+                        {b}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Board & Leadership (foundation) */}
+          {foundation?.board_members && foundation.board_members.length > 0 && (
+            <div className="bg-white border-4 border-bauhaus-black p-4">
+              <h3 className="text-sm font-black text-bauhaus-black mb-3 pb-2 border-b-4 border-bauhaus-black uppercase tracking-widest">
+                Board &amp; Leadership
+              </h3>
+              <ul className="space-y-1.5">
+                {foundation.board_members.map((m, i) => (
+                  <li key={i} className="text-sm font-bold text-bauhaus-black flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-bauhaus-black shrink-0" />
+                    {m}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Connected Entities — top relationships by amount */}
+          {(() => {
+            // Build top connected entities with aggregated amounts
+            const entityAmounts = new Map<string, { name: string; gsId: string; type: string; total: number; relTypes: Set<string> }>();
+            for (const r of allRels) {
+              const otherId = r.source_entity_id === e.id ? r.target_entity_id : r.source_entity_id;
+              const ce = connectedMap.get(otherId);
+              if (!ce) continue;
+              const existing = entityAmounts.get(otherId) || { name: ce.canonical_name, gsId: ce.gs_id, type: ce.entity_type, total: 0, relTypes: new Set() };
+              existing.total += r.amount || 0;
+              existing.relTypes.add(r.relationship_type);
+              entityAmounts.set(otherId, existing);
+            }
+            const sorted = Array.from(entityAmounts.values()).sort((a, b) => b.total - a.total).slice(0, 10);
+            if (sorted.length === 0) return null;
+            return (
+              <div className="bg-white border-4 border-bauhaus-black p-4">
+                <h3 className="text-sm font-black text-bauhaus-black mb-3 pb-2 border-b-4 border-bauhaus-black uppercase tracking-widest">
+                  Connected Entities
+                </h3>
+                <div className="space-y-0">
+                  {sorted.map((ce, i) => (
+                    <div key={i} className="flex items-center justify-between py-2 border-b border-bauhaus-black/5 last:border-b-0">
+                      <div className="min-w-0 flex-1">
+                        <Link href={`/entities/${ce.gsId}`} className="text-sm font-bold text-bauhaus-black hover:text-bauhaus-blue truncate block">
+                          {ce.name}
+                        </Link>
+                        <div className="text-[10px] text-bauhaus-muted font-medium">
+                          {Array.from(ce.relTypes).map(t => relTypeLabel(t)).join(', ')}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 ml-2 shrink-0">
+                        {ce.total > 0 && (
+                          <span className="text-xs font-black text-bauhaus-black">{formatMoney(ce.total)}</span>
+                        )}
+                        <span className={`text-[9px] font-black px-1.5 py-0.5 border uppercase tracking-widest ${entityTypeBadge(ce.type)}`}>
+                          {entityTypeLabel(ce.type)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Financials (if available) */}
           {(e.latest_revenue || e.latest_assets || e.latest_tax_payable) && (
