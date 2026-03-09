@@ -4,15 +4,23 @@ import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
+interface ColumnConfig {
+  key: string;
+  label: string;
+  filterable?: boolean;
+  filterValues?: string[];
+}
+
 interface DatasetConfig {
   table: string;
   label: string;
   description: string;
   source: string;
-  columns: { key: string; label: string }[];
+  columns: ColumnConfig[];
   connections: { slug: string; label: string; rel: string }[];
   refreshCmd: string | null;
   freshnessCol: string;
+  searchCol?: string;
   notes?: string;
 }
 
@@ -24,7 +32,7 @@ const DATASETS: Record<string, DatasetConfig> = {
     source: '15 state portals + web search + foundation programs',
     columns: [
       { key: 'name', label: 'Title' },
-      { key: 'source', label: 'Source' },
+      { key: 'source', label: 'Source', filterable: true, filterValues: ['GrantConnect', 'QLD Grants', 'NSW Grants', 'VIC Grants', 'SA Grants', 'WA Grants', 'TAS Grants', 'NT Grants', 'ACT Grants', 'ARC', 'NHMRC', 'Web Search', 'Foundation Programs'] },
       { key: 'amount_max', label: 'Max Amount' },
       { key: 'closes_at', label: 'Closes' },
       { key: 'enriched_at', label: 'Enriched' },
@@ -82,8 +90,8 @@ const DATASETS: Record<string, DatasetConfig> = {
     columns: [
       { key: 'name', label: 'Name' },
       { key: 'abn', label: 'ABN' },
-      { key: 'state', label: 'State' },
-      { key: 'charity_size', label: 'Size' },
+      { key: 'state', label: 'State', filterable: true, filterValues: ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'NT', 'ACT'] },
+      { key: 'charity_size', label: 'Size', filterable: true, filterValues: ['Small', 'Medium', 'Large'] },
       { key: 'registration_date', label: 'Registered' },
     ],
     connections: [
@@ -120,7 +128,7 @@ const DATASETS: Record<string, DatasetConfig> = {
       { key: 'name', label: 'Name' },
       { key: 'abn', label: 'ABN' },
       { key: 'sector', label: 'Sector' },
-      { key: 'state', label: 'State' },
+      { key: 'state', label: 'State', filterable: true, filterValues: ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'NT', 'ACT'] },
       { key: 'enriched_at', label: 'Enriched' },
     ],
     connections: [
@@ -137,8 +145,8 @@ const DATASETS: Record<string, DatasetConfig> = {
     columns: [
       { key: 'name', label: 'Name' },
       { key: 'icn', label: 'ICN' },
-      { key: 'state', label: 'State' },
-      { key: 'status', label: 'Status' },
+      { key: 'state', label: 'State', filterable: true, filterValues: ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'NT', 'ACT'] },
+      { key: 'status', label: 'Status', filterable: true, filterValues: ['Registered', 'Under Special Administration', 'Deregistered', 'Under Examination'] },
       { key: 'updated_at', label: 'Updated' },
     ],
     connections: [
@@ -158,7 +166,7 @@ const DATASETS: Record<string, DatasetConfig> = {
       { key: 'buyer_name', label: 'Agency' },
       { key: 'contract_value', label: 'Value' },
       { key: 'contract_start', label: 'Start' },
-      { key: 'category', label: 'Category' },
+      { key: 'category', label: 'Category', filterable: true, filterValues: ['Building Construction', 'Healthcare Services', 'IT Services', 'Management Advisory', 'Engineering Services', 'Financial Services', 'Education Services', 'Transport', 'Defence', 'Environmental'] },
     ],
     connections: [
       { slug: 'gs-entities', label: 'Entities', rel: 'Suppliers matched into entity graph' },
@@ -166,6 +174,7 @@ const DATASETS: Record<string, DatasetConfig> = {
     ],
     refreshCmd: 'node scripts/sync-austender-contracts.mjs',
     freshnessCol: 'updated_at',
+    searchCol: 'supplier_name',
   },
   'political-donations': {
     table: 'political_donations',
@@ -177,7 +186,7 @@ const DATASETS: Record<string, DatasetConfig> = {
       { key: 'donation_to', label: 'Recipient' },
       { key: 'amount', label: 'Amount' },
       { key: 'financial_year', label: 'FY' },
-      { key: 'return_type', label: 'Type' },
+      { key: 'return_type', label: 'Type', filterable: true, filterValues: ['Donor', 'Political Party', 'Associated Entity', 'Third Party'] },
     ],
     connections: [
       { slug: 'gs-entities', label: 'Entities', rel: 'Donors matched into entity graph' },
@@ -185,6 +194,7 @@ const DATASETS: Record<string, DatasetConfig> = {
     ],
     refreshCmd: 'node scripts/import-aec-donations.mjs',
     freshnessCol: 'created_at',
+    searchCol: 'donor_name',
     notes: '188K+ records use created_at for freshness (no updated_at column).',
   },
   'gs-entities': {
@@ -194,7 +204,7 @@ const DATASETS: Record<string, DatasetConfig> = {
     source: 'Built from all source datasets',
     columns: [
       { key: 'canonical_name', label: 'Name' },
-      { key: 'entity_type', label: 'Type' },
+      { key: 'entity_type', label: 'Type', filterable: true, filterValues: ['charity', 'company', 'government', 'indigenous_corporation', 'individual', 'political_party', 'trust', 'other'] },
       { key: 'abn', label: 'ABN' },
       { key: 'latest_revenue', label: 'Revenue' },
       { key: 'source_count', label: 'Sources' },
@@ -207,6 +217,7 @@ const DATASETS: Record<string, DatasetConfig> = {
     ],
     refreshCmd: 'node scripts/build-entity-graph.mjs',
     freshnessCol: 'updated_at',
+    searchCol: 'canonical_name',
   },
   'gs-relationships': {
     table: 'gs_relationships',
@@ -234,8 +245,8 @@ const DATASETS: Record<string, DatasetConfig> = {
     columns: [
       { key: 'company_name', label: 'Name' },
       { key: 'acn', label: 'ACN' },
-      { key: 'company_type', label: 'Type' },
-      { key: 'status', label: 'Status' },
+      { key: 'company_type', label: 'Type', filterable: true, filterValues: ['Australian Public Company', 'Australian Proprietary Company', 'Registered Body', 'Foreign Company'] },
+      { key: 'status', label: 'Status', filterable: true, filterValues: ['Registered', 'Deregistered', 'Strike-Off Action In Progress'] },
       { key: 'date_of_registration', label: 'Registered' },
     ],
     connections: [
@@ -244,6 +255,7 @@ const DATASETS: Record<string, DatasetConfig> = {
     ],
     refreshCmd: null,
     freshnessCol: 'updated_at',
+    searchCol: 'company_name',
   },
   'ato-tax-transparency': {
     table: 'ato_tax_transparency',
@@ -260,6 +272,7 @@ const DATASETS: Record<string, DatasetConfig> = {
     connections: [],
     refreshCmd: null,
     freshnessCol: 'created_at',
+    searchCol: 'entity_name',
   },
   'rogs-justice-spending': {
     table: 'rogs_justice_spending',
@@ -294,6 +307,7 @@ const DATASETS: Record<string, DatasetConfig> = {
     ],
     refreshCmd: null,
     freshnessCol: 'created_at',
+    searchCol: 'company_name',
   },
   'money-flows': {
     table: 'money_flows',
@@ -310,6 +324,7 @@ const DATASETS: Record<string, DatasetConfig> = {
     connections: [],
     refreshCmd: null,
     freshnessCol: 'created_at',
+    searchCol: 'source_name',
   },
   'seifa-2021': {
     table: 'seifa_2021',
@@ -326,6 +341,7 @@ const DATASETS: Record<string, DatasetConfig> = {
     connections: [],
     refreshCmd: 'node scripts/import-seifa-postcodes.mjs',
     freshnessCol: 'score', // static dataset, no timestamp
+    searchCol: 'postcode',
     notes: 'Static dataset from Census 2021. Does not update.',
   },
   'justice-funding': {
@@ -347,6 +363,7 @@ const DATASETS: Record<string, DatasetConfig> = {
     ],
     refreshCmd: null,
     freshnessCol: 'updated_at',
+    searchCol: 'recipient_name',
   },
   'alma-interventions': {
     table: 'alma_interventions',
@@ -408,8 +425,22 @@ const DATASETS: Record<string, DatasetConfig> = {
   },
 };
 
-function slugToTable(slug: string): string {
-  return slug.replace(/-/g, '_');
+const PAGE_SIZE = 50;
+
+function buildUrl(
+  basePath: string,
+  current: Record<string, string | undefined>,
+  overrides: Record<string, string | undefined>,
+  resetPage = true,
+): string {
+  const merged = { ...current, ...overrides };
+  if (resetPage && !('page' in overrides)) delete merged.page;
+  const params = new URLSearchParams();
+  for (const [k, v] of Object.entries(merged)) {
+    if (v !== undefined && v !== '') params.set(k, v);
+  }
+  const qs = params.toString();
+  return qs ? `${basePath}?${qs}` : basePath;
 }
 
 function formatValue(value: unknown, key: string): string {
@@ -456,36 +487,100 @@ function freshnessStatus(iso: string | null): { label: string; color: string } {
 
 export default async function DatasetDetailPage({
   params,
+  searchParams: searchParamsPromise,
 }: {
   params: Promise<{ dataset: string }>;
+  searchParams: Promise<{ q?: string; sort?: string; page?: string; [key: string]: string | undefined }>;
 }) {
   const { dataset: slug } = await params;
   const config = DATASETS[slug];
   if (!config) notFound();
 
+  const searchParams = await searchParamsPromise;
+  const basePath = `/ops/health/${slug}`;
+  const sp = searchParams as Record<string, string | undefined>;
+
+  // Parse search
+  const searchQuery = (sp.q ?? '').trim();
+  const searchCol = config.searchCol ?? config.columns[0].key;
+
+  // Parse sort — validate against config columns
+  const validSortKeys = new Set(config.columns.map(c => c.key));
+  let sortKey = config.freshnessCol;
+  let sortAsc = false;
+  if (sp.sort) {
+    const [rawKey, rawDir] = sp.sort.split('.');
+    if (validSortKeys.has(rawKey)) {
+      sortKey = rawKey;
+      sortAsc = rawDir === 'asc';
+    }
+  }
+
+  // Parse filters — only accept filterable column keys
+  const filterableCols = config.columns.filter(c => c.filterable);
+  const activeFilters: Record<string, string> = {};
+  for (const col of filterableCols) {
+    const val = sp[col.key];
+    if (val && col.filterValues?.includes(val)) {
+      activeFilters[col.key] = val;
+    }
+  }
+
+  // Parse pagination
+  const pageNum = Math.max(1, parseInt(sp.page ?? '1', 10) || 1);
+  const offset = (pageNum - 1) * PAGE_SIZE;
+
   const db = getServiceSupabase();
   const selectCols = config.columns.map(c => c.key).join(',');
 
-  // Parallel queries: count, sample rows, freshness, connected dataset counts
+  // Build data query
   const isStatic = config.table === 'seifa_2021' || config.table === 'money_flows';
   const useEstimated = ['acnc_charities', 'political_donations', 'austender_contracts', 'asic_companies', 'gs_entities', 'gs_relationships'].includes(config.table);
+  // Use exact count when filters/search active (estimated won't reflect them), else estimated for large tables
+  const hasFiltersOrSearch = searchQuery || Object.keys(activeFilters).length > 0;
+  const countMode = (useEstimated && !hasFiltersOrSearch) ? 'estimated' as const : 'exact' as const;
 
-  const [countResult, sampleResult, freshnessResult, ...connectionCounts] = await Promise.all([
-    db.from(config.table).select('*', { count: useEstimated ? 'estimated' : 'exact', head: true }),
-    db.from(config.table).select(selectCols).order(config.freshnessCol, { ascending: false }).limit(10),
-    isStatic
-      ? Promise.resolve({ data: null })
-      : db.from(config.table).select(config.freshnessCol).order(config.freshnessCol, { ascending: false }).limit(1),
-    ...config.connections.map(conn => {
-      const connConfig = DATASETS[conn.slug];
-      if (!connConfig) return Promise.resolve({ count: 0 });
-      const useEst = ['acnc_charities', 'political_donations', 'austender_contracts', 'asic_companies', 'gs_entities', 'gs_relationships'].includes(connConfig.table);
-      return db.from(connConfig.table).select('*', { count: useEst ? 'estimated' : 'exact', head: true });
-    }),
+  let dataQuery = db.from(config.table).select(selectCols, { count: countMode });
+
+  // Apply search
+  if (searchQuery) {
+    dataQuery = dataQuery.ilike(searchCol, `%${searchQuery}%`);
+  }
+
+  // Apply filters
+  for (const [key, val] of Object.entries(activeFilters)) {
+    dataQuery = dataQuery.eq(key, val);
+  }
+
+  // Apply sort
+  dataQuery = dataQuery.order(sortKey, { ascending: sortAsc });
+
+  // Apply pagination
+  dataQuery = dataQuery.range(offset, offset + PAGE_SIZE - 1);
+
+  // Freshness query (independent of filters)
+  const freshnessQuery = isStatic
+    ? Promise.resolve({ data: null })
+    : db.from(config.table).select(config.freshnessCol).order(config.freshnessCol, { ascending: false }).limit(1);
+
+  // Connection counts
+  const connectionQueries = config.connections.map(conn => {
+    const connConfig = DATASETS[conn.slug];
+    if (!connConfig) return Promise.resolve({ count: 0 });
+    const useEst = ['acnc_charities', 'political_donations', 'austender_contracts', 'asic_companies', 'gs_entities', 'gs_relationships'].includes(connConfig.table);
+    return db.from(connConfig.table).select('*', { count: useEst ? 'estimated' : 'exact', head: true });
+  });
+
+  const [dataResult, freshnessResult, ...connectionCounts] = await Promise.all([
+    dataQuery,
+    freshnessQuery,
+    ...connectionQueries,
   ]);
 
-  const count = countResult.count ?? 0;
-  const samples = ((sampleResult.data ?? []) as unknown) as Record<string, unknown>[];
+  const totalCount = dataResult.count ?? 0;
+  const rows = ((dataResult.data ?? []) as unknown) as Record<string, unknown>[];
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+
   const lastUpdatedRaw = freshnessResult.data?.[0]
     ? Object.values(freshnessResult.data[0] as unknown as Record<string, unknown>)[0] as string | null
     : null;
@@ -493,6 +588,16 @@ export default async function DatasetDetailPage({
   const status = isStatic
     ? { label: 'STATIC', color: 'bg-blue-100 text-blue-700' }
     : freshnessStatus(lastUpdated);
+
+  // Sort indicator helper
+  function sortUrl(colKey: string): string {
+    const newDir = sortKey === colKey && !sortAsc ? 'asc' : 'desc';
+    return buildUrl(basePath, sp, { sort: `${colKey}.${newDir}`, page: undefined });
+  }
+  function sortIndicator(colKey: string): string {
+    if (sortKey !== colKey) return '';
+    return sortAsc ? ' \u2191' : ' \u2193';
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -527,15 +632,101 @@ export default async function DatasetDetailPage({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main content */}
-        <div className="lg:col-span-2 space-y-8">
-          {/* Sample Records */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Search + Filters */}
+          <section className="space-y-3">
+            {/* Search bar */}
+            <form action={basePath} method="GET" className="flex gap-2">
+              <input
+                type="text"
+                name="q"
+                defaultValue={searchQuery}
+                placeholder={`Search by ${config.columns.find(c => c.key === searchCol)?.label?.toLowerCase() ?? searchCol}...`}
+                className="flex-1 border-4 border-bauhaus-black px-3 py-2 text-sm font-mono focus:outline-none focus:border-bauhaus-red"
+              />
+              {/* Preserve active filters in hidden inputs */}
+              {Object.entries(activeFilters).map(([k, v]) => (
+                <input key={k} type="hidden" name={k} value={v} />
+              ))}
+              {sp.sort && <input type="hidden" name="sort" value={sp.sort} />}
+              <button
+                type="submit"
+                className="border-4 border-bauhaus-black bg-bauhaus-black text-white px-4 py-2 text-xs font-black uppercase tracking-widest hover:bg-bauhaus-red hover:border-bauhaus-red transition-colors"
+              >
+                Search
+              </button>
+              {searchQuery && (
+                <Link
+                  href={buildUrl(basePath, sp, { q: undefined })}
+                  className="border-4 border-bauhaus-black px-3 py-2 text-xs font-black uppercase tracking-widest hover:bg-gray-100 transition-colors flex items-center"
+                >
+                  Clear
+                </Link>
+              )}
+            </form>
+
+            {/* Filter pills */}
+            {filterableCols.length > 0 && (
+              <div className="flex flex-wrap gap-x-4 gap-y-2">
+                {filterableCols.map(col => (
+                  <div key={col.key} className="flex items-center gap-1 flex-wrap">
+                    <span className="text-xs font-black uppercase tracking-wider text-bauhaus-muted">
+                      {col.label}:
+                    </span>
+                    <Link
+                      href={buildUrl(basePath, sp, { [col.key]: undefined })}
+                      className={`px-2 py-0.5 text-xs font-mono border-2 transition-colors ${
+                        !activeFilters[col.key]
+                          ? 'border-bauhaus-black bg-bauhaus-black text-white'
+                          : 'border-bauhaus-black/20 hover:border-bauhaus-black'
+                      }`}
+                    >
+                      All
+                    </Link>
+                    {col.filterValues?.map(val => (
+                      <Link
+                        key={val}
+                        href={buildUrl(basePath, sp, {
+                          [col.key]: activeFilters[col.key] === val ? undefined : val,
+                        })}
+                        className={`px-2 py-0.5 text-xs font-mono border-2 transition-colors ${
+                          activeFilters[col.key] === val
+                            ? 'border-bauhaus-black bg-bauhaus-black text-white'
+                            : 'border-bauhaus-black/20 hover:border-bauhaus-black'
+                        }`}
+                      >
+                        {val}
+                      </Link>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* Data Browser */}
           <section>
             <h2 className="text-sm font-black uppercase tracking-widest text-bauhaus-muted mb-3 border-b-2 border-bauhaus-black pb-2">
-              Sample Records
+              Data Browser
+              <span className="font-mono font-normal ml-2 text-bauhaus-black">
+                {totalCount.toLocaleString()} records
+              </span>
             </h2>
-            {samples.length === 0 ? (
+            {rows.length === 0 ? (
               <div className="border-4 border-dashed border-bauhaus-black/20 p-8 text-center">
-                <div className="text-sm text-bauhaus-muted">No records found</div>
+                <div className="text-sm text-bauhaus-muted">
+                  {searchQuery || Object.keys(activeFilters).length > 0
+                    ? 'No records match your search/filters'
+                    : 'No records found'}
+                </div>
+                {(searchQuery || Object.keys(activeFilters).length > 0) && (
+                  <Link
+                    href={basePath}
+                    className="text-xs text-bauhaus-red hover:underline mt-2 inline-block"
+                  >
+                    Clear all filters
+                  </Link>
+                )}
               </div>
             ) : (
               <div className="border-4 border-bauhaus-black overflow-x-auto">
@@ -543,14 +734,19 @@ export default async function DatasetDetailPage({
                   <thead>
                     <tr className="bg-bauhaus-black text-white">
                       {config.columns.map(col => (
-                        <th key={col.key} className="text-left px-4 py-2 font-black uppercase tracking-wider text-xs">
-                          {col.label}
+                        <th key={col.key} className="text-left px-4 py-2 text-xs">
+                          <Link
+                            href={sortUrl(col.key)}
+                            className="font-black uppercase tracking-wider hover:text-bauhaus-red transition-colors"
+                          >
+                            {col.label}{sortIndicator(col.key)}
+                          </Link>
                         </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {samples.map((row, i) => (
+                    {rows.map((row, i) => (
                       <tr key={i} className="border-t-2 border-bauhaus-black/10 hover:bg-gray-50">
                         {config.columns.map(col => (
                           <td key={col.key} className="px-4 py-2 text-xs font-mono truncate max-w-[200px]">
@@ -563,9 +759,34 @@ export default async function DatasetDetailPage({
                 </table>
               </div>
             )}
-            <p className="text-xs text-bauhaus-muted mt-2">
-              Showing {samples.length} most recent of {count.toLocaleString()} total records
-            </p>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-3">
+                <div className="flex gap-2">
+                  {pageNum > 1 && (
+                    <Link
+                      href={buildUrl(basePath, sp, { page: String(pageNum - 1) }, false)}
+                      className="border-2 border-bauhaus-black px-3 py-1 text-xs font-black uppercase tracking-wider hover:bg-bauhaus-black hover:text-white transition-colors"
+                    >
+                      Prev
+                    </Link>
+                  )}
+                  {pageNum < totalPages && (
+                    <Link
+                      href={buildUrl(basePath, sp, { page: String(pageNum + 1) }, false)}
+                      className="border-2 border-bauhaus-black px-3 py-1 text-xs font-black uppercase tracking-wider hover:bg-bauhaus-black hover:text-white transition-colors"
+                    >
+                      Next
+                    </Link>
+                  )}
+                </div>
+                <span className="text-xs font-mono text-bauhaus-muted">
+                  Page {pageNum} of {totalPages.toLocaleString()}
+                  {' '}({offset + 1}&ndash;{Math.min(offset + PAGE_SIZE, totalCount).toLocaleString()} of {totalCount.toLocaleString()})
+                </span>
+              </div>
+            )}
           </section>
 
           {/* Connections */}
@@ -608,7 +829,7 @@ export default async function DatasetDetailPage({
             <div className="space-y-3">
               <div>
                 <div className="text-xs text-bauhaus-muted uppercase tracking-wider">Records</div>
-                <div className="text-2xl font-black">{count.toLocaleString()}</div>
+                <div className="text-2xl font-black">{totalCount.toLocaleString()}</div>
               </div>
               <div>
                 <div className="text-xs text-bauhaus-muted uppercase tracking-wider">Last Updated</div>
