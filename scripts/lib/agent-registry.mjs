@@ -335,7 +335,7 @@ export const AGENTS = {
     displayName: 'Build Entity Graph',
     category: 'graph',
     defaultPriority: 3,
-    timeoutMs: 600_000,
+    timeoutMs: 1_800_000,
     dependencies: [],
   },
   'resolve-donor-entities': {
