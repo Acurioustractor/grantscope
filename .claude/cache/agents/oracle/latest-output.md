@@ -1,274 +1,365 @@
-# Research Report: Australian Grant/Funding Websites Analysis
-Generated: 2026-03-01
+# Research Report: Supabase Database Access for Mixed Migration/Untracked Tables
+Generated: 2026-03-09
 
 ## Summary
 
-Researched 6 Australian grant/funding websites to assess data availability, access methods, and suitability for GrantScope's database. Key findings: Queensland has excellent CKAN API access with JSON exports; AusTender provides OCDS API for contracts but is procurement-focused (not grants); commercial directories (Funding Centre, The Grants Hub) are behind paywalls with 5,500-7,000+ grants but prohibit redistribution; GrantConnect is the authoritative free source but lacks documented API; AirTree VC is a curated resource page, not a data source.
+Supabase does NOT provide a way to execute arbitrary SQL programmatically via Management API or SQL Editor API. The recommended approaches are: (1) use `supabase db pull` to bring untracked tables under migration control, (2) use direct psql connections with stable passwords from dashboard, (3) create PostgreSQL functions (SECURITY DEFINER) and call via PostgREST RPC, or (4) use server-side PostgreSQL clients. Password rotation is MANUAL not automatic. PostgREST schema cache reloads are event-driven, not time-based.
 
 ## Questions Answered
 
-### Q1: Funding Centre (explore.fundingcentre.com.au)
-**Data Available:** 5,500+ live grants, updated daily
-**Paywall:** Yes - $85-150/year subscription required
-**API/Feeds:** iCal calendar feeds available for members (personal feed for saved grants/deadlines), no public API documented
-**Scraping Feasibility:** Likely JS-rendered, behind login wall
-**Volume:** 5,500+ grants
-**Good Source?** No - Terms prohibit commercial use/redistribution
+### Q1: Supabase direct database connection (non-pooler) with stable password
+**Answer:** Stable passwords ARE available. Database passwords are set manually via the Supabase Dashboard and do NOT auto-rotate. Password resets must be initiated manually via Dashboard Settings > Database > Reset database password. The Supabase CLI `supabase db dump --linked` command that shows rotating passwords is actually generating short-lived CLI session tokens, NOT the main database password.
+
+**Source:** [How do I reset my Supabase database password?](https://github.com/orgs/supabase/discussions/20929), [Connect to your database](https://supabase.com/docs/guides/database/connecting-to-postgres)
+
 **Confidence:** High
 
-**Sources:**
-- [Funding Centre Membership](https://explore.fundingcentre.com.au/membership)
-- [Funding Centre FAQ](https://explore.fundingcentre.com.au/faq)
+**Action:** Use the database password from Supabase Dashboard > Settings > Database. This password is stable until you manually reset it. For direct connections (not pooler), use the connection string on port 5432 with your project's direct connection endpoint.
 
----
+### Q2: Supabase MCP limitations — making MCP see all tables
+**Answer:** The Supabase MCP `execute_sql` tool DOES execute queries against all tables (tracked or untracked). The limitation is that `apply_migration` only tracks DDL operations it performs. To bring untracked tables under migration control, use `supabase db pull` which generates migration files from the current remote schema state.
 
-### Q2: QLD Grants Services (grants.services.qld.gov.au)
-**Data Available:** Grant listings, details, amounts, deadlines via Queensland Government Grants Finder
-**Paywall:** No - Open data under CC BY 4.0 license
-**API/Feeds:** Yes - CKAN API with JSON export at data.qld.gov.au
-**Scraping Feasibility:** CKAN DataStore API preferred over scraping - use `datastore_search` endpoint
-**Volume:** Unknown (dataset available but size not specified in search results)
-**Good Source?** Yes - Excellent option with structured API access
+**Source:** [Database Migrations](https://supabase.com/docs/guides/deployment/database-migrations), [Supabase db pull CLI reference](https://supabase.com/docs/reference/cli/supabase-db-pull)
+
 **Confidence:** High
 
-**API Details:**
-- Endpoint: `https://www.data.qld.gov.au/api/action/datastore_search`
-- Dataset: "Grants Finder" available on data.qld.gov.au
-- Format: JSON via CKAN API
-- License: Creative Commons Attribution 4.0
+**Implementation:**
+```bash
+# Link to your remote project
+supabase link --project-ref tednluwflfhxyucgwigh
 
-**Sources:**
-- [Grants Finder Dataset](https://www.data.qld.gov.au/dataset/grants-finder)
-- [CKAN Data API](https://www.data.qld.gov.au/api/1/util/snippet/api_info.html)
-- [Queensland Open Data Portal](https://www.data.qld.gov.au/)
+# Pull all current schema as migration
+supabase db pull
 
----
+# This creates: supabase/migrations/<timestamp>_remote_schema.sql
+# Contains ALL tables, views, functions from remote database
+```
 
-### Q3: The Grants Hub (thegrantshub.com.au)
-**Data Available:** 7,000+ Australian grants from government, trusts, foundations, and businesses
-**Paywall:** Yes - $313.20-486/year subscription
-**API/Feeds:** None documented
-**Scraping Feasibility:** Unknown rendering method, behind login wall
-**Volume:** 7,000+ grants
-**Good Source?** No - Terms explicitly prohibit use by "businesses offering online grants directories, databases, searchable grant tools or similar"
+**Note:** After running `supabase db pull`, subsequent pulls will only diff changes (not full schema dump). The initial pull when no migration history exists uses `pg_dump` to capture everything.
+
+### Q3: PostgREST schema cache reload timing
+**Answer:** PostgREST schema cache reload is EVENT-DRIVEN, not time-based. There is no fixed auto-reload interval. Reloading happens via `NOTIFY pgrst, 'reload schema';` or automatically if event triggers are configured.
+
+**Source:** [Reload/refresh postgrest schema](https://supabase.com/docs/guides/troubleshooting/refresh-postgrest-schema), [PostgREST Schema Cache](https://docs.postgrest.org/en/latest/references/schema_cache.html)
+
 **Confidence:** High
 
-**Sources:**
-- [The Grants Hub Pricing](https://www.thegrantshub.com.au/pricing)
-- [Grants Directory](https://www.thegrantshub.com.au/grants-directory)
-- [Terms & Conditions](https://www.thegrantshub.com.au/terms-conditions)
+**How to force immediate reload:**
+```sql
+-- Manual reload
+NOTIFY pgrst, 'reload schema';
 
----
+-- Auto-reload on every DDL operation (recommended)
+CREATE OR REPLACE FUNCTION pgrst_watch() 
+RETURNS event_trigger 
+LANGUAGE plpgsql AS $$ 
+BEGIN 
+  NOTIFY pgrst, 'reload schema'; 
+END; 
+$$;
 
-### Q4: AirTree VC (airtree.vc/open-source-vc/government-grants-for-australian-startups)
-**Data Available:** Curated list of ~5-6 major federal grant programs for startups
-**Paywall:** No - Free educational resource
-**API/Feeds:** N/A - Static content page
-**Scraping Feasibility:** Static HTML, easily scrapable
-**Volume:** ~5-6 grant programs (not a comprehensive database)
-**Good Source?** No - Just a curated guide pointing to government sources, not a database
+CREATE EVENT TRIGGER pgrst_watch 
+ON ddl_command_end 
+EXECUTE PROCEDURE pgrst_watch();
+```
+
+**Known Issue:** Reload notifications can be dropped if a schema reload is already in progress. Adding `SELECT pg_sleep(1);` before `NOTIFY` may help reliability.
+
+**Workaround for Hosted Supabase:** The `NOTIFY pgrst, 'reload schema';` command SHOULD work through the connection pooler on Supabase hosted instances. If not working, check if event triggers are set up (they may not be by default).
+
+### Q4: Best practice for shared Supabase database with multiple applications
+**Answer:** Bring ALL tables under migration control using `supabase db pull`, treat schema changes as code changes, use version control (Git), and deploy via CI/CD pipelines. Do NOT rely on automatic schema syncing between applications.
+
+**Source:** [Database Migrations](https://supabase.com/docs/guides/deployment/database-migrations), [Managing Environments](https://supabase.com/docs/guides/deployment/managing-environments), [Multiple environments and migrations – best practices](https://github.com/orgs/supabase/discussions/542)
+
 **Confidence:** High
 
-**Listed Programs:**
-- Export Market Development Grants (EDMG) - Austrade
-- R&D Tax Incentive
-- CSIRO Kick-Start
-- Business Research and Innovation Initiative (BRII)
-- Industry Growth Program (IGP)
+**Recommended Workflow:**
+1. Use `supabase db pull` to capture current schema as migration (one-time operation)
+2. Make all future schema changes via migration files in `supabase/migrations/`
+3. Test migrations locally with `supabase db reset` (applies all migrations to local DB)
+4. Apply to staging: `supabase db push --linked` (or via GitHub Actions)
+5. Apply to production: via CI/CD pipeline, NOT from local machine
+6. Write rollback migrations for every schema change
 
-**Sources:**
-- [AirTree Government Grants for Startups](https://www.airtree.vc/open-source-vc/government-grants-for-australian-startups)
-- [AirTree Open Source VC](https://www.airtree.vc/open-source-vc)
+**For Multiple Applications Sharing Database:**
+- Each application can have its own `supabase/migrations/` folder
+- Coordinate schema changes via shared Git repository
+- Use a single "source of truth" migration folder if possible
+- Test cross-application compatibility before production deployment
 
----
+### Q5: Supabase Management API SQL execution endpoint
+**Answer:** The Management API v1 DOES have a query endpoint, but it ONLY executes SQL queries on the project's LOGS (not the database). There is NO general-purpose SQL execution endpoint for security reasons.
 
-### Q5: Community Grants Hub (communitygrants.gov.au)
-**Data Available:** Australian Government community grants, application guides, grant recipient portal
-**Paywall:** No - Free government service
-**API/Feeds:** No documented API, RSS feed, or data export
-**Scraping Feasibility:** Likely JS-rendered government portal, would need investigation
-**Volume:** Unknown (central hub for community grants administration)
-**Good Source?** Potentially - But appears to be a grants management portal rather than a searchable directory
-**Confidence:** Medium
+**Source:** [Management API v1 run a query](https://supabase.com/docs/reference/api/v1-run-a-query), [Execute SQL in Supabase API Discussion](https://github.com/orgs/supabase/discussions/3419)
 
-**Note:** This is a shared-services platform that delivers grant administration on behalf of Australian Government agencies. The authoritative source for searchable grant opportunities is GrantConnect (grants.gov.au), not this portal.
-
-**Sources:**
-- [Community Grants Hub Homepage](https://www.communitygrants.gov.au/)
-- [Grant Support](https://www.communitygrants.gov.au/grant-support)
-
----
-
-### Q6: AusTender (tenders.gov.au)
-**Data Available:** 450,000+ procurement contracts and tenders (NOT grants)
-**Paywall:** No - Free public access
-**API/Feeds:** Yes - OCDS API (Open Contracting Data Standard) with authentication token required
-**Scraping Feasibility:** API available, no scraping needed
-**Volume:** 450,000+ contracts
-**Good Source?** No - This is for government procurement contracts/tenders, not grants
 **Confidence:** High
 
-**API Details:**
-- Endpoint: `https://api.tenders.gov.au/`
-- Format: OCDS-compliant JSON
-- Auth: Token required
-- Documentation: [GitHub - austender/austender-ocds-api](https://github.com/austender/austender-ocds-api)
+**Endpoint Details:**
+- **URL:** `POST https://api.supabase.com/v1/projects/{ref}/analytics/query`
+- **Purpose:** Query logs ONLY (auth_logs, postgres_logs, edge_logs, etc.)
+- **Auth:** Personal access token (PAT) in Authorization header
+- **Rate limit:** 60 requests per minute per user
+- **Time range:** Max 24 hours, defaults to last 1 minute if not specified
 
-**Sources:**
-- [AusTender Homepage](https://www.tenders.gov.au/)
-- [AusTender OCDS API GitHub](https://github.com/austender/austender-ocds-api)
-- [Open Contracting Partnership - Australia Data](https://www.open-contracting.org/2020/02/11/what-does-australias-open-contracting-data-look-like/)
+**Why No General SQL Execution:**
+> "SQL cannot be fully exposed to frontend clients because it opens a door for forcing inefficient/slow queries that can starve your database of resources."
 
----
+**Alternative Approaches:**
+1. **PostgreSQL Functions (RPC):** Create `SECURITY DEFINER` functions and call via PostgREST
+2. **Server-side PostgreSQL client:** Use `node-postgres` or similar with service role connection
+3. **Edge Functions:** Create custom API routes with database access
 
-## Additional Finding: GrantConnect (grants.gov.au)
+## Detailed Findings
 
-**THE PRIMARY SOURCE** - This is the authoritative, free, whole-of-government grants directory for Australia.
+### Finding 1: Connection Types — Direct vs Pooler
+**Source:** [Connect to your database](https://supabase.com/docs/guides/database/connecting-to-postgres), [Supavisor FAQ](https://supabase.com/docs/guides/troubleshooting/supavisor-faq-YyP5tI)
 
-**Data Available:** All Commonwealth grant opportunities and grants awarded
-**Paywall:** No - Free (registration required for downloading docs and notifications)
-**API/Feeds:** Not documented in search results
-**Scraping Feasibility:** Unknown - Would need technical investigation
-**Volume:** All federal government grants (exact count not specified)
-**Good Source?** Yes - The official authoritative source
+**Key Points:**
+- **Direct connection (port 5432):** For single sessions, database GUIs, pg_dump, migrations. Requires IPv6 by default (IPv4 is paid add-on). Password is stable until manually reset.
+- **Pooler transaction mode (port 6543):** For serverless/edge functions. Shares connections, releases after 5 minutes of inactivity.
+- **Pooler session mode (port 5432 on pooler URL):** For long-lived application connections in IPv4 environments. One client per direct connection, supports prepared statements.
 
-**Key Features:**
-- Centralised listing of current grant opportunities
-- Grants awarded by agency
-- Daily updated reports
-- Search and notification system
-- No documented bulk export or API (but may exist - contact GrantConnect@Finance.gov.au)
+**Connection String Examples:**
+```bash
+# Direct connection (IPv6)
+postgres://postgres:[PASSWORD]@db.xxxxxxxxxx.supabase.co:5432/postgres
 
-**Note:** Search results referenced U.S. Grants.gov (which has XML export and RSS feeds), but did not find equivalent documentation for Australian GrantConnect API.
+# Pooler transaction mode
+postgres://postgres.xxxxxxxxx:[PASSWORD]@aws-0-us-west-1.pooler.supabase.com:6543/postgres
 
-**Sources:**
-- [GrantConnect Homepage](https://www.grants.gov.au/)
-- [GrantConnect Help Centre](https://help.grants.gov.au/)
-- [Department of Finance - Find a Grant](https://www.finance.gov.au/individuals/find-grant-grantconnect)
+# Pooler session mode  
+postgres://postgres.xxxxxxxxx:[PASSWORD]@aws-0-us-west-1.pooler.supabase.com:5432/postgres
+```
 
----
+**For Your Use Case:**
+Use the **direct connection** with the stable password from the dashboard. This is the most reliable for running DDL operations, creating functions, and executing `NOTIFY pgrst, 'reload schema';`.
+
+### Finding 2: Supabase CLI Database URL Behavior
+**Source:** [Backup and Restore using the CLI](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore), [Connecting with PSQL](https://supabase.com/docs/guides/database/psql)
+
+**Key Points:**
+- The CLI command `supabase db dump --linked --dry-run` shows a TEMPORARY session password in the output (this is what you saw rotating every 30-60 seconds)
+- This is NOT your main database password — it's a short-lived CLI authentication token
+- Your actual database password is in Dashboard > Settings > Database and is stable
+- When linked (`supabase link`), the CLI authenticates via access token and generates these temporary credentials for you
+
+**Action:**
+STOP using `supabase db dump` to get passwords. Instead:
+1. Go to Supabase Dashboard > Settings > Database
+2. Copy the stable password shown there (or reset it if needed)
+3. Use this password with the direct connection string for all psql operations
+
+### Finding 3: Migration Pull Strategy
+**Source:** [Supabase db pull CLI reference](https://supabase.com/docs/reference/cli/supabase-db-pull)
+
+**How `supabase db pull` Works:**
+1. **First run (no migration history):** Uses `pg_dump` to capture ALL schemas
+2. **Subsequent runs:** Only diffs changes against last migration
+3. **Schema filtering:** By default excludes `auth` and `storage` schemas (can include with `--schema auth,storage`)
+
+**For Your GrantScope + Empathy Ledger Shared Database:**
+```bash
+cd /Users/benknight/Code/grantscope
+supabase link --project-ref tednluwflfhxyucgwigh
+
+# Pull ALL tables (GrantScope + EL) into migration
+supabase db pull
+
+# Result: supabase/migrations/<timestamp>_remote_schema.sql
+# This file will contain CREATE statements for all 571 tables
+```
+
+**Warning:** This will create a LARGE migration file (571 tables). Consider:
+- Splitting into multiple migration files by schema/application
+- Using `--schema` flag to pull only specific schemas
+- Creating a separate migration folder for shared infrastructure vs application-specific schemas
+
+### Finding 4: PostgreSQL Function Approach (RPC)
+**Source:** [Database Functions](https://supabase.com/docs/guides/database/functions), [Execute SQL in Supabase API Discussion](https://github.com/orgs/supabase/discussions/3419)
+
+**Recommended Pattern:**
+Instead of trying to execute arbitrary SQL via API, create typed PostgreSQL functions and call them via PostgREST RPC.
+
+**Example — Your `exec_sql` Function:**
+```sql
+CREATE OR REPLACE FUNCTION exec_sql(query text)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  result jsonb;
+BEGIN
+  EXECUTE query INTO result;
+  RETURN result;
+END;
+$$;
+```
+
+**Call via PostgREST:**
+```bash
+curl -X POST "https://tednluwflfhxyucgwigh.supabase.co/rest/v1/rpc/exec_sql" \
+  -H "apikey: YOUR_SERVICE_ROLE_KEY" \
+  -H "Authorization: Bearer YOUR_SERVICE_ROLE_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "SELECT * FROM untracked_table LIMIT 10"}'
+```
+
+**Schema Cache Issue:**
+When you update the function definition (ALTER FUNCTION), PostgREST won't see it until cache reloads. Solutions:
+1. Run `NOTIFY pgrst, 'reload schema';` immediately after updating function
+2. Set up auto-reload event trigger (recommended)
+3. Wait for automatic reload (timing unknown, likely several minutes)
 
 ## Comparison Matrix
 
-| Source | Volume | Free Access | API/Feed | Scraping OK | Terms Allow Reuse | Best For |
-|--------|--------|-------------|----------|-------------|-------------------|----------|
-| **GrantConnect** | All federal | Yes (reg req) | Unknown | ? | ? | Primary source |
-| **QLD Grants Finder** | QLD only | Yes | CKAN JSON | Yes (API) | Yes (CC BY 4.0) | State data |
-| **Funding Centre** | 5,500+ | No ($85-150) | iCal only | No | No | N/A |
-| **The Grants Hub** | 7,000+ | No ($313-486) | None | No | No (prohibited) | N/A |
-| **AusTender** | 450k contracts | Yes | OCDS API | Yes (API) | Yes | Procurement only |
-| **AirTree VC** | ~5 programs | Yes | None | Yes | Yes | Guide only |
-| **Community Grants Hub** | Unknown | Yes | None | ? | ? | Admin portal |
-
----
+| Approach | Pros | Cons | Use Case |
+|----------|------|------|----------|
+| **Direct psql (stable password)** | Full PostgreSQL access, DDL support, immediate execution | Requires managing connection strings | One-off admin operations, migrations |
+| **Supabase CLI (linked)** | Integrated with migration workflow, handles auth automatically | Temporary credentials, complex for custom SQL | Migration management, schema diffs |
+| **PostgREST RPC functions** | Works through connection pooler, stable auth (service role key), type-safe | Requires creating function for each operation, schema cache lag | Repeated queries, application integration |
+| **Supabase MCP** | Easy to use from Claude Code, sees all tables for SELECT | Only tracks migrations it applies, not arbitrary DDL | Development exploration, querying data |
+| **Server-side PostgreSQL client** | Full control, no API limits | Requires managing connection lifecycle, credentials | Custom APIs, background jobs |
 
 ## Recommendations
 
-### For GrantScope Database
+### For This Codebase (GrantScope + Empathy Ledger Shared DB)
 
-**Priority 1 - Immediate Implementation:**
-1. **GrantConnect (grants.gov.au)** - Start here. This is the authoritative source for all Commonwealth grants.
-   - Action: Contact GrantConnect@Finance.gov.au to inquire about API access or bulk export
-   - Fallback: Build scraper (investigate if JS-rendered or static HTML)
-   - Expected volume: All federal government grants
+**1. IMMEDIATE: Switch to stable password for psql operations**
 
-2. **Queensland Grants Finder (via data.qld.gov.au)** - Easiest technical integration
-   - Action: Use CKAN API to pull Grants Finder dataset
-   - Implementation: Standard CKAN `datastore_search` endpoint
-   - Code example needed: Python/Node.js CKAN API client
-   - License: CC BY 4.0 (perfect for GrantScope)
+```bash
+# Get your stable password from:
+# https://supabase.com/dashboard/project/tednluwflfhxyucgwigh/settings/database
 
-**Priority 2 - State/Territory Expansion:**
-3. **Other State Open Data Portals** - Check for similar CKAN datasets:
-   - data.nsw.gov.au
-   - data.vic.gov.au
-   - data.sa.gov.au
-   - data.wa.gov.au
-   - Action: Search each portal for "grants" datasets
-
-**Do NOT Pursue:**
-- Funding Centre - Paywall + terms prohibit redistribution
-- The Grants Hub - Paywall + explicit prohibition on grant directory use
-- AusTender - Wrong data type (procurement, not grants)
-- Community Grants Hub - Admin portal, not a searchable directory
-- AirTree VC - Too small, just a curated guide
-
----
-
-## Implementation Notes
-
-### Queensland CKAN API Integration
-To access Queensland Grants Finder data:
-
-```python
-import requests
-
-# Find the Grants Finder dataset
-response = requests.get('https://www.data.qld.gov.au/api/3/action/package_show?id=grants-finder')
-dataset = response.json()
-
-# Get resource ID from dataset
-resource_id = dataset['result']['resources'][0]['id']
-
-# Query the grants data
-response = requests.get(
-    'https://www.data.qld.gov.au/api/action/datastore_search',
-    params={'resource_id': resource_id, 'limit': 1000}
-)
-grants = response.json()['result']['records']
+# Use direct connection (NOT pooler):
+PGPASSWORD="<stable_password_from_dashboard>" psql \
+  -h db.tednluwflfhxyucgwigh.supabase.co \
+  -p 5432 \
+  -U postgres \
+  -d postgres \
+  -c "YOUR SQL HERE"
 ```
 
-### GrantConnect Investigation Steps
-1. Visit grants.gov.au and inspect network requests
-2. Check for:
-   - `/api/` endpoints
-   - JSON responses in XHR requests
-   - GraphQL endpoints
-   - Sitemap.xml for bulk discovery
-3. If no API found, assess scraping:
-   - Check if React/Vue/Angular (JS-rendered)
-   - If JS-rendered, use Playwright
-   - If static HTML, use Cheerio
-4. Monitor `robots.txt` for scraping permissions
+**2. RECOMMENDED: Bring all tables under migration control**
 
-### State Portal Research Template
-For each state portal (data.nsw.gov.au, etc.):
-1. Search for "grants" datasets
-2. Check if CKAN-based (most Australian gov portals use CKAN)
-3. If CKAN: use standard API pattern
-4. Document license (should be CC BY 4.0 or similar)
-5. Estimate update frequency
+```bash
+cd /Users/benknight/Code/grantscope
+supabase link --project-ref tednluwflfhxyucgwigh
+supabase db pull
 
----
+# This creates a baseline migration with ALL 571 tables
+# Commit this to Git as the "source of truth"
+git add supabase/migrations/
+git commit -m "feat: baseline migration from remote schema (571 tables)"
+```
+
+**3. RECOMMENDED: Set up PostgREST auto-reload event trigger**
+
+```sql
+-- Run this once via direct psql connection
+CREATE OR REPLACE FUNCTION pgrst_watch() 
+RETURNS event_trigger 
+LANGUAGE plpgsql AS $$ 
+BEGIN 
+  NOTIFY pgrst, 'reload schema'; 
+END; 
+$$;
+
+CREATE EVENT TRIGGER pgrst_watch 
+ON ddl_command_end 
+EXECUTE PROCEDURE pgrst_watch();
+```
+
+After this, every DDL operation (CREATE FUNCTION, ALTER TABLE, etc.) will automatically reload PostgREST's schema cache within seconds.
+
+**4. FUTURE: Refactor to PostgreSQL functions for repeated operations**
+
+For operations you run frequently (like your `exec_sql` RPC), create properly typed functions:
+
+```sql
+-- Instead of exec_sql(text) → jsonb, create specific functions:
+CREATE OR REPLACE FUNCTION get_grant_deadlines(days_ahead int DEFAULT 30)
+RETURNS TABLE (
+  foundation_name text,
+  program_name text,
+  deadline_date date,
+  days_until_deadline int
+)
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT 
+    f.name,
+    p.name,
+    p.deadline,
+    (p.deadline - CURRENT_DATE) AS days_until_deadline
+  FROM foundation_programs p
+  JOIN foundations f ON f.id = p.foundation_id
+  WHERE p.deadline > CURRENT_DATE
+    AND p.deadline <= CURRENT_DATE + days_ahead
+  ORDER BY p.deadline;
+$$;
+```
+
+Call via PostgREST:
+```bash
+curl "https://tednluwflfhxyucgwigh.supabase.co/rest/v1/rpc/get_grant_deadlines?days_ahead=60" \
+  -H "apikey: SERVICE_ROLE_KEY"
+```
+
+### Implementation Notes
+
+**Migration File Organization:**
+- Consider splitting the initial `supabase db pull` output into multiple files by schema
+- GrantScope tables in one migration file
+- Empathy Ledger tables in another
+- Shared infrastructure (auth, extensions) in a third
+
+**Schema Change Workflow Going Forward:**
+1. Make changes locally via Supabase Studio or direct SQL
+2. Generate migration: `supabase db diff -f <migration_name>`
+3. Review generated SQL in `supabase/migrations/<timestamp>_<migration_name>.sql`
+4. Test locally: `supabase db reset` (wipes local DB and reapplies all migrations)
+5. Push to remote: `supabase db push --linked`
+6. Commit migration file to Git
+
+**Password Management:**
+- Store stable database password in environment variables
+- Use 1Password or similar for team password sharing
+- Rotate password manually via Dashboard when needed (e.g., quarterly, after team member departure)
+- Update all scripts/tools that use the password after rotation
+
+**Supabase MCP Usage:**
+- Continue using for data exploration and SELECT queries
+- Use `apply_migration` for new DDL operations (will be tracked)
+- Existing untracked tables will remain visible to `execute_sql` after running `supabase db pull`
+
+## Sources
+
+1. [Connect to your database | Supabase Docs](https://supabase.com/docs/guides/database/connecting-to-postgres)
+2. [Supavisor FAQ | Supabase Docs](https://supabase.com/docs/guides/troubleshooting/supavisor-faq-YyP5tI)
+3. [Supavisor and Connection Terminology Explained | Supabase Docs](https://supabase.com/docs/guides/troubleshooting/supavisor-and-connection-terminology-explained-9pr_ZO)
+4. [How do I reset my Supabase database password? | GitHub Discussion](https://github.com/orgs/supabase/discussions/20929)
+5. [Database Migrations | Supabase Docs](https://supabase.com/docs/guides/deployment/database-migrations)
+6. [Supabase db pull CLI reference | Supabase Docs](https://supabase.com/docs/reference/cli/supabase-db-pull)
+7. [Local development with schema migrations | Supabase Docs](https://supabase.com/docs/guides/local-development/overview)
+8. [Reload/refresh postgrest schema | Supabase Docs](https://supabase.com/docs/guides/troubleshooting/refresh-postgrest-schema)
+9. [PostgREST Schema Cache | PostgREST Docs](https://docs.postgrest.org/en/latest/references/schema_cache.html)
+10. [Management API v1 run a query | Supabase Docs](https://supabase.com/docs/reference/api/v1-run-a-query)
+11. [Execute SQL in Supabase API | GitHub Discussion](https://github.com/orgs/supabase/discussions/3419)
+12. [Database Functions | Supabase Docs](https://supabase.com/docs/guides/database/functions)
+13. [Managing Environments | Supabase Docs](https://supabase.com/docs/guides/deployment/managing-environments)
+14. [Multiple environments and migrations – best practices | GitHub Discussion](https://github.com/orgs/supabase/discussions/542)
+15. [Connecting with PSQL | Supabase Docs](https://supabase.com/docs/guides/database/psql)
+16. [Backup and Restore using the CLI | Supabase Docs](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore)
 
 ## Open Questions
 
-1. **GrantConnect API** - Does an official API exist? Contact: GrantConnect@Finance.gov.au
-2. **GrantConnect scraping policy** - Is automated access permitted? Check robots.txt and ToS
-3. **GrantConnect data volume** - How many total grant opportunities and awarded grants?
-4. **State portal coverage** - Which other states have open data grants datasets?
-5. **Update frequency** - How often does GrantConnect vs QLD Grants Finder update?
-6. **Historical data** - Does GrantConnect provide access to closed/historical grant rounds?
-7. **Community Grants Hub relationship** - How does this relate to GrantConnect? Are they separate databases?
+1. **PostgREST schema cache timing:** While event-driven reload is documented, the actual timing for automatic reload (without event triggers) is not specified in documentation. Testing needed to determine if there's a background interval.
 
----
+2. **Migration file size limits:** The initial `supabase db pull` for 571 tables will create a very large SQL file. Are there practical limits on migration file size? Should it be split?
 
-## Technical Findings Summary
+3. **Cross-application migration coordination:** With GrantScope and Empathy Ledger sharing a database, how should migration files be organized? Separate repos with shared migration folder? Monorepo with both applications?
 
-### "Backdoors" Found:
-- **Queensland CKAN API** - Full JSON access via data.qld.gov.au
-- **AusTender OCDS API** - But wrong data type (procurement, not grants)
-
-### No Backdoors Found:
-- Funding Centre - Login-walled, iCal only for members
-- The Grants Hub - Login-walled, no documented API
-- GrantConnect - No documented API (requires direct contact/investigation)
-- Community Grants Hub - No documented data export
-- AirTree VC - Static content page (not a database)
-
-### Next Steps for GrantScope Team:
-1. Contact GrantConnect for API documentation
-2. Implement QLD CKAN API integration (quick win)
-3. Investigate GrantConnect scraping feasibility
-4. Research other state open data portals
-5. Consider building relationships with GrantConnect/Department of Finance for official data partnership
+4. **IPv4 Add-on necessity:** Current setup uses connection pooler (IPv4 compatible). If switching to direct connections, is the IPv4 Add-on required? (Direct connections default to IPv6 only)
