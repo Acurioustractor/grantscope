@@ -9,13 +9,13 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-03-08T12:00:00Z
+**Updated:** 2026-03-10T05:30:00Z
 **Goal:** Build entity dossiers + community funding gap packs as revenue products for GrantScope. Part of the larger Australian Community Capital Ledger vision.
 **Branch:** main
 **Test:** `cd /Users/benknight/Code/grantscope/apps/web && npx tsc --noEmit`
 
 ### Now
-[->] Commit Sprint A+B+C code, then begin next phase — expanding data coverage and the vision toward full Community Capital Ledger
+[->] WAITING: ABN Lookup GUID (ref ABNL26131, registered 2026-03-10). Once received, run `node scripts/enrich-postcodes-from-abn.mjs --apply` to fill 16,742 entity postcodes → remoteness
 
 ### This Session
 - [x] **Sprint A: Entity Dossier Enhancement** — justice funding section, place context card, premium gating
@@ -47,10 +47,18 @@ status: active
 - [x] Stripe billing infrastructure (5 tiers, checkout, webhook, portal)
 - [x] 51,728 justice funding records (JusticeHub, same Supabase)
 
+### This Session (2026-03-10)
+- [x] **Remoteness backfill from ABS correspondence data** — downloaded official ABS CG_POSTCODE_2022_RA_2021.csv (2,642 postcodes), filled 31,066 entities
+- [x] **Near-miss postcode fill** — 1,841 more entities via ±9 postcode proximity (GPO, PO Box ranges)
+- [x] **Created `scripts/enrich-postcodes-from-abn.mjs`** — ready to fill 16,742 entities once ABN Lookup GUID arrives
+- [x] **Created `scripts/backfill-remoteness-from-abs.mjs`** — 5 simple UPDATEs instead of CPU-thrashing loop
+- [x] **Stored ABS data** at `data/abs/CG_POSTCODE_2022_RA_2021.csv`
+- [x] **Registered for ABN Lookup API** — ref ABNL26131, GUID expected within 5 working days
+- **Remoteness coverage: 43.2% → 78.6%** (73,097 of 92,991 entities)
+
 ### Next
-- [ ] **Commit all Sprint A+B+C code** to GrantScope repo
-- [ ] **Data gap: postcode_geo missing QLD postcodes** — table starts at 2107, missing 0xxx-2106 (NT, QLD, parts of NSW). Need to import full ABS postcode dataset to get remoteness for all postcodes.
-- [ ] **Expand entity universe** — ABR/ABN Lookup integration (free API) for Layer A business spine. Currently only have entities from ACNC, ORIC, AusTender, AEC, ASX.
+- [ ] **ABN Lookup GUID arrives** → add to `.env` as `ABN_LOOKUP_GUID`, run `node scripts/enrich-postcodes-from-abn.mjs --apply` (16,742 entities → ~97% remoteness)
+- [ ] **Commit all new scripts + data** to GrantScope repo
 - [ ] **ASIC selective enrichment** — company extracts for high-value entities (directors, related entities, subsidiaries). $10-$23/extract, prioritize by relationship density.
 - [ ] **Supply Nation / social enterprise layer** — no single open register. Need Social Traders Finder scrape + RISE dataset + self-declared classification.
 - [ ] **LGA mapping** — add LGA to entities and place pages. Required for "funding per LGA" analysis.
@@ -70,8 +78,8 @@ status: active
 - **Vision architecture** — 7 core objects (Entity, Person, Transaction, Program, Place, Document, Story) + 4 truth layers (raw, resolved, relationship, community)
 
 ### Open Questions
-- UNCONFIRMED: `postcode_geo` data completeness — why missing QLD? May need re-import from ABS source
-- UNCONFIRMED: ABR/ABN Lookup API access — need to check if free tier has rate limits suitable for 80K+ entity enrichment
+- RESOLVED: `postcode_geo` was incomplete (2045-7470 only) — now supplemented by ABS CG_POSTCODE_2022_RA_2021.csv covering all AU postcodes
+- RESOLVED: ABR/ABN Lookup API — free, JSON endpoint at `abr.business.gov.au/json/AbnDetails.aspx`, needs GUID (registered, awaiting delivery ref ABNL26131)
 - UNCONFIRMED: ASIC extract costs at scale — is there a bulk/research pricing arrangement?
 - UNCONFIRMED: Supply Nation API — is the directory programmatically accessible or scrape-only?
 - UNCONFIRMED: 360Giving standard applicability to Australian context — differences in entity identifiers, geography schemes
@@ -93,8 +101,8 @@ max_retries: 3
 - dev_verified: true
 
 #### Unknowns
-- postcode_geo_completeness: UNKNOWN (missing QLD/NT)
-- abr_api_rate_limits: UNKNOWN
+- postcode_geo_completeness: RESOLVED (ABS correspondence file covers all AU postcodes)
+- abr_api_rate_limits: RESOLVED (no stated limits, using 9 req/sec with 3 workers)
 - asic_bulk_pricing: UNKNOWN
 - supply_nation_api: UNKNOWN
 - community_layer_integration: UNKNOWN (Empathy Ledger connection TBD)

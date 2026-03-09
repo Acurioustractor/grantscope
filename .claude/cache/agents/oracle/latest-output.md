@@ -1,365 +1,303 @@
-# Research Report: Supabase Database Access for Mixed Migration/Untracked Tables
-Generated: 2026-03-09
+# Research Report: OpenSanctions Integration for GrantScope
+Generated: 2026-03-10
 
 ## Summary
 
-Supabase does NOT provide a way to execute arbitrary SQL programmatically via Management API or SQL Editor API. The recommended approaches are: (1) use `supabase db pull` to bring untracked tables under migration control, (2) use direct psql connections with stable passwords from dashboard, (3) create PostgreSQL functions (SECURITY DEFINER) and call via PostgREST RPC, or (4) use server-side PostgreSQL clients. Password rotation is MANUAL not automatic. PostgREST schema cache reloads are event-driven, not time-based.
+OpenSanctions is a mature open database combining international sanctions lists, PEP databases, and related entity data into a unified FollowTheMoney (FtM) graph model. It includes 269 datasets (84 PEP sources alone), covers Australian DFAT sanctions natively, and offers both bulk data downloads and a self-hostable matching API (yente). The data is CC BY-NC 4.0 licensed -- free for non-commercial use, paid for commercial. For matching ~80K Australian entities, the self-hosted yente API with batch matching is the recommended approach.
 
 ## Questions Answered
 
-### Q1: Supabase direct database connection (non-pooler) with stable password
-**Answer:** Stable passwords ARE available. Database passwords are set manually via the Supabase Dashboard and do NOT auto-rotate. Password resets must be initiated manually via Dashboard Settings > Database > Reset database password. The Supabase CLI `supabase db dump --linked` command that shows rotating passwords is actually generating short-lived CLI session tokens, NOT the main database password.
+### Q1: What datasets are available and their formats?
+**Answer:** 269 dataset collections available in three formats:
+- **FtM JSON** (`entities.ftm.json`) -- full structured data using FollowTheMoney graph model. One JSON object per line (NDJSON). Recommended for developers.
+- **Simplified CSV** (`targets.simple.csv`) -- flattened tabular view with key columns. Comma-delimited, UTF-8. Good for spreadsheet analysis but loses relationship data.
+- **Nested JSON** (`entities.nested.json`) -- API-style JSON with resolved references.
 
-**Source:** [How do I reset my Supabase database password?](https://github.com/orgs/supabase/discussions/20929), [Connect to your database](https://supabase.com/docs/guides/database/connecting-to-postgres)
+Key dataset collections:
+- `default` -- everything combined (sanctions + PEPs + crime)
+- `sanctions` -- all sanctions lists only
+- `peps` -- all PEP data only (219K persons from 84 sources)
+- `crime` -- crime-related datasets
+- `au_dfat_sanctions` -- Australian DFAT sanctions specifically
 
+Download URL pattern:
+```
+https://data.opensanctions.org/datasets/latest/{dataset}/{format}
+```
+Examples:
+```
+https://data.opensanctions.org/datasets/latest/default/entities.ftm.json
+https://data.opensanctions.org/datasets/latest/sanctions/targets.simple.csv
+https://data.opensanctions.org/datasets/latest/au_dfat_sanctions/entities.ftm.json
+```
+
+Historical versions available via date:
+```
+https://data.opensanctions.org/datasets/20260310/{dataset}/{format}
+```
+
+**Source:** https://www.opensanctions.org/docs/bulk/, https://www.opensanctions.org/datasets/
 **Confidence:** High
 
-**Action:** Use the database password from Supabase Dashboard > Settings > Database. This password is stable until you manually reset it. For direct connections (not pooler), use the connection string on port 5432 with your project's direct connection endpoint.
+### Q2: How to download bulk data?
+**Answer:** Direct HTTP download from `data.opensanctions.org`. No authentication required for download. Updated multiple times daily. Recommended polling frequency: every 30 minutes for freshness.
 
-### Q2: Supabase MCP limitations — making MCP see all tables
-**Answer:** The Supabase MCP `execute_sql` tool DOES execute queries against all tables (tracked or untracked). The limitation is that `apply_migration` only tracks DDL operations it performs. To bring untracked tables under migration control, use `supabase db pull` which generates migration files from the current remote schema state.
+```bash
+# Download all sanctions + PEPs (the "default" collection)
+curl -O https://data.opensanctions.org/datasets/latest/default/entities.ftm.json
 
-**Source:** [Database Migrations](https://supabase.com/docs/guides/deployment/database-migrations), [Supabase db pull CLI reference](https://supabase.com/docs/reference/cli/supabase-db-pull)
+# Download just Australian DFAT sanctions
+curl -O https://data.opensanctions.org/datasets/latest/au_dfat_sanctions/entities.ftm.json
 
+# Download simplified CSV for analysis
+curl -O https://data.opensanctions.org/datasets/latest/default/targets.simple.csv
+```
+
+**Source:** https://www.opensanctions.org/faq/150/downloading/
 **Confidence:** High
 
-**Implementation:**
-```bash
-# Link to your remote project
-supabase link --project-ref tednluwflfhxyucgwigh
+### Q3: What entity types do they track?
+**Answer:** Based on FollowTheMoney schema, OpenSanctions uses these entity types:
+- **Person** -- natural persons (sanctioned individuals, PEPs)
+- **Organization** -- unincorporated bodies, associations
+- **Company** -- incorporated entities
+- **LegalEntity** -- parent type for Company/Organization
+- **Vessel** -- ships/boats (for maritime sanctions)
+- **Aircraft** -- sanctioned aircraft
+- **CryptoWallet** -- cryptocurrency addresses
+- **Position** -- political/governmental roles (for PEP classification)
+- **Occupancy** -- links a Person to a Position for a time period
+- **Identification** -- passport/ID document linked to a person
+- **Address** -- physical addresses
+- **Sanction** -- the sanction event itself, linking entity to program
 
-# Pull all current schema as migration
-supabase db pull
+Relationship types:
+- **Ownership** -- ownership/control between entities
+- **Directorship** -- director/officer role
+- **Employment** -- employment relationship
+- **Family** -- family relationships
+- **Associate** -- general associations
+- **UnknownLink** -- unclassified relationships
 
-# This creates: supabase/migrations/<timestamp>_remote_schema.sql
-# Contains ALL tables, views, functions from remote database
-```
-
-**Note:** After running `supabase db pull`, subsequent pulls will only diff changes (not full schema dump). The initial pull when no migration history exists uses `pg_dump` to capture everything.
-
-### Q3: PostgREST schema cache reload timing
-**Answer:** PostgREST schema cache reload is EVENT-DRIVEN, not time-based. There is no fixed auto-reload interval. Reloading happens via `NOTIFY pgrst, 'reload schema';` or automatically if event triggers are configured.
-
-**Source:** [Reload/refresh postgrest schema](https://supabase.com/docs/guides/troubleshooting/refresh-postgrest-schema), [PostgREST Schema Cache](https://docs.postgrest.org/en/latest/references/schema_cache.html)
-
+**Source:** https://www.opensanctions.org/reference/, https://followthemoney.tech/explorer/
 **Confidence:** High
 
-**How to force immediate reload:**
-```sql
--- Manual reload
-NOTIFY pgrst, 'reload schema';
+### Q4: What identifiers do they use?
+**Answer:** The FtM model supports various identifier types:
 
--- Auto-reload on every DDL operation (recommended)
-CREATE OR REPLACE FUNCTION pgrst_watch() 
-RETURNS event_trigger 
-LANGUAGE plpgsql AS $$ 
-BEGIN 
-  NOTIFY pgrst, 'reload schema'; 
-END; 
-$$;
+For **Person**:
+- `name`, `alias`, `weakAlias` -- name variants
+- `birthDate`, `deathDate`
+- `nationality`, `country`
+- `idNumber` -- national ID numbers
+- `passportNumber`
+- `taxNumber`
+- `gender`
+- `position` -- political position held
 
-CREATE EVENT TRIGGER pgrst_watch 
-ON ddl_command_end 
-EXECUTE PROCEDURE pgrst_watch();
-```
+For **Company/LegalEntity**:
+- `name`, `alias`
+- `registrationNumber` -- company registration number
+- `taxNumber` -- tax/ABN equivalent
+- `jurisdiction` -- country of incorporation
+- `incorporationDate`
+- `address`
+- `classification` -- entity type classification
 
-**Known Issue:** Reload notifications can be dropped if a schema reload is already in progress. Adding `SELECT pg_sleep(1);` before `NOTIFY` may help reliability.
+For **Identification** (linked documents):
+- `number` -- document number
+- `type` -- passport, national ID, etc.
+- `country` -- issuing country
+- `authority` -- issuing authority
 
-**Workaround for Hosted Supabase:** The `NOTIFY pgrst, 'reload schema';` command SHOULD work through the connection pooler on Supabase hosted instances. If not working, check if event triggers are set up (they may not be by default).
+**Important for GrantScope:** OpenSanctions does NOT natively store Australian Business Numbers (ABNs) as a first-class field. ABNs would appear as `registrationNumber` or `taxNumber` if present. Matching will primarily rely on **name + jurisdiction** rather than ABN lookup.
 
-### Q4: Best practice for shared Supabase database with multiple applications
-**Answer:** Bring ALL tables under migration control using `supabase db pull`, treat schema changes as code changes, use version control (Git), and deploy via CI/CD pipelines. Do NOT rely on automatic schema syncing between applications.
-
-**Source:** [Database Migrations](https://supabase.com/docs/guides/deployment/database-migrations), [Managing Environments](https://supabase.com/docs/guides/deployment/managing-environments), [Multiple environments and migrations – best practices](https://github.com/orgs/supabase/discussions/542)
-
+**Source:** https://followthemoney.tech/explorer/schemata/Person/, https://followthemoney.tech/explorer/schemata/LegalEntity/
 **Confidence:** High
 
-**Recommended Workflow:**
-1. Use `supabase db pull` to capture current schema as migration (one-time operation)
-2. Make all future schema changes via migration files in `supabase/migrations/`
-3. Test migrations locally with `supabase db reset` (applies all migrations to local DB)
-4. Apply to staging: `supabase db push --linked` (or via GitHub Actions)
-5. Apply to production: via CI/CD pipeline, NOT from local machine
-6. Write rollback migrations for every schema change
+### Q5: Australian-specific data?
+**Answer:** Yes, OpenSanctions includes:
 
-**For Multiple Applications Sharing Database:**
-- Each application can have its own `supabase/migrations/` folder
-- Coordinate schema changes via shared Git repository
-- Use a single "source of truth" migration folder if possible
-- Test cross-application compatibility before production deployment
+**Australian DFAT Sanctions Consolidated List** (`au_dfat_sanctions`):
+- All persons and entities subject to targeted financial sanctions under Australian sanctions law
+- Includes UNSC sanctions (mandatory for UN members) and Australian autonomous sanctions
+- Updated daily from the Australian Sanctions Office (ASO)
+- Dataset URL: https://www.opensanctions.org/datasets/au_dfat_sanctions/
+- Programs covered: AU-HUMAN (Human Rights Sanctions Regime), plus UNSC programs
 
-### Q5: Supabase Management API SQL execution endpoint
-**Answer:** The Management API v1 DOES have a query endpoint, but it ONLY executes SQL queries on the project's LOGS (not the database). There is NO general-purpose SQL execution endpoint for security reasons.
+**Australian PEPs:**
+- No dedicated Australian PEP source dataset found
+- Australian PEPs would come from **Wikidata PEPs** (`wd_peps`) which pulls from Wikidata entries for Australian politicians, officials
+- Coverage likely includes federal parliamentarians, state premiers, senior officials -- but NOT comprehensive for all levels
+- EveryPolitician data (historical) may also contribute Australian parliamentary data
 
-**Source:** [Management API v1 run a query](https://supabase.com/docs/reference/api/v1-run-a-query), [Execute SQL in Supabase API Discussion](https://github.com/orgs/supabase/discussions/3419)
+**Gap:** There is no dedicated Australian PEP registry in OpenSanctions. Australian PEP coverage relies on Wikidata, which is community-maintained and may have gaps for state/local officials and statutory body heads.
 
+**Source:** https://www.opensanctions.org/datasets/au_dfat_sanctions/, https://www.opensanctions.org/datasets/peps/
+**Confidence:** High (sanctions), Medium (PEP coverage depth)
+
+### Q6: Data schema -- fields per entity?
+**Answer:** The simplified CSV (`targets.simple.csv`) contains these columns:
+- `id` -- unique entity identifier
+- `schema` -- entity type (Person, Company, etc.)
+- `name` -- primary name
+- `aliases` -- semicolon-separated aliases
+- `birth_date` -- for persons
+- `countries` -- semicolon-separated country codes
+- `addresses` -- semicolon-separated addresses
+- `identifiers` -- semicolon-separated ID numbers
+- `sanctions` -- semicolon-separated sanction descriptions
+- `phones` -- phone numbers
+- `emails` -- email addresses
+- `dataset` -- source dataset name
+- `datasets` -- all contributing datasets
+- `first_seen` -- when entity first appeared
+- `last_seen` -- most recent update
+- `last_change` -- when properties last changed
+- `program_ids` -- sanctions program identifiers
+
+The full FtM JSON format provides much richer data with all properties, nested relationships, and provenance.
+
+**Source:** https://www.opensanctions.org/docs/bulk/csv/
 **Confidence:** High
 
-**Endpoint Details:**
-- **URL:** `POST https://api.supabase.com/v1/projects/{ref}/analytics/query`
-- **Purpose:** Query logs ONLY (auth_logs, postgres_logs, edge_logs, etc.)
-- **Auth:** Personal access token (PAT) in Authorization header
-- **Rate limit:** 60 requests per minute per user
-- **Time range:** Max 24 hours, defaults to last 1 minute if not specified
+### Q7: Licensing terms?
+**Answer:**
+- **License:** Creative Commons Attribution-NonCommercial 4.0 (CC BY-NC 4.0)
+- **Non-commercial use:** Free, no license needed
+- **Commercial use:** Requires paid data license
+- **Exemptions (zero-cost license):**
+  - Journalistic media publishing in public interest
+  - Advocacy and non-profit groups working on democratic governance
+  - Public institutions of countries invaded by Russian Armed Forces
+- **GrantScope implication:** If GrantScope is a non-profit/advocacy project improving grant transparency, it likely qualifies for the exemption. If commercial, a license is needed.
+- **Pricing:** Not publicly listed; contact OpenSanctions for commercial tiers
+- **Self-hosted API (yente):** The software is MIT-licensed. The DATA still requires appropriate licensing.
 
-**Why No General SQL Execution:**
-> "SQL cannot be fully exposed to frontend clients because it opens a door for forcing inefficient/slow queries that can starve your database of resources."
+**Source:** https://www.opensanctions.org/licensing/, https://www.opensanctions.org/faq/32/exemptions/
+**Confidence:** High
 
-**Alternative Approaches:**
-1. **PostgreSQL Functions (RPC):** Create `SECURITY DEFINER` functions and call via PostgREST
-2. **Server-side PostgreSQL client:** Use `node-postgres` or similar with service role connection
-3. **Edge Functions:** Create custom API routes with database access
+### Q8: Yente matching API?
+**Answer:**
 
-## Detailed Findings
+**Architecture:**
+- Two Docker containers: yente app + ElasticSearch index
+- Hardware: minimum 4GB RAM, 1 vCPU, 40GB disk; recommended 8GB RAM + SSD
+- Ships as docker-compose setup; also works on Kubernetes
 
-### Finding 1: Connection Types — Direct vs Pooler
-**Source:** [Connect to your database](https://supabase.com/docs/guides/database/connecting-to-postgres), [Supavisor FAQ](https://supabase.com/docs/guides/troubleshooting/supavisor-faq-YyP5tI)
-
-**Key Points:**
-- **Direct connection (port 5432):** For single sessions, database GUIs, pg_dump, migrations. Requires IPv6 by default (IPv4 is paid add-on). Password is stable until manually reset.
-- **Pooler transaction mode (port 6543):** For serverless/edge functions. Shares connections, releases after 5 minutes of inactivity.
-- **Pooler session mode (port 5432 on pooler URL):** For long-lived application connections in IPv4 environments. One client per direct connection, supports prepared statements.
-
-**Connection String Examples:**
+**Self-hosted setup:**
 ```bash
-# Direct connection (IPv6)
-postgres://postgres:[PASSWORD]@db.xxxxxxxxxx.supabase.co:5432/postgres
-
-# Pooler transaction mode
-postgres://postgres.xxxxxxxxx:[PASSWORD]@aws-0-us-west-1.pooler.supabase.com:6543/postgres
-
-# Pooler session mode  
-postgres://postgres.xxxxxxxxx:[PASSWORD]@aws-0-us-west-1.pooler.supabase.com:5432/postgres
+# docker-compose.yml (simplified)
+docker pull ghcr.io/opensanctions/yente:latest
+# Requires OPENSANCTIONS_API_KEY env var for data access
 ```
 
-**For Your Use Case:**
-Use the **direct connection** with the stable password from the dashboard. This is the most reliable for running DDL operations, creating functions, and executing `NOTIFY pgrst, 'reload schema';`.
+**Key endpoints:**
+- `GET /search/{dataset}?q=name` -- text search
+- `POST /match/{dataset}` -- single entity matching
+- `POST /match/{dataset}` with batch -- batch matching (recommended)
 
-### Finding 2: Supabase CLI Database URL Behavior
-**Source:** [Backup and Restore using the CLI](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore), [Connecting with PSQL](https://supabase.com/docs/guides/database/psql)
-
-**Key Points:**
-- The CLI command `supabase db dump --linked --dry-run` shows a TEMPORARY session password in the output (this is what you saw rotating every 30-60 seconds)
-- This is NOT your main database password — it's a short-lived CLI authentication token
-- Your actual database password is in Dashboard > Settings > Database and is stable
-- When linked (`supabase link`), the CLI authenticates via access token and generates these temporary credentials for you
-
-**Action:**
-STOP using `supabase db dump` to get passwords. Instead:
-1. Go to Supabase Dashboard > Settings > Database
-2. Copy the stable password shown there (or reset it if needed)
-3. Use this password with the direct connection string for all psql operations
-
-### Finding 3: Migration Pull Strategy
-**Source:** [Supabase db pull CLI reference](https://supabase.com/docs/reference/cli/supabase-db-pull)
-
-**How `supabase db pull` Works:**
-1. **First run (no migration history):** Uses `pg_dump` to capture ALL schemas
-2. **Subsequent runs:** Only diffs changes against last migration
-3. **Schema filtering:** By default excludes `auth` and `storage` schemas (can include with `--schema auth,storage`)
-
-**For Your GrantScope + Empathy Ledger Shared Database:**
-```bash
-cd /Users/benknight/Code/grantscope
-supabase link --project-ref tednluwflfhxyucgwigh
-
-# Pull ALL tables (GrantScope + EL) into migration
-supabase db pull
-
-# Result: supabase/migrations/<timestamp>_remote_schema.sql
-# This file will contain CREATE statements for all 571 tables
+**Batch matching format (the key for 80K entities):**
+```json
+POST /match/default
+{
+  "queries": {
+    "entity1": {
+      "schema": "Company",
+      "properties": {
+        "name": ["Acme Charity Ltd"],
+        "jurisdiction": ["au"],
+        "registrationNumber": ["12345678"]
+      }
+    },
+    "entity2": {
+      "schema": "Person",
+      "properties": {
+        "name": ["Jane Smith"],
+        "birthDate": ["1975"],
+        "nationality": ["au"]
+      }
+    }
+  }
+}
 ```
 
-**Warning:** This will create a LARGE migration file (571 tables). Consider:
-- Splitting into multiple migration files by schema/application
-- Using `--schema` flag to pull only specific schemas
-- Creating a separate migration folder for shared infrastructure vs application-specific schemas
+**Recommended batch size:** 20-50 entities per request (not 5000).
 
-### Finding 4: PostgreSQL Function Approach (RPC)
-**Source:** [Database Functions](https://supabase.com/docs/guides/database/functions), [Execute SQL in Supabase API Discussion](https://github.com/orgs/supabase/discussions/3419)
+**Response includes:**
+- Match score (0-1)
+- Matched entity details
+- Explanation of scoring components (useful for analyst review)
 
-**Recommended Pattern:**
-Instead of trying to execute arbitrary SQL via API, create typed PostgreSQL functions and call them via PostgREST RPC.
+**Matching algorithm options:**
+- `algorithm=best` -- highest quality matching
+- Supports name transliteration, fuzzy matching, phonetic matching
 
-**Example — Your `exec_sql` Function:**
-```sql
-CREATE OR REPLACE FUNCTION exec_sql(query text)
-RETURNS jsonb
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-DECLARE
-  result jsonb;
-BEGIN
-  EXECUTE query INTO result;
-  RETURN result;
-END;
-$$;
-```
+**Custom datasets:** You can load your own entity lists into yente alongside OpenSanctions data, enabling cross-matching between your data and sanctions/PEP lists.
 
-**Call via PostgREST:**
-```bash
-curl -X POST "https://tednluwflfhxyucgwigh.supabase.co/rest/v1/rpc/exec_sql" \
-  -H "apikey: YOUR_SERVICE_ROLE_KEY" \
-  -H "Authorization: Bearer YOUR_SERVICE_ROLE_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"query": "SELECT * FROM untracked_table LIMIT 10"}'
-```
+**Cloud API alternative:**
+- Hosted at `api.opensanctions.org`
+- Pay-as-you-go pricing
+- Same endpoints as self-hosted
+- No infrastructure management needed
 
-**Schema Cache Issue:**
-When you update the function definition (ALTER FUNCTION), PostgREST won't see it until cache reloads. Solutions:
-1. Run `NOTIFY pgrst, 'reload schema';` immediately after updating function
-2. Set up auto-reload event trigger (recommended)
-3. Wait for automatic reload (timing unknown, likely several minutes)
+**Source:** https://www.opensanctions.org/docs/self-hosted/, https://github.com/opensanctions/yente, https://www.opensanctions.org/docs/api/matching/
+**Confidence:** High
 
-## Comparison Matrix
+## Recommendations for GrantScope
 
-| Approach | Pros | Cons | Use Case |
-|----------|------|------|----------|
-| **Direct psql (stable password)** | Full PostgreSQL access, DDL support, immediate execution | Requires managing connection strings | One-off admin operations, migrations |
-| **Supabase CLI (linked)** | Integrated with migration workflow, handles auth automatically | Temporary credentials, complex for custom SQL | Migration management, schema diffs |
-| **PostgREST RPC functions** | Works through connection pooler, stable auth (service role key), type-safe | Requires creating function for each operation, schema cache lag | Repeated queries, application integration |
-| **Supabase MCP** | Easy to use from Claude Code, sees all tables for SELECT | Only tracks migrations it applies, not arbitrary DDL | Development exploration, querying data |
-| **Server-side PostgreSQL client** | Full control, no API limits | Requires managing connection lifecycle, credentials | Custom APIs, background jobs |
+### Integration Strategy
 
-## Recommendations
+1. **Self-host yente** via Docker for the 80K entity matching job. At 50 entities/batch, that is ~1,600 API calls -- very manageable. A single run should complete in under an hour.
 
-### For This Codebase (GrantScope + Empathy Ledger Shared DB)
+2. **Match in two passes:**
+   - **Pass 1 -- Entity match:** Match all 80K entities (charities, companies, Indigenous corps) as `Company` or `Organization` schema against `sanctions` + `peps` collections
+   - **Pass 2 -- Director/officer match:** Extract known directors/officers from ACNC/ORIC data, match as `Person` schema against `peps` collection to flag PEP board members
 
-**1. IMMEDIATE: Switch to stable password for psql operations**
+3. **Matching fields to use:**
+   - For entities: `name` + `jurisdiction: "au"` + `registrationNumber` (ABN if available)
+   - For persons: `name` + `nationality: "au"` + `birthDate` (if available)
+   - Name matching is fuzzy by default; jurisdiction/nationality helps reduce false positives
 
-```bash
-# Get your stable password from:
-# https://supabase.com/dashboard/project/tednluwflfhxyucgwigh/settings/database
+4. **Store results in a `sanctions_screening` table:**
+   ```sql
+   CREATE TABLE sanctions_screening (
+     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+     entity_id UUID REFERENCES entities(id),
+     person_name TEXT,
+     match_score NUMERIC,
+     matched_entity_id TEXT, -- OpenSanctions entity ID
+     matched_name TEXT,
+     matched_schema TEXT, -- Person, Company, etc.
+     match_type TEXT, -- 'sanction', 'pep', 'crime'
+     datasets TEXT[], -- contributing datasets
+     explanation JSONB, -- yente match explanation
+     screened_at TIMESTAMPTZ DEFAULT NOW(),
+     reviewed BOOLEAN DEFAULT FALSE
+   );
+   ```
 
-# Use direct connection (NOT pooler):
-PGPASSWORD="<stable_password_from_dashboard>" psql \
-  -h db.tednluwflfhxyucgwigh.supabase.co \
-  -p 5432 \
-  -U postgres \
-  -d postgres \
-  -c "YOUR SQL HERE"
-```
+5. **Licensing:** If GrantScope is non-commercial/advocacy, request the zero-cost exemption. If commercial, budget for a data license.
 
-**2. RECOMMENDED: Bring all tables under migration control**
+### Known Limitations
 
-```bash
-cd /Users/benknight/Code/grantscope
-supabase link --project-ref tednluwflfhxyucgwigh
-supabase db pull
-
-# This creates a baseline migration with ALL 571 tables
-# Commit this to Git as the "source of truth"
-git add supabase/migrations/
-git commit -m "feat: baseline migration from remote schema (571 tables)"
-```
-
-**3. RECOMMENDED: Set up PostgREST auto-reload event trigger**
-
-```sql
--- Run this once via direct psql connection
-CREATE OR REPLACE FUNCTION pgrst_watch() 
-RETURNS event_trigger 
-LANGUAGE plpgsql AS $$ 
-BEGIN 
-  NOTIFY pgrst, 'reload schema'; 
-END; 
-$$;
-
-CREATE EVENT TRIGGER pgrst_watch 
-ON ddl_command_end 
-EXECUTE PROCEDURE pgrst_watch();
-```
-
-After this, every DDL operation (CREATE FUNCTION, ALTER TABLE, etc.) will automatically reload PostgREST's schema cache within seconds.
-
-**4. FUTURE: Refactor to PostgreSQL functions for repeated operations**
-
-For operations you run frequently (like your `exec_sql` RPC), create properly typed functions:
-
-```sql
--- Instead of exec_sql(text) → jsonb, create specific functions:
-CREATE OR REPLACE FUNCTION get_grant_deadlines(days_ahead int DEFAULT 30)
-RETURNS TABLE (
-  foundation_name text,
-  program_name text,
-  deadline_date date,
-  days_until_deadline int
-)
-LANGUAGE sql
-STABLE
-AS $$
-  SELECT 
-    f.name,
-    p.name,
-    p.deadline,
-    (p.deadline - CURRENT_DATE) AS days_until_deadline
-  FROM foundation_programs p
-  JOIN foundations f ON f.id = p.foundation_id
-  WHERE p.deadline > CURRENT_DATE
-    AND p.deadline <= CURRENT_DATE + days_ahead
-  ORDER BY p.deadline;
-$$;
-```
-
-Call via PostgREST:
-```bash
-curl "https://tednluwflfhxyucgwigh.supabase.co/rest/v1/rpc/get_grant_deadlines?days_ahead=60" \
-  -H "apikey: SERVICE_ROLE_KEY"
-```
-
-### Implementation Notes
-
-**Migration File Organization:**
-- Consider splitting the initial `supabase db pull` output into multiple files by schema
-- GrantScope tables in one migration file
-- Empathy Ledger tables in another
-- Shared infrastructure (auth, extensions) in a third
-
-**Schema Change Workflow Going Forward:**
-1. Make changes locally via Supabase Studio or direct SQL
-2. Generate migration: `supabase db diff -f <migration_name>`
-3. Review generated SQL in `supabase/migrations/<timestamp>_<migration_name>.sql`
-4. Test locally: `supabase db reset` (wipes local DB and reapplies all migrations)
-5. Push to remote: `supabase db push --linked`
-6. Commit migration file to Git
-
-**Password Management:**
-- Store stable database password in environment variables
-- Use 1Password or similar for team password sharing
-- Rotate password manually via Dashboard when needed (e.g., quarterly, after team member departure)
-- Update all scripts/tools that use the password after rotation
-
-**Supabase MCP Usage:**
-- Continue using for data exploration and SELECT queries
-- Use `apply_migration` for new DDL operations (will be tracked)
-- Existing untracked tables will remain visible to `execute_sql` after running `supabase db pull`
+- **ABN matching is weak:** OpenSanctions won't have ABNs for most entities. Name-based matching will produce false positives that need human review.
+- **Australian PEP coverage is partial:** Relies on Wikidata. State/local officials, statutory body heads, and Indigenous corporation directors are unlikely to be in the PEP dataset. Consider supplementing with your own PEP list from Australian Parliament/state parliament websites.
+- **Ownership/control relationships:** OpenSanctions has some Ownership and Directorship relationship data, but it's primarily focused on sanctioned entities. For comprehensive Australian corporate ownership, you'd need ASIC data or similar.
+- **False positive rate:** For 80K entities matched by name, expect a significant number of false positives. Build a review workflow.
 
 ## Sources
-
-1. [Connect to your database | Supabase Docs](https://supabase.com/docs/guides/database/connecting-to-postgres)
-2. [Supavisor FAQ | Supabase Docs](https://supabase.com/docs/guides/troubleshooting/supavisor-faq-YyP5tI)
-3. [Supavisor and Connection Terminology Explained | Supabase Docs](https://supabase.com/docs/guides/troubleshooting/supavisor-and-connection-terminology-explained-9pr_ZO)
-4. [How do I reset my Supabase database password? | GitHub Discussion](https://github.com/orgs/supabase/discussions/20929)
-5. [Database Migrations | Supabase Docs](https://supabase.com/docs/guides/deployment/database-migrations)
-6. [Supabase db pull CLI reference | Supabase Docs](https://supabase.com/docs/reference/cli/supabase-db-pull)
-7. [Local development with schema migrations | Supabase Docs](https://supabase.com/docs/guides/local-development/overview)
-8. [Reload/refresh postgrest schema | Supabase Docs](https://supabase.com/docs/guides/troubleshooting/refresh-postgrest-schema)
-9. [PostgREST Schema Cache | PostgREST Docs](https://docs.postgrest.org/en/latest/references/schema_cache.html)
-10. [Management API v1 run a query | Supabase Docs](https://supabase.com/docs/reference/api/v1-run-a-query)
-11. [Execute SQL in Supabase API | GitHub Discussion](https://github.com/orgs/supabase/discussions/3419)
-12. [Database Functions | Supabase Docs](https://supabase.com/docs/guides/database/functions)
-13. [Managing Environments | Supabase Docs](https://supabase.com/docs/guides/deployment/managing-environments)
-14. [Multiple environments and migrations – best practices | GitHub Discussion](https://github.com/orgs/supabase/discussions/542)
-15. [Connecting with PSQL | Supabase Docs](https://supabase.com/docs/guides/database/psql)
-16. [Backup and Restore using the CLI | Supabase Docs](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore)
-
-## Open Questions
-
-1. **PostgREST schema cache timing:** While event-driven reload is documented, the actual timing for automatic reload (without event triggers) is not specified in documentation. Testing needed to determine if there's a background interval.
-
-2. **Migration file size limits:** The initial `supabase db pull` for 571 tables will create a very large SQL file. Are there practical limits on migration file size? Should it be split?
-
-3. **Cross-application migration coordination:** With GrantScope and Empathy Ledger sharing a database, how should migration files be organized? Separate repos with shared migration folder? Monorepo with both applications?
-
-4. **IPv4 Add-on necessity:** Current setup uses connection pooler (IPv4 compatible). If switching to direct connections, is the IPv4 Add-on required? (Direct connections default to IPv6 only)
+1. [OpenSanctions Bulk Data](https://www.opensanctions.org/docs/bulk/) -- download formats and URLs
+2. [OpenSanctions Datasets](https://www.opensanctions.org/datasets/) -- 269 dataset collections
+3. [Australian DFAT Sanctions](https://www.opensanctions.org/datasets/au_dfat_sanctions/) -- Australian sanctions data
+4. [PEP Datasets](https://www.opensanctions.org/datasets/peps/) -- 84 PEP sources, 219K persons
+5. [Licensing](https://www.opensanctions.org/licensing/) -- CC BY-NC 4.0 terms
+6. [Exemptions](https://www.opensanctions.org/faq/32/exemptions/) -- non-commercial exemptions
+7. [Self-hosted yente](https://www.opensanctions.org/docs/self-hosted/) -- Docker deployment guide
+8. [yente GitHub](https://github.com/opensanctions/yente) -- source code and README
+9. [Matching API docs](https://www.opensanctions.org/docs/api/matching/) -- batch matching format
+10. [FtM Person schema](https://followthemoney.tech/explorer/schemata/Person/) -- Person entity properties
+11. [FtM LegalEntity schema](https://followthemoney.tech/explorer/schemata/LegalEntity/) -- Company/Org properties
+12. [Data Reference](https://www.opensanctions.org/reference/) -- data dictionary
+13. [CSV format docs](https://www.opensanctions.org/docs/bulk/csv/) -- simplified CSV columns
+14. [API examples](https://github.com/opensanctions/api-examples) -- code examples for API usage
