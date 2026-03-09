@@ -8,3 +8,16 @@ dist/
 *.tsbuildinfo
 .vercel
 .superdesign
+
+# Editor / IDE
+.obsidian/
+
+# Session tools
+.tldr/cache/
+.tldr/daemon.pid
+.claude/tsc-cache/
+.claude/settings.local.json
+
+# Large data files (downloaded, not source)
+data/abs/
+data/opensanctions/
