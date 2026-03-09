@@ -6,9 +6,10 @@
  * Syncs by date range chunks (1 month at a time) to handle volume.
  *
  * Usage:
- *   node scripts/sync-austender-contracts.mjs [--dry-run] [--from=2024-01-01] [--to=2024-12-31] [--months=3]
+ *   node scripts/sync-austender-contracts.mjs [--dry-run] [--from=2024-01-01] [--to=2024-12-31] [--months=3] [--endpoint=published|modified]
  *
- * Default: last 3 months of contracts
+ * Default: last 3 months of contracts via contractPublished endpoint
+ * Use --endpoint=modified for incremental syncs (contracts modified in date range)
  */
 
 import 'dotenv/config';
@@ -18,6 +19,8 @@ const API_BASE = 'https://api.tenders.gov.au/ocds';
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const DRY_RUN = process.argv.includes('--dry-run');
+const endpointArg = process.argv.find(a => a.startsWith('--endpoint='))?.split('=')[1] || 'published';
+const ENDPOINT = endpointArg === 'modified' ? 'contractLastModified' : 'contractPublished';
 
 const fromArg = process.argv.find(a => a.startsWith('--from='))?.split('=')[1];
 const toArg = process.argv.find(a => a.startsWith('--to='))?.split('=')[1];
@@ -148,6 +151,10 @@ async function fetchPage(url) {
 
   if (!res.ok) {
     const text = await res.text();
+    // "No Records found" is a 400 but not an error — just empty
+    if (res.status === 400 && text.includes('No Records found')) {
+      return { releases: [], nextUrl: null };
+    }
     throw new Error(`API error ${res.status}: ${text.slice(0, 200)}`);
   }
 
@@ -159,7 +166,7 @@ async function fetchPage(url) {
 }
 
 async function fetchDateRange(startDate, endDate) {
-  let url = `${API_BASE}/findByDates/contractPublished/${formatDate(startDate)}/${formatDate(endDate)}`;
+  let url = `${API_BASE}/findByDates/${ENDPOINT}/${formatDate(startDate)}/${formatDate(endDate)}`;
   log(`  Fetching ${startDate.toISOString().split('T')[0]} → ${endDate.toISOString().split('T')[0]}...`);
 
   let allReleases = [];
@@ -186,7 +193,7 @@ async function main() {
   const endDate = toArg ? new Date(toArg) : new Date();
   const startDate = fromArg ? new Date(fromArg) : addMonths(endDate, -monthsArg);
 
-  log(`Syncing AusTender contracts from ${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`);
+  log(`Syncing AusTender contracts from ${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]} via ${ENDPOINT}`);
 
   // Chunk by month
   let current = new Date(startDate);
