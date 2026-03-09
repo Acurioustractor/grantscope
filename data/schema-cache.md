@@ -36,6 +36,8 @@ node --env-file=.env scripts/preflight.mjs --refresh
 | remoteness | text |  |
 | sa2_code | text |  |
 | is_community_controlled | boolean |  |
+| lga_name | text |  |
+| lga_code | text |  |
 
 ## gs_relationships (65K rows)
 | Column | Type | Nullable |
@@ -211,6 +213,8 @@ node --env-file=.env scripts/preflight.mjs --refresh
 | sa4_code | text |  |
 | sa4_name | text |  |
 | remoteness_2021 | text |  |
+| lga_name | text |  |
+| lga_code | text |  |
 
 ## org_profiles (0K rows)
 | Column | Type | Nullable |

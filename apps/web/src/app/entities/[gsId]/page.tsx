@@ -252,7 +252,7 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
     e.postcode
       ? supabase
           .from('postcode_geo')
-          .select('postcode, locality, state, remoteness_2021')
+          .select('postcode, locality, state, remoteness_2021, lga_name')
           .eq('postcode', e.postcode)
           .limit(1)
       : Promise.resolve({ data: [] }),
@@ -390,7 +390,7 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
   const totalJusticeFunding = justiceFunding.reduce((sum, r) => sum + (r.amount_dollars || 0), 0);
 
   // Build place context
-  const placeGeo = (placeGeoData || [])[0] as { postcode: string; locality: string; state: string; remoteness_2021: string } | undefined;
+  const placeGeo = (placeGeoData || [])[0] as { postcode: string; locality: string; state: string; remoteness_2021: string; lga_name: string | null } | undefined;
   const seifa = (seifaData || [])[0] as { decile_national: number; score: number } | undefined;
 
   // Count entities in same postcode (for place context card)
@@ -1231,6 +1231,12 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
                     }`}>
                       Decile {seifa.decile_national}/10
                     </dd>
+                  </div>
+                )}
+                {placeGeo?.lga_name && (
+                  <div className="flex justify-between">
+                    <dt className="text-xs font-bold text-bauhaus-muted">LGA</dt>
+                    <dd className="text-sm font-bold text-bauhaus-black">{placeGeo.lga_name}</dd>
                   </div>
                 )}
                 {postcodeEntityCount > 1 && (

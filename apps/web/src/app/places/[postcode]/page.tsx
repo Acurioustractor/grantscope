@@ -40,7 +40,7 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
   const [{ data: geoData }, { data: seifaData }, { data: entities }] = await Promise.all([
     supabase
       .from('postcode_geo')
-      .select('postcode, locality, state, remoteness_2021, sa2_name, sa3_name')
+      .select('postcode, locality, state, remoteness_2021, sa2_name, sa3_name, lga_name')
       .eq('postcode', postcode)
       .limit(1),
     supabase
@@ -204,6 +204,11 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
               'border-bauhaus-black/20 bg-bauhaus-canvas text-bauhaus-black'
             }`}>
               SEIFA Decile {seifa.decile_national}/10
+            </span>
+          )}
+          {geo.lga_name && (
+            <span className="text-[11px] font-black px-2.5 py-1 border-2 border-bauhaus-blue/30 bg-blue-50 text-bauhaus-blue uppercase tracking-widest">
+              LGA: {geo.lga_name}
             </span>
           )}
         </div>

@@ -52,7 +52,7 @@ Colors: `bauhaus-black`, `bauhaus-red`, `bauhaus-blue`, `bauhaus-muted`
 
 | Table | Rows | Key Columns |
 |-------|------|-------------|
-| `gs_entities` | 92K | gs_id, canonical_name, abn, entity_type, sector, postcode, state, remoteness, seifa_irsd_decile, is_community_controlled |
+| `gs_entities` | 92K | gs_id, canonical_name, abn, entity_type, sector, postcode, state, remoteness, seifa_irsd_decile, is_community_controlled, lga_name, lga_code |
 | `gs_relationships` | 65K | source_entity_id, target_entity_id, relationship_type, amount, year, dataset |
 | `austender_contracts` | 672K | title, contract_value, buyer_name, supplier_name, supplier_abn, contract_start, contract_end |
 | `acnc_charities` | 66K | abn, name, charity_size, state, postcode, purposes, beneficiaries, is_foundation |
@@ -62,7 +62,7 @@ Colors: `bauhaus-black`, `bauhaus-red`, `bauhaus-blue`, `bauhaus-muted`
 | `entity_identifiers` | 31K | entity_id, identifier_type, identifier_value, source |
 | `foundations` | 10K | name, acnc_abn, total_giving_annual, thematic_focus, geographic_focus |
 | `grant_opportunities` | 17K | name, amount_min, amount_max, deadline, categories, focus_areas |
-| `postcode_geo` | 12K | postcode, locality, state, sa2_code, remoteness_2021 |
+| `postcode_geo` | 12K | postcode, locality, state, sa2_code, remoteness_2021, lga_name, lga_code |
 | `seifa_2021` | 11K | postcode, index_type, score, decile_national |
 | `org_profiles` | — | user_id, name, abn, stripe_customer_id, subscription_plan |
 | `agent_runs` | — | agent_id, agent_name, status, items_found, items_new, duration_ms |
@@ -71,6 +71,7 @@ Colors: `bauhaus-black`, `bauhaus-red`, `bauhaus-blue`, `bauhaus-muted`
 
 ## Materialized Views
 
+- `mv_funding_by_lga` — per-LGA funding aggregates (492 LGAs)
 - `mv_funding_by_postcode` — per-postcode funding aggregates
 - `mv_gs_donor_contractors` — entities that both donate and contract
 - `mv_gs_entity_stats` — entity-level stats rollup
