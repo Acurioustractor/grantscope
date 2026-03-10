@@ -390,6 +390,44 @@ export const AGENTS = {
     timeoutMs: 300_000,
     dependencies: [],
   },
+
+  // ── Resolution ────────────────────────────────────────────────────────────
+  'resolve-donation-abns': {
+    command: ['node', '--env-file=.env', 'scripts/resolve-donation-abns.mjs', '--apply'],
+    displayName: 'Resolve Donation ABNs',
+    category: 'graph',
+    defaultPriority: 3,
+    timeoutMs: 1_800_000,
+    dependencies: [],
+  },
+  'resolve-social-enterprise-abns': {
+    command: ['node', '--env-file=.env', 'scripts/resolve-social-enterprise-abns.mjs', '--apply'],
+    displayName: 'Resolve SE ABNs',
+    category: 'graph',
+    defaultPriority: 4,
+    timeoutMs: 1_800_000,
+    dependencies: [],
+  },
+
+  // ── Classification ────────────────────────────────────────────────────────
+  'classify-acnc-social-enterprises': {
+    command: ['node', '--env-file=.env', 'scripts/classify-acnc-social-enterprises.mjs', '--limit=200', '--apply'],
+    displayName: 'Classify ACNC Social Enterprises',
+    category: 'enrichment',
+    defaultPriority: 4,
+    timeoutMs: 600_000,
+    dependencies: [],
+  },
+
+  // ── Scraping ──────────────────────────────────────────────────────────────
+  'scrape-grant-deadlines': {
+    command: ['node', '--env-file=.env', 'scripts/scrape-grant-deadlines.mjs', '--limit=100', '--apply'],
+    displayName: 'Scrape Grant Deadlines',
+    category: 'discovery',
+    defaultPriority: 4,
+    timeoutMs: 600_000,
+    dependencies: [],
+  },
 };
 
 export const CATEGORIES = ['sync', 'import', 'discovery', 'enrichment', 'profiling', 'graph', 'embedding', 'analytics'];
