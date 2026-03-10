@@ -36,8 +36,8 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
   const { postcode } = await params;
   const supabase = getServiceSupabase();
 
-  // Fetch geo + SEIFA + entities in parallel
-  const [{ data: geoData }, { data: seifaData }, { data: entities }] = await Promise.all([
+  // Fetch geo + SEIFA + entities + social enterprises in parallel
+  const [{ data: geoData }, { data: seifaData }, { data: entities }, { data: socialEnterprises }] = await Promise.all([
     supabase
       .from('postcode_geo')
       .select('postcode, locality, state, remoteness_2021, sa2_name, sa3_name, lga_name')
@@ -55,6 +55,12 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
       .eq('postcode', postcode)
       .order('latest_revenue', { ascending: false, nullsFirst: false })
       .limit(200),
+    supabase
+      .from('social_enterprises')
+      .select('id, name, abn, org_type, source_primary, certifications, sector, target_beneficiaries, business_model, website')
+      .eq('postcode', postcode)
+      .order('name')
+      .limit(50),
   ]);
 
   if (!geoData?.length) notFound();
@@ -63,6 +69,24 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
   const seifa = seifaData?.[0] || null;
   const entityList = entities || [];
   const entityIds = entityList.map(e => e.id);
+
+  // Social enterprises: combine postcode matches + ABN matches from entity list
+  const seList = socialEnterprises || [];
+  const seAbns = new Set(seList.map((se: { abn: string | null }) => se.abn).filter(Boolean));
+  const entityAbns = entityList.map(e => (e as unknown as { abn: string | null }).abn).filter(Boolean) as string[];
+  // Fetch any additional SEs that match entity ABNs but different postcode
+  let additionalSEs: typeof seList = [];
+  if (entityAbns.length > 0) {
+    const missingAbns = entityAbns.filter(abn => !seAbns.has(abn));
+    if (missingAbns.length > 0) {
+      const { data: extraSEs } = await supabase
+        .from('social_enterprises')
+        .select('id, name, abn, org_type, source_primary, certifications, sector, target_beneficiaries, business_model, website')
+        .in('abn', missingAbns.slice(0, 50));
+      additionalSEs = extraSEs || [];
+    }
+  }
+  const allSocialEnterprises = [...seList, ...additionalSEs];
 
   // Fetch funding relationships for entities in this postcode
   const recipientFunding = new Map<string, { grants: number; contracts: number; donations: number }>();
@@ -264,6 +288,19 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
         </div>
       </div>
 
+      {/* Social Enterprise callout */}
+      {allSocialEnterprises.length > 0 && (
+        <div className="mb-8 border-4 border-bauhaus-blue bg-bauhaus-blue/5 p-4 flex items-center justify-between">
+          <div>
+            <span className="text-sm font-black text-bauhaus-black">{allSocialEnterprises.length} social & Indigenous enterprises</span>
+            <span className="text-sm text-bauhaus-muted font-medium ml-2">operating in this area</span>
+          </div>
+          <Link href={`/social-enterprises?state=${geo.state}`} className="text-xs font-black text-bauhaus-blue uppercase tracking-widest hover:underline">
+            Browse &rarr;
+          </Link>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Content */}
         <div className="lg:col-span-2">
@@ -319,6 +356,54 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
                   </div>
                 ))}
               </div>
+            </Section>
+          )}
+
+          {/* Social Enterprises in Area */}
+          {allSocialEnterprises.length > 0 && (
+            <Section title={`Social & Indigenous Enterprises (${allSocialEnterprises.length})`}>
+              <div className="space-y-0">
+                {allSocialEnterprises.map((se: { id: string; name: string; abn: string | null; org_type: string; source_primary: string | null; certifications: Array<{ body: string }> | null; sector: string[] | null; business_model: string | null; website: string | null }) => {
+                  const isIndigenous = se.source_primary === 'supply-nation' || se.source_primary === 'oric' || se.source_primary === 'kinaway';
+                  const sourceLabels: Record<string, string> = { 'supply-nation': 'Supply Nation', 'oric': 'ORIC', 'social-traders': 'Social Traders', 'buyability': 'BuyAbility', 'b-corp': 'B Corp', 'kinaway': 'Kinaway' };
+                  return (
+                    <div key={se.id} className="py-3 border-b-2 border-bauhaus-black/5 last:border-b-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-bold text-bauhaus-black text-sm">{se.name}</div>
+                          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                            {isIndigenous && (
+                              <span className="text-[10px] px-1.5 py-0.5 font-black uppercase tracking-wider border border-bauhaus-red bg-bauhaus-red/10 text-bauhaus-red">Indigenous</span>
+                            )}
+                            {se.source_primary && (
+                              <span className="text-[10px] px-1.5 py-0.5 font-bold border border-bauhaus-black/20 text-bauhaus-muted">{sourceLabels[se.source_primary] || se.source_primary}</span>
+                            )}
+                            {se.abn && (
+                              <span className="text-[10px] px-1.5 py-0.5 font-bold border border-money/30 text-money">ABN {se.abn}</span>
+                            )}
+                          </div>
+                          {se.business_model && (
+                            <p className="text-xs text-bauhaus-muted mt-1 line-clamp-1">{se.business_model}</p>
+                          )}
+                        </div>
+                        {se.website && (
+                          <a href={se.website} target="_blank" rel="noopener noreferrer" className="text-[10px] font-black text-bauhaus-blue uppercase tracking-wider hover:underline shrink-0">Web</a>
+                        )}
+                      </div>
+                      {se.sector && se.sector.length > 0 && (
+                        <div className="flex gap-1 mt-1.5 flex-wrap">
+                          {se.sector.slice(0, 4).map((s: string) => (
+                            <span key={s} className="text-[10px] px-1.5 py-0.5 bg-bauhaus-canvas text-bauhaus-black font-bold border border-bauhaus-black/10 capitalize">{s}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <Link href={`/social-enterprises?state=${geo.state}`} className="inline-block mt-3 text-xs font-black text-bauhaus-blue uppercase tracking-widest hover:underline">
+                Browse all in {geo.state} &rarr;
+              </Link>
             </Section>
           )}
 

@@ -40,7 +40,7 @@ async function execSql(sql) {
       'Authorization': `Bearer ${SUPABASE_KEY}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ sql }),
+    body: JSON.stringify({ query: sql }),
   });
 
   // If exec_sql RPC doesn't exist, fall back to pg_net or just report

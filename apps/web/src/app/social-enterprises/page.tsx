@@ -5,15 +5,20 @@ export const dynamic = 'force-dynamic';
 interface SocialEnterprise {
   id: string;
   name: string;
+  abn: string | null;
   org_type: string;
   legal_structure: string | null;
   description: string | null;
   website: string | null;
   state: string | null;
   city: string | null;
+  postcode: string | null;
   sector: string[];
   certifications: Array<{ body: string; status?: string; score?: number }>;
   source_primary: string | null;
+  target_beneficiaries: string[] | null;
+  logo_url: string | null;
+  business_model: string | null;
   profile_confidence: string;
   enriched_at: string | null;
   created_at: string;
@@ -71,11 +76,21 @@ const SORT_OPTIONS = [
   { value: 'state', label: 'By State' },
 ];
 
+const SOURCES = [
+  { value: 'supply-nation', label: 'Supply Nation' },
+  { value: 'oric', label: 'ORIC' },
+  { value: 'social-traders', label: 'Social Traders' },
+  { value: 'buyability', label: 'BuyAbility' },
+  { value: 'b-corp', label: 'B Corp' },
+];
+
 interface SearchParams {
   q?: string;
   org_type?: string;
   state?: string;
   sector?: string;
+  source?: string;
+  indigenous?: string;
   sort?: string;
   page?: string;
 }
@@ -86,6 +101,8 @@ export default async function SocialEnterprisesPage({ searchParams }: { searchPa
   const orgTypeFilter = params.org_type || '';
   const stateFilter = params.state || '';
   const sectorFilter = params.sector || '';
+  const sourceFilter = params.source || '';
+  const indigenousFilter = params.indigenous || '';
   const sortBy = params.sort || 'name';
   const page = parseInt(params.page || '1', 10);
   const pageSize = 25;
@@ -94,12 +111,14 @@ export default async function SocialEnterprisesPage({ searchParams }: { searchPa
   const supabase = getServiceSupabase();
   let dbQuery = supabase
     .from('social_enterprises')
-    .select('id, name, org_type, legal_structure, description, website, state, city, sector, certifications, source_primary, profile_confidence, enriched_at, created_at', { count: 'exact' });
+    .select('id, name, abn, org_type, legal_structure, description, website, state, city, postcode, sector, certifications, source_primary, target_beneficiaries, logo_url, business_model, profile_confidence, enriched_at, created_at', { count: 'exact' });
 
   if (query) dbQuery = dbQuery.or(`name.ilike.%${query}%,description.ilike.%${query}%`);
   if (orgTypeFilter) dbQuery = dbQuery.eq('org_type', orgTypeFilter);
   if (stateFilter) dbQuery = dbQuery.eq('state', stateFilter);
   if (sectorFilter) dbQuery = dbQuery.contains('sector', [sectorFilter]);
+  if (sourceFilter) dbQuery = dbQuery.eq('source_primary', sourceFilter);
+  if (indigenousFilter === 'true') dbQuery = dbQuery.or('source_primary.eq.oric,source_primary.eq.supply-nation,source_primary.eq.kinaway');
 
   if (sortBy === 'newest') {
     dbQuery = dbQuery.order('created_at', { ascending: false });
@@ -120,6 +139,8 @@ export default async function SocialEnterprisesPage({ searchParams }: { searchPa
   if (orgTypeFilter) filterParams.set('org_type', orgTypeFilter);
   if (stateFilter) filterParams.set('state', stateFilter);
   if (sectorFilter) filterParams.set('sector', sectorFilter);
+  if (sourceFilter) filterParams.set('source', sourceFilter);
+  if (indigenousFilter) filterParams.set('indigenous', indigenousFilter);
   if (sortBy !== 'name') filterParams.set('sort', sortBy);
   const filterQS = filterParams.toString();
 
@@ -132,9 +153,7 @@ export default async function SocialEnterprisesPage({ searchParams }: { searchPa
           Australian Social Enterprises
         </h1>
         <p className="text-white/80 font-medium max-w-2xl leading-relaxed mb-4">
-          Australia has ~20,000 social enterprises generating $21 billion in revenue and 300,000 jobs.
-          No single directory lists them all. GrantScope aggregates ORIC, Social Traders, BuyAbility,
-          B Corp, and government procurement lists into one searchable directory &mdash; open and free.
+          {(count || 0).toLocaleString()} social and Indigenous enterprises from 6 sources &mdash; Supply Nation, ORIC, Social Traders, BuyAbility, B Corp, and Kinaway &mdash; linked to $901B in government contracts, donations, and justice funding. Open. Free. Updated by 45 autonomous agents.
         </p>
         <div className="flex flex-wrap gap-3 text-xs">
           <span className="px-2.5 py-1 font-black uppercase tracking-wider border-2 border-white/30 text-white/80">
@@ -189,6 +208,12 @@ export default async function SocialEnterprisesPage({ searchParams }: { searchPa
             <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
           ))}
         </select>
+        <select name="source" defaultValue={sourceFilter} className="px-4 py-2.5 border-4 border-l-0 border-bauhaus-black text-sm font-bold bg-white focus:outline-none">
+          <option value="">All sources</option>
+          {SOURCES.map(s => (
+            <option key={s.value} value={s.value}>{s.label}</option>
+          ))}
+        </select>
         <select name="sort" defaultValue={sortBy} className="px-4 py-2.5 border-4 border-l-0 border-bauhaus-black text-sm font-bold bg-white focus:outline-none">
           {SORT_OPTIONS.map(s => (
             <option key={s.value} value={s.value}>{s.label}</option>
@@ -198,6 +223,22 @@ export default async function SocialEnterprisesPage({ searchParams }: { searchPa
           Filter
         </button>
       </form>
+
+      {/* Quick filter chips */}
+      <div className="flex gap-2 mb-6 flex-wrap">
+        <a href="/social-enterprises?indigenous=true" className={`text-xs px-3 py-1.5 font-black uppercase tracking-wider border-2 transition-colors ${indigenousFilter === 'true' ? 'border-bauhaus-red bg-bauhaus-red text-white' : 'border-bauhaus-red/30 text-bauhaus-red hover:bg-bauhaus-red/10'}`}>
+          Indigenous Enterprises ({'>'}9,500)
+        </a>
+        <a href="/social-enterprises?source=social-traders" className={`text-xs px-3 py-1.5 font-black uppercase tracking-wider border-2 transition-colors ${sourceFilter === 'social-traders' ? 'border-bauhaus-blue bg-bauhaus-blue text-white' : 'border-bauhaus-blue/30 text-bauhaus-blue hover:bg-bauhaus-blue/10'}`}>
+          Certified Social Enterprises
+        </a>
+        <a href="/social-enterprises?source=buyability" className={`text-xs px-3 py-1.5 font-black uppercase tracking-wider border-2 transition-colors ${sourceFilter === 'buyability' ? 'border-bauhaus-yellow bg-bauhaus-yellow text-bauhaus-black' : 'border-bauhaus-yellow/50 text-bauhaus-black hover:bg-bauhaus-yellow/10'}`}>
+          Disability Enterprises
+        </a>
+        <a href="/social-enterprises" className="text-xs px-3 py-1.5 font-black uppercase tracking-wider border-2 border-bauhaus-black/20 text-bauhaus-muted hover:bg-bauhaus-canvas">
+          Clear Filters
+        </a>
+      </div>
 
       <div className="space-y-3">
         {(enterprises as SocialEnterprise[] || []).map((se) => {
@@ -218,17 +259,17 @@ export default async function SocialEnterprisesPage({ searchParams }: { searchPa
                       {se.city && (
                         <span className="text-bauhaus-muted">{se.city}</span>
                       )}
-                      {se.enriched_at && (
+                      {se.source_primary && (
                         <span className={`text-[11px] px-1.5 py-0.5 font-black uppercase tracking-wider border-2 ${
-                          se.profile_confidence === 'high' ? 'border-money bg-money-light text-money' :
-                          se.profile_confidence === 'medium' ? 'border-bauhaus-yellow bg-warning-light text-bauhaus-black' :
+                          se.source_primary === 'supply-nation' ? 'border-bauhaus-red/40 bg-bauhaus-red/10 text-bauhaus-red' :
+                          se.source_primary === 'oric' ? 'border-bauhaus-red/40 bg-bauhaus-red/10 text-bauhaus-red' :
                           'border-bauhaus-black/20 bg-bauhaus-canvas text-bauhaus-muted'
                         }`}>
-                          {se.profile_confidence}
+                          {SOURCES.find(s => s.value === se.source_primary)?.label || se.source_primary}
                         </span>
                       )}
-                      {se.website && (
-                        <span className="text-[11px] px-1.5 py-0.5 font-black uppercase tracking-wider border-2 border-bauhaus-blue/20 bg-link-light text-bauhaus-blue">Web</span>
+                      {se.abn && (
+                        <span className="text-[11px] px-1.5 py-0.5 font-bold border-2 border-money/30 bg-money-light text-money">ABN {se.abn}</span>
                       )}
                     </div>
                     {se.description && (
