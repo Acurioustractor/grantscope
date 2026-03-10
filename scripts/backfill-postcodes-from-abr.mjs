@@ -207,15 +207,7 @@ for (const [label, sql] of [['Remoteness', remSql], ['SEIFA', seifaSql], ['LGA',
 
 // Final coverage stats
 log('\nFinal coverage:');
-const stats = psql(`
-  SELECT
-    COUNT(*) as total,
-    COUNT(postcode) as with_postcode,
-    COUNT(remoteness) as with_remoteness,
-    COUNT(lga_name) as with_lga,
-    COUNT(seifa_irsd_decile) as with_seifa
-  FROM gs_entities
-`);
+const stats = psql(`SELECT COUNT(*) as total, COUNT(postcode) as with_postcode, COUNT(remoteness) as with_remoteness, COUNT(lga_name) as with_lga, COUNT(seifa_irsd_decile) as with_seifa FROM gs_entities`);
 const [total, withPostcode, withRemoteness, withLga, withSeifa] = stats.split('|');
 log(`  Entities:    ${Number(total).toLocaleString()}`);
 log(`  Postcode:    ${Number(withPostcode).toLocaleString()} (${Math.round(withPostcode/total*100)}%)`);

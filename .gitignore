@@ -17,6 +17,7 @@ dist/
 .tldr/daemon.pid
 .claude/tsc-cache/
 .claude/settings.local.json
+.claude/cache/agents/
 
 # Large data files (downloaded, not source)
 data/abs/
