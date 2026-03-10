@@ -23,14 +23,14 @@ export function TrackerFilters({
   onChange: (f: Filters) => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-white border-4 border-bauhaus-black">
+    <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-white border-2 border-bauhaus-black">
       {/* Search */}
       <input
         type="text"
         placeholder="Search grants..."
         value={filters.search}
         onChange={(e) => onChange({ ...filters, search: e.target.value })}
-        className="border-4 border-bauhaus-black px-3 py-1.5 text-sm font-medium focus:outline-none focus:border-bauhaus-blue w-48"
+        className="border-2 border-bauhaus-black px-3 py-1.5 text-sm font-medium focus:outline-none focus:border-bauhaus-blue w-48"
       />
 
       {/* Star filter */}

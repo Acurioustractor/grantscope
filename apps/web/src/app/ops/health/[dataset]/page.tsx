@@ -28,7 +28,7 @@ const DATASETS: Record<string, DatasetConfig> = {
   'grant-opportunities': {
     table: 'grant_opportunities',
     label: 'Grant Opportunities',
-    description: 'Open and closed grant opportunities scraped from 15 state government portals, research councils, and web search. The core dataset that powers GrantScope\'s grant matching engine.',
+    description: 'Open and closed grant opportunities scraped from 15 state government portals, research councils, and web search. The core dataset that powers CivicGraph\'s grant matching engine.',
     source: '15 state portals + web search + foundation programs',
     columns: [
       { key: 'name', label: 'Title' },
@@ -104,7 +104,7 @@ const DATASETS: Record<string, DatasetConfig> = {
   'community-orgs': {
     table: 'community_orgs',
     label: 'Community Orgs',
-    description: 'Community-based organisations that GrantScope serves directly. Includes profile data, funding sources, and admin burden metrics. Curated from ACNC flagging and manual entry.',
+    description: 'Community-based organisations that CivicGraph serves directly. Includes profile data, funding sources, and admin burden metrics. Curated from ACNC flagging and manual entry.',
     source: 'Manual + GHL CRM + ACNC flagging',
     columns: [
       { key: 'name', label: 'Name' },

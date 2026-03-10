@@ -235,7 +235,7 @@ function OrgProfileView({ profile, claimData, isClaimOwner }: { profile: OrgProf
             <div className="bg-green-50 border-4 border-money p-4">
               <h3 className="text-xs font-black text-money mb-2 uppercase tracking-widest">Your Profile</h3>
               <p className="text-sm text-bauhaus-black/70 font-medium mb-3">
-                You manage this organisation&apos;s profile on GrantScope.
+                You manage this organisation&apos;s profile on CivicGraph.
               </p>
               <a
                 href="/profile"
@@ -619,7 +619,7 @@ export default async function CharityDetailPage({ params }: { params: Promise<{ 
             <div className="bg-green-50 border-4 border-money p-4">
               <h3 className="text-xs font-black text-money mb-2 uppercase tracking-widest">Your Profile</h3>
               <p className="text-sm text-bauhaus-black/70 font-medium mb-3">
-                You manage this charity&apos;s profile on GrantScope.
+                You manage this charity&apos;s profile on CivicGraph.
               </p>
               <a
                 href={`/charities/${c.abn}/edit`}

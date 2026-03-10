@@ -1,7 +1,19 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import { DashboardCharts } from './charts';
+import nextDynamic from 'next/dynamic';
 
 export const dynamic = 'force-dynamic';
+
+const CoverageMap = nextDynamic(() => import('./coverage-map').then(m => ({ default: m.CoverageMap })), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full border-4 border-bauhaus-black flex items-center justify-center" style={{ height: 500 }}>
+      <div className="text-bauhaus-muted font-black text-sm uppercase tracking-widest animate-pulse">
+        Loading map...
+      </div>
+    </div>
+  ),
+});
 
 function formatMoney(n: number): string {
   if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}B`;
@@ -161,7 +173,48 @@ async function getDashboardData() {
     topFoundations: (topFoundationsResult.data || []) as TopFoundation[],
     closingSoon: (closingSoonResult.data || []) as ClosingGrant[],
     sources,
+    coveragePoints: await getCoveragePoints(supabase),
   };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function getCoveragePoints(supabase: any) {
+  const { data } = await supabase
+    .from('mv_funding_by_postcode')
+    .select('postcode, state, remoteness, entity_count')
+    .gt('entity_count', 0)
+    .limit(3000);
+
+  if (!data?.length) return [];
+
+  const postcodes = data.map((d: { postcode: string }) => d.postcode);
+  const geoLookup = new Map<string, { lat: number; lng: number; locality: string }>();
+
+  for (let i = 0; i < postcodes.length; i += 100) {
+    const chunk = postcodes.slice(i, i + 100);
+    const { data: geoData } = await supabase
+      .from('postcode_geo')
+      .select('postcode, latitude, longitude, locality')
+      .in('postcode', chunk)
+      .not('latitude', 'is', null);
+    for (const g of geoData || []) {
+      geoLookup.set(g.postcode, { lat: g.latitude, lng: g.longitude, locality: g.locality || '' });
+    }
+  }
+
+  return data
+    .filter((d: { postcode: string }) => geoLookup.has(d.postcode))
+    .map((d: { postcode: string; remoteness: string; entity_count: number }) => {
+      const geo = geoLookup.get(d.postcode)!;
+      return {
+        postcode: d.postcode,
+        locality: geo.locality,
+        remoteness: d.remoteness || '',
+        entity_count: d.entity_count,
+        lat: geo.lat,
+        lng: geo.lng,
+      };
+    });
 }
 
 export default async function DashboardPage() {
@@ -215,6 +268,14 @@ export default async function DashboardPage() {
           </div>
         ))}
       </div>
+
+      {/* Coverage Map */}
+      <section className="mb-12">
+        <h2 className="text-sm font-black text-bauhaus-black mb-3 pb-2 border-b-4 border-bauhaus-black uppercase tracking-widest">
+          Entity Coverage Across Australia
+        </h2>
+        <CoverageMap data={data.coveragePoints} />
+      </section>
 
       {/* Charts */}
       <DashboardCharts

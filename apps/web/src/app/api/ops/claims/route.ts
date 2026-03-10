@@ -6,7 +6,7 @@ import { findContactByEmail, addTagToContact, removeTagFromContact } from '@/lib
 
 export const dynamic = 'force-dynamic';
 
-const ADMIN_EMAILS = ['benjamin@act.place', 'hello@grantscope.au'];
+const ADMIN_EMAILS = ['benjamin@act.place', 'hello@civicgraph.au'];
 
 async function checkAdmin() {
   const supabase = await createSupabaseServer();
@@ -114,32 +114,32 @@ export async function PUT(request: NextRequest) {
       if (status === 'verified') {
         await sendEmail({
           to: claimUser.email,
-          subject: 'Your charity claim has been approved — GrantScope',
+          subject: 'Your charity claim has been approved — CivicGraph',
           body: [
             `Hi,`,
             '',
             `Your claim for ${charityName} (ABN ${data.abn}) has been verified.`,
-            `You can now manage your charity's profile at https://grantscope.au/charities/${data.abn}`,
+            `You can now manage your charity's profile at https://civicgraph.au/charities/${data.abn}`,
             ...(admin_notes ? ['', admin_notes] : []),
             '',
             'Best regards,',
-            'GrantScope',
+            'CivicGraph',
           ].join('\n'),
         });
       } else if (status === 'rejected') {
         await sendEmail({
           to: claimUser.email,
-          subject: 'Update on your charity claim — GrantScope',
+          subject: 'Update on your charity claim — CivicGraph',
           body: [
             `Hi,`,
             '',
             `Your claim for ${charityName} (ABN ${data.abn}) was not approved.`,
             ...(admin_notes ? ['', `Reason: ${admin_notes}`] : []),
             '',
-            'If you believe this is an error, contact hello@grantscope.au',
+            'If you believe this is an error, contact hello@civicgraph.au',
             '',
             'Best regards,',
-            'GrantScope',
+            'CivicGraph',
           ].join('\n'),
         });
       }

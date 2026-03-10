@@ -358,7 +358,7 @@ export default function CommunityParityPage() {
               <strong className="text-bauhaus-black">For donors:</strong> Direct giving to
               grassroots organisations, First Nations-led initiatives, and community-controlled
               services has the highest impact per dollar. The infrastructure to find and fund
-              these organisations is what GrantScope is building.
+              these organisations is what CivicGraph is building.
             </p>
             <p>
               <strong className="text-bauhaus-black">For everyone:</strong> The alternative exists.

@@ -7,7 +7,7 @@ const tiers = [
   {
     key: 'community',
     name: 'COMMUNITY',
-    tagline: 'Your work matters more than your budget',
+    tagline: 'Find funding. Track applications.',
     price: 0,
     priceNote: 'forever',
     description: 'For grassroots NFPs, First Nations orgs, and CLCs under $500K revenue',
@@ -25,17 +25,17 @@ const tiers = [
   {
     key: 'professional',
     name: 'PROFESSIONAL',
-    tagline: 'Stop guessing, start winning',
+    tagline: 'AI-scored matching. Pipeline tracking.',
     price: 79,
     priceNote: '/month',
     description: 'For established NFPs and social enterprises',
     features: [
       'Everything in Community',
-      'AI grant writing assistant',
-      'Smart match scoring (0\u2013100)',
-      'Custom alert rules',
-      'Pipeline tracking',
-      'Foundation relationship notes',
+      'AI grant match scoring (0\u2013100)',
+      'Custom alert rules & keywords',
+      'Pipeline tracking with Kanban',
+      'Foundation relationship CRM',
+      'CSV & PDF export',
       '5 team members',
     ],
     cta: 'Start Free Trial',
@@ -44,17 +44,16 @@ const tiers = [
   {
     key: 'organisation',
     name: 'ORGANISATION',
-    tagline: 'Your whole funding operation',
+    tagline: 'Procurement + allocation intelligence.',
     price: 249,
     priceNote: '/month',
-    description: 'For larger NFPs, peak bodies, and multi-program orgs',
+    description: 'For larger NFPs, peak bodies, procurement teams, and multi-program orgs',
     features: [
       'Everything in Professional',
-      'Org-wide pipeline dashboard',
-      'Bulk application tracking',
-      'Corporate & philanthropy CRM',
-      'Auto-match new grants to your mission',
-      'Calendar integration',
+      'Tender Intelligence \u2014 supplier discovery',
+      'Compliance scoring from 20+ data sources',
+      'Intelligence pack generation',
+      'Place-based funding analysis',
       'Board-ready export reports',
       '25 team members',
     ],
@@ -64,42 +63,42 @@ const tiers = [
   {
     key: 'funder',
     name: 'FUNDER',
-    tagline: 'See the whole system. Fund what works.',
+    tagline: 'Portfolio intelligence. Gap analysis.',
     price: 499,
     priceNote: '/month',
-    description: 'For foundations, corporate giving, philanthropic advisors, and government',
+    description: 'For foundations, corporate giving, philanthropic advisors, and commissioners',
     features: [
       'Everything in Organisation',
       'Portfolio view \u2014 outcomes & geography',
       'Gap analysis \u2014 where money isn\'t going',
-      'Deal flow \u2014 discover aligned orgs',
+      'Commissioning intelligence by place',
       'Foundation scorecard & benchmarking',
       'Data API access',
       'White-label option',
       'Unlimited team members',
     ],
     cta: 'Talk to Us',
-    ctaHref: 'mailto:hello@grantscope.au?subject=Funder%20tier%20enquiry',
+    ctaHref: 'mailto:hello@civicgraph.au?subject=Funder%20tier%20enquiry',
     highlight: false,
   },
   {
     key: 'enterprise',
     name: 'ENTERPRISE',
-    tagline: 'The full platform, your way.',
+    tagline: 'Full decision infrastructure.',
     price: 1999,
     priceNote: '/month',
     description: 'For state/federal government, large foundations, and sector-wide deployments',
     features: [
       'Everything in Funder',
-      'Full API access',
-      'Custom reports & dashboards',
+      'Full API access (99K entities, 672K contracts)',
+      'Custom procurement dashboards',
+      'Governed proof layer (outcome evidence)',
       'White-label deployment',
-      'Dedicated support & onboarding',
       'SSO / SAML integration',
-      'Unlimited everything',
+      'Dedicated onboarding & support',
     ],
     cta: 'Contact Us',
-    ctaHref: 'mailto:hello@grantscope.au?subject=Enterprise%20enquiry',
+    ctaHref: 'mailto:hello@civicgraph.au?subject=Enterprise%20enquiry',
     highlight: false,
   },
 ]
@@ -142,97 +141,87 @@ export default function PricingPage() {
   return (
     <div className="min-h-screen bg-bauhaus-canvas">
 
-      {/* ===== HERO: THE PROBLEM ===== */}
+      {/* ===== HERO: THE DECISION PROBLEM ===== */}
       <section className="bg-bauhaus-black text-white py-24 px-6">
         <div className="max-w-5xl mx-auto text-center">
           <p className="text-sm text-white/40 uppercase tracking-[0.3em] font-black mb-8">
-            Australia&apos;s $18.9 billion philanthropic sector
+            Decision Infrastructure for Public Spending
           </p>
           <h1 className="text-5xl md:text-8xl font-black tracking-tight mb-8">
-            94% OF DONATIONS GO TO 10% OF ORGANISATIONS.
+            BETTER DATA.<br />BETTER DECISIONS.<br />BETTER OUTCOMES.
           </h1>
           <p className="text-xl md:text-2xl font-medium text-white/60 max-w-3xl mx-auto mb-4">
-            First Nations communities receive 0.5% of funding despite being 3.8% of the population.
-            Women and girls get 12% despite being half.
-            The 16,000 smallest charities collectively lost $144 million last year.
+            Procurement intelligence. Place-based allocation analysis. Outcome evidence.
+            CivicGraph connects $74B in contracts, 99K entities, and 20+ data sources
+            into the decision layer for government, funders, and community organisations.
           </p>
           <p className="text-lg text-white/40 mt-8">
-            The system isn&apos;t broken by accident. It&apos;s broken by design.
+            From finding the right supplier to proving the investment worked.
           </p>
         </div>
       </section>
 
-      {/* ===== THE INVISIBLE MADE VISIBLE ===== */}
+      {/* ===== THREE PRODUCT FAMILIES ===== */}
       <section className="py-16 px-6 bg-white border-b-4 border-bauhaus-black">
         <div className="max-w-5xl mx-auto text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-black tracking-tight mb-4">
-            WE BUILT THE X-RAY
+            THREE PRODUCTS. ONE DECISION LAYER.
           </h2>
           <p className="text-bauhaus-muted max-w-2xl mx-auto">
-            GrantScope maps every dollar flowing through Australia&apos;s philanthropic system.
-            From extraction to foundation to community. For the first time, anyone can see where
-            the money goes — and where it doesn&apos;t.
+            Procurement intelligence to find the right suppliers. Allocation intelligence
+            to decide where money should go. Governed proof to show it worked.
           </p>
         </div>
-        <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
-            { stat: '$222B', label: 'Charity sector revenue mapped', sub: '7 years of ACNC data' },
-            { stat: '359,678', label: 'Financial records analysed', sub: 'Every registered charity' },
-            { stat: '14,119', label: 'Grant opportunities indexed', sub: '100% AI-embedded for search' },
-            { stat: '9,874', label: 'Foundations profiled', sub: '1,627 AI-enriched' },
+            { label: 'Procurement Intelligence', sub: 'Supplier discovery, compliance scoring, intelligence packs', stat: '672K contracts', color: 'bg-bauhaus-blue text-white' },
+            { label: 'Allocation Intelligence', sub: 'Place packs, gap analysis, commissioning data', stat: '2,900 postcodes', color: 'bg-bauhaus-black text-white' },
+            { label: 'Governed Proof', sub: 'Outcome evidence, community voice, renewal defence', stat: 'Coming soon', color: 'bg-bauhaus-red/10 text-bauhaus-black' },
           ].map((item) => (
-            <div key={item.label} className="border-4 border-bauhaus-black p-6 bg-bauhaus-canvas">
-              <p className="text-3xl md:text-4xl font-black">{item.stat}</p>
+            <div key={item.label} className={`border-4 border-bauhaus-black p-6 ${item.color}`}>
+              <p className="text-2xl md:text-3xl font-black">{item.stat}</p>
               <p className="text-sm font-bold mt-2">{item.label}</p>
-              <p className="text-xs text-bauhaus-muted mt-1">{item.sub}</p>
+              <p className="text-xs mt-1 opacity-70">{item.sub}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ===== THE TWO SIDES ===== */}
+      {/* ===== WHO IS THIS FOR ===== */}
       <section className="py-16 px-6 border-b-4 border-bauhaus-black">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-3xl font-black tracking-tight text-center mb-12">
-            TWO SIDES OF THE SAME BROKEN TABLE
+            WHO MAKES ALLOCATION DECISIONS?
           </h2>
-          <div className="grid md:grid-cols-2 gap-8">
+          <div className="grid md:grid-cols-3 gap-6">
             <div className="border-4 border-bauhaus-black p-8 bg-white bauhaus-shadow">
-              <h3 className="text-xl font-black mb-2">IF YOU&apos;RE A CHARITY</h3>
-              <p className="text-sm text-bauhaus-muted mb-4">You already know this:</p>
+              <h3 className="text-lg font-black mb-2">PROCUREMENT OFFICERS</h3>
+              <p className="text-sm text-bauhaus-muted mb-4">You need to find suppliers fast and defend your choices:</p>
               <ul className="space-y-3 text-sm">
-                <li className="flex gap-3"><span className="text-bauhaus-red font-black">&#10005;</span> You spend 40% of your time chasing grants instead of doing the work</li>
-                <li className="flex gap-3"><span className="text-bauhaus-red font-black">&#10005;</span> You apply to 30 grants, win 3, and can&apos;t tell why</li>
-                <li className="flex gap-3"><span className="text-bauhaus-red font-black">&#10005;</span> AI tools write generic applications that funders can smell from a mile away</li>
-                <li className="flex gap-3"><span className="text-bauhaus-red font-black">&#10005;</span> You have no idea what other funders exist for your work</li>
-                <li className="flex gap-3"><span className="text-bauhaus-red font-black">&#10005;</span> The orgs with the biggest grant teams win, not the best programs</li>
+                <li className="flex gap-3"><span className="text-money font-black">&#10003;</span> Supplier discovery across 99K entities</li>
+                <li className="flex gap-3"><span className="text-money font-black">&#10003;</span> Compliance scoring from 20+ data sources</li>
+                <li className="flex gap-3"><span className="text-money font-black">&#10003;</span> Bid-ready intelligence packs in seconds</li>
+                <li className="flex gap-3"><span className="text-money font-black">&#10003;</span> Indigenous procurement targets with verified data</li>
               </ul>
             </div>
             <div className="border-4 border-bauhaus-black p-8 bg-white bauhaus-shadow">
-              <h3 className="text-xl font-black mb-2">IF YOU&apos;RE A FUNDER</h3>
-              <p className="text-sm text-bauhaus-muted mb-4">You probably know this too:</p>
+              <h3 className="text-lg font-black mb-2">COMMISSIONERS &amp; FUNDERS</h3>
+              <p className="text-sm text-bauhaus-muted mb-4">You need to know where money should go next:</p>
               <ul className="space-y-3 text-sm">
-                <li className="flex gap-3"><span className="text-bauhaus-red font-black">&#10005;</span> You get 500 applications per round and fund 12</li>
-                <li className="flex gap-3"><span className="text-bauhaus-red font-black">&#10005;</span> The best community orgs never apply — they don&apos;t know you exist</li>
-                <li className="flex gap-3"><span className="text-bauhaus-red font-black">&#10005;</span> You can&apos;t see where your funding overlaps with other foundations</li>
-                <li className="flex gap-3"><span className="text-bauhaus-red font-black">&#10005;</span> Your grant process selects for grant-writing skill, not impact</li>
-                <li className="flex gap-3"><span className="text-bauhaus-red font-black">&#10005;</span> You have no benchmark for your giving ratio, executive pay, or impact</li>
+                <li className="flex gap-3"><span className="text-money font-black">&#10003;</span> Place-based funding analysis by postcode</li>
+                <li className="flex gap-3"><span className="text-money font-black">&#10003;</span> Gap scoring — where need exceeds provision</li>
+                <li className="flex gap-3"><span className="text-money font-black">&#10003;</span> Portfolio view across your entire giving</li>
+                <li className="flex gap-3"><span className="text-money font-black">&#10003;</span> Benchmark against peer foundations</li>
               </ul>
             </div>
-          </div>
-
-          <div className="mt-8 border-4 border-money bg-money/5 p-8">
-            <h3 className="text-xl font-black text-money mb-4 text-center">GRANTSCOPE PUTS YOU ON THE SAME SIDE</h3>
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="border-4 border-bauhaus-black p-8 bg-white bauhaus-shadow">
+              <h3 className="text-lg font-black mb-2">COMMUNITY ORGANISATIONS</h3>
+              <p className="text-sm text-bauhaus-muted mb-4">You need to find funding and win it:</p>
               <ul className="space-y-3 text-sm">
-                <li className="flex gap-3"><span className="text-money font-black">&#10003;</span> <strong>Charities:</strong> AI matches grants to your mission with a 0–100 score. Stop guessing.</li>
-                <li className="flex gap-3"><span className="text-money font-black">&#10003;</span> <strong>Charities:</strong> AI writes in YOUR voice, tailored to THEIR language and priorities.</li>
-                <li className="flex gap-3"><span className="text-money font-black">&#10003;</span> <strong>Charities:</strong> Track every foundation relationship. Know your history before they do.</li>
-              </ul>
-              <ul className="space-y-3 text-sm">
-                <li className="flex gap-3"><span className="text-money font-black">&#10003;</span> <strong>Funders:</strong> Search 64,000+ charities by alignment, geography, and track record.</li>
-                <li className="flex gap-3"><span className="text-money font-black">&#10003;</span> <strong>Funders:</strong> See your giving ratio, executive pay benchmarks, and portfolio gaps.</li>
-                <li className="flex gap-3"><span className="text-money font-black">&#10003;</span> <strong>Funders:</strong> Find the orgs doing the work — don&apos;t wait for them to find you.</li>
+                <li className="flex gap-3"><span className="text-money font-black">&#10003;</span> AI-scored grant matching (0&ndash;100)</li>
+                <li className="flex gap-3"><span className="text-money font-black">&#10003;</span> Pipeline tracking across all applications</li>
+                <li className="flex gap-3"><span className="text-money font-black">&#10003;</span> Foundation relationship CRM</li>
+                <li className="flex gap-3"><span className="text-money font-black">&#10003;</span> Free forever for orgs under $500K</li>
               </ul>
             </div>
           </div>
@@ -246,8 +235,8 @@ export default function PricingPage() {
             DATA NOBODY ELSE HAS
           </h2>
           <p className="text-center text-white/50 mb-12 max-w-3xl mx-auto">
-            We&apos;ve analysed 7 years of ACNC financial records, cross-referenced with ATO data,
-            corporate filings, and public grant disclosures. This is what we found.
+            We&apos;ve connected ACNC financial records, AusTender procurement data, AEC political
+            donations, ATO tax transparency, and ASIC corporate filings. This is what we found.
           </p>
 
           <div className="grid md:grid-cols-3 gap-6 mb-12">
@@ -280,7 +269,7 @@ export default function PricingPage() {
           <div className="border-4 border-white/20 p-8">
             <h3 className="font-black text-bauhaus-yellow mb-4">THE FOUNDATION SCORECARD</h3>
             <p className="text-sm text-white/60 mb-6">
-              Every foundation on GrantScope gets a transparency score. Giving ratio, executive
+              Every foundation on CivicGraph gets a transparency score. Giving ratio, executive
               compensation, asset growth, grant distribution, geographic reach. Real accountability.
               Here&apos;s what that looks like:
             </p>
@@ -318,47 +307,40 @@ export default function PricingPage() {
       <section className="py-16 px-6">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-black tracking-tight text-center mb-4">
-            WHAT CHANGES WHEN EVERYONE CAN SEE
+            WHAT CHANGES WITH BETTER DECISION DATA
           </h2>
           <p className="text-center text-bauhaus-muted mb-12 max-w-2xl mx-auto">
-            Transparency isn&apos;t punishment. It&apos;s infrastructure for trust.
+            From spreadsheets to decision infrastructure.
           </p>
           <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             {[
               {
-                before: 'Charities apply blindly to hundreds of grants',
+                before: 'Procurement officers build supplier lists from memory and Google',
+                after: 'Discovery engine across 99K entities with compliance scoring and contract history.',
+              },
+              {
+                before: 'Commissioners allocate funding without seeing where money already flows',
+                after: 'Place packs show funding, providers, gaps, and disadvantage by postcode.',
+              },
+              {
+                before: 'Community orgs apply blindly to hundreds of grants',
                 after: 'AI scores every grant against your mission. Apply to the ones you\'ll win.',
-                icon: '\uD83C\uDFAF',
               },
               {
-                before: 'Funders advertise and wait for applications',
-                after: 'Search 64,000+ charities. Find the orgs already doing the work you want to fund.',
-                icon: '\uD83D\uDD0D',
+                before: 'Nobody can prove procurement created community value',
+                after: 'Governed proof layer connects contracts to outcomes. Defend renewals with evidence.',
               },
               {
-                before: 'Nobody knows where the money actually goes',
-                after: 'Every dollar tracked from source through foundation to community. Gaps visible.',
-                icon: '\uD83D\uDCCA',
+                before: 'Indigenous procurement targets are met on paper, not in practice',
+                after: 'Verified Indigenous entity data from ORIC, Supply Nation, and community classification.',
               },
               {
-                before: 'Grant writing is a professional sport for the privileged',
-                after: 'AI writes in your voice. Community orgs compete on impact, not prose.',
-                icon: '\u270D\uFE0F',
-              },
-              {
-                before: 'Relationships are transactional — submit, wait, reject',
-                after: 'Track every conversation, every application, every outcome. Build trust over years.',
-                icon: '\uD83E\uDD1D',
-              },
-              {
-                before: 'Small orgs can\'t afford the tools that big orgs take for granted',
-                after: 'Cross-subsidy: funders pay, community access is free. The way it should be.',
-                icon: '\u2696\uFE0F',
+                before: 'Small orgs can\'t afford the intelligence tools that primes take for granted',
+                after: 'Cross-subsidy: enterprise pays, community access is free. Better data for everyone.',
               },
             ].map((item) => (
               <div key={item.before} className="border-4 border-bauhaus-black bg-white p-6">
-                <span className="text-2xl">{item.icon}</span>
-                <p className="text-sm text-bauhaus-red line-through mt-3 mb-2">{item.before}</p>
+                <p className="text-sm text-bauhaus-red line-through mb-2">{item.before}</p>
                 <p className="text-sm font-bold">{item.after}</p>
               </div>
             ))}
@@ -370,11 +352,11 @@ export default function PricingPage() {
       <section className="py-16 px-6 bg-bauhaus-canvas border-y-4 border-bauhaus-black">
         <div className="max-w-5xl mx-auto text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-black tracking-tight mb-4">
-            CHOOSE YOUR ROLE IN THE SYSTEM
+            CHOOSE YOUR LEVEL OF INTELLIGENCE
           </h2>
           <p className="text-bauhaus-muted max-w-2xl mx-auto mb-8">
-            Large organisations and foundations pay. Community orgs use it free.
-            That&apos;s not a business model — it&apos;s a belief about how the world should work.
+            Community organisations access core features free. Procurement intelligence,
+            allocation analysis, and governed proof unlock at higher tiers.
           </p>
 
           {/* Annual/Monthly Toggle */}
@@ -503,7 +485,7 @@ export default function PricingPage() {
           </h2>
           <p className="text-center text-white/50 mb-16 max-w-2xl mx-auto">
             In a world where every ACNC filing is public, your reputation isn&apos;t what you
-            say about yourself — it&apos;s what the data says. GrantScope surfaces that data.
+            say about yourself — it&apos;s what the data says. CivicGraph surfaces that data.
             Be on the right side of it.
           </p>
 
@@ -516,7 +498,7 @@ export default function PricingPage() {
                 to fill in your 47-page application form.
               </p>
               <p className="text-sm text-white/70">
-                GrantScope lets you find them by what they do, not by how well they write.
+                CivicGraph lets you find them by what they do, not by how well they write.
                 Search by mission alignment, geography, community served, and track record.
                 Then reach out directly.
               </p>
@@ -560,7 +542,7 @@ export default function PricingPage() {
 
           <div className="text-center mt-12">
             <a
-              href="mailto:hello@grantscope.au?subject=Funder%20tier%20enquiry"
+              href="mailto:hello@civicgraph.au?subject=Funder%20tier%20enquiry"
               className="inline-block py-4 px-10 font-black text-sm uppercase tracking-widest border-4 border-bauhaus-yellow bg-bauhaus-yellow text-bauhaus-black bauhaus-shadow-sm transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none"
             >
               Talk to Us About Funder Access
@@ -569,23 +551,23 @@ export default function PricingPage() {
         </div>
       </section>
 
-      {/* ===== THE MONEY TRAIL ===== */}
+      {/* ===== THE DECISION STACK ===== */}
       <section className="py-16 px-6 bg-white border-b-4 border-bauhaus-black">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-3xl font-black tracking-tight text-center mb-4">
-            FOLLOW THE MONEY
+            THE DECISION STACK
           </h2>
           <p className="text-center text-bauhaus-muted mb-12 max-w-2xl mx-auto">
-            For the first time in Australia, you can trace funding from its source —
-            through foundations — to community impact. No other platform does this.
+            Each layer makes the next more powerful. Start with procurement.
+            Expand into allocation. Add proof when you own the decision.
           </p>
 
           <div className="flex flex-col md:flex-row items-stretch gap-0">
             {[
-              { label: 'SOURCE', desc: 'Mining, finance, property, family wealth', color: 'bg-bauhaus-black text-white' },
-              { label: 'FOUNDATION', desc: 'Endowments, trusts, corporate giving programs', color: 'bg-bauhaus-yellow' },
-              { label: 'GRANT', desc: 'Programs, rounds, partnerships, sponsorships', color: 'bg-bauhaus-blue text-white' },
-              { label: 'COMMUNITY', desc: 'The organisations and people doing the work', color: 'bg-money text-white' },
+              { label: '1. PROCUREMENT', desc: 'Find suppliers. Check compliance. Generate packs.', color: 'bg-bauhaus-blue text-white' },
+              { label: '2. ALLOCATION', desc: 'Place analysis. Gap scoring. Commissioning data.', color: 'bg-bauhaus-black text-white' },
+              { label: '3. PROOF', desc: 'Outcome evidence. Renewal defence. Policy justification.', color: 'bg-bauhaus-red text-white' },
+              { label: 'RESULT', desc: 'Defensible decisions at every stage.', color: 'bg-money text-white' },
             ].map((step, i) => (
               <div key={step.label} className="flex-1 flex flex-col">
                 <div className={`${step.color} p-6 border-4 border-bauhaus-black flex-1`}>
@@ -603,9 +585,8 @@ export default function PricingPage() {
 
           <div className="mt-8 border-4 border-bauhaus-black p-6 bg-bauhaus-canvas">
             <p className="text-sm text-center">
-              <strong>$1.1 billion</strong> of corporate giving comes from mining, gambling,
-              and fossil fuel companies. Communities have a right to know where their funding originates.
-              GrantScope makes it visible.
+              <strong>Every product decision passes one filter:</strong> does this help become default
+              infrastructure for procurement or allocation decisions? That&apos;s what we build.
             </p>
           </div>
         </div>
@@ -648,23 +629,24 @@ export default function PricingPage() {
       <section className="py-20 px-6 bg-bauhaus-black text-white">
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="text-3xl md:text-5xl font-black tracking-tight mb-8">
-            AUSTRALIA HAS NO 360GIVING.
+            OWN THE LAYER WHERE
             <br />
-            <span className="text-bauhaus-yellow">WE&apos;RE BUILDING IT.</span>
+            <span className="text-bauhaus-yellow">INSTITUTIONS DECIDE.</span>
           </h2>
           <p className="text-white/50 text-lg mb-6">
-            The UK has 360Giving — open data on every grant made by every foundation.
-            The US has Candid. Australia has nothing.
+            Who gets funded. Who gets contracted. Where services go. How allocations
+            are justified. These are the decisions that shape communities — and they&apos;re
+            currently made with incomplete data from disconnected systems.
           </p>
           <p className="text-white/50 text-lg mb-6">
-            We&apos;re not waiting for government to build it. We&apos;re not waiting for
-            the sector to agree on a standard. We&apos;re building the infrastructure now,
-            with the data that already exists, and making it free for the people who need it most.
+            CivicGraph connects AusTender contracts, ACNC finances, AEC donations,
+            ATO tax data, and ASIC filings into a single decision layer.
+            99,000+ entities. 65,000+ relationships. 20+ data sources.
           </p>
           <p className="text-white/70 text-xl font-bold mt-8">
-            This isn&apos;t a grant search engine.
+            Lead with the budget problem.
             <br />
-            It&apos;s the operating system for a fairer funding landscape.
+            Add the proof layer after you own the decision.
           </p>
         </div>
       </section>
@@ -684,7 +666,7 @@ export default function PricingPage() {
             },
             {
               q: 'How is this different from other grant platforms?',
-              a: 'Most platforms help you search. GrantScope helps you win AND helps you see. We have 7 years of ACNC financial data, AI-enriched foundation profiles, giving ratio scorecards, and the only money-trail mapping in Australia. Plus the cross-subsidy model means the best orgs aren\'t priced out.',
+              a: 'Most platforms help you search grants. CivicGraph connects grants, contracts, donations, and procurement across 99,000+ entities — the only platform that maps how money flows through society. Three layers: raw financial data, entity relationships, and community evidence. Plus the cross-subsidy model means the best orgs aren\'t priced out.',
             },
             {
               q: 'Can funders search for charities proactively?',
@@ -692,7 +674,7 @@ export default function PricingPage() {
             },
             {
               q: 'Where does your data come from?',
-              a: 'ACNC public registers (359,678 financial records), state and federal grant portals (14,119 grants), ATO DGR data, foundation websites (AI-enriched), and ASIC corporate filings. All public data, aggregated and analysed for the first time.',
+              a: 'ACNC registers (359,678 records), AusTender (672,000 contracts), AEC political donations (312,000 records), ATO tax transparency, ASIC corporate filings, ORIC Indigenous corporations, state grant portals, and AI-enriched foundation profiles. 20+ data sources, all public, connected for the first time.',
             },
             {
               q: 'Do you sell our data?',
@@ -719,13 +701,14 @@ export default function PricingPage() {
       <section className="py-20 px-6 bg-bauhaus-red text-white text-center">
         <div className="max-w-3xl mx-auto">
           <h2 className="text-3xl md:text-5xl font-black tracking-tight mb-6">
-            THE SYSTEM CHANGES
+            BETTER DECISIONS START
             <br />
-            WHEN EVERYONE CAN SEE IT.
+            WITH BETTER DATA.
           </h2>
           <p className="text-white/70 text-lg mb-10">
-            Whether you&apos;re a community org looking for funding, a foundation looking for impact,
-            or a researcher looking for truth — GrantScope is built for you.
+            Procurement officers, commissioners, funders, and community organisations
+            — CivicGraph gives you the decision intelligence to allocate resources
+            where they&apos;ll create the most value.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
@@ -735,7 +718,7 @@ export default function PricingPage() {
               Get Started Free
             </Link>
             <a
-              href="mailto:hello@grantscope.au?subject=Funder%20tier%20enquiry"
+              href="mailto:hello@civicgraph.au?subject=Funder%20tier%20enquiry"
               className="inline-block py-4 px-10 font-black text-sm uppercase tracking-widest border-4 border-white text-white transition-all hover:bg-white hover:text-bauhaus-red"
             >
               Talk to Us

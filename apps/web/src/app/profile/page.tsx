@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { ProfileClient } from './profile-client';
 
 export const metadata = {
-  title: 'Organisation Profile — GrantScope',
+  title: 'Organisation Profile — CivicGraph',
 };
 
 export default async function ProfilePage() {

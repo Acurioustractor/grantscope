@@ -8,10 +8,12 @@ import { KanbanBoard } from './kanban-board';
 export function TrackerClient() {
   const [grants, setGrants] = useState<SavedGrantRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<'personal' | 'org'>('personal');
   const router = useRouter();
 
   useEffect(() => {
-    fetch('/api/tracker')
+    setLoading(true);
+    fetch(`/api/tracker?view=${viewMode}`)
       .then((r) => {
         if (r.status === 401) {
           router.push('/login');
@@ -24,7 +26,7 @@ export function TrackerClient() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [router]);
+  }, [router, viewMode]);
 
   if (loading) {
     return (
@@ -38,18 +40,32 @@ export function TrackerClient() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-4">
         <h1 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight">
           Grant Tracker
         </h1>
-        <form action="/api/auth/signout" method="POST">
-          <button
-            type="submit"
-            className="text-xs font-black text-bauhaus-muted uppercase tracking-widest hover:text-bauhaus-red"
-          >
-            Sign Out
-          </button>
-        </form>
+      </div>
+      <div className="flex gap-0 mb-6 border-4 border-bauhaus-black w-fit">
+        <button
+          onClick={() => setViewMode('personal')}
+          className={`px-4 py-2 text-[11px] font-black uppercase tracking-widest transition-colors ${
+            viewMode === 'personal'
+              ? 'bg-bauhaus-black text-white'
+              : 'bg-white text-bauhaus-black hover:bg-bauhaus-canvas'
+          }`}
+        >
+          My Grants
+        </button>
+        <button
+          onClick={() => setViewMode('org')}
+          className={`px-4 py-2 text-[11px] font-black uppercase tracking-widest border-l-2 border-bauhaus-black/20 transition-colors ${
+            viewMode === 'org'
+              ? 'bg-bauhaus-black text-white'
+              : 'bg-white text-bauhaus-black hover:bg-bauhaus-canvas'
+          }`}
+        >
+          Team Grants
+        </button>
       </div>
       <KanbanBoard initialGrants={grants} />
     </div>

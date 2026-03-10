@@ -5,8 +5,8 @@ import Link from 'next/link';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'For Philanthropy | GrantScope Australia',
-  description: 'The system changes when everyone can see it. GrantScope maps every dollar flowing through Australian philanthropy — from source to community.',
+  title: 'For Philanthropy | CivicGraph Australia',
+  description: 'CivicGraph maps how money flows through society — grants, contracts, donations, and procurement. Three layers of market intelligence for fairer allocation.',
 };
 
 async function getStats() {
@@ -297,8 +297,8 @@ export default async function ForPhilanthropyPage() {
             <br />THE SYSTEM AFFECTS YOU.
           </h2>
           <p className="text-bauhaus-muted max-w-2xl mx-auto text-center mb-16">
-            GrantScope isn&apos;t a search engine. It&apos;s a transparency layer over the entire
-            philanthropic system. Here&apos;s what it changes for each player.
+            CivicGraph isn&apos;t a search engine. It&apos;s infrastructure for fairer markets —
+            three layers connecting money, entities, and community evidence. Here&apos;s what it changes.
           </p>
 
           <div className="grid md:grid-cols-2 gap-8 mb-12">
@@ -351,7 +351,7 @@ export default async function ForPhilanthropyPage() {
                 </li>
                 <li>
                   <strong className="text-bauhaus-black">Move from transactional to relational.</strong>
-                  <span className="text-bauhaus-muted"> The grant application process is adversarial by design. GrantScope enables mutual discovery — find each other based on real alignment, build partnerships over time.</span>
+                  <span className="text-bauhaus-muted"> The grant application process is adversarial by design. CivicGraph enables mutual discovery — find each other based on real alignment, build partnerships over time.</span>
                 </li>
                 <li>
                   <strong className="text-bauhaus-black">Prove real impact.</strong>
@@ -608,7 +608,7 @@ export default async function ForPhilanthropyPage() {
             This isn&apos;t a grant search engine.
           </p>
           <p className="text-2xl md:text-3xl text-bauhaus-yellow font-black">
-            It&apos;s the operating system for a fairer funding landscape.
+            It&apos;s infrastructure for fairer markets.
           </p>
         </div>
       </section>
@@ -632,7 +632,7 @@ export default async function ForPhilanthropyPage() {
               Get Started Free
             </Link>
             <a
-              href="mailto:hello@grantscope.au?subject=Partnership%20enquiry"
+              href="mailto:hello@civicgraph.au?subject=Partnership%20enquiry"
               className="inline-block py-4 px-10 font-black text-sm uppercase tracking-widest border-4 border-white text-white transition-all hover:bg-white hover:text-bauhaus-red"
             >
               Partner With Us

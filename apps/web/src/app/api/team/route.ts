@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       member,
       status: 'pending',
-      message: `Invitation saved for ${email}. They'll join your team when they create a GrantScope account.`,
+      message: `Invitation saved for ${email}. They'll join your team when they create a CivicGraph account.`,
     }, { status: 201 });
   }
 

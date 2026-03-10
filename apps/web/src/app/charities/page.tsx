@@ -5,7 +5,7 @@ import { FilterBar } from '../components/filter-bar';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'Search 64,000+ Australian Charities | GrantScope',
+  title: 'Search 64,000+ Australian Charities | CivicGraph',
   description: 'Search every registered charity in Australia by mission alignment, geography, cause area, organisation size, and financial health. Open data from the ACNC register.',
 };
 

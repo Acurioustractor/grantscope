@@ -4,7 +4,7 @@ import { getServiceSupabase } from '@/lib/supabase';
 /**
  * GET /api/insights
  *
- * Live system-wide statistics for the GrantScope data platform.
+ * Live system-wide statistics for the CivicGraph data platform.
  * Powers the /insights page with real-time numbers.
  */
 export async function GET() {

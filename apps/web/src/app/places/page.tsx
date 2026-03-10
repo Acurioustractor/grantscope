@@ -3,6 +3,18 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
+
+const FundingGapMap = dynamic(() => import('./funding-gap-map').then(m => ({ default: m.FundingGapMap })), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full border-4 border-bauhaus-black flex items-center justify-center" style={{ height: 550 }}>
+      <div className="text-bauhaus-muted font-black text-sm uppercase tracking-widest animate-pulse">
+        Loading map...
+      </div>
+    </div>
+  ),
+});
 
 export default function PlacesPage() {
   const [postcode, setPostcode] = useState('');
@@ -16,34 +28,22 @@ export default function PlacesPage() {
     }
   };
 
-  // Featured regions — high-gap areas to highlight
-  const featuredRegions = [
-    { postcode: '4000', label: 'Brisbane CBD', state: 'QLD' },
-    { postcode: '4825', label: 'Mount Isa', state: 'QLD' },
-    { postcode: '0870', label: 'Alice Springs', state: 'NT' },
-    { postcode: '6725', label: 'Broome', state: 'WA' },
-    { postcode: '4680', label: 'Gladstone', state: 'QLD' },
-    { postcode: '2350', label: 'Armidale', state: 'NSW' },
-    { postcode: '4870', label: 'Cairns', state: 'QLD' },
-    { postcode: '2800', label: 'Orange', state: 'NSW' },
-  ];
-
   return (
-    <div className="max-w-3xl">
+    <div>
       <Link href="/" className="text-xs font-black text-bauhaus-muted uppercase tracking-widest hover:text-bauhaus-black">
         &larr; Home
       </Link>
 
       <div className="mt-4 mb-8">
         <h1 className="text-2xl sm:text-3xl font-black text-bauhaus-black">Community Funding Map</h1>
-        <p className="mt-2 text-bauhaus-muted font-medium leading-relaxed">
-          Search any postcode to see where money goes — and who&apos;s missing. Understand the funding landscape for any community in Australia.
+        <p className="mt-2 text-bauhaus-muted font-medium leading-relaxed max-w-2xl">
+          Search any postcode to see where money goes — and who&apos;s missing. Click any circle on the map to explore a community&apos;s funding landscape.
         </p>
       </div>
 
       {/* Search */}
-      <form onSubmit={handleSearch} className="mb-8">
-        <div className="flex gap-0 border-4 border-bauhaus-black">
+      <form onSubmit={handleSearch} className="mb-6">
+        <div className="flex gap-0 border-4 border-bauhaus-black max-w-lg">
           <input
             type="text"
             value={postcode}
@@ -62,28 +62,13 @@ export default function PlacesPage() {
         </div>
       </form>
 
-      {/* Featured Regions */}
-      <section>
-        <h2 className="text-sm font-black text-bauhaus-black mb-3 pb-2 border-b-4 border-bauhaus-black uppercase tracking-widest">
-          Explore Regions
-        </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {featuredRegions.map((r) => (
-            <Link
-              key={r.postcode}
-              href={`/places/${r.postcode}`}
-              className="border-2 border-bauhaus-black/20 p-3 hover:border-bauhaus-black hover:bg-bauhaus-canvas transition-colors"
-            >
-              <div className="text-lg font-black text-bauhaus-black">{r.postcode}</div>
-              <div className="text-xs font-bold text-bauhaus-muted">{r.label}</div>
-              <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest">{r.state}</div>
-            </Link>
-          ))}
-        </div>
+      {/* Map */}
+      <section className="mb-8">
+        <FundingGapMap />
       </section>
 
       {/* About */}
-      <section className="mt-8 bg-bauhaus-canvas border-4 border-bauhaus-black p-6">
+      <section className="bg-bauhaus-canvas border-4 border-bauhaus-black p-6 max-w-3xl">
         <h2 className="text-sm font-black text-bauhaus-black mb-3 uppercase tracking-widest">
           What is a Funding Gap Pack?
         </h2>

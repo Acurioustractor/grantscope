@@ -117,7 +117,7 @@ export default async function StateOfTheNationPage() {
           <p className="text-white/90 leading-relaxed">
             The data to build that tool already exists. It sits in government databases, published under open licences,
             updated weekly. What doesn&apos;t exist — and what has never existed — is the connective tissue.
-            <span className="text-bauhaus-yellow font-black"> GrantScope is building that connective tissue.</span>
+            <span className="text-bauhaus-yellow font-black"> CivicGraph is building that connective tissue.</span>
           </p>
         </div>
       </section>
@@ -290,7 +290,7 @@ CROSS-REFERENCES
       </section>
 
       <div className="text-center text-sm text-bauhaus-muted font-medium py-8 border-t-4 border-bauhaus-black">
-        GrantScope — grantscope.au — Making the invisible visible.
+        CivicGraph — civicgraph.au — Making the invisible visible.
       </div>
     </div>
   );

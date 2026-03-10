@@ -428,9 +428,35 @@ export const AGENTS = {
     timeoutMs: 600_000,
     dependencies: [],
   },
+
+  // ── Intelligence (org-facing agents) ──────────────────────────────────────
+  'scout-grants-for-profiles': {
+    command: ['node', '--env-file=.env', 'scripts/scout-grants-for-profiles.mjs'],
+    displayName: 'Grant Scout',
+    category: 'intelligence',
+    defaultPriority: 2,
+    timeoutMs: 300_000,
+    dependencies: [],
+  },
+  'score-foundation-alignment': {
+    command: ['node', '--env-file=.env', 'scripts/score-foundation-alignment.mjs'],
+    displayName: 'Foundation Alignment',
+    category: 'intelligence',
+    defaultPriority: 2,
+    timeoutMs: 300_000,
+    dependencies: [],
+  },
+  'sync-pipeline-to-notion': {
+    command: ['node', '--env-file=.env', 'scripts/sync-pipeline-to-notion.mjs'],
+    displayName: 'Notion Pipeline Sync',
+    category: 'intelligence',
+    defaultPriority: 3,
+    timeoutMs: 300_000,
+    dependencies: ['scout-grants-for-profiles', 'score-foundation-alignment'],
+  },
 };
 
-export const CATEGORIES = ['sync', 'import', 'discovery', 'enrichment', 'profiling', 'graph', 'embedding', 'analytics'];
+export const CATEGORIES = ['sync', 'import', 'discovery', 'enrichment', 'profiling', 'graph', 'embedding', 'analytics', 'intelligence'];
 
 export function getAgent(agentId) {
   return AGENTS[agentId] ?? null;

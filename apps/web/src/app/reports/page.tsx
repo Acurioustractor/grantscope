@@ -2,17 +2,17 @@ export default function ReportsPage() {
   return (
     <div>
       <div className="mb-10">
-        <p className="text-xs font-black text-bauhaus-red uppercase tracking-[0.3em] mb-2">Research Wiki</p>
-        <h1 className="text-3xl font-black text-bauhaus-black mb-2">Living Reports</h1>
+        <p className="text-xs font-black text-bauhaus-red uppercase tracking-[0.3em] mb-2">CivicGraph Intelligence</p>
+        <h1 className="text-3xl font-black text-bauhaus-black mb-2">Market Intelligence Reports</h1>
         <p className="text-bauhaus-muted font-medium max-w-2xl">
-          Data-driven investigations into where money flows, who holds power, and what communities
-          can do about it. Start anywhere &mdash; each report links to the others.
+          Data-driven investigations into how money flows through society &mdash; grants, contracts,
+          donations, and procurement. Start anywhere &mdash; each report links to the others.
         </p>
       </div>
 
       {/* Reading order guide */}
       <div className="bg-bauhaus-canvas border-4 border-bauhaus-black p-5 mb-10 bauhaus-shadow-sm max-w-2xl">
-        <p className="text-xs font-black text-bauhaus-muted uppercase tracking-widest mb-3">Suggested Reading Order</p>
+        <p className="text-xs font-black text-bauhaus-muted uppercase tracking-widest mb-3">Investigation Reading Order</p>
         <ol className="space-y-2 text-sm font-medium text-bauhaus-black/80">
           <li className="flex gap-2">
             <span className="text-bauhaus-red font-black">1.</span>
@@ -198,7 +198,7 @@ export default function ReportsPage() {
               <h3 className="text-xl font-black text-bauhaus-black mb-2 group-hover:text-white">Social Enterprise in Australia</h3>
               <p className="text-sm text-bauhaus-muted leading-relaxed group-hover:text-white/80">
                 20,000 businesses trading for purpose. $21 billion in revenue. 300,000 jobs.
-                No legal structure. No central register. The landscape, the gaps, and why GrantScope
+                No legal structure. No central register. The landscape, the gaps, and why CivicGraph
                 is building the directory that doesn&apos;t exist.
               </p>
             </div>

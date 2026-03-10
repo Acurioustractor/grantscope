@@ -5,8 +5,8 @@ import Link from 'next/link';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'For Corporates & Sponsors | GrantScope Australia',
-  description: 'You want to give. You don\'t know who to give to. GrantScope helps companies, sponsors, and high-net-worth individuals find the right charities — by impact, not by pitch deck.',
+  title: 'For Corporates & Sponsors | CivicGraph Australia',
+  description: 'Supplier discovery, social procurement, and impact partnerships. CivicGraph maps 99,000+ entities so corporates can find aligned partners by data, not by pitch deck.',
 };
 
 async function getStats() {
@@ -139,9 +139,9 @@ export default async function ForCorporatePage() {
             SEARCH BY IMPACT.<br />NOT BY PITCH DECK.
           </h2>
           <p className="text-white/50 text-lg max-w-2xl mb-16">
-            GrantScope gives you the tools to find, evaluate, and support the organisations
-            that align with what you actually care about. No gatekeepers. No gala dinners.
-            Just data.
+            CivicGraph maps 99,000+ entities across grants, contracts, and corporate filings.
+            Find suppliers, partners, and aligned organisations by data — not by who
+            your CEO golfs with. Procurement intelligence meets social impact.
           </p>
 
           <div className="grid md:grid-cols-3 gap-6 mb-12">
@@ -163,7 +163,7 @@ export default async function ForCorporatePage() {
               <span className="text-4xl mb-4 block">📊</span>
               <h3 className="font-black text-bauhaus-yellow mb-3 text-lg">EVALUATE</h3>
               <p className="text-sm text-white/70 mb-4">
-                Every charity on GrantScope has 7 years of ACNC financial data. Revenue,
+                Every charity on CivicGraph has 7 years of ACNC financial data. Revenue,
                 expenses, assets, executive compensation, volunteer numbers. Real numbers,
                 not brochures.
               </p>
@@ -182,7 +182,7 @@ export default async function ForCorporatePage() {
               </p>
               <p className="text-xs text-white/40">
                 The best giving relationships are long-term partnerships, not one-off
-                sponsorships. GrantScope helps you build them with data and trust.
+                sponsorships. CivicGraph helps you build them with data and trust.
               </p>
             </div>
           </div>
@@ -270,7 +270,7 @@ export default async function ForCorporatePage() {
               <p className="text-xs font-black uppercase tracking-widest text-bauhaus-red mb-4">Step 2</p>
               <h3 className="font-black text-lg mb-3">SEARCH BY ALIGNMENT</h3>
               <p className="text-sm text-bauhaus-muted">
-                GrantScope&apos;s AI matches organisations to your values. Not who&apos;s
+                CivicGraph&apos;s AI matches organisations to your values. Not who&apos;s
                 loudest — who&apos;s most aligned. Filter by geography, cause area,
                 size, financial health, and track record.
               </p>
@@ -366,7 +366,7 @@ export default async function ForCorporatePage() {
               <h3 className="font-black text-sm uppercase tracking-widest mb-3">For Your Team</h3>
               <p className="text-sm text-bauhaus-muted">
                 People want to work for companies that give a shit. Let your team choose
-                the charities you support. Use GrantScope to make it data-driven,
+                the charities you support. Use CivicGraph to make it data-driven,
                 not politics-driven.
               </p>
             </div>
@@ -438,7 +438,7 @@ export default async function ForCorporatePage() {
               Search Charities
             </Link>
             <a
-              href="mailto:hello@grantscope.au?subject=Corporate%20giving%20enquiry"
+              href="mailto:hello@civicgraph.au?subject=Corporate%20giving%20enquiry"
               className="inline-block py-4 px-10 font-black text-sm uppercase tracking-widest border-4 border-white text-white transition-all hover:bg-white hover:text-bauhaus-red"
             >
               Talk to Us

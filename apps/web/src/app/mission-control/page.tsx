@@ -3,7 +3,7 @@ import { MissionControlClient } from './mission-control-client';
 export const dynamic = 'force-dynamic';
 
 export const metadata = {
-  title: 'Mission Control — GrantScope',
+  title: 'Mission Control — CivicGraph',
   description: 'Unified data inventory, power concentration analysis, agent status, and live SQL playground.',
 };
 

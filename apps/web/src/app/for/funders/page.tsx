@@ -5,8 +5,8 @@ import Link from 'next/link';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'What You Get | GrantScope Funder Tier',
-  description: 'Everything included in your GrantScope Funder subscription — portfolio intelligence, discovery tools, benchmarking, brand visibility, and direct access to aligned organisations.',
+  title: 'What You Get | CivicGraph Funder Tier',
+  description: 'Allocation intelligence for funders — portfolio analytics, supplier discovery, entity graph access, and community evidence. Three layers of market intelligence.',
 };
 
 async function getStats() {
@@ -52,8 +52,8 @@ export default async function ForFundersPage() {
             <br /><span className="text-bauhaus-yellow">WHOLE SYSTEM.</span>
           </h1>
           <p className="text-xl md:text-2xl text-white/50 font-medium max-w-2xl mb-6">
-            Nothing like this exists in Australia. You&apos;re not joining a platform —
-            you&apos;re shaping how philanthropy works in this country.
+            Nothing like this exists in Australia. Three layers of market intelligence —
+            money, entities, and community evidence — shaping how allocation works in this country.
           </p>
           <p className="text-sm text-white/30 max-w-xl">
             First-mover funders get founding partner status, direct input on features,
@@ -61,7 +61,7 @@ export default async function ForFundersPage() {
           </p>
           <div className="mt-12 flex flex-col sm:flex-row gap-4">
             <a
-              href="mailto:hello@grantscope.au?subject=Founding%20Funder%20%E2%80%94%20interested"
+              href="mailto:hello@civicgraph.au?subject=Founding%20Funder%20%E2%80%94%20interested"
               className="inline-block py-4 px-8 font-black text-sm uppercase tracking-widest border-4 border-bauhaus-yellow bg-bauhaus-yellow text-bauhaus-black bauhaus-shadow-sm transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none"
             >
               Become a Founding Funder
@@ -91,7 +91,7 @@ export default async function ForFundersPage() {
                 transparency leaders.
               </p>
               <p className="text-sm font-medium mb-6">
-                Australia has no equivalent. <strong>GrantScope is building it.</strong> The foundations
+                Australia has no equivalent. <strong>CivicGraph is building it.</strong> The foundations
                 and corporates that join now don&apos;t just get a tool — they get to shape the
                 infrastructure that the entire sector will eventually use.
               </p>
@@ -137,7 +137,7 @@ export default async function ForFundersPage() {
             EVERYTHING IN YOUR<br />FUNDER SUBSCRIPTION
           </h2>
           <p className="text-bauhaus-muted text-center max-w-2xl mx-auto mb-16">
-            Not a list of features. A walkthrough of exactly how GrantScope
+            Not a list of features. A walkthrough of exactly how CivicGraph
             changes the way you find, fund, and build relationships with organisations.
           </p>
 
@@ -164,7 +164,7 @@ export default async function ForFundersPage() {
                   <li>
                     <strong>Find the invisible orgs.</strong> The grassroots organisations that don&apos;t
                     have grant writers or marketing budgets but have the best outcomes.
-                    GrantScope surfaces them by impact, not by profile polish.
+                    CivicGraph surfaces them by impact, not by profile polish.
                   </li>
                   <li>
                     <strong>Proactive deal flow.</strong> New charities matching your criteria?
@@ -355,7 +355,7 @@ export default async function ForFundersPage() {
                     to back Australia&apos;s philanthropic transparency infrastructure.
                   </li>
                   <li>
-                    <strong>Featured in launch materials.</strong> When GrantScope launches publicly —
+                    <strong>Featured in launch materials.</strong> When CivicGraph launches publicly —
                     and the media covers it — founding funders are named. This is the kind of
                     visibility you can&apos;t buy.
                   </li>
@@ -396,7 +396,7 @@ export default async function ForFundersPage() {
                     are published in your focus areas.
                   </li>
                   <li>
-                    <strong>White-label option.</strong> Embed GrantScope data in your own
+                    <strong>White-label option.</strong> Embed CivicGraph data in your own
                     website or internal tools. Show your stakeholders where their money goes
                     — on your platform, with your branding.
                   </li>
@@ -610,7 +610,7 @@ export default async function ForFundersPage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a
-              href="mailto:hello@grantscope.au?subject=Founding%20Funder%20%E2%80%94%20interested"
+              href="mailto:hello@civicgraph.au?subject=Founding%20Funder%20%E2%80%94%20interested"
               className="inline-block py-4 px-10 font-black text-sm uppercase tracking-widest border-4 border-white bg-white text-bauhaus-red bauhaus-shadow-sm transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none"
             >
               Become a Founding Funder

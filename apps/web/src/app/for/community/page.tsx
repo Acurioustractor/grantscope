@@ -4,8 +4,8 @@ import type { Metadata } from 'next';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'For Community Organisations | GrantScope Australia',
-  description: 'Find grants, track applications, and discover foundations that fund work like yours. Every government grant, foundation program, and funding opportunity — searchable, current, and built for you.',
+  title: 'For Community Organisations | CivicGraph Australia',
+  description: 'Find grants, contracts, and funding opportunities. CivicGraph maps how money flows through society — so community orgs can access the market fairly.',
 };
 
 async function getStats() {
@@ -61,8 +61,8 @@ export default async function ForCommunityPage() {
           Stop Searching.<br /><span className="text-bauhaus-blue">Start Applying.</span>
         </h1>
         <p className="text-lg text-bauhaus-muted max-w-xl mb-10 leading-relaxed font-medium">
-          Every government grant, foundation program, and funding opportunity &mdash; searchable,
-          current, and built for you.
+          Grants, contracts, and funding opportunities &mdash; all in one place.
+          CivicGraph maps the market so community orgs can access it fairly. Free forever.
         </p>
         <div className="flex gap-0 flex-wrap">
           <a

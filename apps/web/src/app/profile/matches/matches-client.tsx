@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { ThumbsVote } from '@/app/components/thumbs-vote';
 
 interface MatchedGrant {
   id: string;
@@ -23,6 +24,7 @@ export function MatchesClient() {
   const [minScore, setMinScore] = useState(60);
   const [savingGrant, setSavingGrant] = useState<string | null>(null);
   const [savedGrants, setSavedGrants] = useState<Set<string>>(new Set());
+  const [voteCount, setVoteCount] = useState(0);
 
   useEffect(() => {
     fetch(`/api/profile/matches?threshold=${minScore / 100}&limit=100`)
@@ -30,7 +32,10 @@ export function MatchesClient() {
         if (!r.ok) throw r;
         return r.json();
       })
-      .then(data => setMatches(data.matches || []))
+      .then(data => {
+        setMatches(data.matches || []);
+        setVoteCount(data.feedback_count || 0);
+      })
       .catch(async (r) => {
         if (r instanceof Response) {
           const data = await r.json().catch(() => ({}));
@@ -105,13 +110,38 @@ export function MatchesClient() {
             {matches.length} grants matched to your profile
           </p>
         </div>
-        <Link
-          href="/profile"
-          className="text-xs font-black uppercase tracking-widest text-bauhaus-blue hover:text-bauhaus-black border-3 border-bauhaus-black px-4 py-2"
-        >
-          Edit Profile
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            href="/profile/answers"
+            className="text-xs font-black uppercase tracking-widest text-bauhaus-black hover:text-bauhaus-blue border-3 border-bauhaus-black px-4 py-2"
+          >
+            Answer Bank
+          </Link>
+          <Link
+            href="/profile"
+            className="text-xs font-black uppercase tracking-widest text-bauhaus-blue hover:text-bauhaus-black border-3 border-bauhaus-black px-4 py-2"
+          >
+            Edit Profile
+          </Link>
+        </div>
       </div>
+
+      {/* Learning progress */}
+      {voteCount > 0 && (
+        <div className="flex items-center gap-3 border-4 border-bauhaus-blue/30 bg-bauhaus-blue/5 p-3">
+          <span className="text-xs font-black uppercase tracking-widest text-bauhaus-blue">
+            {voteCount} grant{voteCount !== 1 ? 's' : ''} rated
+          </span>
+          {voteCount >= 5 && (
+            <span className="text-[10px] font-black uppercase tracking-widest text-white bg-bauhaus-blue px-2 py-0.5">
+              Personalized
+            </span>
+          )}
+          <span className="text-xs text-bauhaus-muted ml-auto">
+            Rate grants to improve your recommendations
+          </span>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex items-center gap-4 border-4 border-bauhaus-black bg-white p-4">
@@ -163,17 +193,24 @@ export function MatchesClient() {
                       </Link>
                       <div className="text-xs text-bauhaus-muted mt-1">{grant.provider}</div>
                     </div>
-                    <button
-                      onClick={() => saveToTracker(grant.id)}
-                      disabled={savingGrant === grant.id || savedGrants.has(grant.id)}
-                      className={`flex-shrink-0 text-xs font-black uppercase tracking-widest px-3 py-2 border-3 border-bauhaus-black transition-colors ${
-                        savedGrants.has(grant.id)
-                          ? 'bg-bauhaus-black text-white'
-                          : 'hover:bg-bauhaus-black hover:text-white disabled:opacity-50'
-                      }`}
-                    >
-                      {savedGrants.has(grant.id) ? 'Tracked' : savingGrant === grant.id ? '...' : 'Track'}
-                    </button>
+                    <div className="flex-shrink-0 flex items-center gap-2">
+                      <ThumbsVote
+                        grantId={grant.id}
+                        sourceContext="matches"
+                        onVote={() => setVoteCount(c => c + 1)}
+                      />
+                      <button
+                        onClick={() => saveToTracker(grant.id)}
+                        disabled={savingGrant === grant.id || savedGrants.has(grant.id)}
+                        className={`text-xs font-black uppercase tracking-widest px-3 py-2 border-3 border-bauhaus-black transition-colors ${
+                          savedGrants.has(grant.id)
+                            ? 'bg-bauhaus-black text-white'
+                            : 'hover:bg-bauhaus-black hover:text-white disabled:opacity-50'
+                        }`}
+                      >
+                        {savedGrants.has(grant.id) ? 'Tracked' : savingGrant === grant.id ? '...' : 'Track'}
+                      </button>
+                    </div>
                   </div>
 
                   {grant.description && (

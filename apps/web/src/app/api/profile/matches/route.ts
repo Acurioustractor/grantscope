@@ -65,6 +65,12 @@ export async function GET(request: NextRequest) {
   const orgDomains = new Set((profile.domains || []).map((d: string) => d.toLowerCase()));
   const orgGeo = new Set((profile.geographic_focus || []).map((g: string) => g.toLowerCase()));
 
+  // Get user's feedback count for learning stats
+  const { count: feedbackCount } = await serviceDb
+    .from('grant_feedback')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', user.id);
+
   const scored = (matches || []).map((grant: {
     id: string;
     name: string;
@@ -91,11 +97,26 @@ export async function GET(request: NextRequest) {
     };
   });
 
+  // Apply feedback adjustments if user has given feedback
+  if (feedbackCount && feedbackCount > 0) {
+    for (const grant of scored) {
+      const { data: adjusted } = await serviceDb.rpc('get_feedback_adjusted_score', {
+        p_user_id: user.id,
+        p_grant_id: grant.id,
+        p_base_score: grant.fit_score,
+      });
+      if (adjusted !== null && adjusted !== undefined) {
+        grant.fit_score = Math.round(adjusted as number);
+      }
+    }
+  }
+
   scored.sort((a: { fit_score: number }, b: { fit_score: number }) => b.fit_score - a.fit_score);
 
   return NextResponse.json({
     matches: scored,
     count: scored.length,
+    feedback_count: feedbackCount || 0,
     profile_domains: profile.domains,
     profile_geo: profile.geographic_focus,
   });

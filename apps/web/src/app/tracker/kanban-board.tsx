@@ -96,7 +96,7 @@ export function KanbanBoard({ initialGrants }: { initialGrants: SavedGrantRow[] 
       <TrackerFilters filters={filters} onChange={setFilters} />
 
       {grants.length === 0 ? (
-        <div className="border-4 border-bauhaus-black bg-white p-12 text-center">
+        <div className="border-2 border-dashed border-bauhaus-black/20 p-8 text-center">
           <div className="text-lg font-black text-bauhaus-black uppercase tracking-tight mb-2">
             No saved grants yet
           </div>

@@ -9,10 +9,12 @@ interface AccountDropdownProps {
 }
 
 const menuItems = [
-  { href: '/profile', label: 'My Organisation', desc: 'Your charity profile & settings' },
-  { href: '/tracker', label: 'My Grants', desc: 'Track grant applications' },
+  { href: '/profile', label: 'My Organisation', desc: 'Profile, ABN & focus areas' },
+  { href: '/profile/matches', label: 'Matched Grants', desc: 'AI-matched grants for your org' },
+  { href: '/profile/answers', label: 'Answer Bank', desc: 'Reusable Q&A from past applications' },
   { href: '/foundations/tracker', label: 'My Foundations', desc: 'Track foundation relationships' },
-  { href: '/charities/claim', label: 'My Claims', desc: 'Claimed charity profiles' },
+  { href: '/knowledge', label: 'Knowledge Wiki', desc: 'Documents, URLs & org intelligence' },
+  { href: '/settings', label: 'Settings', desc: 'API keys & account' },
   { href: '/pricing', label: 'Billing & Plan', desc: 'Manage your subscription' },
 ];
 

@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
             })
             .eq('id', orgProfileId)
 
-          console.log(`✅ GrantScope subscription activated: org=${orgProfileId} tier=${tier}`)
+          console.log(`✅ CivicGraph subscription activated: org=${orgProfileId} tier=${tier}`)
         }
         break
       }
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
             })
             .eq('id', orgProfileId)
 
-          console.log(`🔄 GrantScope subscription updated: org=${orgProfileId} status=${subscription.status}`)
+          console.log(`🔄 CivicGraph subscription updated: org=${orgProfileId} status=${subscription.status}`)
         }
         break
       }
@@ -83,18 +83,18 @@ export async function POST(request: NextRequest) {
             })
             .eq('id', orgProfileId)
 
-          console.log(`❌ GrantScope subscription cancelled: org=${orgProfileId} → community`)
+          console.log(`❌ CivicGraph subscription cancelled: org=${orgProfileId} → community`)
         }
         break
       }
 
       default:
-        console.log(`Unhandled GrantScope webhook event: ${event.type}`)
+        console.log(`Unhandled CivicGraph webhook event: ${event.type}`)
     }
 
     return NextResponse.json({ received: true })
   } catch (error) {
-    console.error('GrantScope webhook handler error:', error)
+    console.error('CivicGraph webhook handler error:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Webhook handler failed' },
       { status: 500 }

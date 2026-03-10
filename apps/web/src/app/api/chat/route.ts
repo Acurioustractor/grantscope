@@ -1,11 +1,12 @@
 import { streamText, convertToModelMessages, type UIMessage } from 'ai';
 import { anthropic } from '@ai-sdk/anthropic';
+import { createSupabaseServer } from '@/lib/supabase-server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { embedQuery } from '@grantscope/engine';
 
 export const maxDuration = 30;
 
-const SYSTEM_PROMPT = `You are GrantScope, an Australian grant discovery assistant. You help community organisations find relevant grants and foundations.
+const SYSTEM_PROMPT = `You are CivicGraph, an Australian grant discovery assistant. You help community organisations find relevant grants and foundations.
 
 When responding:
 - Always cite specific grant names, amounts, and deadlines
@@ -55,7 +56,27 @@ function getTextFromMessage(msg: UIMessage): string {
     .join('');
 }
 
+async function getOrgProfileId(db: ReturnType<typeof getServiceSupabase>, userId: string) {
+  const { data: own } = await db
+    .from('org_profiles')
+    .select('id')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (own) return own.id;
+
+  const { data: member } = await db
+    .from('org_members')
+    .select('org_profile_id')
+    .eq('user_id', userId)
+    .limit(1)
+    .maybeSingle();
+  return member?.org_profile_id || null;
+}
+
 export async function POST(req: Request) {
+  const url = new URL(req.url);
+  const scope = url.searchParams.get('scope');
+
   const { messages } = await req.json() as { messages: UIMessage[] };
   const supabase = getServiceSupabase();
 
@@ -117,8 +138,40 @@ export async function POST(req: Request) {
     console.error('[chat-rag]', err);
   }
 
+  // Org knowledge search (when scope=knowledge or user is authenticated with org)
+  try {
+    if (scope === 'knowledge' && process.env.OPENAI_API_KEY && lastMessage.length > 3) {
+      const authSupabase = await createSupabaseServer();
+      const { data: { user } } = await authSupabase.auth.getUser();
+
+      if (user) {
+        const orgId = await getOrgProfileId(supabase, user.id);
+        if (orgId) {
+          const queryEmbedding = await embedQuery(lastMessage, process.env.OPENAI_API_KEY);
+          const { data: orgChunks } = await supabase.rpc('search_org_knowledge', {
+            query_embedding: JSON.stringify(queryEmbedding),
+            p_org_profile_id: orgId,
+            match_threshold: 0.5,
+            match_count: 8,
+          });
+
+          if (orgChunks && orgChunks.length > 0) {
+            contextText += '\n\n## Your Organisation Knowledge\n';
+            for (const chunk of orgChunks) {
+              contextText += `- ${chunk.summary || chunk.content.slice(0, 300)}`;
+              if (chunk.topics?.length) contextText += ` [${chunk.topics.join(', ')}]`;
+              contextText += '\n';
+            }
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error('[chat-org-knowledge]', err);
+  }
+
   const systemPrompt = contextText
-    ? `${SYSTEM_PROMPT}\n\nHere is relevant data from the GrantScope database for the user's query:${contextText}`
+    ? `${SYSTEM_PROMPT}\n\nHere is relevant data from the CivicGraph database for the user's query:${contextText}`
     : SYSTEM_PROMPT;
 
   // Convert UIMessages to model messages for streamText

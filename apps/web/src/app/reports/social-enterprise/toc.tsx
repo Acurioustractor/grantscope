@@ -10,7 +10,7 @@ const sections = [
   { id: 'indigenous-enterprise', number: '05', label: 'Indigenous Enterprise' },
   { id: 'social-procurement', number: '06', label: 'Social Procurement' },
   { id: 'data-problem', number: '07', label: 'The Data Problem' },
-  { id: 'grantscope-role', number: '08', label: 'Why GrantScope' },
+  { id: 'grantscope-role', number: '08', label: 'Why CivicGraph' },
   { id: 'how-to-use', number: '09', label: 'How to Use This Platform' },
   { id: 'what-next', number: '10', label: 'What Comes Next' },
 ];

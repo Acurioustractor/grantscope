@@ -3,6 +3,7 @@
 import { Draggable } from '@hello-pangea/dnd';
 import type { SavedGrantRow } from './page';
 import { ColorDot } from '@/app/components/color-label';
+import { ThumbsVote } from '@/app/components/thumbs-vote';
 
 function formatAmount(min: number | null, max: number | null): string {
   if (max) return `$${max >= 1e6 ? (max / 1e6).toFixed(1) + 'M' : max >= 1e3 ? (max / 1e3).toFixed(0) + 'K' : max.toLocaleString()}`;
@@ -31,7 +32,7 @@ export function KanbanCard({ grant, index, onRemove }: { grant: SavedGrantRow; i
           ref={provided.innerRef}
           {...provided.draggableProps}
           {...provided.dragHandleProps}
-          className={`bg-white border-4 border-bauhaus-black p-3 cursor-grab active:cursor-grabbing transition-shadow ${
+          className={`bg-white border-2 border-bauhaus-black p-3 cursor-grab active:cursor-grabbing transition-shadow ${
             snapshot.isDragging ? 'bauhaus-shadow-sm' : ''
           }`}
         >
@@ -64,19 +65,24 @@ export function KanbanCard({ grant, index, onRemove }: { grant: SavedGrantRow; i
           </div>
 
           <div className="flex items-center justify-between mt-2">
-            <div className="flex items-center gap-1">
-              {[1, 2, 3].map((s) => (
-                <svg
-                  key={s}
-                  className="w-3 h-3"
-                  viewBox="0 0 20 20"
-                  fill={s <= grant.stars ? '#F0C020' : 'none'}
-                  stroke={s <= grant.stars ? '#F0C020' : '#ccc'}
-                  strokeWidth={2}
-                >
-                  <path d="M10 1l2.39 4.84 5.34.78-3.87 3.77.91 5.33L10 13.27l-4.77 2.51.91-5.33L2.27 6.62l5.34-.78L10 1z" />
-                </svg>
-              ))}
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
+                {[1, 2, 3].map((s) => (
+                  <svg
+                    key={s}
+                    className="w-3 h-3"
+                    viewBox="0 0 20 20"
+                    fill={s <= grant.stars ? '#F0C020' : 'none'}
+                    stroke={s <= grant.stars ? '#F0C020' : '#ccc'}
+                    strokeWidth={2}
+                  >
+                    <path d="M10 1l2.39 4.84 5.34.78-3.87 3.77.91 5.33L10 13.27l-4.77 2.51.91-5.33L2.27 6.62l5.34-.78L10 1z" />
+                  </svg>
+                ))}
+              </div>
+              <div onClick={(e) => e.stopPropagation()}>
+                <ThumbsVote grantId={grant.grant_id} sourceContext="tracker" />
+              </div>
             </div>
             <div className="flex items-center gap-2 text-xs tabular-nums">
               {amount && (

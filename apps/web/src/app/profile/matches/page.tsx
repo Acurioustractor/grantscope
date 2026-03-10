@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { MatchesClient } from './matches-client';
 
 export const metadata = {
-  title: 'Matched Grants — GrantScope',
+  title: 'Matched Grants — CivicGraph',
 };
 
 export default async function MatchesPage() {

@@ -450,7 +450,7 @@ export default function CommunityPowerPage() {
               { who: 'Policymakers', action: 'Fund community energy through low-interest loans, not grants.' },
               { who: 'Individuals', action: 'Move your banking to a mutual bank or credit union.' },
               { who: 'Individuals', action: 'Buy from social enterprises and cooperatives where possible.' },
-              { who: 'Individuals', action: 'If you give, give to grassroots organisations directly. Use GrantScope to find them.' },
+              { who: 'Individuals', action: 'If you give, give to grassroots organisations directly. Use CivicGraph to find them.' },
             ].map((item, i) => (
               <div key={i} className="flex gap-3 items-start">
                 <span className="text-xs font-black text-bauhaus-red mt-1 w-5 text-right flex-shrink-0">{i + 1}.</span>

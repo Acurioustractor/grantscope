@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const state = searchParams.get('state');
   const remoteness = searchParams.get('remoteness');
-  const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100);
+  const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 500);
 
   const supabase = getServiceSupabase();
 
@@ -32,7 +32,28 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ postcodes: data });
+  // Enrich with lat/lng from postcode_geo
+  const postcodes = (data || []).map((d: Record<string, unknown>) => d.postcode as string);
+  const geoLookup = new Map<string, { lat: number; lng: number; locality: string }>();
+
+  for (let i = 0; i < postcodes.length; i += 100) {
+    const chunk = postcodes.slice(i, i + 100);
+    const { data: geoData } = await supabase
+      .from('postcode_geo')
+      .select('postcode, latitude, longitude, locality')
+      .in('postcode', chunk)
+      .not('latitude', 'is', null);
+    for (const g of geoData || []) {
+      geoLookup.set(g.postcode, { lat: g.latitude, lng: g.longitude, locality: g.locality || '' });
+    }
+  }
+
+  const enriched = (data || []).map((d: Record<string, unknown>) => {
+    const geo = geoLookup.get(d.postcode as string);
+    return { ...d, lat: geo?.lat || null, lng: geo?.lng || null, locality: geo?.locality || null };
+  });
+
+  return NextResponse.json({ postcodes: enriched });
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -75,16 +96,20 @@ async function fallbackGapQuery(supabase: any, state: string | null, remoteness:
     }
   }
 
-  // Get remoteness
+  // Get remoteness + lat/lng
   const remotenessMap = new Map<string, string>();
+  const geoLookup = new Map<string, { lat: number; lng: number; locality: string }>();
   for (let i = 0; i < postcodes.length; i += 100) {
     const chunk = postcodes.slice(i, i + 100);
     const { data: geoData } = await supabase
       .from('postcode_geo')
-      .select('postcode, remoteness_2021')
+      .select('postcode, remoteness_2021, latitude, longitude, locality')
       .in('postcode', chunk);
     for (const g of geoData || []) {
       remotenessMap.set(g.postcode, g.remoteness_2021);
+      if (g.latitude != null && g.longitude != null) {
+        geoLookup.set(g.postcode, { lat: g.latitude, lng: g.longitude, locality: g.locality || '' });
+      }
     }
   }
 
@@ -102,6 +127,7 @@ async function fallbackGapQuery(supabase: any, state: string | null, remoteness:
 
       // Gap score: external dominance * disadvantage * remoteness
       const gapScore = externalShare * disadvantageFactor * remotenessFactor * 100;
+      const geo = geoLookup.get(postcode);
 
       return {
         postcode,
@@ -112,6 +138,9 @@ async function fallbackGapQuery(supabase: any, state: string | null, remoteness:
         community_controlled_count: data.community,
         external_share: externalShare,
         gap_score: Math.round(gapScore * 10) / 10,
+        lat: geo?.lat || null,
+        lng: geo?.lng || null,
+        locality: geo?.locality || null,
       };
     })
     .filter(g => {

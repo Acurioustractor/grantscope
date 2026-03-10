@@ -69,7 +69,7 @@ function FoundationCard({
   }
 
   return (
-    <div className="bg-white border-4 border-bauhaus-black transition-all hover:-translate-y-0.5 bauhaus-shadow-sm">
+    <div className="bg-white border-2 border-bauhaus-black transition-all">
       <div
         className="p-4 cursor-pointer"
         onClick={() => setExpanded(!expanded)}
@@ -151,12 +151,20 @@ function FoundationCard({
   );
 }
 
+function formatGivingSummary(amount: number): string {
+  if (amount >= 1_000_000_000) return `$${(amount / 1_000_000_000).toFixed(1)}B`;
+  if (amount >= 1_000_000) return `$${(amount / 1_000_000).toFixed(1)}M`;
+  if (amount >= 1_000) return `$${(amount / 1_000).toFixed(0)}K`;
+  return `$${amount.toLocaleString()}`;
+}
+
 export function FoundationTrackerClient() {
   const [foundations, setFoundations] = useState<SavedFoundationRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
   const [search, setSearch] = useState('');
   const [starFilter, setStarFilter] = useState(0);
+  const [showSummary, setShowSummary] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -241,6 +249,93 @@ export function FoundationTrackerClient() {
           Browse Foundations &rarr;
         </a>
       </div>
+
+      {/* Portfolio Summary (collapsible) */}
+      {foundations.length > 0 && (
+        <div className="mb-4">
+          <button
+            onClick={() => setShowSummary(!showSummary)}
+            className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-bauhaus-muted hover:text-bauhaus-black transition-colors mb-2"
+          >
+            <svg
+              className={`w-3 h-3 transition-transform ${showSummary ? 'rotate-90' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              strokeWidth={3}
+            >
+              <path strokeLinecap="square" d="M9 5l7 7-7 7" />
+            </svg>
+            Portfolio Summary
+          </button>
+          {showSummary && (() => {
+            const totalGiving = foundations.reduce((sum, f) => sum + (f.foundation?.total_giving_annual || 0), 0);
+            const activeCount = foundations.filter(f => f.stage === 'active_relationship').length;
+            const sectorMap: Record<string, number> = {};
+            const geoMap: Record<string, number> = {};
+            foundations.forEach(f => {
+              (f.foundation?.thematic_focus || []).forEach(t => { sectorMap[t] = (sectorMap[t] || 0) + 1; });
+              (f.foundation?.geographic_focus || []).forEach(g => { geoMap[g] = (geoMap[g] || 0) + 1; });
+            });
+            const topSectors = Object.entries(sectorMap).sort((a, b) => b[1] - a[1]).slice(0, 8);
+            const topGeos = Object.entries(geoMap).sort((a, b) => b[1] - a[1]).slice(0, 8);
+
+            return (
+              <div className="border-4 border-bauhaus-black p-4 space-y-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="text-center">
+                    <p className="text-2xl font-black">{foundations.length}</p>
+                    <p className="text-[10px] font-black uppercase tracking-wider text-bauhaus-muted">Tracked</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-black">{formatGivingSummary(totalGiving)}</p>
+                    <p className="text-[10px] font-black uppercase tracking-wider text-bauhaus-muted">Combined Giving</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-black">{activeCount}</p>
+                    <p className="text-[10px] font-black uppercase tracking-wider text-bauhaus-muted">Active</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-black">{Object.keys(sectorMap).length}</p>
+                    <p className="text-[10px] font-black uppercase tracking-wider text-bauhaus-muted">Sectors</p>
+                  </div>
+                </div>
+                {topSectors.length > 0 && (
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-wider text-bauhaus-muted mb-2">Top Sectors</p>
+                    <div className="space-y-1">
+                      {topSectors.map(([sector, count]) => {
+                        const pct = (count / foundations.length) * 100;
+                        return (
+                          <div key={sector} className="flex items-center gap-2">
+                            <span className="text-xs font-bold w-32 truncate">{sector}</span>
+                            <div className="flex-1 h-2 bg-gray-100">
+                              <div className="h-full bg-bauhaus-red" style={{ width: `${Math.max(pct, 4)}%` }} />
+                            </div>
+                            <span className="text-[10px] text-bauhaus-muted font-bold w-6 text-right">{count}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {topGeos.length > 0 && (
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-wider text-bauhaus-muted mb-2">Geographic Focus</p>
+                    <div className="flex flex-wrap gap-1">
+                      {topGeos.map(([geo, count]) => (
+                        <span key={geo} className="border border-bauhaus-blue px-2 py-0.5 text-xs font-bold">
+                          {geo} <span className="text-bauhaus-muted">({count})</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-0 mb-4 overflow-x-auto border-4 border-bauhaus-black">

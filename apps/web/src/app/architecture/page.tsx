@@ -3,8 +3,8 @@ import { getServiceSupabase } from '@/lib/supabase';
 export const dynamic = 'force-dynamic';
 
 export const metadata = {
-  title: 'Architecture — GrantScope',
-  description: 'GrantScope platform architecture: data sources, pipelines, APIs, and database',
+  title: 'Architecture — CivicGraph',
+  description: 'CivicGraph platform architecture: data sources, pipelines, APIs, and database',
 };
 
 async function getArchStats() {
@@ -65,7 +65,7 @@ export default async function ArchitecturePage() {
           Architecture
         </h1>
         <p className="text-xs text-bauhaus-muted mt-1 uppercase tracking-widest">
-          Data sources, pipelines, APIs, and database — live stats
+          Three-layer market intelligence — data sources, pipelines, entity graph — live stats
         </p>
       </div>
 

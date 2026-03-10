@@ -40,7 +40,7 @@ function LoginForm() {
         <div className="border-4 border-bauhaus-black bg-white">
           <div className="bg-bauhaus-black px-6 py-4">
             <h1 className="text-lg font-black text-white uppercase tracking-widest">
-              GrantScope
+              CivicGraph
             </h1>
             <p className="text-xs text-bauhaus-muted mt-1 uppercase tracking-wider">
               Sign in to your account

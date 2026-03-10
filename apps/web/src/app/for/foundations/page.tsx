@@ -4,8 +4,8 @@ import type { Metadata } from 'next';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'For Foundations | GrantScope Australia',
-  description: 'Australia\'s most comprehensive foundation database. Understand the landscape, compare your portfolio, discover gaps.',
+  title: 'For Foundations | CivicGraph Australia',
+  description: 'Allocation intelligence for foundations. Portfolio analytics, gap analysis, and benchmarking across 99,000+ entities. CivicGraph — infrastructure for fairer markets.',
 };
 
 async function getStats() {

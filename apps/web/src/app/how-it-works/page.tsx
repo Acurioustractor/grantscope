@@ -70,11 +70,11 @@ export default async function HowItWorksPage() {
   return (
     <div>
       <div className="text-center mb-10">
-        <p className="text-xs font-black text-bauhaus-blue uppercase tracking-[0.3em] mb-2">Architecture</p>
-        <h1 className="text-3xl sm:text-4xl font-black text-bauhaus-black mb-3">How GrantScope Works</h1>
+        <p className="text-xs font-black text-bauhaus-blue uppercase tracking-[0.3em] mb-2">Three-Layer Architecture</p>
+        <h1 className="text-3xl sm:text-4xl font-black text-bauhaus-black mb-3">How CivicGraph Works</h1>
         <p className="text-bauhaus-muted max-w-2xl mx-auto leading-relaxed font-medium">
-          Open-source infrastructure that scrapes, enriches, and connects Australian funding data.
-          Every number on this page is live from our database.
+          Three layers of market intelligence: raw financial flows, entity relationships,
+          and community evidence. Every number on this page is live from our database.
         </p>
       </div>
 
@@ -90,8 +90,8 @@ export default async function HowItWorksPage() {
             Data Sources
           </h2>
           <p className="text-bauhaus-muted leading-relaxed mb-4 font-medium">
-            We pull from 20+ dedicated source plugins across federal, state, council, philanthropic registries,
-            and social enterprise directories, plus AI-powered web search for gap-filling. Every source has a scraper
+            Layer 1 (Money) pulls from 20+ sources across government procurement, grants, political donations,
+            tax transparency, charity finances, and corporate filings. Every source has a scraper
             that handles its unique format — RSS feeds, CKAN APIs, HTML scraping, open data portals, and JSON APIs.
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-0">
@@ -142,26 +142,28 @@ export default async function HowItWorksPage() {
         <section>
           <h2 className="text-sm font-black text-bauhaus-black mb-3 flex items-center gap-3 uppercase tracking-widest">
             <span className="w-8 h-8 bg-bauhaus-blue text-white flex items-center justify-center text-sm font-black border-3 border-bauhaus-black">3</span>
-            Living Reports
+            Layer 2: Market Intelligence
           </h2>
           <p className="text-bauhaus-muted leading-relaxed font-medium">
-            Our report engines run analysis across the entire dataset — tracing money flows from
-            taxpayer to outcome, measuring power concentration (Gini coefficients, HHI indices),
-            and quantifying the admin burden that structurally disadvantages small community
-            organisations. Reports update automatically as new data arrives.
+            The entity graph connects 99,000+ entities across datasets — linking charities to their
+            contracts, donations, tax records, and corporate relationships. Layer 2 turns raw data into
+            market intelligence: who connects to whom, where money concentrates, and which communities
+            are underserved. Reports update automatically as new data arrives.
           </p>
         </section>
 
         <section>
           <h2 className="text-sm font-black text-bauhaus-black mb-3 flex items-center gap-3 uppercase tracking-widest">
             <span className="w-8 h-8 bg-bauhaus-yellow text-bauhaus-black flex items-center justify-center text-sm font-black border-3 border-bauhaus-black">4</span>
-            Autonomous Agents
+            Layer 3: Community Proof
           </h2>
           <p className="text-bauhaus-muted leading-relaxed font-medium">
-            Three background agents keep the data fresh without human intervention:
-            the <strong className="text-bauhaus-black">Grant Monitor</strong> runs daily to find new grants,
-            the <strong className="text-bauhaus-black">Foundation Watcher</strong> checks websites weekly for program changes,
-            and the <strong className="text-bauhaus-black">Spend Watcher</strong> tracks government budget allocations quarterly.
+            The proof layer connects financial data to community evidence via
+            <strong className="text-bauhaus-black"> Empathy Ledger</strong> — governed impact stories
+            verified by the communities they describe. Meanwhile, 45+ autonomous agents keep
+            the data fresh: the <strong className="text-bauhaus-black">Grant Monitor</strong> runs daily,
+            the <strong className="text-bauhaus-black">Foundation Watcher</strong> checks websites weekly,
+            and the <strong className="text-bauhaus-black">Entity Resolver</strong> links records across datasets.
             Every agent run is logged for full transparency.
           </p>
         </section>
@@ -196,7 +198,7 @@ export default async function HowItWorksPage() {
 
         <section className="text-center pb-8">
           <p className="text-sm text-bauhaus-muted font-bold uppercase tracking-widest">
-            GrantScope is fully open source. All code, scrapers, and data pipelines are public.
+            CivicGraph — Infrastructure for Fairer Markets. All code, scrapers, and data pipelines are public.
           </p>
         </section>
       </div>

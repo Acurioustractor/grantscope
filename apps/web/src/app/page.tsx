@@ -165,77 +165,71 @@ export default async function HomePage() {
       {/* Hero */}
       <section className="py-16 sm:py-24">
         <p className="text-xs font-black text-bauhaus-red uppercase tracking-[0.3em] mb-4">
-          Open Funding Intelligence
+          Decision Infrastructure for Government &amp; Social Sector
         </p>
         <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-bauhaus-black mb-6 tracking-tight leading-[0.9]">
-          Where Does<br />Australia&apos;s<br /><span className="text-bauhaus-blue">Funding Go?</span>
+          Know Who to Fund.<br />Know Who to Contract.<br /><span className="text-bauhaus-blue">Know It Worked.</span>
         </h1>
         <p className="text-lg text-bauhaus-muted max-w-xl mb-10 leading-relaxed font-medium">
-          Every government grant, every foundation, every corporate giving program
-          — searchable, current, and free. Australia&apos;s open grants infrastructure.
+          Procurement intelligence. Place-based allocation analysis. Governed proof of outcomes.
+          CivicGraph connects 99K entities, 672K contracts, and 312K donations into the
+          decision layer for Australian public spending.
         </p>
 
-        <form action="/grants" method="get" className="max-w-xl flex gap-0 mb-6">
-          <input
-            type="text"
-            name="q"
-            placeholder="Search grants, foundations, programs..."
-            className="flex-1 px-5 py-3.5 text-sm font-bold border-4 border-bauhaus-black bg-white focus:bg-bauhaus-yellow focus:outline-none uppercase tracking-wider placeholder:text-bauhaus-muted placeholder:normal-case placeholder:tracking-normal"
-          />
-          <button
-            type="submit"
-            className="px-7 py-3.5 text-sm font-black bg-bauhaus-black text-white uppercase tracking-widest hover:bg-bauhaus-red cursor-pointer border-4 border-bauhaus-black"
-          >
-            Search
-          </button>
-        </form>
-        <div className="flex gap-0 mb-6">
-          <a href="/dashboard" className="px-6 py-3 bg-bauhaus-blue text-white font-black text-xs uppercase tracking-widest border-4 border-bauhaus-black hover:bg-bauhaus-black bauhaus-shadow-sm">
-            Explore the Data
+        <div className="flex gap-0 flex-wrap mb-6">
+          <a href="/tender-intelligence" className="px-6 py-3 bg-bauhaus-black text-white font-black text-xs uppercase tracking-widest border-4 border-bauhaus-black hover:bg-bauhaus-red bauhaus-shadow-sm">
+            Procurement Intelligence
+          </a>
+          <a href="/places" className="px-6 py-3 bg-white text-bauhaus-black font-black text-xs uppercase tracking-widest border-4 border-bauhaus-black hover:bg-bauhaus-yellow">
+            Place Packs
+          </a>
+          <a href="/grants" className="px-6 py-3 bg-white text-bauhaus-black font-black text-xs uppercase tracking-widest border-4 border-bauhaus-black border-l-0 hover:bg-bauhaus-blue hover:text-white">
+            Search Grants
           </a>
         </div>
         <div className="flex gap-2 flex-wrap mb-6 max-w-xl">
-          <span className="text-xs font-black text-bauhaus-muted uppercase tracking-widest self-center mr-1">Try AI:</span>
+          <span className="text-xs font-black text-bauhaus-muted uppercase tracking-widest self-center mr-1">Quick:</span>
           {[
-            'Find grants for First Nations arts in QLD',
-            'What foundations fund environmental regeneration?',
-            'Grants for youth mental health programs',
+            { label: 'Suppliers in remote QLD', href: '/tender-intelligence?state=QLD&type=indigenous' },
+            { label: 'Funding gaps by postcode', href: '/places' },
+            { label: 'Youth justice commissioning', href: '/reports/youth-justice' },
           ].map(q => (
             <a
-              key={q}
-              href={`/grants?mode=semantic&q=${encodeURIComponent(q)}`}
+              key={q.label}
+              href={q.href}
               className="text-xs px-3 py-1.5 bg-link-light text-bauhaus-blue font-bold border-2 border-bauhaus-blue/20 hover:border-bauhaus-blue transition-colors"
             >
-              &ldquo;{q}&rdquo;
+              {q.label}
             </a>
           ))}
         </div>
       </section>
 
-      {/* Why This Exists */}
+      {/* The Problem */}
       <section className="border-4 border-bauhaus-black mb-16 bg-bauhaus-black text-white">
         <div className="p-8 sm:p-12">
           <h2 className="text-2xl sm:text-3xl font-black mb-6 leading-tight">
-            Why This Exists
+            Every Procurement Decision Is Made With Incomplete Data
           </h2>
           <div className="space-y-4 text-base font-medium leading-relaxed text-white/85 max-w-2xl">
             <p>
-              <strong className="text-bauhaus-yellow">94%</strong> of charitable donations in Australia go to just 10% of organisations.
-              First Nations communities receive <strong className="text-bauhaus-yellow">0.5%</strong> of philanthropic funding.
-              Women and girls get <strong className="text-bauhaus-yellow">12%</strong>.
-              The 16,000 smallest charities posted a collective net loss of <strong className="text-bauhaus-yellow">$144 million</strong> last year.
+              <strong className="text-bauhaus-yellow">$74 billion</strong> in government contracts awarded annually.
+              Procurement officers make supplier decisions from spreadsheets.
+              Commissioners allocate funding without seeing where money already flows.
+              Nobody connects the contract to the community outcome.
             </p>
             <p>
-              GrantScope makes the invisible visible &mdash; tracing where money flows, who holds
-              power, and what communities actually need. Every number is live. Every data source is open.
+              CivicGraph is the decision layer that connects supplier intelligence,
+              place-based funding data, and outcome evidence &mdash; so every allocation
+              decision is defensible, every renewal is justified, and every gap is visible.
             </p>
           </div>
           <div className="flex gap-4 flex-wrap mt-8">
-            <a href="/reports/community-parity" className="px-6 py-3 bg-bauhaus-red text-white font-black text-xs uppercase tracking-widest border-4 border-white hover:bg-white hover:text-bauhaus-black transition-colors">
-              Read the Investigation
+            <a href="/tender-intelligence" className="px-6 py-3 bg-bauhaus-red text-white font-black text-xs uppercase tracking-widest border-4 border-white hover:bg-white hover:text-bauhaus-black transition-colors">
+              See Procurement Intelligence
             </a>
-            <a href="/reports/community-power" className="px-6 py-3 bg-transparent text-white font-black text-xs uppercase tracking-widest border-4 border-white/40 hover:border-white hover:bg-white hover:text-bauhaus-black transition-colors">
-              Explore Alternatives
+            <a href="/for/government" className="px-6 py-3 bg-transparent text-white font-black text-xs uppercase tracking-widest border-4 border-white/40 hover:border-white hover:bg-white hover:text-bauhaus-black transition-colors">
+              For Government
             </a>
           </div>
         </div>
@@ -323,59 +317,61 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Three pillars */}
+      {/* Three Product Families */}
       <section className="border-t-4 border-bauhaus-black pt-16 pb-12">
-        <h2 className="text-2xl font-black text-center text-bauhaus-black mb-10">Four Layers of Funding Intelligence</h2>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-0">
-          <div className="border-4 border-bauhaus-black p-8 bg-white bauhaus-shadow-sm">
-            <div className="w-12 h-12 bg-bauhaus-blue flex items-center justify-center mb-4 border-3 border-bauhaus-black">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="square" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-              </svg>
-            </div>
-            <h3 className="font-black text-bauhaus-black mb-2 text-sm tracking-widest">Government Grants</h3>
-            <p className="text-sm text-bauhaus-muted leading-relaxed">
-              All 8 states and territories, GrantConnect, data.gov.au,
-              and business.gov.au — {stats.sourceCount} data sources, updated daily.
+        <h2 className="text-2xl font-black text-center text-bauhaus-black mb-3">Three Products. One Decision Layer.</h2>
+        <p className="text-sm text-bauhaus-muted text-center mb-10 max-w-2xl mx-auto">
+          From finding the right supplier, to allocating resources where they&apos;re needed,
+          to proving the investment worked. Each layer makes the next more powerful.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-0">
+          <a href="/tender-intelligence" className="group border-4 border-bauhaus-black p-8 bg-white bauhaus-shadow-sm hover:bg-bauhaus-blue hover:text-white transition-colors">
+            <div className="text-xs font-black text-bauhaus-blue uppercase tracking-widest mb-4 group-hover:text-bauhaus-yellow">Product 1 &mdash; Available Now</div>
+            <h3 className="font-black text-bauhaus-black mb-2 text-lg group-hover:text-white">Procurement Intelligence</h3>
+            <p className="text-sm text-bauhaus-muted leading-relaxed mb-4 group-hover:text-white/70">
+              Discover suppliers. Check compliance. Generate bid-ready intelligence packs.
+              672K contracts cross-referenced with {stats.totalEntities.toLocaleString()} entities.
+              Replace spreadsheets with data.
             </p>
-          </div>
-          <div className="border-4 border-l-0 max-md:border-l-4 max-md:border-t-0 border-bauhaus-black p-8 bg-white bauhaus-shadow-sm">
-            <div className="w-12 h-12 bg-bauhaus-red flex items-center justify-center mb-4 border-3 border-bauhaus-black rounded-full">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="square" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+            <div className="flex flex-wrap gap-2">
+              {['Supplier Discovery', 'Compliance', 'Intelligence Packs', 'List Enrichment'].map(t => (
+                <span key={t} className="text-[10px] font-black uppercase tracking-widest px-2 py-1 border-2 border-bauhaus-blue/20 text-bauhaus-blue group-hover:border-white/30 group-hover:text-white/80">{t}</span>
+              ))}
             </div>
-            <h3 className="font-black text-bauhaus-black mb-2 text-sm tracking-widest">Philanthropic Foundations</h3>
-            <p className="text-sm text-bauhaus-muted leading-relaxed">
-              {stats.totalFoundations.toLocaleString()} foundations from the ACNC register.
-              {stats.profiledFoundations.toLocaleString()} with AI-generated giving profiles.
-              {stats.totalPrograms.toLocaleString()} active programs mapped.
+          </a>
+          <a href="/places" className="group border-4 border-l-0 max-md:border-l-4 max-md:border-t-0 border-bauhaus-black p-8 bg-bauhaus-black hover:bg-bauhaus-yellow transition-colors">
+            <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-4 group-hover:text-bauhaus-black">Product 2 &mdash; Available Now</div>
+            <h3 className="font-black text-white mb-2 text-lg group-hover:text-bauhaus-black">Allocation Intelligence</h3>
+            <p className="text-sm text-white/70 leading-relaxed mb-4 group-hover:text-bauhaus-black/70">
+              Place-based funding analysis. Gap scoring. Commissioning intelligence.
+              See where money flows, where it doesn&apos;t, and where
+              capability doesn&apos;t match need.
             </p>
-          </div>
-          <div className="border-4 border-l-0 max-md:border-l-4 max-md:border-t-0 border-bauhaus-black p-8 bg-white bauhaus-shadow-sm">
-            <div className="w-12 h-12 bg-bauhaus-yellow flex items-center justify-center mb-4 border-3 border-bauhaus-black">
-              <svg className="w-6 h-6 text-bauhaus-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="square" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
-              </svg>
+            <div className="flex flex-wrap gap-2">
+              {['Place Packs', 'Gap Analysis', 'Commissioning', 'SEIFA + Remoteness'].map(t => (
+                <span key={t} className="text-[10px] font-black uppercase tracking-widest px-2 py-1 border-2 border-white/20 text-white/60 group-hover:border-bauhaus-black/20 group-hover:text-bauhaus-black/60">{t}</span>
+              ))}
             </div>
-            <h3 className="font-black text-bauhaus-black mb-2 text-sm tracking-widest">Corporate Transparency</h3>
-            <p className="text-sm text-bauhaus-muted leading-relaxed">
-              ASX200 company foundations mapped to giving vs revenue.
-              Who gives what, and is it enough?
+          </a>
+          <div className="border-4 border-l-0 max-md:border-l-4 max-md:border-t-0 border-bauhaus-black p-8 bg-bauhaus-red/10">
+            <div className="text-xs font-black text-bauhaus-red uppercase tracking-widest mb-4">Product 3 &mdash; Coming Soon</div>
+            <h3 className="font-black text-bauhaus-black mb-2 text-lg">Governed Proof</h3>
+            <p className="text-sm text-bauhaus-muted leading-relaxed mb-4">
+              Did procurement create community value? Did this commissioning strategy work?
+              Rights-governed, consent-based evidence that helps defend renewals,
+              justify policy, and prove long-term outcomes.
             </p>
-          </div>
-          <div className="border-4 border-l-0 max-md:border-l-4 max-md:border-t-0 border-bauhaus-black p-8 bg-bauhaus-black bauhaus-shadow-sm">
-            <div className="w-12 h-12 bg-bauhaus-red flex items-center justify-center mb-4 border-3 border-white rounded-full">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="square" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-              </svg>
+            <div className="flex flex-wrap gap-2">
+              {['Outcome Evidence', 'Community Voice', 'Renewal Defence', 'Policy Proof'].map(t => (
+                <span key={t} className="text-[10px] font-black uppercase tracking-widest px-2 py-1 border-2 border-bauhaus-red/20 text-bauhaus-red/60">{t}</span>
+              ))}
             </div>
-            <h3 className="font-black text-white mb-2 text-sm tracking-widest">Entity Graph</h3>
-            <p className="text-sm text-white/70 leading-relaxed">
-              {stats.totalEntities.toLocaleString()} entities, {stats.totalRelationships.toLocaleString()} relationships.
-              Donations, contracts, grants, and corporate data — connected by ABN.
-            </p>
           </div>
+        </div>
+        <div className="border-4 border-t-0 border-bauhaus-black bg-bauhaus-canvas p-6 text-center">
+          <p className="text-xs font-black text-bauhaus-muted uppercase tracking-widest mb-1">Together, These Create</p>
+          <p className="text-lg font-black text-bauhaus-black">The Decision Layer for Australian Public Spending</p>
+          <p className="text-sm text-bauhaus-muted">Who gets funded. Who gets contracted. Where services go. How allocations are justified.</p>
         </div>
       </section>
 
@@ -383,8 +379,8 @@ export default async function HomePage() {
       <section className="border-t-4 border-bauhaus-black pt-16 pb-8">
         <h2 className="text-2xl font-black text-center text-bauhaus-black mb-3">Data Sources</h2>
         <p className="text-center text-sm text-bauhaus-muted mb-10 max-w-2xl mx-auto">
-          GrantScope aggregates data from {stats.sourceCount} sources across every level of Australian government,
-          the ACNC charity register ({stats.acncCharities.toLocaleString()} records), and philanthropic databases.
+          CivicGraph connects {stats.sourceCount} data sources across government procurement, philanthropy,
+          political donations, corporate filings, and community organisations into a single market map.
         </p>
         <div className="flex flex-wrap justify-center gap-3 max-w-3xl mx-auto mb-12">
           {[
@@ -421,8 +417,8 @@ export default async function HomePage() {
 
       {/* Reports teasers */}
       <section className="border-t-4 border-bauhaus-black pt-16 pb-8">
-        <h2 className="text-2xl font-black text-center text-bauhaus-black mb-2">Living Reports</h2>
-        <p className="text-center text-bauhaus-muted mb-10 text-sm font-medium">Data-driven investigations, updated as new data arrives</p>
+        <h2 className="text-2xl font-black text-center text-bauhaus-black mb-2">CivicGraph Intelligence</h2>
+        <p className="text-center text-bauhaus-muted mb-10 text-sm font-medium">Living investigations into how money flows — updated as new data arrives</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 max-w-4xl mx-auto">
           <a href="/reports/donor-contractors" className="group block sm:col-span-2 lg:col-span-3">
             <div className="bg-bauhaus-red border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1" style={{ boxShadow: '6px 6px 0px 0px var(--color-bauhaus-black)' }}>

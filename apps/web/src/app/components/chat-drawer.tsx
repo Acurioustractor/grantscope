@@ -57,7 +57,7 @@ export function ChatDrawer() {
           {/* Header */}
           <div className="bg-bauhaus-black p-4 flex items-center justify-between">
             <div>
-              <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest">GrantScope AI</div>
+              <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest">CivicGraph AI</div>
               <div className="text-[11px] text-white/60 font-medium mt-0.5">Ask about grants, foundations, or funding</div>
             </div>
             <button
@@ -106,7 +106,7 @@ export function ChatDrawer() {
 
             {isLoading && messages[messages.length - 1]?.role !== 'assistant' && (
               <div className="p-3 border-4 border-bauhaus-blue bg-white">
-                <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted mb-1.5">GrantScope AI</div>
+                <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted mb-1.5">CivicGraph AI</div>
                 <div className="flex gap-1">
                   <div className="w-2 h-2 bg-bauhaus-blue animate-pulse"></div>
                   <div className="w-2 h-2 bg-bauhaus-blue animate-pulse" style={{ animationDelay: '0.2s' }}></div>

@@ -4,8 +4,8 @@ import type { Metadata } from 'next';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'For Researchers | GrantScope Australia',
-  description: 'Open data on Australia\'s funding flows. 359,678 ACNC financial records. 17,114 grants. 64,473 charities. All searchable, all transparent, all free.',
+  title: 'For Researchers | CivicGraph Australia',
+  description: 'Open data on how money flows through society. 99,000+ entities. 672,000 contracts. 312,000 donations. Three layers of market intelligence — all searchable, all transparent.',
 };
 
 async function getStats() {
@@ -76,11 +76,11 @@ export default async function ForResearchersPage() {
           For Researchers
         </p>
         <h1 className="text-4xl sm:text-5xl lg:text-7xl font-black text-bauhaus-black mb-6 tracking-tight leading-[0.9]">
-          Open Data on<br />Australia&apos;s<br /><span className="text-bauhaus-blue">Funding Flows.</span>
+          Open Data on<br />How Money Flows<br /><span className="text-bauhaus-blue">Through Society.</span>
         </h1>
         <p className="text-lg text-bauhaus-muted max-w-xl mb-10 leading-relaxed font-medium">
-          {stats.acncRecords.toLocaleString()} ACNC financial records. {stats.totalGrants.toLocaleString()} grants.
-          All searchable, all transparent, all free.
+          99,000+ entities. 672,000 contracts. 312,000 political donations.
+          {stats.acncRecords.toLocaleString()} financial records. Three layers of market intelligence — all open.
         </p>
         <div className="flex gap-0 flex-wrap">
           <a
@@ -124,10 +124,10 @@ export default async function ForResearchersPage() {
       <section className="mb-16">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           <div className="bg-white border-4 border-bauhaus-black p-6 bauhaus-shadow-sm">
-            <h3 className="font-black text-bauhaus-black mb-2 text-sm uppercase tracking-widest">Living Reports</h3>
+            <h3 className="font-black text-bauhaus-black mb-2 text-sm uppercase tracking-widest">Market Intelligence</h3>
             <p className="text-sm text-bauhaus-muted leading-relaxed">
-              Data-driven investigations updated as new data arrives. $222B philanthropy,
-              community parity, power dynamics &mdash; all with live numbers.
+              Data-driven investigations updated as new data arrives. Procurement patterns,
+              donation networks, power dynamics &mdash; all with live numbers.
             </p>
           </div>
           <div className="bg-white border-4 border-bauhaus-black p-6 bauhaus-shadow-sm">

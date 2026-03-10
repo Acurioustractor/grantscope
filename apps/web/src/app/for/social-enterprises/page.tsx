@@ -4,7 +4,7 @@ import type { Metadata } from 'next';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'For Social Enterprises | GrantScope Australia',
+  title: 'For Social Enterprises | CivicGraph Australia',
   description: 'Australia\'s open social enterprise directory. Find peers, discover procurement opportunities, access grant funding, and get visible to buyers who want to purchase with purpose.',
 };
 
@@ -50,7 +50,7 @@ export default async function ForSocialEnterprisesPage() {
           Get Visible.<br /><span className="text-bauhaus-red">Get Found.</span>
         </h1>
         <p className="text-lg text-bauhaus-muted max-w-xl mb-10 leading-relaxed font-medium">
-          Australia has no central register for social enterprises. GrantScope is building it &mdash;
+          Australia has no central register for social enterprises. CivicGraph is building it &mdash;
           open, free, and designed so procurement officers, funders, and communities can find you.
         </p>
         <div className="flex gap-0 flex-wrap">
@@ -122,7 +122,7 @@ export default async function ForSocialEnterprisesPage() {
 
       {/* How It Works */}
       <section className="border-t-4 border-bauhaus-black pt-12 mb-16">
-        <h2 className="text-2xl font-black text-bauhaus-black mb-8">How GrantScope Supports Social Enterprises</h2>
+        <h2 className="text-2xl font-black text-bauhaus-black mb-8">How CivicGraph Supports Social Enterprises</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
             { step: '1', title: 'You\'re Already Listed', desc: 'If you\'re registered with ORIC, Social Traders, BuyAbility, or B Corp, you\'re in our directory. We aggregate automatically.' },
@@ -178,7 +178,7 @@ export default async function ForSocialEnterprisesPage() {
             where all of them can be found.
           </p>
           <p>
-            GrantScope is building the infrastructure that doesn&apos;t exist. We aggregate every
+            CivicGraph is building the infrastructure that doesn&apos;t exist. We aggregate every
             publicly available directory, deduplicate across sources, and enrich with AI-generated
             profiles. Open. Free. Updated continuously.
           </p>

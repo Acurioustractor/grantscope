@@ -4,8 +4,8 @@ import { NavBar } from './components/nav';
 import { ChatDrawer } from './components/chat-drawer';
 
 export const metadata: Metadata = {
-  title: 'GrantScope Australia',
-  description: 'Open-source funding transparency platform — government grants, philanthropic foundations, corporate giving',
+  title: 'CivicGraph — Infrastructure for Fairer Markets',
+  description: 'Mapping how money flows through society — procurement intelligence, funding transparency, community-governed evidence',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -20,7 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
               <div>
-                <div className="font-black text-lg text-white uppercase tracking-tight mb-2">GrantScope</div>
+                <div className="font-black text-lg text-white uppercase tracking-tight mb-2">CivicGraph</div>
                 <p className="text-sm text-bauhaus-muted leading-relaxed">
                   Open source. Open data. Making Australian funding flows transparent and accessible to everyone.
                 </p>

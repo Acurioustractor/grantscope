@@ -4,8 +4,8 @@ import type { Metadata } from 'next';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'For Government | GrantScope Australia',
-  description: 'Track grant programs from announcement to impact. Understand geographic distribution, sector coverage, and community reach.',
+  title: 'For Government | CivicGraph Australia',
+  description: 'Procurement intelligence, grant program tracking, and supplier discovery. CivicGraph connects $74B in government contracts to community outcomes.',
 };
 
 const GOV_SOURCES = ['nsw-grants', 'vic-grants', 'qld-grants', 'sa-grants', 'wa-grants', 'tas-grants', 'act-grants', 'nt-grants', 'grantconnect'];
@@ -116,27 +116,34 @@ export default async function ForGovernmentPage() {
       {/* Hero */}
       <section className="py-16 sm:py-24">
         <p className="text-xs font-black text-bauhaus-red uppercase tracking-[0.3em] mb-4">
-          For Government
+          For Procurement Officers, Commissioners &amp; Program Managers
         </p>
         <h1 className="text-4xl sm:text-5xl lg:text-7xl font-black text-bauhaus-black mb-6 tracking-tight leading-[0.9]">
-          See How Public<br />Funding Reaches<br /><span className="text-bauhaus-blue">Communities.</span>
+          Find the Right<br />Supplier. Fund the<br /><span className="text-bauhaus-blue">Right Place.</span>
         </h1>
         <p className="text-lg text-bauhaus-muted max-w-xl mb-10 leading-relaxed font-medium">
-          Track grant programs from announcement to impact. Understand geographic distribution,
-          sector coverage, and community reach.
+          672,000 contracts. 99,000 entities. 2,900 postcodes analysed. CivicGraph replaces
+          spreadsheets and manual research with decision infrastructure — from supplier
+          discovery to place-based allocation to outcome evidence.
         </p>
         <div className="flex gap-0 flex-wrap">
           <a
-            href="/dashboard"
+            href="/tender-intelligence"
             className="px-6 py-3 bg-bauhaus-black text-white font-black text-xs uppercase tracking-widest border-4 border-bauhaus-black hover:bg-bauhaus-red transition-colors"
           >
-            View Dashboard
+            Tender Intelligence
           </a>
           <a
-            href="/reports"
-            className="px-6 py-3 bg-white text-bauhaus-black font-black text-xs uppercase tracking-widest border-4 border-bauhaus-black hover:bg-bauhaus-canvas transition-colors"
+            href="/places"
+            className="px-6 py-3 bg-white text-bauhaus-black font-black text-xs uppercase tracking-widest border-4 border-bauhaus-black hover:bg-bauhaus-yellow transition-colors"
           >
-            Grant Program Insights
+            Place Packs
+          </a>
+          <a
+            href="mailto:hello@civicgraph.au?subject=Government%20enquiry"
+            className="px-6 py-3 bg-white text-bauhaus-black font-black text-xs uppercase tracking-widest border-4 border-bauhaus-black border-l-0 hover:bg-bauhaus-blue hover:text-white transition-colors"
+          >
+            Talk to Us
           </a>
         </div>
       </section>
@@ -163,42 +170,49 @@ export default async function ForGovernmentPage() {
         </div>
       </section>
 
-      {/* Value Props */}
+      {/* Three Product Families for Government */}
       <section className="mb-16">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <div className="bg-white border-4 border-bauhaus-black p-6 bauhaus-shadow-sm">
-            <h3 className="font-black text-bauhaus-black mb-2 text-sm uppercase tracking-widest">Program Tracking</h3>
-            <p className="text-sm text-bauhaus-muted leading-relaxed">
-              See how your programs are discovered and where funding flows geographically.
-              Track reach and uptake across regions.
+        <h2 className="text-xl font-black text-bauhaus-black mb-6 uppercase tracking-wider">Three Products for Government Decision-Makers</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-0">
+          <a href="/tender-intelligence" className="group bg-bauhaus-blue border-4 border-bauhaus-black p-6 hover:bg-bauhaus-black transition-colors">
+            <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">Product 1</div>
+            <h3 className="font-black text-white mb-2 text-lg">Procurement Intelligence</h3>
+            <p className="text-sm text-white/70 leading-relaxed mb-3">
+              Discover suppliers across 99K entities. Check compliance from 20+ data sources.
+              Generate bid-ready intelligence packs. Meet Indigenous procurement targets with verified data.
             </p>
-          </div>
-          <div className="bg-white border-4 border-bauhaus-black p-6 bauhaus-shadow-sm">
-            <h3 className="font-black text-bauhaus-black mb-2 text-sm uppercase tracking-widest">Gap Analysis</h3>
-            <p className="text-sm text-bauhaus-muted leading-relaxed">
-              Identify regions, sectors, and communities underserved by current programs.
-              See where funding doesn&apos;t reach.
+            <span className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest group-hover:text-white">Try Now &rarr;</span>
+          </a>
+          <a href="/places" className="group bg-bauhaus-black border-4 border-l-0 max-md:border-l-4 max-md:border-t-0 border-bauhaus-black p-6 hover:bg-bauhaus-yellow transition-colors">
+            <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2 group-hover:text-bauhaus-black">Product 2</div>
+            <h3 className="font-black text-white mb-2 text-lg group-hover:text-bauhaus-black">Allocation Intelligence</h3>
+            <p className="text-sm text-white/70 leading-relaxed mb-3 group-hover:text-bauhaus-black/70">
+              Place-based funding analysis across 2,900 postcodes. Gap scoring by SEIFA disadvantage
+              and remoteness. See where money flows and where capability doesn&apos;t match need.
             </p>
-          </div>
-          <div className="bg-white border-4 border-bauhaus-black p-6 bauhaus-shadow-sm">
-            <h3 className="font-black text-bauhaus-black mb-2 text-sm uppercase tracking-widest">Cross-Jurisdictional</h3>
-            <p className="text-sm text-bauhaus-muted leading-relaxed">
-              Compare federal, state, and local programs side-by-side.
-              Understand overlaps, gaps, and complementary funding.
+            <span className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest group-hover:text-bauhaus-black">Explore Places &rarr;</span>
+          </a>
+          <div className="bg-bauhaus-red/10 border-4 border-l-0 max-md:border-l-4 max-md:border-t-0 border-bauhaus-black p-6">
+            <div className="text-xs font-black text-bauhaus-red uppercase tracking-widest mb-2">Product 3 &mdash; Coming</div>
+            <h3 className="font-black text-bauhaus-black mb-2 text-lg">Governed Proof</h3>
+            <p className="text-sm text-bauhaus-muted leading-relaxed mb-3">
+              Did procurement create community value? Did this commissioning strategy work?
+              Rights-governed outcome evidence for renewal defence and policy justification.
             </p>
+            <span className="text-xs font-black text-bauhaus-red uppercase tracking-widest">Register Interest &rarr;</span>
           </div>
         </div>
       </section>
 
-      {/* How It Helps */}
+      {/* Use Cases */}
       <section className="border-t-4 border-bauhaus-black pt-12 mb-16">
-        <h2 className="text-2xl font-black text-bauhaus-black mb-8">How It Works</h2>
+        <h2 className="text-2xl font-black text-bauhaus-black mb-8">Workflow</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
-            { step: '1', title: 'Search Government Grants', desc: 'Find all programs across federal, state, and local government.' },
-            { step: '2', title: 'Filter by State & Sector', desc: 'Drill into specific jurisdictions, policy areas, and target beneficiaries.' },
-            { step: '3', title: 'Analyse Distribution', desc: 'See geographic spread, sector concentration, and funding gaps.' },
-            { step: '4', title: 'Identify Gaps', desc: 'Discover underserved communities and sectors where new programs could help.' },
+            { step: '1', title: 'Discover Suppliers', desc: 'Search by entity type, geography, Indigenous status, contract history, and compliance signals.' },
+            { step: '2', title: 'Score Compliance', desc: 'Cross-reference ACNC, ATO, ASIC, ORIC data. Generate risk and capability profiles.' },
+            { step: '3', title: 'Analyse Places', desc: 'See funding by postcode, remoteness, SEIFA. Identify gaps between need and provision.' },
+            { step: '4', title: 'Defend Decisions', desc: 'Export intelligence packs, place reports, and outcome evidence for audit and renewal.' },
           ].map((item) => (
             <div key={item.step} className="flex gap-4">
               <div className="w-10 h-10 bg-bauhaus-black text-white font-black text-lg flex items-center justify-center flex-shrink-0">
@@ -238,17 +252,28 @@ export default async function ForGovernmentPage() {
 
       {/* Final CTA */}
       <section className="border-t-4 border-bauhaus-black pt-12 pb-8 text-center">
-        <h2 className="text-2xl sm:text-3xl font-black text-bauhaus-black mb-4">Make Your Grants Easier to Find</h2>
-        <p className="text-sm text-bauhaus-muted mb-6 max-w-md mx-auto">
-          GrantScope aggregates and structures grant data so communities can find your programs.
-          Get in touch to improve your program&apos;s discoverability.
+        <h2 className="text-2xl sm:text-3xl font-black text-bauhaus-black mb-4">
+          Default Infrastructure for<br />Procurement &amp; Allocation Decisions
+        </h2>
+        <p className="text-sm text-bauhaus-muted mb-6 max-w-lg mx-auto">
+          CivicGraph is not a grant search engine. It&apos;s the decision layer that
+          connects who gets funded, who gets contracted, and where services go
+          — with the data to defend every allocation.
         </p>
-        <a
-          href="mailto:hello@grantscope.au"
-          className="inline-block px-6 py-3 bg-bauhaus-black text-white font-black text-xs uppercase tracking-widest border-4 border-bauhaus-black hover:bg-bauhaus-red transition-colors"
-        >
-          Contact Us
-        </a>
+        <div className="flex gap-0 flex-wrap justify-center">
+          <a
+            href="/tender-intelligence"
+            className="px-6 py-3 bg-bauhaus-black text-white font-black text-xs uppercase tracking-widest border-4 border-bauhaus-black hover:bg-bauhaus-red transition-colors"
+          >
+            Try Procurement Intelligence
+          </a>
+          <a
+            href="mailto:hello@civicgraph.au?subject=Government%20enquiry"
+            className="px-6 py-3 bg-white text-bauhaus-black font-black text-xs uppercase tracking-widest border-4 border-bauhaus-black hover:bg-bauhaus-canvas transition-colors"
+          >
+            Talk to Us
+          </a>
+        </div>
       </section>
     </div>
   );

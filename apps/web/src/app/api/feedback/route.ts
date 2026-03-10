@@ -16,10 +16,10 @@ async function pushToGHL(type: string, name: string | null, email: string | null
   if (!apiKey || !locationId) return;
 
   try {
-    const [firstName, ...rest] = (name || 'GrantScope User').split(' ');
+    const [firstName, ...rest] = (name || 'CivicGraph User').split(' ');
     const lastName = rest.join(' ') || undefined;
 
-    const contactEmail = email || `grantscope-${Date.now()}@feedback.local`;
+    const contactEmail = email || `civicgraph-${Date.now()}@feedback.local`;
 
     // Upsert contact
     const res = await fetch(`${GHL_API_URL}/contacts/upsert`, {
@@ -34,8 +34,8 @@ async function pushToGHL(type: string, name: string | null, email: string | null
         email: contactEmail,
         firstName,
         lastName,
-        tags: ['GrantScope', TYPE_TAGS[type] || 'GS-Feedback'],
-        source: 'GrantScope Process Page',
+        tags: ['CivicGraph', TYPE_TAGS[type] || 'GS-Feedback'],
+        source: 'CivicGraph Process Page',
       }),
     });
 
@@ -60,7 +60,7 @@ async function pushToGHL(type: string, name: string | null, email: string | null
       body: JSON.stringify({
         type: 'Custom',
         contactId,
-        message: `[GrantScope ${typeLabel}]\n\n${message}`,
+        message: `[CivicGraph ${typeLabel}]\n\n${message}`,
       }),
     });
   } catch (err) {

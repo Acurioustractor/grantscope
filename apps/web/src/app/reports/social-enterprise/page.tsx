@@ -206,7 +206,7 @@ export default async function SocialEnterpriseReportPage() {
           {/* Live state breakdown from our data */}
           <div className="my-8 border-4 border-bauhaus-black overflow-hidden max-w-xl">
             <div className="bg-bauhaus-black px-4 py-3">
-              <h3 className="text-xs font-black text-white uppercase tracking-[0.3em]">GrantScope Directory Coverage by State</h3>
+              <h3 className="text-xs font-black text-white uppercase tracking-[0.3em]">CivicGraph Directory Coverage by State</h3>
             </div>
             <div className="p-4 space-y-2">
               {topStates.map(({ state, count }) => (
@@ -321,7 +321,7 @@ export default async function SocialEnterpriseReportPage() {
               The <strong className="text-bauhaus-black">Office of the Registrar of Indigenous
               Corporations (ORIC)</strong> registers over 3,300 corporations under the CATSI Act.
               These range from small community stores to major land management organisations
-              controlling millions of hectares. GrantScope tracks{' '}
+              controlling millions of hectares. CivicGraph tracks{' '}
               <strong className="text-bauhaus-black">{indigenous.toLocaleString()} Indigenous
               corporations</strong> in its directory &mdash; making this the largest open dataset
               of Indigenous enterprise profiles in Australia.
@@ -399,7 +399,7 @@ export default async function SocialEnterpriseReportPage() {
               data structures, and different definitions of what qualifies.
             </p>
             <p>
-              This is the gap GrantScope fills. One search. Every directory. Every state.
+              This is the gap CivicGraph fills. One search. Every directory. Every state.
             </p>
           </Prose>
 
@@ -455,7 +455,7 @@ export default async function SocialEnterpriseReportPage() {
               Every mapping exercise starts from scratch.
             </p>
             <p>
-              <strong className="text-bauhaus-black">GrantScope is building the register that
+              <strong className="text-bauhaus-black">CivicGraph is building the register that
               doesn&apos;t exist.</strong> We aggregate every publicly available directory,
               deduplicate across sources, enrich with AI-generated profiles, and present the
               result as a single searchable, filterable directory. Open. Free. Updated continuously.
@@ -464,21 +464,21 @@ export default async function SocialEnterpriseReportPage() {
 
           <Callout color="red">
             15 directories. 6 state networks. 3 certification bodies. Zero interoperability.
-            Every search starts from scratch. This is the infrastructure gap GrantScope fills.
+            Every search starts from scratch. This is the infrastructure gap CivicGraph fills.
           </Callout>
 
-          {/* ===== SECTION 8: WHY GRANTSCOPE ===== */}
-          <SectionHeading id="grantscope-role" number="08">Why GrantScope</SectionHeading>
+          {/* ===== SECTION 8: WHY CIVICGRAPH ===== */}
+          <SectionHeading id="grantscope-role" number="08">Why CivicGraph</SectionHeading>
           <Prose>
             <p>
-              GrantScope exists to make the invisible visible. We started with grants &mdash;
+              CivicGraph exists to make the invisible visible. We started with grants &mdash;
               aggregating {'>'}14,000 grant opportunities across every state and federal program.
               We added foundations &mdash; profiling {'>'}9,800 Australian foundations with AI
               enrichment. We mapped {'>'}64,000 charities from the ACNC register.
             </p>
             <p>
               Social enterprises are the natural next layer. The same communities that search
-              GrantScope for grant funding also need to find social enterprise partners for
+              CivicGraph for grant funding also need to find social enterprise partners for
               procurement, discover Indigenous businesses for supply chain diversification, and
               identify disability enterprises for government compliance.
             </p>
@@ -491,7 +491,7 @@ export default async function SocialEnterpriseReportPage() {
             </p>
             <p>
               This is just the beginning. Australia&apos;s 360Giving equivalent doesn&apos;t
-              exist yet. GrantScope is building it &mdash; open data infrastructure for the
+              exist yet. CivicGraph is building it &mdash; open data infrastructure for the
               entire social economy, not just grants.
             </p>
           </Prose>
@@ -507,7 +507,7 @@ export default async function SocialEnterpriseReportPage() {
           <SectionHeading id="how-to-use" number="09">How to Use This Platform</SectionHeading>
           <Prose>
             <p>
-              GrantScope&apos;s social enterprise directory is designed for five audiences,
+              CivicGraph&apos;s social enterprise directory is designed for five audiences,
               each with different needs:
             </p>
           </Prose>
@@ -564,7 +564,7 @@ export default async function SocialEnterpriseReportPage() {
               Enrichment improves as AI profiling matures.
             </p>
             <p>
-              What the sector needs &mdash; and what GrantScope is building toward &mdash; is
+              What the sector needs &mdash; and what CivicGraph is building toward &mdash; is
               the basic infrastructure that charities and companies already have:
             </p>
           </Prose>
@@ -596,7 +596,7 @@ export default async function SocialEnterpriseReportPage() {
 
           <Prose>
             <p>
-              GrantScope cannot solve the legal structure gap or create a national register.
+              CivicGraph cannot solve the legal structure gap or create a national register.
               Those are policy decisions. But we can build the data infrastructure that makes
               the sector visible &mdash; and visibility is the precondition for everything else.
             </p>
@@ -611,7 +611,7 @@ export default async function SocialEnterpriseReportPage() {
 
           <Callout color="blue">
             If you can&apos;t count them, you can&apos;t fund them. If you can&apos;t find them,
-            you can&apos;t buy from them. GrantScope is building the register that doesn&apos;t exist.
+            you can&apos;t buy from them. CivicGraph is building the register that doesn&apos;t exist.
           </Callout>
 
           <div className="my-12 flex gap-4 flex-wrap">

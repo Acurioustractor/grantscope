@@ -4,7 +4,7 @@ import { getServiceSupabase } from '@/lib/supabase';
 /**
  * Public Data API
  *
- * RESTful API for querying GrantScope data.
+ * RESTful API for querying CivicGraph data.
  *
  * Endpoints (via `type` param):
  *   GET /api/data?type=foundations&focus=indigenous&state=qld&limit=50

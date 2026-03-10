@@ -67,7 +67,7 @@ export function ChatMessage({ role, content }: ChatMessageProps) {
         : 'bg-white border-bauhaus-blue'
     }`}>
       <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted mb-1.5">
-        {isUser ? 'You' : 'GrantScope AI'}
+        {isUser ? 'You' : 'CivicGraph AI'}
       </div>
       <div className="text-sm leading-relaxed font-medium text-bauhaus-black whitespace-pre-wrap">
         {renderFormatted(content)}

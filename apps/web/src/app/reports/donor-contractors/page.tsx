@@ -5,7 +5,7 @@ import Link from 'next/link';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'Donate. Win Contracts. Repeat. | GrantScope',
+  title: 'Donate. Win Contracts. Repeat. | CivicGraph',
   description: '140 entities in Australia donate to political parties AND hold government contracts. $80M donated to 28 parties, $4.7B in contracts. See the data.',
   openGraph: {
     title: 'Donate. Win Contracts. Repeat.',
@@ -193,7 +193,7 @@ export default async function DonorContractorsReport() {
         <div className="border-4 border-t-0 border-bauhaus-black p-4 bg-bauhaus-canvas text-center">
           <p className="text-sm text-bauhaus-muted font-bold">
             Source: {fmt(d.graphStats.totalEntities)} entities and {fmt(d.graphStats.totalRels)} relationships
-            in the GrantScope Entity Graph. AEC political donations cross-referenced with AusTender contracts by ABN.
+            in the CivicGraph Entity Graph. AEC political donations cross-referenced with AusTender contracts by ABN.
           </p>
         </div>
       </section>
@@ -385,7 +385,7 @@ export default async function DonorContractorsReport() {
       <section className="mb-12">
         <h2 className="text-xl font-black text-bauhaus-black mb-2 uppercase tracking-widest">All {s.count} Donor-Contractors</h2>
         <p className="text-sm text-bauhaus-muted mb-6 max-w-2xl">
-          Every entity in the GrantScope Entity Graph that appears in both AEC political donation
+          Every entity in the CivicGraph Entity Graph that appears in both AEC political donation
           records and AusTender government contracts. Click any entity for its full dossier.
         </p>
         <div className="border-4 border-bauhaus-black bg-white overflow-x-auto">
@@ -425,7 +425,7 @@ export default async function DonorContractorsReport() {
           <h2 className="text-lg font-black mb-4 text-bauhaus-yellow uppercase tracking-widest">Methodology &amp; Data Sources</h2>
           <div className="text-white/90 leading-relaxed space-y-4">
             <p>
-              This report is generated from the <strong>GrantScope Entity Graph</strong> — {fmt(d.graphStats.totalEntities)} entities
+              This report is generated from the <strong>CivicGraph Entity Graph</strong> — {fmt(d.graphStats.totalEntities)} entities
               and {fmt(d.graphStats.totalRels)} relationships built from cross-referencing Australian public datasets by ABN.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">

@@ -158,7 +158,7 @@ export function ArchitectureDiagram({ stats }: { stats: Stats }) {
             <div className="text-xs text-navy-500 space-y-1">
               <div>14 pages &middot; 7 API routes &middot; 4 Living Reports</div>
               <div>3 autonomous agents (daily, weekly, quarterly)</div>
-              <div className="text-money font-medium">grantscope.vercel.app</div>
+              <div className="text-money font-medium">civicgraph.vercel.app</div>
             </div>
           </div>
         </div>

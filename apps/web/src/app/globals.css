@@ -61,7 +61,6 @@ body {
 h1, h2, h3, h4 {
   letter-spacing: -0.025em;
   line-height: 1.1;
-  text-transform: uppercase;
 }
 
 /* Bauhaus hard shadow utility */
@@ -81,4 +80,13 @@ h1, h2, h3, h4 {
 /* Bauhaus button base */
 a, button {
   transition: all 0.15s ease;
+}
+
+/* Print styles for Tender Intelligence Pack PDF export */
+@media print {
+  nav, footer, .print\\:hidden { display: none !important; }
+  body { background: white !important; }
+  #pack-report { margin: 0; padding: 0; }
+  #pack-report * { break-inside: avoid; }
+  @page { margin: 1.5cm; size: A4; }
 }

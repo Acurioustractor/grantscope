@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
 
       // Notify admin
       await sendEmail({
-        to: 'hello@grantscope.au',
+        to: 'hello@civicgraph.au',
         subject: `New charity claim: ${officialName || 'Unknown'} (ABN ${abn})`,
         body: [
           `A new charity claim has been submitted.`,
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
           `ABN: ${abn}`,
           ...(message ? [`Message: ${message}`] : []),
           '',
-          `Review at: https://grantscope.au/ops/claims`,
+          `Review at: https://civicgraph.au/ops/claims`,
         ].join('\n'),
       });
     } catch (e) {

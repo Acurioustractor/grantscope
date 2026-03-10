@@ -39,7 +39,7 @@ function PasswordGate({ onSuccess }: { onSuccess: () => void }) {
     <div className="min-h-screen bg-bauhaus-black flex items-center justify-center px-6">
       <div className="w-full max-w-sm">
         <div className="border-4 border-white/20 bg-bauhaus-black p-8">
-          <h1 className="text-2xl font-black text-white tracking-tight mb-2">GRANTSCOPE</h1>
+          <h1 className="text-2xl font-black text-white tracking-tight mb-2">CIVICGRAPH</h1>
           <p className="text-sm text-white/40 mb-8">Investor access</p>
           <form onSubmit={handleSubmit}>
             <input
@@ -91,7 +91,7 @@ const competitors = [
   { name: 'Instrumentl (US)', price: '$199/mo', focus: 'US grant search', data: 'US only', openData: 'No', crossSubsidy: 'No' },
   { name: 'Candid/Foundation Directory (US)', price: '$199\u2013$999/mo', focus: 'US foundation data', data: 'US only', openData: 'Partial', crossSubsidy: 'No' },
   { name: '360Giving (UK)', price: 'Free (gov funded)', focus: 'UK grant data', data: 'UK only', openData: 'Yes', crossSubsidy: 'N/A' },
-  { name: 'GrantScope (AU)', price: '$0\u2013$1,999/mo', focus: 'AU grants + foundations + charities', data: 'Australia', openData: 'Yes', crossSubsidy: 'Yes' },
+  { name: 'CivicGraph (AU)', price: '$0\u2013$1,999/mo', focus: 'AU grants + foundations + charities', data: 'Australia', openData: 'Yes', crossSubsidy: 'Yes' },
 ]
 
 // ─── Investor Deck ───────────────────────────────────────────────
@@ -104,10 +104,14 @@ function InvestorDeck() {
         <div className="max-w-4xl mx-auto text-center">
           <p className="text-xs text-white/30 uppercase tracking-[0.3em] font-black mb-6">Confidential</p>
           <h1 className="text-5xl md:text-7xl font-black tracking-tight mb-6">
-            GRANTSCOPE
+            CIVICGRAPH
           </h1>
           <p className="text-xl md:text-2xl text-white/60 mb-4">
-            Australia&apos;s Open Grants Infrastructure
+            Infrastructure for Fairer Markets
+          </p>
+          <p className="text-sm text-white/40 max-w-2xl mx-auto mt-4">
+            Three layers of market intelligence — money, entities, and proof —
+            creating the allocation infrastructure that decides where resources go.
           </p>
           <p className="text-sm text-white/30 mt-8">
             A product of ACT Ventures Pty Ltd &middot; ABN 21 591 780 066
@@ -121,60 +125,76 @@ function InvestorDeck() {
           <h2 className="text-3xl font-black tracking-tight mb-8">THE PROBLEM</h2>
           <div className="grid md:grid-cols-3 gap-6 mb-8">
             <div className="border-4 border-bauhaus-black p-6">
-              <p className="text-4xl font-black text-bauhaus-red">$222B</p>
-              <p className="text-sm font-bold mt-2">Charity sector revenue</p>
-              <p className="text-xs text-bauhaus-muted mt-1">Zero transparency infrastructure</p>
+              <p className="text-4xl font-black text-bauhaus-red">$74B</p>
+              <p className="text-sm font-bold mt-2">Government contracts</p>
+              <p className="text-xs text-bauhaus-muted mt-1">No way to see who wins and why</p>
             </div>
             <div className="border-4 border-bauhaus-black p-6">
-              <p className="text-4xl font-black text-bauhaus-red">94%</p>
-              <p className="text-sm font-bold mt-2">Funding concentration</p>
-              <p className="text-xs text-bauhaus-muted mt-1">Goes to 10% of organisations</p>
+              <p className="text-4xl font-black text-bauhaus-red">59x</p>
+              <p className="text-sm font-bold mt-2">Return on political donations</p>
+              <p className="text-xs text-bauhaus-muted mt-1">Donor-contractors: $80M donated, $4.7B received</p>
             </div>
             <div className="border-4 border-bauhaus-black p-6">
               <p className="text-4xl font-black text-bauhaus-red">0</p>
-              <p className="text-sm font-bold mt-2">Open data platforms</p>
-              <p className="text-xs text-bauhaus-muted mt-1">No 360Giving, no Candid equivalent</p>
+              <p className="text-sm font-bold mt-2">Market intelligence platforms</p>
+              <p className="text-xs text-bauhaus-muted mt-1">No one connects grants, contracts, donations &amp; entities</p>
             </div>
           </div>
           <p className="text-sm text-bauhaus-muted">
-            Australia&apos;s $18.9B philanthropic sector has no transparency infrastructure.
-            First Nations communities receive 0.5% of funding. The 16,000 smallest charities
-            collectively lost $144M last year. The system selects for grant-writing skill,
-            not impact. We&apos;re building the infrastructure to change that.
+            Australia has $74B in procurement, $18.9B in philanthropy, and $312K+ political donations
+            — none of it connected. Nobody can see who wins contracts, who donates to parties,
+            or where community funding actually lands. CivicGraph connects these markets into
+            a single intelligence layer for the first time.
           </p>
         </div>
       </section>
 
-      {/* THE PLATFORM */}
+      {/* THREE-LAYER ARCHITECTURE */}
       <section className="py-16 px-6 bg-white border-b-4 border-bauhaus-black">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl font-black tracking-tight mb-8">THE PLATFORM</h2>
+          <h2 className="text-3xl font-black tracking-tight mb-4">THREE-LAYER ARCHITECTURE</h2>
           <p className="text-sm text-bauhaus-muted mb-8">
-            GrantScope is live today with real data. Not a prototype — a working product
-            with the largest aggregated grants dataset in Australia.
+            CivicGraph is live today. Not a prototype — a working platform connecting
+            money, markets, and proof into allocation intelligence.
           </p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="border-4 border-bauhaus-black p-6 bg-bauhaus-canvas">
-              <p className="text-3xl font-black">59,000+</p>
-              <p className="text-xs font-bold mt-2">Registered charities</p>
+          <div className="grid md:grid-cols-3 gap-4 mb-6">
+            <div className="border-4 border-bauhaus-blue p-6 bg-bauhaus-canvas">
+              <p className="text-xs font-black text-bauhaus-blue uppercase tracking-widest mb-2">Layer 1: Money</p>
+              <p className="text-2xl font-black">14,119</p>
+              <p className="text-xs font-bold mt-1">Grants indexed</p>
+              <p className="text-xs text-bauhaus-muted mt-2">+ 672K contracts, 312K donations, 53K justice funding records</p>
             </div>
-            <div className="border-4 border-bauhaus-black p-6 bg-bauhaus-canvas">
-              <p className="text-3xl font-black">9,874</p>
-              <p className="text-xs font-bold mt-2">Foundations profiled</p>
+            <div className="border-4 border-bauhaus-black p-6 bg-bauhaus-black text-white">
+              <p className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">Layer 2: Market</p>
+              <p className="text-2xl font-black">99,000+</p>
+              <p className="text-xs font-bold mt-1">Entities in graph</p>
+              <p className="text-xs text-white/50 mt-2">200K+ relationships across ACNC, ATO, AEC, AusTender, ORIC, ASIC</p>
             </div>
-            <div className="border-4 border-bauhaus-black p-6 bg-bauhaus-canvas">
-              <p className="text-3xl font-black">14,119</p>
-              <p className="text-xs font-bold mt-2">Grants indexed</p>
-            </div>
-            <div className="border-4 border-bauhaus-black p-6 bg-bauhaus-canvas">
-              <p className="text-3xl font-black">359,678</p>
-              <p className="text-xs font-bold mt-2">Financial records</p>
+            <div className="border-4 border-bauhaus-red p-6 bg-bauhaus-red text-white">
+              <p className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">Layer 3: Proof</p>
+              <p className="text-2xl font-black">Governed</p>
+              <p className="text-xs font-bold mt-1">Community evidence</p>
+              <p className="text-xs text-white/60 mt-2">Consent-based impact stories via Empathy Ledger integration</p>
             </div>
           </div>
-          <p className="text-xs text-bauhaus-muted mt-4">
-            100% AI-embedded for semantic search. 1,627 foundations AI-enriched with giving strategies,
-            focus areas, and application guidance. 7 years of ACNC financial data cross-referenced.
-          </p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="border-4 border-bauhaus-black p-4 bg-bauhaus-canvas text-center">
+              <p className="text-xl font-black">9,874</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-bauhaus-muted mt-1">Foundations</p>
+            </div>
+            <div className="border-4 border-bauhaus-black p-4 bg-bauhaus-canvas text-center">
+              <p className="text-xl font-black">59,000+</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-bauhaus-muted mt-1">Charities</p>
+            </div>
+            <div className="border-4 border-bauhaus-black p-4 bg-bauhaus-canvas text-center">
+              <p className="text-xl font-black">359,678</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-bauhaus-muted mt-1">Financial Records</p>
+            </div>
+            <div className="border-4 border-bauhaus-black p-4 bg-bauhaus-canvas text-center">
+              <p className="text-xl font-black">22+</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-bauhaus-muted mt-1">Data Sources</p>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -247,10 +267,35 @@ function InvestorDeck() {
         </div>
       </section>
 
-      {/* PATH TO REVENUE */}
+      {/* PATH TO REVENUE — PROCUREMENT WEDGE */}
       <section className="py-16 px-6 border-b-4 border-bauhaus-black">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl font-black tracking-tight mb-8">PATH TO REVENUE</h2>
+          <h2 className="text-3xl font-black tracking-tight mb-4">PATH TO $1M ARR</h2>
+          <p className="text-sm text-bauhaus-muted mb-8">
+            The procurement wedge: tender intelligence packs are the fastest path to revenue.
+            Organisations preparing government bids need supplier discovery, compliance history,
+            and competitive intelligence — exactly what CivicGraph&apos;s entity graph provides.
+          </p>
+          <div className="grid md:grid-cols-3 gap-6 mb-8">
+            <div className="border-4 border-bauhaus-black p-6 bg-bauhaus-yellow">
+              <h3 className="font-black text-sm uppercase tracking-widest mb-3">Procurement Intelligence</h3>
+              <p className="text-xs mb-4">Tender intelligence packs for government contractors and suppliers</p>
+              <p className="text-2xl font-black">$299&ndash;$999</p>
+              <p className="text-xs text-bauhaus-black/60 mt-1">per pack or $1,999/mo subscription</p>
+            </div>
+            <div className="border-4 border-bauhaus-black p-6 bg-white">
+              <h3 className="font-black text-sm uppercase tracking-widest mb-3">Allocation Intelligence</h3>
+              <p className="text-xs text-bauhaus-muted mb-4">Portfolio analytics for foundations, corporates, and government</p>
+              <p className="text-2xl font-black">$499/mo</p>
+              <p className="text-xs text-bauhaus-muted mt-1">Funder tier — system-level intelligence</p>
+            </div>
+            <div className="border-4 border-bauhaus-black p-6 bg-white">
+              <h3 className="font-black text-sm uppercase tracking-widest mb-3">Community Access</h3>
+              <p className="text-xs text-bauhaus-muted mb-4">Grant search, entity profiles, place data — free forever</p>
+              <p className="text-2xl font-black">$0</p>
+              <p className="text-xs text-bauhaus-muted mt-1">Cross-subsidised by paying tiers</p>
+            </div>
+          </div>
           <div className="grid md:grid-cols-2 gap-8">
             <div className="border-4 border-bauhaus-black p-8 bg-white">
               <h3 className="font-black text-lg mb-2">$100K ARR</h3>
@@ -266,16 +311,16 @@ function InvestorDeck() {
               </p>
             </div>
             <div className="border-4 border-bauhaus-black p-8 bg-white">
-              <h3 className="font-black text-lg mb-2">$500K ARR</h3>
-              <p className="text-xs text-bauhaus-muted mb-4">~225 paying customers</p>
+              <h3 className="font-black text-lg mb-2">$1M ARR</h3>
+              <p className="text-xs text-bauhaus-muted mb-4">Procurement wedge + SaaS + data licensing</p>
               <ul className="space-y-2 text-sm">
-                <li className="flex gap-2"><span className="text-money font-black">{'\u25CF'}</span> 80 Professional ($79 &times; 12 = $75,840)</li>
-                <li className="flex gap-2"><span className="text-money font-black">{'\u25CF'}</span> 60 Organisation ($249 &times; 12 = $179,280)</li>
-                <li className="flex gap-2"><span className="text-money font-black">{'\u25CF'}</span> 25 Funder ($499 &times; 12 = $149,700)</li>
-                <li className="flex gap-2"><span className="text-money font-black">{'\u25CF'}</span> 5 Enterprise ($1,999 &times; 12 = $119,940)</li>
+                <li className="flex gap-2"><span className="text-money font-black">{'\u25CF'}</span> 50 Tender intelligence packs/mo ($500 avg = $300K)</li>
+                <li className="flex gap-2"><span className="text-money font-black">{'\u25CF'}</span> 100 Professional + Org ($150 avg = $180K)</li>
+                <li className="flex gap-2"><span className="text-money font-black">{'\u25CF'}</span> 40 Funder ($499 &times; 12 = $240K)</li>
+                <li className="flex gap-2"><span className="text-money font-black">{'\u25CF'}</span> 10 Enterprise ($1,999 &times; 12 = $240K)</li>
               </ul>
               <p className="text-xs text-bauhaus-muted mt-4 border-t-2 border-bauhaus-black/10 pt-4">
-                <strong>Total: $524,760 ARR</strong> from 170 paid + 2,000+ free community users
+                <strong>Total: $960K ARR</strong> — procurement wedge provides 30% of revenue
               </p>
             </div>
           </div>
@@ -299,8 +344,8 @@ function InvestorDeck() {
               </thead>
               <tbody>
                 {competitors.map((row) => (
-                  <tr key={row.name} className={`border-b border-white/10 ${row.name.includes('GrantScope') ? 'bg-white/5' : ''}`}>
-                    <td className={`p-3 ${row.name.includes('GrantScope') ? 'font-black text-bauhaus-yellow' : 'text-white/80'}`}>{row.name}</td>
+                  <tr key={row.name} className={`border-b border-white/10 ${row.name.includes('CivicGraph') ? 'bg-white/5' : ''}`}>
+                    <td className={`p-3 ${row.name.includes('CivicGraph') ? 'font-black text-bauhaus-yellow' : 'text-white/80'}`}>{row.name}</td>
                     <td className="p-3 text-white/60">{row.price}</td>
                     <td className="p-3 text-white/60">{row.data}</td>
                     <td className="p-3 text-center text-white/60">{row.openData}</td>
@@ -311,9 +356,9 @@ function InvestorDeck() {
             </table>
           </div>
           <p className="text-xs text-white/30 mt-6">
-            Key differentiator: GrantScope is the only platform combining grant search, foundation intelligence,
-            charity discovery, and money-trail mapping in a single product — with a cross-subsidy model that
-            ensures community access.
+            Key differentiator: CivicGraph is the only platform connecting procurement, grants, donations,
+            and entity relationships into a single market intelligence layer — with a cross-subsidy model
+            that ensures community access and builds network effects faster than closed platforms.
           </p>
         </div>
       </section>
@@ -361,7 +406,7 @@ function InvestorDeck() {
                 CyberGrants) and merged them into Bonterra — valued at $1.8B.
               </p>
               <p className="text-sm text-bauhaus-muted">
-                GrantScope occupies a similar space (grants + foundations + nonprofits) but with
+                CivicGraph occupies a similar space (grants + foundations + nonprofits) but with
                 open data and a cross-subsidy model that builds network effects faster.
               </p>
             </div>
@@ -384,7 +429,7 @@ function InvestorDeck() {
               <h3 className="font-black text-lg mb-1">Benjamin Knight</h3>
               <p className="text-xs text-bauhaus-muted uppercase tracking-widest mb-4">Co-Founder &middot; Systems Designer</p>
               <p className="text-sm text-bauhaus-muted">
-                Full-stack engineer and systems thinker. Built GrantScope&apos;s entire data pipeline,
+                Full-stack engineer and systems thinker. Built CivicGraph&apos;s entire data pipeline,
                 AI enrichment system, and multi-interface platform. Background in enterprise SaaS,
                 data engineering, and community-led design.
               </p>
@@ -400,7 +445,7 @@ function InvestorDeck() {
             </div>
           </div>
           <p className="text-sm text-bauhaus-muted mt-6 text-center">
-            GrantScope is built by{' '}
+            CivicGraph is built by{' '}
             <a href="https://act.place" className="text-bauhaus-blue font-bold hover:underline" target="_blank" rel="noopener noreferrer">
               ACT (A Curious Tractor)
             </a>
@@ -417,11 +462,11 @@ function InvestorDeck() {
             LET&apos;S TALK.
           </h2>
           <p className="text-white/50 text-lg mb-10">
-            We&apos;re building Australia&apos;s grants infrastructure. If you want to be part of it,
+            We&apos;re building the infrastructure for fairer markets. If you want to be part of it,
             we&apos;d love to hear from you.
           </p>
           <a
-            href="mailto:benjamin@act.place?subject=GrantScope%20%E2%80%94%20Investor%20Enquiry"
+            href="mailto:benjamin@act.place?subject=CivicGraph%20%E2%80%94%20Investor%20Enquiry"
             className="inline-block py-4 px-12 font-black text-sm uppercase tracking-widest border-4 border-bauhaus-yellow bg-bauhaus-yellow text-bauhaus-black transition-all hover:bg-bauhaus-yellow/90"
           >
             benjamin@act.place

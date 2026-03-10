@@ -111,7 +111,7 @@ function ClaimContent() {
           <p className="text-xs font-black text-bauhaus-blue uppercase tracking-[0.3em] mb-2">Sign In Required</p>
           <h1 className="text-2xl font-black text-bauhaus-black mb-4">Claim Your Profile</h1>
           <p className="text-bauhaus-muted font-medium leading-relaxed mb-6">
-            Sign in to claim your charity&apos;s profile on GrantScope. You&apos;ll be able to update your description, share your story, and request to be featured.
+            Sign in to claim your charity&apos;s profile on CivicGraph. You&apos;ll be able to update your description, share your story, and request to be featured.
           </p>
           {abn && (
             <div className="bg-bauhaus-canvas border-2 border-bauhaus-black/20 px-4 py-3 mb-6">
@@ -170,7 +170,7 @@ function ClaimContent() {
           <p className="text-xs font-black text-bauhaus-blue uppercase tracking-[0.3em] mb-2">Verification</p>
           <h1 className="text-2xl font-black text-bauhaus-black mb-4">Claim Your Profile</h1>
           <p className="text-bauhaus-muted font-medium leading-relaxed mb-6">
-            Submit a claim to manage this charity&apos;s profile on GrantScope. We&apos;ll verify your connection to the organisation.
+            Submit a claim to manage this charity&apos;s profile on CivicGraph. We&apos;ll verify your connection to the organisation.
           </p>
 
           {error && (
@@ -336,7 +336,7 @@ function ClaimCard({ claim }: { claim: Claim }) {
       {claim.status === 'rejected' && !claim.admin_notes && (
         <div className="mt-3 pt-3 border-t-2 border-bauhaus-red/20">
           <p className="text-xs text-bauhaus-red font-bold">
-            This claim was not approved. If you believe this is an error, please contact hello@grantscope.au.
+            This claim was not approved. If you believe this is an error, please contact hello@civicgraph.au.
           </p>
         </div>
       )}

@@ -66,7 +66,7 @@ export async function sendEmail(opts: {
     'https://www.googleapis.com/auth/gmail.send',
   ]);
 
-  const sender = opts.senderName || 'GrantScope';
+  const sender = opts.senderName || 'CivicGraph';
   const boundary = `boundary_${Date.now()}`;
 
   let message: string;
@@ -122,7 +122,7 @@ export async function sendEmail(opts: {
 export async function sendGrantEmail(
   to: string,
   grant: GrantEmailData,
-  senderName: string = 'GrantScope'
+  senderName: string = 'CivicGraph'
 ): Promise<void> {
   const serviceKeyJson = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
   const delegatedUser = process.env.GOOGLE_DELEGATED_USER;

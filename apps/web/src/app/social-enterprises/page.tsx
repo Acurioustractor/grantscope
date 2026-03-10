@@ -1,4 +1,6 @@
 import { getServiceSupabase } from '@/lib/supabase';
+import { SEClient } from './se-client';
+import type { SEMapPoint } from './se-map';
 
 export const dynamic = 'force-dynamic';
 
@@ -144,6 +146,58 @@ export default async function SocialEnterprisesPage({ searchParams }: { searchPa
   if (sortBy !== 'name') filterParams.set('sort', sortBy);
   const filterQS = filterParams.toString();
 
+  // Fetch map aggregation data — group by postcode with lat/lng
+  const { data: mapRaw } = await supabase
+    .from('social_enterprises')
+    .select('id, name, org_type, postcode')
+    .not('postcode', 'is', null)
+    .limit(5000);
+
+  type SEEntry = { id: string; name: string; org_type: string };
+  const byPostcode = new Map<string, { count: number; types: Map<string, number>; enterprises: SEEntry[] }>();
+  for (const se of mapRaw || []) {
+    const existing = byPostcode.get(se.postcode) || { count: 0, types: new Map<string, number>(), enterprises: [] as SEEntry[] };
+    existing.count++;
+    existing.types.set(se.org_type, (existing.types.get(se.org_type) || 0) + 1);
+    existing.enterprises.push({ id: se.id, name: se.name, org_type: se.org_type });
+    byPostcode.set(se.postcode, existing);
+  }
+
+  // Get lat/lng for postcodes
+  const mapPostcodes = Array.from(byPostcode.keys());
+  const geoLookup = new Map<string, { lat: number; lng: number; locality: string }>();
+  for (let i = 0; i < mapPostcodes.length; i += 100) {
+    const chunk = mapPostcodes.slice(i, i + 100);
+    const { data: geoData } = await supabase
+      .from('postcode_geo')
+      .select('postcode, latitude, longitude, locality')
+      .in('postcode', chunk)
+      .not('latitude', 'is', null);
+    for (const g of geoData || []) {
+      geoLookup.set(g.postcode, { lat: g.latitude, lng: g.longitude, locality: g.locality || '' });
+    }
+  }
+
+  const mapData: SEMapPoint[] = Array.from(byPostcode.entries())
+    .filter(([pc]) => geoLookup.has(pc))
+    .map(([pc, d]) => {
+      const geo = geoLookup.get(pc)!;
+      let dominantType = 'social_enterprise';
+      let maxCount = 0;
+      d.types.forEach((cnt, type) => {
+        if (cnt > maxCount) { maxCount = cnt; dominantType = type; }
+      });
+      return {
+        postcode: pc,
+        locality: geo.locality,
+        lat: geo.lat,
+        lng: geo.lng,
+        count: d.count,
+        dominant_type: dominantType,
+        enterprises: d.enterprises,
+      };
+    });
+
   return (
     <div>
       {/* Hero intro */}
@@ -159,18 +213,18 @@ export default async function SocialEnterprisesPage({ searchParams }: { searchPa
           <span className="px-2.5 py-1 font-black uppercase tracking-wider border-2 border-white/30 text-white/80">
             {(count || 0).toLocaleString()} Records
           </span>
-          <span className="px-2.5 py-1 font-black uppercase tracking-wider border-2 border-bauhaus-red bg-bauhaus-red text-white">
+          <a href="/social-enterprises?indigenous=true" className="px-2.5 py-1 font-black uppercase tracking-wider border-2 border-bauhaus-red bg-bauhaus-red text-white hover:bg-white hover:text-bauhaus-red transition-colors">
             Indigenous Businesses
-          </span>
-          <span className="px-2.5 py-1 font-black uppercase tracking-wider border-2 border-bauhaus-yellow bg-bauhaus-yellow text-bauhaus-black">
+          </a>
+          <a href="/social-enterprises?org_type=disability_enterprise" className="px-2.5 py-1 font-black uppercase tracking-wider border-2 border-bauhaus-yellow bg-bauhaus-yellow text-bauhaus-black hover:bg-white transition-colors">
             Disability Enterprises
-          </span>
-          <span className="px-2.5 py-1 font-black uppercase tracking-wider border-2 border-money bg-money text-white">
+          </a>
+          <a href="/social-enterprises?org_type=b_corp" className="px-2.5 py-1 font-black uppercase tracking-wider border-2 border-money bg-money text-white hover:bg-white hover:text-money transition-colors">
             B Corps
-          </span>
-          <span className="px-2.5 py-1 font-black uppercase tracking-wider border-2 border-bauhaus-blue bg-bauhaus-blue text-white">
+          </a>
+          <a href="/social-enterprises?org_type=social_enterprise" className="px-2.5 py-1 font-black uppercase tracking-wider border-2 border-bauhaus-blue bg-bauhaus-blue text-white hover:bg-white hover:text-bauhaus-blue transition-colors">
             Social Enterprises
-          </span>
+          </a>
         </div>
         <div className="flex gap-4 flex-wrap mt-5">
           <a href="/reports/social-enterprise" className="px-5 py-2.5 bg-bauhaus-red text-white font-black text-xs uppercase tracking-widest border-2 border-bauhaus-red hover:bg-white hover:text-bauhaus-black transition-colors">
@@ -224,6 +278,7 @@ export default async function SocialEnterprisesPage({ searchParams }: { searchPa
         </button>
       </form>
 
+      <SEClient mapData={mapData} listContent={<>
       {/* Quick filter chips */}
       <div className="flex gap-2 mb-6 flex-wrap">
         <a href="/social-enterprises?indigenous=true" className={`text-xs px-3 py-1.5 font-black uppercase tracking-wider border-2 transition-colors ${indigenousFilter === 'true' ? 'border-bauhaus-red bg-bauhaus-red text-white' : 'border-bauhaus-red/30 text-bauhaus-red hover:bg-bauhaus-red/10'}`}>
@@ -244,29 +299,30 @@ export default async function SocialEnterprisesPage({ searchParams }: { searchPa
         {(enterprises as SocialEnterprise[] || []).map((se) => {
           const badge = orgTypeBadge(se.org_type);
           return (
-            <a key={se.id} href={`/social-enterprises/${se.id}`} className="block group">
-              <div className="bg-white border-4 border-bauhaus-black p-4 sm:px-5 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm">
+            <div key={se.id} className="bg-white border-4 border-bauhaus-black p-4 sm:px-5 transition-all hover:-translate-y-1 bauhaus-shadow-sm group">
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-bauhaus-black text-[15px] group-hover:text-bauhaus-blue">{se.name}</h3>
+                    <a href={`/social-enterprises/${se.id}`} className="font-bold text-bauhaus-black text-[15px] hover:text-bauhaus-blue">
+                      <h3>{se.name}</h3>
+                    </a>
                     <div className="text-sm text-bauhaus-muted mt-0.5 flex items-center gap-2 flex-wrap">
-                      <span className={`text-[11px] px-1.5 py-0.5 font-black uppercase tracking-wider border-2 ${badge.cls}`}>
+                      <a href={`/social-enterprises?org_type=${se.org_type}`} className={`text-[11px] px-1.5 py-0.5 font-black uppercase tracking-wider border-2 hover:opacity-80 transition-opacity ${badge.cls}`}>
                         {badge.label}
-                      </span>
+                      </a>
                       {se.state && (
-                        <span className="font-bold">{se.state}</span>
+                        <a href={`/social-enterprises?state=${se.state}`} className="font-bold hover:text-bauhaus-blue transition-colors">{se.state}</a>
                       )}
                       {se.city && (
                         <span className="text-bauhaus-muted">{se.city}</span>
                       )}
                       {se.source_primary && (
-                        <span className={`text-[11px] px-1.5 py-0.5 font-black uppercase tracking-wider border-2 ${
+                        <a href={`/social-enterprises?source=${se.source_primary}`} className={`text-[11px] px-1.5 py-0.5 font-black uppercase tracking-wider border-2 hover:opacity-80 transition-opacity ${
                           se.source_primary === 'supply-nation' ? 'border-bauhaus-red/40 bg-bauhaus-red/10 text-bauhaus-red' :
                           se.source_primary === 'oric' ? 'border-bauhaus-red/40 bg-bauhaus-red/10 text-bauhaus-red' :
                           'border-bauhaus-black/20 bg-bauhaus-canvas text-bauhaus-muted'
                         }`}>
                           {SOURCES.find(s => s.value === se.source_primary)?.label || se.source_primary}
-                        </span>
+                        </a>
                       )}
                       {se.abn && (
                         <span className="text-[11px] px-1.5 py-0.5 font-bold border-2 border-money/30 bg-money-light text-money">ABN {se.abn}</span>
@@ -278,27 +334,31 @@ export default async function SocialEnterprisesPage({ searchParams }: { searchPa
                       </div>
                     )}
                   </div>
-                  <div className="sm:text-right sm:ml-4 flex-shrink-0">
+                  <div className="sm:text-right sm:ml-4 flex-shrink-0 flex items-center gap-3">
                     {se.certifications && se.certifications.length > 0 && (
                       <div className="flex gap-1.5 flex-wrap justify-end">
                         {se.certifications.map((cert, i) => (
-                          <span key={i} className="text-[11px] px-1.5 py-0.5 font-black uppercase tracking-wider border-2 border-money bg-money-light text-money">
+                          <a key={i} href={`/social-enterprises?source=${cert.body}`} className="text-[11px] px-1.5 py-0.5 font-black uppercase tracking-wider border-2 border-money bg-money-light text-money hover:opacity-80 transition-opacity">
                             {certBadge(cert.body)}
-                          </span>
+                          </a>
                         ))}
                       </div>
                     )}
+                    <a href={`/social-enterprises/${se.id}`} className="text-bauhaus-muted hover:text-bauhaus-blue transition-colors flex-shrink-0" title="View details">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="9 18 15 12 9 6" />
+                      </svg>
+                    </a>
                   </div>
                 </div>
                 {se.sector?.length > 0 && (
                   <div className="flex gap-1.5 mt-2.5 flex-wrap">
                     {se.sector.map(s => (
-                      <span key={s} className="text-[11px] px-2 py-0.5 bg-bauhaus-canvas text-bauhaus-black font-bold border-2 border-bauhaus-black/20 capitalize">{s}</span>
+                      <a key={s} href={`/social-enterprises?sector=${s}`} className="text-[11px] px-2 py-0.5 bg-bauhaus-canvas text-bauhaus-black font-bold border-2 border-bauhaus-black/20 capitalize hover:border-bauhaus-blue hover:text-bauhaus-blue transition-colors">{s}</a>
                     ))}
                   </div>
                 )}
               </div>
-            </a>
           );
         })}
       </div>
@@ -325,6 +385,7 @@ export default async function SocialEnterprisesPage({ searchParams }: { searchPa
           )}
         </div>
       )}
+      </>} />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { getServiceSupabase } from '@/lib/supabase';
 import { createSupabaseServer } from '@/lib/supabase-server';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import { CommunityEvidence } from './impact-stories';
 
 export const dynamic = 'force-dynamic';
 
@@ -945,6 +946,9 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
               </div>
             </Section>
           )}
+
+          {/* Community Evidence (Empathy Ledger — governed proof layer) */}
+          <CommunityEvidence gsId={e.gs_id} isPremium={isPremium} />
 
           {/* ACNC Financial History */}
           {financialYears.length > 0 && (

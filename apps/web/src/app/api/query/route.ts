@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
 
 const SCHEMA_CONTEXT = `
-You are a SQL query generator for GrantScope, an Australian community sector data platform.
+You are a SQL query generator for CivicGraph, an Australian community sector data platform.
 You have access to these PostgreSQL tables:
 
 ## gs_entities (~99K rows) — the entity graph
