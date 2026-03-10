@@ -82,9 +82,9 @@ async function main() {
     const BATCH_SIZE = 50;
     for (let i = 0; i < grants.length; i += BATCH_SIZE) {
       const batch = grants.slice(i, i + BATCH_SIZE).map(g => ({
-        title: g.title,
+        name: g.title,
         provider: g.provider,
-        source_url: g.sourceUrl,
+        url: g.sourceUrl,
         description: g.description,
         amount_min: g.amount?.min || null,
         amount_max: g.amount?.max || null,
@@ -94,12 +94,13 @@ async function main() {
         geography: g.geography?.[0] || 'AU',
         status: 'open',
         grant_type: 'open_opportunity',
+        source: g.provider || 'state-grants',
         updated_at: new Date().toISOString(),
       }));
 
       const { data, error } = await supabase
         .from('grant_opportunities')
-        .upsert(batch, { onConflict: 'title,source_id' });
+        .upsert(batch, { onConflict: 'url', ignoreDuplicates: true });
 
       if (error) {
         console.error(`  Upsert error: ${error.message}`);
