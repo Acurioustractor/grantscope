@@ -23,13 +23,17 @@ export async function GET(request: Request) {
   if (!type) {
     return NextResponse.json({
       endpoints: {
+        entities: '/api/data?type=entities&entity_type=charity&state=QLD',
+        relationships: '/api/data?type=relationships&relationship_type=donated_to&min_amount=10000',
         foundations: '/api/data?type=foundations&focus=indigenous&state=qld',
         grants: '/api/data?type=grants&status=open&min_amount=10000',
+        'social-enterprises': '/api/data?type=social-enterprises&source=supply_nation',
         'money-flows': '/api/data?type=money-flows&domain=youth_justice&year=2025',
         'community-orgs': '/api/data?type=community-orgs&domain=youth',
         'government-programs': '/api/data?type=government-programs&jurisdiction=qld',
         reports: '/api/data?type=reports',
       },
+      health: '/api/data/health',
       export: '/api/data/export?type=foundations&format=csv',
       docs: 'All endpoints support limit, offset, and format (json/csv) params.',
     });
@@ -39,6 +43,84 @@ export async function GET(request: Request) {
     const supabase = getServiceSupabase();
 
     switch (type) {
+      case 'entities': {
+        let query = supabase
+          .from('gs_entities')
+          .select('gs_id, canonical_name, abn, entity_type, sector, state, postcode, remoteness, seifa_irsd_decile, lga_name, is_community_controlled, website, description, created_at')
+          .order('canonical_name', { ascending: true })
+          .range(offset, offset + limit - 1);
+
+        const entityType = searchParams.get('entity_type');
+        if (entityType) query = query.eq('entity_type', entityType);
+
+        const state = searchParams.get('state');
+        if (state) query = query.eq('state', state.toUpperCase());
+
+        const postcode = searchParams.get('postcode');
+        if (postcode) query = query.eq('postcode', postcode);
+
+        const abn = searchParams.get('abn');
+        if (abn) query = query.eq('abn', abn);
+
+        const search = searchParams.get('q');
+        if (search) query = query.ilike('canonical_name', `%${search}%`);
+
+        const communityControlled = searchParams.get('community_controlled');
+        if (communityControlled === 'true') query = query.eq('is_community_controlled', true);
+
+        const { data, error } = await query;
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ type: 'entities', data, limit, offset });
+      }
+
+      case 'relationships': {
+        let query = supabase
+          .from('gs_relationships')
+          .select('id, source_entity_id, target_entity_id, relationship_type, amount, year, dataset, created_at')
+          .order('amount', { ascending: false, nullsFirst: false })
+          .range(offset, offset + limit - 1);
+
+        const relType = searchParams.get('relationship_type');
+        if (relType) query = query.eq('relationship_type', relType);
+
+        const dataset = searchParams.get('dataset');
+        if (dataset) query = query.eq('dataset', dataset);
+
+        const minAmount = searchParams.get('min_amount');
+        if (minAmount) query = query.gte('amount', parseInt(minAmount, 10));
+
+        const year = searchParams.get('year');
+        if (year) query = query.eq('year', parseInt(year, 10));
+
+        const { data, error } = await query;
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ type: 'relationships', data, limit, offset });
+      }
+
+      case 'social-enterprises': {
+        let query = supabase
+          .from('social_enterprises')
+          .select('id, name, abn, source_primary, sector, state, postcode, website, description, is_indigenous, created_at')
+          .order('name', { ascending: true })
+          .range(offset, offset + limit - 1);
+
+        const source = searchParams.get('source');
+        if (source) query = query.eq('source_primary', source);
+
+        const seState = searchParams.get('state');
+        if (seState) query = query.eq('state', seState.toUpperCase());
+
+        const indigenous = searchParams.get('indigenous');
+        if (indigenous === 'true') query = query.eq('is_indigenous', true);
+
+        const seSearch = searchParams.get('q');
+        if (seSearch) query = query.ilike('name', `%${seSearch}%`);
+
+        const { data, error } = await query;
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ type: 'social-enterprises', data, limit, offset });
+      }
+
       case 'foundations': {
         let query = supabase
           .from('foundations')

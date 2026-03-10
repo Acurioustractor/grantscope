@@ -21,6 +21,17 @@ interface HealthData {
     entityTypes: Array<{ entity_type: string; count: number }>;
     relationshipTypes: Array<{ relationship_type: string; count: number }>;
     donorContractors: { count: number; totalDonated: number; totalContractValue: number };
+    coverage?: {
+      total: number;
+      withPostcode: number;
+      withRemoteness: number;
+      withLga: number;
+      withSeifa: number;
+      withAbn: number;
+      withWebsite: number;
+      withDescription: number;
+      communityControlled: number;
+    };
   };
   tableCounts: {
     acncCharities: number;
@@ -429,6 +440,58 @@ export function HealthClient() {
           <StatCard label="Total Donated" value={0} customValue={formatCurrency(entityGraph.donorContractors.totalDonated)} />
           <StatCard label="Total Contract Value" value={0} customValue={formatCurrency(entityGraph.donorContractors.totalContractValue)} />
         </div>
+
+        {/* Entity Coverage */}
+        {entityGraph.coverage && entityGraph.coverage.total > 0 && (
+          <div className="mb-4">
+            <h3 className="text-xs font-black uppercase tracking-widest text-bauhaus-muted mb-2">Entity Geo Coverage</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-2">
+              <div className="border-2 border-bauhaus-black/30 p-3">
+                <div className="text-xs font-black uppercase tracking-wider text-bauhaus-muted">Postcode</div>
+                <div className="text-lg font-black"><StatusColor value={entityGraph.coverage.withPostcode} total={entityGraph.coverage.total} thresholds={[70, 90]} /></div>
+                <BarFill value={entityGraph.coverage.withPostcode} total={entityGraph.coverage.total} thresholds={[70, 90]} />
+              </div>
+              <div className="border-2 border-bauhaus-black/30 p-3">
+                <div className="text-xs font-black uppercase tracking-wider text-bauhaus-muted">Remoteness</div>
+                <div className="text-lg font-black"><StatusColor value={entityGraph.coverage.withRemoteness} total={entityGraph.coverage.total} thresholds={[70, 90]} /></div>
+                <BarFill value={entityGraph.coverage.withRemoteness} total={entityGraph.coverage.total} thresholds={[70, 90]} />
+              </div>
+              <div className="border-2 border-bauhaus-black/30 p-3">
+                <div className="text-xs font-black uppercase tracking-wider text-bauhaus-muted">LGA</div>
+                <div className="text-lg font-black"><StatusColor value={entityGraph.coverage.withLga} total={entityGraph.coverage.total} thresholds={[70, 90]} /></div>
+                <BarFill value={entityGraph.coverage.withLga} total={entityGraph.coverage.total} thresholds={[70, 90]} />
+              </div>
+              <div className="border-2 border-bauhaus-black/30 p-3">
+                <div className="text-xs font-black uppercase tracking-wider text-bauhaus-muted">SEIFA</div>
+                <div className="text-lg font-black"><StatusColor value={entityGraph.coverage.withSeifa} total={entityGraph.coverage.total} thresholds={[70, 90]} /></div>
+                <BarFill value={entityGraph.coverage.withSeifa} total={entityGraph.coverage.total} thresholds={[70, 90]} />
+              </div>
+              <div className="border-2 border-bauhaus-black/30 p-3">
+                <div className="text-xs font-black uppercase tracking-wider text-bauhaus-muted">ABN</div>
+                <div className="text-lg font-black"><StatusColor value={entityGraph.coverage.withAbn} total={entityGraph.coverage.total} thresholds={[80, 95]} /></div>
+                <BarFill value={entityGraph.coverage.withAbn} total={entityGraph.coverage.total} thresholds={[80, 95]} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
+              <div className="border-2 border-bauhaus-black/30 p-3">
+                <div className="text-xs font-black uppercase tracking-wider text-bauhaus-muted">Has Website</div>
+                <div className="text-lg font-black"><StatusColor value={entityGraph.coverage.withWebsite} total={entityGraph.coverage.total} thresholds={[20, 50]} /></div>
+              </div>
+              <div className="border-2 border-bauhaus-black/30 p-3">
+                <div className="text-xs font-black uppercase tracking-wider text-bauhaus-muted">Has Description</div>
+                <div className="text-lg font-black"><StatusColor value={entityGraph.coverage.withDescription} total={entityGraph.coverage.total} thresholds={[20, 50]} /></div>
+              </div>
+              <div className="border-2 border-bauhaus-black/30 p-3">
+                <div className="text-xs font-black uppercase tracking-wider text-bauhaus-muted">Community Controlled</div>
+                <div className="text-lg font-black">{entityGraph.coverage.communityControlled.toLocaleString()}</div>
+              </div>
+              <div className="border-2 border-bauhaus-black/30 p-3">
+                <div className="text-xs font-black uppercase tracking-wider text-bauhaus-muted">Total Entities</div>
+                <div className="text-lg font-black">{entityGraph.coverage.total.toLocaleString()}</div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Entity types grid */}
         {entityGraph.entityTypes.length > 0 && (

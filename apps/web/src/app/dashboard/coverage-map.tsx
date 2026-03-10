@@ -41,9 +41,9 @@ export function CoverageMap({ data }: CoverageMapProps) {
   return (
     <div className="relative">
       <AustraliaMap height={500}>
-        {data.map((p) => (
+        {data.map((p, i) => (
           <CircleMarker
-            key={p.postcode}
+            key={`${p.postcode}-${i}`}
             center={[p.lat, p.lng]}
             radius={markerRadius(p.entity_count)}
             pathOptions={{

@@ -40,6 +40,7 @@ export async function GET() {
       // Entity graph
       entityTypeBreakdown, relationshipTypeBreakdown,
       donorContractorStats,
+      entityCoverageResult,
     ] = await Promise.all([
       // Fast RPCs
       safe(db.rpc('get_table_counts'), 8000),
@@ -68,6 +69,20 @@ export async function GET() {
       safe(db.rpc('get_entity_type_breakdown'), 8000),
       safe(db.rpc('get_relationship_type_breakdown'), 8000),
       safe(db.from('mv_gs_donor_contractors').select('total_donated, total_contract_value').order('total_donated', { ascending: false }).limit(1000), 8000),
+      // Entity coverage — geo enrichment stats
+      safe(db.rpc('exec_sql', { query: `
+        SELECT
+          COUNT(*) as total,
+          COUNT(postcode) as with_postcode,
+          COUNT(remoteness) as with_remoteness,
+          COUNT(lga_name) as with_lga,
+          COUNT(seifa_irsd_decile) as with_seifa,
+          COUNT(abn) as with_abn,
+          COUNT(website) as with_website,
+          COUNT(description) as with_description,
+          COUNT(CASE WHEN is_community_controlled THEN 1 END) as community_controlled
+        FROM gs_entities
+      ` }), 8000),
     ]);
 
     // Extract counts from single RPC result (pg_stat_user_tables estimated counts)
@@ -111,6 +126,21 @@ export async function GET() {
     const relTypes = (relationshipTypeBreakdown as { data: Array<{ relationship_type: string; count: number }> }).data ?? [];
     const totalRecords = dataFreshness.reduce((s, d) => s + d.count, 0);
 
+    // Parse entity coverage from exec_sql result (returns array of rows)
+    const ecRows = entityCoverageResult.data ?? [];
+    const ec = Array.isArray(ecRows) && ecRows.length > 0 ? ecRows[0] : {};
+    const entityCoverage = {
+      total: Number(ec.total ?? 0),
+      withPostcode: Number(ec.with_postcode ?? 0),
+      withRemoteness: Number(ec.with_remoteness ?? 0),
+      withLga: Number(ec.with_lga ?? 0),
+      withSeifa: Number(ec.with_seifa ?? 0),
+      withAbn: Number(ec.with_abn ?? 0),
+      withWebsite: Number(ec.with_website ?? 0),
+      withDescription: Number(ec.with_description ?? 0),
+      communityControlled: Number(ec.community_controlled ?? 0),
+    };
+
     const response = NextResponse.json({
       stats: {
         grants: {
@@ -142,6 +172,7 @@ export async function GET() {
           totalDonated: dcTotalDonated,
           totalContractValue: dcTotalContracts,
         },
+        coverage: entityCoverage,
       },
       tableCounts: {
         acncCharities: tcount('acnc_charities'),

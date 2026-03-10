@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CivicGraph — Data Universe</title>
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; background: #0a0a0a; color: #fff; overflow-x: hidden; }
+
+  /* Header */
+  .header { padding: 32px 48px 24px; }
+  .header h1 { font-size: 11px; font-weight: 900; letter-spacing: 0.35em; text-transform: uppercase; color: #D02020; margin-bottom: 4px; }
+  .header h2 { font-size: 36px; font-weight: 900; letter-spacing: -0.02em; line-height: 1.1; }
+  .header h2 span { color: #666; }
+  .header .subtitle { font-size: 13px; color: #666; font-weight: 600; margin-top: 8px; }
+
+  /* Hero counters */
+  .counters { display: flex; gap: 0; margin: 0 48px 40px; border: 3px solid #222; }
+  .counter { flex: 1; padding: 20px 16px; text-align: center; border-right: 3px solid #222; position: relative; }
+  .counter:last-child { border-right: 0; }
+  .counter .num { font-size: 28px; font-weight: 900; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .counter .label { font-size: 9px; font-weight: 800; letter-spacing: 0.25em; text-transform: uppercase; color: #666; margin-top: 4px; }
+  .counter .bar { position: absolute; top: 0; left: 0; height: 3px; }
+
+  /* Sections */
+  .section { margin: 0 48px 48px; }
+  .section-head { font-size: 10px; font-weight: 900; letter-spacing: 0.3em; text-transform: uppercase; color: #444; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #222; }
+
+  /* Sankey area */
+  #sankey { width: 100%; overflow: visible; }
+  #sankey svg { display: block; }
+  .sankey-link { fill: none; stroke-opacity: 0.22; transition: stroke-opacity 0.2s; }
+  .sankey-link:hover { stroke-opacity: 0.55; }
+
+  /* Schema graph */
+  #schema { width: 100%; border: 3px solid #222; background: #0d0d0d; position: relative; overflow: hidden; }
+  .table-node { cursor: pointer; }
+  .table-node rect { rx: 0; ry: 0; }
+  .table-node text { font-family: 'Inter', sans-serif; }
+  .table-name { font-size: 11px; font-weight: 900; letter-spacing: 0.1em; text-transform: uppercase; }
+  .table-count { font-size: 10px; font-weight: 600; }
+  .edge-line { stroke-width: 1.5; stroke-dasharray: 4,3; }
+  .edge-label { font-size: 8px; fill: #555; font-weight: 600; font-family: 'Inter', sans-serif; }
+
+  /* Entity type breakdown */
+  .type-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0; border: 3px solid #222; }
+  .type-card { padding: 16px; border-right: 3px solid #222; border-bottom: 3px solid #222; }
+  .type-card .name { font-size: 10px; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; color: #888; }
+  .type-card .val { font-size: 24px; font-weight: 900; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .type-card .pct { font-size: 11px; color: #555; font-weight: 700; }
+  .type-card .bar-bg { height: 4px; background: #1a1a1a; margin-top: 8px; }
+  .type-card .bar-fill { height: 4px; }
+
+  /* Flow stats */
+  .flow-row { display: flex; gap: 0; border: 3px solid #222; margin-bottom: -3px; }
+  .flow-cell { flex: 1; padding: 20px; border-right: 3px solid #222; }
+  .flow-cell:last-child { border-right: 0; }
+  .flow-cell .fl-label { font-size: 9px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: #555; }
+  .flow-cell .fl-val { font-size: 22px; font-weight: 900; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .flow-cell .fl-sub { font-size: 11px; color: #444; font-weight: 600; margin-top: 2px; }
+
+  /* Geo */
+  .geo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 3px solid #222; }
+  .geo-col { padding: 20px; }
+  .geo-col:first-child { border-right: 3px solid #222; }
+  .geo-col h4 { font-size: 9px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: #555; margin-bottom: 12px; }
+  .geo-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .geo-bar .geo-name { font-size: 11px; font-weight: 700; width: 48px; text-align: right; color: #999; }
+  .geo-bar .geo-track { flex: 1; height: 16px; background: #1a1a1a; position: relative; }
+  .geo-bar .geo-fill { height: 100%; position: absolute; top: 0; left: 0; display: flex; align-items: center; padding-left: 6px; }
+  .geo-bar .geo-fill span { font-size: 9px; font-weight: 800; color: rgba(255,255,255,0.8); }
+  .geo-bar-remote .geo-name { width: 120px; font-size: 10px; }
+
+  /* Map */
+  #map-container { border: 3px solid #222; height: 520px; background: #0d0d0d; }
+  #map-container .leaflet-container { background: #0d0d0d; }
+
+  /* Entity Network */
+  #entity-network { width: 100%; border: 3px solid #222; background: #0d0d0d; }
+
+  /* Coverage */
+  .coverage { display: flex; gap: 0; border: 3px solid #222; }
+  .cov-cell { flex: 1; padding: 16px; border-right: 3px solid #222; text-align: center; }
+  .cov-cell:last-child { border-right: 0; }
+  .cov-cell .cov-val { font-size: 28px; font-weight: 900; }
+  .cov-cell .cov-label { font-size: 9px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: #555; margin-top: 4px; }
+
+  /* Pipeline */
+  .pipeline { display: flex; gap: 0; border: 3px solid #222; overflow: hidden; }
+  .pipe-stage { flex: 1; padding: 16px; text-align: center; position: relative; border-right: 3px solid #222; }
+  .pipe-stage:last-child { border-right: 0; }
+  .pipe-stage .pipe-name { font-size: 9px; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; color: #888; }
+  .pipe-stage .pipe-count { font-size: 18px; font-weight: 900; margin-top: 4px; }
+  .pipe-stage .pipe-sub { font-size: 10px; color: #444; font-weight: 600; }
+
+  /* Legend */
+  .legend { display: flex; gap: 24px; margin-top: 12px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.1em; }
+  .legend-swatch { width: 12px; height: 12px; border: 2px solid rgba(255,255,255,0.1); }
+
+  /* Explanation blocks */
+  .explain { margin-bottom: 20px; max-width: 800px; }
+  .explain p { font-size: 13px; color: #888; line-height: 1.65; font-weight: 500; }
+  .explain .links { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
+  .explain .links a { font-size: 10px; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; color: #1040C0; text-decoration: none; padding: 5px 12px; border: 2px solid #1040C0; transition: all 0.15s; }
+  .explain .links a:hover { background: #1040C0; color: #fff; }
+  .explain .links a.red { color: #D02020; border-color: #D02020; }
+  .explain .links a.red:hover { background: #D02020; color: #fff; }
+  .explain .links a.green { color: #059669; border-color: #059669; }
+  .explain .links a.green:hover { background: #059669; color: #fff; }
+  .explain .links a.purple { color: #7c3aed; border-color: #7c3aed; }
+  .explain .links a.purple:hover { background: #7c3aed; color: #fff; }
+  .explain .links a.yellow { color: #F0C020; border-color: #F0C020; }
+  .explain .links a.yellow:hover { background: #F0C020; color: #000; }
+
+  /* Footer */
+  .footer { padding: 32px 48px; color: #333; font-size: 11px; font-weight: 600; border-top: 2px solid #1a1a1a; margin-top: 32px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>CivicGraph</h1>
+  <h2>1,482,620 Records <span>Across 14 Datasets</span></h2>
+  <div class="subtitle">Decision Infrastructure for Australian Government & Social Sector — $169B in tracked flows</div>
+</div>
+
+<div class="counters">
+  <div class="counter"><div class="bar" style="width:100%;background:#1040C0"></div><div class="num">100,036</div><div class="label">Entities</div></div>
+  <div class="counter"><div class="bar" style="width:100%;background:#D02020"></div><div class="num">211,783</div><div class="label">Relationships</div></div>
+  <div class="counter"><div class="bar" style="width:100%;background:#F0C020"></div><div class="num">670,303</div><div class="label">Contracts</div></div>
+  <div class="counter"><div class="bar" style="width:100%;background:#059669"></div><div class="num">312,933</div><div class="label">Donations</div></div>
+  <div class="counter"><div class="bar" style="width:100%;background:#7c3aed"></div><div class="num">52,133</div><div class="label">Justice Funding</div></div>
+  <div class="counter"><div class="bar" style="width:100%;background:#f97316"></div><div class="num">18,069</div><div class="label">Grants</div></div>
+  <div class="counter"><div class="bar" style="width:100%;background:#ec4899"></div><div class="num">30,760</div><div class="label">Identifiers</div></div>
+</div>
+
+<!-- Money Flows -->
+<div class="section">
+  <div class="section-head">Money Flows — Who Pays Whom</div>
+  <div class="explain">
+    <p>Every dollar the Australian Government spends on contracts, every political donation, and every philanthropic grant — traced from source to recipient. This shows the 8 largest money flow corridors across $169B in tracked transactions.</p>
+    <div class="links">
+      <a href="/procurement">Browse Contracts (670K)</a>
+      <a href="/power" class="red">Power Map</a>
+      <a href="/grants" class="yellow">Grants Database</a>
+    </div>
+  </div>
+  <div class="flow-row">
+    <div class="flow-cell"><div class="fl-label">Government → Companies</div><div class="fl-val" style="color:#1040C0">$151.2B</div><div class="fl-sub">157,085 contracts</div></div>
+    <div class="flow-cell"><div class="fl-label">Government → Charities</div><div class="fl-val" style="color:#059669">$9.7B</div><div class="fl-sub">7,617 contracts</div></div>
+    <div class="flow-cell"><div class="fl-label">Foundations → Grants</div><div class="fl-val" style="color:#F0C020">$3.5B</div><div class="fl-sub">5,443 grants awarded</div></div>
+    <div class="flow-cell"><div class="fl-label">Companies → Political Parties</div><div class="fl-val" style="color:#D02020">$1.3B</div><div class="fl-sub">36,407 donations</div></div>
+  </div>
+  <div class="flow-row">
+    <div class="flow-cell"><div class="fl-label">Government → Foundations</div><div class="fl-val" style="color:#7c3aed">$3.2B</div><div class="fl-sub">4,452 contracts</div></div>
+    <div class="flow-cell"><div class="fl-label">Government → Indigenous Corps</div><div class="fl-val" style="color:#f97316">$105.5M</div><div class="fl-sub">499 contracts</div></div>
+    <div class="flow-cell"><div class="fl-label">Government → Social Enterprises</div><div class="fl-val" style="color:#ec4899">$76.5M</div><div class="fl-sub">250 contracts</div></div>
+    <div class="flow-cell"><div class="fl-label">Total Tracked</div><div class="fl-val" style="color:#fff">$169.1B</div><div class="fl-sub">211,783 relationships</div></div>
+  </div>
+</div>
+
+<!-- Sankey -->
+<div class="section">
+  <div class="section-head">Relationship Flow — Sources → Types → Targets</div>
+  <div class="explain">
+    <p>How 211K relationships flow through the system. Left column shows who originates the money (government, companies, foundations, charities). Middle column shows the mechanism (contracts, donations, grants). Right column shows who receives it. Width of each flow is proportional to volume.</p>
+    <div class="links">
+      <a href="/entities">Entity Graph (100K)</a>
+      <a href="/mission-control" class="purple">Mission Control</a>
+    </div>
+  </div>
+  <div id="sankey"></div>
+</div>
+
+<!-- Entity Types -->
+<div class="section">
+  <div class="section-head">Entity Universe — 100,036 Resolved Entities</div>
+  <div class="explain">
+    <p>Every organisation CivicGraph tracks — resolved across ACNC, AusTender, AEC, ATO, ORIC, and ABR data. Each entity has a unique GS-ID linking all its identities across registries. Companies dominate by volume, but charities and Indigenous corporations carry the most social signal.</p>
+    <div class="links">
+      <a href="/entities">Browse All Entities</a>
+      <a href="/charities" class="green">Charities (64K)</a>
+      <a href="/social-enterprises" class="purple">Social Enterprises</a>
+      <a href="/foundations" class="yellow">Foundations (10.7K)</a>
+    </div>
+  </div>
+  <div class="type-grid" id="type-grid"></div>
+</div>
+
+<!-- Geography -->
+<div class="section">
+  <div class="section-head">Geographic Distribution</div>
+  <div class="explain">
+    <p>Where Australia's funded organisations are located — by state and by ABS remoteness classification. NSW and VIC dominate entity counts, but the real story is the funding disparity between major cities and remote communities. Remote and very remote areas have 7,801 community-controlled organisations but receive a fraction of per-capita funding.</p>
+    <div class="links">
+      <a href="/places">Browse Places</a>
+      <a href="/insights" class="red">Funding Insights</a>
+    </div>
+  </div>
+  <div class="geo-grid">
+    <div class="geo-col">
+      <h4>By State</h4>
+      <div id="state-bars"></div>
+    </div>
+    <div class="geo-col">
+      <h4>By Remoteness</h4>
+      <div id="remote-bars"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Leaflet Map -->
+<div class="section">
+  <div class="section-head">Community Funding Gaps — <span id="map-count">Loading...</span> Postcodes</div>
+  <div class="explain">
+    <p>How underserved is each community relative to its need? Gap scores combine external funding share, SEIFA disadvantage decile, and remoteness. Red = critical gaps (70+), orange = high (50-69), yellow = moderate (30-49), green = well-served. Click any dot to explore that postcode's full funding profile.</p>
+    <div class="links">
+      <a href="/places">Explore All Places</a>
+      <a href="/api/places/gaps" class="red">Gap Scores API</a>
+      <a href="/dashboard" class="yellow">Data Observatory</a>
+    </div>
+  </div>
+  <div id="map-container"></div>
+  <div class="legend" style="margin-top:12px;">
+    <div class="legend-item"><div class="legend-swatch" style="background:#D02020"></div>Critical (70+)</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#f97316"></div>High (50-69)</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#F0C020"></div>Moderate (30-49)</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#059669"></div>Well-served (&lt;30)</div>
+  </div>
+</div>
+
+<!-- Entity Relationship Network -->
+<div class="section">
+  <div class="section-head">Entity Type Relationships — How Types Connect Through Data</div>
+  <div class="explain">
+    <p>A network view of how different entity types connect through real transactions. Government is the hub — linked to every other type through contracts, grants, and justice funding. Companies and charities form a secondary axis through procurement subcontracting. Drag nodes to explore the structure.</p>
+    <div class="links">
+      <a href="/power" class="purple">Power Map</a>
+      <a href="/entities">Entity Graph</a>
+    </div>
+  </div>
+  <div id="entity-network" style="height:500px;"></div>
+</div>
+
+<!-- Coverage -->
+<div class="section">
+  <div class="section-head">Data Enrichment Coverage</div>
+  <div class="explain">
+    <p>How complete is our geographic enrichment? Starting from raw ABN and name data, CivicGraph resolves each entity's postcode, then cascades to remoteness (ABS), LGA, and SEIFA disadvantage decile. Coverage above 93% across all dimensions — up from 43% remoteness coverage two weeks ago. Community-controlled classification identifies First Nations organisations using ORIC data and name pattern matching.</p>
+    <div class="links">
+      <a href="/ops/health" class="green">Data Health Dashboard</a>
+      <a href="/mission-control">Mission Control</a>
+    </div>
+  </div>
+  <div class="coverage">
+    <div class="cov-cell"><div class="cov-val" style="color:#1040C0">96.4%</div><div class="cov-label">Postcode</div></div>
+    <div class="cov-cell"><div class="cov-val" style="color:#059669">96.4%</div><div class="cov-label">Remoteness</div></div>
+    <div class="cov-cell"><div class="cov-val" style="color:#F0C020">95.1%</div><div class="cov-label">LGA</div></div>
+    <div class="cov-cell"><div class="cov-val" style="color:#D02020">93.5%</div><div class="cov-label">SEIFA Decile</div></div>
+    <div class="cov-cell"><div class="cov-val" style="color:#7c3aed">7,801</div><div class="cov-label">Community Controlled</div></div>
+    <div class="cov-cell"><div class="cov-val" style="color:#f97316">2,925</div><div class="cov-label">Postcodes Mapped</div></div>
+  </div>
+</div>
+
+<!-- Data Pipeline -->
+<div class="section">
+  <div class="section-head">Data Pipeline — 48 Agents, 9 Categories</div>
+  <div class="explain">
+    <p>CivicGraph's data pipeline is fully automated — 48 agents that ingest from government registries, resolve entities across datasets, enrich with geographic and demographic data, analyse for power concentration and funding gaps, and monitor data quality. Each agent logs runs, items found, and errors to the agent_runs table for full observability.</p>
+    <div class="links">
+      <a href="/ops" class="red">Ops Dashboard</a>
+      <a href="/ops/health">Agent Health</a>
+      <a href="/mission-control" class="purple">Mission Control</a>
+    </div>
+  </div>
+  <div class="pipeline">
+    <div class="pipe-stage"><div class="pipe-name">Ingest</div><div class="pipe-count">12</div><div class="pipe-sub">ACNC, AusTender, AEC, ORIC, ATO, ABR</div></div>
+    <div class="pipe-stage"><div class="pipe-name">Resolve</div><div class="pipe-count">8</div><div class="pipe-sub">Entity matching, ABN linking, dedup</div></div>
+    <div class="pipe-stage"><div class="pipe-name">Enrich</div><div class="pipe-count">14</div><div class="pipe-sub">Foundations, SE, geo, SEIFA, remoteness</div></div>
+    <div class="pipe-stage"><div class="pipe-name">Analyse</div><div class="pipe-count">8</div><div class="pipe-sub">Power maps, gaps, benchmarks</div></div>
+    <div class="pipe-stage"><div class="pipe-name">Monitor</div><div class="pipe-count">6</div><div class="pipe-sub">Health, freshness, quality, alerts</div></div>
+  </div>
+</div>
+
+<!-- Schema -->
+<div class="section">
+  <div class="section-head">Schema — Click Any Table for Columns</div>
+  <div class="explain">
+    <p>The full database schema — 14 core tables and 7 materialized views centred around gs_entities, the resolved entity graph. Click any table node to see its columns. Lines show foreign key relationships and data flows between tables. The hub-and-spoke design reflects how entity resolution works: every dataset connects back to the central entity graph via ABN, name matching, or explicit ID links.</p>
+    <div class="links">
+      <a href="/api/data">Public Data API</a>
+      <a href="/api/data/health" class="green">Health API</a>
+      <a href="/dashboard" class="yellow">Data Observatory</a>
+    </div>
+  </div>
+  <div id="schema" style="height:580px"></div>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-swatch" style="background:#1040C0"></div>Core</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#D02020"></div>Source</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#F0C020"></div>Geo</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#059669"></div>Platform</div>
+  </div>
+</div>
+
+<div class="footer">
+  CivicGraph — Decision Infrastructure for Government & Social Sector — Built on Supabase — 14 tables, 354 columns, 1.48M records
+</div>
+
+<script>
+// ── Entity types ──
+const types = [
+  { name: 'Charity', count: 52488, color: '#1040C0' },
+  { name: 'Company', count: 24074, color: '#D02020' },
+  { name: 'Foundation', count: 10746, color: '#F0C020' },
+  { name: 'Indigenous Corp', count: 7348, color: '#f97316' },
+  { name: 'Social Enterprise', count: 5180, color: '#059669' },
+  { name: 'Government Body', count: 134, color: '#7c3aed' },
+  { name: 'Political Party', count: 66, color: '#ec4899' },
+];
+const maxType = types[0].count;
+const tg = document.getElementById('type-grid');
+types.forEach(t => {
+  const pct = ((t.count / 100036) * 100).toFixed(1);
+  tg.innerHTML += `<div class="type-card"><div class="name">${t.name}</div><div class="val" style="color:${t.color}">${t.count.toLocaleString()}</div><div class="pct">${pct}%</div><div class="bar-bg"><div class="bar-fill" style="width:${(t.count/maxType)*100}%;background:${t.color}"></div></div></div>`;
+});
+
+// ── State bars ──
+const states = [
+  { name: 'NSW', count: 27586 }, { name: 'VIC', count: 21081 }, { name: 'QLD', count: 12777 },
+  { name: 'WA', count: 9085 }, { name: 'SA', count: 5315 }, { name: 'ACT', count: 4583 },
+  { name: 'NT', count: 1857 }, { name: 'TAS', count: 1608 },
+];
+const maxState = states[0].count;
+const sb = document.getElementById('state-bars');
+const stateColors = ['#1040C0','#D02020','#F0C020','#059669','#7c3aed','#f97316','#ec4899','#06b6d4'];
+states.forEach((s, i) => {
+  sb.innerHTML += `<div class="geo-bar"><div class="geo-name">${s.name}</div><div class="geo-track"><div class="geo-fill" style="width:${(s.count/maxState)*100}%;background:${stateColors[i]}"><span>${s.count.toLocaleString()}</span></div></div></div>`;
+});
+
+// ── Remoteness bars ──
+const remotes = [
+  { name: 'Major Cities', count: 66810, color: '#1040C0' },
+  { name: 'Inner Regional', count: 14602, color: '#059669' },
+  { name: 'Outer Regional', count: 9871, color: '#F0C020' },
+  { name: 'Very Remote', count: 3155, color: '#D02020' },
+  { name: 'Remote', count: 1923, color: '#f97316' },
+];
+const maxRemote = remotes[0].count;
+const rb = document.getElementById('remote-bars');
+remotes.forEach(r => {
+  rb.innerHTML += `<div class="geo-bar geo-bar-remote"><div class="geo-name">${r.name}</div><div class="geo-track"><div class="geo-fill" style="width:${(r.count/maxRemote)*100}%;background:${r.color}"><span>${r.count.toLocaleString()}</span></div></div></div>`;
+});
+
+// ══════════════════════════════════════════════════════════════
+// SANKEY — Fixed 3-column layout with cubic bezier paths
+// ══════════════════════════════════════════════════════════════
+(function() {
+  const containerW = document.getElementById('sankey').clientWidth;
+  const marginLeft = 180;
+  const marginRight = 180;
+  const width = containerW;
+  const height = 700;
+  const nodeW = 14;
+  const nodeGap = 16;
+
+  const svg = d3.select('#sankey').append('svg')
+    .attr('viewBox', `0 0 ${width} ${height}`)
+    .attr('preserveAspectRatio', 'xMidYMid meet')
+    .style('width', '100%')
+    .style('height', 'auto');
+
+  // Column X positions
+  const col0X = marginLeft;
+  const col1X = width / 2 - nodeW / 2;
+  const col2X = width - marginRight - nodeW;
+
+  // Source nodes (left column)
+  const sources = [
+    { name: 'Government', count: '170K', color: '#7c3aed' },
+    { name: 'Companies', count: '36K', color: '#D02020' },
+    { name: 'Foundations', count: '5.5K', color: '#F0C020' },
+    { name: 'Charities', count: '262', color: '#1040C0' },
+  ];
+
+  // Middle nodes (relationship types)
+  const middles = [
+    { name: 'Contracts', count: '170K', color: '#1040C0' },
+    { name: 'Donations', count: '36K', color: '#D02020' },
+    { name: 'Grants', count: '5.4K', color: '#F0C020' },
+  ];
+
+  // Target nodes (right column)
+  const targets = [
+    { name: 'Companies', count: '157K recv', color: '#D02020' },
+    { name: 'Political Parties', count: '36K recv', color: '#ec4899' },
+    { name: 'Charities', count: '7.6K recv', color: '#1040C0' },
+    { name: 'Foundations', count: '9.9K recv', color: '#F0C020' },
+    { name: 'Indigenous Corps', count: '499 recv', color: '#f97316' },
+    { name: 'Social Enterprises', count: '250 recv', color: '#059669' },
+  ];
+
+  // Calculate Y positions for each column
+  function layoutColumn(items, totalHeight, startY) {
+    // Size nodes proportional to log of their implicit value
+    const values = items.map(d => {
+      const m = d.count.match(/[\d.]+/);
+      let v = parseFloat(m[0]);
+      if (d.count.includes('K')) v *= 1000;
+      return Math.log10(v + 1);
+    });
+    const totalVal = values.reduce((a, b) => a + b, 0);
+    const availH = totalHeight - (items.length - 1) * nodeGap;
+    let y = startY;
+    return items.map((item, i) => {
+      const h = Math.max(28, (values[i] / totalVal) * availH);
+      const pos = { ...item, y, h };
+      y += h + nodeGap;
+      return pos;
+    });
+  }
+
+  const padY = 30;
+  const usableH = height - padY * 2;
+
+  const srcNodes = layoutColumn(sources, usableH, padY);
+  const midNodes = layoutColumn(middles, usableH, padY);
+  const tgtNodes = layoutColumn(targets, usableH, padY);
+
+  // Assign x positions
+  srcNodes.forEach(n => { n.x = col0X; });
+  midNodes.forEach(n => { n.x = col1X; });
+  tgtNodes.forEach(n => { n.x = col2X; });
+
+  // Flow definitions: [srcCol, srcIdx, tgtCol, tgtIdx, count, dollars, color]
+  const flows = [
+    // Source -> Middle
+    { s: srcNodes[0], t: midNodes[0], count: 169903, dollars: '$164.3B', color: '#7c3aed' },
+    { s: srcNodes[1], t: midNodes[1], count: 36059, dollars: '$1.3B', color: '#D02020' },
+    { s: srcNodes[2], t: midNodes[2], count: 5443, dollars: '$3.5B', color: '#F0C020' },
+    { s: srcNodes[2], t: midNodes[1], count: 86, dollars: '$7.7M', color: '#F0C020' },
+    { s: srcNodes[3], t: midNodes[1], count: 262, dollars: '$3.6M', color: '#1040C0' },
+    // Middle -> Target
+    { s: midNodes[0], t: tgtNodes[0], count: 157085, dollars: '$151.2B', color: '#1040C0' },
+    { s: midNodes[0], t: tgtNodes[2], count: 7617, dollars: '$9.7B', color: '#1040C0' },
+    { s: midNodes[0], t: tgtNodes[3], count: 4452, dollars: '$3.2B', color: '#1040C0' },
+    { s: midNodes[0], t: tgtNodes[4], count: 499, dollars: '$105M', color: '#1040C0' },
+    { s: midNodes[0], t: tgtNodes[5], count: 250, dollars: '$76M', color: '#1040C0' },
+    { s: midNodes[1], t: tgtNodes[1], count: 36407, dollars: '$1.3B', color: '#D02020' },
+    { s: midNodes[2], t: tgtNodes[3], count: 5443, dollars: '$3.5B', color: '#F0C020' },
+  ];
+
+  // Draw flows as cubic bezier
+  flows.forEach(f => {
+    const thickness = Math.max(2, Math.log(f.count + 1) * 3.2);
+    const sx = f.s.x + nodeW;
+    const tx = f.t.x;
+    const sy = f.s.y + f.s.h / 2;
+    const ty = f.t.y + f.t.h / 2;
+    const cpx1 = sx + (tx - sx) * 0.4;
+    const cpx2 = tx - (tx - sx) * 0.4;
+
+    svg.append('path')
+      .attr('class', 'sankey-link')
+      .attr('d', `M${sx},${sy} C${cpx1},${sy} ${cpx2},${ty} ${tx},${ty}`)
+      .attr('stroke', f.color)
+      .attr('stroke-width', thickness)
+      .append('title').text(`${f.s.name} → ${f.t.name}: ${f.count.toLocaleString()} (${f.dollars})`);
+  });
+
+  // Draw source nodes + labels
+  srcNodes.forEach(n => {
+    svg.append('rect').attr('x', n.x).attr('y', n.y).attr('width', nodeW).attr('height', n.h).attr('fill', n.color);
+    // Label left of node
+    svg.append('text')
+      .attr('x', n.x - 10).attr('y', n.y + n.h / 2)
+      .attr('text-anchor', 'end').attr('dominant-baseline', 'middle')
+      .attr('fill', '#ccc').attr('font-size', '12px').attr('font-weight', '700')
+      .attr('font-family', 'Inter, sans-serif')
+      .text(n.name);
+    svg.append('text')
+      .attr('x', n.x - 10).attr('y', n.y + n.h / 2 + 14)
+      .attr('text-anchor', 'end').attr('dominant-baseline', 'middle')
+      .attr('fill', '#666').attr('font-size', '10px').attr('font-weight', '600')
+      .attr('font-family', 'Inter, sans-serif')
+      .text(n.count);
+  });
+
+  // Draw middle nodes + labels
+  midNodes.forEach(n => {
+    svg.append('rect').attr('x', n.x).attr('y', n.y).attr('width', nodeW).attr('height', n.h).attr('fill', n.color);
+    svg.append('text')
+      .attr('x', n.x + nodeW / 2).attr('y', n.y - 8)
+      .attr('text-anchor', 'middle').attr('dominant-baseline', 'auto')
+      .attr('fill', '#ccc').attr('font-size', '11px').attr('font-weight', '800')
+      .attr('font-family', 'Inter, sans-serif').attr('letter-spacing', '0.05em')
+      .text(n.name);
+    svg.append('text')
+      .attr('x', n.x + nodeW / 2).attr('y', n.y + n.h + 14)
+      .attr('text-anchor', 'middle').attr('dominant-baseline', 'auto')
+      .attr('fill', '#555').attr('font-size', '10px').attr('font-weight', '600')
+      .attr('font-family', 'Inter, sans-serif')
+      .text(n.count);
+  });
+
+  // Draw target nodes + labels
+  tgtNodes.forEach(n => {
+    svg.append('rect').attr('x', n.x).attr('y', n.y).attr('width', nodeW).attr('height', n.h).attr('fill', n.color);
+    // Label right of node
+    svg.append('text')
+      .attr('x', n.x + nodeW + 10).attr('y', n.y + n.h / 2)
+      .attr('text-anchor', 'start').attr('dominant-baseline', 'middle')
+      .attr('fill', '#ccc').attr('font-size', '12px').attr('font-weight', '700')
+      .attr('font-family', 'Inter, sans-serif')
+      .text(n.name);
+    svg.append('text')
+      .attr('x', n.x + nodeW + 10).attr('y', n.y + n.h / 2 + 14)
+      .attr('text-anchor', 'start').attr('dominant-baseline', 'middle')
+      .attr('fill', '#666').attr('font-size', '10px').attr('font-weight', '600')
+      .attr('font-family', 'Inter, sans-serif')
+      .text(n.count);
+  });
+})();
+
+// ══════════════════════════════════════════════════════════════
+// LEAFLET MAP — fetches live gap data from API
+// ══════════════════════════════════════════════════════════════
+(async function() {
+  function gapColor(score) {
+    if (score >= 70) return '#D02020';
+    if (score >= 50) return '#f97316';
+    if (score >= 30) return '#F0C020';
+    return '#059669';
+  }
+
+  let geoData = [];
+  try {
+    const res = await fetch('/api/places/gaps?limit=2000');
+    const json = await res.json();
+    geoData = (json.postcodes || []).filter(p => p.lat != null && p.lng != null);
+    document.getElementById('map-count').textContent = geoData.length.toLocaleString();
+  } catch (e) {
+    document.getElementById('map-count').textContent = 'Error loading data';
+  }
+
+  const _REMOVED = [{"p":"REMOVED{"p":"6728","la":-17.091,"ln":124.592,"r":"Very ","e":1,"s":"NT","g":100},{"p":"2878","la":-32.823,"ln":144.495,"r":"Very ","e":1,"s":"NSW","g":100},{"p":"6799","la":-12.17,"ln":96.832,"r":"Very ","e":3,"s":"WA","g":100},{"p":"4892","la":-14.66,"ln":143.374,"r":"Very ","e":2,"s":"ACT","g":100},{"p":"4891","la":-17.447,"ln":140.929,"r":"Very ","e":2,"s":"QLD","g":100},{"p":"4875","la":-9.585,"ln":143.769,"r":"Very ","e":3,"s":"ACT","g":100},{"p":"6718","la":-20.971,"ln":117.741,"r":"Very ","e":1,"s":"ACT","g":100},{"p":"5690","la":-31.689,"ln":133.61,"r":"Very ","e":2,"s":"ACT","g":100},{"p":"6442","la":-31.195,"ln":121.58,"r":"Very ","e":4,"s":"WA","g":90},{"p":"2880","la":-30.17,"ln":142.203,"r":"Very ","e":1,"s":"SA","g":90},{"p":"6743","la":-15.174,"ln":128.551,"r":"Very ","e":3,"s":"ACT","g":90},{"p":"6701","la":-24.735,"ln":115.152,"r":"Very ","e":2,"s":"ACT","g":90},{"p":"5670","la":-33.409,"ln":135.021,"r":"Very ","e":1,"s":"SA","g":90},{"p":"5583","la":-35.118,"ln":137.739,"r":"Remot","e":4,"s":"SA","g":80},{"p":"5611","la":-33.252,"ln":136.896,"r":"Remot","e":1,"s":"SA","g":80},{"p":"7470","la":-41.902,"ln":145.501,"r":"Remot","e":2,"s":"TAS","g":80},{"p":"7140","la":-42.544,"ln":146.455,"r":"Remot","e":21,"s":"TAS","g":80},{"p":"6530","la":-28.802,"ln":114.863,"r":"Very ","e":4,"s":"ACT","g":80},{"p":"4874","la":-12.499,"ln":142.625,"r":"Very ","e":1,"s":"ACT","g":80},{"p":"6725","la":-18.773,"ln":122.754,"r":"Very ","e":2,"s":"NT","g":80},{"p":"5733","la":-29.721,"ln":138.408,"r":"Very ","e":1,"s":"ACT","g":80},{"p":"7469","la":-41.784,"ln":145.202,"r":"Remot","e":4,"s":"TAS","g":80},{"p":"3888","la":-37.391,"ln":148.661,"r":"Remot","e":2,"s":"ACT","g":72},{"p":"3395","la":-35.833,"ln":142.421,"r":"Remot","e":4,"s":"VIC","g":72},{"p":"6514","la":-30.027,"ln":115.087,"r":"Remot","e":1,"s":"WA","g":72},{"p":"2648","la":-33.467,"ln":141.908,"r":"Remot","e":1,"s":"SA","g":72},{"p":"2406","la":-28.894,"ln":148.848,"r":"Remot","e":2,"s":"QLD","g":72},{"p":"6488","la":-31.128,"ln":117.736,"r":"Remot","e":2,"s":"WA","g":72},{"p":"2874","la":-32.62,"ln":147.539,"r":"Remot","e":1,"s":"NSW","g":72},{"p":"5577","la":-35.036,"ln":137.31,"r":"Remot","e":2,"s":"SA","g":72},{"p":"5433","la":-32.181,"ln":138.106,"r":"Remot","e":2,"s":"SA","g":72},{"p":"5653","la":-32.968,"ln":135.229,"r":"Very ","e":1,"s":"SA","g":70},{"p":"6798","la":-10.487,"ln":105.641,"r":"Very ","e":7,"s":"WA","g":70},{"p":"7030","la":-42.304,"ln":146.958,"r":"Remot","e":26,"s":"TAS","g":68},{"p":"6760","la":-22.027,"ln":124.384,"r":"Very ","e":3,"s":"WA","g":67},{"p":"6431","la":-30.404,"ln":122.684,"r":"Very ","e":12,"s":"WA","g":67},{"p":"6630","la":-27.57,"ln":115.724,"r":"Very ","e":9,"s":"WA","g":67},{"p":"7330","la":-40.782,"ln":145.058,"r":"Remot","e":20,"s":"TAS","g":65},{"p":"3874","la":-38.514,"ln":146.836,"r":"Remot","e":1,"s":"VIC","g":64},{"p":"5575","la":-34.823,"ln":137.545,"r":"Remot","e":16,"s":"SA","g":64},{"p":"2400","la":-29.475,"ln":149.462,"r":"Remot","e":4,"s":"ACT","g":64},{"p":"7116","la":-43.262,"ln":147.034,"r":"Remot","e":1,"s":"NSW","g":64},{"p":"3424","la":-35.728,"ln":141.931,"r":"Remot","e":1,"s":"Vic","g":64},{"p":"3396","la":-35.716,"ln":142.329,"r":"Remot","e":4,"s":"VIC","g":64},{"p":"4873","la":-16.347,"ln":145.421,"r":"Remot","e":1,"s":"ACT","g":64},{"p":"6370","la":-32.806,"ln":117.626,"r":"Remot","e":2,"s":"WA","g":64},{"p":"6398","la":-34.789,"ln":116.604,"r":"Remot","e":5,"s":"WA","g":64},{"p":"6519","la":-29.514,"ln":115.598,"r":"Remot","e":1,"s":"WA","g":64},{"p":"5576","la":-35.051,"ln":137.56,"r":"Remot","e":6,"s":"SA","g":64},{"p":"6426","la":-30.361,"ln":119.311,"r":"Remot","e":3,"s":"WA","g":64},{"p":"7468","la":-42.706,"ln":145.538,"r":"Remot","e":1,"s":"TAS","g":64},{"p":"3890","la":-37.566,"ln":149.217,"r":"Remot","e":5,"s":"VIC","g":64},{"p":"6415","la":-31.481,"ln":118.29,"r":"Remot","e":12,"s":"WA","g":64},{"p":"3490","la":-34.912,"ln":142.207,"r":"Remot","e":4,"s":"VIC","g":64},{"p":"6418","la":-31.896,"ln":118.163,"r":"Remot","e":4,"s":"WA","g":64},{"p":"6317","la":-33.647,"ln":117.739,"r":"Remot","e":27,"s":"WA","g":62},{"p":"6623","la":-29.022,"ln":116.12,"r":"Remot","e":7,"s":"WA","g":62},{"p":"3465","la":-37.021,"ln":143.611,"r":"Outer","e":26,"s":"VIC","g":60},{"p":"6753","la":-23.154,"ln":119.714,"r":"Very ","e":3,"s":"ACT","g":60},{"p":"2371","la":-29.366,"ln":151.815,"r":"Outer","e":2,"s":"NSW","g":60},{"p":"2395","la":-31.584,"ln":149.441,"r":"Outer","e":2,"s":"NSW","g":60},{"p":"4357","la":-27.958,"ln":151.104,"r":"Outer","e":10,"s":"QLD","g":60},{"p":"3540","la":-35.893,"ln":143.45,"r":"Outer","e":1,"s":"VIC","g":60},{"p":"2440","la":-30.376,"ln":153.02,"r":"Outer","e":3,"s":"ACT","g":60},{"p":"2475","la":-28.546,"ln":152.388,"r":"Outer","e":1,"s":"NSW","g":60},{"p":"6485","la":-31.185,"ln":117.381,"r":"Outer","e":4,"s":"WA","g":60},{"p":"6450","la":-33.401,"ln":122.211,"r":"Very ","e":2,"s":"ACT","g":60},{"p":"2347","la":-30.282,"ln":150.523,"r":"Outer","e":7,"s":"NSW","g":60},{"p":"3472","la":-36.865,"ln":143.658,"r":"Outer","e":4,"s":"VIC","g":60},{"p":"6443","la":-32.395,"ln":123.744,"r":"Very ","e":5,"s":"WA","g":60},{"p":"4314","la":-26.965,"ln":152.054,"r":"Outer","e":8,"s":"QLD","g":60},{"p":"5520","la":-33.769,"ln":138.12,"r":"Outer","e":4,"s":"SA","g":60},{"p":"7467","la":-42.094,"ln":145.53,"r":"Remot","e":4,"s":"TAS","g":60},{"p":"2341","la":-31.347,"ln":150.611,"r":"Outer","e":4,"s":"NSW","g":60},{"p":"6346","la":-33.319,"ln":120.349,"r":"Very ","e":7,"s":"WA","g":60},{"p":"4888","la":-17.499,"ln":145.491,"r":"Remot","e":20,"s":"QLD","g":60},{"p":"6722","la":-20.408,"ln":118.607,"r":"Very ","e":1,"s":"ACT","g":60},{"p":"2663","la":-34.933,"ln":147.717,"r":"Outer","e":1,"s":"ACT","g":60},{"p":"5556","la":-33.951,"ln":137.611,"r":"Outer","e":7,"s":"SA","g":60},{"p":"3423","la":-36.132,"ln":141.941,"r":"Outer","e":4,"s":"VIC","g":60},{"p":"3595","la":-35.203,"ln":143.352,"r":"Outer","e":2,"s":"VIC","g":60},{"p":"2424","la":-31.64,"ln":151.965,"r":"Outer","e":1,"s":"NSW","g":60},{"p":"5540","la":-33.206,"ln":138.08,"r":"Outer","e":52,"s":"SA","g":60},{"p":"2645","la":-35.334,"ln":146.332,"r":"Outer","e":2,"s":"NSW","g":60},{"p":"3825","la":-37.979,"ln":146.343,"r":"Outer","e":43,"s":"VIC","g":59},{"p":"6367","la":-32.423,"ln":118.352,"r":"Remot","e":5,"s":"WA","g":58},{"p":"5582","la":-34.942,"ln":137.735,"r":"Remot","e":5,"s":"SA","g":56},{"p":"2875","la":-33.135,"ln":147.578,"r":"Remot","e":14,"s":"NSW","g":56},{"p":"6475","la":-30.614,"ln":117.44,"r":"Remot","e":2,"s":"WA","g":56},{"p":"2397","la":-29.926,"ln":149.691,"r":"Remot","e":2,"s":"NSW","g":56},{"p":"3885","la":-37.292,"ln":148.119,"r":"Remot","e":9,"s":"VIC","g":56},{"p":"6490","la":-31.162,"ln":118.107,"r":"Remot","e":2,"s":"WA","g":56},{"p":"6477","la":-30.776,"ln":117.939,"r":"Remot","e":4,"s":"WA","g":56},{"p":"5640","la":-33.606,"ln":136.438,"r":"Remot","e":5,"s":"SA","g":56},{"p":"6726","la":-17.95,"ln":122.196,"r":"Remot","e":2,"s":"ACT","g":56},{"p":"2873","la":-32.269,"ln":147.26,"r":"Remot","e":4,"s":"NSW","g":56},{"p":"2405","la":-28.895,"ln":149.647,"r":"Remot","e":1,"s":"NSW","g":56},{"p":"5633","la":-33.417,"ln":135.711,"r":"Remot","e":3,"s":"SA","g":56},{"p":"2388","la":-30.427,"ln":149.002,"r":"Remot","e":22,"s":"NSW","g":56},{"p":"6535","la":-27.832,"ln":114.852,"r":"Remot","e":13,"s":"WA","g":55},{"p":"5606","la":-35.156,"ln":136.466,"r":"Remot","e":57,"s":"SA","g":55},{"p":"6312","la":-32.979,"ln":117.307,"r":"Remot","e":28,"s":"WA","g":55},{"p":"2700","la":-34.902,"ln":146.304,"r":"Outer","e":1,"s":"ACT","g":54},{"p":"3478","la":-36.689,"ln":143.231,"r":"Outer","e":17,"s":"VIC","g":54},{"p":"2382","la":-30.595,"ln":150.178,"r":"Outer","e":11,"s":"NSW","g":54},{"p":"5573","la":-34.514,"ln":137.509,"r":"Outer","e":1,"s":"ACT","g":54},{"p":"3390","la":-36.584,"ln":142.487,"r":"Outer","e":4,"s":"VIC","g":54},{"p":"2633","la":-36.865,"ln":148.702,"r":"Outer","e":4,"s":"NSW","g":54},{"p":"5461","la":-34.095,"ln":138.444,"r":"Outer","e":16,"s":"SA","g":54},{"p":"2372","la":-29.083,"ln":152,"r":"Outer","e":1,"s":"ACT","g":54},{"p":"6323","la":-34.486,"ln":117.626,"r":"Outer","e":2,"s":"WA","g":54},{"p":"7117","la":-43.338,"ln":147.04,"r":"Outer","e":3,"s":"TAS","g":54},{"p":"2460","la":-29.321,"ln":153.271,"r":"Outer","e":1,"s":"ACT","g":54},{"p":"3713","la":-37.208,"ln":145.88,"r":"Outer","e":3,"s":"VIC","g":54},{"p":"5522","la":-33.578,"ln":138.003,"r":"Outer","e":4,"s":"SA","g":54},{"p":"4880","la":-17.067,"ln":145.373,"r":"Outer","e":1,"s":"ACT","g":54},{"p":"2329","la":-32.047,"ln":150.188,"r":"Outer","e":8,"s":"NSW","g":54},{"p":"3393","la":-36.258,"ln":142.387,"r":"Outer","e":1,"s":"ACT","g":54},{"p":"2441","la":-30.816,"ln":152.831,"r":"Outer","e":1,"s":"ACT","g":54},{"p":"4370","la":-28.253,"ln":152.231,"r":"Outer","e":1,"s":"NSW","g":54},{"p":"5570","la":-34.274,"ln":137.899,"r":"Outer","e":2,"s":"SA","g":54},{"p":"7112","la":-43.292,"ln":147.14,"r":"Outer","e":1,"s":"ACT","g":54},{"p":"7120","la":-42.317,"ln":147.487,"r":"Outer","e":8,"s":"TAS","g":54},{"p":"2429","la":-31.77,"ln":152.292,"r":"Outer","e":35,"s":"NSW","g":54},{"p":"5558","la":-34.105,"ln":137.598,"r":"Outer","e":1,"s":"ACT","g":54},{"p":"3310","la":-37.708,"ln":141.549,"r":"Outer","e":1,"s":"VIC","g":54},{"p":"5560","la":-33.895,"ln":138.032,"r":"Outer","e":2,"s":"SA","g":54},{"p":"7027","la":-42.536,"ln":147.383,"r":"Outer","e":5,"s":"TAS","g":54},{"p":"3575","la":-36.056,"ln":144.159,"r":"Outer","e":4,"s":"VIC","g":54},{"p":"6308","la":-32.579,"ln":116.665,"r":"Outer","e":10,"s":"WA","g":54},{"p":"2447","la":-30.771,"ln":152.752,"r":"Outer","e":1,"s":"ACT","g":54},{"p":"2360","la":-29.63,"ln":151.162,"r":"Outer","e":2,"s":"ACT","g":54},{"p":"2402","la":-29.442,"ln":150.548,"r":"Outer","e":1,"s":"SA","g":54},{"p":"3412","la":-36.659,"ln":141.366,"r":"Outer","e":2,"s":"VIC","g":54},{"p":"2343","la":-31.665,"ln":150.149,"r":"Outer","e":1,"s":"ACT","g":54},{"p":"4886","la":-17.536,"ln":145.634,"r":"Outer","e":2,"s":"QLD","g":54},{"p":"2357","la":-31.193,"ln":149.264,"r":"Outer","e":2,"s":"ACT","g":54},{"p":"2333","la":-32.249,"ln":150.702,"r":"Outer","e":1,"s":"ACT","g":54},{"p":"3361","la":-37.753,"ln":143.373,"r":"Outer","e":2,"s":"VIC","g":54},{"p":"2404","la":-29.892,"ln":150.735,"r":"Outer","e":7,"s":"NSW","g":54},{"p":"3377","la":-37.232,"ln":142.957,"r":"Outer","e":37,"s":"VIC","g":54},{"p":"3517","la":-36.483,"ln":143.887,"r":"Outer","e":5,"s":"VIC","g":54},{"p":"3500","la":-34.193,"ln":142.154,"r":"Outer","e":1,"s":"SA","g":54},{"p":"2403","la":-29.62,"ln":150.787,"r":"Outer","e":2,"s":"NSW","g":54},{"p":"3496","la":-34.387,"ln":141.388,"r":"Outer","e":11,"s":"VIC","g":54},{"p":"3475","la":-36.706,"ln":143.512,"r":"Outer","e":1,"s":"VIC","g":54},{"p":"3324","la":-37.942,"ln":143.375,"r":"Outer","e":5,"s":"VIC","g":54},{"p":"3485","la":-35.712,"ln":142.672,"r":"Outer","e":4,"s":"VIC","g":54},{"p":"3909","la":-37.822,"ln":147.97,"r":"Outer","e":1,"s":"Vic","g":54},{"p":"2359","la":-30.141,"ln":151.001,"r":"Outer","e":3,"s":"NSW","g":54},{"p":"3311","la":-37.468,"ln":141.23,"r":"Outer","e":5,"s":"VIC","g":54},{"p":"5493","la":-33.015,"ln":138.747,"r":"Outer","e":2,"s":"SA","g":54},{"p":"2370","la":-29.736,"ln":151.869,"r":"Outer","e":38,"s":"NSW","g":54},{"p":"6410","la":-31.58,"ln":117.68,"r":"Outer","e":9,"s":"WA","g":53},{"p":"6315","la":-33.286,"ln":117.343,"r":"Remot","e":12,"s":"WA","g":53},{"p":"5473","la":-33.257,"ln":138.351,"r":"Outer","e":8,"s":"SA","g":53},{"p":"6531","la":-28.774,"ln":114.612,"r":"Very ","e":8,"s":"WA","g":53},{"p":"2675","la":-33.459,"ln":145.479,"r":"Remot","e":11,"s":"NSW","g":52},{"p":"5602","la":-33.53,"ln":136.861,"r":"Remot","e":5,"s":"SA","g":51},{"p":"2325","la":-32.978,"ln":151.317,"r":"Outer","e":67,"s":"NSW","g":51},{"p":"5554","la":-33.928,"ln":137.756,"r":"Outer","e":15,"s":"SA","g":50},{"p":"6432","la":-30.871,"ln":121.542,"r":"Very ","e":25,"s":"WA","g":50},{"p":"3579","la":-35.768,"ln":143.769,"r":"Outer","e":14,"s":"VIC","g":50},{"p":"2879","la":-32.275,"ln":142.333,"r":"Very ","e":6,"s":"NSW","g":50},{"p":"2899","la":-36.084,"ln":146.929,"r":"Very ","e":8,"s":"NSW","g":50},{"p":"6359","la":-32.667,"ln":119.128,"r":"Very ","e":1,"s":"WA","g":50},{"p":"6348","la":-33.881,"ln":120.146,"r":"Very ","e":2,"s":"WA","g":50},{"p":"6321","la":-34.269,"ln":117.399,"r":"Outer","e":6,"s":"WA","g":50},{"p":"5652","la":-33.091,"ln":135.25,"r":"Very ","e":7,"s":"SA","g":50},{"p":"6716","la":-21.605,"ln":116.312,"r":"Very ","e":2,"s":"WA","g":50},{"p":"3518","la":-36.475,"ln":143.586,"r":"Outer","e":6,"s":"VIC","g":50},{"p":"6638","la":-28.612,"ln":118.158,"r":"Very ","e":4,"s":"WA","g":50},{"p":"2672","la":-33.244,"ln":146.4,"r":"Remot","e":16,"s":"NSW","g":50},{"p":"2474","la":-28.499,"ln":152.885,"r":"Outer","e":28,"s":"NSW","g":48},{"p":"2632","la":-37.02,"ln":149.22,"r":"Outer","e":10,"s":"NSW","g":48},{"p":"3418","la":-36.074,"ln":141.538,"r":"Outer","e":16,"s":"VIC","g":48},{"p":"5571","la":-34.515,"ln":137.812,"r":"Outer","e":8,"s":"SA","g":48},{"p":"2355","la":-30.775,"ln":151.154,"r":"Outer","e":3,"s":"NSW","g":48},{"p":"3480","la":-36.312,"ln":142.968,"r":"Outer","e":11,"s":"VIC","g":48},{"p":"5605","la":-34.258,"ln":136.154,"r":"Remot","e":8,"s":"SA","g":48},{"p":"3494","la":-34.486,"ln":142.348,"r":"Outer","e":2,"s":"VIC","g":48},{"p":"3533","la":-35.385,"ln":142.839,"r":"Outer","e":2,"s":"VIC","g":48},{"p":"3373","la":-37.458,"ln":143.343,"r":"Outer","e":13,"s":"VIC","g":48},{"p":"2870","la":-33.035,"ln":148.168,"r":"Outer","e":1,"s":"ACT","g":48},{"p":"3847","la":-38.166,"ln":146.773,"r":"Outer","e":5,"s":"VIC","g":48},{"p":"2410","la":-28.901,"ln":150.743,"r":"Outer","e":1,"s":"NSW","g":48},{"p":"3700","la":-36.336,"ln":147.355,"r":"Outer","e":3,"s":"VIC","g":48},{"p":"3388","la":-36.598,"ln":142.694,"r":"Outer","e":9,"s":"VIC","g":48},{"p":"2338","la":-31.735,"ln":151.029,"r":"Outer","e":5,"s":"NSW","g":48},{"p":"2868","la":-32.741,"ln":148.562,"r":"Outer","e":8,"s":"NSW","g":48},{"p":"2646","la":-35.758,"ln":146.325,"r":"Outer","e":20,"s":"NSW","g":48},{"p":"2346","la":-30.729,"ln":150.518,"r":"Outer","e":9,"s":"NSW","g":48},{"p":"6409","la":-31.605,"ln":117.471,"r":"Outer","e":4,"s":"WA","g":48},{"p":"2852","la":-32.281,"ln":149.459,"r":"Outer","e":9,"s":"NSW","g":48},{"p":"2705","la":-34.49,"ln":146.373,"r":"Outer","e":1,"s":"ACT","g":48},{"p":"7109","la":-43.571,"ln":146.524,"r":"Remot","e":14,"s":"TAS","g":48},{"p":"3318","la":-37.025,"ln":141.27,"r":"Outer","e":6,"s":"VIC","g":48},{"p":"3360","la":-37.78,"ln":143.513,"r":"Outer","e":6,"s":"VIC","g":48},{"p":"2702","la":-34.867,"ln":147.014,"r":"Outer","e":1,"s":"ACT","g":48},{"p":"2671","la":-33.839,"ln":147.308,"r":"Remot","e":1,"s":"ACT","g":48},{"p":"3858","la":-37.822,"ln":146.568,"r":"Outer","e":9,"s":"VIC","g":48},{"p":"2380","la":-31.046,"ln":150.199,"r":"Outer","e":1,"s":"ACT","g":48},{"p":"6603","la":-30.874,"ln":116.726,"r":"Outer","e":6,"s":"WA","g":48},{"p":"2340","la":-31.334,"ln":151.138,"r":"Outer","e":10,"s":"ACT","g":48},{"p":"3546","la":-35.06,"ln":142.85,"r":"Outer","e":3,"s":"VIC","g":48},{"p":"2669","la":-33.815,"ln":146.667,"r":"Remot","e":10,"s":"NSW","g":48},{"p":"5471","la":-33.476,"ln":138.424,"r":"Outer","e":1,"s":"SA","g":48},{"p":"3525","la":-36.283,"ln":143.364,"r":"Outer","e":10,"s":"VIC","g":48},{"p":"2703","la":-34.608,"ln":146.371,"r":"Outer","e":2,"s":"NSW","g":48},{"p":"3585","la":-35.348,"ln":143.337,"r":"Outer","e":1,"s":"ACT","g":48},{"p":"3875","la":-37.826,"ln":147.632,"r":"Outer","e":1,"s":"ACT","g":48},{"p":"2659","la":-35.61,"ln":146.767,"r":"Outer","e":8,"s":"NSW","g":48},{"p":"3596","la":-35.124,"ln":143.328,"r":"Outer","e":1,"s":"VIC","g":48},{"p":"2658","la":-35.536,"ln":146.978,"r":"Outer","e":15,"s":"NSW","g":48},{"p":"3512","la":-35.121,"ln":141.02,"r":"Remot","e":5,"s":"VIC","g":48},{"p":"3566","la":-35.946,"ln":144.383,"r":"Outer","e":1,"s":"VIC","g":48},{"p":"3289","la":-37.893,"ln":142.228,"r":"Outer","e":1,"s":"VIC","g":48},{"p":"2665","la":-34.313,"ln":146.842,"r":"Outer","e":10,"s":"NSW","g":48},{"p":"3392","la":-36.43,"ln":142.678,"r":"Outer","e":5,"s":"VIC","g":48},{"p":"5608","la":-33.034,"ln":137.525,"r":"Outer","e":24,"s":"SA","g":48},{"p":"3414","la":-36.389,"ln":142.094,"r":"Outer","e":8,"s":"VIC","g":47},{"p":"2422","la":-31.973,"ln":151.866,"r":"Outer","e":30,"s":"NSW","g":47},{"p":"6536","la":-27.542,"ln":114.38,"r":"Remot","e":6,"s":"WA","g":47},{"p":"5730","la":-30.987,"ln":138.528,"r":"Very ","e":3,"s":"SA","g":47},{"p":"6401","la":-31.64,"ln":116.682,"r":"Outer","e":29,"s":"WA","g":47},{"p":"3304","la":-38.182,"ln":141.952,"r":"Outer","e":7,"s":"VIC","g":46},{"p":"4887","la":-17.385,"ln":145.387,"r":"Outer","e":7,"s":"QLD","g":46},{"p":"3400","la":-36.725,"ln":142.204,"r":"Outer","e":54,"s":"VIC","g":46},{"p":"2877","la":-32.845,"ln":146.085,"r":"Remot","e":22,"s":"NSW","g":46},{"p":"6306","la":-32.297,"ln":117.141,"r":"Remot","e":7,"s":"WA","g":46},{"p":"3305","la":-38.235,"ln":141.437,"r":"Outer","e":36,"s":"VIC","g":45},{"p":"6433","la":-30.749,"ln":121.466,"r":"Very ","e":8,"s":"WA","g":45},{"p":"6525","la":-29.327,"ln":115.098,"r":"Outer","e":16,"s":"WA","g":45}];
+
+  const remotenessColors = {
+    'Major': '#1040C0',
+    'Inner': '#059669',
+    'Outer': '#F0C020',
+    'Remot': '#f97316',
+    'Very ': '#D02020',
+  };
+
+  const map = L.map('map-container', {
+    center: [-28, 134],
+    zoom: 4,
+    zoomControl: true,
+    attributionControl: false,
+  });
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 18,
+  }).addTo(map);
+
+  geoData.forEach(d => {
+    const rKey = d.r.trim().substring(0, 5);
+    let color = '#888';
+    for (const [k, v] of Object.entries(remotenessColors)) {
+      if (rKey.startsWith(k.trim())) { color = v; break; }
+    }
+
+    const radius = Math.max(3, Math.sqrt(d.e) * 2);
+
+    const remotenessLabels = {
+      'Major': 'Major Cities',
+      'Inner': 'Inner Regional',
+      'Outer': 'Outer Regional',
+      'Remot': 'Remote',
+      'Very ': 'Very Remote',
+    };
+    const rLabel = remotenessLabels[d.r] || d.r.trim();
+
+    L.circleMarker([d.la, d.ln], {
+      radius: radius,
+      fillColor: color,
+      color: color,
+      weight: 1,
+      opacity: 0.8,
+      fillOpacity: 0.6,
+    }).addTo(map)
+      .bindTooltip(
+        `<div style="font-family:Inter,sans-serif;font-size:11px;">
+          <strong style="font-size:13px;">${d.p}</strong><br/>
+          <span style="color:#aaa">${rLabel}</span> | ${d.s}<br/>
+          Entities: <strong>${d.e}</strong><br/>
+          Gap Score: <strong style="color:${d.g >= 80 ? '#D02020' : d.g >= 60 ? '#f97316' : '#F0C020'}">${d.g}</strong>
+        </div>`,
+        { className: '', direction: 'top' }
+      );
+  });
+})();
+
+// ══════════════════════════════════════════════════════════════
+// ENTITY TYPE RELATIONSHIP NETWORK
+// ══════════════════════════════════════════════════════════════
+(function() {
+  const container = document.getElementById('entity-network');
+  const width = container.clientWidth;
+  const height = 500;
+  const svg = d3.select('#entity-network').append('svg')
+    .attr('width', width).attr('height', height);
+
+  const entityNodes = [
+    { id: 'Charity', count: 52488, color: '#1040C0', r: 38 },
+    { id: 'Company', count: 24074, color: '#D02020', r: 30 },
+    { id: 'Foundation', count: 10746, color: '#F0C020', r: 24 },
+    { id: 'Indigenous Corp', count: 7348, color: '#f97316', r: 20 },
+    { id: 'Social Enterprise', count: 5180, color: '#059669', r: 18 },
+    { id: 'Government Body', count: 134, color: '#7c3aed', r: 14 },
+    { id: 'Political Party', count: 66, color: '#ec4899', r: 12 },
+  ];
+
+  const entityEdges = [
+    { source: 'Government Body', target: 'Company', count: 157085, dollars: '$151B', type: 'contracts' },
+    { source: 'Government Body', target: 'Charity', count: 7617, dollars: '$9.7B', type: 'contracts' },
+    { source: 'Government Body', target: 'Foundation', count: 4452, dollars: '$3.2B', type: 'contracts' },
+    { source: 'Government Body', target: 'Indigenous Corp', count: 499, dollars: '$105M', type: 'contracts' },
+    { source: 'Government Body', target: 'Social Enterprise', count: 250, dollars: '$76M', type: 'contracts' },
+    { source: 'Company', target: 'Political Party', count: 36059, dollars: '$1.3B', type: 'donations' },
+    { source: 'Foundation', target: 'Foundation', count: 5443, dollars: '$3.5B', type: 'grants' },
+    { source: 'Charity', target: 'Political Party', count: 262, dollars: '$3.6M', type: 'donations' },
+    { source: 'Foundation', target: 'Political Party', count: 86, dollars: '$7.7M', type: 'donations' },
+  ];
+
+  const linkData = entityEdges.map(e => ({ ...e }));
+  const nodeData = entityNodes.map(n => ({ ...n }));
+
+  const simulation = d3.forceSimulation(nodeData)
+    .force('link', d3.forceLink(linkData).id(d => d.id).distance(160))
+    .force('charge', d3.forceManyBody().strength(-600))
+    .force('center', d3.forceCenter(width / 2, height / 2))
+    .force('collision', d3.forceCollide(d => d.r + 20))
+    .force('x', d3.forceX(width / 2).strength(0.08))
+    .force('y', d3.forceY(height / 2).strength(0.08));
+
+  // Arrowhead marker
+  svg.append('defs').append('marker')
+    .attr('id', 'arrowhead')
+    .attr('viewBox', '0 -5 10 10')
+    .attr('refX', 20).attr('refY', 0)
+    .attr('markerWidth', 6).attr('markerHeight', 6)
+    .attr('orient', 'auto')
+    .append('path').attr('d', 'M0,-5L10,0L0,5').attr('fill', '#444');
+
+  const link = svg.selectAll('.entity-link').data(linkData).enter().append('g');
+
+  const linkLine = link.append('path')
+    .attr('fill', 'none')
+    .attr('stroke', '#444')
+    .attr('stroke-width', d => Math.max(1.5, Math.log(d.count + 1) * 0.8))
+    .attr('stroke-opacity', 0.5)
+    .attr('marker-end', 'url(#arrowhead)');
+
+  const linkLabel = link.append('text')
+    .attr('font-family', 'Inter, sans-serif')
+    .attr('font-size', '9px')
+    .attr('font-weight', '700')
+    .attr('fill', '#666')
+    .attr('text-anchor', 'middle')
+    .text(d => d.dollars);
+
+  const node = svg.selectAll('.entity-node').data(nodeData).enter().append('g')
+    .attr('class', 'entity-node')
+    .style('cursor', 'grab')
+    .call(d3.drag()
+      .on('start', (event, d) => {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x; d.fy = d.y;
+      })
+      .on('drag', (event, d) => { d.fx = event.x; d.fy = event.y; })
+      .on('end', (event, d) => {
+        if (!event.active) simulation.alphaTarget(0);
+        d.fx = null; d.fy = null;
+      })
+    );
+
+  node.append('circle')
+    .attr('r', d => d.r)
+    .attr('fill', d => d.color)
+    .attr('stroke', '#000')
+    .attr('stroke-width', 2)
+    .attr('opacity', 0.85);
+
+  node.append('text')
+    .attr('text-anchor', 'middle')
+    .attr('dy', -4)
+    .attr('fill', '#fff')
+    .attr('font-family', 'Inter, sans-serif')
+    .attr('font-size', '9px')
+    .attr('font-weight', '900')
+    .attr('letter-spacing', '0.05em')
+    .text(d => d.id.length > 12 ? d.id.substring(0, 11) + '.' : d.id);
+
+  node.append('text')
+    .attr('text-anchor', 'middle')
+    .attr('dy', 8)
+    .attr('fill', 'rgba(255,255,255,0.6)')
+    .attr('font-family', 'Inter, sans-serif')
+    .attr('font-size', '8px')
+    .attr('font-weight', '600')
+    .text(d => d.count.toLocaleString());
+
+  simulation.on('tick', () => {
+    // Bounds constraint
+    const pad = 50;
+    nodeData.forEach(d => {
+      d.x = Math.max(pad, Math.min(width - pad, d.x));
+      d.y = Math.max(pad, Math.min(height - pad, d.y));
+    });
+
+    linkLine.attr('d', d => {
+      const dx = d.target.x - d.source.x;
+      const dy = d.target.y - d.source.y;
+      const dr = Math.sqrt(dx * dx + dy * dy) * 1.5;
+      // For self-referencing links (Foundation -> Foundation)
+      if (d.source === d.target) {
+        const x = d.source.x;
+        const y = d.source.y;
+        return `M${x - 15},${y - d.source.r} A30,30 0 1,1 ${x + 15},${y - d.source.r}`;
+      }
+      return `M${d.source.x},${d.source.y} A${dr},${dr} 0 0,1 ${d.target.x},${d.target.y}`;
+    });
+
+    linkLabel
+      .attr('x', d => {
+        if (d.source === d.target) return d.source.x;
+        return (d.source.x + d.target.x) / 2 + 10;
+      })
+      .attr('y', d => {
+        if (d.source === d.target) return d.source.y - d.source.r - 20;
+        return (d.source.y + d.target.y) / 2 - 8;
+      });
+
+    node.attr('transform', d => `translate(${d.x},${d.y})`);
+  });
+})();
+
+// ══════════════════════════════════════════════════════════════
+// SCHEMA GRAPH — Fixed layout, hub-and-spoke
+// ══════════════════════════════════════════════════════════════
+(function() {
+  const container = document.getElementById('schema');
+  const width = container.clientWidth;
+  const height = 580;
+  const svg = d3.select('#schema').append('svg').attr('width', width).attr('height', height);
+
+  const tables = [
+    { id: 'gs_entities', label: 'gs_entities', rows: '100K', group: 'core', cols: ['id (uuid PK)','gs_id (text UK)','canonical_name','abn','entity_type','sector','state','postcode -> postcode_geo','remoteness','seifa_irsd_decile','is_community_controlled','lga_name','source_datasets[]','latest_revenue'] },
+    { id: 'gs_relationships', label: 'gs_relationships', rows: '212K', group: 'core', cols: ['id (uuid PK)','source_entity_id -> gs_entities','target_entity_id -> gs_entities','relationship_type','amount','year','dataset','confidence','properties (jsonb)'] },
+    { id: 'entity_identifiers', label: 'entity_identifiers', rows: '31K', group: 'core', cols: ['id (uuid PK)','entity_id -> gs_entities','identifier_type','identifier_value','source','is_primary','is_verified'] },
+    { id: 'austender_contracts', label: 'austender_contracts', rows: '670K', group: 'source', cols: ['id (uuid PK)','title','contract_value','buyer_name','supplier_name','supplier_abn -> gs_entities','category','contract_start','contract_end'] },
+    { id: 'acnc_charities', label: 'acnc_charities', rows: '66K', group: 'source', cols: ['abn (text PK -> gs_entities)','name','charity_size','state','purposes[]','beneficiaries[]','is_foundation','is_social_enterprise'] },
+    { id: 'justice_funding', label: 'justice_funding', rows: '52K', group: 'source', cols: ['id (uuid PK)','recipient_name','recipient_abn -> gs_entities','program_name','amount_dollars','state','sector','financial_year','gs_entity_id -> gs_entities'] },
+    { id: 'political_donations', label: 'political_donations', rows: '313K', group: 'source', cols: ['id (uuid PK)','donor_name','donor_abn -> gs_entities','donation_to','amount','financial_year'] },
+    { id: 'foundations', label: 'foundations', rows: '10.8K', group: 'source', cols: ['id (uuid PK)','acnc_abn -> acnc_charities','name','type','total_giving_annual','thematic_focus[]','geographic_focus[]','enriched_at'] },
+    { id: 'grant_opportunities', label: 'grant_opportunities', rows: '18K', group: 'source', cols: ['id (uuid PK)','name','provider','amount_min','amount_max','deadline','foundation_id -> foundations','embedding (vector)','status'] },
+    { id: 'social_enterprises', label: 'social_enterprises', rows: '10.3K', group: 'source', cols: ['id (uuid PK)','name','abn -> gs_entities','sector[]','state','certifications (jsonb)'] },
+    { id: 'postcode_geo', label: 'postcode_geo', rows: '12K', group: 'geo', cols: ['postcode (text PK)','locality','state','lat/lng','remoteness_2021','lga_name','lga_code','sa2_code'] },
+    { id: 'seifa_2021', label: 'seifa_2021', rows: '11K', group: 'geo', cols: ['postcode -> postcode_geo','index_type','score','decile_national','rank_national'] },
+    { id: 'org_profiles', label: 'org_profiles', rows: '--', group: 'platform', cols: ['id (uuid PK)','user_id -> auth.users','name','abn','stripe_customer_id','subscription_plan','embedding (vector)'] },
+    { id: 'agent_runs', label: 'agent_runs', rows: '344', group: 'platform', cols: ['id (uuid PK)','agent_id','agent_name','status','items_found','items_new','duration_ms','completed_at'] },
+  ];
+
+  const edges = [
+    { source: 'gs_relationships', target: 'gs_entities', label: 'source/target' },
+    { source: 'entity_identifiers', target: 'gs_entities', label: 'entity_id' },
+    { source: 'austender_contracts', target: 'gs_entities', label: 'supplier_abn' },
+    { source: 'acnc_charities', target: 'gs_entities', label: 'abn' },
+    { source: 'justice_funding', target: 'gs_entities', label: 'gs_entity_id' },
+    { source: 'political_donations', target: 'gs_entities', label: 'donor_abn' },
+    { source: 'social_enterprises', target: 'gs_entities', label: 'abn' },
+    { source: 'foundations', target: 'acnc_charities', label: 'acnc_abn' },
+    { source: 'grant_opportunities', target: 'foundations', label: 'foundation_id' },
+    { source: 'gs_entities', target: 'postcode_geo', label: 'postcode' },
+    { source: 'seifa_2021', target: 'postcode_geo', label: 'postcode' },
+  ];
+
+  const groupColor = { core: '#1040C0', source: '#D02020', geo: '#F0C020', platform: '#059669' };
+
+  // Fixed positions — hub-and-spoke around gs_entities at center
+  const cx = width / 2;
+  const cy = height / 2;
+  const positions = {
+    // Center hub
+    'gs_entities':          { x: cx, y: cy },
+    // Close to center
+    'gs_relationships':     { x: cx - 160, y: cy - 60 },
+    'entity_identifiers':   { x: cx + 160, y: cy - 60 },
+    // Source ring — spread around
+    'austender_contracts':  { x: cx - 320, y: cy - 160 },
+    'acnc_charities':       { x: cx - 240, y: cy + 120 },
+    'justice_funding':      { x: cx - 80, y: cy - 200 },
+    'political_donations':  { x: cx + 100, y: cy - 200 },
+    'foundations':          { x: cx + 260, y: cy + 100 },
+    'grant_opportunities':  { x: cx + 380, y: cy + 180 },
+    'social_enterprises':   { x: cx + 300, y: cy - 140 },
+    // Geo — right side
+    'postcode_geo':         { x: cx - 100, y: cy + 200 },
+    'seifa_2021':           { x: cx - 240, y: cy + 240 },
+    // Platform — bottom right
+    'org_profiles':         { x: cx + 140, y: cy + 220 },
+    'agent_runs':           { x: cx + 300, y: cy + 260 },
+  };
+
+  const nodeW = 130;
+  const nodeH = 38;
+
+  // Draw edges as curved paths
+  edges.forEach(e => {
+    const sp = positions[e.source];
+    const tp = positions[e.target];
+    if (!sp || !tp) return;
+    const dx = tp.x - sp.x;
+    const dy = tp.y - sp.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    // Offset for curve
+    const mx = (sp.x + tp.x) / 2 + dy * 0.15;
+    const my = (sp.y + tp.y) / 2 - dx * 0.15;
+
+    svg.append('path')
+      .attr('d', `M${sp.x},${sp.y} Q${mx},${my} ${tp.x},${tp.y}`)
+      .attr('fill', 'none')
+      .attr('stroke', '#333')
+      .attr('stroke-width', 1.5)
+      .attr('stroke-dasharray', '4,3');
+
+    svg.append('text')
+      .attr('x', mx).attr('y', my)
+      .attr('text-anchor', 'middle')
+      .attr('dominant-baseline', 'middle')
+      .attr('font-family', 'Inter, sans-serif')
+      .attr('font-size', '8px')
+      .attr('font-weight', '600')
+      .attr('fill', '#555')
+      .text(e.label);
+  });
+
+  // Draw nodes
+  const tip = document.createElement('div');
+  tip.style.cssText = 'position:fixed;display:none;background:#121212;color:#fff;padding:12px 16px;border:3px solid #333;font-size:11px;z-index:100;max-width:320px;box-shadow:4px 4px 0 rgba(0,0,0,0.3);pointer-events:none;';
+  document.body.appendChild(tip);
+
+  tables.forEach(t => {
+    const pos = positions[t.id];
+    if (!pos) return;
+    const color = groupColor[t.group];
+    const g = svg.append('g')
+      .attr('class', 'table-node')
+      .attr('transform', `translate(${pos.x}, ${pos.y})`);
+
+    g.append('rect')
+      .attr('width', nodeW).attr('height', nodeH)
+      .attr('x', -nodeW / 2).attr('y', -nodeH / 2)
+      .attr('fill', color)
+      .attr('stroke', '#000')
+      .attr('stroke-width', 2);
+
+    g.append('text')
+      .attr('class', 'table-name')
+      .attr('text-anchor', 'middle')
+      .attr('dy', -3)
+      .attr('fill', t.group === 'geo' ? '#000' : '#fff')
+      .text(t.id.replace(/_/g, ' '));
+
+    g.append('text')
+      .attr('class', 'table-count')
+      .attr('text-anchor', 'middle')
+      .attr('dy', 13)
+      .attr('fill', t.group === 'geo' ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.6)')
+      .text(t.rows + ' rows');
+
+    g.on('click', function(event) {
+      event.stopPropagation();
+      tip.innerHTML = `<div style="font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;color:${color}">${t.id}</div>` +
+        t.cols.map(c => `<div style="padding:1px 0;color:#999;font-weight:600">${c}</div>`).join('');
+      tip.style.display = 'block';
+      tip.style.left = event.pageX + 16 + 'px';
+      tip.style.top = event.pageY - 20 + 'px';
+      const rect = tip.getBoundingClientRect();
+      if (rect.right > window.innerWidth) tip.style.left = (window.innerWidth - rect.width - 16) + 'px';
+      if (rect.bottom > window.innerHeight) tip.style.top = (window.innerHeight - rect.height - 16) + 'px';
+    });
+  });
+
+  document.addEventListener('click', function(event) {
+    if (!event.target.closest('.table-node')) {
+      tip.style.display = 'none';
+    }
+  });
+})();
+</script>
+</body>
+</html>

@@ -18,6 +18,40 @@ const menuItems = [
   { href: '/pricing', label: 'Billing & Plan', desc: 'Manage your subscription' },
 ];
 
+const adminSections = [
+  {
+    heading: 'Ops & Health',
+    items: [
+      { href: '/ops', label: 'Ops Dashboard' },
+      { href: '/ops/health', label: 'Data Health' },
+      { href: '/ops/claims', label: 'Manage Claims' },
+    ],
+  },
+  {
+    heading: 'Data Browsers',
+    items: [
+      { href: '/dashboard', label: 'Data Observatory' },
+      { href: '/mission-control', label: 'Mission Control' },
+      { href: '/entities', label: 'Entity Graph' },
+      { href: '/grants', label: 'Grants' },
+      { href: '/foundations', label: 'Foundations' },
+      { href: '/charities', label: 'Charities' },
+      { href: '/places', label: 'Places' },
+      { href: '/procurement', label: 'Procurement' },
+      { href: '/social-enterprises', label: 'Social Enterprises' },
+      { href: '/power', label: 'Power Map' },
+    ],
+  },
+  {
+    heading: 'Reports & Analysis',
+    items: [
+      { href: '/reports', label: 'All Reports' },
+      { href: '/insights', label: 'Insights' },
+      { href: '/benchmark', label: 'Benchmark' },
+    ],
+  },
+];
+
 export function AccountDropdown({ userEmail, isAdmin, onToggle }: AccountDropdownProps) {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -64,7 +98,7 @@ export function AccountDropdown({ userEmail, isAdmin, onToggle }: AccountDropdow
       {open && (
         <div
           ref={dropdownRef}
-          className="absolute right-0 top-full mt-1 w-64 border-4 border-bauhaus-black bg-white bauhaus-shadow-sm z-50"
+          className="absolute right-0 top-full mt-1 w-64 border-4 border-bauhaus-black bg-white bauhaus-shadow-sm z-50 max-h-[80vh] overflow-y-auto"
         >
           {menuItems.map((item) => (
             <a
@@ -81,14 +115,26 @@ export function AccountDropdown({ userEmail, isAdmin, onToggle }: AccountDropdow
           {isAdmin && (
             <>
               <div className="border-t-2 border-bauhaus-black/20" />
-              <a
-                href="/ops/claims"
-                className="block px-4 py-3 hover:bg-bauhaus-black hover:text-white transition-colors group"
-                onClick={() => setOpen(false)}
-              >
-                <div className="text-xs font-black uppercase tracking-widest text-bauhaus-red group-hover:text-white">Admin</div>
-                <div className="text-[11px] text-bauhaus-muted group-hover:text-white/70 font-medium mt-0.5">Manage claims & operations</div>
-              </a>
+              <div className="px-4 py-2 bg-bauhaus-red/5">
+                <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-red">Admin</div>
+              </div>
+              {adminSections.map((section) => (
+                <div key={section.heading}>
+                  <div className="px-4 pt-2 pb-1">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-bauhaus-muted/60">{section.heading}</div>
+                  </div>
+                  {section.items.map((item) => (
+                    <a
+                      key={item.href}
+                      href={item.href}
+                      className="block px-4 py-1.5 hover:bg-bauhaus-black hover:text-white transition-colors group"
+                      onClick={() => setOpen(false)}
+                    >
+                      <div className="text-[11px] font-bold group-hover:text-white">{item.label}</div>
+                    </a>
+                  ))}
+                </div>
+              ))}
             </>
           )}
 

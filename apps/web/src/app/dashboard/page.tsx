@@ -1,19 +1,8 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import { DashboardCharts } from './charts';
-import nextDynamic from 'next/dynamic';
+import { FundingGapMapLoader } from './funding-gap-map-loader';
 
 export const dynamic = 'force-dynamic';
-
-const CoverageMap = nextDynamic(() => import('./coverage-map').then(m => ({ default: m.CoverageMap })), {
-  ssr: false,
-  loading: () => (
-    <div className="w-full border-4 border-bauhaus-black flex items-center justify-center" style={{ height: 500 }}>
-      <div className="text-bauhaus-muted font-black text-sm uppercase tracking-widest animate-pulse">
-        Loading map...
-      </div>
-    </div>
-  ),
-});
 
 function formatMoney(n: number): string {
   if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}B`;
@@ -127,9 +116,41 @@ async function getDashboardData() {
       geoMap.set(geo, existing);
     }
   }
-  const geography: GeoRow[] = Array.from(geoMap.entries())
+  // Normalize geo labels and merge duplicates (e.g. "international" → "International")
+  const AU_STATES: Record<string, string> = {
+    'AU-National': 'National (AU)',
+    'AU-NSW': 'New South Wales',
+    'AU-VIC': 'Victoria',
+    'AU-QLD': 'Queensland',
+    'AU-WA': 'Western Australia',
+    'AU-SA': 'South Australia',
+    'AU-TAS': 'Tasmania',
+    'AU-NT': 'Northern Territory',
+    'AU-ACT': 'ACT',
+    'NZ-National': 'New Zealand',
+  };
+  const normalizedGeoMap = new Map<string, { count: number; total_giving: number }>();
+  for (const [raw, data] of geoMap.entries()) {
+    const label = AU_STATES[raw] || (raw.charAt(0).toUpperCase() + raw.slice(1));
+    const existing = normalizedGeoMap.get(label) || { count: 0, total_giving: 0 };
+    existing.count += data.count;
+    existing.total_giving += data.total_giving;
+    normalizedGeoMap.set(label, existing);
+  }
+  const sortedGeo = Array.from(normalizedGeoMap.entries())
     .map(([geo, data]) => ({ geo, ...data }))
     .sort((a, b) => b.total_giving - a.total_giving);
+  // Top 10 + aggregate the rest as "Other"
+  const top10 = sortedGeo.slice(0, 10);
+  const rest = sortedGeo.slice(10);
+  if (rest.length > 0) {
+    top10.push({
+      geo: `Other (${rest.length})`,
+      count: rest.reduce((s, r) => s + r.count, 0),
+      total_giving: rest.reduce((s, r) => s + r.total_giving, 0),
+    });
+  }
+  const geography: GeoRow[] = top10;
 
   // Source coverage
   const { data: grantSources } = await supabase
@@ -173,48 +194,7 @@ async function getDashboardData() {
     topFoundations: (topFoundationsResult.data || []) as TopFoundation[],
     closingSoon: (closingSoonResult.data || []) as ClosingGrant[],
     sources,
-    coveragePoints: await getCoveragePoints(supabase),
   };
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function getCoveragePoints(supabase: any) {
-  const { data } = await supabase
-    .from('mv_funding_by_postcode')
-    .select('postcode, state, remoteness, entity_count')
-    .gt('entity_count', 0)
-    .limit(3000);
-
-  if (!data?.length) return [];
-
-  const postcodes = data.map((d: { postcode: string }) => d.postcode);
-  const geoLookup = new Map<string, { lat: number; lng: number; locality: string }>();
-
-  for (let i = 0; i < postcodes.length; i += 100) {
-    const chunk = postcodes.slice(i, i + 100);
-    const { data: geoData } = await supabase
-      .from('postcode_geo')
-      .select('postcode, latitude, longitude, locality')
-      .in('postcode', chunk)
-      .not('latitude', 'is', null);
-    for (const g of geoData || []) {
-      geoLookup.set(g.postcode, { lat: g.latitude, lng: g.longitude, locality: g.locality || '' });
-    }
-  }
-
-  return data
-    .filter((d: { postcode: string }) => geoLookup.has(d.postcode))
-    .map((d: { postcode: string; remoteness: string; entity_count: number }) => {
-      const geo = geoLookup.get(d.postcode)!;
-      return {
-        postcode: d.postcode,
-        locality: geo.locality,
-        remoteness: d.remoteness || '',
-        entity_count: d.entity_count,
-        lat: geo.lat,
-        lng: geo.lng,
-      };
-    });
 }
 
 export default async function DashboardPage() {
@@ -249,17 +229,17 @@ export default async function DashboardPage() {
       </div>
 
       {/* Hero stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-0 mb-12 border-4 border-bauhaus-black">
-        {heroStats.map((stat, i) => (
+      <div className="flex flex-wrap mb-12 border-4 border-bauhaus-black">
+        {heroStats.map((stat) => (
           <div
             key={stat.label}
-            className={`bg-white p-4 text-center ${i < heroStats.length - 1 ? 'border-r-4 border-bauhaus-black' : ''} ${i < 4 ? 'border-b-4 sm:border-b-4 lg:border-b-0 border-bauhaus-black' : ''}`}
+            className="bg-white p-4 text-center flex-1 min-w-[140px] border-r-4 border-b-4 border-bauhaus-black last:border-r-0 [&:nth-last-child(-n+1)]:border-b-0 lg:[&]:border-b-0"
           >
             <div className={`w-3 h-3 ${stat.color} mx-auto mb-2`}></div>
-            <div className="text-2xl sm:text-3xl font-black tabular-nums text-bauhaus-black">
+            <div className="text-2xl font-black tabular-nums text-bauhaus-black">
               {stat.value}
             </div>
-            <div className="text-[11px] font-black uppercase tracking-widest text-bauhaus-muted mt-1">
+            <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted mt-1">
               {stat.label}
             </div>
             {stat.sub && (
@@ -269,12 +249,16 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      {/* Coverage Map */}
+      {/* Community Capital Map */}
       <section className="mb-12">
         <h2 className="text-sm font-black text-bauhaus-black mb-3 pb-2 border-b-4 border-bauhaus-black uppercase tracking-widest">
-          Entity Coverage Across Australia
+          Community Capital Map
         </h2>
-        <CoverageMap data={data.coveragePoints} />
+        <p className="text-xs text-bauhaus-muted font-medium mb-3 max-w-2xl">
+          SA2-level view of funding distribution, disadvantage, and community control across Australia.
+          Use the tabs to switch between metrics. Click any region to explore its full profile on the Power Map page.
+        </p>
+        <FundingGapMapLoader />
       </section>
 
       {/* Charts */}

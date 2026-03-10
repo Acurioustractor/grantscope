@@ -78,10 +78,12 @@ export async function GET() {
     // --- Power concentration ---
     const powerPromises = [
       safe(db.from('mv_gs_donor_contractors')
-        .select('entity_name, total_donated, total_contract_value, donation_count, contract_count')
+        .select('canonical_name, total_donated, total_contract_value, donation_count, contract_count')
         .order('total_contract_value', { ascending: false })
         .limit(20), 8000),
-      safe(db.rpc('get_entity_type_breakdown'), 8000),
+      safe(db.from('gs_entities')
+        .select('entity_type')
+        .not('entity_type', 'is', null), 8000),
       safe(db.from('mv_gs_donor_contractors')
         .select('total_donated, total_contract_value')
         .order('total_donated', { ascending: false })
@@ -140,14 +142,23 @@ export async function GET() {
     const lastSync = allUpdates.length > 0 ? new Date(Math.max(...allUpdates)).toISOString() : null;
 
     // --- Power concentration ---
-    const top20 = (power[0].data ?? []) as Array<{
-      entity_name: string;
+    const top20 = ((power[0].data ?? []) as Array<{
+      canonical_name: string;
       total_donated: number;
       total_contract_value: number;
       donation_count: number;
       contract_count: number;
-    }>;
-    const entityTypes = (power[1].data ?? []) as Array<{ entity_type: string; count: number }>;
+    }>).map(r => ({ ...r, entity_name: r.canonical_name }));
+
+    // Aggregate entity types client-side since RPC doesn't exist
+    const entityTypeRaw = (power[1].data ?? []) as Array<{ entity_type: string }>;
+    const etMap = new Map<string, number>();
+    for (const r of entityTypeRaw) {
+      if (r.entity_type) etMap.set(r.entity_type, (etMap.get(r.entity_type) || 0) + 1);
+    }
+    const entityTypes = Array.from(etMap.entries())
+      .map(([entity_type, count]) => ({ entity_type, count }))
+      .sort((a, b) => b.count - a.count);
     const dcAll = (power[2].data ?? []) as Array<{ total_donated: number; total_contract_value: number }>;
     const dcTotalDonated = dcAll.reduce((s, r) => s + (r.total_donated || 0), 0);
     const dcTotalContracts = dcAll.reduce((s, r) => s + (r.total_contract_value || 0), 0);

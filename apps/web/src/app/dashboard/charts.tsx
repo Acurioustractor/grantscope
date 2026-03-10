@@ -156,10 +156,10 @@ export function DashboardCharts(props: Props) {
       {/* Sector Giving */}
       <ChartCard title="Foundation Giving by Sector">
         {sectorData.length > 0 ? (
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={Math.max(300, sectorData.length * 32)}>
             <BarChart data={sectorData} layout="vertical" margin={{ left: 10, right: 10, top: 0, bottom: 0 }}>
               <XAxis type="number" tickFormatter={(v: number) => formatMoney(v)} tick={{ fontSize: 10, fontWeight: 700 }} />
-              <YAxis type="category" dataKey="name" width={90} tick={{ fontSize: 11, fontWeight: 700 }} />
+              <YAxis type="category" dataKey="name" width={130} tick={{ fontSize: 11, fontWeight: 700 }} />
               <Tooltip content={<CustomTooltip />} />
               <Bar dataKey="value" barSize={18}>
                 {sectorData.map((_, i) => (
@@ -176,10 +176,10 @@ export function DashboardCharts(props: Props) {
       {/* Geographic Distribution */}
       <ChartCard title="Foundation Giving by Geography">
         {geoData.length > 0 ? (
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={Math.max(300, geoData.length * 32)}>
             <BarChart data={geoData} layout="vertical" margin={{ left: 10, right: 10, top: 0, bottom: 0 }}>
               <XAxis type="number" tickFormatter={(v: number) => formatMoney(v)} tick={{ fontSize: 10, fontWeight: 700 }} />
-              <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 11, fontWeight: 700 }} />
+              <YAxis type="category" dataKey="name" width={140} tick={{ fontSize: 11, fontWeight: 700 }} />
               <Tooltip content={<CustomTooltip />} />
               <Bar dataKey="value" fill="#7c3aed" barSize={18} />
             </BarChart>

@@ -11,7 +11,7 @@ import { getServiceSupabase } from '@/lib/supabase';
  *   GET /api/data/export?type=money-flows&domain=youth_justice&format=csv
  */
 
-const ALLOWED_TYPES = ['foundations', 'grants', 'money-flows', 'community-orgs', 'government-programs'] as const;
+const ALLOWED_TYPES = ['entities', 'relationships', 'foundations', 'grants', 'social-enterprises', 'money-flows', 'community-orgs', 'government-programs'] as const;
 
 function toCSV(data: Record<string, unknown>[]): string {
   if (!data.length) return '';
@@ -50,8 +50,11 @@ export async function GET(request: Request) {
     const supabase = getServiceSupabase();
 
     const tableMap: Record<string, string> = {
+      entities: 'gs_entities',
+      relationships: 'gs_relationships',
       foundations: 'foundations',
       grants: 'grant_opportunities',
+      'social-enterprises': 'social_enterprises',
       'money-flows': 'money_flows',
       'community-orgs': 'community_orgs',
       'government-programs': 'government_programs',
