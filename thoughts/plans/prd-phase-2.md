@@ -1,8 +1,8 @@
-# GrantScope Phase 2 PRD — The Matching Engine
+# CivicGraph Phase 2 PRD — The Matching Engine
 
-**Date:** 1 March 2026
-**Status:** Draft
-**Depends on:** Phase 1 complete (14,119 grants, 9,874 foundations, 100% embedded, semantic search live)
+**Date:** 1 March 2026 (Updated: 10 March 2026)
+**Status:** Partially Complete — many items done, some superseded by entity graph
+**Depends on:** Phase 1 complete (18,069 grants, 10,779 foundations, 100% embedded, semantic search live)
 
 ---
 
@@ -10,30 +10,35 @@
 
 Level the playing field so community-based organisations — especially First Nations groups, grassroots collectives, and culturally-grounded social enterprises — get matched with the funding they deserve, without needing a grant writer, a Sydney network, or a six-figure fundraising budget.
 
-Australia's $8.86B in annual charitable giving flows through relationship networks that favour established, metro-based organisations. GrantScope makes the flow visible and the matching automatic.
+Australia's $8.86B in annual charitable giving flows through relationship networks that favour established, metro-based organisations. CivicGraph makes the flow visible and the matching automatic.
 
 ---
 
-## What Phase 1 Delivered
+## What Phase 1 Delivered (Updated 10 March 2026)
 
 | Asset | Count | Coverage |
 |-------|------:|----------|
-| Grant opportunities | 14,119 | 10+ government sources, 100% embedded |
-| Foundations | 9,874 | ACNC-derived, 1,627 enriched with LLM profiling |
-| Foundation programs | 866 | Linked to 361 foundations |
+| Entity graph | 100,036 entities, 211,783 relationships | Unified ABN-linked registry |
+| AusTender contracts | 670,303 | Full OCDS history from 2013 |
+| Political donations | 312,933 | Full AEC register |
 | ACNC annual statements | 359,678 | 7 years (2017-2023), 53k+ charities |
-| Community orgs | 500 | Youth justice domain only |
-| Semantic search | Live | Hybrid keyword/vector on grants page |
-| Web UI | Live | Grants search, foundations directory, corporate giving, reports |
+| Justice funding | 52,133 | Cross-sector funding flows |
+| ATO tax transparency | 26,241 | Full large taxpayer dataset |
+| Grant opportunities | 18,069 | 30+ government sources, 100% embedded |
+| Foundations | 10,779 | 3,264 AI-enriched (30%) |
+| Social enterprises | 10,339 | Supply Nation + 5 sources |
+| Foundation programs | 2,472 | Linked to foundations |
+| Community orgs | 541 | Enriched profiles |
+| Entity resolution F1 | 94.1% | Trigram + ABN matching |
+| Platform | 70 pages, 77 API routes, 86 scripts | Full-stack |
 
-### What's Missing
+### What's Still Missing
 
-1. **Grant descriptions are thin** — 44% have no description, 43% have stubs under 200 chars. Semantic search quality suffers.
-2. **Foundation programs are invisible** — 866 programs exist but don't appear in grant search results.
-3. **No org self-registration** — Community orgs can't create a profile and get matched.
-4. **No matching engine** — The two sides (seekers + givers) can't find each other automatically.
-5. **Corporate layer is absent** — No way to trace money from BHP's $13B profit to community outcomes.
-6. **3,304 foundations with websites haven't been enriched** — The profiler exists and works, just needs to run.
+1. **Foundation enrichment** — 70% still lack AI profiles. 494 with websites in queue.
+2. **No paying users** — Zero external users, zero revenue. Launch is #1 priority.
+3. **Person layer** — Directorship relationships have 0 rows. ACNC responsible persons not imported.
+4. **Community voice** — Place pages show money + demographics but no community stories.
+5. **State procurement** — NSW, QLD, VIC, WA, SA all separate systems.
 
 ---
 
@@ -123,7 +128,7 @@ ALTER TABLE grant_opportunities
 
 ### Track B: Org Profiles + Matching (Weeks 2-4)
 
-The core feature that makes GrantScope two-sided.
+The core feature that makes CivicGraph two-sided.
 
 #### B1. Org Profiles Table
 
@@ -159,7 +164,7 @@ Key fields:
 
 **What:** Automated grant ↔ org matching that runs daily.
 
-**Why:** This is the product. Without matching, GrantScope is just a search engine. With matching, it's a platform that works for you while you sleep.
+**Why:** This is the product. Without matching, CivicGraph is just a search engine. With matching, it's a platform that works for you while you sleep.
 
 **Schema:** `matches` table (full SQL in `thoughts/plans/data-model.md`)
 
@@ -212,7 +217,7 @@ suggested → saved → applying → submitted → won/lost → (feedback loop)
 
 ### Track C: Corporate Transparency Layer (Weeks 3-5)
 
-Trace the money. This is what makes GrantScope different from every other grants database.
+Trace the money. This is what makes CivicGraph different from every other grants database.
 
 #### C1. Corporate Entities Table
 
@@ -366,21 +371,21 @@ CREATE TABLE wealth_flows ( ... );  -- See data-model.md
 
 ## Success Metrics
 
-### Data coverage (end of Phase 2)
-- Open grants: 500+ (from ~130 GrantConnect)
-- Foundation enrichment: 50%+ (from 16.5%)
-- Grant descriptions: 80%+ have 200+ chars (from 53%)
-- States covered: 8/8 (from 5-6)
+### Data coverage — CURRENT STATUS
+- Open grants: 18,069 from 30+ sources ✅ (was 14,119)
+- Foundation enrichment: 30% (3,264 of 10,779) — target 50%+
+- Entity graph: 100,036 entities, 211,783 relationships ✅
+- AusTender: 670,303 contracts (full history) ✅
+- Political donations: 312,933 (full AEC) ✅
+- ATO tax: 26,241 (full dataset) ✅
+- Social enterprises: 10,339 ✅
+- Entity resolution F1: 94.1% ✅
 
-### Matching (end of Phase 2)
-- Org profiles created: 50+ (seed with community_orgs data)
-- Average matches per org: 15+
-- Foundation programs in search: 866 (from 0)
-
-### Transparency (end of Phase 2)
-- Corporate entities: 200+
-- Wealth flows: 500+ (from 406)
-- Corporate → Foundation links: 50+
+### Still needed
+- Org profiles active: ~10 (target: 50+)
+- Foundation enrichment: 30% → 50%+ target
+- Person layer: 0 directorship relationships
+- Paying users: 0 (target: 5 in 90 days)
 
 ---
 

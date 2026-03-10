@@ -1,6 +1,6 @@
 # CivicGraph System Compendium
 
-> The complete technical reference for CivicGraph (GrantScope). Updated 2026-03-10.
+> The complete technical reference for CivicGraph. Updated 2026-03-10.
 
 ## Architecture Overview
 
@@ -21,7 +21,7 @@
 │   Embedding · Analytics · Intelligence                           │
 ├──────────────────────────────────────────────────────────────────┤
 │                    Supabase (Postgres + pgvector)                 │
-│   100K entities · 200K relationships · 672K contracts            │
+│   100K entities · 199K relationships · 672K contracts            │
 │   370K charity filings · 312K political donations · 18K grants   │
 │   2.2M company records · 10K foundations · 10K social enterprises│
 └──────────────────────────────────────────────────────────────────┘
@@ -35,14 +35,14 @@
 | Table | Rows | Purpose |
 |-------|------|---------|
 | `gs_entities` | 100K | Canonical entity registry — orgs, companies, government bodies |
-| `gs_relationships` | 199K | Directed edges: donations, contracts, grants, governance |
+| `gs_relationships` | 199K | Directed edges: donations, contracts, grants, governance, charity links |
 | `entity_aliases` | 31K | Alternate names (trading, legal, abbreviations) |
 | `entity_identifiers` | 31K | Cross-reference: ABN, ACN, ORIC ICE, Supply Nation ID |
 
 ### Government & Funding
 | Table | Rows | Purpose |
 |-------|------|---------|
-| `austender_contracts` | 672K | Federal procurement contracts |
+| `austender_contracts` | 672K | Federal procurement contracts (full history) |
 | `acnc_charities` | 66K | ACNC charity register |
 | `acnc_ais` | 370K | Annual information statements (financials by year) |
 | `justice_funding` | 52K | Justice/social services funding records |
@@ -133,7 +133,7 @@
 | Grant Discovery | 47 | 2.4 min | Multi-source grant scraping |
 | Sync Foundation Programs | 45 | 24s | Pull foundation program data |
 | Backfill Embeddings | 37 | 23s | OpenAI embeddings for vector search |
-| Build Entity Graph | 9 | 10 min | Consolidate 92K entities + 65K relationships |
+| Build Entity Graph | 9 | 10 min | Consolidate 100K entities + 199K relationships |
 | Refresh Materialized Views | 7 | 2.6s | SQL-only, fastest agent |
 
 ### Agent Execution Patterns
@@ -141,7 +141,7 @@
 **1. Idempotent Upsert** (sync agents) — `onConflict: 'abn'` ensures safe reruns
 **2. Multi-Source Discovery** — GrantEngine combines GrantConnect, data.gov.au, state portals, web search
 **3. LLM Round-Robin** — 5 providers (MiniMax, Groq, Gemini, DeepSeek, Anthropic) with automatic failover on rate limits
-**4. Graph Builder** — Pre-loads 92K entities into memory for O(1) lookups, batch inserts
+**4. Graph Builder** — Pre-loads 100K entities into memory for O(1) lookups, batch inserts
 **5. ABR Streaming** — Streams 1GB+ XML via `unzip -p | readline` sliding window
 
 ### Data Flows
@@ -290,7 +290,7 @@ Foundation Profiling → Alignment Scoring → Foundation Tracker
 | Route | Purpose |
 |-------|---------|
 | `/` | Landing page |
-| `/entities` | Entity graph explorer (99K entities) |
+| `/entities` | Entity graph explorer (100K entities) |
 | `/entities/[gsId]` | Entity dossier: funding, contracts, relationships |
 | `/places` | Place-based funding analysis |
 | `/places/[postcode]` | Place dossier: geo, SEIFA, entities, funding |

@@ -1,20 +1,20 @@
-# GrantScope
+# CivicGraph
 
-**Australia's open funding intelligence platform. Trace where money flows, who holds power, and what communities actually need.**
+**Decision infrastructure for Australian government and social sector. Know who to fund. Know who to contract. Know it worked.**
 
-GrantScope connects the dots between government grants, philanthropic foundations, political donations, government contracts, corporate accountability registers, and 92,000+ entities — all cross-referenced by ABN. No equivalent exists in Australia. We're building it.
+CivicGraph is the decision layer that connects 100,000+ entities, 672,000+ contracts, 312,000+ political donations, and 18,000+ grant opportunities into a unified intelligence platform — all cross-referenced by ABN. Nothing like this exists in Australia.
 
-**Free for communities. Open data, open source, open access.**
+**Free for communities. Institutions pay so communities don't have to.**
 
 ## What This Does
 
-GrantScope is a **transparency and funding intelligence platform** that:
+CivicGraph is **decision infrastructure** that powers three products:
 
-1. **Aggregates** grants, foundations, charities, political donations, government contracts, modern slavery statements, and lobbying registers from 30+ public data sources
-2. **Builds an entity graph** — 92,000+ entities and 50,000+ relationships linked by ABN, revealing who funds whom, who contracts with government, and who donates to political parties
-3. **Enriches** records with AI-generated descriptions, sector tags, geographic focus, and SEIFA disadvantage indexing
-4. **Investigates** — 15 live analytical reports including the flagship finding: 140 entities donate $80M to political parties AND hold $4.7B in government contracts
-5. **Serves** community organisations with free grant search, foundation matching, and place-based funding intelligence
+1. **Procurement Intelligence** — supplier discovery, compliance checking, Indigenous/social enterprise verification across 672K federal contracts and 10K social enterprises
+2. **Allocation Intelligence** — place-based funding gap analysis using SEIFA disadvantage, remoteness, and entity density across 2,900+ postcodes and 492 LGAs
+3. **Governed Proof** — outcome evidence linking funding to results (coming — integrates JusticeHub + Empathy Ledger)
+
+Built on a **unified entity graph** of 100,000+ organisations linked by ABN across 30+ public data sources, with 199,000+ relationships revealing who funds whom, who contracts with government, and who donates to political parties.
 
 ## The Flagship Finding
 
@@ -22,24 +22,28 @@ GrantScope is a **transparency and funding intelligence platform** that:
 
 See the full investigation: `/reports/donor-contractors`
 
-## Entity Graph (92,000+ entities)
+## Entity Graph (100,000+ entities)
 
-The core of GrantScope is the **entity graph** — a unified registry linking every dataset by ABN:
+The core of CivicGraph is the **entity graph** — a unified registry linking every dataset by ABN:
 
 | Layer | Records | What it reveals |
 |-------|--------:|----------------|
-| Entity Registry | 92,303 | Unified entities (companies, charities, foundations, Indigenous corps, government bodies) |
-| Relationships | 50,425 | Donations, contracts, grants, lobbying, charity links, directorships |
-| Political Donations | 188,609 | AEC disclosure records (1998–2024) |
-| Government Contracts | 58,128 | Federal procurement via AusTender |
-| Modern Slavery Register | 16,473 | Entities with $100M+ revenue and their supply chain statements |
-| ACNC Charities | 64,473 | Every registered charity with 7 years of financials |
-| Grant Opportunities | 17,727 | Government + philanthropic grants from all states |
-| Foundations | 10,763 | Philanthropic foundations with AI-generated profiles |
-| Lobbying Register | 139 | NSW third-party lobbyist firms and their clients |
-| Social Enterprises | 3,541 | B Corps, social traders, Indigenous enterprises |
-| ORIC Corporations | 7,369 | Indigenous corporations register |
-| ASIC Companies | 2,149,868 | Company name → ABN lookup for entity resolution |
+| Entity Registry | 100,036 | Unified entities (companies, charities, foundations, Indigenous corps, government bodies) |
+| Relationships | 199,001 | Donations, contracts, grants, governance, charity links |
+| AusTender Contracts | 672,474 | Full federal procurement history |
+| ACNC Annual Statements | 370,468 | 7 years of charity financials (2017–2023) |
+| Political Donations | 312,182 | AEC disclosure records (1998–2024) |
+| ACNC Charities | 66,431 | Every registered charity |
+| Justice Funding | 52,133 | QLD, federal, cross-sector justice/social services |
+| Entity Identifiers | 30,934 | ABN, ACN, ORIC ICE, Supply Nation cross-references |
+| ATO Tax Transparency | 23,909 | Large company tax data |
+| Grant Opportunities | 18,069 | Government + philanthropic grants from all states |
+| Foundations | 10,779 | Philanthropic foundations with AI-generated profiles |
+| Social Enterprises | 10,339 | Supply Nation + Social Traders + B Corps |
+| ORIC Corporations | 7,523 | Indigenous corporations register |
+| Foundation Programs | 2,472 | Linked grant programs |
+| ASX Companies | 1,976 | Listed companies with market cap |
+| ASIC Companies | 2,176,163 | Company name → ABN lookup for entity resolution |
 
 ### Entity Dossier ("ABN X-Ray")
 
@@ -56,11 +60,13 @@ Every entity has a full dossier at `/entities/[gsId]` showing:
 
 ### Cross-Reference Findings
 
-- **Donor → Contract:** 140 entities donate to parties AND hold contracts ($80M donated, $4.7B contracts)
+- **Donor → Contract:** 140 entities donate to political parties AND hold government contracts ($80M donated, $4.7B contracts)
 - **Both-sides donors:** Majority donate to BOTH Labor and Liberal/National — hedging their bets
 - **ORIC → ACNC:** 41% of Indigenous corporations linked to ACNC charity records
 - **Donor → Entity:** 5,361 political donor names resolved to ABNs via entity matching
-- **Modern Slavery → Entity Graph:** 4,320 entities already in graph enriched with $100M+ revenue data
+- **Entity Resolution F1:** 94.1% (precision 99.9%, recall 89.0%)
+- **Geographic Coverage:** 96% postcode, 96% remoteness, 95% LGA, 94% SEIFA across 100K entities
+- **Community-Controlled:** 7,822 organisations classified (ORIC + name-pattern matching)
 
 ## Reports
 
@@ -88,7 +94,7 @@ Every entity has a full dossier at `/entities/[gsId]` showing:
 
 ```
 apps/
-  web/                    # Next.js 14 public web app (App Router)
+  web/                    # Next.js 15 public web app (App Router)
     src/app/
       grants/             # Grant search and discovery
       foundations/         # Foundation profiles and search
@@ -97,10 +103,16 @@ apps/
       reports/            # 15 analytical reports
       places/             # Place-based funding intelligence
       tracker/            # Saved grants and foundations
+      knowledge/          # Document upload, AI extraction, org Q&A
       social-enterprises/ # Social enterprise directory
+      tender-intelligence/# Procurement compliance tools
+      power/              # Money flow analysis + Sankey diagrams
+      alerts/             # Grant alert preferences
+      pipeline/           # Grant application pipeline
+      mission-control/    # Agent monitoring & control
       ops/                # Admin tools (claims review)
-      api/                # 40+ API routes
-scripts/                  # 50+ data pipeline scripts
+      api/                # 76 API routes
+scripts/                  # 48 data pipeline agents
   enrich-*.mjs            # Multi-provider LLM enrichment
   import-*.mjs            # Data source importers (Modern Slavery, Lobbying, etc.)
   sync-*.mjs              # Ongoing sync pipelines
@@ -112,13 +124,13 @@ supabase/
 
 ## Tech Stack
 
-- **Frontend:** Next.js 14 (App Router), TypeScript, Tailwind CSS (Bauhaus design system)
-- **Database:** Supabase (PostgreSQL) with materialized views for analytics
-- **Entity Graph:** 92K entities, deterministic GS ID system (`AU-ABN-*`, `AU-ACN-*`, `AU-ORIC-*`)
-- **AI Enrichment:** Multi-provider LLM rotation (Groq, Gemini, Minimax, DeepSeek) with automatic fallback
-- **Data Pipelines:** Node.js scripts with Cheerio for web scraping
-- **Auth:** Supabase Auth with org team model and Stripe billing
-- **Search:** Full-text search with embedding-based semantic matching (OpenAI)
+- **Frontend:** Next.js 15 (App Router), TypeScript, Tailwind 4 (Bauhaus design system)
+- **Database:** Supabase (PostgreSQL + pgvector) with 100+ tables, 7 materialized views
+- **Entity Graph:** 100K entities, deterministic GS ID system (`AU-ABN-*`, `AU-ACN-*`, `AU-ORIC-*`), F1 94.1%
+- **AI Enrichment:** 9 LLM providers in round-robin (Groq, Gemini, DeepSeek, OpenAI, Anthropic, Perplexity, Kimi, Minimax, Gemini grounded)
+- **Data Pipelines:** 48 agents with orchestrator, scheduling, and Mission Control dashboard
+- **Auth:** Supabase Auth with org team model and Stripe billing (5 tiers)
+- **Search:** Full-text + pgvector semantic search (OpenAI text-embedding-3-small, 1536 dims)
 
 ## Data Pipeline Design
 
@@ -189,19 +201,18 @@ cd apps/web && pnpm dev
 
 ## Why This Matters
 
-- **94%** of charitable donations go to just **10%** of organisations
+- **$107 billion** in government funding flows through systems with no unified intelligence layer
+- **672,000 federal contracts** awarded with no cross-reference to political donations or community need
+- **140 entities** donate to political parties AND hold $4.7B in government contracts — a 58x return
 - First Nations communities receive **0.5%** of philanthropic funding
-- Women and girls get **12%**
-- The 16,000 smallest charities posted a collective net loss of **$144 million** last year
-- **No single official "total philanthropy" figure** exists in Australia
-- Community-based organisations are often the last to hear about funding opportunities
-- 140 entities donate to political parties AND hold $4.7B in government contracts
+- **No single platform** maps the flow of public money from allocation to outcome
+- Community-based organisations are the last to hear about opportunities and the first to lose funding
 
-GrantScope makes the invisible visible. Open data, open source, open access.
+CivicGraph makes the invisible visible. Decision infrastructure, not just data.
 
 ## Who Built This
 
-GrantScope is a project of [A Curious Tractor (ACT)](https://act.place) — a regenerative innovation ecosystem founded by Benjamin Knight and Nicholas Marchesi OAM. ACT partners with marginalised communities (especially First Nations) to build tools that transfer institutional power to community-led initiatives.
+CivicGraph is a project of [A Curious Tractor (ACT)](https://act.place) — a regenerative innovation ecosystem founded by Benjamin Knight and Nicholas Marchesi OAM. ACT partners with marginalised communities (especially First Nations) to build tools that transfer institutional power to community-led initiatives.
 
 Free for communities. Institutions pay so communities don't have to.
 

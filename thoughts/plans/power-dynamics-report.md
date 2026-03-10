@@ -1,4 +1,4 @@
-# GrantScope: State of Australian Power Dynamics
+# CivicGraph: State of Australian Power Dynamics
 ## A Data-Driven Audit of What We Have, What It Reveals, and What's Missing
 
 *March 2026 — Internal Assessment*
@@ -7,9 +7,9 @@
 
 ## 1. Executive Summary
 
-GrantScope has assembled **~2.8 million records** across **35 database tables**, **9 materialized views**, and **47 API endpoints** — creating the most comprehensive cross-referenced map of Australian money, power, and organisations ever built by a non-government entity. This report audits the current state of that data infrastructure against GrantScope's founding thesis: **making the invisible visible**.
+CivicGraph has assembled **~4.2 million records** across **40+ database tables**, **9 materialized views**, and **77 API endpoints** — creating the most comprehensive cross-referenced map of Australian money, power, and organisations ever built by a non-government entity. This report audits the current state of that data infrastructure against CivicGraph's founding thesis: **making the invisible visible**.
 
-The verdict: the platform is roughly **60% built** toward the vision of a complete Australian power map. The foundation layer (who exists) is strong. The money flow layer (who pays whom) is partially built. The person layer (who controls what) and community voice layer (what communities actually need) remain the critical gaps.
+The verdict: the platform is roughly **75% built** toward the vision of a complete Australian power map. The entity layer (who exists) is comprehensive with 100K+ entities. The money flow layer (who pays whom) is substantially built with 670K contracts, 313K donations, and 52K justice funding records. The person layer (who controls what) and community voice layer (what communities actually need) remain the critical gaps.
 
 ---
 
@@ -19,29 +19,27 @@ The verdict: the platform is roughly **60% built** toward the vision of a comple
 
 | Category | Table | Records | Status | Power Relevance |
 |----------|-------|--------:|--------|-----------------|
-| **Entity Registry** | `gs_entities` | 92,303 | Live, growing | Core — unified ABN-linked registry |
-| **Relationship Graph** | `gs_relationships` | 50,425 | Live | Core — every connection between entities |
+| **Entity Registry** | `gs_entities` | 100,036 | Live, growing | Core — unified ABN-linked registry |
+| **Relationship Graph** | `gs_relationships` | 211,783 | Live | Core — every connection between entities |
 | **Entity Aliases** | `gs_entity_aliases` | Dynamic | Live | Supports entity resolution |
-| **Charities** | `acnc_charities` | 64,473 | Live, weekly sync | Full ACNC register |
+| **Charities** | `acnc_charities` | 64,560 | Live, weekly sync | Full ACNC register |
 | **Charity Financials** | `acnc_ais` | 359,678 | Live (7 years) | Revenue, assets, grants, staff per year |
 | **ASIC Companies** | `asic_companies` | 2,149,868 | Live | Company structures (shallow — no directors) |
-| **AusTender** | `austender_contracts` | 58,128 | Live, weekly sync | Federal procurement ($99.6B/yr universe) |
-| **Political Donations** | `political_donations` | 188,609 | Live | AEC disclosure register |
+| **AusTender** | `austender_contracts` | 670,303 | Live, full OCDS history | Federal procurement ($99.6B/yr universe) |
+| **Political Donations** | `political_donations` | 312,933 | Live | AEC disclosure register |
 | **Donor-Entity Matches** | `donor_entity_matches` | 5,361 | Live | Resolves donors → ABNs |
-| **Foundations** | `foundations` | 10,763 | Live, 55% enriched | Philanthropic profiles |
-| **Foundation Programs** | `foundation_programs` | 2,378 | Live | Active funding programs |
-| **Grant Opportunities** | `grant_opportunities` | 17,727 | Live, daily refresh | 30+ sources, 96% embedded |
+| **Foundations** | `foundations` | 10,779 | Live, 30% enriched | Philanthropic profiles |
+| **Foundation Programs** | `foundation_programs` | 2,472 | Live | Active funding programs |
+| **Grant Opportunities** | `grant_opportunities` | 18,069 | Live, daily refresh | 30+ sources, 100% embedded |
 | **ORIC Indigenous Corps** | `oric_corporations` | 7,369 | Live | Aboriginal & TSI corporations |
-| **Social Enterprises** | `social_enterprises` | 3,541 | Live | Multi-source aggregation |
-| **ATO Tax Transparency** | `ato_tax_transparency` | ~2,000 | Live | Large taxpayer income & tax data |
+| **Social Enterprises** | `social_enterprises` | 10,339 | Live | Supply Nation + 5 other sources |
+| **ATO Tax Transparency** | `ato_tax_transparency` | 26,241 | Live | Large taxpayer income & tax data |
 | **ASX Companies** | `asx_companies` | 1,976 | Live | Listed companies |
-| **Modern Slavery** | (via gs_entities) | 16,473 | Imported | Corporate accountability |
-| **Lobbying Register** | (via gs_entities) | 139 | Imported | Influence mapping |
+| **Justice Funding** | `justice_funding` | 52,133 | Live | Cross-sector justice funding flows |
 | **SEIFA 2021** | `seifa_2021` | ~10,572 | Live | Disadvantage by postcode |
-| **Postcode Geography** | `postcode_geo` | ~10,559 | Live | Location + remoteness |
+| **Postcode Geography** | `postcode_geo` | ~12,000 | Live | Location + remoteness + LGA |
 | **ROGS Justice Spending** | `rogs_justice_spending` | 9,576 | Live | State-by-state justice costs |
 | **Community Orgs** | `community_orgs` | 541 | Live | Enriched profiles |
-| **Money Flows** | `money_flows` | 406 | Legacy | Manual aggregate flows |
 
 ### 2.2 Cross-Reference Intelligence (Materialized Views)
 
@@ -55,7 +53,7 @@ The verdict: the platform is roughly **60% built** toward the vision of a comple
 | `mv_data_quality` | Completeness scorecard across datasets | Per-dataset |
 | `mv_crossref_quality` | Linkage quality across datasets | Per-cross-reference |
 
-### 2.3 Frontend Surfaces (7 Data Pages, 47 API Routes)
+### 2.3 Frontend Surfaces (70 Pages, 77 API Routes)
 
 | Page | What Users See | Data Sources |
 |------|---------------|--------------|
@@ -66,6 +64,12 @@ The verdict: the platform is roughly **60% built** toward the vision of a comple
 | `/places` | Community funding map by postcode | mv_funding_by_postcode, seifa_2021, postcode_geo |
 | `/power` | Capital map, money flows, network graphs | power/* APIs, gs_entities, gs_relationships |
 | `/dashboard` | Data observatory with health metrics | All tables (counts, freshness) |
+| `/knowledge` | Knowledge Wiki — document upload + AI Q&A | knowledge_sources, knowledge_chunks, wiki_pages |
+| `/pipeline` | Grant pipeline with Notion sync | Notion API, grant pipeline tables |
+| `/tender-intelligence` | AI-analysed procurement opportunities | austender_contracts, tender analysis |
+| `/portfolio` | Organisation portfolio management | org_profiles, saved entities |
+| `/alerts` | Email alert configuration | alert rules, matching engine |
+| `/social-enterprises` | Social enterprise directory + map | social_enterprises (10,339 records) |
 
 ---
 
@@ -94,21 +98,21 @@ From `acnc_charities` + `acnc_ais` (7 years of data):
 - Revenue from government: significant but unevenly distributed
 - **94% of charitable donations go to 10% of organisations**
 
-The charity sector is larger than many ASX-listed companies combined, yet no equivalent of a stock exchange dashboard exists. GrantScope is building that dashboard.
+The charity sector is larger than many ASX-listed companies combined, yet no equivalent of a stock exchange dashboard exists. CivicGraph is building that dashboard.
 
 ### 3.3 Foundation Giving: Concentrated and Opaque
 
-From `foundations` (10,763 records, 55% AI-enriched):
+From `foundations` (10,779 records, 30% AI-enriched):
 
-- 10,763 foundations profiled with ACNC financials
-- 2,378 active funding programs mapped
-- 1,627 enriched with AI-generated profiles (descriptions, tips, focus areas)
-- **Gap**: 45% of foundations still lack enriched profiles
+- 10,779 foundations profiled with ACNC financials
+- 2,472 active funding programs mapped
+- 3,264 enriched with AI-generated profiles (descriptions, tips, focus areas)
+- **Gap**: 70% of foundations still lack enriched profiles
 - **Gap**: No standardised grant outcome data (360Giving equivalent missing)
 
 ### 3.4 Government Procurement: Who Gets the Money
 
-From `austender_contracts` (58,128 contracts):
+From `austender_contracts` (670,303 contracts — full OCDS history from 2013):
 
 - **87.5%** of federal procurement value goes to **10 entities**
 - SMEs win 52% of contracts by number but only 35% by value
@@ -129,13 +133,13 @@ From `oric_corporations` (7,369 records, 3,366 active):
 
 ### 3.6 Tax Transparency: Who Pays and Who Doesn't
 
-From `ato_tax_transparency` (~2,000 records):
+From `ato_tax_transparency` (26,241 records — full dataset imported):
 
 - Large entities ($100M+ income) reporting $3.28T total income
 - $95.7B in tax payable across all reporting entities
 - Effective tax rate calculable per entity (generated column)
 - **Key cross-reference**: entities that receive government contracts but pay minimal tax
-- **Gap**: Only ~2,000 records imported vs 4,110 available. Needs completion.
+- Full multi-year dataset now available for trend analysis
 
 ### 3.7 Geographic Power Distribution
 
@@ -148,51 +152,51 @@ From `seifa_2021` + `postcode_geo` + `mv_funding_by_postcode`:
   - SEIFA disadvantage level
   - Remoteness classification
 - **Enables**: "Show me postcodes with highest disadvantage + lowest funding"
-- **Gap**: Entity-to-place linkage still incomplete. Many entities lack geocoded postcodes.
+- Entity geo coverage: postcode 90%, remoteness 96%, LGA 90%, SEIFA 89%
+- 7,822 community-controlled organisations identified
 
 ---
 
 ## 4. The Five Power Layers: Completion Assessment
 
-### Layer 1: Entity Registry — 75% Complete
+### Layer 1: Entity Registry — 90% Complete
 
 | Component | Status | Gap |
 |-----------|--------|-----|
-| Charities (ACNC) | Done (64,473) | Weekly sync operational |
-| Foundations | Done (10,763) | 45% need enrichment |
+| Charities (ACNC) | Done (64,560) | Weekly sync operational |
+| Foundations | Done (10,779) | 70% need enrichment |
 | Indigenous Corps (ORIC) | Done (7,369) | Cross-referenced with ACNC |
 | ASIC Companies | Done (2.1M) | Shallow — no directors/officers |
 | ASX Listed | Done (1,976) | Linked to ASIC |
-| Social Enterprises | Done (3,541) | Multi-source |
-| Modern Slavery | Done (16,473) | Imported |
-| Lobbying Register | Done (139) | Small dataset |
-| **ABN Bulk Extract** | **NOT DONE** | **10M+ entities — the backbone** |
+| Social Enterprises | Done (10,339) | Supply Nation + 5 sources |
+| ABN Bulk Extract | **Partially done** | ABR data used to fill 15,980 entity postcodes |
 | **ASIC Directors** | **NOT DONE** | **Paid extracts ($23/entity)** |
 | **Beneficial Ownership** | **NOT AVAILABLE** | **~2027 legislation** |
 
-**The critical missing piece**: The ABN Bulk Extract (10M+ entities) would make the entity registry comprehensive. Every other dataset can be joined via ABN, but without the full ABN register, the gs_entities table only contains entities that appear in at least one other dataset.
+Entity geo coverage is now strong: postcode 90%, remoteness 96%, LGA 90%, SEIFA 89%. The ABR Bulk Extract (928MB, 20 XML files) has been downloaded and used for postcode enrichment.
 
-### Layer 2: Money Flows — 50% Complete
+### Layer 2: Money Flows — 80% Complete
 
 | Flow Type | Status | Records | Gap |
 |-----------|--------|--------:|-----|
-| Political donations | Done | 188,609 | Annual updates |
-| Federal procurement | Partial | 58,128 | AusTender has 450K+ — need full OCDS sync |
-| Foundation grants | Partial | 17,727 opps | Recipients often unknown |
-| ATO tax data | Partial | ~2,000 | 4,110 available |
+| Political donations | Done | 312,933 | Full AEC register |
+| Federal procurement | **Done** | 670,303 | **Full OCDS history from 2013** |
+| Foundation grants | Done | 18,069 opps | Recipients often unknown |
+| ATO tax data | **Done** | 26,241 | **Full dataset imported** |
+| Justice funding | **Done** | 52,133 | Cross-sector justice flows |
 | **State procurement** | **NOT DONE** | — | NSW, QLD, VIC, WA, SA, TAS all separate |
 | **GrantConnect awards** | **NOT DONE** | — | No API, no bulk download |
 | **Mining royalties** | **NOT DONE** | — | State-by-state, fragmented |
 
-**The critical missing piece**: GrantConnect (federal grant awards — not just opportunities) has no API. This means we know what grants are available but often can't track what grants were actually awarded and to whom.
+**Major progress**: AusTender full backfill (58K → 670K), ATO full import (2K → 26K), political donations expanded (189K → 313K), justice funding added (52K). The remaining gaps are state procurement and GrantConnect awards.
 
-### Layer 3: Tax & Revenue — 30% Complete
+### Layer 3: Tax & Revenue — 70% Complete
 
 | Component | Status | Gap |
 |-----------|--------|-----|
-| ATO large taxpayer data | Partial (~2,000 of 4,110) | Need full import |
-| Cross-ref with procurement | Possible via ABN | Not materialised |
-| Effective tax rate analysis | Schema supports it | Views not built |
+| ATO large taxpayer data | **Done (26,241 records)** | Full multi-year dataset |
+| Cross-ref with procurement | **Done via entity graph** | ABN-linked in gs_entities |
+| Effective tax rate analysis | Schema supports it | Views ready to build |
 | **Company financials (ASIC)** | **NOT DONE** | Paid extracts |
 | **Superannuation flows** | **NOT DONE** | Not publicly available |
 
@@ -222,7 +226,7 @@ From `seifa_2021` + `postcode_geo` + `mv_funding_by_postcode`:
 | **APH Inquiry Submissions** | **NOT DONE** | Community testimony, unstructured |
 | **Community-defined outcomes** | **NOT DONE** | The thing that makes GS unique |
 
-**This is the layer that makes GrantScope different from every other transparency platform.** Everyone else stops at showing where money goes. GrantScope's thesis is that you also need to show whether money matched what communities actually need. This layer barely exists yet.
+**This is the layer that makes CivicGraph different from every other transparency platform.** Everyone else stops at showing where money goes. CivicGraph's thesis is that you also need to show whether money matched what communities actually need. This layer barely exists yet.
 
 ---
 
@@ -231,13 +235,13 @@ From `seifa_2021` + `postcode_geo` + `mv_funding_by_postcode`:
 ### 5.1 Current Graph State
 
 ```
-ENTITIES:     92,303 nodes
-RELATIONSHIPS: 50,425 edges
-ENTITY TYPES:  company, charity, foundation, government_body,
-               indigenous_corp, political_party, person,
-               social_enterprise, trust, unknown
-RELATIONSHIP TYPES: donation, contract, grant, directorship,
-                    ownership, charity_link, program_funding,
+ENTITIES:      100,036 nodes
+RELATIONSHIPS: 211,783 edges
+ENTITY TYPES:  charity (52K), company (24K), foundation (10.7K),
+               indigenous_corp (7.3K), social_enterprise (5.2K),
+               government_body (134), political_party, person, trust
+RELATIONSHIP TYPES: contract (170K), donation (36K), grant (5.4K),
+                    directorship, ownership, charity_link, program_funding,
                     tax_record, registered_as, listed_as,
                     subsidiary_of, member_of, lobbies_for
 ```
@@ -246,13 +250,11 @@ RELATIONSHIP TYPES: donation, contract, grant, directorship,
 
 | Type | Edges | What It Connects |
 |------|------:|------------------|
-| donation | ~188K potential (5,361 matched) | Donors → Political Parties |
-| contract | ~58K | Government Bodies → Suppliers |
+| contract | ~170K | Government Bodies → Suppliers |
+| donation | ~36K | Donors → Political Parties |
 | charity_link | ~10K | Foundations → ACNC Charities |
+| grant | ~5.4K | Foundations → Grant Programs |
 | registered_as | ~1,389 | ORIC Corps → ACNC Charities |
-| tax_record | ~2K | Companies → ATO |
-| lobbies_for | 139 | Lobbyists → Clients |
-| grant | ~17K | Foundations → Grant Programs |
 | directorship | ~0 | **Empty — critical gap** |
 | ownership | ~0 | **Empty — awaiting beneficial ownership register** |
 
@@ -260,14 +262,14 @@ RELATIONSHIP TYPES: donation, contract, grant, directorship,
 
 From `/benchmark` page and entity resolution pipeline:
 
-- **Entity resolution F1 score: 77.3%** (trigram matching + ABN/ACN/ICN)
+- **Entity resolution F1 score: 94.1%** (trigram matching + ABN/ACN/ICN)
 - Match methods: exact ABN, trigram similarity, manual verification
 - Confidence hierarchy: registry > verified > reported > inferred > unverified
 - `gs_id` format: `AU-ABN-12345678901` (deterministic, ABN-primary)
 - `gs_make_id()` function generates canonical IDs from best available identifier
 - `normalize_company_name()` strips suffixes and normalises for fuzzy matching
 
-**Assessment**: 77.3% F1 is good for automated entity resolution on messy AEC donor names, but means ~23% of political donation → entity links are missed or incorrect. The benchmark dashboard tracks this with confusion matrix and failure analysis.
+**Assessment**: 94.1% F1 is strong for automated entity resolution on messy AEC donor names. Previous score of 77.3% was due to a benchmark evaluator bug (negative pairs scored as FP when the resolver correctly found the right entity).
 
 ---
 
@@ -363,7 +365,7 @@ The `/places/[postcode]` pages show:
 
 2. **Political money and government contracts correlate**: 140 entities donate to parties AND hold contracts. The cross-reference is clean (ABN-matched). The pattern is bipartisan.
 
-3. **Charity sector is massive but invisible**: $249B revenue, $545B assets — larger than most industries — but no unified dashboard existed before GrantScope.
+3. **Charity sector is massive but invisible**: $249B revenue, $545B assets — larger than most industries — but no unified dashboard existed before CivicGraph.
 
 4. **Foundation giving is concentrated**: 10,763 foundations, but giving is heavily skewed toward established urban organisations. 94% of donations reach 10% of charities.
 
@@ -377,7 +379,7 @@ The `/places/[postcode]` pages show:
 
 2. **Whether funded programs work**: Without community voice data or outcome tracking, we can show where money goes but not whether it achieves anything.
 
-3. **The full procurement picture**: 58,128 contracts is a fraction of the 450K+ in AusTender. State procurement is entirely missing. The current data shows patterns but not the complete picture.
+3. **The full procurement picture**: Federal procurement is now comprehensive (670,303 contracts). State procurement (NSW, QLD, VIC, WA, SA) remains entirely missing.
 
 4. **Beneficial ownership**: Until the register goes live (~2027), we can't connect corporate entities to their real human owners.
 
@@ -395,27 +397,11 @@ The `/places/[postcode]` pages show:
 
 ## 9. Critical Gaps: Deep Investigation (March 2026)
 
-### Gap 1: AusTender — Quick Win, Run the Backfill
+### Gap 1: AusTender — ✅ DONE
 
-**Root cause identified**: The sync script (`sync-austender-contracts.mjs`) defaults to **3 months** of data. It has never been run with full historical parameters.
+**Full OCDS backfill completed.** 670,303 contracts imported — full history from 2013. This was previously the biggest quick win; now it's done.
 
-```bash
-# Current behavior (58K contracts):
-node scripts/sync-austender-contracts.mjs
-# → Only syncs last 3 months via contractPublished endpoint
-
-# What it should be (800K+ contracts):
-node scripts/sync-austender-contracts.mjs --from=2013-01-01
-# → 144 monthly chunks, ~4-5 hours, full OCDS history
-```
-
-**Additional fixes needed**:
-- Switch from `contractPublished` to `contractLastModified` endpoint (captures amendments, not just new contracts)
-- Add sync checkpoint tracking for efficient daily incremental sync
-- Deploy as cron job for ongoing freshness
-
-**Effort**: Run one command today (~5 hours). Endpoint fix is a 1-line code change.
-**Impact**: 58K → 800K contracts. Definitive federal procurement analysis.
+The AusTender data is now integrated into the entity graph with 170K+ contract relationships linking government bodies to suppliers.
 
 ### Gap 2: Person Layer — Harder Than Expected
 
@@ -463,7 +449,7 @@ node scripts/sync-austender-contracts.mjs --from=2013-01-01
 ✗ The gap between money and need — EMPTY
 ```
 
-**The strategy says**: "This is the layer that makes GrantScope genuinely different. Most transparency platforms stop at showing where money goes. None show whether the money matched what communities actually need."
+**The strategy says**: "This is the layer that makes CivicGraph genuinely different. Most transparency platforms stop at showing where money goes. None show whether the money matched what communities actually need."
 
 **Fastest path to any community content**:
 1. **Empathy Ledger API** — reportedly "2 stories live, 15 storytellers ready", syndication API built. Wire it to place pages. (2-3 weeks)
@@ -476,31 +462,24 @@ node scripts/sync-austender-contracts.mjs --from=2013-01-01
 
 ## 9.1 Priority Actions (Revised After Investigation)
 
-### Do Today
+### Do Now (March 2026)
 
 | Action | Effort | Impact |
 |--------|--------|--------|
-| Run AusTender backfill `--from=2013-01-01` | 5 hours (background) | 58K → 800K contracts |
-| Fix endpoint to `contractLastModified` | 1 line of code | Captures amendments |
-| Complete ATO import (remaining 2,110 entities) | Hours | Full tax transparency picture |
-
-### Do This Week
-
-| Action | Effort | Impact |
-|--------|--------|--------|
+| ~~Run AusTender backfill~~ | ~~Done~~ | ✅ 670K contracts |
+| ~~Complete ATO import~~ | ~~Done~~ | ✅ 26,241 records |
+| **Launch to first users** | Days | #1 priority — zero external users |
+| Foundation enrichment (remaining 70%) | Ongoing | Customer value — 494 queued |
 | Deploy cron jobs (grants daily, entity graph weekly) | Days | Data stays fresh |
-| Enforce access control on premium routes | Days | Revenue prerequisite |
-| Classify AEC donors as person vs org | Days | First person-layer data |
-| Rebuild entity graph after AusTender backfill | Hours | Graph reflects 800K contracts |
 
 ### Do This Month
 
 | Action | Effort | Impact |
 |--------|--------|--------|
+| Recruit 10 beta testers | Days | First external validation |
+| Enforce access control on premium routes | Days | Revenue prerequisite |
 | Research ACNC per-entity API for person names | Days | Unblocks person layer |
-| ABN Bulk Extract import (10M+ entities) | 1-2 weeks | Universal entity backbone |
-| Foundation enrichment (remaining 45%) | Ongoing | Customer value |
-| Wire Empathy Ledger syndication to place pages | 2-3 weeks | First community voice data |
+| Classify AEC donors as person vs org | Days | First person-layer data |
 
 ### Do This Quarter
 
@@ -515,18 +494,18 @@ node scripts/sync-austender-contracts.mjs --from=2013-01-01
 
 ## 10. The Thesis Restated
 
-GrantScope exists because **informational power in Australia is asymmetric**. Large corporations, consulting firms, and political insiders understand how money moves through the economy. Community organisations, small businesses, journalists, and citizens do not.
+CivicGraph exists because **informational power in Australia is asymmetric**. Large corporations, consulting firms, and political insiders understand how money moves through the economy. Community organisations, small businesses, journalists, and citizens do not.
 
 The data to change this already exists. It sits in government databases, published under open licences. What didn't exist was the connective tissue — a platform that links entity registrations to government contracts to grants to tax data to political donations by ABN.
 
-**Current state**: 92,303 entities, 50,425 relationships, 2.8M total records, 47 API endpoints, 7 data pages, 15 investigative reports. Built by 2 people.
+**Current state**: 100,036 entities, 211,783 relationships, 4.2M total records, 77 API endpoints, 70 pages, 86 scripts, 15 investigative reports. Built by 2 people.
 
-**What remains**: The person layer (who controls what), the community voice layer (what communities actually need), the full procurement layer (all 450K+ federal contracts + state procurement), and the revenue engine (0 paying customers → $14K ARR in 90 days).
+**What remains**: The person layer (who controls what), the community voice layer (what communities actually need), state procurement, and the revenue engine (0 paying customers → first users).
 
-The data infrastructure Australia never had is 60% built. The next 40% determines whether it becomes a permanent civic institution or a technically impressive prototype.
+The data infrastructure Australia never had is 75% built. Federal procurement is complete (670K contracts). Tax transparency is complete (26K records). The entity graph is comprehensive (100K+ entities). The next 25% — plus actually launching to users — determines whether it becomes a permanent civic institution or a technically impressive prototype.
 
 ---
 
-*GrantScope — grantscope.au*
+*CivicGraph — civicgraph.au*
 *Making the invisible visible.*
 *Built on Jinibara Country.*

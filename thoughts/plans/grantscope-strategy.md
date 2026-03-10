@@ -1,8 +1,8 @@
-# GrantScope: Australia's Community Capital Ledger
+# CivicGraph: Australia's Community Capital Ledger
 
 ## What This Is
 
-GrantScope is a searchable map of Australian organisations, money, ownership, grants, contracts, place, and community-defined impact. It makes capital allocation legible, then uses that legibility to help communities negotiate for a fairer share of power and capital.
+CivicGraph is a searchable map of Australian organisations, money, ownership, grants, contracts, place, and community-defined impact. It makes capital allocation legible, then uses that legibility to help communities negotiate for a fairer share of power and capital.
 
 Not a grants database. Not a procurement tracker. Not a charity register.
 
@@ -12,7 +12,7 @@ An always-on Australian ledger of money, power, place, and community voice.
 
 ## What It Answers
 
-For any organisation, place, or issue, GrantScope answers:
+For any organisation, place, or issue, CivicGraph answers:
 
 - Who exists here?
 - Who owns what?
@@ -30,54 +30,64 @@ The platform identifies every entity that touches community capital flows — no
 
 ## What's Real Today (March 2026)
 
-This is not a whitepaper for something that doesn't exist. It's a strategy for something that's 60% built.
+This is not a whitepaper for something that doesn't exist. It's a strategy for something that's 75% built.
 
 ### Data Assets
 
 | Dataset | Records | Status |
 |---------|--------:|--------|
-| ASIC Company Names | 2,149,868 | Imported, ABN cross-referenced |
+| AusTender Federal Contracts | 670,303 | Full OCDS history, ABN cross-referenced |
 | ACNC Annual Statements | 359,678 | 7 years (2017-2023), full financials |
-| AEC Political Donations | 188,609 | ABN-matched via entity resolution |
-| ACNC Charities Register | 64,473 | Full register, weekly sync |
-| AusTender Federal Contracts | 58,128 | ABN cross-referenced |
-| Grant Opportunities | 17,529 | 30+ sources, 100% embedded for semantic search |
-| Foundations (profiled) | 10,763 | ABN + ACNC linked, 1,627 LLM-enriched |
+| AEC Political Donations | 312,933 | ABN-matched via entity resolution |
+| ACNC Charities Register | 64,560 | Full register, weekly sync |
+| Justice Funding Records | 52,133 | JusticeHub cross-linked |
+| ATO Corporate Tax Transparency | 26,241 | Full import, effective tax rates |
+| Grant Opportunities | 18,069 | 30+ sources, 100% embedded for semantic search |
+| Foundations (profiled) | 10,779 | ABN + ACNC linked, 3,264 LLM-enriched (30%) |
+| Social Enterprises | 10,339 | Supply Nation + Social Traders + B Corp + state networks |
 | ORIC Indigenous Corporations | 7,369 | ABN + ACNC cross-referenced |
-| Donor-Entity ABN Matches | 5,361 | Resolved via entity graph |
-| Foundation Programs | 2,378 | Linked to 361 foundations |
-| ATO Corporate Tax Transparency | ~2,000 | Large taxpayer data |
-| SEIFA Socioeconomic Index | ~2,700 | Postcodes with disadvantage scores |
-| Place/Postcode Geography | ~17,000 | Remoteness + location data |
-| ROGS Justice Spending | 9,576 | Productivity Commission data |
-| Social Enterprises | ~500 | Multi-source aggregation |
-| Community Orgs | 500 | Profile tracking |
-| **Entity Graph** | **80,000+ entities** | **50,000+ relationships** |
-| **Total Records** | **~2.8M** | |
+| Foundation Programs | 2,472 | Linked to 361+ foundations |
+| SEIFA Socioeconomic Index | ~11,000 | All AU postcodes with disadvantage scores |
+| Place/Postcode Geography | ~12,000 | Remoteness + LGA + SA2 + lat/lng |
+| Community Orgs | 541 | Profile tracking |
+| **Entity Graph** | **100,036 entities** | **211,783 relationships** |
+| **Total Records** | **~4.2M** | |
 
 ### Cross-Reference Intelligence (Verified)
 
-- 185 entities that donate to political parties AND hold government contracts
+- 140+ entities that donate to political parties AND hold government contracts
 - 41% of Indigenous corporations linked to ACNC charity records
-- 31% of grants linked to their source foundation
-- Entity resolution F1 score: 77.3% (trigram matching + ABN/ACN/ICN)
+- Entity resolution F1 score: **94.1%** (trigram matching + ABN/ACN/ICN + benchmark harness)
 - Canonical ID system: `gs_id` format (`AU-ABN-12345678901`)
+- Entity geo coverage: postcode 90%, remoteness 96%, LGA 90%, SEIFA 89%
+- 7,822 community-controlled organisations classified (ORIC + name-matched charities)
+- Funding gap scoring across 2,900+ postcodes via `get_funding_gaps()` RPC
 
-### Live Product
+### Live Product (70 pages, 77 API routes, 86 scripts)
 
-- Semantic + hybrid grant search (14K+ grants)
-- Foundation directory with 7-year giving history
-- Entity graph explorer (80K entities)
-- Place pages with SEIFA + remoteness + funding gap analysis
-- Investigative reports: donor-contractor overlap, power dynamics, funding equity, money flow
+- Semantic + hybrid grant search (18K grants, 100% embedded)
+- Foundation directory with 7-year giving history and AI profiles
+- Entity dossier ("ABN X-Ray") with donations, contracts, justice funding, place context
+- Place pages with SEIFA + remoteness + funding gap analysis + coverage map
 - Grant tracker (kanban: wishlist → submitted → won/lost)
-- 47 scripts, 11,209 LOC of data pipelines
-- 8-provider LLM enrichment with auto-rotation
-- Stripe billing, user accounts, team management
+- Knowledge Wiki: document upload (PDF/DOCX/URL) → AI extraction → org-scoped RAG Q&A
+- AI Answer Bank: extract Q&A pairs from past applications
+- Grant pipeline tracker with Notion sync
+- Tender intelligence module with compliance checks
+- Portfolio management for grant tracking
+- Alert system for grant matches
+- Social enterprise directory with Supply Nation + multi-source aggregation
+- Investigative reports: donor-contractor overlap, power dynamics, funding equity, community parity
+- AI chat assistant (RAG-powered grant discovery + org knowledge)
+- Mission control dashboard with agent orchestration
+- Data observatory with coverage map, sector charts, freshness tracking
+- 48 data pipeline agents with 8-category registry and orchestrator
+- Stripe billing (5 tiers), user accounts, team management
+- API key management for programmatic access
 
 ### Technology Stack
 
-Next.js 15 + Supabase (Postgres + pgvector) + OpenAI embeddings + 8-provider LLM rotation + Firecrawl scraping + Stripe billing + Vercel hosting
+Next.js 15 + Supabase (Postgres + pgvector + Storage + Auth) + OpenAI embeddings + 9-provider LLM rotation + Cheerio/mammoth scraping + Stripe billing + Vercel hosting
 
 ---
 
@@ -117,17 +127,21 @@ Already public, structured, bulk-accessible. Low acquisition cost.
 
 | Source | What You Get | Access | Status |
 |--------|-------------|--------|--------|
-| **ABR/ABN Bulk Extract** | 10M+ entities (name, type, status, state, GST) | Free weekly XML on data.gov.au | Not yet imported |
+| **ABR/ABN Bulk Extract** | 10M+ entities (name, type, status, state, GST) | Free weekly XML on data.gov.au | **Done** (20 XML files, ~6M records, backfilled 16K postcodes) |
 | **ACNC Register** | 64K charities with purposes, programs, finances, governance | Free weekly CSV on data.gov.au | Done |
-| **ACNC AIS Data** | Revenue, expenses, grants, assets, staff by charity by year | Free annual CSV | Done (7 years) |
-| **ORIC Register** | 3,372 Indigenous corporations with financials | Free CSV on data.gov.au | Done |
-| **AusTender** | Federal procurement contracts | Free, structured | Done (58K contracts) |
-| **AEC Donations** | Political donations disclosures | Free, structured | Done (188K records) |
+| **ACNC AIS Data** | Revenue, expenses, grants, assets, staff by charity by year | Free annual CSV | Done (7 years, 360K records) |
+| **ORIC Register** | 7,369 Indigenous corporations with financials | Free CSV on data.gov.au | Done |
+| **AusTender** | Federal procurement contracts | Free OCDS API | **Done** (670K contracts, full history) |
+| **AEC Donations** | Political donations disclosures | Free, structured | **Done** (313K records) |
 | **ASIC Company Dataset** | Company name, ACN, type, status, registration date | Free weekly CSV (shallow — no directors) | Done (2.1M) |
-| **QGIP (QLD)** | Government expenditure on frontline services by LGA | Free CSV via data.qld.gov.au CKAN API | Not yet imported |
-| **ATO Tax Transparency** | Large taxpayer income, tax, entity details | Free, annual | Done |
-| **Modern Slavery Register** | ~27,695 entities with statements | Free, structured | Not yet imported |
-| **Federal Lobbying Register** | ~1,500 third-party lobbyists | Free | Not yet imported |
+| **ATO Tax Transparency** | Large taxpayer income, tax, entity details | Free, annual | **Done** (26K records, full import) |
+| **Supply Nation** | Verified Indigenous businesses | Directory scrape | **Done** (6,135 businesses) |
+| **Social Traders** | Social enterprise directory | Directory scrape | **Done** (multi-source, 10K+ SEs) |
+| **Modern Slavery Register** | ~27K entities with statements | Free, structured | Done (16K imported) |
+| **Federal Lobbying Register** | ~1,500 third-party lobbyists | Free | Done (139 imported) |
+| **NIAA Senate Order 16** | Indigenous affairs grants | Public data | **Done** |
+| **Justice Funding** | Justice sector funding flows | JusticeHub cross-link | **Done** (52K records) |
+| **ABS Geography** | Postcode-to-remoteness correspondence | Free CSV | **Done** (full AU coverage) |
 
 ### Tier 2: Hard / Fragmented (6-12 months)
 
@@ -135,7 +149,7 @@ Already public, structured, bulk-accessible. Low acquisition cost.
 |--------|-----------|
 | **ASIC Directors/Officeholders** | Paid extracts ($10-23 per entity). Selective enrichment only. |
 | **State government grants** | Each state has different portal, format, access rules. NSW/VIC/SA/WA/NT all incomplete. |
-| **Supply Nation** | Locked behind Salesforce portal. Need partnership, not scraping. ~6K verified Indigenous businesses. |
+| **Supply Nation** | **Done** — 6,135 businesses scraped and imported. |
 | **Council community plans** | Every LGA publishes one. Public but unstructured (PDFs). |
 | **APH inquiry submissions** | Public, searchable, full of community voice. Unstructured. |
 
@@ -179,7 +193,7 @@ The `gs_entities` table already supports `person` as an entity type, and `gs_rel
 
 ## The Community Layer (The Thing Nobody Else Has)
 
-Most transparency platforms stop at showing where money goes. None show whether the money matched what communities actually need. This is the layer that makes GrantScope genuinely different.
+Most transparency platforms stop at showing where money goes. None show whether the money matched what communities actually need. This is the layer that makes CivicGraph genuinely different.
 
 ### Concrete data sources for community voice:
 
@@ -203,10 +217,10 @@ This is how the platform says: *here is the ledger of money AND here is the ledg
 
 ### Empathy Ledger as architectural partner:
 
-EL is the community voice infrastructure. GrantScope is the money/power ledger. Together they complete the picture. The integration is not decorative — it's structural:
+EL is the community voice infrastructure. CivicGraph is the money/power ledger. Together they complete the picture. The integration is not decorative — it's structural:
 
 - EL captures community-defined outcomes in structured format
-- GrantScope maps where money goes
+- CivicGraph maps where money goes
 - Linked by place, they show whether investment matches community priority
 - This is the ACT ecosystem flywheel: better community data feeds better accountability, which feeds better funding decisions, which creates better community outcomes
 
@@ -267,7 +281,7 @@ The platform's credibility depends on users knowing what's verified vs inferred.
 
 ### Indigenous data sovereignty:
 
-GrantScope partners WITH Indigenous communities. It does not claim ownership of Indigenous data. Specific principles:
+CivicGraph partners WITH Indigenous communities. It does not claim ownership of Indigenous data. Specific principles:
 
 - ORIC and Supply Nation data is presented as those organisations publish it — no re-interpretation
 - Indigenous corporations can claim their profile and control how their community context is presented
@@ -288,7 +302,7 @@ Every major transparency platform in the world is failing financially:
 | **Michael West Media** (AU corporate power) | 500K monthly views | Reader-funded, fragile |
 | **360Giving** (UK grants data) | 275 funders, £265B in grants | Foundation-funded charity |
 
-The pattern: foundations fund transparency work when it's fashionable, then reprioritise. GrantScope cannot follow this path. It must generate its own revenue from the data itself.
+The pattern: foundations fund transparency work when it's fashionable, then reprioritise. CivicGraph cannot follow this path. It must generate its own revenue from the data itself.
 
 ---
 
@@ -366,7 +380,7 @@ ACT Foundation (CLG, charitable, DGR)
 ACT Ventures (Pty Ltd, mission-locked, 40% profit-sharing)
   └── Provides operational services to the cooperative under contract
 
-GrantScope Data Cooperative (Distributing Co-op, CNL QLD)
+CivicGraph Data Cooperative (Distributing Co-op, CNL QLD)
   ├── Owned and governed by community org members (one member, one vote)
   ├── Revenue from professional intelligence + institutional licensing
   ├── Surplus distributed via patronage rebates (proportional to usage)
@@ -405,47 +419,49 @@ Nobody else has both the entity graph AND the community voice layer.
 - **Michael West Media** — corporate power journalism (no data product)
 - **360Giving (UK)** — open grants standard (no Australian equivalent)
 
-### What GrantScope has that nobody else does:
+### What CivicGraph has that nobody else does:
 
-1. **Entity resolution at scale** — 80K+ entities cross-referenced by ABN across donations, contracts, charities, and Indigenous corporations. Nobody else has done this for Australia.
-2. **The cross-reference graph** — linking political donations → government contracts → charities → Indigenous corporations. Each new dataset multiplies the value of every existing one.
-3. **Community voice integration** — Empathy Ledger partnership means community-defined priorities linked to funding flows. Unique globally.
-4. **Cooperative ownership** — community orgs contribute data and validate results because they own the platform.
-5. **Beneficial Ownership timing** — the register goes live ~2027. Whoever has the entity graph ready to integrate ownership data becomes Australia's definitive power map.
-6. **AI enrichment pipeline** — 8-provider LLM rotation with entity resolution, making public data machine-readable at scale.
+1. **Entity resolution at scale** — 100K+ entities cross-referenced by ABN across donations, contracts, charities, justice funding, and Indigenous corporations. Nobody else has done this for Australia. F1 score: 94.1%.
+2. **The cross-reference graph** — 211K relationships linking political donations → government contracts → charities → Indigenous corporations → justice funding. Each new dataset multiplies the value of every existing one.
+3. **Knowledge infrastructure** — document upload, AI extraction, org-scoped RAG search, answer bank with AI Q&A extraction. Users build institutional knowledge that improves with every application.
+4. **Community voice integration** — Empathy Ledger partnership means community-defined priorities linked to funding flows. Unique globally.
+5. **Cooperative ownership** — community orgs contribute data and validate results because they own the platform.
+6. **Beneficial Ownership timing** — the register goes live ~2027. Whoever has the entity graph ready to integrate ownership data becomes Australia's definitive power map.
+7. **AI enrichment pipeline** — 9-provider LLM rotation with entity resolution, making public data machine-readable at scale.
+8. **Geographic intelligence** — 96% of entities geocoded with remoteness, 90% with LGA, 89% with SEIFA disadvantage. Funding gap scoring across 2,900+ postcodes.
 
 ---
 
 ## Execution Plan
 
-### Phase 0: NOW (Already Done)
+### Phase 0: DONE
 
-GrantScope as grants + foundations + entities + places. Live product with 2.8M records, semantic search, investigative reports.
+CivicGraph as grants + foundations + entities + places + knowledge + pipeline + alerts. Live product with 4.2M records, 100K entity graph, semantic search, investigative reports, knowledge wiki, 70 pages, 77 API routes, 86 scripts.
 
-### Phase 1: Complete the Money Layer (Q2 2026)
+### Phase 1: Launch to First Users (NOW — Q2 2026)
 
 | Action | Impact | Effort |
 |--------|--------|--------|
-| Import QGIP expenditure data (QLD) | Government spending by LGA, department, program | Days (free CSV) |
-| Import ABR bulk extract (10M+ entities) | National entity backbone, cross-reference everything | 1-2 weeks (XML parsing) |
-| Import Modern Slavery Register (~27K entities) | Corporate accountability dimension | Days (structured) |
-| Import Federal Lobbying Register (~1,500) | Influence layer | Days |
-| Publish donor-contract overlap report | First public proof of the thesis | 1 week |
-| Build Entity Dossier page ("ABN X-Ray") | Core product wedge | 2 weeks |
-| Complete foundation enrichment (3,304 remaining) | Data quality foundation | Ongoing (batches) |
-| Reframe positioning (README, landing page) | Narrative catches up to product | 1 day |
+| Deploy to production and verify accessibility | Users can reach the product | Days |
+| Deploy cron for daily grant refresh + weekly graph rebuild | Data stays fresh | Days |
+| Fix access control — enforce tier limits on API routes | Revenue prerequisite | Days |
+| Recruit 10 beta testers from warm network | First feedback loop | 1-2 weeks |
+| Complete foundation enrichment (2,452 remaining with websites) | Data quality | Ongoing (batches) |
+| LinkedIn page + first content post (donor-contractor investigation) | Brand awareness | 1 day |
+| Email 3 grant consultants — offer free Professional access | First users | Days |
+| Set up hello@civicgraph.au forwarding | Contact channel | Hours |
+| Submit PA Conference 2026 speaker proposal (Sep 8-10, Brisbane) | Conference presence | Days |
 
-### Phase 2: Build the Person Layer (Q3 2026)
+### Phase 2: Build the Person Layer + First Revenue (Q3 2026)
 
 | Action | Impact | Effort |
 |--------|--------|--------|
 | Cross-reference ACNC responsible persons with AEC donors | Interlocking directorates — the investigative angle | 2-3 weeks |
 | Person entity type in graph | People who direct + donate + contract | 1-2 weeks |
 | Entity dossier includes "people connected to this org" | Product depth | 1 week |
-| Launch paid entity dossiers | First revenue | 2 weeks |
+| Convert beta testers to paid — founding member pricing (50% off forever) | First revenue | Ongoing |
 | Launch paid API tiers | Recurring revenue | 2 weeks |
-| Ship alert system (entity/place monitoring) | Sticky product | 2-3 weeks |
-| Recruit first 10 cooperative members | Network effects | Ongoing |
+| Target 5 paying customers by end of Month 3 ($14K ARR) | Revenue validation | Sales |
 
 ### Phase 3: Build the Community Layer (Q4 2026)
 
@@ -453,11 +469,10 @@ GrantScope as grants + foundations + entities + places. Live product with 2.8M r
 |--------|--------|--------|
 | Empathy Ledger integration (API) | Community stories linked to places | 2-3 weeks |
 | LGA Community Strategic Plan extraction | Council-adopted priorities by place | 4-6 weeks (PDF extraction) |
-| APH inquiry submissions pipeline | Community voice on national issues | 3-4 weeks |
 | Place pages show money + community priorities + gap | The full picture | 2-3 weeks |
 | Ship flagship quarterly reports | Content + sales | Ongoing |
 | Institutional licensing (universities, peak bodies) | Enterprise revenue | Relationship-driven |
-| First cooperative surplus distribution | Prove the model | Process |
+| PA Conference Sep 2026 — "What 100,000 entities tell us about Australian philanthropy" | Market positioning | Preparation |
 
 ### Phase 4: Scale and Deepen (Q1 2027)
 
@@ -488,7 +503,7 @@ Right now, large institutions have: better data, better memory, better reporting
 
 Communities have: better lived knowledge, less visibility into the full system, less time to prove what they already know.
 
-GrantScope narrows that gap. A community group should be able to say:
+CivicGraph narrows that gap. A community group should be able to say:
 
 > Here is all the money that came into our area.
 > Here is who got it.
@@ -506,19 +521,19 @@ That is how search, analysis, and visibility become a practical redistribution o
 
 ### Data gaps:
 
-1. **Foundation enrichment** — 3,304 with websites not yet enriched (16.5% done)
-2. **Grant descriptions** — 44% have none, 53% are stubs, only 13 are rich
-3. **Foundation programs not in search** — 866 programs invisible to grant seekers
-4. **Eligibility data** — 0 structured eligibility criteria across all records
-5. **State grant coverage** — SA, WA, NT missing; VIC has 3 grants
-6. **Grant freshness** — inserted once, never updated, no lifecycle management
+1. **Foundation enrichment** — 2,452 with websites not yet enriched (30% done, was 16.5%)
+2. **State grant coverage** — SA, WA, NT still sparse
+3. **Eligibility data** — limited structured eligibility criteria
+4. **Grant freshness** — inserted once, rarely updated, no lifecycle management
+5. **Person layer** — ACNC responsible persons + AEC donor cross-reference not yet built
 
 ### Architecture gaps:
 
 1. **Person layer pipeline** — infrastructure exists, data pipeline doesn't
-2. **Community voice pipeline** — no structured ingestion yet
-3. **Unified search** — grants and foundation programs are separate searches
-4. **Entity-to-place linkage** — limited connection between entities and geography
+2. **Community voice pipeline** — no structured ingestion yet (EL integration planned)
+3. **Cron deployment** — automated daily/weekly data refresh not yet deployed
+4. **Access control enforcement** — tier limits on API routes not fully enforced
+5. **Zero external users** — product exists, no users yet. This is the #1 priority.
 
 ---
 
@@ -526,7 +541,7 @@ That is how search, analysis, and visibility become a practical redistribution o
 
 > Every dollar of taxpayer money, every political donation, every government contract, every charitable grant — all connected, all searchable, all free.
 >
-> GrantScope makes capital allocation legible. It puts that knowledge in your hands — whether you're a community org applying for funding, a journalist following the money, a researcher studying influence, or a foundation asking where your grants actually ended up.
+> CivicGraph makes capital allocation legible. It puts that knowledge in your hands — whether you're a community org applying for funding, a journalist following the money, a researcher studying influence, or a foundation asking where your grants actually ended up.
 >
 > We're not a startup looking for exit. We're a cooperative that exists to make power visible and redistribute what we earn to the communities the data serves.
 >
@@ -538,20 +553,20 @@ That is how search, analysis, and visibility become a practical redistribution o
 
 ## The ACT Ecosystem Flywheel
 
-GrantScope does not exist alone. It is one of three platforms in the ACT ecosystem, each producing data the others need. Together they create a flywheel that no competitor can replicate because no competitor has all three layers.
+CivicGraph does not exist alone. It is one of three platforms in the ACT ecosystem, each producing data the others need. Together they create a flywheel that no competitor can replicate because no competitor has all three layers.
 
 ### The Three Platforms
 
 | Platform | What It Does | Data It Produces | Revenue Model |
 |----------|-------------|-----------------|---------------|
-| **GrantScope** | Maps money, power, organisations, place | Entity graph, funding flows, cross-references, gap analysis | Cooperative: entity dossiers, API, institutional licenses |
+| **CivicGraph** | Maps money, power, organisations, place | Entity graph, funding flows, cross-references, gap analysis | Cooperative: entity dossiers, API, institutional licenses |
 | **Empathy Ledger** | Captures community voice, stories, cultural intelligence | Storyteller profiles, cultural markers, impact dimensions, consent-managed stories | Cross-subsidy SaaS: free for communities, $299-$2,499/mo for institutions |
 | **JusticeHub** | Tracks intervention effectiveness in youth justice | 1,112 scored interventions, evidence links, outcome data, discrimination reports | Cross-subsidy SaaS + government contracts ($200K-$1M/yr) |
 
 ### How They Feed Each Other
 
 ```
-GrantScope (MONEY)                    Empathy Ledger (VOICE)
+CivicGraph (MONEY)                    Empathy Ledger (VOICE)
   │                                       │
   │ "Here's all the youth justice         │ "Here's what communities say
   │  funding in QLD, who got it,          │  about these programs — what's
@@ -572,23 +587,23 @@ GrantScope (MONEY)                    Empathy Ledger (VOICE)
 
 ### Specific Data Flows
 
-**GrantScope → JusticeHub:**
+**CivicGraph → JusticeHub:**
 - Grant data feeds JH's Funding Operating System (System 0)
 - Foundation profiles inform JH's philanthropic fundraising targets
 - Place-based funding analysis shows which regions are underfunded for justice
 
-**JusticeHub → GrantScope:**
-- Intervention effectiveness scores enrich GrantScope's grant data ("this program works")
-- 507 youth justice organisations add to GrantScope's entity graph
+**JusticeHub → CivicGraph:**
+- Intervention effectiveness scores enrich CivicGraph's grant data ("this program works")
+- 507 youth justice organisations add to CivicGraph's entity graph
 - ALMA evidence links provide outcome data for funded programs
 
-**Empathy Ledger → GrantScope:**
-- Consented community stories appear on GrantScope place pages and grant pages
+**Empathy Ledger → CivicGraph:**
+- Consented community stories appear on CivicGraph place pages and grant pages
 - Cultural markers and impact dimensions provide qualitative context for funding decisions
 - Storyteller profiles link to organisations in the entity graph
 - Syndication API already built and tested (2 stories live, 15 storytellers ready)
 
-**GrantScope → Empathy Ledger:**
+**CivicGraph → Empathy Ledger:**
 - Grant data contextualises stories ("This org received $X from Y foundation")
 - Foundation profiles help storytelling orgs identify potential funders
 - Place pages drive traffic to EL stories about specific communities
@@ -613,12 +628,12 @@ But a competitor building all three — with bi-directional data flows, shared e
 
 | Platform | Year 1 | Year 2 | Year 3 |
 |----------|--------|--------|--------|
-| **GrantScope** | $80K | $350K | $800K |
+| **CivicGraph** | $80K | $350K | $800K |
 | **Empathy Ledger** | $60K | $200K | $500K |
 | **JusticeHub** | $180K | $420K | $950K |
 | **Combined** | **$320K** | **$970K** | **$2.25M** |
 
-JusticeHub leads revenue because government contracts are larger and the $3.9B NAJP procurement window is open NOW. GrantScope follows as entity dossiers and API access gain traction. EL grows as institutional storytelling partnerships scale.
+JusticeHub leads revenue because government contracts are larger and the $3.9B NAJP procurement window is open NOW. CivicGraph follows as entity dossiers and API access gain traction. EL grows as institutional storytelling partnerships scale.
 
 ---
 
@@ -626,7 +641,7 @@ JusticeHub leads revenue because government contracts are larger and the $3.9B N
 
 ### The Market Is Real
 
-| Segment                            | Size                            | GrantScope's Share                               |
+| Segment                            | Size                            | CivicGraph's Share                               |
 | ---------------------------------- | ------------------------------- | ------------------------------------------------ |
 | Australian charity sector revenue  | **$222B/year**                  | Data about where this money goes                 |
 | Charitable giving                  | **$13B+/year**                  | Data about who gives and who receives            |
@@ -649,9 +664,9 @@ JusticeHub leads revenue because government contracts are larger and the $3.9B N
 | **360Giving** (UK grants) | ~$1.2M AUD/year | Nonprofit | Foundation grants (cautionary tale) |
 | **OpenSecrets** (US political money) | $2.5M revenue, $4.3M expenses | Nonprofit | Foundation grants (dying) |
 
-**The lesson:** 360Giving and OpenSecrets prove the foundation-funded model doesn't work. illion proves the commercial data model does. GrantScope must be illion for civic data, not another OpenSecrets.
+**The lesson:** 360Giving and OpenSecrets prove the foundation-funded model doesn't work. illion proves the commercial data model does. CivicGraph must be illion for civic data, not another OpenSecrets.
 
-### Revenue Assumptions (GrantScope Only)
+### Revenue Assumptions (CivicGraph Only)
 
 #### Year 1: $80K (Proving the Model)
 
@@ -697,7 +712,7 @@ JusticeHub leads revenue because government contracts are larger and the $3.9B N
 - ASIC company extract via GlobalX: $15-40 per search
 - D&B business report: $100-300 per entity
 - illion credit report: $50-200 per entity
-- GrantScope entity dossier (aggregating ALL of the above plus grants, donations, charity links, community voice): **$500-$2,000** — far more comprehensive at a competitive price
+- CivicGraph entity dossier (aggregating ALL of the above plus grants, donations, charity links, community voice): **$500-$2,000** — far more comprehensive at a competitive price
 
 ---
 
@@ -706,41 +721,41 @@ JusticeHub leads revenue because government contracts are larger and the $3.9B N
 ### Who Would Pay Anything to Get This
 
 **1. Community Legal Centres and Aboriginal Legal Services**
-They're fighting for their clients with one hand tied behind their back. They know the system is stacked but can't prove it with data. GrantScope gives them ammunition: "Your department spent $X on programs that don't work while our community got nothing." **They'd pay nothing (free tier) but they're the moral backbone of the platform.**
+They're fighting for their clients with one hand tied behind their back. They know the system is stacked but can't prove it with data. CivicGraph gives them ammunition: "Your department spent $X on programs that don't work while our community got nothing." **They'd pay nothing (free tier) but they're the moral backbone of the platform.**
 
 **2. Philanthropic Foundations (3,200+ PAFs, $10B+ capital)**
-They give $13B/year but have no way to see what everyone else is funding, where gaps are, or whether their grants overlap with government spending. They're flying blind. "Where should our next $500K go?" is a question GrantScope answers better than any consultant. **They'd pay $2K-$50K/year and be grateful.**
+They give $13B/year but have no way to see what everyone else is funding, where gaps are, or whether their grants overlap with government spending. They're flying blind. "Where should our next $500K go?" is a question CivicGraph answers better than any consultant. **They'd pay $2K-$50K/year and be grateful.**
 
 **3. University Researchers**
-Social policy, public administration, nonprofit studies — 30-50 research centres across 43 universities. They currently spend weeks manually downloading ACNC/AusTender/AEC data and cross-referencing in Excel. GrantScope's API makes a PhD project that took 6 months take 6 hours. **They'd pay $5K-$50K/year per centre.**
+Social policy, public administration, nonprofit studies — 30-50 research centres across 43 universities. They currently spend weeks manually downloading ACNC/AusTender/AEC data and cross-referencing in Excel. CivicGraph's API makes a PhD project that took 6 months take 6 hours. **They'd pay $5K-$50K/year per centre.**
 
 **4. Anti-Corruption Bodies (NACC, CCC, ICAC, IBAC)**
 Combined budgets ~$300-350M. They investigate corruption where money, influence, and power intersect — exactly what the entity graph maps. A tool that shows "this company donated $X to Party Y and then received $Z in contracts from Department W" is investigative gold. **They'd pay $50K-$200K/year through government procurement.**
 
 **5. ESG/Compliance Firms**
-$996M market growing at 12.7%. Mandatory sustainability reporting from Jan 2025 means every large company needs supply chain and community impact data. GrantScope shows whether a company's "community investment" actually reaches communities. **They'd pay $20K-$100K/year.**
+$996M market growing at 12.7%. Mandatory sustainability reporting from Jan 2025 means every large company needs supply chain and community impact data. CivicGraph shows whether a company's "community investment" actually reaches communities. **They'd pay $20K-$100K/year.**
 
 **6. Government Advisory Consultants (50-100 firms)**
-Big 4 plus mid-tier firms doing government policy work need this data for every engagement. They currently charge clients $2,000-$5,000/day and spend significant time on manual data gathering that GrantScope automates. **They'd pay $10K-$50K/year and embed it in their methodology.**
+Big 4 plus mid-tier firms doing government policy work need this data for every engagement. They currently charge clients $2,000-$5,000/day and spend significant time on manual data gathering that CivicGraph automates. **They'd pay $10K-$50K/year and embed it in their methodology.**
 
 **7. Investigative Journalists**
-ABC, Nine/SMH, Guardian AU, Michael West Media, Crikey, The Saturday Paper. They manually search ACNC/AusTender/AEC for every investigation. GrantScope gives them the cross-reference in seconds. **They'd pay $0-$20K/year (mostly free tier — but the PR they generate is worth millions in brand value).**
+ABC, Nine/SMH, Guardian AU, Michael West Media, Crikey, The Saturday Paper. They manually search ACNC/AusTender/AEC for every investigation. CivicGraph gives them the cross-reference in seconds. **They'd pay $0-$20K/year (mostly free tier — but the PR they generate is worth millions in brand value).**
 
 ### Who Really Wants This
 
-**First Nations communities.** They know money flows through their regions but not to them. They know large intermediary organisations get the contracts. They know outside consultants get paid to write reports about them. GrantScope makes all of that visible and provable. For the first time, a community group can walk into a negotiation with: "Here's every dollar that came into our region in the last 5 years, who got it, and how much stayed local." That changes power dynamics permanently.
+**First Nations communities.** They know money flows through their regions but not to them. They know large intermediary organisations get the contracts. They know outside consultants get paid to write reports about them. CivicGraph makes all of that visible and provable. For the first time, a community group can walk into a negotiation with: "Here's every dollar that came into our region in the last 5 years, who got it, and how much stayed local." That changes power dynamics permanently.
 
-**Anyone who's ever lost a grant to a bigger org with a better grant writer.** Small community organisations with deep local knowledge lose funding to large intermediaries with professional bid teams. GrantScope shows the pattern — and shows funders they're funding intermediaries, not communities.
+**Anyone who's ever lost a grant to a bigger org with a better grant writer.** Small community organisations with deep local knowledge lose funding to large intermediaries with professional bid teams. CivicGraph shows the pattern — and shows funders they're funding intermediaries, not communities.
 
-**Closing the Gap accountability advocates.** 4 of 19 targets on track. Justice targets going backwards. $3.9B NAJP committed. Nobody can show whether the money is reaching communities or being absorbed by departments and large NGOs. JusticeHub + GrantScope together answer that question.
+**Closing the Gap accountability advocates.** 4 of 19 targets on track. Justice targets going backwards. $3.9B NAJP committed. Nobody can show whether the money is reaching communities or being absorbed by departments and large NGOs. JusticeHub + CivicGraph together answer that question.
 
 ### Who's Nervous
 
 **1. Large intermediary service providers**
-The big NFPs that win government contracts to deliver services in communities they don't belong to. Anglicare, Mission Australia, Salvation Army, UnitingCare — organisations with $500M+ revenue that win contracts to deliver services in remote Indigenous communities from head offices in Sydney. GrantScope shows how much money goes to them vs local organisations. **They won't try to block it (too politically risky) but they'll quietly resist adoption.**
+The big NFPs that win government contracts to deliver services in communities they don't belong to. Anglicare, Mission Australia, Salvation Army, UnitingCare — organisations with $500M+ revenue that win contracts to deliver services in remote Indigenous communities from head offices in Sydney. CivicGraph shows how much money goes to them vs local organisations. **They won't try to block it (too politically risky) but they'll quietly resist adoption.**
 
 **2. Political parties and their donor networks**
-185 entities that donate to parties AND hold government contracts — already in the database. Making this cross-reference publicly searchable is embarrassing. The AEC transparency register exists but nobody cross-references it with AusTender. GrantScope does this automatically. **They can't stop it (it's all public data) but they'd prefer it didn't exist.**
+185 entities that donate to parties AND hold government contracts — already in the database. Making this cross-reference publicly searchable is embarrassing. The AEC transparency register exists but nobody cross-references it with AusTender. CivicGraph does this automatically. **They can't stop it (it's all public data) but they'd prefer it didn't exist.**
 
 **3. Government departments with poor grant outcomes**
 Departments that spend hundreds of millions on programs with no evidence of effectiveness. JusticeHub's ALMA scores expose this: "Your department funded 47 programs. 3 have any evidence of effectiveness. 31 have never been evaluated." **They'll resist by questioning methodology, not by engaging with the data.**
@@ -749,11 +764,11 @@ Departments that spend hundreds of millions on programs with no evidence of effe
 Foundation directors who also sit on boards of organisations their foundation funds. Foundation directors who also donate to political parties that set policy their grants respond to. The person layer of the entity graph exposes interlocking directorates. **They'll say "privacy concerns" when they mean "accountability concerns."**
 
 **5. Consulting firms that sell manual research as expertise**
-Firms charging $2,000-$5,000/day for analysis that GrantScope provides at API prices. Their value proposition relies on information asymmetry — they know where to find public data and charge for finding it. GrantScope eliminates that asymmetry. **Some will become customers (smart ones). Others will disparage it as "incomplete" (threatened ones).**
+Firms charging $2,000-$5,000/day for analysis that CivicGraph provides at API prices. Their value proposition relies on information asymmetry — they know where to find public data and charge for finding it. CivicGraph eliminates that asymmetry. **Some will become customers (smart ones). Others will disparage it as "incomplete" (threatened ones).**
 
 ### Who's Genuinely Scared
 
-**Nobody should be scared of transparent public data.** Every data source GrantScope uses is already public. ABR, ACNC, AusTender, AEC, ORIC — all published by government. GrantScope doesn't create new information. It connects existing information in ways that reveal patterns nobody could previously see without weeks of manual work.
+**Nobody should be scared of transparent public data.** Every data source CivicGraph uses is already public. ABR, ACNC, AusTender, AEC, ORIC — all published by government. CivicGraph doesn't create new information. It connects existing information in ways that reveal patterns nobody could previously see without weeks of manual work.
 
 The people who are scared are the people who benefit from the current opacity. That's not a reason to stop — it's a reason to move faster.
 
@@ -763,7 +778,7 @@ The people who are scared are the people who benefit from the current opacity. T
 
 ## Competitive Landscape: Who Makes Money From This Stuff
 
-34 companies across 9 categories prove the model. The pattern is clear: start with open/public data, add enrichment and workflow, sell subscriptions. Here are the ones that matter most for GrantScope.
+34 companies across 9 categories prove the model. The pattern is clear: start with open/public data, add enrichment and workflow, sell subscriptions. Here are the ones that matter most for CivicGraph.
 
 ### The Revenue Proof Points
 
@@ -780,12 +795,12 @@ The people who are scared are the people who benefit from the current opacity. T
 | Sayari (US) | Est. $50-100M | Enterprise SaaS on open registry data | **$235M investment from TPG.** Open corporate data → massive valuation. |
 | D&B (US) | ~$2.3B | Enterprise subs + data licensing | **183 years old.** DUNS number became infrastructure. |
 | Bureau van Dijk (UK) | Est. $100-500M | Enterprise subs on aggregated registry data | Acquired by Moody's for **€3B** for normalising 170 sources. |
-| OpenCorporates (UK) | Est. $5-15M | Dual licensing (free public/paid commercial) | **THE model for GrantScope.** Free for journalists/NGOs, paid for banks. |
+| OpenCorporates (UK) | Est. $5-15M | Dual licensing (free public/paid commercial) | **THE model for CivicGraph.** Free for journalists/NGOs, paid for banks. |
 | Crunchbase (US) | ~$50M | Freemium + data licensing (45% of revenue) | Started as crowdsourced TechCrunch side project → commercial. |
 
 ### Australian Competitors (Direct)
 
-| Competitor | Revenue | Model | GrantScope Differentiation |
+| Competitor | Revenue | Model | CivicGraph Differentiation |
 |------------|---------|-------|---------------------------|
 | **SmartyGrants / Our Community** | $6.2M | SaaS for grantmakers + Funding Centre subs ($1.5-3K/yr) | They do workflow (applications). We do intelligence (who funds what, why, patterns). Complementary. |
 | **The Grants Hub** | Small | Subscription directory ($313-486/yr) | Listings only. No enrichment, no entity graph, no AI. |
@@ -795,30 +810,30 @@ The people who are scared are the people who benefit from the current opacity. T
 ### The Five Models That Transfer
 
 **1. OpenCorporates (dual licensing) — THE model**
-Free for public benefit, paid for commercial use. Open corporate registry data from 200M+ companies. Bellingcat and investigative journalists get free access (driving credibility and PR). Banks and compliance teams pay for KYC/AML use. GrantScope should adopt this exact structure.
+Free for public benefit, paid for commercial use. Open corporate registry data from 200M+ companies. Bellingcat and investigative journalists get free access (driving credibility and PR). Banks and compliance teams pay for KYC/AML use. CivicGraph should adopt this exact structure.
 
 **2. PitchBook (enrichment on public filings) — the aspiration**
-$618M revenue from data that's largely derived from public filings, press releases, and crowdsourced inputs. The enrichment and UX is the moat, not the raw data. GrantScope already has the enrichment pipeline (8 LLM providers, entity resolution at 77.3% F1).
+$618M revenue from data that's largely derived from public filings, press releases, and crowdsourced inputs. The enrichment and UX is the moat, not the raw data. CivicGraph already has the enrichment pipeline (9 LLM providers, entity resolution at 94.1% F1).
 
 **3. Candid (grant-specific, US-only) — the category validator**
-$40M revenue proving that grants data specifically sustains a real business. But US-only, and their Australian partnership via Foundation Maps is thin. GrantScope can be the Australian Candid with better tech and broader scope.
+$40M revenue proving that grants data specifically sustains a real business. But US-only, and their Australian partnership via Foundation Maps is thin. CivicGraph can be the Australian Candid with better tech and broader scope.
 
 **4. Quorum (workflow on public data) — the execution proof**
 $61M from public legislative data turned into workflow tools. 50% of Fortune 100 pay. Proves that organising and making public data actionable is worth billions in aggregate.
 
 **5. Sayari (registry aggregation → strategic value) — the exit benchmark**
-Open corporate/registry data from 250+ jurisdictions, entity resolution, risk scoring. $235M investment from TPG Growth. 950% growth in government contracts. If GrantScope becomes the authoritative Australian entity graph, strategic acquirers will pay multiples.
+Open corporate/registry data from 250+ jurisdictions, entity resolution, risk scoring. $235M investment from TPG Growth. 950% growth in government contracts. If CivicGraph becomes the authoritative Australian entity graph, strategic acquirers will pay multiples.
 
 ### Pricing Benchmarks Across Categories
 
 | Tier | Price Range | What They Get | Who Charges This |
 |------|-------------|---------------|-----------------|
-| Free/Community | $0 | Basic search, limited results | Crunchbase, OpenCorporates, Candid, **GrantScope** |
+| Free/Community | $0 | Basic search, limited results | Crunchbase, OpenCorporates, Candid, **CivicGraph** |
 | Professional | $300-3,000/yr | Full search, alerts, exports | Grants Hub ($486), Funding Centre ($3K), Crunchbase Pro ($588) |
 | Enterprise | $10K-100K+/yr | API access, data feeds, analytics | PitchBook ($20-60K/seat), Sayari, MSCI |
 | Platform/OEM | $50K-500K+/yr | White-label data, bulk licensing | D&B, Bureau van Dijk, World-Check |
 
-GrantScope positioning: **Free for communities, $500-2K/yr for professional grant seekers, $5-50K/yr for foundations and researchers, $20-100K/yr for compliance and government.**
+CivicGraph positioning: **Free for communities, $500-2K/yr for professional grant seekers, $5-50K/yr for foundations and researchers, $20-100K/yr for compliance and government.**
 
 ### What Drives Premium Pricing (Pattern From 34 Companies)
 
@@ -827,7 +842,7 @@ GrantScope positioning: **Free for communities, $500-2K/yr for professional gran
 3. **Workflow integration** — if it's embedded in daily work, switching costs are high (Quorum, Blackbaud)
 4. **Unique enrichment** — if nobody else has normalised the data, the moat is strong (Bureau van Dijk, Sayari)
 
-GrantScope targets #2 and #4 first. Foundation program officers making funding decisions and grant consultants writing applications are highest-value customers. The unique enrichment (AI-generated foundation profiles, entity graph, funding pattern analysis) is the moat.
+CivicGraph targets #2 and #4 first. Foundation program officers making funding decisions and grant consultants writing applications are highest-value customers. The unique enrichment (AI-generated foundation profiles, entity graph, funding pattern analysis) is the moat.
 
 ### Realistic Revenue Trajectory (Benchmarked)
 
@@ -841,7 +856,7 @@ GrantScope targets #2 and #4 first. Foundation program officers making funding d
 
 ### The Lesson
 
-Every company on this list started with data that was either free, public, or crowdsourced. The money is never in the raw data — it's in normalisation, enrichment, cross-referencing, and making it actionable. GrantScope already has 2.8M records, 80K entity graph, multi-provider AI enrichment, and semantic search. The infrastructure exists. The market is proven. Now it's execution.
+Every company on this list started with data that was either free, public, or crowdsourced. The money is never in the raw data — it's in normalisation, enrichment, cross-referencing, and making it actionable. CivicGraph already has 4.2M records, 100K entity graph with 211K relationships, 9-provider AI enrichment, 94.1% entity resolution F1, and semantic search across 18K grants. The infrastructure exists. The market is proven. Now it's execution — specifically, getting the first users in the door.
 
 ---
 
@@ -849,7 +864,7 @@ Every company on this list started with data that was either free, public, or cr
 
 This is not a project any normal startup or nonprofit can build. It requires:
 
-1. **Technical capability** — 2.8M records, 80K entity graph, multi-provider AI pipelines, production platforms across 3 codebases. Built by 2 people.
+1. **Technical capability** — 4.2M records, 100K entity graph, 211K relationships, multi-provider AI pipelines, production platforms across 3 codebases. Built by 2 people.
 
 2. **Community trust** — First Nations organisations share data with ACT because ACT is led by people who show up, listen, and don't extract. Nick Marchesi built Orange Sky by standing next to people, not above them. That trust can't be bought or replicated.
 

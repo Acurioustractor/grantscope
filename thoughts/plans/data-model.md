@@ -1,4 +1,4 @@
-# GrantScope Data Model — The 360Giving Architecture
+# CivicGraph Data Model — The 360Giving Architecture
 
 ## Core Philosophy
 
@@ -26,7 +26,7 @@ Both sides get transparency. Both sides get matched. The model traces money from
                               ▼              ▼              ▼
                     ┌─────────────┐  ┌──────────────┐  ┌──────────────┐
                     │ FOUNDATIONS  │  │ COMMUNITY    │  │ CORPORATES   │
-                    │   (9,874)   │  │ ORGS (500)   │  │ (via ASX/ABN)│
+                    │  (10,779)   │  │ ORGS (541)   │  │ (via ASX/ABN)│
                     └──────┬──────┘  └──────┬───────┘  └──────┬───────┘
                            │                │                  │
                    ┌───────┴───────┐        │                  │
@@ -34,13 +34,13 @@ Both sides get transparency. Both sides get matched. The model traces money from
           ┌────────────┐  ┌────────────┐    │                  │
           │ FOUNDATION │  │ OPEN       │    │                  │
           │ PROGRAMS   │  │ PROGRAMS   │    │                  │
-          │   (866)    │  │ (JSON)     │    │                  │
+          │  (2,472)   │  │ (JSON)     │    │                  │
           └──────┬─────┘  └────────────┘    │                  │
                  │                          │                  │
                  ▼                          │                  │
     ┌────────────────────────┐              │                  │
     │   GRANT OPPORTUNITIES  │◄─────────────┘                  │
-    │       (14,119)         │              (applies to)       │
+    │       (18,069)         │              (applies to)       │
     │                        │                                 │
     │  gov + foundation +    │◄────────────────────────────────┘
     │  corporate + research  │         (corporate programs)
@@ -48,9 +48,9 @@ Both sides get transparency. Both sides get matched. The model traces money from
                  │
                  ▼
     ┌────────────────────────┐      ┌─────────────────┐
-    │     MONEY FLOWS        │◄────►│   GOVERNMENT    │
-    │       (406)            │      │   PROGRAMS (4)  │
-    │  source → destination  │      └─────────────────┘
+    │   GS_RELATIONSHIPS     │◄────►│   GOVERNMENT    │
+    │     (211,783)          │      │   PROGRAMS      │
+    │  entity → entity       │      └─────────────────┘
     │  with amounts + years  │
     └────────────────────────┘
                  │
@@ -75,45 +75,58 @@ The bedrock. 7 years of annual financial statements for 53,000+ charities.
 - `revenue_from_government` = government dependency
 - `giving_ratio_pct` (via view) = how much flows through vs hoarded
 
-#### `foundations` — 9,874 rows ✅
+#### `foundations` — 10,779 rows ✅
 Every significant grantmaking entity in Australia.
 - 34 columns: financials, focus areas, giving philosophy, application tips
 - Derived from ACNC filtered for grantmakers
-- 1,627 enriched with AI profiling (descriptions, tips, board members)
+- 3,264 enriched with AI profiling (30% — descriptions, tips, board members)
 - **Links to:** acnc_ais (via ABN), foundation_programs (FK)
 
-#### `foundation_programs` — 866 rows ✅
+#### `foundation_programs` — 2,472 rows ✅
 Specific funding programs from foundations.
 - Name, description, amount range, deadline, status
 - **Links to:** foundations (FK)
-- **GAP:** Not linked to grant_opportunities. Not in search results.
 
-#### `grant_opportunities` — 14,119 rows ✅
+#### `grant_opportunities` — 18,069 rows ✅
 All discoverable grants from government + some foundations.
 - 41 columns, 100% embedded for semantic search
-- 10+ automated source plugins
-- **GAP:** No FK to foundations. Foundation programs aren't included.
+- 30+ automated source plugins
 
-#### `community_orgs` — 500 rows ✅
+#### `gs_entities` — 100,036 rows ✅
+Unified entity registry linking all datasets by ABN.
+- Entity types: charity (52K), company (24K), foundation (10.7K), indigenous_corp (7.3K), social_enterprise (5.2K), government_body (134)
+- Geo coverage: postcode 90%, remoteness 96%, LGA 90%, SEIFA 89%
+- 7,822 community-controlled organisations classified
+
+#### `gs_relationships` — 211,783 rows ✅
+Every connection between entities — the graph.
+- Types: contract (170K), donation (36K), grant (5.4K), and more
+- Links donations, contracts, grants, tax, justice funding
+
+#### `austender_contracts` — 670,303 rows ✅
+Full federal procurement history from 2013 via OCDS API.
+
+#### `political_donations` — 312,933 rows ✅
+Full AEC disclosure register.
+
+#### `ato_tax_transparency` — 26,241 rows ✅
+Full large taxpayer dataset — income, taxable income, tax payable.
+
+#### `justice_funding` — 52,133 rows ✅
+Cross-sector justice funding flows from JusticeHub.
+
+#### `social_enterprises` — 10,339 rows ✅
+Supply Nation + Social Traders + B Corp + state networks.
+
+#### `community_orgs` — 541 rows ✅
 Grassroots organisations, the seekers.
 - Programs, outcomes, admin burden tracking
-- **GAP:** No matching system. Can't search for grants that fit them.
 
-#### `government_programs` — 4 rows ✅ (barely started)
-Government spending programs (budget allocations, not grants).
-- Budget amounts, spend per unit, outcomes
-- **GAP:** Only 4 programs (youth justice). Needs 100s.
+### TIER 2: Tables Added Since Initial Plan
 
-#### `money_flows` — 406 rows ✅
-How money moves between entities.
-- Source → destination with amounts, years, flow types
-- **GAP:** Uses TEXT names not FKs. Only covers youth justice domain.
-
-### TIER 2: Needed Tables (DON'T EXIST YET)
-
-#### `org_profiles` — NEW
+#### `org_profiles` — EXISTS
 **Purpose:** Any organisation can create a profile to get matched with grants.
-Uses ACNC data automatically if they have an ABN.
+Uses ACNC data automatically if they have an ABN. Includes Stripe billing integration (`stripe_customer_id`, `subscription_plan`).
 
 ```sql
 CREATE TABLE org_profiles (
@@ -310,9 +323,9 @@ Foundation → grants officer → networks → established orgs → funded
 (relationship-driven, Sydney/Melbourne-centric, English-first)
 ```
 
-GrantScope model:
+CivicGraph model:
 ```
-Foundation → GrantScope search → ALL matching orgs ranked by fit → funded
+Foundation → CivicGraph search → ALL matching orgs ranked by fit → funded
 (merit-driven, national, culturally aware)
 ```
 
@@ -345,16 +358,19 @@ wealth_flows ──(flow)──► community impact                (where it end
 
 | Table | Now | 6 months | 1 year | Notes |
 |-------|----:|--------:|---------:|-------|
+| gs_entities | 100,036 | 110,000 | 130,000 | Unified entity registry |
+| gs_relationships | 211,783 | 250,000 | 300,000 | All cross-references |
+| austender_contracts | 670,303 | 700,000 | 750,000 | Full OCDS history |
 | acnc_ais | 359,678 | 410,000 | 460,000 | +~50k/year |
-| grant_opportunities | 14,119 | 25,000 | 50,000 | SA, WA, intl, enrichment |
-| foundations | 9,874 | 12,000 | 15,000 | More ACNC filters, community foundations |
-| foundation_programs | 866 | 3,000 | 5,000 | Scrape all foundation websites |
-| community_orgs | 500 | 2,000 | 10,000 | Self-registration + ACNC mining |
-| org_profiles | 0 | 500 | 5,000 | Seekers signing up |
-| corporate_entities | 0 | 200 | 500 | ASX200 + major private |
-| wealth_flows | 406 | 5,000 | 50,000 | Full economy mapping |
-| government_programs | 4 | 200 | 1,000 | All jurisdictions, all domains |
-| matches | 0 | 10,000 | 100,000 | Automated matching engine |
+| political_donations | 312,933 | 320,000 | 330,000 | Annual AEC releases |
+| justice_funding | 52,133 | 55,000 | 60,000 | Cross-sector flows |
+| ato_tax_transparency | 26,241 | 28,000 | 30,000 | Annual ATO releases |
+| grant_opportunities | 18,069 | 25,000 | 50,000 | SA, WA, intl, enrichment |
+| foundations | 10,779 | 12,000 | 15,000 | More ACNC filters |
+| social_enterprises | 10,339 | 12,000 | 15,000 | Growing directory |
+| foundation_programs | 2,472 | 4,000 | 6,000 | Scrape all foundation websites |
+| community_orgs | 541 | 2,000 | 10,000 | Self-registration + ACNC mining |
+| org_profiles | ~10 | 500 | 5,000 | Seekers signing up |
 
 ---
 

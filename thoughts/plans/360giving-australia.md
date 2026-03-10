@@ -1,64 +1,45 @@
-# GrantScope: Australia's 360Giving
+# CivicGraph: Australia's 360Giving
 
 ## Vision
 
 Build Australia's open grants infrastructure — the single most complete, searchable database of every funding opportunity in the country. Government grants, philanthropic foundations, corporate giving programs, research funding, and international funders active in Australia.
 
-Australia has no 360Giving equivalent. The UK has 320+ funders publishing 1M+ grants in machine-readable format. Australia has GrantConnect (government only), Foundation Maps (members-only), and Funding Centre ($55-85/year). GrantScope fills this gap as open infrastructure.
+Australia has no 360Giving equivalent. The UK has 320+ funders publishing 1M+ grants in machine-readable format. Australia has GrantConnect (government only), Foundation Maps (members-only), and Funding Centre ($55-85/year). CivicGraph fills this gap as open infrastructure.
 
-## Current State (1 March 2026)
+## Current State (10 March 2026)
 
-### Grants Database: `grant_opportunities` — 14,119 rows
+### Grants Database: `grant_opportunities` — 18,069 rows
 - 100% embedded (pgvector, text-embedding-3-small, 1536 dims)
 - Semantic search live via `/api/search/semantic`
 - Hybrid search on grants page (auto-detect keyword vs natural language)
+- 30+ automated source plugins across all states + federal
 
-| Metric | Count | % |
-|--------|------:|--:|
-| Total grants | 14,119 | |
-| With embeddings | 14,119 | 100% |
-| Open opportunities | 6,271 | 44% |
-| Historical awards | 7,848 | 56% |
-| Has funding amount | 13,447 | 95% |
-| Has URL | 14,018 | 99% |
-| Has categories | 13,625 | 96% |
-| Has deadline | 5,661 | 40% |
-| Has description (>50 chars) | 7,539 | 53% |
-| Has rich description (>500 chars) | 13 | 0.1% |
-| Enrichment fields populated | ~20 | 0.1% |
-
-**Sources active:** GrantConnect (129), ARC (5,598), Brisbane CC (5,529), QLD Arts (2,319), QLD Grants (148), TAS (103), ACT (95), GHL sync (93), data.gov.au (30), NHMRC (18), NSW (11), VIC (3), + ~45 manual/agent
-
-### Foundations Database: `foundations` — 9,874 rows
-- Derived from ACNC register (60k+ charities filtered to grantmakers)
+### Foundations Database: `foundations` — 10,779 rows
+- Derived from ACNC register (64K+ charities filtered to grantmakers)
 - 34 columns including giving_philosophy, application_tips, board_members
-- Multi-provider LLM enrichment pipeline built (Groq, Gemini, DeepSeek, OpenAI, Anthropic, Perplexity, Kimi, Minimax)
-
-| Metric | Count | % |
-|--------|------:|--:|
-| Total foundations | 9,874 | |
-| Has annual giving amount | 9,120 | 92% |
-| Has website | 4,921 | 50% |
-| Has thematic focus | 5,694 | 58% |
-| **Enriched (LLM profiled)** | **1,627** | **16.5%** |
-| Has website, NOT enriched | 3,304 | |
-| No website, NOT enriched | 4,943 | |
-| Has description | 247 | 2.5% |
-
-**Enrichment sources:** firecrawl+multi-llm (1,075), firecrawl+claude (526), firecrawl+jina+multi-llm+vip (26)
+- Multi-provider LLM enrichment pipeline (9 providers: Groq, Gemini, DeepSeek, OpenAI, Anthropic, Perplexity, Kimi, Minimax, Gemini grounded)
+- **3,264 AI-enriched (30%)** — up from 1,627 (16.5%)
 
 ### ACNC Annual Statements: `acnc_ais` — 359,678 rows
 - 7 years of data (2017-2023), 65 columns
 - Full financials: revenue, expenses, grants given (AU + intl), assets, staff
 - **14,882 charities gave grants in 2023** totalling **$8.86 billion**
 - `v_acnc_grant_makers` view identifies grantmaking orgs
-- `v_acnc_latest` view for most recent year per charity
+- `mv_acnc_latest` materialized view for most recent year per charity
 
-### Foundation Programs: `foundation_programs` — 866 rows
-- Linked to 361 distinct foundations
+### Foundation Programs: `foundation_programs` — 2,472 rows
+- Linked to foundations via FK
 - All have descriptions
-- 185 have deadlines, 169 have amounts
-- **0 have eligibility criteria** (biggest gap)
+
+### Entity Graph (NEW — not in original 360Giving vision)
+- **100,036 entities** in unified registry linked by ABN
+- **211,783 relationships** — contracts, donations, grants, tax, justice funding
+- **670,303 AusTender contracts** — full federal procurement history
+- **312,933 political donations** — full AEC register
+- **26,241 ATO tax transparency** records
+- **52,133 justice funding** records
+- **10,339 social enterprises** — Supply Nation + 5 sources
+- Entity resolution F1: **94.1%**
 
 ### Built Infrastructure
 - `packages/grant-engine/src/foundations/` — acnc-importer, foundation-profiler, community-profiler, repository, types
@@ -82,42 +63,32 @@ Australia has no 360Giving equivalent. The UK has 320+ funders publishing 1M+ gr
 - Semantic search with pgvector embeddings
 - Web UI: foundations directory, grants search, reports
 
-### Gaps (Priority Order)
+### Gaps (Priority Order — Updated 10 March 2026)
 
-#### 1. Foundation Enrichment Scale ($0, immediate)
-- **3,304 foundations** have websites but haven't been enriched
-- The profiler exists and works. It just needs to run on more foundations.
-- Blocked by: LLM API quotas (already round-robins 8 providers)
-- **Action:** Run profiler in batches, targeting foundations by total_giving_annual DESC
+#### 1. Foundation Enrichment Scale ($0, ongoing)
+- **~7,500 foundations** still need AI enrichment (3,264 of 10,779 done = 30%)
+- 494 with websites currently queued
+- The profiler works with 9 LLM providers in round-robin
+- **Action:** Continue running `enrich-foundations.mjs --limit=500`
 
-#### 2. Grant Description Enrichment ($0, 1-2 days)
-- **6,244 grants** (44%) have no description at all
-- **6,041 grants** have only short stubs (50-200 chars)
-- Only 13 grants have rich descriptions (500+ chars)
-- **Action:** Build Cheerio + Groq pipeline to crawl grant URLs and extract descriptions, eligibility, deadlines
-- This dramatically improves semantic search quality
+#### 2. Zero Users
+- No external users, no paying customers
+- All infrastructure is built — launch is the #1 priority
+- **Action:** Recruit 10 beta testers from warm network
 
-#### 3. Foundation ↔ Grant Linkage
-- 866 foundation programs exist but aren't connected to grant_opportunities search
-- Users searching grants don't see foundation programs
-- **Action:** Either sync foundation_programs → grant_opportunities, or unify the search
+#### 3. Grant Description Enrichment
+- Many grants still have thin descriptions
+- Grant enrichment pipeline built (`enrich-grant-descriptions.mjs`)
+- **Action:** Continue running enrichment batches
 
 #### 4. Eligibility Data
-- 0 out of 866 foundation programs have eligibility criteria
-- 0 out of 14,119 grants have structured eligibility (aside from ~20 manually enriched)
+- Structured eligibility criteria still sparse
 - **Action:** LLM extraction from grant/program URLs
 
-#### 5. Missing Government Sources
-- SA (South Australia) — no plugin yet
-- WA (Western Australia) — no plugin yet
-- VIC only has 3 grants (needs Firecrawl for JS SPA)
-- NT has 0 grants (needs Firecrawl/Playwright)
-- **Action:** Build SA + WA plugins, add Firecrawl for VIC/NT
-
-#### 6. Freshness & Lifecycle
-- Grants are inserted and never updated
-- No staleness detection, no "grant closed" marking
-- **Action:** Re-crawl URLs, detect closed/expired, daily discovery runs
+#### 5. State Coverage
+- 30+ sources now active across all states + federal
+- Some states still have thin coverage
+- **Action:** Build additional state plugins where gaps identified
 
 ## Build Phases (Updated)
 

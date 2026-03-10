@@ -1,4 +1,4 @@
-# GrantScope Rollout Strategy
+# CivicGraph Rollout Strategy
 **Date:** 2026-03-08
 **Status:** Ready for execution
 
@@ -9,41 +9,47 @@
 ### The Platform
 | Metric | Count |
 |--------|------:|
-| Total entities in graph | 92,303 |
-| Relationships mapped | 50,425 |
-| Grant opportunities | 17,727 |
-| Grants open now | 4,877 |
-| Grants with AI embeddings | 17,012 (96%) |
-| Foundations profiled | 10,763 |
-| Foundations AI-enriched | 5,974 (55%) |
-| Foundation programs | 2,416 |
+| Total entities in graph | 100,036 |
+| Relationships mapped | 211,783 |
+| Grant opportunities | 18,069 |
+| Grants with AI embeddings | 18,069 (100%) |
+| Foundations profiled | 10,779 |
+| Foundations AI-enriched | 3,264 (30%) |
+| Foundation programs | 2,472 |
 | ACNC charity records | 359,678 |
-| Modern Slavery entities | 16,473 |
-| Social enterprises | 3,541 |
+| Social enterprises | 10,339 |
 | Community orgs | 541 |
-| Lobbying register entities | 139 |
 | Donor-contractors identified | 140 |
-| Political donation records | 188,609 |
-| Government contracts | 58,128 |
+| Political donation records | 312,933 |
+| Government contracts | 670,303 |
+| ATO tax transparency | 26,241 |
+| Justice funding records | 52,133 |
 | ASIC company lookup | 2,149,868 |
+| Entity resolution F1 | 94.1% |
+| Entity coverage (postcode) | 90% |
+| Entity coverage (remoteness) | 96% |
 | Analytical reports | 15 live |
-| Pages | 57 |
-| API routes | 41 |
-| Data pipeline scripts | 50+ |
+| Pages | 70 |
+| API routes | 77 |
+| Data pipeline scripts | 86 |
 
 ### What Users Can Do Today
-1. **Search 17,727 grants** — keyword + AI semantic search, filter by state/amount/category/closing date
-2. **Browse 10,763 foundations** — AI profiles, giving data, programs, ACNC financials
+1. **Search 18,069 grants** — keyword + AI semantic search, filter by state/amount/category/closing date
+2. **Browse 10,779 foundations** — AI profiles, giving data, programs, ACNC financials
 3. **Search 64,000+ charities** — full ACNC register with financial history
-4. **Explore 92,000+ entities** — unified graph linking donations, contracts, grants, lobbying
+4. **Explore 100,000+ entities** — unified graph linking donations, contracts, grants, tax, justice funding
 5. **Read 15 investigations** — donor-contractors, funding equity, power dynamics, community parity
 6. **Save & track grants** — personal + team view, pipeline stages, notes, star ratings
 7. **Track foundations** — CRM for funder relationships
 8. **AI chat assistant** — RAG-powered grant discovery (Claude Haiku + pgvector)
-9. **Claim charity profiles** — verification flow for charity staff
-10. **Team collaboration** — invite members, shared trackers, org-level views
-11. **Place-based analysis** — postcode funding profiles, SEIFA disadvantage, remoteness
-12. **Entity dossiers** — full ABN X-Ray with donations, contracts, financials, location intelligence
+9. **Knowledge Wiki** — upload documents (PDF, DOCX, URLs), AI-powered org Q&A
+10. **Claim charity profiles** — verification flow for charity staff
+11. **Team collaboration** — invite members, shared trackers, org-level views
+12. **Place-based analysis** — postcode funding profiles, SEIFA disadvantage, remoteness
+13. **Entity dossiers** — full ABN X-Ray with donations, contracts, tax, justice funding, location intelligence
+14. **Tender intelligence** — AI-analysed procurement opportunities matching org profile
+15. **Grant pipeline** — Notion-synced grant tracking with stage management
+16. **Alert system** — email alerts for new matching grants and entity changes
 
 ### Pricing (Live on Stripe)
 | Tier | Monthly | Who It's For |
@@ -73,7 +79,7 @@
 
 ### The Product (Say This Third)
 
-> 92,000 entities. 50,000 relationships. 17,727 grants. 10,763 foundations. 15 live investigations. AI-powered search. Free for communities. The data infrastructure Australia never had.
+> 100,000 entities. 211,000 relationships. 18,069 grants. 10,779 foundations. 670,000 government contracts. 313,000 political donations. 26,000 tax transparency records. 52,000 justice funding records. 10,000 social enterprises. AI-powered search. Free for communities. The data infrastructure Australia never had.
 
 ---
 
@@ -144,14 +150,14 @@
     - Week 5: "We mapped every foundation in Australia. Here's what we found."
     - Week 6: "94% of charity donations go to 10% of organisations. Here's the data."
     - Week 7: "The $4.7B question: who donates AND contracts?"
-    - Week 8: "How we built Australia's entity graph (92,000 entities, 2 people)"
-14. **Email newsletter** — "GrantScope Weekly" with new grants, closing soon, foundation spotlight
+    - Week 8: "How we built Australia's entity graph (100,000 entities, 2 people)"
+14. **Email newsletter** — "CivicGraph Weekly" with new grants, closing soon, foundation spotlight
 
 ### Week 9-12: Revenue
 
 15. **Convert beta testers** — personal outreach, founding member pricing (50% off locked forever)
 16. **Philanthropy Australia Conference prep** (Sep 8-10, Brisbane)
-    - Submit speaker proposal: "What 92,000 entities tell us about Australian philanthropy"
+    - Submit speaker proposal: "What 100,000 entities tell us about Australian philanthropy"
     - Book fringe session: live demo of entity graph
     - Nick's network: Orange Sky connections in the philanthropy world
 17. **Target 5 paying customers** by end of Month 3:
@@ -187,7 +193,7 @@
 
 ### Agent/Bot Integration (Future)
 - **Telegram bot** — already exists in ACT ecosystem. Add grant alert tool.
-- **Notion Workers** — already deployed with 21 tools. Add GrantScope grant search tool.
+- **Notion Workers** — already deployed with 21 tools. Add CivicGraph grant search tool.
 - **Email digests** — weekly grant matches for saved profiles (needs implementation)
 - **Webhook alerts** — new grants matching saved criteria (needs implementation)
 
@@ -240,7 +246,7 @@ Landing page → Read investigation → Explore entity graph
 ## Communication Strategy
 
 ### Core Narrative
-**GrantScope makes the invisible visible.** We trace where Australia's money flows — from political donations to government contracts to philanthropic grants to community outcomes. The data is open. The platform is free for communities. Institutions pay so communities don't have to.
+**CivicGraph makes the invisible visible.** We trace where Australia's money flows — from political donations to government contracts to philanthropic grants to community outcomes. The data is open. The platform is free for communities. Institutions pay so communities don't have to.
 
 ### Voice
 - **Not academic.** Plain language, strong claims backed by numbers.
@@ -260,7 +266,7 @@ Landing page → Read investigation → Explore entity graph
 - **Week 1:** "New This Month" — new data sources, new features
 - **Week 2:** Investigation deep dive — one report highlighted
 - **Week 3:** Foundation spotlight — profile one foundation's giving pattern
-- **Week 4:** Community story — how a community org used GrantScope
+- **Week 4:** Community story — how a community org used CivicGraph
 
 ---
 
@@ -286,7 +292,7 @@ Landing page → Read investigation → Explore entity graph
 
 ## Immediate Next Actions (This Week)
 
-1. [ ] **Deploy GrantScope to production** — verify it's live and accessible
+1. [ ] **Deploy CivicGraph to production** — verify it's live and accessible
 2. [ ] **Set up cron** for daily grant refresh + weekly entity graph rebuild
 3. [ ] **Fix access control** — enforce tier limits on API routes
 4. [ ] **Write LinkedIn post #1** — donor-contractor investigation teaser
@@ -294,10 +300,10 @@ Landing page → Read investigation → Explore entity graph
 6. [ ] **Email 3 grant consultants** — offer free Professional access for 60 days
 7. [ ] **Join Philanthropy Australia** as associate member ($1,100/yr)
 8. [ ] **Submit PA Conference 2026 speaker proposal** (deadline TBD — check early bird registration)
-9. [ ] **Set up hello@grantscope.au** forwarding + monitoring
-10. [ ] **Create GrantScope LinkedIn page** + first post
+9. [ ] **Set up hello@civicgraph.au** forwarding + monitoring
+10. [ ] **Create CivicGraph LinkedIn page** + first post
 
 ---
 
-*Built by 2 people. 92,303 entities. The data infrastructure Australia never had.*
+*Built by 2 people. 100,036 entities. 4.2M records. The data infrastructure Australia never had.*
 *A Curious Tractor project. Built on Jinibara Country.*

@@ -47,16 +47,19 @@ On the philanthropic side, Australia's 9,800+ foundations distribute billions an
 
 The foundation for mapping Australia's power structure is already in place. Every major dataset is free, publicly licensed (typically CC-BY 3.0), and updated regularly:
 
-| Dataset | Records | Format | Update Cycle | Key Fields |
-|---------|---------|--------|-------------|------------|
-| ABN Bulk Extract | 10M+ entities | XML | Weekly | ABN, entity type, legal name, trading names, state, GST/DGR status |
-| ASIC Companies Register | 3M+ companies | CSV/XLSX | Weekly | ACN, name, type, status, state, registration date, ABN |
-| AusTender (OCDS API) | 450K+ contracts (from 2013) | JSON API | Continuous | Contract ID, supplier ABN, value, category, agency, dates |
-| NSW eTendering | Large (contracts $150K+) | JSON API (OCDS) | Continuous | Tender and contract data, OCDS-compliant |
-| QLD Forward Procurement Pipeline | Growing | CSV/API | Non-regular | Agency, category, estimated value |
-| ATO Corporate Tax Transparency | 4,110 entities ($100M+ income) | XLSX | Annual | Total income, taxable income, tax payable, ownership type |
-| ORIC (Indigenous Corporations) | 3,372 | CSV | Periodic | ICN, ABN, name, state, industry, status |
-| ACNC (Charities) | 60,000+ | CSV | Bulk download | ABN, name, financials, purposes, beneficiaries |
+| Dataset | Records | Format | Update Cycle | Status |
+|---------|---------|--------|-------------|--------|
+| ABN Bulk Extract | 10M+ entities | XML | Weekly | **Downloaded (928MB)** |
+| ASIC Companies Register | 3M+ companies | CSV/XLSX | Weekly | **Imported (2.1M)** |
+| AusTender (OCDS API) | 670K+ contracts (from 2013) | JSON API | Continuous | **Full history imported** |
+| AEC Political Donations | 312K+ records | CSV | Annual | **Full register imported** |
+| ATO Corporate Tax Transparency | 26K+ records | XLSX | Annual | **Full dataset imported** |
+| ACNC (Charities) | 64K+ charities, 360K AIS | CSV | Bulk download | **Fully imported** |
+| ORIC (Indigenous Corporations) | 7,369 | CSV | Periodic | **Fully imported** |
+| Justice Funding | 52K+ records | Cross-sector | Various | **Fully imported** |
+| Social Enterprises | 10K+ records | Multi-source | Various | **Fully imported** |
+| NSW eTendering | Large (contracts $150K+) | JSON API (OCDS) | Continuous | Planned |
+| QLD Forward Procurement Pipeline | Growing | CSV/API | Non-regular | Planned |
 
 The critical connector across all these datasets is the **Australian Business Number (ABN)**. Every registered business, charity, Indigenous corporation, government entity, trust, and sole trader has one. The ABN Bulk Extract provides the master key -- linking ASIC company registrations, ACNC charity registrations, ORIC Indigenous corporation data, AusTender procurement contracts, and ATO tax transparency data into a single queryable entity graph.
 
@@ -177,7 +180,7 @@ Making procurement data transparent and connected to entity data creates feedbac
 
 ## The GrantConnect Gap as Strategic Entry Point
 
-GrantConnect -- the Commonwealth's grants information system -- has no API and no bulk data download. It mandates publication but doesn't enable analysis. This is precisely the gap that a 360Giving-equivalent for Australia would fill. By building the infrastructure to aggregate, standardise, and publish Australian grants data in open format, a platform like GrantScope becomes not just a directory but the foundational data infrastructure for an entirely new level of transparency in Australian public life.
+GrantConnect -- the Commonwealth's grants information system -- has no API and no bulk data download. It mandates publication but doesn't enable analysis. This is precisely the gap that a 360Giving-equivalent for Australia would fill. By building the infrastructure to aggregate, standardise, and publish Australian grants data in open format, a platform like CivicGraph becomes not just a directory but the foundational data infrastructure for an entirely new level of transparency in Australian public life.
 
 ---
 
@@ -185,16 +188,22 @@ GrantConnect -- the Commonwealth's grants information system -- has no API and n
 
 The technical requirements are substantial but achievable with existing open-source tools:
 
-| Component | Approach | Data Volume |
-|-----------|----------|-------------|
-| ABN Entity Registry | Streaming XML parser (fast-xml-parser), weekly sync | 10M+ records |
-| ASIC Company Data | CSV/XLSX parsing, weekly sync from data.gov.au | 3M+ records |
-| AusTender Procurement | OCDS API client, incremental sync by date | 450K+ contracts |
-| NSW eTendering | OCDS API client | Large |
-| ATO Tax Transparency | XLSX download from data.gov.au, annual | 4,110 entities |
-| ORIC Indigenous Corps | CSV from data.gov.au | 3,372 records |
-| ACNC Charities | Already ingested | 60K+ records |
-| Cross-reference Engine | ABN-based join across all datasets | Universal |
+| Component | Approach | Data Volume | Status |
+|-----------|----------|-------------|--------|
+| Entity Graph | ABN-based unified registry | 100,036 entities, 211,783 relationships | **DONE** |
+| AusTender Procurement | OCDS API client, full history | 670,303 contracts | **DONE** |
+| Political Donations | AEC disclosure register | 312,933 records | **DONE** |
+| ACNC Charities | CSV bulk download, weekly sync | 64,560 + 359,678 AIS | **DONE** |
+| Justice Funding | JusticeHub cross-sector data | 52,133 records | **DONE** |
+| ATO Tax Transparency | XLSX from data.gov.au | 26,241 records | **DONE** |
+| Grant Opportunities | 30+ government APIs + scrapers | 18,069, 100% embedded | **DONE** |
+| Foundations | ACNC-derived + AI enrichment | 10,779 (3,264 enriched) | **DONE** |
+| Social Enterprises | Supply Nation + 5 sources | 10,339 records | **DONE** |
+| ORIC Indigenous Corps | CSV from data.gov.au | 7,369 records | **DONE** |
+| ABR Bulk Extract | XML streaming parser | 928MB downloaded | **Partial** |
+| ASIC Company Data | CSV from data.gov.au | 2.1M+ records | **DONE** |
+| Cross-reference Engine | ABN-based join, entity resolution F1 94.1% | Universal | **DONE** |
+| NSW eTendering | OCDS API client | — | Planned |
 
 The ABN serves as the universal join key. Every dataset either contains ABNs directly or can be linked through ASIC's ACN-to-ABN mapping. The AusTender OCDS API includes supplier ABNs in contract notices, enabling direct linkage to the entity registry.
 
@@ -202,30 +211,37 @@ Priority sequencing matters. ORIC (3,372 records, highest mission relevance, sma
 
 ---
 
-## Implementation Status (March 2026)
+## Implementation Status (10 March 2026)
 
-### Completed
+### Completed — ALL Core Data Layers
 
-- **ACNC Charities:** 359,678 records ingested with 7 years financial data (acnc_ais), full beneficiary/purpose mapping
-- **Foundations:** 9,874 philanthropic entities profiled with multi-provider LLM enrichment
-- **Foundation Programs:** 866 open funding opportunities mapped
-- **Grant Opportunities:** 14,119 grants from 17 government sources, 100% embedded for semantic search
-- **Community Orgs:** 500 enriched charity profiles
-- **Social Enterprises:** 7 directory sources (B Corp, Social Traders, Supply Nation, state networks)
-- **ORIC Indigenous Corporations:** 7,369 records ingested (3,366 registered), 1,388 cross-referenced with ACNC, Minimax M2.5 LLM enrichment running
+- **Entity Graph:** 100,036 entities, 211,783 relationships — unified ABN-linked registry
+- **AusTender Contracts:** 670,303 records — full OCDS history from 2013 ($99.6B/year universe)
+- **ACNC Charities:** 64,560 records with 359,678 annual statements (7 years)
+- **Political Donations:** 312,933 records — full AEC disclosure register
+- **Justice Funding:** 52,133 records — cross-sector funding flows
+- **ATO Tax Transparency:** 26,241 records — full large taxpayer dataset
+- **Grant Opportunities:** 18,069 from 30+ sources, 100% embedded for semantic search
+- **Foundations:** 10,779 profiled, 3,264 AI-enriched (30%)
+- **Social Enterprises:** 10,339 — Supply Nation (6,135 Indigenous businesses) + 5 other sources
+- **ORIC Indigenous Corporations:** 7,369 records (3,366 active), cross-referenced with ACNC
+- **Foundation Programs:** 2,472 active funding programs
+- **ABR Bulk Extract:** Downloaded (928MB, 20 XML files) — used for postcode enrichment
+- **Entity Resolution:** F1 score 94.1% (trigram + ABN/ACN/ICN matching)
+- **Entity Geo Coverage:** postcode 90%, remoteness 96%, LGA 90%, SEIFA 89%
+- **Community-Controlled Orgs:** 7,822 identified and classified
+- **Platform:** 70 pages, 77 API routes, 86 data pipeline scripts
 
 ### In Progress
 
-- ORIC LLM enrichment (Minimax M2.5 primary, Gemini/Groq/DeepSeek rotation)
+- Foundation enrichment at scale (494 with websites queued)
+- Knowledge Wiki (document ingestion + AI Q&A)
 
-### Next Waves
+### Remaining Waves
 
-- **Wave 2:** AusTender OCDS API (federal procurement, $99.6B/year)
-- **Wave 3:** ASIC Companies Register (3M+ companies)
-- **Wave 4:** ABN Bulk Extract (10M+ entities, streaming XML)
-- **Wave 5:** ATO Corporate Tax Transparency (4,110 large entities)
-- **Wave 6:** Cross-reference engine + power analysis visualisations
-- **Wave 7:** Beneficial ownership register integration (~2027)
+- **Person Layer:** ACNC responsible persons, ASIC directors — schema ready, no data flowing
+- **State Procurement:** NSW, QLD, VIC, WA, SA — all separate systems
+- **Beneficial Ownership Register:** Integration ready (~2027 when register goes live)
 
 ---
 
@@ -238,4 +254,4 @@ The implications are profound. In a country where the ASX top 100 commands 47% o
 ---
 
 *Prepared by Deep Research, March 2026*
-*Implementation by GrantScope (grantscope.au)*
+*Implementation by CivicGraph (civicgraph.au)*

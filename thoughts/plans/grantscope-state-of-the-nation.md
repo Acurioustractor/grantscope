@@ -1,4 +1,4 @@
-# GrantScope: The State of Business, Power and Money in Australia
+# CivicGraph: The State of Business, Power and Money in Australia
 ## Why We're Building This, What We've Found, and What Comes Next
 
 *March 2026*
@@ -13,22 +13,28 @@ Yet no public tool exists that lets ordinary Australians trace how money moves t
 
 The data to build that tool already exists. It sits in government databases, published under open licences, updated weekly. What doesn't exist — and what has never existed — is the connective tissue.
 
-GrantScope is building that connective tissue.
+CivicGraph is building that connective tissue.
 
 ---
 
 ## What We've Built So Far
 
-### The Numbers (Live, March 2026)
+### The Numbers (Live, 10 March 2026)
 
 | Layer | Records | What It Tells You |
 |-------|---------|-------------------|
-| **Charities** (ACNC) | 64,473 | Every registered charity in Australia — who they serve, what they do, where they operate |
-| **Grant Opportunities** | 17,727 from 37 sources | Every findable government grant currently open or recently closed |
-| **Foundations** | 10,763 | Australia's philanthropic infrastructure — who gives, how much, to whom |
-| **Foundation Programs** | 2,378 | Active funding programs accepting applications |
-| **Indigenous Corporations** (ORIC) | 7,369 (3,366 active) | Every Aboriginal and Torres Strait Islander corporation ever registered — community services, health, land management, culture |
-| **Financial Data** | 7 years per charity | Revenue, expenses, assets, staff, grants given — $249 billion in total charity sector revenue |
+| **AusTender Contracts** | 670,303 | Full history of federal government procurement — who gets paid, how much |
+| **Charities** (ACNC) | 64,560 | Every registered charity in Australia — who they serve, what they do, where they operate |
+| **Political Donations** | 312,933 | Every disclosed political donation — who donates, to which party, how much |
+| **Justice Funding** | 52,133 | Justice sector funding flows cross-linked from JusticeHub |
+| **ATO Tax Transparency** | 26,241 | Large taxpayer data — income, taxable income, tax payable |
+| **Grant Opportunities** | 18,069 from 30+ sources | Every findable government grant currently open or recently closed |
+| **Foundations** | 10,779 | Australia's philanthropic infrastructure — who gives, how much, to whom |
+| **Social Enterprises** | 10,339 | Supply Nation + Social Traders + B Corp + state networks |
+| **Indigenous Corporations** (ORIC) | 7,369 (3,366 active) | Every Aboriginal and Torres Strait Islander corporation ever registered |
+| **Foundation Programs** | 2,472 | Active funding programs accepting applications |
+| **Financial Data** | 359,678 annual statements | Revenue, expenses, assets, staff, grants given — 7 years per charity |
+| **Entity Graph** | 100,036 entities, 211,783 relationships | The connected power map |
 
 ### What That Data Already Reveals
 
@@ -51,7 +57,7 @@ By size: 281 Large, 804 Medium, 2,281 Small — proving that Indigenous self-gov
 
 ### AI-Powered Understanding
 
-We don't just store data. We use AI (Minimax M2.5, Gemini, Groq) to analyse every entity — generating descriptions, identifying focus areas, mapping which communities are served. Here's what the AI reveals about real corporations:
+We don't just store data. We use AI (9 LLM providers including Minimax, Gemini, Groq, DeepSeek, Kimi, OpenAI, Perplexity, Anthropic) to analyse every entity — generating descriptions, identifying focus areas, mapping which communities are served. 3,264 foundations have been AI-enriched with descriptions, giving philosophy, application tips, and board members. Here's what the AI reveals about real corporations:
 
 > **Acacia Larrakia Aboriginal Corporation** (NT, est. 1992)
 > "The name combines 'Acacia' (the wattle tree, culturally significant to many Aboriginal groups) with 'Larrakia' — the Larrakia people, who are the Traditional Owners of the Darwin region. The corporation serves to support, preserve and promote Larrakia cultural heritage, traditions and community interests."
@@ -71,25 +77,25 @@ This isn't generic — the AI identifies specific language groups, traditional c
 
 ### The Five Layers
 
-**Layer 1: The Entity Registry** (Partially built)
-Every registered entity in Australia — business, charity, Indigenous corporation, trust, sole trader — classified and linked by ABN. We have charities, foundations, and Indigenous corporations. Next: ASIC (3M+ companies) and ABN Bulk Extract (10M+ entities).
+**Layer 1: The Entity Registry** (BUILT)
+100,036 entities — businesses, charities, Indigenous corporations, social enterprises, foundations, government bodies — classified and linked by ABN. 90% geocoded with postcode, 96% with remoteness, 90% with LGA, 89% with SEIFA disadvantage decile. Entity resolution F1: 94.1%.
 
-**Layer 2: Where Government Money Flows** (Next wave)
-AusTender publishes $99.6 billion/year in federal procurement contracts via an open API. By linking contracts to entities by ABN, we can show: Which entity types win government contracts? How much goes to large corporations vs SMEs vs Indigenous businesses vs community organisations?
+**Layer 2: Where Government Money Flows** (BUILT)
+670,303 AusTender contracts — full OCDS history from 2013. 312,933 political donations cross-referenced by ABN. 140+ entities that donate to political parties AND hold government contracts. Plus 52,133 justice funding records.
 
-The numbers we already know are stark:
+The numbers are stark:
 - 87.5% of contract value goes to 10 entities
 - SMEs win 52% of contracts by number but only 35% by value
-- Government consulting spend: ~$1 billion in 2024-25
+- 140+ entities simultaneously donate to parties AND hold government contracts ($80M donated, $4.7B in contracts)
 
-**Layer 3: Who Pays Tax (And Who Doesn't)**
-The ATO publishes tax transparency data for 4,110 entities earning $100M+ annually — $3.28 trillion in total income, $95.7 billion in tax payable. Cross-referenced with procurement: how much government money flows to companies that pay no tax?
+**Layer 3: Who Pays Tax (And Who Doesn't)** (BUILT)
+26,241 ATO tax transparency records imported — full dataset. Cross-referenced with procurement and donations via ABN. Effective tax rates calculable per entity.
 
-**Layer 4: The Grants and Philanthropy Layer** (Partially built)
-We already have 17,727 grants and 10,763 foundations. The missing piece: GrantConnect (federal grants) has no API and no bulk download. It mandates publication but prevents analysis. We're building the 360Giving equivalent that Australia lacks.
+**Layer 4: The Grants and Philanthropy Layer** (BUILT)
+18,069 grants from 30+ sources, 100% embedded for semantic search. 10,779 foundations with 3,264 AI-enriched. 2,472 foundation programs. Knowledge Wiki for org document management and AI-powered Q&A.
 
 **Layer 5: Beneficial Ownership** (~2027)
-Parliament passed the beneficial ownership register legislation in November 2025. When it goes live, we'll integrate it — connecting not just which companies receive money, but who actually owns them.
+Parliament passed the beneficial ownership register legislation in November 2025. When it goes live, we'll integrate it — connecting not just which companies receive money, but who actually owns them. The entity graph is ready to absorb this data the moment it becomes available.
 
 ### Questions That Become Answerable
 
@@ -175,32 +181,48 @@ The data already exists. The connections don't. We're building the connections.
 
 ---
 
-## Current Data Snapshot
+## Current Data Snapshot (10 March 2026)
 
 ```
-ENTITIES MAPPED
-├── Charities (ACNC)           64,473
-├── Foundations                 10,763
-├── Foundation Programs          2,378
+ENTITY GRAPH
+├── Total Entities             100,036
+├── Total Relationships        211,783
+├── Entity Types: charity (52K), company (24K), foundation (10.7K),
+│   indigenous_corp (7.3K), social_enterprise (5.2K), government_body (134)
+└── Relationship Types: contract (170K), donation (36K), grant (5.4K)
+
+DATA ESTATE
+├── AusTender Contracts        670,303
+├── ACNC Annual Statements     359,678  (7 years)
+├── Political Donations        312,933
+├── Charities (ACNC)            64,560
+├── Justice Funding             52,133
+├── ATO Tax Transparency        26,241
+├── Grant Opportunities         18,069  (100% embedded)
+├── Foundations                 10,779  (3,264 AI-enriched = 30%)
+├── Social Enterprises          10,339  (Supply Nation + 5 other sources)
 ├── Indigenous Corps (ORIC)      7,369  (3,366 active)
-├── Grant Opportunities         17,727  (37 sources)
-└── Financial Records          ~400,000 (7 years)
+├── Foundation Programs          2,472
+└── Community Orgs                 541
 
-CROSS-REFERENCES
-├── ORIC ↔ ACNC matched         1,389
-├── Foundations identified       9,867  (from ACNC)
-└── Grants embedded (vectors)   17,727  (100%)
+ENTITY COVERAGE
+├── With postcode               90%
+├── With remoteness             96%
+├── With LGA                    90%
+├── With SEIFA decile           89%
+├── With ABN                    96%
+├── Community-controlled      7,822
 
-SECTOR TOTALS
-├── Charity revenue           $249 billion
-├── Charity assets            $545 billion
-├── Foundation grants given    $2.99 billion
-└── Entity types                    6
+PLATFORM
+├── Frontend pages               70
+├── API routes                   77
+├── Data pipeline scripts        86
+├── Entity resolution F1       94.1%
 
-NEXT: AusTender ($99.6B procurement) → ASIC (3M companies) → ABN (10M entities)
+TOTAL RECORDS: ~4.2M
 ```
 
 ---
 
-*GrantScope — grantscope.au*
+*CivicGraph — civicgraph.au*
 *Making the invisible visible.*

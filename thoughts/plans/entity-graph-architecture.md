@@ -1,39 +1,39 @@
-# GrantScope Entity Graph Architecture
+# CivicGraph Entity Graph Architecture
 
 ## The Gap
 
-GrantScope has 2.5M+ records across 12 datasets. But they sit in silos. There is no entity graph connecting them.
+CivicGraph has 4.2M+ records across 20+ datasets. The entity graph now connects them.
 
-**What exists:**
-| Table | Records | Cross-Referencing |
-|-------|---------|------------------|
-| asic_companies | 2,167,341 | name lookup only |
-| political_donations | 188,609 | donor_name (text, unlinked) |
-| acnc_charities | 64,473 | ABN column |
-| austender_contracts | 58,128 | supplier_abn column |
-| ato_tax_transparency | 25,545 | not linked |
-| grant_opportunities | 17,727 | foundation_id FK |
-| foundations | 10,763 | abn column, derived from ACNC |
-| postcode_geo | 10,559 | geographic |
-| seifa_2021 | 10,572 | socioeconomic |
-| oric_corporations | 7,369 | abn column |
-| donor_entity_matches | 5,361 | THE ONLY cross-reference |
-| social_enterprises | 3,541 | not linked |
-| asx_companies | 1,976 | not linked |
-| foundation_programs | 2,378 | foundation_id FK |
-| community_orgs | 541 | not linked |
-| money_flows | 406 | manual aggregate flows |
+**What exists (BUILT — March 2026):**
+| Table | Records | Status |
+|-------|---------|--------|
+| gs_entities | 100,036 | **LIVE** — unified ABN-linked registry |
+| gs_relationships | 211,783 | **LIVE** — all connections between entities |
+| austender_contracts | 670,303 | **LIVE** — full OCDS history from 2013 |
+| political_donations | 312,933 | **LIVE** — full AEC register |
+| acnc_charities | 64,560 | **LIVE** — ABN-linked |
+| justice_funding | 52,133 | **LIVE** — cross-sector funding flows |
+| ato_tax_transparency | 26,241 | **LIVE** — full dataset |
+| grant_opportunities | 18,069 | **LIVE** — 100% embedded |
+| postcode_geo | ~12,000 | **LIVE** — with remoteness + LGA |
+| foundations | 10,779 | **LIVE** — 3,264 AI-enriched |
+| social_enterprises | 10,339 | **LIVE** — Supply Nation + 5 sources |
+| seifa_2021 | ~10,572 | **LIVE** — disadvantage by postcode |
+| oric_corporations | 7,369 | **LIVE** — ABN cross-referenced |
+| donor_entity_matches | 5,361 | **LIVE** — resolves donors → ABNs |
+| foundation_programs | 2,472 | **LIVE** — active funding programs |
+| asic_companies | 2,149,868 | **LIVE** — company structures |
+| asx_companies | 1,976 | **LIVE** — listed companies |
+| community_orgs | 541 | **LIVE** — enriched profiles |
 
-**What's missing:**
-- No unified entity table for organisations (companies, charities, foundations, govt bodies are all separate)
-- `entity_relationships` table exists but has **0 rows**
-- No way to ask "show me everything connected to ABN X" without querying 8+ tables manually
-- The 185 donor-contract overlap is computed at query time, not materialised
-- No provenance tracking (which source said what, when)
-- No temporal data on relationships
-- ATO tax data (25,545 records) and ASX data (1,976) are completely unlinked
+**Entity resolution F1: 94.1%** (was 77.3% — evaluator bug fixed)
+**Entity coverage: postcode 90%, remoteness 96%, LGA 90%, SEIFA 89%**
+**7,822 community-controlled organisations identified**
 
-**The existing `canonical_entities` system is ACT CRM** (14,982 persons with LinkedIn/GHL/Xero IDs). It's not GrantScope infrastructure and should not be repurposed.
+**Remaining gaps:**
+- Person layer: `directorship` relationships have 0 rows — ACNC responsible persons not imported
+- Beneficial ownership: awaiting ~2027 register
+- State procurement: NSW, QLD, VIC, WA, SA all separate systems
 
 ---
 
@@ -66,7 +66,7 @@ CREATE TABLE gs_entities (
 
   -- Prefixed identifiers (360Giving pattern)
   -- AU-ABN-21591780066, AU-ACN-123456789, AU-ORIC-ICN1234, AU-ASX-BHP
-  gs_id TEXT UNIQUE NOT NULL, -- GrantScope canonical ID
+  gs_id TEXT UNIQUE NOT NULL, -- CivicGraph canonical ID
 
   -- Descriptive
   description TEXT,
@@ -193,22 +193,23 @@ CREATE INDEX idx_gs_rel_entity_type ON gs_relationships(source_entity_id, relati
 CREATE INDEX idx_gs_rel_target_type ON gs_relationships(target_entity_id, relationship_type);
 ```
 
-### Relationship Population
+### Relationship Population (DONE)
 
-Convert existing siloed data into graph edges:
+Existing siloed data has been converted into graph edges:
 
 | Source Table | Relationship Type | Source Entity | Target Entity | Records |
 |-------------|------------------|---------------|---------------|---------|
-| political_donations | `donation` | donor (person/company) | political party | 188,609 |
-| austender_contracts | `contract` | government body (buyer) | company (supplier) | 58,128 |
-| grant_opportunities | `grant` | foundation | recipient (when known) | 17,727 |
-| foundation_programs | `program` | foundation | program | 2,378 |
+| political_donations | `donation` | donor (person/company) | political party | 312,933 |
+| austender_contracts | `contract` | government body (buyer) | company (supplier) | 670,303 |
+| grant_opportunities | `grant` | foundation | recipient (when known) | 18,069 |
+| foundation_programs | `program` | foundation | program | 2,472 |
 | donor_entity_matches | enriches donations | maps donor names → ABNs | | 5,361 |
-| ato_tax_transparency | `tax_record` | company | ATO | 25,545 |
-| acnc → foundations | `foundation_of` | foundation | parent charity | 10,763 |
+| ato_tax_transparency | `tax_record` | company | ATO | 26,241 |
+| justice_funding | `justice_funding` | funder | recipient | 52,133 |
+| acnc → foundations | `foundation_of` | foundation | parent charity | 10,779 |
 | oric → acnc | `registered_as` | indigenous corp | ACNC charity | ~3,000 |
 
-**Estimated initial graph:** ~300,000+ relationships from existing data alone.
+**Current graph:** 211,783 relationships across 100,036 entities.
 
 ### Population Script: `scripts/build-relationship-graph.mjs`
 
@@ -475,16 +476,18 @@ gs_entities (unified registry)
   └── mv_donor_contractors (materialised cross-reference)
 
 Source tables (unchanged, read-only):
-  ├── political_donations (188K)
-  ├── austender_contracts (58K)
+  ├── austender_contracts (670K)
+  ├── political_donations (313K)
   ├── acnc_charities (64K)
-  ├── foundations (10K)
+  ├── justice_funding (52K)
+  ├── ato_tax_transparency (26K)
+  ├── grant_opportunities (18K)
+  ├── foundations (10.7K)
+  ├── social_enterprises (10.3K)
   ├── oric_corporations (7K)
   ├── asic_companies (2.1M)
-  ├── ato_tax_transparency (25K)
-  ├── grant_opportunities (17K)
   ├── asx_companies (2K)
-  └── social_enterprises (3.5K)
+  └── community_orgs (541)
 ```
 
 The source tables stay as-is. The `gs_*` tables are the graph layer built on top. Source tables are the raw data; `gs_*` is the intelligence.

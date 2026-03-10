@@ -1,16 +1,16 @@
-# Why GrantScope Exists
+# Why CivicGraph Exists
 
-## The Problem: Australia's Philanthropy is Hidden in Plain Sight
+## The Problem: Australia Has No Decision Infrastructure for Public Money
 
-Australia's charitable sector reported **$222 billion** in total revenue in 2023. Of that, **$18.9 billion** came from donations and bequests, and **$107 billion** from government. The top 50 corporate givers contributed **$1.5 billion** in FY2024. Private ancillary funds hold **$10.66 billion** in net assets.
+Australia's charitable sector reported **$222 billion** in total revenue in 2023. **$107 billion** came from government. **672,000+ federal contracts** are awarded through AusTender. **$312 million+** flows through political donations. **$8.86 billion** in grants were distributed by charities in 2023 alone.
 
-These are enormous numbers. Yet if you're a community organisation in regional Queensland, a First Nations land council seeking partnership funding, or a disability service trying to diversify beyond government contracts — you cannot easily answer the most basic question:
+These are enormous numbers. Yet no single system connects them. A government procurement officer cannot easily check whether a supplier also donates to the party in power. A program manager allocating Indigenous services funding cannot see which postcodes are most underserved. A community organisation in regional Queensland cannot answer the most basic question:
 
-**Who funds what, where, and how much?**
+**Who funds what, where, and does it work?**
 
-There is no single public platform that maps the flow of philanthropic capital across Australia. The data exists — scattered across ACNC returns, ATO statistics, foundation annual reports, corporate sustainability disclosures, and government grant portals — but it has never been assembled into a coherent, searchable, publicly accessible whole.
+The data exists — scattered across AusTender, ACNC returns, AEC disclosures, ATO statistics, state grant portals, foundation annual reports, and justice funding records — but it has never been assembled into a coherent decision layer.
 
-GrantScope changes that.
+CivicGraph changes that.
 
 ---
 
@@ -64,39 +64,49 @@ Without platform-level transparency, these distortions remain invisible. Policy 
 
 ---
 
-## What GrantScope Does About It
+## What CivicGraph Does About It
 
-### Three layers of funding intelligence
+### Three products, one entity graph
 
-**1. Government Grants — every portal, always current**
+**1. Procurement Intelligence** — for government and institutional buyers
 
-We aggregate grant opportunities from GrantConnect (federal), state portals (QLD, NSW, VIC, WA, SA, TAS), business.gov.au, and data.gov.au into a single searchable index. Currently tracking **400+ active opportunities** from 24 sources.
+Supplier discovery across **672,474 AusTender contracts**, **10,339 social enterprises** (Supply Nation + Social Traders + B Corps), and **7,523 ORIC Indigenous corporations**. Compliance checking for Indigenous Procurement Policy (IPP) targets. Donor-contractor cross-reference reveals which suppliers also donate to political parties.
 
-No more checking 15 different government websites. One search, all levels of government.
+No more spreadsheets. One search for the right supplier, with compliance scoring built in.
 
-**2. Philanthropic Foundations — every trust, every program**
+**2. Allocation Intelligence** — for funders and program managers
 
-We've imported the entire **ACNC register** — **9,875 foundations** — and are building rich AI-powered profiles for each one. So far:
+Place-based funding gap analysis across **2,900+ postcodes** and **492 LGAs**, scored by SEIFA disadvantage, remoteness, entity density, and external funding share. Combined with **18,069 grant opportunities** from 30+ sources, **10,779 philanthropic foundations** with AI-enriched profiles, and **2,472 linked foundation programs**.
 
-- **180 high-confidence profiles** with giving philosophy, open programs, board members, and application tips
-- **597 medium-confidence profiles** with thematic focus, geographic coverage, and giving amounts
-- **472 foundation programs** discovered through website scraping
-- **46 VIP foundations** (top philanthropists + corporate givers) with verified giving data from AFR, Forbes, and CSI research
+Where should the next dollar go? CivicGraph surfaces the most underserved communities automatically.
 
-Every profile includes: what they fund, where they fund, how much they give, how to apply, and what they care about. This is information that previously required hours of research per foundation.
+**3. Governed Proof** — for commissioners and evaluators (coming)
 
-**3. Corporate Philanthropy — giving vs revenue transparency**
+Outcome evidence linking funding to results, integrating JusticeHub (1,100 interventions, 570 evidence records) and Empathy Ledger (community voice and lived experience). Closing the loop from allocation to impact.
 
-Australia's largest companies give through corporate foundations, but there's no easy way to compare giving against revenue, or to see which industries contribute most relative to their size. We're mapping ASX200 companies to their foundations, calculating giving ratios, and making this data publicly searchable.
+### The Entity Graph — the foundation under all three products
 
-### Open data, open source, open access
+A unified registry of **100,036 entities** linked by ABN across all data sources:
 
-GrantScope is MIT-licensed and free. The data is free. The tools are free.
+- **672,474 AusTender contracts** — full federal procurement history
+- **312,182 political donations** — complete AEC register
+- **66,431 ACNC charities** with 7 years of financials (370K annual statements)
+- **52,133 justice funding** records
+- **23,909 ATO tax transparency** records
+- **10,339 social enterprises** — Supply Nation + Social Traders + B Corps
+- **7,523 ORIC Indigenous corporations**
+- **199,001 relationships** — contracts, donations, grants, governance links
 
-We believe that transparency in philanthropic capital allocation is a **public good**. When communities can see who funds what, they can:
+Entity resolution F1: **94.1%**. Geographic coverage: **96% postcode, 96% remoteness, 95% LGA, 94% SEIFA**.
 
-- Find funding they didn't know existed
-- Hold foundations accountable to their stated missions
+### Cross-subsidy: institutions pay, communities access free
+
+CivicGraph is MIT-licensed. The data is free. Community access is free forever.
+
+Government and institutional buyers pay for procurement intelligence, tender packs, and API access. That revenue funds free community access:
+
+- Find funding you didn't know existed
+- Hold funders accountable to their stated missions
 - Identify gaps where no one is funding critical work
 - Build more effective partnerships based on shared priorities
 - Advocate for policy change with evidence, not anecdote
@@ -111,68 +121,85 @@ A critical accounting reality: philanthropic flows are counted multiple times ac
 
 This isn't just a measurement problem — it's a power problem. When the data is fragmented, those with the resources to navigate the complexity (large foundations, corporate advisors, government agencies) have information advantages over those who need funding most (small community organisations, First Nations groups, regional services).
 
-GrantScope doesn't solve the double-counting problem. But by assembling all the fragments into one place, we make the landscape navigable for everyone — not just those with research budgets.
+CivicGraph doesn't solve the double-counting problem. But by assembling all the fragments into one decision layer, we make the landscape navigable for everyone — not just those with research budgets.
 
 ### Tax subsidies deserve public scrutiny
 
 When the government foregoes **$2.26 billion** in revenue to subsidise charitable giving, and **82% of that benefit** flows to the top income decile, that's a policy choice that deserves informed public debate. But the debate can't happen if the data is locked in ATO statistics tables, Treasury working papers, and ACNC annual reports that few people read.
 
-GrantScope makes this data accessible. Not as advocacy — as infrastructure. The facts should be available to everyone: donors, charities, policymakers, journalists, researchers, and the communities that philanthropy is meant to serve.
+CivicGraph makes this data accessible. Not as advocacy — as infrastructure. The facts should be available to everyone: donors, charities, policymakers, journalists, researchers, and the communities that public money is meant to serve.
+
+### Procurement needs transparency infrastructure
+
+**140 entities** donate to political parties AND hold government contracts. They donated $80M and received $4.7B in contracts — a 58x return. Both major parties benefit. Government procurement officers currently have no tool to check this cross-reference. CivicGraph provides it.
 
 ### Community organisations deserve better tools
 
 The typical small charity in Australia has limited capacity to research funding opportunities, track foundation priorities, or benchmark their grant success rates. They're competing for attention from foundations that receive hundreds of applications per round.
 
-GrantScope levels the playing field by giving every organisation — from a one-person community group in the NT to a major research university — the same visibility into who funds what, and how to approach them.
+CivicGraph levels the playing field by giving every organisation — from a one-person community group in the NT to a major research university — the same visibility into who funds what, and how to approach them.
 
 ---
 
 ## How It's Built
 
-GrantScope is an open-source platform built on:
+CivicGraph is an open-source platform built on:
 
-- **ACNC Register** — 9,875 registered foundations imported from the Australian Charities and Not-for-profits Commission
-- **Multi-source grant discovery** — GrantConnect RSS, state CKAN APIs, business.gov.au, data.gov.au
-- **AI-powered foundation profiling** — Multi-provider LLM analysis (Groq, OpenAI, Minimax) combined with web scraping (Jina Reader, Firecrawl) to build rich profiles from foundation websites and annual reports
-- **VIP research layer** — Cross-referenced with AFR Philanthropy 50, Forbes Corporate 50, CSI High Net Wealth Report, and Fundraising Research Australia data
-- **Supabase** — PostgreSQL database with full-text search and geographic filtering
-- **Next.js** — Public web application for search, browse, and transparency reporting
+- **ACNC Register** — 66,431 charities + 370,468 annual financial statements (7 years)
+- **ACNC Foundation Filter** — 10,779 grantmaking foundations extracted from the register
+- **Multi-source grant discovery** — GrantConnect RSS, state CKAN APIs across all states, business.gov.au, data.gov.au — 30+ sources
+- **AI-powered foundation profiling** — 9 LLM providers in round-robin (Groq, Gemini, DeepSeek, OpenAI, Anthropic, Perplexity, Kimi, Minimax, Gemini grounded) with web scraping (Jina Reader, Firecrawl)
+- **Entity graph** — Deterministic entity resolution linking ACNC, AusTender, AEC, ATO, ORIC, ASIC, Supply Nation by ABN
+- **VIP research layer** — Cross-referenced with AFR Philanthropy 50, Forbes Corporate 50, CSI High Net Wealth Report
+- **Supabase** — PostgreSQL with pgvector (HNSW), 100+ tables, materialized views for analytics
+- **Next.js 15** — 76 API routes, 70+ pages, Bauhaus design system
 
 Every data source is free or near-free to access. Total operating cost: approximately **$6/month**.
 
-### Current Database
+### Current Database (March 2026)
 
-| Dataset | Count | Coverage |
-|---------|------:|---------|
-| Foundations | 9,875 | All ACNC-registered foundations, trusts, and ancillary funds |
-| High-confidence profiles | 180 | Rich data: programs, philosophy, board, tips |
-| Medium-confidence profiles | 597 | Good data: focus areas, geography, giving amounts |
-| Grant opportunities | 400+ | Federal (GrantConnect), state (QLD), data.gov.au |
-| Foundation programs | 472 | Open funding programs extracted from websites |
-| VIP foundations | 46 | Top philanthropists + corporate givers with verified data |
+| Dataset | Records | Coverage |
+|---------|--------:|---------|
+| Entity graph | 100,036 | Unified registry — charities, companies, government, Indigenous corps |
+| Relationships | 199,001 | Contracts, donations, grants, governance links |
+| AusTender contracts | 672,474 | Full federal procurement history |
+| ACNC charities | 66,431 | Every registered charity |
+| ACNC annual statements | 370,468 | 7 years of financials (2017–2023) |
+| Political donations | 312,182 | Complete AEC register |
+| Justice funding | 52,133 | QLD, federal, cross-sector |
+| ATO tax transparency | 23,909 | Large company tax data |
+| Grant opportunities | 18,069 | Government + philanthropic, all states |
+| Foundations | 10,779 | ACNC-filtered grantmakers |
+| Social enterprises | 10,339 | Supply Nation + Social Traders + B Corps |
+| ORIC corporations | 7,523 | Indigenous corporations register |
+| Foundation programs | 2,472 | Linked grant programs |
+| ASIC companies | 2.2M | ABN resolution backbone |
+| AI-enriched profiles | 3,264 | Foundations with deep LLM profiles |
 
 ---
 
 ## What Comes Next
 
-### Near-term (building now)
+### Now: Launch to first users
 
-- **More state grant portals** — NSW, VIC, WA, SA, TAS data sources
-- **Deeper foundation profiling** — targeting 4,360 foundations with websites for AI profiling
-- **Tag normalisation** — standardising 60+ LLM-generated thematic tags into a clean taxonomy
-- **Corporate transparency metrics** — giving ratios, revenue vs giving, industry comparisons
+The product exists — 76 API routes, 70+ pages, 4.2M records. No external users yet. Recruiting 10 beta testers from warm network is the #1 priority.
+
+### Near-term
+
+- **Foundation enrichment at scale** — 3,264 of 10,779 done (30%), 494 with websites currently in queue
+- **Knowledge Wiki** — document upload (PDF/DOCX/URL), AI extraction, org-scoped Q&A (infrastructure built, wiring up)
+- **Grant pipeline intelligence** — scout grants for user profiles, Notion sync, deadline alerts
 
 ### Medium-term
 
-- **Public web app** — searchable directory of grants, foundations, and corporate giving
-- **Foundation program tracking** — open/closed status, deadline alerts, eligibility matching
-- **Historical giving trends** — year-over-year foundation giving data from annual reports
-- **Geographic equity analysis** — mapping funding flows against community need indicators
+- **ASIC selective enrichment** — directors + subsidiaries for high-value entities ($10-23/extract)
+- **Supply Nation API integration** — complete the community-controlled entity picture
+- **Open contribution layer** — community corrections, local context, lived experience
 
 ### Long-term vision
 
-- **Philanthropic flow mapping** — tracing dollars from donor through foundation to recipient
-- **Community needs matching** — connecting underfunded areas with aligned foundations
+- **Australia's 360Giving equivalent** — open data standard for Australian grants
+- **Community governance** — cooperative model, community treasury
 - **Policy transparency tools** — visualising the relationship between tax subsidies and giving patterns
 - **API for researchers** — open data access for academic and policy research
 
@@ -180,7 +207,7 @@ Every data source is free or near-free to access. Total operating cost: approxim
 
 ## Contributing
 
-GrantScope is open source and we welcome contributions. Whether you're a developer, a researcher, a philanthropic professional, or someone who cares about funding equity in Australia — there's a place for you.
+CivicGraph is open source and we welcome contributions. Whether you're a developer, a researcher, a procurement professional, or someone who cares about funding equity in Australia — there's a place for you.
 
 - **Code**: [github.com/Acurioustractor/grantscope](https://github.com/Acurioustractor/grantscope)
 - **Data issues**: Found incorrect foundation data? Open an issue.
@@ -214,4 +241,4 @@ MIT. The data wants to be free.
 
 ---
 
-*GrantScope is a project of [ACT Global](https://act.place) — building tools for a more connected, fair, and balanced society.*
+*CivicGraph is a project of [A Curious Tractor (ACT)](https://act.place) — building decision infrastructure that transfers institutional power to community-led initiatives.*
