@@ -20,5 +20,7 @@ dist/
 
 # Large data files (downloaded, not source)
 data/abs/
+data/abr/
+data/asic/
 data/lga/
 data/opensanctions/

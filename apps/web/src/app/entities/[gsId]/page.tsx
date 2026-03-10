@@ -193,7 +193,7 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
     // Not logged in — free tier
   }
 
-  // Fetch relationships, ACNC financials, grants, justice funding, and place context in parallel
+  // Fetch relationships, ACNC financials, grants, justice funding, place context, and cross-system data in parallel
   const [
     { data: outbound },
     { data: inbound },
@@ -206,6 +206,7 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
     { data: foundationProgramsData },
     { data: charityData },
     { data: socialEnterpriseData },
+    { data: jhOrgData },
   ] = await Promise.all([
     supabase
       .from('gs_relationships')
@@ -283,14 +284,28 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
           .eq('abn', e.abn)
           .limit(1)
       : Promise.resolve({ data: [] }),
-    // Social enterprise enrichment
-    e.abn
-      ? supabase
+    // Social enterprise enrichment (try ABN first, then name)
+    (async () => {
+      if (e.abn) {
+        const { data } = await supabase
           .from('social_enterprises')
-          .select('id, name, org_type, certifications, sector, source_primary')
+          .select('id, name, org_type, certifications, sector, source_primary, target_beneficiaries, logo_url, business_model, website')
           .eq('abn', e.abn)
-          .limit(1)
-      : Promise.resolve({ data: [] }),
+          .limit(1);
+        if (data && data.length > 0) return { data };
+      }
+      return supabase
+        .from('social_enterprises')
+        .select('id, name, org_type, certifications, sector, source_primary, target_beneficiaries, logo_url, business_model, website')
+        .ilike('name', e.canonical_name)
+        .limit(1);
+    })(),
+    // JusticeHub organization (cross-system bridge)
+    supabase
+      .from('organizations')
+      .select('id, name, slug')
+      .eq('gs_entity_id', e.id)
+      .limit(1),
   ]);
 
   // Process enrichment data
@@ -356,10 +371,46 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
     name: string;
     org_type: string | null;
     certifications: string[] | null;
-    sector: string | null;
+    sector: string[] | null;
     source_primary: string | null;
+    target_beneficiaries: string[] | null;
+    logo_url: string | null;
+    business_model: string | null;
+    website: string | null;
   }
   const socialEnterprise = (socialEnterpriseData || [])[0] as SocialEnterpriseEnrichment | undefined;
+
+  // JusticeHub cross-system data
+  interface JHOrg { id: string; name: string; slug: string }
+  const jhOrg = (jhOrgData || [])[0] as JHOrg | undefined;
+
+  // ALMA evidence chain: entity → JH org → interventions → evidence
+  let almaInterventionCount = 0;
+  let almaEvidenceCount = 0;
+  interface AlmaIntervention { id: string; name: string; type: string }
+  let almaInterventions: AlmaIntervention[] = [];
+  if (jhOrg) {
+    const [{ data: interventions }, { count: evidenceCount }] = await Promise.all([
+      supabase
+        .from('alma_interventions')
+        .select('id, name, type')
+        .eq('operating_organization_id', jhOrg.id)
+        .order('name'),
+      supabase
+        .from('alma_intervention_evidence')
+        .select('id', { count: 'exact', head: true })
+        .in('intervention_id',
+          (await supabase
+            .from('alma_interventions')
+            .select('id')
+            .eq('operating_organization_id', jhOrg.id)
+          ).data?.map((i: { id: string }) => i.id) || []
+        ),
+    ]);
+    almaInterventions = (interventions || []) as AlmaIntervention[];
+    almaInterventionCount = almaInterventions.length;
+    almaEvidenceCount = evidenceCount || 0;
+  }
 
   // Deduplicate ACNC financials by year (keep richest record)
   interface AcncYear {
@@ -817,6 +868,84 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
             )
           )}
 
+          {/* Social Enterprise Profile */}
+          {socialEnterprise && (socialEnterprise.target_beneficiaries || socialEnterprise.business_model || socialEnterprise.sector) && (
+            <Section title="Social Enterprise">
+              <div className="space-y-4">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                {socialEnterprise.logo_url && (
+                  <img src={socialEnterprise.logo_url} alt={`${socialEnterprise.name} logo`} className="h-12 object-contain" />
+                )}
+                {socialEnterprise.business_model && (
+                  <p className="text-bauhaus-muted leading-relaxed font-medium text-sm">{socialEnterprise.business_model}</p>
+                )}
+                {socialEnterprise.certifications && (
+                  <div className="flex flex-wrap gap-2">
+                    {(Array.isArray(socialEnterprise.certifications) ? socialEnterprise.certifications : []).map((cert: string) => (
+                      <span key={cert} className="text-[10px] font-black px-2 py-0.5 border-2 border-money bg-money-light text-money uppercase tracking-widest">
+                        {cert}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {socialEnterprise.target_beneficiaries && socialEnterprise.target_beneficiaries.length > 0 && (
+                  <div>
+                    <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-2">Beneficiaries</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {socialEnterprise.target_beneficiaries.map((b: string) => (
+                        <span key={b} className="text-xs font-bold px-2 py-0.5 bg-bauhaus-black/5 text-bauhaus-black">
+                          {b}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {socialEnterprise.sector && socialEnterprise.sector.length > 0 && (
+                  <div>
+                    <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-2">Services</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {socialEnterprise.sector.map((s: string) => (
+                        <span key={s} className="text-xs font-bold px-2 py-0.5 bg-bauhaus-black/5 text-bauhaus-muted">
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {socialEnterprise.source_primary && (
+                  <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest pt-2 border-t border-bauhaus-black/5">
+                    Source: {socialEnterprise.source_primary === 'social-traders' ? 'Social Traders' : socialEnterprise.source_primary}
+                  </div>
+                )}
+              </div>
+            </Section>
+          )}
+
+          {/* ALMA Evidence (JusticeHub cross-system) */}
+          {almaInterventionCount > 0 && (
+            <Section title={`Justice Interventions (${almaInterventionCount})`}>
+              <div className="space-y-0">
+                {almaInterventions.map((ai) => (
+                  <div key={ai.id} className="flex items-center justify-between py-3 border-b-2 border-bauhaus-black/5 last:border-b-0">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-bauhaus-black text-sm truncate">{ai.name}</div>
+                      <div className="text-[11px] text-bauhaus-muted font-medium capitalize">{ai.type?.replace(/_/g, ' ')}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {almaEvidenceCount > 0 && (
+                <div className="mt-3 bg-bauhaus-canvas p-3">
+                  <span className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest">Evidence Base: </span>
+                  <span className="text-sm font-black text-bauhaus-black">{almaEvidenceCount} evidence record{almaEvidenceCount !== 1 ? 's' : ''}</span>
+                </div>
+              )}
+              <div className="mt-3 text-[10px] text-bauhaus-muted leading-relaxed">
+                Data from JusticeHub ALMA — Australian Lived-experience, Methods &amp; Approaches database.
+              </div>
+            </Section>
+          )}
+
           {/* ACNC Financial History */}
           {financialYears.length > 0 && (
             <Section title={`Financial History (${financialYears.length} years)`}>
@@ -1186,6 +1315,26 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
               ))}
             </div>
           </div>
+
+          {/* JusticeHub Link (cross-system) */}
+          {jhOrg && (
+            <div className="bg-white border-4 border-bauhaus-blue p-4">
+              <h3 className="text-sm font-black text-bauhaus-blue mb-3 pb-2 border-b-4 border-bauhaus-blue uppercase tracking-widest">
+                JusticeHub
+              </h3>
+              <p className="text-xs font-medium text-bauhaus-black leading-relaxed mb-3">
+                This entity is tracked in JusticeHub with {almaInterventionCount} intervention{almaInterventionCount !== 1 ? 's' : ''} and {almaEvidenceCount} evidence record{almaEvidenceCount !== 1 ? 's' : ''}.
+              </p>
+              <a
+                href={`https://justicehub.org.au/organizations/${jhOrg.slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block px-4 py-2 bg-bauhaus-blue text-white font-black text-xs uppercase tracking-widest hover:bg-bauhaus-black transition-colors"
+              >
+                View on JusticeHub
+              </a>
+            </div>
+          )}
 
           {/* Place Context */}
           {(placeGeo || seifa) && (

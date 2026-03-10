@@ -496,6 +496,58 @@ async function buildEntities() {
   }
   log(`  Social enterprises: ${stats.social}`);
 
+  // 1k. JusticeHub Organizations — batch upsert (cross-system bridge)
+  log('  Loading JusticeHub organizations...');
+  let jhCount = 0;
+  offset = 0;
+  while (true) {
+    const { data: jhOrgs, error } = await supabase
+      .from('organizations')
+      .select('id, name, abn, type, state, postcode')
+      .not('abn', 'is', null)
+      .range(offset, offset + batchSize - 1);
+    if (error) { log(`  ERROR: ${error.message}`); break; }
+    if (!jhOrgs?.length) break;
+
+    if (!dryRun) {
+      const jhEntities = jhOrgs.map(o => ({
+        entity_type: o.type === 'government' ? 'government_body' : (o.type === 'indigenous' ? 'indigenous_corp' : 'charity'),
+        canonical_name: o.name,
+        abn: o.abn,
+        gs_id: makeGsId({ abn: o.abn }),
+        state: o.state,
+        postcode: o.postcode,
+        source_datasets: ['justicehub'],
+        source_count: 1,
+        confidence: 'registry',
+      }));
+
+      for (let i = 0; i < jhEntities.length; i += 500) {
+        const chunk = jhEntities.slice(i, i + 500);
+        await supabase.from('gs_entities').upsert(chunk, { onConflict: 'gs_id', ignoreDuplicates: true });
+      }
+
+      // Auto-link: set gs_entity_id on JH organizations
+      for (const o of jhOrgs) {
+        const gsId = makeGsId({ abn: o.abn });
+        const { data: entity } = await supabase
+          .from('gs_entities')
+          .select('id')
+          .eq('gs_id', gsId)
+          .single();
+        if (entity) {
+          await supabase
+            .from('organizations')
+            .update({ gs_entity_id: entity.id })
+            .eq('id', o.id);
+        }
+      }
+    }
+    jhCount += jhOrgs.length;
+    offset += batchSize;
+  }
+  log(`  JusticeHub organizations: ${jhCount}`);
+
   log(`\nEntity registry complete:`);
   log(`  ACNC charities: ${stats.charities}`);
   log(`  Foundations enriched: ${stats.foundations}`);
@@ -507,6 +559,7 @@ async function buildEntities() {
   log(`  ATO tax records: ${stats.ato}`);
   log(`  ASX companies: ${stats.asx}`);
   log(`  Social enterprises: ${stats.social}`);
+  log(`  JusticeHub orgs: ${jhCount}`);
   log(`  Skipped: ${stats.skipped}`);
   return stats;
 }

@@ -177,11 +177,11 @@ async function main() {
 
       if (isPositive) {
         // Check if the match is correct
-        // Primary: ABN match. Fallback (when ground truth has no ABN): name match
+        // Primary: ABN match. Fallback: normalized name match (handles ABN=0 and ABN changes)
         const gtHasAbn = gt.candidate_abn && gt.candidate_abn !== '0' && gt.candidate_abn !== '';
         const abnMatch = gtHasAbn && result.matched_abn === gt.candidate_abn;
-        const nameMatch = !gtHasAbn && result.matched_name &&
-          result.matched_name.toUpperCase().trim() === gt.candidate_name?.toUpperCase().trim();
+        const nameMatch = result.matched_name &&
+          indexNormalize(result.matched_name) === indexNormalize(gt.candidate_name || '');
         if (abnMatch || nameMatch) {
           truePositives++;
           calibration[bucket].correct++;
@@ -199,18 +199,28 @@ async function main() {
           });
         }
       } else {
-        // Matched a negative — false positive
-        falsePositives++;
-        calibration[bucket].total--; // undo the count for negatives
-        failures.falsePositiveExamples.push({
-          donor_name: gt.donor_name,
-          expected: 'no match',
-          got_abn: result.matched_abn,
-          got_name: result.matched_name,
-          confidence: result.confidence,
-          method: result.method,
-          difficulty: gt.difficulty,
-        });
+        // Negative pair: this donor should NOT be matched to the confusable entity.
+        // If resolver matched to a DIFFERENT entity, it correctly rejected the confusable → true negative.
+        // Only count as false positive if resolver matched to the specific confusable entity.
+        const matchedConfusable = (gt.candidate_abn && result.matched_abn === gt.candidate_abn) ||
+          (!gt.candidate_abn && result.matched_name?.toUpperCase().trim() === gt.candidate_name?.toUpperCase().trim());
+
+        if (matchedConfusable) {
+          falsePositives++;
+          calibration[bucket].total--; // undo the count for negatives
+          failures.falsePositiveExamples.push({
+            donor_name: gt.donor_name,
+            expected: `not "${gt.candidate_name}"`,
+            got_abn: result.matched_abn,
+            got_name: result.matched_name,
+            confidence: result.confidence,
+            method: result.method,
+            difficulty: gt.difficulty,
+          });
+        } else {
+          trueNegatives++;
+          calibration[bucket].total--; // don't count negatives in calibration
+        }
       }
     } else {
       // Resolver returned null

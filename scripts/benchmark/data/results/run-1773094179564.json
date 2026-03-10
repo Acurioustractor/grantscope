@@ -1,31 +1,101 @@
 {
   "task": "entity-resolution",
-  "timestamp": "2026-03-09T22:12:33.918Z",
+  "timestamp": "2026-03-09T22:09:39.563Z",
   "metrics": {
-    "precision": 0.9985974754558204,
-    "recall": 0.89,
-    "f1": 0.9411764705882354,
-    "accuracy": 0.9243336199484092,
+    "precision": 0.9845722300140253,
+    "recall": 0.8775,
+    "f1": 0.9279576999339061,
+    "accuracy": 0.9157351676698194,
     "matchRate": 0.884780739466896
   },
   "counts": {
-    "truePositives": 712,
-    "falsePositives": 1,
+    "truePositives": 702,
+    "falsePositives": 11,
     "trueNegatives": 363,
     "falseNegatives": 87,
     "totalPairs": 1163
   },
   "calibration": {
     "1": {
-      "correct": 354,
+      "correct": 348,
       "total": 354
     },
     "0.9": {
-      "correct": 358,
+      "correct": 354,
       "total": 359
     }
   },
   "topFalsePositives": [
+    {
+      "donor_name": "Toga Pty. Ltd.",
+      "expected_abn": "27000926947",
+      "expected_name": "TOGA PTY. LTD.",
+      "got_abn": "47000605818",
+      "got_name": "TOGA PTY. LTD.",
+      "confidence": 1,
+      "method": "exact",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "The Union Education Foundation Limited",
+      "expected_abn": "0",
+      "expected_name": "THE UNION EDUCATION FOUNDATION LIMITED",
+      "got_abn": "56469208528",
+      "got_name": "The Union Education Foundation",
+      "confidence": 0.88,
+      "method": "core_name",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "the union education foundation",
+      "expected_abn": "0",
+      "expected_name": "THE UNION EDUCATION FOUNDATION LIMITED",
+      "got_abn": "56469208528",
+      "got_name": "The Union Education Foundation",
+      "confidence": 1,
+      "method": "exact",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Villa World Limited",
+      "expected_abn": "94010621226",
+      "expected_name": "VILLA WORLD LIMITED",
+      "got_abn": "38117546326",
+      "got_name": "VILLA WORLD LIMITED",
+      "confidence": 1,
+      "method": "exact",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Treasury Wine Estates Limited",
+      "expected_abn": "78145321320",
+      "expected_name": "TREASURY WINE ESTATES LIMITED",
+      "got_abn": "24004373862",
+      "got_name": "TREASURY WINE ESTATES LIMITED",
+      "confidence": 1,
+      "method": "exact",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "COMMONWEALTH BANK OF AUSTRALIA",
+      "expected_abn": "48123123124",
+      "expected_name": "COMMONWEALTH BANK OF AUSTRALIA",
+      "got_abn": "47624727267",
+      "got_name": "COMMONWEALTH BANK OF AUSTRALIA",
+      "confidence": 1,
+      "method": "exact",
+      "difficulty": "easy"
+    },
+    {
+      "donor_name": "Climate 200 Pty Ltd",
+      "expected_abn": "98632816383",
+      "expected_name": "CLIMATE 200 PTY LTD",
+      "got_abn": null,
+      "got_name": "Climate 200 Pty Ltd",
+      "confidence": 1,
+      "method": "exact",
+      "difficulty": "easy"
+    },
     {
       "donor_name": "ASG Group",
       "expected_abn": "57070045117",
@@ -34,6 +104,36 @@
       "got_name": "ASG Limited",
       "confidence": 0.85,
       "method": "normalized",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "Australian Payments Plus",
+      "expected_abn": "19649744203",
+      "expected_name": "AUSTRALIAN PAYMENTS PLUS LTD",
+      "got_abn": "93624272475",
+      "got_name": "AUSTRALIAN PAYMENTS PLUS LTD",
+      "confidence": 0.88,
+      "method": "core_name",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "Liberal Party of Australia - (NSW Division)",
+      "expected_abn": null,
+      "expected_name": "Liberal Party of Australia NSW Division",
+      "got_abn": null,
+      "got_name": "LIBERAL PARTY OF AUSTRALIA - NSW DIVISION",
+      "confidence": 0.88,
+      "method": "core_name",
+      "difficulty": "medium"
+    },
+    {
+      "donor_name": "Simonds Group",
+      "expected_abn": "54143841801",
+      "expected_name": "SIMONDS GROUP LIMITED",
+      "got_abn": "26602018100",
+      "got_name": "SIMONDS GROUP LIMITED",
+      "confidence": 0.88,
+      "method": "core_name",
       "difficulty": "medium"
     }
   ],

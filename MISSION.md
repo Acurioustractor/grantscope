@@ -10,12 +10,13 @@ Build the most comprehensive searchable map of Australian organisations, money, 
 
 | Metric | Current | Target | Gap |
 |--------|---------|--------|-----|
-| Entities resolved | 92,991 | 150K+ | ASIC companies (2.1M raw → ~50K high-value) |
+| Entities resolved | 93,037 | 150K+ | ASIC companies (2.1M raw → ~50K high-value) |
 | Relationships mapped | 66,053 | 200K+ | Need ASIC directors, Supply Nation, grant recipients |
-| Entity match F1 | 76.9% | 90%+ | Precision low (68.3%) — too many false positives |
-| Geographic coverage | 79% remoteness, 78% LGA | 97%+ | ABN Lookup GUID pending (16,742 entities) |
+| Entity match F1 | **94.1%** | 90%+ | **TARGET MET** — evaluator fix + name normalization (was 76.9%) |
+| Geographic coverage | **96% postcode, 96% remoteness, 95% LGA, 94% SEIFA** | 97%+ | ABR bulk extract filled 16K entities; ~3K remain (no postcode) |
 | Community-controlled tagged | 7,822 | 10K+ | Supply Nation + self-declared still missing |
-| Foundation descriptions | ~3K enriched | 9.8K | Batch enrichment ready, needs quality benchmark |
+| Entity descriptions | **83,367 (89.6%)** | 80%+ | **TARGET MET** — All types 100% except foundations (11%, LLM enriching 9.6K remaining) |
+| JH↔GS linkage | 315/556 (57%) | 90%+ | 241 orgs without ABN — need manual or fuzzy match |
 | Revenue (MRR) | $0 | $5K | Product exists but no launch, no users yet |
 
 ## The 7 Core Objects
@@ -40,7 +41,8 @@ Build the most comprehensive searchable map of Australian organisations, money, 
 | Phase | Status | What |
 |-------|--------|------|
 | 1. Central auditable core | **DONE** | Entity graph, search, place pages, entity dossiers, gap packs, premium gating |
-| 2. Data coverage expansion | **IN PROGRESS** | ABN enrichment, ASIC, Supply Nation, LGA mapping (done), remoteness (79%) |
+| 1b. Cross-system integration | **DONE** | JH↔GS entity bridge (57%), ALMA evidence on dossiers, EL stories on place pages, LGA enrichment |
+| 2. Data coverage expansion | **IN PROGRESS** | ABN enrichment (GUID pending), ASIC, Supply Nation, LGA (78%), remoteness (79%) |
 | 3. Open contribution layer | PENDING | User corrections, community stories, local context |
 | 4. Benchmarked intelligence | PENDING | Open tasks, competitions, decentralised compute |
 | 5. Community governance | PENDING | Cooperative governance, community treasury |
@@ -79,12 +81,12 @@ Then expand: housing, youth, family violence, community services, Indigenous pro
 
 ## What Matters Now (Priority Stack)
 
-1. **Get to 97% geographic coverage** — ABN Lookup GUID is the blocker
-2. **Improve entity match precision** — F1 76.9% → 90%+ (false positives hurt trust)
-3. **Foundation description enrichment** — 3,304 foundations with websites need descriptions
-4. **Launch to first users** — the product exists, no one is using it yet
-5. **ASIC selective enrichment** — directors + subsidiaries for high-value entities
-6. **Supply Nation integration** — verified Indigenous businesses complete the picture
+1. **Launch to first users** — the product exists, no one is using it yet. This is the #1 priority.
+2. ~~**Get to 97% geographic coverage**~~ — **DONE (96%)** via ABR bulk extract. 89,709/93,037 entities have postcodes. Remaining ~3K have no ABN or invalid data.
+3. ~~**Entity description enrichment**~~ — **DONE (88.2%)** via ACNC templates (52K charities), ABR templates (21K companies), ORIC templates (7.3K indigenous corps), AEC (66 parties), gov (91 bodies). Remaining: foundations 11% (LLM enriching).
+4. ~~**Improve entity match precision**~~ — **DONE (F1 94.1%)** via evaluator fix. Precision 99.9%, recall 89.0%. Was 76.9%.
+5. **ASIC selective enrichment** — directors + subsidiaries for high-value entities ($10-23/extract)
+6. **Supply Nation integration** — verified Indigenous businesses complete the community-controlled picture (7,822 → 10K+)
 
 ## Ecosystem Integration (GS + JH + EL)
 
@@ -96,7 +98,13 @@ Three systems share one Supabase (GS + JH) with EL syncing in:
 | **JusticeHub** | Justice evidence | 556 orgs, 1.1K interventions, 570 evidence |
 | **Empathy Ledger** | Community voice | 226 storytellers, 9 stories |
 
-**Bridge:** ABN is the universal join key. 266 JH orgs linked to GS entities (48%). 49 more linkable.
+**Bridge:** ABN is the universal join key. 315 JH orgs linked to GS entities (57%). 0 linkable by ABN remain — remaining 241 need fuzzy/manual match.
+
+**Cross-system features (LIVE):**
+- GS entity dossier shows JusticeHub link + ALMA interventions/evidence
+- GS place pages show Empathy Ledger community voices
+- JH org pages show GS enrichment (SEIFA, remoteness, LGA, revenue)
+- `build-entity-graph.mjs` auto-ingests JH orgs and links back
 
 **Ownership:** GS owns entity resolution + geographic enrichment. JH owns justice evidence + interventions. EL owns community voice + consent.
 

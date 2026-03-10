@@ -138,6 +138,34 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
   }
   const typeBreakdown = Array.from(byType.entries()).sort((a, b) => b[1] - a[1]);
 
+  // Empathy Ledger storytellers in this area (cross-system bridge)
+  interface Storyteller { id: string; full_name: string; bio: string | null; profile_image_url: string | null }
+  let storytellers: Storyteller[] = [];
+  if (geo.state) {
+    const { data: stData } = await supabase
+      .from('storytellers')
+      .select('id, full_name, bio, profile_image_url, location_id')
+      .not('full_name', 'is', null)
+      .limit(200);
+
+    if (stData?.length) {
+      // Get location IDs that match this state
+      const locationIds = stData.filter((s: { location_id: string | null }) => s.location_id).map((s: { location_id: string }) => s.location_id);
+      if (locationIds.length > 0) {
+        const { data: locs } = await supabase
+          .from('locations')
+          .select('id, state_province')
+          .in('id', locationIds)
+          .eq('state_province', geo.state);
+
+        const matchingLocationIds = new Set((locs || []).map((l: { id: string }) => l.id));
+        storytellers = (stData as (Storyteller & { location_id: string | null })[])
+          .filter(s => s.location_id && matchingLocationIds.has(s.location_id))
+          .slice(0, 6);
+      }
+    }
+  }
+
   // Comparison — find similar postcodes (same remoteness + similar SEIFA)
   let comparisonPostcodes: { postcode: string; locality: string; entity_count: number }[] = [];
   if (seifa && geo.remoteness_2021) {
@@ -372,6 +400,33 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
               <p className="text-xs font-medium text-bauhaus-black leading-relaxed">
                 This postcode has {entityList.length} funded entities but no identified community-controlled organisations receiving funding. This may indicate a gap in community self-determination.
               </p>
+            </div>
+          )}
+
+          {/* Community Voice (Empathy Ledger cross-system) */}
+          {storytellers.length > 0 && (
+            <div className="bg-white border-4 border-bauhaus-blue p-4">
+              <h3 className="text-sm font-black text-bauhaus-blue mb-3 pb-2 border-b-4 border-bauhaus-blue uppercase tracking-widest">
+                Community Voice
+              </h3>
+              <div className="space-y-3">
+                {storytellers.map((st) => (
+                  <div key={st.id} className="flex items-start gap-3">
+                    {st.profile_image_url && (
+                      <img src={st.profile_image_url} alt="" className="w-8 h-8 object-cover border-2 border-bauhaus-black shrink-0" />
+                    )}
+                    <div className="min-w-0">
+                      <div className="text-sm font-bold text-bauhaus-black">{st.full_name}</div>
+                      {st.bio && (
+                        <p className="text-[11px] text-bauhaus-muted font-medium line-clamp-2 mt-0.5">{st.bio}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 text-[10px] text-bauhaus-muted leading-relaxed">
+                Community voices from Empathy Ledger — lived experience linked to place.
+              </div>
             </div>
           )}
 

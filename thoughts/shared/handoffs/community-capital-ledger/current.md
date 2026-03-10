@@ -15,7 +15,7 @@ status: active
 **Test:** `cd /Users/benknight/Code/grantscope/apps/web && npx tsc --noEmit`
 
 ### Now
-[->] WAITING: ABN Lookup GUID (ref ABNL26131, registered 2026-03-10). Once received, run `node scripts/enrich-postcodes-from-abn.mjs --apply` to fill 16,742 entity postcodes → remoteness
+[->] Foundation enrichment running (494 with websites queued). Launch to first users is #1 priority.
 
 ### This Session
 - [x] **Sprint A: Entity Dossier Enhancement** — justice funding section, place context card, premium gating
@@ -52,20 +52,23 @@ status: active
 - [x] **Near-miss postcode fill** — 1,841 more entities via ±9 postcode proximity (GPO, PO Box ranges)
 - [x] **Created `scripts/enrich-postcodes-from-abn.mjs`** — ready to fill 16,742 entities once ABN Lookup GUID arrives
 - [x] **Created `scripts/backfill-remoteness-from-abs.mjs`** — 5 simple UPDATEs instead of CPU-thrashing loop
-- [x] **Stored ABS data** at `data/abs/CG_POSTCODE_2022_RA_2021.csv`
-- [x] **Registered for ABN Lookup API** — ref ABNL26131, GUID expected within 5 working days
-- **Remoteness coverage: 43.2% → 78.6%** (73,097 of 92,991 entities)
+- [x] **Created `scripts/backfill-postcodes-from-abr.mjs`** — ABR bulk extract (data.gov.au), filled 15,980 entity postcodes without needing GUID
+- [x] **ABR Bulk Extract downloaded** — `data/abr/public_split_1_10.zip` + `data/abr/public_split_11_20.zip` (928MB, 20 XML files, ~6M records)
+- [x] **Cascade enrichment** — postcodes → remoteness (8,560), SEIFA (16,080), LGA (15,877)
+- [x] **CBD/PO Box remoteness fix** — 4,673 entities in PO Box ranges set to "Major Cities of Australia"
+- [x] **ABS remoteness fill** — 977 postcode_geo rows updated + 3,343 entities cascaded from ABS CSV
+- [x] **Entity match F1 fixed** — evaluator bug (76.9% → **94.1%**). Negative pairs were scored as FP when resolver correctly found the right entity.
+- [x] **Foundation enrichment started** — 100 foundations queued (MiniMax + Gemini providers)
+- **Coverage: Postcode 96.4%, Remoteness 96.4%, LGA 95.1%, SEIFA 93.5%** (was 79%/43%/78%/76%)
 
 ### Next
-- [ ] **ABN Lookup GUID arrives** → add to `.env` as `ABN_LOOKUP_GUID`, run `node scripts/enrich-postcodes-from-abn.mjs --apply` (16,742 entities → ~97% remoteness)
-- [ ] **Commit all new scripts + data** to GrantScope repo
+- [ ] **Launch to first users** — #1 priority. Product exists, no users yet.
+- [ ] **Foundation enrichment at scale** — 494 with websites in queue, then ~9K name-only. Run: `node --env-file=.env scripts/enrich-foundations.mjs --limit=500`
+- [ ] **Commit all new scripts + changes** to GrantScope repo
 - [ ] **ASIC selective enrichment** — company extracts for high-value entities (directors, related entities, subsidiaries). $10-$23/extract, prioritize by relationship density.
 - [ ] **Supply Nation / social enterprise layer** — no single open register. Need Social Traders Finder scrape + RISE dataset + self-declared classification.
-- [ ] **LGA mapping** — add LGA to entities and place pages. Required for "funding per LGA" analysis.
-- [ ] **Community layer (Empathy Ledger integration)** — the "ledger of meaning" alongside the "ledger of money". Community stories, priorities, lived experience linked to places and funding flows.
-- [ ] **Open contribution layer (Phase 2 of vision)** — let users add source finds, match corrections, local context, community stories
-- [ ] **Benchmark: run recipient-entity-match** — `node scripts/benchmark/evaluate.mjs --task recipient-entity-match` to get F1 baseline
-- [ ] **Foundation description enrichment at scale** — use benchmark task to drive quality, then batch-generate descriptions for 3,304 foundations with websites
+- [ ] **Community layer (Empathy Ledger integration)** — the "ledger of meaning" alongside the "ledger of money"
+- [ ] **Benchmark: run recipient-entity-match** — `node scripts/benchmark/evaluate.mjs --task recipient-entity-match`
 
 ### Decisions
 - **Same Supabase** — GrantScope + JusticeHub + EmpathyLedger all on `tednluwflfhxyucgwigh`
