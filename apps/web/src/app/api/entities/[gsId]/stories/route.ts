@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireModule } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
 
 /**
@@ -14,6 +15,9 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ gsId: string }> }
 ) {
+  const auth = await requireModule('research');
+  if (auth.error) return auth.error;
+
   const { gsId } = await params;
 
   // Look up the entity's ABN

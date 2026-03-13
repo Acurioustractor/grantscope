@@ -7,7 +7,7 @@
  * API: https://data.gov.au/data/api/3/action/package_search
  */
 
-import type { SourcePlugin, DiscoveryQuery, RawGrant } from '../types.js';
+import type { SourcePlugin, DiscoveryQuery, RawGrant } from '../types';
 
 const CKAN_BASE = 'https://data.gov.au/data/api/3/action';
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServer } from '@/lib/supabase-server';
+import { requireModule } from '@/lib/api-auth';
+import { getServiceSupabase } from '@/lib/supabase';
 
 /**
  * GET /api/alerts — list user's alert preferences
@@ -7,11 +8,12 @@ import { createSupabaseServer } from '@/lib/supabase-server';
  */
 
 export async function GET() {
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Auth required' }, { status: 401 });
+  const auth = await requireModule('tracker');
+  if (auth.error) return auth.error;
+  const { user } = auth;
 
-  const { data, error } = await supabase
+  const db = getServiceSupabase();
+  const { data, error } = await db
     .from('alert_preferences')
     .select('*')
     .eq('user_id', user.id)
@@ -22,14 +24,15 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Auth required' }, { status: 401 });
+  const auth = await requireModule('tracker');
+  if (auth.error) return auth.error;
+  const { user } = auth;
 
   const body = await request.json();
   const { name, frequency, categories, focus_areas, states, min_amount, max_amount, keywords, entity_types } = body;
 
-  const { data, error } = await supabase
+  const db = getServiceSupabase();
+  const { data, error } = await db
     .from('alert_preferences')
     .insert({
       user_id: user.id,

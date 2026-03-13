@@ -1,9 +1,13 @@
+import { requireModule } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
 import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
+  const auth = await requireModule('research');
+  if (auth.error) return auth.error;
+
   const q = req.nextUrl.searchParams.get('q')?.trim();
   const limit = Math.min(Number(req.nextUrl.searchParams.get('limit') || 20), 50);
 

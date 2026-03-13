@@ -1,0 +1,5045 @@
+{
+  "timestamp": "2026-03-12T03:57:23.021Z",
+  "benchmarkVersion": "funding-network-v2",
+  "scenarioCount": 50,
+  "metrics": {
+    "precisionAt10": 1,
+    "recallAt10": 0.2780952380952384,
+    "meanRelevance": 0.9702524959852853,
+    "justiceExposure": 0.94,
+    "actability": 0.5969999999999998,
+    "relationshipUtility": 0.7187999999999998,
+    "overallScore": 0.7893545468161043
+  },
+  "familyMetrics": {
+    "grant_discovery": {
+      "precisionAt10": 1,
+      "recallAt10": 0.27777777777777773,
+      "meanRelevance": 0.9805652173913042,
+      "justiceExposure": 0.9,
+      "actability": 0.8550000000000001,
+      "relationshipUtility": 0.49099999999999994,
+      "overallScore": 0.7876185990338164
+    },
+    "foundation_discovery": {
+      "precisionAt10": 1,
+      "recallAt10": 0.27777777777777773,
+      "meanRelevance": 0.9084402664286563,
+      "justiceExposure": 0.9,
+      "actability": 0.55,
+      "relationshipUtility": 0.608,
+      "overallScore": 0.7590936088412868
+    },
+    "charity_delivery_match": {
+      "precisionAt10": 1,
+      "recallAt10": 0.27777777777777773,
+      "meanRelevance": 1,
+      "justiceExposure": 1,
+      "actability": 0.37999999999999995,
+      "relationshipUtility": 0.75,
+      "overallScore": 0.7903055555555556
+    },
+    "social_enterprise_delivery_match": {
+      "precisionAt10": 1,
+      "recallAt10": 0.2793650793650793,
+      "meanRelevance": 0.9622569961064651,
+      "justiceExposure": 0.9,
+      "actability": 0.19999999999999998,
+      "relationshipUtility": 0.745,
+      "overallScore": 0.754199415094309
+    },
+    "need_gap_search": {
+      "precisionAt10": 1,
+      "recallAt10": 0.27777777777777773,
+      "meanRelevance": 1,
+      "justiceExposure": 1,
+      "actability": 1,
+      "relationshipUtility": 1,
+      "overallScore": 0.8555555555555554
+    }
+  },
+  "worstScenarios": [
+    {
+      "id": "foundation_discovery:regional-regenerative",
+      "title": "Regional regenerative and environment initiative seeking capital",
+      "family": "foundation_discovery",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 0.8344827586206897,
+        "justiceExposure": 0,
+        "actability": 0.6,
+        "relationshipUtility": 0.6599999999999999,
+        "overallScore": 0.6169521072796935
+      },
+      "topResults": [
+        {
+          "id": "15eab191-852a-4289-bf3c-d33e1789af07",
+          "kind": "foundation",
+          "name": "Copticare Relief Fund Limited",
+          "judgeScore": 29,
+          "strategyScore": 26.5
+        },
+        {
+          "id": "2b7adf13-154c-45bf-8c06-9e73f59460f4",
+          "kind": "foundation",
+          "name": "Australian Trust For Conservation Volunteers",
+          "judgeScore": 25,
+          "strategyScore": 23.5
+        },
+        {
+          "id": "b90cb1d5-af9e-4603-834c-e934ab2043ba",
+          "kind": "foundation",
+          "name": "BHP Foundation",
+          "judgeScore": 25,
+          "strategyScore": 23.5
+        },
+        {
+          "id": "85f0de43-d004-4122-83a6-287eeecc4da9",
+          "kind": "foundation",
+          "name": "Rio Tinto Foundation",
+          "judgeScore": 26,
+          "strategyScore": 23.5
+        },
+        {
+          "id": "7ea297ca-50d0-475f-aa07-128c24aa8de7",
+          "kind": "foundation",
+          "name": "Workplace Giving Australia Holdings Ltd",
+          "judgeScore": 25,
+          "strategyScore": 23.5
+        }
+      ],
+      "misses": [
+        {
+          "id": "f5138e92-77da-4d91-8ea5-75bb24850918",
+          "kind": "foundation",
+          "name": "The Trustee For The Nature Conservancy Australia Trust",
+          "judgeScore": 23
+        },
+        {
+          "id": "9302c45e-83b7-465d-9bae-8b2006e3d753",
+          "kind": "foundation",
+          "name": "Linking Futures Foundation Aboriginal Corporation",
+          "judgeScore": 21
+        },
+        {
+          "id": "8f8704be-d6e8-40f3-b561-ac6630ce5b36",
+          "kind": "foundation",
+          "name": "Minderoo Foundation Limited as trustee for The Minderoo Foundation Trust",
+          "judgeScore": 22
+        },
+        {
+          "id": "be0da19b-ba73-463b-b19e-eb28154333f0",
+          "kind": "foundation",
+          "name": "NATIONAL DAWAH FOUNDATION AUSTRALIA INCORPORATED",
+          "judgeScore": 21
+        },
+        {
+          "id": "76d9423a-99f5-443b-a2e9-c8346b660276",
+          "kind": "foundation",
+          "name": "Queensland Farmers' Federation Ltd",
+          "judgeScore": 21
+        }
+      ]
+    },
+    {
+      "id": "social_enterprise_delivery_match:regional-regenerative",
+      "title": "Regional regenerative and environment initiative seeking capital",
+      "family": "social_enterprise_delivery_match",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 1,
+        "justiceExposure": 0,
+        "actability": 0.19999999999999998,
+        "relationshipUtility": 0.75,
+        "overallScore": 0.6268055555555556
+      },
+      "topResults": [
+        {
+          "id": "9ddc9a51-208f-4146-91f7-dc98d5384a10",
+          "kind": "social_enterprise",
+          "name": "Abm Elgoring Ambung Aboriginal Corporation RNTBC",
+          "judgeScore": 13.25,
+          "strategyScore": 11
+        },
+        {
+          "id": "4cecfb27-9b2d-4680-84da-076d0570906f",
+          "kind": "social_enterprise",
+          "name": "Adnyamathanha Traditional Lands Association (Aboriginal Corporation) RNTBC",
+          "judgeScore": 13.25,
+          "strategyScore": 11
+        },
+        {
+          "id": "06becff8-962d-4e6b-897f-2f324726d168",
+          "kind": "social_enterprise",
+          "name": "Allodial Land and Sea Council Indigenous Corporation",
+          "judgeScore": 13.25,
+          "strategyScore": 11
+        },
+        {
+          "id": "a696b36c-6132-4e75-a592-42814c34fe33",
+          "kind": "social_enterprise",
+          "name": "Alpurrurulam Land Aboriginal Corporation",
+          "judgeScore": 13.25,
+          "strategyScore": 11
+        },
+        {
+          "id": "a38c94e0-afa8-41f6-b30c-2d7e3139cdf6",
+          "kind": "social_enterprise",
+          "name": "Arabana Aboriginal Corporation RNTBC",
+          "judgeScore": 13.25,
+          "strategyScore": 11
+        }
+      ],
+      "misses": [
+        {
+          "id": "f598677c-5694-4052-b4f1-19ca18fa6a19",
+          "kind": "social_enterprise",
+          "name": "Mimbi Aboriginal Corporation",
+          "judgeScore": 13.25
+        },
+        {
+          "id": "a0598bd2-14f6-4d22-af20-d2db638046af",
+          "kind": "social_enterprise",
+          "name": "South West Aboriginal Land & Sea Council Aboriginal Corporation",
+          "judgeScore": 13.25
+        },
+        {
+          "id": "408637f6-eff8-4caa-baf1-f4c42f732ce0",
+          "kind": "social_enterprise",
+          "name": "Tjayuwara Unmuru Aboriginal Corporation RNTBC",
+          "judgeScore": 13.25
+        },
+        {
+          "id": "c45c7428-84fd-4ec2-be16-ea1b74078cbf",
+          "kind": "social_enterprise",
+          "name": "Wirangu Aboriginal Corporation RNTBC",
+          "judgeScore": 13.25
+        },
+        {
+          "id": "435c4b17-207d-4efd-9f3b-29cfa14e02cb",
+          "kind": "social_enterprise",
+          "name": "Bar-Barrum Aboriginal Corporation RNTBC",
+          "judgeScore": 13.25
+        }
+      ]
+    },
+    {
+      "id": "grant_discovery:regional-regenerative",
+      "title": "Regional regenerative and environment initiative seeking capital",
+      "family": "grant_discovery",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 0.9100000000000001,
+        "justiceExposure": 0,
+        "actability": 0.95,
+        "relationshipUtility": 0.39999999999999997,
+        "overallScore": 0.6388055555555556
+      },
+      "topResults": [
+        {
+          "id": "e1117128-6f86-438c-997c-59be3b6b9a0e",
+          "kind": "grant",
+          "name": "Regional Community Grants Program",
+          "judgeScore": 20,
+          "strategyScore": 18
+        },
+        {
+          "id": "d66b26c2-42cc-4ac9-9266-12d01e34b248",
+          "kind": "grant",
+          "name": "2024 Aboriginal Sustainable Funding Program",
+          "judgeScore": 18,
+          "strategyScore": 16
+        },
+        {
+          "id": "3f1b9638-2523-464c-9b63-06c647d0d130",
+          "kind": "grant",
+          "name": "2024 Inclusive Environments Funding Program",
+          "judgeScore": 18,
+          "strategyScore": 16
+        },
+        {
+          "id": "d8b6dce7-cb06-4350-bd76-f7e2596ac00d",
+          "kind": "grant",
+          "name": "2024/25 Country Passenger Transport Infrastructure Grants Scheme (CPTIGS)",
+          "judgeScore": 18,
+          "strategyScore": 16
+        },
+        {
+          "id": "24964b58-a7f0-4259-8d50-1ad7f65a5d50",
+          "kind": "grant",
+          "name": "2025 Inclusive Environments Funding Program - Inclusion Readiness Payments",
+          "judgeScore": 18,
+          "strategyScore": 16
+        }
+      ],
+      "misses": [
+        {
+          "id": "ab64f0c8-c979-4b27-9f0c-12372252608b",
+          "kind": "grant",
+          "name": "2020 Festival of Urbanism Research Grants (under Henry Halloran Trust for Early Career Researchers)",
+          "judgeScore": 16.5
+        },
+        {
+          "id": "436df6c4-847c-467d-aca5-f4d2da021614",
+          "kind": "grant",
+          "name": "2025/26 Country Passenger Transport Infrastructure Grants scheme (CPTIGS)",
+          "judgeScore": 18
+        },
+        {
+          "id": "24fb6f3c-1a09-40e4-a0b2-ee3b651983b4",
+          "kind": "grant",
+          "name": "2026 Aboriginal Families as Teachers",
+          "judgeScore": 18
+        },
+        {
+          "id": "287b2838-a592-419a-b7b7-25ed813c800a",
+          "kind": "grant",
+          "name": "2026 Inclusive Environments Funding Program - Inclusion Readiness Payments",
+          "judgeScore": 18
+        },
+        {
+          "id": "9983852f-04d0-42bf-afaf-603f372720fc",
+          "kind": "grant",
+          "name": "2026 Inclusive Environments Funding Program - Quarter 1 Payments",
+          "judgeScore": 18
+        }
+      ]
+    },
+    {
+      "id": "social_enterprise_delivery_match:csr-social-enterprise-employment",
+      "title": "Corporate CSR lead looking for social enterprises with employment pathways",
+      "family": "social_enterprise_delivery_match",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 0.901123595505618,
+        "justiceExposure": 1,
+        "actability": 0.19999999999999998,
+        "relationshipUtility": 0.75,
+        "overallScore": 0.7570302746566793
+      },
+      "topResults": [
+        {
+          "id": "3484a82e-20e0-49e5-9e29-c60ad7c64550",
+          "kind": "social_enterprise",
+          "name": "Australian Indigenous Mentoring Experience Indigenous Corporation",
+          "judgeScore": 22.25,
+          "strategyScore": 19
+        },
+        {
+          "id": "571b05e3-8939-4b43-9680-7f3d7c00ee93",
+          "kind": "social_enterprise",
+          "name": "Bindal Sharks United Training, Employment, Sport and Recreation Aboriginal Corporation",
+          "judgeScore": 22.25,
+          "strategyScore": 19
+        },
+        {
+          "id": "8ede8ef2-f79a-468c-a679-44118915f760",
+          "kind": "social_enterprise",
+          "name": "Entrepreneurs and Small Business Indigenous Corporation",
+          "judgeScore": 22.25,
+          "strategyScore": 19
+        },
+        {
+          "id": "fcf9cf64-2419-4a0d-96bf-b5925f02c4a5",
+          "kind": "social_enterprise",
+          "name": "Gudhuga Employment & Training Aboriginal Corporation",
+          "judgeScore": 22.25,
+          "strategyScore": 19
+        },
+        {
+          "id": "09ded791-71d4-48dc-9cfd-441885e2cbb4",
+          "kind": "social_enterprise",
+          "name": "Wunkula Training, Education and Business Development Aboriginal Corporation",
+          "judgeScore": 22.25,
+          "strategyScore": 19
+        }
+      ],
+      "misses": [
+        {
+          "id": "af95f6df-eae6-4c8e-acc5-82bf7c1c4749",
+          "kind": "social_enterprise",
+          "name": "Honoured",
+          "judgeScore": 17
+        },
+        {
+          "id": "cfa5b1e8-cd0f-46ff-b04c-7507184b49f9",
+          "kind": "social_enterprise",
+          "name": "Birrelee Multi-Functional Aboriginal Childrens Service Aboriginal Corporation",
+          "judgeScore": 17.25
+        },
+        {
+          "id": "963ac0fa-0622-4b36-ab97-a10e66b6ae28",
+          "kind": "social_enterprise",
+          "name": "Dalaigur Pre-school and Children's Services Aboriginal Corporation",
+          "judgeScore": 17.25
+        },
+        {
+          "id": "eacce024-4ddd-4ddb-8005-cbaf4a31ee4b",
+          "kind": "social_enterprise",
+          "name": "Little Yuin Pre-School Family Centre Aboriginal Corporation",
+          "judgeScore": 17.25
+        },
+        {
+          "id": "3b3ea787-fe78-41a8-91cb-ed23a9aed2f6",
+          "kind": "social_enterprise",
+          "name": "Wiradjuri Aboriginal Corporation Community and Child Care Centre",
+          "judgeScore": 17.25
+        }
+      ]
+    },
+    {
+      "id": "social_enterprise_delivery_match:housing-homelessness-remote",
+      "title": "Need-first search for housing and homelessness support in remote communities",
+      "family": "social_enterprise_delivery_match",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2857142857142857,
+        "meanRelevance": 0.8962962962962964,
+        "justiceExposure": 1,
+        "actability": 0.19999999999999998,
+        "relationshipUtility": 0.75,
+        "overallScore": 0.7576521164021165
+      },
+      "topResults": [
+        {
+          "id": "cb354004-b0b7-462f-823c-e8b7c2136c8d",
+          "kind": "social_enterprise",
+          "name": "Aboriginal Corporation for Homeless and Rehabilitation Community Services",
+          "judgeScore": 20.25,
+          "strategyScore": 17
+        },
+        {
+          "id": "baec1d29-5f15-4efd-9dc5-e9284423cb86",
+          "kind": "social_enterprise",
+          "name": "Munjuwa Health, Housing & Community Aboriginal Corporation",
+          "judgeScore": 20.25,
+          "strategyScore": 17
+        },
+        {
+          "id": "19be2fdc-0f97-44a9-b903-7d4a727898c6",
+          "kind": "social_enterprise",
+          "name": "Mutkin Residential and Community Care Indigenous Corporation",
+          "judgeScore": 20.25,
+          "strategyScore": 17
+        },
+        {
+          "id": "688fdf6b-fd8c-4f21-90a4-b296d5394add",
+          "kind": "social_enterprise",
+          "name": "Aboriginal Drug and Alcohol Council (SA) Aboriginal Corporation",
+          "judgeScore": 17.25,
+          "strategyScore": 15
+        },
+        {
+          "id": "f5eaa1f8-ba3b-456c-a21d-e51682664fd7",
+          "kind": "social_enterprise",
+          "name": "Aboriginal Housing Northern Territory (AHNT) Aboriginal Corporation",
+          "judgeScore": 17.25,
+          "strategyScore": 15
+        }
+      ],
+      "misses": [
+        {
+          "id": "4d4daadb-933e-4ec7-af9d-77eac4e23c0c",
+          "kind": "social_enterprise",
+          "name": "Ngangganawili Aboriginal Community Controlled Health and Medical Services Aboriginal Corporation",
+          "judgeScore": 17.25
+        },
+        {
+          "id": "42f464c1-ed8e-40ed-aa97-1e85c0e4542a",
+          "kind": "social_enterprise",
+          "name": "The Central Australian Aboriginal Alcohol Programmes Unit Aboriginal Corporation",
+          "judgeScore": 17.25
+        },
+        {
+          "id": "31bf9158-799c-44c8-91d3-e7c221d4b108",
+          "kind": "social_enterprise",
+          "name": "Yura Yungi Medical Service Aboriginal Corporation",
+          "judgeScore": 17.25
+        },
+        {
+          "id": "c2e92155-ffe7-4178-9084-367efbae4da9",
+          "kind": "social_enterprise",
+          "name": "Aputula Housing Aboriginal Corporation",
+          "judgeScore": 17.25
+        },
+        {
+          "id": "0c2d342b-3522-4385-8439-6ade797227b0",
+          "kind": "social_enterprise",
+          "name": "Barkly Region Alcohol and Drug Abuse Advisory Group Aboriginal Corporation",
+          "judgeScore": 17.25
+        }
+      ]
+    },
+    {
+      "id": "social_enterprise_delivery_match:education-training-regional",
+      "title": "Regional education and training pathways for under-served communities",
+      "family": "social_enterprise_delivery_match",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 0.897752808988764,
+        "justiceExposure": 1,
+        "actability": 0.22000000000000003,
+        "relationshipUtility": 0.75,
+        "overallScore": 0.7578561173533084
+      },
+      "topResults": [
+        {
+          "id": "571b05e3-8939-4b43-9680-7f3d7c00ee93",
+          "kind": "social_enterprise",
+          "name": "Bindal Sharks United Training, Employment, Sport and Recreation Aboriginal Corporation",
+          "judgeScore": 22.25,
+          "strategyScore": 19
+        },
+        {
+          "id": "8ede8ef2-f79a-468c-a679-44118915f760",
+          "kind": "social_enterprise",
+          "name": "Entrepreneurs and Small Business Indigenous Corporation",
+          "judgeScore": 22.25,
+          "strategyScore": 19
+        },
+        {
+          "id": "bed948a6-90a8-43c5-a3b5-17134f3763c3",
+          "kind": "social_enterprise",
+          "name": "Kariyarra Employment, Training and Education Aboriginal Corporation",
+          "judgeScore": 22.25,
+          "strategyScore": 19
+        },
+        {
+          "id": "09ded791-71d4-48dc-9cfd-441885e2cbb4",
+          "kind": "social_enterprise",
+          "name": "Wunkula Training, Education and Business Development Aboriginal Corporation",
+          "judgeScore": 22.25,
+          "strategyScore": 19
+        },
+        {
+          "id": "3484a82e-20e0-49e5-9e29-c60ad7c64550",
+          "kind": "social_enterprise",
+          "name": "Australian Indigenous Mentoring Experience Indigenous Corporation",
+          "judgeScore": 20.25,
+          "strategyScore": 17
+        }
+      ],
+      "misses": [
+        {
+          "id": "af95f6df-eae6-4c8e-acc5-82bf7c1c4749",
+          "kind": "social_enterprise",
+          "name": "Honoured",
+          "judgeScore": 17
+        },
+        {
+          "id": "42daff3e-fbb3-46f4-877c-dc94f86a1b81",
+          "kind": "social_enterprise",
+          "name": "Alpirakina Store Aboriginal Corporation",
+          "judgeScore": 17.25
+        },
+        {
+          "id": "42f87673-557c-4940-9d0a-3c807efeedd4",
+          "kind": "social_enterprise",
+          "name": "Arnhem Northern and Kimberley Artists Aboriginal Corporation - ANKA",
+          "judgeScore": 17.25
+        },
+        {
+          "id": "65b8edb1-47a0-44cf-9feb-0e7ea7834806",
+          "kind": "social_enterprise",
+          "name": "Gapuwiyak Culture  &  Arts Aboriginal Corporation",
+          "judgeScore": 17.25
+        },
+        {
+          "id": "f2e35c0c-a880-4534-8e3a-443a9d363dd7",
+          "kind": "social_enterprise",
+          "name": "Groote Broadcasting Anindilyakwa Radio Aboriginal Corporation",
+          "judgeScore": 17.25
+        }
+      ]
+    },
+    {
+      "id": "social_enterprise_delivery_match:disability-services-qld",
+      "title": "Queensland disability and community inclusion search",
+      "family": "social_enterprise_delivery_match",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2857142857142857,
+        "meanRelevance": 0.9273972602739724,
+        "justiceExposure": 1,
+        "actability": 0.18,
+        "relationshipUtility": 0.7,
+        "overallScore": 0.7586223091976516
+      },
+      "topResults": [
+        {
+          "id": "571b05e3-8939-4b43-9680-7f3d7c00ee93",
+          "kind": "social_enterprise",
+          "name": "Bindal Sharks United Training, Employment, Sport and Recreation Aboriginal Corporation",
+          "judgeScore": 18.25,
+          "strategyScore": 15
+        },
+        {
+          "id": "cfb12c88-d413-4c39-ace8-ee9e3751b411",
+          "kind": "social_enterprise",
+          "name": "Injilinji Aboriginal and Torres Strait Islanders Corporation for Children and Youth Services",
+          "judgeScore": 18.25,
+          "strategyScore": 15
+        },
+        {
+          "id": "69c58b71-c833-4788-82e1-39f02fd93f2f",
+          "kind": "social_enterprise",
+          "name": "Logan Culture, Education and Wellbeing Torres Strait Islander Corporation",
+          "judgeScore": 18.25,
+          "strategyScore": 15
+        },
+        {
+          "id": "af95f6df-eae6-4c8e-acc5-82bf7c1c4749",
+          "kind": "social_enterprise",
+          "name": "Honoured",
+          "judgeScore": 17,
+          "strategyScore": 14
+        },
+        {
+          "id": "99ff6b2a-ef9a-40c6-81f6-bf5144a7ea58",
+          "kind": "social_enterprise",
+          "name": "Aboriginal Interpreting WA Aboriginal Corporation (AIWA)",
+          "judgeScore": 16.25,
+          "strategyScore": 13
+        }
+      ],
+      "misses": [
+        {
+          "id": "6078a96e-5558-4518-8b01-a2c734bc222c",
+          "kind": "social_enterprise",
+          "name": "The Big Sister Experience",
+          "judgeScore": 15
+        },
+        {
+          "id": "54fec973-dc61-4b66-b1eb-eb5ab1d7b7b9",
+          "kind": "social_enterprise",
+          "name": "Cunnamulla Aboriginal Corporation for Health",
+          "judgeScore": 14.5
+        },
+        {
+          "id": "5f93b496-8d6f-4346-a4c5-4356062d7d5e",
+          "kind": "social_enterprise",
+          "name": "KsafeT",
+          "judgeScore": 15
+        },
+        {
+          "id": "eccd8c25-f0da-4c3e-83fe-109f9a0ad3d3",
+          "kind": "social_enterprise",
+          "name": "2Spirits Aboriginal and Torres Strait Islander Corporation for Queensland LGBTIQ+ Sistergirl and Brotherboy Health and Wellbeing",
+          "judgeScore": 13.25
+        },
+        {
+          "id": "8ede8ef2-f79a-468c-a679-44118915f760",
+          "kind": "social_enterprise",
+          "name": "Entrepreneurs and Small Business Indigenous Corporation",
+          "judgeScore": 13.25
+        }
+      ]
+    },
+    {
+      "id": "foundation_discovery:first-nations-leadership-women",
+      "title": "First Nations women and leadership initiative seeking the right funding network",
+      "family": "foundation_discovery",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 0.9135135135135137,
+        "justiceExposure": 1,
+        "actability": 0.5,
+        "relationshipUtility": 0.56,
+        "overallScore": 0.7677582582582584
+      },
+      "topResults": [
+        {
+          "id": "85f0de43-d004-4122-83a6-287eeecc4da9",
+          "kind": "foundation",
+          "name": "Rio Tinto Foundation",
+          "judgeScore": 37,
+          "strategyScore": 34.5
+        },
+        {
+          "id": "d0a53909-0fa5-4ddb-9921-bb014766ce7f",
+          "kind": "foundation",
+          "name": "THE EDDIE BETTS FOUNDATION LTD",
+          "judgeScore": 36,
+          "strategyScore": 34.5
+        },
+        {
+          "id": "93f9da95-eab9-42c4-a2d8-68b685868bbf",
+          "kind": "foundation",
+          "name": "Youth Plus Foundation Limited",
+          "judgeScore": 36,
+          "strategyScore": 34.5
+        },
+        {
+          "id": "9302c45e-83b7-465d-9bae-8b2006e3d753",
+          "kind": "foundation",
+          "name": "Linking Futures Foundation Aboriginal Corporation",
+          "judgeScore": 34,
+          "strategyScore": 33
+        },
+        {
+          "id": "7ea297ca-50d0-475f-aa07-128c24aa8de7",
+          "kind": "foundation",
+          "name": "Workplace Giving Australia Holdings Ltd",
+          "judgeScore": 33,
+          "strategyScore": 32.5
+        }
+      ],
+      "misses": [
+        {
+          "id": "d10cb21e-bf8d-4e4b-8ae5-f75f6ddcde6c",
+          "kind": "foundation",
+          "name": "Empower Sports Foundation Aboriginal Corporation",
+          "judgeScore": 32
+        },
+        {
+          "id": "2abe8009-17fd-4512-ac01-03bd5d41db93",
+          "kind": "foundation",
+          "name": "Nomads Charitable & Educational Foundation",
+          "judgeScore": 31
+        },
+        {
+          "id": "5cfeb7f4-a714-4749-84a2-1d0949f57b47",
+          "kind": "foundation",
+          "name": "Roman Catholic Trust Corporation For The Diocese Of Cairns",
+          "judgeScore": 33
+        },
+        {
+          "id": "25aad8e2-9cbb-43b9-9ec3-ad1f8214debe",
+          "kind": "foundation",
+          "name": "Waalitj Foundation Limited",
+          "judgeScore": 33
+        },
+        {
+          "id": "9a8dcdb4-63a1-44e2-8b61-a7a5ec9eff12",
+          "kind": "foundation",
+          "name": "Australian Rural Leadership Foundation Limited",
+          "judgeScore": 31
+        }
+      ]
+    },
+    {
+      "id": "foundation_discovery:education-training-regional",
+      "title": "Regional education and training pathways for under-served communities",
+      "family": "foundation_discovery",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 0.8729729729729729,
+        "justiceExposure": 1,
+        "actability": 0.55,
+        "relationshipUtility": 0.6199999999999999,
+        "overallScore": 0.7679001501501502
+      },
+      "topResults": [
+        {
+          "id": "9a8dcdb4-63a1-44e2-8b61-a7a5ec9eff12",
+          "kind": "foundation",
+          "name": "Australian Rural Leadership Foundation Limited",
+          "judgeScore": 36,
+          "strategyScore": 34.5
+        },
+        {
+          "id": "53669bac-b6ca-49f4-89b3-948009d71bbd",
+          "kind": "foundation",
+          "name": "Good Things Foundation Limited",
+          "judgeScore": 36,
+          "strategyScore": 34.5
+        },
+        {
+          "id": "85f0de43-d004-4122-83a6-287eeecc4da9",
+          "kind": "foundation",
+          "name": "Rio Tinto Foundation",
+          "judgeScore": 37,
+          "strategyScore": 34.5
+        },
+        {
+          "id": "b26adc75-ad71-456a-8ebb-6b455dfc3f95",
+          "kind": "foundation",
+          "name": "the Fremantle Foundation Community Charity Trust",
+          "judgeScore": 31,
+          "strategyScore": 31
+        },
+        {
+          "id": "61022050-d477-434a-a7a3-8821c401c772",
+          "kind": "foundation",
+          "name": "CORE LEARNING FOUNDATION INC.",
+          "judgeScore": 31,
+          "strategyScore": 29.5
+        }
+      ],
+      "misses": [
+        {
+          "id": "6534a942-5313-4c0b-8a08-f22a18179208",
+          "kind": "foundation",
+          "name": "BEYOND DREAMS FOUNDATION LTD",
+          "judgeScore": 29
+        },
+        {
+          "id": "2ce2d7ec-962b-443c-8824-b7ceee67b7fe",
+          "kind": "foundation",
+          "name": "GRO Foundation",
+          "judgeScore": 28
+        },
+        {
+          "id": "37ae7516-b2c7-4d9c-a3d7-b77b83a90e72",
+          "kind": "foundation",
+          "name": "LEEDAL FOUNDATION LIMITED",
+          "judgeScore": 28
+        },
+        {
+          "id": "9302c45e-83b7-465d-9bae-8b2006e3d753",
+          "kind": "foundation",
+          "name": "Linking Futures Foundation Aboriginal Corporation",
+          "judgeScore": 29
+        },
+        {
+          "id": "fc694b5d-fc27-48d5-a1f3-2e95628acb77",
+          "kind": "foundation",
+          "name": "Lord Mayor's Charitable Fund",
+          "judgeScore": 29
+        }
+      ]
+    },
+    {
+      "id": "foundation_discovery:act-indigenous-arts-qld",
+      "title": "A Curious Tractor seeking Indigenous community arts funding in Queensland",
+      "family": "foundation_discovery",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 0.9121212121212121,
+        "justiceExposure": 1,
+        "actability": 0.5,
+        "relationshipUtility": 0.58,
+        "overallScore": 0.768979797979798
+      },
+      "topResults": [
+        {
+          "id": "93f9da95-eab9-42c4-a2d8-68b685868bbf",
+          "kind": "foundation",
+          "name": "Youth Plus Foundation Limited",
+          "judgeScore": 33,
+          "strategyScore": 31.5
+        },
+        {
+          "id": "5cb27568-8820-441c-a536-e88b5b4d9cea",
+          "kind": "foundation",
+          "name": "THE TRUSTEE FOR TIM FAIRFAX FAMILY FOUNDATION",
+          "judgeScore": 30,
+          "strategyScore": 29.5
+        },
+        {
+          "id": "8ea6b07a-7a4d-4c5d-89aa-5b2b4dcfe968",
+          "kind": "foundation",
+          "name": "MOZZY FOUNDATION LTD.",
+          "judgeScore": 30,
+          "strategyScore": 28.5
+        },
+        {
+          "id": "962e557a-daad-45e7-bbd3-aa67ec1d66b9",
+          "kind": "foundation",
+          "name": "The Balnaves Foundation",
+          "judgeScore": 30,
+          "strategyScore": 28.5
+        },
+        {
+          "id": "5a17c2cc-9959-4ef9-b0a5-d90c6051eee0",
+          "kind": "foundation",
+          "name": "The Trustee For The Australian Mercy Works Charitable Trust",
+          "judgeScore": 30,
+          "strategyScore": 28.5
+        }
+      ],
+      "misses": [
+        {
+          "id": "d51d40f2-66aa-4a3f-976b-bc78c2beba1f",
+          "kind": "foundation",
+          "name": "The Trustee For Bamaga Community Fund",
+          "judgeScore": 28
+        },
+        {
+          "id": "71f206e1-2348-48d5-abc3-2ac76e466a50",
+          "kind": "foundation",
+          "name": "Australian Bibliotherapy Foundation",
+          "judgeScore": 28
+        },
+        {
+          "id": "9ffa88cb-d604-403e-b796-b7a0771472f2",
+          "kind": "foundation",
+          "name": "Australian Tennis Foundation Charitable Fund Limited",
+          "judgeScore": 28
+        },
+        {
+          "id": "93fb2ef7-8d8c-422a-9516-4646310c4686",
+          "kind": "foundation",
+          "name": "Bruce McMullin Foundation",
+          "judgeScore": 26
+        },
+        {
+          "id": "f4fc15e4-37a3-4950-9984-f7ab40ceb5ab",
+          "kind": "foundation",
+          "name": "CASPA FOUNDATION LTD",
+          "judgeScore": 28
+        }
+      ]
+    }
+  ],
+  "scenarioResults": [
+    {
+      "id": "grant_discovery:act-indigenous-arts-qld",
+      "title": "A Curious Tractor seeking Indigenous community arts funding in Queensland",
+      "family": "grant_discovery",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 1,
+        "justiceExposure": 1,
+        "actability": 1,
+        "relationshipUtility": 0.39999999999999997,
+        "overallScore": 0.8105555555555556
+      },
+      "topResults": [
+        {
+          "id": "61f4603f-cb27-407c-8341-e015800fac9a",
+          "kind": "grant",
+          "name": "2023 Youth Opportunities grant applications",
+          "judgeScore": 28,
+          "strategyScore": 27
+        },
+        {
+          "id": "c3f19198-9395-4e4f-9e28-06f06e314067",
+          "kind": "grant",
+          "name": "2023-2024 Cultural Grants Program - Round 2",
+          "judgeScore": 28,
+          "strategyScore": 27
+        },
+        {
+          "id": "ddcf921a-c8fb-411a-ab8d-89d62aa7ab59",
+          "kind": "grant",
+          "name": "2023/24 Investing in Women",
+          "judgeScore": 28,
+          "strategyScore": 27
+        },
+        {
+          "id": "7a432cbf-3c0d-409b-aeba-1ba8fca98ab9",
+          "kind": "grant",
+          "name": "2024 Aboriginal Languages Revival Program",
+          "judgeScore": 28,
+          "strategyScore": 27
+        },
+        {
+          "id": "d66b26c2-42cc-4ac9-9266-12d01e34b248",
+          "kind": "grant",
+          "name": "2024 Aboriginal Sustainable Funding Program",
+          "judgeScore": 28,
+          "strategyScore": 27
+        }
+      ],
+      "misses": [
+        {
+          "id": "e8225a42-748d-4203-9a24-a69e50ccc750",
+          "kind": "grant",
+          "name": "2025-27 Caring for State Heritage",
+          "judgeScore": 28
+        },
+        {
+          "id": "24fb6f3c-1a09-40e4-a0b2-ee3b651983b4",
+          "kind": "grant",
+          "name": "2026 Aboriginal Families as Teachers",
+          "judgeScore": 28
+        },
+        {
+          "id": "c1244b63-0640-4ae7-ba21-c0f0aa16debc",
+          "kind": "grant",
+          "name": "2026 Aboriginal Languages Revival Program",
+          "judgeScore": 28
+        },
+        {
+          "id": "e30c53f7-b4d8-4c1f-9cf3-6394d8d1eaf8",
+          "kind": "grant",
+          "name": "2026 Ninganah No More",
+          "judgeScore": 28
+        },
+        {
+          "id": "6f82a730-6389-4bc6-a1d2-0e394cd4fe75",
+          "kind": "grant",
+          "name": "2026-2029 Indigenous Employment Initiative",
+          "judgeScore": 26.5
+        }
+      ]
+    },
+    {
+      "id": "foundation_discovery:act-indigenous-arts-qld",
+      "title": "A Curious Tractor seeking Indigenous community arts funding in Queensland",
+      "family": "foundation_discovery",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 0.9121212121212121,
+        "justiceExposure": 1,
+        "actability": 0.5,
+        "relationshipUtility": 0.58,
+        "overallScore": 0.768979797979798
+      },
+      "topResults": [
+        {
+          "id": "93f9da95-eab9-42c4-a2d8-68b685868bbf",
+          "kind": "foundation",
+          "name": "Youth Plus Foundation Limited",
+          "judgeScore": 33,
+          "strategyScore": 31.5
+        },
+        {
+          "id": "5cb27568-8820-441c-a536-e88b5b4d9cea",
+          "kind": "foundation",
+          "name": "THE TRUSTEE FOR TIM FAIRFAX FAMILY FOUNDATION",
+          "judgeScore": 30,
+          "strategyScore": 29.5
+        },
+        {
+          "id": "8ea6b07a-7a4d-4c5d-89aa-5b2b4dcfe968",
+          "kind": "foundation",
+          "name": "MOZZY FOUNDATION LTD.",
+          "judgeScore": 30,
+          "strategyScore": 28.5
+        },
+        {
+          "id": "962e557a-daad-45e7-bbd3-aa67ec1d66b9",
+          "kind": "foundation",
+          "name": "The Balnaves Foundation",
+          "judgeScore": 30,
+          "strategyScore": 28.5
+        },
+        {
+          "id": "5a17c2cc-9959-4ef9-b0a5-d90c6051eee0",
+          "kind": "foundation",
+          "name": "The Trustee For The Australian Mercy Works Charitable Trust",
+          "judgeScore": 30,
+          "strategyScore": 28.5
+        }
+      ],
+      "misses": [
+        {
+          "id": "d51d40f2-66aa-4a3f-976b-bc78c2beba1f",
+          "kind": "foundation",
+          "name": "The Trustee For Bamaga Community Fund",
+          "judgeScore": 28
+        },
+        {
+          "id": "71f206e1-2348-48d5-abc3-2ac76e466a50",
+          "kind": "foundation",
+          "name": "Australian Bibliotherapy Foundation",
+          "judgeScore": 28
+        },
+        {
+          "id": "9ffa88cb-d604-403e-b796-b7a0771472f2",
+          "kind": "foundation",
+          "name": "Australian Tennis Foundation Charitable Fund Limited",
+          "judgeScore": 28
+        },
+        {
+          "id": "93fb2ef7-8d8c-422a-9516-4646310c4686",
+          "kind": "foundation",
+          "name": "Bruce McMullin Foundation",
+          "judgeScore": 26
+        },
+        {
+          "id": "f4fc15e4-37a3-4950-9984-f7ab40ceb5ab",
+          "kind": "foundation",
+          "name": "CASPA FOUNDATION LTD",
+          "judgeScore": 28
+        }
+      ]
+    },
+    {
+      "id": "charity_delivery_match:act-indigenous-arts-qld",
+      "title": "A Curious Tractor seeking Indigenous community arts funding in Queensland",
+      "family": "charity_delivery_match",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 1,
+        "justiceExposure": 1,
+        "actability": 0.39999999999999997,
+        "relationshipUtility": 0.75,
+        "overallScore": 0.7918055555555557
+      },
+      "topResults": [
+        {
+          "id": "62688406117",
+          "kind": "charity",
+          "name": "AID MERIDIAN LTD",
+          "judgeScore": 18,
+          "strategyScore": 17.5
+        },
+        {
+          "id": "20005700112",
+          "kind": "charity",
+          "name": "Al-Anon Family Groups (Australia) Pty. Ltd.",
+          "judgeScore": 18,
+          "strategyScore": 17.5
+        },
+        {
+          "id": "25677488489",
+          "kind": "charity",
+          "name": "ALL TOGETHER THRIVING LIMITED",
+          "judgeScore": 18,
+          "strategyScore": 17.5
+        },
+        {
+          "id": "39109129679",
+          "kind": "charity",
+          "name": "Architects Without Frontiers",
+          "judgeScore": 18,
+          "strategyScore": 17.5
+        },
+        {
+          "id": "15651164082",
+          "kind": "charity",
+          "name": "ASPIRE CAIRNS COMMUNITY LIMITED",
+          "judgeScore": 18,
+          "strategyScore": 17.5
+        }
+      ],
+      "misses": [
+        {
+          "id": "51932500318",
+          "kind": "charity",
+          "name": "Bindelong Aboriginal Corporation",
+          "judgeScore": 16.5
+        },
+        {
+          "id": "21472309062",
+          "kind": "charity",
+          "name": "Boys From The Bush Projects Inc",
+          "judgeScore": 18
+        },
+        {
+          "id": "44690873744",
+          "kind": "charity",
+          "name": "BRANCHES 4 CHANGE LTD",
+          "judgeScore": 16.5
+        },
+        {
+          "id": "36154056630",
+          "kind": "charity",
+          "name": "Bus Stop Films Ltd",
+          "judgeScore": 18
+        },
+        {
+          "id": "74845764368",
+          "kind": "charity",
+          "name": "CAMPFIRE HEALING INDIGENOUS CORPORATION",
+          "judgeScore": 18
+        }
+      ]
+    },
+    {
+      "id": "social_enterprise_delivery_match:act-indigenous-arts-qld",
+      "title": "A Curious Tractor seeking Indigenous community arts funding in Queensland",
+      "family": "social_enterprise_delivery_match",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 1,
+        "justiceExposure": 1,
+        "actability": 0.19999999999999998,
+        "relationshipUtility": 0.75,
+        "overallScore": 0.7768055555555556
+      },
+      "topResults": [
+        {
+          "id": "7a9fa948-94b5-47fe-92d2-e306eb5f8a39",
+          "kind": "social_enterprise",
+          "name": "APY Art Centre Collective Aboriginal Corporation",
+          "judgeScore": 22.25,
+          "strategyScore": 19
+        },
+        {
+          "id": "dd87de2a-143d-4724-b998-4255fb60748d",
+          "kind": "social_enterprise",
+          "name": "Aragun Warriors Sports & Culture Torres Strait Islander Corporation",
+          "judgeScore": 22.25,
+          "strategyScore": 19
+        },
+        {
+          "id": "35f03f2a-bc9d-4e82-afdc-81af5e95d152",
+          "kind": "social_enterprise",
+          "name": "Arlpwe Artists Aboriginal Corporation",
+          "judgeScore": 22.25,
+          "strategyScore": 19
+        },
+        {
+          "id": "42f87673-557c-4940-9d0a-3c807efeedd4",
+          "kind": "social_enterprise",
+          "name": "Arnhem Northern and Kimberley Artists Aboriginal Corporation - ANKA",
+          "judgeScore": 22.25,
+          "strategyScore": 19
+        },
+        {
+          "id": "b35bfee3-035d-4869-8571-cb5de44be395",
+          "kind": "social_enterprise",
+          "name": "BAB NERKEP ARTS Live Solutions Logistics Supply Indigenous Corporation",
+          "judgeScore": 22.25,
+          "strategyScore": 19
+        }
+      ],
+      "misses": [
+        {
+          "id": "65b8edb1-47a0-44cf-9feb-0e7ea7834806",
+          "kind": "social_enterprise",
+          "name": "Gapuwiyak Culture  &  Arts Aboriginal Corporation",
+          "judgeScore": 22.25
+        },
+        {
+          "id": "f2e35c0c-a880-4534-8e3a-443a9d363dd7",
+          "kind": "social_enterprise",
+          "name": "Groote Broadcasting Anindilyakwa Radio Aboriginal Corporation",
+          "judgeScore": 22.25
+        },
+        {
+          "id": "47a67a03-4a3e-4d8c-b28e-388fc4e4f427",
+          "kind": "social_enterprise",
+          "name": "Keringke Arts Aboriginal Corporation",
+          "judgeScore": 22.25
+        },
+        {
+          "id": "6d70dd0f-28c3-41ec-a6e4-12ca53f5a138",
+          "kind": "social_enterprise",
+          "name": "Milingimbi Art and Cultural Aboriginal Corporation",
+          "judgeScore": 22.25
+        },
+        {
+          "id": "f4f8a680-d844-4935-8a9b-00f5f4cc3bb8",
+          "kind": "social_enterprise",
+          "name": "Tapatjatjaka Art and Craft Aboriginal Corporation",
+          "judgeScore": 22.25
+        }
+      ]
+    },
+    {
+      "id": "need_gap_search:act-indigenous-arts-qld",
+      "title": "A Curious Tractor seeking Indigenous community arts funding in Queensland",
+      "family": "need_gap_search",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 1,
+        "justiceExposure": 1,
+        "actability": 1,
+        "relationshipUtility": 1,
+        "overallScore": 0.8555555555555555
+      },
+      "topResults": [
+        {
+          "id": "0839",
+          "kind": "place",
+          "name": "0839",
+          "judgeScore": 16,
+          "strategyScore": 12
+        },
+        {
+          "id": "0840",
+          "kind": "place",
+          "name": "0840",
+          "judgeScore": 16,
+          "strategyScore": 12
+        },
+        {
+          "id": "0847",
+          "kind": "place",
+          "name": "0847",
+          "judgeScore": 16,
+          "strategyScore": 12
+        },
+        {
+          "id": "0862",
+          "kind": "place",
+          "name": "0862",
+          "judgeScore": 16,
+          "strategyScore": 12
+        },
+        {
+          "id": "4285",
+          "kind": "place",
+          "name": "4285",
+          "judgeScore": 16,
+          "strategyScore": 12
+        }
+      ],
+      "misses": [
+        {
+          "id": "4341",
+          "kind": "place",
+          "name": "4341",
+          "judgeScore": 16
+        },
+        {
+          "id": "4342",
+          "kind": "place",
+          "name": "4342",
+          "judgeScore": 16
+        },
+        {
+          "id": "4347",
+          "kind": "place",
+          "name": "4347",
+          "judgeScore": 16
+        },
+        {
+          "id": "4354",
+          "kind": "place",
+          "name": "4354",
+          "judgeScore": 16
+        },
+        {
+          "id": "4355",
+          "kind": "place",
+          "name": "4355",
+          "judgeScore": 16
+        }
+      ]
+    },
+    {
+      "id": "grant_discovery:remote-youth-justice",
+      "title": "Philanthropy team looking for underserved youth justice organisations in remote Australia",
+      "family": "grant_discovery",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 1,
+        "justiceExposure": 1,
+        "actability": 1,
+        "relationshipUtility": 0.39999999999999997,
+        "overallScore": 0.8105555555555556
+      },
+      "topResults": [
+        {
+          "id": "61f4603f-cb27-407c-8341-e015800fac9a",
+          "kind": "grant",
+          "name": "2023 Youth Opportunities grant applications",
+          "judgeScore": 23,
+          "strategyScore": 22
+        },
+        {
+          "id": "24fb6f3c-1a09-40e4-a0b2-ee3b651983b4",
+          "kind": "grant",
+          "name": "2026 Aboriginal Families as Teachers",
+          "judgeScore": 23,
+          "strategyScore": 22
+        },
+        {
+          "id": "e30c53f7-b4d8-4c1f-9cf3-6394d8d1eaf8",
+          "kind": "grant",
+          "name": "2026 Ninganah No More",
+          "judgeScore": 23,
+          "strategyScore": 22
+        },
+        {
+          "id": "a2d70cd0-acea-4ac4-921b-c807e817cd4e",
+          "kind": "grant",
+          "name": "24/25 Creative Nations Round 2",
+          "judgeScore": 23,
+          "strategyScore": 22
+        },
+        {
+          "id": "307f02f2-80b1-42af-8df8-dae8713a2f0e",
+          "kind": "grant",
+          "name": "25/26 Creative Nations",
+          "judgeScore": 23,
+          "strategyScore": 22
+        }
+      ],
+      "misses": [
+        {
+          "id": "d8254260-2e05-40fe-a0a6-395a289bee2d",
+          "kind": "grant",
+          "name": "Aboriginal and Torres Strait Islander Arts Development Fund",
+          "judgeScore": 21.5
+        },
+        {
+          "id": "c25ab9d4-726e-4743-a962-ef3cde6925a3",
+          "kind": "grant",
+          "name": "Active Kids Grant 2026",
+          "judgeScore": 20
+        },
+        {
+          "id": "dea9be8f-32e3-4741-aca8-f83f82266f23",
+          "kind": "grant",
+          "name": "Cultural Scholarship",
+          "judgeScore": 21.5
+        },
+        {
+          "id": "1d3effce-8d84-4f58-ba1d-59b7a12742a8",
+          "kind": "grant",
+          "name": "End Youth Suicide Week",
+          "judgeScore": 20
+        },
+        {
+          "id": "a3e5e44e-4af0-4e73-a9a9-9b880e981d80",
+          "kind": "grant",
+          "name": "Equitishare housing support program",
+          "judgeScore": 20.5
+        }
+      ]
+    },
+    {
+      "id": "foundation_discovery:remote-youth-justice",
+      "title": "Philanthropy team looking for underserved youth justice organisations in remote Australia",
+      "family": "foundation_discovery",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 0.928125,
+        "justiceExposure": 1,
+        "actability": 0.55,
+        "relationshipUtility": 0.5599999999999998,
+        "overallScore": 0.7744305555555556
+      },
+      "topResults": [
+        {
+          "id": "9a8dcdb4-63a1-44e2-8b61-a7a5ec9eff12",
+          "kind": "foundation",
+          "name": "Australian Rural Leadership Foundation Limited",
+          "judgeScore": 31,
+          "strategyScore": 29.5
+        },
+        {
+          "id": "5a22bd65-2b2d-40fe-9f9b-bdb94ef124c4",
+          "kind": "foundation",
+          "name": "CMS Australia Ancillary Fund",
+          "judgeScore": 31,
+          "strategyScore": 29.5
+        },
+        {
+          "id": "53669bac-b6ca-49f4-89b3-948009d71bbd",
+          "kind": "foundation",
+          "name": "Good Things Foundation Limited",
+          "judgeScore": 31,
+          "strategyScore": 29.5
+        },
+        {
+          "id": "85f0de43-d004-4122-83a6-287eeecc4da9",
+          "kind": "foundation",
+          "name": "Rio Tinto Foundation",
+          "judgeScore": 32,
+          "strategyScore": 29.5
+        },
+        {
+          "id": "6534a942-5313-4c0b-8a08-f22a18179208",
+          "kind": "foundation",
+          "name": "BEYOND DREAMS FOUNDATION LTD",
+          "judgeScore": 29,
+          "strategyScore": 28
+        }
+      ],
+      "misses": [
+        {
+          "id": "453d6447-f801-404b-a487-3b7f4a956d88",
+          "kind": "foundation",
+          "name": "Access T Foundation Ltd",
+          "judgeScore": 26
+        },
+        {
+          "id": "93fb2ef7-8d8c-422a-9516-4646310c4686",
+          "kind": "foundation",
+          "name": "Bruce McMullin Foundation",
+          "judgeScore": 26
+        },
+        {
+          "id": "9f87828a-ff3a-44bc-847d-2fde6f96ac9f",
+          "kind": "foundation",
+          "name": "Edmund Rice Foundation (Australia)",
+          "judgeScore": 28
+        },
+        {
+          "id": "2ce2d7ec-962b-443c-8824-b7ceee67b7fe",
+          "kind": "foundation",
+          "name": "GRO Foundation",
+          "judgeScore": 26
+        },
+        {
+          "id": "cf62895d-dd0d-4db5-82ae-94c42bbe511d",
+          "kind": "foundation",
+          "name": "Hope Foundation Limited",
+          "judgeScore": 30
+        }
+      ]
+    },
+    {
+      "id": "charity_delivery_match:remote-youth-justice",
+      "title": "Philanthropy team looking for underserved youth justice organisations in remote Australia",
+      "family": "charity_delivery_match",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 1,
+        "justiceExposure": 1,
+        "actability": 0.39999999999999997,
+        "relationshipUtility": 0.75,
+        "overallScore": 0.7918055555555557
+      },
+      "topResults": [
+        {
+          "id": "62688406117",
+          "kind": "charity",
+          "name": "AID MERIDIAN LTD",
+          "judgeScore": 23,
+          "strategyScore": 22.5
+        },
+        {
+          "id": "20005700112",
+          "kind": "charity",
+          "name": "Al-Anon Family Groups (Australia) Pty. Ltd.",
+          "judgeScore": 23,
+          "strategyScore": 22.5
+        },
+        {
+          "id": "74164220286",
+          "kind": "charity",
+          "name": "Australia and New Zealand Chapter of the Association for Contextual Behavioral Science",
+          "judgeScore": 23,
+          "strategyScore": 22.5
+        },
+        {
+          "id": "74408091981",
+          "kind": "charity",
+          "name": "Be One Collective Aboriginal Corporation",
+          "judgeScore": 23,
+          "strategyScore": 22.5
+        },
+        {
+          "id": "74845764368",
+          "kind": "charity",
+          "name": "CAMPFIRE HEALING INDIGENOUS CORPORATION",
+          "judgeScore": 23,
+          "strategyScore": 22.5
+        }
+      ],
+      "misses": [
+        {
+          "id": "51932500318",
+          "kind": "charity",
+          "name": "Bindelong Aboriginal Corporation",
+          "judgeScore": 21.5
+        },
+        {
+          "id": "61666394869",
+          "kind": "charity",
+          "name": "CULTURAL DIVERSITY INTIATIVES PTY LTD",
+          "judgeScore": 21.5
+        },
+        {
+          "id": "17689318812",
+          "kind": "charity",
+          "name": "DEAF REACH AUSTRALIA LIMITED",
+          "judgeScore": 21.5
+        },
+        {
+          "id": "69686646024",
+          "kind": "charity",
+          "name": "ENDEX AUSTRALIA LIMITED",
+          "judgeScore": 23
+        },
+        {
+          "id": "36641106827",
+          "kind": "charity",
+          "name": "ESCABAGS LTD",
+          "judgeScore": 23
+        }
+      ]
+    },
+    {
+      "id": "social_enterprise_delivery_match:remote-youth-justice",
+      "title": "Philanthropy team looking for underserved youth justice organisations in remote Australia",
+      "family": "social_enterprise_delivery_match",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 1,
+        "justiceExposure": 1,
+        "actability": 0.19999999999999998,
+        "relationshipUtility": 0.75,
+        "overallScore": 0.7768055555555556
+      },
+      "topResults": [
+        {
+          "id": "f4365c8c-d3f5-4f2f-b8e7-a211a4f75696",
+          "kind": "social_enterprise",
+          "name": "Aboriginal Family Legal Services Queensland (Maruma-li-mari) Indigenous Corporation",
+          "judgeScore": 17.25,
+          "strategyScore": 15
+        },
+        {
+          "id": "99ff6b2a-ef9a-40c6-81f6-bf5144a7ea58",
+          "kind": "social_enterprise",
+          "name": "Aboriginal Interpreting WA Aboriginal Corporation (AIWA)",
+          "judgeScore": 17.25,
+          "strategyScore": 15
+        },
+        {
+          "id": "06becff8-962d-4e6b-897f-2f324726d168",
+          "kind": "social_enterprise",
+          "name": "Allodial Land and Sea Council Indigenous Corporation",
+          "judgeScore": 17.25,
+          "strategyScore": 15
+        },
+        {
+          "id": "a7d7643c-0331-4c96-9fe7-f3f79ae1e491",
+          "kind": "social_enterprise",
+          "name": "Allodial Land Use Registry Indigenous Corporation",
+          "judgeScore": 17.25,
+          "strategyScore": 15
+        },
+        {
+          "id": "b7c1ce01-3434-49fd-ae45-d7e3a7b4be55",
+          "kind": "social_enterprise",
+          "name": "Amaroo Aboriginal and Torres Strait Islander Elders Justice Group (Aboriginal Corporation)",
+          "judgeScore": 17.25,
+          "strategyScore": 15
+        }
+      ],
+      "misses": [
+        {
+          "id": "2bcafdbf-270b-4880-a070-493a7620ecd7",
+          "kind": "social_enterprise",
+          "name": "Central Australian Aboriginal Family Legal Unit Aboriginal Corporation",
+          "judgeScore": 17.25
+        },
+        {
+          "id": "6f22f7b5-1359-460b-b327-07c54d015361",
+          "kind": "social_enterprise",
+          "name": "North Queensland Land Council Native Title Representative Body Aboriginal Corporation",
+          "judgeScore": 17.25
+        },
+        {
+          "id": "a0598bd2-14f6-4d22-af20-d2db638046af",
+          "kind": "social_enterprise",
+          "name": "South West Aboriginal Land & Sea Council Aboriginal Corporation",
+          "judgeScore": 17.25
+        },
+        {
+          "id": "2f02cbd4-c26e-452b-95fe-6ecf5dda8771",
+          "kind": "social_enterprise",
+          "name": "Balanggarra Aboriginal Corporation RNTBC",
+          "judgeScore": 17.25
+        },
+        {
+          "id": "d1790814-c6e2-48be-8101-ed4c848567e3",
+          "kind": "social_enterprise",
+          "name": "Banjima Native Title Aboriginal Corporation RNTBC",
+          "judgeScore": 17.25
+        }
+      ]
+    },
+    {
+      "id": "need_gap_search:remote-youth-justice",
+      "title": "Philanthropy team looking for underserved youth justice organisations in remote Australia",
+      "family": "need_gap_search",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 1,
+        "justiceExposure": 1,
+        "actability": 1,
+        "relationshipUtility": 1,
+        "overallScore": 0.8555555555555555
+      },
+      "topResults": [
+        {
+          "id": "0839",
+          "kind": "place",
+          "name": "0839",
+          "judgeScore": 20,
+          "strategyScore": 16
+        },
+        {
+          "id": "0840",
+          "kind": "place",
+          "name": "0840",
+          "judgeScore": 20,
+          "strategyScore": 16
+        },
+        {
+          "id": "0847",
+          "kind": "place",
+          "name": "0847",
+          "judgeScore": 20,
+          "strategyScore": 16
+        },
+        {
+          "id": "0862",
+          "kind": "place",
+          "name": "0862",
+          "judgeScore": 20,
+          "strategyScore": 16
+        },
+        {
+          "id": "4285",
+          "kind": "place",
+          "name": "4285",
+          "judgeScore": 20,
+          "strategyScore": 16
+        }
+      ],
+      "misses": [
+        {
+          "id": "4341",
+          "kind": "place",
+          "name": "4341",
+          "judgeScore": 20
+        },
+        {
+          "id": "4342",
+          "kind": "place",
+          "name": "4342",
+          "judgeScore": 20
+        },
+        {
+          "id": "4347",
+          "kind": "place",
+          "name": "4347",
+          "judgeScore": 20
+        },
+        {
+          "id": "4354",
+          "kind": "place",
+          "name": "4354",
+          "judgeScore": 20
+        },
+        {
+          "id": "4355",
+          "kind": "place",
+          "name": "4355",
+          "judgeScore": 20
+        }
+      ]
+    },
+    {
+      "id": "grant_discovery:csr-social-enterprise-employment",
+      "title": "Corporate CSR lead looking for social enterprises with employment pathways",
+      "family": "grant_discovery",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 0.9478260869565218,
+        "justiceExposure": 1,
+        "actability": 0.3,
+        "relationshipUtility": 0.75,
+        "overallScore": 0.7738707729468599
+      },
+      "topResults": [
+        {
+          "id": "455b97ac-a458-4876-821b-74edf500c16a",
+          "kind": "grant",
+          "name": "Community Youth Sports Grant",
+          "judgeScore": 23,
+          "strategyScore": 22
+        },
+        {
+          "id": "c01fb589-797a-4a0a-8c2e-effeb8982112",
+          "kind": "grant",
+          "name": "Tertiary Education Encouragement Award",
+          "judgeScore": 23,
+          "strategyScore": 22
+        },
+        {
+          "id": "8578b456-2510-440c-968d-47b0333985bd",
+          "kind": "grant",
+          "name": "BETA Loan Fund Program",
+          "judgeScore": 21.5,
+          "strategyScore": 20.5
+        },
+        {
+          "id": "dd2370d3-cabb-4d61-84ba-2e7cacb3e7c6",
+          "kind": "grant",
+          "name": "Channel 7 Telethon Trust Partnership",
+          "judgeScore": 21.5,
+          "strategyScore": 20.5
+        },
+        {
+          "id": "e26f47a0-7282-44ae-84da-2c08ce0cf78c",
+          "kind": "grant",
+          "name": "Community Giving program (Western Australia)",
+          "judgeScore": 21.5,
+          "strategyScore": 20.5
+        }
+      ],
+      "misses": [
+        {
+          "id": "5e1ee702-9ca7-4ff0-9932-da7abb6b1d62",
+          "kind": "grant",
+          "name": "Resources Community Investment Initiative (Rio Tinto's contribution)",
+          "judgeScore": 21.5
+        },
+        {
+          "id": "aae7b08e-74b5-476d-bb1f-6f59d9c145af",
+          "kind": "grant",
+          "name": "Rio Tinto Australia-Japan Collaboration Program",
+          "judgeScore": 21.5
+        },
+        {
+          "id": "c2b4e526-daa0-43ac-9b19-aad257ec2ce0",
+          "kind": "grant",
+          "name": "Training and Employment Services",
+          "judgeScore": 21.5
+        },
+        {
+          "id": "c2fb22a2-982b-4b1d-8c64-41961ad5f8c4",
+          "kind": "grant",
+          "name": "Women’s Business 2nd Chance (WB2C)",
+          "judgeScore": 21.5
+        },
+        {
+          "id": "8a65dffa-77d0-4026-b71f-16444ab90f59",
+          "kind": "grant",
+          "name": "Women’s Business Hub",
+          "judgeScore": 21.5
+        }
+      ]
+    },
+    {
+      "id": "foundation_discovery:csr-social-enterprise-employment",
+      "title": "Corporate CSR lead looking for social enterprises with employment pathways",
+      "family": "foundation_discovery",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 0.9305555555555556,
+        "justiceExposure": 1,
+        "actability": 0.55,
+        "relationshipUtility": 0.58,
+        "overallScore": 0.7764166666666668
+      },
+      "topResults": [
+        {
+          "id": "9a8dcdb4-63a1-44e2-8b61-a7a5ec9eff12",
+          "kind": "foundation",
+          "name": "Australian Rural Leadership Foundation Limited",
+          "judgeScore": 36,
+          "strategyScore": 34.5
+        },
+        {
+          "id": "53669bac-b6ca-49f4-89b3-948009d71bbd",
+          "kind": "foundation",
+          "name": "Good Things Foundation Limited",
+          "judgeScore": 36,
+          "strategyScore": 34.5
+        },
+        {
+          "id": "fd594e4d-1d05-4bd3-99cf-b6adc1b3cf22",
+          "kind": "foundation",
+          "name": "Preston Campbell Foundation Limited",
+          "judgeScore": 36,
+          "strategyScore": 34.5
+        },
+        {
+          "id": "623cc47b-0a20-4746-ae8f-f39fa26078c4",
+          "kind": "foundation",
+          "name": "ASPIRE 42 FOUNDATION LTD",
+          "judgeScore": 34,
+          "strategyScore": 33
+        },
+        {
+          "id": "72ed2394-1439-4ac5-bdbf-15ca9e565951",
+          "kind": "foundation",
+          "name": "Youth Insearch Foundation (Aust) Inc",
+          "judgeScore": 33,
+          "strategyScore": 32.5
+        }
+      ],
+      "misses": [
+        {
+          "id": "61022050-d477-434a-a7a3-8821c401c772",
+          "kind": "foundation",
+          "name": "CORE LEARNING FOUNDATION INC.",
+          "judgeScore": 31
+        },
+        {
+          "id": "a2f91761-7ab2-45b0-9510-caa86e00b07e",
+          "kind": "foundation",
+          "name": "KARI Foundation Ltd",
+          "judgeScore": 31
+        },
+        {
+          "id": "0c13ae3f-7095-4438-8d76-3fc0a690c143",
+          "kind": "foundation",
+          "name": "Leon Landucci Open Family Australia Scholarship Trust",
+          "judgeScore": 29
+        },
+        {
+          "id": "962e557a-daad-45e7-bbd3-aa67ec1d66b9",
+          "kind": "foundation",
+          "name": "The Balnaves Foundation",
+          "judgeScore": 31
+        },
+        {
+          "id": "281a493a-a549-41d2-aa8a-c77f75a68df5",
+          "kind": "foundation",
+          "name": "The Goodman Foundation",
+          "judgeScore": 31
+        }
+      ]
+    },
+    {
+      "id": "charity_delivery_match:csr-social-enterprise-employment",
+      "title": "Corporate CSR lead looking for social enterprises with employment pathways",
+      "family": "charity_delivery_match",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 1,
+        "justiceExposure": 1,
+        "actability": 0.39999999999999997,
+        "relationshipUtility": 0.75,
+        "overallScore": 0.7918055555555557
+      },
+      "topResults": [
+        {
+          "id": "15749066741",
+          "kind": "charity",
+          "name": "Aboriginal Interpreting WA Aboriginal Corporation (AIWA)",
+          "judgeScore": 26,
+          "strategyScore": 24.5
+        },
+        {
+          "id": "74164220286",
+          "kind": "charity",
+          "name": "Australia and New Zealand Chapter of the Association for Contextual Behavioral Science",
+          "judgeScore": 26,
+          "strategyScore": 24.5
+        },
+        {
+          "id": "37681615332",
+          "kind": "charity",
+          "name": "CORROBOREE TALENT SERVICES LIMITED",
+          "judgeScore": 26,
+          "strategyScore": 24.5
+        },
+        {
+          "id": "72686743680",
+          "kind": "charity",
+          "name": "DEADLY MALE LIMITED",
+          "judgeScore": 26,
+          "strategyScore": 24.5
+        },
+        {
+          "id": "45653897691",
+          "kind": "charity",
+          "name": "Dyirranga Ltd",
+          "judgeScore": 26,
+          "strategyScore": 24.5
+        }
+      ],
+      "misses": [
+        {
+          "id": "43682880217",
+          "kind": "charity",
+          "name": "Ginhar Miya Ltd",
+          "judgeScore": 24.5
+        },
+        {
+          "id": "29667735659",
+          "kind": "charity",
+          "name": "LIVIPOD LIMITED",
+          "judgeScore": 24.5
+        },
+        {
+          "id": "92687918270",
+          "kind": "charity",
+          "name": "PATHWAYS AND ADVOCACY NETWORK LTD",
+          "judgeScore": 24.5
+        },
+        {
+          "id": "21607985973",
+          "kind": "charity",
+          "name": "Specialisterne Centre Australia Limited",
+          "judgeScore": 26
+        },
+        {
+          "id": "49682935388",
+          "kind": "charity",
+          "name": "STAND STRONG COLLECTIVE LTD.",
+          "judgeScore": 24.5
+        }
+      ]
+    },
+    {
+      "id": "social_enterprise_delivery_match:csr-social-enterprise-employment",
+      "title": "Corporate CSR lead looking for social enterprises with employment pathways",
+      "family": "social_enterprise_delivery_match",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 0.901123595505618,
+        "justiceExposure": 1,
+        "actability": 0.19999999999999998,
+        "relationshipUtility": 0.75,
+        "overallScore": 0.7570302746566793
+      },
+      "topResults": [
+        {
+          "id": "3484a82e-20e0-49e5-9e29-c60ad7c64550",
+          "kind": "social_enterprise",
+          "name": "Australian Indigenous Mentoring Experience Indigenous Corporation",
+          "judgeScore": 22.25,
+          "strategyScore": 19
+        },
+        {
+          "id": "571b05e3-8939-4b43-9680-7f3d7c00ee93",
+          "kind": "social_enterprise",
+          "name": "Bindal Sharks United Training, Employment, Sport and Recreation Aboriginal Corporation",
+          "judgeScore": 22.25,
+          "strategyScore": 19
+        },
+        {
+          "id": "8ede8ef2-f79a-468c-a679-44118915f760",
+          "kind": "social_enterprise",
+          "name": "Entrepreneurs and Small Business Indigenous Corporation",
+          "judgeScore": 22.25,
+          "strategyScore": 19
+        },
+        {
+          "id": "fcf9cf64-2419-4a0d-96bf-b5925f02c4a5",
+          "kind": "social_enterprise",
+          "name": "Gudhuga Employment & Training Aboriginal Corporation",
+          "judgeScore": 22.25,
+          "strategyScore": 19
+        },
+        {
+          "id": "09ded791-71d4-48dc-9cfd-441885e2cbb4",
+          "kind": "social_enterprise",
+          "name": "Wunkula Training, Education and Business Development Aboriginal Corporation",
+          "judgeScore": 22.25,
+          "strategyScore": 19
+        }
+      ],
+      "misses": [
+        {
+          "id": "af95f6df-eae6-4c8e-acc5-82bf7c1c4749",
+          "kind": "social_enterprise",
+          "name": "Honoured",
+          "judgeScore": 17
+        },
+        {
+          "id": "cfa5b1e8-cd0f-46ff-b04c-7507184b49f9",
+          "kind": "social_enterprise",
+          "name": "Birrelee Multi-Functional Aboriginal Childrens Service Aboriginal Corporation",
+          "judgeScore": 17.25
+        },
+        {
+          "id": "963ac0fa-0622-4b36-ab97-a10e66b6ae28",
+          "kind": "social_enterprise",
+          "name": "Dalaigur Pre-school and Children's Services Aboriginal Corporation",
+          "judgeScore": 17.25
+        },
+        {
+          "id": "eacce024-4ddd-4ddb-8005-cbaf4a31ee4b",
+          "kind": "social_enterprise",
+          "name": "Little Yuin Pre-School Family Centre Aboriginal Corporation",
+          "judgeScore": 17.25
+        },
+        {
+          "id": "3b3ea787-fe78-41a8-91cb-ed23a9aed2f6",
+          "kind": "social_enterprise",
+          "name": "Wiradjuri Aboriginal Corporation Community and Child Care Centre",
+          "judgeScore": 17.25
+        }
+      ]
+    },
+    {
+      "id": "need_gap_search:csr-social-enterprise-employment",
+      "title": "Corporate CSR lead looking for social enterprises with employment pathways",
+      "family": "need_gap_search",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 1,
+        "justiceExposure": 1,
+        "actability": 1,
+        "relationshipUtility": 1,
+        "overallScore": 0.8555555555555555
+      },
+      "topResults": [
+        {
+          "id": "2319",
+          "kind": "place",
+          "name": "2319",
+          "judgeScore": 16,
+          "strategyScore": 12
+        },
+        {
+          "id": "2325",
+          "kind": "place",
+          "name": "2325",
+          "judgeScore": 16,
+          "strategyScore": 12
+        },
+        {
+          "id": "2326",
+          "kind": "place",
+          "name": "2326",
+          "judgeScore": 16,
+          "strategyScore": 12
+        },
+        {
+          "id": "2329",
+          "kind": "place",
+          "name": "2329",
+          "judgeScore": 16,
+          "strategyScore": 12
+        },
+        {
+          "id": "2338",
+          "kind": "place",
+          "name": "2338",
+          "judgeScore": 16,
+          "strategyScore": 12
+        }
+      ],
+      "misses": [
+        {
+          "id": "2361",
+          "kind": "place",
+          "name": "2361",
+          "judgeScore": 16
+        },
+        {
+          "id": "2365",
+          "kind": "place",
+          "name": "2365",
+          "judgeScore": 16
+        },
+        {
+          "id": "2370",
+          "kind": "place",
+          "name": "2370",
+          "judgeScore": 16
+        },
+        {
+          "id": "2371",
+          "kind": "place",
+          "name": "2371",
+          "judgeScore": 16
+        },
+        {
+          "id": "2381",
+          "kind": "place",
+          "name": "2381",
+          "judgeScore": 16
+        }
+      ]
+    },
+    {
+      "id": "grant_discovery:foundation-before-intro-campaign",
+      "title": "Charity looking for aligned foundations before an introduction campaign",
+      "family": "grant_discovery",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 1,
+        "justiceExposure": 1,
+        "actability": 1,
+        "relationshipUtility": 0.4699999999999999,
+        "overallScore": 0.8158055555555556
+      },
+      "topResults": [
+        {
+          "id": "61f4603f-cb27-407c-8341-e015800fac9a",
+          "kind": "grant",
+          "name": "2023 Youth Opportunities grant applications",
+          "judgeScore": 23,
+          "strategyScore": 21
+        },
+        {
+          "id": "ddcf921a-c8fb-411a-ab8d-89d62aa7ab59",
+          "kind": "grant",
+          "name": "2023/24 Investing in Women",
+          "judgeScore": 23,
+          "strategyScore": 21
+        },
+        {
+          "id": "287b2838-a592-419a-b7b7-25ed813c800a",
+          "kind": "grant",
+          "name": "2026 Inclusive Environments Funding Program - Inclusion Readiness Payments",
+          "judgeScore": 23,
+          "strategyScore": 21
+        },
+        {
+          "id": "aa729caf-8928-4b92-abbc-3cd3ae623da8",
+          "kind": "grant",
+          "name": "A Reconfigurable Neuromorphic Compute System for Brain-Scale Simulations. The project aims to construct a world-first reconfigurable neuromorphic compute system. The hardware is designed to run brain-",
+          "judgeScore": 23,
+          "strategyScore": 21
+        },
+        {
+          "id": "5536f68f-4470-4e4e-badc-f1d904b14734",
+          "kind": "grant",
+          "name": "A smartphone rip-detection tool to improve rip current awareness. This project aims to develop a smartphone rip-detection tool and online education game to help reduce the number of Australians drowni",
+          "judgeScore": 23,
+          "strategyScore": 21
+        }
+      ],
+      "misses": [
+        {
+          "id": "6f82a730-6389-4bc6-a1d2-0e394cd4fe75",
+          "kind": "grant",
+          "name": "2026-2029 Indigenous Employment Initiative",
+          "judgeScore": 21.5
+        },
+        {
+          "id": "5ec96ad4-e108-4503-9beb-b18c4fab0a9a",
+          "kind": "grant",
+          "name": "Aboriginal Apprenticeship Certificate III In Engineering- Mechanical Trade",
+          "judgeScore": 20
+        },
+        {
+          "id": "bafb4f24-51f8-48ba-a6b2-37486c21f82e",
+          "kind": "grant",
+          "name": "AEDC community grants",
+          "judgeScore": 23
+        },
+        {
+          "id": "964cb142-92cf-49f9-a31b-fc2aa2315a1c",
+          "kind": "grant",
+          "name": "Annual Grant Round",
+          "judgeScore": 20
+        },
+        {
+          "id": "2980623e-8e41-4659-ae6c-844c28243aa4",
+          "kind": "grant",
+          "name": "Annual Grants Program",
+          "judgeScore": 20
+        }
+      ]
+    },
+    {
+      "id": "foundation_discovery:foundation-before-intro-campaign",
+      "title": "Charity looking for aligned foundations before an introduction campaign",
+      "family": "foundation_discovery",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 0.8948717948717949,
+        "justiceExposure": 1,
+        "actability": 0.55,
+        "relationshipUtility": 0.6199999999999999,
+        "overallScore": 0.7722799145299145
+      },
+      "topResults": [
+        {
+          "id": "fd594e4d-1d05-4bd3-99cf-b6adc1b3cf22",
+          "kind": "foundation",
+          "name": "Preston Campbell Foundation Limited",
+          "judgeScore": 39,
+          "strategyScore": 34.5
+        },
+        {
+          "id": "6ff5d678-9a13-4b8b-b5f9-72ec93a17384",
+          "kind": "foundation",
+          "name": "Bravehearts Foundation",
+          "judgeScore": 36,
+          "strategyScore": 32.5
+        },
+        {
+          "id": "962e557a-daad-45e7-bbd3-aa67ec1d66b9",
+          "kind": "foundation",
+          "name": "The Balnaves Foundation",
+          "judgeScore": 36,
+          "strategyScore": 32.5
+        },
+        {
+          "id": "15eab191-852a-4289-bf3c-d33e1789af07",
+          "kind": "foundation",
+          "name": "Copticare Relief Fund Limited",
+          "judgeScore": 34,
+          "strategyScore": 31.5
+        },
+        {
+          "id": "d98be2ce-6cf2-4492-9665-654899b2bd43",
+          "kind": "foundation",
+          "name": "The Australian Rotary Foundation Trust",
+          "judgeScore": 36,
+          "strategyScore": 31.5
+        }
+      ],
+      "misses": [
+        {
+          "id": "eb682a50-84cf-4220-88ee-4f12e0f3f9cf",
+          "kind": "foundation",
+          "name": "LifeChanger Foundation Limited",
+          "judgeScore": 34
+        },
+        {
+          "id": "a640cb59-4e5a-41f1-9e40-1a5c00024f20",
+          "kind": "foundation",
+          "name": "CHOSEN COMMUNITY FOUNDATION LTD",
+          "judgeScore": 32
+        },
+        {
+          "id": "9f87828a-ff3a-44bc-847d-2fde6f96ac9f",
+          "kind": "foundation",
+          "name": "Edmund Rice Foundation (Australia)",
+          "judgeScore": 33
+        },
+        {
+          "id": "3ab6c7a2-549f-40cb-9504-efafc6edc5e5",
+          "kind": "foundation",
+          "name": "Harman Foundation Limited",
+          "judgeScore": 33
+        },
+        {
+          "id": "755da06c-b424-43c4-ba64-2ac952625832",
+          "kind": "foundation",
+          "name": "MY GUARDIAN FOUNDATION LIMITED",
+          "judgeScore": 32
+        }
+      ]
+    },
+    {
+      "id": "charity_delivery_match:foundation-before-intro-campaign",
+      "title": "Charity looking for aligned foundations before an introduction campaign",
+      "family": "charity_delivery_match",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 1,
+        "justiceExposure": 1,
+        "actability": 0.39999999999999997,
+        "relationshipUtility": 0.75,
+        "overallScore": 0.7918055555555557
+      },
+      "topResults": [
+        {
+          "id": "74164220286",
+          "kind": "charity",
+          "name": "Australia and New Zealand Chapter of the Association for Contextual Behavioral Science",
+          "judgeScore": 28,
+          "strategyScore": 25.5
+        },
+        {
+          "id": "48326796042",
+          "kind": "charity",
+          "name": "Australian Society of Special Care in Dentistry Incorporated",
+          "judgeScore": 28,
+          "strategyScore": 25.5
+        },
+        {
+          "id": "31626916890",
+          "kind": "charity",
+          "name": "COMPUTER SIMULATION & ADVANCED RESEARCH TECHNOLOGIES (CSART) LTD",
+          "judgeScore": 28,
+          "strategyScore": 25.5
+        },
+        {
+          "id": "15803603765",
+          "kind": "charity",
+          "name": "National Indigenous Corporation of Australia",
+          "judgeScore": 28,
+          "strategyScore": 25.5
+        },
+        {
+          "id": "45635277762",
+          "kind": "charity",
+          "name": "OUTSIDE THE LOCKER ROOM CHARITY LTD",
+          "judgeScore": 28,
+          "strategyScore": 25.5
+        }
+      ],
+      "misses": [
+        {
+          "id": "72716811463",
+          "kind": "charity",
+          "name": "Allawaw Aboriginal Corporation",
+          "judgeScore": 26.5
+        },
+        {
+          "id": "16133150979",
+          "kind": "charity",
+          "name": "Yiliyapinya Indigenous Corporation",
+          "judgeScore": 28
+        },
+        {
+          "id": "62688283639",
+          "kind": "charity",
+          "name": "ZAZA'S LEGACY - CHOKING PREVENTION AUSTRALIA incorporated",
+          "judgeScore": 26.5
+        },
+        {
+          "id": "24148144591",
+          "kind": "charity",
+          "name": "AusGive International Inc",
+          "judgeScore": 26.5
+        },
+        {
+          "id": "30403768306",
+          "kind": "charity",
+          "name": "Australasian Hepatology Association Incorporated",
+          "judgeScore": 26.5
+        }
+      ]
+    },
+    {
+      "id": "social_enterprise_delivery_match:foundation-before-intro-campaign",
+      "title": "Charity looking for aligned foundations before an introduction campaign",
+      "family": "social_enterprise_delivery_match",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 1,
+        "justiceExposure": 1,
+        "actability": 0.19999999999999998,
+        "relationshipUtility": 0.75,
+        "overallScore": 0.7768055555555556
+      },
+      "topResults": [
+        {
+          "id": "0430cb38-cd8f-4147-ab5e-4fd85d925231",
+          "kind": "social_enterprise",
+          "name": "AbSec- NSW Child, Family and Community Peak Aboriginal Corporation",
+          "judgeScore": 18.25,
+          "strategyScore": 15
+        },
+        {
+          "id": "80821925-0dbc-4306-90db-b5d65ab17cc2",
+          "kind": "social_enterprise",
+          "name": "Be Defib Aware Indigenous Corporation",
+          "judgeScore": 18.25,
+          "strategyScore": 15
+        },
+        {
+          "id": "571b05e3-8939-4b43-9680-7f3d7c00ee93",
+          "kind": "social_enterprise",
+          "name": "Bindal Sharks United Training, Employment, Sport and Recreation Aboriginal Corporation",
+          "judgeScore": 18.25,
+          "strategyScore": 15
+        },
+        {
+          "id": "8d47d853-f464-4355-9df0-8aa47ae8e6b6",
+          "kind": "social_enterprise",
+          "name": "Coraki Swanettes Playgroup Aboriginal Corporation",
+          "judgeScore": 18.25,
+          "strategyScore": 15
+        },
+        {
+          "id": "4f1de7c8-47f2-45cd-be50-99b51ae49aab",
+          "kind": "social_enterprise",
+          "name": "Cullunghutti Aboriginal Child and Family Centre Aboriginal Corporation",
+          "judgeScore": 18.25,
+          "strategyScore": 15
+        }
+      ],
+      "misses": [
+        {
+          "id": "af95f6df-eae6-4c8e-acc5-82bf7c1c4749",
+          "kind": "social_enterprise",
+          "name": "Honoured",
+          "judgeScore": 17
+        },
+        {
+          "id": "6078a96e-5558-4518-8b01-a2c734bc222c",
+          "kind": "social_enterprise",
+          "name": "The Big Sister Experience",
+          "judgeScore": 17
+        },
+        {
+          "id": "54fec973-dc61-4b66-b1eb-eb5ab1d7b7b9",
+          "kind": "social_enterprise",
+          "name": "Cunnamulla Aboriginal Corporation for Health",
+          "judgeScore": 14.5
+        },
+        {
+          "id": "5f93b496-8d6f-4346-a4c5-4356062d7d5e",
+          "kind": "social_enterprise",
+          "name": "KsafeT",
+          "judgeScore": 15
+        },
+        {
+          "id": "97536f98-5585-4d96-824f-d5e36d17cad5",
+          "kind": "social_enterprise",
+          "name": "Social Care Solutions Pty Ltd",
+          "judgeScore": 12
+        }
+      ]
+    },
+    {
+      "id": "need_gap_search:foundation-before-intro-campaign",
+      "title": "Charity looking for aligned foundations before an introduction campaign",
+      "family": "need_gap_search",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 1,
+        "justiceExposure": 1,
+        "actability": 1,
+        "relationshipUtility": 1,
+        "overallScore": 0.8555555555555555
+      },
+      "topResults": [
+        {
+          "id": "2319",
+          "kind": "place",
+          "name": "2319",
+          "judgeScore": 16,
+          "strategyScore": 12
+        },
+        {
+          "id": "2325",
+          "kind": "place",
+          "name": "2325",
+          "judgeScore": 16,
+          "strategyScore": 12
+        },
+        {
+          "id": "2326",
+          "kind": "place",
+          "name": "2326",
+          "judgeScore": 16,
+          "strategyScore": 12
+        },
+        {
+          "id": "2329",
+          "kind": "place",
+          "name": "2329",
+          "judgeScore": 16,
+          "strategyScore": 12
+        },
+        {
+          "id": "2338",
+          "kind": "place",
+          "name": "2338",
+          "judgeScore": 16,
+          "strategyScore": 12
+        }
+      ],
+      "misses": [
+        {
+          "id": "2361",
+          "kind": "place",
+          "name": "2361",
+          "judgeScore": 16
+        },
+        {
+          "id": "2365",
+          "kind": "place",
+          "name": "2365",
+          "judgeScore": 16
+        },
+        {
+          "id": "2370",
+          "kind": "place",
+          "name": "2370",
+          "judgeScore": 16
+        },
+        {
+          "id": "2371",
+          "kind": "place",
+          "name": "2371",
+          "judgeScore": 16
+        },
+        {
+          "id": "2381",
+          "kind": "place",
+          "name": "2381",
+          "judgeScore": 16
+        }
+      ]
+    },
+    {
+      "id": "grant_discovery:regional-regenerative",
+      "title": "Regional regenerative and environment initiative seeking capital",
+      "family": "grant_discovery",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 0.9100000000000001,
+        "justiceExposure": 0,
+        "actability": 0.95,
+        "relationshipUtility": 0.39999999999999997,
+        "overallScore": 0.6388055555555556
+      },
+      "topResults": [
+        {
+          "id": "e1117128-6f86-438c-997c-59be3b6b9a0e",
+          "kind": "grant",
+          "name": "Regional Community Grants Program",
+          "judgeScore": 20,
+          "strategyScore": 18
+        },
+        {
+          "id": "d66b26c2-42cc-4ac9-9266-12d01e34b248",
+          "kind": "grant",
+          "name": "2024 Aboriginal Sustainable Funding Program",
+          "judgeScore": 18,
+          "strategyScore": 16
+        },
+        {
+          "id": "3f1b9638-2523-464c-9b63-06c647d0d130",
+          "kind": "grant",
+          "name": "2024 Inclusive Environments Funding Program",
+          "judgeScore": 18,
+          "strategyScore": 16
+        },
+        {
+          "id": "d8b6dce7-cb06-4350-bd76-f7e2596ac00d",
+          "kind": "grant",
+          "name": "2024/25 Country Passenger Transport Infrastructure Grants Scheme (CPTIGS)",
+          "judgeScore": 18,
+          "strategyScore": 16
+        },
+        {
+          "id": "24964b58-a7f0-4259-8d50-1ad7f65a5d50",
+          "kind": "grant",
+          "name": "2025 Inclusive Environments Funding Program - Inclusion Readiness Payments",
+          "judgeScore": 18,
+          "strategyScore": 16
+        }
+      ],
+      "misses": [
+        {
+          "id": "ab64f0c8-c979-4b27-9f0c-12372252608b",
+          "kind": "grant",
+          "name": "2020 Festival of Urbanism Research Grants (under Henry Halloran Trust for Early Career Researchers)",
+          "judgeScore": 16.5
+        },
+        {
+          "id": "436df6c4-847c-467d-aca5-f4d2da021614",
+          "kind": "grant",
+          "name": "2025/26 Country Passenger Transport Infrastructure Grants scheme (CPTIGS)",
+          "judgeScore": 18
+        },
+        {
+          "id": "24fb6f3c-1a09-40e4-a0b2-ee3b651983b4",
+          "kind": "grant",
+          "name": "2026 Aboriginal Families as Teachers",
+          "judgeScore": 18
+        },
+        {
+          "id": "287b2838-a592-419a-b7b7-25ed813c800a",
+          "kind": "grant",
+          "name": "2026 Inclusive Environments Funding Program - Inclusion Readiness Payments",
+          "judgeScore": 18
+        },
+        {
+          "id": "9983852f-04d0-42bf-afaf-603f372720fc",
+          "kind": "grant",
+          "name": "2026 Inclusive Environments Funding Program - Quarter 1 Payments",
+          "judgeScore": 18
+        }
+      ]
+    },
+    {
+      "id": "foundation_discovery:regional-regenerative",
+      "title": "Regional regenerative and environment initiative seeking capital",
+      "family": "foundation_discovery",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 0.8344827586206897,
+        "justiceExposure": 0,
+        "actability": 0.6,
+        "relationshipUtility": 0.6599999999999999,
+        "overallScore": 0.6169521072796935
+      },
+      "topResults": [
+        {
+          "id": "15eab191-852a-4289-bf3c-d33e1789af07",
+          "kind": "foundation",
+          "name": "Copticare Relief Fund Limited",
+          "judgeScore": 29,
+          "strategyScore": 26.5
+        },
+        {
+          "id": "2b7adf13-154c-45bf-8c06-9e73f59460f4",
+          "kind": "foundation",
+          "name": "Australian Trust For Conservation Volunteers",
+          "judgeScore": 25,
+          "strategyScore": 23.5
+        },
+        {
+          "id": "b90cb1d5-af9e-4603-834c-e934ab2043ba",
+          "kind": "foundation",
+          "name": "BHP Foundation",
+          "judgeScore": 25,
+          "strategyScore": 23.5
+        },
+        {
+          "id": "85f0de43-d004-4122-83a6-287eeecc4da9",
+          "kind": "foundation",
+          "name": "Rio Tinto Foundation",
+          "judgeScore": 26,
+          "strategyScore": 23.5
+        },
+        {
+          "id": "7ea297ca-50d0-475f-aa07-128c24aa8de7",
+          "kind": "foundation",
+          "name": "Workplace Giving Australia Holdings Ltd",
+          "judgeScore": 25,
+          "strategyScore": 23.5
+        }
+      ],
+      "misses": [
+        {
+          "id": "f5138e92-77da-4d91-8ea5-75bb24850918",
+          "kind": "foundation",
+          "name": "The Trustee For The Nature Conservancy Australia Trust",
+          "judgeScore": 23
+        },
+        {
+          "id": "9302c45e-83b7-465d-9bae-8b2006e3d753",
+          "kind": "foundation",
+          "name": "Linking Futures Foundation Aboriginal Corporation",
+          "judgeScore": 21
+        },
+        {
+          "id": "8f8704be-d6e8-40f3-b561-ac6630ce5b36",
+          "kind": "foundation",
+          "name": "Minderoo Foundation Limited as trustee for The Minderoo Foundation Trust",
+          "judgeScore": 22
+        },
+        {
+          "id": "be0da19b-ba73-463b-b19e-eb28154333f0",
+          "kind": "foundation",
+          "name": "NATIONAL DAWAH FOUNDATION AUSTRALIA INCORPORATED",
+          "judgeScore": 21
+        },
+        {
+          "id": "76d9423a-99f5-443b-a2e9-c8346b660276",
+          "kind": "foundation",
+          "name": "Queensland Farmers' Federation Ltd",
+          "judgeScore": 21
+        }
+      ]
+    },
+    {
+      "id": "charity_delivery_match:regional-regenerative",
+      "title": "Regional regenerative and environment initiative seeking capital",
+      "family": "charity_delivery_match",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 1,
+        "justiceExposure": 1,
+        "actability": 0.19999999999999998,
+        "relationshipUtility": 0.75,
+        "overallScore": 0.7768055555555556
+      },
+      "topResults": [
+        {
+          "id": "59465108322",
+          "kind": "charity",
+          "name": "AUSTRALIAN INSTITUTE OF HORTICULTURE INC",
+          "judgeScore": 20.5,
+          "strategyScore": 19.25
+        },
+        {
+          "id": "25952427724",
+          "kind": "charity",
+          "name": "BOTANIC GARDENS OF AUSTRALIA AND NEW ZEALAND LTD.",
+          "judgeScore": 20.5,
+          "strategyScore": 19.25
+        },
+        {
+          "id": "75119895703",
+          "kind": "charity",
+          "name": "Canberra and National NatureMapr Network Incorporated",
+          "judgeScore": 20.5,
+          "strategyScore": 19.25
+        },
+        {
+          "id": "76639858969",
+          "kind": "charity",
+          "name": "COUNTRY NEEDS PEOPLE LTD",
+          "judgeScore": 20.5,
+          "strategyScore": 19.25
+        },
+        {
+          "id": "42640106056",
+          "kind": "charity",
+          "name": "CRC TIME LIMITED",
+          "judgeScore": 20.5,
+          "strategyScore": 19.25
+        }
+      ],
+      "misses": [
+        {
+          "id": "13687595562",
+          "kind": "charity",
+          "name": "BRYANT MACFIE ENVIRONMENTAL CHARITY LIMITED",
+          "judgeScore": 19
+        },
+        {
+          "id": "39668953955",
+          "kind": "charity",
+          "name": "ECOLANDS COLLECTIVE LTD",
+          "judgeScore": 19
+        },
+        {
+          "id": "14692936253",
+          "kind": "charity",
+          "name": "GREENING AUSTRALIA CONSERVATION LIMITED",
+          "judgeScore": 19
+        },
+        {
+          "id": "42681884355",
+          "kind": "charity",
+          "name": "PEOPLE FOR NATURE LIMITED",
+          "judgeScore": 20.5
+        },
+        {
+          "id": "57533056318",
+          "kind": "charity",
+          "name": "Renew Australia Inc.",
+          "judgeScore": 20.5
+        }
+      ]
+    },
+    {
+      "id": "social_enterprise_delivery_match:regional-regenerative",
+      "title": "Regional regenerative and environment initiative seeking capital",
+      "family": "social_enterprise_delivery_match",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 1,
+        "justiceExposure": 0,
+        "actability": 0.19999999999999998,
+        "relationshipUtility": 0.75,
+        "overallScore": 0.6268055555555556
+      },
+      "topResults": [
+        {
+          "id": "9ddc9a51-208f-4146-91f7-dc98d5384a10",
+          "kind": "social_enterprise",
+          "name": "Abm Elgoring Ambung Aboriginal Corporation RNTBC",
+          "judgeScore": 13.25,
+          "strategyScore": 11
+        },
+        {
+          "id": "4cecfb27-9b2d-4680-84da-076d0570906f",
+          "kind": "social_enterprise",
+          "name": "Adnyamathanha Traditional Lands Association (Aboriginal Corporation) RNTBC",
+          "judgeScore": 13.25,
+          "strategyScore": 11
+        },
+        {
+          "id": "06becff8-962d-4e6b-897f-2f324726d168",
+          "kind": "social_enterprise",
+          "name": "Allodial Land and Sea Council Indigenous Corporation",
+          "judgeScore": 13.25,
+          "strategyScore": 11
+        },
+        {
+          "id": "a696b36c-6132-4e75-a592-42814c34fe33",
+          "kind": "social_enterprise",
+          "name": "Alpurrurulam Land Aboriginal Corporation",
+          "judgeScore": 13.25,
+          "strategyScore": 11
+        },
+        {
+          "id": "a38c94e0-afa8-41f6-b30c-2d7e3139cdf6",
+          "kind": "social_enterprise",
+          "name": "Arabana Aboriginal Corporation RNTBC",
+          "judgeScore": 13.25,
+          "strategyScore": 11
+        }
+      ],
+      "misses": [
+        {
+          "id": "f598677c-5694-4052-b4f1-19ca18fa6a19",
+          "kind": "social_enterprise",
+          "name": "Mimbi Aboriginal Corporation",
+          "judgeScore": 13.25
+        },
+        {
+          "id": "a0598bd2-14f6-4d22-af20-d2db638046af",
+          "kind": "social_enterprise",
+          "name": "South West Aboriginal Land & Sea Council Aboriginal Corporation",
+          "judgeScore": 13.25
+        },
+        {
+          "id": "408637f6-eff8-4caa-baf1-f4c42f732ce0",
+          "kind": "social_enterprise",
+          "name": "Tjayuwara Unmuru Aboriginal Corporation RNTBC",
+          "judgeScore": 13.25
+        },
+        {
+          "id": "c45c7428-84fd-4ec2-be16-ea1b74078cbf",
+          "kind": "social_enterprise",
+          "name": "Wirangu Aboriginal Corporation RNTBC",
+          "judgeScore": 13.25
+        },
+        {
+          "id": "435c4b17-207d-4efd-9f3b-29cfa14e02cb",
+          "kind": "social_enterprise",
+          "name": "Bar-Barrum Aboriginal Corporation RNTBC",
+          "judgeScore": 13.25
+        }
+      ]
+    },
+    {
+      "id": "need_gap_search:regional-regenerative",
+      "title": "Regional regenerative and environment initiative seeking capital",
+      "family": "need_gap_search",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 1,
+        "justiceExposure": 1,
+        "actability": 1,
+        "relationshipUtility": 1,
+        "overallScore": 0.8555555555555555
+      },
+      "topResults": [
+        {
+          "id": "4285",
+          "kind": "place",
+          "name": "4285",
+          "judgeScore": 20,
+          "strategyScore": 16
+        },
+        {
+          "id": "4287",
+          "kind": "place",
+          "name": "4287",
+          "judgeScore": 20,
+          "strategyScore": 16
+        },
+        {
+          "id": "4311",
+          "kind": "place",
+          "name": "4311",
+          "judgeScore": 20,
+          "strategyScore": 16
+        },
+        {
+          "id": "4312",
+          "kind": "place",
+          "name": "4312",
+          "judgeScore": 20,
+          "strategyScore": 16
+        },
+        {
+          "id": "4313",
+          "kind": "place",
+          "name": "4313",
+          "judgeScore": 20,
+          "strategyScore": 16
+        }
+      ],
+      "misses": [
+        {
+          "id": "4355",
+          "kind": "place",
+          "name": "4355",
+          "judgeScore": 20
+        },
+        {
+          "id": "4357",
+          "kind": "place",
+          "name": "4357",
+          "judgeScore": 20
+        },
+        {
+          "id": "4361",
+          "kind": "place",
+          "name": "4361",
+          "judgeScore": 20
+        },
+        {
+          "id": "4365",
+          "kind": "place",
+          "name": "4365",
+          "judgeScore": 20
+        },
+        {
+          "id": "4373",
+          "kind": "place",
+          "name": "4373",
+          "judgeScore": 20
+        }
+      ]
+    },
+    {
+      "id": "grant_discovery:first-nations-leadership-women",
+      "title": "First Nations women and leadership initiative seeking the right funding network",
+      "family": "grant_discovery",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 1,
+        "justiceExposure": 1,
+        "actability": 1,
+        "relationshipUtility": 0.43499999999999994,
+        "overallScore": 0.8131805555555556
+      },
+      "topResults": [
+        {
+          "id": "61f4603f-cb27-407c-8341-e015800fac9a",
+          "kind": "grant",
+          "name": "2023 Youth Opportunities grant applications",
+          "judgeScore": 28,
+          "strategyScore": 27
+        },
+        {
+          "id": "ae929729-a26f-4f9d-a3f3-311aa8698223",
+          "kind": "grant",
+          "name": "2023-24 Return to Work Pathways Program",
+          "judgeScore": 28,
+          "strategyScore": 27
+        },
+        {
+          "id": "ddcf921a-c8fb-411a-ab8d-89d62aa7ab59",
+          "kind": "grant",
+          "name": "2023/24 Investing in Women",
+          "judgeScore": 28,
+          "strategyScore": 27
+        },
+        {
+          "id": "24fb6f3c-1a09-40e4-a0b2-ee3b651983b4",
+          "kind": "grant",
+          "name": "2026 Aboriginal Families as Teachers",
+          "judgeScore": 28,
+          "strategyScore": 27
+        },
+        {
+          "id": "e30c53f7-b4d8-4c1f-9cf3-6394d8d1eaf8",
+          "kind": "grant",
+          "name": "2026 Ninganah No More",
+          "judgeScore": 28,
+          "strategyScore": 27
+        }
+      ],
+      "misses": [
+        {
+          "id": "6f82a730-6389-4bc6-a1d2-0e394cd4fe75",
+          "kind": "grant",
+          "name": "2026-2029 Indigenous Employment Initiative",
+          "judgeScore": 26.5
+        },
+        {
+          "id": "5ec96ad4-e108-4503-9beb-b18c4fab0a9a",
+          "kind": "grant",
+          "name": "Aboriginal Apprenticeship Certificate III In Engineering- Mechanical Trade",
+          "judgeScore": 25
+        },
+        {
+          "id": "d1e20403-c88b-4e1e-9e9e-a61b286e3b50",
+          "kind": "grant",
+          "name": "Aboriginal Languages Revival Program",
+          "judgeScore": 28
+        },
+        {
+          "id": "bd7d6490-cb45-476c-b866-967a30d5916a",
+          "kind": "grant",
+          "name": "Aboriginal Languages Small Grant Program 2024- 2025",
+          "judgeScore": 28
+        },
+        {
+          "id": "4630db01-9a31-4da3-8e01-ba3567fed349",
+          "kind": "grant",
+          "name": "Aboriginal Partnership Funding Program 2023/2024",
+          "judgeScore": 28
+        }
+      ]
+    },
+    {
+      "id": "foundation_discovery:first-nations-leadership-women",
+      "title": "First Nations women and leadership initiative seeking the right funding network",
+      "family": "foundation_discovery",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 0.9135135135135137,
+        "justiceExposure": 1,
+        "actability": 0.5,
+        "relationshipUtility": 0.56,
+        "overallScore": 0.7677582582582584
+      },
+      "topResults": [
+        {
+          "id": "85f0de43-d004-4122-83a6-287eeecc4da9",
+          "kind": "foundation",
+          "name": "Rio Tinto Foundation",
+          "judgeScore": 37,
+          "strategyScore": 34.5
+        },
+        {
+          "id": "d0a53909-0fa5-4ddb-9921-bb014766ce7f",
+          "kind": "foundation",
+          "name": "THE EDDIE BETTS FOUNDATION LTD",
+          "judgeScore": 36,
+          "strategyScore": 34.5
+        },
+        {
+          "id": "93f9da95-eab9-42c4-a2d8-68b685868bbf",
+          "kind": "foundation",
+          "name": "Youth Plus Foundation Limited",
+          "judgeScore": 36,
+          "strategyScore": 34.5
+        },
+        {
+          "id": "9302c45e-83b7-465d-9bae-8b2006e3d753",
+          "kind": "foundation",
+          "name": "Linking Futures Foundation Aboriginal Corporation",
+          "judgeScore": 34,
+          "strategyScore": 33
+        },
+        {
+          "id": "7ea297ca-50d0-475f-aa07-128c24aa8de7",
+          "kind": "foundation",
+          "name": "Workplace Giving Australia Holdings Ltd",
+          "judgeScore": 33,
+          "strategyScore": 32.5
+        }
+      ],
+      "misses": [
+        {
+          "id": "d10cb21e-bf8d-4e4b-8ae5-f75f6ddcde6c",
+          "kind": "foundation",
+          "name": "Empower Sports Foundation Aboriginal Corporation",
+          "judgeScore": 32
+        },
+        {
+          "id": "2abe8009-17fd-4512-ac01-03bd5d41db93",
+          "kind": "foundation",
+          "name": "Nomads Charitable & Educational Foundation",
+          "judgeScore": 31
+        },
+        {
+          "id": "5cfeb7f4-a714-4749-84a2-1d0949f57b47",
+          "kind": "foundation",
+          "name": "Roman Catholic Trust Corporation For The Diocese Of Cairns",
+          "judgeScore": 33
+        },
+        {
+          "id": "25aad8e2-9cbb-43b9-9ec3-ad1f8214debe",
+          "kind": "foundation",
+          "name": "Waalitj Foundation Limited",
+          "judgeScore": 33
+        },
+        {
+          "id": "9a8dcdb4-63a1-44e2-8b61-a7a5ec9eff12",
+          "kind": "foundation",
+          "name": "Australian Rural Leadership Foundation Limited",
+          "judgeScore": 31
+        }
+      ]
+    },
+    {
+      "id": "charity_delivery_match:first-nations-leadership-women",
+      "title": "First Nations women and leadership initiative seeking the right funding network",
+      "family": "charity_delivery_match",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 1,
+        "justiceExposure": 1,
+        "actability": 0.39999999999999997,
+        "relationshipUtility": 0.75,
+        "overallScore": 0.7918055555555557
+      },
+      "topResults": [
+        {
+          "id": "74164220286",
+          "kind": "charity",
+          "name": "Australia and New Zealand Chapter of the Association for Contextual Behavioral Science",
+          "judgeScore": 28,
+          "strategyScore": 26.5
+        },
+        {
+          "id": "68091455551",
+          "kind": "charity",
+          "name": "Australian Indigenous Leadership Centre Ltd",
+          "judgeScore": 28,
+          "strategyScore": 26.5
+        },
+        {
+          "id": "50203962931",
+          "kind": "charity",
+          "name": "Centre of Perinatal Excellence Ltd",
+          "judgeScore": 28,
+          "strategyScore": 26.5
+        },
+        {
+          "id": "53002941086",
+          "kind": "charity",
+          "name": "Haematology Society of Australia and New Zealand",
+          "judgeScore": 28,
+          "strategyScore": 26.5
+        },
+        {
+          "id": "70649580423",
+          "kind": "charity",
+          "name": "INDIGENOUS CARBON INDUSTRY NETWORK LTD",
+          "judgeScore": 28,
+          "strategyScore": 26.5
+        }
+      ],
+      "misses": [
+        {
+          "id": "44690873744",
+          "kind": "charity",
+          "name": "BRANCHES 4 CHANGE LTD",
+          "judgeScore": 26.5
+        },
+        {
+          "id": "43682880217",
+          "kind": "charity",
+          "name": "Ginhar Miya Ltd",
+          "judgeScore": 26.5
+        },
+        {
+          "id": "29667735659",
+          "kind": "charity",
+          "name": "LIVIPOD LIMITED",
+          "judgeScore": 26.5
+        },
+        {
+          "id": "92687918270",
+          "kind": "charity",
+          "name": "PATHWAYS AND ADVOCACY NETWORK LTD",
+          "judgeScore": 26.5
+        },
+        {
+          "id": "85719667289",
+          "kind": "charity",
+          "name": "SNACKTEMBER",
+          "judgeScore": 28
+        }
+      ]
+    },
+    {
+      "id": "social_enterprise_delivery_match:first-nations-leadership-women",
+      "title": "First Nations women and leadership initiative seeking the right funding network",
+      "family": "social_enterprise_delivery_match",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 1,
+        "justiceExposure": 1,
+        "actability": 0.19999999999999998,
+        "relationshipUtility": 0.75,
+        "overallScore": 0.7768055555555556
+      },
+      "topResults": [
+        {
+          "id": "99ff6b2a-ef9a-40c6-81f6-bf5144a7ea58",
+          "kind": "social_enterprise",
+          "name": "Aboriginal Interpreting WA Aboriginal Corporation (AIWA)",
+          "judgeScore": 22.25,
+          "strategyScore": 19
+        },
+        {
+          "id": "62677603-326b-47ae-ba8d-8d9ef5c4d25a",
+          "kind": "social_enterprise",
+          "name": "Adapt Mentorship Indigenous Corporation",
+          "judgeScore": 22.25,
+          "strategyScore": 19
+        },
+        {
+          "id": "571b05e3-8939-4b43-9680-7f3d7c00ee93",
+          "kind": "social_enterprise",
+          "name": "Bindal Sharks United Training, Employment, Sport and Recreation Aboriginal Corporation",
+          "judgeScore": 22.25,
+          "strategyScore": 19
+        },
+        {
+          "id": "87cfdd61-453b-4811-be11-5130cd268061",
+          "kind": "social_enterprise",
+          "name": "Bunya Wakka Wakka Cultural and Heritage Aboriginal Corporation",
+          "judgeScore": 22.25,
+          "strategyScore": 19
+        },
+        {
+          "id": "f0acc628-3bfb-49f4-94d5-455ccc03fe7c",
+          "kind": "social_enterprise",
+          "name": "Business Lifestyle Learning Aboriginal Corporation",
+          "judgeScore": 22.25,
+          "strategyScore": 19
+        }
+      ],
+      "misses": [
+        {
+          "id": "f2e35c0c-a880-4534-8e3a-443a9d363dd7",
+          "kind": "social_enterprise",
+          "name": "Groote Broadcasting Anindilyakwa Radio Aboriginal Corporation",
+          "judgeScore": 22.25
+        },
+        {
+          "id": "1454ee32-b2d5-4acd-8fe5-fd2aaa584c50",
+          "kind": "social_enterprise",
+          "name": "Karalundi Aboriginal Education Community Aboriginal Corporation",
+          "judgeScore": 22.25
+        },
+        {
+          "id": "51e0b49f-babe-44b6-80c4-e57c2ec67cca",
+          "kind": "social_enterprise",
+          "name": "Nungalinya College Indigenous Corporation",
+          "judgeScore": 22.25
+        },
+        {
+          "id": "ccfd1992-b0a3-4e75-8980-36d1b950282b",
+          "kind": "social_enterprise",
+          "name": "Clear",
+          "judgeScore": 20.25
+        },
+        {
+          "id": "dbe2ae75-e935-4339-b0ba-de6f46929504",
+          "kind": "social_enterprise",
+          "name": "Groote Eylandt Bickerton Island Primary College Aboriginal Corporation",
+          "judgeScore": 22.25
+        }
+      ]
+    },
+    {
+      "id": "need_gap_search:first-nations-leadership-women",
+      "title": "First Nations women and leadership initiative seeking the right funding network",
+      "family": "need_gap_search",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 1,
+        "justiceExposure": 1,
+        "actability": 1,
+        "relationshipUtility": 1,
+        "overallScore": 0.8555555555555555
+      },
+      "topResults": [
+        {
+          "id": "0839",
+          "kind": "place",
+          "name": "0839",
+          "judgeScore": 20,
+          "strategyScore": 16
+        },
+        {
+          "id": "0840",
+          "kind": "place",
+          "name": "0840",
+          "judgeScore": 20,
+          "strategyScore": 16
+        },
+        {
+          "id": "0847",
+          "kind": "place",
+          "name": "0847",
+          "judgeScore": 20,
+          "strategyScore": 16
+        },
+        {
+          "id": "0862",
+          "kind": "place",
+          "name": "0862",
+          "judgeScore": 20,
+          "strategyScore": 16
+        },
+        {
+          "id": "4285",
+          "kind": "place",
+          "name": "4285",
+          "judgeScore": 20,
+          "strategyScore": 16
+        }
+      ],
+      "misses": [
+        {
+          "id": "4341",
+          "kind": "place",
+          "name": "4341",
+          "judgeScore": 20
+        },
+        {
+          "id": "4342",
+          "kind": "place",
+          "name": "4342",
+          "judgeScore": 20
+        },
+        {
+          "id": "4347",
+          "kind": "place",
+          "name": "4347",
+          "judgeScore": 20
+        },
+        {
+          "id": "4354",
+          "kind": "place",
+          "name": "4354",
+          "judgeScore": 20
+        },
+        {
+          "id": "4355",
+          "kind": "place",
+          "name": "4355",
+          "judgeScore": 20
+        }
+      ]
+    },
+    {
+      "id": "grant_discovery:housing-homelessness-remote",
+      "title": "Need-first search for housing and homelessness support in remote communities",
+      "family": "grant_discovery",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 1,
+        "justiceExposure": 1,
+        "actability": 1,
+        "relationshipUtility": 0.43499999999999994,
+        "overallScore": 0.8131805555555556
+      },
+      "topResults": [
+        {
+          "id": "61f4603f-cb27-407c-8341-e015800fac9a",
+          "kind": "grant",
+          "name": "2023 Youth Opportunities grant applications",
+          "judgeScore": 23,
+          "strategyScore": 22
+        },
+        {
+          "id": "ddcf921a-c8fb-411a-ab8d-89d62aa7ab59",
+          "kind": "grant",
+          "name": "2023/24 Investing in Women",
+          "judgeScore": 23,
+          "strategyScore": 22
+        },
+        {
+          "id": "eb02c963-69dd-4db4-8bd6-1edb66ae3a09",
+          "kind": "grant",
+          "name": "A parenting program to improve Aboriginal parent and child wellbeing. This project aims to develop and implement a culturally safe, trauma-informed parenting program that can interrupt the intergenera",
+          "judgeScore": 23,
+          "strategyScore": 22
+        },
+        {
+          "id": "f910afd4-b366-4c0c-9883-afc950e543aa",
+          "kind": "grant",
+          "name": "A study of Torres Strait Islander mobility amid climate change. This project aims to investigate the mobility of Torres Strait Islanders in response to climate change, focusing on how potential reloca",
+          "judgeScore": 23,
+          "strategyScore": 22
+        },
+        {
+          "id": "b22604e7-67d3-4128-8635-294f40db4daf",
+          "kind": "grant",
+          "name": "Aboriginal Community Connectors Pilot program",
+          "judgeScore": 23,
+          "strategyScore": 22
+        }
+      ],
+      "misses": [
+        {
+          "id": "6f82a730-6389-4bc6-a1d2-0e394cd4fe75",
+          "kind": "grant",
+          "name": "2026-2029 Indigenous Employment Initiative",
+          "judgeScore": 21.5
+        },
+        {
+          "id": "5ec96ad4-e108-4503-9beb-b18c4fab0a9a",
+          "kind": "grant",
+          "name": "Aboriginal Apprenticeship Certificate III In Engineering- Mechanical Trade",
+          "judgeScore": 20
+        },
+        {
+          "id": "3170d364-c5b7-4a66-b1d2-c521a73c0312",
+          "kind": "grant",
+          "name": "Alcohol and Other Drugs (AOD) Post-Custodial Grants",
+          "judgeScore": 23
+        },
+        {
+          "id": "f5a157e2-42fe-413c-ad1b-11e1e0159049",
+          "kind": "grant",
+          "name": "Alcohol and Other Drugs Family, Carer and Friends Support Grants - Stream 2",
+          "judgeScore": 23
+        },
+        {
+          "id": "f3db9001-95e9-496d-ad12-76342a3f2b10",
+          "kind": "grant",
+          "name": "Bloom Research Program",
+          "judgeScore": 21.5
+        }
+      ]
+    },
+    {
+      "id": "foundation_discovery:housing-homelessness-remote",
+      "title": "Need-first search for housing and homelessness support in remote communities",
+      "family": "foundation_discovery",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 0.9258064516129032,
+        "justiceExposure": 1,
+        "actability": 0.5,
+        "relationshipUtility": 0.5599999999999999,
+        "overallScore": 0.7702168458781362
+      },
+      "topResults": [
+        {
+          "id": "b26adc75-ad71-456a-8ebb-6b455dfc3f95",
+          "kind": "foundation",
+          "name": "the Fremantle Foundation Community Charity Trust",
+          "judgeScore": 31,
+          "strategyScore": 31
+        },
+        {
+          "id": "5dca7c4f-bc4a-4351-ae59-e3d7a63d5805",
+          "kind": "foundation",
+          "name": "Crown Resorts Foundation Private Ancillary Fund",
+          "judgeScore": 30,
+          "strategyScore": 28.5
+        },
+        {
+          "id": "8f8704be-d6e8-40f3-b561-ac6630ce5b36",
+          "kind": "foundation",
+          "name": "Minderoo Foundation Limited as trustee for The Minderoo Foundation Trust",
+          "judgeScore": 30,
+          "strategyScore": 28.5
+        },
+        {
+          "id": "3bef14a0-f817-40a5-9130-99bcdd50c84d",
+          "kind": "foundation",
+          "name": "KINDRED PATHWAYS FOUNDATION LIMITED",
+          "judgeScore": 29,
+          "strategyScore": 28
+        },
+        {
+          "id": "ecf3e6b0-20c6-455a-a9a3-233d8f2347e2",
+          "kind": "foundation",
+          "name": "Make-A-Wish Foundation Of Australia Ltd.",
+          "judgeScore": 28,
+          "strategyScore": 27.5
+        }
+      ],
+      "misses": [
+        {
+          "id": "7575854f-9371-4dcd-bd52-5b38954211c9",
+          "kind": "foundation",
+          "name": "Anglicare Foundation Funds",
+          "judgeScore": 27
+        },
+        {
+          "id": "e9677dee-4f78-4da1-a030-607253cbcd9b",
+          "kind": "foundation",
+          "name": "BHUMINANDA DHAULIDEVI FOUNDATION INCORPORATED",
+          "judgeScore": 26
+        },
+        {
+          "id": "8af9120d-7efd-4766-a6e5-2bc31ed9b402",
+          "kind": "foundation",
+          "name": "Brent Kelly Foundation Pty Ltd",
+          "judgeScore": 27
+        },
+        {
+          "id": "ef4b0ddc-06b4-4a2b-8596-d5cc9401c275",
+          "kind": "foundation",
+          "name": "Da Costa Samaritan Fund Trust",
+          "judgeScore": 27
+        },
+        {
+          "id": "92e21a0d-41c0-46b8-b55b-151ec579ff7f",
+          "kind": "foundation",
+          "name": "Daystar Foundation",
+          "judgeScore": 27
+        }
+      ]
+    },
+    {
+      "id": "charity_delivery_match:housing-homelessness-remote",
+      "title": "Need-first search for housing and homelessness support in remote communities",
+      "family": "charity_delivery_match",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 1,
+        "justiceExposure": 1,
+        "actability": 0.39999999999999997,
+        "relationshipUtility": 0.75,
+        "overallScore": 0.7918055555555557
+      },
+      "topResults": [
+        {
+          "id": "62688406117",
+          "kind": "charity",
+          "name": "AID MERIDIAN LTD",
+          "judgeScore": 28,
+          "strategyScore": 26.5
+        },
+        {
+          "id": "74164220286",
+          "kind": "charity",
+          "name": "Australia and New Zealand Chapter of the Association for Contextual Behavioral Science",
+          "judgeScore": 28,
+          "strategyScore": 26.5
+        },
+        {
+          "id": "72686743680",
+          "kind": "charity",
+          "name": "DEADLY MALE LIMITED",
+          "judgeScore": 28,
+          "strategyScore": 26.5
+        },
+        {
+          "id": "75614188715",
+          "kind": "charity",
+          "name": "Eczema Support Australia Ltd",
+          "judgeScore": 28,
+          "strategyScore": 26.5
+        },
+        {
+          "id": "56691755003",
+          "kind": "charity",
+          "name": "EMPOWERED PARENTHOOD AUSTRALIA LTD",
+          "judgeScore": 28,
+          "strategyScore": 26.5
+        }
+      ],
+      "misses": [
+        {
+          "id": "83863862973",
+          "kind": "charity",
+          "name": "Australian Indigenous Psychologists Association Incorporated",
+          "judgeScore": 26.5
+        },
+        {
+          "id": "17685094651",
+          "kind": "charity",
+          "name": "GLOBAL ENABLERS GROUP LTD",
+          "judgeScore": 26.5
+        },
+        {
+          "id": "16682914558",
+          "kind": "charity",
+          "name": "JUST ONE REASON LIMITED",
+          "judgeScore": 26.5
+        },
+        {
+          "id": "78667515095",
+          "kind": "charity",
+          "name": "REMOTE AUSTRALIANS MATTER LIMITED",
+          "judgeScore": 28
+        },
+        {
+          "id": "50684297818",
+          "kind": "charity",
+          "name": "RESOLUTE READY LTD",
+          "judgeScore": 28
+        }
+      ]
+    },
+    {
+      "id": "social_enterprise_delivery_match:housing-homelessness-remote",
+      "title": "Need-first search for housing and homelessness support in remote communities",
+      "family": "social_enterprise_delivery_match",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2857142857142857,
+        "meanRelevance": 0.8962962962962964,
+        "justiceExposure": 1,
+        "actability": 0.19999999999999998,
+        "relationshipUtility": 0.75,
+        "overallScore": 0.7576521164021165
+      },
+      "topResults": [
+        {
+          "id": "cb354004-b0b7-462f-823c-e8b7c2136c8d",
+          "kind": "social_enterprise",
+          "name": "Aboriginal Corporation for Homeless and Rehabilitation Community Services",
+          "judgeScore": 20.25,
+          "strategyScore": 17
+        },
+        {
+          "id": "baec1d29-5f15-4efd-9dc5-e9284423cb86",
+          "kind": "social_enterprise",
+          "name": "Munjuwa Health, Housing & Community Aboriginal Corporation",
+          "judgeScore": 20.25,
+          "strategyScore": 17
+        },
+        {
+          "id": "19be2fdc-0f97-44a9-b903-7d4a727898c6",
+          "kind": "social_enterprise",
+          "name": "Mutkin Residential and Community Care Indigenous Corporation",
+          "judgeScore": 20.25,
+          "strategyScore": 17
+        },
+        {
+          "id": "688fdf6b-fd8c-4f21-90a4-b296d5394add",
+          "kind": "social_enterprise",
+          "name": "Aboriginal Drug and Alcohol Council (SA) Aboriginal Corporation",
+          "judgeScore": 17.25,
+          "strategyScore": 15
+        },
+        {
+          "id": "f5eaa1f8-ba3b-456c-a21d-e51682664fd7",
+          "kind": "social_enterprise",
+          "name": "Aboriginal Housing Northern Territory (AHNT) Aboriginal Corporation",
+          "judgeScore": 17.25,
+          "strategyScore": 15
+        }
+      ],
+      "misses": [
+        {
+          "id": "4d4daadb-933e-4ec7-af9d-77eac4e23c0c",
+          "kind": "social_enterprise",
+          "name": "Ngangganawili Aboriginal Community Controlled Health and Medical Services Aboriginal Corporation",
+          "judgeScore": 17.25
+        },
+        {
+          "id": "42f464c1-ed8e-40ed-aa97-1e85c0e4542a",
+          "kind": "social_enterprise",
+          "name": "The Central Australian Aboriginal Alcohol Programmes Unit Aboriginal Corporation",
+          "judgeScore": 17.25
+        },
+        {
+          "id": "31bf9158-799c-44c8-91d3-e7c221d4b108",
+          "kind": "social_enterprise",
+          "name": "Yura Yungi Medical Service Aboriginal Corporation",
+          "judgeScore": 17.25
+        },
+        {
+          "id": "c2e92155-ffe7-4178-9084-367efbae4da9",
+          "kind": "social_enterprise",
+          "name": "Aputula Housing Aboriginal Corporation",
+          "judgeScore": 17.25
+        },
+        {
+          "id": "0c2d342b-3522-4385-8439-6ade797227b0",
+          "kind": "social_enterprise",
+          "name": "Barkly Region Alcohol and Drug Abuse Advisory Group Aboriginal Corporation",
+          "judgeScore": 17.25
+        }
+      ]
+    },
+    {
+      "id": "need_gap_search:housing-homelessness-remote",
+      "title": "Need-first search for housing and homelessness support in remote communities",
+      "family": "need_gap_search",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 1,
+        "justiceExposure": 1,
+        "actability": 1,
+        "relationshipUtility": 1,
+        "overallScore": 0.8555555555555555
+      },
+      "topResults": [
+        {
+          "id": "0839",
+          "kind": "place",
+          "name": "0839",
+          "judgeScore": 20,
+          "strategyScore": 16
+        },
+        {
+          "id": "0840",
+          "kind": "place",
+          "name": "0840",
+          "judgeScore": 20,
+          "strategyScore": 16
+        },
+        {
+          "id": "0847",
+          "kind": "place",
+          "name": "0847",
+          "judgeScore": 20,
+          "strategyScore": 16
+        },
+        {
+          "id": "0862",
+          "kind": "place",
+          "name": "0862",
+          "judgeScore": 20,
+          "strategyScore": 16
+        },
+        {
+          "id": "4871",
+          "kind": "place",
+          "name": "4871",
+          "judgeScore": 20,
+          "strategyScore": 16
+        }
+      ],
+      "misses": [
+        {
+          "id": "5265",
+          "kind": "place",
+          "name": "5265",
+          "judgeScore": 20
+        },
+        {
+          "id": "5268",
+          "kind": "place",
+          "name": "5268",
+          "judgeScore": 20
+        },
+        {
+          "id": "5277",
+          "kind": "place",
+          "name": "5277",
+          "judgeScore": 20
+        },
+        {
+          "id": "5278",
+          "kind": "place",
+          "name": "5278",
+          "judgeScore": 20
+        },
+        {
+          "id": "5279",
+          "kind": "place",
+          "name": "5279",
+          "judgeScore": 20
+        }
+      ]
+    },
+    {
+      "id": "grant_discovery:disability-services-qld",
+      "title": "Queensland disability and community inclusion search",
+      "family": "grant_discovery",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 1,
+        "justiceExposure": 1,
+        "actability": 1,
+        "relationshipUtility": 0.4699999999999999,
+        "overallScore": 0.8158055555555556
+      },
+      "topResults": [
+        {
+          "id": "61f4603f-cb27-407c-8341-e015800fac9a",
+          "kind": "grant",
+          "name": "2023 Youth Opportunities grant applications",
+          "judgeScore": 23,
+          "strategyScore": 21
+        },
+        {
+          "id": "ddcf921a-c8fb-411a-ab8d-89d62aa7ab59",
+          "kind": "grant",
+          "name": "2023/24 Investing in Women",
+          "judgeScore": 23,
+          "strategyScore": 21
+        },
+        {
+          "id": "287b2838-a592-419a-b7b7-25ed813c800a",
+          "kind": "grant",
+          "name": "2026 Inclusive Environments Funding Program - Inclusion Readiness Payments",
+          "judgeScore": 23,
+          "strategyScore": 21
+        },
+        {
+          "id": "aa729caf-8928-4b92-abbc-3cd3ae623da8",
+          "kind": "grant",
+          "name": "A Reconfigurable Neuromorphic Compute System for Brain-Scale Simulations. The project aims to construct a world-first reconfigurable neuromorphic compute system. The hardware is designed to run brain-",
+          "judgeScore": 23,
+          "strategyScore": 21
+        },
+        {
+          "id": "5536f68f-4470-4e4e-badc-f1d904b14734",
+          "kind": "grant",
+          "name": "A smartphone rip-detection tool to improve rip current awareness. This project aims to develop a smartphone rip-detection tool and online education game to help reduce the number of Australians drowni",
+          "judgeScore": 23,
+          "strategyScore": 21
+        }
+      ],
+      "misses": [
+        {
+          "id": "6f82a730-6389-4bc6-a1d2-0e394cd4fe75",
+          "kind": "grant",
+          "name": "2026-2029 Indigenous Employment Initiative",
+          "judgeScore": 21.5
+        },
+        {
+          "id": "5ec96ad4-e108-4503-9beb-b18c4fab0a9a",
+          "kind": "grant",
+          "name": "Aboriginal Apprenticeship Certificate III In Engineering- Mechanical Trade",
+          "judgeScore": 20
+        },
+        {
+          "id": "bafb4f24-51f8-48ba-a6b2-37486c21f82e",
+          "kind": "grant",
+          "name": "AEDC community grants",
+          "judgeScore": 23
+        },
+        {
+          "id": "964cb142-92cf-49f9-a31b-fc2aa2315a1c",
+          "kind": "grant",
+          "name": "Annual Grant Round",
+          "judgeScore": 20
+        },
+        {
+          "id": "2980623e-8e41-4659-ae6c-844c28243aa4",
+          "kind": "grant",
+          "name": "Annual Grants Program",
+          "judgeScore": 20
+        }
+      ]
+    },
+    {
+      "id": "foundation_discovery:disability-services-qld",
+      "title": "Queensland disability and community inclusion search",
+      "family": "foundation_discovery",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 0.9580645161290322,
+        "justiceExposure": 1,
+        "actability": 0.65,
+        "relationshipUtility": 0.72,
+        "overallScore": 0.799918458781362
+      },
+      "topResults": [
+        {
+          "id": "6ff5d678-9a13-4b8b-b5f9-72ec93a17384",
+          "kind": "foundation",
+          "name": "Bravehearts Foundation",
+          "judgeScore": 30,
+          "strategyScore": 26.5
+        },
+        {
+          "id": "9f87828a-ff3a-44bc-847d-2fde6f96ac9f",
+          "kind": "foundation",
+          "name": "Edmund Rice Foundation (Australia)",
+          "judgeScore": 30,
+          "strategyScore": 26.5
+        },
+        {
+          "id": "8054e9eb-6a31-4290-9168-666ecc1b6dad",
+          "kind": "foundation",
+          "name": "Five Star Charitable Trust",
+          "judgeScore": 30,
+          "strategyScore": 26.5
+        },
+        {
+          "id": "f4034fa9-f959-4cc2-92e8-5b0a7d58cccd",
+          "kind": "foundation",
+          "name": "Human Appeal International Australia",
+          "judgeScore": 31,
+          "strategyScore": 26.5
+        },
+        {
+          "id": "fd594e4d-1d05-4bd3-99cf-b6adc1b3cf22",
+          "kind": "foundation",
+          "name": "Preston Campbell Foundation Limited",
+          "judgeScore": 30,
+          "strategyScore": 26.5
+        }
+      ],
+      "misses": [
+        {
+          "id": "16af1c00-9b9e-4c43-ad4a-71f10cbc0e29",
+          "kind": "foundation",
+          "name": "FRASER FOUNDATION",
+          "judgeScore": 28
+        },
+        {
+          "id": "6ec3d85f-c153-4a62-ba58-70c8575413e5",
+          "kind": "foundation",
+          "name": "The Smiles Foundation",
+          "judgeScore": 28
+        },
+        {
+          "id": "94995671-ab37-4090-b65b-a9bca4c096c4",
+          "kind": "foundation",
+          "name": "Arthritis Foundation Of Wa Inc",
+          "judgeScore": 27
+        },
+        {
+          "id": "4c337370-4770-447e-b9dd-6e9a40ec8bd7",
+          "kind": "foundation",
+          "name": "Australian Childhood Foundation",
+          "judgeScore": 27
+        },
+        {
+          "id": "d6e6dc2d-acd6-48a7-8db8-fd92845ae049",
+          "kind": "foundation",
+          "name": "Brave Foundation",
+          "judgeScore": 27
+        }
+      ]
+    },
+    {
+      "id": "charity_delivery_match:disability-services-qld",
+      "title": "Queensland disability and community inclusion search",
+      "family": "charity_delivery_match",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 1,
+        "justiceExposure": 1,
+        "actability": 0.39999999999999997,
+        "relationshipUtility": 0.75,
+        "overallScore": 0.7918055555555557
+      },
+      "topResults": [
+        {
+          "id": "38650171930",
+          "kind": "charity",
+          "name": "ABORIGINAL AND TORRES STRAIT ISLANDER HOUSING QUEENSLAND LIMITED",
+          "judgeScore": 24,
+          "strategyScore": 21.5
+        },
+        {
+          "id": "47103733582",
+          "kind": "charity",
+          "name": "Action for Children And The Aged (ACATA) Australia",
+          "judgeScore": 24,
+          "strategyScore": 21.5
+        },
+        {
+          "id": "15651164082",
+          "kind": "charity",
+          "name": "ASPIRE CAIRNS COMMUNITY LIMITED",
+          "judgeScore": 24,
+          "strategyScore": 21.5
+        },
+        {
+          "id": "74164220286",
+          "kind": "charity",
+          "name": "Australia and New Zealand Chapter of the Association for Contextual Behavioral Science",
+          "judgeScore": 24,
+          "strategyScore": 21.5
+        },
+        {
+          "id": "48326796042",
+          "kind": "charity",
+          "name": "Australian Society of Special Care in Dentistry Incorporated",
+          "judgeScore": 24,
+          "strategyScore": 21.5
+        }
+      ],
+      "misses": [
+        {
+          "id": "72716811463",
+          "kind": "charity",
+          "name": "Allawaw Aboriginal Corporation",
+          "judgeScore": 22.5
+        },
+        {
+          "id": "83928434866",
+          "kind": "charity",
+          "name": "Malosi swag incorporated",
+          "judgeScore": 24
+        },
+        {
+          "id": "63565769081",
+          "kind": "charity",
+          "name": "Matung Kunarr Aboriginal Corporation",
+          "judgeScore": 24
+        },
+        {
+          "id": "15803603765",
+          "kind": "charity",
+          "name": "National Indigenous Corporation of Australia",
+          "judgeScore": 24
+        },
+        {
+          "id": "20688239527",
+          "kind": "charity",
+          "name": "NEU CONNECTIONS CLINICAL NEUROPLASTICITY SOLUTIONS (CNS) LIMITED",
+          "judgeScore": 22.5
+        }
+      ]
+    },
+    {
+      "id": "social_enterprise_delivery_match:disability-services-qld",
+      "title": "Queensland disability and community inclusion search",
+      "family": "social_enterprise_delivery_match",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2857142857142857,
+        "meanRelevance": 0.9273972602739724,
+        "justiceExposure": 1,
+        "actability": 0.18,
+        "relationshipUtility": 0.7,
+        "overallScore": 0.7586223091976516
+      },
+      "topResults": [
+        {
+          "id": "571b05e3-8939-4b43-9680-7f3d7c00ee93",
+          "kind": "social_enterprise",
+          "name": "Bindal Sharks United Training, Employment, Sport and Recreation Aboriginal Corporation",
+          "judgeScore": 18.25,
+          "strategyScore": 15
+        },
+        {
+          "id": "cfb12c88-d413-4c39-ace8-ee9e3751b411",
+          "kind": "social_enterprise",
+          "name": "Injilinji Aboriginal and Torres Strait Islanders Corporation for Children and Youth Services",
+          "judgeScore": 18.25,
+          "strategyScore": 15
+        },
+        {
+          "id": "69c58b71-c833-4788-82e1-39f02fd93f2f",
+          "kind": "social_enterprise",
+          "name": "Logan Culture, Education and Wellbeing Torres Strait Islander Corporation",
+          "judgeScore": 18.25,
+          "strategyScore": 15
+        },
+        {
+          "id": "af95f6df-eae6-4c8e-acc5-82bf7c1c4749",
+          "kind": "social_enterprise",
+          "name": "Honoured",
+          "judgeScore": 17,
+          "strategyScore": 14
+        },
+        {
+          "id": "99ff6b2a-ef9a-40c6-81f6-bf5144a7ea58",
+          "kind": "social_enterprise",
+          "name": "Aboriginal Interpreting WA Aboriginal Corporation (AIWA)",
+          "judgeScore": 16.25,
+          "strategyScore": 13
+        }
+      ],
+      "misses": [
+        {
+          "id": "6078a96e-5558-4518-8b01-a2c734bc222c",
+          "kind": "social_enterprise",
+          "name": "The Big Sister Experience",
+          "judgeScore": 15
+        },
+        {
+          "id": "54fec973-dc61-4b66-b1eb-eb5ab1d7b7b9",
+          "kind": "social_enterprise",
+          "name": "Cunnamulla Aboriginal Corporation for Health",
+          "judgeScore": 14.5
+        },
+        {
+          "id": "5f93b496-8d6f-4346-a4c5-4356062d7d5e",
+          "kind": "social_enterprise",
+          "name": "KsafeT",
+          "judgeScore": 15
+        },
+        {
+          "id": "eccd8c25-f0da-4c3e-83fe-109f9a0ad3d3",
+          "kind": "social_enterprise",
+          "name": "2Spirits Aboriginal and Torres Strait Islander Corporation for Queensland LGBTIQ+ Sistergirl and Brotherboy Health and Wellbeing",
+          "judgeScore": 13.25
+        },
+        {
+          "id": "8ede8ef2-f79a-468c-a679-44118915f760",
+          "kind": "social_enterprise",
+          "name": "Entrepreneurs and Small Business Indigenous Corporation",
+          "judgeScore": 13.25
+        }
+      ]
+    },
+    {
+      "id": "need_gap_search:disability-services-qld",
+      "title": "Queensland disability and community inclusion search",
+      "family": "need_gap_search",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 1,
+        "justiceExposure": 1,
+        "actability": 1,
+        "relationshipUtility": 1,
+        "overallScore": 0.8555555555555555
+      },
+      "topResults": [
+        {
+          "id": "4285",
+          "kind": "place",
+          "name": "4285",
+          "judgeScore": 16,
+          "strategyScore": 12
+        },
+        {
+          "id": "4287",
+          "kind": "place",
+          "name": "4287",
+          "judgeScore": 16,
+          "strategyScore": 12
+        },
+        {
+          "id": "4311",
+          "kind": "place",
+          "name": "4311",
+          "judgeScore": 16,
+          "strategyScore": 12
+        },
+        {
+          "id": "4312",
+          "kind": "place",
+          "name": "4312",
+          "judgeScore": 16,
+          "strategyScore": 12
+        },
+        {
+          "id": "4313",
+          "kind": "place",
+          "name": "4313",
+          "judgeScore": 16,
+          "strategyScore": 12
+        }
+      ],
+      "misses": [
+        {
+          "id": "4355",
+          "kind": "place",
+          "name": "4355",
+          "judgeScore": 16
+        },
+        {
+          "id": "4357",
+          "kind": "place",
+          "name": "4357",
+          "judgeScore": 16
+        },
+        {
+          "id": "4361",
+          "kind": "place",
+          "name": "4361",
+          "judgeScore": 16
+        },
+        {
+          "id": "4365",
+          "kind": "place",
+          "name": "4365",
+          "judgeScore": 16
+        },
+        {
+          "id": "4373",
+          "kind": "place",
+          "name": "4373",
+          "judgeScore": 16
+        }
+      ]
+    },
+    {
+      "id": "grant_discovery:culture-language-community",
+      "title": "Community-led culture, language, and arts funding network",
+      "family": "grant_discovery",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 1,
+        "justiceExposure": 1,
+        "actability": 1,
+        "relationshipUtility": 0.39999999999999997,
+        "overallScore": 0.8105555555555556
+      },
+      "topResults": [
+        {
+          "id": "61f4603f-cb27-407c-8341-e015800fac9a",
+          "kind": "grant",
+          "name": "2023 Youth Opportunities grant applications",
+          "judgeScore": 28,
+          "strategyScore": 27
+        },
+        {
+          "id": "c3f19198-9395-4e4f-9e28-06f06e314067",
+          "kind": "grant",
+          "name": "2023-2024 Cultural Grants Program - Round 2",
+          "judgeScore": 28,
+          "strategyScore": 27
+        },
+        {
+          "id": "ddcf921a-c8fb-411a-ab8d-89d62aa7ab59",
+          "kind": "grant",
+          "name": "2023/24 Investing in Women",
+          "judgeScore": 28,
+          "strategyScore": 27
+        },
+        {
+          "id": "7a432cbf-3c0d-409b-aeba-1ba8fca98ab9",
+          "kind": "grant",
+          "name": "2024 Aboriginal Languages Revival Program",
+          "judgeScore": 28,
+          "strategyScore": 27
+        },
+        {
+          "id": "d66b26c2-42cc-4ac9-9266-12d01e34b248",
+          "kind": "grant",
+          "name": "2024 Aboriginal Sustainable Funding Program",
+          "judgeScore": 28,
+          "strategyScore": 27
+        }
+      ],
+      "misses": [
+        {
+          "id": "e8225a42-748d-4203-9a24-a69e50ccc750",
+          "kind": "grant",
+          "name": "2025-27 Caring for State Heritage",
+          "judgeScore": 28
+        },
+        {
+          "id": "24fb6f3c-1a09-40e4-a0b2-ee3b651983b4",
+          "kind": "grant",
+          "name": "2026 Aboriginal Families as Teachers",
+          "judgeScore": 28
+        },
+        {
+          "id": "c1244b63-0640-4ae7-ba21-c0f0aa16debc",
+          "kind": "grant",
+          "name": "2026 Aboriginal Languages Revival Program",
+          "judgeScore": 28
+        },
+        {
+          "id": "e30c53f7-b4d8-4c1f-9cf3-6394d8d1eaf8",
+          "kind": "grant",
+          "name": "2026 Ninganah No More",
+          "judgeScore": 28
+        },
+        {
+          "id": "6f82a730-6389-4bc6-a1d2-0e394cd4fe75",
+          "kind": "grant",
+          "name": "2026-2029 Indigenous Employment Initiative",
+          "judgeScore": 26.5
+        }
+      ]
+    },
+    {
+      "id": "foundation_discovery:culture-language-community",
+      "title": "Community-led culture, language, and arts funding network",
+      "family": "foundation_discovery",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 0.913888888888889,
+        "justiceExposure": 1,
+        "actability": 0.55,
+        "relationshipUtility": 0.6199999999999999,
+        "overallScore": 0.7760833333333333
+      },
+      "topResults": [
+        {
+          "id": "93f9da95-eab9-42c4-a2d8-68b685868bbf",
+          "kind": "foundation",
+          "name": "Youth Plus Foundation Limited",
+          "judgeScore": 36,
+          "strategyScore": 34.5
+        },
+        {
+          "id": "962e557a-daad-45e7-bbd3-aa67ec1d66b9",
+          "kind": "foundation",
+          "name": "The Balnaves Foundation",
+          "judgeScore": 36,
+          "strategyScore": 33.5
+        },
+        {
+          "id": "8f8704be-d6e8-40f3-b561-ac6630ce5b36",
+          "kind": "foundation",
+          "name": "Minderoo Foundation Limited as trustee for The Minderoo Foundation Trust",
+          "judgeScore": 33,
+          "strategyScore": 30.5
+        },
+        {
+          "id": "2e064017-4dd8-41e9-9090-bd9814a074d3",
+          "kind": "foundation",
+          "name": "The Trustee For The Larrakia Development Trust",
+          "judgeScore": 33,
+          "strategyScore": 30.5
+        },
+        {
+          "id": "c6137c0e-acaa-4861-8bc1-929d449f7d00",
+          "kind": "foundation",
+          "name": "The Trustee For The Qantas Foundation Memorial Trust",
+          "judgeScore": 33,
+          "strategyScore": 30.5
+        }
+      ],
+      "misses": [
+        {
+          "id": "2abe8009-17fd-4512-ac01-03bd5d41db93",
+          "kind": "foundation",
+          "name": "Nomads Charitable & Educational Foundation",
+          "judgeScore": 31
+        },
+        {
+          "id": "93fb2ef7-8d8c-422a-9516-4646310c4686",
+          "kind": "foundation",
+          "name": "Bruce McMullin Foundation",
+          "judgeScore": 29
+        },
+        {
+          "id": "732cc588-8551-4d94-a22c-b7e26aa74e6f",
+          "kind": "foundation",
+          "name": "ELLENBROOK CULTURAL FOUNDATION INCORPORATED",
+          "judgeScore": 31
+        },
+        {
+          "id": "fd65a9ee-e942-4ee3-8351-e58e46b8446e",
+          "kind": "foundation",
+          "name": "THE DHADJOWA FOUNDATION LTD",
+          "judgeScore": 31
+        },
+        {
+          "id": "d0a53909-0fa5-4ddb-9921-bb014766ce7f",
+          "kind": "foundation",
+          "name": "THE EDDIE BETTS FOUNDATION LTD",
+          "judgeScore": 31
+        }
+      ]
+    },
+    {
+      "id": "charity_delivery_match:culture-language-community",
+      "title": "Community-led culture, language, and arts funding network",
+      "family": "charity_delivery_match",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 1,
+        "justiceExposure": 1,
+        "actability": 0.39999999999999997,
+        "relationshipUtility": 0.75,
+        "overallScore": 0.7918055555555557
+      },
+      "topResults": [
+        {
+          "id": "20005700112",
+          "kind": "charity",
+          "name": "Al-Anon Family Groups (Australia) Pty. Ltd.",
+          "judgeScore": 23,
+          "strategyScore": 22.5
+        },
+        {
+          "id": "25677488489",
+          "kind": "charity",
+          "name": "ALL TOGETHER THRIVING LIMITED",
+          "judgeScore": 23,
+          "strategyScore": 22.5
+        },
+        {
+          "id": "74164220286",
+          "kind": "charity",
+          "name": "Australia and New Zealand Chapter of the Association for Contextual Behavioral Science",
+          "judgeScore": 23,
+          "strategyScore": 22.5
+        },
+        {
+          "id": "58930578025",
+          "kind": "charity",
+          "name": "Australia and New Zealand Transplant and Cellular Therapies Limited",
+          "judgeScore": 23,
+          "strategyScore": 22.5
+        },
+        {
+          "id": "48326796042",
+          "kind": "charity",
+          "name": "Australian Society of Special Care in Dentistry Incorporated",
+          "judgeScore": 23,
+          "strategyScore": 22.5
+        }
+      ],
+      "misses": [
+        {
+          "id": "51932500318",
+          "kind": "charity",
+          "name": "Bindelong Aboriginal Corporation",
+          "judgeScore": 21.5
+        },
+        {
+          "id": "44690873744",
+          "kind": "charity",
+          "name": "BRANCHES 4 CHANGE LTD",
+          "judgeScore": 21.5
+        },
+        {
+          "id": "61666394869",
+          "kind": "charity",
+          "name": "CULTURAL DIVERSITY INTIATIVES PTY LTD",
+          "judgeScore": 21.5
+        },
+        {
+          "id": "17689318812",
+          "kind": "charity",
+          "name": "DEAF REACH AUSTRALIA LIMITED",
+          "judgeScore": 21.5
+        },
+        {
+          "id": "63312656641",
+          "kind": "charity",
+          "name": "Drug Free Australia (NSW) Incorporated",
+          "judgeScore": 23
+        }
+      ]
+    },
+    {
+      "id": "social_enterprise_delivery_match:culture-language-community",
+      "title": "Community-led culture, language, and arts funding network",
+      "family": "social_enterprise_delivery_match",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 1,
+        "justiceExposure": 1,
+        "actability": 0.19999999999999998,
+        "relationshipUtility": 0.75,
+        "overallScore": 0.7768055555555556
+      },
+      "topResults": [
+        {
+          "id": "f9ab85c4-856b-42f6-b59e-d757d26646ee",
+          "kind": "social_enterprise",
+          "name": "Aboriginal Art Centre Hub of Western Australia Aboriginal Corporation",
+          "judgeScore": 22.25,
+          "strategyScore": 19
+        },
+        {
+          "id": "7a9fa948-94b5-47fe-92d2-e306eb5f8a39",
+          "kind": "social_enterprise",
+          "name": "APY Art Centre Collective Aboriginal Corporation",
+          "judgeScore": 22.25,
+          "strategyScore": 19
+        },
+        {
+          "id": "dd87de2a-143d-4724-b998-4255fb60748d",
+          "kind": "social_enterprise",
+          "name": "Aragun Warriors Sports & Culture Torres Strait Islander Corporation",
+          "judgeScore": 22.25,
+          "strategyScore": 19
+        },
+        {
+          "id": "709b6a3a-9352-408b-8803-ec06f23a74b1",
+          "kind": "social_enterprise",
+          "name": "Ardyaloon Art & Culture Aboriginal Corporation",
+          "judgeScore": 22.25,
+          "strategyScore": 19
+        },
+        {
+          "id": "35f03f2a-bc9d-4e82-afdc-81af5e95d152",
+          "kind": "social_enterprise",
+          "name": "Arlpwe Artists Aboriginal Corporation",
+          "judgeScore": 22.25,
+          "strategyScore": 19
+        }
+      ],
+      "misses": [
+        {
+          "id": "65b8edb1-47a0-44cf-9feb-0e7ea7834806",
+          "kind": "social_enterprise",
+          "name": "Gapuwiyak Culture  &  Arts Aboriginal Corporation",
+          "judgeScore": 22.25
+        },
+        {
+          "id": "f2e35c0c-a880-4534-8e3a-443a9d363dd7",
+          "kind": "social_enterprise",
+          "name": "Groote Broadcasting Anindilyakwa Radio Aboriginal Corporation",
+          "judgeScore": 22.25
+        },
+        {
+          "id": "47a67a03-4a3e-4d8c-b28e-388fc4e4f427",
+          "kind": "social_enterprise",
+          "name": "Keringke Arts Aboriginal Corporation",
+          "judgeScore": 22.25
+        },
+        {
+          "id": "6d70dd0f-28c3-41ec-a6e4-12ca53f5a138",
+          "kind": "social_enterprise",
+          "name": "Milingimbi Art and Cultural Aboriginal Corporation",
+          "judgeScore": 22.25
+        },
+        {
+          "id": "f4f8a680-d844-4935-8a9b-00f5f4cc3bb8",
+          "kind": "social_enterprise",
+          "name": "Tapatjatjaka Art and Craft Aboriginal Corporation",
+          "judgeScore": 22.25
+        }
+      ]
+    },
+    {
+      "id": "need_gap_search:culture-language-community",
+      "title": "Community-led culture, language, and arts funding network",
+      "family": "need_gap_search",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 1,
+        "justiceExposure": 1,
+        "actability": 1,
+        "relationshipUtility": 1,
+        "overallScore": 0.8555555555555555
+      },
+      "topResults": [
+        {
+          "id": "0839",
+          "kind": "place",
+          "name": "0839",
+          "judgeScore": 16,
+          "strategyScore": 12
+        },
+        {
+          "id": "0840",
+          "kind": "place",
+          "name": "0840",
+          "judgeScore": 16,
+          "strategyScore": 12
+        },
+        {
+          "id": "0847",
+          "kind": "place",
+          "name": "0847",
+          "judgeScore": 16,
+          "strategyScore": 12
+        },
+        {
+          "id": "0862",
+          "kind": "place",
+          "name": "0862",
+          "judgeScore": 16,
+          "strategyScore": 12
+        },
+        {
+          "id": "4285",
+          "kind": "place",
+          "name": "4285",
+          "judgeScore": 16,
+          "strategyScore": 12
+        }
+      ],
+      "misses": [
+        {
+          "id": "4341",
+          "kind": "place",
+          "name": "4341",
+          "judgeScore": 16
+        },
+        {
+          "id": "4342",
+          "kind": "place",
+          "name": "4342",
+          "judgeScore": 16
+        },
+        {
+          "id": "4347",
+          "kind": "place",
+          "name": "4347",
+          "judgeScore": 16
+        },
+        {
+          "id": "4354",
+          "kind": "place",
+          "name": "4354",
+          "judgeScore": 16
+        },
+        {
+          "id": "4355",
+          "kind": "place",
+          "name": "4355",
+          "judgeScore": 16
+        }
+      ]
+    },
+    {
+      "id": "grant_discovery:education-training-regional",
+      "title": "Regional education and training pathways for under-served communities",
+      "family": "grant_discovery",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 0.9478260869565218,
+        "justiceExposure": 1,
+        "actability": 0.3,
+        "relationshipUtility": 0.75,
+        "overallScore": 0.7738707729468599
+      },
+      "topResults": [
+        {
+          "id": "455b97ac-a458-4876-821b-74edf500c16a",
+          "kind": "grant",
+          "name": "Community Youth Sports Grant",
+          "judgeScore": 23,
+          "strategyScore": 22
+        },
+        {
+          "id": "c01fb589-797a-4a0a-8c2e-effeb8982112",
+          "kind": "grant",
+          "name": "Tertiary Education Encouragement Award",
+          "judgeScore": 23,
+          "strategyScore": 22
+        },
+        {
+          "id": "8578b456-2510-440c-968d-47b0333985bd",
+          "kind": "grant",
+          "name": "BETA Loan Fund Program",
+          "judgeScore": 21.5,
+          "strategyScore": 20.5
+        },
+        {
+          "id": "dd2370d3-cabb-4d61-84ba-2e7cacb3e7c6",
+          "kind": "grant",
+          "name": "Channel 7 Telethon Trust Partnership",
+          "judgeScore": 21.5,
+          "strategyScore": 20.5
+        },
+        {
+          "id": "e26f47a0-7282-44ae-84da-2c08ce0cf78c",
+          "kind": "grant",
+          "name": "Community Giving program (Western Australia)",
+          "judgeScore": 21.5,
+          "strategyScore": 20.5
+        }
+      ],
+      "misses": [
+        {
+          "id": "5e1ee702-9ca7-4ff0-9932-da7abb6b1d62",
+          "kind": "grant",
+          "name": "Resources Community Investment Initiative (Rio Tinto's contribution)",
+          "judgeScore": 21.5
+        },
+        {
+          "id": "aae7b08e-74b5-476d-bb1f-6f59d9c145af",
+          "kind": "grant",
+          "name": "Rio Tinto Australia-Japan Collaboration Program",
+          "judgeScore": 21.5
+        },
+        {
+          "id": "c2b4e526-daa0-43ac-9b19-aad257ec2ce0",
+          "kind": "grant",
+          "name": "Training and Employment Services",
+          "judgeScore": 21.5
+        },
+        {
+          "id": "c2fb22a2-982b-4b1d-8c64-41961ad5f8c4",
+          "kind": "grant",
+          "name": "Women’s Business 2nd Chance (WB2C)",
+          "judgeScore": 21.5
+        },
+        {
+          "id": "8a65dffa-77d0-4026-b71f-16444ab90f59",
+          "kind": "grant",
+          "name": "Women’s Business Hub",
+          "judgeScore": 21.5
+        }
+      ]
+    },
+    {
+      "id": "foundation_discovery:education-training-regional",
+      "title": "Regional education and training pathways for under-served communities",
+      "family": "foundation_discovery",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 0.8729729729729729,
+        "justiceExposure": 1,
+        "actability": 0.55,
+        "relationshipUtility": 0.6199999999999999,
+        "overallScore": 0.7679001501501502
+      },
+      "topResults": [
+        {
+          "id": "9a8dcdb4-63a1-44e2-8b61-a7a5ec9eff12",
+          "kind": "foundation",
+          "name": "Australian Rural Leadership Foundation Limited",
+          "judgeScore": 36,
+          "strategyScore": 34.5
+        },
+        {
+          "id": "53669bac-b6ca-49f4-89b3-948009d71bbd",
+          "kind": "foundation",
+          "name": "Good Things Foundation Limited",
+          "judgeScore": 36,
+          "strategyScore": 34.5
+        },
+        {
+          "id": "85f0de43-d004-4122-83a6-287eeecc4da9",
+          "kind": "foundation",
+          "name": "Rio Tinto Foundation",
+          "judgeScore": 37,
+          "strategyScore": 34.5
+        },
+        {
+          "id": "b26adc75-ad71-456a-8ebb-6b455dfc3f95",
+          "kind": "foundation",
+          "name": "the Fremantle Foundation Community Charity Trust",
+          "judgeScore": 31,
+          "strategyScore": 31
+        },
+        {
+          "id": "61022050-d477-434a-a7a3-8821c401c772",
+          "kind": "foundation",
+          "name": "CORE LEARNING FOUNDATION INC.",
+          "judgeScore": 31,
+          "strategyScore": 29.5
+        }
+      ],
+      "misses": [
+        {
+          "id": "6534a942-5313-4c0b-8a08-f22a18179208",
+          "kind": "foundation",
+          "name": "BEYOND DREAMS FOUNDATION LTD",
+          "judgeScore": 29
+        },
+        {
+          "id": "2ce2d7ec-962b-443c-8824-b7ceee67b7fe",
+          "kind": "foundation",
+          "name": "GRO Foundation",
+          "judgeScore": 28
+        },
+        {
+          "id": "37ae7516-b2c7-4d9c-a3d7-b77b83a90e72",
+          "kind": "foundation",
+          "name": "LEEDAL FOUNDATION LIMITED",
+          "judgeScore": 28
+        },
+        {
+          "id": "9302c45e-83b7-465d-9bae-8b2006e3d753",
+          "kind": "foundation",
+          "name": "Linking Futures Foundation Aboriginal Corporation",
+          "judgeScore": 29
+        },
+        {
+          "id": "fc694b5d-fc27-48d5-a1f3-2e95628acb77",
+          "kind": "foundation",
+          "name": "Lord Mayor's Charitable Fund",
+          "judgeScore": 29
+        }
+      ]
+    },
+    {
+      "id": "charity_delivery_match:education-training-regional",
+      "title": "Regional education and training pathways for under-served communities",
+      "family": "charity_delivery_match",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 1,
+        "justiceExposure": 1,
+        "actability": 0.39999999999999997,
+        "relationshipUtility": 0.75,
+        "overallScore": 0.7918055555555557
+      },
+      "topResults": [
+        {
+          "id": "74164220286",
+          "kind": "charity",
+          "name": "Australia and New Zealand Chapter of the Association for Contextual Behavioral Science",
+          "judgeScore": 28,
+          "strategyScore": 26.5
+        },
+        {
+          "id": "37681615332",
+          "kind": "charity",
+          "name": "CORROBOREE TALENT SERVICES LIMITED",
+          "judgeScore": 28,
+          "strategyScore": 26.5
+        },
+        {
+          "id": "72686743680",
+          "kind": "charity",
+          "name": "DEADLY MALE LIMITED",
+          "judgeScore": 28,
+          "strategyScore": 26.5
+        },
+        {
+          "id": "70649580423",
+          "kind": "charity",
+          "name": "INDIGENOUS CARBON INDUSTRY NETWORK LTD",
+          "judgeScore": 28,
+          "strategyScore": 26.5
+        },
+        {
+          "id": "15803603765",
+          "kind": "charity",
+          "name": "National Indigenous Corporation of Australia",
+          "judgeScore": 28,
+          "strategyScore": 26.5
+        }
+      ],
+      "misses": [
+        {
+          "id": "43682880217",
+          "kind": "charity",
+          "name": "Ginhar Miya Ltd",
+          "judgeScore": 26.5
+        },
+        {
+          "id": "29667735659",
+          "kind": "charity",
+          "name": "LIVIPOD LIMITED",
+          "judgeScore": 26.5
+        },
+        {
+          "id": "92687918270",
+          "kind": "charity",
+          "name": "PATHWAYS AND ADVOCACY NETWORK LTD",
+          "judgeScore": 26.5
+        },
+        {
+          "id": "21607985973",
+          "kind": "charity",
+          "name": "Specialisterne Centre Australia Limited",
+          "judgeScore": 28
+        },
+        {
+          "id": "49682935388",
+          "kind": "charity",
+          "name": "STAND STRONG COLLECTIVE LTD.",
+          "judgeScore": 26.5
+        }
+      ]
+    },
+    {
+      "id": "social_enterprise_delivery_match:education-training-regional",
+      "title": "Regional education and training pathways for under-served communities",
+      "family": "social_enterprise_delivery_match",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 0.897752808988764,
+        "justiceExposure": 1,
+        "actability": 0.22000000000000003,
+        "relationshipUtility": 0.75,
+        "overallScore": 0.7578561173533084
+      },
+      "topResults": [
+        {
+          "id": "571b05e3-8939-4b43-9680-7f3d7c00ee93",
+          "kind": "social_enterprise",
+          "name": "Bindal Sharks United Training, Employment, Sport and Recreation Aboriginal Corporation",
+          "judgeScore": 22.25,
+          "strategyScore": 19
+        },
+        {
+          "id": "8ede8ef2-f79a-468c-a679-44118915f760",
+          "kind": "social_enterprise",
+          "name": "Entrepreneurs and Small Business Indigenous Corporation",
+          "judgeScore": 22.25,
+          "strategyScore": 19
+        },
+        {
+          "id": "bed948a6-90a8-43c5-a3b5-17134f3763c3",
+          "kind": "social_enterprise",
+          "name": "Kariyarra Employment, Training and Education Aboriginal Corporation",
+          "judgeScore": 22.25,
+          "strategyScore": 19
+        },
+        {
+          "id": "09ded791-71d4-48dc-9cfd-441885e2cbb4",
+          "kind": "social_enterprise",
+          "name": "Wunkula Training, Education and Business Development Aboriginal Corporation",
+          "judgeScore": 22.25,
+          "strategyScore": 19
+        },
+        {
+          "id": "3484a82e-20e0-49e5-9e29-c60ad7c64550",
+          "kind": "social_enterprise",
+          "name": "Australian Indigenous Mentoring Experience Indigenous Corporation",
+          "judgeScore": 20.25,
+          "strategyScore": 17
+        }
+      ],
+      "misses": [
+        {
+          "id": "af95f6df-eae6-4c8e-acc5-82bf7c1c4749",
+          "kind": "social_enterprise",
+          "name": "Honoured",
+          "judgeScore": 17
+        },
+        {
+          "id": "42daff3e-fbb3-46f4-877c-dc94f86a1b81",
+          "kind": "social_enterprise",
+          "name": "Alpirakina Store Aboriginal Corporation",
+          "judgeScore": 17.25
+        },
+        {
+          "id": "42f87673-557c-4940-9d0a-3c807efeedd4",
+          "kind": "social_enterprise",
+          "name": "Arnhem Northern and Kimberley Artists Aboriginal Corporation - ANKA",
+          "judgeScore": 17.25
+        },
+        {
+          "id": "65b8edb1-47a0-44cf-9feb-0e7ea7834806",
+          "kind": "social_enterprise",
+          "name": "Gapuwiyak Culture  &  Arts Aboriginal Corporation",
+          "judgeScore": 17.25
+        },
+        {
+          "id": "f2e35c0c-a880-4534-8e3a-443a9d363dd7",
+          "kind": "social_enterprise",
+          "name": "Groote Broadcasting Anindilyakwa Radio Aboriginal Corporation",
+          "judgeScore": 17.25
+        }
+      ]
+    },
+    {
+      "id": "need_gap_search:education-training-regional",
+      "title": "Regional education and training pathways for under-served communities",
+      "family": "need_gap_search",
+      "metrics": {
+        "precisionAt10": 1,
+        "recallAt10": 0.2777777777777778,
+        "meanRelevance": 1,
+        "justiceExposure": 1,
+        "actability": 1,
+        "relationshipUtility": 1,
+        "overallScore": 0.8555555555555555
+      },
+      "topResults": [
+        {
+          "id": "0839",
+          "kind": "place",
+          "name": "0839",
+          "judgeScore": 20,
+          "strategyScore": 16
+        },
+        {
+          "id": "0840",
+          "kind": "place",
+          "name": "0840",
+          "judgeScore": 20,
+          "strategyScore": 16
+        },
+        {
+          "id": "0847",
+          "kind": "place",
+          "name": "0847",
+          "judgeScore": 20,
+          "strategyScore": 16
+        },
+        {
+          "id": "0862",
+          "kind": "place",
+          "name": "0862",
+          "judgeScore": 20,
+          "strategyScore": 16
+        },
+        {
+          "id": "4285",
+          "kind": "place",
+          "name": "4285",
+          "judgeScore": 20,
+          "strategyScore": 16
+        }
+      ],
+      "misses": [
+        {
+          "id": "4341",
+          "kind": "place",
+          "name": "4341",
+          "judgeScore": 20
+        },
+        {
+          "id": "4342",
+          "kind": "place",
+          "name": "4342",
+          "judgeScore": 20
+        },
+        {
+          "id": "4347",
+          "kind": "place",
+          "name": "4347",
+          "judgeScore": 20
+        },
+        {
+          "id": "4354",
+          "kind": "place",
+          "name": "4354",
+          "judgeScore": 20
+        },
+        {
+          "id": "4355",
+          "kind": "place",
+          "name": "4355",
+          "judgeScore": 20
+        }
+      ]
+    }
+  ]
+}

@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireModule } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
+  const auth = await requireModule('grants');
+  if (auth.error) return auth.error;
+
   const { searchParams } = request.nextUrl;
   const q = searchParams.get('q') || '';
   const category = searchParams.get('category') || '';

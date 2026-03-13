@@ -5,7 +5,7 @@
  * Handles date parsing, amount normalization, category mapping, and dedup key generation.
  */
 
-import type { RawGrant, CanonicalGrant, GrantSource } from './types.js';
+import type { RawGrant, CanonicalGrant, GrantSource } from './types';
 
 const MONTH_MAP: Record<string, string> = {
   jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
@@ -51,6 +51,14 @@ const VALID_CATEGORIES = new Set([
   'health', 'arts', 'community', 'technology', 'education',
 ]);
 
+function isValidDateParts(year: number, month: number, day: number): boolean {
+  if (month < 1 || month > 12 || day < 1 || day > 31) return false;
+  const candidate = new Date(Date.UTC(year, month - 1, day));
+  return candidate.getUTCFullYear() === year &&
+    candidate.getUTCMonth() === month - 1 &&
+    candidate.getUTCDate() === day;
+}
+
 /**
  * Parse various date formats into ISO date string (YYYY-MM-DD).
  */
@@ -59,7 +67,18 @@ export function normalizeDate(input: string | undefined | null): string | null {
   const text = input.trim();
 
   // Already ISO: 2026-06-30
-  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+  const isoMatch = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (isoMatch) {
+    const year = parseInt(isoMatch[1], 10);
+    const middle = parseInt(isoMatch[2], 10);
+    const last = parseInt(isoMatch[3], 10);
+
+    if (isValidDateParts(year, middle, last)) return text;
+    if (middle > 12 && isValidDateParts(year, last, middle)) {
+      return `${isoMatch[1]}-${isoMatch[3]}-${isoMatch[2]}`;
+    }
+    return null;
+  }
 
   // ISO with time: 2026-06-30T00:00:00Z
   if (/^\d{4}-\d{2}-\d{2}T/.test(text)) return text.split('T')[0];
@@ -67,7 +86,16 @@ export function normalizeDate(input: string | undefined | null): string | null {
   // DD/MM/YYYY or DD-MM-YYYY
   const dmyMatch = text.match(/^(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})$/);
   if (dmyMatch) {
-    return `${dmyMatch[3]}-${dmyMatch[2].padStart(2, '0')}-${dmyMatch[1].padStart(2, '0')}`;
+    const first = parseInt(dmyMatch[1], 10);
+    const second = parseInt(dmyMatch[2], 10);
+    const year = dmyMatch[3];
+
+    // Prefer the unambiguous interpretation when one side exceeds 12.
+    if (second > 12 && first <= 12) {
+      return `${year}-${String(first).padStart(2, '0')}-${String(second).padStart(2, '0')}`;
+    }
+
+    return `${year}-${String(second).padStart(2, '0')}-${String(first).padStart(2, '0')}`;
   }
 
   // DD Mon YYYY or DD Month YYYY

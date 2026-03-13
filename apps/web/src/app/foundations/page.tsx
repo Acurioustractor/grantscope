@@ -1,6 +1,8 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import { FilterBar } from '../components/filter-bar';
 import { FoundationActionsProvider, FoundationCardActions } from '../components/foundation-card-actions';
+import { FundingIntelligenceRail } from '../components/funding-intelligence-rail';
+import { ListPreviewProvider, FoundationPreviewTrigger } from '../components/list-preview';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,6 +18,15 @@ interface FoundationRow {
   profile_confidence: string;
   enriched_at: string | null;
   created_at: string;
+}
+
+interface FoundationPowerProfileRow {
+  foundation_id: string;
+  capital_holder_class: string;
+  capital_source_class: string;
+  reportable_in_power_map: boolean;
+  openness_score: number | null;
+  gatekeeping_score: number | null;
 }
 
 function formatGiving(amount: number | null): string {
@@ -34,6 +45,18 @@ function typeLabel(type: string | null): string {
     grantmaker: 'Grantmaker',
   };
   return type ? labels[type] || type : 'Foundation';
+}
+
+function powerClassLabel(value: string | null | undefined) {
+  if (!value) return 'Unclassified';
+  return value.replace(/_/g, ' ');
+}
+
+function opennessLabel(score: number | null | undefined) {
+  if (score == null) return 'Unknown openness';
+  if (score >= 0.6) return 'Open capital';
+  if (score < 0.35) return 'Gatekept capital';
+  return 'Mixed access';
 }
 
 const STATES = [
@@ -121,6 +144,13 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
     supabase.rpc('get_foundation_program_counts'),
     supabase.rpc('get_foundation_acnc_summary'),
   ]);
+  const foundationIds = ((foundations || []) as FoundationRow[]).map((foundation) => foundation.id);
+  const { data: powerProfiles } = foundationIds.length
+    ? await supabase
+        .from('foundation_power_profiles')
+        .select('foundation_id, capital_holder_class, capital_source_class, reportable_in_power_map, openness_score, gatekeeping_score')
+        .in('foundation_id', foundationIds)
+    : { data: [] as FoundationPowerProfileRow[] };
   const totalPages = Math.ceil((count || 0) / pageSize);
 
   // Build lookup map for program counts
@@ -136,6 +166,13 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
   if (acncSummary) {
     for (const row of acncSummary as Array<{ foundation_id: string; total_assets: number; grants_given: number; latest_year: number }>) {
       acncMap.set(row.foundation_id, { total_assets: Number(row.total_assets), grants_given: Number(row.grants_given), latest_year: row.latest_year });
+    }
+  }
+
+  const powerMap = new Map<string, FoundationPowerProfileRow>();
+  if (powerProfiles) {
+    for (const row of powerProfiles as FoundationPowerProfileRow[]) {
+      powerMap.set(row.foundation_id, row);
     }
   }
 
@@ -162,8 +199,18 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
   const filterQS = filterParams.toString();
 
   return (
+    <ListPreviewProvider>
     <FoundationActionsProvider>
     <div>
+      <FundingIntelligenceRail
+        current="foundations"
+        totalLabel={`${(count || 0).toLocaleString()} foundations, trusts, and ancillary funds in the current funder search`}
+        query={query}
+        theme={focusFilter || query}
+        geography={geoFilter}
+        trackerHref="/tracker"
+      />
+
       <div className="mb-8">
         <p className="text-xs font-black text-bauhaus-red uppercase tracking-[0.3em] mb-2">Directory</p>
         <h1 className="text-3xl font-black text-bauhaus-black mb-2">Australian Foundations</h1>
@@ -172,6 +219,14 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
           {' '}&middot;{' '}
           <a href="/charities" className="text-bauhaus-blue hover:underline font-bold">See all 64,000+ charities &rarr;</a>
         </p>
+        <div className="mt-4 flex flex-wrap gap-2 text-[11px] font-black uppercase tracking-widest">
+          <a href="/reports/philanthropy-power" className="px-3 py-2 border-2 border-bauhaus-black text-bauhaus-black hover:bg-bauhaus-black hover:text-white transition-colors">
+            Open philanthropy power map
+          </a>
+          <a href="/funding-workspace" className="px-3 py-2 border-2 border-bauhaus-blue text-bauhaus-blue bg-link-light hover:bg-bauhaus-blue hover:text-white transition-colors">
+            Open funding workspace
+          </a>
+        </div>
       </div>
 
       <form method="get" className="flex flex-col sm:flex-row gap-0 mb-4 flex-wrap">
@@ -253,8 +308,18 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
         {(foundations as FoundationRow[] || []).map((f) => {
           const pc = progCountMap.get(f.id);
           const acnc = acncMap.get(f.id);
+          const power = powerMap.get(f.id);
           return (
-          <a key={f.id} href={`/foundations/${f.id}`} className="block group">
+          <FoundationPreviewTrigger key={f.id} foundation={{
+              id: f.id,
+              name: f.name,
+              type: f.type,
+              description: f.description,
+              total_giving_annual: f.total_giving_annual,
+              thematic_focus: f.thematic_focus || [],
+              geographic_focus: f.geographic_focus || [],
+              website: f.website,
+            }}><div className="group">
             <div className="bg-white border-4 border-bauhaus-black p-4 sm:px-5 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm">
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
                 <div className="flex-1 min-w-0">
@@ -279,6 +344,26 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
                     )}
                     {f.website && (
                       <span className="text-[11px] px-1.5 py-0.5 font-black uppercase tracking-wider border-2 border-bauhaus-blue/20 bg-link-light text-bauhaus-blue">Web</span>
+                    )}
+                    {power && (
+                      <>
+                        <span className={`text-[11px] px-1.5 py-0.5 font-black uppercase tracking-wider border-2 ${
+                          power.reportable_in_power_map
+                            ? 'border-bauhaus-black bg-bauhaus-black text-white'
+                            : 'border-bauhaus-black/20 bg-bauhaus-canvas text-bauhaus-muted'
+                        }`}>
+                          {power.reportable_in_power_map ? 'Power map' : 'Operator'}
+                        </span>
+                        <span className={`text-[11px] px-1.5 py-0.5 font-black uppercase tracking-wider border-2 ${
+                          (power.openness_score || 0) >= 0.6
+                            ? 'border-money bg-money-light text-money'
+                            : (power.gatekeeping_score || 0) >= 0.45
+                              ? 'border-bauhaus-red bg-bauhaus-red/10 text-bauhaus-red'
+                              : 'border-bauhaus-black/20 bg-bauhaus-canvas text-bauhaus-muted'
+                        }`}>
+                          {opennessLabel(power.openness_score)}
+                        </span>
+                      </>
                     )}
                   </div>
                   {f.description && (
@@ -314,8 +399,28 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
                   ))}
                 </div>
               )}
+              {power && (
+                <div className="mt-3 grid gap-2 sm:grid-cols-3 text-[11px] font-bold">
+                  <div className="border-2 border-bauhaus-black/15 bg-bauhaus-canvas px-2 py-2">
+                    <p className="text-bauhaus-muted uppercase tracking-wider text-[10px] font-black">Capital role</p>
+                    <p className="mt-1 text-bauhaus-black">{powerClassLabel(power.capital_holder_class)}</p>
+                  </div>
+                  <div className="border-2 border-bauhaus-black/15 bg-bauhaus-canvas px-2 py-2">
+                    <p className="text-bauhaus-muted uppercase tracking-wider text-[10px] font-black">Capital source</p>
+                    <p className="mt-1 text-bauhaus-black">{powerClassLabel(power.capital_source_class)}</p>
+                  </div>
+                  <div className="border-2 border-bauhaus-black/15 bg-bauhaus-canvas px-2 py-2">
+                    <p className="text-bauhaus-muted uppercase tracking-wider text-[10px] font-black">Access pattern</p>
+                    <p className="mt-1 text-bauhaus-black">
+                      {power.reportable_in_power_map
+                        ? `${opennessLabel(power.openness_score)} · gatekeeping ${Math.round((power.gatekeeping_score || 0) * 100)}%`
+                        : 'Excluded from power map'}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
-          </a>
+          </div></FoundationPreviewTrigger>
           );
         })}
       </div>
@@ -337,5 +442,6 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
       )}
     </div>
     </FoundationActionsProvider>
+    </ListPreviewProvider>
   );
 }

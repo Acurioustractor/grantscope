@@ -1,10 +1,10 @@
 import { getServiceSupabase } from '@/lib/supabase';
-import { buildYouthJusticeReport } from '@grantscope/engine';
+import { buildYouthJusticeReport } from '@grant-engine/reports/money-flow';
 import { YouthJusticeCharts } from './charts';
 
 export const dynamic = 'force-dynamic';
 
-import { QLD_YOUTH_JUSTICE_PROGRAMS, QLD_YOUTH_JUSTICE_FLOWS } from '@grantscope/engine';
+import { QLD_YOUTH_JUSTICE_PROGRAMS, QLD_YOUTH_JUSTICE_FLOWS } from '@grant-engine/sources/qld-youth-justice';
 
 async function getReport() {
   try {

@@ -6,7 +6,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { CanonicalGrant, DiscoveryRunResult, ExistingGrantRecord } from '../types.js';
+import type { CanonicalGrant, DiscoveryRunResult, ExistingGrantRecord } from '../types';
 
 export class GrantRepository {
   constructor(private supabase: SupabaseClient) {}

@@ -2,6 +2,29 @@ import { getServiceSupabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
+async function getDonorContractorHeadlineStats(
+  supabase: ReturnType<typeof getServiceSupabase>,
+) {
+  const [{ count }, { data }] = await Promise.all([
+    supabase.from('mv_gs_donor_contractors').select('gs_id', { count: 'exact', head: true }),
+    supabase.from('mv_gs_donor_contractors').select('total_donated, total_contract_value'),
+  ]);
+
+  let totalDonated = 0;
+  let totalContracts = 0;
+
+  for (const row of data || []) {
+    totalDonated += Number(row.total_donated || 0);
+    totalContracts += Number(row.total_contract_value || 0);
+  }
+
+  return {
+    count: count || 0,
+    totalDonated,
+    totalContracts,
+  };
+}
+
 async function getStats() {
   const supabase = getServiceSupabase();
 
@@ -18,21 +41,25 @@ async function getStats() {
     socialEnterprisesResult,
     entitiesResult,
     relationshipsResult,
-    donorContractorsResult,
+    austenderContractsResult,
+    politicalDonationsResult,
+    donorContractorStats,
   ] = await Promise.all([
     supabase.from('grant_opportunities').select('*', { count: 'exact', head: true }),
     supabase.from('foundations').select('*', { count: 'exact', head: true }),
     supabase.from('foundations').select('*', { count: 'exact', head: true }).not('enriched_at', 'is', null),
     supabase.from('grant_opportunities').select('*', { count: 'exact', head: true }).not('embedding', 'is', null),
     supabase.from('grant_opportunities').select('*', { count: 'exact', head: true }).gt('closes_at', new Date().toISOString()),
-    supabase.from('foundation_programs').select('*', { count: 'exact', head: true }),
+    supabase.from('foundation_programs').select('*', { count: 'exact', head: true }).in('status', ['open', 'closed']),
     supabase.from('acnc_ais').select('*', { count: 'exact', head: true }),
     supabase.from('community_orgs').select('*', { count: 'exact', head: true }),
     supabase.from('grant_opportunities').select('*', { count: 'exact', head: true }).not('amount_max', 'is', null),
     supabase.from('social_enterprises').select('*', { count: 'exact', head: true }),
     supabase.from('gs_entities').select('*', { count: 'exact', head: true }),
     supabase.from('gs_relationships').select('*', { count: 'exact', head: true }),
-    supabase.from('mv_gs_donor_contractors').select('total_donated, total_contract_value').order('total_donated', { ascending: false }).limit(200),
+    supabase.from('austender_contracts').select('*', { count: 'exact', head: true }),
+    supabase.from('political_donations').select('*', { count: 'exact', head: true }),
+    getDonorContractorHeadlineStats(supabase),
   ]);
 
   // Grants by state — fetch source column for state scrapers and count client-side
@@ -66,14 +93,6 @@ async function getStats() {
   );
   const categories = catCountsArr.filter(c => c.cnt > 0).sort((a, b) => b.cnt - a.cnt).slice(0, 10);
 
-  // Aggregate donor-contractor stats
-  const dcRows = (donorContractorsResult.data || []) as Array<{ total_donated: string; total_contract_value: string }>;
-  let dcTotalDonated = 0, dcTotalContracts = 0;
-  for (const dc of dcRows) {
-    dcTotalDonated += Number(dc.total_donated);
-    dcTotalContracts += Number(dc.total_contract_value);
-  }
-
   return {
     totalGrants: grantsResult.count || 0,
     totalFoundations: foundationsResult.count || 0,
@@ -87,9 +106,11 @@ async function getStats() {
     withAmounts: withAmountsResult.count || 0,
     totalEntities: entitiesResult.count || 0,
     totalRelationships: relationshipsResult.count || 0,
-    donorContractorCount: dcRows.length,
-    dcTotalDonated,
-    dcTotalContracts,
+    totalAustenderContracts: austenderContractsResult.count || 0,
+    totalPoliticalDonations: politicalDonationsResult.count || 0,
+    donorContractorCount: donorContractorStats.count,
+    dcTotalDonated: donorContractorStats.totalDonated,
+    dcTotalContracts: donorContractorStats.totalContracts,
     byState,
     sourceCount,
     categories,
@@ -141,12 +162,17 @@ function money(n: number): string {
   return `$${n.toLocaleString()}`;
 }
 
+function fmt(n: number): string {
+  return n.toLocaleString();
+}
+
 export default async function HomePage() {
   let stats = {
     totalGrants: 0, totalFoundations: 0, profiledFoundations: 0,
     embeddedGrants: 0, openGrants: 0, totalPrograms: 0,
     acncCharities: 0, communityOrgs: 0, socialEnterprises: 0, withAmounts: 0,
     totalEntities: 0, totalRelationships: 0,
+    totalAustenderContracts: 0, totalPoliticalDonations: 0,
     donorContractorCount: 0, dcTotalDonated: 0, dcTotalContracts: 0,
     byState: null as Array<{ source: string; cnt: number }> | null,
     sourceCount: 0,
@@ -159,6 +185,10 @@ export default async function HomePage() {
   }
 
   // unused after homepage cleanup: embeddedPct, maxStateCnt, maxCatCnt
+  const heroEvidenceLine =
+    stats.totalEntities > 0 && stats.totalAustenderContracts > 0 && stats.totalPoliticalDonations > 0
+      ? `CivicGraph connects ${fmt(stats.totalEntities)} entities, ${fmt(stats.totalAustenderContracts)} contracts, and ${fmt(stats.totalPoliticalDonations)} donations into the decision layer for Australian public spending.`
+      : 'CivicGraph connects supplier intelligence, place-based funding data, and donation signals into the decision layer for Australian public spending.';
 
   return (
     <div>
@@ -171,9 +201,8 @@ export default async function HomePage() {
           Know Who to Fund.<br />Know Who to Contract.<br /><span className="text-bauhaus-blue">Know It Worked.</span>
         </h1>
         <p className="text-lg text-bauhaus-muted max-w-xl mb-10 leading-relaxed font-medium">
-          Procurement intelligence. Place-based allocation analysis. Governed proof of outcomes.
-          CivicGraph connects 99K entities, 672K contracts, and 312K donations into the
-          decision layer for Australian public spending.
+          Procurement intelligence. Place-based allocation analysis. Governed proof of outcomes.{' '}
+          {heroEvidenceLine}
         </p>
 
         <div className="flex gap-0 flex-wrap mb-6">
@@ -190,9 +219,11 @@ export default async function HomePage() {
         <div className="flex gap-2 flex-wrap mb-6 max-w-xl">
           <span className="text-xs font-black text-bauhaus-muted uppercase tracking-widest self-center mr-1">Quick:</span>
           {[
-            { label: 'Suppliers in remote QLD', href: '/tender-intelligence?state=QLD&type=indigenous' },
+            { label: 'Supplier discovery workflow', href: '/tender-intelligence#discover' },
+            { label: 'Social procurement analyser', href: '/procurement' },
+            { label: 'Intelligence pack preview', href: '/tender-intelligence#pack' },
             { label: 'Funding gaps by postcode', href: '/places' },
-            { label: 'Youth justice commissioning', href: '/reports/youth-justice' },
+            { label: 'Due diligence report', href: '/reports/donor-contractors' },
           ].map(q => (
             <a
               key={q.label}
@@ -330,8 +361,8 @@ export default async function HomePage() {
             <h3 className="font-black text-bauhaus-black mb-2 text-lg group-hover:text-white">Procurement Intelligence</h3>
             <p className="text-sm text-bauhaus-muted leading-relaxed mb-4 group-hover:text-white/70">
               Discover suppliers. Check compliance. Generate bid-ready intelligence packs.
-              672K contracts cross-referenced with {stats.totalEntities.toLocaleString()} entities.
-              Replace spreadsheets with data.
+              National contract history cross-referenced with {stats.totalEntities.toLocaleString()} entities.
+              Replace spreadsheets with a defensible market view.
             </p>
             <div className="flex flex-wrap gap-2">
               {['Supplier Discovery', 'Compliance', 'Intelligence Packs', 'List Enrichment'].map(t => (
@@ -431,7 +462,7 @@ export default async function HomePage() {
             <div className="bg-bauhaus-black border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1" style={{ boxShadow: '6px 6px 0px 0px var(--color-bauhaus-red)' }}>
               <div className="text-xs font-black text-bauhaus-yellow mb-1 uppercase tracking-widest">Data Investigation</div>
               <h3 className="font-black text-white mb-1">Where Does Australia&apos;s $222 Billion Go?</h3>
-              <p className="text-sm text-bauhaus-muted group-hover:text-white/60">359,678 charity records. 53,207 charities. 7 years of ACNC data.</p>
+              <p className="text-sm text-bauhaus-muted group-hover:text-white/60">National charity registry analysis with longitudinal ACNC reporting and funding-flow context.</p>
             </div>
           </a>
           <a href="/reports/community-parity" className="group block">
@@ -452,7 +483,7 @@ export default async function HomePage() {
             <div className="bg-white border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-red group-hover:text-white">
               <div className="text-xs font-black text-bauhaus-red mb-1 uppercase tracking-widest group-hover:text-bauhaus-yellow">New</div>
               <h3 className="font-black text-bauhaus-black mb-1 group-hover:text-white">Social Enterprise in Australia</h3>
-              <p className="text-sm text-bauhaus-muted group-hover:text-white/80">20,000 businesses. $21B revenue. No register. Until now.</p>
+              <p className="text-sm text-bauhaus-muted group-hover:text-white/80">A national market map for social enterprise, Indigenous business, and mission-led providers.</p>
             </div>
           </a>
           <a href="/reports/youth-justice" className="group block">

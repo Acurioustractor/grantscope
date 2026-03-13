@@ -8,7 +8,10 @@
     "build": "pnpm --filter @grantscope/web build",
     "typecheck": "pnpm -r typecheck",
     "discover": "tsx scripts/grantscope-discovery.mjs",
-    "sync-acnc": "tsx scripts/sync-acnc-register.mjs"
+    "sync-acnc": "tsx scripts/sync-acnc-register.mjs",
+    "funding-benchmark:build": "node scripts/funding-autoresearch/build-benchmark-set.mjs",
+    "funding-benchmark:evaluate": "node scripts/funding-autoresearch/evaluate.mjs --save",
+    "funding-autoresearch": "node scripts/funding-autoresearch/autoresearch.mjs"
   },
   "keywords": [
     "grants",

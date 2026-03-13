@@ -6,7 +6,7 @@
  * preserving the most complete data from each.
  */
 
-import type { CanonicalGrant, GrantSource, ExistingGrantRecord } from './types.js';
+import type { CanonicalGrant, GrantSource, ExistingGrantRecord } from './types';
 
 /**
  * Deduplicate an array of canonical grants.

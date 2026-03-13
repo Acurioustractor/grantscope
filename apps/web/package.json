@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3003",
+    "dev": "next dev --turbopack -p 3003",
+    "dev:webpack": "next dev -p 3003",
     "build": "next build",
     "start": "next start -p 3003",
     "typecheck": "tsc --noEmit"
@@ -19,6 +20,7 @@
     "leaflet": "^1.9.4",
     "mammoth": "^1.11.0",
     "next": "^15.1.0",
+    "pdf-lib": "^1.17.1",
     "pdf-parse": "^2.4.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

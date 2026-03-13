@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireModule } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
 
 /**
@@ -8,6 +9,9 @@ import { getServiceSupabase } from '@/lib/supabase';
  * Powers the /insights page with real-time numbers.
  */
 export async function GET() {
+  const auth = await requireModule('grants');
+  if (auth.error) return auth.error;
+
   const supabase = getServiceSupabase();
 
   // Run all queries in parallel

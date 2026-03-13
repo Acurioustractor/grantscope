@@ -7,7 +7,7 @@
  * scrapes the website and uses LLM to generate description, thematic focus,
  * geographic focus, giving philosophy, and other metadata.
  *
- * Usage: node scripts/enrich-foundations.mjs [--dry-run] [--limit=500] [--provider=groq] [--no-website]
+ * Usage: node scripts/enrich-foundations.mjs [--dry-run] [--limit=500] [--provider=minimax] [--no-website]
  *
  * --no-website: Also enrich foundations without websites (name + ACNC data only)
  */
@@ -15,6 +15,8 @@
 import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import * as cheerio from 'cheerio';
+import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
+import { MINIMAX_CHAT_COMPLETIONS_URL } from './lib/minimax.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -37,7 +39,7 @@ function log(msg) {
 
 // LLM Providers — round-robin with fallback
 const PROVIDERS = [
-  { name: 'minimax', baseUrl: 'https://api.minimaxi.chat/v1/chat/completions', model: 'MiniMax-M2.5', envKey: 'MINIMAX_API_KEY', disabled: false },
+  { name: 'minimax', baseUrl: MINIMAX_CHAT_COMPLETIONS_URL, model: 'MiniMax-M2.5', envKey: 'MINIMAX_API_KEY', disabled: false },
   { name: 'groq', baseUrl: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.3-70b-versatile', envKey: 'GROQ_API_KEY', disabled: false },
   { name: 'gemini', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', model: 'gemini-2.5-flash', envKey: 'GEMINI_API_KEY', disabled: false },
   { name: 'deepseek', baseUrl: 'https://api.deepseek.com/chat/completions', model: 'deepseek-chat', envKey: 'DEEPSEEK_API_KEY', disabled: false },
@@ -55,6 +57,7 @@ if (PREFERRED_PROVIDER !== 'minimax') {
 
 let currentProviderIndex = 0;
 let anthropicTokens = { input: 0, output: 0 };
+let currentRunId = null;
 
 const RATE_LIMIT_DELAY_MS = 1500;
 const SCRAPE_TIMEOUT_MS = 15000;
@@ -235,6 +238,11 @@ If information is very limited, make reasonable inferences from the name. Never 
 
       if (!response.ok) {
         const err = await response.text();
+        if (response.status === 401 || /invalid api key|unauthorized/i.test(err)) {
+          log(`${provider.name} auth failed — disabling`);
+          provider.disabled = true;
+          continue;
+        }
         if (response.status === 429 || response.status === 402 ||
             err.includes('rate_limit') || err.includes('quota') ||
             err.includes('Insufficient Balance') || err.includes('credit balance')) {
@@ -357,6 +365,9 @@ function emptyResult() {
 async function main() {
   log(`Starting foundation enrichment (limit=${LIMIT}, preferred=${PREFERRED_PROVIDER}, dry-run=${DRY_RUN}, no-website=${NO_WEBSITE}, re-enrich=${RE_ENRICH})`);
 
+  const run = await logStart(supabase, 'enrich-foundations', 'Enrich Foundations');
+  currentRunId = run.id;
+
   // Fetch foundations to enrich
   let query;
   if (RE_ENRICH) {
@@ -386,6 +397,7 @@ async function main() {
 
   if (error) {
     log(`DB error: ${error.message}`);
+    await logFailed(supabase, run.id, error.message);
     process.exit(1);
   }
 
@@ -465,9 +477,19 @@ async function main() {
     const cost = (anthropicTokens.input * 0.80 + anthropicTokens.output * 4.00) / 1_000_000;
     log(`Anthropic total: ${anthropicTokens.input} in / ${anthropicTokens.output} out — $${cost.toFixed(4)}`);
   }
+
+  await logComplete(supabase, run.id, {
+    items_found: foundations.length,
+    items_new: enriched,
+    items_updated: 0,
+    status: errors > 0 ? 'partial' : 'success',
+    errors: errors > 0 ? [`${errors} foundation enrichment errors`] : [],
+  });
 }
 
 main().catch(err => {
   console.error('Fatal error:', err);
+  const message = err instanceof Error ? err.message : String(err);
+  logFailed(supabase, currentRunId, message).catch(() => {});
   process.exit(1);
 });

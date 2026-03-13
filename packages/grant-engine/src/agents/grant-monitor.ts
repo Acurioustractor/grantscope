@@ -6,12 +6,12 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { AgentConfig, AgentRunResult } from './agent-runner.js';
-import { SourceRegistry } from '../sources/registry.js';
-import { createGrantConnectPlugin } from '../sources/grantconnect.js';
-import { createQLDGrantsPlugin } from '../sources/qld-grants.js';
-import { createDataGovAuPlugin } from '../sources/data-gov-au.js';
-import { normalize } from '../normalizer.js';
+import type { AgentConfig, AgentRunResult } from './agent-runner.ts';
+import { SourceRegistry } from '../sources/registry.ts';
+import { createGrantConnectPlugin } from '../sources/grantconnect.ts';
+import { createQLDGrantsPlugin } from '../sources/qld-grants.ts';
+import { createDataGovAuPlugin } from '../sources/data-gov-au.ts';
+import { normalize } from '../normalizer.ts';
 
 export function createGrantMonitor(): AgentConfig {
   return {
@@ -45,6 +45,11 @@ export function createGrantMonitor(): AgentConfig {
       const existingNames = new Set(
         (existing || []).map(g => g.name?.toLowerCase())
       );
+      const existingUrls = new Set(
+        (existing || [])
+          .map(g => g.url)
+          .filter((url): url is string => typeof url === 'string' && url.length > 0)
+      );
 
       for await (const { grant, stats } of registry.discoverAll({ status: 'open' })) {
         found++;
@@ -52,12 +57,14 @@ export function createGrantMonitor(): AgentConfig {
         // Check if this is new
         const normalized = normalize(grant);
         if (existingNames.has(normalized.name.toLowerCase())) continue;
+        if (normalized.url && existingUrls.has(normalized.url)) continue;
 
         // Insert new grant
         const { error } = await supabase.from('grant_opportunities').insert({
           name: normalized.name,
           provider: normalized.provider,
           program: normalized.program,
+          source: grant.sourceId || normalized.provider || 'unknown',
           amount_min: normalized.amountMin,
           amount_max: normalized.amountMax,
           closes_at: normalized.closesAt,
@@ -70,9 +77,16 @@ export function createGrantMonitor(): AgentConfig {
         });
 
         if (error) {
+          if (/duplicate key value/i.test(error.message)) {
+            if (normalized.url) existingUrls.add(normalized.url);
+            existingNames.add(normalized.name.toLowerCase());
+            continue;
+          }
           errors.push(`Insert failed for "${grant.title}": ${error.message}`);
         } else {
           newGrants++;
+          existingNames.add(normalized.name.toLowerCase());
+          if (normalized.url) existingUrls.add(normalized.url);
           log(`New grant: ${grant.title}`);
         }
       }

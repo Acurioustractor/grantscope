@@ -70,6 +70,23 @@ function extractAmounts(text) {
   return {};
 }
 
+function stableSlug(value) {
+  const raw = String(value || '');
+  const normalized = raw
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80);
+
+  let hash = 0;
+  for (let i = 0; i < raw.length; i++) {
+    hash = ((hash << 5) - hash) + raw.charCodeAt(i);
+    hash |= 0;
+  }
+
+  return `${normalized || 'record'}-${Math.abs(hash).toString(36)}`;
+}
+
 async function fetchText(url) {
   const res = await fetch(url, {
     headers: { 'User-Agent': 'GrantScope/1.0 (research; contact@act.place)' },
@@ -90,13 +107,48 @@ async function upsertGrants(grants, source) {
     return;
   }
 
-  // Batch upsert 500 at a time using onConflict: 'url'
+  const existingUrls = new Set();
+  const PAGE_SIZE = 5000;
+  for (let offset = 0; ; offset += PAGE_SIZE) {
+    const { data: existing, error } = await supabase
+      .from('grant_opportunities')
+      .select('url')
+      .not('url', 'is', null)
+      .range(offset, offset + PAGE_SIZE - 1);
+
+    if (error) {
+      throw error;
+    }
+
+    for (const row of existing || []) {
+      if (row.url) existingUrls.add(row.url);
+    }
+
+    if (!existing || existing.length < PAGE_SIZE) {
+      break;
+    }
+  }
+
+  const filteredGrants = [];
+  const seenUrls = new Set();
+  const seenKeys = new Set();
+  for (const grant of grants) {
+    const dedupKey = `${grant.source_id}::${grant.name}`.toUpperCase();
+    if (seenKeys.has(dedupKey)) continue;
+    seenKeys.add(dedupKey);
+    if (grant.url && (existingUrls.has(grant.url) || seenUrls.has(grant.url))) continue;
+    if (grant.url) seenUrls.add(grant.url);
+    filteredGrants.push(grant);
+  }
+
+  // Batch upsert 500 at a time using the concrete unique index the table exposes.
+  // Supabase/PostgREST cannot target the partial unique URL index.
   const BATCH_SIZE = 500;
-  for (let i = 0; i < grants.length; i += BATCH_SIZE) {
-    const batch = grants.slice(i, i + BATCH_SIZE);
+  for (let i = 0; i < filteredGrants.length; i += BATCH_SIZE) {
+    const batch = filteredGrants.slice(i, i + BATCH_SIZE);
     const { error } = await supabase
       .from('grant_opportunities')
-      .upsert(batch, { onConflict: 'url', ignoreDuplicates: false });
+      .upsert(batch, { onConflict: 'name,source_id', ignoreDuplicates: false });
 
     if (error) {
       console.error(`  Batch upsert error (${source}, offset ${i}): ${error.message}`);
@@ -105,8 +157,11 @@ async function upsertGrants(grants, source) {
         try {
           const { error: singleErr } = await supabase
             .from('grant_opportunities')
-            .upsert(g, { onConflict: 'url', ignoreDuplicates: false });
+            .upsert(g, { onConflict: 'name,source_id', ignoreDuplicates: false });
           if (singleErr) {
+            if (/duplicate key value/i.test(singleErr.message)) {
+              continue;
+            }
             stats.errors++;
             if (stats.errors <= 3) console.error(`  Single upsert error: ${singleErr.message}`);
           } else {
@@ -120,8 +175,8 @@ async function upsertGrants(grants, source) {
       stats.upserted += batch.length;
     }
   }
-  stats.total += grants.length;
-  console.log(`  Upserted ${grants.length} grants from ${source}`);
+  stats.total += filteredGrants.length;
+  console.log(`  Upserted ${filteredGrants.length} grants from ${source}`);
 }
 
 // ─── Source 1: NSW Grants Portal ────────────────────────────
@@ -181,6 +236,7 @@ async function scrapeNSW() {
         amount_max: amounts.max || null,
         categories,
         source: 'nsw-grants',
+        source_id: 'nsw-grants',
         grant_type: 'open_opportunity',
         discovered_by: 'import-gov-grants',
         discovery_method: 'scraper',
@@ -235,12 +291,13 @@ async function importQLDArtsGrants() {
           name: `${title} (${year})`.slice(0, 500),
           provider: 'Arts Queensland',
           program: name || 'Arts Grants Expenditure',
-          url: `https://www.data.qld.gov.au/dataset/arts-grants-expenditure#${year}-${encodeURIComponent(recipient).slice(0, 80)}`,
+          url: `https://www.data.qld.gov.au/dataset/arts-grants-expenditure#${stableSlug(`${year}-${recipient}-${name}-${amountNum}`)}`,
           description: `${description || ''} Recipient: ${recipient}. Year: ${year}.`.trim().slice(0, 1000),
           amount_min: isNaN(amountNum) ? null : amountNum,
           amount_max: isNaN(amountNum) ? null : amountNum,
           categories: ['arts'],
           source: 'qld-arts-data',
+          source_id: 'qld-arts-data',
           grant_type: 'historical_award',
           discovered_by: 'import-gov-grants',
           discovery_method: 'data.gov.au',
@@ -292,12 +349,13 @@ async function importBrisbaneGrants() {
           name: `${name} (${r.grant_round || 'Brisbane'})`.slice(0, 500),
           provider: 'Brisbane City Council',
           program: grantName,
-          url: `https://data.brisbane.qld.gov.au/explore/dataset/grants-recipients/table/?sort=index&refine.index=${r.index || Math.random().toString(36).slice(2)}`,
+          url: `https://data.brisbane.qld.gov.au/explore/dataset/grants-recipients/table/#${stableSlug(`${r.index || ''}-${recipient}-${name}-${amountApproved || ''}`)}`,
           description: `${r.group || ''} grant. Recipient: ${recipient}. Project: ${project}. Round: ${r.grant_round || ''}.`.trim().slice(0, 1000),
           amount_min: amountApproved,
           amount_max: amountApproved,
           categories: inferCategories(name, `${r.group || ''} ${project}`),
           source: 'brisbane-grants',
+          source_id: 'brisbane-grants',
           grant_type: 'historical_award',
           discovered_by: 'import-gov-grants',
           discovery_method: 'open-data-api',

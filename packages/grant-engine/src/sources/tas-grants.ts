@@ -8,7 +8,7 @@
  */
 
 import * as cheerio from 'cheerio';
-import type { SourcePlugin, DiscoveryQuery, RawGrant } from '../types.js';
+import type { SourcePlugin, DiscoveryQuery, RawGrant } from '../types';
 
 const TAS_GRANTS_URL = 'https://www.stategrowth.tas.gov.au/grants_and_funding_opportunities/grants_list';
 const TAS_BASE = 'https://www.stategrowth.tas.gov.au';

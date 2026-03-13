@@ -2,5 +2,15 @@
   "installCommand": "pnpm install",
   "buildCommand": "cd apps/web && pnpm run build",
   "outputDirectory": "apps/web/.next",
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "crons": [
+    {
+      "path": "/api/tender-intelligence/automation/run-due",
+      "schedule": "0 21 * * *"
+    },
+    {
+      "path": "/api/tender-intelligence/automation/deliver-notifications",
+      "schedule": "5 * * * *"
+    }
+  ]
 }

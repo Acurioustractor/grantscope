@@ -3,8 +3,7 @@
 /**
  * Scrape State Grant Portals
  *
- * Runs state-level grant scrapers (NSW, VIC) and upserts to grant_opportunities.
- * QLD is already handled by the main discovery engine via CKAN API.
+ * Runs state/territory grant scrapers and upserts to grant_opportunities.
  *
  * Usage:
  *   node scripts/scrape-state-grants.mjs                    # All states
@@ -14,8 +13,15 @@
 
 import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
+import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
+import { createACTGrantsPlugin } from '../packages/grant-engine/src/sources/act-grants.ts';
+import { createQLDGrantsPlugin } from '../packages/grant-engine/src/sources/qld-grants.ts';
 import { createNSWGrantsPlugin } from '../packages/grant-engine/src/sources/nsw-grants.ts';
 import { createVICGrantsPlugin } from '../packages/grant-engine/src/sources/vic-grants.ts';
+import { createTASGrantsPlugin } from '../packages/grant-engine/src/sources/tas-grants.ts';
+import { createSAGrantsPlugin } from '../packages/grant-engine/src/sources/sa-grants.ts';
+import { createWAGrantsPlugin } from '../packages/grant-engine/src/sources/wa-grants.ts';
+import { createNTGrantsPlugin } from '../packages/grant-engine/src/sources/nt-grants.ts';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -30,13 +36,23 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+let currentRunId = null;
 
 const statePlugins = [
+  createACTGrantsPlugin(),
+  createQLDGrantsPlugin(),
   createNSWGrantsPlugin(),
   createVICGrantsPlugin(),
+  createTASGrantsPlugin(),
+  createSAGrantsPlugin(),
+  createWAGrantsPlugin(),
+  createNTGrantsPlugin(),
 ];
 
 async function main() {
+  const run = await logStart(supabase, 'scrape-state-grants', 'Scrape State Grants');
+  currentRunId = run.id;
+
   console.log('=== State Grant Scraper ===');
   console.log(`Time: ${new Date().toISOString()}`);
   console.log(`Dry run: ${DRY_RUN}`);
@@ -52,8 +68,10 @@ async function main() {
     process.exit(1);
   }
 
+  let totalDiscovered = 0;
   let totalNew = 0;
   let totalUpdated = 0;
+  const errors = [];
 
   for (const plugin of plugins) {
     console.log(`\n--- ${plugin.name} ---`);
@@ -64,11 +82,14 @@ async function main() {
         grants.push(grant);
       }
     } catch (err) {
-      console.error(`Error running ${plugin.id}: ${err.message}`);
+      const message = err instanceof Error ? err.message : String(err);
+      errors.push(`${plugin.id}: ${message}`);
+      console.error(`Error running ${plugin.id}: ${message}`);
       continue;
     }
 
     console.log(`Found ${grants.length} grants from ${plugin.id}`);
+    totalDiscovered += grants.length;
 
     if (DRY_RUN) {
       for (const g of grants.slice(0, 10)) {
@@ -103,6 +124,7 @@ async function main() {
         .upsert(batch, { onConflict: 'url', ignoreDuplicates: true });
 
       if (error) {
+        errors.push(`${plugin.id} upsert: ${error.message}`);
         console.error(`  Upsert error: ${error.message}`);
       } else {
         totalNew += batch.length;
@@ -115,9 +137,19 @@ async function main() {
   console.log(`\n=== Summary ===`);
   console.log(`Total new/updated: ${totalNew}`);
   console.log('Done.');
+
+  await logComplete(supabase, run.id, {
+    items_found: totalDiscovered,
+    items_new: totalNew,
+    items_updated: totalUpdated,
+    status: errors.length > 0 ? 'partial' : 'success',
+    errors,
+  });
 }
 
 main().catch(err => {
   console.error('Fatal error:', err);
+  const message = err instanceof Error ? err.message : String(err);
+  logFailed(supabase, currentRunId, message).catch(() => {});
   process.exit(1);
 });

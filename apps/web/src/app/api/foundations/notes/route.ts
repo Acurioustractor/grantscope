@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServer } from '@/lib/supabase-server';
+import { requireModule } from '@/lib/api-auth';
+import { getServiceSupabase } from '@/lib/supabase';
 
 /**
  * GET /api/foundations/notes?abn=xxx — list notes for a foundation
@@ -7,13 +8,14 @@ import { createSupabaseServer } from '@/lib/supabase-server';
  */
 
 export async function GET(request: NextRequest) {
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Auth required' }, { status: 401 });
+  const auth = await requireModule('tracker');
+  if (auth.error) return auth.error;
+  const { user } = auth;
 
   const abn = request.nextUrl.searchParams.get('abn');
 
-  let query = supabase
+  const db = getServiceSupabase();
+  let query = db
     .from('foundation_notes')
     .select('*')
     .eq('user_id', user.id)
@@ -27,16 +29,17 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Auth required' }, { status: 401 });
+  const auth = await requireModule('tracker');
+  if (auth.error) return auth.error;
+  const { user } = auth;
 
   const body = await request.json();
   const { foundation_abn, note_type, title, content, contact_name, contact_role, contact_email, next_action, next_action_date } = body;
 
   if (!content) return NextResponse.json({ error: 'content required' }, { status: 400 });
 
-  const { data, error } = await supabase
+  const db = getServiceSupabase();
+  const { data, error } = await db
     .from('foundation_notes')
     .insert({
       user_id: user.id,

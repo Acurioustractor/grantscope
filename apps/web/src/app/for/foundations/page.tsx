@@ -14,7 +14,7 @@ async function getStats() {
   const [totalResult, enrichedResult, programsResult, givingResult] = await Promise.all([
     supabase.from('foundations').select('*', { count: 'exact', head: true }),
     supabase.from('foundations').select('*', { count: 'exact', head: true }).not('enriched_at', 'is', null),
-    supabase.from('foundation_programs').select('*', { count: 'exact', head: true }),
+    supabase.from('foundation_programs').select('*', { count: 'exact', head: true }).in('status', ['open', 'closed']),
     supabase.from('foundations').select('total_giving_annual').not('total_giving_annual', 'is', null),
   ]);
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase-server';
 import { getServiceSupabase } from '@/lib/supabase';
-import { embedQuery } from '@grantscope/engine';
+import { embedQuery } from '@grant-engine/embeddings';
 
 export async function GET() {
   const supabase = await createSupabaseServer();

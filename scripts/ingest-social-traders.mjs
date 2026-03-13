@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
 /**
- * Ingest Social Traders certified social enterprises into GrantScope
+ * Ingest Social Traders public finder organisations into GrantScope
  *
- * Source: Social Traders Algolia index (665 certified enterprises)
+ * Source: Social Traders Algolia index (all public social-enterprise finder records)
  * Target: social_enterprises table + gs_entities entity linking
  *
  * Usage: node --env-file=.env scripts/ingest-social-traders.mjs [--dry-run]
@@ -27,6 +27,83 @@ const started = Date.now();
 
 function log(msg) {
   console.log(`[social-traders] ${msg}`);
+}
+
+function unique(values) {
+  return [...new Set((values || []).filter(Boolean).map((value) => String(value).trim()).filter(Boolean))];
+}
+
+function toArray(value) {
+  if (Array.isArray(value)) return value;
+  if (value == null || value === '') return [];
+  return [value];
+}
+
+function buildDescription({ services, beneficiaries, businessModel, statusLabel, membershipType }) {
+  const bits = [];
+  if (businessModel) bits.push(businessModel.trim());
+  if (services.length > 0) bits.push(`Products and services include ${services.slice(0, 4).join(', ')}.`);
+  if (beneficiaries.length > 0) bits.push(`Primary beneficiaries include ${beneficiaries.slice(0, 3).join(', ')}.`);
+  if (statusLabel) bits.push(`Social Traders status: ${statusLabel}.`);
+  if (membershipType) bits.push(`Membership: ${membershipType}.`);
+  return bits.length > 0 ? bits.join(' ') : null;
+}
+
+function buildGeographicFocus({ state, city, officeLocations, location }) {
+  const stateValues = [
+    state,
+    ...toArray(location),
+    ...officeLocations.map((office) => office?.address?.state || null),
+  ];
+  const cityValues = [
+    city,
+    ...officeLocations.map((office) => office?.address?.city_suburb || office?.address?.city || null),
+  ];
+  return unique([...stateValues, ...cityValues]);
+}
+
+function inferProfileConfidence({ website, businessModel, beneficiaries, geographicFocus, profilePublished, visibleOnWebsite }) {
+  const signalCount = [
+    Boolean(website),
+    Boolean(businessModel),
+    beneficiaries.length > 0,
+    geographicFocus.length > 0,
+    Boolean(profilePublished),
+    Boolean(visibleOnWebsite),
+  ].filter(Boolean).length;
+
+  if (signalCount >= 5) return 'high';
+  if (signalCount >= 3) return 'medium';
+  return 'low';
+}
+
+function mergeUniqueList(existing, incoming) {
+  return unique([...(existing || []), ...(incoming || [])]);
+}
+
+function mergeCertifications(existing, incoming) {
+  const existingList = Array.isArray(existing) ? existing : [];
+  const incomingList = Array.isArray(incoming) ? incoming : [];
+  const seen = new Set();
+  const merged = [];
+  for (const item of [...existingList, ...incomingList]) {
+    const key = JSON.stringify(item);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push(item);
+  }
+  return merged.length > 0 ? merged : null;
+}
+
+function isEnterpriseRecord({ statusLabel, membershipType }) {
+  if (statusLabel === 'Active Member') return false;
+  if (
+    ['Essentials', 'Tailored Support', 'Leadership', 'Trailblazer', 'Whole of Government'].includes(membershipType || '') &&
+    !['Certified', 'Certified (Grace Period)', 'Certification Expired'].includes(statusLabel)
+  ) {
+    return false;
+  }
+  return true;
 }
 
 function algoliaQuery(params) {
@@ -65,11 +142,12 @@ async function fetchAllEnterprises() {
       query: '',
       hitsPerPage: 100,
       page,
-      facetFilters: [['status__c:Certified', 'status__c:Certified (Grace Period)']],
+      filters: 'social_enterprise_finder__c:true',
       attributesToRetrieve: [
         'name', 'website', 'status__c', 'address',
         'supplier_product_service', 'primary_beneficiaries',
         'business_model__c', 'membership_type__c',
+        'profile_published__c', 'visible_on_website__c',
         '_geoloc', 'objectID', 'accountIDsafe__c',
         'office_locations', 'logo',
       ],
@@ -88,7 +166,19 @@ async function main() {
   log(`Starting${DRY_RUN ? ' (DRY RUN)' : ''}...`);
 
   const enterprises = await fetchAllEnterprises();
-  log(`Fetched ${enterprises.length} certified social enterprises from Algolia`);
+  log(`Fetched ${enterprises.length} public social-enterprise finder records from Algolia`);
+  const includedEnterprises = [];
+  let excludedNonEnterprise = 0;
+  for (const ent of enterprises) {
+    const statusLabel = ent.status__c || 'Listed';
+    const membershipType = ent.membership_type__c || null;
+    if (!isEnterpriseRecord({ statusLabel, membershipType })) {
+      excludedNonEnterprise++;
+      continue;
+    }
+    includedEnterprises.push(ent);
+  }
+  log(`Included ${includedEnterprises.length} enterprise records after filtering ${excludedNonEnterprise} non-enterprise buyer/member records`);
 
   // Load existing social_enterprises for dedup by name
   const { data: existing } = await supabase
@@ -103,31 +193,57 @@ async function main() {
   let itemsUpdated = 0;
   const errors = [];
 
-  for (const ent of enterprises) {
+  for (const ent of includedEnterprises) {
     const addr = ent.address || {};
     const postcode = addr.postalCode || addr.postal_code_zip || null;
     const state = addr.state || null;
+    const city = addr.city || addr.city_suburb || null;
     const services = ent.supplier_product_service || [];
-    const certStatus = ent.status__c === 'Certified'
-      ? 'Social Traders Certified'
-      : 'Social Traders Certified (Grace Period)';
+    const statusLabel = ent.status__c || 'Listed';
+    const certifications = [];
+    if (statusLabel === 'Certified') certifications.push('Social Traders Certified');
+    if (statusLabel === 'Certified (Grace Period)') certifications.push('Social Traders Certified (Grace Period)');
 
     const rawBeneficiaries = ent.primary_beneficiaries;
     const beneficiaries = Array.isArray(rawBeneficiaries)
       ? rawBeneficiaries
       : rawBeneficiaries ? [rawBeneficiaries] : [];
     const officeLocations = ent.office_locations || [];
+    const geographicFocus = buildGeographicFocus({
+      state,
+      city,
+      officeLocations,
+      location: ent.location,
+    });
+    const description = buildDescription({
+      services,
+      beneficiaries,
+      businessModel: ent.business_model__c || null,
+      statusLabel,
+      membershipType: ent.membership_type__c || null,
+    });
+    const profileConfidence = inferProfileConfidence({
+      website: ent.website || null,
+      businessModel: ent.business_model__c || null,
+      beneficiaries,
+      geographicFocus,
+      profilePublished: ent.profile_published__c,
+      visibleOnWebsite: ent.visible_on_website__c,
+    });
 
     const record = {
       name: ent.name,
       source_primary: 'social-traders',
       org_type: 'social_enterprise',
-      certifications: [certStatus],
+      certifications: certifications.length > 0 ? certifications : null,
       sector: services.length > 0 ? services : null,
       website: ent.website || null,
       state: state,
       postcode: postcode ? String(postcode).padStart(4, '0') : null,
-      city: addr.city || null,
+      city,
+      description,
+      geographic_focus: geographicFocus.length > 0 ? geographicFocus : null,
+      profile_confidence: profileConfidence,
       target_beneficiaries: beneficiaries.length > 0 ? beneficiaries : null,
       logo_url: ent.logo || null,
       business_model: ent.business_model__c || null,
@@ -139,6 +255,9 @@ async function main() {
           beneficiaries: beneficiaries.length > 0 ? beneficiaries : null,
           business_model: ent.business_model__c || null,
           membership_type: ent.membership_type__c || null,
+          status: statusLabel,
+          profile_published: ent.profile_published__c ?? null,
+          visible_on_website: ent.visible_on_website__c ?? null,
           office_locations: officeLocations.length > 0 ? officeLocations : null,
           geo: ent._geoloc || null,
           synced_at: new Date().toISOString(),
@@ -162,6 +281,54 @@ async function main() {
       if (isNew) {
         const { error } = await supabase.from('social_enterprises').insert(record);
         if (error) {
+          if (error.message?.includes('social_enterprises_name_state_key')) {
+            const { data: existingRow, error: existingError } = await supabase
+              .from('social_enterprises')
+              .select('id, source_primary, website, description, sector, city, postcode, geographic_focus, certifications, sources, profile_confidence, target_beneficiaries, logo_url, business_model')
+              .eq('name', record.name)
+              .eq('state', record.state)
+              .limit(1)
+              .maybeSingle();
+
+            if (!existingError && existingRow) {
+              const mergedSources = {
+                ...(existingRow.sources || {}),
+                ...(record.sources || {}),
+              };
+              const mergedSector = mergeUniqueList(existingRow.sector, record.sector);
+              const mergedGeographicFocus = mergeUniqueList(existingRow.geographic_focus, record.geographic_focus);
+              const mergedBeneficiaries = mergeUniqueList(existingRow.target_beneficiaries, record.target_beneficiaries);
+              const mergedCertifications = mergeCertifications(existingRow.certifications, record.certifications);
+
+              const { error: mergeError } = await supabase
+                .from('social_enterprises')
+                .update({
+                  website: existingRow.website || record.website,
+                  description: existingRow.description || record.description,
+                  sector: mergedSector.length > 0 ? mergedSector : null,
+                  city: existingRow.city || record.city,
+                  postcode: existingRow.postcode || record.postcode,
+                  geographic_focus: mergedGeographicFocus.length > 0 ? mergedGeographicFocus : null,
+                  certifications: mergedCertifications,
+                  sources: mergedSources,
+                  profile_confidence:
+                    existingRow.profile_confidence === 'high' || record.profile_confidence === 'high'
+                      ? 'high'
+                      : existingRow.profile_confidence === 'medium' || record.profile_confidence === 'medium'
+                        ? 'medium'
+                        : existingRow.profile_confidence || record.profile_confidence,
+                  target_beneficiaries: mergedBeneficiaries.length > 0 ? mergedBeneficiaries : null,
+                  logo_url: existingRow.logo_url || record.logo_url,
+                  business_model: existingRow.business_model || record.business_model,
+                })
+                .eq('id', existingRow.id);
+
+              if (!mergeError) {
+                itemsUpdated++;
+                continue;
+              }
+            }
+          }
           errors.push(`${ent.name}: ${error.message}`);
           continue;
         }
@@ -177,6 +344,9 @@ async function main() {
             state: record.state,
             postcode: record.postcode,
             city: record.city,
+            description: record.description,
+            geographic_focus: record.geographic_focus,
+            profile_confidence: record.profile_confidence,
             target_beneficiaries: record.target_beneficiaries,
             logo_url: record.logo_url,
             business_model: record.business_model,

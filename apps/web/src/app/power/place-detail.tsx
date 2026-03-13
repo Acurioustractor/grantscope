@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 
 interface PlaceData {
   sa2_code: string;
@@ -14,6 +15,7 @@ interface PlaceData {
   seifa_decile: number | null;
   top_recipients: Array<{ gs_id: string; name: string; type: string; revenue: number | null }>;
   top_funders: Array<{ name: string; amount: number; type: string }>;
+  postcodes: Array<{ postcode: string; locality: string | null }>;
 }
 
 function formatDollars(value: number | null | undefined): string {
@@ -199,10 +201,10 @@ export function PlaceDetail({ sa2Code, onClose, onSelectEntity }: PlaceDetailPro
               </div>
               <div className="space-y-1">
                 {data.top_recipients.map((r, i) => (
-                  <button
+                  <Link
                     key={i}
-                    onClick={() => onSelectEntity?.(r.gs_id)}
-                    className="w-full text-left flex items-center gap-2 p-2 hover:bg-bauhaus-canvas transition-colors border border-bauhaus-black/10"
+                    href={`/entities/${r.gs_id}`}
+                    className="flex items-center gap-2 p-2 hover:bg-bauhaus-canvas transition-colors border border-bauhaus-black/10"
                   >
                     <span className="w-7 h-7 flex items-center justify-center bg-bauhaus-blue text-white text-[10px] font-black flex-shrink-0">
                       {entityTypeIcon(r.type)}
@@ -214,7 +216,7 @@ export function PlaceDetail({ sa2Code, onClose, onSelectEntity }: PlaceDetailPro
                         {r.revenue ? ` · ${formatDollars(r.revenue)} rev` : ''}
                       </div>
                     </div>
-                  </button>
+                  </Link>
                 ))}
               </div>
             </div>
@@ -243,6 +245,45 @@ export function PlaceDetail({ sa2Code, onClose, onSelectEntity }: PlaceDetailPro
               </div>
             </div>
           )}
+
+          {/* Postcodes in this SA2 */}
+          {data.postcodes.length > 0 && (
+            <div>
+              <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-2">
+                Postcodes in this Region
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {data.postcodes.map((p) => (
+                  <Link
+                    key={p.postcode}
+                    href={`/places/${p.postcode}`}
+                    className="text-xs font-bold px-2 py-1 border border-bauhaus-black/20 text-bauhaus-black hover:bg-bauhaus-yellow hover:border-bauhaus-black transition-colors"
+                    title={p.locality || p.postcode}
+                  >
+                    {p.postcode}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Navigation links */}
+          <div className="pt-2 border-t-2 border-bauhaus-black/10 space-y-2">
+            {data.postcodes.length === 1 && (
+              <Link
+                href={`/places/${data.postcodes[0].postcode}`}
+                className="block text-center px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 border-bauhaus-black text-bauhaus-black hover:bg-bauhaus-yellow transition-colors"
+              >
+                Open Place Details
+              </Link>
+            )}
+            <Link
+              href={`/grants${data.state ? `?state=${encodeURIComponent(data.state)}` : ''}`}
+              className="block text-center px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 border-bauhaus-blue text-bauhaus-blue hover:bg-link-light transition-colors"
+            >
+              Grants in {data.state || 'this area'}
+            </Link>
+          </div>
         </div>
       )}
     </div>

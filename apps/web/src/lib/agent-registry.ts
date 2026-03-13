@@ -20,7 +20,10 @@ export type AgentCategory =
   | 'profiling'
   | 'graph'
   | 'embedding'
-  | 'analytics';
+  | 'analytics'
+  | 'intelligence'
+  | 'goods'
+  | 'nz';
 
 export const AGENTS: Record<string, AgentDef> = {
   // ── Sync ────────────────────────────────────────────────────────────────────
@@ -31,7 +34,7 @@ export const AGENTS: Record<string, AgentDef> = {
   'sync-ato-tax-transparency': { command: ['node', '--env-file=.env', 'scripts/sync-ato-tax-transparency.mjs'], displayName: 'Sync ATO Tax Transparency', category: 'sync', defaultPriority: 5, timeoutMs: 300_000, dependencies: [] },
   'sync-asx-companies':        { command: ['node', '--env-file=.env', 'scripts/sync-asx-companies.mjs'], displayName: 'Sync ASX Companies', category: 'sync', defaultPriority: 5, timeoutMs: 300_000, dependencies: [] },
   'sync-asic-companies':       { command: ['node', '--env-file=.env', 'scripts/sync-asic-companies.mjs'], displayName: 'Sync ASIC Companies', category: 'sync', defaultPriority: 5, timeoutMs: 600_000, dependencies: [] },
-  'sync-foundation-programs':  { command: ['node', '--env-file=.env', 'scripts/sync-foundation-programs.mjs'], displayName: 'Sync Foundation Programs', category: 'sync', defaultPriority: 4, timeoutMs: 120_000, dependencies: [] },
+  'sync-foundation-programs':  { command: ['node', '--env-file=.env', 'scripts/sync-foundation-programs.mjs', '--cleanup-invalid'], displayName: 'Sync Foundation Programs', category: 'sync', defaultPriority: 4, timeoutMs: 120_000, dependencies: [] },
   'sync-ghl-to-tracker':       { command: ['node', '--env-file=.env', 'scripts/sync-ghl-to-tracker.mjs'], displayName: 'Sync GHL to Tracker', category: 'sync', defaultPriority: 5, timeoutMs: 120_000, dependencies: [] },
 
   // ── Import ──────────────────────────────────────────────────────────────────
@@ -40,8 +43,10 @@ export const AGENTS: Record<string, AgentDef> = {
   'import-acnc-financials':        { command: ['node', '--env-file=.env', 'scripts/import-acnc-financials.mjs'], displayName: 'Import ACNC Financials', category: 'import', defaultPriority: 4, timeoutMs: 600_000, dependencies: [] },
   'import-rogs-justice':           { command: ['node', '--env-file=.env', 'scripts/import-rogs-justice.mjs'], displayName: 'Import ROGS Justice', category: 'import', defaultPriority: 4, timeoutMs: 300_000, dependencies: [] },
   'import-seifa-postcodes':        { command: ['node', '--env-file=.env', 'scripts/import-seifa-postcodes.mjs'], displayName: 'Import SEIFA Postcodes', category: 'import', defaultPriority: 5, timeoutMs: 120_000, dependencies: [] },
-  'import-social-traders':         { command: ['node', '--env-file=.env', 'scripts/import-social-traders.mjs'], displayName: 'Import Social Traders', category: 'import', defaultPriority: 5, timeoutMs: 300_000, dependencies: [] },
+  'import-social-traders':         { command: ['node', '--env-file=.env', 'scripts/ingest-social-traders.mjs'], displayName: 'Import Social Traders', category: 'import', defaultPriority: 5, timeoutMs: 300_000, dependencies: [] },
   'import-bcorp-au':               { command: ['node', '--env-file=.env', 'scripts/import-bcorp-au.mjs'], displayName: 'Import B Corp AU', category: 'import', defaultPriority: 5, timeoutMs: 300_000, dependencies: [] },
+  'import-ndis-provider-market':   { command: ['node', '--env-file=.env', 'scripts/import-ndis-provider-market.mjs'], displayName: 'Import NDIS Provider Market', category: 'import', defaultPriority: 4, timeoutMs: 300_000, dependencies: [] },
+  'import-ndis-provider-register': { command: ['node', '--env-file=.env', 'scripts/import-ndis-provider-register.mjs'], displayName: 'Import NDIS Provider Register', category: 'import', defaultPriority: 4, timeoutMs: 3_600_000, dependencies: [] },
   'import-modern-slavery':         { command: ['node', '--env-file=.env', 'scripts/import-modern-slavery.mjs'], displayName: 'Import Modern Slavery Register', category: 'import', defaultPriority: 5, timeoutMs: 300_000, dependencies: [] },
   'import-lobbying-register':      { command: ['node', '--env-file=.env', 'scripts/import-lobbying-register.mjs'], displayName: 'Import Lobbying Register', category: 'import', defaultPriority: 5, timeoutMs: 300_000, dependencies: [] },
   'import-gov-grants':             { command: ['node', '--env-file=.env', 'scripts/import-gov-grants.mjs'], displayName: 'Import Gov Grants', category: 'import', defaultPriority: 3, timeoutMs: 600_000, dependencies: [] },
@@ -60,14 +65,15 @@ export const AGENTS: Record<string, AgentDef> = {
   'enrich-programs':               { command: ['node', '--env-file=.env', 'scripts/enrich-programs.mjs'], displayName: 'Enrich Programs', category: 'enrichment', defaultPriority: 4, timeoutMs: 600_000, dependencies: [] },
 
   // ── Profiling ───────────────────────────────────────────────────────────────
-  'build-foundation-profiles':       { command: ['npx', 'tsx', 'scripts/build-foundation-profiles.mjs', '--limit=25', '--concurrency=5'], displayName: 'Build Foundation Profiles', category: 'profiling', defaultPriority: 4, timeoutMs: 1_200_000, dependencies: [] },
+  'build-foundation-profiles':       { command: ['npx', 'tsx', 'scripts/build-foundation-profiles.mjs', '--limit=20', '--concurrency=2'], displayName: 'Build Foundation Profiles', category: 'profiling', defaultPriority: 4, timeoutMs: 2_400_000, dependencies: [] },
   'profile-vip-foundations':         { command: ['node', '--env-file=.env', 'scripts/profile-vip-foundations.mjs'], displayName: 'Profile VIP Foundations', category: 'profiling', defaultPriority: 4, timeoutMs: 600_000, dependencies: [] },
   'profile-community-orgs':         { command: ['node', '--env-file=.env', 'scripts/profile-community-orgs.mjs'], displayName: 'Profile Community Orgs', category: 'profiling', defaultPriority: 5, timeoutMs: 600_000, dependencies: [] },
+  'classify-foundation-power-profiles': { command: ['node', '--env-file=.env', 'scripts/classify-foundation-power-profiles.mjs'], displayName: 'Classify Foundation Power Profiles', category: 'profiling', defaultPriority: 4, timeoutMs: 600_000, dependencies: ['sync-foundation-programs', 'enrich-foundations'] },
   'reprofile-low-confidence':       { command: ['node', '--env-file=.env', 'scripts/reprofile-low-confidence.mjs'], displayName: 'Reprofile Low Confidence', category: 'profiling', defaultPriority: 6, timeoutMs: 600_000, dependencies: [] },
   'reprofile-missing-descriptions': { command: ['node', '--env-file=.env', 'scripts/reprofile-missing-descriptions.mjs'], displayName: 'Reprofile Missing Descriptions', category: 'profiling', defaultPriority: 6, timeoutMs: 600_000, dependencies: [] },
 
   // ── Graph ───────────────────────────────────────────────────────────────────
-  'build-entity-graph':            { command: ['node', '--env-file=.env', 'scripts/build-entity-graph.mjs'], displayName: 'Build Entity Graph', category: 'graph', defaultPriority: 3, timeoutMs: 600_000, dependencies: [] },
+  'build-entity-graph':            { command: ['node', '--env-file=.env', 'scripts/build-entity-graph.mjs'], displayName: 'Build Entity Graph', category: 'graph', defaultPriority: 3, timeoutMs: 3_600_000, dependencies: [] },
   'resolve-donor-entities':        { command: ['node', '--env-file=.env', 'scripts/resolve-donor-entities.mjs'], displayName: 'Resolve Donor Entities', category: 'graph', defaultPriority: 4, timeoutMs: 600_000, dependencies: ['build-entity-graph'] },
   'classify-community-controlled': { command: ['node', '--env-file=.env', 'scripts/classify-community-controlled.mjs', '--apply'], displayName: 'Classify Community-Controlled', category: 'graph', defaultPriority: 5, timeoutMs: 300_000, dependencies: ['build-entity-graph'] },
 
@@ -78,9 +84,16 @@ export const AGENTS: Record<string, AgentDef> = {
   'refresh-materialized-views':    { command: ['node', '--env-file=.env', 'scripts/refresh-materialized-views.mjs'], displayName: 'Refresh Materialized Views', category: 'analytics', defaultPriority: 2, timeoutMs: 300_000, dependencies: [] },
   'build-money-flow-data':        { command: ['node', '--env-file=.env', 'scripts/build-money-flow-data.mjs'], displayName: 'Build Money Flow Data', category: 'analytics', defaultPriority: 4, timeoutMs: 600_000, dependencies: ['build-entity-graph', 'resolve-donor-entities'] },
   'flag-acnc-social-enterprises': { command: ['node', '--env-file=.env', 'scripts/flag-acnc-social-enterprises.mjs'], displayName: 'Flag ACNC Social Enterprises', category: 'analytics', defaultPriority: 5, timeoutMs: 300_000, dependencies: [] },
+
+  // ── Intelligence ──────────────────────────────────────────────────────────
+  'contract-alert-checker':       { command: ['node', '--env-file=.env', 'scripts/check-contract-alerts.mjs', '--apply'], displayName: 'Contract Alert Checker', category: 'intelligence', defaultPriority: 1, timeoutMs: 120_000, dependencies: [] },
+  'donor-contract-crossover':     { command: ['node', '--env-file=.env', 'scripts/check-donor-contract-crossover.mjs', '--apply'], displayName: 'Donor-Contract Crossover', category: 'intelligence', defaultPriority: 1, timeoutMs: 120_000, dependencies: [] },
+
+  // ── New Zealand ───────────────────────────────────────────────────────────
+  'import-nz-charities':          { command: ['node', '--env-file=.env', 'scripts/import-nz-charities.mjs', '--apply'], displayName: 'NZ Charities Register', category: 'nz', defaultPriority: 2, timeoutMs: 600_000, dependencies: [] },
 };
 
-export const CATEGORIES: AgentCategory[] = ['sync', 'import', 'discovery', 'enrichment', 'profiling', 'graph', 'embedding', 'analytics'];
+export const CATEGORIES: AgentCategory[] = ['sync', 'import', 'discovery', 'enrichment', 'profiling', 'graph', 'embedding', 'analytics', 'intelligence', 'goods', 'nz'];
 
 export function getAgent(agentId: string): AgentDef | null {
   return AGENTS[agentId] ?? null;

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServer } from '@/lib/supabase-server';
+import { requireModule } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
 
 const ALLOWED_TYPES = [
@@ -35,9 +35,9 @@ function getSourceType(mimeType: string, filename: string): string {
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const auth = await requireModule('grants');
+  if (auth.error) return auth.error;
+  const { user } = auth;
 
   const db = getServiceSupabase();
   const orgId = await getOrgProfileId(db, user.id);
@@ -133,9 +133,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const auth = await requireModule('grants');
+  if (auth.error) return auth.error;
+  const { user } = auth;
 
   const db = getServiceSupabase();
   const orgId = await getOrgProfileId(db, user.id);
@@ -192,9 +192,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const auth = await requireModule('grants');
+  if (auth.error) return auth.error;
+  const { user } = auth;
 
   const db = getServiceSupabase();
   const orgId = await getOrgProfileId(db, user.id);

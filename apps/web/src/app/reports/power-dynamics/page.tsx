@@ -1,5 +1,5 @@
 import { getServiceSupabase } from '@/lib/supabase';
-import { buildPowerReport } from '@grantscope/engine/src/reports/power-analysis';
+import { buildPowerReport } from '@grant-engine/reports/power-analysis';
 import { PowerDynamicsCharts } from './charts';
 
 export const dynamic = 'force-dynamic';

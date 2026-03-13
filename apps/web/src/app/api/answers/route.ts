@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServer } from '@/lib/supabase-server';
+import { requireModule } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
-import { embedQuery } from '@grantscope/engine';
+import { embedQuery } from '@grant-engine/embeddings';
 
 async function getOrgProfileId(db: ReturnType<typeof getServiceSupabase>, userId: string) {
   const { data: own } = await db
@@ -21,9 +21,9 @@ async function getOrgProfileId(db: ReturnType<typeof getServiceSupabase>, userId
 }
 
 export async function GET(request: NextRequest) {
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const auth = await requireModule('grants');
+  if (auth.error) return auth.error;
+  const { user } = auth;
 
   const db = getServiceSupabase();
   const orgId = await getOrgProfileId(db, user.id);
@@ -48,9 +48,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const auth = await requireModule('grants');
+  if (auth.error) return auth.error;
+  const { user } = auth;
 
   const db = getServiceSupabase();
   const orgId = await getOrgProfileId(db, user.id);
@@ -92,9 +92,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const auth = await requireModule('grants');
+  if (auth.error) return auth.error;
+  const { user } = auth;
 
   const db = getServiceSupabase();
   const orgId = await getOrgProfileId(db, user.id);
@@ -145,9 +145,9 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const auth = await requireModule('grants');
+  if (auth.error) return auth.error;
+  const { user } = auth;
 
   const db = getServiceSupabase();
   const orgId = await getOrgProfileId(db, user.id);

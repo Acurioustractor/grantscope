@@ -56,6 +56,7 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+let currentRunId = null;
 
 function log(msg) {
   console.log(`[profiler] ${msg}`);
@@ -335,6 +336,7 @@ async function main() {
   }
 
   const run = await logStart(supabase, 'build-foundation-profiles', 'Profile Foundations');
+  currentRunId = run.id;
 
   const scraper = SKIP_SCRAPE ? null : new FoundationScraper({ requestDelayMs: 2000, maxPagesPerFoundation: 5 });
   const profiler = new FoundationProfiler();
@@ -366,6 +368,8 @@ async function main() {
     items_found: foundations.length,
     items_new: profiled,
     items_updated: 0,
+    status: errors > 0 ? 'partial' : 'success',
+    errors: errors > 0 ? [`${errors} foundation profiling errors`] : [],
   });
 
   log(`\nComplete: ${profiled} profiled, ${errors} errors out of ${foundations.length}`);
@@ -373,5 +377,7 @@ async function main() {
 
 main().catch(err => {
   console.error('Fatal error:', err);
+  const message = err instanceof Error ? err.message : String(err);
+  logFailed(supabase, currentRunId, message).catch(() => {});
   process.exit(1);
 });

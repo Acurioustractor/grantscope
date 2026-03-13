@@ -9,7 +9,7 @@
  * Fields: kebab-case inside data[].attributes
  */
 
-import type { SourcePlugin, DiscoveryQuery, RawGrant } from '../types.js';
+import type { SourcePlugin, DiscoveryQuery, RawGrant } from '../types';
 
 const API_BASE = 'https://dataportal.arc.gov.au/NCGP/API/grants';
 

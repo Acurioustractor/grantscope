@@ -1,9 +1,18 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  transpilePackages: ['@grantscope/engine'],
+  experimental: {
+    externalDir: true,
+  },
   serverExternalPackages: ['playwright', 'playwright-core'],
-  webpack: (config, { isServer }) => {
+  turbopack: {
+    resolveAlias: {
+      playwright: './src/lib/shims/empty-module.ts',
+      'playwright-core': './src/lib/shims/empty-module.ts',
+    },
+    resolveExtensions: ['.tsx', '.ts', '.jsx', '.js', '.json'],
+  },
+  webpack: (config) => {
     // Resolve .js imports to .ts files in workspace packages (ESM convention)
     config.resolve.extensionAlias = {
       '.js': ['.ts', '.tsx', '.js'],

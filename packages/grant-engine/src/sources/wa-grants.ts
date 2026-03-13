@@ -12,7 +12,7 @@
  */
 
 import * as cheerio from 'cheerio';
-import type { SourcePlugin, DiscoveryQuery, RawGrant } from '../types.js';
+import type { SourcePlugin, DiscoveryQuery, RawGrant } from '../types';
 
 const BROWSER_UA = 'GrantScope/1.0 (research; contact@act.place)';
 

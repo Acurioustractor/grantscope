@@ -19,6 +19,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
+import { MINIMAX_CHAT_COMPLETIONS_URL } from './lib/minimax.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -43,11 +44,11 @@ function log(msg) {
 // LLM Providers — round-robin with fallback
 // ---------------------------------------------------------------------------
 const PROVIDERS = [
-  { name: 'minimax', baseUrl: 'https://api.minimaxi.chat/v1/chat/completions', model: 'MiniMax-M2.5', envKey: 'MINIMAX_API_KEY', disabled: false },
-  { name: 'groq', baseUrl: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.3-70b-versatile', envKey: 'GROQ_API_KEY', disabled: false },
-  { name: 'gemini', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', model: 'gemini-2.5-flash', envKey: 'GEMINI_API_KEY', disabled: false },
-  { name: 'deepseek', baseUrl: 'https://api.deepseek.com/chat/completions', model: 'deepseek-chat', envKey: 'DEEPSEEK_API_KEY', disabled: false },
+  { name: 'minimax', baseUrl: MINIMAX_CHAT_COMPLETIONS_URL, model: 'MiniMax-M2.5', envKey: 'MINIMAX_API_KEY', disabled: false },
   { name: 'anthropic', baseUrl: 'https://api.anthropic.com/v1/messages', model: 'claude-haiku-4-5-20251001', envKey: 'ANTHROPIC_API_KEY', disabled: false, isAnthropic: true },
+  { name: 'groq', baseUrl: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.3-70b-versatile', envKey: 'GROQ_API_KEY', disabled: false },
+  { name: 'deepseek', baseUrl: 'https://api.deepseek.com/chat/completions', model: 'deepseek-chat', envKey: 'DEEPSEEK_API_KEY', disabled: false },
+  { name: 'gemini', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', model: 'gemini-2.5-flash', envKey: 'GEMINI_API_KEY', disabled: false },
 ];
 
 let currentProviderIndex = 0;
@@ -76,11 +77,14 @@ Respond with JSON only:
   "confidence": 0.0 to 1.0,
   "sector": ["one or more of: employment, housing, disability, environment, education, health, arts, food, indigenous, community-development, aged-care, youth, other"],
   "business_model": "brief description of how they trade/operate commercially, or null if not a social enterprise"
-}`;
+}
+
+Keep the JSON answer under 80 tokens and do not include commentary outside the JSON object.`;
 }
 
 async function classifyWithLLM(charity) {
   const prompt = buildPrompt(charity);
+  let lastError = null;
 
   for (let attempt = 0; attempt < PROVIDERS.length; attempt++) {
     const provider = PROVIDERS[(currentProviderIndex + attempt) % PROVIDERS.length];
@@ -104,23 +108,35 @@ async function classifyWithLLM(charity) {
         });
       } else {
         headers['Authorization'] = `Bearer ${apiKey}`;
-        body = JSON.stringify({
+        const requestBody = {
           model: provider.model,
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.1,
-          max_tokens: 500,
-        });
+          max_tokens: provider.name === 'minimax' ? 1200 : 500,
+          response_format: { type: 'json_object' },
+        };
+
+        if (provider.name === 'minimax') {
+          requestBody.extra_body = { reasoning_split: true };
+        }
+
+        body = JSON.stringify(requestBody);
       }
 
       const response = await fetch(provider.baseUrl, {
         method: 'POST',
         headers,
         body,
-        signal: AbortSignal.timeout(30000),
+        signal: AbortSignal.timeout(provider.name === 'minimax' ? 45000 : 30000),
       });
 
       if (!response.ok) {
         const err = await response.text();
+        if (response.status === 401 || /invalid api key|authorized_error|unauthorized/i.test(err)) {
+          log(`${provider.name} auth failed -- disabling`);
+          provider.disabled = true;
+          continue;
+        }
         if (response.status === 429 || response.status === 402 ||
             err.includes('rate_limit') || err.includes('quota') ||
             err.includes('Insufficient Balance') || err.includes('credit balance')) {
@@ -146,18 +162,20 @@ async function classifyWithLLM(charity) {
         ? (json.content?.[0]?.text || '')
         : (json.choices?.[0]?.message?.content || '');
 
-      // Advance round-robin
-      currentProviderIndex = (currentProviderIndex + attempt + 1) % PROVIDERS.length;
-
       // Strip reasoning tags and markdown code blocks
       const stripped = text
         .replace(/<think>[\s\S]*?<\/think>/g, '')
+        .replace(/<answer>/gi, '')
+        .replace(/<\/answer>/gi, '')
         .replace(/`{3,}json\s*/gi, '')
         .replace(/`{3,}\s*/g, '')
         .trim();
+      const preferredText = text.includes('</think>')
+        ? text.split('</think>').pop().trim()
+        : stripped;
 
       // Find JSON object
-      let jsonStr = stripped;
+      let jsonStr = preferredText || stripped;
       const firstBrace = jsonStr.indexOf('{');
       if (firstBrace >= 0) jsonStr = jsonStr.slice(firstBrace);
       else jsonStr = '';
@@ -165,7 +183,13 @@ async function classifyWithLLM(charity) {
       const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
         log(`${provider.name} no JSON found for ${charity.name}`);
-        return null;
+        lastError = `${provider.name}: no JSON found`;
+        provider.badJsonCount = (provider.badJsonCount || 0) + 1;
+        if (provider.badJsonCount >= 3) {
+          log(`${provider.name} bad JSON threshold reached -- disabling`);
+          provider.disabled = true;
+        }
+        continue;
       }
 
       const cleaned = jsonMatch[0]
@@ -177,24 +201,38 @@ async function classifyWithLLM(charity) {
         parsed = JSON.parse(cleaned);
       } catch {
         log(`${provider.name} JSON parse error for ${charity.name}`);
-        return null;
+        lastError = `${provider.name}: JSON parse error`;
+        provider.badJsonCount = (provider.badJsonCount || 0) + 1;
+        if (provider.badJsonCount >= 3) {
+          log(`${provider.name} bad JSON threshold reached -- disabling`);
+          provider.disabled = true;
+        }
+        continue;
       }
+
+      // Advance round-robin only on a valid structured response.
+      currentProviderIndex = (currentProviderIndex + attempt + 1) % PROVIDERS.length;
 
       return {
         provider: provider.name,
         is_social_enterprise: !!parsed.is_social_enterprise,
         confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0,
-        sector: Array.isArray(parsed.sector) ? parsed.sector : [],
+        sector: Array.isArray(parsed.sector)
+          ? parsed.sector
+          : typeof parsed.sector === 'string' && parsed.sector.trim().length > 0
+            ? [parsed.sector.trim()]
+            : [],
         business_model: typeof parsed.business_model === 'string' ? parsed.business_model : null,
       };
 
     } catch (err) {
       log(`${provider.name} error: ${err.message?.slice(0, 100) || String(err)}`);
+      lastError = `${provider.name}: ${err.message?.slice(0, 160) || String(err)}`;
       continue;
     }
   }
 
-  throw new Error('All LLM providers exhausted');
+  throw new Error(lastError || 'All LLM providers exhausted');
 }
 
 // ---------------------------------------------------------------------------
@@ -206,6 +244,9 @@ async function processInBatches(items, batchSize, fn) {
     const batch = items.slice(i, i + batchSize);
     const batchResults = await Promise.allSettled(batch.map(fn));
     results.push(...batchResults);
+    if (i + batchSize < items.length && RATE_LIMIT_DELAY_MS > 0) {
+      await new Promise((resolve) => setTimeout(resolve, RATE_LIMIT_DELAY_MS));
+    }
   }
   return results;
 }
@@ -217,7 +258,7 @@ async function main() {
   log(`Starting ACNC social enterprise classification`);
   log(`  limit=${LIMIT}, min-confidence=${MIN_CONFIDENCE}, apply=${APPLY}, concurrency=${CONCURRENCY}`);
 
-  const run = await logStart(supabase, 'classify-acnc-se', 'Classify ACNC Social Enterprises');
+  const run = await logStart(supabase, 'classify-acnc-social-enterprises', 'Classify ACNC Social Enterprises');
 
   try {
     // Fetch charities not already in social_enterprises
@@ -282,6 +323,7 @@ async function main() {
     let classifiedAsSE = 0;
     let inserted = 0;
     let errors = 0;
+    const runErrors = [];
     const sectorCounts = {};
     const providerCounts = {};
     const classifications = []; // for dry-run display
@@ -302,12 +344,15 @@ async function main() {
 
         if (res.status === 'rejected') {
           errors++;
+          if (runErrors.length < 25) runErrors.push(res.reason?.message || res.reason);
           log(`Error: ${res.reason?.message || res.reason}`);
           if (String(res.reason).includes('All LLM providers exhausted')) {
             log('All providers exhausted -- stopping');
             await logComplete(supabase, run.id, {
               items_found: totalChecked,
               items_new: inserted,
+              status: errors > 0 ? 'partial' : 'success',
+              errors: runErrors,
             });
             printSummary(totalChecked, classifiedAsSE, inserted, errors, sectorCounts, providerCounts);
             return;
@@ -341,25 +386,29 @@ async function main() {
           });
 
           if (APPLY) {
+            const payload = {
+              name: charity.name,
+              abn: charity.abn,
+              source_primary: 'acnc-classified',
+              sources: { llm_classification: { confidence: result.confidence, business_model: result.business_model } },
+              postcode: charity.postcode || null,
+              state: charity.state || null,
+              sector: result.sector,
+              business_model: result.business_model,
+            };
+
             const { error: insertErr } = await supabase
               .from('social_enterprises')
-              .upsert(
-                {
-                  name: charity.name,
-                  abn: charity.abn,
-                  source_primary: 'acnc-classified',
-                  sources: { llm_classification: { confidence: result.confidence, business_model: result.business_model } },
-                  postcode: charity.postcode || null,
-                  state: charity.state || null,
-                  sector: result.sector,
-                  business_model: result.business_model,
-                },
-                { onConflict: 'abn', ignoreDuplicates: true }
-              );
+              .insert(payload);
 
             if (insertErr) {
-              log(`Insert error for ${charity.name}: ${insertErr.message}`);
-              errors++;
+              if (/duplicate key value/i.test(insertErr.message)) {
+                log(`Duplicate social enterprise skipped for ${charity.name}`);
+              } else {
+                log(`Insert error for ${charity.name}: ${insertErr.message}`);
+                errors++;
+                if (runErrors.length < 25) runErrors.push(`Insert error for ${charity.name}: ${insertErr.message}`);
+              }
             } else {
               inserted++;
             }
@@ -393,6 +442,8 @@ async function main() {
       items_found: totalChecked,
       items_new: inserted,
       items_updated: classifiedAsSE,
+      status: errors > 0 ? 'partial' : 'success',
+      errors: runErrors,
     });
 
   } catch (err) {

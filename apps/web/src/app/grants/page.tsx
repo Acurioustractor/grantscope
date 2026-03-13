@@ -1,27 +1,13 @@
 import { getServiceSupabase } from '@/lib/supabase';
-import { searchGrantsSemantic } from '@grantscope/engine/src/embeddings.js';
+import { searchGrantsSemantic } from '@grant-engine/embeddings';
 import { FilterBar } from '../components/filter-bar';
-import { GrantActionsProvider, GrantCardActions } from '../components/grant-card-actions';
+import { FundingIntelligenceRail } from '../components/funding-intelligence-rail';
+import { ListPreviewProvider, GrantPreviewTrigger } from '../components/list-preview';
+import { dedupeGrantList, sortGrantList, type GrantListItem } from './grant-list-utils';
 
 export const dynamic = 'force-dynamic';
 
-interface Grant {
-  id: string;
-  name: string;
-  provider: string;
-  program: string | null;
-  program_type: string | null;
-  amount_min: number | null;
-  amount_max: number | null;
-  closes_at: string | null;
-  url: string | null;
-  description: string | null;
-  categories: string[];
-  source: string | null;
-  status: string;
-  sources: unknown;
-  similarity?: number;
-}
+interface Grant extends GrantListItem {}
 
 function formatAmount(min: number | null, max: number | null): string {
   if (min && max) return `$${min.toLocaleString()} – $${max.toLocaleString()}`;
@@ -127,21 +113,33 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
         grantType: grantType !== 'all' ? grantType : undefined,
       });
 
+      const semanticIds = results.map((result) => result.id);
+      const { data: semanticDetails } = semanticIds.length > 0
+        ? await supabase
+            .from('grant_opportunities')
+            .select('id, program, program_type, source, status, sources, created_at, updated_at, last_verified_at')
+            .in('id', semanticIds)
+        : { data: [] };
+      const semanticDetailMap = new Map(
+        (semanticDetails || []).map((row) => [row.id, row]),
+      );
+
       grants = results.map(r => ({
+        ...(semanticDetailMap.get(r.id) || {}),
         id: r.id,
         name: r.name,
         provider: r.provider,
-        program: (r as Record<string, unknown>).program as string | null ?? null,
-        program_type: (r as Record<string, unknown>).program_type as string | null ?? null,
+        program: semanticDetailMap.get(r.id)?.program ?? null,
+        program_type: semanticDetailMap.get(r.id)?.program_type ?? null,
         amount_min: r.amount_min,
         amount_max: r.amount_max,
         closes_at: r.closes_at,
         url: r.url,
-        description: (r as Record<string, unknown>).description as string | null ?? null,
+        description: r.description ?? null,
         categories: r.categories || [],
-        source: (r as Record<string, unknown>).source as string | null ?? null,
-        status: 'open',
-        sources: null,
+        source: semanticDetailMap.get(r.id)?.source ?? null,
+        status: semanticDetailMap.get(r.id)?.status || 'open',
+        sources: semanticDetailMap.get(r.id)?.sources ?? null,
         similarity: r.similarity,
       }));
 
@@ -171,6 +169,11 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
         grants = grants.filter(g => g.closes_at && g.closes_at <= cutoff);
       }
 
+      grants = sortGrantList(
+        dedupeGrantList(grants),
+        sortOrder,
+        { semantic: true },
+      ) as Grant[];
       count = grants.length;
       usedSemantic = true;
     } catch {
@@ -179,16 +182,37 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
   }
 
   if (!usedSemantic) {
+    const grantFields = [
+      'id',
+      'name',
+      'provider',
+      'program',
+      'program_type',
+      'amount_min',
+      'amount_max',
+      'closes_at',
+      'url',
+      'description',
+      'categories',
+      'source',
+      'status',
+      'sources',
+      'created_at',
+      'updated_at',
+      'last_verified_at',
+    ].join(', ');
+
     let dbQuery = supabase
       .from('grant_opportunities')
-      .select('*', { count: 'exact' });
+      .select(grantFields);
 
     if (grantType !== 'all') {
       dbQuery = dbQuery.eq('grant_type', grantType);
     }
 
     if (query) {
-      dbQuery = dbQuery.or(`name.ilike.%${query}%,provider.ilike.%${query}%`);
+      const escapedQuery = query.replace(/[%_]/g, '');
+      dbQuery = dbQuery.or(`name.ilike.%${escapedQuery}%,provider.ilike.%${escapedQuery}%`);
     }
 
     if (category) {
@@ -232,26 +256,15 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
       dbQuery = dbQuery.not('closes_at', 'is', null);
     }
 
-    if (sortOrder === 'closing_asc') {
-      dbQuery = dbQuery.order('closes_at', { ascending: true, nullsFirst: false });
-    } else if (sortOrder === 'closing_desc') {
-      dbQuery = dbQuery.order('closes_at', { ascending: false, nullsFirst: false });
-    } else if (sortOrder === 'amount_desc') {
-      dbQuery = dbQuery.order('amount_max', { ascending: false, nullsFirst: false });
-    } else if (sortOrder === 'amount_asc') {
-      dbQuery = dbQuery.order('amount_max', { ascending: true, nullsFirst: false });
-    } else if (sortOrder === 'name_asc') {
-      dbQuery = dbQuery.order('name', { ascending: true });
-    } else {
-      // Default: newest first
-      dbQuery = dbQuery.order('created_at', { ascending: false });
-    }
-
-    dbQuery = dbQuery.range(offset, offset + pageSize - 1);
-
     const result = await dbQuery;
-    grants = (result.data || []) as Grant[];
-    count = result.count || 0;
+    const filteredRows = ((result.data || []) as unknown) as Grant[];
+    const uniqueGrants = sortGrantList(
+      dedupeGrantList(filteredRows),
+      sortOrder,
+    ) as Grant[];
+
+    count = uniqueGrants.length;
+    grants = uniqueGrants.slice(offset, offset + pageSize);
   }
 
   const totalPages = usedSemantic ? 1 : Math.ceil((count || 0) / pageSize);
@@ -280,162 +293,178 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
   const filterQS = filterParams.toString();
 
   return (
+    <ListPreviewProvider>
     <div>
-      <div className="mb-8">
-        <p className="text-xs font-black text-bauhaus-blue uppercase tracking-[0.3em] mb-2">Directory</p>
-        <h1 className="text-3xl font-black text-bauhaus-black mb-2">Grants &amp; Opportunities</h1>
-        <p className="text-bauhaus-muted font-medium">
-          {count.toLocaleString()} {grantType === 'historical_award' ? 'historical awards' : grantType === 'all' ? 'grants' : 'open opportunities'}
-        </p>
+      <FundingIntelligenceRail
+        current="grants"
+        totalLabel={`${count.toLocaleString()} ${grantType === 'historical_award' ? 'historical awards' : grantType === 'all' ? 'grants and opportunities' : 'open opportunities'} in the current funding search`}
+        query={query}
+        theme={category || query}
+        geography={geoFilter}
+        trackerHref="/tracker"
+      />
+
+      <div className="mb-6">
+        <div className="flex items-baseline justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-bauhaus-black">Grants &amp; Opportunities</h1>
+            <p className="text-sm text-bauhaus-muted mt-0.5">
+              {count.toLocaleString()} {grantType === 'historical_award' ? 'historical awards' : grantType === 'all' ? 'grants' : 'open opportunities'}
+            </p>
+          </div>
+          <div className="flex items-center gap-1">
+            {grantTypes.map(t => (
+              <a
+                key={t.value}
+                href={`/grants?type=${t.value}&q=${query}&category=${category}&mode=${searchMode}`}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-colors ${grantType === t.value ? 'bg-bauhaus-black text-white' : 'text-bauhaus-muted hover:bg-bauhaus-canvas'}`}
+              >
+                {t.label}
+              </a>
+            ))}
+          </div>
+        </div>
       </div>
 
-      <div className="flex gap-0 mb-6">
-        {grantTypes.map(t => (
-          <a
-            key={t.value}
-            href={`/grants?type=${t.value}&q=${query}&category=${category}&mode=${searchMode}`}
-            className={`px-4 py-2 text-xs font-black uppercase tracking-widest border-4 border-r-0 last:border-r-4 border-bauhaus-black ${grantType === t.value ? 'bg-bauhaus-black text-white' : 'bg-white text-bauhaus-black hover:bg-bauhaus-canvas'}`}
-          >
-            {t.label}
-          </a>
-        ))}
-      </div>
-
-      {/* Search mode toggle + search bar */}
-      <div className="flex gap-0 mb-0">
-        <a
-          href={`/grants?type=${grantType}&q=${query}&category=${category}&mode=keyword`}
-          className={`px-4 py-2 text-[11px] font-black uppercase tracking-widest border-4 border-b-0 border-bauhaus-black ${searchMode !== 'ai' ? 'bg-bauhaus-black text-white' : 'bg-white text-bauhaus-black hover:bg-bauhaus-canvas'}`}
-        >
-          Keyword
-        </a>
-        <a
-          href={`/grants?type=${grantType}&q=${query}&category=${category}&mode=ai`}
-          className={`px-4 py-2 text-[11px] font-black uppercase tracking-widest border-4 border-b-0 border-l-0 border-bauhaus-black ${searchMode === 'ai' ? 'bg-bauhaus-blue text-white' : 'bg-white text-bauhaus-black hover:bg-bauhaus-canvas'}`}
-        >
-          AI Search
-        </a>
-      </div>
-
-      <form method="get" className="flex flex-col sm:flex-row gap-0 mb-4">
+      {/* Search bar */}
+      <form method="get" className="flex gap-2 mb-3">
         <input type="hidden" name="type" value={grantType} />
         <input type="hidden" name="mode" value={searchMode} />
         {amountMin && <input type="hidden" name="amount_min" value={amountMin} />}
         {amountMax && <input type="hidden" name="amount_max" value={amountMax} />}
         {geoFilter && <input type="hidden" name="geo" value={geoFilter} />}
         {closingFilter && <input type="hidden" name="closing" value={closingFilter} />}
-        <input
-          type="text"
-          name="q"
-          defaultValue={query}
-          placeholder={searchMode === 'ai' ? 'Describe what you need funding for...' : 'Search grants...'}
-          className="flex-1 px-4 py-2.5 border-4 border-bauhaus-black text-sm font-bold bg-white focus:bg-bauhaus-yellow focus:outline-none uppercase tracking-wider placeholder:normal-case placeholder:tracking-normal"
-        />
-        <select name="category" defaultValue={category} className="px-4 py-2.5 border-4 border-l-0 border-bauhaus-black text-sm font-bold bg-white focus:outline-none uppercase">
+        <div className="flex-1 relative">
+          <input
+            type="text"
+            name="q"
+            defaultValue={query}
+            placeholder={searchMode === 'ai' ? 'Describe what you need funding for...' : 'Search grants...'}
+            className="w-full px-4 py-2.5 border border-bauhaus-black/20 rounded-lg text-sm bg-white focus:border-bauhaus-blue focus:ring-1 focus:ring-bauhaus-blue focus:outline-none placeholder:text-bauhaus-muted/50"
+          />
+        </div>
+        <select name="category" defaultValue={category} className="px-3 py-2.5 border border-bauhaus-black/20 rounded-lg text-sm bg-white focus:outline-none">
           <option value="">All categories</option>
           {categories.map(c => (
             <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
           ))}
         </select>
-        <button type="submit" className="px-5 py-2.5 bg-bauhaus-black text-white text-xs font-black uppercase tracking-widest hover:bg-bauhaus-red cursor-pointer border-4 border-bauhaus-black">
+        <div className="flex rounded-lg overflow-hidden border border-bauhaus-black/20">
+          <a
+            href={`/grants?type=${grantType}&q=${query}&category=${category}&mode=keyword`}
+            className={`px-3 py-2.5 text-xs font-semibold transition-colors ${searchMode !== 'ai' ? 'bg-bauhaus-black text-white' : 'bg-white text-bauhaus-muted hover:bg-bauhaus-canvas'}`}
+          >
+            Keyword
+          </a>
+          <a
+            href={`/grants?type=${grantType}&q=${query}&category=${category}&mode=ai`}
+            className={`px-3 py-2.5 text-xs font-semibold transition-colors border-l border-bauhaus-black/20 ${searchMode === 'ai' ? 'bg-bauhaus-blue text-white' : 'bg-white text-bauhaus-muted hover:bg-bauhaus-canvas'}`}
+          >
+            AI
+          </a>
+        </div>
+        <button type="submit" className="px-5 py-2.5 bg-bauhaus-black text-white text-xs font-semibold rounded-lg hover:bg-bauhaus-black/80 cursor-pointer transition-colors">
           Search
         </button>
       </form>
 
-      {/* Filters */}
+      {/* Filters — single compact row */}
       <FilterBar>
-        <form method="get" className="flex flex-col sm:flex-row gap-0 border-4 border-bauhaus-black bg-white">
+        <form method="get" className="flex items-center gap-3 py-2 px-3 bg-bauhaus-canvas/50 border border-bauhaus-black/10 rounded-lg flex-wrap">
           <input type="hidden" name="type" value={grantType} />
           <input type="hidden" name="mode" value={searchMode} />
           {query && <input type="hidden" name="q" value={query} />}
           {category && <input type="hidden" name="category" value={category} />}
-          <div className="flex items-center px-3 py-2 border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black">
-            <span className="text-[11px] font-black text-bauhaus-muted uppercase tracking-wider mr-2 whitespace-nowrap">Amount</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] font-semibold text-bauhaus-muted uppercase tracking-wide">Amount</span>
             <input
               type="number"
               name="amount_min"
               defaultValue={amountMin || ''}
-              placeholder="Min $"
-              className="w-20 px-2 py-1 text-xs font-bold border-2 border-bauhaus-black/20 bg-bauhaus-canvas focus:outline-none tabular-nums"
+              placeholder="Min"
+              className="w-16 px-2 py-1 text-xs border border-bauhaus-black/15 rounded bg-white focus:outline-none tabular-nums"
             />
-            <span className="mx-1 text-bauhaus-muted">–</span>
+            <span className="text-bauhaus-muted/50">–</span>
             <input
               type="number"
               name="amount_max"
               defaultValue={amountMax || ''}
-              placeholder="Max $"
-              className="w-20 px-2 py-1 text-xs font-bold border-2 border-bauhaus-black/20 bg-bauhaus-canvas focus:outline-none tabular-nums"
+              placeholder="Max"
+              className="w-16 px-2 py-1 text-xs border border-bauhaus-black/15 rounded bg-white focus:outline-none tabular-nums"
             />
           </div>
-          <div className="flex items-center px-3 py-2 border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black">
-            <span className="text-[11px] font-black text-bauhaus-muted uppercase tracking-wider mr-2">State</span>
-            <select name="geo" defaultValue={geoFilter} className="text-xs font-bold bg-bauhaus-canvas border-2 border-bauhaus-black/20 px-2 py-1 focus:outline-none">
+          <div className="w-px h-5 bg-bauhaus-black/10"></div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] font-semibold text-bauhaus-muted uppercase tracking-wide">State</span>
+            <select name="geo" defaultValue={geoFilter} className="text-xs border border-bauhaus-black/15 rounded bg-white px-2 py-1 focus:outline-none">
               <option value="">All</option>
               {STATES.map(s => (
                 <option key={s.value} value={s.value}>{s.label}</option>
               ))}
             </select>
           </div>
-          <div className="flex items-center px-3 py-2 border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black">
-            <span className="text-[11px] font-black text-bauhaus-muted uppercase tracking-wider mr-2">Source</span>
-            <select name="source" defaultValue={sourceFilter} className="text-xs font-bold bg-bauhaus-canvas border-2 border-bauhaus-black/20 px-2 py-1 focus:outline-none uppercase">
+          <div className="w-px h-5 bg-bauhaus-black/10"></div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] font-semibold text-bauhaus-muted uppercase tracking-wide">Source</span>
+            <select name="source" defaultValue={sourceFilter} className="text-xs border border-bauhaus-black/15 rounded bg-white px-2 py-1 focus:outline-none">
               <option value="">All</option>
               {SOURCES.map(s => (
                 <option key={s.value} value={s.value}>{s.label}</option>
               ))}
             </select>
           </div>
-          <div className="flex items-center px-3 py-2 border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black">
-            <span className="text-[11px] font-black text-bauhaus-muted uppercase tracking-wider mr-2">Type</span>
-            <select name="program_type" defaultValue={programTypeFilter} className="text-xs font-bold bg-bauhaus-canvas border-2 border-bauhaus-black/20 px-2 py-1 focus:outline-none uppercase">
+          <div className="w-px h-5 bg-bauhaus-black/10"></div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] font-semibold text-bauhaus-muted uppercase tracking-wide">Type</span>
+            <select name="program_type" defaultValue={programTypeFilter} className="text-xs border border-bauhaus-black/15 rounded bg-white px-2 py-1 focus:outline-none">
               <option value="">All</option>
               {PROGRAM_TYPES.map(t => (
                 <option key={t.value} value={t.value}>{t.label}</option>
               ))}
             </select>
           </div>
-          <div className="flex items-center px-3 py-2 border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black gap-1">
-            <span className="text-[11px] font-black text-bauhaus-muted uppercase tracking-wider mr-1">Closing</span>
-            {[{ v: '', label: 'Upcoming' }, { v: '30', label: '30 Days' }, { v: '90', label: '90 Days' }, { v: 'all', label: 'All' }].map(({ v, label }) => (
+          <div className="w-px h-5 bg-bauhaus-black/10"></div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] font-semibold text-bauhaus-muted uppercase tracking-wide">Closing</span>
+            {[{ v: '', label: 'Upcoming' }, { v: '30', label: '30d' }, { v: '90', label: '90d' }, { v: 'all', label: 'All' }].map(({ v, label }) => (
               <a
                 key={v}
                 href={`/grants?${new URLSearchParams({ type: grantType, mode: searchMode, ...(query ? { q: query } : {}), ...(category ? { category } : {}), ...(amountMin ? { amount_min: String(amountMin) } : {}), ...(amountMax ? { amount_max: String(amountMax) } : {}), ...(geoFilter ? { geo: geoFilter } : {}), ...(sourceFilter ? { source: sourceFilter } : {}), ...(programTypeFilter ? { program_type: programTypeFilter } : {}), closing: v }).toString()}`}
-                className={`px-2 py-0.5 text-[11px] font-black uppercase tracking-wider border-2 border-bauhaus-black/20 ${closingFilter === v ? 'bg-bauhaus-black text-white border-bauhaus-black' : 'bg-bauhaus-canvas text-bauhaus-black hover:bg-bauhaus-black/10'}`}
+                className={`px-2 py-0.5 text-[11px] font-semibold rounded transition-colors ${closingFilter === v ? 'bg-bauhaus-black text-white' : 'text-bauhaus-muted hover:bg-bauhaus-black/5'}`}
               >
                 {label}
               </a>
             ))}
           </div>
-          <button type="submit" className="px-4 py-2 bg-bauhaus-black text-white text-[11px] font-black uppercase tracking-widest hover:bg-bauhaus-red cursor-pointer">
+          <button type="submit" className="ml-auto px-3 py-1 bg-bauhaus-black text-white text-[11px] font-semibold rounded hover:bg-bauhaus-black/80 cursor-pointer transition-colors">
             Apply
           </button>
         </form>
       </FilterBar>
 
-      {/* Sort & filter controls */}
-      <div className="flex items-center gap-3 mb-4 flex-wrap">
-        <div className="flex items-center gap-1">
-          <span className="text-[11px] font-black text-bauhaus-muted uppercase tracking-wider mr-1">Sort</span>
-          {[
-            { v: 'newest', label: 'Newest' },
-            { v: 'closing_asc', label: 'Closing Soon' },
-            { v: 'closing_desc', label: 'Closing Last' },
-            { v: 'amount_desc', label: '$ High' },
-            { v: 'amount_asc', label: '$ Low' },
-            { v: 'name_asc', label: 'A-Z' },
-          ].map(({ v, label }) => (
-            <a
-              key={v}
-              href={`/grants?${new URLSearchParams({ type: grantType, mode: searchMode, ...(query ? { q: query } : {}), ...(category ? { category } : {}), ...(closingFilter ? { closing: closingFilter } : {}), ...(geoFilter ? { geo: geoFilter } : {}), ...(amountMin ? { amount_min: String(amountMin) } : {}), ...(amountMax ? { amount_max: String(amountMax) } : {}), ...(hideOngoing ? { hide_ongoing: '1' } : {}), ...(sourceFilter ? { source: sourceFilter } : {}), ...(programTypeFilter ? { program_type: programTypeFilter } : {}), sort: v }).toString()}`}
-              className={`px-2 py-0.5 text-[11px] font-black uppercase tracking-wider border-2 border-bauhaus-black/20 ${sortOrder === v ? 'bg-bauhaus-black text-white border-bauhaus-black' : 'bg-bauhaus-canvas text-bauhaus-black hover:bg-bauhaus-black/10'}`}
-            >
-              {label}
-            </a>
-          ))}
-        </div>
+      {/* Sort controls — inline, subtle */}
+      <div className="flex items-center gap-2 mb-4 mt-3">
+        <span className="text-[11px] font-semibold text-bauhaus-muted uppercase tracking-wide">Sort</span>
+        {[
+          { v: 'newest', label: 'Newest' },
+          { v: 'closing_asc', label: 'Closing Soon' },
+          { v: 'closing_desc', label: 'Closing Last' },
+          { v: 'amount_desc', label: '$ High' },
+          { v: 'amount_asc', label: '$ Low' },
+          { v: 'name_asc', label: 'A-Z' },
+        ].map(({ v, label }) => (
+          <a
+            key={v}
+            href={`/grants?${new URLSearchParams({ type: grantType, mode: searchMode, ...(query ? { q: query } : {}), ...(category ? { category } : {}), ...(closingFilter ? { closing: closingFilter } : {}), ...(geoFilter ? { geo: geoFilter } : {}), ...(amountMin ? { amount_min: String(amountMin) } : {}), ...(amountMax ? { amount_max: String(amountMax) } : {}), ...(hideOngoing ? { hide_ongoing: '1' } : {}), ...(sourceFilter ? { source: sourceFilter } : {}), ...(programTypeFilter ? { program_type: programTypeFilter } : {}), sort: v }).toString()}`}
+            className={`px-2 py-0.5 text-[11px] font-semibold rounded transition-colors ${sortOrder === v ? 'bg-bauhaus-black text-white' : 'text-bauhaus-muted hover:bg-bauhaus-black/5'}`}
+          >
+            {label}
+          </a>
+        ))}
+        <div className="w-px h-4 bg-bauhaus-black/10 mx-1"></div>
         <a
           href={`/grants?${new URLSearchParams({ type: grantType, mode: searchMode, ...(query ? { q: query } : {}), ...(category ? { category } : {}), ...(closingFilter ? { closing: closingFilter } : {}), ...(geoFilter ? { geo: geoFilter } : {}), ...(amountMin ? { amount_min: String(amountMin) } : {}), ...(amountMax ? { amount_max: String(amountMax) } : {}), ...(sortOrder !== 'newest' ? { sort: sortOrder } : {}), ...(sourceFilter ? { source: sourceFilter } : {}), ...(programTypeFilter ? { program_type: programTypeFilter } : {}), ...(!hideOngoing ? { hide_ongoing: '1' } : {}) }).toString()}`}
-          className={`px-2 py-0.5 text-[11px] font-black uppercase tracking-wider border-2 ${hideOngoing ? 'bg-bauhaus-black text-white border-bauhaus-black' : 'border-bauhaus-black/20 bg-bauhaus-canvas text-bauhaus-black hover:bg-bauhaus-black/10'}`}
+          className={`px-2 py-0.5 text-[11px] font-semibold rounded transition-colors ${hideOngoing ? 'bg-bauhaus-black text-white' : 'text-bauhaus-muted hover:bg-bauhaus-black/5'}`}
         >
           {hideOngoing ? 'Show Ongoing' : 'Hide Ongoing'}
         </a>
@@ -443,33 +472,42 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
 
       {/* Semantic search banner */}
       {usedSemantic && (
-        <div className="mb-4 p-3 bg-link-light border-4 border-bauhaus-blue">
-          <span className="text-xs font-black text-bauhaus-blue uppercase tracking-wider">
+        <div className="mb-4 p-3 bg-link-light border border-bauhaus-blue/30 rounded-lg">
+          <span className="text-xs font-semibold text-bauhaus-blue">
             AI found {count} grants matching: &ldquo;{query}&rdquo;
           </span>
         </div>
       )}
 
-      <GrantActionsProvider>
-      <div className="space-y-0">
+      <div className="space-y-2">
         {grants.map((grant) => (
-          <a
+          <GrantPreviewTrigger
             key={grant.id}
-            href={`/grants/${grant.id}`}
-            className="block group"
+            grant={{
+              id: grant.id,
+              name: grant.name,
+              provider: grant.provider,
+              description: grant.description ?? null,
+              amount_min: grant.amount_min,
+              amount_max: grant.amount_max,
+              closes_at: grant.closes_at,
+              categories: grant.categories || [],
+              url: grant.url ?? null,
+              source: grant.source ?? null,
+            }}
           >
-            <div className="bg-white border-4 border-b-0 border-bauhaus-black p-4 sm:px-5 transition-all group-hover:bg-bauhaus-blue group-hover:text-white last:border-b-4">
+            <div className="bg-white border border-bauhaus-black/10 rounded-lg p-4 sm:px-5 transition-all hover:border-bauhaus-blue/30 hover:shadow-sm group-hover:bg-bauhaus-blue group-hover:text-white group-hover:border-bauhaus-blue">
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-bauhaus-black text-[15px] group-hover:text-white">{grant.name}</h3>
+                    <h3 className="font-semibold text-bauhaus-black text-[15px] group-hover:text-white">{grant.name}</h3>
                     {grant.program_type && grant.program_type !== 'open_opportunity' && (
-                      <span className={`text-[10px] font-black px-1.5 py-0.5 uppercase tracking-wider border-2 flex-shrink-0 ${
-                        grant.program_type === 'fellowship' ? 'border-bauhaus-blue bg-link-light text-bauhaus-blue' :
-                        grant.program_type === 'scholarship' ? 'border-bauhaus-yellow bg-warning-light text-bauhaus-black' :
-                        grant.program_type === 'historical_award' ? 'border-bauhaus-black/20 bg-bauhaus-canvas text-bauhaus-muted' :
-                        'border-money bg-money-light text-money'
-                      } group-hover:border-white/30 group-hover:bg-white/20 group-hover:text-white`}>
+                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 uppercase tracking-wider rounded flex-shrink-0 ${
+                        grant.program_type === 'fellowship' ? 'bg-link-light text-bauhaus-blue' :
+                        grant.program_type === 'scholarship' ? 'bg-warning-light text-bauhaus-black' :
+                        grant.program_type === 'historical_award' ? 'bg-bauhaus-canvas text-bauhaus-muted' :
+                        'bg-money-light text-money'
+                      } group-hover:bg-white/20 group-hover:text-white`}>
                         {grant.program_type.replace('_', ' ')}
                       </span>
                     )}
@@ -484,18 +522,18 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
                   )}
                 </div>
                 <div className="sm:text-right sm:ml-4 flex-shrink-0">
-                  <div className="text-sm font-black text-bauhaus-blue tabular-nums group-hover:text-bauhaus-yellow">
+                  <div className="text-sm font-bold text-bauhaus-blue tabular-nums group-hover:text-bauhaus-yellow">
                     {formatAmount(grant.amount_min, grant.amount_max)}
                   </div>
-                  <div className={`text-xs mt-0.5 font-bold ${grant.closes_at ? 'text-bauhaus-red' : 'text-bauhaus-muted'} group-hover:text-white/70`}>
+                  <div className={`text-xs mt-0.5 font-medium ${grant.closes_at ? 'text-bauhaus-red' : 'text-bauhaus-muted'} group-hover:text-white/70`}>
                     {grant.closes_at ? `Closes ${formatDate(grant.closes_at)}` : 'Ongoing'}
                   </div>
                   {usedSemantic && grant.similarity != null && (
                     <div className="flex items-center gap-1.5 mt-1 justify-end">
-                      <div className="w-16 h-1.5 bg-bauhaus-canvas border border-bauhaus-black/20 group-hover:border-white/30">
-                        <div className="h-full bg-bauhaus-blue group-hover:bg-bauhaus-yellow" style={{ width: `${Math.round(grant.similarity * 100)}%` }}></div>
+                      <div className="w-16 h-1.5 bg-bauhaus-canvas rounded-full overflow-hidden">
+                        <div className="h-full bg-bauhaus-blue group-hover:bg-bauhaus-yellow rounded-full" style={{ width: `${Math.round(grant.similarity * 100)}%` }}></div>
                       </div>
-                      <span className="text-[10px] font-black text-bauhaus-muted group-hover:text-white/50 uppercase tracking-wider tabular-nums">
+                      <span className="text-[10px] font-semibold text-bauhaus-muted group-hover:text-white/50 tabular-nums">
                         {Math.round(grant.similarity * 100)}%
                       </span>
                     </div>
@@ -504,36 +542,35 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
               </div>
               <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
                 {grant.categories?.length > 0 && grant.categories.map(c => (
-                    <span key={c} className="text-[11px] px-2 py-0.5 bg-bauhaus-canvas text-bauhaus-black font-black uppercase tracking-wider border-2 border-bauhaus-black/20 group-hover:bg-white/20 group-hover:text-white group-hover:border-white/30">
+                    <span key={c} className="text-[11px] px-2 py-0.5 bg-bauhaus-canvas text-bauhaus-muted font-medium rounded group-hover:bg-white/20 group-hover:text-white">
                       {c}
                     </span>
                   ))}
-                <div className="ml-auto">
-                  <GrantCardActions grantId={grant.id} />
-                </div>
+                <span className="ml-auto text-[11px] font-semibold text-bauhaus-muted group-hover:text-white/70">
+                  Open details &rarr;
+                </span>
               </div>
             </div>
-          </a>
+          </GrantPreviewTrigger>
         ))}
-        {grants.length > 0 && <div className="border-b-4 border-bauhaus-black -mt-0"></div>}
       </div>
-      </GrantActionsProvider>
 
       {totalPages > 1 && (
-        <div className="flex justify-center items-center gap-0 mt-8">
+        <div className="flex justify-center items-center gap-2 mt-8">
           {page > 1 && (
-            <a href={`/grants?${filterQS}&page=${page - 1}`} className="px-4 py-2 text-xs font-black uppercase tracking-widest border-4 border-bauhaus-black text-bauhaus-black hover:bg-bauhaus-black hover:text-white">
+            <a href={`/grants?${filterQS}&page=${page - 1}`} className="px-4 py-2 text-xs font-semibold border border-bauhaus-black/20 rounded-lg text-bauhaus-black hover:bg-bauhaus-canvas transition-colors">
               Previous
             </a>
           )}
-          <span className="px-4 py-2 text-xs font-black uppercase tracking-widest border-4 border-l-0 border-bauhaus-black bg-bauhaus-canvas">Page {page} of {totalPages}</span>
+          <span className="px-4 py-2 text-xs font-medium text-bauhaus-muted">Page {page} of {totalPages}</span>
           {page < totalPages && (
-            <a href={`/grants?${filterQS}&page=${page + 1}`} className="px-4 py-2 text-xs font-black uppercase tracking-widest border-4 border-l-0 border-bauhaus-black text-bauhaus-black hover:bg-bauhaus-black hover:text-white">
+            <a href={`/grants?${filterQS}&page=${page + 1}`} className="px-4 py-2 text-xs font-semibold border border-bauhaus-black/20 rounded-lg text-bauhaus-black hover:bg-bauhaus-canvas transition-colors">
               Next
             </a>
           )}
         </div>
       )}
     </div>
+    </ListPreviewProvider>
   );
 }

@@ -65,7 +65,7 @@ export const AGENTS = {
     dependencies: [],
   },
   'sync-foundation-programs': {
-    command: ['node', '--env-file=.env', 'scripts/sync-foundation-programs.mjs'],
+    command: ['node', '--env-file=.env', 'scripts/sync-foundation-programs.mjs', '--cleanup-invalid'],
     displayName: 'Sync Foundation Programs',
     category: 'sync',
     defaultPriority: 4,
@@ -123,7 +123,7 @@ export const AGENTS = {
     dependencies: [],
   },
   'import-social-traders': {
-    command: ['node', '--env-file=.env', 'scripts/import-social-traders.mjs'],
+    command: ['node', '--env-file=.env', 'scripts/ingest-social-traders.mjs'],
     displayName: 'Import Social Traders',
     category: 'import',
     defaultPriority: 5,
@@ -152,6 +152,22 @@ export const AGENTS = {
     category: 'import',
     defaultPriority: 5,
     timeoutMs: 300_000,
+    dependencies: [],
+  },
+  'import-ndis-provider-market': {
+    command: ['node', '--env-file=.env', 'scripts/import-ndis-provider-market.mjs'],
+    displayName: 'Import NDIS Provider Market',
+    category: 'import',
+    defaultPriority: 4,
+    timeoutMs: 300_000,
+    dependencies: [],
+  },
+  'import-ndis-provider-register': {
+    command: ['node', '--env-file=.env', 'scripts/import-ndis-provider-register.mjs'],
+    displayName: 'Import NDIS Provider Register',
+    category: 'import',
+    defaultPriority: 4,
+    timeoutMs: 3_600_000,
     dependencies: [],
   },
   'import-gov-procurement-se': {
@@ -221,7 +237,7 @@ export const AGENTS = {
     dependencies: [],
   },
   'run-scraping-agents': {
-    command: ['node', '--env-file=.env', 'scripts/run-scraping-agents.mjs'],
+    command: ['npx', 'tsx', 'scripts/run-scraping-agents.mjs'],
     displayName: 'Run Scraping Agents',
     category: 'discovery',
     defaultPriority: 3,
@@ -289,11 +305,11 @@ export const AGENTS = {
 
   // ── Profiling ───────────────────────────────────────────────────────────────
   'build-foundation-profiles': {
-    command: ['npx', 'tsx', 'scripts/build-foundation-profiles.mjs', '--limit=25', '--concurrency=5'],
+    command: ['npx', 'tsx', 'scripts/build-foundation-profiles.mjs', '--limit=20', '--concurrency=2'],
     displayName: 'Build Foundation Profiles',
     category: 'profiling',
     defaultPriority: 4,
-    timeoutMs: 1_200_000,
+    timeoutMs: 2_400_000,
     dependencies: [],
   },
   'profile-vip-foundations': {
@@ -311,6 +327,14 @@ export const AGENTS = {
     defaultPriority: 5,
     timeoutMs: 600_000,
     dependencies: [],
+  },
+  'classify-foundation-power-profiles': {
+    command: ['node', '--env-file=.env', 'scripts/classify-foundation-power-profiles.mjs'],
+    displayName: 'Classify Foundation Power Profiles',
+    category: 'profiling',
+    defaultPriority: 4,
+    timeoutMs: 600_000,
+    dependencies: ['sync-foundation-programs', 'enrich-foundations'],
   },
   'reprofile-low-confidence': {
     command: ['node', '--env-file=.env', 'scripts/reprofile-low-confidence.mjs'],
@@ -335,7 +359,7 @@ export const AGENTS = {
     displayName: 'Build Entity Graph',
     category: 'graph',
     defaultPriority: 3,
-    timeoutMs: 1_800_000,
+    timeoutMs: 3_600_000,
     dependencies: [],
   },
   'resolve-donor-entities': {
@@ -454,9 +478,70 @@ export const AGENTS = {
     timeoutMs: 300_000,
     dependencies: ['scout-grants-for-profiles', 'score-foundation-alignment'],
   },
+  // ── Contract Alerts ─────────────────────────────────────────────────────────
+  'contract-alert-checker': {
+    command: ['node', '--env-file=.env', 'scripts/check-contract-alerts.mjs', '--apply'],
+    displayName: 'Contract Alert Checker',
+    category: 'intelligence',
+    defaultPriority: 1,
+    timeoutMs: 120_000,
+    dependencies: [],
+  },
+  'donor-contract-crossover': {
+    command: ['node', '--env-file=.env', 'scripts/check-donor-contract-crossover.mjs', '--apply'],
+    displayName: 'Donor-Contract Crossover',
+    category: 'intelligence',
+    defaultPriority: 1,
+    timeoutMs: 120_000,
+    dependencies: [],
+  },
+  // ── Goods Intelligence (Goods on Country supply chain agents) ──────────────
+  'goods-community-census': {
+    command: ['node', '--env-file=.env', 'scripts/import-agil-communities.mjs'],
+    displayName: 'Goods Community Census (AGIL)',
+    category: 'goods',
+    defaultPriority: 2,
+    timeoutMs: 600_000,
+    dependencies: [],
+  },
+  'goods-lifecycle-sync': {
+    command: ['node', '--env-file=.env', 'scripts/goods-lifecycle-sync.mjs'],
+    displayName: 'Goods Lifecycle Sync',
+    category: 'goods',
+    defaultPriority: 2,
+    timeoutMs: 300_000,
+    dependencies: ['goods-community-census'],
+  },
+  'goods-procurement-matcher': {
+    command: ['node', '--env-file=.env', 'scripts/goods-procurement-matcher.mjs'],
+    displayName: 'Goods Procurement Matcher',
+    category: 'goods',
+    defaultPriority: 2,
+    timeoutMs: 300_000,
+    dependencies: ['goods-community-census', 'goods-lifecycle-sync'],
+  },
+  'goods-supply-chain-analyst': {
+    command: ['node', '--env-file=.env', 'scripts/goods-supply-chain-analyst.mjs'],
+    displayName: 'Goods Supply Chain Analyst',
+    category: 'goods',
+    defaultPriority: 3,
+    timeoutMs: 300_000,
+    dependencies: ['goods-community-census'],
+  },
 };
 
-export const CATEGORIES = ['sync', 'import', 'discovery', 'enrichment', 'profiling', 'graph', 'embedding', 'analytics', 'intelligence'];
+  // ── New Zealand (NZ data sources) ───────────────────────────────────────────
+  'import-nz-charities': {
+    command: ['node', '--env-file=.env', 'scripts/import-nz-charities.mjs', '--apply'],
+    displayName: 'NZ Charities Register',
+    category: 'nz',
+    defaultPriority: 2,
+    timeoutMs: 600_000,
+    dependencies: [],
+  },
+};
+
+export const CATEGORIES = ['sync', 'import', 'discovery', 'enrichment', 'profiling', 'graph', 'embedding', 'analytics', 'intelligence', 'goods', 'nz'];
 
 export function getAgent(agentId) {
   return AGENTS[agentId] ?? null;

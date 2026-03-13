@@ -8,7 +8,7 @@
  */
 
 import * as cheerio from 'cheerio';
-import type { SourcePlugin, DiscoveryQuery, RawGrant } from '../types.js';
+import type { SourcePlugin, DiscoveryQuery, RawGrant } from '../types';
 
 const ACT_GRANTS_URL = 'https://www.act.gov.au/grants';
 const ACT_BASE = 'https://www.act.gov.au';

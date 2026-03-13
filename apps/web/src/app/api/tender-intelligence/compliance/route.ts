@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
-import { createSupabaseServer } from '@/lib/supabase-server';
+import { requireModule } from '@/lib/api-auth';
 import { logUsage } from '../_lib/log-usage';
+import { logProcurementWorkflowRun } from '../_lib/procurement-workspace';
 
 /**
  * POST /api/tender-intelligence/compliance
@@ -35,19 +36,19 @@ function sanitizeLike(s: string) {
 type EntityRow = { gs_id: string; canonical_name: string; abn: string | null; entity_type: string; state: string | null; postcode: string | null; remoteness: string | null; seifa_irsd_decile: number | null; is_community_controlled: boolean; lga_name: string | null; latest_revenue: number | null };
 
 export async function POST(request: NextRequest) {
-  const authSupabase = await createSupabaseServer();
-  const { data: { user } } = await authSupabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-  }
+  const auth = await requireModule('procurement');
+  if (auth.error) return auth.error;
+  const { user } = auth;
 
   const body = await request.json();
   const {
     suppliers: inputSuppliers,
+    shortlist_id,
     total_contract_value,
     state,
   } = body as {
     suppliers: SupplierInput[];
+    shortlist_id?: string;
     total_contract_value?: number;
     state?: string;
     category?: string;
@@ -62,6 +63,7 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = getServiceSupabase();
+  const startedAt = new Date().toISOString();
 
   // ── Step 1: Bulk resolve by ABN ──
   const abnInputs = inputSuppliers.filter(s => s.abn);
@@ -248,6 +250,23 @@ export async function POST(request: NextRequest) {
   const complianceScore = Math.min(100, Math.round(scores.reduce((a, b) => a + b, 0)));
 
   logUsage({ user_id: user.id, endpoint: 'compliance', filters: { state, supplier_count: inputSuppliers.length }, result_count: resolvedEntities.length });
+  await logProcurementWorkflowRun(supabase, {
+    userId: user.id,
+    workflowType: 'compliance',
+    workflowStatus: 'completed',
+    shortlistId: shortlist_id,
+    inputPayload: { state: state || null, supplier_count: inputSuppliers.length, total_contract_value: total_contract_value || null },
+    outputSummary: {
+      compliance_score: complianceScore,
+      resolved: resolvedEntities.length,
+      indigenous_meets_target: metrics.indigenous.meets_target,
+      social_enterprise_meets_target: metrics.social_enterprise.meets_target,
+      regional_meets_target: metrics.regional.meets_target,
+    },
+    recordsScanned: inputSuppliers.length,
+    recordsChanged: recommendations.length,
+    startedAt,
+  });
 
   return NextResponse.json({
     compliance_score: complianceScore,

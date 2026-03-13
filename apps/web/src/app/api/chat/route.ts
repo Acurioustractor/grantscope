@@ -1,8 +1,8 @@
 import { streamText, convertToModelMessages, type UIMessage } from 'ai';
 import { anthropic } from '@ai-sdk/anthropic';
-import { createSupabaseServer } from '@/lib/supabase-server';
+import { requireModule } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
-import { embedQuery } from '@grantscope/engine';
+import { embedQuery } from '@grant-engine/embeddings';
 
 export const maxDuration = 30;
 
@@ -74,6 +74,10 @@ async function getOrgProfileId(db: ReturnType<typeof getServiceSupabase>, userId
 }
 
 export async function POST(req: Request) {
+  const auth = await requireModule('grants');
+  if (auth.error) return auth.error;
+  const { user } = auth;
+
   const url = new URL(req.url);
   const scope = url.searchParams.get('scope');
 
@@ -141,10 +145,7 @@ export async function POST(req: Request) {
   // Org knowledge search (when scope=knowledge or user is authenticated with org)
   try {
     if (scope === 'knowledge' && process.env.OPENAI_API_KEY && lastMessage.length > 3) {
-      const authSupabase = await createSupabaseServer();
-      const { data: { user } } = await authSupabase.auth.getUser();
-
-      if (user) {
+      {
         const orgId = await getOrgProfileId(supabase, user.id);
         if (orgId) {
           const queryEmbedding = await embedQuery(lastMessage, process.env.OPENAI_API_KEY);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireModule } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
-import { embedQuery } from '@grantscope/engine';
+import { embedQuery } from '@grant-engine/embeddings';
 import { PDFParse } from 'pdf-parse';
 import mammoth from 'mammoth';
 import * as cheerio from 'cheerio';
@@ -99,14 +100,8 @@ ${truncated}`,
 }
 
 export async function POST(req: NextRequest) {
-  // Auth via worker secret
-  const authHeader = req.headers.get('authorization');
-  const workerSecret = process.env.WORKER_SECRET;
-
-  if (workerSecret && authHeader !== `Bearer ${workerSecret}`) {
-    // Also allow authenticated users to trigger processing
-    // (for manual "process now" button)
-  }
+  const auth = await requireModule('grants');
+  if (auth.error) return auth.error;
 
   const db = getServiceSupabase();
 

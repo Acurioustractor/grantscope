@@ -56,14 +56,21 @@ export default async function EntityGraphPage({
   const showDonorContractors = view === 'donor-contractors' || !view;
 
   if (showDonorContractors) {
-    const { data: donorContractors } = await supabase
-      .from('mv_gs_donor_contractors')
-      .select('*')
-      .order('total_donated', { ascending: false })
-      .limit(100);
-
-    const { count: totalEntities } = await supabase.from('gs_entities').select('*', { count: 'exact', head: true });
-    const { count: totalRels } = await supabase.from('gs_relationships').select('*', { count: 'exact', head: true });
+    const [
+      { data: donorContractors },
+      { count: donorContractorCount },
+      { count: totalEntities },
+      { count: totalRels },
+    ] = await Promise.all([
+      supabase
+        .from('mv_gs_donor_contractors')
+        .select('*')
+        .order('total_donated', { ascending: false })
+        .limit(100),
+      supabase.from('mv_gs_donor_contractors').select('gs_id', { count: 'exact', head: true }),
+      supabase.from('gs_entities').select('*', { count: 'exact', head: true }),
+      supabase.from('gs_relationships').select('*', { count: 'exact', head: true }),
+    ]);
 
     return (
       <div className="max-w-5xl">
@@ -78,7 +85,7 @@ export default async function EntityGraphPage({
             href="/entities?view=donor-contractors"
             className={`px-4 py-2 text-xs font-black uppercase tracking-widest ${showDonorContractors ? 'bg-bauhaus-black text-white' : 'bg-white text-bauhaus-black hover:bg-bauhaus-canvas'}`}
           >
-            Donor-Contractors ({donorContractors?.length || 0})
+            Donor-Contractors ({donorContractorCount || 0})
           </Link>
           <Link
             href="/entities?view=search"
@@ -94,6 +101,11 @@ export default async function EntityGraphPage({
             <h2 className="text-xs font-black uppercase tracking-widest">
               Entities that Donate to Political Parties AND Hold Government Contracts
             </h2>
+          </div>
+          <div className="border-b-2 border-bauhaus-black/10 bg-bauhaus-canvas px-4 py-2">
+            <p className="text-[11px] font-bold text-bauhaus-muted uppercase tracking-widest">
+              Showing the top 100 ranked by total donated. Open any entity for the full dossier.
+            </p>
           </div>
           <div className="divide-y-2 divide-bauhaus-black/5">
             {(donorContractors || []).map((dc: Record<string, unknown>, i: number) => (

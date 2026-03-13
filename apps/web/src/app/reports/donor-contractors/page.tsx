@@ -1,21 +1,23 @@
 import type { Metadata } from 'next';
 import { getServiceSupabase } from '@/lib/supabase';
 import Link from 'next/link';
+import { DatasetEmailGate, ShareButtons } from './report-actions';
 
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'Donate. Win Contracts. Repeat. | CivicGraph',
-  description: '140 entities in Australia donate to political parties AND hold government contracts. $80M donated to 28 parties, $4.7B in contracts. See the data.',
+  title: 'Donate. Win Contracts. Repeat. | CivicGraph Investigation',
+  description: 'Live analysis: Australian entities that donate to political parties AND hold government contracts. Cross-referenced by ABN across AEC and AusTender data.',
   openGraph: {
     title: 'Donate. Win Contracts. Repeat.',
-    description: '140 entities donate to political parties AND hold government contracts. $80M to 28 parties, $4.7B in contracts. Cross-referenced by ABN from AEC + AusTender data.',
+    description: 'Live donor-contractor analysis from CivicGraph — cross-referenced by ABN across AEC political donations and AusTender contract data.',
     type: 'article',
+    siteName: 'CivicGraph',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Donate. Win Contracts. Repeat.',
-    description: '140 entities donate to political parties AND hold government contracts. $80M donated, $4.7B in contracts. See every entity.',
+    description: 'Live donor-contractor analysis from CivicGraph, showing entities that both donate to political parties and hold government contracts.',
   },
 };
 
@@ -164,6 +166,12 @@ export default async function DonorContractorsReport() {
           and received {money(s.sumContracts)} in government contracts from {s.uniqueBuyers} departments.
           This is what the connected data reveals.
         </p>
+        <div className="mt-4 flex flex-wrap items-center gap-4">
+          <ShareButtons title="Donate. Win Contracts. Repeat." entityCount={s.count} />
+          <span className="text-xs text-bauhaus-muted font-bold">
+            Data updated {new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })}
+          </span>
+        </div>
       </div>
 
       {/* Hero stats */}
@@ -459,6 +467,11 @@ export default async function DonorContractorsReport() {
             </p>
           </div>
         </div>
+      </section>
+
+      {/* Email Gate — Full Dataset */}
+      <section className="mb-12">
+        <DatasetEmailGate reportSlug="donor-contractors" entityCount={s.count} />
       </section>
 
       {/* CTA */}

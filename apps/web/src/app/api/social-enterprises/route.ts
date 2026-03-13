@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireModule } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
 
 /**
@@ -23,6 +24,9 @@ import { getServiceSupabase } from '@/lib/supabase';
  *   format       — json (default) or csv
  */
 export async function GET(request: NextRequest) {
+  const auth = await requireModule('research');
+  if (auth.error) return auth.error;
+
   const { searchParams } = request.nextUrl;
   const q = searchParams.get('q') || '';
   const state = searchParams.get('state') || '';

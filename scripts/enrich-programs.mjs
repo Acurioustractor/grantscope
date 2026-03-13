@@ -13,6 +13,7 @@
 import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { createRequire } from 'module';
+import { MINIMAX_CHAT_COMPLETIONS_URL } from './lib/minimax.mjs';
 const require = createRequire(import.meta.url);
 const cheerio = require('../packages/grant-engine/node_modules/cheerio');
 
@@ -31,7 +32,7 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const PROVIDERS = [
-  { name: 'minimax', baseUrl: 'https://api.minimaxi.chat/v1/chat/completions', model: 'MiniMax-M2.5', envKey: 'MINIMAX_API_KEY', disabled: false },
+  { name: 'minimax', baseUrl: MINIMAX_CHAT_COMPLETIONS_URL, model: 'MiniMax-M2.5', envKey: 'MINIMAX_API_KEY', disabled: false },
   { name: 'groq', baseUrl: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.3-70b-versatile', envKey: 'GROQ_API_KEY', disabled: false },
   { name: 'gemini', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', model: 'gemini-2.5-flash', envKey: 'GEMINI_API_KEY', disabled: false },
   { name: 'deepseek', baseUrl: 'https://api.deepseek.com/chat/completions', model: 'deepseek-chat', envKey: 'DEEPSEEK_API_KEY', disabled: false },
@@ -116,6 +117,11 @@ If a field is unclear, use null or empty. Keep text concise.`;
 
       if (!response.ok) {
         const err = await response.text();
+        if (response.status === 401 || /invalid api key|authorized_error|unauthorized/i.test(err)) {
+          console.log(`  [${provider.name}] auth failed — disabling`);
+          provider.disabled = true;
+          continue;
+        }
         if (response.status === 429 || response.status === 402 || /rate_limit|quota|Insufficient Balance|credit balance/.test(err)) {
           console.log(`  [${provider.name}] rate limited — disabling`);
           provider.disabled = true;

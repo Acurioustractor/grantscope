@@ -162,7 +162,7 @@ const SQL_TEMPLATES = [
   { label: 'Grants by source', sql: 'SELECT source, COUNT(*) as count FROM grant_opportunities GROUP BY source ORDER BY count DESC' },
   { label: 'Recent agent runs', sql: 'SELECT agent_name, status, items_found, items_new, completed_at FROM agent_runs ORDER BY completed_at DESC LIMIT 10' },
   { label: 'Foundation profiling progress', sql: "SELECT COUNT(*) FILTER (WHERE description IS NOT NULL) as profiled, COUNT(*) as total, ROUND(100.0 * COUNT(*) FILTER (WHERE description IS NOT NULL) / COUNT(*), 1) as pct FROM foundations" },
-  { label: 'Postcodes by remoteness', sql: 'SELECT remoteness_2021, COUNT(*) as count FROM gs_entities WHERE remoteness_2021 IS NOT NULL GROUP BY remoteness_2021 ORDER BY count DESC' },
+  { label: 'Postcodes by remoteness', sql: 'SELECT remoteness, COUNT(*) as count FROM gs_entities WHERE remoteness IS NOT NULL GROUP BY remoteness ORDER BY count DESC' },
   { label: 'Community-controlled orgs', sql: "SELECT entity_type, COUNT(*) as count FROM gs_entities WHERE is_community_controlled = true GROUP BY entity_type ORDER BY count DESC" },
   { label: 'Funding gaps (top 10)', sql: 'SELECT * FROM get_funding_gaps() LIMIT 10' },
 ];

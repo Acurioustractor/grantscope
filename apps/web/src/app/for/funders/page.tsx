@@ -1,6 +1,8 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { getProofPack } from '@/lib/governed-proof/presentation';
+import type { GovernedProofBundle } from '@/lib/governed-proof/contracts';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,9 +29,38 @@ async function getStats() {
   };
 }
 
+async function getGovernedProofExamples() {
+  const supabase = getServiceSupabase();
+  const { data } = await supabase
+    .from('governed_proof_bundles')
+    .select('id, bundle_key, subject_type, subject_id, owner_system, lifecycle_status, review_status, promotion_status, overall_confidence, capital_confidence, evidence_confidence, voice_confidence, governance_confidence, capital_context, evidence_context, voice_context, governance_context, output_context, freshness_at, last_validated_at, published_at, created_at, updated_at')
+    .eq('subject_type', 'place')
+    .or('promotion_status.eq.partner,promotion_status.eq.public')
+    .order('updated_at', { ascending: false })
+    .limit(3);
+
+  return ((data || []) as unknown as GovernedProofBundle[]).map((row) => {
+    const proofPack = getProofPack(row);
+    return {
+      placeKey: row.subjectId,
+      confidence: row.overallConfidence,
+      promotionStatus: row.promotionStatus,
+      headline: proofPack.headline,
+    };
+  });
+}
+
 export default async function ForFundersPage() {
   let stats = { charities: 0, foundations: 0, grants: 0, enriched: 0, acnc: 0 };
-  try { stats = await getStats(); } catch {}
+  let governedProofExamples: Array<{
+    placeKey: string;
+    confidence: number;
+    promotionStatus: string;
+    headline: string | null;
+  }> = [];
+  try {
+    [stats, governedProofExamples] = await Promise.all([getStats(), getGovernedProofExamples()]);
+  } catch {}
   const fmt = (n: number) => n.toLocaleString('en-AU');
 
   return (
@@ -124,6 +155,61 @@ export default async function ForFundersPage() {
                   <span><strong>Early API access</strong> — programmatic access before public release</span>
                 </li>
               </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-16 px-6 bg-white border-b-4 border-bauhaus-black">
+        <div className="max-w-5xl mx-auto">
+          <div className="grid lg:grid-cols-[0.8fr_1.2fr] gap-8 items-start">
+            <div>
+              <p className="text-xs font-black text-bauhaus-blue uppercase tracking-[0.3em] mb-3">Governed Proof</p>
+              <h2 className="text-3xl md:text-4xl font-black tracking-tight mb-4">
+                From place intelligence to funder-ready proof
+              </h2>
+              <p className="text-sm text-bauhaus-muted leading-relaxed">
+                CivicGraph is the entry point. A place page shows who is funded and where the gaps sit.
+                Governed Proof then adds intervention evidence from JusticeHub and governed community voice from Empathy Ledger.
+              </p>
+            </div>
+            <div className="border-4 border-bauhaus-black bg-bauhaus-canvas p-6">
+              <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted mb-4">
+                Current public examples
+              </div>
+              {governedProofExamples.length > 0 ? (
+                <div className="space-y-4">
+                  {governedProofExamples.map((example) => (
+                    <Link
+                      key={example.placeKey}
+                      href={`/for/funders/proof/${example.placeKey}`}
+                      className="block border-2 border-bauhaus-black bg-white p-4 hover:bg-bauhaus-yellow transition-colors"
+                    >
+                      <div className="flex items-center justify-between gap-3 mb-2">
+                        <div className="text-sm font-black text-bauhaus-black">Place {example.placeKey}</div>
+                        <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue">
+                          {example.promotionStatus} · {example.confidence.toFixed(2)}
+                        </div>
+                      </div>
+                      <p className="text-xs text-bauhaus-muted leading-relaxed">
+                        {example.headline || `Open the governed proof summary for postcode ${example.placeKey}.`}
+                      </p>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div>
+                  <p className="text-sm text-bauhaus-muted leading-relaxed mb-4">
+                    Public examples are not promoted yet. The proof system already exists, but promotion stays gated until review and governance checks are complete.
+                  </p>
+                  <a
+                    href="mailto:hello@civicgraph.au?subject=Governed%20Proof%20briefing"
+                    className="inline-block px-4 py-3 font-black text-xs uppercase tracking-widest border-4 border-bauhaus-black bg-white hover:bg-bauhaus-yellow transition-colors"
+                  >
+                    Request a briefing
+                  </a>
+                </div>
+              )}
             </div>
           </div>
         </div>

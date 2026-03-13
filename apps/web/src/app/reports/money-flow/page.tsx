@@ -1,5 +1,5 @@
 import { getServiceSupabase } from '@/lib/supabase';
-import { buildSankeyData } from '@grantscope/engine';
+import { buildSankeyData } from '@grant-engine/reports/money-flow';
 import { MoneyFlowCharts } from './charts';
 
 export const dynamic = 'force-dynamic';

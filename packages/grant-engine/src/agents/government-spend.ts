@@ -6,7 +6,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { AgentConfig, AgentRunResult } from './agent-runner.js';
+import type { AgentConfig, AgentRunResult } from './agent-runner';
 
 const CKAN_BASE = 'https://data.gov.au/data/api/3/action';
 
@@ -97,7 +97,7 @@ export function createGovernmentSpendWatcher(): AgentConfig {
             else if (/victoria|vic/.test(text)) jurisdiction = 'vic';
             else if (/western australia|wa/.test(text)) jurisdiction = 'wa';
 
-            const { error } = await supabase.from('government_programs').insert({
+            const { error } = await supabase.from('government_programs').upsert({
               name: pkg.title.slice(0, 200),
               department: pkg.organization?.title || 'Unknown',
               jurisdiction,
@@ -105,7 +105,7 @@ export function createGovernmentSpendWatcher(): AgentConfig {
               source_url: `https://data.gov.au/data/dataset/${pkg.id}`,
               source_type: 'ckan',
               scraped_at: new Date().toISOString(),
-            });
+            }, { onConflict: 'name' });
 
             if (error) {
               errors.push(`Insert failed for "${pkg.title}": ${error.message}`);

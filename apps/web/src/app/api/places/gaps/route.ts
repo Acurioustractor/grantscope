@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireModule } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
 
 /**
@@ -10,6 +11,9 @@ import { getServiceSupabase } from '@/lib/supabase';
  * Higher score = bigger gap between community need and community-controlled funding share.
  */
 export async function GET(request: NextRequest) {
+  const auth = await requireModule('allocation');
+  if (auth.error) return auth.error;
+
   const { searchParams } = new URL(request.url);
   const state = searchParams.get('state');
   const remoteness = searchParams.get('remoteness');

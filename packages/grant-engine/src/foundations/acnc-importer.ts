@@ -17,7 +17,7 @@
 
 import { parse } from 'csv-parse';
 import { Readable } from 'stream';
-import type { Foundation, FoundationType } from './types.js';
+import type { Foundation, FoundationType } from './types';
 
 // Keywords in org name that indicate a foundation/trust/PAF
 const FOUNDATION_NAME_PATTERNS = [

@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireModule } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
 
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ postcode: string }> }
 ) {
+  const auth = await requireModule('allocation');
+  if (auth.error) return auth.error;
+
   const { postcode } = await params;
   const supabase = getServiceSupabase();
 

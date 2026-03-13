@@ -54,7 +54,7 @@ export async function sendEmail(opts: {
   body: string;
   html?: string;
   senderName?: string;
-}): Promise<void> {
+}): Promise<{ id: string | null }> {
   const serviceKeyJson = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
   const delegatedUser = process.env.GOOGLE_DELEGATED_USER;
   if (!serviceKeyJson || !delegatedUser) {
@@ -117,6 +117,9 @@ export async function sendEmail(opts: {
     const text = await res.text();
     throw new Error(`Gmail send failed (${res.status}): ${text}`);
   }
+
+  const data = await res.json().catch(() => null);
+  return { id: typeof data?.id === 'string' ? data.id : null };
 }
 
 export async function sendGrantEmail(

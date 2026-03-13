@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServer } from '@/lib/supabase-server';
+import { requireModule } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
 import { STAGE_TO_GHL } from '@/lib/ghl';
 
@@ -8,9 +8,9 @@ type RouteContext = { params: Promise<{ grantId: string }> };
 const GHL_SYNC_STAGES = new Set(Object.keys(STAGE_TO_GHL));
 
 export async function PUT(request: NextRequest, context: RouteContext) {
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const auth = await requireModule('tracker');
+  if (auth.error) return auth.error;
+  const { user } = auth;
 
   const { grantId } = await context.params;
   const body = await request.json();
@@ -115,9 +115,9 @@ async function syncToGHL(
 }
 
 export async function DELETE(_request: NextRequest, context: RouteContext) {
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const auth = await requireModule('tracker');
+  if (auth.error) return auth.error;
+  const { user } = auth;
 
   const { grantId } = await context.params;
 

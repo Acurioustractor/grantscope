@@ -14,7 +14,7 @@ async function getArchStats() {
     supabase.from('grant_opportunities').select('*', { count: 'exact', head: true }),
     supabase.from('foundations').select('*', { count: 'exact', head: true }),
     supabase.from('acnc_ais').select('*', { count: 'exact', head: true }),
-    supabase.from('foundation_programs').select('*', { count: 'exact', head: true }),
+    supabase.from('foundation_programs').select('*', { count: 'exact', head: true }).in('status', ['open', 'closed']),
     supabase.from('community_orgs').select('*', { count: 'exact', head: true }),
     supabase.from('org_profiles').select('*', { count: 'exact', head: true }),
     supabase.from('saved_grants').select('*', { count: 'exact', head: true }),

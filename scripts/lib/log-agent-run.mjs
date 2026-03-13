@@ -42,7 +42,13 @@ export async function logStart(supabase, agentId, agentName) {
  * Mark a run as completed with stats.
  * @param {import('@supabase/supabase-js').SupabaseClient} supabase
  * @param {string|null} runId
- * @param {{ items_found?: number, items_new?: number, items_updated?: number }} stats
+ * @param {{
+ *   items_found?: number,
+ *   items_new?: number,
+ *   items_updated?: number,
+ *   status?: 'success' | 'partial',
+ *   errors?: unknown[]
+ * }} stats
  */
 export async function logComplete(supabase, runId, stats = {}) {
   if (!runId) return;
@@ -62,12 +68,15 @@ export async function logComplete(supabase, runId, stats = {}) {
   const { error } = await supabase
     .from('agent_runs')
     .update({
-      status: 'success',
+      status: stats.status || 'success',
       completed_at: now,
       duration_ms: durationMs,
       items_found: stats.items_found ?? 0,
       items_new: stats.items_new ?? 0,
       items_updated: stats.items_updated ?? 0,
+      errors: Array.isArray(stats.errors) && stats.errors.length > 0
+        ? stats.errors.map(err => ({ message: String(err), time: now }))
+        : null,
     })
     .eq('id', runId);
 

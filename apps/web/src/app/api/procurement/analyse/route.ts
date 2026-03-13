@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
+import { requireModule } from '@/lib/api-auth';
 
 /**
  * POST /api/procurement/analyse
@@ -15,6 +16,9 @@ import { getServiceSupabase } from '@/lib/supabase';
  * Also accepts GET with ?abns=12345678901,98765432101 for quick lookups.
  */
 export async function POST(request: NextRequest) {
+  const auth = await requireModule('procurement');
+  if (auth.error) return auth.error;
+
   const body = await request.json();
   const abns: string[] = body.abns || [];
   const values: Record<string, number> = body.values || {};
@@ -31,6 +35,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  const auth = await requireModule('procurement');
+  if (auth.error) return auth.error;
+
   const abnParam = request.nextUrl.searchParams.get('abns') || '';
   const abns = abnParam.split(',').map(a => a.trim()).filter(a => /^\d{11}$/.test(a));
 

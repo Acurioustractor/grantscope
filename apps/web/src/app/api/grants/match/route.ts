@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createSupabaseServer } from '@/lib/supabase-server';
+import { requireModule } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
 
 /**
@@ -10,12 +10,13 @@ import { getServiceSupabase } from '@/lib/supabase';
  */
 
 export async function GET() {
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Auth required' }, { status: 401 });
+  const auth = await requireModule('grants');
+  if (auth.error) return auth.error;
+  const { user } = auth;
 
   // Get user's org profile
-  const { data: profile } = await supabase
+  const serviceDb = getServiceSupabase();
+  const { data: profile } = await serviceDb
     .from('org_profiles')
     .select('id, name, abn, domains, geographic_focus, org_type, annual_revenue, embedding, mission')
     .eq('user_id', user.id)

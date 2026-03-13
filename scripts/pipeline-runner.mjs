@@ -65,7 +65,7 @@ const STEPS = [
   {
     id: 'sync',
     name: 'Sync Foundation Programs',
-    cmd: ['node', '--env-file=.env', 'scripts/sync-foundation-programs.mjs'],
+    cmd: ['node', '--env-file=.env', 'scripts/sync-foundation-programs.mjs', '--cleanup-invalid'],
     timeout: 120_000, // 2 min
   },
   {

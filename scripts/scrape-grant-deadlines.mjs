@@ -19,6 +19,7 @@ import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import * as cheerio from 'cheerio';
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
+import { MINIMAX_CHAT_COMPLETIONS_URL } from './lib/minimax.mjs';
 
 // --- Config ---
 
@@ -49,7 +50,7 @@ function log(msg) {
 // --- LLM Providers (round-robin with fallback) ---
 
 const PROVIDERS = [
-  { name: 'minimax', baseUrl: 'https://api.minimaxi.chat/v1/chat/completions', model: 'MiniMax-M2.5', envKey: 'MINIMAX_API_KEY', disabled: false },
+  { name: 'minimax', baseUrl: MINIMAX_CHAT_COMPLETIONS_URL, model: 'MiniMax-M2.5', envKey: 'MINIMAX_API_KEY', disabled: false },
   { name: 'groq', baseUrl: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.3-70b-versatile', envKey: 'GROQ_API_KEY', disabled: false },
   { name: 'gemini', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', model: 'gemini-2.5-flash', envKey: 'GEMINI_API_KEY', disabled: false },
   { name: 'deepseek', baseUrl: 'https://api.deepseek.com/chat/completions', model: 'deepseek-chat', envKey: 'DEEPSEEK_API_KEY', disabled: false },
@@ -186,6 +187,11 @@ Rules:
 
       if (!response.ok) {
         const err = await response.text();
+        if (response.status === 401 || /invalid api key|authorized_error|unauthorized/i.test(err)) {
+          log(`  ${provider.name} auth failed -- disabling`);
+          provider.disabled = true;
+          continue;
+        }
         if (response.status === 429 || response.status === 402 ||
             err.includes('rate_limit') || err.includes('quota') ||
             err.includes('Insufficient Balance') || err.includes('credit balance')) {

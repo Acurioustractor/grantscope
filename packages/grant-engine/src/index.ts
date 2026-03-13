@@ -14,7 +14,7 @@
  */
 
 // Core engine
-export { GrantEngine } from './engine.js';
+export { GrantEngine } from './engine';
 
 // Types
 export type {
@@ -30,60 +30,60 @@ export type {
   GrantScorer,
   GrantEngineConfig,
   ExistingGrantRecord,
-} from './types.js';
+} from './types';
 
 // Source plugins
-export { createWebSearchPlugin } from './sources/web-search.js';
-export { createLLMKnowledgePlugin } from './sources/llm-knowledge.js';
-export { createGrantConnectPlugin } from './sources/grantconnect.js';
-export { createDataGovAuPlugin } from './sources/data-gov-au.js';
-export { createQLDGrantsPlugin } from './sources/qld-grants.js';
-export { createBusinessGovAuPlugin } from './sources/business-gov-au.js';
-export { createNSWGrantsPlugin } from './sources/nsw-grants.js';
-export { createVICGrantsPlugin } from './sources/vic-grants.js';
-export { createARCGrantsPlugin } from './sources/arc-grants.js';
-export { createNHMRCGrantsPlugin } from './sources/nhmrc-grants.js';
-export { createTASGrantsPlugin } from './sources/tas-grants.js';
-export { createACTGrantsPlugin } from './sources/act-grants.js';
-export { createNTGrantsPlugin } from './sources/nt-grants.js';
-export { createSAGrantsPlugin } from './sources/sa-grants.js';
-export { createWAGrantsPlugin } from './sources/wa-grants.js';
-export { SourceRegistry } from './sources/registry.js';
+export { createWebSearchPlugin } from './sources/web-search';
+export { createLLMKnowledgePlugin } from './sources/llm-knowledge';
+export { createGrantConnectPlugin } from './sources/grantconnect';
+export { createDataGovAuPlugin } from './sources/data-gov-au';
+export { createQLDGrantsPlugin } from './sources/qld-grants';
+export { createBusinessGovAuPlugin } from './sources/business-gov-au';
+export { createNSWGrantsPlugin } from './sources/nsw-grants';
+export { createVICGrantsPlugin } from './sources/vic-grants';
+export { createARCGrantsPlugin } from './sources/arc-grants';
+export { createNHMRCGrantsPlugin } from './sources/nhmrc-grants';
+export { createTASGrantsPlugin } from './sources/tas-grants';
+export { createACTGrantsPlugin } from './sources/act-grants';
+export { createNTGrantsPlugin } from './sources/nt-grants';
+export { createSAGrantsPlugin } from './sources/sa-grants';
+export { createWAGrantsPlugin } from './sources/wa-grants';
+export { SourceRegistry } from './sources/registry';
 
 // Foundations
-export { parseACNCRegister, downloadACNCRegister, acncToFoundation } from './foundations/acnc-importer.js';
-export { FoundationRepository } from './foundations/repository.js';
-export type { Foundation, FoundationType, FoundationProgram } from './foundations/types.js';
+export { parseACNCRegister, downloadACNCRegister, acncToFoundation } from './foundations/acnc-importer';
+export { FoundationRepository } from './foundations/repository';
+export type { Foundation, FoundationType, FoundationProgram } from './foundations/types';
 
 // Reports
-export { buildSankeyData, buildYouthJusticeReport } from './reports/money-flow.js';
-export type { SankeyNode, SankeyLink, SankeyData, ProgramComparison, YouthJusticeReport } from './reports/money-flow.js';
+export { buildSankeyData, buildYouthJusticeReport } from './reports/money-flow';
+export type { SankeyNode, SankeyLink, SankeyData, ProgramComparison, YouthJusticeReport } from './reports/money-flow';
 
-export { buildPowerReport } from './reports/power-analysis.js';
-export type { PowerMetrics, FoundationPowerProfile, PowerReport } from './reports/power-analysis.js';
-export { buildAdminBurdenReport } from './reports/admin-burden.js';
-export type { AdminBurdenReport, AdminTier, GrantComplexityEstimate } from './reports/admin-burden.js';
+export { buildPowerReport } from './reports/power-analysis';
+export type { PowerMetrics, FoundationPowerProfile, PowerReport } from './reports/power-analysis';
+export { buildAdminBurdenReport } from './reports/admin-burden';
+export type { AdminBurdenReport, AdminTier, GrantComplexityEstimate } from './reports/admin-burden';
 
 // Data sources (non-grant)
-export { ingestYouthJusticeData, searchQLDYouthJusticeDatasets, QLD_YOUTH_JUSTICE_PROGRAMS, QLD_YOUTH_JUSTICE_FLOWS } from './sources/qld-youth-justice.js';
+export { ingestYouthJusticeData, searchQLDYouthJusticeDatasets, QLD_YOUTH_JUSTICE_PROGRAMS, QLD_YOUTH_JUSTICE_FLOWS } from './sources/qld-youth-justice';
 
 // Community
-export { importCommunityOrgs, estimateAdminBurden } from './foundations/community-profiler.js';
-export type { CommunityOrgProfile } from './foundations/community-profiler.js';
+export { importCommunityOrgs, estimateAdminBurden } from './foundations/community-profiler';
+export type { CommunityOrgProfile } from './foundations/community-profiler';
 
 // Agents
-export { runAllAgents, runAgent, shouldRun } from './agents/agent-runner.js';
-export type { AgentConfig, AgentRunResult, AgentRunLog } from './agents/agent-runner.js';
-export { createGrantMonitor } from './agents/grant-monitor.js';
-export { createFoundationWatcher } from './agents/foundation-watcher.js';
-export { createGovernmentSpendWatcher } from './agents/government-spend.js';
+export { runAllAgents, runAgent, shouldRun } from './agents/agent-runner';
+export type { AgentConfig, AgentRunResult, AgentRunLog } from './agents/agent-runner';
+export { createGrantMonitor } from './agents/grant-monitor';
+export { createFoundationWatcher } from './agents/foundation-watcher';
+export { createGovernmentSpendWatcher } from './agents/government-spend';
 
 // Embeddings & Enrichment
-export { buildEmbeddingText, generateEmbeddings, embedQuery, backfillEmbeddings, searchGrantsSemantic } from './embeddings.js';
-export { enrichGrant, batchEnrich } from './enrichment.js';
-export { enrichGrantFree, batchEnrichFree } from './enrichment-free.js';
+export { buildEmbeddingText, generateEmbeddings, embedQuery, backfillEmbeddings, searchGrantsSemantic } from './embeddings';
+export { enrichGrant, batchEnrich } from './enrichment';
+export { enrichGrantFree, batchEnrichFree } from './enrichment-free';
 
 // Utilities
-export { normalize, normalizeDate, normalizeAmount, normalizeCategories, generateDedupKey } from './normalizer.js';
-export { deduplicateGrants, filterExisting } from './deduplicator.js';
-export { GrantRepository } from './storage/repository.js';
+export { normalize, normalizeDate, normalizeAmount, normalizeCategories, generateDedupKey } from './normalizer';
+export { deduplicateGrants, filterExisting } from './deduplicator';
+export { GrantRepository } from './storage/repository';

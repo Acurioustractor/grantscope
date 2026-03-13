@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { SavedGrantRow } from './page';
 import { KanbanBoard } from './kanban-board';
+import { GrantActionsProvider } from '@/app/components/grant-card-actions';
+import { GrantListWithPreview } from '@/app/components/grant-list-with-preview';
 
 export function TrackerClient() {
   const [grants, setGrants] = useState<SavedGrantRow[]>([]);
@@ -41,9 +43,22 @@ export function TrackerClient() {
   return (
     <div>
       <div className="mb-4">
-        <h1 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight">
-          Grant Tracker
-        </h1>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight">
+              Grant Tracker
+            </h1>
+            <p className="mt-1 text-sm font-medium text-bauhaus-muted">
+              Detailed grant-stage movement still lives here. For the joined money, funder, partner, and need view, use the funding workspace.
+            </p>
+          </div>
+          <a
+            href="/funding-workspace"
+            className="inline-flex px-4 py-3 border-2 border-bauhaus-black text-bauhaus-black text-[10px] font-black uppercase tracking-widest hover:bg-bauhaus-black hover:text-white transition-colors"
+          >
+            Open Funding Workspace
+          </a>
+        </div>
       </div>
       <div className="flex gap-0 mb-6 border-4 border-bauhaus-black w-fit">
         <button
@@ -67,7 +82,11 @@ export function TrackerClient() {
           Team Grants
         </button>
       </div>
-      <KanbanBoard initialGrants={grants} />
+      <GrantActionsProvider>
+        <GrantListWithPreview>
+          <KanbanBoard initialGrants={grants} />
+        </GrantListWithPreview>
+      </GrantActionsProvider>
     </div>
   );
 }

@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
+import { requireModule } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
-import { buildSankeyData } from '@grantscope/engine';
+import { buildSankeyData } from '@grant-engine/reports/money-flow';
 
 export async function GET(request: Request) {
+  const auth = await requireModule('research');
+  if (auth.error) return auth.error;
+
   const { searchParams } = new URL(request.url);
   const year = parseInt(searchParams.get('year') || '2025', 10);
   const domain = searchParams.get('domain');

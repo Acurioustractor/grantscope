@@ -1,4 +1,7 @@
 import { getServiceSupabase } from '@/lib/supabase';
+import { safeOptionalData } from '@/lib/optional-data';
+import { createGovernedProofService } from '@/lib/governed-proof/service';
+import { getProofPack } from '@/lib/governed-proof/presentation';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 
@@ -10,6 +13,51 @@ function formatMoney(amount: number | null): string {
   if (amount >= 1_000_000) return `$${(amount / 1_000_000).toFixed(1)}M`;
   if (amount >= 1_000) return `$${(amount / 1_000).toFixed(0)}K`;
   return `$${amount.toLocaleString()}`;
+}
+
+function formatPercent(value: number | null | undefined): string {
+  if (value == null) return '\u2014';
+  return `${Math.round(value)}%`;
+}
+
+function districtLabel(name: string): string {
+  return name.replace(/~[A-Z]+$/, '');
+}
+
+function validNdisDistrict(name: string | null | undefined): name is string {
+  if (!name) return false;
+  const normalized = districtLabel(name).trim();
+  return normalized.length > 0 &&
+    normalized !== 'ALL' &&
+    normalized !== 'Other' &&
+    normalized !== 'Other Territories' &&
+    !normalized.toLowerCase().includes('missing') &&
+    !normalized.startsWith('OT_');
+}
+
+function hasDisabilitySignal(values: Array<string | null | undefined> | null | undefined): boolean {
+  if (!values || values.length === 0) return false;
+  return values.some((value) => {
+    const normalized = String(value || '').toLowerCase();
+    return normalized.includes('disab') || normalized.includes('ndis') || normalized.includes('mental illness');
+  });
+}
+
+interface NdisSupplyRow {
+  state_code: string;
+  service_district_name: string;
+  provider_count: number;
+  report_date: string | null;
+}
+
+interface NdisConcentrationRow {
+  state_code: string;
+  service_district_name: string;
+  payment_share_top10_pct: number | null;
+  payment_band: string | null;
+  source_page_url: string | null;
+  source_file_url: string | null;
+  source_file_title: string | null;
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -35,12 +83,13 @@ function entityTypeLabel(type: string): string {
 export default async function PlaceDetailPage({ params }: { params: Promise<{ postcode: string }> }) {
   const { postcode } = await params;
   const supabase = getServiceSupabase();
+  const governedProofService = createGovernedProofService();
 
   // Fetch geo + SEIFA + entities + social enterprises in parallel
-  const [{ data: geoData }, { data: seifaData }, { data: entities }, { data: socialEnterprises }] = await Promise.all([
+  const [{ data: geoData }, { data: seifaData }, { data: entities }, { data: socialEnterprises }, governedProofBundle, { data: grantData }] = await Promise.all([
     supabase
       .from('postcode_geo')
-      .select('postcode, locality, state, remoteness_2021, sa2_name, sa3_name, lga_name')
+      .select('postcode, locality, state, remoteness_2021, sa2_code, sa2_name, sa3_name, lga_name')
       .eq('postcode', postcode)
       .limit(1),
     supabase
@@ -61,11 +110,21 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
       .eq('postcode', postcode)
       .order('name')
       .limit(50),
+    governedProofService.getBundleByKey(`place:${postcode}`),
+    supabase
+      .from('grant_opportunities')
+      .select('id, name, amount_min, amount_max, deadline, closes_at, categories, source, program_type')
+      .order('deadline', { ascending: true, nullsFirst: false })
+      .limit(500),
   ]);
 
   if (!geoData?.length) notFound();
 
   const geo = geoData[0];
+  const stateCode = typeof geo.state === 'string' && geo.state.trim().length > 0 ? geo.state : null;
+  const placeTitle = stateCode ? `${geo.locality || postcode}, ${stateCode}` : (geo.locality || postcode);
+  const socialEnterprisesHref = stateCode ? `/social-enterprises?state=${encodeURIComponent(stateCode)}` : '/social-enterprises';
+  const socialEnterprisesLabel = stateCode ? `Browse all in ${stateCode} \u2192` : 'Browse all enterprises \u2192';
   const seifa = seifaData?.[0] || null;
   const entityList = entities || [];
   const entityIds = entityList.map(e => e.id);
@@ -87,6 +146,90 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
     }
   }
   const allSocialEnterprises = [...seList, ...additionalSEs];
+  const disabilityFocusedSocialEnterprises = allSocialEnterprises.filter((socialEnterprise: {
+    target_beneficiaries?: string[] | null;
+    sector?: string[] | null;
+  }) => hasDisabilitySignal(socialEnterprise.target_beneficiaries) || hasDisabilitySignal(socialEnterprise.sector));
+
+  let ndisStateSupplyTotal: NdisSupplyRow | null = null;
+  let ndisStateDistricts: NdisSupplyRow[] = [];
+  let ndisStateHotspots: NdisConcentrationRow[] = [];
+  let ndisThinDistrictCount = 0;
+  let ndisVeryThinDistrictCount = 0;
+  let ndisStateDisabilityEnterpriseCount = 0;
+  let ndisSourceLink: string | null = null;
+
+  if (stateCode) {
+    const [
+      { data: ndisStateSupplyData },
+      { data: ndisDistrictData },
+      { data: ndisConcentrationData },
+      { count: stateDisabilityEnterpriseCount },
+    ] = await Promise.all([
+      supabase
+        .from('v_ndis_provider_supply_summary')
+        .select('report_date, state_code, service_district_name, provider_count')
+        .eq('state_code', stateCode)
+        .eq('service_district_name', 'ALL')
+        .limit(1),
+      supabase
+        .from('v_ndis_provider_supply_summary')
+        .select('report_date, state_code, service_district_name, provider_count')
+        .eq('state_code', stateCode)
+        .neq('service_district_name', 'ALL')
+        .neq('service_district_name', 'Other')
+        .not('service_district_name', 'ilike', '%Missing%')
+        .order('provider_count', { ascending: true }),
+      supabase
+        .from('ndis_market_concentration')
+        .select('state_code, service_district_name, payment_share_top10_pct, payment_band, source_page_url, source_file_url, source_file_title')
+        .eq('state_code', stateCode)
+        .eq('support_class', 'Core')
+        .neq('service_district_name', 'ALL')
+        .neq('service_district_name', 'Other')
+        .not('service_district_name', 'ilike', '%Missing%')
+        .not('payment_share_top10_pct', 'is', null)
+        .order('payment_share_top10_pct', { ascending: false }),
+      supabase
+        .from('social_enterprises')
+        .select('id', { count: 'exact', head: true })
+        .eq('state', stateCode)
+        .overlaps('target_beneficiaries', ['People with disabilities', 'people_with_disability']),
+    ]);
+
+    ndisStateSupplyTotal = ((ndisStateSupplyData || [])[0] as NdisSupplyRow | undefined) || null;
+    ndisStateDistricts = ((ndisDistrictData || []) as NdisSupplyRow[]).filter((row) => validNdisDistrict(row.service_district_name));
+    ndisThinDistrictCount = ndisStateDistricts.filter((row) => row.provider_count < 100).length;
+    ndisVeryThinDistrictCount = ndisStateDistricts.filter((row) => row.provider_count < 50).length;
+    ndisStateDisabilityEnterpriseCount = stateDisabilityEnterpriseCount || 0;
+
+    const districtNameByLabel = new Map<string, string>();
+    for (const row of ndisStateDistricts) {
+      districtNameByLabel.set(districtLabel(row.service_district_name), row.service_district_name);
+    }
+
+    const concentrationByDistrict = new Map<string, NdisConcentrationRow>();
+    for (const row of (ndisConcentrationData || []) as NdisConcentrationRow[]) {
+      if (!validNdisDistrict(row.service_district_name)) continue;
+      const normalizedDistrict = districtLabel(row.service_district_name);
+      if (!districtNameByLabel.has(normalizedDistrict)) continue;
+      const key = `${row.state_code}:${normalizedDistrict}`;
+      const current = concentrationByDistrict.get(key);
+      if (!current || (row.payment_share_top10_pct || 0) > (current.payment_share_top10_pct || 0)) {
+        concentrationByDistrict.set(key, {
+          ...row,
+          service_district_name: districtNameByLabel.get(normalizedDistrict) || normalizedDistrict,
+        });
+      }
+    }
+    ndisStateHotspots = Array.from(concentrationByDistrict.values())
+      .sort((a, b) => (b.payment_share_top10_pct || 0) - (a.payment_share_top10_pct || 0))
+      .slice(0, 4);
+    ndisSourceLink =
+      ndisStateHotspots.find((row) => row.source_file_url || row.source_page_url)?.source_file_url ||
+      ndisStateHotspots.find((row) => row.source_page_url)?.source_page_url ||
+      null;
+  }
 
   // Fetch funding relationships for entities in this postcode
   const recipientFunding = new Map<string, { grants: number; contracts: number; donations: number }>();
@@ -166,23 +309,31 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
   interface Storyteller { id: string; full_name: string; bio: string | null; profile_image_url: string | null }
   let storytellers: Storyteller[] = [];
   if (geo.state) {
-    const { data: stData } = await supabase
-      .from('storytellers')
-      .select('id, full_name, bio, profile_image_url, location_id')
-      .not('full_name', 'is', null)
-      .limit(200);
+    const stData = await safeOptionalData(
+      supabase
+        .from('storytellers')
+        .select('id, full_name, bio, profile_image_url, location_id')
+        .not('full_name', 'is', null)
+        .limit(200),
+      [] as Array<Storyteller & { location_id: string | null }>,
+    );
 
-    if (stData?.length) {
+    if (stData.length > 0) {
       // Get location IDs that match this state
-      const locationIds = stData.filter((s: { location_id: string | null }) => s.location_id).map((s: { location_id: string }) => s.location_id);
+      const locationIds = stData
+        .filter((s) => !!s.location_id)
+        .map((s) => s.location_id as string);
       if (locationIds.length > 0) {
-        const { data: locs } = await supabase
-          .from('locations')
-          .select('id, state_province')
-          .in('id', locationIds)
-          .eq('state_province', geo.state);
+        const locs = await safeOptionalData(
+          supabase
+            .from('locations')
+            .select('id, state_province')
+            .in('id', locationIds)
+            .eq('state_province', geo.state),
+          [] as Array<{ id: string; state_province: string | null }>,
+        );
 
-        const matchingLocationIds = new Set((locs || []).map((l: { id: string }) => l.id));
+        const matchingLocationIds = new Set(locs.map((l: { id: string }) => l.id));
         storytellers = (stData as (Storyteller & { location_id: string | null })[])
           .filter(s => s.location_id && matchingLocationIds.has(s.location_id))
           .slice(0, 6);
@@ -225,6 +376,39 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
     }
   }
 
+  // Filter grants relevant to this area (by state match or national scope)
+  const now = new Date().toISOString().slice(0, 10);
+  const relevantGrants = (grantData || [])
+    .filter((g: { deadline?: string | null; closes_at?: string | null }) => {
+      const deadline = g.deadline || g.closes_at;
+      return !deadline || deadline >= now; // Include grants with no deadline or future deadlines
+    })
+    .filter((g: { categories?: string[] | null; source?: string | null }) => {
+      // Basic relevance: prefer grants that match entity types in this postcode
+      return true; // Show all — more sophisticated matching can come later
+    })
+    .slice(0, 8) as Array<{
+      id: string;
+      name: string;
+      amount_min: number | null;
+      amount_max: number | null;
+      deadline: string | null;
+      closes_at: string | null;
+      categories: string[] | null;
+      source: string | null;
+      program_type: string | null;
+    }>;
+
+  const publicGovernedProofBundle =
+    governedProofBundle && ['partner', 'public'].includes(governedProofBundle.promotionStatus)
+      ? governedProofBundle
+      : null;
+  const proofPack = publicGovernedProofBundle ? getProofPack(publicGovernedProofBundle) : null;
+  const fundingSnapshot = (proofPack?.fundingSnapshot || {}) as Record<string, unknown>;
+  const evidenceSnapshot = (proofPack?.evidenceSnapshot || {}) as Record<string, unknown>;
+  const voiceSnapshot = (proofPack?.voiceSnapshot || {}) as Record<string, unknown>;
+  const strengths = proofPack ? proofPack.strengths.slice(0, 3) : [];
+
   return (
     <div className="max-w-5xl">
       <Link href="/places" className="text-xs font-black text-bauhaus-muted uppercase tracking-widest hover:text-bauhaus-black">
@@ -234,7 +418,7 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
       {/* Header */}
       <div className="mt-4 mb-6">
         <h1 className="text-2xl sm:text-3xl font-black text-bauhaus-black">
-          {geo.locality || postcode}, {geo.state}
+          {placeTitle}
         </h1>
         <div className="flex items-center gap-3 mt-2 flex-wrap">
           <span className="text-[11px] font-black px-2.5 py-1 border-2 border-bauhaus-black/20 bg-bauhaus-canvas text-bauhaus-black uppercase tracking-widest">
@@ -263,6 +447,14 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
               LGA: {geo.lga_name}
             </span>
           )}
+          {geo.sa2_code && (
+            <Link
+              href={`/power?sa2=${geo.sa2_code}`}
+              className="text-[11px] font-black px-2.5 py-1 border-2 border-bauhaus-black bg-bauhaus-canvas text-bauhaus-black uppercase tracking-widest hover:bg-bauhaus-yellow transition-colors"
+            >
+              View on Power Map
+            </Link>
+          )}
         </div>
       </div>
 
@@ -288,6 +480,78 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
         </div>
       </div>
 
+      {publicGovernedProofBundle && (
+        <div className="mb-8 border-4 border-bauhaus-blue bg-white">
+          <div className="grid gap-0 lg:grid-cols-[1.4fr_0.6fr]">
+            <div className="p-5 border-b-4 lg:border-b-0 lg:border-r-4 border-bauhaus-blue">
+              <div className="flex items-center justify-between gap-4 mb-3">
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-[0.25em] text-bauhaus-blue mb-1">
+                    Governed Proof
+                  </div>
+                  <h2 className="text-xl font-black text-bauhaus-black">
+                    This place has a governed proof layer
+                  </h2>
+                </div>
+                <span className="text-[10px] font-black px-2.5 py-1 border-2 border-bauhaus-blue bg-link-light text-bauhaus-blue uppercase tracking-widest">
+                  {publicGovernedProofBundle.promotionStatus}
+                </span>
+              </div>
+              <p className="text-sm text-bauhaus-muted leading-relaxed mb-4">
+                {proofPack && typeof proofPack.headline === 'string'
+                  ? proofPack.headline
+                  : `This postcode has a promoted governed-proof bundle joining capital, evidence, and community voice.`}
+              </p>
+              <div className="grid sm:grid-cols-3 gap-3">
+                <div className="border-2 border-bauhaus-black p-3 bg-bauhaus-canvas">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted mb-1">Capital</div>
+                  <div className="text-lg font-black text-bauhaus-black">
+                    {formatMoney(typeof fundingSnapshot.totalFunding === 'number' ? fundingSnapshot.totalFunding : null)}
+                  </div>
+                </div>
+                <div className="border-2 border-bauhaus-black p-3 bg-bauhaus-canvas">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted mb-1">Evidence</div>
+                  <div className="text-lg font-black text-bauhaus-black">
+                    {typeof evidenceSnapshot.interventionCount === 'number' ? evidenceSnapshot.interventionCount : 0} interventions
+                  </div>
+                </div>
+                <div className="border-2 border-bauhaus-black p-3 bg-bauhaus-canvas">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted mb-1">Voice</div>
+                  <div className="text-lg font-black text-bauhaus-black">
+                    {typeof voiceSnapshot.publishableStoryCount === 'number' ? voiceSnapshot.publishableStoryCount : 0} stories
+                  </div>
+                </div>
+              </div>
+              {strengths.length > 0 && (
+                <div className="mt-4 space-y-1">
+                  {strengths.map((strength) => (
+                    <div key={String(strength)} className="text-xs font-medium text-bauhaus-black">
+                      {'\u25CF'} {String(strength)}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="p-5 bg-link-light flex flex-col justify-between">
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue mb-2">
+                  User Path
+                </div>
+                <p className="text-sm text-bauhaus-black font-medium leading-relaxed">
+                  Start in place context here, then open the governed proof view for a funder-ready summary shaped from GrantScope, JusticeHub, and Empathy Ledger.
+                </p>
+              </div>
+              <Link
+                href={`/for/funders/proof/${postcode}`}
+                className="mt-4 inline-block px-4 py-3 text-center font-black text-xs uppercase tracking-widest border-4 border-bauhaus-black bg-white hover:bg-bauhaus-yellow transition-colors"
+              >
+                Open Governed Proof
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Social Enterprise callout */}
       {allSocialEnterprises.length > 0 && (
         <div className="mb-8 border-4 border-bauhaus-blue bg-bauhaus-blue/5 p-4 flex items-center justify-between">
@@ -295,7 +559,7 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
             <span className="text-sm font-black text-bauhaus-black">{allSocialEnterprises.length} social & Indigenous enterprises</span>
             <span className="text-sm text-bauhaus-muted font-medium ml-2">operating in this area</span>
           </div>
-          <Link href={`/social-enterprises?state=${geo.state}`} className="text-xs font-black text-bauhaus-blue uppercase tracking-widest hover:underline">
+          <Link href={socialEnterprisesHref} className="text-xs font-black text-bauhaus-blue uppercase tracking-widest hover:underline">
             Browse &rarr;
           </Link>
         </div>
@@ -359,6 +623,82 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
             </Section>
           )}
 
+          {stateCode && (
+            <Section title="NDIS Supply & Service Pressure">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+                <div className="border-2 border-bauhaus-black p-3 bg-bauhaus-canvas">
+                  <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">State Providers</div>
+                  <div className="text-2xl font-black text-bauhaus-black">{ndisStateSupplyTotal?.provider_count?.toLocaleString() || '\u2014'}</div>
+                </div>
+                <div className="border-2 border-bauhaus-black p-3 bg-bauhaus-canvas">
+                  <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">Thin Districts</div>
+                  <div className="text-2xl font-black text-bauhaus-blue">{ndisThinDistrictCount}</div>
+                </div>
+                <div className="border-2 border-bauhaus-black p-3 bg-bauhaus-canvas">
+                  <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">Very Thin</div>
+                  <div className="text-2xl font-black text-bauhaus-red">{ndisVeryThinDistrictCount}</div>
+                </div>
+                <div className="border-2 border-bauhaus-black p-3 bg-bauhaus-canvas">
+                  <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">Local Disability Delivery</div>
+                  <div className="text-2xl font-black text-bauhaus-black">{disabilityFocusedSocialEnterprises.length}</div>
+                  <div className="text-[10px] text-bauhaus-muted font-medium mt-1">
+                    {ndisStateDisabilityEnterpriseCount.toLocaleString()} disability-focused enterprises in {stateCode}
+                  </div>
+                </div>
+              </div>
+              <p className="text-sm text-bauhaus-muted leading-relaxed mb-4">
+                NDIS money is not the same thing as healthy service coverage. This view shows whether {placeTitle} sits inside a state market with thin provider supply, captured payment flows, and too few local disability-focused or community-controlled alternatives.
+                {totalJusticeFunding > 0 && ` This matters here because ${placeTitle} already shows ${formatMoney(totalJusticeFunding)} in justice-related funding moving through local entities.`}
+              </p>
+              <div className="grid gap-4 md:grid-cols-2 mb-4">
+                <div className="border-2 border-bauhaus-black p-4">
+                  <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-2">Thinnest Districts In {stateCode}</div>
+                  <div className="space-y-2">
+                    {ndisStateDistricts.slice(0, 4).map((district) => (
+                      <div key={district.service_district_name} className="flex items-center justify-between text-sm">
+                        <span className="font-bold text-bauhaus-black">{district.service_district_name}</span>
+                        <span className="font-mono font-black text-bauhaus-blue">{district.provider_count.toLocaleString()} providers</span>
+                      </div>
+                    ))}
+                    {ndisStateDistricts.length === 0 && (
+                      <div className="text-sm font-medium text-bauhaus-muted">No thin district data available.</div>
+                    )}
+                  </div>
+                </div>
+                <div className="border-2 border-bauhaus-black p-4">
+                  <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-2">Captured Markets</div>
+                  <div className="space-y-2">
+                    {ndisStateHotspots.slice(0, 4).map((district) => (
+                      <div key={`${district.state_code}:${district.service_district_name}`} className="flex items-center justify-between text-sm">
+                        <span className="font-bold text-bauhaus-black">{district.service_district_name}</span>
+                        <span className="font-mono font-black text-bauhaus-red">{formatPercent(district.payment_share_top10_pct)}</span>
+                      </div>
+                    ))}
+                    {ndisStateHotspots.length === 0 && (
+                      <div className="text-sm font-medium text-bauhaus-muted">No concentration data available.</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Link href="/reports/ndis-market" className="px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 border-bauhaus-black text-bauhaus-black hover:bg-bauhaus-yellow transition-colors">
+                  Open NDIS Market
+                </Link>
+                <Link href="/funding-workspace" className="px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 border-bauhaus-black text-bauhaus-black hover:bg-money-light transition-colors">
+                  Open Funding Workspace
+                </Link>
+                <Link href="/reports/youth-justice" className="px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 border-bauhaus-black text-bauhaus-black hover:bg-link-light transition-colors">
+                  Compare With Youth Justice
+                </Link>
+                {ndisSourceLink && (
+                  <a href={ndisSourceLink} target="_blank" rel="noopener noreferrer" className="px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 border-bauhaus-blue text-bauhaus-blue hover:bg-link-light transition-colors">
+                    Source Dataset
+                  </a>
+                )}
+              </div>
+            </Section>
+          )}
+
           {/* Social Enterprises in Area */}
           {allSocialEnterprises.length > 0 && (
             <Section title={`Social & Indigenous Enterprises (${allSocialEnterprises.length})`}>
@@ -392,8 +732,8 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
                       </div>
                       {se.sector && se.sector.length > 0 && (
                         <div className="flex gap-1 mt-1.5 flex-wrap">
-                          {se.sector.slice(0, 4).map((s: string) => (
-                            <span key={s} className="text-[10px] px-1.5 py-0.5 bg-bauhaus-canvas text-bauhaus-black font-bold border border-bauhaus-black/10 capitalize">{s}</span>
+                          {Array.from(new Set(se.sector)).slice(0, 4).map((s: string, index: number) => (
+                            <span key={`${se.id}-${s}-${index}`} className="text-[10px] px-1.5 py-0.5 bg-bauhaus-canvas text-bauhaus-black font-bold border border-bauhaus-black/10 capitalize">{s}</span>
                           ))}
                         </div>
                       )}
@@ -401,8 +741,57 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
                   );
                 })}
               </div>
-              <Link href={`/social-enterprises?state=${geo.state}`} className="inline-block mt-3 text-xs font-black text-bauhaus-blue uppercase tracking-widest hover:underline">
-                Browse all in {geo.state} &rarr;
+              <Link href={socialEnterprisesHref} className="inline-block mt-3 text-xs font-black text-bauhaus-blue uppercase tracking-widest hover:underline">
+                {socialEnterprisesLabel}
+              </Link>
+            </Section>
+          )}
+
+          {/* Grant Opportunities */}
+          {relevantGrants.length > 0 && (
+            <Section title="Grant Opportunities">
+              <p className="text-xs text-bauhaus-muted mb-3">
+                Funding opportunities that may be relevant to organisations in {placeTitle}.
+              </p>
+              <div className="space-y-0">
+                {relevantGrants.map((g) => (
+                  <div key={g.id} className="flex items-center justify-between py-3 border-b-2 border-bauhaus-black/5 last:border-b-0">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-bauhaus-black text-sm truncate">{g.name}</div>
+                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                        {g.source && (
+                          <span className="text-[10px] px-1.5 py-0.5 font-bold border border-bauhaus-black/20 text-bauhaus-muted">{g.source}</span>
+                        )}
+                        {g.program_type && (
+                          <span className="text-[10px] px-1.5 py-0.5 font-bold border border-bauhaus-blue/30 text-bauhaus-blue">{g.program_type}</span>
+                        )}
+                        {g.categories?.slice(0, 2).map((cat, ci) => (
+                          <span key={ci} className="text-[10px] px-1.5 py-0.5 bg-bauhaus-canvas text-bauhaus-black font-bold border border-bauhaus-black/10 capitalize">{cat}</span>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="text-right ml-4 shrink-0">
+                      {(g.amount_min || g.amount_max) && (
+                        <div className="font-black text-bauhaus-black text-sm">
+                          {g.amount_min && g.amount_max
+                            ? `${formatMoney(g.amount_min)}–${formatMoney(g.amount_max)}`
+                            : formatMoney(g.amount_max || g.amount_min)}
+                        </div>
+                      )}
+                      {(g.deadline || g.closes_at) && (
+                        <div className="text-[10px] text-bauhaus-muted font-bold">
+                          Closes {g.deadline || g.closes_at}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <Link
+                href={stateCode ? `/grants?state=${encodeURIComponent(stateCode)}` : '/grants'}
+                className="inline-block mt-3 text-xs font-black text-bauhaus-blue uppercase tracking-widest hover:underline"
+              >
+                Browse all grants {stateCode ? `in ${stateCode}` : ''} &rarr;
               </Link>
             </Section>
           )}
@@ -491,9 +880,14 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
           {/* Community Voice (Empathy Ledger cross-system) */}
           {storytellers.length > 0 && (
             <div className="bg-white border-4 border-bauhaus-blue p-4">
-              <h3 className="text-sm font-black text-bauhaus-blue mb-3 pb-2 border-b-4 border-bauhaus-blue uppercase tracking-widest">
-                Community Voice
-              </h3>
+              <div className="flex items-center justify-between gap-3 mb-3 pb-2 border-b-4 border-bauhaus-blue">
+                <h3 className="text-sm font-black text-bauhaus-blue uppercase tracking-widest">
+                  Community Voice
+                </h3>
+                <span className="text-[10px] font-black px-2 py-0.5 border border-bauhaus-blue/30 bg-link-light text-bauhaus-blue uppercase tracking-widest">
+                  External Evidence
+                </span>
+              </div>
               <div className="space-y-3">
                 {storytellers.map((st) => (
                   <div key={st.id} className="flex items-start gap-3">
@@ -510,7 +904,7 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
                 ))}
               </div>
               <div className="mt-3 text-[10px] text-bauhaus-muted leading-relaxed">
-                Community voices from Empathy Ledger — lived experience linked to place.
+                External ecosystem evidence via Empathy Ledger, linked to this place by geography rather than direct GrantScope attribution.
               </div>
             </div>
           )}

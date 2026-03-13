@@ -6,8 +6,9 @@
  * Falls back automatically on quota/rate errors.
  */
 
-import type { Foundation } from './types.js';
-import type { ScrapedFoundationData } from './annual-report-scraper.js';
+import type { Foundation } from './types';
+import type { ScrapedFoundationData } from './annual-report-scraper';
+import { MINIMAX_CHAT_COMPLETIONS_URL } from '../minimax.ts';
 
 export interface EnrichedProfile {
   description: string | null;
@@ -56,7 +57,7 @@ const PROVIDERS: ProviderConfig[] = [
   {
     name: 'minimax',
     envKey: 'MINIMAX_API_KEY',
-    baseUrl: 'https://api.minimax.io/v1/chat/completions',
+    baseUrl: MINIMAX_CHAT_COMPLETIONS_URL,
     model: 'MiniMax-M2.5',
     maxTokens: 4000,
     supportsJsonMode: false, // M2.5 reasoning model, parse JSON from response
@@ -248,6 +249,9 @@ Rules:
 
     if (!response.ok) {
       const err = await response.text();
+      if (response.status === 401 || /invalid api key|authorized_error|unauthorized/i.test(err)) {
+        throw new Error(`AUTH:${provider.name}:${response.status}: ${err.slice(0, 200)}`);
+      }
       // Check for quota/rate limit errors
       if (err.includes('insufficient_quota') || err.includes('insufficient_balance') || err.includes('Insufficient Balance') || err.includes('credit balance is too lo')) {
         throw new Error(`QUOTA:${provider.name}:${response.status}: ${err.slice(0, 200)}`);
@@ -348,6 +352,12 @@ Rules:
         if (msg.startsWith('QUOTA:')) {
           // Disable this provider for the rest of the session
           console.log(`[profiler]     ${provider.name} quota exceeded — disabling, trying next provider`);
+          this.disabledProviders.add(provider.name);
+          continue;
+        }
+
+        if (msg.startsWith('AUTH:')) {
+          console.log(`[profiler]     ${provider.name} auth failed — disabling, trying next provider`);
           this.disabledProviders.add(provider.name);
           continue;
         }

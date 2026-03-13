@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireModule } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
 
 const SCHEMA_CONTEXT = `
@@ -54,6 +55,9 @@ Columns: abn, name, charity_size (text: 'Small', 'Medium', 'Large'), state, post
 `;
 
 export async function POST(request: NextRequest) {
+  const auth = await requireModule('grants');
+  if (auth.error) return auth.error;
+
   const { question } = await request.json();
 
   if (!question || typeof question !== 'string') {

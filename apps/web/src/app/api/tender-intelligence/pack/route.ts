@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
-import { createSupabaseServer } from '@/lib/supabase-server';
+import { getDecisionPackBlockers } from '@/lib/procurement-pack-readiness';
+import { requireModule } from '@/lib/api-auth';
 import { logUsage } from '../_lib/log-usage';
+import {
+  createProcurementPackExport,
+  getProcurementContext,
+  logProcurementWorkflowRun,
+  normalizeReviewChecklist,
+  updateProcurementShortlistSummary,
+} from '../_lib/procurement-workspace';
 
 /** Escape SQL LIKE wildcards in user input */
 function sanitizeLike(s: string) {
@@ -19,6 +27,7 @@ function sanitizeLike(s: string) {
  */
 
 interface PackRequest {
+  shortlist_id?: string;
   state?: string;
   postcode?: string;
   lga?: string;
@@ -30,16 +39,15 @@ interface PackRequest {
 }
 
 export async function POST(request: NextRequest) {
-  const authSupabase = await createSupabaseServer();
-  const { data: { user } } = await authSupabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-  }
+  const auth = await requireModule('procurement');
+  if (auth.error) return auth.error;
+  const { user } = auth;
 
   const body = await request.json() as PackRequest;
   const supabase = getServiceSupabase();
 
   const {
+    shortlist_id,
     state,
     postcode,
     lga,
@@ -49,6 +57,8 @@ export async function POST(request: NextRequest) {
     existing_suppliers = [],
     total_contract_value,
   } = body;
+  const startedAt = new Date().toISOString();
+  let packBlockers: string[] = [];
 
   // ── Section 1: Market Capability Overview ──
   let entityQuery = supabase
@@ -258,19 +268,307 @@ export async function POST(request: NextRequest) {
     .sort((a, b) => b.contracts.count - a.contracts.count || (b.revenue || 0) - (a.revenue || 0))
     .slice(0, 10);
 
+  const packPayload = {
+    generated_at: new Date().toISOString(),
+    filters: { state, postcode, lga, category, remoteness, supplier_types },
+    sections: {
+      market_overview: marketOverview,
+      compliance_analysis: complianceAnalysis,
+      supplier_shortlist: supplierShortlist,
+      bid_strength: bidStrength,
+      recommended_partners: recommended,
+    },
+  };
+
+  let workflowOutputSummary: Record<string, unknown> = {
+    suppliers_identified: marketOverview.suppliers_identified,
+    shortlist_size: supplierShortlist.length,
+    recommended_count: recommended.length,
+    compliance_score: complianceAnalysis
+      ? {
+          indigenous_meets_target: complianceAnalysis.indigenous.meets_target,
+          indigenous_pct_value: complianceAnalysis.indigenous.pct_value,
+        }
+      : null,
+  };
+  let workflowStatus: 'completed' | 'failed' | 'blocked' = 'completed';
+  let workflowRun: { id: string } | null = null;
+
+  let packExport: { id: string; title: string; created_at: string } | null = null;
+  if (shortlist_id) {
+    const shortlistContext = await getProcurementContext(supabase, user.id, { shortlistId: shortlist_id });
+    if (shortlistContext.shortlist && shortlistContext.orgProfileId) {
+      const [
+        { data: shortlistItems, error: shortlistItemsError },
+        { data: shortlistTasks, error: shortlistTasksError },
+        { data: shortlistComments, error: shortlistCommentsError },
+      ] = await Promise.all([
+        supabase
+          .from('procurement_shortlist_items')
+          .select('id, supplier_name, gs_id, supplier_abn, decision_tag, note, review_checklist, evidence_snapshot, contract_count, contract_total_value, state, lga_name, remoteness, updated_at, last_reviewed_at')
+          .eq('shortlist_id', shortlistContext.shortlist.id)
+          .order('updated_at', { ascending: false }),
+        supabase
+          .from('procurement_tasks')
+          .select('id, title, status, priority, assignee_label, due_at, shortlist_item_id, completion_outcome, completion_note, completed_at')
+          .eq('shortlist_id', shortlistContext.shortlist.id)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('procurement_shortlist_comments')
+          .select('id, shortlist_item_id, pack_export_id, author_user_id, comment_type, body, created_at')
+          .eq('shortlist_id', shortlistContext.shortlist.id)
+          .is('shortlist_item_id', null)
+          .order('created_at', { ascending: false })
+          .limit(12),
+      ]);
+
+      if (shortlistItemsError) {
+        return NextResponse.json({ error: shortlistItemsError.message }, { status: 500 });
+      }
+
+      if (shortlistTasksError) {
+        return NextResponse.json({ error: shortlistTasksError.message }, { status: 500 });
+      }
+
+      if (shortlistCommentsError) {
+        return NextResponse.json({ error: shortlistCommentsError.message }, { status: 500 });
+      }
+
+      const decisionCounts = (shortlistItems || []).reduce<Record<string, number>>((acc, item) => {
+        const key = item.decision_tag || 'untriaged';
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      }, {});
+
+      const reviewedSuppliers = (shortlistItems || []).map((item) => {
+        const checklist = normalizeReviewChecklist(item.review_checklist);
+        const checklistComplete = Object.values(checklist).filter(Boolean).length;
+        return {
+          supplier_name: item.supplier_name,
+          gs_id: item.gs_id,
+          supplier_abn: item.supplier_abn,
+          decision_tag: item.decision_tag,
+          note: item.note,
+          review_checklist: checklist,
+          checklist_complete: checklistComplete,
+          evidence_snapshot: item.evidence_snapshot || {},
+          contract_count: item.contract_count,
+          contract_total_value: item.contract_total_value,
+          state: item.state,
+          lga_name: item.lga_name,
+          remoteness: item.remoteness,
+          updated_at: item.updated_at,
+          last_reviewed_at: item.last_reviewed_at,
+        };
+      });
+
+      const reviewedSupplierCount = reviewedSuppliers.filter((item) => item.checklist_complete > 0 || item.decision_tag || item.note).length;
+      const openTaskCount = (shortlistTasks || []).filter((task) => task.status !== 'done').length;
+      const doneTaskCount = (shortlistTasks || []).filter((task) => task.status === 'done').length;
+      const approvalUserIds = [
+        shortlistContext.shortlist.requested_by,
+        shortlistContext.shortlist.approved_by,
+        shortlistContext.shortlist.approver_user_id,
+        ...(shortlistComments || []).map((comment) => comment.author_user_id).filter((value): value is string => !!value),
+      ].filter((value): value is string => !!value);
+      const { data: approvalUsers, error: approvalUsersError } = approvalUserIds.length > 0
+        ? await supabase
+            .from('profiles')
+            .select('id, display_name, full_name, email')
+            .in('id', approvalUserIds)
+        : { data: [], error: null };
+
+      if (approvalUsersError) {
+        return NextResponse.json({ error: approvalUsersError.message }, { status: 500 });
+      }
+
+      const approvalUserById = new Map(
+        (approvalUsers || []).map((profile) => [
+          profile.id,
+          profile.display_name || profile.full_name || profile.email || null,
+        ]),
+      );
+
+      const exportSummary = {
+        generated_at: packPayload.generated_at,
+        shortlist_name: shortlistContext.shortlist.name,
+        supplier_count: reviewedSuppliers.length,
+        reviewed_supplier_count: reviewedSupplierCount,
+        decision_counts: decisionCounts,
+        open_task_count: openTaskCount,
+        completed_task_count: doneTaskCount,
+        approval_status: shortlistContext.shortlist.approval_status,
+        approver_user_id: shortlistContext.shortlist.approver_user_id,
+      };
+
+      const signoffComments = (shortlistComments || []).map((comment) => ({
+        id: comment.id,
+        pack_export_id: comment.pack_export_id,
+        author_user_id: comment.author_user_id,
+        author_label: comment.author_user_id ? approvalUserById.get(comment.author_user_id) || null : null,
+        comment_type: comment.comment_type,
+        body: comment.body,
+        created_at: comment.created_at,
+      }));
+
+      packBlockers = getDecisionPackBlockers({
+        shortlist: shortlistContext.shortlist,
+        items: (shortlistItems || []).map((item) => ({
+          id: item.id,
+          supplier_name: item.supplier_name,
+          decision_tag: item.decision_tag,
+          note: item.note,
+          review_checklist: item.review_checklist,
+          evidence_snapshot: item.evidence_snapshot,
+        })),
+      }).map((blocker) => blocker.message);
+      if (packBlockers.length > 0) {
+        workflowStatus = 'blocked';
+      }
+
+      workflowOutputSummary = {
+        ...workflowOutputSummary,
+        reviewed_supplier_count: reviewedSupplierCount,
+        open_task_count: openTaskCount,
+        decision_counts: decisionCounts,
+        blocker_count: packBlockers.length,
+        blockers: packBlockers.slice(0, 8),
+      };
+
+      const evidenceSnapshot = {
+        decision_brief: {
+          recommendation_summary: shortlistContext.shortlist.recommendation_summary,
+          why_now: shortlistContext.shortlist.why_now,
+          risk_summary: shortlistContext.shortlist.risk_summary,
+          next_action: shortlistContext.shortlist.next_action,
+          owner_name: shortlistContext.shortlist.owner_name,
+          owner_user_id: shortlistContext.shortlist.owner_user_id,
+          approver_user_id: shortlistContext.shortlist.approver_user_id,
+          approver_name: shortlistContext.shortlist.approver_user_id
+            ? approvalUserById.get(shortlistContext.shortlist.approver_user_id) || null
+            : null,
+          decision_due_at: shortlistContext.shortlist.decision_due_at,
+        },
+        approval_snapshot: {
+          approval_status: shortlistContext.shortlist.approval_status,
+          approval_notes: shortlistContext.shortlist.approval_notes,
+          requested_by: shortlistContext.shortlist.requested_by,
+          requested_by_name: shortlistContext.shortlist.requested_by
+            ? approvalUserById.get(shortlistContext.shortlist.requested_by) || null
+            : null,
+          requested_at: shortlistContext.shortlist.requested_at,
+          approved_by: shortlistContext.shortlist.approved_by,
+          approved_by_name: shortlistContext.shortlist.approved_by
+            ? approvalUserById.get(shortlistContext.shortlist.approved_by) || null
+            : null,
+          approved_at: shortlistContext.shortlist.approved_at,
+          last_pack_export_id: shortlistContext.shortlist.last_pack_export_id,
+          approved_pack_export_id: shortlistContext.shortlist.approved_pack_export_id,
+          approver_user_id: shortlistContext.shortlist.approver_user_id,
+          approver_name: shortlistContext.shortlist.approver_user_id
+            ? approvalUserById.get(shortlistContext.shortlist.approver_user_id) || null
+            : null,
+        },
+        shortlist_summary: exportSummary,
+        reviewed_suppliers: reviewedSuppliers,
+        task_queue: shortlistTasks || [],
+        signoff_comments: signoffComments,
+      };
+
+      if (packBlockers.length > 0) {
+        logUsage({ user_id: user.id, endpoint: 'pack', filters: { state, lga, postcode, remoteness }, result_count: allEntities.length });
+        workflowRun = await logProcurementWorkflowRun(supabase, {
+          userId: user.id,
+          workflowType: 'pack',
+          workflowStatus,
+          shortlistId: shortlist_id,
+          inputPayload: {
+            state: state || null,
+            postcode: postcode || null,
+            lga: lga || null,
+            remoteness: remoteness || null,
+            supplier_types,
+            existing_supplier_count: existing_suppliers.length,
+            total_contract_value: total_contract_value || null,
+          },
+          outputSummary: workflowOutputSummary,
+          recordsScanned: allEntities.length,
+          recordsChanged: 0,
+          errorCount: packBlockers.length,
+          startedAt,
+        });
+
+        return NextResponse.json({
+          error: 'Decision pack blocked until the shortlist has enough evidence and governance detail.',
+          blockers: packBlockers,
+          workflow_run_id: workflowRun?.id || null,
+        }, { status: 422 });
+      }
+
+      const createdExport = await createProcurementPackExport(supabase, user.id, {
+        shortlistId: shortlistContext.shortlist.id,
+        workflowRunId: null,
+        title: `${shortlistContext.shortlist.name} Decision Pack`,
+        exportSummary,
+        packPayload,
+        evidenceSnapshot,
+      });
+
+      if (createdExport) {
+        await updateProcurementShortlistSummary(supabase, user.id, {
+          shortlistId: shortlistContext.shortlist.id,
+          lastPackExportId: createdExport.id,
+        });
+        packExport = {
+          id: createdExport.id,
+          title: createdExport.title,
+          created_at: createdExport.created_at,
+        };
+      }
+    }
+  }
+
+  if (packExport?.id) {
+    workflowOutputSummary = {
+      ...workflowOutputSummary,
+      pack_export_id: packExport.id,
+    };
+  }
+
   logUsage({ user_id: user.id, endpoint: 'pack', filters: { state, lga, postcode, remoteness }, result_count: allEntities.length });
+  workflowRun = await logProcurementWorkflowRun(supabase, {
+    userId: user.id,
+    workflowType: 'pack',
+    workflowStatus,
+    shortlistId: shortlist_id,
+    inputPayload: {
+      state: state || null,
+      postcode: postcode || null,
+      lga: lga || null,
+      remoteness: remoteness || null,
+      supplier_types,
+      existing_supplier_count: existing_suppliers.length,
+      total_contract_value: total_contract_value || null,
+    },
+    outputSummary: workflowOutputSummary,
+    recordsScanned: allEntities.length,
+    recordsChanged: supplierShortlist.length + recommended.length + (packExport ? 1 : 0),
+    startedAt,
+  });
+
+  if (packExport?.id && workflowRun?.id) {
+    const { error: workflowLinkError } = await supabase
+      .from('procurement_pack_exports')
+      .update({ workflow_run_id: workflowRun.id })
+      .eq('id', packExport.id);
+
+    if (workflowLinkError) {
+      console.error('[procurement-pack-export-link]', workflowLinkError.message);
+    }
+  }
 
   return NextResponse.json({
-    pack: {
-      generated_at: new Date().toISOString(),
-      filters: { state, postcode, lga, category, remoteness, supplier_types },
-      sections: {
-        market_overview: marketOverview,
-        compliance_analysis: complianceAnalysis,
-        supplier_shortlist: supplierShortlist,
-        bid_strength: bidStrength,
-        recommended_partners: recommended,
-      },
-    },
+    pack: packPayload,
+    export: packExport,
   });
 }

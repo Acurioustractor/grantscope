@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server';
+import { requireModule } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
 
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ gsId: string }> }
 ) {
+  const auth = await requireModule('allocation');
+  if (auth.error) return auth.error;
+
   const { gsId } = await params;
 
   try {

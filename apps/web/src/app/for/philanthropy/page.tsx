@@ -25,7 +25,7 @@ async function getStats() {
     supabase.from('foundations').select('*', { count: 'exact', head: true }).not('enriched_at', 'is', null),
     supabase.from('grant_opportunities').select('*', { count: 'exact', head: true }),
     supabase.from('v_charity_explorer').select('*', { count: 'exact', head: true }),
-    supabase.from('foundation_programs').select('*', { count: 'exact', head: true }),
+    supabase.from('foundation_programs').select('*', { count: 'exact', head: true }).in('status', ['open', 'closed']),
     supabase.from('foundations').select('total_giving_annual').not('total_giving_annual', 'is', null),
     supabase.from('acnc_ais').select('*', { count: 'exact', head: true }),
   ]);

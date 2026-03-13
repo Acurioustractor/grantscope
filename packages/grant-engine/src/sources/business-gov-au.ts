@@ -7,7 +7,7 @@
 
 import FirecrawlApp from '@mendable/firecrawl-js';
 import * as cheerio from 'cheerio';
-import type { SourcePlugin, DiscoveryQuery, RawGrant } from '../types.js';
+import type { SourcePlugin, DiscoveryQuery, RawGrant } from '../types';
 
 const GRANTS_URL = 'https://business.gov.au/grants-and-programs';
 

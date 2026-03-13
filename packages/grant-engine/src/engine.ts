@@ -17,26 +17,26 @@ import type {
   DiscoveryRunResult,
   CanonicalGrant,
   GrantScorer,
-} from './types.js';
-import { SourceRegistry } from './sources/registry.js';
-import { normalize } from './normalizer.js';
-import { deduplicateGrants, filterExisting } from './deduplicator.js';
-import { GrantRepository } from './storage/repository.js';
-import { createWebSearchPlugin } from './sources/web-search.js';
-import { createLLMKnowledgePlugin } from './sources/llm-knowledge.js';
-import { createGrantConnectPlugin } from './sources/grantconnect.js';
-import { createDataGovAuPlugin } from './sources/data-gov-au.js';
-import { createQLDGrantsPlugin } from './sources/qld-grants.js';
-import { createBusinessGovAuPlugin } from './sources/business-gov-au.js';
-import { createNSWGrantsPlugin } from './sources/nsw-grants.js';
-import { createVICGrantsPlugin } from './sources/vic-grants.js';
-import { createARCGrantsPlugin } from './sources/arc-grants.js';
-import { createNHMRCGrantsPlugin } from './sources/nhmrc-grants.js';
-import { createTASGrantsPlugin } from './sources/tas-grants.js';
-import { createACTGrantsPlugin } from './sources/act-grants.js';
-import { createNTGrantsPlugin } from './sources/nt-grants.js';
-import { createSAGrantsPlugin } from './sources/sa-grants.js';
-import { createWAGrantsPlugin } from './sources/wa-grants.js';
+} from './types';
+import { SourceRegistry } from './sources/registry';
+import { normalize } from './normalizer';
+import { deduplicateGrants, filterExisting } from './deduplicator';
+import { GrantRepository } from './storage/repository';
+import { createWebSearchPlugin } from './sources/web-search';
+import { createLLMKnowledgePlugin } from './sources/llm-knowledge';
+import { createGrantConnectPlugin } from './sources/grantconnect';
+import { createDataGovAuPlugin } from './sources/data-gov-au';
+import { createQLDGrantsPlugin } from './sources/qld-grants';
+import { createBusinessGovAuPlugin } from './sources/business-gov-au';
+import { createNSWGrantsPlugin } from './sources/nsw-grants';
+import { createVICGrantsPlugin } from './sources/vic-grants';
+import { createARCGrantsPlugin } from './sources/arc-grants';
+import { createNHMRCGrantsPlugin } from './sources/nhmrc-grants';
+import { createTASGrantsPlugin } from './sources/tas-grants';
+import { createACTGrantsPlugin } from './sources/act-grants';
+import { createNTGrantsPlugin } from './sources/nt-grants';
+import { createSAGrantsPlugin } from './sources/sa-grants';
+import { createWAGrantsPlugin } from './sources/wa-grants';
 
 export class GrantEngine {
   private registry: SourceRegistry;

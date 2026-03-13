@@ -146,7 +146,7 @@ export default async function FoundationDetailPage({ params }: { params: Promise
 
   const [{ data: foundation }, { data: programs }, { data: linkedGrants }] = await Promise.all([
     supabase.from('foundations').select('*').eq('id', id).single(),
-    supabase.from('foundation_programs').select('*').eq('foundation_id', id).order('deadline', { ascending: true, nullsFirst: false }),
+    supabase.from('foundation_programs').select('*').eq('foundation_id', id).in('status', ['open', 'closed']).order('deadline', { ascending: true, nullsFirst: false }),
     supabase.from('grant_opportunities').select('id, name, amount_min, amount_max, closes_at, program_type, source, description').eq('foundation_id', id).order('closes_at', { ascending: true, nullsFirst: false }),
   ]);
 

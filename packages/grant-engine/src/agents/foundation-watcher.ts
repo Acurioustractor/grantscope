@@ -8,7 +8,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { AgentConfig, AgentRunResult } from './agent-runner.js';
+import type { AgentConfig, AgentRunResult } from './agent-runner';
 
 export function createFoundationWatcher(): AgentConfig {
   return {

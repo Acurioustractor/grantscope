@@ -63,9 +63,14 @@ export function CommunityEvidence({ gsId, isPremium }: { gsId: string; isPremium
   if (loading) {
     return (
       <section className="mb-8">
-        <h2 className="text-sm font-black text-bauhaus-black mb-3 pb-2 border-b-4 border-bauhaus-black uppercase tracking-widest">
-          Community Evidence
-        </h2>
+        <div className="flex items-center justify-between gap-3 mb-3 pb-2 border-b-4 border-bauhaus-black">
+          <h2 className="text-sm font-black text-bauhaus-black uppercase tracking-widest">
+            Community Evidence
+          </h2>
+          <span className="text-[10px] font-black px-2 py-0.5 border border-bauhaus-blue/30 bg-link-light text-bauhaus-blue uppercase tracking-widest">
+            External Evidence
+          </span>
+        </div>
         <div className="animate-pulse space-y-3">
           <div className="h-16 bg-bauhaus-canvas" />
           <div className="h-16 bg-bauhaus-canvas" />
@@ -80,9 +85,14 @@ export function CommunityEvidence({ gsId, isPremium }: { gsId: string; isPremium
   if (!isPremium) {
     return (
       <section className="mb-8">
-        <h2 className="text-sm font-black text-bauhaus-black mb-3 pb-2 border-b-4 border-bauhaus-black uppercase tracking-widest">
-          Community Evidence ({data.count})
-        </h2>
+        <div className="flex items-center justify-between gap-3 mb-3 pb-2 border-b-4 border-bauhaus-black">
+          <h2 className="text-sm font-black text-bauhaus-black uppercase tracking-widest">
+            Community Evidence ({data.count})
+          </h2>
+          <span className="text-[10px] font-black px-2 py-0.5 border border-bauhaus-blue/30 bg-link-light text-bauhaus-blue uppercase tracking-widest">
+            External Evidence
+          </span>
+        </div>
         <div className="bg-bauhaus-canvas p-4">
           <p className="text-sm font-bold text-bauhaus-black mb-1">
             {data.count} governed evidence record{data.count !== 1 ? 's' : ''} available
@@ -106,9 +116,14 @@ export function CommunityEvidence({ gsId, isPremium }: { gsId: string; isPremium
 
   return (
     <section className="mb-8">
-      <h2 className="text-sm font-black text-bauhaus-black mb-3 pb-2 border-b-4 border-bauhaus-black uppercase tracking-widest">
-        Community Evidence ({data.count})
-      </h2>
+      <div className="flex items-center justify-between gap-3 mb-3 pb-2 border-b-4 border-bauhaus-black">
+        <h2 className="text-sm font-black text-bauhaus-black uppercase tracking-widest">
+          Community Evidence ({data.count})
+        </h2>
+        <span className="text-[10px] font-black px-2 py-0.5 border border-bauhaus-blue/30 bg-link-light text-bauhaus-blue uppercase tracking-widest">
+          External Evidence
+        </span>
+      </div>
 
       <div className="space-y-0">
         {data.stories.slice(0, 5).map((record) => (

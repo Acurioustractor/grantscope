@@ -29,10 +29,12 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  // Protect /home, /tracker, /ops, and /profile routes
-  if ((pathname.startsWith('/home') || pathname.startsWith('/tracker') || pathname.startsWith('/foundations/tracker') || pathname.startsWith('/ops') || pathname.startsWith('/profile')) && !user) {
+  // Protect authenticated routes
+  const protectedPrefixes = ['/home', '/tracker', '/foundations/tracker', '/ops', '/profile', '/goods-intelligence', '/goods-workspace'];
+  if (protectedPrefixes.some(p => pathname.startsWith(p)) && !user) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
+    url.searchParams.set('next', pathname);
     return NextResponse.redirect(url);
   }
 
@@ -47,5 +49,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/home', '/tracker/:path*', '/foundations/tracker/:path*', '/foundations/tracker', '/ops/:path*', '/ops', '/profile/:path*', '/profile', '/login'],
+  matcher: ['/home', '/tracker/:path*', '/foundations/tracker/:path*', '/foundations/tracker', '/ops/:path*', '/ops', '/profile/:path*', '/profile', '/login', '/goods-intelligence/:path*', '/goods-intelligence', '/goods-workspace/:path*', '/goods-workspace'],
 };

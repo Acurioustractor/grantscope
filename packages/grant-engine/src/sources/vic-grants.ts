@@ -14,7 +14,7 @@
  */
 
 import * as cheerio from 'cheerio';
-import type { SourcePlugin, DiscoveryQuery, RawGrant } from '../types.js';
+import type { SourcePlugin, DiscoveryQuery, RawGrant } from '../types';
 
 const VIC_MAIN_URL = 'https://www.vic.gov.au/grants';
 const BROWSER_UA = 'GrantScope/1.0 (research; contact@act.place)';

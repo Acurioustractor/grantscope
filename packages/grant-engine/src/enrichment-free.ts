@@ -13,6 +13,7 @@
 
 import * as cheerio from 'cheerio';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { MINIMAX_CHAT_COMPLETIONS_URL } from './minimax.ts';
 
 const RATE_LIMIT_DELAY_MS = 1500;
 const SCRAPE_TIMEOUT_MS = 10000;
@@ -26,7 +27,7 @@ interface LLMProvider {
 }
 
 const PROVIDERS: LLMProvider[] = [
-  { name: 'minimax', baseUrl: 'https://api.minimaxi.chat/v1/chat/completions', model: 'MiniMax-M2.5', envKey: 'MINIMAX_API_KEY' },
+  { name: 'minimax', baseUrl: MINIMAX_CHAT_COMPLETIONS_URL, model: 'MiniMax-M2.5', envKey: 'MINIMAX_API_KEY' },
   { name: 'groq', baseUrl: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.3-70b-versatile', envKey: 'GROQ_API_KEY' },
   { name: 'gemini', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', model: 'gemini-2.5-flash', envKey: 'GEMINI_API_KEY' },
   { name: 'deepseek', baseUrl: 'https://api.deepseek.com/chat/completions', model: 'deepseek-chat', envKey: 'DEEPSEEK_API_KEY' },
@@ -146,6 +147,11 @@ If a field is unclear, use null or empty array. Keep description under 500 chars
 
       if (!response.ok) {
         const err = await response.text();
+        if (response.status === 401 || /invalid api key|authorized_error|unauthorized/i.test(err)) {
+          log(`[enrich-free] ${provider.name} auth failed — disabling`);
+          provider.disabled = true;
+          continue;
+        }
         if (response.status === 429 || response.status === 402 ||
             err.includes('rate_limit') || err.includes('quota') ||
             err.includes('Insufficient Balance') || err.includes('credit balance')) {

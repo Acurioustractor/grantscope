@@ -104,6 +104,16 @@ export default function ReportsPage() {
             </div>
           </a>
 
+          <a href="/reports/philanthropy-power" className="group block">
+            <div className="bg-white border-4 border-bauhaus-black p-6 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-red group-hover:text-white">
+              <div className="text-xs font-black text-bauhaus-red mb-2 uppercase tracking-widest group-hover:text-bauhaus-yellow">New</div>
+              <h3 className="text-xl font-black text-bauhaus-black mb-2 group-hover:text-white">Philanthropy Gatekeepers</h3>
+              <p className="text-sm text-bauhaus-muted leading-relaxed group-hover:text-white/80">
+                Which foundations are actually approachable, which keep capital opaque, and where theme and geography discipline concentrate philanthropic power.
+              </p>
+            </div>
+          </a>
+
           <a href="/reports/funding-equity" className="group block sm:col-span-2">
             <div className="bg-bauhaus-yellow border-4 border-bauhaus-black p-6 transition-all group-hover:-translate-y-1" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-red)' }}>
               <div className="text-xs font-black text-bauhaus-black mb-2 uppercase tracking-widest">New Investigation</div>
@@ -166,6 +176,17 @@ export default function ReportsPage() {
               <p className="text-sm text-bauhaus-muted leading-relaxed group-hover:text-white/80">
                 $343M/year on detention. $1.3M per child. 73% reoffend.
                 Follow the money from taxpayer to outcome.
+              </p>
+            </div>
+          </a>
+
+          <a href="/reports/ndis-market" className="group block">
+            <div className="bg-white border-4 border-bauhaus-black p-6 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-blue group-hover:text-white">
+              <div className="text-xs font-black text-bauhaus-blue mb-2 uppercase tracking-widest group-hover:text-bauhaus-yellow">New</div>
+              <h3 className="text-xl font-black text-bauhaus-black mb-2 group-hover:text-white">NDIS Market Power</h3>
+              <p className="text-sm text-bauhaus-muted leading-relaxed group-hover:text-white/80">
+                10,335 active providers. Thin regional supply. Heavy payment concentration in remote Core markets.
+                See where disability service provision is fragile and where a few providers capture the flow.
               </p>
             </div>
           </a>

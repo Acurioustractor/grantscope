@@ -1,0 +1,46 @@
+INSERT INTO agent_schedules (
+  agent_id,
+  interval_hours,
+  enabled,
+  freshness_threshold_hours,
+  auto_create_task,
+  priority,
+  params
+)
+VALUES
+  ('discover-foundation-programs', 24, true, 72, false, 5, '{"limit": 50, "concurrency": 2}'::jsonb),
+  ('scrape-state-grants', 24, true, 48, false, 4, '{}'::jsonb),
+  ('run-scraping-agents', 12, true, 24, false, 5, '{}'::jsonb),
+  ('scrape-grant-deadlines', 24, true, 48, false, 4, '{"limit": 200, "apply": true, "provider": "minimax"}'::jsonb),
+  ('enrich-foundations', 12, true, 24, false, 5, '{"limit": 40, "provider": "minimax"}'::jsonb),
+  ('enrich-charities', 12, true, 24, false, 5, '{"limit": 30, "concurrency": 2}'::jsonb),
+  ('enrich-social-enterprises', 12, true, 24, false, 5, '{"limit": 30, "concurrency": 2}'::jsonb),
+  ('enrich-oric-corporations', 24, true, 72, false, 4, '{"limit": 30, "provider": "minimax"}'::jsonb),
+  ('enrich-programs', 24, true, 48, false, 4, '{"limit": 50}'::jsonb),
+  ('build-foundation-profiles', 24, true, 48, false, 5, '{"limit": 10, "concurrency": 2}'::jsonb),
+  ('profile-vip-foundations', 168, true, 336, false, 5, '{}'::jsonb),
+  ('reprofile-low-confidence', 24, true, 72, false, 5, '{"limit": 25}'::jsonb),
+  ('reprofile-missing-descriptions', 24, true, 48, false, 5, '{"limit": 50, "concurrency": 2}'::jsonb),
+  ('classify-acnc-social-enterprises', 48, true, 168, false, 4, '{"limit": 200, "apply": true, "minConfidence": 0.7}'::jsonb),
+  ('profile-community-orgs', 48, true, 168, false, 4, '{"limit": 500}'::jsonb),
+  ('import-acnc-financials', 168, true, 720, false, 4, '{}'::jsonb),
+  ('import-social-traders', 720, true, 1440, false, 5, '{}'::jsonb),
+  ('import-bcorp-au', 720, true, 1440, false, 5, '{}'::jsonb),
+  ('import-state-se-networks', 720, true, 1440, false, 5, '{}'::jsonb),
+  ('import-buyability', 720, true, 1440, false, 5, '{}'::jsonb),
+  ('import-gov-procurement-se', 720, true, 1440, false, 5, '{}'::jsonb),
+  ('import-indigenous-directories', 720, true, 1440, false, 5, '{}'::jsonb),
+  ('import-modern-slavery', 720, true, 1440, false, 4, '{}'::jsonb),
+  ('import-lobbying-register', 720, true, 1440, false, 4, '{}'::jsonb),
+  ('import-rogs-justice', 720, true, 2160, false, 4, '{}'::jsonb),
+  ('import-gov-grants', 168, true, 336, false, 4, '{}'::jsonb),
+  ('sync-asic-companies', 720, true, 1440, false, 4, '{}'::jsonb)
+ON CONFLICT (agent_id) DO UPDATE
+SET
+  interval_hours = EXCLUDED.interval_hours,
+  enabled = EXCLUDED.enabled,
+  freshness_threshold_hours = EXCLUDED.freshness_threshold_hours,
+  auto_create_task = EXCLUDED.auto_create_task,
+  priority = EXCLUDED.priority,
+  params = EXCLUDED.params,
+  updated_at = NOW();

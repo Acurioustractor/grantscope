@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServer } from '@/lib/supabase-server';
+import { requireModule } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
-import { embedQuery } from '@grantscope/engine';
+import { embedQuery } from '@grant-engine/embeddings';
 import { PDFParse } from 'pdf-parse';
 import mammoth from 'mammoth';
 import * as cheerio from 'cheerio';
@@ -121,9 +121,9 @@ ${truncated}`,
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const auth = await requireModule('grants');
+  if (auth.error) return auth.error;
+  const { user } = auth;
 
   const db = getServiceSupabase();
   const orgId = await getOrgProfileId(db, user.id);

@@ -20,13 +20,19 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 );
 
-const domain = process.argv.includes('--domain')
-  ? process.argv[process.argv.indexOf('--domain') + 1]
-  : undefined;
+const domainEqArg = process.argv.find(arg => arg.startsWith('--domain='));
+const domain = domainEqArg
+  ? domainEqArg.split('=')[1]
+  : process.argv.includes('--domain')
+    ? process.argv[process.argv.indexOf('--domain') + 1]
+    : undefined;
 
-const limit = process.argv.includes('--limit')
-  ? parseInt(process.argv[process.argv.indexOf('--limit') + 1], 10)
-  : 500;
+const limitEqArg = process.argv.find(arg => arg.startsWith('--limit='));
+const limit = limitEqArg
+  ? parseInt(limitEqArg.split('=')[1], 10)
+  : process.argv.includes('--limit')
+    ? parseInt(process.argv[process.argv.indexOf('--limit') + 1], 10)
+    : 500;
 
 async function main() {
   console.log('=== Community Org Profiling ===\n');

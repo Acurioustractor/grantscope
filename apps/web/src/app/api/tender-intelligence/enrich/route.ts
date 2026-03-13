@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
-import { createSupabaseServer } from '@/lib/supabase-server';
+import { requireModule } from '@/lib/api-auth';
 import { logUsage } from '../_lib/log-usage';
+import { logProcurementWorkflowRun } from '../_lib/procurement-workspace';
 
 /**
  * POST /api/tender-intelligence/enrich
@@ -27,14 +28,12 @@ function sanitizeLike(s: string) {
 }
 
 export async function POST(request: NextRequest) {
-  const authSupabase = await createSupabaseServer();
-  const { data: { user } } = await authSupabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-  }
+  const auth = await requireModule('procurement');
+  if (auth.error) return auth.error;
+  const { user } = auth;
 
   const body = await request.json();
-  const { suppliers: inputSuppliers } = body as { suppliers: SupplierInput[] };
+  const { suppliers: inputSuppliers, shortlist_id } = body as { suppliers: SupplierInput[]; shortlist_id?: string };
 
   if (!inputSuppliers || !Array.isArray(inputSuppliers) || inputSuppliers.length === 0) {
     return NextResponse.json({ error: 'suppliers array is required' }, { status: 400 });
@@ -45,6 +44,7 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = getServiceSupabase();
+  const startedAt = new Date().toISOString();
 
   // ── Step 1: Bulk resolve by ABN (single query) ──
   const abnInputs = inputSuppliers
@@ -188,6 +188,21 @@ export async function POST(request: NextRequest) {
   };
 
   logUsage({ user_id: user.id, endpoint: 'enrich', filters: { supplier_count: inputSuppliers.length }, result_count: summary.resolved });
+  await logProcurementWorkflowRun(supabase, {
+    userId: user.id,
+    workflowType: 'enrich',
+    workflowStatus: 'completed',
+    shortlistId: shortlist_id,
+    inputPayload: { supplier_count: inputSuppliers.length },
+    outputSummary: {
+      resolved: summary.resolved,
+      unresolved: summary.unresolved,
+      with_contracts: summary.with_contracts,
+    },
+    recordsScanned: inputSuppliers.length,
+    recordsChanged: summary.resolved,
+    startedAt,
+  });
 
   return NextResponse.json({ enriched, summary });
 }

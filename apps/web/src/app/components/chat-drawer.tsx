@@ -1,37 +1,100 @@
 'use client';
 
-import { useState } from 'react';
-import { useChat } from '@ai-sdk/react';
+import { useEffect, useRef, useState } from 'react';
 import { ChatMessage } from './chat-message';
+
+interface Message {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+}
 
 export function ChatDrawer() {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
-  const { messages, sendMessage, status } = useChat();
-  const isLoading = status === 'streaming' || status === 'submitted';
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open || !scrollRef.current) return;
+    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [messages, open]);
+
+  async function sendMessage(text: string) {
+    if (!text.trim() || isLoading) return;
+
+    const userMessage: Message = {
+      id: `${Date.now()}-user`,
+      role: 'user',
+      content: text.trim(),
+    };
+
+    const nextMessages = [...messages, userMessage];
+    setMessages(nextMessages);
+    setInput('');
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: nextMessages.map((message, index) => ({
+            id: message.id || String(index),
+            role: message.role,
+            parts: [{ type: 'text', text: message.content }],
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Chat request failed with status ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('No response body');
+      }
+
+      const assistantId = `${Date.now()}-assistant`;
+      let assistantContent = '';
+      const decoder = new TextDecoder();
+
+      setMessages((prev) => [...prev, { id: assistantId, role: 'assistant', content: '' }]);
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        assistantContent += decoder.decode(value, { stream: true });
+        setMessages((prev) =>
+          prev.map((message) =>
+            message.id === assistantId ? { ...message, content: assistantContent } : message
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Chat error:', error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}-error`,
+          role: 'assistant',
+          content: 'Sorry, something went wrong. Please try again.',
+        },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
-    const text = input.trim();
-    setInput('');
-    sendMessage({ text });
+    void sendMessage(input);
   };
 
   const sendSuggestion = (text: string) => {
-    setInput('');
-    sendMessage({ text });
-  };
-
-  // Extract text content from message parts
-  const getMessageText = (m: (typeof messages)[number]): string => {
-    if (Array.isArray(m.parts)) {
-      return m.parts
-        .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
-        .map(p => p.text)
-        .join('');
-    }
-    return '';
+    void sendMessage(text);
   };
 
   return (
@@ -72,7 +135,7 @@ export function ChatDrawer() {
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
             {messages.length === 0 && (
               <div className="text-center py-8">
                 <div className="w-16 h-16 bg-bauhaus-red border-4 border-bauhaus-black mx-auto mb-4 flex items-center justify-center">
@@ -101,7 +164,7 @@ export function ChatDrawer() {
             )}
 
             {messages.map(m => (
-              <ChatMessage key={m.id} role={m.role as 'user' | 'assistant'} content={getMessageText(m)} />
+              <ChatMessage key={m.id} role={m.role} content={m.content} />
             ))}
 
             {isLoading && messages[messages.length - 1]?.role !== 'assistant' && (

@@ -27,6 +27,7 @@ import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { FoundationScraper } from '../packages/grant-engine/src/foundations/annual-report-scraper.ts';
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
+import { MINIMAX_CHAT_COMPLETIONS_URL } from './lib/minimax.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -38,6 +39,7 @@ const LIMIT = limitArg ? parseInt(limitArg.split('=')[1], 10) : 50;
 
 const concurrencyArg = process.argv.find(a => a.startsWith('--concurrency='));
 const CONCURRENCY = concurrencyArg ? parseInt(concurrencyArg.split('=')[1], 10) : 3;
+const PREFERRED_PROVIDER = process.argv.find(a => a.startsWith('--provider='))?.split('=')[1] || 'minimax';
 
 const sizeArg = process.argv.find(a => a.startsWith('--size='));
 const SIZE_FILTER = sizeArg ? sizeArg.split('=')[1] : null;
@@ -48,6 +50,7 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+let currentRunId = null;
 
 function log(msg) {
   console.log(`[enrich-charities] ${msg}`);
@@ -85,13 +88,23 @@ const PROVIDERS = [
   },
 ];
 
+if (PREFERRED_PROVIDER !== 'minimax') {
+  const idx = PROVIDERS.findIndex((provider) => provider.name === PREFERRED_PROVIDER);
+  if (idx > 0) {
+    const [provider] = PROVIDERS.splice(idx, 1);
+    PROVIDERS.unshift(provider);
+  }
+}
+
 let currentProviderIndex = 0;
+const DISABLED_PROVIDERS = new Set();
 
 async function callLLM(prompt) {
   const startIdx = currentProviderIndex;
 
   for (let attempt = 0; attempt < PROVIDERS.length; attempt++) {
     const provider = PROVIDERS[(startIdx + attempt) % PROVIDERS.length];
+    if (DISABLED_PROVIDERS.has(provider.name)) continue;
     const apiKey = process.env[provider.envKey];
     if (!apiKey) continue;
 
@@ -100,7 +113,7 @@ async function callLLM(prompt) {
 
       if (provider.name === 'minimax') {
         // MiniMax M2.5 reasoning model (OpenAI-compatible)
-        const res = await fetch('https://api.minimax.io/v1/chat/completions', {
+        const res = await fetch(MINIMAX_CHAT_COMPLETIONS_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
           body: JSON.stringify({
@@ -109,8 +122,10 @@ async function callLLM(prompt) {
             max_tokens: 2000,
             temperature: 0.2,
           }),
+          signal: AbortSignal.timeout(45000),
         });
         if (!res.ok) {
+          if (res.status === 401) DISABLED_PROVIDERS.add(provider.name);
           if (res.status === 429 || res.status === 503) throw new Error(`Rate limited: ${res.status}`);
           throw new Error(`Minimax error ${res.status}`);
         }
@@ -130,8 +145,10 @@ async function callLLM(prompt) {
             tools: [{ google_search: {} }],
             generationConfig: { maxOutputTokens: 2000, temperature: 0.2 },
           }),
+          signal: AbortSignal.timeout(30000),
         });
         if (!res.ok) {
+          if (res.status === 401) DISABLED_PROVIDERS.add(provider.name);
           const body = await res.text();
           if (res.status === 429 || res.status === 503) throw new Error(`Rate limited: ${res.status}`);
           throw new Error(`Gemini error ${res.status}: ${body.slice(0, 200)}`);
@@ -149,8 +166,10 @@ async function callLLM(prompt) {
             max_tokens: 2000,
             temperature: 0.2,
           }),
+          signal: AbortSignal.timeout(30000),
         });
         if (!res.ok) {
+          if (res.status === 401) DISABLED_PROVIDERS.add(provider.name);
           if (res.status === 429 || res.status === 503) throw new Error(`Rate limited: ${res.status}`);
           throw new Error(`Gemini error ${res.status}`);
         }
@@ -166,8 +185,10 @@ async function callLLM(prompt) {
             max_tokens: 2000,
             temperature: 0.2,
           }),
+          signal: AbortSignal.timeout(30000),
         });
         if (!res.ok) {
+          if (res.status === 401) DISABLED_PROVIDERS.add(provider.name);
           if (res.status === 429 || res.status === 503) throw new Error(`Rate limited: ${res.status}`);
           throw new Error(`Groq error ${res.status}`);
         }
@@ -186,8 +207,10 @@ async function callLLM(prompt) {
             max_tokens: 2000,
             messages: [{ role: 'user', content: prompt }],
           }),
+          signal: AbortSignal.timeout(30000),
         });
         if (!res.ok) {
+          if (res.status === 401) DISABLED_PROVIDERS.add(provider.name);
           if (res.status === 429 || res.status === 529) throw new Error(`Rate limited: ${res.status}`);
           throw new Error(`Anthropic error ${res.status}`);
         }
@@ -199,6 +222,9 @@ async function callLLM(prompt) {
       return result;
     } catch (err) {
       log(`    ${provider.name} failed: ${err.message}`);
+      if (/401|400|429|529|rate limited|quota|balance|credit/i.test(String(err.message || ''))) {
+        DISABLED_PROVIDERS.add(provider.name);
+      }
       continue;
     }
   }
@@ -385,6 +411,7 @@ async function main() {
   }
 
   const run = await logStart(supabase, 'enrich-charities', 'Enrich Charities');
+  currentRunId = run.id;
 
   const scraper = new FoundationScraper({ requestDelayMs: 2000, maxPagesPerFoundation: 3 });
 
@@ -420,6 +447,8 @@ async function main() {
     items_found: charities.length,
     items_new: enriched,
     items_updated: 0,
+    status: errors > 0 ? 'partial' : 'success',
+    errors: errors > 0 ? [`${errors} charity enrichment errors`] : [],
   });
 
   log(`\nComplete: ${enriched} enriched, ${noContent} no content, ${noDescription} no description, ${errors} errors out of ${charities.length}`);
@@ -427,5 +456,7 @@ async function main() {
 
 main().catch(err => {
   console.error('Fatal error:', err);
+  const message = err instanceof Error ? err.message : String(err);
+  logFailed(supabase, currentRunId, message).catch(() => {});
   process.exit(1);
 });

@@ -107,7 +107,7 @@ async function getPipelineStats(): Promise<PipelineStats> {
     supabase.from('foundations').select('*', { count: 'exact', head: true }).gte('enriched_at', new Date(Date.now() - 7 * 86400000).toISOString()),
     supabase.from('foundations').select('*', { count: 'exact', head: true }).gte('enriched_at', new Date(Date.now() - 30 * 86400000).toISOString()),
     supabase.from('community_orgs').select('*', { count: 'exact', head: true }),
-    supabase.from('foundation_programs').select('*', { count: 'exact', head: true }),
+    supabase.from('foundation_programs').select('*', { count: 'exact', head: true }).in('status', ['open', 'closed']),
     supabase.from('acnc_ais').select('*', { count: 'exact', head: true }),
     supabase.from('social_enterprises').select('*', { count: 'exact', head: true }),
     supabase.from('social_enterprises').select('*', { count: 'exact', head: true }).not('enriched_at', 'is', null),

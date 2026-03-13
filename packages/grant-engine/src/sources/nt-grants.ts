@@ -12,7 +12,7 @@
  */
 
 import * as cheerio from 'cheerio';
-import type { SourcePlugin, DiscoveryQuery, RawGrant } from '../types.js';
+import type { SourcePlugin, DiscoveryQuery, RawGrant } from '../types';
 
 const NT_DIRECTORY_URL = 'https://nt.gov.au/community/grants-and-volunteers/grants/grants-directory';
 const GRANTS_NT_SEARCH = 'https://grantsnt.nt.gov.au/grants';

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireModule } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
 
 interface FlowNode {
@@ -14,6 +15,9 @@ interface FlowLink {
 }
 
 export async function GET(request: Request) {
+  const auth = await requireModule('allocation');
+  if (auth.error) return auth.error;
+
   const { searchParams } = new URL(request.url);
   const domain = searchParams.get('domain') || 'all';
   const year = parseInt(searchParams.get('year') || '2025', 10);

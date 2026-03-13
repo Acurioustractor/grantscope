@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
+import { requireModule } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  const auth = await requireModule('grants');
+  if (auth.error) return auth.error;
+
   const supabase = getServiceSupabase();
 
   try {

@@ -51,6 +51,35 @@ function timestamp() {
   return new Date().toISOString().replace('T', ' ').slice(0, 19);
 }
 
+function toCliFlag(key) {
+  return key.replace(/[A-Z]/g, match => `-${match.toLowerCase()}`);
+}
+
+function appendTaskParams(cmd, params) {
+  if (!params || typeof params !== 'object') return;
+
+  for (const [rawKey, rawValue] of Object.entries(params)) {
+    if (rawValue === null || rawValue === undefined) continue;
+
+    const key = toCliFlag(rawKey);
+
+    if (typeof rawValue === 'boolean') {
+      if (rawValue) cmd.push(`--${key}`);
+      continue;
+    }
+
+    if (Array.isArray(rawValue)) {
+      for (const value of rawValue) {
+        if (value === null || value === undefined) continue;
+        cmd.push(`--${key}=${value}`);
+      }
+      continue;
+    }
+
+    cmd.push(`--${key}=${rawValue}`);
+  }
+}
+
 // ─── Crash Recovery ──────────────────────────────────────────────────────────
 
 async function recoverStuckTasks() {
@@ -85,9 +114,7 @@ async function executeTask(task) {
   // Merge task params into command args
   const cmd = [...agent.command];
   const params = task.params || {};
-  if (params.limit) cmd.push(`--limit=${params.limit}`);
-  if (params.concurrency) cmd.push(`--concurrency=${params.concurrency}`);
-  if (params.batchSize) cmd.push(`--batch-size=${params.batchSize}`);
+  appendTaskParams(cmd, params);
 
   // Log start to agent_runs
   const run = await logStart(supabase, task.agent_id, agent.displayName);

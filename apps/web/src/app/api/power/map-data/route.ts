@@ -1,16 +1,34 @@
 import { NextResponse } from 'next/server';
+import { requireModule } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
 
 export async function GET(request: Request) {
+  const auth = await requireModule('allocation');
+  if (auth.error) return auth.error;
+
   const { searchParams } = new URL(request.url);
   const metric = searchParams.get('metric') || 'total_funding';
 
   try {
     const supabase = getServiceSupabase();
 
-    // Use the get_sa2_map_data() RPC which joins mv_funding_by_postcode
-    // with postcode_geo and aggregates by SA2 — returns all ~710 SA2s
-    const { data: features, error } = await supabase.rpc('get_sa2_map_data');
+    // Uses sa2_reference (all 2,473 SA2s) joined to gs_entities + SEIFA
+    // Supabase RPC defaults to 1000 row limit; fetch all via pagination
+    const all: Record<string, unknown>[] = [];
+    let offset = 0;
+    const PAGE = 1000;
+    let error: { message: string } | null = null;
+    while (true) {
+      const { data: page, error: pageError } = await supabase
+        .rpc('get_sa2_map_data')
+        .range(offset, offset + PAGE - 1);
+      if (pageError) { error = pageError; break; }
+      if (!page || page.length === 0) break;
+      all.push(...page);
+      if (page.length < PAGE) break;
+      offset += PAGE;
+    }
+    const features = all;
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });

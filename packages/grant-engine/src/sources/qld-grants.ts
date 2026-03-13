@@ -9,7 +9,7 @@
  * API: https://www.data.qld.gov.au/api/3/action/datastore_search
  */
 
-import type { SourcePlugin, DiscoveryQuery, RawGrant } from '../types.js';
+import type { SourcePlugin, DiscoveryQuery, RawGrant } from '../types';
 
 const QLD_CKAN_BASE = 'https://www.data.qld.gov.au/api/3/action';
 

@@ -35,18 +35,16 @@
   --color-purple-light: #f5f3ff;
 }
 
-/* Outfit font from Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700;900&display=swap');
-
 /* Base typography */
 html {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-family: "Avenir Next", "Helvetica Neue", "Segoe UI", sans-serif;
 }
 
 body {
-  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: inherit;
   color: var(--color-navy-900);
   background: var(--color-bauhaus-canvas);
   line-height: 1.6;
@@ -72,19 +70,114 @@ h1, h2, h3, h4 {
   box-shadow: 4px 4px 0px 0px var(--color-bauhaus-black);
 }
 
-/* Override all border-radius globally */
-* {
+/* Override all border-radius globally (Bauhaus pages) */
+*:not(.ws *) {
   border-radius: 0 !important;
 }
+
+/* ── Workspace theme (editorial style for operational tools) ── */
+.ws {
+  --ws-surface-0: #FDFCFB;
+  --ws-surface-1: #FFFFFF;
+  --ws-surface-2: #F9F8F6;
+  --ws-border: #E7E5E4;
+  --ws-border-strong: #1C1917;
+  --ws-text: #1C1917;
+  --ws-text-secondary: #87817E;
+  --ws-text-tertiary: #B2ADA9;
+  --ws-accent: #2563EB;
+  --ws-red: #DC2626;
+  --ws-amber: #D97706;
+  --ws-green: #16A34A;
+  background: var(--ws-surface-0);
+  color: var(--ws-text);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.ws .mono {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Bauhaus → Workspace automatic remapping ──
+   When inside .ws, remap Bauhaus utility classes to workspace equivalents.
+   This lets existing pages work seamlessly inside the workspace theme
+   without rewriting every component. ── */
+
+/* Borders: thin down from Bauhaus 4px/2px to workspace 1px */
+.ws .border-4 { border-width: 1px !important; }
+.ws .border-3 { border-width: 1px !important; }
+.ws .border-2 { border-width: 1px !important; }
+.ws .border-b-4 { border-bottom-width: 1px !important; }
+.ws .border-t-4 { border-top-width: 1px !important; }
+.ws .border-l-4 { border-left-width: 1px !important; }
+.ws .border-y-4 { border-top-width: 1px !important; border-bottom-width: 1px !important; }
+.ws .divide-y-2 > :not(:first-child) { border-top-width: 1px !important; }
+
+/* Border colors: map to workspace palette */
+.ws .border-bauhaus-black { border-color: var(--ws-border) !important; }
+.ws .border-bauhaus-red { border-color: var(--ws-red) !important; }
+.ws .border-bauhaus-blue { border-color: var(--ws-accent) !important; }
+.ws .divide-bauhaus-black\/10 > :not(:first-child) { border-color: var(--ws-border) !important; }
+
+/* Text colors */
+.ws .text-bauhaus-black { color: var(--ws-text) !important; }
+.ws .text-bauhaus-muted { color: var(--ws-text-secondary) !important; }
+.ws .text-bauhaus-red { color: var(--ws-red) !important; }
+.ws .text-bauhaus-blue { color: var(--ws-accent) !important; }
+.ws .text-bauhaus-yellow { color: var(--ws-amber) !important; }
+
+/* Background colors */
+.ws .bg-bauhaus-black { background-color: var(--ws-text) !important; }
+.ws .bg-bauhaus-canvas { background-color: var(--ws-surface-2) !important; }
+.ws .bg-bauhaus-red { background-color: var(--ws-red) !important; }
+.ws .bg-bauhaus-blue { background-color: var(--ws-accent) !important; }
+.ws .bg-bauhaus-yellow { background-color: var(--ws-amber) !important; }
+.ws .bg-white { background-color: var(--ws-surface-1) !important; }
+
+/* Hover states: soften from Bauhaus snap to workspace gentle */
+.ws .hover\:bg-bauhaus-black:hover { background-color: var(--ws-surface-2) !important; color: var(--ws-text) !important; }
+.ws .hover\:text-bauhaus-red:hover { color: var(--ws-red) !important; }
+.ws .hover\:bg-bauhaus-red:hover { background-color: var(--ws-red) !important; }
+.ws .hover\:bg-gray-50:hover { background-color: var(--ws-surface-2) !important; }
+
+/* Typography: dial back Bauhaus heaviness */
+.ws .font-black { font-weight: 700 !important; }
+.ws .tracking-widest { letter-spacing: 0.05em !important; }
+.ws .tracking-wider { letter-spacing: 0.03em !important; }
+
+/* Shadows: remove Bauhaus hard shadows */
+.ws .bauhaus-shadow { box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important; }
+.ws .bauhaus-shadow-sm { box-shadow: 0 1px 2px rgba(0,0,0,0.06) !important; }
+
+/* Max-width for content within workspace */
+.ws main > div { max-width: 1200px; margin-left: auto; margin-right: auto; }
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.ws .pulse { animation: pulse-soft 2s cubic-bezier(0.4,0,0.6,1) infinite; }
 
 /* Bauhaus button base */
 a, button {
   transition: all 0.15s ease;
 }
 
+/* Slide-in animation for preview panels */
+@keyframes slide-in-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.2s ease-out;
+}
+
 /* Print styles for Tender Intelligence Pack PDF export */
 @media print {
-  nav, footer, .print\\:hidden { display: none !important; }
+  nav, footer, .print\:hidden { display: none !important; }
   body { background: white !important; }
   #pack-report { margin: 0; padding: 0; }
   #pack-report * { break-inside: avoid; }

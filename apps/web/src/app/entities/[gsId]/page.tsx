@@ -1,8 +1,13 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import { createSupabaseServer } from '@/lib/supabase-server';
+import { safeOptionalCount, safeOptionalData } from '@/lib/optional-data';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { CommunityEvidence } from './impact-stories';
+import { ProcurementWorkspaceCard } from './procurement-workspace-card';
+import { getEntityProcurementMemberships } from '@/app/api/tender-intelligence/_lib/procurement-workspace';
+import { decisionTagBadgeClass, decisionTagLabel } from '@/lib/procurement-shortlist';
+import { getProofPack } from '@/lib/governed-proof/presentation';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,7 +31,12 @@ interface Entity {
   latest_revenue: number | null;
   latest_assets: number | null;
   latest_tax_payable: number | null;
+  remoteness: string | null;
+  lga_name: string | null;
+  seifa_irsd_decile: number | null;
   financial_year: string | null;
+  last_seen: string | null;
+  updated_at: string | null;
   is_community_controlled: boolean | null;
 }
 
@@ -74,12 +84,57 @@ interface ConnectedEntity {
   entity_type: string;
 }
 
+interface NdisSupplyRow {
+  state_code: string;
+  service_district_name: string;
+  provider_count: number;
+  report_date: string | null;
+}
+
+interface NdisConcentrationRow {
+  state_code: string;
+  service_district_name: string;
+  payment_share_top10_pct: number | null;
+  payment_band: string | null;
+  source_page_url: string | null;
+  source_file_url: string | null;
+  source_file_title: string | null;
+}
+
 function formatMoney(amount: number | null): string {
   if (!amount) return '\u2014';
   if (amount >= 1_000_000_000) return `$${(amount / 1_000_000_000).toFixed(1)}B`;
   if (amount >= 1_000_000) return `$${(amount / 1_000_000).toFixed(1)}M`;
   if (amount >= 1_000) return `$${(amount / 1_000).toFixed(0)}K`;
   return `$${amount.toLocaleString()}`;
+}
+
+function formatPercent(value: number | null | undefined): string {
+  if (value == null) return '\u2014';
+  return `${Math.round(value)}%`;
+}
+
+function districtLabel(name: string): string {
+  return name.replace(/~[A-Z]+$/, '');
+}
+
+function validNdisDistrict(name: string | null | undefined): name is string {
+  if (!name) return false;
+  const normalized = districtLabel(name).trim();
+  return normalized.length > 0 &&
+    normalized !== 'ALL' &&
+    normalized !== 'Other' &&
+    normalized !== 'Other Territories' &&
+    !normalized.toLowerCase().includes('missing') &&
+    !normalized.startsWith('OT_');
+}
+
+function hasDisabilitySignal(values: Array<string | null | undefined> | null | undefined): boolean {
+  if (!values || values.length === 0) return false;
+  return values.some((value) => {
+    const normalized = String(value || '').toLowerCase();
+    return normalized.includes('disab') || normalized.includes('ndis') || normalized.includes('mental illness');
+  });
 }
 
 function entityTypeLabel(type: string): string {
@@ -116,6 +171,15 @@ function confidenceBadge(c: string) {
   if (c === 'verified') return { cls: 'border-bauhaus-blue bg-link-light text-bauhaus-blue', label: 'Verified' };
   if (c === 'reported') return { cls: 'border-bauhaus-yellow bg-warning-light text-bauhaus-black', label: 'Reported' };
   return { cls: 'border-bauhaus-black/20 bg-bauhaus-canvas text-bauhaus-muted', label: c };
+}
+
+function getShortlistIdFromPath(path: string | null | undefined) {
+  if (!path || !path.startsWith('/')) return null;
+  try {
+    return new URL(path, 'https://grantscope.local').searchParams.get('shortlistId');
+  } catch {
+    return null;
+  }
 }
 
 function relTypeLabel(type: string): string {
@@ -164,9 +228,26 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-export default async function EntityDossierPage({ params }: { params: Promise<{ gsId: string }> }) {
+export default async function EntityDossierPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ gsId: string }>;
+  searchParams: Promise<{ from?: string | string[] }>;
+}) {
   const { gsId } = await params;
+  const resolvedSearchParams = await searchParams;
   const supabase = getServiceSupabase();
+  const rawReturnPath = Array.isArray(resolvedSearchParams.from)
+    ? resolvedSearchParams.from[0]
+    : resolvedSearchParams.from;
+  const returnHref = rawReturnPath && rawReturnPath.startsWith('/') ? rawReturnPath : '/entities';
+  const returnLabel = returnHref.startsWith('/tender-intelligence')
+    ? 'Procurement Workspace'
+    : returnHref.startsWith('/places/')
+      ? 'Place'
+      : 'Entity Graph';
+  const preferredShortlistId = getShortlistIdFromPath(returnHref);
 
   const { data: entity } = await supabase
     .from('gs_entities')
@@ -179,6 +260,11 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
 
   // Check auth status for premium gating
   let isPremium = false;
+  let workspaceOrgName: string | null = null;
+  let canEditWorkspace = false;
+  let workspaceShortlists: Array<{ id: string; name: string; is_default: boolean }> = [];
+  let workspaceMemberships: Awaited<ReturnType<typeof getEntityProcurementMemberships>>['memberships'] = [];
+  let workspaceTasks: Awaited<ReturnType<typeof getEntityProcurementMemberships>>['tasks'] = [];
   try {
     const supabaseAuth = await createSupabaseServer();
     const { data: { user } } = await supabaseAuth.auth.getUser();
@@ -189,6 +275,21 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
         .eq('user_id', user.id)
         .single();
       isPremium = !!profile?.stripe_customer_id;
+
+      const workspaceResult = await getEntityProcurementMemberships(supabase, user.id, {
+        gsId,
+        supplierAbn: e.abn,
+        preferredShortlistId,
+      });
+      workspaceOrgName = workspaceResult.context.profile?.name || null;
+      canEditWorkspace = workspaceResult.context.currentUserPermissions?.can_edit_shortlist === true;
+      workspaceShortlists = workspaceResult.context.shortlists.map((shortlist) => ({
+        id: shortlist.id,
+        name: shortlist.name,
+        is_default: shortlist.is_default,
+      }));
+      workspaceMemberships = workspaceResult.memberships;
+      workspaceTasks = workspaceResult.tasks;
     }
   } catch {
     // Not logged in — free tier
@@ -207,7 +308,7 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
     { data: foundationProgramsData },
     { data: charityData },
     { data: socialEnterpriseData },
-    { data: jhOrgData },
+    { data: governedProofData },
   ] = await Promise.all([
     supabase
       .from('gs_relationships')
@@ -254,7 +355,7 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
     e.postcode
       ? supabase
           .from('postcode_geo')
-          .select('postcode, locality, state, remoteness_2021, lga_name')
+          .select('postcode, locality, state, remoteness_2021, lga_name, sa2_code, sa2_name')
           .eq('postcode', e.postcode)
           .limit(1)
       : Promise.resolve({ data: [] }),
@@ -301,12 +402,15 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
         .ilike('name', e.canonical_name)
         .limit(1);
     })(),
-    // JusticeHub organization (cross-system bridge)
-    supabase
-      .from('organizations')
-      .select('id, name, slug')
-      .eq('gs_entity_id', e.id)
-      .limit(1),
+    e.postcode
+      ? supabase
+          .from('governed_proof_bundles')
+          .select('*')
+          .eq('subject_type', 'place')
+          .eq('subject_id', e.postcode)
+          .or('promotion_status.eq.partner,promotion_status.eq.public')
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
 
   // Process enrichment data
@@ -350,7 +454,7 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
       .from('foundation_programs')
       .select('id, name, url, description, amount_min, amount_max, deadline, status, categories, program_type, eligibility, application_process')
       .eq('foundation_id', foundation.id)
-      .eq('status', 'active')
+      .in('status', ['open', 'closed'])
       .order('deadline', { ascending: true, nullsFirst: false });
     foundationPrograms = (progData || []) as FoundationProgram[];
   }
@@ -380,10 +484,117 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
     website: string | null;
   }
   const socialEnterprise = (socialEnterpriseData || [])[0] as SocialEnterpriseEnrichment | undefined;
+  const disabilityRelevant =
+    hasDisabilitySignal(charity?.beneficiaries) ||
+    hasDisabilitySignal(charity?.purposes) ||
+    hasDisabilitySignal(socialEnterprise?.target_beneficiaries) ||
+    hasDisabilitySignal(socialEnterprise?.sector) ||
+    hasDisabilitySignal([e.sector, e.sub_sector, e.description]);
+
+  let ndisStateSupplyTotal: NdisSupplyRow | null = null;
+  let ndisStateDistricts: NdisSupplyRow[] = [];
+  let ndisStateHotspots: NdisConcentrationRow[] = [];
+  let ndisThinDistrictCount = 0;
+  let ndisVeryThinDistrictCount = 0;
+  let localDisabilityEnterpriseCount = 0;
+  let localCommunityControlledCount = 0;
+  let ndisSourceLink: string | null = null;
+
+  if (disabilityRelevant && e.state) {
+    const [
+      { data: ndisStateSupplyData },
+      { data: ndisDistrictData },
+      { data: ndisConcentrationData },
+      { count: disabilityEnterpriseCount },
+      { count: communityControlledCount },
+    ] = await Promise.all([
+      supabase
+        .from('v_ndis_provider_supply_summary')
+        .select('report_date, state_code, service_district_name, provider_count')
+        .eq('state_code', e.state)
+        .eq('service_district_name', 'ALL')
+        .limit(1),
+      supabase
+        .from('v_ndis_provider_supply_summary')
+        .select('report_date, state_code, service_district_name, provider_count')
+        .eq('state_code', e.state)
+        .neq('service_district_name', 'ALL')
+        .neq('service_district_name', 'Other')
+        .not('service_district_name', 'ilike', '%Missing%')
+        .order('provider_count', { ascending: true }),
+      supabase
+        .from('ndis_market_concentration')
+        .select('state_code, service_district_name, payment_share_top10_pct, payment_band, source_page_url, source_file_url, source_file_title')
+        .eq('state_code', e.state)
+        .eq('support_class', 'Core')
+        .neq('service_district_name', 'ALL')
+        .neq('service_district_name', 'Other')
+        .not('service_district_name', 'ilike', '%Missing%')
+        .not('payment_share_top10_pct', 'is', null)
+        .order('payment_share_top10_pct', { ascending: false }),
+      e.postcode
+        ? supabase
+            .from('social_enterprises')
+            .select('id', { count: 'exact', head: true })
+            .eq('postcode', e.postcode)
+            .overlaps('target_beneficiaries', ['People with disabilities', 'people_with_disability'])
+        : Promise.resolve({ count: 0 }),
+      e.postcode
+        ? supabase
+            .from('gs_entities')
+            .select('id', { count: 'exact', head: true })
+            .eq('postcode', e.postcode)
+            .eq('is_community_controlled', true)
+        : Promise.resolve({ count: 0 }),
+    ]);
+
+    ndisStateSupplyTotal = ((ndisStateSupplyData || [])[0] as NdisSupplyRow | undefined) || null;
+    ndisStateDistricts = ((ndisDistrictData || []) as NdisSupplyRow[]).filter((row) => validNdisDistrict(row.service_district_name));
+    ndisThinDistrictCount = ndisStateDistricts.filter((row) => row.provider_count < 100).length;
+    ndisVeryThinDistrictCount = ndisStateDistricts.filter((row) => row.provider_count < 50).length;
+    localDisabilityEnterpriseCount = disabilityEnterpriseCount || 0;
+    localCommunityControlledCount = communityControlledCount || 0;
+
+    const districtNameByLabel = new Map<string, string>();
+    for (const row of ndisStateDistricts) {
+      districtNameByLabel.set(districtLabel(row.service_district_name), row.service_district_name);
+    }
+
+    const concentrationByDistrict = new Map<string, NdisConcentrationRow>();
+    for (const row of (ndisConcentrationData || []) as NdisConcentrationRow[]) {
+      if (!validNdisDistrict(row.service_district_name)) continue;
+      const normalizedDistrict = districtLabel(row.service_district_name);
+      if (!districtNameByLabel.has(normalizedDistrict)) continue;
+      const key = `${row.state_code}:${normalizedDistrict}`;
+      const current = concentrationByDistrict.get(key);
+      if (!current || (row.payment_share_top10_pct || 0) > (current.payment_share_top10_pct || 0)) {
+        concentrationByDistrict.set(key, {
+          ...row,
+          service_district_name: districtNameByLabel.get(normalizedDistrict) || normalizedDistrict,
+        });
+      }
+    }
+
+    ndisStateHotspots = Array.from(concentrationByDistrict.values())
+      .sort((a, b) => (b.payment_share_top10_pct || 0) - (a.payment_share_top10_pct || 0))
+      .slice(0, 4);
+    ndisSourceLink =
+      ndisStateHotspots.find((row) => row.source_file_url || row.source_page_url)?.source_file_url ||
+      ndisStateHotspots.find((row) => row.source_page_url)?.source_page_url ||
+      null;
+  }
 
   // JusticeHub cross-system data
-  interface JHOrg { id: string; name: string; slug: string }
-  const jhOrg = (jhOrgData || [])[0] as JHOrg | undefined;
+  interface JHOrg { id: string; name: string; slug: string | null }
+  const jhOrgRows = await safeOptionalData(
+    supabase
+      .from('organizations')
+      .select('id, name, slug')
+      .eq('gs_entity_id', e.id)
+      .limit(1),
+    [] as JHOrg[],
+  );
+  const jhOrg = jhOrgRows[0];
 
   // ALMA evidence chain: entity → JH org → interventions → evidence
   let almaInterventionCount = 0;
@@ -391,26 +602,34 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
   interface AlmaIntervention { id: string; name: string; type: string }
   let almaInterventions: AlmaIntervention[] = [];
   if (jhOrg) {
-    const [{ data: interventions }, { count: evidenceCount }] = await Promise.all([
-      supabase
-        .from('alma_interventions')
-        .select('id, name, type')
-        .eq('operating_organization_id', jhOrg.id)
-        .order('name'),
-      supabase
-        .from('alma_intervention_evidence')
-        .select('id', { count: 'exact', head: true })
-        .in('intervention_id',
-          (await supabase
-            .from('alma_interventions')
-            .select('id')
-            .eq('operating_organization_id', jhOrg.id)
-          ).data?.map((i: { id: string }) => i.id) || []
-        ),
+    const [interventions, interventionIds] = await Promise.all([
+      safeOptionalData(
+        supabase
+          .from('alma_interventions')
+          .select('id, name, type')
+          .eq('operating_organization_id', jhOrg.id)
+          .order('name'),
+        [] as AlmaIntervention[],
+      ),
+      safeOptionalData(
+        supabase
+          .from('alma_interventions')
+          .select('id')
+          .eq('operating_organization_id', jhOrg.id),
+        [] as Array<{ id: string }>,
+      ),
     ]);
-    almaInterventions = (interventions || []) as AlmaIntervention[];
+    almaInterventions = interventions;
     almaInterventionCount = almaInterventions.length;
-    almaEvidenceCount = evidenceCount || 0;
+
+    if (interventionIds.length > 0) {
+      almaEvidenceCount = await safeOptionalCount(
+        supabase
+          .from('alma_intervention_evidence')
+          .select('id', { count: 'exact', head: true })
+          .in('intervention_id', interventionIds.map((row) => row.id)),
+      );
+    }
   }
 
   // Deduplicate ACNC financials by year (keep richest record)
@@ -442,8 +661,39 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
   const totalJusticeFunding = justiceFunding.reduce((sum, r) => sum + (r.amount_dollars || 0), 0);
 
   // Build place context
-  const placeGeo = (placeGeoData || [])[0] as { postcode: string; locality: string; state: string; remoteness_2021: string; lga_name: string | null } | undefined;
+  const placeGeo = (placeGeoData || [])[0] as { postcode: string; locality: string; state: string; remoteness_2021: string; lga_name: string | null; sa2_code: string | null; sa2_name: string | null } | undefined;
   const seifa = (seifaData || [])[0] as { decile_national: number; score: number } | undefined;
+  const publicGovernedProofBundle = governedProofData as {
+    subject_id: string;
+    promotion_status: string;
+    overall_confidence: number | null;
+    output_context: Record<string, unknown> | null;
+    capital_context?: Record<string, unknown> | null;
+    evidence_context?: Record<string, unknown> | null;
+    voice_context?: Record<string, unknown> | null;
+    governance_context?: Record<string, unknown> | null;
+    lifecycle_status?: string;
+    review_status?: string;
+    owner_system?: string;
+    bundle_key?: string;
+    id?: string;
+    subject_type?: string;
+    capital_confidence?: number | null;
+    evidence_confidence?: number | null;
+    voice_confidence?: number | null;
+    governance_confidence?: number | null;
+    freshness_at?: string | null;
+    last_validated_at?: string | null;
+    published_at?: string | null;
+    created_at?: string;
+    updated_at?: string;
+  } | null;
+  const governedProofPack = publicGovernedProofBundle
+    ? getProofPack(publicGovernedProofBundle as any)
+    : null;
+  const governedProofStrengths = governedProofPack
+    ? governedProofPack.strengths.slice(0, 2)
+    : [];
 
   // Count entities in same postcode (for place context card)
   let postcodeEntityCount = 0;
@@ -489,17 +739,19 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
   const totalDonated = donations.reduce((sum, r) => sum + (r.amount || 0), 0);
   const totalContractValue = contracts.reduce((sum, r) => sum + (r.amount || 0), 0);
   const isDonorContractor = donations.length > 0 && contracts.length > 0;
+  const leadWorkspaceMembership = workspaceMemberships[0] || null;
+  const workspaceOpenTasks = workspaceTasks.filter((task) => task.status !== 'done');
+  const workspaceUrgentTasks = workspaceOpenTasks.filter((task) => task.priority === 'critical' || task.priority === 'high');
 
   // Get connected entity name helper
   const getName = (id: string) => connectedMap.get(id)?.canonical_name || 'Unknown';
   const getGsId = (id: string) => connectedMap.get(id)?.gs_id || '';
-
   const badge = confidenceBadge(e.confidence);
 
   return (
     <div className="max-w-5xl">
-      <Link href="/entities" className="text-xs font-black text-bauhaus-muted uppercase tracking-widest hover:text-bauhaus-black">
-        &larr; Entity Graph
+      <Link href={returnHref} className="text-xs font-black text-bauhaus-muted uppercase tracking-widest hover:text-bauhaus-black">
+        &larr; Back to {returnLabel}
       </Link>
 
       {/* Header */}
@@ -570,6 +822,133 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
           </div>
         </div>
       </div>
+
+      {publicGovernedProofBundle && e.postcode && (
+        <div className="mb-8 border-4 border-bauhaus-blue bg-white">
+          <div className="grid gap-0 lg:grid-cols-[1.25fr_0.75fr]">
+            <div className="p-5 border-b-4 lg:border-b-0 lg:border-r-4 border-bauhaus-blue">
+              <div className="text-[10px] font-black uppercase tracking-[0.25em] text-bauhaus-blue mb-2">
+                Governed Proof
+              </div>
+              <h2 className="text-xl font-black text-bauhaus-black mb-2">
+                This entity sits inside a promoted place proof bundle
+              </h2>
+              <p className="text-sm text-bauhaus-muted leading-relaxed mb-4">
+                {governedProofPack && typeof governedProofPack.headline === 'string'
+                  ? governedProofPack.headline
+                  : `Postcode ${e.postcode} has a governed-proof layer joining capital, evidence, and community voice.`}
+              </p>
+              <div className="flex flex-wrap gap-3 text-[11px] font-black uppercase tracking-widest">
+                <span className="px-2.5 py-1 border-2 border-bauhaus-blue bg-link-light text-bauhaus-blue">
+                  {publicGovernedProofBundle.promotion_status}
+                </span>
+                <span className="px-2.5 py-1 border-2 border-bauhaus-black/20 bg-bauhaus-canvas text-bauhaus-black">
+                  confidence {Number(publicGovernedProofBundle.overall_confidence ?? 0).toFixed(2)}
+                </span>
+              </div>
+              {governedProofStrengths.length > 0 && (
+                <div className="mt-4 space-y-1">
+                  {governedProofStrengths.map((strength) => (
+                    <div key={String(strength)} className="text-xs font-medium text-bauhaus-black">
+                      {'\u25CF'} {String(strength)}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="p-5 bg-link-light flex flex-col justify-between">
+              <p className="text-sm text-bauhaus-black font-medium leading-relaxed">
+                Use the entity dossier for relationship context, then open the place proof page for the full funder-facing summary.
+              </p>
+              <div className="mt-4 flex flex-col gap-3">
+                <Link
+                  href={`/for/funders/proof/${e.postcode}`}
+                  className="inline-block px-4 py-3 text-center font-black text-xs uppercase tracking-widest border-4 border-bauhaus-black bg-white hover:bg-bauhaus-yellow transition-colors"
+                >
+                  Open Place Proof
+                </Link>
+                <Link
+                  href={`/for/funders/proof/${e.postcode}/system`}
+                  className="inline-block px-4 py-3 text-center font-black text-xs uppercase tracking-widest border-4 border-bauhaus-black bg-white hover:bg-link-light transition-colors"
+                >
+                  Open System Map
+                </Link>
+                <Link
+                  href={`/places/${e.postcode}`}
+                  className="inline-block px-4 py-3 text-center font-black text-xs uppercase tracking-widest border-4 border-bauhaus-black bg-white hover:bg-bauhaus-canvas transition-colors"
+                >
+                  Open Place Context
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {workspaceOrgName && (leadWorkspaceMembership || workspaceOpenTasks.length > 0) && (
+        <div className="mb-8 border-4 border-bauhaus-red bg-white">
+          <div className="bg-bauhaus-red px-4 py-3 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-white/70">Procurement Status</p>
+              <h2 className="text-lg font-black text-white">Current workspace decision context</h2>
+            </div>
+            <Link
+              href={leadWorkspaceMembership ? `/tender-intelligence?shortlistId=${leadWorkspaceMembership.shortlist_id}#procurement-workspace` : '/tender-intelligence'}
+              className="px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 border-white text-white hover:bg-white hover:text-bauhaus-red transition-colors"
+            >
+              Open Workspace
+            </Link>
+          </div>
+          <div className="grid gap-0 md:grid-cols-4">
+            <div className="p-4 border-b-4 md:border-b-0 md:border-r-4 border-bauhaus-red">
+              <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Saved In</p>
+              <p className="text-2xl font-black text-bauhaus-black mt-2">{workspaceMemberships.length}</p>
+              <p className="text-xs font-medium text-bauhaus-muted mt-1">shortlist{workspaceMemberships.length === 1 ? '' : 's'}</p>
+            </div>
+            <div className="p-4 border-b-4 md:border-b-0 md:border-r-4 border-bauhaus-red">
+              <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Current Decision</p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <span className={`inline-flex text-[10px] font-black uppercase tracking-widest px-2 py-1 border ${decisionTagBadgeClass(leadWorkspaceMembership?.decision_tag || null)}`}>
+                  {decisionTagLabel(leadWorkspaceMembership?.decision_tag || null)}
+                </span>
+                {leadWorkspaceMembership && (
+                  <span className="text-xs font-medium text-bauhaus-muted">
+                    {leadWorkspaceMembership.shortlist_name}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="p-4 border-b-4 md:border-b-0 md:border-r-4 border-bauhaus-red">
+              <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Owner / Due</p>
+              <p className="text-sm font-black text-bauhaus-black mt-2">{leadWorkspaceMembership?.shortlist_owner_name || 'Unassigned'}</p>
+              <p className="text-xs font-medium text-bauhaus-muted mt-1">
+                {leadWorkspaceMembership?.shortlist_decision_due_at ? `Due ${new Date(leadWorkspaceMembership.shortlist_decision_due_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}` : 'No decision due date'}
+              </p>
+            </div>
+            <div className="p-4">
+              <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Review Queue</p>
+              <p className="text-2xl font-black text-bauhaus-black mt-2">{workspaceOpenTasks.length}</p>
+              <p className="text-xs font-medium text-bauhaus-muted mt-1">
+                {workspaceUrgentTasks.length > 0 ? `${workspaceUrgentTasks.length} urgent` : 'No urgent tasks'}
+              </p>
+            </div>
+          </div>
+          {(leadWorkspaceMembership?.note || leadWorkspaceMembership?.shortlist_next_action) && (
+            <div className="border-t-4 border-bauhaus-red px-4 py-4 bg-bauhaus-canvas">
+              {leadWorkspaceMembership?.shortlist_next_action && (
+                <p className="text-sm font-black text-bauhaus-black">
+                  Next action: <span className="font-medium">{leadWorkspaceMembership.shortlist_next_action}</span>
+                </p>
+              )}
+              {leadWorkspaceMembership?.note && (
+                <p className="text-sm font-medium text-bauhaus-black mt-2">
+                  Latest note: {leadWorkspaceMembership.note}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Two column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -893,8 +1272,8 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
                   <div>
                     <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-2">Beneficiaries</div>
                     <div className="flex flex-wrap gap-1.5">
-                      {socialEnterprise.target_beneficiaries.map((b: string) => (
-                        <span key={b} className="text-xs font-bold px-2 py-0.5 bg-bauhaus-black/5 text-bauhaus-black">
+                      {Array.from(new Set(socialEnterprise.target_beneficiaries)).map((b: string, index: number) => (
+                        <span key={`${b}-${index}`} className="text-xs font-bold px-2 py-0.5 bg-bauhaus-black/5 text-bauhaus-black">
                           {b}
                         </span>
                       ))}
@@ -905,8 +1284,8 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
                   <div>
                     <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-2">Services</div>
                     <div className="flex flex-wrap gap-1.5">
-                      {socialEnterprise.sector.map((s: string) => (
-                        <span key={s} className="text-xs font-bold px-2 py-0.5 bg-bauhaus-black/5 text-bauhaus-muted">
+                      {Array.from(new Set(socialEnterprise.sector)).map((s: string, index: number) => (
+                        <span key={`${s}-${index}`} className="text-xs font-bold px-2 py-0.5 bg-bauhaus-black/5 text-bauhaus-muted">
                           {s}
                         </span>
                       ))}
@@ -925,6 +1304,14 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
           {/* ALMA Evidence (JusticeHub cross-system) */}
           {almaInterventionCount > 0 && (
             <Section title={`Justice Interventions (${almaInterventionCount})`}>
+              <div className="mb-3 flex items-center gap-2">
+                <span className="text-[10px] font-black px-2 py-0.5 border border-bauhaus-blue/30 bg-link-light text-bauhaus-blue uppercase tracking-widest">
+                  External Evidence
+                </span>
+                <span className="text-[10px] text-bauhaus-muted font-medium">
+                  JusticeHub ALMA records linked by shared organisation identifiers.
+                </span>
+              </div>
               <div className="space-y-0">
                 {almaInterventions.map((ai) => (
                   <div key={ai.id} className="flex items-center justify-between py-3 border-b-2 border-bauhaus-black/5 last:border-b-0">
@@ -942,7 +1329,7 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
                 </div>
               )}
               <div className="mt-3 text-[10px] text-bauhaus-muted leading-relaxed">
-                Data from JusticeHub ALMA — Australian Lived-experience, Methods &amp; Approaches database.
+                External ecosystem evidence via JusticeHub ALMA — Australian Lived-experience, Methods &amp; Approaches database.
               </div>
             </Section>
           )}
@@ -1100,6 +1487,33 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
               )}
             </dl>
           </div>
+
+          {workspaceOrgName && (
+            <ProcurementWorkspaceCard
+              orgName={workspaceOrgName}
+              shortlists={workspaceShortlists}
+              initialMemberships={workspaceMemberships}
+              initialTasks={workspaceTasks}
+              canEdit={canEditWorkspace}
+              supplier={{
+                gs_id: e.gs_id,
+                canonical_name: e.canonical_name,
+                abn: e.abn,
+                entity_type: e.entity_type,
+                state: e.state,
+                postcode: e.postcode,
+                remoteness: e.remoteness || null,
+                lga_name: e.lga_name || null,
+                seifa_irsd_decile: e.seifa_irsd_decile || null,
+                latest_revenue: e.latest_revenue,
+                is_community_controlled: !!e.is_community_controlled,
+                contracts: {
+                  count: contracts.length,
+                  total_value: totalContractValue,
+                },
+              }}
+            />
+          )}
 
           {/* Focus Areas (foundation thematic + charity purposes/beneficiaries) */}
           {((foundation?.thematic_focus && foundation.thematic_focus.length > 0) ||
@@ -1323,20 +1737,34 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
           {/* JusticeHub Link (cross-system) */}
           {jhOrg && (
             <div className="bg-white border-4 border-bauhaus-blue p-4">
-              <h3 className="text-sm font-black text-bauhaus-blue mb-3 pb-2 border-b-4 border-bauhaus-blue uppercase tracking-widest">
-                JusticeHub
-              </h3>
+              <div className="flex items-center justify-between gap-3 mb-3 pb-2 border-b-4 border-bauhaus-blue">
+                <h3 className="text-sm font-black text-bauhaus-blue uppercase tracking-widest">
+                  JusticeHub
+                </h3>
+                <span className="text-[10px] font-black px-2 py-0.5 border border-bauhaus-blue/30 bg-link-light text-bauhaus-blue uppercase tracking-widest">
+                  External Link
+                </span>
+              </div>
               <p className="text-xs font-medium text-bauhaus-black leading-relaxed mb-3">
-                This entity is tracked in JusticeHub with {almaInterventionCount} intervention{almaInterventionCount !== 1 ? 's' : ''} and {almaEvidenceCount} evidence record{almaEvidenceCount !== 1 ? 's' : ''}.
+                This entity is also tracked in JusticeHub with {almaInterventionCount} intervention{almaInterventionCount !== 1 ? 's' : ''} and {almaEvidenceCount} evidence record{almaEvidenceCount !== 1 ? 's' : ''}.
               </p>
-              <a
-                href={`https://justicehub.org.au/organizations/${jhOrg.slug}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block px-4 py-2 bg-bauhaus-blue text-white font-black text-xs uppercase tracking-widest hover:bg-bauhaus-black transition-colors"
-              >
-                View on JusticeHub
-              </a>
+              <p className="text-[10px] text-bauhaus-muted leading-relaxed mb-3">
+                External ecosystem profile linked from GrantScope for additional context. JusticeHub content is maintained separately.
+              </p>
+              {jhOrg.slug ? (
+                <a
+                  href={`https://justicehub.org.au/organizations/${jhOrg.slug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block px-4 py-2 bg-bauhaus-blue text-white font-black text-xs uppercase tracking-widest hover:bg-bauhaus-black transition-colors"
+                >
+                  View on JusticeHub
+                </a>
+              ) : (
+                <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest">
+                  JusticeHub profile available on request
+                </div>
+              )}
             </div>
           )}
 
@@ -1392,6 +1820,16 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
                     <dd className="text-sm font-bold text-bauhaus-black">{placeGeo.lga_name}</dd>
                   </div>
                 )}
+                {placeGeo?.sa2_name && (
+                  <div className="flex justify-between">
+                    <dt className="text-xs font-bold text-bauhaus-muted">SA2 Region</dt>
+                    <dd className="text-sm font-bold text-bauhaus-black">
+                      <Link href={`/power?sa2=${placeGeo.sa2_code}`} className="hover:text-bauhaus-blue">
+                        {placeGeo.sa2_name}
+                      </Link>
+                    </dd>
+                  </div>
+                )}
                 {postcodeEntityCount > 1 && (
                   <div className="flex justify-between">
                     <dt className="text-xs font-bold text-bauhaus-muted">Entities in Area</dt>
@@ -1410,6 +1848,95 @@ export default async function EntityDossierPage({ params }: { params: Promise<{ 
                   </p>
                 </div>
               )}
+              {placeGeo?.sa2_code && (
+                <Link
+                  href={`/power?sa2=${placeGeo.sa2_code}`}
+                  className="mt-3 block text-center px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 border-bauhaus-black text-bauhaus-black hover:bg-bauhaus-yellow transition-colors"
+                >
+                  View on Power Map
+                </Link>
+              )}
+            </div>
+          )}
+
+          {disabilityRelevant && e.state && (
+            <div className="bg-white border-4 border-bauhaus-blue p-4">
+              <div className="flex items-center justify-between gap-3 mb-3 pb-2 border-b-4 border-bauhaus-blue">
+                <h3 className="text-sm font-black text-bauhaus-blue uppercase tracking-widest">
+                  Disability Market Context
+                </h3>
+                <span className="text-[10px] font-black px-2 py-0.5 border border-bauhaus-blue/30 bg-link-light text-bauhaus-blue uppercase tracking-widest">
+                  NDIS Layer
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="border-2 border-bauhaus-black p-3 bg-bauhaus-canvas">
+                  <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">State Providers</div>
+                  <div className="text-lg font-black text-bauhaus-black">{ndisStateSupplyTotal?.provider_count?.toLocaleString() || '\u2014'}</div>
+                </div>
+                <div className="border-2 border-bauhaus-black p-3 bg-bauhaus-canvas">
+                  <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">Thin Districts</div>
+                  <div className="text-lg font-black text-bauhaus-blue">{ndisThinDistrictCount}</div>
+                </div>
+                <div className="border-2 border-bauhaus-black p-3 bg-bauhaus-canvas">
+                  <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">Very Thin</div>
+                  <div className="text-lg font-black text-bauhaus-red">{ndisVeryThinDistrictCount}</div>
+                </div>
+                <div className="border-2 border-bauhaus-black p-3 bg-bauhaus-canvas">
+                  <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">Local Alternatives</div>
+                  <div className="text-lg font-black text-bauhaus-black">{localDisabilityEnterpriseCount}</div>
+                  <div className="text-[10px] text-bauhaus-muted font-medium mt-1">
+                    {localCommunityControlledCount} community-controlled orgs in postcode
+                  </div>
+                </div>
+              </div>
+              <p className="text-xs text-bauhaus-muted leading-relaxed mb-4">
+                This organisation shows disability-related delivery signals. The strategic question is whether it sits inside a resilient market, a thin market, or a captured market where large providers take most of the money and local alternatives are scarce.
+              </p>
+              {ndisStateDistricts.length > 0 && (
+                <div className="mb-4">
+                  <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-2">Thinnest Districts In {e.state}</div>
+                  <div className="space-y-2">
+                    {ndisStateDistricts.slice(0, 3).map((district) => (
+                      <div key={district.service_district_name} className="flex items-center justify-between text-sm">
+                        <span className="font-bold text-bauhaus-black">{district.service_district_name}</span>
+                        <span className="font-mono font-black text-bauhaus-blue">{district.provider_count.toLocaleString()} providers</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {ndisStateHotspots.length > 0 && (
+                <div className="mb-4">
+                  <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-2">Captured Markets</div>
+                  <div className="space-y-2">
+                    {ndisStateHotspots.map((district) => (
+                      <div key={`${district.state_code}:${district.service_district_name}`} className="flex items-center justify-between text-sm">
+                        <span className="font-bold text-bauhaus-black">{district.service_district_name}</span>
+                        <span className="font-mono font-black text-bauhaus-red">{formatPercent(district.payment_share_top10_pct)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="flex flex-wrap gap-2">
+                <Link href="/reports/ndis-market" className="px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 border-bauhaus-black text-bauhaus-black hover:bg-bauhaus-yellow transition-colors">
+                  Open NDIS Market
+                </Link>
+                {e.postcode && (
+                  <Link href={`/places/${e.postcode}`} className="px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 border-bauhaus-black text-bauhaus-black hover:bg-link-light transition-colors">
+                    Open Place Pressure
+                  </Link>
+                )}
+                <Link href="/funding-workspace" className="px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 border-bauhaus-black text-bauhaus-black hover:bg-money-light transition-colors">
+                  Open Funding Workspace
+                </Link>
+                {ndisSourceLink && (
+                  <a href={ndisSourceLink} target="_blank" rel="noopener noreferrer" className="px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 border-bauhaus-blue text-bauhaus-blue hover:bg-link-light transition-colors">
+                    Source Dataset
+                  </a>
+                )}
+              </div>
             </div>
           )}
 

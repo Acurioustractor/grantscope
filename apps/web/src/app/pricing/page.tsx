@@ -3,7 +3,32 @@
 import { useState } from 'react'
 import Link from 'next/link'
 
-const tiers = [
+type FeatureStatus = 'comingSoon' | 'custom'
+
+interface TierFeature {
+  label: string
+  status?: FeatureStatus
+}
+
+interface Tier {
+  key: string
+  name: string
+  tagline: string
+  price: number
+  priceNote: string
+  description: string
+  features: TierFeature[]
+  cta: string
+  ctaHref?: string
+  highlight: boolean
+}
+
+const FEATURE_STATUS_LABELS: Record<FeatureStatus, string> = {
+  comingSoon: 'Coming soon',
+  custom: 'Custom deployment',
+}
+
+const tiers: Tier[] = [
   {
     key: 'community',
     name: 'COMMUNITY',
@@ -12,11 +37,11 @@ const tiers = [
     priceNote: 'forever',
     description: 'For grassroots NFPs, First Nations orgs, and CLCs under $500K revenue',
     features: [
-      'Full grant search (14,000+ opportunities)',
-      'Foundation profiles (9,800+)',
-      'Save & track grants',
-      'Basic email alerts',
-      '1 team member',
+      { label: 'Full grant search' },
+      { label: 'Foundation profiles' },
+      { label: 'Save & track grants' },
+      { label: 'Basic email alerts' },
+      { label: '1 team member' },
     ],
     cta: 'Get Started',
     ctaHref: '/auth/signup',
@@ -30,13 +55,14 @@ const tiers = [
     priceNote: '/month',
     description: 'For established NFPs and social enterprises',
     features: [
-      'Everything in Community',
-      'AI grant match scoring (0\u2013100)',
-      'Custom alert rules & keywords',
-      'Pipeline tracking with Kanban',
-      'Foundation relationship CRM',
-      'CSV & PDF export',
-      '5 team members',
+      { label: 'Everything in Community' },
+      { label: 'AI grant match scoring (0–100)' },
+      { label: 'Custom alert rules & keywords' },
+      { label: 'Pipeline tracking with Kanban' },
+      { label: 'Foundation relationship tracker' },
+      { label: 'CSV export' },
+      { label: 'PDF export', status: 'comingSoon' },
+      { label: '5 team members' },
     ],
     cta: 'Start Free Trial',
     highlight: false,
@@ -49,13 +75,13 @@ const tiers = [
     priceNote: '/month',
     description: 'For larger NFPs, peak bodies, procurement teams, and multi-program orgs',
     features: [
-      'Everything in Professional',
-      'Tender Intelligence \u2014 supplier discovery',
-      'Compliance scoring from 20+ data sources',
-      'Intelligence pack generation',
-      'Place-based funding analysis',
-      'Board-ready export reports',
-      '25 team members',
+      { label: 'Everything in Professional' },
+      { label: 'Tender Intelligence — supplier discovery' },
+      { label: 'Compliance scoring inside intelligence packs' },
+      { label: 'Intelligence pack generation' },
+      { label: 'Place-based funding analysis' },
+      { label: 'Board-ready export reports', status: 'comingSoon' },
+      { label: '25 team members' },
     ],
     cta: 'Start Free Trial',
     highlight: true,
@@ -68,14 +94,14 @@ const tiers = [
     priceNote: '/month',
     description: 'For foundations, corporate giving, philanthropic advisors, and commissioners',
     features: [
-      'Everything in Organisation',
-      'Portfolio view \u2014 outcomes & geography',
-      'Gap analysis \u2014 where money isn\'t going',
-      'Commissioning intelligence by place',
-      'Foundation scorecard & benchmarking',
-      'Data API access',
-      'White-label option',
-      'Unlimited team members',
+      { label: 'Everything in Organisation' },
+      { label: 'Portfolio view — saved foundations & summary' },
+      { label: 'Gap analysis — where money isn\'t going' },
+      { label: 'Commissioning intelligence by place' },
+      { label: 'Foundation scorecard & benchmarking', status: 'comingSoon' },
+      { label: 'Read-only API access' },
+      { label: 'White-label option', status: 'custom' },
+      { label: 'Unlimited team members' },
     ],
     cta: 'Talk to Us',
     ctaHref: 'mailto:hello@civicgraph.au?subject=Funder%20tier%20enquiry',
@@ -84,18 +110,18 @@ const tiers = [
   {
     key: 'enterprise',
     name: 'ENTERPRISE',
-    tagline: 'Full decision infrastructure.',
+    tagline: 'Managed deployment for teams with governance requirements.',
     price: 1999,
     priceNote: '/month',
     description: 'For state/federal government, large foundations, and sector-wide deployments',
     features: [
-      'Everything in Funder',
-      'Full API access (99K entities, 672K contracts)',
-      'Custom procurement dashboards',
-      'Governed proof layer (outcome evidence)',
-      'White-label deployment',
-      'SSO / SAML integration',
-      'Dedicated onboarding & support',
+      { label: 'Everything in Funder' },
+      { label: 'Expanded API access', status: 'custom' },
+      { label: 'Custom procurement dashboards', status: 'custom' },
+      { label: 'Governed proof layer', status: 'comingSoon' },
+      { label: 'White-label deployment', status: 'custom' },
+      { label: 'SSO / SAML integration', status: 'custom' },
+      { label: 'Dedicated onboarding & support' },
     ],
     cta: 'Contact Us',
     ctaHref: 'mailto:hello@civicgraph.au?subject=Enterprise%20enquiry',
@@ -151,12 +177,12 @@ export default function PricingPage() {
             BETTER DATA.<br />BETTER DECISIONS.<br />BETTER OUTCOMES.
           </h1>
           <p className="text-xl md:text-2xl font-medium text-white/60 max-w-3xl mx-auto mb-4">
-            Procurement intelligence. Place-based allocation analysis. Outcome evidence.
-            CivicGraph connects $74B in contracts, 99K entities, and 20+ data sources
-            into the decision layer for government, funders, and community organisations.
+            Procurement intelligence. Place-based allocation analysis. External evidence links.
+            CivicGraph brings public spending, market, and funding data into a working research
+            and triage layer for government, funders, and community organisations.
           </p>
           <p className="text-lg text-white/40 mt-8">
-            From finding the right supplier to proving the investment worked.
+            From finding the right supplier to pressure-testing where money should go next.
           </p>
         </div>
       </section>
@@ -169,12 +195,12 @@ export default function PricingPage() {
           </h2>
           <p className="text-bauhaus-muted max-w-2xl mx-auto">
             Procurement intelligence to find the right suppliers. Allocation intelligence
-            to decide where money should go. Governed proof to show it worked.
+            to decide where money should go. Governed proof is rolling out carefully.
           </p>
         </div>
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
-            { label: 'Procurement Intelligence', sub: 'Supplier discovery, compliance scoring, intelligence packs', stat: '672K contracts', color: 'bg-bauhaus-blue text-white' },
+            { label: 'Procurement Intelligence', sub: 'Supplier discovery, compliance scoring, intelligence packs', stat: 'National contract history', color: 'bg-bauhaus-blue text-white' },
             { label: 'Allocation Intelligence', sub: 'Place packs, gap analysis, commissioning data', stat: '2,900 postcodes', color: 'bg-bauhaus-black text-white' },
             { label: 'Governed Proof', sub: 'Outcome evidence, community voice, renewal defence', stat: 'Coming soon', color: 'bg-bauhaus-red/10 text-bauhaus-black' },
           ].map((item) => (
@@ -198,8 +224,8 @@ export default function PricingPage() {
               <h3 className="text-lg font-black mb-2">PROCUREMENT OFFICERS</h3>
               <p className="text-sm text-bauhaus-muted mb-4">You need to find suppliers fast and defend your choices:</p>
               <ul className="space-y-3 text-sm">
-                <li className="flex gap-3"><span className="text-money font-black">&#10003;</span> Supplier discovery across 99K entities</li>
-                <li className="flex gap-3"><span className="text-money font-black">&#10003;</span> Compliance scoring from 20+ data sources</li>
+                <li className="flex gap-3"><span className="text-money font-black">&#10003;</span> Supplier discovery across the national entity graph</li>
+                <li className="flex gap-3"><span className="text-money font-black">&#10003;</span> Compliance scoring from connected public registries</li>
                 <li className="flex gap-3"><span className="text-money font-black">&#10003;</span> Bid-ready intelligence packs in seconds</li>
                 <li className="flex gap-3"><span className="text-money font-black">&#10003;</span> Indigenous procurement targets with verified data</li>
               </ul>
@@ -210,8 +236,8 @@ export default function PricingPage() {
               <ul className="space-y-3 text-sm">
                 <li className="flex gap-3"><span className="text-money font-black">&#10003;</span> Place-based funding analysis by postcode</li>
                 <li className="flex gap-3"><span className="text-money font-black">&#10003;</span> Gap scoring — where need exceeds provision</li>
-                <li className="flex gap-3"><span className="text-money font-black">&#10003;</span> Portfolio view across your entire giving</li>
-                <li className="flex gap-3"><span className="text-money font-black">&#10003;</span> Benchmark against peer foundations</li>
+                <li className="flex gap-3"><span className="text-money font-black">&#10003;</span> Portfolio view across saved foundations</li>
+                <li className="flex gap-3"><span className="text-money font-black">&#10003;</span> Benchmarking workflows in research preview</li>
               </ul>
             </div>
             <div className="border-4 border-bauhaus-black p-8 bg-white bauhaus-shadow">
@@ -267,11 +293,16 @@ export default function PricingPage() {
           </div>
 
           <div className="border-4 border-white/20 p-8">
-            <h3 className="font-black text-bauhaus-yellow mb-4">THE FOUNDATION SCORECARD</h3>
+            <div className="flex items-center gap-3 mb-4">
+              <h3 className="font-black text-bauhaus-yellow">FOUNDATION SCORECARD PREVIEW</h3>
+              <span className="text-[10px] font-black px-2 py-0.5 border border-bauhaus-yellow/40 bg-bauhaus-yellow/10 text-bauhaus-yellow uppercase tracking-widest">
+                Research Preview
+              </span>
+            </div>
             <p className="text-sm text-white/60 mb-6">
-              Every foundation on CivicGraph gets a transparency score. Giving ratio, executive
-              compensation, asset growth, grant distribution, geographic reach. Real accountability.
-              Here&apos;s what that looks like:
+              We are prototyping scorecards from ACNC filings and foundation profile data. Giving
+              ratio, executive compensation, asset growth, grant distribution, and geographic reach
+              are visible in the research layer today. Self-serve benchmarking is still rolling out.
             </p>
             <div className="grid md:grid-cols-3 gap-4">
               <div className="border-2 border-white/10 p-4">
@@ -297,7 +328,7 @@ export default function PricingPage() {
               </div>
             </div>
             <p className="text-xs text-white/30 mt-4">
-              Real foundation data from ACNC filings. Names available to Funder tier subscribers.
+              Illustrative scoring preview based on ACNC filings. Named subscriber benchmarking is still being tightened before wider rollout.
             </p>
           </div>
         </div>
@@ -316,7 +347,7 @@ export default function PricingPage() {
             {[
               {
                 before: 'Procurement officers build supplier lists from memory and Google',
-                after: 'Discovery engine across 99K entities with compliance scoring and contract history.',
+                after: 'Discovery engine across the national entity graph with compliance scoring and contract history.',
               },
               {
                 before: 'Commissioners allocate funding without seeing where money already flows',
@@ -328,7 +359,7 @@ export default function PricingPage() {
               },
               {
                 before: 'Nobody can prove procurement created community value',
-                after: 'Governed proof layer connects contracts to outcomes. Defend renewals with evidence.',
+                after: 'Pilot governed proof workflows connect contracts to outcomes. Wider rollout is coming soon.',
               },
               {
                 before: 'Indigenous procurement targets are met on paper, not in practice',
@@ -356,8 +387,18 @@ export default function PricingPage() {
           </h2>
           <p className="text-bauhaus-muted max-w-2xl mx-auto mb-8">
             Community organisations access core features free. Procurement intelligence,
-            allocation analysis, and governed proof unlock at higher tiers.
+            allocation analysis, and carefully staged evidence workflows unlock at higher tiers.
           </p>
+          <div className="border-4 border-bauhaus-black bg-white p-4 max-w-3xl mx-auto text-left mb-8">
+            <p className="text-[11px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">
+              Feature availability
+            </p>
+            <p className="text-sm text-bauhaus-black font-medium leading-relaxed">
+              Unmarked features are usable in the product today. <span className="font-black">Coming soon</span> means
+              in active rollout. <span className="font-black">Custom deployment</span> means available through managed or
+              enterprise delivery, not a self-serve workflow.
+            </p>
+          </div>
 
           {/* Annual/Monthly Toggle */}
           <div className="flex items-center justify-center gap-4 mb-8">
@@ -430,9 +471,20 @@ export default function PricingPage() {
                 <div className="p-6 flex-1">
                   <ul className="space-y-2.5">
                     {tier.features.map((feature) => (
-                      <li key={feature} className="flex gap-2 text-sm">
+                      <li key={feature.label} className="flex gap-2 text-sm">
                         <span className="text-money font-black text-xs mt-0.5">{'\u25CF'}</span>
-                        {feature}
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span>{feature.label}</span>
+                          {feature.status && (
+                            <span className={`text-[9px] font-black px-1.5 py-0.5 uppercase tracking-widest border ${
+                              feature.status === 'comingSoon'
+                                ? 'border-bauhaus-yellow bg-warning-light text-bauhaus-black'
+                                : 'border-bauhaus-blue bg-link-light text-bauhaus-blue'
+                            }`}>
+                              {FEATURE_STATUS_LABELS[feature.status]}
+                            </span>
+                          )}
+                        </div>
                       </li>
                     ))}
                   </ul>
@@ -504,15 +556,20 @@ export default function PricingPage() {
               </p>
             </div>
             <div className="border-4 border-white/20 p-8">
-              <h3 className="font-black text-bauhaus-yellow mb-4 text-lg">BENCHMARK YOURSELF</h3>
+              <div className="flex items-center gap-3 mb-4">
+                <h3 className="font-black text-bauhaus-yellow text-lg">BENCHMARK YOURSELF</h3>
+                <span className="text-[10px] font-black px-2 py-0.5 border border-bauhaus-yellow/40 bg-bauhaus-yellow/10 text-bauhaus-yellow uppercase tracking-widest">
+                  Preview
+                </span>
+              </div>
               <p className="text-sm text-white/70 mb-4">
                 What&apos;s your giving ratio? How does your executive compensation compare to
                 your grant distribution? What percentage of your funding reaches First Nations
                 communities? Regional areas? Women-led organisations?
               </p>
               <p className="text-sm text-white/70">
-                Every foundation can now see how they compare. Not to shame — to improve.
-                The foundations with the best scores will wear them proudly.
+                We&apos;re tightening this workflow before broader release. Early partners can pressure-test
+                where they sit and what data still needs verification.
               </p>
             </div>
             <div className="border-4 border-white/20 p-8">
@@ -559,14 +616,14 @@ export default function PricingPage() {
           </h2>
           <p className="text-center text-bauhaus-muted mb-12 max-w-2xl mx-auto">
             Each layer makes the next more powerful. Start with procurement.
-            Expand into allocation. Add proof when you own the decision.
+            Expand into allocation. Add proof as the workflow matures.
           </p>
 
           <div className="flex flex-col md:flex-row items-stretch gap-0">
             {[
               { label: '1. PROCUREMENT', desc: 'Find suppliers. Check compliance. Generate packs.', color: 'bg-bauhaus-blue text-white' },
               { label: '2. ALLOCATION', desc: 'Place analysis. Gap scoring. Commissioning data.', color: 'bg-bauhaus-black text-white' },
-              { label: '3. PROOF', desc: 'Outcome evidence. Renewal defence. Policy justification.', color: 'bg-bauhaus-red text-white' },
+              { label: '3. PROOF', desc: 'Outcome evidence workflows (pilot). Renewal defence. Policy justification.', color: 'bg-bauhaus-red text-white' },
               { label: 'RESULT', desc: 'Defensible decisions at every stage.', color: 'bg-money text-white' },
             ].map((step, i) => (
               <div key={step.label} className="flex-1 flex flex-col">
@@ -641,7 +698,7 @@ export default function PricingPage() {
           <p className="text-white/50 text-lg mb-6">
             CivicGraph connects AusTender contracts, ACNC finances, AEC donations,
             ATO tax data, and ASIC filings into a single decision layer.
-            99,000+ entities. 65,000+ relationships. 20+ data sources.
+            National entity graph. Connected relationship data. Public-source evidence for market decisions.
           </p>
           <p className="text-white/70 text-xl font-bold mt-8">
             Lead with the budget problem.
@@ -666,7 +723,7 @@ export default function PricingPage() {
             },
             {
               q: 'How is this different from other grant platforms?',
-              a: 'Most platforms help you search grants. CivicGraph connects grants, contracts, donations, and procurement across 99,000+ entities — the only platform that maps how money flows through society. Three layers: raw financial data, entity relationships, and community evidence. Plus the cross-subsidy model means the best orgs aren\'t priced out.',
+              a: 'Most platforms help you search grants. CivicGraph connects grants, contracts, donations, and procurement across the national entity graph. Three layers: raw financial data, entity relationships, and community evidence. Plus the cross-subsidy model means the best orgs aren\'t priced out.',
             },
             {
               q: 'Can funders search for charities proactively?',
@@ -674,7 +731,7 @@ export default function PricingPage() {
             },
             {
               q: 'Where does your data come from?',
-              a: 'ACNC registers (359,678 records), AusTender (672,000 contracts), AEC political donations (312,000 records), ATO tax transparency, ASIC corporate filings, ORIC Indigenous corporations, state grant portals, and AI-enriched foundation profiles. 20+ data sources, all public, connected for the first time.',
+              a: 'ACNC registers, AusTender, AEC political donations, ATO tax transparency, ASIC corporate filings, ORIC Indigenous corporations, state grant portals, and AI-enriched foundation profiles. Coverage varies by workflow, and the platform surfaces connected public sources rather than pretending every dataset is equally complete.',
             },
             {
               q: 'Do you sell our data?',

@@ -236,18 +236,29 @@ export function FoundationTrackerClient() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <div>
+        <div className="max-w-2xl">
           <p className="text-xs font-black text-bauhaus-red uppercase tracking-[0.3em] mb-1">Tracker</p>
           <h1 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight">
             My Foundations
           </h1>
+          <p className="mt-1 text-sm font-medium text-bauhaus-muted">
+            Detailed relationship-stage work still lives here. For the joined grants, funders, delivery partners, and coverage view, use the funding workspace.
+          </p>
         </div>
-        <a
-          href="/foundations"
-          className="text-xs font-black text-bauhaus-blue uppercase tracking-widest hover:text-bauhaus-red"
-        >
-          Browse Foundations &rarr;
-        </a>
+        <div className="flex flex-col items-end gap-2">
+          <a
+            href="/funding-workspace"
+            className="inline-flex px-4 py-3 border-2 border-bauhaus-black text-bauhaus-black text-[10px] font-black uppercase tracking-widest hover:bg-bauhaus-black hover:text-white transition-colors"
+          >
+            Open Funding Workspace
+          </a>
+          <a
+            href="/foundations"
+            className="text-xs font-black text-bauhaus-blue uppercase tracking-widest hover:text-bauhaus-red"
+          >
+            Browse Foundations &rarr;
+          </a>
+        </div>
       </div>
 
       {/* Portfolio Summary (collapsible) */}

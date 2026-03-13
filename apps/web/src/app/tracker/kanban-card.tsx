@@ -40,7 +40,6 @@ export function KanbanCard({ grant, index, onRemove }: { grant: SavedGrantRow; i
             <a
               href={`/grants/${grant.grant_id}`}
               className="text-sm font-bold text-bauhaus-black hover:text-bauhaus-blue leading-tight line-clamp-2 flex-1"
-              onClick={(e) => e.stopPropagation()}
             >
               {grant.grant.name}
             </a>

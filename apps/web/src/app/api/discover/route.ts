@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireModule } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
-import { GrantEngine } from '@grantscope/engine';
+import { GrantEngine } from '@grant-engine/engine';
 
 export async function POST(request: NextRequest) {
-  const authHeader = request.headers.get('authorization');
-  const expectedKey = process.env.API_SECRET_KEY;
-
-  if (expectedKey && authHeader !== `Bearer ${expectedKey}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireModule('grants');
+  if (auth.error) return auth.error;
 
   const body = await request.json();
   const { sources, dryRun, geography, categories, keywords } = body;

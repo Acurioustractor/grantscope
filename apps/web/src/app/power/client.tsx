@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 
 const CapitalMap = dynamic(
@@ -71,7 +72,9 @@ interface DataHealth {
 }
 
 export function PowerPageClient() {
-  const [selectedSA2, setSelectedSA2] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const initialSA2 = searchParams.get('sa2');
+  const [selectedSA2, setSelectedSA2] = useState<string | null>(initialSA2);
   const [selectedEntity, setSelectedEntity] = useState<string | null>(null);
   const [health, setHealth] = useState<DataHealth | null>(null);
 

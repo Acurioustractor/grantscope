@@ -18,6 +18,7 @@ import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { FoundationScraper } from '../packages/grant-engine/src/foundations/annual-report-scraper.ts';
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
+import { MINIMAX_CHAT_COMPLETIONS_URL } from './lib/minimax.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -28,6 +29,8 @@ const LIMIT = limitArg ? parseInt(limitArg.split('=')[1], 10) : 50;
 
 const concurrencyArg = process.argv.find(a => a.startsWith('--concurrency='));
 const CONCURRENCY = concurrencyArg ? parseInt(concurrencyArg.split('=')[1], 10) : 2;
+const PREFERRED_PROVIDER = process.argv.find(a => a.startsWith('--provider='))?.split('=')[1] || 'minimax';
+const DISCOVERY_MODE = process.argv.find(a => a.startsWith('--mode='))?.split('=')[1] || 'strict-public';
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
@@ -35,6 +38,7 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+let currentRunId = null;
 
 function log(msg) {
   console.log(`[discover-programs] ${msg}`);
@@ -70,13 +74,23 @@ const PROVIDERS = [
   },
 ];
 
+if (PREFERRED_PROVIDER !== 'minimax') {
+  const idx = PROVIDERS.findIndex((provider) => provider.name === PREFERRED_PROVIDER);
+  if (idx > 0) {
+    const [provider] = PROVIDERS.splice(idx, 1);
+    PROVIDERS.unshift(provider);
+  }
+}
+
 let currentProviderIndex = 0;
+const DISABLED_PROVIDERS = new Set();
 
 async function callLLM(prompt) {
   const startIdx = currentProviderIndex;
 
   for (let attempt = 0; attempt < PROVIDERS.length; attempt++) {
     const provider = PROVIDERS[(startIdx + attempt) % PROVIDERS.length];
+    if (DISABLED_PROVIDERS.has(provider.name)) continue;
     const apiKey = process.env[provider.envKey];
     if (!apiKey) continue;
 
@@ -84,7 +98,7 @@ async function callLLM(prompt) {
       let result;
 
       if (provider.name === 'minimax') {
-        const res = await fetch('https://api.minimax.io/v1/chat/completions', {
+        const res = await fetch(MINIMAX_CHAT_COMPLETIONS_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
           body: JSON.stringify({
@@ -93,8 +107,10 @@ async function callLLM(prompt) {
             max_tokens: 4000,
             temperature: 0.1,
           }),
+          signal: AbortSignal.timeout(45000),
         });
         if (!res.ok) {
+          if (res.status === 401) DISABLED_PROVIDERS.add(provider.name);
           if (res.status === 429 || res.status === 503) throw new Error(`Rate limited: ${res.status}`);
           throw new Error(`Minimax error ${res.status}`);
         }
@@ -112,8 +128,10 @@ async function callLLM(prompt) {
             tools: [{ google_search: {} }],
             generationConfig: { maxOutputTokens: 4000, temperature: 0.1 },
           }),
+          signal: AbortSignal.timeout(30000),
         });
         if (!res.ok) {
+          if (res.status === 401) DISABLED_PROVIDERS.add(provider.name);
           if (res.status === 429 || res.status === 503) throw new Error(`Rate limited: ${res.status}`);
           throw new Error(`Gemini error ${res.status}`);
         }
@@ -129,8 +147,10 @@ async function callLLM(prompt) {
             max_tokens: 4000,
             temperature: 0.1,
           }),
+          signal: AbortSignal.timeout(30000),
         });
         if (!res.ok) {
+          if (res.status === 401) DISABLED_PROVIDERS.add(provider.name);
           if (res.status === 429 || res.status === 503) throw new Error(`Rate limited: ${res.status}`);
           throw new Error(`Gemini error ${res.status}`);
         }
@@ -146,8 +166,10 @@ async function callLLM(prompt) {
             max_tokens: 4000,
             temperature: 0.1,
           }),
+          signal: AbortSignal.timeout(30000),
         });
         if (!res.ok) {
+          if (res.status === 401) DISABLED_PROVIDERS.add(provider.name);
           if (res.status === 429 || res.status === 503) throw new Error(`Rate limited: ${res.status}`);
           throw new Error(`Groq error ${res.status}`);
         }
@@ -166,8 +188,10 @@ async function callLLM(prompt) {
             max_tokens: 4000,
             messages: [{ role: 'user', content: prompt }],
           }),
+          signal: AbortSignal.timeout(30000),
         });
         if (!res.ok) {
+          if (res.status === 401) DISABLED_PROVIDERS.add(provider.name);
           if (res.status === 429 || res.status === 529) throw new Error(`Rate limited: ${res.status}`);
           throw new Error(`Anthropic error ${res.status}`);
         }
@@ -179,6 +203,9 @@ async function callLLM(prompt) {
       return result;
     } catch (err) {
       log(`    ${provider.name} failed: ${err.message}`);
+      if (/401|400|429|529|rate limited|quota|balance|credit/i.test(String(err.message || ''))) {
+        DISABLED_PROVIDERS.add(provider.name);
+      }
       continue;
     }
   }
@@ -196,34 +223,173 @@ function parseJSON(text) {
   }
 }
 
+function looksGrantLikeProgramRecord(program) {
+  const combined = `${program?.name || ''} ${program?.description || ''} ${program?.application_process || ''} ${program?.eligibility || ''} ${program?.url || ''} ${program?.program_type || ''}`;
+  const hasGrantLanguage = /(grant|grant round|community giving|fellowship|scholarship|award|bursary|funding round|apply now|how to apply|applications? open|grant guidelines|expression of interest|eoi)/i.test(combined);
+  const hasGrantPath = /(\/grants?\/|\/grant-programs?\/|\/funding\/|\/apply\/|\/applications?\/|\/community-giving\/|\/fellowships?\/|\/scholarships?\/)/i.test(String(program?.url || '').toLowerCase());
+  const looksNonGrant = /(appeal|donation|donate|sponsorship|sponsor a child|child sponsorship|orphan sponsorship|water project|food packs?|relief fund|crisis relief|family support|support program|housing support|clean water|fiscal sponsorship|disaster relief|donations program|community support|direct sponsorship)/i.test(combined);
+  const hasStructuredSignal = Boolean(program?.amount_min || program?.amount_max || program?.deadline);
+  if (looksNonGrant && !hasGrantLanguage && !hasGrantPath) return false;
+  return hasGrantLanguage || hasGrantPath || hasStructuredSignal;
+}
+
 async function getFoundationsToScan() {
-  // Get foundation IDs that already have programs
+  // Get foundation IDs that already have grant-like public programs.
+  // Invalid appeal/support rows should not block a rescan.
   const { data: withPrograms } = await supabase
     .from('foundation_programs')
-    .select('foundation_id');
+    .select('foundation_id, name, description, url, application_process, eligibility, amount_min, amount_max, deadline, program_type');
 
-  const hasPrograms = new Set((withPrograms || []).map(r => r.foundation_id));
+  const hasPrograms = new Set(
+    (withPrograms || [])
+      .filter(looksGrantLikeProgramRecord)
+      .map(r => r.foundation_id)
+  );
 
-  // Get foundations that are likely grantmakers (mention grants/fund/fellowship in description)
-  // with websites + descriptions but no programs yet
-  // Ordered by total_giving_annual (biggest funders first)
+  // Get foundations that are likely grantmakers with websites + descriptions but no programs yet.
+  // Prioritise actual funder language and avoid obvious operating charities / school / event pages.
   const { data, error } = await supabase
     .from('foundations')
-    .select('id, name, website, description, thematic_focus, geographic_focus, total_giving_annual')
+    .select('id, name, type, website, description, thematic_focus, geographic_focus, total_giving_annual, giving_philosophy, application_tips, open_programs, profile_confidence')
     .not('website', 'is', null)
     .not('description', 'is', null)
-    .or('description.ilike.%grant%,description.ilike.%fellowship%,description.ilike.%scholarship%,description.ilike.%philanthrop%,description.ilike.%fund%program%')
+    .or([
+      'name.ilike.%foundation%',
+      'name.ilike.%trust%',
+      'name.ilike.%fund%',
+      'description.ilike.%grant%',
+      'description.ilike.%fellowship%',
+      'description.ilike.%scholarship%',
+      'description.ilike.%philanthrop%',
+      'description.ilike.%funding%',
+      'description.ilike.%applications%'
+    ].join(','))
     .order('total_giving_annual', { ascending: false, nullsFirst: false })
-    .limit(LIMIT * 2); // fetch extra to filter
+    .limit(LIMIT * 4); // fetch extra to filter
 
   if (error) {
     log(`Error fetching foundations: ${error.message}`);
     return [];
   }
 
-  // Prioritise foundations without programs
-  return (data || [])
+  const grantmakerSignals = /(grant|grants|fellowship|scholarship|philanthrop|funding|applications|awards?|EOI|apply now|grant round|community giving|open for applications|grant program)/i;
+  const operatorSignals = /(school|schools office|college|grammar|church|parish|diocese|catholic|christian brothers|hospital|medical centre|racing|showground|primary health network|phn|legal aid|university|institute|society|council|commission|australia for|care australia|world vision|red cross|donations fund|relief fund|barnardos|caritas|compassion|flying doctor|medecins sans frontieres|msf|health network|healthcare network)/i;
+  const corporateCommunitySignals = /(community|sustainability|social impact|our impact|responsibility)/i;
+  const antiGrantmakerSignals = /(not a traditional grant-?maker|operating (school|foundation|organisation)|direct service provider|does not offer grants|engage .* as a partner rather than as a traditional funder|families should contact|enrolment or community partnerships|direct program delivery|fundraising campaigns for specific projects|beneficiaries should review)/i;
+  const directServiceSignals = /(childfund|children'?s fund|welfare|relief|refugee|aged care|aged masons widows|orphans|health service|hospital|community health|aid fund|community services|service delivery|service provider|donations fund|benevolence)/i;
+  const hardRejectFundNames = /(childfund|welfare fund|relief fund|donations fund|aid fund)/i;
+  const explicitProgramsPathSignals = /(\/grants?\/|\/grant-programs?\/|\/funding\/|\/apply\/|\/applications?\/|\/community-giving\/|\/fellowships?\/|\/scholarships?\/)/i;
+  const grantLikeProgramSignals = /(grant|grant round|community giving|fellowship|scholarship|award|application|eoi|funding round)/i;
+
+  // Prioritise likely grantmakers without programs
+  const candidates = (data || [])
     .filter(f => !hasPrograms.has(f.id))
+    .filter((foundation) => {
+      const website = String(foundation.website || '').toLowerCase();
+      if (!website || website.includes('facebook.com') || website.includes('instagram.com')) return false;
+
+      const name = String(foundation.name || '');
+      const description = String(foundation.description || '');
+      const baseJoined = `${name} ${description} ${foundation.giving_philosophy || ''}`;
+      const applicationTipsText = String(foundation.application_tips || '');
+      const joined = `${baseJoined} ${applicationTipsText}`;
+
+      const type = String(foundation.type || '').toLowerCase();
+      const openPrograms = Array.isArray(foundation.open_programs) ? foundation.open_programs : [];
+      const hasOpenPrograms = openPrograms.length > 0;
+      const hasGrantLikeOpenPrograms = openPrograms.some((program) => {
+        const combined = `${program?.name || ''} ${program?.description || ''} ${program?.url || ''}`;
+        return grantLikeProgramSignals.test(combined);
+      });
+      const applicationTipsSignal = /grant round|community giving|open for applications|apply now|scholarship|fellowship|grant program|grant guidelines|how to apply|eligibility/i.test(applicationTipsText);
+      const hasApplicationSurface = hasGrantLikeOpenPrograms || /grant round|community giving|open for applications|apply now|grant guidelines|eligibility|EOI/i.test(baseJoined);
+      const websiteHasExplicitProgramsPath = explicitProgramsPathSignals.test(website);
+      const explicitPublicFundingSurface =
+        hasGrantLikeOpenPrograms ||
+        websiteHasExplicitProgramsPath ||
+        /grant round|community giving|open for applications|fellowship|scholarship|apply now|applications are open|how to apply|grant program/i.test(baseJoined);
+      const nameHasFunderShape = /foundation|trust|fund/i.test(name);
+      const websiteHasFunderShape = /foundation|trust|fund|grants?/i.test(website);
+      const isPreferredType = ['corporate_foundation', 'private_ancillary_fund', 'public_ancillary_fund', 'trust'].includes(type);
+      const isBroadGrantmaker = type === 'grantmaker';
+      const isCorporateCommunityPage = type === 'corporate_foundation' && corporateCommunitySignals.test(website) && !hasOpenPrograms && !websiteHasExplicitProgramsPath;
+      const looksLikeGrantmaker =
+        grantmakerSignals.test(joined) ||
+        (isPreferredType && (nameHasFunderShape || websiteHasFunderShape)) ||
+        (isBroadGrantmaker && (nameHasFunderShape || websiteHasFunderShape) && (grantmakerSignals.test(joined) || hasApplicationSurface)) ||
+        foundation.total_giving_annual >= 1000000;
+
+      const looksLikeOperator = operatorSignals.test(baseJoined) && !grantmakerSignals.test(baseJoined);
+      const looksLikeDirectService = directServiceSignals.test(joined) && !explicitPublicFundingSurface;
+      const explicitlyNotGrantmaker = antiGrantmakerSignals.test(joined);
+      const institutionalOperator = operatorSignals.test(name) && !nameHasFunderShape && !websiteHasFunderShape;
+      const corporateAllowed =
+        type !== 'corporate_foundation' ||
+        hasGrantLikeOpenPrograms ||
+        explicitPublicFundingSurface;
+      const allowedByType =
+        ((type === 'private_ancillary_fund' || type === 'public_ancillary_fund') &&
+          (explicitPublicFundingSurface || (foundation.profile_confidence !== 'low' && foundation.total_giving_annual >= 1000000 && (nameHasFunderShape || websiteHasFunderShape)))) ||
+        (type === 'trust' &&
+          (explicitPublicFundingSurface || (foundation.profile_confidence === 'high' && foundation.total_giving_annual >= 1000000 && (nameHasFunderShape || websiteHasFunderShape)))) ||
+        (type === 'corporate_foundation' && corporateAllowed && explicitPublicFundingSurface) ||
+        (isBroadGrantmaker &&
+          (nameHasFunderShape || websiteHasFunderShape) &&
+          (explicitPublicFundingSurface || (foundation.profile_confidence === 'high' && foundation.total_giving_annual >= 5000000))) ||
+        ((nameHasFunderShape || websiteHasFunderShape) && explicitPublicFundingSurface);
+      const strictPublicMode = DISCOVERY_MODE === 'strict-public';
+      if (explicitlyNotGrantmaker && !hasGrantLikeOpenPrograms) return false;
+      if (strictPublicMode && hardRejectFundNames.test(name) && !explicitPublicFundingSurface) return false;
+      if (strictPublicMode && institutionalOperator && !explicitPublicFundingSurface) return false;
+      if (foundation.profile_confidence === 'low' && !hasOpenPrograms && !websiteHasExplicitProgramsPath && !/grant|fellowship|scholarship/.test(joined)) return false;
+      if (strictPublicMode && !explicitPublicFundingSurface && type !== 'private_ancillary_fund' && type !== 'public_ancillary_fund') return false;
+      return looksLikeGrantmaker && !looksLikeOperator && !looksLikeDirectService && !isCorporateCommunityPage && allowedByType;
+    })
+    .filter((foundation, index, arr) => {
+      const dedupeKey = `${String(foundation.name || '').trim().toLowerCase()}|${String(foundation.website || '').trim().toLowerCase()}`;
+      return arr.findIndex((other) => `${String(other.name || '').trim().toLowerCase()}|${String(other.website || '').trim().toLowerCase()}` === dedupeKey) === index;
+    });
+
+  return candidates
+    .sort((a, b) => {
+      const score = (foundation) => {
+        let total = 0;
+        const type = String(foundation.type || '').toLowerCase();
+        const joined = `${foundation.name || ''} ${foundation.description || ''} ${foundation.giving_philosophy || ''} ${foundation.application_tips || ''}`;
+        const openPrograms = Array.isArray(foundation.open_programs) ? foundation.open_programs : [];
+        const hasOpenPrograms = openPrograms.length > 0;
+        const hasGrantLikeOpenPrograms = openPrograms.some((program) => {
+          const combined = `${program?.name || ''} ${program?.description || ''} ${program?.url || ''}`;
+          return grantLikeProgramSignals.test(combined);
+        });
+        const hasApplicationSurface = Boolean(foundation.application_tips) || hasGrantLikeOpenPrograms || /apply|application|guidelines|eligibility|grant round|EOI/i.test(joined);
+        const website = String(foundation.website || '').toLowerCase();
+
+        if (type === 'private_ancillary_fund' || type === 'public_ancillary_fund') total += 6;
+        else if (type === 'trust') total += 5;
+        else if (type === 'grantmaker') total += 4;
+        else if (type === 'corporate_foundation') total += 2;
+        if (foundation.profile_confidence === 'high') total += 4;
+        else if (foundation.profile_confidence === 'medium') total += 2;
+        if (foundation.giving_philosophy) total += 2;
+        if (foundation.application_tips && (hasGrantLikeOpenPrograms || explicitProgramsPathSignals.test(website) || /grant round|community giving|fellowship|scholarship|grant program/i.test(joined))) total += 2;
+        if (hasGrantLikeOpenPrograms) total += 4;
+        else if (hasOpenPrograms) total -= 3;
+        if (hasApplicationSurface) total += 3;
+        if (explicitProgramsPathSignals.test(website)) total += 4;
+        if (foundation.total_giving_annual >= 1000000) total += 4;
+        else if (foundation.total_giving_annual >= 250000) total += 2;
+        if (/grant|fellowship|scholarship|funding|applications?/i.test(`${foundation.name} ${foundation.description}`)) total += 3;
+        if (type === 'corporate_foundation' && corporateCommunitySignals.test(website) && !hasApplicationSurface) total -= 6;
+        if (/diocese|catholic|christian brothers|donations fund|relief fund/i.test(joined)) total -= 8;
+        if (directServiceSignals.test(joined) && !hasApplicationSurface) total -= 8;
+        if (operatorSignals.test(String(foundation.name || '')) && !/foundation|trust|fund/i.test(String(foundation.name || '')) && !hasApplicationSurface) total -= 10;
+        if (antiGrantmakerSignals.test(joined)) total -= 12;
+        if (foundation.profile_confidence === 'low' && !hasOpenPrograms && !/grant|fellowship|scholarship/.test(joined)) total -= 6;
+        return total;
+      };
+      return score(b) - score(a);
+    })
     .slice(0, LIMIT);
 }
 
@@ -405,6 +571,7 @@ async function main() {
   log('Starting foundation program discovery...');
   log(`  Limit: ${LIMIT}`);
   log(`  Concurrency: ${CONCURRENCY}`);
+  log(`  Mode: ${DISCOVERY_MODE}`);
   log(`  Dry run: ${DRY_RUN}`);
 
   const foundations = await getFoundationsToScan();
@@ -415,7 +582,8 @@ async function main() {
     return;
   }
 
-  const run = await logStart(supabase, 'discover-programs', 'Discover Foundation Programs');
+  const run = await logStart(supabase, 'discover-foundation-programs', 'Discover Foundation Programs');
+  currentRunId = run.id;
 
   const scraper = new FoundationScraper({ requestDelayMs: 2000, maxPagesPerFoundation: 5 });
 
@@ -448,6 +616,8 @@ async function main() {
     items_found: foundations.length,
     items_new: totalFound,
     items_updated: 0,
+    status: errors > 0 ? 'partial' : 'success',
+    errors: errors > 0 ? [`${errors} foundation program discovery errors`] : [],
   });
 
   log(`\nComplete: ${totalFound} programs discovered from ${withPrograms}/${scanned} foundations (${errors} errors)`);
@@ -456,5 +626,7 @@ async function main() {
 
 main().catch(err => {
   console.error('Fatal error:', err);
+  const message = err instanceof Error ? err.message : String(err);
+  logFailed(supabase, currentRunId, message).catch(() => {});
   process.exit(1);
 });

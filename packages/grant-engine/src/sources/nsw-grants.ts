@@ -11,7 +11,7 @@
  */
 
 import * as cheerio from 'cheerio';
-import type { SourcePlugin, DiscoveryQuery, RawGrant } from '../types.js';
+import type { SourcePlugin, DiscoveryQuery, RawGrant } from '../types';
 
 const NSW_GRANTS_URL = 'https://www.nsw.gov.au/grants-and-funding';
 const NSW_ES_SEARCH = 'https://www.nsw.gov.au/api/v1/elasticsearch/prod_content/_search';

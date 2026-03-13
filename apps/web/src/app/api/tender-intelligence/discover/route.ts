@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
-import { createSupabaseServer } from '@/lib/supabase-server';
+import { requireModule } from '@/lib/api-auth';
 import { logUsage } from '../_lib/log-usage';
-
-/** Escape SQL LIKE wildcards in user input */
-function sanitizeLike(s: string) {
-  return s.replace(/[%_\\]/g, c => `\\${c}`);
-}
+import { runProcurementDiscovery } from '../_lib/discovery';
+import { logProcurementWorkflowRun, updateShortlistFilters } from '../_lib/procurement-workspace';
 
 /**
  * POST /api/tender-intelligence/discover
@@ -15,115 +12,99 @@ function sanitizeLike(s: string) {
  * Returns matching suppliers with contract history and compliance metadata.
  */
 export async function POST(request: NextRequest) {
-  const authSupabase = await createSupabaseServer();
-  const { data: { user } } = await authSupabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-  }
+  const auth = await requireModule('procurement');
+  if (auth.error) return auth.error;
+  const { user } = auth;
 
   const body = await request.json();
   const {
     state,
     postcode,
     lga,
+    shortlist_id,
     entity_types = ['indigenous_corp', 'social_enterprise', 'charity', 'company'],
-    category,
     remoteness,
     community_controlled,
     min_contracts = 0,
     limit: rawLimit = 50,
   } = body;
 
-  // Input validation
-  const VALID_TYPES = ['indigenous_corp', 'social_enterprise', 'charity', 'company', 'foundation', 'government_body'];
-  const validatedTypes = (entity_types as string[]).filter((t: string) => VALID_TYPES.includes(t));
-  if (validatedTypes.length === 0) {
-    return NextResponse.json({ error: 'At least one valid entity_type required' }, { status: 400 });
-  }
-  const limit = Math.min(Math.max(1, Number(rawLimit) || 50), 200);
-
+  const startedAt = new Date().toISOString();
   const supabase = getServiceSupabase();
 
-  // Build entity query
-  let query = supabase
-    .from('gs_entities')
-    .select('gs_id, canonical_name, abn, entity_type, state, postcode, remoteness, seifa_irsd_decile, is_community_controlled, lga_name, latest_revenue, sector')
-    .in('entity_type', validatedTypes)
-    .order('latest_revenue', { ascending: false, nullsFirst: false })
-    .limit(limit);
-
-  if (state && typeof state === 'string') query = query.eq('state', state.slice(0, 10));
-  if (postcode && typeof postcode === 'string') query = query.eq('postcode', postcode.slice(0, 10));
-  if (lga && typeof lga === 'string') query = query.ilike('lga_name', `%${sanitizeLike(lga.slice(0, 100))}%`);
-  if (remoteness) query = query.eq('remoteness', remoteness);
-  if (community_controlled) query = query.eq('is_community_controlled', true);
-
-  const { data: entities, error } = await query;
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  let discovery;
+  try {
+    discovery = await runProcurementDiscovery(supabase, {
+      state,
+      postcode,
+      lga,
+      entity_types,
+      remoteness,
+      community_controlled,
+      min_contracts,
+      limit: rawLimit,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unable to run supplier discovery';
+    await logProcurementWorkflowRun(supabase, {
+      userId: user.id,
+      workflowType: 'discover',
+      workflowStatus: 'failed',
+      shortlistId: shortlist_id,
+      inputPayload: { state, postcode, lga, entity_types, remoteness, community_controlled, min_contracts, limit: rawLimit },
+      outputSummary: { error: message },
+      errorCount: 1,
+      startedAt,
+    });
+    return NextResponse.json({ error: message }, { status: message.includes('entity_type') ? 400 : 500 });
   }
 
-  if (!entities || entities.length === 0) {
-    return NextResponse.json({ suppliers: [], count: 0, filters_applied: body });
+  if (discovery.suppliers.length === 0) {
+    await Promise.all([
+      updateShortlistFilters(supabase, user.id, {
+        ...discovery.appliedFilters,
+      }, { shortlistId: shortlist_id }),
+      logProcurementWorkflowRun(supabase, {
+        userId: user.id,
+        workflowType: 'discover',
+        workflowStatus: 'completed',
+        shortlistId: shortlist_id,
+        inputPayload: discovery.appliedFilters,
+        outputSummary: { total_found: 0, with_federal_contracts: 0 },
+        recordsScanned: 0,
+        recordsChanged: 0,
+        startedAt,
+      }),
+    ]);
+    return NextResponse.json({ suppliers: [], summary: discovery.summary, filters_applied: discovery.appliedFilters });
   }
 
-  // Get contract history for discovered entities
-  const abns = entities.filter(e => e.abn).map(e => e.abn);
-  let contractCounts: Record<string, { count: number; total_value: number }> = {};
-
-  if (abns.length > 0) {
-    const { data: contracts } = await supabase
-      .from('austender_contracts')
-      .select('supplier_abn, contract_value')
-      .in('supplier_abn', abns);
-
-    if (contracts) {
-      for (const c of contracts) {
-        if (!c.supplier_abn) continue;
-        if (!contractCounts[c.supplier_abn]) {
-          contractCounts[c.supplier_abn] = { count: 0, total_value: 0 };
-        }
-        contractCounts[c.supplier_abn].count++;
-        contractCounts[c.supplier_abn].total_value += c.contract_value || 0;
-      }
-    }
-  }
-
-  // Enrich entities with contract data
-  const suppliers = entities.map(e => ({
-    ...e,
-    contracts: contractCounts[e.abn || ''] || { count: 0, total_value: 0 },
-  }));
-
-  // Filter by minimum contracts if specified
-  const filtered = min_contracts > 0
-    ? suppliers.filter(s => s.contracts.count >= min_contracts)
-    : suppliers;
-
-  // Sort: entities with contracts first, then by revenue
-  filtered.sort((a, b) => {
-    if (a.contracts.count !== b.contracts.count) return b.contracts.count - a.contracts.count;
-    return (b.latest_revenue || 0) - (a.latest_revenue || 0);
-  });
-
-  // Summary stats
-  const summary = {
-    total_found: filtered.length,
-    indigenous_businesses: filtered.filter(s => s.entity_type === 'indigenous_corp').length,
-    social_enterprises: filtered.filter(s => s.entity_type === 'social_enterprise').length,
-    community_controlled: filtered.filter(s => s.is_community_controlled).length,
-    with_federal_contracts: filtered.filter(s => s.contracts.count > 0).length,
-    avg_seifa_decile: filtered.length > 0
-      ? +(filtered.reduce((sum, s) => sum + (s.seifa_irsd_decile || 5), 0) / filtered.length).toFixed(1)
-      : null,
-  };
-
-  logUsage({ user_id: user.id, endpoint: 'discover', filters: { state, postcode, lga, remoteness }, result_count: filtered.length });
+  logUsage({ user_id: user.id, endpoint: 'discover', filters: { state, postcode, lga, remoteness }, result_count: discovery.suppliers.length });
+  await Promise.all([
+    updateShortlistFilters(supabase, user.id, {
+      ...discovery.appliedFilters,
+    }, { shortlistId: shortlist_id }),
+    logProcurementWorkflowRun(supabase, {
+      userId: user.id,
+      workflowType: 'discover',
+      workflowStatus: 'completed',
+      shortlistId: shortlist_id,
+      inputPayload: discovery.appliedFilters,
+      outputSummary: {
+        total_found: discovery.suppliers.length,
+        with_federal_contracts: discovery.summary.with_federal_contracts,
+        indigenous_businesses: discovery.summary.indigenous_businesses,
+        social_enterprises: discovery.summary.social_enterprises,
+      },
+      recordsScanned: discovery.recordsScanned,
+      recordsChanged: discovery.suppliers.length,
+      startedAt,
+    }),
+  ]);
 
   return NextResponse.json({
-    suppliers: filtered,
-    summary,
-    filters_applied: body,
+    suppliers: discovery.suppliers,
+    summary: discovery.summary,
+    filters_applied: discovery.appliedFilters,
   });
 }

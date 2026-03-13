@@ -5,7 +5,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Foundation } from './types.js';
+import type { Foundation } from './types';
 
 export class FoundationRepository {
   constructor(private supabase: SupabaseClient) {}

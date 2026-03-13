@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 
 interface EntityResult {
   type: 'entity';
@@ -83,7 +82,6 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
   const [loading, setLoading] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const router = useRouter();
   const abortRef = useRef<AbortController | null>(null);
 
   // Flatten all results for keyboard navigation
@@ -147,8 +145,8 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
 
   const navigate = useCallback((href: string) => {
     onClose();
-    router.push(href);
-  }, [router]);
+    window.location.href = href;
+  }, [onClose]);
 
   // Keyboard navigation
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {

@@ -25,7 +25,7 @@ async function getStats() {
       supabase.from('grants').select('*', { count: 'exact', head: true }),
       supabase.from('oric_corporations').select('*', { count: 'exact', head: true }),
       supabase.from('oric_corporations').select('*', { count: 'exact', head: true }).eq('status', 'Registered'),
-      supabase.from('foundation_programs').select('*', { count: 'exact', head: true }),
+      supabase.from('foundation_programs').select('*', { count: 'exact', head: true }).in('status', ['open', 'closed']),
       supabase.from('austender_contracts').select('*', { count: 'exact', head: true }),
       supabase.from('asic_companies').select('*', { count: 'exact', head: true }),
       supabase.from('ato_tax_transparency').select('*', { count: 'exact', head: true }),

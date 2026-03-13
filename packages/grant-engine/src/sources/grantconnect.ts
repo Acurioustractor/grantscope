@@ -12,7 +12,7 @@
  */
 
 import * as cheerio from 'cheerio';
-import type { SourcePlugin, DiscoveryQuery, RawGrant } from '../types.js';
+import type { SourcePlugin, DiscoveryQuery, RawGrant } from '../types';
 
 const RSS_URL = 'https://www.grants.gov.au/public_data/rss/rss.xml';
 const LIST_URL = 'https://www.grants.gov.au/Go/List';
