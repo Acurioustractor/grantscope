@@ -53,7 +53,8 @@ async function loadCSV(filePath) {
 }
 
 async function main() {
-  const runId = await logStart(db, AGENT_ID, AGENT_NAME);
+  const run = await logStart(db, AGENT_ID, AGENT_NAME);
+  const runId = run?.id;
   const stats = { processed: 0, created: 0, updated: 0, errors: 0 };
 
   try {
@@ -75,29 +76,35 @@ async function main() {
       const rows = batch.map(r => {
         stats.processed++;
 
-        // Map CSV columns to our schema (column names vary — normalize)
-        const regNumber = r['Registration Number'] || r['registration_number'] || r['Reg Number'] || '';
-        const name = r['Organisation Name'] || r['name'] || r['Name'] || '';
-        const legalName = r['Legal Name'] || r['legal_name'] || '';
+        // Map OData CSV columns to our schema
+        const regNumber = r['CharityRegistrationNumber'] || '';
+        const name = r['Name'] || '';
+
+        // Parse DD/MM/YYYY date format
+        const parseDate = (d) => {
+          if (!d) return null;
+          const parts = d.split('/');
+          if (parts.length === 3) return `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+          return null;
+        };
 
         return {
           registration_number: regNumber.trim(),
           name: name.trim(),
-          legal_name: legalName.trim() || null,
-          charity_type: r['Charity Type'] || r['Entity Type'] || null,
-          sector: r['Sector'] || r['Main Sector'] || null,
-          purposes: r['Purposes'] ? r['Purposes'].split(';').map(s => s.trim()) : null,
-          activities: r['Activities'] || r['Main Activity'] || null,
-          address_city: r['City'] || r['Town/City'] || null,
-          address_region: r['Region'] || null,
-          postal_code: r['Postal Code'] || r['Postcode'] || null,
-          website: r['Website'] || null,
-          email: r['Email'] || null,
-          registration_date: r['Registration Date'] || null,
-          total_income_nzd: r['Total Income'] ? parseFloat(r['Total Income']) || null : null,
-          total_expenditure_nzd: r['Total Expenditure'] ? parseFloat(r['Total Expenditure']) || null : null,
-          total_assets_nzd: r['Total Assets'] ? parseFloat(r['Total Assets']) || null : null,
-          is_deregistered: (r['Status'] || '').toLowerCase().includes('deregistered'),
+          legal_name: null,
+          charity_type: r['OrganisationalType'] || null,
+          sector: r['MainSectorId'] || null,
+          purposes: r['CharitablePurpose'] ? [r['CharitablePurpose']] : null,
+          activities: r['MainActivityId'] || null,
+          address_city: r['PostalAddressCity'] || r['StreetAddressCity'] || null,
+          address_region: r['PostalAddressSuburb'] || r['StreetAddressSuburb'] || null,
+          postal_code: r['PostalAddressPostcode'] || r['StreetAddressPostcode'] || null,
+          website: r['WebSiteURL'] || null,
+          email: r['CharityEmailAddress'] || r['EMailAddress1'] || null,
+          phone: r['Telephone1'] || null,
+          registration_date: parseDate(r['DateRegistered']),
+          is_deregistered: (r['RegistrationStatus'] || '').toLowerCase() === 'deregistered',
+          deregistration_date: parseDate(r['DeregistrationDate']),
           source_url: `https://register.charities.govt.nz/Charity/${regNumber.trim()}`,
           raw_data: r,
         };

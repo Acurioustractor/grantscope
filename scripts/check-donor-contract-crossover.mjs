@@ -35,7 +35,8 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 async function main() {
-  const runId = await logStart(db, AGENT_ID, AGENT_NAME);
+  const run = await logStart(db, AGENT_ID, AGENT_NAME);
+  const runId = run?.id;
   const stats = { contracts_checked: 0, crossovers_found: 0, alerts_created: 0 };
 
   try {
