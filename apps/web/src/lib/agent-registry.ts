@@ -46,6 +46,7 @@ export const AGENTS: Record<string, AgentDef> = {
   'import-seifa-postcodes':        { command: ['node', '--env-file=.env', 'scripts/import-seifa-postcodes.mjs'], displayName: 'Import SEIFA Postcodes', category: 'import', defaultPriority: 5, timeoutMs: 120_000, dependencies: [] },
   'import-social-traders':         { command: ['node', '--env-file=.env', 'scripts/ingest-social-traders.mjs'], displayName: 'Import Social Traders', category: 'import', defaultPriority: 5, timeoutMs: 300_000, dependencies: [] },
   'import-bcorp-au':               { command: ['node', '--env-file=.env', 'scripts/import-bcorp-au.mjs'], displayName: 'Import B Corp AU', category: 'import', defaultPriority: 5, timeoutMs: 300_000, dependencies: [] },
+  'import-ndis-participants':      { command: ['node', '--env-file=.env', 'scripts/import-ndis-participants.mjs', '--apply'], displayName: 'Import NDIS Participants', category: 'import', defaultPriority: 4, timeoutMs: 300_000, dependencies: [] },
   'import-ndis-provider-market':   { command: ['node', '--env-file=.env', 'scripts/import-ndis-provider-market.mjs'], displayName: 'Import NDIS Provider Market', category: 'import', defaultPriority: 4, timeoutMs: 300_000, dependencies: [] },
   'import-ndis-provider-register': { command: ['node', '--env-file=.env', 'scripts/import-ndis-provider-register.mjs'], displayName: 'Import NDIS Provider Register', category: 'import', defaultPriority: 4, timeoutMs: 3_600_000, dependencies: [] },
   'import-modern-slavery':         { command: ['node', '--env-file=.env', 'scripts/import-modern-slavery.mjs'], displayName: 'Import Modern Slavery Register', category: 'import', defaultPriority: 5, timeoutMs: 300_000, dependencies: [] },
@@ -106,6 +107,24 @@ export const AGENTS: Record<string, AgentDef> = {
 
   // ── State Donations ──────────────────────────────────────────────────────
   'import-qld-donations':         { command: ['node', '--env-file=.env', 'scripts/import-qld-donations.mjs', '--apply'], displayName: 'QLD Political Donations', category: 'import', defaultPriority: 2, timeoutMs: 600_000, dependencies: [] },
+
+  // ── Research Grants ────────────────────────────────────────────────────────
+  'import-arc-grants':            { command: ['node', '--env-file=.env', 'scripts/import-arc-grants.mjs', '--apply'], displayName: 'ARC Research Grants', category: 'import', defaultPriority: 2, timeoutMs: 900_000, dependencies: [] },
+  'import-nhmrc-grants':          { command: ['node', '--env-file=.env', 'scripts/import-nhmrc-grants.mjs', '--apply'], displayName: 'NHMRC Research Grants', category: 'import', defaultPriority: 2, timeoutMs: 300_000, dependencies: [] },
+  'link-research-grants-entities': { command: ['node', '--env-file=.env', 'scripts/link-research-grants-entities.mjs', '--apply'], displayName: 'Link Research Grants → Entities', category: 'graph', defaultPriority: 3, timeoutMs: 300_000, dependencies: ['import-arc-grants', 'import-nhmrc-grants'] },
+
+  // ── Justice Funding Bridge ─────────────────────────────────────────────────
+  'bridge-justice-funding':       { command: ['node', '--env-file=.env', 'scripts/bridge-justice-funding.mjs', '--apply'], displayName: 'Justice Funding → Entity Bridge', category: 'graph', defaultPriority: 3, timeoutMs: 1_800_000, dependencies: [] },
+
+  // ── State Procurement ──────────────────────────────────────────────────────
+  'import-nsw-contracts':         { command: ['node', '--env-file=.env', 'scripts/import-nsw-contracts.mjs', '--apply'], displayName: 'NSW eTendering Contracts', category: 'import', defaultPriority: 2, timeoutMs: 300_000, dependencies: [] },
+  'import-qld-contracts':         { command: ['node', '--env-file=.env', 'scripts/import-qld-contracts.mjs', '--apply'], displayName: 'QLD Awarded Contracts', category: 'import', defaultPriority: 2, timeoutMs: 300_000, dependencies: [] },
+  'import-nt-contracts':          { command: ['node', '--env-file=.env', 'scripts/import-nt-contracts.mjs', '--apply'], displayName: 'NT Awarded Contracts', category: 'import', defaultPriority: 2, timeoutMs: 300_000, dependencies: [] },
+  'import-act-contracts':         { command: ['node', '--env-file=.env', 'scripts/import-act-contracts.mjs', '--apply'], displayName: 'ACT Government Contracts', category: 'import', defaultPriority: 2, timeoutMs: 300_000, dependencies: [] },
+  'import-rogs-youth-justice':    { command: ['node', '--env-file=.env', 'scripts/import-rogs-youth-justice.mjs', '--apply'], displayName: 'ROGS Youth Justice Expenditure', category: 'import', defaultPriority: 2, timeoutMs: 300_000, dependencies: [] },
+  'scrape-tas-contracts':         { command: ['node', '--env-file=.env', 'scripts/scrape-tas-contracts.mjs', '--apply', '--resume'], displayName: 'TAS Awarded Contracts', category: 'import', defaultPriority: 2, timeoutMs: 7_200_000, dependencies: [] },
+  'import-ctg-youth-justice':     { command: ['node', '--env-file=.env', 'scripts/import-ctg-youth-justice.mjs', '--apply'], displayName: 'Closing the Gap Youth Justice', category: 'import', defaultPriority: 2, timeoutMs: 300_000, dependencies: [] },
+  'import-bocsar-crime':          { command: ['node', '--env-file=.env', 'scripts/import-bocsar-crime.mjs', '--download', '--apply'], displayName: 'NSW BOCSAR LGA Crime Stats', category: 'import', defaultPriority: 2, timeoutMs: 600_000, dependencies: [] },
 };
 
 export const CATEGORIES: AgentCategory[] = ['sync', 'import', 'discovery', 'enrichment', 'profiling', 'graph', 'embedding', 'analytics', 'intelligence', 'goods', 'nz', 'scraping'];
