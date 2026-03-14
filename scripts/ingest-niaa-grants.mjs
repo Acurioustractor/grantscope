@@ -17,7 +17,8 @@ import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const DRY_RUN = process.argv.includes('--dry-run');
+const APPLY = process.argv.includes('--apply');
+const DRY_RUN = process.argv.includes('--dry-run') || !APPLY;
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
@@ -68,6 +69,9 @@ async function main() {
   const run = await logStart(supabase, 'ingest-niaa-senate-order-16', 'Ingest NIAA Senate Order 16');
 
   try {
+    log(`Mode: ${APPLY ? 'APPLY' : 'DRY RUN'}`);
+    if (!APPLY) log('🔒 DRY RUN — pass --apply to execute changes');
+
     // 1. Read CSV
     const csvPath = new URL('../data/niaa/senate-order-16-apr-2025.csv', import.meta.url).pathname;
     const csvData = readFileSync(csvPath, 'utf-8');
@@ -110,13 +114,16 @@ async function main() {
     log(`Existing rows with source='${SOURCE}': ${existingCount || 0}`);
 
     if (existingCount > 0) {
-      log(`Deleting ${existingCount} existing rows to re-ingest cleanly`);
-      if (!DRY_RUN) {
+      if (APPLY) {
+        log(`Deleting ${existingCount} existing rows to re-ingest cleanly`);
         const { error: delError } = await supabase
           .from('justice_funding')
           .delete()
           .eq('source', SOURCE);
         if (delError) throw new Error(`Delete failed: ${delError.message}`);
+        log('✅ Deleted existing records');
+      } else {
+        log(`⏭️  Would delete ${existingCount} existing records from justice_funding (dry run)`);
       }
     }
 

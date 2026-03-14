@@ -27,6 +27,8 @@ import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = join(__dirname, '..', 'data');
 
+const APPLY = process.argv.includes('--apply');
+
 const supabase = createClient(
   process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -149,7 +151,8 @@ async function main() {
   const startedAt = Date.now();
   let itemsFound = 0, itemsNew = 0;
 
-  console.log('=== Import AGIL Communities ===\n');
+  console.log('=== Import AGIL Communities ===');
+  if (!APPLY) console.log('🔒 DRY RUN — pass --apply to execute changes\n');
 
   // 1. Load data sources
   console.log('1. Loading data sources...');
@@ -199,10 +202,21 @@ async function main() {
   // 3. Clear old data and prepare for fresh import
   console.log('\n3. Clearing old community data...');
   // Delete in FK order: signals → asset_lifecycle → supply_routes → procurement_entities → communities
-  for (const table of ['goods_procurement_signals', 'goods_asset_lifecycle', 'goods_supply_routes', 'goods_procurement_entities', 'goods_communities']) {
-    const { error } = await supabase.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    if (error) console.log(`   Warning deleting ${table}: ${error.message.slice(0, 100)}`);
-    else console.log(`   Cleared ${table}`);
+  const tables = ['goods_procurement_signals', 'goods_asset_lifecycle', 'goods_supply_routes', 'goods_procurement_entities', 'goods_communities'];
+
+  if (APPLY) {
+    for (const table of tables) {
+      const { error } = await supabase.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (error) console.log(`   Warning deleting ${table}: ${error.message.slice(0, 100)}`);
+      else console.log(`   Cleared ${table}`);
+    }
+  } else {
+    console.log('   ⏭️  DRY RUN: Would delete all rows from the following tables:');
+    for (const table of tables) {
+      // Query count to show what would be deleted
+      const { count } = await supabase.from(table).select('id', { count: 'exact', head: true });
+      console.log(`      - ${table}: ${count || 0} rows`);
+    }
   }
 
   // 4. Build community rows from AGIL + BushTel
@@ -281,31 +295,60 @@ async function main() {
   // 5. Upsert communities
   console.log('\n5. Inserting communities...');
   const BATCH = 100;
-  for (let i = 0; i < rows.length; i += BATCH) {
-    const batch = rows.slice(i, i + BATCH);
-    const { error } = await supabase.from('goods_communities').upsert(batch, {
-      onConflict: 'community_name,state',
-      ignoreDuplicates: false,
-    });
-    if (error) {
-      console.log(`   Batch ${i} error: ${error.message.slice(0, 150)}`);
-      // Try one-by-one for diagnostics
-      for (const row of batch) {
-        const { error: e2 } = await supabase.from('goods_communities').upsert([row], {
-          onConflict: 'community_name,state',
-          ignoreDuplicates: true,
-        });
-        if (!e2) itemsNew++;
+
+  if (APPLY) {
+    for (let i = 0; i < rows.length; i += BATCH) {
+      const batch = rows.slice(i, i + BATCH);
+      const { error } = await supabase.from('goods_communities').upsert(batch, {
+        onConflict: 'community_name,state',
+        ignoreDuplicates: false,
+      });
+      if (error) {
+        console.log(`   Batch ${i} error: ${error.message.slice(0, 150)}`);
+        // Try one-by-one for diagnostics
+        for (const row of batch) {
+          const { error: e2 } = await supabase.from('goods_communities').upsert([row], {
+            onConflict: 'community_name,state',
+            ignoreDuplicates: true,
+          });
+          if (!e2) itemsNew++;
+        }
+      } else {
+        itemsNew += batch.length;
       }
-    } else {
-      itemsNew += batch.length;
+      if (i % 500 === 0 && i > 0) process.stdout.write(`   ${i}/${rows.length}\r`);
     }
-    if (i % 500 === 0 && i > 0) process.stdout.write(`   ${i}/${rows.length}\r`);
+    console.log(`   Inserted ${itemsNew} communities\n`);
+  } else {
+    console.log(`   ⏭️  DRY RUN: Would upsert ${rows.length} communities`);
+    console.log(`   Sample communities:`);
+    for (const row of rows.slice(0, 5)) {
+      console.log(`      - ${row.community_name}, ${row.state} (${row.remoteness || 'unknown remoteness'})`);
+    }
+    console.log();
   }
-  console.log(`   Inserted ${itemsNew} communities\n`);
 
   // 6. Enrich with CivicGraph procurement entities
   console.log('6. Matching procurement entities...');
+
+  if (!APPLY) {
+    console.log('   ⏭️  DRY RUN: Would match procurement entities (skipping in dry run)\n');
+    console.log('=== SUMMARY (DRY RUN) ===');
+    console.log(`Total AGIL locations:     ${agil.size}`);
+    console.log(`Communities to import:     ${rows.length}`);
+    console.log('');
+    console.log('By state:');
+    const byState = {};
+    for (const r of rows) {
+      byState[r.state] = (byState[r.state] || 0) + 1;
+    }
+    for (const [s, n] of Object.entries(byState).sort((a, b) => b[1] - a[1])) {
+      console.log(`  ${s}: ${n}`);
+    }
+    if (runId) await logComplete(supabase, runId, { items_found: itemsFound, items_new: 0 });
+    return;
+  }
+
   // Get all communities with postcodes
   const commWithPostcodes = await sql(`
     SELECT id, community_name, state, postcode

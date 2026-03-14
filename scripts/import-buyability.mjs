@@ -22,7 +22,8 @@ import { execFileSync } from 'node:child_process';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const DRY_RUN = process.argv.includes('--dry-run');
+const APPLY = process.argv.includes('--apply');
+const DRY_RUN = process.argv.includes('--dry-run') || !APPLY;
 const limitArg = process.argv.find((a) => a.startsWith('--limit='));
 const LIMIT = limitArg ? parseInt(limitArg.split('=')[1], 10) : null;
 const concurrencyArg = process.argv.find((a) => a.startsWith('--concurrency='));
@@ -198,17 +199,20 @@ async function collapseBuyabilityDuplicates() {
     return;
   }
 
-  const BATCH_SIZE = 100;
-  for (let i = 0; i < duplicateIds.length; i += BATCH_SIZE) {
-    const batch = duplicateIds.slice(i, i + BATCH_SIZE);
-    const { error: deleteError } = await supabase
-      .from('social_enterprises')
-      .delete()
-      .in('id', batch);
-    if (deleteError) throw deleteError;
+  if (APPLY) {
+    const BATCH_SIZE = 100;
+    for (let i = 0; i < duplicateIds.length; i += BATCH_SIZE) {
+      const batch = duplicateIds.slice(i, i + BATCH_SIZE);
+      const { error: deleteError } = await supabase
+        .from('social_enterprises')
+        .delete()
+        .in('id', batch);
+      if (deleteError) throw deleteError;
+    }
+    log(`Collapsed ${duplicateIds.length} stale BuyAbility duplicate rows`);
+  } else {
+    log(`⏭️  Would collapse ${duplicateIds.length} duplicate BuyAbility rows (dry run)`);
   }
-
-  log(`Collapsed ${duplicateIds.length} stale BuyAbility duplicate rows`);
 }
 
 function parseDirectoryCards(html) {
@@ -286,6 +290,7 @@ async function mapWithConcurrency(items, limit, mapper) {
 
 async function run() {
   log('Starting BuyAbility import...');
+  if (!APPLY) log('🔒 DRY RUN — pass --apply to execute changes');
 
   const enterprises = await scrapeDirectory();
   log(`Found ${enterprises.length} directory entries`);

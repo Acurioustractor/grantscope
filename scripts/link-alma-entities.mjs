@@ -59,22 +59,33 @@ async function main() {
 
   for (const [orgName, interventionIds] of orgMap) {
     // 2. Build search terms — use significant words
-    const words = orgName.split(/\s+/).filter(w => w.length > 3);
+    const stopWords = new Set(['the', 'and', 'for', 'with', 'from', 'that', 'this', 'department', 'government']);
+    const words = orgName.split(/[^a-zA-Z]+/).filter(w => w.length > 3 && !stopWords.has(w.toLowerCase()));
     if (!words.length) { skipped++; continue; }
 
-    // Use first 2-3 significant words for ILIKE search
-    const searchTerms = words.slice(0, 3);
-    let query = db
+    // Try multiple search strategies and combine candidates
+    const allCandidates = new Map();
+
+    // Strategy 1: Full org name ILIKE
+    const { data: c1 } = await db
       .from('gs_entities')
       .select('id, canonical_name, gs_id, abn')
-      .limit(10);
+      .ilike('canonical_name', `%${words[0]}%`)
+      .limit(20);
+    for (const c of c1 || []) allCandidates.set(c.id, c);
 
-    // Chain ILIKE filters for each word
-    for (const word of searchTerms) {
-      query = query.ilike('canonical_name', `%${word}%`);
+    // Strategy 2: If >1 word, try first two words together
+    if (words.length > 1) {
+      const { data: c2 } = await db
+        .from('gs_entities')
+        .select('id, canonical_name, gs_id, abn')
+        .ilike('canonical_name', `%${words[0]}%`)
+        .ilike('canonical_name', `%${words[1]}%`)
+        .limit(20);
+      for (const c of c2 || []) allCandidates.set(c.id, c);
     }
 
-    const { data: candidates } = await query;
+    const candidates = [...allCandidates.values()];
     if (!candidates?.length) { skipped++; continue; }
 
     // 3. Score with local similarity (simple trigram approximation)

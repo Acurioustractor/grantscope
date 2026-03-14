@@ -32,6 +32,21 @@ const FUZZY_THRESHOLD = 0.7;
 
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// ─── Name normalization ──────────────────────────────────────────────────
+
+function normalizeName(name) {
+  return name
+    .replace(/&#39;/g, "'")
+    .replace(/&#34;/g, '"')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/\[.*?\]\s*/g, '') // Remove [ECQ] prefixes
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
 // ─── Trigram similarity (mirrors pg_trgm) ────────────────────────────────
 
 function trigrams(s) {
@@ -87,17 +102,27 @@ async function main() {
     if (PHASE_FILTER) console.log(`  Phase filter: ${PHASE_FILTER}`);
     console.log();
 
-    let query = db
-      .from('political_donations')
-      .select('id, donor_name')
-      .is('donor_abn', null)
-      .not('donor_name', 'is', null)
-      .order('amount', { ascending: false });
+    const donations = [];
+    const donationPageSize = 1000;
+    let donationOffset = 0;
+    while (true) {
+      const { data: page, error: pageError } = await db
+        .from('political_donations')
+        .select('id, donor_name')
+        .is('donor_abn', null)
+        .not('donor_name', 'is', null)
+        .order('amount', { ascending: false })
+        .range(donationOffset, donationOffset + donationPageSize - 1);
 
-    if (LIMIT) query = query.limit(LIMIT);
-
-    const { data: donations, error } = await query;
-    if (error) throw error;
+      if (pageError) throw pageError;
+      if (!page?.length) break;
+      donations.push(...page);
+      if (page.length < donationPageSize) break;
+      if (LIMIT && donations.length >= LIMIT) break;
+      donationOffset += donationPageSize;
+    }
+    if (LIMIT) donations.splice(LIMIT);
+    const error = null;
 
     if (!donations?.length) {
       console.log('No unmatched donations found.');
@@ -105,10 +130,10 @@ async function main() {
       return;
     }
 
-    // Dedupe by donor name
+    // Dedupe by normalized donor name
     const nameMap = new Map();
     for (const d of donations) {
-      const name = d.donor_name.trim();
+      const name = normalizeName(d.donor_name);
       if (!name || name.length < 3) continue;
       if (!nameMap.has(name)) nameMap.set(name, []);
       nameMap.get(name).push(d.id);
@@ -120,17 +145,18 @@ async function main() {
     console.log('\nBuilding entity name index...');
     const entityIndex = new Map();
     let offset = 0;
-    const pageSize = 5000;
+    const pageSize = 1000; // Supabase client caps at 1000 per request
     while (true) {
-      const { data: entities } = await db
+      const { data: entities, error: entityError } = await db
         .from('gs_entities')
         .select('id, canonical_name, abn')
         .not('abn', 'is', null)
         .range(offset, offset + pageSize - 1);
 
+      if (entityError) throw entityError;
       if (!entities?.length) break;
       for (const e of entities) {
-        entityIndex.set(e.canonical_name.toLowerCase(), e.abn);
+        entityIndex.set(normalizeName(e.canonical_name), e.abn);
       }
       if (entities.length < pageSize) break;
       offset += pageSize;
@@ -146,11 +172,11 @@ async function main() {
     if (!PHASE_FILTER || PHASE_FILTER === '1') {
       console.log('\n--- Phase 1: Exact Name Match ---');
       for (const [name, ids] of nameMap) {
-        const abn = entityIndex.get(name.toLowerCase());
+        const abn = entityIndex.get(name); // nameMap keys are already normalized/lowercase
         if (abn) {
           phase1Matches++;
           updates.push({ ids, abn, method: 'exact_name' });
-          nameMap.delete(name); // Remove from further processing
+          nameMap.delete(name);
         }
       }
       console.log(`  ${phase1Matches} exact matches`);

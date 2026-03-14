@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
- * Person-Role Bridge — Inserts person_roles as board_member edges in gs_relationships
+ * Bridge Person Roles → Graph
  *
- * For each person_role:
- *   1. Find the company entity by ABN or ACN in gs_entities
- *   2. Find or create a person entity
- *   3. Insert a 'board_member' relationship in gs_relationships
+ * 1. Match person_roles.company_abn → gs_entities to find company entities
+ * 2. Create person entities in gs_entities for each unique person
+ * 3. Create gs_relationships from person → company with role_type
+ * 4. Backfill person_roles.entity_id and person_entity_id
  *
  * Usage:
  *   node --env-file=.env scripts/bridge-person-roles.mjs [--apply] [--limit=1000]
@@ -27,144 +27,204 @@ const LIMIT = parseInt(process.argv.find(a => a.startsWith('--limit='))?.split('
 
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+function titleCase(name) {
+  return name.split(' ').map(w =>
+    w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+  ).join(' ');
+}
+
+// Map person_roles role_type → gs_relationships relationship_type
+const ROLE_TO_REL = {
+  director: 'directorship',
+  chair: 'directorship',
+  board_member: 'member_of',
+  secretary: 'member_of',
+  trustee: 'member_of',
+  officeholder: 'member_of',
+  public_officer: 'member_of',
+  other: 'member_of',
+};
+
+function personGsId(normName) {
+  const slug = normName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  return `GS-PERSON-${slug}`.slice(0, 80);
+}
+
 async function main() {
   const run = await logStart(db, 'bridge-person-roles', 'Bridge Person Roles');
 
   try {
-    console.log('=== Bridge Person Roles to gs_relationships ===');
+    console.log('=== Bridge Person Roles → Graph ===');
     console.log(`  Mode: ${APPLY ? 'APPLY' : 'DRY RUN'}`);
     console.log();
 
-    // 1. Get person_roles that have entity_id (company linked) but need graph edges
-    let query = db
-      .from('person_roles')
-      .select('id, person_name, person_name_normalised, role_type, company_name, company_abn, company_acn, entity_id, person_entity_id, appointment_date, cessation_date')
-      .not('entity_id', 'is', null)
-      .order('created_at', { ascending: false });
+    // 1. Fetch all person_roles with company_abn
+    const allRoles = [];
+    let offset = 0;
+    const pageSize = 1000;
 
-    if (LIMIT) query = query.limit(LIMIT);
+    while (true) {
+      let query = db
+        .from('person_roles')
+        .select('id, person_name, person_name_normalised, role_type, company_name, company_abn, appointment_date, cessation_date, source')
+        .not('company_abn', 'is', null)
+        .range(offset, offset + pageSize - 1);
 
-    const { data: roles, error } = await query;
-    if (error) throw error;
-
-    if (!roles?.length) {
-      console.log('No person roles with linked company entities found.');
-      await logComplete(db, run.id, { items_found: 0, items_new: 0 });
-      return;
+      const { data: page, error } = await query;
+      if (error) throw error;
+      if (!page || page.length === 0) break;
+      allRoles.push(...page);
+      if (page.length < pageSize) break;
+      offset += pageSize;
     }
 
-    console.log(`${roles.length} person roles to process`);
+    console.log(`  ${allRoles.length} person roles with company ABN`);
 
-    // 2. Get existing board_member relationships to avoid duplicates
-    const { data: existingRels } = await db
-      .from('gs_relationships')
-      .select('source_entity_id, target_entity_id')
-      .eq('relationship_type', 'board_member');
+    // 2. Build ABN → gs_entity map
+    const uniqueAbns = [...new Set(allRoles.map(r => r.company_abn))];
+    const abnToEntity = new Map();
 
-    const existingSet = new Set(
-      (existingRels || []).map(r => `${r.source_entity_id}:${r.target_entity_id}`)
-    );
-    console.log(`${existingSet.size} existing board_member relationships`);
+    for (let i = 0; i < uniqueAbns.length; i += 100) {
+      const batch = uniqueAbns.slice(i, i + 100);
+      const { data: entities, error } = await db
+        .from('gs_entities')
+        .select('id, abn')
+        .in('abn', batch);
+      if (error) throw error;
+      for (const e of entities) abnToEntity.set(e.abn, e.id);
+    }
 
-    // 3. Build person entity lookup — find person entities or track needed ones
-    const personEntityIds = new Set();
-    const personsByName = new Map();
+    console.log(`  ${abnToEntity.size}/${uniqueAbns.length} company ABNs matched to gs_entities`);
 
-    for (const role of roles) {
-      if (role.person_entity_id) {
-        personEntityIds.add(role.person_entity_id);
-      } else {
-        // Group by normalised name
-        const normName = role.person_name_normalised || role.person_name.toUpperCase().trim();
-        if (!personsByName.has(normName)) {
-          personsByName.set(normName, { name: role.person_name, roles: [] });
-        }
-        personsByName.get(normName).roles.push(role);
+    // 3. Group roles by person
+    const personMap = new Map(); // norm_name → { displayName, roles[] }
+    for (const role of allRoles) {
+      const key = role.person_name_normalised || role.person_name.toUpperCase().trim();
+      if (!personMap.has(key)) {
+        personMap.set(key, { displayName: titleCase(key), roles: [] });
       }
+      personMap.get(key).roles.push(role);
     }
 
-    // 4. Look up existing person entities
-    const { data: existingPersons } = await db
-      .from('gs_entities')
-      .select('id, canonical_name')
-      .eq('entity_type', 'person')
-      .in('canonical_name', [...personsByName.keys()].map(n =>
-        n.split(' ').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')
-      ));
+    console.log(`  ${personMap.size} unique persons`);
 
-    const personEntityByName = new Map();
-    for (const p of existingPersons || []) {
-      personEntityByName.set(p.canonical_name.toUpperCase(), p.id);
-    }
-
-    // 5. Create relationships
-    let created = 0;
+    // 4. Process each person
+    let personsCreated = 0;
+    let relsCreated = 0;
     let skipped = 0;
-    const toInsert = [];
+    let errors = 0;
 
-    for (const role of roles) {
-      let personId = role.person_entity_id;
-      if (!personId) {
-        const normName = role.person_name_normalised || role.person_name.toUpperCase().trim();
-        personId = personEntityByName.get(normName);
-      }
+    const entries = [...personMap.entries()];
+    const toProcess = LIMIT ? entries.slice(0, LIMIT) : entries;
 
-      if (!personId || !role.entity_id) {
-        skipped++;
-        continue;
-      }
+    for (let i = 0; i < toProcess.length; i++) {
+      const [normName, { displayName, roles }] = toProcess[i];
 
-      const key = `${personId}:${role.entity_id}`;
-      if (existingSet.has(key)) {
-        skipped++;
-        continue;
-      }
-
-      existingSet.add(key); // Prevent dupes in this batch
-
-      toInsert.push({
-        source_entity_id: personId,
-        target_entity_id: role.entity_id,
-        relationship_type: 'board_member',
-        dataset: 'asic_officeholders',
-        year: role.appointment_date ? new Date(role.appointment_date).getFullYear() : null,
-        properties: {
-          role_type: role.role_type,
-          appointment_date: role.appointment_date,
-          cessation_date: role.cessation_date,
-          active: !role.cessation_date,
-        },
-      });
-    }
-
-    console.log(`\n${toInsert.length} new relationships to create (${skipped} skipped)`);
-
-    if (APPLY && toInsert.length > 0) {
-      // Insert in batches of 500
-      for (let i = 0; i < toInsert.length; i += 500) {
-        const batch = toInsert.slice(i, i + 500);
-        const { error: insertError } = await db
-          .from('gs_relationships')
-          .insert(batch);
-
-        if (insertError) {
-          console.error(`Batch insert error: ${insertError.message}`);
-        } else {
-          created += batch.length;
+      // Find distinct companies for this person
+      const companyEdges = new Map(); // entityId-relType → edge data
+      for (const role of roles) {
+        const companyEntityId = abnToEntity.get(role.company_abn);
+        if (!companyEntityId) continue;
+        const relType = ROLE_TO_REL[role.role_type] || 'member_of';
+        const key = `${companyEntityId}:${relType}`;
+        if (!companyEdges.has(key)) {
+          companyEdges.set(key, {
+            companyEntityId,
+            relType,
+            originalRole: role.role_type,
+            appointmentDate: role.appointment_date,
+            cessationDate: role.cessation_date,
+            source: role.source || 'acnc',
+          });
         }
       }
-      console.log(`  ${created} relationships created`);
+
+      if (companyEdges.size === 0) {
+        skipped++;
+        continue;
+      }
+
+      if (!APPLY) {
+        personsCreated++;
+        relsCreated += companyEdges.size;
+        continue;
+      }
+
+      // Create person entity
+      const gsId = personGsId(normName);
+      const { data: personEntity, error: personError } = await db
+        .from('gs_entities')
+        .upsert({
+          gs_id: gsId,
+          canonical_name: displayName,
+          entity_type: 'person',
+          source_count: roles.length,
+          confidence: 'registry',
+        }, { onConflict: 'gs_id' })
+        .select('id')
+        .single();
+
+      if (personError) {
+        errors++;
+        if (errors <= 5) console.error(`  Error creating person ${displayName}: ${personError.message}`);
+        continue;
+      }
+
+      personsCreated++;
+      const personEntityId = personEntity.id;
+
+      // Create relationships
+      const relBatch = [];
+      for (const [, edge] of companyEdges) {
+        relBatch.push({
+          source_entity_id: personEntityId,
+          target_entity_id: edge.companyEntityId,
+          relationship_type: edge.relType,
+          dataset: 'person_roles',
+          confidence: 'registry',
+          start_date: edge.appointmentDate || null,
+          end_date: edge.cessationDate || null,
+          properties: { source: edge.source, original_role: edge.originalRole },
+        });
+      }
+
+      const { error: relError } = await db
+        .from('gs_relationships')
+        .insert(relBatch);
+
+      if (relError) {
+        errors++;
+        if (errors <= 5) console.error(`  Error creating relationships for ${displayName}: ${relError.message}`);
+      } else {
+        relsCreated += relBatch.length;
+      }
+
+      // Update person_roles with entity references
+      const roleIds = roles.filter(r => abnToEntity.has(r.company_abn)).map(r => r.id);
+      if (roleIds.length > 0) {
+        const firstCompanyId = abnToEntity.get(roles.find(r => abnToEntity.has(r.company_abn)).company_abn);
+        await db
+          .from('person_roles')
+          .update({ person_entity_id: personEntityId, entity_id: firstCompanyId })
+          .in('id', roleIds);
+      }
+
+      if ((i + 1) % 500 === 0) {
+        console.log(`  Progress: ${i + 1}/${toProcess.length} (${personsCreated} persons, ${relsCreated} relationships)`);
+      }
     }
 
     console.log(`\n=== Summary ===`);
-    console.log(`Roles processed: ${roles.length}`);
-    console.log(`New edges: ${toInsert.length}`);
-    console.log(`Created: ${created}`);
-    if (!APPLY) console.log('(DRY RUN — use --apply to write changes)');
+    console.log(`  Persons: ${personsCreated} created`);
+    console.log(`  Relationships: ${relsCreated} created`);
+    console.log(`  Skipped (no matching company): ${skipped}`);
+    console.log(`  Errors: ${errors}`);
+    if (!APPLY) console.log('  (DRY RUN — use --apply to write changes)');
 
     await logComplete(db, run.id, {
-      items_found: roles.length,
-      items_new: created,
+      items_found: toProcess.length,
+      items_new: personsCreated,
+      items_updated: relsCreated,
     });
 
   } catch (err) {
