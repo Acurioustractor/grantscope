@@ -81,6 +81,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
   const [results, setResults] = useState<{ entities: EntityResult[]; foundations: FoundationResult[]; grants: GrantResult[] }>({ entities: [], foundations: [], grants: [] });
   const [loading, setLoading] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [searchMode, setSearchMode] = useState<'text' | 'ai'>('text');
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -122,13 +123,21 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
       return;
     }
 
+    // Use semantic search for natural language queries (>5 words), text search otherwise
+    const wordCount = query.trim().split(/\s+/).length;
+    const useAI = searchMode === 'ai' || (searchMode === 'text' && wordCount > 5);
+
     const timer = setTimeout(() => {
       abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
       setLoading(true);
 
-      fetch(`/api/global-search?q=${encodeURIComponent(query)}`, { signal: controller.signal })
+      const endpoint = useAI
+        ? `/api/search/universal?q=${encodeURIComponent(query)}`
+        : `/api/global-search?q=${encodeURIComponent(query)}`;
+
+      fetch(endpoint, { signal: controller.signal })
         .then(res => res.json())
         .then(data => {
           setResults(data);
@@ -138,10 +147,10 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
         .catch(err => {
           if (err.name !== 'AbortError') setLoading(false);
         });
-    }, 300);
+    }, useAI ? 500 : 300);
 
     return () => clearTimeout(timer);
-  }, [query]);
+  }, [query, searchMode]);
 
   const navigate = useCallback((href: string) => {
     onClose();
@@ -358,6 +367,16 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
               <span><kbd className="px-1.5 py-0.5 border border-bauhaus-black/20 font-black">&#8629;</kbd> select</span>
               <span><kbd className="px-1.5 py-0.5 border border-bauhaus-black/20 font-black">esc</kbd> close</span>
             </div>
+            <button
+              onClick={() => setSearchMode(m => m === 'text' ? 'ai' : 'text')}
+              className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 border-2 transition-colors cursor-pointer ${
+                searchMode === 'ai'
+                  ? 'border-bauhaus-blue bg-link-light text-bauhaus-blue'
+                  : 'border-bauhaus-black/20 text-bauhaus-muted hover:border-bauhaus-black/40'
+              }`}
+            >
+              {searchMode === 'ai' ? 'AI Search' : 'Text Search'}
+            </button>
           </div>
         </div>
       </div>

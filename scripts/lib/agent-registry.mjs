@@ -270,6 +270,14 @@ export const AGENTS = {
     timeoutMs: 600_000,
     dependencies: [],
   },
+  'enrich-entity-contacts': {
+    command: ['node', '--env-file=.env', 'scripts/enrich-entity-contacts.mjs', '--apply'],
+    displayName: 'Enrich Entity Contacts',
+    category: 'enrichment',
+    defaultPriority: 4,
+    timeoutMs: 600_000,
+    dependencies: ['build-entity-graph'],
+  },
   'enrich-charities': {
     command: ['node', '--env-file=.env', 'scripts/enrich-charities.mjs'],
     displayName: 'Enrich Charities',
@@ -378,6 +386,22 @@ export const AGENTS = {
     timeoutMs: 300_000,
     dependencies: ['build-entity-graph'],
   },
+  'bridge-person-roles': {
+    command: ['node', '--env-file=.env', 'scripts/bridge-person-roles.mjs', '--apply'],
+    displayName: 'Bridge Person Roles',
+    category: 'graph',
+    defaultPriority: 4,
+    timeoutMs: 600_000,
+    dependencies: ['build-entity-graph'],
+  },
+  'link-alma-entities': {
+    command: ['node', '--env-file=.env', 'scripts/link-alma-entities.mjs', '--apply'],
+    displayName: 'Link ALMA Entities',
+    category: 'graph',
+    defaultPriority: 4,
+    timeoutMs: 300_000,
+    dependencies: ['build-entity-graph'],
+  },
 
   // ── Embedding ───────────────────────────────────────────────────────────────
   'backfill-embeddings': {
@@ -387,6 +411,22 @@ export const AGENTS = {
     defaultPriority: 5,
     timeoutMs: 300_000,
     dependencies: [],
+  },
+  'backfill-entity-embeddings': {
+    command: ['node', '--env-file=.env', 'scripts/backfill-entity-embeddings.mjs', '--batch-size', '100'],
+    displayName: 'Backfill Entity Embeddings',
+    category: 'embedding',
+    defaultPriority: 4,
+    timeoutMs: 3_600_000,
+    dependencies: ['build-entity-graph'],
+  },
+  'backfill-foundation-embeddings': {
+    command: ['node', '--env-file=.env', 'scripts/backfill-foundation-embeddings.mjs', '--batch-size', '100'],
+    displayName: 'Backfill Foundation Embeddings',
+    category: 'embedding',
+    defaultPriority: 4,
+    timeoutMs: 600_000,
+    dependencies: ['enrich-foundations'],
   },
 
   // ── Analytics ───────────────────────────────────────────────────────────────
@@ -423,6 +463,14 @@ export const AGENTS = {
     defaultPriority: 3,
     timeoutMs: 1_800_000,
     dependencies: [],
+  },
+  'resolve-donation-abns-v2': {
+    command: ['node', '--env-file=.env', 'scripts/resolve-donation-abns-v2.mjs', '--apply'],
+    displayName: 'Resolve Donation ABNs v2',
+    category: 'graph',
+    defaultPriority: 3,
+    timeoutMs: 3_600_000,
+    dependencies: ['build-entity-graph'],
   },
   'resolve-social-enterprise-abns': {
     command: ['node', '--env-file=.env', 'scripts/resolve-social-enterprise-abns.mjs', '--apply'],
@@ -461,6 +509,14 @@ export const AGENTS = {
     defaultPriority: 2,
     timeoutMs: 300_000,
     dependencies: [],
+  },
+  'deliver-grant-notifications': {
+    command: ['node', '--env-file=.env', 'scripts/deliver-grant-notifications.mjs'],
+    displayName: 'Deliver Grant Notifications',
+    category: 'intelligence',
+    defaultPriority: 2,
+    timeoutMs: 300_000,
+    dependencies: ['scout-grants-for-profiles'],
   },
   'score-foundation-alignment': {
     command: ['node', '--env-file=.env', 'scripts/score-foundation-alignment.mjs'],
@@ -528,7 +584,6 @@ export const AGENTS = {
     timeoutMs: 300_000,
     dependencies: ['goods-community-census'],
   },
-};
 
   // ── New Zealand (NZ data sources) ───────────────────────────────────────────
   'import-nz-charities': {
@@ -539,9 +594,29 @@ export const AGENTS = {
     timeoutMs: 600_000,
     dependencies: [],
   },
+
+  // ── Scraping (external API scraping) ────────────────────────────────────────
+  'scrape-acnc-persons': {
+    command: ['node', '--env-file=.env', 'scripts/scrape-acnc-responsible-persons.mjs', '--priority-only', '--apply'],
+    displayName: 'ACNC Responsible Persons',
+    category: 'scraping',
+    defaultPriority: 2,
+    timeoutMs: 3_600_000,
+    dependencies: [],
+  },
+
+  // ── State Donations ─────────────────────────────────────────────────────────
+  'import-qld-donations': {
+    command: ['node', '--env-file=.env', 'scripts/import-qld-donations.mjs', '--apply'],
+    displayName: 'QLD Political Donations',
+    category: 'import',
+    defaultPriority: 2,
+    timeoutMs: 600_000,
+    dependencies: [],
+  },
 };
 
-export const CATEGORIES = ['sync', 'import', 'discovery', 'enrichment', 'profiling', 'graph', 'embedding', 'analytics', 'intelligence', 'goods', 'nz'];
+export const CATEGORIES = ['sync', 'import', 'discovery', 'enrichment', 'profiling', 'graph', 'embedding', 'analytics', 'intelligence', 'goods', 'nz', 'scraping'];
 
 export function getAgent(agentId) {
   return AGENTS[agentId] ?? null;

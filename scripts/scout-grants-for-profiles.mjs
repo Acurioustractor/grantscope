@@ -256,6 +256,42 @@ async function main() {
           totalAdded += newGrants.length;
           console.log(`  ✓ Added ${newGrants.length} grants to tracker`);
         }
+
+        // 5b. Queue grant notifications for high-match grants
+        if (profile.notify_email) {
+          const notifyThreshold = profile.notify_threshold || MIN_SCORE;
+          const notifiable = newGrants.filter(g => g.match_score >= notifyThreshold);
+          if (notifiable.length > 0) {
+            const outboxRows = notifiable.map(g => ({
+              user_id: profile.user_id,
+              org_profile_id: profile.id,
+              grant_id: g.id,
+              notification_type: 'grant_match',
+              subject: `New grant match: ${g.name?.slice(0, 80)}`,
+              body: [
+                `Grant: ${g.name}`,
+                `Match score: ${g.match_score}%`,
+                `Signals: ${g.match_signals.join(', ')}`,
+                g.deadline ? `Deadline: ${g.deadline}` : null,
+                g.url ? `\nMore info: ${g.url}` : null,
+                '',
+                'View in CivicGraph: https://civicgraph.au/grants',
+              ].filter(Boolean).join('\n'),
+              match_score: g.match_score,
+              match_signals: g.match_signals,
+            }));
+
+            const { error: outboxError } = await supabase
+              .from('grant_notification_outbox')
+              .upsert(outboxRows, { onConflict: 'user_id,grant_id,notification_type', ignoreDuplicates: true });
+
+            if (outboxError) {
+              console.error(`  Error queuing notifications:`, outboxError.message);
+            } else {
+              console.log(`  ✓ Queued ${notifiable.length} grant notifications`);
+            }
+          }
+        }
       }
 
       // 6. Update alert match counts
