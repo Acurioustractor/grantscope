@@ -41,6 +41,50 @@ export default function ReportsPage() {
         </ol>
       </div>
 
+      {/* ===== FLAGSHIP: TRIPLE PLAY ===== */}
+      <section className="mb-6">
+        <a href="/reports/triple-play" className="group block">
+          <div className="bg-bauhaus-black border-4 border-bauhaus-black p-8 transition-all group-hover:-translate-y-1" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-red)' }}>
+            <div className="text-xs font-black text-bauhaus-yellow mb-2 uppercase tracking-widest">Cross-Dataset Investigation — NEW</div>
+            <h3 className="text-2xl font-black text-white mb-3">Donate. Lobby. Win. Pay No Tax.</h3>
+            <p className="text-base text-white/80 leading-relaxed mb-4">
+              The Triple Play: entities that donate to political parties, lobby government ministers,
+              win billions in contracts, and pay minimal tax. Five public datasets cross-referenced by ABN
+              to reveal the system as a whole.
+            </p>
+            <div className="flex gap-6 text-white/60 text-sm font-bold">
+              <span>446 donor-contractors</span>
+              <span>&middot;</span>
+              <span>$358M donated &rarr; $35B in contracts</span>
+              <span>&middot;</span>
+              <span>53,000+ crossover alerts</span>
+            </div>
+          </div>
+        </a>
+      </section>
+
+      {/* ===== FLAGSHIP: TEMPORAL ANALYSIS ===== */}
+      <section className="mb-6">
+        <a href="/reports/timing" className="group block">
+          <div className="bg-white border-4 border-bauhaus-black p-8 transition-all group-hover:-translate-y-1" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-blue)' }}>
+            <div className="text-xs font-black text-bauhaus-red mb-2 uppercase tracking-widest">Temporal Analysis — NEW</div>
+            <h3 className="text-2xl font-black text-bauhaus-black mb-3">Donate Today, Win Tomorrow.</h3>
+            <p className="text-base text-bauhaus-muted leading-relaxed mb-4">
+              Statistical correlation of political donation timing against government contract awards.
+              189,937 temporal matches reveal how quickly donors become contractors &mdash;
+              23,530 contracts awarded within 90 days of a donation.
+            </p>
+            <div className="flex gap-6 text-bauhaus-muted/60 text-sm font-bold">
+              <span>189,937 temporal matches</span>
+              <span>&middot;</span>
+              <span>$180B in correlated contracts</span>
+              <span>&middot;</span>
+              <span>134 entities</span>
+            </div>
+          </div>
+        </a>
+      </section>
+
       {/* ===== FLAGSHIP: DONOR-CONTRACTORS ===== */}
       <section className="mb-12">
         <a href="/reports/donor-contractors" className="group block">
@@ -48,16 +92,16 @@ export default function ReportsPage() {
             <div className="text-xs font-black text-bauhaus-yellow mb-2 uppercase tracking-widest">Entity Graph Investigation</div>
             <h3 className="text-2xl font-black text-white mb-3">Donate. Win Contracts. Repeat.</h3>
             <p className="text-base text-white/80 leading-relaxed mb-4">
-              140 entities donate to political parties AND hold government contracts.
-              $80M donated. $4.7B received. For the first time, we connected AEC donation records
-              with AusTender contracts across 80,000 entities to reveal who benefits from both sides.
+              446 entities donate to political parties AND hold government contracts.
+              $358M donated. $35.3B received. AEC donation records cross-referenced
+              with AusTender contracts across 138,000 entities by ABN.
             </p>
             <div className="flex gap-6 text-white/60 text-sm font-bold">
-              <span>140 donor-contractors</span>
+              <span>446 donor-contractors</span>
               <span>&middot;</span>
-              <span>80,000 entities</span>
+              <span>138,000 entities</span>
               <span>&middot;</span>
-              <span>50,000+ relationships</span>
+              <span>296,000+ relationships</span>
             </div>
           </div>
         </a>

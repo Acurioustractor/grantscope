@@ -1329,7 +1329,7 @@ export default async function EntityDossierPage({
                 </div>
               )}
               <div className="mt-3 text-[10px] text-bauhaus-muted leading-relaxed">
-                External ecosystem evidence via JusticeHub ALMA — Australian Lived-experience, Methods &amp; Approaches database.
+                External ecosystem evidence via JusticeHub ALMA — Australian Living Map of Alternatives.
               </div>
             </Section>
           )}
