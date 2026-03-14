@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
+import { requireModule } from '@/lib/api-auth';
 
 /**
- * Data Export API
+ * Data Export API (requires research module)
  *
  * Bulk export in CSV or JSON format.
  *
@@ -34,6 +35,9 @@ function toCSV(data: Record<string, unknown>[]): string {
 }
 
 export async function GET(request: Request) {
+  const auth = await requireModule('research');
+  if (auth.error) return auth.error;
+
   const { searchParams } = new URL(request.url);
   const type = searchParams.get('type') as typeof ALLOWED_TYPES[number] | null;
   const format = searchParams.get('format') || 'csv';

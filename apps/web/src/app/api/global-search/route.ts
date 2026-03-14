@@ -1,6 +1,9 @@
 import { requireModule } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
 import { NextRequest, NextResponse } from 'next/server';
+import * as EntityService from '@/lib/services/entity-service';
+import * as GrantService from '@/lib/services/grant-service';
+import * as FoundationService from '@/lib/services/foundation-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,30 +18,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ entities: [], grants: [] });
   }
 
-  const supabase = getServiceSupabase();
-  const escapedQ = q.replace(/[%_]/g, '');
+  const db = getServiceSupabase();
 
   // Parallel search across entities, grants, and foundations
-  const [entitiesRes, grantsRes, foundationsRes] = await Promise.all([
-    supabase
-      .from('gs_entities')
-      .select('gs_id, canonical_name, entity_type, abn, state, source_count, latest_revenue')
-      .or(`canonical_name.ilike.%${escapedQ}%,abn.eq.${escapedQ}`)
-      .order('source_count', { ascending: false })
-      .limit(Math.min(limit, 10)),
-    supabase
-      .from('grant_opportunities')
-      .select('id, name, amount_min, amount_max, closes_at, program_type, source')
-      .ilike('name', `%${escapedQ}%`)
-      .limit(5),
-    supabase
-      .from('foundations')
-      .select('id, name, acnc_abn, type, total_giving_annual, thematic_focus, geographic_focus')
-      .ilike('name', `%${escapedQ}%`)
-      .limit(5),
+  const [entityResults, grantResults, foundationResults] = await Promise.all([
+    EntityService.search(db, q, Math.min(limit, 10)),
+    GrantService.search(db, q, 5),
+    FoundationService.search(db, q, 5),
   ]);
 
-  const entities = (entitiesRes.data || []).map(e => ({
+  const entities = (entityResults.data).map(e => ({
     type: 'entity' as const,
     id: e.gs_id,
     name: e.canonical_name,
@@ -52,7 +41,7 @@ export async function GET(req: NextRequest) {
 
   // Filter out foundations already represented in entities (by ABN match)
   const entityAbns = new Set(entities.map(e => e.abn).filter(Boolean));
-  const foundations = (foundationsRes.data || [])
+  const foundations = (foundationResults.data)
     .filter(f => !entityAbns.has(f.acnc_abn))
     .map(f => ({
       type: 'foundation' as const,
@@ -65,7 +54,7 @@ export async function GET(req: NextRequest) {
       href: `/foundations/${f.id}`,
     }));
 
-  const grants = (grantsRes.data || []).map(g => ({
+  const grants = (grantResults.data).map(g => ({
     type: 'grant' as const,
     id: g.id,
     name: g.name,

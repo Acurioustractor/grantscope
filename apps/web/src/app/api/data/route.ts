@@ -1,10 +1,19 @@
 import { NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
 
+/** Add rate-limit and cache headers to public data responses */
+function withPublicHeaders(response: NextResponse): NextResponse {
+  response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+  response.headers.set('X-RateLimit-Limit', '60');
+  response.headers.set('X-RateLimit-Window', '60');
+  return response;
+}
+
 /**
  * Public Data API
  *
  * RESTful API for querying CivicGraph data.
+ * Rate-limited: 60 requests/minute per IP (enforced at edge).
  *
  * Endpoints (via `type` param):
  *   GET /api/data?type=foundations&focus=indigenous&state=qld&limit=50
@@ -21,7 +30,7 @@ export async function GET(request: Request) {
   const offset = parseInt(searchParams.get('offset') || '0', 10);
 
   if (!type) {
-    return NextResponse.json({
+    return withPublicHeaders(NextResponse.json({
       endpoints: {
         entities: '/api/data?type=entities&entity_type=charity&state=QLD',
         relationships: '/api/data?type=relationships&relationship_type=donated_to&min_amount=10000',
@@ -36,7 +45,7 @@ export async function GET(request: Request) {
       health: '/api/data/health',
       export: '/api/data/export?type=foundations&format=csv',
       docs: 'All endpoints support limit, offset, and format (json/csv) params.',
-    });
+    }));
   }
 
   try {
@@ -70,7 +79,7 @@ export async function GET(request: Request) {
 
         const { data, error } = await query;
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-        return NextResponse.json({ type: 'entities', data, limit, offset });
+        return withPublicHeaders(NextResponse.json({ type: 'entities', data, limit, offset }));
       }
 
       case 'relationships': {
@@ -94,7 +103,7 @@ export async function GET(request: Request) {
 
         const { data, error } = await query;
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-        return NextResponse.json({ type: 'relationships', data, limit, offset });
+        return withPublicHeaders(NextResponse.json({ type: 'relationships', data, limit, offset }));
       }
 
       case 'social-enterprises': {
@@ -118,7 +127,7 @@ export async function GET(request: Request) {
 
         const { data, error } = await query;
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-        return NextResponse.json({ type: 'social-enterprises', data, limit, offset });
+        return withPublicHeaders(NextResponse.json({ type: 'social-enterprises', data, limit, offset }));
       }
 
       case 'foundations': {
@@ -136,7 +145,7 @@ export async function GET(request: Request) {
 
         const { data, count, error } = await query;
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-        return NextResponse.json({ type: 'foundations', data, total: count, limit, offset });
+        return withPublicHeaders(NextResponse.json({ type: 'foundations', data, total: count, limit, offset }));
       }
 
       case 'grants': {
@@ -157,7 +166,7 @@ export async function GET(request: Request) {
 
         const { data, error } = await query;
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-        return NextResponse.json({ type: 'grants', data, limit, offset });
+        return withPublicHeaders(NextResponse.json({ type: 'grants', data, limit, offset }));
       }
 
       case 'money-flows': {
@@ -175,7 +184,7 @@ export async function GET(request: Request) {
 
         const { data, error } = await query;
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-        return NextResponse.json({ type: 'money-flows', data, limit, offset });
+        return withPublicHeaders(NextResponse.json({ type: 'money-flows', data, limit, offset }));
       }
 
       case 'community-orgs': {
@@ -190,7 +199,7 @@ export async function GET(request: Request) {
 
         const { data, error } = await query;
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-        return NextResponse.json({ type: 'community-orgs', data, limit, offset });
+        return withPublicHeaders(NextResponse.json({ type: 'community-orgs', data, limit, offset }));
       }
 
       case 'government-programs': {
@@ -208,7 +217,7 @@ export async function GET(request: Request) {
 
         const { data, error } = await query;
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-        return NextResponse.json({ type: 'government-programs', data, limit, offset });
+        return withPublicHeaders(NextResponse.json({ type: 'government-programs', data, limit, offset }));
       }
 
       case 'reports': {
@@ -218,7 +227,7 @@ export async function GET(request: Request) {
           .order('last_generated_at', { ascending: false });
 
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-        return NextResponse.json({ type: 'reports', data });
+        return withPublicHeaders(NextResponse.json({ type: 'reports', data }));
       }
 
       default:

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { authenticateApiKey } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
 import { hasModule } from '@/lib/subscription';
+import * as EntityService from '@/lib/services/entity-service';
+import * as ContractService from '@/lib/services/contract-service';
 
 /**
  * Enterprise Exposure API — /api/v1/exposure
@@ -35,7 +37,7 @@ export async function GET(request: NextRequest) {
   const sections = new Set(
     includeParam
       ? includeParam.split(',').map(s => s.trim())
-      : ['contracts', 'donations', 'financials', 'relationships', 'interventions']
+      : ['contracts', 'donations', 'financials', 'relationships', 'interventions', 'tax', 'lobbying']
   );
 
   const db = getServiceSupabase();
@@ -47,16 +49,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No valid ABNs provided' }, { status: 400 });
     }
 
-    const { data: entities } = await db
-      .from('gs_entities')
-      .select('gs_id, canonical_name, abn, entity_type, sector, state, postcode, remoteness, seifa_irsd_decile, lga_name, is_community_controlled')
-      .in('abn', abnList);
+    const { data: entities } = await EntityService.findByAbns(db, abnList);
 
     const results = await Promise.all(
-      (entities || []).map(entity => buildDossier(db, entity, sections))
+      entities.map(entity => buildDossier(db, entity, sections))
     );
 
-    const found = new Set((entities || []).map(e => e.abn));
+    const found = new Set(entities.map(e => e.abn));
     const missing = abnList.filter(a => !found.has(a));
 
     return NextResponse.json({
@@ -80,18 +79,13 @@ export async function GET(request: NextRequest) {
         batch: '/api/v1/exposure?abns=abn1,abn2,abn3',
         include: '/api/v1/exposure?abn=X&include=contracts,donations',
       },
-      sections: ['contracts', 'donations', 'financials', 'relationships', 'interventions'],
+      sections: ['contracts', 'donations', 'financials', 'relationships', 'interventions', 'tax', 'lobbying'],
     }, { status: 400 });
   }
 
-  let entityQuery = db
-    .from('gs_entities')
-    .select('gs_id, canonical_name, abn, entity_type, sector, state, postcode, remoteness, seifa_irsd_decile, lga_name, is_community_controlled, website, description');
-
-  if (abn) entityQuery = entityQuery.eq('abn', abn);
-  else if (gsId) entityQuery = entityQuery.eq('gs_id', gsId);
-
-  const { data: entity } = await entityQuery.single();
+  const { data: entity } = abn
+    ? await EntityService.findByAbn(db, abn)
+    : await EntityService.findByGsId(db, gsId!);
 
   if (!entity) {
     return NextResponse.json({ error: 'Entity not found' }, { status: 404 });
@@ -110,27 +104,14 @@ async function buildDossier(db: any, entity: any, sections: Set<string>) {
   const dossier: Record<string, unknown> = { entity };
 
   // Get internal entity ID for relationship queries
-  const { data: fullEntity } = await db
-    .from('gs_entities')
-    .select('id')
-    .eq('gs_id', entity.gs_id)
-    .single();
-
-  const entityId = fullEntity?.id;
+  const entityId = await EntityService.getInternalId(db, entity.gs_id);
 
   const promises: Promise<void>[] = [];
 
   if (sections.has('contracts') && entity.abn) {
     promises.push(
-      db
-        .from('austender_contracts')
-        .select('title, contract_value, buyer_name, contract_start, contract_end, category, procurement_method')
-        .eq('supplier_abn', entity.abn)
-        .order('contract_value', { ascending: false })
-        .limit(100)
-        .then(({ data }: { data: unknown }) => {
-          dossier.contracts = data || [];
-        })
+      ContractService.findBySupplierAbn(db, entity.abn, { limit: 100 })
+        .then(({ data }) => { dossier.contracts = data; })
     );
   }
 
@@ -176,6 +157,27 @@ async function buildDossier(db: any, entity: any, sections: Set<string>) {
     );
   }
 
+  if (sections.has('tax') && entity.abn) {
+    promises.push(
+      db
+        .from('ato_tax_transparency')
+        .select('report_year, total_income, taxable_income, tax_payable, entity_type, industry')
+        .eq('abn', entity.abn)
+        .order('report_year', { ascending: false })
+        .limit(10)
+        .then(({ data }: { data: unknown }) => {
+          dossier.tax_transparency = data || [];
+        })
+    );
+  }
+
+  if (sections.has('lobbying') && entity.canonical_name) {
+    promises.push(
+      EntityService.findLobbyConnections(db, entity.canonical_name)
+        .then(data => { dossier.lobbying_connections = data; })
+    );
+  }
+
   if (sections.has('relationships') && entityId) {
     promises.push(
       Promise.all([
@@ -206,16 +208,21 @@ async function buildDossier(db: any, entity: any, sections: Set<string>) {
   const contracts = dossier.contracts as { contract_value?: number }[] | undefined;
   const donations = dossier.donations as { amount?: number }[] | undefined;
   const interventions = dossier.interventions as unknown[] | undefined;
+  const taxRecords = dossier.tax_transparency as { total_income?: number; taxable_income?: number; tax_payable?: number }[] | undefined;
+  const lobbyConns = dossier.lobbying_connections as unknown[] | undefined;
 
-  if (contracts?.length || donations?.length || interventions?.length) {
-    dossier.summary = {
-      total_contract_value: contracts?.reduce((s, c) => s + (Number(c.contract_value) || 0), 0) ?? 0,
-      contract_count: contracts?.length ?? 0,
-      total_donated: donations?.reduce((s, d) => s + (Number(d.amount) || 0), 0) ?? 0,
-      donation_count: donations?.length ?? 0,
-      intervention_count: interventions?.length ?? 0,
-    };
-  }
+  dossier.summary = {
+    total_contract_value: contracts?.reduce((s, c) => s + (Number(c.contract_value) || 0), 0) ?? 0,
+    contract_count: contracts?.length ?? 0,
+    total_donated: donations?.reduce((s, d) => s + (Number(d.amount) || 0), 0) ?? 0,
+    donation_count: donations?.length ?? 0,
+    intervention_count: interventions?.length ?? 0,
+    tax_years_available: taxRecords?.length ?? 0,
+    latest_effective_tax_rate: taxRecords?.[0]?.total_income
+      ? Math.round((Number(taxRecords[0].tax_payable) || 0) / Number(taxRecords[0].total_income) * 1000) / 10
+      : null,
+    lobbying_connection_count: lobbyConns?.length ?? 0,
+  };
 
   return dossier;
 }

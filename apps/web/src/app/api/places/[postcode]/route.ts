@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireModule } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
+import * as EntityService from '@/lib/services/entity-service';
 
 export async function GET(
   _request: NextRequest,
@@ -10,49 +11,43 @@ export async function GET(
   if (auth.error) return auth.error;
 
   const { postcode } = await params;
-  const supabase = getServiceSupabase();
+  const db = getServiceSupabase();
 
-  // Fetch geo, SEIFA, entities, and relationships in parallel
-  const [{ data: geo }, { data: seifa }, { data: entities }] = await Promise.all([
-    supabase
+  // Fetch geo, SEIFA, entities in parallel
+  const [{ data: geo }, { data: seifa }, entityResult] = await Promise.all([
+    db
       .from('postcode_geo')
       .select('postcode, locality, state, remoteness_2021, sa2_name, sa3_name')
       .eq('postcode', postcode)
       .limit(1),
-    supabase
+    db
       .from('seifa_2021')
       .select('decile_national, score')
       .eq('postcode', postcode)
       .eq('index_type', 'IRSD')
       .limit(1),
-    supabase
-      .from('gs_entities')
-      .select('id, gs_id, canonical_name, entity_type, is_community_controlled, latest_revenue')
-      .eq('postcode', postcode)
-      .order('latest_revenue', { ascending: false, nullsFirst: false })
-      .limit(200),
+    EntityService.findByPostcode(db, postcode),
   ]);
 
   if (!geo?.length) {
     return NextResponse.json({ error: 'Postcode not found' }, { status: 404 });
   }
 
-  const entityList = entities || [];
+  const entityList = entityResult.data;
   const entityIds = entityList.map(e => e.id);
 
   // Fetch inbound funding relationships for entities in this postcode
   let totalFunding = 0;
   let communityControlledFunding = 0;
-  const recipientFunding = new Map<string, number>();
+  const recipientFunding = new Map<number, number>();
   const communityControlledIds = new Set(
     entityList.filter(e => e.is_community_controlled).map(e => e.id)
   );
 
   if (entityIds.length > 0) {
-    // Batch fetch relationships targeting these entities
     for (let i = 0; i < entityIds.length; i += 100) {
       const chunk = entityIds.slice(i, i + 100);
-      const { data: rels } = await supabase
+      const { data: rels } = await db
         .from('gs_relationships')
         .select('target_entity_id, amount, relationship_type')
         .in('target_entity_id', chunk)
@@ -72,7 +67,6 @@ export async function GET(
     }
   }
 
-  // Top recipients by funding
   const topRecipients = entityList
     .map(e => ({
       gs_id: e.gs_id,
