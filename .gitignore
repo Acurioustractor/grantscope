@@ -25,3 +25,6 @@ data/abr/
 data/asic/
 data/lga/
 data/opensanctions/
+
+# Large files (exceed GitHub 100MB limit)
+data/nsw-etendering/full.jsonl
