@@ -51,7 +51,7 @@ Build decision infrastructure for Australian government and social sector — co
 | Phase | Status | What |
 |-------|--------|------|
 | 1. Central auditable core | **DONE** | Entity graph, search, place pages, entity dossiers, gap packs, premium gating |
-| 1b. Cross-system integration | **DONE** | JH↔CG entity bridge (57%), ALMA evidence on dossiers, EL stories on place pages, LGA enrichment |
+| 1b. Cross-system integration | **DONE** | JH↔CG entity bridge (57%), ALMA (Australian Living Map of Alternatives) evidence on dossiers, EL stories on place pages, LGA enrichment |
 | 2. Data coverage expansion | **MOSTLY DONE** | 96% postcode, 96% remoteness, 95% LGA, 94% SEIFA. Remaining: ASIC directors, Supply Nation API |
 | 3. Open contribution layer | PENDING | User corrections, community stories, local context |
 | 4. Benchmarked intelligence | PENDING | Open tasks, competitions, decentralised compute |

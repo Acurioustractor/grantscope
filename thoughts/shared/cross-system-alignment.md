@@ -34,7 +34,7 @@
 | Gap | Impact | Fix | Effort |
 |-----|--------|-----|--------|
 | GS entity dossier → JH org page | No cross-platform navigation | Add link when `gs_entity_id` match exists | 20 min |
-| ALMA evidence → GS entity dossier | Evidence not visible on entity pages | Query via org → intervention → evidence chain | 1 hr |
+| ALMA (Australian Living Map of Alternatives) evidence → GS entity dossier | Evidence not visible on entity pages | Query via org → intervention → evidence chain | 1 hr |
 | EL stories → GS place pages | Community voice missing from place context | Query `storytellers` by location/postcode | 45 min |
 | JH orgs → GS entity source | `build-entity-graph.mjs` doesn't ingest JH orgs | Add as source dataset | 30 min |
 | GS enrichment → JH org pages | JH org pages show "Data Insights" but not LGA yet | Update enrichment API to include LGA | 15 min |

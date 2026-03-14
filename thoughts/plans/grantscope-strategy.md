@@ -595,7 +595,7 @@ CivicGraph (MONEY)                    Empathy Ledger (VOICE)
 **JusticeHub → CivicGraph:**
 - Intervention effectiveness scores enrich CivicGraph's grant data ("this program works")
 - 507 youth justice organisations add to CivicGraph's entity graph
-- ALMA evidence links provide outcome data for funded programs
+- ALMA (Australian Living Map of Alternatives) evidence links provide outcome data for funded programs
 
 **Empathy Ledger → CivicGraph:**
 - Consented community stories appear on CivicGraph place pages and grant pages

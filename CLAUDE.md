@@ -36,6 +36,32 @@ cd apps/web && npx tsc --noEmit
 
 Start implementing immediately. Only enter plan mode when explicitly asked. Default to action.
 
+## Rule #5: Protect Context — Clear, Don't Compact
+
+Auto-compaction is lossy and compounds — each compression degrades context. After 2-3 compactions you're working with garbage. **This is the #1 productivity killer in this project.**
+
+**HARD LIMITS (non-negotiable):**
+- **MAX 5 background tasks per session.** Every background task completion notification consumes context even if you never read the output. 30 background tasks = 30 notifications = compaction trigger. If you need more than 5, run `/continuity_ledger` then suggest `/clear` first.
+- **MAX 3 parallel Task agents at once.** Wait for results, summarize in 1-2 sentences each, then launch more if needed.
+- **NEVER read background task output files into main context.** Use `tail -3` only. Summarize findings in your own words.
+- **After ANY Task agent completes, summarize in ≤2 sentences.** Do not echo the agent's full output.
+
+**Prevention:**
+- Keep sub-agent results OUT of main context. Summarize agent outputs in 2-3 sentences, don't paste them.
+- For background tasks: check output files with `tail -3`, don't read entire outputs into context.
+- When running 3+ parallel agents, summarize their collective output — don't include each full report.
+- Prefer `head -5` / `tail -5` over reading full script outputs.
+- **Count your tool calls.** After 30+ tool calls in a session, proactively suggest `/clear`.
+
+**When context gets heavy:**
+- If you sense context is 60%+ used (many tool calls, long outputs, multiple agent results), proactively run `/continuity_ledger` and suggest `/clear`.
+- After `/clear`, the SessionStart hook reloads the ledger — you'll have clean context with full signal.
+- `/clear` + ledger reload > degraded compacted context. Always.
+
+**After compaction (if it happens anyway):**
+- Read the handoff/ledger file immediately to recover domain context.
+- Don't guess — verify state by checking git status, running quick DB queries, and reading the plan file.
+
 ## Project Structure
 
 - **Monorepo:** `apps/web` (Next.js 15, Tailwind 4), `scripts/` (data pipeline agents)
@@ -60,6 +86,9 @@ Colors: `bauhaus-black`, `bauhaus-red`, `bauhaus-blue`, `bauhaus-muted`
 | `political_donations` | 312K | donor_name, donor_abn, donation_to, amount, financial_year |
 | `ato_tax_transparency` | 24K | entity_name, abn, total_income, taxable_income, tax_payable, report_year |
 | `entity_identifiers` | 31K | entity_id, identifier_type, identifier_value, source |
+| `alma_interventions` | 1.2K | name, type, description, evidence_level, cultural_authority, target_cohort, geography, portfolio_score, gs_entity_id |
+| `alma_evidence` | 570 | intervention_id, evidence_type, methodology, sample_size, effect_size |
+| `alma_outcomes` | 506 | intervention_id, outcome_type, measurement_method, indicators |
 | `foundations` | 10.8K | name, acnc_abn, total_giving_annual, thematic_focus, geographic_focus |
 | `grant_opportunities` | 18K | name, amount_min, amount_max, deadline, categories, focus_areas |
 | `postcode_geo` | 12K | postcode, locality, state, sa2_code, remoteness_2021, lga_name, lga_code |
