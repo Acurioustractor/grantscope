@@ -162,6 +162,74 @@ function AlmaBreakdown({ report }: { report: YouthJusticeReport }) {
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Cross-System: Youth Justice Spend vs NDIS Budget
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+function CrossSystemSpend({ report }: { report: YouthJusticeReport }) {
+  // Match NDIS data to youth justice state totals
+  const data = report.ndisOverlay.map((ndis) => {
+    const yj = report.stateTotals.find(s => s.state === ndis.state);
+    return {
+      state: ndis.state,
+      'Youth Justice (10yr)': yj?.total_10yr || 0,
+      'NDIS Budget (annual)': ndis.ndis_budget,
+    };
+  }).sort((a, b) => b['NDIS Budget (annual)'] - a['NDIS Budget (annual)']);
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl p-6">
+      <h3 className="text-lg font-black mb-1">Youth Justice vs NDIS Spend</h3>
+      <p className="text-sm text-gray-500 mb-4">10-year youth justice total alongside annual NDIS budget — same communities, different systems</p>
+      <ResponsiveContainer width="100%" height={300}>
+        <BarChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} />
+          <XAxis dataKey="state" />
+          <YAxis tickFormatter={formatDollars} />
+          <Tooltip formatter={(value) => formatDollars(Number(value))} />
+          <Legend />
+          <Bar dataKey="Youth Justice (10yr)" fill="#dc2626" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="NDIS Budget (annual)" fill="#7c3aed" radius={[4, 4, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// NDIS Disability Type Breakdown by State
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+function DisabilityBreakdown({ report }: { report: YouthJusticeReport }) {
+  const data = report.ndisOverlay
+    .map((row) => ({
+      state: row.state,
+      Autism: row.autism,
+      Intellectual: row.intellectual,
+      Psychosocial: row.psychosocial,
+    }))
+    .sort((a, b) => (b.Autism + b.Intellectual + b.Psychosocial) - (a.Autism + a.Intellectual + a.Psychosocial));
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl p-6">
+      <h3 className="text-lg font-black mb-1">NDIS Youth by Disability Type</h3>
+      <p className="text-sm text-gray-500 mb-4">Young NDIS participants by primary disability — these overlap heavily with youth justice cohorts</p>
+      <ResponsiveContainer width="100%" height={300}>
+        <BarChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} />
+          <XAxis dataKey="state" />
+          <YAxis tickFormatter={(v: number) => v >= 1000 ? `${(v/1000).toFixed(0)}K` : String(v)} />
+          <Tooltip formatter={(value) => Number(value).toLocaleString()} />
+          <Legend />
+          <Bar dataKey="Autism" fill="#3b82f6" stackId="a" />
+          <Bar dataKey="Intellectual" fill="#8b5cf6" stackId="a" />
+          <Bar dataKey="Psychosocial" fill="#f59e0b" stackId="a" radius={[4, 4, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Main Export
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -174,6 +242,17 @@ export function YouthJusticeCharts({ report }: { report: YouthJusticeReport }) {
         <GrowthComparison report={report} />
       </div>
       <AlmaBreakdown report={report} />
+    </div>
+  );
+}
+
+export function CrossSystemCharts({ report }: { report: YouthJusticeReport }) {
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <CrossSystemSpend report={report} />
+        <DisabilityBreakdown report={report} />
+      </div>
     </div>
   );
 }

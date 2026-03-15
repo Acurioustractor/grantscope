@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { YouthJusticeCharts } from './charts';
+import { YouthJusticeCharts, CrossSystemCharts } from './charts';
 import {
   getRogsTimeSeries,
   getSchoolProfiles,
@@ -433,6 +433,43 @@ export default async function YouthJusticeReportPage() {
           Youth justice doesn&apos;t exist in isolation. NDIS participants, disability pensions, and youth welfare payments
           map directly onto the same communities. These are the same young people in different systems.
         </p>
+
+        {report.ndisOverlay.length > 0 && (() => {
+          const totalNdisYouth = report.ndisOverlay.reduce((s, r) => s + r.ndis_youth, 0);
+          const totalNdisBudget = report.ndisOverlay.reduce((s, r) => s + r.ndis_budget, 0);
+          const totalDsp = report.dssPayments.filter(d => d.payment_type === 'Disability Support Pension').reduce((s, d) => s + d.recipients, 0);
+          const totalYouthAllowance = report.dssPayments.filter(d => d.payment_type === 'Youth Allowance (other)').reduce((s, d) => s + d.recipients, 0);
+
+          return (
+            <>
+              {/* Summary stats */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+                <div className="bg-purple-50 border border-purple-200 rounded-xl p-5 text-center">
+                  <div className="text-2xl sm:text-3xl font-black text-purple-600">{totalNdisYouth.toLocaleString()}</div>
+                  <div className="text-xs text-gray-500 mt-1">NDIS Youth Participants</div>
+                </div>
+                <div className="bg-purple-50 border border-purple-200 rounded-xl p-5 text-center">
+                  <div className="text-2xl sm:text-3xl font-black text-purple-600">{money(totalNdisBudget)}</div>
+                  <div className="text-xs text-gray-500 mt-1">NDIS Annual Budget</div>
+                </div>
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 text-center">
+                  <div className="text-2xl sm:text-3xl font-black text-amber-600">{totalDsp.toLocaleString()}</div>
+                  <div className="text-xs text-gray-500 mt-1">Disability Support Pension</div>
+                </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 text-center">
+                  <div className="text-2xl sm:text-3xl font-black text-blue-600">{totalYouthAllowance.toLocaleString()}</div>
+                  <div className="text-xs text-gray-500 mt-1">Youth Allowance Recipients</div>
+                </div>
+              </div>
+
+              {/* Charts */}
+              <CrossSystemCharts report={report} />
+
+              {/* Detail table */}
+              <h3 className="text-sm font-bold text-bauhaus-muted uppercase tracking-wider mt-6 mb-3">State-by-State Detail</h3>
+            </>
+          );
+        })()}
 
         {report.ndisOverlay.length > 0 && (
           <div className="overflow-x-auto border-4 border-bauhaus-black rounded-sm mb-6">
