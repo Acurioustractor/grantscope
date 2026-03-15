@@ -7,7 +7,7 @@
  * ENV vars needed:
  *   CIVICGRAPH_BASE_URL          (default: https://civicgraph.vercel.app)
  *   CIVICGRAPH_SUPABASE_URL      (default: https://tednluwflfhxyucgwigh.supabase.co)
- *   CIVICGRAPH_ANON_KEY          Supabase public anon key
+ *   CIVICGRAPH_ANON_KEY          Supabase publishable key (sb_publishable_...)
  *   CIVICGRAPH_EMAIL             e.g. benjamin@act.place
  *   CIVICGRAPH_PASSWORD          account password
  */

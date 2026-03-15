@@ -290,7 +290,7 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
   'https://tednluwflfhxyucgwigh.supabase.co',
-  process.env.CIVICGRAPH_ANON_KEY  // the public anon key
+  process.env.CIVICGRAPH_ANON_KEY  // sb_publishable_7WrSXaJoGbP5btr1k7EYXQ_ZDJeWrc_
 );
 
 // Sign in as benjamin@act.place (do once, cache the session)
@@ -321,7 +321,7 @@ const data = await res.json();
 ```env
 CIVICGRAPH_BASE_URL=https://civicgraph.vercel.app
 CIVICGRAPH_SUPABASE_URL=https://tednluwflfhxyucgwigh.supabase.co
-CIVICGRAPH_ANON_KEY=<supabase-anon-key>
+CIVICGRAPH_ANON_KEY=sb_publishable_7WrSXaJoGbP5btr1k7EYXQ_ZDJeWrc_
 CIVICGRAPH_EMAIL=benjamin@act.place
 CIVICGRAPH_PASSWORD=<password>
 ```
