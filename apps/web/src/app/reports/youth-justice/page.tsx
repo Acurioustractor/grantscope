@@ -507,36 +507,66 @@ export default async function YouthJusticeReportPage() {
 
       {/* ━━━━ Grants ━━━━ */}
       <section className="mb-10">
-        <h2 className="text-xl font-black text-bauhaus-black uppercase tracking-wider mb-1">Youth Justice Grants</h2>
+        <h2 className="text-xl font-black text-bauhaus-black uppercase tracking-wider mb-1">Youth Justice Grants & Funding</h2>
         <p className="text-sm text-bauhaus-muted mb-4">
-          State budget allocations and program grants — who gets funded to deliver youth justice services.
+          Where the money goes — state department allocations and the community organisations delivering services on the ground.
         </p>
-        {report.grants.length > 0 ? (
-          <div className="overflow-x-auto border-4 border-bauhaus-black rounded-sm">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-bauhaus-black text-white text-left">
-                  <th className="px-4 py-3 font-black uppercase tracking-wider text-xs">Recipient</th>
-                  <th className="px-4 py-3 font-black uppercase tracking-wider text-xs">State</th>
-                  <th className="px-4 py-3 font-black uppercase tracking-wider text-xs text-right">Total</th>
-                  <th className="px-4 py-3 font-black uppercase tracking-wider text-xs text-right">Grants</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.grants.map((g, i) => (
-                  <tr key={`grant-${i}`} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                    <td className="px-4 py-2 text-xs font-medium">{g.recipient_name}</td>
-                    <td className="px-4 py-2 text-xs">{g.state || '—'}</td>
-                    <td className="px-4 py-2 text-right font-mono text-sm">{money(g.total)}</td>
-                    <td className="px-4 py-2 text-right font-mono text-sm">{g.grants}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <p className="text-sm text-gray-400 italic">No grants data available.</p>
-        )}
+
+        {report.grants.length > 0 && (() => {
+          const deptKeywords = ['department of', 'directorate', 'total'];
+          const isDept = (name: string) => deptKeywords.some(k => name.toLowerCase().startsWith(k));
+          const depts = report.grants.filter(g => isDept(g.recipient_name));
+          const orgs = report.grants.filter(g => !isDept(g.recipient_name));
+
+          return (
+            <>
+              {/* Department allocations as compact cards */}
+              {depts.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-sm font-bold text-bauhaus-muted uppercase tracking-wider mb-3">State Department Allocations</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {depts.filter(d => d.recipient_name !== 'Total').map((d) => (
+                      <div key={`dept-${d.recipient_name}-${d.state}`} className="bg-gray-50 border border-gray-200 rounded-sm p-3">
+                        <div className="text-lg font-black text-bauhaus-black">{money(d.total)}</div>
+                        <div className="text-xs text-gray-500 mt-0.5">{d.recipient_name}</div>
+                        <div className="text-[10px] font-bold text-bauhaus-muted uppercase tracking-wider mt-1">{d.state}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Service delivery orgs as table */}
+              {orgs.length > 0 && (
+                <>
+                  <h3 className="text-sm font-bold text-bauhaus-muted uppercase tracking-wider mb-3">Service Delivery Organisations</h3>
+                  <div className="overflow-x-auto border-4 border-bauhaus-black rounded-sm">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-bauhaus-black text-white text-left">
+                          <th className="px-4 py-3 font-black uppercase tracking-wider text-xs">Organisation</th>
+                          <th className="px-4 py-3 font-black uppercase tracking-wider text-xs">State</th>
+                          <th className="px-4 py-3 font-black uppercase tracking-wider text-xs text-right">Total Funding</th>
+                          <th className="px-4 py-3 font-black uppercase tracking-wider text-xs text-right">Grants</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {orgs.map((g, i) => (
+                          <tr key={`grant-${i}`} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                            <td className="px-4 py-2 text-xs font-medium">{g.recipient_name}</td>
+                            <td className="px-4 py-2 text-xs">{g.state || '—'}</td>
+                            <td className="px-4 py-2 text-right font-mono text-sm">{money(g.total)}</td>
+                            <td className="px-4 py-2 text-right font-mono text-sm">{g.grants}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+            </>
+          );
+        })()}
       </section>
 
       {/* ━━━━ Campaign Links ━━━━ */}
