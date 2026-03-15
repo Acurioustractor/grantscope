@@ -17,6 +17,88 @@ Log in at the login URL with the benjamin@act.place account to generate an API k
 
 ---
 
+## 0. Fastest Path: The /api/goods Endpoint (No Auth Needed)
+
+CivicGraph now has a dedicated endpoint for the Goods project that returns everything in one call:
+
+```
+GET https://civicgraph.vercel.app/api/goods
+```
+
+Returns grants, tenders, funders, and deployment priority data pre-filtered for Goods' focus areas.
+
+### Sections
+
+| URL | What It Returns |
+|-----|-----------------|
+| `/api/goods` | Everything (all four sections) |
+| `/api/goods?section=grants` | Grants matching indigenous manufacturing, remote, circular economy |
+| `/api/goods?section=tenders` | Suppliers in remote areas with AusTender contract history |
+| `/api/goods?section=funders` | Foundations focused on indigenous/community/environment |
+| `/api/goods?section=deployment` | Postcodes ranked by disadvantage for deployment prioritisation |
+| `/api/goods?section=procurement&abns=...` | Social impact analysis for your supplier ABNs |
+| `/api/goods?section=community` | Community orgs, community-controlled entities, LGA funding map |
+
+### Parameters
+
+| Param | Default | Description |
+|-------|---------|-------------|
+| `section` | `all` | `grants`, `tenders`, `funders`, `deployment`, `procurement`, `community`, or `all` |
+| `states` | `NT,WA,QLD,SA` | Comma-separated state filter |
+| `abns` | — | Comma-separated ABNs for procurement analysis |
+| `limit` | `20` | Max results per section (max 100) |
+
+### Examples (tap on phone)
+
+```
+https://civicgraph.vercel.app/api/goods
+https://civicgraph.vercel.app/api/goods?section=grants&limit=10
+https://civicgraph.vercel.app/api/goods?section=tenders&states=NT,WA
+https://civicgraph.vercel.app/api/goods?section=deployment&states=NT&limit=30
+https://civicgraph.vercel.app/api/goods?section=funders&limit=50
+https://civicgraph.vercel.app/api/goods?section=procurement&abns=25009942998,12345678901
+https://civicgraph.vercel.app/api/goods?section=community&states=NT,WA&limit=30
+```
+
+### In the Goods codebase (one-liner)
+
+```typescript
+// Pull everything for the admin dashboard
+const dashboard = await fetch('https://civicgraph.vercel.app/api/goods').then(r => r.json());
+
+// dashboard.grants              — matched grant opportunities
+// dashboard.tenders             — remote area suppliers with contracts
+// dashboard.tenders_summary     — { total, indigenous, with_contracts, community_controlled }
+// dashboard.funders             — foundation profiles with relevance scores
+// dashboard.deployment          — postcodes ranked by need (priority_score 0-100)
+// dashboard.deployment_summary  — { total_areas, critical, high, states_covered }
+// dashboard.community           — { community_orgs, community_controlled_entities, lga_funding }
+// dashboard.community_summary   — { orgs_count, cc_entities_count, by_state, by_remoteness }
+```
+
+### For growth-pipeline.ts (periodic sync)
+
+```typescript
+// In the Goods growth-pipeline.ts, add a CivicGraph sync step:
+async function syncCivicGraphData() {
+  const res = await fetch('https://civicgraph.vercel.app/api/goods?limit=50');
+  const data = await res.json();
+
+  // Store grants for the admin dashboard
+  await upsertGrants(data.grants);
+
+  // Store deployment priority areas
+  await upsertDeploymentAreas(data.deployment);
+
+  // Store funder profiles
+  await upsertFunders(data.funders);
+
+  console.log(`Synced: ${data.grants_count} grants, ${data.deployment_summary.total_areas} areas, ${data.funders_count} funders`);
+}
+```
+
+---
+
 ## 1. What Goods Can Access
 
 CivicGraph provides two tiers of access relevant to the Goods project:
