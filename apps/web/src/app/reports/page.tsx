@@ -216,10 +216,10 @@ export default function ReportsPage() {
           <a href="/reports/youth-justice" className="group block">
             <div className="bg-white border-4 border-bauhaus-black p-6 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-red group-hover:text-white">
               <div className="text-xs font-black text-bauhaus-red mb-2 uppercase tracking-widest group-hover:text-bauhaus-yellow">Flagship</div>
-              <h3 className="text-xl font-black text-bauhaus-black mb-2 group-hover:text-white">QLD Youth Justice</h3>
+              <h3 className="text-xl font-black text-bauhaus-black mb-2 group-hover:text-white">Youth Justice: 5 Cities</h3>
               <p className="text-sm text-bauhaus-muted leading-relaxed group-hover:text-white/80">
-                $343M/year on detention. $1.3M per child. 73% reoffend.
-                Follow the money from taxpayer to outcome.
+                $9.2B on youth justice across QLD, NSW, NT, SA, WA. Detention gets 2x community budgets.
+                Cross-system scan linking school disadvantage, spending, and what works.
               </p>
             </div>
           </a>
@@ -231,6 +231,17 @@ export default function ReportsPage() {
               <p className="text-sm text-bauhaus-muted leading-relaxed group-hover:text-white/80">
                 10,335 active providers. Thin regional supply. Heavy payment concentration in remote Core markets.
                 See where disability service provision is fragile and where a few providers capture the flow.
+              </p>
+            </div>
+          </a>
+
+          <a href="/reports/child-protection" className="group block">
+            <div className="bg-white border-4 border-bauhaus-black p-6 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-red group-hover:text-white">
+              <div className="text-xs font-black text-bauhaus-red mb-2 uppercase tracking-widest group-hover:text-bauhaus-yellow">New</div>
+              <h3 className="text-xl font-black text-bauhaus-black mb-2 group-hover:text-white">Child Protection</h3>
+              <p className="text-sm text-bauhaus-muted leading-relaxed group-hover:text-white/80">
+                $4.1B+ in child protection, out-of-home care, and child safety funding mapped.
+                Cross-referenced with youth justice, NDIS, and education — the pipeline made visible.
               </p>
             </div>
           </a>
