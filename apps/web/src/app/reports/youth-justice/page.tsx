@@ -5,7 +5,10 @@ import {
   getSchoolProfiles,
   getAlmaInterventions,
   getAlmaCount,
-  getProviderContracts,
+  getYouthJusticeContracts,
+  getYouthJusticeGrants,
+  getNdisYouthOverlay,
+  getDssPaymentsByState,
   money,
 } from '@/lib/services/report-service';
 
@@ -42,13 +45,35 @@ type AlmaIntervention = {
   portfolio_score: number;
 };
 
-type ProviderContract = {
-  source: string;
-  target: string;
+type AustenderContract = {
+  buyer_name: string;
+  supplier_name: string;
   amount: number;
   year: number;
-  dataset: string;
-  relationship_type: string;
+  title: string;
+};
+
+type GrantRecipient = {
+  recipient_name: string;
+  state: string | null;
+  total: number;
+  grants: number;
+};
+
+type NdisOverlay = {
+  state: string;
+  ndis_total: number;
+  ndis_youth: number;
+  psychosocial: number;
+  intellectual: number;
+  autism: number;
+  ndis_budget: number;
+};
+
+type DssPayment = {
+  state: string;
+  payment_type: string;
+  recipients: number;
 };
 
 type StateTotal = {
@@ -65,7 +90,10 @@ export type YouthJusticeReport = {
   spendingTimeSeries: StateSpending[];
   cityProfiles: CityProfile[];
   almaInterventions: AlmaIntervention[];
-  providerContracts: ProviderContract[];
+  contracts: AustenderContract[];
+  grants: GrantRecipient[];
+  ndisOverlay: NdisOverlay[];
+  dssPayments: DssPayment[];
   nationalTotal: number;
   nationalDetention: number;
   nationalCommunity: number;
@@ -73,28 +101,27 @@ export type YouthJusticeReport = {
   detentionCommunityRatio: number;
 };
 
-const YOUTH_JUSTICE_ENTITY_IDS = [
-  '9bcaf78d-8336-4027-9f1a-9f4b1cd2d2a9',
-  '480c807d-c368-4c27-a2a5-9f17c2788518',
-  '1216ec52-7b4b-4621-b621-74a9a2a05498',
-  '327b8eb9-28a1-4939-a355-4a0cf6e1e62f',
-  'a88307dc-d781-4b38-a972-a0212cbff409',
-  'e26309da-b12c-46c7-8683-6572a4725006',
-];
+const ALL_STATES = ['ACT', 'NSW', 'NT', 'QLD', 'SA', 'TAS', 'VIC', 'WA'];
 
 const CITY_LGAS = [
-  'Brisbane','Logan','Ipswich','Alice Springs',
+  'Brisbane','Logan','Ipswich',
+  'Alice Springs',
   'Sydney','Canterbury-Bankstown','Blacktown',
   'Adelaide','Playford','Port Adelaide Enfield','Salisbury',
   'Perth','Armadale','Wanneroo',
+  'Greater Dandenong','Hume','Casey',
+  'Launceston','Glenorchy','Brighton','Derwent Valley',
 ];
 
 async function getReport(): Promise<YouthJusticeReport> {
-  const [rogsData, cityData, almaData, contractData, almaCountVal] = await Promise.all([
-    getRogsTimeSeries('ROGS Youth Justice', ['QLD', 'NT', 'NSW', 'SA', 'WA']),
+  const [rogsData, cityData, almaData, contractsData, grantsData, ndisData, dssData, almaCountVal] = await Promise.all([
+    getRogsTimeSeries('ROGS Youth Justice', ALL_STATES),
     getSchoolProfiles(CITY_LGAS),
     getAlmaInterventions('youth-justice'),
-    getProviderContracts(YOUTH_JUSTICE_ENTITY_IDS),
+    getYouthJusticeContracts(15),
+    getYouthJusticeGrants(15),
+    getNdisYouthOverlay(),
+    getDssPaymentsByState(),
     getAlmaCount('youth-justice'),
   ]);
 
@@ -165,7 +192,10 @@ async function getReport(): Promise<YouthJusticeReport> {
     spendingTimeSeries,
     cityProfiles: (cityData as CityProfile[] | null) || [],
     almaInterventions: (almaData as AlmaIntervention[] | null) || [],
-    providerContracts: (contractData as ProviderContract[] | null) || [],
+    contracts: (contractsData as AustenderContract[] | null) || [],
+    grants: (grantsData as GrantRecipient[] | null) || [],
+    ndisOverlay: (ndisData as NdisOverlay[] | null) || [],
+    dssPayments: (dssData as DssPayment[] | null) || [],
     nationalTotal,
     nationalDetention,
     nationalCommunity,
@@ -178,19 +208,47 @@ export default async function YouthJusticeReportPage() {
   const report = await getReport();
 
   const stateNames: Record<string, string> = {
-    QLD: 'Queensland',
+    ACT: 'Australian Capital Territory',
     NSW: 'New South Wales',
     NT: 'Northern Territory',
+    QLD: 'Queensland',
     SA: 'South Australia',
+    TAS: 'Tasmania',
+    VIC: 'Victoria',
     WA: 'Western Australia',
   };
 
+  // DSS uses full state names — map to abbreviations
+  const dssStateMap: Record<string, string> = {
+    'Australian Capital Territory': 'ACT',
+    'New South Wales': 'NSW',
+    'Northern Territory': 'NT',
+    'Queensland': 'QLD',
+    'South Australia': 'SA',
+    'Tasmania': 'TAS',
+    'Victoria': 'VIC',
+    'Western Australia': 'WA',
+  };
+
+  // Pivot DSS data by state
+  const dssByState = new Map<string, Record<string, number>>();
+  for (const row of report.dssPayments) {
+    const abbr = dssStateMap[row.state] || row.state;
+    if (!dssByState.has(abbr)) dssByState.set(abbr, {});
+    const entry = dssByState.get(abbr)!;
+    if (row.payment_type === 'Disability Support Pension') entry.dsp = row.recipients;
+    if (row.payment_type === 'Youth Allowance (other)') entry.youthAllowance = row.recipients;
+    if (row.payment_type === 'JobSeeker Payment') entry.jobseeker = row.recipients;
+  }
+
   const cityGroups: { metro: string; state: string; lgas: string[] }[] = [
     { metro: 'Brisbane', state: 'QLD', lgas: ['Brisbane', 'Logan', 'Ipswich'] },
-    { metro: 'Alice Springs', state: 'NT', lgas: ['Alice Springs'] },
+    { metro: 'Melbourne', state: 'VIC', lgas: ['Greater Dandenong', 'Hume', 'Casey'] },
     { metro: 'Sydney', state: 'NSW', lgas: ['Sydney', 'Canterbury-Bankstown', 'Blacktown'] },
     { metro: 'Adelaide', state: 'SA', lgas: ['Adelaide', 'Playford', 'Port Adelaide Enfield', 'Salisbury'] },
     { metro: 'Perth', state: 'WA', lgas: ['Perth', 'Armadale', 'Wanneroo'] },
+    { metro: 'Northern Tasmania', state: 'TAS', lgas: ['Launceston', 'Glenorchy', 'Brighton', 'Derwent Valley'] },
+    { metro: 'Alice Springs', state: 'NT', lgas: ['Alice Springs'] },
   ];
 
   return (
@@ -201,13 +259,13 @@ export default async function YouthJusticeReportPage() {
         </Link>
         <div className="flex items-center gap-3 mt-4 mb-1">
           <span className="text-xs font-black text-bauhaus-red uppercase tracking-widest">Cross-System Intelligence</span>
-          <span className="text-[10px] font-bold text-white bg-bauhaus-black px-2 py-0.5 rounded-sm uppercase tracking-wider">5 Cities</span>
+          <span className="text-[10px] font-bold text-white bg-bauhaus-black px-2 py-0.5 rounded-sm uppercase tracking-wider">All States</span>
         </div>
         <h1 className="text-3xl sm:text-4xl font-black text-bauhaus-black mb-3">
           Youth Justice: Follow the Money
         </h1>
         <p className="text-bauhaus-muted text-base sm:text-lg max-w-3xl leading-relaxed font-medium">
-          Five states have spent {money(report.nationalTotal)} on youth justice over the past decade.
+          Eight states and territories have spent {money(report.nationalTotal)} on youth justice over the past decade.
           {' '}{money(report.nationalDetention)} went to detention — {report.detentionCommunityRatio}x more than
           the {money(report.nationalCommunity)} spent on community supervision.
           Meanwhile, {report.almaCount} evidence-based alternatives exist.
@@ -223,7 +281,7 @@ export default async function YouthJusticeReportPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
         <div className="bg-red-50 border border-red-200 rounded-xl p-5 text-center">
           <div className="text-2xl sm:text-3xl font-black text-red-600">{money(report.nationalTotal)}</div>
-          <div className="text-xs text-gray-500 mt-1">Total 10-Year Spend (5 States)</div>
+          <div className="text-xs text-gray-500 mt-1">Total 10-Year Spend (All States)</div>
         </div>
         <div className="bg-red-50 border border-red-200 rounded-xl p-5 text-center">
           <div className="text-2xl sm:text-3xl font-black text-red-600">{money(report.nationalDetention)}</div>
@@ -368,42 +426,117 @@ export default async function YouthJusticeReportPage() {
         </div>
       </section>
 
-      {/* ━━━━ Provider Contracts ━━━━ */}
-      <section className="mb-10">
-        <h2 className="text-xl font-black text-bauhaus-black uppercase tracking-wider mb-1">Youth Justice Contracts & Grants</h2>
+      {/* ━━━━ Cross-System Overlay: NDIS + DSS ━━━━ */}
+      <section className="mb-10 mt-10">
+        <h2 className="text-xl font-black text-bauhaus-black uppercase tracking-wider mb-1">Cross-System Overlay: Disability & Welfare</h2>
         <p className="text-sm text-bauhaus-muted mb-4">
-          Who gets paid to run youth justice? Top contracts and grants from AusTender and state budgets.
+          Youth justice doesn&apos;t exist in isolation. NDIS participants, disability pensions, and youth welfare payments
+          map directly onto the same communities. These are the same young people in different systems.
         </p>
-        <div className="overflow-x-auto border-4 border-bauhaus-black rounded-sm">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-bauhaus-black text-white text-left">
-                <th className="px-4 py-3 font-black uppercase tracking-wider text-xs">From</th>
-                <th className="px-4 py-3 font-black uppercase tracking-wider text-xs">To</th>
-                <th className="px-4 py-3 font-black uppercase tracking-wider text-xs text-right">Amount</th>
-                <th className="px-4 py-3 font-black uppercase tracking-wider text-xs text-right">Year</th>
-                <th className="px-4 py-3 font-black uppercase tracking-wider text-xs">Type</th>
-              </tr>
-            </thead>
-            <tbody>
-              {report.providerContracts.slice(0, 15).map((c, i) => (
-                <tr key={`${c.source}-${c.target}-${i}`} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                  <td className="px-4 py-2 text-xs">{c.source}</td>
-                  <td className="px-4 py-2 text-xs font-medium">{c.target}</td>
-                  <td className="px-4 py-2 text-right font-mono text-sm">{money(c.amount)}</td>
-                  <td className="px-4 py-2 text-right font-mono text-sm">{c.year}</td>
-                  <td className="px-4 py-2">
-                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${
-                      c.relationship_type === 'contract' ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700'
-                    }`}>
-                      {c.relationship_type}
-                    </span>
-                  </td>
+
+        {report.ndisOverlay.length > 0 && (
+          <div className="overflow-x-auto border-4 border-bauhaus-black rounded-sm mb-6">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-bauhaus-black text-white text-left">
+                  <th className="px-4 py-3 font-black uppercase tracking-wider text-xs">State</th>
+                  <th className="px-4 py-3 font-black uppercase tracking-wider text-xs text-right">NDIS Youth</th>
+                  <th className="px-4 py-3 font-black uppercase tracking-wider text-xs text-right">Psychosocial</th>
+                  <th className="px-4 py-3 font-black uppercase tracking-wider text-xs text-right">Intellectual</th>
+                  <th className="px-4 py-3 font-black uppercase tracking-wider text-xs text-right">Autism</th>
+                  <th className="px-4 py-3 font-black uppercase tracking-wider text-xs text-right">NDIS Budget</th>
+                  <th className="px-4 py-3 font-black uppercase tracking-wider text-xs text-right">DSP Recipients</th>
+                  <th className="px-4 py-3 font-black uppercase tracking-wider text-xs text-right">Youth Allowance</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {report.ndisOverlay.map((row, i) => {
+                  const dss = dssByState.get(row.state) || {};
+                  return (
+                    <tr key={row.state} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                      <td className="px-4 py-3 font-bold">{stateNames[row.state] || row.state}</td>
+                      <td className="px-4 py-3 text-right font-mono">{row.ndis_youth.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right font-mono text-amber-600">{row.psychosocial.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right font-mono text-purple-600">{row.intellectual.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right font-mono text-blue-600">{row.autism.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right font-mono">{money(row.ndis_budget)}</td>
+                      <td className="px-4 py-3 text-right font-mono text-red-600">{(dss.dsp || 0).toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right font-mono">{(dss.youthAllowance || 0).toLocaleString()}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {/* ━━━━ Contracts ━━━━ */}
+      <section className="mb-10">
+        <h2 className="text-xl font-black text-bauhaus-black uppercase tracking-wider mb-1">Youth Justice Contracts</h2>
+        <p className="text-sm text-bauhaus-muted mb-4">
+          Federal procurement contracts from AusTender — who builds, operates, and services youth detention.
+        </p>
+        {report.contracts.length > 0 ? (
+          <div className="overflow-x-auto border-4 border-bauhaus-black rounded-sm">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-bauhaus-black text-white text-left">
+                  <th className="px-4 py-3 font-black uppercase tracking-wider text-xs">Buyer</th>
+                  <th className="px-4 py-3 font-black uppercase tracking-wider text-xs">Supplier</th>
+                  <th className="px-4 py-3 font-black uppercase tracking-wider text-xs text-right">Value</th>
+                  <th className="px-4 py-3 font-black uppercase tracking-wider text-xs text-right">Year</th>
+                </tr>
+              </thead>
+              <tbody>
+                {report.contracts.map((c, i) => (
+                  <tr key={`contract-${i}`} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                    <td className="px-4 py-2 text-xs">{c.buyer_name}</td>
+                    <td className="px-4 py-2 text-xs font-medium">{c.supplier_name}</td>
+                    <td className="px-4 py-2 text-right font-mono text-sm">{money(c.amount)}</td>
+                    <td className="px-4 py-2 text-right font-mono text-sm">{c.year}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-400 italic">No contracts data available.</p>
+        )}
+      </section>
+
+      {/* ━━━━ Grants ━━━━ */}
+      <section className="mb-10">
+        <h2 className="text-xl font-black text-bauhaus-black uppercase tracking-wider mb-1">Youth Justice Grants</h2>
+        <p className="text-sm text-bauhaus-muted mb-4">
+          State budget allocations and program grants — who gets funded to deliver youth justice services.
+        </p>
+        {report.grants.length > 0 ? (
+          <div className="overflow-x-auto border-4 border-bauhaus-black rounded-sm">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-bauhaus-black text-white text-left">
+                  <th className="px-4 py-3 font-black uppercase tracking-wider text-xs">Recipient</th>
+                  <th className="px-4 py-3 font-black uppercase tracking-wider text-xs">State</th>
+                  <th className="px-4 py-3 font-black uppercase tracking-wider text-xs text-right">Total</th>
+                  <th className="px-4 py-3 font-black uppercase tracking-wider text-xs text-right">Grants</th>
+                </tr>
+              </thead>
+              <tbody>
+                {report.grants.map((g, i) => (
+                  <tr key={`grant-${i}`} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                    <td className="px-4 py-2 text-xs font-medium">{g.recipient_name}</td>
+                    <td className="px-4 py-2 text-xs">{g.state || '—'}</td>
+                    <td className="px-4 py-2 text-right font-mono text-sm">{money(g.total)}</td>
+                    <td className="px-4 py-2 text-right font-mono text-sm">{g.grants}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-400 italic">No grants data available.</p>
+        )}
       </section>
 
       {/* ━━━━ Campaign Links ━━━━ */}
@@ -448,8 +581,9 @@ export default async function YouthJusticeReportPage() {
             <li>ACARA My School — School profiles including ICSEA, Indigenous enrolment, and school type</li>
             <li>Australian Living Map of Alternatives (ALMA) — JusticeHub evidence database</li>
             <li>AusTender — Federal procurement contracts with youth justice entities</li>
-            <li>State budget papers — QLD, NSW, NT, SA, WA youth justice appropriations</li>
-            <li>Department of Social Services — Payment demographics by postcode and state</li>
+            <li>State budget papers — all state/territory youth justice appropriations</li>
+            <li>NDIS — Participant data by service district, disability type, and age</li>
+            <li>Department of Social Services — Disability Support Pension, Youth Allowance, JobSeeker payment demographics</li>
           </ul>
           <p className="text-xs text-gray-400 mt-4">
             This is a living report. All data is sourced from public datasets.

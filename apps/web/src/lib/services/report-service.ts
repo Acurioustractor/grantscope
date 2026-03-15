@@ -301,6 +301,101 @@ export async function getRogsTimeSeries(programPrefix: string, states: string[])
 }
 
 /**
+ * Youth justice contracts from AusTender (direct query, no gs_relationships JOIN)
+ */
+export async function getYouthJusticeContracts(limit = 15) {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT buyer_name, supplier_name, contract_value::bigint as amount,
+              EXTRACT(YEAR FROM contract_start)::int as year, title
+       FROM austender_contracts
+       WHERE title ILIKE '%youth%justice%'
+          OR title ILIKE '%juvenile%detention%'
+          OR title ILIKE '%youth%detention%'
+       ORDER BY contract_value DESC
+       LIMIT ${limit}`,
+  })) as Promise<Array<{
+    buyer_name: string;
+    supplier_name: string;
+    amount: number;
+    year: number;
+    title: string;
+  }> | null>;
+}
+
+/**
+ * Youth justice grant recipients (non-ROGS, from justice_funding)
+ */
+export async function getYouthJusticeGrants(limit = 15) {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT recipient_name, state,
+              SUM(amount_dollars)::bigint as total,
+              COUNT(*)::int as grants
+       FROM justice_funding
+       WHERE topics @> ARRAY['youth-justice']::text[]
+         AND program_name NOT LIKE 'ROGS%'
+       GROUP BY recipient_name, state
+       ORDER BY total DESC
+       LIMIT ${limit}`,
+  })) as Promise<Array<{
+    recipient_name: string;
+    state: string | null;
+    total: number;
+    grants: number;
+  }> | null>;
+}
+
+/**
+ * NDIS youth justice overlay — participants, budgets, disability types by state
+ */
+export async function getNdisYouthOverlay() {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT state,
+              SUM(total_participants)::bigint as ndis_total,
+              SUM(youth_participants)::bigint as ndis_youth,
+              SUM(psychosocial_participants)::bigint as psychosocial,
+              SUM(intellectual_disability_participants)::bigint as intellectual,
+              SUM(autism_participants)::bigint as autism,
+              SUM(total_annual_budget)::bigint as ndis_budget
+       FROM v_ndis_youth_justice_overlay
+       WHERE state != 'OT'
+       GROUP BY state
+       ORDER BY ndis_budget DESC`,
+  })) as Promise<Array<{
+    state: string;
+    ndis_total: number;
+    ndis_youth: number;
+    psychosocial: number;
+    intellectual: number;
+    autism: number;
+    ndis_budget: number;
+  }> | null>;
+}
+
+/**
+ * DSS welfare payments by state for youth-relevant types
+ */
+export async function getDssPaymentsByState() {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT state, payment_type,
+              SUM(recipient_count)::int as recipients
+       FROM dss_payment_demographics
+       WHERE payment_type IN ('Disability Support Pension','Youth Allowance (other)','JobSeeker Payment')
+         AND geography_type = 'state'
+         AND state NOT IN ('Unknown')
+       GROUP BY state, payment_type
+       ORDER BY state, payment_type`,
+  })) as Promise<Array<{
+    state: string;
+    payment_type: string;
+    recipients: number;
+  }> | null>;
+}
+
+/**
  * Utility: format money
  */
 export function money(n: number | null): string {

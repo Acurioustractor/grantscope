@@ -16,9 +16,12 @@ function formatDollars(value: number): string {
 const STATE_COLORS: Record<string, string> = {
   QLD: '#dc2626',
   NSW: '#2563eb',
+  VIC: '#1d4ed8',
   NT: '#d97706',
   SA: '#059669',
   WA: '#7c3aed',
+  TAS: '#0891b2',
+  ACT: '#6b7280',
 };
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
