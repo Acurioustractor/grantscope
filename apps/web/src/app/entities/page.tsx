@@ -149,8 +149,24 @@ export default async function EntityGraphPage({
       .select('id, gs_id, canonical_name, entity_type, abn, state, source_count, latest_revenue, latest_assets, sector');
 
     if (q) {
-      const escapedQ = q.replace(/[%_]/g, '');
-      dbQuery = dbQuery.or(`canonical_name.ilike.%${escapedQ}%,abn.eq.${escapedQ}`);
+      const isAbn = /^\d{9,11}$/.test(q.replace(/\s/g, ''));
+      if (isAbn) {
+        dbQuery = dbQuery.eq('abn', q.replace(/\s/g, ''));
+      } else {
+        // Fuzzy trigram search — handles abbreviations, typos, partial matches
+        const { data: fuzzyHits } = await supabase.rpc('search_entities_fuzzy', {
+          search_name: q,
+          min_similarity: 0.2,
+          max_results: 100,
+        });
+        const hitIds = (fuzzyHits || []).map((h: { id: string }) => h.id);
+        if (hitIds.length > 0) {
+          dbQuery = dbQuery.in('id', hitIds);
+        } else {
+          // Fallback to ILIKE for short queries where trigrams struggle
+          dbQuery = dbQuery.ilike('canonical_name', `%${q.replace(/[%_]/g, '')}%`);
+        }
+      }
     }
     if (type) {
       dbQuery = dbQuery.eq('entity_type', type);

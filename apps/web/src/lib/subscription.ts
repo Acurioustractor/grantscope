@@ -14,6 +14,7 @@ export type Module =
   | 'supply-chain'     // Goods Intelligence — community economics, corridor analysis
   | 'allocation'       // Place packs, gap analysis, commissioning
   | 'research'         // Reports, investigations, entity graph
+  | 'relationships'    // Relationship Flywheel — contact→entity linkage, warm paths, playbooks
   | 'governed-proof'   // Outcome evidence, community voice (pilot)
   | 'api';             // Programmatic access
 
@@ -21,9 +22,9 @@ export type Module =
 const TIER_MODULES: Record<Tier, Module[]> = {
   community:     ['grants', 'research'],
   professional:  ['grants', 'tracker', 'research'],
-  organisation:  ['grants', 'tracker', 'procurement', 'allocation', 'research'],
-  funder:        ['grants', 'tracker', 'procurement', 'allocation', 'research', 'api'],
-  enterprise:    ['grants', 'tracker', 'procurement', 'supply-chain', 'allocation', 'research', 'governed-proof', 'api'],
+  organisation:  ['grants', 'tracker', 'procurement', 'allocation', 'research', 'relationships'],
+  funder:        ['grants', 'tracker', 'procurement', 'allocation', 'research', 'relationships', 'api'],
+  enterprise:    ['grants', 'tracker', 'procurement', 'supply-chain', 'allocation', 'research', 'relationships', 'governed-proof', 'api'],
 };
 
 const TIER_ORDER: Tier[] = ['community', 'professional', 'organisation', 'funder', 'enterprise'];
@@ -64,6 +65,7 @@ export const MODULE_LABELS: Record<Module, string> = {
   'supply-chain': 'Supply Chain Intelligence',
   allocation: 'Allocation Intelligence',
   research: 'Research & Data',
+  relationships: 'Relationship Intelligence',
   'governed-proof': 'Governed Proof',
   api: 'API Access',
 };

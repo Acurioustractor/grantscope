@@ -8,7 +8,7 @@ const ENTITY_DETAIL_COLS =
   'gs_id, canonical_name, abn, entity_type, sector, state, postcode, remoteness, seifa_irsd_decile, lga_name, is_community_controlled, website, description' as const;
 
 const ENTITY_SEARCH_COLS =
-  'gs_id, canonical_name, entity_type, abn, state, source_count, latest_revenue' as const;
+  'id, gs_id, canonical_name, entity_type, abn, state, source_count, latest_revenue' as const;
 
 const ENTITY_PLACE_COLS =
   'id, gs_id, canonical_name, entity_type, is_community_controlled, latest_revenue' as const;
@@ -34,6 +34,7 @@ export interface EntityDetail extends EntitySummary {
 }
 
 export interface EntitySearchResult {
+  id: string;
   gs_id: string;
   canonical_name: string;
   entity_type: string | null;
@@ -118,22 +119,56 @@ export async function findByPostcode(
   return { data: (data || []) as EntityPlaceResult[], error };
 }
 
-/** Text search — entities matching name or ABN */
+/** Text search — entities matching name (fuzzy trigram) or ABN (exact) */
 export async function search(
   db: SupabaseClient,
   query: string,
   limit: number = 10
 ) {
-  const escaped = query.replace(/[%_]/g, '');
+  const cap = Math.min(limit, 50);
 
+  // ABN exact match
+  const isAbn = /^\d{9,11}$/.test(query.replace(/\s/g, ''));
+  if (isAbn) {
+    const { data, error } = await db
+      .from('gs_entities')
+      .select(ENTITY_SEARCH_COLS)
+      .eq('abn', query.replace(/\s/g, ''))
+      .limit(cap);
+    return { data: (data || []) as EntitySearchResult[], error };
+  }
+
+  // Fuzzy trigram search — handles abbreviations, typos, partial matches
+  const { data: fuzzyHits, error: fuzzyErr } = await db.rpc('search_entities_fuzzy', {
+    search_name: query,
+    min_similarity: 0.2,
+    max_results: cap * 2,
+  });
+
+  if (fuzzyErr || !fuzzyHits?.length) {
+    // Fallback to ILIKE for short queries or if trigram index is unavailable
+    const escaped = query.replace(/[%_]/g, '');
+    const { data, error } = await db
+      .from('gs_entities')
+      .select(ENTITY_SEARCH_COLS)
+      .ilike('canonical_name', `%${escaped}%`)
+      .order('source_count', { ascending: false })
+      .limit(cap);
+    return { data: (data || []) as EntitySearchResult[], error };
+  }
+
+  // Fetch full details for fuzzy matches, preserving similarity order
+  const hitIds = fuzzyHits.map((h: { id: string }) => h.id);
   const { data, error } = await db
     .from('gs_entities')
     .select(ENTITY_SEARCH_COLS)
-    .or(`canonical_name.ilike.%${escaped}%,abn.eq.${escaped}`)
-    .order('source_count', { ascending: false })
-    .limit(Math.min(limit, 50));
+    .in('id', hitIds)
+    .limit(cap);
 
-  return { data: (data || []) as EntitySearchResult[], error };
+  const idOrder = new Map<string, number>(hitIds.map((id: string, i: number) => [id, i]));
+  const rows = (data || []) as EntitySearchResult[];
+  rows.sort((a, b) => (idOrder.get(a.id) ?? 999) - (idOrder.get(b.id) ?? 999));
+  return { data: rows, error };
 }
 
 /** Filtered + paginated entity list */
