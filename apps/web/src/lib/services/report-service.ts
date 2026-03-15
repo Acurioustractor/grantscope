@@ -396,6 +396,29 @@ export async function getDssPaymentsByState() {
 }
 
 /**
+ * DSS welfare payments at LGA level — cross-system overlap with school disadvantage
+ */
+export async function getDssPaymentsByLga(lgaNames: string[]) {
+  const supabase = getServiceSupabase();
+  const lgaList = lgaNames.map(l => `'${l.replace(/'/g, "''")}'`).join(',');
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT p.lga_name, d.payment_type,
+              SUM(d.recipient_count)::int as recipients
+       FROM dss_payment_demographics d
+       JOIN (SELECT DISTINCT lga_code, lga_name FROM postcode_geo WHERE lga_name IN (${lgaList})) p
+         ON p.lga_code = d.geography_code
+       WHERE d.geography_type = 'lga'
+         AND d.payment_type IN ('Disability Support Pension','Youth Allowance (other)','JobSeeker Payment')
+       GROUP BY p.lga_name, d.payment_type
+       ORDER BY p.lga_name, d.payment_type`,
+  })) as Promise<Array<{
+    lga_name: string;
+    payment_type: string;
+    recipients: number;
+  }> | null>;
+}
+
+/**
  * Utility: format money
  */
 export function money(n: number | null): string {

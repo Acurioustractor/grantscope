@@ -246,9 +246,52 @@ export function YouthJusticeCharts({ report }: { report: YouthJusticeReport }) {
   );
 }
 
-export function CrossSystemCharts({ report }: { report: YouthJusticeReport }) {
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// LGA-Level Cross-System Overlap
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+type LgaOverlapRow = {
+  lga: string;
+  dsp: number;
+  jobseeker: number;
+  youthAllowance: number;
+  lowIcsea: number;
+  avgIcsea: number;
+  indigenousPct: number;
+};
+
+function LgaOverlapChart({ data }: { data: LgaOverlapRow[] }) {
+  // Sort by DSP recipients descending — the most burdened communities first
+  const sorted = [...data]
+    .sort((a, b) => b.dsp - a.dsp)
+    .slice(0, 12);
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl p-6">
+      <h3 className="text-lg font-black mb-1">Same Places, Multiple Systems</h3>
+      <p className="text-sm text-gray-500 mb-4">
+        Disability pensions + JobSeeker + Youth Allowance recipients in the same LGAs with high school disadvantage
+      </p>
+      <ResponsiveContainer width="100%" height={400}>
+        <BarChart data={sorted} layout="vertical" margin={{ left: 120 }}>
+          <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+          <XAxis type="number" tickFormatter={(v: number) => v >= 1000 ? `${(v/1000).toFixed(0)}K` : String(v)} />
+          <YAxis type="category" dataKey="lga" width={120} tick={{ fontSize: 12 }} />
+          <Tooltip formatter={(value) => Number(value).toLocaleString()} />
+          <Legend />
+          <Bar dataKey="dsp" name="Disability Pension" fill="#dc2626" stackId="a" />
+          <Bar dataKey="jobseeker" name="JobSeeker" fill="#d97706" stackId="a" />
+          <Bar dataKey="youthAllowance" name="Youth Allowance" fill="#3b82f6" stackId="a" radius={[0, 4, 4, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+export function CrossSystemCharts({ report, lgaOverlap }: { report: YouthJusticeReport; lgaOverlap: LgaOverlapRow[] }) {
   return (
     <div className="flex flex-col gap-6">
+      {lgaOverlap.length > 0 && <LgaOverlapChart data={lgaOverlap} />}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <CrossSystemSpend report={report} />
         <DisabilityBreakdown report={report} />

@@ -9,6 +9,7 @@ import {
   getYouthJusticeGrants,
   getNdisYouthOverlay,
   getDssPaymentsByState,
+  getDssPaymentsByLga,
   money,
 } from '@/lib/services/report-service';
 
@@ -76,6 +77,12 @@ type DssPayment = {
   recipients: number;
 };
 
+type DssLgaPayment = {
+  lga_name: string;
+  payment_type: string;
+  recipients: number;
+};
+
 type StateTotal = {
   state: string;
   total_10yr: number;
@@ -94,6 +101,7 @@ export type YouthJusticeReport = {
   grants: GrantRecipient[];
   ndisOverlay: NdisOverlay[];
   dssPayments: DssPayment[];
+  dssLga: DssLgaPayment[];
   nationalTotal: number;
   nationalDetention: number;
   nationalCommunity: number;
@@ -114,7 +122,7 @@ const CITY_LGAS = [
 ];
 
 async function getReport(): Promise<YouthJusticeReport> {
-  const [rogsData, cityData, almaData, contractsData, grantsData, ndisData, dssData, almaCountVal] = await Promise.all([
+  const [rogsData, cityData, almaData, contractsData, grantsData, ndisData, dssData, dssLgaData, almaCountVal] = await Promise.all([
     getRogsTimeSeries('ROGS Youth Justice', ALL_STATES),
     getSchoolProfiles(CITY_LGAS),
     getAlmaInterventions('youth-justice'),
@@ -122,6 +130,7 @@ async function getReport(): Promise<YouthJusticeReport> {
     getYouthJusticeGrants(15),
     getNdisYouthOverlay(),
     getDssPaymentsByState(),
+    getDssPaymentsByLga(CITY_LGAS),
     getAlmaCount('youth-justice'),
   ]);
 
@@ -196,6 +205,7 @@ async function getReport(): Promise<YouthJusticeReport> {
     grants: (grantsData as GrantRecipient[] | null) || [],
     ndisOverlay: (ndisData as NdisOverlay[] | null) || [],
     dssPayments: (dssData as DssPayment[] | null) || [],
+    dssLga: (dssLgaData as DssLgaPayment[] | null) || [],
     nationalTotal,
     nationalDetention,
     nationalCommunity,
@@ -462,8 +472,28 @@ export default async function YouthJusticeReportPage() {
                 </div>
               </div>
 
-              {/* Charts */}
-              <CrossSystemCharts report={report} />
+              {/* Charts — build LGA overlap data */}
+              <CrossSystemCharts report={report} lgaOverlap={(() => {
+                const lgaMap = new Map<string, { dsp: number; jobseeker: number; youthAllowance: number }>();
+                for (const row of report.dssLga) {
+                  if (!lgaMap.has(row.lga_name)) lgaMap.set(row.lga_name, { dsp: 0, jobseeker: 0, youthAllowance: 0 });
+                  const entry = lgaMap.get(row.lga_name)!;
+                  if (row.payment_type === 'Disability Support Pension') entry.dsp = row.recipients;
+                  if (row.payment_type === 'JobSeeker Payment') entry.jobseeker = row.recipients;
+                  if (row.payment_type === 'Youth Allowance (other)') entry.youthAllowance = row.recipients;
+                }
+                return Array.from(lgaMap.entries()).map(([lga, dss]) => {
+                  const school = report.cityProfiles.find(p => p.lga_name === lga);
+                  return {
+                    lga,
+                    ...dss,
+                    lowIcsea: school?.low_icsea || 0,
+                    avgIcsea: school?.avg_icsea || 0,
+                    indigenousPct: school?.avg_indig_pct || 0,
+                  };
+                });
+              })()
+              } />
 
               {/* Detail table */}
               <h3 className="text-sm font-bold text-bauhaus-muted uppercase tracking-wider mt-6 mb-3">State-by-State Detail</h3>
