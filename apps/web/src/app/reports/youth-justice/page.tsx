@@ -436,70 +436,136 @@ export default async function YouthJusticeReportPage() {
         </div>
       </section>
 
-      {/* ━━━━ Cross-System Overlay: NDIS + DSS ━━━━ */}
+      {/* ━━━━ Cross-System Overlap Heatmap ━━━━ */}
       <section className="mb-10 mt-10">
-        <h2 className="text-xl font-black text-bauhaus-black uppercase tracking-wider mb-1">Cross-System Overlay: Disability & Welfare</h2>
+        <h2 className="text-xl font-black text-bauhaus-black uppercase tracking-wider mb-1">Cross-System Overlap</h2>
         <p className="text-sm text-bauhaus-muted mb-4">
-          Youth justice doesn&apos;t exist in isolation. NDIS participants, disability pensions, and youth welfare payments
-          map directly onto the same communities. These are the same young people in different systems.
+          Same places, same young people, different government systems.
+          Each cell shows intensity relative to the worst LGA for that indicator.
+          When an entire row is dark, every system is failing that community simultaneously.
         </p>
 
-        {report.ndisOverlay.length > 0 && (() => {
-          const totalNdisYouth = report.ndisOverlay.reduce((s, r) => s + r.ndis_youth, 0);
-          const totalNdisBudget = report.ndisOverlay.reduce((s, r) => s + r.ndis_budget, 0);
-          const totalDsp = report.dssPayments.filter(d => d.payment_type === 'Disability Support Pension').reduce((s, d) => s + d.recipients, 0);
-          const totalYouthAllowance = report.dssPayments.filter(d => d.payment_type === 'Youth Allowance (other)').reduce((s, d) => s + d.recipients, 0);
+        {report.dssLga.length > 0 && (() => {
+          // Build per-LGA cross-system data
+          const lgaMap = new Map<string, { dsp: number; jobseeker: number; youthAllowance: number }>();
+          for (const row of report.dssLga) {
+            if (!lgaMap.has(row.lga_name)) lgaMap.set(row.lga_name, { dsp: 0, jobseeker: 0, youthAllowance: 0 });
+            const entry = lgaMap.get(row.lga_name)!;
+            if (row.payment_type === 'Disability Support Pension') entry.dsp = row.recipients;
+            if (row.payment_type === 'JobSeeker Payment') entry.jobseeker = row.recipients;
+            if (row.payment_type === 'Youth Allowance (other)') entry.youthAllowance = row.recipients;
+          }
+
+          const rows = Array.from(lgaMap.entries()).map(([lga, dss]) => {
+            const school = report.cityProfiles.find(p => p.lga_name === lga);
+            return {
+              lga,
+              state: school?.state || '',
+              lowIcsea: school?.low_icsea || 0,
+              avgIcsea: school?.avg_icsea || 1100,
+              indigenousPct: school?.avg_indig_pct || 0,
+              dsp: dss.dsp,
+              jobseeker: dss.jobseeker,
+              youthAllowance: dss.youthAllowance,
+              totalWelfare: dss.dsp + dss.jobseeker + dss.youthAllowance,
+            };
+          });
+
+          // Compute max values for normalization (0–1 scale)
+          const maxLowIcsea = Math.max(...rows.map(r => r.lowIcsea), 1);
+          const maxIndigPct = Math.max(...rows.map(r => r.indigenousPct), 1);
+          const maxDsp = Math.max(...rows.map(r => r.dsp), 1);
+          const maxJobseeker = Math.max(...rows.map(r => r.jobseeker), 1);
+          const maxYouthAllowance = Math.max(...rows.map(r => r.youthAllowance), 1);
+          const minIcsea = Math.min(...rows.map(r => r.avgIcsea));
+          const maxIcsea = Math.max(...rows.map(r => r.avgIcsea));
+
+          // Sort by composite burden score (sum of all normalized values)
+          const scored = rows.map(r => {
+            const icseaScore = maxIcsea > minIcsea ? (maxIcsea - r.avgIcsea) / (maxIcsea - minIcsea) : 0;
+            const scores = {
+              lowIcsea: r.lowIcsea / maxLowIcsea,
+              icsea: icseaScore,
+              indigenous: r.indigenousPct / maxIndigPct,
+              dsp: r.dsp / maxDsp,
+              jobseeker: r.jobseeker / maxJobseeker,
+              youthAllowance: r.youthAllowance / maxYouthAllowance,
+            };
+            const burden = Object.values(scores).reduce((a, b) => a + b, 0) / 6;
+            return { ...r, scores, burden };
+          }).sort((a, b) => b.burden - a.burden);
+
+          // Color function: 0 = white, 1 = deep red
+          const heatColor = (v: number) => {
+            const r = 220;
+            const g = Math.round(240 - v * 200);
+            const b = Math.round(240 - v * 200);
+            return `rgb(${r}, ${g}, ${b})`;
+          };
+
+          const heatText = (v: number) => v > 0.6 ? 'text-red-900 font-bold' : v > 0.3 ? 'text-red-800' : 'text-gray-700';
 
           return (
-            <>
-              {/* Summary stats */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-                <div className="bg-purple-50 border border-purple-200 rounded-xl p-5 text-center">
-                  <div className="text-2xl sm:text-3xl font-black text-purple-600">{totalNdisYouth.toLocaleString()}</div>
-                  <div className="text-xs text-gray-500 mt-1">NDIS Youth Participants</div>
-                </div>
-                <div className="bg-purple-50 border border-purple-200 rounded-xl p-5 text-center">
-                  <div className="text-2xl sm:text-3xl font-black text-purple-600">{money(totalNdisBudget)}</div>
-                  <div className="text-xs text-gray-500 mt-1">NDIS Annual Budget</div>
-                </div>
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 text-center">
-                  <div className="text-2xl sm:text-3xl font-black text-amber-600">{totalDsp.toLocaleString()}</div>
-                  <div className="text-xs text-gray-500 mt-1">Disability Support Pension</div>
-                </div>
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 text-center">
-                  <div className="text-2xl sm:text-3xl font-black text-blue-600">{totalYouthAllowance.toLocaleString()}</div>
-                  <div className="text-xs text-gray-500 mt-1">Youth Allowance Recipients</div>
-                </div>
-              </div>
-
-              {/* Charts — build LGA overlap data */}
-              <CrossSystemCharts report={report} lgaOverlap={(() => {
-                const lgaMap = new Map<string, { dsp: number; jobseeker: number; youthAllowance: number }>();
-                for (const row of report.dssLga) {
-                  if (!lgaMap.has(row.lga_name)) lgaMap.set(row.lga_name, { dsp: 0, jobseeker: 0, youthAllowance: 0 });
-                  const entry = lgaMap.get(row.lga_name)!;
-                  if (row.payment_type === 'Disability Support Pension') entry.dsp = row.recipients;
-                  if (row.payment_type === 'JobSeeker Payment') entry.jobseeker = row.recipients;
-                  if (row.payment_type === 'Youth Allowance (other)') entry.youthAllowance = row.recipients;
-                }
-                return Array.from(lgaMap.entries()).map(([lga, dss]) => {
-                  const school = report.cityProfiles.find(p => p.lga_name === lga);
-                  return {
-                    lga,
-                    ...dss,
-                    lowIcsea: school?.low_icsea || 0,
-                    avgIcsea: school?.avg_icsea || 0,
-                    indigenousPct: school?.avg_indig_pct || 0,
-                  };
-                });
-              })()
-              } />
-
-              {/* Detail table */}
-              <h3 className="text-sm font-bold text-bauhaus-muted uppercase tracking-wider mt-6 mb-3">State-by-State Detail</h3>
-            </>
+            <div className="overflow-x-auto border-4 border-bauhaus-black rounded-sm mb-8">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-bauhaus-black text-white text-left">
+                    <th className="px-3 py-3 font-black uppercase tracking-wider text-xs" colSpan={2}>Place</th>
+                    <th className="px-3 py-3 font-black uppercase tracking-wider text-xs text-center border-l border-gray-600" colSpan={3}>School System</th>
+                    <th className="px-3 py-3 font-black uppercase tracking-wider text-xs text-center border-l border-gray-600" colSpan={3}>Welfare System</th>
+                    <th className="px-3 py-3 font-black uppercase tracking-wider text-xs text-center border-l border-gray-600">Burden</th>
+                  </tr>
+                  <tr className="bg-gray-800 text-gray-300 text-left text-[10px]">
+                    <th className="px-3 py-1.5 font-bold uppercase tracking-wider">LGA</th>
+                    <th className="px-3 py-1.5 font-bold uppercase tracking-wider">State</th>
+                    <th className="px-3 py-1.5 font-bold uppercase tracking-wider text-right border-l border-gray-600">Low ICSEA</th>
+                    <th className="px-3 py-1.5 font-bold uppercase tracking-wider text-right">Avg ICSEA</th>
+                    <th className="px-3 py-1.5 font-bold uppercase tracking-wider text-right">Indigenous %</th>
+                    <th className="px-3 py-1.5 font-bold uppercase tracking-wider text-right border-l border-gray-600">DSP</th>
+                    <th className="px-3 py-1.5 font-bold uppercase tracking-wider text-right">JobSeeker</th>
+                    <th className="px-3 py-1.5 font-bold uppercase tracking-wider text-right">Youth Allow.</th>
+                    <th className="px-3 py-1.5 font-bold uppercase tracking-wider text-center border-l border-gray-600">Score</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {scored.map((row) => (
+                    <tr key={row.lga}>
+                      <td className="px-3 py-2 font-bold text-xs border-b border-gray-100">{row.lga}</td>
+                      <td className="px-3 py-2 text-xs text-gray-500 border-b border-gray-100">{row.state}</td>
+                      <td className="px-3 py-2 text-right font-mono text-xs border-b border-gray-100 border-l border-gray-200" style={{ backgroundColor: heatColor(row.scores.lowIcsea) }}>
+                        <span className={heatText(row.scores.lowIcsea)}>{row.lowIcsea}</span>
+                      </td>
+                      <td className="px-3 py-2 text-right font-mono text-xs border-b border-gray-100" style={{ backgroundColor: heatColor(row.scores.icsea) }}>
+                        <span className={heatText(row.scores.icsea)}>{row.avgIcsea}</span>
+                      </td>
+                      <td className="px-3 py-2 text-right font-mono text-xs border-b border-gray-100" style={{ backgroundColor: heatColor(row.scores.indigenous) }}>
+                        <span className={heatText(row.scores.indigenous)}>{row.indigenousPct}%</span>
+                      </td>
+                      <td className="px-3 py-2 text-right font-mono text-xs border-b border-gray-100 border-l border-gray-200" style={{ backgroundColor: heatColor(row.scores.dsp) }}>
+                        <span className={heatText(row.scores.dsp)}>{row.dsp.toLocaleString()}</span>
+                      </td>
+                      <td className="px-3 py-2 text-right font-mono text-xs border-b border-gray-100" style={{ backgroundColor: heatColor(row.scores.jobseeker) }}>
+                        <span className={heatText(row.scores.jobseeker)}>{row.jobseeker.toLocaleString()}</span>
+                      </td>
+                      <td className="px-3 py-2 text-right font-mono text-xs border-b border-gray-100" style={{ backgroundColor: heatColor(row.scores.youthAllowance) }}>
+                        <span className={heatText(row.scores.youthAllowance)}>{row.youthAllowance.toLocaleString()}</span>
+                      </td>
+                      <td className="px-3 py-2 text-center font-mono text-xs font-black border-b border-gray-100 border-l border-gray-200" style={{ backgroundColor: heatColor(row.burden) }}>
+                        <span className={heatText(row.burden)}>{(row.burden * 100).toFixed(0)}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           );
         })()}
+
+        {/* State-level charts */}
+        <CrossSystemCharts report={report} lgaOverlap={[]} />
+
+        {/* State detail table */}
+        <h3 className="text-sm font-bold text-bauhaus-muted uppercase tracking-wider mt-6 mb-3">State-by-State Detail</h3>
 
         {report.ndisOverlay.length > 0 && (
           <div className="overflow-x-auto border-4 border-bauhaus-black rounded-sm mb-6">
