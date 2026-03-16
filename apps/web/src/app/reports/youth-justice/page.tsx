@@ -10,6 +10,8 @@ import {
   getNdisYouthOverlay,
   getDssPaymentsByState,
   getDssPaymentsByLga,
+  getYouthJusticeIndicators,
+  getCrimeStatsLga,
   money,
 } from '@/lib/services/report-service';
 
@@ -83,6 +85,25 @@ type DssLgaPayment = {
   recipients: number;
 };
 
+type YjIndicator = {
+  state: string;
+  total_expenditure_m: number;
+  cost_per_day: number;
+  recidivism_pct: number | null;
+  indigenous_rate_ratio: number | null;
+  facility_count: number;
+  total_beds: number;
+  detention_indigenous_pct: number;
+  ctg_detention_rate: number | null;
+};
+
+type CrimeLga = {
+  lga_name: string;
+  state: string;
+  total_incidents: number;
+  avg_rate_per_100k: number;
+};
+
 type StateTotal = {
   state: string;
   total_10yr: number;
@@ -102,6 +123,8 @@ export type YouthJusticeReport = {
   ndisOverlay: NdisOverlay[];
   dssPayments: DssPayment[];
   dssLga: DssLgaPayment[];
+  yjIndicators: YjIndicator[];
+  crimeLga: CrimeLga[];
   nationalTotal: number;
   nationalDetention: number;
   nationalCommunity: number;
@@ -122,7 +145,7 @@ const CITY_LGAS = [
 ];
 
 async function getReport(): Promise<YouthJusticeReport> {
-  const [rogsData, cityData, almaData, contractsData, grantsData, ndisData, dssData, dssLgaData, almaCountVal] = await Promise.all([
+  const [rogsData, cityData, almaData, contractsData, grantsData, ndisData, dssData, dssLgaData, yjIndicatorsData, crimeLgaData, almaCountVal] = await Promise.all([
     getRogsTimeSeries('ROGS Youth Justice', ALL_STATES),
     getSchoolProfiles(CITY_LGAS),
     getAlmaInterventions('youth-justice'),
@@ -131,6 +154,8 @@ async function getReport(): Promise<YouthJusticeReport> {
     getNdisYouthOverlay(),
     getDssPaymentsByState(),
     getDssPaymentsByLga(CITY_LGAS),
+    getYouthJusticeIndicators(),
+    getCrimeStatsLga(CITY_LGAS),
     getAlmaCount('youth-justice'),
   ]);
 
@@ -206,6 +231,8 @@ async function getReport(): Promise<YouthJusticeReport> {
     ndisOverlay: (ndisData as NdisOverlay[] | null) || [],
     dssPayments: (dssData as DssPayment[] | null) || [],
     dssLga: (dssLgaData as DssLgaPayment[] | null) || [],
+    yjIndicators: (yjIndicatorsData as YjIndicator[] | null) || [],
+    crimeLga: (crimeLgaData as CrimeLga[] | null) || [],
     nationalTotal,
     nationalDetention,
     nationalCommunity,
@@ -446,7 +473,7 @@ export default async function YouthJusticeReportPage() {
         </p>
 
         {report.dssLga.length > 0 && (() => {
-          // Build per-LGA cross-system data
+          // Build per-LGA welfare data
           const lgaMap = new Map<string, { dsp: number; jobseeker: number; youthAllowance: number }>();
           for (const row of report.dssLga) {
             if (!lgaMap.has(row.lga_name)) lgaMap.set(row.lga_name, { dsp: 0, jobseeker: 0, youthAllowance: 0 });
@@ -456,31 +483,57 @@ export default async function YouthJusticeReportPage() {
             if (row.payment_type === 'Youth Allowance (other)') entry.youthAllowance = row.recipients;
           }
 
+          // Build state-level justice indicators lookup
+          const yjByState = new Map<string, YjIndicator>();
+          for (const yj of report.yjIndicators) yjByState.set(yj.state, yj);
+
+          // Build crime lookup
+          const crimeByLga = new Map<string, CrimeLga>();
+          for (const c of report.crimeLga) crimeByLga.set(c.lga_name, c);
+
           const rows = Array.from(lgaMap.entries()).map(([lga, dss]) => {
             const school = report.cityProfiles.find(p => p.lga_name === lga);
+            const state = school?.state || '';
+            const yj = yjByState.get(state);
+            const crime = crimeByLga.get(lga);
             return {
               lga,
-              state: school?.state || '',
+              state,
+              // School system
               lowIcsea: school?.low_icsea || 0,
               avgIcsea: school?.avg_icsea || 1100,
               indigenousPct: school?.avg_indig_pct || 0,
+              // Welfare system
               dsp: dss.dsp,
               jobseeker: dss.jobseeker,
               youthAllowance: dss.youthAllowance,
-              totalWelfare: dss.dsp + dss.jobseeker + dss.youthAllowance,
+              // Justice system (state-level, applied to LGA)
+              costPerDay: yj?.cost_per_day || 0,
+              recidivism: yj?.recidivism_pct || 0,
+              indigenousRateRatio: yj?.indigenous_rate_ratio || 0,
+              detentionIndigenousPct: yj?.detention_indigenous_pct || 0,
+              ctgRate: yj?.ctg_detention_rate || 0,
+              // Crime (LGA-level)
+              crimeRate: crime?.avg_rate_per_100k || 0,
             };
           });
 
-          // Compute max values for normalization (0–1 scale)
-          const maxLowIcsea = Math.max(...rows.map(r => r.lowIcsea), 1);
-          const maxIndigPct = Math.max(...rows.map(r => r.indigenousPct), 1);
-          const maxDsp = Math.max(...rows.map(r => r.dsp), 1);
-          const maxJobseeker = Math.max(...rows.map(r => r.jobseeker), 1);
-          const maxYouthAllowance = Math.max(...rows.map(r => r.youthAllowance), 1);
-          const minIcsea = Math.min(...rows.map(r => r.avgIcsea));
-          const maxIcsea = Math.max(...rows.map(r => r.avgIcsea));
+          // Normalize each column 0–1
+          const maxOf = (arr: number[]) => Math.max(...arr, 1);
+          const minOf = (arr: number[]) => Math.min(...arr);
+          const maxLowIcsea = maxOf(rows.map(r => r.lowIcsea));
+          const maxIndigPct = maxOf(rows.map(r => r.indigenousPct));
+          const maxDsp = maxOf(rows.map(r => r.dsp));
+          const maxJobseeker = maxOf(rows.map(r => r.jobseeker));
+          const maxYouthAllowance = maxOf(rows.map(r => r.youthAllowance));
+          const minIcsea = minOf(rows.map(r => r.avgIcsea));
+          const maxIcsea = maxOf(rows.map(r => r.avgIcsea));
+          const maxCostPerDay = maxOf(rows.map(r => r.costPerDay));
+          const maxRecidivism = maxOf(rows.map(r => r.recidivism));
+          const maxIndRatio = maxOf(rows.map(r => r.indigenousRateRatio));
+          const maxDetIndPct = maxOf(rows.map(r => r.detentionIndigenousPct));
+          const maxCrime = maxOf(rows.map(r => r.crimeRate));
 
-          // Sort by composite burden score (sum of all normalized values)
           const scored = rows.map(r => {
             const icseaScore = maxIcsea > minIcsea ? (maxIcsea - r.avgIcsea) / (maxIcsea - minIcsea) : 0;
             const scores = {
@@ -490,8 +543,14 @@ export default async function YouthJusticeReportPage() {
               dsp: r.dsp / maxDsp,
               jobseeker: r.jobseeker / maxJobseeker,
               youthAllowance: r.youthAllowance / maxYouthAllowance,
+              costPerDay: r.costPerDay / maxCostPerDay,
+              recidivism: r.recidivism / maxRecidivism,
+              indRatio: r.indigenousRateRatio / maxIndRatio,
+              detIndPct: r.detentionIndigenousPct / maxDetIndPct,
+              crime: r.crimeRate / maxCrime,
             };
-            const burden = Object.values(scores).reduce((a, b) => a + b, 0) / 6;
+            const allScores = Object.values(scores);
+            const burden = allScores.reduce((a, b) => a + b, 0) / allScores.length;
             return { ...r, scores, burden };
           }).sort((a, b) => b.burden - a.burden);
 
@@ -502,55 +561,60 @@ export default async function YouthJusticeReportPage() {
             const b = Math.round(240 - v * 200);
             return `rgb(${r}, ${g}, ${b})`;
           };
-
           const heatText = (v: number) => v > 0.6 ? 'text-red-900 font-bold' : v > 0.3 ? 'text-red-800' : 'text-gray-700';
+
+          const heatCell = (val: string | number, score: number, border = false) => (
+            <td className={`px-2 py-2 text-right font-mono text-[11px] border-b border-gray-100 ${border ? 'border-l border-gray-200' : ''}`} style={{ backgroundColor: heatColor(score) }}>
+              <span className={heatText(score)}>{typeof val === 'number' ? val.toLocaleString() : val}</span>
+            </td>
+          );
 
           return (
             <div className="overflow-x-auto border-4 border-bauhaus-black rounded-sm mb-8">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm" style={{ minWidth: 1100 }}>
                 <thead>
                   <tr className="bg-bauhaus-black text-white text-left">
-                    <th className="px-3 py-3 font-black uppercase tracking-wider text-xs" colSpan={2}>Place</th>
-                    <th className="px-3 py-3 font-black uppercase tracking-wider text-xs text-center border-l border-gray-600" colSpan={3}>School System</th>
-                    <th className="px-3 py-3 font-black uppercase tracking-wider text-xs text-center border-l border-gray-600" colSpan={3}>Welfare System</th>
-                    <th className="px-3 py-3 font-black uppercase tracking-wider text-xs text-center border-l border-gray-600">Burden</th>
+                    <th className="px-2 py-3 font-black uppercase tracking-wider text-[10px]" colSpan={2}>Place</th>
+                    <th className="px-2 py-3 font-black uppercase tracking-wider text-[10px] text-center border-l border-gray-600" colSpan={3}>Education</th>
+                    <th className="px-2 py-3 font-black uppercase tracking-wider text-[10px] text-center border-l border-gray-600" colSpan={3}>Welfare</th>
+                    <th className="px-2 py-3 font-black uppercase tracking-wider text-[10px] text-center border-l border-gray-600" colSpan={4}>Youth Justice</th>
+                    <th className="px-2 py-3 font-black uppercase tracking-wider text-[10px] text-center border-l border-gray-600">Crime</th>
+                    <th className="px-2 py-3 font-black uppercase tracking-wider text-[10px] text-center border-l border-gray-600">All</th>
                   </tr>
-                  <tr className="bg-gray-800 text-gray-300 text-left text-[10px]">
-                    <th className="px-3 py-1.5 font-bold uppercase tracking-wider">LGA</th>
-                    <th className="px-3 py-1.5 font-bold uppercase tracking-wider">State</th>
-                    <th className="px-3 py-1.5 font-bold uppercase tracking-wider text-right border-l border-gray-600">Low ICSEA</th>
-                    <th className="px-3 py-1.5 font-bold uppercase tracking-wider text-right">Avg ICSEA</th>
-                    <th className="px-3 py-1.5 font-bold uppercase tracking-wider text-right">Indigenous %</th>
-                    <th className="px-3 py-1.5 font-bold uppercase tracking-wider text-right border-l border-gray-600">DSP</th>
-                    <th className="px-3 py-1.5 font-bold uppercase tracking-wider text-right">JobSeeker</th>
-                    <th className="px-3 py-1.5 font-bold uppercase tracking-wider text-right">Youth Allow.</th>
-                    <th className="px-3 py-1.5 font-bold uppercase tracking-wider text-center border-l border-gray-600">Score</th>
+                  <tr className="bg-gray-800 text-gray-300 text-left text-[9px]">
+                    <th className="px-2 py-1 font-bold uppercase tracking-wider">LGA</th>
+                    <th className="px-2 py-1 font-bold uppercase tracking-wider w-8">ST</th>
+                    <th className="px-2 py-1 font-bold uppercase tracking-wider text-right border-l border-gray-600">Low ICSEA</th>
+                    <th className="px-2 py-1 font-bold uppercase tracking-wider text-right">ICSEA</th>
+                    <th className="px-2 py-1 font-bold uppercase tracking-wider text-right">Indig %</th>
+                    <th className="px-2 py-1 font-bold uppercase tracking-wider text-right border-l border-gray-600">DSP</th>
+                    <th className="px-2 py-1 font-bold uppercase tracking-wider text-right">JobSeek</th>
+                    <th className="px-2 py-1 font-bold uppercase tracking-wider text-right">Youth A.</th>
+                    <th className="px-2 py-1 font-bold uppercase tracking-wider text-right border-l border-gray-600">$/Day</th>
+                    <th className="px-2 py-1 font-bold uppercase tracking-wider text-right">Recid %</th>
+                    <th className="px-2 py-1 font-bold uppercase tracking-wider text-right">Indig Ratio</th>
+                    <th className="px-2 py-1 font-bold uppercase tracking-wider text-right">Det Indig %</th>
+                    <th className="px-2 py-1 font-bold uppercase tracking-wider text-right border-l border-gray-600">Rate/100K</th>
+                    <th className="px-2 py-1 font-bold uppercase tracking-wider text-center border-l border-gray-600">Score</th>
                   </tr>
                 </thead>
                 <tbody>
                   {scored.map((row) => (
                     <tr key={row.lga}>
-                      <td className="px-3 py-2 font-bold text-xs border-b border-gray-100">{row.lga}</td>
-                      <td className="px-3 py-2 text-xs text-gray-500 border-b border-gray-100">{row.state}</td>
-                      <td className="px-3 py-2 text-right font-mono text-xs border-b border-gray-100 border-l border-gray-200" style={{ backgroundColor: heatColor(row.scores.lowIcsea) }}>
-                        <span className={heatText(row.scores.lowIcsea)}>{row.lowIcsea}</span>
-                      </td>
-                      <td className="px-3 py-2 text-right font-mono text-xs border-b border-gray-100" style={{ backgroundColor: heatColor(row.scores.icsea) }}>
-                        <span className={heatText(row.scores.icsea)}>{row.avgIcsea}</span>
-                      </td>
-                      <td className="px-3 py-2 text-right font-mono text-xs border-b border-gray-100" style={{ backgroundColor: heatColor(row.scores.indigenous) }}>
-                        <span className={heatText(row.scores.indigenous)}>{row.indigenousPct}%</span>
-                      </td>
-                      <td className="px-3 py-2 text-right font-mono text-xs border-b border-gray-100 border-l border-gray-200" style={{ backgroundColor: heatColor(row.scores.dsp) }}>
-                        <span className={heatText(row.scores.dsp)}>{row.dsp.toLocaleString()}</span>
-                      </td>
-                      <td className="px-3 py-2 text-right font-mono text-xs border-b border-gray-100" style={{ backgroundColor: heatColor(row.scores.jobseeker) }}>
-                        <span className={heatText(row.scores.jobseeker)}>{row.jobseeker.toLocaleString()}</span>
-                      </td>
-                      <td className="px-3 py-2 text-right font-mono text-xs border-b border-gray-100" style={{ backgroundColor: heatColor(row.scores.youthAllowance) }}>
-                        <span className={heatText(row.scores.youthAllowance)}>{row.youthAllowance.toLocaleString()}</span>
-                      </td>
-                      <td className="px-3 py-2 text-center font-mono text-xs font-black border-b border-gray-100 border-l border-gray-200" style={{ backgroundColor: heatColor(row.burden) }}>
+                      <td className="px-2 py-2 font-bold text-xs border-b border-gray-100 whitespace-nowrap">{row.lga}</td>
+                      <td className="px-2 py-2 text-[10px] text-gray-500 border-b border-gray-100">{row.state}</td>
+                      {heatCell(row.lowIcsea, row.scores.lowIcsea, true)}
+                      {heatCell(row.avgIcsea, row.scores.icsea)}
+                      {heatCell(`${row.indigenousPct}%`, row.scores.indigenous)}
+                      {heatCell(row.dsp, row.scores.dsp, true)}
+                      {heatCell(row.jobseeker, row.scores.jobseeker)}
+                      {heatCell(row.youthAllowance, row.scores.youthAllowance)}
+                      {heatCell(`$${row.costPerDay.toLocaleString()}`, row.scores.costPerDay, true)}
+                      {heatCell(row.recidivism ? `${row.recidivism}%` : '—', row.scores.recidivism)}
+                      {heatCell(row.indigenousRateRatio ? `${row.indigenousRateRatio}x` : '—', row.scores.indRatio)}
+                      {heatCell(row.detentionIndigenousPct ? `${row.detentionIndigenousPct}%` : '—', row.scores.detIndPct)}
+                      {heatCell(row.crimeRate || '—', row.scores.crime, true)}
+                      <td className="px-2 py-2 text-center font-mono text-xs font-black border-b border-gray-100 border-l border-gray-200" style={{ backgroundColor: heatColor(row.burden) }}>
                         <span className={heatText(row.burden)}>{(row.burden * 100).toFixed(0)}</span>
                       </td>
                     </tr>

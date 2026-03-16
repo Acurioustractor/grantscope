@@ -419,6 +419,61 @@ export async function getDssPaymentsByLga(lgaNames: string[]) {
 }
 
 /**
+ * Youth justice system indicators by state — detention costs, recidivism, Indigenous overrepresentation
+ */
+export async function getYouthJusticeIndicators() {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT d.state,
+              d.total_expenditure_m::float,
+              d.cost_per_detention::float as cost_per_day,
+              d.recidivism_pct::float,
+              d.indigenous_rate_ratio::float,
+              d.facility_count::int,
+              d.total_beds::int,
+              d.facility_indigenous_pct::float as detention_indigenous_pct,
+              c.actual_rate::float as ctg_detention_rate
+       FROM v_youth_justice_state_dashboard d
+       LEFT JOIN v_ctg_youth_justice_progress c
+         ON c.state = d.state AND c.financial_year = d.financial_year
+       WHERE d.financial_year = '2023-24'
+       ORDER BY d.total_expenditure_m DESC`,
+  })) as Promise<Array<{
+    state: string;
+    total_expenditure_m: number;
+    cost_per_day: number;
+    recidivism_pct: number | null;
+    indigenous_rate_ratio: number | null;
+    facility_count: number;
+    total_beds: number;
+    detention_indigenous_pct: number;
+    ctg_detention_rate: number | null;
+  }> | null>;
+}
+
+/**
+ * Crime stats by LGA — total incidents and rates
+ */
+export async function getCrimeStatsLga(lgaNames: string[]) {
+  const supabase = getServiceSupabase();
+  const lgaList = lgaNames.map(l => `'${l.replace(/'/g, "''")}'`).join(',');
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT lga_name, state,
+              SUM(incidents)::int as total_incidents,
+              ROUND(AVG(rate_per_100k))::int as avg_rate_per_100k
+       FROM crime_stats_lga
+       WHERE lga_name IN (${lgaList})
+       GROUP BY lga_name, state
+       ORDER BY avg_rate_per_100k DESC`,
+  })) as Promise<Array<{
+    lga_name: string;
+    state: string;
+    total_incidents: number;
+    avg_rate_per_100k: number;
+  }> | null>;
+}
+
+/**
  * Utility: format money
  */
 export function money(n: number | null): string {
