@@ -1,7 +1,13 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { execSync } from 'child_process';
+import { existsSync } from 'fs';
+import { resolve } from 'path';
 
-// Integration tests against real DB via gsql.mjs
+const rootDir = process.cwd().replace('/apps/web', '');
+const hasEnv = existsSync(resolve(rootDir, '.env'));
+
+// Integration tests against real DB via gsql.mjs — skip in CI where .env is unavailable
+const describeDb = hasEnv ? describe : describe.skip;
 function gsql(query: string): string {
   return execSync(`node --env-file=.env scripts/gsql.mjs "${query.replace(/"/g, '\\"')}"`, {
     cwd: process.cwd().replace('/apps/web', ''),
@@ -23,7 +29,7 @@ function gsqlJson(query: string): Record<string, unknown>[] {
   }
 }
 
-describe('Entity Dossier - MV data', () => {
+describeDb('Entity Dossier - MV data', () => {
   it('returns correct stats for Defence (>100K relationships)', () => {
     const result = gsql(
       "SELECT total_relationships, total_outbound_amount FROM mv_gs_entity_stats WHERE gs_id = 'AU-GOV-0ec9911c9e99d1b7bb1b77f4abffc583'"
@@ -65,7 +71,7 @@ describe('Entity Dossier - MV data', () => {
   });
 });
 
-describe('Entity Dossier - Keyset pagination indexes', () => {
+describeDb('Entity Dossier - Keyset pagination indexes', () => {
   it('has composite indexes for source keyset', () => {
     const result = gsql(
       "SELECT indexname FROM pg_indexes WHERE tablename = 'gs_relationships' AND indexname = 'idx_gs_rel_source_type_amt'"
@@ -81,7 +87,7 @@ describe('Entity Dossier - Keyset pagination indexes', () => {
   });
 });
 
-describe('Entity Dossier - Risk badge', () => {
+describeDb('Entity Dossier - Risk badge', () => {
   it('flags concentration >= 0.6', () => {
     const result = gsql(
       "SELECT COUNT(*) as c FROM mv_gs_entity_stats WHERE top_counterparty_share >= 0.6"
