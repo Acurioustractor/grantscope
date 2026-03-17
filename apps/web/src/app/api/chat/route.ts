@@ -47,14 +47,7 @@ function formatMoney(n: number | null): string {
   return `$${n.toLocaleString()}`;
 }
 
-/** Extract text from a UIMessage (which uses parts array, not content string) */
-function getTextFromMessage(msg: UIMessage): string {
-  if (!msg.parts) return '';
-  return msg.parts
-    .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
-    .map(p => p.text)
-    .join('');
-}
+import { getTextFromMessage } from '@/lib/ai-chat-helpers';
 
 async function getOrgProfileId(db: ReturnType<typeof getServiceSupabase>, userId: string) {
   const { data: own } = await db

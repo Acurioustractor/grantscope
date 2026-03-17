@@ -4,13 +4,20 @@ import { useState, useCallback } from 'react';
 import { IntakeChat, type IntakeUpdate } from '../_components/intake-chat';
 import { IntelligencePanel } from '../_components/intelligence-panel';
 
+export interface SavedMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export function IntakeBuilderClient({
   intakeId,
   initialPhase,
+  savedMessages,
 }: {
   intakeId: string;
   initialPhase: string;
-  initialMessages: unknown[];
+  savedMessages: SavedMessage[];
 }) {
   const [allUpdates, setAllUpdates] = useState<IntakeUpdate[]>([]);
 
@@ -68,6 +75,7 @@ export function IntakeBuilderClient({
         <IntakeChat
           intakeId={intakeId}
           initialPhase={initialPhase}
+          savedMessages={savedMessages}
           onIntakeUpdate={handleIntakeUpdate}
         />
       </div>

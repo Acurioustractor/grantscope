@@ -1,25 +1,17 @@
 import { streamText, convertToModelMessages, type UIMessage } from 'ai';
 import { anthropic } from '@ai-sdk/anthropic';
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { requireOrgAccess } from '../../../_lib/auth';
-import { NextResponse } from 'next/server';
 import {
   getJourney,
   addJourneyMessage,
   matchStepToData,
 } from '@/lib/services/journey-service';
+import { getTextFromMessage } from '@/lib/ai-chat-helpers';
 
 export const maxDuration = 60;
 
 type Params = { params: Promise<{ orgProfileId: string }> };
-
-function getTextFromMessage(msg: UIMessage): string {
-  if (!msg.parts) return '';
-  return msg.parts
-    .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
-    .map(p => p.text)
-    .join('');
-}
 
 function buildSystemPrompt(journeyContext: string, almaContext: string): string {
   return `You are a Journey Mapping Guide — an expert in service design, human-centred design, and the Australian social sector. You help organisations map the real journeys of the people they serve.
@@ -80,6 +72,9 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   if (journeyId) {
     const journey = await getJourney(journeyId);
+    if (journey && journey.org_profile_id !== orgProfileId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
     if (journey) {
       journeyContext = `Journey: "${journey.title}"\n`;
       for (const persona of journey.personas) {

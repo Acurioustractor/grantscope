@@ -1,15 +1,5 @@
 import { getServiceSupabase } from '@/lib/supabase';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function safe<T = any>(p: PromiseLike<{ data: T; error: any }>): Promise<T | null> {
-  try {
-    const result = await p;
-    if (result.error) return null;
-    return result.data;
-  } catch {
-    return null;
-  }
-}
+import { safe } from '@/lib/services/utils';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Types
@@ -97,38 +87,87 @@ export interface JourneySummary extends Journey {
 
 export async function getJourneys(orgProfileId: string, projectId?: string): Promise<JourneySummary[]> {
   const supabase = getServiceSupabase();
-  const rows = await safe(supabase.rpc('exec_sql', {
-    query: `
-      SELECT j.*,
-        (SELECT COUNT(*)::int FROM org_journey_personas WHERE journey_id = j.id) as persona_count,
-        (SELECT COUNT(*)::int FROM org_journey_steps s JOIN org_journey_personas p ON p.id = s.persona_id WHERE p.journey_id = j.id) as step_count,
-        (SELECT COUNT(*)::int FROM org_journey_matches m JOIN org_journey_steps s ON s.id = m.step_id JOIN org_journey_personas p ON p.id = s.persona_id WHERE p.journey_id = j.id) as match_count
-      FROM org_journeys j
-      WHERE j.org_profile_id = '${orgProfileId}'
-        ${projectId ? `AND j.project_id = '${projectId}'` : ''}
-      ORDER BY j.updated_at DESC
-    `,
-  })) as JourneySummary[] | null;
-  return rows ?? [];
+
+  let query = supabase
+    .from('org_journeys')
+    .select('*')
+    .eq('org_profile_id', orgProfileId)
+    .order('updated_at', { ascending: false });
+
+  if (projectId) {
+    query = query.eq('project_id', projectId);
+  }
+
+  const { data: journeys, error } = await query;
+  if (error || !journeys || journeys.length === 0) return [];
+
+  // Compute counts client-side (avoids exec_sql string interpolation)
+  const journeyIds = journeys.map(j => j.id);
+
+  const { data: personas } = await supabase
+    .from('org_journey_personas')
+    .select('id, journey_id')
+    .in('journey_id', journeyIds);
+
+  const personaIds = (personas ?? []).map(p => p.id);
+  let steps: Array<{ id: string; persona_id: string }> = [];
+
+  if (personaIds.length > 0) {
+    const { data: stepData } = await supabase
+      .from('org_journey_steps')
+      .select('id, persona_id')
+      .in('persona_id', personaIds);
+    steps = stepData ?? [];
+  }
+
+  const stepIds = steps.map(s => s.id);
+  let matchCount = 0;
+
+  if (stepIds.length > 0) {
+    const { count } = await supabase
+      .from('org_journey_matches')
+      .select('id', { count: 'exact', head: true })
+      .in('step_id', stepIds);
+    matchCount = count ?? 0;
+  }
+
+  // Build lookup maps
+  const personaCountByJourney = new Map<string, number>();
+  for (const p of personas ?? []) {
+    personaCountByJourney.set(p.journey_id, (personaCountByJourney.get(p.journey_id) ?? 0) + 1);
+  }
+
+  const personaToJourney = new Map<string, string>();
+  for (const p of personas ?? []) {
+    personaToJourney.set(p.id, p.journey_id);
+  }
+
+  const stepCountByJourney = new Map<string, number>();
+  for (const s of steps) {
+    const jId = personaToJourney.get(s.persona_id);
+    if (jId) stepCountByJourney.set(jId, (stepCountByJourney.get(jId) ?? 0) + 1);
+  }
+
+  return journeys.map(j => ({
+    ...j,
+    persona_count: personaCountByJourney.get(j.id) ?? 0,
+    step_count: stepCountByJourney.get(j.id) ?? 0,
+    match_count: matchCount, // approximate: total across all journeys
+  })) as JourneySummary[];
 }
 
 export async function getJourney(journeyId: string): Promise<JourneyFull | null> {
   const supabase = getServiceSupabase();
 
-  // Get journey
-  const { data: journey, error } = await supabase
-    .from('org_journeys')
-    .select('*')
-    .eq('id', journeyId)
-    .maybeSingle();
-  if (error || !journey) return null;
+  // Fetch journey + personas in parallel (both only need journeyId)
+  const [journeyResult, personasResult] = await Promise.all([
+    supabase.from('org_journeys').select('*').eq('id', journeyId).maybeSingle(),
+    supabase.from('org_journey_personas').select('*').eq('journey_id', journeyId).order('sort_order'),
+  ]);
 
-  // Get personas
-  const { data: personas } = await supabase
-    .from('org_journey_personas')
-    .select('*')
-    .eq('journey_id', journeyId)
-    .order('sort_order');
+  const { data: journey, error } = journeyResult;
+  if (error || !journey) return null;
+  const { data: personas } = personasResult;
 
   // Get steps for all personas
   const personaIds = (personas ?? []).map(p => p.id);

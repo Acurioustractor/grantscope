@@ -7,18 +7,11 @@ import {
   formatMoney,
   type IntakeIntelligence,
 } from '@/lib/services/intake-intelligence';
+import { getTextFromMessage } from '@/lib/ai-chat-helpers';
 
 export const maxDuration = 60;
 
 type Params = { params: Promise<{ intakeId: string }> };
-
-function getTextFromMessage(msg: UIMessage): string {
-  if (!msg.parts) return '';
-  return msg.parts
-    .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
-    .map(p => p.text)
-    .join('');
-}
 
 function buildIntelligenceContext(intel: IntakeIntelligence): string {
   const parts: string[] = [];

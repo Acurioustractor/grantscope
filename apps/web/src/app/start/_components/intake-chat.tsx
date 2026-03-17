@@ -37,7 +37,7 @@ export interface IntakeUpdate {
 // Parsers
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-function parseIntakeUpdates(text: string): IntakeUpdate[] {
+export function parseIntakeUpdates(text: string): IntakeUpdate[] {
   const updates: IntakeUpdate[] = [];
   const regex = /<!-- INTAKE_UPDATE (.*?) -->/g;
   let m;
@@ -51,11 +51,11 @@ function parseIntakeUpdates(text: string): IntakeUpdate[] {
   return updates;
 }
 
-function stripIntakeUpdates(text: string): string {
+export function stripIntakeUpdates(text: string): string {
   return text.replace(/<!-- INTAKE_UPDATE .*? -->/g, '').trim();
 }
 
-function formatMarkdown(text: string): string {
+export function formatMarkdown(text: string): string {
   return text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -136,13 +136,21 @@ I have access to data on **100,000+ Australian organisations**, **18,000+ grants
 
 **Tell me about your idea.** What problem do you want to solve, and who do you want to help?`;
 
+interface SavedMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export function IntakeChat({
   intakeId,
   initialPhase,
+  savedMessages,
   onIntakeUpdate,
 }: {
   intakeId: string;
   initialPhase: string;
+  savedMessages?: SavedMessage[];
   onIntakeUpdate: (updates: IntakeUpdate[]) => void;
 }) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -159,19 +167,42 @@ export function IntakeChat({
     [intakeId],
   );
 
-  const { messages, sendMessage, status } = useChat({
-    transport,
-    messages: [
-      {
-        id: 'welcome',
-        role: 'assistant' as const,
-        parts: [{ type: 'text' as const, text: WELCOME_TEXT }],
+  const initialMessages = useMemo(() => {
+    const welcome = {
+      id: 'welcome',
+      role: 'assistant' as const,
+      parts: [{ type: 'text' as const, text: WELCOME_TEXT }],
+      createdAt: new Date(),
+    };
+    if (!savedMessages || savedMessages.length === 0) return [welcome];
+    // Restore conversation from DB — prepend welcome, then saved messages
+    return [
+      welcome,
+      ...savedMessages.map(m => ({
+        id: m.id,
+        role: m.role as 'user' | 'assistant',
+        parts: [{ type: 'text' as const, text: m.content }],
         createdAt: new Date(),
-      },
-    ],
+      })),
+    ];
+  }, [savedMessages]);
+
+  const { messages, sendMessage, status, error } = useChat({
+    transport,
+    messages: initialMessages,
   });
 
   const isStreaming = status === 'streaming' || status === 'submitted';
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Surface AI errors to user
+  useEffect(() => {
+    if (error) {
+      setErrorMessage('Something went wrong. Please try again.');
+      const timer = setTimeout(() => setErrorMessage(null), 8000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
 
   // Process structured updates
   const stableOnIntakeUpdate = useCallback(onIntakeUpdate, [onIntakeUpdate]);
@@ -280,6 +311,13 @@ export function IntakeChat({
 
         <div ref={messagesEndRef} />
       </div>
+
+      {/* Error banner */}
+      {errorMessage && (
+        <div className="px-4 py-2 bg-red-50 border-t border-red-200 text-red-700 text-xs font-medium">
+          {errorMessage}
+        </div>
+      )}
 
       {/* Input */}
       <div className="border-t border-gray-200 p-4">

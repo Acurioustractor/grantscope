@@ -1,17 +1,7 @@
 import { getServiceSupabase } from '@/lib/supabase';
+import { safe } from '@/lib/services/utils';
 
 type Topic = 'youth-justice' | 'child-protection' | 'ndis' | 'family-services' | 'indigenous' | 'legal-services' | 'diversion' | 'prevention';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function safe<T = any>(p: PromiseLike<{ data: T; error: any }>): Promise<T | null> {
-  try {
-    const result = await p;
-    if (result.error) return null;
-    return result.data;
-  } catch {
-    return null;
-  }
-}
 
 function topicFilter(topic: Topic): string {
   return `topics @> ARRAY['${topic}']::text[]`;
@@ -425,17 +415,22 @@ export async function getYouthJusticeIndicators() {
   const supabase = getServiceSupabase();
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT d.state,
-              d.total_expenditure_m::float,
-              d.cost_per_detention::float as cost_per_day,
-              d.recidivism_pct::float,
-              d.indigenous_rate_ratio::float,
+              ROUND(d.total_expenditure_m)::int as total_expenditure_m,
+              ROUND(d.cost_per_detention)::int as cost_per_day,
+              r.recidivism_pct::int as recidivism_pct,
+              ROUND(d.indigenous_rate_ratio, 1)::float as indigenous_rate_ratio,
               d.facility_count::int,
               d.total_beds::int,
-              d.facility_indigenous_pct::float as detention_indigenous_pct,
+              ROUND(d.facility_indigenous_pct)::int as detention_indigenous_pct,
               c.actual_rate::float as ctg_detention_rate
        FROM v_youth_justice_state_dashboard d
        LEFT JOIN v_ctg_youth_justice_progress c
          ON c.state = d.state AND c.financial_year = d.financial_year
+       LEFT JOIN LATERAL (
+         SELECT recidivism_pct FROM v_youth_justice_state_dashboard
+         WHERE state = d.state AND recidivism_pct IS NOT NULL
+         ORDER BY financial_year DESC LIMIT 1
+       ) r ON true
        WHERE d.financial_year = '2023-24'
        ORDER BY d.total_expenditure_m DESC`,
   })) as Promise<Array<{
@@ -474,6 +469,64 @@ export async function getCrimeStatsLga(lgaNames: string[]) {
 }
 
 /**
+ * Cross-system heatmap — all LGAs from pre-computed lga_cross_system_stats
+ */
+export async function getCrossSystemHeatmap() {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT
+              lga_name, state, COALESCE(population, 0)::int AS population,
+              COALESCE(low_icsea_schools, 0)::int AS low_icsea,
+              COALESCE(avg_icsea, 0)::int AS avg_icsea,
+              COALESCE(school_count, 0)::int AS schools,
+              COALESCE(indigenous_pct, 0)::float AS indigenous_pct,
+              CASE WHEN population > 0 THEN ROUND(dsp_recipients::numeric / population * 1000) ELSE 0 END::int AS dsp_rate,
+              CASE WHEN population > 0 THEN ROUND(jobseeker_recipients::numeric / population * 1000) ELSE 0 END::int AS jobseeker_rate,
+              CASE WHEN population > 0 THEN ROUND(youth_allowance_recipients::numeric / population * 1000) ELSE 0 END::int AS youth_allowance_rate,
+              COALESCE(cost_per_detention_day, 0)::int AS cost_per_day,
+              recidivism_pct::int AS recidivism_pct,
+              COALESCE(indigenous_rate_ratio, 0)::float AS indigenous_rate_ratio,
+              COALESCE(detention_indigenous_pct, 0)::int AS detention_indigenous_pct,
+              CASE WHEN population > 0 THEN ROUND(ndis_youth_participants::numeric / population * 1000) ELSE 0 END::int AS ndis_rate,
+              COALESCE(crime_rate_per_100k, 0)::int AS crime_rate
+       FROM lga_cross_system_stats
+       WHERE school_count > 0 OR dsp_recipients > 0 OR ndis_youth_participants > 0
+       ORDER BY lga_name`,
+  })) as Promise<Array<{
+    lga_name: string;
+    state: string;
+    population: number;
+    low_icsea: number;
+    avg_icsea: number;
+    schools: number;
+    indigenous_pct: number;
+    dsp_rate: number;
+    jobseeker_rate: number;
+    youth_allowance_rate: number;
+    cost_per_day: number;
+    recidivism_pct: number | null;
+    indigenous_rate_ratio: number;
+    detention_indigenous_pct: number;
+    ndis_rate: number;
+    crime_rate: number;
+  }> | null>;
+}
+
+/**
+ * ALMA intervention count by LGA — for service desert detection
+ */
+export async function getAlmaByLga(topic: Topic) {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT ge.lga_name, COUNT(*)::int as alma_count
+            FROM alma_interventions ai
+            JOIN gs_entities ge ON ge.id = ai.gs_entity_id
+            WHERE ai.${topicFilter(topic)} AND ge.lga_name IS NOT NULL
+            GROUP BY ge.lga_name`,
+  })) as Promise<Array<{ lga_name: string; alma_count: number }> | null>;
+}
+
+/**
  * Utility: format money
  */
 export function money(n: number | null): string {
@@ -489,4 +542,263 @@ export function money(n: number | null): string {
  */
 export function fmt(n: number): string {
   return n.toLocaleString('en-AU');
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// PICC Entity Dashboard Functions
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+const PICC_ABN = '14640793728';
+
+/**
+ * PICC funding by program (recent)
+ */
+export async function getPiccFundingByProgram() {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT program_name,
+              SUM(amount_dollars)::bigint as total,
+              COUNT(*)::int as records,
+              MIN(financial_year) as from_fy,
+              MAX(financial_year) as to_fy
+       FROM justice_funding
+       WHERE recipient_abn = '${PICC_ABN}'
+       GROUP BY program_name
+       ORDER BY total DESC`,
+  })) as Promise<Array<{
+    program_name: string;
+    total: number;
+    records: number;
+    from_fy: string;
+    to_fy: string;
+  }> | null>;
+}
+
+/**
+ * PICC funding by year (time series)
+ */
+export async function getPiccFundingByYear() {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT financial_year,
+              SUM(amount_dollars)::bigint as total,
+              COUNT(*)::int as grants,
+              COUNT(DISTINCT program_name)::int as programs
+       FROM justice_funding
+       WHERE recipient_abn = '${PICC_ABN}'
+       GROUP BY financial_year
+       ORDER BY financial_year`,
+  })) as Promise<Array<{
+    financial_year: string;
+    total: number;
+    grants: number;
+    programs: number;
+  }> | null>;
+}
+
+/**
+ * PICC contracts from AusTender
+ */
+export async function getPiccContracts() {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT title, contract_value::bigint as value,
+              buyer_name, contract_start, contract_end
+       FROM austender_contracts
+       WHERE supplier_abn = '${PICC_ABN}'
+       ORDER BY contract_value DESC`,
+  })) as Promise<Array<{
+    title: string;
+    value: number;
+    buyer_name: string;
+    contract_start: string;
+    contract_end: string | null;
+  }> | null>;
+}
+
+/**
+ * PICC ALMA interventions
+ */
+export async function getPiccAlmaInterventions() {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT ai.name, ai.type, ai.evidence_level,
+              ai.target_cohort, ai.description
+       FROM alma_interventions ai
+       JOIN gs_entities ge ON ge.id = ai.gs_entity_id
+       WHERE ge.abn = '${PICC_ABN}'
+       ORDER BY ai.name`,
+  })) as Promise<Array<{
+    name: string;
+    type: string;
+    evidence_level: string;
+    target_cohort: string;
+    description: string;
+  }> | null>;
+}
+
+/**
+ * PICC entity details
+ */
+export async function getPiccEntity() {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT gs_id, canonical_name, abn, entity_type, sector,
+              state, postcode, remoteness, seifa_irsd_decile,
+              is_community_controlled, lga_name
+       FROM gs_entities
+       WHERE abn = '${PICC_ABN}'`,
+  })) as Promise<Array<{
+    gs_id: string;
+    canonical_name: string;
+    abn: string;
+    entity_type: string;
+    sector: string;
+    state: string;
+    postcode: string;
+    remoteness: string;
+    seifa_irsd_decile: number;
+    is_community_controlled: boolean;
+    lga_name: string;
+  }> | null>;
+}
+
+/**
+ * Related Palm Island entities
+ */
+export async function getPalmIslandEntities() {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT gs_id, canonical_name, abn, entity_type, sector
+       FROM gs_entities
+       WHERE (canonical_name ILIKE '%palm island%' OR postcode = '4816')
+         AND abn != '${PICC_ABN}'
+       ORDER BY canonical_name
+       LIMIT 20`,
+  })) as Promise<Array<{
+    gs_id: string;
+    canonical_name: string;
+    abn: string;
+    entity_type: string;
+    sector: string;
+  }> | null>;
+}
+
+/**
+ * PICC leadership from org_leadership table
+ */
+export async function getPiccLeadership() {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT name, title, bio, external_roles, sort_order
+       FROM org_leadership
+       WHERE org_profile_id = 'a1b2c3d4-0000-4000-8000-01cc0f11e001'
+       ORDER BY sort_order`,
+  })) as Promise<Array<{
+    name: string;
+    title: string;
+    bio: string | null;
+    external_roles: Array<{ org: string; role: string }>;
+    sort_order: number;
+  }> | null>;
+}
+
+/**
+ * Matched grant opportunities for PICC (upcoming, matching their focus areas)
+ */
+export async function getPiccMatchedGrants() {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT id, name, amount_min, amount_max, deadline, categories, foundation_id
+       FROM grant_opportunities
+       WHERE deadline > CURRENT_DATE
+         AND (
+           'indigenous' = ANY(categories)
+           OR 'health' = ANY(categories)
+           OR 'community' = ANY(categories)
+           OR 'youth' = ANY(categories)
+         )
+       ORDER BY deadline ASC
+       LIMIT 15`,
+  })) as Promise<Array<{
+    id: string;
+    name: string;
+    amount_min: number | null;
+    amount_max: number | null;
+    deadline: string;
+    categories: string[];
+    foundation_id: string | null;
+  }> | null>;
+}
+
+/**
+ * PICC funding by year (from gs_relationships for the funding flow chart)
+ */
+export async function getPiccPipeline() {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT p.name, p.amount_display, p.amount_numeric, p.funder, p.deadline,
+              p.status, p.notes, p.funder_type, p.grant_opportunity_id,
+              f.id as foundation_id
+       FROM org_pipeline p
+       JOIN org_profiles o ON o.id = p.org_profile_id
+       LEFT JOIN gs_entities e ON e.id = p.funder_entity_id
+       LEFT JOIN foundations f ON f.acnc_abn = e.abn
+       WHERE o.abn = '14640793728'
+       ORDER BY CASE p.status
+         WHEN 'submitted' THEN 1 WHEN 'upcoming' THEN 2 WHEN 'prospect' THEN 3 ELSE 4
+       END, p.deadline`,
+  })) as Promise<Array<{
+    name: string;
+    amount_display: string;
+    amount_numeric: number | null;
+    funder: string;
+    deadline: string;
+    status: string;
+    notes: string | null;
+    funder_type: string | null;
+    grant_opportunity_id: string | null;
+    foundation_id: string | null;
+  }> | null>;
+}
+
+export async function getPiccPeerOrgs() {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT DISTINCT e.canonical_name, e.abn, e.state, e.lga_name,
+              COUNT(DISTINCT a.id)::int as alma_programs,
+              STRING_AGG(DISTINCT a.type, ', ') as program_types
+       FROM gs_entities e
+       JOIN alma_interventions a ON a.gs_entity_id = e.gs_id
+       WHERE a.type IN ('Cultural Connection', 'Community-Led', 'Wraparound Support', 'Diversion', 'Family Strengthening')
+         AND e.is_community_controlled = true
+         AND e.abn != '14640793728'
+       GROUP BY e.canonical_name, e.abn, e.state, e.lga_name
+       ORDER BY alma_programs DESC
+       LIMIT 12`,
+  })) as Promise<Array<{
+    canonical_name: string;
+    abn: string;
+    state: string;
+    lga_name: string | null;
+    alma_programs: number;
+    program_types: string;
+  }> | null>;
+}
+
+export async function getPiccFundingFlow() {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT year, SUM(amount)::bigint as total, COUNT(*)::int as grants
+       FROM gs_relationships
+       WHERE (source_entity_id = '18fc2705-463c-4b27-8dbd-0ca79c640582'
+              OR target_entity_id = '18fc2705-463c-4b27-8dbd-0ca79c640582')
+         AND amount IS NOT NULL
+         AND year IS NOT NULL
+       GROUP BY year ORDER BY year`,
+  })) as Promise<Array<{
+    year: number;
+    total: number;
+    grants: number;
+  }> | null>;
 }

@@ -9,7 +9,12 @@ export default async function IntakePage({ params }: Props) {
   const intake = await getIntake(intakeId);
   if (!intake) notFound();
 
-  const messages = await getIntakeMessages(intakeId);
+  const dbMessages = await getIntakeMessages(intakeId);
+  const savedMessages = dbMessages.map(m => ({
+    id: m.id,
+    role: m.role as 'user' | 'assistant',
+    content: m.content,
+  }));
 
   return (
     <div className="h-screen bg-white flex flex-col overflow-hidden">
@@ -33,7 +38,7 @@ export default async function IntakePage({ params }: Props) {
       <IntakeBuilderClient
         intakeId={intakeId}
         initialPhase={intake.phase}
-        initialMessages={messages}
+        savedMessages={savedMessages}
       />
     </div>
   );
