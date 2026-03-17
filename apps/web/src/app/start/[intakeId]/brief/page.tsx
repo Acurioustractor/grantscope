@@ -61,13 +61,13 @@ export default async function BriefPage({ params }: Props) {
           </p>
           <div className="flex gap-3 justify-center flex-wrap">
             <a
-              href={`/register?redirect=/home`}
+              href={`/register?redirect=/home?claim=${intakeId}`}
               className="px-6 py-3 bg-bauhaus-black text-white text-xs font-black uppercase tracking-widest hover:bg-bauhaus-red transition-colors"
             >
               Create Free Account
             </a>
             <a
-              href="/login?next=/home"
+              href={`/login?next=/home?claim=${intakeId}`}
               className="px-6 py-3 border-2 border-bauhaus-black text-bauhaus-black text-xs font-black uppercase tracking-widest hover:bg-bauhaus-black hover:text-white transition-colors"
             >
               Already have an account? Sign in

@@ -1,6 +1,8 @@
+import { Suspense } from 'react';
 import { createSupabaseServer } from '@/lib/supabase-server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { HomeClient } from './home-client';
+import { IntakeClaimer } from './intake-claimer';
 import type { GrantItem, FoundationItem, AgentRun } from './home-client';
 
 export const dynamic = 'force-dynamic';
@@ -90,23 +92,28 @@ export default async function HomePage() {
       : 'Welcome to CivicGraph. Let\u2019s get your workspace set up.';
 
   return (
-    <HomeClient
-      greeting={greeting}
-      contextLine={contextLine}
-      isNewUser={isNewUser}
-      hasProfile={hasProfile}
-      hasFocusAreas={hasFocusAreas}
-      grants={grants}
-      foundations={foundations}
-      agentRuns={agentRuns}
-      openGrantCount={openGrantCount || 0}
-      entityCount={entityCount || 0}
-      urgentDeadlines={urgentDeadlines}
-      soonDeadlines={soonDeadlines}
-      discoveredCount={discoveredCount}
-      activeCount={activeCount}
-      submittedCount={submittedCount}
-      wonCount={wonCount}
-    />
+    <>
+      <Suspense>
+        <IntakeClaimer />
+      </Suspense>
+      <HomeClient
+        greeting={greeting}
+        contextLine={contextLine}
+        isNewUser={isNewUser}
+        hasProfile={hasProfile}
+        hasFocusAreas={hasFocusAreas}
+        grants={grants}
+        foundations={foundations}
+        agentRuns={agentRuns}
+        openGrantCount={openGrantCount || 0}
+        entityCount={entityCount || 0}
+        urgentDeadlines={urgentDeadlines}
+        soonDeadlines={soonDeadlines}
+        discoveredCount={discoveredCount}
+        activeCount={activeCount}
+        submittedCount={submittedCount}
+        wonCount={wonCount}
+      />
+    </>
   );
 }

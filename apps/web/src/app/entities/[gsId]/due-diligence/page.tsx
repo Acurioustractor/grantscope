@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { createSupabaseServer } from '@/lib/supabase-server';
 import { assembleDueDiligencePack } from '@/lib/services/due-diligence-service';
 import type { DueDiligencePack, ContractRecord, AlmaInterventionSummary } from '@/lib/services/due-diligence-service';
 
@@ -61,6 +62,11 @@ export default async function DueDiligencePreviewPage({
   params: Promise<{ gsId: string }>;
 }) {
   const { gsId } = await params;
+
+  const supabase = await createSupabaseServer();
+  const { data: { user } } = await supabase.auth.getUser();
+  const isAuthenticated = !!user;
+
   const pack = await assembleDueDiligencePack(gsId);
   if (!pack) notFound();
 
@@ -71,20 +77,29 @@ export default async function DueDiligencePreviewPage({
         <Link href={`/entities/${gsId}`} className="text-xs font-black text-bauhaus-muted uppercase tracking-widest hover:text-bauhaus-black">
           &larr; Back to Entity
         </Link>
-        <div className="flex gap-2">
+        {isAuthenticated ? (
+          <div className="flex gap-2">
+            <a
+              href={`/api/entities/${gsId}/due-diligence?format=pdf`}
+              className="text-[11px] font-black px-3 py-1.5 border-2 border-bauhaus-black bg-bauhaus-black text-white uppercase tracking-widest hover:bg-bauhaus-red hover:border-bauhaus-red transition-colors"
+            >
+              Download PDF
+            </a>
+            <a
+              href={`/api/entities/${gsId}/due-diligence?format=json`}
+              className="text-[11px] font-black px-3 py-1.5 border-2 border-bauhaus-black text-bauhaus-black uppercase tracking-widest hover:bg-bauhaus-black hover:text-white transition-colors"
+            >
+              Download JSON
+            </a>
+          </div>
+        ) : (
           <a
-            href={`/api/entities/${gsId}/due-diligence?format=pdf`}
+            href={`/register?redirect=/entities/${gsId}/due-diligence`}
             className="text-[11px] font-black px-3 py-1.5 border-2 border-bauhaus-black bg-bauhaus-black text-white uppercase tracking-widest hover:bg-bauhaus-red hover:border-bauhaus-red transition-colors"
           >
-            Download PDF
+            Sign Up to Download PDF
           </a>
-          <a
-            href={`/api/entities/${gsId}/due-diligence?format=json`}
-            className="text-[11px] font-black px-3 py-1.5 border-2 border-bauhaus-black text-bauhaus-black uppercase tracking-widest hover:bg-bauhaus-black hover:text-white transition-colors"
-          >
-            Download JSON
-          </a>
-        </div>
+        )}
       </div>
 
       {/* Header */}
