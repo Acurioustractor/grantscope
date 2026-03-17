@@ -30,7 +30,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Protect authenticated routes
-  const protectedPrefixes = ['/home', '/tracker', '/foundations/tracker', '/ops', '/profile', '/goods-intelligence', '/goods-workspace'];
+  const protectedPrefixes = ['/home', '/tracker', '/foundations/tracker', '/ops', '/profile', '/goods-intelligence', '/goods-workspace', '/org'];
   if (protectedPrefixes.some(p => pathname.startsWith(p)) && !user) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
@@ -49,5 +49,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/home', '/tracker/:path*', '/foundations/tracker/:path*', '/foundations/tracker', '/ops/:path*', '/ops', '/profile/:path*', '/profile', '/login', '/goods-intelligence/:path*', '/goods-intelligence', '/goods-workspace/:path*', '/goods-workspace'],
+  matcher: ['/home', '/home/:path*', '/tracker/:path*', '/foundations/tracker/:path*', '/foundations/tracker', '/ops/:path*', '/ops', '/profile/:path*', '/profile', '/login', '/goods-intelligence/:path*', '/goods-intelligence', '/goods-workspace/:path*', '/goods-workspace', '/org/:path*', '/org'],
 };

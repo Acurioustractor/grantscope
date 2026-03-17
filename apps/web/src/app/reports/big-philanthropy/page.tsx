@@ -1,4 +1,5 @@
 import { TableOfContents } from './toc';
+import { ReportCTA } from '../_components/report-cta';
 
 // Foundation IDs for internal links
 const FOUNDATIONS = {
@@ -634,6 +635,8 @@ export default async function BigPhilanthropyPage() {
           </section>
         </article>
       </div>
+
+      <ReportCTA reportSlug="big-philanthropy" reportTitle="The $222 Billion Question" />
     </div>
   );
 }

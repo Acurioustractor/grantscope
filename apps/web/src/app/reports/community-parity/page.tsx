@@ -1,4 +1,5 @@
 import { TableOfContents } from './toc';
+import { ReportCTA } from '../_components/report-cta';
 
 const FOUNDATIONS = {
   paulRamsay: '4ee5baca-c898-4318-ae2b-d79b95379cc7',
@@ -410,6 +411,8 @@ export default function CommunityParityPage() {
           </section>
         </article>
       </div>
+
+      <ReportCTA reportSlug="community-parity" reportTitle="Community Parity Report" />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { getServiceSupabase } from '@/lib/supabase';
 import Link from 'next/link';
+import { ReportCTA } from '../_components/report-cta';
 
 export const dynamic = 'force-dynamic';
 
@@ -421,6 +422,8 @@ export default async function TriplePlayReport() {
           </div>
         </div>
       </section>
+
+      <ReportCTA reportSlug="triple-play" reportTitle="Donate. Lobby. Win. Pay No Tax." />
     </div>
   );
 }

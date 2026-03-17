@@ -1,6 +1,7 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import { buildPowerReport } from '@grant-engine/reports/power-analysis';
 import { PowerDynamicsCharts } from './charts';
+import { ReportCTA } from '../_components/report-cta';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,6 +57,8 @@ export default async function PowerDynamicsPage() {
       </div>
 
       <PowerDynamicsCharts report={report} />
+
+      <ReportCTA reportSlug="power-dynamics" reportTitle="Power Dynamics Report" />
     </div>
   );
 }

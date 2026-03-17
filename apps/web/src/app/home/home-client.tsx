@@ -348,6 +348,7 @@ export function HomeClient(props: HomeClientProps) {
             <div className="space-y-1">
               {[
                 { href: '/grants', label: 'Search Grants', icon: '\uD83D\uDD0D', count: openGrantCount },
+                { href: '/home/portfolio', label: 'My Grantees', icon: '\uD83D\uDCCB' },
                 { href: '/tender-intelligence', label: 'Procurement Intel', icon: '\uD83D\uDCE6' },
                 { href: '/places', label: 'Place Packs', icon: '\uD83D\uDCCD' },
                 { href: '/reports', label: 'Reports & Research', icon: '\uD83D\uDCCA' },

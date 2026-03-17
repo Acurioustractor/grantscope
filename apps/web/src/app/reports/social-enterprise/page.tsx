@@ -1,5 +1,6 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import { TableOfContents } from './toc';
+import { ReportCTA } from '../_components/report-cta';
 
 export const dynamic = 'force-dynamic';
 
@@ -669,6 +670,8 @@ export default async function SocialEnterpriseReportPage() {
           </section>
         </article>
       </div>
+
+      <ReportCTA reportSlug="social-enterprise" reportTitle="Social Enterprise in Australia" />
     </div>
   );
 }

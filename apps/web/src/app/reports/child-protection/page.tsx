@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { getServiceSupabase } from '@/lib/supabase';
+import { ReportCTA } from '../_components/report-cta';
 import {
   getFundingByState,
   getTopPrograms,
@@ -631,6 +632,8 @@ export default async function ChildProtectionReportPage() {
           </Link>
         </div>
       </section>
+
+      <ReportCTA reportSlug="child-protection" reportTitle="Child Protection Report" />
     </div>
   );
 }

@@ -1,21 +1,26 @@
 import Link from 'next/link';
 import { YouthJusticeCharts, CrossSystemCharts } from './charts';
+import { ReportCTA } from '../_components/report-cta';
+import { FollowTheChild } from './follow-the-child';
+import type { HeatmapRow } from './follow-the-child';
+import { PowerMap } from './power-map';
 import {
   getRogsTimeSeries,
-  getSchoolProfiles,
   getAlmaInterventions,
   getAlmaCount,
+  getAlmaByLga,
   getYouthJusticeContracts,
   getYouthJusticeGrants,
   getNdisYouthOverlay,
   getDssPaymentsByState,
-  getDssPaymentsByLga,
   getYouthJusticeIndicators,
-  getCrimeStatsLga,
+  getCrossSystemHeatmap,
   money,
 } from '@/lib/services/report-service';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600; // ISR: regenerate at most once per hour
+
+const ALL_STATES = ['ACT', 'NSW', 'NT', 'QLD', 'SA', 'TAS', 'VIC', 'WA'];
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Types
@@ -28,16 +33,6 @@ type StateSpending = {
   detention: number;
   community: number;
   conferencing: number;
-};
-
-type CityProfile = {
-  lga_name: string;
-  state: string;
-  schools: number;
-  avg_icsea: number;
-  low_icsea: number;
-  avg_indig_pct: number;
-  total_students: number;
 };
 
 type AlmaIntervention = {
@@ -79,12 +74,6 @@ type DssPayment = {
   recipients: number;
 };
 
-type DssLgaPayment = {
-  lga_name: string;
-  payment_type: string;
-  recipients: number;
-};
-
 type YjIndicator = {
   state: string;
   total_expenditure_m: number;
@@ -95,13 +84,6 @@ type YjIndicator = {
   total_beds: number;
   detention_indigenous_pct: number;
   ctg_detention_rate: number | null;
-};
-
-type CrimeLga = {
-  lga_name: string;
-  state: string;
-  total_incidents: number;
-  avg_rate_per_100k: number;
 };
 
 type StateTotal = {
@@ -116,15 +98,13 @@ type StateTotal = {
 export type YouthJusticeReport = {
   stateTotals: StateTotal[];
   spendingTimeSeries: StateSpending[];
-  cityProfiles: CityProfile[];
   almaInterventions: AlmaIntervention[];
   contracts: AustenderContract[];
   grants: GrantRecipient[];
   ndisOverlay: NdisOverlay[];
   dssPayments: DssPayment[];
-  dssLga: DssLgaPayment[];
   yjIndicators: YjIndicator[];
-  crimeLga: CrimeLga[];
+  heatmapRows: HeatmapRow[];
   nationalTotal: number;
   nationalDetention: number;
   nationalCommunity: number;
@@ -132,31 +112,18 @@ export type YouthJusticeReport = {
   detentionCommunityRatio: number;
 };
 
-const ALL_STATES = ['ACT', 'NSW', 'NT', 'QLD', 'SA', 'TAS', 'VIC', 'WA'];
-
-const CITY_LGAS = [
-  'Brisbane','Logan','Ipswich',
-  'Alice Springs',
-  'Sydney','Canterbury-Bankstown','Blacktown',
-  'Adelaide','Playford','Port Adelaide Enfield','Salisbury',
-  'Perth','Armadale','Wanneroo',
-  'Greater Dandenong','Hume','Casey',
-  'Launceston','Glenorchy','Brighton','Derwent Valley',
-];
-
 async function getReport(): Promise<YouthJusticeReport> {
-  const [rogsData, cityData, almaData, contractsData, grantsData, ndisData, dssData, dssLgaData, yjIndicatorsData, crimeLgaData, almaCountVal] = await Promise.all([
+  const [rogsData, almaData, contractsData, grantsData, ndisData, dssData, yjIndicatorsData, heatmapData, almaCountVal, almaByLgaData] = await Promise.all([
     getRogsTimeSeries('ROGS Youth Justice', ALL_STATES),
-    getSchoolProfiles(CITY_LGAS),
     getAlmaInterventions('youth-justice'),
     getYouthJusticeContracts(15),
     getYouthJusticeGrants(15),
     getNdisYouthOverlay(),
     getDssPaymentsByState(),
-    getDssPaymentsByLga(CITY_LGAS),
     getYouthJusticeIndicators(),
-    getCrimeStatsLga(CITY_LGAS),
+    getCrossSystemHeatmap(),
     getAlmaCount('youth-justice'),
+    getAlmaByLga('youth-justice'),
   ]);
 
   // Process ROGS data into time series and state totals
@@ -221,18 +188,27 @@ async function getReport(): Promise<YouthJusticeReport> {
   const nationalDetention = stateTotals.reduce((s, st) => s + st.detention_10yr, 0);
   const nationalCommunity = stateTotals.reduce((s, st) => s + st.community_10yr, 0);
 
+  // Merge ALMA intervention counts into heatmap rows
+  const almaByLga = new Map<string, number>();
+  for (const row of (almaByLgaData as Array<{ lga_name: string; alma_count: number }> | null) || []) {
+    almaByLga.set(row.lga_name, row.alma_count);
+  }
+  const rawHeatmap = (heatmapData as Array<Omit<HeatmapRow, 'alma_count'>> | null) || [];
+  const heatmapRows: HeatmapRow[] = rawHeatmap.map(r => ({
+    ...r,
+    alma_count: almaByLga.get(r.lga_name) || 0,
+  }));
+
   return {
     stateTotals,
     spendingTimeSeries,
-    cityProfiles: (cityData as CityProfile[] | null) || [],
     almaInterventions: (almaData as AlmaIntervention[] | null) || [],
     contracts: (contractsData as AustenderContract[] | null) || [],
     grants: (grantsData as GrantRecipient[] | null) || [],
     ndisOverlay: (ndisData as NdisOverlay[] | null) || [],
     dssPayments: (dssData as DssPayment[] | null) || [],
-    dssLga: (dssLgaData as DssLgaPayment[] | null) || [],
     yjIndicators: (yjIndicatorsData as YjIndicator[] | null) || [],
-    crimeLga: (crimeLgaData as CrimeLga[] | null) || [],
+    heatmapRows,
     nationalTotal,
     nationalDetention,
     nationalCommunity,
@@ -241,19 +217,19 @@ async function getReport(): Promise<YouthJusticeReport> {
   };
 }
 
+const stateNames: Record<string, string> = {
+  ACT: 'Australian Capital Territory',
+  NSW: 'New South Wales',
+  NT: 'Northern Territory',
+  QLD: 'Queensland',
+  SA: 'South Australia',
+  TAS: 'Tasmania',
+  VIC: 'Victoria',
+  WA: 'Western Australia',
+};
+
 export default async function YouthJusticeReportPage() {
   const report = await getReport();
-
-  const stateNames: Record<string, string> = {
-    ACT: 'Australian Capital Territory',
-    NSW: 'New South Wales',
-    NT: 'Northern Territory',
-    QLD: 'Queensland',
-    SA: 'South Australia',
-    TAS: 'Tasmania',
-    VIC: 'Victoria',
-    WA: 'Western Australia',
-  };
 
   // DSS uses full state names — map to abbreviations
   const dssStateMap: Record<string, string> = {
@@ -278,15 +254,6 @@ export default async function YouthJusticeReportPage() {
     if (row.payment_type === 'JobSeeker Payment') entry.jobseeker = row.recipients;
   }
 
-  const cityGroups: { metro: string; state: string; lgas: string[] }[] = [
-    { metro: 'Brisbane', state: 'QLD', lgas: ['Brisbane', 'Logan', 'Ipswich'] },
-    { metro: 'Melbourne', state: 'VIC', lgas: ['Greater Dandenong', 'Hume', 'Casey'] },
-    { metro: 'Sydney', state: 'NSW', lgas: ['Sydney', 'Canterbury-Bankstown', 'Blacktown'] },
-    { metro: 'Adelaide', state: 'SA', lgas: ['Adelaide', 'Playford', 'Port Adelaide Enfield', 'Salisbury'] },
-    { metro: 'Perth', state: 'WA', lgas: ['Perth', 'Armadale', 'Wanneroo'] },
-    { metro: 'Northern Tasmania', state: 'TAS', lgas: ['Launceston', 'Glenorchy', 'Brighton', 'Derwent Valley'] },
-    { metro: 'Alice Springs', state: 'NT', lgas: ['Alice Springs'] },
-  ];
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -299,18 +266,17 @@ export default async function YouthJusticeReportPage() {
           <span className="text-[10px] font-bold text-white bg-bauhaus-black px-2 py-0.5 rounded-sm uppercase tracking-wider">All States</span>
         </div>
         <h1 className="text-3xl sm:text-4xl font-black text-bauhaus-black mb-3">
-          Youth Justice: Follow the Money
+          Follow the Child
         </h1>
         <p className="text-bauhaus-muted text-base sm:text-lg max-w-3xl leading-relaxed font-medium">
-          Eight states and territories have spent {money(report.nationalTotal)} on youth justice over the past decade.
-          {' '}{money(report.nationalDetention)} went to detention — {report.detentionCommunityRatio}x more than
-          the {money(report.nationalCommunity)} spent on community supervision.
-          Meanwhile, {report.almaCount} evidence-based alternatives exist.
+          A child doesn&apos;t enter youth justice by accident. They are failed by schools, missed by disability services,
+          raised in poverty, and known to child protection — long before they are locked up.
+          This report traces the pipeline across {report.heatmapRows.length} communities.
         </p>
         <div className="flex gap-2 mt-4">
           <span className="text-[10px] font-bold bg-gray-100 text-gray-600 px-2 py-1 rounded uppercase tracking-wider">Contained Campaign</span>
           <span className="text-[10px] font-bold bg-gray-100 text-gray-600 px-2 py-1 rounded uppercase tracking-wider">JusticeHub</span>
-          <span className="text-[10px] font-bold bg-gray-100 text-gray-600 px-2 py-1 rounded uppercase tracking-wider">ROGS 2015–2025</span>
+          <span className="text-[10px] font-bold bg-gray-100 text-gray-600 px-2 py-1 rounded uppercase tracking-wider">ROGS 2015-2025</span>
         </div>
       </div>
 
@@ -333,6 +299,11 @@ export default async function YouthJusticeReportPage() {
           <div className="text-xs text-gray-500 mt-1">Evidence-Based Alternatives</div>
         </div>
       </div>
+
+      {/* ━━━━ Follow the Child: Pipeline + State Cards + Heatmap ━━━━ */}
+      {report.heatmapRows.length > 0 && (
+        <FollowTheChild rows={report.heatmapRows} />
+      )}
 
       {/* ━━━━ State Comparison Table ━━━━ */}
       <section className="mb-10">
@@ -373,76 +344,12 @@ export default async function YouthJusticeReportPage() {
       {/* ━━━━ Charts (Client Component) ━━━━ */}
       <YouthJusticeCharts report={report} />
 
-      {/* ━━━━ City Profiles ━━━━ */}
-      <section className="mb-10 mt-10">
-        <h2 className="text-xl font-black text-bauhaus-black uppercase tracking-wider mb-1">City Profiles: School Disadvantage</h2>
-        <p className="text-sm text-bauhaus-muted mb-4">
-          Cross-system view linking school ICSEA disadvantage to youth justice catchment areas.
-          Low-ICSEA schools (&lt;900) indicate concentrated educational disadvantage.
-        </p>
-
-        {cityGroups.map((group) => {
-          const lgas = report.cityProfiles.filter((p) => group.lgas.includes(p.lga_name));
-          if (lgas.length === 0) return null;
-          const totalStudents = lgas.reduce((s, l) => s + (l.total_students || 0), 0);
-          const totalLowIcsea = lgas.reduce((s, l) => s + (l.low_icsea || 0), 0);
-
-          return (
-            <div key={group.metro} className="mb-6 border-4 border-bauhaus-black rounded-sm overflow-hidden">
-              <div className="bg-bauhaus-black text-white px-4 py-3 flex justify-between items-center">
-                <h3 className="font-black uppercase tracking-wider text-sm">{group.metro} Metro ({group.state})</h3>
-                <div className="flex gap-4 text-xs">
-                  <span>{totalStudents.toLocaleString()} students</span>
-                  <span className="text-red-300">{totalLowIcsea} low-ICSEA schools</span>
-                </div>
-              </div>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-gray-100 text-left">
-                    <th className="px-4 py-2 text-xs font-bold uppercase tracking-wider">LGA</th>
-                    <th className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-right">Schools</th>
-                    <th className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-right">Avg ICSEA</th>
-                    <th className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-right">Low ICSEA (&lt;900)</th>
-                    <th className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-right">Indigenous %</th>
-                    <th className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-right">Students</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lgas.map((lga, i) => (
-                    <tr key={lga.lga_name} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                      <td className="px-4 py-2 font-medium">{lga.lga_name}</td>
-                      <td className="px-4 py-2 text-right font-mono">{lga.schools}</td>
-                      <td className="px-4 py-2 text-right font-mono">
-                        <span className={lga.avg_icsea < 950 ? 'text-red-600 font-bold' : lga.avg_icsea < 1000 ? 'text-amber-600' : 'text-gray-600'}>
-                          {lga.avg_icsea}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2 text-right font-mono">
-                        {lga.low_icsea > 0 ? (
-                          <span className="text-red-600 font-bold">{lga.low_icsea}</span>
-                        ) : '0'}
-                      </td>
-                      <td className="px-4 py-2 text-right font-mono">
-                        <span className={lga.avg_indig_pct > 20 ? 'text-red-600 font-bold' : ''}>
-                          {lga.avg_indig_pct}%
-                        </span>
-                      </td>
-                      <td className="px-4 py-2 text-right font-mono">{(lga.total_students || 0).toLocaleString()}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          );
-        })}
-      </section>
-
       {/* ━━━━ ALMA Interventions ━━━━ */}
       <section className="mb-10">
         <h2 className="text-xl font-black text-bauhaus-black uppercase tracking-wider mb-1">What Works: Evidence from ALMA</h2>
         <p className="text-sm text-bauhaus-muted mb-4">
           From the Australian Living Map of Alternatives — {report.almaCount} youth justice interventions with documented evidence.
-          Sorted by portfolio score (effectiveness × cultural authority × evidence quality).
+          Sorted by portfolio score (effectiveness x cultural authority x evidence quality).
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {report.almaInterventions.map((intervention) => (
@@ -463,172 +370,13 @@ export default async function YouthJusticeReportPage() {
         </div>
       </section>
 
-      {/* ━━━━ Cross-System Overlap Heatmap ━━━━ */}
-      <section className="mb-10 mt-10">
-        <h2 className="text-xl font-black text-bauhaus-black uppercase tracking-wider mb-1">Cross-System Overlap</h2>
-        <p className="text-sm text-bauhaus-muted mb-4">
-          Same places, same young people, different government systems.
-          Each cell shows intensity relative to the worst LGA for that indicator.
-          When an entire row is dark, every system is failing that community simultaneously.
-        </p>
+      {/* ━━━━ PICC Power Map ━━━━ */}
+      <PowerMap />
 
-        {report.dssLga.length > 0 && (() => {
-          // Build per-LGA welfare data
-          const lgaMap = new Map<string, { dsp: number; jobseeker: number; youthAllowance: number }>();
-          for (const row of report.dssLga) {
-            if (!lgaMap.has(row.lga_name)) lgaMap.set(row.lga_name, { dsp: 0, jobseeker: 0, youthAllowance: 0 });
-            const entry = lgaMap.get(row.lga_name)!;
-            if (row.payment_type === 'Disability Support Pension') entry.dsp = row.recipients;
-            if (row.payment_type === 'JobSeeker Payment') entry.jobseeker = row.recipients;
-            if (row.payment_type === 'Youth Allowance (other)') entry.youthAllowance = row.recipients;
-          }
-
-          // Build state-level justice indicators lookup
-          const yjByState = new Map<string, YjIndicator>();
-          for (const yj of report.yjIndicators) yjByState.set(yj.state, yj);
-
-          // Build crime lookup
-          const crimeByLga = new Map<string, CrimeLga>();
-          for (const c of report.crimeLga) crimeByLga.set(c.lga_name, c);
-
-          const rows = Array.from(lgaMap.entries()).map(([lga, dss]) => {
-            const school = report.cityProfiles.find(p => p.lga_name === lga);
-            const state = school?.state || '';
-            const yj = yjByState.get(state);
-            const crime = crimeByLga.get(lga);
-            return {
-              lga,
-              state,
-              // School system
-              lowIcsea: school?.low_icsea || 0,
-              avgIcsea: school?.avg_icsea || 1100,
-              indigenousPct: school?.avg_indig_pct || 0,
-              // Welfare system
-              dsp: dss.dsp,
-              jobseeker: dss.jobseeker,
-              youthAllowance: dss.youthAllowance,
-              // Justice system (state-level, applied to LGA)
-              costPerDay: yj?.cost_per_day || 0,
-              recidivism: yj?.recidivism_pct || 0,
-              indigenousRateRatio: yj?.indigenous_rate_ratio || 0,
-              detentionIndigenousPct: yj?.detention_indigenous_pct || 0,
-              ctgRate: yj?.ctg_detention_rate || 0,
-              // Crime (LGA-level)
-              crimeRate: crime?.avg_rate_per_100k || 0,
-            };
-          });
-
-          // Normalize each column 0–1
-          const maxOf = (arr: number[]) => Math.max(...arr, 1);
-          const minOf = (arr: number[]) => Math.min(...arr);
-          const maxLowIcsea = maxOf(rows.map(r => r.lowIcsea));
-          const maxIndigPct = maxOf(rows.map(r => r.indigenousPct));
-          const maxDsp = maxOf(rows.map(r => r.dsp));
-          const maxJobseeker = maxOf(rows.map(r => r.jobseeker));
-          const maxYouthAllowance = maxOf(rows.map(r => r.youthAllowance));
-          const minIcsea = minOf(rows.map(r => r.avgIcsea));
-          const maxIcsea = maxOf(rows.map(r => r.avgIcsea));
-          const maxCostPerDay = maxOf(rows.map(r => r.costPerDay));
-          const maxRecidivism = maxOf(rows.map(r => r.recidivism));
-          const maxIndRatio = maxOf(rows.map(r => r.indigenousRateRatio));
-          const maxDetIndPct = maxOf(rows.map(r => r.detentionIndigenousPct));
-          const maxCrime = maxOf(rows.map(r => r.crimeRate));
-
-          const scored = rows.map(r => {
-            const icseaScore = maxIcsea > minIcsea ? (maxIcsea - r.avgIcsea) / (maxIcsea - minIcsea) : 0;
-            const scores = {
-              lowIcsea: r.lowIcsea / maxLowIcsea,
-              icsea: icseaScore,
-              indigenous: r.indigenousPct / maxIndigPct,
-              dsp: r.dsp / maxDsp,
-              jobseeker: r.jobseeker / maxJobseeker,
-              youthAllowance: r.youthAllowance / maxYouthAllowance,
-              costPerDay: r.costPerDay / maxCostPerDay,
-              recidivism: r.recidivism / maxRecidivism,
-              indRatio: r.indigenousRateRatio / maxIndRatio,
-              detIndPct: r.detentionIndigenousPct / maxDetIndPct,
-              crime: r.crimeRate / maxCrime,
-            };
-            const allScores = Object.values(scores);
-            const burden = allScores.reduce((a, b) => a + b, 0) / allScores.length;
-            return { ...r, scores, burden };
-          }).sort((a, b) => b.burden - a.burden);
-
-          // Color function: 0 = white, 1 = deep red
-          const heatColor = (v: number) => {
-            const r = 220;
-            const g = Math.round(240 - v * 200);
-            const b = Math.round(240 - v * 200);
-            return `rgb(${r}, ${g}, ${b})`;
-          };
-          const heatText = (v: number) => v > 0.6 ? 'text-red-900 font-bold' : v > 0.3 ? 'text-red-800' : 'text-gray-700';
-
-          const heatCell = (val: string | number, score: number, border = false) => (
-            <td className={`px-2 py-2 text-right font-mono text-[11px] border-b border-gray-100 ${border ? 'border-l border-gray-200' : ''}`} style={{ backgroundColor: heatColor(score) }}>
-              <span className={heatText(score)}>{typeof val === 'number' ? val.toLocaleString() : val}</span>
-            </td>
-          );
-
-          return (
-            <div className="overflow-x-auto border-4 border-bauhaus-black rounded-sm mb-8">
-              <table className="w-full text-sm" style={{ minWidth: 1100 }}>
-                <thead>
-                  <tr className="bg-bauhaus-black text-white text-left">
-                    <th className="px-2 py-3 font-black uppercase tracking-wider text-[10px]" colSpan={2}>Place</th>
-                    <th className="px-2 py-3 font-black uppercase tracking-wider text-[10px] text-center border-l border-gray-600" colSpan={3}>Education</th>
-                    <th className="px-2 py-3 font-black uppercase tracking-wider text-[10px] text-center border-l border-gray-600" colSpan={3}>Welfare</th>
-                    <th className="px-2 py-3 font-black uppercase tracking-wider text-[10px] text-center border-l border-gray-600" colSpan={4}>Youth Justice</th>
-                    <th className="px-2 py-3 font-black uppercase tracking-wider text-[10px] text-center border-l border-gray-600">Crime</th>
-                    <th className="px-2 py-3 font-black uppercase tracking-wider text-[10px] text-center border-l border-gray-600">All</th>
-                  </tr>
-                  <tr className="bg-gray-800 text-gray-300 text-left text-[9px]">
-                    <th className="px-2 py-1 font-bold uppercase tracking-wider">LGA</th>
-                    <th className="px-2 py-1 font-bold uppercase tracking-wider w-8">ST</th>
-                    <th className="px-2 py-1 font-bold uppercase tracking-wider text-right border-l border-gray-600">Low ICSEA</th>
-                    <th className="px-2 py-1 font-bold uppercase tracking-wider text-right">ICSEA</th>
-                    <th className="px-2 py-1 font-bold uppercase tracking-wider text-right">Indig %</th>
-                    <th className="px-2 py-1 font-bold uppercase tracking-wider text-right border-l border-gray-600">DSP</th>
-                    <th className="px-2 py-1 font-bold uppercase tracking-wider text-right">JobSeek</th>
-                    <th className="px-2 py-1 font-bold uppercase tracking-wider text-right">Youth A.</th>
-                    <th className="px-2 py-1 font-bold uppercase tracking-wider text-right border-l border-gray-600">$/Day</th>
-                    <th className="px-2 py-1 font-bold uppercase tracking-wider text-right">Recid %</th>
-                    <th className="px-2 py-1 font-bold uppercase tracking-wider text-right">Indig Ratio</th>
-                    <th className="px-2 py-1 font-bold uppercase tracking-wider text-right">Det Indig %</th>
-                    <th className="px-2 py-1 font-bold uppercase tracking-wider text-right border-l border-gray-600">Rate/100K</th>
-                    <th className="px-2 py-1 font-bold uppercase tracking-wider text-center border-l border-gray-600">Score</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {scored.map((row) => (
-                    <tr key={row.lga}>
-                      <td className="px-2 py-2 font-bold text-xs border-b border-gray-100 whitespace-nowrap">{row.lga}</td>
-                      <td className="px-2 py-2 text-[10px] text-gray-500 border-b border-gray-100">{row.state}</td>
-                      {heatCell(row.lowIcsea, row.scores.lowIcsea, true)}
-                      {heatCell(row.avgIcsea, row.scores.icsea)}
-                      {heatCell(`${row.indigenousPct}%`, row.scores.indigenous)}
-                      {heatCell(row.dsp, row.scores.dsp, true)}
-                      {heatCell(row.jobseeker, row.scores.jobseeker)}
-                      {heatCell(row.youthAllowance, row.scores.youthAllowance)}
-                      {heatCell(`$${row.costPerDay.toLocaleString()}`, row.scores.costPerDay, true)}
-                      {heatCell(row.recidivism ? `${row.recidivism}%` : '—', row.scores.recidivism)}
-                      {heatCell(row.indigenousRateRatio ? `${row.indigenousRateRatio}x` : '—', row.scores.indRatio)}
-                      {heatCell(row.detentionIndigenousPct ? `${row.detentionIndigenousPct}%` : '—', row.scores.detIndPct)}
-                      {heatCell(row.crimeRate || '—', row.scores.crime, true)}
-                      <td className="px-2 py-2 text-center font-mono text-xs font-black border-b border-gray-100 border-l border-gray-200" style={{ backgroundColor: heatColor(row.burden) }}>
-                        <span className={heatText(row.burden)}>{(row.burden * 100).toFixed(0)}</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          );
-        })()}
-
-        {/* State-level charts */}
+      {/* ━━━━ Cross-System State Detail ━━━━ */}
+      <section className="mb-10">
         <CrossSystemCharts report={report} lgaOverlap={[]} />
 
-        {/* State detail table */}
         <h3 className="text-sm font-bold text-bauhaus-muted uppercase tracking-wider mt-6 mb-3">State-by-State Detail</h3>
 
         {report.ndisOverlay.length > 0 && (
@@ -717,7 +465,6 @@ export default async function YouthJusticeReportPage() {
 
           return (
             <>
-              {/* Department allocations as compact cards */}
               {depts.length > 0 && (
                 <div className="mb-6">
                   <h3 className="text-sm font-bold text-bauhaus-muted uppercase tracking-wider mb-3">State Department Allocations</h3>
@@ -733,7 +480,6 @@ export default async function YouthJusticeReportPage() {
                 </div>
               )}
 
-              {/* Service delivery orgs as table */}
               {orgs.length > 0 && (
                 <>
                   <h3 className="text-sm font-bold text-bauhaus-muted uppercase tracking-wider mb-3">Service Delivery Organisations</h3>
@@ -799,6 +545,48 @@ export default async function YouthJusticeReportPage() {
         </div>
       </section>
 
+      {/* ━━━━ Take Action ━━━━ */}
+      <section className="mb-10">
+        <div className="border-4 border-bauhaus-black rounded-sm overflow-hidden">
+          <div className="bg-bauhaus-black text-white px-6 py-4">
+            <h2 className="text-lg font-black uppercase tracking-wider">Use This Data</h2>
+            <p className="text-sm text-gray-400 mt-1">Turn evidence into funding applications, partnership building, and strategic planning.</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-0">
+            <Link
+              href="/foundations?focus=youth-justice"
+              className="p-6 border-b sm:border-b-0 sm:border-r border-gray-200 hover:bg-blue-50/50 transition-colors group"
+            >
+              <h3 className="font-black text-sm uppercase tracking-wider mb-2 group-hover:text-bauhaus-blue transition-colors">Find Funders</h3>
+              <p className="text-xs text-gray-500 leading-relaxed">
+                Search 10,800+ foundations by thematic focus. Use this report&apos;s evidence to strengthen your case.
+              </p>
+              <span className="inline-block mt-3 text-xs font-bold text-bauhaus-blue uppercase tracking-wider">Browse Foundations &rarr;</span>
+            </Link>
+            <Link
+              href="/grants"
+              className="p-6 border-b sm:border-b-0 sm:border-r border-gray-200 hover:bg-green-50/50 transition-colors group"
+            >
+              <h3 className="font-black text-sm uppercase tracking-wider mb-2 group-hover:text-green-700 transition-colors">Find Grants</h3>
+              <p className="text-xs text-gray-500 leading-relaxed">
+                Search open grant opportunities. Youth justice, diversion, and family services programs available now.
+              </p>
+              <span className="inline-block mt-3 text-xs font-bold text-green-700 uppercase tracking-wider">Search Grants &rarr;</span>
+            </Link>
+            <Link
+              href="/home"
+              className="p-6 hover:bg-amber-50/50 transition-colors group"
+            >
+              <h3 className="font-black text-sm uppercase tracking-wider mb-2 group-hover:text-amber-700 transition-colors">Your Dashboard</h3>
+              <p className="text-xs text-gray-500 leading-relaxed">
+                Track your pipeline, match to opportunities, and build your org&apos;s evidence base.
+              </p>
+              <span className="inline-block mt-3 text-xs font-bold text-amber-700 uppercase tracking-wider">Go to Dashboard &rarr;</span>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* ━━━━ Data Sources ━━━━ */}
       <section className="mb-10">
         <div className="bg-gray-50 border border-gray-200 rounded-sm p-6">
@@ -811,13 +599,17 @@ export default async function YouthJusticeReportPage() {
             <li>State budget papers — all state/territory youth justice appropriations</li>
             <li>NDIS — Participant data by service district, disability type, and age</li>
             <li>Department of Social Services — Disability Support Pension, Youth Allowance, JobSeeker payment demographics</li>
+            <li>ABS Estimated Resident Population 2023 — LGA-level population for per-capita normalization</li>
+            <li>Crime statistics — BOCSAR (NSW), CSA (VIC), QPS (QLD), NTPFES (NT) at LGA level</li>
           </ul>
           <p className="text-xs text-gray-400 mt-4">
             This is a living report. All data is sourced from public datasets.
-            Cross-system geographic linkage is performed by CivicGraph.
+            Cross-system geographic linkage and per-capita normalization performed by CivicGraph.
           </p>
         </div>
       </section>
+
+      <ReportCTA reportSlug="youth-justice" reportTitle="Youth Justice Report" />
     </div>
   );
 }

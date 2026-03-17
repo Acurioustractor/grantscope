@@ -1,4 +1,5 @@
 import { getServiceSupabase } from '@/lib/supabase';
+import { ReportCTA } from '../_components/report-cta';
 
 export const dynamic = 'force-dynamic';
 
@@ -431,6 +432,8 @@ export default async function FundingEquityPage() {
           </div>
         </div>
       </section>
+
+      <ReportCTA reportSlug="funding-equity" reportTitle="Funding Equity Report" />
     </div>
   );
 }

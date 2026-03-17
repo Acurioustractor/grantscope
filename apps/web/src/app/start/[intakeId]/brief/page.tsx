@@ -46,6 +46,37 @@ export default async function BriefPage({ params }: Props) {
         ">
           <BriefContent markdown={brief} />
         </article>
+
+        {/* Account conversion CTA */}
+        <div className="mt-16 mb-12 border-4 border-bauhaus-black p-8 text-center print:hidden">
+          <div className="text-xs font-black text-bauhaus-red uppercase tracking-[0.2em] mb-2">
+            Next Step
+          </div>
+          <h2 className="text-xl font-black text-bauhaus-black mb-3">
+            Save your brief &amp; get matched to funding
+          </h2>
+          <p className="text-sm text-gray-600 max-w-lg mx-auto mb-6">
+            Create a free CivicGraph account to save this brief, track grant opportunities,
+            and get automatically matched to funding that fits your project.
+          </p>
+          <div className="flex gap-3 justify-center flex-wrap">
+            <a
+              href={`/register?redirect=/home`}
+              className="px-6 py-3 bg-bauhaus-black text-white text-xs font-black uppercase tracking-widest hover:bg-bauhaus-red transition-colors"
+            >
+              Create Free Account
+            </a>
+            <a
+              href="/login?next=/home"
+              className="px-6 py-3 border-2 border-bauhaus-black text-bauhaus-black text-xs font-black uppercase tracking-widest hover:bg-bauhaus-black hover:text-white transition-colors"
+            >
+              Already have an account? Sign in
+            </a>
+          </div>
+          <p className="text-[10px] text-gray-400 mt-4">
+            Free forever for community organisations. No credit card required.
+          </p>
+        </div>
       </main>
     </div>
   );

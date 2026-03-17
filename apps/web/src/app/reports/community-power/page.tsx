@@ -1,4 +1,5 @@
 import { TableOfContents } from './toc';
+import { ReportCTA } from '../_components/report-cta';
 
 function Stat({ value, label, color }: { value: string; label: string; color?: string }) {
   return (
@@ -518,6 +519,8 @@ export default function CommunityPowerPage() {
           </section>
         </article>
       </div>
+
+      <ReportCTA reportSlug="community-power" reportTitle="Community Power Playbook" />
     </div>
   );
 }
