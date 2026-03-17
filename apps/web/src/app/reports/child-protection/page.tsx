@@ -319,6 +319,8 @@ export default async function ChildProtectionReportPage() {
         </div>
       </section>
 
+      <ReportCTA reportSlug="child-protection" reportTitle="Child Protection Report" variant="inline" />
+
       {/* Cross-System Organisations */}
       {report.crossSystem.length > 0 && (
         <section className="mb-10">

@@ -373,6 +373,8 @@ export default async function YouthJusticeReportPage() {
       {/* ━━━━ PICC Power Map ━━━━ */}
       <PowerMap />
 
+      <ReportCTA reportSlug="youth-justice" reportTitle="Youth Justice Report" variant="inline" />
+
       {/* ━━━━ Cross-System State Detail ━━━━ */}
       <section className="mb-10">
         <CrossSystemCharts report={report} lgaOverlap={[]} />

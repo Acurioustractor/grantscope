@@ -287,6 +287,8 @@ export default async function FundingEquityPage() {
         </div>
       </section>
 
+      <ReportCTA reportSlug="funding-equity" reportTitle="Funding Equity Report" variant="inline" />
+
       {/* Indigenous-Serving Charities */}
       <section className="mb-12">
         <h2 className="text-xl font-black text-bauhaus-black mb-2 uppercase tracking-widest">Indigenous-Serving Charities</h2>

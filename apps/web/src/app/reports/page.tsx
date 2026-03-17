@@ -1,3 +1,5 @@
+import { ReportCTA } from './_components/report-cta';
+
 export default function ReportsPage() {
   return (
     <div>
@@ -281,6 +283,12 @@ export default function ReportsPage() {
           </a>
         </div>
       </section>
+
+      <ReportCTA
+        reportSlug="reports-index"
+        reportTitle="CivicGraph Intelligence Reports"
+        pdfDescription="Get our latest research as formatted PDFs — ready for board papers, grant applications, or policy briefs."
+      />
 
       {/* ===== SECTION D: INFRASTRUCTURE ===== */}
       <section className="mb-12">

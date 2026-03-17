@@ -244,6 +244,8 @@ export default async function SocialEnterpriseReportPage() {
             These are businesses, not charities with side hustles.
           </Callout>
 
+          <ReportCTA reportSlug="social-enterprise" reportTitle="Social Enterprise in Australia" variant="inline" />
+
           {/* ===== SECTION 4: THE LEGAL GAP ===== */}
           <SectionHeading id="legal-gap" number="04">The Legal Gap</SectionHeading>
           <Prose>

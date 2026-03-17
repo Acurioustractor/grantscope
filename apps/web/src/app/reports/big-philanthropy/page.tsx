@@ -214,6 +214,8 @@ export default async function BigPhilanthropyPage() {
             </div>
           </div>
 
+          <ReportCTA reportSlug="big-philanthropy" reportTitle="The $222 Billion Question" variant="inline" />
+
           {/* ===== SECTION 4: THE SCORECARD ===== */}
           <SectionHeading id="scorecard" number="04">The Philanthropy Scorecard</SectionHeading>
           <Prose>

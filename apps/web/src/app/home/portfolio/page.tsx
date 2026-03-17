@@ -26,6 +26,16 @@ export default async function PortfolioPage() {
 
   const db = getServiceSupabase();
 
+  // Check subscription tier — portfolio requires Organisation tier or above
+  const { data: orgProfile } = await db
+    .from('org_profiles')
+    .select('subscription_plan')
+    .eq('user_id', user.id)
+    .single();
+
+  const plan = orgProfile?.subscription_plan || 'free';
+  const hasPortfolioAccess = ['organisation', 'enterprise'].includes(plan);
+
   // Get or create default portfolio
   let { data: portfolios } = await db
     .from('funder_portfolios')
@@ -148,6 +158,23 @@ export default async function PortfolioPage() {
         </div>
       </div>
 
+      {/* Tier upgrade gate */}
+      {!hasPortfolioAccess && (
+        <div className="border-4 border-bauhaus-red bg-red-50 p-6 mb-8">
+          <div className="text-xs font-black text-bauhaus-red uppercase tracking-widest mb-2">Organisation Tier Required</div>
+          <p className="text-sm text-bauhaus-black mb-4 max-w-xl">
+            Portfolio monitoring is available on the <strong>Organisation</strong> plan and above.
+            Track grantees, monitor risk flags, and see aggregate funding data across your portfolio.
+          </p>
+          <a
+            href="/pricing"
+            className="inline-block px-5 py-2.5 bg-bauhaus-black text-white text-xs font-black uppercase tracking-widest hover:bg-bauhaus-red transition-colors"
+          >
+            View Plans &amp; Pricing
+          </a>
+        </div>
+      )}
+
       {/* Aggregate Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-0 mb-8 border-4 border-bauhaus-black">
         <div className="p-4 border-r-2 border-b-2 sm:border-b-0 border-bauhaus-black/10">
@@ -222,10 +249,19 @@ export default async function PortfolioPage() {
       )}
 
       {/* Entity list + add entity form */}
-      <PortfolioClient
-        portfolioId={portfolio.id}
-        entities={entities}
-      />
+      {hasPortfolioAccess ? (
+        <PortfolioClient
+          portfolioId={portfolio.id}
+          entities={entities}
+        />
+      ) : (
+        <div className="border-4 border-dashed border-bauhaus-black/20 p-12 text-center">
+          <div className="text-xl font-black text-bauhaus-black mb-2">Portfolio Locked</div>
+          <p className="text-sm text-bauhaus-muted max-w-md mx-auto">
+            Upgrade to the Organisation plan to add grantees, monitor funding flows, and track risk across your portfolio.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

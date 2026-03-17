@@ -1,0 +1,36 @@
+{
+  "date": "2026-03-18",
+  "window": "7d",
+  "metrics": {
+    "commits": 21,
+    "contributors": 1,
+    "prs_merged": 0,
+    "insertions": 702217,
+    "deletions": 11014,
+    "net_loc": 691203,
+    "test_loc": 6602,
+    "test_ratio": 0.01,
+    "active_days": 4,
+    "sessions": 7,
+    "deep_sessions": 1,
+    "avg_session_minutes": 14,
+    "loc_per_session_hour": 0,
+    "feat_pct": 0.57,
+    "fix_pct": 0.05,
+    "peak_hour": 22,
+    "ai_assisted_commits": 20
+  },
+  "authors": {
+    "Acurioustractor": {
+      "commits": 21,
+      "insertions": 702217,
+      "deletions": 11014,
+      "test_ratio": 0.01,
+      "top_area": "apps/"
+    }
+  },
+  "version_range": ["n/a", "n/a"],
+  "streak_days": 3,
+  "tweetable": "Week of Mar 11: 21 commits, 702K LOC (incl 665K data), 95% AI-assisted, 4 active days, peak: 10pm PT | Streak: 3d",
+  "notes": "Two massive data pipeline commits (476K + 189K) heavily inflate LOC. Real app/script code ~35K LOC. Solo builder + Claude Opus 4.6 pair."
+}

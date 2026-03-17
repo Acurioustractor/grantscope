@@ -271,6 +271,8 @@ export default async function TriplePlayReport() {
         </div>
       </section>
 
+      <ReportCTA reportSlug="triple-play" reportTitle="Donate. Lobby. Win. Pay No Tax." variant="inline" />
+
       {/* Biggest contracts, lowest tax */}
       <section className="mb-12">
         <h2 className="text-xl font-black text-bauhaus-black mb-2 uppercase tracking-widest">

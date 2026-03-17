@@ -175,6 +175,8 @@ export default function CommunityPowerPage() {
             <Stat value="300K" label="Jobs Created" color="text-bauhaus-blue" />
           </div>
 
+          <ReportCTA reportSlug="community-power" reportTitle="Community Power Playbook" variant="inline" />
+
           {/* ===== SECTION 4: COMMUNITY ENERGY ===== */}
           <SectionHeading id="community-energy" number="04">Community Energy</SectionHeading>
           <Prose>

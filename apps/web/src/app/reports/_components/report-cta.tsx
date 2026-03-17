@@ -7,6 +7,8 @@ interface ReportCTAProps {
   reportTitle: string;
   /** Short description of what the PDF contains */
   pdfDescription?: string;
+  /** 'full' = bottom-of-page CTA (default), 'inline' = lighter mid-report banner */
+  variant?: 'full' | 'inline';
 }
 
 /**
@@ -14,7 +16,7 @@ interface ReportCTAProps {
  * Drop this at the bottom of any public report page.
  * Stores leads in `report_leads` via /api/reports/leads.
  */
-export function ReportCTA({ reportSlug, reportTitle, pdfDescription }: ReportCTAProps) {
+export function ReportCTA({ reportSlug, reportTitle, pdfDescription, variant = 'full' }: ReportCTAProps) {
   const [email, setEmail] = useState('');
   const [org, setOrg] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -45,6 +47,13 @@ export function ReportCTA({ reportSlug, reportTitle, pdfDescription }: ReportCTA
   }
 
   if (status === 'success') {
+    if (variant === 'inline') {
+      return (
+        <div className="border-2 border-bauhaus-black/20 bg-green-50 p-4 text-center my-8">
+          <span className="text-sm font-bold text-green-700">Sent to {email}</span>
+        </div>
+      );
+    }
     return (
       <div className="border-4 border-bauhaus-black p-8 bg-white text-center my-12">
         <div className="text-2xl font-black text-bauhaus-black mb-2">Report Requested</div>
@@ -66,6 +75,36 @@ export function ReportCTA({ reportSlug, reportTitle, pdfDescription }: ReportCTA
             See Plans
           </a>
         </div>
+      </div>
+    );
+  }
+
+  if (variant === 'inline') {
+    return (
+      <div className="border-2 border-bauhaus-black/20 bg-bauhaus-canvas p-5 my-8">
+        <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row items-center gap-3 max-w-2xl mx-auto">
+          <div className="text-sm font-black text-bauhaus-black whitespace-nowrap">
+            Get the full PDF
+          </div>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@organisation.com"
+            required
+            className="flex-1 w-full sm:w-auto px-3 py-2 border-2 border-bauhaus-black text-sm font-bold focus:outline-none focus:border-bauhaus-red"
+          />
+          <button
+            type="submit"
+            disabled={status === 'loading'}
+            className="px-4 py-2 bg-bauhaus-black text-white text-xs font-black uppercase tracking-widest hover:bg-bauhaus-red transition-colors disabled:opacity-50 whitespace-nowrap"
+          >
+            {status === 'loading' ? 'Sending...' : 'Send PDF'}
+          </button>
+        </form>
+        {status === 'error' && (
+          <p className="text-xs text-bauhaus-red mt-2 font-bold text-center">Something went wrong. Try again.</p>
+        )}
       </div>
     );
   }

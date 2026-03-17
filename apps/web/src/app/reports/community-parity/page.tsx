@@ -209,6 +209,8 @@ export default function CommunityParityPage() {
             The gap between need and funding is a chasm.
           </Callout>
 
+          <ReportCTA reportSlug="community-parity" reportTitle="Community Parity Report" variant="inline" />
+
           {/* ===== SECTION 4: REPUTATION CLEANSING ===== */}
           <SectionHeading id="reputation" number="04">Reputation Cleansing</SectionHeading>
           <Prose>

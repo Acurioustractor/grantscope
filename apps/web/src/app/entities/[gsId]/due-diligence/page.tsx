@@ -45,6 +45,61 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
+function Tip({ term, children }: { term: string; children: React.ReactNode }) {
+  return (
+    <span className="relative group/tip cursor-help border-b border-dotted border-bauhaus-muted">
+      {term}
+      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-bauhaus-black text-white text-xs rounded shadow-lg opacity-0 group-hover/tip:opacity-100 transition-opacity pointer-events-none w-56 text-center z-10">
+        {children}
+      </span>
+    </span>
+  );
+}
+
+function generateInsights(pack: DueDiligencePack): string[] {
+  const insights: string[] = [];
+
+  // Financial health
+  if (pack.financials.length > 0) {
+    const latest = pack.financials[0];
+    const surplus = latest.net_surplus_deficit;
+    if (surplus != null && surplus > 0) {
+      insights.push(`Reported a ${fmtMoney(surplus)} surplus in ${latest.ais_year} — financially healthy.`);
+    } else if (surplus != null && surplus < 0) {
+      insights.push(`Reported a ${fmtMoney(Math.abs(surplus))} deficit in ${latest.ais_year} — monitor financial sustainability.`);
+    }
+  }
+
+  // Funding profile
+  const totalFunding = pack.funding.total + pack.contracts.total;
+  if (totalFunding > 0) {
+    insights.push(`Receives ${fmtMoney(totalFunding)} in tracked government funding and contracts.`);
+  }
+
+  // Integrity
+  if (pack.integrity_flags.donations_and_contracts_overlap) {
+    insights.push('Flagged: has both political donations and government contracts — cross-reference recommended.');
+  } else if (!pack.integrity_flags.has_donations) {
+    insights.push('Clean political record — no political donations on file.');
+  }
+
+  // Evidence alignment
+  if (pack.alma_interventions.length > 0) {
+    insights.push(`Linked to ${pack.alma_interventions.length} evidence-backed program${pack.alma_interventions.length > 1 ? 's' : ''} in the Australian Living Map of Alternatives.`);
+  }
+
+  // Community
+  if (pack.entity.is_community_controlled) {
+    insights.push('Community-controlled organisation — eligible for priority funding pathways.');
+  }
+
+  if (pack.integrity_flags.low_seifa) {
+    insights.push('Serves a high-disadvantage area (SEIFA decile 1-3).');
+  }
+
+  return insights.slice(0, 3);
+}
+
 function IntegrityFlag({ label, ok }: { label: string; ok: boolean }) {
   return (
     <div className="flex items-center gap-2 py-1">
@@ -115,11 +170,32 @@ export default async function DueDiligencePreviewPage({
         </div>
       </div>
 
+      {/* Auto-Insights */}
+      {(() => {
+        const insights = generateInsights(pack);
+        return insights.length > 0 ? (
+          <div className="border-2 border-bauhaus-blue bg-blue-50/50 p-4 mb-8">
+            <div className="text-[10px] font-black text-bauhaus-blue uppercase tracking-widest mb-2">Executive Summary</div>
+            <ul className="space-y-1">
+              {insights.map((insight, i) => (
+                <li key={i} className="text-sm text-bauhaus-black flex gap-2">
+                  <span className="text-bauhaus-blue font-black">&bull;</span>
+                  {insight}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null;
+      })()}
+
       {/* Entity Profile */}
       <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-8">
         <StatCard label="Entity Type" value={pack.entity.entity_type} />
         <StatCard label="State" value={pack.entity.state || '\u2014'} />
-        <StatCard label="SEIFA Decile" value={pack.entity.seifa_irsd_decile != null ? String(pack.entity.seifa_irsd_decile) : '\u2014'} />
+        <div className="border-2 border-bauhaus-black p-3">
+          <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest"><Tip term="SEIFA Decile">Socio-Economic Indexes for Areas — decile 1 is most disadvantaged, 10 is least</Tip></div>
+          <div className="text-2xl font-black text-bauhaus-black">{pack.entity.seifa_irsd_decile != null ? String(pack.entity.seifa_irsd_decile) : '\u2014'}</div>
+        </div>
         <StatCard label="Community Ctrl" value={pack.entity.is_community_controlled ? 'Yes' : 'No'} color={pack.entity.is_community_controlled ? 'text-green-600' : undefined} />
         <StatCard label="Remoteness" value={pack.entity.remoteness || '\u2014'} />
         <StatCard label="LGA" value={pack.entity.lga_name || '\u2014'} />
@@ -138,8 +214,8 @@ export default async function DueDiligencePreviewPage({
         <div className="text-xs text-bauhaus-muted mb-6">
           {[
             pack.charity.charity_size ? `Size: ${pack.charity.charity_size}` : null,
-            pack.charity.pbi ? 'PBI' : null,
-            pack.charity.hpc ? 'HPC' : null,
+            pack.charity.pbi ? 'PBI (Public Benevolent Institution — tax-deductible donations)' : null,
+            pack.charity.hpc ? 'HPC (Health Promotion Charity — tax-deductible donations)' : null,
             pack.charity.purposes?.length ? `Purposes: ${pack.charity.purposes.join(', ')}` : null,
           ].filter(Boolean).join(' \u2022 ')}
         </div>
@@ -184,7 +260,7 @@ export default async function DueDiligencePreviewPage({
           </div>
         </>
       ) : (
-        <p className="text-sm text-bauhaus-muted">No ACNC financial data available.</p>
+        <p className="text-sm text-bauhaus-muted">No ACNC financial data on file — this entity may not be a registered charity, or financials have not yet been lodged.</p>
       )}
 
       {/* Funding */}
@@ -216,7 +292,7 @@ export default async function DueDiligencePreviewPage({
           </div>
         </>
       ) : (
-        <p className="text-sm text-bauhaus-muted">No justice funding records.</p>
+        <p className="text-sm text-bauhaus-muted">No government funding records found — clean record in tracked datasets.</p>
       )}
 
       {/* Contracts */}
@@ -251,7 +327,7 @@ export default async function DueDiligencePreviewPage({
           </div>
         </>
       ) : (
-        <p className="text-sm text-bauhaus-muted">No AusTender contracts.</p>
+        <p className="text-sm text-bauhaus-muted">No AusTender contracts on record — clean procurement record.</p>
       )}
 
       {/* Political Donations */}
@@ -282,11 +358,11 @@ export default async function DueDiligencePreviewPage({
           </div>
         </>
       ) : (
-        <p className="text-sm text-bauhaus-muted">No political donation records.</p>
+        <p className="text-sm text-bauhaus-muted">No political donation records — clean political record.</p>
       )}
 
       {/* ALMA Evidence */}
-      <SectionTitle>Evidence Alignment (ALMA)</SectionTitle>
+      <SectionTitle>Evidence Alignment (<Tip term="ALMA">Australian Living Map of Alternatives — JusticeHub&apos;s evidence database of what works</Tip>)</SectionTitle>
       {pack.alma_interventions.length > 0 ? (
         <>
           <div className="grid grid-cols-2 gap-3 mb-4">
@@ -317,7 +393,7 @@ export default async function DueDiligencePreviewPage({
           </div>
         </>
       ) : (
-        <p className="text-sm text-bauhaus-muted">No ALMA interventions linked to this entity.</p>
+        <p className="text-sm text-bauhaus-muted">No evidence-backed programs (ALMA) linked yet — this entity may operate programs not yet catalogued in the Australian Living Map of Alternatives.</p>
       )}
 
       {/* Geographic Context */}
