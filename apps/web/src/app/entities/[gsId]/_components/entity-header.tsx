@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Entity, MvEntityStats, CharityEnrichment, SocialEnterpriseEnrichment } from '../_lib/types';
 import { entityTypeLabel, entityTypeBadge, confidenceBadge, formatMoney } from '../_lib/formatters';
+import { DueDiligenceButton } from './due-diligence-button';
 
 function Sparkline({ data }: { data: Record<string, number> }) {
   const entries = Object.entries(data)
@@ -151,12 +152,15 @@ export function EntityHeader({ entity: e, stats, charity, socialEnterprise, retu
         </div>
       </div>
 
-      {/* Data freshness */}
-      {e.updated_at && (
-        <div className="text-[10px] font-medium text-bauhaus-muted mb-4">
-          Data as of: {new Date(e.updated_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
-        </div>
-      )}
+      {/* Due Diligence + Data freshness */}
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+        <DueDiligenceButton gsId={e.gs_id} />
+        {e.updated_at && (
+          <div className="text-[10px] font-medium text-bauhaus-muted">
+            Data as of: {new Date(e.updated_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
+          </div>
+        )}
+      </div>
     </>
   );
 }

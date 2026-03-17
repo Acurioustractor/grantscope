@@ -1,5 +1,8 @@
 import { getServiceSupabase } from '@/lib/supabase';
+import { createSupabaseServer } from '@/lib/supabase-server';
+import { getCurrentOrgProfileContext } from '@/lib/org-profile';
 import { notFound } from 'next/navigation';
+import Link from 'next/link';
 import { GivingHistoryChart } from './giving-chart';
 import { GrantActionsProvider, GrantCardActions } from '@/app/components/grant-card-actions';
 import { FoundationActionsProvider, FoundationCardActions } from '@/app/components/foundation-card-actions';
@@ -204,6 +207,46 @@ export default async function FoundationDetailPage({ params }: { params: Promise
   const similarFoundations = (similarData || []) as SimilarFoundation[];
   const matchingGrants = (matchingData || []) as MatchingGrant[];
 
+  // Optional: check if logged-in user's org has pipeline items with this foundation
+  interface PipelineContext {
+    orgName: string;
+    orgSlug: string | null;
+    items: Array<{ name: string; status: string; amount_display: string | null; deadline: string | null }>;
+  }
+  let pipelineContext: PipelineContext | null = null;
+  try {
+    const authSupabase = await createSupabaseServer();
+    const { data: { user } } = await authSupabase.auth.getUser();
+    if (user) {
+      const ctx = await getCurrentOrgProfileContext(supabase, user.id);
+      if (ctx.orgProfileId && ctx.profile) {
+        // Find pipeline items where funder_entity_id matches this foundation's entity
+        const { data: pipelineItems } = await supabase.rpc('exec_sql', {
+          query: `SELECT op.name, op.status, op.amount_display, op.deadline
+             FROM org_pipeline op
+             JOIN gs_entities ge ON ge.id = op.funder_entity_id
+             WHERE op.org_profile_id = '${ctx.orgProfileId}'
+               AND ge.abn = '${f.acnc_abn}'
+             ORDER BY op.created_at DESC`,
+        });
+        if (pipelineItems && (pipelineItems as unknown[]).length > 0) {
+          const { data: orgProfile } = await supabase
+            .from('org_profiles')
+            .select('slug')
+            .eq('id', ctx.orgProfileId)
+            .maybeSingle();
+          pipelineContext = {
+            orgName: ctx.profile.name,
+            orgSlug: orgProfile?.slug ?? null,
+            items: pipelineItems as PipelineContext['items'],
+          };
+        }
+      }
+    }
+  } catch {
+    // Auth check is optional — don't break the page
+  }
+
   const badge = confidenceBadge(f.profile_confidence);
   const allPrograms = programs as ProgramRow[] || [];
   const allLinkedGrants = (linkedGrants || []) as LinkedGrant[];
@@ -252,6 +295,44 @@ export default async function FoundationDetailPage({ params }: { params: Promise
           </a>
         </div>
       </div>
+
+      {/* Pipeline Context Banner — shown when logged-in org has items with this foundation */}
+      {pipelineContext && (
+        <div className="mb-6 border-4 border-green-600 bg-green-50 p-4">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="text-xs font-black uppercase tracking-widest text-green-800 mb-2">
+                Your Pipeline with {f.name}
+              </h3>
+              <div className="space-y-1.5">
+                {pipelineContext.items.map((item, i) => (
+                  <div key={i} className="flex items-center gap-3 text-sm">
+                    <span className={`text-[10px] px-2 py-0.5 font-bold border rounded-sm uppercase ${
+                      item.status === 'awarded' ? 'bg-green-100 text-green-800 border-green-300' :
+                      item.status === 'submitted' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                      item.status === 'drafting' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                      'bg-gray-50 text-gray-500 border-gray-200'
+                    }`}>
+                      {item.status}
+                    </span>
+                    <span className="font-medium text-gray-800">{item.name}</span>
+                    {item.amount_display && <span className="font-mono text-green-700 text-xs">{item.amount_display}</span>}
+                    {item.deadline && <span className="text-gray-400 text-xs">Due {item.deadline}</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+            {pipelineContext.orgSlug && (
+              <Link
+                href={`/org/${pipelineContext.orgSlug}`}
+                className="text-xs px-3 py-2 bg-green-700 text-white font-bold uppercase tracking-wider hover:bg-green-800 transition-colors rounded-sm shrink-0"
+              >
+                {pipelineContext.orgName} Dashboard &rarr;
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Key stats — adaptive, only show fields with data */}
       {(() => {

@@ -1,5 +1,6 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import { notFound } from 'next/navigation';
+import Link from 'next/link';
 import { GrantActions } from '@/app/components/grant-actions';
 import { GrantNotes } from '@/app/components/grant-notes';
 import { PartnerPicker } from '@/app/components/partner-picker';
@@ -133,6 +134,36 @@ export default async function GrantDetailPage({ params }: { params: Promise<{ id
     relatedFoundations = (foundations || []) as RelatedFoundation[];
   }
 
+  // Check if the logged-in user's org has this grant in their pipeline
+  interface PipelineEntry {
+    name: string;
+    status: string;
+    amount_display: string;
+    deadline: string;
+    notes: string | null;
+    funder: string;
+    created_at: string;
+    updated_at: string;
+    org_name: string;
+    org_slug: string | null;
+  }
+  let pipelineEntry: PipelineEntry | null = null;
+  try {
+    const { data: entry } = await supabase.rpc('exec_sql', {
+      query: `SELECT p.name, p.status, p.amount_display, p.deadline, p.notes, p.funder,
+                p.created_at, p.updated_at, o.name as org_name, o.slug as org_slug
+         FROM org_pipeline p
+         JOIN org_profiles o ON o.id = p.org_profile_id
+         WHERE p.grant_opportunity_id = '${id}'
+         LIMIT 1`,
+    });
+    if (entry && (entry as PipelineEntry[]).length > 0) {
+      pipelineEntry = (entry as PipelineEntry[])[0];
+    }
+  } catch {
+    // No pipeline entry
+  }
+
   const eligibility = g.eligibility_criteria as Array<{ criterion: string; description: string; category: string }> | null;
   const assessment = g.assessment_criteria as Array<{ name: string; description: string; weight_pct: number }> | null;
   const timeline = g.timeline_stages as Array<{ stage: string; description: string; date: string; is_completed: boolean }> | null;
@@ -145,6 +176,53 @@ export default async function GrantDetailPage({ params }: { params: Promise<{ id
       <a href="/grants" className="text-xs font-black text-bauhaus-muted uppercase tracking-widest hover:text-bauhaus-black">
         &larr; Back to Grants
       </a>
+
+      {/* Pipeline Status Banner */}
+      {pipelineEntry && (
+        <div className="mt-4 mb-4 border-4 border-green-600 bg-green-50 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <span className={`text-xs px-2 py-0.5 font-bold uppercase border ${
+                pipelineEntry.status === 'submitted' ? 'bg-green-100 text-green-800 border-green-300' :
+                pipelineEntry.status === 'upcoming' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
+                'bg-gray-100 text-gray-600 border-gray-300'
+              }`}>
+                {pipelineEntry.status === 'submitted' ? 'Applied' : pipelineEntry.status}
+              </span>
+              <span className="text-sm font-bold text-green-800">In your pipeline</span>
+            </div>
+            {pipelineEntry.org_slug && (
+              <Link href={`/reports/${pipelineEntry.org_slug}`} className="text-xs font-bold text-green-700 underline hover:text-green-900">
+                {pipelineEntry.org_name} Dashboard &rarr;
+              </Link>
+            )}
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+            <div>
+              <span className="font-bold uppercase tracking-wider text-green-700">Amount</span>
+              <p className="font-mono font-bold text-sm mt-0.5">{pipelineEntry.amount_display}</p>
+            </div>
+            <div>
+              <span className="font-bold uppercase tracking-wider text-green-700">Deadline</span>
+              <p className="font-bold text-sm mt-0.5">{pipelineEntry.deadline}</p>
+            </div>
+            <div>
+              <span className="font-bold uppercase tracking-wider text-green-700">Added to Pipeline</span>
+              <p className="text-sm mt-0.5">{formatDate(pipelineEntry.created_at)}</p>
+            </div>
+            <div>
+              <span className="font-bold uppercase tracking-wider text-green-700">Last Updated</span>
+              <p className="text-sm mt-0.5">{formatDate(pipelineEntry.updated_at)}</p>
+            </div>
+          </div>
+          {pipelineEntry.notes && (
+            <div className="mt-3 pt-3 border-t border-green-300">
+              <span className="text-xs font-bold uppercase tracking-wider text-green-700">Notes</span>
+              <p className="text-sm text-green-900 mt-1">{pipelineEntry.notes}</p>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="mt-4 mb-2 flex items-start gap-3">
         <h1 className="text-2xl sm:text-3xl font-black text-bauhaus-black">{g.name}</h1>

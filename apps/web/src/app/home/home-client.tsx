@@ -349,7 +349,9 @@ export function HomeClient(props: HomeClientProps) {
               {[
                 { href: '/grants', label: 'Search Grants', icon: '\uD83D\uDD0D', count: openGrantCount },
                 { href: '/home/portfolio', label: 'My Grantees', icon: '\uD83D\uDCCB' },
-                { href: '/tender-intelligence', label: 'Procurement Intel', icon: '\uD83D\uDCE6' },
+                { href: '/home/watchlist', label: 'Watchlist', icon: '\uD83D\uDC41\uFE0F' },
+                { href: '/home/report-builder', label: 'Report Builder', icon: '\uD83D\uDCCA' },
+                { href: '/home/tender-brief', label: 'Tender Brief', icon: '\uD83D\uDCE6' },
                 { href: '/places', label: 'Place Packs', icon: '\uD83D\uDCCD' },
                 { href: '/reports', label: 'Reports & Research', icon: '\uD83D\uDCCA' },
                 { href: '/entities', label: 'Entity Graph', icon: '\uD83D\uDD17', count: entityCount },

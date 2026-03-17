@@ -1,0 +1,338 @@
+'use client';
+
+import { useState } from 'react';
+import Link from 'next/link';
+
+const TOPICS = [
+  { value: 'youth-justice', label: 'Youth Justice' },
+  { value: 'child-protection', label: 'Child Protection' },
+  { value: 'ndis', label: 'NDIS' },
+  { value: 'family-services', label: 'Family Services' },
+  { value: 'indigenous', label: 'Indigenous' },
+  { value: 'legal-services', label: 'Legal Services' },
+  { value: 'diversion', label: 'Diversion' },
+  { value: 'prevention', label: 'Prevention' },
+];
+
+const STATES = ['', 'NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'NT', 'ACT'];
+
+function money(n: number | null): string {
+  if (!n) return '—';
+  if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}B`;
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
+  if (n >= 1e3) return `$${(n / 1e3).toFixed(0)}K`;
+  return `$${n.toLocaleString()}`;
+}
+
+interface ReportData {
+  topic: string;
+  stateFilter: string | null;
+  generatedAt: string;
+  sections: {
+    fundingByState: Array<{ state: string; grants: number; total: number; orgs: number }> | null;
+    topPrograms: Array<{ program_name: string; state: string; grants: number; total: number }> | null;
+    topOrgs: Array<{ recipient_name: string; recipient_abn: string | null; state: string | null; grants: number; total: number; gs_id: string | null }> | null;
+    almaInterventions: Array<{ name: string; type: string | null; evidence_level: string | null; geography: string | null; portfolio_score: number | null }> | null;
+    almaCount: number;
+    fundingByLga: Array<{ lga_name: string; state: string; orgs: number; total_funding: number; seifa_decile: number | null }> | null;
+    crossSystemOrgs: Array<{ gs_id: string; canonical_name: string; entity_type: string | null; state: string | null; systems: string[]; total_funding: number }> | null;
+  };
+}
+
+export function ReportBuilderClient() {
+  const [topic, setTopic] = useState('youth-justice');
+  const [stateFilter, setStateFilter] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [report, setReport] = useState<ReportData | null>(null);
+  const [error, setError] = useState('');
+
+  async function generateReport() {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/report-builder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic, stateFilter: stateFilter || undefined }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || 'Failed to generate report');
+        return;
+      }
+      setReport(await res.json());
+    } catch {
+      setError('Network error');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const topicLabel = TOPICS.find(t => t.value === topic)?.label || topic;
+
+  return (
+    <div>
+      {/* Controls */}
+      <div className="border-4 border-bauhaus-black p-6 mb-8">
+        <div className="text-xs font-black text-bauhaus-muted uppercase tracking-widest mb-4">Report Parameters</div>
+        <div className="flex flex-wrap gap-4 items-end">
+          <div className="flex-1 min-w-[200px]">
+            <label className="text-xs font-bold text-bauhaus-black block mb-1">Topic</label>
+            <select
+              value={topic}
+              onChange={e => setTopic(e.target.value)}
+              className="w-full px-3 py-2 border-2 border-gray-200 text-sm focus:border-bauhaus-black outline-none"
+            >
+              {TOPICS.map(t => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="min-w-[150px]">
+            <label className="text-xs font-bold text-bauhaus-black block mb-1">State Filter</label>
+            <select
+              value={stateFilter}
+              onChange={e => setStateFilter(e.target.value)}
+              className="w-full px-3 py-2 border-2 border-gray-200 text-sm focus:border-bauhaus-black outline-none"
+            >
+              <option value="">All States</option>
+              {STATES.filter(Boolean).map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+          <button
+            onClick={generateReport}
+            disabled={loading}
+            className="px-6 py-2 bg-bauhaus-black text-white text-xs font-black uppercase tracking-widest hover:bg-bauhaus-red transition-colors disabled:opacity-50"
+          >
+            {loading ? 'Generating...' : 'Generate Report'}
+          </button>
+        </div>
+        {error && <p className="text-sm text-bauhaus-red mt-3">{error}</p>}
+      </div>
+
+      {/* Report output */}
+      {report && (
+        <div className="space-y-8">
+          <div className="text-center border-b-4 border-bauhaus-black pb-4 mb-8">
+            <div className="text-[10px] font-black text-bauhaus-red uppercase tracking-widest mb-1">CivicGraph Intelligence Report</div>
+            <h2 className="text-xl font-black text-bauhaus-black">
+              {topicLabel} Funding Landscape
+              {report.stateFilter ? ` — ${report.stateFilter}` : ' — National'}
+            </h2>
+            <p className="text-xs text-bauhaus-muted mt-1">
+              Generated {new Date(report.generatedAt).toLocaleDateString('en-AU', { dateStyle: 'long' })}
+            </p>
+          </div>
+
+          {/* Funding by State */}
+          {report.sections.fundingByState && report.sections.fundingByState.length > 0 && (
+            <Section title="Funding by State">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b-2 border-bauhaus-black">
+                    <th className="text-left py-2 font-black text-xs uppercase tracking-wider">State</th>
+                    <th className="text-right py-2 font-black text-xs uppercase tracking-wider">Total</th>
+                    <th className="text-right py-2 font-black text-xs uppercase tracking-wider">Grants</th>
+                    <th className="text-right py-2 font-black text-xs uppercase tracking-wider">Orgs</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {report.sections.fundingByState.map(row => (
+                    <tr key={row.state} className="border-b border-gray-100">
+                      <td className="py-2 font-bold">{row.state}</td>
+                      <td className="py-2 text-right">{money(row.total)}</td>
+                      <td className="py-2 text-right text-bauhaus-muted">{row.grants.toLocaleString()}</td>
+                      <td className="py-2 text-right text-bauhaus-muted">{row.orgs}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Section>
+          )}
+
+          {/* Top Programs */}
+          {report.sections.topPrograms && report.sections.topPrograms.length > 0 && (
+            <Section title="Top Funded Programs">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b-2 border-bauhaus-black">
+                    <th className="text-left py-2 font-black text-xs uppercase tracking-wider">Program</th>
+                    <th className="text-left py-2 font-black text-xs uppercase tracking-wider">State</th>
+                    <th className="text-right py-2 font-black text-xs uppercase tracking-wider">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {report.sections.topPrograms.map((row, i) => (
+                    <tr key={i} className="border-b border-gray-100">
+                      <td className="py-2 font-medium">{row.program_name}</td>
+                      <td className="py-2 text-bauhaus-muted">{row.state}</td>
+                      <td className="py-2 text-right">{money(row.total)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Section>
+          )}
+
+          {/* Top Organisations */}
+          {report.sections.topOrgs && report.sections.topOrgs.length > 0 && (
+            <Section title="Top Funded Organisations">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b-2 border-bauhaus-black">
+                    <th className="text-left py-2 font-black text-xs uppercase tracking-wider">Organisation</th>
+                    <th className="text-left py-2 font-black text-xs uppercase tracking-wider">State</th>
+                    <th className="text-right py-2 font-black text-xs uppercase tracking-wider">Total</th>
+                    <th className="text-right py-2 font-black text-xs uppercase tracking-wider">Grants</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {report.sections.topOrgs.map((row, i) => (
+                    <tr key={i} className="border-b border-gray-100">
+                      <td className="py-2">
+                        {row.gs_id ? (
+                          <Link href={`/entities/${row.gs_id}`} className="font-medium hover:text-bauhaus-red transition-colors">
+                            {row.recipient_name}
+                          </Link>
+                        ) : (
+                          <span className="font-medium">{row.recipient_name}</span>
+                        )}
+                      </td>
+                      <td className="py-2 text-bauhaus-muted">{row.state || '—'}</td>
+                      <td className="py-2 text-right">{money(row.total)}</td>
+                      <td className="py-2 text-right text-bauhaus-muted">{row.grants}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Section>
+          )}
+
+          {/* Funding by LGA */}
+          {report.sections.fundingByLga && report.sections.fundingByLga.length > 0 && (
+            <Section title="Funding by LGA (Top 20)">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b-2 border-bauhaus-black">
+                    <th className="text-left py-2 font-black text-xs uppercase tracking-wider">LGA</th>
+                    <th className="text-left py-2 font-black text-xs uppercase tracking-wider">State</th>
+                    <th className="text-right py-2 font-black text-xs uppercase tracking-wider">Total</th>
+                    <th className="text-right py-2 font-black text-xs uppercase tracking-wider">Orgs</th>
+                    <th className="text-right py-2 font-black text-xs uppercase tracking-wider">SEIFA</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {report.sections.fundingByLga.map((row, i) => (
+                    <tr key={i} className="border-b border-gray-100">
+                      <td className="py-2 font-medium">{row.lga_name}</td>
+                      <td className="py-2 text-bauhaus-muted">{row.state}</td>
+                      <td className="py-2 text-right">{money(row.total_funding)}</td>
+                      <td className="py-2 text-right text-bauhaus-muted">{row.orgs}</td>
+                      <td className="py-2 text-right">
+                        {row.seifa_decile != null ? (
+                          <span className={row.seifa_decile <= 3 ? 'text-bauhaus-red font-bold' : ''}>
+                            {row.seifa_decile}
+                          </span>
+                        ) : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Section>
+          )}
+
+          {/* ALMA Evidence */}
+          {report.sections.almaInterventions && report.sections.almaInterventions.length > 0 && (
+            <Section title={`ALMA Evidence-Based Interventions (${report.sections.almaCount} total)`}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {report.sections.almaInterventions.map((row, i) => (
+                  <div key={i} className="border-2 border-gray-200 p-3">
+                    <div className="font-bold text-sm">{row.name}</div>
+                    <div className="flex gap-2 mt-1">
+                      {row.type && (
+                        <span className="text-[10px] px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded">{row.type}</span>
+                      )}
+                      {row.evidence_level && (
+                        <span className="text-[10px] px-1.5 py-0.5 bg-green-50 text-green-600 rounded">{row.evidence_level}</span>
+                      )}
+                      {row.geography && (
+                        <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">{row.geography}</span>
+                      )}
+                    </div>
+                    {row.portfolio_score != null && (
+                      <div className="text-[10px] text-bauhaus-muted mt-1">
+                        Portfolio score: {row.portfolio_score.toFixed(1)}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {/* Cross-System Organisations */}
+          {report.sections.crossSystemOrgs && report.sections.crossSystemOrgs.length > 0 && (
+            <Section title="Cross-System Organisations">
+              <p className="text-xs text-bauhaus-muted mb-3">
+                Organisations that appear across multiple funding systems.
+              </p>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b-2 border-bauhaus-black">
+                    <th className="text-left py-2 font-black text-xs uppercase tracking-wider">Organisation</th>
+                    <th className="text-left py-2 font-black text-xs uppercase tracking-wider">Systems</th>
+                    <th className="text-right py-2 font-black text-xs uppercase tracking-wider">Total Funding</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {report.sections.crossSystemOrgs.map((row, i) => (
+                    <tr key={i} className="border-b border-gray-100">
+                      <td className="py-2">
+                        <Link href={`/entities/${row.gs_id}`} className="font-medium hover:text-bauhaus-red transition-colors">
+                          {row.canonical_name}
+                        </Link>
+                        <div className="text-[10px] text-bauhaus-muted">{row.state} · {row.entity_type}</div>
+                      </td>
+                      <td className="py-2">
+                        <div className="flex gap-1 flex-wrap">
+                          {row.systems.map(s => (
+                            <span key={s} className="text-[10px] px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded">{s}</span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="py-2 text-right">{money(row.total_funding)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Section>
+          )}
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!report && !loading && (
+        <div className="border-4 border-dashed border-bauhaus-black/20 p-12 text-center">
+          <div className="text-3xl mb-3">📊</div>
+          <div className="font-bold text-lg mb-1">Build Your Report</div>
+          <p className="text-sm text-bauhaus-muted max-w-md mx-auto">
+            Select a topic and optional state filter above, then click Generate to create a custom
+            funding intelligence report with ALMA evidence overlay.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section>
+      <h3 className="text-xs font-black text-bauhaus-red uppercase tracking-widest mb-3">{title}</h3>
+      <div className="border-2 border-gray-200 p-4">{children}</div>
+    </section>
+  );
+}
