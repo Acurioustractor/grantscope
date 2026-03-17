@@ -189,24 +189,27 @@ describe('subscription', () => {
       expect(modules).toContain('research');
     });
 
-    it('organisation gets 5 modules', () => {
+    it('organisation gets 6 modules', () => {
       const modules = getModules('organisation');
-      expect(modules).toHaveLength(5);
+      expect(modules).toHaveLength(6);
       expect(modules).toContain('procurement');
       expect(modules).toContain('allocation');
+      expect(modules).toContain('relationships');
     });
 
-    it('funder gets 6 modules', () => {
+    it('funder gets 7 modules', () => {
       const modules = getModules('funder');
-      expect(modules).toHaveLength(6);
+      expect(modules).toHaveLength(7);
       expect(modules).toContain('api');
+      expect(modules).toContain('relationships');
     });
 
-    it('enterprise gets all 8 modules', () => {
+    it('enterprise gets all 9 modules', () => {
       const modules = getModules('enterprise');
-      expect(modules).toHaveLength(8);
+      expect(modules).toHaveLength(9);
       expect(modules).toContain('supply-chain');
       expect(modules).toContain('governed-proof');
+      expect(modules).toContain('relationships');
     });
   });
 });

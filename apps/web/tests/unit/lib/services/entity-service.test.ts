@@ -35,6 +35,7 @@ function createMockDb() {
 
   const db = {
     from: vi.fn().mockReturnValue(chain),
+    rpc: vi.fn().mockResolvedValue({ data: [], error: null }),
     _chain: chain,
     _resolveWith: resolveWith,
   };
