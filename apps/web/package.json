@@ -29,6 +29,8 @@
     "pdf-parse": "^2.4.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-force-graph-2d": "^1.29.1",
+    "react-force-graph-3d": "^1.29.1",
     "react-leaflet": "^5.0.0",
     "recharts": "^3.7.0",
     "stripe": "^20.4.0"
