@@ -352,6 +352,8 @@ export function HomeClient(props: HomeClientProps) {
                 { href: '/home/watchlist', label: 'Watchlist', icon: '\uD83D\uDC41\uFE0F' },
                 { href: '/home/report-builder', label: 'Report Builder', icon: '\uD83D\uDCCA' },
                 { href: '/home/tender-brief', label: 'Tender Brief', icon: '\uD83D\uDCE6' },
+                { href: '/home/board-report', label: 'Board Report', icon: '\uD83D\uDCCB' },
+                { href: '/home/api-keys', label: 'API Keys', icon: '\uD83D\uDD11' },
                 { href: '/places', label: 'Place Packs', icon: '\uD83D\uDCCD' },
                 { href: '/reports', label: 'Reports & Research', icon: '\uD83D\uDCCA' },
                 { href: '/entities', label: 'Entity Graph', icon: '\uD83D\uDD17', count: entityCount },

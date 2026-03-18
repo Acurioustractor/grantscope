@@ -526,6 +526,14 @@ export const AGENTS = {
     timeoutMs: 300_000,
     dependencies: ['scout-grants-for-profiles'],
   },
+  'check-entity-watches': {
+    command: ['node', '--env-file=.env', 'scripts/check-entity-watches.mjs'],
+    displayName: 'Entity Watch Notifications',
+    category: 'intelligence',
+    defaultPriority: 3,
+    timeoutMs: 300_000,
+    dependencies: [],
+  },
   'score-foundation-alignment': {
     command: ['node', '--env-file=.env', 'scripts/score-foundation-alignment.mjs'],
     displayName: 'Foundation Alignment',

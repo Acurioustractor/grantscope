@@ -32,6 +32,14 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const { name, permissions, rate_limit_per_hour } = body;
 
+  // Validate name is required
+  if (!name || typeof name !== 'string') {
+    return NextResponse.json(
+      { error: 'name is required and must be a string' },
+      { status: 400 }
+    );
+  }
+
   // Generate a secure API key
   const rawKey = `cg_${crypto.randomBytes(32).toString('hex')}`;
   const keyHash = crypto.createHash('sha256').update(rawKey).digest('hex');
@@ -44,18 +52,19 @@ export async function POST(request: NextRequest) {
       user_id: user.id,
       key_hash: keyHash,
       key_prefix: keyPrefix,
-      name: name || 'Default',
+      name,
       permissions: permissions || ['read'],
-      rate_limit_per_hour: rate_limit_per_hour || 100,
+      rate_limit_per_hour: rate_limit_per_hour || 1000,
+      enabled: true,
     })
-    .select('id, key_prefix, name, permissions, rate_limit_per_hour, created_at')
+    .select('id, key_prefix, name, enabled, created_at, rate_limit_per_hour')
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Return the raw key ONCE — it can never be retrieved again
+  // Return the raw key ONCE — it cannot be retrieved again
   return NextResponse.json({
-    key: { ...data, raw_key: rawKey },
-    warning: 'Save this key now. It cannot be retrieved again.',
+    ...data,
+    key: rawKey,
   }, { status: 201 });
 }
