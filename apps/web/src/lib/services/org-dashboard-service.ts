@@ -81,6 +81,8 @@ export interface OrgContact {
   notes: string | null;
   last_contacted_at: string | null;
   linked_entity_id: string | null;
+  linkedin_url: string | null;
+  person_id: string | null;
 }
 
 export interface OrgLeader {
@@ -426,13 +428,21 @@ export interface OrgContactWithEntity extends OrgContact {
   linked_entity_name: string | null;
   linked_entity_type: string | null;
   linked_entity_abn: string | null;
+  // GHL enrichment
+  ghl_contact_id: string | null;
+  ghl_engagement_status: string | null;
+  ghl_last_contact_date: string | null;
+  // Notion
+  notion_id: string | null;
+  // Unified tags
+  unified_tags: string[];
 }
 
 export async function getOrgContacts(orgProfileId: string, projectId?: string): Promise<OrgContactWithEntity[]> {
   const supabase = getServiceSupabase();
   let query = supabase
     .from('org_contacts')
-    .select('id, name, role, organisation, contact_type, email, phone, notes, last_contacted_at, linked_entity_id')
+    .select('id, name, role, organisation, contact_type, email, phone, notes, last_contacted_at, linked_entity_id, linkedin_url, person_id')
     .eq('org_profile_id', orgProfileId);
   if (projectId) query = query.eq('project_id', projectId);
   const { data } = await query.order('contact_type').order('name');
@@ -455,13 +465,57 @@ export async function getOrgContacts(orgProfileId: string, projectId?: string): 
     }
   }
 
-  return contacts.map(c => ({
-    ...c,
-    linked_entity_gs_id: c.linked_entity_id ? entityMap[c.linked_entity_id]?.gs_id ?? null : null,
-    linked_entity_name: c.linked_entity_id ? entityMap[c.linked_entity_id]?.canonical_name ?? null : null,
-    linked_entity_type: c.linked_entity_id ? entityMap[c.linked_entity_id]?.entity_type ?? null : null,
-    linked_entity_abn: c.linked_entity_id ? entityMap[c.linked_entity_id]?.abn ?? null : null,
-  }));
+  // Enrich with person_identity_map + GHL data for linked people
+  const personIds = contacts.map(c => c.person_id).filter(Boolean) as string[];
+  let personMap: Record<string, { ghl_contact_id: string | null; notion_id: string | null; unified_tags: string[] }> = {};
+  let ghlMap: Record<string, { engagement_status: string | null; last_contact_date: string | null }> = {};
+
+  if (personIds.length > 0) {
+    const personRows = await safe(supabase.rpc('exec_sql', {
+      query: `SELECT person_id, ghl_contact_id, notion_id, unified_tags
+         FROM person_identity_map
+         WHERE person_id IN (${personIds.map(id => `'${id}'`).join(',')})`,
+    })) as Array<{ person_id: string; ghl_contact_id: string | null; notion_id: string | null; unified_tags: string[] | null }> | null;
+
+    for (const p of personRows ?? []) {
+      personMap[p.person_id] = {
+        ghl_contact_id: p.ghl_contact_id,
+        notion_id: p.notion_id,
+        unified_tags: p.unified_tags ?? [],
+      };
+    }
+
+    // Get GHL engagement data for linked contacts
+    const ghlIds = (personRows ?? []).map(p => p.ghl_contact_id).filter(Boolean) as string[];
+    if (ghlIds.length > 0) {
+      const ghlRows = await safe(supabase.rpc('exec_sql', {
+        query: `SELECT ghl_id, engagement_status, last_contact_date
+           FROM ghl_contacts
+           WHERE ghl_id IN (${ghlIds.map(id => `'${id}'`).join(',')})`,
+      })) as Array<{ ghl_id: string; engagement_status: string | null; last_contact_date: string | null }> | null;
+
+      for (const g of ghlRows ?? []) {
+        ghlMap[g.ghl_id] = { engagement_status: g.engagement_status, last_contact_date: g.last_contact_date };
+      }
+    }
+  }
+
+  return contacts.map(c => {
+    const person = c.person_id ? personMap[c.person_id] : null;
+    const ghl = person?.ghl_contact_id ? ghlMap[person.ghl_contact_id] : null;
+    return {
+      ...c,
+      linked_entity_gs_id: c.linked_entity_id ? entityMap[c.linked_entity_id]?.gs_id ?? null : null,
+      linked_entity_name: c.linked_entity_id ? entityMap[c.linked_entity_id]?.canonical_name ?? null : null,
+      linked_entity_type: c.linked_entity_id ? entityMap[c.linked_entity_id]?.entity_type ?? null : null,
+      linked_entity_abn: c.linked_entity_id ? entityMap[c.linked_entity_id]?.abn ?? null : null,
+      ghl_contact_id: person?.ghl_contact_id ?? null,
+      ghl_engagement_status: ghl?.engagement_status ?? null,
+      ghl_last_contact_date: ghl?.last_contact_date ?? null,
+      notion_id: person?.notion_id ?? null,
+      unified_tags: person?.unified_tags ?? [],
+    };
+  });
 }
 
 export async function getOrgLeadership(orgProfileId: string, projectId?: string): Promise<OrgLeader[]> {
