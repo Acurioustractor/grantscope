@@ -146,6 +146,15 @@ export async function findContactByEmail(email: string): Promise<{ id: string } 
   return contact?.id ? { id: contact.id } : null;
 }
 
+export async function updateContactCustomField(contactId: string, fieldId: string, value: string) {
+  await ghlFetch(`/contacts/${contactId}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      customFields: [{ id: fieldId, value }],
+    }),
+  });
+}
+
 export async function upsertContact(opts: {
   email: string;
   firstName?: string;
@@ -153,6 +162,7 @@ export async function upsertContact(opts: {
   companyName?: string;
   tags?: string[];
   source?: string;
+  customFields?: Array<{ id: string; value: string }>;
 }): Promise<{ id: string }> {
   const locationId = process.env.GHL_LOCATION_ID;
   const data = await ghlFetch('/contacts/upsert', {
@@ -165,6 +175,7 @@ export async function upsertContact(opts: {
       companyName: opts.companyName,
       tags: opts.tags,
       source: opts.source,
+      ...(opts.customFields && { customFields: opts.customFields }),
     }),
   });
 
