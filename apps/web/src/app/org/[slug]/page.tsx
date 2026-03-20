@@ -20,6 +20,9 @@ import {
   getOrgRevolvingDoor,
   getOrgRelationshipSummary,
   getOrgFundingDesert,
+  getOrgBoardMembers,
+  getOrgDonorCrosslinks,
+  getOrgFoundationFunders,
   money,
 } from '@/lib/services/org-dashboard-service';
 import { Section } from '../_components/ui';
@@ -30,6 +33,9 @@ import {
   RevolvingDoorSection,
   RelationshipSummarySection,
   FundingDesertSection,
+  BoardMembersSection,
+  DonorCrosslinksSection,
+  FoundationFundersSection,
   LeadershipSection,
   FundingSection,
   FundingTimelineSection,
@@ -72,6 +78,9 @@ export default async function OrgDashboard({ params, searchParams }: { params: P
     projectSummaries,
     powerIndex,
     revolvingDoor,
+    boardMembers,
+    donorCrosslinks,
+    foundationFunders,
   ] = await Promise.all([
     abn ? getOrgFundingByProgram(abn, fundingYearFilter) : null,
     abn ? getOrgFundingByYear(abn) : null,
@@ -88,6 +97,9 @@ export default async function OrgDashboard({ params, searchParams }: { params: P
     getOrgProjectSummaries(profile.id),
     abn ? getOrgPowerIndex(abn) : null,
     abn ? getOrgRevolvingDoor(abn) : null,
+    abn ? getOrgBoardMembers(abn) : [],
+    abn ? getOrgDonorCrosslinks(abn) : [],
+    abn ? getOrgFoundationFunders(abn) : [],
   ]);
 
   // Secondary fetches that depend on entity data
@@ -176,6 +188,12 @@ export default async function OrgDashboard({ params, searchParams }: { params: P
         <RevolvingDoorSection revolvingDoor={revolvingDoor} />
 
         <RelationshipSummarySection relationships={relationships} slug={slug} />
+
+        <BoardMembersSection boardMembers={boardMembers} />
+
+        <DonorCrosslinksSection donorCrosslinks={donorCrosslinks} />
+
+        <FoundationFundersSection foundationFunders={foundationFunders} />
 
         {/* Projects */}
         {projectSummaries.length > 0 && (

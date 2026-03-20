@@ -17,6 +17,9 @@ import type {
   RevolvingDoor,
   RelationshipSummary,
   FundingDesert,
+  BoardMember,
+  DonorCrosslink,
+  FoundationFunder,
 } from '@/lib/services/org-dashboard-service';
 import { money } from '@/lib/services/org-dashboard-service';
 import { Section, StatCard, SystemBadge, ContactTypeBadge } from './ui';
@@ -516,6 +519,172 @@ export function LeadershipSection({ leadership }: { leadership: OrgLeader[] }) {
             </div>
           </div>
         ))}
+      </div>
+    </Section>
+  );
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Board Members (auto-discovered)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+function formatPersonName(normalised: string): string {
+  return normalised
+    .toLowerCase()
+    .split(' ')
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
+export function BoardMembersSection({ boardMembers }: { boardMembers: BoardMember[] }) {
+  if (boardMembers.length === 0) return null;
+  return (
+    <Section title="Board & Officers">
+      <DataSource label="Auto-discovered from ACNC, ORIC, Parliament, ABR" />
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className={THEAD}>
+            <tr>
+              <th className={TH}>Name</th>
+              <th className={TH}>Roles</th>
+              <th className={TH}>Sources</th>
+              <th className={TH_R}>Contracts</th>
+              <th className={TH_R}>Justice $</th>
+              <th className={TH_R}>Donations</th>
+            </tr>
+          </thead>
+          <tbody>
+            {boardMembers.map((m, i) => {
+              const totalFlow = Number(m.contract_dollars) + Number(m.justice_dollars) + Number(m.donation_dollars);
+              return (
+                <tr key={m.person_name_normalised} className={ROW(i)}>
+                  <td className={`${TD} font-bold`}>{formatPersonName(m.person_name_normalised)}</td>
+                  <td className={TD}>
+                    <div className="flex flex-wrap gap-1">
+                      {(m.roles ?? []).slice(0, 3).map(r => (
+                        <span key={r} className="text-[10px] px-1.5 py-0.5 bg-gray-100 border border-gray-200 rounded-sm font-bold uppercase tracking-wider">
+                          {r}
+                        </span>
+                      ))}
+                    </div>
+                  </td>
+                  <td className={TD}>
+                    <div className="flex flex-wrap gap-1">
+                      {(m.role_sources ?? []).map(s => (
+                        <span key={s} className="text-[10px] px-1.5 py-0.5 bg-blue-50 border border-blue-200 rounded-sm text-blue-700 font-bold">
+                          {s.replace('_register', '').replace('_', ' ').toUpperCase()}
+                        </span>
+                      ))}
+                    </div>
+                  </td>
+                  <td className={TD_R}>{Number(m.contract_dollars) > 0 ? money(Number(m.contract_dollars)) : '--'}</td>
+                  <td className={TD_R}>{Number(m.justice_dollars) > 0 ? money(Number(m.justice_dollars)) : '--'}</td>
+                  <td className={TD_R}>{Number(m.donation_dollars) > 0 ? money(Number(m.donation_dollars)) : '--'}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </Section>
+  );
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Donor→Board Crosslinks
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+export function DonorCrosslinksSection({ donorCrosslinks }: { donorCrosslinks: DonorCrosslink[] }) {
+  if (donorCrosslinks.length === 0) return null;
+  return (
+    <Section title="Political Donor Connections">
+      <DataSource label="Cross-referenced: political donations + board positions" />
+      <p className="text-xs text-gray-500 mb-4">
+        People connected to this organisation who also appear as individual political donors.
+      </p>
+      <div className="space-y-3">
+        {donorCrosslinks.map(d => (
+          <div key={d.donor_name} className="bg-white border-2 border-gray-200 rounded-sm p-4 hover:border-bauhaus-black transition-colors">
+            <div className="flex items-start justify-between mb-2">
+              <div>
+                <h4 className="font-black text-sm">{d.donor_name}</h4>
+                <div className="flex items-center gap-2 mt-1">
+                  {d.is_politician && (
+                    <span className="text-[10px] px-2 py-0.5 bg-red-100 border border-red-300 rounded-sm text-red-700 font-bold uppercase tracking-wider">
+                      Politician
+                    </span>
+                  )}
+                  {d.is_foundation_trustee && (
+                    <span className="text-[10px] px-2 py-0.5 bg-amber-100 border border-amber-300 rounded-sm text-amber-700 font-bold uppercase tracking-wider">
+                      Foundation Trustee
+                    </span>
+                  )}
+                  <span className="text-[10px] text-gray-400 font-bold">
+                    Power Score: {d.power_score}
+                  </span>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-lg font-black text-red-700">{money(Number(d.total_donated))}</p>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                  {d.donation_count} donation{d.donation_count !== 1 ? 's' : ''}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {(d.parties ?? []).map(p => (
+                <span key={p} className="text-[10px] px-2 py-0.5 bg-gray-100 border border-gray-200 rounded-sm font-bold">
+                  {p}
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </Section>
+  );
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Foundation Funders
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+export function FoundationFundersSection({ foundationFunders }: { foundationFunders: FoundationFunder[] }) {
+  if (foundationFunders.length === 0) return null;
+  return (
+    <Section title="Foundation Funders">
+      <DataSource label="Cross-referenced: foundation grants + entity registry" />
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className={THEAD}>
+            <tr>
+              <th className={TH}>Foundation</th>
+              <th className={TH_R}>Annual Giving</th>
+              <th className={TH_R}>Grants to Org</th>
+              <th className={TH_R}>Grant Value</th>
+              <th className={TH}>Years</th>
+            </tr>
+          </thead>
+          <tbody>
+            {foundationFunders.map((f, i) => (
+              <tr key={f.foundation_abn ?? f.foundation_name} className={ROW(i)}>
+                <td className={`${TD} font-bold`}>{f.foundation_name}</td>
+                <td className={TD_R}>{Number(f.total_giving_annual) > 0 ? money(Number(f.total_giving_annual)) : '--'}</td>
+                <td className={TD_R}>{f.grant_count}</td>
+                <td className={TD_R}>{Number(f.total_grant_amount) > 0 ? money(Number(f.total_grant_amount)) : '--'}</td>
+                <td className={TD}>
+                  <div className="flex flex-wrap gap-1">
+                    {(f.grant_years ?? []).sort().map(y => (
+                      <span key={y} className="text-[10px] px-1.5 py-0.5 bg-gray-100 border border-gray-200 rounded-sm font-mono">
+                        {y}
+                      </span>
+                    ))}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </Section>
   );

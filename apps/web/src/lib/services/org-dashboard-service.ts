@@ -207,6 +207,41 @@ export interface FundingDesert {
   desert_rank: number;
 }
 
+export interface BoardMember {
+  person_name_normalised: string;
+  roles: string[];
+  role_sources: string[];
+  contract_dollars: number;
+  contract_count: number;
+  justice_dollars: number;
+  justice_count: number;
+  donation_dollars: number;
+  donation_count: number;
+}
+
+export interface DonorCrosslink {
+  donor_name: string;
+  total_donated: number;
+  donation_count: number;
+  parties: string[];
+  parties_count: number;
+  board_count: number;
+  is_foundation_trustee: boolean;
+  is_politician: boolean;
+  power_score: number;
+  first_donation: string;
+  last_donation: string;
+}
+
+export interface FoundationFunder {
+  foundation_name: string;
+  foundation_abn: string;
+  total_giving_annual: number;
+  grant_count: number;
+  total_grant_amount: number;
+  grant_years: string[];
+}
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Org Projects
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -779,6 +814,71 @@ export async function getOrgFundingDesert(lgaName: string): Promise<FundingDeser
        WHERE d.lga_name = '${lgaName.replace(/'/g, "''")}'`,
   })) as FundingDesert[] | null;
   return rows?.[0] ?? null;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Board Members (auto-discovered from person_roles)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+export async function getOrgBoardMembers(abn: string): Promise<BoardMember[]> {
+  const supabase = getServiceSupabase();
+  const rows = await safe(supabase.rpc('exec_sql', {
+    query: `SELECT person_name_normalised, roles, role_sources,
+              contract_dollars::bigint as contract_dollars,
+              contract_count::int as contract_count,
+              justice_dollars::bigint as justice_dollars,
+              justice_count::int as justice_count,
+              donation_dollars::bigint as donation_dollars,
+              donation_count::int as donation_count
+       FROM mv_person_entity_crosswalk
+       WHERE company_abn = '${abn}'
+       ORDER BY (contract_dollars + justice_dollars + donation_dollars) DESC
+       LIMIT 30`,
+  })) as BoardMember[] | null;
+  return rows ?? [];
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Donor→Board Crosslinks
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+export async function getOrgDonorCrosslinks(abn: string): Promise<DonorCrosslink[]> {
+  const supabase = getServiceSupabase();
+  const rows = await safe(supabase.rpc('exec_sql', {
+    query: `SELECT dc.donor_name, dc.total_donated::bigint as total_donated,
+              dc.donation_count::int as donation_count,
+              dc.parties, dc.parties_count::int as parties_count,
+              dc.board_count::int as board_count,
+              dc.is_foundation_trustee, dc.is_politician,
+              dc.power_score::int as power_score,
+              dc.first_donation::text, dc.last_donation::text
+       FROM mv_donor_person_crosslink dc
+       WHERE dc.org_abns @> ARRAY['${abn}']
+       ORDER BY dc.total_donated DESC
+       LIMIT 20`,
+  })) as DonorCrosslink[] | null;
+  return rows ?? [];
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Foundation Funders (who funds this org)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+export async function getOrgFoundationFunders(abn: string): Promise<FoundationFunder[]> {
+  const supabase = getServiceSupabase();
+  const rows = await safe(supabase.rpc('exec_sql', {
+    query: `SELECT foundation_name, foundation_abn,
+              MAX(total_giving_annual)::bigint as total_giving_annual,
+              COUNT(*)::int as grant_count,
+              SUM(grant_amount)::bigint as total_grant_amount,
+              array_agg(DISTINCT grant_year) FILTER (WHERE grant_year IS NOT NULL) as grant_years
+       FROM mv_foundation_grantees
+       WHERE grantee_abn = '${abn}'
+       GROUP BY foundation_name, foundation_abn
+       ORDER BY SUM(grant_amount) DESC NULLS LAST
+       LIMIT 20`,
+  })) as FoundationFunder[] | null;
+  return rows ?? [];
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
