@@ -72,6 +72,12 @@ const megaMenuSections = [
       { href: '/reports/funding-deserts', label: 'Funding Deserts', desc: 'Where disadvantage meets underinvestment' },
       { href: '/reports/data-health', label: 'Data Health', desc: 'Coverage & completeness across 7 systems' },
       { href: '/reports/tax-transparency', label: 'Tax Transparency', desc: 'Government contracts vs tax paid' },
+      { href: '/reports/exec-remuneration', label: 'Exec Remuneration', desc: 'Executive pay vs service delivery' },
+      { href: '/reports/board-interlocks', label: 'Board Interlocks', desc: 'Who controls Australia\'s charities?' },
+      { href: '/reports/charity-contracts', label: 'Charity Contracts', desc: 'Charity exec pay vs government contracts' },
+      { href: '/reports/influence-network', label: 'Influence Network', desc: 'Lobby, donate, win contracts — the cycle' },
+      { href: '/reports/desert-overhead', label: 'Desert Overhead', desc: 'Exec pay in disadvantaged areas' },
+      { href: '/reports/community-efficiency', label: 'ACCO Efficiency', desc: 'Community-controlled orgs deliver more with less' },
     ],
   },
   {
