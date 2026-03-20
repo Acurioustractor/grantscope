@@ -1,11 +1,11 @@
 # GrantScope Schema Cache
 
-Generated: 2026-03-09. Refresh with:
+Generated: 2026-03-20. Refresh with:
 ```bash
 node --env-file=.env scripts/preflight.mjs --refresh
 ```
 
-## gs_entities (93K rows)
+## gs_entities (159K rows)
 | Column | Type | Nullable |
 |--------|------|----------|
 | id | uuid | NOT NULL |
@@ -39,7 +39,7 @@ node --env-file=.env scripts/preflight.mjs --refresh
 | lga_name | text |  |
 | lga_code | text |  |
 
-## gs_relationships (65K rows)
+## gs_relationships (1.08M rows)
 | Column | Type | Nullable |
 |--------|------|----------|
 | id | uuid | NOT NULL |
@@ -60,7 +60,7 @@ node --env-file=.env scripts/preflight.mjs --refresh
 | created_at | timestamp with time zone |  |
 | properties | jsonb |  |
 
-## austender_contracts (672K rows)
+## austender_contracts (770K rows)
 | Column | Type | Nullable |
 |--------|------|----------|
 | id | uuid | NOT NULL |
@@ -88,7 +88,7 @@ node --env-file=.env scripts/preflight.mjs --refresh
 | created_at | timestamp with time zone |  |
 | updated_at | timestamp with time zone |  |
 
-## justice_funding (53K rows)
+## justice_funding (71K rows)
 | Column | Type | Nullable |
 |--------|------|----------|
 | id | uuid | NOT NULL |
@@ -241,3 +241,6 @@ node --env-file=.env scripts/preflight.mjs --refresh
 | stripe_customer_id | text |  |
 | subscription_plan | text |  |
 | subscription_status | text |  |
+| slug | text |  |
+| org_status | text |  |
+| auspice_org_name | text |  |

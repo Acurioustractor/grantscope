@@ -78,11 +78,11 @@ Colors: `bauhaus-black`, `bauhaus-red`, `bauhaus-blue`, `bauhaus-muted`
 
 | Table | Rows | Key Columns |
 |-------|------|-------------|
-| `gs_entities` | 100K | gs_id, canonical_name, abn, entity_type, sector, postcode, state, remoteness, seifa_irsd_decile, is_community_controlled, lga_name, lga_code |
-| `gs_relationships` | 199K | source_entity_id, target_entity_id, relationship_type, amount, year, dataset |
-| `austender_contracts` | 672K | title, contract_value, buyer_name, supplier_name, supplier_abn, contract_start, contract_end |
+| `gs_entities` | 159K | gs_id, canonical_name, abn, entity_type, sector, postcode, state, remoteness, seifa_irsd_decile, is_community_controlled, lga_name, lga_code |
+| `gs_relationships` | 1.08M | source_entity_id, target_entity_id, relationship_type, amount, year, dataset |
+| `austender_contracts` | 770K | title, contract_value, buyer_name, supplier_name, supplier_abn, contract_start, contract_end |
 | `acnc_charities` | 66K | abn, name, charity_size, state, postcode, purposes, beneficiaries, is_foundation |
-| `justice_funding` | 52K | recipient_name, recipient_abn, program_name, amount_dollars, state, financial_year, sector |
+| `justice_funding` | 71K | recipient_name, recipient_abn, gs_entity_id, program_name, amount_dollars, state, financial_year, sector |
 | `political_donations` | 312K | donor_name, donor_abn, donation_to, amount, financial_year |
 | `ato_tax_transparency` | 24K | entity_name, abn, total_income, taxable_income, tax_payable, report_year |
 | `entity_identifiers` | 31K | entity_id, identifier_type, identifier_value, source |
@@ -107,6 +107,12 @@ Colors: `bauhaus-black`, `bauhaus-red`, `bauhaus-blue`, `bauhaus-muted`
 - `mv_data_quality` — data quality metrics
 - `mv_org_justice_signals` — justice funding signals per org
 - `mv_acnc_latest` — latest ACNC snapshot per charity
+- `mv_entity_power_index` — cross-system power concentration (83K entities, 7 systems, power_score, system_count)
+- `mv_funding_deserts` — LGA-level disadvantage vs funding (1.6K LGAs, desert_score, SEIFA + remoteness)
+- `mv_revolving_door` — entities with 2+ influence vectors: lobbying, donations, contracts, funding (4.7K entities, revolving_door_score)
+- `mv_board_interlocks` — people serving on multiple entity boards (person_name, entities, shared_board_count)
+- `mv_person_entity_network` — person→entity connections with financial footprint (4.9K connections)
+- `mv_person_influence` — per-person influence scores (4.8K people, board_count, financial_footprint)
 
 ## Common Query Cookbook
 

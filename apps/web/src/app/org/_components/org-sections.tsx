@@ -13,6 +13,10 @@ import type {
   PeerOrg,
   MatchedGrant,
   OrgPipelineItemWithEntity,
+  PowerIndex,
+  RevolvingDoor,
+  RelationshipSummary,
+  FundingDesert,
 } from '@/lib/services/org-dashboard-service';
 import { money } from '@/lib/services/org-dashboard-service';
 import { Section, StatCard, SystemBadge, ContactTypeBadge } from './ui';
@@ -103,6 +107,381 @@ export function KeyStats({
           )}
         </div>
       )}
+    </section>
+  );
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Power Score Badge
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+const SYSTEM_LABELS: Record<string, { label: string; color: string }> = {
+  in_procurement: { label: 'Procurement', color: 'bg-blue-100 text-blue-800 border-blue-300' },
+  in_justice_funding: { label: 'Justice Funding', color: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
+  in_political_donations: { label: 'Donations', color: 'bg-red-100 text-red-800 border-red-300' },
+  in_charity_registry: { label: 'Charity', color: 'bg-purple-100 text-purple-800 border-purple-300' },
+  in_foundation: { label: 'Foundation', color: 'bg-amber-100 text-amber-800 border-amber-300' },
+  in_alma_evidence: { label: 'ALMA', color: 'bg-pink-100 text-pink-800 border-pink-300' },
+  in_ato_transparency: { label: 'ATO', color: 'bg-teal-100 text-teal-800 border-teal-300' },
+};
+
+function PowerScoreBar({ score, maxScore }: { score: number; maxScore: number }) {
+  const pct = Math.min((score / maxScore) * 100, 100);
+  const tier = pct >= 80 ? 'bg-bauhaus-red' : pct >= 50 ? 'bg-amber-500' : pct >= 20 ? 'bg-bauhaus-blue' : 'bg-gray-400';
+  return (
+    <div className="w-full h-3 bg-gray-100 rounded-sm overflow-hidden">
+      <div className={`h-full rounded-sm transition-all ${tier}`} style={{ width: `${Math.max(pct, 2)}%` }} />
+    </div>
+  );
+}
+
+export function PowerScoreSection({ powerIndex, slug }: { powerIndex: PowerIndex | null; slug: string }) {
+  if (!powerIndex) return null;
+
+  const activeSystems = Object.entries(SYSTEM_LABELS).filter(
+    ([key]) => powerIndex[key as keyof PowerIndex] && Number(powerIndex[key as keyof PowerIndex]) > 0
+  );
+
+  // System presence as a simple horizontal bar chart
+  const systemEntries: Array<{ key: string; label: string; color: string; dollars: number }> = [
+    { key: 'in_procurement', label: 'Procurement', color: 'bg-blue-500', dollars: Number(powerIndex.procurement_dollars) },
+    { key: 'in_justice_funding', label: 'Justice Funding', color: 'bg-emerald-500', dollars: Number(powerIndex.justice_dollars) },
+    { key: 'in_political_donations', label: 'Donations', color: 'bg-red-500', dollars: Number(powerIndex.donation_dollars) },
+    { key: 'in_charity_registry', label: 'Charity', color: 'bg-purple-500', dollars: 0 },
+    { key: 'in_foundation', label: 'Foundation', color: 'bg-amber-500', dollars: Number(powerIndex.foundation_giving) },
+    { key: 'in_alma_evidence', label: 'ALMA', color: 'bg-pink-500', dollars: 0 },
+    { key: 'in_ato_transparency', label: 'ATO', color: 'bg-teal-500', dollars: Number(powerIndex.ato_income) },
+  ];
+
+  const activeEntries = systemEntries.filter(
+    s => powerIndex[s.key as keyof PowerIndex] && Number(powerIndex[s.key as keyof PowerIndex]) > 0
+  );
+
+  return (
+    <Section title="Cross-System Power Index">
+      <DataSource label="Auto-computed from CivicGraph" />
+      <div className="bg-white border-2 border-bauhaus-black rounded-sm shadow-sm overflow-hidden">
+        {/* Header row with score */}
+        <div className="p-5 border-b-2 border-bauhaus-black bg-gray-50">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">
+                Power Score
+              </p>
+              <p className="text-4xl font-black text-bauhaus-black">{Number(powerIndex.power_score).toLocaleString()}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">
+                Systems Present
+              </p>
+              <p className="text-4xl font-black text-bauhaus-black">
+                {powerIndex.system_count}<span className="text-lg text-gray-400">/7</span>
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">
+                Total Dollar Flow
+              </p>
+              <p className="text-2xl font-black text-green-700">{money(Number(powerIndex.total_dollar_flow))}</p>
+            </div>
+          </div>
+          <PowerScoreBar score={Number(powerIndex.power_score)} maxScore={100} />
+        </div>
+
+        {/* System presence badges */}
+        <div className="p-5">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">
+            Active Systems
+          </p>
+          <div className="flex flex-wrap gap-2 mb-4">
+            {activeSystems.map(([key, { label, color }]) => (
+              <span key={key} className={`text-xs px-3 py-1.5 font-bold border rounded-sm ${color}`}>
+                {label}
+              </span>
+            ))}
+          </div>
+
+          {/* System breakdown bars */}
+          {activeEntries.length > 0 && (
+            <div className="space-y-2 mt-4">
+              {activeEntries.map(s => {
+                const maxDollars = Math.max(...activeEntries.map(e => e.dollars), 1);
+                const pct = s.dollars > 0 ? Math.max((s.dollars / maxDollars) * 100, 4) : 4;
+                return (
+                  <div key={s.key} className="flex items-center gap-3">
+                    <span className="w-28 text-xs font-bold text-gray-500 shrink-0 text-right">{s.label}</span>
+                    <div className="flex-1 h-5 bg-gray-100 rounded-sm overflow-hidden">
+                      <div className={`h-full rounded-sm ${s.color}`} style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="w-20 text-xs font-mono font-bold text-gray-600 shrink-0 text-right">
+                      {s.dollars > 0 ? money(s.dollars) : '--'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Key counts */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-5 pt-4 border-t border-gray-100">
+            {Number(powerIndex.contract_count) > 0 && (
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Contracts</p>
+                <p className="text-lg font-black">{Number(powerIndex.contract_count).toLocaleString()}</p>
+              </div>
+            )}
+            {Number(powerIndex.justice_record_count) > 0 && (
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Justice Records</p>
+                <p className="text-lg font-black">{Number(powerIndex.justice_record_count).toLocaleString()}</p>
+              </div>
+            )}
+            {Number(powerIndex.donation_count) > 0 && (
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Donations</p>
+                <p className="text-lg font-black">{Number(powerIndex.donation_count).toLocaleString()}</p>
+              </div>
+            )}
+            {Number(powerIndex.board_connections) > 0 && (
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Board Links</p>
+                <p className="text-lg font-black">{Number(powerIndex.board_connections).toLocaleString()}</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Link to graph */}
+        <div className="border-t border-gray-200 px-5 py-3 bg-gray-50 flex justify-end">
+          <Link
+            href={`/graph?entity=${slug}&mode=hubs`}
+            className="text-xs px-3 py-1.5 bg-bauhaus-black text-white font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors rounded-sm"
+          >
+            View in Network Graph
+          </Link>
+        </div>
+      </div>
+    </Section>
+  );
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Revolving Door Warning
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+const VECTOR_LABELS: Record<string, { label: string; icon: string }> = {
+  lobbies: { label: 'Lobbying', icon: '!' },
+  donates: { label: 'Political Donations', icon: '$' },
+  contracts: { label: 'Government Contracts', icon: '#' },
+  receives_funding: { label: 'Receives Government Funding', icon: '>' },
+};
+
+export function RevolvingDoorSection({ revolvingDoor }: { revolvingDoor: RevolvingDoor | null }) {
+  if (!revolvingDoor) return null;
+
+  const vectors = Object.entries(VECTOR_LABELS).filter(
+    ([key]) => revolvingDoor[key as keyof RevolvingDoor] === true
+  );
+
+  return (
+    <section>
+      <div className="bg-white border-2 border-orange-400 rounded-sm shadow-sm overflow-hidden">
+        <div className="border-l-4 border-orange-500">
+          {/* Header */}
+          <div className="px-5 py-4 bg-orange-50 border-b border-orange-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center font-black text-sm">!</span>
+                <div>
+                  <h3 className="font-black uppercase tracking-widest text-sm text-orange-900">
+                    Revolving Door Entity
+                  </h3>
+                  <p className="text-xs text-orange-700 mt-0.5">
+                    This entity operates across {revolvingDoor.influence_vectors} influence vectors
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-orange-600">Score</p>
+                <p className="text-2xl font-black text-orange-800">{revolvingDoor.revolving_door_score}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Influence vectors */}
+          <div className="px-5 py-4">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">
+              Influence Vectors
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              {vectors.map(([key, { label }]) => {
+                let amount: number | null = null;
+                if (key === 'donates') amount = Number(revolvingDoor.total_donated);
+                if (key === 'contracts') amount = Number(revolvingDoor.total_contracts);
+                if (key === 'receives_funding') amount = Number(revolvingDoor.total_funded);
+
+                return (
+                  <div key={key} className="flex items-center gap-3 p-3 bg-orange-50/50 border border-orange-100 rounded-sm">
+                    <span className="w-2 h-2 rounded-full bg-orange-500 shrink-0" />
+                    <div>
+                      <p className="text-xs font-bold text-gray-700">{label}</p>
+                      {amount != null && amount > 0 && (
+                        <p className="text-xs font-mono text-gray-500">{money(amount)}</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Parties funded */}
+            {revolvingDoor.parties_funded && revolvingDoor.parties_funded.length > 0 && (
+              <div className="mt-4 pt-3 border-t border-orange-100">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">
+                  Parties Funded
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {revolvingDoor.parties_funded.map(party => (
+                    <span key={party} className="text-[10px] px-2 py-1 bg-red-50 text-red-700 border border-red-200 font-bold rounded-sm">
+                      {party}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Relationship Summary
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+const REL_TYPE_LABELS: Record<string, { label: string; color: string }> = {
+  grant: { label: 'Funding Relationships', color: 'border-l-emerald-500' },
+  contract: { label: 'Contract Relationships', color: 'border-l-blue-500' },
+  donation: { label: 'Political Donation Connections', color: 'border-l-red-500' },
+  lobbies_for: { label: 'Lobbying Connections', color: 'border-l-amber-500' },
+  member_of: { label: 'Membership Links', color: 'border-l-purple-500' },
+  directorship: { label: 'Directorship Links', color: 'border-l-indigo-500' },
+  partners_with: { label: 'Partnership Links', color: 'border-l-teal-500' },
+  subsidiary_of: { label: 'Subsidiary Links', color: 'border-l-gray-500' },
+};
+
+export function RelationshipSummarySection({
+  relationships,
+  slug,
+}: {
+  relationships: RelationshipSummary[];
+  slug: string;
+}) {
+  if (relationships.length === 0) return null;
+
+  const totalRels = relationships.reduce((s, r) => s + r.count, 0);
+
+  return (
+    <Section title="Relationship Network">
+      <DataSource label="Auto-discovered from CivicGraph" />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {relationships.map(r => {
+          const meta = REL_TYPE_LABELS[r.relationship_type] ?? {
+            label: r.relationship_type,
+            color: 'border-l-gray-400',
+          };
+          return (
+            <Link
+              key={r.relationship_type}
+              href={`/graph?entity=${slug}&mode=hubs`}
+              className={`bg-white border border-gray-200 border-l-4 ${meta.color} rounded-sm shadow-sm p-4 hover:shadow-md transition-shadow`}
+            >
+              <p className="text-2xl font-black text-bauhaus-black">{r.count.toLocaleString()}</p>
+              <p className="text-xs font-bold text-gray-500 mt-1">{meta.label}</p>
+            </Link>
+          );
+        })}
+      </div>
+      <div className="mt-3 flex items-center justify-between">
+        <p className="text-xs text-gray-400">
+          {totalRels.toLocaleString()} total connections across {relationships.length} types
+        </p>
+        <Link
+          href={`/graph?entity=${slug}&mode=hubs`}
+          className="text-xs text-bauhaus-blue font-bold hover:underline"
+        >
+          Explore in Network Graph
+        </Link>
+      </div>
+    </Section>
+  );
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Funding Desert Context
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+export function FundingDesertSection({ fundingDesert }: { fundingDesert: FundingDesert | null }) {
+  if (!fundingDesert) return null;
+
+  // Only show if it's meaningfully a desert (e.g., top 50% of desert scores)
+  const desertScore = Number(fundingDesert.desert_score);
+  if (desertScore <= 0) return null;
+
+  const severity =
+    desertScore >= 80 ? { label: 'Severe', bg: 'bg-red-50', border: 'border-red-400', text: 'text-red-800', dot: 'bg-red-500' }
+    : desertScore >= 50 ? { label: 'Significant', bg: 'bg-orange-50', border: 'border-orange-400', text: 'text-orange-800', dot: 'bg-orange-500' }
+    : { label: 'Moderate', bg: 'bg-yellow-50', border: 'border-yellow-400', text: 'text-yellow-800', dot: 'bg-yellow-500' };
+
+  return (
+    <section>
+      <div className={`${severity.bg} border-2 ${severity.border} rounded-sm p-5`}>
+        <div className="flex items-start gap-4">
+          <span className={`w-3 h-3 rounded-full ${severity.dot} shrink-0 mt-1`} />
+          <div className="flex-1">
+            <h3 className={`font-black uppercase tracking-widest text-sm ${severity.text}`}>
+              Funding Desert — {severity.label}
+            </h3>
+            <p className={`text-sm mt-1 ${severity.text}`}>
+              Located in <strong>{fundingDesert.lga_name}</strong> ({fundingDesert.state})
+              {fundingDesert.desert_rank > 0 && (
+                <> — ranked <strong>#{fundingDesert.desert_rank}</strong> funding desert</>
+              )}
+            </p>
+            <div className="flex items-center gap-6 mt-3">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Desert Score</p>
+                <p className={`text-lg font-black ${severity.text}`}>{desertScore.toFixed(1)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Remoteness</p>
+                <p className="text-sm font-bold text-gray-600">{fundingDesert.remoteness}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Avg IRSD Decile</p>
+                <p className="text-sm font-bold text-gray-600">{Number(fundingDesert.avg_irsd_decile).toFixed(1)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Total Flow</p>
+                <p className="text-sm font-bold text-gray-600">{money(Number(fundingDesert.total_dollar_flow))}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Entities</p>
+                <p className="text-sm font-bold text-gray-600">{Number(fundingDesert.indexed_entities).toLocaleString()}</p>
+              </div>
+            </div>
+            <div className="mt-3">
+              <Link
+                href="/reports/power-concentration"
+                className="text-xs text-bauhaus-blue font-bold hover:underline"
+              >
+                View Funding Deserts Report
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
   );
 }
@@ -434,6 +813,25 @@ export function ContactsSection({ contacts }: { contacts: OrgContactWithEntity[]
               <p className="text-xs text-gray-500">{c.role}</p>
               {c.organisation && c.organisation !== c.name && (
                 <p className="text-[10px] text-gray-400 mt-1">{c.organisation}</p>
+              )}
+              {(c.linkedin_url || c.email) && (
+                <div className="mt-2 flex items-center gap-2">
+                  {c.linkedin_url && (
+                    <a href={c.linkedin_url} target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-[#0077B5] text-white rounded-sm hover:bg-[#005885] transition-colors">
+                      LinkedIn
+                    </a>
+                  )}
+                  {c.email && (
+                    <a href={`mailto:${c.email}`}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border border-gray-300 text-gray-600 rounded-sm hover:bg-gray-50 transition-colors">
+                      Email
+                    </a>
+                  )}
+                  {c.person_id && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400 inline-block" title="Linked to person record" />
+                  )}
+                </div>
               )}
               {c.linked_entity_gs_id && (
                 <div className="mt-2 pt-2 border-t border-gray-100 flex items-center gap-2">

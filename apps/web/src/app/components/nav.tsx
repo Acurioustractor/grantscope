@@ -17,6 +17,7 @@ const publicLinks = [
   { href: '/entities', label: 'Entities' },
   { href: '/grants', label: 'Grants' },
   { href: '/reports', label: 'Reports' },
+  { href: '/developers', label: 'API' },
 ];
 
 const megaMenuSections = [
@@ -52,10 +53,14 @@ const megaMenuSections = [
   {
     title: 'Investigations',
     links: [
+      { href: '/reports/power-concentration', label: 'Power Index', desc: '82K entities scored across 7 datasets' },
       { href: '/reports/donor-contractors', label: 'Donor-Contractors', desc: 'Entities that both donate and hold government contracts' },
       { href: '/reports/cross-reference', label: '$74B Question', desc: 'Who gets government contracts?' },
       { href: '/reports/big-philanthropy', label: '$222 Billion', desc: 'Where charity money goes' },
       { href: '/reports/community-parity', label: 'Community Parity', desc: 'Who benefits, who misses out' },
+      { href: '/reports/who-runs-australia', label: 'Who Runs Australia?', desc: 'Boards, donations, lobbying & contracts' },
+      { href: '/reports/funding-deserts', label: 'Funding Deserts', desc: 'Where disadvantage meets underinvestment' },
+      { href: '/reports/data-health', label: 'Data Health', desc: 'Coverage & completeness across 7 systems' },
     ],
   },
   {
@@ -88,6 +93,7 @@ const workspaceModules: NavModule[] = [
     module: 'grants',
     children: [
       { label: 'Search', href: '/grants' },
+      { label: 'Matched', href: '/profile/matches' },
       { label: 'Tracker', href: '/tracker' },
       { label: 'Foundations', href: '/foundations' },
       { label: 'Foundation Tracker', href: '/foundations/tracker' },
@@ -125,6 +131,18 @@ const workspaceModules: NavModule[] = [
       { label: 'Entities', href: '/entities' },
       { label: 'Charities', href: '/charities' },
       { label: 'Social Enterprises', href: '/social-enterprises' },
+      { label: 'Network Graph', href: '/graph' },
+    ],
+  },
+  {
+    id: 'relationships',
+    label: 'Relationships',
+    href: '/org',
+    module: 'relationships',
+    children: [
+      { label: 'My Org', href: '/org' },
+      { label: 'Contacts', href: '/org/__SLUG__/contacts' },
+      { label: 'Knowledge Wiki', href: '/knowledge' },
     ],
   },
 ];
@@ -142,9 +160,11 @@ const adminLinks = [
 interface NavBarProps {
   initialUserEmail: string | null;
   subscriptionTier?: Tier;
+  isImpersonating?: boolean;
+  orgSlug?: string | null;
 }
 
-export function NavBar({ initialUserEmail, subscriptionTier = 'community' }: NavBarProps) {
+export function NavBar({ initialUserEmail, subscriptionTier = 'community', isImpersonating = false, orgSlug = null }: NavBarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [megaOpen, setMegaOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -156,6 +176,21 @@ export function NavBar({ initialUserEmail, subscriptionTier = 'community' }: Nav
   const isLoggedIn = !!userEmail;
   const isAdmin = isLoggedIn && ADMIN_EMAILS.includes(userEmail);
   const tier = subscriptionTier;
+
+  // Resolve org-slug-dependent links (hide links that need a slug when none is available)
+  const resolvedModules = workspaceModules.map(mod => {
+    if (!mod.children) return mod;
+    return {
+      ...mod,
+      children: mod.children.filter(child => {
+        if (child.href.includes('__SLUG__') && !orgSlug) return false;
+        return true;
+      }).map(child => ({
+        ...child,
+        href: orgSlug ? child.href.replace('__SLUG__', orgSlug) : child.href,
+      })),
+    };
+  });
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -190,7 +225,7 @@ export function NavBar({ initialUserEmail, subscriptionTier = 'community' }: Nav
 
   /** Find the active top-level module for showing sub-nav */
   function activeModule(): NavModule | null {
-    for (const mod of workspaceModules) {
+    for (const mod of resolvedModules) {
       if (mod.children) {
         for (const child of mod.children) {
           if (pathname.startsWith(child.href)) return mod;
@@ -219,7 +254,7 @@ export function NavBar({ initialUserEmail, subscriptionTier = 'community' }: Nav
 
             {/* Module tabs — bottom-border indicator pattern (Linear/Vercel) */}
             <div className="flex items-center gap-0 h-12">
-              {workspaceModules.map(mod => {
+              {resolvedModules.map(mod => {
                 const locked = mod.module && !hasModule(tier, mod.module);
                 const active = currentModule?.id === mod.id || (mod.id === 'home' && pathname === '/home');
                 return (
@@ -261,8 +296,8 @@ export function NavBar({ initialUserEmail, subscriptionTier = 'community' }: Nav
                 {TIER_LABELS[tier]}
               </span>
 
-              {/* Admin links */}
-              {isAdmin && adminLinks.map(link => (
+              {/* Admin links — hidden when impersonating */}
+              {isAdmin && !isImpersonating && adminLinks.map(link => (
                 <a
                   key={link.href}
                   href={link.href}
@@ -289,7 +324,7 @@ export function NavBar({ initialUserEmail, subscriptionTier = 'community' }: Nav
               </button>
 
               {/* Account */}
-              <WorkspaceAccountMenu userEmail={userEmail} isAdmin={isAdmin} />
+              <WorkspaceAccountMenu userEmail={userEmail} isAdmin={isAdmin} isImpersonating={isImpersonating} />
             </div>
           </div>
 
@@ -472,7 +507,7 @@ export function NavBar({ initialUserEmail, subscriptionTier = 'community' }: Nav
 
 /* ─── Workspace account menu (editorial style) ────────────── */
 
-function WorkspaceAccountMenu({ userEmail, isAdmin }: { userEmail: string; isAdmin: boolean }) {
+function WorkspaceAccountMenu({ userEmail, isAdmin, isImpersonating = false }: { userEmail: string; isAdmin: boolean; isImpersonating?: boolean }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -535,6 +570,36 @@ function WorkspaceAccountMenu({ userEmail, isAdmin }: { userEmail: string; isAdm
               {item.label}
             </a>
           ))}
+
+          {isAdmin && !isImpersonating && (
+            <>
+              <div className="border-t" style={{ borderColor: 'var(--ws-border)' }}>
+                <div className="px-3 py-1.5">
+                  <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#E63946' }}>Super Admin</div>
+                </div>
+                {[
+                  { href: '/org', label: 'All Organisations' },
+                  { href: '/org/justicehub/intelligence', label: 'JH Command Center' },
+                  { href: '/mission-control', label: 'Mission Control' },
+                  { href: '/graph', label: 'Network Graph' },
+                  { href: '/ops', label: 'Ops Dashboard' },
+                  { href: '/ops/health', label: 'Data Health' },
+                ].map(item => (
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    className="block px-3 py-1.5 text-[12px] font-medium transition-colors"
+                    style={{ color: 'var(--ws-text-secondary)' }}
+                    onClick={() => setOpen(false)}
+                    onMouseEnter={e => { (e.target as HTMLElement).style.background = 'var(--ws-surface-2)'; }}
+                    onMouseLeave={e => { (e.target as HTMLElement).style.background = 'transparent'; }}
+                  >
+                    {item.label}
+                  </a>
+                ))}
+              </div>
+            </>
+          )}
 
           <div className="border-t" style={{ borderColor: 'var(--ws-border)' }}>
             <form action="/api/auth/signout" method="POST">

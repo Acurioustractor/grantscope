@@ -16,12 +16,20 @@ import {
   getMatchedGrantOpportunities,
   getOrgPeerOrgs,
   getOrgProjectSummaries,
+  getOrgPowerIndex,
+  getOrgRevolvingDoor,
+  getOrgRelationshipSummary,
+  getOrgFundingDesert,
   money,
 } from '@/lib/services/org-dashboard-service';
 import { Section } from '../_components/ui';
 import { ProjectCards } from '../_components/project-cards';
 import {
   KeyStats,
+  PowerScoreSection,
+  RevolvingDoorSection,
+  RelationshipSummarySection,
+  FundingDesertSection,
   LeadershipSection,
   FundingSection,
   FundingTimelineSection,
@@ -62,6 +70,8 @@ export default async function OrgDashboard({ params, searchParams }: { params: P
     matchedGrants,
     peerOrgs,
     projectSummaries,
+    powerIndex,
+    revolvingDoor,
   ] = await Promise.all([
     abn ? getOrgFundingByProgram(abn, fundingYearFilter) : null,
     abn ? getOrgFundingByYear(abn) : null,
@@ -76,11 +86,22 @@ export default async function OrgDashboard({ params, searchParams }: { params: P
     getMatchedGrantOpportunities(profile.id, profile.org_type, null),
     abn ? getOrgPeerOrgs(abn) : [],
     getOrgProjectSummaries(profile.id),
+    abn ? getOrgPowerIndex(abn) : null,
+    abn ? getOrgRevolvingDoor(abn) : null,
   ]);
 
-  const localEcosystem = entity && abn
-    ? await getOrgLocalEcosystem(abn, entity.postcode, entity.lga_name)
-    : null;
+  // Secondary fetches that depend on entity data
+  const [localEcosystem, relationships, fundingDesert] = await Promise.all([
+    entity && abn
+      ? getOrgLocalEcosystem(abn, entity.postcode, entity.lga_name)
+      : null,
+    entity?.id
+      ? getOrgRelationshipSummary(entity.id)
+      : [],
+    entity?.lga_name
+      ? getOrgFundingDesert(entity.lga_name)
+      : null,
+  ]);
 
   const totalFunding = fundingByProgram?.reduce((s, r) => s + Number(r.total), 0) ?? 0;
   const totalContracts = contracts?.reduce((s, r) => s + Number(r.value), 0) ?? 0;
@@ -110,12 +131,28 @@ export default async function OrgDashboard({ params, searchParams }: { params: P
                 <p className="mt-2 text-sm text-gray-400 max-w-2xl">{profile.description}</p>
               )}
             </div>
-            <Link
-              href="/home"
-              className="text-sm text-gray-400 hover:text-white underline"
-            >
-              Dashboard &rarr;
-            </Link>
+            <div className="flex flex-col items-end gap-2">
+              <Link
+                href={`/org/${slug}/intelligence`}
+                className="px-4 py-2 bg-bauhaus-red text-white font-black uppercase tracking-widest text-xs hover:bg-red-700 transition-colors"
+              >
+                Command Center
+              </Link>
+              <div className="flex items-center gap-4">
+                <Link
+                  href={`/org/${slug}/contacts`}
+                  className="text-sm text-gray-400 hover:text-white underline"
+                >
+                  Contacts
+                </Link>
+                <Link
+                  href="/home"
+                  className="text-sm text-gray-400 hover:text-white underline"
+                >
+                  Dashboard &rarr;
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -130,6 +167,15 @@ export default async function OrgDashboard({ params, searchParams }: { params: P
           profile={profile}
           entity={entity}
         />
+
+        {/* Intelligence sections */}
+        <FundingDesertSection fundingDesert={fundingDesert} />
+
+        <PowerScoreSection powerIndex={powerIndex} slug={slug} />
+
+        <RevolvingDoorSection revolvingDoor={revolvingDoor} />
+
+        <RelationshipSummarySection relationships={relationships} slug={slug} />
 
         {/* Projects */}
         {projectSummaries.length > 0 && (

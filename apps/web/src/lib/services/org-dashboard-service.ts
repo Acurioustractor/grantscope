@@ -134,6 +134,7 @@ export interface LocalEntity {
 }
 
 export interface GsEntity {
+  id: string;
   gs_id: string;
   canonical_name: string;
   abn: string;
@@ -145,6 +146,65 @@ export interface GsEntity {
   seifa_irsd_decile: number;
   is_community_controlled: boolean;
   lga_name: string;
+  lga_code: string | null;
+}
+
+export interface PowerIndex {
+  id: string;
+  gs_id: string;
+  canonical_name: string;
+  system_count: number;
+  power_score: number;
+  total_dollar_flow: number;
+  in_procurement: number;
+  in_justice_funding: number;
+  in_political_donations: number;
+  in_charity_registry: number;
+  in_foundation: number;
+  in_alma_evidence: number;
+  in_ato_transparency: number;
+  procurement_dollars: number;
+  justice_dollars: number;
+  donation_dollars: number;
+  foundation_giving: number;
+  ato_income: number;
+  contract_count: number;
+  justice_record_count: number;
+  donation_count: number;
+  alma_intervention_count: number;
+  board_connections: number;
+}
+
+export interface RevolvingDoor {
+  id: string;
+  gs_id: string;
+  canonical_name: string;
+  lobbies: boolean;
+  donates: boolean;
+  contracts: boolean;
+  receives_funding: boolean;
+  influence_vectors: number;
+  total_donated: number;
+  total_contracts: number;
+  total_funded: number;
+  revolving_door_score: number;
+  parties_funded: string[];
+}
+
+export interface RelationshipSummary {
+  relationship_type: string;
+  count: number;
+}
+
+export interface FundingDesert {
+  lga_name: string;
+  state: string;
+  remoteness: string;
+  desert_score: number;
+  avg_irsd_decile: number;
+  total_dollar_flow: number;
+  indexed_entities: number;
+  desert_rank: number;
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -309,9 +369,9 @@ export async function getOrgAlmaInterventions(abn: string): Promise<AlmaInterven
 export async function getOrgEntity(abn: string): Promise<GsEntity | null> {
   const supabase = getServiceSupabase();
   const rows = await safe(supabase.rpc('exec_sql', {
-    query: `SELECT gs_id, canonical_name, abn, entity_type, sector,
+    query: `SELECT id, gs_id, canonical_name, abn, entity_type, sector,
               state, postcode, remoteness, seifa_irsd_decile,
-              is_community_controlled, lga_name
+              is_community_controlled, lga_name, lga_code
        FROM gs_entities
        WHERE abn = '${abn}'`,
   })) as GsEntity[] | null;
@@ -524,7 +584,11 @@ export async function getOrgLeadership(orgProfileId: string, projectId?: string)
     .from('org_leadership')
     .select('id, name, title, bio, external_roles, sort_order')
     .eq('org_profile_id', orgProfileId);
-  if (projectId) query = query.eq('project_id', projectId);
+  if (projectId) {
+    query = query.eq('project_id', projectId);
+  } else {
+    query = query.is('project_id', null);
+  }
   const { data } = await query.order('sort_order');
   return (data ?? []) as OrgLeader[];
 }
@@ -638,6 +702,83 @@ export async function getOrgPeerOrgs(abn: string): Promise<PeerOrg[]> {
   })) as PeerOrg[] | null;
 
   return rows ?? [];
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Intelligence data (Power Index, Revolving Door, etc.)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+export async function getOrgPowerIndex(abn: string): Promise<PowerIndex | null> {
+  const supabase = getServiceSupabase();
+  const rows = await safe(supabase.rpc('exec_sql', {
+    query: `SELECT id, gs_id, canonical_name, system_count,
+              power_score::bigint as power_score,
+              total_dollar_flow::bigint as total_dollar_flow,
+              in_procurement, in_justice_funding, in_political_donations,
+              in_charity_registry, in_foundation, in_alma_evidence, in_ato_transparency,
+              procurement_dollars::bigint as procurement_dollars,
+              justice_dollars::bigint as justice_dollars,
+              donation_dollars::bigint as donation_dollars,
+              foundation_giving::bigint as foundation_giving,
+              ato_income::bigint as ato_income,
+              contract_count::int as contract_count,
+              justice_record_count::int as justice_record_count,
+              donation_count::int as donation_count,
+              alma_intervention_count::int as alma_intervention_count,
+              board_connections::int as board_connections
+       FROM mv_entity_power_index
+       WHERE abn = '${abn}'`,
+  })) as PowerIndex[] | null;
+  return rows?.[0] ?? null;
+}
+
+export async function getOrgRevolvingDoor(abn: string): Promise<RevolvingDoor | null> {
+  const supabase = getServiceSupabase();
+  const rows = await safe(supabase.rpc('exec_sql', {
+    query: `SELECT id, gs_id, canonical_name,
+              lobbies, donates, contracts, receives_funding,
+              influence_vectors,
+              total_donated::bigint as total_donated,
+              total_contracts::bigint as total_contracts,
+              total_funded::bigint as total_funded,
+              revolving_door_score,
+              parties_funded
+       FROM mv_revolving_door
+       WHERE abn = '${abn}'`,
+  })) as RevolvingDoor[] | null;
+  return rows?.[0] ?? null;
+}
+
+export async function getOrgRelationshipSummary(entityId: string): Promise<RelationshipSummary[]> {
+  const supabase = getServiceSupabase();
+  const rows = await safe(supabase.rpc('exec_sql', {
+    query: `SELECT relationship_type, COUNT(*)::int as count
+       FROM gs_relationships
+       WHERE source_entity_id = '${entityId}' OR target_entity_id = '${entityId}'
+       GROUP BY relationship_type
+       ORDER BY count DESC`,
+  })) as RelationshipSummary[] | null;
+  return rows ?? [];
+}
+
+export async function getOrgFundingDesert(lgaName: string): Promise<FundingDesert | null> {
+  if (!lgaName) return null;
+  const supabase = getServiceSupabase();
+  const rows = await safe(supabase.rpc('exec_sql', {
+    query: `SELECT d.lga_name, d.state, d.remoteness,
+              d.desert_score::numeric as desert_score,
+              d.avg_irsd_decile::numeric as avg_irsd_decile,
+              d.total_dollar_flow::bigint as total_dollar_flow,
+              d.indexed_entities::int as indexed_entities,
+              r.rank::int as desert_rank
+       FROM mv_funding_deserts d
+       JOIN (
+         SELECT lga_name, ROW_NUMBER() OVER (ORDER BY desert_score DESC) as rank
+         FROM mv_funding_deserts
+       ) r ON r.lga_name = d.lga_name
+       WHERE d.lga_name = '${lgaName.replace(/'/g, "''")}'`,
+  })) as FundingDesert[] | null;
+  return rows?.[0] ?? null;
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
