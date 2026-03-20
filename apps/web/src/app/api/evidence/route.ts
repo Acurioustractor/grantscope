@@ -33,7 +33,13 @@ Provide 3-5 specific, actionable recommendations for commissioners, funders, or 
 Be direct, specific, and data-driven. Cite intervention names and evidence types. Use Australian English.`;
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
+  let body: { topic?: string; state?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+
   const { topic, state } = body;
 
   if (!topic || !VALID_TOPICS.includes(topic)) {
@@ -46,7 +52,8 @@ export async function POST(request: NextRequest) {
 
   const supabase = getServiceSupabase();
 
-  // Build state filter for geography-based filtering
+  // SAFETY: topic and state are validated against VALID_TOPICS/VALID_STATES allowlists above.
+  // Do NOT add new interpolated params without adding allowlist validation first.
   const stateFilter = state
     ? `AND (ai.geography ILIKE '%${state}%' OR ge.state = '${state}')`
     : '';
@@ -113,6 +120,8 @@ export async function POST(request: NextRequest) {
 
   const statsRow = (stats as Array<{ interventions: number; evidence: number; outcomes: number }> | null)?.[0]
     ?? { interventions: 0, evidence: 0, outcomes: 0 };
+
+  console.log(`[/api/evidence] topic=${topic} state=${state || 'all'} → ${statsRow.interventions} interventions, ${statsRow.evidence} evidence, ${statsRow.outcomes} outcomes`);
 
   if (statsRow.interventions === 0) {
     return NextResponse.json({ error: 'No interventions found for this topic/state combination' }, { status: 404 });

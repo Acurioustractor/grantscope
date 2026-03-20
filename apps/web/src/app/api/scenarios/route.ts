@@ -10,13 +10,19 @@ type Source = typeof VALID_SOURCES[number];
 type Target = typeof VALID_TARGETS[number];
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
+  let body: { source?: string; target?: string; redirect_pct?: number; state?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+
   const { source, target, redirect_pct, state } = body;
 
-  if (!source || !VALID_SOURCES.includes(source)) {
+  if (!source || !VALID_SOURCES.includes(source as typeof VALID_SOURCES[number])) {
     return NextResponse.json({ error: `Invalid source. Valid: ${VALID_SOURCES.join(', ')}` }, { status: 400 });
   }
-  if (!target || !VALID_TARGETS.includes(target)) {
+  if (!target || !VALID_TARGETS.includes(target as typeof VALID_TARGETS[number])) {
     return NextResponse.json({ error: `Invalid target. Valid: ${VALID_TARGETS.join(', ')}` }, { status: 400 });
   }
 
@@ -28,7 +34,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: `Invalid state. Valid: ${VALID_STATES.join(', ')}` }, { status: 400 });
   }
 
+  console.log(`[/api/scenarios] source=${source} target=${target} pct=${pct} state=${state || 'all'}`);
+
   const supabase = getServiceSupabase();
+  // SAFETY: state is validated against VALID_STATES allowlist above.
+  // source/target are validated against VALID_SOURCES/VALID_TARGETS.
+  // Do NOT add new interpolated params without adding allowlist validation first.
   const stateWhere = state ? `AND state = '${state}'` : '';
   const stateWhereJf = state ? `AND jf.state = '${state}'` : '';
 
@@ -115,6 +126,8 @@ export async function POST(request: NextRequest) {
   const avgDesertScore = desertList.length > 0
     ? Math.round(desertList.reduce((s, d) => s + d.desert_score, 0) / desertList.length * 10) / 10
     : 0;
+
+  console.log(`[/api/scenarios] source=$${(sourceTotal / 1e9).toFixed(1)}B target=$${(targetTotal / 1e9).toFixed(1)}B redirect=$${(redirectedAmount / 1e9).toFixed(1)}B deserts=${desertCount}`);
 
   return NextResponse.json({
     current: {

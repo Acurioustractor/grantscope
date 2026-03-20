@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
+import { cleanSqlOutput, validateSql } from '@/lib/sql-validation';
 
 export const maxDuration = 30;
 
@@ -77,7 +78,14 @@ Columns: id, person_name, person_name_normalised, role_type (text: director, sec
 `;
 
 export async function POST(request: NextRequest) {
-  const { question } = await request.json();
+  let body: { question?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+
+  const { question } = body;
 
   if (!question || typeof question !== 'string') {
     return NextResponse.json({ error: 'question is required' }, { status: 400 });
@@ -95,72 +103,67 @@ export async function POST(request: NextRequest) {
   const baseUrl = process.env.MINIMAX_BASE_URL || 'https://api.minimax.io/v1';
 
   // Step 1: Generate SQL from natural language
-  const llmResponse = await fetch(`${baseUrl}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: 'MiniMax-M2',
-      max_tokens: 1000,
-      temperature: 0,
-      messages: [
-        {
-          role: 'user',
-          content: `${SCHEMA_CONTEXT}\n\nGenerate a PostgreSQL query for this question:\n${question}`,
-        },
-      ],
-    }),
-  });
+  const sqlAbort = AbortController ? new AbortController() : undefined;
+  const sqlTimeout = setTimeout(() => sqlAbort?.abort(), 15_000);
+
+  let llmResponse: Response;
+  try {
+    llmResponse = await fetch(`${baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'MiniMax-M2',
+        max_tokens: 1000,
+        temperature: 0,
+        messages: [
+          {
+            role: 'user',
+            content: `${SCHEMA_CONTEXT}\n\nGenerate a PostgreSQL query for this question:\n${question}`,
+          },
+        ],
+      }),
+      signal: sqlAbort?.signal,
+    });
+  } catch (e) {
+    clearTimeout(sqlTimeout);
+    console.error('[/api/ask] MiniMax SQL generation failed:', e instanceof Error ? e.message : e);
+    const isTimeout = e instanceof Error && e.name === 'AbortError';
+    return NextResponse.json(
+      { error: isTimeout ? 'LLM timed out — please try again' : 'LLM connection failed' },
+      { status: 504 }
+    );
+  }
+  clearTimeout(sqlTimeout);
 
   if (!llmResponse.ok) {
     const err = await llmResponse.text();
-    return NextResponse.json({ error: 'LLM error', details: err }, { status: 502 });
+    console.error('[/api/ask] MiniMax returned error:', llmResponse.status, err.slice(0, 200));
+    return NextResponse.json({ error: 'LLM error' }, { status: 502 });
   }
 
   const llmJson = await llmResponse.json();
   const sqlRaw = (llmJson.choices?.[0]?.message?.content || '').trim();
 
-  // Strip <think> blocks, markdown code blocks, and trailing semicolons
-  const sql = sqlRaw
-    .replace(/<think>[\s\S]*?<\/think>\s*/gi, '')
-    .replace(/^```sql\s*/i, '')
-    .replace(/^```\s*/i, '')
-    .replace(/\s*```$/i, '')
-    .trim()
-    .replace(/;\s*$/, '');
-
-  // Safety: only allow SELECT/WITH
-  const sqlUpper = sql.toUpperCase().replace(/\s+/g, ' ').trim();
-  if (!sqlUpper.startsWith('SELECT') && !sqlUpper.startsWith('WITH')) {
+  const sql = cleanSqlOutput(sqlRaw);
+  const validation = validateSql(sql);
+  if (!validation.valid) {
     return NextResponse.json(
-      { error: 'Only SELECT queries are allowed', generated_sql: sql },
+      { error: validation.error, generated_sql: sql },
       { status: 400 }
     );
   }
-
-  // Block dangerous keywords
-  const blocked = ['INSERT', 'UPDATE', 'DELETE', 'DROP', 'ALTER', 'TRUNCATE', 'CREATE', 'GRANT', 'REVOKE', 'EXECUTE'];
-  for (const kw of blocked) {
-    const pattern = new RegExp(`\\b${kw}\\b`, 'i');
-    if (pattern.test(sql.replace(/'[^']*'/g, ''))) {
-      return NextResponse.json(
-        { error: `Blocked keyword: ${kw}`, generated_sql: sql },
-        { status: 400 }
-      );
-    }
-  }
-
-  // Auto-append LIMIT if missing
-  const hasLimit = /\bLIMIT\b/i.test(sql);
-  const finalSql = hasLimit ? sql : `${sql} LIMIT 100`;
+  const finalSql = validation.sql;
+  console.log('[/api/ask] Generated SQL:', finalSql.slice(0, 300));
 
   // Step 2: Execute the query
   const supabase = getServiceSupabase();
   const { data, error } = await supabase.rpc('exec_sql', { query: finalSql });
 
   if (error) {
+    console.error('[/api/ask] exec_sql failed:', error.message);
     return NextResponse.json(
       { error: 'Query execution failed', details: error.message, generated_sql: finalSql },
       { status: 400 }
@@ -172,6 +175,8 @@ export async function POST(request: NextRequest) {
 
   // Step 3: Generate plain-English explanation
   let explanation = '';
+  const explainAbort = new AbortController();
+  const explainTimeout = setTimeout(() => explainAbort.abort(), 15_000);
   try {
     const explainResponse = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
@@ -190,15 +195,20 @@ export async function POST(request: NextRequest) {
           },
         ],
       }),
+      signal: explainAbort.signal,
     });
 
     if (explainResponse.ok) {
       const explainJson = await explainResponse.json();
-      explanation = explainJson.choices?.[0]?.message?.content || '';
+      const rawExplanation = explainJson.choices?.[0]?.message?.content || '';
+      // Strip <think> blocks from explanation (MiniMax may include reasoning)
+      explanation = rawExplanation.replace(/<think>[\s\S]*?<\/think>\s*/gi, '').trim();
     }
   } catch {
     // Non-critical — return results without explanation
+    console.warn('[/api/ask] Explanation generation failed (non-critical)');
   }
+  clearTimeout(explainTimeout);
 
   return NextResponse.json({
     question,
