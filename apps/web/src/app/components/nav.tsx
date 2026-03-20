@@ -12,6 +12,7 @@ const ADMIN_EMAILS = ['benjamin@act.place', 'hello@civicgraph.au'];
 /* ─── Public (logged-out) nav ─────────────────────────────── */
 
 const publicLinks = [
+  { href: '/ask', label: 'Ask' },
   { href: '/tender-intelligence', label: 'Procurement' },
   { href: '/places', label: 'Places' },
   { href: '/entities', label: 'Entities' },
@@ -21,6 +22,14 @@ const publicLinks = [
 ];
 
 const megaMenuSections = [
+  {
+    title: 'Decision Tools',
+    links: [
+      { href: '/ask', label: 'Ask CivicGraph', desc: 'Natural language queries across all datasets' },
+      { href: '/evidence', label: 'Evidence Synthesis', desc: 'ALMA evidence analysis and synthesis' },
+      { href: '/scenarios', label: 'Scenario Modelling', desc: 'What-if allocation analysis' },
+    ],
+  },
   {
     title: 'Procurement Intelligence',
     links: [
@@ -130,6 +139,9 @@ const workspaceModules: NavModule[] = [
     module: 'research',
     children: [
       { label: 'Reports', href: '/reports' },
+      { label: 'Ask', href: '/ask' },
+      { label: 'Evidence', href: '/evidence' },
+      { label: 'Scenarios', href: '/scenarios' },
       { label: 'Entities', href: '/entities' },
       { label: 'Charities', href: '/charities' },
       { label: 'Social Enterprises', href: '/social-enterprises' },
