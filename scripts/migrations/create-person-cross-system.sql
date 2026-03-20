@@ -59,7 +59,7 @@ WITH
 board_members AS (
   SELECT
     pr.person_name_normalised,
-    pr.person_name,
+    MIN(pr.person_name) AS person_name,
     COUNT(DISTINCT pr.entity_id) AS board_count,
     ARRAY_AGG(DISTINCT pr.company_name ORDER BY pr.company_name) AS board_entities,
     ARRAY_AGG(DISTINCT pr.company_abn ORDER BY pr.company_abn) FILTER (WHERE pr.company_abn IS NOT NULL) AS board_abns,
@@ -67,7 +67,7 @@ board_members AS (
   FROM person_roles pr
   WHERE pr.person_name_normalised IS NOT NULL
     AND LENGTH(pr.person_name_normalised) > 3
-  GROUP BY pr.person_name_normalised, pr.person_name
+  GROUP BY pr.person_name_normalised
 ),
 -- Individual political donors (from mv_individual_donors)
 donors AS (
@@ -97,7 +97,7 @@ all_persons AS (
   UNION
   SELECT person_name_normalised FROM donors
 )
-SELECT
+SELECT DISTINCT ON (ap.person_name_normalised)
   ap.person_name_normalised,
   COALESCE(bm.person_name, d.donor_name) AS display_name,
   -- System flags
@@ -128,7 +128,8 @@ LEFT JOIN board_members bm ON bm.person_name_normalised = ap.person_name_normali
 LEFT JOIN donors d ON d.person_name_normalised = ap.person_name_normalised
 WHERE
   -- Must appear in 2+ systems
-  (bm.person_name IS NOT NULL)::int + (d.donor_name IS NOT NULL)::int >= 2;
+  (bm.person_name IS NOT NULL)::int + (d.donor_name IS NOT NULL)::int >= 2
+ORDER BY ap.person_name_normalised;
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_mv_person_cross_name
   ON mv_person_cross_system (person_name_normalised);

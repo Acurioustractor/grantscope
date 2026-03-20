@@ -73,7 +73,17 @@ const VIEW_GROUPS = [
       'mv_foundation_grantees',
     ],
   },
-  // Group 4: Alma dashboard views (depend on alma tables)
+  // Group 4: Foundation intelligence (depend on mv_foundation_grantees + mv_person_entity_crosswalk from Group 3)
+  {
+    concurrent: true,
+    views: [
+      'mv_trustee_grantee_chain',
+      'mv_foundation_need_alignment',
+      'mv_evidence_backed_funding',
+      'mv_foundation_scores',
+    ],
+  },
+  // Group 5: Alma dashboard views (depend on alma tables)
   {
     concurrent: true,
     views: [
