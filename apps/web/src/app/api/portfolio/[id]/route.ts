@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireModule } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
+import { getImpersonateSlug } from '@/lib/org-profile';
 
 /** GET /api/portfolio/[id] — full portfolio with entity details + aggregate stats */
 export async function GET(
@@ -13,12 +14,24 @@ export async function GET(
   const { id } = await params;
   const db = getServiceSupabase();
 
+  // Check impersonation
+  const impersonateSlug = await getImpersonateSlug();
+  let effectiveUserId = auth.user.id;
+  if (impersonateSlug) {
+    const { data: impOrg } = await db
+      .from('org_profiles')
+      .select('user_id')
+      .eq('slug', impersonateSlug)
+      .maybeSingle();
+    if (impOrg?.user_id) effectiveUserId = impOrg.user_id;
+  }
+
   // Verify ownership
   const { data: portfolio } = await db
     .from('funder_portfolios')
     .select('id, name, description, created_at, updated_at')
     .eq('id', id)
-    .eq('user_id', auth.user.id)
+    .eq('user_id', effectiveUserId)
     .single();
 
   if (!portfolio) {
@@ -95,11 +108,23 @@ export async function DELETE(
   const { id } = await params;
   const db = getServiceSupabase();
 
+  // Check impersonation
+  const impSlug = await getImpersonateSlug();
+  let delUserId = auth.user.id;
+  if (impSlug) {
+    const { data: impOrg } = await db
+      .from('org_profiles')
+      .select('user_id')
+      .eq('slug', impSlug)
+      .maybeSingle();
+    if (impOrg?.user_id) delUserId = impOrg.user_id;
+  }
+
   const { error } = await db
     .from('funder_portfolios')
     .delete()
     .eq('id', id)
-    .eq('user_id', auth.user.id);
+    .eq('user_id', delUserId);
 
   if (error) {
     return NextResponse.json({ error: 'Failed to delete portfolio' }, { status: 500 });

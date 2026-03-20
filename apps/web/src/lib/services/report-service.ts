@@ -545,6 +545,105 @@ export function fmt(n: number): string {
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Youth Justice Deep-Dive Functions
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/**
+ * Community-controlled vs non-Indigenous funding gap
+ */
+export async function getAccoFundingGap(topic: Topic) {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT
+              CASE WHEN ge.is_community_controlled THEN 'Community Controlled' ELSE 'Non-Indigenous' END as org_type,
+              COUNT(DISTINCT jf.recipient_name)::int as orgs,
+              SUM(jf.amount_dollars)::bigint as total_funding,
+              ROUND(AVG(jf.amount_dollars))::bigint as avg_grant
+            FROM justice_funding jf
+            JOIN gs_entities ge ON ge.id = jf.gs_entity_id
+            WHERE ${topicFilter(topic)}
+              AND jf.program_name NOT LIKE 'ROGS%' AND jf.program_name NOT LIKE 'Total%'
+            GROUP BY CASE WHEN ge.is_community_controlled THEN 'Community Controlled' ELSE 'Non-Indigenous' END`,
+  })) as Promise<Array<{ org_type: string; orgs: number; total_funding: number; avg_grant: number }> | null>;
+}
+
+/**
+ * Funding by remoteness
+ */
+export async function getFundingByRemoteness(topic: Topic) {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT ge.remoteness,
+              COUNT(DISTINCT jf.recipient_name)::int as orgs,
+              SUM(jf.amount_dollars)::bigint as total,
+              COUNT(*)::int as grants
+            FROM justice_funding jf
+            JOIN gs_entities ge ON ge.id = jf.gs_entity_id
+            WHERE ${topicFilter(topic)}
+              AND jf.program_name NOT LIKE 'ROGS%' AND jf.program_name NOT LIKE 'Total%'
+              AND ge.remoteness IS NOT NULL
+            GROUP BY ge.remoteness
+            ORDER BY total DESC`,
+  })) as Promise<Array<{ remoteness: string; orgs: number; total: number; grants: number }> | null>;
+}
+
+/**
+ * Effective ALMA interventions that are unfunded (no matching justice_funding)
+ */
+export async function getUnfundedEffectivePrograms(topic: Topic) {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT ai.name, ai.type, ai.evidence_level, ai.cultural_authority, ai.geography
+            FROM alma_interventions ai
+            WHERE ai.topics @> ARRAY['${topic}']::text[]
+              AND (ai.evidence_level ILIKE '%Effective%' OR ai.evidence_level ILIKE '%Indigenous%')
+              AND ai.gs_entity_id IS NULL
+            ORDER BY ai.type, ai.name`,
+  })) as Promise<Array<{ name: string; type: string; evidence_level: string; cultural_authority: string; geography: string }> | null>;
+}
+
+/**
+ * Revolving door entities in youth justice
+ */
+export async function getYjRevolvingDoor(topic: Topic, limit = 15) {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `WITH yj_orgs AS (
+              SELECT DISTINCT gs_entity_id
+              FROM justice_funding
+              WHERE ${topicFilter(topic)} AND program_name NOT LIKE 'ROGS%' AND gs_entity_id IS NOT NULL
+            )
+            SELECT rd.canonical_name, rd.revolving_door_score::int, rd.influence_vectors::int,
+              rd.total_donated::bigint, rd.total_contracts::bigint, rd.total_funded::bigint,
+              rd.parties_funded, rd.distinct_buyers::int, rd.is_community_controlled
+            FROM mv_revolving_door rd
+            JOIN yj_orgs yj ON yj.gs_entity_id = rd.id
+            ORDER BY rd.revolving_door_score DESC
+            LIMIT ${limit}`,
+  })) as Promise<Array<{
+    canonical_name: string; revolving_door_score: number; influence_vectors: number;
+    total_donated: number; total_contracts: number; total_funded: number;
+    parties_funded: string; distinct_buyers: number; is_community_controlled: boolean;
+  }> | null>;
+}
+
+/**
+ * Top foundations with youth/justice/indigenous focus
+ */
+export async function getYjFoundations(limit = 10) {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT f.name, f.total_giving_annual::bigint, f.thematic_focus::text, f.geographic_focus
+            FROM foundations f
+            WHERE f.thematic_focus::text ILIKE '%justice%'
+              OR f.thematic_focus::text ILIKE '%youth%'
+              OR (f.thematic_focus::text ILIKE '%indigenous%' AND f.total_giving_annual > 50000000)
+            ORDER BY f.total_giving_annual DESC NULLS LAST
+            LIMIT ${limit}`,
+  })) as Promise<Array<{ name: string; total_giving_annual: number; thematic_focus: string; geographic_focus: string }> | null>;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // PICC Entity Dashboard Functions
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

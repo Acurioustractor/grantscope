@@ -50,7 +50,7 @@ const PROVIDERS = [
   {
     name: 'minimax',
     envKey: 'MINIMAX_API_KEY',
-    model: 'MiniMax-M2.5',
+    model: 'MiniMax-M2.7',
   },
   {
     name: 'gemini-grounded',

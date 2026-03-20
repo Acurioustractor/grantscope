@@ -71,7 +71,7 @@ function noteProviderFailure(provider, message) {
 // ─── Multi-provider LLM ─────────────────────────────────────
 
 const PROVIDERS = [
-  { name: 'minimax', envKey: 'MINIMAX_API_KEY', model: 'MiniMax-M2.5' },
+  { name: 'minimax', envKey: 'MINIMAX_API_KEY', model: 'MiniMax-M2.7' },
   { name: 'gemini', envKey: 'GEMINI_API_KEY', model: 'gemini-2.5-flash' },
   { name: 'anthropic', envKey: 'ANTHROPIC_API_KEY', model: 'claude-3-5-haiku-20241022' },
   { name: 'groq', envKey: 'GROQ_API_KEY', model: 'llama-3.3-70b-versatile' },

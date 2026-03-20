@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireModule } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
 import { embedQuery } from '@grant-engine/embeddings';
+import { getEffectiveOrgId } from '@/lib/org-profile';
 
 export async function POST(request: NextRequest) {
   const auth = await requireModule('grants');
@@ -9,25 +10,7 @@ export async function POST(request: NextRequest) {
   const { user } = auth;
 
   const db = getServiceSupabase();
-
-  // Get org profile
-  const { data: own } = await db
-    .from('org_profiles')
-    .select('id')
-    .eq('user_id', user.id)
-    .maybeSingle();
-
-  let orgId = own?.id;
-  if (!orgId) {
-    const { data: member } = await db
-      .from('org_members')
-      .select('org_profile_id')
-      .eq('user_id', user.id)
-      .limit(1)
-      .maybeSingle();
-    orgId = member?.org_profile_id;
-  }
-
+  const orgId = await getEffectiveOrgId(db, user.id);
   if (!orgId) return NextResponse.json({ error: 'No org profile found' }, { status: 404 });
 
   const body = await request.json();

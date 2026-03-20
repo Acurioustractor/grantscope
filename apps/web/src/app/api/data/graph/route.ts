@@ -12,13 +12,14 @@ import { getServiceSupabase } from '@/lib/supabase';
  *   3. Edge-first (default, no entity_type): fetch top edges by amount, resolve nodes.
  *
  * GET /api/data/graph
- *   ?mode=hubs|justice
+ *   ?mode=hubs|justice|power|ndis
  *   &entity_type=foundation|charity|company|...
  *   &topic=youth-justice|child-protection|...
  *   &state=NSW|VIC|QLD|...
  *   &min_amount=10000
  *   &limit=5000
  *   &hubs=20  (number of top hubs to show, default 20)
+ *   &min_systems=3  (power mode: minimum systems an entity appears in)
  */
 
 type EdgeRow = {
@@ -101,7 +102,431 @@ export async function GET(request: Request) {
     const hubCount = Math.min(parseInt(searchParams.get('hubs') || '30', 10), 100);
 
     const topic = searchParams.get('topic') || 'youth-justice';
+    const minSystems = Math.max(2, parseInt(searchParams.get('min_systems') || '3', 10));
     const supabase = getServiceSupabase();
+
+    // ── Power mode: cross-system power concentration graph ──
+    if (mode === 'power') {
+      const stateFilter = state ? `AND pi.state = '${state.toUpperCase()}'` : '';
+
+      // Step 1: Get multi-system entities from power index
+      const powerEntities = await paginatedRpc<{
+        id: string; canonical_name: string; entity_type: string;
+        state: string | null; remoteness: string | null; lga_name: string | null;
+        is_community_controlled: boolean;
+        system_count: number; power_score: number;
+        in_procurement: number; in_justice_funding: number; in_political_donations: number;
+        in_charity_registry: number; in_foundation: number; in_alma_evidence: number; in_ato_transparency: number;
+        procurement_dollars: number; justice_dollars: number; donation_dollars: number;
+        total_dollar_flow: number; distinct_govt_buyers: number; distinct_parties_funded: number;
+      }>(supabase,
+        `SELECT pi.id, pi.canonical_name, pi.entity_type, pi.state, pi.remoteness, pi.lga_name,
+                pi.is_community_controlled, pi.system_count, pi.power_score,
+                pi.in_procurement, pi.in_justice_funding, pi.in_political_donations,
+                pi.in_charity_registry, pi.in_foundation, pi.in_alma_evidence, pi.in_ato_transparency,
+                pi.procurement_dollars, pi.justice_dollars, pi.donation_dollars,
+                pi.total_dollar_flow, pi.distinct_govt_buyers, pi.distinct_parties_funded
+         FROM mv_entity_power_index pi
+         WHERE pi.system_count >= ${minSystems} ${stateFilter}
+         ORDER BY pi.power_score DESC
+         LIMIT ${Math.min(limit, 2000)}`,
+        2000);
+
+      if (powerEntities.length === 0) {
+        return NextResponse.json({ nodes: [], edges: [], meta: { total_nodes: 0, total_edges: 0 } });
+      }
+
+      // Step 2: Get relationships between these entities
+      const entityIds = powerEntities.map(e => e.id);
+      const idList = entityIds.map(id => `'${id}'`).join(',');
+
+      const edges = await paginatedRpc<EdgeRow>(supabase,
+        `SELECT source_entity_id, target_entity_id, relationship_type, amount, dataset, year
+         FROM gs_relationships
+         WHERE source_entity_id IN (${idList})
+           AND target_entity_id IN (${idList})
+           AND source_entity_id != target_entity_id`,
+        30000);
+
+      // Step 3: Compute degree
+      const degree = new Map<string, number>();
+      for (const e of edges) {
+        degree.set(e.source_entity_id, (degree.get(e.source_entity_id) || 0) + 1);
+        degree.set(e.target_entity_id, (degree.get(e.target_entity_id) || 0) + 1);
+      }
+
+      // Step 4: Build nodes with power metadata
+      const connectedIds = new Set<string>();
+      for (const e of edges) {
+        connectedIds.add(e.source_entity_id);
+        connectedIds.add(e.target_entity_id);
+      }
+
+      // Include top power entities even if unconnected (up to 50), plus all connected
+      const topUnconnected = powerEntities
+        .filter(e => !connectedIds.has(e.id))
+        .slice(0, 50);
+      const includedEntities = powerEntities.filter(e => connectedIds.has(e.id) || topUnconnected.includes(e));
+
+      const systems = (e: typeof powerEntities[0]) => {
+        const s: string[] = [];
+        if (e.in_procurement) s.push('procurement');
+        if (e.in_justice_funding) s.push('justice');
+        if (e.in_political_donations) s.push('donations');
+        if (e.in_charity_registry) s.push('charity');
+        if (e.in_foundation) s.push('foundation');
+        if (e.in_alma_evidence) s.push('alma');
+        if (e.in_ato_transparency) s.push('ato');
+        return s;
+      };
+
+      const nodes = includedEntities.map(e => ({
+        id: e.id,
+        label: e.canonical_name,
+        type: e.entity_type,
+        state: e.state,
+        remoteness: e.remoteness,
+        community_controlled: e.is_community_controlled,
+        degree: degree.get(e.id) || 0,
+        system_count: Number(e.system_count),
+        power_score: Number(e.power_score),
+        systems: systems(e),
+        procurement_dollars: Number(e.procurement_dollars),
+        justice_dollars: Number(e.justice_dollars),
+        donation_dollars: Number(e.donation_dollars),
+        total_dollar_flow: Number(e.total_dollar_flow),
+        distinct_govt_buyers: Number(e.distinct_govt_buyers),
+        distinct_parties_funded: Number(e.distinct_parties_funded),
+      }));
+
+      const response = NextResponse.json({
+        nodes,
+        edges: edges.map(e => ({
+          source: e.source_entity_id,
+          target: e.target_entity_id,
+          type: e.relationship_type,
+          amount: e.amount,
+          dataset: e.dataset,
+          year: e.year,
+        })),
+        meta: {
+          total_nodes: nodes.length,
+          total_edges: edges.length,
+          filters: { mode: 'power', minSystems, state, limit },
+        },
+      });
+      response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+      return response;
+    }
+
+    // ── Interlocks mode: people → organisations bipartite graph ──
+    if (mode === 'interlocks') {
+      const minBoards = Math.max(2, parseInt(searchParams.get('min_boards') || '2', 10));
+
+      // Step 1: Get interlockers from MV
+      const interlockers = await paginatedRpc<{
+        person_name_normalised: string;
+        person_name_display: string;
+        board_count: number;
+        organisations: string[];
+        organisation_abns: string[];
+        entity_ids: string[] | null;
+        role_types: string[];
+        interlock_score: number;
+        total_procurement_dollars: number;
+        total_justice_dollars: number;
+        total_donation_dollars: number;
+        max_entity_system_count: number;
+        total_power_score: number;
+        connects_community_controlled: boolean;
+      }>(supabase,
+        `SELECT person_name_normalised, person_name_display, board_count,
+                organisations, organisation_abns, entity_ids, role_types,
+                interlock_score, total_procurement_dollars, total_justice_dollars,
+                total_donation_dollars, max_entity_system_count, total_power_score,
+                connects_community_controlled
+         FROM mv_board_interlocks
+         WHERE board_count >= ${minBoards}
+         ORDER BY interlock_score DESC
+         LIMIT ${Math.min(limit, 500)}`,
+        500);
+
+      if (interlockers.length === 0) {
+        return NextResponse.json({ nodes: [], edges: [], meta: { total_nodes: 0, total_edges: 0 } });
+      }
+
+      // Step 2: Collect all entity IDs for org node enrichment
+      const allEntityIds = new Set<string>();
+      for (const p of interlockers) {
+        if (p.entity_ids) for (const eid of p.entity_ids) if (eid) allEntityIds.add(eid);
+      }
+      const entityDetails = allEntityIds.size > 0
+        ? await fetchNodes(supabase, [...allEntityIds])
+        : [];
+      const entityMap = new Map(entityDetails.map(e => [e.id, e]));
+
+      // Step 3: Build bipartite graph — person nodes + org nodes + edges
+      const nodes: Array<Record<string, unknown>> = [];
+      const graphEdges: Array<{ source: string; target: string; type: string; amount: number | null; dataset: string; year: number | null }> = [];
+
+      // ABN → entity lookup
+      const abnToEntity = new Map<string, NodeRow>();
+      for (const e of entityDetails) {
+        // Find ABN from interlockers' data
+        for (const p of interlockers) {
+          const idx = (p.entity_ids || []).indexOf(e.id);
+          if (idx >= 0 && p.organisation_abns[idx]) {
+            abnToEntity.set(p.organisation_abns[idx], e);
+          }
+        }
+      }
+      // Also build from entity_ids directly
+      for (const p of interlockers) {
+        if (p.entity_ids && p.organisation_abns) {
+          for (let i = 0; i < p.organisation_abns.length; i++) {
+            const abn = p.organisation_abns[i];
+            if (p.entity_ids[i] && entityMap.has(p.entity_ids[i])) {
+              abnToEntity.set(abn, entityMap.get(p.entity_ids[i])!);
+            }
+          }
+        }
+      }
+
+      // Track org nodes by ABN to avoid dupes
+      const orgNodesAdded = new Set<string>();
+
+      for (const person of interlockers) {
+        const personId = `person:${person.person_name_normalised}`;
+
+        // Person node
+        nodes.push({
+          id: personId,
+          label: person.person_name_display,
+          type: 'person',
+          state: null,
+          sector: null,
+          remoteness: null,
+          community_controlled: person.connects_community_controlled,
+          degree: person.board_count,
+          board_count: person.board_count,
+          interlock_score: Number(person.interlock_score),
+          role_types: person.role_types,
+          procurement_dollars: Number(person.total_procurement_dollars),
+          justice_dollars: Number(person.total_justice_dollars),
+          donation_dollars: Number(person.total_donation_dollars),
+          max_system_count: Number(person.max_entity_system_count),
+          total_power_score: Number(person.total_power_score),
+        });
+
+        // Organisation nodes + edges
+        for (let i = 0; i < person.organisations.length; i++) {
+          const orgAbn = person.organisation_abns[i];
+          const orgKey = `org:${orgAbn}`;
+          const entity = abnToEntity.get(orgAbn);
+
+          if (!orgNodesAdded.has(orgAbn)) {
+            orgNodesAdded.add(orgAbn);
+            nodes.push({
+              id: orgKey,
+              label: entity?.canonical_name || person.organisations[i],
+              type: entity?.entity_type || 'charity',
+              state: entity?.state || null,
+              sector: entity?.sector || null,
+              remoteness: entity?.remoteness || null,
+              community_controlled: entity?.is_community_controlled || false,
+              degree: 0, // will compute below
+            });
+          }
+
+          graphEdges.push({
+            source: personId,
+            target: orgKey,
+            type: 'board_member',
+            amount: null,
+            dataset: 'person_roles',
+            year: null,
+          });
+        }
+      }
+
+      // Compute degree
+      const degree = new Map<string, number>();
+      for (const e of graphEdges) {
+        degree.set(e.source, (degree.get(e.source) || 0) + 1);
+        degree.set(e.target, (degree.get(e.target) || 0) + 1);
+      }
+      for (const n of nodes) {
+        if (n.type !== 'person') n.degree = degree.get(n.id as string) || 0;
+      }
+
+      const response = NextResponse.json({
+        nodes,
+        edges: graphEdges,
+        meta: {
+          total_nodes: nodes.length,
+          total_edges: graphEdges.length,
+          total_persons: interlockers.length,
+          total_orgs: orgNodesAdded.size,
+          filters: { mode: 'interlocks', minBoards, state, limit },
+        },
+      });
+      response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+      return response;
+    }
+
+    // ── NDIS mode: provider → LGA bipartite graph with thin market severity ──
+    if (mode === 'ndis') {
+      const stateFilter = state ? `AND dl.state = '${state.toUpperCase()}'` : '';
+
+      // Step 1: Get disability landscape data (LGAs with NDIS participants)
+      const lgaRows = await paginatedRpc<{
+        lga_name: string; state: string; remoteness: string | null;
+        ndis_participants: number; ndis_entities: number;
+        ndis_avg_utilisation: number | null;
+        seifa_decile: number | null; desert_score: number | null;
+        procurement_entities: number; justice_entities: number;
+        total_entities: number;
+      }>(supabase,
+        `SELECT dl.lga_name, dl.state, dl.remoteness,
+                dl.ndis_participants, dl.ndis_entities,
+                dl.ndis_avg_utilisation,
+                dl.seifa_decile, dl.desert_score,
+                dl.procurement_entities, dl.justice_entities,
+                dl.total_entities
+         FROM mv_disability_landscape dl
+         WHERE dl.ndis_participants > 0 ${stateFilter}
+         ORDER BY dl.ndis_participants DESC
+         LIMIT ${Math.min(limit, 500)}`,
+        500);
+
+      if (lgaRows.length === 0) {
+        return NextResponse.json({ nodes: [], edges: [], meta: { total_nodes: 0, total_edges: 0 } });
+      }
+
+      // Step 2: Get NDIS providers mapped to these LGAs via postcode_geo
+      const lgaNames = lgaRows.map(l => l.lga_name);
+      const lgaNameList = lgaNames.map(n => `'${n.replace(/'/g, "''")}'`).join(',');
+
+      const providers = await paginatedRpc<{
+        id: string; canonical_name: string; entity_type: string;
+        state: string | null; lga_name: string | null;
+        remoteness: string | null; is_community_controlled: boolean;
+        sector: string | null; abn: string | null;
+        system_count: number | null; power_score: number | null;
+      }>(supabase,
+        `SELECT ge.id, ge.canonical_name, ge.entity_type, ge.state, ge.lga_name,
+                ge.remoteness, ge.is_community_controlled, ge.sector, ge.abn,
+                pi.system_count, pi.power_score
+         FROM gs_entities ge
+         LEFT JOIN mv_entity_power_index pi ON pi.id = ge.id
+         WHERE ge.sector = 'disability-services'
+           AND ge.lga_name IN (${lgaNameList})
+         ORDER BY pi.power_score DESC NULLS LAST
+         LIMIT ${Math.min(limit, 3000)}`,
+        3000);
+
+      // Step 3: Build bipartite graph — LGA hub nodes + provider spoke nodes
+      const nodes: Array<Record<string, unknown>> = [];
+      const graphEdges: Array<{ source: string; target: string; type: string; amount: number | null; dataset: string; year: number | null }> = [];
+
+      // Classify thin market severity
+      const severity = (participants: number, entities: number): string => {
+        if (participants > 0 && entities === 0) return 'critical';
+        if (participants > 500 && entities < 3) return 'severe';
+        if (participants > 100 && entities < 5) return 'moderate';
+        return 'adequate';
+      };
+
+      // LGA nodes
+      const lgaNodeIds = new Set<string>();
+      for (const lga of lgaRows) {
+        const lgaId = `lga:${lga.lga_name}`;
+        lgaNodeIds.add(lgaId);
+        nodes.push({
+          id: lgaId,
+          label: lga.lga_name,
+          type: 'lga',
+          state: lga.state,
+          sector: null,
+          remoteness: lga.remoteness,
+          community_controlled: false,
+          degree: 0,
+          ndis_participants: Number(lga.ndis_participants),
+          ndis_entities: Number(lga.ndis_entities),
+          ndis_utilisation: lga.ndis_avg_utilisation ? Number(lga.ndis_avg_utilisation) : null,
+          seifa_decile: lga.seifa_decile ? Number(lga.seifa_decile) : null,
+          desert_score: lga.desert_score ? Number(lga.desert_score) : null,
+          severity: severity(Number(lga.ndis_participants), Number(lga.ndis_entities)),
+          cross_system_entities: Number(lga.total_entities),
+        });
+      }
+
+      // Provider nodes + edges to LGAs
+      const providerNodesAdded = new Set<string>();
+      for (const prov of providers) {
+        if (!prov.lga_name) continue;
+        const lgaId = `lga:${prov.lga_name}`;
+        if (!lgaNodeIds.has(lgaId)) continue;
+
+        const provId = `provider:${prov.id}`;
+        if (!providerNodesAdded.has(provId)) {
+          providerNodesAdded.add(provId);
+          nodes.push({
+            id: provId,
+            label: prov.canonical_name,
+            type: prov.entity_type || 'company',
+            state: prov.state,
+            sector: prov.sector,
+            remoteness: prov.remoteness,
+            community_controlled: prov.is_community_controlled,
+            degree: 0,
+            system_count: prov.system_count ? Number(prov.system_count) : null,
+            power_score: prov.power_score ? Number(prov.power_score) : null,
+          });
+        }
+
+        graphEdges.push({
+          source: provId,
+          target: lgaId,
+          type: 'ndis_provider',
+          amount: null,
+          dataset: 'ndis',
+          year: null,
+        });
+      }
+
+      // Compute degree
+      const degree = new Map<string, number>();
+      for (const e of graphEdges) {
+        degree.set(e.source, (degree.get(e.source) || 0) + 1);
+        degree.set(e.target, (degree.get(e.target) || 0) + 1);
+      }
+      for (const n of nodes) {
+        n.degree = degree.get(n.id as string) || 0;
+      }
+
+      // Count severities for meta
+      const severityCounts = { critical: 0, severe: 0, moderate: 0, adequate: 0 };
+      for (const lga of lgaRows) {
+        const s = severity(Number(lga.ndis_participants), Number(lga.ndis_entities));
+        severityCounts[s as keyof typeof severityCounts]++;
+      }
+
+      const response = NextResponse.json({
+        nodes,
+        edges: graphEdges,
+        meta: {
+          total_nodes: nodes.length,
+          total_edges: graphEdges.length,
+          total_lgas: lgaRows.length,
+          total_providers: providerNodesAdded.size,
+          severity_counts: severityCounts,
+          filters: { mode: 'ndis', state, limit },
+        },
+      });
+      response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+      return response;
+    }
 
     // ── Justice mode: program → recipient graph from justice_funding ──
     if (mode === 'justice') {

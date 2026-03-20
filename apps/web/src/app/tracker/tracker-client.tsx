@@ -11,9 +11,20 @@ export function TrackerClient() {
   const [grants, setGrants] = useState<SavedGrantRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'personal' | 'org'>('personal');
+  const [didInit, setDidInit] = useState(false);
   const router = useRouter();
 
+  // Detect impersonation on client mount and auto-switch to org view
   useEffect(() => {
+    const isImpersonating = document.cookie.split(';').some(c => c.trim().startsWith('cg_impersonate_org='));
+    if (isImpersonating) {
+      setViewMode('org');
+    }
+    setDidInit(true);
+  }, []);
+
+  useEffect(() => {
+    if (!didInit) return;
     setLoading(true);
     fetch(`/api/tracker?view=${viewMode}`)
       .then((r) => {
@@ -28,7 +39,7 @@ export function TrackerClient() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [router, viewMode]);
+  }, [router, viewMode, didInit]);
 
   if (loading) {
     return (

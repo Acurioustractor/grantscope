@@ -34,13 +34,91 @@ const GEO_OPTIONS = [
 ];
 
 const ORG_TYPES = [
+  { value: '', label: "I don't know yet" },
   { value: 'charity', label: 'Registered Charity' },
   { value: 'nfp', label: 'Not-for-Profit' },
   { value: 'social_enterprise', label: 'Social Enterprise' },
+  { value: 'cooperative', label: 'Cooperative' },
+  { value: 'indigenous_corp', label: 'Indigenous Corporation (CATSI)' },
   { value: 'startup', label: 'Startup' },
   { value: 'government', label: 'Government' },
   { value: 'university', label: 'University / Research' },
+  { value: 'collective', label: 'Unincorporated Collective' },
 ];
+
+const ORG_STATUSES = [
+  { value: 'exploring', label: 'Exploring', description: "We're figuring out what we want to be" },
+  { value: 'pre_formation', label: 'Pre-formation', description: 'We know what we want to be, working towards it' },
+  { value: 'auspiced', label: 'Auspiced', description: "Operating under another organisation's ABN" },
+  { value: 'incorporated', label: 'Incorporated', description: 'We have our own ABN and legal structure' },
+];
+
+interface Recommendation {
+  type: string;
+  description: string;
+  benefit: string;
+  requirement: string;
+  url: string;
+}
+
+function getFormationRecommendations(profile: OrgProfile): Recommendation[] {
+  const recs: Recommendation[] = [];
+  const domains = profile.domains || [];
+  const revenue = parseFloat(profile.annual_revenue) || 0;
+  const orgType = profile.org_type;
+
+  if (domains.includes('indigenous')) {
+    recs.push({
+      type: 'Indigenous Corporation (CATSI)',
+      description: 'A corporation governed by Aboriginal and Torres Strait Islander people, registered under the CATSI Act.',
+      benefit: 'Self-determined governance, access to Indigenous-specific funding, cultural authority recognised',
+      requirement: 'Must have minimum 5 Indigenous members, register with ORIC',
+      url: 'https://www.oric.gov.au/start-corporation',
+    });
+  }
+
+  if (revenue > 0 || orgType === 'social_enterprise') {
+    recs.push({
+      type: 'Social Enterprise',
+      description: 'A business that trades to intentionally tackle social problems, improve communities, or protect the environment.',
+      benefit: 'Can generate own revenue, access impact investment, eligible for social enterprise grants',
+      requirement: 'No specific registration — can be a company limited by guarantee or cooperative',
+      url: 'https://www.socialtraders.com.au/about-social-enterprise/',
+    });
+  }
+
+  if (orgType === 'cooperative') {
+    recs.push({
+      type: 'Cooperative',
+      description: 'A member-owned organisation where members share decision-making and benefits equally.',
+      benefit: 'Democratic governance, shared resources, member loyalty',
+      requirement: 'Register under state/territory co-operatives legislation, minimum 5 members',
+      url: 'https://bfrsa.org.au/cooperatives/',
+    });
+  }
+
+  if (domains.includes('community') || domains.includes('health') || domains.includes('education')) {
+    recs.push({
+      type: 'Registered Charity (ACNC)',
+      description: 'A not-for-profit with charitable purposes, registered with the Australian Charities and Not-for-profits Commission.',
+      benefit: 'Tax concessions, DGR eligibility (tax-deductible donations), public trust',
+      requirement: 'Must register with ACNC, meet governance standards, report annually',
+      url: 'https://www.acnc.gov.au/for-charities/start-charity',
+    });
+  }
+
+  if (recs.length === 0 || (!domains.includes('indigenous') && revenue === 0)) {
+    recs.push({
+      type: 'Incorporated Association',
+      description: 'The simplest legal structure for a not-for-profit — registered at state level, run by members.',
+      benefit: 'Cheapest to set up ($50-200), limited liability for members, can open bank accounts and sign leases',
+      requirement: 'Register with your state fair trading office, need a constitution and minimum 5 members',
+      url: 'https://www.nfplaw.org.au/free-resources/setting-up-an-nfp/incorporated-associations',
+    });
+  }
+
+  return recs;
+}
 
 interface Project {
   name: string;
@@ -63,6 +141,8 @@ interface OrgProfile {
   projects: Project[];
   notify_email: boolean;
   notify_threshold: number;
+  org_status: string;
+  auspice_org_name: string;
 }
 
 const EMPTY_PROFILE: OrgProfile = {
@@ -79,6 +159,8 @@ const EMPTY_PROFILE: OrgProfile = {
   projects: [],
   notify_email: true,
   notify_threshold: 0.75,
+  org_status: 'exploring',
+  auspice_org_name: '',
 };
 
 interface MatchedGrant {
@@ -94,9 +176,15 @@ interface MatchedGrant {
   fit_score: number;
 }
 
+function getIsImpersonating(): boolean {
+  if (typeof document === 'undefined') return false;
+  return document.cookie.split(';').some(c => c.trim().startsWith('cg_impersonate_org='));
+}
+
 export function ProfileClient() {
   const [profile, setProfile] = useState<OrgProfile>(EMPTY_PROFILE);
   const [loading, setLoading] = useState(true);
+  const isImpersonating = getIsImpersonating();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
@@ -121,9 +209,19 @@ export function ProfileClient() {
           setProfile({
             ...EMPTY_PROFILE,
             ...data,
+            name: data.name || '',
+            mission: data.mission || '',
+            description: data.description || '',
+            abn: data.abn || '',
+            website: data.website || '',
+            org_type: data.org_type || '',
+            domains: data.domains || [],
+            geographic_focus: data.geographic_focus || [],
             annual_revenue: data.annual_revenue?.toString() || '',
             team_size: data.team_size?.toString() || '',
             projects: data.projects || [],
+            org_status: data.org_status || 'exploring',
+            auspice_org_name: data.auspice_org_name || '',
           });
         }
       })
@@ -227,6 +325,8 @@ export function ProfileClient() {
         ...profile,
         annual_revenue: profile.annual_revenue ? parseFloat(profile.annual_revenue) : null,
         team_size: profile.team_size ? parseInt(profile.team_size, 10) : null,
+        org_status: profile.org_status || 'exploring',
+        auspice_org_name: profile.auspice_org_name || null,
       };
 
       const r = await fetch('/api/profile', {
@@ -315,8 +415,8 @@ export function ProfileClient() {
         </p>
       </div>
 
-      {/* Claimed Charities */}
-      {claims.length > 0 && (
+      {/* Claimed Charities — only for incorporated orgs, hidden during impersonation */}
+      {claims.length > 0 && profile.org_status === 'incorporated' && !isImpersonating && (
         <section className="border-4 border-bauhaus-black bg-white">
           <div className="bg-green-600 px-5 py-3 flex items-center justify-between">
             <h2 className="text-sm font-black text-white uppercase tracking-widest">Claimed Profiles</h2>
@@ -372,6 +472,44 @@ export function ProfileClient() {
           </div>
         )}
 
+        {/* Journey Status */}
+        <section className="border-4 border-bauhaus-black bg-white">
+          <div className="bg-bauhaus-black px-5 py-3">
+            <h2 className="text-sm font-black text-white uppercase tracking-widest">Your Journey</h2>
+          </div>
+          <div className="p-5 space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
+              {ORG_STATUSES.map((status, i) => {
+                const isActive = profile.org_status === status.value;
+                const isPast = ORG_STATUSES.findIndex(s => s.value === profile.org_status) > i;
+                return (
+                  <div key={status.value} className="flex items-center gap-2">
+                    {i > 0 && (
+                      <div className={`hidden sm:block w-6 h-0.5 ${isPast || isActive ? 'bg-bauhaus-black' : 'bg-bauhaus-black/20'}`} />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setProfile(p => ({ ...p, org_status: status.value }))}
+                      className={`px-3 py-2 text-xs font-black uppercase tracking-wider border-3 transition-colors ${
+                        isActive
+                          ? 'bg-bauhaus-blue text-white border-bauhaus-black'
+                          : isPast
+                          ? 'bg-bauhaus-blue/20 text-bauhaus-black border-bauhaus-black/40'
+                          : 'bg-white text-bauhaus-black/50 border-bauhaus-black/20 hover:border-bauhaus-black/40'
+                      }`}
+                    >
+                      {status.label}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-sm text-bauhaus-muted">
+              {ORG_STATUSES.find(s => s.value === profile.org_status)?.description}
+            </p>
+          </div>
+        </section>
+
         {/* Identity */}
         <section className="border-4 border-bauhaus-black bg-white">
           <div className="bg-bauhaus-black px-5 py-3">
@@ -419,18 +557,37 @@ export function ProfileClient() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">
-                  ABN
-                </label>
-                <input
-                  type="text"
-                  value={profile.abn}
-                  onChange={e => setProfile(p => ({ ...p, abn: e.target.value }))}
-                  className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue"
-                  placeholder="21 591 780 066"
-                />
-              </div>
+              {profile.org_status === 'incorporated' && (
+                <div>
+                  <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">
+                    ABN
+                  </label>
+                  <input
+                    type="text"
+                    value={profile.abn}
+                    onChange={e => setProfile(p => ({ ...p, abn: e.target.value }))}
+                    className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue"
+                    placeholder="21 591 780 066"
+                  />
+                </div>
+              )}
+              {profile.org_status === 'auspiced' && (
+                <div>
+                  <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">
+                    Auspicing Organisation
+                  </label>
+                  <input
+                    type="text"
+                    value={profile.auspice_org_name}
+                    onChange={e => setProfile(p => ({ ...p, auspice_org_name: e.target.value }))}
+                    className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue"
+                    placeholder="Name of the organisation auspicing you"
+                  />
+                  <p className="text-xs text-bauhaus-muted mt-1">
+                    You can operate under a registered org&apos;s structure while you grow
+                  </p>
+                </div>
+              )}
               <div>
                 <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">
                   Website
@@ -514,7 +671,6 @@ export function ProfileClient() {
                 onChange={e => setProfile(p => ({ ...p, org_type: e.target.value }))}
                 className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue bg-white"
               >
-                <option value="">Select type</option>
                 {ORG_TYPES.map(t => (
                   <option key={t.value} value={t.value}>{t.label}</option>
                 ))}
@@ -549,6 +705,47 @@ export function ProfileClient() {
             </div>
           </div>
         </section>
+
+        {/* What Should I Be? — only for exploring/pre_formation */}
+        {(profile.org_status === 'exploring' || profile.org_status === 'pre_formation') && (
+          <section className="border-4 border-bauhaus-black bg-white">
+            <div className="bg-bauhaus-blue px-5 py-3">
+              <h2 className="text-sm font-black text-white uppercase tracking-widest">What Should I Be?</h2>
+            </div>
+            <div className="p-5 space-y-4">
+              <p className="text-sm text-bauhaus-muted">
+                Based on your mission and focus areas, here are some structures to consider.
+                Fill in more details above for better recommendations.
+              </p>
+              {getFormationRecommendations(profile).map(rec => (
+                <div key={rec.type} className="border-2 border-bauhaus-black/20 p-4 space-y-2">
+                  <h3 className="text-sm font-black uppercase tracking-wide text-bauhaus-black">
+                    {rec.type}
+                  </h3>
+                  <p className="text-sm text-bauhaus-black/70">{rec.description}</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    <div className="bg-green-50 border border-green-200 px-3 py-2">
+                      <span className="font-black text-green-800 uppercase tracking-wider">Benefit:</span>{' '}
+                      <span className="text-green-700">{rec.benefit}</span>
+                    </div>
+                    <div className="bg-amber-50 border border-amber-200 px-3 py-2">
+                      <span className="font-black text-amber-800 uppercase tracking-wider">Requires:</span>{' '}
+                      <span className="text-amber-700">{rec.requirement}</span>
+                    </div>
+                  </div>
+                  <a
+                    href={rec.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block text-xs font-black text-bauhaus-blue uppercase tracking-widest hover:text-bauhaus-black"
+                  >
+                    Learn more &rarr;
+                  </a>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Projects */}
         <section className="border-4 border-bauhaus-black bg-white">

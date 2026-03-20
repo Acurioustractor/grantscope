@@ -26,6 +26,12 @@ interface GraphNode {
   total_dollar_flow?: number;
   distinct_govt_buyers?: number;
   distinct_parties_funded?: number;
+  ndis_participants?: number;
+  ndis_entities?: number;
+  ndis_utilisation?: number | null;
+  severity?: string;
+  seifa_decile?: number | null;
+  desert_score?: number | null;
   board_count?: number;
   interlock_score?: number;
   role_types?: string[];
@@ -58,7 +64,7 @@ interface Story {
   id: string;
   title: string;
   description: string;
-  mode: 'hubs' | 'justice' | 'power' | 'interlocks';
+  mode: 'hubs' | 'justice' | 'power' | 'interlocks' | 'ndis';
   topic?: string;
   minSystems?: number;
   narrative: string;
@@ -140,6 +146,14 @@ const ALMA_COLORS: Record<string, string> = {
   'Family Strengthening': '#c084fc',
 };
 
+// NDIS thin market severity colors
+const SEVERITY_COLORS: Record<string, string> = {
+  critical: '#ef4444',  // red
+  severe: '#f97316',    // orange
+  moderate: '#fbbf24',  // amber
+  adequate: '#4ade80',  // green
+};
+
 // Power mode: color by system count (more systems = hotter)
 const SYSTEM_COLORS: Record<number, string> = {
   1: '#6b7280',  // gray
@@ -153,7 +167,7 @@ const SYSTEM_COLORS: Record<number, string> = {
 
 type Preset = {
   label: string;
-  mode: 'hubs' | 'justice' | 'power' | 'interlocks';
+  mode: 'hubs' | 'justice' | 'power' | 'interlocks' | 'ndis';
   type?: string;
   hubs?: number;
   topic?: string;
@@ -165,6 +179,7 @@ type Preset = {
 const PRESETS: Preset[] = [
   { label: 'Power Map', mode: 'power', minSystems: 3, desc: 'Entities spanning 3+ systems — who holds cross-system power' },
   { label: 'Power Elite', mode: 'power', minSystems: 4, desc: 'Entities in 4+ systems — the inner circle' },
+  { label: 'NDIS Thin Markets', mode: 'ndis', desc: 'Disability provider networks — where are the thin markets?' },
   { label: 'Board Interlocks', mode: 'interlocks', minBoards: 2, desc: 'People sitting on multiple charity boards' },
   { label: 'Youth Justice', mode: 'justice', topic: 'youth-justice', desc: 'Programs funding youth justice services' },
   { label: 'Child Protection', mode: 'justice', topic: 'child-protection', desc: 'Child protection funding flows' },
@@ -352,6 +367,8 @@ export default function GraphPage() {
       if (preset.mode === 'power') {
         params.set('mode', 'power');
         params.set('min_systems', String(preset.minSystems || 3));
+      } else if (preset.mode === 'ndis') {
+        params.set('mode', 'ndis');
       } else if (preset.mode === 'interlocks') {
         params.set('mode', 'interlocks');
         params.set('min_boards', String(preset.minBoards || 2));
@@ -384,6 +401,8 @@ export default function GraphPage() {
       return { label: story.title, mode: 'justice', topic: story.topic, desc: story.description };
     } else if (story.mode === 'power') {
       return { label: story.title, mode: 'power', minSystems: story.minSystems || 3, desc: story.description };
+    } else if (story.mode === 'ndis') {
+      return { label: story.title, mode: 'ndis', desc: story.description };
     } else {
       return { label: story.title, mode: 'hubs', type: 'foundation', hubs: 30, desc: story.description };
     }
@@ -498,10 +517,16 @@ export default function GraphPage() {
   const isJustice = effectiveMode === 'justice';
   const isPower = effectiveMode === 'power';
   const isInterlocks = effectiveMode === 'interlocks';
+  const isNdis = effectiveMode === 'ndis';
   useEffect(() => {
     if (data && fgRef.current) {
       const fg = fgRef.current;
-      if (isInterlocks) {
+      if (isNdis) {
+        // NDIS: bipartite LGA hubs + provider spokes — strong repulsion for readability
+        fg.d3Force('charge')?.strength(-160).distanceMax(600);
+        fg.d3Force('link')?.distance(35).strength(0.45);
+        fg.d3Force('center')?.strength(0.03);
+      } else if (isInterlocks) {
         // Interlocks: bipartite layout — strong repulsion to spread person clusters
         fg.d3Force('charge')?.strength(-180).distanceMax(700);
         fg.d3Force('link')?.distance(40).strength(0.4);
@@ -523,7 +548,7 @@ export default function GraphPage() {
       fg.d3ReheatSimulation();
       setTimeout(() => fg.zoomToFit(400, 50), 2000);
     }
-  }, [data, isJustice, isPower, isInterlocks]);
+  }, [data, isJustice, isPower, isInterlocks, isNdis]);
 
   const graphData = useMemo(() => {
     if (!data) return { nodes: [], links: [] };
@@ -737,6 +762,109 @@ export default function GraphPage() {
       return;
     }
 
+    // NDIS mode: LGA nodes = rounded squares sized by participants, providers = circles
+    if (isNdis) {
+      const isLga = node.type === 'lga';
+      const severityColor = isLga ? (SEVERITY_COLORS[node.severity] || '#6b7280') : (TYPE_COLORS[node.type] || '#a78bfa');
+
+      if (isLga) {
+        const participants = node.ndis_participants || 0;
+        const size = Math.max(8, Math.min(22, Math.sqrt(participants) * 0.4));
+
+        // Glow — stronger for critical/severe
+        const isCritical = node.severity === 'critical' || node.severity === 'severe';
+        const glowSize = size * (isCritical ? 3.5 : 2.5);
+        const gradient = ctx.createRadialGradient(x, y, size * 0.2, x, y, glowSize);
+        gradient.addColorStop(0, severityColor + (dimmed ? '18' : isCritical ? '66' : '44'));
+        gradient.addColorStop(0.5, severityColor + (dimmed ? '06' : '18'));
+        gradient.addColorStop(1, severityColor + '00');
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(x, y, glowSize, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Rounded square for LGA
+        ctx.globalAlpha = dimAlpha;
+        ctx.fillStyle = severityColor;
+        const r = size * 0.3;
+        ctx.beginPath();
+        ctx.moveTo(x - size + r, y - size);
+        ctx.lineTo(x + size - r, y - size);
+        ctx.quadraticCurveTo(x + size, y - size, x + size, y - size + r);
+        ctx.lineTo(x + size, y + size - r);
+        ctx.quadraticCurveTo(x + size, y + size, x + size - r, y + size);
+        ctx.lineTo(x - size + r, y + size);
+        ctx.quadraticCurveTo(x - size, y + size, x - size, y + size - r);
+        ctx.lineTo(x - size, y - size + r);
+        ctx.quadraticCurveTo(x - size, y - size, x - size + r, y - size);
+        ctx.fill();
+
+        // Participant count inside
+        if (globalScale > 0.2 && participants > 50) {
+          const fontSize = Math.max(7, Math.min(10, size * 0.6));
+          ctx.font = `700 ${fontSize}px -apple-system, "SF Pro Text", sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = '#000000cc';
+          ctx.fillText(participants > 1000 ? `${(participants / 1000).toFixed(0)}K` : String(participants), x, y);
+        }
+        ctx.globalAlpha = 1;
+
+        // Labels — show at lower zoom for critical LGAs
+        const labelThresh = isCritical ? 0.12 : 0.25;
+        if (globalScale > labelThresh && !dimmed) {
+          const fontSize = Math.max(10, 12 / globalScale);
+          ctx.font = `700 ${fontSize}px -apple-system, "SF Pro Text", sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'top';
+          ctx.fillStyle = '#000000bb';
+          ctx.fillText(node.label.substring(0, 28), x + 0.5, y + size + 3.5);
+          ctx.fillStyle = severityColor + 'dd';
+          ctx.fillText(node.label.substring(0, 28), x, y + size + 3);
+        }
+      } else {
+        // Provider node — circle, colored by type
+        const provSize = Math.max(2, Math.min(8, Math.sqrt(deg + 1) * 1.5));
+        const provColor = node.community_controlled ? '#f87171' : severityColor;
+
+        ctx.globalAlpha = dimAlpha;
+        ctx.fillStyle = provColor;
+        ctx.beginPath();
+        ctx.arc(x, y, provSize, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Cross-system ring for multi-system providers
+        if (node.system_count && node.system_count >= 2) {
+          ctx.strokeStyle = SYSTEM_COLORS[Math.min(node.system_count, 7)] || '#60a5fa';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(x, y, provSize + 2, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        // Community-controlled ring
+        if (node.community_controlled) {
+          ctx.strokeStyle = '#f87171';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(x, y, provSize + 2, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+
+        // Labels for high-degree providers
+        if (deg > 3 && globalScale > 0.4 && !dimmed) {
+          const fontSize = Math.max(9, 11 / globalScale);
+          ctx.font = `600 ${fontSize}px -apple-system, "SF Pro Text", sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'top';
+          ctx.fillStyle = '#ffffffaa';
+          ctx.fillText(node.label.substring(0, 24), x, y + provSize + 2);
+        }
+      }
+      return;
+    }
+
     // Default rendering (justice + hub modes)
     const color = (node.alma_type && ALMA_COLORS[node.alma_type]) || TYPE_COLORS[node.type] || '#6b7280';
     const size = isProgram
@@ -808,7 +936,7 @@ export default function GraphPage() {
       ctx.fillStyle = isProgram ? '#fbbf24dd' : '#ffffffdd';
       ctx.fillText(node.label.substring(0, 32), x, y + size + 2);
     }
-  }, [isPower, isInterlocks, hasHighlights, isNodeHighlighted, searchHighlightId]);
+  }, [isPower, isInterlocks, isNdis, hasHighlights, isNodeHighlighted, searchHighlightId]);
 
   // Active story object
   const activeStory = activeStoryIndex != null ? STORIES[activeStoryIndex] : null;
@@ -851,8 +979,8 @@ export default function GraphPage() {
               ctx.arc(node.x || 0, node.y || 0, size, 0, Math.PI * 2);
               ctx.fill();
             }}
-            linkColor={() => isInterlocks ? 'rgba(244,114,182,0.15)' : isPower ? 'rgba(255,255,255,0.08)' : isJustice ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)'}
-            linkWidth={isInterlocks ? 0.6 : isPower ? 0.4 : isJustice ? 0.5 : 0.3}
+            linkColor={() => isNdis ? 'rgba(251,191,36,0.12)' : isInterlocks ? 'rgba(244,114,182,0.15)' : isPower ? 'rgba(255,255,255,0.08)' : isJustice ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)'}
+            linkWidth={isNdis ? 0.5 : isInterlocks ? 0.6 : isPower ? 0.4 : isJustice ? 0.5 : 0.3}
             d3AlphaDecay={0.015}
             d3VelocityDecay={0.25}
             warmupTicks={300}
@@ -1125,7 +1253,37 @@ export default function GraphPage() {
       <div className={`absolute bottom-4 z-10 bg-[#12121a]/80 backdrop-blur border border-white/10 rounded-lg p-3 max-w-xs transition-all duration-300 ${
         showStories ? 'left-[calc(min(350px,85vw)+16px)]' : 'left-4'
       }`}>
-        {isInterlocks ? (
+        {isNdis ? (
+          <>
+            <p className="text-[10px] font-mono uppercase tracking-wider text-white/40 mb-2">NDIS Thin Markets</p>
+            <div className="space-y-2">
+              <div>
+                <p className="text-[9px] font-mono uppercase text-white/30 mb-1">Market Severity</p>
+                {Object.entries(SEVERITY_COLORS).map(([sev, color]) => (
+                  <div key={sev} className="flex items-center gap-1.5 mb-0.5">
+                    <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: color }} />
+                    <span className="text-[10px] text-white/50 capitalize">{sev}</span>
+                  </div>
+                ))}
+              </div>
+              <div>
+                <p className="text-[9px] font-mono uppercase text-white/30 mb-1">Node Types</p>
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <div className="w-3 h-3 rounded-sm bg-[#fbbf24]" />
+                  <span className="text-[10px] text-white/50">LGA (sized by participants)</span>
+                </div>
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#a78bfa]" />
+                  <span className="text-[10px] text-white/50">NDIS Provider</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full border-2 border-[#f87171]" />
+                  <span className="text-[10px] text-white/50">Community Controlled</span>
+                </div>
+              </div>
+            </div>
+          </>
+        ) : isInterlocks ? (
           <>
             <p className="text-[10px] font-mono uppercase tracking-wider text-white/40 mb-2">Board Interlocks</p>
             <div className="space-y-2">
@@ -1242,6 +1400,11 @@ export default function GraphPage() {
             </span>
             {hoveredNode.state && <span className="text-[10px] text-white/40">{hoveredNode.state}</span>}
             <span className="text-[10px] text-white/40">{hoveredNode.degree} connections</span>
+            {hoveredNode.ndis_participants && (
+              <span className="text-[10px] font-mono" style={{ color: SEVERITY_COLORS[hoveredNode.severity || ''] || '#fbbf24' }}>
+                {hoveredNode.ndis_participants.toLocaleString()} participants
+              </span>
+            )}
             {hoveredNode.board_count && (
               <span className="text-[10px] font-mono text-[#f472b6]">
                 {hoveredNode.board_count} boards
@@ -1289,6 +1452,25 @@ export default function GraphPage() {
                 ALMA: {selectedNode.alma_type}
                 {selectedNode.alma_evidence && ` · ${selectedNode.alma_evidence}`}
               </p>
+            )}
+            {selectedNode.ndis_participants != null && selectedNode.ndis_participants > 0 && (
+              <div className="mt-1 pt-1 border-t border-white/10">
+                <p className="text-[10px] font-mono" style={{ color: SEVERITY_COLORS[selectedNode.severity || ''] || '#fbbf24' }}>
+                  {selectedNode.ndis_participants.toLocaleString()} NDIS participants · {selectedNode.ndis_entities || 0} providers
+                  {selectedNode.severity && ` · ${selectedNode.severity.toUpperCase()}`}
+                </p>
+                {selectedNode.ndis_utilisation != null && (
+                  <p className="text-[9px] text-white/40 font-mono mt-0.5">
+                    Avg utilisation: {(selectedNode.ndis_utilisation * 100).toFixed(0)}%
+                    {selectedNode.seifa_decile && ` · SEIFA D${selectedNode.seifa_decile}`}
+                  </p>
+                )}
+                {selectedNode.desert_score != null && (
+                  <p className="text-[9px] text-[#f97316] font-mono">
+                    Desert score: {Math.round(selectedNode.desert_score)}
+                  </p>
+                )}
+              </div>
             )}
             {selectedNode.board_count && (
               <div className="mt-1 pt-1 border-t border-white/10">

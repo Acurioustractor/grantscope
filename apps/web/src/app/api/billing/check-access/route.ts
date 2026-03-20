@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase-server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { resolveSubscriptionTier, getModules } from '@/lib/subscription';
+import { getImpersonateSlug } from '@/lib/org-profile';
 
 export async function GET() {
   try {
@@ -13,11 +14,20 @@ export async function GET() {
     }
 
     const supabase = getServiceSupabase();
-    const { data: profile } = await supabase
-      .from('org_profiles')
-      .select('stripe_customer_id, subscription_plan, name')
-      .eq('user_id', user.id)
-      .maybeSingle();
+
+    // Check impersonation — use impersonated org's subscription
+    const impersonateSlug = await getImpersonateSlug();
+    const { data: profile } = impersonateSlug
+      ? await supabase
+          .from('org_profiles')
+          .select('stripe_customer_id, subscription_plan, name')
+          .eq('slug', impersonateSlug)
+          .maybeSingle()
+      : await supabase
+          .from('org_profiles')
+          .select('stripe_customer_id, subscription_plan, name')
+          .eq('user_id', user.id)
+          .maybeSingle();
 
     const tier = resolveSubscriptionTier(profile?.subscription_plan);
     const modules = getModules(tier);

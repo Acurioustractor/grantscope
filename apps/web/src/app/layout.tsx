@@ -1,9 +1,13 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { NavBar } from './components/nav';
+import { ImpersonationBanner } from './components/impersonation-banner';
 import { ChatDrawer } from './components/chat-drawer';
 import { createSupabaseServer } from '@/lib/supabase-server';
+import { getServiceSupabase } from '@/lib/supabase';
 import { resolveSubscriptionTier } from '@/lib/subscription';
+import { isAdminEmail } from '@/lib/admin';
+import { cookies } from 'next/headers';
 
 export const metadata: Metadata = {
   title: 'CivicGraph - Infrastructure for Fairer Markets',
@@ -16,15 +20,40 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Check for impersonation cookie (admin-only)
+  const cookieStore = await cookies();
+  const impersonateSlug = cookieStore.get('cg_impersonate_org')?.value ?? null;
+  let impersonatingOrg: { name: string; slug: string } | null = null;
+
   // Resolve subscription tier from org_profiles
   let subscriptionPlan: string | null = null;
+  let userOrgSlug: string | null = null;
   if (user) {
-    const { data: profile } = await supabase
-      .from('org_profiles')
-      .select('subscription_plan')
-      .eq('user_id', user.id)
-      .single();
-    subscriptionPlan = profile?.subscription_plan ?? null;
+    if (impersonateSlug && isAdminEmail(user.email)) {
+      // Admin impersonating: use the target org's tier
+      const db = getServiceSupabase();
+      const { data: targetOrg } = await db
+        .from('org_profiles')
+        .select('name, slug, subscription_plan')
+        .eq('slug', impersonateSlug)
+        .maybeSingle();
+      if (targetOrg) {
+        subscriptionPlan = targetOrg.subscription_plan;
+        impersonatingOrg = { name: targetOrg.name, slug: targetOrg.slug };
+        userOrgSlug = targetOrg.slug;
+      }
+    }
+    if (!subscriptionPlan) {
+      const { data: profile } = await supabase
+        .from('org_profiles')
+        .select('subscription_plan, slug')
+        .eq('user_id', user.id)
+        .single();
+      subscriptionPlan = profile?.subscription_plan ?? null;
+      if (!impersonatingOrg && profile?.slug) {
+        userOrgSlug = profile.slug;
+      }
+    }
   }
   const tier = resolveSubscriptionTier(subscriptionPlan);
   const isLoggedIn = !!user;
@@ -39,7 +68,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <NavBar
           initialUserEmail={user?.email ?? null}
           subscriptionTier={tier}
+          isImpersonating={!!impersonatingOrg}
+          orgSlug={userOrgSlug}
         />
+        {impersonatingOrg && (
+          <ImpersonationBanner orgName={impersonatingOrg.name} orgSlug={impersonatingOrg.slug} />
+        )}
         {isLoggedIn ? (
           /* Workspace: generous padding, pages control their own max-width */
           <main className="px-6 py-6">

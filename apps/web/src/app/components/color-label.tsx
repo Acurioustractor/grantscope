@@ -52,3 +52,18 @@ export function ColorDot({ color }: { color: string | null }) {
     />
   );
 }
+
+/** Labeled project tag for display in cards */
+export function ProjectTag({ color }: { color: string | null }) {
+  if (!color || color === 'none') return null;
+  const entry = COLOR_MAP[color];
+  if (!entry) return null;
+  return (
+    <span
+      className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white flex-shrink-0"
+      style={{ backgroundColor: entry.hex }}
+    >
+      {entry.project}
+    </span>
+  );
+}

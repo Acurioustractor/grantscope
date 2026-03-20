@@ -47,11 +47,21 @@ function applyFilters(grants: SavedGrantRow[], filters: Filters): SavedGrantRow[
 
 export function KanbanBoard({ initialGrants }: { initialGrants: SavedGrantRow[] }) {
   const [grants, setGrants] = useState(initialGrants);
-  const [filters, setFilters] = useState<Filters>({ minStars: 0, color: null, search: '' });
+  const [filters, setFilters] = useState<Filters>({ minStars: 0, color: null, search: '', sortByDeadline: false });
 
   const filtered = applyFilters(grants, filters);
 
-  const byStage = (stage: string) => filtered.filter((g) => g.stage === stage);
+  const byStage = (stage: string) => {
+    const stageGrants = filtered.filter((g) => g.stage === stage);
+    if (filters.sortByDeadline) {
+      stageGrants.sort((a, b) => {
+        const aDate = a.grant.closes_at ? new Date(a.grant.closes_at).getTime() : Infinity;
+        const bDate = b.grant.closes_at ? new Date(b.grant.closes_at).getTime() : Infinity;
+        return aDate - bDate;
+      });
+    }
+    return stageGrants;
+  };
 
   const handleRemove = useCallback(
     (grantId: string) => {

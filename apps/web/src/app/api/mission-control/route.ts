@@ -81,13 +81,12 @@ export async function GET() {
         .select('canonical_name, total_donated, total_contract_value, donation_count, contract_count')
         .order('total_contract_value', { ascending: false })
         .limit(20), 8000),
-      safe(db.from('gs_entities')
+      safe(db.from('mv_gs_donor_contractors')
         .select('entity_type')
         .not('entity_type', 'is', null), 8000),
-      safe(db.from('mv_gs_donor_contractors')
-        .select('total_donated, total_contract_value')
-        .order('total_donated', { ascending: false })
-        .limit(1000), 8000),
+      safe(db.rpc('exec_sql', {
+        query: `SELECT COUNT(*)::int as count, SUM(total_donated)::bigint as total_donated, SUM(total_contract_value)::bigint as total_contract_value FROM mv_gs_donor_contractors`,
+      }), 8000),
     ];
 
     // --- Agent runs ---
@@ -159,9 +158,8 @@ export async function GET() {
     const entityTypes = Array.from(etMap.entries())
       .map(([entity_type, count]) => ({ entity_type, count }))
       .sort((a, b) => b.count - a.count);
-    const dcAll = (power[2].data ?? []) as Array<{ total_donated: number; total_contract_value: number }>;
-    const dcTotalDonated = dcAll.reduce((s, r) => s + (r.total_donated || 0), 0);
-    const dcTotalContracts = dcAll.reduce((s, r) => s + (r.total_contract_value || 0), 0);
+    const dcAgg = ((power[2].data ?? []) as Array<{ count: number; total_donated: number; total_contract_value: number }>)[0]
+      ?? { count: 0, total_donated: 0, total_contract_value: 0 };
 
     return NextResponse.json({
       hero: {
@@ -176,9 +174,9 @@ export async function GET() {
       power: {
         top20,
         entityTypes,
-        donorContractorCount: dcAll.length,
-        totalDonated: dcTotalDonated,
-        totalContractValue: dcTotalContracts,
+        donorContractorCount: dcAgg.count,
+        totalDonated: Number(dcAgg.total_donated),
+        totalContractValue: Number(dcAgg.total_contract_value),
       },
       agents: {
         recentRuns: agentRuns,

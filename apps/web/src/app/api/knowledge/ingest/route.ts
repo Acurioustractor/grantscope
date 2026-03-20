@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { requireModule } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
+import { isAdminEmail } from '@/lib/admin';
 
 const ALLOWED_TYPES = [
   'application/pdf',
@@ -10,7 +12,21 @@ const ALLOWED_TYPES = [
 ];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
-async function getOrgProfileId(db: ReturnType<typeof getServiceSupabase>, userId: string) {
+async function getOrgProfileId(db: ReturnType<typeof getServiceSupabase>, userId: string, userEmail?: string) {
+  // Check for admin impersonation
+  if (userEmail && isAdminEmail(userEmail)) {
+    const cookieStore = await cookies();
+    const impersonateSlug = cookieStore.get('cg_impersonate_org')?.value;
+    if (impersonateSlug) {
+      const { data: impersonated } = await db
+        .from('org_profiles')
+        .select('id')
+        .eq('slug', impersonateSlug)
+        .maybeSingle();
+      if (impersonated) return impersonated.id;
+    }
+  }
+
   const { data: own } = await db
     .from('org_profiles')
     .select('id')
@@ -27,7 +43,8 @@ async function getOrgProfileId(db: ReturnType<typeof getServiceSupabase>, userId
   return member?.org_profile_id || null;
 }
 
-function getSourceType(mimeType: string, filename: string): string {
+/** File format for metadata/storage — not the knowledge_sources.source_type */
+function getFileFormat(mimeType: string, filename: string): string {
   if (mimeType === 'application/pdf') return 'pdf';
   if (mimeType.includes('wordprocessingml')) return 'docx';
   if (filename.endsWith('.md')) return 'markdown';
@@ -40,7 +57,7 @@ export async function POST(req: NextRequest) {
   const { user } = auth;
 
   const db = getServiceSupabase();
-  const orgId = await getOrgProfileId(db, user.id);
+  const orgId = await getOrgProfileId(db, user.id, user.email);
   if (!orgId) return NextResponse.json({ error: 'No org profile found' }, { status: 404 });
 
   const formData = await req.formData();
@@ -52,9 +69,12 @@ export async function POST(req: NextRequest) {
   }
 
   let sourceName: string;
-  let sourceType: string;
+  let fileFormat: string;
   let sourceUrl: string | null = null;
   let storagePath: string | null = null;
+  // source_type is the knowledge classification (foundational/strategic/tactical/dynamic/experimental)
+  // User uploads default to 'dynamic'; can be reclassified later
+  const sourceType = (formData.get('source_type') as string) || 'dynamic';
 
   if (file) {
     if (!ALLOWED_TYPES.includes(file.type) && !file.name.endsWith('.md') && !file.name.endsWith('.txt')) {
@@ -68,7 +88,7 @@ export async function POST(req: NextRequest) {
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
     storagePath = `${orgId}/${timestamp}-${safeName}`;
     sourceName = file.name;
-    sourceType = getSourceType(file.type, file.name);
+    fileFormat = getFileFormat(file.type, file.name);
 
     // Upload to Supabase Storage
     const buffer = Buffer.from(await file.arrayBuffer());
@@ -83,7 +103,7 @@ export async function POST(req: NextRequest) {
     // URL source
     sourceUrl = url!;
     sourceName = url!;
-    sourceType = 'url';
+    fileFormat = 'url';
   }
 
   // Create knowledge_sources record
@@ -106,15 +126,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: sourceError.message }, { status: 500 });
   }
 
-  // Queue for extraction
+  // Queue for extraction (source_type here is the file format, not knowledge classification)
   const { error: queueError } = await db
     .from('knowledge_extraction_queue')
     .insert({
-      source_type: sourceType,
+      source_type: fileFormat,
       source_id: source.id,
       source_url: sourceUrl || storagePath,
       source_metadata: { org_profile_id: orgId, original_name: sourceName },
-      raw_content: '', // Will be filled by processor
+      raw_content: '',
       status: 'pending',
       priority: 5,
     });
@@ -138,7 +158,7 @@ export async function GET(req: NextRequest) {
   const { user } = auth;
 
   const db = getServiceSupabase();
-  const orgId = await getOrgProfileId(db, user.id);
+  const orgId = await getOrgProfileId(db, user.id, user.email);
   if (!orgId) return NextResponse.json({ error: 'No org profile found' }, { status: 404 });
 
   // Fetch sources with queue status
@@ -197,7 +217,7 @@ export async function DELETE(req: NextRequest) {
   const { user } = auth;
 
   const db = getServiceSupabase();
-  const orgId = await getOrgProfileId(db, user.id);
+  const orgId = await getOrgProfileId(db, user.id, user.email);
   if (!orgId) return NextResponse.json({ error: 'No org profile found' }, { status: 404 });
 
   const { searchParams } = req.nextUrl;

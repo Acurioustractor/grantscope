@@ -8,7 +8,7 @@
 
 import type { Foundation } from './types';
 import type { ScrapedFoundationData } from './annual-report-scraper';
-import { MINIMAX_CHAT_COMPLETIONS_URL } from '../minimax.ts';
+import { MINIMAX_CHAT_COMPLETIONS_URL, stripThinkTags } from '../minimax.ts';
 
 export interface EnrichedProfile {
   description: string | null;
@@ -58,7 +58,7 @@ const PROVIDERS: ProviderConfig[] = [
     name: 'minimax',
     envKey: 'MINIMAX_API_KEY',
     baseUrl: MINIMAX_CHAT_COMPLETIONS_URL,
-    model: 'MiniMax-M2.5',
+    model: 'MiniMax-M2.7',
     maxTokens: 4000,
     supportsJsonMode: false, // M2.5 reasoning model, parse JSON from response
   },
@@ -268,10 +268,7 @@ Rules:
     const data = await response.json() as {
       choices: Array<{ message: { content: string } }>;
     };
-    let content = data.choices[0]?.message?.content || '';
-
-    // Strip <think> blocks from reasoning models (Minimax M2.5, DeepSeek, etc.)
-    content = content.replace(/<think>[\s\S]*?<\/think>\s*/g, '').trim();
+    const content = stripThinkTags(data.choices[0]?.message?.content || '');
 
     return content;
   }

@@ -39,7 +39,7 @@ function log(msg) {
 
 // LLM Providers — round-robin with fallback
 const PROVIDERS = [
-  { name: 'minimax', baseUrl: MINIMAX_CHAT_COMPLETIONS_URL, model: 'MiniMax-M2.5', envKey: 'MINIMAX_API_KEY', disabled: false },
+  { name: 'minimax', baseUrl: MINIMAX_CHAT_COMPLETIONS_URL, model: 'MiniMax-M2.7', envKey: 'MINIMAX_API_KEY', disabled: false },
   { name: 'groq', baseUrl: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.3-70b-versatile', envKey: 'GROQ_API_KEY', disabled: false },
   { name: 'gemini', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', model: 'gemini-2.5-flash', envKey: 'GEMINI_API_KEY', disabled: false },
   { name: 'deepseek', baseUrl: 'https://api.deepseek.com/chat/completions', model: 'deepseek-chat', envKey: 'DEEPSEEK_API_KEY', disabled: false },
@@ -96,7 +96,7 @@ async function scrapeWebsite(url) {
     const ogDesc = $('meta[property="og:description"]').attr('content') || '';
 
     const combined = [metaDesc, ogDesc, mainText].filter(Boolean).join('\n\n');
-    return combined.length > 50 ? combined.slice(0, 6000) : null;
+    return combined.length > 50 ? combined.slice(0, 3000) : null;
   } catch {
     return null;
   }
@@ -182,7 +182,7 @@ ${contextParts.join('\n')}
 
 Based on all available information, provide a comprehensive profile.
 
-Return JSON only, no explanation:
+Return ONLY a compact JSON object. No explanation, no markdown, no preamble. Keep descriptions under 300 chars. Be concise:
 {
   "description": "2-4 sentence description of what this foundation does, its mission, and who it supports. Be specific about sectors and geography.",
   "thematic_focus": ["area1", "area2"],
@@ -290,12 +290,20 @@ If information is very limited, make reasonable inferences from the name. Never 
       if (firstBrace >= 0) jsonStr = jsonStr.slice(firstBrace);
       else jsonStr = '';
 
-      let jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+      // Find balanced JSON object by matching braces
+      let depth = 0, jsonStart = -1, jsonEnd = -1;
+      for (let ci = 0; ci < jsonStr.length; ci++) {
+        if (jsonStr[ci] === '{') { if (depth === 0) jsonStart = ci; depth++; }
+        else if (jsonStr[ci] === '}') { depth--; if (depth === 0) { jsonEnd = ci + 1; break; } }
+      }
+
+      let jsonMatch = jsonStart >= 0 && jsonEnd > jsonStart ? [jsonStr.slice(jsonStart, jsonEnd)] : null;
 
       // Handle truncated responses
       if (!jsonMatch && jsonStr.startsWith('{')) {
         const fixed = jsonStr + '"}';
-        jsonMatch = fixed.match(/\{[\s\S]*\}/);
+        const m = fixed.match(/\{[\s\S]*\}/);
+        if (m) jsonMatch = m;
       }
       if (!jsonMatch) {
         log(`${provider.name} no JSON found (${text.length} chars)`);

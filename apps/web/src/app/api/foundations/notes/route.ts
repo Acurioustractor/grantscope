@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireModule } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
+import { getImpersonateSlug } from '@/lib/org-profile';
 
 /**
  * GET /api/foundations/notes?abn=xxx — list notes for a foundation
@@ -15,10 +16,24 @@ export async function GET(request: NextRequest) {
   const abn = request.nextUrl.searchParams.get('abn');
 
   const db = getServiceSupabase();
+
+  // Check impersonation — show impersonated org's notes
+  const impersonateSlug = await getImpersonateSlug();
+  let filterUserId = user.id;
+
+  if (impersonateSlug) {
+    const { data: impOrg } = await db
+      .from('org_profiles')
+      .select('user_id')
+      .eq('slug', impersonateSlug)
+      .maybeSingle();
+    if (impOrg?.user_id) filterUserId = impOrg.user_id;
+  }
+
   let query = db
     .from('foundation_notes')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('user_id', filterUserId)
     .order('created_at', { ascending: false });
 
   if (abn) query = query.eq('foundation_abn', abn);

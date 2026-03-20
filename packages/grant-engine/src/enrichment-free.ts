@@ -13,7 +13,7 @@
 
 import * as cheerio from 'cheerio';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { MINIMAX_CHAT_COMPLETIONS_URL } from './minimax.ts';
+import { MINIMAX_CHAT_COMPLETIONS_URL, stripThinkTags } from './minimax.ts';
 
 const RATE_LIMIT_DELAY_MS = 1500;
 const SCRAPE_TIMEOUT_MS = 10000;
@@ -27,7 +27,7 @@ interface LLMProvider {
 }
 
 const PROVIDERS: LLMProvider[] = [
-  { name: 'minimax', baseUrl: MINIMAX_CHAT_COMPLETIONS_URL, model: 'MiniMax-M2.5', envKey: 'MINIMAX_API_KEY' },
+  { name: 'minimax', baseUrl: MINIMAX_CHAT_COMPLETIONS_URL, model: 'MiniMax-M2.7', envKey: 'MINIMAX_API_KEY' },
   { name: 'groq', baseUrl: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.3-70b-versatile', envKey: 'GROQ_API_KEY' },
   { name: 'gemini', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', model: 'gemini-2.5-flash', envKey: 'GEMINI_API_KEY' },
   { name: 'deepseek', baseUrl: 'https://api.deepseek.com/chat/completions', model: 'deepseek-chat', envKey: 'DEEPSEEK_API_KEY' },
@@ -166,7 +166,8 @@ If a field is unclear, use null or empty array. Keep description under 500 chars
       const json = await response.json() as {
         choices?: Array<{ message?: { content?: string } }>;
       };
-      const text = json.choices?.[0]?.message?.content || '';
+      const rawText = json.choices?.[0]?.message?.content || '';
+      const text = stripThinkTags(rawText); // M2.7+ wraps reasoning in <think> tags
 
       // Advance provider index for round-robin
       currentProviderIndex = (currentProviderIndex + attempt + 1) % PROVIDERS.length;

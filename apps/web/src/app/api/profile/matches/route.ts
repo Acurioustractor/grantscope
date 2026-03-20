@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
 
   // Boost scores for domain/geography overlap
   const orgDomains = new Set((profile.domains || []).map((d: string) => d.toLowerCase()));
-  const orgGeo = new Set((profile.geographic_focus || []).map((g: string) => g.toLowerCase()));
+  const orgGeo = new Set<string>((profile.geographic_focus || []).map((g: string) => g.toLowerCase()));
 
   // Get user's feedback count for learning stats
   const { count: feedbackCount } = await serviceDb
@@ -81,6 +81,9 @@ export async function GET(request: NextRequest) {
     categories: string[];
     url: string | null;
     grant_type: string;
+    status: string;
+    focus_areas: string[];
+    geography: string | null;
     similarity: number;
   }) => {
     let score = grant.similarity;
@@ -89,6 +92,28 @@ export async function GET(request: NextRequest) {
     if (grant.categories?.length && orgDomains.size > 0) {
       const overlap = grant.categories.filter(c => orgDomains.has(c.toLowerCase())).length;
       score += Math.min(overlap * 0.025, 0.05);
+    }
+
+    // Focus area overlap boost (up to +0.05)
+    if (grant.focus_areas?.length && orgDomains.size > 0) {
+      const overlap = grant.focus_areas.filter(f => orgDomains.has(f.toLowerCase())).length;
+      score += Math.min(overlap * 0.025, 0.05);
+    }
+
+    // Geographic relevance boost (+0.03 if grant geography overlaps org geo)
+    if (grant.geography && orgGeo.size > 0) {
+      const geoLower = grant.geography.toLowerCase();
+      for (const g of orgGeo) {
+        if (geoLower.includes(g) || g.includes(geoLower)) {
+          score += 0.03;
+          break;
+        }
+      }
+    }
+
+    // Penalty for grants with no amount or description (low quality)
+    if (!grant.amount_max && (!grant.description || grant.description.length < 50)) {
+      score -= 0.03;
     }
 
     return {

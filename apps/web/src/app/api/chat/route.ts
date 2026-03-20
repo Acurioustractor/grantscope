@@ -48,23 +48,7 @@ function formatMoney(n: number | null): string {
 }
 
 import { getTextFromMessage } from '@/lib/ai-chat-helpers';
-
-async function getOrgProfileId(db: ReturnType<typeof getServiceSupabase>, userId: string) {
-  const { data: own } = await db
-    .from('org_profiles')
-    .select('id')
-    .eq('user_id', userId)
-    .maybeSingle();
-  if (own) return own.id;
-
-  const { data: member } = await db
-    .from('org_members')
-    .select('org_profile_id')
-    .eq('user_id', userId)
-    .limit(1)
-    .maybeSingle();
-  return member?.org_profile_id || null;
-}
+import { getEffectiveOrgId } from '@/lib/org-profile';
 
 export async function POST(req: Request) {
   const auth = await requireModule('grants');
@@ -139,7 +123,7 @@ export async function POST(req: Request) {
   try {
     if (scope === 'knowledge' && process.env.OPENAI_API_KEY && lastMessage.length > 3) {
       {
-        const orgId = await getOrgProfileId(supabase, user.id);
+        const orgId = await getEffectiveOrgId(supabase, user.id);
         if (orgId) {
           const queryEmbedding = await embedQuery(lastMessage, process.env.OPENAI_API_KEY);
           const { data: orgChunks } = await supabase.rpc('search_org_knowledge', {

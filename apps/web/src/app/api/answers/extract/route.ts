@@ -2,28 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireModule } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
 import { embedQuery } from '@grant-engine/embeddings';
+import { getEffectiveOrgId } from '@/lib/org-profile';
 import { PDFParse } from 'pdf-parse';
 import mammoth from 'mammoth';
 import * as cheerio from 'cheerio';
 
 export const maxDuration = 60;
-
-async function getOrgProfileId(db: ReturnType<typeof getServiceSupabase>, userId: string) {
-  const { data: own } = await db
-    .from('org_profiles')
-    .select('id')
-    .eq('user_id', userId)
-    .maybeSingle();
-  if (own) return own.id;
-
-  const { data: member } = await db
-    .from('org_members')
-    .select('org_profile_id')
-    .eq('user_id', userId)
-    .limit(1)
-    .maybeSingle();
-  return member?.org_profile_id || null;
-}
 
 async function extractText(file: File | null, url: string | null): Promise<{ text: string; sourceName: string }> {
   if (url) {
@@ -126,7 +110,7 @@ export async function POST(req: NextRequest) {
   const { user } = auth;
 
   const db = getServiceSupabase();
-  const orgId = await getOrgProfileId(db, user.id);
+  const orgId = await getEffectiveOrgId(db, user.id);
   if (!orgId) return NextResponse.json({ error: 'No org profile found' }, { status: 404 });
 
   const formData = await req.formData();

@@ -4,6 +4,7 @@ export interface Filters {
   minStars: number;
   color: string | null;
   search: string;
+  sortByDeadline: boolean;
 }
 
 const COLORS: Record<string, { hex: string; label: string }> = {
@@ -68,15 +69,30 @@ export function TrackerFilters({
           <button
             key={key}
             onClick={() => onChange({ ...filters, color: filters.color === key ? null : key })}
-            title={label}
-            className="w-6 h-6 border-2 transition-transform hover:scale-110"
+            className={`inline-flex items-center gap-1 px-2 py-1 text-[10px] font-black uppercase tracking-wide border-2 transition-transform hover:scale-105 ${
+              filters.color === key ? 'text-white' : 'text-white/80'
+            }`}
             style={{
-              backgroundColor: hex,
+              backgroundColor: filters.color === key ? hex : `${hex}99`,
               borderColor: filters.color === key ? '#121212' : 'transparent',
             }}
-          />
+          >
+            {label}
+          </button>
         ))}
       </div>
+
+      {/* Deadline sort */}
+      <button
+        onClick={() => onChange({ ...filters, sortByDeadline: !filters.sortByDeadline })}
+        className={`px-3 py-1.5 text-xs font-black border-2 uppercase tracking-widest ${
+          filters.sortByDeadline
+            ? 'bg-bauhaus-red text-white border-bauhaus-red'
+            : 'bg-white text-bauhaus-muted border-bauhaus-black/20 hover:border-bauhaus-black'
+        }`}
+      >
+        {filters.sortByDeadline ? '⏰ Deadline First' : '⏰ Deadline'}
+      </button>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireModule } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
+import { getImpersonateSlug } from '@/lib/org-profile';
 
 /** GET /api/portfolio — list user's portfolios with entity counts */
 export async function GET() {
@@ -8,10 +9,23 @@ export async function GET() {
   if (auth.error) return auth.error;
 
   const db = getServiceSupabase();
+
+  // Check impersonation — show impersonated org owner's portfolios
+  const impersonateSlug = await getImpersonateSlug();
+  let effectiveUserId = auth.user.id;
+  if (impersonateSlug) {
+    const { data: impOrg } = await db
+      .from('org_profiles')
+      .select('user_id')
+      .eq('slug', impersonateSlug)
+      .maybeSingle();
+    if (impOrg?.user_id) effectiveUserId = impOrg.user_id;
+  }
+
   const { data: portfolios, error } = await db
     .from('funder_portfolios')
     .select('id, name, description, created_at, updated_at')
-    .eq('user_id', auth.user.id)
+    .eq('user_id', effectiveUserId)
     .order('created_at', { ascending: false });
 
   if (error) {

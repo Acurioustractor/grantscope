@@ -11,7 +11,7 @@ if (!key) {
 }
 
 const body = {
-  model: 'MiniMax-M2.5',
+  model: 'MiniMax-M2.7',
   messages: [{ role: 'user', content: 'Reply with exactly OK' }],
   temperature: 0,
   max_tokens: 10,

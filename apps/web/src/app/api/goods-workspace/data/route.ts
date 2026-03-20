@@ -61,6 +61,7 @@ export async function GET(request: NextRequest) {
           org_type: null,
           geographic_focus: ['NT', 'QLD', 'WA', 'SA'],
         },
+        isImpersonating: false,
       };
     }
 

@@ -2,23 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireModule } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
 import { embedQuery } from '@grant-engine/embeddings';
-
-async function getOrgProfileId(db: ReturnType<typeof getServiceSupabase>, userId: string) {
-  const { data: own } = await db
-    .from('org_profiles')
-    .select('id')
-    .eq('user_id', userId)
-    .maybeSingle();
-  if (own) return own.id;
-
-  const { data: member } = await db
-    .from('org_members')
-    .select('org_profile_id')
-    .eq('user_id', userId)
-    .limit(1)
-    .maybeSingle();
-  return member?.org_profile_id || null;
-}
+import { getEffectiveOrgId } from '@/lib/org-profile';
 
 export async function GET(request: NextRequest) {
   const auth = await requireModule('grants');
@@ -26,7 +10,7 @@ export async function GET(request: NextRequest) {
   const { user } = auth;
 
   const db = getServiceSupabase();
-  const orgId = await getOrgProfileId(db, user.id);
+  const orgId = await getEffectiveOrgId(db, user.id);
   if (!orgId) return NextResponse.json({ error: 'No org profile found' }, { status: 404 });
 
   const { searchParams } = request.nextUrl;
@@ -53,7 +37,7 @@ export async function POST(request: NextRequest) {
   const { user } = auth;
 
   const db = getServiceSupabase();
-  const orgId = await getOrgProfileId(db, user.id);
+  const orgId = await getEffectiveOrgId(db, user.id);
   if (!orgId) return NextResponse.json({ error: 'No org profile found' }, { status: 404 });
 
   const body = await request.json();
@@ -97,7 +81,7 @@ export async function PUT(request: NextRequest) {
   const { user } = auth;
 
   const db = getServiceSupabase();
-  const orgId = await getOrgProfileId(db, user.id);
+  const orgId = await getEffectiveOrgId(db, user.id);
   if (!orgId) return NextResponse.json({ error: 'No org profile found' }, { status: 404 });
 
   const body = await request.json();
@@ -150,7 +134,7 @@ export async function DELETE(request: NextRequest) {
   const { user } = auth;
 
   const db = getServiceSupabase();
-  const orgId = await getOrgProfileId(db, user.id);
+  const orgId = await getEffectiveOrgId(db, user.id);
   if (!orgId) return NextResponse.json({ error: 'No org profile found' }, { status: 404 });
 
   const { searchParams } = request.nextUrl;

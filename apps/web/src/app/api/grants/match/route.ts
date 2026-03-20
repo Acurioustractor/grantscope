@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireModule } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
+import { getEffectiveOrgId } from '@/lib/org-profile';
 
 /**
  * GET /api/grants/match — AI-scored grant matches for the authenticated user's org profile
@@ -14,13 +15,17 @@ export async function GET() {
   if (auth.error) return auth.error;
   const { user } = auth;
 
-  // Get user's org profile
+  // Get user's org profile (respects impersonation)
   const serviceDb = getServiceSupabase();
-  const { data: profile } = await serviceDb
-    .from('org_profiles')
-    .select('id, name, abn, domains, geographic_focus, org_type, annual_revenue, embedding, mission')
-    .eq('user_id', user.id)
-    .single();
+  const orgId = await getEffectiveOrgId(serviceDb, user.id);
+
+  const { data: profile } = orgId
+    ? await serviceDb
+        .from('org_profiles')
+        .select('id, name, abn, domains, geographic_focus, org_type, annual_revenue, embedding, mission')
+        .eq('id', orgId)
+        .single()
+    : { data: null };
 
   if (!profile) {
     return NextResponse.json({

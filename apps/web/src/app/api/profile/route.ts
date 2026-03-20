@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { createSupabaseServer } from '@/lib/supabase-server';
 import { getServiceSupabase } from '@/lib/supabase';
+import { isAdminEmail } from '@/lib/admin';
 import { embedQuery } from '@grant-engine/embeddings';
+
+/** If admin is impersonating an org, return that org's slug (otherwise null) */
+async function getImpersonatedSlug(userEmail: string | undefined): Promise<string | null> {
+  if (!userEmail || !isAdminEmail(userEmail)) return null;
+  const cookieStore = await cookies();
+  return cookieStore.get('cg_impersonate_org')?.value ?? null;
+}
 
 export async function GET() {
   const supabase = await createSupabaseServer();
@@ -9,11 +18,13 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const serviceDb = getServiceSupabase();
-  const { data, error } = await serviceDb
-    .from('org_profiles')
-    .select('*')
-    .eq('user_id', user.id)
-    .maybeSingle();
+  const impersonateSlug = await getImpersonatedSlug(user.email);
+
+  const query = impersonateSlug
+    ? serviceDb.from('org_profiles').select('*').eq('slug', impersonateSlug).maybeSingle()
+    : serviceDb.from('org_profiles').select('*').eq('user_id', user.id).maybeSingle();
+
+  const { data, error } = await query;
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
@@ -30,6 +41,7 @@ export async function PUT(request: NextRequest) {
     domains, geographic_focus, org_type,
     annual_revenue, team_size, projects,
     notify_email, notify_threshold,
+    org_status, auspice_org_name,
   } = body;
 
   if (!name) {
@@ -60,11 +72,24 @@ export async function PUT(request: NextRequest) {
   }
 
   const serviceDb = getServiceSupabase();
+  const impersonateSlug = await getImpersonatedSlug(user.email);
+
+  // When impersonating, resolve the target org's user_id
+  let targetUserId = user.id;
+  if (impersonateSlug) {
+    const { data: targetOrg } = await serviceDb
+      .from('org_profiles')
+      .select('user_id')
+      .eq('slug', impersonateSlug)
+      .maybeSingle();
+    if (targetOrg?.user_id) targetUserId = targetOrg.user_id;
+  }
+
   const { data, error } = await serviceDb
     .from('org_profiles')
     .upsert(
       {
-        user_id: user.id,
+        user_id: targetUserId,
         name,
         description: description || null,
         mission: mission || null,
@@ -78,6 +103,8 @@ export async function PUT(request: NextRequest) {
         projects: projects || null,
         embedding: embedding ? JSON.stringify(embedding) : null,
         embedding_text: embeddingParts || null,
+        org_status: org_status || null,
+        auspice_org_name: auspice_org_name || null,
         notify_email: notify_email ?? true,
         notify_threshold: notify_threshold ?? 0.75,
         updated_at: new Date().toISOString(),

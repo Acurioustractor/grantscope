@@ -1,8 +1,10 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
 import { createSupabaseServer } from '@/lib/supabase-server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { isAdminEmail } from '@/lib/admin';
+import { ImpersonateButton } from './_components/impersonate-button';
 
 export const metadata = {
   title: 'All Organisations — CivicGraph Admin',
@@ -12,6 +14,13 @@ export default async function OrgIndexPage() {
   const supabase = await createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login?next=/org');
+
+  // If impersonating, redirect to that org's dashboard
+  const cookieStore = await cookies();
+  const impersonateSlug = cookieStore.get('cg_impersonate_org')?.value;
+  if (impersonateSlug && isAdminEmail(user.email)) {
+    redirect(`/org/${impersonateSlug}`);
+  }
 
   if (!isAdminEmail(user.email)) {
     // Non-admins: redirect to their own org if they have one
@@ -109,12 +118,15 @@ export default async function OrgIndexPage() {
                   <span>Owner: {ownerEmails[org.user_id] ?? 'unlinked'}</span>
                 </div>
               </div>
-              <Link
-                href={`/org/${org.slug}`}
-                className="ml-6 shrink-0 px-5 py-2.5 bg-bauhaus-red text-white font-black uppercase tracking-widest text-sm hover:bg-red-700 transition-colors"
-              >
-                View Dashboard
-              </Link>
+              <div className="ml-6 shrink-0 flex items-center gap-2">
+                <ImpersonateButton slug={org.slug} />
+                <Link
+                  href={`/org/${org.slug}`}
+                  className="px-5 py-2.5 bg-bauhaus-red text-white font-black uppercase tracking-widest text-sm hover:bg-red-700 transition-colors"
+                >
+                  View Dashboard
+                </Link>
+              </div>
             </div>
           ))}
         </div>

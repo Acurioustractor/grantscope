@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase-server';
 import { getServiceSupabase } from '@/lib/supabase';
+import { getEffectiveOrgId } from '@/lib/org-profile';
 
 /**
  * GET /api/team — list team members for user's org (with emails)
@@ -32,34 +33,31 @@ export async function GET() {
 
   const serviceDb = getServiceSupabase();
 
-  // Get user's org profile
-  const { data: profile } = await serviceDb
+  // Get effective org (respects impersonation)
+  const orgProfileId = await getEffectiveOrgId(serviceDb, user.id);
+  if (!orgProfileId) {
+    return NextResponse.json({ members: [], orgProfileId: null, currentUserRole: null });
+  }
+
+  // Determine user's role in this org
+  const { data: ownerCheck } = await serviceDb
     .from('org_profiles')
     .select('id')
+    .eq('id', orgProfileId)
     .eq('user_id', user.id)
     .maybeSingle();
 
-  let orgProfileId: string | null = null;
   let currentUserRole: string | null = null;
-
-  if (!profile) {
-    // Check if user is a member of someone else's org
+  if (ownerCheck) {
+    currentUserRole = 'admin';
+  } else {
     const { data: membership } = await serviceDb
       .from('org_members')
-      .select('org_profile_id, role')
+      .select('role')
+      .eq('org_profile_id', orgProfileId)
       .eq('user_id', user.id)
-      .limit(1)
       .maybeSingle();
-
-    if (!membership) {
-      return NextResponse.json({ members: [], orgProfileId: null, currentUserRole: null });
-    }
-
-    orgProfileId = membership.org_profile_id;
-    currentUserRole = membership.role;
-  } else {
-    orgProfileId = profile.id;
-    currentUserRole = 'admin'; // org owner is always admin
+    currentUserRole = membership?.role ?? null;
   }
 
   const { data: members } = await serviceDb

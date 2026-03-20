@@ -15,6 +15,11 @@ import {
   getDssPaymentsByState,
   getYouthJusticeIndicators,
   getCrossSystemHeatmap,
+  getAccoFundingGap,
+  getFundingByRemoteness,
+  getUnfundedEffectivePrograms,
+  getYjRevolvingDoor,
+  getYjFoundations,
   money,
 } from '@/lib/services/report-service';
 
@@ -95,6 +100,16 @@ type StateTotal = {
   growth_pct: number;
 };
 
+type AccoGap = { org_type: string; orgs: number; total_funding: number; avg_grant: number };
+type RemotenessRow = { remoteness: string; orgs: number; total: number; grants: number };
+type UnfundedProgram = { name: string; type: string; evidence_level: string; cultural_authority: string; geography: string };
+type RevolvingDoorRow = {
+  canonical_name: string; revolving_door_score: number; influence_vectors: number;
+  total_donated: number; total_contracts: number; total_funded: number;
+  parties_funded: string; distinct_buyers: number; is_community_controlled: boolean;
+};
+type FoundationRow = { name: string; total_giving_annual: number; thematic_focus: string; geographic_focus: string };
+
 export type YouthJusticeReport = {
   stateTotals: StateTotal[];
   spendingTimeSeries: StateSpending[];
@@ -110,10 +125,15 @@ export type YouthJusticeReport = {
   nationalCommunity: number;
   almaCount: number;
   detentionCommunityRatio: number;
+  accoGap: AccoGap[];
+  remoteness: RemotenessRow[];
+  unfundedPrograms: UnfundedProgram[];
+  revolvingDoor: RevolvingDoorRow[];
+  foundations: FoundationRow[];
 };
 
 async function getReport(): Promise<YouthJusticeReport> {
-  const [rogsData, almaData, contractsData, grantsData, ndisData, dssData, yjIndicatorsData, heatmapData, almaCountVal, almaByLgaData] = await Promise.all([
+  const [rogsData, almaData, contractsData, grantsData, ndisData, dssData, yjIndicatorsData, heatmapData, almaCountVal, almaByLgaData, accoGapData, remotenessData, unfundedData, revolvingDoorData, foundationsData] = await Promise.all([
     getRogsTimeSeries('ROGS Youth Justice', ALL_STATES),
     getAlmaInterventions('youth-justice'),
     getYouthJusticeContracts(15),
@@ -124,6 +144,11 @@ async function getReport(): Promise<YouthJusticeReport> {
     getCrossSystemHeatmap(),
     getAlmaCount('youth-justice'),
     getAlmaByLga('youth-justice'),
+    getAccoFundingGap('youth-justice'),
+    getFundingByRemoteness('youth-justice'),
+    getUnfundedEffectivePrograms('youth-justice'),
+    getYjRevolvingDoor('youth-justice', 10),
+    getYjFoundations(10),
   ]);
 
   // Process ROGS data into time series and state totals
@@ -214,6 +239,11 @@ async function getReport(): Promise<YouthJusticeReport> {
     nationalCommunity,
     almaCount: almaCountVal,
     detentionCommunityRatio: nationalCommunity > 0 ? Math.round(nationalDetention / nationalCommunity) : 0,
+    accoGap: (accoGapData as AccoGap[] | null) || [],
+    remoteness: (remotenessData as RemotenessRow[] | null) || [],
+    unfundedPrograms: (unfundedData as UnfundedProgram[] | null) || [],
+    revolvingDoor: (revolvingDoorData as RevolvingDoorRow[] | null) || [],
+    foundations: (foundationsData as FoundationRow[] | null) || [],
   };
 }
 
@@ -299,6 +329,251 @@ export default async function YouthJusticeReportPage() {
           <div className="text-xs text-gray-500 mt-1">Evidence-Based Alternatives</div>
         </div>
       </div>
+
+      {/* ━━━━ Five Structural Failures ━━━━ */}
+      <section className="mb-12">
+        <h2 className="text-xl font-black text-bauhaus-black uppercase tracking-wider mb-1">Five Structural Failures</h2>
+        <p className="text-sm text-bauhaus-muted mb-6">The system doesn&apos;t fail randomly. These patterns are structural.</p>
+
+        {/* 1. Incarceration Premium — big visual ratio */}
+        <div className="border-4 border-bauhaus-black rounded-sm p-6 mb-6" style={{ boxShadow: '6px 6px 0px 0px var(--color-bauhaus-red)' }}>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-xs font-black text-bauhaus-red uppercase tracking-widest">Failure #1</span>
+            <span className="text-xs font-black text-bauhaus-muted uppercase tracking-widest">The Incarceration Premium</span>
+          </div>
+          <p className="text-sm text-bauhaus-muted mb-4">
+            For every $1 spent on community supervision, ${report.detentionCommunityRatio} is spent on detention.
+            Evidence universally shows community-based approaches are cheaper AND more effective.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 items-stretch">
+            <div className="flex-1 bg-red-50 border-2 border-red-200 rounded-sm p-4 text-center">
+              <div className="text-3xl sm:text-4xl font-black text-red-600">{money(report.nationalDetention)}</div>
+              <div className="text-xs text-red-400 font-bold uppercase tracking-wider mt-1">Detention</div>
+              <div className="mt-3 h-4 bg-red-500 rounded-full" />
+            </div>
+            <div className="flex items-center justify-center text-2xl font-black text-bauhaus-muted">vs</div>
+            <div className="flex-1 bg-emerald-50 border-2 border-emerald-200 rounded-sm p-4 text-center">
+              <div className="text-3xl sm:text-4xl font-black text-emerald-600">{money(report.nationalCommunity)}</div>
+              <div className="text-xs text-emerald-400 font-bold uppercase tracking-wider mt-1">Community</div>
+              <div className="mt-3 h-4 rounded-full overflow-hidden bg-gray-200">
+                <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${Math.round((report.nationalCommunity / Math.max(report.nationalDetention, 1)) * 100)}%` }} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 2. ACCO Funding Gap */}
+        {report.accoGap.length === 2 && (() => {
+          const acco = report.accoGap.find(r => r.org_type === 'Community Controlled');
+          const nonIndigenous = report.accoGap.find(r => r.org_type === 'Non-Indigenous');
+          if (!acco || !nonIndigenous) return null;
+          const gapPct = Math.round(((nonIndigenous.avg_grant - acco.avg_grant) / nonIndigenous.avg_grant) * 100);
+          return (
+            <div className="border-4 border-bauhaus-black rounded-sm p-6 mb-6">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xs font-black text-bauhaus-red uppercase tracking-widest">Failure #2</span>
+                <span className="text-xs font-black text-bauhaus-muted uppercase tracking-widest">The Community-Controlled Gap</span>
+              </div>
+              <p className="text-sm text-bauhaus-muted mb-4">
+                Community-controlled organisations receive <span className="font-black text-bauhaus-red">{gapPct}% smaller grants</span> on average
+                than non-Indigenous providers — despite serving the populations most impacted by justice system contact.
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-amber-50 border-2 border-amber-200 rounded-sm p-4">
+                  <div className="text-xs font-black text-amber-600 uppercase tracking-wider mb-2">Community Controlled</div>
+                  <div className="text-2xl font-black text-bauhaus-black">{acco.orgs} orgs</div>
+                  <div className="text-sm font-mono text-bauhaus-muted">{money(acco.total_funding)} total</div>
+                  <div className="text-sm font-mono font-bold text-amber-700">{money(acco.avg_grant)} avg grant</div>
+                </div>
+                <div className="bg-gray-50 border-2 border-gray-200 rounded-sm p-4">
+                  <div className="text-xs font-black text-gray-500 uppercase tracking-wider mb-2">Non-Indigenous</div>
+                  <div className="text-2xl font-black text-bauhaus-black">{nonIndigenous.orgs} orgs</div>
+                  <div className="text-sm font-mono text-bauhaus-muted">{money(nonIndigenous.total_funding)} total</div>
+                  <div className="text-sm font-mono font-bold text-gray-700">{money(nonIndigenous.avg_grant)} avg grant</div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* 3. Geography Trap — remoteness bars */}
+        {report.remoteness.length > 0 && (() => {
+          const maxFunding = Math.max(...report.remoteness.map(r => r.total));
+          const metro = report.remoteness.find(r => r.remoteness.includes('Major'));
+          const remote = report.remoteness.filter(r => r.remoteness.includes('Remote'));
+          const remoteTotalFunding = remote.reduce((s, r) => s + r.total, 0);
+          const ratio = metro && remoteTotalFunding > 0 ? Math.round(metro.total / remoteTotalFunding) : 0;
+          return (
+            <div className="border-4 border-bauhaus-black rounded-sm p-6 mb-6">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xs font-black text-bauhaus-red uppercase tracking-widest">Failure #3</span>
+                <span className="text-xs font-black text-bauhaus-muted uppercase tracking-widest">The Geography Trap</span>
+              </div>
+              <p className="text-sm text-bauhaus-muted mb-4">
+                Major cities receive <span className="font-black text-bauhaus-red">{ratio}x more funding</span> than Remote + Very Remote combined —
+                despite remote communities having the highest rates of youth justice contact.
+              </p>
+              <div className="space-y-3">
+                {report.remoteness.map(r => (
+                  <div key={r.remoteness} className="flex items-center gap-3">
+                    <div className="w-44 text-xs font-bold text-right truncate shrink-0">{r.remoteness.replace(' Australia', '')}</div>
+                    <div className="flex-1 h-6 bg-gray-100 rounded-sm overflow-hidden">
+                      <div
+                        className={`h-full rounded-sm ${r.remoteness.includes('Remote') ? 'bg-red-500' : r.remoteness.includes('Outer') ? 'bg-amber-400' : r.remoteness.includes('Inner') ? 'bg-blue-400' : 'bg-emerald-500'}`}
+                        style={{ width: `${Math.max(2, (r.total / maxFunding) * 100)}%` }}
+                      />
+                    </div>
+                    <div className="w-20 text-xs font-mono text-right shrink-0">{money(r.total)}</div>
+                    <div className="w-16 text-[10px] text-bauhaus-muted text-right shrink-0">{r.orgs} orgs</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* 4. Evidence-Funding Mismatch */}
+        {report.unfundedPrograms.length > 0 && (
+          <div className="border-4 border-bauhaus-black rounded-sm p-6 mb-6">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-xs font-black text-bauhaus-red uppercase tracking-widest">Failure #4</span>
+              <span className="text-xs font-black text-bauhaus-muted uppercase tracking-widest">Evidence Without Funding</span>
+            </div>
+            <p className="text-sm text-bauhaus-muted mb-4">
+              These <span className="font-black">{report.unfundedPrograms.length} programs</span> have proven effectiveness or Indigenous-led authority
+              but <span className="font-black text-bauhaus-red">no matching justice funding</span> in our database.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {report.unfundedPrograms.map(p => (
+                <div key={p.name} className="border-2 border-red-200 bg-red-50/50 rounded-sm p-3">
+                  <h4 className="font-bold text-sm leading-tight mb-1">{p.name}</h4>
+                  <div className="flex flex-wrap gap-1 mb-1.5">
+                    <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded uppercase">{p.type}</span>
+                    {p.geography && <span className="text-[10px] font-bold bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">{p.geography}</span>}
+                  </div>
+                  <p className="text-[10px] text-gray-500 leading-relaxed">{p.evidence_level}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 5. Revolving Door */}
+        {report.revolvingDoor.length > 0 && (
+          <div className="border-4 border-bauhaus-black rounded-sm p-6 mb-6" style={{ boxShadow: '6px 6px 0px 0px var(--color-bauhaus-blue)' }}>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-xs font-black text-bauhaus-red uppercase tracking-widest">Failure #5</span>
+              <span className="text-xs font-black text-bauhaus-muted uppercase tracking-widest">The Revolving Door</span>
+            </div>
+            <p className="text-sm text-bauhaus-muted mb-4">
+              These entities receive youth justice funding while also holding government contracts and making political donations.
+              Multiple influence vectors = structural power.
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-bauhaus-black text-white text-left">
+                    <th className="px-3 py-2 font-black uppercase tracking-wider text-[10px]">Entity</th>
+                    <th className="px-3 py-2 font-black uppercase tracking-wider text-[10px] text-center">Vectors</th>
+                    <th className="px-3 py-2 font-black uppercase tracking-wider text-[10px] text-right">Donated</th>
+                    <th className="px-3 py-2 font-black uppercase tracking-wider text-[10px] text-right">Contracts</th>
+                    <th className="px-3 py-2 font-black uppercase tracking-wider text-[10px] text-right">Justice $</th>
+                    <th className="px-3 py-2 font-black uppercase tracking-wider text-[10px] text-right">Score</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {report.revolvingDoor.map((r, i) => (
+                    <tr key={r.canonical_name} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                      <td className="px-3 py-2 text-xs font-medium">
+                        {r.canonical_name}
+                        {r.is_community_controlled && <span className="ml-1 text-[9px] bg-amber-100 text-amber-700 px-1 rounded">ACCO</span>}
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        <div className="flex justify-center gap-0.5">
+                          {Array.from({ length: r.influence_vectors }, (_, j) => (
+                            <div key={j} className="w-2.5 h-2.5 rounded-full bg-bauhaus-red" />
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2 text-right font-mono text-xs text-red-600">{r.total_donated > 0 ? money(r.total_donated) : '—'}</td>
+                      <td className="px-3 py-2 text-right font-mono text-xs text-purple-600">{money(r.total_contracts)}</td>
+                      <td className="px-3 py-2 text-right font-mono text-xs text-emerald-600">{money(r.total_funded)}</td>
+                      <td className="px-3 py-2 text-right font-mono text-xs font-bold">{r.revolving_door_score}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* ━━━━ Philanthropy Landscape ━━━━ */}
+      {report.foundations.length > 0 && (
+        <section className="mb-12">
+          <h2 className="text-xl font-black text-bauhaus-black uppercase tracking-wider mb-1">Philanthropy Landscape</h2>
+          <p className="text-sm text-bauhaus-muted mb-4">
+            Foundations with youth, justice, or Indigenous focus areas. These are potential funding partners for evidence-based alternatives.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {report.foundations.map(f => {
+              const focuses = f.thematic_focus.replace(/[{}"]/g, '').split(',').slice(0, 5);
+              return (
+                <div key={f.name} className="border-2 border-gray-200 rounded-sm p-4 hover:border-bauhaus-blue transition-colors">
+                  <div className="flex justify-between items-start gap-2 mb-2">
+                    <h4 className="font-bold text-sm leading-tight">{f.name}</h4>
+                    <span className="text-sm font-black text-bauhaus-blue shrink-0">{money(f.total_giving_annual)}/yr</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1 mb-1">
+                    {focuses.map(tag => (
+                      <span key={tag} className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                        tag.includes('justice') ? 'bg-red-100 text-red-700' :
+                        tag.includes('indigenous') ? 'bg-amber-100 text-amber-700' :
+                        tag.includes('youth') ? 'bg-blue-100 text-blue-700' :
+                        'bg-gray-100 text-gray-600'
+                      }`}>{tag.replace(/-/g, ' ')}</span>
+                    ))}
+                  </div>
+                  {f.geographic_focus && <p className="text-[10px] text-gray-400">{f.geographic_focus}</p>}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* ━━━━ Explore the Network ━━━━ */}
+      <section className="mb-12">
+        <div className="border-4 border-bauhaus-blue rounded-sm overflow-hidden">
+          <div className="bg-bauhaus-blue text-white px-6 py-4">
+            <h2 className="text-lg font-black uppercase tracking-wider">Explore the Network</h2>
+            <p className="text-sm text-white/70 mt-1">Interactive force-directed visualizations of youth justice funding flows and power structures.</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-0">
+            <Link
+              href="/graph?preset=2"
+              className="p-5 border-b sm:border-b-0 sm:border-r border-gray-200 hover:bg-blue-50/50 transition-colors group"
+            >
+              <h3 className="font-black text-sm uppercase tracking-wider mb-1 group-hover:text-bauhaus-blue">Youth Justice Graph</h3>
+              <p className="text-xs text-gray-500 leading-relaxed">Programs funding services — who funds whom and how much.</p>
+            </Link>
+            <Link
+              href="/graph?preset=0"
+              className="p-5 border-b sm:border-b-0 sm:border-r border-gray-200 hover:bg-blue-50/50 transition-colors group"
+            >
+              <h3 className="font-black text-sm uppercase tracking-wider mb-1 group-hover:text-bauhaus-blue">Power Map</h3>
+              <p className="text-xs text-gray-500 leading-relaxed">Entities spanning 3+ systems — cross-system influence.</p>
+            </Link>
+            <Link
+              href="/graph?preset=2"
+              className="p-5 hover:bg-blue-50/50 transition-colors group"
+            >
+              <h3 className="font-black text-sm uppercase tracking-wider mb-1 group-hover:text-bauhaus-blue">Board Interlocks</h3>
+              <p className="text-xs text-gray-500 leading-relaxed">People sitting on multiple charity boards — the hidden connectors.</p>
+            </Link>
+          </div>
+        </div>
+      </section>
 
       {/* ━━━━ Follow the Child: Pipeline + State Cards + Heatmap ━━━━ */}
       {report.heatmapRows.length > 0 && (

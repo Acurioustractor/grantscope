@@ -20,6 +20,14 @@ const menuItems = [
 
 const adminSections = [
   {
+    heading: 'Super Admin',
+    items: [
+      { href: '/org', label: 'All Organisations' },
+      { href: '/org/justicehub/intelligence', label: 'JH Command Center' },
+      { href: '/graph', label: 'Network Graph' },
+    ],
+  },
+  {
     heading: 'Ops & Health',
     items: [
       { href: '/ops', label: 'Ops Dashboard' },

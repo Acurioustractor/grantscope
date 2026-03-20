@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireModule } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
 import { STAGE_TO_GHL } from '@/lib/ghl';
+import { getImpersonateSlug } from '@/lib/org-profile';
 
 type RouteContext = { params: Promise<{ grantId: string }> };
 
