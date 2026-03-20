@@ -47,14 +47,23 @@ const VIEW_GROUPS = [
       'v_austender_supplier_tax',
       'v_austender_top_charities',
       'v_austender_top_oric',
+      'mv_entity_power_index',
     ],
   },
-  // Group 3: Depend on earlier views
+  // Group 3: Depend on earlier views (mv_funding_deserts depends on mv_entity_power_index + mv_funding_by_lga)
   {
     concurrent: true,
     views: [
       'mv_crossref_quality',
       'mv_data_quality',
+      'mv_funding_deserts',
+      'mv_revolving_door',
+      'mv_disability_landscape',
+      'mv_board_interlocks',
+      'mv_person_entity_network',
+      'mv_person_influence',
+      'mv_individual_donors',
+      'mv_person_cross_system',
     ],
   },
   // Group 4: Alma dashboard views (depend on alma tables)

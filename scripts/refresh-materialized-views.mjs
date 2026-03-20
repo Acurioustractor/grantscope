@@ -24,6 +24,8 @@ const VIEWS = [
   'mv_data_quality',
   'mv_crossref_quality',
   'mv_donor_contract_crossref',
+  'mv_entity_power_index',
+  'mv_funding_deserts',
 ];
 
 async function refreshView(viewName) {
