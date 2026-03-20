@@ -54,6 +54,7 @@ const megaMenuSections = [
     title: 'Investigations',
     links: [
       { href: '/reports/power-concentration', label: 'Power Index', desc: '82K entities scored across 7 datasets' },
+      { href: '/reports/political-money', label: 'Political Money', desc: 'Who funds politics & what they get back' },
       { href: '/reports/donor-contractors', label: 'Donor-Contractors', desc: 'Entities that both donate and hold government contracts' },
       { href: '/reports/cross-reference', label: '$74B Question', desc: 'Who gets government contracts?' },
       { href: '/reports/big-philanthropy', label: '$222 Billion', desc: 'Where charity money goes' },
@@ -61,6 +62,7 @@ const megaMenuSections = [
       { href: '/reports/who-runs-australia', label: 'Who Runs Australia?', desc: 'Boards, donations, lobbying & contracts' },
       { href: '/reports/funding-deserts', label: 'Funding Deserts', desc: 'Where disadvantage meets underinvestment' },
       { href: '/reports/data-health', label: 'Data Health', desc: 'Coverage & completeness across 7 systems' },
+      { href: '/reports/tax-transparency', label: 'Tax Transparency', desc: 'Government contracts vs tax paid' },
     ],
   },
   {

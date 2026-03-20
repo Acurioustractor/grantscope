@@ -65,6 +65,50 @@ export default function ReportsPage() {
         </a>
       </section>
 
+      {/* ===== FLAGSHIP: POWER CONCENTRATION ===== */}
+      <section className="mb-6">
+        <a href="/reports/power-concentration" className="group block">
+          <div className="bg-bauhaus-black border-4 border-bauhaus-black p-8 transition-all group-hover:-translate-y-1" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-blue)' }}>
+            <div className="text-xs font-black text-bauhaus-yellow mb-2 uppercase tracking-widest">Cross-System Investigation — NEW</div>
+            <h3 className="text-2xl font-black text-white mb-3">Cross-System Power Concentration</h3>
+            <p className="text-base text-white/80 leading-relaxed mb-4">
+              82,967 entities scored across 7 public datasets. Who appears everywhere,
+              who holds power across systems, who gets watched but never funded, and where
+              the funding deserts are.
+            </p>
+            <div className="flex gap-6 text-white/60 text-sm font-bold">
+              <span>7 datasets cross-referenced</span>
+              <span>&middot;</span>
+              <span>$918B tracked &rarr; 4,726 revolving door entities</span>
+              <span>&middot;</span>
+              <span>931 severe funding deserts</span>
+            </div>
+          </div>
+        </a>
+      </section>
+
+      {/* ===== FLAGSHIP: TAX TRANSPARENCY ===== */}
+      <section className="mb-6">
+        <a href="/reports/tax-transparency" className="group block">
+          <div className="bg-white border-4 border-bauhaus-black p-8 transition-all group-hover:-translate-y-1" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-red)' }}>
+            <div className="text-xs font-black text-bauhaus-red mb-2 uppercase tracking-widest">Cross-Dataset Investigation &mdash; NEW</div>
+            <h3 className="text-2xl font-black text-bauhaus-black mb-3">Tax Transparency: Contracts vs Tax</h3>
+            <p className="text-base text-bauhaus-muted leading-relaxed mb-4">
+              Who gets government contracts &mdash; and how much tax do they pay?
+              ATO tax transparency data cross-referenced with 770K+ AusTender contracts by ABN.
+              Billions in public money flowing to entities paying minimal tax.
+            </p>
+            <div className="flex gap-6 text-bauhaus-muted/60 text-sm font-bold">
+              <span>26K+ ATO records</span>
+              <span>&middot;</span>
+              <span>770K+ contracts</span>
+              <span>&middot;</span>
+              <span>Matched by ABN</span>
+            </div>
+          </div>
+        </a>
+      </section>
+
       {/* ===== FLAGSHIP: TEMPORAL ANALYSIS ===== */}
       <section className="mb-6">
         <a href="/reports/timing" className="group block">
@@ -82,6 +126,28 @@ export default function ReportsPage() {
               <span>$180B in correlated contracts</span>
               <span>&middot;</span>
               <span>134 entities</span>
+            </div>
+          </div>
+        </a>
+      </section>
+
+      {/* ===== FLAGSHIP: POLITICAL MONEY ===== */}
+      <section className="mb-6">
+        <a href="/reports/political-money" className="group block">
+          <div className="bg-bauhaus-red border-4 border-bauhaus-black p-8 transition-all group-hover:-translate-y-1" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-black)' }}>
+            <div className="text-xs font-black text-bauhaus-yellow mb-2 uppercase tracking-widest">Cross-Dataset Investigation — NEW</div>
+            <h3 className="text-2xl font-black text-white mb-3">Political Money</h3>
+            <p className="text-base text-white/80 leading-relaxed mb-4">
+              Who funds Australian politics &mdash; and what do they get in return?
+              312K donation records cross-referenced against 770K government contracts.
+              $21.9B in tracked political donations. The donor-to-contractor pipeline, exposed.
+            </p>
+            <div className="flex gap-6 text-white/60 text-sm font-bold">
+              <span>312K donation records</span>
+              <span>&middot;</span>
+              <span>35K unique donors</span>
+              <span>&middot;</span>
+              <span>27 years of disclosure data</span>
             </div>
           </div>
         </a>
