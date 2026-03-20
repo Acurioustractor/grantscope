@@ -64,6 +64,8 @@ const VIEW_GROUPS = [
       'mv_person_influence',
       'mv_individual_donors',
       'mv_person_cross_system',
+      'mv_person_network',
+      'mv_trustee_grantee_overlaps',
     ],
   },
   // Group 4: Alma dashboard views (depend on alma tables)
