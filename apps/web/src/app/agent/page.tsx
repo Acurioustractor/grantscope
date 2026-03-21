@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { AgentPlayground } from './playground';
 
 export const metadata: Metadata = {
   title: 'Agent API — CivicGraph',
@@ -112,6 +113,9 @@ Content-Type: application/json
           <pre className="text-sm font-mono text-bauhaus-black">{`GET /api/agent`}</pre>
         </div>
       </section>
+
+      {/* Live Playground */}
+      <AgentPlayground />
 
       {/* Actions */}
       <section className="mb-12">
