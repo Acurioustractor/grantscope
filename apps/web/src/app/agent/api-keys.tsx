@@ -21,10 +21,18 @@ interface UsageDay {
   avg_ms: number;
 }
 
+interface ActionBreakdown {
+  action: string;
+  requests: number;
+  errors: number;
+  avg_ms: number;
+}
+
 interface UsageData {
   keys: { id: string; name: string; prefix: string; requests: number; errors: number }[];
   totals: { requests: number; errors: number };
   daily: UsageDay[];
+  actions?: ActionBreakdown[];
 }
 
 export function UsageDashboard() {
@@ -90,6 +98,31 @@ export function UsageDashboard() {
             <div className="flex justify-between mt-1">
               <span className="text-[9px] text-bauhaus-muted font-bold">{daily[0]?.day.slice(5)}</span>
               <span className="text-[9px] text-bauhaus-muted font-bold">{daily[daily.length - 1]?.day.slice(5)}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Action breakdown */}
+        {usage.actions && usage.actions.length > 0 && (
+          <div className="border-t-4 border-bauhaus-black p-4">
+            <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-3">By Action</div>
+            <div className="space-y-1.5">
+              {usage.actions.map(a => {
+                const pct = usage.totals.requests > 0 ? (a.requests / usage.totals.requests) * 100 : 0;
+                return (
+                  <div key={a.action} className="flex items-center gap-2 text-xs font-medium text-bauhaus-muted">
+                    <code className="text-[10px] font-mono font-bold text-bauhaus-black w-28 shrink-0">{a.action}</code>
+                    <div className="flex-1 h-3 bg-bauhaus-canvas border border-bauhaus-black/10 relative">
+                      <div
+                        className="h-full bg-bauhaus-blue"
+                        style={{ width: `${Math.max(pct, 2)}%` }}
+                      />
+                    </div>
+                    <span className="tabular-nums shrink-0 w-16 text-right">{a.requests.toLocaleString()}</span>
+                    <span className="tabular-nums shrink-0 w-14 text-right text-bauhaus-muted/60">{a.avg_ms}ms</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

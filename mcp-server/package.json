@@ -1,6 +1,6 @@
 {
   "name": "civicgraph-mcp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "CivicGraph MCP server — Australian government intelligence for AI agents. 560K entities, 1.5M relationships, 770K contracts.",
   "bin": {
     "civicgraph-mcp": "./index.mjs"

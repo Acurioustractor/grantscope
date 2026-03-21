@@ -35,6 +35,10 @@
     {
       "path": "/api/civicscope/cron?mode=telegram",
       "schedule": "30 6 * * *"
+    },
+    {
+      "path": "/api/cron/usage-alerts",
+      "schedule": "0 * * * *"
     }
   ]
 }

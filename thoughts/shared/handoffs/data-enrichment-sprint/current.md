@@ -8,53 +8,55 @@ status: active
 # Work Stream: data-enrichment-sprint
 
 ## Ledger
-**Updated:** 2026-03-20T14:00:00Z
-**Goal:** Bulk enrich entities via MiniMax M2.7 — descriptions, sectors, classifications, linkages
+**Updated:** 2026-03-21T16:30:00Z
+**Goal:** Data infrastructure scaling + relationship expansion
 **Branch:** main
-**Test:** `node --env-file=.env scripts/gsql.mjs "SELECT entity_type, SUM(CASE WHEN description IS NOT NULL THEN 1 ELSE 0 END) as has_desc, COUNT(*) as total FROM gs_entities GROUP BY entity_type ORDER BY total DESC"`
+**Test:** `node --env-file=.env scripts/gsql.mjs "SELECT relationship_type, COUNT(*) FROM gs_relationships GROUP BY relationship_type ORDER BY count DESC"`
 
 ### Now
-[->] SE enrichment still running (b878ab6) — processing indigenous corps, coverage unchanged at 396/5,181
+[->] entity_xref optimized + subsidiary expansion done. Ready for next infrastructure task.
 
 ### This Session
-- [x] **+13,685 new entities** from justice_funding ABN linkage (145K → 158.7K)
-- [x] **Government bodies fully enriched**: 870/870 have descriptions (was 75/1,535)
-- [x] Gov body cleanup: 665 junk entities reclassified (CSV fragments, not real gov bodies)
-- [x] ALMA linker v4 run: 1 new link (63.6% coverage — remaining 424 are hard-to-match)
-- [x] Foundation grantee mapping: 3 matched, 0 new edges (already existed)
-- [x] SE enrichment: 396 now have descriptions on gs_entities (was 0, still running)
-- [x] New scripts: `enrich-gov-bodies.mjs`, `enrich-social-enterprises.mjs`
-- [x] Migration files: `link-justice-funding-entities.sql`, `reclassify-justice-entities.sql`, `cleanup-gov-bodies.sql`
+- [x] **mv_entity_xref → entity_xref table**: converted from MV (refresh timed out >5min) to regular table with staged refresh. 1.2M rows, refreshable via `scripts/refresh-entity-xref.mjs` (12 staged INSERTs batched by state)
+- [x] **Subsidiary expansion**: subsidiary_of 423 → 1,234 (+811) via ABR trading name matching. Script: `scripts/link-subsidiaries-v2.mjs`
+- [x] **Expression indexes**: added `idx_gs_entities_name_upper` and `idx_entity_xref_trading_upper` for normalized name matching
 
-### Running (Background Tasks)
-- **SE enrichment** (b878ab6): still running, processing indigenous corps — 396/5,181 gs_entities descriptions so far
+### Previous Sessions
+- [x] NDIS provider linkage: 48,510 linked, 28,211 tagged
+- [x] MV refresh + optimization: power_index 160K, person_network 337K, 9 cascaded MVs
+- [x] Foundation type reclassification, 25 distinct types
+- [x] Mega-linker: +232K person entities, +425K edges
+- [x] Justice ABN linkage, gov body enrichment, SE enrichment
 
-### Key Stats (CURRENT as of 2026-03-20T14:00)
-| Entity Type | Has Desc | Total | Coverage |
-|-------------|----------|-------|----------|
-| company | 22,985 | 77,216 | 30% |
-| charity | 52,417 | 52,552 | 99.7% |
-| foundation | 10,465 | 10,750 | 97.3% |
-| indigenous_corp | 7,337 | 7,343 | 99.9% |
-| social_enterprise | 396 | 5,181 | 7.6% |
-| person | 0 | 4,747 | 0% |
-| government_body | 870 | 870 | 100% |
-| political_party | 66 | 66 | 100% |
+### Key Stats (CURRENT as of 2026-03-21T16:30)
+| Table/MV | Rows | Status |
+|----------|------|--------|
+| gs_entities | 565,660 | Stable |
+| gs_relationships | ~1.51M | +811 subsidiary_of |
+| entity_xref | 1,211,743 | Fresh (was stale MV) |
+| subsidiary_of | 1,234 | Was 423 |
+| affiliated_with | 505 | Unchanged |
+| mv_entity_power_index | 160,312 | Optimized ✓ |
+| mv_person_entity_network | 337,002 | Optimized ✓ |
 
 ### Next
-- [ ] Wait for SE enrichment (b878ab6) to complete
-- [ ] Fix foundation enrichment JSON parsing (truncation at 7K chars, Gemini 503 fallback)
-- [ ] Company enrichment — 54K without descriptions (biggest absolute gap)
-- [ ] NDIS provider→entity ABN matching
-- [ ] Subsidiary/parent relationship inference (only 29 exist)
-- [ ] Board/directorship overlap expansion (only 2,219 exist)
-- [ ] Refresh materialized views after enrichment
+- [ ] Company enrichment — 226K without descriptions (biggest gap, needs LLM — BLOCKED by MiniMax balance)
+- [ ] entity_xref needs VACUUM — can't complete through Supabase pooler (times out >7min). Try via Supabase dashboard SQL editor
+- [ ] Fix foundation enrichment JSON parsing
+- [ ] Recharge MiniMax API balance — LLM scripts blocked
+- [ ] Subsidiary v2 script improvement — ABR batch queries timeout intermittently via REST API (300 ABNs/batch). Keyset pagination + retry logic works for gs_entities but ABR needs smaller batches or psql fallback
 
 ### Decisions
 - Justice entities created as entity_type='company', confidence='reported', source_datasets=['justice_funding']
 - Most common recipient_name per ABN used as canonical_name
 - Junk gov bodies reclassified to 'company' (not deleted — FK constraints)
 - enrich-gov-bodies.mjs auto-reclassifies non-gov entities during enrichment
+- **MV optimization pattern**: universe-first (collect entity_ids per system, UNION, then JOIN details) — avoids scanning 566K × N LEFT JOINs
+- **LATERAL JOINs kill Supabase pooler** at scale — replace with pre-aggregated CTEs filtered by `IN (SELECT entity_id FROM relevant_set)`
+- **CASCADE drops 9 dependent MVs** when rebuilding mv_entity_power_index — migration files exist in scripts/migrations/ to recreate each
+- **entity_xref converted to regular table** — MV REFRESH timed out (>5min, 6 UNION ALL branches each scanning 566K). Now uses staged INSERTs batched by state in `scripts/refresh-entity-xref.mjs`
+- **Subsidiary matching approach**: SQL temp tables (tn_lookup + en_lookup) for fast matching (~3s), then export CSV + Supabase REST for insertion. Direct SQL INSERT into gs_relationships (1.5M rows) times out.
+- **PostgREST pagination**: keyset (cursor) pagination required for gs_entities (566K) — offset-based times out at ~400K. Use `.gt('id', lastId).order('id').limit(1000)`
 - SE enrichment writes to `social_enterprises` table (separate from gs_entities)
 - Foundation enrichment is slow (~1/min) due to web scraping + LLM chain
 
@@ -62,10 +64,11 @@ status: active
 - SE enrichment: should results also update gs_entities.description? Currently only social_enterprises table
 - Foundation JSON parsing: MiniMax sometimes returns 7K+ char responses that don't parse as JSON
 - Foundation enrichment: Gemini fallback is also failing (503 high demand) — need third fallback or retry logic?
+- UNCONFIRMED: entity_xref VACUUM may have completed via autovacuum by next session — check `n_dead_tup` on resume
 
 ### Workflow State
 pattern: enrichment-sprint
-phase: 2
+phase: 3
 total_phases: 5
 retries: 0
 max_retries: 3
@@ -76,14 +79,15 @@ max_retries: 3
 - justice_abn_linkage: DONE (+13,685 entities)
 - gov_body_enrichment: DONE (870/870)
 - gov_body_cleanup: DONE (665 junk reclassified)
+- entity_xref_optimization: DONE (MV → table, staged refresh)
+- subsidiary_expansion: DONE (423 → 1,234)
 
 #### Unknowns
-- SE enrichment completion time: ~110 batches at current rate
-- Foundation enrichment success rate: LOW (both MiniMax JSON parse + Gemini 503)
 - Company enrichment approach: UNKNOWN (need website scraping or name-based?)
+- MiniMax API balance: EXHAUSTED — need recharge for LLM-based scripts
 
 #### Last Failure
-Foundation enrichment (b653e9f): MiniMax returns 7K+ chars that don't parse as JSON; Gemini fallback hitting 503 (high demand)
+MiniMax API balance exhausted (status_code: 1008, status_msg: "insufficient balance") — classify-foundations.mjs blocked
 
 ---
 

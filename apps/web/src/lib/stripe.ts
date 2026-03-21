@@ -92,3 +92,46 @@ export const TIERS = {
 } as const
 
 export type TierKey = keyof typeof TIERS
+
+// ── Agent API Tiers ────────────────────────────────────────────────────────
+// Used on /agent pricing and for agent API billing
+export const AGENT_TIERS = {
+  explorer: {
+    name: 'Explorer',
+    price: 0,
+    stripePriceId: null,
+    rateLimit: 20,
+    features: [
+      '20 requests/minute',
+      'All 6 actions',
+      'IP-based rate limiting',
+      'Community support',
+    ],
+  },
+  builder: {
+    name: 'Builder',
+    price: 0, // Free during beta
+    stripePriceId: process.env.STRIPE_PRICE_AGENT_BUILDER || null,
+    rateLimit: 60,
+    features: [
+      '60 requests/minute',
+      'Usage dashboard + analytics',
+      'NL→SQL queries',
+      'Up to 5 API keys',
+    ],
+  },
+  enterprise: {
+    name: 'Enterprise',
+    price: null, // Custom pricing
+    stripePriceId: process.env.STRIPE_PRICE_AGENT_ENTERPRISE || null,
+    rateLimit: null, // Unlimited
+    features: [
+      'Unlimited requests',
+      'Dedicated support',
+      'Custom endpoints',
+      'White-label + SSO',
+    ],
+  },
+} as const
+
+export type AgentTierKey = keyof typeof AGENT_TIERS

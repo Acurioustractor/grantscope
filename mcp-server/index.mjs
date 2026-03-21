@@ -19,12 +19,59 @@
  *   claude mcp add civicgraph -- env CIVICGRAPH_API_KEY=cg_live_... npx civicgraph-mcp
  */
 
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const pkg = JSON.parse(readFileSync(join(__dirname, 'package.json'), 'utf8'));
+const VERSION = pkg.version;
+
+// Handle --version and --help flags
+const args = process.argv.slice(2);
+if (args.includes('--version') || args.includes('-v')) {
+  console.log(`civicgraph-mcp v${VERSION}`);
+  process.exit(0);
+}
+if (args.includes('--help') || args.includes('-h')) {
+  console.log(`civicgraph-mcp v${VERSION}
+
+CivicGraph MCP Server — Australian government intelligence for AI agents.
+560K entities, 1.5M relationships, 770K contracts.
+
+Usage:
+  npx civicgraph-mcp                           Start the MCP server
+  CIVICGRAPH_API_KEY=cg_live_... npx civicgraph-mcp   Start with authentication
+
+Options:
+  --version, -v   Show version number
+  --help, -h      Show this help message
+
+Environment:
+  CIVICGRAPH_API_KEY   API key for authenticated access (get one at civicgraph.app/agent)
+  CIVICGRAPH_URL       Base URL override (default: https://civicgraph.app)
+
+Install in Claude Code:
+  claude mcp add civicgraph -- npx civicgraph-mcp
+  claude mcp add civicgraph -- env CIVICGRAPH_API_KEY=cg_live_... npx civicgraph-mcp
+
+Tools provided:
+  civicgraph_search          Search 560K+ Australian entities
+  civicgraph_entity          Full entity profile with power score
+  civicgraph_power_index     Cross-system power rankings
+  civicgraph_funding_deserts Underserved areas by funding gap
+  civicgraph_revolving_door  Entities with multiple influence vectors
+  civicgraph_ask             Natural language queries across all datasets
+
+More info: https://civicgraph.app/agent`);
+  process.exit(0);
+}
 
 const BASE_URL = process.env.CIVICGRAPH_URL || 'https://civicgraph.app';
 const API_KEY = process.env.CIVICGRAPH_API_KEY || '';
@@ -35,12 +82,36 @@ async function callAgent(body) {
     headers['Authorization'] = `Bearer ${API_KEY}`;
   }
 
-  const res = await fetch(`${BASE_URL}/api/agent`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(body),
-  });
-  const data = await res.json();
+  let res;
+  try {
+    res = await fetch(`${BASE_URL}/api/agent`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+    });
+  } catch (err) {
+    if (err.cause?.code === 'ENOTFOUND') {
+      throw new Error(`Cannot reach ${BASE_URL} — check your internet connection or CIVICGRAPH_URL setting`);
+    }
+    if (err.cause?.code === 'ECONNREFUSED') {
+      throw new Error(`Connection refused by ${BASE_URL} — is the server running?`);
+    }
+    throw new Error(`Network error connecting to ${BASE_URL}: ${err.message}`);
+  }
+
+  let data;
+  try {
+    data = await res.json();
+  } catch {
+    throw new Error(`Unexpected response from ${BASE_URL} (status ${res.status}) — expected JSON`);
+  }
+
+  if (res.status === 401) {
+    throw new Error('Invalid or revoked API key. Check your CIVICGRAPH_API_KEY or get a new key at civicgraph.app/agent');
+  }
+  if (res.status === 429) {
+    throw new Error('Rate limit exceeded. Authenticated requests get 60 req/min — get an API key at civicgraph.app/agent');
+  }
   if (!res.ok) {
     throw new Error(data.error || `API error ${res.status}`);
   }
@@ -135,7 +206,7 @@ const TOOL_TO_ACTION = {
 };
 
 const server = new Server(
-  { name: 'civicgraph', version: '1.0.0' },
+  { name: 'civicgraph', version: VERSION },
   { capabilities: { tools: {} } },
 );
 
@@ -165,10 +236,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error(`CivicGraph MCP server running (${BASE_URL})${API_KEY ? ' [authenticated]' : ' [anonymous]'}`);
+  console.error(`CivicGraph MCP server v${VERSION} running (${BASE_URL})${API_KEY ? ' [authenticated]' : ' [anonymous]'}`);
 }
 
 main().catch((err) => {
-  console.error('Fatal:', err);
+  console.error(`Fatal: ${err.message}`);
+  console.error('Run "npx civicgraph-mcp --help" for usage information.');
   process.exit(1);
 });

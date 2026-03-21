@@ -1,5 +1,5 @@
 ---
-date: 2026-03-21T18:00:00Z
+date: 2026-03-21T20:30:00Z
 session_name: commercial-showcase-build
 branch: main
 status: active
@@ -9,7 +9,7 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-03-21T18:00:00Z
+**Updated:** 2026-03-21T20:30:00Z
 **Goal:** Build world-class public-facing commercial showcase pages for CivicGraph — entity intelligence, funding maps, power index, comparison, person profiles. Done when all pages work, type-check, and look professional enough to sell.
 **Branch:** main
 **Test:** cd apps/web && npx tsc --noEmit
@@ -22,40 +22,47 @@ status: active
 - [x] Entity profile enhancement — power index, ATO, board members, revolving door, cross-system badges
 - [x] Funding desert map + API (`/map`, `/api/data/map`) — Leaflet CircleMarker, state filter, remoteness breakdown
 - [x] Map→entity linkage — click LGA shows top entities in detail panel
-- [x] Power Index leaderboard (`/entity/top`, `/api/data/entity/top`) — 160K entities, filters by state/system/min-systems/sort/CC
-- [x] Entity comparison (`/entity/compare`, `/api/data/entity/compare`) — side-by-side 2-5 entities with relative bars
-- [x] Person profile (`/person/[name]`, `/api/data/person`) — board seats, financial footprint, interlock alerts
+- [x] Power Index leaderboard (`/entity/top`, `/api/data/entity/top`) — 160K entities, filters
+- [x] Entity comparison (`/entity/compare`, `/api/data/entity/compare`) — side-by-side 2-5 entities
+- [x] Person profile (`/person/[name]`, `/api/data/person`) — board seats, financial footprint
 - [x] Person search leaderboard (`/person`) — "Who Runs Australia?" ranked by influence
-- [x] Navigation links across all new pages (Search, Power Index, Compare, People, Map, Graph)
-- [x] Board member names link to person profiles
-- [x] Entity profile "Compare" button pre-fills current entity
-- [x] Fixed: map state filter alias bug, state casing mismatch, NT postcode gap
-- [x] Fixed: compare preset gs_ids (AU-ABN format, not GS-ORG)
+- [x] Nav mega menu — "Intelligence" section with all 6 new pages, workspace sub-nav updated
+- [x] Entity network neighborhood graph — react-force-graph-2d mini graph on entity profile
+- [x] Network API (`/api/data/entity/network`) — 60 relationships + 15 board members
+- [x] Shared utility extraction — `lib/format.ts`, `lib/sql.ts`, `lib/table-styles.ts`
+- [x] SQL injection fixes — Zod validation on all 6 API routes, `esc()` on all user inputs
+- [x] Rate limiting — `lib/rate-limit.ts`, 30 req/min/IP on all public APIs
+- [x] money() dedup — migrated 29 of 40 files to shared import (12 kept local for variant logic)
+- [x] FTS indexes — already existed (trigram on gs_entities + person_roles)
 - [x] All TypeScript type checks pass clean
+- [x] Three commits pushed: showcase build, refactor, rate limiting
 
 ### Next
 - [ ] Contract alerts + investigation workflow (entity → investigate → deep dive)
 - [ ] LGA boundary GeoJSON choropleth (instead of bubble map)
 - [ ] Load NT postcodes into postcode_geo to fix NT gap on map
-- [ ] Entity network neighborhood — small embedded graph on entity profile
 - [ ] Sector-level aggregation views (all charities in sector X)
 - [ ] PDF export / report generation from entity profiles
-- [ ] Add new pages to public nav mega menu
+- [ ] Visual QA of all new pages (screenshots, responsive check)
+- [ ] Migrate remaining 12 variant money() functions to shared lib (need to unify formatting logic)
 
 ### Decisions
 - Public pages use `/entity/` (no auth), workspace uses `/entities/` (auth-gated): parallel paths
 - Person URL format: `/person/Name-With-Dashes` (slugified from person_name)
 - Comparison preset IDs use AU-ABN format (actual gs_ids from database)
 - Map uses react-leaflet CircleMarker (not GeoJSON polygons) — faster, simpler, good enough for v1
-- Person influence MV has name collision issue (Mark Smith = 714 seats across multiple real people) — known, future dedup needed
+- Person influence MV has name collision issue (Mark Smith = 714 seats) — known, future dedup
+- Rate limiter is in-memory (not Redis) — sufficient for single-instance, needs upgrade for multi-instance
+- Nav mega menu expanded to 6-column grid to accommodate Intelligence section
+- SQL sanitization via `esc()` function — not parameterized queries (exec_sql doesn't support params)
 
 ### Open Questions
-- UNCONFIRMED: Should new pages be added to the public nav mega menu in nav.tsx?
 - UNCONFIRMED: Should entity profile have an "Investigate" button that triggers an agentic research workflow?
+- UNCONFIRMED: Do 12 variant money() files need unification or are the differences intentional?
 
 ### Workflow State
 pattern: iterative-build
-phase: 3
+phase: 4
 total_phases: 6
 retries: 0
 max_retries: 3
@@ -63,6 +70,10 @@ max_retries: 3
 #### Resolved
 - goal: "Build commercial showcase pages for CivicGraph"
 - resource_allocation: aggressive
+- nav_mega_menu: DONE — Intelligence section added
+- sql_injection: FIXED — Zod + esc() on all routes
+- rate_limiting: DONE — 30 req/min/IP
+- code_dedup: DONE — shared libs extracted
 
 #### Unknowns
 - Investigation workflow UX: UNKNOWN — how should agentic investigation be triggered and displayed?
@@ -75,45 +86,50 @@ max_retries: 3
 
 ## Context
 
-### Files Created (all new, untracked)
+### Commits (this session)
+- `bdc6650` feat: commercial showcase — nav, network graph, all pages (17 files, +3,086)
+- `2b7d73a` refactor: shared utils, Zod validation, SQL injection fixes (20 files, +249/-166)
+- `5196ed5` chore: rate limiting, money() dedup across 20 pages (27 files, +133/-154)
+
+### Shared Libraries Created
 ```
-apps/web/src/app/entity/page.tsx          — Entity search (client-side, debounced)
-apps/web/src/app/entity/top/page.tsx       — Power Index leaderboard
-apps/web/src/app/entity/compare/page.tsx   — Entity comparison (2-5 side-by-side)
-apps/web/src/app/person/page.tsx           — "Who Runs Australia?" person leaderboard
-apps/web/src/app/person/[name]/page.tsx    — Person profile (SSR)
-apps/web/src/app/map/page.tsx              — Funding desert map
-apps/web/src/app/map/map-view.tsx          — Leaflet map component
-apps/web/src/app/api/data/entity/search/route.ts  — Entity search API (text, ABN, LGA)
-apps/web/src/app/api/data/entity/top/route.ts     — Top entities API (paginated, filtered)
-apps/web/src/app/api/data/entity/compare/route.ts — Comparison API (power + revolving door + boards)
-apps/web/src/app/api/data/map/route.ts             — Map API (mv_funding_deserts + postcode_geo centroids)
-apps/web/src/app/api/data/person/route.ts          — Person API (search, top, profile)
+apps/web/src/lib/format.ts       — money(), fmt(), truncate(), slugify()
+apps/web/src/lib/sql.ts          — safe(), esc(), validateUuid(), validateGsId(), validateAbn(), whitelist()
+apps/web/src/lib/table-styles.ts — TH, TH_R, TD, TD_R, THEAD, ROW
+apps/web/src/lib/rate-limit.ts   — rateLimit() — in-memory sliding window, 30/min default
 ```
 
-### Files Modified
+### Files Created
 ```
-apps/web/src/app/entity/[gsId]/page.tsx — Enhanced with power index, ATO, board (linked to /person), revolving door, cross-system badges, compare link
+apps/web/src/app/entity/page.tsx                    — Entity search (client-side, debounced)
+apps/web/src/app/entity/top/page.tsx                — Power Index leaderboard
+apps/web/src/app/entity/compare/page.tsx            — Entity comparison (2-5 side-by-side)
+apps/web/src/app/entity/[gsId]/network-graph.tsx    — Mini force-directed graph component
+apps/web/src/app/person/page.tsx                    — "Who Runs Australia?" person leaderboard
+apps/web/src/app/person/[name]/page.tsx             — Person profile (SSR)
+apps/web/src/app/map/page.tsx                       — Funding desert map
+apps/web/src/app/map/map-view.tsx                   — Leaflet map component
+apps/web/src/app/api/data/entity/search/route.ts    — Entity search API
+apps/web/src/app/api/data/entity/top/route.ts       — Top entities API
+apps/web/src/app/api/data/entity/compare/route.ts   — Comparison API
+apps/web/src/app/api/data/entity/network/route.ts   — Network graph API
+apps/web/src/app/api/data/map/route.ts              — Map API
+apps/web/src/app/api/data/person/route.ts           — Person API
 ```
 
 ### Key APIs
 | Endpoint | Purpose |
 |----------|---------|
 | `/api/data/entity/search?q=X&lga=X` | Text/ABN/LGA entity search |
-| `/api/data/entity/top?system=X&state=X&sort=X&min_systems=N` | Power index leaderboard |
+| `/api/data/entity/top?system=X&state=X&sort=X` | Power index leaderboard |
 | `/api/data/entity/compare?ids=X,Y,Z` | Side-by-side comparison data |
+| `/api/data/entity/network?id=UUID` | Entity network graph data |
 | `/api/data/map?state=X` | Funding desert map data |
 | `/api/data/person?q=X&name=X` | Person search/profile |
-
-### Key MVs Used
-- `mv_entity_power_index` (82K entities, 44 columns) — power_score, system_count, dollar flows
-- `mv_funding_deserts` (1.6K LGAs) — desert_score, SEIFA, remoteness
-- `mv_revolving_door` (4.7K entities) — influence vectors, revolving_door_score
-- `mv_person_influence` (4.8K people) — board_count, financial_system_count
-- `mv_person_entity_network` (4.9K connections) — person→entity with financials
 
 ### Known Issues
 - NT has 0 rows in postcode_geo → NT LGAs don't appear on map
 - Person name collisions in mv_person_influence (Mark Smith = 714 seats = many different people)
 - Comparison presets are hardcoded — should be dynamic or user-configurable
 - Map uses bubble markers not proper LGA boundary polygons
+- 12 report pages still have variant money() (different formatting: Math.abs, en-AU locale, null handling)

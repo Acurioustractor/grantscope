@@ -252,6 +252,61 @@ Authorization: Bearer cg_live_...
         </div>
       </section>
 
+      {/* Integration */}
+      <section className="mb-12">
+        <h2 className="text-xl font-black text-bauhaus-black mb-4">Works With</h2>
+        <div className="border-4 border-bauhaus-black p-4 sm:p-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {[
+              { name: 'Claude Code', desc: 'MCP server', mono: 'claude mcp add civicgraph' },
+              { name: 'OpenAI', desc: 'Function calling', mono: 'POST /api/agent' },
+              { name: 'LangChain', desc: 'Tool integration', mono: 'CivicGraphTool()' },
+              { name: 'Any HTTP Client', desc: 'REST API', mono: 'curl, fetch, axios' },
+            ].map(i => (
+              <div key={i.name} className="text-center">
+                <div className="text-sm font-black text-bauhaus-black uppercase tracking-widest">{i.name}</div>
+                <div className="text-[10px] text-bauhaus-muted font-medium mt-0.5">{i.desc}</div>
+                <code className="text-[9px] font-mono text-bauhaus-blue mt-1 block">{i.mono}</code>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Social proof */}
+      <section className="mb-12">
+        <h2 className="text-xl font-black text-bauhaus-black mb-4">Built For Real Work</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {[
+            {
+              quote: 'We mapped $74B in federal procurement flows to identify conflict-of-interest patterns that would take a human analyst months.',
+              label: 'Procurement Intelligence',
+              color: 'border-bauhaus-blue',
+            },
+            {
+              quote: 'Cross-referencing political donations with government contracts across 560K entities — automatically. No hallucinations, just data.',
+              label: 'Revolving Door Detection',
+              color: 'border-bauhaus-red',
+            },
+            {
+              quote: 'Identified 1,582 funding deserts — local government areas where disadvantage is high but funding is almost zero.',
+              label: 'Funding Gap Analysis',
+              color: 'border-bauhaus-black',
+            },
+            {
+              quote: '1,155 evidence-based interventions from ALMA, linked to delivery organisations. Know what works and who delivers it.',
+              label: 'Evidence Mapping',
+              color: 'border-bauhaus-blue',
+            },
+          ].map(t => (
+            <div key={t.label} className={`border-4 ${t.color} p-5`}>
+              <p className="text-sm text-bauhaus-muted font-medium leading-relaxed italic mb-3">&ldquo;{t.quote}&rdquo;</p>
+              <div className="text-[10px] font-black text-bauhaus-black uppercase tracking-widest">{t.label}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* Why CivicGraph for agents */}
       <section className="border-t-4 border-bauhaus-black pt-12">
         <h2 className="text-xl font-black text-bauhaus-black mb-4">Why CivicGraph for Agents</h2>

@@ -54,16 +54,25 @@ export async function GET(request: NextRequest) {
     .order('created_at', { ascending: false })
     .limit(500);
 
-  // Aggregate by day
+  // Aggregate by day and by action
   const byDay = new Map<string, { requests: number; errors: number; avg_ms: number; total_ms: number }>();
+  const byAction = new Map<string, { requests: number; errors: number; avg_ms: number; total_ms: number }>();
   for (const row of recent || []) {
     const day = (row.created_at as string).slice(0, 10);
-    const entry = byDay.get(day) || { requests: 0, errors: 0, avg_ms: 0, total_ms: 0 };
-    entry.requests++;
-    entry.total_ms += (row.response_ms as number) || 0;
-    if ((row.status_code as number) >= 400) entry.errors++;
-    entry.avg_ms = Math.round(entry.total_ms / entry.requests);
-    byDay.set(day, entry);
+    const dayEntry = byDay.get(day) || { requests: 0, errors: 0, avg_ms: 0, total_ms: 0 };
+    dayEntry.requests++;
+    dayEntry.total_ms += (row.response_ms as number) || 0;
+    if ((row.status_code as number) >= 400) dayEntry.errors++;
+    dayEntry.avg_ms = Math.round(dayEntry.total_ms / dayEntry.requests);
+    byDay.set(day, dayEntry);
+
+    const action = (row.action as string) || 'unknown';
+    const actionEntry = byAction.get(action) || { requests: 0, errors: 0, avg_ms: 0, total_ms: 0 };
+    actionEntry.requests++;
+    actionEntry.total_ms += (row.response_ms as number) || 0;
+    if ((row.status_code as number) >= 400) actionEntry.errors++;
+    actionEntry.avg_ms = Math.round(actionEntry.total_ms / actionEntry.requests);
+    byAction.set(action, actionEntry);
   }
 
   const totals = keys.reduce((acc, k) => ({
@@ -81,5 +90,8 @@ export async function GET(request: NextRequest) {
     })),
     totals,
     daily: Array.from(byDay.entries()).map(([day, stats]) => ({ day, ...stats })),
+    actions: Array.from(byAction.entries())
+      .map(([action, stats]) => ({ action, requests: stats.requests, errors: stats.errors, avg_ms: stats.avg_ms }))
+      .sort((a, b) => b.requests - a.requests),
   });
 }
