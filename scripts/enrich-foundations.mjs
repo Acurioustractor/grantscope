@@ -280,61 +280,84 @@ If information is very limited, make reasonable inferences from the name. Never 
       // Strip reasoning tags and markdown code blocks
       const stripped = text
         .replace(/<think>[\s\S]*?<\/think>/g, '')
-        .replace(/`{3,}json\s*/gi, '')
-        .replace(/`{3,}\s*/g, '')
+        .replace(/```json\s*/gi, '')
+        .replace(/```\s*/g, '')
         .trim();
 
-      // Find JSON object
+      // Find JSON object — brace-matching that respects quoted strings
       let jsonStr = stripped;
       const firstBrace = jsonStr.indexOf('{');
       if (firstBrace >= 0) jsonStr = jsonStr.slice(firstBrace);
       else jsonStr = '';
 
-      // Find balanced JSON object by matching braces
-      let depth = 0, jsonStart = -1, jsonEnd = -1;
+      let depth = 0, jsonStart = -1, jsonEnd = -1, inString = false, escaped = false;
       for (let ci = 0; ci < jsonStr.length; ci++) {
-        if (jsonStr[ci] === '{') { if (depth === 0) jsonStart = ci; depth++; }
-        else if (jsonStr[ci] === '}') { depth--; if (depth === 0) { jsonEnd = ci + 1; break; } }
+        const ch = jsonStr[ci];
+        if (escaped) { escaped = false; continue; }
+        if (ch === '\\' && inString) { escaped = true; continue; }
+        if (ch === '"') { inString = !inString; continue; }
+        if (inString) continue;
+        if (ch === '{') { if (depth === 0) jsonStart = ci; depth++; }
+        else if (ch === '}') { depth--; if (depth === 0) { jsonEnd = ci + 1; break; } }
       }
 
-      let jsonMatch = jsonStart >= 0 && jsonEnd > jsonStart ? [jsonStr.slice(jsonStart, jsonEnd)] : null;
+      let extracted = jsonStart >= 0 && jsonEnd > jsonStart ? jsonStr.slice(jsonStart, jsonEnd) : null;
 
-      // Handle truncated responses
-      if (!jsonMatch && jsonStr.startsWith('{')) {
-        const fixed = jsonStr + '"}';
-        const m = fixed.match(/\{[\s\S]*\}/);
-        if (m) jsonMatch = m;
+      // Handle truncated responses — close open strings/arrays/objects
+      if (!extracted && jsonStr.startsWith('{') && depth > 0) {
+        let fixed = jsonStr;
+        // If we're inside a string, close it
+        if (inString) fixed += '"';
+        // If inside an array, close it
+        const lastBracket = fixed.lastIndexOf('[');
+        const lastBracketClose = fixed.lastIndexOf(']');
+        if (lastBracket > lastBracketClose) fixed += ']';
+        // Close remaining open braces
+        for (let d = 0; d < depth; d++) fixed += '}';
+        extracted = fixed;
+        log(`${provider.name} truncated response (${text.length} chars) — auto-closed ${depth} brace(s)`);
       }
-      if (!jsonMatch) {
-        log(`${provider.name} no JSON found (${text.length} chars)`);
+
+      if (!extracted) {
+        log(`${provider.name} no JSON found (${text.length} chars): ${stripped.slice(0, 120)}`);
         return { provider: provider.name, ...emptyResult() };
       }
 
-      let cleaned = jsonMatch[0]
+      // Sanitize: fix control chars inside JSON strings, trailing commas
+      let cleaned = extracted
         .replace(/,\s*}/g, '}')
         .replace(/,\s*]/g, ']');
+
+      // Fix unescaped control characters inside string values (newlines, tabs)
+      cleaned = cleaned.replace(/"((?:[^"\\]|\\.)*)"/g, (match, inner) => {
+        const sanitized = inner
+          .replace(/(?<!\\)\n/g, '\\n')
+          .replace(/(?<!\\)\r/g, '\\r')
+          .replace(/(?<!\\)\t/g, '\\t');
+        return `"${sanitized}"`;
+      });
 
       let parsed;
       try {
         parsed = JSON.parse(cleaned);
-      } catch {
-        // Try to salvage description from truncated JSON
-        const descMatch = cleaned.match(/"description"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-        if (descMatch) {
-          log(`${provider.name} JSON truncated — salvaged description (${descMatch[1].length} chars)`);
-          const salvaged = { description: descMatch[1] };
-          // Try to extract arrays too
-          for (const field of ['thematic_focus', 'geographic_focus', 'target_recipients']) {
-            const arrMatch = cleaned.match(new RegExp(`"${field}"\\s*:\\s*(\\[[^\\]]*\\])`));
-            if (arrMatch) try { salvaged[field] = JSON.parse(arrMatch[1]); } catch {}
-          }
-          for (const field of ['giving_philosophy', 'wealth_source', 'application_tips']) {
-            const strMatch = cleaned.match(new RegExp(`"${field}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"`));
-            if (strMatch) salvaged[field] = strMatch[1];
-          }
+      } catch (parseErr) {
+        // Salvage individual fields from malformed JSON
+        const salvaged = {};
+        // Extract string fields
+        for (const field of ['description', 'giving_philosophy', 'wealth_source', 'application_tips']) {
+          const m = cleaned.match(new RegExp(`"${field}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"`));
+          if (m) salvaged[field] = m[1].replace(/\\n/g, ' ').replace(/\\"/g, '"');
+        }
+        // Extract array fields
+        for (const field of ['thematic_focus', 'geographic_focus', 'target_recipients']) {
+          const m = cleaned.match(new RegExp(`"${field}"\\s*:\\s*(\\[[^\\]]*\\])`));
+          if (m) try { salvaged[field] = JSON.parse(m[1]); } catch {}
+        }
+        if (salvaged.description) {
+          log(`${provider.name} JSON parse failed — salvaged ${Object.keys(salvaged).length} fields (${parseErr.message})`);
           parsed = salvaged;
         } else {
-          log(`${provider.name} JSON parse error. Raw: ${cleaned.slice(0, 200)}`);
+          log(`${provider.name} JSON unsalvageable (${parseErr.message}). Raw: ${cleaned.slice(0, 200)}`);
           return { provider: provider.name, ...emptyResult() };
         }
       }
