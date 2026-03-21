@@ -3,12 +3,15 @@ import { z } from 'zod';
 import { getServiceSupabase } from '@/lib/supabase';
 import { esc, validateAbn } from '@/lib/sql';
 import { rateLimit } from '@/lib/rate-limit';
+import { validateApiKey, logUsage, InvalidApiKeyError, type ApiKeyInfo } from '@/lib/api-key';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
 
-// Tighter rate limit for agent API: 20 req/min
-const limiter = rateLimit({ max: 20 });
+// Anonymous rate limit: 20 req/min (IP-based)
+const anonLimiter = rateLimit({ max: 20 });
+// Keyed rate limit: per-key limit (default 60/min), still IP-based as fallback
+const keyedLimiter = rateLimit({ max: 120 });
 
 const ACTIONS = ['search', 'entity', 'power_index', 'funding_deserts', 'revolving_door', 'ask'] as const;
 
@@ -22,12 +25,21 @@ const schema = z.object({
   min_systems: z.coerce.number().int().min(1).max(7).optional().default(1),
 });
 
-type ActionResult = { data: unknown; meta: { action: string; cached: boolean; timestamp: string } };
+type ActionResult = {
+  data: unknown;
+  meta: { action: string; cached: boolean; timestamp: string; response_ms?: number };
+};
 
-function ok(action: string, data: unknown, cache = 300): NextResponse {
+function getIp(req: NextRequest): string {
+  return req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+    ?? req.headers.get('x-real-ip')
+    ?? 'unknown';
+}
+
+function ok(action: string, data: unknown, responseMs: number, cache = 300): NextResponse {
   const body: ActionResult = {
     data,
-    meta: { action, cached: cache > 0, timestamp: new Date().toISOString() },
+    meta: { action, cached: cache > 0, timestamp: new Date().toISOString(), response_ms: responseMs },
   };
   const res = NextResponse.json(body);
   if (cache > 0) {
@@ -37,8 +49,39 @@ function ok(action: string, data: unknown, cache = 300): NextResponse {
 }
 
 export async function POST(request: NextRequest) {
-  const limited = limiter(request);
-  if (limited) return limited;
+  const startTime = Date.now();
+  const ip = getIp(request);
+
+  // --- API Key validation ---
+  let apiKey: ApiKeyInfo | null = null;
+  try {
+    apiKey = await validateApiKey(request);
+  } catch (err) {
+    if (err instanceof InvalidApiKeyError) {
+      return NextResponse.json(
+        { error: 'Invalid or revoked API key. Check your Authorization header.' },
+        { status: 401 },
+      );
+    }
+    throw err;
+  }
+
+  // --- Rate limiting (key-aware) ---
+  if (apiKey) {
+    // Keyed request — use higher ceiling as fallback
+    const limited = keyedLimiter(request);
+    if (limited) {
+      logUsage(apiKey.id, 'rate_limited', Date.now() - startTime, 429, ip);
+      return limited;
+    }
+  } else {
+    // Anonymous request — tighter limit
+    const limited = anonLimiter(request);
+    if (limited) {
+      logUsage(null, 'rate_limited', Date.now() - startTime, 429, ip);
+      return limited;
+    }
+  }
 
   let body: unknown;
   try {
@@ -90,7 +133,9 @@ export async function POST(request: NextRequest) {
 
         const { data, error } = await supabase.rpc('exec_sql', { query: sql });
         if (error) throw error;
-        return ok('search', data || []);
+        const responseMs = Date.now() - startTime;
+        logUsage(apiKey?.id ?? null, action, responseMs, 200, ip);
+        return ok('search', data || [], responseMs);
       }
 
       // --- Full entity profile ---
@@ -119,6 +164,8 @@ export async function POST(request: NextRequest) {
         if (entityErr) throw entityErr;
 
         if (!entity || (entity as unknown[]).length === 0) {
+          const responseMs = Date.now() - startTime;
+          logUsage(apiKey?.id ?? null, action, responseMs, 404, ip);
           return NextResponse.json({ error: 'Entity not found' }, { status: 404 });
         }
 
@@ -134,10 +181,9 @@ export async function POST(request: NextRequest) {
                   LIMIT 20`,
         });
 
-        return ok('entity', {
-          entity: entityRow,
-          board: board || [],
-        });
+        const responseMs = Date.now() - startTime;
+        logUsage(apiKey?.id ?? null, action, responseMs, 200, ip);
+        return ok('entity', { entity: entityRow, board: board || [] }, responseMs);
       }
 
       // --- Power index leaderboard ---
@@ -155,7 +201,9 @@ export async function POST(request: NextRequest) {
                   LIMIT ${limit}`,
         });
         if (error) throw error;
-        return ok('power_index', data || []);
+        const responseMs = Date.now() - startTime;
+        logUsage(apiKey?.id ?? null, action, responseMs, 200, ip);
+        return ok('power_index', data || [], responseMs);
       }
 
       // --- Funding deserts ---
@@ -174,7 +222,9 @@ export async function POST(request: NextRequest) {
                   LIMIT ${limit}`,
         });
         if (error) throw error;
-        return ok('funding_deserts', data || []);
+        const responseMs = Date.now() - startTime;
+        logUsage(apiKey?.id ?? null, action, responseMs, 200, ip);
+        return ok('funding_deserts', data || [], responseMs);
       }
 
       // --- Revolving door ---
@@ -188,7 +238,9 @@ export async function POST(request: NextRequest) {
                   LIMIT ${limit}`,
         });
         if (error) throw error;
-        return ok('revolving_door', data || []);
+        const responseMs = Date.now() - startTime;
+        logUsage(apiKey?.id ?? null, action, responseMs, 200, ip);
+        return ok('revolving_door', data || [], responseMs);
       }
 
       // --- Natural language query (proxies to /api/ask) ---
@@ -207,22 +259,28 @@ export async function POST(request: NextRequest) {
 
         const askData = await askRes.json();
         if (!askRes.ok) {
+          const responseMs = Date.now() - startTime;
+          logUsage(apiKey?.id ?? null, action, responseMs, askRes.status, ip);
           return NextResponse.json({ error: askData.error || 'Query failed', details: askData.details }, { status: askRes.status });
         }
 
+        const responseMs = Date.now() - startTime;
+        logUsage(apiKey?.id ?? null, action, responseMs, 200, ip);
         return ok('ask', {
           question: askData.question,
           explanation: askData.explanation,
           results: askData.results,
           count: askData.count,
           generated_sql: askData.generated_sql,
-        }, 0); // Don't cache AI queries
+        }, responseMs, 0); // Don't cache AI queries
       }
 
       default:
         return NextResponse.json({ error: `Unknown action: ${action}`, available_actions: ACTIONS }, { status: 400 });
     }
   } catch (err) {
+    const responseMs = Date.now() - startTime;
+    logUsage(apiKey?.id ?? null, action, responseMs, 500, ip);
     console.error(`[/api/agent] ${action} error:`, err);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
@@ -232,11 +290,20 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   return NextResponse.json({
     name: 'CivicGraph Agent API',
-    version: '1.0',
+    version: '1.1',
     description: 'Structured intelligence on Australian government spending, procurement, political donations, charities, and community organisations. 560K entities, 1.5M relationships, 770K contracts.',
     endpoint: '/api/agent',
     method: 'POST',
-    rate_limit: '20 requests/minute',
+    authentication: {
+      type: 'Bearer token',
+      header: 'Authorization: Bearer cg_live_...',
+      alternative: 'x-api-key: cg_live_...',
+      note: 'API key optional during beta. Anonymous requests limited to 20/min. Keyed requests get 60/min+.',
+    },
+    rate_limit: {
+      anonymous: '20 requests/minute',
+      authenticated: '60+ requests/minute (configurable per key)',
+    },
     actions: {
       search: {
         description: 'Search entities by name or ABN',

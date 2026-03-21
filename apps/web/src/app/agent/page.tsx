@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import { AgentPlayground } from './playground';
+import { ApiKeyManager } from './api-keys';
 
 export const metadata: Metadata = {
   title: 'Agent API — CivicGraph',
@@ -104,6 +105,7 @@ export default function AgentPage() {
           <div className="text-xs font-black text-bauhaus-muted uppercase tracking-widest mb-3">Single endpoint. POST JSON. Get intelligence.</div>
           <pre className="text-sm font-mono text-bauhaus-black overflow-x-auto whitespace-pre">{`POST /api/agent
 Content-Type: application/json
+Authorization: Bearer cg_live_...
 
 {
   "action": "search",
@@ -111,8 +113,14 @@ Content-Type: application/json
 }`}</pre>
           <div className="mt-4 text-xs font-black text-bauhaus-muted uppercase tracking-widest mb-2">Or discover capabilities:</div>
           <pre className="text-sm font-mono text-bauhaus-black">{`GET /api/agent`}</pre>
+          <div className="mt-3 text-xs text-bauhaus-muted font-medium">
+            API key optional during beta. Anonymous: 20 req/min. With key: 60+ req/min.
+          </div>
         </div>
       </section>
+
+      {/* API Keys */}
+      <ApiKeyManager />
 
       {/* Live Playground */}
       <AgentPlayground />
@@ -191,23 +199,38 @@ Content-Type: application/json
         </div>
       </section>
 
-      {/* Pricing placeholder */}
+      {/* Pricing */}
       <section className="mb-12">
-        <div className="border-4 border-bauhaus-red bg-bauhaus-red/5 p-8 text-center">
-          <div className="text-xs font-black text-bauhaus-red uppercase tracking-[0.3em] mb-2">Early Access</div>
-          <h2 className="text-2xl font-black text-bauhaus-black mb-3">Free During Beta</h2>
-          <p className="text-sm text-bauhaus-muted max-w-lg mx-auto mb-4">
-            20 requests/minute. No API key required. Full access to all actions.
-            When we move to production pricing, early adopters get priority.
-          </p>
-          <div className="flex justify-center gap-4 flex-wrap">
-            <a href="/api/agent" className="px-6 py-3 bg-bauhaus-black text-white font-black text-xs uppercase tracking-widest border-4 border-bauhaus-black hover:bg-bauhaus-red transition-colors">
-              View API Docs
-            </a>
-            <a href="mailto:ben@civicgraph.com.au?subject=Agent API Access" className="px-6 py-3 bg-white text-bauhaus-black font-black text-xs uppercase tracking-widest border-4 border-bauhaus-black hover:bg-bauhaus-yellow transition-colors">
-              Get In Touch
-            </a>
+        <h2 className="text-xl font-black text-bauhaus-black mb-4">Pricing</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="border-4 border-bauhaus-black p-6">
+            <div className="text-xs font-black text-bauhaus-muted uppercase tracking-[0.3em] mb-1">Anonymous</div>
+            <div className="text-3xl font-black text-bauhaus-black mb-2">Free</div>
+            <ul className="text-sm text-bauhaus-muted font-medium space-y-1">
+              <li>20 requests/minute</li>
+              <li>All 6 actions available</li>
+              <li>No API key needed</li>
+              <li>IP-based rate limiting</li>
+            </ul>
           </div>
+          <div className="border-4 border-bauhaus-blue p-6 bg-bauhaus-blue/5">
+            <div className="text-xs font-black text-bauhaus-blue uppercase tracking-[0.3em] mb-1">With API Key</div>
+            <div className="text-3xl font-black text-bauhaus-black mb-2">Free <span className="text-sm font-bold text-bauhaus-muted">(beta)</span></div>
+            <ul className="text-sm text-bauhaus-muted font-medium space-y-1">
+              <li>60 requests/minute</li>
+              <li>Usage tracking + analytics</li>
+              <li>Up to 5 keys per org</li>
+              <li>Priority when paid tiers launch</li>
+            </ul>
+          </div>
+        </div>
+        <div className="mt-4 flex justify-center gap-4 flex-wrap">
+          <a href="/api/agent" className="px-6 py-3 bg-bauhaus-black text-white font-black text-xs uppercase tracking-widest border-4 border-bauhaus-black hover:bg-bauhaus-red transition-colors">
+            View API Docs
+          </a>
+          <a href="mailto:ben@civicgraph.com.au?subject=Agent API Access" className="px-6 py-3 bg-white text-bauhaus-black font-black text-xs uppercase tracking-widest border-4 border-bauhaus-black hover:bg-bauhaus-yellow transition-colors">
+            Get In Touch
+          </a>
         </div>
       </section>
 
