@@ -12,6 +12,7 @@ export const dynamic = 'force-dynamic';
  *   ?mode=hansard     — Scrape QLD Hansard transcripts
  *   ?mode=spending    — Scrape QLD consultancy spending via CKAN
  *   ?mode=crosslink   — Run the cross-linking engine
+ *   ?mode=commitments — Track charter commitment status
  *   ?mode=all         — Run all in sequence
  *
  * Auth: Vercel Cron (CRON_SECRET) or API_SECRET_KEY
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const modes = mode === 'all'
-      ? ['statements', 'hansard', 'spending', 'crosslink']
+      ? ['statements', 'hansard', 'spending', 'crosslink', 'commitments']
       : [mode];
 
     for (const m of modes) {
@@ -48,6 +49,9 @@ export async function GET(request: NextRequest) {
           break;
         case 'crosslink':
           results.crosslink = await runCrossLinker(db, dryRun);
+          break;
+        case 'commitments':
+          results.commitments = await runCommitmentTracker(db, dryRun);
           break;
         default:
           results[m] = { error: `Unknown mode: ${m}` };
@@ -224,6 +228,80 @@ async function runCrossLinker(db: SupabaseClient, dryRun: boolean) {
   }
 
   return { linked, processed: statements.length, dry_run: dryRun };
+}
+
+async function runCommitmentTracker(db: SupabaseClient, dryRun: boolean) {
+  const STOPS = new Set(['that', 'this', 'with', 'from', 'will', 'have', 'been',
+    'their', 'they', 'them', 'than', 'more', 'each', 'also', 'into', 'over',
+    'ensure', 'support', 'including', 'implement', 'deliver', 'provide', 'work']);
+
+  function extractKw(text: string) {
+    return [...new Set(text.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/)
+      .filter(w => w.length > 3 && !STOPS.has(w)))];
+  }
+
+  const [{ data: commitments }, { data: statements }, { data: funding }, { data: interventions }] = await Promise.all([
+    db.from('civic_charter_commitments').select('*'),
+    db.from('civic_ministerial_statements').select('id, headline, body_text, minister_name, mentioned_amounts, published_at'),
+    db.from('justice_funding').select('id, program_name, recipient_name, amount_dollars').eq('state', 'QLD').limit(200),
+    db.from('alma_interventions').select('id, name').neq('verification_status', 'ai_generated').not('gs_entity_id', 'is', null).limit(200),
+  ]);
+
+  if (!commitments?.length || !statements?.length) return { updated: 0, message: 'No data' };
+
+  let updated = 0;
+  const statusCounts: Record<string, number> = {};
+
+  for (const c of commitments) {
+    const kws = extractKw(c.commitment_text);
+    if (!kws.length) continue;
+
+    const matchedStmts = statements.filter(s => {
+      const text = `${s.headline} ${s.body_text || ''}`.toLowerCase();
+      const hits = kws.filter(kw => text.includes(kw)).length;
+      const ministerMatch = c.minister_name && s.minister_name?.includes(c.minister_name.split(' ').pop() || '');
+      return (hits / kws.length) >= 0.3 || (hits >= 2 && ministerMatch);
+    }).slice(0, 10);
+
+    const matchedFunding = (funding || []).filter(f => {
+      const text = `${f.program_name || ''} ${f.recipient_name || ''}`.toLowerCase();
+      return kws.filter(kw => text.includes(kw)).length >= 2;
+    }).slice(0, 10);
+
+    const matchedInts = (interventions || []).filter(i =>
+      kws.filter(kw => i.name.toLowerCase().includes(kw)).length >= 2
+    ).slice(0, 10);
+
+    const hasFunding = matchedFunding.length > 0;
+    const hasPrograms = matchedInts.length > 0;
+    const hasStatements = matchedStmts.length > 0;
+
+    const newStatus = (hasFunding && hasPrograms) ? 'delivered'
+      : (hasFunding || hasPrograms || hasStatements) ? 'in_progress'
+      : 'not_started';
+
+    statusCounts[newStatus] = (statusCounts[newStatus] || 0) + 1;
+
+    if (!hasStatements && !hasFunding && !hasPrograms) continue;
+    if (dryRun) continue;
+
+    const { error } = await db.from('civic_charter_commitments').update({
+      status: newStatus,
+      status_evidence: [
+        matchedStmts.length ? `${matchedStmts.length} statement(s)` : '',
+        matchedFunding.length ? `${matchedFunding.length} funding` : '',
+        matchedInts.length ? `${matchedInts.length} program(s)` : '',
+      ].filter(Boolean).join(' | '),
+      linked_statement_ids: matchedStmts.map(s => s.id),
+      linked_funding_ids: matchedFunding.map(f => f.id),
+      linked_intervention_ids: matchedInts.map(i => i.id),
+      updated_at: new Date().toISOString(),
+    }).eq('id', c.id);
+
+    if (!error) updated++;
+  }
+
+  return { updated, status_breakdown: statusCounts, dry_run: dryRun };
 }
 
 function extractBodyText(html: string): string {
