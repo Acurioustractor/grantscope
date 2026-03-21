@@ -1,11 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getServiceSupabase } from '@/lib/supabase';
+import { validateUuid } from '@/lib/sql';
 
 export const revalidate = 3600;
 
+const schema = z.object({
+  id: z.string().min(1),
+});
+
 export async function GET(req: NextRequest) {
-  const id = req.nextUrl.searchParams.get('id'); // gs_entities.id (UUID)
-  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
+  const parsed = schema.safeParse(Object.fromEntries(req.nextUrl.searchParams));
+  if (!parsed.success) return NextResponse.json({ error: 'id required' }, { status: 400 });
+
+  const id = validateUuid(parsed.data.id);
+  if (!id) return NextResponse.json({ error: 'Invalid UUID format' }, { status: 400 });
 
   const supabase = getServiceSupabase();
 

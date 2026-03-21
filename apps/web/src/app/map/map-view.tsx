@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Tooltip } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import { money } from '@/lib/format';
 
 interface LgaFeature {
   lga_name: string;
@@ -39,13 +40,6 @@ function desertRadius(score: number, entities: number): number {
   const base = Math.sqrt(Math.max(score, 1)) * 1.2;
   const entityBoost = Math.log2(Math.max(entities, 1) + 1) * 0.5;
   return Math.max(3, Math.min(base + entityBoost, 25));
-}
-
-function money(n: number): string {
-  if (n >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(1)}B`;
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
-  return `$${n.toLocaleString()}`;
 }
 
 export default function MapView({ features, selected, onSelect }: MapViewProps) {

@@ -1,26 +1,36 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getServiceSupabase } from '@/lib/supabase';
+import { esc } from '@/lib/sql';
 
 export const dynamic = 'force-dynamic';
 
+const schema = z.object({
+  q: z.string().max(200).optional(),
+  name: z.string().max(200).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+});
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const name = searchParams.get('name')?.trim();
-  const q = searchParams.get('q')?.trim();
-  const limit = Math.min(parseInt(searchParams.get('limit') || '20', 10), 100);
+  const parsed = schema.safeParse(Object.fromEntries(searchParams));
+  if (!parsed.success) return NextResponse.json({ error: 'Invalid parameters' }, { status: 400 });
+
+  const { limit } = parsed.data;
+  const name = parsed.data.name?.trim();
+  const q = parsed.data.q?.trim();
 
   const supabase = getServiceSupabase();
 
   // Search mode: return top people matching query
   if (q && q.length >= 2) {
     try {
-      const escaped = q.replace(/'/g, "''").toUpperCase();
       const { data, error } = await supabase.rpc('exec_sql', {
         query: `SELECT person_name, person_name_normalised, board_count, entity_types, data_sources,
                   total_procurement, total_contracts, total_justice, total_donations,
                   max_influence_score, financial_system_count
            FROM mv_person_influence
-           WHERE person_name_normalised LIKE '%${escaped}%'
+           WHERE person_name_normalised LIKE '%${esc(q.toUpperCase())}%'
            ORDER BY max_influence_score DESC NULLS LAST
            LIMIT ${limit}`,
       });
@@ -58,7 +68,7 @@ export async function GET(request: Request) {
 
   // Profile mode: return full person details
   try {
-    const normalised = name.replace(/'/g, "''").toUpperCase();
+    const normalised = esc(name.toUpperCase());
 
     // Get influence summary
     const { data: influence, error: infErr } = await supabase.rpc('exec_sql', {

@@ -1,18 +1,30 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getServiceSupabase } from '@/lib/supabase';
+import { whitelist } from '@/lib/sql';
 
 export const dynamic = 'force-dynamic';
 
+const STATES = ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'] as const;
+
+const schema = z.object({
+  state: z.string().optional(),
+  metric: z.string().max(50).optional(),
+});
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const state = searchParams.get('state');
-  const metric = searchParams.get('metric') || 'desert_score';
+  const parsed = schema.safeParse(Object.fromEntries(searchParams));
+  if (!parsed.success) return NextResponse.json({ error: 'Invalid parameters' }, { status: 400 });
+
+  const safeState = whitelist(parsed.data.state?.toUpperCase() ?? null, STATES, null as unknown as typeof STATES[number]);
+  const metric = parsed.data.metric || 'desert_score';
 
   try {
     const supabase = getServiceSupabase();
 
-    const stateClause = state
-      ? `AND UPPER(state) = '${state.toUpperCase().replace(/'/g, "''")}'`
+    const stateClause = safeState
+      ? `AND UPPER(state) = '${safeState}'`
       : '';
 
     const { data, error } = await supabase.rpc('exec_sql', {

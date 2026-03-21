@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
+import { money } from '@/lib/format';
 
 // Lazy-load map to avoid SSR issues with Leaflet
 const MapView = dynamic(() => import('./map-view'), { ssr: false });
@@ -27,13 +28,6 @@ interface Summary {
   severe_deserts: number;
   avg_desert_score: string;
   max_desert_score: string;
-}
-
-function money(n: number): string {
-  if (n >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(1)}B`;
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
-  return `$${n.toLocaleString()}`;
 }
 
 const STATES = ['ALL', 'NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'NT', 'ACT'];

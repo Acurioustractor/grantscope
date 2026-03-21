@@ -1,24 +1,40 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getServiceSupabase } from '@/lib/supabase';
+import { esc, whitelist } from '@/lib/sql';
 
 export const dynamic = 'force-dynamic';
 
+const STATES = ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'] as const;
+const SORTS = ['power_score', 'total_dollar_flow', 'system_count', 'procurement_dollars', 'justice_dollars', 'donation_dollars'] as const;
+const SYSTEMS = ['procurement', 'justice', 'donations', 'charity', 'foundation', 'alma', 'ato'] as const;
+
+const schema = z.object({
+  limit: z.coerce.number().int().min(1).max(200).optional().default(100),
+  offset: z.coerce.number().int().min(0).optional().default(0),
+  system: z.string().optional(),
+  type: z.string().max(50).optional(),
+  state: z.string().optional(),
+  cc: z.string().optional(),
+  min_systems: z.coerce.number().int().min(1).max(7).optional().default(1),
+  sort: z.string().optional(),
+});
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const limit = Math.min(parseInt(searchParams.get('limit') || '100', 10), 500);
-  const offset = parseInt(searchParams.get('offset') || '0', 10);
-  const system = searchParams.get('system'); // procurement, justice, donations, charity, foundation, alma, ato
-  const type = searchParams.get('type');     // entity_type filter
-  const state = searchParams.get('state');   // state filter
-  const cc = searchParams.get('cc');         // community_controlled only
-  const minSystems = parseInt(searchParams.get('min_systems') || '1', 10);
-  const sort = searchParams.get('sort') || 'power_score'; // power_score, total_dollar_flow, system_count
+  const parsed = schema.safeParse(Object.fromEntries(searchParams));
+  if (!parsed.success) return NextResponse.json({ error: 'Invalid parameters' }, { status: 400 });
+
+  const { limit, offset, type, cc, min_systems } = parsed.data;
+  const safeState = whitelist(parsed.data.state?.toUpperCase() ?? null, STATES, null as unknown as typeof STATES[number]);
+  const safeSort = whitelist(parsed.data.sort ?? null, SORTS, 'power_score');
+  const safeSystem = whitelist(parsed.data.system ?? null, SYSTEMS, null as unknown as typeof SYSTEMS[number]);
 
   try {
     const supabase = getServiceSupabase();
-    const conditions: string[] = [`system_count >= ${minSystems}`];
+    const conditions: string[] = [`system_count >= ${min_systems}`];
 
-    if (system) {
+    if (safeSystem) {
       const systemCol: Record<string, string> = {
         procurement: 'in_procurement',
         justice: 'in_justice_funding',
@@ -28,16 +44,13 @@ export async function GET(request: Request) {
         alma: 'in_alma_evidence',
         ato: 'in_ato_transparency',
       };
-      const col = systemCol[system];
+      const col = systemCol[safeSystem];
       if (col) conditions.push(`${col} > 0`);
     }
 
-    if (type) conditions.push(`entity_type = '${type.replace(/'/g, "''")}'`);
-    if (state) conditions.push(`UPPER(state) = '${state.toUpperCase().replace(/'/g, "''")}'`);
+    if (type) conditions.push(`entity_type = '${esc(type)}'`);
+    if (safeState) conditions.push(`UPPER(state) = '${safeState}'`);
     if (cc === 'true') conditions.push(`is_community_controlled = true`);
-
-    const validSorts = ['power_score', 'total_dollar_flow', 'system_count', 'procurement_dollars', 'justice_dollars', 'donation_dollars'];
-    const orderCol = validSorts.includes(sort) ? sort : 'power_score';
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
@@ -52,7 +65,7 @@ export async function GET(request: Request) {
                 charity_size
          FROM mv_entity_power_index
          ${whereClause}
-         ORDER BY ${orderCol} DESC NULLS LAST
+         ORDER BY ${safeSort} DESC NULLS LAST
          LIMIT ${limit} OFFSET ${offset}`,
     });
 

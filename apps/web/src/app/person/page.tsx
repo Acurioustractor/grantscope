@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
+import { money } from '@/lib/format';
 
 interface Person {
   person_name: string;
@@ -16,13 +17,6 @@ interface Person {
   total_donations: number;
   max_influence_score: number;
   financial_system_count: number;
-}
-
-function money(n: number): string {
-  if (n >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(1)}B`;
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
-  return `$${n.toLocaleString()}`;
 }
 
 export default function PersonSearchPage() {

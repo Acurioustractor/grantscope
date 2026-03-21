@@ -2,26 +2,11 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getServiceSupabase } from '@/lib/supabase';
 import { EntityNetworkGraph } from './network-graph';
+import { safe, esc } from '@/lib/sql';
+import { money } from '@/lib/format';
+import { TH, TH_R, TD, TD_R, THEAD, ROW } from '@/lib/table-styles';
 
 export const revalidate = 3600;
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function safe<T = any>(p: PromiseLike<{ data: T; error: any }>): Promise<T | null> {
-  try {
-    const result = await p;
-    if (result.error) return null;
-    return result.data;
-  } catch {
-    return null;
-  }
-}
-
-function money(n: number): string {
-  if (n >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(1)}B`;
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
-  return `$${n.toLocaleString()}`;
-}
 
 interface Entity {
   id: string;
@@ -42,7 +27,7 @@ async function getEntity(gsId: string): Promise<Entity | null> {
   const supabase = getServiceSupabase();
   const rows = await safe(supabase.rpc('exec_sql', {
     query: `SELECT id, gs_id, canonical_name, abn, entity_type, sector, state, postcode, remoteness, seifa_irsd_decile, is_community_controlled, lga_name
-       FROM gs_entities WHERE gs_id = '${gsId}'`,
+       FROM gs_entities WHERE gs_id = '${esc(gsId)}'`,
   })) as Entity[] | null;
   return rows?.[0] ?? null;
 }
@@ -76,14 +61,6 @@ export async function generateMetadata({ params }: { params: Promise<{ gsId: str
   if (!entity) return { title: 'Not Found' };
   return { title: `${entity.canonical_name} — CivicGraph` };
 }
-
-const TH = 'text-left py-3 pr-4 font-black uppercase tracking-widest text-[10px] text-gray-400';
-const TH_R = 'text-right py-3 pr-4 font-black uppercase tracking-widest text-[10px] text-gray-400';
-const TD = 'py-3 pr-4';
-const TD_R = 'py-3 pr-4 text-right';
-const THEAD = 'border-b-2 border-gray-200 bg-gray-50/50';
-const ROW = (i: number) =>
-  `border-b border-gray-100 hover:bg-blue-50/30 transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`;
 
 const SYSTEMS = [
   { key: 'in_procurement', label: 'Procurement', color: 'bg-blue-500' },

@@ -1,21 +1,32 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getServiceSupabase } from '@/lib/supabase';
+import { esc, validateAbn } from '@/lib/sql';
 
 export const dynamic = 'force-dynamic';
 
+const schema = z.object({
+  q: z.string().max(200).optional(),
+  lga: z.string().max(100).optional(),
+  type: z.string().max(50).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+});
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const q = searchParams.get('q')?.trim();
-  const limit = Math.min(parseInt(searchParams.get('limit') || '20', 10), 100);
-  const type = searchParams.get('type');
-  const lga = searchParams.get('lga')?.trim();
+  const parsed = schema.safeParse(Object.fromEntries(searchParams));
+  if (!parsed.success) return NextResponse.json({ error: 'Invalid parameters' }, { status: 400 });
+
+  const { limit, type } = parsed.data;
+  const q = parsed.data.q?.trim();
+  const lga = parsed.data.lga?.trim();
+
+  const typeFilter = type ? `AND ge.entity_type = '${esc(type)}'` : '';
 
   // LGA mode: return top entities in an LGA (for map detail panel)
   if (lga) {
     try {
       const supabase = getServiceSupabase();
-      const escapedLga = lga.replace(/'/g, "''");
-      const typeFilter = type ? `AND ge.entity_type = '${type.replace(/'/g, "''")}'` : '';
 
       const { data, error } = await supabase.rpc('exec_sql', {
         query: `SELECT ge.gs_id, ge.canonical_name, ge.abn, ge.entity_type, ge.sector,
@@ -23,7 +34,7 @@ export async function GET(request: Request) {
                   pi.power_score, pi.system_count
            FROM gs_entities ge
            LEFT JOIN mv_entity_power_index pi ON pi.id = ge.id
-           WHERE ge.lga_name = '${escapedLga}' ${typeFilter}
+           WHERE ge.lga_name = '${esc(lga)}' ${typeFilter}
            ORDER BY pi.power_score DESC NULLS LAST
            LIMIT ${limit}`,
       });
@@ -43,11 +54,8 @@ export async function GET(request: Request) {
 
   try {
     const supabase = getServiceSupabase();
-    const escaped = q.replace(/'/g, "''");
     const abnClean = q.replace(/\s/g, '');
-    const isABN = /^\d{11}$/.test(abnClean);
-
-    const typeFilter = type ? `AND ge.entity_type = '${type.replace(/'/g, "''")}'` : '';
+    const isABN = !!validateAbn(abnClean);
 
     const query = isABN
       ? `SELECT ge.gs_id, ge.canonical_name, ge.abn, ge.entity_type, ge.sector,
@@ -55,14 +63,14 @@ export async function GET(request: Request) {
                 pi.power_score, pi.system_count
          FROM gs_entities ge
          LEFT JOIN mv_entity_power_index pi ON pi.id = ge.id
-         WHERE ge.abn = '${abnClean}'
+         WHERE ge.abn = '${esc(abnClean)}'
          LIMIT ${limit}`
       : `SELECT ge.gs_id, ge.canonical_name, ge.abn, ge.entity_type, ge.sector,
                 ge.state, ge.lga_name, ge.is_community_controlled,
                 pi.power_score, pi.system_count
          FROM gs_entities ge
          LEFT JOIN mv_entity_power_index pi ON pi.id = ge.id
-         WHERE UPPER(ge.canonical_name) LIKE '%${escaped.toUpperCase()}%' ${typeFilter}
+         WHERE UPPER(ge.canonical_name) LIKE '%${esc(q.toUpperCase())}%' ${typeFilter}
          ORDER BY pi.power_score DESC NULLS LAST
          LIMIT ${limit}`;
 

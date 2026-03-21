@@ -1,19 +1,34 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getServiceSupabase } from '@/lib/supabase';
+import { esc, validateGsId } from '@/lib/sql';
 
 export const dynamic = 'force-dynamic';
 
+const GSID_PATTERN = /^[A-Z0-9][A-Z0-9-]{2,80}$/;
+
+const schema = z.object({
+  ids: z.string().transform(s => s.split(',').map(v => v.trim()).filter(Boolean))
+    .pipe(z.array(z.string().regex(GSID_PATTERN)).min(2).max(10)),
+});
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const ids = searchParams.get('ids')?.split(',').map(s => s.trim()).filter(Boolean);
+  const parsed = schema.safeParse(Object.fromEntries(searchParams));
+  if (!parsed.success) return NextResponse.json({ error: 'Provide 2-10 valid comma-separated gs_ids' }, { status: 400 });
 
-  if (!ids || ids.length < 2 || ids.length > 5) {
-    return NextResponse.json({ error: 'Provide 2-5 comma-separated gs_ids' }, { status: 400 });
+  const ids = parsed.data.ids;
+
+  // Double-check each id with validateGsId
+  for (const id of ids) {
+    if (!validateGsId(id)) {
+      return NextResponse.json({ error: 'Invalid gs_id format' }, { status: 400 });
+    }
   }
 
   try {
     const supabase = getServiceSupabase();
-    const escaped = ids.map(id => `'${id.replace(/'/g, "''")}'`).join(',');
+    const escaped = ids.map(id => `'${esc(id)}'`).join(',');
 
     // Fetch power index data for all entities
     const { data: power, error: powerErr } = await supabase.rpc('exec_sql', {

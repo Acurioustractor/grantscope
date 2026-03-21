@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { money } from '@/lib/format';
 
 interface TopEntity {
   gs_id: string;
@@ -29,13 +30,6 @@ interface TopEntity {
   distinct_govt_buyers: number;
   distinct_parties_funded: number;
   charity_size: string | null;
-}
-
-function money(n: number): string {
-  if (n >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(1)}B`;
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
-  return `$${n.toLocaleString()}`;
 }
 
 const SYSTEMS = [

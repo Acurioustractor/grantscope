@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
+import { money } from '@/lib/format';
 
 interface SearchResult {
   gs_id: string;
@@ -24,13 +25,6 @@ const TYPE_COLORS: Record<string, string> = {
   person: 'bg-gray-100 text-gray-700 border-gray-200',
   university: 'bg-indigo-100 text-indigo-700 border-indigo-200',
 };
-
-function money(n: number): string {
-  if (n >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(1)}B`;
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
-  return `$${n.toLocaleString()}`;
-}
 
 export default function EntitySearchPage() {
   const [query, setQuery] = useState('');

@@ -1,26 +1,11 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getServiceSupabase } from '@/lib/supabase';
+import { safe, esc } from '@/lib/sql';
+import { money } from '@/lib/format';
+import { TH, TH_R, TD, TD_R, THEAD, ROW } from '@/lib/table-styles';
 
 export const revalidate = 3600;
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function safe<T = any>(p: PromiseLike<{ data: T; error: any }>): Promise<T | null> {
-  try {
-    const result = await p;
-    if (result.error) return null;
-    return result.data;
-  } catch {
-    return null;
-  }
-}
-
-function money(n: number): string {
-  if (n >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(1)}B`;
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
-  return `$${n.toLocaleString()}`;
-}
 
 interface Influence {
   person_name: string;
@@ -57,14 +42,6 @@ interface Position {
   gs_id: string;
 }
 
-const TH = 'text-left py-3 pr-4 font-black uppercase tracking-widest text-[10px] text-gray-400';
-const TH_R = 'text-right py-3 pr-4 font-black uppercase tracking-widest text-[10px] text-gray-400';
-const TD = 'py-3 pr-4';
-const TD_R = 'py-3 pr-4 text-right';
-const THEAD = 'border-b-2 border-gray-200 bg-gray-50/50';
-const ROW = (i: number) =>
-  `border-b border-gray-100 hover:bg-blue-50/30 transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`;
-
 export async function generateMetadata({ params }: { params: Promise<{ name: string }> }) {
   const { name } = await params;
   const decoded = decodeURIComponent(name).replace(/-/g, ' ');
@@ -82,7 +59,7 @@ export default async function PersonPage({ params }: { params: Promise<{ name: s
 
   const [influence, positions] = await Promise.all([
     safe(supabase.rpc('exec_sql', {
-      query: `SELECT * FROM mv_person_influence WHERE person_name_normalised = '${normalised.replace(/'/g, "''")}'`,
+      query: `SELECT * FROM mv_person_influence WHERE person_name_normalised = '${esc(normalised)}'`,
     })) as Promise<Influence[] | null>,
     safe(supabase.rpc('exec_sql', {
       query: `SELECT pen.person_name_display, pen.entity_name, pen.entity_abn, pen.entity_type,
@@ -95,7 +72,7 @@ export default async function PersonPage({ params }: { params: Promise<{ name: s
                 ge.gs_id
          FROM mv_person_entity_network pen
          JOIN gs_entities ge ON ge.id = pen.entity_id
-         WHERE pen.person_name_normalised = '${normalised.replace(/'/g, "''")}'
+         WHERE pen.person_name_normalised = '${esc(normalised)}'
          ORDER BY pen.influence_score DESC NULLS LAST`,
     })) as Promise<Position[] | null>,
   ]);
