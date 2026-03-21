@@ -159,9 +159,141 @@ async function runStatementsScraper(db: SupabaseClient, dryRun: boolean) {
 }
 
 async function runHansardScraper(db: SupabaseClient, dryRun: boolean) {
-  // Lightweight: search for recent Hansard and insert summaries
-  // Full scraping done by the CLI script
-  return { message: 'Hansard scraping runs via CLI script (scrape-qld-hansard.mjs)', dry_run: dryRun };
+  const PDF_BASE = 'https://documents.parliament.qld.gov.au/events/han';
+  const JUSTICE_KW = [
+    'youth justice', 'juvenile', 'detention', 'watch house', 'child safety',
+    'corrective services', 'prison', 'indigenous', 'first nations', 'aboriginal',
+    'crime', 'criminal', 'sentencing', 'bail', 'police', 'domestic violence',
+    'recidivism', 'rehabilitation', 'justice reinvestment', 'closing the gap',
+    'funding', 'budget', 'million', 'program', 'reform',
+    'housing', 'homelessness', 'mental health', 'education', 'employment',
+  ];
+
+  // Generate Tue-Thu dates for last 14 days (typical sitting days)
+  const today = new Date();
+  const candidates: string[] = [];
+  for (let i = 1; i <= 14; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const dow = d.getDay();
+    if (dow >= 2 && dow <= 4) { // Tue, Wed, Thu
+      candidates.push(d.toISOString().slice(0, 10));
+    }
+  }
+
+  // Check which dates we already have
+  const { data: existing } = await db
+    .from('civic_hansard')
+    .select('sitting_date')
+    .in('sitting_date', candidates);
+  const existingDates = new Set((existing || []).map((r: { sitting_date: string }) => r.sitting_date));
+  const newDates = candidates.filter(d => !existingDates.has(d)).slice(0, 3); // max 3 per run
+
+  if (newDates.length === 0) {
+    return { message: 'No new sitting dates to check', checked: candidates.length, existing: existingDates.size, dry_run: dryRun };
+  }
+
+  let totalInserted = 0;
+  const errors: string[] = [];
+
+  for (const dateStr of newDates) {
+    const [year, month, day] = dateStr.split('-');
+    const pdfUrl = `${PDF_BASE}/${year}/${year}_${month}_${day}_WEEKLY.pdf`;
+
+    // HEAD check
+    try {
+      const headRes = await fetch(pdfUrl, { method: 'HEAD' });
+      if (!headRes.ok) continue;
+    } catch { continue; }
+
+    // Fetch via Jina Reader
+    try {
+      const res = await fetch(`${JINA_PREFIX}${pdfUrl}`, {
+        headers: { 'Accept': 'text/plain', 'User-Agent': 'CivicGraph/1.0 (research; civicgraph.au)' },
+      });
+      if (!res.ok) continue;
+
+      const text = await res.text();
+      if (text.length < 100) continue;
+
+      // Parse speeches
+      const speeches = parseHansardSpeeches(text, pdfUrl, dateStr, JUSTICE_KW);
+
+      for (const speech of speeches) {
+        if (dryRun) { totalInserted++; continue; }
+        const { error } = await db.from('civic_hansard').insert(speech);
+        if (error && error.code !== '23505') errors.push(error.message);
+        else if (!error) totalInserted++;
+      }
+    } catch (err) {
+      errors.push(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  return { dates_checked: newDates.length, inserted: totalInserted, errors: errors.slice(0, 5), dry_run: dryRun };
+}
+
+function parseHansardSpeeches(text: string, url: string, date: string, keywords: string[]) {
+  const speeches: Record<string, unknown>[] = [];
+  const speakerRegex = /(?:^|\n)(?:(?:Hon\.?\s+)?(?:Mr|Mrs|Ms|Dr|Prof)\.?\s+)?([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+)*)\s*\(([^)]+)\)(?:\s*\(([^)]+)\))?\s*:/gm;
+
+  let match;
+  const segments: { name: string; meta1: string; meta2: string | null; start: number; end: number }[] = [];
+
+  while ((match = speakerRegex.exec(text)) !== null) {
+    if (segments.length > 0) segments[segments.length - 1].end = match.index;
+    segments.push({ name: toTitleCase(match[1]), meta1: match[2], meta2: match[3] || null, start: match.index + match[0].length, end: text.length });
+  }
+
+  // Simpler fallback pattern
+  if (segments.length === 0) {
+    const simpleRegex = /(?:^|\n)\s*([A-Z][A-Z'-]+(?:\s+[A-Z][A-Z'-]+)*)\s*(?:\(([^)]+)\))?\s*:/gm;
+    const skipWords = new Set(['THE', 'AND', 'FOR', 'BUT', 'NOT', 'THIS', 'THAT']);
+    while ((match = simpleRegex.exec(text)) !== null) {
+      if (match[1].length > 2 && !skipWords.has(match[1])) {
+        if (segments.length > 0) segments[segments.length - 1].end = match.index;
+        segments.push({ name: toTitleCase(match[1]), meta1: match[2] || '', meta2: null, start: match.index + match[0].length, end: text.length });
+      }
+    }
+  }
+
+  for (const seg of segments) {
+    const bodyText = text.slice(seg.start, seg.end).trim();
+    if (bodyText.length < 30) continue;
+
+    const fullText = `${seg.name} ${bodyText}`.toLowerCase();
+    if (!keywords.some(kw => fullText.includes(kw))) continue;
+
+    const metaParts = (seg.meta1 || '').split('—');
+    const lowerBody = bodyText.toLowerCase().slice(0, 200);
+    let speechType = 'speech';
+    if (lowerBody.includes('i ask the minister') || lowerBody.includes('my question is')) speechType = 'question';
+    else if (lowerBody.includes('i table') || lowerBody.includes('i thank the member for')) speechType = 'answer';
+    else if (bodyText.length < 100) speechType = 'interjection';
+
+    const firstLine = bodyText.split('\n')[0].trim();
+
+    speeches.push({
+      sitting_date: date,
+      speaker_name: seg.name,
+      speaker_party: metaParts[1]?.trim() || null,
+      speaker_electorate: metaParts[0]?.trim() || null,
+      speaker_role: seg.meta2,
+      speech_type: speechType,
+      subject: firstLine.length < 120 && firstLine.length > 5 ? firstLine : null,
+      body_text: bodyText.slice(0, 50000),
+      source_url: url,
+      source_format: 'pdf',
+      jurisdiction: 'QLD',
+      scraped_at: new Date().toISOString(),
+    });
+  }
+
+  return speeches;
+}
+
+function toTitleCase(str: string): string {
+  return str.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
 }
 
 async function runSpendingScraper(db: SupabaseClient, dryRun: boolean) {

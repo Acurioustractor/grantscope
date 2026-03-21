@@ -25,6 +25,10 @@
       "schedule": "30 5 * * *"
     },
     {
+      "path": "/api/civicscope/cron?mode=hansard",
+      "schedule": "0 4 * * 0"
+    },
+    {
       "path": "/api/civicscope/digest?period=daily",
       "schedule": "0 6 * * *"
     }
