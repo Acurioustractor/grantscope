@@ -240,6 +240,11 @@ export interface FoundationFunder {
   grant_count: number;
   total_grant_amount: number;
   grant_years: string[];
+  foundation_score: number | null;
+  transparency_score: number | null;
+  need_alignment_score: number | null;
+  evidence_score: number | null;
+  overlapping_trustees: number | null;
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -867,15 +872,21 @@ export async function getOrgDonorCrosslinks(abn: string): Promise<DonorCrosslink
 export async function getOrgFoundationFunders(abn: string): Promise<FoundationFunder[]> {
   const supabase = getServiceSupabase();
   const rows = await safe(supabase.rpc('exec_sql', {
-    query: `SELECT foundation_name, foundation_abn,
-              MAX(total_giving_annual)::bigint as total_giving_annual,
+    query: `SELECT fg.foundation_name, fg.foundation_abn,
+              MAX(fg.total_giving_annual)::bigint as total_giving_annual,
               COUNT(*)::int as grant_count,
-              SUM(grant_amount)::bigint as total_grant_amount,
-              array_agg(DISTINCT grant_year) FILTER (WHERE grant_year IS NOT NULL) as grant_years
-       FROM mv_foundation_grantees
-       WHERE grantee_abn = '${abn}'
-       GROUP BY foundation_name, foundation_abn
-       ORDER BY SUM(grant_amount) DESC NULLS LAST
+              SUM(fg.grant_amount)::bigint as total_grant_amount,
+              array_agg(DISTINCT fg.grant_year) FILTER (WHERE fg.grant_year IS NOT NULL) as grant_years,
+              MAX(fs.foundation_score)::int as foundation_score,
+              MAX(fs.transparency_score)::int as transparency_score,
+              MAX(fs.need_alignment_score)::int as need_alignment_score,
+              MAX(fs.evidence_score)::int as evidence_score,
+              MAX(fs.overlapping_trustees)::int as overlapping_trustees
+       FROM mv_foundation_grantees fg
+       LEFT JOIN mv_foundation_scores fs ON fs.acnc_abn = fg.foundation_abn
+       WHERE fg.grantee_abn = '${abn}'
+       GROUP BY fg.foundation_name, fg.foundation_abn
+       ORDER BY SUM(fg.grant_amount) DESC NULLS LAST
        LIMIT 20`,
   })) as FoundationFunder[] | null;
   return rows ?? [];

@@ -454,6 +454,14 @@ export const AGENTS = {
     timeoutMs: 300_000,
     dependencies: [],
   },
+  'refresh-acnc-ais': {
+    command: ['node', '--env-file=.env', 'scripts/refresh-acnc-ais.mjs'],
+    displayName: 'ACNC AIS Annual Refresh',
+    category: 'foundations',
+    defaultPriority: 3,
+    timeoutMs: 600_000,
+    dependencies: [],
+  },
   'build-money-flow-data': {
     command: ['node', '--env-file=.env', 'scripts/build-money-flow-data.mjs'],
     displayName: 'Build Money Flow Data',

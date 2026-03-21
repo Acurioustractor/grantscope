@@ -649,29 +649,62 @@ export function DonorCrosslinksSection({ donorCrosslinks }: { donorCrosslinks: D
 // Foundation Funders
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+function ScorePill({ score, label }: { score: number | null; label: string }) {
+  if (score == null) return null;
+  const bg = score >= 50 ? 'bg-green-100 text-green-800' : score >= 20 ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-500';
+  return (
+    <span className={`inline-block px-1.5 py-0.5 text-[10px] font-bold rounded ${bg}`} title={label}>
+      {label[0]}: {score}
+    </span>
+  );
+}
+
 export function FoundationFundersSection({ foundationFunders }: { foundationFunders: FoundationFunder[] }) {
   if (foundationFunders.length === 0) return null;
+  const hasScores = foundationFunders.some(f => f.foundation_score != null);
   return (
     <Section title="Foundation Funders">
-      <DataSource label="Cross-referenced: foundation grants + entity registry" />
+      <DataSource label="Cross-referenced: foundation grants + entity registry + foundation scores" />
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className={THEAD}>
             <tr>
               <th className={TH}>Foundation</th>
               <th className={TH_R}>Annual Giving</th>
-              <th className={TH_R}>Grants to Org</th>
-              <th className={TH_R}>Grant Value</th>
+              <th className={TH_R}>Grants</th>
+              <th className={TH_R}>Value</th>
+              {hasScores && <th className={TH}>Score</th>}
               <th className={TH}>Years</th>
             </tr>
           </thead>
           <tbody>
             {foundationFunders.map((f, i) => (
               <tr key={f.foundation_abn ?? f.foundation_name} className={ROW(i)}>
-                <td className={`${TD} font-bold`}>{f.foundation_name}</td>
+                <td className={`${TD} font-bold`}>
+                  {f.foundation_name}
+                  {Number(f.overlapping_trustees) > 0 && (
+                    <span className="ml-2 inline-block px-1.5 py-0.5 text-[10px] font-bold bg-red-100 text-red-700 rounded" title="Foundation trustees sit on this org's board">
+                      BOARD OVERLAP
+                    </span>
+                  )}
+                </td>
                 <td className={TD_R}>{Number(f.total_giving_annual) > 0 ? money(Number(f.total_giving_annual)) : '--'}</td>
                 <td className={TD_R}>{f.grant_count}</td>
                 <td className={TD_R}>{Number(f.total_grant_amount) > 0 ? money(Number(f.total_grant_amount)) : '--'}</td>
+                {hasScores && (
+                  <td className={TD}>
+                    <div className="flex flex-wrap gap-1">
+                      {f.foundation_score != null && (
+                        <span className="inline-block px-2 py-0.5 text-[10px] font-black bg-bauhaus-black text-white rounded">
+                          {f.foundation_score}
+                        </span>
+                      )}
+                      <ScorePill score={f.transparency_score ?? null} label="Transparency" />
+                      <ScorePill score={f.need_alignment_score ?? null} label="Need" />
+                      <ScorePill score={f.evidence_score ?? null} label="Evidence" />
+                    </div>
+                  </td>
+                )}
                 <td className={TD}>
                   <div className="flex flex-wrap gap-1">
                     {(f.grant_years ?? []).sort().map(y => (
@@ -686,6 +719,13 @@ export function FoundationFundersSection({ foundationFunders }: { foundationFund
           </tbody>
         </table>
       </div>
+      {hasScores && (
+        <div className="mt-3 text-right">
+          <Link href="/reports/philanthropy" className="text-[10px] font-black text-bauhaus-blue uppercase tracking-widest hover:text-bauhaus-red">
+            Foundation Intelligence Report &rarr;
+          </Link>
+        </div>
+      )}
     </Section>
   );
 }

@@ -36,18 +36,17 @@ function log(msg) {
   console.log(line);
 }
 
-// Known agent scripts — maps agent_id to script path
-const AGENT_SCRIPTS = {
-  'watch-board-changes': 'scripts/watch-board-changes.mjs',
-  'watch-funding-anomalies': 'scripts/watch-funding-anomalies.mjs',
-  'watch-data-quality': 'scripts/watch-data-quality.mjs',
-  'watch-entity-changes': 'scripts/watch-entity-changes.mjs',
-  'enrich-grants-free': 'scripts/enrich-grants-free.mjs',
-  'scrape-acnc-people': 'scripts/scrape-acnc-people.mjs',
-  'link-entities-mega': 'scripts/link-entities-mega.mjs',
-  'refresh-views': 'scripts/refresh-views.mjs',
-  'link-corporate-groups': 'scripts/link-corporate-groups.mjs',
+// Auto-discover agent scripts by convention: scripts/${agentId}.mjs
+// Override map for agents whose script name differs from agent_id
+const AGENT_SCRIPT_OVERRIDES = {
+  'refresh-materialized-views': 'scripts/refresh-views.mjs',
 };
+
+function resolveScript(agentId) {
+  if (AGENT_SCRIPT_OVERRIDES[agentId]) return AGENT_SCRIPT_OVERRIDES[agentId];
+  const path = `scripts/${agentId}.mjs`;
+  return existsSync(path) ? path : null;
+}
 
 async function getDueAgents() {
   const { data, error } = await supabase
@@ -71,9 +70,9 @@ async function getDueAgents() {
 }
 
 async function runAgent(schedule) {
-  const scriptPath = AGENT_SCRIPTS[schedule.agent_id];
+  const scriptPath = resolveScript(schedule.agent_id);
   if (!scriptPath) {
-    log(`  Unknown agent: ${schedule.agent_id} — no script mapped`);
+    log(`  No script found for: ${schedule.agent_id}`);
     return false;
   }
 

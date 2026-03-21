@@ -40,8 +40,34 @@ export default function ReportsPage() {
             <span className="text-bauhaus-red font-black">6.</span>
             <span><a href="/reports/social-enterprise" className="font-bold text-bauhaus-blue hover:text-bauhaus-red">Social Enterprise in Australia</a> &mdash; The invisible $21 billion sector and the register that doesn&apos;t exist</span>
           </li>
+          <li className="flex gap-2">
+            <span className="text-bauhaus-red font-black">7.</span>
+            <span><a href="/reports/philanthropy" className="font-bold text-bauhaus-blue hover:text-bauhaus-red">Foundation Intelligence</a> &mdash; Who funds what, who watches, and what works</span>
+          </li>
         </ol>
       </div>
+
+      {/* ===== FLAGSHIP: FOUNDATION INTELLIGENCE ===== */}
+      <section className="mb-6">
+        <a href="/reports/philanthropy" className="group block">
+          <div className="bg-bauhaus-black border-4 border-bauhaus-black p-8 transition-all group-hover:-translate-y-1" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-yellow, #f5a623)' }}>
+            <div className="text-xs font-black text-bauhaus-yellow mb-2 uppercase tracking-widest">Foundation Intelligence &mdash; NEW</div>
+            <h3 className="text-2xl font-black text-white mb-3">Who Funds What. Who Watches. What Works.</h3>
+            <p className="text-base text-white/80 leading-relaxed mb-4">
+              2,466 Australian foundations scored on transparency, need alignment, evidence-backed
+              funding, and geographic reach. $11.8B in annual giving &mdash; but how much reaches
+              communities that need it most? Trustee&ndash;grantee board overlaps revealed.
+            </p>
+            <div className="flex gap-6 text-white/60 text-sm font-bold">
+              <span>2,466 foundations scored</span>
+              <span>&middot;</span>
+              <span>5,036 grantee links traced</span>
+              <span>&middot;</span>
+              <span>72 revolving door overlaps</span>
+            </div>
+          </div>
+        </a>
+      </section>
 
       {/* ===== FLAGSHIP: TRIPLE PLAY ===== */}
       <section className="mb-6">
