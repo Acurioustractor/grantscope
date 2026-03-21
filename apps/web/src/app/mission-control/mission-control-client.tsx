@@ -1247,6 +1247,8 @@ function QuickLinks() {
     { href: '/benchmark', label: 'Benchmark', desc: 'AI quality evaluation' },
     { href: '/places', label: 'Places', desc: 'Funding gap analysis by postcode' },
     { href: '/dashboard', label: 'Dashboard', desc: 'Overview & key metrics' },
+    { href: '/admin/api-usage', label: 'API Usage', desc: 'Per-org keys & rate limits' },
+    { href: '/agent', label: 'Agent API', desc: 'Storefront & playground' },
   ];
 
   return (

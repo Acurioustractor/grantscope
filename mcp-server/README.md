@@ -30,6 +30,16 @@ With API key:
 claude mcp add civicgraph -- env CIVICGRAPH_API_KEY=cg_live_... npx civicgraph-mcp
 ```
 
+## CLI Options
+
+```
+civicgraph-mcp [options]
+
+Options:
+  --version, -v   Show version number
+  --help, -h      Show help with usage examples and available tools
+```
+
 ## Available Tools
 
 | Tool | Description |
@@ -56,6 +66,24 @@ AusTender, AEC donations, ACNC charities, ATO tax transparency, ORIC, justice fu
 
 - **Anonymous:** 20 requests/minute
 - **With API key:** 60+ requests/minute
+
+## Error Handling
+
+v1.1+ provides clear error messages for common issues:
+
+- **Network errors** — connection refused, DNS resolution failures
+- **Authentication** — invalid or revoked API key with link to get a new one
+- **Rate limiting** — explains current limits and how to upgrade
+
+## Changelog
+
+### v1.1.0
+- Added `--version` and `--help` CLI flags
+- Improved error messages for network, auth, and rate limit failures
+- Version now reads from package.json
+
+### v1.0.0
+- Initial release with 6 tools
 
 ## License
 
