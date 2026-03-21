@@ -12,7 +12,7 @@ import { getServiceSupabase } from '@/lib/supabase';
  *   3. Edge-first (default, no entity_type): fetch top edges by amount, resolve nodes.
  *
  * GET /api/data/graph
- *   ?mode=hubs|justice|power|ndis
+ *   ?mode=hubs|justice|power|ndis|foundations
  *   &entity_type=foundation|charity|company|...
  *   &topic=youth-justice|child-protection|...
  *   &state=NSW|VIC|QLD|...
@@ -687,6 +687,196 @@ export async function GET(request: Request) {
           total_edges: edges.length,
           filters: { mode: 'justice', topic, state, minAmount, limit },
           alma_enriched: almaMap.size,
+        },
+      });
+      response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+      return response;
+    }
+
+    // ── Foundations mode: foundation → grantee graph from mv_foundation_grantees ──
+    if (mode === 'foundations') {
+      const stateFilter = state ? `AND fg.grantee_state = '${state.toUpperCase()}'` : '';
+      const minGiving = parseInt(searchParams.get('min_giving') || '0', 10);
+      const givingFilter = minGiving > 0 ? `AND fg.total_giving_annual >= ${minGiving}` : '';
+
+      // Step 1: Get foundation → grantee edges
+      const granteeRows = await paginatedRpc<{
+        foundation_name: string;
+        foundation_abn: string;
+        total_giving_annual: number | null;
+        grantee_name: string;
+        grantee_abn: string | null;
+        grant_amount: number | null;
+        grant_year: number | null;
+        grantee_entity_id: string | null;
+        grantee_state: string | null;
+      }>(supabase,
+        `SELECT fg.foundation_name, fg.foundation_abn,
+                fg.total_giving_annual, fg.grantee_name, fg.grantee_abn,
+                fg.grant_amount, fg.grant_year,
+                fg.grantee_entity_id, fg.grantee_state
+         FROM mv_foundation_grantees fg
+         WHERE fg.foundation_abn IS NOT NULL ${stateFilter} ${givingFilter}
+         ORDER BY fg.total_giving_annual DESC NULLS LAST, fg.grant_amount DESC NULLS LAST
+         LIMIT ${limit}`,
+        limit);
+
+      if (granteeRows.length === 0) {
+        return NextResponse.json({ nodes: [], edges: [], meta: { total_nodes: 0, total_edges: 0 } });
+      }
+
+      // Step 2: Get foundation scores
+      const foundationAbns = [...new Set(granteeRows.map(r => r.foundation_abn))];
+      const abnList = foundationAbns.map(a => `'${a}'`).join(',');
+      const scores = await paginatedRpc<{
+        acnc_abn: string; foundation_score: number;
+        transparency_score: number; need_alignment_score: number;
+        evidence_score: number; concentration_score: number;
+      }>(supabase,
+        `SELECT acnc_abn, foundation_score, transparency_score,
+                need_alignment_score, evidence_score, concentration_score
+         FROM mv_foundation_scores WHERE acnc_abn IN (${abnList})`,
+        5000);
+      const scoreMap = new Map(scores.map(s => [s.acnc_abn, s]));
+
+      // Step 3: Get regranting chains (foundation → regranter → ultimate grantee)
+      const regrantRows = await paginatedRpc<{
+        source_abn: string; regranter_name: string; regranter_abn: string;
+        ultimate_grantee: string; ultimate_grantee_abn: string | null;
+        downstream_amount: number | null;
+      }>(supabase,
+        `SELECT source_abn, regranter_name, regranter_abn,
+                ultimate_grantee, ultimate_grantee_abn, downstream_amount
+         FROM mv_foundation_regranting
+         WHERE source_abn IN (${abnList})
+         ORDER BY downstream_amount DESC NULLS LAST
+         LIMIT 2000`,
+        2000);
+
+      // Step 4: Build graph
+      const nodes: Array<Record<string, unknown>> = [];
+      const graphEdges: Array<{ source: string; target: string; type: string; amount: number | null; dataset: string; year: number | null }> = [];
+
+      // Foundation hub nodes (keyed by ABN)
+      const foundationNodes = new Map<string, {
+        name: string; giving: number; granteeCount: number;
+        score: typeof scores[0] | undefined;
+      }>();
+      // Grantee spoke nodes (keyed by ABN or name)
+      const granteeNodeMap = new Map<string, {
+        name: string; abn: string | null; state: string | null;
+        entityId: string | null; totalReceived: number; foundationCount: number;
+        isRegranter: boolean;
+      }>();
+
+      const regranterAbns = new Set(regrantRows.map(r => r.regranter_abn));
+
+      for (const row of granteeRows) {
+        const fKey = `foundation:${row.foundation_abn}`;
+        const gKey = row.grantee_abn ? `grantee:${row.grantee_abn}` : `grantee:${row.grantee_name}`;
+
+        // Foundation node
+        const fNode = foundationNodes.get(fKey) || {
+          name: row.foundation_name, giving: Number(row.total_giving_annual || 0),
+          granteeCount: 0, score: scoreMap.get(row.foundation_abn),
+        };
+        fNode.granteeCount++;
+        foundationNodes.set(fKey, fNode);
+
+        // Grantee node
+        const gNode = granteeNodeMap.get(gKey) || {
+          name: row.grantee_name, abn: row.grantee_abn, state: row.grantee_state,
+          entityId: row.grantee_entity_id, totalReceived: 0, foundationCount: 0,
+          isRegranter: row.grantee_abn ? regranterAbns.has(row.grantee_abn) : false,
+        };
+        gNode.totalReceived += Number(row.grant_amount || 0);
+        gNode.foundationCount++;
+        granteeNodeMap.set(gKey, gNode);
+
+        // Edge: foundation → grantee
+        graphEdges.push({
+          source: fKey, target: gKey, type: 'grant',
+          amount: Number(row.grant_amount || 0),
+          dataset: 'foundation_grantees', year: row.grant_year,
+        });
+      }
+
+      // Add regranting chain edges (regranter → ultimate grantee)
+      for (const row of regrantRows) {
+        const regranterKey = `grantee:${row.regranter_abn}`;
+        const ultimateKey = row.ultimate_grantee_abn
+          ? `grantee:${row.ultimate_grantee_abn}`
+          : `grantee:${row.ultimate_grantee}`;
+
+        // Ensure ultimate grantee node exists
+        if (!granteeNodeMap.has(ultimateKey)) {
+          granteeNodeMap.set(ultimateKey, {
+            name: row.ultimate_grantee, abn: row.ultimate_grantee_abn,
+            state: null, entityId: null, totalReceived: Number(row.downstream_amount || 0),
+            foundationCount: 0, isRegranter: false,
+          });
+        }
+
+        graphEdges.push({
+          source: regranterKey, target: ultimateKey, type: 'regrant',
+          amount: Number(row.downstream_amount || 0),
+          dataset: 'foundation_regranting', year: null,
+        });
+      }
+
+      // Compute degree
+      const degree = new Map<string, number>();
+      for (const e of graphEdges) {
+        degree.set(e.source, (degree.get(e.source) || 0) + 1);
+        degree.set(e.target, (degree.get(e.target) || 0) + 1);
+      }
+
+      // Score tier for coloring
+      const scoreTier = (score: number | undefined): string => {
+        if (!score) return 'unscored';
+        if (score >= 50) return 'high';
+        if (score >= 20) return 'medium';
+        return 'low';
+      };
+
+      // Build node list
+      for (const [key, f] of foundationNodes) {
+        nodes.push({
+          id: key, label: f.name, type: 'foundation',
+          state: null, sector: 'philanthropy', remoteness: null,
+          community_controlled: false,
+          degree: degree.get(key) || 0,
+          funding: f.giving, grantee_count: f.granteeCount,
+          foundation_score: f.score ? Number(f.score.foundation_score) : null,
+          transparency_score: f.score ? Number(f.score.transparency_score) : null,
+          need_alignment_score: f.score ? Number(f.score.need_alignment_score) : null,
+          evidence_score: f.score ? Number(f.score.evidence_score) : null,
+          score_tier: scoreTier(f.score ? Number(f.score.foundation_score) : undefined),
+        });
+      }
+
+      for (const [key, g] of granteeNodeMap) {
+        nodes.push({
+          id: key, label: g.name, type: g.isRegranter ? 'regranter' : 'grantee',
+          state: g.state, sector: null, remoteness: null,
+          community_controlled: false,
+          degree: degree.get(key) || 0,
+          funding: g.totalReceived,
+          foundation_count: g.foundationCount,
+          is_regranter: g.isRegranter,
+        });
+      }
+
+      const response = NextResponse.json({
+        nodes,
+        edges: graphEdges,
+        meta: {
+          total_nodes: nodes.length,
+          total_edges: graphEdges.length,
+          total_foundations: foundationNodes.size,
+          total_grantees: granteeNodeMap.size,
+          total_regrant_edges: regrantRows.length,
+          filters: { mode: 'foundations', state, minGiving, limit },
         },
       });
       response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');

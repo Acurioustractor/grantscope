@@ -81,6 +81,9 @@ const VIEW_GROUPS = [
       'mv_foundation_need_alignment',
       'mv_evidence_backed_funding',
       'mv_foundation_scores',
+      'mv_foundation_regranting',
+      'mv_foundation_trends',
+      'mv_foundation_readiness',
     ],
   },
   // Group 5: Alma dashboard views (depend on alma tables)

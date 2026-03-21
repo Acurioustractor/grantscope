@@ -37,6 +37,11 @@ interface GraphNode {
   role_types?: string[];
   max_system_count?: number;
   total_power_score?: number;
+  foundation_score?: number | null;
+  score_tier?: string;
+  grantee_count?: number;
+  foundation_count?: number;
+  is_regranter?: boolean;
   x?: number;
   y?: number;
 }
@@ -64,7 +69,7 @@ interface Story {
   id: string;
   title: string;
   description: string;
-  mode: 'hubs' | 'justice' | 'power' | 'interlocks' | 'ndis';
+  mode: 'hubs' | 'justice' | 'power' | 'interlocks' | 'ndis' | 'foundations';
   topic?: string;
   minSystems?: number;
   narrative: string;
@@ -102,9 +107,9 @@ const STORIES: Story[] = [
   {
     id: 'foundation-networks',
     title: 'Foundation Networks',
-    description: 'How philanthropic foundations connect through shared grantees',
-    mode: 'hubs',
-    narrative: 'Australia\'s major foundations are connected through a web of shared grantees. When multiple foundations fund the same organization, it creates natural clusters in the network. These clusters often reveal thematic alignment between funders.',
+    description: 'How philanthropic foundations connect through grantees and regranting chains',
+    mode: 'foundations',
+    narrative: 'Australia\'s major foundations distribute funding through direct grants and regranting intermediaries like FRRR. Foundations are scored on transparency, need alignment, evidence backing, and geographic reach. Regranting chains show how funding flows through intermediary foundations to ultimate recipients.',
     highlights: ['foundations'],
   },
   {
@@ -167,13 +172,21 @@ const SYSTEM_COLORS: Record<number, string> = {
 
 type Preset = {
   label: string;
-  mode: 'hubs' | 'justice' | 'power' | 'interlocks' | 'ndis';
+  mode: 'hubs' | 'justice' | 'power' | 'interlocks' | 'ndis' | 'foundations';
   type?: string;
   hubs?: number;
   topic?: string;
   minSystems?: number;
   minBoards?: number;
+  minGiving?: number;
   desc: string;
+};
+
+const SCORE_TIER_COLORS: Record<string, string> = {
+  high: '#22c55e',     // green
+  medium: '#f59e0b',   // amber
+  low: '#6b7280',      // gray
+  unscored: '#374151', // dark gray
 };
 
 const PRESETS: Preset[] = [
@@ -185,7 +198,8 @@ const PRESETS: Preset[] = [
   { label: 'Child Protection', mode: 'justice', topic: 'child-protection', desc: 'Child protection funding flows' },
   { label: 'Indigenous Justice', mode: 'justice', topic: 'indigenous', desc: 'Indigenous justice programs & orgs' },
   { label: 'Diversion Programs', mode: 'justice', topic: 'diversion', desc: 'Diversion & prevention funding' },
-  { label: 'Foundation Networks', mode: 'hubs', type: 'foundation', hubs: 30, desc: 'Top foundations and who they fund' },
+  { label: 'Foundation Giving', mode: 'foundations', desc: 'Foundation → grantee flows with scores and regranting chains' },
+  { label: 'Top Foundations', mode: 'foundations', minGiving: 5000000, desc: 'Foundations giving $5M+ and their grantee networks' },
   { label: 'Full Network', mode: 'hubs', type: '', hubs: 0, desc: 'Top relationships by value' },
 ];
 
@@ -253,7 +267,7 @@ function getAnnotationsForStory(storyId: string): Annotation[] {
       ];
     case 'foundation-networks':
       return [
-        { text: 'Blue nodes are foundations. Shared grantees create natural clusters between funders.', target: 'foundations' },
+        { text: 'Diamond nodes are foundations, colored by score. Hexagons are regranters that redistribute funding.', target: 'foundations' },
       ];
     case 'power-concentration':
       return [
@@ -375,6 +389,9 @@ export default function GraphPage() {
       } else if (preset.mode === 'justice') {
         params.set('mode', 'justice');
         if (preset.topic) params.set('topic', preset.topic);
+      } else if (preset.mode === 'foundations') {
+        params.set('mode', 'foundations');
+        if (preset.minGiving) params.set('min_giving', String(preset.minGiving));
       } else if (preset.type) {
         params.set('entity_type', preset.type);
         params.set('mode', 'hubs');
@@ -403,6 +420,8 @@ export default function GraphPage() {
       return { label: story.title, mode: 'power', minSystems: story.minSystems || 3, desc: story.description };
     } else if (story.mode === 'ndis') {
       return { label: story.title, mode: 'ndis', desc: story.description };
+    } else if (story.mode === 'foundations') {
+      return { label: story.title, mode: 'foundations', desc: story.description };
     } else {
       return { label: story.title, mode: 'hubs', type: 'foundation', hubs: 30, desc: story.description };
     }
@@ -518,10 +537,16 @@ export default function GraphPage() {
   const isPower = effectiveMode === 'power';
   const isInterlocks = effectiveMode === 'interlocks';
   const isNdis = effectiveMode === 'ndis';
+  const isFoundations = effectiveMode === 'foundations';
   useEffect(() => {
     if (data && fgRef.current) {
       const fg = fgRef.current;
-      if (isNdis) {
+      if (isFoundations) {
+        // Foundation mode: hub foundations with grantee spokes + regranting chains
+        fg.d3Force('charge')?.strength(-150).distanceMax(600);
+        fg.d3Force('link')?.distance(35).strength(0.4);
+        fg.d3Force('center')?.strength(0.03);
+      } else if (isNdis) {
         // NDIS: bipartite LGA hubs + provider spokes — strong repulsion for readability
         fg.d3Force('charge')?.strength(-160).distanceMax(600);
         fg.d3Force('link')?.distance(35).strength(0.45);
@@ -548,7 +573,7 @@ export default function GraphPage() {
       fg.d3ReheatSimulation();
       setTimeout(() => fg.zoomToFit(400, 50), 2000);
     }
-  }, [data, isJustice, isPower, isInterlocks, isNdis]);
+  }, [data, isJustice, isPower, isInterlocks, isNdis, isFoundations]);
 
   const graphData = useMemo(() => {
     if (!data) return { nodes: [], links: [] };
@@ -757,6 +782,84 @@ export default function GraphPage() {
         ctx.fillStyle = '#000000bb';
         ctx.fillText(node.label.substring(0, 30), x + 0.5, y + size + 2.5);
         ctx.fillStyle = isPerson ? '#f472b6dd' : '#ffffffdd';
+        ctx.fillText(node.label.substring(0, 30), x, y + size + 2);
+      }
+      return;
+    }
+
+    // Foundations mode: foundations = diamonds, regranters = hexagons, grantees = circles
+    if (isFoundations) {
+      const isFoundation = node.type === 'foundation';
+      const isRegranter = node.type === 'regranter' || node.is_regranter;
+      const tierColor = isFoundation
+        ? (SCORE_TIER_COLORS[node.score_tier] || '#60a5fa')
+        : isRegranter ? '#f59e0b' : '#6b7280';
+      const size = isFoundation
+        ? Math.max(8, Math.min(20, Math.sqrt((node.funding || 0) / 100000) * 1.2))
+        : isRegranter
+          ? Math.max(5, Math.min(14, Math.sqrt(deg + 1) * 2))
+          : Math.max(2, Math.min(8, Math.sqrt(deg + 1) * 1.3));
+
+      // Glow for foundations
+      if (isFoundation) {
+        const glowSize = size * 3;
+        const gradient = ctx.createRadialGradient(x, y, size * 0.2, x, y, glowSize);
+        gradient.addColorStop(0, tierColor + (dimmed ? '18' : '55'));
+        gradient.addColorStop(0.5, tierColor + (dimmed ? '06' : '18'));
+        gradient.addColorStop(1, tierColor + '00');
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(x, y, glowSize, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.globalAlpha = dimAlpha;
+      ctx.fillStyle = tierColor;
+      ctx.beginPath();
+      if (isFoundation) {
+        // Diamond shape for foundations
+        ctx.moveTo(x, y - size);
+        ctx.lineTo(x + size, y);
+        ctx.lineTo(x, y + size);
+        ctx.lineTo(x - size, y);
+        ctx.closePath();
+      } else if (isRegranter) {
+        // Hexagon for regranters
+        for (let i = 0; i < 6; i++) {
+          const angle = (Math.PI / 3) * i - Math.PI / 6;
+          const px = x + size * Math.cos(angle);
+          const py = y + size * Math.sin(angle);
+          i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+      } else {
+        // Circle for grantees
+        ctx.arc(x, y, size, 0, Math.PI * 2);
+      }
+      ctx.fill();
+
+      // Score ring for foundations with scores
+      if (isFoundation && node.foundation_score) {
+        const score = Number(node.foundation_score);
+        const arcLen = (score / 100) * Math.PI * 2;
+        ctx.strokeStyle = tierColor;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x, y, size + 3, -Math.PI / 2, -Math.PI / 2 + arcLen);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+
+      // Labels
+      const labelThreshold = isFoundation ? 0.15 : isRegranter ? 0.3 : 0.5;
+      if (globalScale > labelThreshold && !dimmed) {
+        const fontSize = Math.max(10, 12 / globalScale);
+        ctx.font = `700 ${fontSize}px -apple-system, "SF Pro Text", sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillStyle = '#000000bb';
+        ctx.fillText(node.label.substring(0, 30), x + 0.5, y + size + 2.5);
+        ctx.fillStyle = tierColor + 'dd';
         ctx.fillText(node.label.substring(0, 30), x, y + size + 2);
       }
       return;
@@ -979,8 +1082,8 @@ export default function GraphPage() {
               ctx.arc(node.x || 0, node.y || 0, size, 0, Math.PI * 2);
               ctx.fill();
             }}
-            linkColor={() => isNdis ? 'rgba(251,191,36,0.12)' : isInterlocks ? 'rgba(244,114,182,0.15)' : isPower ? 'rgba(255,255,255,0.08)' : isJustice ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)'}
-            linkWidth={isNdis ? 0.5 : isInterlocks ? 0.6 : isPower ? 0.4 : isJustice ? 0.5 : 0.3}
+            linkColor={(link: any) => isFoundations ? (link.dataset === 'foundation_regranting' ? 'rgba(245,158,11,0.25)' : 'rgba(255,255,255,0.12)') : isNdis ? 'rgba(251,191,36,0.12)' : isInterlocks ? 'rgba(244,114,182,0.15)' : isPower ? 'rgba(255,255,255,0.08)' : isJustice ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)'}
+            linkWidth={(link: any) => isFoundations ? (link.dataset === 'foundation_regranting' ? 0.8 : 0.5) : isNdis ? 0.5 : isInterlocks ? 0.6 : isPower ? 0.4 : isJustice ? 0.5 : 0.3}
             d3AlphaDecay={0.015}
             d3VelocityDecay={0.25}
             warmupTicks={300}
@@ -1338,6 +1441,47 @@ export default function GraphPage() {
               </div>
             </div>
           </>
+        ) : isFoundations ? (
+          <>
+            <p className="text-[10px] font-mono uppercase tracking-wider text-white/40 mb-2">Foundation Networks</p>
+            <div className="space-y-2">
+              <div>
+                <p className="text-[9px] font-mono uppercase text-white/30 mb-1">Node Shapes</p>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <div className="w-3 h-3 rotate-45" style={{ backgroundColor: '#22c55e' }} />
+                  <span className="text-[10px] text-white/50">Foundation (diamond)</span>
+                </div>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <div className="w-3 h-3 bg-[#f59e0b]" style={{ clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' }} />
+                  <span className="text-[10px] text-white/50">Regranter (hexagon)</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#6b7280]" />
+                  <span className="text-[10px] text-white/50">Grantee</span>
+                </div>
+              </div>
+              <div>
+                <p className="text-[9px] font-mono uppercase text-white/30 mb-1">Foundation Score</p>
+                {Object.entries(SCORE_TIER_COLORS).map(([tier, color]) => (
+                  <div key={tier} className="flex items-center gap-1.5 mb-0.5">
+                    <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: color }} />
+                    <span className="text-[10px] text-white/50 capitalize">{tier}</span>
+                  </div>
+                ))}
+              </div>
+              <div>
+                <p className="text-[9px] font-mono uppercase text-white/30 mb-1">Edge Types</p>
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <div className="w-4 h-0 border-t border-white/30" />
+                  <span className="text-[10px] text-white/40">Direct grant</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-4 h-0 border-t border-dashed border-[#f59e0b]/50" />
+                  <span className="text-[10px] text-white/40">Regrant chain</span>
+                </div>
+              </div>
+            </div>
+          </>
         ) : isJustice ? (
           <>
             <p className="text-[10px] font-mono uppercase tracking-wider text-white/40 mb-2">Justice Graph</p>
@@ -1414,6 +1558,14 @@ export default function GraphPage() {
               <span className="text-[10px] font-mono" style={{ color: SYSTEM_COLORS[Math.min(hoveredNode.system_count, 7)] }}>
                 {hoveredNode.system_count} systems
               </span>
+            )}
+            {hoveredNode.foundation_score != null && (
+              <span className="text-[10px] font-mono" style={{ color: SCORE_TIER_COLORS[hoveredNode.score_tier || 'unscored'] }}>
+                Score: {hoveredNode.foundation_score}
+              </span>
+            )}
+            {hoveredNode.is_regranter && (
+              <span className="text-[10px] font-mono text-[#f59e0b]">Regranter</span>
             )}
           </div>
         </div>
