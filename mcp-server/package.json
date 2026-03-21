@@ -1,0 +1,37 @@
+{
+  "name": "civicgraph-mcp",
+  "version": "1.0.0",
+  "description": "CivicGraph MCP server — Australian government intelligence for AI agents. 560K entities, 1.5M relationships, 770K contracts.",
+  "bin": {
+    "civicgraph-mcp": "./index.mjs"
+  },
+  "type": "module",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "civicgraph",
+    "australia",
+    "government",
+    "procurement",
+    "transparency",
+    "ai-agents"
+  ],
+  "author": "CivicGraph <ben@civicgraph.com.au>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Acurioustractor/grantscope.git",
+    "directory": "mcp-server"
+  },
+  "homepage": "https://civicgraph.com.au/agent",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1"
+  },
+  "files": [
+    "index.mjs",
+    "README.md"
+  ]
+}

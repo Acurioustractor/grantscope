@@ -6,11 +6,17 @@
  * Exposes CivicGraph intelligence as MCP tools for AI agents.
  * Wraps the /api/agent endpoint into tool calls.
  *
+ * Environment variables:
+ *   CIVICGRAPH_API_KEY  — API key for authenticated access (optional, get one at civicgraph.com.au/agent)
+ *   CIVICGRAPH_URL      — Base URL (default: https://civicgraph.com.au)
+ *
  * Usage:
- *   CIVICGRAPH_URL=http://localhost:3003 node mcp-server/index.mjs
+ *   npx civicgraph-mcp
+ *   CIVICGRAPH_API_KEY=cg_live_... npx civicgraph-mcp
  *
  * Install in Claude Code:
- *   claude mcp add civicgraph -- node /path/to/grantscope/mcp-server/index.mjs
+ *   claude mcp add civicgraph -- npx civicgraph-mcp
+ *   claude mcp add civicgraph -- env CIVICGRAPH_API_KEY=cg_live_... npx civicgraph-mcp
  */
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
@@ -20,12 +26,18 @@ import {
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 
-const BASE_URL = process.env.CIVICGRAPH_URL || 'http://localhost:3003';
+const BASE_URL = process.env.CIVICGRAPH_URL || 'https://civicgraph.com.au';
+const API_KEY = process.env.CIVICGRAPH_API_KEY || '';
 
 async function callAgent(body) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (API_KEY) {
+    headers['Authorization'] = `Bearer ${API_KEY}`;
+  }
+
   const res = await fetch(`${BASE_URL}/api/agent`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(body),
   });
   const data = await res.json();
@@ -153,7 +165,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error(`CivicGraph MCP server running (${BASE_URL})`);
+  console.error(`CivicGraph MCP server running (${BASE_URL})${API_KEY ? ' [authenticated]' : ' [anonymous]'}`);
 }
 
 main().catch((err) => {
