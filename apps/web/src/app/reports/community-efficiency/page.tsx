@@ -817,9 +817,9 @@ export default async function CommunityEfficiencyReport() {
             </p>
             <p>
               <strong className="text-bauhaus-black">Cross-system power index:</strong> CivicGraph&apos;s
-              mv_entity_power_index materialized view, which scores entities across 7 government systems
+              mv_entity_power_index materialized view, which scores entities across 8 government systems
               (procurement, justice funding, political donations, charity register, foundation giving,
-              ALMA evidence, ATO transparency). Only entities appearing in 2+ systems are included.
+              ALMA evidence, ATO transparency, NDIS). Only entities appearing in 2+ systems are included.
             </p>
             <p>
               <strong className="text-bauhaus-black">Executive overhead:</strong> Calculated as total paid

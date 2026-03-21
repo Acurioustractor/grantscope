@@ -188,7 +188,7 @@ async function main() {
       SELECT canonical_name, COUNT(*) AS cnt
       FROM gs_entities
       WHERE canonical_name IS NOT NULL
-        AND TRIM(canonical_name) != ''
+        AND LENGTH(TRIM(canonical_name)) > 0
     `;
     if (NAME_FILTER) {
       clusterQuery += `    AND canonical_name = ${esc(NAME_FILTER)}\n`;

@@ -58,8 +58,9 @@ function makeGsId(abn) {
  * Most NDIS providers are private businesses, but some are charities/community orgs.
  */
 function inferEntityType(provider) {
-  // Default NDIS providers to 'ndis_provider'
-  return 'ndis_provider';
+  // NDIS providers are a mix of companies, charities, sole traders etc.
+  // Use 'company' as default — most are corporate entities
+  return 'company';
 }
 
 /**
@@ -197,7 +198,8 @@ async function createEntities(unmatchedProviders) {
       entity_type: inferEntityType(provider),
       state: normalizeState(provider.state_code),
       postcode: provider.postcode || null,
-      properties: {
+      confidence: 'registry',
+      metadata: {
         ndis_provider_name: provider.provider_name,
         ndis_legal_name: provider.legal_name,
         ndis_registration_status: provider.registration_status,

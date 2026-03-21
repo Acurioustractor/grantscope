@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'API Developer Portal | CivicGraph',
-  description: 'Programmatic access to Australia\'s most comprehensive cross-system civic intelligence dataset. 159K+ entities, 1M+ relationships, 770K+ contracts across 7 data systems.',
+  description: 'Programmatic access to Australia\'s most comprehensive cross-system civic intelligence dataset. 333K+ entities, 1M+ relationships, 770K+ contracts across 8 data systems.',
   openGraph: {
     title: 'CivicGraph API',
     description: 'Programmatic access to Australia\'s most comprehensive cross-system civic intelligence dataset.',
@@ -624,7 +624,7 @@ export default function DevelopersPage() {
     "dataset_count": 17,
     "agents": 48
   },
-  "entities": { "total": 159000, "by_type": [...] },
+  "entities": { "total": 333000, "by_type": [...] },
   "relationships": { "total": 1000000 },
   "grants": { "total": 18000, "open": 3200 },
   "foundations": { "total": 10800, "programs": 2400 },
@@ -634,7 +634,7 @@ export default function DevelopersPage() {
     "justice_funding": { "records": 71000 }
   },
   "datasets": [
-    { "name": "Entity Graph", "table": "gs_entities", "records": 159000, "status": "fresh" }
+    { "name": "Entity Graph", "table": "gs_entities", "records": 333000, "status": "fresh" }
   ],
   "recent_agent_runs": [...]
 }`}

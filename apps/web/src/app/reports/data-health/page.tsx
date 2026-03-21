@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Data Health | CivicGraph',
-  description: 'Coverage and completeness metrics across 7 data systems powering CivicGraph.',
+  description: 'Coverage and completeness metrics across 8 data systems powering CivicGraph.',
 };
 
 /* ─── Formatting helpers ──────────────────────────── */
@@ -334,7 +334,7 @@ export default async function DataHealthPage() {
           Data Health
         </h1>
         <p className="text-bauhaus-muted text-base sm:text-lg max-w-3xl leading-relaxed font-medium">
-          Coverage and completeness across 7 data systems. {fmt(d.entities.total)} entities,{' '}
+          Coverage and completeness across 8 data systems. {fmt(d.entities.total)} entities,{' '}
           {fmt(d.relationships.total)} relationships, {fmt(d.contracts.total)} contracts.
           Real-time transparency on what we have and what is missing.
         </p>
