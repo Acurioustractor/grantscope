@@ -13,15 +13,26 @@ const ADMIN_EMAILS = ['benjamin@act.place', 'hello@civicgraph.au'];
 
 const publicLinks = [
   { href: '/ask', label: 'Ask' },
+  { href: '/entity', label: 'Intelligence' },
   { href: '/tender-intelligence', label: 'Procurement' },
   { href: '/places', label: 'Places' },
-  { href: '/entities', label: 'Entities' },
   { href: '/grants', label: 'Grants' },
   { href: '/reports', label: 'Reports' },
   { href: '/developers', label: 'API' },
 ];
 
 const megaMenuSections = [
+  {
+    title: 'Intelligence',
+    links: [
+      { href: '/entity', label: 'Entity Search', desc: 'Search 560K entities across all datasets' },
+      { href: '/entity/top', label: 'Power Index', desc: 'Top entities ranked by cross-system influence' },
+      { href: '/person', label: 'Who Runs Australia?', desc: 'Board seats, influence & interlocks' },
+      { href: '/entity/compare', label: 'Compare Entities', desc: 'Side-by-side entity comparison' },
+      { href: '/map', label: 'Funding Desert Map', desc: 'Where disadvantage meets underinvestment' },
+      { href: '/graph', label: 'Network Graph', desc: 'Interactive entity relationship graph' },
+    ],
+  },
   {
     title: 'Decision Tools',
     links: [
@@ -150,9 +161,13 @@ const workspaceModules: NavModule[] = [
       { label: 'Evidence', href: '/evidence' },
       { label: 'Scenarios', href: '/scenarios' },
       { label: 'Entities', href: '/entities' },
+      { label: 'Entity Intel', href: '/entity' },
+      { label: 'Power Index', href: '/entity/top' },
+      { label: 'People', href: '/person' },
+      { label: 'Funding Map', href: '/map' },
+      { label: 'Network Graph', href: '/graph' },
       { label: 'Charities', href: '/charities' },
       { label: 'Social Enterprises', href: '/social-enterprises' },
-      { label: 'Network Graph', href: '/graph' },
     ],
   },
   {
@@ -466,7 +481,7 @@ export function NavBar({ initialUserEmail, subscriptionTier = 'community', isImp
       {megaOpen && (
         <div ref={megaRef} className="hidden md:block border-t-4 border-bauhaus-black bg-white shadow-[0_8px_0_0_rgba(0,0,0,0.08)]">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <div className="grid grid-cols-5 gap-8">
+            <div className="grid grid-cols-6 gap-6">
               {megaMenuSections.map((section) => (
                 <div key={section.title}>
                   <h3 className="text-[10px] font-black text-bauhaus-muted uppercase tracking-[0.3em] mb-3">{section.title}</h3>
