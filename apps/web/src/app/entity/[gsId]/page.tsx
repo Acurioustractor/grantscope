@@ -181,17 +181,17 @@ export default async function EntityPage({ params }: { params: Promise<{ gsId: s
             <p className="text-sm font-bold uppercase tracking-widest text-bauhaus-red">
               CivicGraph Entity Profile
             </p>
+            <Link href={`/entity/${encodeURIComponent(entity.gs_id)}/investigate`} className="text-xs font-bold text-bauhaus-red hover:text-white transition-colors border border-bauhaus-red px-3 py-1">
+              Investigate
+            </Link>
+            <Link href={`/entity/${encodeURIComponent(entity.gs_id)}/print`} className="text-xs text-gray-400 hover:text-white transition-colors border border-gray-600 px-3 py-1">
+              Print / PDF
+            </Link>
             <Link href="/entity" className="text-xs text-gray-400 hover:text-white transition-colors border border-gray-600 px-3 py-1">
               Search
             </Link>
             <Link href="/entity/top" className="text-xs text-gray-400 hover:text-white transition-colors border border-gray-600 px-3 py-1">
               Power Index
-            </Link>
-            <Link href={`/entity/compare?ids=${encodeURIComponent(entity.gs_id)}`} className="text-xs text-gray-400 hover:text-white transition-colors border border-gray-600 px-3 py-1">
-              Compare
-            </Link>
-            <Link href="/person" className="text-xs text-gray-400 hover:text-white transition-colors border border-gray-600 px-3 py-1">
-              People
             </Link>
             <Link href="/map" className="text-xs text-gray-400 hover:text-white transition-colors border border-gray-600 px-3 py-1">
               Map

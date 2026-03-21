@@ -28,6 +28,7 @@ const megaMenuSections = [
       { href: '/entity', label: 'Entity Search', desc: 'Search 560K entities across all datasets' },
       { href: '/entity/top', label: 'Power Index', desc: 'Top entities ranked by cross-system influence' },
       { href: '/person', label: 'Who Runs Australia?', desc: 'Board seats, influence & interlocks' },
+      { href: '/sector', label: 'Sector Intelligence', desc: 'Drill into any sector — entities, funding, power' },
       { href: '/entity/compare', label: 'Compare Entities', desc: 'Side-by-side entity comparison' },
       { href: '/map', label: 'Funding Desert Map', desc: 'Where disadvantage meets underinvestment' },
       { href: '/graph', label: 'Network Graph', desc: 'Interactive entity relationship graph' },
