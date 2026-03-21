@@ -491,6 +491,11 @@ async function runTelegramAlerts(db: SupabaseClient, dryRun: boolean) {
 
     msg += `\n<i>${alert.jurisdiction || 'QLD'} \u{00B7} ${new Date(alert.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}</i>`;
 
+    // Deep link to CivicScope dashboard with search
+    const searchTerm = (alert.title || alert.summary || '').split(/\s+/).slice(0, 4).join(' ');
+    const dashUrl = `https://www.justicehub.com.au/civic/qld-youth-justice?q=${encodeURIComponent(searchTerm)}`;
+    msg += `\n\n<a href="${dashUrl}">View on CivicScope \u{2192}</a>`;
+
     if (dryRun) { sent++; continue; }
 
     try {

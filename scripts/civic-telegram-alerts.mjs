@@ -55,6 +55,11 @@ function formatAlert(alert) {
   msg += `\n<i>${alert.jurisdiction} \u{00B7} ${new Date(alert.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</i>`;
   msg += `\n<code>#civicscope #${alert.jurisdiction?.toLowerCase() || 'qld'}</code>`;
 
+  // Deep link to CivicScope dashboard
+  const searchTerm = (alert.title || alert.summary || '').split(/\s+/).slice(0, 4).join(' ');
+  const dashUrl = `https://www.justicehub.com.au/civic/qld-youth-justice?q=${encodeURIComponent(searchTerm)}`;
+  msg += `\n\n<a href="${dashUrl}">View on CivicScope \u{2192}</a>`;
+
   return msg;
 }
 
