@@ -62,8 +62,8 @@ export async function POST(req: NextRequest, { params }: Params) {
       // Build CivicGraph profile URL
       const gsId = contact.linked_entity_id ? entityGsIdMap[contact.linked_entity_id] : null;
       const civicGraphUrl = gsId
-        ? `https://civicgraph.com.au/entity/${encodeURIComponent(gsId)}`
-        : `https://civicgraph.com.au/org/${orgProfile.slug}/contacts`;
+        ? `https://civicgraph.app/entity/${encodeURIComponent(gsId)}`
+        : `https://civicgraph.app/org/${orgProfile.slug}/contacts`;
 
       const { id: ghlContactId } = await upsertContact({
         email: contact.email,

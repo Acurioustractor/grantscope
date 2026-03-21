@@ -16,14 +16,14 @@
     "transparency",
     "ai-agents"
   ],
-  "author": "CivicGraph <ben@civicgraph.com.au>",
+  "author": "CivicGraph <ben@civicgraph.app>",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/Acurioustractor/grantscope.git",
     "directory": "mcp-server"
   },
-  "homepage": "https://civicgraph.com.au/agent",
+  "homepage": "https://civicgraph.app/agent",
   "engines": {
     "node": ">=18.0.0"
   },

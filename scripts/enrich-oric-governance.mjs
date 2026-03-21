@@ -132,7 +132,7 @@ async function fetchWithRetry(url, maxRetries = 3) {
     try {
       const res = await fetch(url, {
         headers: {
-          'User-Agent': 'CivicGraph/1.0 (civicgraph.com.au; public-benefit-research)',
+          'User-Agent': 'CivicGraph/1.0 (civicgraph.app; public-benefit-research)',
           'Accept': 'application/json',
         },
         signal: AbortSignal.timeout(30000),

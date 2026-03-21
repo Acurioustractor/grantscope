@@ -28,7 +28,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const GOOGLE_SERVICE_ACCOUNT_KEY = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
 const GOOGLE_DELEGATED_USER = process.env.GOOGLE_DELEGATED_USER;
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://civicgraph.com.au';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://civicgraph.app';
 
 if (!supabaseUrl || !supabaseKey) {
   console.error('Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');

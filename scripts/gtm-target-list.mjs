@@ -106,7 +106,7 @@ const TARGETS = [
 ];
 
 // ── Output ──────────────────────────────────────────────────────────
-const BASE_URL = 'https://civicgraph.com.au';
+const BASE_URL = 'https://civicgraph.app';
 
 console.log('╔══════════════════════════════════════════════════════════════════╗');
 console.log('║  CivicGraph GTM Phase 1 — Foundation Outreach Target List      ║');

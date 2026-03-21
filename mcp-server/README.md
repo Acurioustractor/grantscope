@@ -1,6 +1,6 @@
 # civicgraph-mcp
 
-[MCP](https://modelcontextprotocol.io/) server for [CivicGraph](https://civicgraph.com.au) — Australian government intelligence for AI agents.
+[MCP](https://modelcontextprotocol.io/) server for [CivicGraph](https://civicgraph.app) — Australian government intelligence for AI agents.
 
 560K entities, 1.5M relationships, 770K contracts, 312K political donations. Cross-referenced by ABN across 11 datasets.
 
@@ -12,7 +12,7 @@ npx civicgraph-mcp
 
 ### With API key (higher rate limits)
 
-Get a key at [civicgraph.com.au/agent](https://civicgraph.com.au/agent), then:
+Get a key at [civicgraph.app/agent](https://civicgraph.app/agent), then:
 
 ```bash
 CIVICGRAPH_API_KEY=cg_live_... npx civicgraph-mcp
@@ -50,7 +50,7 @@ AusTender, AEC donations, ACNC charities, ATO tax transparency, ORIC, justice fu
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `CIVICGRAPH_API_KEY` | — | API key for authenticated access |
-| `CIVICGRAPH_URL` | `https://civicgraph.com.au` | Base URL |
+| `CIVICGRAPH_URL` | `https://civicgraph.app` | Base URL |
 
 ## Rate Limits
 

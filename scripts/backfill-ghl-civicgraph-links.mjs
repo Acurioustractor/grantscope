@@ -124,7 +124,7 @@ async function main() {
   for (const [ghlId, link] of Object.entries(linksByContact)) {
     const gsId = entityGsIdMap[link.entity_id];
     if (gsId) {
-      ghlContactUrlMap[ghlId] = `https://civicgraph.com.au/entity/${encodeURIComponent(gsId)}`;
+      ghlContactUrlMap[ghlId] = `https://civicgraph.app/entity/${encodeURIComponent(gsId)}`;
     }
   }
 

@@ -7,8 +7,8 @@
  * Wraps the /api/agent endpoint into tool calls.
  *
  * Environment variables:
- *   CIVICGRAPH_API_KEY  — API key for authenticated access (optional, get one at civicgraph.com.au/agent)
- *   CIVICGRAPH_URL      — Base URL (default: https://civicgraph.com.au)
+ *   CIVICGRAPH_API_KEY  — API key for authenticated access (optional, get one at civicgraph.app/agent)
+ *   CIVICGRAPH_URL      — Base URL (default: https://civicgraph.app)
  *
  * Usage:
  *   npx civicgraph-mcp
@@ -26,7 +26,7 @@ import {
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 
-const BASE_URL = process.env.CIVICGRAPH_URL || 'https://grantscope.vercel.app';
+const BASE_URL = process.env.CIVICGRAPH_URL || 'https://civicgraph.app';
 const API_KEY = process.env.CIVICGRAPH_API_KEY || '';
 
 async function callAgent(body) {

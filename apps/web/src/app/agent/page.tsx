@@ -228,7 +228,7 @@ Authorization: Bearer cg_live_...
           <a href="/api/agent" className="px-6 py-3 bg-bauhaus-black text-white font-black text-xs uppercase tracking-widest border-4 border-bauhaus-black hover:bg-bauhaus-red transition-colors">
             View API Docs
           </a>
-          <a href="mailto:ben@civicgraph.com.au?subject=Agent API Access" className="px-6 py-3 bg-white text-bauhaus-black font-black text-xs uppercase tracking-widest border-4 border-bauhaus-black hover:bg-bauhaus-yellow transition-colors">
+          <a href="mailto:ben@civicgraph.app?subject=Agent API Access" className="px-6 py-3 bg-white text-bauhaus-black font-black text-xs uppercase tracking-widest border-4 border-bauhaus-black hover:bg-bauhaus-yellow transition-colors">
             Get In Touch
           </a>
         </div>

@@ -306,14 +306,14 @@ export function ApiKeysClient() {
           <div>
             <div className="text-sm font-black text-bauhaus-black mb-2">Base URL</div>
             <code className="block px-3 py-2 bg-bauhaus-canvas border-2 border-bauhaus-black font-mono text-xs">
-              https://civicgraph.com.au/api
+              https://civicgraph.app/api
             </code>
           </div>
 
           <div>
             <div className="text-sm font-black text-bauhaus-black mb-2">Example Request</div>
             <pre className="px-3 py-2 bg-bauhaus-canvas border-2 border-bauhaus-black font-mono text-xs overflow-x-auto">
-{`curl https://civicgraph.com.au/api/data/entities \\
+{`curl https://civicgraph.app/api/data/entities \\
   -H "Authorization: Bearer cg_your_api_key_here"`}
             </pre>
           </div>
