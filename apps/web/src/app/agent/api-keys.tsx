@@ -14,6 +14,107 @@ interface ApiKeyRow {
   total_errors: number;
 }
 
+interface UsageDay {
+  day: string;
+  requests: number;
+  errors: number;
+  avg_ms: number;
+}
+
+interface UsageData {
+  keys: { id: string; name: string; prefix: string; requests: number; errors: number }[];
+  totals: { requests: number; errors: number };
+  daily: UsageDay[];
+}
+
+export function UsageDashboard() {
+  const [usage, setUsage] = useState<UsageData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/agent/usage')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setUsage(d); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return null;
+  if (!usage || usage.totals.requests === 0) return null;
+
+  const daily = [...usage.daily].sort((a, b) => a.day.localeCompare(b.day)).slice(-14);
+  const maxReqs = Math.max(...daily.map(d => d.requests), 1);
+  const avgMs = daily.length > 0
+    ? Math.round(daily.reduce((s, d) => s + d.avg_ms * d.requests, 0) / Math.max(daily.reduce((s, d) => s + d.requests, 0), 1))
+    : 0;
+
+  return (
+    <section className="mb-12">
+      <h2 className="text-xl font-black text-bauhaus-black mb-4">Usage</h2>
+      <div className="border-4 border-bauhaus-black">
+        {/* Stats row */}
+        <div className="grid grid-cols-3 divide-x-4 divide-bauhaus-black border-b-4 border-bauhaus-black">
+          <div className="p-4 text-center">
+            <div className="text-2xl font-black text-bauhaus-black tabular-nums">{usage.totals.requests.toLocaleString()}</div>
+            <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mt-1">Total Requests</div>
+          </div>
+          <div className="p-4 text-center">
+            <div className="text-2xl font-black text-bauhaus-black tabular-nums">{usage.totals.errors.toLocaleString()}</div>
+            <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mt-1">Errors</div>
+          </div>
+          <div className="p-4 text-center">
+            <div className="text-2xl font-black text-bauhaus-black tabular-nums">{avgMs}ms</div>
+            <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mt-1">Avg Response</div>
+          </div>
+        </div>
+
+        {/* Bar chart - last 14 days */}
+        {daily.length > 0 && (
+          <div className="p-4">
+            <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-3">Last 14 Days</div>
+            <div className="flex items-end gap-1 h-24">
+              {daily.map(d => (
+                <div key={d.day} className="flex-1 flex flex-col items-center gap-0.5 group relative">
+                  <div
+                    className="w-full bg-bauhaus-blue hover:bg-bauhaus-red transition-colors cursor-default"
+                    style={{ height: `${Math.max((d.requests / maxReqs) * 100, 4)}%` }}
+                    title={`${d.day}: ${d.requests} requests, ${d.avg_ms}ms avg`}
+                  />
+                  {/* Tooltip */}
+                  <div className="absolute bottom-full mb-1 hidden group-hover:block bg-bauhaus-black text-white text-[9px] font-bold px-2 py-1 whitespace-nowrap z-10">
+                    {d.day.slice(5)}: {d.requests} req, {d.avg_ms}ms
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-between mt-1">
+              <span className="text-[9px] text-bauhaus-muted font-bold">{daily[0]?.day.slice(5)}</span>
+              <span className="text-[9px] text-bauhaus-muted font-bold">{daily[daily.length - 1]?.day.slice(5)}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Per-key breakdown */}
+        {usage.keys.length > 1 && (
+          <div className="border-t-4 border-bauhaus-black p-4">
+            <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-2">By Key</div>
+            <div className="space-y-1">
+              {usage.keys.map(k => (
+                <div key={k.id} className="flex items-center gap-2 text-xs font-medium text-bauhaus-muted">
+                  <code className="text-[10px] font-mono">{k.prefix}...</code>
+                  <span className="font-bold text-bauhaus-black">{k.name}</span>
+                  <span className="ml-auto tabular-nums">{k.requests.toLocaleString()} req</span>
+                  {k.errors > 0 && <span className="text-bauhaus-red tabular-nums">{k.errors} err</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 export function ApiKeyManager() {
   const [keys, setKeys] = useState<ApiKeyRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -95,7 +196,7 @@ export function ApiKeyManager() {
   // Not authenticated — show sign-in prompt
   if (!authed) {
     return (
-      <section className="mb-12">
+      <section id="api-keys" className="mb-12 scroll-mt-20">
         <h2 className="text-xl font-black text-bauhaus-black mb-4">API Keys</h2>
         <div className="border-4 border-bauhaus-black p-8 text-center">
           <div className="text-sm text-bauhaus-muted font-medium mb-4">
@@ -113,7 +214,7 @@ export function ApiKeyManager() {
   }
 
   return (
-    <section className="mb-12">
+    <section id="api-keys" className="mb-12 scroll-mt-20">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-black text-bauhaus-black">API Keys</h2>
         {!showCreate && (

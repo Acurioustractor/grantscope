@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { AgentPlayground } from './playground';
-import { ApiKeyManager } from './api-keys';
+import { ApiKeyManager, UsageDashboard } from './api-keys';
 
 export const metadata: Metadata = {
   title: 'Agent API — CivicGraph',
@@ -122,6 +122,9 @@ Authorization: Bearer cg_live_...
       {/* API Keys */}
       <ApiKeyManager />
 
+      {/* Usage Dashboard */}
+      <UsageDashboard />
+
       {/* Live Playground */}
       <AgentPlayground />
 
@@ -202,35 +205,50 @@ Authorization: Bearer cg_live_...
       {/* Pricing */}
       <section className="mb-12">
         <h2 className="text-xl font-black text-bauhaus-black mb-4">Pricing</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="border-4 border-bauhaus-black p-6">
-            <div className="text-xs font-black text-bauhaus-muted uppercase tracking-[0.3em] mb-1">Anonymous</div>
-            <div className="text-3xl font-black text-bauhaus-black mb-2">Free</div>
-            <ul className="text-sm text-bauhaus-muted font-medium space-y-1">
+            <div className="text-xs font-black text-bauhaus-muted uppercase tracking-[0.3em] mb-1">Explorer</div>
+            <div className="text-3xl font-black text-bauhaus-black mb-1">Free</div>
+            <div className="text-xs text-bauhaus-muted font-medium mb-3">No key required</div>
+            <ul className="text-sm text-bauhaus-muted font-medium space-y-1.5 mb-4">
               <li>20 requests/minute</li>
-              <li>All 6 actions available</li>
-              <li>No API key needed</li>
+              <li>All 6 actions</li>
               <li>IP-based rate limiting</li>
+              <li>Community support</li>
             </ul>
+            <a href="/api/agent" className="block text-center px-4 py-2.5 bg-bauhaus-black text-white font-black text-xs uppercase tracking-widest hover:bg-bauhaus-blue transition-colors">
+              Start Now
+            </a>
           </div>
-          <div className="border-4 border-bauhaus-blue p-6 bg-bauhaus-blue/5">
-            <div className="text-xs font-black text-bauhaus-blue uppercase tracking-[0.3em] mb-1">With API Key</div>
-            <div className="text-3xl font-black text-bauhaus-black mb-2">Free <span className="text-sm font-bold text-bauhaus-muted">(beta)</span></div>
-            <ul className="text-sm text-bauhaus-muted font-medium space-y-1">
+          <div className="border-4 border-bauhaus-blue p-6 bg-bauhaus-blue/5 relative">
+            <div className="absolute -top-3 right-4 bg-bauhaus-blue text-white text-[10px] font-black uppercase tracking-widest px-3 py-1">Beta</div>
+            <div className="text-xs font-black text-bauhaus-blue uppercase tracking-[0.3em] mb-1">Builder</div>
+            <div className="text-3xl font-black text-bauhaus-black mb-1">Free</div>
+            <div className="text-xs text-bauhaus-muted font-medium mb-3">API key required</div>
+            <ul className="text-sm text-bauhaus-muted font-medium space-y-1.5 mb-4">
               <li>60 requests/minute</li>
-              <li>Usage tracking + analytics</li>
-              <li>Up to 5 keys per org</li>
-              <li>Priority when paid tiers launch</li>
+              <li>Usage dashboard + analytics</li>
+              <li>NL→SQL queries</li>
+              <li>Up to 5 API keys</li>
             </ul>
+            <a href="#api-keys" className="block text-center px-4 py-2.5 bg-bauhaus-blue text-white font-black text-xs uppercase tracking-widest hover:bg-bauhaus-black transition-colors">
+              Get API Key
+            </a>
           </div>
-        </div>
-        <div className="mt-4 flex justify-center gap-4 flex-wrap">
-          <a href="/api/agent" className="px-6 py-3 bg-bauhaus-black text-white font-black text-xs uppercase tracking-widest border-4 border-bauhaus-black hover:bg-bauhaus-red transition-colors">
-            View API Docs
-          </a>
-          <a href="mailto:ben@civicgraph.app?subject=Agent API Access" className="px-6 py-3 bg-white text-bauhaus-black font-black text-xs uppercase tracking-widest border-4 border-bauhaus-black hover:bg-bauhaus-yellow transition-colors">
-            Get In Touch
-          </a>
+          <div className="border-4 border-bauhaus-black p-6 bg-bauhaus-canvas">
+            <div className="text-xs font-black text-bauhaus-muted uppercase tracking-[0.3em] mb-1">Enterprise</div>
+            <div className="text-3xl font-black text-bauhaus-black mb-1">Custom</div>
+            <div className="text-xs text-bauhaus-muted font-medium mb-3">Volume + SLA</div>
+            <ul className="text-sm text-bauhaus-muted font-medium space-y-1.5 mb-4">
+              <li>Unlimited requests</li>
+              <li>Dedicated support</li>
+              <li>Custom endpoints</li>
+              <li>White-label + SSO</li>
+            </ul>
+            <a href="mailto:ben@civicgraph.app?subject=Enterprise Agent API" className="block text-center px-4 py-2.5 border-4 border-bauhaus-black text-bauhaus-black font-black text-xs uppercase tracking-widest hover:bg-bauhaus-black hover:text-white transition-colors">
+              Get In Touch
+            </a>
+          </div>
         </div>
       </section>
 

@@ -95,12 +95,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'question too long (max 500 chars)' }, { status: 400 });
   }
 
-  const apiKey = process.env.MINIMAX_API_KEY;
+  // LLM provider: prefer OpenAI (works from Vercel), fall back to MiniMax
+  const openaiKey = process.env.OPENAI_API_KEY;
+  const minimaxKey = process.env.MINIMAX_API_KEY;
+  const useOpenAI = !!openaiKey;
+  const apiKey = openaiKey || minimaxKey;
   if (!apiKey) {
-    return NextResponse.json({ error: 'MINIMAX_API_KEY not configured' }, { status: 500 });
+    return NextResponse.json({ error: 'No LLM API key configured (OPENAI_API_KEY or MINIMAX_API_KEY)' }, { status: 500 });
   }
 
-  const baseUrl = process.env.MINIMAX_BASE_URL || 'https://api.minimax.io/v1';
+  const baseUrl = useOpenAI
+    ? 'https://api.openai.com/v1'
+    : (process.env.MINIMAX_BASE_URL || 'https://api.minimax.io/v1');
+  const model = useOpenAI ? 'gpt-4.1-mini' : 'MiniMax-M2';
 
   // Step 1: Generate SQL from natural language
   const sqlAbort = AbortController ? new AbortController() : undefined;
@@ -115,13 +122,17 @@ export async function POST(request: NextRequest) {
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'MiniMax-M2',
+        model,
         max_tokens: 1000,
         temperature: 0,
         messages: [
           {
+            role: 'system',
+            content: SCHEMA_CONTEXT,
+          },
+          {
             role: 'user',
-            content: `${SCHEMA_CONTEXT}\n\nGenerate a PostgreSQL query for this question:\n${question}`,
+            content: `Generate a PostgreSQL query for this question:\n${question}`,
           },
         ],
       }),
@@ -129,7 +140,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (e) {
     clearTimeout(sqlTimeout);
-    console.error('[/api/ask] MiniMax SQL generation failed:', e instanceof Error ? e.message : e);
+    console.error(`[/api/ask] ${model} SQL generation failed:`, e instanceof Error ? e.message : e);
     const isTimeout = e instanceof Error && e.name === 'AbortError';
     return NextResponse.json(
       { error: isTimeout ? 'LLM timed out — please try again' : 'LLM connection failed' },
@@ -140,8 +151,8 @@ export async function POST(request: NextRequest) {
 
   if (!llmResponse.ok) {
     const err = await llmResponse.text();
-    console.error('[/api/ask] MiniMax returned error:', llmResponse.status, err.slice(0, 200));
-    return NextResponse.json({ error: 'LLM error' }, { status: 502 });
+    console.error(`[/api/ask] ${model} returned error:`, llmResponse.status, err.slice(0, 300));
+    return NextResponse.json({ error: 'LLM error', details: err.slice(0, 200) }, { status: 502 });
   }
 
   const llmJson = await llmResponse.json();
@@ -185,7 +196,7 @@ export async function POST(request: NextRequest) {
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'MiniMax-M2',
+        model,
         max_tokens: 500,
         temperature: 0,
         messages: [

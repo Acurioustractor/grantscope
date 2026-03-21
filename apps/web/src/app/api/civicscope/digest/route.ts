@@ -149,7 +149,7 @@ Write in a direct, analytical tone. No preamble. Use specific names, dates, and 
     const { text: summary } = await generateText({
       model: anthropic('claude-sonnet-4-5-20250514'),
       prompt,
-      maxTokens: 1000,
+      maxOutputTokens: 1000,
     });
 
     // ── Store the digest ──
