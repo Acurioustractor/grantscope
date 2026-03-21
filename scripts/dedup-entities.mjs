@@ -313,17 +313,10 @@ async function main() {
           continue;
         }
 
-        // ── LIVE: Build a single transaction for this cluster ──
-        const sqls = [];
-        sqls.push('BEGIN;');
-
-        const victimIds = victims.map(v => `'${v.id}'`).join(',');
-
-        // 2a. Merge enrichment fields from victims to survivor (fill blanks)
+        // ── LIVE: Merge enrichment fields first (one-time per cluster) ──
         const updates = [];
         for (const field of ENRICHMENT_FIELDS) {
           if (survivor[field] == null || survivor[field] === '') {
-            // Find first victim with this field populated
             const donor = victims.find(v => v[field] != null && v[field] !== '');
             if (donor) {
               updates.push(`${field} = ${esc(donor[field])}`);
@@ -331,11 +324,9 @@ async function main() {
             }
           }
         }
-        // Merge source_datasets arrays
         const allDatasets = new Set();
         for (const e of clusterEntities) {
           if (e.source_datasets) {
-            // Parse postgres array text format: {a,b,c}
             const cleaned = e.source_datasets.replace(/^\{|\}$/g, '');
             if (cleaned) cleaned.split(',').forEach(d => allDatasets.add(d.trim()));
           }
@@ -344,7 +335,6 @@ async function main() {
           updates.push(`source_datasets = ARRAY[${[...allDatasets].map(d => esc(d)).join(',')}]`);
           updates.push(`source_count = ${allDatasets.size}`);
         }
-        // Merge tags arrays
         const allTags = new Set();
         for (const e of clusterEntities) {
           if (e.tags && e.tags !== '{}') {
@@ -355,187 +345,130 @@ async function main() {
         if (allTags.size > 0) {
           updates.push(`tags = ARRAY[${[...allTags].map(t => esc(t)).join(',')}]`);
         }
-        // Use earliest first_seen
-        const firstSeens = clusterEntities
-          .map(e => e.first_seen)
-          .filter(Boolean)
-          .sort();
-        if (firstSeens.length > 0) {
-          updates.push(`first_seen = ${esc(firstSeens[0])}`);
-        }
-        // Use latest last_seen
-        const lastSeens = clusterEntities
-          .map(e => e.last_seen)
-          .filter(Boolean)
-          .sort()
-          .reverse();
-        if (lastSeens.length > 0) {
-          updates.push(`last_seen = ${esc(lastSeens[0])}`);
-        }
+        const firstSeens = clusterEntities.map(e => e.first_seen).filter(Boolean).sort();
+        if (firstSeens.length > 0) updates.push(`first_seen = ${esc(firstSeens[0])}`);
+        const lastSeens = clusterEntities.map(e => e.last_seen).filter(Boolean).sort().reverse();
+        if (lastSeens.length > 0) updates.push(`last_seen = ${esc(lastSeens[0])}`);
 
         if (updates.length > 0) {
-          sqls.push(`UPDATE gs_entities SET ${updates.join(', ')}, updated_at = NOW() WHERE id = '${survivor.id}';`);
+          try {
+            psqlExec(`UPDATE gs_entities SET ${updates.join(', ')}, updated_at = NOW() WHERE id = '${survivor.id}';`);
+          } catch (err) {
+            console.error(`  WARN: enrichment merge failed: ${err.message.slice(0, 100)}`);
+          }
         }
 
-        // 2b. Redirect relationships from victims to survivor
-        // Handle the unique index: (source_entity_id, target_entity_id, relationship_type, dataset, COALESCE(source_record_id, ''))
-        // Strategy: try UPDATE, delete rows that would violate uniqueness
+        // ── Process victims in sub-batches of 10 ──
+        const SUB_BATCH = 10;
+        let clusterMerged = 0;
+        for (let vi = 0; vi < victims.length; vi += SUB_BATCH) {
+          const subVictims = victims.slice(vi, vi + SUB_BATCH);
+          const victimIds = subVictims.map(v => `'${v.id}'`).join(',');
+          const sqls = [];
+          sqls.push('BEGIN;');
 
-        // For source_entity_id redirects:
-        // First, delete relationships that would become duplicates
-        sqls.push(`
-          DELETE FROM gs_relationships
-          WHERE id IN (
-            SELECT victim_rel.id
-            FROM gs_relationships victim_rel
-            WHERE victim_rel.source_entity_id IN (${victimIds})
-              AND EXISTS (
-                SELECT 1 FROM gs_relationships survivor_rel
-                WHERE survivor_rel.source_entity_id = '${survivor.id}'
-                  AND survivor_rel.target_entity_id = victim_rel.target_entity_id
-                  AND survivor_rel.relationship_type = victim_rel.relationship_type
-                  AND survivor_rel.dataset = victim_rel.dataset
-                  AND COALESCE(survivor_rel.source_record_id, '') = COALESCE(victim_rel.source_record_id, '')
-              )
-          );
-        `);
-
-        // Also delete relationships that would become self-loops (source=target=survivor)
-        sqls.push(`
-          DELETE FROM gs_relationships
-          WHERE source_entity_id IN (${victimIds})
-            AND target_entity_id = '${survivor.id}';
-        `);
-
-        // Now redirect remaining source_entity_id references
-        sqls.push(`
-          UPDATE gs_relationships
-          SET source_entity_id = '${survivor.id}'
-          WHERE source_entity_id IN (${victimIds});
-        `);
-
-        // For target_entity_id redirects:
-        // Delete would-be duplicates
-        sqls.push(`
-          DELETE FROM gs_relationships
-          WHERE id IN (
-            SELECT victim_rel.id
-            FROM gs_relationships victim_rel
-            WHERE victim_rel.target_entity_id IN (${victimIds})
-              AND EXISTS (
-                SELECT 1 FROM gs_relationships survivor_rel
-                WHERE survivor_rel.target_entity_id = '${survivor.id}'
-                  AND survivor_rel.source_entity_id = victim_rel.source_entity_id
-                  AND survivor_rel.relationship_type = victim_rel.relationship_type
-                  AND survivor_rel.dataset = victim_rel.dataset
-                  AND COALESCE(survivor_rel.source_record_id, '') = COALESCE(victim_rel.source_record_id, '')
-              )
-          );
-        `);
-
-        // Delete self-loops (target=victim, source=survivor)
-        sqls.push(`
-          DELETE FROM gs_relationships
-          WHERE target_entity_id IN (${victimIds})
-            AND source_entity_id = '${survivor.id}';
-        `);
-
-        // Redirect remaining
-        sqls.push(`
-          UPDATE gs_relationships
-          SET target_entity_id = '${survivor.id}'
-          WHERE target_entity_id IN (${victimIds});
-        `);
-
-        // Also delete any intra-cluster relationships (victim-to-victim that became survivor-to-survivor)
-        sqls.push(`
-          DELETE FROM gs_relationships
-          WHERE source_entity_id = '${survivor.id}'
-            AND target_entity_id = '${survivor.id}';
-        `);
-
-        // 2c. Redirect soft FK references (no CASCADE, no unique constraints)
-        sqls.push(`UPDATE justice_funding SET gs_entity_id = '${survivor.id}' WHERE gs_entity_id IN (${victimIds});`);
-        sqls.push(`UPDATE alma_interventions SET gs_entity_id = '${survivor.id}' WHERE gs_entity_id IN (${victimIds});`);
-        sqls.push(`UPDATE justice_reinvestment_sites SET gs_entity_id = '${survivor.id}' WHERE gs_entity_id IN (${victimIds});`);
-        sqls.push(`UPDATE nz_charities SET gs_entity_id = '${survivor.id}' WHERE gs_entity_id IN (${victimIds});`);
-        sqls.push(`UPDATE nz_gets_contracts SET gs_entity_id = '${survivor.id}' WHERE gs_entity_id IN (${victimIds});`);
-        sqls.push(`UPDATE research_grants SET gs_entity_id = '${survivor.id}' WHERE gs_entity_id IN (${victimIds});`);
-        sqls.push(`UPDATE org_contacts SET linked_entity_id = '${survivor.id}' WHERE linked_entity_id IN (${victimIds});`);
-        sqls.push(`UPDATE org_pipeline SET funder_entity_id = '${survivor.id}' WHERE funder_entity_id IN (${victimIds});`);
-
-        // person_roles: redirect both entity_id and person_entity_id
-        sqls.push(`UPDATE person_roles SET entity_id = '${survivor.id}' WHERE entity_id IN (${victimIds});`);
-        sqls.push(`UPDATE person_roles SET person_entity_id = '${survivor.id}' WHERE person_entity_id IN (${victimIds});`);
-
-        // person_entity_links: redirect before cascade delete would remove them
-        sqls.push(`UPDATE person_entity_links SET entity_id = '${survivor.id}' WHERE entity_id IN (${victimIds});`);
-
-        // gs_entity_aliases: redirect before cascade delete
-        sqls.push(`
-          UPDATE gs_entity_aliases SET entity_id = '${survivor.id}'
-          WHERE entity_id IN (${victimIds})
-            AND NOT EXISTS (
-              SELECT 1 FROM gs_entity_aliases existing
-              WHERE existing.entity_id = '${survivor.id}'
-                AND existing.alias = gs_entity_aliases.alias
-            );
-        `);
-        // Delete remaining aliases that would be duplicates
-        sqls.push(`DELETE FROM gs_entity_aliases WHERE entity_id IN (${victimIds});`);
-
-        // contact_entity_links, entity_watches, funder_portfolio_entities: ON DELETE CASCADE
-        // but redirect first to preserve data
-        sqls.push(`UPDATE contact_entity_links SET entity_id = '${survivor.id}' WHERE entity_id IN (${victimIds});`);
-        sqls.push(`UPDATE entity_watches SET entity_id = '${survivor.id}' WHERE entity_id IN (${victimIds});`);
-        sqls.push(`UPDATE funder_portfolio_entities SET entity_id = '${survivor.id}' WHERE entity_id IN (${victimIds});`);
-
-        // 2d. Log merges to entity_merge_log for audit trail
-        for (const victim of victims) {
-          const snapshot = {};
-          for (const [key, val] of Object.entries(victim)) {
-            if (val != null && val !== '') snapshot[key] = val;
-          }
+          // Redirect relationships — delete would-be duplicates first
+          // 1a. Delete victim source rows that conflict with survivor's existing rows
           sqls.push(`
-            INSERT INTO entity_merge_log (
-              surviving_entity_id, merged_entity_id, merged_entity_snapshot,
-              merge_reason, match_confidence, match_details, merged_by, can_unmerge, merged_at
-            ) VALUES (
-              '${survivor.id}',
-              '${victim.id}',
-              ${esc(JSON.stringify(snapshot))}::jsonb,
-              'dedup-entities: same canonical_name',
-              1.0,
-              ${esc(JSON.stringify({
-                cluster_size: clusterEntities.length,
-                survivor_rels: survivorRels,
-                victim_rels: relCounts.get(victim.id) || 0,
-              }))}::jsonb,
-              'dedup-entities.mjs',
-              true,
-              NOW()
-            );
-          `);
-        }
+            DELETE FROM gs_relationships WHERE id IN (
+              SELECT v.id FROM gs_relationships v
+              WHERE v.source_entity_id IN (${victimIds})
+                AND EXISTS (SELECT 1 FROM gs_relationships s WHERE s.source_entity_id = '${survivor.id}'
+                  AND s.target_entity_id = v.target_entity_id AND s.relationship_type = v.relationship_type
+                  AND s.dataset = v.dataset AND COALESCE(s.source_record_id,'') = COALESCE(v.source_record_id,''))
+            );`);
+          // 1b. Delete self-loops (victim→survivor)
+          sqls.push(`DELETE FROM gs_relationships WHERE source_entity_id IN (${victimIds}) AND target_entity_id = '${survivor.id}';`);
+          // 1c. Delete inter-victim duplicates (multiple victims with same target/type/dataset/record_id)
+          sqls.push(`
+            DELETE FROM gs_relationships WHERE id IN (
+              SELECT id FROM (
+                SELECT id, ROW_NUMBER() OVER (
+                  PARTITION BY target_entity_id, relationship_type, dataset, COALESCE(source_record_id, '')
+                  ORDER BY CASE WHEN amount IS NOT NULL THEN 0 ELSE 1 END, id
+                ) AS rn
+                FROM gs_relationships
+                WHERE source_entity_id IN (${victimIds})
+              ) ranked WHERE rn > 1
+            );`);
+          // 1d. Redirect remaining source refs to survivor
+          sqls.push(`UPDATE gs_relationships SET source_entity_id = '${survivor.id}' WHERE source_entity_id IN (${victimIds});`);
 
-        // 2e. Delete victim entities
-        sqls.push(`DELETE FROM gs_entities WHERE id IN (${victimIds});`);
+          // 2a. Delete victim target rows that conflict with survivor's existing rows
+          sqls.push(`
+            DELETE FROM gs_relationships WHERE id IN (
+              SELECT v.id FROM gs_relationships v
+              WHERE v.target_entity_id IN (${victimIds})
+                AND EXISTS (SELECT 1 FROM gs_relationships s WHERE s.target_entity_id = '${survivor.id}'
+                  AND s.source_entity_id = v.source_entity_id AND s.relationship_type = v.relationship_type
+                  AND s.dataset = v.dataset AND COALESCE(s.source_record_id,'') = COALESCE(v.source_record_id,''))
+            );`);
+          // 2b. Delete self-loops (survivor→victim)
+          sqls.push(`DELETE FROM gs_relationships WHERE target_entity_id IN (${victimIds}) AND source_entity_id = '${survivor.id}';`);
+          // 2c. Delete inter-victim duplicates for target redirect
+          sqls.push(`
+            DELETE FROM gs_relationships WHERE id IN (
+              SELECT id FROM (
+                SELECT id, ROW_NUMBER() OVER (
+                  PARTITION BY source_entity_id, relationship_type, dataset, COALESCE(source_record_id, '')
+                  ORDER BY CASE WHEN amount IS NOT NULL THEN 0 ELSE 1 END, id
+                ) AS rn
+                FROM gs_relationships
+                WHERE target_entity_id IN (${victimIds})
+              ) ranked WHERE rn > 1
+            );`);
+          // 2d. Redirect remaining target refs to survivor
+          sqls.push(`UPDATE gs_relationships SET target_entity_id = '${survivor.id}' WHERE target_entity_id IN (${victimIds});`);
+          // 3. Clean up any self-loops created by the redirects
+          sqls.push(`DELETE FROM gs_relationships WHERE source_entity_id = '${survivor.id}' AND target_entity_id = '${survivor.id}';`);
 
-        sqls.push('COMMIT;');
+          // Redirect soft FKs
+          sqls.push(`UPDATE ndis_registered_providers SET gs_entity_id = '${survivor.id}' WHERE gs_entity_id IN (${victimIds});`);
+          sqls.push(`UPDATE justice_funding SET gs_entity_id = '${survivor.id}' WHERE gs_entity_id IN (${victimIds});`);
+          sqls.push(`UPDATE alma_interventions SET gs_entity_id = '${survivor.id}' WHERE gs_entity_id IN (${victimIds});`);
+          sqls.push(`UPDATE justice_reinvestment_sites SET gs_entity_id = '${survivor.id}' WHERE gs_entity_id IN (${victimIds});`);
+          sqls.push(`UPDATE nz_charities SET gs_entity_id = '${survivor.id}' WHERE gs_entity_id IN (${victimIds});`);
+          sqls.push(`UPDATE nz_gets_contracts SET gs_entity_id = '${survivor.id}' WHERE gs_entity_id IN (${victimIds});`);
+          sqls.push(`UPDATE research_grants SET gs_entity_id = '${survivor.id}' WHERE gs_entity_id IN (${victimIds});`);
+          sqls.push(`UPDATE org_contacts SET linked_entity_id = '${survivor.id}' WHERE linked_entity_id IN (${victimIds});`);
+          sqls.push(`UPDATE org_pipeline SET funder_entity_id = '${survivor.id}' WHERE funder_entity_id IN (${victimIds});`);
+          sqls.push(`UPDATE person_roles SET entity_id = '${survivor.id}' WHERE entity_id IN (${victimIds});`);
+          sqls.push(`UPDATE person_roles SET person_entity_id = '${survivor.id}' WHERE person_entity_id IN (${victimIds});`);
+          sqls.push(`UPDATE person_entity_links SET entity_id = '${survivor.id}' WHERE entity_id IN (${victimIds});`);
+          sqls.push(`
+            UPDATE gs_entity_aliases SET entity_id = '${survivor.id}'
+            WHERE entity_id IN (${victimIds}) AND NOT EXISTS (
+              SELECT 1 FROM gs_entity_aliases x WHERE x.entity_id = '${survivor.id}' AND x.alias_value = gs_entity_aliases.alias_value AND x.alias_type = gs_entity_aliases.alias_type
+            );`);
+          sqls.push(`DELETE FROM gs_entity_aliases WHERE entity_id IN (${victimIds});`);
+          sqls.push(`UPDATE contact_entity_links SET entity_id = '${survivor.id}' WHERE entity_id IN (${victimIds});`);
+          sqls.push(`UPDATE entity_watches SET entity_id = '${survivor.id}' WHERE entity_id IN (${victimIds});`);
+          sqls.push(`UPDATE funder_portfolio_entities SET entity_id = '${survivor.id}' WHERE entity_id IN (${victimIds});`);
 
-        // Execute the transaction
-        try {
-          psqlExec(sqls.join('\n'), { timeout: 120000 });
-          stats.entitiesMerged += victims.length;
-          for (const v of victims) {
-            stats.relationshipsRedirected += relCounts.get(v.id) || 0;
+          // Audit log — skip if entity_merge_log FK points to canonical_entities (not gs_entities)
+
+          // Delete victims
+          sqls.push(`DELETE FROM gs_entities WHERE id IN (${victimIds});`);
+          sqls.push('COMMIT;');
+
+          try {
+            const txResult = psqlExec(sqls.join('\n'), { timeout: 300000 });
+            // Check for errors in psql output (psql continues past errors within a transaction)
+            if (txResult.includes('ERROR:')) {
+              const errLine = txResult.split('\n').find(l => l.includes('ERROR:'));
+              throw new Error(errLine || 'Unknown psql error');
+            }
+            clusterMerged += subVictims.length;
+            for (const v of subVictims) {
+              stats.relationshipsRedirected += relCounts.get(v.id) || 0;
+            }
+          } catch (err) {
+            console.error(`  ERROR sub-batch ${vi}-${vi + subVictims.length} of "${name}": ${err.message.slice(0, 200)}`);
+            stats.errors.push({ name, error: err.message.slice(0, 200) });
+            try { psqlExec('ROLLBACK;'); } catch {}
           }
-        } catch (err) {
-          console.error(`  ERROR processing "${name}": ${err.message.slice(0, 200)}`);
-          stats.errors.push({ name, error: err.message.slice(0, 200) });
-          // Try to rollback if not already rolled back
-          try { psqlExec('ROLLBACK;'); } catch {}
         }
+        stats.entitiesMerged += clusterMerged;
       }
 
       // Batch progress
