@@ -53,6 +53,9 @@ export async function GET(request: NextRequest) {
         case 'commitments':
           results.commitments = await runCommitmentTracker(db, dryRun);
           break;
+        case 'telegram':
+          results.telegram = await runTelegramAlerts(db, dryRun);
+          break;
         default:
           results[m] = { error: `Unknown mode: ${m}` };
       }
@@ -434,6 +437,85 @@ async function runCommitmentTracker(db: SupabaseClient, dryRun: boolean) {
   }
 
   return { updated, status_breakdown: statusCounts, dry_run: dryRun };
+}
+
+async function runTelegramAlerts(db: SupabaseClient, dryRun: boolean) {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+
+  if (!botToken || !chatId) {
+    return { error: 'Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID env vars', dry_run: dryRun };
+  }
+
+  // Fetch unsent alerts (max 10 per run to stay within rate limits)
+  const { data: alerts, error } = await db
+    .from('civic_alerts')
+    .select('*')
+    .is('sent_at', null)
+    .order('created_at', { ascending: true })
+    .limit(10);
+
+  if (error) return { error: error.message };
+  if (!alerts?.length) return { sent: 0, message: 'No unsent alerts' };
+
+  const typeEmoji: Record<string, string> = {
+    program_announcement: '\u{1F4E2}',
+    hansard_mention: '\u{1F3DB}\u{FE0F}',
+    commitment_progress: '\u{2705}',
+    funding_change: '\u{1F4B0}',
+  };
+  const sevEmoji: Record<string, string> = {
+    high: '\u{1F6A8}',
+    info: '\u{1F4CB}',
+    warning: '\u{26A0}\u{FE0F}',
+  };
+
+  function esc(text: string) {
+    return (text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  let sent = 0;
+  const errors: string[] = [];
+
+  for (const alert of alerts) {
+    const emoji = typeEmoji[alert.alert_type] || sevEmoji[alert.severity] || '\u{1F514}';
+    const severity = alert.severity === 'high' ? ' \u{1F534} HIGH' : '';
+    let msg = `${emoji}${severity} <b>${esc(alert.title)}</b>\n\n${esc(alert.summary)}\n\n`;
+
+    const linked = alert.linked_records || {};
+    const parts: string[] = [];
+    if (linked.funding?.length) parts.push(`${linked.funding.length} funding`);
+    if (linked.interventions?.length) parts.push(`${linked.interventions.length} program(s)`);
+    if (linked.statements?.length) parts.push(`${linked.statements.length} statement(s)`);
+    if (parts.length) msg += `\u{1F517} ${parts.join(' \u{00B7} ')}\n`;
+
+    msg += `\n<i>${alert.jurisdiction || 'QLD'} \u{00B7} ${new Date(alert.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}</i>`;
+
+    if (dryRun) { sent++; continue; }
+
+    try {
+      const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, text: msg, parse_mode: 'HTML', disable_web_page_preview: true }),
+      });
+
+      if (!res.ok) {
+        errors.push(`Telegram ${res.status} for alert ${alert.id}`);
+        continue;
+      }
+
+      sent++;
+      await db.from('civic_alerts').update({ sent_at: new Date().toISOString() }).eq('id', alert.id);
+
+      // Telegram rate limit: 1 msg/sec
+      await new Promise(r => setTimeout(r, 1100));
+    } catch (err) {
+      errors.push(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  return { sent, total: alerts.length, errors: errors.slice(0, 5), dry_run: dryRun };
 }
 
 function extractBodyText(html: string): string {
