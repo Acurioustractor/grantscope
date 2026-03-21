@@ -95,12 +95,23 @@ export async function GET() {
       safe(db.from('grant_discovery_runs').select('*').order('started_at', { ascending: false }).limit(10), 8000),
     ];
 
+    // --- Discoveries (autoresearch findings) ---
+    const discoveriesPromise = safe(
+      db.from('discoveries')
+        .select('*')
+        .eq('dismissed', false)
+        .order('created_at', { ascending: false })
+        .limit(50),
+      8000
+    );
+
     // Fire everything in parallel
-    const [counts, freshness, power, agents] = await Promise.all([
+    const [counts, freshness, power, agents, discoveriesResult] = await Promise.all([
       Promise.all(countPromises),
       Promise.all(freshnessPromises),
       Promise.all(powerPromises),
       Promise.all(agentPromises),
+      discoveriesPromise,
     ]);
 
     // --- Build inventory ---
@@ -182,6 +193,7 @@ export async function GET() {
         recentRuns: agentRuns,
         discoveryRuns: agents[1].data ?? [],
       },
+      discoveries: discoveriesResult.data ?? [],
       lastUpdated: new Date().toISOString(),
     });
   } catch (err) {

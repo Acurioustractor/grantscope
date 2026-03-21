@@ -86,6 +86,21 @@ interface AgentRun {
   completed_at: string;
 }
 
+interface Discovery {
+  id: string;
+  agent_id: string;
+  discovery_type: string;
+  severity: 'info' | 'notable' | 'significant' | 'critical';
+  title: string;
+  description: string | null;
+  entity_ids: string[] | null;
+  person_names: string[] | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  reviewed_at: string | null;
+  dismissed: boolean;
+}
+
 interface MissionData {
   hero: HeroData;
   inventory: InventoryItem[];
@@ -100,6 +115,7 @@ interface MissionData {
       started_at: string;
     }>;
   };
+  discoveries: Discovery[];
   lastUpdated: string;
 }
 
@@ -249,6 +265,9 @@ export function MissionControlClient() {
         </button>
       </div>
 
+      {data.discoveries.length > 0 && (
+        <DiscoveriesFeed discoveries={data.discoveries} onUpdate={fetchData} />
+      )}
       <HeroMetrics hero={data.hero} />
       <DataInventory inventory={data.inventory} />
       <PowerConcentration power={data.power} />
@@ -1057,6 +1076,160 @@ function SqlPlayground() {
         {result && result.rows.length === 0 && !queryError && (
           <div className="mt-3 p-4 text-center text-sm text-bauhaus-muted border-2 border-dashed border-bauhaus-black/20">
             Query returned 0 rows
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+// ─── Discoveries Feed ─────────────────────────────────────────────────────
+
+const SEVERITY_STYLES: Record<string, string> = {
+  critical: 'bg-red-600 text-white',
+  significant: 'bg-orange-500 text-white',
+  notable: 'bg-yellow-500 text-bauhaus-black',
+  info: 'bg-gray-200 text-bauhaus-black',
+};
+
+const TYPE_LABELS: Record<string, string> = {
+  board_appointment: 'Board Appointment',
+  board_departure: 'Board Departure',
+  new_interlock: 'New Interlock',
+  funding_anomaly: 'Funding Anomaly',
+  new_contract: 'New Contract',
+  entity_change: 'Entity Change',
+  gazette_alert: 'Gazette Alert',
+  data_quality: 'Data Quality',
+  pattern: 'Pattern',
+};
+
+function DiscoveriesFeed({ discoveries, onUpdate }: { discoveries: Discovery[]; onUpdate: () => void }) {
+  const [filter, setFilter] = useState<string>('all');
+  const [acting, setActing] = useState<string | null>(null);
+
+  const severityCounts = {
+    critical: discoveries.filter(d => d.severity === 'critical').length,
+    significant: discoveries.filter(d => d.severity === 'significant').length,
+    notable: discoveries.filter(d => d.severity === 'notable').length,
+    info: discoveries.filter(d => d.severity === 'info').length,
+  };
+
+  const filtered = filter === 'all'
+    ? discoveries
+    : discoveries.filter(d => d.severity === filter);
+
+  const unreviewed = discoveries.filter(d => !d.reviewed_at).length;
+
+  const handleAction = async (id: string, action: 'dismiss' | 'review') => {
+    setActing(id);
+    try {
+      await fetch(`/api/mission-control/discoveries/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+      onUpdate();
+    } catch { /* ignore */ }
+    setActing(null);
+  };
+
+  return (
+    <section className="mb-10">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <h2 className="text-sm font-black uppercase tracking-widest text-bauhaus-muted border-b-2 border-bauhaus-red pb-2">
+            Autoresearch Discoveries
+          </h2>
+          {unreviewed > 0 && (
+            <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider bg-bauhaus-red text-white">
+              {unreviewed} new
+            </span>
+          )}
+        </div>
+        <div className="flex gap-1">
+          {(['all', 'critical', 'significant', 'notable', 'info'] as const).map(s => (
+            <button
+              key={s}
+              onClick={() => setFilter(s)}
+              className={`px-2 py-1 text-[10px] font-black uppercase tracking-wider border-2 transition-colors ${
+                filter === s ? 'border-bauhaus-black bg-bauhaus-black text-white' : 'border-bauhaus-black/20 hover:border-bauhaus-black'
+              }`}
+            >
+              {s} {s !== 'all' && severityCounts[s] > 0 ? `(${severityCounts[s]})` : ''}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="border-4 border-bauhaus-black">
+        {filtered.length === 0 ? (
+          <div className="p-8 text-center text-sm text-bauhaus-muted">No discoveries matching filter</div>
+        ) : (
+          <div className="divide-y divide-bauhaus-black/10">
+            {filtered.map(d => (
+              <div
+                key={d.id}
+                className={`px-4 py-3 hover:bg-gray-50 transition-colors ${
+                  !d.reviewed_at ? 'border-l-4 border-l-bauhaus-red' : 'border-l-4 border-l-transparent'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider ${SEVERITY_STYLES[d.severity]}`}>
+                        {d.severity}
+                      </span>
+                      <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider bg-bauhaus-black/5 text-bauhaus-muted">
+                        {TYPE_LABELS[d.discovery_type] || d.discovery_type}
+                      </span>
+                      <span className="text-[10px] text-bauhaus-muted font-mono">
+                        {d.agent_id}
+                      </span>
+                    </div>
+                    <div className="text-sm font-bold text-bauhaus-black">{d.title}</div>
+                    {d.description && (
+                      <div className="text-xs text-bauhaus-muted mt-0.5 line-clamp-2">{d.description}</div>
+                    )}
+                    {d.person_names && d.person_names.length > 0 && (
+                      <div className="flex gap-1 mt-1.5 flex-wrap">
+                        {d.person_names.map(name => (
+                          <span key={name} className="px-1.5 py-0.5 text-[9px] font-mono bg-bauhaus-blue/10 text-bauhaus-blue">
+                            {name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="text-[10px] text-bauhaus-muted whitespace-nowrap">{timeAgo(d.created_at)}</span>
+                    {!d.reviewed_at && (
+                      <>
+                        <button
+                          onClick={() => handleAction(d.id, 'review')}
+                          disabled={acting === d.id}
+                          className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider border border-green-500 text-green-700 hover:bg-green-500 hover:text-white transition-colors"
+                        >
+                          Ack
+                        </button>
+                        <button
+                          onClick={() => handleAction(d.id, 'dismiss')}
+                          disabled={acting === d.id}
+                          className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider border border-bauhaus-black/20 text-bauhaus-muted hover:bg-bauhaus-black hover:text-white transition-colors"
+                        >
+                          Dismiss
+                        </button>
+                      </>
+                    )}
+                    {d.reviewed_at && (
+                      <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider bg-green-100 text-green-700">
+                        Reviewed
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
