@@ -68,7 +68,7 @@ const VIEW_GROUPS = [
       'mv_trustee_grantee_overlaps',
       'mv_person_directory',
       'mv_person_entity_crosswalk',
-      'mv_entity_xref',
+      // mv_entity_xref replaced by entity_xref table — use refresh-entity-xref.mjs
       'mv_donor_person_crosslink',
       'mv_foundation_grantees',
     ],
