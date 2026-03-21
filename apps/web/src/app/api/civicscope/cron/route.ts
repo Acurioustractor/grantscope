@@ -120,7 +120,7 @@ async function runStatementsScraper(db: SupabaseClient, dryRun: boolean) {
           try { if (jsonLdMatch) jsonLd = JSON.parse(jsonLdMatch[1]); } catch { /* skip */ }
 
           const headline = jsonLd?.headline
-            || detailHtml.match(/<h1[^>]*>(.*?)<\/h1>/s)?.[1]?.replace(/<[^>]*>/g, '').trim()
+            || detailHtml.match(/<h1[^>]*>([\s\S]*?)<\/h1>/)?.[1]?.replace(/<[^>]*>/g, '').trim()
             || `Statement ${id}`;
 
           const ministerMatch = detailHtml.match(/The Honourable ([A-Z][a-zA-Z'-]+ [A-Z][a-zA-Z'-]+(?:\s[A-Z][a-zA-Z'-]+)?)/);

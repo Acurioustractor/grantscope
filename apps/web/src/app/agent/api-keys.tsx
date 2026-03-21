@@ -102,7 +102,7 @@ export function ApiKeyManager() {
             Sign in to generate API keys and track usage.
           </div>
           <a
-            href="/auth/sign-in"
+            href="/login"
             className="inline-block px-6 py-3 bg-bauhaus-black text-white font-black text-xs uppercase tracking-widest border-4 border-bauhaus-black hover:bg-bauhaus-red transition-colors"
           >
             Sign In

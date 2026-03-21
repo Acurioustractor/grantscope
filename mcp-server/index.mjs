@@ -26,7 +26,7 @@ import {
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 
-const BASE_URL = process.env.CIVICGRAPH_URL || 'https://civicgraph.com.au';
+const BASE_URL = process.env.CIVICGRAPH_URL || 'https://grantscope.vercel.app';
 const API_KEY = process.env.CIVICGRAPH_API_KEY || '';
 
 async function callAgent(body) {
