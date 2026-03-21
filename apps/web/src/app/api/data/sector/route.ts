@@ -15,6 +15,13 @@ const schema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional(),
 });
 
+/** Pick the best display name from case variants (prefer Title Case over lowercase) */
+function bestName(variants: string[]): string {
+  // Prefer one that starts with uppercase
+  const titled = variants.find(v => v[0] === v[0].toUpperCase() && v[0] !== v[0].toLowerCase());
+  return titled ?? variants[0];
+}
+
 export async function GET(request: Request) {
   const limited = limiter(request);
   if (limited) return limited;
@@ -38,22 +45,30 @@ export async function GET(request: Request) {
            WHERE sector IS NOT NULL
            GROUP BY sector, entity_type
            ORDER BY COUNT(*) DESC
-           LIMIT 100`,
+           LIMIT 200`,
       }));
 
-      // Aggregate by sector
-      const sectorMap = new Map<string, { entities: number; cc: number; states: number; types: string[] }>();
+      // Aggregate by sector — merge case-insensitive duplicates
+      const sectorMap = new Map<string, { names: string[]; entities: number; cc: number; states: number; types: string[] }>();
       for (const r of (overview ?? []) as Array<{ sector: string; entity_type: string; entity_count: number; cc_count: number; state_count: number }>) {
-        const existing = sectorMap.get(r.sector) || { entities: 0, cc: 0, states: 0, types: [] };
+        const key = r.sector.toLowerCase();
+        const existing = sectorMap.get(key) || { names: [], entities: 0, cc: 0, states: 0, types: [] };
+        if (!existing.names.includes(r.sector)) existing.names.push(r.sector);
         existing.entities += r.entity_count;
         existing.cc += r.cc_count;
         existing.states = Math.max(existing.states, r.state_count);
         if (!existing.types.includes(r.entity_type)) existing.types.push(r.entity_type);
-        sectorMap.set(r.sector, existing);
+        sectorMap.set(key, existing);
       }
 
       const sectors = [...sectorMap.entries()]
-        .map(([name, data]) => ({ name, ...data }))
+        .map(([, data]) => ({
+          name: bestName(data.names),
+          entities: data.entities,
+          cc: data.cc,
+          states: data.states,
+          types: data.types,
+        }))
         .sort((a, b) => b.entities - a.entities);
 
       const response = NextResponse.json({ sectors });
@@ -61,9 +76,9 @@ export async function GET(request: Request) {
       return response;
     }
 
-    // Sector detail view
-    const safeSector = esc(sector);
-    const clauses: string[] = [`sector = '${safeSector}'`];
+    // Sector detail view — case-insensitive match to merge variants
+    const safeSector = esc(sector.toLowerCase());
+    const clauses: string[] = [`LOWER(sector) = '${safeSector}'`];
     if (type) clauses.push(`entity_type = '${esc(type)}'`);
     if (state) clauses.push(`UPPER(state) = '${esc(state.toUpperCase())}'`);
     const where = clauses.join(' AND ');

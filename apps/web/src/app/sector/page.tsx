@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { money } from '@/lib/format';
 
@@ -35,12 +35,20 @@ interface SectorDetail {
 }
 
 const STATES = ['ALL', 'NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'NT', 'ACT'];
+const ENTITY_TYPES = ['ALL', 'charity', 'company', 'foundation', 'indigenous_corp', 'social_enterprise', 'government_body', 'person', 'political_party'];
+
+type ViewMode = 'grid' | 'table';
+type SortKey = 'name' | 'entities' | 'cc';
 
 export default function SectorPage() {
   const [sectors, setSectors] = useState<SectorOverview[]>([]);
   const [selectedSector, setSelectedSector] = useState<string | null>(null);
   const [detail, setDetail] = useState<SectorDetail | null>(null);
   const [stateFilter, setStateFilter] = useState('ALL');
+  const [typeFilter, setTypeFilter] = useState('ALL');
+  const [search, setSearch] = useState('');
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [sortKey, setSortKey] = useState<SortKey>('entities');
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
 
@@ -58,11 +66,42 @@ export default function SectorPage() {
     setDetailLoading(true);
     const params = new URLSearchParams({ sector: selectedSector });
     if (stateFilter !== 'ALL') params.set('state', stateFilter);
+    if (typeFilter !== 'ALL') params.set('type', typeFilter);
     fetch(`/api/data/sector?${params}`)
       .then(r => r.json())
       .then(d => { setDetail(d); setDetailLoading(false); })
       .catch(() => setDetailLoading(false));
-  }, [selectedSector, stateFilter]);
+  }, [selectedSector, stateFilter, typeFilter]);
+
+  // Filter and sort sectors
+  const filteredSectors = useMemo(() => {
+    let result = sectors;
+
+    // Search filter
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter(s => s.name.toLowerCase().includes(q));
+    }
+
+    // Entity type filter (on overview)
+    if (typeFilter !== 'ALL') {
+      result = result.filter(s => s.types.includes(typeFilter));
+    }
+
+    // Sort
+    if (sortKey === 'name') result = [...result].sort((a, b) => a.name.localeCompare(b.name));
+    else if (sortKey === 'cc') result = [...result].sort((a, b) => b.cc - a.cc);
+    // 'entities' is default sort from API
+
+    return result;
+  }, [sectors, search, typeFilter, sortKey]);
+
+  // All unique entity types for filter
+  const allTypes = useMemo(() => {
+    const types = new Set<string>();
+    for (const s of sectors) for (const t of s.types) types.add(t);
+    return [...types].sort();
+  }, [sectors]);
 
   return (
     <main className="min-h-screen bg-gray-50 text-bauhaus-black">
@@ -84,36 +123,51 @@ export default function SectorPage() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 py-8">
+      <div className="mx-auto max-w-7xl px-4 py-6">
         {loading ? (
           <div className="flex items-center gap-2 text-gray-400">
             <span className="inline-block w-5 h-5 border-2 border-gray-300 border-t-bauhaus-red rounded-full animate-spin" />
             Loading sectors...
           </div>
         ) : selectedSector ? (
-          // Sector detail view
+          /* ─── Sector detail view ─────────────────────────── */
           <div>
-            <button onClick={() => { setSelectedSector(null); setStateFilter('ALL'); }} className="text-xs text-gray-400 hover:text-bauhaus-red mb-4 underline">
+            <button onClick={() => { setSelectedSector(null); setStateFilter('ALL'); setTypeFilter('ALL'); }} className="text-xs text-gray-400 hover:text-bauhaus-red mb-4 underline">
               All Sectors
             </button>
 
             <h2 className="text-2xl font-black uppercase tracking-wider mb-2">{selectedSector}</h2>
 
-            {/* State filter */}
-            <div className="flex items-center gap-1 mb-6">
-              {STATES.map(s => (
-                <button
-                  key={s}
-                  onClick={() => setStateFilter(s)}
-                  className={`text-[10px] px-3 py-1.5 font-bold uppercase tracking-wider transition-all ${
-                    stateFilter === s
-                      ? 'bg-bauhaus-black text-white'
-                      : 'bg-white text-gray-500 border border-gray-200 hover:border-bauhaus-black'
-                  }`}
+            {/* Filters */}
+            <div className="flex flex-wrap items-center gap-4 mb-6">
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mr-1">State</span>
+                {STATES.map(s => (
+                  <button
+                    key={s}
+                    onClick={() => setStateFilter(s)}
+                    className={`text-[10px] px-2.5 py-1 font-bold uppercase tracking-wider transition-all ${
+                      stateFilter === s
+                        ? 'bg-bauhaus-black text-white'
+                        : 'bg-white text-gray-500 border border-gray-200 hover:border-bauhaus-black'
+                    }`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mr-1">Type</span>
+                <select
+                  value={typeFilter}
+                  onChange={e => setTypeFilter(e.target.value)}
+                  className="text-xs border border-gray-200 bg-white px-2 py-1 text-gray-600"
                 >
-                  {s}
-                </button>
-              ))}
+                  {ENTITY_TYPES.map(t => (
+                    <option key={t} value={t}>{t === 'ALL' ? 'All types' : t}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {detailLoading ? (
@@ -196,7 +250,7 @@ export default function SectorPage() {
                   )}
                 </div>
 
-                {/* Entity list */}
+                {/* Entity table */}
                 <section>
                   <h3 className="text-lg font-black uppercase tracking-widest mb-3">
                     Entities
@@ -246,29 +300,169 @@ export default function SectorPage() {
             ) : null}
           </div>
         ) : (
-          // Sector overview grid
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {sectors.map(s => (
-              <button
-                key={s.name}
-                onClick={() => setSelectedSector(s.name)}
-                className="bg-white border-2 border-gray-200 hover:border-bauhaus-black p-5 text-left transition-all group"
-              >
-                <h3 className="font-black text-lg uppercase tracking-wider group-hover:text-bauhaus-red transition-colors">
-                  {s.name}
-                </h3>
-                <div className="mt-3 flex items-center gap-3 text-xs text-gray-400">
-                  <span><strong className="text-bauhaus-black">{s.entities.toLocaleString()}</strong> entities</span>
-                  {s.cc > 0 && <span><strong className="text-bauhaus-red">{s.cc}</strong> CC</span>}
-                  <span>{s.states} states</span>
-                </div>
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {s.types.slice(0, 4).map(t => (
-                    <span key={t} className="text-[9px] px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-sm">{t}</span>
+          /* ─── Sector overview ────────────────────────────── */
+          <div>
+            {/* Controls */}
+            <div className="flex flex-wrap items-center gap-4 mb-6">
+              {/* Search */}
+              <input
+                type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search sectors..."
+                className="text-sm border-2 border-gray-200 focus:border-bauhaus-black bg-white px-3 py-1.5 w-64 outline-none transition-colors"
+              />
+
+              {/* Entity type filter */}
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mr-1">Type</span>
+                <select
+                  value={typeFilter}
+                  onChange={e => setTypeFilter(e.target.value)}
+                  className="text-xs border border-gray-200 bg-white px-2 py-1.5 text-gray-600"
+                >
+                  <option value="ALL">All types</option>
+                  {allTypes.map(t => (
+                    <option key={t} value={t}>{t}</option>
                   ))}
-                </div>
-              </button>
-            ))}
+                </select>
+              </div>
+
+              {/* Sort */}
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mr-1">Sort</span>
+                {([['entities', 'Count'], ['cc', 'Community'], ['name', 'A-Z']] as [SortKey, string][]).map(([key, label]) => (
+                  <button
+                    key={key}
+                    onClick={() => setSortKey(key)}
+                    className={`text-[10px] px-2.5 py-1 font-bold uppercase tracking-wider transition-all ${
+                      sortKey === key
+                        ? 'bg-bauhaus-black text-white'
+                        : 'bg-white text-gray-500 border border-gray-200 hover:border-bauhaus-black'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* View toggle */}
+              <div className="flex items-center gap-1 ml-auto">
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`text-[10px] px-2.5 py-1 font-bold uppercase tracking-wider transition-all ${
+                    viewMode === 'grid'
+                      ? 'bg-bauhaus-black text-white'
+                      : 'bg-white text-gray-500 border border-gray-200 hover:border-bauhaus-black'
+                  }`}
+                >
+                  Grid
+                </button>
+                <button
+                  onClick={() => setViewMode('table')}
+                  className={`text-[10px] px-2.5 py-1 font-bold uppercase tracking-wider transition-all ${
+                    viewMode === 'table'
+                      ? 'bg-bauhaus-black text-white'
+                      : 'bg-white text-gray-500 border border-gray-200 hover:border-bauhaus-black'
+                  }`}
+                >
+                  Table
+                </button>
+              </div>
+            </div>
+
+            {/* Count */}
+            <p className="text-xs text-gray-400 mb-4">
+              {filteredSectors.length} sectors
+              {search && ` matching "${search}"`}
+              {typeFilter !== 'ALL' && ` with ${typeFilter} entities`}
+            </p>
+
+            {viewMode === 'grid' ? (
+              /* Grid view */
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredSectors.map(s => (
+                  <button
+                    key={s.name}
+                    onClick={() => { setSelectedSector(s.name); setTypeFilter('ALL'); }}
+                    className="bg-white border-2 border-gray-200 hover:border-bauhaus-black p-5 text-left transition-all group"
+                  >
+                    <h3 className="font-black text-base uppercase tracking-wider group-hover:text-bauhaus-red transition-colors">
+                      {s.name}
+                    </h3>
+                    <div className="mt-3 flex items-center gap-3 text-xs text-gray-400">
+                      <span><strong className="text-bauhaus-black">{s.entities.toLocaleString()}</strong> entities</span>
+                      {s.cc > 0 && <span><strong className="text-bauhaus-red">{s.cc.toLocaleString()}</strong> CC</span>}
+                      <span>{s.states} states</span>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {s.types.slice(0, 4).map(t => (
+                        <span key={t} className="text-[9px] px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-sm">{t}</span>
+                      ))}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              /* Table view */
+              <div className="bg-white border border-gray-200 overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-gray-50 border-b border-gray-200">
+                      <th
+                        className="text-left text-[10px] font-bold uppercase tracking-widest text-gray-400 px-4 py-2 cursor-pointer hover:text-bauhaus-black"
+                        onClick={() => setSortKey('name')}
+                      >
+                        Sector {sortKey === 'name' && '▲'}
+                      </th>
+                      <th
+                        className="text-right text-[10px] font-bold uppercase tracking-widest text-gray-400 px-4 py-2 cursor-pointer hover:text-bauhaus-black"
+                        onClick={() => setSortKey('entities')}
+                      >
+                        Entities {sortKey === 'entities' && '▼'}
+                      </th>
+                      <th
+                        className="text-right text-[10px] font-bold uppercase tracking-widest text-gray-400 px-4 py-2 cursor-pointer hover:text-bauhaus-black"
+                        onClick={() => setSortKey('cc')}
+                      >
+                        Community Ctrl {sortKey === 'cc' && '▼'}
+                      </th>
+                      <th className="text-right text-[10px] font-bold uppercase tracking-widest text-gray-400 px-4 py-2">States</th>
+                      <th className="text-left text-[10px] font-bold uppercase tracking-widest text-gray-400 px-4 py-2">Entity Types</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredSectors.map((s, i) => (
+                      <tr
+                        key={s.name}
+                        className={`cursor-pointer hover:bg-gray-50 transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}
+                        onClick={() => { setSelectedSector(s.name); setTypeFilter('ALL'); }}
+                      >
+                        <td className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-bauhaus-black hover:text-bauhaus-red transition-colors">
+                          {s.name}
+                        </td>
+                        <td className="px-4 py-2 text-xs text-right font-mono font-bold">{s.entities.toLocaleString()}</td>
+                        <td className="px-4 py-2 text-xs text-right font-mono">
+                          {s.cc > 0 ? (
+                            <span className="text-bauhaus-red font-bold">{s.cc.toLocaleString()}</span>
+                          ) : (
+                            <span className="text-gray-300">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-2 text-xs text-right text-gray-400">{s.states}</td>
+                        <td className="px-4 py-2">
+                          <div className="flex flex-wrap gap-1">
+                            {s.types.slice(0, 4).map(t => (
+                              <span key={t} className="text-[9px] px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-sm">{t}</span>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
       </div>
