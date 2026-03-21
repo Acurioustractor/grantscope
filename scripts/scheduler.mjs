@@ -39,6 +39,9 @@ function log(msg) {
 // Known agent scripts — maps agent_id to script path
 const AGENT_SCRIPTS = {
   'watch-board-changes': 'scripts/watch-board-changes.mjs',
+  'watch-funding-anomalies': 'scripts/watch-funding-anomalies.mjs',
+  'watch-data-quality': 'scripts/watch-data-quality.mjs',
+  'watch-entity-changes': 'scripts/watch-entity-changes.mjs',
   'enrich-grants-free': 'scripts/enrich-grants-free.mjs',
   'scrape-acnc-people': 'scripts/scrape-acnc-people.mjs',
   'link-entities-mega': 'scripts/link-entities-mega.mjs',
