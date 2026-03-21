@@ -25,17 +25,10 @@ export const metadata: Metadata = {
   },
 };
 
+import { money, fmt } from '@/lib/format';
+
 /* ── helpers ── */
 
-function money(n: number): string {
-  if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}B`;
-  if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
-  if (n >= 1e3) return `$${(n / 1e3).toFixed(0)}K`;
-  return `$${n.toLocaleString()}`;
-}
-function fmt(n: number): string {
-  return n.toLocaleString();
-}
 function pct(n: number, d: number): string {
   if (d === 0) return '0%';
   return `${((n / d) * 100).toFixed(1)}%`;

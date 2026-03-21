@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getServiceSupabase } from '@/lib/supabase';
 import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
+import { money, fmt } from '@/lib/format';
 
 export const revalidate = 1800;
 
@@ -14,17 +15,6 @@ async function safe<T = any>(p: PromiseLike<{ data: T; error: any }>): Promise<T
   } catch {
     return null;
   }
-}
-
-function money(n: number): string {
-  if (n >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(1)}B`;
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
-  return `$${n.toLocaleString()}`;
-}
-
-function fmt(n: number): string {
-  return n.toLocaleString();
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {

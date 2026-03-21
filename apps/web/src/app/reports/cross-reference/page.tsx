@@ -1,14 +1,8 @@
 import { getServiceSupabase } from '@/lib/supabase';
+import { money, fmt } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
 
-function fmt(n: number) { return n.toLocaleString(); }
-function money(n: number): string {
-  if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}B`;
-  if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
-  if (n >= 1e3) return `$${(n / 1e3).toFixed(0)}K`;
-  return `$${n.toLocaleString()}`;
-}
 function pct(n: number, d: number) { return d > 0 ? `${((n / d) * 100).toFixed(1)}%` : '0%'; }
 
 interface EntitySummary { entity_type: string; contracts: number; total_value: number; }

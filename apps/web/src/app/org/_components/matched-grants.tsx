@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { money } from '@/lib/format';
 
 interface MatchedGrant {
   id: string;
@@ -13,13 +14,6 @@ interface MatchedGrant {
   provider: string | null;
   categories: string[] | null;
   url: string | null;
-}
-
-function money(n: number): string {
-  if (n >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(1)}B`;
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
-  return `$${n.toLocaleString()}`;
 }
 
 const TH = 'text-left py-3 pr-4 font-black uppercase tracking-widest text-[10px] text-gray-400';

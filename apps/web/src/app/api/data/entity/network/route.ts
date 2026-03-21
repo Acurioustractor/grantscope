@@ -2,14 +2,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getServiceSupabase } from '@/lib/supabase';
 import { validateUuid } from '@/lib/sql';
+import { rateLimit } from '@/lib/rate-limit';
 
 export const revalidate = 3600;
+
+const limiter = rateLimit();
 
 const schema = z.object({
   id: z.string().min(1),
 });
 
 export async function GET(req: NextRequest) {
+  const limited = limiter(req);
+  if (limited) return limited;
+
   const parsed = schema.safeParse(Object.fromEntries(req.nextUrl.searchParams));
   if (!parsed.success) return NextResponse.json({ error: 'id required' }, { status: 400 });
 

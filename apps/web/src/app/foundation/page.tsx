@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { getServiceSupabase } from '@/lib/supabase';
 import Link from 'next/link';
+import { money } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,13 +9,6 @@ export const metadata: Metadata = {
   title: 'Foundation Intelligence | CivicGraph',
   description: 'Browse 2,400+ Australian foundations scored on transparency, need alignment, evidence backing, and geographic reach.',
 };
-
-function money(n: number): string {
-  if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}B`;
-  if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
-  if (n >= 1e3) return `$${(n / 1e3).toFixed(0)}K`;
-  return `$${n.toLocaleString()}`;
-}
 
 interface Foundation {
   foundation_id: string;

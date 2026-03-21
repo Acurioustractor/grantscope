@@ -2,8 +2,11 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getServiceSupabase } from '@/lib/supabase';
 import { esc } from '@/lib/sql';
+import { rateLimit } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
+
+const limiter = rateLimit();
 
 const schema = z.object({
   q: z.string().max(200).optional(),
@@ -12,6 +15,9 @@ const schema = z.object({
 });
 
 export async function GET(request: Request) {
+  const limited = limiter(request);
+  if (limited) return limited;
+
   const { searchParams } = new URL(request.url);
   const parsed = schema.safeParse(Object.fromEntries(searchParams));
   if (!parsed.success) return NextResponse.json({ error: 'Invalid parameters' }, { status: 400 });
