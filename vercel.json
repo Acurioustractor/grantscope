@@ -11,6 +11,14 @@
     {
       "path": "/api/tender-intelligence/automation/deliver-notifications",
       "schedule": "5 * * * *"
+    },
+    {
+      "path": "/api/civicscope/cron?mode=statements",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/civicscope/cron?mode=crosslink",
+      "schedule": "0 5 * * *"
     }
   ]
 }

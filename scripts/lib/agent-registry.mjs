@@ -832,9 +832,43 @@ export const AGENTS = {
     timeoutMs: 600_000,
     dependencies: [],
   },
+
+  // ── CivicScope (Queensland civic intelligence) ────────────────────────────
+  'scrape-ministerial-statements': {
+    command: ['node', '--env-file=.env', 'scripts/scrape-ministerial-statements.mjs', '--pages=5'],
+    displayName: 'QLD Ministerial Statements',
+    category: 'civicscope',
+    defaultPriority: 2,
+    timeoutMs: 600_000,
+    dependencies: [],
+  },
+  'scrape-qld-hansard': {
+    command: ['node', '--env-file=.env', 'scripts/scrape-qld-hansard.mjs', '--days=7'],
+    displayName: 'QLD Hansard Scraper',
+    category: 'civicscope',
+    defaultPriority: 2,
+    timeoutMs: 600_000,
+    dependencies: [],
+  },
+  'scrape-qld-consultancy-spending': {
+    command: ['node', '--env-file=.env', 'scripts/scrape-qld-consultancy-spending.mjs'],
+    displayName: 'QLD Consultancy Spending',
+    category: 'civicscope',
+    defaultPriority: 3,
+    timeoutMs: 600_000,
+    dependencies: [],
+  },
+  'civic-cross-linker': {
+    command: ['node', '--env-file=.env', 'scripts/civic-cross-linker.mjs'],
+    displayName: 'CivicScope Cross-Linker',
+    category: 'civicscope',
+    defaultPriority: 2,
+    timeoutMs: 600_000,
+    dependencies: ['scrape-ministerial-statements', 'scrape-qld-hansard'],
+  },
 };
 
-export const CATEGORIES = ['sync', 'import', 'discovery', 'enrichment', 'profiling', 'graph', 'embedding', 'analytics', 'intelligence', 'goods', 'nz', 'scraping'];
+export const CATEGORIES = ['sync', 'import', 'discovery', 'enrichment', 'profiling', 'graph', 'embedding', 'analytics', 'intelligence', 'goods', 'nz', 'scraping', 'civicscope'];
 
 export function getAgent(agentId) {
   return AGENTS[agentId] ?? null;
