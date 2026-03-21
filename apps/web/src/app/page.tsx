@@ -1,5 +1,6 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import { money, fmt } from '@/lib/format';
+import { UnifiedSearch } from './components/unified-search';
 
 export const dynamic = 'force-dynamic';
 
@@ -194,6 +195,8 @@ export default async function HomePage() {
           Procurement intelligence. Place-based allocation analysis. Governed proof of outcomes.{' '}
           {heroEvidenceLine}
         </p>
+
+        <UnifiedSearch />
 
         <div className="flex gap-0 flex-wrap mb-6">
           <a href="/tender-intelligence" className="px-6 py-3 bg-bauhaus-black text-white font-black text-xs uppercase tracking-widest border-4 border-bauhaus-black hover:bg-bauhaus-red bauhaus-shadow-sm">
