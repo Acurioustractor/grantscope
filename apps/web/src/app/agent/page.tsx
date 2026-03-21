@@ -89,8 +89,8 @@ export default function AgentPage() {
             { value: '1.5M+', label: 'Relationships' },
             { value: '770K+', label: 'Contracts' },
             { value: '$74B+', label: 'Tracked' },
-          ].map(s => (
-            <div key={s.label} className="p-4 text-center">
+          ].map((s, i) => (
+            <div key={s.label} className={`p-4 text-center ${i >= 2 ? 'border-t-4 border-bauhaus-black sm:border-t-0' : ''}`}>
               <div className="text-2xl sm:text-3xl font-black text-bauhaus-black tabular-nums">{s.value}</div>
               <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mt-1">{s.label}</div>
             </div>
@@ -101,7 +101,7 @@ export default function AgentPage() {
       {/* Quick start */}
       <section className="mb-12">
         <h2 className="text-xl font-black text-bauhaus-black mb-4">Quick Start</h2>
-        <div className="border-4 border-bauhaus-black bg-bauhaus-canvas p-6">
+        <div className="border-4 border-bauhaus-black bg-bauhaus-canvas p-4 sm:p-6">
           <div className="text-xs font-black text-bauhaus-muted uppercase tracking-widest mb-3">Single endpoint. POST JSON. Get intelligence.</div>
           <pre className="text-sm font-mono text-bauhaus-black overflow-x-auto whitespace-pre">{`POST /api/agent
 Content-Type: application/json
@@ -131,7 +131,7 @@ Authorization: Bearer cg_live_...
         <div className="space-y-4">
           {ACTIONS.map(a => (
             <div key={a.name} className="border-4 border-bauhaus-black">
-              <div className="flex items-center justify-between p-4 bg-bauhaus-black text-white">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 gap-1 bg-bauhaus-black text-white">
                 <h3 className="font-black text-sm uppercase tracking-widest">{a.label}</h3>
                 <code className="text-[11px] font-mono text-bauhaus-yellow">{`"action": "${a.name}"`}</code>
               </div>
@@ -186,13 +186,13 @@ Authorization: Bearer cg_live_...
       {/* Data sources */}
       <section className="mb-12">
         <h2 className="text-xl font-black text-bauhaus-black mb-4">Data Sources</h2>
-        <div className="border-4 border-bauhaus-black p-6">
-          <div className="flex flex-wrap gap-3">
+        <div className="border-4 border-bauhaus-black p-4 sm:p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {DATA_SOURCES.map(ds => (
               <div key={ds.name} className="flex items-center gap-2">
-                <span className={`w-2.5 h-2.5 ${ds.color} border border-bauhaus-black`} />
+                <span className={`w-2.5 h-2.5 shrink-0 ${ds.color} border border-bauhaus-black`} />
                 <span className="text-xs font-black text-bauhaus-black uppercase tracking-widest">{ds.name}</span>
-                <span className="text-[10px] text-bauhaus-muted font-medium">{ds.desc}</span>
+                <span className="text-[10px] text-bauhaus-muted font-medium whitespace-nowrap">{ds.desc}</span>
               </div>
             ))}
           </div>
