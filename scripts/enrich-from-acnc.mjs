@@ -261,8 +261,10 @@ async function main() {
       if (!entity.state && acnc.state) updates.state = acnc.state;
       if (!entity.postcode && acnc.postcode) updates.postcode = acnc.postcode;
 
-      // Community controlled flag
-      if (!entity.is_community_controlled && acnc.ben_aboriginal_tsi) {
+      // Community controlled flag — only set for entities with Indigenous-related names
+      // (not just charities that list Aboriginal/TSI as beneficiaries — Red Cross serves
+      // Indigenous people but isn't community-controlled BY them)
+      if (!entity.is_community_controlled && acnc.ben_aboriginal_tsi && entity.entity_type === 'indigenous_corp') {
         updates.is_community_controlled = true;
         communityControlled++;
         changed = true;

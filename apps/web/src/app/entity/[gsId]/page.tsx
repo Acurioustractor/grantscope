@@ -38,6 +38,16 @@ interface DonationRow { donation_to: string; total: number; count: number }
 interface RelRow { partner_name: string; relationship_type: string; amount: number | null; year: string | null; dataset: string | null; partner_gs_id: string }
 interface AlmaRow { name: string; type: string; evidence_level: string; target_cohort: string; description: string }
 interface AcncRow { charity_size: string; purposes: string[]; beneficiaries: string[]; state: string; postcode: string }
+interface ImpactRow {
+  reporting_year: string; report_url: string; evidence_type: string;
+  has_quantitative_outcomes: boolean; confidence_score: number;
+  total_beneficiaries: number | null; youth_beneficiaries: number | null;
+  indigenous_beneficiaries: number | null; programs_delivered: number | null;
+  reports_recidivism: boolean; reports_housing: boolean; reports_employment: boolean;
+  key_outcomes: string;
+}
+interface MmrRow { mmr_contracts: number; mmr_value: number; total_contracts: number; total_value: number }
+interface AnaoRow { portfolio: string; exemption_rate: number; exempted_value_aud: number; compliance_rate: number | null }
 interface PowerRow {
   power_score: number; system_count: number;
   in_procurement: number; in_justice_funding: number; in_political_donations: number;
@@ -79,7 +89,7 @@ export default async function EntityPage({ params }: { params: Promise<{ gsId: s
 
   const supabase = getServiceSupabase();
 
-  const [funding, contracts, donations, relationships, alma, acnc, power, ato, board, revolvingDoor] = await Promise.all([
+  const [funding, contracts, donations, relationships, alma, acnc, power, ato, board, revolvingDoor, impactReports, mmrStats, anaoCompliance] = await Promise.all([
     entity.abn ? safe(supabase.rpc('exec_sql', {
       query: `SELECT program_name, SUM(amount_dollars)::bigint as total, COUNT(*)::int as records,
                 MIN(financial_year) as from_fy, MAX(financial_year) as to_fy
@@ -148,6 +158,33 @@ export default async function EntityPage({ params }: { params: Promise<{ gsId: s
                 total_funded, funding_count
          FROM mv_revolving_door WHERE id = '${entity.id}' LIMIT 1`,
     })) as Promise<RevolvingDoorRow[] | null>,
+    // Impact reports
+    entity.abn ? safe(supabase.rpc('exec_sql', {
+      query: `SELECT reporting_year, report_url, evidence_type,
+                has_quantitative_outcomes, confidence_score,
+                total_beneficiaries, youth_beneficiaries, indigenous_beneficiaries,
+                programs_delivered, reports_recidivism, reports_housing, reports_employment,
+                key_outcomes
+         FROM charity_impact_reports WHERE abn = '${entity.abn}'
+         ORDER BY reporting_year DESC LIMIT 3`,
+    })) as Promise<ImpactRow[] | null> : null,
+    // MMR contract stats
+    entity.abn ? safe(supabase.rpc('exec_sql', {
+      query: `SELECT COUNT(*) FILTER (WHERE is_mmr_applicable)::int as mmr_contracts,
+                COALESCE(SUM(contract_value) FILTER (WHERE is_mmr_applicable), 0)::bigint as mmr_value,
+                COUNT(*)::int as total_contracts,
+                COALESCE(SUM(contract_value), 0)::bigint as total_value
+         FROM austender_contracts WHERE supplier_abn = '${entity.abn}'`,
+    })) as Promise<MmrRow[] | null> : null,
+    // ANAO portfolio compliance (for buyer entities — match by buyer_name)
+    entity.entity_type === 'government' ? safe(supabase.rpc('exec_sql', {
+      query: `SELECT e.portfolio, e.exemption_rate, e.exempted_value_aud,
+                c.compliance_rate
+         FROM anao_mmr_exemptions e
+         LEFT JOIN anao_mmr_compliance c ON c.portfolio = e.portfolio
+         WHERE e.portfolio ILIKE '%${esc(entity.canonical_name.replace(/^Department of /i, '').split(' ')[0])}%'
+         LIMIT 1`,
+    })) as Promise<AnaoRow[] | null> : null,
   ]);
 
   const totalFunding = funding?.reduce((s, r) => s + Number(r.total), 0) ?? 0;
@@ -160,6 +197,9 @@ export default async function EntityPage({ params }: { params: Promise<{ gsId: s
   const formerBoardMembers = board?.filter(b => b.cessation_date) ?? [];
   const rdData = (revolvingDoor as RevolvingDoorRow[] | null)?.[0] ?? null;
   const hasRevolvingDoor = rdData && Number(rdData.influence_vectors) >= 2;
+  const impactData = (impactReports as ImpactRow[] | null)?.[0] ?? null;
+  const mmrData = (mmrStats as MmrRow[] | null)?.[0] ?? null;
+  const anaoData = (anaoCompliance as AnaoRow[] | null)?.[0] ?? null;
 
   // Count sections with data for the "data coverage" display
   const sections = [
@@ -168,8 +208,10 @@ export default async function EntityPage({ params }: { params: Promise<{ gsId: s
     { name: 'Political Donations', has: totalDonations > 0 },
     { name: 'ACNC', has: !!acncData },
     { name: 'ALMA Evidence', has: (alma?.length ?? 0) > 0 },
+    { name: 'Impact Report', has: !!impactData },
     { name: 'ATO', has: (ato?.length ?? 0) > 0 },
     { name: 'Board/Governance', has: (board?.length ?? 0) > 0 },
+    { name: 'ANAO Compliance', has: !!anaoData },
   ];
 
   return (
@@ -521,7 +563,14 @@ export default async function EntityPage({ params }: { params: Promise<{ gsId: s
         {/* Contracts */}
         {contracts && contracts.length > 0 && (
           <section>
-            <h2 className="text-lg font-black uppercase tracking-widest text-bauhaus-black mb-3">Federal Contracts</h2>
+            <h2 className="text-lg font-black uppercase tracking-widest text-bauhaus-black mb-3">
+              Federal Contracts
+              {mmrData && Number(mmrData.mmr_contracts) > 0 && (
+                <span className="text-xs font-normal text-gray-400 ml-2 normal-case tracking-normal">
+                  {mmrData.mmr_contracts} of {mmrData.total_contracts} MMR-applicable ({money(Number(mmrData.mmr_value))})
+                </span>
+              )}
+            </h2>
             <div className="bg-white border border-gray-200 rounded-sm shadow-sm overflow-hidden">
               <table className="w-full text-sm border-collapse">
                 <thead>
@@ -599,6 +648,86 @@ export default async function EntityPage({ params }: { params: Promise<{ gsId: s
                   </div>
                 </div>
               ))}
+            </div>
+          </section>
+        )}
+
+        {/* Impact Report */}
+        {impactData && (
+          <section className="bg-emerald-50 border-2 border-emerald-300 p-5">
+            <div className="flex items-start justify-between mb-3">
+              <h2 className="text-sm font-black uppercase tracking-widest text-emerald-800">
+                Impact Report — {impactData.reporting_year}
+              </h2>
+              <span className={`text-[10px] px-2 py-1 font-bold uppercase tracking-wider rounded-sm ${
+                impactData.has_quantitative_outcomes
+                  ? 'bg-emerald-200 text-emerald-800'
+                  : 'bg-gray-200 text-gray-600'
+              }`}>
+                {impactData.evidence_type?.replace(/_/g, ' ')}
+              </span>
+            </div>
+            <p className="text-sm text-emerald-900 mb-3">{impactData.key_outcomes}</p>
+            <div className="flex flex-wrap gap-3">
+              {impactData.total_beneficiaries != null && (
+                <div className="text-xs"><span className="font-bold text-emerald-800">{Number(impactData.total_beneficiaries).toLocaleString()}</span> <span className="text-emerald-600">beneficiaries</span></div>
+              )}
+              {impactData.youth_beneficiaries != null && (
+                <div className="text-xs"><span className="font-bold text-emerald-800">{Number(impactData.youth_beneficiaries).toLocaleString()}</span> <span className="text-emerald-600">youth</span></div>
+              )}
+              {impactData.indigenous_beneficiaries != null && (
+                <div className="text-xs"><span className="font-bold text-emerald-800">{Number(impactData.indigenous_beneficiaries).toLocaleString()}</span> <span className="text-emerald-600">Indigenous</span></div>
+              )}
+              {impactData.programs_delivered != null && (
+                <div className="text-xs"><span className="font-bold text-emerald-800">{Number(impactData.programs_delivered).toLocaleString()}</span> <span className="text-emerald-600">programs</span></div>
+              )}
+              {impactData.reports_recidivism && (
+                <span className="text-[10px] px-2 py-0.5 bg-emerald-200 text-emerald-800 rounded-sm font-bold">Reports Recidivism</span>
+              )}
+              {impactData.reports_housing && (
+                <span className="text-[10px] px-2 py-0.5 bg-emerald-200 text-emerald-800 rounded-sm font-bold">Reports Housing</span>
+              )}
+              {impactData.reports_employment && (
+                <span className="text-[10px] px-2 py-0.5 bg-emerald-200 text-emerald-800 rounded-sm font-bold">Reports Employment</span>
+              )}
+            </div>
+            {impactData.report_url && (
+              <a href={impactData.report_url} target="_blank" rel="noopener noreferrer" className="inline-block mt-3 text-xs text-emerald-700 underline hover:text-emerald-900">
+                View Annual Report
+              </a>
+            )}
+          </section>
+        )}
+
+        {/* ANAO Indigenous Procurement Compliance */}
+        {anaoData && (
+          <section className="bg-orange-50 border-2 border-orange-300 p-5">
+            <h2 className="text-sm font-black uppercase tracking-widest text-orange-800 mb-3">
+              ANAO Indigenous Procurement Compliance
+            </h2>
+            <p className="text-xs text-orange-700 mb-3">
+              Source: Auditor-General Report No.40 2024-25 — Portfolio: {anaoData.portfolio}
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-orange-600">MMR Exemption Rate</p>
+                <p className="text-2xl font-black text-orange-800 mt-1">{(Number(anaoData.exemption_rate) * 100).toFixed(0)}%</p>
+                <p className="text-xs text-orange-600">of contracts exempted</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-orange-600">Exempted Value</p>
+                <p className="text-2xl font-black text-orange-800 mt-1">{money(Number(anaoData.exempted_value_aud))}</p>
+                <p className="text-xs text-orange-600">removed from MMR targets</p>
+              </div>
+              {anaoData.compliance_rate != null && (
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-orange-600">Reporting Compliance</p>
+                  <p className={`text-2xl font-black mt-1 ${Number(anaoData.compliance_rate) >= 0.8 ? 'text-green-700' : Number(anaoData.compliance_rate) >= 0.5 ? 'text-orange-800' : 'text-red-700'}`}>
+                    {(Number(anaoData.compliance_rate) * 100).toFixed(0)}%
+                  </p>
+                  <p className="text-xs text-orange-600">of contracts compliant</p>
+                </div>
+              )}
             </div>
           </section>
         )}

@@ -406,18 +406,20 @@ async function getTargetOrgs() {
   }
 
   // Step 1: Get justice-funded ABNs directly from justice_funding (no JOIN — fast)
+  const statesArg = args.find((_, i, a) => a[i - 1] === '--states');
+  const stateFilter = statesArg ? `WHERE state IN (${statesArg.split(',').map(s => `'${s.trim()}'`).join(',')})` : 'WHERE TRUE';
   const abnSet = new Set();
   for (let offset = 0; ; offset += 1000) {
     const { data: page } = await supabase.rpc('exec_sql', {
       query: `SELECT DISTINCT recipient_abn AS abn FROM justice_funding
-              WHERE state IN ('QLD','NT') AND recipient_abn IS NOT NULL AND recipient_abn != '' AND recipient_abn != '0'
+              ${stateFilter} AND recipient_abn IS NOT NULL AND recipient_abn != '' AND recipient_abn != '0'
               ORDER BY recipient_abn LIMIT 1000 OFFSET ${offset}`
     });
     if (!page?.length) break;
     page.forEach(r => abnSet.add(r.abn));
     if (page.length < 1000) break;
   }
-  console.log(`  ${abnSet.size} justice-funded ABNs`);
+  console.log(`  ${abnSet.size} justice-funded ABNs (${statesArg || 'all states'})`);
 
   // Step 2: Get AIS data with websites, ordered by gov revenue
   const { data } = await supabase.from('acnc_ais')
