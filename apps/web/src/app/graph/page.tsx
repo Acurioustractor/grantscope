@@ -42,6 +42,10 @@ interface GraphNode {
   grantee_count?: number;
   foundation_count?: number;
   is_regranter?: boolean;
+  meeting_count?: number;
+  minister_count?: number;
+  org_count?: number;
+  purposes?: string[];
   x?: number;
   y?: number;
 }
@@ -69,7 +73,7 @@ interface Story {
   id: string;
   title: string;
   description: string;
-  mode: 'hubs' | 'justice' | 'power' | 'interlocks' | 'ndis' | 'foundations' | 'alma';
+  mode: 'hubs' | 'justice' | 'power' | 'interlocks' | 'ndis' | 'foundations' | 'alma' | 'diary';
   topic?: string;
   minSystems?: number;
   narrative: string;
@@ -128,6 +132,14 @@ const STORIES: Story[] = [
     minSystems: 3,
     narrative: '',
     highlights: ['multi-system'],
+  },
+  {
+    id: 'ministerial-access',
+    title: 'Ministerial Access',
+    description: 'Which organizations get face time with ministers? Mapped from diary disclosures.',
+    mode: 'diary',
+    narrative: '',
+    highlights: ['top-recipients'],
   },
 ];
 
@@ -239,6 +251,22 @@ function computeInsights(storyId: string, nodes: GraphNode[], edges: GraphEdge[]
         callout: elite.length > 0 ? `Top entity: ${elite.sort((a,b) => (b.power_score||0) - (a.power_score||0))[0]?.label}` : undefined,
       };
     }
+    case 'ministerial-access': {
+      const ministers = nodes.filter(n => n.type === 'minister');
+      const meetingOrgs = nodes.filter(n => n.type !== 'minister');
+      const topByMeetings = [...meetingOrgs].sort((a, b) => (b.degree || 0) - (a.degree || 0));
+      const multiMinister = meetingOrgs.filter(n => (n.minister_count || 0) > 1);
+      return {
+        narrative: `${ministers.length} ministers disclosed ${edges.length} meeting relationships with ${meetingOrgs.length} organizations. ${multiMinister.length} organizations met with multiple ministers — indicating cross-portfolio influence.`,
+        stats: [
+          { label: 'Ministers', value: String(ministers.length) },
+          { label: 'Organizations', value: String(meetingOrgs.length) },
+          { label: 'Meetings', value: String(edges.length) },
+          { label: 'Multi-minister', value: String(multiMinister.length) },
+        ],
+        callout: topByMeetings.length > 0 ? `Most connected: ${topByMeetings[0].label} (${topByMeetings[0].degree} minister links)` : undefined,
+      };
+    }
     default:
       return { narrative: '', stats: [] };
   }
@@ -256,6 +284,7 @@ const TYPE_COLORS: Record<string, string> = {
   person: '#f472b6',
   university: '#38bdf8',
   program: '#f59e0b',
+  minister: '#ef4444',
   unknown: '#6b7280',
 };
 
@@ -293,7 +322,7 @@ const SYSTEM_COLORS: Record<number, string> = {
 
 type Preset = {
   label: string;
-  mode: 'hubs' | 'justice' | 'power' | 'interlocks' | 'ndis' | 'foundations' | 'alma';
+  mode: 'hubs' | 'justice' | 'power' | 'interlocks' | 'ndis' | 'foundations' | 'alma' | 'diary';
   type?: string;
   hubs?: number;
   topic?: string;
@@ -301,6 +330,7 @@ type Preset = {
   minSystems?: number;
   minBoards?: number;
   minGiving?: number;
+  minister?: string;
   desc: string;
 };
 
@@ -323,6 +353,8 @@ const PRESETS: Preset[] = [
   { label: 'Alice Springs Youth', mode: 'alma', state: 'Alice Springs', desc: 'Alice Springs youth service interventions — who delivers what' },
   { label: 'Foundation Giving', mode: 'foundations', desc: 'Foundation → grantee flows with scores and regranting chains' },
   { label: 'Top Foundations', mode: 'foundations', minGiving: 5000000, desc: 'Foundations giving $5M+ and their grantee networks' },
+  { label: 'Ministerial Diary', mode: 'diary', desc: 'Who ministers meet — org access mapped from diary disclosures' },
+  { label: 'Oonchiumpa Ecosystem', mode: 'alma', topic: 'youth-justice', state: 'Alice Springs', desc: 'Oonchiumpa & Alice Springs youth services — ALMA evidence network' },
   { label: 'Full Network', mode: 'hubs', type: '', hubs: 0, desc: 'Top relationships by value' },
 ];
 
@@ -399,6 +431,10 @@ function getAnnotationsForStory(storyId: string): Annotation[] {
     case 'power-concentration':
       return [
         { text: 'Hotter colors = more systems. These entities appear in contracts, donations, and funding simultaneously.', target: 'multi-system' },
+      ];
+    case 'ministerial-access':
+      return [
+        { text: 'Red pentagons are ministers. Lines show disclosed meetings with organizations.', target: 'programs' },
       ];
     default:
       return [];
@@ -524,6 +560,9 @@ export default function GraphPage() {
       } else if (preset.mode === 'foundations') {
         params.set('mode', 'foundations');
         if (preset.minGiving) params.set('min_giving', String(preset.minGiving));
+      } else if (preset.mode === 'diary') {
+        params.set('mode', 'diary');
+        if (preset.minister) params.set('minister', preset.minister);
       } else if (preset.type) {
         params.set('entity_type', preset.type);
         params.set('mode', 'hubs');
@@ -559,6 +598,8 @@ export default function GraphPage() {
       return { label: story.title, mode: 'foundations', desc: story.description };
     } else if (story.mode === 'alma') {
       return { label: story.title, mode: 'alma', state: 'Alice Springs', desc: story.description };
+    } else if (story.mode === 'diary') {
+      return { label: story.title, mode: 'diary', desc: story.description };
     } else {
       return { label: story.title, mode: 'hubs', type: 'foundation', hubs: 30, desc: story.description };
     }
@@ -1106,6 +1147,55 @@ export default function GraphPage() {
           ctx.fillStyle = '#ffffffaa';
           ctx.fillText(node.label.substring(0, 24), x, y + provSize + 2);
         }
+      }
+      return;
+    }
+
+    // Diary mode: minister nodes as pentagons, org nodes as circles
+    const isDiary = effectiveMode === 'diary';
+    const isMinister = node.type === 'minister';
+    if (isDiary && isMinister) {
+      const minColor = '#ef4444';
+      const size = Math.max(8, Math.min(20, Math.sqrt(deg + 1) * 3));
+
+      // Red glow
+      const gradient = ctx.createRadialGradient(x, y, size * 0.3, x, y, size * 4);
+      gradient.addColorStop(0, minColor + (dimmed ? '18' : '55'));
+      gradient.addColorStop(0.5, minColor + (dimmed ? '06' : '18'));
+      gradient.addColorStop(1, minColor + '00');
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(x, y, size * 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Pentagon shape for ministers
+      ctx.globalAlpha = dimAlpha;
+      ctx.fillStyle = minColor;
+      ctx.beginPath();
+      for (let i = 0; i < 5; i++) {
+        const angle = (i * 2 * Math.PI) / 5 - Math.PI / 2;
+        const px = x + size * Math.cos(angle);
+        const py = y + size * Math.sin(angle);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      // Hot center
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(x, y, size * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Label
+      if (globalScale > 0.3 || deg > 5) {
+        ctx.font = `bold ${Math.min(12, 10 / globalScale)}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillStyle = '#ffffffcc';
+        ctx.fillText(node.label.substring(0, 30), x, y + size + 3);
       }
       return;
     }

@@ -12,7 +12,7 @@ import { getServiceSupabase } from '@/lib/supabase';
  *   3. Edge-first (default, no entity_type): fetch top edges by amount, resolve nodes.
  *
  * GET /api/data/graph
- *   ?mode=hubs|justice|power|ndis|foundations
+ *   ?mode=hubs|justice|power|ndis|foundations|diary
  *   &entity_type=foundation|charity|company|...
  *   &topic=youth-justice|child-protection|...
  *   &state=NSW|VIC|QLD|...
@@ -877,6 +877,147 @@ export async function GET(request: Request) {
           total_grantees: granteeNodeMap.size,
           total_regrant_edges: regrantRows.length,
           filters: { mode: 'foundations', state, minGiving, limit },
+        },
+      });
+      response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+      return response;
+    }
+
+    // ── Diary mode: minister → organisation meeting network ──
+    if (mode === 'diary') {
+      const ministerFilter = searchParams.get('minister');
+      const ministerWhere = ministerFilter
+        ? `AND d.minister_name ILIKE '%${ministerFilter.replace(/'/g, "''")}%'`
+        : '';
+
+      // Step 1: Get aggregated minister → entity meetings
+      const diaryRows = await paginatedRpc<{
+        minister_name: string;
+        entity_id: string;
+        entity_name: string;
+        entity_type: string;
+        entity_state: string | null;
+        is_community_controlled: boolean;
+        meeting_count: number;
+        purposes: string;
+      }>(supabase,
+        `SELECT d.minister_name,
+                d.linked_entity_id as entity_id,
+                e.canonical_name as entity_name,
+                e.entity_type,
+                e.state as entity_state,
+                COALESCE(e.is_community_controlled, false) as is_community_controlled,
+                COUNT(*) as meeting_count,
+                STRING_AGG(DISTINCT d.purpose, '; ' ORDER BY d.purpose) as purposes
+         FROM civic_ministerial_diaries d
+         JOIN gs_entities e ON e.id = d.linked_entity_id
+         WHERE d.linked_entity_id IS NOT NULL ${ministerWhere}
+         GROUP BY d.minister_name, d.linked_entity_id, e.canonical_name, e.entity_type, e.state, e.is_community_controlled
+         ORDER BY meeting_count DESC
+         LIMIT ${limit}`,
+        limit);
+
+      if (diaryRows.length === 0) {
+        return NextResponse.json({ nodes: [], edges: [], meta: { mode: 'diary', total_nodes: 0, total_edges: 0 } });
+      }
+
+      // Step 2: Build bipartite graph — minister hubs + org spokes
+      const nodes: Array<Record<string, unknown>> = [];
+      const graphEdges: Array<{ source: string; target: string; type: string; amount: number | null; dataset: string; year: number | null }> = [];
+
+      // Minister nodes
+      const ministerNodes = new Map<string, { totalMeetings: number; orgCount: number }>();
+      // Org nodes (keyed by entity_id)
+      const orgNodes = new Map<string, {
+        name: string; type: string; state: string | null;
+        community_controlled: boolean;
+        totalMeetings: number; ministerCount: number;
+        purposes: Set<string>;
+      }>();
+
+      for (const row of diaryRows) {
+        const minKey = `minister:${row.minister_name}`;
+        const orgKey = `org:${row.entity_id}`;
+
+        // Minister node
+        const min = ministerNodes.get(minKey) || { totalMeetings: 0, orgCount: 0 };
+        min.totalMeetings += Number(row.meeting_count);
+        min.orgCount++;
+        ministerNodes.set(minKey, min);
+
+        // Org node
+        const org = orgNodes.get(orgKey) || {
+          name: row.entity_name, type: row.entity_type,
+          state: row.entity_state, community_controlled: row.is_community_controlled,
+          totalMeetings: 0, ministerCount: 0, purposes: new Set<string>(),
+        };
+        org.totalMeetings += Number(row.meeting_count);
+        org.ministerCount++;
+        if (row.purposes) {
+          for (const p of row.purposes.split('; ')) org.purposes.add(p);
+        }
+        orgNodes.set(orgKey, org);
+
+        // Edge
+        graphEdges.push({
+          source: minKey,
+          target: orgKey,
+          type: 'meeting',
+          amount: Number(row.meeting_count),
+          dataset: 'ministerial_diary',
+          year: null,
+        });
+      }
+
+      // Compute degree
+      const degree = new Map<string, number>();
+      for (const e of graphEdges) {
+        degree.set(e.source, (degree.get(e.source) || 0) + 1);
+        degree.set(e.target, (degree.get(e.target) || 0) + 1);
+      }
+
+      // Build node list
+      for (const [key, m] of ministerNodes) {
+        nodes.push({
+          id: key,
+          label: key.replace('minister:', ''),
+          type: 'minister',
+          state: null,
+          sector: 'government',
+          remoteness: null,
+          community_controlled: false,
+          degree: degree.get(key) || 0,
+          meeting_count: m.totalMeetings,
+          org_count: m.orgCount,
+        });
+      }
+
+      for (const [key, o] of orgNodes) {
+        nodes.push({
+          id: key,
+          label: o.name,
+          type: o.type,
+          state: o.state,
+          sector: null,
+          remoteness: null,
+          community_controlled: o.community_controlled,
+          degree: degree.get(key) || 0,
+          meeting_count: o.totalMeetings,
+          minister_count: o.ministerCount,
+          purposes: [...o.purposes].slice(0, 5),
+        });
+      }
+
+      const response = NextResponse.json({
+        nodes,
+        edges: graphEdges,
+        meta: {
+          mode: 'diary',
+          total_nodes: nodes.length,
+          total_edges: graphEdges.length,
+          total_ministers: ministerNodes.size,
+          total_orgs: orgNodes.size,
+          filters: { mode: 'diary', minister: ministerFilter, limit },
         },
       });
       response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');

@@ -35,11 +35,14 @@ function fixOcr(text) {
     .replace(/\b(202)\s+(\d)\b/g, '$1$2')
     // Fix common OCR splits (specific known cases)
     .replace(/For\s+tescue/gi, 'Fortescue')
+    .replace(/Fre\s+don/gi, 'Fredon')
     .replace(/Andr\s+ew/gi, 'Andrew')
     .replace(/Fra\s+ser/gi, 'Fraser')
     .replace(/Ca\s+binet/gi, 'Cabinet')
     .replace(/Ministeria\s+l/gi, 'Ministerial')
     .replace(/Minister\s+ial/gi, 'Ministerial')
+    .replace(/Mi\s+nisterial/gi, 'Ministerial')
+    .replace(/Lear\s+nin\s+g/gi, 'Learning')
     .replace(/Fe\s+bruary/gi, 'February')
     .replace(/Augu\s+st/gi, 'August')
     .replace(/Febr\s+uary/gi, 'February')
@@ -47,6 +50,8 @@ function fixOcr(text) {
     .replace(/Octo\s+ber/gi, 'October')
     .replace(/Novem\s+ber/gi, 'November')
     .replace(/Decem\s+ber/gi, 'December')
+    .replace(/Blac\s+kall/gi, 'Blackall')
+    .replace(/I\s+slander/gi, 'Islander')
     // Fix OCR spaces in common words
     .replace(/Departmentof/g, 'Department of')
     .replace(/Premierand/g, 'Premier and')
@@ -67,18 +72,16 @@ function isInternalMeeting(org) {
 
   // Entries starting with "Hon" are minister-to-minister meetings
   if (/^hon\s/i.test(t)) return true;
-  // Entries starting with dates are PDF artifacts
-  if (/^\d{1,2}\s+\w+\s+\d{4}\s/i.test(t)) return true;
+  // Entries starting with dates are PDF artifacts (catches OCR-split dates too)
+  if (/^\d{1,2}\s+\w+\s+\d{2,4}\s/i.test(t)) return true;
   // Entries starting with "Deputy" or "Acting" + govt role
-  if (/^(deputy|acting)\s+(director|commissioner|police|premier)/i.test(t)) return true;
+  if (/^(deputy|acting)\s+(director|commissioner|police|premier|victim)/i.test(t)) return true;
   // Commissioner meetings are internal govt
   if (/^commissioner,?\s/i.test(t)) return true;
-  // Director-General meetings
-  if (/^(di\s*rector-general|d-g)/i.test(t)) return true;
-  // Cabinet meetings
-  if (/^cabinet\s+(ministers?|members?|meeting)/i.test(t)) return true;
-  // "Ca binet" OCR variant
-  if (/^ca\s*binet\s+(ministers?|members?|meeting)/i.test(t)) return true;
+  // Director-General meetings (all variants)
+  if (/^(di\s*rector-general|d-g|d -g)/i.test(t)) return true;
+  // Cabinet meetings (including OCR variants)
+  if (/^ca\s*binet\s+(minister|member|meeting)/i.test(t)) return true;
   // Attorney-General combos (internal ministerial meetings)
   if (/^attorney\s*-?\s*general/i.test(t)) return true;
   // "Premier and Minister" combos
@@ -89,10 +92,13 @@ function isInternalMeeting(org) {
   if (/^(emergency|disaster|state\s+recovery|state\s+disaster)/i.test(t)) return true;
   // "Ministerial Staff" standalone or with just a name
   if (/^ministerial\s+staff/i.test(t)) return true;
-  // "Auditor-General" internal
-  if (/^auditor-general/i.test(t)) return true;
-  // "Assistant Minister for..." (no org)
-  if (/^assistant\s+minister\s+for/i.test(t)) return true;
+  // "Auditor-General" internal (with OCR variant)
+  if (/^auditor\s*-?\s*general/i.test(t)) return true;
+  // "Assistant Minister for..." entries that are ONLY about the assistant minister (no org)
+  if (/^assistant\s+minister\s+(for|to)\s+/i.test(t)) {
+    // But if it also contains a known org indicator, don't skip
+    if (!/foundation|association|council|pty|ltd|union|group|network|society|college|school|academy|library|chamber|hospital/i.test(t)) return true;
+  }
   // "A/Director-General" acting DG meetings
   if (/^a\/director/i.test(t)) return true;
   // "Afternoon Tea" social events
@@ -135,14 +141,30 @@ function isInternalMeeting(org) {
   if (/^commonwealth\s+of\s+australia\s+first\s+ministers/i.test(t)) return true;
   // "Clerk of the Executive Council"
   if (/^clerk\s+of\s+the\s+executive/i.test(t)) return true;
-  // Individual MPs (no org)
-  if (/^\w+\s+\w+\s+mp,?\s+(assistant\s+minister|member\s+for)/i.test(t)) return true;
+  // Individual MPs (no org) — "Name MP, Member for X" or "Name MP, Leader of..."
+  if (/^\w+\s+\w+\s+mp,?\s+(assistant\s+minister|member\s+for|leader\s+of)/i.test(t)) return true;
   // Just "Victim of Crime"
   if (/^victim\s+of\s+crime$/i.test(t)) return true;
   // Family members
   if (/^family\s+member/i.test(t)) return true;
   // Weather events
   if (/weather\s+event/i.test(t)) return true;
+  // "BoM Staff" — Bureau of Meteorology
+  if (/^bom\s+staff/i.test(t)) return true;
+  // "Chief Minister, Northern Territory" — intergovernmental
+  if (/^chief\s+minister,?\s/i.test(t)) return true;
+  // "Cross-Border Commissioner" internal
+  if (/^cross\s*-?\s*border\s+commissioner/i.test(t)) return true;
+  // "Bethany Clarke Ministerial Staff" — just name + staff
+  if (/^[a-z]+\s+[a-z]+\s+ministerial\s+staff$/i.test(t)) return true;
+  // "Archbishop/Bishop Name" — no org
+  if (/^(archbishop|bishop)\s+/i.test(t)) return true;
+  // "D Webb, T Harbour, Ministerial Staff" — just names
+  if (/^[a-z]\s+\w+,\s+[a-z]\s+\w+,?\s+ministerial/i.test(t)) return true;
+  // "Alain Etchegaray, Honorary Consul" — diplomatic
+  if (/honorary\s+consul/i.test(t)) return true;
+  // Multiple MP entries with no org
+  if (/^[\w\s]+mp,\s+[\w\s]+mp,/i.test(t) && !/foundation|association|council|pty|ltd|union|group/i.test(t)) return true;
 
   // If the entire text is just internal meeting types (after stripping)
   const stripped = t
@@ -187,12 +209,20 @@ const MANUAL_ALIASES = {
   'KPMG': 'KPMG',
   'DELOITTE': 'DELOITTE TOUCHE TOHMATSU',
   'PRICEWATERHOUSECOOPERS': 'PRICEWATERHOUSECOOPERS',
-  'PRICEWATERHOUSECOOPERS': 'PRICEWATERHOUSECOOPERS',
   'MCKINSEY': 'MCKINSEY & COMPANY INC AUSTRALIA',
   'BOEING': 'BOEING AUSTRALIA HOLDINGS PTY LTD',
   'RHEINMETALL': 'RHEINMETALL DEFENCE AUSTRALIA PTY LTD',
   'RAYTHEON': 'RAYTHEON AUSTRALIA PTY LIMITED',
   'AURECON': 'AURECON AUSTRALASIA PTY LTD',
+  'QUEENSLAND INVESTMENT CORPORATION': 'QUEENSLAND INVESTMENT CORPORATION',
+  'KOREA ZINC': 'KOREA ZINC',
+  'ARK ENERGY': 'ARK ENERGY',
+  'SUN METALS': 'SUN METALS',
+
+  // Lobbyist firms (appear in diary as "Person – Lobbyist, FirmName")
+  'PREMIERNATIONAL': 'PremierNational Pty Ltd',
+  'PREMIER NATIONAL': 'PremierNational Pty Ltd',
+  'BARTON DEAKIN': 'Barton Deakin Pty Limited',
 
   // Peak bodies and associations
   'RACQ': 'THE ROYAL AUTOMOBILE CLUB OF QUEENSLAND LTD',
@@ -206,44 +236,67 @@ const MANUAL_ALIASES = {
   'QUEENSLAND RESOURCES COUNCIL': 'QUEENSLAND RESOURCES COUNCIL',
   'CHAMBER OF COMMERCE AND INDUSTRY QUEENSLAND': 'CHAMBER OF COMMERCE AND INDUSTRY QUEENSLAND',
   'CCIQ': 'CHAMBER OF COMMERCE AND INDUSTRY QUEENSLAND',
+  'BUSINESS CHAMBER QUEENSLAND': 'CHAMBER OF COMMERCE AND INDUSTRY QUEENSLAND',
+  'BCQ': 'CHAMBER OF COMMERCE AND INDUSTRY QUEENSLAND',
 
   // Unions
   'CFMEU': 'CONSTRUCTION FORESTRY MARITIME MINING AND ENERGY UNION',
   'UNITED WORKERS UNION': 'UNITED WORKERS UNION',
   'QUEENSLAND TEACHERS UNION': 'QUEENSLAND TEACHERS UNION',
+  "QUEENSLAND TEACHERS' UNION": 'QUEENSLAND TEACHERS UNION',
   'QUEENSLAND NURSES': 'QUEENSLAND NURSES AND MIDWIVES UNION',
   'SHOP DISTRIBUTIVE AND ALLIED EMPLOYEES': 'SHOP DISTRIBUTIVE AND ALLIED EMPLOYEES ASSOCIATION',
   'TOGETHER UNION': 'TOGETHER QUEENSLAND',
+  'TOGETHER ASU': 'TOGETHER QUEENSLAND',
 
   // Foundations and NFPs
   'CLONTARF FOUNDATION': 'CLONTARF FOUNDATION',
   'BRISBANE FESTIVAL': 'MAJOR BRISBANE FESTIVALS PTY LTD',
   'TOWNSVILLE ENTERPRISE': 'TOWNSVILLE ENTERPRISE LIMITED',
-  'ARTHUR BEETSON FOUNDATION': 'ARTHUR BEETSON FOUNDATION LIMITED',
+  'ARTHUR BEETSON FOUNDATION': 'The Arthur Beetson Foundation',
   'INDIGENOUS MARATHONS FOUNDATION': 'INDIGENOUS MARATHON FOUNDATION LTD',
   'SALVATION ARMY': 'THE SALVATION ARMY (QUEENSLAND)',
   'RED CROSS': 'AUSTRALIAN RED CROSS SOCIETY',
   'SMITH FAMILY': 'THE SMITH FAMILY',
   'BEYONDBLUE': 'BEYONDBLUE LIMITED',
   'HEADSPACE': 'HEADSPACE NATIONAL YOUTH MENTAL HEALTH FOUNDATION LTD',
+  'YALARI': 'YALARI',
+  'CAPE YORK PARTNERSHIPS': 'The Cape York Partnership Group Ltd',
+  'CAPE YORK PARTNERSHIP': 'The Cape York Partnership Group Ltd',
+  'VOICE FOR VICTIMS': 'VOICE FOR VICTIMS FOUNDATION LTD',
+  'VOICE 4 VICTIMS': 'VOICE FOR VICTIMS FOUNDATION LTD',
+  'YOUTH INSEARCH': 'YOUTH INSEARCH',
+  'OHANA FOR YOUTH': 'OHANA FOR YOUTH',
+  'CAST THE NET': 'CAST THE NET',
 
   // Education
   'ISLAMIC COLLEGE OF BRISBANE': 'ISLAMIC COLLEGE OF BRISBANE',
   'INDEPENDENT SCHOOLS QUEENSLAND': 'INDEPENDENT SCHOOLS QUEENSLAND LTD',
   'ROCKHAMPTON GRAMMAR': 'THE ROCKHAMPTON GRAMMAR SCHOOL',
+  'HOLY SPIRIT COLLEGE': 'HOLY SPIRIT COLLEGE',
 
   // Specific QLD entities
   'QPS': 'QUEENSLAND POLICE SERVICE',
   'QUEENSLAND CORRECTIVE SERVICES': 'QUEENSLAND CORRECTIVE SERVICES',
-  'MURRI CHAMBER OF COMMERCE': 'MURRI CHAMBER OF COMMERCE LTD',
+  'MURRI CHAMBER OF COMMERCE': 'MURRI CHAMBER OF COMMERCE',
   'QUEENSLAND AIR MUSEUM': 'QUEENSLAND AIR MUSEUM INC',
   'QUEENSLAND YOUTH ORCHESTRA': 'QUEENSLAND YOUTH ORCHESTRA INC',
   'SUNSHINE COAST ARTS FOUNDATION': 'SUNSHINE COAST ARTS FOUNDATION',
   'QIBN': 'QUEENSLAND INDIGENOUS BUSINESS NETWORK',
-  'OCHRE SUN': 'OCHRE SUN PTY LTD',
-  'OASIS TOWNSVILLE': 'OASIS TOWNSVILLE LTD',
+  'OCHRE SUN': 'OCHRE SUN',
+  'OASIS TOWNSVILLE': 'OASIS TOWNSVILLE',
   'FRESH START ACADEMY': 'FRESH START ACADEMY',
   'NSW HOMICIDE VICTIM SUPPORT GROUP': 'NSW HOMICIDE VICTIMS SUPPORT GROUP INC',
+  'QUEENSLAND HOTELS ASSOCIATION': 'QUEENSLAND HOTELS ASSOCIATION',
+  'QHA': 'QUEENSLAND HOTELS ASSOCIATION',
+  'TAXI COUNCIL': 'TAXI COUNCIL OF QUEENSLAND INCORPORATED',
+  'DOMESTIC AND FAMILY VIOLENCE PREVENTION COUNCIL': 'DOMESTIC AND FAMILY VIOLENCE PREVENTION COUNCIL',
+  'OUTBACK FUTURES': 'OUTBACK FUTURES LTD',
+  'STORYFEST': 'STORYFEST',
+  'CAIRNS REGION TOY LIBRARY': 'CAIRNS COMMUNITY TOY LIBRARY',
+  'CENTRAL HIGHLANDS PERFORMING ARTS': 'CENTRAL HIGHLANDS PERFORMING ARTS',
+  '54 REASONS': '54 REASONS',
+  'CHANGEWISE': 'CHANGEWISE',
 
   // Media
   'COURIER MAIL': 'QUEENSLAND NEWSPAPERS PTY  LTD',
@@ -254,31 +307,16 @@ const MANUAL_ALIASES = {
   'SEVEN WEST MEDIA': 'SEVEN WEST MEDIA LIMITED',
   'NEWS CORP': 'NEWS CORP AUSTRALIA',
 
-  // Health
-  'AUSTRALIAN FESTIVAL OF CHAMBER MUSIC': 'AUSTRALIAN FESTIVAL OF CHAMBER MUSIC LIMITED',
-
   // QLD specific orgs from diary entries
-  'ATSILS': 'ABORIGINAL AND TORRES STRAIT ISLANDER LEGAL SERVICE (QLD) LIMITED',
-  'ABORIGINAL AND TORRES STRAIT ISLANDER LEGAL SERVICE': 'ABORIGINAL AND TORRES STRAIT ISLANDER LEGAL SERVICE (QLD) LIMITED',
-  'QUEENSLAND HOTELS ASSOCIATION': 'QUEENSLAND HOTELS ASSOCIATION',
-  'TAXI COUNCIL OF AUSTRALIA': 'TAXI COUNCIL QUEENSLAND LTD',
-  'HOWARD SMITH WHARVES': 'HOWARD SMITH WHARVES HOLDINGS PTY LTD',
-  'TOGETHER ASU': 'TOGETHER QUEENSLAND',
-  'OUTBACK FUTURES': 'OUTBACK FUTURES LTD',
-  'VOICE FOR VICTIMS': 'VOICE FOR VICTIMS INC',
-  'VOICE 4 VICTIMS': 'VOICE FOR VICTIMS INC',
-  'DOMESTIC AND FAMILY VIOLENCE PREVENTION COUNCIL': 'DOMESTIC AND FAMILY VIOLENCE PREVENTION COUNCIL',
-  'BAZMARK': 'BAZMARK PTY LIMITED',
-  'FREDON GROUP': 'FREDON GROUP PTY LTD',
-  'BARTON DEAKIN': 'BARTON DEAKIN PTY LIMITED',
+  'ATSILS': 'Aboriginal & Torres Strait Islander Legal Service (Qld) Ltd',
+  'ABORIGINAL AND TORRES STRAIT ISLANDER LEGAL SERVICE': 'Aboriginal & Torres Strait Islander Legal Service (Qld) Ltd',
+  'HOWARD SMITH WHARVES': 'HOWARD SMITH WHARVES',
+  'BAZMARK': 'BAZMARK',
+  'FREDON GROUP': 'FREDON INDUSTRIES PTY LIMITED',
+  'FREDON': 'FREDON INDUSTRIES PTY LIMITED',
   'TABCORP': 'TABCORP HOLDINGS LIMITED',
   'QUEENSLAND AFRICAN COMMUNITY COUNCIL': 'QUEENSLAND AFRICAN COMMUNITIES COUNCIL LTD',
-  'AUSTRALIAN CHIN COMMUNITY COUNCIL': 'AUSTRALIAN CHIN COMMUNITY INC',
-  'STORYFEST': 'STORYFEST INC',
-  'CAIRNS REGION TOY LIBRARY': 'CAIRNS COMMUNITY TOY LIBRARY INC',
-  'CENTRAL HIGHLANDS PERFORMING ARTS': 'CENTRAL HIGHLANDS PERFORMING ARTS INC',
-  '54 REASONS': '54 REASONS LTD',
-  'INDEPENDENT SCHOOLS QUEENSLAND': 'INDEPENDENT SCHOOLS QUEENSLAND LTD',
+  'AUSTRALIAN CHIN COMMUNITY COUNCIL': 'AUSTRALIAN CHIN COMMUNITY',
   '2032 OLYMPIC': 'BRISBANE ORGANISING COMMITTEE FOR THE 2032 OLYMPIC AND PARALYMPIC GAMES LIMITED',
   'OLYMPIC AND PARALYMPIC GAMES': 'BRISBANE ORGANISING COMMITTEE FOR THE 2032 OLYMPIC AND PARALYMPIC GAMES LIMITED',
   'LAING O\'ROURKE': 'LAING O\'ROURKE AUSTRALIA PTY LIMITED',
@@ -286,7 +324,9 @@ const MANUAL_ALIASES = {
   'IPSWICH ART GALLERY': 'THE TRUSTEE FOR IPSWICH ARTS FOUNDATION TRUST',
   'BRAVUS MINING': 'ADANI MINING PTY LTD',
   'TOWNSVILLE SHOW': 'TOWNSVILLE AGRICULTURAL PASTORAL & INDUSTRIAL ASSOCIATION',
-  'TABCORP': 'TABCORP HOLDINGS LIMITED',
+  'BUSY GROUP': 'BUSY GROUP',
+  'BARINGA BARAMBAH': 'BARINGA BARAMBAH',
+  'THRIVE AND CONNECT': 'THRIVE AND CONNECT',
 
   // Sports
   'AFL COMMISSION': 'AUSTRALIAN FOOTBALL LEAGUE',
@@ -294,6 +334,9 @@ const MANUAL_ALIASES = {
   'NATIONAL RUGBY LEAGUE': 'NATIONAL RUGBY LEAGUE LIMITED',
   'CRICKET AUSTRALIA': 'CRICKET AUSTRALIA',
   'TENNIS AUSTRALIA': 'TENNIS AUSTRALIA LIMITED',
+
+  // Health / Arts
+  'AUSTRALIAN FESTIVAL OF CHAMBER MUSIC': 'AUSTRALIAN FESTIVAL OF CHAMBER MUSIC LIMITED',
 };
 
 // ── Load high-relevance entities for lookup ─────────────────────────
@@ -431,12 +474,22 @@ function findEntityInText(text, { lookup, shortLookup }) {
   // 1. Check manual aliases first (highest priority)
   for (const [alias, canonical] of Object.entries(MANUAL_ALIASES)) {
     if (cleaned.includes(alias.toUpperCase())) {
-      const entity = lookup.get(canonical.toUpperCase());
+      const canonUpper = canonical.toUpperCase();
+      const entity = lookup.get(canonUpper);
       if (entity) return { entity, matchedVia: `alias: ${alias}` };
-      // Try finding by partial match in lookup
-      for (const [key, e] of lookup) {
-        if (key.includes(canonical.toUpperCase())) {
-          return { entity: e, matchedVia: `alias: ${alias}` };
+      // Try finding by partial match in lookup — entity name must CONTAIN canonical
+      // (not reverse — that matches "PTY LTD" to everything)
+      // Require canonical to be at least 12 chars to avoid false partial matches
+      if (canonUpper.length >= 12) {
+        for (const [key, e] of lookup) {
+          if (key.includes(canonUpper) && e.entity_type !== 'person') {
+            return { entity: e, matchedVia: `alias_partial: ${alias}` };
+          }
+        }
+        for (const [key, e] of shortLookup) {
+          if (key.includes(canonUpper) && e.entity_type !== 'person') {
+            return { entity: e, matchedVia: `alias_short: ${alias}` };
+          }
         }
       }
     }
@@ -550,6 +603,76 @@ function findCouncilInText(text, { lookup, shortLookup }) {
   return null;
 }
 
+// ── Extract lobbyist firm from "Person – Lobbyist, FirmName" ────────
+function extractLobbyistFirm(text) {
+  const cleaned = fixOcr(text);
+  const patterns = [
+    /[–—-]\s*Lobbyist,?\s+([A-Z][A-Za-z\s&'.()-]+?(?:Pty\s+Ltd|Limited|Group))/gi,
+    /Lobbyist,?\s+([A-Z][A-Za-z\s&'.()-]+?(?:Pty\s+Ltd|Limited|Group))/gi,
+  ];
+  for (const pattern of patterns) {
+    pattern.lastIndex = 0;
+    const match = pattern.exec(cleaned);
+    if (match) return match[1].trim();
+  }
+  return null;
+}
+
+// ── DB fallback: ILIKE search for unmatched org names ───────────────
+async function dbFallbackSearch(orgText) {
+  const cleaned = fixOcr(orgText);
+
+  // Extract candidate org names from the text
+  const candidates = [];
+
+  // Try lobbyist firm extraction
+  const lobbyist = extractLobbyistFirm(orgText);
+  if (lobbyist) candidates.push(lobbyist);
+
+  // Try "Person, Role, OrgName" patterns — extract after last comma-separated org-like segment
+  const globalPattern = /,\s*([A-Z][A-Za-z\s&'.()-]+?(?:Foundation|Association|Council|Trust|Group|Union|Commission|Authority|Institute|Board|Society|Club|Chamber|Federation|Alliance|Services|Network|College|School|Academy|Hospital|Pty\s+Ltd|Limited|Inc))/gi;
+  globalPattern.lastIndex = 0;
+  let match;
+  while ((match = globalPattern.exec(cleaned)) !== null) {
+    const name = match[1].trim().replace(/,\s*$/, '');
+    if (name.length >= 8 && name.length <= 120) candidates.push(name);
+  }
+
+  // "OrgName Teleconference/Meeting" (non-global, single match)
+  const teleMatch = cleaned.match(/^([A-Z][A-Za-z\s&'.()-]+?(?:Foundation|Association|Council|Trust|Group|Union|Pty\s+Ltd|Limited|Inc))\s*(?:Teleconference|Meeting|,)/i);
+  if (teleMatch) {
+    const name = teleMatch[1].trim().replace(/,\s*$/, '');
+    if (name.length >= 8 && name.length <= 120) candidates.push(name);
+  }
+
+  if (candidates.length === 0) return null;
+
+  // Try each candidate against the DB using query builder
+  // Require minimum 12 chars to avoid generic matches like "The Princ" or "Australia Institute"
+  for (const candidate of candidates.slice(0, 3)) {
+    if (candidate.length < 12) continue;
+    // Skip generic terms that match too broadly
+    if (/^(The |Australian |Queensland |Local |National )\w{0,8}$/i.test(candidate)) continue;
+    const { data, error } = await db
+      .from('gs_entities')
+      .select('id, canonical_name, entity_type')
+      .ilike('canonical_name', `%${candidate}%`)
+      .neq('entity_type', 'person')
+      .order('canonical_name', { ascending: true })
+      .limit(3);
+    if (!error && data?.length > 0) {
+      // Prefer exact-ish match (entity name close in length to candidate)
+      const best = data.sort((a, b) =>
+        Math.abs(a.canonical_name.length - candidate.length) -
+        Math.abs(b.canonical_name.length - candidate.length)
+      )[0];
+      return { entity: best, matchedVia: `db_fallback: "${candidate}"` };
+    }
+  }
+
+  return null;
+}
+
 // ── Main ────────────────────────────────────────────────────────────
 async function main() {
   log(`Ministerial Diary NLP Entity Linker v2 (${DRY_RUN ? 'DRY RUN' : 'LIVE'})`);
@@ -604,6 +727,11 @@ async function main() {
       }
     }
 
+    // Step 4: DB fallback search (slower, but catches fuzzy matches)
+    if (!result) {
+      result = await dbFallbackSearch(entry.organisation);
+    }
+
     if (result?.entity) {
       matches.push({
         diary_id: entry.id,
@@ -631,10 +759,17 @@ async function main() {
     }
   }
 
+  // Count previously linked entries (those already linked before this run)
+  const { count: prevCount } = await db
+    .from('civic_ministerial_diaries')
+    .select('*', { count: 'exact', head: true })
+    .not('linked_entity_id', 'is', null);
+  const previouslyLinked = (prevCount || 0) - (DRY_RUN ? 0 : linked);
+
   // Results
   const external = entries.length - skippedInternal;
-  const totalLinked = linked + 167; // 167 previously linked
-  const totalExternal = external + 167;
+  const totalLinked = linked + previouslyLinked;
+  const totalExternal = external + previouslyLinked;
   log('\n── Results ──────────────────────────────────');
   log(`Total entries:       ${entries.length}`);
   log(`Skipped (internal):  ${skippedInternal}`);
