@@ -6,12 +6,15 @@
  */
 import { execSync } from 'child_process';
 
-function sql(query) {
+function sql(query, { timeout = 300000 } = {}) {
   const dbPassword = process.env.DATABASE_PASSWORD;
   if (!dbPassword) throw new Error('DATABASE_PASSWORD not set in .env');
+  // Set statement_timeout in the same session to override Supabase pooler defaults
+  const stmtTimeout = Math.round(timeout / 1000);
+  const fullQuery = `SET statement_timeout = '${stmtTimeout}s'; ${query}`;
   const result = execSync(
-    `psql -h aws-0-ap-southeast-2.pooler.supabase.com -p 5432 -U "postgres.tednluwflfhxyucgwigh" -d postgres -c "${query.replace(/"/g, '\\"')}"`,
-    { env: { ...process.env, PGPASSWORD: dbPassword }, encoding: 'utf8', timeout: 300000, stdio: ['pipe', 'pipe', 'pipe'] }
+    `psql -h aws-0-ap-southeast-2.pooler.supabase.com -p 5432 -U "postgres.tednluwflfhxyucgwigh" -d postgres -c "${fullQuery.replace(/"/g, '\\"')}"`,
+    { env: { ...process.env, PGPASSWORD: dbPassword }, encoding: 'utf8', timeout: timeout + 10000, stdio: ['pipe', 'pipe', 'pipe'] }
   );
   return result.trim();
 }
@@ -94,8 +97,6 @@ const VIEW_GROUPS = [
       'alma_dashboard_funding',
       'alma_dashboard_interventions',
       'alma_dashboard_queue',
-      'alma_dashboard_sources',
-      'alma_dashboard_tags',
       'alma_sentiment_program_correlation',
     ],
   },
@@ -105,21 +106,34 @@ function extractError(e) {
   const stderr = e.stderr || '';
   const errorLine = stderr.split('\n').find(l => l.startsWith('ERROR:'));
   if (errorLine) return errorLine.replace(/^ERROR:\s*/, '').slice(0, 80);
-  if (e.status === null) return 'timeout (>5min)';
+  if (e.status === null) return 'timeout';
   return 'psql error (check view definition)';
 }
 
+// Views that need extended timeout (heavy joins on 1M+ row tables)
+const HEAVY_VIEWS = new Set([
+  'mv_gs_donor_contractors',
+  'mv_donor_contract_crossref',
+  'v_austender_supplier_tax',
+  'v_austender_top_charities',
+  'mv_entity_power_index',
+  'mv_person_entity_network',
+  'mv_person_entity_crosswalk',
+  'mv_funding_by_postcode',
+]);
+
 function refreshView(name) {
+  const timeout = HEAVY_VIEWS.has(name) ? 600000 : 300000;
   const start = performance.now();
   try {
-    sql(`REFRESH MATERIALIZED VIEW CONCURRENTLY ${name}`);
+    sql(`REFRESH MATERIALIZED VIEW CONCURRENTLY ${name}`, { timeout });
     const ms = Math.round(performance.now() - start);
     return { name, ok: true, ms };
   } catch (e) {
     // CONCURRENTLY requires unique index — fall back to non-concurrent
     if (e.message.includes('unique index') || e.message.includes('cannot refresh')) {
       try {
-        sql(`REFRESH MATERIALIZED VIEW ${name}`);
+        sql(`REFRESH MATERIALIZED VIEW ${name}`, { timeout });
         const ms = Math.round(performance.now() - start);
         return { name, ok: true, ms, note: 'non-concurrent' };
       } catch (e2) {
