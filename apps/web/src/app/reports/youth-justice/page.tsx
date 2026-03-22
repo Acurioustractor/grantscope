@@ -677,11 +677,11 @@ export default async function YouthJusticeReportPage() {
                   return (
                     <tr key={row.state} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                       <td className="px-4 py-3 font-bold">{stateNames[row.state] || row.state}</td>
-                      <td className="px-4 py-3 text-right font-mono">{row.ndis_youth.toLocaleString()}</td>
-                      <td className="px-4 py-3 text-right font-mono text-amber-600">{row.psychosocial.toLocaleString()}</td>
-                      <td className="px-4 py-3 text-right font-mono text-purple-600">{row.intellectual.toLocaleString()}</td>
-                      <td className="px-4 py-3 text-right font-mono text-blue-600">{row.autism.toLocaleString()}</td>
-                      <td className="px-4 py-3 text-right font-mono">{money(row.ndis_budget)}</td>
+                      <td className="px-4 py-3 text-right font-mono">{(row.ndis_youth ?? 0).toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right font-mono text-amber-600">{(row.psychosocial ?? 0).toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right font-mono text-purple-600">{(row.intellectual ?? 0).toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right font-mono text-blue-600">{(row.autism ?? 0).toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right font-mono">{money(row.ndis_budget ?? 0)}</td>
                       <td className="px-4 py-3 text-right font-mono text-red-600">{(dss.dsp || 0).toLocaleString()}</td>
                       <td className="px-4 py-3 text-right font-mono">{(dss.youthAllowance || 0).toLocaleString()}</td>
                     </tr>

@@ -69,7 +69,7 @@ interface Story {
   id: string;
   title: string;
   description: string;
-  mode: 'hubs' | 'justice' | 'power' | 'interlocks' | 'ndis' | 'foundations';
+  mode: 'hubs' | 'justice' | 'power' | 'interlocks' | 'ndis' | 'foundations' | 'alma';
   topic?: string;
   minSystems?: number;
   narrative: string;
@@ -172,10 +172,11 @@ const SYSTEM_COLORS: Record<number, string> = {
 
 type Preset = {
   label: string;
-  mode: 'hubs' | 'justice' | 'power' | 'interlocks' | 'ndis' | 'foundations';
+  mode: 'hubs' | 'justice' | 'power' | 'interlocks' | 'ndis' | 'foundations' | 'alma';
   type?: string;
   hubs?: number;
   topic?: string;
+  state?: string;
   minSystems?: number;
   minBoards?: number;
   minGiving?: number;
@@ -198,6 +199,7 @@ const PRESETS: Preset[] = [
   { label: 'Child Protection', mode: 'justice', topic: 'child-protection', desc: 'Child protection funding flows' },
   { label: 'Indigenous Justice', mode: 'justice', topic: 'indigenous', desc: 'Indigenous justice programs & orgs' },
   { label: 'Diversion Programs', mode: 'justice', topic: 'diversion', desc: 'Diversion & prevention funding' },
+  { label: 'Alice Springs Youth', mode: 'alma', state: 'Alice Springs', desc: 'Alice Springs youth service interventions — who delivers what' },
   { label: 'Foundation Giving', mode: 'foundations', desc: 'Foundation → grantee flows with scores and regranting chains' },
   { label: 'Top Foundations', mode: 'foundations', minGiving: 5000000, desc: 'Foundations giving $5M+ and their grantee networks' },
   { label: 'Full Network', mode: 'hubs', type: '', hubs: 0, desc: 'Top relationships by value' },
@@ -386,9 +388,14 @@ export default function GraphPage() {
       } else if (preset.mode === 'interlocks') {
         params.set('mode', 'interlocks');
         params.set('min_boards', String(preset.minBoards || 2));
+      } else if (preset.mode === 'alma') {
+        params.set('mode', 'alma');
+        if (preset.state) params.set('state', preset.state);
+        if (preset.topic) params.set('topic', preset.topic);
       } else if (preset.mode === 'justice') {
         params.set('mode', 'justice');
         if (preset.topic) params.set('topic', preset.topic);
+        if (preset.state) params.set('state', preset.state);
       } else if (preset.mode === 'foundations') {
         params.set('mode', 'foundations');
         if (preset.minGiving) params.set('min_giving', String(preset.minGiving));

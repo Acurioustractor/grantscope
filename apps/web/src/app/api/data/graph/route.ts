@@ -101,7 +101,7 @@ export async function GET(request: Request) {
     const limit = Math.min(parseInt(searchParams.get('limit') || '5000', 10), 60000);
     const hubCount = Math.min(parseInt(searchParams.get('hubs') || '30', 10), 100);
 
-    const topic = searchParams.get('topic') || 'youth-justice';
+    const topic = searchParams.get('topic') || (mode === 'alma' ? '' : 'youth-justice');
     const minSystems = Math.max(2, parseInt(searchParams.get('min_systems') || '3', 10));
     const supabase = getServiceSupabase();
 
@@ -877,6 +877,159 @@ export async function GET(request: Request) {
           total_grantees: granteeNodeMap.size,
           total_regrant_edges: regrantRows.length,
           filters: { mode: 'foundations', state, minGiving, limit },
+        },
+      });
+      response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+      return response;
+    }
+
+    // ── ALMA mode: intervention → entity graph from alma_interventions ──
+    if (mode === 'alma') {
+      const geoFilter = state ? `AND ai.geography::text ILIKE '%${state.replace(/'/g, "''")}%'` : '';
+      const topicFilter = topic ? `AND ai.topics @> ARRAY['${topic.replace(/'/g, "''")}']` : '';
+
+      // Step 1: Get ALMA interventions with linked entities
+      const almaRows = await paginatedRpc<{
+        id: string; name: string; type: string; evidence_level: string;
+        target_cohort: string; gs_entity_id: string | null;
+        entity_name: string | null; entity_type: string | null;
+        entity_gs_id: string | null; entity_abn: string | null;
+        entity_state: string | null; entity_remoteness: string | null;
+        is_community_controlled: boolean;
+      }>(supabase,
+        `SELECT ai.id, ai.name, ai.type, ai.evidence_level, ai.target_cohort,
+                ai.gs_entity_id,
+                e.canonical_name as entity_name, e.entity_type, e.gs_id as entity_gs_id,
+                e.abn as entity_abn, e.state as entity_state, e.remoteness as entity_remoteness,
+                COALESCE(e.is_community_controlled, false) as is_community_controlled
+         FROM alma_interventions ai
+         LEFT JOIN gs_entities e ON e.id = ai.gs_entity_id
+         WHERE 1=1 ${geoFilter} ${topicFilter}
+         ORDER BY ai.type, ai.name`,
+        1000
+      );
+
+      if (!almaRows.length) {
+        return NextResponse.json({ nodes: [], edges: [], meta: { mode: 'alma', total_nodes: 0, total_edges: 0 } });
+      }
+
+      // Step 2: Build intervention type nodes (hub) and entity nodes (spokes)
+      const nodes: Array<{
+        id: string; label: string; type: string; size: number;
+        color?: string; gs_id?: string; entity_type?: string;
+        evidence_level?: string; intervention_type?: string;
+        is_community_controlled?: boolean;
+      }> = [];
+      const edges: Array<{ source: string; target: string; value: number; label?: string }> = [];
+      const seenNodes = new Set<string>();
+
+      // Create intervention type hub nodes
+      const typeGroups = new Map<string, typeof almaRows>();
+      for (const row of almaRows) {
+        if (!typeGroups.has(row.type)) typeGroups.set(row.type, []);
+        typeGroups.get(row.type)!.push(row);
+      }
+
+      for (const [type, interventions] of typeGroups) {
+        const typeNodeId = `type-${type}`;
+        if (!seenNodes.has(typeNodeId)) {
+          seenNodes.add(typeNodeId);
+          nodes.push({
+            id: typeNodeId,
+            label: type,
+            type: 'intervention_type',
+            size: 8 + interventions.length * 2,
+            intervention_type: type,
+          });
+        }
+
+        for (const intervention of interventions) {
+          const intNodeId = `int-${intervention.id}`;
+          if (!seenNodes.has(intNodeId)) {
+            seenNodes.add(intNodeId);
+            nodes.push({
+              id: intNodeId,
+              label: intervention.name,
+              type: 'intervention',
+              size: 5,
+              evidence_level: intervention.evidence_level,
+              intervention_type: intervention.type,
+            });
+          }
+
+          // Edge: type → intervention
+          edges.push({
+            source: typeNodeId,
+            target: intNodeId,
+            value: 1,
+            label: type,
+          });
+
+          // If linked to an entity, add entity node + edge
+          if (intervention.gs_entity_id && intervention.entity_name) {
+            const entityNodeId = `entity-${intervention.gs_entity_id}`;
+            if (!seenNodes.has(entityNodeId)) {
+              seenNodes.add(entityNodeId);
+              nodes.push({
+                id: entityNodeId,
+                label: intervention.entity_name,
+                type: 'entity',
+                size: 6,
+                gs_id: intervention.entity_gs_id || undefined,
+                entity_type: intervention.entity_type || undefined,
+                is_community_controlled: intervention.is_community_controlled,
+              });
+            }
+
+            edges.push({
+              source: intNodeId,
+              target: entityNodeId,
+              value: 2,
+              label: 'delivered_by',
+            });
+          }
+        }
+      }
+
+      // Step 3: Add funding relationships between entities
+      const entityIds = almaRows
+        .filter(r => r.gs_entity_id)
+        .map(r => `'${r.gs_entity_id}'`);
+
+      if (entityIds.length > 1) {
+        const fundingRows = await paginatedRpc<{
+          source_entity_id: string; target_entity_id: string;
+          relationship_type: string; amount: number | null;
+        }>(supabase,
+          `SELECT source_entity_id, target_entity_id, relationship_type, SUM(amount) as amount
+           FROM gs_relationships
+           WHERE source_entity_id IN (${entityIds.join(',')})
+             AND target_entity_id IN (${entityIds.join(',')})
+             AND source_entity_id != target_entity_id
+           GROUP BY source_entity_id, target_entity_id, relationship_type`,
+          1000
+        );
+
+        for (const row of fundingRows) {
+          edges.push({
+            source: `entity-${row.source_entity_id}`,
+            target: `entity-${row.target_entity_id}`,
+            value: row.amount || 1,
+            label: row.relationship_type,
+          });
+        }
+      }
+
+      const response = NextResponse.json({
+        nodes,
+        edges,
+        meta: {
+          mode: 'alma',
+          total_nodes: nodes.length,
+          total_edges: edges.length,
+          intervention_types: typeGroups.size,
+          linked_entities: entityIds.length,
+          filters: { mode: 'alma', topic, state, limit },
         },
       });
       response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
