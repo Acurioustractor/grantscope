@@ -223,6 +223,99 @@ function browserExtractText(url) {
   }
 }
 
+// ── PDF Text Extraction (with pdftotext fallback) ────────────
+
+function extractWithPdftotext(pdfPath) {
+  try {
+    const text = execSync(`pdftotext -layout "${pdfPath}" -`, {
+      timeout: 30000,
+      maxBuffer: 10 * 1024 * 1024,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    }).toString();
+    return text.trim();
+  } catch {
+    return null;
+  }
+}
+
+function extractWithOcr(pdfPath) {
+  // OCR pipeline: pdftoppm (PDF→images) | tesseract (images→text)
+  // Only process first 20 pages to keep it reasonable
+  try {
+    const tmpDir = `/tmp/ocr-${Date.now()}`;
+    execSync(`mkdir -p "${tmpDir}"`, { stdio: 'pipe' });
+    // Convert PDF pages to PNGs (150dpi is enough for OCR, keeps it fast)
+    execSync(`pdftoppm -r 150 -l 20 -png "${pdfPath}" "${tmpDir}/page"`, {
+      timeout: 60000,
+      stdio: 'pipe',
+    });
+    // OCR each page
+    const pages = execSync(`ls "${tmpDir}"/page-*.png 2>/dev/null | sort`, {
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    }).trim().split('\n').filter(Boolean);
+
+    if (!pages.length) return null;
+
+    let allText = '';
+    for (const page of pages) {
+      try {
+        const basename = page.split('/').pop();
+        const text = execSync(`cd "${tmpDir}" && tesseract "${basename}" stdout 2>/dev/null`, {
+          timeout: 30000,
+          maxBuffer: 5 * 1024 * 1024,
+          encoding: 'utf8',
+          stdio: ['pipe', 'pipe', 'pipe'],
+        });
+        allText += text + '\n';
+      } catch { /* skip page */ }
+    }
+    // Clean up
+    execSync(`rm -rf "${tmpDir}"`, { stdio: 'pipe' });
+    return allText.trim();
+  } catch {
+    return null;
+  }
+}
+
+async function extractPdfText(pdfPath) {
+  const buf = await readFile(pdfPath);
+
+  // Try pdf-parse first (fastest, handles most PDFs)
+  let text = '';
+  let pages = 0;
+  try {
+    const data = await pdfParse(buf);
+    text = data.text || '';
+    pages = data.numpages || 0;
+  } catch {
+    // pdf-parse can throw on malformed PDFs
+  }
+
+  // If pdf-parse got low text, try pdftotext (poppler) — handles
+  // complex layouts and embedded fonts better
+  if (text.length < 5000) {
+    console.log(`    pdf-parse: ${text.length} chars — trying pdftotext...`);
+    const popplerText = extractWithPdftotext(pdfPath);
+    if (popplerText && popplerText.length > text.length) {
+      console.log(`    pdftotext: ${popplerText.length} chars`);
+      text = popplerText;
+    }
+  }
+
+  // Last resort: OCR (for image-only/scanned PDFs)
+  if (text.length < 2000) {
+    console.log(`    Still ${text.length} chars — trying OCR (tesseract)...`);
+    const ocrText = extractWithOcr(pdfPath);
+    if (ocrText && ocrText.length > text.length) {
+      console.log(`    OCR: ${ocrText.length} chars`);
+      text = ocrText;
+    }
+  }
+
+  return { text: text.slice(0, MAX_TEXT_CHARS), pages };
+}
+
 // ── PDF Download & Text Extraction ───────────────────────────
 
 async function downloadAndExtractPdf(url, abn, depth = 0) {
@@ -232,9 +325,8 @@ async function downloadAndExtractPdf(url, abn, depth = 0) {
   // Check cache
   if (existsSync(pdfPath)) {
     console.log(`    Cache hit: ${pdfPath}`);
-    const buf = await readFile(pdfPath);
-    const data = await pdfParse(buf);
-    return { text: data.text.slice(0, MAX_TEXT_CHARS), pages: data.numpages, path: pdfPath };
+    const { text, pages } = await extractPdfText(pdfPath);
+    return { text, pages, path: pdfPath };
   }
 
   if (depth > 2) return null; // prevent infinite recursion
@@ -307,8 +399,8 @@ async function downloadAndExtractPdf(url, abn, depth = 0) {
     await writeFile(pdfPath, buf);
     console.log(`    Downloaded: ${pdfPath} (${(buf.length / 1024 / 1024).toFixed(1)}MB)`);
 
-    const data = await pdfParse(buf);
-    return { text: data.text.slice(0, MAX_TEXT_CHARS), pages: data.numpages, path: pdfPath };
+    const { text, pages } = await extractPdfText(pdfPath);
+    return { text, pages, path: pdfPath };
   } catch (e) {
     console.log(`    PDF error: ${e.message}`);
     return null;

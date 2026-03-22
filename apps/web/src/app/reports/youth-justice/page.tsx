@@ -20,6 +20,8 @@ import {
   getUnfundedEffectivePrograms,
   getYjRevolvingDoor,
   getYjFoundations,
+  getAnaoYjCompliance,
+  getYjMmrStats,
   money,
 } from '@/lib/services/report-service';
 
@@ -109,6 +111,16 @@ type RevolvingDoorRow = {
   parties_funded: string; distinct_buyers: number; is_community_controlled: boolean;
 };
 type FoundationRow = { name: string; total_giving_annual: number; thematic_focus: string; geographic_focus: string };
+type AnaoCompliance = {
+  portfolio: string; compliance_rate: number;
+  contracts_compliant: number; contracts_in_reporting: number;
+  exemption_rate: number; exempted_contracts: number; total_contracts: number;
+  exempted_value_aud: number;
+};
+type MmrStats = {
+  total_contracts: number; mmr_applicable: number; mmr_community_controlled: number;
+  total_value: number; mmr_value: number; mmr_cc_value: number;
+};
 
 export type YouthJusticeReport = {
   stateTotals: StateTotal[];
@@ -130,10 +142,12 @@ export type YouthJusticeReport = {
   unfundedPrograms: UnfundedProgram[];
   revolvingDoor: RevolvingDoorRow[];
   foundations: FoundationRow[];
+  anaoCompliance: AnaoCompliance[];
+  mmrStats: MmrStats | null;
 };
 
 async function getReport(): Promise<YouthJusticeReport> {
-  const [rogsData, almaData, contractsData, grantsData, ndisData, dssData, yjIndicatorsData, heatmapData, almaCountVal, almaByLgaData, accoGapData, remotenessData, unfundedData, revolvingDoorData, foundationsData] = await Promise.all([
+  const [rogsData, almaData, contractsData, grantsData, ndisData, dssData, yjIndicatorsData, heatmapData, almaCountVal, almaByLgaData, accoGapData, remotenessData, unfundedData, revolvingDoorData, foundationsData, anaoData, mmrData] = await Promise.all([
     getRogsTimeSeries('ROGS Youth Justice', ALL_STATES),
     getAlmaInterventions('youth-justice'),
     getYouthJusticeContracts(15),
@@ -149,6 +163,8 @@ async function getReport(): Promise<YouthJusticeReport> {
     getUnfundedEffectivePrograms('youth-justice'),
     getYjRevolvingDoor('youth-justice', 10),
     getYjFoundations(10),
+    getAnaoYjCompliance(),
+    getYjMmrStats(),
   ]);
 
   // Process ROGS data into time series and state totals
@@ -244,6 +260,8 @@ async function getReport(): Promise<YouthJusticeReport> {
     unfundedPrograms: (unfundedData as UnfundedProgram[] | null) || [],
     revolvingDoor: (revolvingDoorData as RevolvingDoorRow[] | null) || [],
     foundations: (foundationsData as FoundationRow[] | null) || [],
+    anaoCompliance: (anaoData as AnaoCompliance[] | null) || [],
+    mmrStats: ((mmrData as MmrStats[] | null) || [])[0] || null,
   };
 }
 
@@ -507,6 +525,84 @@ export default async function YouthJusticeReportPage() {
           </div>
         )}
       </section>
+
+      {/* ━━━━ ANAO Procurement Compliance ━━━━ */}
+      {(report.anaoCompliance.length > 0 || report.mmrStats) && (
+        <section className="mb-12">
+          <h2 className="text-xl font-black text-bauhaus-black uppercase tracking-wider mb-1">Procurement Accountability</h2>
+          <p className="text-sm text-bauhaus-muted mb-6">
+            ANAO Report 40 (2024-25) assessed Indigenous procurement compliance across federal portfolios.
+            Youth justice organisations hold federal contracts subject to the Commonwealth Indigenous Procurement Policy (IPP).
+          </p>
+
+          {report.mmrStats && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+              <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 text-center">
+                <div className="text-2xl font-black text-purple-700">{report.mmrStats.total_contracts.toLocaleString()}</div>
+                <div className="text-[10px] text-gray-500 mt-1">Federal Contracts<br />by YJ Orgs</div>
+              </div>
+              <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 text-center">
+                <div className="text-2xl font-black text-purple-700">{report.mmrStats.mmr_applicable.toLocaleString()}</div>
+                <div className="text-[10px] text-gray-500 mt-1">MMR-Applicable<br />({Math.round((report.mmrStats.mmr_applicable / report.mmrStats.total_contracts) * 100)}%)</div>
+              </div>
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center">
+                <div className="text-2xl font-black text-amber-700">{report.mmrStats.mmr_community_controlled}</div>
+                <div className="text-[10px] text-gray-500 mt-1">Community-Controlled<br />MMR Contracts</div>
+              </div>
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center">
+                <div className="text-2xl font-black text-amber-700">{money(report.mmrStats.mmr_cc_value)}</div>
+                <div className="text-[10px] text-gray-500 mt-1">Community-Controlled<br />MMR Value</div>
+              </div>
+            </div>
+          )}
+
+          {report.anaoCompliance.length > 0 && (
+            <div className="overflow-x-auto border-4 border-bauhaus-black rounded-sm">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-bauhaus-black text-white text-left">
+                    <th className="px-4 py-3 font-black uppercase tracking-wider text-[10px]">Portfolio</th>
+                    <th className="px-4 py-3 font-black uppercase tracking-wider text-[10px] text-center">Compliance Rate</th>
+                    <th className="px-4 py-3 font-black uppercase tracking-wider text-[10px] text-center">Compliant</th>
+                    <th className="px-4 py-3 font-black uppercase tracking-wider text-[10px] text-center">Exemption Rate</th>
+                    <th className="px-4 py-3 font-black uppercase tracking-wider text-[10px] text-right">Exempted Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {report.anaoCompliance.map((row, i) => (
+                    <tr key={row.portfolio} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                      <td className="px-4 py-2 text-xs font-medium">{row.portfolio}</td>
+                      <td className="px-4 py-2 text-center">
+                        <span className={`text-xs font-black px-2 py-0.5 rounded ${
+                          row.compliance_rate >= 0.8 ? 'bg-emerald-100 text-emerald-700' :
+                          row.compliance_rate >= 0.5 ? 'bg-amber-100 text-amber-700' :
+                          'bg-red-100 text-red-700'
+                        }`}>
+                          {Math.round(row.compliance_rate * 100)}%
+                        </span>
+                      </td>
+                      <td className="px-4 py-2 text-center font-mono text-xs">{row.contracts_compliant}/{row.contracts_in_reporting}</td>
+                      <td className="px-4 py-2 text-center">
+                        <span className={`text-xs font-black px-2 py-0.5 rounded ${
+                          row.exemption_rate >= 0.5 ? 'bg-red-100 text-red-700' :
+                          row.exemption_rate >= 0.3 ? 'bg-amber-100 text-amber-700' :
+                          'bg-emerald-100 text-emerald-700'
+                        }`}>
+                          {Math.round(row.exemption_rate * 100)}%
+                        </span>
+                      </td>
+                      <td className="px-4 py-2 text-right font-mono text-xs">{money(row.exempted_value_aud)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="bg-gray-50 px-4 py-2 text-[10px] text-gray-500 border-t">
+                Source: ANAO Report 40 (2024-25) — Entities&apos; Compliance with the Commonwealth Indigenous Procurement Policy
+              </div>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* ━━━━ Philanthropy Landscape ━━━━ */}
       {report.foundations.length > 0 && (
@@ -876,6 +972,7 @@ export default async function YouthJusticeReportPage() {
             <li>State budget papers — all state/territory youth justice appropriations</li>
             <li>NDIS — Participant data by service district, disability type, and age</li>
             <li>Department of Social Services — Disability Support Pension, Youth Allowance, JobSeeker payment demographics</li>
+            <li>ANAO Report 40 (2024-25) — Entities&apos; Compliance with the Commonwealth Indigenous Procurement Policy</li>
             <li>ABS Estimated Resident Population 2023 — LGA-level population for per-capita normalization</li>
             <li>Crime statistics — BOCSAR (NSW), CSA (VIC), QPS (QLD), NTPFES (NT) at LGA level</li>
           </ul>

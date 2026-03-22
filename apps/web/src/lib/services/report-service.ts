@@ -885,6 +885,61 @@ export async function getPiccPeerOrgs() {
   }> | null>;
 }
 
+/**
+ * ANAO procurement compliance for youth-justice-relevant portfolios
+ */
+export async function getAnaoYjCompliance() {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT c.portfolio, c.compliance_rate,
+              c.contracts_compliant, c.contracts_in_reporting,
+              e.exemption_rate, e.exempted_contracts, e.total_contracts,
+              e.exempted_value_aud
+       FROM anao_mmr_compliance c
+       JOIN anao_mmr_exemptions e ON e.portfolio = c.portfolio
+       WHERE c.portfolio IN ('Attorney-Generals', 'Education', 'Social Services', 'National Indigenous Australians Agency')
+       ORDER BY c.compliance_rate`,
+  })) as Promise<Array<{
+    portfolio: string;
+    compliance_rate: number;
+    contracts_compliant: number;
+    contracts_in_reporting: number;
+    exemption_rate: number;
+    exempted_contracts: number;
+    total_contracts: number;
+    exempted_value_aud: number;
+  }> | null>;
+}
+
+/**
+ * MMR contract stats for youth-justice-topic orgs
+ */
+export async function getYjMmrStats() {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT
+              COUNT(*)::int as total_contracts,
+              SUM(CASE WHEN ac.is_mmr_applicable THEN 1 ELSE 0 END)::int as mmr_applicable,
+              SUM(CASE WHEN ac.is_mmr_applicable AND e.is_community_controlled THEN 1 ELSE 0 END)::int as mmr_community_controlled,
+              SUM(ac.contract_value)::bigint as total_value,
+              SUM(CASE WHEN ac.is_mmr_applicable THEN ac.contract_value ELSE 0 END)::bigint as mmr_value,
+              SUM(CASE WHEN ac.is_mmr_applicable AND e.is_community_controlled THEN ac.contract_value ELSE 0 END)::bigint as mmr_cc_value
+       FROM austender_contracts ac
+       JOIN gs_entities e ON e.abn = ac.supplier_abn
+       WHERE ac.supplier_abn IN (
+         SELECT DISTINCT recipient_abn FROM justice_funding
+         WHERE recipient_abn IS NOT NULL AND topics @> ARRAY['youth-justice']::text[]
+       )`,
+  })) as Promise<Array<{
+    total_contracts: number;
+    mmr_applicable: number;
+    mmr_community_controlled: number;
+    total_value: number;
+    mmr_value: number;
+    mmr_cc_value: number;
+  }> | null>;
+}
+
 export async function getPiccFundingFlow() {
   const supabase = getServiceSupabase();
   return safe(supabase.rpc('exec_sql', {
