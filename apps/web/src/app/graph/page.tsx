@@ -83,7 +83,7 @@ const STORIES: Story[] = [
     description: 'See how funding flows from government programs to community organizations',
     mode: 'justice',
     topic: 'youth-justice',
-    narrative: 'Youth justice funding in Australia flows through state and federal programs to hundreds of community organizations. The largest programs fund a handful of major recipients, while smaller community-led organizations receive a fraction of total funding.',
+    narrative: '', // computed dynamically
     highlights: ['programs', 'top-recipients'],
   },
   {
@@ -92,7 +92,7 @@ const STORIES: Story[] = [
     description: 'Community-controlled organizations receive 3.2% of procurement dollars despite being over-represented in the system',
     mode: 'justice',
     topic: 'indigenous',
-    narrative: 'Indigenous community-controlled organizations (ACCOs) are central to justice service delivery but receive a disproportionately small share of total funding. This graph shows the network of Indigenous-focused programs and their recipients.',
+    narrative: '',
     highlights: ['acco'],
   },
   {
@@ -101,7 +101,15 @@ const STORIES: Story[] = [
     description: 'Programs with ALMA evidence rings vs those operating without evaluation',
     mode: 'justice',
     topic: 'youth-justice',
-    narrative: 'Organizations with colored evidence rings have been evaluated by the Australian Living Map of Alternatives (ALMA). Those without rings are operating without formal evaluation — a gap in our understanding of what works.',
+    narrative: '',
+    highlights: ['alma-evidence'],
+  },
+  {
+    id: 'alice-springs',
+    title: 'Alice Springs Youth Services',
+    description: '67% of NT youth spend is reactive — only 9% goes to prevention',
+    mode: 'alma',
+    narrative: '',
     highlights: ['alma-evidence'],
   },
   {
@@ -109,7 +117,7 @@ const STORIES: Story[] = [
     title: 'Foundation Networks',
     description: 'How philanthropic foundations connect through grantees and regranting chains',
     mode: 'foundations',
-    narrative: 'Australia\'s major foundations distribute funding through direct grants and regranting intermediaries like FRRR. Foundations are scored on transparency, need alignment, evidence backing, and geographic reach. Regranting chains show how funding flows through intermediary foundations to ultimate recipients.',
+    narrative: '',
     highlights: ['foundations'],
   },
   {
@@ -118,10 +126,123 @@ const STORIES: Story[] = [
     description: 'Entities that appear across multiple systems — contracts, donations, lobbying, funding',
     mode: 'power',
     minSystems: 3,
-    narrative: 'Some entities appear across multiple data systems — they receive government contracts, make political donations, hire lobbyists, AND receive community funding. These cross-system entities wield outsized influence.',
+    narrative: '',
     highlights: ['multi-system'],
   },
 ];
+
+// ── Dynamic insight computation from graph data ──
+interface Insight {
+  narrative: string;
+  stats: { label: string; value: string }[];
+  callout?: string;
+}
+
+function computeInsights(storyId: string, nodes: GraphNode[], edges: GraphEdge[]): Insight {
+  const programs = nodes.filter(n => n.type === 'program');
+  const orgs = nodes.filter(n => n.type !== 'program');
+  const accos = nodes.filter(n => n.community_controlled || n.type === 'indigenous_corp');
+  const withAlma = nodes.filter(n => n.alma_type);
+  const totalFunding = orgs.reduce((sum, n) => sum + (n.funding || 0), 0);
+  const topByDegree = [...orgs].sort((a, b) => b.degree - a.degree);
+  const fmt = (n: number) => n >= 1e9 ? `$${(n/1e9).toFixed(1)}B` : n >= 1e6 ? `$${(n/1e6).toFixed(1)}M` : n >= 1e3 ? `$${(n/1e3).toFixed(0)}K` : `$${n}`;
+
+  switch (storyId) {
+    case 'follow-the-money': {
+      const top3 = topByDegree.slice(0, 3);
+      const top3Funding = top3.reduce((s, n) => s + (n.funding || 0), 0);
+      const top3Share = totalFunding > 0 ? ((top3Funding / totalFunding) * 100).toFixed(0) : '?';
+      return {
+        narrative: `${programs.length} government programs fund ${orgs.length} organizations. The top 3 recipients capture ${top3Share}% of total funding — a pattern of concentration that limits the reach of community-level services.`,
+        stats: [
+          { label: 'Programs', value: String(programs.length) },
+          { label: 'Recipients', value: String(orgs.length) },
+          { label: 'Total funding', value: fmt(totalFunding) },
+          { label: 'Top 3 share', value: `${top3Share}%` },
+        ],
+        callout: top3.length > 0 ? `Largest recipient: ${top3[0].label} (${top3[0].degree} program links)` : undefined,
+      };
+    }
+    case 'indigenous-funding': {
+      const accoFunding = accos.reduce((s, n) => s + (n.funding || 0), 0);
+      const accoShare = totalFunding > 0 ? ((accoFunding / totalFunding) * 100).toFixed(1) : '?';
+      return {
+        narrative: `${accos.length} Aboriginal Community-Controlled Organizations (ACCOs) appear in this network, receiving ${accoShare}% of total funding. Despite being central to service delivery and cultural authority, they receive a disproportionately small share.`,
+        stats: [
+          { label: 'ACCOs', value: String(accos.length) },
+          { label: 'ACCO funding', value: fmt(accoFunding) },
+          { label: 'ACCO share', value: `${accoShare}%` },
+          { label: 'Total orgs', value: String(orgs.length) },
+        ],
+        callout: accos.length > 0 ? `Over-monitored, under-funded: ACCOs appear in 2.15 avg systems but receive 3.2% of procurement dollars nationally.` : undefined,
+      };
+    }
+    case 'evidence-gaps': {
+      const withoutAlma = orgs.filter(n => !n.alma_type);
+      const evidenceRate = orgs.length > 0 ? ((withAlma.length / orgs.length) * 100).toFixed(0) : '?';
+      const evidenceTypes = new Set(withAlma.map(n => n.alma_type).filter(Boolean));
+      return {
+        narrative: `Only ${evidenceRate}% of organizations have ALMA (Australian Living Map of Alternatives) evidence records. ${withoutAlma.length} organizations are operating without formal evaluation — a critical gap in understanding what works.`,
+        stats: [
+          { label: 'With evidence', value: String(withAlma.length) },
+          { label: 'Without', value: String(withoutAlma.length) },
+          { label: 'Evidence rate', value: `${evidenceRate}%` },
+          { label: 'Evidence types', value: String(evidenceTypes.size) },
+        ],
+        callout: 'Colored rings = evaluated programs. No ring = no formal evidence on record.',
+      };
+    }
+    case 'alice-springs': {
+      const interventionTypes = new Set(nodes.filter(n => n.alma_type).map(n => n.alma_type));
+      const linked = nodes.filter(n => n.type !== 'intervention_type' && n.degree > 0);
+      return {
+        narrative: `Alice Springs youth services span ${interventionTypes.size} intervention types with ${nodes.length} nodes in the network. NT Government spends 67% of youth funding on reactive services ($14.77M) and only 9% on prevention ($2.02M) — an inversion of what evidence shows works.`,
+        stats: [
+          { label: 'Interventions', value: String(linked.length) },
+          { label: 'Types', value: String(interventionTypes.size) },
+          { label: 'Reactive spend', value: '67%' },
+          { label: 'Prevention', value: '9%' },
+        ],
+        callout: '$1 invested in early intervention saves $2-7 in future crisis costs (SVA/UK NCB).',
+      };
+    }
+    case 'foundation-networks': {
+      const foundations = nodes.filter(n => n.type === 'foundation');
+      const regranters = nodes.filter(n => n.is_regranter);
+      const grantees = nodes.filter(n => n.type !== 'foundation' && !n.is_regranter);
+      const highScore = foundations.filter(n => n.score_tier === 'high');
+      return {
+        narrative: `${foundations.length} foundations distribute funding to ${grantees.length} grantees, with ${regranters.length} regranting intermediaries. ${highScore.length} foundations score 'high' on transparency, need alignment, and evidence backing.`,
+        stats: [
+          { label: 'Foundations', value: String(foundations.length) },
+          { label: 'Grantees', value: String(grantees.length) },
+          { label: 'Regranters', value: String(regranters.length) },
+          { label: 'High score', value: String(highScore.length) },
+        ],
+        callout: regranters.length > 0 ? 'Hexagon nodes are regranters — they redistribute funding from larger foundations to smaller grantees.' : undefined,
+      };
+    }
+    case 'power-concentration': {
+      const multiSystem = nodes.filter(n => (n.system_count ?? 0) >= 3);
+      const elite = nodes.filter(n => (n.system_count ?? 0) >= 5);
+      const avgPower = multiSystem.length > 0
+        ? (multiSystem.reduce((s, n) => s + (n.power_score || 0), 0) / multiSystem.length).toFixed(1)
+        : '0';
+      return {
+        narrative: `${multiSystem.length} entities span 3+ systems (contracts, donations, lobbying, funding). ${elite.length} are in 5+ systems — the power elite. These cross-system entities wield outsized influence over government policy and spending.`,
+        stats: [
+          { label: '3+ systems', value: String(multiSystem.length) },
+          { label: '5+ systems', value: String(elite.length) },
+          { label: 'Avg power score', value: avgPower },
+          { label: 'Connections', value: String(edges.length) },
+        ],
+        callout: elite.length > 0 ? `Top entity: ${elite.sort((a,b) => (b.power_score||0) - (a.power_score||0))[0]?.label}` : undefined,
+      };
+    }
+    default:
+      return { narrative: '', stats: [] };
+  }
+}
 
 const TYPE_COLORS: Record<string, string> = {
   charity: '#4ade80',
@@ -266,6 +387,10 @@ function getAnnotationsForStory(storyId: string): Annotation[] {
     case 'evidence-gaps':
       return [
         { text: 'Colored rings = ALMA evidence. No ring = no formal evaluation on record.', target: 'alma-evidence' },
+      ];
+    case 'alice-springs':
+      return [
+        { text: 'Colored rings show intervention type — most services are reactive (Diversion/Therapeutic) not preventive.', target: 'alma-evidence' },
       ];
     case 'foundation-networks':
       return [
@@ -419,6 +544,9 @@ export default function GraphPage() {
     }
   }, []);
 
+  // Computed insights state
+  const [insights, setInsights] = useState<Insight | null>(null);
+
   // Story-to-preset mapping: create a Preset from a Story
   const storyToPreset = useCallback((story: Story): Preset => {
     if (story.mode === 'justice') {
@@ -429,6 +557,8 @@ export default function GraphPage() {
       return { label: story.title, mode: 'ndis', desc: story.description };
     } else if (story.mode === 'foundations') {
       return { label: story.title, mode: 'foundations', desc: story.description };
+    } else if (story.mode === 'alma') {
+      return { label: story.title, mode: 'alma', state: 'Alice Springs', desc: story.description };
     } else {
       return { label: story.title, mode: 'hubs', type: 'foundation', hubs: 30, desc: story.description };
     }
@@ -447,14 +577,18 @@ export default function GraphPage() {
     fetchGraph(preset);
   }, [fetchGraph, storyToPreset]);
 
-  // When data changes while a story is active, compute highlights
+  // When data changes while a story is active, compute highlights + insights
   useEffect(() => {
     if (activeStoryIndex != null && data) {
       const story = STORIES[activeStoryIndex];
       if (story) {
         const ids = getHighlightedNodeIds(data.nodes, story.highlights);
         setHighlightedNodeIds(ids);
+        const computed = computeInsights(story.id, data.nodes, data.edges);
+        setInsights(computed);
       }
+    } else {
+      setInsights(null);
     }
   }, [activeStoryIndex, data]);
 
@@ -523,6 +657,7 @@ export default function GraphPage() {
       setActiveStoryIndex(null);
       setHighlightedNodeIds(new Set());
       setAnnotationPositions([]);
+      setInsights(null);
     }
     if (fgRef.current && node.x != null && node.y != null) {
       fgRef.current.centerAt(node.x, node.y, 800);
@@ -1204,20 +1339,42 @@ export default function GraphPage() {
             ))}
           </div>
 
-          {/* Active story narrative */}
+          {/* Active story narrative with computed insights */}
           {activeStory && (
-            <div className="border-t border-white/10 p-4 bg-[#0a0a0f]/80">
-              <div className="flex items-center gap-2 mb-2">
+            <div className="border-t border-white/10 p-4 bg-[#0a0a0f]/80 space-y-3">
+              <div className="flex items-center gap-2">
                 <div className="w-1 h-4 bg-[#fbbf24] rounded-full" />
                 <h3 className="text-xs font-black uppercase tracking-widest text-[#fbbf24]">
                   {activeStory.title}
                 </h3>
               </div>
+
+              {/* Stat cards */}
+              {insights && insights.stats.length > 0 && (
+                <div className="grid grid-cols-2 gap-1.5">
+                  {insights.stats.map((stat) => (
+                    <div key={stat.label} className="bg-white/5 rounded px-2 py-1.5 border border-white/5">
+                      <p className="text-[13px] font-bold text-white/90 font-mono">{stat.value}</p>
+                      <p className="text-[9px] text-white/40 uppercase tracking-wider">{stat.label}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Dynamic narrative */}
               <p className="text-[11px] text-white/60 leading-relaxed">
-                {activeStory.narrative}
+                {insights?.narrative || activeStory.description}
               </p>
+
+              {/* Callout */}
+              {insights?.callout && (
+                <div className="bg-[#fbbf24]/5 border border-[#fbbf24]/15 rounded px-2.5 py-2">
+                  <p className="text-[10px] text-[#fbbf24]/80 leading-relaxed">{insights.callout}</p>
+                </div>
+              )}
+
               {highlightedNodeIds.size > 0 && (
-                <p className="text-[9px] text-white/30 mt-2 font-mono">
+                <p className="text-[9px] text-white/30 font-mono">
                   {highlightedNodeIds.size} nodes highlighted
                 </p>
               )}
@@ -1314,6 +1471,7 @@ export default function GraphPage() {
                   setHighlightedNodeIds(new Set());
                   setAnnotationPositions([]);
                   setSearchHighlightId(null);
+                  setInsights(null);
                 }}
                 className="px-3 py-1.5 bg-[#fbbf24]/10 border border-[#fbbf24]/30 rounded text-xs font-mono text-[#fbbf24] hover:bg-[#fbbf24]/20 transition-colors"
               >
@@ -1343,6 +1501,7 @@ export default function GraphPage() {
                 setHighlightedNodeIds(new Set());
                 setAnnotationPositions([]);
                 setSearchHighlightId(null);
+                setInsights(null);
                 fetchGraph(preset);
               }}
               disabled={loading}
