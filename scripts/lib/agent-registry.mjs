@@ -884,6 +884,14 @@ export const AGENTS = {
     timeoutMs: 300_000,
     dependencies: [],
   },
+  'scrape-qld-yj-contracts': {
+    command: ['node', '--env-file=.env', 'scripts/scrape-qld-yj-contracts.mjs'],
+    displayName: 'QLD DCYJMA Contract Disclosures',
+    category: 'scraping',
+    defaultPriority: 3,
+    timeoutMs: 600_000,
+    dependencies: [],
+  },
 };
 
 export const CATEGORIES = ['sync', 'import', 'discovery', 'enrichment', 'profiling', 'graph', 'embedding', 'analytics', 'intelligence', 'goods', 'nz', 'scraping', 'civicscope'];
