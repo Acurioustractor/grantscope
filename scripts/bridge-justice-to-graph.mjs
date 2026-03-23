@@ -12,6 +12,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { createHash } from 'crypto';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -31,6 +32,13 @@ function log(msg) {
 
 function slugify(s) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 60);
+}
+
+/** Collision-resistant gs_id: slug-80 + 4-char hash of full name */
+function programGsId(name, state) {
+  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 80);
+  const hash = createHash('md5').update(name).digest('hex').slice(0, 4);
+  return `GS-PROG-${slug}-${hash}-${state.toLowerCase()}`;
 }
 
 async function main() {
@@ -88,14 +96,20 @@ async function main() {
     .select('id, gs_id, canonical_name, state')
     .eq('entity_type', 'program');
 
+  // Build lookup from gs_id → entity id
+  const gsIdToEntity = new Map();
   for (const ep of (existingPrograms || [])) {
-    // Match by gs_id pattern
-    for (const key of programKeys) {
-      const [name, state] = key.split('|||');
-      const expectedGsId = `GS-PROG-${slugify(name)}-${state.toLowerCase()}`;
-      if (ep.gs_id === expectedGsId) {
-        programToEntity.set(key, ep.id);
-      }
+    gsIdToEntity.set(ep.gs_id, ep.id);
+  }
+  // Match program keys to existing entities (try new format, fall back to old)
+  for (const key of programKeys) {
+    const [name, state] = key.split('|||');
+    const newGsId = programGsId(name, state);
+    const oldGsId = `GS-PROG-${slugify(name)}-${state.toLowerCase()}`;
+    if (gsIdToEntity.has(newGsId)) {
+      programToEntity.set(key, gsIdToEntity.get(newGsId));
+    } else if (gsIdToEntity.has(oldGsId)) {
+      programToEntity.set(key, gsIdToEntity.get(oldGsId));
     }
   }
   log(`Found ${programToEntity.size} existing program entities`);
@@ -105,7 +119,7 @@ async function main() {
   for (const key of programKeys) {
     if (programToEntity.has(key)) continue;
     const [name, state] = key.split('|||');
-    const gsId = `GS-PROG-${slugify(name)}-${state.toLowerCase()}`;
+    const gsId = programGsId(name, state);
 
     if (!DRY_RUN) {
       const { data: inserted, error: insertErr } = await db

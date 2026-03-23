@@ -1006,13 +1006,13 @@ export async function getEvidenceGapDetail(topic: Topic, state?: string, limit =
 /**
  * QLD Hansard mentions of youth justice keywords
  */
-export async function getQldHansardMentions(limit = 20) {
+export async function getHansardMentions(state: string, limit = 20) {
   const supabase = getServiceSupabase();
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT speaker_name, speaker_party, speaker_electorate, sitting_date, subject,
               LEFT(body_text, 300) as excerpt
        FROM civic_hansard
-       WHERE jurisdiction = 'QLD'
+       WHERE jurisdiction = '${state}'
          AND (body_text ILIKE '%youth justice%'
            OR body_text ILIKE '%watch house%'
            OR body_text ILIKE '%child safety%'
@@ -1066,9 +1066,9 @@ export async function getYjLobbyingConnections(topic: Topic, state?: string, lim
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 /**
- * QLD-specific: funding by operational program (excludes ROGS aggregates)
+ * State-specific: funding by operational program (excludes ROGS aggregates)
  */
-export async function getQldFundingByProgram(limit = 20) {
+export async function getFundingByProgram(topic: Topic, state: string, limit = 20) {
   const supabase = getServiceSupabase();
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT program_name,
@@ -1076,8 +1076,8 @@ export async function getQldFundingByProgram(limit = 20) {
               SUM(amount_dollars)::bigint as total,
               COUNT(DISTINCT recipient_name)::int as orgs
        FROM justice_funding
-       WHERE state = 'QLD'
-         AND ${topicFilter('youth-justice')}
+       WHERE state = '${state}'
+         AND ${topicFilter(topic)}
          AND program_name NOT LIKE 'ROGS%'
          AND program_name NOT LIKE 'Total%'
        GROUP BY program_name
