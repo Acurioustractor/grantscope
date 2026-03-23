@@ -64,6 +64,8 @@ interface RevolvingDoorRow {
   total_contracts: number; contract_count: number; distinct_buyers: number;
   total_funded: number; funding_count: number;
 }
+interface OutcomeMetricRow { metric_name: string; metric_value: number; metric_unit: string; period: string; cohort: string; source: string; notes: string | null }
+interface PolicyEventRow { title: string; event_date: string; event_type: string; severity: string; impact_summary: string | null }
 
 export async function generateMetadata({ params }: { params: Promise<{ gsId: string }> }) {
   const { gsId } = await params;
@@ -89,7 +91,7 @@ export default async function EntityPage({ params }: { params: Promise<{ gsId: s
 
   const supabase = getServiceSupabase();
 
-  const [funding, contracts, donations, relationships, alma, acnc, power, ato, board, revolvingDoor, impactReports, mmrStats, anaoCompliance] = await Promise.all([
+  const [funding, contracts, donations, relationships, alma, acnc, power, ato, board, revolvingDoor, impactReports, mmrStats, anaoCompliance, outcomeMetrics, policyEvents] = await Promise.all([
     entity.abn ? safe(supabase.rpc('exec_sql', {
       query: `SELECT program_name, SUM(amount_dollars)::bigint as total, COUNT(*)::int as records,
                 MIN(financial_year) as from_fy, MAX(financial_year) as to_fy
@@ -185,6 +187,21 @@ export default async function EntityPage({ params }: { params: Promise<{ gsId: s
          WHERE e.portfolio ILIKE '%${esc(entity.canonical_name.replace(/^Department of /i, '').split(' ')[0])}%'
          LIMIT 1`,
     })) as Promise<AnaoRow[] | null> : null,
+    // Jurisdiction outcomes context
+    entity.state ? safe(supabase.rpc('exec_sql', {
+      query: `SELECT metric_name, metric_value, metric_unit, period, cohort, source, notes
+         FROM outcomes_metrics
+         WHERE jurisdiction = '${esc(entity.state)}' AND domain = 'youth-justice'
+           AND metric_name IN ('detention_rate_per_10k', 'indigenous_overrepresentation_ratio', 'cost_per_day_detention', 'cost_per_day_community', 'pct_unsentenced', 'avg_daily_detention', 'avg_days_in_detention', 'ctg_target11_indigenous_detention_rate')
+           AND (cohort = 'all' OR cohort = 'indigenous')
+         ORDER BY metric_name, period DESC`,
+    })) as Promise<OutcomeMetricRow[] | null> : null,
+    entity.state ? safe(supabase.rpc('exec_sql', {
+      query: `SELECT title, event_date, event_type, severity, impact_summary
+         FROM policy_events
+         WHERE jurisdiction = '${esc(entity.state)}' AND domain = 'youth-justice' AND severity IN ('critical', 'significant')
+         ORDER BY event_date DESC LIMIT 5`,
+    })) as Promise<PolicyEventRow[] | null> : null,
   ]);
 
   const totalFunding = funding?.reduce((s, r) => s + Number(r.total), 0) ?? 0;
@@ -200,6 +217,13 @@ export default async function EntityPage({ params }: { params: Promise<{ gsId: s
   const impactData = (impactReports as ImpactRow[] | null)?.[0] ?? null;
   const mmrData = (mmrStats as MmrRow[] | null)?.[0] ?? null;
   const anaoData = (anaoCompliance as AnaoRow[] | null)?.[0] ?? null;
+  const outcomesData = (outcomeMetrics as OutcomeMetricRow[] | null) ?? [];
+  const policyData = (policyEvents as PolicyEventRow[] | null) ?? [];
+  const hasJurisdictionContext = outcomesData.length > 0 || policyData.length > 0;
+
+  // Helper to get a specific metric
+  const getMetric = (name: string, cohort = 'all') =>
+    outcomesData.find(m => m.metric_name === name && m.cohort === cohort);
 
   // Count sections with data for the "data coverage" display
   const sections = [
@@ -212,6 +236,7 @@ export default async function EntityPage({ params }: { params: Promise<{ gsId: s
     { name: 'ATO', has: (ato?.length ?? 0) > 0 },
     { name: 'Board/Governance', has: (board?.length ?? 0) > 0 },
     { name: 'ANAO Compliance', has: !!anaoData },
+    { name: 'Jurisdiction Context', has: hasJurisdictionContext },
   ];
 
   return (
@@ -405,6 +430,66 @@ export default async function EntityPage({ params }: { params: Promise<{ gsId: s
                 <p className="text-xs text-gray-400 mt-1">Connected entities</p>
               </div>
             </div>
+          </section>
+        )}
+
+        {/* Jurisdiction Context */}
+        {hasJurisdictionContext && (
+          <section>
+            <h2 className="text-lg font-black uppercase tracking-widest text-bauhaus-black mb-3">
+              {entity.state} Jurisdiction Context
+            </h2>
+            <p className="text-xs text-gray-500 mb-3">Youth justice outcomes for {entity.state} — how this entity&rsquo;s operating environment is performing.</p>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+              {(() => {
+                const detRate = getMetric('detention_rate_per_10k');
+                const overrep = getMetric('indigenous_overrepresentation_ratio');
+                const costDet = getMetric('cost_per_day_detention');
+                const costCom = getMetric('cost_per_day_community');
+                const pctRemand = getMetric('pct_unsentenced');
+                const avgDaily = getMetric('avg_daily_detention');
+                const ctgRate = getMetric('ctg_target11_indigenous_detention_rate', 'indigenous');
+                const items = [
+                  detRate && { label: 'Detention rate', value: `${detRate.metric_value}/10K`, warn: detRate.metric_value > 4 },
+                  overrep && { label: 'Indigenous overrep.', value: `${overrep.metric_value}x`, warn: overrep.metric_value > 15 },
+                  costDet && { label: 'Cost/day (detention)', value: `$${Number(costDet.metric_value).toLocaleString()}`, warn: false },
+                  costCom && { label: 'Cost/day (community)', value: `$${Number(costCom.metric_value).toLocaleString()}`, warn: false },
+                  avgDaily && { label: 'Avg daily detained', value: avgDaily.metric_value.toLocaleString(), warn: avgDaily.metric_value > 200 },
+                  pctRemand && { label: 'Unsentenced (remand)', value: `${pctRemand.metric_value}%`, warn: pctRemand.metric_value > 75 },
+                  ctgRate && { label: 'CtG Target 11', value: `${ctgRate.metric_value}/10K`, warn: true },
+                ].filter(Boolean) as Array<{ label: string; value: string; warn: boolean }>;
+                return items.slice(0, 4).map((item, i) => (
+                  <div key={i} className={`p-3 border shadow-sm ${item.warn ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200'}`}>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{item.label}</p>
+                    <p className={`text-lg font-black mt-1 ${item.warn ? 'text-red-600' : 'text-gray-800'}`}>{item.value}</p>
+                  </div>
+                ));
+              })()}
+            </div>
+
+            {policyData.length > 0 && (
+              <div className="bg-white border border-gray-200 shadow-sm p-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Recent Policy Changes</p>
+                <div className="space-y-2">
+                  {policyData.slice(0, 3).map((e, i) => (
+                    <div key={i} className="flex gap-2 items-start">
+                      <div className={`shrink-0 w-1.5 h-1.5 rounded-full mt-1.5 ${
+                        e.severity === 'critical' ? 'bg-red-500' : 'bg-amber-500'
+                      }`} />
+                      <div>
+                        <span className="text-[10px] text-gray-400 font-bold">{e.event_date?.slice(0, 7)}</span>
+                        <span className="text-xs font-bold text-gray-700 ml-1.5">{e.title}</span>
+                        {e.impact_summary && <p className="text-[10px] text-gray-500">{e.impact_summary}</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <Link href={`/reports/youth-justice/${entity.state?.toLowerCase()}`} className="text-[10px] font-bold text-bauhaus-blue mt-2 inline-block hover:underline">
+                  View full {entity.state} report &rarr;
+                </Link>
+              </div>
+            )}
           </section>
         )}
 
