@@ -347,6 +347,7 @@ const PRESETS: Preset[] = [
   { label: 'NDIS Thin Markets', mode: 'ndis', desc: 'Disability provider networks — where are the thin markets?' },
   { label: 'Board Interlocks', mode: 'interlocks', minBoards: 2, desc: 'People sitting on multiple charity boards' },
   { label: 'Youth Justice', mode: 'justice', topic: 'youth-justice', desc: 'Programs funding youth justice services' },
+  { label: 'QLD Youth Justice', mode: 'justice', topic: 'youth-justice', state: 'QLD', desc: 'Queensland youth justice funding flows' },
   { label: 'Child Protection', mode: 'justice', topic: 'child-protection', desc: 'Child protection funding flows' },
   { label: 'Indigenous Justice', mode: 'justice', topic: 'indigenous', desc: 'Indigenous justice programs & orgs' },
   { label: 'Diversion Programs', mode: 'justice', topic: 'diversion', desc: 'Diversion & prevention funding' },

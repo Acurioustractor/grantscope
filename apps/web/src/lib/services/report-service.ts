@@ -44,8 +44,9 @@ export async function getTopPrograms(topic: Topic, limit = 15) {
 /**
  * Top funded organisations for a topic, with entity linking
  */
-export async function getTopOrgs(topic: Topic, limit = 25) {
+export async function getTopOrgs(topic: Topic, limit = 25, state?: string) {
   const supabase = getServiceSupabase();
+  const stateFilter = state ? ` AND jf.state = '${state}'` : '';
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT jf.recipient_name,
               jf.recipient_abn,
@@ -55,7 +56,7 @@ export async function getTopOrgs(topic: Topic, limit = 25) {
               e.gs_id
        FROM justice_funding jf
        LEFT JOIN gs_entities e ON e.abn = jf.recipient_abn AND jf.recipient_abn IS NOT NULL
-       WHERE jf.${topicFilter(topic)}
+       WHERE jf.${topicFilter(topic)}${stateFilter}
        GROUP BY jf.recipient_name, jf.recipient_abn, jf.state, e.gs_id
        ORDER BY total DESC
        LIMIT ${limit}`,
@@ -72,12 +73,13 @@ export async function getTopOrgs(topic: Topic, limit = 25) {
 /**
  * ALMA interventions for a topic
  */
-export async function getAlmaInterventions(topic: Topic, limit = 25) {
+export async function getAlmaInterventions(topic: Topic, limit = 25, state?: string) {
   const supabase = getServiceSupabase();
+  const stateFilter = state ? ` AND geography::text ILIKE '%${state}%'` : '';
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT name, type, evidence_level, geography, portfolio_score::float
        FROM alma_interventions
-       WHERE ${topicFilter(topic)}
+       WHERE ${topicFilter(topic)}${stateFilter}
        ORDER BY portfolio_score DESC NULLS LAST
        LIMIT ${limit}`,
   })) as Promise<Array<{
@@ -92,10 +94,11 @@ export async function getAlmaInterventions(topic: Topic, limit = 25) {
 /**
  * ALMA intervention count for a topic
  */
-export async function getAlmaCount(topic: Topic): Promise<number> {
+export async function getAlmaCount(topic: Topic, state?: string): Promise<number> {
   const supabase = getServiceSupabase();
+  const stateFilter = state ? ` AND geography::text ILIKE '%${state}%'` : '';
   const data = await safe(supabase.rpc('exec_sql', {
-    query: `SELECT COUNT(*)::int as cnt FROM alma_interventions WHERE ${topicFilter(topic)}`,
+    query: `SELECT COUNT(*)::int as cnt FROM alma_interventions WHERE ${topicFilter(topic)}${stateFilter}`,
   }));
   return (data as Array<{ cnt: number }> | null)?.[0]?.cnt ?? 0;
 }
@@ -118,8 +121,9 @@ export async function getContractStats(keywords: string[]) {
  * Funding by LGA with SEIFA overlay — uses entity+relationship JOINs
  * with topic-tagged justice_funding for safety
  */
-export async function getFundingByLga(topic: Topic, limit = 20) {
+export async function getFundingByLga(topic: Topic, limit = 20, state?: string) {
   const supabase = getServiceSupabase();
+  const stateFilter = state ? ` AND jf.state = '${state}'` : '';
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT e.lga_name, e.state,
               COUNT(DISTINCT e.gs_id)::int as orgs,
@@ -127,7 +131,7 @@ export async function getFundingByLga(topic: Topic, limit = 20) {
               MIN(e.seifa_irsd_decile)::int as seifa_decile
        FROM justice_funding jf
        JOIN gs_entities e ON e.abn = jf.recipient_abn AND jf.recipient_abn IS NOT NULL
-       WHERE jf.${topicFilter(topic)}
+       WHERE jf.${topicFilter(topic)}${stateFilter}
          AND e.lga_name IS NOT NULL
        GROUP BY e.lga_name, e.state
        ORDER BY total_funding DESC
@@ -551,8 +555,9 @@ export function fmt(n: number): string {
 /**
  * Community-controlled vs non-Indigenous funding gap
  */
-export async function getAccoFundingGap(topic: Topic) {
+export async function getAccoFundingGap(topic: Topic, state?: string) {
   const supabase = getServiceSupabase();
+  const stateFilter = state ? ` AND jf.state = '${state}'` : '';
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT
               CASE WHEN ge.is_community_controlled THEN 'Community Controlled' ELSE 'Non-Indigenous' END as org_type,
@@ -561,7 +566,7 @@ export async function getAccoFundingGap(topic: Topic) {
               ROUND(AVG(jf.amount_dollars))::bigint as avg_grant
             FROM justice_funding jf
             JOIN gs_entities ge ON ge.id = jf.gs_entity_id
-            WHERE ${topicFilter(topic)}
+            WHERE ${topicFilter(topic)}${stateFilter}
               AND jf.program_name NOT LIKE 'ROGS%' AND jf.program_name NOT LIKE 'Total%'
             GROUP BY CASE WHEN ge.is_community_controlled THEN 'Community Controlled' ELSE 'Non-Indigenous' END`,
   })) as Promise<Array<{ org_type: string; orgs: number; total_funding: number; avg_grant: number }> | null>;
@@ -570,8 +575,9 @@ export async function getAccoFundingGap(topic: Topic) {
 /**
  * Funding by remoteness
  */
-export async function getFundingByRemoteness(topic: Topic) {
+export async function getFundingByRemoteness(topic: Topic, state?: string) {
   const supabase = getServiceSupabase();
+  const stateFilter = state ? ` AND jf.state = '${state}'` : '';
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT ge.remoteness,
               COUNT(DISTINCT jf.recipient_name)::int as orgs,
@@ -579,7 +585,7 @@ export async function getFundingByRemoteness(topic: Topic) {
               COUNT(*)::int as grants
             FROM justice_funding jf
             JOIN gs_entities ge ON ge.id = jf.gs_entity_id
-            WHERE ${topicFilter(topic)}
+            WHERE ${topicFilter(topic)}${stateFilter}
               AND jf.program_name NOT LIKE 'ROGS%' AND jf.program_name NOT LIKE 'Total%'
               AND ge.remoteness IS NOT NULL
             GROUP BY ge.remoteness
@@ -605,13 +611,14 @@ export async function getUnfundedEffectivePrograms(topic: Topic) {
 /**
  * Revolving door entities in youth justice
  */
-export async function getYjRevolvingDoor(topic: Topic, limit = 15) {
+export async function getYjRevolvingDoor(topic: Topic, limit = 15, state?: string) {
   const supabase = getServiceSupabase();
+  const stateFilter = state ? ` AND state = '${state}'` : '';
   return safe(supabase.rpc('exec_sql', {
     query: `WITH yj_orgs AS (
               SELECT DISTINCT gs_entity_id
               FROM justice_funding
-              WHERE ${topicFilter(topic)} AND program_name NOT LIKE 'ROGS%' AND gs_entity_id IS NOT NULL
+              WHERE ${topicFilter(topic)}${stateFilter} AND program_name NOT LIKE 'ROGS%' AND gs_entity_id IS NOT NULL
             )
             SELECT rd.canonical_name, rd.revolving_door_score::int, rd.influence_vectors::int,
               rd.total_donated::bigint, rd.total_contracts::bigint, rd.total_funded::bigint,
@@ -937,6 +944,149 @@ export async function getYjMmrStats() {
     total_value: number;
     mmr_value: number;
     mmr_cc_value: number;
+  }> | null>;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Evidence Coverage (Fix 7)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/**
+ * Evidence coverage summary for a topic + optional state
+ */
+export async function getEvidenceCoverage(topic: Topic, state?: string) {
+  const supabase = getServiceSupabase();
+  const stateFilter = state ? ` AND ai.geography::text ILIKE '%${state}%'` : '';
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT COUNT(DISTINCT ai.id)::int as total_interventions,
+              COUNT(DISTINCT ae.intervention_id)::int as with_evidence,
+              (COUNT(DISTINCT ai.id) - COUNT(DISTINCT ae.intervention_id))::int as without_evidence,
+              ROUND(COUNT(DISTINCT ae.intervention_id)::numeric / NULLIF(COUNT(DISTINCT ai.id),0) * 100)::int as coverage_pct
+       FROM alma_interventions ai
+       LEFT JOIN alma_evidence ae ON ae.intervention_id = ai.id
+       WHERE ai.${topicFilter(topic)}${stateFilter}`,
+  })) as Promise<Array<{
+    total_interventions: number;
+    with_evidence: number;
+    without_evidence: number;
+    coverage_pct: number;
+  }> | null>;
+}
+
+/**
+ * Detail: which interventions have/lack evidence
+ */
+export async function getEvidenceGapDetail(topic: Topic, state?: string, limit = 30) {
+  const supabase = getServiceSupabase();
+  const stateFilter = state ? ` AND ai.geography::text ILIKE '%${state}%'` : '';
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT ai.name, ai.type, ai.evidence_level,
+              CASE WHEN ae.id IS NOT NULL THEN true ELSE false END as has_evidence,
+              ae.evidence_type, ae.methodology
+       FROM alma_interventions ai
+       LEFT JOIN alma_evidence ae ON ae.intervention_id = ai.id
+       WHERE ai.${topicFilter(topic)}${stateFilter}
+       ORDER BY has_evidence, ai.name
+       LIMIT ${limit}`,
+  })) as Promise<Array<{
+    name: string;
+    type: string | null;
+    evidence_level: string | null;
+    has_evidence: boolean;
+    evidence_type: string | null;
+    methodology: string | null;
+  }> | null>;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Hansard & Lobbying Integration (Fix 8)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/**
+ * QLD Hansard mentions of youth justice keywords
+ */
+export async function getQldHansardMentions(limit = 20) {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT speaker_name, speaker_party, speaker_electorate, sitting_date, subject,
+              LEFT(body_text, 300) as excerpt
+       FROM civic_hansard
+       WHERE jurisdiction = 'QLD'
+         AND (body_text ILIKE '%youth justice%'
+           OR body_text ILIKE '%watch house%'
+           OR body_text ILIKE '%child safety%'
+           OR body_text ILIKE '%juvenile%')
+       ORDER BY sitting_date DESC
+       LIMIT ${limit}`,
+  })) as Promise<Array<{
+    speaker_name: string;
+    speaker_party: string | null;
+    speaker_electorate: string | null;
+    sitting_date: string;
+    subject: string | null;
+    excerpt: string;
+  }> | null>;
+}
+
+/**
+ * Federal lobbying connections touching YJ orgs
+ */
+export async function getYjLobbyingConnections(topic: Topic, state?: string, limit = 15) {
+  const supabase = getServiceSupabase();
+  const stateFilter = state ? ` AND jf.state = '${state}'` : '';
+  return safe(supabase.rpc('exec_sql', {
+    query: `WITH yj_orgs AS (
+              SELECT DISTINCT gs_entity_id FROM justice_funding
+              WHERE ${topicFilter(topic)}${stateFilter}
+                AND gs_entity_id IS NOT NULL
+            )
+            SELECT e.canonical_name, e.gs_id,
+              r.properties->>'lobbyist_name' as lobbyist_name,
+              r.properties->>'client_name' as client_name,
+              r.relationship_type
+            FROM gs_relationships r
+            JOIN gs_entities e ON e.id = r.source_entity_id OR e.id = r.target_entity_id
+            WHERE r.relationship_type = 'lobbies_for'
+              AND (r.source_entity_id IN (SELECT gs_entity_id FROM yj_orgs)
+                OR r.target_entity_id IN (SELECT gs_entity_id FROM yj_orgs))
+            ORDER BY e.canonical_name
+            LIMIT ${limit}`,
+  })) as Promise<Array<{
+    canonical_name: string;
+    gs_id: string | null;
+    lobbyist_name: string | null;
+    client_name: string | null;
+    relationship_type: string;
+  }> | null>;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// QLD Youth Justice (Fix 5)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/**
+ * QLD-specific: funding by operational program (excludes ROGS aggregates)
+ */
+export async function getQldFundingByProgram(limit = 20) {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT program_name,
+              COUNT(*)::int as grants,
+              SUM(amount_dollars)::bigint as total,
+              COUNT(DISTINCT recipient_name)::int as orgs
+       FROM justice_funding
+       WHERE state = 'QLD'
+         AND ${topicFilter('youth-justice')}
+         AND program_name NOT LIKE 'ROGS%'
+         AND program_name NOT LIKE 'Total%'
+       GROUP BY program_name
+       ORDER BY total DESC
+       LIMIT ${limit}`,
+  })) as Promise<Array<{
+    program_name: string;
+    grants: number;
+    total: number;
+    orgs: number;
   }> | null>;
 }
 

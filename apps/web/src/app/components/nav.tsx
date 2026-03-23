@@ -57,6 +57,7 @@ const megaMenuSections = [
       { href: '/places', label: 'Place Packs', desc: 'Funding & providers by postcode' },
       { href: '/reports/funding-equity', label: 'Gap Analysis', desc: 'Where money doesn\'t match need' },
       { href: '/reports/youth-justice', label: 'Commissioning', desc: 'Youth justice deep analysis' },
+      { href: '/reports/qld-youth-justice', label: 'QLD Youth Justice', desc: 'Queensland deep dive' },
       { href: '/power', label: 'Power Map', desc: 'Where the money flows' },
     ],
   },
@@ -148,6 +149,7 @@ const workspaceModules: NavModule[] = [
     children: [
       { label: 'Places', href: '/places' },
       { label: 'Gap Analysis', href: '/reports/funding-equity' },
+      { label: 'QLD Youth Justice', href: '/reports/qld-youth-justice' },
       { label: 'Power Map', href: '/power' },
     ],
   },
