@@ -183,21 +183,16 @@ async function main() {
 
     if (batch.length >= BATCH_SIZE) {
       if (!DRY_RUN) {
-        const { error: insertErr } = await db
+        const { data, error: insertErr } = await db
           .from('gs_relationships')
-          .insert(batch);
+          .upsert(batch, {
+            onConflict: 'source_entity_id,target_entity_id,relationship_type,dataset,source_record_id',
+            ignoreDuplicates: true,
+            count: 'exact',
+          });
         if (insertErr) {
-          for (const item of batch) {
-            const { error: singleErr } = await db
-              .from('gs_relationships')
-              .insert(item);
-            if (singleErr) {
-              if (singleErr.message.includes('duplicate')) skipped++;
-              else { if (errors < 3) log(`Insert error: ${singleErr.message}`); errors++; }
-            } else {
-              created++;
-            }
-          }
+          if (errors < 3) log(`Upsert error: ${insertErr.message}`);
+          errors += batch.length;
         } else {
           created += batch.length;
         }
@@ -218,17 +213,8 @@ async function main() {
           ignoreDuplicates: true,
         });
       if (insertErr) {
-        for (const item of batch) {
-          const { error: singleErr } = await db
-            .from('gs_relationships')
-            .insert(item);
-          if (singleErr) {
-            if (singleErr.message.includes('duplicate')) skipped++;
-            else errors++;
-          } else {
-            created++;
-          }
-        }
+        if (errors < 3) log(`Upsert error (flush): ${insertErr.message}`);
+        errors += batch.length;
       } else {
         created += batch.length;
       }

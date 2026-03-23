@@ -1091,6 +1091,30 @@ export async function getFundingByProgram(topic: Topic, state: string, limit = 2
   }> | null>;
 }
 
+/**
+ * Data depth for a state: total justice_funding records and distinct sources
+ */
+export async function getStateDataDepth(state: string) {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT COUNT(*)::int as total_records,
+              COUNT(DISTINCT source)::int as sources,
+              COUNT(DISTINCT program_name)::int as programs,
+              COUNT(DISTINCT recipient_name)::int as recipients,
+              MIN(financial_year) as earliest_year,
+              MAX(financial_year) as latest_year
+       FROM justice_funding
+       WHERE state = '${state}'`,
+  })) as Promise<Array<{
+    total_records: number;
+    sources: number;
+    programs: number;
+    recipients: number;
+    earliest_year: string;
+    latest_year: string;
+  }> | null>;
+}
+
 export async function getPiccFundingFlow() {
   const supabase = getServiceSupabase();
   return safe(supabase.rpc('exec_sql', {

@@ -13,6 +13,7 @@ import {
   getHansardMentions,
   getYjLobbyingConnections,
   getYjRevolvingDoor,
+  getStateDataDepth,
   money,
   fmt,
 } from '@/lib/services/report-service';
@@ -73,6 +74,7 @@ async function getStateReport(stateCode: string) {
     hansard,
     lobbying,
     revolvingDoor,
+    dataDepth,
   ] = await Promise.all([
     getFundingByProgram('youth-justice', stateCode),
     getTopOrgs('youth-justice', 25, stateCode),
@@ -86,6 +88,7 @@ async function getStateReport(stateCode: string) {
     getHansardMentions(stateCode, 20),
     getYjLobbyingConnections('youth-justice', stateCode),
     getYjRevolvingDoor('youth-justice', 10, stateCode),
+    getStateDataDepth(stateCode),
   ]);
 
   const programRows = (programs as ProgramRow[] | null) || [];
@@ -109,6 +112,7 @@ async function getStateReport(stateCode: string) {
     hansard: (hansard as HansardRow[] | null) || [],
     lobbying: (lobbying as LobbyRow[] | null) || [],
     revolvingDoor: (revolvingDoor as RevolvingDoorRow[] | null) || [],
+    depth: ((dataDepth as Array<{ total_records: number; sources: number; programs: number; recipients: number; earliest_year: string; latest_year: string }> | null) || [])[0] || null,
     totalFunding,
     totalOrgs,
   };
@@ -148,6 +152,21 @@ export default async function StateYouthJusticePage({ params }: { params: Promis
           <span className="text-[10px] font-bold bg-gray-100 text-gray-600 px-2 py-1 rounded uppercase tracking-wider">Hansard</span>
         </div>
       </div>
+
+      {/* Data Coverage Banner */}
+      {report.depth && report.depth.total_records < 1000 && (
+        <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+          <span className="text-amber-500 text-lg mt-0.5">&#9888;</span>
+          <div>
+            <div className="text-sm font-bold text-amber-800">Limited data coverage</div>
+            <p className="text-xs text-amber-700 mt-0.5">
+              {stateCode} has {fmt(report.depth.total_records)} justice funding records across {report.depth.sources} sources
+              ({report.depth.earliest_year}&ndash;{report.depth.latest_year}).
+              Sections below may appear sparse. More data sources are being added.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">

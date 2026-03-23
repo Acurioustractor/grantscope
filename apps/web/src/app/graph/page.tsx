@@ -348,6 +348,13 @@ const PRESETS: Preset[] = [
   { label: 'Board Interlocks', mode: 'interlocks', minBoards: 2, desc: 'People sitting on multiple charity boards' },
   { label: 'Youth Justice', mode: 'justice', topic: 'youth-justice', desc: 'Programs funding youth justice services' },
   { label: 'QLD Youth Justice', mode: 'justice', topic: 'youth-justice', state: 'QLD', desc: 'Queensland youth justice funding flows' },
+  { label: 'NSW Youth Justice', mode: 'justice', topic: 'youth-justice', state: 'NSW', desc: 'New South Wales youth justice funding flows' },
+  { label: 'VIC Youth Justice', mode: 'justice', topic: 'youth-justice', state: 'VIC', desc: 'Victorian youth justice funding flows' },
+  { label: 'WA Youth Justice', mode: 'justice', topic: 'youth-justice', state: 'WA', desc: 'Western Australia youth justice funding flows' },
+  { label: 'SA Youth Justice', mode: 'justice', topic: 'youth-justice', state: 'SA', desc: 'South Australia youth justice funding flows' },
+  { label: 'NT Youth Justice', mode: 'justice', topic: 'youth-justice', state: 'NT', desc: 'Northern Territory youth justice funding flows' },
+  { label: 'TAS Youth Justice', mode: 'justice', topic: 'youth-justice', state: 'TAS', desc: 'Tasmanian youth justice funding flows' },
+  { label: 'ACT Youth Justice', mode: 'justice', topic: 'youth-justice', state: 'ACT', desc: 'ACT youth justice funding flows' },
   { label: 'Child Protection', mode: 'justice', topic: 'child-protection', desc: 'Child protection funding flows' },
   { label: 'Indigenous Justice', mode: 'justice', topic: 'indigenous', desc: 'Indigenous justice programs & orgs' },
   { label: 'Diversion Programs', mode: 'justice', topic: 'diversion', desc: 'Diversion & prevention funding' },
@@ -707,8 +714,18 @@ export default function GraphPage() {
     }
   }, [activeStoryIndex]);
 
-  // Initial load
+  // Initial load — respect ?preset= URL param if present
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const presetName = params.get('preset');
+    if (presetName) {
+      const idx = PRESETS.findIndex(p => p.label === presetName);
+      if (idx >= 0) {
+        setActivePreset(idx);
+        fetchGraph(PRESETS[idx]);
+        return;
+      }
+    }
     fetchGraph(PRESETS[0]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
