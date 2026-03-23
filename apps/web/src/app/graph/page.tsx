@@ -73,7 +73,7 @@ interface Story {
   id: string;
   title: string;
   description: string;
-  mode: 'hubs' | 'justice' | 'power' | 'interlocks' | 'ndis' | 'foundations' | 'alma' | 'diary';
+  mode: 'hubs' | 'justice' | 'power' | 'interlocks' | 'ndis' | 'foundations' | 'alma' | 'diary' | 'dollar';
   topic?: string;
   minSystems?: number;
   narrative: string;
@@ -322,7 +322,7 @@ const SYSTEM_COLORS: Record<number, string> = {
 
 type Preset = {
   label: string;
-  mode: 'hubs' | 'justice' | 'power' | 'interlocks' | 'ndis' | 'foundations' | 'alma' | 'diary';
+  mode: 'hubs' | 'justice' | 'power' | 'interlocks' | 'ndis' | 'foundations' | 'alma' | 'diary' | 'dollar';
   type?: string;
   hubs?: number;
   topic?: string;
@@ -358,6 +358,8 @@ const PRESETS: Preset[] = [
   { label: 'Child Protection', mode: 'justice', topic: 'child-protection', desc: 'Child protection funding flows' },
   { label: 'Indigenous Justice', mode: 'justice', topic: 'indigenous', desc: 'Indigenous justice programs & orgs' },
   { label: 'Diversion Programs', mode: 'justice', topic: 'diversion', desc: 'Diversion & prevention funding' },
+  { label: 'Follow the Dollar', mode: 'dollar', topic: 'youth-justice', desc: 'Trace funding → recipients → contracts, donations & lobbying' },
+  { label: 'Follow the Dollar (QLD)', mode: 'dollar', topic: 'youth-justice', state: 'QLD', desc: 'QLD youth justice dollar flows — who gets funded and what else they do' },
   { label: 'Alice Springs Youth', mode: 'alma', state: 'Alice Springs', desc: 'Alice Springs youth service interventions — who delivers what' },
   { label: 'Foundation Giving', mode: 'foundations', desc: 'Foundation → grantee flows with scores and regranting chains' },
   { label: 'Top Foundations', mode: 'foundations', minGiving: 5000000, desc: 'Foundations giving $5M+ and their grantee networks' },
@@ -563,6 +565,10 @@ export default function GraphPage() {
         if (preset.topic) params.set('topic', preset.topic);
       } else if (preset.mode === 'justice') {
         params.set('mode', 'justice');
+        if (preset.topic) params.set('topic', preset.topic);
+        if (preset.state) params.set('state', preset.state);
+      } else if (preset.mode === 'dollar') {
+        params.set('mode', 'dollar');
         if (preset.topic) params.set('topic', preset.topic);
         if (preset.state) params.set('state', preset.state);
       } else if (preset.mode === 'foundations') {

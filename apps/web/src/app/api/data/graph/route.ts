@@ -528,6 +528,176 @@ export async function GET(request: Request) {
       return response;
     }
 
+    // ── Dollar mode: trace program → recipient → contracts/donations/lobbying ──
+    if (mode === 'dollar') {
+      const stateFilter = state ? `AND jf.state = '${state.toUpperCase()}'` : '';
+      const topicFilter = topic ? `AND jf.topics @> ARRAY['${topic.replace(/'/g, "''")}']` : '';
+
+      // Step 1: Get top-funded recipients
+      const recipients = await paginatedRpc<{
+        gs_entity_id: string; recipient_name: string;
+        total_amount: number; grant_count: number; programs: string;
+      }>(supabase,
+        `SELECT jf.gs_entity_id, jf.recipient_name,
+                SUM(jf.amount_dollars) as total_amount, COUNT(*) as grant_count,
+                STRING_AGG(DISTINCT jf.program_name, '; ' ORDER BY jf.program_name) as programs
+         FROM justice_funding jf
+         WHERE jf.gs_entity_id IS NOT NULL
+           AND jf.amount_dollars > 0
+           AND jf.program_name NOT LIKE 'ROGS%' AND jf.program_name NOT LIKE 'Total%'
+           ${topicFilter} ${stateFilter}
+         GROUP BY jf.gs_entity_id, jf.recipient_name
+         ORDER BY total_amount DESC
+         LIMIT ${Math.min(limit, 200)}`,
+        200);
+
+      if (recipients.length === 0) {
+        return NextResponse.json({ nodes: [], edges: [], meta: { mode: 'dollar', total_nodes: 0, total_edges: 0 } });
+      }
+
+      const recipientIds = recipients.map(r => r.gs_entity_id);
+      const idList = recipientIds.map(id => `'${id}'`).join(',');
+
+      // Step 2: Get program entities for these recipients
+      const programEdges = await paginatedRpc<{
+        source_entity_id: string; target_entity_id: string;
+        amount: number | null; properties: { program?: string } | null;
+      }>(supabase,
+        `SELECT source_entity_id, target_entity_id, amount, properties
+         FROM gs_relationships
+         WHERE target_entity_id IN (${idList})
+           AND relationship_type = 'grant'
+           AND dataset = 'justice_funding'
+         ORDER BY amount DESC NULLS LAST
+         LIMIT 2000`,
+        2000);
+
+      // Step 3: Get downstream relationships (contracts, donations, lobbying)
+      const [contracts, donations, lobbying] = await Promise.all([
+        paginatedRpc<EdgeRow>(supabase,
+          `SELECT source_entity_id, target_entity_id, relationship_type, amount, dataset, year
+           FROM gs_relationships
+           WHERE (source_entity_id IN (${idList}) OR target_entity_id IN (${idList}))
+             AND relationship_type = 'contract'
+           ORDER BY amount DESC NULLS LAST
+           LIMIT 1000`, 1000),
+        paginatedRpc<EdgeRow>(supabase,
+          `SELECT source_entity_id, target_entity_id, relationship_type, amount, dataset, year
+           FROM gs_relationships
+           WHERE source_entity_id IN (${idList})
+             AND relationship_type = 'donation'
+           ORDER BY amount DESC NULLS LAST
+           LIMIT 500`, 500),
+        paginatedRpc<EdgeRow>(supabase,
+          `SELECT source_entity_id, target_entity_id, relationship_type, amount, dataset, year
+           FROM gs_relationships
+           WHERE (source_entity_id IN (${idList}) OR target_entity_id IN (${idList}))
+             AND relationship_type = 'lobbies_for'
+           LIMIT 200`, 200),
+      ]);
+
+      // Step 4: Collect all entity IDs and fetch node details
+      const allEntityIds = new Set<string>();
+      for (const r of recipients) allEntityIds.add(r.gs_entity_id);
+      for (const e of programEdges) { allEntityIds.add(e.source_entity_id); allEntityIds.add(e.target_entity_id); }
+      for (const e of [...contracts, ...donations, ...lobbying]) {
+        allEntityIds.add(e.source_entity_id);
+        allEntityIds.add(e.target_entity_id);
+      }
+      const entityDetails = await fetchNodes(supabase, [...allEntityIds]);
+      const entityMap = new Map(entityDetails.map(e => [e.id, e]));
+
+      // Step 5: Build graph
+      const nodes: Array<Record<string, unknown>> = [];
+      const graphEdges: Array<{ source: string; target: string; type: string; amount: number | null; dataset: string; year: number | null }> = [];
+      const seenNodes = new Set<string>();
+
+      const addNode = (id: string, extra?: Record<string, unknown>) => {
+        if (seenNodes.has(id)) return;
+        seenNodes.add(id);
+        const entity = entityMap.get(id);
+        nodes.push({
+          id,
+          label: entity?.canonical_name || id,
+          type: entity?.entity_type || 'unknown',
+          state: entity?.state || null,
+          sector: entity?.sector || null,
+          remoteness: entity?.remoteness || null,
+          community_controlled: entity?.is_community_controlled || false,
+          degree: 0,
+          ...extra,
+        });
+      };
+
+      // Add recipient nodes with funding metadata
+      const recipientIdSet = new Set(recipientIds);
+      for (const r of recipients) {
+        addNode(r.gs_entity_id, {
+          funding: Number(r.total_amount),
+          layer: 'recipient',
+        });
+      }
+
+      // Add program→recipient edges and program source nodes
+      for (const e of programEdges) {
+        addNode(e.source_entity_id, { layer: 'program' });
+        graphEdges.push({
+          source: e.source_entity_id, target: e.target_entity_id,
+          type: 'grant', amount: e.amount, dataset: 'justice_funding', year: null,
+        });
+      }
+
+      // Add downstream edges and their connected nodes
+      for (const e of contracts) {
+        const otherId = recipientIdSet.has(e.source_entity_id) ? e.target_entity_id : e.source_entity_id;
+        addNode(otherId, { layer: 'contract' });
+        graphEdges.push({
+          source: e.source_entity_id, target: e.target_entity_id,
+          type: e.relationship_type, amount: e.amount, dataset: e.dataset, year: e.year,
+        });
+      }
+      for (const e of donations) {
+        addNode(e.target_entity_id, { layer: 'donation' });
+        graphEdges.push({
+          source: e.source_entity_id, target: e.target_entity_id,
+          type: e.relationship_type, amount: e.amount, dataset: e.dataset, year: e.year,
+        });
+      }
+      for (const e of lobbying) {
+        const otherId = recipientIdSet.has(e.source_entity_id) ? e.target_entity_id : e.source_entity_id;
+        addNode(otherId, { layer: 'lobbying' });
+        graphEdges.push({
+          source: e.source_entity_id, target: e.target_entity_id,
+          type: e.relationship_type, amount: e.amount, dataset: e.dataset, year: e.year,
+        });
+      }
+
+      // Compute degree
+      const degree = new Map<string, number>();
+      for (const e of graphEdges) {
+        degree.set(e.source, (degree.get(e.source) || 0) + 1);
+        degree.set(e.target, (degree.get(e.target) || 0) + 1);
+      }
+      for (const n of nodes) n.degree = degree.get(n.id as string) || 0;
+
+      const response = NextResponse.json({
+        nodes,
+        edges: graphEdges,
+        meta: {
+          mode: 'dollar',
+          total_nodes: nodes.length,
+          total_edges: graphEdges.length,
+          recipients: recipients.length,
+          contracts: contracts.length,
+          donations: donations.length,
+          lobbying: lobbying.length,
+          filters: { mode: 'dollar', topic, state, limit },
+        },
+      });
+      response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+      return response;
+    }
+
     // ── Justice mode: program → recipient graph from justice_funding ──
     if (mode === 'justice') {
       const stateFilter = state ? `AND jf.state = '${state.toUpperCase()}'` : '';
