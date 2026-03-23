@@ -150,6 +150,11 @@ export default async function StateYouthJusticePage({ params }: { params: Promis
           <span className="text-[10px] font-bold bg-gray-100 text-gray-600 px-2 py-1 rounded uppercase tracking-wider">Justice Funding</span>
           <span className="text-[10px] font-bold bg-gray-100 text-gray-600 px-2 py-1 rounded uppercase tracking-wider">ALMA</span>
           <span className="text-[10px] font-bold bg-gray-100 text-gray-600 px-2 py-1 rounded uppercase tracking-wider">Hansard</span>
+          {stateKey === 'qld' && (
+            <Link href="/reports/youth-justice/qld/tracker" className="text-[10px] font-bold bg-bauhaus-red text-white px-2 py-1 rounded uppercase tracking-wider hover:bg-red-700 transition-colors">
+              Accountability Tracker
+            </Link>
+          )}
         </div>
       </div>
 

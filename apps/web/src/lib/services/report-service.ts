@@ -1115,6 +1115,171 @@ export async function getStateDataDepth(state: string) {
   }> | null>;
 }
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Accountability Tracker Functions
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/**
+ * Budget commitments from SDS (Service Delivery Statements) for a state
+ */
+export async function getBudgetCommitments(state: string) {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT program_name, amount_dollars::bigint as amount, financial_year, source
+       FROM justice_funding
+       WHERE state = '${state}' AND source LIKE '%-budget-sds'
+         AND program_name NOT LIKE 'Total%'
+       ORDER BY amount_dollars DESC NULLS LAST`,
+  })) as Promise<Array<{
+    program_name: string;
+    amount: number | null;
+    financial_year: string;
+    source: string;
+  }> | null>;
+}
+
+/**
+ * Recipients for a specific program in a state (from justice_funding)
+ */
+export async function getProgramRecipients(state: string, programName: string, limit = 20) {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT jf.recipient_name, jf.recipient_abn,
+              SUM(jf.amount_dollars)::bigint as total,
+              COUNT(*)::int as grants,
+              e.gs_id, e.is_community_controlled
+       FROM justice_funding jf
+       LEFT JOIN gs_entities e ON e.abn = jf.recipient_abn AND jf.recipient_abn IS NOT NULL
+       WHERE jf.state = '${state}' AND jf.program_name = '${programName.replace(/'/g, "''")}'
+       GROUP BY jf.recipient_name, jf.recipient_abn, e.gs_id, e.is_community_controlled
+       ORDER BY total DESC NULLS LAST
+       LIMIT ${limit}`,
+  })) as Promise<Array<{
+    recipient_name: string;
+    recipient_abn: string | null;
+    total: number | null;
+    grants: number;
+    gs_id: string | null;
+    is_community_controlled: boolean | null;
+  }> | null>;
+}
+
+/**
+ * Leadership for top funded orgs in a state/topic — org name + directors
+ */
+export async function getTrackerLeadership(state: string, topic: Topic, limit = 20) {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `WITH top_orgs AS (
+              SELECT DISTINCT ON (jf.recipient_abn) jf.recipient_name, jf.recipient_abn, e.id as entity_id,
+                e.gs_id, e.is_community_controlled,
+                SUM(jf.amount_dollars) OVER (PARTITION BY jf.recipient_abn) as total_funded
+              FROM justice_funding jf
+              JOIN gs_entities e ON e.abn = jf.recipient_abn
+              WHERE jf.state = '${state}' AND jf.${topicFilter(topic)}
+                AND jf.recipient_abn IS NOT NULL
+                AND jf.program_name NOT LIKE 'ROGS%' AND jf.program_name NOT LIKE 'Total%'
+              ORDER BY jf.recipient_abn, total_funded DESC
+            )
+            SELECT t.recipient_name, t.recipient_abn, t.gs_id, t.is_community_controlled,
+              t.total_funded::bigint,
+              COALESCE(
+                (SELECT json_agg(json_build_object('name', pr.person_name, 'role', pr.role_type) ORDER BY pr.role_type, pr.person_name)
+                 FROM person_roles pr WHERE pr.entity_id = t.entity_id),
+                '[]'
+              )::text as directors
+            FROM top_orgs t
+            ORDER BY t.total_funded DESC NULLS LAST
+            LIMIT ${limit}`,
+  })) as Promise<Array<{
+    recipient_name: string;
+    recipient_abn: string | null;
+    gs_id: string | null;
+    is_community_controlled: boolean | null;
+    total_funded: number;
+    directors: string; // JSON string of [{name, role}]
+  }> | null>;
+}
+
+/**
+ * Board interlocks within a state's YJ funded org ecosystem
+ */
+export async function getTrackerInterlocks(state: string, topic: Topic, limit = 15) {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `WITH yj_entities AS (
+              SELECT DISTINCT e.id
+              FROM justice_funding jf
+              JOIN gs_entities e ON e.abn = jf.recipient_abn
+              WHERE jf.state = '${state}' AND jf.${topicFilter(topic)}
+                AND jf.recipient_abn IS NOT NULL
+            )
+            SELECT bi.person_name_display as person_name, bi.board_count,
+              bi.organisations::text
+            FROM mv_board_interlocks bi
+            WHERE bi.board_count >= 2
+              AND EXISTS (
+                SELECT 1 FROM person_roles pr
+                WHERE pr.person_name = bi.person_name_normalised
+                  AND pr.entity_id IN (SELECT id FROM yj_entities)
+              )
+            ORDER BY bi.board_count DESC
+            LIMIT ${limit}`,
+  })) as Promise<Array<{
+    person_name: string;
+    board_count: number;
+    organisations: string; // JSON array text
+  }> | null>;
+}
+
+/**
+ * Political donations by funded orgs in a state/topic
+ */
+export async function getTrackerDonations(state: string, topic: Topic, limit = 15) {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT pd.donor_name, pd.donation_to,
+              SUM(pd.amount)::bigint as total,
+              COUNT(*)::int as records,
+              MIN(pd.financial_year) as from_fy,
+              MAX(pd.financial_year) as to_fy
+       FROM political_donations pd
+       WHERE pd.donor_abn IN (
+         SELECT DISTINCT recipient_abn FROM justice_funding
+         WHERE state = '${state}' AND ${topicFilter(topic)}
+           AND recipient_abn IS NOT NULL
+       )
+       GROUP BY pd.donor_name, pd.donation_to
+       ORDER BY total DESC
+       LIMIT ${limit}`,
+  })) as Promise<Array<{
+    donor_name: string;
+    donation_to: string;
+    total: number;
+    records: number;
+    from_fy: string;
+    to_fy: string;
+  }> | null>;
+}
+
+/**
+ * Budget totals from SDS (the "Total" rows for headline numbers)
+ */
+export async function getBudgetTotals(state: string) {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT program_name, amount_dollars::bigint as amount, financial_year
+       FROM justice_funding
+       WHERE state = '${state}' AND source LIKE '%-budget-sds'
+         AND program_name LIKE 'Total%'
+       ORDER BY financial_year DESC`,
+  })) as Promise<Array<{
+    program_name: string;
+    amount: number;
+    financial_year: string;
+  }> | null>;
+}
+
 export async function getPiccFundingFlow() {
   const supabase = getServiceSupabase();
   return safe(supabase.rpc('exec_sql', {
