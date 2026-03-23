@@ -959,11 +959,11 @@ export async function getEvidenceCoverage(topic: Topic, state?: string) {
   const stateFilter = state ? ` AND ai.geography::text ILIKE '%${state}%'` : '';
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT COUNT(DISTINCT ai.id)::int as total_interventions,
-              COUNT(DISTINCT ae.intervention_id)::int as with_evidence,
-              (COUNT(DISTINCT ai.id) - COUNT(DISTINCT ae.intervention_id))::int as without_evidence,
-              ROUND(COUNT(DISTINCT ae.intervention_id)::numeric / NULLIF(COUNT(DISTINCT ai.id),0) * 100)::int as coverage_pct
+              COUNT(DISTINCT aie.intervention_id)::int as with_evidence,
+              (COUNT(DISTINCT ai.id) - COUNT(DISTINCT aie.intervention_id))::int as without_evidence,
+              ROUND(COUNT(DISTINCT aie.intervention_id)::numeric / NULLIF(COUNT(DISTINCT ai.id),0) * 100)::int as coverage_pct
        FROM alma_interventions ai
-       LEFT JOIN alma_evidence ae ON ae.intervention_id = ai.id
+       LEFT JOIN alma_intervention_evidence aie ON aie.intervention_id = ai.id
        WHERE ai.${topicFilter(topic)}${stateFilter}`,
   })) as Promise<Array<{
     total_interventions: number;
@@ -981,10 +981,11 @@ export async function getEvidenceGapDetail(topic: Topic, state?: string, limit =
   const stateFilter = state ? ` AND ai.geography::text ILIKE '%${state}%'` : '';
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT ai.name, ai.type, ai.evidence_level,
-              CASE WHEN ae.id IS NOT NULL THEN true ELSE false END as has_evidence,
+              CASE WHEN aie.id IS NOT NULL THEN true ELSE false END as has_evidence,
               ae.evidence_type, ae.methodology
        FROM alma_interventions ai
-       LEFT JOIN alma_evidence ae ON ae.intervention_id = ai.id
+       LEFT JOIN alma_intervention_evidence aie ON aie.intervention_id = ai.id
+       LEFT JOIN alma_evidence ae ON ae.id = aie.evidence_id
        WHERE ai.${topicFilter(topic)}${stateFilter}
        ORDER BY has_evidence, ai.name
        LIMIT ${limit}`,
