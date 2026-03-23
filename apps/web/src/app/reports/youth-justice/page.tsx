@@ -22,6 +22,7 @@ import {
   getYjFoundations,
   getAnaoYjCompliance,
   getYjMmrStats,
+  getStateComparisonMetrics,
   money,
 } from '@/lib/services/report-service';
 
@@ -122,6 +123,8 @@ type MmrStats = {
   total_value: number; mmr_value: number; mmr_cc_value: number;
 };
 
+type ComparisonRow = { jurisdiction: string; metric_name: string; metric_value: number; metric_unit: string; period: string; cohort: string | null };
+
 export type YouthJusticeReport = {
   stateTotals: StateTotal[];
   spendingTimeSeries: StateSpending[];
@@ -144,10 +147,11 @@ export type YouthJusticeReport = {
   foundations: FoundationRow[];
   anaoCompliance: AnaoCompliance[];
   mmrStats: MmrStats | null;
+  stateMetrics: ComparisonRow[];
 };
 
 async function getReport(): Promise<YouthJusticeReport> {
-  const [rogsData, almaData, contractsData, grantsData, ndisData, dssData, yjIndicatorsData, heatmapData, almaCountVal, almaByLgaData, accoGapData, remotenessData, unfundedData, revolvingDoorData, foundationsData, anaoData, mmrData] = await Promise.all([
+  const [rogsData, almaData, contractsData, grantsData, ndisData, dssData, yjIndicatorsData, heatmapData, almaCountVal, almaByLgaData, accoGapData, remotenessData, unfundedData, revolvingDoorData, foundationsData, anaoData, mmrData, stateMetricsData] = await Promise.all([
     getRogsTimeSeries('ROGS Youth Justice', ALL_STATES),
     getAlmaInterventions('youth-justice'),
     getYouthJusticeContracts(15),
@@ -165,6 +169,10 @@ async function getReport(): Promise<YouthJusticeReport> {
     getYjFoundations(10),
     getAnaoYjCompliance(),
     getYjMmrStats(),
+    getStateComparisonMetrics([
+      'avg_daily_detention', 'indigenous_overrepresentation_ratio',
+      'detention_rate_per_10k', 'pct_unsentenced', 'cost_per_day_detention',
+    ]),
   ]);
 
   // Process ROGS data into time series and state totals
@@ -262,6 +270,7 @@ async function getReport(): Promise<YouthJusticeReport> {
     foundations: (foundationsData as FoundationRow[] | null) || [],
     anaoCompliance: (anaoData as AnaoCompliance[] | null) || [],
     mmrStats: ((mmrData as MmrStats[] | null) || [])[0] || null,
+    stateMetrics: (stateMetricsData as ComparisonRow[] | null) || [],
   };
 }
 
@@ -278,6 +287,21 @@ const stateNames: Record<string, string> = {
 
 export default async function YouthJusticeReportPage() {
   const report = await getReport();
+
+  // Build state metric lookup from comparison data
+  const sm: Record<string, Record<string, number>> = {};
+  for (const row of report.stateMetrics) {
+    if (!sm[row.jurisdiction]) sm[row.jurisdiction] = {};
+    const existing = sm[row.jurisdiction][row.metric_name];
+    if (existing === undefined || row.cohort === 'all') {
+      sm[row.jurisdiction][row.metric_name] = row.metric_value;
+    }
+  }
+  const sv = (state: string, metric: string) => sm[state]?.[metric] ?? null;
+
+  // National outcome stats
+  const natDetention = sv('National', 'avg_daily_detention');
+  const natOverrep = sv('National', 'indigenous_overrepresentation_ratio');
 
   // DSS uses full state names — map to abbreviations
   const dssStateMap: Record<string, string> = {
@@ -340,24 +364,81 @@ export default async function YouthJusticeReportPage() {
       </div>
 
       {/* ━━━━ Hero Stats ━━━━ */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-10">
         <div className="bg-red-50 border border-red-200 rounded-xl p-5 text-center">
           <div className="text-2xl sm:text-3xl font-black text-red-600">{money(report.nationalTotal)}</div>
-          <div className="text-xs text-gray-500 mt-1">Total 10-Year Spend (All States)</div>
+          <div className="text-xs text-gray-500 mt-1">10-Year Spend</div>
         </div>
         <div className="bg-red-50 border border-red-200 rounded-xl p-5 text-center">
-          <div className="text-2xl sm:text-3xl font-black text-red-600">{money(report.nationalDetention)}</div>
-          <div className="text-xs text-gray-500 mt-1">Detention Spending</div>
+          <div className="text-2xl sm:text-3xl font-black text-red-600">{natDetention?.toLocaleString() ?? '—'}</div>
+          <div className="text-xs text-gray-500 mt-1">Avg Daily Detention</div>
         </div>
-        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5 text-center">
-          <div className="text-2xl sm:text-3xl font-black text-emerald-600">{money(report.nationalCommunity)}</div>
-          <div className="text-xs text-gray-500 mt-1">Community Supervision</div>
+        <div className="bg-red-50 border border-red-200 rounded-xl p-5 text-center">
+          <div className="text-2xl sm:text-3xl font-black text-red-600">{natOverrep ? `${natOverrep}x` : '—'}</div>
+          <div className="text-xs text-gray-500 mt-1">First Nations Overrep.</div>
         </div>
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 text-center">
-          <div className="text-2xl sm:text-3xl font-black text-amber-600">{report.almaCount}</div>
-          <div className="text-xs text-gray-500 mt-1">Evidence-Based Alternatives</div>
+          <div className="text-2xl sm:text-3xl font-black text-amber-600">{report.detentionCommunityRatio}:1</div>
+          <div className="text-xs text-gray-500 mt-1">Detention vs Community $</div>
+        </div>
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 text-center">
+          <div className="text-2xl sm:text-3xl font-black text-amber-600">{sv('National', 'pct_unsentenced') ?? '—'}%</div>
+          <div className="text-xs text-gray-500 mt-1">On Remand (Unsentenced)</div>
+        </div>
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5 text-center">
+          <div className="text-2xl sm:text-3xl font-black text-emerald-600">{report.almaCount}</div>
+          <div className="text-xs text-gray-500 mt-1">ALMA Alternatives</div>
         </div>
       </div>
+
+      {/* ━━━━ State Dashboard Cards ━━━━ */}
+      <section className="mb-12">
+        <h2 className="text-xl font-black text-bauhaus-black uppercase tracking-wider mb-1">State by State</h2>
+        <p className="text-sm text-bauhaus-muted mb-4">Click any state for a deep dive into funding, evidence, and political context.</p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {report.stateTotals.map(st => {
+            const det = sv(st.state, 'avg_daily_detention');
+            const overrep = sv(st.state, 'indigenous_overrepresentation_ratio');
+            const rate = sv(st.state, 'detention_rate_per_10k');
+            const remand = sv(st.state, 'pct_unsentenced');
+            const isQld = st.state === 'QLD';
+            return (
+              <Link
+                key={st.state}
+                href={`/reports/youth-justice/${st.state.toLowerCase()}`}
+                className={`border-2 rounded-xl p-4 hover:shadow-md transition-all group ${isQld ? 'border-bauhaus-red bg-red-50/30' : 'border-gray-200 hover:border-bauhaus-black'}`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-lg font-black group-hover:text-bauhaus-red transition-colors">{st.state}</span>
+                  <span className="text-[10px] font-bold text-gray-400">{stateNames[st.state]?.split(' ')[0]}</span>
+                </div>
+                <div className="text-sm font-black text-gray-800 mb-2">{money(st.latest_year)}<span className="text-[10px] font-bold text-gray-400 ml-1">/yr</span></div>
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Detention</span>
+                    <span className="font-bold text-gray-700">{det?.toLocaleString() ?? '—'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Rate/10K</span>
+                    <span className="font-bold text-gray-700">{rate ?? '—'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Overrep.</span>
+                    <span className={`font-bold ${overrep && overrep >= 20 ? 'text-red-600' : 'text-gray-700'}`}>{overrep ? `${overrep}x` : '—'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Remand</span>
+                    <span className={`font-bold ${remand && remand >= 80 ? 'text-red-600' : 'text-gray-700'}`}>{remand ? `${remand}%` : '—'}</span>
+                  </div>
+                </div>
+                {isQld && (
+                  <div className="mt-2 text-[10px] font-bold text-bauhaus-red uppercase tracking-wider">Accountability Tracker &rarr;</div>
+                )}
+              </Link>
+            );
+          })}
+        </div>
+      </section>
 
       {/* ━━━━ Five Structural Failures ━━━━ */}
       <section className="mb-12">
@@ -687,39 +768,62 @@ export default async function YouthJusticeReportPage() {
         <FollowTheChild rows={report.heatmapRows} />
       )}
 
-      {/* ━━━━ State Comparison Table ━━━━ */}
+      {/* ━━━━ State Comparison Table — Spending + Outcomes ━━━━ */}
       <section className="mb-10">
-        <h2 className="text-xl font-black text-bauhaus-black uppercase tracking-wider mb-1">State-by-State Spending</h2>
-        <p className="text-sm text-bauhaus-muted mb-4">ROGS Youth Justice data, 2015-16 to 2024-25</p>
+        <h2 className="text-xl font-black text-bauhaus-black uppercase tracking-wider mb-1">State-by-State Comparison</h2>
+        <p className="text-sm text-bauhaus-muted mb-4">ROGS spending (2015-2025) and AIHW outcomes data side by side. Click any state for a deep dive.</p>
         <div className="overflow-x-auto border-4 border-bauhaus-black rounded-sm">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-bauhaus-black text-white text-left">
-                <th className="px-4 py-3 font-black uppercase tracking-wider text-xs">State</th>
-                <th className="px-4 py-3 font-black uppercase tracking-wider text-xs text-right">10-Year Total</th>
-                <th className="px-4 py-3 font-black uppercase tracking-wider text-xs text-right">Detention</th>
-                <th className="px-4 py-3 font-black uppercase tracking-wider text-xs text-right">Community</th>
-                <th className="px-4 py-3 font-black uppercase tracking-wider text-xs text-right">Latest Year</th>
-                <th className="px-4 py-3 font-black uppercase tracking-wider text-xs text-right">Growth</th>
+                <th className="px-3 py-3 font-black uppercase tracking-wider text-[10px]">State</th>
+                <th className="px-3 py-3 font-black uppercase tracking-wider text-[10px] text-right">10yr Total</th>
+                <th className="px-3 py-3 font-black uppercase tracking-wider text-[10px] text-right">Latest Year</th>
+                <th className="px-3 py-3 font-black uppercase tracking-wider text-[10px] text-right">Growth</th>
+                <th className="px-3 py-3 font-black uppercase tracking-wider text-[10px] text-right border-l border-gray-600">Detention</th>
+                <th className="px-3 py-3 font-black uppercase tracking-wider text-[10px] text-right">Rate/10K</th>
+                <th className="px-3 py-3 font-black uppercase tracking-wider text-[10px] text-right">Overrep.</th>
+                <th className="px-3 py-3 font-black uppercase tracking-wider text-[10px] text-right">Remand</th>
+                <th className="px-3 py-3 font-black uppercase tracking-wider text-[10px] text-right">$/Day</th>
               </tr>
             </thead>
             <tbody>
-              {report.stateTotals.map((st, i) => (
-                <tr key={st.state} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                  <td className="px-4 py-3 font-bold">{stateNames[st.state] || st.state}</td>
-                  <td className="px-4 py-3 text-right font-mono text-sm">{money(st.total_10yr)}</td>
-                  <td className="px-4 py-3 text-right font-mono text-sm text-red-600">{money(st.detention_10yr)}</td>
-                  <td className="px-4 py-3 text-right font-mono text-sm text-emerald-600">{money(st.community_10yr)}</td>
-                  <td className="px-4 py-3 text-right font-mono text-sm">{money(st.latest_year)}</td>
-                  <td className="px-4 py-3 text-right font-mono text-sm">
-                    <span className={st.growth_pct > 50 ? 'text-red-600 font-bold' : 'text-gray-600'}>
-                      +{st.growth_pct}%
-                    </span>
-                  </td>
-                </tr>
-              ))}
+              {report.stateTotals.map((st, i) => {
+                const det = sv(st.state, 'avg_daily_detention');
+                const rate = sv(st.state, 'detention_rate_per_10k');
+                const overrep = sv(st.state, 'indigenous_overrepresentation_ratio');
+                const remand = sv(st.state, 'pct_unsentenced');
+                const cost = sv(st.state, 'cost_per_day_detention');
+                return (
+                  <tr key={st.state} className={`${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50/50 cursor-pointer`}>
+                    <td className="px-3 py-2.5">
+                      <Link href={`/reports/youth-justice/${st.state.toLowerCase()}`} className="font-bold text-bauhaus-blue hover:underline">
+                        {st.state}
+                      </Link>
+                    </td>
+                    <td className="px-3 py-2.5 text-right font-mono text-xs">{money(st.total_10yr)}</td>
+                    <td className="px-3 py-2.5 text-right font-mono text-xs">{money(st.latest_year)}</td>
+                    <td className="px-3 py-2.5 text-right font-mono text-xs">
+                      <span className={st.growth_pct > 50 ? 'text-red-600 font-bold' : 'text-gray-600'}>+{st.growth_pct}%</span>
+                    </td>
+                    <td className="px-3 py-2.5 text-right font-mono text-xs border-l border-gray-200">{det?.toLocaleString() ?? '—'}</td>
+                    <td className="px-3 py-2.5 text-right font-mono text-xs">{rate ?? '—'}</td>
+                    <td className="px-3 py-2.5 text-right font-mono text-xs">
+                      <span className={overrep && overrep >= 20 ? 'text-red-600 font-bold' : ''}>{overrep ? `${overrep}x` : '—'}</span>
+                    </td>
+                    <td className="px-3 py-2.5 text-right font-mono text-xs">
+                      <span className={remand && remand >= 80 ? 'text-red-600 font-bold' : ''}>{remand ? `${remand}%` : '—'}</span>
+                    </td>
+                    <td className="px-3 py-2.5 text-right font-mono text-xs">{cost ? `$${cost.toLocaleString()}` : '—'}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
+          <div className="bg-gray-50 px-3 py-2 text-[10px] text-gray-500 border-t flex justify-between">
+            <span>Sources: Productivity Commission ROGS 2026, AIHW Youth Justice 2023-24</span>
+            <span>Overrep. = Indigenous detention overrepresentation ratio</span>
+          </div>
         </div>
       </section>
 
