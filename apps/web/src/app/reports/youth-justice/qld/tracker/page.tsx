@@ -1,8 +1,10 @@
+import { Fragment } from 'react';
 import Link from 'next/link';
 import {
   getBudgetCommitments,
   getBudgetTotals,
   getTopOrgs,
+  getProgramsWithPartners,
   getTrackerLeadership,
   getTrackerInterlocks,
   getTrackerDonations,
@@ -47,6 +49,7 @@ type RevolvingDoorRow = {
   total_donated: number; total_contracts: number; total_funded: number;
   parties_funded: string; distinct_buyers: number; is_community_controlled: boolean;
 };
+type PartnerRow = { program_name: string; recipient_name: string; recipient_abn: string | null; total: number | null; grants: number; gs_id: string | null; is_community_controlled: boolean | null };
 type MetricRow = { metric_name: string; metric_value: number; metric_unit: string; period: string; cohort: string | null; source: string; notes: string | null };
 type ComparisonRow = { jurisdiction: string; metric_name: string; metric_value: number; metric_unit: string; period: string; cohort: string | null };
 type CtgRow = { rate: number; period: string; notes: string | null };
@@ -58,6 +61,7 @@ async function getTrackerData() {
     budgetCommitments,
     budgetTotals,
     topOrgs,
+    programPartners,
     leadership,
     interlocks,
     donations,
@@ -77,6 +81,7 @@ async function getTrackerData() {
     getBudgetCommitments('QLD'),
     getBudgetTotals('QLD'),
     getTopOrgs('youth-justice', 25, 'QLD'),
+    getProgramsWithPartners('youth-justice', 'QLD', { namedOnly: true }),
     getTrackerLeadership('QLD', 'youth-justice', 20),
     getTrackerInterlocks('QLD', 'youth-justice', 15),
     getTrackerDonations('QLD', 'youth-justice', 15),
@@ -98,10 +103,19 @@ async function getTrackerData() {
     getOversightData('QLD'),
   ]);
 
+  // Group partners by program name
+  const partnersByProgram: Record<string, PartnerRow[]> = {};
+  const rawPartners = (programPartners as PartnerRow[] | null) || [];
+  for (const p of rawPartners) {
+    if (!partnersByProgram[p.program_name]) partnersByProgram[p.program_name] = [];
+    partnersByProgram[p.program_name].push(p);
+  }
+
   return {
     budgetCommitments: (budgetCommitments as BudgetRow[] | null) || [],
     budgetTotals: (budgetTotals as BudgetTotal[] | null) || [],
     topOrgs: (topOrgs as OrgRow[] | null) || [],
+    partnersByProgram,
     leadership: (leadership as LeaderRow[] | null) || [],
     interlocks: (interlocks as InterlockRow[] | null) || [],
     donations: (donations as DonationRow[] | null) || [],
@@ -138,7 +152,13 @@ function parseOrgs(json: string): Array<{ canonical_name: string; abn: string }>
 
 /** Look up a metric value from the outcomes array */
 function m(metrics: MetricRow[], name: string, cohort?: string): number | null {
-  const row = metrics.find(r => r.metric_name === name && (cohort ? r.cohort === cohort : !r.cohort));
+  const c = cohort ?? 'all';
+  const row = metrics.find(r => r.metric_name === name && r.cohort === c);
+  // Fall back to matching cohort for indigenous-specific metrics
+  if (!row && !cohort) {
+    const alt = metrics.find(r => r.metric_name === name && r.cohort === 'indigenous');
+    return alt?.metric_value ?? null;
+  }
   return row?.metric_value ?? null;
 }
 
@@ -168,11 +188,15 @@ export default async function QldTrackerPage() {
   const programItems = data.budgetCommitments.filter(b => b.amount);
   const totalOrgs = new Set(data.topOrgs.map(o => o.recipient_name)).size;
 
-  // Build lookup map for state comparison
+  // Build lookup map for state comparison — prefer 'all' cohort, fallback to 'indigenous'/null
   const comp: Record<string, Record<string, number>> = {};
   for (const row of data.comparison) {
     if (!comp[row.metric_name]) comp[row.metric_name] = {};
-    comp[row.metric_name][row.jurisdiction] = row.metric_value;
+    const existing = comp[row.metric_name][row.jurisdiction];
+    // Only overwrite if no existing value, or this row is 'all' cohort (preferred)
+    if (existing === undefined || row.cohort === 'all') {
+      comp[row.metric_name][row.jurisdiction] = row.metric_value;
+    }
   }
   const cv = (metric: string, jur: string) => comp[metric]?.[jur] ?? null;
 
@@ -228,6 +252,34 @@ export default async function QldTrackerPage() {
           <div className="text-2xl sm:text-3xl font-black text-emerald-600">{data.coverage?.coverage_pct ?? '—'}%</div>
           <div className="text-xs text-gray-500 mt-1">Evidence Coverage</div>
         </div>
+      </div>
+
+      {/* Editorial Summary */}
+      <div className="bg-gray-900 text-white rounded-xl p-6 mb-10 leading-relaxed">
+        <h2 className="text-lg font-black uppercase tracking-wider mb-3">The Story in Three Numbers</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+          <div className="border-l-4 border-red-500 pl-3">
+            <div className="text-2xl font-black text-red-400">{m(om, 'cost_per_day_detention') ? `$${fmt(Math.round(m(om, 'cost_per_day_detention')! * 365))}` : '—'}</div>
+            <div className="text-xs text-gray-400">per child per year in detention</div>
+          </div>
+          <div className="border-l-4 border-amber-500 pl-3">
+            <div className="text-2xl font-black text-amber-400">{m(om, 'recidivism_6_months') ?? '—'}%</div>
+            <div className="text-xs text-gray-400">reoffend within 6 months</div>
+          </div>
+          <div className="border-l-4 border-emerald-500 pl-3">
+            <div className="text-2xl font-black text-emerald-400">{m(om, 'on_country_program_spend') ? `$${(m(om, 'on_country_program_spend')! / 1e6).toFixed(1)}M` : '—'}</div>
+            <div className="text-xs text-gray-400">spent on On Country programs</div>
+          </div>
+        </div>
+        <p className="text-sm text-gray-300">
+          Queensland spends {m(om, 'cost_per_day_detention') && m(om, 'cost_per_day_community')
+            ? `${(m(om, 'cost_per_day_detention')! / m(om, 'cost_per_day_community')!).toFixed(0)}x more`
+            : 'vastly more'} on locking children up than supervising them in community.
+          {m(om, 'recidivism_6_months') ? ` ${m(om, 'recidivism_6_months')}% reoffend within 6 months — detention is not working.` : ''}
+          {' '}Meanwhile, {m(om, 'pct_first_nations_in_detention') ?? '—'}% of children in detention are First Nations, despite being {m(om, 'indigenous_overrepresentation_ratio') ? `${m(om, 'indigenous_overrepresentation_ratio')}x overrepresented` : 'vastly overrepresented'}.
+          {' '}Of the ${latestTotal ? money(latestTotal.amount) : '—'} budget, the largest item is {programItems[0]?.program_name ?? 'unknown'} (${programItems[0] ? money(programItems[0].amount) : '—'}) — primarily supervision and surveillance, not rehabilitation.
+          {' '}Community-led alternatives receive a fraction: On Country programs get just ${m(om, 'on_country_program_spend') ? `${(m(om, 'on_country_program_spend')! / 1e6).toFixed(1)}M` : '—'}/year, and that amount is declining.
+        </p>
       </div>
 
       {/* Section 0: Outcomes Reality Check — from outcomes_metrics DB */}
@@ -344,7 +396,7 @@ export default async function QldTrackerPage() {
                 <li className="flex gap-2"><span className="font-black text-red-500 shrink-0">&bull;</span>Avg {m(om, 'avg_days_on_remand') ?? '—'} days on remand before resolution</li>
                 <li className="flex gap-2"><span className="font-black text-red-500 shrink-0">&bull;</span>{m(om, 'use_of_force_incidents')?.toLocaleString() ?? '—'} use-of-force incidents</li>
                 <li className="flex gap-2"><span className="font-black text-red-500 shrink-0">&bull;</span>{m(om, 'self_harm_incidents') ?? '—'} self-harm incidents in detention</li>
-                <li className="flex gap-2"><span className="font-black text-amber-500 shrink-0">&bull;</span>On Country programs: only ${m(om, 'on_country_program_spend') ?? '—'}M/year (declining)</li>
+                <li className="flex gap-2"><span className="font-black text-amber-500 shrink-0">&bull;</span>On Country programs: only ${m(om, 'on_country_program_spend') ? (m(om, 'on_country_program_spend')! / 1e6).toFixed(1) : '—'}M/year (declining)</li>
                 <li className="flex gap-2"><span className="font-black text-amber-500 shrink-0">&bull;</span>Closing the Gap Target 11: <span className="font-bold text-red-600">Worsening</span></li>
               </ul>
             </div>
@@ -679,19 +731,66 @@ export default async function QldTrackerPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b-2 border-bauhaus-black">
-                  <th className="text-left py-2 font-black uppercase tracking-wider text-xs">Program</th>
+                  <th className="text-left py-2 font-black uppercase tracking-wider text-xs">Program / Delivery Partner</th>
                   <th className="text-right py-2 font-black uppercase tracking-wider text-xs">Amount</th>
                   <th className="text-right py-2 font-black uppercase tracking-wider text-xs">FY</th>
                 </tr>
               </thead>
               <tbody>
-                {programItems.map((b, i) => (
-                  <tr key={i} className="border-b border-gray-200 hover:bg-gray-50">
-                    <td className="py-2 font-medium">{b.program_name}</td>
-                    <td className="py-2 text-right font-bold">{money(b.amount)}</td>
-                    <td className="py-2 text-right text-gray-600">{b.financial_year}</td>
-                  </tr>
-                ))}
+                {programItems.map((b, i) => {
+                  // Match budget program to justice_funding partners by fuzzy substring
+                  const budgetKey = b.program_name.toLowerCase();
+                  const budgetWords = budgetKey.split(/\s+/).slice(0, 2).join(' ');
+                  const partners: PartnerRow[] = [];
+                  const seen = new Set<string>();
+                  for (const [progName, rows] of Object.entries(data.partnersByProgram)) {
+                    const pk = progName.toLowerCase();
+                    if (pk.includes(budgetKey) || budgetKey.includes(pk)
+                      || pk.split(/\s+/).slice(0, 2).join(' ') === budgetWords) {
+                      for (const r of rows) {
+                        const key = r.recipient_name;
+                        if (!seen.has(key)) { seen.add(key); partners.push(r); }
+                      }
+                    }
+                  }
+                  const shown = partners.slice(0, 10);
+                  const remaining = partners.length - shown.length;
+                  return (
+                    <Fragment key={i}>
+                      <tr className="border-b border-gray-200 bg-gray-50/80">
+                        <td className="py-2 font-bold">{b.program_name}</td>
+                        <td className="py-2 text-right font-black">{money(b.amount)}</td>
+                        <td className="py-2 text-right text-gray-600">{b.financial_year}</td>
+                      </tr>
+                      {shown.map((pt, j) => (
+                        <tr key={`${i}-${j}`} className="border-b border-gray-100 hover:bg-blue-50/50">
+                          <td className="py-1.5 pl-6">
+                            <span className="text-gray-400 mr-1.5">&rarr;</span>
+                            {pt.gs_id ? (
+                              <Link href={`/entity/${pt.gs_id}`} className="text-bauhaus-blue hover:underline">
+                                {pt.recipient_name}
+                              </Link>
+                            ) : (
+                              <span className="text-gray-700">{pt.recipient_name}</span>
+                            )}
+                            {pt.is_community_controlled && (
+                              <span className="ml-1.5 text-[10px] font-bold bg-emerald-100 text-emerald-700 px-1 py-0.5 rounded uppercase">ACCO</span>
+                            )}
+                          </td>
+                          <td className="py-1.5 text-right">{money(pt.total)}</td>
+                          <td />
+                        </tr>
+                      ))}
+                      {remaining > 0 && (
+                        <tr className="border-b border-gray-200">
+                          <td className="py-1.5 pl-6 text-xs text-gray-400 italic" colSpan={3}>
+                            + {remaining} more delivery partners
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>

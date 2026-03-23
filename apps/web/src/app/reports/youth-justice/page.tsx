@@ -326,6 +326,17 @@ export default async function YouthJusticeReportPage() {
           <span className="text-[10px] font-bold bg-gray-100 text-gray-600 px-2 py-1 rounded uppercase tracking-wider">JusticeHub</span>
           <span className="text-[10px] font-bold bg-gray-100 text-gray-600 px-2 py-1 rounded uppercase tracking-wider">ROGS 2015-2025</span>
         </div>
+        {/* State navigation */}
+        <div className="flex flex-wrap gap-2 mt-5">
+          <Link href="/reports/youth-justice/national" className="text-xs font-black uppercase tracking-wider px-3 py-1.5 border-2 border-bauhaus-black bg-bauhaus-black text-white rounded hover:bg-gray-800 transition-colors">
+            National
+          </Link>
+          {ALL_STATES.map(s => (
+            <Link key={s} href={`/reports/youth-justice/${s.toLowerCase()}`} className="text-xs font-black uppercase tracking-wider px-3 py-1.5 border-2 border-bauhaus-black rounded hover:bg-bauhaus-black hover:text-white transition-colors">
+              {s}
+            </Link>
+          ))}
+        </div>
       </div>
 
       {/* ━━━━ Hero Stats ━━━━ */}

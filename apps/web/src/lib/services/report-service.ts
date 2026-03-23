@@ -57,6 +57,14 @@ export async function getTopOrgs(topic: Topic, limit = 25, state?: string) {
        FROM justice_funding jf
        LEFT JOIN gs_entities e ON e.abn = jf.recipient_abn AND jf.recipient_abn IS NOT NULL
        WHERE jf.${topicFilter(topic)}${stateFilter}
+         AND jf.program_name NOT LIKE 'ROGS%'
+         AND jf.program_name NOT LIKE 'Total%'
+         AND jf.recipient_name NOT LIKE 'Youth Justice -%'
+         AND jf.recipient_name NOT LIKE 'Total%'
+         AND jf.recipient_name NOT LIKE 'Department of%'
+         AND jf.recipient_name NOT LIKE 'State of%'
+         AND jf.recipient_name NOT LIKE 'Multiple%'
+         AND jf.amount_dollars IS NOT NULL
        GROUP BY jf.recipient_name, jf.recipient_abn, jf.state, e.gs_id
        ORDER BY total DESC
        LIMIT ${limit}`,
@@ -133,6 +141,7 @@ export async function getFundingByLga(topic: Topic, limit = 20, state?: string) 
        JOIN gs_entities e ON e.abn = jf.recipient_abn AND jf.recipient_abn IS NOT NULL
        WHERE jf.${topicFilter(topic)}${stateFilter}
          AND e.lga_name IS NOT NULL
+         ${state ? `AND e.state = '${state}'` : ''}
        GROUP BY e.lga_name, e.state
        ORDER BY total_funding DESC
        LIMIT ${limit}`,
@@ -533,8 +542,9 @@ export async function getAlmaByLga(topic: Topic) {
 /**
  * Utility: format money
  */
-export function money(n: number | null): string {
-  if (!n) return '—';
+export function money(n: number | null | undefined): string {
+  if (n == null) return '—';
+  if (n === 0) return '$0';
   if (n >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(1)}B`;
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
@@ -1066,6 +1076,79 @@ export async function getYjLobbyingConnections(topic: Topic, state?: string, lim
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 /**
+ * Programs with their delivery partners — returns each org under each program, with entity links
+ */
+export async function getProgramsWithPartners(topic: Topic, state: string, opts?: { namedOnly?: boolean }) {
+  const supabase = getServiceSupabase();
+  const deptFilter = opts?.namedOnly
+    ? `AND jf.program_name NOT LIKE 'Community%Youth Justice%'
+         AND jf.program_name NOT LIKE 'Community,%Youth Justice%'`
+    : '';
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT jf.program_name, jf.recipient_name, jf.recipient_abn,
+              COALESCE(SUM(jf.amount_dollars)::bigint, org_total.total) as total,
+              COUNT(*)::int as grants,
+              e.gs_id, e.is_community_controlled
+       FROM justice_funding jf
+       LEFT JOIN gs_entities e ON e.abn = jf.recipient_abn AND jf.recipient_abn IS NOT NULL
+       LEFT JOIN LATERAL (
+         SELECT SUM(jf2.amount_dollars)::bigint as total
+         FROM justice_funding jf2
+         WHERE jf2.state = '${state}'
+           AND jf2.amount_dollars IS NOT NULL
+           AND (
+             (jf.recipient_abn IS NOT NULL AND jf2.recipient_abn = jf.recipient_abn)
+             OR (jf.recipient_abn IS NULL AND jf2.recipient_name = jf.recipient_name)
+           )
+       ) org_total ON true
+       WHERE jf.state = '${state}'
+         AND jf.${topicFilter(topic)}
+         AND jf.program_name NOT LIKE 'ROGS%'
+         AND jf.program_name NOT LIKE 'Total%'
+         AND jf.program_name NOT LIKE 'Government real%'
+         AND jf.program_name NOT LIKE 'Cost per%'
+         AND jf.program_name NOT LIKE 'Net capital%'
+         AND jf.program_name NOT LIKE 'Real recurrent%'
+         ${deptFilter}
+         AND jf.recipient_name NOT LIKE 'Department of%'
+         AND jf.recipient_name NOT LIKE 'Multiple%'
+         AND jf.recipient_name NOT LIKE 'State of%'
+         AND jf.recipient_name NOT LIKE 'Total%'
+         AND jf.recipient_name NOT LIKE 'Youth Justice -%'
+       GROUP BY jf.program_name, jf.recipient_name, jf.recipient_abn, e.gs_id, e.is_community_controlled, org_total.total
+       ORDER BY jf.program_name, total DESC NULLS LAST
+       LIMIT 500`,
+  })) as Promise<Array<{
+    program_name: string;
+    recipient_name: string;
+    recipient_abn: string | null;
+    total: number | null;
+    grants: number;
+    gs_id: string | null;
+    is_community_controlled: boolean | null;
+  }> | null>;
+}
+
+/**
+ * ROGS expenditure breakdown for a state (detention-based, community-based, group conferencing)
+ */
+export async function getRogsExpenditure(state: string) {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT program_name, SUM(amount_dollars)::bigint as total, COUNT(*)::int as years
+       FROM justice_funding
+       WHERE state = '${state}' AND source = 'rogs-2026'
+         AND program_name NOT LIKE '%Total%'
+       GROUP BY program_name
+       ORDER BY total DESC`,
+  })) as Promise<Array<{
+    program_name: string;
+    total: number;
+    years: number;
+  }> | null>;
+}
+
+/**
  * State-specific: funding by operational program (excludes ROGS aggregates)
  */
 export async function getFundingByProgram(topic: Topic, state: string, limit = 20) {
@@ -1080,6 +1163,13 @@ export async function getFundingByProgram(topic: Topic, state: string, limit = 2
          AND ${topicFilter(topic)}
          AND program_name NOT LIKE 'ROGS%'
          AND program_name NOT LIKE 'Total%'
+         AND program_name NOT LIKE 'Government real%'
+         AND program_name NOT LIKE 'Cost per%'
+         AND program_name NOT LIKE 'Net capital%'
+         AND program_name NOT LIKE 'Real recurrent%'
+         AND recipient_name NOT LIKE 'Youth Justice -%'
+         AND recipient_name NOT LIKE 'Total%'
+         AND recipient_name NOT LIKE 'Department of%'
        GROUP BY program_name
        ORDER BY total DESC
        LIMIT ${limit}`,
@@ -1312,11 +1402,11 @@ export async function getStateComparisonMetrics(metricNames: string[], domain = 
   const supabase = getServiceSupabase();
   const nameList = metricNames.map(n => `'${n}'`).join(',');
   return safe(supabase.rpc('exec_sql', {
-    query: `SELECT jurisdiction, metric_name, metric_value::float, metric_unit, period, cohort
+    query: `SELECT DISTINCT ON (metric_name, jurisdiction) jurisdiction, metric_name, metric_value::float, metric_unit, period, cohort
        FROM outcomes_metrics
        WHERE domain = '${domain}' AND metric_name IN (${nameList})
-         AND cohort IS NULL
-       ORDER BY metric_name, jurisdiction`,
+         AND (cohort = 'all' OR cohort = 'indigenous' OR cohort IS NULL)
+       ORDER BY metric_name, jurisdiction, CASE WHEN cohort = 'all' THEN 0 WHEN cohort IS NULL THEN 1 ELSE 2 END, period DESC`,
   })) as Promise<Array<{
     jurisdiction: string;
     metric_name: string;
