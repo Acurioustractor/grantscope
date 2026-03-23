@@ -40,6 +40,7 @@ export async function GET(request: Request) {
         'money-flows': '/api/data?type=money-flows&domain=youth_justice&year=2025',
         'community-orgs': '/api/data?type=community-orgs&domain=youth',
         'government-programs': '/api/data?type=government-programs&jurisdiction=qld',
+        outcomes: '/api/data?type=outcomes&jurisdiction=QLD&domain=youth-justice',
         reports: '/api/data?type=reports',
       },
       health: '/api/data/health',
@@ -218,6 +219,23 @@ export async function GET(request: Request) {
         const { data, error } = await query;
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
         return withPublicHeaders(NextResponse.json({ type: 'government-programs', data, limit, offset }));
+      }
+
+      case 'outcomes': {
+        // Query outcomes metrics, optionally filtered by jurisdiction and domain
+        const jurisdiction = searchParams.get('jurisdiction') || searchParams.get('state');
+        const domain = searchParams.get('domain') || 'youth-justice';
+        const metricName = searchParams.get('metric');
+
+        let sql = `SELECT jurisdiction, domain, metric_name, metric_value, metric_unit, period, cohort, source, notes
+          FROM outcomes_metrics WHERE domain = '${domain.replace(/'/g, "''")}'`;
+        if (jurisdiction) sql += ` AND jurisdiction = '${jurisdiction.toUpperCase().replace(/'/g, "''")}'`;
+        if (metricName) sql += ` AND metric_name = '${metricName.replace(/'/g, "''")}'`;
+        sql += ` ORDER BY jurisdiction, metric_name, period LIMIT ${limit} OFFSET ${offset}`;
+
+        const { data, error } = await supabase.rpc('exec_sql', { query: sql });
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+        return withPublicHeaders(NextResponse.json({ type: 'outcomes', data, limit, offset }));
       }
 
       case 'reports': {

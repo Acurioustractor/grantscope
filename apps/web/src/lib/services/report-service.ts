@@ -1280,6 +1280,118 @@ export async function getBudgetTotals(state: string) {
   }> | null>;
 }
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Outcomes & Accountability Functions
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/**
+ * All outcomes metrics for a jurisdiction + domain
+ */
+export async function getOutcomesMetrics(jurisdiction: string, domain = 'youth-justice') {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT metric_name, metric_value::float, metric_unit, period, cohort, source, notes
+       FROM outcomes_metrics
+       WHERE jurisdiction = '${jurisdiction}' AND domain = '${domain}'
+       ORDER BY metric_name, period`,
+  })) as Promise<Array<{
+    metric_name: string;
+    metric_value: number;
+    metric_unit: string;
+    period: string;
+    cohort: string | null;
+    source: string;
+    notes: string | null;
+  }> | null>;
+}
+
+/**
+ * State comparison: specific metrics across all jurisdictions
+ */
+export async function getStateComparisonMetrics(metricNames: string[], domain = 'youth-justice') {
+  const supabase = getServiceSupabase();
+  const nameList = metricNames.map(n => `'${n}'`).join(',');
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT jurisdiction, metric_name, metric_value::float, metric_unit, period, cohort
+       FROM outcomes_metrics
+       WHERE domain = '${domain}' AND metric_name IN (${nameList})
+         AND cohort IS NULL
+       ORDER BY metric_name, jurisdiction`,
+  })) as Promise<Array<{
+    jurisdiction: string;
+    metric_name: string;
+    metric_value: number;
+    metric_unit: string;
+    period: string;
+    cohort: string | null;
+  }> | null>;
+}
+
+/**
+ * Closing the Gap trend data for a jurisdiction
+ */
+export async function getCtgTrend(jurisdiction: string, domain = 'youth-justice') {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT metric_value::float as rate, period, notes
+       FROM outcomes_metrics
+       WHERE jurisdiction = '${jurisdiction}' AND domain = '${domain}'
+         AND metric_name = 'ctg_target11_indigenous_detention_rate'
+       ORDER BY period`,
+  })) as Promise<Array<{
+    rate: number;
+    period: string;
+    notes: string | null;
+  }> | null>;
+}
+
+/**
+ * Policy timeline for a jurisdiction + domain
+ */
+export async function getPolicyTimeline(jurisdiction: string, domain = 'youth-justice') {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT event_date, title, description, event_type, severity, source, impact_summary,
+              metadata
+       FROM policy_events
+       WHERE jurisdiction = '${jurisdiction}' AND domain = '${domain}'
+       ORDER BY event_date DESC`,
+  })) as Promise<Array<{
+    event_date: string;
+    title: string;
+    description: string;
+    event_type: string;
+    severity: string;
+    source: string | null;
+    impact_summary: string | null;
+    metadata: Record<string, unknown> | null;
+  }> | null>;
+}
+
+/**
+ * Oversight recommendations for a jurisdiction + domain
+ */
+export async function getOversightData(jurisdiction: string, domain = 'youth-justice') {
+  const supabase = getServiceSupabase();
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT oversight_body, report_title, report_date, report_url,
+              recommendation_number, recommendation_text, status, status_notes, severity
+       FROM oversight_recommendations
+       WHERE jurisdiction = '${jurisdiction}' AND domain = '${domain}'
+       ORDER BY oversight_body, recommendation_number`,
+  })) as Promise<Array<{
+    oversight_body: string;
+    report_title: string;
+    report_date: string;
+    report_url: string | null;
+    recommendation_number: string;
+    recommendation_text: string;
+    status: string;
+    status_notes: string | null;
+    severity: string | null;
+  }> | null>;
+}
+
 export async function getPiccFundingFlow() {
   const supabase = getServiceSupabase();
   return safe(supabase.rpc('exec_sql', {

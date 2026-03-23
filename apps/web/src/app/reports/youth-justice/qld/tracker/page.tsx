@@ -13,6 +13,11 @@ import {
   getHansardMentions,
   getYjLobbyingConnections,
   getYjRevolvingDoor,
+  getOutcomesMetrics,
+  getStateComparisonMetrics,
+  getCtgTrend,
+  getPolicyTimeline,
+  getOversightData,
   money,
   fmt,
 } from '@/lib/services/report-service';
@@ -42,6 +47,11 @@ type RevolvingDoorRow = {
   total_donated: number; total_contracts: number; total_funded: number;
   parties_funded: string; distinct_buyers: number; is_community_controlled: boolean;
 };
+type MetricRow = { metric_name: string; metric_value: number; metric_unit: string; period: string; cohort: string | null; source: string; notes: string | null };
+type ComparisonRow = { jurisdiction: string; metric_name: string; metric_value: number; metric_unit: string; period: string; cohort: string | null };
+type CtgRow = { rate: number; period: string; notes: string | null };
+type PolicyRow = { event_date: string; title: string; description: string; event_type: string; severity: string; source: string | null; impact_summary: string | null; metadata: Record<string, unknown> | null };
+type OversightRow = { oversight_body: string; report_title: string; report_date: string; report_url: string | null; recommendation_number: string; recommendation_text: string; status: string; status_notes: string | null; severity: string | null };
 
 async function getTrackerData() {
   const [
@@ -58,6 +68,11 @@ async function getTrackerData() {
     hansard,
     lobbying,
     revolvingDoor,
+    outcomes,
+    comparison,
+    ctgTrend,
+    policyTimeline,
+    oversight,
   ] = await Promise.all([
     getBudgetCommitments('QLD'),
     getBudgetTotals('QLD'),
@@ -72,6 +87,15 @@ async function getTrackerData() {
     getHansardMentions('QLD', 15),
     getYjLobbyingConnections('youth-justice', 'QLD'),
     getYjRevolvingDoor('youth-justice', 10, 'QLD'),
+    getOutcomesMetrics('QLD'),
+    getStateComparisonMetrics([
+      'detention_rate_per_10k', 'avg_daily_detention', 'indigenous_overrepresentation_ratio',
+      'ctg_target11_indigenous_detention_rate', 'avg_days_in_detention', 'cost_per_day_detention',
+      'pct_unsentenced', 'detention_5yr_trend_pct',
+    ]),
+    getCtgTrend('QLD'),
+    getPolicyTimeline('QLD'),
+    getOversightData('QLD'),
   ]);
 
   return {
@@ -88,6 +112,11 @@ async function getTrackerData() {
     hansard: (hansard as HansardRow[] | null) || [],
     lobbying: (lobbying as LobbyRow[] | null) || [],
     revolvingDoor: (revolvingDoor as RevolvingDoorRow[] | null) || [],
+    outcomes: (outcomes as MetricRow[] | null) || [],
+    comparison: (comparison as ComparisonRow[] | null) || [],
+    ctgTrend: (ctgTrend as CtgRow[] | null) || [],
+    policyTimeline: (policyTimeline as PolicyRow[] | null) || [],
+    oversight: (oversight as OversightRow[] | null) || [],
   };
 }
 
@@ -107,12 +136,59 @@ function parseOrgs(json: string): Array<{ canonical_name: string; abn: string }>
   }
 }
 
+/** Look up a metric value from the outcomes array */
+function m(metrics: MetricRow[], name: string, cohort?: string): number | null {
+  const row = metrics.find(r => r.metric_name === name && (cohort ? r.cohort === cohort : !r.cohort));
+  return row?.metric_value ?? null;
+}
+
+function fmtDate(d: string): string {
+  const date = new Date(d);
+  return date.toLocaleDateString('en-AU', { month: 'short', year: 'numeric' });
+}
+
+const SEVERITY_COLOR: Record<string, string> = {
+  critical: 'bg-red-500',
+  significant: 'bg-amber-500',
+  moderate: 'bg-blue-400',
+  positive: 'bg-emerald-500',
+};
+
+const BODY_LABELS: Record<string, string> = {
+  'qld-audit-office': 'QLD Audit Office',
+  'qld-ombudsman': 'QLD Ombudsman',
+  'qld-sentencing-advisory-council': 'Sentencing Advisory Council',
+  'qld-human-rights-commissioner': 'Human Rights Commissioner',
+};
+
 export default async function QldTrackerPage() {
   const data = await getTrackerData();
 
   const latestTotal = data.budgetTotals[0];
   const programItems = data.budgetCommitments.filter(b => b.amount);
   const totalOrgs = new Set(data.topOrgs.map(o => o.recipient_name)).size;
+
+  // Build lookup map for state comparison
+  const comp: Record<string, Record<string, number>> = {};
+  for (const row of data.comparison) {
+    if (!comp[row.metric_name]) comp[row.metric_name] = {};
+    comp[row.metric_name][row.jurisdiction] = row.metric_value;
+  }
+  const cv = (metric: string, jur: string) => comp[metric]?.[jur] ?? null;
+
+  // Group oversight by body
+  const oversightByBody: Record<string, OversightRow[]> = {};
+  for (const r of data.oversight) {
+    if (!oversightByBody[r.oversight_body]) oversightByBody[r.oversight_body] = [];
+    oversightByBody[r.oversight_body].push(r);
+  }
+
+  // Split policy events: HR overrides vs general timeline
+  const hrOverrides = data.policyTimeline.filter(e => e.event_type === 'human_rights_override');
+  const timelineEvents = data.policyTimeline.filter(e => e.event_type !== 'human_rights_override');
+
+  // QLD-specific metrics
+  const om = data.outcomes;
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -154,76 +230,82 @@ export default async function QldTrackerPage() {
         </div>
       </div>
 
-      {/* Section 0: Outcomes Reality Check */}
+      {/* Section 0: Outcomes Reality Check — from outcomes_metrics DB */}
       <section className="mb-12">
         <h2 className="text-xl font-black text-bauhaus-black uppercase tracking-wider mb-2 border-b-4 border-bauhaus-red pb-2">
           The Numbers That Matter
         </h2>
         <p className="text-sm text-bauhaus-muted mb-4">
-          Source: <a href="https://www.qfcc.qld.gov.au/kids-in-queensland/queensland-child-rights-report" className="text-bauhaus-blue underline" target="_blank" rel="noopener">Queensland Child Rights Report 2025</a> (OATSICC &amp; QFCC) — 2023-24 data.
+          Source: outcomes_metrics database — AIHW, ROGS, QLD Child Rights Report 2025.
         </p>
 
         {/* Key Outcome Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
-            <div className="text-xl sm:text-2xl font-black text-red-600">292</div>
-            <div className="text-[10px] text-gray-500 mt-1 leading-tight">Avg daily detention</div>
-          </div>
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
-            <div className="text-xl sm:text-2xl font-black text-red-600">71.9%</div>
-            <div className="text-[10px] text-gray-500 mt-1 leading-tight">First Nations in detention</div>
-          </div>
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
-            <div className="text-xl sm:text-2xl font-black text-red-600">26.4x</div>
-            <div className="text-[10px] text-gray-500 mt-1 leading-tight">Indigenous detention rate ratio</div>
-          </div>
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
-            <div className="text-xl sm:text-2xl font-black text-red-600">97%</div>
-            <div className="text-[10px] text-gray-500 mt-1 leading-tight">Reoffend within 6 months</div>
-          </div>
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center">
-            <div className="text-xl sm:text-2xl font-black text-amber-600">71%</div>
-            <div className="text-[10px] text-gray-500 mt-1 leading-tight">Have a disability</div>
-          </div>
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center">
-            <div className="text-xl sm:text-2xl font-black text-amber-600">85%</div>
-            <div className="text-[10px] text-gray-500 mt-1 leading-tight">Unsentenced (remand)</div>
-          </div>
+          {[
+            { name: 'avg_daily_detention', label: 'Avg daily detention', color: 'red' },
+            { name: 'pct_first_nations_in_detention', label: 'First Nations in detention', color: 'red', suffix: '%' },
+            { name: 'indigenous_overrepresentation_ratio', label: 'Indigenous detention rate ratio', color: 'red', suffix: 'x' },
+            { name: 'recidivism_6_months', label: 'Reoffend within 6 months', color: 'red', suffix: '%' },
+            { name: 'pct_disability_in_detention', label: 'Have a disability', color: 'amber', suffix: '%' },
+            { name: 'pct_unsentenced', label: 'Unsentenced (remand)', color: 'amber', suffix: '%' },
+          ].map((stat) => {
+            const val = m(om, stat.name);
+            const bgClass = stat.color === 'red' ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200';
+            const textClass = stat.color === 'red' ? 'text-red-600' : 'text-amber-600';
+            return (
+              <div key={stat.name} className={`${bgClass} border rounded-xl p-4 text-center`}>
+                <div className={`text-xl sm:text-2xl font-black ${textClass}`}>
+                  {val !== null ? `${val}${stat.suffix || ''}` : '—'}
+                </div>
+                <div className="text-[10px] text-gray-500 mt-1 leading-tight">{stat.label}</div>
+              </div>
+            );
+          })}
         </div>
 
         {/* Cost Comparison */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
           <div className="border-2 border-red-300 rounded-xl p-5">
             <div className="text-xs font-black text-red-500 uppercase tracking-wider mb-1">Detention</div>
-            <div className="text-3xl font-black text-red-600">$2,162<span className="text-sm font-bold text-gray-400">/day</span></div>
-            <div className="text-xs text-gray-500 mt-1">$789,130 per child per year</div>
+            <div className="text-3xl font-black text-red-600">
+              ${m(om, 'cost_per_day_detention')?.toLocaleString() ?? '—'}<span className="text-sm font-bold text-gray-400">/day</span>
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              {m(om, 'cost_per_day_detention') ? `$${fmt(Math.round(m(om, 'cost_per_day_detention')! * 365))} per child per year` : '—'}
+            </div>
           </div>
           <div className="border-2 border-emerald-300 rounded-xl p-5">
             <div className="text-xs font-black text-emerald-500 uppercase tracking-wider mb-1">Community Supervision</div>
-            <div className="text-3xl font-black text-emerald-600">$382<span className="text-sm font-bold text-gray-400">/day</span></div>
-            <div className="text-xs text-gray-500 mt-1">5.7x cheaper — and better outcomes</div>
+            <div className="text-3xl font-black text-emerald-600">
+              ${m(om, 'cost_per_day_community')?.toLocaleString() ?? '—'}<span className="text-sm font-bold text-gray-400">/day</span>
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              {m(om, 'cost_per_day_detention') && m(om, 'cost_per_day_community')
+                ? `${(m(om, 'cost_per_day_detention')! / m(om, 'cost_per_day_community')!).toFixed(1)}x cheaper — and better outcomes`
+                : '—'}
+            </div>
           </div>
         </div>
 
         {/* Watch-house Crisis */}
         <div className="bg-gray-50 border border-gray-200 rounded-xl p-5 mb-6">
           <h3 className="text-sm font-black text-bauhaus-black uppercase tracking-wider mb-3">Watch-house Crisis</h3>
-          <p className="text-xs text-gray-500 mb-3">Children held in adult police watch-houses, 2023-24. These are not youth facilities.</p>
+          <p className="text-xs text-gray-500 mb-3">Children held in adult police watch-houses. These are not youth facilities.</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="text-center">
-              <div className="text-2xl font-black text-gray-800">7,807</div>
+              <div className="text-2xl font-black text-gray-800">{m(om, 'watchhouse_stays')?.toLocaleString() ?? '—'}</div>
               <div className="text-[10px] text-gray-500">Total stays</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-black text-red-600">59.2%</div>
+              <div className="text-2xl font-black text-red-600">{m(om, 'watchhouse_pct_first_nations') ?? '—'}%</div>
               <div className="text-[10px] text-gray-500">First Nations</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-black text-amber-600">440</div>
+              <div className="text-2xl font-black text-amber-600">{m(om, 'watchhouse_stays_8_14_days')?.toLocaleString() ?? '—'}</div>
               <div className="text-[10px] text-gray-500">Held 8-14 days</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-black text-red-600">248</div>
+              <div className="text-2xl font-black text-red-600">{m(om, 'watchhouse_stays_15plus_days')?.toLocaleString() ?? '—'}</div>
               <div className="text-[10px] text-gray-500">Held 15+ days</div>
             </div>
           </div>
@@ -236,67 +318,65 @@ export default async function QldTrackerPage() {
             <div>
               <h4 className="text-xs font-bold text-gray-600 mb-2">By Socioeconomic Quintile</h4>
               {[
-                { label: 'Most disadvantaged (Q1)', count: 141, pct: 48 },
-                { label: 'Q2', count: 66, pct: 23 },
-                { label: 'Q3', count: 42, pct: 14 },
-                { label: 'Q4', count: 24, pct: 8 },
-                { label: 'Least disadvantaged (Q5)', count: 10, pct: 3 },
-              ].map((q, i) => (
-                <div key={i} className="flex items-center gap-2 mb-1.5">
-                  <span className="text-[10px] text-gray-600 w-40 shrink-0">{q.label}</span>
-                  <div className="flex-1 bg-gray-200 rounded-full h-2.5">
-                    <div className="bg-red-400 rounded-full h-2.5" style={{ width: `${q.pct}%` }} />
+                { label: 'Most disadvantaged (Q1)', metric: 'detention_seifa_q1' },
+                { label: 'Q2', metric: 'detention_seifa_q2' },
+                { label: 'Q3', metric: 'detention_seifa_q3' },
+                { label: 'Q4', metric: 'detention_seifa_q4' },
+                { label: 'Least disadvantaged (Q5)', metric: 'detention_seifa_q5' },
+              ].map((q) => {
+                const count = m(om, q.metric);
+                const total = [1,2,3,4,5].reduce((s, n) => s + (m(om, `detention_seifa_q${n}`) ?? 0), 0);
+                const pct = count && total ? Math.round((count / total) * 100) : 0;
+                return (
+                  <div key={q.metric} className="flex items-center gap-2 mb-1.5">
+                    <span className="text-[10px] text-gray-600 w-40 shrink-0">{q.label}</span>
+                    <div className="flex-1 bg-gray-200 rounded-full h-2.5">
+                      <div className="bg-red-400 rounded-full h-2.5" style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="text-[10px] font-bold text-gray-700 w-8 text-right">{count ?? '—'}</span>
                   </div>
-                  <span className="text-[10px] font-bold text-gray-700 w-8 text-right">{q.count}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
             <div>
               <h4 className="text-xs font-bold text-gray-600 mb-2">Key Facts</h4>
               <ul className="space-y-1.5 text-xs text-gray-700">
-                <li className="flex gap-2"><span className="font-black text-red-500 shrink-0">&bull;</span>Avg 48 days on remand before resolution</li>
-                <li className="flex gap-2"><span className="font-black text-red-500 shrink-0">&bull;</span>2,433 use-of-force incidents (63.4% on First Nations children)</li>
-                <li className="flex gap-2"><span className="font-black text-red-500 shrink-0">&bull;</span>50 self-harm incidents in detention</li>
-                <li className="flex gap-2"><span className="font-black text-amber-500 shrink-0">&bull;</span>On Country programs: only $2.8M/year (declining)</li>
+                <li className="flex gap-2"><span className="font-black text-red-500 shrink-0">&bull;</span>Avg {m(om, 'avg_days_on_remand') ?? '—'} days on remand before resolution</li>
+                <li className="flex gap-2"><span className="font-black text-red-500 shrink-0">&bull;</span>{m(om, 'use_of_force_incidents')?.toLocaleString() ?? '—'} use-of-force incidents</li>
+                <li className="flex gap-2"><span className="font-black text-red-500 shrink-0">&bull;</span>{m(om, 'self_harm_incidents') ?? '—'} self-harm incidents in detention</li>
+                <li className="flex gap-2"><span className="font-black text-amber-500 shrink-0">&bull;</span>On Country programs: only ${m(om, 'on_country_program_spend') ?? '—'}M/year (declining)</li>
                 <li className="flex gap-2"><span className="font-black text-amber-500 shrink-0">&bull;</span>Closing the Gap Target 11: <span className="font-bold text-red-600">Worsening</span></li>
               </ul>
             </div>
           </div>
         </div>
 
-        {/* Policy Timeline */}
-        <div className="bg-gray-50 border border-gray-200 rounded-xl p-5">
-          <h3 className="text-sm font-black text-bauhaus-black uppercase tracking-wider mb-3">Policy Timeline</h3>
-          <div className="space-y-3">
-            {[
-              { date: 'Mar 2024', title: 'Making Queensland Safer Act 2024', desc: 'Abolished "detention as last resort" principle. Enabled adult sentences for children. Excluded restorative justice for 33 offence categories. 4th Human Rights Act override.', severity: 'critical' as const },
-              { date: 'Nov 2025', title: 'Justice Reinvestment Framework', desc: '$5M competitive grants program for place-based justice reinvestment. First framework of its kind in QLD.', severity: 'positive' as const },
-              { date: 'Mar 2025', title: 'Wacol Youth Remand Centre opens', desc: '76-bed facility built to adult correctional standards. Lacks dedicated youth-specific design features. Rapid expansion of detention capacity.', severity: 'warning' as const },
-              { date: '2024-25', title: 'Government investment announcements', desc: '$225M Staying on Track, $115M Gold Standard Early Intervention, $80M Circuit Breaker, $50M Crime Prevention Schools, $40M Youth Justice Schools, $50M Regional Reset.', severity: 'info' as const },
-            ].map((e, i) => (
-              <div key={i} className="flex gap-3">
-                <div className={`shrink-0 w-2 rounded-full ${
-                  e.severity === 'critical' ? 'bg-red-500' :
-                  e.severity === 'positive' ? 'bg-emerald-500' :
-                  e.severity === 'warning' ? 'bg-amber-500' : 'bg-blue-400'
-                }`} />
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{e.date}</span>
-                    <span className="text-sm font-bold text-gray-800">{e.title}</span>
+        {/* Policy Timeline — from policy_events DB */}
+        {timelineEvents.length > 0 && (
+          <div className="bg-gray-50 border border-gray-200 rounded-xl p-5">
+            <h3 className="text-sm font-black text-bauhaus-black uppercase tracking-wider mb-3">Policy Timeline</h3>
+            <div className="space-y-3">
+              {timelineEvents.map((e, i) => (
+                <div key={i} className="flex gap-3">
+                  <div className={`shrink-0 w-2 rounded-full ${SEVERITY_COLOR[e.severity] || 'bg-gray-400'}`} />
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{fmtDate(e.event_date)}</span>
+                      <span className="text-sm font-bold text-gray-800">{e.title}</span>
+                    </div>
+                    <p className="text-xs text-gray-600 mt-0.5">{e.description}</p>
                   </div>
-                  <p className="text-xs text-gray-600 mt-0.5">{e.desc}</p>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+            <div className="mt-4 text-[10px] text-gray-400 italic">
+              Source: CivicGraph policy_events database. Updated automatically when new legislation or policy changes are detected.
+            </div>
           </div>
-          <div className="mt-4 text-[10px] text-gray-400 italic">
-            Source: QLD Child Rights Report 2025 (OATSICC &amp; QFCC). OATSICC notes: &ldquo;no evaluation frameworks, no equity analysis, and unclear whether new investment or redistribution of existing funds.&rdquo;
-          </div>
-        </div>
+        )}
       </section>
 
-      {/* Section: How QLD Compares */}
+      {/* Section: How QLD Compares — from outcomes_metrics DB */}
       <section className="mb-12">
         <h2 className="text-xl font-black text-bauhaus-black uppercase tracking-wider mb-2 border-b-4 border-bauhaus-red pb-2">
           How QLD Compares
@@ -310,125 +390,84 @@ export default async function QldTrackerPage() {
             <thead>
               <tr className="border-b-2 border-bauhaus-black">
                 <th className="text-left py-2 font-black uppercase tracking-wider text-xs">Metric</th>
-                <th className="text-right py-2 font-black uppercase tracking-wider text-xs">QLD</th>
-                <th className="text-right py-2 font-black uppercase tracking-wider text-xs">NSW</th>
-                <th className="text-right py-2 font-black uppercase tracking-wider text-xs">VIC</th>
-                <th className="text-right py-2 font-black uppercase tracking-wider text-xs">WA</th>
-                <th className="text-right py-2 font-black uppercase tracking-wider text-xs">NT</th>
-                <th className="text-right py-2 font-black uppercase tracking-wider text-xs">National</th>
+                {['QLD', 'NSW', 'VIC', 'WA', 'NT', 'National'].map(j => (
+                  <th key={j} className="text-right py-2 font-black uppercase tracking-wider text-xs">{j}</th>
+                ))}
               </tr>
             </thead>
             <tbody>
-              <tr className="border-b border-gray-200 bg-red-50">
-                <td className="py-2 font-medium">Detention rate (per 10K)</td>
-                <td className="py-2 text-right font-black text-red-600">5.1</td>
-                <td className="py-2 text-right">3.6</td>
-                <td className="py-2 text-right text-emerald-600 font-bold">1.4</td>
-                <td className="py-2 text-right">4.2</td>
-                <td className="py-2 text-right text-red-600 font-bold">17.0</td>
-                <td className="py-2 text-right font-bold">3.4</td>
-              </tr>
-              <tr className="border-b border-gray-200">
-                <td className="py-2 font-medium">Avg daily detention count</td>
-                <td className="py-2 text-right font-black text-red-600">317</td>
-                <td className="py-2 text-right">200</td>
-                <td className="py-2 text-right">120</td>
-                <td className="py-2 text-right">145</td>
-                <td className="py-2 text-right">62</td>
-                <td className="py-2 text-right font-bold">950</td>
-              </tr>
-              <tr className="border-b border-gray-200 bg-red-50">
-                <td className="py-2 font-medium">Indigenous overrepresentation</td>
-                <td className="py-2 text-right font-black text-red-600">26x</td>
-                <td className="py-2 text-right">22x</td>
-                <td className="py-2 text-right text-emerald-600 font-bold">14x</td>
-                <td className="py-2 text-right">24x</td>
-                <td className="py-2 text-right">5x</td>
-                <td className="py-2 text-right font-bold">17x</td>
-              </tr>
-              <tr className="border-b border-gray-200">
-                <td className="py-2 font-medium">First Nations detention rate (per 10K)</td>
-                <td className="py-2 text-right font-black text-red-600">42</td>
-                <td className="py-2 text-right">32</td>
-                <td className="py-2 text-right">18</td>
-                <td className="py-2 text-right">38</td>
-                <td className="py-2 text-right text-red-600 font-bold">25</td>
-                <td className="py-2 text-right font-bold">26.1</td>
-              </tr>
-              <tr className="border-b border-gray-200 bg-red-50">
-                <td className="py-2 font-medium">Avg days in detention</td>
-                <td className="py-2 text-right font-black text-red-600">104</td>
-                <td className="py-2 text-right">55</td>
-                <td className="py-2 text-right text-emerald-600 font-bold">37</td>
-                <td className="py-2 text-right">68</td>
-                <td className="py-2 text-right">45</td>
-                <td className="py-2 text-right font-bold">62</td>
-              </tr>
-              <tr className="border-b border-gray-200">
-                <td className="py-2 font-medium">Cost per day (detention)</td>
-                <td className="py-2 text-right font-bold">$2,162</td>
-                <td className="py-2 text-right">$3,200</td>
-                <td className="py-2 text-right">$7,123</td>
-                <td className="py-2 text-right">$2,573</td>
-                <td className="py-2 text-right">$4,800</td>
-                <td className="py-2 text-right font-bold">$3,635</td>
-              </tr>
-              <tr className="border-b border-gray-200 bg-red-50">
-                <td className="py-2 font-medium">% unsentenced (remand)</td>
-                <td className="py-2 text-right font-black text-red-600">86%</td>
-                <td className="py-2 text-right">72%</td>
-                <td className="py-2 text-right">65%</td>
-                <td className="py-2 text-right">78%</td>
-                <td className="py-2 text-right">80%</td>
-                <td className="py-2 text-right font-bold">75%</td>
-              </tr>
-              <tr className="border-b border-gray-200">
-                <td className="py-2 font-medium">5-year trend (detention count)</td>
-                <td className="py-2 text-right font-black text-red-600">+53%</td>
-                <td className="py-2 text-right text-red-600">+86% (Indig.)</td>
-                <td className="py-2 text-right text-red-600">+37%</td>
-                <td className="py-2 text-right text-amber-600">Declining</td>
-                <td className="py-2 text-right text-amber-600">Stable</td>
-                <td className="py-2 text-right">—</td>
-              </tr>
+              {[
+                { label: 'Detention rate (per 10K)', metric: 'detention_rate_per_10k', highlight: true },
+                { label: 'Avg daily detention count', metric: 'avg_daily_detention', highlight: false },
+                { label: 'Indigenous overrepresentation', metric: 'indigenous_overrepresentation_ratio', highlight: true, suffix: 'x' },
+                { label: 'First Nations detention rate (per 10K)', metric: 'ctg_target11_indigenous_detention_rate', highlight: false },
+                { label: 'Avg days in detention', metric: 'avg_days_in_detention', highlight: true },
+                { label: 'Cost per day (detention)', metric: 'cost_per_day_detention', highlight: false, prefix: '$' },
+                { label: '% unsentenced (remand)', metric: 'pct_unsentenced', highlight: true, suffix: '%' },
+                { label: '5-year trend (detention)', metric: 'detention_5yr_trend_pct', highlight: false, suffix: '%', signed: true },
+              ].map((row, i) => {
+                const jurisdictions = ['QLD', 'NSW', 'VIC', 'WA', 'NT', 'National'];
+                const vals = jurisdictions.map(j => cv(row.metric, j));
+                const nonNull = vals.filter((v): v is number => v !== null);
+                const maxVal = Math.max(...nonNull);
+                const minVal = Math.min(...nonNull.filter((_, idx) => jurisdictions[idx] !== 'National'));
+                return (
+                  <tr key={row.metric} className={`border-b border-gray-200 ${row.highlight ? 'bg-red-50' : ''}`}>
+                    <td className="py-2 font-medium">{row.label}</td>
+                    {jurisdictions.map((j, ji) => {
+                      const v = vals[ji];
+                      const isQld = j === 'QLD';
+                      const isNational = j === 'National';
+                      const isMax = v === maxVal && !isNational;
+                      const isMin = v === minVal && !isNational;
+                      let cls = 'py-2 text-right';
+                      if (isQld) cls += ' font-black text-red-600';
+                      else if (isMax && row.metric !== 'cost_per_day_detention') cls += ' text-red-600 font-bold';
+                      else if (isMin) cls += ' text-emerald-600 font-bold';
+                      else if (isNational) cls += ' font-bold';
+                      const display = v !== null
+                        ? `${row.signed && v > 0 ? '+' : ''}${row.prefix || ''}${row.metric === 'cost_per_day_detention' ? v.toLocaleString() : v}${row.suffix || ''}`
+                        : '—';
+                      return <td key={j} className={cls}>{display}</td>;
+                    })}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
 
         <div className="text-[10px] text-gray-400 italic">
-          QLD has the highest absolute detention numbers in Australia (317), 2nd-highest rate (5.1 per 10K), highest Indigenous rate (42 per 10K), and longest average stays (104 days). Sources: AIHW Youth Justice in Australia 2023-24, ROGS 2026 Table 17A.
+          Data from outcomes_metrics database. Sources: AIHW Youth Justice in Australia 2023-24, ROGS 2026 Table 17A.
         </div>
       </section>
 
-      {/* Section: Court Pipeline */}
+      {/* Section: Court Pipeline — from outcomes_metrics DB */}
       <section className="mb-12">
         <h2 className="text-xl font-black text-bauhaus-black uppercase tracking-wider mb-2 border-b-4 border-bauhaus-red pb-2">
           Court Pipeline
         </h2>
         <p className="text-sm text-bauhaus-muted mb-4">
-          What happens in QLD Childrens Court — <a href="https://www.parliament.qld.gov.au/Work-of-the-Assembly/Tabled-Papers/docs/5824t0283/5824t283.pdf" className="text-bauhaus-blue underline" target="_blank" rel="noopener">Annual Report 2023-24</a>.
+          What happens in QLD Childrens Court — data from outcomes_metrics database.
         </p>
 
         {/* Court Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
           <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-center">
-            <div className="text-2xl font-black text-gray-800">7,317</div>
+            <div className="text-2xl font-black text-gray-800">{m(om, 'court_finalised_appearances')?.toLocaleString() ?? '—'}</div>
             <div className="text-[10px] text-gray-500 mt-1">Finalised appearances</div>
-            <div className="text-[10px] text-emerald-600 font-bold">+6.3%</div>
           </div>
           <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-center">
-            <div className="text-2xl font-black text-gray-800">49,612</div>
+            <div className="text-2xl font-black text-gray-800">{m(om, 'court_finalised_charges')?.toLocaleString() ?? '—'}</div>
             <div className="text-[10px] text-gray-500 mt-1">Finalised charges</div>
-            <div className="text-[10px] text-red-600 font-bold">+15.3%</div>
           </div>
           <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
-            <div className="text-2xl font-black text-red-600">55.4%</div>
+            <div className="text-2xl font-black text-red-600">{m(om, 'court_pct_first_nations_defendants') ?? '—'}%</div>
             <div className="text-[10px] text-gray-500 mt-1">Defendants are First Nations</div>
           </div>
           <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
-            <div className="text-2xl font-black text-red-600">6,697</div>
+            <div className="text-2xl font-black text-red-600">{m(om, 'court_breach_bail_convictions')?.toLocaleString() ?? '—'}</div>
             <div className="text-[10px] text-gray-500 mt-1">Breach of bail convictions</div>
-            <div className="text-[10px] text-red-600 font-bold">+614% from 938</div>
           </div>
         </div>
 
@@ -437,24 +476,24 @@ export default async function QldTrackerPage() {
           <h3 className="text-sm font-black text-bauhaus-black uppercase tracking-wider mb-3">Sentencing Outcomes</h3>
           <div className="space-y-2">
             {[
-              { label: 'Reprimand / minor', pct: 33.9, count: '1,672', color: 'bg-emerald-400' },
-              { label: 'Probation', pct: 30.6, count: '1,511', color: 'bg-blue-400' },
-              { label: 'Community service', pct: 8.0, count: '397', color: 'bg-sky-400' },
-              { label: 'Detention', pct: 7.8, count: '386', color: 'bg-red-500' },
-              { label: 'Other', pct: 19.7, count: '1,351', color: 'bg-gray-300' },
-            ].map((s, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <span className="text-xs text-gray-600 w-36 shrink-0">{s.label}</span>
-                <div className="flex-1 bg-gray-200 rounded-full h-3">
-                  <div className={`${s.color} rounded-full h-3`} style={{ width: `${s.pct}%` }} />
+              { label: 'Reprimand / minor', metric: 'court_sentence_reprimand_pct', color: 'bg-emerald-400' },
+              { label: 'Probation', metric: 'court_sentence_probation_pct', color: 'bg-blue-400' },
+              { label: 'Detention', metric: 'court_sentence_detention_pct', color: 'bg-red-500' },
+            ].map((s) => {
+              const pct = m(om, s.metric);
+              return (
+                <div key={s.metric} className="flex items-center gap-3">
+                  <span className="text-xs text-gray-600 w-36 shrink-0">{s.label}</span>
+                  <div className="flex-1 bg-gray-200 rounded-full h-3">
+                    <div className={`${s.color} rounded-full h-3`} style={{ width: `${pct ?? 0}%` }} />
+                  </div>
+                  <span className="text-xs font-bold text-gray-700 w-16 text-right">{pct ?? '—'}%</span>
                 </div>
-                <span className="text-xs font-bold text-gray-700 w-16 text-right">{s.pct}%</span>
-                <span className="text-[10px] text-gray-400 w-12 text-right">{s.count}</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
           <div className="mt-3 text-xs text-gray-500">
-            92.2% receive non-custodial sentences. Yet 86% of those in detention are unsentenced — held on remand.
+            {m(om, 'pct_unsentenced') ?? '—'}% of those in detention are unsentenced — held on remand.
           </div>
         </div>
 
@@ -462,34 +501,27 @@ export default async function QldTrackerPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
           <div className="border border-gray-200 rounded-xl p-5">
             <h4 className="text-xs font-black text-bauhaus-black uppercase tracking-wider mb-2">Restorative Justice</h4>
-            <div className="text-2xl font-black text-blue-600 mb-1">2,246</div>
-            <div className="text-xs text-gray-500">Young people referred to RJ (+5%)</div>
-            <div className="text-xs text-gray-500 mt-1">1,462 participated in conferences</div>
-            <div className="text-xs text-gray-500">46% of participants are First Nations</div>
+            <div className="text-2xl font-black text-blue-600 mb-1">{m(om, 'court_rj_referrals')?.toLocaleString() ?? '—'}</div>
+            <div className="text-xs text-gray-500">Young people referred to RJ</div>
+            <div className="text-xs text-gray-500 mt-1">{m(om, 'court_rj_conferences')?.toLocaleString() ?? '—'} participated in conferences</div>
           </div>
           <div className="border border-gray-200 rounded-xl p-5">
             <h4 className="text-xs font-black text-bauhaus-black uppercase tracking-wider mb-2">Processing Time</h4>
             <div className="space-y-2 mt-2">
               <div className="flex justify-between text-xs">
                 <span className="text-gray-600">Magistrates Court</span>
-                <span className="font-bold">85 days avg</span>
+                <span className="font-bold">{m(om, 'court_processing_magistrates_days') ?? '—'} days avg</span>
               </div>
               <div className="flex justify-between text-xs">
                 <span className="text-gray-600">Childrens Court of QLD</span>
-                <span className="font-bold text-amber-600">307 days avg</span>
+                <span className="font-bold text-amber-600">{m(om, 'court_processing_childrens_court_days') ?? '—'} days avg</span>
               </div>
             </div>
           </div>
         </div>
-
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs text-amber-800">
-          <span className="font-black">Key finding:</span> The 614% spike in breach-of-bail convictions (938 → 6,697) is driven by the
-          Youth Justice and Other Legislation Amendment Act 2023, which created new bail breach offences. This single legislative change
-          accounts for the entire increase in finalised charges. Children are being re-criminalised for administrative non-compliance.
-        </div>
       </section>
 
-      {/* Section: Closing the Gap Scorecard */}
+      {/* Section: Closing the Gap Scorecard — from outcomes_metrics DB */}
       <section className="mb-12">
         <h2 className="text-xl font-black text-bauhaus-black uppercase tracking-wider mb-2 border-b-4 border-bauhaus-red pb-2">
           Closing the Gap: Target 11
@@ -501,13 +533,23 @@ export default async function QldTrackerPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           <div className="bg-red-50 border-2 border-red-300 rounded-xl p-5 text-center">
             <div className="text-xs font-black text-red-500 uppercase tracking-wider mb-1">QLD Status</div>
-            <div className="text-2xl font-black text-red-600">WORSENING</div>
-            <div className="text-xs text-gray-500 mt-1">42 per 10K (was 29 in 2020)</div>
+            <div className="text-2xl font-black text-red-600">
+              {data.ctgTrend.length > 0 && data.ctgTrend[0].rate < data.ctgTrend[data.ctgTrend.length - 1].rate ? 'WORSENING' : 'IMPROVING'}
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              {data.ctgTrend.length > 0
+                ? `${data.ctgTrend[data.ctgTrend.length - 1].rate} per 10K (was ${data.ctgTrend[0].rate} in ${data.ctgTrend[0].period.split('-')[0]})`
+                : '—'}
+            </div>
           </div>
           <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-5 text-center">
             <div className="text-xs font-black text-amber-500 uppercase tracking-wider mb-1">National Status</div>
-            <div className="text-2xl font-black text-amber-600">NO CHANGE</div>
-            <div className="text-xs text-gray-500 mt-1">26.1 per 10K (baseline 31.9)</div>
+            <div className="text-2xl font-black text-amber-600">
+              {cv('ctg_target11_indigenous_detention_rate', 'National') !== null ? 'NO CHANGE' : '—'}
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              {cv('ctg_target11_indigenous_detention_rate', 'National') ?? '—'} per 10K
+            </div>
           </div>
           <div className="bg-gray-50 border-2 border-gray-300 rounded-xl p-5 text-center">
             <div className="text-xs font-black text-gray-500 uppercase tracking-wider mb-1">Target (2031)</div>
@@ -516,36 +558,32 @@ export default async function QldTrackerPage() {
           </div>
         </div>
 
-        {/* Trend */}
-        <div className="bg-gray-50 border border-gray-200 rounded-xl p-5 mb-6">
-          <h3 className="text-sm font-black text-bauhaus-black uppercase tracking-wider mb-3">QLD First Nations Detention Rate Trend</h3>
-          <div className="space-y-2">
-            {[
-              { year: '2019-20', rate: 29, baseline: true },
-              { year: '2020-21', rate: 24, note: 'COVID dip' },
-              { year: '2021-22', rate: 32, note: '' },
-              { year: '2022-23', rate: 38, note: '' },
-              { year: '2023-24', rate: 42, note: 'Highest nationally' },
-            ].map((y, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <span className="text-xs text-gray-600 w-16 shrink-0">{y.year}</span>
-                <div className="flex-1 bg-gray-200 rounded-full h-3">
-                  <div className={`rounded-full h-3 ${y.rate > 35 ? 'bg-red-500' : y.rate > 25 ? 'bg-amber-400' : 'bg-emerald-400'}`}
-                    style={{ width: `${(y.rate / 50) * 100}%` }} />
+        {/* Trend — from ctgTrend query */}
+        {data.ctgTrend.length > 0 && (
+          <div className="bg-gray-50 border border-gray-200 rounded-xl p-5 mb-6">
+            <h3 className="text-sm font-black text-bauhaus-black uppercase tracking-wider mb-3">QLD First Nations Detention Rate Trend</h3>
+            <div className="space-y-2">
+              {data.ctgTrend.map((y, i) => (
+                <div key={y.period} className="flex items-center gap-3">
+                  <span className="text-xs text-gray-600 w-16 shrink-0">{y.period}</span>
+                  <div className="flex-1 bg-gray-200 rounded-full h-3">
+                    <div className={`rounded-full h-3 ${y.rate > 35 ? 'bg-red-500' : y.rate > 25 ? 'bg-amber-400' : 'bg-emerald-400'}`}
+                      style={{ width: `${(y.rate / 50) * 100}%` }} />
+                  </div>
+                  <span className="text-xs font-bold text-gray-700 w-8 text-right">{y.rate}</span>
+                  {y.notes && <span className="text-[10px] text-gray-400 w-28">{y.notes}</span>}
+                  {i === 0 && !y.notes && <span className="text-[10px] text-blue-500 w-28">Baseline</span>}
                 </div>
-                <span className="text-xs font-bold text-gray-700 w-8 text-right">{y.rate}</span>
-                {y.note && <span className="text-[10px] text-gray-400 w-28">{y.note}</span>}
-                {y.baseline && <span className="text-[10px] text-blue-500 w-28">Baseline</span>}
-              </div>
-            ))}
+              ))}
+            </div>
+            <div className="mt-3 text-xs text-gray-500">
+              Rate per 10,000 First Nations young people aged 10-17 in detention on an average night. Source: AIHW, Productivity Commission Closing the Gap Dashboard.
+            </div>
           </div>
-          <div className="mt-3 text-xs text-gray-500">
-            Rate per 10,000 First Nations young people aged 10-17 in detention on an average night. Source: AIHW, Productivity Commission Closing the Gap Dashboard.
-          </div>
-        </div>
+        )}
       </section>
 
-      {/* Section: Oversight & Accountability */}
+      {/* Section: Oversight & Accountability — from DB */}
       <section className="mb-12">
         <h2 className="text-xl font-black text-bauhaus-black uppercase tracking-wider mb-2 border-b-4 border-bauhaus-red pb-2">
           Oversight &amp; Accountability
@@ -554,75 +592,67 @@ export default async function QldTrackerPage() {
           What oversight bodies have found — and whether anyone listened.
         </p>
 
-        {/* Human Rights Act Overrides */}
-        <div className="bg-red-50 border border-red-200 rounded-xl p-5 mb-6">
-          <h3 className="text-sm font-black text-red-600 uppercase tracking-wider mb-3">Human Rights Act Overrides</h3>
-          <p className="text-xs text-gray-600 mb-3">The QLD Human Rights Act 2019 protects fundamental rights. The government can override it by declaring legislation incompatible. Youth justice has triggered more overrides than any other policy area — including COVID-19.</p>
-          <div className="space-y-3">
-            {[
-              { date: 'Jun 2023', law: 'Youth Justice Amendment Act', desc: 'Bail breach offence — criminalised administrative non-compliance', duration: '5 years' },
-              { date: 'Dec 2023', law: 'Youth Justice Amendment Act (No.2)', desc: 'Watch-house detention — authorised holding children in adult police facilities', duration: '5 years' },
-              { date: 'Sep 2024', law: 'Making Queensland Safer Act', desc: 'Abolished "detention as last resort", adult sentences for children, excluded RJ for 33 offences', duration: '5 years (longest ever)' },
-            ].map((o, i) => (
-              <div key={i} className="flex gap-3 items-start">
-                <div className="shrink-0 w-2 h-2 rounded-full bg-red-500 mt-1.5" />
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{o.date}</span>
-                    <span className="text-xs font-bold text-gray-800">{o.law}</span>
-                    <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold">{o.duration}</span>
+        {/* Human Rights Act Overrides — from policy_events */}
+        {hrOverrides.length > 0 && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-5 mb-6">
+            <h3 className="text-sm font-black text-red-600 uppercase tracking-wider mb-3">Human Rights Act Overrides</h3>
+            <p className="text-xs text-gray-600 mb-3">The QLD Human Rights Act 2019 protects fundamental rights. The government can override it by declaring legislation incompatible. Youth justice has triggered more overrides than any other policy area.</p>
+            <div className="space-y-3">
+              {hrOverrides.map((o, i) => (
+                <div key={i} className="flex gap-3 items-start">
+                  <div className="shrink-0 w-2 h-2 rounded-full bg-red-500 mt-1.5" />
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{fmtDate(o.event_date)}</span>
+                      <span className="text-xs font-bold text-gray-800">{o.title}</span>
+                      {o.metadata && (o.metadata as Record<string, string>).duration && (
+                        <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold">
+                          {(o.metadata as Record<string, string>).duration}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-600 mt-0.5">{o.description}</p>
                   </div>
-                  <p className="text-xs text-gray-600 mt-0.5">{o.desc}</p>
                 </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Oversight Bodies — from oversight_recommendations */}
+        {Object.keys(oversightByBody).length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+            {Object.entries(oversightByBody).map(([body, recs]) => (
+              <div key={body} className="border border-gray-200 rounded-xl p-5">
+                <h4 className="text-xs font-black text-bauhaus-black uppercase tracking-wider mb-2">
+                  {BODY_LABELS[body] || body}
+                </h4>
+                {recs[0]?.report_title && (
+                  <div className="text-[10px] text-gray-400 mb-2">
+                    {recs[0].report_url ? (
+                      <a href={recs[0].report_url} className="text-bauhaus-blue underline" target="_blank" rel="noopener">{recs[0].report_title}</a>
+                    ) : recs[0].report_title}
+                  </div>
+                )}
+                <ul className="space-y-1.5 text-xs text-gray-700">
+                  {recs.slice(0, 4).map((r, i) => (
+                    <li key={i} className="flex gap-2">
+                      <span className={`font-bold shrink-0 ${
+                        r.status === 'not_implemented' ? 'text-red-500' :
+                        r.status === 'partial' ? 'text-amber-500' :
+                        r.status === 'implemented' ? 'text-emerald-500' : 'text-gray-400'
+                      }`}>&bull;</span>
+                      <span>{r.recommendation_text}</span>
+                    </li>
+                  ))}
+                  {recs.length > 4 && (
+                    <li className="text-[10px] text-gray-400">+{recs.length - 4} more recommendations</li>
+                  )}
+                </ul>
               </div>
             ))}
           </div>
-          <div className="mt-4 text-[10px] text-red-700 font-bold">
-            Zero overrides were used during the COVID-19 pandemic. Youth justice is the only policy area where QLD has repeatedly overridden its own Human Rights Act.
-          </div>
-        </div>
-
-        {/* Oversight Bodies */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-          <div className="border border-gray-200 rounded-xl p-5">
-            <h4 className="text-xs font-black text-bauhaus-black uppercase tracking-wider mb-2">QLD Ombudsman</h4>
-            <ul className="space-y-1.5 text-xs text-gray-700">
-              <li className="flex gap-2"><span className="text-red-500 font-bold shrink-0">&bull;</span>42-102 children in watch-houses daily (Jan-Apr 2024)</li>
-              <li className="flex gap-2"><span className="text-red-500 font-bold shrink-0">&bull;</span>Peak: 102 children on a single day (Feb 13, 2024)</li>
-              <li className="flex gap-2"><span className="text-red-500 font-bold shrink-0">&bull;</span>Youth detention centres at 99.6% capacity</li>
-              <li className="flex gap-2"><span className="text-amber-500 font-bold shrink-0">&bull;</span>No public compliance tracking for recommendations</li>
-            </ul>
-          </div>
-          <div className="border border-gray-200 rounded-xl p-5">
-            <h4 className="text-xs font-black text-bauhaus-black uppercase tracking-wider mb-2">QLD Audit Office</h4>
-            <ul className="space-y-1.5 text-xs text-gray-700">
-              <li className="flex gap-2"><span className="text-amber-500 font-bold shrink-0">&bull;</span>&ldquo;Reducing Serious Youth Crime&rdquo; (Jun 2024)</li>
-              <li className="flex gap-2"><span className="text-amber-500 font-bold shrink-0">&bull;</span>12 recommendations issued</li>
-              <li className="flex gap-2"><span className="text-red-500 font-bold shrink-0">&bull;</span>&ldquo;Had not effectively implemented all recommendations&rdquo;</li>
-              <li className="flex gap-2"><span className="text-amber-500 font-bold shrink-0">&bull;</span>Cleveland YDC in lockdown 81% of time (294/365 days)</li>
-            </ul>
-          </div>
-          <div className="border border-gray-200 rounded-xl p-5">
-            <h4 className="text-xs font-black text-bauhaus-black uppercase tracking-wider mb-2">Sentencing Advisory Council</h4>
-            <ul className="space-y-1.5 text-xs text-gray-700">
-              <li className="flex gap-2"><span className="text-blue-500 font-bold shrink-0">&bull;</span>74 recommendations for youth sentencing reform</li>
-              <li className="flex gap-2"><span className="text-red-500 font-bold shrink-0">&bull;</span>Government moved opposite direction: adult sentences for children</li>
-              <li className="flex gap-2"><span className="text-amber-500 font-bold shrink-0">&bull;</span>Same maximum penalties as adults for serious offences</li>
-            </ul>
-          </div>
-          <div className="border border-gray-200 rounded-xl p-5">
-            <h4 className="text-xs font-black text-bauhaus-black uppercase tracking-wider mb-2">Human Rights Commissioner</h4>
-            <ul className="space-y-1.5 text-xs text-gray-700">
-              <li className="flex gap-2"><span className="text-red-500 font-bold shrink-0">&bull;</span>&ldquo;No justification for the override&rdquo; — QHRC on Making QLD Safer Act</li>
-              <li className="flex gap-2"><span className="text-amber-500 font-bold shrink-0">&bull;</span>Advisory power only — cannot block legislation</li>
-              <li className="flex gap-2"><span className="text-amber-500 font-bold shrink-0">&bull;</span>Commissioner Natalie Lewis submitted detailed opposition</li>
-            </ul>
-          </div>
-        </div>
-
-        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-xs text-gray-600">
-          <span className="font-black text-gray-800">Accountability gap:</span> All four oversight bodies (Ombudsman, Audit Office, Sentencing Advisory Council, Human Rights Commissioner) have <span className="font-bold">advisory power only</span>. None can compel implementation of recommendations or block legislation. The government has received 100+ recommendations across these bodies and moved in the opposite direction on most.
-        </div>
+        )}
       </section>
 
       {/* Section 1: Budget Commitments */}

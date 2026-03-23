@@ -764,6 +764,14 @@ export const AGENTS = {
     timeoutMs: 1_800_000,
     dependencies: [],
   },
+  'scrape-rogs-17a': {
+    command: ['node', '--env-file=.env', 'scripts/scrape-rogs-17a.mjs'],
+    displayName: 'ROGS Table 17A Scraper',
+    category: 'scraping',
+    defaultPriority: 3,
+    timeoutMs: 300_000,
+    dependencies: [],
+  },
   'scrape-acnc-people': {
     command: ['node', '--env-file=.env', 'scripts/scrape-acnc-people.mjs', '--rps=5'],
     displayName: 'ACNC Board Members & Officers',
@@ -865,6 +873,16 @@ export const AGENTS = {
     defaultPriority: 2,
     timeoutMs: 600_000,
     dependencies: ['scrape-ministerial-statements', 'scrape-qld-hansard'],
+  },
+
+  // ── Scrapers (outcomes data) ──────────────────────────────────────────────
+  'scrape-aihw-yj': {
+    command: ['node', '--env-file=.env', 'scripts/scrape-aihw-yj.mjs'],
+    displayName: 'AIHW Youth Justice Scraper',
+    category: 'scraping',
+    defaultPriority: 3,
+    timeoutMs: 300_000,
+    dependencies: [],
   },
 };
 
