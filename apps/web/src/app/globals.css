@@ -173,6 +173,29 @@ a, button {
   transition: all 0.15s ease;
 }
 
+/* Report table polish — subtle row transitions, clean borders */
+[data-reports-layout] table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+[data-reports-layout] table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+[data-reports-layout] tbody tr {
+  transition: background-color 0.1s ease;
+}
+
+/* Smooth section fade-in on report pages */
+[data-reports-layout] section {
+  animation: section-fade 0.3s ease-out;
+}
+@keyframes section-fade {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* Slide-in animation for preview panels */
 @keyframes slide-in-right {
   from { transform: translateX(100%); }
