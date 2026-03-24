@@ -6,8 +6,9 @@
  * Source: https://www.aihw.gov.au/reports/youth-justice/youth-detention-population-in-australia-2025
  *
  * Extracts quarterly data (Jun 2021 → Jun 2025, 17 quarters) from:
- *   S14: Detention numbers (ages 10-17) by state
- *   S18: Detention rates per 10K by Indigenous status by state
+ *   All detention:   S4 (First Nations numbers), S14 (total numbers), S18 (rates)
+ *   Unsentenced:     S22 (First Nations numbers), S32 (total numbers), S36 (rates)
+ *   Sentenced:       S40 (First Nations numbers), S50 (total numbers), S54 (rates)
  *
  * Inserts into outcomes_metrics with domain='youth-justice'.
  *
@@ -23,7 +24,7 @@ const require = createRequire(import.meta.url);
 const XLSX = require('xlsx');
 
 const DRY_RUN = process.argv.includes('--dry-run');
-const XLSX_PATH = '/tmp/aihw-youth-detention-2025.xlsx';
+const XLSX_PATH = process.env.AIHW_XLSX || 'data/aihw/aihw-youth-detention-2025.xlsx';
 const SOURCE = 'AIHW Youth Detention Population in Australia 2025';
 const SOURCE_URL = 'https://www.aihw.gov.au/reports/youth-justice/youth-detention-population-in-australia-2025';
 
@@ -203,7 +204,93 @@ for (let i = 3; i < s4.length; i++) {
   }
 }
 
-log(`  Total metrics extracted: ${metrics.length}`);
+// -- Helper: parse a "numbers by sex" table (like S14, S22, S32, S40, S50) --
+// These tables have Male, Female, Total/Persons sections. We extract Total only.
+function parseNumbersTable(sheetName, metricName, cohort, sourceTable, notesPrefix) {
+  const sheet = wb.Sheets[sheetName] || wb.Sheets[sheetName + ' '];
+  if (!sheet) { log(`  WARNING: sheet ${sheetName} not found`); return; }
+  const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+  let inTotal = false;
+  let count = 0;
+  for (let i = 3; i < data.length; i++) {
+    const row = data[i];
+    if (!row) continue;
+    if (row[0]?.toString().includes('Total') || row[0]?.toString().includes('Persons')) {
+      inTotal = true;
+      continue;
+    }
+    if (row[0]?.toString().includes('Male') && inTotal) break;
+    if (!inTotal) continue;
+    const quarter = row[1]?.toString().trim();
+    if (!quarter || !quarter.includes('qtr')) continue;
+    const period = quarterToPeriod(quarter);
+    for (const [colIdx, jurisdiction] of Object.entries(JURISDICTIONS)) {
+      const value = row[parseInt(colIdx)];
+      if (value === undefined || value === null || value === 'n.p.' || value === '—') continue;
+      const numValue = parseFloat(value);
+      if (isNaN(numValue)) continue;
+      metrics.push({
+        jurisdiction, domain: 'youth-justice', metric_name: metricName,
+        metric_value: Math.round(numValue), metric_unit: 'persons', period, cohort,
+        source: SOURCE, source_url: SOURCE_URL, source_table: sourceTable,
+        notes: `${notesPrefix}, ${quarter}, avg nightly population`,
+      });
+      count++;
+    }
+  }
+  log(`  ${sheetName}: ${count} metrics`);
+}
+
+// -- Helper: parse a "rates by Indigenous status" table (like S18, S36, S54) --
+function parseRatesTable(sheetName, metricName, sourceTable, notesPrefix) {
+  const sheet = wb.Sheets[sheetName] || wb.Sheets[sheetName + ' '];
+  if (!sheet) { log(`  WARNING: sheet ${sheetName} not found`); return; }
+  const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+  let currentCohort = '';
+  let count = 0;
+  for (let i = 3; i < data.length; i++) {
+    const row = data[i];
+    if (!row || !row[1]) continue;
+    if (row[0]?.toString().includes('First Nations')) currentCohort = 'indigenous';
+    else if (row[0]?.toString().includes('Non')) currentCohort = 'non-indigenous';
+    else if (row[0]?.toString().includes('Total')) currentCohort = 'all';
+    else if (row[0]?.toString().includes('Rate ratio')) continue;
+    const quarter = row[1]?.toString().trim();
+    if (!quarter.includes('qtr')) continue;
+    const period = quarterToPeriod(quarter);
+    for (const [colIdx, jurisdiction] of Object.entries(JURISDICTIONS)) {
+      const value = row[parseInt(colIdx)];
+      if (value === undefined || value === null || value === 'n.p.' || value === '—' || value === '..') continue;
+      const numValue = parseFloat(value);
+      if (isNaN(numValue)) continue;
+      metrics.push({
+        jurisdiction, domain: 'youth-justice', metric_name: metricName,
+        metric_value: Math.round(numValue * 100) / 100, metric_unit: 'per_10k', period,
+        cohort: currentCohort, source: SOURCE, source_url: SOURCE_URL,
+        source_table: sourceTable,
+        notes: `${notesPrefix}, ${quarter}`,
+      });
+      count++;
+    }
+  }
+  log(`  ${sheetName}: ${count} metrics`);
+}
+
+// -- Unsentenced detention (S19-S36) --
+
+log('\nParsing unsentenced detention tables...');
+parseNumbersTable('Table S22', 'aihw_avg_nightly_unsentenced', 'indigenous', 'Table S22', 'First Nations ages 10-17');
+parseNumbersTable('Table S32', 'aihw_avg_nightly_unsentenced', 'all', 'Table S32', 'Ages 10-17');
+parseRatesTable('Table S36', 'aihw_unsentenced_rate_per_10k', 'Table S36', 'Ages 10-17');
+
+// -- Sentenced detention (S37-S54) --
+
+log('\nParsing sentenced detention tables...');
+parseNumbersTable('Table S40', 'aihw_avg_nightly_sentenced', 'indigenous', 'Table S40', 'First Nations ages 10-17');
+parseNumbersTable('Table S50', 'aihw_avg_nightly_sentenced', 'all', 'Table S50', 'Ages 10-17');
+parseRatesTable('Table S54', 'aihw_sentenced_rate_per_10k', 'Table S54', 'Ages 10-17');
+
+log(`\nTotal metrics extracted: ${metrics.length}`);
 
 // -- Summary --
 
@@ -263,5 +350,5 @@ log('\n======================================================');
 log(`  AIHW Youth Detention 2025 — ${DRY_RUN ? 'DRY RUN' : 'LIVE'}`);
 log(`  Metrics: ${metrics.length}`);
 log(`  Quarters: Jun 2021 → Jun 2025 (17 quarters)`);
-log(`  Tables: S4 (First Nations numbers), S14 (total numbers), S18 (rates by Indigenous status)`);
+log(`  Tables: S4,S14,S18 (all), S22,S32,S36 (unsentenced), S40,S50,S54 (sentenced)`);
 log('======================================================');
