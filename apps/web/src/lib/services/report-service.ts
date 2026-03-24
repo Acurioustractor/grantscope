@@ -1,9 +1,38 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import { safe } from '@/lib/services/utils';
+import { esc } from '@/lib/sql';
 
-type Topic = 'youth-justice' | 'child-protection' | 'ndis' | 'family-services' | 'indigenous' | 'legal-services' | 'diversion' | 'prevention';
+export type Topic = 'youth-justice' | 'child-protection' | 'ndis' | 'family-services' | 'indigenous' | 'legal-services' | 'diversion' | 'prevention';
+
+const VALID_TOPICS: readonly string[] = ['youth-justice', 'child-protection', 'ndis', 'family-services', 'indigenous', 'legal-services', 'diversion', 'prevention'];
+const VALID_STATES: readonly string[] = ['QLD', 'NSW', 'VIC', 'WA', 'SA', 'NT', 'TAS', 'ACT'];
+const VALID_DOMAINS: readonly string[] = ['youth-justice', 'child-protection', 'disability', 'education', 'ndis', 'family-services', 'indigenous'];
+const VALID_JURISDICTIONS: readonly string[] = [...VALID_STATES, 'National'];
+
+function assertState(state: string): string {
+  const s = state.toUpperCase();
+  if (!VALID_STATES.includes(s)) throw new Error(`Invalid state: ${state}`);
+  return s;
+}
+
+function assertJurisdiction(j: string): string {
+  const v = j.toUpperCase() === 'NATIONAL' ? 'National' : j.toUpperCase();
+  if (!VALID_JURISDICTIONS.includes(v)) throw new Error(`Invalid jurisdiction: ${j}`);
+  return v;
+}
+
+function assertDomain(d: string): string {
+  if (!VALID_DOMAINS.includes(d)) throw new Error(`Invalid domain: ${d}`);
+  return d;
+}
+
+function assertTopic(t: string): Topic {
+  if (!VALID_TOPICS.includes(t)) throw new Error(`Invalid topic: ${t}`);
+  return t as Topic;
+}
 
 function topicFilter(topic: Topic): string {
+  assertTopic(topic);
   return `topics @> ARRAY['${topic}']::text[]`;
 }
 
@@ -46,7 +75,7 @@ export async function getTopPrograms(topic: Topic, limit = 15) {
  */
 export async function getTopOrgs(topic: Topic, limit = 25, state?: string) {
   const supabase = getServiceSupabase();
-  const stateFilter = state ? ` AND jf.state = '${state}'` : '';
+  const stateFilter = state ? ` AND jf.state = '${assertState(state)}'` : '';
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT jf.recipient_name,
               jf.recipient_abn,
@@ -83,7 +112,7 @@ export async function getTopOrgs(topic: Topic, limit = 25, state?: string) {
  */
 export async function getAlmaInterventions(topic: Topic, limit = 25, state?: string) {
   const supabase = getServiceSupabase();
-  const stateFilter = state ? ` AND ai.geography::text ILIKE '%${state}%'` : '';
+  const stateFilter = state ? ` AND ai.geography::text ILIKE '%${esc(state)}%'` : '';
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT ai.name, ai.type, ai.evidence_level, ai.geography, ai.portfolio_score::float,
               e.gs_id, e.canonical_name as org_name, e.abn as org_abn
@@ -109,7 +138,7 @@ export async function getAlmaInterventions(topic: Topic, limit = 25, state?: str
  */
 export async function getAlmaCount(topic: Topic, state?: string): Promise<number> {
   const supabase = getServiceSupabase();
-  const stateFilter = state ? ` AND geography::text ILIKE '%${state}%'` : '';
+  const stateFilter = state ? ` AND geography::text ILIKE '%${esc(state)}%'` : '';
   const data = await safe(supabase.rpc('exec_sql', {
     query: `SELECT COUNT(*)::int as cnt FROM alma_interventions WHERE ${topicFilter(topic)}${stateFilter}`,
   }));
@@ -121,7 +150,7 @@ export async function getAlmaCount(topic: Topic, state?: string): Promise<number
  */
 export async function getContractStats(keywords: string[]) {
   const supabase = getServiceSupabase();
-  const where = keywords.map(k => `title ILIKE '%${k}%'`).join(' OR ');
+  const where = keywords.map(k => `title ILIKE '%${esc(k)}%'`).join(' OR ');
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT COUNT(*)::int as contracts,
               SUM(contract_value)::bigint as total_value
@@ -136,7 +165,8 @@ export async function getContractStats(keywords: string[]) {
  */
 export async function getFundingByLga(topic: Topic, limit = 20, state?: string) {
   const supabase = getServiceSupabase();
-  const stateFilter = state ? ` AND jf.state = '${state}'` : '';
+  const sc = state ? assertState(state) : null;
+  const stateFilter = sc ? ` AND jf.state = '${sc}'` : '';
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT e.lga_name, e.state,
               COUNT(DISTINCT e.gs_id)::int as orgs,
@@ -146,7 +176,7 @@ export async function getFundingByLga(topic: Topic, limit = 20, state?: string) 
        JOIN gs_entities e ON e.abn = jf.recipient_abn AND jf.recipient_abn IS NOT NULL
        WHERE jf.${topicFilter(topic)}${stateFilter}
          AND e.lga_name IS NOT NULL
-         ${state ? `AND e.state = '${state}'` : ''}
+         ${sc ? `AND e.state = '${sc}'` : ''}
        GROUP BY e.lga_name, e.state
        ORDER BY total_funding DESC
        LIMIT ${limit}`,
@@ -240,7 +270,7 @@ export async function getCrossSystemOrgs(primaryTopic: Topic, crossTopics: Topic
  */
 export async function getCrossSystemOverlap(primaryTopic: Topic, stateCode: string, limit = 15) {
   const supabase = getServiceSupabase();
-  const sc = stateCode.toUpperCase();
+  const sc = assertState(stateCode);
   const query = `
     SELECT e.gs_id, e.canonical_name, e.entity_type,
            array_agg(DISTINCT t.topic ORDER BY t.topic) as topics,
@@ -271,7 +301,7 @@ export async function getCrossSystemOverlap(primaryTopic: Topic, stateCode: stri
  */
 export async function getSchoolProfiles(lgaNames: string[]) {
   const supabase = getServiceSupabase();
-  const lgaList = lgaNames.map(l => `'${l.replace(/'/g, "''")}'`).join(',');
+  const lgaList = lgaNames.map(l => `'${esc(l)}'`).join(',');
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT lga_name, state,
               COUNT(*)::int as schools,
@@ -297,7 +327,7 @@ export async function getSchoolProfiles(lgaNames: string[]) {
  * Provider contracts for specific entity UUIDs
  */
 export async function getProviderContracts(entityIds: string[], limit = 20) {
-  const idList = entityIds.map(id => `'${id}'`).join(',');
+  const idList = entityIds.map(id => `'${esc(id)}'`).join(',');
   const supabase = getServiceSupabase();
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT s.canonical_name as source, t.canonical_name as target,
@@ -324,11 +354,12 @@ export async function getProviderContracts(entityIds: string[], limit = 20) {
  */
 export async function getRogsTimeSeries(programPrefix: string, states: string[]) {
   const supabase = getServiceSupabase();
-  const stateList = states.map(s => `'${s}'`).join(',');
+  const validStates = states.map(s => assertState(s));
+  const stateList = validStates.map(s => `'${s}'`).join(',');
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT state, financial_year, program_name, amount_dollars::bigint as amount
        FROM justice_funding
-       WHERE program_name LIKE '${programPrefix}%'
+       WHERE program_name LIKE '${esc(programPrefix)}%'
          AND state IN (${stateList})
        ORDER BY state, financial_year, program_name`,
   })) as Promise<Array<{
@@ -439,7 +470,7 @@ export async function getDssPaymentsByState() {
  */
 export async function getDssPaymentsByLga(lgaNames: string[]) {
   const supabase = getServiceSupabase();
-  const lgaList = lgaNames.map(l => `'${l.replace(/'/g, "''")}'`).join(',');
+  const lgaList = lgaNames.map(l => `'${esc(l)}'`).join(',');
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT p.lga_name, d.payment_type,
               SUM(d.recipient_count)::int as recipients
@@ -500,7 +531,7 @@ export async function getYouthJusticeIndicators() {
  */
 export async function getCrimeStatsLga(lgaNames: string[]) {
   const supabase = getServiceSupabase();
-  const lgaList = lgaNames.map(l => `'${l.replace(/'/g, "''")}'`).join(',');
+  const lgaList = lgaNames.map(l => `'${esc(l)}'`).join(',');
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT lga_name, state,
               SUM(incidents)::int as total_incidents,
@@ -604,7 +635,7 @@ export function fmt(n: number | null | undefined): string {
  */
 export async function getAccoFundingGap(topic: Topic, state?: string) {
   const supabase = getServiceSupabase();
-  const stateFilter = state ? ` AND jf.state = '${state}'` : '';
+  const stateFilter = state ? ` AND jf.state = '${assertState(state)}'` : '';
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT
               CASE WHEN ge.is_community_controlled THEN 'Community Controlled' ELSE 'Non-Indigenous' END as org_type,
@@ -624,7 +655,7 @@ export async function getAccoFundingGap(topic: Topic, state?: string) {
  */
 export async function getFundingByRemoteness(topic: Topic, state?: string) {
   const supabase = getServiceSupabase();
-  const stateFilter = state ? ` AND jf.state = '${state}'` : '';
+  const stateFilter = state ? ` AND jf.state = '${assertState(state)}'` : '';
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT ge.remoteness,
               COUNT(DISTINCT jf.recipient_name)::int as orgs,
@@ -660,7 +691,7 @@ export async function getUnfundedEffectivePrograms(topic: Topic) {
  */
 export async function getYjRevolvingDoor(topic: Topic, limit = 15, state?: string) {
   const supabase = getServiceSupabase();
-  const stateFilter = state ? ` AND state = '${state}'` : '';
+  const stateFilter = state ? ` AND state = '${assertState(state)}'` : '';
   return safe(supabase.rpc('exec_sql', {
     query: `WITH yj_orgs AS (
               SELECT DISTINCT gs_entity_id
@@ -1003,7 +1034,7 @@ export async function getYjMmrStats() {
  */
 export async function getEvidenceCoverage(topic: Topic, state?: string) {
   const supabase = getServiceSupabase();
-  const stateFilter = state ? ` AND ai.geography::text ILIKE '%${state}%'` : '';
+  const stateFilter = state ? ` AND ai.geography::text ILIKE '%${esc(state)}%'` : '';
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT COUNT(DISTINCT ai.id)::int as total_interventions,
               COUNT(DISTINCT aie.intervention_id)::int as with_evidence,
@@ -1025,7 +1056,7 @@ export async function getEvidenceCoverage(topic: Topic, state?: string) {
  */
 export async function getEvidenceGapDetail(topic: Topic, state?: string, limit = 30) {
   const supabase = getServiceSupabase();
-  const stateFilter = state ? ` AND ai.geography::text ILIKE '%${state}%'` : '';
+  const stateFilter = state ? ` AND ai.geography::text ILIKE '%${esc(state)}%'` : '';
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT ai.name, ai.type, ai.evidence_level,
               CASE WHEN aie.id IS NOT NULL THEN true ELSE false END as has_evidence,
@@ -1059,11 +1090,12 @@ export async function getEvidenceGapDetail(topic: Topic, state?: string, limit =
  */
 export async function getHansardMentions(state: string, limit = 20) {
   const supabase = getServiceSupabase();
+  const sc = assertState(state);
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT speaker_name, speaker_party, speaker_electorate, sitting_date, subject,
               LEFT(body_text, 300) as excerpt
        FROM civic_hansard
-       WHERE jurisdiction = '${state}'
+       WHERE jurisdiction = '${sc}'
          AND (body_text ILIKE '%youth justice%'
            OR body_text ILIKE '%watch house%'
            OR body_text ILIKE '%child safety%'
@@ -1085,7 +1117,7 @@ export async function getHansardMentions(state: string, limit = 20) {
  */
 export async function getYjLobbyingConnections(topic: Topic, state?: string, limit = 15) {
   const supabase = getServiceSupabase();
-  const stateFilter = state ? ` AND jf.state = '${state}'` : '';
+  const stateFilter = state ? ` AND jf.state = '${assertState(state)}'` : '';
   return safe(supabase.rpc('exec_sql', {
     query: `WITH yj_orgs AS (
               SELECT DISTINCT gs_entity_id FROM justice_funding
@@ -1121,6 +1153,7 @@ export async function getYjLobbyingConnections(topic: Topic, state?: string, lim
  */
 export async function getProgramsWithPartners(topic: Topic, state: string, opts?: { namedOnly?: boolean }) {
   const supabase = getServiceSupabase();
+  const sc = assertState(state);
   const deptFilter = opts?.namedOnly
     ? `AND jf.program_name NOT LIKE 'Community%Youth Justice%'
          AND jf.program_name NOT LIKE 'Community,%Youth Justice%'`
@@ -1134,7 +1167,7 @@ export async function getProgramsWithPartners(topic: Topic, state: string, opts?
                 ROW_NUMBER() OVER (PARTITION BY jf.program_name ORDER BY SUM(jf.amount_dollars) DESC NULLS LAST) as rn
          FROM justice_funding jf
          LEFT JOIN gs_entities e ON e.abn = jf.recipient_abn AND jf.recipient_abn IS NOT NULL
-         WHERE jf.state = '${state}'
+         WHERE jf.state = '${sc}'
            AND jf.${topicFilter(topic)}
            AND jf.program_name NOT LIKE 'ROGS%'
            AND jf.program_name NOT LIKE 'Total%'
@@ -1169,10 +1202,11 @@ export async function getProgramsWithPartners(topic: Topic, state: string, opts?
  */
 export async function getRogsExpenditure(state: string) {
   const supabase = getServiceSupabase();
+  const sc = assertState(state);
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT program_name, SUM(amount_dollars)::bigint as total, COUNT(*)::int as years
        FROM justice_funding
-       WHERE state = '${state}' AND source = 'rogs-2026'
+       WHERE state = '${sc}' AND source = 'rogs-2026'
          AND program_name NOT LIKE '%Total%'
        GROUP BY program_name
        ORDER BY total DESC`,
@@ -1188,13 +1222,14 @@ export async function getRogsExpenditure(state: string) {
  */
 export async function getFundingByProgram(topic: Topic, state: string, limit = 20) {
   const supabase = getServiceSupabase();
+  const sc = assertState(state);
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT program_name,
               COUNT(*)::int as grants,
               SUM(amount_dollars)::bigint as total,
               COUNT(DISTINCT recipient_name)::int as orgs
        FROM justice_funding
-       WHERE state = '${state}'
+       WHERE state = '${sc}'
          AND ${topicFilter(topic)}
          AND program_name NOT LIKE 'ROGS%'
          AND program_name NOT LIKE 'Total%'
@@ -1221,6 +1256,7 @@ export async function getFundingByProgram(topic: Topic, state: string, limit = 2
  */
 export async function getStateDataDepth(state: string) {
   const supabase = getServiceSupabase();
+  const sc = assertState(state);
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT COUNT(*)::int as total_records,
               COUNT(DISTINCT source)::int as sources,
@@ -1229,7 +1265,7 @@ export async function getStateDataDepth(state: string) {
               MIN(financial_year) as earliest_year,
               MAX(financial_year) as latest_year
        FROM justice_funding
-       WHERE state = '${state}'`,
+       WHERE state = '${sc}'`,
   })) as Promise<Array<{
     total_records: number;
     sources: number;
@@ -1249,10 +1285,11 @@ export async function getStateDataDepth(state: string) {
  */
 export async function getBudgetCommitments(state: string) {
   const supabase = getServiceSupabase();
+  const sc = assertState(state);
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT program_name, amount_dollars::bigint as amount, financial_year, source
        FROM justice_funding
-       WHERE state = '${state}' AND source LIKE '%-budget-sds'
+       WHERE state = '${sc}' AND source LIKE '%-budget-sds'
          AND program_name NOT LIKE 'Total%'
        ORDER BY amount_dollars DESC NULLS LAST`,
   })) as Promise<Array<{
@@ -1268,6 +1305,7 @@ export async function getBudgetCommitments(state: string) {
  */
 export async function getProgramRecipients(state: string, programName: string, limit = 20) {
   const supabase = getServiceSupabase();
+  const sc = assertState(state);
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT jf.recipient_name, jf.recipient_abn,
               SUM(jf.amount_dollars)::bigint as total,
@@ -1275,7 +1313,7 @@ export async function getProgramRecipients(state: string, programName: string, l
               e.gs_id, e.is_community_controlled
        FROM justice_funding jf
        LEFT JOIN gs_entities e ON e.abn = jf.recipient_abn AND jf.recipient_abn IS NOT NULL
-       WHERE jf.state = '${state}' AND jf.program_name = '${programName.replace(/'/g, "''")}'
+       WHERE jf.state = '${sc}' AND jf.program_name = '${esc(programName)}'
        GROUP BY jf.recipient_name, jf.recipient_abn, e.gs_id, e.is_community_controlled
        ORDER BY total DESC NULLS LAST
        LIMIT ${limit}`,
@@ -1294,6 +1332,7 @@ export async function getProgramRecipients(state: string, programName: string, l
  */
 export async function getTrackerLeadership(state: string, topic: Topic, limit = 20) {
   const supabase = getServiceSupabase();
+  const sc = assertState(state);
   return safe(supabase.rpc('exec_sql', {
     query: `WITH top_orgs AS (
               SELECT DISTINCT ON (jf.recipient_abn) jf.recipient_name, jf.recipient_abn, e.id as entity_id,
@@ -1301,7 +1340,7 @@ export async function getTrackerLeadership(state: string, topic: Topic, limit = 
                 SUM(jf.amount_dollars) OVER (PARTITION BY jf.recipient_abn) as total_funded
               FROM justice_funding jf
               JOIN gs_entities e ON e.abn = jf.recipient_abn
-              WHERE jf.state = '${state}' AND jf.${topicFilter(topic)}
+              WHERE jf.state = '${sc}' AND jf.${topicFilter(topic)}
                 AND jf.recipient_abn IS NOT NULL
                 AND jf.program_name NOT LIKE 'ROGS%' AND jf.program_name NOT LIKE 'Total%'
               ORDER BY jf.recipient_abn, total_funded DESC
@@ -1331,12 +1370,13 @@ export async function getTrackerLeadership(state: string, topic: Topic, limit = 
  */
 export async function getTrackerInterlocks(state: string, topic: Topic, limit = 15) {
   const supabase = getServiceSupabase();
+  const sc = assertState(state);
   return safe(supabase.rpc('exec_sql', {
     query: `WITH yj_entities AS (
               SELECT DISTINCT e.id
               FROM justice_funding jf
               JOIN gs_entities e ON e.abn = jf.recipient_abn
-              WHERE jf.state = '${state}' AND jf.${topicFilter(topic)}
+              WHERE jf.state = '${sc}' AND jf.${topicFilter(topic)}
                 AND jf.recipient_abn IS NOT NULL
             )
             SELECT bi.person_name_display as person_name, bi.board_count,
@@ -1362,6 +1402,7 @@ export async function getTrackerInterlocks(state: string, topic: Topic, limit = 
  */
 export async function getTrackerDonations(state: string, topic: Topic, limit = 15) {
   const supabase = getServiceSupabase();
+  const sc = assertState(state);
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT pd.donor_name, pd.donation_to,
               SUM(pd.amount)::bigint as total,
@@ -1371,7 +1412,7 @@ export async function getTrackerDonations(state: string, topic: Topic, limit = 1
        FROM political_donations pd
        WHERE pd.donor_abn IN (
          SELECT DISTINCT recipient_abn FROM justice_funding
-         WHERE state = '${state}' AND ${topicFilter(topic)}
+         WHERE state = '${sc}' AND ${topicFilter(topic)}
            AND recipient_abn IS NOT NULL
        )
        GROUP BY pd.donor_name, pd.donation_to
@@ -1392,10 +1433,11 @@ export async function getTrackerDonations(state: string, topic: Topic, limit = 1
  */
 export async function getBudgetTotals(state: string) {
   const supabase = getServiceSupabase();
+  const sc = assertState(state);
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT program_name, amount_dollars::bigint as amount, financial_year
        FROM justice_funding
-       WHERE state = '${state}' AND source LIKE '%-budget-sds'
+       WHERE state = '${sc}' AND source LIKE '%-budget-sds'
          AND program_name LIKE 'Total%'
        ORDER BY financial_year DESC`,
   })) as Promise<Array<{
@@ -1414,10 +1456,12 @@ export async function getBudgetTotals(state: string) {
  */
 export async function getOutcomesMetrics(jurisdiction: string, domain = 'youth-justice') {
   const supabase = getServiceSupabase();
+  const j = assertJurisdiction(jurisdiction);
+  const d = assertDomain(domain);
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT metric_name, metric_value::float, metric_unit, period, cohort, source, notes
        FROM outcomes_metrics
-       WHERE jurisdiction = '${jurisdiction}' AND domain = '${domain}'
+       WHERE jurisdiction = '${j}' AND domain = '${d}'
        ORDER BY metric_name, period`,
   })) as Promise<Array<{
     metric_name: string;
@@ -1435,11 +1479,12 @@ export async function getOutcomesMetrics(jurisdiction: string, domain = 'youth-j
  */
 export async function getStateComparisonMetrics(metricNames: string[], domain = 'youth-justice') {
   const supabase = getServiceSupabase();
-  const nameList = metricNames.map(n => `'${n}'`).join(',');
+  const d = assertDomain(domain);
+  const nameList = metricNames.map(n => `'${esc(n)}'`).join(',');
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT DISTINCT ON (metric_name, jurisdiction) jurisdiction, metric_name, metric_value::float, metric_unit, period, cohort
        FROM outcomes_metrics
-       WHERE domain = '${domain}' AND metric_name IN (${nameList})
+       WHERE domain = '${d}' AND metric_name IN (${nameList})
          AND (cohort = 'all' OR cohort = 'indigenous' OR cohort IS NULL)
        ORDER BY metric_name, jurisdiction, CASE WHEN cohort = 'all' THEN 0 WHEN cohort IS NULL THEN 1 ELSE 2 END, period DESC`,
   })) as Promise<Array<{
@@ -1457,10 +1502,12 @@ export async function getStateComparisonMetrics(metricNames: string[], domain = 
  */
 export async function getCtgTrend(jurisdiction: string, domain = 'youth-justice') {
   const supabase = getServiceSupabase();
+  const j = assertJurisdiction(jurisdiction);
+  const d = assertDomain(domain);
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT metric_value::float as rate, period, notes
        FROM outcomes_metrics
-       WHERE jurisdiction = '${jurisdiction}' AND domain = '${domain}'
+       WHERE jurisdiction = '${j}' AND domain = '${d}'
          AND metric_name = 'ctg_target11_indigenous_detention_rate'
        ORDER BY period`,
   })) as Promise<Array<{
@@ -1475,11 +1522,13 @@ export async function getCtgTrend(jurisdiction: string, domain = 'youth-justice'
  */
 export async function getPolicyTimeline(jurisdiction: string, domain = 'youth-justice') {
   const supabase = getServiceSupabase();
+  const j = assertJurisdiction(jurisdiction);
+  const d = assertDomain(domain);
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT event_date, title, description, event_type, severity, source, impact_summary,
               metadata
        FROM policy_events
-       WHERE jurisdiction = '${jurisdiction}' AND domain = '${domain}'
+       WHERE jurisdiction = '${j}' AND domain = '${d}'
        ORDER BY event_date DESC`,
   })) as Promise<Array<{
     event_date: string;
@@ -1498,11 +1547,13 @@ export async function getPolicyTimeline(jurisdiction: string, domain = 'youth-ju
  */
 export async function getOversightData(jurisdiction: string, domain = 'youth-justice') {
   const supabase = getServiceSupabase();
+  const j = assertJurisdiction(jurisdiction);
+  const d = assertDomain(domain);
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT oversight_body, report_title, report_date, report_url,
               recommendation_number, recommendation_text, status, status_notes, severity
        FROM oversight_recommendations
-       WHERE jurisdiction = '${jurisdiction}' AND domain = '${domain}'
+       WHERE jurisdiction = '${j}' AND domain = '${d}'
        ORDER BY oversight_body, recommendation_number`,
   })) as Promise<Array<{
     oversight_body: string;
@@ -1526,7 +1577,7 @@ export async function getOversightData(jurisdiction: string, domain = 'youth-jus
  */
 export async function getCrossDomainOrgs(stateCode: string, limit = 20) {
   const supabase = getServiceSupabase();
-  const sc = stateCode.toUpperCase();
+  const sc = assertState(stateCode);
   const domainTopics = ['youth-justice', 'child-protection', 'ndis', 'family-services', 'indigenous'];
   const domainLabels: Record<string, string> = {
     'youth-justice': 'Youth Justice',
@@ -1579,7 +1630,7 @@ export async function getCrossDomainOrgs(stateCode: string, limit = 20) {
  */
 export async function getStateDomainFunding(stateCode: string) {
   const supabase = getServiceSupabase();
-  const sc = stateCode.toUpperCase();
+  const sc = assertState(stateCode);
   const domains: Array<{ topic: Topic; label: string }> = [
     { topic: 'youth-justice', label: 'Youth Justice' },
     { topic: 'child-protection', label: 'Child Protection' },
@@ -1623,6 +1674,7 @@ export async function getStateDomainFunding(stateCode: string) {
  */
 export async function getOversightSummary(jurisdiction: string) {
   const supabase = getServiceSupabase();
+  const j = assertJurisdiction(jurisdiction);
   const query = `
     SELECT domain,
            COUNT(*)::int as total,
@@ -1631,7 +1683,7 @@ export async function getOversightSummary(jurisdiction: string) {
            COUNT(*) FILTER (WHERE status = 'pending' OR status = 'accepted')::int as pending,
            COUNT(*) FILTER (WHERE status = 'rejected' OR status = 'superseded')::int as rejected
     FROM oversight_recommendations
-    WHERE jurisdiction IN ('${jurisdiction}', 'National')
+    WHERE jurisdiction IN ('${j}', 'National')
     GROUP BY domain
     ORDER BY domain
   `;
