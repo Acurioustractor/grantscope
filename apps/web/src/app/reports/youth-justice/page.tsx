@@ -554,8 +554,8 @@ export default async function YouthJusticeReportPage() {
               but <span className="font-black text-bauhaus-red">no matching justice funding</span> in our database.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {report.unfundedPrograms.map(p => (
-                <div key={p.name} className="border-2 border-red-200 bg-red-50/50 rounded-sm p-3">
+              {report.unfundedPrograms.map((p, i) => (
+                <div key={`${p.name}-${i}`} className="border-2 border-red-200 bg-red-50/50 rounded-sm p-3">
                   <h4 className="font-bold text-sm leading-tight mb-1">{p.name}</h4>
                   <div className="flex flex-wrap gap-1 mb-1.5">
                     <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded uppercase">{p.type}</span>

@@ -47,6 +47,93 @@ export default function ReportsPage() {
         </ol>
       </div>
 
+      {/* ===== DOMAIN INTELLIGENCE ===== */}
+      <section className="mb-12">
+        <div className="mb-5">
+          <h2 className="text-xl font-black text-bauhaus-black mb-1">Domain Intelligence</h2>
+          <p className="text-sm text-bauhaus-muted font-medium">
+            ROGS, AIHW, ACARA &amp; ALMA data across youth justice, child protection, disability, and education.
+            State deep-dives, national comparisons, and cross-domain analysis.
+          </p>
+        </div>
+
+        {/* State Dashboards row */}
+        <div className="bg-gray-50 border-4 border-bauhaus-black p-5 mb-5">
+          <div className="text-xs font-black text-bauhaus-muted uppercase tracking-widest mb-3">Cross-Domain State Dashboards</div>
+          <div className="flex flex-wrap gap-2">
+            {['ACT', 'NSW', 'NT', 'QLD', 'SA', 'TAS', 'VIC', 'WA'].map(s => (
+              <a key={s} href={`/reports/${s.toLowerCase()}`}
+                className="text-sm font-black uppercase tracking-wider px-4 py-2 border-2 border-bauhaus-black hover:bg-bauhaus-black hover:text-white transition-colors">
+                {s}
+              </a>
+            ))}
+          </div>
+        </div>
+
+        {/* Domain grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="bg-red-50 border-4 border-bauhaus-black p-5">
+            <div className="text-xs font-black text-red-600 mb-1 uppercase tracking-widest">Youth Justice</div>
+            <a href="/reports/youth-justice" className="block">
+              <h3 className="text-lg font-black text-bauhaus-black mb-1 hover:text-red-600 transition-colors">Who gets locked up, who profits, what works</h3>
+            </a>
+            <p className="text-xs text-bauhaus-muted">Detention, recidivism, CtG Target 11, ROGS 17A, ALMA evidence</p>
+            <div className="flex gap-3 mt-3">
+              <a href="/reports/youth-justice/national" className="text-[10px] font-bold text-red-600 hover:underline">National &rarr;</a>
+              <span className="text-[10px] text-gray-300">|</span>
+              <a href="/reports/youth-justice/qld" className="text-[10px] font-bold text-red-600 hover:underline">QLD &rarr;</a>
+              <a href="/reports/youth-justice/nsw" className="text-[10px] font-bold text-red-600 hover:underline">NSW &rarr;</a>
+              <a href="/reports/youth-justice/nt" className="text-[10px] font-bold text-red-600 hover:underline">NT &rarr;</a>
+            </div>
+          </div>
+
+          <div className="bg-amber-50 border-4 border-bauhaus-black p-5">
+            <div className="text-xs font-black text-amber-600 mb-1 uppercase tracking-widest">Child Protection</div>
+            <a href="/reports/child-protection" className="block">
+              <h3 className="text-lg font-black text-bauhaus-black mb-1 hover:text-amber-600 transition-colors">Out-of-home care, family safety, the pipeline</h3>
+            </a>
+            <p className="text-xs text-bauhaus-muted">Notifications, substantiations, OOHC, resubstantiation, ROGS 16A</p>
+            <div className="flex gap-3 mt-3">
+              <a href="/reports/child-protection/national" className="text-[10px] font-bold text-amber-600 hover:underline">National &rarr;</a>
+              <span className="text-[10px] text-gray-300">|</span>
+              <a href="/reports/child-protection/nsw" className="text-[10px] font-bold text-amber-600 hover:underline">NSW &rarr;</a>
+              <a href="/reports/child-protection/qld" className="text-[10px] font-bold text-amber-600 hover:underline">QLD &rarr;</a>
+              <a href="/reports/child-protection/vic" className="text-[10px] font-bold text-amber-600 hover:underline">VIC &rarr;</a>
+            </div>
+          </div>
+
+          <div className="bg-blue-50 border-4 border-bauhaus-black p-5">
+            <div className="text-xs font-black text-blue-600 mb-1 uppercase tracking-widest">Disability</div>
+            <a href="/reports/disability" className="block">
+              <h3 className="text-lg font-black text-bauhaus-black mb-1 hover:text-blue-600 transition-colors">NDIS markets, thin supply, who delivers</h3>
+            </a>
+            <p className="text-xs text-bauhaus-muted">Participation, expenditure, satisfaction, restrictive practices, ROGS 15A</p>
+            <div className="flex gap-3 mt-3">
+              <a href="/reports/disability/national" className="text-[10px] font-bold text-blue-600 hover:underline">National &rarr;</a>
+              <span className="text-[10px] text-gray-300">|</span>
+              <a href="/reports/disability/nsw" className="text-[10px] font-bold text-blue-600 hover:underline">NSW &rarr;</a>
+              <a href="/reports/disability/qld" className="text-[10px] font-bold text-blue-600 hover:underline">QLD &rarr;</a>
+              <a href="/reports/disability/sa" className="text-[10px] font-bold text-blue-600 hover:underline">SA &rarr;</a>
+            </div>
+          </div>
+
+          <div className="bg-emerald-50 border-4 border-bauhaus-black p-5">
+            <div className="text-xs font-black text-emerald-600 mb-1 uppercase tracking-widest">Education</div>
+            <a href="/reports/education" className="block">
+              <h3 className="text-lg font-black text-bauhaus-black mb-1 hover:text-emerald-600 transition-colors">Schools, funding, outcomes, and the crossover</h3>
+            </a>
+            <p className="text-xs text-bauhaus-muted">Attendance, retention, enrolments, ICSEA, expenditure, ROGS 4A</p>
+            <div className="flex gap-3 mt-3">
+              <a href="/reports/education/national" className="text-[10px] font-bold text-emerald-600 hover:underline">National &rarr;</a>
+              <span className="text-[10px] text-gray-300">|</span>
+              <a href="/reports/education/nsw" className="text-[10px] font-bold text-emerald-600 hover:underline">NSW &rarr;</a>
+              <a href="/reports/education/nt" className="text-[10px] font-bold text-emerald-600 hover:underline">NT &rarr;</a>
+              <a href="/reports/education/vic" className="text-[10px] font-bold text-emerald-600 hover:underline">VIC &rarr;</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ===== FLAGSHIP: FOUNDATION INTELLIGENCE ===== */}
       <section className="mb-6">
         <a href="/reports/philanthropy" className="group block">

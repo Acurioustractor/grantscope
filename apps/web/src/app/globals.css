@@ -153,6 +153,14 @@ h1, h2, h3, h4 {
 
 /* Max-width for content within workspace */
 .ws main > div { max-width: 1200px; margin-left: auto; margin-right: auto; }
+.ws main > [data-reports-layout] { max-width: none; margin: 0; }
+
+/* Reports layout: break out of both public centering and workspace constraints */
+main:has(> [data-reports-layout]) {
+  padding: 0 !important;
+  max-width: none !important;
+  margin: 0 !important;
+}
 
 @keyframes pulse-soft {
   0%, 100% { opacity: 1; }
@@ -173,6 +181,15 @@ a, button {
 
 .animate-slide-in-right {
   animation: slide-in-right 0.2s ease-out;
+}
+
+@keyframes slide-in-left {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 0.2s ease-out;
 }
 
 /* Print styles for Tender Intelligence Pack PDF export */

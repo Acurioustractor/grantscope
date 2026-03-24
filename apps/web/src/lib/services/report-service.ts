@@ -83,12 +83,14 @@ export async function getTopOrgs(topic: Topic, limit = 25, state?: string) {
  */
 export async function getAlmaInterventions(topic: Topic, limit = 25, state?: string) {
   const supabase = getServiceSupabase();
-  const stateFilter = state ? ` AND geography::text ILIKE '%${state}%'` : '';
+  const stateFilter = state ? ` AND ai.geography::text ILIKE '%${state}%'` : '';
   return safe(supabase.rpc('exec_sql', {
-    query: `SELECT name, type, evidence_level, geography, portfolio_score::float
-       FROM alma_interventions
-       WHERE ${topicFilter(topic)}${stateFilter}
-       ORDER BY portfolio_score DESC NULLS LAST
+    query: `SELECT ai.name, ai.type, ai.evidence_level, ai.geography, ai.portfolio_score::float,
+              e.gs_id, e.canonical_name as org_name, e.abn as org_abn
+       FROM alma_interventions ai
+       LEFT JOIN gs_entities e ON e.id = ai.gs_entity_id
+       WHERE ai.${topicFilter(topic)}${stateFilter}
+       ORDER BY ai.portfolio_score DESC NULLS LAST
        LIMIT ${limit}`,
   })) as Promise<Array<{
     name: string;
@@ -96,6 +98,9 @@ export async function getAlmaInterventions(topic: Topic, limit = 25, state?: str
     evidence_level: string | null;
     geography: string | null;
     portfolio_score: number | null;
+    gs_id: string | null;
+    org_name: string | null;
+    org_abn: string | null;
   }> | null>;
 }
 
@@ -226,6 +231,37 @@ export async function getCrossSystemOrgs(primaryTopic: Topic, crossTopics: Topic
     entity_type: string | null;
     state: string | null;
     systems: string[];
+    total_funding: number;
+  }> | null>;
+}
+
+/**
+ * Cross-system overlap — orgs in a primary topic that also appear in other topics, filtered by state
+ */
+export async function getCrossSystemOverlap(primaryTopic: Topic, stateCode: string, limit = 15) {
+  const supabase = getServiceSupabase();
+  const sc = stateCode.toUpperCase();
+  const query = `
+    SELECT e.gs_id, e.canonical_name, e.entity_type,
+           array_agg(DISTINCT t.topic ORDER BY t.topic) as topics,
+           COUNT(DISTINCT t.topic)::int as topic_count,
+           SUM(jf.amount_dollars)::bigint as total_funding
+    FROM gs_entities e
+    JOIN justice_funding jf ON jf.recipient_abn = e.abn AND e.abn IS NOT NULL
+    CROSS JOIN LATERAL unnest(jf.topics) AS t(topic)
+    WHERE e.state = '${sc}'
+      AND jf.topics @> ARRAY['${primaryTopic}']::text[]
+    GROUP BY e.gs_id, e.canonical_name, e.entity_type
+    HAVING COUNT(DISTINCT t.topic) > 1
+    ORDER BY COUNT(DISTINCT t.topic) DESC, SUM(jf.amount_dollars) DESC NULLS LAST
+    LIMIT ${limit}
+  `;
+  return safe(supabase.rpc('exec_sql', { query })) as Promise<Array<{
+    gs_id: string;
+    canonical_name: string;
+    entity_type: string | null;
+    topics: string[];
+    topic_count: number;
     total_funding: number;
   }> | null>;
 }
@@ -554,7 +590,8 @@ export function money(n: number | null | undefined): string {
 /**
  * Utility: format number with commas
  */
-export function fmt(n: number): string {
+export function fmt(n: number | null | undefined): string {
+  if (n == null) return '—';
   return n.toLocaleString('en-AU');
 }
 
@@ -992,10 +1029,12 @@ export async function getEvidenceGapDetail(topic: Topic, state?: string, limit =
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT ai.name, ai.type, ai.evidence_level,
               CASE WHEN aie.id IS NOT NULL THEN true ELSE false END as has_evidence,
-              ae.evidence_type, ae.methodology
+              ae.evidence_type, ae.methodology,
+              e.gs_id, e.abn as org_abn
        FROM alma_interventions ai
        LEFT JOIN alma_intervention_evidence aie ON aie.intervention_id = ai.id
        LEFT JOIN alma_evidence ae ON ae.id = aie.evidence_id
+       LEFT JOIN gs_entities e ON e.id = ai.gs_entity_id
        WHERE ai.${topicFilter(topic)}${stateFilter}
        ORDER BY has_evidence, ai.name
        LIMIT ${limit}`,
@@ -1006,6 +1045,8 @@ export async function getEvidenceGapDetail(topic: Topic, state?: string, limit =
     has_evidence: boolean;
     evidence_type: string | null;
     methodology: string | null;
+    gs_id: string | null;
+    org_abn: string | null;
   }> | null>;
 }
 
@@ -1085,39 +1126,33 @@ export async function getProgramsWithPartners(topic: Topic, state: string, opts?
          AND jf.program_name NOT LIKE 'Community,%Youth Justice%'`
     : '';
   return safe(supabase.rpc('exec_sql', {
-    query: `SELECT jf.program_name, jf.recipient_name, jf.recipient_abn,
-              COALESCE(SUM(jf.amount_dollars)::bigint, org_total.total) as total,
-              COUNT(*)::int as grants,
-              e.gs_id, e.is_community_controlled
-       FROM justice_funding jf
-       LEFT JOIN gs_entities e ON e.abn = jf.recipient_abn AND jf.recipient_abn IS NOT NULL
-       LEFT JOIN LATERAL (
-         SELECT SUM(jf2.amount_dollars)::bigint as total
-         FROM justice_funding jf2
-         WHERE jf2.state = '${state}'
-           AND jf2.amount_dollars IS NOT NULL
-           AND (
-             (jf.recipient_abn IS NOT NULL AND jf2.recipient_abn = jf.recipient_abn)
-             OR (jf.recipient_abn IS NULL AND jf2.recipient_name = jf.recipient_name)
-           )
-       ) org_total ON true
-       WHERE jf.state = '${state}'
-         AND jf.${topicFilter(topic)}
-         AND jf.program_name NOT LIKE 'ROGS%'
-         AND jf.program_name NOT LIKE 'Total%'
-         AND jf.program_name NOT LIKE 'Government real%'
-         AND jf.program_name NOT LIKE 'Cost per%'
-         AND jf.program_name NOT LIKE 'Net capital%'
-         AND jf.program_name NOT LIKE 'Real recurrent%'
-         ${deptFilter}
-         AND jf.recipient_name NOT LIKE 'Department of%'
-         AND jf.recipient_name NOT LIKE 'Multiple%'
-         AND jf.recipient_name NOT LIKE 'State of%'
-         AND jf.recipient_name NOT LIKE 'Total%'
-         AND jf.recipient_name NOT LIKE 'Youth Justice -%'
-       GROUP BY jf.program_name, jf.recipient_name, jf.recipient_abn, e.gs_id, e.is_community_controlled, org_total.total
-       ORDER BY jf.program_name, total DESC NULLS LAST
-       LIMIT 500`,
+    query: `WITH ranked AS (
+         SELECT jf.program_name, jf.recipient_name, jf.recipient_abn,
+                SUM(jf.amount_dollars)::bigint as total,
+                COUNT(*)::int as grants,
+                e.gs_id, e.is_community_controlled,
+                ROW_NUMBER() OVER (PARTITION BY jf.program_name ORDER BY SUM(jf.amount_dollars) DESC NULLS LAST) as rn
+         FROM justice_funding jf
+         LEFT JOIN gs_entities e ON e.abn = jf.recipient_abn AND jf.recipient_abn IS NOT NULL
+         WHERE jf.state = '${state}'
+           AND jf.${topicFilter(topic)}
+           AND jf.program_name NOT LIKE 'ROGS%'
+           AND jf.program_name NOT LIKE 'Total%'
+           AND jf.program_name NOT LIKE 'Government real%'
+           AND jf.program_name NOT LIKE 'Cost per%'
+           AND jf.program_name NOT LIKE 'Net capital%'
+           AND jf.program_name NOT LIKE 'Real recurrent%'
+           ${deptFilter}
+           AND jf.recipient_name NOT LIKE 'Department of%'
+           AND jf.recipient_name NOT LIKE 'Multiple%'
+           AND jf.recipient_name NOT LIKE 'State of%'
+           AND jf.recipient_name NOT LIKE 'Total%'
+           AND jf.recipient_name NOT LIKE 'Youth Justice -%'
+         GROUP BY jf.program_name, jf.recipient_name, jf.recipient_abn, e.gs_id, e.is_community_controlled
+       )
+       SELECT program_name, recipient_name, recipient_abn, total, grants, gs_id, is_community_controlled
+       FROM ranked WHERE rn <= 30
+       ORDER BY program_name, total DESC NULLS LAST`,
   })) as Promise<Array<{
     program_name: string;
     recipient_name: string;
@@ -1171,7 +1206,7 @@ export async function getFundingByProgram(topic: Topic, state: string, limit = 2
          AND recipient_name NOT LIKE 'Total%'
          AND recipient_name NOT LIKE 'Department of%'
        GROUP BY program_name
-       ORDER BY total DESC
+       ORDER BY total DESC NULLS LAST
        LIMIT ${limit}`,
   })) as Promise<Array<{
     program_name: string;
@@ -1479,6 +1514,134 @@ export async function getOversightData(jurisdiction: string, domain = 'youth-jus
     status: string;
     status_notes: string | null;
     severity: string | null;
+  }> | null>;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Cross-Domain State Dashboard Functions
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/**
+ * Cross-domain organisations — entities in a state appearing in 2+ topic domains
+ */
+export async function getCrossDomainOrgs(stateCode: string, limit = 20) {
+  const supabase = getServiceSupabase();
+  const sc = stateCode.toUpperCase();
+  const domainTopics = ['youth-justice', 'child-protection', 'ndis', 'family-services', 'indigenous'];
+  const domainLabels: Record<string, string> = {
+    'youth-justice': 'Youth Justice',
+    'child-protection': 'Child Protection',
+    'ndis': 'NDIS/Disability',
+    'family-services': 'Family Services',
+    'indigenous': 'Indigenous',
+  };
+  const topicList = domainTopics.map(t => `'${t}'`).join(',');
+  const query = `
+    WITH state_orgs AS (
+      SELECT DISTINCT e.gs_id, e.canonical_name, e.entity_type, e.is_community_controlled,
+             t.topic,
+             SUM(jf.amount_dollars) OVER (PARTITION BY e.gs_id) as total_funding
+      FROM gs_entities e
+      JOIN justice_funding jf ON jf.recipient_abn = e.abn AND e.abn IS NOT NULL
+      CROSS JOIN LATERAL unnest(jf.topics) AS t(topic)
+      WHERE e.state = '${sc}'
+        AND t.topic IN (${topicList})
+    )
+    SELECT gs_id, canonical_name, entity_type, is_community_controlled,
+           array_agg(DISTINCT topic ORDER BY topic) as domains,
+           COUNT(DISTINCT topic)::int as domain_count,
+           MAX(total_funding)::bigint as total_funding
+    FROM state_orgs
+    GROUP BY gs_id, canonical_name, entity_type, is_community_controlled
+    HAVING COUNT(DISTINCT topic) >= 2
+    ORDER BY COUNT(DISTINCT topic) DESC, MAX(total_funding) DESC NULLS LAST
+    LIMIT ${limit}
+  `;
+  type Row = {
+    gs_id: string;
+    canonical_name: string;
+    entity_type: string | null;
+    is_community_controlled: boolean | null;
+    domains: string[];
+    domain_count: number;
+    total_funding: number;
+  };
+  const rows = await safe(supabase.rpc('exec_sql', { query })) as Row[] | null;
+  // Map topic codes to labels
+  return (rows || []).map(r => ({
+    ...r,
+    domain_labels: r.domains.map(d => domainLabels[d] || d),
+  }));
+}
+
+/**
+ * Funding summary per domain for a state
+ */
+export async function getStateDomainFunding(stateCode: string) {
+  const supabase = getServiceSupabase();
+  const sc = stateCode.toUpperCase();
+  const domains: Array<{ topic: Topic; label: string }> = [
+    { topic: 'youth-justice', label: 'Youth Justice' },
+    { topic: 'child-protection', label: 'Child Protection' },
+    { topic: 'ndis', label: 'NDIS/Disability' },
+    { topic: 'family-services', label: 'Family Services' },
+    { topic: 'indigenous', label: 'Indigenous Services' },
+  ];
+  const cases = domains.map(d =>
+    `SUM(CASE WHEN topics @> ARRAY['${d.topic}']::text[] THEN amount_dollars ELSE 0 END)::bigint as "${d.topic}_total",
+     COUNT(*) FILTER (WHERE topics @> ARRAY['${d.topic}']::text[])::int as "${d.topic}_grants",
+     COUNT(DISTINCT recipient_name) FILTER (WHERE topics @> ARRAY['${d.topic}']::text[])::int as "${d.topic}_orgs"`
+  ).join(',\n     ');
+  const query = `
+    SELECT ${cases},
+           SUM(amount_dollars)::bigint as grand_total,
+           COUNT(*)::int as total_grants,
+           COUNT(DISTINCT recipient_name)::int as total_orgs
+    FROM justice_funding
+    WHERE state = '${sc}'
+  `;
+  type Row = Record<string, unknown>;
+  const rows = await safe(supabase.rpc('exec_sql', { query })) as Row[] | null;
+  const row = rows?.[0];
+  if (!row) return null;
+  return {
+    domains: domains.map(d => ({
+      topic: d.topic,
+      label: d.label,
+      total: Number(row[`${d.topic}_total`] || 0),
+      grants: Number(row[`${d.topic}_grants`] || 0),
+      orgs: Number(row[`${d.topic}_orgs`] || 0),
+    })),
+    grandTotal: Number(row.grand_total || 0),
+    totalGrants: Number(row.total_grants || 0),
+    totalOrgs: Number(row.total_orgs || 0),
+  };
+}
+
+/**
+ * Oversight implementation summary across all domains for a state
+ */
+export async function getOversightSummary(jurisdiction: string) {
+  const supabase = getServiceSupabase();
+  const query = `
+    SELECT domain,
+           COUNT(*)::int as total,
+           COUNT(*) FILTER (WHERE status = 'implemented')::int as implemented,
+           COUNT(*) FILTER (WHERE status = 'partially_implemented')::int as partial,
+           COUNT(*) FILTER (WHERE status = 'pending' OR status = 'accepted')::int as pending,
+           COUNT(*) FILTER (WHERE status = 'rejected' OR status = 'superseded')::int as rejected
+    FROM oversight_recommendations
+    WHERE jurisdiction IN ('${jurisdiction}', 'National')
+    GROUP BY domain
+    ORDER BY domain
+  `;
+  return safe(supabase.rpc('exec_sql', { query })) as Promise<Array<{
+    domain: string;
+    total: number;
+    implemented: number;
+    partial: number;
+    pending: number;
+    rejected: number;
   }> | null>;
 }
 

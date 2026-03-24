@@ -27,6 +27,8 @@ const COMPARISON_METRICS = [
   'detention_rate_per_10k', 'avg_daily_detention', 'indigenous_overrepresentation_ratio',
   'ctg_target11_indigenous_detention_rate', 'avg_days_in_detention', 'cost_per_day_detention',
   'pct_unsentenced', 'detention_5yr_trend_pct',
+  'rogs_yj_recidivism_12m', 'rogs_yj_deaths_in_custody',
+  'rogs_cost_per_day_community',
 ];
 
 async function getData() {
@@ -151,6 +153,9 @@ export default async function NationalComparisonPage() {
                 { label: 'Cost per day (detention)', metric: 'cost_per_day_detention', highlight: false, prefix: '$' },
                 { label: '% unsentenced (remand)', metric: 'pct_unsentenced', highlight: true, suffix: '%' },
                 { label: '5-year trend', metric: 'detention_5yr_trend_pct', highlight: false, suffix: '%', signed: true },
+                { label: 'Recidivism (12 months)', metric: 'rogs_yj_recidivism_12m', highlight: true, suffix: '%' },
+                { label: 'Deaths in custody', metric: 'rogs_yj_deaths_in_custody', highlight: false },
+                { label: 'Cost per day (community)', metric: 'rogs_cost_per_day_community', highlight: false, prefix: '$' },
               ].map((row) => {
                 const vals = JURISDICTIONS.map(j => cv(row.metric, j));
                 const stateVals = STATES.map(j => cv(row.metric, j)).filter((v): v is number => v !== null);

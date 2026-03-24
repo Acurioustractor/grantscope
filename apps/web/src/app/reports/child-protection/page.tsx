@@ -159,6 +159,19 @@ export default async function ChildProtectionReportPage() {
             Open place coverage
           </Link>
         </div>
+
+        {/* State Navigation */}
+        <div className="flex flex-wrap gap-2 mt-3">
+          <Link href="/reports/child-protection/national" className="text-[10px] font-black uppercase tracking-widest px-3 py-2 bg-amber-600 text-white hover:bg-amber-700 transition-colors">
+            National Comparison
+          </Link>
+          {(['NSW', 'VIC', 'QLD', 'WA', 'SA', 'NT', 'TAS', 'ACT'] as const).map(s => (
+            <Link key={s} href={`/reports/child-protection/${s.toLowerCase()}`}
+              className="text-[10px] font-black uppercase tracking-widest px-3 py-2 border-2 border-bauhaus-black hover:bg-bauhaus-black hover:text-white transition-colors">
+              {s}
+            </Link>
+          ))}
+        </div>
       </div>
 
       {/* Hero stats */}

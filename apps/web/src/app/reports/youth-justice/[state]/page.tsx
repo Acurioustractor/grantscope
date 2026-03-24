@@ -51,12 +51,12 @@ export function generateMetadata({ params }: { params: Promise<{ state: string }
 
 type ProgramRow = { program_name: string; grants: number; total: number; orgs: number };
 type OrgRow = { recipient_name: string; recipient_abn: string | null; state: string | null; grants: number; total: number; gs_id: string | null };
-type AlmaRow = { name: string; type: string | null; evidence_level: string | null; geography: string | null; portfolio_score: number | null };
+type AlmaRow = { name: string; type: string | null; evidence_level: string | null; geography: string | null; portfolio_score: number | null; gs_id: string | null; org_name: string | null; org_abn: string | null };
 type LgaRow = { lga_name: string; state: string; orgs: number; total_funding: number; seifa_decile: number | null };
 type AccoGap = { org_type: string; orgs: number; total_funding: number; avg_grant: number };
 type RemotenessRow = { remoteness: string; orgs: number; total: number; grants: number };
 type CoverageRow = { total_interventions: number; with_evidence: number; without_evidence: number; coverage_pct: number };
-type GapRow = { name: string; type: string | null; evidence_level: string | null; has_evidence: boolean; evidence_type: string | null; methodology: string | null };
+type GapRow = { name: string; type: string | null; evidence_level: string | null; has_evidence: boolean; evidence_type: string | null; methodology: string | null; gs_id: string | null; org_abn: string | null };
 type HansardRow = { speaker_name: string; speaker_party: string | null; speaker_electorate: string | null; sitting_date: string; subject: string | null; excerpt: string };
 type LobbyRow = { canonical_name: string; gs_id: string | null; lobbyist_name: string | null; client_name: string | null; relationship_type: string };
 type RevolvingDoorRow = {
@@ -400,61 +400,64 @@ export default async function StateYouthJusticePage({ params }: { params: Promis
           <h2 className="text-xl font-black text-bauhaus-black uppercase tracking-wider mb-4 border-b-4 border-bauhaus-black pb-2">
             Funding by Program
           </h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b-2 border-bauhaus-black">
-                  <th className="text-left py-2 font-black uppercase tracking-wider text-xs">Program / Delivery Partner</th>
-                  <th className="text-right py-2 font-black uppercase tracking-wider text-xs">Grants</th>
-                  <th className="text-right py-2 font-black uppercase tracking-wider text-xs">Total</th>
-                  <th className="text-right py-2 font-black uppercase tracking-wider text-xs">Orgs</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.programs.map((p, i) => {
-                  const partners = report.partnersByProgram[p.program_name] || [];
-                  const shown = partners.slice(0, 10);
-                  const remaining = partners.length - shown.length;
-                  return (
-                    <Fragment key={i}>
-                      <tr className="border-b border-gray-200 bg-gray-50/80">
-                        <td className="py-2 font-bold">{p.program_name}</td>
-                        <td className="py-2 text-right text-gray-600">{fmt(p.grants)}</td>
-                        <td className="py-2 text-right font-black">{money(p.total)}</td>
-                        <td className="py-2 text-right text-gray-600">{p.orgs}</td>
-                      </tr>
-                      {shown.map((pt, j) => (
-                        <tr key={`${i}-${j}`} className="border-b border-gray-100 hover:bg-blue-50/50">
-                          <td className="py-1.5 pl-6">
-                            <span className="text-gray-400 mr-1.5">&rarr;</span>
-                            {pt.gs_id ? (
-                              <Link href={`/entity/${pt.gs_id}`} className="text-bauhaus-blue hover:underline">
-                                {pt.recipient_name}
-                              </Link>
-                            ) : (
-                              <span className="text-gray-700">{pt.recipient_name}</span>
-                            )}
-                            {pt.is_community_controlled && (
-                              <span className="ml-1.5 text-[10px] font-bold bg-emerald-100 text-emerald-700 px-1 py-0.5 rounded uppercase">ACCO</span>
-                            )}
-                          </td>
-                          <td className="py-1.5 text-right text-gray-500">{fmt(pt.grants)}</td>
-                          <td className="py-1.5 text-right">{money(pt.total)}</td>
-                          <td />
-                        </tr>
-                      ))}
-                      {remaining > 0 && (
-                        <tr className="border-b border-gray-200">
-                          <td className="py-1.5 pl-6 text-xs text-gray-400 italic" colSpan={4}>
-                            + {remaining} more delivery partners (see Top Funded Organisations below)
-                          </td>
-                        </tr>
-                      )}
-                    </Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="space-y-0">
+            {report.programs.map((p, i) => {
+              const partners = report.partnersByProgram[p.program_name] || [];
+              const shown = partners.slice(0, 30);
+              const moreCount = p.orgs - shown.length;
+              const programHref = `/reports/youth-justice/${stateKey}/program/${encodeURIComponent(p.program_name.toLowerCase().replace(/\s+/g, '-'))}`;
+              return (
+                <details key={i} className="border-b border-gray-200 group">
+                  <summary className="flex items-center gap-2 py-2.5 px-2 bg-gray-50/80 hover:bg-gray-100 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+                    <svg className="w-3 h-3 text-gray-400 transition-transform group-open:rotate-90 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                    <span className="font-bold text-sm flex-1 min-w-0 truncate">{p.program_name}</span>
+                    <span className="text-xs text-gray-500 flex-shrink-0">{fmt(p.grants)} grants</span>
+                    <span className="text-sm font-black flex-shrink-0 w-20 text-right">{money(p.total)}</span>
+                    <span className="text-xs text-gray-500 flex-shrink-0 w-12 text-right">{p.orgs} orgs</span>
+                  </summary>
+                  <div className="pl-7 pr-2 pb-2">
+                    {shown.length > 0 ? (
+                      <table className="w-full text-sm">
+                        <tbody>
+                          {shown.map((pt, j) => (
+                            <tr key={j} className="border-b border-gray-100 hover:bg-blue-50/50">
+                              <td className="py-1.5">
+                                <span className="text-gray-400 mr-1.5">&rarr;</span>
+                                {pt.gs_id ? (
+                                  <Link href={`/entity/${pt.gs_id}`} className="text-bauhaus-blue hover:underline">{pt.recipient_name}</Link>
+                                ) : pt.recipient_abn ? (
+                                  <Link href={`/entity/AU-ABN-${pt.recipient_abn}`} className="text-bauhaus-blue hover:underline">{pt.recipient_name}</Link>
+                                ) : (
+                                  <Link href={`/search?q=${encodeURIComponent(pt.recipient_name)}`} className="text-bauhaus-blue hover:underline">{pt.recipient_name}</Link>
+                                )}
+                                {pt.is_community_controlled && (
+                                  <span className="ml-1.5 text-[10px] font-bold bg-emerald-100 text-emerald-700 px-1 py-0.5 rounded uppercase">ACCO</span>
+                                )}
+                              </td>
+                              <td className="py-1.5 text-right text-gray-500 w-16">{fmt(pt.grants)}</td>
+                              <td className="py-1.5 text-right w-24">{money(pt.total)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <p className="text-xs text-gray-400 italic py-1">
+                        <Link href={programHref} className="text-bauhaus-blue hover:underline">View all {p.orgs} delivery partners &rarr;</Link>
+                      </p>
+                    )}
+                    {moreCount > 0 && (
+                      <div className="pt-1">
+                        <Link href={programHref} className="text-xs text-bauhaus-blue hover:underline italic">
+                          + {moreCount} more delivery partners &rarr;
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                </details>
+              );
+            })}
           </div>
         </section>
       )}
@@ -482,8 +485,14 @@ export default async function StateYouthJusticePage({ params }: { params: Promis
                         <Link href={`/entity/${o.gs_id}`} className="font-medium text-bauhaus-blue hover:underline">
                           {o.recipient_name}
                         </Link>
+                      ) : o.recipient_abn ? (
+                        <Link href={`/entity/AU-ABN-${o.recipient_abn}`} className="font-medium text-bauhaus-blue hover:underline">
+                          {o.recipient_name}
+                        </Link>
                       ) : (
-                        <span className="font-medium">{o.recipient_name}</span>
+                        <Link href={`/search?q=${encodeURIComponent(o.recipient_name)}`} className="font-medium text-bauhaus-blue hover:underline">
+                          {o.recipient_name}
+                        </Link>
                       )}
                     </td>
                     <td className="py-2 text-right text-gray-600">{fmt(o.grants)}</td>
@@ -503,22 +512,41 @@ export default async function StateYouthJusticePage({ params }: { params: Promis
             ALMA Interventions ({report.almaCount})
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {report.almaInterventions.map((a, i) => (
-              <div key={i} className="border border-gray-200 rounded-lg p-4 hover:border-bauhaus-blue transition-colors">
-                <div className="font-bold text-sm mb-1">{a.name}</div>
-                <div className="flex flex-wrap gap-1.5">
-                  {a.type && (
-                    <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded uppercase">{a.type}</span>
+            {report.almaInterventions.map((a, i) => {
+              const href = a.gs_id
+                ? `/entity/${a.gs_id}`
+                : a.org_abn
+                  ? `/entity/AU-ABN-${a.org_abn}`
+                  : null;
+              const card = (
+                <>
+                  <div className="font-bold text-sm mb-1">{a.name}</div>
+                  {a.org_name && a.org_name !== a.name && (
+                    <div className="text-[11px] text-gray-500 mb-1.5">{a.org_name}</div>
                   )}
-                  {a.evidence_level && (
-                    <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded uppercase">{a.evidence_level}</span>
-                  )}
-                  {a.geography && (
-                    <span className="text-[10px] font-bold bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">{a.geography}</span>
-                  )}
+                  <div className="flex flex-wrap gap-1.5">
+                    {a.type && (
+                      <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded uppercase">{a.type}</span>
+                    )}
+                    {a.evidence_level && (
+                      <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded uppercase">{a.evidence_level}</span>
+                    )}
+                    {a.geography && (
+                      <span className="text-[10px] font-bold bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">{a.geography}</span>
+                    )}
+                  </div>
+                </>
+              );
+              return href ? (
+                <Link key={i} href={href} className="border border-gray-200 rounded-lg p-4 hover:border-bauhaus-blue hover:bg-blue-50/30 transition-colors block">
+                  {card}
+                </Link>
+              ) : (
+                <div key={i} className="border border-gray-200 rounded-lg p-4">
+                  {card}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       )}
@@ -558,9 +586,21 @@ export default async function StateYouthJusticePage({ params }: { params: Promis
                   </tr>
                 </thead>
                 <tbody>
-                  {report.evidenceGaps.map((g, i) => (
+                  {report.evidenceGaps.map((g, i) => {
+                    const gapHref = g.gs_id
+                      ? `/entity/${g.gs_id}`
+                      : g.org_abn
+                        ? `/entity/AU-ABN-${g.org_abn}`
+                        : null;
+                    return (
                     <tr key={i} className="border-b border-gray-200 hover:bg-gray-50">
-                      <td className="py-2 font-medium">{g.name}</td>
+                      <td className="py-2 font-medium">
+                        {gapHref ? (
+                          <Link href={gapHref} className="text-bauhaus-blue hover:underline">{g.name}</Link>
+                        ) : (
+                          g.name
+                        )}
+                      </td>
                       <td className="py-2 text-gray-600">{g.type || '—'}</td>
                       <td className="py-2 text-center">
                         {g.has_evidence ? (
@@ -571,7 +611,8 @@ export default async function StateYouthJusticePage({ params }: { params: Promis
                       </td>
                       <td className="py-2 text-gray-600 text-xs">{g.methodology || '—'}</td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

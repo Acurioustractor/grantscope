@@ -34,7 +34,7 @@ export async function POST(
 
   const { grantId } = await params;
   const body = await request.json();
-  const { vote, reason, source_context } = body;
+  const { vote, reason, source_context, project_code } = body;
 
   if (vote !== 1 && vote !== -1) {
     return NextResponse.json({ error: 'vote must be 1 or -1' }, { status: 400 });
@@ -49,11 +49,24 @@ export async function POST(
     .eq('user_id', user.id)
     .maybeSingle();
 
+  // Resolve project_profile_id if a project_code was provided
+  let projectProfileId: string | null = null;
+  if (project_code && profile?.id) {
+    const { data: projectProfile } = await db
+      .from('project_profiles')
+      .select('id')
+      .eq('org_profile_id', profile.id)
+      .eq('project_code', project_code)
+      .maybeSingle();
+    projectProfileId = projectProfile?.id || null;
+  }
+
   const { data, error } = await db
     .from('grant_feedback')
     .upsert({
       user_id: user.id,
       org_profile_id: profile?.id || null,
+      project_profile_id: projectProfileId,
       grant_id: grantId,
       vote,
       reason: reason || null,

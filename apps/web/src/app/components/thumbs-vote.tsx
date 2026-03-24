@@ -3,40 +3,50 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 
+const UP_REASONS = [
+  'Right sector',
+  'Right size',
+  'Right location',
+  'Strong fit',
+] as const;
+
 const DOWN_REASONS = [
   'Wrong sector',
   'Too small',
   'Wrong location',
   'Not relevant',
   'Already applied',
+  'Not a grant',
 ] as const;
 
 interface ThumbsVoteProps {
   grantId: string;
   initialVote?: 1 | -1 | null;
   sourceContext?: string;
+  projectCode?: string;
   onVote?: (vote: 1 | -1) => void;
 }
 
-export function ThumbsVote({ grantId, initialVote = null, sourceContext, onVote }: ThumbsVoteProps) {
+export function ThumbsVote({ grantId, initialVote = null, sourceContext, projectCode, onVote }: ThumbsVoteProps) {
   const [vote, setVote] = useState<1 | -1 | null>(initialVote);
-  const [showReasons, setShowReasons] = useState(false);
+  const [showReasons, setShowReasons] = useState<'up' | 'down' | null>(null);
   const [saving, setSaving] = useState(false);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
+  const upBtnRef = useRef<HTMLButtonElement>(null);
   const downBtnRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   async function submitVote(v: 1 | -1, reason?: string) {
     setSaving(true);
     setVote(v);
-    setShowReasons(false);
+    setShowReasons(null);
     onVote?.(v);
 
     try {
       await fetch(`/api/grants/${grantId}/feedback`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ vote: v, reason, source_context: sourceContext }),
+        body: JSON.stringify({ vote: v, reason, source_context: sourceContext, project_code: projectCode }),
       });
     } catch {
       // Optimistic — don't revert on failure
@@ -51,21 +61,25 @@ export function ThumbsVote({ grantId, initialVote = null, sourceContext, onVote 
       const rect = downBtnRef.current.getBoundingClientRect();
       setDropdownPos({ top: rect.bottom + 4, left: rect.right - 160 });
     }
-    setShowReasons(true);
+    setShowReasons('down');
   }
 
   function handleUp() {
     if (vote === 1) return;
-    setShowReasons(false);
-    submitVote(1);
+    if (upBtnRef.current) {
+      const rect = upBtnRef.current.getBoundingClientRect();
+      setDropdownPos({ top: rect.bottom + 4, left: rect.left });
+    }
+    setShowReasons('up');
   }
 
   const handleClickOutside = useCallback((e: MouseEvent) => {
     if (
       dropdownRef.current && !dropdownRef.current.contains(e.target as Node) &&
+      upBtnRef.current && !upBtnRef.current.contains(e.target as Node) &&
       downBtnRef.current && !downBtnRef.current.contains(e.target as Node)
     ) {
-      setShowReasons(false);
+      setShowReasons(null);
     }
   }, []);
 
@@ -76,9 +90,14 @@ export function ThumbsVote({ grantId, initialVote = null, sourceContext, onVote 
     }
   }, [showReasons, handleClickOutside]);
 
+  const reasons = showReasons === 'up' ? UP_REASONS : DOWN_REASONS;
+  const voteValue = showReasons === 'up' ? 1 : -1;
+  const headerText = showReasons === 'up' ? 'Why?' : 'Why not?';
+
   return (
     <div className="inline-flex items-center gap-1">
       <button
+        ref={upBtnRef}
         onClick={handleUp}
         disabled={saving}
         className={`p-1.5 border-2 transition-colors ${
@@ -117,19 +136,19 @@ export function ThumbsVote({ grantId, initialVote = null, sourceContext, onVote 
           style={{ top: dropdownPos.top, left: Math.max(8, dropdownPos.left) }}
         >
           <div className="px-3 py-1.5 border-b-2 border-bauhaus-black/10">
-            <span className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Why not?</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">{headerText}</span>
           </div>
-          {DOWN_REASONS.map(reason => (
+          {reasons.map(reason => (
             <button
               key={reason}
-              onClick={() => submitVote(-1, reason)}
+              onClick={() => submitVote(voteValue as 1 | -1, reason)}
               className="block w-full text-left px-3 py-1.5 text-xs text-bauhaus-black hover:bg-bauhaus-black/5 transition-colors"
             >
               {reason}
             </button>
           ))}
           <button
-            onClick={() => submitVote(-1)}
+            onClick={() => submitVote(voteValue as 1 | -1)}
             className="block w-full text-left px-3 py-1.5 text-xs text-bauhaus-muted hover:bg-bauhaus-black/5 border-t border-bauhaus-black/10 transition-colors"
           >
             Skip reason

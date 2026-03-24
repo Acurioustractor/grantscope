@@ -115,5 +115,61 @@ export async function PUT(request: NextRequest) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Generate project-level embeddings (fire-and-forget — don't block the response)
+  if (data?.id && projects?.length && process.env.OPENAI_API_KEY) {
+    generateProjectEmbeddings(serviceDb, data.id, projects).catch(err =>
+      console.error('[profile] Project embedding generation failed:', err)
+    );
+  }
+
   return NextResponse.json(data);
+}
+
+interface ProjectInput {
+  code: string;
+  name: string;
+  description?: string;
+  domains?: string[];
+  geographic?: string;
+  category?: string;
+}
+
+async function generateProjectEmbeddings(
+  serviceDb: ReturnType<typeof getServiceSupabase>,
+  orgProfileId: string,
+  projects: ProjectInput[]
+) {
+  for (const project of projects) {
+    if (!project.code || !project.name) continue;
+
+    const embeddingText = [
+      project.name,
+      project.description,
+      project.domains?.length ? `Focus areas: ${project.domains.join(', ')}` : null,
+      project.geographic ? `Geography: ${project.geographic}` : null,
+      project.category ? `Category: ${project.category}` : null,
+    ].filter(Boolean).join('\n').slice(0, 8000);
+
+    try {
+      const projectEmbedding = await embedQuery(embeddingText, process.env.OPENAI_API_KEY);
+      const geoFocus = project.geographic
+        ? project.geographic.split(',').map((g: string) => g.trim()).filter(Boolean)
+        : [];
+
+      await serviceDb.from('project_profiles').upsert({
+        org_profile_id: orgProfileId,
+        project_code: project.code,
+        name: project.name,
+        description: project.description || null,
+        domains: project.domains || [],
+        geographic_focus: geoFocus,
+        embedding: JSON.stringify(projectEmbedding),
+        embedding_text: embeddingText,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'org_profile_id,project_code' });
+    } catch (err) {
+      console.error(`[profile] Project ${project.code} embedding failed:`, err);
+    }
+  }
 }

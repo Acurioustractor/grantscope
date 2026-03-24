@@ -39,6 +39,17 @@ interface GrantDetail {
   created_at: string;
 }
 
+interface LearningInsights {
+  penalized_providers: string[];
+  penalized_categories: string[];
+  boosted_providers: string[];
+  boosted_categories: string[];
+  total_votes: number;
+  up_votes: number;
+  down_votes: number;
+  grants_filtered: number;
+}
+
 function GrantSidebar({
   grantId,
   fitScore,
@@ -266,6 +277,95 @@ function GrantSidebar({
   );
 }
 
+function LearningBanner({ voteCount, learning }: { voteCount: number; learning: LearningInsights | null }) {
+  const [expanded, setExpanded] = useState(false);
+  const hasDetails = learning && (
+    learning.penalized_providers.length > 0 ||
+    learning.boosted_providers.length > 0 ||
+    learning.penalized_categories.length > 0 ||
+    learning.boosted_categories.length > 0 ||
+    learning.grants_filtered > 0
+  );
+
+  return (
+    <div className="border-4 border-bauhaus-blue/30 bg-bauhaus-blue/5">
+      <button
+        onClick={() => hasDetails && setExpanded(!expanded)}
+        className="w-full flex items-center gap-3 p-3 text-left"
+      >
+        <span className="text-xs font-black uppercase tracking-widest text-bauhaus-blue">
+          {voteCount} grant{voteCount !== 1 ? 's' : ''} rated
+        </span>
+        {learning && (
+          <span className="text-[10px] text-bauhaus-muted">
+            ({learning.up_votes} up, {learning.down_votes} down)
+          </span>
+        )}
+        {voteCount >= 5 && (
+          <span className="text-[10px] font-black uppercase tracking-widest text-white bg-bauhaus-blue px-2 py-0.5">
+            Personalized
+          </span>
+        )}
+        {learning && learning.grants_filtered > 0 && (
+          <span className="text-[10px] text-bauhaus-muted">
+            {learning.grants_filtered} filtered out
+          </span>
+        )}
+        {hasDetails && (
+          <span className="text-[10px] text-bauhaus-muted ml-auto">
+            {expanded ? 'Hide' : 'Show'} details
+          </span>
+        )}
+      </button>
+
+      {expanded && learning && (
+        <div className="px-3 pb-3 pt-0 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {learning.penalized_providers.length > 0 && (
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-red mb-1">Deprioritized providers</div>
+              <div className="flex flex-wrap gap-1">
+                {learning.penalized_providers.map(p => (
+                  <span key={p} className="text-[10px] text-bauhaus-red border border-bauhaus-red/30 px-1.5 py-0.5">{p}</span>
+                ))}
+              </div>
+            </div>
+          )}
+          {learning.boosted_providers.length > 0 && (
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue mb-1">Boosted providers</div>
+              <div className="flex flex-wrap gap-1">
+                {learning.boosted_providers.map(p => (
+                  <span key={p} className="text-[10px] text-bauhaus-blue border border-bauhaus-blue/30 px-1.5 py-0.5">{p}</span>
+                ))}
+              </div>
+            </div>
+          )}
+          {learning.penalized_categories.length > 0 && (
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-red mb-1">Deprioritized sectors</div>
+              <div className="flex flex-wrap gap-1">
+                {learning.penalized_categories.map(c => (
+                  <span key={c} className="text-[10px] text-bauhaus-red border border-bauhaus-red/30 px-1.5 py-0.5">{c}</span>
+                ))}
+              </div>
+            </div>
+          )}
+          {learning.boosted_categories.length > 0 && (
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue mb-1">Boosted sectors</div>
+              <div className="flex flex-wrap gap-1">
+                {learning.boosted_categories.map(c => (
+                  <span key={c} className="text-[10px] text-bauhaus-blue border border-bauhaus-blue/30 px-1.5 py-0.5">{c}</span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function MatchesClient() {
   const [matches, setMatches] = useState<MatchedGrant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -275,9 +375,19 @@ export function MatchesClient() {
   const [savedGrants, setSavedGrants] = useState<Set<string>>(new Set());
   const [voteCount, setVoteCount] = useState(0);
   const [selectedGrant, setSelectedGrant] = useState<MatchedGrant | null>(null);
+  const [activeProject, setActiveProject] = useState<string | null>(null);
+  const [availableProjects, setAvailableProjects] = useState<{ code: string; name: string }[]>([]);
+  const [learning, setLearning] = useState<LearningInsights | null>(null);
 
   useEffect(() => {
-    fetch(`/api/profile/matches?threshold=${minScore / 100}&limit=100`)
+    setLoading(true);
+    const params = new URLSearchParams({
+      threshold: String(minScore / 100),
+      limit: '100',
+    });
+    if (activeProject) params.set('project', activeProject);
+
+    fetch(`/api/profile/matches?${params}`)
       .then(r => {
         if (!r.ok) throw r;
         return r.json();
@@ -285,6 +395,8 @@ export function MatchesClient() {
       .then(data => {
         setMatches(data.matches || []);
         setVoteCount(data.feedback_count || 0);
+        if (data.available_projects) setAvailableProjects(data.available_projects);
+        setLearning(data.learning || null);
       })
       .catch(async (r) => {
         if (r instanceof Response) {
@@ -295,7 +407,7 @@ export function MatchesClient() {
         }
       })
       .finally(() => setLoading(false));
-  }, [minScore]);
+  }, [minScore, activeProject]);
 
   const saveToTracker = useCallback(async (grantId: string) => {
     setSavingGrant(grantId);
@@ -319,11 +431,15 @@ export function MatchesClient() {
     return 'bg-bauhaus-muted/30';
   }
 
+  const activeProjectName = activeProject
+    ? availableProjects.find(p => p.code === activeProject)?.name
+    : null;
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[40vh]">
         <div className="text-sm font-black uppercase tracking-widest text-bauhaus-muted animate-pulse">
-          Finding matches...
+          {activeProjectName ? `Finding matches for ${activeProjectName}...` : 'Finding matches...'}
         </div>
       </div>
     );
@@ -357,7 +473,8 @@ export function MatchesClient() {
             Matched Grants
           </h1>
           <p className="text-sm text-bauhaus-muted mt-1">
-            {matches.length} grants matched to your profile
+            {matches.length} grants matched
+            {activeProjectName ? ` for ${activeProjectName}` : ' to your profile'}
           </p>
         </div>
         <div className="flex gap-2">
@@ -376,21 +493,41 @@ export function MatchesClient() {
         </div>
       </div>
 
+      {/* Project selector */}
+      {availableProjects.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">
+            Match for:
+          </span>
+          <button
+            onClick={() => setActiveProject(null)}
+            className={`text-xs font-black uppercase tracking-widest px-3 py-1.5 border-2 transition-colors ${
+              !activeProject
+                ? 'border-bauhaus-black bg-bauhaus-black text-white'
+                : 'border-bauhaus-black/30 hover:border-bauhaus-black text-bauhaus-black/60'
+            }`}
+          >
+            All Projects
+          </button>
+          {availableProjects.map(p => (
+            <button
+              key={p.code}
+              onClick={() => setActiveProject(p.code)}
+              className={`text-xs font-black uppercase tracking-widest px-3 py-1.5 border-2 transition-colors ${
+                activeProject === p.code
+                  ? 'border-bauhaus-blue bg-bauhaus-blue text-white'
+                  : 'border-bauhaus-black/30 hover:border-bauhaus-blue text-bauhaus-black/60'
+              }`}
+            >
+              {p.name}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Learning progress */}
       {voteCount > 0 && (
-        <div className="flex items-center gap-3 border-4 border-bauhaus-blue/30 bg-bauhaus-blue/5 p-3">
-          <span className="text-xs font-black uppercase tracking-widest text-bauhaus-blue">
-            {voteCount} grant{voteCount !== 1 ? 's' : ''} rated
-          </span>
-          {voteCount >= 5 && (
-            <span className="text-[10px] font-black uppercase tracking-widest text-white bg-bauhaus-blue px-2 py-0.5">
-              Personalized
-            </span>
-          )}
-          <span className="text-xs text-bauhaus-muted ml-auto">
-            Rate grants to improve your recommendations
-          </span>
-        </div>
+        <LearningBanner voteCount={voteCount} learning={learning} />
       )}
 
       {/* Filters */}
@@ -417,7 +554,7 @@ export function MatchesClient() {
       {matches.length === 0 ? (
         <div className="border-4 border-bauhaus-black/20 p-8 text-center">
           <p className="text-sm text-bauhaus-muted">
-            No grants found above {minScore}% fit. Try lowering the threshold or updating your profile.
+            No grants found above {minScore}% fit{activeProjectName ? ` for ${activeProjectName}` : ''}. Try lowering the threshold or updating your profile.
           </p>
         </div>
       ) : (
@@ -452,6 +589,7 @@ export function MatchesClient() {
                       <ThumbsVote
                         grantId={grant.id}
                         sourceContext="matches"
+                        projectCode={activeProject || undefined}
                         onVote={() => setVoteCount(c => c + 1)}
                       />
                       <button
