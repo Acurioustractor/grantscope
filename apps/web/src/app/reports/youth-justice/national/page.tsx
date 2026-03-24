@@ -6,6 +6,7 @@ import {
   money,
   fmt,
 } from '@/lib/services/report-service';
+import { StateComparisonChart, TimeSeriesChart } from '../../_components/report-charts';
 
 export const revalidate = 3600;
 
@@ -119,6 +120,59 @@ export default async function NationalComparisonPage() {
           <div className="text-xs text-gray-500 mt-1">Unsentenced (remand)</div>
         </div>
       </div>
+
+      {/* Visual comparisons — the story at a glance */}
+      {(() => {
+        const chartMetrics: Array<{ metric: string; label: string; format: 'number' | 'money' | 'pct' | 'ratio' }> = [
+          { metric: 'detention_rate_per_10k', label: 'Detention rate per 10,000 young people', format: 'number' },
+          { metric: 'indigenous_overrepresentation_ratio', label: 'First Nations overrepresentation ratio', format: 'ratio' },
+          { metric: 'cost_per_day_detention', label: 'Cost per day in detention', format: 'money' },
+        ];
+        return (
+          <section className="mb-12 grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {chartMetrics.map(({ metric, label, format }) => {
+              const chartData = STATES
+                .map(s => ({ jurisdiction: s, metric_value: cv(metric, s) ?? 0 }))
+                .filter(d => d.metric_value > 0);
+              if (chartData.length < 3) return null;
+              return (
+                <div key={metric} className="border-2 border-bauhaus-black/10 bg-white p-4">
+                  <StateComparisonChart data={chartData} metricKey={metric} label={label} format={format} />
+                </div>
+              );
+            })}
+          </section>
+        );
+      })()}
+
+      {/* CTG Trend — Closing the Gap detention rates over time */}
+      {(() => {
+        const trendStates = Object.entries(data.ctgTrends).filter(([, rows]) => rows.length >= 2);
+        if (trendStates.length === 0) return null;
+        // Merge into a single dataset keyed by period
+        const periods = new Set<string>();
+        for (const [, rows] of trendStates) rows.forEach(r => periods.add(r.period));
+        const merged = Array.from(periods).sort().map(period => {
+          const point: Record<string, unknown> = { period };
+          for (const [state, rows] of trendStates) {
+            const row = rows.find(r => r.period === period);
+            if (row) point[state] = row.rate;
+          }
+          return point;
+        });
+        const colors: Record<string, string> = { QLD: '#D02020', NSW: '#1040C0', VIC: '#059669', WA: '#F0C020', NT: '#ea580c' };
+        return (
+          <section className="mb-12 border-2 border-bauhaus-black/10 bg-white p-6">
+            <TimeSeriesChart
+              data={merged}
+              lines={trendStates.map(([state]) => ({ dataKey: state, color: colors[state] || '#777', label: state }))}
+              xKey="period"
+              label="Closing the Gap — Indigenous detention rate trend"
+              format="number"
+            />
+          </section>
+        );
+      })()}
 
       {/* Full Comparison Table */}
       <section className="mb-12">

@@ -1,6 +1,7 @@
 import { Fragment } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { FundingByProgramChart, StateComparisonChart, LgaFundingChart } from '../../_components/report-charts';
 import {
   getFundingByProgram,
   getProgramsWithPartners,
@@ -300,6 +301,24 @@ export default async function StateYouthJusticePage({ params }: { params: Promis
             )}
           </div>
 
+          {/* State comparison chart — detention rate at a glance */}
+          {(() => {
+            const detRateData = ['QLD', 'NSW', 'VIC', 'WA', 'SA', 'NT', 'TAS', 'ACT']
+              .map(j => ({ jurisdiction: j, metric_value: cv('detention_rate_per_10k', j) ?? 0 }))
+              .filter(d => d.metric_value > 0);
+            return detRateData.length >= 3 ? (
+              <div className="mb-8">
+                <StateComparisonChart
+                  data={detRateData}
+                  metricKey="detention_rate_per_10k"
+                  label="Detention rate per 10,000 young people"
+                  format="number"
+                  highlightState={stateCode}
+                />
+              </div>
+            ) : null;
+          })()}
+
           {/* State comparison table */}
           {Object.keys(comp).length > 0 && (
             <div className="overflow-x-auto">
@@ -400,6 +419,11 @@ export default async function StateYouthJusticePage({ params }: { params: Promis
           <h2 className="text-xl font-black text-bauhaus-black uppercase tracking-wider mb-4 border-b-4 border-bauhaus-black pb-2">
             Funding by Program
           </h2>
+          {report.programs.length >= 3 && (
+            <div className="mb-6">
+              <FundingByProgramChart data={report.programs} />
+            </div>
+          )}
           <div className="space-y-0">
             {report.programs.map((p, i) => {
               const partners = report.partnersByProgram[p.program_name] || [];
@@ -626,6 +650,11 @@ export default async function StateYouthJusticePage({ params }: { params: Promis
           <h2 className="text-xl font-black text-bauhaus-black uppercase tracking-wider mb-4 border-b-4 border-bauhaus-black pb-2">
             Funding by LGA
           </h2>
+          {report.lgaFunding.length >= 3 && (
+            <div className="mb-6">
+              <LgaFundingChart data={report.lgaFunding} />
+            </div>
+          )}
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>

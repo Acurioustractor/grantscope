@@ -16,6 +16,7 @@ import {
 import { StateNav, ProgramsTable, TopOrgsTable, LgaFundingTable, OutcomesTable, PolicyTimeline, CrossSystemTable } from '../../_components/report-sections';
 import type { ProgramRow, OrgRow, AlmaRow, LgaRow, MetricRow, PolicyRow, OversightRow, CrossSystemRow } from '../../_components/shared-types';
 import { ReportSection } from '../../_components/report-section';
+import { FundingByProgramChart, LgaFundingChart } from '../../_components/report-charts';
 
 export const revalidate = 3600;
 
@@ -166,6 +167,11 @@ export default async function ChildProtectionStatePage({ params }: { params: Pro
       {/* Programs + Top Orgs */}
       {(report.programs.length > 0 || report.topOrgs.length > 0) && (
         <ReportSection title="Funding">
+          {report.programs.length >= 3 && (
+            <section className="mb-6">
+              <FundingByProgramChart data={report.programs} />
+            </section>
+          )}
           <section className="mb-10 grid grid-cols-1 lg:grid-cols-2 gap-6">
             <ProgramsTable programs={report.programs} />
             <TopOrgsTable orgs={report.topOrgs} />
@@ -175,6 +181,11 @@ export default async function ChildProtectionStatePage({ params }: { params: Pro
 
       {/* LGA Funding */}
       <ReportSection title="LGA Funding">
+        {report.lgas.length >= 3 && (
+          <section className="mb-4">
+            <LgaFundingChart data={report.lgas} />
+          </section>
+        )}
         <LgaFundingTable lgas={report.lgas} />
       </ReportSection>
 
