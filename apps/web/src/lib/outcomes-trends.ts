@@ -54,15 +54,26 @@ const METRIC_LABELS: Record<string, string> = {
 export function computeTrendSignals(
   metrics: OutcomeMetric[],
   jurisdiction: string,
-  cohort = 'all',
+  cohort?: string,
 ): TrendSignal[] {
-  // Group metrics by name (filtered by cohort)
-  const byName = new Map<string, OutcomeMetric[]>();
+  // Group metrics by name+cohort (if cohort specified, filter; otherwise group all)
+  const byKey = new Map<string, OutcomeMetric[]>();
   for (const m of metrics) {
-    if (m.cohort !== cohort) continue;
-    const existing = byName.get(m.metric_name) ?? [];
+    if (cohort && m.cohort !== cohort) continue;
+    // Key by metric_name + cohort to keep cohorts separate
+    const key = `${m.metric_name}::${m.cohort ?? 'all'}`;
+    const existing = byKey.get(key) ?? [];
     existing.push(m);
-    byName.set(m.metric_name, existing);
+    byKey.set(key, existing);
+  }
+
+  // Deduplicate: prefer 'indigenous' cohort trends for CTG metrics, 'all' for others
+  const byName = new Map<string, OutcomeMetric[]>();
+  for (const [key, rows] of byKey) {
+    const name = key.split('::')[0];
+    if (!byName.has(name) || rows.length > (byName.get(name)?.length ?? 0)) {
+      byName.set(name, rows);
+    }
   }
 
   const signals: TrendSignal[] = [];
