@@ -5,6 +5,7 @@ import { EntityNetworkGraph } from './network-graph';
 import { safe, esc } from '@/lib/sql';
 import { money } from '@/lib/format';
 import { TH, TH_R, TD, TD_R, THEAD, ROW } from '@/lib/table-styles';
+import { computeTrendSignals, pickTopTrends } from '@/lib/outcomes-trends';
 
 export const revalidate = 3600;
 
@@ -220,6 +221,9 @@ export default async function EntityPage({ params }: { params: Promise<{ gsId: s
   const outcomesData = (outcomeMetrics as OutcomeMetricRow[] | null) ?? [];
   const policyData = (policyEvents as PolicyEventRow[] | null) ?? [];
   const hasJurisdictionContext = outcomesData.length > 0 || policyData.length > 0;
+  const trendSignals = outcomesData.length > 0
+    ? pickTopTrends(computeTrendSignals(outcomesData, entity.state ?? ''), 2)
+    : [];
 
   // Helper to get a specific metric
   const getMetric = (name: string, cohort = 'all') =>
@@ -468,8 +472,26 @@ export default async function EntityPage({ params }: { params: Promise<{ gsId: s
               })()}
             </div>
 
+            {/* Trend Signals */}
+            {trendSignals.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                {trendSignals.map((t, i) => (
+                  <div key={i} className={`inline-flex items-center gap-1.5 px-3 py-1.5 border text-xs font-bold ${
+                    t.direction === 'worsening'
+                      ? 'bg-red-50 border-red-200 text-red-700'
+                      : t.direction === 'improving'
+                        ? 'bg-green-50 border-green-200 text-green-700'
+                        : 'bg-gray-50 border-gray-200 text-gray-600'
+                  }`}>
+                    <span>{t.direction === 'worsening' ? '\u2191' : t.direction === 'improving' ? '\u2193' : '\u2192'}</span>
+                    <span>{t.formatted}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {policyData.length > 0 && (
-              <div className="bg-white border border-gray-200 shadow-sm p-4">
+              <div className="bg-white border border-gray-200 shadow-sm p-4 mb-3">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Recent Policy Changes</p>
                 <div className="space-y-2">
                   {policyData.slice(0, 3).map((e, i) => (
@@ -485,11 +507,12 @@ export default async function EntityPage({ params }: { params: Promise<{ gsId: s
                     </div>
                   ))}
                 </div>
-                <Link href={`/reports/youth-justice/${entity.state?.toLowerCase()}`} className="text-[10px] font-bold text-bauhaus-blue mt-2 inline-block hover:underline">
-                  View full {entity.state} report &rarr;
-                </Link>
               </div>
             )}
+
+            <Link href={`/reports/youth-justice/${entity.state?.toLowerCase()}/tracker`} className="text-[10px] font-bold text-bauhaus-blue hover:underline">
+              View full {entity.state} outcomes tracker &rarr;
+            </Link>
           </section>
         )}
 
