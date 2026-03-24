@@ -23,6 +23,8 @@ import {
   getCtgTargetComparison,
   getPolicyTimeline,
   getOversightData,
+  getQgipExpenditureByYear,
+  getQgipTopPrograms,
   money,
   fmt,
 } from '@/lib/services/report-service';
@@ -120,6 +122,8 @@ async function getTrackerData(abbr: string) {
   const sentencedSeries = await getMetricTimeSeries(abbr, ['aihw_avg_nightly_sentenced', 'aihw_avg_nightly_unsentenced']);
   const safetySeries = await getMetricTimeSeries(abbr, ['rogs_assault_rate', 'rogs_selfharm_rate', 'rogs_cost_per_day_detention']);
   const ctgTarget = await getCtgTargetComparison(abbr);
+  const qgipByYear = await getQgipExpenditureByYear(abbr);
+  const qgipTopPrograms = await getQgipTopPrograms(abbr);
 
   const partnersByProgram: Record<string, PartnerRow[]> = {};
   const rawPartners = (programPartners as PartnerRow[] | null) || [];
@@ -151,6 +155,8 @@ async function getTrackerData(abbr: string) {
     sentencedSeries: (sentencedSeries as TimeSeriesRow[] | null) || [],
     safetySeries: (safetySeries as TimeSeriesRow[] | null) || [],
     ctgTarget: (ctgTarget as CtgTargetRow[] | null) || [],
+    qgipByYear: (qgipByYear as Array<{ financial_year: string; grants: number; orgs: number; total: number }> | null) || [],
+    qgipTopPrograms: (qgipTopPrograms as Array<{ program_name: string; grants: number; orgs: number; total: number; from_fy: string; to_fy: string }> | null) || [],
   };
 }
 
@@ -947,6 +953,74 @@ export default async function StateTrackerPage({ params }: { params: Promise<{ s
                   {i === 0 && !y.notes && <span className="text-[10px] text-blue-500 w-28">Baseline</span>}
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Government Grant Expenditure (QGIP) */}
+      {data.qgipByYear.length > 0 && (
+        <section className="mb-12">
+          <h2 className="text-xl font-black text-bauhaus-black uppercase tracking-wider mb-2 border-b-4 border-bauhaus-blue pb-2">
+            {++sectionNum}. Government Grant Expenditure
+          </h2>
+          <p className="text-sm text-bauhaus-muted mb-4">
+            {abbr} Government Investment Portal — actual payments to named recipients across {data.qgipByYear.length} financial years.
+          </p>
+
+          {/* Year-by-year bar chart */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
+            <div>
+              <h3 className="text-sm font-black text-bauhaus-black uppercase tracking-wider mb-3">Annual Expenditure</h3>
+              <div className="space-y-1.5">
+                {(() => {
+                  const maxTotal = Math.max(...data.qgipByYear.map(y => y.total || 0));
+                  return data.qgipByYear.map((y, i) => (
+                    <div key={i} className="flex items-center gap-2 text-xs">
+                      <span className="w-12 text-gray-500 shrink-0">{y.financial_year}</span>
+                      <div className="flex-1 bg-gray-100 rounded-sm h-5 overflow-hidden">
+                        <div
+                          className="bg-bauhaus-blue h-full rounded-sm"
+                          style={{ width: `${maxTotal ? (y.total / maxTotal) * 100 : 0}%` }}
+                        />
+                      </div>
+                      <span className="w-16 text-right font-bold shrink-0">{money(y.total)}</span>
+                    </div>
+                  ));
+                })()}
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-black text-bauhaus-black uppercase tracking-wider mb-3">Top Programs by Total Spend</h3>
+              <div className="space-y-2">
+                {data.qgipTopPrograms.slice(0, 10).map((p, i) => (
+                  <div key={i} className="border-b border-gray-100 pb-1.5">
+                    <div className="flex justify-between items-start">
+                      <Link href={`/reports/youth-justice/${state}/program/${encodeURIComponent(p.program_name.toLowerCase().replace(/ /g, '-'))}`} className="text-xs text-bauhaus-blue hover:underline leading-tight">
+                        {p.program_name}
+                      </Link>
+                      <span className="text-xs font-bold shrink-0 ml-2">{money(p.total)}</span>
+                    </div>
+                    <div className="text-[10px] text-gray-400">{p.orgs} orgs &middot; {p.grants} grants &middot; {p.from_fy}–{p.to_fy}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
+              <div className="text-xl font-black text-blue-600">{money(data.qgipByYear.reduce((s, y) => s + (y.total || 0), 0))}</div>
+              <div className="text-[10px] text-gray-500 uppercase">Total Tracked</div>
+            </div>
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center">
+              <div className="text-xl font-black text-gray-800">{fmt(data.qgipByYear.reduce((s, y) => s + y.grants, 0))}</div>
+              <div className="text-[10px] text-gray-500 uppercase">Grants</div>
+            </div>
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center">
+              <div className="text-xl font-black text-gray-800">{fmt(Math.max(...data.qgipByYear.map(y => y.orgs)))}</div>
+              <div className="text-[10px] text-gray-500 uppercase">Peak Orgs/Year</div>
             </div>
           </div>
         </section>

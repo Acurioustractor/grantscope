@@ -1765,3 +1765,57 @@ export async function getPiccFundingFlow() {
     grants: number;
   }> | null>;
 }
+
+/**
+ * QGIP grant expenditure by financial year for a state — 13-year time series
+ */
+export async function getQgipExpenditureByYear(state: string) {
+  const supabase = getServiceSupabase();
+  const sc = assertState(state);
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT financial_year,
+              COUNT(*)::int as grants,
+              COUNT(DISTINCT recipient_name)::int as orgs,
+              SUM(amount_dollars)::bigint as total
+       FROM justice_funding
+       WHERE source = 'qgip' AND state = '${sc}'
+         AND financial_year IS NOT NULL AND amount_dollars IS NOT NULL
+       GROUP BY financial_year
+       ORDER BY financial_year`,
+  }), 'getQgipExpenditureByYear') as Promise<Array<{
+    financial_year: string;
+    grants: number;
+    orgs: number;
+    total: number;
+  }> | null>;
+}
+
+/**
+ * QGIP top programs by total expenditure for a state
+ */
+export async function getQgipTopPrograms(state: string, limit = 15) {
+  const supabase = getServiceSupabase();
+  const sc = assertState(state);
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT program_name,
+              COUNT(*)::int as grants,
+              COUNT(DISTINCT recipient_name)::int as orgs,
+              SUM(amount_dollars)::bigint as total,
+              MIN(financial_year) as from_fy,
+              MAX(financial_year) as to_fy
+       FROM justice_funding
+       WHERE source = 'qgip' AND state = '${sc}'
+         AND amount_dollars IS NOT NULL
+         AND program_name NOT LIKE 'Total%'
+       GROUP BY program_name
+       ORDER BY total DESC
+       LIMIT ${limit}`,
+  }), 'getQgipTopPrograms') as Promise<Array<{
+    program_name: string;
+    grants: number;
+    orgs: number;
+    total: number;
+    from_fy: string;
+    to_fy: string;
+  }> | null>;
+}
