@@ -19,8 +19,8 @@ import {
   getOutcomesMetrics,
   getStateComparisonMetrics,
   getCtgTrend,
-  getCtgTargetComparison,
   getMetricTimeSeries,
+  getCtgTargetComparison,
   getPolicyTimeline,
   getOversightData,
   money,
@@ -93,7 +93,6 @@ async function getTrackerData(abbr: string) {
     evidenceCoverage, almaInterventions, almaCount,
     hansard, lobbying, revolvingDoor,
     outcomes, comparison, ctgTrend, policyTimeline, oversight,
-    sentencedSeries, safetySeries, ctgTarget,
   ] = await Promise.all([
     getBudgetCommitments(abbr),
     getBudgetTotals(abbr),
@@ -114,10 +113,13 @@ async function getTrackerData(abbr: string) {
     getCtgTrend(abbr),
     getPolicyTimeline(abbr),
     getOversightData(abbr),
-    getMetricTimeSeries(abbr, ['aihw_avg_nightly_sentenced', 'aihw_avg_nightly_unsentenced']),
-    getMetricTimeSeries(abbr, ['rogs_assault_rate', 'rogs_selfharm_rate', 'rogs_cost_per_day_detention']),
-    getCtgTargetComparison(abbr),
   ]);
+
+  // Fetch time series data sequentially after main queries complete
+  // (avoids Supabase connection pool exhaustion on data-heavy states like QLD)
+  const sentencedSeries = await getMetricTimeSeries(abbr, ['aihw_avg_nightly_sentenced', 'aihw_avg_nightly_unsentenced']);
+  const safetySeries = await getMetricTimeSeries(abbr, ['rogs_assault_rate', 'rogs_selfharm_rate', 'rogs_cost_per_day_detention']);
+  const ctgTarget = await getCtgTargetComparison(abbr);
 
   const partnersByProgram: Record<string, PartnerRow[]> = {};
   const rawPartners = (programPartners as PartnerRow[] | null) || [];
