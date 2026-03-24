@@ -1518,6 +1518,58 @@ export async function getCtgTrend(jurisdiction: string, domain = 'youth-justice'
 }
 
 /**
+ * Time series for specific metrics — enables trend charts
+ */
+export async function getMetricTimeSeries(
+  jurisdiction: string,
+  metricNames: string[],
+  domain = 'youth-justice',
+  cohort = 'all',
+) {
+  const supabase = getServiceSupabase();
+  const j = assertJurisdiction(jurisdiction);
+  const d = assertDomain(domain);
+  const c = esc(cohort);
+  const nameList = metricNames.map(n => `'${esc(n)}'`).join(',');
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT metric_name, metric_value::float, metric_unit, period, cohort, source
+       FROM outcomes_metrics
+       WHERE jurisdiction = '${j}' AND domain = '${d}'
+         AND metric_name IN (${nameList})
+         AND cohort = '${c}'
+       ORDER BY metric_name, period`,
+  })) as Promise<Array<{
+    metric_name: string;
+    metric_value: number;
+    metric_unit: string;
+    period: string;
+    cohort: string;
+    source: string;
+  }> | null>;
+}
+
+/**
+ * CTG target vs projection for a jurisdiction
+ */
+export async function getCtgTargetComparison(jurisdiction: string) {
+  const supabase = getServiceSupabase();
+  const j = assertJurisdiction(jurisdiction);
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT metric_name, metric_value::float, period, cohort
+       FROM outcomes_metrics
+       WHERE jurisdiction = '${j}' AND domain = 'youth-justice'
+         AND metric_name IN ('ctg_detention_rate', 'ctg_detention_rate_projected', 'ctg_detention_rate_target')
+         AND cohort = 'indigenous'
+       ORDER BY metric_name, period`,
+  })) as Promise<Array<{
+    metric_name: string;
+    metric_value: number;
+    period: string;
+    cohort: string;
+  }> | null>;
+}
+
+/**
  * Policy timeline for a jurisdiction + domain
  */
 export async function getPolicyTimeline(jurisdiction: string, domain = 'youth-justice') {

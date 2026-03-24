@@ -19,6 +19,8 @@ import {
   getOutcomesMetrics,
   getStateComparisonMetrics,
   getCtgTrend,
+  getCtgTargetComparison,
+  getMetricTimeSeries,
   getPolicyTimeline,
   getOversightData,
   money,
@@ -75,6 +77,8 @@ type ComparisonRow = { jurisdiction: string; metric_name: string; metric_value: 
 type CtgRow = { rate: number; period: string; notes: string | null };
 type PolicyRow = { event_date: string; title: string; description: string; event_type: string; severity: string; source: string | null; impact_summary: string | null; metadata: Record<string, unknown> | null };
 type OversightRow = { oversight_body: string; report_title: string; report_date: string; report_url: string | null; recommendation_number: string; recommendation_text: string; status: string; status_notes: string | null; severity: string | null };
+type TimeSeriesRow = { metric_name: string; metric_value: number; metric_unit: string; period: string; cohort: string; source: string };
+type CtgTargetRow = { metric_name: string; metric_value: number; period: string; cohort: string };
 
 const COMPARISON_METRICS = [
   'detention_rate_per_10k', 'avg_daily_detention', 'indigenous_overrepresentation_ratio',
@@ -89,6 +93,7 @@ async function getTrackerData(abbr: string) {
     evidenceCoverage, almaInterventions, almaCount,
     hansard, lobbying, revolvingDoor,
     outcomes, comparison, ctgTrend, policyTimeline, oversight,
+    sentencedSeries, safetySeries, ctgTarget,
   ] = await Promise.all([
     getBudgetCommitments(abbr),
     getBudgetTotals(abbr),
@@ -109,6 +114,9 @@ async function getTrackerData(abbr: string) {
     getCtgTrend(abbr),
     getPolicyTimeline(abbr),
     getOversightData(abbr),
+    getMetricTimeSeries(abbr, ['aihw_avg_nightly_sentenced', 'aihw_avg_nightly_unsentenced']),
+    getMetricTimeSeries(abbr, ['rogs_assault_rate', 'rogs_selfharm_rate', 'rogs_cost_per_day_detention']),
+    getCtgTargetComparison(abbr),
   ]);
 
   const partnersByProgram: Record<string, PartnerRow[]> = {};
@@ -138,6 +146,9 @@ async function getTrackerData(abbr: string) {
     ctgTrend: (ctgTrend as CtgRow[] | null) || [],
     policyTimeline: (policyTimeline as PolicyRow[] | null) || [],
     oversight: (oversight as OversightRow[] | null) || [],
+    sentencedSeries: (sentencedSeries as TimeSeriesRow[] | null) || [],
+    safetySeries: (safetySeries as TimeSeriesRow[] | null) || [],
+    ctgTarget: (ctgTarget as CtgTargetRow[] | null) || [],
   };
 }
 
@@ -512,6 +523,196 @@ export default async function StateTrackerPage({ params }: { params: Promise<{ s
               )}
             </div>
           )}
+
+          {/* Sentenced vs Unsentenced — AIHW quarterly time series */}
+          {data.sentencedSeries.length > 0 && (() => {
+            const sentenced = data.sentencedSeries.filter(r => r.metric_name === 'aihw_avg_nightly_sentenced');
+            const unsentenced = data.sentencedSeries.filter(r => r.metric_name === 'aihw_avg_nightly_unsentenced');
+            if (sentenced.length === 0 && unsentenced.length === 0) return null;
+            // Get matching periods
+            const periods = [...new Set([...sentenced, ...unsentenced].map(r => r.period))].sort();
+            const latestSent = sentenced[sentenced.length - 1]?.metric_value ?? 0;
+            const latestUnsent = unsentenced[unsentenced.length - 1]?.metric_value ?? 0;
+            const total = latestSent + latestUnsent;
+            const unsentPct = total > 0 ? Math.round((latestUnsent / total) * 100) : 0;
+            // Trend: compare first to last
+            const firstUnsent = unsentenced[0]?.metric_value ?? 0;
+            const unsentChange = firstUnsent > 0 ? Math.round(((latestUnsent - firstUnsent) / firstUnsent) * 100) : 0;
+            return (
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-5 mb-6">
+                <h3 className="text-sm font-black text-bauhaus-black uppercase tracking-wider mb-1">Sentenced vs Remand</h3>
+                <p className="text-xs text-bauhaus-muted mb-4">
+                  AIHW quarterly avg nightly detention, ages 10-17.{' '}
+                  {unsentPct > 50 && <span className="text-red-600 font-bold">{unsentPct}% are unsentenced — on remand, not convicted.</span>}
+                </p>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="border-2 border-red-300 rounded-xl p-4 text-center">
+                    <div className="text-2xl font-black text-red-600">{Math.round(latestUnsent)}</div>
+                    <div className="text-[10px] text-gray-500">Unsentenced (remand)</div>
+                    {unsentChange !== 0 && (
+                      <div className={`text-xs font-bold mt-1 ${unsentChange > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+                        {unsentChange > 0 ? '↑' : '↓'} {Math.abs(unsentChange)}% since {unsentenced[0]?.period?.split('Q')[0]}
+                      </div>
+                    )}
+                  </div>
+                  <div className="border-2 border-gray-300 rounded-xl p-4 text-center">
+                    <div className="text-2xl font-black text-gray-700">{Math.round(latestSent)}</div>
+                    <div className="text-[10px] text-gray-500">Sentenced</div>
+                  </div>
+                </div>
+                {/* Stacked bar trend */}
+                <div className="space-y-1">
+                  {periods.slice(-8).map(p => {
+                    const s = sentenced.find(r => r.period === p)?.metric_value ?? 0;
+                    const u = unsentenced.find(r => r.period === p)?.metric_value ?? 0;
+                    const t = s + u;
+                    const maxTotal = Math.max(...periods.map(pp => {
+                      const ss = sentenced.find(r => r.period === pp)?.metric_value ?? 0;
+                      const uu = unsentenced.find(r => r.period === pp)?.metric_value ?? 0;
+                      return ss + uu;
+                    }));
+                    const widthPct = maxTotal > 0 ? (t / maxTotal) * 100 : 0;
+                    const sentPctBar = t > 0 ? (s / t) * 100 : 0;
+                    return (
+                      <div key={p} className="flex items-center gap-2">
+                        <span className="text-[9px] text-gray-500 w-16 shrink-0 text-right font-mono">{p}</span>
+                        <div className="flex-1 bg-gray-200 rounded-full h-3" style={{ width: '100%' }}>
+                          <div className="flex h-3 rounded-full overflow-hidden" style={{ width: `${widthPct}%` }}>
+                            <div className="bg-gray-400 h-full" style={{ width: `${sentPctBar}%` }} />
+                            <div className="bg-red-400 h-full" style={{ width: `${100 - sentPctBar}%` }} />
+                          </div>
+                        </div>
+                        <span className="text-[9px] text-gray-500 w-8 shrink-0 font-mono">{Math.round(t)}</span>
+                      </div>
+                    );
+                  })}
+                  <div className="flex gap-4 mt-2 text-[9px] text-gray-500">
+                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-gray-400 rounded-sm" />Sentenced</span>
+                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-red-400 rounded-sm" />Unsentenced (remand)</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Safety in Custody — ROGS 10-year trends */}
+          {data.safetySeries.length > 0 && (() => {
+            const assaults = data.safetySeries.filter(r => r.metric_name === 'rogs_assault_rate');
+            const selfharm = data.safetySeries.filter(r => r.metric_name === 'rogs_selfharm_rate');
+            const costs = data.safetySeries.filter(r => r.metric_name === 'rogs_cost_per_day_detention');
+            if (assaults.length === 0 && selfharm.length === 0) return null;
+            return (
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-5 mb-6">
+                <h3 className="text-sm font-black text-bauhaus-black uppercase tracking-wider mb-1">Safety in Custody — 10-Year Trend</h3>
+                <p className="text-xs text-bauhaus-muted mb-4">ROGS 2026 rates per 10,000 custody nights.</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {[
+                    { label: 'All Assaults', data: assaults, color: 'red' },
+                    { label: 'Self-harm & Attempted Suicide', data: selfharm, color: 'amber' },
+                  ].filter(s => s.data.length > 0).map(series => {
+                    const latest = series.data[series.data.length - 1];
+                    const first = series.data[0];
+                    const maxVal = Math.max(...series.data.map(r => r.metric_value));
+                    const change = first.metric_value > 0
+                      ? Math.round(((latest.metric_value - first.metric_value) / first.metric_value) * 100)
+                      : 0;
+                    const bgClass = series.color === 'red' ? 'border-red-200' : 'border-amber-200';
+                    const barClass = series.color === 'red' ? 'bg-red-400' : 'bg-amber-400';
+                    const textClass = series.color === 'red' ? 'text-red-600' : 'text-amber-600';
+                    return (
+                      <div key={series.label} className={`border ${bgClass} rounded-lg p-4`}>
+                        <div className="flex items-baseline justify-between mb-2">
+                          <span className="text-xs font-bold text-gray-700">{series.label}</span>
+                          <span className={`text-lg font-black ${textClass}`}>
+                            {Math.round(latest.metric_value)}
+                            <span className="text-[10px] text-gray-400 ml-1">per 10K nights</span>
+                          </span>
+                        </div>
+                        {change !== 0 && (
+                          <div className={`text-[10px] font-bold mb-2 ${change > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+                            {change > 0 ? '↑' : '↓'} {Math.abs(change)}% since {first.period}
+                          </div>
+                        )}
+                        <div className="space-y-0.5">
+                          {series.data.map(r => (
+                            <div key={r.period} className="flex items-center gap-1.5">
+                              <span className="text-[8px] text-gray-400 w-12 shrink-0 text-right font-mono">{r.period.slice(0, 4)}</span>
+                              <div className="flex-1 bg-gray-100 rounded-full h-1.5">
+                                <div className={`${barClass} rounded-full h-1.5`} style={{ width: `${maxVal > 0 ? (r.metric_value / maxVal) * 100 : 0}%` }} />
+                              </div>
+                              <span className="text-[8px] text-gray-400 w-6 shrink-0 font-mono">{Math.round(r.metric_value)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Cost trend inline */}
+                {costs.length > 1 && (
+                  <div className="mt-4 pt-3 border-t border-gray-200">
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-xs font-bold text-gray-700">Cost per day (detention)</span>
+                      <span className="text-sm font-black text-gray-800">
+                        ${Math.round(costs[costs.length - 1].metric_value).toLocaleString()}
+                        <span className="text-[10px] text-gray-400 ml-1">
+                          (was ${Math.round(costs[0].metric_value).toLocaleString()} in {costs[0].period})
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* CTG Target 11 — Is this state on track? */}
+          {data.ctgTarget.length > 0 && (() => {
+            const actuals = data.ctgTarget.filter(r => r.metric_name === 'ctg_detention_rate');
+            const projected = data.ctgTarget.filter(r => r.metric_name === 'ctg_detention_rate_projected');
+            const targets = data.ctgTarget.filter(r => r.metric_name === 'ctg_detention_rate_target');
+            if (actuals.length === 0) return null;
+            const latestActual = actuals[actuals.length - 1];
+            const proj2031 = projected.find(r => r.period === '2030-31');
+            const target2031 = targets.find(r => r.period === '2030-31');
+            const onTrack = proj2031 && target2031 && proj2031.metric_value <= target2031.metric_value;
+            return (
+              <div className={`border-2 ${onTrack ? 'border-emerald-300 bg-emerald-50' : 'border-red-300 bg-red-50'} rounded-xl p-5 mb-6`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <h3 className="text-sm font-black text-bauhaus-black uppercase tracking-wider">Closing the Gap — Target 11</h3>
+                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-sm uppercase tracking-wider ${onTrack ? 'bg-emerald-200 text-emerald-800' : 'bg-red-200 text-red-800'}`}>
+                    {onTrack ? 'On Track' : 'Off Track'}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-600 mb-3">
+                  Indigenous youth detention rate per 10K — reduce overrepresentation by 2030-31.
+                </p>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="text-center">
+                    <div className="text-xs text-gray-500 mb-1">Current ({latestActual.period})</div>
+                    <div className="text-2xl font-black text-gray-800">{latestActual.metric_value}</div>
+                  </div>
+                  {proj2031 && (
+                    <div className="text-center">
+                      <div className="text-xs text-gray-500 mb-1">Projected 2030-31</div>
+                      <div className={`text-2xl font-black ${onTrack ? 'text-emerald-600' : 'text-red-600'}`}>{proj2031.metric_value}</div>
+                    </div>
+                  )}
+                  {target2031 && (
+                    <div className="text-center">
+                      <div className="text-xs text-gray-500 mb-1">Target 2030-31</div>
+                      <div className="text-2xl font-black text-emerald-600">{target2031.metric_value}</div>
+                    </div>
+                  )}
+                </div>
+                {proj2031 && target2031 && !onTrack && (
+                  <p className="text-xs text-red-700 mt-3 font-medium">
+                    At current trajectory, {abbr} will be {(proj2031.metric_value / target2031.metric_value).toFixed(1)}x the national target.
+                  </p>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Court Pipeline (QLD-specific data, but adaptive) */}
           {m(om, 'court_finalised_appearances') !== null && (
