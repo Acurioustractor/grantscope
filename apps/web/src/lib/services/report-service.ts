@@ -1117,7 +1117,7 @@ export async function getHansardMentions(state: string, limit = 20) {
  */
 export async function getYjLobbyingConnections(topic: Topic, state?: string, limit = 15) {
   const supabase = getServiceSupabase();
-  const stateFilter = state ? ` AND jf.state = '${assertState(state)}'` : '';
+  const stateFilter = state ? ` AND state = '${assertState(state)}'` : '';
   return safe(supabase.rpc('exec_sql', {
     query: `WITH yj_orgs AS (
               SELECT DISTINCT gs_entity_id FROM justice_funding

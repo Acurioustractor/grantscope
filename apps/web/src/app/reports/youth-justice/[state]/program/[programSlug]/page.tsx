@@ -17,6 +17,14 @@ type OrgRow = {
   max_year: string | null;
 };
 
+type LeaderRow = {
+  abn: string;
+  canonical_name: string;
+  person_name: string;
+  role: string | null;
+  source: string | null;
+};
+
 type ProgramStats = {
   program_name: string;
   total: number | null;
@@ -80,7 +88,30 @@ async function getProgramDetail(state: string, programSlug: string) {
        LIMIT 500`,
   })) as OrgRow[] | null;
 
-  return { stats, orgs: orgs ?? [], exactName };
+  // Get leadership for orgs with ABNs
+  const abns = (orgs ?? []).map(o => o.recipient_abn).filter(Boolean);
+  let leadership: LeaderRow[] = [];
+  if (abns.length > 0) {
+    const abnList = abns.map(a => `'${a}'`).join(',');
+    leadership = (await safe(supabase.rpc('exec_sql', {
+      query: `SELECT e.abn, e.canonical_name,
+                pr.person_name, pr.role_type as role, pr.source
+         FROM gs_entities e
+         JOIN person_roles pr ON pr.entity_id = e.id
+         WHERE e.abn IN (${abnList})
+         ORDER BY e.canonical_name, pr.role_type, pr.person_name
+         LIMIT 500`,
+    })) ?? []) as LeaderRow[];
+  }
+
+  // Group leadership by ABN
+  const leadersByAbn: Record<string, LeaderRow[]> = {};
+  for (const l of leadership) {
+    if (!leadersByAbn[l.abn]) leadersByAbn[l.abn] = [];
+    leadersByAbn[l.abn].push(l);
+  }
+
+  return { stats, orgs: orgs ?? [], exactName, leadersByAbn };
 }
 
 function OrgLink({ name, gsId, abn }: { name: string; gsId: string | null; abn: string | null }) {
@@ -107,14 +138,16 @@ export default async function ProgramDetailPage({ params }: { params: Promise<{ 
   const result = await getProgramDetail(stateCode, programSlug);
   if (!result) notFound();
 
-  const { stats, orgs, exactName } = result;
+  const { stats, orgs, exactName, leadersByAbn } = result;
 
   return (
     <div className="max-w-6xl mx-auto">
       {/* Breadcrumb */}
-      <Link href={`/reports/youth-justice/${state}`} className="text-xs font-black text-bauhaus-muted uppercase tracking-widest hover:text-bauhaus-black">
-        &larr; {stateName} Youth Justice
-      </Link>
+      <div className="flex items-center gap-2 text-xs font-black text-bauhaus-muted uppercase tracking-widest">
+        <Link href={`/reports/youth-justice/${state}`} className="hover:text-bauhaus-black">{stateName} Youth Justice</Link>
+        <span>/</span>
+        <Link href={`/reports/youth-justice/${state}/tracker`} className="hover:text-bauhaus-black">Tracker</Link>
+      </div>
 
       <div className="mt-4 mb-1 flex items-center gap-3">
         <span className="text-xs font-black text-bauhaus-red uppercase tracking-widest">Program</span>
@@ -149,39 +182,43 @@ export default async function ProgramDetailPage({ params }: { params: Promise<{ 
         </div>
       )}
 
-      {/* Orgs table */}
+      {/* Delivery Partners */}
       <section>
         <h2 className="text-xl font-black text-bauhaus-black uppercase tracking-wider mb-4 border-b-4 border-bauhaus-black pb-2">
           Delivery Partners ({orgs.length})
         </h2>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b-2 border-bauhaus-black">
-                <th className="text-left py-2 font-black uppercase tracking-wider text-xs">Organisation</th>
-                <th className="text-right py-2 font-black uppercase tracking-wider text-xs">Grants</th>
-                <th className="text-right py-2 font-black uppercase tracking-wider text-xs">Total</th>
-                <th className="text-right py-2 font-black uppercase tracking-wider text-xs">Period</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orgs.map((o, i) => (
-                <tr key={i} className="border-b border-gray-200 hover:bg-gray-50">
-                  <td className="py-2">
+        <div className="space-y-4">
+          {orgs.map((o, i) => {
+            const leaders = o.recipient_abn ? (leadersByAbn[o.recipient_abn] ?? []) : [];
+            return (
+              <div key={i} className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors">
+                <div className="flex items-start justify-between mb-2">
+                  <div>
                     <OrgLink name={o.recipient_name} gsId={o.gs_id} abn={o.recipient_abn} />
                     {o.is_community_controlled && (
                       <span className="ml-1.5 text-[10px] font-bold bg-emerald-100 text-emerald-700 px-1 py-0.5 rounded uppercase">ACCO</span>
                     )}
-                  </td>
-                  <td className="py-2 text-right text-gray-600">{fmt(o.grants)}</td>
-                  <td className="py-2 text-right font-bold">{o.total ? money(o.total) : '—'}</td>
-                  <td className="py-2 text-right text-gray-500 text-xs">
-                    {o.min_year && o.max_year ? `${o.min_year}–${o.max_year}` : '—'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                  <div className="text-right shrink-0 ml-4">
+                    <div className="font-black text-bauhaus-black">{o.total ? money(o.total) : '—'}</div>
+                    <div className="text-xs text-gray-500">{fmt(o.grants)} grants &middot; {o.min_year && o.max_year ? `${o.min_year}–${o.max_year}` : '—'}</div>
+                  </div>
+                </div>
+                {leaders.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {leaders.slice(0, 10).map((l, j) => (
+                      <span key={j} className="text-[11px] bg-gray-100 text-gray-700 px-2 py-0.5 rounded">
+                        {l.person_name}{l.role ? ` (${l.role})` : ''}
+                      </span>
+                    ))}
+                    {leaders.length > 10 && <span className="text-[11px] text-gray-400">+{leaders.length - 10} more</span>}
+                  </div>
+                ) : (
+                  <div className="text-xs text-gray-400 italic mt-1">No leadership data available</div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </section>
     </div>

@@ -1073,7 +1073,11 @@ export default async function StateTrackerPage({ params }: { params: Promise<{ s
                     return (
                       <Fragment key={i}>
                         <tr className="border-b border-gray-200 bg-gray-50/80">
-                          <td className="py-2 font-bold">{b.program_name}</td>
+                          <td className="py-2 font-bold">
+                            <Link href={`/reports/youth-justice/${state}/program/${encodeURIComponent(b.program_name.toLowerCase().replace(/ /g, '-'))}`} className="text-bauhaus-blue hover:underline">
+                              {b.program_name}
+                            </Link>
+                          </td>
                           <td className="py-2 text-right font-black">{money(b.amount)}</td>
                           <td className="py-2 text-right text-gray-600">{b.financial_year}</td>
                         </tr>
