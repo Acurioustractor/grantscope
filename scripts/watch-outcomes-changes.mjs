@@ -28,6 +28,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+const DRY_RUN = process.argv.includes('--dry-run');
 const LOOKBACK_HOURS = parseInt(
   process.argv.find(a => a.startsWith('--lookback='))?.split('=')[1] || '0'
 );
@@ -112,10 +113,10 @@ function assessDirection(metricName, oldVal, newVal) {
 
 async function main() {
   const t0 = Date.now();
-  console.log(`${AGENT_NAME} — Autoresearch Agent`);
+  console.log(`${AGENT_NAME} — Autoresearch Agent${DRY_RUN ? ' [DRY RUN]' : ''}`);
   console.log('═'.repeat(50));
 
-  const runId = (await logStart(supabase, AGENT_ID, AGENT_NAME))?.id;
+  const runId = DRY_RUN ? null : (await logStart(supabase, AGENT_ID, AGENT_NAME))?.id;
 
   try {
     const since = await getLastRunTime();
@@ -229,10 +230,13 @@ async function main() {
     // ── 4. Insert discoveries ──
     console.log(`\n  Total discoveries: ${discoveries.length}`);
 
-    if (discoveries.length > 0) {
+    if (discoveries.length > 0 && !DRY_RUN) {
       const { error } = await supabase.from('discoveries').insert(discoveries);
       if (error) console.error('  Insert error:', error.message);
       else console.log(`  Inserted ${discoveries.length} discoveries`);
+    } else if (DRY_RUN && discoveries.length > 0) {
+      console.log('\n  [DRY RUN] Would insert:');
+      for (const d of discoveries) console.log(`    [${d.severity}] ${d.title}`);
     }
 
     const duration = Date.now() - t0;

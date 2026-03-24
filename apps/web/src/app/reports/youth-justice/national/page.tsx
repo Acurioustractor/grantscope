@@ -303,7 +303,7 @@ export default async function NationalComparisonPage() {
             const cost = cv('cost_per_day_detention', s);
             const rank = detentionRanks[s];
             return (
-              <Link key={s} href={`/reports/youth-justice/${s.toLowerCase()}`}
+              <Link key={s} href={`/reports/youth-justice/${s.toLowerCase()}/tracker`}
                 className="border border-gray-200 rounded-xl p-4 hover:border-bauhaus-blue transition-colors">
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-black text-lg text-bauhaus-black">{s}</span>
