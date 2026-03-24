@@ -27,6 +27,8 @@ export interface TrendSignal {
 /** Metrics where a higher value means worse outcomes */
 const WORSE_WHEN_HIGHER = new Set([
   'detention_rate_per_10k',
+  'aihw_detention_rate_per_10k',
+  'aihw_avg_nightly_detention',
   'indigenous_overrepresentation_ratio',
   'cost_per_day_detention',
   'pct_unsentenced',
@@ -37,6 +39,8 @@ const WORSE_WHEN_HIGHER = new Set([
 
 const METRIC_LABELS: Record<string, string> = {
   detention_rate_per_10k: 'detention rates',
+  aihw_detention_rate_per_10k: 'detention rates',
+  aihw_avg_nightly_detention: 'nightly detention population',
   indigenous_overrepresentation_ratio: 'Indigenous overrepresentation',
   cost_per_day_detention: 'detention costs',
   pct_unsentenced: 'remand rates',

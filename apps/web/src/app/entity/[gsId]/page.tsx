@@ -193,7 +193,7 @@ export default async function EntityPage({ params }: { params: Promise<{ gsId: s
       query: `SELECT metric_name, metric_value, metric_unit, period, cohort, source, notes
          FROM outcomes_metrics
          WHERE jurisdiction = '${esc(entity.state)}' AND domain = 'youth-justice'
-           AND metric_name IN ('detention_rate_per_10k', 'indigenous_overrepresentation_ratio', 'cost_per_day_detention', 'cost_per_day_community', 'pct_unsentenced', 'avg_daily_detention', 'avg_days_in_detention', 'ctg_target11_indigenous_detention_rate')
+           AND metric_name IN ('detention_rate_per_10k', 'indigenous_overrepresentation_ratio', 'cost_per_day_detention', 'cost_per_day_community', 'pct_unsentenced', 'avg_daily_detention', 'avg_days_in_detention', 'ctg_target11_indigenous_detention_rate', 'aihw_detention_rate_per_10k', 'aihw_avg_nightly_detention')
            AND (cohort = 'all' OR cohort = 'indigenous')
          ORDER BY metric_name, period DESC`,
     })) as Promise<OutcomeMetricRow[] | null> : null,
