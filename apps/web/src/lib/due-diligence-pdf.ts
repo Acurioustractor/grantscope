@@ -5,25 +5,27 @@ const PAGE_WIDTH = 595.28;
 const PAGE_HEIGHT = 841.89;
 const MARGIN = 42;
 const CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2;
-const FONT_SIZES = {
+const FONT_SIZES: Record<string, number> = {
+  micro: 7,
   tiny: 8,
   label: 9,
-  body: 11,
-  section: 13,
+  body: 10,
+  section: 11,
+  metric: 12,
   heading: 18,
-  title: 26,
-} as const;
+  statValue: 28,
+  title: 34,
+};
 
-const COLORS = {
-  black: rgb(0.08, 0.08, 0.08),
-  muted: rgb(0.42, 0.42, 0.42),
-  red: rgb(0.87, 0.11, 0.12),
-  blue: rgb(0.11, 0.28, 0.82),
-  green: rgb(0.06, 0.6, 0.41),
-  yellow: rgb(0.95, 0.78, 0.12),
-  canvas: rgb(0.97, 0.96, 0.93),
+// Bauhaus-inspired: pure black/white/red — no compromises
+const C = {
+  black: rgb(0, 0, 0),
   white: rgb(1, 1, 1),
-  border: rgb(0.14, 0.14, 0.14),
+  red: rgb(0.898, 0.224, 0.208),   // #E53935
+  muted: rgb(0.459, 0.459, 0.459), // #757575
+  light: rgb(0.741, 0.741, 0.741), // #BDBDBD
+  surface: rgb(0.961, 0.961, 0.961), // #F5F5F5
+  hairline: rgb(0.88, 0.88, 0.88),
 } as const;
 
 function fmtMoney(value: number | null | undefined): string {
@@ -39,16 +41,15 @@ function fmtDate(value: string | null | undefined): string {
   return new Date(value).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function sanitizeForPdf(text: string): string {
-  // Replace characters that WinAnsi (Helvetica) can't encode
+function sanitize(text: string): string {
   return text
-    .replace(/\u2713|\u2714/g, '[Y]')   // checkmarks
-    .replace(/\u2717|\u2718/g, '[N]')   // X marks
-    .replace(/\u2022/g, '*')            // bullets (already handled but just in case)
-    .replace(/[\u0100-\u024F]/g, '')    // extended Latin
-    .replace(/[\u2000-\u200F]/g, ' ')   // special spaces
-    .replace(/[\u2028\u2029]/g, '\n')   // line/paragraph separators
-    .replace(/[^\x00-\xFF]/g, '');      // strip anything outside Latin-1
+    .replace(/\u2713|\u2714/g, '[Y]')
+    .replace(/\u2717|\u2718/g, '[N]')
+    .replace(/\u2022/g, '*')
+    .replace(/[\u0100-\u024F]/g, '')
+    .replace(/[\u2000-\u200F]/g, ' ')
+    .replace(/[\u2028\u2029]/g, '\n')
+    .replace(/[^\x00-\xFF]/g, '');
 }
 
 function slugify(value: string): string {
@@ -57,8 +58,7 @@ function slugify(value: string): string {
 
 function wrapText(text: string, font: PDFFont, size: number, maxWidth: number): string[] {
   const lines: string[] = [];
-  const paragraphs = text.replace(/\r/g, '').split('\n');
-  for (const paragraph of paragraphs) {
+  for (const paragraph of text.replace(/\r/g, '').split('\n')) {
     const trimmed = paragraph.trim();
     if (!trimmed) { lines.push(''); continue; }
     let current = '';
@@ -78,21 +78,18 @@ function wrapText(text: string, font: PDFFont, size: number, maxWidth: number): 
   return lines.length > 0 ? lines : [''];
 }
 
-function drawWrappedText(
-  page: PDFPage,
-  text: string,
-  options: { x: number; y: number; maxWidth: number; font: PDFFont; size: number; color: ReturnType<typeof rgb>; lineGap?: number },
+function drawWrapped(
+  page: PDFPage, text: string,
+  opts: { x: number; y: number; maxWidth: number; font: PDFFont; size: number; color: ReturnType<typeof rgb>; lineGap?: number },
 ): number {
-  const lines = wrapText(sanitizeForPdf(text), options.font, options.size, options.maxWidth);
-  const lineHeight = options.size + (options.lineGap ?? 4);
-  let cursorY = options.y;
+  const lines = wrapText(sanitize(text), opts.font, opts.size, opts.maxWidth);
+  const lh = opts.size + (opts.lineGap ?? 4);
+  let cy = opts.y;
   for (const line of lines) {
-    if (line) {
-      page.drawText(line, { x: options.x, y: cursorY, size: options.size, font: options.font, color: options.color });
-    }
-    cursorY -= lineHeight;
+    if (line) page.drawText(line, { x: opts.x, y: cy, size: opts.size, font: opts.font, color: opts.color });
+    cy -= lh;
   }
-  return cursorY;
+  return cy;
 }
 
 export async function buildDueDiligencePdf(pack: DueDiligencePack): Promise<{ bytes: Uint8Array; filename: string }> {
@@ -108,86 +105,100 @@ export async function buildDueDiligencePdf(pack: DueDiligencePack): Promise<{ by
   const startPage = () => {
     page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
     pages.push(page);
-    y = PAGE_HEIGHT - 72;
+    // Draw page header bar
+    page.drawRectangle({ x: 0, y: PAGE_HEIGHT - 28, width: PAGE_WIDTH, height: 28, color: C.black });
+    page.drawRectangle({ x: MARGIN, y: PAGE_HEIGHT - 22, width: 18, height: 18, color: C.red });
+    page.drawRectangle({ x: MARGIN + 4, y: PAGE_HEIGHT - 18, width: 10, height: 10, color: C.white });
+    page.drawText('CIVICGRAPH DUE DILIGENCE PACK', {
+      x: MARGIN + 24, y: PAGE_HEIGHT - 19, size: FONT_SIZES.tiny, font: bold, color: C.muted,
+    });
+    y = PAGE_HEIGHT - 52;
   };
 
   const ensureSpace = (height: number) => {
     if (y - height < 48) startPage();
   };
 
-  const drawSectionLabel = (label: string) => {
-    ensureSpace(24);
-    page.drawRectangle({ x: MARGIN, y: y - 2, width: CONTENT_WIDTH, height: 1, color: COLORS.border });
+  // Section divider: label + 2px black rule
+  const drawSection = (label: string) => {
+    ensureSpace(28);
+    page.drawText(label.toUpperCase(), { x: MARGIN, y, size: FONT_SIZES.body, font: bold, color: C.muted });
+    y -= 14;
+    page.drawRectangle({ x: MARGIN, y, width: CONTENT_WIDTH, height: 2, color: C.black });
     y -= 16;
-    page.drawText(label.toUpperCase(), { x: MARGIN, y, size: FONT_SIZES.label, font: bold, color: COLORS.muted });
-    y -= 18;
   };
 
-  const drawParagraph = (text: string, size: number = FONT_SIZES.body, font: PDFFont = regular, color = COLORS.black) => {
-    const lines = wrapText(text, font, size, CONTENT_WIDTH);
-    const needed = lines.length * (size + 4) + 4;
-    ensureSpace(needed);
-    y = drawWrappedText(page, text, { x: MARGIN, y, maxWidth: CONTENT_WIDTH, font, size, color });
+  const drawParagraph = (text: string, size = FONT_SIZES.body, font: PDFFont = regular, color = C.black) => {
+    const lines = wrapText(sanitize(text), font, size, CONTENT_WIDTH);
+    ensureSpace(lines.length * (size + 4) + 4);
+    y = drawWrapped(page, text, { x: MARGIN, y, maxWidth: CONTENT_WIDTH, font, size, color });
     y -= 4;
   };
 
-  const drawKeyValueGrid = (items: Array<{ label: string; value: string }>) => {
-    const columnWidth = (CONTENT_WIDTH - 16) / 2;
-    for (let index = 0; index < items.length; index += 2) {
-      ensureSpace(70);
-      const row = items.slice(index, index + 2);
-      row.forEach((item, itemIndex) => {
-        const x = MARGIN + itemIndex * (columnWidth + 16);
-        page.drawRectangle({ x, y: y - 56, width: columnWidth, height: 56, borderColor: COLORS.border, borderWidth: 1.5, color: COLORS.canvas });
-        page.drawText(sanitizeForPdf(item.label.toUpperCase()), { x: x + 10, y: y - 14, size: FONT_SIZES.tiny, font: bold, color: COLORS.muted });
-        drawWrappedText(page, item.value, { x: x + 10, y: y - 30, maxWidth: columnWidth - 20, font: bold, size: FONT_SIZES.body, color: COLORS.black, lineGap: 3 });
-      });
-      y -= 68;
-    }
-  };
-
-  const drawStatCards = (items: Array<{ label: string; value: string; color?: ReturnType<typeof rgb> }>) => {
+  // Stat cards: 2px black stroke, large value
+  const drawStatCards = (items: Array<{ label: string; value: string; color?: ReturnType<typeof rgb>; filled?: boolean }>) => {
     const cols = Math.min(items.length, 3);
-    const gap = 12;
-    const cardWidth = (CONTENT_WIDTH - gap * (cols - 1)) / cols;
-    ensureSpace(68);
+    const gap = 16;
+    const cardW = (CONTENT_WIDTH - gap * (cols - 1)) / cols;
+    const cardH = 58;
+    ensureSpace(cardH + 8);
     items.slice(0, 6).forEach((item, i) => {
       const col = i % cols;
-      const rowIndex = Math.floor(i / cols);
-      if (col === 0 && rowIndex > 0) { y -= 68; ensureSpace(68); }
-      const x = MARGIN + col * (cardWidth + gap);
-      const cardY = y;
-      page.drawRectangle({ x, y: cardY - 58, width: cardWidth, height: 58, borderColor: COLORS.border, borderWidth: 2, color: COLORS.white });
-      page.drawText(item.label.toUpperCase(), { x: x + 10, y: cardY - 14, size: FONT_SIZES.tiny, font: bold, color: COLORS.muted });
-      page.drawText(String(item.value ?? '\u2014'), { x: x + 10, y: cardY - 38, size: FONT_SIZES.heading, font: bold, color: item.color || COLORS.black });
+      const rowIdx = Math.floor(i / cols);
+      if (col === 0 && rowIdx > 0) { y -= cardH + 8; ensureSpace(cardH + 8); }
+      const x = MARGIN + col * (cardW + gap);
+      const cy = y;
+      const isFilled = item.filled;
+      const borderColor = item.color || C.black;
+      page.drawRectangle({ x, y: cy - cardH, width: cardW, height: cardH, color: isFilled ? C.black : C.white, borderColor, borderWidth: 2 });
+      page.drawText(sanitize(item.label.toUpperCase()), { x: x + 14, y: cy - 16, size: FONT_SIZES.tiny, font: bold, color: C.muted });
+      page.drawText(sanitize(String(item.value ?? '\u2014')), { x: x + 14, y: cy - 40, size: FONT_SIZES.statValue, font: bold, color: isFilled ? C.white : (item.color || C.black) });
     });
-    y -= 68;
+    y -= cardH + 8;
   };
 
+  // KV grid: two columns of label/value pairs
+  const drawKVGrid = (items: Array<{ label: string; value: string; highlight?: boolean }>) => {
+    const colW = (CONTENT_WIDTH - 16) / 2;
+    for (let i = 0; i < items.length; i += 2) {
+      ensureSpace(32);
+      const row = items.slice(i, i + 2);
+      row.forEach((item, idx) => {
+        const x = MARGIN + idx * (colW + 16);
+        page.drawText(sanitize(item.label.toUpperCase()), { x, y, size: FONT_SIZES.tiny, font: bold, color: C.light });
+        const valColor = item.highlight ? C.red : C.black;
+        page.drawText(sanitize(item.value), { x, y: y - 14, size: FONT_SIZES.metric, font: bold, color: valColor });
+      });
+      y -= 36;
+    }
+  };
+
+  // Table with grey header row
   const drawTable = (headers: string[], rows: string[][], colWidths: number[]) => {
-    const rowHeight = 18;
+    const rh = 20;
+    ensureSpace(rh * 2);
     // Header
-    ensureSpace(rowHeight * 2);
+    page.drawRectangle({ x: MARGIN, y: y - rh, width: CONTENT_WIDTH, height: rh, color: C.surface });
     let tx = MARGIN;
-    page.drawRectangle({ x: MARGIN, y: y - rowHeight, width: CONTENT_WIDTH, height: rowHeight, color: COLORS.canvas });
     for (let c = 0; c < headers.length; c++) {
-      page.drawText(headers[c].toUpperCase(), { x: tx + 4, y: y - 13, size: FONT_SIZES.tiny, font: bold, color: COLORS.muted });
+      page.drawText(headers[c].toUpperCase(), { x: tx + 8, y: y - 14, size: FONT_SIZES.tiny, font: bold, color: C.muted });
       tx += colWidths[c];
     }
-    y -= rowHeight;
-    page.drawRectangle({ x: MARGIN, y, width: CONTENT_WIDTH, height: 1, color: COLORS.border });
-
+    y -= rh;
+    // Rows
     for (const row of rows) {
-      ensureSpace(rowHeight);
+      ensureSpace(rh);
       tx = MARGIN;
       for (let c = 0; c < row.length; c++) {
-        const raw = sanitizeForPdf(row[c] == null || typeof row[c] !== 'string' ? String(row[c] ?? '\u2014') : row[c]);
+        const raw = sanitize(row[c] == null || typeof row[c] !== 'string' ? String(row[c] ?? '\u2014') : row[c]);
         const cellText = raw.length > 50 ? raw.slice(0, 48) + '...' : raw;
-        page.drawText(cellText, { x: tx + 4, y: y - 13, size: FONT_SIZES.label, font: regular, color: COLORS.black });
+        const isFirstCol = c === 0;
+        const font_ = isFirstCol ? bold : regular;
+        page.drawText(cellText, { x: tx + 8, y: y - 14, size: FONT_SIZES.label, font: font_, color: C.black });
         tx += colWidths[c];
       }
-      y -= rowHeight;
-      page.drawRectangle({ x: MARGIN, y, width: CONTENT_WIDTH, height: 0.5, color: rgb(0.88, 0.88, 0.88) });
+      y -= rh;
+      page.drawRectangle({ x: MARGIN, y, width: CONTENT_WIDTH, height: 0.5, color: C.hairline });
     }
     y -= 8;
   };
@@ -196,84 +207,150 @@ export async function buildDueDiligencePdf(pack: DueDiligencePack): Promise<{ by
   // COVER PAGE
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  page.drawRectangle({ x: 0, y: PAGE_HEIGHT - 200, width: PAGE_WIDTH, height: 200, color: COLORS.black });
+  // Hero block — full-width black with red top stripe
+  const heroH = 260;
+  page.drawRectangle({ x: 0, y: PAGE_HEIGHT - heroH, width: PAGE_WIDTH, height: heroH, color: C.black });
+  page.drawRectangle({ x: 0, y: PAGE_HEIGHT - 4, width: PAGE_WIDTH, height: 4, color: C.red });
 
-  // CivicGraph branding
-  page.drawRectangle({ x: MARGIN, y: PAGE_HEIGHT - 74, width: 26, height: 26, color: COLORS.red });
-  page.drawRectangle({ x: MARGIN + 6, y: PAGE_HEIGHT - 68, width: 14, height: 14, color: COLORS.white });
-  page.drawText('CivicGraph Due Diligence Pack', {
-    x: MARGIN + 36, y: PAGE_HEIGHT - 58, size: FONT_SIZES.label, font: bold, color: COLORS.yellow,
-  });
+  // Logo mark
+  page.drawRectangle({ x: MARGIN, y: PAGE_HEIGHT - 60, width: 28, height: 28, color: C.red });
+  page.drawRectangle({ x: MARGIN + 7, y: PAGE_HEIGHT - 53, width: 14, height: 14, color: C.white });
+  page.drawText('CIVICGRAPH', { x: MARGIN + 38, y: PAGE_HEIGHT - 48, size: FONT_SIZES.section, font: bold, color: C.red });
+  page.drawText('DUE DILIGENCE PACK', { x: MARGIN + 38, y: PAGE_HEIGHT - 60, size: FONT_SIZES.label, font: bold, color: C.muted });
 
-  y = PAGE_HEIGHT - 110;
-  drawWrappedText(page, pack.entity.canonical_name, {
-    x: MARGIN, y, maxWidth: CONTENT_WIDTH, font: bold, size: FONT_SIZES.title, color: COLORS.white,
-  });
-  y -= FONT_SIZES.title + 12;
-
-  const subtitle = [
-    pack.entity.abn ? `ABN ${pack.entity.abn}` : null,
-    pack.entity.entity_type,
-    pack.entity.state,
-  ].filter(Boolean).join(' \u2022 ');
-  page.drawText(subtitle, { x: MARGIN, y, size: FONT_SIZES.body, font: regular, color: rgb(0.8, 0.8, 0.8) });
-
-  y = PAGE_HEIGHT - 240;
-  drawKeyValueGrid([
-    { label: 'Generated', value: fmtDate(pack.generated_at) },
-    { label: 'Generated By', value: 'CivicGraph \u2014 Allocation Intelligence' },
-    { label: 'Entity ID', value: pack.entity.gs_id },
-    { label: 'Data Sources', value: `${pack.data_sources.length} databases` },
-  ]);
-
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // 1. ENTITY PROFILE
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  drawSectionLabel('1. Entity Profile');
-  drawKeyValueGrid([
-    { label: 'Legal Name', value: pack.entity.canonical_name },
-    { label: 'ABN', value: pack.entity.abn || 'Not registered' },
-    { label: 'Entity Type', value: pack.entity.entity_type },
-    { label: 'Sector', value: pack.entity.sector || '\u2014' },
-    { label: 'State', value: pack.entity.state || '\u2014' },
-    { label: 'Postcode', value: pack.entity.postcode || '\u2014' },
-    { label: 'Remoteness', value: pack.entity.remoteness || '\u2014' },
-    { label: 'SEIFA IRSD Decile', value: pack.entity.seifa_irsd_decile != null ? String(pack.entity.seifa_irsd_decile) : '\u2014' },
-    { label: 'Community Controlled', value: pack.entity.is_community_controlled ? 'Yes' : 'No' },
-    { label: 'LGA', value: pack.entity.lga_name || '\u2014' },
-  ]);
-
-  if (pack.charity) {
-    drawParagraph(
-      [
-        pack.charity.charity_size ? `Charity size: ${pack.charity.charity_size}` : null,
-        pack.charity.pbi ? 'Public Benevolent Institution (PBI)' : null,
-        pack.charity.hpc ? 'Health Promotion Charity (HPC)' : null,
-        pack.charity.purposes?.length ? `Purposes: ${pack.charity.purposes.join(', ')}` : null,
-        pack.charity.operating_states?.length ? `Operating in: ${pack.charity.operating_states.join(', ')}` : null,
-      ].filter(Boolean).join('. ') + '.',
-      FONT_SIZES.label,
-      regular,
-      COLORS.muted,
-    );
+  // Entity name
+  y = PAGE_HEIGHT - 105;
+  const nameLines = wrapText(sanitize(pack.entity.canonical_name), bold, FONT_SIZES.title, CONTENT_WIDTH - 130);
+  for (const line of nameLines) {
+    page.drawText(line, { x: MARGIN, y, size: FONT_SIZES.title, font: bold, color: C.white });
+    y -= FONT_SIZES.title + 6;
   }
 
+  // Subtitle
+  const subtitle = [pack.entity.abn ? `ABN ${pack.entity.abn}` : null, pack.entity.entity_type, pack.entity.state].filter(Boolean).join('  ·  ');
+  page.drawText(sanitize(subtitle), { x: MARGIN, y, size: FONT_SIZES.metric, font: regular, color: C.light });
+
+  // Divider + gen info
+  const metaY = PAGE_HEIGHT - heroH + 50;
+  page.drawRectangle({ x: MARGIN, y: metaY + 16, width: CONTENT_WIDTH, height: 1, color: C.muted });
+  page.drawText(`Generated ${fmtDate(pack.generated_at)}`, { x: MARGIN, y: metaY, size: FONT_SIZES.body, font: regular, color: C.muted });
+  page.drawText('CivicGraph \u2014 Allocation Intelligence', { x: MARGIN + 260, y: metaY, size: FONT_SIZES.body, font: regular, color: C.muted });
+
+  // Community-controlled badge (if applicable)
+  y = PAGE_HEIGHT - heroH - 10;
+  if (pack.entity.is_community_controlled) {
+    const badgeW = 220;
+    page.drawRectangle({ x: MARGIN, y: y - 18, width: badgeW, height: 18, color: C.red });
+    page.drawRectangle({ x: MARGIN + 8, y: y - 13, width: 8, height: 8, color: C.white });
+    page.drawText('COMMUNITY-CONTROLLED ORGANISATION', { x: MARGIN + 22, y: y - 13, size: FONT_SIZES.micro, font: bold, color: C.white });
+    y -= 28;
+  }
+
+  // Revenue trend mini bar chart (if financials available)
+  if (pack.financials.length >= 2) {
+    const trendX = MARGIN + 290;
+    const trendW = CONTENT_WIDTH - 290;
+    const trendY = y + (pack.entity.is_community_controlled ? 28 : 0);
+    page.drawText('5-YEAR REVENUE TREND', { x: trendX, y: trendY - 2, size: FONT_SIZES.micro, font: bold, color: C.light });
+    const years = pack.financials.slice(0, 5).reverse();
+    const maxRev = Math.max(...years.map(f => f.total_revenue ?? 0), 1);
+    const barMaxH = 28;
+    const barW = (trendW - (years.length - 1) * 3) / years.length;
+    const chartY = trendY - 16;
+    years.forEach((yr, i) => {
+      const rev = yr.total_revenue ?? 0;
+      const h = Math.max(2, (rev / maxRev) * barMaxH);
+      const bx = trendX + i * (barW + 3);
+      const isLatest = i === years.length - 1;
+      page.drawRectangle({ x: bx, y: chartY - barMaxH, width: barW, height: h, color: isLatest ? C.red : C.muted });
+      page.drawText(String(yr.ais_year), { x: bx + 2, y: chartY - barMaxH - 10, size: FONT_SIZES.micro, font: isLatest ? bold : regular, color: isLatest ? C.red : C.light });
+    });
+  }
+
+  // Stat cards row
+  y -= 8;
+  drawStatCards([
+    { label: 'Total Funding', value: fmtMoney(pack.funding.total), color: C.red },
+    { label: 'Contracts', value: fmtMoney(pack.contracts.total) },
+    { label: 'ALMA Evidence', value: String(pack.alma_interventions.length), filled: true },
+  ]);
+
+  // Entity snapshot KV grid
+  drawSection('Entity Snapshot');
+  drawKVGrid([
+    { label: 'Entity Type', value: `${pack.entity.entity_type}${pack.entity.is_community_controlled ? ' / Community-controlled' : ''}` },
+    { label: 'Data Sources', value: `${pack.data_sources.length} databases cross-referenced` },
+    { label: 'Location', value: [pack.entity.postcode, pack.entity.state, pack.entity.remoteness].filter(Boolean).join(' · ') || '\u2014' },
+    { label: 'LGA', value: pack.entity.lga_name || '\u2014' },
+    { label: 'SEIFA IRSD', value: pack.entity.seifa_irsd_decile != null ? `Decile ${pack.entity.seifa_irsd_decile}${pack.entity.seifa_irsd_decile <= 3 ? ' (most disadvantaged)' : ''}` : '\u2014', highlight: (pack.entity.seifa_irsd_decile ?? 10) <= 3 },
+    { label: 'ACNC Status', value: pack.charity ? [pack.charity.pbi ? 'PBI' : null, pack.charity.charity_size ? `${pack.charity.charity_size} charity` : null].filter(Boolean).join(' · ') || 'Registered' : 'Not ACNC registered' },
+  ]);
+
+  // Integrity checklist
+  drawSection('Integrity Assessment');
+  const flags = pack.integrity_flags;
+  const checks: Array<{ label: string; ok: boolean }> = [
+    { label: 'ABN registered', ok: !flags.missing_abn },
+    { label: 'ACNC financial data available', ok: !flags.missing_financials },
+    { label: 'Evidence-backed programs (ALMA)', ok: flags.has_alma_interventions },
+    { label: 'Government funding received', ok: flags.has_justice_funding },
+    { label: 'No political donations declared', ok: !flags.has_donations },
+    { label: 'Operating in disadvantaged area (SEIFA <= 3)', ok: flags.low_seifa },
+  ];
+
+  for (const chk of checks) {
+    ensureSpace(20);
+    const boxX = MARGIN;
+    if (chk.ok) {
+      page.drawRectangle({ x: boxX, y: y - 12, width: 14, height: 14, color: C.red });
+      page.drawText('Y', { x: boxX + 4, y: y - 10, size: FONT_SIZES.label, font: bold, color: C.white });
+    } else {
+      page.drawRectangle({ x: boxX, y: y - 12, width: 14, height: 14, borderColor: C.light, borderWidth: 2, color: C.white });
+      page.drawText('\u2014', { x: boxX + 3, y: y - 10, size: FONT_SIZES.label, font: bold, color: C.light });
+    }
+    page.drawText(sanitize(chk.label), { x: boxX + 22, y: y - 10, size: FONT_SIZES.section, font: regular, color: chk.ok ? C.black : C.muted });
+    y -= 20;
+  }
+
+  if (flags.donations_and_contracts_overlap) {
+    ensureSpace(30);
+    page.drawRectangle({ x: MARGIN, y: y - 24, width: CONTENT_WIDTH, height: 24, color: rgb(1, 0.95, 0.95), borderColor: C.red, borderWidth: 1.5 });
+    page.drawText('INTEGRITY FLAG: Entity has both political donations and government contracts.', {
+      x: MARGIN + 10, y: y - 17, size: FONT_SIZES.label, font: bold, color: C.red,
+    });
+    y -= 34;
+  }
+
+  // Cover footer: CTA + data freshness
+  const footY = 42;
+  // Live profile CTA
+  page.drawRectangle({ x: MARGIN, y: footY, width: 280, height: 22, color: C.black });
+  page.drawRectangle({ x: MARGIN + 8, y: footY + 6, width: 8, height: 8, color: C.red });
+  page.drawRectangle({ x: MARGIN + 10, y: footY + 8, width: 4, height: 4, color: C.white });
+  const profileUrl = `civicgraph.org/entities/${pack.entity.gs_id}`;
+  page.drawText(`VIEW LIVE PROFILE  ${profileUrl}`, { x: MARGIN + 22, y: footY + 6, size: FONT_SIZES.micro, font: bold, color: C.white });
+  // Data freshness
+  page.drawRectangle({ x: MARGIN + 284, y: footY, width: CONTENT_WIDTH - 284, height: 22, color: C.surface });
+  page.drawEllipse({ x: MARGIN + 296, y: footY + 11, xScale: 4, yScale: 4, color: C.red });
+  page.drawText(`DATA CURRENT AS OF ${fmtDate(pack.generated_at).toUpperCase()}`, { x: MARGIN + 306, y: footY + 6, size: FONT_SIZES.micro, font: bold, color: C.muted });
+
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // 2. FINANCIAL SUMMARY
+  // PAGE 2: FINANCIAL SUMMARY + FUNDING
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  drawSectionLabel('2. Financial Summary');
+  startPage();
+
+  drawSection('Financial Summary');
   if (pack.financials.length > 0) {
-    const latestYear = pack.financials[0];
+    const latest = pack.financials[0];
     drawStatCards([
-      { label: 'Latest Revenue', value: fmtMoney(latestYear.total_revenue) },
-      { label: 'Latest Expenses', value: fmtMoney(latestYear.total_expenses) },
-      { label: 'Total Assets', value: fmtMoney(latestYear.total_assets) },
+      { label: 'Latest Revenue', value: fmtMoney(latest.total_revenue) },
+      { label: 'Latest Expenses', value: fmtMoney(latest.total_expenses) },
+      { label: 'Total Assets', value: fmtMoney(latest.total_assets) },
     ]);
 
     drawTable(
-      ['Year', 'Revenue', 'Expenses', 'Assets', 'Surplus', 'Gov Revenue', 'Staff FTE'],
+      ['Year', 'Revenue', 'Expenses', 'Assets', 'Surplus', 'Gov Rev'],
       pack.financials.map(f => [
         String(f.ais_year),
         fmtMoney(f.total_revenue),
@@ -281,41 +358,53 @@ export async function buildDueDiligencePdf(pack: DueDiligencePack): Promise<{ by
         fmtMoney(f.total_assets),
         fmtMoney(f.net_surplus_deficit),
         fmtMoney(f.revenue_from_government),
-        f.staff_fte != null ? String(Math.round(f.staff_fte)) : '\u2014',
       ]),
-      [55, 80, 80, 80, 75, 80, 62],
+      [55, 90, 90, 90, 90, 90],
     );
   } else {
-    drawParagraph('No ACNC financial data available for this entity.', FONT_SIZES.body, regular, COLORS.muted);
+    drawParagraph('No ACNC financial data available for this entity.', FONT_SIZES.body, regular, C.muted);
   }
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // 3. FUNDING HISTORY
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  drawSectionLabel('3. Government Funding');
+  drawSection('Government Funding');
   if (pack.funding.total > 0) {
     drawStatCards([
-      { label: 'Total Funding', value: fmtMoney(pack.funding.total), color: COLORS.red },
+      { label: 'Total Funding', value: fmtMoney(pack.funding.total), color: C.red },
       { label: 'Funding Records', value: String(pack.funding.record_count) },
       { label: 'Programs', value: String(Object.keys(pack.funding.by_program).length) },
     ]);
 
-    const programEntries = Object.entries(pack.funding.by_program).sort((a, b) => b[1] - a[1]).slice(0, 10);
+    const programs = Object.entries(pack.funding.by_program).sort((a, b) => b[1] - a[1]).slice(0, 10);
     drawTable(
       ['Program', 'Total'],
-      programEntries.map(([prog, total]) => [prog, fmtMoney(total)]),
+      programs.map(([prog, total]) => [prog, fmtMoney(total)]),
       [CONTENT_WIDTH - 100, 100],
     );
   } else {
-    drawParagraph('No justice funding records found for this entity.', FONT_SIZES.body, regular, COLORS.muted);
+    drawParagraph('No justice funding records found for this entity.', FONT_SIZES.body, regular, C.muted);
+  }
+
+  // Geographic context on same page if space
+  drawSection('Geographic Context');
+  if (pack.place) {
+    drawKVGrid([
+      { label: 'Locality', value: pack.place.locality || '\u2014' },
+      { label: 'LGA', value: pack.place.lga_name || '\u2014' },
+      { label: 'Remoteness', value: pack.place.remoteness || '\u2014', highlight: pack.place.remoteness?.includes('Remote') ?? false },
+      { label: 'Local Ecosystem', value: `${pack.place.local_entity_count} entities in postcode ${pack.place.postcode}` },
+      { label: 'SEIFA Score', value: pack.place.seifa_score != null ? String(pack.place.seifa_score) : '\u2014' },
+      { label: 'SEIFA Decile', value: pack.place.seifa_decile != null ? `Decile ${pack.place.seifa_decile}` : '\u2014', highlight: (pack.place.seifa_decile ?? 10) <= 3 },
+    ]);
+  } else {
+    drawParagraph('No geographic data available (missing postcode).', FONT_SIZES.body, regular, C.muted);
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // 4. GOVERNMENT CONTRACTS
+  // PAGE 3: CONTRACTS + POLITICAL + RELATIONSHIPS
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  drawSectionLabel('4. Government Contracts');
+  startPage();
+
+  drawSection('Government Contracts');
   if (pack.contracts.total > 0) {
     drawStatCards([
       { label: 'Total Contracts', value: fmtMoney(pack.contracts.total) },
@@ -335,170 +424,114 @@ export async function buildDueDiligencePdf(pack: DueDiligencePack): Promise<{ by
       );
     }
   } else {
-    drawParagraph('No AusTender contract records found for this entity.', FONT_SIZES.body, regular, COLORS.muted);
+    drawParagraph('No AusTender contract records found for this entity.', FONT_SIZES.body, regular, C.muted);
   }
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // 5. POLITICAL DONATIONS
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  drawSectionLabel('5. Political Connections');
+  drawSection('Political Connections');
   if (pack.donations.total > 0) {
     drawStatCards([
-      { label: 'Total Donations', value: fmtMoney(pack.donations.total), color: COLORS.red },
+      { label: 'Total Donations', value: fmtMoney(pack.donations.total), color: C.red },
       { label: 'Donation Records', value: String(pack.donations.record_count) },
     ]);
-
-    const partyEntries = Object.entries(pack.donations.by_party).sort((a, b) => b[1] - a[1]);
-    drawTable(
-      ['Party / Recipient', 'Total'],
-      partyEntries.map(([party, total]) => [party, fmtMoney(total)]),
-      [CONTENT_WIDTH - 100, 100],
-    );
+    const parties = Object.entries(pack.donations.by_party).sort((a, b) => b[1] - a[1]);
+    drawTable(['Party / Recipient', 'Total'], parties.map(([p, t]) => [p, fmtMoney(t)]), [CONTENT_WIDTH - 100, 100]);
   } else {
-    drawParagraph('No political donation records found for this entity.', FONT_SIZES.body, regular, COLORS.muted);
+    ensureSpace(30);
+    page.drawRectangle({ x: MARGIN, y: y - 24, width: CONTENT_WIDTH, height: 24, color: C.surface });
+    page.drawRectangle({ x: MARGIN + 12, y: y - 18, width: 12, height: 12, borderColor: C.light, borderWidth: 2, color: C.white });
+    page.drawText('\u2014', { x: MARGIN + 15, y: y - 16, size: FONT_SIZES.label, font: bold, color: C.light });
+    page.drawText('No political donation records found for this entity.', { x: MARGIN + 32, y: y - 16, size: FONT_SIZES.section, font: regular, color: C.muted });
+    y -= 34;
+  }
+
+  drawSection('Relationship Summary');
+  if (pack.stats) {
+    drawStatCards([
+      { label: 'Relationships', value: String(pack.stats.total_relationships) },
+      { label: 'Inbound Value', value: fmtMoney(pack.stats.total_inbound_amount), color: C.red },
+      { label: 'Counterparties', value: String(pack.stats.counterparty_count) },
+    ]);
+    drawParagraph(`${pack.stats.counterparty_count} distinct counterparties across all relationship types.`);
+  } else {
+    drawParagraph('No relationship statistics available.', FONT_SIZES.body, regular, C.muted);
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // 6. ALMA EVIDENCE
+  // PAGE 4: EVIDENCE + SOURCES + GLOSSARY
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  drawSectionLabel('6. Evidence Alignment (ALMA)');
+  startPage();
+
+  drawSection('Evidence Alignment \u2014 Australian Living Map of Alternatives (ALMA)');
   if (pack.alma_interventions.length > 0) {
     drawStatCards([
-      { label: 'ALMA Interventions', value: String(pack.alma_interventions.length), color: COLORS.green },
-      { label: 'Youth Justice', value: String(pack.alma_interventions.filter(a => a.serves_youth_justice).length) },
+      { label: 'ALMA Interventions', value: String(pack.alma_interventions.length), color: C.red },
+      { label: 'Youth Justice', value: String(pack.alma_interventions.filter(a => a.serves_youth_justice).length), filled: true },
     ]);
 
     drawTable(
       ['Intervention', 'Type', 'Evidence', 'Cohort'],
-      pack.alma_interventions.map(a => [
-        a.name,
-        a.type || '\u2014',
-        a.evidence_level || '\u2014',
-        a.target_cohort || '\u2014',
-      ]),
+      pack.alma_interventions.map(a => [a.name, a.type || '\u2014', a.evidence_level || '\u2014', a.target_cohort || '\u2014']),
       [190, 110, 100, 112],
     );
   } else {
-    drawParagraph('No Australian Living Map of Alternatives (ALMA) interventions linked to this entity.', FONT_SIZES.body, regular, COLORS.muted);
+    drawParagraph('No Australian Living Map of Alternatives (ALMA) interventions linked to this entity.', FONT_SIZES.body, regular, C.muted);
   }
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // 7. GEOGRAPHIC CONTEXT
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  drawSectionLabel('7. Geographic Context');
-  if (pack.place) {
-    drawKeyValueGrid([
-      { label: 'Locality', value: pack.place.locality || '\u2014' },
-      { label: 'LGA', value: pack.place.lga_name || '\u2014' },
-      { label: 'Remoteness', value: pack.place.remoteness || '\u2014' },
-      { label: 'SEIFA IRSD Score', value: pack.place.seifa_score != null ? String(pack.place.seifa_score) : '\u2014' },
-      { label: 'SEIFA Decile', value: pack.place.seifa_decile != null ? String(pack.place.seifa_decile) : '\u2014' },
-      { label: 'Local Ecosystem', value: `${pack.place.local_entity_count} entities in postcode ${pack.place.postcode}` },
-    ]);
-  } else {
-    drawParagraph('No geographic data available (missing postcode).', FONT_SIZES.body, regular, COLORS.muted);
-  }
-
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // 8. RELATIONSHIP SUMMARY
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  drawSectionLabel('8. Relationship Summary');
-  if (pack.stats) {
-    drawStatCards([
-      { label: 'Relationships', value: String(pack.stats.total_relationships) },
-      { label: 'Inbound Value', value: fmtMoney(pack.stats.total_inbound_amount) },
-      { label: 'Outbound Value', value: fmtMoney(pack.stats.total_outbound_amount) },
-    ]);
-    drawParagraph(`${pack.stats.counterparty_count} distinct counterparties across all relationship types.`);
-  } else {
-    drawParagraph('No relationship statistics available.', FONT_SIZES.body, regular, COLORS.muted);
-  }
-
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // 9. INTEGRITY ASSESSMENT
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  drawSectionLabel('9. Integrity Assessment');
-  const flags = pack.integrity_flags;
-  const flagItems: Array<{ label: string; ok: boolean }> = [
-    { label: 'ABN registered', ok: !flags.missing_abn },
-    { label: 'ACNC financial data available', ok: !flags.missing_financials },
-    { label: 'Evidence-backed programs (ALMA)', ok: flags.has_alma_interventions },
-    { label: 'Government funding received', ok: flags.has_justice_funding },
-    { label: 'Government contracts held', ok: flags.has_contracts },
-    { label: 'Political donations declared', ok: !flags.has_donations },
-    { label: 'No donations + contracts overlap', ok: !flags.donations_and_contracts_overlap },
-    { label: 'Operating in disadvantaged area (SEIFA <= 3)', ok: flags.low_seifa },
-  ];
-
-  for (const flag of flagItems) {
-    ensureSpace(18);
-    const indicator = flag.ok ? '[Y]' : '[N]';
-    const color = flag.ok ? COLORS.green : COLORS.red;
-    page.drawText(indicator, { x: MARGIN, y, size: FONT_SIZES.body, font: bold, color });
-    page.drawText(sanitizeForPdf(flag.label), { x: MARGIN + 24, y, size: FONT_SIZES.body, font: regular, color: COLORS.black });
-    y -= 18;
-  }
-  y -= 8;
-
-  if (flags.donations_and_contracts_overlap) {
-    ensureSpace(40);
-    page.drawRectangle({ x: MARGIN, y: y - 30, width: CONTENT_WIDTH, height: 30, color: rgb(1, 0.95, 0.95), borderColor: COLORS.red, borderWidth: 1.5 });
-    page.drawText('INTEGRITY FLAG: Entity has both political donation records and government contracts. Cross-reference recommended.', {
-      x: MARGIN + 10, y: y - 20, size: FONT_SIZES.label, font: bold, color: COLORS.red,
-    });
-    y -= 42;
-  }
-
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // 10. DATA SOURCES
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  drawSectionLabel('10. Data Sources & Citation');
+  drawSection('Data Sources & Citation');
   for (const src of pack.data_sources) {
-    ensureSpace(16);
-    page.drawText(`\u2022 ${src}`, { x: MARGIN + 8, y, size: FONT_SIZES.label, font: regular, color: COLORS.muted });
-    y -= 16;
+    ensureSpace(14);
+    page.drawText(sanitize(`* ${src}`), { x: MARGIN + 8, y, size: FONT_SIZES.body, font: regular, color: C.black });
+    y -= 14;
   }
-  y -= 8;
+  y -= 6;
 
-  ensureSpace(60);
-  page.drawRectangle({ x: MARGIN, y: y - 50, width: CONTENT_WIDTH, height: 50, color: COLORS.canvas, borderColor: COLORS.border, borderWidth: 1 });
-  drawWrappedText(page, pack.citation, {
-    x: MARGIN + 10, y: y - 14, maxWidth: CONTENT_WIDTH - 20, font: regular, size: FONT_SIZES.label, color: COLORS.muted,
-  });
-  y -= 60;
+  // Citation box
+  ensureSpace(50);
+  page.drawRectangle({ x: MARGIN, y: y - 44, width: CONTENT_WIDTH, height: 44, color: C.surface, borderColor: C.light, borderWidth: 1 });
+  drawWrapped(page, pack.citation, { x: MARGIN + 12, y: y - 14, maxWidth: CONTENT_WIDTH - 24, font: regular, size: FONT_SIZES.label, color: C.muted });
+  y -= 54;
 
   drawParagraph(
     'This due diligence pack is auto-generated from public data sources. Verify critical claims against primary sources before inclusion in formal submissions or board papers.',
-    FONT_SIZES.label,
-    regular,
-    COLORS.muted,
+    FONT_SIZES.label, regular, C.light,
   );
 
+  // Glossary
+  drawSection('Glossary');
+  const glossary: Array<{ term: string; def: string }> = [
+    { term: 'ALMA', def: 'Australian Living Map of Alternatives. JusticeHub\'s evidence database of community-led interventions, their outcomes, and evaluation methodology.' },
+    { term: 'SEIFA IRSD', def: 'Index of Relative Socio-economic Disadvantage. Decile 1 = most disadvantaged 10% of areas nationally.' },
+    { term: 'PBI', def: 'Public Benevolent Institution. ATO endorsement allowing DGR (tax-deductible donation) status.' },
+    { term: 'Community-controlled', def: 'Organisation governed by the community it serves, typically with majority Indigenous board.' },
+    { term: 'CivicGraph', def: 'Decision infrastructure for government and social sector. Cross-references 7+ public databases.' },
+  ];
+
+  for (const g of glossary) {
+    const termWidth = bold.widthOfTextAtSize(sanitize(g.term), FONT_SIZES.body);
+    const defLines = wrapText(sanitize(`\u2014 ${g.def}`), regular, FONT_SIZES.body, CONTENT_WIDTH - termWidth - 8);
+    ensureSpace(defLines.length * 14 + 4);
+    page.drawText(sanitize(g.term), { x: MARGIN, y, size: FONT_SIZES.body, font: bold, color: C.black });
+    let gy = y;
+    for (const line of defLines) {
+      page.drawText(line, { x: MARGIN + termWidth + 6, y: gy, size: FONT_SIZES.body, font: regular, color: C.muted });
+      gy -= 14;
+    }
+    y = gy - 2;
+  }
+
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // PAGE CHROME
+  // PAGE CHROME (footer on all pages)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   const totalPages = pages.length;
   pages.forEach((p, index) => {
-    p.drawRectangle({ x: MARGIN, y: PAGE_HEIGHT - 28, width: CONTENT_WIDTH, height: 2, color: COLORS.black });
-    p.drawRectangle({ x: MARGIN, y: 28, width: CONTENT_WIDTH, height: 1, color: COLORS.border });
-    p.drawRectangle({ x: MARGIN, y: PAGE_HEIGHT - 56, width: 22, height: 22, color: COLORS.red });
-    p.drawRectangle({ x: MARGIN + 5, y: PAGE_HEIGHT - 51, width: 12, height: 12, color: COLORS.white });
-    p.drawText('CivicGraph Due Diligence Pack', {
-      x: MARGIN + 32, y: PAGE_HEIGHT - 47, size: FONT_SIZES.tiny, font: bold, color: COLORS.muted,
-    });
-    p.drawText(`Page ${index + 1} of ${totalPages}`, {
-      x: MARGIN, y: 16, size: FONT_SIZES.tiny, font: regular, color: COLORS.muted,
-    });
+    // Footer line
+    p.drawRectangle({ x: MARGIN, y: 30, width: CONTENT_WIDTH, height: 1, color: C.black });
+    p.drawText(`Page ${index + 1} of ${totalPages}`, { x: MARGIN, y: 18, size: FONT_SIZES.tiny, font: regular, color: C.light });
     const idText = pack.entity.gs_id;
     p.drawText(idText, {
-      x: PAGE_WIDTH - MARGIN - regular.widthOfTextAtSize(idText, FONT_SIZES.tiny), y: 16, size: FONT_SIZES.tiny, font: regular, color: COLORS.muted,
+      x: PAGE_WIDTH - MARGIN - regular.widthOfTextAtSize(idText, FONT_SIZES.tiny), y: 18, size: FONT_SIZES.tiny, font: regular, color: C.light,
     });
   });
 
