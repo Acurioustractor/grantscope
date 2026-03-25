@@ -1,11 +1,26 @@
 import { NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
+import { validateApiKey, logUsage, InvalidApiKeyError } from '@/lib/api-key';
+import { rateLimit } from '@/lib/rate-limit';
 
-/** Add rate-limit and cache headers to public data responses */
+const publicLimiter = rateLimit({ windowMs: 60_000, max: 30 });
+const authenticatedLimiter = rateLimit({ windowMs: 60_000, max: 120 });
+
+// Module-level vars set by GET handler for usage logging
+let _apiKeyId: string | null = null;
+let _startMs = 0;
+let _ip = 'unknown';
+let _rateLimitVal = 30;
+
+/** Add rate-limit and cache headers + fire usage log */
 function withPublicHeaders(response: NextResponse): NextResponse {
   response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
-  response.headers.set('X-RateLimit-Limit', '60');
+  response.headers.set('X-RateLimit-Limit', String(_rateLimitVal));
   response.headers.set('X-RateLimit-Window', '60');
+  // Fire-and-forget usage log
+  if (_apiKeyId) {
+    logUsage(_apiKeyId, 'data-api', Date.now() - _startMs, response.status, _ip);
+  }
   return response;
 }
 
@@ -24,9 +39,33 @@ function withPublicHeaders(response: NextResponse): NextResponse {
  *   GET /api/data?type=reports
  */
 export async function GET(request: Request) {
+  const startMs = Date.now();
+
+  // API key validation (optional — anonymous allowed with lower limits)
+  let apiKey: Awaited<ReturnType<typeof validateApiKey>> = null;
+  try {
+    apiKey = await validateApiKey(request);
+  } catch (err) {
+    if (err instanceof InvalidApiKeyError) {
+      return NextResponse.json({ error: 'Invalid or revoked API key' }, { status: 401 });
+    }
+  }
+
+  // Rate limiting — authenticated keys get 120/min, anonymous gets 30/min
+  const limited = apiKey
+    ? authenticatedLimiter(request)
+    : publicLimiter(request);
+  if (limited) return limited;
+
+  _apiKeyId = apiKey?.id ?? null;
+  _startMs = startMs;
+  _rateLimitVal = apiKey ? apiKey.rateLimitPerMin || 120 : 30;
+  _ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+    ?? request.headers.get('x-real-ip') ?? 'unknown';
+
   const { searchParams } = new URL(request.url);
   const type = searchParams.get('type');
-  const limit = Math.min(parseInt(searchParams.get('limit') || '100', 10), 500);
+  const limit = Math.min(parseInt(searchParams.get('limit') || '100', 10), apiKey ? 1000 : 500);
   const offset = parseInt(searchParams.get('offset') || '0', 10);
 
   if (!type) {
