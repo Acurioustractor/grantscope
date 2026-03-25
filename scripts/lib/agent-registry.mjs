@@ -419,6 +419,15 @@ export const AGENTS = {
     dependencies: ['build-entity-graph'],
   },
 
+  'backfill-qgip-abns': {
+    command: ['node', '--env-file=.env', 'scripts/backfill-qgip-abns.mjs'],
+    displayName: 'Backfill QGIP ABNs',
+    category: 'graph',
+    defaultPriority: 3,
+    timeoutMs: 600_000,
+    dependencies: [],
+  },
+
   // ── Embedding ───────────────────────────────────────────────────────────────
   'backfill-embeddings': {
     command: ['node', '--env-file=.env', 'scripts/backfill-embeddings.mjs', '--batch-size', '100'],
@@ -830,6 +839,14 @@ export const AGENTS = {
     category: 'scraping',
     defaultPriority: 3,
     timeoutMs: 600_000,
+    dependencies: [],
+  },
+  'scrape-grants-sa': {
+    command: ['node', '--env-file=.env', 'scripts/scrape-grants-sa.mjs', '--live'],
+    displayName: 'SA Grants Portal',
+    category: 'scraping',
+    defaultPriority: 3,
+    timeoutMs: 300_000,
     dependencies: [],
   },
   'scrape-lobbying-wa': {
