@@ -39,6 +39,18 @@ function fmtDate(value: string | null | undefined): string {
   return new Date(value).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+function sanitizeForPdf(text: string): string {
+  // Replace characters that WinAnsi (Helvetica) can't encode
+  return text
+    .replace(/\u2713|\u2714/g, '[Y]')   // checkmarks
+    .replace(/\u2717|\u2718/g, '[N]')   // X marks
+    .replace(/\u2022/g, '*')            // bullets (already handled but just in case)
+    .replace(/[\u0100-\u024F]/g, '')    // extended Latin
+    .replace(/[\u2000-\u200F]/g, ' ')   // special spaces
+    .replace(/[\u2028\u2029]/g, '\n')   // line/paragraph separators
+    .replace(/[^\x00-\xFF]/g, '');      // strip anything outside Latin-1
+}
+
 function slugify(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) || 'due-diligence';
 }
@@ -71,7 +83,7 @@ function drawWrappedText(
   text: string,
   options: { x: number; y: number; maxWidth: number; font: PDFFont; size: number; color: ReturnType<typeof rgb>; lineGap?: number },
 ): number {
-  const lines = wrapText(text, options.font, options.size, options.maxWidth);
+  const lines = wrapText(sanitizeForPdf(text), options.font, options.size, options.maxWidth);
   const lineHeight = options.size + (options.lineGap ?? 4);
   let cursorY = options.y;
   for (const line of lines) {
@@ -127,7 +139,7 @@ export async function buildDueDiligencePdf(pack: DueDiligencePack): Promise<{ by
       row.forEach((item, itemIndex) => {
         const x = MARGIN + itemIndex * (columnWidth + 16);
         page.drawRectangle({ x, y: y - 56, width: columnWidth, height: 56, borderColor: COLORS.border, borderWidth: 1.5, color: COLORS.canvas });
-        page.drawText(item.label.toUpperCase(), { x: x + 10, y: y - 14, size: FONT_SIZES.tiny, font: bold, color: COLORS.muted });
+        page.drawText(sanitizeForPdf(item.label.toUpperCase()), { x: x + 10, y: y - 14, size: FONT_SIZES.tiny, font: bold, color: COLORS.muted });
         drawWrappedText(page, item.value, { x: x + 10, y: y - 30, maxWidth: columnWidth - 20, font: bold, size: FONT_SIZES.body, color: COLORS.black, lineGap: 3 });
       });
       y -= 68;
@@ -147,7 +159,7 @@ export async function buildDueDiligencePdf(pack: DueDiligencePack): Promise<{ by
       const cardY = y;
       page.drawRectangle({ x, y: cardY - 58, width: cardWidth, height: 58, borderColor: COLORS.border, borderWidth: 2, color: COLORS.white });
       page.drawText(item.label.toUpperCase(), { x: x + 10, y: cardY - 14, size: FONT_SIZES.tiny, font: bold, color: COLORS.muted });
-      page.drawText(item.value, { x: x + 10, y: cardY - 38, size: FONT_SIZES.heading, font: bold, color: item.color || COLORS.black });
+      page.drawText(String(item.value ?? '\u2014'), { x: x + 10, y: cardY - 38, size: FONT_SIZES.heading, font: bold, color: item.color || COLORS.black });
     });
     y -= 68;
   };
@@ -169,7 +181,8 @@ export async function buildDueDiligencePdf(pack: DueDiligencePack): Promise<{ by
       ensureSpace(rowHeight);
       tx = MARGIN;
       for (let c = 0; c < row.length; c++) {
-        const cellText = row[c].length > 50 ? row[c].slice(0, 48) + '\u2026' : row[c];
+        const raw = sanitizeForPdf(row[c] == null || typeof row[c] !== 'string' ? String(row[c] ?? '\u2014') : row[c]);
+        const cellText = raw.length > 50 ? raw.slice(0, 48) + '...' : raw;
         page.drawText(cellText, { x: tx + 4, y: y - 13, size: FONT_SIZES.label, font: regular, color: COLORS.black });
         tx += colWidths[c];
       }
@@ -419,15 +432,15 @@ export async function buildDueDiligencePdf(pack: DueDiligencePack): Promise<{ by
     { label: 'Government contracts held', ok: flags.has_contracts },
     { label: 'Political donations declared', ok: !flags.has_donations },
     { label: 'No donations + contracts overlap', ok: !flags.donations_and_contracts_overlap },
-    { label: 'Operating in disadvantaged area (SEIFA \u2264 3)', ok: flags.low_seifa },
+    { label: 'Operating in disadvantaged area (SEIFA <= 3)', ok: flags.low_seifa },
   ];
 
   for (const flag of flagItems) {
     ensureSpace(18);
-    const indicator = flag.ok ? '\u2713' : '\u2717';
+    const indicator = flag.ok ? '[Y]' : '[N]';
     const color = flag.ok ? COLORS.green : COLORS.red;
     page.drawText(indicator, { x: MARGIN, y, size: FONT_SIZES.body, font: bold, color });
-    page.drawText(flag.label, { x: MARGIN + 18, y, size: FONT_SIZES.body, font: regular, color: COLORS.black });
+    page.drawText(sanitizeForPdf(flag.label), { x: MARGIN + 24, y, size: FONT_SIZES.body, font: regular, color: COLORS.black });
     y -= 18;
   }
   y -= 8;
