@@ -40,6 +40,7 @@ interface SavedFoundation {
 
 interface EntityWatch {
   id: string;
+  entity_id: string;
   gs_id: string;
   canonical_name: string | null;
   watch_types: string[];
@@ -66,13 +67,24 @@ interface Alert {
   created_at: string;
 }
 
-type Tab = 'grants' | 'foundations' | 'entities' | 'alerts';
+interface Discovery {
+  id: string;
+  title: string;
+  description: string;
+  severity: string;
+  discovery_type: string;
+  entity_ids: string[];
+  created_at: string;
+}
+
+type Tab = 'grants' | 'foundations' | 'entities' | 'alerts' | 'feed';
 
 interface Props {
   savedGrants: SavedGrant[];
   savedFoundations: SavedFoundation[];
   entityWatches: EntityWatch[];
   alerts: Alert[];
+  recentDiscoveries: Discovery[];
 }
 
 // ── Helpers ───────────────────────────────────────────────────────
@@ -133,16 +145,25 @@ const STAGE_COLORS: Record<string, string> = {
 
 // ── Component ─────────────────────────────────────────────────────
 
-export function WatchlistClient({ savedGrants, savedFoundations, entityWatches, alerts }: Props) {
-  const [activeTab, setActiveTab] = useState<Tab>('grants');
+export function WatchlistClient({ savedGrants, savedFoundations, entityWatches, alerts, recentDiscoveries }: Props) {
+  const [activeTab, setActiveTab] = useState<Tab>('feed');
   const [watchGsId, setWatchGsId] = useState('');
   const [watches, setWatches] = useState(entityWatches);
   const [adding, setAdding] = useState(false);
 
+  // Filter discoveries to those matching watched entity IDs
+  const watchedEntityIds = new Set(watches.map(w => w.entity_id));
+  const watchedDiscoveries = recentDiscoveries.filter(d =>
+    d.entity_ids?.some(eid => watchedEntityIds.has(eid))
+  );
+  // Also show all discoveries if no watches yet (onboarding)
+  const feedDiscoveries = watches.length > 0 ? watchedDiscoveries : recentDiscoveries.slice(0, 20);
+
   const tabs: { key: Tab; label: string; count: number }[] = [
+    { key: 'feed', label: 'Feed', count: feedDiscoveries.length },
+    { key: 'entities', label: 'Entities', count: watches.length },
     { key: 'grants', label: 'Grants', count: savedGrants.length },
     { key: 'foundations', label: 'Foundations', count: savedFoundations.length },
-    { key: 'entities', label: 'Entities', count: watches.length },
     { key: 'alerts', label: 'Alerts', count: alerts.length },
   ];
 
@@ -189,6 +210,57 @@ export function WatchlistClient({ savedGrants, savedFoundations, entityWatches, 
           </button>
         ))}
       </div>
+
+      {/* Feed tab */}
+      {activeTab === 'feed' && (
+        <div>
+          {feedDiscoveries.length === 0 ? (
+            <EmptyState
+              icon="📡"
+              title="No recent discoveries"
+              description={watches.length > 0
+                ? 'No changes detected for your watched entities this week.'
+                : 'Watch entities to see their discoveries here. Platform-wide discoveries will show when you have no watches.'}
+              cta={watches.length === 0 ? { label: 'Browse Entities', href: '/entities' } : undefined}
+            />
+          ) : (
+            <div className="space-y-2">
+              {feedDiscoveries.map(d => {
+                const severityStyles: Record<string, string> = {
+                  critical: 'border-l-4 border-l-bauhaus-red bg-error-light',
+                  significant: 'border-l-4 border-l-orange-500 bg-orange-50',
+                  notable: 'border-l-4 border-l-bauhaus-blue bg-link-light',
+                  info: 'border-l-4 border-l-gray-300',
+                };
+                return (
+                  <div key={d.id} className={`border-2 border-gray-200 p-4 ${severityStyles[d.severity] || ''}`}>
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-bold text-sm">{d.title}</div>
+                        <div className="text-xs text-bauhaus-muted mt-1 line-clamp-2">{d.description}</div>
+                        <div className="flex gap-2 mt-2 flex-wrap">
+                          <span className={`text-[10px] px-1.5 py-0.5 font-bold uppercase ${
+                            d.severity === 'critical' ? 'bg-bauhaus-red text-white' :
+                            d.severity === 'significant' ? 'bg-orange-500 text-white' :
+                            d.severity === 'notable' ? 'bg-bauhaus-blue text-white' :
+                            'bg-gray-200 text-gray-600'
+                          }`}>
+                            {d.severity}
+                          </span>
+                          <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-600">
+                            {d.discovery_type.replace(/_/g, ' ')}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="text-xs text-bauhaus-muted shrink-0">{timeAgo(d.created_at)}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Grants tab */}
       {activeTab === 'grants' && (

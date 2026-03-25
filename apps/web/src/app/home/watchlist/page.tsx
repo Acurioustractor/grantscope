@@ -18,11 +18,14 @@ export default async function WatchlistPage() {
 
   const db = getServiceSupabase();
 
+  const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
   const [
     { data: savedGrants },
     { data: savedFoundations },
     { data: entityWatches },
     { data: alerts },
+    { data: recentDiscoveries },
   ] = await Promise.all([
     db.from('saved_grants')
       .select('id, stage, stars, color, notes, updated_at, grant:grant_opportunities(id, name, provider, amount_min, amount_max, closes_at, categories)')
@@ -42,6 +45,12 @@ export default async function WatchlistPage() {
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false }),
+    db.from('discoveries')
+      .select('id, title, description, severity, discovery_type, entity_ids, created_at')
+      .gte('created_at', oneWeekAgo)
+      .eq('dismissed', false)
+      .order('created_at', { ascending: false })
+      .limit(100),
   ]);
 
   return (
@@ -90,6 +99,7 @@ export default async function WatchlistPage() {
         savedFoundations={(savedFoundations || []) as any}
         entityWatches={entityWatches || []}
         alerts={alerts || []}
+        recentDiscoveries={(recentDiscoveries || []) as any}
       />
     </div>
   );
