@@ -2,6 +2,7 @@ import { getServiceSupabase } from '@/lib/supabase';
 import { safeOptionalData } from '@/lib/optional-data';
 import { createGovernedProofService } from '@/lib/governed-proof/service';
 import { getProofPack } from '@/lib/governed-proof/presentation';
+import { getPlaceBrief } from '@/lib/services/place-brief-service';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 
@@ -91,6 +92,7 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
       .from('postcode_geo')
       .select('postcode, locality, state, remoteness_2021, sa2_code, sa2_name, sa3_name, lga_name')
       .eq('postcode', postcode)
+      .not('state', 'is', null)
       .limit(1),
     supabase
       .from('seifa_2021')
@@ -376,6 +378,9 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
     }
   }
 
+  // Place Brief — EL transcripts + ALMA interventions + alignment score
+  const placeBrief = await getPlaceBrief(supabase, postcode, geo.locality, geo.state);
+
   // Filter grants relevant to this area (by state match or national scope)
   const now = new Date().toISOString().slice(0, 10);
   const relevantGrants = (grantData || [])
@@ -455,6 +460,22 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
               View on Power Map
             </Link>
           )}
+          {placeBrief.alignment.score > 0 && (
+            <span className={`text-[11px] font-black px-2.5 py-1 border-2 uppercase tracking-widest ${
+              placeBrief.alignment.score >= 75 ? 'border-money bg-money-light text-money' :
+              placeBrief.alignment.score >= 50 ? 'border-bauhaus-blue bg-link-light text-bauhaus-blue' :
+              placeBrief.alignment.score >= 25 ? 'border-orange-500 bg-orange-50 text-orange-700' :
+              'border-bauhaus-red bg-error-light text-bauhaus-red'
+            }`}>
+              Alignment {placeBrief.alignment.score}/100
+            </span>
+          )}
+          <a
+            href={`/api/places/${postcode}/brief`}
+            className="text-[11px] font-black px-2.5 py-1 border-2 border-bauhaus-black bg-bauhaus-black text-white uppercase tracking-widest hover:bg-bauhaus-blue hover:border-bauhaus-blue transition-colors"
+          >
+            Download Place Brief (PDF)
+          </a>
         </div>
       </div>
 
@@ -615,6 +636,102 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
                     {jf.amount_dollars && (
                       <div className="text-right ml-4">
                         <div className="font-black text-bauhaus-black">{formatMoney(jf.amount_dollars)}</div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {/* Evidence-Funding Alignment */}
+          {placeBrief.alignment.evidenceCount > 0 && (
+            <Section title="Evidence-Funding Alignment">
+              <div className="border-4 p-4 mb-4" style={{
+                borderColor: placeBrief.alignment.score >= 75 ? '#0f9968' : placeBrief.alignment.score >= 50 ? '#1c47d1' : placeBrief.alignment.score >= 25 ? '#f97316' : '#de1c1e',
+              }}>
+                <div className="flex items-center gap-4 mb-3">
+                  <div className={`text-4xl font-black ${
+                    placeBrief.alignment.score >= 75 ? 'text-money' :
+                    placeBrief.alignment.score >= 50 ? 'text-bauhaus-blue' :
+                    placeBrief.alignment.score >= 25 ? 'text-orange-500' :
+                    'text-bauhaus-red'
+                  }`}>
+                    {placeBrief.alignment.score}<span className="text-lg text-bauhaus-muted">/100</span>
+                  </div>
+                  <div>
+                    <div className="text-sm font-black text-bauhaus-black">{placeBrief.alignment.label}</div>
+                    <div className="text-xs text-bauhaus-muted">{placeBrief.alignment.detail}</div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-bauhaus-canvas border-2 border-bauhaus-black p-3">
+                    <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">Interventions</div>
+                    <div className="text-xl font-black text-bauhaus-black">{placeBrief.alignment.evidenceCount}</div>
+                  </div>
+                  <div className="bg-bauhaus-canvas border-2 border-bauhaus-black p-3">
+                    <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">Funded</div>
+                    <div className="text-xl font-black text-money">{placeBrief.alignment.fundedEvidenceCount}</div>
+                  </div>
+                  <div className="bg-bauhaus-canvas border-2 border-bauhaus-black p-3">
+                    <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">Voice Records</div>
+                    <div className="text-xl font-black text-bauhaus-blue">{placeBrief.alignment.transcriptCount}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Interventions list */}
+              <div className="space-y-0">
+                {placeBrief.interventions.map((intervention, i) => (
+                  <div key={i} className="flex items-center justify-between py-3 border-b-2 border-bauhaus-black/5 last:border-b-0">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-bauhaus-black text-sm">{intervention.name}</div>
+                      <div className="text-[11px] text-bauhaus-muted font-medium">
+                        {intervention.type} &middot; {intervention.evidence_level}
+                      </div>
+                    </div>
+                    <span className={`text-[10px] font-black px-2 py-0.5 uppercase tracking-widest ${
+                      intervention.linked
+                        ? 'border border-money/30 bg-money-light text-money'
+                        : 'border border-bauhaus-red/30 bg-error-light text-bauhaus-red'
+                    }`}>
+                      {intervention.linked ? 'Funded' : 'Unfunded'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {/* Community Voice — EL Transcripts */}
+          {placeBrief.transcripts.length > 0 && (
+            <Section title={`Community Voice (${placeBrief.transcripts.length} Transcripts)`}>
+              <p className="text-xs text-bauhaus-muted mb-4">
+                First-person accounts from Empathy Ledger, recorded in {placeTitle}. These are community members speaking about their lived experience with services and systems.
+              </p>
+              <div className="space-y-0">
+                {placeBrief.transcripts.map((transcript) => (
+                  <div key={transcript.id} className="py-4 border-b-2 border-bauhaus-black/5 last:border-b-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-black text-bauhaus-black text-sm">{transcript.storyteller_name}</span>
+                      {transcript.has_video && (
+                        <span className="text-[10px] font-black px-1.5 py-0.5 border border-bauhaus-blue/30 bg-link-light text-bauhaus-blue uppercase tracking-wider">Video</span>
+                      )}
+                      <span className="text-[10px] text-bauhaus-muted font-medium">{transcript.word_count.toLocaleString()} words</span>
+                    </div>
+                    {transcript.title !== transcript.storyteller_name && (
+                      <div className="text-xs font-bold text-bauhaus-muted mb-1">{transcript.title}</div>
+                    )}
+                    {transcript.excerpt && (
+                      <p className="text-sm text-bauhaus-black/70 leading-relaxed italic">
+                        &ldquo;{transcript.excerpt}&rdquo;
+                      </p>
+                    )}
+                    {transcript.themes && transcript.themes.length > 0 && (
+                      <div className="flex gap-1 mt-2 flex-wrap">
+                        {transcript.themes.slice(0, 4).map((theme, ti) => (
+                          <span key={ti} className="text-[10px] px-1.5 py-0.5 bg-bauhaus-canvas text-bauhaus-black font-bold border border-bauhaus-black/10">{theme}</span>
+                        ))}
                       </div>
                     )}
                   </div>
