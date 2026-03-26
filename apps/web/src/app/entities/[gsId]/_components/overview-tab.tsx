@@ -27,6 +27,7 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
     localDisabilityEnterpriseCount, localCommunityControlledCount,
     ndisSourceLink,
     jhOrg, almaInterventionCount, almaEvidenceCount,
+    personRoles,
   } = enrichment;
 
   const {
@@ -45,8 +46,48 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
   const contractCount = contractBreakdown?.count ?? 0;
   const totalContractValue = contractBreakdown?.amount ?? 0;
 
+  const roleLabel = (r: string, props: Record<string, string> | null) => {
+    if (props?.title) return props.title;
+    if (r === 'ceo') return 'Chief Executive Officer';
+    if (r === 'cfo') return 'Chief Financial Officer';
+    if (r === 'chair') return 'Chair';
+    return r.replace(/_/g, ' ');
+  };
+
   return (
     <>
+      {/* Person Roles — Board Seats & Positions */}
+      {personRoles.length > 0 && (
+        <Section title="Board Seats & Positions">
+          <p className="text-sm text-bauhaus-muted mb-4">
+            {e.canonical_name} holds {personRoles.length} role{personRoles.length !== 1 ? 's' : ''} across {new Set(personRoles.map((r) => r.company_name)).size} organisation{new Set(personRoles.map((r) => r.company_name)).size !== 1 ? 's' : ''}
+          </p>
+          <div className="space-y-2">
+            {personRoles.map((r, i) => (
+              <div key={i} className="flex items-center justify-between border-2 border-bauhaus-black p-3">
+                <div>
+                  <div className="font-black">
+                    {r.entity_gs_id ? (
+                      <Link href={`/entities/${r.entity_gs_id}`} className="hover:text-bauhaus-red">
+                        {r.company_name}
+                      </Link>
+                    ) : (
+                      r.company_name
+                    )}
+                  </div>
+                  {r.company_abn && (
+                    <span className="text-xs text-bauhaus-muted font-mono">ABN {r.company_abn}</span>
+                  )}
+                </div>
+                <span className="text-xs font-black uppercase tracking-wider bg-gray-100 px-2 py-1">
+                  {roleLabel(r.role_type, r.properties)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
+
       {/* Governed Proof Banner */}
       {governedProofBundle && e.postcode && (
         <div className="mb-8 border-4 border-bauhaus-blue bg-white">

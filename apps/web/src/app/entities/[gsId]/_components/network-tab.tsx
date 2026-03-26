@@ -54,8 +54,120 @@ interface SimNode extends NetworkNode {
   isCenter: boolean;
 }
 
+interface PersonBoard {
+  org_name: string;
+  org_gs_id: string | null;
+  org_type: string | null;
+  org_revenue: number | null;
+  my_role: string;
+  co_directors: Array<{
+    name: string;
+    role: string;
+    title: string | null;
+    gs_id: string | null;
+    shared_boards: number;
+  }>;
+}
+
+interface PersonNetworkResponse {
+  type: 'person';
+  person: { id: string; gs_id: string; name: string };
+  boards: PersonBoard[];
+}
+
+function PersonBoardNetwork({ data }: { data: PersonNetworkResponse }) {
+  const totalCoDirectors = new Set(data.boards.flatMap((b) => b.co_directors.map((c) => c.name))).size;
+  const interlocked = data.boards.flatMap((b) => b.co_directors).filter((c) => c.shared_boards > 1);
+  const uniqueInterlocked = new Set(interlocked.map((c) => c.name));
+
+  return (
+    <div>
+      <div className="flex flex-wrap gap-4 mb-6 text-xs">
+        <div className="border-2 border-bauhaus-black px-3 py-2">
+          <span className="font-black text-lg">{data.boards.length}</span>
+          <span className="ml-1 text-bauhaus-muted uppercase tracking-wider">boards</span>
+        </div>
+        <div className="border-2 border-bauhaus-black px-3 py-2">
+          <span className="font-black text-lg">{totalCoDirectors}</span>
+          <span className="ml-1 text-bauhaus-muted uppercase tracking-wider">co-directors</span>
+        </div>
+        {uniqueInterlocked.size > 0 && (
+          <div className="border-2 border-bauhaus-red px-3 py-2">
+            <span className="font-black text-lg text-bauhaus-red">{uniqueInterlocked.size}</span>
+            <span className="ml-1 text-bauhaus-muted uppercase tracking-wider">shared across boards</span>
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-4">
+        {data.boards.map((board, i) => (
+          <div key={i} className="border-2 border-bauhaus-black">
+            <div className="flex items-center justify-between bg-bauhaus-black text-white px-4 py-2">
+              <div className="flex items-center gap-3">
+                {board.org_gs_id ? (
+                  <Link href={`/entities/${board.org_gs_id}`} className="font-black hover:text-bauhaus-yellow">
+                    {board.org_name}
+                  </Link>
+                ) : (
+                  <span className="font-black">{board.org_name}</span>
+                )}
+                {board.org_type && (
+                  <span className="text-[10px] uppercase tracking-wider text-white/60">
+                    {board.org_type.replace(/_/g, ' ')}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                {board.org_revenue ? (
+                  <span className="font-mono text-sm">{formatMoney(board.org_revenue)}</span>
+                ) : null}
+                <span className="text-[10px] uppercase tracking-wider bg-white/20 px-2 py-0.5">
+                  {board.my_role.replace(/_/g, ' ')}
+                </span>
+              </div>
+            </div>
+            {board.co_directors.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-0">
+                {board.co_directors.map((cd, j) => (
+                  <div
+                    key={j}
+                    className={`px-3 py-2 border-b border-r border-gray-200 ${cd.shared_boards > 1 ? 'bg-red-50' : ''}`}
+                  >
+                    <div className="flex items-center gap-1">
+                      {cd.gs_id ? (
+                        <Link href={`/entities/${cd.gs_id}`} className="text-sm font-medium hover:text-bauhaus-red">
+                          {cd.name}
+                        </Link>
+                      ) : (
+                        <span className="text-sm font-medium">{cd.name}</span>
+                      )}
+                      {cd.shared_boards > 1 && (
+                        <span className="text-[9px] bg-bauhaus-red text-white px-1 py-0.5 font-mono">
+                          {cd.shared_boards}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[10px] text-bauhaus-muted uppercase tracking-wider">
+                      {cd.title || cd.role.replace(/_/g, ' ')}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="px-4 py-3 text-sm text-bauhaus-muted">
+                Sole director
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function NetworkTab({ gsId }: { gsId: string }) {
-  const [data, setData] = useState<NetworkResponse | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [hoveredNode, setHoveredNode] = useState<SimNode | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -65,7 +177,7 @@ export function NetworkTab({ gsId }: { gsId: string }) {
   useEffect(() => {
     fetch(`/api/entities/${gsId}/network`)
       .then((r) => r.json())
-      .then((d: NetworkResponse) => {
+      .then((d) => {
         setData(d);
         setLoading(false);
       })
@@ -74,15 +186,16 @@ export function NetworkTab({ gsId }: { gsId: string }) {
 
   // Simple force simulation
   const runSimulation = useCallback(() => {
-    if (!data) return;
+    if (!data || data.type === 'person') return;
+    const netData = data as NetworkResponse;
 
     const width = 800;
     const height = 500;
-    const maxAmount = Math.max(...data.nodes.map((n) => n.total_amount), 1);
+    const maxAmount = Math.max(...netData.nodes.map((n: NetworkNode) => n.total_amount), 1);
 
     const nodes: SimNode[] = [
       {
-        ...data.center,
+        ...netData.center,
         total_amount: 0,
         relationship_types: [],
         x: width / 2,
@@ -92,8 +205,8 @@ export function NetworkTab({ gsId }: { gsId: string }) {
         radius: 24,
         isCenter: true,
       },
-      ...data.nodes.map((n, i) => {
-        const angle = (i / data.nodes.length) * Math.PI * 2;
+      ...netData.nodes.map((n: NetworkNode, i: number) => {
+        const angle = (i / netData.nodes.length) * Math.PI * 2;
         const dist = 150 + Math.random() * 100;
         return {
           ...n,
@@ -139,7 +252,7 @@ export function NetworkTab({ gsId }: { gsId: string }) {
       }
 
       // Attraction to center for connected nodes
-      for (const edge of data.edges) {
+      for (const edge of netData.edges) {
         const source = nodeById.get(edge.source);
         const target = nodeById.get(edge.target);
         if (!source || !target) continue;
@@ -174,7 +287,7 @@ export function NetworkTab({ gsId }: { gsId: string }) {
         const svg = svgRef.current;
 
         // Update edges
-        data.edges.forEach((edge, i) => {
+        netData.edges.forEach((edge: NetworkEdge, i: number) => {
           const line = svg.querySelector(`#edge-${i}`) as SVGLineElement;
           if (!line) return;
           const source = nodeById.get(edge.source);
@@ -217,7 +330,12 @@ export function NetworkTab({ gsId }: { gsId: string }) {
     );
   }
 
-  if (!data || data.nodes.length === 0) {
+  // Person entity: render board network
+  if (data?.type === 'person') {
+    return <PersonBoardNetwork data={data as PersonNetworkResponse} />;
+  }
+
+  if (!data || !data.nodes || data.nodes.length === 0) {
     return (
       <div className="text-center py-12">
         <p className="text-bauhaus-muted font-bold">No connected entities found</p>
@@ -233,8 +351,8 @@ export function NetworkTab({ gsId }: { gsId: string }) {
     <div>
       {/* Entity type distribution */}
       <div className="flex flex-wrap gap-3 mb-6">
-        {Object.entries(data.entityTypes)
-          .sort((a, b) => b[1] - a[1])
+        {Object.entries(data.entityTypes as Record<string, number>)
+          .sort((a, b) => (b[1] as number) - (a[1] as number))
           .map(([type, count]) => (
             <div key={type} className="flex items-center gap-2">
               <span
@@ -242,7 +360,7 @@ export function NetworkTab({ gsId }: { gsId: string }) {
                 style={{ backgroundColor: TYPE_COLORS[type] || '#9ca3af' }}
               />
               <span className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest">
-                {entityTypeLabel(type)} ({count})
+                {entityTypeLabel(type)} ({count as number})
               </span>
             </div>
           ))}
@@ -257,7 +375,7 @@ export function NetworkTab({ gsId }: { gsId: string }) {
           style={{ maxHeight: '500px' }}
         >
           {/* Edges */}
-          {data.edges.map((edge, i) => {
+          {(data.edges as NetworkEdge[]).map((edge: NetworkEdge, i: number) => {
             const source = nodeById.get(edge.source);
             const target = nodeById.get(edge.target);
             return (

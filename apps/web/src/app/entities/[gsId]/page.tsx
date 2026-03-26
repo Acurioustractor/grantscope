@@ -19,7 +19,7 @@ import type {
   FoundationEnrichment, FoundationProgram, CharityEnrichment,
   SocialEnterpriseEnrichment, NdisSupplyRow, NdisConcentrationRow,
   AlmaIntervention, PlaceGeo, SeifaData, GovernedProofBundle,
-  EntityEnrichment, WorkspaceContext,
+  EntityEnrichment, WorkspaceContext, PersonRole,
 } from './_lib/types';
 
 export const revalidate = 300; // ISR: 5 min
@@ -251,6 +251,34 @@ export default async function EntityDossierPage({
     postcodeEntityCount = count || 0;
   }
 
+  // Person roles (board seats, executive roles) — for person entities
+  let personRoles: PersonRole[] = [];
+  if (e.entity_type === 'person') {
+    // Match by person_entity_id first, fall back to normalised name match
+    const nameNormalised = e.canonical_name.toUpperCase();
+    const { data: rolesData } = await supabase
+      .from('person_roles')
+      .select('person_name, role_type, company_name, company_abn, properties')
+      .or(`person_entity_id.eq.${e.id},person_name_normalised.eq.${nameNormalised}`)
+      .order('company_name');
+    // Enrich with gs_id for linking
+    const roles = (rolesData || []) as Array<PersonRole & { entity_gs_id?: string | null }>;
+    if (roles.length > 0) {
+      const abns = [...new Set(roles.map((r) => r.company_abn).filter(Boolean))] as string[];
+      if (abns.length > 0) {
+        const { data: entities } = await supabase
+          .from('gs_entities')
+          .select('gs_id, abn')
+          .in('abn', abns);
+        const abnToGsId = new Map((entities || []).map((ent) => [ent.abn, ent.gs_id]));
+        for (const r of roles) {
+          r.entity_gs_id = r.company_abn ? abnToGsId.get(r.company_abn) || null : null;
+        }
+      }
+      personRoles = roles;
+    }
+  }
+
   // Grants
   const grants = (grantData || []) as Array<{ id: string; amount: number | null; properties: Record<string, string | null> }>;
 
@@ -302,6 +330,7 @@ export default async function EntityDossierPage({
     ndisThinDistrictCount, ndisVeryThinDistrictCount,
     localDisabilityEnterpriseCount, localCommunityControlledCount,
     ndisSourceLink,
+    personRoles,
   };
 
   const workspace: WorkspaceContext = {
@@ -324,6 +353,7 @@ export default async function EntityDossierPage({
         gsId={e.gs_id}
         defaultTab="overview"
         hasEvidence={hasEvidence}
+        entityType={e.entity_type}
         overviewContent={
           <OverviewTab
             entity={e}

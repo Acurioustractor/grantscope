@@ -228,6 +228,15 @@ export interface GovernedProofBundle {
   updated_at?: string;
 }
 
+export interface PersonRole {
+  person_name: string;
+  role_type: string;
+  company_name: string;
+  company_abn: string | null;
+  entity_gs_id: string | null;
+  properties: Record<string, string> | null;
+}
+
 export interface EntityEnrichment {
   foundation: FoundationEnrichment | undefined;
   foundationPrograms: FoundationProgram[];
@@ -256,6 +265,7 @@ export interface EntityEnrichment {
   localDisabilityEnterpriseCount: number;
   localCommunityControlledCount: number;
   ndisSourceLink: string | null;
+  personRoles: PersonRole[];
 }
 
 export interface WorkspaceContext {

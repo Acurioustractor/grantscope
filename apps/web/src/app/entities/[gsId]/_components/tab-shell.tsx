@@ -20,6 +20,7 @@ interface TabShellProps {
   networkContent: ReactNode;
   evidenceContent: ReactNode;
   hasEvidence: boolean;
+  entityType?: string;
 }
 
 export function TabShell({
@@ -29,6 +30,7 @@ export function TabShell({
   networkContent,
   evidenceContent,
   hasEvidence,
+  entityType,
 }: TabShellProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -49,7 +51,12 @@ export function TabShell({
     [searchParams, router, pathname],
   );
 
-  const visibleTabs = hasEvidence ? TABS : TABS.filter((t) => t.key !== 'evidence');
+  const isPerson = entityType === 'person';
+  const visibleTabs = TABS.filter((t) => {
+    if (t.key === 'evidence' && !hasEvidence) return false;
+    if (t.key === 'money' && isPerson) return false;
+    return true;
+  });
 
   return (
     <div>

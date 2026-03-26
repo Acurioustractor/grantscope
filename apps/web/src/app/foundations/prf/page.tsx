@@ -4,15 +4,15 @@ import Link from 'next/link';
 export const dynamic = 'force-dynamic';
 
 const money = (n: number | null) =>
-  n == null ? '—' : `$${(n / 1_000_000).toFixed(1)}M`;
-
-const pct = (n: number | null, d: number) =>
-  n == null || d === 0 ? '—' : `${Math.round((n / d) * 100)}%`;
+  n == null ? '—' : n >= 1_000_000_000
+    ? `$${(n / 1_000_000_000).toFixed(1)}B`
+    : `$${(n / 1_000_000).toFixed(1)}M`;
 
 interface Partner {
   recipient_name: string;
   recipient_abn: string | null;
   gs_entity_id: string | null;
+  gs_id: string | null;
   amount_dollars: number;
   program_name: string;
   state: string | null;
@@ -31,6 +31,7 @@ interface AlmaIntervention {
   target_cohort: string | null;
   geography: string | null;
   org: string;
+  org_gs_id: string | null;
 }
 
 interface OutcomeSub {
@@ -45,6 +46,8 @@ interface OutcomeSub {
 interface Person {
   person_name: string;
   role_type: string;
+  properties: Record<string, unknown> | null;
+  gs_id: string | null;
 }
 
 interface PortfolioStatus {
@@ -58,6 +61,34 @@ interface PortfolioStatus {
   pending_tasks: number;
 }
 
+interface Grantee {
+  canonical_name: string;
+  gs_id: string | null;
+  entity_type: string | null;
+  state: string | null;
+  is_community_controlled: boolean;
+}
+
+interface BoardInterlock {
+  canonical_name: string;
+  gs_id: string | null;
+  shared_count: number;
+}
+
+interface FoundationRecord {
+  name: string;
+  total_giving_annual: number;
+  endowment_size: number | null;
+  thematic_focus: string;
+  geographic_focus: string;
+  giving_history: Array<{ year: string; amount: number; grants?: number }>;
+  open_programs: Array<{ name: string; via?: string; focus?: string; amount?: string; cycle?: string; url?: string }>;
+  description: string;
+  giving_philosophy: string;
+  target_recipients: string[];
+  wealth_source: string;
+}
+
 async function getData() {
   const db = getServiceSupabase();
 
@@ -68,10 +99,12 @@ async function getData() {
     { data: people },
     { data: portfolio },
     { data: foundation },
+    { data: grantees },
+    { data: interlocks },
   ] = await Promise.all([
     db.rpc('exec_sql', {
       query: `SELECT jf.recipient_name, jf.recipient_abn, jf.gs_entity_id,
-                     jf.amount_dollars, jf.program_name, jf.state,
+                     ge.gs_id, jf.amount_dollars, jf.program_name, jf.state,
                      ge.entity_type, ge.is_community_controlled, ge.remoteness,
                      ge.seifa_irsd_decile, ge.postcode
               FROM justice_funding jf
@@ -81,7 +114,7 @@ async function getData() {
     }),
     db.rpc('exec_sql', {
       query: `SELECT ai.name, ai.type, ai.evidence_level, ai.portfolio_score,
-                     ai.target_cohort, ai.geography, ge.canonical_name as org
+                     ai.target_cohort, ai.geography, ge.canonical_name as org, ge.gs_id as org_gs_id
               FROM alma_interventions ai
               JOIN gs_entities ge ON ge.id::text = ai.gs_entity_id::text
               WHERE ge.id IN (SELECT gs_entity_id FROM justice_funding
@@ -101,19 +134,54 @@ async function getData() {
               ORDER BY os.created_at DESC`,
     }),
     db.rpc('exec_sql', {
-      query: `SELECT pr.person_name, pr.role_type
+      query: `SELECT pr.person_name, pr.role_type, pr.properties, pe.gs_id
               FROM person_roles pr
-              JOIN gs_entities ge ON ge.id = pr.entity_id
-              WHERE ge.abn IN ('32623132472', '30106576087')
-              ORDER BY pr.role_type, pr.person_name`,
+              LEFT JOIN gs_entities pe ON pe.id = pr.person_entity_id
+              WHERE pr.entity_id = '92edb50b-b111-45a8-b697-0354410b2d2d'
+              ORDER BY
+                CASE pr.role_type
+                  WHEN 'chair' THEN 1
+                  WHEN 'ceo' THEN 2
+                  WHEN 'cfo' THEN 3
+                  WHEN 'director' THEN 4
+                  ELSE 5
+                END,
+                pr.person_name`,
     }),
     db.rpc('exec_sql', {
       query: `SELECT * FROM v_prf_portfolio_outcomes`,
     }),
     db.rpc('exec_sql', {
-      query: `SELECT name, total_giving_annual, thematic_focus::text as thematic_focus,
-                     geographic_focus
+      query: `SELECT name, total_giving_annual, endowment_size,
+                     thematic_focus::text as thematic_focus,
+                     geographic_focus,
+                     giving_history,
+                     open_programs,
+                     description,
+                     giving_philosophy,
+                     target_recipients::text[] as target_recipients,
+                     wealth_source
               FROM foundations WHERE acnc_abn = '32623132472'`,
+    }),
+    db.rpc('exec_sql', {
+      query: `SELECT e.canonical_name, e.gs_id, e.entity_type, e.state, e.is_community_controlled
+              FROM gs_relationships r
+              JOIN gs_entities e ON e.id = r.target_entity_id
+              WHERE r.source_entity_id = '92edb50b-b111-45a8-b697-0354410b2d2d'
+                AND r.relationship_type = 'grant'
+                AND r.dataset = 'foundation_grantees'
+              ORDER BY e.canonical_name`,
+    }),
+    db.rpc('exec_sql', {
+      query: `SELECT e.canonical_name, e.gs_id, (r.properties->>'shared_count')::int as shared_count
+              FROM gs_relationships r
+              JOIN gs_entities e ON e.id = CASE
+                WHEN r.source_entity_id = '92edb50b-b111-45a8-b697-0354410b2d2d' THEN r.target_entity_id
+                ELSE r.source_entity_id END
+              WHERE (r.source_entity_id = '92edb50b-b111-45a8-b697-0354410b2d2d'
+                OR r.target_entity_id = '92edb50b-b111-45a8-b697-0354410b2d2d')
+                AND r.relationship_type = 'shared_director'
+              ORDER BY (r.properties->>'shared_count')::int DESC NULLS LAST, e.canonical_name`,
     }),
   ]);
 
@@ -123,17 +191,14 @@ async function getData() {
     outcomes: (outcomes || []) as OutcomeSub[],
     people: (people || []) as Person[],
     portfolio: (portfolio || []) as PortfolioStatus[],
-    foundation: (foundation || [])[0] as {
-      name: string;
-      total_giving_annual: number;
-      thematic_focus: string;
-      geographic_focus: string;
-    } | undefined,
+    foundation: (foundation || [])[0] as FoundationRecord | undefined,
+    grantees: (grantees || []) as Grantee[],
+    interlocks: (interlocks || []) as BoardInterlock[],
   };
 }
 
 export default async function PRFIntelligencePage() {
-  const { partners, alma, outcomes, people, portfolio, foundation } =
+  const { partners, alma, outcomes, people, portfolio, foundation, grantees, interlocks } =
     await getData();
 
   const jrPartners = partners.filter(
@@ -169,6 +234,30 @@ export default async function PRFIntelligencePage() {
     a.evidence_level?.includes('Effective'),
   );
 
+  // Categorise people
+  const boardMembers = people.filter(
+    (p) => p.role_type === 'chair' || p.role_type === 'director',
+  );
+  const executives = people.filter(
+    (p) => p.role_type === 'ceo' || p.role_type === 'cfo' || (p.role_type === 'other' && (p.properties as Record<string, string>)?.title?.startsWith('Chief')),
+  );
+  const seniorStaff = people.filter(
+    (p) => p.role_type === 'other' && !(p.properties as Record<string, string>)?.title?.startsWith('Chief'),
+  );
+
+  // Giving history for chart
+  const givingHistory = Array.isArray(foundation?.giving_history)
+    ? foundation.giving_history
+    : [];
+
+  // Open programs
+  const openPrograms = Array.isArray(foundation?.open_programs)
+    ? foundation.open_programs
+    : [];
+
+  // Community-controlled grantees
+  const ccGrantees = grantees.filter((g) => g.is_community_controlled);
+
   return (
     <div className="min-h-screen bg-white text-bauhaus-black">
       {/* Header */}
@@ -186,21 +275,199 @@ export default async function PRFIntelligencePage() {
             </h1>
             <p className="mt-1 text-sm text-bauhaus-muted">
               Portfolio Intelligence Dashboard — {foundation?.geographic_focus || 'National'} •{' '}
-              {money(foundation?.total_giving_annual ?? null)}/yr
+              ABN 32 623 132 472
             </p>
           </div>
-          <div className="text-right">
+          <div className="text-right space-y-1">
             <div className="text-4xl font-black text-bauhaus-red">
-              {money(totalFunding)}
+              {money(foundation?.endowment_size ?? null)}
             </div>
             <div className="text-xs uppercase tracking-widest text-bauhaus-muted">
-              Total mapped funding
+              Endowment
+            </div>
+            <div className="text-xl font-black">
+              {money(foundation?.total_giving_annual ?? null)}<span className="text-sm font-normal text-bauhaus-muted">/yr</span>
             </div>
           </div>
         </div>
       </header>
 
       <div className="mx-auto max-w-7xl px-8 py-8 space-y-12">
+
+        {/* Foundation Overview */}
+        <section>
+          <h2 className="text-xl font-black uppercase tracking-widest border-b-2 border-bauhaus-black pb-2 mb-6">
+            Foundation Overview
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Key Stats */}
+            <div className="border-2 border-bauhaus-black p-4 space-y-3">
+              <h3 className="font-black text-sm uppercase tracking-wider">Key Financials</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-bauhaus-muted">Endowment</span>
+                  <span className="font-mono font-bold">{money(foundation?.endowment_size ?? null)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-bauhaus-muted">Annual Giving</span>
+                  <span className="font-mono font-bold">{money(foundation?.total_giving_annual ?? null)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-bauhaus-muted">Cumulative (since 2016)</span>
+                  <span className="font-mono font-bold">$1.5B</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-bauhaus-muted">Partners</span>
+                  <span className="font-mono font-bold">175+</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-bauhaus-muted">Total Funded Orgs</span>
+                  <span className="font-mono font-bold">356</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-bauhaus-muted">Impact Fund (ESG)</span>
+                  <span className="font-mono font-bold">16.4%</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Giving History */}
+            <div className="border-2 border-bauhaus-black p-4 space-y-3">
+              <h3 className="font-black text-sm uppercase tracking-wider">Giving History</h3>
+              <div className="space-y-2">
+                {givingHistory.map((g) => (
+                  <div key={g.year} className="flex items-center gap-3">
+                    <span className="text-xs text-bauhaus-muted w-10">{g.year}</span>
+                    <div className="flex-1 h-4 bg-gray-100 relative">
+                      <div
+                        className="h-4 bg-bauhaus-red"
+                        style={{ width: `${(g.amount / 320_000_000) * 100}%` }}
+                      />
+                    </div>
+                    <span className="font-mono text-sm w-16 text-right">{money(g.amount)}</span>
+                  </div>
+                ))}
+              </div>
+              {foundation?.wealth_source && (
+                <p className="text-xs text-bauhaus-muted mt-2">{foundation.wealth_source}</p>
+              )}
+            </div>
+
+            {/* Target Recipients */}
+            <div className="border-2 border-bauhaus-black p-4 space-y-3">
+              <h3 className="font-black text-sm uppercase tracking-wider">Target Recipients</h3>
+              <div className="flex flex-wrap gap-2">
+                {(foundation?.target_recipients || []).map((t, i) => (
+                  <span key={i} className="text-xs bg-gray-100 px-2 py-1 border border-gray-200">
+                    {t}
+                  </span>
+                ))}
+              </div>
+              <h3 className="font-black text-sm uppercase tracking-wider pt-2">Thematic Focus</h3>
+              <div className="flex flex-wrap gap-1">
+                {(foundation?.thematic_focus || '').split(',').filter(Boolean).map((t, i) => (
+                  <span key={i} className="text-xs bg-bauhaus-black text-white px-2 py-0.5">
+                    {t.trim().replace(/-/g, ' ')}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Description */}
+          {foundation?.description && (
+            <p className="mt-4 text-sm text-gray-700 max-w-4xl">
+              {foundation.description}
+            </p>
+          )}
+        </section>
+
+        {/* How PRF Funds */}
+        <section>
+          <h2 className="text-xl font-black uppercase tracking-widest border-b-2 border-bauhaus-black pb-2 mb-6">
+            How PRF Funds
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Application Routes */}
+            <div className="border-2 border-bauhaus-black p-4 space-y-4">
+              <h3 className="font-black text-sm uppercase tracking-wider">Application Routes</h3>
+              <div className="space-y-3 text-sm">
+                <div className="border-b border-gray-200 pb-2">
+                  <div className="font-black">Australian Communities Foundation</div>
+                  <p className="text-bauhaus-muted text-xs">PRF routes most open grant rounds through ACF</p>
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    <span className="text-xs bg-gray-100 px-2 py-0.5">Just Futures (justice)</span>
+                    <span className="text-xs bg-gray-100 px-2 py-0.5">Strengthening Early Years</span>
+                    <span className="text-xs bg-gray-100 px-2 py-0.5">Specialist DFV Programs</span>
+                  </div>
+                  <a href="https://www.communityfoundation.org.au/support" target="_blank" rel="noopener noreferrer" className="text-xs text-bauhaus-red hover:underline mt-1 inline-block">
+                    Check ACF for current open rounds &#8599;
+                  </a>
+                </div>
+                <div className="border-b border-gray-200 pb-2">
+                  <div className="font-black">PRF Fellowship</div>
+                  <p className="text-bauhaus-muted text-xs">Up to $250,000 over 18 months for individuals</p>
+                  <p className="text-xs">Annual cycle — applications Oct-Nov</p>
+                  <a href="https://www.paulramsayfoundation.org.au/news-resources/2026-fellowships" target="_blank" rel="noopener noreferrer" className="text-xs text-bauhaus-red hover:underline mt-1 inline-block">
+                    Fellowship details &#8599;
+                  </a>
+                </div>
+                <div>
+                  <div className="font-black">Impact Investing (PRI)</div>
+                  <p className="text-bauhaus-muted text-xs">Catalytic investments, not grants. Standing EOI.</p>
+                  <a href="https://www.paulramsayfoundation.org.au/invest" target="_blank" rel="noopener noreferrer" className="text-xs text-bauhaus-red hover:underline mt-1 inline-block">
+                    Impact investing &#8599;
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* Funding Priorities */}
+            <div className="border-2 border-bauhaus-black p-4 space-y-4">
+              <h3 className="font-black text-sm uppercase tracking-wider">Funding Priorities</h3>
+              <p className="text-xs text-bauhaus-muted">PRF does not accept unsolicited applications. Most funding is invitation-only or via ACF rounds.</p>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-start gap-2">
+                  <span className="w-2 h-2 bg-bauhaus-red mt-1.5 flex-shrink-0" />
+                  <div>
+                    <span className="font-bold">Justice reinvestment</span>
+                    <span className="text-bauhaus-muted"> — diversion, throughcare, community-led alternatives to custody</span>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="w-2 h-2 bg-bauhaus-blue mt-1.5 flex-shrink-0" />
+                  <div>
+                    <span className="font-bold">Early childhood</span>
+                    <span className="text-bauhaus-muted"> — prenatal to school, family support, early learning</span>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="w-2 h-2 bg-bauhaus-yellow mt-1.5 flex-shrink-0" />
+                  <div>
+                    <span className="font-bold">Employment pathways</span>
+                    <span className="text-bauhaus-muted"> — transitions for people experiencing disadvantage</span>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="w-2 h-2 bg-bauhaus-black mt-1.5 flex-shrink-0" />
+                  <div>
+                    <span className="font-bold">Place-based change</span>
+                    <span className="text-bauhaus-muted"> — community-led, First Nations self-determination</span>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="w-2 h-2 bg-gray-400 mt-1.5 flex-shrink-0" />
+                  <div>
+                    <span className="font-bold">Family violence</span>
+                    <span className="text-bauhaus-muted"> — specialist DFV programs, First Nations-led</span>
+                  </div>
+                </div>
+              </div>
+              <p className="text-xs text-bauhaus-muted pt-2">&gt;50% of FY25 distributions supported First Nations-led organisations</p>
+            </div>
+          </div>
+        </section>
+
         {/* Proof Chain Status */}
         <section>
           <h2 className="text-xl font-black uppercase tracking-widest border-b-2 border-bauhaus-black pb-2 mb-6">
@@ -263,9 +530,9 @@ export default async function PRFIntelligencePage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-3">
                         <h3 className="font-black text-lg">
-                          {partner?.gs_entity_id ? (
+                          {partner?.gs_id ? (
                             <Link
-                              href={`/entities/${partner.gs_entity_id}`}
+                              href={`/entities/${partner.gs_id}`}
                               className="hover:text-bauhaus-red"
                             >
                               {p.recipient_name}
@@ -336,6 +603,36 @@ export default async function PRFIntelligencePage() {
           </div>
         </section>
 
+        {/* Full Grant Network */}
+        <section>
+          <h2 className="text-xl font-black uppercase tracking-widest border-b-2 border-bauhaus-black pb-2 mb-2">
+            Full Grant Network
+          </h2>
+          <p className="text-sm text-bauhaus-muted mb-4">
+            {grantees.length} funded organisations (FY2024 ACNC filing) •{' '}
+            {ccGrantees.length} community-controlled
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+            {grantees.map((g, i) => (
+              <div key={i} className="flex items-center gap-2 py-1.5 px-2 border-b border-gray-100 text-sm">
+                {g.is_community_controlled && (
+                  <span className="w-2 h-2 bg-bauhaus-red flex-shrink-0" title="Community-controlled" />
+                )}
+                {g.gs_id ? (
+                  <Link href={`/entities/${g.gs_id}`} className="hover:text-bauhaus-red truncate">
+                    {g.canonical_name}
+                  </Link>
+                ) : (
+                  <span className="truncate">{g.canonical_name}</span>
+                )}
+                {g.state && (
+                  <span className="text-xs text-bauhaus-muted flex-shrink-0">{g.state}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+
         {/* Evidence Map — ALMA Interventions */}
         <section>
           <h2 className="text-xl font-black uppercase tracking-widest border-b-2 border-bauhaus-black pb-2 mb-2">
@@ -374,7 +671,11 @@ export default async function PRFIntelligencePage() {
                     className="border-b border-gray-200 hover:bg-gray-50"
                   >
                     <td className="py-2 font-medium">{a.name}</td>
-                    <td className="py-2 text-bauhaus-muted">{a.org}</td>
+                    <td className="py-2 text-bauhaus-muted">
+                      {a.org_gs_id ? (
+                        <Link href={`/entities/${a.org_gs_id}`} className="hover:text-bauhaus-red">{a.org}</Link>
+                      ) : a.org}
+                    </td>
                     <td className="py-2">
                       <span className="text-xs bg-gray-100 px-2 py-0.5">
                         {a.type}
@@ -459,7 +760,11 @@ export default async function PRFIntelligencePage() {
                   className="flex items-center justify-between border-b border-gray-200 py-2"
                 >
                   <div>
-                    <span className="font-medium">{g.recipient_name}</span>
+                    {g.gs_id ? (
+                      <Link href={`/entities/${g.gs_id}`} className="font-medium hover:text-bauhaus-red">{g.recipient_name}</Link>
+                    ) : (
+                      <span className="font-medium">{g.recipient_name}</span>
+                    )}
                     <span className="ml-2 text-xs text-bauhaus-muted">
                       {g.program_name}
                     </span>
@@ -473,24 +778,138 @@ export default async function PRFIntelligencePage() {
           </section>
         )}
 
-        {/* Governance */}
+        {/* Governance — Board, Executives, Staff */}
         <section>
           <h2 className="text-xl font-black uppercase tracking-widest border-b-2 border-bauhaus-black pb-2 mb-6">
-            Board & Governance
+            Board & Leadership
           </h2>
-          <div className="grid grid-cols-3 gap-3">
-            {people.map((p, i) => (
-              <div key={i} className="border border-gray-200 p-3">
-                <div className="font-medium">{p.person_name}</div>
-                <div className="text-xs text-bauhaus-muted uppercase tracking-wider">
-                  {p.role_type}
+
+          {/* Board of Directors */}
+          <h3 className="font-black text-sm uppercase tracking-wider mb-3">Board of Directors</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-8">
+            {boardMembers.map((p, i) => {
+              const props = (p.properties || {}) as Record<string, string>;
+              const displayName = `${props.title === 'Sir' ? 'Sir ' : ''}${p.person_name}${props.honours ? ` ${props.honours}` : ''}`;
+              return (
+                <div key={i} className="border-2 border-bauhaus-black p-3">
+                  <div className="font-black">
+                    {p.gs_id ? (
+                      <Link href={`/entities/${p.gs_id}`} className="hover:text-bauhaus-red">
+                        {displayName}
+                      </Link>
+                    ) : displayName}
+                  </div>
+                  <div className="text-xs text-bauhaus-muted uppercase tracking-wider">
+                    {p.role_type}{props.additional_role ? ` • ${props.additional_role}` : ''}
+                  </div>
+                  {props.background && (
+                    <p className="text-xs text-gray-600 mt-1">{props.background}</p>
+                  )}
                 </div>
+              );
+            })}
+          </div>
+
+          {/* Executive Team */}
+          <h3 className="font-black text-sm uppercase tracking-wider mb-3">Executive Team</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-8">
+            {executives.map((p, i) => {
+              const props = (p.properties || {}) as Record<string, string>;
+              const title = p.role_type === 'ceo' ? 'Chief Executive Officer'
+                : p.role_type === 'cfo' ? 'Chief Financial Officer'
+                : props.title || p.role_type;
+              return (
+                <div key={i} className="border border-bauhaus-black p-3">
+                  <div className="font-black">
+                    {p.gs_id ? (
+                      <Link href={`/entities/${p.gs_id}`} className="hover:text-bauhaus-red">
+                        {p.person_name}
+                      </Link>
+                    ) : p.person_name}
+                  </div>
+                  <div className="text-xs text-bauhaus-muted uppercase tracking-wider">
+                    {title}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Senior Staff */}
+          {seniorStaff.length > 0 && (
+            <>
+              <h3 className="font-black text-sm uppercase tracking-wider mb-3">Senior Staff</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {seniorStaff.map((p, i) => {
+                  const props = (p.properties || {}) as Record<string, string>;
+                  return (
+                    <div key={i} className="border border-gray-200 p-2">
+                      <div className="font-medium text-sm">
+                        {p.gs_id ? (
+                          <Link href={`/entities/${p.gs_id}`} className="hover:text-bauhaus-red">
+                            {p.person_name}
+                          </Link>
+                        ) : p.person_name}
+                      </div>
+                      <div className="text-xs text-bauhaus-muted">
+                        {props.title || p.role_type}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            ))}
+            </>
+          )}
+        </section>
+
+        {/* Board Interlocks */}
+        {interlocks.length > 0 && (
+          <section>
+            <h2 className="text-xl font-black uppercase tracking-widest border-b-2 border-bauhaus-black pb-2 mb-2">
+              Board Interlocks
+            </h2>
+            <p className="text-sm text-bauhaus-muted mb-4">
+              PRF directors share board seats with {interlocks.length} other organisations
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+              {interlocks.map((il, i) => (
+                <div key={i} className="flex items-center gap-2 py-1.5 px-2 border border-gray-200 text-sm">
+                  {il.shared_count > 1 && (
+                    <span className="text-xs bg-bauhaus-red text-white px-1.5 py-0.5 font-mono flex-shrink-0">
+                      {il.shared_count}
+                    </span>
+                  )}
+                  {il.gs_id ? (
+                    <Link href={`/entities/${il.gs_id}`} className="hover:text-bauhaus-red truncate">
+                      {il.canonical_name}
+                    </Link>
+                  ) : (
+                    <span className="truncate">{il.canonical_name}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Data Sources */}
+        <section>
+          <h2 className="text-xl font-black uppercase tracking-widest border-b-2 border-bauhaus-black pb-2 mb-4">
+            Data Sources
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+            <DataSourceCard label="Board & Staff" count={people.length} source="ACNC Register + Web Research" />
+            <DataSourceCard label="JR Portfolio" count={jrPartners.length} source="PRF Portfolio Review PDF" />
+            <DataSourceCard label="Grant Network" count={grantees.length} source="ACNC Annual Report (FY24)" />
+            <DataSourceCard label="ALMA Evidence" count={alma.length} source="JusticeHub ALMA Database" />
+            <DataSourceCard label="Outcomes" count={outcomes.length} source="Annual Report Ingestion" />
+            <DataSourceCard label="Board Interlocks" count={interlocks.length} source="ACNC Cross-Reference" />
+            <DataSourceCard label="Shared Directors" count={interlocks.filter(il => il.shared_count > 1).length} source="Multi-board overlap" />
+            <DataSourceCard label="Proof Tasks" count={portfolio.reduce((s, p) => s + p.pending_tasks, 0)} source="Governed Proof Pipeline" />
           </div>
         </section>
 
-        {/* Opportunities to Dive Deeper */}
+        {/* Opportunities */}
         <section>
           <h2 className="text-xl font-black uppercase tracking-widest border-b-2 border-bauhaus-red pb-2 mb-6 text-bauhaus-red">
             Opportunities
@@ -524,13 +943,25 @@ export default async function PRFIntelligencePage() {
               urgency="low"
             />
             <OpportunityCard
-              title="$320M/yr foundation with deep justice reinvestment commitment"
-              description="PRF is Australia's largest private foundation. The JR portfolio is their signature program. A comprehensive outcomes dashboard is the exact product they'd pay for."
-              action="Send portfolio dashboard as outreach hook — 'here's what we know about your portfolio's impact, here's what's missing'"
-              urgency="high"
+              title={`${grantees.length} funded orgs mapped — ${ccGrantees.length} community-controlled`}
+              description={`Full FY24 ACNC grant network now in CivicGraph. ${ccGrantees.length} community-controlled orgs identified. Cross-reference with government funding for co-investment analysis.`}
+              action="Run co-funding analysis: which PRF grantees also receive government justice/DFV funding?"
+              urgency="medium"
             />
           </div>
         </section>
+
+        {/* Philosophy */}
+        {foundation?.giving_philosophy && (
+          <section>
+            <h2 className="text-xl font-black uppercase tracking-widest border-b-2 border-bauhaus-black pb-2 mb-4">
+              Giving Philosophy
+            </h2>
+            <p className="text-sm text-gray-700 max-w-4xl">
+              {foundation.giving_philosophy}
+            </p>
+          </section>
+        )}
       </div>
     </div>
   );
@@ -562,7 +993,6 @@ function StatusCard({
         </span>
       </div>
       <div className="text-xs text-bauhaus-muted mt-1">{desc}</div>
-      {/* Progress bar */}
       <div className="mt-2 h-1 bg-gray-200">
         <div
           className={`h-1 ${color}`}
@@ -600,6 +1030,26 @@ function EvidenceBadge({ level }: { level: string | null }) {
   const short = level.split('(')[0].trim();
   return (
     <span className={`text-xs px-2 py-0.5 ${color}`}>{short}</span>
+  );
+}
+
+function DataSourceCard({
+  label,
+  count,
+  source,
+}: {
+  label: string;
+  count: number;
+  source: string;
+}) {
+  return (
+    <div className="border border-gray-200 p-2">
+      <div className="flex items-baseline gap-1">
+        <span className="font-mono font-bold">{count}</span>
+        <span className="text-bauhaus-muted">{label}</span>
+      </div>
+      <div className="text-bauhaus-muted mt-0.5">{source}</div>
+    </div>
   );
 }
 
