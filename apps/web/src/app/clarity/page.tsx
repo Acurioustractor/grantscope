@@ -121,8 +121,8 @@ async function getData() {
               FROM political_donations`,
     }), 20000),
     safe(db.rpc('exec_sql', {
-      query: `SELECT COUNT(*) as total, COUNT(acnc_abn) as with_abn,
-              ROUND(COUNT(acnc_abn)::numeric / NULLIF(COUNT(*), 0) * 100, 1) as pct
+      query: `SELECT COUNT(*) as total, COUNT(gs_entity_id) as linked,
+              ROUND(COUNT(gs_entity_id)::numeric / NULLIF(COUNT(*), 0) * 100, 1) as pct
               FROM foundations`,
     })),
   ]);
@@ -130,6 +130,7 @@ async function getData() {
   // Batch 2: use estimated counts (instant) + smaller queries
   const [
     estCountsResult,
+    allTablesResult,
     outcomesResult,
     untaggedResult,
     crossSystemResult,
@@ -141,6 +142,13 @@ async function getData() {
               FROM pg_stat_user_tables
               WHERE schemaname = 'public'
                 AND relname IN ('gs_entities', 'gs_relationships')`,
+    })),
+    // ALL tables with estimated row counts
+    safe(db.rpc('exec_sql', {
+      query: `SELECT relname as table_name, reltuples::bigint as est_rows
+              FROM pg_class
+              WHERE relkind = 'r' AND relnamespace = 'public'::regnamespace AND reltuples > 0
+              ORDER BY reltuples DESC`,
     })),
     safe(db.rpc('exec_sql', {
       query: `SELECT jurisdiction as state, COUNT(DISTINCT metric_name) as metric_types, COUNT(*) as total
@@ -180,6 +188,7 @@ async function getData() {
     foundations: parseFirst(foundationResult),
     entities: parseFirst(entityCountResult),
     relationships: parseFirst(relCountResult),
+    allTables: parse(allTablesResult) as { table_name: string; est_rows: number }[],
     outcomes: parse(outcomesResult) as { state: string; metric_types: number; total: number }[],
     untagged: parse(untaggedResult) as { state: string; untagged: number }[],
     crossSystem: parse(crossSystemResult) as { system_count: number; entities: number }[],
@@ -280,91 +289,149 @@ function generateFindings(data: Awaited<ReturnType<typeof getData>>): Finding[] 
   return findings;
 }
 
-/* ─── Full Platform Inventory ─────────────────────── */
+/* ─── Domain classifier — auto-classifies ALL tables ─── */
 
-const DOMAINS = {
-  'Entity Graph': [
-    { table: 'gs_entities', records: '566K', description: 'Central entity register — orgs, people, government bodies', link: 'abn' },
-    { table: 'gs_relationships', records: '1.5M', description: 'Edges: contracts, grants, donations, directorships, lobbying', link: 'entity_id' },
-    { table: 'entity_xref', records: '1.2M', description: 'Cross-reference map linking source records to entities', link: 'entity_id' },
-    { table: 'gs_entity_aliases', records: '17K', description: 'Alternative names for entity matching', link: 'entity_id' },
-    { table: 'entity_identifiers', records: '31K', description: 'ABN, ACN, ORIC ICN, and other identifiers per entity', link: 'entity_id' },
-  ],
-  'Registries (19.3M)': [
-    { table: 'abr_registry', records: '19.9M', description: 'Full Australian Business Register — every ABN in Australia', link: 'abn' },
-    { table: 'asic_companies', records: '~2M', description: 'ASIC company register — directors, addresses, status', link: 'abn' },
-    { table: 'acnc_charities', records: '64K', description: 'ACNC charity register — purposes, beneficiaries, size', link: 'abn' },
-    { table: 'acnc_ais', records: '~250K', description: 'ACNC Annual Information Statements — revenue, staff, volunteers', link: 'abn' },
-    { table: 'acnc_programs', records: '98K', description: 'Programs run by registered charities', link: 'fk' },
-    { table: 'oric_corporations', records: '7.4K', description: 'ORIC Indigenous corporation register', link: 'abn' },
-    { table: 'asx_companies', records: '2.3K', description: 'ASX-listed companies', link: 'abn' },
-  ],
-  'Procurement ($200B+)': [
-    { table: 'austender_contracts', records: '791K', description: 'Federal AusTender procurement — buyer, supplier, value, dates', link: 'abn' },
-    { table: 'state_tenders', records: '200K', description: 'NSW + QLD state procurement contracts', link: 'abn' },
-    { table: 'ndis_registered_providers', records: '49K', description: 'NDIS registered service providers', link: 'abn' },
-    { table: 'ndis_active_providers', records: '~30K', description: 'Currently active NDIS providers with service types', link: 'abn' },
-  ],
-  'Funding & Grants': [
-    { table: 'justice_funding', records: '145K', description: 'Justice + social sector grants — state & federal, 9 topics', link: 'entity_id' },
-    { table: 'grant_opportunities', records: '30K', description: 'Open + closed grant rounds — amounts, deadlines, categories', link: 'none' },
-    { table: 'foundations', records: '10.8K', description: 'Philanthropic foundations — giving, focus areas, programs', link: 'abn' },
-    { table: 'foundation_programs', records: '~2.5K', description: 'Foundation grant programs with eligibility and focus', link: 'fk' },
-    { table: 'research_grants', records: '~5K', description: 'ARC/NHMRC research grants', link: 'none' },
-  ],
-  'Influence & Accountability': [
-    { table: 'political_donations', records: '313K', description: 'AEC political donation disclosures — donor, party, amount', link: 'abn' },
-    { table: 'ato_tax_transparency', records: '24K', description: 'ATO corporate tax transparency — income, tax payable', link: 'abn' },
-    { table: 'civic_hansard', records: '135', description: 'QLD parliamentary Hansard mentions of justice programs', link: 'none' },
-    { table: 'civic_ministerial_diaries', records: '1.7K', description: 'Ministerial diary entries — who ministers meet', link: 'none' },
-    { table: 'civic_ministerial_statements', records: '607', description: 'Ministerial media statements on youth justice', link: 'none' },
-    { table: 'oversight_recommendations', records: '43', description: 'Oversight body recommendations (QLD Inspector-General etc)', link: 'none' },
-  ],
-  'People & Governance': [
-    { table: 'person_roles', records: '340K', description: 'Board members, directors, trustees — ACNC, ASIC, foundations', link: 'entity_id' },
-    { table: 'person_identity_map', records: '~9K', description: 'De-duplicated person identities across sources', link: 'fk' },
-    { table: 'person_entity_links', records: '~1.5K', description: 'Verified person-to-entity connections', link: 'entity_id' },
-  ],
-  'Evidence & Outcomes': [
-    { table: 'alma_interventions', records: '1.4K', description: 'ALMA evidence-based programs — 10 types, linked to orgs', link: 'entity_id' },
-    { table: 'alma_evidence', records: '570', description: 'Evidence records — methodology, sample size, effect size', link: 'fk' },
-    { table: 'alma_outcomes', records: '506', description: 'Measured outcomes per intervention', link: 'fk' },
-    { table: 'outcomes_metrics', records: '9.2K', description: 'ROGS + AIHW structured indicators — rates, costs, trends', link: 'none' },
-    { table: 'aihw_child_protection', records: '3K', description: 'AIHW child protection notifications and substantiations', link: 'none' },
-    { table: 'crime_stats_lga', records: '58K', description: 'Crime statistics by LGA — offence types, counts, rates', link: 'fk' },
-  ],
-  'Social & Disability': [
-    { table: 'ndis_utilisation', records: '144K', description: 'NDIS plan utilisation by service type, state, cohort', link: 'none' },
-    { table: 'ndis_participants', records: '67K', description: 'NDIS participant counts by LGA, age, disability type', link: 'none' },
-    { table: 'ndis_participants_lga', records: '8.3K', description: 'NDIS participants aggregated by LGA', link: 'fk' },
-    { table: 'ndis_market_concentration', records: '~12K', description: 'NDIS market share by provider and region', link: 'none' },
-    { table: 'dss_payment_demographics', records: '106K', description: 'Federal welfare payment demographics by region', link: 'none' },
-    { table: 'social_enterprises', records: '~800', description: 'Social enterprise directory', link: 'abn' },
-    { table: 'acara_schools', records: '9.8K', description: 'School profiles — ICSEA, enrolment, Indigenous %', link: 'none' },
-  ],
-  'Geography & Disadvantage': [
-    { table: 'postcode_geo', records: '12K', description: 'Postcode → SA2, LGA, remoteness classification', link: 'none' },
-    { table: 'lga_cross_system_stats', records: '360', description: 'Per-LGA aggregates across all data systems', link: 'fk' },
-  ],
-} as const;
+interface TableEntry {
+  table: string;
+  records: number;
+}
 
-const DOMAIN_COLORS: Record<string, string> = {
-  'Entity Graph': 'bg-bauhaus-black',
-  'Registries (19.3M)': 'bg-green-500',
-  'Procurement ($200B+)': 'bg-bauhaus-blue',
-  'Funding & Grants': 'bg-yellow-500',
-  'Influence & Accountability': 'bg-bauhaus-red',
-  'People & Governance': 'bg-purple-500',
-  'Evidence & Outcomes': 'bg-pink-500',
-  'Social & Disability': 'bg-teal-500',
-  'Geography & Disadvantage': 'bg-orange-500',
-};
+const DOMAIN_RULES: { domain: string; color: string; patterns: RegExp[] }[] = [
+  { domain: 'Entity Graph', color: 'bg-bauhaus-black', patterns: [
+    /^gs_entit/, /^gs_relationship/, /^entity_/, /^canonical_entit/, /^donor_entity/,
+  ]},
+  { domain: 'Registries', color: 'bg-green-500', patterns: [
+    /^abr_/, /^asic_/, /^acnc_/, /^oric_/, /^asx_/, /^nz_charit/,
+  ]},
+  { domain: 'Procurement', color: 'bg-bauhaus-blue', patterns: [
+    /^austender/, /^state_tender/, /^procurement_/, /^goods_/,
+  ]},
+  { domain: 'Funding & Grants', color: 'bg-yellow-500', patterns: [
+    /^justice_fund/, /^grant_/, /^foundation/, /^research_grant/, /^funding_/,
+    /^saved_grant/, /^saved_found/, /^money_flow/,
+  ]},
+  { domain: 'Influence & Accountability', color: 'bg-bauhaus-red', patterns: [
+    /^political_/, /^ato_/, /^civic_/, /^oversight_/, /^lobbying/,
+    /^discrimination/, /^policy_event/,
+  ]},
+  { domain: 'People & Governance', color: 'bg-purple-500', patterns: [
+    /^person_/, /^linkedin_/, /^ghl_/, /^contact_/, /^org_contact/,
+    /^enrichment_ready/, /^fellows/,
+  ]},
+  { domain: 'Evidence & Outcomes', color: 'bg-pink-500', patterns: [
+    /^alma_/, /^outcomes_/, /^aihw_/, /^crime_stat/, /^rogs_/,
+    /^justicehub/, /^justice_matrix/, /^international_prog/,
+  ]},
+  { domain: 'Social & Disability', color: 'bg-teal-500', patterns: [
+    /^ndis_/, /^dss_/, /^social_enter/, /^acara_/, /^community_/,
+    /^nt_communit/, /^youth_deten/, /^disability/,
+  ]},
+  { domain: 'Geography', color: 'bg-orange-500', patterns: [
+    /^postcode_/, /^seifa_/, /^sa[23]_/, /^lga_/, /^agil_/,
+  ]},
+  { domain: 'Platform & Ops', color: 'bg-gray-400', patterns: [
+    /^agent_/, /^webhook/, /^privacy_/, /^api_/, /^pm2_/, /^sync_/,
+    /^site_health/, /^health_alert/, /^discover/, /^page_view/,
+    /^app_/, /^user_/, /^users$/, /^ce_/, /^integration_/,
+    /^processing_/, /^migration_/, /^subscription/, /^pending_sub/,
+  ]},
+  { domain: 'Content & Knowledge', color: 'bg-indigo-400', patterns: [
+    /^knowledge_/, /^project_/, /^notion_/, /^blog_/, /^article/,
+    /^media_/, /^cms_/, /^wiki_/, /^story/, /^content_/, /^transcript/,
+    /^sprint_/, /^idea_/, /^exa_/, /^intelligence_/, /^signal_/,
+    /^review_/, /^pulse_/, /^campaign_/, /^el_/, /^portrait/, /^photo/,
+    /^quote/, /^ralph_/, /^agentic_/, /^daily_reflect/,
+  ]},
+  { domain: 'Finance & Ops', color: 'bg-amber-500', patterns: [
+    /^xero_/, /^receipt_/, /^bookkeeping/, /^dext_/, /^email_/,
+    /^gmail_/, /^bgfit_/, /^financial_/, /^revenue_/, /^cashflow/,
+    /^vendor_/, /^fundrais/, /^calendar_/, /^remind/, /^message/,
+    /^communication/, /^org_/, /^organization/, /^team_/, /^services/,
+    /^registered_service/, /^tour_/, /^studio_/, /^telegram_/,
+    /^charity_claim/, /^credential/, /^token/, /^public_/,
+    /^imessage_/, /^memo/, /^data_source/, /^goal/, /^metric/,
+    /^location/, /^event/, /^facility/, /^resource_alloc/, /^compliance/,
+    /^role_tax/, /^repo_/, /^ecosystem_/, /^art_innov/, /^gov_prog/,
+    /^clearinghouse/, /^partner_/, /^pmpp/, /^recommend/,
+    /^scraped_/, /^coe_/, /^learned_/, /^collection_/, /^author/,
+    /^org_profile/, /^org_member/, /^org_grant/, /^org_program/,
+    /^org_milestone/, /^org_leader/, /^org_referral/, /^org_session/,
+    /^org_pipeline/, /^org_compliance/, /^org_action/, /^org_participant/,
+    /^public_spend/, /^platform_/, /^profile/, /^tab_/,
+  ]},
+];
+
+function classifyTable(name: string): string {
+  for (const rule of DOMAIN_RULES) {
+    if (rule.patterns.some(p => p.test(name))) return rule.domain;
+  }
+  return 'Other';
+}
+
+// Tables from other projects/products that share this Supabase instance
+const EXCLUDED_TABLES = [
+  // ACT (A Curious Tractor) business ops
+  /^xero_/, /^receipt/, /^bookkeeping/, /^dext_/, /^ghl_/, /^bgfit_/, /^cashflow/,
+  /^vendor_/, /^financial_/, /^revenue_/, /^email_financial/, /^email_response/,
+  // Empathy Ledger
+  /^el_/, /^story/, /^portrait/, /^photo/, /^fellow/, /^tour_/, /^partner_/,
+  /^review_video/, /^review_media/, /^review_curated/, /^review_project/, /^review_year/,
+  /^storyteller_/, /^synced_stor/,
+  // Personal productivity / other apps
+  /^telegram_/, /^imessage_/, /^gmail_/, /^calendar_event/, /^reminder/,
+  /^notion_/, /^sprint_/, /^daily_reflect/, /^idea_board/, /^agentic_/,
+  /^ralph_/, /^studio_/, /^cms_/, /^wiki_/, /^blog_/, /^memory_episode/,
+  // Legacy CRM / comms
+  /^linkedin_/, /^communication/, /^contact_intel/, /^contact_cadence/,
+  /^contact_enrichment/, /^contact_project/, /^contact_support/, /^contact_vote/,
+  /^contact_entity/, /^enrichment_rev/, /^profile_sync/, /^profile_appear/,
+  /^org_session/, /^org_participant/, /^org_pipeline/, /^org_action/,
+  /^org_compliance/, /^org_referral/, /^org_leadership/, /^org_milestone/,
+  /^org_member/, /^org_grant_budget/, /^org_program/, /^org_profile/,
+  /^organization_member/, /^organization_cap/, /^organizations_prof/,
+  // Platform internals
+  /^privacy_/, /^webhook_delivery/, /^pm2_/, /^sync_/, /^processing_job/,
+  /^migration_/, /^app_config/, /^app_user/, /^user_identity/, /^user_profile/,
+  /^user_gamif/, /^ce_user/, /^ce_metric/, /^auth/, /^token/,
+];
+
+function isExcluded(name: string): boolean {
+  return EXCLUDED_TABLES.some(p => p.test(name));
+}
+
+function buildDomains(tables: { table_name: string; est_rows: number }[]): Record<string, TableEntry[]> {
+  const domains: Record<string, TableEntry[]> = {};
+  for (const t of tables) {
+    if (isExcluded(t.table_name)) continue;
+    const domain = classifyTable(t.table_name);
+    if (!domains[domain]) domains[domain] = [];
+    domains[domain].push({ table: t.table_name, records: Number(t.est_rows) });
+  }
+  // Sort each domain by records descending
+  for (const entries of Object.values(domains)) {
+    entries.sort((a, b) => b.records - a.records);
+  }
+  return domains;
+}
+
+function domainColor(domain: string): string {
+  return DOMAIN_RULES.find(r => r.domain === domain)?.color ?? 'bg-gray-300';
+}
+
+function fmtRows(n: number): string {
+  if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
+  if (n >= 1e3) return `${(n / 1e3).toFixed(1)}K`;
+  return String(n);
+}
 
 /* ─── Page ────────────────────────────────────────── */
 
 export default async function ClarityPage() {
   const data = await getData();
   const findings = generateFindings(data);
+
+  // Build full inventory from live data
+  const domains = buildDomains(data.allTables);
 
   // Build topic × state matrix
   const topics = [...new Set(data.topicMatrix.map(t => t.topic))].sort();
@@ -417,7 +484,7 @@ export default async function ClarityPage() {
       table: 'foundations',
       records: Number(data.foundations.total ?? 0),
       linkage_pct: Number(data.foundations.pct ?? 0),
-      description: 'Philanthropic foundations linked to ACNC charity register via ABN',
+      description: 'Philanthropic foundations linked to entity graph via ABN',
     },
   ];
 
@@ -446,56 +513,61 @@ export default async function ClarityPage() {
       <section className="mb-14">
         <h2 className="text-xl font-black text-bauhaus-black mb-2 uppercase tracking-widest">The Full Platform</h2>
         <p className="text-sm text-bauhaus-muted mb-6 max-w-2xl">
-          {fmt(Number(data.entities.total ?? 0))} entities connected by {fmt(Number(data.relationships.total ?? 0))} relationships,
-          drawn from {Object.keys(DOMAINS).reduce((s, d) => s + DOMAINS[d as keyof typeof DOMAINS].length, 0)} data systems
-          across government registries, procurement, funding, influence, and evidence.
-          All connected through ABN as the universal join key.
+          {fmt(Number(data.entities.total ?? 0))} entities connected by {fmt(Number(data.relationships.total ?? 0))} relationships
+          across {Object.values(domains).reduce((s, t) => s + t.length, 0)} tables and {fmt(Object.values(domains).reduce((s, ts) => s + ts.reduce((a, t) => a + t.records, 0), 0))} total records.
+          Live counts from the database — not hardcoded.
         </p>
 
-        {Object.entries(DOMAINS).map(([domain, tables]) => (
-          <div key={domain} className="mb-6">
-            <h3 className="text-sm font-black text-bauhaus-black uppercase tracking-widest mb-2 flex items-center gap-2">
-              <span className={`inline-block w-3 h-3 rounded-full ${DOMAIN_COLORS[domain as keyof typeof DOMAIN_COLORS]}`} />
+        {/* Summary cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-0 mb-8">
+          {Object.entries(domains).map(([domain, tables], i) => {
+            const totalRows = tables.reduce((s, t) => s + t.records, 0);
+            return (
+              <div key={domain} className={`border-4 border-bauhaus-black p-3 bg-white ${i > 0 ? 'border-l-0' : ''} ${i >= 6 ? 'border-t-0' : i >= 4 ? 'sm:border-t-0' : i >= 2 ? 'max-sm:border-t-0' : ''}`}>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className={`inline-block w-2.5 h-2.5 rounded-full ${domainColor(domain)}`} />
+                  <span className="text-[10px] font-black text-bauhaus-black uppercase tracking-widest leading-tight">{domain}</span>
+                </div>
+                <div className="text-lg font-black text-bauhaus-black">{fmtRows(totalRows)}</div>
+                <div className="text-[10px] text-bauhaus-muted">{tables.length} tables</div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Full table listing per domain */}
+        {Object.entries(domains).map(([domain, tables]) => (
+          <details key={domain} className="mb-4 group" open={['Entity Graph', 'Registries', 'Procurement', 'Funding & Grants', 'Influence & Accountability', 'People & Governance', 'Evidence & Outcomes', 'Social & Disability', 'Geography'].includes(domain)}>
+            <summary className="text-sm font-black text-bauhaus-black uppercase tracking-widest mb-2 flex items-center gap-2 cursor-pointer list-none">
+              <span className={`inline-block w-3 h-3 rounded-full ${domainColor(domain)}`} />
               {domain}
-            </h3>
+              <span className="text-bauhaus-muted font-mono text-xs font-normal ml-1">
+                {tables.length} tables &middot; {fmtRows(tables.reduce((s, t) => s + t.records, 0))} rows
+              </span>
+              <span className="text-bauhaus-muted text-xs ml-auto group-open:rotate-90 transition-transform">&#9654;</span>
+            </summary>
             <div className="border-4 border-bauhaus-black bg-white overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
                   <tr className="bg-bauhaus-black text-white">
                     <th className="text-left p-2 font-black uppercase tracking-widest">Table</th>
                     <th className="text-right p-2 font-black uppercase tracking-widest">Records</th>
-                    <th className="text-left p-2 font-black uppercase tracking-widest">What It Contains</th>
-                    <th className="text-center p-2 font-black uppercase tracking-widest">Link</th>
+                    <th className="text-right p-2 font-black uppercase tracking-widest">Size</th>
                   </tr>
                 </thead>
                 <tbody>
                   {tables.map((t, i) => (
                     <tr key={t.table} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                       <td className="p-2 font-mono font-bold text-bauhaus-black">{t.table}</td>
-                      <td className="p-2 text-right font-mono">{t.records}</td>
-                      <td className="p-2 text-bauhaus-muted">{t.description}</td>
-                      <td className="p-2 text-center">
-                        <span className={`inline-block w-2 h-2 rounded-full ${
-                          t.link === 'abn' ? 'bg-green-500' :
-                          t.link === 'entity_id' ? 'bg-bauhaus-blue' :
-                          t.link === 'fk' ? 'bg-yellow-500' :
-                          'bg-gray-300'
-                        }`} title={t.link} />
-                      </td>
+                      <td className="p-2 text-right font-mono">{fmt(t.records)}</td>
+                      <td className="p-2 text-right font-mono text-bauhaus-muted">{fmtRows(t.records)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </div>
+          </details>
         ))}
-        <p className="text-xs text-bauhaus-muted">
-          Link key:{' '}
-          <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-1 align-middle" /> ABN join{' '}
-          <span className="inline-block w-2 h-2 rounded-full bg-bauhaus-blue mr-1 ml-2 align-middle" /> Entity ID FK{' '}
-          <span className="inline-block w-2 h-2 rounded-full bg-yellow-500 mr-1 ml-2 align-middle" /> Other FK{' '}
-          <span className="inline-block w-2 h-2 rounded-full bg-gray-300 mr-1 ml-2 align-middle" /> Standalone
-        </p>
       </section>
 
       {/* ─── Section 2: Interactive Schema Graph ──────── */}
