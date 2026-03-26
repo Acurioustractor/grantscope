@@ -3,6 +3,7 @@ import { safeOptionalData } from '@/lib/optional-data';
 import { createGovernedProofService } from '@/lib/governed-proof/service';
 import { getProofPack } from '@/lib/governed-proof/presentation';
 import { getPlaceBrief } from '@/lib/services/place-brief-service';
+import { getPlaceDataLayers } from '@/lib/services/place-data-service';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 
@@ -90,7 +91,7 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
   const [{ data: geoData }, { data: seifaData }, { data: entities }, { data: socialEnterprises }, governedProofBundle, { data: grantData }] = await Promise.all([
     supabase
       .from('postcode_geo')
-      .select('postcode, locality, state, remoteness_2021, sa2_code, sa2_name, sa3_name, lga_name')
+      .select('postcode, locality, state, remoteness_2021, sa2_code, sa2_name, sa3_name, lga_name, lga_code')
       .eq('postcode', postcode)
       .not('state', 'is', null)
       .limit(1),
@@ -379,7 +380,11 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
   }
 
   // Place Brief — EL transcripts + ALMA interventions + alignment score
-  const placeBrief = await getPlaceBrief(supabase, postcode, geo.locality, geo.state);
+  // Place Data Layers — crime, schools, NDIS participants, DSS payments
+  const [placeBrief, dataLayers] = await Promise.all([
+    getPlaceBrief(supabase, postcode, geo.locality, geo.state),
+    getPlaceDataLayers(supabase, postcode, geo.lga_name, geo.lga_code, geo.state),
+  ]);
 
   // Filter grants relevant to this area (by state match or national scope)
   const now = new Date().toISOString().slice(0, 10);
@@ -910,6 +915,114 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
               >
                 Browse all grants {stateCode ? `in ${stateCode}` : ''} &rarr;
               </Link>
+            </Section>
+          )}
+
+          {/* Schools */}
+          {dataLayers.schools.length > 0 && (
+            <Section title={`Schools (${dataLayers.schools.length})`}>
+              <p className="text-xs text-bauhaus-muted mb-3">
+                ACARA school profiles in postcode {postcode}. ICSEA measures educational advantage (national avg 1000).
+              </p>
+              <div className="space-y-0">
+                {dataLayers.schools.map((s, i) => (
+                  <div key={i} className="flex items-center justify-between py-3 border-b-2 border-bauhaus-black/5 last:border-b-0">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-bauhaus-black text-sm truncate">{s.school_name}</div>
+                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                        <span className="text-[10px] px-1.5 py-0.5 font-bold border border-bauhaus-black/20 text-bauhaus-muted">{s.school_sector}</span>
+                        <span className="text-[10px] px-1.5 py-0.5 font-bold border border-bauhaus-black/20 text-bauhaus-muted">{s.school_type}</span>
+                        {s.indigenous_pct != null && s.indigenous_pct > 0 && (
+                          <span className={`text-[10px] px-1.5 py-0.5 font-bold border ${s.indigenous_pct >= 30 ? 'border-bauhaus-red text-bauhaus-red' : 'border-bauhaus-black/20 text-bauhaus-muted'}`}>
+                            {Math.round(s.indigenous_pct)}% Indigenous
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right ml-4 shrink-0">
+                      {s.icsea_value && (
+                        <div className={`font-black text-sm ${s.icsea_value < 900 ? 'text-bauhaus-red' : s.icsea_value < 1000 ? 'text-orange-600' : 'text-bauhaus-black'}`}>
+                          ICSEA {s.icsea_value}
+                        </div>
+                      )}
+                      {s.total_enrolments && (
+                        <div className="text-[10px] text-bauhaus-muted font-bold">{s.total_enrolments.toLocaleString()} students</div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {/* Crime Statistics */}
+          {dataLayers.crime && dataLayers.crime.offences.length > 0 && (
+            <Section title={`Crime — ${dataLayers.crime.lga_name} LGA`}>
+              <p className="text-xs text-bauhaus-muted mb-3">
+                Reported incidents by offence group{dataLayers.crime.year_period ? ` (${dataLayers.crime.year_period})` : ''}. Source: state crime statistics agencies.
+              </p>
+              <div className="space-y-0">
+                {dataLayers.crime.offences.map((o, i) => (
+                  <div key={i} className="flex items-center justify-between py-2.5 border-b-2 border-bauhaus-black/5 last:border-b-0">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-bauhaus-black text-sm">{o.offence_group}</div>
+                      {o.rate_per_100k != null && (
+                        <div className="text-[10px] text-bauhaus-muted font-bold">{Math.round(o.rate_per_100k)} per 100K</div>
+                      )}
+                    </div>
+                    <div className="text-right ml-4 shrink-0">
+                      <div className="font-black text-bauhaus-black text-sm">{o.total_incidents.toLocaleString()}</div>
+                      {o.two_year_trend_pct != null && (
+                        <div className={`text-[10px] font-bold ${o.two_year_trend_pct > 10 ? 'text-bauhaus-red' : o.two_year_trend_pct < -10 ? 'text-money' : 'text-bauhaus-muted'}`}>
+                          {o.two_year_trend_pct > 0 ? '+' : ''}{Math.round(o.two_year_trend_pct)}% 2yr
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {/* DSS Welfare Payments */}
+          {dataLayers.dss_payments.length > 0 && (
+            <Section title="Welfare & Social Security">
+              <p className="text-xs text-bauhaus-muted mb-3">
+                DSS payment recipients in this area. Higher counts may indicate service demand and community need.
+              </p>
+              <div className="space-y-0">
+                {dataLayers.dss_payments.slice(0, 10).map((p, i) => (
+                  <div key={i} className="flex items-center justify-between py-2.5 border-b-2 border-bauhaus-black/5 last:border-b-0">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-bauhaus-black text-sm">{p.payment_type}</div>
+                    </div>
+                    <div className="text-right ml-4 shrink-0">
+                      <div className="font-black text-bauhaus-black text-sm">{p.recipient_count.toLocaleString()}</div>
+                      {p.indigenous_count != null && p.indigenous_count > 0 && (
+                        <div className="text-[10px] font-bold text-bauhaus-muted">{p.indigenous_count.toLocaleString()} Indigenous</div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {/* NDIS Participants */}
+          {dataLayers.ndis_participants && (
+            <Section title="NDIS Participants">
+              <div className="border-2 border-bauhaus-black p-4 bg-bauhaus-canvas">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">{dataLayers.ndis_participants.lga_name} LGA</div>
+                    <div className="text-2xl font-black text-bauhaus-black">{dataLayers.ndis_participants.participant_count.toLocaleString()}</div>
+                    <div className="text-[10px] font-bold text-bauhaus-muted">active participants</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest">{dataLayers.ndis_participants.reporting_period}</div>
+                  </div>
+                </div>
+              </div>
             </Section>
           )}
 
