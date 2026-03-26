@@ -22,8 +22,14 @@ const config: Config = {
       },
       fontFamily: {
         sans: [
-          '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto',
+          '"DM Sans"', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"',
           '"Helvetica Neue"', 'Arial', 'sans-serif',
+        ],
+        display: [
+          'Satoshi', '"DM Sans"', '-apple-system', 'sans-serif',
+        ],
+        mono: [
+          '"JetBrains Mono"', 'ui-monospace', 'monospace',
         ],
       },
     },

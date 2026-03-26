@@ -36,6 +36,16 @@ cd apps/web && npx tsc --noEmit
 
 Start implementing immediately. Only enter plan mode when explicitly asked. Default to action.
 
+## Rule #6: Architecture Constraints (Stop Guessing)
+
+These defaults prevent the #1 friction source — picking the wrong approach and rewriting:
+
+- **In-app, not CLI.** New features go into the Next.js app as pages/components. Never build CLI tools or standalone scripts for user-facing features unless explicitly asked.
+- **Server Components by default.** Only use `"use client"` when the component needs interactivity (onClick, useState, useEffect). Never use `next/dynamic` in Server Components.
+- **Bulk SQL, not API loops.** For data operations touching 50+ rows, use a single SQL query via gsql.mjs or psql, not individual API calls or Supabase SDK loops.
+- **Ask before large queries.** Any ILIKE or JOIN on tables >100K rows needs pagination or a targeted WHERE clause. Never run unfiltered scans on gs_entities, gs_relationships, or austender_contracts.
+- **When unsure, ask.** If the approach could go two ways (CLI vs UI, server vs client, SQL vs API), ask in one sentence before building.
+
 ## Rule #5: Protect Context — Clear, Don't Compact
 
 Auto-compaction is lossy and compounds — each compression degrades context. After 2-3 compactions you're working with garbage. **This is the #1 productivity killer in this project.**
@@ -71,8 +81,14 @@ Auto-compaction is lossy and compounds — each compression degrades context. Af
 
 ## Design System
 
-Bauhaus-inspired: `border-4 border-bauhaus-black`, `font-black uppercase tracking-widest`
-Colors: `bauhaus-black`, `bauhaus-red`, `bauhaus-blue`, `bauhaus-muted`
+Always read `DESIGN.md` before making any visual or UI decisions.
+All font choices, colors, spacing, and aesthetic direction are defined there.
+Do not deviate without explicit user approval.
+In QA mode, flag any code that doesn't match DESIGN.md.
+
+**Quick reference:** Bauhaus Industrial — Satoshi (display), DM Sans (body), JetBrains Mono (code).
+`border-4 border-bauhaus-black`, `font-black uppercase tracking-widest`, zero border-radius everywhere.
+Colors: `bauhaus-black` #121212, `bauhaus-red` #D02020, `bauhaus-blue` #1040C0, `bauhaus-yellow` #F0C020, `bauhaus-canvas` #F0F0F0.
 
 ## Key Tables Reference
 
