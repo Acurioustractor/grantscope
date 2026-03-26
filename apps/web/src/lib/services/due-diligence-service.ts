@@ -78,6 +78,11 @@ export interface AlmaInterventionSummary {
   geography: string[] | null;
   portfolio_score: number | null;
   serves_youth_justice: boolean;
+  years_operating: number | null;
+  current_funding: string | null;
+  website: string | null;
+  evidence_count: number;
+  outcome_names: string[];
 }
 
 export interface PlaceContext {
@@ -214,10 +219,11 @@ export async function assembleDueDiligencePack(gsId: string): Promise<DueDiligen
           .limit(100))
       : Promise.resolve(null),
 
-    // ALMA interventions
+    // ALMA interventions with evidence + outcome counts
     safe(supabase.from('alma_interventions')
-      .select('name, type, evidence_level, target_cohort, geography, portfolio_score, serves_youth_justice')
-      .eq('gs_entity_id', entity.id)),
+      .select('id, name, type, evidence_level, target_cohort, geography, portfolio_score, serves_youth_justice, years_operating, current_funding, website')
+      .eq('gs_entity_id', entity.id)
+      .neq('data_quality', 'quarantined')),
 
     // Place geo
     entity.postcode
@@ -285,7 +291,60 @@ export async function assembleDueDiligencePack(gsId: string): Promise<DueDiligen
     donationsByParty[party] = (donationsByParty[party] || 0) + (r.amount || 0);
   }
 
-  const almaInterventions = (almaResult || []) as AlmaInterventionSummary[];
+  // Enrich ALMA interventions with evidence + outcome counts
+  const almaRaw = (almaResult || []) as Array<Record<string, unknown>>;
+  const almaIds = almaRaw.map(a => a.id as string).filter(Boolean);
+
+  let evidenceCounts: Record<string, number> = {};
+  let outcomesByIntervention: Record<string, string[]> = {};
+
+  if (almaIds.length > 0) {
+    const [evResult, outResult] = await Promise.all([
+      safe(supabase.from('alma_intervention_evidence')
+        .select('intervention_id')
+        .in('intervention_id', almaIds)),
+      safe(supabase.from('alma_intervention_outcomes')
+        .select('intervention_id, outcome_id')
+        .in('intervention_id', almaIds)),
+    ]);
+
+    for (const row of (evResult || []) as Array<{ intervention_id: string }>) {
+      evidenceCounts[row.intervention_id] = (evidenceCounts[row.intervention_id] || 0) + 1;
+    }
+
+    // Fetch outcome names for the outcome_ids
+    const outcomeIds = [...new Set(((outResult || []) as Array<{ intervention_id: string; outcome_id: string }>).map(r => r.outcome_id))];
+    let outcomeNameMap: Record<string, string> = {};
+    if (outcomeIds.length > 0) {
+      const namesResult = await safe(supabase.from('alma_outcomes').select('id, name').in('id', outcomeIds));
+      for (const row of (namesResult || []) as Array<{ id: string; name: string }>) {
+        outcomeNameMap[row.id] = row.name;
+      }
+    }
+
+    for (const row of (outResult || []) as Array<{ intervention_id: string; outcome_id: string }>) {
+      if (!outcomesByIntervention[row.intervention_id]) outcomesByIntervention[row.intervention_id] = [];
+      const name = outcomeNameMap[row.outcome_id];
+      if (name && !outcomesByIntervention[row.intervention_id].includes(name)) {
+        outcomesByIntervention[row.intervention_id].push(name);
+      }
+    }
+  }
+
+  const almaInterventions: AlmaInterventionSummary[] = almaRaw.map(a => ({
+    name: a.name as string,
+    type: a.type as string | null,
+    evidence_level: a.evidence_level as string | null,
+    target_cohort: Array.isArray(a.target_cohort) ? (a.target_cohort as string[]).join(', ') : (a.target_cohort as string | null),
+    geography: a.geography as string[] | null,
+    portfolio_score: a.portfolio_score as number | null,
+    serves_youth_justice: a.serves_youth_justice as boolean,
+    years_operating: a.years_operating as number | null,
+    current_funding: a.current_funding as string | null,
+    website: a.website as string | null,
+    evidence_count: evidenceCounts[a.id as string] || 0,
+    outcome_names: outcomesByIntervention[a.id as string] || [],
+  }));
 
   const placeGeoRow = ((placeGeoResult || []) as Array<Record<string, unknown>>)[0];
   const seifaRow = ((seifaResult || []) as Array<Record<string, unknown>>)[0];

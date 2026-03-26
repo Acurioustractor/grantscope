@@ -464,16 +464,58 @@ export async function buildDueDiligencePdf(pack: DueDiligencePack): Promise<{ by
 
   drawSection('Evidence Alignment \u2014 Australian Living Map of Alternatives (ALMA)');
   if (pack.alma_interventions.length > 0) {
+    const totalEvidence = pack.alma_interventions.reduce((s, a) => s + a.evidence_count, 0);
+    const totalOutcomes = new Set(pack.alma_interventions.flatMap(a => a.outcome_names)).size;
+    const withEvidence = pack.alma_interventions.filter(a => a.evidence_count > 0).length;
+
     drawStatCards([
       { label: 'ALMA Interventions', value: String(pack.alma_interventions.length), color: C.red },
-      { label: 'Youth Justice', value: String(pack.alma_interventions.filter(a => a.serves_youth_justice).length), filled: true },
+      { label: 'Evidence Records', value: String(totalEvidence), filled: true },
+      { label: 'Distinct Outcomes', value: String(totalOutcomes) },
     ]);
 
+    // Intervention table with evidence count
     drawTable(
-      ['Intervention', 'Type', 'Evidence', 'Cohort'],
-      pack.alma_interventions.map(a => [a.name, a.type || '\u2014', a.evidence_level || '\u2014', a.target_cohort || '\u2014']),
-      [190, 110, 100, 112],
+      ['Intervention', 'Type', 'Evidence', 'Funding', 'Score'],
+      pack.alma_interventions
+        .sort((a, b) => (b.portfolio_score ?? 0) - (a.portfolio_score ?? 0))
+        .map(a => [
+          a.name,
+          a.type || '\u2014',
+          a.evidence_count > 0 ? `${a.evidence_count} records` : 'None',
+          a.current_funding || '\u2014',
+          a.portfolio_score != null ? a.portfolio_score.toFixed(2) : '\u2014',
+        ]),
+      [180, 95, 75, 80, 82],
     );
+
+    // Outcomes summary — unique outcomes across all interventions
+    if (totalOutcomes > 0) {
+      drawSection('Measured Outcomes');
+      const allOutcomes = [...new Set(pack.alma_interventions.flatMap(a => a.outcome_names))].slice(0, 12);
+      for (const outcome of allOutcomes) {
+        ensureSpace(16);
+        page.drawRectangle({ x: MARGIN, y: y - 10, width: 8, height: 8, color: C.red });
+        page.drawText(sanitize(outcome), { x: MARGIN + 14, y: y - 10, size: FONT_SIZES.body, font: regular, color: C.black });
+        y -= 16;
+      }
+      if (totalOutcomes > 12) {
+        drawParagraph(`+ ${totalOutcomes - 12} more measured outcomes`, FONT_SIZES.label, regular, C.muted);
+      }
+      y -= 4;
+    }
+
+    // Evidence coverage summary
+    if (withEvidence > 0) {
+      ensureSpace(24);
+      const pct = Math.round((withEvidence / pack.alma_interventions.length) * 100);
+      page.drawRectangle({ x: MARGIN, y: y - 20, width: CONTENT_WIDTH, height: 20, color: C.surface });
+      page.drawText(
+        sanitize(`${withEvidence} of ${pack.alma_interventions.length} interventions have linked evidence records (${pct}% coverage)`),
+        { x: MARGIN + 10, y: y - 14, size: FONT_SIZES.label, font: bold, color: C.muted },
+      );
+      y -= 28;
+    }
   } else {
     drawParagraph('No Australian Living Map of Alternatives (ALMA) interventions linked to this entity.', FONT_SIZES.body, regular, C.muted);
   }
