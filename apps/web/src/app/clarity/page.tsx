@@ -108,7 +108,7 @@ async function getData() {
     safe(db.rpc('exec_sql', {
       query: `SELECT COUNT(*) as total, COUNT(gs_entity_id) as linked,
               ROUND(COUNT(gs_entity_id)::numeric / NULLIF(COUNT(*), 0) * 100, 1) as pct
-              FROM alma_interventions`,
+              FROM alma_interventions WHERE data_quality = 'valid'`,
     })),
     safe(db.rpc('exec_sql', {
       query: `SELECT COUNT(*) as total, COUNT(supplier_abn) as with_abn,
@@ -226,7 +226,7 @@ function generateFindings(data: Awaited<ReturnType<typeof getData>>): Finding[] 
   const aPct = Number(data.almaLink.pct ?? 0);
   findings.push({
     severity: aPct >= 60 ? 'strength' : 'gap',
-    claim: `${pct(aPct)} of ALMA interventions linked to CivicGraph entities`,
+    claim: `${pct(aPct)} of Australian Living Map of Alternatives (ALMA) interventions linked to CivicGraph entities`,
     evidence: `Evidence database connects to the funding graph — see which orgs have evidence-backed programs.`,
   });
 
@@ -459,7 +459,7 @@ export default async function ClarityPage() {
       description: 'State & federal justice program grants linked to entities via ABN',
     },
     {
-      name: 'ALMA Interventions',
+      name: 'Australian Living Map of Alternatives (ALMA)',
       table: 'alma_interventions',
       records: Number(data.almaLink.total ?? 0),
       linkage_pct: Number(data.almaLink.pct ?? 0),
