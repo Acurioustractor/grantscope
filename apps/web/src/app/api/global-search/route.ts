@@ -1,4 +1,3 @@
-import { requireModule } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
 import { NextRequest, NextResponse } from 'next/server';
 import * as EntityService from '@/lib/services/entity-service';
@@ -8,8 +7,6 @@ import * as FoundationService from '@/lib/services/foundation-service';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-  const auth = await requireModule('research');
-  if (auth.error) return auth.error;
 
   const q = req.nextUrl.searchParams.get('q')?.trim();
   const limit = Math.min(Number(req.nextUrl.searchParams.get('limit') || 20), 50);
@@ -27,17 +24,46 @@ export async function GET(req: NextRequest) {
     FoundationService.search(db, q, 5),
   ]);
 
-  const entities = (entityResults.data).map(e => ({
-    type: 'entity' as const,
-    id: e.gs_id,
-    name: e.canonical_name,
-    entityType: e.entity_type,
-    abn: e.abn,
-    state: e.state,
-    sourceCount: e.source_count,
-    revenue: e.latest_revenue,
-    href: `/entities/${e.gs_id}`,
-  }));
+  // Enrich entities with relationship counts from MV
+  const entityIds = entityResults.data.map(e => e.id);
+  let statsMap = new Map<string, { total_relationships: number; type_breakdown: Record<string, { count: number; amount: number }> }>();
+  if (entityIds.length > 0) {
+    const { data: statsData } = await db
+      .from('mv_gs_entity_stats')
+      .select('id, total_relationships, type_breakdown')
+      .in('id', entityIds);
+    for (const s of statsData || []) {
+      statsMap.set(s.id, { total_relationships: s.total_relationships, type_breakdown: s.type_breakdown || {} });
+    }
+  }
+
+  const entities = (entityResults.data).map((e, i) => {
+    const st = statsMap.get(e.id);
+    const tb = st?.type_breakdown || {};
+    const systems: string[] = [];
+    if ((tb['contract:inbound']?.count ?? 0) > 0 || (tb['contract:outbound']?.count ?? 0) > 0) systems.push('procurement');
+    if ((tb['grant:inbound']?.count ?? 0) > 0) systems.push('grants');
+    if ((tb['donation:outbound']?.count ?? 0) > 0) systems.push('donations');
+    const rels = st?.total_relationships ?? 0;
+    return {
+      type: 'entity' as const,
+      id: e.gs_id,
+      name: e.canonical_name,
+      entityType: e.entity_type,
+      abn: e.abn,
+      state: e.state,
+      sourceCount: e.source_count,
+      revenue: e.latest_revenue,
+      relationships: rels,
+      systems,
+      href: `/entities/${e.gs_id}`,
+      // Blend fuzzy rank with relationship weight for relevance
+      _score: (entityResults.data.length - i) + Math.min(Math.log10(rels + 1) * 3, 15),
+    };
+  });
+
+  // Re-sort: boost entities with more cross-system data to the top
+  entities.sort((a, b) => b._score - a._score);
 
   // Filter out foundations already represented in entities (by ABN match)
   const entityAbns = new Set(entities.map(e => e.abn).filter(Boolean));

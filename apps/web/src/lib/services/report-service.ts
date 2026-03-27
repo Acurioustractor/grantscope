@@ -31,9 +31,21 @@ function assertTopic(t: string): Topic {
   return t as Topic;
 }
 
-function topicFilter(topic: Topic): string {
+/**
+ * Topic filter for justice_funding queries. Excludes austender-direct which
+ * contains 95% general procurement (postal, defence, IT) not justice data.
+ */
+function topicFilter(topic: Topic, alias?: string): string {
   assertTopic(topic);
-  return `topics @> ARRAY['${topic}']::text[]`;
+  const p = alias ? `${alias}.` : '';
+  return `${p}topics @> ARRAY['${topic}']::text[] AND ${p}source NOT IN ('austender-direct')`;
+}
+
+/** Topic filter for alma_interventions (no source column to exclude). */
+function almaTopicFilter(topic: Topic, alias?: string): string {
+  assertTopic(topic);
+  const p = alias ? `${alias}.` : '';
+  return `${p}topics @> ARRAY['${topic}']::text[]`;
 }
 
 /**
@@ -85,7 +97,7 @@ export async function getTopOrgs(topic: Topic, limit = 25, state?: string) {
               e.gs_id
        FROM justice_funding jf
        LEFT JOIN gs_entities e ON e.abn = jf.recipient_abn AND jf.recipient_abn IS NOT NULL
-       WHERE jf.${topicFilter(topic)}${stateFilter}
+       WHERE ${topicFilter(topic, 'jf')}${stateFilter}
          AND jf.program_name NOT LIKE 'ROGS%'
          AND jf.program_name NOT LIKE 'Total%'
          AND jf.recipient_name NOT LIKE 'Youth Justice -%'
@@ -118,7 +130,7 @@ export async function getAlmaInterventions(topic: Topic, limit = 25, state?: str
               e.gs_id, e.canonical_name as org_name, e.abn as org_abn
        FROM alma_interventions ai
        LEFT JOIN gs_entities e ON e.id = ai.gs_entity_id
-       WHERE ai.${topicFilter(topic)}${stateFilter}
+       WHERE ${almaTopicFilter(topic, 'ai')}${stateFilter}
        ORDER BY ai.portfolio_score DESC NULLS LAST
        LIMIT ${limit}`,
   })) as Promise<Array<{
@@ -140,7 +152,7 @@ export async function getAlmaCount(topic: Topic, state?: string): Promise<number
   const supabase = getServiceSupabase();
   const stateFilter = state ? ` AND geography::text ILIKE '%${esc(state)}%'` : '';
   const data = await safe(supabase.rpc('exec_sql', {
-    query: `SELECT COUNT(*)::int as cnt FROM alma_interventions WHERE ${topicFilter(topic)}${stateFilter}`,
+    query: `SELECT COUNT(*)::int as cnt FROM alma_interventions WHERE ${almaTopicFilter(topic)}${stateFilter}`,
   }));
   return (data as Array<{ cnt: number }> | null)?.[0]?.cnt ?? 0;
 }
@@ -174,7 +186,7 @@ export async function getFundingByLga(topic: Topic, limit = 20, state?: string) 
               MIN(e.seifa_irsd_decile)::int as seifa_decile
        FROM justice_funding jf
        JOIN gs_entities e ON e.abn = jf.recipient_abn AND jf.recipient_abn IS NOT NULL
-       WHERE jf.${topicFilter(topic)}${stateFilter}
+       WHERE ${topicFilter(topic, 'jf')}${stateFilter}
          AND e.lga_name IS NOT NULL
          ${sc ? `AND e.state = '${sc}'` : ''}
        GROUP BY e.lga_name, e.state
@@ -202,7 +214,7 @@ export async function getCrossSystemOrgs(primaryTopic: Topic, crossTopics: Topic
       SELECT DISTINCT e.id, e.gs_id, e.canonical_name, e.entity_type, e.state
       FROM gs_entities e
       JOIN justice_funding jf ON jf.recipient_abn = e.abn AND e.abn IS NOT NULL
-      WHERE jf.${topicFilter(primaryTopic)}
+      WHERE ${topicFilter(primaryTopic, 'jf')}
     )`;
 
   const crossCtes = crossTopics.map((t, i) => `
@@ -210,7 +222,7 @@ export async function getCrossSystemOrgs(primaryTopic: Topic, crossTopics: Topic
       SELECT DISTINCT e.id
       FROM gs_entities e
       JOIN justice_funding jf ON jf.recipient_abn = e.abn AND e.abn IS NOT NULL
-      WHERE jf.${topicFilter(t)}
+      WHERE ${topicFilter(t, 'jf')}
     )`);
 
   const topicLabels: Record<string, string> = {
@@ -399,18 +411,21 @@ export async function getYouthJusticeContracts(limit = 15) {
 export async function getYouthJusticeGrants(limit = 15) {
   const supabase = getServiceSupabase();
   return safe(supabase.rpc('exec_sql', {
-    query: `SELECT recipient_name, state,
-              SUM(amount_dollars)::bigint as total,
+    query: `SELECT jf.recipient_name, jf.state,
+              ge.gs_id,
+              SUM(jf.amount_dollars)::bigint as total,
               COUNT(*)::int as grants
-       FROM justice_funding
-       WHERE topics @> ARRAY['youth-justice']::text[]
-         AND program_name NOT LIKE 'ROGS%'
-       GROUP BY recipient_name, state
-       ORDER BY total DESC
+       FROM justice_funding jf
+       LEFT JOIN gs_entities ge ON ge.id = jf.gs_entity_id
+       WHERE ${topicFilter('youth-justice', 'jf')}
+         AND jf.program_name NOT LIKE 'ROGS%'
+       GROUP BY jf.recipient_name, jf.state, ge.gs_id
+       ORDER BY total DESC NULLS LAST
        LIMIT ${limit}`,
   })) as Promise<Array<{
     recipient_name: string;
     state: string | null;
+    gs_id: string | null;
     total: number;
     grants: number;
   }> | null>;
@@ -601,7 +616,7 @@ export async function getAlmaByLga(topic: Topic) {
     query: `SELECT ge.lga_name, COUNT(*)::int as alma_count
             FROM alma_interventions ai
             JOIN gs_entities ge ON ge.id = ai.gs_entity_id
-            WHERE ai.${topicFilter(topic)} AND ge.lga_name IS NOT NULL
+            WHERE ${almaTopicFilter(topic, 'ai')} AND ge.lga_name IS NOT NULL
             GROUP BY ge.lga_name`,
   })) as Promise<Array<{ lga_name: string; alma_count: number }> | null>;
 }
@@ -644,7 +659,7 @@ export async function getAccoFundingGap(topic: Topic, state?: string) {
               ROUND(AVG(jf.amount_dollars))::bigint as avg_grant
             FROM justice_funding jf
             JOIN gs_entities ge ON ge.id = jf.gs_entity_id
-            WHERE ${topicFilter(topic)}${stateFilter}
+            WHERE ${topicFilter(topic, 'jf')}${stateFilter}
               AND jf.program_name NOT LIKE 'ROGS%' AND jf.program_name NOT LIKE 'Total%'
             GROUP BY CASE WHEN ge.is_community_controlled THEN 'Community Controlled' ELSE 'Non-Indigenous' END`,
   })) as Promise<Array<{ org_type: string; orgs: number; total_funding: number; avg_grant: number }> | null>;
@@ -663,7 +678,7 @@ export async function getFundingByRemoteness(topic: Topic, state?: string) {
               COUNT(*)::int as grants
             FROM justice_funding jf
             JOIN gs_entities ge ON ge.id = jf.gs_entity_id
-            WHERE ${topicFilter(topic)}${stateFilter}
+            WHERE ${topicFilter(topic, 'jf')}${stateFilter}
               AND jf.program_name NOT LIKE 'ROGS%' AND jf.program_name NOT LIKE 'Total%'
               AND ge.remoteness IS NOT NULL
             GROUP BY ge.remoteness
@@ -679,7 +694,7 @@ export async function getUnfundedEffectivePrograms(topic: Topic) {
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT ai.name, ai.type, ai.evidence_level, ai.cultural_authority, ai.geography
             FROM alma_interventions ai
-            WHERE ai.topics @> ARRAY['${topic}']::text[]
+            WHERE ${almaTopicFilter(topic, 'ai')}
               AND (ai.evidence_level ILIKE '%Effective%' OR ai.evidence_level ILIKE '%Indigenous%')
               AND ai.gs_entity_id IS NULL
             ORDER BY ai.type, ai.name`,
@@ -691,22 +706,29 @@ export async function getUnfundedEffectivePrograms(topic: Topic) {
  */
 export async function getYjRevolvingDoor(topic: Topic, limit = 15, state?: string) {
   const supabase = getServiceSupabase();
-  const stateFilter = state ? ` AND state = '${assertState(state)}'` : '';
+  const stateFilter = state ? ` AND jf.state = '${assertState(state)}'` : '';
   return safe(supabase.rpc('exec_sql', {
     query: `WITH yj_orgs AS (
-              SELECT DISTINCT gs_entity_id
-              FROM justice_funding
-              WHERE ${topicFilter(topic)}${stateFilter} AND program_name NOT LIKE 'ROGS%' AND gs_entity_id IS NOT NULL
+              SELECT jf.gs_entity_id, SUM(jf.amount_dollars)::bigint as yj_funding
+              FROM justice_funding jf
+              WHERE ${topicFilter(topic, 'jf')}${stateFilter}
+                AND jf.program_name NOT LIKE 'ROGS%'
+                AND jf.program_name NOT IN ('General Goods and Services', 'DYJVS Contract')
+                AND jf.gs_entity_id IS NOT NULL
+              GROUP BY jf.gs_entity_id
+              HAVING SUM(jf.amount_dollars) > 100000
             )
-            SELECT rd.canonical_name, rd.revolving_door_score::int, rd.influence_vectors::int,
-              rd.total_donated::bigint, rd.total_contracts::bigint, rd.total_funded::bigint,
+            SELECT rd.canonical_name, rd.gs_id, rd.revolving_door_score::int, rd.influence_vectors::int,
+              rd.total_donated::bigint, rd.total_contracts::bigint,
+              COALESCE(yj.yj_funding, 0)::bigint as total_funded,
               rd.parties_funded, rd.distinct_buyers::int, rd.is_community_controlled
             FROM mv_revolving_door rd
             JOIN yj_orgs yj ON yj.gs_entity_id = rd.id
+            WHERE rd.canonical_name NOT LIKE 'Department %'
             ORDER BY rd.revolving_door_score DESC
             LIMIT ${limit}`,
   })) as Promise<Array<{
-    canonical_name: string; revolving_door_score: number; influence_vectors: number;
+    canonical_name: string; gs_id: string | null; revolving_door_score: number; influence_vectors: number;
     total_donated: number; total_contracts: number; total_funded: number;
     parties_funded: string; distinct_buyers: number; is_community_controlled: boolean;
   }> | null>;
@@ -718,14 +740,17 @@ export async function getYjRevolvingDoor(topic: Topic, limit = 15, state?: strin
 export async function getYjFoundations(limit = 10) {
   const supabase = getServiceSupabase();
   return safe(supabase.rpc('exec_sql', {
-    query: `SELECT f.name, f.total_giving_annual::bigint, f.thematic_focus::text, f.geographic_focus
+    query: `SELECT f.name, f.total_giving_annual::bigint, f.thematic_focus::text, f.geographic_focus, ge.gs_id
             FROM foundations f
-            WHERE f.thematic_focus::text ILIKE '%justice%'
+            LEFT JOIN gs_entities ge ON ge.id = f.gs_entity_id
+            WHERE (f.thematic_focus::text ILIKE '%justice%'
               OR f.thematic_focus::text ILIKE '%youth%'
-              OR (f.thematic_focus::text ILIKE '%indigenous%' AND f.total_giving_annual > 50000000)
+              OR (f.thematic_focus::text ILIKE '%indigenous%' AND f.total_giving_annual > 50000000))
+              AND (f.name ILIKE '%foundation%' OR f.name ILIKE '%trust%' OR f.name ILIKE '%philanthropic%' OR f.name ILIKE '%endowment%')
+              AND f.name NOT ILIKE '%university%'
             ORDER BY f.total_giving_annual DESC NULLS LAST
             LIMIT ${limit}`,
-  })) as Promise<Array<{ name: string; total_giving_annual: number; thematic_focus: string; geographic_focus: string }> | null>;
+  })) as Promise<Array<{ name: string; total_giving_annual: number; thematic_focus: string; geographic_focus: string; gs_id: string | null }> | null>;
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1042,7 +1067,7 @@ export async function getEvidenceCoverage(topic: Topic, state?: string) {
               ROUND(COUNT(DISTINCT aie.intervention_id)::numeric / NULLIF(COUNT(DISTINCT ai.id),0) * 100)::int as coverage_pct
        FROM alma_interventions ai
        LEFT JOIN alma_intervention_evidence aie ON aie.intervention_id = ai.id
-       WHERE ai.${topicFilter(topic)}${stateFilter}`,
+       WHERE ${almaTopicFilter(topic, 'ai')}${stateFilter}`,
   })) as Promise<Array<{
     total_interventions: number;
     with_evidence: number;
@@ -1066,7 +1091,7 @@ export async function getEvidenceGapDetail(topic: Topic, state?: string, limit =
        LEFT JOIN alma_intervention_evidence aie ON aie.intervention_id = ai.id
        LEFT JOIN alma_evidence ae ON ae.id = aie.evidence_id
        LEFT JOIN gs_entities e ON e.id = ai.gs_entity_id
-       WHERE ai.${topicFilter(topic)}${stateFilter}
+       WHERE ${almaTopicFilter(topic, 'ai')}${stateFilter}
        ORDER BY has_evidence, ai.name
        LIMIT ${limit}`,
   })) as Promise<Array<{
@@ -1168,7 +1193,7 @@ export async function getProgramsWithPartners(topic: Topic, state: string, opts?
          FROM justice_funding jf
          LEFT JOIN gs_entities e ON e.abn = jf.recipient_abn AND jf.recipient_abn IS NOT NULL
          WHERE jf.state = '${sc}'
-           AND jf.${topicFilter(topic)}
+           AND ${topicFilter(topic, 'jf')}
            AND jf.program_name NOT LIKE 'ROGS%'
            AND jf.program_name NOT LIKE 'Total%'
            AND jf.program_name NOT LIKE 'Government real%'
@@ -1340,7 +1365,7 @@ export async function getTrackerLeadership(state: string, topic: Topic, limit = 
                 SUM(jf.amount_dollars) OVER (PARTITION BY jf.recipient_abn) as total_funded
               FROM justice_funding jf
               JOIN gs_entities e ON e.abn = jf.recipient_abn
-              WHERE jf.state = '${sc}' AND jf.${topicFilter(topic)}
+              WHERE jf.state = '${sc}' AND ${topicFilter(topic, 'jf')}
                 AND jf.recipient_abn IS NOT NULL
                 AND jf.program_name NOT LIKE 'ROGS%' AND jf.program_name NOT LIKE 'Total%'
               ORDER BY jf.recipient_abn, total_funded DESC
@@ -1376,7 +1401,7 @@ export async function getTrackerInterlocks(state: string, topic: Topic, limit = 
               SELECT DISTINCT e.id
               FROM justice_funding jf
               JOIN gs_entities e ON e.abn = jf.recipient_abn
-              WHERE jf.state = '${sc}' AND jf.${topicFilter(topic)}
+              WHERE jf.state = '${sc}' AND ${topicFilter(topic, 'jf')}
                 AND jf.recipient_abn IS NOT NULL
             )
             SELECT bi.person_name_display as person_name, bi.board_count,

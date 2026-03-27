@@ -41,6 +41,8 @@ interface OutcomeSub {
   outcomes: Array<{ metric: string; value: number; unit: string; description?: string }>;
   narrative: string | null;
   status: string;
+  gs_entity_id: string | null;
+  evidence_urls: string[] | null;
 }
 
 interface Person {
@@ -124,7 +126,8 @@ async function getData() {
     }),
     db.rpc('exec_sql', {
       query: `SELECT os.org_name, os.program_name, os.reporting_period,
-                     os.outcomes, os.narrative, os.status
+                     os.outcomes, os.narrative, os.status,
+                     os.gs_entity_id, os.evidence_urls
               FROM outcome_submissions os
               WHERE os.gs_entity_id IN (
                 SELECT ge.gs_id FROM gs_entities ge
@@ -712,7 +715,11 @@ export default async function PRFIntelligencePage() {
                 <div key={i} className="border-2 border-bauhaus-black p-4">
                   <div className="flex justify-between items-start">
                     <div>
-                      <h3 className="font-black">{o.org_name}</h3>
+                      <h3 className="font-black">
+                        {o.gs_entity_id ? (
+                          <Link href={`/entities/${o.gs_entity_id}`} className="hover:text-bauhaus-red">{o.org_name}</Link>
+                        ) : o.org_name}
+                      </h3>
                       <p className="text-sm text-bauhaus-muted">
                         {o.program_name} • {o.reporting_period}
                       </p>
@@ -741,6 +748,24 @@ export default async function PRFIntelligencePage() {
                       ),
                     )}
                   </div>
+                  {Array.isArray(o.evidence_urls) && o.evidence_urls.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {o.evidence_urls.map((url: string, k: number) => (
+                        <a key={k} href={url} target="_blank" rel="noopener noreferrer"
+                           className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue hover:underline">
+                          Source Document {(o.evidence_urls?.length ?? 0) > 1 ? k + 1 : ''} &rarr;
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                  {o.gs_entity_id && (
+                    <div className="mt-2 flex gap-3">
+                      <Link href={`/entities/${o.gs_entity_id}#funding`}
+                            className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted hover:text-bauhaus-red">
+                        View Funding &rarr;
+                      </Link>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

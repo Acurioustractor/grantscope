@@ -293,6 +293,132 @@ export default async function EntityDossierPage({
   }
   const totalJusticeFunding = justiceFunding.reduce((sum, r) => sum + (r.amount_dollars || 0), 0);
 
+  // Org person roles (board/leadership for non-person entities)
+  let orgPersonRoles: Array<{ person_name: string; role_type: string; person_gs_id: string | null }> = [];
+  if (e.entity_type !== 'person') {
+    const { data: orgRolesData } = await supabase
+      .from('person_roles')
+      .select('person_name, role_type, person_entity_id')
+      .eq('entity_id', e.id)
+      .order('role_type')
+      .order('person_name');
+    if (orgRolesData && orgRolesData.length > 0) {
+      const personEntityIds = [...new Set(orgRolesData.map(r => r.person_entity_id).filter(Boolean))] as string[];
+      const personGsIdMap = new Map<string, string>();
+      if (personEntityIds.length > 0) {
+        const { data: personEntities } = await supabase
+          .from('gs_entities')
+          .select('id, gs_id')
+          .in('id', personEntityIds);
+        for (const pe of personEntities || []) personGsIdMap.set(pe.id, pe.gs_id);
+      }
+      orgPersonRoles = orgRolesData.map(r => ({
+        person_name: r.person_name,
+        role_type: r.role_type,
+        person_gs_id: r.person_entity_id ? personGsIdMap.get(r.person_entity_id) || null : null,
+      }));
+    }
+  }
+
+  // Outcome submissions for this entity
+  let outcomeSubmissions: Array<{ id: string; program_name: string; reporting_period: string; outcomes: Array<{ metric: string; value: number; unit: string; description?: string }>; narrative: string | null; status: string }> = [];
+  {
+    const { data: osData } = await supabase
+      .from('outcome_submissions')
+      .select('id, program_name, reporting_period, outcomes, narrative, status')
+      .eq('gs_entity_id', e.gs_id)
+      .order('created_at', { ascending: false });
+    outcomeSubmissions = (osData || []) as typeof outcomeSubmissions;
+  }
+
+  // Political donations (grouped by party/recipient)
+  interface DonationRow { donation_to: string; total: number; count: number; years: string[] }
+  let politicalDonations: DonationRow[] = [];
+  let totalDonations = 0;
+  if (e.abn) {
+    const { data: donData } = await supabase.rpc('exec_sql', {
+      query: `SELECT donation_to, SUM(amount)::bigint as total, COUNT(*)::int as count,
+                     array_agg(DISTINCT financial_year ORDER BY financial_year) as years
+              FROM political_donations WHERE donor_abn = '${e.abn}'
+              GROUP BY donation_to ORDER BY total DESC LIMIT 20`,
+    });
+    politicalDonations = (donData || []) as DonationRow[];
+    totalDonations = politicalDonations.reduce((s, d) => s + (d.total || 0), 0);
+  }
+
+  // Lobbying targets
+  interface LobbyTarget { target_name: string; target_gs_id: string | null }
+  let lobbyingTargets: LobbyTarget[] = [];
+  {
+    const { data: lobbyData } = await supabase
+      .from('gs_relationships')
+      .select('target_entity_id')
+      .eq('source_entity_id', e.id)
+      .eq('relationship_type', 'lobbies_for');
+    if (lobbyData && lobbyData.length > 0) {
+      const targetIds = lobbyData.map(r => r.target_entity_id);
+      const { data: targetEntities } = await supabase
+        .from('gs_entities')
+        .select('id, canonical_name, gs_id')
+        .in('id', targetIds);
+      lobbyingTargets = (targetEntities || []).map(t => ({
+        target_name: t.canonical_name,
+        target_gs_id: t.gs_id,
+      }));
+    }
+  }
+
+  // Top contracts
+  interface TopContractRow { title: string; contract_value: number; buyer_name: string; contract_start: string | null; contract_end: string | null }
+  let topContracts: TopContractRow[] = [];
+  if (e.abn) {
+    const { data: contractData } = await supabase
+      .from('austender_contracts')
+      .select('title, contract_value, buyer_name, contract_start, contract_end')
+      .eq('supplier_abn', e.abn)
+      .not('contract_value', 'is', null)
+      .order('contract_value', { ascending: false })
+      .limit(5);
+    topContracts = (contractData || []) as TopContractRow[];
+  }
+
+  // Shared directors — people who sit on this entity's board AND other boards
+  interface SharedDirectorRow { person_name: string; person_gs_id: string | null; shared_entities: Array<{ name: string; gs_id: string | null }> }
+  let sharedDirectors: SharedDirectorRow[] = [];
+  if (e.entity_type !== 'person' && orgPersonRoles.length > 0) {
+    // Get person entity IDs from orgPersonRoles that have gs_ids
+    const personGsIds = orgPersonRoles.map(r => r.person_gs_id).filter(Boolean) as string[];
+    if (personGsIds.length > 0) {
+      const { data: interlockData } = await supabase.rpc('exec_sql', {
+        query: `SELECT pr.person_name,
+                       pe.gs_id as person_gs_id,
+                       json_agg(json_build_object('name', ge2.canonical_name, 'gs_id', ge2.gs_id) ORDER BY ge2.canonical_name) as shared_entities
+                FROM person_roles pr
+                JOIN gs_entities pe ON pe.gs_id = ANY(ARRAY[${personGsIds.map(id => `'${id}'`).join(',')}])
+                  AND pe.id = pr.person_entity_id
+                JOIN gs_entities ge2 ON ge2.id = pr.entity_id AND ge2.id != '${e.id}'
+                GROUP BY pr.person_name, pe.gs_id
+                HAVING COUNT(*) > 0
+                ORDER BY COUNT(*) DESC
+                LIMIT 10`,
+      });
+      sharedDirectors = (interlockData || []) as SharedDirectorRow[];
+    }
+  }
+
+  // Cross-system summary — which data systems mention this entity
+  const crossSystems: string[] = [];
+  if ((mvStats?.type_breakdown['contract:inbound']?.count ?? 0) > 0 || (mvStats?.type_breakdown['contract:outbound']?.count ?? 0) > 0) crossSystems.push('Procurement');
+  if (justiceFunding.length > 0) crossSystems.push('Justice Funding');
+  if (totalDonations > 0) crossSystems.push('Political Donations');
+  if (lobbyingTargets.length > 0) crossSystems.push('Lobbying');
+  if (charity) crossSystems.push('ACNC Charities');
+  if (foundation) crossSystems.push('Foundations');
+  if (almaInterventionCount > 0) crossSystems.push('ALMA Evidence');
+  if (outcomeSubmissions.length > 0) crossSystems.push('Governed Proof');
+  if (financialYears.length > 0 && !charity) crossSystems.push('ATO');
+  const crossSystemSummary = { systems: crossSystems, count: crossSystems.length };
+
   // Auth & workspace context
   let isPremium = false;
   let workspaceOrgName: string | null = null;
@@ -331,6 +457,14 @@ export default async function EntityDossierPage({
     localDisabilityEnterpriseCount, localCommunityControlledCount,
     ndisSourceLink,
     personRoles,
+    orgPersonRoles,
+    outcomeSubmissions,
+    politicalDonations,
+    totalDonations,
+    lobbyingTargets,
+    topContracts,
+    sharedDirectors,
+    crossSystemSummary,
   };
 
   const workspace: WorkspaceContext = {

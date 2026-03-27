@@ -153,7 +153,10 @@ export default function OutcomeReviewPage() {
                       )}
                     </div>
                     <h3 className="text-sm font-black text-bauhaus-black truncate">
-                      {sub.org_name} — {sub.program_name}
+                      {sub.gs_entity_id ? (
+                        <Link href={`/entities/${sub.gs_entity_id}`} className="hover:text-bauhaus-red">{sub.org_name}</Link>
+                      ) : sub.org_name}
+                      {' — '}{sub.program_name}
                     </h3>
                     <div className="text-xs text-bauhaus-muted mt-0.5">
                       {sub.reporting_period} · {sub.outcomes.length} outcome{sub.outcomes.length !== 1 ? 's' : ''} · Submitted {new Date(sub.created_at).toLocaleDateString('en-AU')}
@@ -170,8 +173,18 @@ export default function OutcomeReviewPage() {
                   <div className="grid sm:grid-cols-3 gap-4 mb-4">
                     <div>
                       <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest">Organisation</div>
-                      <div className="text-sm font-bold">{sub.org_name}</div>
+                      <div className="text-sm font-bold">
+                        {sub.gs_entity_id ? (
+                          <Link href={`/entities/${sub.gs_entity_id}`} className="hover:text-bauhaus-red">{sub.org_name}</Link>
+                        ) : sub.org_name}
+                      </div>
                       {sub.org_abn && <div className="text-xs text-bauhaus-muted">ABN {sub.org_abn}</div>}
+                      {sub.gs_entity_id && (
+                        <Link href={`/entities/${sub.gs_entity_id}#funding`}
+                              className="text-[10px] font-black text-bauhaus-blue uppercase tracking-widest hover:underline mt-1 inline-block">
+                          View Funding &rarr;
+                        </Link>
+                      )}
                     </div>
                     <div>
                       <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest">Contact</div>

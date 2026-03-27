@@ -266,6 +266,60 @@ export interface EntityEnrichment {
   localCommunityControlledCount: number;
   ndisSourceLink: string | null;
   personRoles: PersonRole[];
+  orgPersonRoles: OrgPersonRole[];
+  outcomeSubmissions: OutcomeSubmission[];
+  politicalDonations: PoliticalDonationSummary[];
+  totalDonations: number;
+  lobbyingTargets: LobbyingTarget[];
+  topContracts: TopContract[];
+  sharedDirectors: SharedDirector[];
+  crossSystemSummary: CrossSystemSummary;
+}
+
+export interface OrgPersonRole {
+  person_name: string;
+  role_type: string;
+  person_gs_id: string | null;
+}
+
+export interface PoliticalDonationSummary {
+  donation_to: string;
+  total: number;
+  count: number;
+  years: string[];
+}
+
+export interface LobbyingTarget {
+  target_name: string;
+  target_gs_id: string | null;
+}
+
+export interface TopContract {
+  title: string;
+  contract_value: number;
+  buyer_name: string;
+  contract_start: string | null;
+  contract_end: string | null;
+}
+
+export interface SharedDirector {
+  person_name: string;
+  person_gs_id: string | null;
+  shared_entities: Array<{ name: string; gs_id: string | null }>;
+}
+
+export interface CrossSystemSummary {
+  systems: string[];
+  count: number;
+}
+
+export interface OutcomeSubmission {
+  id: string;
+  program_name: string;
+  reporting_period: string;
+  outcomes: Array<{ metric: string; value: number; unit: string; description?: string }>;
+  narrative: string | null;
+  status: string;
 }
 
 export interface WorkspaceContext {

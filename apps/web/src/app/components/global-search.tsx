@@ -11,6 +11,8 @@ interface EntityResult {
   state: string | null;
   sourceCount: number;
   revenue: number | null;
+  relationships: number;
+  systems: string[];
   href: string;
 }
 
@@ -140,7 +142,11 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
       fetch(endpoint, { signal: controller.signal })
         .then(res => res.json())
         .then(data => {
-          setResults(data);
+          setResults({
+            entities: Array.isArray(data.entities) ? data.entities : [],
+            foundations: Array.isArray(data.foundations) ? data.foundations : [],
+            grants: Array.isArray(data.grants) ? data.grants : [],
+          });
           setSelectedIndex(0);
           setLoading(false);
         })
@@ -227,10 +233,19 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                       >
                         <div className="flex-1 min-w-0">
                           <div className="font-bold text-bauhaus-black truncate">{r.name}</div>
-                          <div className="text-[11px] text-bauhaus-muted font-medium">
-                            {r.abn && <span>ABN {r.abn} &middot; </span>}
-                            {r.state && <span>{r.state} &middot; </span>}
-                            {r.sourceCount} source{r.sourceCount !== 1 ? 's' : ''}
+                          <div className="text-[11px] text-bauhaus-muted font-medium flex items-center gap-1 flex-wrap">
+                            {r.state && <span>{r.state}</span>}
+                            {r.relationships > 0 && <span>{r.state ? '·' : ''} {r.relationships.toLocaleString()} links</span>}
+                            {r.systems.length > 0 && (
+                              <>
+                                <span>·</span>
+                                {r.systems.map(s => (
+                                  <span key={s} className={`text-[9px] font-black px-1 py-0 uppercase tracking-wider ${
+                                    s === 'donations' ? 'text-bauhaus-red' : s === 'procurement' ? 'text-bauhaus-black' : 'text-bauhaus-blue'
+                                  }`}>{s}</span>
+                                ))}
+                              </>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-2 ml-3 shrink-0">

@@ -28,6 +28,10 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
     ndisSourceLink,
     jhOrg, almaInterventionCount, almaEvidenceCount,
     personRoles,
+    orgPersonRoles, outcomeSubmissions,
+    justiceFunding, totalJusticeFunding,
+    politicalDonations, totalDonations, lobbyingTargets,
+    topContracts, sharedDirectors, crossSystemSummary,
   } = enrichment;
 
   const {
@@ -217,6 +221,31 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
         </div>
       )}
 
+      {/* Cross-System Summary */}
+      {crossSystemSummary.count >= 2 && (
+        <div className="mb-6 border-4 border-bauhaus-black p-4 bg-bauhaus-canvas">
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-[10px] font-black text-bauhaus-black uppercase tracking-widest">
+              Found in {crossSystemSummary.count} systems
+            </span>
+            <span className="text-bauhaus-muted">—</span>
+            {crossSystemSummary.systems.map((sys) => (
+              <span key={sys} className={`text-[10px] font-black px-2 py-0.5 uppercase tracking-widest border-2 ${
+                sys === 'Political Donations' || sys === 'Lobbying'
+                  ? 'border-bauhaus-red/30 bg-error-light text-bauhaus-red'
+                  : sys === 'Procurement'
+                    ? 'border-bauhaus-black/20 bg-white text-bauhaus-black'
+                    : sys === 'ALMA Evidence' || sys === 'Governed Proof'
+                      ? 'border-money/30 bg-money-light text-money'
+                      : 'border-bauhaus-blue/20 bg-link-light text-bauhaus-blue'
+              }`}>
+                {sys}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Two column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main content */}
@@ -224,6 +253,196 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
           {e.description && (
             <Section title="About">
               <p className="text-bauhaus-muted leading-relaxed font-medium">{e.description}</p>
+            </Section>
+          )}
+
+          {/* Government Funding */}
+          {justiceFunding.length > 0 && (
+            <Section title={`Government Funding (${formatMoney(totalJusticeFunding)})`}>
+              <div className="space-y-0">
+                {/* Group by program */}
+                {(() => {
+                  const byProgram = new Map<string, { count: number; total: number; years: string[] }>();
+                  for (const jf of justiceFunding) {
+                    const key = jf.program_name || 'Unknown Program';
+                    const existing = byProgram.get(key) || { count: 0, total: 0, years: [] };
+                    existing.count++;
+                    existing.total += jf.amount_dollars || 0;
+                    if (jf.financial_year && !existing.years.includes(jf.financial_year)) existing.years.push(jf.financial_year);
+                    byProgram.set(key, existing);
+                  }
+                  return Array.from(byProgram.entries())
+                    .sort((a, b) => b[1].total - a[1].total)
+                    .slice(0, 10)
+                    .map(([program, info]) => (
+                      <div key={program} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-b-0">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-bold text-bauhaus-black truncate">{program}</div>
+                          <div className="text-xs text-bauhaus-muted">
+                            {info.count} record{info.count !== 1 ? 's' : ''}
+                            {info.years.length > 0 && ` · ${info.years.sort().join(', ')}`}
+                          </div>
+                        </div>
+                        <span className="font-mono text-sm font-bold text-bauhaus-black ml-3">
+                          {formatMoney(info.total)}
+                        </span>
+                      </div>
+                    ));
+                })()}
+              </div>
+              {justiceFunding.length > 10 && (
+                <div className="mt-2 text-xs text-bauhaus-muted">
+                  Showing top 10 of {justiceFunding.length} funding records
+                </div>
+              )}
+            </Section>
+          )}
+
+          {/* Outcome Submissions */}
+          {outcomeSubmissions.length > 0 && (
+            <Section title={`Reported Outcomes (${outcomeSubmissions.length})`}>
+              <div className="space-y-4">
+                {outcomeSubmissions.map((os) => (
+                  <div key={os.id} className="border-2 border-gray-200 p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <span className="text-sm font-bold text-bauhaus-black">{os.program_name}</span>
+                        <span className="text-xs text-bauhaus-muted ml-2">{os.reporting_period}</span>
+                      </div>
+                      <span className={`text-[10px] font-black px-2 py-0.5 uppercase tracking-widest ${
+                        os.status === 'validated' ? 'bg-money-light text-green-800' :
+                        os.status === 'submitted' ? 'bg-bauhaus-yellow/20 text-yellow-800' :
+                        'bg-gray-100 text-gray-600'
+                      }`}>
+                        {os.status}
+                      </span>
+                    </div>
+                    {os.narrative && (
+                      <p className="text-xs text-bauhaus-muted mb-2 italic line-clamp-2">{os.narrative}</p>
+                    )}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                      {(Array.isArray(os.outcomes) ? os.outcomes : []).slice(0, 6).map((m, j) => (
+                        <div key={j} className="bg-gray-50 px-2 py-1.5 text-xs">
+                          <div className="font-mono font-bold">
+                            {m.value != null ? m.value.toLocaleString() : '—'}{' '}
+                            <span className="text-bauhaus-muted">{m.unit}</span>
+                          </div>
+                          <div className="text-bauhaus-muted text-[10px]">{m.metric.replace(/_/g, ' ')}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {/* Political Donations */}
+          {politicalDonations.length > 0 && (
+            <Section title={`Political Donations (${formatMoney(totalDonations)})`}>
+              <div className="space-y-0">
+                {politicalDonations.slice(0, 10).map((d) => (
+                  <div key={d.donation_to} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-b-0">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-bold text-bauhaus-black truncate">{d.donation_to}</div>
+                      <div className="text-xs text-bauhaus-muted">
+                        {d.count} donation{d.count !== 1 ? 's' : ''}
+                        {d.years?.length > 0 && ` · ${d.years[0]}–${d.years[d.years.length - 1]}`}
+                      </div>
+                    </div>
+                    <span className="font-mono text-sm font-bold text-bauhaus-red ml-3">
+                      {formatMoney(d.total)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {/* Lobbying Connections */}
+          {lobbyingTargets.length > 0 && (
+            <Section title={`Lobbying Connections (${lobbyingTargets.length})`}>
+              <div className="space-y-0">
+                {lobbyingTargets.map((l, i) => (
+                  <div key={i} className="flex items-center gap-2 py-2 border-b border-gray-200 last:border-b-0">
+                    <span className="w-1.5 h-1.5 bg-bauhaus-red shrink-0" />
+                    {l.target_gs_id ? (
+                      <Link href={`/entities/${l.target_gs_id}`} className="text-sm font-bold text-bauhaus-black hover:text-bauhaus-red truncate">
+                        {l.target_name}
+                      </Link>
+                    ) : (
+                      <span className="text-sm font-bold text-bauhaus-black truncate">{l.target_name}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {/* Top Contracts */}
+          {topContracts.length > 0 && (
+            <Section title={`Top Contracts (${topContracts.length > 4 ? 'top 5' : topContracts.length})`}>
+              <div className="space-y-0">
+                {topContracts.map((c, i) => (
+                  <div key={i} className="py-2 border-b border-gray-200 last:border-b-0">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-bold text-bauhaus-black line-clamp-1">{c.title || 'Untitled Contract'}</div>
+                        <div className="text-xs text-bauhaus-muted">
+                          {c.buyer_name}
+                          {c.contract_start && ` · ${new Date(c.contract_start).toLocaleDateString('en-AU', { month: 'short', year: 'numeric' })}`}
+                          {c.contract_end && `–${new Date(c.contract_end).toLocaleDateString('en-AU', { month: 'short', year: 'numeric' })}`}
+                        </div>
+                      </div>
+                      <span className="font-mono text-sm font-bold text-bauhaus-black shrink-0">
+                        {formatMoney(c.contract_value)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {/* Shared Directors / Board Interlocks */}
+          {sharedDirectors.length > 0 && (
+            <Section title={`Board Interlocks (${sharedDirectors.length} shared directors)`}>
+              <div className="space-y-3">
+                {sharedDirectors.map((sd, i) => (
+                  <div key={i} className="py-2 border-b border-gray-200 last:border-b-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="w-1.5 h-1.5 bg-bauhaus-red shrink-0" />
+                      {sd.person_gs_id ? (
+                        <Link href={`/entities/${sd.person_gs_id}`} className="text-sm font-bold text-bauhaus-black hover:text-bauhaus-red">
+                          {sd.person_name}
+                        </Link>
+                      ) : (
+                        <span className="text-sm font-bold text-bauhaus-black">{sd.person_name}</span>
+                      )}
+                      <span className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest">
+                        also sits on
+                      </span>
+                    </div>
+                    <div className="ml-4 flex flex-wrap gap-1.5">
+                      {sd.shared_entities.slice(0, 5).map((se, j) => (
+                        se.gs_id ? (
+                          <Link key={j} href={`/entities/${se.gs_id}`}
+                                className="text-[11px] font-bold px-2 py-0.5 border-2 border-bauhaus-red/20 bg-error-light text-bauhaus-red hover:border-bauhaus-red truncate max-w-[200px]">
+                            {se.name}
+                          </Link>
+                        ) : (
+                          <span key={j} className="text-[11px] font-bold px-2 py-0.5 border-2 border-gray-200 text-bauhaus-muted truncate max-w-[200px]">
+                            {se.name}
+                          </span>
+                        )
+                      ))}
+                      {sd.shared_entities.length > 5 && (
+                        <span className="text-[10px] text-bauhaus-muted font-bold">+{sd.shared_entities.length - 5} more</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </Section>
           )}
 
@@ -578,7 +797,32 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
           )}
 
           {/* Board & Leadership */}
-          {foundation?.board_members && foundation.board_members.length > 0 && (
+          {orgPersonRoles.length > 0 ? (
+            <div className="bg-white border-4 border-bauhaus-black p-4">
+              <h3 className="text-sm font-black text-bauhaus-black mb-3 pb-2 border-b-4 border-bauhaus-black uppercase tracking-widest">
+                Board &amp; Leadership ({orgPersonRoles.length})
+              </h3>
+              <ul className="space-y-1.5">
+                {orgPersonRoles.map((r, i) => (
+                  <li key={i} className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="w-1.5 h-1.5 bg-bauhaus-black shrink-0" />
+                      {r.person_gs_id ? (
+                        <Link href={`/entities/${r.person_gs_id}`} className="text-sm font-bold text-bauhaus-black hover:text-bauhaus-red truncate">
+                          {r.person_name}
+                        </Link>
+                      ) : (
+                        <span className="text-sm font-bold text-bauhaus-black truncate">{r.person_name}</span>
+                      )}
+                    </div>
+                    <span className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest shrink-0">
+                      {r.role_type.replace(/_/g, ' ')}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : foundation?.board_members && foundation.board_members.length > 0 ? (
             <div className="bg-white border-4 border-bauhaus-black p-4">
               <h3 className="text-sm font-black text-bauhaus-black mb-3 pb-2 border-b-4 border-bauhaus-black uppercase tracking-widest">
                 Board &amp; Leadership
@@ -592,7 +836,7 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
                 ))}
               </ul>
             </div>
-          )}
+          ) : null}
 
           {/* Financials */}
           {(e.latest_revenue || e.latest_assets || e.latest_tax_payable) && (

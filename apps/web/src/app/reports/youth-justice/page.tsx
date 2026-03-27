@@ -62,6 +62,7 @@ type AustenderContract = {
 type GrantRecipient = {
   recipient_name: string;
   state: string | null;
+  gs_id: string | null;
   total: number;
   grants: number;
 };
@@ -107,11 +108,11 @@ type AccoGap = { org_type: string; orgs: number; total_funding: number; avg_gran
 type RemotenessRow = { remoteness: string; orgs: number; total: number; grants: number };
 type UnfundedProgram = { name: string; type: string; evidence_level: string; cultural_authority: string; geography: string };
 type RevolvingDoorRow = {
-  canonical_name: string; revolving_door_score: number; influence_vectors: number;
+  canonical_name: string; gs_id: string | null; revolving_door_score: number; influence_vectors: number;
   total_donated: number; total_contracts: number; total_funded: number;
   parties_funded: string; distinct_buyers: number; is_community_controlled: boolean;
 };
-type FoundationRow = { name: string; total_giving_annual: number; thematic_focus: string; geographic_focus: string };
+type FoundationRow = { name: string; total_giving_annual: number; thematic_focus: string; geographic_focus: string; gs_id: string | null };
 type AnaoCompliance = {
   portfolio: string; compliance_rate: number;
   contracts_compliant: number; contracts_in_reporting: number;
@@ -155,7 +156,7 @@ async function getReport(): Promise<YouthJusticeReport> {
     getRogsTimeSeries('ROGS Youth Justice', ALL_STATES),
     getAlmaInterventions('youth-justice'),
     getYouthJusticeContracts(15),
-    getYouthJusticeGrants(15),
+    getYouthJusticeGrants(40),
     getNdisYouthOverlay(),
     getDssPaymentsByState(),
     getYouthJusticeIndicators(),
@@ -595,7 +596,11 @@ export default async function YouthJusticeReportPage() {
                   {report.revolvingDoor.map((r, i) => (
                     <tr key={r.canonical_name} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                       <td className="px-3 py-2 text-xs font-medium">
-                        {r.canonical_name}
+                        {r.gs_id ? (
+                          <Link href={`/entities/${r.gs_id}`} className="text-bauhaus-black hover:text-bauhaus-red font-bold">
+                            {r.canonical_name}
+                          </Link>
+                        ) : r.canonical_name}
                         {r.is_community_controlled && <span className="ml-1 text-[9px] bg-amber-100 text-amber-700 px-1 rounded">ACCO</span>}
                       </td>
                       <td className="px-3 py-2 text-center">
@@ -709,7 +714,11 @@ export default async function YouthJusticeReportPage() {
               return (
                 <div key={f.name} className="border-2 border-gray-200 rounded-sm p-4 hover:border-bauhaus-blue transition-colors">
                   <div className="flex justify-between items-start gap-2 mb-2">
-                    <h4 className="font-bold text-sm leading-tight">{f.name}</h4>
+                    <h4 className="font-bold text-sm leading-tight">
+                      {f.gs_id ? (
+                        <Link href={`/entities/${f.gs_id}`} className="hover:text-bauhaus-red">{f.name}</Link>
+                      ) : f.name}
+                    </h4>
                     <span className="text-sm font-black text-bauhaus-blue shrink-0">{money(f.total_giving_annual)}/yr</span>
                   </div>
                   <div className="flex flex-wrap gap-1 mb-1">
@@ -984,7 +993,13 @@ export default async function YouthJusticeReportPage() {
                       <tbody>
                         {orgs.map((g, i) => (
                           <tr key={`grant-${i}`} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                            <td className="px-4 py-2 text-xs font-medium">{g.recipient_name}</td>
+                            <td className="px-4 py-2 text-xs font-medium">
+                              {g.gs_id ? (
+                                <Link href={`/entities/${g.gs_id}`} className="text-bauhaus-black hover:text-bauhaus-red font-bold">
+                                  {g.recipient_name}
+                                </Link>
+                              ) : g.recipient_name}
+                            </td>
                             <td className="px-4 py-2 text-xs">{g.state || '—'}</td>
                             <td className="px-4 py-2 text-right font-mono text-sm">{money(g.total)}</td>
                             <td className="px-4 py-2 text-right font-mono text-sm">{g.grants}</td>
