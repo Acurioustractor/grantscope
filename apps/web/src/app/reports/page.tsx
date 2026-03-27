@@ -178,6 +178,28 @@ export default function ReportsPage() {
         </a>
       </section>
 
+      {/* ===== FLAGSHIP: PROCUREMENT OLIGOPOLY ===== */}
+      <section className="mb-6">
+        <a href="/reports/procurement-oligopoly" className="group block">
+          <div className="bg-white border-4 border-bauhaus-black p-8 transition-all group-hover:-translate-y-1" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-red)' }}>
+            <div className="text-xs font-black text-bauhaus-red mb-2 uppercase tracking-widest">Procurement Investigation &mdash; NEW</div>
+            <h3 className="text-2xl font-black text-bauhaus-black mb-3">The Procurement Oligopoly</h3>
+            <p className="text-base text-bauhaus-muted leading-relaxed mb-4">
+              100 entities (0.18% of all suppliers) receive 59% of all federal procurement dollars.
+              Defence dominates, but the concentration extends across IT, construction, consulting, and services.
+              Cross-referenced with political donations and lobbying registrations.
+            </p>
+            <div className="flex gap-6 text-bauhaus-muted/60 text-sm font-bold">
+              <span>55,000+ unique suppliers</span>
+              <span>&middot;</span>
+              <span>$1.1T in contracts</span>
+              <span>&middot;</span>
+              <span>44 of top 100 also donate</span>
+            </div>
+          </div>
+        </a>
+      </section>
+
       {/* ===== FLAGSHIP: POWER CONCENTRATION ===== */}
       <section className="mb-6">
         <a href="/reports/power-concentration" className="group block">

@@ -70,6 +70,30 @@ export interface DonationRecord {
   financial_year: string | null;
 }
 
+export interface EvidenceDetail {
+  evidence_type: string;
+  methodology: string | null;
+  sample_size: number | null;
+  effect_size: string | null;
+  title: string | null;
+}
+
+export interface OutcomeDetail {
+  name: string;
+  outcome_type: string | null;
+  measurement_method: string | null;
+  indicators: string | null;
+}
+
+export interface ProofStatus {
+  lifecycle_status: string;
+  overall_confidence: number | null;
+  evidence_confidence: number | null;
+  voice_confidence: number | null;
+  capital_confidence: number | null;
+  governance_confidence: number | null;
+}
+
 export interface AlmaInterventionSummary {
   name: string;
   type: string | null;
@@ -83,6 +107,8 @@ export interface AlmaInterventionSummary {
   website: string | null;
   evidence_count: number;
   outcome_names: string[];
+  evidence_details: EvidenceDetail[];
+  outcome_details: OutcomeDetail[];
 }
 
 export interface PlaceContext {
@@ -137,6 +163,7 @@ export interface DueDiligencePack {
   contracts: ContractSummary;
   donations: DonationSummary;
   alma_interventions: AlmaInterventionSummary[];
+  proof_status: ProofStatus | null;
   place: PlaceContext | null;
   integrity_flags: IntegrityFlags;
   data_sources: string[];
@@ -298,35 +325,78 @@ export async function assembleDueDiligencePack(gsId: string): Promise<DueDiligen
   let evidenceCounts: Record<string, number> = {};
   let outcomesByIntervention: Record<string, string[]> = {};
 
+  let evidenceDetailsByIntervention: Record<string, EvidenceDetail[]> = {};
+  let outcomeDetailsByIntervention: Record<string, OutcomeDetail[]> = {};
+
   if (almaIds.length > 0) {
-    const [evResult, outResult] = await Promise.all([
+    const [evJunctionResult, outResult] = await Promise.all([
       safe(supabase.from('alma_intervention_evidence')
-        .select('intervention_id')
+        .select('intervention_id, evidence_id')
         .in('intervention_id', almaIds)),
       safe(supabase.from('alma_intervention_outcomes')
         .select('intervention_id, outcome_id')
         .in('intervention_id', almaIds)),
     ]);
 
-    for (const row of (evResult || []) as Array<{ intervention_id: string }>) {
+    const evJunction = (evJunctionResult || []) as Array<{ intervention_id: string; evidence_id: string }>;
+    for (const row of evJunction) {
       evidenceCounts[row.intervention_id] = (evidenceCounts[row.intervention_id] || 0) + 1;
     }
 
-    // Fetch outcome names for the outcome_ids
+    // Fetch full evidence details
+    const evidenceIds = [...new Set(evJunction.map(r => r.evidence_id))];
+    let evidenceMap: Record<string, EvidenceDetail> = {};
+    if (evidenceIds.length > 0) {
+      const evDetailResult = await safe(supabase.from('alma_evidence')
+        .select('id, title, evidence_type, methodology, sample_size, effect_size')
+        .in('id', evidenceIds));
+      for (const row of (evDetailResult || []) as Array<{ id: string; title: string | null; evidence_type: string; methodology: string | null; sample_size: number | null; effect_size: string | null }>) {
+        evidenceMap[row.id] = {
+          evidence_type: row.evidence_type,
+          methodology: row.methodology,
+          sample_size: row.sample_size,
+          effect_size: row.effect_size,
+          title: row.title,
+        };
+      }
+    }
+
+    // Group evidence details by intervention
+    for (const row of evJunction) {
+      if (!evidenceDetailsByIntervention[row.intervention_id]) evidenceDetailsByIntervention[row.intervention_id] = [];
+      const detail = evidenceMap[row.evidence_id];
+      if (detail) evidenceDetailsByIntervention[row.intervention_id].push(detail);
+    }
+
+    // Fetch full outcome details
     const outcomeIds = [...new Set(((outResult || []) as Array<{ intervention_id: string; outcome_id: string }>).map(r => r.outcome_id))];
-    let outcomeNameMap: Record<string, string> = {};
+    let outcomeDetailMap: Record<string, OutcomeDetail> = {};
     if (outcomeIds.length > 0) {
-      const namesResult = await safe(supabase.from('alma_outcomes').select('id, name').in('id', outcomeIds));
-      for (const row of (namesResult || []) as Array<{ id: string; name: string }>) {
-        outcomeNameMap[row.id] = row.name;
+      const outcomeDetailResult = await safe(supabase.from('alma_outcomes')
+        .select('id, name, outcome_type, measurement_method, indicators')
+        .in('id', outcomeIds));
+      for (const row of (outcomeDetailResult || []) as Array<{ id: string; name: string; outcome_type: string | null; measurement_method: string | null; indicators: string | null }>) {
+        outcomeDetailMap[row.id] = {
+          name: row.name,
+          outcome_type: row.outcome_type,
+          measurement_method: row.measurement_method,
+          indicators: row.indicators,
+        };
       }
     }
 
     for (const row of (outResult || []) as Array<{ intervention_id: string; outcome_id: string }>) {
       if (!outcomesByIntervention[row.intervention_id]) outcomesByIntervention[row.intervention_id] = [];
-      const name = outcomeNameMap[row.outcome_id];
-      if (name && !outcomesByIntervention[row.intervention_id].includes(name)) {
-        outcomesByIntervention[row.intervention_id].push(name);
+      const detail = outcomeDetailMap[row.outcome_id];
+      if (detail) {
+        const name = detail.name;
+        if (name && !outcomesByIntervention[row.intervention_id].includes(name)) {
+          outcomesByIntervention[row.intervention_id].push(name);
+        }
+        if (!outcomeDetailsByIntervention[row.intervention_id]) outcomeDetailsByIntervention[row.intervention_id] = [];
+        if (!outcomeDetailsByIntervention[row.intervention_id].find(o => o.name === detail.name)) {
+          outcomeDetailsByIntervention[row.intervention_id].push(detail);
+        }
       }
     }
   }
@@ -344,7 +414,17 @@ export async function assembleDueDiligencePack(gsId: string): Promise<DueDiligen
     website: a.website as string | null,
     evidence_count: evidenceCounts[a.id as string] || 0,
     outcome_names: outcomesByIntervention[a.id as string] || [],
+    evidence_details: evidenceDetailsByIntervention[a.id as string] || [],
+    outcome_details: outcomeDetailsByIntervention[a.id as string] || [],
   }));
+
+  // Fetch governed proof bundle for this entity (if exists)
+  const proofBundleResult = await safe(supabase.from('governed_proof_bundles')
+    .select('lifecycle_status, overall_confidence, evidence_confidence, voice_confidence, capital_confidence, governance_confidence')
+    .eq('subject_id', entity.gs_id)
+    .order('updated_at', { ascending: false })
+    .limit(1));
+  const proofRow = ((proofBundleResult || []) as Array<ProofStatus>)[0] || null;
 
   const placeGeoRow = ((placeGeoResult || []) as Array<Record<string, unknown>>)[0];
   const seifaRow = ((seifaResult || []) as Array<Record<string, unknown>>)[0];
@@ -410,6 +490,7 @@ export async function assembleDueDiligencePack(gsId: string): Promise<DueDiligen
       by_party: donationsByParty,
     },
     alma_interventions: almaInterventions,
+    proof_status: proofRow,
     place,
     integrity_flags: integrityFlags,
     data_sources: [

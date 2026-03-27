@@ -489,18 +489,99 @@ export async function buildDueDiligencePdf(pack: DueDiligencePack): Promise<{ by
       [180, 95, 75, 80, 82],
     );
 
-    // Outcomes summary — unique outcomes across all interventions
+    // Evidence Base — breakdown by evidence type
+    const allEvidence = pack.alma_interventions.flatMap(a => a.evidence_details);
+    if (allEvidence.length > 0) {
+      drawSection('Evidence Base');
+      // Type distribution
+      const typeCounts: Record<string, number> = {};
+      let totalSampleSize = 0;
+      let sampledStudies = 0;
+      for (const ev of allEvidence) {
+        const t = ev.evidence_type || 'Unknown';
+        typeCounts[t] = (typeCounts[t] || 0) + 1;
+        if (ev.sample_size && ev.sample_size > 0) {
+          totalSampleSize += ev.sample_size;
+          sampledStudies++;
+        }
+      }
+      const sortedTypes = Object.entries(typeCounts).sort((a, b) => b[1] - a[1]);
+
+      // Evidence type bar chart
+      const maxCount = sortedTypes[0]?.[1] ?? 1;
+      const barMaxW = CONTENT_WIDTH - 180;
+      for (const [evType, count] of sortedTypes) {
+        ensureSpace(18);
+        const barW = Math.max(4, (count / maxCount) * barMaxW);
+        const isRCT = evType.includes('RCT');
+        page.drawText(sanitize(evType), { x: MARGIN, y: y - 10, size: FONT_SIZES.label, font: bold, color: C.black });
+        page.drawRectangle({ x: MARGIN + 160, y: y - 12, width: barW, height: 12, color: isRCT ? C.red : C.black });
+        page.drawText(String(count), { x: MARGIN + 164 + barW, y: y - 10, size: FONT_SIZES.label, font: bold, color: C.muted });
+        y -= 18;
+      }
+
+      // Sample size summary
+      if (sampledStudies > 0) {
+        ensureSpace(20);
+        y -= 4;
+        page.drawRectangle({ x: MARGIN, y: y - 16, width: CONTENT_WIDTH, height: 16, color: C.surface });
+        page.drawText(
+          sanitize(`${allEvidence.length} studies | ${sampledStudies} with sample data | ${totalSampleSize.toLocaleString()} total participants`),
+          { x: MARGIN + 10, y: y - 12, size: FONT_SIZES.label, font: bold, color: C.muted },
+        );
+        y -= 24;
+      }
+    }
+
+    // Measured Outcomes — enriched with type and indicators
     if (totalOutcomes > 0) {
       drawSection('Measured Outcomes');
-      const allOutcomes = [...new Set(pack.alma_interventions.flatMap(a => a.outcome_names))].slice(0, 12);
-      for (const outcome of allOutcomes) {
-        ensureSpace(16);
-        page.drawRectangle({ x: MARGIN, y: y - 10, width: 8, height: 8, color: C.red });
-        page.drawText(sanitize(outcome), { x: MARGIN + 14, y: y - 10, size: FONT_SIZES.body, font: regular, color: C.black });
-        y -= 16;
+      // Collect unique outcome details across all interventions
+      const seenOutcomes = new Set<string>();
+      const uniqueOutcomeDetails: Array<{ name: string; outcome_type: string | null; measurement_method: string | null; indicators: string | null }> = [];
+      for (const intervention of pack.alma_interventions) {
+        for (const od of intervention.outcome_details) {
+          if (!seenOutcomes.has(od.name)) {
+            seenOutcomes.add(od.name);
+            uniqueOutcomeDetails.push(od);
+          }
+        }
       }
-      if (totalOutcomes > 12) {
-        drawParagraph(`+ ${totalOutcomes - 12} more measured outcomes`, FONT_SIZES.label, regular, C.muted);
+      // Also include outcome names that don't have details
+      const allOutcomeNames = [...new Set(pack.alma_interventions.flatMap(a => a.outcome_names))];
+      for (const name of allOutcomeNames) {
+        if (!seenOutcomes.has(name)) {
+          seenOutcomes.add(name);
+          uniqueOutcomeDetails.push({ name, outcome_type: null, measurement_method: null, indicators: null });
+        }
+      }
+
+      // Render as table if we have detail, else bullets
+      const hasAnyDetail = uniqueOutcomeDetails.some(o => o.outcome_type || o.indicators);
+      if (hasAnyDetail) {
+        drawTable(
+          ['Outcome', 'Type', 'Indicators'],
+          uniqueOutcomeDetails.slice(0, 15).map(o => [
+            o.name,
+            o.outcome_type || '\u2014',
+            o.indicators ? (o.indicators.length > 60 ? o.indicators.slice(0, 58) + '...' : o.indicators) : '\u2014',
+          ]),
+          [160, 130, CONTENT_WIDTH - 290],
+        );
+        if (uniqueOutcomeDetails.length > 15) {
+          drawParagraph(`+ ${uniqueOutcomeDetails.length - 15} more measured outcomes`, FONT_SIZES.label, regular, C.muted);
+        }
+      } else {
+        const displayOutcomes = allOutcomeNames.slice(0, 12);
+        for (const outcome of displayOutcomes) {
+          ensureSpace(16);
+          page.drawRectangle({ x: MARGIN, y: y - 10, width: 8, height: 8, color: C.red });
+          page.drawText(sanitize(outcome), { x: MARGIN + 14, y: y - 10, size: FONT_SIZES.body, font: regular, color: C.black });
+          y -= 16;
+        }
+        if (allOutcomeNames.length > 12) {
+          drawParagraph(`+ ${allOutcomeNames.length - 12} more measured outcomes`, FONT_SIZES.label, regular, C.muted);
+        }
       }
       y -= 4;
     }
@@ -515,6 +596,47 @@ export async function buildDueDiligencePdf(pack: DueDiligencePack): Promise<{ by
         { x: MARGIN + 10, y: y - 14, size: FONT_SIZES.label, font: bold, color: C.muted },
       );
       y -= 28;
+    }
+
+    // Governed Proof status (if bundle exists)
+    if (pack.proof_status) {
+      drawSection('Governed Proof Status');
+      const ps = pack.proof_status;
+      const statusLabel = ps.lifecycle_status.charAt(0).toUpperCase() + ps.lifecycle_status.slice(1);
+      const confidence = ps.overall_confidence != null ? `${Math.round(ps.overall_confidence * 100)}%` : '\u2014';
+
+      // Status badge
+      ensureSpace(30);
+      const isValidated = ps.lifecycle_status === 'validated' || ps.lifecycle_status === 'published';
+      const badgeColor = isValidated ? C.red : C.black;
+      const badgeW = bold.widthOfTextAtSize(statusLabel.toUpperCase(), FONT_SIZES.label) + 20;
+      page.drawRectangle({ x: MARGIN, y: y - 18, width: badgeW, height: 18, color: badgeColor });
+      page.drawText(statusLabel.toUpperCase(), { x: MARGIN + 10, y: y - 13, size: FONT_SIZES.label, font: bold, color: C.white });
+      page.drawText(`Overall Confidence: ${confidence}`, { x: MARGIN + badgeW + 12, y: y - 13, size: FONT_SIZES.body, font: bold, color: C.black });
+      y -= 28;
+
+      // Confidence dimensions
+      const dimensions: Array<{ label: string; value: number | null }> = [
+        { label: 'Capital', value: ps.capital_confidence },
+        { label: 'Evidence', value: ps.evidence_confidence },
+        { label: 'Voice', value: ps.voice_confidence },
+        { label: 'Governance', value: ps.governance_confidence },
+      ];
+      const dimWithValues = dimensions.filter(d => d.value != null);
+      if (dimWithValues.length > 0) {
+        const dimBarMaxW = CONTENT_WIDTH - 120;
+        for (const dim of dimWithValues) {
+          ensureSpace(16);
+          const pctVal = Math.round((dim.value ?? 0) * 100);
+          const barW = Math.max(2, (dim.value ?? 0) * dimBarMaxW);
+          page.drawText(sanitize(dim.label.toUpperCase()), { x: MARGIN, y: y - 10, size: FONT_SIZES.tiny, font: bold, color: C.muted });
+          page.drawRectangle({ x: MARGIN + 80, y: y - 12, width: dimBarMaxW, height: 10, color: C.surface });
+          page.drawRectangle({ x: MARGIN + 80, y: y - 12, width: barW, height: 10, color: pctVal >= 70 ? C.red : C.black });
+          page.drawText(`${pctVal}%`, { x: MARGIN + 84 + dimBarMaxW, y: y - 10, size: FONT_SIZES.tiny, font: bold, color: C.muted });
+          y -= 16;
+        }
+        y -= 4;
+      }
     }
   } else {
     drawParagraph('No Australian Living Map of Alternatives (ALMA) interventions linked to this entity.', FONT_SIZES.body, regular, C.muted);
