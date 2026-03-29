@@ -1,14 +1,10 @@
 import { NextResponse } from 'next/server';
-import { requireModule } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
 
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ sa2Code: string }> }
 ) {
-  const auth = await requireModule('allocation');
-  if (auth.error) return auth.error;
-
   const { sa2Code } = await params;
 
   try {

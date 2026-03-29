@@ -83,6 +83,12 @@ export function CapitalMap({ onSelectSA2 }: CapitalMapProps) {
       fetch('/geo/sa2-2021.json').then(r => r.json()),
       fetch('/api/power/map-data').then(r => r.json()),
     ]).then(([geo, data]) => {
+      // Add unique IDs to features to prevent duplicate key warnings
+      if (geo?.features) {
+        geo.features.forEach((f: any, i: number) => {
+          if (f.properties) f.properties._uid = i;
+        });
+      }
       setGeoData(geo);
       setMapData(data.features || []);
       setLoading(false);

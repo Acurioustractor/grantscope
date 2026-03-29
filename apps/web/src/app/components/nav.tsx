@@ -139,7 +139,7 @@ const workspaceModules: NavModule[] = [
     module: 'procurement',
     children: [
       { label: 'Discover', href: '/tender-intelligence' },
-      { label: 'Supply Chain', href: '/goods-intelligence' },
+      { label: 'Goods Workspace', href: '/goods-workspace' },
     ],
   },
   {
@@ -195,7 +195,7 @@ const workspaceModules: NavModule[] = [
 const adminLinks = [
   { href: '/ops', label: 'Ops' },
   { href: '/mission-control', label: 'Mission Control' },
-  { href: '/goods-intelligence', label: 'Supply Chain' },
+  { href: '/goods-workspace', label: 'Goods Workspace' },
 ];
 
 /* ─── Component ────────────────────────────────────────────── */
