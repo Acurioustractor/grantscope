@@ -125,7 +125,7 @@ async function getData() {
 
     // LGAs with NDIS participants in top funding deserts
     q(`SELECT l.lga_name, l.state, l.participant_count,
-        d.desert_score, d.remoteness, d.ndis_entities as providers,
+        d.desert_score, d.remoteness, d.disability_entities as providers,
         d.thin_market_status
       FROM ndis_participants_lga l
       JOIN mv_disability_landscape d ON l.lga_name = d.lga_name AND l.state = d.state
@@ -134,7 +134,7 @@ async function getData() {
       ORDER BY d.desert_score DESC LIMIT 20`),
 
     // Top underserved LGAs (participants with few providers)
-    q(`SELECT lga_name, state, remoteness, ndis_participants, ndis_entities as providers,
+    q(`SELECT lga_name, state, remoteness, ndis_participants, disability_entities as providers,
         thin_market_status, desert_score
       FROM mv_disability_landscape
       WHERE ndis_participants > 100
