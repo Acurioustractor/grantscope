@@ -586,7 +586,7 @@ export default async function NdisReportPage() {
                 <tr className="bg-[#F0F0F0]">
                   <th className="text-left p-3 font-black uppercase tracking-widest text-xs">LGA</th>
                   <th className="text-right p-3 font-black uppercase tracking-widest text-xs">Participants</th>
-                  <th className="text-right p-3 font-black uppercase tracking-widest text-xs">Providers</th>
+                  <th className="text-right p-3 font-black uppercase tracking-widest text-xs">Linked Providers</th>
                   <th className="text-left p-3 font-black uppercase tracking-widest text-xs">Status</th>
                 </tr>
               </thead>
@@ -609,7 +609,9 @@ export default async function NdisReportPage() {
           </div>
           <div className="p-4 bg-[#FFE8E8] border-t-4 border-bauhaus-red">
             <p className="text-xs font-bold text-bauhaus-black leading-relaxed">
-              CRITICAL = participants present, zero mapped providers. SEVERE = participants outnumber providers by 100:1 or more.
+              &ldquo;Linked Providers&rdquo; = NDIS registered providers matched to CivicGraph entities in this LGA via ABN.
+              Zero does not mean no providers exist — it means none are linked in our entity graph yet.
+              CRITICAL = participants present, zero linked providers. SEVERE = participants outnumber linked providers by 100:1+.
             </p>
           </div>
         </div>
