@@ -555,7 +555,7 @@ export default async function NdisReportPage() {
               </thead>
               <tbody>
                 {data.geographicGaps.slice(0, 12).map((row, i) => (
-                  <tr key={`${row.lga_name}-${row.state}`} className={i % 2 === 0 ? 'bg-white' : 'bg-[#F8F8F8]'}>
+                  <tr key={`${row.lga_name}-${row.state}-${i}`} className={i % 2 === 0 ? 'bg-white' : 'bg-[#F8F8F8]'}>
                     <td className="p-3 font-medium text-xs">{String(row.lga_name)}</td>
                     <td className="p-3 text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">{String(row.state)}</td>
                     <td className="p-3 text-right font-mono font-bold">{fmt(num(row.participant_count))}</td>
@@ -592,7 +592,7 @@ export default async function NdisReportPage() {
               </thead>
               <tbody>
                 {data.topDesertLgas.map((row, i) => (
-                  <tr key={`${row.lga_name}-${row.state}`} className={i % 2 === 0 ? 'bg-white' : 'bg-[#F8F8F8]'}>
+                  <tr key={`${row.lga_name}-${row.state}-${i}`} className={i % 2 === 0 ? 'bg-white' : 'bg-[#F8F8F8]'}>
                     <td className="p-3">
                       <div className="text-xs font-bold">{String(row.lga_name)}</div>
                       <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">{String(row.state)} — {String(row.remoteness || '')}</div>

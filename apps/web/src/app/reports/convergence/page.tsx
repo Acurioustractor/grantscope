@@ -118,12 +118,12 @@ async function getData() {
          GROUP BY metric_name`,
     }), 'cp-notifications') as Promise<ChildProtectionStat[] | null>,
 
-    // Community-controlled org percentage
+    // Community-controlled org percentage (use power index MV — pre-aggregated, fast)
     safe(supabase.rpc('exec_sql', {
       query: `SELECT
          ROUND(100.0 * COUNT(*) FILTER (WHERE is_community_controlled = true) / NULLIF(COUNT(*), 0), 1)::float as pct
-         FROM gs_entities
-         WHERE entity_type IN ('charity', 'company', 'nfp')`,
+         FROM mv_entity_power_index
+         WHERE system_count >= 1`,
     }), 'cc-pct') as Promise<Array<{ pct: number }> | null>,
 
     // Average desert score in remote areas
@@ -134,35 +134,28 @@ async function getData() {
            AND desert_score IS NOT NULL`,
     }), 'desert-remote') as Promise<Array<{ avg_score: number }> | null>,
 
-    // Money split: community-controlled vs mainstream (justice funding)
+    // Money split: community-controlled vs mainstream (use power index MV — pre-aggregated)
     safe(supabase.rpc('exec_sql', {
       query: `SELECT
-         e.is_community_controlled,
-         COUNT(DISTINCT jf.recipient_abn)::int as org_count,
-         SUM(jf.amount_dollars)::bigint as total_funding,
-         COUNT(*)::int as grant_count
-       FROM justice_funding jf
-       JOIN gs_entities e ON e.abn = jf.recipient_abn AND jf.recipient_abn IS NOT NULL
-       WHERE jf.amount_dollars IS NOT NULL
-         AND jf.program_name NOT LIKE 'ROGS%'
-         AND jf.program_name NOT LIKE 'Total%'
-         AND jf.recipient_name NOT LIKE 'Department of%'
-         AND jf.recipient_name NOT LIKE 'State of%'
-       GROUP BY e.is_community_controlled`,
+         is_community_controlled,
+         COUNT(*)::int as org_count,
+         SUM(justice_dollars)::bigint as total_funding,
+         0 as grant_count
+       FROM mv_entity_power_index
+       WHERE in_justice_funding = 1 AND justice_dollars > 0
+       GROUP BY is_community_controlled`,
     }), 'money-split') as Promise<MoneySplit[] | null>,
 
-    // Contract split: community-controlled vs mainstream
+    // Contract split: community-controlled vs mainstream (use power index MV — pre-aggregated)
     safe(supabase.rpc('exec_sql', {
       query: `SELECT
-         e.is_community_controlled,
-         COUNT(DISTINCT ac.supplier_abn)::int as supplier_count,
-         SUM(ac.contract_value)::bigint as total_value,
-         COUNT(*)::int as contract_count
-       FROM austender_contracts ac
-       JOIN gs_entities e ON e.abn = ac.supplier_abn AND ac.supplier_abn IS NOT NULL
-       WHERE ac.contract_value IS NOT NULL
-         AND ac.contract_value > 0
-       GROUP BY e.is_community_controlled`,
+         is_community_controlled,
+         COUNT(*)::int as supplier_count,
+         SUM(procurement_dollars)::bigint as total_value,
+         SUM(contract_count)::int as contract_count
+       FROM mv_entity_power_index
+       WHERE in_procurement = 1 AND procurement_dollars > 0
+       GROUP BY is_community_controlled`,
     }), 'contract-split') as Promise<ContractSplit[] | null>,
 
     // ALMA evidence gap: intervention types with evidence vs funding
@@ -191,9 +184,9 @@ async function getData() {
        ORDER BY aust DESC`,
     }), 'pipeline-costs') as Promise<PipelineCost[] | null>,
 
-    // Count of community-controlled orgs
+    // Count of community-controlled orgs (use power index MV)
     safe(supabase.rpc('exec_sql', {
-      query: `SELECT COUNT(*)::int as count FROM gs_entities WHERE is_community_controlled = true`,
+      query: `SELECT COUNT(*)::int as count FROM mv_entity_power_index WHERE is_community_controlled = true`,
     }), 'cc-count') as Promise<Array<{ count: number }> | null>,
 
     // Count entities in justice funding
@@ -328,7 +321,7 @@ export default async function ConvergenceReportPage() {
               </thead>
               <tbody>
                 {data.desertRows.map((row, i) => (
-                  <tr key={row.lga_name} className={`border-t border-gray-200 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50`}>
+                  <tr key={`${row.lga_name}-${row.state}-${i}`} className={`border-t border-gray-200 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50`}>
                     <td className="px-3 py-2 font-bold">
                       <Link href={`/places?lga=${encodeURIComponent(row.lga_name)}`} className="text-bauhaus-blue hover:text-bauhaus-red">
                         {row.lga_name}
