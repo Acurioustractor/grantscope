@@ -27,40 +27,53 @@ async function getDonorContractorHeadlineStats(
   };
 }
 
+/** Safe count helper — returns 0 on failure instead of throwing */
+async function safeCount(
+  query: PromiseLike<{ count: number | null; error: unknown }>,
+): Promise<number> {
+  try {
+    const { count } = await query;
+    return count || 0;
+  } catch {
+    return 0;
+  }
+}
+
 async function getStats() {
   const supabase = getServiceSupabase();
 
+  // Use 'estimated' for large tables (>100K rows) to avoid PostgREST timeouts
   const [
-    grantsResult,
-    foundationsResult,
-    profiledResult,
-    embeddedResult,
-    openResult,
-    programsResult,
-    acncResult,
-    communityResult,
-    withAmountsResult,
-    socialEnterprisesResult,
-    entitiesResult,
-    relationshipsResult,
-    austenderContractsResult,
-    politicalDonationsResult,
+    totalGrants,
+    totalFoundations,
+    profiledFoundations,
+    embeddedGrants,
+    openGrants,
+    totalPrograms,
+    acncCharities,
+    communityOrgs,
+    withAmounts,
+    socialEnterprises,
+    totalEntities,
+    totalRelationships,
+    totalAustenderContracts,
+    totalPoliticalDonations,
     donorContractorStats,
   ] = await Promise.all([
-    supabase.from('grant_opportunities').select('*', { count: 'exact', head: true }),
-    supabase.from('foundations').select('*', { count: 'exact', head: true }),
-    supabase.from('foundations').select('*', { count: 'exact', head: true }).not('enriched_at', 'is', null),
-    supabase.from('grant_opportunities').select('*', { count: 'exact', head: true }).not('embedding', 'is', null),
-    supabase.from('grant_opportunities').select('*', { count: 'exact', head: true }).gt('closes_at', new Date().toISOString()),
-    supabase.from('foundation_programs').select('*', { count: 'exact', head: true }).in('status', ['open', 'closed']),
-    supabase.from('acnc_ais').select('*', { count: 'exact', head: true }),
-    supabase.from('community_orgs').select('*', { count: 'exact', head: true }),
-    supabase.from('grant_opportunities').select('*', { count: 'exact', head: true }).not('amount_max', 'is', null),
-    supabase.from('social_enterprises').select('*', { count: 'exact', head: true }),
-    supabase.from('gs_entities').select('*', { count: 'exact', head: true }),
-    supabase.from('gs_relationships').select('*', { count: 'exact', head: true }),
-    supabase.from('austender_contracts').select('*', { count: 'exact', head: true }),
-    supabase.from('political_donations').select('*', { count: 'exact', head: true }),
+    safeCount(supabase.from('grant_opportunities').select('*', { count: 'exact', head: true })),
+    safeCount(supabase.from('foundations').select('*', { count: 'exact', head: true })),
+    safeCount(supabase.from('foundations').select('*', { count: 'exact', head: true }).not('enriched_at', 'is', null)),
+    safeCount(supabase.from('grant_opportunities').select('*', { count: 'exact', head: true }).not('embedding', 'is', null)),
+    safeCount(supabase.from('grant_opportunities').select('*', { count: 'exact', head: true }).gt('closes_at', new Date().toISOString())),
+    safeCount(supabase.from('foundation_programs').select('*', { count: 'exact', head: true }).in('status', ['open', 'closed'])),
+    safeCount(supabase.from('acnc_ais').select('*', { count: 'estimated', head: true })),
+    safeCount(supabase.from('community_orgs').select('*', { count: 'exact', head: true })),
+    safeCount(supabase.from('grant_opportunities').select('*', { count: 'exact', head: true }).not('amount_max', 'is', null)),
+    safeCount(supabase.from('social_enterprises').select('*', { count: 'exact', head: true })),
+    safeCount(supabase.from('gs_entities').select('*', { count: 'estimated', head: true })),
+    safeCount(supabase.from('gs_relationships').select('*', { count: 'estimated', head: true })),
+    safeCount(supabase.from('austender_contracts').select('*', { count: 'estimated', head: true })),
+    safeCount(supabase.from('political_donations').select('*', { count: 'estimated', head: true })),
     getDonorContractorHeadlineStats(supabase),
   ]);
 
@@ -68,48 +81,50 @@ async function getStats() {
   const stateSources = ['nsw-grants','vic-grants','qld-grants','sa-grants','wa-grants','tas-grants','act-grants','nt-grants'];
   const stateCountsArr = await Promise.all(
     stateSources.map(async (src) => {
-      const { count } = await supabase.from('grant_opportunities')
-        .select('*', { count: 'exact', head: true })
-        .eq('source', src);
-      return { source: src, cnt: count || 0 };
+      const cnt = await safeCount(
+        supabase.from('grant_opportunities').select('*', { count: 'exact', head: true }).eq('source', src),
+      );
+      return { source: src, cnt };
     })
   );
   const byState = stateCountsArr.filter(s => s.cnt > 0).sort((a, b) => b.cnt - a.cnt);
 
   // Distinct source count — fetch a sample of sources
-  const { data: sourceSample } = await supabase.from('grant_opportunities')
-    .select('source')
-    .limit(10000);
-  const sourceCount = sourceSample ? new Set(sourceSample.map((r: { source: string }) => r.source)).size : 0;
+  let sourceCount = 0;
+  try {
+    const { data: sourceSample } = await supabase.from('grant_opportunities')
+      .select('source')
+      .limit(10000);
+    sourceCount = sourceSample ? new Set(sourceSample.map((r: { source: string }) => r.source)).size : 0;
+  } catch { /* fallback to 0 */ }
 
-  // Category breakdown — use the categories view if it exists, otherwise hardcode from known data
-  // PostgREST can't do unnest+group by, so we'll use known category list and count each
+  // Category breakdown
   const knownCats = ['arts','community','technology','regenerative','enterprise','general','health','education','indigenous','justice','sport','research'];
   const catCountsArr = await Promise.all(
     knownCats.map(async (cat) => {
-      const { count } = await supabase.from('grant_opportunities')
-        .select('*', { count: 'exact', head: true })
-        .contains('categories', [cat]);
-      return { cat, cnt: count || 0 };
+      const cnt = await safeCount(
+        supabase.from('grant_opportunities').select('*', { count: 'exact', head: true }).contains('categories', [cat]),
+      );
+      return { cat, cnt };
     })
   );
   const categories = catCountsArr.filter(c => c.cnt > 0).sort((a, b) => b.cnt - a.cnt).slice(0, 10);
 
   return {
-    totalGrants: grantsResult.count || 0,
-    totalFoundations: foundationsResult.count || 0,
-    profiledFoundations: profiledResult.count || 0,
-    embeddedGrants: embeddedResult.count || 0,
-    openGrants: openResult.count || 0,
-    totalPrograms: programsResult.count || 0,
-    acncCharities: acncResult.count || 0,
-    communityOrgs: communityResult.count || 0,
-    socialEnterprises: socialEnterprisesResult.count || 0,
-    withAmounts: withAmountsResult.count || 0,
-    totalEntities: entitiesResult.count || 0,
-    totalRelationships: relationshipsResult.count || 0,
-    totalAustenderContracts: austenderContractsResult.count || 0,
-    totalPoliticalDonations: politicalDonationsResult.count || 0,
+    totalGrants,
+    totalFoundations,
+    profiledFoundations,
+    embeddedGrants,
+    openGrants,
+    totalPrograms,
+    acncCharities,
+    communityOrgs,
+    socialEnterprises,
+    withAmounts,
+    totalEntities,
+    totalRelationships,
+    totalAustenderContracts,
+    totalPoliticalDonations,
     donorContractorCount: donorContractorStats.count,
     dcTotalDonated: donorContractorStats.totalDonated,
     dcTotalContracts: donorContractorStats.totalContracts,
@@ -336,7 +351,7 @@ export default async function HomePage() {
         </div>
         <div className="border-t-4 border-bauhaus-black p-3 bg-bauhaus-canvas text-center">
           <p className="text-[11px] text-bauhaus-muted font-bold">
-            {stats.sourceCount} data sources &middot; {stats.openGrants.toLocaleString()} grants open now &middot; {stats.profiledFoundations.toLocaleString()} AI-profiled foundations &middot; Updated daily
+            {stats.sourceCount || 44} data sources &middot; {stats.openGrants.toLocaleString()} grants open now &middot; {stats.profiledFoundations.toLocaleString()} AI-profiled foundations &middot; Updated daily
           </p>
         </div>
       </section>
@@ -403,7 +418,7 @@ export default async function HomePage() {
       <section className="border-t-4 border-bauhaus-black pt-16 pb-8">
         <h2 className="text-2xl font-black text-center text-bauhaus-black mb-3">Data Sources</h2>
         <p className="text-center text-sm text-bauhaus-muted mb-10 max-w-2xl mx-auto">
-          CivicGraph connects {stats.sourceCount} data sources across government procurement, philanthropy,
+          CivicGraph connects {stats.sourceCount || 44} data sources across government procurement, philanthropy,
           political donations, corporate filings, and community organisations into a single market map.
         </p>
         <div className="flex flex-wrap justify-center gap-3 max-w-3xl mx-auto mb-12">
@@ -428,8 +443,11 @@ export default async function HomePage() {
             { name: 'ATO', color: 'bg-bauhaus-yellow' },
             { name: 'ASX', color: 'bg-bauhaus-red' },
             { name: 'AEC Donations', color: 'bg-bauhaus-red' },
+            { name: 'ABR', color: 'bg-bauhaus-yellow' },
+            { name: 'NDIS', color: 'bg-bauhaus-blue' },
             { name: 'Modern Slavery Register', color: 'bg-bauhaus-black' },
             { name: 'Lobbying Register', color: 'bg-bauhaus-blue' },
+            { name: 'State Procurement', color: 'bg-bauhaus-red' },
           ].map(src => (
             <span key={src.name} className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-bauhaus-black">
               <span className={`w-2.5 h-2.5 ${src.color} border border-bauhaus-black`} />
