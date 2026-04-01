@@ -134,6 +134,28 @@ export default function ReportsPage() {
         </div>
       </section>
 
+      {/* ===== FLAGSHIP: CONVERGENCE ===== */}
+      <section className="mb-6">
+        <a href="/reports/convergence" className="group block">
+          <div className="bg-bauhaus-red border-4 border-bauhaus-black p-8 transition-all group-hover:-translate-y-1" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-black)' }}>
+            <div className="text-xs font-black text-bauhaus-yellow mb-2 uppercase tracking-widest">Cross-System Investigation &mdash; FLAGSHIP</div>
+            <h3 className="text-2xl font-black text-white mb-3">One Child. Five Systems. Zero Coordination.</h3>
+            <p className="text-base text-white/80 leading-relaxed mb-4">
+              The same communities appear in every government system &mdash; child protection, youth justice,
+              disability, education, welfare. Money flows to maintain systems, not to help people.
+              Community-controlled organisations have the evidence. They get the crumbs.
+            </p>
+            <div className="flex gap-6 text-white/60 text-sm font-bold">
+              <span>5 systems cross-referenced</span>
+              <span>&middot;</span>
+              <span>1,951 LGAs scored</span>
+              <span>&middot;</span>
+              <span>ALMA evidence mapped to funding</span>
+            </div>
+          </div>
+        </a>
+      </section>
+
       {/* ===== FLAGSHIP: FOUNDATION INTELLIGENCE ===== */}
       <section className="mb-6">
         <a href="/reports/philanthropy" className="group block">

@@ -955,9 +955,9 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
             </Section>
           )}
 
-          {/* Crime Statistics */}
+          {/* Crime & Safety */}
           {dataLayers.crime && dataLayers.crime.offences.length > 0 && (
-            <Section title={`Crime — ${dataLayers.crime.lga_name} LGA`}>
+            <Section title={`Crime & Safety — ${dataLayers.crime.lga_name} LGA`}>
               <p className="text-xs text-bauhaus-muted mb-3">
                 Reported incidents by offence group{dataLayers.crime.year_period ? ` (${dataLayers.crime.year_period})` : ''}. Source: state crime statistics agencies.
               </p>
@@ -970,13 +970,22 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
                         <div className="text-[10px] text-bauhaus-muted font-bold">{Math.round(o.rate_per_100k)} per 100K</div>
                       )}
                     </div>
-                    <div className="text-right ml-4 shrink-0">
+                    <div className="text-right ml-4 shrink-0 flex flex-col items-end gap-0.5">
                       <div className="font-black text-bauhaus-black text-sm">{o.total_incidents.toLocaleString()}</div>
-                      {o.two_year_trend_pct != null && (
-                        <div className={`text-[10px] font-bold ${o.two_year_trend_pct > 10 ? 'text-bauhaus-red' : o.two_year_trend_pct < -10 ? 'text-money' : 'text-bauhaus-muted'}`}>
-                          {o.two_year_trend_pct > 0 ? '+' : ''}{Math.round(o.two_year_trend_pct)}% 2yr
-                        </div>
-                      )}
+                      <div className="flex gap-2">
+                        {o.two_year_trend_pct != null && (
+                          <span className={`text-[10px] font-bold flex items-center gap-0.5 ${o.two_year_trend_pct > 10 ? 'text-bauhaus-red' : o.two_year_trend_pct < -10 ? 'text-money' : 'text-bauhaus-muted'}`}>
+                            {o.two_year_trend_pct > 0 ? '↑' : o.two_year_trend_pct < 0 ? '↓' : '→'}
+                            {Math.abs(Math.round(o.two_year_trend_pct))}% 2yr
+                          </span>
+                        )}
+                        {o.ten_year_trend_pct != null && (
+                          <span className={`text-[10px] font-bold flex items-center gap-0.5 ${o.ten_year_trend_pct > 20 ? 'text-bauhaus-red' : o.ten_year_trend_pct < -20 ? 'text-money' : 'text-bauhaus-muted'}`}>
+                            {o.ten_year_trend_pct > 0 ? '↑' : o.ten_year_trend_pct < 0 ? '↓' : '→'}
+                            {Math.abs(Math.round(o.ten_year_trend_pct))}% 10yr
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -984,29 +993,97 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
             </Section>
           )}
 
-          {/* DSS Welfare Payments */}
-          {dataLayers.dss_payments.length > 0 && (
-            <Section title="Welfare & Social Security">
-              <p className="text-xs text-bauhaus-muted mb-3">
-                DSS payment recipients in this area. Higher counts may indicate service demand and community need.
-              </p>
-              <div className="space-y-0">
-                {dataLayers.dss_payments.slice(0, 10).map((p, i) => (
-                  <div key={i} className="flex items-center justify-between py-2.5 border-b-2 border-bauhaus-black/5 last:border-b-0">
-                    <div className="flex-1 min-w-0">
-                      <div className="font-bold text-bauhaus-black text-sm">{p.payment_type}</div>
-                    </div>
-                    <div className="text-right ml-4 shrink-0">
-                      <div className="font-black text-bauhaus-black text-sm">{p.recipient_count.toLocaleString()}</div>
-                      {p.indigenous_count != null && p.indigenous_count > 0 && (
-                        <div className="text-[10px] font-bold text-bauhaus-muted">{p.indigenous_count.toLocaleString()} Indigenous</div>
-                      )}
+          {/* Social Need — DSS Welfare Payments */}
+          {dataLayers.dss_payments.length > 0 && (() => {
+            const totalRecipients = dataLayers.dss_payments.reduce((sum, p) => sum + p.recipient_count, 0);
+            const totalIndigenous = dataLayers.dss_payments.reduce((sum, p) => sum + (p.indigenous_count || 0), 0);
+            const indigenousProportion = totalRecipients > 0 && totalIndigenous > 0
+              ? Math.round((totalIndigenous / totalRecipients) * 100)
+              : null;
+            // Aggregate age bands across all payment types
+            const ageUnder25 = dataLayers.dss_payments.reduce((sum, p) => sum + (p.age_under_25 || 0), 0);
+            const age2544 = dataLayers.dss_payments.reduce((sum, p) => sum + (p.age_25_44 || 0), 0);
+            const age4564 = dataLayers.dss_payments.reduce((sum, p) => sum + (p.age_45_64 || 0), 0);
+            const age65plus = dataLayers.dss_payments.reduce((sum, p) => sum + (p.age_65_plus || 0), 0);
+            const hasAgeData = (ageUnder25 + age2544 + age4564 + age65plus) > 0;
+            const ageTotal = ageUnder25 + age2544 + age4564 + age65plus;
+            return (
+              <Section title="Social Need">
+                <p className="text-xs text-bauhaus-muted mb-3">
+                  DSS payment recipients in this area by payment type. Higher counts indicate service demand and community need.
+                </p>
+                {/* Summary stats */}
+                <div className="grid grid-cols-2 gap-0 mb-4 border-4 border-bauhaus-black">
+                  <div className="p-3 border-r-2 border-bauhaus-black/10">
+                    <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">Total Recipients</div>
+                    <div className="text-xl font-black text-bauhaus-black">{totalRecipients.toLocaleString()}</div>
+                  </div>
+                  <div className="p-3">
+                    <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">Payment Types</div>
+                    <div className="text-xl font-black text-bauhaus-black">{dataLayers.dss_payments.length}</div>
+                  </div>
+                </div>
+                {/* Indigenous proportion */}
+                {indigenousProportion != null && (
+                  <div className={`mb-4 p-3 border-2 flex items-center justify-between ${indigenousProportion >= 20 ? 'border-bauhaus-red bg-error-light' : 'border-bauhaus-black/20 bg-bauhaus-canvas'}`}>
+                    <div className="text-xs font-black uppercase tracking-widest text-bauhaus-black">Indigenous Recipients</div>
+                    <div className={`text-lg font-black ${indigenousProportion >= 20 ? 'text-bauhaus-red' : 'text-bauhaus-black'}`}>
+                      {indigenousProportion}%
+                      <span className="text-[10px] font-bold text-bauhaus-muted ml-1">({totalIndigenous.toLocaleString()})</span>
                     </div>
                   </div>
-                ))}
-              </div>
-            </Section>
-          )}
+                )}
+                {/* Age distribution */}
+                {hasAgeData && (
+                  <div className="mb-4 border-2 border-bauhaus-black p-3 bg-bauhaus-canvas">
+                    <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-2">Age Distribution</div>
+                    <div className="grid grid-cols-4 gap-2">
+                      {[
+                        { label: 'Under 25', value: ageUnder25 },
+                        { label: '25–44', value: age2544 },
+                        { label: '45–64', value: age4564 },
+                        { label: '65+', value: age65plus },
+                      ].map(({ label, value }) => (
+                        <div key={label} className="text-center">
+                          <div className="text-sm font-black text-bauhaus-black">{ageTotal > 0 ? Math.round((value / ageTotal) * 100) : 0}%</div>
+                          <div className="text-[10px] font-bold text-bauhaus-muted">{label}</div>
+                          <div className="text-[10px] font-bold text-bauhaus-black">{value.toLocaleString()}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {/* Payment type breakdown */}
+                <div className="space-y-0">
+                  {dataLayers.dss_payments.slice(0, 10).map((p, i) => {
+                    const indigenousPct = p.recipient_count > 0 && p.indigenous_count != null && p.indigenous_count > 0
+                      ? Math.round((p.indigenous_count / p.recipient_count) * 100)
+                      : null;
+                    return (
+                      <div key={i} className="flex items-center justify-between py-2.5 border-b-2 border-bauhaus-black/5 last:border-b-0">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-bold text-bauhaus-black text-sm">{p.payment_type}</div>
+                          {indigenousPct != null && indigenousPct > 0 && (
+                            <div className={`text-[10px] font-bold ${indigenousPct >= 20 ? 'text-bauhaus-red' : 'text-bauhaus-muted'}`}>
+                              {indigenousPct}% Indigenous
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-right ml-4 shrink-0">
+                          <div className="font-black text-bauhaus-black text-sm">{p.recipient_count.toLocaleString()}</div>
+                          {p.male_count != null && p.female_count != null && (p.male_count + p.female_count) > 0 && (
+                            <div className="text-[10px] font-bold text-bauhaus-muted">
+                              {Math.round((p.female_count / (p.male_count + p.female_count)) * 100)}% F
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Section>
+            );
+          })()}
 
           {/* NDIS Participants */}
           {dataLayers.ndis_participants && (

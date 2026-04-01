@@ -462,6 +462,13 @@ export default async function HomePage() {
         <h2 className="text-2xl font-black text-center text-bauhaus-black mb-2">CivicGraph Intelligence</h2>
         <p className="text-center text-bauhaus-muted mb-10 text-sm font-medium">Living investigations into how money flows — updated as new data arrives</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 max-w-4xl mx-auto">
+          <a href="/reports/convergence" className="group block sm:col-span-2 lg:col-span-3">
+            <div className="bg-bauhaus-blue border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1" style={{ boxShadow: '6px 6px 0px 0px var(--color-bauhaus-black)' }}>
+              <div className="text-xs font-black text-bauhaus-yellow mb-1 uppercase tracking-widest">Flagship Investigation</div>
+              <h3 className="font-black text-white mb-1">One Child. Five Systems. Zero Coordination.</h3>
+              <p className="text-sm text-white/80">Child protection, youth justice, disability, education, welfare — the same communities appear in every system. The money maintains the system, not the person.</p>
+            </div>
+          </a>
           <a href="/reports/donor-contractors" className="group block sm:col-span-2 lg:col-span-3">
             <div className="bg-bauhaus-red border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1" style={{ boxShadow: '6px 6px 0px 0px var(--color-bauhaus-black)' }}>
               <div className="text-xs font-black text-bauhaus-yellow mb-1 uppercase tracking-widest">Entity Graph Investigation</div>
@@ -523,6 +530,27 @@ export default async function HomePage() {
               <div className="text-xs font-black text-bauhaus-blue mb-1 uppercase tracking-widest group-hover:text-bauhaus-yellow">Live</div>
               <h3 className="font-black text-bauhaus-black mb-1 group-hover:text-white">Follow the Dollar</h3>
               <p className="text-sm text-bauhaus-muted group-hover:text-white/80">Trace funding flows from taxpayer to outcome.</p>
+            </div>
+          </a>
+          <a href="/reports/ndis" className="group block">
+            <div className="bg-white border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-blue group-hover:text-white">
+              <div className="text-xs font-black text-bauhaus-blue mb-1 uppercase tracking-widest group-hover:text-bauhaus-yellow">New</div>
+              <h3 className="font-black text-bauhaus-black mb-1 group-hover:text-white">The Disability Dollar</h3>
+              <p className="text-sm text-bauhaus-muted group-hover:text-white/80">350K NDIS records. Market concentration. Thin markets. Who provides, who misses out.</p>
+            </div>
+          </a>
+          <a href="/reports/research-funding" className="group block">
+            <div className="bg-white border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-black group-hover:text-white">
+              <div className="text-xs font-black text-bauhaus-black mb-1 uppercase tracking-widest group-hover:text-bauhaus-yellow">New</div>
+              <h3 className="font-black text-bauhaus-black mb-1 group-hover:text-white">The $29 Billion Question</h3>
+              <p className="text-sm text-bauhaus-muted group-hover:text-white/80">46K ARC + NHMRC grants. Who gets the research money, and where.</p>
+            </div>
+          </a>
+          <a href="/reports/state-procurement" className="group block">
+            <div className="bg-white border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-yellow">
+              <div className="text-xs font-black text-bauhaus-yellow mb-1 uppercase tracking-widest group-hover:text-bauhaus-black">New</div>
+              <h3 className="font-black text-bauhaus-black mb-1">State Procurement</h3>
+              <p className="text-sm text-bauhaus-muted group-hover:text-bauhaus-black/70">200K state government contracts. Department breakdowns. Supplier intelligence.</p>
             </div>
           </a>
           <a href="/reports/state-of-the-nation" className="group block sm:col-span-2 lg:col-span-3">

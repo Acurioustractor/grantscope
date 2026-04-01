@@ -14,6 +14,7 @@ export interface CrimeSummary {
     total_incidents: number;
     rate_per_100k: number | null;
     two_year_trend_pct: number | null;
+    ten_year_trend_pct: number | null;
   }>;
   year_period: string | null;
 }
@@ -41,6 +42,10 @@ export interface DssPaymentSummary {
   indigenous_count: number | null;
   male_count: number | null;
   female_count: number | null;
+  age_under_25: number | null;
+  age_25_44: number | null;
+  age_45_64: number | null;
+  age_65_plus: number | null;
 }
 
 export interface PlaceDataLayers {
@@ -71,6 +76,7 @@ async function getCrimeStats(
     query: `SELECT offence_group, SUM(incidents) as total_incidents,
               AVG(rate_per_100k) as rate_per_100k,
               AVG(two_year_trend_pct) as two_year_trend_pct,
+              AVG(ten_year_trend_pct) as ten_year_trend_pct,
               MAX(year_period) as year_period
             FROM crime_stats_lga
             WHERE lga_name = '${cleanLga.replace(/'/g, "''")}' AND state = '${state}'
@@ -89,6 +95,7 @@ async function getCrimeStats(
       total_incidents: Number(row.total_incidents || 0),
       rate_per_100k: row.rate_per_100k != null ? Number(row.rate_per_100k) : null,
       two_year_trend_pct: row.two_year_trend_pct != null ? Number(row.two_year_trend_pct) : null,
+      ten_year_trend_pct: row.ten_year_trend_pct != null ? Number(row.ten_year_trend_pct) : null,
     })),
     year_period: data[0]?.year_period ? String(data[0].year_period) : null,
   };
@@ -165,10 +172,26 @@ async function getDssPayments(
   lgaCode: string | null,
 ): Promise<DssPaymentSummary[]> {
   // Prefer postcode-level data; fall back to LGA
+  const AGE_COLS = `SUM(age_under_25) as age_under_25, SUM(age_25_44) as age_25_44,
+              SUM(age_45_64) as age_45_64, SUM(age_65_plus) as age_65_plus`;
+
+  const mapRow = (row: Record<string, unknown>): DssPaymentSummary => ({
+    payment_type: String(row.payment_type || ''),
+    recipient_count: Number(row.recipient_count || 0),
+    indigenous_count: row.indigenous_count != null ? Number(row.indigenous_count) : null,
+    male_count: row.male_count != null ? Number(row.male_count) : null,
+    female_count: row.female_count != null ? Number(row.female_count) : null,
+    age_under_25: row.age_under_25 != null ? Number(row.age_under_25) : null,
+    age_25_44: row.age_25_44 != null ? Number(row.age_25_44) : null,
+    age_45_64: row.age_45_64 != null ? Number(row.age_45_64) : null,
+    age_65_plus: row.age_65_plus != null ? Number(row.age_65_plus) : null,
+  });
+
   const { data: pcData } = await db.rpc('exec_sql', {
     query: `SELECT payment_type, SUM(recipient_count) as recipient_count,
               SUM(indigenous_count) as indigenous_count,
-              SUM(male_count) as male_count, SUM(female_count) as female_count
+              SUM(male_count) as male_count, SUM(female_count) as female_count,
+              ${AGE_COLS}
             FROM dss_payment_demographics
             WHERE geography_type = 'postcode' AND geography_code = '${postcode}'
             GROUP BY payment_type
@@ -177,13 +200,7 @@ async function getDssPayments(
   });
 
   if (pcData && Array.isArray(pcData) && pcData.length > 0) {
-    return pcData.map((row: Record<string, unknown>) => ({
-      payment_type: String(row.payment_type || ''),
-      recipient_count: Number(row.recipient_count || 0),
-      indigenous_count: row.indigenous_count != null ? Number(row.indigenous_count) : null,
-      male_count: row.male_count != null ? Number(row.male_count) : null,
-      female_count: row.female_count != null ? Number(row.female_count) : null,
-    }));
+    return pcData.map(mapRow);
   }
 
   // Fall back to LGA
@@ -191,7 +208,8 @@ async function getDssPayments(
   const { data: lgaData } = await db.rpc('exec_sql', {
     query: `SELECT payment_type, SUM(recipient_count) as recipient_count,
               SUM(indigenous_count) as indigenous_count,
-              SUM(male_count) as male_count, SUM(female_count) as female_count
+              SUM(male_count) as male_count, SUM(female_count) as female_count,
+              ${AGE_COLS}
             FROM dss_payment_demographics
             WHERE geography_type = 'lga' AND geography_code = '${lgaCode}'
             GROUP BY payment_type
@@ -200,13 +218,7 @@ async function getDssPayments(
   });
 
   if (!lgaData || !Array.isArray(lgaData)) return [];
-  return lgaData.map((row: Record<string, unknown>) => ({
-    payment_type: String(row.payment_type || ''),
-    recipient_count: Number(row.recipient_count || 0),
-    indigenous_count: row.indigenous_count != null ? Number(row.indigenous_count) : null,
-    male_count: row.male_count != null ? Number(row.male_count) : null,
-    female_count: row.female_count != null ? Number(row.female_count) : null,
-  }));
+  return lgaData.map(mapRow);
 }
 
 // ── Main entry point ───────────────────────────────────────────────────

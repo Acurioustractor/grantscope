@@ -84,6 +84,7 @@ export const reportSections: NavSection[] = [
     description: 'NDIS markets, thin supply, who delivers',
     items: [
       { label: 'Overview', href: '/reports/disability' },
+      { label: 'The Disability Dollar', href: '/reports/ndis' },
       { label: 'NDIS Market', href: '/reports/ndis-market' },
       { label: 'National Comparison', href: '/reports/disability/national' },
       {
@@ -104,6 +105,13 @@ export const reportSections: NavSection[] = [
         href: '/reports/education/act',
         children: stateChildren('education'),
       },
+    ],
+  },
+  {
+    title: 'Cross-System',
+    description: 'Where every system meets the same communities',
+    items: [
+      { label: 'Convergence', href: '/reports/convergence' },
     ],
   },
   {
@@ -154,6 +162,14 @@ export const reportSections: NavSection[] = [
       { label: 'Charity Contracts', href: '/reports/charity-contracts' },
       { label: 'Exec Remuneration', href: '/reports/exec-remuneration' },
       { label: 'Tax Transparency', href: '/reports/tax-transparency' },
+    ],
+  },
+  {
+    title: 'Research & Procurement',
+    description: 'Where government money goes beyond social services',
+    items: [
+      { label: 'Research Funding', href: '/reports/research-funding' },
+      { label: 'State Procurement', href: '/reports/state-procurement' },
     ],
   },
   {
