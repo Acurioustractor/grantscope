@@ -794,11 +794,11 @@ export default function GraphPage() {
         fg.d3Force('link')?.distance(40).strength(0.4);
         fg.d3Force('center')?.strength(0.025);
       } else if (isPower) {
-        // Power mode: GRAVITY WELL — high power at center, low power at edges
-        // Weaker forces let pre-positioned nodes (from graphData memo) settle near their rings
-        fg.d3Force('charge')?.strength(-30).distanceMax(150);
-        fg.d3Force('link')?.distance(15).strength(0.05);
-        fg.d3Force('center')?.strength(0.002); // very weak center, nodes pre-positioned
+        // Power mode: GRAVITY WELL — nodes pre-positioned in rings
+        // Minimal forces to prevent overlap, but preserve ring structure
+        fg.d3Force('charge')?.strength(-8).distanceMax(80);
+        fg.d3Force('link')?.distance(10).strength(0.01);
+        fg.d3Force('center', null); // remove center force entirely — rings ARE the layout
       } else if (isJustice) {
         fg.d3Force('charge')?.strength(-120).distanceMax(600);
         fg.d3Force('link')?.distance(30).strength(0.5);
@@ -1454,10 +1454,10 @@ export default function GraphPage() {
                 }
               }
             } : undefined}
-            d3AlphaDecay={0.015}
-            d3VelocityDecay={0.25}
-            warmupTicks={isPower ? 500 : 300}
-            cooldownTime={isPower ? 8000 : 12000}
+            d3AlphaDecay={isPower ? 0.05 : 0.015}
+            d3VelocityDecay={isPower ? 0.6 : 0.25}
+            warmupTicks={isPower ? 100 : 300}
+            cooldownTime={isPower ? 3000 : 12000}
             onNodeHover={(node: any) => setHoveredNode(node as GraphNode | null)} // eslint-disable-line @typescript-eslint/no-explicit-any
             onNodeClick={(node: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
               setSelectedNode(node as GraphNode);
