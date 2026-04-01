@@ -517,6 +517,8 @@ export default function GraphPage() {
   const [activePreset, setActivePreset] = useState(0);
   const [showPanel, setShowPanel] = useState(true);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  const [cinematicActive, setCinematicActive] = useState(false);
+  const cinematicTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Story state
   const [showStories, setShowStories] = useState(false);
@@ -720,6 +722,34 @@ export default function GraphPage() {
     }
   }, [activeStoryIndex]);
 
+  // Cinematic zoom sequence
+  const triggerCinematic = useCallback(() => {
+    if (!fgRef.current || cinematicActive) return;
+    setCinematicActive(true);
+
+    // Step 1: zoom to fit (see everything)
+    fgRef.current.zoomToFit(600, 80);
+
+    // Step 2: after 2s, slowly zoom into center over 3s
+    cinematicTimerRef.current = setTimeout(() => {
+      if (fgRef.current) {
+        fgRef.current.zoom(4, 3000);
+        fgRef.current.centerAt(0, 0, 3000);
+      }
+      // Step 3: hold for 2s then reset active state
+      cinematicTimerRef.current = setTimeout(() => {
+        setCinematicActive(false);
+      }, 5500);
+    }, 2200);
+  }, [cinematicActive]);
+
+  // Cleanup cinematic timers on unmount
+  useEffect(() => {
+    return () => {
+      if (cinematicTimerRef.current) clearTimeout(cinematicTimerRef.current);
+    };
+  }, []);
+
   // Initial load — respect ?preset= URL param if present
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -903,17 +933,45 @@ export default function GraphPage() {
         ctx.globalAlpha = 1;
       }
 
-      // Labels — show at lower zoom for high-power entities
-      const labelThreshold = sysCount >= 5 ? 0.1 : sysCount >= 4 ? 0.2 : 0.4;
-      if (globalScale > labelThreshold && !dimmed) {
-        const fontSize = Math.max(10, 12 / globalScale);
+      // Community-controlled: bright green pulsing outer ring — visually unmistakable
+      if (node.community_controlled) {
+        const ringRadius = size + 5;
+        ctx.globalAlpha = dimmed ? 0.2 : 0.9;
+        ctx.strokeStyle = '#4ade80';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(x, y, ringRadius, 0, Math.PI * 2);
+        ctx.stroke();
+        // Outer glow halo
+        const haloGradient = ctx.createRadialGradient(x, y, ringRadius - 2, x, y, ringRadius + 8);
+        haloGradient.addColorStop(0, 'rgba(74, 222, 128, 0.35)');
+        haloGradient.addColorStop(1, 'rgba(74, 222, 128, 0)');
+        ctx.fillStyle = haloGradient;
+        ctx.beginPath();
+        ctx.arc(x, y, ringRadius + 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+
+      // Labels — 5+ system entities always visible; others zoom-dependent
+      // White text with black stroke for dark background readability
+      const alwaysShowLabel = sysCount >= 5;
+      const labelThreshold = sysCount >= 5 ? 0 : sysCount >= 4 ? 0.2 : 0.4;
+      if ((alwaysShowLabel || globalScale > labelThreshold) && !dimmed) {
+        const fontSize = Math.max(10, 12 / Math.max(globalScale, 0.3));
         ctx.font = `700 ${fontSize}px -apple-system, "SF Pro Text", sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
-        ctx.fillStyle = '#000000bb';
-        ctx.fillText(node.label.substring(0, 36), x + 0.5, y + size + 3.5);
-        ctx.fillStyle = color + 'ee';
-        ctx.fillText(node.label.substring(0, 36), x, y + size + 3);
+        const labelText = node.label.substring(0, 36);
+        const labelY = y + size + (node.community_controlled ? 8 : 3);
+        // Black stroke for contrast against dark bg
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 3;
+        ctx.lineJoin = 'round';
+        ctx.strokeText(labelText, x, labelY);
+        // White fill
+        ctx.fillStyle = sysCount >= 5 ? '#ffffff' : color + 'ee';
+        ctx.fillText(labelText, x, labelY);
       }
       return;
     }
@@ -1592,6 +1650,21 @@ export default function GraphPage() {
                 Clear Highlights
               </button>
             )}
+            {/* Cinematic zoom button */}
+            {data && !loading && (
+              <button
+                onClick={triggerCinematic}
+                disabled={cinematicActive}
+                title="Cinematic reveal — zoom to fit then slowly zoom in"
+                className={`px-3 py-1.5 border rounded text-xs font-mono transition-all ${
+                  cinematicActive
+                    ? 'bg-[#dc2626]/20 border-[#dc2626]/40 text-[#dc2626] cursor-wait'
+                    : 'bg-white/5 border-white/10 text-white/60 hover:bg-[#dc2626]/10 hover:border-[#dc2626]/30 hover:text-[#dc2626]'
+                }`}
+              >
+                {cinematicActive ? '● REC' : '⬛ Cinematic'}
+              </button>
+            )}
             <button
               onClick={() => setShowPanel(!showPanel)}
               className="px-3 py-1.5 bg-white/5 border border-white/10 rounded text-xs font-mono text-white/60 hover:bg-white/10 transition-colors"
@@ -1629,6 +1702,60 @@ export default function GraphPage() {
               <div className="text-[10px] text-white/30 mt-0.5">{preset.desc}</div>
             </button>
           ))}
+        </div>
+      )}
+
+      {/* Floating stats overlay — bottom-left, above legend */}
+      {data && !loading && isPower && (
+        <div className={`absolute z-10 transition-all duration-300 ${
+          showStories ? 'left-[calc(min(350px,85vw)+16px)]' : 'left-4'
+        }`} style={{ bottom: 'calc(1rem + 260px)' }}>
+          <div className="bg-[#0a0a0f]/85 backdrop-blur border border-white/10 rounded-lg p-3 w-52">
+            <p className="text-[9px] font-mono uppercase tracking-widest text-white/30 mb-2">Live Graph Stats</p>
+            <div className="space-y-1.5">
+              <div className="flex items-baseline justify-between">
+                <span className="text-[10px] text-white/40 font-mono">Entities</span>
+                <span className="text-sm font-black font-mono text-white/90">{data.meta.total_nodes.toLocaleString()}</span>
+              </div>
+              <div className="flex items-baseline justify-between">
+                <span className="text-[10px] text-white/40 font-mono">Connections</span>
+                <span className="text-sm font-black font-mono text-white/90">{data.meta.total_edges.toLocaleString()}</span>
+              </div>
+              {(() => {
+                const ccNodes = data.nodes.filter(n => n.community_controlled);
+                const ccPct = data.meta.total_nodes > 0
+                  ? ((ccNodes.length / data.meta.total_nodes) * 100).toFixed(1)
+                  : '0';
+                return (
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-[10px] text-white/40 font-mono">Comm. Controlled</span>
+                    <span className="text-sm font-black font-mono text-[#4ade80]">
+                      {ccNodes.length.toLocaleString()}
+                      <span className="text-[9px] text-[#4ade80]/60 ml-1">{ccPct}%</span>
+                    </span>
+                  </div>
+                );
+              })()}
+              {(() => {
+                const maxSys = data.nodes.reduce((m, n) => Math.max(m, n.system_count ?? 0), 0);
+                const eliteCount = data.nodes.filter(n => (n.system_count ?? 0) >= 5).length;
+                return (
+                  <>
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-[10px] text-white/40 font-mono">Max systems</span>
+                      <span className="text-sm font-black font-mono" style={{ color: SYSTEM_COLORS[Math.min(maxSys, 7)] || '#6b7280' }}>
+                        {maxSys}
+                      </span>
+                    </div>
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-[10px] text-white/40 font-mono">Power elite (5+)</span>
+                      <span className="text-sm font-black font-mono text-[#ef4444]">{eliteCount}</span>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          </div>
         </div>
       )}
 
