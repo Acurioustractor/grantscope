@@ -794,10 +794,11 @@ export default function GraphPage() {
         fg.d3Force('link')?.distance(40).strength(0.4);
         fg.d3Force('center')?.strength(0.025);
       } else if (isPower) {
-        // Power mode: spread out to show clusters, strong repulsion
-        fg.d3Force('charge')?.strength(-200).distanceMax(800);
-        fg.d3Force('link')?.distance(50).strength(0.3);
-        fg.d3Force('center')?.strength(0.02);
+        // Power mode: GRAVITY WELL — high power at center, low power at edges
+        // Weaker forces let pre-positioned nodes (from graphData memo) settle near their rings
+        fg.d3Force('charge')?.strength(-30).distanceMax(150);
+        fg.d3Force('link')?.distance(15).strength(0.05);
+        fg.d3Force('center')?.strength(0.002); // very weak center, nodes pre-positioned
       } else if (isJustice) {
         fg.d3Force('charge')?.strength(-120).distanceMax(600);
         fg.d3Force('link')?.distance(30).strength(0.5);
@@ -814,8 +815,30 @@ export default function GraphPage() {
 
   const graphData = useMemo(() => {
     if (!data) return { nodes: [], links: [] };
+
+    const nodes = data.nodes.map(n => {
+      const copy = { ...n } as GraphNode & { x?: number; y?: number; vx?: number; vy?: number };
+      // Gravity well: pre-position power mode nodes in concentric rings
+      if (isPower && n.system_count) {
+        const sys = n.system_count || 1;
+        const power = n.power_score || 0;
+        const maxRadius = 600;
+        // Higher system_count → smaller ring (closer to center)
+        const ring = Math.max(0, 7 - sys);
+        const radius = ring * (maxRadius / 5) + Math.max(0, 40 - Math.sqrt(power) * 4);
+        // Distribute around the ring deterministically by entity id hash
+        const hash = n.id.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+        const angle = ((hash * 137.508) % 360) * (Math.PI / 180); // golden angle distribution
+        copy.x = Math.cos(angle) * radius;
+        copy.y = Math.sin(angle) * radius;
+        copy.vx = 0;
+        copy.vy = 0;
+      }
+      return copy;
+    });
+
     return {
-      nodes: data.nodes.map(n => ({ ...n })),
+      nodes,
       links: data.edges.map(e => ({
         source: typeof e.source === 'string' ? e.source : e.source.id,
         target: typeof e.target === 'string' ? e.target : e.target.id,
@@ -823,7 +846,7 @@ export default function GraphPage() {
         amount: e.amount,
       })),
     };
-  }, [data]);
+  }, [data, isPower]);
 
   // Whether highlighting is active (from story or search)
   const hasHighlights = highlightedNodeIds.size > 0 || searchHighlightId != null;
@@ -1398,10 +1421,43 @@ export default function GraphPage() {
             }}
             linkColor={(link: any) => isFoundations ? (link.dataset === 'foundation_regranting' ? 'rgba(245,158,11,0.25)' : 'rgba(255,255,255,0.12)') : isNdis ? 'rgba(251,191,36,0.12)' : isInterlocks ? 'rgba(244,114,182,0.15)' : isPower ? 'rgba(255,255,255,0.08)' : isJustice ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)'}
             linkWidth={(link: any) => isFoundations ? (link.dataset === 'foundation_regranting' ? 0.8 : 0.5) : isNdis ? 0.5 : isInterlocks ? 0.6 : isPower ? 0.4 : isJustice ? 0.5 : 0.3}
+            onRenderFramePre={isPower ? (ctx: CanvasRenderingContext2D, globalScale: number) => {
+              // Draw concentric ring guides for gravity well
+              const maxRadius = 600;
+              const rings = [
+                { sys: 7, label: '7 systems' },
+                { sys: 6, label: '6' },
+                { sys: 5, label: '5' },
+                { sys: 4, label: '4' },
+                { sys: 3, label: '3' },
+              ];
+              ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+              ctx.lineWidth = 1 / globalScale;
+              for (const ring of rings) {
+                const r = Math.max(0, 7 - ring.sys) * (maxRadius / 5);
+                if (r > 0) {
+                  ctx.beginPath();
+                  ctx.arc(0, 0, r, 0, Math.PI * 2);
+                  ctx.stroke();
+                }
+              }
+              // Label the outermost ring
+              if (globalScale > 0.15) {
+                ctx.fillStyle = 'rgba(255,255,255,0.08)';
+                ctx.font = `${12 / globalScale}px sans-serif`;
+                ctx.textAlign = 'center';
+                for (const ring of rings) {
+                  const r = Math.max(0, 7 - ring.sys) * (maxRadius / 5);
+                  if (r > 0) {
+                    ctx.fillText(ring.label, 0, -r - 5 / globalScale);
+                  }
+                }
+              }
+            } : undefined}
             d3AlphaDecay={0.015}
             d3VelocityDecay={0.25}
-            warmupTicks={300}
-            cooldownTime={12000}
+            warmupTicks={isPower ? 500 : 300}
+            cooldownTime={isPower ? 8000 : 12000}
             onNodeHover={(node: any) => setHoveredNode(node as GraphNode | null)} // eslint-disable-line @typescript-eslint/no-explicit-any
             onNodeClick={(node: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
               setSelectedNode(node as GraphNode);
