@@ -112,6 +112,7 @@ export const reportSections: NavSection[] = [
     description: 'Where every system meets the same communities',
     items: [
       { label: 'Convergence', href: '/reports/convergence' },
+      { label: 'Reality Check', href: '/reports/reality-check' },
     ],
   },
   {
