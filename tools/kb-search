@@ -1,20 +1,29 @@
 #!/usr/bin/env python3
 """
-kb-search — Fast BM25 full-text search over your Obsidian/kb vault
+kb-search — Hybrid semantic + BM25 search over your Obsidian/kb vault
 
-Builds and maintains a SQLite search index over all wiki/ and raw/ markdown
-files. Called by `kb query` to find relevant articles before loading them into
-the LLM context window.
+Combines two search strategies and merges their scores:
+  1. BM25 (keyword)   — fast, exact-match, always available
+  2. Semantic (vector) — concept-level, finds articles without exact keywords
 
-Usage (standalone):
-    kb-search "mutual aid funding models"          → top-10 matches
-    kb-search "CORENA revolving fund" --top=5      → top-5 with excerpts
-    kb-search "indigenous corporations" --json     → JSON output for piping
-    kb-search --reindex                            → rebuild full index
-    kb-search --stats                              → index statistics
+Semantic embedding sources (tried in order):
+  A. llama-server /v1/embeddings  — Gemma 4 neural embeddings (best quality)
+                                    Available when llama-server is running.
+                                    Enable with: llama-server ... --embeddings
+  B. TF-IDF + SVD (numpy LSA)    — offline fallback, no model needed,
+                                    genuine semantic search via latent topics
 
-Used internally by kb query via:
-    kb-search "<query>" --json --top=15
+Usage:
+    kb-search "who funds youth justice"         → hybrid results
+    kb-search "CORENA revolving fund" --bm25    → BM25 only
+    kb-search "foundation grants" --semantic    → semantic only
+    kb-search "indigenous corps" --excerpt -v   → with highlights
+    kb-search --reindex                         → rebuild full index
+    kb-search --reindex --embed                 → rebuild + recompute embeddings
+    kb-search --stats                           → index statistics
+
+Used by kb query:
+    kb-search "<question>" --json --top=15
 """
 
 import argparse
@@ -23,19 +32,29 @@ import math
 import os
 import re
 import sqlite3
+import struct
 import sys
+import textwrap
+import urllib.request
+import urllib.error
 from collections import Counter
 from pathlib import Path
 
 # ─── Config ───────────────────────────────────────────────────────────────────
 
-INDEX_FILE = ".kb-search.db"          # lives in vault root, gitignored
-MIN_WORD_LEN = 2
-MAX_EXCERPT_CHARS = 300
-BM25_K1 = 1.5                         # term frequency saturation
-BM25_B  = 0.75                        # length normalisation
+INDEX_FILE       = ".kb-search.db"
+LLM_URL          = os.environ.get("KB_API_URL", "http://127.0.0.1:8080").rstrip("/chat/completions").rstrip("/v1")
+EMBED_URL        = f"{LLM_URL}/v1/embeddings"
+LLM_MODEL        = os.environ.get("KB_MODEL", "gemma4")
+EMBED_DIM_LLM    = 2560        # Gemma 4 E4B hidden size
+EMBED_DIM_LSA    = 128         # LSA latent dimensions
+BM25_K1          = 1.5
+BM25_B           = 0.75
+HYBRID_ALPHA     = 0.6         # weight for semantic vs BM25 (0=BM25 only, 1=semantic only)
+MIN_WORD_LEN     = 2
+MAX_EXCERPT_CHARS= 350
+EMBED_BATCH_SIZE = 16          # docs per embedding API call
 
-# Words to ignore in indexing and queries
 STOPWORDS = {
     'a','an','and','are','as','at','be','by','for','from','has','he','in',
     'is','it','its','of','on','that','the','to','was','were','will','with',
@@ -44,23 +63,22 @@ STOPWORDS = {
     'if','no','so','up','out','about','into','then','than','more',
     'we','our','you','your','i','my','she','her','him','his','they',
     'would','could','should','may','might','shall','there',
-    # domain stopwords
     'australia','australian','org','organisation','organization',
 }
 
-# ─── Colors ───────────────────────────────────────────────────────────────────
+# ─── Terminal colors ──────────────────────────────────────────────────────────
 
 class C:
-    BOLD  = "\033[1m"
-    DIM   = "\033[2m"
-    GREEN = "\033[32m"
-    BLUE  = "\033[34m"
-    CYAN  = "\033[36m"
-    YELLOW= "\033[33m"
-    RED   = "\033[31m"
-    RESET = "\033[0m"
+    BOLD  = "\033[1m"; DIM   = "\033[2m"; GREEN = "\033[32m"
+    BLUE  = "\033[34m"; CYAN  = "\033[36m"; YELLOW= "\033[33m"
+    RED   = "\033[31m"; RESET = "\033[0m"
 
-# ─── Vault discovery ──────────────────────────────────────────────────────────
+def ok  (m): print(f"{C.GREEN}✓{C.RESET} {m}")
+def info(m): print(f"{C.BLUE}ℹ{C.RESET} {m}")
+def warn(m): print(f"{C.YELLOW}⚠{C.RESET} {m}")
+def err (m): print(f"{C.RED}✗{C.RESET} {m}", file=sys.stderr)
+
+# ─── Vault ────────────────────────────────────────────────────────────────────
 
 def find_vault_root() -> Path:
     p = Path.cwd()
@@ -68,257 +86,550 @@ def find_vault_root() -> Path:
         if (p / "AGENTS.md").exists():
             return p
         p = p.parent
-    # Also try common locations relative to script
     script_parent = Path(__file__).parent.parent
     if (script_parent / "AGENTS.md").exists():
         return script_parent
-    print(f"{C.RED}✗{C.RESET} Cannot find AGENTS.md — run from inside a kb vault", file=sys.stderr)
+    err("Cannot find AGENTS.md — run from inside a kb vault")
     sys.exit(1)
 
 # ─── Tokeniser ────────────────────────────────────────────────────────────────
 
-def tokenise(text: str) -> list[str]:
-    """Lowercase, strip markdown, split on non-alpha, remove stopwords."""
-    # Strip frontmatter
+def tokenise(text: str) -> list:
     text = re.sub(r'^---.*?---\s*', '', text, flags=re.DOTALL)
-    # Strip markdown links, wikilinks, code blocks
     text = re.sub(r'```.*?```', ' ', text, flags=re.DOTALL)
     text = re.sub(r'`[^`]+`', ' ', text)
-    text = re.sub(r'\[\[([^\]|]+)(?:\|[^\]]*)?\]\]', r'\1', text)  # wikilinks → text
-    text = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', text)           # md links → text
+    text = re.sub(r'\[\[([^\]|]+)(?:\|[^\]]*)?\]\]', r'\1', text)
+    text = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', text)
     text = re.sub(r'[#*_~>|]', ' ', text)
     text = text.lower()
     words = re.findall(r'[a-z][a-z0-9\-]{1,}', text)
     return [w for w in words if w not in STOPWORDS and len(w) >= MIN_WORD_LEN]
 
-def tokenise_query(query: str) -> list[str]:
-    """Tokenise a user query, preserving quoted phrases as single tokens."""
+def tokenise_query(query: str) -> list:
     phrases = []
-    # Extract quoted phrases first
     for phrase in re.findall(r'"([^"]+)"', query):
         phrases.append(phrase.lower().replace(' ', '_PHRASE_'))
         query = query.replace(f'"{phrase}"', '')
-    tokens = tokenise(query)
-    return tokens + phrases
+    return tokenise(query) + phrases
 
-# ─── BM25 implementation (pure stdlib) ────────────────────────────────────────
+def text_for_embedding(text: str) -> str:
+    """Strip markdown and return clean text for embedding."""
+    text = re.sub(r'^---.*?---\s*', '', text, flags=re.DOTALL)
+    text = re.sub(r'```.*?```', ' ', text, flags=re.DOTALL)
+    text = re.sub(r'\[\[([^\]|]+)(?:\|[^\]]*)?\]\]', r'\1', text)
+    text = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', text)
+    text = re.sub(r'[#*_~`|>]', ' ', text)
+    return re.sub(r'\s+', ' ', text).strip()[:2000]  # cap to avoid huge payloads
 
-class BM25Index:
+# ─── Vector helpers ───────────────────────────────────────────────────────────
+
+def pack_vec(v: list) -> bytes:
+    return struct.pack(f'{len(v)}f', *v)
+
+def unpack_vec(b: bytes) -> list:
+    n = len(b) // 4
+    return list(struct.unpack(f'{n}f', b))
+
+def dot(a: list, b: list) -> float:
+    return sum(x * y for x, y in zip(a, b))
+
+def norm(v: list) -> float:
+    return math.sqrt(sum(x * x for x in v))
+
+def cosine(a: list, b: list) -> float:
+    na, nb = norm(a), norm(b)
+    if na == 0 or nb == 0:
+        return 0.0
+    return max(-1.0, min(1.0, dot(a, b) / (na * nb)))
+
+def normalize(v: list) -> list:
+    n = norm(v)
+    if n == 0:
+        return v
+    return [x / n for x in v]
+
+# ─── Embedding: llama-server (/v1/embeddings) ─────────────────────────────────
+
+def llm_embed_available() -> bool:
+    try:
+        r = urllib.request.urlopen(
+            urllib.request.Request(f"{LLM_URL}/v1/models",
+                                   headers={"Content-Type": "application/json"}),
+            timeout=2
+        )
+        return r.status == 200
+    except Exception:
+        return False
+
+def llm_embed(texts: list) -> list | None:
     """
-    Okapi BM25 index stored in SQLite.
-    Supports incremental updates — only reindexes changed files.
+    Call llama-server /v1/embeddings. Returns list of embedding vectors,
+    or None if the server isn't running or doesn't support embeddings.
+    """
+    payload = json.dumps({
+        "model": LLM_MODEL,
+        "input": texts,
+        "encoding_format": "float"
+    }).encode()
+    try:
+        req = urllib.request.Request(
+            EMBED_URL, data=payload,
+            headers={"Content-Type": "application/json"}
+        )
+        with urllib.request.urlopen(req, timeout=60) as r:
+            data = json.loads(r.read())
+            # Sort by index to guarantee order
+            items = sorted(data["data"], key=lambda x: x["index"])
+            return [item["embedding"] for item in items]
+    except (urllib.error.URLError, KeyError, json.JSONDecodeError):
+        return None
+
+# ─── Embedding: TF-IDF + SVD (LSA, numpy fallback) ────────────────────────────
+
+class LSAEmbedder:
+    """
+    Latent Semantic Analysis — builds a TF-IDF matrix over the corpus,
+    applies truncated SVD to get dense semantic vectors.
+    Genuine semantic search: 'fund youth justice' → 'reinvestment programs'
     """
 
+    def __init__(self, dim: int = EMBED_DIM_LSA):
+        self.dim = dim
+        self.vocab: dict = {}       # term → col index
+        self.idf: list = []         # per-term IDF weights
+        self.Vt: list | None = None # SVD right singular vectors (dim × vocab)
+        self.fitted = False
+
+    def fit(self, corpus: list):
+        """
+        corpus: list of (doc_id, token_list) tuples
+        Builds vocabulary, IDF, and SVD projection matrix.
+        """
+        import numpy as np
+
+        if not corpus:
+            return
+
+        # Build vocabulary from all docs
+        all_terms = set()
+        for _, tokens in corpus:
+            all_terms.update(tokens)
+        self.vocab = {t: i for i, t in enumerate(sorted(all_terms))}
+        V = len(self.vocab)
+        N = len(corpus)
+
+        # Build TF-IDF matrix  (N × V)
+        # TF = log(1 + freq/doc_len)
+        # IDF = log(N / df + 1)
+        df = [0] * V
+        tf_matrix = []
+
+        for _, tokens in corpus:
+            freq = Counter(tokens)
+            total = max(len(tokens), 1)
+            row = [0.0] * V
+            for term, count in freq.items():
+                if term in self.vocab:
+                    idx = self.vocab[term]
+                    row[idx] = math.log1p(count / total)
+                    df[idx] += 1
+            tf_matrix.append(row)
+
+        self.idf = [math.log((N + 1) / (d + 1)) + 1 for d in df]
+
+        # Apply IDF weighting
+        mat = np.array(tf_matrix, dtype=np.float32)
+        idf_arr = np.array(self.idf, dtype=np.float32)
+        mat *= idf_arr  # broadcast: each row × idf
+
+        # L2 normalise rows
+        row_norms = np.linalg.norm(mat, axis=1, keepdims=True)
+        row_norms[row_norms == 0] = 1
+        mat /= row_norms
+
+        # Truncated SVD: mat ≈ U S Vt, keep top-dim components
+        actual_dim = min(self.dim, min(mat.shape) - 1, 128)
+        if actual_dim < 1:
+            self.fitted = False
+            return
+
+        try:
+            U, S, Vt = np.linalg.svd(mat, full_matrices=False)
+            self.Vt = Vt[:actual_dim, :]   # (dim × V)
+            self.dim = actual_dim
+            self.fitted = True
+        except Exception:
+            self.fitted = False
+
+    def embed(self, tokens: list) -> list | None:
+        """Project a token list into LSA space."""
+        if not self.fitted or self.Vt is None:
+            return None
+        import numpy as np
+
+        V = len(self.vocab)
+        vec = np.zeros(V, dtype=np.float32)
+        freq = Counter(tokens)
+        total = max(len(tokens), 1)
+        for term, count in freq.items():
+            if term in self.vocab:
+                idx = self.vocab[term]
+                vec[idx] = math.log1p(count / total) * self.idf[idx]
+        n = np.linalg.norm(vec)
+        if n > 0:
+            vec /= n
+        projected = self.Vt @ vec          # (dim,)
+        result = projected.tolist()
+        n2 = norm(result)
+        if n2 > 0:
+            result = [x / n2 for x in result]
+        return result
+
+# ─── SQLite schema ────────────────────────────────────────────────────────────
+
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS docs (
+    id      INTEGER PRIMARY KEY,
+    path    TEXT UNIQUE NOT NULL,
+    title   TEXT,
+    summary TEXT,
+    mtime   REAL,
+    length  INTEGER
+);
+CREATE TABLE IF NOT EXISTS terms (
+    doc_id  INTEGER NOT NULL REFERENCES docs(id) ON DELETE CASCADE,
+    term    TEXT NOT NULL,
+    freq    INTEGER NOT NULL,
+    PRIMARY KEY (doc_id, term)
+);
+CREATE TABLE IF NOT EXISTS embeddings (
+    doc_id    INTEGER PRIMARY KEY REFERENCES docs(id) ON DELETE CASCADE,
+    source    TEXT NOT NULL,   -- 'llm' or 'lsa'
+    vector    BLOB NOT NULL,   -- packed float32 array
+    dim       INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS lsa_model (
+    key   TEXT PRIMARY KEY,
+    value BLOB NOT NULL        -- pickled numpy arrays
+);
+CREATE TABLE IF NOT EXISTS meta (
+    key   TEXT PRIMARY KEY,
+    value TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_terms_term ON terms(term);
+CREATE INDEX IF NOT EXISTS idx_embed_source ON embeddings(source);
+"""
+
+# ─── BM25 index ───────────────────────────────────────────────────────────────
+
+class SearchIndex:
     def __init__(self, db_path: Path):
         self.db_path = db_path
         self.conn = sqlite3.connect(str(db_path))
         self.conn.execute("PRAGMA journal_mode=WAL")
         self.conn.execute("PRAGMA synchronous=NORMAL")
-        self._ensure_schema()
-
-    def _ensure_schema(self):
-        self.conn.executescript("""
-            CREATE TABLE IF NOT EXISTS docs (
-                id      INTEGER PRIMARY KEY,
-                path    TEXT UNIQUE NOT NULL,
-                title   TEXT,
-                summary TEXT,
-                mtime   REAL,
-                length  INTEGER  -- token count
-            );
-            CREATE TABLE IF NOT EXISTS terms (
-                doc_id  INTEGER NOT NULL REFERENCES docs(id) ON DELETE CASCADE,
-                term    TEXT NOT NULL,
-                freq    INTEGER NOT NULL,
-                PRIMARY KEY (doc_id, term)
-            );
-            CREATE TABLE IF NOT EXISTS meta (
-                key   TEXT PRIMARY KEY,
-                value TEXT
-            );
-            CREATE INDEX IF NOT EXISTS idx_terms_term ON terms(term);
-        """)
+        self.conn.executescript(SCHEMA)
         self.conn.commit()
+        self._lsa: LSAEmbedder | None = None
 
     # ── Indexing ──────────────────────────────────────────────────────────────
 
     def index_file(self, path: Path, vault_root: Path) -> bool:
-        """Index or reindex a single file. Returns True if changed."""
         rel = str(path.relative_to(vault_root))
         mtime = path.stat().st_mtime
-        row = self.conn.execute(
-            "SELECT id, mtime FROM docs WHERE path = ?", (rel,)
-        ).fetchone()
-
+        row = self.conn.execute("SELECT id, mtime FROM docs WHERE path=?", (rel,)).fetchone()
         if row and abs(row[1] - mtime) < 0.01:
-            return False  # unchanged
+            return False
 
         text = path.read_text(encoding='utf-8', errors='replace')
         tokens = tokenise(text)
         freq = Counter(tokens)
-
-        # Extract title and summary from content
         title = extract_title(text, path)
         summary = extract_summary(text)
 
         if row:
             doc_id = row[0]
             self.conn.execute(
-                "UPDATE docs SET mtime=?, length=?, title=?, summary=? WHERE id=?",
-                (mtime, len(tokens), title, summary, doc_id)
-            )
+                "UPDATE docs SET mtime=?,length=?,title=?,summary=? WHERE id=?",
+                (mtime, len(tokens), title, summary, doc_id))
             self.conn.execute("DELETE FROM terms WHERE doc_id=?", (doc_id,))
+            self.conn.execute("DELETE FROM embeddings WHERE doc_id=?", (doc_id,))
         else:
             cur = self.conn.execute(
-                "INSERT INTO docs (path, title, summary, mtime, length) VALUES (?,?,?,?,?)",
-                (rel, title, summary, mtime, len(tokens))
-            )
+                "INSERT INTO docs (path,title,summary,mtime,length) VALUES (?,?,?,?,?)",
+                (rel, title, summary, mtime, len(tokens)))
             doc_id = cur.lastrowid
 
         self.conn.executemany(
-            "INSERT INTO terms (doc_id, term, freq) VALUES (?,?,?)",
-            [(doc_id, term, count) for term, count in freq.items()]
-        )
+            "INSERT INTO terms (doc_id,term,freq) VALUES (?,?,?)",
+            [(doc_id, t, c) for t, c in freq.items()])
         return True
 
-    def remove_deleted(self, existing_paths: set[str]):
-        """Remove index entries for files that no longer exist."""
+    def remove_deleted(self, existing: set) -> int:
         indexed = {r[0] for r in self.conn.execute("SELECT path FROM docs")}
-        stale = indexed - existing_paths
-        for path in stale:
-            self.conn.execute("DELETE FROM docs WHERE path=?", (path,))
+        stale = indexed - existing
+        for p in stale:
+            self.conn.execute("DELETE FROM docs WHERE path=?", (p,))
         return len(stale)
 
-    def commit(self):
-        # Update corpus stats
-        stats = self.conn.execute(
-            "SELECT COUNT(*), AVG(length) FROM docs"
-        ).fetchone()
-        self.conn.execute(
-            "INSERT OR REPLACE INTO meta VALUES ('doc_count', ?)", (str(stats[0]),)
-        )
-        self.conn.execute(
-            "INSERT OR REPLACE INTO meta VALUES ('avg_length', ?)", (str(stats[1] or 0),)
-        )
+    def commit_bm25(self):
+        stats = self.conn.execute("SELECT COUNT(*), AVG(length) FROM docs").fetchone()
+        self.conn.execute("INSERT OR REPLACE INTO meta VALUES ('doc_count',?)", (str(stats[0]),))
+        self.conn.execute("INSERT OR REPLACE INTO meta VALUES ('avg_length',?)", (str(stats[1] or 0),))
         self.conn.commit()
 
-    # ── Searching ─────────────────────────────────────────────────────────────
+    # ── Embedding: store ──────────────────────────────────────────────────────
 
-    def search(self, query: str, top_k: int = 10, scope: str = 'all') -> list[dict]:
-        """
-        BM25 search. Returns ranked list of {path, title, summary, score, excerpt}.
-        scope: 'all' | 'wiki' | 'raw'
-        """
+    def store_embedding(self, doc_id: int, vector: list, source: str):
+        blob = pack_vec(vector)
+        self.conn.execute(
+            "INSERT OR REPLACE INTO embeddings (doc_id,source,vector,dim) VALUES (?,?,?,?)",
+            (doc_id, source, blob, len(vector)))
+
+    def get_embedding(self, doc_id: int) -> tuple | None:
+        row = self.conn.execute(
+            "SELECT vector, source FROM embeddings WHERE doc_id=?", (doc_id,)).fetchone()
+        if row:
+            return unpack_vec(row[0]), row[1]
+        return None
+
+    def all_docs_without_embeddings(self, source: str | None = None) -> list:
+        if source:
+            return self.conn.execute(
+                "SELECT d.id, d.path FROM docs d "
+                "LEFT JOIN embeddings e ON d.id=e.doc_id "
+                "WHERE e.doc_id IS NULL OR e.source != ?", (source,)
+            ).fetchall()
+        return self.conn.execute(
+            "SELECT d.id, d.path FROM docs d "
+            "LEFT JOIN embeddings e ON d.id=e.doc_id WHERE e.doc_id IS NULL"
+        ).fetchall()
+
+    def all_doc_embeddings(self, source: str | None = None) -> list:
+        """Return [(doc_id, vector)] for all embedded docs."""
+        if source:
+            rows = self.conn.execute(
+                "SELECT doc_id, vector FROM embeddings WHERE source=?", (source,)).fetchall()
+        else:
+            rows = self.conn.execute("SELECT doc_id, vector FROM embeddings").fetchall()
+        return [(r[0], unpack_vec(r[1])) for r in rows]
+
+    # ── LSA model persistence ─────────────────────────────────────────────────
+
+    def save_lsa_model(self, lsa: LSAEmbedder):
+        import pickle
+        blob = pickle.dumps({
+            'vocab': lsa.vocab,
+            'idf': lsa.idf,
+            'Vt': lsa.Vt,
+            'dim': lsa.dim,
+            'fitted': lsa.fitted,
+        })
+        self.conn.execute(
+            "INSERT OR REPLACE INTO lsa_model VALUES ('model', ?)", (blob,))
+        self.conn.commit()
+
+    def load_lsa_model(self) -> LSAEmbedder | None:
+        import pickle
+        row = self.conn.execute("SELECT value FROM lsa_model WHERE key='model'").fetchone()
+        if not row:
+            return None
+        try:
+            data = pickle.loads(row[0])
+            lsa = LSAEmbedder(data['dim'])
+            lsa.vocab = data['vocab']
+            lsa.idf = data['idf']
+            lsa.Vt = data['Vt']
+            lsa.dim = data['dim']
+            lsa.fitted = data['fitted']
+            return lsa
+        except Exception:
+            return None
+
+    # ── BM25 search ───────────────────────────────────────────────────────────
+
+    def bm25_search(self, query: str, top_k: int = 30, scope: str = 'all') -> dict:
+        """Returns {doc_id: bm25_score}"""
         tokens = tokenise_query(query)
         if not tokens:
-            return []
+            return {}
 
-        meta = dict(self.conn.execute("SELECT key, value FROM meta").fetchall())
+        meta = dict(self.conn.execute("SELECT key,value FROM meta").fetchall())
         N = int(meta.get('doc_count', 1))
         avgdl = float(meta.get('avg_length', 100))
-
         if N == 0:
-            return []
+            return {}
 
-        # For each query term, get IDF and per-doc frequencies
-        scores: dict[int, float] = {}
-        matched_terms: dict[int, list[str]] = {}
-
+        scores = {}
         for term in set(tokens):
-            # Phrase tokens — search for constituent words
-            search_term = term.replace('_PHRASE_', ' ')
-            if '_PHRASE_' in term:
-                # Treat phrase as exact match bonus — score each word and multiply
-                phrase_words = search_term.split()
-                for pw in phrase_words:
-                    self._score_term(pw, N, avgdl, scores, matched_terms, weight=2.0)
-            else:
-                # Also match stemmed variants (prefix match for longer terms)
-                self._score_term(term, N, avgdl, scores, matched_terms, weight=1.0)
-                if len(term) > 5:
-                    self._score_prefix(term[:4], N, avgdl, scores, matched_terms, weight=0.6)
+            weight = 2.0 if '_PHRASE_' in term else 1.0
+            t = term.replace('_PHRASE_', ' ')
+            self._bm25_term(t, N, avgdl, scores, weight)
+            if len(t) > 5:
+                self._bm25_prefix(t[:4], N, avgdl, scores, 0.5)
 
-        if not scores:
-            return []
+        if scope != 'all':
+            prefix = 'wiki/' if scope == 'wiki' else 'raw/'
+            paths = {r[0]: r[1] for r in self.conn.execute("SELECT id, path FROM docs")}
+            scores = {k: v for k, v in scores.items()
+                      if paths.get(k, '').startswith(prefix)}
 
-        # Sort by score
-        ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)[:top_k * 2]
+        return scores
 
-        results = []
-        for doc_id, score in ranked:
-            row = self.conn.execute(
-                "SELECT path, title, summary, length FROM docs WHERE id=?", (doc_id,)
-            ).fetchone()
-            if not row:
-                continue
-
-            path, title, summary, length = row
-
-            # Filter by scope
-            if scope == 'wiki' and not path.startswith('wiki/'):
-                continue
-            if scope == 'raw' and not path.startswith('raw/'):
-                continue
-
-            results.append({
-                'path': path,
-                'title': title or path,
-                'summary': summary or '',
-                'score': round(score, 3),
-                'matched_terms': list(set(matched_terms.get(doc_id, []))),
-            })
-
-            if len(results) >= top_k:
-                break
-
-        return results
-
-    def _score_term(self, term, N, avgdl, scores, matched_terms, weight=1.0):
+    def _bm25_term(self, term, N, avgdl, scores, weight=1.0):
         rows = self.conn.execute(
             "SELECT d.id, t.freq, d.length FROM terms t JOIN docs d ON t.doc_id=d.id WHERE t.term=?",
-            (term,)
-        ).fetchall()
+            (term,)).fetchall()
         if not rows:
             return
         df = len(rows)
         idf = math.log((N - df + 0.5) / (df + 0.5) + 1)
         for doc_id, tf, dl in rows:
-            norm_tf = (tf * (BM25_K1 + 1)) / (tf + BM25_K1 * (1 - BM25_B + BM25_B * dl / max(avgdl, 1)))
-            scores[doc_id] = scores.get(doc_id, 0) + weight * idf * norm_tf
-            matched_terms.setdefault(doc_id, []).append(term)
+            ntf = (tf * (BM25_K1 + 1)) / (tf + BM25_K1 * (1 - BM25_B + BM25_B * dl / max(avgdl,1)))
+            scores[doc_id] = scores.get(doc_id, 0) + weight * idf * ntf
 
-    def _score_prefix(self, prefix, N, avgdl, scores, matched_terms, weight=0.6):
+    def _bm25_prefix(self, prefix, N, avgdl, scores, weight=0.5):
         rows = self.conn.execute(
             "SELECT d.id, t.freq, d.length, t.term FROM terms t JOIN docs d ON t.doc_id=d.id WHERE t.term LIKE ?",
-            (prefix + '%',)
-        ).fetchall()
-        if not rows:
-            return
-        # Group by term for IDF
-        term_groups: dict[str, list] = {}
+            (prefix + '%',)).fetchall()
+        by_term = {}
         for doc_id, tf, dl, term in rows:
-            term_groups.setdefault(term, []).append((doc_id, tf, dl))
-        for term, doc_rows in term_groups.items():
+            by_term.setdefault(term, []).append((doc_id, tf, dl))
+        for term, doc_rows in by_term.items():
             df = len(doc_rows)
             idf = math.log((N - df + 0.5) / (df + 0.5) + 1)
             for doc_id, tf, dl in doc_rows:
-                norm_tf = (tf * (BM25_K1 + 1)) / (tf + BM25_K1 * (1 - BM25_B + BM25_B * dl / max(avgdl, 1)))
-                scores[doc_id] = scores.get(doc_id, 0) + weight * idf * norm_tf
-                matched_terms.setdefault(doc_id, []).append(term)
+                ntf = (tf * (BM25_K1+1)) / (tf + BM25_K1*(1-BM25_B+BM25_B*dl/max(avgdl,1)))
+                scores[doc_id] = scores.get(doc_id, 0) + weight * idf * ntf
+
+    # ── Semantic search ───────────────────────────────────────────────────────
+
+    def semantic_search(self, query: str, top_k: int = 30,
+                        scope: str = 'all', lsa: LSAEmbedder | None = None) -> dict:
+        """
+        Returns {doc_id: cosine_similarity}.
+        Uses LLM embeddings if server available, else LSA.
+        """
+        # Try LLM embeddings first
+        if llm_embed_available():
+            q_vecs = llm_embed([query])
+            if q_vecs:
+                q_vec = normalize(q_vecs[0])
+                # Look for LLM-embedded docs
+                doc_embeds = self.all_doc_embeddings(source='llm')
+                if doc_embeds:
+                    return self._cosine_rank(q_vec, doc_embeds, scope, top_k)
+
+        # Fallback to LSA
+        if lsa and lsa.fitted:
+            q_tokens = tokenise(query)
+            q_vec = lsa.embed(q_tokens)
+            if q_vec:
+                doc_embeds = self.all_doc_embeddings(source='lsa')
+                if doc_embeds:
+                    return self._cosine_rank(q_vec, doc_embeds, scope, top_k)
+
+        return {}
+
+    def _cosine_rank(self, q_vec, doc_embeds, scope, top_k) -> dict:
+        """Compute cosine scores, optionally filtered by scope."""
+        if scope != 'all':
+            prefix = 'wiki/' if scope == 'wiki' else 'raw/'
+            paths = {r[0]: r[1] for r in self.conn.execute("SELECT id, path FROM docs")}
+        scores = {}
+        for doc_id, d_vec in doc_embeds:
+            if scope != 'all' and not paths.get(doc_id, '').startswith(prefix):
+                continue
+            scores[doc_id] = cosine(q_vec, d_vec)
+        return scores
+
+    # ── Hybrid merge ──────────────────────────────────────────────────────────
+
+    def hybrid_search(self, query: str, top_k: int = 10,
+                      scope: str = 'all', alpha: float = HYBRID_ALPHA,
+                      lsa: LSAEmbedder | None = None) -> list:
+        """
+        Merge BM25 + semantic scores using Reciprocal Rank Fusion + linear blend.
+        Returns ranked list of {path, title, summary, score, bm25, semantic, matched_terms}.
+        """
+        bm25_scores  = self.bm25_search(query, top_k=top_k*3, scope=scope)
+        sem_scores   = self.semantic_search(query, top_k=top_k*3, scope=scope, lsa=lsa)
+
+        has_semantic = bool(sem_scores)
+
+        # Normalise both score dicts to [0,1]
+        def normalise(d: dict) -> dict:
+            if not d:
+                return {}
+            lo, hi = min(d.values()), max(d.values())
+            if hi == lo:
+                return {k: 1.0 for k in d}
+            return {k: (v - lo) / (hi - lo) for k, v in d.items()}
+
+        bm25_n = normalise(bm25_scores)
+        sem_n  = normalise(sem_scores)
+
+        # Union of all doc_ids
+        all_ids = set(bm25_n) | set(sem_n)
+
+        # Effective alpha: if no semantic scores, use BM25 only
+        eff_alpha = alpha if has_semantic else 0.0
+
+        combined = {}
+        for doc_id in all_ids:
+            b = bm25_n.get(doc_id, 0.0)
+            s = sem_n.get(doc_id, 0.0)
+            combined[doc_id] = (1 - eff_alpha) * b + eff_alpha * s
+
+        ranked = sorted(combined.items(), key=lambda x: x[1], reverse=True)[:top_k*2]
+
+        results = []
+        for doc_id, score in ranked:
+            row = self.conn.execute(
+                "SELECT path, title, summary FROM docs WHERE id=?", (doc_id,)).fetchone()
+            if not row:
+                continue
+            path, title, summary = row
+
+            # Get matched terms for display
+            q_tokens = tokenise_query(query)
+            matched = [t for t in q_tokens
+                       if self.conn.execute(
+                           "SELECT 1 FROM terms WHERE doc_id=? AND term=?",
+                           (doc_id, t)).fetchone()]
+
+            results.append({
+                'path': path,
+                'title': title or path,
+                'summary': summary or '',
+                'score': round(score, 4),
+                'bm25': round(bm25_n.get(doc_id, 0.0), 4),
+                'semantic': round(sem_n.get(doc_id, 0.0), 4),
+                'semantic_source': 'llm' if (has_semantic and doc_id in sem_scores) else 'lsa',
+                'matched_terms': matched,
+            })
+            if len(results) >= top_k:
+                break
+
+        return results
 
     def stats(self) -> dict:
-        meta = dict(self.conn.execute("SELECT key, value FROM meta").fetchall())
+        meta = dict(self.conn.execute("SELECT key,value FROM meta").fetchall())
         term_count = self.conn.execute("SELECT COUNT(DISTINCT term) FROM terms").fetchone()[0]
+        embed_counts = dict(self.conn.execute(
+            "SELECT source, COUNT(*) FROM embeddings GROUP BY source").fetchall())
         scope_counts = dict(self.conn.execute(
-            "SELECT SUBSTR(path,1,4), COUNT(*) FROM docs GROUP BY SUBSTR(path,1,4)"
-        ).fetchall())
+            "SELECT SUBSTR(path,1,4), COUNT(*) FROM docs GROUP BY SUBSTR(path,1,4)").fetchall())
         return {
             'documents': int(meta.get('doc_count', 0)),
             'unique_terms': term_count,
             'avg_doc_length': round(float(meta.get('avg_length', 0)), 1),
             'wiki_articles': scope_counts.get('wiki', 0),
             'raw_sources': scope_counts.get('raw/', 0),
-            'index_size_kb': round(self.db_path.stat().st_size / 1024, 1) if self.db_path.exists() else 0,
+            'llm_embeddings': embed_counts.get('llm', 0),
+            'lsa_embeddings': embed_counts.get('lsa', 0),
+            'index_size_kb': round(self.db_path.stat().st_size / 1024, 1)
+                             if self.db_path.exists() else 0,
         }
 
     def close(self):
@@ -326,22 +637,16 @@ class BM25Index:
 
 # ─── Text helpers ─────────────────────────────────────────────────────────────
 
-def extract_title(text: str, path: Path) -> str:
-    """Extract title from YAML frontmatter or first H1."""
-    m = re.search(r'^---.*?title:\s*["\']?(.+?)["\']?\s*$.*?---', text, re.MULTILINE | re.DOTALL)
-    if m:
-        return m.group(1).strip()
+def extract_title(text, path):
+    m = re.search(r'^---.*?title:\s*["\']?(.+?)["\']?\s*$.*?---', text, re.MULTILINE|re.DOTALL)
+    if m: return m.group(1).strip()
     m = re.search(r'^#\s+(.+)$', text, re.MULTILINE)
-    if m:
-        return m.group(1).strip()
+    if m: return m.group(1).strip()
     return path.stem.replace('-', ' ').title()
 
-def extract_summary(text: str) -> str:
-    """Extract summary from frontmatter or first paragraph."""
-    m = re.search(r'^---.*?summary:\s*["\']?(.+?)["\']?\s*$.*?---', text, re.MULTILINE | re.DOTALL)
-    if m:
-        return m.group(1).strip()[:200]
-    # First non-heading, non-blank paragraph after frontmatter
+def extract_summary(text):
+    m = re.search(r'^---.*?summary:\s*["\']?(.+?)["\']?\s*$.*?---', text, re.MULTILINE|re.DOTALL)
+    if m: return m.group(1).strip()[:200]
     body = re.sub(r'^---.*?---\s*', '', text, flags=re.DOTALL)
     for line in body.split('\n'):
         line = line.strip()
@@ -349,112 +654,189 @@ def extract_summary(text: str) -> str:
             return line[:200]
     return ''
 
-def excerpt_with_highlights(vault_root: Path, result: dict, query_tokens: list[str]) -> str:
-    """Find the best excerpt from the file containing query terms."""
+def excerpt_with_highlights(vault_root, result, query_tokens):
     path = vault_root / result['path']
     if not path.exists():
         return result.get('summary', '')
-
     text = path.read_text(encoding='utf-8', errors='replace')
-    # Strip frontmatter
     text = re.sub(r'^---.*?---\s*', '', text, flags=re.DOTALL)
-    # Strip markdown formatting
     text = re.sub(r'```.*?```', '', text, flags=re.DOTALL)
-    text = re.sub(r'[#*_~`]', '', text)
+    text = re.sub(r'[#*_~`|]', '', text)
     text = re.sub(r'\[\[([^\]]+)\]\]', r'\1', text)
     text = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', text)
     text = ' '.join(text.split())
-
     if not text:
         return result.get('summary', '')
-
-    # Find best window containing most query terms
     words = text.split()
-    window = 60  # words
-    best_score = -1
-    best_start = 0
-
+    window = 60
+    best_score, best_start = -1, 0
     for i in range(0, max(1, len(words) - window), 10):
         chunk = ' '.join(words[i:i+window]).lower()
         score = sum(1 for t in query_tokens if t in chunk)
         if score > best_score:
-            best_score = score
-            best_start = i
-
+            best_score, best_start = score, i
     excerpt = ' '.join(words[best_start:best_start + window])
     if len(excerpt) > MAX_EXCERPT_CHARS:
         excerpt = excerpt[:MAX_EXCERPT_CHARS] + '…'
-
-    # Highlight matched terms (for terminal output)
     for term in query_tokens:
         if '_PHRASE_' not in term:
             excerpt = re.sub(
                 rf'\b({re.escape(term)}[a-z]*)\b',
-                f'{C.YELLOW}\\1{C.RESET}',
-                excerpt,
-                flags=re.IGNORECASE
-            )
+                f'{C.YELLOW}\\1{C.RESET}', excerpt, flags=re.IGNORECASE)
     return excerpt
 
-# ─── Index management ─────────────────────────────────────────────────────────
+# ─── Index build ──────────────────────────────────────────────────────────────
 
-def build_index(vault_root: Path, force: bool = False, quiet: bool = False) -> BM25Index:
-    """Build or update the search index. Returns the index."""
+def get_md_files(vault_root: Path) -> list:
+    files = []
+    for d in ['wiki', 'raw']:
+        p = vault_root / d
+        if p.exists():
+            files.extend(f for f in p.rglob('*.md') if f.name != '.gitkeep')
+    return files
+
+def build_index(vault_root: Path, embed: bool = False,
+                force: bool = False, quiet: bool = False) -> SearchIndex:
     db_path = vault_root / INDEX_FILE
-    idx = BM25Index(db_path)
+    idx = SearchIndex(db_path)
 
-    md_files = list((vault_root / 'wiki').rglob('*.md')) + \
-               list((vault_root / 'raw').rglob('*.md'))
-    md_files = [f for f in md_files if f.name != '.gitkeep']
-
+    md_files = get_md_files(vault_root)
     if force:
         idx.conn.execute("DELETE FROM docs")
         idx.conn.execute("DELETE FROM terms")
+        idx.conn.execute("DELETE FROM embeddings")
+        idx.conn.execute("DELETE FROM lsa_model")
         idx.conn.commit()
 
-    existing_paths = {str(f.relative_to(vault_root)) for f in md_files}
-    removed = idx.remove_deleted(existing_paths)
+    existing = {str(f.relative_to(vault_root)) for f in md_files}
+    removed = idx.remove_deleted(existing)
+    updated = sum(1 for f in md_files if idx.index_file(f, vault_root))
+    idx.commit_bm25()
 
-    updated = 0
-    for f in md_files:
-        if idx.index_file(f, vault_root):
-            updated += 1
-
-    idx.commit()
+    # Build/update embeddings
+    embed_source = 'pending'
+    if embed or updated > 0:
+        embed_source = _build_embeddings(idx, vault_root, md_files, quiet)
 
     if not quiet:
-        stats = idx.stats()
-        if updated or removed:
-            print(f"{C.GREEN}✓{C.RESET} Index updated: {stats['documents']} docs, {stats['unique_terms']:,} terms "
-                  f"({updated} updated, {removed} removed)")
-        else:
-            print(f"{C.DIM}ℹ Index up-to-date: {stats['documents']} docs{C.RESET}")
-
+        s = idx.stats()
+        mode = f"llm({s['llm_embeddings']})+lsa({s['lsa_embeddings']})" \
+               if (s['llm_embeddings'] or s['lsa_embeddings']) else "bm25-only"
+        print(f"{C.GREEN}✓{C.RESET} Index: {s['documents']} docs, "
+              f"{s['unique_terms']:,} terms, {mode} "
+              f"({updated} updated, {removed} removed)")
     return idx
 
-def ensure_index(vault_root: Path) -> BM25Index:
-    """Auto-update the index if files have changed since last build."""
+def _build_embeddings(idx: SearchIndex, vault_root: Path,
+                      md_files: list, quiet: bool) -> str:
+    """Build LSA model over all docs, then try LLM embeddings for changed docs."""
+
+    # Always build/rebuild LSA over all docs (fast, offline)
+    if not quiet:
+        info("Building LSA semantic model...")
+
+    corpus = []
+    for f in md_files:
+        rel = str(f.relative_to(vault_root))
+        row = idx.conn.execute("SELECT id FROM docs WHERE path=?", (rel,)).fetchone()
+        if not row:
+            continue
+        text = f.read_text(encoding='utf-8', errors='replace')
+        corpus.append((row[0], tokenise(text)))
+
+    lsa = LSAEmbedder(EMBED_DIM_LSA)
+    lsa.fit(corpus)
+
+    if lsa.fitted:
+        # Store LSA embeddings for every doc
+        for doc_id, tokens in corpus:
+            vec = lsa.embed(tokens)
+            if vec:
+                idx.store_embedding(doc_id, vec, 'lsa')
+        idx.save_lsa_model(lsa)
+        if not quiet:
+            ok(f"LSA model fitted ({lsa.dim} dimensions, {len(lsa.vocab):,} terms)")
+
+    # Try LLM embeddings (overrides LSA where available)
+    if llm_embed_available():
+        if not quiet:
+            info("LLM server detected — computing neural embeddings...")
+        docs_to_embed = [(doc_id, path)
+                         for doc_id, path in idx.conn.execute("SELECT id, path FROM docs")]
+        _embed_with_llm(idx, vault_root, docs_to_embed, quiet)
+        return 'llm+lsa'
+    else:
+        if not quiet and lsa.fitted:
+            info("LLM server not detected — using LSA semantic search")
+            info("Start llama-server with --embeddings for neural embeddings")
+        return 'lsa'
+
+def _embed_with_llm(idx: SearchIndex, vault_root: Path,
+                    docs: list, quiet: bool):
+    """Batch-embed docs using llama-server."""
+    batches = [docs[i:i+EMBED_BATCH_SIZE] for i in range(0, len(docs), EMBED_BATCH_SIZE)]
+    total = 0
+    for batch in batches:
+        texts = []
+        for doc_id, rel_path in batch:
+            fpath = vault_root / rel_path
+            if fpath.exists():
+                text = text_for_embedding(fpath.read_text(encoding='utf-8', errors='replace'))
+                texts.append(text)
+            else:
+                texts.append('')
+        vecs = llm_embed(texts)
+        if vecs:
+            for (doc_id, _), vec in zip(batch, vecs):
+                idx.store_embedding(doc_id, normalize(vec), 'llm')
+            total += len(batch)
+    idx.conn.commit()
+    if not quiet and total:
+        ok(f"LLM embeddings computed for {total} docs")
+
+def ensure_index(vault_root: Path, quiet: bool = True) -> tuple:
+    """Return (SearchIndex, LSAEmbedder|None), auto-updating if files changed."""
     db_path = vault_root / INDEX_FILE
-    idx = BM25Index(db_path)
-
-    # Quick check: any files newer than index?
     index_mtime = db_path.stat().st_mtime if db_path.exists() else 0
-    md_files = list((vault_root / 'wiki').rglob('*.md')) + \
-               list((vault_root / 'raw').rglob('*.md'))
+    md_files = get_md_files(vault_root)
     needs_update = any(f.stat().st_mtime > index_mtime for f in md_files)
+    if needs_update or not db_path.exists():
+        idx = build_index(vault_root, embed=True, quiet=quiet)
+    else:
+        idx = SearchIndex(db_path)
+    lsa = idx.load_lsa_model()
+    return idx, lsa
 
-    if needs_update:
-        return build_index(vault_root, quiet=True)
-
-    return idx
-
-# ─── CLI ──────────────────────────────────────────────────────────────────────
+# ─── CLI commands ─────────────────────────────────────────────────────────────
 
 def cmd_search(args):
     vault = find_vault_root()
-    idx = ensure_index(vault)
+    idx, lsa = ensure_index(vault)
 
-    results = idx.search(args.query, top_k=args.top, scope=args.scope)
+    # Choose search mode
+    if args.bm25:
+        raw = idx.bm25_search(args.query, top_k=args.top, scope=args.scope)
+        results = []
+        for doc_id, score in sorted(raw.items(), key=lambda x: x[1], reverse=True)[:args.top]:
+            row = idx.conn.execute("SELECT path,title,summary FROM docs WHERE id=?", (doc_id,)).fetchone()
+            if row:
+                results.append({'path':row[0],'title':row[1] or row[0],
+                                 'summary':row[2] or '','score':round(score,4),
+                                 'bm25':round(score,4),'semantic':0.0,
+                                 'semantic_source':'none','matched_terms':[]})
+    elif args.semantic:
+        raw = idx.semantic_search(args.query, top_k=args.top, scope=args.scope, lsa=lsa)
+        results = []
+        for doc_id, score in sorted(raw.items(), key=lambda x: x[1], reverse=True)[:args.top]:
+            row = idx.conn.execute("SELECT path,title,summary FROM docs WHERE id=?", (doc_id,)).fetchone()
+            if row:
+                results.append({'path':row[0],'title':row[1] or row[0],
+                                 'summary':row[2] or '','score':round(score,4),
+                                 'bm25':0.0,'semantic':round(score,4),
+                                 'semantic_source':'lsa','matched_terms':[]})
+    else:
+        results = idx.hybrid_search(args.query, top_k=args.top, scope=args.scope, lsa=lsa)
+
     idx.close()
 
     if not results:
@@ -465,87 +847,107 @@ def cmd_search(args):
         return
 
     if args.json:
-        # JSON output for piping into kb query
-        output = []
-        for r in results:
-            output.append({
-                'path': r['path'],
-                'title': r['title'],
-                'summary': r['summary'],
-                'score': r['score'],
-                'matched_terms': r['matched_terms'],
-            })
-        print(json.dumps(output, indent=2))
+        print(json.dumps(results, indent=2))
         return
 
-    # Human-readable output
-    query_tokens = tokenise_query(args.query)
-    print(f"\n{C.BOLD}Search results for:{C.RESET} {args.query}\n")
+    # Human output
+    q_tokens = tokenise_query(args.query)
+    sem_available = any(r.get('semantic', 0) > 0 for r in results)
+    mode_str = f"hybrid (bm25 + {'llm' if llm_embed_available() else 'lsa'} semantic)" \
+               if sem_available else "bm25 only"
+    print(f"\n{C.BOLD}Results for:{C.RESET} {args.query}  {C.DIM}[{mode_str}]{C.RESET}\n")
+
     for i, r in enumerate(results, 1):
-        score_bar = '█' * min(10, int(r['score'] * 3)) + '░' * (10 - min(10, int(r['score'] * 3)))
+        # Score bar: split into BM25 (blue) and semantic (cyan) portions
+        b_fill = int(r.get('bm25', 0) * 5)
+        s_fill = int(r.get('semantic', 0) * 5)
+        bar = C.BLUE + '█' * b_fill + C.CYAN + '█' * s_fill + \
+              C.DIM + '░' * max(0, 10 - b_fill - s_fill) + C.RESET
+
+        src = r.get('semantic_source', '')
+        src_tag = f" {C.DIM}[{src}]{C.RESET}" if src and src != 'none' else ''
+
         print(f"{C.BOLD}{i:2}. {r['title']}{C.RESET}")
-        print(f"    {C.DIM}{r['path']}{C.RESET}  {C.CYAN}{score_bar}{C.RESET}  score={r['score']}")
+        print(f"    {C.DIM}{r['path']}{C.RESET}  {bar}  "
+              f"score={r['score']:.3f} bm25={r.get('bm25',0):.2f} "
+              f"sem={r.get('semantic',0):.2f}{src_tag}")
         if r.get('matched_terms'):
-            print(f"    {C.DIM}matched: {', '.join(r['matched_terms'][:8])}{C.RESET}")
+            print(f"    {C.DIM}keywords: {', '.join(r['matched_terms'][:8])}{C.RESET}")
         if args.excerpt or args.verbose:
-            excerpt = excerpt_with_highlights(vault, r, query_tokens)
-            if excerpt:
-                wrapped = textwrap.fill(excerpt, width=80, initial_indent='    ', subsequent_indent='    ')
+            exc = excerpt_with_highlights(vault, r, q_tokens)
+            if exc:
+                wrapped = textwrap.fill(exc, 80, initial_indent='    ', subsequent_indent='    ')
                 print(f"{C.DIM}{wrapped}{C.RESET}")
         print()
+
 
 def cmd_reindex(args):
     vault = find_vault_root()
     db_path = vault / INDEX_FILE
     if db_path.exists():
         db_path.unlink()
-        print(f"{C.BLUE}ℹ{C.RESET} Cleared existing index")
-    build_index(vault, force=False, quiet=False)
+        print(f"{C.BLUE}ℹ{C.RESET} Cleared index")
+    build_index(vault, embed=True, force=False, quiet=False)
+
 
 def cmd_stats(args):
     vault = find_vault_root()
     db_path = vault / INDEX_FILE
     if not db_path.exists():
-        print(f"{C.YELLOW}⚠{C.RESET} No index found — run: kb-search --reindex")
+        warn("No index — run: kb-search --reindex")
         return
-    idx = BM25Index(db_path)
-    stats = idx.stats()
+    idx = SearchIndex(db_path)
+    s = idx.stats()
+    lsa = idx.load_lsa_model()
     idx.close()
-    print(f"\n{C.BOLD}Search Index Stats{C.RESET}")
-    print(f"  Documents:    {stats['documents']}")
-    print(f"  Wiki articles:{stats['wiki_articles']}")
-    print(f"  Raw sources:  {stats['raw_sources']}")
-    print(f"  Unique terms: {stats['unique_terms']:,}")
-    print(f"  Avg doc len:  {stats['avg_doc_length']} tokens")
-    print(f"  Index size:   {stats['index_size_kb']} KB")
+
+    llm_up = llm_embed_available()
+    print(f"\n{C.BOLD}kb-search Index{C.RESET}")
+    print(f"  Documents:       {s['documents']}")
+    print(f"  Wiki articles:   {s['wiki_articles']}")
+    print(f"  Raw sources:     {s['raw_sources']}")
+    print(f"  Unique terms:    {s['unique_terms']:,}")
+    print(f"  Avg doc length:  {s['avg_doc_length']} tokens")
+    print(f"  Index size:      {s['index_size_kb']} KB")
+    print(f"\n  {C.BOLD}Semantic search:{C.RESET}")
+    print(f"  LLM server:      {'🟢 running' if llm_up else '🔴 offline'}")
+    print(f"  LLM embeddings:  {s['llm_embeddings']} docs")
+    print(f"  LSA embeddings:  {s['lsa_embeddings']} docs"
+          + (f" ({lsa.dim}d)" if lsa else ""))
+    if lsa and lsa.fitted:
+        print(f"  LSA vocab:       {len(lsa.vocab):,} terms")
     print()
 
-# ─── Main ─────────────────────────────────────────────────────────────────────
 
-import textwrap
+# ─── Main ─────────────────────────────────────────────────────────────────────
 
 def main():
     parser = argparse.ArgumentParser(
         prog='kb-search',
-        description='Fast BM25 search over your kb vault',
+        description='Hybrid semantic + BM25 search over your kb vault',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=textwrap.dedent("""\
             examples:
-              kb-search "mutual aid funding"
-              kb-search "CORENA revolving fund" --top=5 --excerpt
-              kb-search "foundation grants" --scope=wiki --json
-              kb-search --reindex
+              kb-search "who funds youth justice"
+              kb-search "CORENA revolving fund" --excerpt
+              kb-search "foundation grants" --semantic
+              kb-search "grant dependency" --bm25
+              kb-search "indigenous self-determination" --scope=wiki -v
+              kb-search --reindex --embed
               kb-search --stats
         """)
     )
     parser.add_argument('query', nargs='?', help='Search query')
-    parser.add_argument('--top', type=int, default=10, help='Number of results (default 10)')
-    parser.add_argument('--scope', choices=['all', 'wiki', 'raw'], default='all', help='Search scope')
-    parser.add_argument('--json', action='store_true', help='Output JSON (for piping to kb query)')
-    parser.add_argument('--excerpt', action='store_true', help='Show text excerpt with highlights')
-    parser.add_argument('--verbose', '-v', action='store_true', help='Show excerpts for all results')
-    parser.add_argument('--reindex', action='store_true', help='Rebuild the full search index')
-    parser.add_argument('--stats', action='store_true', help='Show index statistics')
+    parser.add_argument('--top',      type=int, default=10)
+    parser.add_argument('--scope',    choices=['all','wiki','raw'], default='all')
+    parser.add_argument('--json',     action='store_true', help='JSON output')
+    parser.add_argument('--excerpt',  action='store_true', help='Show excerpt')
+    parser.add_argument('--verbose','-v', action='store_true')
+    parser.add_argument('--bm25',    action='store_true', help='BM25 only')
+    parser.add_argument('--semantic', action='store_true', help='Semantic only')
+    parser.add_argument('--reindex', action='store_true')
+    parser.add_argument('--embed',   action='store_true', help='Force recompute embeddings')
+    parser.add_argument('--stats',   action='store_true')
 
     args = parser.parse_args()
 
