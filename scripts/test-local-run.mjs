@@ -68,7 +68,7 @@ async function fetchFoundations() {
 
   const { data, error } = await supabase
     .from('foundations')
-    .select('id, name, acnc_abn, website, state, total_giving_annual, thematic_focus, description, acnc_data')
+    .select('id, name, acnc_abn, website, total_giving_annual, thematic_focus, description, acnc_data')
     .is('enriched_at', null)
     .not('total_giving_annual', 'is', null)
     .order('total_giving_annual', { ascending: false })
@@ -80,7 +80,7 @@ async function fetchFoundations() {
   ok(`Found ${data.length} foundations:`);
   data.forEach((f, i) => {
     const giving = f.total_giving_annual ? `$${Number(f.total_giving_annual).toLocaleString()}/yr` : 'no giving data';
-    console.log(`  ${i + 1}. ${C.bold}${f.name}${C.reset} (${f.state || '?'}) — ${giving}`);
+    console.log(`  ${i + 1}. ${C.bold}${f.name}${C.reset} (${f.acnc_data?.State || '?'}) — ${giving}`);
   });
   return data;
 }
@@ -115,7 +115,7 @@ function buildPrompt(f) {
 
 Foundation Name: ${f.name}
 ABN: ${f.acnc_abn || 'N/A'}
-State: ${f.state || 'Unknown'}
+State: ${f.acnc_data?.State || 'Unknown'}
 Annual Giving: ${f.total_giving_annual ? '$' + Number(f.total_giving_annual).toLocaleString() : 'unknown'}
 ${purposes.length ? 'Purposes: ' + purposes.join(', ') : ''}
 ${beneficiaries.length ? 'Beneficiaries: ' + beneficiaries.join(', ') : ''}
