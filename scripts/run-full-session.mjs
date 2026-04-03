@@ -247,6 +247,11 @@ async function main() {
     run('Watch funding anomalies',     'watch-funding-anomalies.mjs',  [], { optional: true, timeout: 120_000 });
 
     // Export to kb if path provided
+    // Sync to Notion
+    if (existsSync('scripts/sync-enrichment-to-notion.mjs')) {
+      run('Sync to Notion dashboard',  'sync-enrichment-to-notion.mjs', [], { optional: true, noSkipDry: true, timeout: 60_000 });
+    }
+
     if (KB_PATH && existsSync(KB_PATH)) {
       run('Export to knowledge base',  'export-to-kb.mjs',
         [`--kb-path=${KB_PATH}`, '--type=all'],
