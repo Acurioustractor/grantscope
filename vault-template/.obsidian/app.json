@@ -1,0 +1,13 @@
+{
+  "showLineNumber": true,
+  "strictLineBreaks": false,
+  "readableLineLength": true,
+  "livePreview": true,
+  "defaultViewMode": "preview",
+  "showFrontmatter": false,
+  "alwaysUpdateLinks": true,
+  "newFileLocation": "folder",
+  "newFileFolderPath": "wiki/concepts",
+  "useMarkdownLinks": false,
+  "attachmentFolderPath": "raw"
+}
