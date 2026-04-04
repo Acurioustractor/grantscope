@@ -920,6 +920,11 @@ def cmd_query(args):
         _sp.Popen([sys.executable, str(search_tool), '--reindex'],
                   stdout=_sp.DEVNULL, stderr=_sp.DEVNULL, cwd=str(vault))
 
+    # Check CivicGraph availability before system prompt uses it
+    has_civicgraph = civicgraph_available()
+    if has_civicgraph:
+        info("CivicGraph live DB connected")
+
     # ── System prompt ────────────────────────────────────────────────────────
     cg_tool_desc = """
 - civicgraph_query(query_type, topic) — query the LIVE CivicGraph database:
@@ -963,11 +968,6 @@ RULES:
         {"role": "system",  "content": system_content},
         {"role": "user",    "content": f"Question: {question}"}
     ]
-
-    # Extend tools with CivicGraph if available
-    has_civicgraph = civicgraph_available()
-    if has_civicgraph:
-        info(f"CivicGraph live DB connected")
 
     # ── Agentic tool-call loop ────────────────────────────────────────────────
     tools_to_use = list(KB_TOOLS) if has_search else []
