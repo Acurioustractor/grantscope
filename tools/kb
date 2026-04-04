@@ -1,0 +1,1011 @@
+#!/usr/bin/env python3
+"""
+kb — LLM-powered knowledge base CLI
+
+Compile raw sources into a wiki, query it, lint it, all via local LLM.
+Inspired by Andrej Karpathy's LLM knowledge base workflow.
+
+Usage:
+    kb ingest <path>          Ingest a source document into raw/
+    kb compile [--all]        Compile wiki articles from raw sources
+    kb query "<question>"     Ask questions against the wiki
+    kb lint [--fix]           Check wiki health and consistency
+    kb status                 Show knowledge base stats
+"""
+
+import argparse
+import json
+import os
+import re
+import sys
+import textwrap
+import urllib.request
+import urllib.error
+from datetime import datetime
+from pathlib import Path
+from typing import Optional
+
+# ─── Config ──────────────────────────────────────────────────────────────────
+
+API_URL = os.environ.get("KB_API_URL", "http://127.0.0.1:8080/v1/chat/completions")
+MODEL = os.environ.get("KB_MODEL", "gemma4")
+MAX_CONTEXT_CHARS = 100_000  # stay well within 128K tokens
+
+# ─── Colors ──────────────────────────────────────────────────────────────────
+
+class C:
+    BOLD    = "\033[1m"
+    DIM     = "\033[2m"
+    GREEN   = "\033[32m"
+    YELLOW  = "\033[33m"
+    BLUE    = "\033[34m"
+    RED     = "\033[31m"
+    CYAN    = "\033[36m"
+    RESET   = "\033[0m"
+
+def info(msg):    print(f"{C.BLUE}ℹ{C.RESET} {msg}")
+def ok(msg):      print(f"{C.GREEN}✓{C.RESET} {msg}")
+def warn(msg):    print(f"{C.YELLOW}⚠{C.RESET} {msg}")
+def err(msg):     print(f"{C.RED}✗{C.RESET} {msg}", file=sys.stderr)
+def heading(msg): print(f"\n{C.BOLD}{C.CYAN}{msg}{C.RESET}\n")
+
+# ─── Vault Discovery ────────────────────────────────────────────────────────
+
+def find_vault_root() -> Path:
+    """Walk up from CWD looking for AGENTS.md"""
+    p = Path.cwd()
+    while p != p.parent:
+        if (p / "AGENTS.md").exists():
+            return p
+        p = p.parent
+    err("Could not find AGENTS.md — are you inside a knowledge base vault?")
+    err("Create one with: setup.sh /path/to/my-vault")
+    sys.exit(1)
+
+# ─── LLM Client ─────────────────────────────────────────────────────────────
+
+def llm_chat(system: str, user: str, temperature: float = 0.3, max_tokens: int = 4096) -> str:
+    """Send a chat completion request to the local LLM."""
+    payload = json.dumps({
+        "model": MODEL,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "stream": False,
+    }).encode("utf-8")
+
+    req = urllib.request.Request(
+        API_URL,
+        data=payload,
+        headers={"Content-Type": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=300) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            return data["choices"][0]["message"]["content"]
+    except urllib.error.URLError as e:
+        err(f"Cannot reach LLM at {API_URL}")
+        err(f"Start llama-server with: llama-server -m <model.gguf> --jinja -fa -c 131072")
+        err(f"Detail: {e}")
+        sys.exit(1)
+    except (KeyError, IndexError, json.JSONDecodeError) as e:
+        err(f"Unexpected response from LLM: {e}")
+        sys.exit(1)
+
+def llm_stream(system: str, user: str, temperature: float = 0.3, max_tokens: int = 4096) -> str:
+    """Stream a chat completion, printing tokens as they arrive. Returns full text."""
+    payload = json.dumps({
+        "model": MODEL,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "stream": True,
+    }).encode("utf-8")
+
+    req = urllib.request.Request(
+        API_URL,
+        data=payload,
+        headers={"Content-Type": "application/json"},
+    )
+    try:
+        full_text = []
+        with urllib.request.urlopen(req, timeout=300) as resp:
+            buffer = ""
+            for chunk in iter(lambda: resp.read(1), b""):
+                buffer += chunk.decode("utf-8", errors="replace")
+                while "\n" in buffer:
+                    line, buffer = buffer.split("\n", 1)
+                    line = line.strip()
+                    if not line or line == "data: [DONE]":
+                        continue
+                    if line.startswith("data: "):
+                        try:
+                            obj = json.loads(line[6:])
+                            delta = obj.get("choices", [{}])[0].get("delta", {})
+                            token = delta.get("content", "")
+                            if token:
+                                print(token, end="", flush=True)
+                                full_text.append(token)
+                        except json.JSONDecodeError:
+                            pass
+        print()  # newline after stream
+        return "".join(full_text)
+    except urllib.error.URLError:
+        # Fall back to non-streaming
+        return llm_chat(system, user, temperature, max_tokens)
+
+# ─── Helpers ─────────────────────────────────────────────────────────────────
+
+def read_file(path: Path) -> str:
+    return path.read_text(encoding="utf-8", errors="replace")
+
+def write_file(path: Path, content: str):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
+
+def word_count(text: str) -> int:
+    return len(text.split())
+
+def get_agents_md(vault: Path) -> str:
+    return read_file(vault / "AGENTS.md")
+
+def get_index(vault: Path) -> str:
+    idx = vault / "wiki" / "_index.md"
+    if idx.exists():
+        return read_file(idx)
+    return ""
+
+def list_raw_files(vault: Path) -> list[Path]:
+    raw = vault / "raw"
+    return sorted(f for f in raw.rglob("*.md") if f.name != ".gitkeep")
+
+def list_wiki_files(vault: Path) -> list[Path]:
+    wiki = vault / "wiki"
+    return sorted(
+        f for f in wiki.rglob("*.md")
+        if f.name != "_index.md" and f.name != ".gitkeep"
+    )
+
+def truncate(text: str, max_chars: int = MAX_CONTEXT_CHARS) -> str:
+    if len(text) <= max_chars:
+        return text
+    return text[:max_chars] + "\n\n[... truncated for context window ...]"
+
+def now_str() -> str:
+    return datetime.now().strftime("%Y-%m-%d")
+
+def fetch_url_content(url: str) -> str:
+    """Fetch a URL and return its text content."""
+    req = urllib.request.Request(url, headers={
+        "User-Agent": "kb-tool/1.0"
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            raw = resp.read().decode("utf-8", errors="replace")
+            # Strip HTML tags naively
+            text = re.sub(r'<script[^>]*>.*?</script>', '', raw, flags=re.DOTALL)
+            text = re.sub(r'<style[^>]*>.*?</style>', '', text, flags=re.DOTALL)
+            text = re.sub(r'<[^>]+>', ' ', text)
+            text = re.sub(r'\s+', ' ', text).strip()
+            return text
+    except Exception as e:
+        err(f"Failed to fetch {url}: {e}")
+        sys.exit(1)
+
+
+# ─── Commands ────────────────────────────────────────────────────────────────
+
+def cmd_ingest(args):
+    """Ingest a source document into raw/ and update the index."""
+    vault = find_vault_root()
+    source = args.path
+
+    heading("Ingesting source document")
+
+    # Determine if URL or file
+    if source.startswith("http://") or source.startswith("https://"):
+        info(f"Fetching URL: {source}")
+        content = fetch_url_content(source)
+        # Generate filename from URL
+        slug = re.sub(r'[^a-z0-9]+', '-', source.split("//")[1].split("?")[0].lower()).strip("-")[:60]
+        dest_name = f"{slug}.md"
+        header = f"# Source: {source}\n\nFetched: {now_str()}\n\n---\n\n"
+        content = header + content
+    else:
+        source_path = Path(source).expanduser().resolve()
+        if not source_path.exists():
+            err(f"File not found: {source}")
+            sys.exit(1)
+        info(f"Reading file: {source_path}")
+        content = read_file(source_path)
+        dest_name = source_path.name
+        if not dest_name.endswith(".md"):
+            dest_name += ".md"
+
+    # Copy to raw/
+    dest = vault / "raw" / dest_name
+    if dest.exists():
+        warn(f"File already exists: raw/{dest_name} — overwriting")
+    write_file(dest, content)
+    ok(f"Saved to raw/{dest_name}")
+
+    # Ask LLM to analyze
+    info("Analyzing with LLM...")
+    agents = get_agents_md(vault)
+    system = f"""You are a knowledge base assistant. Follow these rules:\n\n{agents}\n\nRespond in valid JSON only. No markdown fences, no commentary."""
+
+    analysis_prompt = f"""Analyze this source document and return JSON with these fields:
+- "title": a short title for this source
+- "summary": one-sentence summary (max 30 words)
+- "key_concepts": list of 3-8 key concepts (lowercase, hyphenated, e.g. "mutual-aid")
+- "suggested_articles": list of wiki article filenames that should be created or updated (kebab-case.md)
+- "category_suggestions": for each suggested article, whether it's a "concept", "entity", or "connection"
+
+Document content:
+{truncate(content, 20000)}"""
+
+    response = llm_chat(system, analysis_prompt, temperature=0.2)
+
+    # Parse JSON from response
+    try:
+        # Try to extract JSON from response
+        json_match = re.search(r'\{.*\}', response, re.DOTALL)
+        if json_match:
+            analysis = json.loads(json_match.group())
+        else:
+            analysis = json.loads(response)
+    except json.JSONDecodeError:
+        warn("LLM response wasn't valid JSON — using raw output")
+        analysis = {
+            "title": dest_name.replace(".md", "").replace("-", " ").title(),
+            "summary": "Analysis pending",
+            "key_concepts": [],
+            "suggested_articles": [],
+        }
+
+    ok(f"Title: {analysis.get('title', 'Unknown')}")
+    ok(f"Summary: {analysis.get('summary', 'N/A')}")
+
+    concepts = analysis.get("key_concepts", [])
+    if concepts:
+        print(f"\n  {C.DIM}Key concepts:{C.RESET} {', '.join(concepts)}")
+
+    suggested = analysis.get("suggested_articles", [])
+    if suggested:
+        print(f"  {C.DIM}Suggested articles:{C.RESET} {', '.join(suggested)}")
+
+    # Update index
+    info("Updating _index.md...")
+    index_path = vault / "wiki" / "_index.md"
+    index_content = read_file(index_path) if index_path.exists() else get_index(vault)
+
+    # Add source entry to the Sources table
+    concepts_str = ", ".join(concepts) if concepts else "—"
+    new_row = f"| raw/{dest_name} | {analysis.get('title', dest_name)} | {now_str()} | {analysis.get('summary', '—')} | {concepts_str} |"
+
+    # Insert row into Sources table
+    if "| File | Title | Date Added |" in index_content:
+        # Find the end of the sources table header and insert after
+        lines = index_content.split("\n")
+        insert_idx = None
+        in_sources = False
+        for i, line in enumerate(lines):
+            if "| File | Title | Date Added |" in line:
+                in_sources = True
+                continue
+            if in_sources and line.startswith("|---"):
+                insert_idx = i + 1
+                break
+        if insert_idx:
+            lines.insert(insert_idx, new_row)
+            index_content = "\n".join(lines)
+
+    # Update stats
+    raw_count = len(list_raw_files(vault))
+    wiki_count = len(list_wiki_files(vault))
+    total_words = sum(word_count(read_file(f)) for f in list_raw_files(vault) + list_wiki_files(vault))
+    index_content = re.sub(r'Raw sources: \d+', f'Raw sources: {raw_count}', index_content)
+    index_content = re.sub(r'Wiki articles: \d+', f'Wiki articles: {wiki_count}', index_content)
+    index_content = re.sub(r'Total words: ~?\d+', f'Total words: ~{total_words}', index_content)
+    index_content = re.sub(r'Last updated: .*', f'Last updated: {now_str()}', index_content)
+
+    write_file(index_path, index_content)
+    ok("Index updated")
+
+    # Suggest next step
+    print(f"\n{C.BOLD}Next step:{C.RESET} run {C.CYAN}kb compile{C.RESET} to generate wiki articles from this source.")
+
+
+def cmd_compile(args):
+    """Compile wiki articles from raw sources."""
+    vault = find_vault_root()
+
+    heading("Compiling wiki from sources")
+
+    raw_files = list_raw_files(vault)
+    if not raw_files:
+        warn("No source documents in raw/ — ingest some first with: kb ingest <path>")
+        return
+
+    wiki_files = list_wiki_files(vault)
+    agents = get_agents_md(vault)
+    index = get_index(vault)
+
+    # Build context: all raw sources (truncated if needed)
+    info(f"Reading {len(raw_files)} source(s) and {len(wiki_files)} existing article(s)...")
+
+    raw_context = ""
+    for f in raw_files:
+        content = read_file(f)
+        raw_context += f"\n\n--- SOURCE: {f.name} ---\n{content}"
+
+    wiki_context = ""
+    for f in wiki_files:
+        content = read_file(f)
+        wiki_context += f"\n\n--- EXISTING ARTICLE: {f.relative_to(vault / 'wiki')} ---\n{content}"
+
+    # Truncate to fit context
+    available = MAX_CONTEXT_CHARS - len(agents) - len(index) - 5000  # leave room for prompt
+    raw_context = truncate(raw_context, available // 2)
+    wiki_context = truncate(wiki_context, available // 2)
+
+    system = f"""You are a knowledge base compiler. Follow these rules strictly:
+
+{agents}
+
+Current index:
+{index}"""
+
+    user_prompt = f"""Based on the source documents below, create or update wiki articles.
+
+INSTRUCTIONS:
+1. For each key concept, entity, or connection in the sources, create a dedicated .md article
+2. Follow the article template from AGENTS.md exactly (YAML frontmatter, sections, backlinks)
+3. Use [[wikilinks]] for all cross-references
+4. Place articles in the correct subdirectory: concepts/, entities/, or connections/
+5. Return ALL articles in a single response
+
+FORMAT YOUR RESPONSE AS:
+For each article, output:
+===FILE: wiki/concepts/article-name.md===
+(full article content with frontmatter)
+===END===
+
+After all articles, output:
+===INDEX===
+(complete updated _index.md content)
+===END===
+
+SOURCE DOCUMENTS:
+{raw_context}
+
+EXISTING WIKI ARTICLES (update if needed):
+{wiki_context}"""
+
+    info("Generating articles (this may take a minute)...")
+    print(f"{C.DIM}{'─' * 60}{C.RESET}")
+    response = llm_stream(system, user_prompt, temperature=0.3, max_tokens=8192)
+    print(f"{C.DIM}{'─' * 60}{C.RESET}")
+
+    # Parse response into files
+    file_pattern = re.compile(r'===FILE:\s*(.+?)===\s*\n(.*?)===END===', re.DOTALL)
+    index_pattern = re.compile(r'===INDEX===\s*\n(.*?)===END===', re.DOTALL)
+
+    files_written = 0
+    for match in file_pattern.finditer(response):
+        filepath = match.group(1).strip()
+        content = match.group(2).strip() + "\n"
+        dest = vault / filepath
+        write_file(dest, content)
+        ok(f"Wrote {filepath}")
+        files_written += 1
+
+    # Update index if provided
+    idx_match = index_pattern.search(response)
+    if idx_match:
+        idx_content = idx_match.group(1).strip() + "\n"
+        write_file(vault / "wiki" / "_index.md", idx_content)
+        ok("Updated _index.md")
+
+    if files_written == 0:
+        warn("No articles were parsed from the LLM response.")
+        warn("The response may not have followed the expected ===FILE:...===END=== format.")
+        warn("Try running again, or manually extract articles from the output above.")
+    else:
+        # Update stats
+        raw_count = len(list_raw_files(vault))
+        wiki_count = len(list_wiki_files(vault))
+        total_words = sum(word_count(read_file(f)) for f in list_raw_files(vault) + list_wiki_files(vault))
+        ok(f"Compiled {files_written} article(s). Wiki now has {wiki_count} articles, ~{total_words} words total.")
+
+
+# ─── Tool definitions (given to LLM) ─────────────────────────────────────────
+
+KB_TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "search",
+            "description": (
+                "Search the knowledge base for articles relevant to a query. "
+                "Uses hybrid BM25 + semantic search. Returns ranked list of articles "
+                "with titles, summaries, and relevance scores. "
+                "Call this to find what's in the wiki before reading full articles. "
+                "You can call it multiple times with different queries to explore different angles."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The search query. Use natural language — semantic search will find conceptually related articles even without exact keyword matches."
+                    },
+                    "scope": {
+                        "type": "string",
+                        "enum": ["wiki", "raw", "all"],
+                        "description": "Where to search. 'wiki' for compiled articles, 'raw' for source documents, 'all' for both. Default: wiki."
+                    },
+                    "top_k": {
+                        "type": "integer",
+                        "description": "How many results to return (1-20). Default: 8."
+                    }
+                },
+                "required": ["query"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "read_article",
+            "description": (
+                "Read the full content of a specific wiki article or raw source. "
+                "Use the path returned by search() to load an article into context. "
+                "Call this after search() to get the full text of the most relevant articles."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "File path relative to vault root, e.g. 'wiki/concepts/mutual-aid.md' or 'raw/corena-report.md'"
+                    }
+                },
+                "required": ["path"]
+            }
+        }
+    }
+]
+
+
+def run_tool(tool_name: str, tool_args: dict, vault: Path) -> str:
+    """Execute a tool call and return the result as a string."""
+
+    if tool_name == "search":
+        query  = tool_args.get("query", "")
+        scope  = tool_args.get("scope", "wiki")
+        top_k  = min(int(tool_args.get("top_k", 8)), 20)
+
+        search_tool = vault / "tools" / "kb-search"
+        if not search_tool.exists():
+            return json.dumps({"error": "Search tool not found. Run: kb search --reindex"})
+
+        import subprocess
+        try:
+            proc = subprocess.run(
+                [sys.executable, str(search_tool), query,
+                 f"--top={top_k}", f"--scope={scope}", "--json"],
+                capture_output=True, text=True, timeout=15, cwd=str(vault)
+            )
+            if proc.returncode == 0 and proc.stdout.strip():
+                results = json.loads(proc.stdout)
+                # Return compact form — just enough for the LLM to decide what to read
+                compact = []
+                for r in results:
+                    compact.append({
+                        "path":    r["path"],
+                        "title":   r["title"],
+                        "summary": r["summary"][:150] if r.get("summary") else "",
+                        "score":   r["score"],
+                        "bm25":    r.get("bm25", 0),
+                        "semantic": r.get("semantic", 0),
+                    })
+                return json.dumps({"results": compact, "count": len(compact)})
+            return json.dumps({"results": [], "count": 0})
+        except Exception as e:
+            return json.dumps({"error": str(e)})
+
+    elif tool_name == "read_article":
+        path_str = tool_args.get("path", "")
+        # Try exact path first, then with wiki/ prefix
+        for candidate in [vault / path_str, vault / "wiki" / path_str, vault / "raw" / path_str]:
+            if candidate.exists() and candidate.suffix == ".md":
+                content = read_file(candidate)
+                return json.dumps({
+                    "path": path_str,
+                    "content": truncate(content, 12000),  # single article fits easily
+                    "words": word_count(content)
+                })
+        return json.dumps({"error": f"Article not found: {path_str}"})
+
+    return json.dumps({"error": f"Unknown tool: {tool_name}"})
+
+
+def llm_tool_call(messages: list, tools: list,
+                  temperature: float = 0.2, max_tokens: int = 2048) -> dict:
+    """
+    Single chat completion call with tools. Returns the raw response dict.
+    Handles both tool_calls responses and plain text responses.
+    """
+    payload = json.dumps({
+        "model": MODEL,
+        "messages": messages,
+        "tools": tools,
+        "tool_choice": "auto",
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "stream": False,
+    }).encode()
+
+    req = urllib.request.Request(
+        API_URL, data=payload,
+        headers={"Content-Type": "application/json"}
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=300) as resp:
+            return json.loads(resp.read())
+    except urllib.error.URLError:
+        err(f"Cannot reach LLM at {API_URL}")
+        err("Start llama-server with: llama-server -m <model> --jinja -fa -c 131072")
+        sys.exit(1)
+
+
+def search_vault(vault: Path, query: str, top_k: int = 15, scope: str = 'all') -> list:
+    """
+    Direct search call (used as fallback, not via tool loop).
+    Returns list of {path, title, summary, score} dicts.
+    """
+    import subprocess
+    search_tool = vault / "tools" / "kb-search"
+    if not search_tool.exists():
+        return []
+    try:
+        result = subprocess.run(
+            [sys.executable, str(search_tool), query,
+             f"--top={top_k}", f"--scope={scope}", "--json"],
+            capture_output=True, text=True, timeout=15, cwd=str(vault)
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return json.loads(result.stdout)
+    except Exception:
+        pass
+    return []
+
+
+def cmd_query(args):
+    """Agentic query: LLM calls search() and read_article() as tools, then synthesises."""
+    vault = find_vault_root()
+    question = args.question
+    max_turns = getattr(args, 'turns', 6)   # max tool-call rounds before forcing answer
+
+    heading(f"Query: {question}")
+
+    agents    = get_agents_md(vault)
+    wiki_files = list_wiki_files(vault)
+
+    if not wiki_files:
+        warn("Wiki is empty — compile some articles first with: kb compile")
+        return
+
+    search_tool = vault / "tools" / "kb-search"
+    has_search  = search_tool.exists()
+
+    # Auto-reindex in background so embeddings stay fresh
+    if has_search:
+        import subprocess as _sp
+        _sp.Popen([sys.executable, str(search_tool), '--reindex'],
+                  stdout=_sp.DEVNULL, stderr=_sp.DEVNULL, cwd=str(vault))
+
+    # ── System prompt ────────────────────────────────────────────────────────
+    system_content = f"""{agents}
+
+You are a research agent with access to a personal knowledge base wiki.
+Your job is to answer questions thoroughly by:
+  1. Calling search() with relevant queries to find articles (try multiple angles)
+  2. Calling read_article() to load the full content of the most relevant articles
+  3. Synthesising a complete, cited answer from what you read
+
+IMPORTANT:
+- Always search BEFORE answering — never guess from memory
+- Use 2-4 search queries to explore different angles of the question
+- After searching, read the top 3-5 articles before synthesising
+- Cite articles using [[wikilinks]] in your final answer
+- If the wiki doesn't have enough information, say so explicitly
+- Be specific: quote figures, names, and dates from the articles"""
+
+    messages = [
+        {"role": "system",  "content": system_content},
+        {"role": "user",    "content": f"Question: {question}"}
+    ]
+
+    # ── Agentic tool-call loop ────────────────────────────────────────────────
+    tools_to_use = KB_TOOLS if has_search else []   # no tools if search not available
+    turn = 0
+    tool_calls_made = []
+    articles_loaded = set()
+    total_context_chars = 0
+    CONTEXT_BUDGET = MAX_CONTEXT_CHARS - len(system_content) - 4000  # reserve for answer
+
+    info(f"Starting agentic search loop (max {max_turns} turns)...")
+
+    while turn < max_turns:
+        turn += 1
+
+        # If we've used up context budget, force a final answer
+        if total_context_chars > CONTEXT_BUDGET:
+            info(f"Context budget reached ({total_context_chars:,} chars) — synthesising...")
+            messages.append({
+                "role": "user",
+                "content": "You have enough context now. Please synthesise a complete answer to the original question, citing the articles you read with [[wikilinks]]."
+            })
+            tools_to_use = []   # disable tools for final synthesis
+
+        response = llm_tool_call(messages, tools_to_use, temperature=0.2, max_tokens=3000)
+        choice   = response.get("choices", [{}])[0]
+        message  = choice.get("message", {})
+        finish   = choice.get("finish_reason", "stop")
+
+        # ── Case 1: LLM wants to call tools ───────────────────────────────────
+        if finish == "tool_calls" and message.get("tool_calls"):
+            # Add assistant message with tool_calls to history
+            messages.append({
+                "role": "assistant",
+                "content": message.get("content") or "",
+                "tool_calls": message["tool_calls"]
+            })
+
+            # Execute each tool call and append results
+            for tc in message["tool_calls"]:
+                fn_name = tc["function"]["name"]
+                try:
+                    fn_args = json.loads(tc["function"]["arguments"])
+                except json.JSONDecodeError:
+                    fn_args = {}
+
+                tool_calls_made.append(fn_name)
+
+                # Show what the agent is doing
+                if fn_name == "search":
+                    q = fn_args.get("query", "?")
+                    scope = fn_args.get("scope", "wiki")
+                    print(f"  {C.CYAN}→ search({C.BOLD}{q!r}{C.RESET}{C.CYAN}, scope={scope}){C.RESET}")
+                elif fn_name == "read_article":
+                    p = fn_args.get("path", "?")
+                    articles_loaded.add(p)
+                    print(f"  {C.BLUE}→ read_article({C.BOLD}{p}{C.RESET}{C.BLUE}){C.RESET}")
+
+                result_str = run_tool(fn_name, fn_args, vault)
+                total_context_chars += len(result_str)
+
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tc["id"],
+                    "content": result_str
+                })
+
+            continue   # next turn
+
+        # ── Case 2: LLM produced a text answer (stop / no more tools) ─────────
+        answer_text = message.get("content") or ""
+
+        if not answer_text.strip():
+            # Empty response — nudge for an answer
+            if turn < max_turns:
+                messages.append({
+                    "role": "user",
+                    "content": "Please provide your final answer now, citing the articles you found."
+                })
+                continue
+            break
+
+        # We have a final answer
+        break
+
+    # ── Fallback: if loop ended without a text answer, do a direct call ────────
+    else:
+        # max_turns exhausted — force answer from what we have
+        messages.append({
+            "role": "user",
+            "content": "Summarise what you found and answer the original question as best you can."
+        })
+        resp = llm_tool_call(messages, [], temperature=0.3, max_tokens=4096)
+        answer_text = resp.get("choices", [{}])[0].get("message", {}).get("content", "")
+
+    # ── Print stats then stream the answer ────────────────────────────────────
+    searches_done = tool_calls_made.count("search")
+    reads_done    = tool_calls_made.count("read_article")
+    info(f"Agent used {searches_done} search(es), read {reads_done} article(s) "
+         f"across {turn} turn(s)")
+    if articles_loaded:
+        for p in sorted(articles_loaded):
+            print(f"  {C.DIM}  read: {p}{C.RESET}")
+
+    print(f"\n{C.DIM}{'─' * 60}{C.RESET}")
+
+    # If no tool support (search not available), fall back to direct retrieval
+    if not has_search and not answer_text:
+        # Classic path: load top articles directly
+        raw_results = search_vault(vault, question, top_k=10, scope='wiki')
+        selected_paths = [r['path'] for r in raw_results] if raw_results else \
+                         [str(f.relative_to(vault)) for f in wiki_files[:8]]
+        context_parts = []
+        for p in selected_paths:
+            fpath = vault / p
+            if not fpath.exists():
+                fpath = vault / "wiki" / p
+            if fpath.exists():
+                context_parts.append(f"--- {p} ---\n{read_file(fpath)}")
+        wiki_context = truncate("\n\n".join(context_parts))
+        direct_system = f"""{agents}\nAnswer using the wiki articles below. Cite with [[wikilinks]]."""
+        answer_text = llm_stream(direct_system,
+                                 f"Question: {question}\n\nWiki:\n{wiki_context}",
+                                 temperature=0.3, max_tokens=4096)
+    else:
+        # Stream the answer we already have
+        for char in answer_text:
+            print(char, end='', flush=True)
+        print()
+
+    print(f"{C.DIM}{'─' * 60}{C.RESET}")
+
+    # Save if requested
+    if args.save or args.slides:
+        if args.slides:
+            # Re-ask for Marp format
+            info("Converting to Marp slides...")
+            slide_system = f"{agents}\n\nConvert the following answer into a Marp slide deck. Use the Marp format from AGENTS.md."
+            slide_prompt = f"Convert this into a Marp slide deck:\n\n{answer}"
+            slides = llm_chat(slide_system, slide_prompt, max_tokens=4096)
+
+            slug = re.sub(r'[^a-z0-9]+', '-', question.lower())[:50].strip("-")
+            dest = vault / "outputs" / "slides" / f"{slug}.md"
+            write_file(dest, slides)
+            ok(f"Saved slides to outputs/slides/{slug}.md")
+        else:
+            slug = re.sub(r'[^a-z0-9]+', '-', question.lower())[:50].strip("-")
+            dest = vault / "outputs" / "reports" / f"{slug}.md"
+            header = f"---\ntitle: \"{question}\"\ndate: {now_str()}\ntype: query-report\n---\n\n# {question}\n\n"
+            write_file(dest, header + answer)
+            ok(f"Saved report to outputs/reports/{slug}.md")
+
+
+def cmd_lint(args):
+    """Check wiki health and consistency."""
+    vault = find_vault_root()
+
+    heading("Linting knowledge base")
+
+    agents = get_agents_md(vault)
+    wiki_files = list_wiki_files(vault)
+
+    if not wiki_files:
+        warn("Wiki is empty — nothing to lint.")
+        return
+
+    # Build context
+    all_content = ""
+    for f in wiki_files:
+        rel = f.relative_to(vault / "wiki")
+        all_content += f"\n\n--- {rel} ---\n{read_file(f)}"
+
+    index = get_index(vault)
+    all_content = truncate(all_content)
+
+    system = f"""{agents}
+
+You are auditing this knowledge base for quality issues."""
+
+    user_prompt = f"""Review all wiki articles below and identify:
+
+1. **Inconsistencies** — conflicting facts, dates, or figures across articles
+2. **Missing backlinks** — articles that reference concepts without [[wikilinks]]
+3. **Coverage gaps** — important concepts mentioned but lacking dedicated articles
+4. **Stale data** — information that may be outdated
+5. **Format issues** — articles missing required frontmatter fields
+6. **Suggested improvements** — new connections, articles, or edits
+
+Current index:
+{truncate(index, 5000)}
+
+Wiki articles:
+{all_content}
+
+{"Also suggest specific fixes for each issue." if args.fix else "List issues only."}"""
+
+    print(f"{C.DIM}{'─' * 60}{C.RESET}")
+    response = llm_stream(system, user_prompt, temperature=0.3, max_tokens=4096)
+    print(f"{C.DIM}{'─' * 60}{C.RESET}")
+
+    if args.fix:
+        # Ask for fix confirmation
+        print(f"\n{C.YELLOW}Auto-fix is experimental.{C.RESET} Review the suggestions above.")
+        confirm = input(f"\nApply fixes? [y/N] ").strip().lower()
+        if confirm == "y":
+            fix_prompt = f"""Based on the issues identified above, output corrected versions of articles that need fixing.
+
+Use the same format:
+===FILE: wiki/category/article-name.md===
+(corrected content)
+===END===
+
+Issues found:
+{response}
+
+Current articles:
+{all_content}"""
+
+            info("Generating fixes...")
+            fix_response = llm_chat(system, fix_prompt, temperature=0.2, max_tokens=8192)
+
+            file_pattern = re.compile(r'===FILE:\s*(.+?)===\s*\n(.*?)===END===', re.DOTALL)
+            fixes = 0
+            for match in file_pattern.finditer(fix_response):
+                filepath = match.group(1).strip()
+                content = match.group(2).strip() + "\n"
+                dest = vault / filepath
+                write_file(dest, content)
+                ok(f"Fixed {filepath}")
+                fixes += 1
+
+            if fixes:
+                ok(f"Applied {fixes} fix(es).")
+            else:
+                warn("No fixes were generated in the expected format.")
+        else:
+            info("No fixes applied.")
+
+
+def cmd_status(args):
+    """Show knowledge base stats."""
+    vault = find_vault_root()
+
+    heading("Knowledge Base Status")
+
+    raw_files = list_raw_files(vault)
+    wiki_files = list_wiki_files(vault)
+
+    raw_words = sum(word_count(read_file(f)) for f in raw_files)
+    wiki_words = sum(word_count(read_file(f)) for f in wiki_files)
+    total_words = raw_words + wiki_words
+
+    # Count by category
+    concepts = [f for f in wiki_files if "concepts" in str(f)]
+    entities = [f for f in wiki_files if "entities" in str(f)]
+    connections = [f for f in wiki_files if "connections" in str(f)]
+
+    print(f"  {C.BOLD}Vault:{C.RESET}        {vault}")
+    print(f"  {C.BOLD}Raw sources:{C.RESET}  {len(raw_files)} ({raw_words:,} words)")
+    print(f"  {C.BOLD}Wiki total:{C.RESET}   {len(wiki_files)} articles ({wiki_words:,} words)")
+    print(f"    Concepts:    {len(concepts)}")
+    print(f"    Entities:    {len(entities)}")
+    print(f"    Connections: {len(connections)}")
+    print(f"  {C.BOLD}Total words:{C.RESET}  {total_words:,}")
+
+    # Find wikilinks
+    all_links = set()
+    all_targets = set()
+    for f in wiki_files:
+        content = read_file(f)
+        links = re.findall(r'\[\[([^\]]+)\]\]', content)
+        all_links.update(links)
+        all_targets.add(f.stem)
+
+    broken = [l for l in all_links if l not in all_targets and not l.startswith("raw/")]
+    if broken:
+        print(f"\n  {C.YELLOW}Broken links:{C.RESET} {len(broken)}")
+        for b in broken[:10]:
+            print(f"    → [[{b}]]")
+
+    # Last modified
+    if wiki_files:
+        newest = max(wiki_files, key=lambda f: f.stat().st_mtime)
+        from datetime import datetime as dt
+        mtime = dt.fromtimestamp(newest.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
+        print(f"\n  {C.BOLD}Last updated:{C.RESET} {mtime} ({newest.name})")
+
+    print()
+
+
+# ─── Main ────────────────────────────────────────────────────────────────────
+
+def main():
+    parser = argparse.ArgumentParser(
+        prog="kb",
+        description="LLM-powered knowledge base CLI — compile, query, and maintain a markdown wiki.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=textwrap.dedent("""\
+            examples:
+              kb ingest ~/Downloads/article.md    Ingest a local file
+              kb ingest https://example.com/post  Ingest from URL
+              kb compile                          Compile wiki articles
+              kb query "What is mutual aid?"      Ask a question
+              kb query "CORENA model" --save      Save answer as report
+              kb query "Overview" --slides        Generate Marp slides
+              kb lint                             Check for issues
+              kb lint --fix                       Auto-fix issues
+              kb status                           Show stats
+        """),
+    )
+    sub = parser.add_subparsers(dest="command")
+
+    # ingest
+    p_ingest = sub.add_parser("ingest", help="Ingest a source document into raw/")
+    p_ingest.add_argument("path", help="File path or URL to ingest")
+
+    # compile
+    p_compile = sub.add_parser("compile", help="Compile wiki articles from raw sources")
+    p_compile.add_argument("--all", action="store_true", help="Recompile all articles from scratch")
+
+    # query
+    p_query = sub.add_parser("query", help="Ask questions against the wiki")
+    p_query.add_argument("question", help="Your question")
+    p_query.add_argument("--save",   action="store_true", help="Save answer as a report")
+    p_query.add_argument("--slides", action="store_true", help="Output as Marp slides")
+    p_query.add_argument("--turns",  type=int, default=6,
+                         help="Max tool-call rounds before forcing answer (default 6)")
+
+    # lint
+    p_lint = sub.add_parser("lint", help="Check wiki health and consistency")
+    p_lint.add_argument("--fix", action="store_true", help="Attempt to auto-fix issues")
+
+    # status
+    p_status = sub.add_parser("status", help="Show knowledge base stats")
+
+    # search  (thin wrapper around kb-search)
+    p_search = sub.add_parser("search", help="Fast BM25 search across all wiki articles")
+    p_search.add_argument("query", help="Search query")
+    p_search.add_argument("--top", type=int, default=10, help="Number of results")
+    p_search.add_argument("--scope", choices=["all","wiki","raw"], default="all")
+    p_search.add_argument("--excerpt", action="store_true", help="Show text excerpt")
+    p_search.add_argument("--reindex", action="store_true", help="Rebuild search index")
+
+    args = parser.parse_args()
+
+    if not args.command:
+        parser.print_help()
+        sys.exit(0)
+
+    commands = {
+        "ingest":  cmd_ingest,
+        "compile": cmd_compile,
+        "query":   cmd_query,
+        "lint":    cmd_lint,
+        "status":  cmd_status,
+        "search":  cmd_search_wrapper,
+    }
+    commands[args.command](args)
+
+
+def cmd_search_wrapper(args):
+    """Thin wrapper: delegate to kb-search tool."""
+    import subprocess
+    vault = find_vault_root()
+    search_tool = vault / "tools" / "kb-search"
+    if not search_tool.exists():
+        err("kb-search not found in tools/ — make sure it's installed")
+        sys.exit(1)
+    cmd = [sys.executable, str(search_tool), args.query,
+           f"--top={args.top}", f"--scope={args.scope}"]
+    if getattr(args, 'excerpt', False): cmd.append("--excerpt")
+    if getattr(args, 'reindex', False): cmd = [sys.executable, str(search_tool), "--reindex"]
+    os.execv(sys.executable, cmd)
+
+
+if __name__ == "__main__":
+    main()
