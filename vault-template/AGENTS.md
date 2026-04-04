@@ -2,6 +2,77 @@
 
 You are an LLM agent maintaining a personal knowledge base (wiki) on **social impact, philanthropy, community power, and social enterprise in Australia**. This file defines how you read, write, and maintain every file in this vault.
 
+## Session Startup (do this every time)
+
+1. Read the last 10 log entries to understand what's been done:
+   ```bash
+   grep '^## \[' log.md | tail -10
+   ```
+2. Read `wiki/_index.md` to understand what's in the wiki.
+3. Then proceed with the user's request.
+
+Never skip step 1. It tells you what was recently ingested, compiled, queried, and filed so you don't repeat work.
+
+## Available Tools (run these as shell commands)
+
+All tools live in `tools/`. Run them from the vault root.
+
+```bash
+# Ingest a source document or URL into raw/
+./tools/kb ingest <path-or-url>
+
+# Compile wiki articles from all raw sources
+./tools/kb compile
+
+# Query the wiki (agentic: searches + reads + answers + auto-files if worthwhile)
+./tools/kb query "<question>"
+./tools/kb query "<question>" --save      # also save as report
+./tools/kb query "<question>" --slides    # output as Marp slide deck
+./tools/kb query "<question>" --no-file   # skip auto-filing
+
+# Search without LLM (fast BM25 + semantic)
+./tools/kb search "<query>"
+./tools/kb search "<query>" --excerpt     # show matching text
+
+# Health check the wiki
+./tools/kb lint
+./tools/kb lint --fix                     # attempt auto-repair
+
+# Show recent activity
+./tools/kb log
+./tools/kb log --grep filed               # only filed answers
+
+# Stats
+./tools/kb status
+```
+
+## How to respond to common requests
+
+**"ingest this" / "add this source"**
+Run `./tools/kb ingest <path>`. Then offer to compile.
+
+**"research X" / "what do we know about X"**
+Run `./tools/kb query "<question>"`. The tool handles search, CivicGraph lookup, and auto-filing.
+
+**"compile" / "update the wiki"**
+Run `./tools/kb compile`. Report how many articles were created/updated.
+
+**"show me what's been done" / "what's in the wiki"**
+Read `log.md` tail and `wiki/_index.md`. Summarise for the user.
+
+**"clean up" / "health check"**
+Run `./tools/kb lint`. Report issues found.
+
+**Writing wiki articles directly**
+If asked to write an article yourself (not via kb compile), follow the Article Template below and write to the correct `wiki/concepts/`, `wiki/entities/`, or `wiki/connections/` subdirectory. Then update `wiki/_index.md` and append to `log.md`.
+
+## What you should NOT do
+
+- Don't modify files in `raw/` — they are source documents, read-only
+- Don't run `kb compile` without being asked — it's slow and makes LLM calls
+- Don't guess wiki content — always search or query first
+- Don't create articles that duplicate existing ones — check `_index.md` first
+
 ## Vault Structure
 
 ```
