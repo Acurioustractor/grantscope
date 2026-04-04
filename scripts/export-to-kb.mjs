@@ -110,7 +110,7 @@ async function exportFoundationsGaps() {
 
   const { data, error } = await supabase
     .from('foundations')
-    .select('name, acnc_abn, total_giving_annual, website, state, thematic_focus')
+    .select('name, acnc_abn, total_giving_annual, website, acnc_data, thematic_focus')
     .or('description.is.null,description.eq.')
     .order('total_giving_annual', { ascending: false, nullsFirst: false })
     .limit(200);
@@ -135,7 +135,7 @@ async function exportFoundationsGaps() {
     ...data.map(f => {
       const giving = f.total_giving_annual ? `$${Number(f.total_giving_annual).toLocaleString()}` : '—';
       const site = f.website ? `[website](${f.website})` : '—';
-      return `| ${f.name?.slice(0, 50)} | ${f.acnc_abn || '—'} | ${giving} | ${f.state || '—'} | ${site} |`;
+      return `| ${f.name?.slice(0, 50)} | ${f.acnc_abn || '—'} | ${giving} | ${f.acnc_data?.State || '—'} | ${site} |`;
     }),
   ];
 
@@ -155,9 +155,13 @@ async function exportDataQuality() {
   ]);
 
   // Entity type breakdown
-  const { data: entityTypes } = await supabase.rpc('exec_sql', {
-    sql: `SELECT entity_type, COUNT(*) as cnt, COUNT(abn) as with_abn, COUNT(description) as with_desc FROM gs_entities GROUP BY entity_type ORDER BY cnt DESC`
-  }).catch(() => ({ data: [] }));
+  let entityTypes = [];
+  try {
+    const rpcRes = await supabase.rpc('exec_sql', {
+      sql: `SELECT entity_type, COUNT(*) as cnt, COUNT(abn) as with_abn, COUNT(description) as with_desc FROM gs_entities GROUP BY entity_type ORDER BY cnt DESC`
+    });
+    entityTypes = rpcRes.data || [];
+  } catch (_) { entityTypes = []; }
 
   // Relationship breakdown
   const { data: relTypes } = await supabase
