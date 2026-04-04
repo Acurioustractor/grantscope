@@ -180,6 +180,67 @@ def truncate(text: str, max_chars: int = MAX_CONTEXT_CHARS) -> str:
 def now_str() -> str:
     return datetime.now().strftime("%Y-%m-%d")
 
+def now_ts() -> str:
+    return datetime.now().strftime("%Y-%m-%d %H:%M")
+
+
+# ─── Log ────────────────────────────────────────────────────────────────
+
+LOG_FILE = "log.md"
+LOG_HEADER = """# Knowledge Base Log
+
+Append-only record of all operations: ingests, queries, lint passes, and filed answers.
+Each entry starts with `## [DATE]` for easy grep parsing.
+
+Grep tips:
+  grep '^## \\[' log.md | tail -10          # last 10 entries
+  grep 'ingest' log.md                      # all ingests
+  grep 'filed' log.md                       # answers filed to wiki
+  grep '^## \\[2026-04' log.md              # all entries in April 2026
+
+---
+
+"""
+
+
+def append_log(vault: Path, operation: str, title: str, detail: str = ""):
+    """
+    Append a line to log.md.
+    Format: ## [YYYY-MM-DD HH:MM] operation | title
+    Followed by optional detail lines.
+
+    grep '^## \\[' log.md gives all entries.
+    """
+    log_path = vault / LOG_FILE
+
+    # Create log file with header if it doesn't exist
+    if not log_path.exists():
+        write_file(log_path, LOG_HEADER)
+
+    ts = now_ts()
+    entry = f"## [{ts}] {operation} | {title}\n"
+    if detail:
+        # Indent detail lines, keep them short
+        for line in detail.strip().splitlines()[:6]:  # cap at 6 detail lines
+            entry += f"  {line}\n"
+    entry += "\n"
+
+    with log_path.open("a", encoding="utf-8") as f:
+        f.write(entry)
+
+
+def get_log_tail(vault: Path, n: int = 10) -> str:
+    """Return the last n log entries (for LLM context)."""
+    log_path = vault / LOG_FILE
+    if not log_path.exists():
+        return ""
+    content = log_path.read_text(encoding="utf-8", errors="replace")
+    # Split on entry headers and take the last n
+    entries = re.split(r'(?=^## \[)', content, flags=re.MULTILINE)
+    # Filter out header block and blank splits
+    entries = [e for e in entries if e.strip().startswith("## [")]
+    return "".join(entries[-n:])
+
 def fetch_url_content(url: str) -> str:
     """Fetch a URL and return its text content."""
     req = urllib.request.Request(url, headers={
@@ -318,6 +379,12 @@ Document content:
     write_file(index_path, index_content)
     ok("Index updated")
 
+    # Log it
+    append_log(vault, "ingest", analysis.get('title', dest_name),
+               f"file: raw/{dest_name}\n"
+               f"summary: {analysis.get('summary', '—')}\n"
+               f"concepts: {', '.join(concepts) if concepts else '—'}")
+
     # Suggest next step
     print(f"\n{C.BOLD}Next step:{C.RESET} run {C.CYAN}kb compile{C.RESET} to generate wiki articles from this source.")
 
@@ -417,12 +484,16 @@ EXISTING WIKI ARTICLES (update if needed):
         warn("No articles were parsed from the LLM response.")
         warn("The response may not have followed the expected ===FILE:...===END=== format.")
         warn("Try running again, or manually extract articles from the output above.")
+        append_log(vault, "compile", "failed", "No articles parsed from LLM response")
     else:
         # Update stats
         raw_count = len(list_raw_files(vault))
         wiki_count = len(list_wiki_files(vault))
         total_words = sum(word_count(read_file(f)) for f in list_raw_files(vault) + list_wiki_files(vault))
         ok(f"Compiled {files_written} article(s). Wiki now has {wiki_count} articles, ~{total_words} words total.")
+        append_log(vault, "compile", f"{files_written} articles",
+                   f"wiki total: {wiki_count} articles, ~{total_words} words\n"
+                   f"raw sources: {raw_count}")
 
 
 # ─── CivicGraph live DB tool ────────────────────────────────────────────────
@@ -699,6 +770,132 @@ def search_vault(vault: Path, query: str, top_k: int = 15, scope: str = 'all') -
     return []
 
 
+def maybe_file_to_wiki(vault: Path, question: str, answer: str,
+                        agents: str) -> str | None:
+    """
+    Ask the LLM whether this query answer is wiki-worthy.
+    If yes, convert it into a proper wiki article with frontmatter,
+    backlinks, and index entry, then file it to wiki/connections/ or
+    the most appropriate category.
+
+    Returns the relative path of the filed article, or None if not filed.
+    """
+    # Don't file very short answers
+    if word_count(answer) < 80:
+        return None
+
+    # Step 1: quick yes/no — is this worth filing?
+    judge_system = """You are deciding whether a query answer should be permanently
+filed into a personal knowledge base wiki. Respond with JSON only."""
+
+    judge_prompt = f"""Question asked: {question}
+
+Answer length: {word_count(answer)} words
+Answer preview: {answer[:400]}
+
+Should this answer be filed as a permanent wiki article?
+File it if the answer:
+- Synthesises multiple concepts into a new insight not already in the wiki
+- Provides a comparison, analysis, or connection that would be useful to revisit
+- Contains specific data, figures, or evidence worth preserving
+- Represents a meaningful research finding
+
+Don't file it if the answer is:
+- A simple factual lookup (who is X, what is Y)
+- A status check or housekeeping query
+- Too short or conversational to stand as an article
+
+Return JSON: {{"file": true/false, "reason": "one sentence", "suggested_title": "...", "category": "concept|entity|connection"}}"""
+
+    response = llm_chat(judge_system, judge_prompt, temperature=0.1, max_tokens=256)
+
+    try:
+        match = re.search(r'\{.*\}', response, re.DOTALL)
+        decision = json.loads(match.group()) if match else {}
+    except (json.JSONDecodeError, AttributeError):
+        return None
+
+    if not decision.get('file'):
+        return None
+
+    # Step 2: convert the answer into a proper wiki article
+    title = decision.get('suggested_title', question[:60])
+    category = decision.get('category', 'connection')
+    reason = decision.get('reason', '')
+    slug = re.sub(r'[^a-z0-9]+', '-', title.lower())[:60].strip('-')
+    rel_path = f"wiki/{category}s/{slug}.md"
+    dest = vault / rel_path
+
+    # Don't overwrite existing articles
+    if dest.exists():
+        info(f"Not filing — article already exists: {rel_path}")
+        return None
+
+    info(f"Filing answer to wiki: {rel_path}")
+    info(f"Reason: {reason}")
+
+    # Step 3: ask LLM to format as a proper wiki article
+    format_system = f"""{agents}
+
+You are converting a query answer into a wiki article.
+Follow the article template from AGENTS.md exactly.
+Return ONLY the article content — no commentary, no fences."""
+
+    format_prompt = f"""Convert this query answer into a wiki article.
+
+Original question: {question}
+Title: {title}
+Category: {category}
+
+Answer to convert:
+{answer}
+
+Requirements:
+- Include full YAML frontmatter with title, category, created, sources (query), tags, summary
+- Use [[wikilinks]] for all cross-references to other wiki articles
+- Keep the key insights but structure as an encyclopedic article, not a Q&A
+- Add a ## Backlinks section at the bottom (leave empty — will be filled by compile)
+- Add a note at the top: > *Filed from query on {now_str()}*
+"""
+
+    article = llm_chat(format_system, format_prompt, temperature=0.2, max_tokens=4096)
+
+    if not article.strip():
+        return None
+
+    # Write the article
+    write_file(dest, article)
+    ok(f"Filed to {rel_path}")
+
+    # Step 4: update _index.md to include the new article
+    index_path = vault / "wiki" / "_index.md"
+    if index_path.exists():
+        index_content = read_file(index_path)
+        # Extract summary from frontmatter if present
+        summary_match = re.search(r'summary:\s*["\']?(.+?)["\']?\s*$',
+                                   article, re.MULTILINE)
+        summary = summary_match.group(1).strip()[:100] if summary_match else f"Filed from query: {question[:60]}"
+        new_row = f"| {rel_path} | {title} | {category} | {now_str()} | {summary} |"
+
+        if "| File | Title | Category |" in index_content:
+            lines = index_content.split("\n")
+            insert_idx = None
+            in_wiki = False
+            for i, line in enumerate(lines):
+                if "| File | Title | Category |" in line:
+                    in_wiki = True
+                    continue
+                if in_wiki and line.startswith("|---"):
+                    insert_idx = i + 1
+                    break
+            if insert_idx:
+                lines.insert(insert_idx, new_row)
+                index_content = "\n".join(lines)
+                write_file(index_path, index_content)
+
+    return rel_path
+
+
 def cmd_query(args):
     """Agentic query: LLM calls search() and read_article() as tools, then synthesises."""
     vault = find_vault_root()
@@ -910,25 +1107,41 @@ RULES:
 
     print(f"{C.DIM}{'─' * 60}{C.RESET}")
 
-    # Save if requested
+    # ── Log the query ─────────────────────────────────────────────────────
+    append_log(vault, "query", question,
+               f"searches: {searches_done}, articles read: {reads_done}"
+               + (f", civicgraph queries: {cg_done}" if cg_done else ""))
+
+    # ── Auto-file: ask LLM whether this answer belongs in the wiki ──────────
+    # This closes the compounding loop: explorations add back to the wiki.
+    if answer_text and not getattr(args, 'no_file', False):
+        filed_path = maybe_file_to_wiki(vault, question, answer_text, agents)
+        if filed_path:
+            append_log(vault, "filed", question,
+                       f"path: {filed_path}\n"
+                       f"reason: query answer judged wiki-worthy and filed")
+
+    # ── Save if explicitly requested ─────────────────────────────────────
     if args.save or args.slides:
         if args.slides:
             # Re-ask for Marp format
             info("Converting to Marp slides...")
             slide_system = f"{agents}\n\nConvert the following answer into a Marp slide deck. Use the Marp format from AGENTS.md."
-            slide_prompt = f"Convert this into a Marp slide deck:\n\n{answer}"
+            slide_prompt = f"Convert this into a Marp slide deck:\n\n{answer_text}"
             slides = llm_chat(slide_system, slide_prompt, max_tokens=4096)
 
             slug = re.sub(r'[^a-z0-9]+', '-', question.lower())[:50].strip("-")
             dest = vault / "outputs" / "slides" / f"{slug}.md"
             write_file(dest, slides)
             ok(f"Saved slides to outputs/slides/{slug}.md")
+            append_log(vault, "output", f"slides: {slug}.md", f"question: {question}")
         else:
             slug = re.sub(r'[^a-z0-9]+', '-', question.lower())[:50].strip("-")
             dest = vault / "outputs" / "reports" / f"{slug}.md"
             header = f"---\ntitle: \"{question}\"\ndate: {now_str()}\ntype: query-report\n---\n\n# {question}\n\n"
-            write_file(dest, header + answer)
+            write_file(dest, header + answer_text)
             ok(f"Saved report to outputs/reports/{slug}.md")
+            append_log(vault, "output", f"report: {slug}.md", f"question: {question}")
 
 
 def cmd_lint(args):
@@ -977,6 +1190,9 @@ Wiki articles:
     print(f"{C.DIM}{'─' * 60}{C.RESET}")
     response = llm_stream(system, user_prompt, temperature=0.3, max_tokens=4096)
     print(f"{C.DIM}{'─' * 60}{C.RESET}")
+
+    append_log(vault, "lint", f"{len(wiki_files)} articles checked",
+               f"fix mode: {'yes' if args.fix else 'no'}")
 
     if args.fix:
         # Ask for fix confirmation
@@ -1101,10 +1317,12 @@ def main():
     # query
     p_query = sub.add_parser("query", help="Ask questions against the wiki")
     p_query.add_argument("question", help="Your question")
-    p_query.add_argument("--save",   action="store_true", help="Save answer as a report")
-    p_query.add_argument("--slides", action="store_true", help="Output as Marp slides")
-    p_query.add_argument("--turns",  type=int, default=6,
+    p_query.add_argument("--save",    action="store_true", help="Save answer as a report")
+    p_query.add_argument("--slides",  action="store_true", help="Output as Marp slides")
+    p_query.add_argument("--turns",   type=int, default=6,
                          help="Max tool-call rounds before forcing answer (default 6)")
+    p_query.add_argument("--no-file", action="store_true",
+                         help="Skip auto-filing answer back into wiki")
 
     # lint
     p_lint = sub.add_parser("lint", help="Check wiki health and consistency")
@@ -1112,6 +1330,11 @@ def main():
 
     # status
     p_status = sub.add_parser("status", help="Show knowledge base stats")
+
+    # log
+    p_log = sub.add_parser("log", help="Show recent knowledge base activity")
+    p_log.add_argument("--tail", type=int, default=20, help="Number of entries to show")
+    p_log.add_argument("--grep", type=str, default="", help="Filter entries by keyword")
 
     # search  (thin wrapper around kb-search)
     p_search = sub.add_parser("search", help="Fast BM25 search across all wiki articles")
@@ -1134,8 +1357,69 @@ def main():
         "lint":    cmd_lint,
         "status":  cmd_status,
         "search":  cmd_search_wrapper,
+        "log":     cmd_log,
     }
     commands[args.command](args)
+
+
+def cmd_log(args):
+    """Show recent knowledge base activity from log.md."""
+    vault = find_vault_root()
+    log_path = vault / LOG_FILE
+
+    if not log_path.exists():
+        warn("No log yet — run some kb commands first.")
+        return
+
+    content = log_path.read_text(encoding="utf-8", errors="replace")
+    entries = re.split(r'(?=^## \[)', content, flags=re.MULTILINE)
+    entries = [e for e in entries if e.strip().startswith("## [")]
+
+    # Filter if --grep provided
+    if args.grep:
+        entries = [e for e in entries if args.grep.lower() in e.lower()]
+
+    # Take tail
+    entries = entries[-args.tail:]
+
+    if not entries:
+        warn(f"No log entries{f' matching \"{args.grep}\"' if args.grep else ''}.")
+        return
+
+    # Colour-code by operation type
+    op_colours = {
+        "ingest":  C.GREEN,
+        "compile": C.BLUE,
+        "query":   C.CYAN,
+        "filed":   C.YELLOW,
+        "lint":    C.DIM,
+        "output":  C.DIM,
+    }
+
+    print(f"\n{C.BOLD}Knowledge Base Log{C.RESET}  "
+          f"{C.DIM}({len(entries)} entries{f', filtered: \"{args.grep}\"' if args.grep else ''}){C.RESET}\n")
+
+    for entry in entries:
+        # Colour the operation keyword
+        for op, colour in op_colours.items():
+            entry = re.sub(
+                rf'(## \[.+?\] )({op})',
+                rf'\1{colour}{op}{C.RESET}',
+                entry, count=1
+            )
+        print(entry.rstrip())
+        print()
+
+    # Quick stats
+    all_entries = re.split(r'(?=^## \[)', content, flags=re.MULTILINE)
+    all_entries = [e for e in all_entries if e.strip().startswith("## [")]
+    ops = {}
+    for e in all_entries:
+        m = re.search(r'^## \[.+?\] (\w+)', e, re.MULTILINE)
+        if m:
+            ops[m.group(1)] = ops.get(m.group(1), 0) + 1
+    stats_str = "  ".join(f"{op}: {count}" for op, count in sorted(ops.items()))
+    print(f"{C.DIM}Total: {len(all_entries)} entries — {stats_str}{C.RESET}\n")
 
 
 def cmd_search_wrapper(args):
