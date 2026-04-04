@@ -425,6 +425,108 @@ EXISTING WIKI ARTICLES (update if needed):
         ok(f"Compiled {files_written} article(s). Wiki now has {wiki_count} articles, ~{total_words} words total.")
 
 
+# ─── CivicGraph live DB tool ────────────────────────────────────────────────
+
+CIVICGRAPH_TOOL_SCRIPT = os.environ.get(
+    "CIVICGRAPH_TOOL_PATH",
+    os.path.expanduser("~/Code/grantscope/scripts/kb-civicgraph-tool.mjs")
+)
+
+def civicgraph_available() -> bool:
+    return Path(CIVICGRAPH_TOOL_SCRIPT).exists()
+
+def run_civicgraph_tool(query_type: str, topic: str = "",
+                        entity: str = "", state: str = "",
+                        limit: int = 8) -> str:
+    """
+    Call kb-civicgraph-tool.mjs and return JSON string.
+    Requires SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY in environment.
+    """
+    import subprocess
+    script = Path(CIVICGRAPH_TOOL_SCRIPT)
+    if not script.exists():
+        return json.dumps({"error": f"CivicGraph tool not found at {CIVICGRAPH_TOOL_SCRIPT}"})
+
+    # Find the grantscope .env file
+    env_file = script.parent.parent / ".env"
+    cmd = ["node"]
+    if env_file.exists():
+        cmd += [f"--env-file={env_file}"]
+    cmd += [
+        str(script),
+        f"--query-type={query_type}",
+        f"--limit={limit}",
+    ]
+    if topic:  cmd.append(f"--topic={topic}")
+    if entity: cmd.append(f"--entity={entity}")
+    if state:  cmd.append(f"--state={state}")
+
+    try:
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=30
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip()
+        if result.stderr:
+            return json.dumps({"error": result.stderr[:300]})
+        return json.dumps({"error": "No output from CivicGraph tool"})
+    except subprocess.TimeoutExpired:
+        return json.dumps({"error": "CivicGraph query timed out (30s)"})
+    except FileNotFoundError:
+        return json.dumps({"error": "node not found — is Node.js installed?"})
+
+
+CIVICGRAPH_TOOL_DEF = {
+    "type": "function",
+    "function": {
+        "name": "civicgraph_query",
+        "description": (
+            "Query the CivicGraph live database — 587K Australian entities, "
+            "$1.2 trillion in tracked contracts, donations, and grants. "
+            "Use this to find real funding data that supplements the wiki. "
+            "Returns foundations, government contracts, donor-contractor crossovers, "
+            "open grants, entity profiles, justice funding data, or board interlocks."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query_type": {
+                    "type": "string",
+                    "enum": ["foundations", "contracts", "donor_contractors",
+                              "grants", "entity", "justice_funding", "board_interlocks"],
+                    "description": (
+                        "foundations: foundations funding a topic. "
+                        "contracts: government contracts in a domain. "
+                        "donor_contractors: entities that donated politically AND hold contracts. "
+                        "grants: open grant opportunities. "
+                        "entity: profile and relationships for a named org. "
+                        "justice_funding: justice sector funding (ROGS, QLD YJ, etc). "
+                        "board_interlocks: shared board members between entities."
+                    )
+                },
+                "topic": {
+                    "type": "string",
+                    "description": "The subject to search for. Natural language OK: 'youth justice', 'housing', 'indigenous health'."
+                },
+                "entity": {
+                    "type": "string",
+                    "description": "For entity or board_interlocks queries: name of the specific organisation."
+                },
+                "state": {
+                    "type": "string",
+                    "description": "Optional: filter by Australian state code (QLD, NSW, VIC, SA, WA, TAS, NT, ACT)."
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Max results to return (1-20, default 8)."
+                }
+            },
+            "required": ["query_type"]
+        }
+    }
+}
+
+
 # ─── Tool definitions (given to LLM) ─────────────────────────────────────────
 
 KB_TOOLS = [
@@ -534,6 +636,15 @@ def run_tool(tool_name: str, tool_args: dict, vault: Path) -> str:
                 })
         return json.dumps({"error": f"Article not found: {path_str}"})
 
+    elif tool_name == "civicgraph_query":
+        return run_civicgraph_tool(
+            query_type = tool_args.get("query_type", "foundations"),
+            topic      = tool_args.get("topic", ""),
+            entity     = tool_args.get("entity", ""),
+            state      = tool_args.get("state", ""),
+            limit      = min(int(tool_args.get("limit", 8)), 20),
+        )
+
     return json.dumps({"error": f"Unknown tool: {tool_name}"})
 
 
@@ -613,29 +724,58 @@ def cmd_query(args):
                   stdout=_sp.DEVNULL, stderr=_sp.DEVNULL, cwd=str(vault))
 
     # ── System prompt ────────────────────────────────────────────────────────
+    cg_tool_desc = """
+- civicgraph_query(query_type, topic) — query the LIVE CivicGraph database:
+    - "foundations" — foundations actively funding a topic
+    - "contracts"   — government contracts awarded in a sector
+    - "donor_contractors" — entities that donated politically AND hold contracts
+    - "grants"      — open grant opportunities
+    - "entity"      — full profile of a named organisation
+    - "justice_funding" — justice sector funding (ROGS, state YJ programs)
+    - "board_interlocks" — shared board members across organisations
+  Use CivicGraph to get LIVE data to support or extend what the wiki says.
+  Always include CivicGraph results when the question involves money, who funds what,
+  specific organisations, or government contracts."""\
+  if has_civicgraph else ""
+
     system_content = f"""{agents}
 
-You are a research agent with access to a personal knowledge base wiki.
-Your job is to answer questions thoroughly by:
-  1. Calling search() with relevant queries to find articles (try multiple angles)
-  2. Calling read_article() to load the full content of the most relevant articles
-  3. Synthesising a complete, cited answer from what you read
+You are a research agent with access to two data sources:
+1. A personal knowledge base wiki (compiled articles on social impact, philanthropy, community power in Australia)
+2. CivicGraph — a live database of 587K Australian entities, $1.2T in tracked contracts/donations/grants
 
-IMPORTANT:
+Answer questions by:
+  1. Calling search() to find relevant wiki articles (use 2-4 different queries)
+  2. Calling read_article() to load the most relevant articles in full
+  3. Calling civicgraph_query() to pull live data from the database
+  4. Synthesising a complete answer that combines wiki knowledge with live CivicGraph data
+
+Available tools:{cg_tool_desc}
+- search(query, scope) — hybrid semantic+BM25 search over the wiki
+- read_article(path)   — load a full article into context
+
+RULES:
 - Always search BEFORE answering — never guess from memory
-- Use 2-4 search queries to explore different angles of the question
-- After searching, read the top 3-5 articles before synthesising
-- Cite articles using [[wikilinks]] in your final answer
-- If the wiki doesn't have enough information, say so explicitly
-- Be specific: quote figures, names, and dates from the articles"""
+- For questions about who funds what, always call civicgraph_query()
+- Cite wiki articles with [[wikilinks]] and CivicGraph data with entity names + ABNs
+- Quote specific figures (dollar amounts, dates, percentages) from your sources
+- If neither wiki nor CivicGraph has enough, say so explicitly
+- Be concise in synthesis — lead with the key finding, then support with evidence"""
 
     messages = [
         {"role": "system",  "content": system_content},
         {"role": "user",    "content": f"Question: {question}"}
     ]
 
+    # Extend tools with CivicGraph if available
+    has_civicgraph = civicgraph_available()
+    if has_civicgraph:
+        info(f"CivicGraph live DB connected")
+
     # ── Agentic tool-call loop ────────────────────────────────────────────────
-    tools_to_use = KB_TOOLS if has_search else []   # no tools if search not available
+    tools_to_use = list(KB_TOOLS) if has_search else []
+    if has_civicgraph:
+        tools_to_use.append(CIVICGRAPH_TOOL_DEF)
     turn = 0
     tool_calls_made = []
     articles_loaded = set()
@@ -689,6 +829,10 @@ IMPORTANT:
                     p = fn_args.get("path", "?")
                     articles_loaded.add(p)
                     print(f"  {C.BLUE}→ read_article({C.BOLD}{p}{C.RESET}{C.BLUE}){C.RESET}")
+                elif fn_name == "civicgraph_query":
+                    qt  = fn_args.get("query_type", "?")
+                    top = fn_args.get("topic") or fn_args.get("entity", "?")
+                    print(f"  {C.GREEN}→ civicgraph_query({C.BOLD}{qt}{C.RESET}{C.GREEN}, topic={top!r}){C.RESET}")
 
                 result_str = run_tool(fn_name, fn_args, vault)
                 total_context_chars += len(result_str)
@@ -728,10 +872,12 @@ IMPORTANT:
         answer_text = resp.get("choices", [{}])[0].get("message", {}).get("content", "")
 
     # ── Print stats then stream the answer ────────────────────────────────────
-    searches_done = tool_calls_made.count("search")
-    reads_done    = tool_calls_made.count("read_article")
-    info(f"Agent used {searches_done} search(es), read {reads_done} article(s) "
-         f"across {turn} turn(s)")
+    searches_done  = tool_calls_made.count("search")
+    reads_done     = tool_calls_made.count("read_article")
+    cg_done        = tool_calls_made.count("civicgraph_query")
+    cg_str         = f", {cg_done} CivicGraph DB query(ies)" if cg_done else ""
+    info(f"Agent used {searches_done} search(es), read {reads_done} article(s)"
+         f"{cg_str} across {turn} turn(s)")
     if articles_loaded:
         for p in sorted(articles_loaded):
             print(f"  {C.DIM}  read: {p}{C.RESET}")
