@@ -206,13 +206,8 @@ async function main() {
   }
   console.log(`   Updated ${commAssetCounts.length} communities\n`);
 
-  // 6. Refresh MV
-  console.log('6. Refreshing MV...');
-  const { execSync } = await import('child_process');
-  execSync(
-    `psql -h aws-0-ap-southeast-2.pooler.supabase.com -p 5432 -U "postgres.tednluwflfhxyucgwigh" -d postgres -c "REFRESH MATERIALIZED VIEW mv_goods_community_intelligence"`,
-    { env: { ...process.env, PGPASSWORD: process.env.DATABASE_PASSWORD }, stdio: 'pipe', timeout: 30000 }
-  );
+  // 6. Refresh MV (Skipped: view mv_goods_community_intelligence is currently deprecated/dropped)
+  console.log('6. Refreshing MV... (Skipped)');
   console.log('   Done\n');
 
   // 7. Summary

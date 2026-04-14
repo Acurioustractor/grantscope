@@ -65,12 +65,52 @@ export const AGENTS = {
     dependencies: [],
   },
   'sync-foundation-programs': {
-    command: ['node', '--env-file=.env', 'scripts/sync-foundation-programs.mjs', '--cleanup-invalid'],
+    command: ['node', '--env-file=.env', 'scripts/sync-foundation-programs.mjs', '--cleanup-invalid', '--priority-only', '--frontier-window-hours=72'],
     displayName: 'Sync Foundation Programs',
     category: 'sync',
     defaultPriority: 4,
     timeoutMs: 120_000,
     dependencies: [],
+  },
+  'sync-foundation-programs-full-sweep': {
+    command: ['node', '--env-file=.env', 'scripts/sync-foundation-programs.mjs', '--cleanup-invalid', '--skip-embed', '--frontier-window-hours=72', '--full-sweep', '--foundation-limit=120', '--agent-id=sync-foundation-programs-full-sweep'],
+    displayName: 'Sync Foundation Programs (Full Sweep)',
+    category: 'sync',
+    defaultPriority: 6,
+    timeoutMs: 900_000,
+    dependencies: [],
+  },
+  'sync-source-frontier': {
+    command: ['node', '--env-file=.env', 'scripts/sync-source-frontier.mjs'],
+    displayName: 'Sync Source Frontier',
+    category: 'sync',
+    defaultPriority: 4,
+    timeoutMs: 300_000,
+    dependencies: [],
+  },
+  'poll-source-frontier': {
+    command: ['node', '--env-file=.env', 'scripts/poll-source-frontier.mjs', '--kinds=grant_source_page', '--limit=20', '--concurrency=5'],
+    displayName: 'Poll Source Frontier',
+    category: 'sync',
+    defaultPriority: 4,
+    timeoutMs: 300_000,
+    dependencies: ['sync-source-frontier'],
+  },
+  'poll-foundation-frontier': {
+    command: ['node', '--env-file=.env', 'scripts/poll-source-frontier.mjs', '--agent-id=poll-foundation-frontier', '--agent-name=Poll Foundation Frontier', '--kinds=foundation_homepage,foundation_known_page,foundation_candidate_page,foundation_program_page', '--limit=100', '--concurrency=8'],
+    displayName: 'Poll Foundation Frontier',
+    category: 'sync',
+    defaultPriority: 4,
+    timeoutMs: 600_000,
+    dependencies: ['sync-source-frontier'],
+  },
+  'snapshot-grant-frontier': {
+    command: ['node', '--env-file=.env', 'scripts/snapshot-grant-frontier.mjs'],
+    displayName: 'Snapshot Grant Frontier',
+    category: 'analytics',
+    defaultPriority: 4,
+    timeoutMs: 120_000,
+    dependencies: ['sync-source-frontier', 'poll-source-frontier', 'poll-foundation-frontier'],
   },
   'sync-ghl-to-tracker': {
     command: ['node', '--env-file=.env', 'scripts/sync-ghl-to-tracker.mjs'],
@@ -79,6 +119,14 @@ export const AGENTS = {
     defaultPriority: 5,
     timeoutMs: 120_000,
     dependencies: [],
+  },
+  'refresh-youth-justice-trackers': {
+    command: ['node', '--env-file=.env', 'scripts/refresh-youth-justice-source-chain.mjs'],
+    displayName: 'Refresh Youth Justice Source Chain',
+    category: 'sync',
+    defaultPriority: 4,
+    timeoutMs: 1_800_000,
+    dependencies: ['scrape-qld-hansard', 'scrape-qld-yj-contracts', 'scrape-qgip-grants'],
   },
 
   // ── Import (one-off or periodic bulk loads) ─────────────────────────────────
@@ -227,22 +275,81 @@ export const AGENTS = {
     dependencies: [],
   },
 
-  // ── Discovery ───────────────────────────────────────────────────────────────
-  'grantscope-discovery': {
-    command: ['npx', 'tsx', 'scripts/grantscope-discovery.mjs'],
-    displayName: 'Grant Discovery',
-    category: 'discovery',
+  // ── Data Intelligence ─────────────────────────────────────────────────────
+  'sweep-abn-entities': {
+    command: ['node', '--env-file=.env', 'scripts/sweep-abn-entities.mjs', '--limit=500'],
+    displayName: 'ABN Entity Sweeper',
+    category: 'enrichment',
+    defaultPriority: 3,
+    timeoutMs: 1_800_000,
+    dependencies: [],
+  },
+  'merge-duplicate-entities': {
+    command: ['node', '--env-file=.env', 'scripts/merge-duplicate-entities.mjs', '--limit=500'],
+    displayName: 'Merge Duplicate Entities',
+    category: 'graph',
+    defaultPriority: 3,
+    timeoutMs: 1_800_000,
+    dependencies: [],
+  },
+  'build-person-network': {
+    command: ['node', '--env-file=.env', 'scripts/build-person-network.mjs', '--limit=2000'],
+    displayName: 'Build Person Network',
+    category: 'graph',
+    defaultPriority: 4,
+    timeoutMs: 1_800_000,
+    dependencies: [],
+  },
+  'refresh-total-funding-mv': {
+    command: ['node', '--env-file=.env', 'scripts/refresh-total-funding-mv.mjs'],
+    displayName: 'Refresh Total Funding MV',
+    category: 'analytics',
     defaultPriority: 2,
     timeoutMs: 600_000,
     dependencies: [],
   },
+
+  // ── Discovery ───────────────────────────────────────────────────────────────
+
+  'grantscope-discovery': {
+    command: ['npx', 'tsx', 'scripts/grantscope-discovery.mjs', '--frontier-window-hours=24', '--frontier-fallback-count=4'],
+    displayName: 'Grant Discovery',
+    category: 'discovery',
+    defaultPriority: 2,
+    timeoutMs: 1_800_000,
+    dependencies: [],
+  },
   'discover-foundation-programs': {
-    command: ['node', '--env-file=.env', 'scripts/discover-foundation-programs.mjs'],
+    command: ['node', '--env-file=.env', 'scripts/discover-foundation-programs.mjs', '--refresh-existing', '--rescan-days=14', '--limit=40', '--concurrency=2'],
     displayName: 'Discover Foundation Programs',
     category: 'discovery',
     defaultPriority: 4,
     timeoutMs: 600_000,
     dependencies: [],
+  },
+  'discover-foundation-programs-full-sweep': {
+    command: ['node', '--env-file=.env', 'scripts/discover-foundation-programs.mjs', '--refresh-existing', '--rescan-days=30', '--limit=120', '--concurrency=2', '--full-sweep', '--agent-id=discover-foundation-programs-full-sweep'],
+    displayName: 'Discover Foundation Programs (Full Sweep)',
+    category: 'discovery',
+    defaultPriority: 6,
+    timeoutMs: 3_600_000,
+    dependencies: [],
+  },
+  'discover-foundation-programs-long-tail': {
+    command: ['node', '--env-file=.env', 'scripts/discover-foundation-programs.mjs', '--refresh-existing', '--rescan-days=14', '--limit=20', '--concurrency=1', '--frontier-metadata-flag=long_tail_priority', '--agent-id=discover-foundation-programs-long-tail', '--agent-name=Discover Foundation Programs (Long Tail)'],
+    displayName: 'Discover Foundation Programs (Long Tail)',
+    category: 'discovery',
+    defaultPriority: 4,
+    timeoutMs: 1_800_000,
+    dependencies: ['sync-source-frontier', 'poll-foundation-frontier'],
+  },
+  'extract-foundation-relationships': {
+    command: ['node', '--env-file=.env', 'scripts/extract-foundation-relationships.mjs', '--limit=15', '--concurrency=2', '--max-pages=6', '--frontier-window-hours=168', '--refresh-days=30'],
+    displayName: 'Extract Foundation Relationships',
+    category: 'enrichment',
+    defaultPriority: 4,
+    timeoutMs: 1_200_000,
+    dependencies: ['sync-source-frontier', 'poll-foundation-frontier'],
   },
   'scrape-state-grants': {
     command: ['node', '--env-file=.env', 'scripts/scrape-state-grants.mjs'],
@@ -263,11 +370,11 @@ export const AGENTS = {
 
   // ── Enrichment ──────────────────────────────────────────────────────────────
   'enrich-grants-free': {
-    command: ['npx', 'tsx', 'scripts/enrich-grants-free.mjs', '--limit=100'],
+    command: ['npx', 'tsx', 'scripts/enrich-grants-free.mjs', '--limit=200'],
     displayName: 'Enrich Grants (Free)',
     category: 'enrichment',
     defaultPriority: 4,
-    timeoutMs: 600_000,
+    timeoutMs: 1_800_000,
     dependencies: [],
   },
   'enrich-grants': {
@@ -327,9 +434,19 @@ export const AGENTS = {
     dependencies: [],
   },
 
+  // ── Bittensor / Decentralised Data ─────────────────────────────────────────
+  'enrich-from-sn13': {
+    command: ['node', '--env-file=.env', 'scripts/enrich-from-sn13.mjs'],
+    displayName: 'Enrich from SN13 (Macrocosmos)',
+    category: 'enrichment',
+    defaultPriority: 5,
+    timeoutMs: 600_000,
+    dependencies: [],
+  },
+
   // ── Profiling ───────────────────────────────────────────────────────────────
   'build-foundation-profiles': {
-    command: ['npx', 'tsx', 'scripts/build-foundation-profiles.mjs', '--limit=20', '--concurrency=2'],
+    command: ['npx', 'tsx', 'scripts/build-foundation-profiles.mjs', '--limit=100', '--concurrency=10'],
     displayName: 'Build Foundation Profiles',
     category: 'profiling',
     defaultPriority: 4,
@@ -394,6 +511,22 @@ export const AGENTS = {
     timeoutMs: 600_000,
     dependencies: ['build-entity-graph'],
   },
+  'dedup-grants': {
+    command: ['node', '--env-file=.env', 'scripts/dedup-grants.mjs'],
+    displayName: 'Dedup Grants (Semantic)',
+    category: 'graph',
+    defaultPriority: 4,
+    timeoutMs: 600_000,
+    dependencies: [],
+  },
+  'close-stale-grants': {
+    command: ['node', '--env-file=.env', 'scripts/close-stale-grants.mjs'],
+    displayName: 'Close Stale Grants',
+    category: 'analytics',
+    defaultPriority: 3,
+    timeoutMs: 300_000,
+    dependencies: [],
+  },
   'classify-community-controlled': {
     command: ['node', '--env-file=.env', 'scripts/classify-community-controlled.mjs', '--apply'],
     displayName: 'Classify Community-Controlled',
@@ -430,7 +563,7 @@ export const AGENTS = {
 
   // ── Embedding ───────────────────────────────────────────────────────────────
   'backfill-embeddings': {
-    command: ['node', '--env-file=.env', 'scripts/backfill-embeddings.mjs', '--batch-size', '100'],
+    command: ['node', '--env-file=.env', 'scripts/backfill-embeddings.mjs', '--batch-size', '100', '--limit=100', '--exclude-sources=foundation_program'],
     displayName: 'Backfill Embeddings',
     category: 'embedding',
     defaultPriority: 5,
@@ -461,6 +594,22 @@ export const AGENTS = {
     category: 'analytics',
     defaultPriority: 2,
     timeoutMs: 300_000,
+    dependencies: [],
+  },
+  'snapshot-data-catalog': {
+    command: ['node', '--env-file=.env', 'scripts/snapshot-data-catalog.mjs'],
+    displayName: 'Snapshot Data Catalog',
+    category: 'analytics',
+    defaultPriority: 2,
+    timeoutMs: 300_000,
+    dependencies: [],
+  },
+  'trust-remediation-loop': {
+    command: ['node', '--env-file=.env', 'scripts/trust-remediation-loop.mjs'],
+    displayName: 'Trust Remediation Loop',
+    category: 'analytics',
+    defaultPriority: 2,
+    timeoutMs: 3_600_000,
     dependencies: [],
   },
   'refresh-acnc-ais': {
@@ -551,9 +700,41 @@ export const AGENTS = {
     timeoutMs: 300_000,
     dependencies: ['scout-grants-for-profiles'],
   },
+  'send-grant-alert-digests': {
+    command: ['npx', 'tsx', '--tsconfig', 'apps/web/tsconfig.json', 'scripts/send-grant-alert-digests.ts'],
+    displayName: 'Send Grant Alert Digests',
+    category: 'intelligence',
+    defaultPriority: 3,
+    timeoutMs: 300_000,
+    dependencies: ['scout-grants-for-profiles'],
+  },
+  'send-billing-reminders': {
+    command: ['npx', 'tsx', '--tsconfig', 'apps/web/tsconfig.json', 'scripts/send-billing-reminders.ts'],
+    displayName: 'Send Billing Reminders',
+    category: 'intelligence',
+    defaultPriority: 3,
+    timeoutMs: 300_000,
+    dependencies: [],
+  },
   'check-entity-watches': {
     command: ['node', '--env-file=.env', 'scripts/check-entity-watches.mjs'],
     displayName: 'Entity Watch Notifications',
+    category: 'intelligence',
+    defaultPriority: 3,
+    timeoutMs: 300_000,
+    dependencies: [],
+  },
+  'watch-data-quality': {
+    command: ['node', '--env-file=.env', 'scripts/watch-data-quality.mjs'],
+    displayName: 'Data Quality Watcher',
+    category: 'intelligence',
+    defaultPriority: 3,
+    timeoutMs: 300_000,
+    dependencies: [],
+  },
+  'watch-funding-anomalies': {
+    command: ['node', '--env-file=.env', 'scripts/watch-funding-anomalies.mjs'],
+    displayName: 'Funding Anomaly Watcher',
     category: 'intelligence',
     defaultPriority: 3,
     timeoutMs: 300_000,
@@ -901,8 +1082,16 @@ export const AGENTS = {
     timeoutMs: 300_000,
     dependencies: [],
   },
+  'scrape-qgip-grants': {
+    command: ['node', '--env-file=.env', 'scripts/scrape-qgip-grants.mjs', '--live'],
+    displayName: 'QGIP Expenditure Scraper',
+    category: 'scraping',
+    defaultPriority: 3,
+    timeoutMs: 1_800_000,
+    dependencies: [],
+  },
   'scrape-qld-yj-contracts': {
-    command: ['node', '--env-file=.env', 'scripts/scrape-qld-yj-contracts.mjs'],
+    command: ['node', '--env-file=.env', 'scripts/scrape-qld-yj-contracts.mjs', '--live'],
     displayName: 'QLD DCYJMA Contract Disclosures',
     category: 'scraping',
     defaultPriority: 3,
