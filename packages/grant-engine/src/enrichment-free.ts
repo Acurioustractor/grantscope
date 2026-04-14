@@ -197,6 +197,71 @@ If a field is unclear, use null or empty array. Keep description under 500 chars
   throw new Error('All LLM providers exhausted');
 }
 
+/**
+ * Call Gemini native API with Google Search grounding — free web research.
+ * Used for CRM grants that have a name but no direct URL provided.
+ */
+async function extractWithGeminiGrounded(
+  name: string,
+  log: (msg: string) => void = console.log,
+): Promise<GrantEnrichmentResult> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error('GEMINI_API_KEY required for web-search enrichment');
+
+  const prompt = `Search the web for information about the Australian grant known as "${name}".
+Extract its key details and return ONLY a JSON response without markdown formatting.
+
+{
+  "description": "2-4 sentence description of what this grant funds and its purpose",
+  "eligibility_criteria": ["who can apply - criterion 1", "criterion 2"],
+  "target_recipients": ["type of org or person that can apply"],
+  "deadline": "YYYY-MM-DD or null if not found",
+  "amount_min": null or number,
+  "amount_max": null or number
+}
+
+Use null or empty arrays if a field is unclear. Keep description under 500 chars.`;
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      tools: [{ google_search: {} }],
+      generationConfig: { maxOutputTokens: 1000, temperature: 0.1 },
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`gemini-grounded API error ${response.status}: ${err.slice(0, 200)}`);
+  }
+
+  const data = await response.json() as {
+    candidates: Array<{ content: { parts: Array<{ text?: string }> } }>;
+  };
+  const parts = data.candidates?.[0]?.content?.parts || [];
+  const text = parts.filter((p: { text?: string }) => p.text).map((p: { text?: string }) => p.text!).join('\n');
+
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) return emptyResult();
+
+  try {
+    const parsed = JSON.parse(jsonMatch[0]);
+    return {
+      description: typeof parsed.description === 'string' ? parsed.description.slice(0, 1000) : null,
+      eligibility_criteria: Array.isArray(parsed.eligibility_criteria) ? parsed.eligibility_criteria : [],
+      target_recipients: Array.isArray(parsed.target_recipients) ? parsed.target_recipients : [],
+      deadline: typeof parsed.deadline === 'string' ? parsed.deadline : null,
+      amount_min: typeof parsed.amount_min === 'number' ? parsed.amount_min : null,
+      amount_max: typeof parsed.amount_max === 'number' ? parsed.amount_max : null,
+    };
+  } catch {
+    return emptyResult();
+  }
+}
+
 function emptyResult(): GrantEnrichmentResult {
   return {
     description: null,
@@ -212,7 +277,7 @@ function emptyResult(): GrantEnrichmentResult {
  * Enrich a single grant by scraping its URL and extracting with Groq.
  */
 export async function enrichGrantFree(
-  grant: { name: string; url: string; source: string },
+  grant: { name: string; url: string | null; source: string },
   log: (msg: string) => void = console.log,
 ): Promise<GrantEnrichmentResult> {
   // Strategy 1: ARC grants — name field already contains truncated summary,
@@ -229,13 +294,21 @@ export async function enrichGrantFree(
     };
   }
 
-  // Strategy 2: Scrape URL with Cheerio
-  const scraped = await scrapeUrl(grant.url);
-  if (!scraped) {
-    return emptyResult();
+  // Strategy 2: Web Search for URL-less grants (manual/CRM)
+  if (!grant.url) {
+    log(`[enrich-free] Web Search triggered for URL-less grant: ${grant.name}`);
+    return extractWithGeminiGrounded(grant.name, log);
   }
 
-  // Strategy 3: Extract with LLM (Groq → Gemini → DeepSeek)
+  // Strategy 3: Scrape URL with Cheerio
+  const scraped = await scrapeUrl(grant.url);
+  if (!scraped) {
+    log(`[enrich-free] Web Search triggered for un-scrapeable grant: ${grant.url}`);
+    // Fall back to web search if cheerio fails completely
+    return extractWithGeminiGrounded(grant.name, log);
+  }
+
+  // Strategy 4: Extract with LLM (Groq → Gemini → DeepSeek)
   return extractWithLLM(grant.name, scraped, log);
 }
 
@@ -262,11 +335,11 @@ export async function batchEnrichFree(
 
   log(`[enrich-free] Providers available: ${PROVIDERS.filter(p => process.env[p.envKey]).map(p => p.name).join(', ')}`);
 
-  // Fetch grants needing enrichment — prioritize non-ARC (they need it more)
+  // Fetch grants needing enrichment (including URL-less CRM grants) - prioritize non-ARC
   let query = supabase
     .from('grant_opportunities')
     .select('id, name, url, source, description')
-    .not('url', 'is', null)
+    .or('url.not.is.null,source.eq.ghl_sync')
     .is('enriched_at', null)
     .order('created_at', { ascending: false })
     .limit(limit);
@@ -302,10 +375,6 @@ export async function batchEnrichFree(
   let skipped = 0;
 
   for (const grant of sorted) {
-    if (!grant.url) {
-      skipped++;
-      continue;
-    }
 
     try {
       const result = await enrichGrantFree(

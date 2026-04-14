@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createSupabaseServer } from '@/lib/supabase-server';
+import { requireAdminApi } from '@/lib/admin-auth';
 import { getServiceSupabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
@@ -16,11 +16,8 @@ function safe(p: PromiseLike<any>, ms = 15000): Promise<any> {
 }
 
 export async function GET() {
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAdminApi();
+  if (auth.error) return auth.error;
 
   const db = getServiceSupabase();
 
@@ -42,8 +39,10 @@ export async function GET() {
       donorContractorStats,
       entityCoverageResult,
     ] = await Promise.all([
-      // Fast RPCs
-      safe(db.rpc('get_table_counts'), 8000),
+      // Fast RPCs (fetch estimated counts dynamically as get_table_counts has visibility issues)
+      safe(db.rpc('exec_sql', {
+        query: `SELECT relname, coalesce(reltuples, 0) as count FROM pg_class`
+      }), 8000),
       safe(db.rpc('get_table_freshness'), 12000),
       // Filtered counts — each wrapped in safe() so pool saturation doesn't block response
       safe(db.from('grant_opportunities').select('*', { count: 'exact', head: true })
@@ -86,7 +85,14 @@ export async function GET() {
     ]);
 
     // Extract counts from single RPC result (pg_stat_user_tables estimated counts)
-    const tc: Record<string, number> = tableCountsResult.data ?? {};
+    const tc: Record<string, number> = {};
+    if (Array.isArray(tableCountsResult.data)) {
+      for (const row of tableCountsResult.data) {
+        if (row.relname) tc[row.relname] = Number(row.count) || 0;
+      }
+    } else if (tableCountsResult.data) {
+       Object.assign(tc, tableCountsResult.data);
+    }
     const tcount = (table: string) => tc[table] ?? 0;
 
     // Extract freshness timestamps from single RPC result
