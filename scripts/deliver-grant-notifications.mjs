@@ -116,7 +116,7 @@ async function main() {
     // Fetch queued notifications
     const { data: queued, error } = await db
       .from('grant_notification_outbox')
-      .select('id, user_id, grant_id, subject, body, match_score, match_signals, attempt_count')
+      .select('id, user_id, grant_id, alert_preference_id, subject, body, match_score, match_signals, attempt_count')
       .eq('status', 'queued')
       .lt('attempt_count', MAX_ATTEMPTS)
       .order('queued_at', { ascending: true })
@@ -145,6 +145,7 @@ async function main() {
     let sent = 0;
     let failed = 0;
     let cancelled = 0;
+    const eventRows = [];
 
     for (const notification of queued) {
       const email = emailMap.get(notification.user_id);
@@ -162,6 +163,14 @@ async function main() {
           })
           .eq('id', notification.id);
         cancelled++;
+        eventRows.push({
+          user_id: notification.user_id,
+          alert_preference_id: notification.alert_preference_id || null,
+          notification_id: notification.id,
+          grant_id: notification.grant_id,
+          event_type: 'notification_cancelled',
+          metadata: { reason: 'missing_email' },
+        });
         continue;
       }
 
@@ -190,7 +199,25 @@ async function main() {
           })
           .eq('id', notification.id);
 
+        if (notification.alert_preference_id) {
+          await db
+            .from('alert_preferences')
+            .update({
+              last_sent_at: attemptedAt,
+              updated_at: attemptedAt,
+            })
+            .eq('id', notification.alert_preference_id);
+        }
+
         sent++;
+        eventRows.push({
+          user_id: notification.user_id,
+          alert_preference_id: notification.alert_preference_id || null,
+          notification_id: notification.id,
+          grant_id: notification.grant_id,
+          event_type: 'notification_sent',
+          metadata: { attempt_count: attemptCount, source: 'scheduled_delivery' },
+        });
       } catch (err) {
         await db
           .from('grant_notification_outbox')
@@ -204,7 +231,34 @@ async function main() {
 
         failed++;
         console.error(`  Failed ${notification.id}: ${err.message}`);
+        eventRows.push({
+          user_id: notification.user_id,
+          alert_preference_id: notification.alert_preference_id || null,
+          notification_id: notification.id,
+          grant_id: notification.grant_id,
+          event_type: 'notification_failed',
+          metadata: { attempt_count: attemptCount, error: err.message, source: 'scheduled_delivery' },
+        });
       }
+    }
+
+    if (!DRY_RUN && eventRows.length > 0) {
+      await db.from('alert_events').insert(eventRows);
+      const deliveryRunEvents = [...new Set(queued.map((notification) => notification.user_id))].map((recipientUserId) => ({
+        user_id: recipientUserId,
+        alert_preference_id: null,
+        notification_id: null,
+        grant_id: null,
+        event_type: 'delivery_run',
+        metadata: {
+          scoped_user: null,
+          queued: queued.filter((notification) => notification.user_id === recipientUserId).length,
+          sent: eventRows.filter((event) => event.user_id === recipientUserId && event.event_type === 'notification_sent').length,
+          failed: eventRows.filter((event) => event.user_id === recipientUserId && event.event_type === 'notification_failed').length,
+          cancelled: eventRows.filter((event) => event.user_id === recipientUserId && event.event_type === 'notification_cancelled').length,
+        },
+      }));
+      await db.from('alert_events').insert(deliveryRunEvents);
     }
 
     console.log(`\n=== Summary ===`);
