@@ -236,7 +236,7 @@ async function exportDataQuality() {
     '',
     '1. Restart scheduler: `node --env-file=.env scripts/scheduler.mjs`',
     '2. Clear stuck tasks: `node --env-file=.env scripts/recover-stale-agent-runs.mjs`',
-    '3. Refresh MVs: `node --env-file=.env scripts/refresh-materialized-views.mjs`',
+    '3. Refresh MVs: `node --env-file=.env scripts/refresh-views.mjs`',
     '4. Run overnight enrichment: `./run-local-enrichment.sh --local-only`',
     '5. Fix QGIP bug: `node --env-file=.env scripts/scrape-qgip-grants-fixed.mjs --live`',
   ];

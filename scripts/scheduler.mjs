@@ -52,7 +52,6 @@ function splitArgs(rawArgs) {
 // Auto-discover agent scripts by convention: scripts/${agentId}.mjs
 // Override map for agents whose script name differs from agent_id
 const AGENT_SCRIPT_OVERRIDES = {
-  'refresh-materialized-views': 'scripts/refresh-views.mjs',
 };
 
 function resolveScript(agentId) {

@@ -396,7 +396,7 @@ source .env && PGPASSWORD="$DATABASE_PASSWORD" psql -h aws-0-ap-southeast-2.pool
 node --env-file=.env scripts/<agent>.mjs [--apply] [--limit=N]
 
 # Refresh materialized views
-node --env-file=.env scripts/refresh-materialized-views.mjs
+node --env-file=.env scripts/refresh-views.mjs
 ```
 
 ---

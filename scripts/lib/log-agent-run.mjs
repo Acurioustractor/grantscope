@@ -74,7 +74,7 @@ export async function logComplete(supabase, runId, stats = {}) {
       items_new: stats.items_new ?? 0,
       items_updated: stats.items_updated ?? 0,
       errors: Array.isArray(stats.errors) && stats.errors.length > 0
-        ? stats.errors.map(err => ({ message: String(err), time: now }))
+        ? stats.errors.map(err => ({ message: errorToString(err), time: now }))
         : null,
     })
     .eq('id', runId);
@@ -85,10 +85,26 @@ export async function logComplete(supabase, runId, stats = {}) {
 }
 
 /**
+ * Serialize an error value to a human-readable string.
+ * Handles Error objects, plain objects, and primitives.
+ */
+function errorToString(err) {
+  if (typeof err === 'string') return err;
+  if (err instanceof Error) return err.message;
+  if (err && typeof err === 'object') {
+    // Supabase/API error objects often have .message or .error
+    if (err.message) return String(err.message);
+    if (err.error) return String(err.error);
+    try { return JSON.stringify(err); } catch { return '[unserializable object]'; }
+  }
+  return String(err);
+}
+
+/**
  * Mark a run as failed.
  * @param {import('@supabase/supabase-js').SupabaseClient} supabase
  * @param {string|null} runId
- * @param {Error|string} err
+ * @param {Error|string|object} err
  */
 export async function logFailed(supabase, runId, err) {
   if (!runId) return;
@@ -110,7 +126,7 @@ export async function logFailed(supabase, runId, err) {
       status: 'failed',
       completed_at: now,
       duration_ms: durationMs,
-      errors: [{ message: String(err), time: now }],
+      errors: [{ message: errorToString(err), time: now }],
     })
     .eq('id', runId);
 

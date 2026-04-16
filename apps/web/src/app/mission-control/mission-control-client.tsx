@@ -114,9 +114,56 @@ interface MissionData {
       grants_new: number;
       started_at: string;
     }>;
+    runtimeSweeps: Array<{
+      agent_id: string;
+      agent_name: string;
+      full_sweep_cursor: number | null;
+      full_sweep_candidate_count: number | null;
+      full_sweep_progress_pct: number | null;
+      full_sweep_advanced_by: number | null;
+      full_sweep_last_programs_found: number | null;
+      full_sweep_last_inserted: number | null;
+      full_sweep_last_updated: number | null;
+      full_sweep_last_skipped: number | null;
+      full_sweep_last_errors: number | null;
+      full_sweep_last_batch_foundation_ids: string[] | null;
+      full_sweep_last_batch_foundation_names: string[] | null;
+      full_sweep_last_run_at: string | null;
+      interval_hours: number | null;
+      enabled: boolean | null;
+      auto_create_task: boolean | null;
+      schedule_last_run_at: string | null;
+      recent_run_status: string | null;
+      recent_run_completed_at: string | null;
+      updated_at: string;
+    }>;
+  };
+  frontier: {
+    autoDisabled: Array<{
+      id: string;
+      sourceKey: string;
+      sourceName: string | null;
+      sourceKind: string;
+      foundationId: string | null;
+      foundationName: string | null;
+      targetUrl: string;
+      failureCount: number;
+      lastHttpStatus: number | null;
+      nextCheckAt: string | null;
+      updatedAt: string;
+      autoDisabledReason: string | null;
+      autoDisabledAt: string | null;
+      autoDisabledFailureCount: number;
+      lastEffectiveCadenceReason: string | null;
+    }>;
   };
   discoveries: Discovery[];
   lastUpdated: string;
+}
+
+interface TaskQueueResult {
+  task?: Pick<AgentTask, 'id' | 'agent_id' | 'status' | 'priority' | 'created_at'>;
+  existing: boolean;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -190,9 +237,49 @@ const REFRESH_COMMANDS = [
   { label: 'AusTender', cmd: 'node scripts/sync-austender-contracts.mjs' },
   { label: 'ACNC Charities', cmd: 'node scripts/sync-acnc-charities.mjs' },
   { label: 'ORIC Register', cmd: 'node scripts/import-oric-register.mjs' },
-  { label: 'Mat. Views', cmd: 'node scripts/refresh-materialized-views.mjs' },
+  { label: 'Mat. Views', cmd: 'node scripts/refresh-views.mjs' },
   { label: 'Foundation Profiles', cmd: 'npx tsx scripts/build-foundation-profiles.mjs --limit=50' },
 ];
+
+async function enqueueMissionControlTask(agentId: string): Promise<TaskQueueResult> {
+  const res = await fetch('/api/mission-control/tasks', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ agent_id: agentId }),
+  });
+
+  const body = await res.json().catch(() => ({}));
+  if (res.status === 409) {
+    return {
+      task: body.task,
+      existing: true,
+    };
+  }
+
+  if (!res.ok) {
+    throw new Error(body.error || 'Failed to queue task');
+  }
+
+  return {
+    task: body.task,
+    existing: Boolean(body.existing),
+  };
+}
+
+async function reenableFrontierRow(frontierId: string) {
+  const res = await fetch(`/api/mission-control/frontier/${encodeURIComponent(frontierId)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'reenable' }),
+  });
+
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(body.error || 'Failed to re-enable frontier row');
+  }
+
+  return body.frontier;
+}
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
@@ -200,6 +287,7 @@ export function MissionControlClient() {
   const [data, setData] = useState<MissionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [taskQueueRefreshToken, setTaskQueueRefreshToken] = useState(0);
   const router = useRouter();
 
   const fetchData = useCallback(() => {
@@ -223,6 +311,10 @@ export function MissionControlClient() {
     const interval = setInterval(fetchData, 60_000);
     return () => clearInterval(interval);
   }, [fetchData]);
+
+  const handleTaskQueued = useCallback(() => {
+    setTaskQueueRefreshToken((current) => current + 1);
+  }, []);
 
   if (loading) {
     return (
@@ -272,7 +364,9 @@ export function MissionControlClient() {
       <DataInventory inventory={data.inventory} />
       <PowerConcentration power={data.power} />
       <AgentStatus agents={data.agents} />
-      <TaskQueue />
+      <SweepRuntime sweeps={data.agents.runtimeSweeps} onUpdate={fetchData} onTaskQueued={handleTaskQueued} />
+      <FrontierExceptions rows={data.frontier.autoDisabled} onUpdate={fetchData} />
+      <TaskQueue refreshToken={taskQueueRefreshToken} />
       <ScheduleManager />
       <SqlPlayground />
       <QuickLinks />
@@ -619,13 +713,340 @@ function AgentStatus({ agents }: { agents: MissionData['agents'] }) {
   );
 }
 
+function SweepRuntime({
+  sweeps,
+  onUpdate,
+  onTaskQueued,
+}: {
+  sweeps: MissionData['agents']['runtimeSweeps'];
+  onUpdate: () => void;
+  onTaskQueued: () => void;
+}) {
+  const [cursorInputs, setCursorInputs] = useState<Record<string, string>>({});
+  const [updatingAgentId, setUpdatingAgentId] = useState<string | null>(null);
+  const [queueingAgentId, setQueueingAgentId] = useState<string | null>(null);
+  const [updateError, setUpdateError] = useState<string | null>(null);
+  const [queueNotice, setQueueNotice] = useState<string | null>(null);
+
+  const setCursor = async (agentId: string, cursor: number) => {
+    setUpdatingAgentId(agentId);
+    setUpdateError(null);
+    try {
+      const res = await fetch(`/api/mission-control/runtime-sweeps/${encodeURIComponent(agentId)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cursor }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || 'Failed to update cursor');
+      setCursorInputs(prev => ({ ...prev, [agentId]: String(cursor) }));
+      onUpdate();
+    } catch (err) {
+      setUpdateError(err instanceof Error ? err.message : 'Failed to update cursor');
+    } finally {
+      setUpdatingAgentId(null);
+    }
+  };
+
+  const runSweep = async (agentId: string, agentName: string) => {
+    setQueueingAgentId(agentId);
+    setUpdateError(null);
+    setQueueNotice(null);
+
+    try {
+      const result = await enqueueMissionControlTask(agentId);
+      setQueueNotice(
+        result.existing
+          ? `${agentName} already has a pending or running task`
+          : `${agentName} queued`
+      );
+      onTaskQueued();
+    } catch (err) {
+      setUpdateError(err instanceof Error ? err.message : 'Failed to queue task');
+    } finally {
+      setQueueingAgentId(null);
+    }
+  };
+
+  return (
+    <section className="mb-10">
+      <h2 className="text-sm font-black uppercase tracking-widest text-bauhaus-muted mb-4 border-b-2 border-bauhaus-black pb-2">
+        Sweep Cursors
+      </h2>
+
+      {queueNotice && (
+        <div className="mb-3 border-2 border-green-300 bg-green-50 px-3 py-2 text-xs font-mono text-green-700">
+          {queueNotice}
+        </div>
+      )}
+
+      {updateError && (
+        <div className="mb-3 border-2 border-red-300 bg-red-50 px-3 py-2 text-xs font-mono text-red-700">
+          {updateError}
+        </div>
+      )}
+
+      <div className="border-4 border-bauhaus-black overflow-x-auto">
+        {sweeps.length === 0 ? (
+          <div className="p-8 text-center text-sm text-bauhaus-muted">No rotating sweep state recorded</div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-bauhaus-black text-white">
+                <th className="text-left px-3 py-2 font-black uppercase tracking-wider text-[10px]">Sweep</th>
+                <th className="text-left px-3 py-2 font-black uppercase tracking-wider text-[10px]">Cursor</th>
+                <th className="text-left px-3 py-2 font-black uppercase tracking-wider text-[10px]">Last Batch</th>
+                <th className="text-left px-3 py-2 font-black uppercase tracking-wider text-[10px]">Last Output</th>
+                <th className="text-left px-3 py-2 font-black uppercase tracking-wider text-[10px]">Run Status</th>
+                <th className="text-right px-3 py-2 font-black uppercase tracking-wider text-[10px]">When</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sweeps.map((sweep) => {
+                const batchNames = Array.isArray(sweep.full_sweep_last_batch_foundation_names)
+                  ? sweep.full_sweep_last_batch_foundation_names
+                  : [];
+                const cursor = sweep.full_sweep_cursor ?? 0;
+                const candidateCount = sweep.full_sweep_candidate_count ?? 0;
+                const progress = sweep.full_sweep_progress_pct ?? 0;
+                const cursorInput = cursorInputs[sweep.agent_id] ?? String(cursor);
+                const lastOutput = sweep.agent_id.includes('discover')
+                  ? `${sweep.full_sweep_last_programs_found ?? 0} programs found`
+                  : `${sweep.full_sweep_last_inserted ?? 0} inserted / ${sweep.full_sweep_last_updated ?? 0} updated`;
+                const status = sweep.recent_run_status || (sweep.enabled ? 'scheduled' : 'disabled');
+
+                return (
+                  <tr key={sweep.agent_id} className="border-t border-bauhaus-black/10 hover:bg-gray-50 align-top">
+                    <td className="px-3 py-3">
+                      <div className="font-bold text-xs">{sweep.agent_name}</div>
+                      <div className="text-[10px] text-bauhaus-muted font-mono mt-1">{sweep.agent_id}</div>
+                      <div className="text-[10px] text-bauhaus-muted mt-1">
+                        every {sweep.interval_hours ?? '-'}h {sweep.enabled ? '• enabled' : '• paused'}
+                      </div>
+                    </td>
+                    <td className="px-3 py-3">
+                      <div className="font-mono text-xs">{cursor} / {candidateCount || '-'}</div>
+                      <div className="mt-2 h-2 w-28 bg-bauhaus-black/10 border border-bauhaus-black/20">
+                        <div
+                          className="h-full bg-bauhaus-blue"
+                          style={{ width: `${Math.max(0, Math.min(100, progress))}%` }}
+                        />
+                      </div>
+                      <div className="text-[10px] text-bauhaus-muted mt-1">{progress.toFixed(1)}%</div>
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <button
+                          onClick={() => setCursor(sweep.agent_id, 0)}
+                          disabled={updatingAgentId === sweep.agent_id}
+                          className="px-2 py-1 text-[10px] font-black uppercase tracking-wider border-2 border-bauhaus-black/20 hover:border-bauhaus-black hover:bg-bauhaus-black hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Reset
+                        </button>
+                        <input
+                          type="number"
+                          min={0}
+                          max={Math.max(0, candidateCount - 1)}
+                          value={cursorInput}
+                          onChange={(e) => setCursorInputs(prev => ({ ...prev, [sweep.agent_id]: e.target.value }))}
+                          className="w-20 border-2 border-bauhaus-black/20 px-2 py-1 text-[10px] font-mono"
+                        />
+                        <button
+                          onClick={() => {
+                            const nextCursor = Number.parseInt(cursorInput, 10);
+                            if (Number.isNaN(nextCursor)) {
+                              setUpdateError('Cursor must be a number');
+                              return;
+                            }
+                            void setCursor(sweep.agent_id, nextCursor);
+                          }}
+                          disabled={updatingAgentId === sweep.agent_id}
+                          className="px-2 py-1 text-[10px] font-black uppercase tracking-wider border-2 border-bauhaus-black/20 hover:border-bauhaus-black hover:bg-bauhaus-blue hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Jump
+                        </button>
+                        <button
+                          onClick={() => void runSweep(sweep.agent_id, sweep.agent_name)}
+                          disabled={queueingAgentId === sweep.agent_id}
+                          className="px-2 py-1 text-[10px] font-black uppercase tracking-wider border-2 border-bauhaus-red text-bauhaus-red hover:bg-bauhaus-red hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {queueingAgentId === sweep.agent_id ? 'Queueing...' : 'Run Now'}
+                        </button>
+                      </div>
+                    </td>
+                    <td className="px-3 py-3 text-xs">
+                      {batchNames.length === 0 ? (
+                        <span className="text-bauhaus-muted">No batch yet</span>
+                      ) : (
+                        <div className="space-y-1">
+                          {batchNames.slice(0, 3).map((name) => (
+                            <div key={name} className="font-medium">{name}</div>
+                          ))}
+                          {batchNames.length > 3 && (
+                            <div className="text-[10px] text-bauhaus-muted">+{batchNames.length - 3} more</div>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-3 py-3 text-xs">
+                      <div>{lastOutput}</div>
+                      <div className="text-[10px] text-bauhaus-muted mt-1">
+                        advanced {sweep.full_sweep_advanced_by ?? 0} • errors {sweep.full_sweep_last_errors ?? 0}
+                      </div>
+                    </td>
+                    <td className="px-3 py-3">
+                      <span className={`px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${
+                        status === 'success' ? 'bg-green-600 text-white' :
+                        status === 'partial' ? 'bg-yellow-500 text-bauhaus-black' :
+                        status === 'failed' ? 'bg-red-500 text-white' :
+                        status === 'running' ? 'bg-blue-500 text-white' :
+                        'bg-gray-300 text-bauhaus-black'
+                      }`}>
+                        {status}
+                      </span>
+                    </td>
+                    <td className="px-3 py-3 text-right text-bauhaus-muted text-xs">
+                      {timeAgo(sweep.full_sweep_last_run_at || sweep.recent_run_completed_at || sweep.schedule_last_run_at)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function FrontierExceptions({
+  rows,
+  onUpdate,
+}: {
+  rows: MissionData['frontier']['autoDisabled'];
+  onUpdate: () => void;
+}) {
+  const [updatingRowId, setUpdatingRowId] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleReenable = async (rowId: string, label: string) => {
+    setUpdatingRowId(rowId);
+    setNotice(null);
+    setError(null);
+    try {
+      await reenableFrontierRow(rowId);
+      setNotice(`${label} re-enabled`);
+      onUpdate();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to re-enable frontier row');
+    } finally {
+      setUpdatingRowId(null);
+    }
+  };
+
+  return (
+    <section className="mb-10">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-sm font-black uppercase tracking-widest text-bauhaus-muted border-b-2 border-bauhaus-black pb-2">
+          Frontier Exceptions
+        </h2>
+        <div className="text-[10px] font-mono text-bauhaus-muted">
+          {rows.length} auto-disabled candidate{rows.length === 1 ? '' : 's'}
+        </div>
+      </div>
+
+      {notice && (
+        <div className="mb-3 border-2 border-green-300 bg-green-50 px-3 py-2 text-xs font-mono text-green-700">
+          {notice}
+        </div>
+      )}
+
+      {error && (
+        <div className="mb-3 border-2 border-red-300 bg-red-50 px-3 py-2 text-xs font-mono text-red-700">
+          {error}
+        </div>
+      )}
+
+      <div className="border-4 border-bauhaus-black overflow-x-auto">
+        {rows.length === 0 ? (
+          <div className="p-8 text-center text-sm text-bauhaus-muted">No auto-disabled frontier rows</div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-bauhaus-black text-white">
+                <th className="text-left px-3 py-2 font-black uppercase tracking-wider text-[10px]">Foundation</th>
+                <th className="text-left px-3 py-2 font-black uppercase tracking-wider text-[10px]">Target</th>
+                <th className="text-left px-3 py-2 font-black uppercase tracking-wider text-[10px]">Reason</th>
+                <th className="text-left px-3 py-2 font-black uppercase tracking-wider text-[10px]">HTTP</th>
+                <th className="text-right px-3 py-2 font-black uppercase tracking-wider text-[10px]">Disabled</th>
+                <th className="text-right px-3 py-2 font-black uppercase tracking-wider text-[10px]">Next Check</th>
+                <th className="text-center px-3 py-2 font-black uppercase tracking-wider text-[10px]">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.id} className="border-t border-bauhaus-black/10 hover:bg-gray-50 align-top">
+                  <td className="px-3 py-3">
+                    <div className="font-bold text-xs">{row.foundationName || row.sourceName || 'Unknown foundation'}</div>
+                    <div className="text-[10px] font-mono text-bauhaus-muted mt-1">{row.sourceKind}</div>
+                  </td>
+                  <td className="px-3 py-3">
+                    <a
+                      href={row.targetUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs font-mono text-bauhaus-blue underline underline-offset-2 break-all"
+                    >
+                      {row.targetUrl}
+                    </a>
+                  </td>
+                  <td className="px-3 py-3 text-xs">
+                    <div className="font-bold uppercase tracking-wide text-[10px] text-bauhaus-red">
+                      {(row.autoDisabledReason || 'auto-disabled').replace(/_/g, ' ')}
+                    </div>
+                    <div className="text-[10px] text-bauhaus-muted mt-1">
+                      cadence: {(row.lastEffectiveCadenceReason || 'n/a').replace(/_/g, ' ')}
+                    </div>
+                  </td>
+                  <td className="px-3 py-3 text-xs">
+                    <div className="font-mono">{row.lastHttpStatus ?? '-'}</div>
+                    <div className="text-[10px] text-bauhaus-muted mt-1">
+                      failures {row.autoDisabledFailureCount || row.failureCount || 0}
+                    </div>
+                  </td>
+                  <td className="px-3 py-3 text-right text-xs text-bauhaus-muted">
+                    {timeAgo(row.autoDisabledAt || row.updatedAt)}
+                  </td>
+                  <td className="px-3 py-3 text-right text-xs text-bauhaus-muted">
+                    {timeAgo(row.nextCheckAt)}
+                  </td>
+                  <td className="px-3 py-3 text-center">
+                    <button
+                      onClick={() => void handleReenable(row.id, row.foundationName || row.targetUrl)}
+                      disabled={updatingRowId === row.id}
+                      className="px-2 py-1 text-[10px] font-black uppercase tracking-wider border-2 border-bauhaus-blue text-bauhaus-blue hover:bg-bauhaus-blue hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {updatingRowId === row.id ? 'Re-enabling...' : 'Re-enable'}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </section>
+  );
+}
+
 // ─── Task Queue ──────────────────────────────────────────────────────────────
 
-function TaskQueue() {
+function TaskQueue({ refreshToken }: { refreshToken: number }) {
   const [tasks, setTasks] = useState<AgentTask[]>([]);
   const [registry, setRegistry] = useState<RegistryAgent[]>([]);
   const [filter, setFilter] = useState<string>('all');
   const [creating, setCreating] = useState(false);
+  const [queueMessage, setQueueMessage] = useState<string | null>(null);
+  const [queueError, setQueueError] = useState<string | null>(null);
 
   const fetchTasks = useCallback(() => {
     fetch('/api/mission-control/tasks?limit=30')
@@ -647,16 +1068,26 @@ function TaskQueue() {
     return () => clearInterval(interval);
   }, [fetchTasks]);
 
+  useEffect(() => {
+    if (refreshToken > 0) fetchTasks();
+  }, [fetchTasks, refreshToken]);
+
   const createTask = async (agentId: string) => {
     setCreating(true);
+    setQueueMessage(null);
+    setQueueError(null);
     try {
-      await fetch('/api/mission-control/tasks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agent_id: agentId }),
-      });
+      const result = await enqueueMissionControlTask(agentId);
+      const agentName = registry.find(a => a.id === agentId)?.displayName || agentId;
+      setQueueMessage(
+        result.existing
+          ? `${agentName} already has a pending or running task`
+          : `${agentName} queued`
+      );
       fetchTasks();
-    } catch { /* ignore */ }
+    } catch (err) {
+      setQueueError(err instanceof Error ? err.message : 'Failed to queue task');
+    }
     setCreating(false);
   };
 
@@ -724,6 +1155,18 @@ function TaskQueue() {
           </div>
         </details>
       </div>
+
+      {queueMessage && (
+        <div className="mb-3 border-2 border-green-300 bg-green-50 px-3 py-2 text-xs font-mono text-green-700">
+          {queueMessage}
+        </div>
+      )}
+
+      {queueError && (
+        <div className="mb-3 border-2 border-red-300 bg-red-50 px-3 py-2 text-xs font-mono text-red-700">
+          {queueError}
+        </div>
+      )}
 
       {/* Task list */}
       <div className="border-4 border-bauhaus-black overflow-x-auto">

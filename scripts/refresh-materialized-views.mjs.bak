@@ -1,0 +1,61 @@
+#!/usr/bin/env node
+
+/**
+ * Refresh all materialized views in GrantScope
+ * Run after data imports/enrichments to update computed metrics
+ *
+ * Usage: node scripts/refresh-materialized-views.mjs
+ */
+
+import 'dotenv/config';
+import { execSync } from 'child_process';
+
+const dbPassword = process.env.DATABASE_PASSWORD;
+if (!dbPassword) {
+  console.error('Missing DATABASE_PASSWORD');
+  process.exit(1);
+}
+
+const VIEWS = [
+  'mv_funding_by_lga',
+  'mv_funding_by_postcode',
+  'mv_gs_donor_contractors',
+  'mv_gs_entity_stats',
+  'mv_org_justice_signals',
+  'mv_acnc_latest',
+  'mv_data_quality',
+  'mv_crossref_quality',
+  'mv_donor_contract_crossref',
+  'mv_entity_power_index',
+  'mv_funding_deserts',
+];
+
+function refresh(view) {
+  const sql = `REFRESH MATERIALIZED VIEW ${view}`;
+  try {
+    execSync(
+      `psql -h aws-0-ap-southeast-2.pooler.supabase.com -p 5432 -U "postgres.tednluwflfhxyucgwigh" -d postgres -c "${sql.replace(/"/g, '\\"')}"`,
+      { env: { ...process.env, PGPASSWORD: dbPassword }, stdio: 'pipe', timeout: 300000 }
+    );
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+async function main() {
+  console.log(`Refreshing ${VIEWS.length} materialized views...`);
+
+  for (const view of VIEWS) {
+    const start = Date.now();
+    if (refresh(view)) {
+      console.log(`  ✓ ${view} (${Date.now() - start}ms)`);
+    } else {
+      console.log(`  ✗ ${view} — check manually: REFRESH MATERIALIZED VIEW ${view};`);
+    }
+  }
+
+  console.log('\nDone.');
+}
+
+main().catch(err => { console.error('Fatal:', err); process.exit(1); });

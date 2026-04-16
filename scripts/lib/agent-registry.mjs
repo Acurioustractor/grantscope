@@ -274,6 +274,54 @@ export const AGENTS = {
     timeoutMs: 600_000,
     dependencies: [],
   },
+  'ingest-abr-bulk': {
+    command: ['node', '--env-file=.env', 'scripts/ingest-abr-bulk.mjs'],
+    displayName: 'Bulk ABR Registry Import',
+    category: 'import',
+    defaultPriority: 3,
+    timeoutMs: 3_600_000,
+    dependencies: [],
+  },
+  'ingest-parliament-members': {
+    command: ['node', '--env-file=.env', 'scripts/ingest-parliament-members.mjs'],
+    displayName: 'Parliament Members Import',
+    category: 'import',
+    defaultPriority: 3,
+    timeoutMs: 300_000,
+    dependencies: [],
+  },
+  'ingest-niaa-grants': {
+    command: ['node', '--env-file=.env', 'scripts/ingest-niaa-grants.mjs'],
+    displayName: 'NIAA Grants Import',
+    category: 'import',
+    defaultPriority: 2,
+    timeoutMs: 600_000,
+    dependencies: [],
+  },
+  'ingest-grantconnect': {
+    command: ['node', '--env-file=.env', 'scripts/ingest-grantconnect.mjs'],
+    displayName: 'GrantConnect Import',
+    category: 'import',
+    defaultPriority: 2,
+    timeoutMs: 600_000,
+    dependencies: [],
+  },
+  'ingest-dss-payments': {
+    command: ['node', '--env-file=.env', 'scripts/ingest-dss-payments.mjs'],
+    displayName: 'DSS Payments Import',
+    category: 'import',
+    defaultPriority: 3,
+    timeoutMs: 300_000,
+    dependencies: [],
+  },
+  'ingest-ndis-data': {
+    command: ['node', '--env-file=.env', 'scripts/ingest-ndis-data.mjs'],
+    displayName: 'NDIS Data Import',
+    category: 'import',
+    defaultPriority: 3,
+    timeoutMs: 600_000,
+    dependencies: [],
+  },
 
   // ── Data Intelligence ─────────────────────────────────────────────────────
   'sweep-abn-entities': {
@@ -433,6 +481,30 @@ export const AGENTS = {
     timeoutMs: 600_000,
     dependencies: [],
   },
+  'enrich-entities': {
+    command: ['node', '--env-file=.env', 'scripts/enrich-entities.mjs'],
+    displayName: 'Enrich Entities',
+    category: 'enrichment',
+    defaultPriority: 3,
+    timeoutMs: 600_000,
+    dependencies: [],
+  },
+  'enrich-companies-from-abr': {
+    command: ['node', '--env-file=.env', 'scripts/enrich-companies-from-abr.mjs'],
+    displayName: 'Enrich Companies from ABR',
+    category: 'enrichment',
+    defaultPriority: 3,
+    timeoutMs: 600_000,
+    dependencies: ['ingest-abr-bulk'],
+  },
+  'enrich-oric-governance': {
+    command: ['node', '--env-file=.env', 'scripts/enrich-oric-governance.mjs'],
+    displayName: 'Enrich ORIC Governance',
+    category: 'enrichment',
+    defaultPriority: 3,
+    timeoutMs: 600_000,
+    dependencies: ['sync-oric-corporations'],
+  },
 
   // ── Bittensor / Decentralised Data ─────────────────────────────────────────
   'enrich-from-sn13': {
@@ -560,6 +632,22 @@ export const AGENTS = {
     timeoutMs: 600_000,
     dependencies: [],
   },
+  'link-entities-mega': {
+    command: ['node', '--env-file=.env', 'scripts/link-entities-mega.mjs', '--live'],
+    displayName: 'Mega Entity Linker',
+    category: 'graph',
+    defaultPriority: 2,
+    timeoutMs: 3_600_000,
+    dependencies: ['build-entity-graph'],
+  },
+  'dedup-entities': {
+    command: ['node', '--env-file=.env', 'scripts/dedup-entities.mjs'],
+    displayName: 'Entity Deduplication',
+    category: 'graph',
+    defaultPriority: 2,
+    timeoutMs: 1_800_000,
+    dependencies: ['build-entity-graph'],
+  },
 
   // ── Embedding ───────────────────────────────────────────────────────────────
   'backfill-embeddings': {
@@ -589,11 +677,11 @@ export const AGENTS = {
 
   // ── Analytics ───────────────────────────────────────────────────────────────
   'refresh-materialized-views': {
-    command: ['node', '--env-file=.env', 'scripts/refresh-materialized-views.mjs'],
+    command: ['node', '--env-file=.env', 'scripts/refresh-views.mjs'],
     displayName: 'Refresh Materialized Views',
     category: 'analytics',
     defaultPriority: 2,
-    timeoutMs: 300_000,
+    timeoutMs: 600_000,
     dependencies: [],
   },
   'snapshot-data-catalog': {
@@ -674,6 +762,22 @@ export const AGENTS = {
   },
 
   // ── Scraping ──────────────────────────────────────────────────────────────
+  'scrape-ministerial-diaries': {
+    command: ['node', '--env-file=.env', 'scripts/scrape-ministerial-diaries.mjs'],
+    displayName: 'Ministerial Diary Scraper',
+    category: 'scraping',
+    defaultPriority: 3,
+    timeoutMs: 600_000,
+    dependencies: [],
+  },
+  'scrape-aihw-cp': {
+    command: ['node', '--env-file=.env', 'scripts/scrape-aihw-cp.mjs'],
+    displayName: 'AIHW Child Protection Scraper',
+    category: 'scraping',
+    defaultPriority: 3,
+    timeoutMs: 300_000,
+    dependencies: [],
+  },
   'scrape-grant-deadlines': {
     command: ['node', '--env-file=.env', 'scripts/scrape-grant-deadlines.mjs', '--limit=100', '--apply'],
     displayName: 'Scrape Grant Deadlines',
@@ -755,6 +859,30 @@ export const AGENTS = {
     defaultPriority: 3,
     timeoutMs: 300_000,
     dependencies: [],
+  },
+  'watch-outcomes-changes': {
+    command: ['node', '--env-file=.env', 'scripts/watch-outcomes-changes.mjs'],
+    displayName: 'Outcomes Changes Watcher',
+    category: 'intelligence',
+    defaultPriority: 3,
+    timeoutMs: 300_000,
+    dependencies: [],
+  },
+  'watch-schema-health': {
+    command: ['node', '--env-file=.env', 'scripts/watch-schema-health.mjs'],
+    displayName: 'Schema Health Watcher',
+    category: 'intelligence',
+    defaultPriority: 3,
+    timeoutMs: 300_000,
+    dependencies: [],
+  },
+  'backfill-oric-abns': {
+    command: ['node', '--env-file=.env', 'scripts/backfill-oric-abns.mjs'],
+    displayName: 'Backfill ORIC ABNs from ABR',
+    category: 'enrichment',
+    defaultPriority: 3,
+    timeoutMs: 600_000,
+    dependencies: ['ingest-abr-bulk'],
   },
   'score-foundation-alignment': {
     command: ['node', '--env-file=.env', 'scripts/score-foundation-alignment.mjs'],

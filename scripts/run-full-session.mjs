@@ -117,7 +117,7 @@ async function main() {
     h('Phase 1 — Housekeeping');
 
     run('Recover stuck agent runs',    'recover-stale-agent-runs.mjs', [],   { noSkipDry: true, timeout: 30_000 });
-    run('Refresh materialized views',  'refresh-materialized-views.mjs', [], { timeout: 120_000 });
+    run('Refresh materialized views',  'refresh-views.mjs', [], { timeout: 120_000 });
     run('Schema health check',         'watch-schema-health.mjs', [],        { optional: true, timeout: 60_000 });
   }
 
@@ -157,7 +157,7 @@ async function main() {
     run('Enrich ORIC corporations',    'enrich-oric-corporations.mjs',  ['--limit=100'],{ timeout: 180_000 });
 
     // Refresh MVs after new imports
-    run('Refresh materialized views (post-import)', 'refresh-materialized-views.mjs', [], { timeout: 120_000 });
+    run('Refresh materialized views (post-import)', 'refresh-views.mjs', [], { timeout: 120_000 });
   }
 
   // ════════════════════════════════════════════════════════════════════════════
@@ -242,7 +242,7 @@ async function main() {
   if (PHASE === 'all' || PHASE === 'wrapup') {
     h('Phase 4 — Wrap-up');
 
-    run('Final MV refresh',            'refresh-materialized-views.mjs',[], { timeout: 120_000 });
+    run('Final MV refresh',            'refresh-views.mjs',[], { timeout: 120_000 });
     run('Watch data quality',          'watch-data-quality.mjs',       [], { optional: true, timeout: 120_000 });
     run('Watch funding anomalies',     'watch-funding-anomalies.mjs',  [], { optional: true, timeout: 120_000 });
 

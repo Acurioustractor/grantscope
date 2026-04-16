@@ -258,7 +258,7 @@ const REFRESH_COMMANDS = [
   { label: 'ORIC Register', cmd: 'node scripts/import-oric-register.mjs' },
   { label: 'Modern Slavery', cmd: 'node scripts/import-modern-slavery.mjs' },
   { label: 'Lobbying Register', cmd: 'node scripts/import-lobbying-register.mjs' },
-  { label: 'Materialized Views', cmd: 'node scripts/refresh-materialized-views.mjs' },
+  { label: 'Materialized Views', cmd: 'node scripts/refresh-views.mjs' },
   { label: 'SEIFA Postcodes', cmd: 'node scripts/import-seifa-postcodes.mjs' },
 ];
 

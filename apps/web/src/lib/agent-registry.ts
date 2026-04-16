@@ -35,7 +35,8 @@ export const AGENTS: Record<string, AgentDef> = {
   'sync-ato-tax-transparency': { command: ['node', '--env-file=.env', 'scripts/sync-ato-tax-transparency.mjs'], displayName: 'Sync ATO Tax Transparency', category: 'sync', defaultPriority: 5, timeoutMs: 300_000, dependencies: [] },
   'sync-asx-companies':        { command: ['node', '--env-file=.env', 'scripts/sync-asx-companies.mjs'], displayName: 'Sync ASX Companies', category: 'sync', defaultPriority: 5, timeoutMs: 300_000, dependencies: [] },
   'sync-asic-companies':       { command: ['node', '--env-file=.env', 'scripts/sync-asic-companies.mjs'], displayName: 'Sync ASIC Companies', category: 'sync', defaultPriority: 5, timeoutMs: 600_000, dependencies: [] },
-  'sync-foundation-programs':  { command: ['node', '--env-file=.env', 'scripts/sync-foundation-programs.mjs', '--cleanup-invalid'], displayName: 'Sync Foundation Programs', category: 'sync', defaultPriority: 4, timeoutMs: 120_000, dependencies: [] },
+  'sync-foundation-programs':  { command: ['node', '--env-file=.env', 'scripts/sync-foundation-programs.mjs', '--cleanup-invalid', '--priority-only', '--frontier-window-hours=72'], displayName: 'Sync Foundation Programs', category: 'sync', defaultPriority: 4, timeoutMs: 120_000, dependencies: [] },
+  'sync-foundation-programs-full-sweep': { command: ['node', '--env-file=.env', 'scripts/sync-foundation-programs.mjs', '--cleanup-invalid', '--skip-embed', '--frontier-window-hours=72', '--full-sweep', '--foundation-limit=120', '--agent-id=sync-foundation-programs-full-sweep'], displayName: 'Sync Foundation Programs (Full Sweep)', category: 'sync', defaultPriority: 6, timeoutMs: 900_000, dependencies: [] },
   'sync-ghl-to-tracker':       { command: ['node', '--env-file=.env', 'scripts/sync-ghl-to-tracker.mjs'], displayName: 'Sync GHL to Tracker', category: 'sync', defaultPriority: 5, timeoutMs: 120_000, dependencies: [] },
 
   // ── Import ──────────────────────────────────────────────────────────────────
@@ -55,7 +56,9 @@ export const AGENTS: Record<string, AgentDef> = {
 
   // ── Discovery ───────────────────────────────────────────────────────────────
   'grantscope-discovery':          { command: ['npx', 'tsx', 'scripts/grantscope-discovery.mjs'], displayName: 'Grant Discovery', category: 'discovery', defaultPriority: 2, timeoutMs: 600_000, dependencies: [] },
-  'discover-foundation-programs':  { command: ['node', '--env-file=.env', 'scripts/discover-foundation-programs.mjs'], displayName: 'Discover Foundation Programs', category: 'discovery', defaultPriority: 4, timeoutMs: 600_000, dependencies: [] },
+  'discover-foundation-programs':  { command: ['node', '--env-file=.env', 'scripts/discover-foundation-programs.mjs', '--refresh-existing', '--rescan-days=14', '--limit=40', '--concurrency=2'], displayName: 'Discover Foundation Programs', category: 'discovery', defaultPriority: 4, timeoutMs: 600_000, dependencies: [] },
+  'discover-foundation-programs-full-sweep': { command: ['node', '--env-file=.env', 'scripts/discover-foundation-programs.mjs', '--refresh-existing', '--rescan-days=30', '--limit=120', '--concurrency=2', '--full-sweep', '--agent-id=discover-foundation-programs-full-sweep'], displayName: 'Discover Foundation Programs (Full Sweep)', category: 'discovery', defaultPriority: 6, timeoutMs: 3_600_000, dependencies: [] },
+  'extract-foundation-relationships': { command: ['node', '--env-file=.env', 'scripts/extract-foundation-relationships.mjs', '--limit=15', '--concurrency=2', '--max-pages=6', '--frontier-window-hours=168', '--refresh-days=30'], displayName: 'Extract Foundation Relationships', category: 'enrichment', defaultPriority: 4, timeoutMs: 1_200_000, dependencies: ['sync-source-frontier', 'poll-foundation-frontier'] },
   'scrape-state-grants':           { command: ['node', '--env-file=.env', 'scripts/scrape-state-grants.mjs'], displayName: 'Scrape State Grants', category: 'discovery', defaultPriority: 3, timeoutMs: 600_000, dependencies: [] },
 
   // ── Enrichment ──────────────────────────────────────────────────────────────
@@ -84,12 +87,12 @@ export const AGENTS: Record<string, AgentDef> = {
   'resolve-donation-abns-v2':      { command: ['node', '--env-file=.env', 'scripts/resolve-donation-abns-v2.mjs', '--apply'], displayName: 'Resolve Donation ABNs v2', category: 'graph', defaultPriority: 3, timeoutMs: 3_600_000, dependencies: ['build-entity-graph'] },
 
   // ── Embedding ───────────────────────────────────────────────────────────────
-  'backfill-embeddings':           { command: ['node', '--env-file=.env', 'scripts/backfill-embeddings.mjs', '--batch-size', '100'], displayName: 'Backfill Embeddings', category: 'embedding', defaultPriority: 5, timeoutMs: 300_000, dependencies: [] },
+  'backfill-embeddings':           { command: ['node', '--env-file=.env', 'scripts/backfill-embeddings.mjs', '--batch-size', '100', '--limit=100', '--exclude-sources=foundation_program'], displayName: 'Backfill Embeddings', category: 'embedding', defaultPriority: 5, timeoutMs: 300_000, dependencies: [] },
   'backfill-entity-embeddings':    { command: ['node', '--env-file=.env', 'scripts/backfill-entity-embeddings.mjs', '--batch-size', '100'], displayName: 'Backfill Entity Embeddings', category: 'embedding', defaultPriority: 4, timeoutMs: 3_600_000, dependencies: ['build-entity-graph'] },
   'backfill-foundation-embeddings': { command: ['node', '--env-file=.env', 'scripts/backfill-foundation-embeddings.mjs', '--batch-size', '100'], displayName: 'Backfill Foundation Embeddings', category: 'embedding', defaultPriority: 4, timeoutMs: 600_000, dependencies: ['enrich-foundations'] },
 
   // ── Analytics ───────────────────────────────────────────────────────────────
-  'refresh-materialized-views':    { command: ['node', '--env-file=.env', 'scripts/refresh-materialized-views.mjs'], displayName: 'Refresh Materialized Views', category: 'analytics', defaultPriority: 2, timeoutMs: 300_000, dependencies: [] },
+  'refresh-materialized-views':    { command: ['node', '--env-file=.env', 'scripts/refresh-views.mjs'], displayName: 'Refresh Materialized Views', category: 'analytics', defaultPriority: 2, timeoutMs: 600_000, dependencies: [] },
   'build-money-flow-data':        { command: ['node', '--env-file=.env', 'scripts/build-money-flow-data.mjs'], displayName: 'Build Money Flow Data', category: 'analytics', defaultPriority: 4, timeoutMs: 600_000, dependencies: ['build-entity-graph', 'resolve-donor-entities'] },
   'flag-acnc-social-enterprises': { command: ['node', '--env-file=.env', 'scripts/flag-acnc-social-enterprises.mjs'], displayName: 'Flag ACNC Social Enterprises', category: 'analytics', defaultPriority: 5, timeoutMs: 300_000, dependencies: [] },
 
@@ -98,6 +101,8 @@ export const AGENTS: Record<string, AgentDef> = {
   'donor-contract-crossover':     { command: ['node', '--env-file=.env', 'scripts/check-donor-contract-crossover.mjs', '--apply'], displayName: 'Donor-Contract Crossover', category: 'intelligence', defaultPriority: 1, timeoutMs: 120_000, dependencies: [] },
   'scout-grants-for-profiles':    { command: ['node', '--env-file=.env', 'scripts/scout-grants-for-profiles.mjs'], displayName: 'Grant Scout', category: 'intelligence', defaultPriority: 2, timeoutMs: 300_000, dependencies: [] },
   'deliver-grant-notifications':  { command: ['node', '--env-file=.env', 'scripts/deliver-grant-notifications.mjs'], displayName: 'Deliver Grant Notifications', category: 'intelligence', defaultPriority: 2, timeoutMs: 300_000, dependencies: ['scout-grants-for-profiles'] },
+  'send-grant-alert-digests':     { command: ['npx', 'tsx', '--tsconfig', 'apps/web/tsconfig.json', 'scripts/send-grant-alert-digests.ts'], displayName: 'Send Grant Alert Digests', category: 'intelligence', defaultPriority: 3, timeoutMs: 300_000, dependencies: ['scout-grants-for-profiles'] },
+  'send-billing-reminders':       { command: ['npx', 'tsx', '--tsconfig', 'apps/web/tsconfig.json', 'scripts/send-billing-reminders.ts'], displayName: 'Send Billing Reminders', category: 'intelligence', defaultPriority: 3, timeoutMs: 300_000, dependencies: [] },
 
   // ── New Zealand ───────────────────────────────────────────────────────────
   'import-nz-charities':          { command: ['node', '--env-file=.env', 'scripts/import-nz-charities.mjs', '--apply'], displayName: 'NZ Charities Register', category: 'nz', defaultPriority: 2, timeoutMs: 600_000, dependencies: [] },
