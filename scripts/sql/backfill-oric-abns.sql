@@ -37,53 +37,28 @@ BEGIN
   RAISE NOTICE 'Phase 1 (exact match): updated % rows', (SELECT COUNT(*) FROM oric_corporations WHERE abn IS NOT NULL) - 3288;
 END $$;
 
--- Phase 2: Normalized match
--- Create normalized versions in the temp table
-ALTER TABLE oric_missing ADD COLUMN norm_name TEXT;
-
-UPDATE oric_missing SET norm_name = TRIM(LOWER(REGEXP_REPLACE(
-  REGEXP_REPLACE(name, '\m(Aboriginal|Torres Strait Islander|Corporation|Incorporated|Inc|Ltd|Limited|Pty|Co-operative|Association|Assoc)\M', '', 'gi'),
-  '[^a-zA-Z0-9 ]', '', 'g')));
-
+-- Phase 2: Normalized match using mv_abr_name_lookup (pre-materialized)
 -- Remove already-matched from temp table
 DELETE FROM oric_missing om
 USING oric_corporations oc
 WHERE om.icn = oc.icn AND oc.abn IS NOT NULL;
 
+ALTER TABLE oric_missing ADD COLUMN norm_name TEXT;
+UPDATE oric_missing SET norm_name = TRIM(LOWER(REGEXP_REPLACE(
+  REGEXP_REPLACE(name, '\m(Aboriginal|Torres Strait Islander|Corporation|Incorporated|Inc|Ltd|Limited|Pty|Co-operative|Association|Assoc|The|Of)\M', '', 'gi'),
+  '[^a-zA-Z0-9 ]', '', 'g')));
 CREATE INDEX ON oric_missing (norm_name);
 
--- For phase 2, create a smaller temp table of ABR candidates
--- Only ATSI-related entity types to narrow the 18.5M down
-CREATE TEMP TABLE abr_candidates AS
-SELECT abn, entity_name,
-  TRIM(LOWER(REGEXP_REPLACE(
-    REGEXP_REPLACE(entity_name, '\m(Aboriginal|Torres Strait Islander|Corporation|Incorporated|Inc|Ltd|Limited|Pty|Co-operative|Association|Assoc)\M', '', 'gi'),
-    '[^a-zA-Z0-9 ]', '', 'g'))) AS norm_name
-FROM abr_registry
-WHERE status = 'Active'
-  AND abn IS NOT NULL
-  AND (
-    entity_name ILIKE '%aboriginal%'
-    OR entity_name ILIKE '%indigenous%'
-    OR entity_name ILIKE '%torres strait%'
-    OR entity_name ILIKE '%first nations%'
-    OR entity_name ILIKE '%koori%'
-    OR entity_name ILIKE '%murri%'
-    OR entity_name ILIKE '%yolngu%'
-    OR entity_name ILIKE '%noongar%'
-  );
-
-CREATE INDEX ON abr_candidates (norm_name);
-
--- Now join normalized names — both tables are small
+-- Join against mv_abr_name_lookup (9M rows, indexed on norm_name)
 UPDATE oric_corporations oc
 SET abn = matched.abn
 FROM (
-  SELECT DISTINCT ON (om.icn) om.icn, ac.abn
+  SELECT om.icn, MIN(a.abn) AS abn
   FROM oric_missing om
-  JOIN abr_candidates ac ON om.norm_name = ac.norm_name
+  JOIN mv_abr_name_lookup a ON om.norm_name = a.norm_name
   WHERE LENGTH(om.norm_name) >= 3
-  ORDER BY om.icn, ac.abn
+  GROUP BY om.icn
+  HAVING COUNT(DISTINCT a.abn) = 1  -- only unique matches
 ) matched
 WHERE oc.icn = matched.icn AND oc.abn IS NULL;
 
@@ -96,4 +71,3 @@ SELECT
 FROM oric_corporations;
 
 DROP TABLE IF EXISTS oric_missing;
-DROP TABLE IF EXISTS abr_candidates;

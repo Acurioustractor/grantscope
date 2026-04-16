@@ -46,6 +46,7 @@ const VIEW_GROUPS = [
       'v_grant_stats',
       'v_grant_focus_areas',
       'v_grant_provider_summary',
+      'mv_abr_name_lookup',
     ],
   },
   // Group 2: Depend on base tables, independent of each other
@@ -140,6 +141,7 @@ const HEAVY_VIEWS = new Set([
   'mv_person_entity_network',
   'mv_person_entity_crosswalk',
   'mv_funding_by_postcode',
+  'mv_abr_name_lookup',
 ]);
 
 async function refreshView(name) {
