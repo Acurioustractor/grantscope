@@ -16,6 +16,8 @@ if (!process.env.SUPABASE_SERVICE_ROLE_KEY || !(process.env.SUPABASE_URL || proc
 
 const HIGH_VALUE_AGENT_IDS = [
   'discover-foundation-programs',
+  'discover-foundation-programs-full-sweep',
+  'sync-foundation-programs-full-sweep',
   'scrape-state-grants',
   'run-scraping-agents',
   'scrape-grant-deadlines',
@@ -43,6 +45,7 @@ const HIGH_VALUE_AGENT_IDS = [
   'import-lobbying-register',
   'import-rogs-justice',
   'import-gov-grants',
+  'send-billing-reminders',
 ];
 
 function printHeader(title) {
