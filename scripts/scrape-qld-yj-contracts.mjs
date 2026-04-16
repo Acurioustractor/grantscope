@@ -18,8 +18,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
-import { execSync } from 'child_process';
-import { writeFileSync, unlinkSync } from 'fs';
+import { psql } from './lib/psql.mjs';
 
 // ── Config ────────────────────────────────────────────────
 
@@ -31,10 +30,14 @@ const CKAN_PACKAGE_URL =
 const SOURCE = 'qld_contract_disclosure';
 const SOURCE_BASE_URL =
   'https://www.data.qld.gov.au/dataset/dcyjma-contract-disclosure-report';
+const JINA_HTTP_PREFIX = 'https://r.jina.ai/http://';
+const CKAN_RESOURCE_SHOW_URL = 'https://data.qld.gov.au/api/3/action/resource_show?id=';
 
 const LIVE = process.argv.includes('--live');
 const DRY_RUN = !LIVE;
 const BATCH_SIZE = 50;
+const MIN_RETAIN_RATIO = 0.8;
+const resourceArchiveCache = new Map();
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -45,53 +48,141 @@ function log(msg) {
   console.log(`[${new Date().toISOString().slice(11, 19)}] ${msg}`);
 }
 
-// ── psql helper (from watch-outcomes-changes pattern) ──────
+function stripJinaWrapper(text) {
+  if (!text) return text;
+  const marker = 'Markdown Content:\n';
+  const markerIndex = text.indexOf(marker);
+  let cleaned = markerIndex >= 0 ? text.slice(markerIndex + marker.length).trim() : text.trim();
 
-function psql(query) {
-  const connStr = `postgresql://postgres.tednluwflfhxyucgwigh:${process.env.DATABASE_PASSWORD}@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres`;
-  const tmpFile = `/tmp/qld-yj-contracts-${Date.now()}.sql`;
-  writeFileSync(tmpFile, query);
-  try {
-    const result = execSync(
-      `psql "${connStr}" --csv -f ${tmpFile} 2>/dev/null`,
-      { encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024, timeout: 120000 }
-    );
-    unlinkSync(tmpFile);
-    const lines = result
-      .trim()
-      .split('\n')
-      .filter((l) => l.length > 0);
-    if (lines.length < 2) return [];
-    const headers = lines[0].split(',').map((h) => h.trim());
-    return lines.slice(1).map((line) => {
-      const vals = [];
-      let cur = '',
-        inQ = false;
-      for (const ch of line) {
-        if (ch === '"') {
-          inQ = !inQ;
-          continue;
-        }
-        if (ch === ',' && !inQ) {
-          vals.push(cur);
-          cur = '';
-          continue;
-        }
-        cur += ch;
+  if (cleaned.startsWith('```')) {
+    const lines = cleaned.split(/\r?\n/);
+    if (lines.length > 2) {
+      lines.shift();
+      while (lines.length && lines.at(-1)?.trim() === '```') {
+        lines.pop();
       }
-      vals.push(cur);
-      const obj = {};
-      headers.forEach((h, i) => (obj[h] = vals[i] || ''));
-      return obj;
+      cleaned = lines.join('\n').trim();
+    }
+  }
+
+  return cleaned;
+}
+
+async function fetchTextAttempt({ url, via, headers, transform }) {
+  try {
+    const res = await fetch(url, {
+      headers,
+      redirect: 'follow',
     });
+
+    if (!res.ok) {
+      return {
+        text: null,
+        via: null,
+        error: `HTTP ${res.status} via ${via}`,
+      };
+    }
+
+    const rawText = await res.text();
+    const text = transform ? transform(rawText) : rawText;
+    if (!text || text.trim().length === 0) {
+      return {
+        text: null,
+        via: null,
+        error: `Empty response via ${via}`,
+      };
+    }
+
+    return {
+      text,
+      via,
+      sourceUrl: url,
+    };
   } catch (err) {
-    try {
-      unlinkSync(tmpFile);
-    } catch {}
-    console.error('psql error:', err.message?.slice(0, 200));
-    return [];
+    return {
+      text: null,
+      via: null,
+      error: `${via} error: ${err.message}`,
+    };
   }
 }
+
+async function fetchResourceArchiveUrl(resource) {
+  if (!resource?.id) return null;
+  if (resourceArchiveCache.has(resource.id)) {
+    return resourceArchiveCache.get(resource.id);
+  }
+
+  try {
+    const res = await fetch(`${CKAN_RESOURCE_SHOW_URL}${resource.id}`, {
+      headers: { 'User-Agent': 'CivicGraph/1.0 (research; civicgraph.au)' },
+    });
+    if (!res.ok) {
+      resourceArchiveCache.set(resource.id, null);
+      return null;
+    }
+
+    const body = await res.json();
+    const cacheUrl = body?.result?.archiver?.cache_url || null;
+    resourceArchiveCache.set(resource.id, cacheUrl);
+    return cacheUrl;
+  } catch {
+    resourceArchiveCache.set(resource.id, null);
+    return null;
+  }
+}
+
+async function fetchCsvText(resource) {
+  const resourceUrl = resource?.url || resource;
+  const attempts = [
+    {
+      via: 'direct',
+      url: resourceUrl,
+      headers: { 'User-Agent': 'CivicGraph/1.0 (research; civicgraph.au)' },
+    },
+    {
+      via: 'jina',
+      url: `${JINA_HTTP_PREFIX}${resourceUrl.replace(/^https?:\/\//, '')}`,
+      headers: {
+        'User-Agent': 'Mozilla/5.0',
+        Accept: 'text/plain',
+      },
+      transform: stripJinaWrapper,
+    },
+  ];
+
+  let lastFailure = null;
+
+  for (const attempt of attempts) {
+    const result = await fetchTextAttempt(attempt);
+    if (result.text) return result;
+    lastFailure = result.error;
+  }
+
+  return {
+    text: null,
+    via: null,
+    error: lastFailure || 'Unknown fetch failure',
+  };
+}
+
+async function fetchArchiveCsvText(resource) {
+  const cacheUrl = await fetchResourceArchiveUrl(resource);
+  if (!cacheUrl) {
+    return {
+      text: null,
+      via: null,
+      error: 'No CKAN archive URL available',
+    };
+  }
+
+  return fetchTextAttempt({
+    via: 'ckan-archive',
+    url: cacheUrl,
+    headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'text/csv,text/plain,*/*' },
+  });
+}
+
 
 // ── Topic auto-tagging ────────────────────────────────────
 
@@ -332,6 +423,20 @@ function parseCsvLine(line) {
   return fields;
 }
 
+function isLikelyDisclosureHeader(headers) {
+  const normalized = headers.map((header) => header.toLowerCase().replace(/\s+/g, ' ').trim());
+  const hasSupplier = normalized.some((header) => header.includes('supplier name') || header === 'supplier');
+  const hasContractShape = normalized.some(
+    (header) =>
+      header.includes('contract description') ||
+      header.includes('contract title') ||
+      header.includes('contract description/name') ||
+      header.includes('contract description/ name'),
+  );
+  const hasValue = normalized.some((header) => header.includes('contract value') || header === 'value');
+  return hasSupplier && hasContractShape && hasValue;
+}
+
 // ── Column name normalization ────────────────────────────
 
 /**
@@ -461,8 +566,31 @@ function deriveFinancialYear(dateStr) {
 
 // ── Dedup key ────────────────────────────────────────────
 
-function dedupKey(supplierName, title, value) {
-  return `${(supplierName || '').toLowerCase().trim()}|${(title || '').toLowerCase().trim()}|${value || ''}`;
+function dedupKeyForInsert(recipientName, programName, amountDollars) {
+  return [
+    SOURCE,
+    (recipientName || '').toLowerCase().trim(),
+    (programName || '').toLowerCase().trim(),
+    amountDollars == null ? '' : String(amountDollars),
+  ].join('|');
+}
+
+function dedupeInsertRows(rows) {
+  const deduped = [];
+  const seen = new Set();
+
+  for (const row of rows) {
+    const key = dedupKeyForInsert(
+      row.recipient_name,
+      row.program_name,
+      row.amount_dollars
+    );
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(row);
+  }
+
+  return deduped;
 }
 
 // ── Phase 1: Fetch CKAN package and discover CSV resources ─
@@ -515,30 +643,42 @@ async function downloadAndParseCsvs(resources) {
     log(`  Downloading: ${resourceName}`);
 
     try {
-      const res = await fetch(resource.url, {
-        headers: { 'User-Agent': 'CivicGraph/1.0 (research; civicgraph.au)' },
-        redirect: 'follow',
-      });
-
-      if (!res.ok) {
-        log(`    HTTP ${res.status}, skipping`);
-        continue;
+      let fetched = await fetchCsvText(resource);
+      if (!fetched.text) {
+        log(`    ${fetched.error || 'Fetch failed'}; trying CKAN archive`);
+        fetched = await fetchArchiveCsvText(resource);
+        if (!fetched.text) {
+          log(`    ${fetched.error || 'Archive fetch failed'}, skipping`);
+          continue;
+        }
       }
 
-      const csvText = await res.text();
-      if (!csvText || csvText.trim().length === 0) {
-        log(`    Empty response, skipping`);
-        continue;
+      let csvText = fetched.text;
+      let rows = parseCsv(csvText);
+      let headers = rows.length > 0 ? Object.keys(rows[0]) : [];
+
+      if (rows.length === 0 || !isLikelyDisclosureHeader(headers)) {
+        log(`    ${rows.length === 0 ? 'No data rows found' : 'Header did not match contract disclosure shape'}; trying CKAN archive`);
+        const archiveFetched = await fetchArchiveCsvText(resource);
+        if (archiveFetched.text) {
+          fetched = archiveFetched;
+          csvText = archiveFetched.text;
+          rows = parseCsv(csvText);
+          headers = rows.length > 0 ? Object.keys(rows[0]) : [];
+        }
       }
 
-      const rows = parseCsv(csvText);
       if (rows.length === 0) {
-        log(`    No data rows found, skipping`);
+        log(`    No data rows found after fallback, skipping`);
         continue;
       }
 
-      // Build column mapper from actual headers
-      const headers = Object.keys(rows[0]);
+      if (!isLikelyDisclosureHeader(headers)) {
+        log(`    Header did not match contract disclosure shape after fallback, skipping`);
+        continue;
+      }
+
+      log(`    Loaded via ${fetched.via}`);
       const mapRow = buildRowMapper(headers);
 
       log(`    Parsed ${rows.length} rows (columns: ${headers.join(', ')})`);
@@ -546,41 +686,46 @@ async function downloadAndParseCsvs(resources) {
       let resourceContracts = 0;
       for (const row of rows) {
         const mapped = mapRow(row);
+        const supplierName = (mapped.supplier_name || '').trim();
 
         // Skip rows without a supplier name
-        if (!mapped.supplier_name || mapped.supplier_name.trim() === '')
+        if (!supplierName)
           continue;
 
-        // Deduplicate by supplier+title+value
-        const key = dedupKey(
-          mapped.supplier_name,
-          mapped.title,
-          mapped.value
+        const title = (mapped.title || '').trim();
+        const category = (mapped.category || '').trim();
+        const contractValue = parseContractValue(mapped.value);
+        const programName = title || `DCYJMA Contract - ${category || 'Unspecified'}`;
+
+        // Deduplicate against the same uniqueness shape enforced by justice_funding
+        const key = dedupKeyForInsert(
+          supplierName,
+          programName,
+          contractValue
         );
         if (seenKeys.has(key)) continue;
         seenKeys.add(key);
 
         const abn = normalizeAbn(mapped.abn);
-        const contractValue = parseContractValue(mapped.value);
         const startDate = parseDate(mapped.start_date);
         const endDate = parseDate(mapped.end_date);
-        const topics = autoTagTopics(mapped.title, mapped.category);
-        const sector = classifySector(mapped.title, mapped.category);
+        const topics = autoTagTopics(title, category);
+        const sector = classifySector(title, category);
         const financialYear = deriveFinancialYear(startDate);
 
         allContracts.push({
-          supplier_name: mapped.supplier_name.trim(),
+          supplier_name: supplierName,
           abn,
-          title: mapped.title.trim(),
+          title,
           contract_value: contractValue,
           start_date: startDate,
           end_date: endDate,
-          category: mapped.category.trim(),
+          category,
           topics,
           sector,
           financial_year: financialYear,
           resource_name: resourceName,
-          resource_url: resource.url,
+          resource_url: fetched.sourceUrl || resource.url,
         });
         resourceContracts++;
       }
@@ -635,7 +780,7 @@ async function upsertContracts(contracts, abnToEntity) {
   log(`\nPhase 4: Upserting ${contracts.length} contracts into justice_funding...`);
 
   // Build justice_funding rows
-  const rows = contracts.map((c, idx) => {
+  const rawRows = contracts.map((c, idx) => {
     const entity = c.abn ? abnToEntity.get(c.abn) : null;
 
     return {
@@ -657,6 +802,13 @@ async function upsertContracts(contracts, abnToEntity) {
       gs_entity_id: entity?.id || null,
     };
   });
+  const rows = dedupeInsertRows(rawRows);
+  const removedAtInsertStage = rawRows.length - rows.length;
+  if (removedAtInsertStage > 0) {
+    log(
+      `  Removed ${removedAtInsertStage} duplicate rows at final insert-key stage`,
+    );
+  }
 
   if (DRY_RUN) {
     log('  DRY RUN -- showing summary:');
@@ -695,7 +847,19 @@ async function upsertContracts(contracts, abnToEntity) {
       );
     }
 
-    return { inserted: 0, errors: 0 };
+    const { count: existingCount } = await supabase
+      .from('justice_funding')
+      .select('id', { count: 'exact', head: true })
+      .eq('source', SOURCE);
+    if (existingCount > 0 && rows.length < existingCount * MIN_RETAIN_RATIO) {
+      log(
+        `    Guardrail: live replace would be blocked because fetched rows (${rows.length}) are below ${Math.round(
+          MIN_RETAIN_RATIO * 100,
+        )}% of existing source rows (${existingCount}).`,
+      );
+    }
+
+    return { inserted: 0, errors: 0, skipped: false, guardReason: null };
   }
 
   // Live mode: delete existing source records then re-insert
@@ -704,6 +868,12 @@ async function upsertContracts(contracts, abnToEntity) {
     .from('justice_funding')
     .select('id', { count: 'exact', head: true })
     .eq('source', SOURCE);
+
+  if (existingCount > 0 && rows.length < existingCount * MIN_RETAIN_RATIO) {
+    const guardReason = `Guardrail blocked live replace: fetched ${rows.length} rows, existing mirror has ${existingCount} rows`;
+    log(`  ${guardReason}`);
+    return { inserted: 0, errors: 0, skipped: true, guardReason };
+  }
 
   if (existingCount > 0) {
     log(`  Deleting ${existingCount} existing '${SOURCE}' records...`);
@@ -747,7 +917,7 @@ async function upsertContracts(contracts, abnToEntity) {
   }
 
   log(`  Inserted: ${inserted}, Errors: ${errors}`);
-  return { inserted, errors };
+  return { inserted, errors, skipped: false, guardReason: null };
 }
 
 // ── Main ─────────────────────────────────────────────────
@@ -788,7 +958,7 @@ async function main() {
     const abnToEntity = await matchEntities(contracts);
 
     // Phase 4: Upsert into justice_funding
-    const { inserted, errors } = await upsertContracts(contracts, abnToEntity);
+    const { inserted, errors, skipped, guardReason } = await upsertContracts(contracts, abnToEntity);
 
     // ── Summary ──
     const uniqueSuppliers = new Set(contracts.map((c) => c.supplier_name))
@@ -812,6 +982,9 @@ async function main() {
     if (!DRY_RUN) {
       log(`  Inserted: ${inserted}`);
       log(`  Errors: ${errors}`);
+      if (skipped && guardReason) {
+        log(`  Skipped update: ${guardReason}`);
+      }
     }
 
     // Sector breakdown
@@ -841,6 +1014,8 @@ async function main() {
       items_found: contracts.length,
       items_new: inserted,
       items_updated: 0,
+      status: skipped ? 'partial' : 'success',
+      errors: skipped && guardReason ? [guardReason] : [],
     });
   } catch (err) {
     console.error('Fatal error:', err);

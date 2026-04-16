@@ -16,8 +16,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
-import { execSync } from 'child_process';
-import { writeFileSync, unlinkSync } from 'fs';
+import { psql } from './lib/psql.mjs';
 
 const supabase = createClient(
   process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -28,38 +27,6 @@ const LOOKBACK_HOURS = parseInt(
   process.argv.find(a => a.startsWith('--lookback='))?.split('=')[1] || '0'
 );
 
-function psql(query) {
-  const connStr = `postgresql://postgres.tednluwflfhxyucgwigh:${process.env.DATABASE_PASSWORD}@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres`;
-  const tmpFile = `/tmp/watch-entity-${Date.now()}.sql`;
-  writeFileSync(tmpFile, query);
-  try {
-    const result = execSync(
-      `psql "${connStr}" --csv -f ${tmpFile} 2>/dev/null`,
-      { encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024, timeout: 120000 }
-    );
-    unlinkSync(tmpFile);
-    const lines = result.trim().split('\n').filter(l => l.length > 0);
-    if (lines.length < 2) return [];
-    const headers = lines[0].split(',').map(h => h.trim());
-    return lines.slice(1).map(line => {
-      const vals = [];
-      let cur = '', inQ = false;
-      for (const ch of line) {
-        if (ch === '"') { inQ = !inQ; continue; }
-        if (ch === ',' && !inQ) { vals.push(cur); cur = ''; continue; }
-        cur += ch;
-      }
-      vals.push(cur);
-      const obj = {};
-      headers.forEach((h, i) => obj[h] = vals[i] || '');
-      return obj;
-    });
-  } catch (err) {
-    try { unlinkSync(tmpFile); } catch {}
-    console.error('psql error:', err.message?.slice(0, 200));
-    return [];
-  }
-}
 
 async function getLastRunTime() {
   if (LOOKBACK_HOURS > 0) {
@@ -130,17 +97,40 @@ async function main() {
       LIMIT 100
     `);
 
-    for (const e of newCC) {
+    if (newCC.length > 20) {
+      // Aggregate into a single discovery to avoid flooding Mission Control
+      const exampleNames = newCC.slice(0, 5).map(e => e.canonical_name).filter(Boolean);
       discoveries.push({
         agent_id: 'watch-entity-changes',
         discovery_type: 'entity_change',
         severity: 'notable',
-        title: `New community-controlled org: ${(e.canonical_name || '').slice(0, 50)}`,
-        description: `${e.canonical_name} (${e.entity_type}) registered in ${e.state || 'unknown state'}. ABN: ${e.abn || 'pending'}.`,
-        entity_ids: [e.id],
+        title: `${newCC.length} new community-controlled organisations registered`,
+        description: `${newCC.length} new community-controlled orgs ingested. Examples: ${exampleNames.join(', ')}.`,
+        entity_ids: newCC.slice(0, 20).map(e => e.id),
         person_names: [],
-        metadata: { entity_type: e.entity_type, state: e.state, abn: e.abn },
+        metadata: {
+          count: newCC.length,
+          examples: newCC.slice(0, 10).map(e => ({
+            name: e.canonical_name,
+            entity_type: e.entity_type,
+            state: e.state,
+            abn: e.abn,
+          })),
+        },
       });
+    } else {
+      for (const e of newCC) {
+        discoveries.push({
+          agent_id: 'watch-entity-changes',
+          discovery_type: 'entity_change',
+          severity: 'notable',
+          title: `New community-controlled org: ${(e.canonical_name || '').slice(0, 50)}`,
+          description: `${e.canonical_name} (${e.entity_type}) registered in ${e.state || 'unknown state'}. ABN: ${e.abn || 'pending'}.`,
+          entity_ids: [e.id],
+          person_names: [],
+          metadata: { entity_type: e.entity_type, state: e.state, abn: e.abn },
+        });
+      }
     }
     console.log(`  ${newCC.length} new community-controlled orgs`);
 

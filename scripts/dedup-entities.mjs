@@ -49,6 +49,8 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
+import { psql as _psqlBase } from './lib/psql.mjs';
+const psql = (query, opts = {}) => _psqlBase(query, { timeout: 300000, maxBuffer: 200 * 1024 * 1024, label: 'dedup', ...opts });
 import { execSync } from 'child_process';
 import { writeFileSync, unlinkSync } from 'fs';
 
@@ -75,46 +77,6 @@ const LOG_INTERVAL = 50; // log progress every N clusters
 // ─────────────────────────────────────────────────────────
 // psql helper — no statement timeout, CSV output
 // ─────────────────────────────────────────────────────────
-function psql(query, { timeout = 300000, parse = true } = {}) {
-  const connStr = `postgresql://postgres.tednluwflfhxyucgwigh:${process.env.DATABASE_PASSWORD}@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres`;
-  const tmpFile = `/tmp/dedup-${Date.now()}-${Math.random().toString(36).slice(2, 6)}.sql`;
-  writeFileSync(tmpFile, query);
-  try {
-    const result = execSync(
-      `psql "${connStr}" --csv -f ${tmpFile} 2>/dev/null`,
-      { encoding: 'utf-8', maxBuffer: 200 * 1024 * 1024, timeout }
-    );
-    unlinkSync(tmpFile);
-    if (!parse) return result;
-    // Multiline-aware CSV parser (handles quoted fields with newlines)
-    const rows = [];
-    let cur = '', inQ = false, vals = [];
-    const chars = result.trim();
-    for (let i = 0; i < chars.length; i++) {
-      const ch = chars[i];
-      if (ch === '"') {
-        if (inQ && chars[i + 1] === '"') { cur += '"'; i++; continue; } // escaped quote
-        inQ = !inQ; continue;
-      }
-      if (ch === ',' && !inQ) { vals.push(cur); cur = ''; continue; }
-      if (ch === '\n' && !inQ) { vals.push(cur); rows.push(vals); vals = []; cur = ''; continue; }
-      if (ch === '\r' && !inQ) continue; // skip \r
-      cur += ch;
-    }
-    if (cur || vals.length > 0) { vals.push(cur); rows.push(vals); }
-    if (rows.length < 2) return [];
-    const headers = rows[0].map(h => h.trim());
-    return rows.slice(1).map(vals => {
-      const obj = {};
-      headers.forEach((h, i) => obj[h] = vals[i] || '');
-      return obj;
-    });
-  } catch (err) {
-    try { unlinkSync(tmpFile); } catch {}
-    console.error('psql error:', err.message?.slice(0, 300));
-    return parse ? [] : '';
-  }
-}
 
 /**
  * Execute a mutation via psql. Returns raw output string.

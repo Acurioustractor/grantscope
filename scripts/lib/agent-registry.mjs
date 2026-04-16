@@ -740,6 +740,22 @@ export const AGENTS = {
     timeoutMs: 300_000,
     dependencies: [],
   },
+  'watch-board-changes': {
+    command: ['node', '--env-file=.env', 'scripts/watch-board-changes.mjs'],
+    displayName: 'Board Changes Watcher',
+    category: 'intelligence',
+    defaultPriority: 3,
+    timeoutMs: 300_000,
+    dependencies: [],
+  },
+  'watch-entity-changes': {
+    command: ['node', '--env-file=.env', 'scripts/watch-entity-changes.mjs'],
+    displayName: 'Entity Changes Watcher',
+    category: 'intelligence',
+    defaultPriority: 3,
+    timeoutMs: 300_000,
+    dependencies: [],
+  },
   'score-foundation-alignment': {
     command: ['node', '--env-file=.env', 'scripts/score-foundation-alignment.mjs'],
     displayName: 'Foundation Alignment',

@@ -25,7 +25,6 @@ export async function logStart(supabase, agentId, agentName) {
       agent_id: agentId,
       agent_name: agentName,
       started_at: now,
-      completed_at: now, // will be updated on complete
       status: 'running',
     })
     .select('id')

@@ -16,8 +16,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
-import { execSync } from 'child_process';
-import { writeFileSync, unlinkSync } from 'fs';
+import { psql } from './lib/psql.mjs';
 
 // ── Config ────────────────────────────────────────────────
 
@@ -46,40 +45,6 @@ function log(msg) {
 
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
-// ── psql helper ──────────────────────────────────────────
-
-function psql(query) {
-  const connStr = `postgresql://postgres.tednluwflfhxyucgwigh:${process.env.DATABASE_PASSWORD}@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres`;
-  const tmpFile = `/tmp/qgip-${Date.now()}.sql`;
-  writeFileSync(tmpFile, query);
-  try {
-    const result = execSync(
-      `psql "${connStr}" --csv -f ${tmpFile} 2>/dev/null`,
-      { encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024, timeout: 120000 }
-    );
-    unlinkSync(tmpFile);
-    const lines = result.trim().split('\n').filter(l => l.length > 0);
-    if (lines.length < 2) return [];
-    const headers = lines[0].split(',').map(h => h.trim());
-    return lines.slice(1).map(line => {
-      const vals = [];
-      let cur = '', inQ = false;
-      for (const ch of line) {
-        if (ch === '"') { inQ = !inQ; continue; }
-        if (ch === ',' && !inQ) { vals.push(cur); cur = ''; continue; }
-        cur += ch;
-      }
-      vals.push(cur);
-      const obj = {};
-      headers.forEach((h, i) => { obj[h] = vals[i] || ''; });
-      return obj;
-    });
-  } catch (err) {
-    try { unlinkSync(tmpFile); } catch {}
-    log(`psql error: ${err.message}`);
-    return [];
-  }
-}
 
 // ── Topic classification ─────────────────────────────────
 

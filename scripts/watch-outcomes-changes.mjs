@@ -17,8 +17,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
-import { execSync } from 'child_process';
-import { writeFileSync, unlinkSync } from 'fs';
+import { psql } from './lib/psql.mjs';
 
 const AGENT_ID = 'watch-outcomes-changes';
 const AGENT_NAME = 'Outcomes Change Watcher';
@@ -33,38 +32,6 @@ const LOOKBACK_HOURS = parseInt(
   process.argv.find(a => a.startsWith('--lookback='))?.split('=')[1] || '0'
 );
 
-function psql(query) {
-  const connStr = `postgresql://postgres.tednluwflfhxyucgwigh:${process.env.DATABASE_PASSWORD}@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres`;
-  const tmpFile = `/tmp/watch-outcomes-${Date.now()}.sql`;
-  writeFileSync(tmpFile, query);
-  try {
-    const result = execSync(
-      `psql "${connStr}" --csv -f ${tmpFile} 2>/dev/null`,
-      { encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024, timeout: 120000 }
-    );
-    unlinkSync(tmpFile);
-    const lines = result.trim().split('\n').filter(l => l.length > 0);
-    if (lines.length < 2) return [];
-    const headers = lines[0].split(',').map(h => h.trim());
-    return lines.slice(1).map(line => {
-      const vals = [];
-      let cur = '', inQ = false;
-      for (const ch of line) {
-        if (ch === '"') { inQ = !inQ; continue; }
-        if (ch === ',' && !inQ) { vals.push(cur); cur = ''; continue; }
-        cur += ch;
-      }
-      vals.push(cur);
-      const obj = {};
-      headers.forEach((h, i) => obj[h] = vals[i] || '');
-      return obj;
-    });
-  } catch (err) {
-    try { unlinkSync(tmpFile); } catch {}
-    console.error('psql error:', err.message?.slice(0, 200));
-    return [];
-  }
-}
 
 async function getLastRunTime() {
   if (LOOKBACK_HOURS > 0) {

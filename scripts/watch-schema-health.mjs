@@ -19,8 +19,8 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
-import { execSync } from 'child_process';
-import { writeFileSync, unlinkSync, readFileSync, existsSync } from 'fs';
+import { psql } from './lib/psql.mjs';
+import { writeFileSync, readFileSync, existsSync } from 'fs';
 
 const supabase = createClient(
   process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -65,7 +65,10 @@ const CLASSIFIED_TABLES = new Set([
 // Operational/internal tables — not data, skip them
 const OPERATIONAL_TABLES = new Set([
   'agent_runs', 'agent_schedules', 'agent_audit_log', 'agent_actions', 'agent_proposals',
-  'agent_task_queue', 'agent_tasks', 'agents', 'discoveries', 'pm2_cron_status',
+  'agent_runtime_state', 'agent_task_queue', 'agent_tasks', 'agents', 'discoveries', 'pm2_cron_status',
+  'pilot_participants',
+  'validation_reviews',
+  'foundation_people', 'foundation_grantees', 'foundation_relationship_signals',
   'webhook_delivery_log', 'integration_events', 'site_health_checks', 'pipeline_runs',
   'sync_status', 'ghl_sync_log', 'api_usage', 'page_views', 'privacy_audit_log',
   'api_keys', 'users', 'user_identities', 'org_profiles', 'org_contacts', 'org_members',
@@ -93,7 +96,7 @@ const OPERATIONAL_TABLES = new Set([
   'synced_stories', 'canonical_entities', 'entity_potential_matches', 'entity_merge_log',
   'sector_map_cache', 'act_entities', 'civic_digests', 'nz_charities',
   'blog_posts', 'blog_posts_profiles', 'public_profiles', 'authors',
-  'alert_preferences', 'alert_notifications', 'health_alerts',
+  'alert_preferences', 'alert_notifications', 'alert_events', 'product_events', 'health_alerts',
   'storytellers', 'el_storytellers', 'el_transcripts',
   'agentic_projects', 'agentic_tasks', 'agentic_chat', 'agentic_work_log',
   'ai_discoveries', 'analysis_jobs',
@@ -122,38 +125,6 @@ const OPERATIONAL_TABLES = new Set([
   'postcode_sa2_concordance',
 ]);
 
-function psql(query) {
-  const connStr = `postgresql://postgres.tednluwflfhxyucgwigh:${process.env.DATABASE_PASSWORD}@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres`;
-  const tmpFile = `/tmp/watch-sh-${Date.now()}.sql`;
-  writeFileSync(tmpFile, query);
-  try {
-    const result = execSync(
-      `psql "${connStr}" --csv -f ${tmpFile} 2>/dev/null`,
-      { encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024, timeout: 120000 }
-    );
-    unlinkSync(tmpFile);
-    const lines = result.trim().split('\n').filter(l => l.length > 0);
-    if (lines.length < 2) return [];
-    const headers = lines[0].split(',').map(h => h.trim());
-    return lines.slice(1).map(line => {
-      const vals = [];
-      let cur = '', inQ = false;
-      for (const ch of line) {
-        if (ch === '"') { inQ = !inQ; continue; }
-        if (ch === ',' && !inQ) { vals.push(cur); cur = ''; continue; }
-        cur += ch;
-      }
-      vals.push(cur);
-      const obj = {};
-      headers.forEach((h, i) => obj[h] = vals[i] || '');
-      return obj;
-    });
-  } catch (err) {
-    try { unlinkSync(tmpFile); } catch {}
-    console.error('psql error:', err.message?.slice(0, 200));
-    return [];
-  }
-}
 
 async function writeDiscovery(discovery) {
   if (DRY_RUN) {
@@ -206,6 +177,7 @@ async function main() {
       r.table_name !== 'abr_registry' &&
       r.table_name !== 'gs_entities' &&
       !r.table_name.startsWith('mv_') &&
+      !r.table_name.startsWith('v_') &&
       !r.table_name.startsWith('v_')
     );
 

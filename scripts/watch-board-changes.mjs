@@ -16,8 +16,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
-import { execSync } from 'child_process';
-import { writeFileSync, unlinkSync } from 'fs';
+import { psql } from './lib/psql.mjs';
 
 const supabase = createClient(
   process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -29,38 +28,6 @@ const LOOKBACK_HOURS = parseInt(
   process.argv.find(a => a.startsWith('--lookback='))?.split('=')[1] || '0'
 );
 
-function psql(query) {
-  const connStr = `postgresql://postgres.tednluwflfhxyucgwigh:${process.env.DATABASE_PASSWORD}@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres`;
-  const tmpFile = `/tmp/watch-board-${Date.now()}.sql`;
-  writeFileSync(tmpFile, query);
-  try {
-    const result = execSync(
-      `psql "${connStr}" --csv -f ${tmpFile} 2>/dev/null`,
-      { encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024, timeout: 120000 }
-    );
-    unlinkSync(tmpFile);
-    const lines = result.trim().split('\n').filter(l => l.length > 0);
-    if (lines.length < 2) return [];
-    const headers = lines[0].split(',').map(h => h.trim());
-    return lines.slice(1).map(line => {
-      const vals = [];
-      let cur = '', inQ = false;
-      for (const ch of line) {
-        if (ch === '"') { inQ = !inQ; continue; }
-        if (ch === ',' && !inQ) { vals.push(cur); cur = ''; continue; }
-        cur += ch;
-      }
-      vals.push(cur);
-      const obj = {};
-      headers.forEach((h, i) => obj[h] = vals[i] || '');
-      return obj;
-    });
-  } catch (err) {
-    try { unlinkSync(tmpFile); } catch {}
-    console.error('psql error:', err.message?.slice(0, 200));
-    return [];
-  }
-}
 
 async function getLastRunTime() {
   if (LOOKBACK_HOURS > 0) {
@@ -133,12 +100,12 @@ async function main() {
             AND entity_id IS NOT NULL
             AND cessation_date IS NULL
           GROUP BY person_name_normalised
-          HAVING COUNT(DISTINCT entity_id) >= 2
+          HAVING COUNT(DISTINCT entity_id) >= 3
         `);
         interlockPeople.push(...counts);
       }
 
-      console.log(`  ${interlockPeople.length} people with 2+ boards (potential interlocks)`);
+      console.log(`  ${interlockPeople.length} people with 3+ boards (potential interlocks)`);
 
       // ── 3. Check power scores for connected entities ──
       const entityIds = [...new Set(newRoles.map(r => r.entity_id).filter(Boolean))];
@@ -163,7 +130,7 @@ async function main() {
         const boardCount = parseInt(person.board_count);
         const personRoles = newRoles.filter(r => r.person_name_normalised === person.person_name_normalised);
 
-        if (personRoles.length > 0 && boardCount >= 2) {
+        if (personRoles.length > 0 && boardCount >= 3) {
           const entityIdsForPerson = personRoles.map(r => r.entity_id).filter(Boolean);
           const entityNames = personRoles.map(r => r.entity_name || r.company_name).filter(Boolean);
           const severity = boardCount >= 5 ? 'significant' : boardCount >= 3 ? 'notable' : 'info';

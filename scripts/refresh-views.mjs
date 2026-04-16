@@ -4,7 +4,10 @@
  *
  * Usage: node --env-file=.env scripts/refresh-views.mjs [--view mv_name] [--concurrent]
  */
-import { execSync } from 'child_process';
+import { execSync, exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
 
 function sql(query, { timeout = 300000 } = {}) {
   const dbPassword = process.env.DATABASE_PASSWORD;
@@ -17,6 +20,18 @@ function sql(query, { timeout = 300000 } = {}) {
     { env: { ...process.env, PGPASSWORD: dbPassword }, encoding: 'utf8', timeout: timeout + 10000, stdio: ['pipe', 'pipe', 'pipe'] }
   );
   return result.trim();
+}
+
+async function sqlAsync(query, { timeout = 300000 } = {}) {
+  const dbPassword = process.env.DATABASE_PASSWORD;
+  if (!dbPassword) throw new Error('DATABASE_PASSWORD not set in .env');
+  const stmtTimeout = Math.round(timeout / 1000);
+  const fullQuery = `SET statement_timeout = '${stmtTimeout}s'; ${query}`;
+  const { stdout } = await execAsync(
+    `psql -h aws-0-ap-southeast-2.pooler.supabase.com -p 5432 -U "postgres.tednluwflfhxyucgwigh" -d postgres -c "${fullQuery.replace(/"/g, '\\"')}"`,
+    { env: { ...process.env, PGPASSWORD: dbPassword }, encoding: 'utf8', timeout: timeout + 10000 }
+  );
+  return stdout.trim();
 }
 
 // Ordered by dependency: base views first, then views that depend on them
@@ -42,6 +57,7 @@ const VIEW_GROUPS = [
       'mv_donor_contract_crossref',
       'mv_org_justice_signals',
       'mv_funding_by_postcode',
+      'mv_funding_by_lga',
       'mv_funding_by_disadvantage',
       'mv_indigenous_funding_by_disadvantage',
       'v_austender_stats',
@@ -74,9 +90,10 @@ const VIEW_GROUPS = [
       // mv_entity_xref replaced by entity_xref table — use refresh-entity-xref.mjs
       'mv_donor_person_crosslink',
       'mv_foundation_grantees',
+      'mv_charity_network',
     ],
   },
-  // Group 4: Foundation intelligence (depend on mv_foundation_grantees + mv_person_entity_crosswalk from Group 3)
+  // Group 4: Foundation intelligence + charity rankings (depend on Group 3)
   {
     concurrent: true,
     views: [
@@ -88,6 +105,8 @@ const VIEW_GROUPS = [
       'mv_foundation_trends',
       'mv_foundation_readiness',
       'mv_funding_outcomes_summary',
+      'mv_charity_rankings',
+      'mv_board_power',
     ],
   },
   // Group 5: Alma dashboard views (depend on alma tables)
@@ -123,18 +142,19 @@ const HEAVY_VIEWS = new Set([
   'mv_funding_by_postcode',
 ]);
 
-function refreshView(name) {
+async function refreshView(name) {
   const timeout = HEAVY_VIEWS.has(name) ? 600000 : 300000;
   const start = performance.now();
   try {
-    sql(`REFRESH MATERIALIZED VIEW CONCURRENTLY ${name}`, { timeout });
+    await sqlAsync(`REFRESH MATERIALIZED VIEW CONCURRENTLY ${name}`, { timeout });
     const ms = Math.round(performance.now() - start);
     return { name, ok: true, ms };
   } catch (e) {
     // CONCURRENTLY requires unique index — fall back to non-concurrent
-    if (e.message.includes('unique index') || e.message.includes('cannot refresh')) {
+    if (e.message?.includes('unique index') || e.message?.includes('cannot refresh') ||
+        e.stderr?.includes('unique index') || e.stderr?.includes('cannot refresh')) {
       try {
-        sql(`REFRESH MATERIALIZED VIEW ${name}`, { timeout });
+        await sqlAsync(`REFRESH MATERIALIZED VIEW ${name}`, { timeout });
         const ms = Math.round(performance.now() - start);
         return { name, ok: true, ms, note: 'non-concurrent' };
       } catch (e2) {
@@ -154,7 +174,7 @@ const totalStart = performance.now();
 
 if (singleView) {
   console.log(`\n  Refreshing ${singleView}...\n`);
-  const r = refreshView(singleView);
+  const r = await refreshView(singleView);
   const icon = r.ok ? '✅' : '❌';
   console.log(`  ${icon} ${r.name}: ${r.ok ? `${r.ms}ms` : r.error}${r.note ? ` (${r.note})` : ''}`);
   process.exit(r.ok ? 0 : 1);
@@ -166,7 +186,8 @@ let totalViews = 0;
 let failures = 0;
 
 for (const group of VIEW_GROUPS) {
-  const results = group.views.map(v => refreshView(v));
+  // Run views within each group in parallel, wait for all to complete before next group
+  const results = await Promise.all(group.views.map(v => refreshView(v)));
   for (const r of results) {
     totalViews++;
     const icon = r.ok ? '✅' : '❌';
