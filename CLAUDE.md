@@ -172,6 +172,12 @@ SELECT entity_type, COUNT(*) FROM gs_entities GROUP BY entity_type ORDER BY coun
 SELECT remoteness, COUNT(*) FROM gs_entities WHERE is_community_controlled = true GROUP BY remoteness ORDER BY count DESC;
 ```
 
+## Health Stack
+
+- typecheck: cd apps/web && npx tsc --noEmit
+- test: cd apps/web && npx vitest run
+- shell: shellcheck scripts/*.sh
+
 ## Daily Workflow
 
 1. **Start:** Run `/preflight` to check database, env, git, and types

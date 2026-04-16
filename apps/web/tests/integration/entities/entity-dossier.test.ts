@@ -34,7 +34,10 @@ describeDb('Entity Dossier - MV data', () => {
     const result = gsql(
       "SELECT total_relationships, total_outbound_amount FROM mv_gs_entity_stats WHERE gs_id = 'AU-GOV-0ec9911c9e99d1b7bb1b77f4abffc583'"
     );
-    expect(result).toContain('349760');
+    // Relationship count grows with data ingestion — use range, not exact match
+    const match = result.match(/(\d{5,})\s*\|/);
+    expect(match).not.toBeNull();
+    expect(Number(match![1])).toBeGreaterThan(300000);
     // Should have significant outbound amount
     expect(result).toMatch(/\d{10,}/); // 10+ digit number
   });
