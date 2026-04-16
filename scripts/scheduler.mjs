@@ -76,7 +76,7 @@ function resolveCommand(schedule) {
   if (!scriptPath) return null;
 
   return {
-    command: ['node', '--env-file=.env', scriptPath, ...scheduleArgs],
+    command: [process.execPath, '--env-file=.env', scriptPath, ...scheduleArgs],
     timeoutMs: 600000,
     source: 'script-fallback',
   };
@@ -118,7 +118,11 @@ async function runAgent(schedule) {
     return false;
   }
 
-  const [bin, ...args] = resolved.command;
+  const [rawBin, ...args] = resolved.command;
+  // Resolve bare 'node'/'npx' to absolute path — cron PATH doesn't include nvm
+  const bin = rawBin === 'node' ? process.execPath
+    : rawBin === 'npx' ? process.execPath.replace(/\/node$/, '/npx')
+    : rawBin;
   log(`  Running: ${schedule.agent_id} via ${resolved.source}`);
   log(`    ${[bin, ...args].join(' ')}`);
   const startTime = Date.now();
