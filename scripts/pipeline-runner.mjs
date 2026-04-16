@@ -4,11 +4,18 @@
  * GrantScope Pipeline Runner
  *
  * Runs the full data pipeline on a configurable interval:
- *   1. Grant Discovery (all sources)
- *   2. Grant Enrichment (free LLMs)
- *   3. Foundation Profiling
- *   4. Foundation Programs → Grant Search sync
- *   5. Backfill Embeddings
+ *   1. Source frontier sync
+ *   2. Grant-source frontier polling
+ *   3. Foundation frontier polling
+ *   4. Grant Discovery (all sources)
+ *   5. State grant scraping
+ *   6. Grant deadline refresh
+ *   7. Grant enrichment (free LLMs)
+ *   8. Foundation profiling
+ *   9. Foundation program discovery + stale rescan
+ *  10. Foundation relationship extraction
+ *  11. Foundation Programs → Grant Search sync
+ *  12. Incremental Non-Foundation Embeddings
  *
  * Each step logs to agent_runs so the /ops dashboard shows real-time progress.
  *
@@ -18,7 +25,7 @@
  * Options:
  *   --interval=N   Minutes between runs (default: 30)
  *   --once         Run once and exit (no loop)
- *   --skip=a,b     Skip specific steps (discovery,enrich,profile,sync,embed)
+ *   --skip=a,b     Skip specific steps (frontier,frontier-poll,foundation-frontier-poll,discovery,state,deadlines,enrich,profile,foundation-discovery,foundation-relationships,sync,embed)
  */
 
 import 'dotenv/config';
@@ -45,10 +52,40 @@ const SKIP = new Set(skipArg ? skipArg.split('=')[1].split(',') : []);
 
 const STEPS = [
   {
+    id: 'frontier',
+    name: 'Source Frontier Sync',
+    cmd: ['node', '--env-file=.env', 'scripts/sync-source-frontier.mjs'],
+    timeout: 300_000,
+  },
+  {
+    id: 'frontier-poll',
+    name: 'Grant Source Frontier Poll',
+    cmd: ['node', '--env-file=.env', 'scripts/poll-source-frontier.mjs', '--kinds=grant_source_page', '--limit=20', '--concurrency=5'],
+    timeout: 300_000,
+  },
+  {
+    id: 'foundation-frontier-poll',
+    name: 'Foundation Frontier Poll',
+    cmd: ['node', '--env-file=.env', 'scripts/poll-source-frontier.mjs', '--kinds=foundation_homepage,foundation_known_page,foundation_candidate_page,foundation_program_page', '--limit=100', '--concurrency=8'],
+    timeout: 600_000,
+  },
+  {
     id: 'discovery',
     name: 'Grant Discovery',
-    cmd: ['npx', 'tsx', 'scripts/grantscope-discovery.mjs'],
+    cmd: ['npx', 'tsx', 'scripts/grantscope-discovery.mjs', '--frontier-window-hours=24', '--frontier-fallback-count=4'],
     timeout: 600_000, // 10 min
+  },
+  {
+    id: 'state',
+    name: 'State Grant Discovery',
+    cmd: ['node', '--env-file=.env', 'scripts/scrape-state-grants.mjs'],
+    timeout: 900_000,
+  },
+  {
+    id: 'deadlines',
+    name: 'Grant Deadline Refresh',
+    cmd: ['node', '--env-file=.env', 'scripts/scrape-grant-deadlines.mjs', '--apply', '--limit=100'],
+    timeout: 900_000,
   },
   {
     id: 'enrich',
@@ -63,15 +100,27 @@ const STEPS = [
     timeout: 1_200_000, // 20 min
   },
   {
+    id: 'foundation-discovery',
+    name: 'Foundation Program Refresh',
+    cmd: ['node', '--env-file=.env', 'scripts/discover-foundation-programs.mjs', '--limit=40', '--concurrency=2', '--refresh-existing', '--rescan-days=14'],
+    timeout: 1_200_000,
+  },
+  {
+    id: 'foundation-relationships',
+    name: 'Foundation Relationship Extraction',
+    cmd: ['node', '--env-file=.env', 'scripts/extract-foundation-relationships.mjs', '--limit=15', '--concurrency=2', '--max-pages=6', '--frontier-window-hours=168', '--refresh-days=30'],
+    timeout: 1_200_000,
+  },
+  {
     id: 'sync',
     name: 'Sync Foundation Programs',
-    cmd: ['node', '--env-file=.env', 'scripts/sync-foundation-programs.mjs', '--cleanup-invalid'],
+    cmd: ['node', '--env-file=.env', 'scripts/sync-foundation-programs.mjs', '--cleanup-invalid', '--priority-only', '--frontier-window-hours=72'],
     timeout: 120_000, // 2 min
   },
   {
     id: 'embed',
-    name: 'Backfill Embeddings',
-    cmd: ['node', '--env-file=.env', 'scripts/backfill-embeddings.mjs', '--batch-size', '100'],
+    name: 'Incremental Embeddings',
+    cmd: ['node', '--env-file=.env', 'scripts/backfill-embeddings.mjs', '--batch-size', '100', '--limit=100', '--exclude-sources=foundation_program'],
     timeout: 300_000, // 5 min
   },
 ];
