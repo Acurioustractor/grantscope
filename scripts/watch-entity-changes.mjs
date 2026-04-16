@@ -134,20 +134,24 @@ async function main() {
     }
     console.log(`  ${newCC.length} new community-controlled orgs`);
 
-    // ── 3. Relationship growth spikes ──
+    // ── 3. Relationship growth spikes (CTE filters on indexed created_at first) ──
     console.log('  Checking relationship growth...');
     const relGrowth = psql(`
-      SELECT
-        e.id, e.canonical_name, e.entity_type,
-        COUNT(*) AS new_rels,
-        SUM(COALESCE(r.amount, 0)) AS new_amount
-      FROM gs_relationships r
-      JOIN gs_entities e ON e.id = r.target_entity_id
-      WHERE r.created_at > '${since}'
-        AND r.relationship_type IN ('contract', 'donation', 'grant')
-      GROUP BY e.id, e.canonical_name, e.entity_type
-      HAVING COUNT(*) >= 10
-      ORDER BY COUNT(*) DESC
+      WITH recent_rels AS (
+        SELECT target_entity_id AS entity_id,
+          COUNT(*) AS new_rels,
+          SUM(COALESCE(amount, 0)) AS new_amount
+        FROM gs_relationships
+        WHERE created_at > '${since}'
+          AND relationship_type IN ('contract', 'donation', 'grant')
+        GROUP BY target_entity_id
+        HAVING COUNT(*) >= 10
+      )
+      SELECT rr.entity_id AS id, rr.new_rels, rr.new_amount,
+        e.canonical_name, e.entity_type
+      FROM recent_rels rr
+      JOIN gs_entities e ON e.id = rr.entity_id
+      ORDER BY rr.new_rels DESC
       LIMIT 50
     `);
 

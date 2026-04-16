@@ -29,6 +29,23 @@ const LOOKBACK_HOURS = parseInt(
 );
 
 
+async function getLastRunTime() {
+  if (LOOKBACK_HOURS > 0) {
+    return new Date(Date.now() - LOOKBACK_HOURS * 3600000).toISOString();
+  }
+  const { data } = await supabase
+    .from('agent_runs')
+    .select('completed_at')
+    .eq('agent_id', 'watch-data-quality')
+    .eq('status', 'success')
+    .order('completed_at', { ascending: false })
+    .limit(1);
+
+  if (data && data.length > 0) return data[0].completed_at;
+  // Default: 24h lookback on first run
+  return new Date(Date.now() - 24 * 3600000).toISOString();
+}
+
 async function main() {
   const t0 = Date.now();
   console.log('Data Quality Watcher — Autoresearch Agent');
@@ -37,17 +54,20 @@ async function main() {
   const runId = (await logStart(supabase, 'watch-data-quality', 'Data Quality Watcher'))?.id;
 
   try {
+    const since = await getLastRunTime();
+    console.log(`  Looking for changes since: ${since}`);
     const discoveries = [];
 
-    // ── 1. Entity type breakdown — missing ABNs ──
+    // ── 1. Entity type breakdown — missing ABNs (only new entities since last run) ──
     console.log('\n  Checking entities missing ABNs...');
     const missingAbns = psql(`
       SELECT entity_type, COUNT(*) as cnt
       FROM gs_entities
       WHERE abn IS NULL
         AND entity_type NOT IN ('person', 'individual', 'government_body', 'program')
+        AND created_at > '${since}'
       GROUP BY entity_type
-      HAVING COUNT(*) > 100
+      HAVING COUNT(*) > 5
       ORDER BY cnt DESC
       LIMIT 20
     `);
@@ -67,17 +87,24 @@ async function main() {
     }
     console.log(`  ${missingAbns.length} entity types with missing ABNs`);
 
-    // ── 2. Duplicate entity names (top merge candidates) ──
+    // ── 2. Duplicate entity names (only among recently created entities) ──
     console.log('  Checking duplicate entity names...');
     const dupes = psql(`
-      SELECT canonical_name, COUNT(*) as cnt,
-        array_agg(DISTINCT entity_type) as types,
-        array_agg(DISTINCT abn) FILTER (WHERE abn IS NOT NULL) as abns
-      FROM gs_entities
-      WHERE entity_type != 'person'
-        AND canonical_name IS NOT NULL
-        AND length(canonical_name) > 5
-      GROUP BY canonical_name
+      WITH recent_names AS (
+        SELECT DISTINCT canonical_name
+        FROM gs_entities
+        WHERE created_at > '${since}'
+          AND entity_type != 'person'
+          AND canonical_name IS NOT NULL
+          AND length(canonical_name) > 5
+      )
+      SELECT e.canonical_name, COUNT(*) as cnt,
+        array_agg(DISTINCT e.entity_type) as types,
+        array_agg(DISTINCT e.abn) FILTER (WHERE e.abn IS NOT NULL) as abns
+      FROM gs_entities e
+      JOIN recent_names rn ON rn.canonical_name = e.canonical_name
+      WHERE e.entity_type != 'person'
+      GROUP BY e.canonical_name
       HAVING COUNT(*) >= 3
       ORDER BY cnt DESC
       LIMIT 50
@@ -165,16 +192,35 @@ async function main() {
       }
     }
 
-    // ── 5. Orphaned relationships ──
-    console.log('  Checking orphaned relationships...');
+    // ── 5. Orphaned relationships (sampled estimate to avoid full table scan) ──
+    console.log('  Checking orphaned relationships (sampled)...');
     const orphaned = psql(`
-      SELECT COUNT(*) AS cnt
-      FROM gs_relationships r
-      WHERE NOT EXISTS (SELECT 1 FROM gs_entities e WHERE e.id = r.source_entity_id)
-         OR NOT EXISTS (SELECT 1 FROM gs_entities e WHERE e.id = r.target_entity_id)
+      WITH sample AS (
+        SELECT source_entity_id, target_entity_id
+        FROM gs_relationships TABLESAMPLE SYSTEM(0.1)
+      ),
+      orphan_sample AS (
+        SELECT COUNT(*) AS orphan_cnt
+        FROM sample s
+        WHERE NOT EXISTS (SELECT 1 FROM gs_entities e WHERE e.id = s.source_entity_id)
+           OR NOT EXISTS (SELECT 1 FROM gs_entities e WHERE e.id = s.target_entity_id)
+      ),
+      total AS (
+        SELECT reltuples::bigint AS est_total
+        FROM pg_class WHERE relname = 'gs_relationships'
+      )
+      SELECT
+        os.orphan_cnt,
+        (SELECT COUNT(*) FROM sample) AS sample_size,
+        t.est_total,
+        CASE WHEN (SELECT COUNT(*) FROM sample) > 0
+          THEN ROUND(os.orphan_cnt::numeric / (SELECT COUNT(*) FROM sample) * t.est_total)
+          ELSE 0
+        END AS estimated_orphans
+      FROM orphan_sample os, total t
     `);
 
-    const orphanCount = parseInt(orphaned[0]?.cnt || '0');
+    const orphanCount = parseInt(orphaned[0]?.estimated_orphans || '0');
     if (orphanCount > 0) {
       discoveries.push({
         agent_id: 'watch-data-quality',
@@ -187,7 +233,8 @@ async function main() {
         metadata: { count: orphanCount, issue: 'orphaned_relationships' },
       });
     }
-    console.log(`  ${orphanCount} orphaned relationships`);
+    const sampleSize = parseInt(orphaned[0]?.sample_size || '0');
+    console.log(`  ~${orphanCount} orphaned relationships (estimated from ${sampleSize} sampled rows)`);
 
     // ── Deduplicate and insert ──
     const seen = new Set();
@@ -222,7 +269,7 @@ async function main() {
     console.log(`\n${'═'.repeat(50)}`);
     console.log(`  Missing ABN types: ${missingAbns.length}`);
     console.log(`  Duplicate names: ${dupes.length}`);
-    console.log(`  Orphaned rels: ${orphanCount}`);
+    console.log(`  Orphaned rels: ~${orphanCount} (estimated)`);
     console.log(`  Duration: ${duration}s`);
 
     await logComplete(supabase, runId, {
