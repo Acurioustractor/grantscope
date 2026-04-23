@@ -70,11 +70,11 @@ const FOUNDATIONS = {
   snow: {
     name: 'The Snow Foundation',
     abn: '49411415493',
-    pages: [
+    pdfs: [
       {
-        url: 'https://www.snowfoundation.org.au/about/annual-report/',
-        year: 2025,
-        label: '2025 Annual Report',
+        url: 'https://www.snowfoundation.org.au/wp-content/uploads/2025/03/Snow-Foundation-Annual-Report-2024-medium-res.pdf',
+        year: 2024,
+        label: '2024 Annual Report',
       },
     ],
   },

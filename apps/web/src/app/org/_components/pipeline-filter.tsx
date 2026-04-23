@@ -26,6 +26,7 @@ const STATUS_STYLES: Record<string, string> = {
   drafting: 'bg-blue-50 text-blue-700 border-blue-200',
   prospect: 'bg-gray-50 text-gray-500 border-gray-200',
   rejected: 'bg-red-50 text-red-600 border-red-200',
+  'historical/past': 'bg-stone-50 text-stone-600 border-stone-200',
 };
 
 const FUNDER_TYPE_STYLES: Record<string, string> = {
@@ -40,7 +41,40 @@ const STATUS_ACTIONS: Record<string, { label: string; hint: string }> = {
   drafting: { label: 'Continue Draft', hint: 'Application in progress' },
   prospect: { label: 'Build Relationship', hint: 'Research the funder, find warm introductions, build the case' },
   rejected: { label: 'Review & Retry', hint: 'Review feedback, consider resubmission or similar grants' },
+  'historical/past': {
+    label: 'Close Or Reframe',
+    hint: 'Deadline has passed - keep as historical context or update with the next round.',
+  },
 };
+
+const TERMINAL_STATUSES = new Set(['submitted', 'awarded', 'rejected', 'closed', 'historical', 'historical_past', 'past']);
+
+function parseDeadline(value: string | null) {
+  if (!value) return null;
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (dateOnly) {
+    return new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]));
+  }
+  const parsed = new Date(value);
+  return Number.isFinite(parsed.getTime()) ? parsed : null;
+}
+
+function isPastOpenDeadline(item: PipelineItem) {
+  const deadline = parseDeadline(item.deadline);
+  if (!deadline || TERMINAL_STATUSES.has(item.status)) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return deadline.getTime() < today.getTime();
+}
+
+function displayStatus(item: PipelineItem) {
+  return isPastOpenDeadline(item) ? 'historical/past' : item.status;
+}
+
+function displayDeadline(item: PipelineItem) {
+  if (!item.deadline) return null;
+  return isPastOpenDeadline(item) ? `${item.deadline} (past)` : item.deadline;
+}
 
 export function PipelineTable({ items, orgSlug, orgProfileId }: { items: PipelineItem[]; orgSlug: string; orgProfileId?: string }) {
   const funderTypes = [...new Set(items.map(p => p.funder_type).filter(Boolean))] as string[];
@@ -94,7 +128,8 @@ export function PipelineTable({ items, orgSlug, orgProfileId }: { items: Pipelin
             <tbody>
               {filtered.map((g, i) => {
                 const isExpanded = expandedId === g.id;
-                const action = STATUS_ACTIONS[g.status] ?? STATUS_ACTIONS.prospect;
+                const status = displayStatus(g);
+                const action = STATUS_ACTIONS[status] ?? STATUS_ACTIONS.prospect;
                 return (
                   <Fragment key={g.id}>
                     <tr
@@ -134,10 +169,10 @@ export function PipelineTable({ items, orgSlug, orgProfileId }: { items: Pipelin
                           </span>
                         )}
                       </td>
-                      <td className="py-3 pr-4 text-gray-400 text-xs">{g.deadline}</td>
+                      <td className="py-3 pr-4 text-gray-400 text-xs">{displayDeadline(g)}</td>
                       <td className="py-3 pr-4">
-                        <span className={`text-[10px] px-2 py-0.5 font-bold border rounded-sm uppercase ${STATUS_STYLES[g.status] ?? STATUS_STYLES.prospect}`}>
-                          {g.status}
+                        <span className={`text-[10px] px-2 py-0.5 font-bold border rounded-sm uppercase ${STATUS_STYLES[status] ?? STATUS_STYLES.prospect}`}>
+                          {status}
                         </span>
                       </td>
                     </tr>
