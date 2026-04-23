@@ -21,6 +21,7 @@ export interface OrgProject {
   linked_gs_entity_id: string | null;
   logo_url: string | null;
   metadata: Record<string, unknown>;
+  updated_at: string | null;
 }
 
 export interface OrgProjectSummary extends OrgProject {
@@ -29,6 +30,57 @@ export interface OrgProjectSummary extends OrgProject {
   contact_count: number;
   pipeline_value: number;
   children: OrgProjectSummary[];
+}
+
+export interface OrgProjectFoundationResearchSummary {
+  fit_status: 'ready' | 'partial' | 'missing';
+  proof_status: 'ready' | 'partial' | 'missing';
+  applicant_status: 'ready' | 'partial' | 'missing';
+  relationship_status: 'ready' | 'partial' | 'missing';
+  ask_status: 'ready' | 'partial' | 'missing';
+  missing_items: string[];
+}
+
+export interface OrgProjectFoundationPortfolioRow {
+  id: string;
+  stage: 'saved' | 'priority' | 'approach_now' | 'in_conversation' | 'parked';
+  engagement_status:
+    | 'researching'
+    | 'ready_to_approach'
+    | 'approached'
+    | 'meeting'
+    | 'proposal'
+    | 'won'
+    | 'lost'
+    | 'parked';
+  engagement_updated_at: string;
+  fit_score: number | null;
+  fit_summary: string | null;
+  message_alignment: string | null;
+  next_step: string | null;
+  next_touch_at: string | null;
+  next_touch_note: string | null;
+  last_interaction_at: string | null;
+  updated_at: string;
+  project: {
+    id: string;
+    name: string;
+    slug: string;
+  };
+  foundation: {
+    id: string;
+    name: string;
+    type: string | null;
+    total_giving_annual: number | null;
+  };
+  applicant_entity: {
+    id: string;
+    name: string;
+    entity_type: string;
+    status: string;
+    is_default: boolean;
+  } | null;
+  research: OrgProjectFoundationResearchSummary | null;
 }
 
 export interface OrgProfile {
@@ -43,6 +95,7 @@ export interface OrgProfile {
   org_type: string | null;
   subscription_plan: string | null;
   logo_url: string | null;
+  updated_at: string | null;
 }
 
 export interface OrgProgram {
@@ -54,6 +107,7 @@ export interface OrgProgram {
   reporting_cycle: string | null;
   status: string;
   sort_order: number;
+  updated_at: string | null;
 }
 
 export interface OrgPipelineItem {
@@ -68,6 +122,7 @@ export interface OrgPipelineItem {
   notes: string | null;
   funder_entity_id: string | null;
   funder_type: string | null;
+  updated_at: string | null;
 }
 
 export interface OrgContact {
@@ -83,6 +138,7 @@ export interface OrgContact {
   linked_entity_id: string | null;
   linkedin_url: string | null;
   person_id: string | null;
+  updated_at: string | null;
 }
 
 export interface OrgLeader {
@@ -92,6 +148,7 @@ export interface OrgLeader {
   bio: string | null;
   external_roles: Array<{ org: string; role: string }>;
   sort_order: number;
+  updated_at: string | null;
 }
 
 export interface FundingByProgram {
@@ -255,7 +312,7 @@ export async function getOrgProjects(orgProfileId: string): Promise<OrgProject[]
   const supabase = getServiceSupabase();
   const { data } = await supabase
     .from('org_projects')
-    .select('id, org_profile_id, parent_project_id, name, slug, code, description, tier, category, status, sort_order, abn, linked_gs_entity_id, logo_url, metadata')
+    .select('id, org_profile_id, parent_project_id, name, slug, code, description, tier, category, status, sort_order, abn, linked_gs_entity_id, logo_url, metadata, updated_at')
     .eq('org_profile_id', orgProfileId)
     .order('sort_order');
   return (data ?? []) as OrgProject[];
@@ -265,7 +322,7 @@ export async function getOrgProjectBySlug(orgProfileId: string, slug: string): P
   const supabase = getServiceSupabase();
   const { data, error } = await supabase
     .from('org_projects')
-    .select('id, org_profile_id, parent_project_id, name, slug, code, description, tier, category, status, sort_order, abn, linked_gs_entity_id, logo_url, metadata')
+    .select('id, org_profile_id, parent_project_id, name, slug, code, description, tier, category, status, sort_order, abn, linked_gs_entity_id, logo_url, metadata, updated_at')
     .eq('org_profile_id', orgProfileId)
     .eq('slug', slug)
     .maybeSingle();
@@ -323,6 +380,78 @@ export async function getOrgProjectSummaries(orgProfileId: string): Promise<OrgP
   return roots;
 }
 
+export async function getOrgFoundationPortfolio(orgProfileId: string): Promise<OrgProjectFoundationPortfolioRow[]> {
+  const supabase = getServiceSupabase();
+  const { data, error } = await supabase
+    .from('org_project_foundations')
+    .select(`
+      id,
+      stage,
+      engagement_status,
+      engagement_updated_at,
+      fit_score,
+      fit_summary,
+      message_alignment,
+      next_step,
+      next_touch_at,
+      next_touch_note,
+      last_interaction_at,
+      updated_at,
+      project:org_projects!org_project_foundations_org_project_id_fkey(
+        id,
+        name,
+        slug
+      ),
+      foundation:foundations!org_project_foundations_foundation_id_fkey(
+        id,
+        name,
+        type,
+        total_giving_annual
+      ),
+      applicant_entity:org_applicant_entities!org_project_foundations_applicant_entity_id_fkey(
+        id,
+        name,
+        entity_type,
+        status,
+        is_default
+      ),
+      research:org_project_foundation_research(
+        fit_status,
+        proof_status,
+        applicant_status,
+        relationship_status,
+        ask_status,
+        missing_items
+      )
+    `)
+    .eq('org_profile_id', orgProfileId)
+    .order('fit_score', { ascending: false, nullsFirst: false })
+    .order('updated_at', { ascending: false });
+
+  if (error || !data) return [];
+
+  return (data as Array<Record<string, unknown>>).map((row) => ({
+    id: row.id as string,
+    stage: row.stage as OrgProjectFoundationPortfolioRow['stage'],
+    engagement_status: row.engagement_status as OrgProjectFoundationPortfolioRow['engagement_status'],
+    engagement_updated_at: row.engagement_updated_at as string,
+    fit_score: row.fit_score == null ? null : Number(row.fit_score),
+    fit_summary: (row.fit_summary as string | null) ?? null,
+    message_alignment: (row.message_alignment as string | null) ?? null,
+    next_step: (row.next_step as string | null) ?? null,
+    next_touch_at: (row.next_touch_at as string | null) ?? null,
+    next_touch_note: (row.next_touch_note as string | null) ?? null,
+    last_interaction_at: (row.last_interaction_at as string | null) ?? null,
+    updated_at: row.updated_at as string,
+    project: row.project as OrgProjectFoundationPortfolioRow['project'],
+    foundation: row.foundation as OrgProjectFoundationPortfolioRow['foundation'],
+    applicant_entity: (row.applicant_entity as OrgProjectFoundationPortfolioRow['applicant_entity']) ?? null,
+    research: Array.isArray(row.research)
+      ? ((row.research[0] as OrgProjectFoundationResearchSummary | undefined) ?? null)
+      : null,
+  }));
+}
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Org Profile Lookup
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -331,7 +460,7 @@ export async function getOrgProfileBySlug(slug: string): Promise<OrgProfile | nu
   const supabase = getServiceSupabase();
   const { data, error } = await supabase
     .from('org_profiles')
-    .select('id, name, abn, slug, linked_gs_entity_id, description, team_size, annual_revenue, org_type, subscription_plan, logo_url')
+    .select('id, name, abn, slug, linked_gs_entity_id, description, team_size, annual_revenue, org_type, subscription_plan, logo_url, updated_at')
     .eq('slug', slug)
     .maybeSingle();
   if (error || !data) return null;
@@ -459,7 +588,7 @@ export async function getOrgPrograms(orgProfileId: string, projectId?: string): 
   const supabase = getServiceSupabase();
   let query = supabase
     .from('org_programs')
-    .select('id, name, system, funding_source, annual_amount_display, reporting_cycle, status, sort_order')
+    .select('id, name, system, funding_source, annual_amount_display, reporting_cycle, status, sort_order, updated_at')
     .eq('org_profile_id', orgProfileId);
   if (projectId) query = query.eq('project_id', projectId);
   const { data } = await query.order('sort_order');
@@ -478,7 +607,7 @@ export async function getOrgPipeline(orgProfileId: string, projectId?: string): 
   const supabase = getServiceSupabase();
   let query = supabase
     .from('org_pipeline')
-    .select('id, name, amount_display, amount_numeric, funder, deadline, status, grant_opportunity_id, notes, funder_entity_id, funder_type')
+    .select('id, name, amount_display, amount_numeric, funder, deadline, status, grant_opportunity_id, notes, funder_entity_id, funder_type, updated_at')
     .eq('org_profile_id', orgProfileId);
   if (projectId) query = query.eq('project_id', projectId);
   const { data } = await query.order('created_at');
@@ -542,7 +671,7 @@ export async function getOrgContacts(orgProfileId: string, projectId?: string): 
   const supabase = getServiceSupabase();
   let query = supabase
     .from('org_contacts')
-    .select('id, name, role, organisation, contact_type, email, phone, notes, last_contacted_at, linked_entity_id, linkedin_url, person_id')
+    .select('id, name, role, organisation, contact_type, email, phone, notes, last_contacted_at, linked_entity_id, linkedin_url, person_id, updated_at')
     .eq('org_profile_id', orgProfileId);
   if (projectId) query = query.eq('project_id', projectId);
   const { data } = await query.order('contact_type').order('name');
@@ -622,7 +751,7 @@ export async function getOrgLeadership(orgProfileId: string, projectId?: string)
   const supabase = getServiceSupabase();
   let query = supabase
     .from('org_leadership')
-    .select('id, name, title, bio, external_roles, sort_order')
+    .select('id, name, title, bio, external_roles, sort_order, updated_at')
     .eq('org_profile_id', orgProfileId);
   if (projectId) {
     query = query.eq('project_id', projectId);
@@ -652,6 +781,116 @@ export interface MatchedGrant {
   fit_score: number | null;
 }
 
+type GrantCandidate = MatchedGrant & {
+  target_recipients: string[] | null;
+  geography: string | null;
+  last_verified_at: string | null;
+};
+
+const GRANT_MATCH_STOP_WORDS = new Set([
+  'a',
+  'an',
+  'and',
+  'are',
+  'at',
+  'be',
+  'by',
+  'for',
+  'from',
+  'in',
+  'into',
+  'is',
+  'it',
+  'of',
+  'on',
+  'or',
+  'our',
+  'that',
+  'the',
+  'their',
+  'this',
+  'to',
+  'we',
+  'with',
+  'your',
+  'impact',
+  'infrastructure',
+  'organisation',
+  'organisations',
+  'program',
+  'programs',
+  'project',
+  'projects',
+  'sector',
+  'social',
+  'system',
+  'systems',
+]);
+
+function buildGrantMatchTokens(...values: Array<string | null | undefined>) {
+  const raw = values
+    .filter(Boolean)
+    .flatMap((value) => String(value).split(/[,\n/]+/g))
+    .flatMap((value) => value.split(/\s+/g))
+    .map((value) => value.trim().toLowerCase())
+    .map((value) => value.replace(/[^a-z0-9&-]/g, ''))
+    .filter((value) => value.length >= 3)
+    .filter((value) => !GRANT_MATCH_STOP_WORDS.has(value));
+
+  return Array.from(new Set(raw));
+}
+
+function orgTypeTerms(orgType: string | null) {
+  const normalized = (orgType ?? '').toLowerCase();
+  if (normalized === 'oric') {
+    return ['indigenous', 'aboriginal', 'torres', 'community', 'controlled'];
+  }
+  if (normalized === 'charity') {
+    return ['charity', 'community', 'social', 'not-for-profit'];
+  }
+  if (normalized === 'social enterprise') {
+    return ['social', 'enterprise', 'employment', 'community', 'procurement'];
+  }
+  if (normalized === 'community group') {
+    return ['community', 'place', 'local'];
+  }
+  return [];
+}
+
+function projectMetadataList(metadata: Record<string, unknown> | null | undefined, key: string) {
+  return Array.isArray(metadata?.[key])
+    ? metadata[key].filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+    : [];
+}
+
+function textOverlapScore(values: Array<string | null | undefined>, tokens: string[]) {
+  if (tokens.length === 0) return 0;
+  const haystack = values
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  return tokens.filter((token) => haystack.includes(token)).length;
+}
+
+function geographyMatches(value: string | null | undefined, geoFocus: string[] | null) {
+  if (!value || !geoFocus || geoFocus.length === 0) return false;
+  const haystack = value.toLowerCase();
+  return geoFocus.some((entry) => {
+    const normalized = entry.toLowerCase();
+    return haystack.includes(normalized) ||
+      (normalized === 'queensland' && haystack.includes('qld')) ||
+      (normalized === 'new south wales' && haystack.includes('nsw')) ||
+      (normalized === 'victoria' && haystack.includes('vic')) ||
+      (normalized === 'western australia' && haystack.includes('wa')) ||
+      (normalized === 'south australia' && haystack.includes('sa')) ||
+      (normalized === 'tasmania' && haystack.includes('tas')) ||
+      (normalized === 'australian capital territory' && haystack.includes('act')) ||
+      (normalized === 'northern territory' && haystack.includes('nt')) ||
+      haystack.includes('national') ||
+      haystack.includes('australia');
+  });
+}
+
 /**
  * Find grant opportunities that match the org profile.
  * Matches on: future deadline, categories/focus_areas overlap with org_type + geographic_focus.
@@ -675,20 +914,158 @@ export async function getMatchedGrantOpportunities(
     .map(p => p.grant_opportunity_id)
     .filter(Boolean) as string[];
 
-  // Build query — future deadlines, ordered by deadline
+  const { data: orgProjects } = await supabase
+    .from('org_projects')
+    .select('name, description, category, status, metadata')
+    .eq('org_profile_id', orgProfileId)
+    .neq('status', 'archived')
+    .order('sort_order');
+
+  const keywordTerms = Array.from(
+    new Set([
+      ...buildGrantMatchTokens(
+        ...(orgProjects ?? []).flatMap((project) => {
+          const metadata = (project.metadata ?? {}) as Record<string, unknown>;
+          const profileSummary = typeof metadata.profile_summary === 'string' ? metadata.profile_summary : null;
+          const fundingBrief = typeof metadata.funding_brief === 'string' ? metadata.funding_brief : null;
+          const proofPoints = projectMetadataList(metadata, 'proof_points').join(' ');
+          return [project.name, project.description, project.category, profileSummary, fundingBrief, proofPoints];
+        }),
+      ),
+      ...orgTypeTerms(orgType),
+    ]),
+  ).slice(0, 18);
+
+  const priorityTerms = Array.from(
+    new Set(
+      (orgProjects ?? [])
+        .flatMap((project) => {
+          const metadata = (project.metadata ?? {}) as Record<string, unknown>;
+          return [
+            ...projectMetadataList(metadata, 'funding_tags'),
+            ...projectMetadataList(metadata, 'required_grant_terms'),
+          ];
+        })
+        .map((item) => item.toLowerCase())
+    ),
+  ).slice(0, 18);
+
+  // Build query — future deadlines, then rank locally using org project signals.
   let query = supabase
     .from('grant_opportunities')
-    .select('id, name, description, amount_min, amount_max, deadline, closes_at, provider, categories, focus_areas, url, fit_score')
+    .select('id, name, description, amount_min, amount_max, deadline, closes_at, provider, categories, focus_areas, target_recipients, geography, url, fit_score, last_verified_at')
     .or('deadline.gte.now(),closes_at.gte.now(),deadline.is.null')
     .order('deadline', { ascending: true, nullsFirst: false })
-    .limit(20);
+    .limit(120);
 
   if (excludeIds.length > 0) {
     query = query.not('id', 'in', `(${excludeIds.join(',')})`);
   }
 
   const { data } = await query;
-  return (data ?? []) as MatchedGrant[];
+  const rows = (data ?? []) as GrantCandidate[];
+
+  if (keywordTerms.length === 0 && priorityTerms.length === 0) {
+    return rows.slice(0, 8).map(({ target_recipients: _targetRecipients, geography: _geography, last_verified_at: _lastVerifiedAt, ...row }) => row);
+  }
+
+  const ranked = rows
+    .map((row) => {
+      const thematicHits = textOverlapScore(
+        [
+          ...(row.categories ?? []),
+          ...(row.focus_areas ?? []),
+          ...(row.target_recipients ?? []),
+        ],
+        keywordTerms,
+      );
+      const keywordHits = textOverlapScore(
+        [
+          row.name,
+          row.description,
+          ...(row.categories ?? []),
+          ...(row.focus_areas ?? []),
+          ...(row.target_recipients ?? []),
+          row.provider,
+        ],
+        keywordTerms,
+      );
+      const priorityHits = textOverlapScore(
+        [
+          row.name,
+          row.description,
+          ...(row.categories ?? []),
+          ...(row.focus_areas ?? []),
+          ...(row.target_recipients ?? []),
+        ],
+        priorityTerms,
+      );
+      const provider = (row.provider ?? '').toLowerCase();
+      const universityProvider =
+        provider.includes('university') || provider.includes('institute of technology');
+      const researchHeavy =
+        textOverlapScore([...(row.categories ?? []), ...(row.focus_areas ?? []), row.name], ['research', 'science', 'discovery']) > 0;
+
+      let score = thematicHits * 5 + keywordHits * 2 + priorityHits * 4;
+
+      if (geographyMatches(row.geography, geoFocus)) score += 3;
+      if (
+        orgType &&
+        (row.target_recipients ?? []).some((entry) => entry.toLowerCase().includes(orgType.toLowerCase()))
+      ) {
+        score += 2;
+      }
+
+      if (universityProvider) {
+        score -= 6;
+      }
+      if (researchHeavy && priorityHits === 0) {
+        score -= 6;
+      }
+
+      const deadline = row.deadline ?? row.closes_at;
+      if (deadline) {
+        const days = Math.ceil((new Date(deadline).getTime() - Date.now()) / 86400000);
+        if (days >= 0 && days <= 45) score += 2;
+        else if (days > 45 && days <= 120) score += 1;
+      } else if (row.last_verified_at) {
+        score += 1;
+      }
+
+      return {
+        ...row,
+        fit_score: score,
+        _hits: thematicHits + keywordHits + priorityHits,
+        _thematicHits: thematicHits,
+        _priorityHits: priorityHits,
+        _universityProvider: universityProvider,
+      };
+    })
+    .filter((row) => row._hits > 0)
+    .filter((row) => row._thematicHits > 0 || row._priorityHits > 0)
+    .filter((row) => !row._universityProvider)
+    .filter((row) => (row.fit_score ?? 0) >= 8)
+    .sort((left, right) => {
+      if ((right.fit_score ?? 0) !== (left.fit_score ?? 0)) {
+        return (right.fit_score ?? 0) - (left.fit_score ?? 0);
+      }
+      const leftDate = left.deadline ?? left.closes_at ?? '9999-12-31';
+      const rightDate = right.deadline ?? right.closes_at ?? '9999-12-31';
+      return leftDate.localeCompare(rightDate);
+    })
+    .slice(0, 8)
+    .map(({
+      target_recipients: _targetRecipients,
+      geography: _geography,
+      last_verified_at: _lastVerifiedAt,
+      _hits,
+      _thematicHits,
+      _priorityHits,
+      _universityProvider,
+      ...row
+    }) => row);
+
+  return ranked;
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

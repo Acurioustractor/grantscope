@@ -3,10 +3,11 @@ import './globals.css';
 import { NavBar } from './components/nav';
 import { ImpersonationBanner } from './components/impersonation-banner';
 import { ChatDrawer } from './components/chat-drawer';
-import { createSupabaseServer } from '@/lib/supabase-server';
+import { createSupabaseServer, hasSupabaseServerEnv } from '@/lib/supabase-server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { resolveSubscriptionTier } from '@/lib/subscription';
 import { isAdminEmail } from '@/lib/admin';
+import type { User } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 
 export const metadata: Metadata = {
@@ -15,43 +16,48 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createSupabaseServer();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user: User | null = null;
+  let subscriptionPlan: string | null = null;
+  let userOrgSlug: string | null = null;
+  let impersonatingOrg: { name: string; slug: string } | null = null;
 
   // Check for impersonation cookie (admin-only)
   const cookieStore = await cookies();
   const impersonateSlug = cookieStore.get('cg_impersonate_org')?.value ?? null;
-  let impersonatingOrg: { name: string; slug: string } | null = null;
 
   // Resolve subscription tier from org_profiles
-  let subscriptionPlan: string | null = null;
-  let userOrgSlug: string | null = null;
-  if (user) {
-    if (impersonateSlug && isAdminEmail(user.email)) {
-      // Admin impersonating: use the target org's tier
-      const db = getServiceSupabase();
-      const { data: targetOrg } = await db
-        .from('org_profiles')
-        .select('name, slug, subscription_plan')
-        .eq('slug', impersonateSlug)
-        .maybeSingle();
-      if (targetOrg) {
-        subscriptionPlan = targetOrg.subscription_plan;
-        impersonatingOrg = { name: targetOrg.name, slug: targetOrg.slug };
-        userOrgSlug = targetOrg.slug;
+  if (hasSupabaseServerEnv()) {
+    const supabase = await createSupabaseServer();
+    const {
+      data: { user: currentUser },
+    } = await supabase.auth.getUser();
+    user = currentUser;
+
+    if (user) {
+      if (impersonateSlug && isAdminEmail(user.email)) {
+        // Admin impersonating: use the target org's tier
+        const db = getServiceSupabase();
+        const { data: targetOrg } = await db
+          .from('org_profiles')
+          .select('name, slug, subscription_plan')
+          .eq('slug', impersonateSlug)
+          .maybeSingle();
+        if (targetOrg) {
+          subscriptionPlan = targetOrg.subscription_plan;
+          impersonatingOrg = { name: targetOrg.name, slug: targetOrg.slug };
+          userOrgSlug = targetOrg.slug;
+        }
       }
-    }
-    if (!subscriptionPlan) {
-      const { data: profile } = await supabase
-        .from('org_profiles')
-        .select('subscription_plan, slug')
-        .eq('user_id', user.id)
-        .single();
-      subscriptionPlan = profile?.subscription_plan ?? null;
-      if (!impersonatingOrg && profile?.slug) {
-        userOrgSlug = profile.slug;
+      if (!subscriptionPlan) {
+        const { data: profile } = await supabase
+          .from('org_profiles')
+          .select('subscription_plan, slug')
+          .eq('user_id', user.id)
+          .single();
+        subscriptionPlan = profile?.subscription_plan ?? null;
+        if (!impersonatingOrg && profile?.slug) {
+          userOrgSlug = profile.slug;
+        }
       }
     }
   }
