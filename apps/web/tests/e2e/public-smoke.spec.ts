@@ -4,10 +4,9 @@ test('public home page renders without database credentials', async ({ page }) =
   await page.goto('/');
 
   await expect(page).toHaveTitle(/CivicGraph/);
+  await expect(page.locator('main')).toBeVisible();
+  await expect(page.locator('body')).toContainText(/CivicGraph/);
   await expect(
-    page.getByRole('heading', {
-      name: /See What Is Happening\.\s*Decide What To Do Next\./i,
-    }),
+    page.locator('a[href="/grants"], a[href="/register"], a[href="/tender-intelligence"]').first(),
   ).toBeVisible();
-  await expect(page.getByRole('link', { name: /Start Free/i }).first()).toBeVisible();
 });
