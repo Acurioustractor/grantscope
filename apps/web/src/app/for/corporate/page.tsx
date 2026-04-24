@@ -403,7 +403,7 @@ export default async function ForCorporatePage() {
           </div>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
-              href="/auth/signup"
+              href="/register"
               className="inline-block py-3 px-8 font-black text-sm uppercase tracking-widest border-4 border-bauhaus-black bg-bauhaus-black text-white transition-all hover:bg-bauhaus-yellow hover:text-bauhaus-black"
             >
               Start Free

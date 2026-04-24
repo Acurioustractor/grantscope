@@ -58,6 +58,9 @@ const SORT_OPTIONS = [
   { value: 'name', label: 'Name A-Z' },
   { value: 'revenue', label: 'Highest Revenue' },
   { value: 'grants', label: 'Highest Grants' },
+  { value: 'assets', label: 'Highest Assets' },
+  { value: 'fte', label: 'Most Staff' },
+  { value: 'volunteers', label: 'Most Volunteers' },
   { value: 'newest', label: 'Newest Registered' },
 ];
 
@@ -76,6 +79,8 @@ interface CharityRow {
   total_revenue: number | null;
   total_grants_given: number | null;
   total_assets: number | null;
+  staff_fte: number | null;
+  staff_volunteers: number | null;
   latest_financial_year: number | null;
   has_enrichment: boolean;
 }
@@ -138,7 +143,7 @@ export default async function CharitiesPage({ searchParams }: { searchParams: Pr
   // Build query
   let dbQuery = supabase
     .from('v_charity_explorer')
-    .select('abn, name, charity_size, state, pbi, hpc, purposes, beneficiaries, operating_states, is_foundation, website, total_revenue, total_grants_given, total_assets, latest_financial_year, has_enrichment', { count: 'exact' });
+    .select('abn, name, charity_size, state, pbi, hpc, purposes, beneficiaries, operating_states, is_foundation, website, total_revenue, total_grants_given, total_assets, staff_fte, staff_volunteers, latest_financial_year, has_enrichment', { count: 'exact' });
 
   if (query) {
     dbQuery = dbQuery.ilike('name', `%${query}%`);
@@ -182,6 +187,12 @@ export default async function CharitiesPage({ searchParams }: { searchParams: Pr
     dbQuery = dbQuery.order('total_revenue', { ascending: false, nullsFirst: false });
   } else if (sortBy === 'grants') {
     dbQuery = dbQuery.order('total_grants_given', { ascending: false, nullsFirst: false });
+  } else if (sortBy === 'assets') {
+    dbQuery = dbQuery.order('total_assets', { ascending: false, nullsFirst: false });
+  } else if (sortBy === 'fte') {
+    dbQuery = dbQuery.order('staff_fte', { ascending: false, nullsFirst: false });
+  } else if (sortBy === 'volunteers') {
+    dbQuery = dbQuery.order('staff_volunteers', { ascending: false, nullsFirst: false });
   } else if (sortBy === 'newest') {
     dbQuery = dbQuery.order('registration_date', { ascending: false, nullsFirst: false });
   } else {
@@ -219,6 +230,17 @@ export default async function CharitiesPage({ searchParams }: { searchParams: Pr
           {(count || 0).toLocaleString()} charities from the ACNC register — every registered charity in Australia. Search by mission, geography, cause area, size, and financial health.
         </p>
       </div>
+
+      {/* Rankings banner */}
+      <a href="/rankings" className="block mb-4 group">
+        <div className="bg-bauhaus-black border-4 border-bauhaus-black p-4 flex items-center justify-between transition-all group-hover:-translate-y-0.5 bauhaus-shadow-sm">
+          <div>
+            <div className="text-xs font-black text-bauhaus-red uppercase tracking-widest mb-1">New</div>
+            <div className="text-sm font-black text-white">Charity Rankings &mdash; 42,000+ charities scored across 6 dimensions</div>
+          </div>
+          <span className="text-white font-black text-lg ml-4 flex-shrink-0">&rarr;</span>
+        </div>
+      </a>
 
       {/* Insights banner */}
       <a href="/charities/insights" className="block mb-6 group">
@@ -393,6 +415,16 @@ export default async function CharitiesPage({ searchParams }: { searchParams: Pr
                 {c.total_assets != null && c.total_assets > 0 && (
                   <div className="text-[11px] text-bauhaus-muted font-bold tabular-nums">
                     {formatCurrency(c.total_assets)} assets
+                  </div>
+                )}
+                {c.staff_fte != null && c.staff_fte > 0 && (
+                  <div className="text-[11px] text-bauhaus-muted font-bold tabular-nums">
+                    {c.staff_fte.toLocaleString()} FTE
+                  </div>
+                )}
+                {c.staff_volunteers != null && c.staff_volunteers > 0 && (
+                  <div className="text-[11px] text-bauhaus-muted font-bold tabular-nums">
+                    {c.staff_volunteers.toLocaleString()} vol
                   </div>
                 )}
                 {c.latest_financial_year && (
