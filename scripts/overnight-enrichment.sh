@@ -179,13 +179,19 @@ if should_run_phase 4; then
   log "═══════════════════════════════════════════════════════════"
   log "PHASE 4 — Linkage (ALMA, justice, people, interlocks)"
   log "═══════════════════════════════════════════════════════════"
-  run_agent "ALMA → entity linker (90% unlinked)" node --env-file=.env scripts/enrich-alma-orgs.mjs
+  # link-alma-v4 is the actual ALMA→entity linker (multi-strategy: ABN, name,
+  # parent-org extraction, fuzzy match). enrich-alma-orgs only scrapes websites.
+  run_agent "ALMA → entity linker (v4 multi-strategy)" node --env-file=.env scripts/link-alma-v4.mjs --apply
+  run_agent "ALMA → entity linker (via registry)"      node --env-file=.env scripts/link-alma-via-registry.mjs
+  run_agent "ALMA website metadata enrichment"         node --env-file=.env scripts/enrich-alma-orgs.mjs --limit=200
   run_agent "Justice funding → entity bridge"     node --env-file=.env scripts/bridge-justice-funding.mjs
   run_agent "Justice → graph (relationships)"     node --env-file=.env scripts/bridge-justice-to-graph.mjs
   run_agent "Person roles bridge"                 node --env-file=.env scripts/bridge-person-roles.mjs
   run_agent "Person network builder"              node --env-file=.env scripts/build-person-network.mjs
   run_agent "Cross-system linker"                 node --env-file=.env scripts/civic-cross-linker.mjs
   run_agent "Donor-contract crossover check"      node --env-file=.env scripts/check-donor-contract-crossover.mjs
+  # Catch-all linkage sweep — comprehensive cleanup pass
+  run_agent "Overnight linkage sweep (catch-all)" node --env-file=.env scripts/overnight-linkage-sweep.mjs
 fi
 
 # ─── Phase 5: Profiles + embeddings + mega-linker
