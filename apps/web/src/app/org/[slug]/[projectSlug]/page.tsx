@@ -374,7 +374,7 @@ export default async function ProjectDashboard({
             </div>
             <div className="flex flex-col items-end gap-2">
               <Link
-                href={`/funding-workspace?org=${encodeURIComponent(slug)}&project=${encodeURIComponent(projectSlug)}`}
+                href={`/graph?org=${encodeURIComponent(slug)}&project=${encodeURIComponent(projectSlug)}`}
                 className="px-4 py-2 bg-bauhaus-blue text-white font-black uppercase tracking-widest text-xs hover:bg-blue-700 transition-colors"
               >
                 Funding Matches
@@ -467,7 +467,7 @@ export default async function ProjectDashboard({
               Open QBE Program
             </a>
             <Link
-              href="/goods-workspace"
+              href="/social-enterprises"
               className="border-2 border-bauhaus-blue/25 bg-link-light px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-bauhaus-blue transition-colors hover:border-bauhaus-blue hover:bg-bauhaus-blue hover:text-white"
             >
               Open Goods Workspace

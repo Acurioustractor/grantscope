@@ -149,7 +149,7 @@ export function MoneyTab({ gsId, isPremium }: { gsId: string; isPremium: boolean
             </button>
           ) : (
             <Link
-              href="/pricing"
+              href="/support"
               className="inline-block px-6 py-3 bg-bauhaus-black text-white font-black text-xs uppercase tracking-widest hover:bg-bauhaus-blue transition-colors"
             >
               Unlock Full Dossier

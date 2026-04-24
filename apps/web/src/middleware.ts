@@ -2,7 +2,12 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request });
+  // Expose the pathname to server components so the root layout can
+  // conditionally skip chrome (nav/footer) for iframe-embed routes.
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-pathname', request.nextUrl.pathname);
+
+  let supabaseResponse = NextResponse.next({ request: { headers: requestHeaders } });
   let user = null;
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -37,7 +42,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Protect authenticated routes
-  const protectedPrefixes = ['/home', '/tracker', '/foundations/tracker', '/ops', '/profile', '/goods-intelligence', '/goods-workspace', '/org'];
+  const protectedPrefixes = ['/home', '/tracker', '/foundations/tracker', '/ops', '/profile', '/org'];
   if (protectedPrefixes.some(p => pathname.startsWith(p)) && !user) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
@@ -56,5 +61,10 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/home', '/home/:path*', '/tracker/:path*', '/foundations/tracker/:path*', '/foundations/tracker', '/ops/:path*', '/ops', '/profile/:path*', '/profile', '/login', '/goods-intelligence/:path*', '/goods-intelligence', '/goods-workspace/:path*', '/goods-workspace', '/org/:path*', '/org'],
+  // Run middleware everywhere so x-pathname is set for server components.
+  // Auth gating still only applies to the protected prefixes above.
+  matcher: [
+    // Skip static files, Next internals, and images
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|svg|webp|ico|css|js)$).*)',
+  ],
 };

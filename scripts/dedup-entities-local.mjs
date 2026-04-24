@@ -125,7 +125,7 @@ function parseRecommendation(text) {
 async function ensureTable() {
   // Create the table if it doesn't exist
   const { error } = await supabase.rpc('exec_sql', {
-    sql: `CREATE TABLE IF NOT EXISTS dedup_recommendations (
+    query: `CREATE TABLE IF NOT EXISTS dedup_recommendations (
       id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
       discovery_id uuid,
       cluster_name text,

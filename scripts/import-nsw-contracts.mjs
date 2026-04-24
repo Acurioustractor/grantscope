@@ -159,7 +159,7 @@ async function main() {
       // Check austender_contracts schema for compatibility
       console.log('\nChecking austender_contracts schema...');
       const { data: cols } = await db.rpc('exec_sql', {
-        sql: "SELECT column_name FROM information_schema.columns WHERE table_name = 'austender_contracts' ORDER BY ordinal_position"
+        query: "SELECT column_name FROM information_schema.columns WHERE table_name = 'austender_contracts' ORDER BY ordinal_position"
       });
 
       // Map to austender_contracts columns

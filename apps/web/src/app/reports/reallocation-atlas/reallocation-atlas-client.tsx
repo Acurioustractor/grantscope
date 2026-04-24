@@ -224,8 +224,8 @@ export function ReallocationAtlasClient({ atlasData }: { atlasData: AtlasData })
     ? localDirected / localCommunityEntities.length
     : 0;
   const selectedGoodsHref = selected
-    ? `/goods-workspace?lga=${encodeURIComponent(selected.lga_name)}&state=${encodeURIComponent(selected.state)}&mode=need-led&ntOnly=${selected.state === 'NT' ? 'true' : 'false'}`
-    : '/goods-workspace';
+    ? `/social-enterprises?lga=${encodeURIComponent(selected.lga_name)}&state=${encodeURIComponent(selected.state)}&mode=need-led&ntOnly=${selected.state === 'NT' ? 'true' : 'false'}`
+    : '/social-enterprises';
   const selectedPowerGraphHref = selected
     ? `/graph?mode=power&state=${encodeURIComponent(selected.state)}`
     : '/graph?mode=power';

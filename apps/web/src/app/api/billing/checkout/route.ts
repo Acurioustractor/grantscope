@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
       mode: 'subscription',
       line_items: [{ price: tierConfig.stripePriceId, quantity: 1 }],
       success_url: `${appUrl}/profile?billing=success`,
-      cancel_url: `${appUrl}/pricing?billing=cancelled`,
+      cancel_url: `${appUrl}/support?billing=cancelled`,
       metadata: {
         org_profile_id: profile.id,
         tier,

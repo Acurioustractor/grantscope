@@ -764,7 +764,7 @@ export function ProjectProcurementRoutesSection({
                   ) : null}
                   <div className="mt-4 flex flex-wrap gap-2">
                     <Link
-                      href="/goods-workspace"
+                      href="/social-enterprises"
                       className="inline-flex border-2 border-bauhaus-black/15 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-bauhaus-black transition-colors hover:border-bauhaus-black hover:bg-bauhaus-black hover:text-white"
                     >
                       Open workspace

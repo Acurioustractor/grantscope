@@ -196,7 +196,7 @@ async function queryDonorContractors() {
   // Join political_donations with austender_contracts on donor_abn = supplier_abn
   // Filter by topic in contract description or entity name
   const { data, error } = await db.rpc('exec_sql', {
-    sql: `
+    query: `
       SELECT
         d.donor_name,
         d.donor_abn,

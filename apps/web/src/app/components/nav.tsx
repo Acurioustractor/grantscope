@@ -15,7 +15,7 @@ const publicLinks = [
   { href: '/grants', label: 'Funding' },
   { href: '/power', label: 'Power' },
   { href: '/reports', label: 'Reports' },
-  { href: '/pricing', label: 'Pricing' },
+  { href: '/support', label: 'Support' },
 ];
 
 const megaMenuSections = [
@@ -32,10 +32,10 @@ const megaMenuSections = [
   {
     title: 'Market And Power',
     links: [
-      { href: '/tender-intelligence', label: 'Tender Intelligence', desc: 'Check suppliers, pathways, and procurement options' },
+      { href: '/procurement', label: 'Procurement', desc: 'Check suppliers, pathways, and procurement options' },
       { href: '/power', label: 'Power Map', desc: 'See the money, entities, and relationships shaping a field' },
       { href: '/reports/big-philanthropy', label: 'Big Philanthropy', desc: 'Track foundation power, giving, and concentration' },
-      { href: '/clarity', label: 'Data Clarity', desc: 'Understand what the graph covers and how the systems connect' },
+      { href: '/insights', label: 'Data Clarity', desc: 'Understand what the graph covers and how the systems connect' },
     ],
   },
   {
@@ -50,9 +50,9 @@ const megaMenuSections = [
   {
     title: 'Platform',
     links: [
-      { href: '/pricing', label: 'Pricing', desc: 'Compare Community, Professional, Organisation, and Funder plans' },
-      { href: '/for/community', label: 'For Community Teams', desc: 'How the product helps nonprofits and grant consultants' },
-      { href: '/developers', label: 'API', desc: 'Programmatic access and developer entry points' },
+      { href: '/support', label: 'Support', desc: 'Partner with us, commission research, or support the work' },
+      { href: '/social-enterprises', label: 'Social Enterprises', desc: 'Community-controlled and Indigenous-led organisations' },
+      { href: '/snow-foundation', label: 'Partners', desc: 'Our funding partners and collaborators' },
       { href: '/places', label: 'Place Packs', desc: 'Place-based funding and allocation intelligence' },
     ],
   },
@@ -77,7 +77,7 @@ const workspaceModules: NavModule[] = [
       { label: 'Home', href: '/home' },
       { label: 'My Org', href: '/org' },
       { label: 'Briefing Hub', href: '/briefing' },
-      { label: 'Data Clarity', href: '/clarity' },
+      { label: 'Data Clarity', href: '/insights' },
     ],
   },
   {
@@ -98,11 +98,11 @@ const workspaceModules: NavModule[] = [
   {
     id: 'procurement',
     label: 'Markets',
-    href: '/tender-intelligence',
+    href: '/procurement',
     module: 'procurement',
     children: [
-      { label: 'Discover', href: '/tender-intelligence' },
-      { label: 'Goods Workspace', href: '/goods-workspace' },
+      { label: 'Discover', href: '/procurement' },
+      { label: 'Social Enterprises', href: '/social-enterprises' },
     ],
   },
   {
@@ -135,9 +135,7 @@ const workspaceModules: NavModule[] = [
 
 const adminLinks = [
   { href: '/ops', label: 'Ops' },
-  { href: '/portfolio-control', label: 'Portfolio Control' },
   { href: '/mission-control', label: 'Mission Control' },
-  { href: '/goods-workspace', label: 'Goods Workspace' },
 ];
 
 /* ─── Component ────────────────────────────────────────────── */
@@ -245,7 +243,7 @@ export function NavBar({ initialUserEmail, subscriptionTier = 'community', isImp
                 return (
                   <a
                     key={mod.id}
-                    href={locked ? '/pricing' : mod.href}
+                    href={locked ? '/support' : mod.href}
                     className="relative px-3 h-12 flex items-center text-[13px] font-medium transition-colors"
                     style={{
                       color: locked
@@ -545,9 +543,8 @@ function WorkspaceAccountMenu({ userEmail, isAdmin, isImpersonating = false }: {
             { href: '/profile', label: 'My Organisation' },
             { href: '/profile/matches', label: 'Matched Grants' },
             { href: '/profile/answers', label: 'Answer Bank' },
-            { href: '/knowledge', label: 'Knowledge Wiki' },
             { href: '/settings', label: 'Settings' },
-            { href: '/pricing', label: 'Billing & Plan' },
+            { href: '/support', label: 'Support' },
           ].map(item => (
             <a
               key={item.href}

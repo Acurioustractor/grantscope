@@ -171,7 +171,7 @@ export function EvidenceTab({ gsId, isPremium }: { gsId: string; isPremium: bool
                 ))}
               </div>
               <div className="absolute inset-0 flex items-center justify-center">
-                <Link href="/pricing" className="px-6 py-3 bg-bauhaus-black text-white font-black text-sm uppercase tracking-widest hover:bg-bauhaus-blue transition-colors">
+                <Link href="/support" className="px-6 py-3 bg-bauhaus-black text-white font-black text-sm uppercase tracking-widest hover:bg-bauhaus-blue transition-colors">
                   Unlock Full Dossier
                 </Link>
               </div>

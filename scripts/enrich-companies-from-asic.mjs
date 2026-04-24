@@ -31,7 +31,7 @@ const CONN = `postgresql://postgres.tednluwflfhxyucgwigh:${pw}@aws-0-ap-southeas
 
 function psql(sql, timeout = 120000) {
   const cmd = `psql "${CONN}" -t -A -c ${JSON.stringify(sql)}`;
-  return execSync(cmd, { encoding: 'utf8', timeout }).trim();
+  return execSync(cmd, { encoding: 'utf8', timeout, maxBuffer: 200 * 1024 * 1024 }).trim();
 }
 
 function log(msg) {

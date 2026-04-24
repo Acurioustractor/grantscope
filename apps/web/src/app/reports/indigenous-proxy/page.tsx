@@ -1,8 +1,28 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getServiceSupabase } from '@/lib/supabase';
 import { safe } from '@/lib/services/utils';
 
 export const revalidate = 3600;
+
+export const metadata: Metadata = {
+  title: 'The Indigenous Proxy Problem — CivicGraph',
+  description:
+    '57% of Australian government funding tagged "Indigenous" flows to non-Indigenous-controlled organisations. Cross-system investigation of where the money actually lands versus where it was promised.',
+  openGraph: {
+    title: 'The Indigenous Proxy Problem',
+    description:
+      '57% of Indigenous-tagged government funding flows to non-Indigenous-controlled organisations. A CivicGraph investigation.',
+    type: 'article',
+    siteName: 'CivicGraph',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'The Indigenous Proxy Problem',
+    description:
+      '57% of Indigenous-tagged funding flows to non-Indigenous orgs. CivicGraph investigation.',
+  },
+};
 
 function money(n: number | null | undefined): string {
   if (n == null) return '--';
@@ -206,8 +226,35 @@ export default async function IndigenousProxyPage() {
         &larr; All Reports
       </Link>
 
+      {/* Advisory review banner — non-negotiable per /about/curious-tractor */}
+      <div className="mt-4 border-4 border-bauhaus-yellow bg-bauhaus-yellow/20 p-4">
+        <div className="flex items-start gap-3">
+          <div className="flex-shrink-0 border-2 border-bauhaus-black bg-bauhaus-yellow px-2 py-1 text-[10px] font-black uppercase tracking-widest text-bauhaus-black">
+            Under Advisory Review
+          </div>
+          <div className="text-sm text-bauhaus-black">
+            <p className="font-bold">
+              This investigation analyses First Nations data and is being reviewed by our Indigenous advisory before broader distribution.
+            </p>
+            <p className="mt-2 text-bauhaus-muted">
+              CivicGraph&rsquo;s{' '}
+              <Link href="/about/curious-tractor" className="font-black text-bauhaus-black underline hover:text-bauhaus-red">
+                published principle
+              </Link>{' '}
+              is that Indigenous-related publications pass advisory review before full public release. The data and
+              methodology are public for transparency; the framing is iterating with Aboriginal and Torres Strait Islander
+              voices. If you&rsquo;re a community member, researcher, or advisor who wants to contribute, see the{' '}
+              <a href="#contribute" className="font-black text-bauhaus-black underline hover:text-bauhaus-red">
+                review invitation
+              </a>{' '}
+              below.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Hero */}
-      <div className="mt-4 mb-8">
+      <div className="mt-8 mb-8">
         <div className="text-[10px] font-black text-bauhaus-red uppercase tracking-[0.25em] mb-1">Cross-System Investigation</div>
         <h1 className="text-3xl sm:text-4xl font-black text-bauhaus-black mb-3">
           The Indigenous Proxy Problem
@@ -527,6 +574,91 @@ export default async function IndigenousProxyPage() {
           </div>
         </section>
       )}
+
+      {/* Contribute / advisory review invitation */}
+      <section id="contribute" className="mb-10">
+        <div className="border-4 border-bauhaus-black bg-bauhaus-black text-white p-6 sm:p-8">
+          <div className="text-[10px] font-black text-bauhaus-yellow uppercase tracking-[0.3em] mb-2">
+            Contribute To This Investigation
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight mb-4">
+            This is a living investigation. Help shape it.
+          </h2>
+          <p className="text-sm text-white/80 leading-relaxed mb-4 max-w-3xl">
+            The data is strong. The framing needs to be right. If you&rsquo;re an Aboriginal or Torres
+            Strait Islander person, community organisation, peak body, researcher, or advocate working
+            in this space, CivicGraph wants your input before wider public release.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2 mt-6">
+            <div className="border-4 border-white/20 p-4">
+              <p className="text-[10px] font-black text-bauhaus-yellow uppercase tracking-widest mb-1">
+                Indigenous advisors
+              </p>
+              <p className="text-sm text-white/80">
+                Advance review of framing and findings. Named publicly (with your agreement).
+                Honorarium available.
+              </p>
+            </div>
+            <div className="border-4 border-white/20 p-4">
+              <p className="text-[10px] font-black text-bauhaus-yellow uppercase tracking-widest mb-1">
+                Community organisations
+              </p>
+              <p className="text-sm text-white/80">
+                Tell us what&rsquo;s missing. Flag misclassifications. Point us to data we haven&rsquo;t
+                found yet.
+              </p>
+            </div>
+            <div className="border-4 border-white/20 p-4">
+              <p className="text-[10px] font-black text-bauhaus-yellow uppercase tracking-widest mb-1">
+                Journalists
+              </p>
+              <p className="text-sm text-white/80">
+                Request the full dataset, methodology notes, and entity-level data for your own
+                investigation.
+              </p>
+            </div>
+            <div className="border-4 border-white/20 p-4">
+              <p className="text-[10px] font-black text-bauhaus-yellow uppercase tracking-widest mb-1">
+                Researchers
+              </p>
+              <p className="text-sm text-white/80">
+                Access for peer-reviewed work. We cite your feedback; you cite the atlas.
+              </p>
+            </div>
+          </div>
+          <div className="mt-6 flex flex-wrap gap-0">
+            <a
+              href="mailto:ben@benjamink.com.au?subject=Indigenous%20Proxy%20Problem%20%E2%80%94%20contribute"
+              className="border-4 border-white bg-bauhaus-yellow px-6 py-3 text-xs font-black uppercase tracking-widest text-bauhaus-black transition-colors hover:bg-white"
+            >
+              Get in touch
+            </a>
+            <Link
+              href="/about/curious-tractor"
+              className="border-y-4 border-r-4 border-white bg-transparent px-6 py-3 text-xs font-black uppercase tracking-widest text-white transition-colors hover:bg-white hover:text-bauhaus-black"
+            >
+              Our principles
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* How to cite */}
+      <section className="mb-10">
+        <div className="border-4 border-bauhaus-black p-4 bg-white">
+          <h3 className="text-sm font-black text-bauhaus-black uppercase tracking-widest mb-2">
+            How to cite
+          </h3>
+          <p className="text-xs text-bauhaus-muted font-mono leading-relaxed">
+            A Curious Tractor. &ldquo;The Indigenous Proxy Problem.&rdquo; CivicGraph, 2026.{' '}
+            https://civicgraph.com.au/reports/indigenous-proxy
+          </p>
+          <p className="text-xs text-bauhaus-muted mt-2">
+            Republication, data reuse, and adaptation welcome under attribution. If you&rsquo;re publishing a
+            derivative investigation, we&rsquo;d appreciate a heads-up so we can support verification.
+          </p>
+        </div>
+      </section>
 
       {/* Methodology */}
       <section className="mb-8">

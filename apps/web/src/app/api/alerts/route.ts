@@ -226,7 +226,7 @@ export async function POST(request: NextRequest) {
         error: 'This alert frequency is not available on your current plan.',
         tier,
         allowed_frequencies: entitlements.frequencies,
-        upgrade_url: '/pricing',
+        upgrade_url: '/support',
       },
       { status: 403 }
     );
@@ -246,7 +246,7 @@ export async function POST(request: NextRequest) {
         error: 'You have reached your alert limit for this plan.',
         tier,
         max_alerts: entitlements.maxAlerts,
-        upgrade_url: '/pricing',
+        upgrade_url: '/support',
       },
       { status: 403 }
     );

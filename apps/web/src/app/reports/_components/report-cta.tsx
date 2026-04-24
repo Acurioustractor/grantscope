@@ -69,7 +69,7 @@ export function ReportCTA({ reportSlug, reportTitle, pdfDescription, variant = '
             Explore Entities
           </a>
           <a
-            href="/pricing"
+            href="/support"
             className="px-4 py-2 border-2 border-bauhaus-black text-bauhaus-black text-xs font-black uppercase tracking-widest hover:bg-bauhaus-black hover:text-white transition-colors"
           >
             See Plans

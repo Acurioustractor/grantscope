@@ -264,7 +264,7 @@ export default async function SnowFoundationDemoPage() {
     {
       step: 'Screen 3',
       title: 'Clarity handoff for Deadly Hearts Trek',
-      href: '/clarity?subject=Deadly%20Hearts%20Trek&state=NT&output=story-handoff&lanes=clarity,entity,place',
+      href: '/insights?subject=Deadly%20Hearts%20Trek&state=NT&output=story-handoff&lanes=clarity,entity,place',
       platform: 'CivicGraph',
       description:
         'This is the public accountability layer between capital and story. It shows the narrative handoff with the active evidence lanes visible instead of implied.',

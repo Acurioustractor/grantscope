@@ -122,7 +122,7 @@ const START_POINTS: StartPoint[] = [
       'Read power, funding concentration, place signals, and under-served territory before pushing a narrative or recommendation.',
     outcome: 'Best when you need a place brief, field scan, or reporting angle.',
     primary: { label: 'Compose Story Handoff', href: '/briefing?start=place&output=story-handoff#composer' },
-    secondary: { label: 'Check Data Coverage', href: '/clarity' },
+    secondary: { label: 'Check Data Coverage', href: '/insights' },
   },
 ];
 
@@ -249,7 +249,7 @@ export default async function BriefingPage() {
               Open Power Map
             </Link>
             <Link
-              href="/clarity"
+              href="/insights"
               className="rounded-lg px-3 py-2 text-sm font-medium transition-colors"
               style={{ background: 'var(--ws-accent)', color: '#fff' }}
             >
@@ -485,7 +485,7 @@ export default async function BriefingPage() {
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
               <Link
-                href="/clarity"
+                href="/insights"
                 className="rounded-lg px-3 py-2 text-sm font-medium transition-colors"
                 style={{ background: 'var(--ws-accent)', color: '#fff' }}
               >

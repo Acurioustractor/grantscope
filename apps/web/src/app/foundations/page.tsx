@@ -812,7 +812,7 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
             label: 'Narrow lead list',
             description: 'Good for direct prospecting, not for broad landscape claims.',
             actionLabel: 'Use for: direct outreach and shortlist review',
-            actionHref: '/funding-workspace',
+            actionHref: '/graph',
             actionCta: 'Open funding workspace',
             secondaryHref: bestRecoveryOption && bestRecoveryOption.count > sliceCount ? bestRecoveryOption.href : null,
             secondaryCta: bestRecoveryOption && bestRecoveryOption.count > sliceCount ? `Broaden to ${bestRecoveryLabel}` : null,
@@ -828,7 +828,7 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
               actionLabel: 'Use for: close comparison inside one lane',
               actionHref: '/foundations/compare',
               actionCta: 'Open compare surface',
-              secondaryHref: '/funding-workspace',
+              secondaryHref: '/graph',
               secondaryCta: 'Open funding workspace',
               nextStep: 'Next step: compare the strongest candidates inside this lane before broadening further.',
               className: 'border-bauhaus-blue/25 bg-link-light text-bauhaus-blue',
@@ -992,7 +992,7 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
           <a href="/foundations/compare" className="px-3 py-2 border-2 border-bauhaus-red text-bauhaus-red bg-bauhaus-red/5 hover:bg-bauhaus-red hover:text-white transition-colors">
             Compare foundations
           </a>
-          <a href="/funding-workspace" className="px-3 py-2 border-2 border-bauhaus-blue text-bauhaus-blue bg-link-light hover:bg-bauhaus-blue hover:text-white transition-colors">
+          <a href="/graph" className="px-3 py-2 border-2 border-bauhaus-blue text-bauhaus-blue bg-link-light hover:bg-bauhaus-blue hover:text-white transition-colors">
             Open funding workspace
           </a>
         </div>

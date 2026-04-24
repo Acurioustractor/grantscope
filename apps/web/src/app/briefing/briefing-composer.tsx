@@ -55,7 +55,7 @@ const START_POINTS: StartPoint[] = [
     key: 'procurement',
     label: 'Procurement / market',
     description: 'Use this when the decision is about suppliers, pathways, or a live procurement move.',
-    directRoute: '/tender-intelligence',
+    directRoute: '/procurement',
   },
   {
     key: 'place',
@@ -74,7 +74,7 @@ const OUTPUTS: OutputOption[] = [
     primaryLabel: 'Open board memo generator',
     supportHrefs: [
       { label: 'Open power map', href: '/power' },
-      { label: 'Check clarity layer', href: '/clarity' },
+      { label: 'Check clarity layer', href: '/insights' },
     ],
   },
   {
@@ -92,7 +92,7 @@ const OUTPUTS: OutputOption[] = [
     key: 'tender-pack',
     label: 'Tender pack',
     description: 'Carry the evidence into supplier review, market testing, and sign-off-ready procurement work.',
-    primaryHref: '/tender-intelligence',
+    primaryHref: '/procurement',
     primaryLabel: 'Open tender intelligence',
     supportHrefs: [
       { label: 'See market power', href: '/power' },
@@ -103,7 +103,7 @@ const OUTPUTS: OutputOption[] = [
     key: 'story-handoff',
     label: 'Story handoff',
     description: 'Prepare the evidence chain for reporting, company stories, and aligned narrative analysis.',
-    primaryHref: '/clarity',
+    primaryHref: '/insights',
     primaryLabel: 'Open clarity handoff',
     supportHrefs: [
       { label: 'Open reporting', href: '/reports' },

@@ -80,7 +80,7 @@ export default function PlacesPage() {
             We cross-reference ACNC charity data, AusTender contracts, AEC political donations, ORIC Indigenous corporations, and justice funding records to build a comprehensive view of money flows at the community level.
           </p>
           <p>
-            <strong className="text-bauhaus-black">Free for communities.</strong> This data should be accessible to the people it affects most. Institutional users can access premium features through our <Link href="/pricing" className="text-bauhaus-blue hover:underline">paid tiers</Link>.
+            <strong className="text-bauhaus-black">Free for communities.</strong> This data should be accessible to the people it affects most. Institutional users can access premium features through our <Link href="/support" className="text-bauhaus-blue hover:underline">paid tiers</Link>.
           </p>
         </div>
       </section>

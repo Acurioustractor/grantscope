@@ -15,7 +15,7 @@ const menuItems = [
   { href: '/foundations/tracker', label: 'My Foundations', desc: 'Track foundation relationships' },
   { href: '/knowledge', label: 'Knowledge Wiki', desc: 'Documents, URLs & org intelligence' },
   { href: '/settings', label: 'Settings', desc: 'API keys & account' },
-  { href: '/pricing', label: 'Billing & Plan', desc: 'Manage your subscription' },
+  { href: '/support', label: 'Billing & Plan', desc: 'Manage your subscription' },
 ];
 
 const adminSections = [

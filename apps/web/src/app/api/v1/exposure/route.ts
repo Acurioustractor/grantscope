@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
   if (!hasModule(auth.tier, 'api')) {
     return NextResponse.json(
-      { error: 'API access requires Funder tier or above', upgrade_url: '/pricing' },
+      { error: 'API access requires Funder tier or above', upgrade_url: '/support' },
       { status: 403 }
     );
   }

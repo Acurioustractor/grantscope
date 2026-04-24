@@ -687,7 +687,7 @@ export function ProfileClient() {
                 </button>
               ) : null}
               <Link
-                href={`/pricing${billingInteractionSource !== 'profile_billing_panel' ? `?billing_source=${encodeURIComponent(billingInteractionSource)}` : ''}`}
+                href={`/support${billingInteractionSource !== 'profile_billing_panel' ? `?billing_source=${encodeURIComponent(billingInteractionSource)}` : ''}`}
                 className="px-4 py-3 text-xs font-black uppercase tracking-widest bg-white text-bauhaus-black border-4 border-bauhaus-black hover:bg-bauhaus-yellow transition-colors"
               >
                 Compare Plans

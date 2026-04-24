@@ -21,35 +21,73 @@ async function main() {
   // Step 1: Find austender supplier ABNs missing from gs_entities
   console.log('Finding missing supplier ABNs...');
 
-  // Get all unique supplier ABNs + their most common name
-  const { data: suppliers, error: supErr } = await supabase.rpc('exec_sql', {
-    sql: `
-      SELECT supplier_abn,
-             MODE() WITHIN GROUP (ORDER BY supplier_name) as supplier_name,
-             COALESCE(bool_or(supplier_oric_match), false) as is_indigenous,
-             COALESCE(bool_or(supplier_acnc_match), false) as is_charity,
-             COUNT(*) as contract_count,
-             COALESCE(SUM(contract_value), 0) as total_value
-      FROM austender_contracts
-      WHERE supplier_abn IS NOT NULL
-        AND supplier_abn NOT IN (SELECT abn FROM gs_entities WHERE abn IS NOT NULL)
-      GROUP BY supplier_abn
-      ORDER BY total_value DESC
-      LIMIT 1000
-    `,
-  });
+  // Dedup and diff in JS instead of SQL — 770K × 587K JOIN exceeds the 8s
+  // Supabase statement timeout. Pagination + in-memory sets finishes in ~30s
+  // and produces the same result.
 
-  if (supErr) {
-    console.error('Error fetching suppliers:', supErr.message);
-    process.exit(1);
+  // Step 1a: load existing gs_entity ABNs into a Set.
+  // PostgREST caps responses at 1000 rows by default, so paginate 1000 at a time.
+  // With ~350K entities that have ABNs, this is ~350 requests = ~20s.
+  console.log('  loading existing gs_entities ABNs...');
+  const existingAbns = new Set();
+  {
+    let from = 0;
+    const PAGE = 1000;
+    while (true) {
+      const { data, error } = await supabase
+        .from('gs_entities')
+        .select('abn')
+        .not('abn', 'is', null)
+        .order('abn')
+        .range(from, from + PAGE - 1);
+      if (error) { console.error('Error loading gs_entities ABNs:', error.message); process.exit(1); }
+      if (!data || data.length === 0) break;
+      for (const row of data) if (row.abn) existingAbns.add(row.abn);
+      if (from % 50000 === 0) console.log(`    ${existingAbns.size} loaded...`);
+      if (data.length < PAGE) break;
+      from += PAGE;
+    }
   }
+  console.log(`  loaded ${existingAbns.size} existing ABNs`);
+
+  // Step 1b: scan austender_contracts for unique supplier ABNs not in existingAbns
+  console.log('  scanning austender_contracts for missing suppliers...');
+  const supplierMap = new Map(); // abn → { supplier_abn, supplier_name, is_indigenous, is_charity }
+  {
+    let from = 0;
+    const PAGE = 1000;
+    const TARGET = 1000; // cap per run
+    while (supplierMap.size < TARGET) {
+      const { data, error } = await supabase
+        .from('austender_contracts')
+        .select('supplier_abn, supplier_name, supplier_oric_match, supplier_acnc_match')
+        .not('supplier_abn', 'is', null)
+        .range(from, from + PAGE - 1);
+      if (error) { console.error('Error scanning contracts:', error.message); process.exit(1); }
+      if (!data || data.length === 0) break;
+      for (const row of data) {
+        const abn = row.supplier_abn;
+        if (!abn || existingAbns.has(abn) || supplierMap.has(abn)) continue;
+        supplierMap.set(abn, {
+          supplier_abn: abn,
+          supplier_name: row.supplier_name,
+          is_indigenous: row.supplier_oric_match === true,
+          is_charity: row.supplier_acnc_match === true,
+        });
+        if (supplierMap.size >= TARGET) break;
+      }
+      if (data.length < PAGE) break;
+      from += PAGE;
+    }
+  }
+  const suppliers = Array.from(supplierMap.values());
 
   console.log(`Found ${suppliers.length} missing suppliers (batch capped at 1000)`);
 
   if (DRY_RUN) {
     console.log('Top 10:');
     for (const s of suppliers.slice(0, 10)) {
-      console.log(`  ${s.supplier_abn} | ${s.supplier_name} | $${Number(s.total_value).toLocaleString()} | ${s.contract_count} contracts`);
+      console.log(`  ${s.supplier_abn} | ${s.supplier_name}${s.is_indigenous ? ' [indigenous]' : ''}${s.is_charity ? ' [charity]' : ''}`);
     }
     return;
   }
@@ -89,7 +127,7 @@ async function main() {
 
   // Get buyer ABNs that exist as entities
   const { data: buyerEntities, error: buyerErr } = await supabase.rpc('exec_sql', {
-    sql: `
+    query: `
       SELECT DISTINCT buyer_id, buyer_name
       FROM austender_contracts
       WHERE buyer_id IS NOT NULL

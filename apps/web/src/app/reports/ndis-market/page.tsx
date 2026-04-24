@@ -244,16 +244,16 @@ export default async function NdisMarketPage() {
           enterprises or community organisations are barely visible in the money flow.
         </p>
         <div className="mt-4 flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-widest">
-          <Link href="/funding-workspace?theme=disability_ndis" className="px-3 py-2 border-2 border-bauhaus-black text-bauhaus-black hover:bg-bauhaus-black hover:text-white transition-colors">
+          <Link href="/graph?theme=disability_ndis" className="px-3 py-2 border-2 border-bauhaus-black text-bauhaus-black hover:bg-bauhaus-black hover:text-white transition-colors">
             Open funding workspace
           </Link>
-          <Link href="/funding-workspace?lens=pressure&theme=disability_ndis" className="px-3 py-2 border-2 border-bauhaus-red text-bauhaus-red bg-bauhaus-red/5 hover:bg-bauhaus-red hover:text-white transition-colors">
+          <Link href="/graph?lens=pressure&theme=disability_ndis" className="px-3 py-2 border-2 border-bauhaus-red text-bauhaus-red bg-bauhaus-red/5 hover:bg-bauhaus-red hover:text-white transition-colors">
             Search pressure points
           </Link>
-          <Link href="/funding-workspace?lens=captured&theme=disability_ndis" className="px-3 py-2 border-2 border-bauhaus-red/20 text-bauhaus-red hover:border-bauhaus-red hover:bg-bauhaus-red hover:text-white transition-colors">
+          <Link href="/graph?lens=captured&theme=disability_ndis" className="px-3 py-2 border-2 border-bauhaus-red/20 text-bauhaus-red hover:border-bauhaus-red hover:bg-bauhaus-red hover:text-white transition-colors">
             Search captured markets
           </Link>
-          <Link href="/funding-workspace?lens=alternatives&theme=disability_ndis" className="px-3 py-2 border-2 border-bauhaus-blue text-bauhaus-blue bg-link-light hover:bg-bauhaus-blue hover:text-white transition-colors">
+          <Link href="/graph?lens=alternatives&theme=disability_ndis" className="px-3 py-2 border-2 border-bauhaus-blue text-bauhaus-blue bg-link-light hover:bg-bauhaus-blue hover:text-white transition-colors">
             Back alternatives
           </Link>
           <Link href="/reports/youth-justice" className="px-3 py-2 border-2 border-bauhaus-black/20 text-bauhaus-muted hover:border-bauhaus-black hover:text-bauhaus-black transition-colors">
@@ -501,7 +501,7 @@ export default async function NdisMarketPage() {
           and which community-rooted organisations could be backed instead.
         </p>
         <div className="mt-5 grid gap-4 md:grid-cols-3">
-          <Link href="/funding-workspace" className="border-2 border-bauhaus-black bg-white p-4 hover:bg-bauhaus-black hover:text-white transition-colors">
+          <Link href="/graph" className="border-2 border-bauhaus-black bg-white p-4 hover:bg-bauhaus-black hover:text-white transition-colors">
             <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue">Funding move</p>
             <h3 className="mt-2 text-lg font-black">Find who could fill the gap</h3>
             <p className="mt-2 text-sm font-medium text-bauhaus-muted">

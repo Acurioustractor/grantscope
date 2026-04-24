@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireModule } from '@/lib/api-auth';
 import { assembleDueDiligencePack } from '@/lib/services/due-diligence-service';
 import { buildDueDiligencePdf } from '@/lib/due-diligence-pdf';
 import type { DueDiligencePack } from '@/lib/services/due-diligence-service';
@@ -8,9 +7,9 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ gsId: string }> },
 ) {
-  const auth = await requireModule('allocation');
-  if (auth.error) return auth.error;
-
+  // Free and public. Accountability Briefs are a public-good tool for
+  // journalists, researchers, and community orgs. Paywall removed with
+  // the Path D scope cut.
   const { gsId } = await params;
   const format = request.nextUrl.searchParams.get('format') || 'json';
 
@@ -72,7 +71,7 @@ function renderHTML(pack: DueDiligencePack): string {
 
   let body = `
 <div class="header">
-  <div class="subtitle">CivicGraph \u2014 Due Diligence Pack</div>
+  <div class="subtitle">CivicGraph \u2014 Accountability Brief</div>
   <h1>${esc(e.canonical_name)}</h1>
   <div class="date">ABN ${esc(e.abn) || 'Not registered'} \u2022 ${esc(e.entity_type)} \u2022 Generated ${pack.generated_at.split('T')[0]}</div>
 </div>
@@ -227,7 +226,7 @@ function htmlShell(title: string, body: string): string {
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>${esc(title)} \u2014 CivicGraph Due Diligence Pack</title>
+<title>${esc(title)} \u2014 CivicGraph Accountability Brief</title>
 <style>
   @page { margin: 2cm; size: A4; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -261,8 +260,8 @@ function htmlShell(title: string, body: string): string {
 <body>
 ${body}
 <div class="footer">
-  <div class="brand">CivicGraph \u2014 Decision Infrastructure for Government &amp; Social Sector</div>
-  <p style="margin-top:4px">This due diligence pack is auto-generated from public data sources. Verify critical claims against primary sources before inclusion in formal submissions.</p>
+  <div class="brand">CivicGraph \u2014 Australia&rsquo;s Accountability Atlas \u2022 A Curious Tractor</div>
+  <p style="margin-top:4px">This accountability brief is auto-generated from public data sources (AusTender, AEC, ACNC, GrantConnect, ABR, ATO tax transparency). Free for community organisations, journalists, and researchers. Verify critical claims against primary sources before formal use. civicgraph.com.au/about/curious-tractor</p>
 </div>
 </body>
 </html>`;

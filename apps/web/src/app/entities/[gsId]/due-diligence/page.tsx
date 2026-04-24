@@ -10,8 +10,8 @@ export const revalidate = 300;
 export async function generateMetadata({ params }: { params: Promise<{ gsId: string }> }): Promise<Metadata> {
   const { gsId } = await params;
   return {
-    title: `Due Diligence Pack — ${gsId} | CivicGraph`,
-    description: 'Entity due diligence pack with financials, funding, contracts, political connections, and evidence alignment.',
+    title: `Accountability Brief — ${gsId} | CivicGraph`,
+    description: 'Free public-data accountability brief: financials, government funding, contracts, political connections, and evidence alignment for a single Australian organisation.',
   };
 }
 
@@ -125,42 +125,36 @@ export default async function DueDiligencePreviewPage({
   const pack = await assembleDueDiligencePack(gsId);
   if (!pack) notFound();
 
+  // Suppress unused-var warning — kept for future logged-in enhancements
+  void isAuthenticated;
+
   return (
     <div className="max-w-4xl mx-auto py-8 px-4 print:px-0 print:py-0">
-      {/* Action bar */}
+      {/* Action bar — downloads are free and public */}
       <div className="flex items-center justify-between mb-6 no-print">
         <Link href={`/entities/${gsId}`} className="text-xs font-black text-bauhaus-muted uppercase tracking-widest hover:text-bauhaus-black">
           &larr; Back to Entity
         </Link>
-        {isAuthenticated ? (
-          <div className="flex gap-2">
-            <a
-              href={`/api/entities/${gsId}/due-diligence?format=pdf`}
-              className="text-[11px] font-black px-3 py-1.5 border-2 border-bauhaus-black bg-bauhaus-black text-white uppercase tracking-widest hover:bg-bauhaus-red hover:border-bauhaus-red transition-colors"
-            >
-              Download PDF
-            </a>
-            <a
-              href={`/api/entities/${gsId}/due-diligence?format=json`}
-              className="text-[11px] font-black px-3 py-1.5 border-2 border-bauhaus-black text-bauhaus-black uppercase tracking-widest hover:bg-bauhaus-black hover:text-white transition-colors"
-            >
-              Download JSON
-            </a>
-          </div>
-        ) : (
+        <div className="flex gap-2">
           <a
-            href={`/register?redirect=/entities/${gsId}/due-diligence`}
+            href={`/api/entities/${gsId}/due-diligence?format=pdf`}
             className="text-[11px] font-black px-3 py-1.5 border-2 border-bauhaus-black bg-bauhaus-black text-white uppercase tracking-widest hover:bg-bauhaus-red hover:border-bauhaus-red transition-colors"
           >
-            Sign Up to Download PDF
+            Download PDF
           </a>
-        )}
+          <a
+            href={`/api/entities/${gsId}/due-diligence?format=json`}
+            className="text-[11px] font-black px-3 py-1.5 border-2 border-bauhaus-black text-bauhaus-black uppercase tracking-widest hover:bg-bauhaus-black hover:text-white transition-colors"
+          >
+            Download JSON
+          </a>
+        </div>
       </div>
 
       {/* Header */}
       <div className="border-b-4 border-bauhaus-black pb-4 mb-8">
         <div className="text-[11px] font-black text-bauhaus-muted uppercase tracking-[0.2em]">
-          CivicGraph — Due Diligence Pack
+          CivicGraph — Accountability Brief
         </div>
         <h1 className="text-3xl font-black text-bauhaus-black uppercase tracking-wide mt-1">
           {pack.entity.canonical_name}
