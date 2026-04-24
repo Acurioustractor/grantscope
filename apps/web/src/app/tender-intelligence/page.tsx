@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { BriefingLoopBar } from '@/app/components/briefing-loop-bar';
+import { buildTenderBriefingState } from '@/app/components/briefing-page-params';
 import { decisionTagBadgeClass, decisionTagLabel, SHORTLIST_DECISIONS } from '@/lib/procurement-shortlist';
 import { getDecisionPackBlockers, type PackReadinessBlocker } from '@/lib/procurement-pack-readiness';
 import { createSupabaseBrowser } from '@/lib/supabase-browser';
@@ -99,12 +101,26 @@ import {
   ExportButton,
 } from './tender-intelligence-utils';
 
-
 export default function TenderIntelligencePage() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const selectedShortlistId = searchParams.get('shortlistId');
+  const {
+    briefingComposeHref,
+    briefingLanes,
+    briefingState,
+    briefingSubject,
+    hasBriefingContext,
+    loop,
+    notice: briefingNotice,
+    seed: briefingSeed,
+  } = buildTenderBriefingState({
+    subject: searchParams.get('subject') || '',
+    state: searchParams.get('state') || '',
+    output: searchParams.get('output') || '',
+    lanes: searchParams.get('lanes') || '',
+  });
   const [authResolved, setAuthResolved] = useState(false);
   const [authed, setAuthed] = useState(false);
   const [shellAuthenticated, setShellAuthenticated] = useState(false);
@@ -115,6 +131,7 @@ export default function TenderIntelligencePage() {
   const [operationBlockers, setOperationBlockers] = useState<string[]>([]);
   const [operationNotice, setOperationNotice] = useState('');
   const [workspaceBusyId, setWorkspaceBusyId] = useState<string | null>(null);
+  const [appliedBriefingSeed, setAppliedBriefingSeed] = useState('');
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
   const [supplierCommentDrafts, setSupplierCommentDrafts] = useState<Record<string, string>>({});
   const [taskCompletionDrafts, setTaskCompletionDrafts] = useState<Record<string, { outcome: NonNullable<ProcurementTask['completion_outcome']>; note: string }>>({});
@@ -284,6 +301,22 @@ export default function TenderIntelligencePage() {
   const [publicTab, setPublicTab] = useState<TabKey>('discover');
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    if (!briefingSeed || briefingSeed === appliedBriefingSeed) return;
+
+    if (briefingSubject) {
+      setWorkspaceSearch(briefingSubject);
+    }
+
+    if (briefingState) {
+      setDiscoverState(briefingState);
+      setPackState(briefingState);
+    }
+
+    setOperationNotice(briefingNotice);
+    setAppliedBriefingSeed(briefingSeed);
+  }, [appliedBriefingSeed, briefingNotice, briefingSeed, briefingState, briefingSubject]);
+
   // Discover state
   const [discoverState, setDiscoverState] = useState('');
   const [discoverLga, setDiscoverLga] = useState('');
@@ -309,7 +342,10 @@ export default function TenderIntelligencePage() {
     if (nextTab !== tab) {
       setTab(nextTab);
     }
-  }, [searchParams, tab]);
+    if (nextTab !== publicTab) {
+      setPublicTab(nextTab);
+    }
+  }, [publicTab, searchParams, tab]);
 
   const replaceWorkspaceQuery = useCallback((updates: { tab?: TabKey | null; shortlistId?: string | null }) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -2589,7 +2625,7 @@ export default function TenderIntelligencePage() {
 
       {/* Tabs */}
       <div className="border-b-4 border-bauhaus-black bg-white print:hidden">
-        <div className="max-w-5xl mx-auto flex">
+        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row">
           {[
             { key: 'discover' as TabKey, label: 'Supplier Discovery' },
             { key: 'enrich' as TabKey, label: 'List Enrichment' },
@@ -2598,7 +2634,7 @@ export default function TenderIntelligencePage() {
             <button
               key={t.key}
               onClick={() => setActiveTab(t.key)}
-              className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-r-4 border-bauhaus-black transition-colors ${
+              className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black transition-colors text-left sm:text-center ${
                 tab === t.key
                   ? 'bg-bauhaus-black text-white'
                   : 'text-bauhaus-muted hover:bg-bauhaus-canvas'
@@ -2630,6 +2666,17 @@ export default function TenderIntelligencePage() {
               </div>
             )}
           </div>
+
+          {hasBriefingContext && loop && (
+            <BriefingLoopBar
+              refineHref={briefingComposeHref}
+              output={loop.output}
+              subject={loop.subject}
+              state={loop.state}
+              lanes={loop.lanes}
+              message={loop.message}
+            />
+          )}
 
           {workspaceError && (
             <div className="border-4 border-bauhaus-red bg-bauhaus-red/10 px-4 py-3 text-sm font-bold text-bauhaus-red">
