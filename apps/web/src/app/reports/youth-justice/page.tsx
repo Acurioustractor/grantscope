@@ -346,6 +346,14 @@ export default async function YouthJusticeReportPage() {
           raised in poverty, and known to child protection — long before they are locked up.
           This report traces the pipeline across {report.heatmapRows.length} communities.
         </p>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <Link
+            href="/reports/youth-justice/trackers"
+            className="border-2 border-bauhaus-black px-4 py-2 text-xs font-black uppercase tracking-wider text-bauhaus-black transition-colors hover:bg-bauhaus-black hover:text-white"
+          >
+            Open tracker portfolio
+          </Link>
+        </div>
         <div className="flex gap-2 mt-4">
           <span className="text-[10px] font-bold bg-gray-100 text-gray-600 px-2 py-1 rounded uppercase tracking-wider">Contained Campaign</span>
           <span className="text-[10px] font-bold bg-gray-100 text-gray-600 px-2 py-1 rounded uppercase tracking-wider">JusticeHub</span>

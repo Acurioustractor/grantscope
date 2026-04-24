@@ -98,6 +98,19 @@ interface ContractStats {
   abn_pct: number;
 }
 
+interface GrantSemanticsStats {
+  status_null: number;
+  application_status_null: number;
+  open_past_deadline: number;
+  ghl_unknown: number;
+}
+
+interface SourceIdentityStats {
+  blank_source_id: number;
+  canonical_mismatch: number;
+  duplicate_shadows: number;
+}
+
 interface AgentRun {
   agent_name: string;
   status: string;
@@ -127,6 +140,8 @@ async function getData(): Promise<{
   alma: AlmaStats;
   foundations: FoundationStats;
   contracts: ContractStats;
+  grantSemantics: GrantSemanticsStats;
+  sourceIdentity: SourceIdentityStats;
   agents: AgentRun[];
   latestAgentRun: string | null;
 }> {
@@ -147,6 +162,8 @@ async function getData(): Promise<{
     foundationStatsResult,
     grantOpResult,
     contractStatsResult,
+    grantSemanticsResult,
+    sourceIdentityResult,
     agentHealthResult,
   ] = await Promise.all([
     safe(db.rpc('exec_sql', {
@@ -216,6 +233,35 @@ async function getData(): Promise<{
       FROM austender_contracts`,
     })),
     safe(db.rpc('exec_sql', {
+      query: `SELECT
+        COUNT(*) FILTER (WHERE status IS NULL) as status_null,
+        COUNT(*) FILTER (WHERE application_status IS NULL) as application_status_null,
+        COUNT(*) FILTER (WHERE status = 'open' AND closes_at < CURRENT_DATE) as open_past_deadline,
+        COUNT(*) FILTER (WHERE source = 'ghl_sync' AND status = 'unknown') as ghl_unknown
+      FROM grant_opportunities`,
+    })),
+    safe(db.rpc('exec_sql', {
+      query: `SELECT
+        COUNT(*) FILTER (
+          WHERE discovered_by = 'grant_engine'
+            AND COALESCE(discovery_method, '') <> ''
+            AND COALESCE(source_id, '') = ''
+        ) as blank_source_id,
+        COUNT(*) FILTER (
+          WHERE discovered_by = 'grant_engine'
+            AND COALESCE(discovery_method, '') <> ''
+            AND COALESCE(source_id, '') <> ''
+            AND source_id NOT LIKE '%::duplicate::%'
+            AND source_id <> discovery_method
+        ) as canonical_mismatch,
+        COUNT(*) FILTER (
+          WHERE discovered_by = 'grant_engine'
+            AND source_id LIKE '%::duplicate::%'
+            AND status = 'duplicate'
+        ) as duplicate_shadows
+      FROM grant_opportunities`,
+    })),
+    safe(db.rpc('exec_sql', {
       query: `SELECT DISTINCT ON (agent_name)
         agent_name, status, started_at, items_found, items_new, duration_ms
       FROM agent_runs
@@ -234,6 +280,8 @@ async function getData(): Promise<{
   const fs = parseFirst(foundationStatsResult);
   const go = parseFirst(grantOpResult);
   const cs = parseFirst(contractStatsResult);
+  const gs = parseFirst(grantSemanticsResult);
+  const si = parseFirst(sourceIdentityResult);
   const agents = parse(agentHealthResult) as AgentRun[];
 
   // Find most recent agent run
@@ -285,6 +333,17 @@ async function getData(): Promise<{
       with_abn: Number(cs.with_abn ?? 0),
       abn_pct: Number(cs.abn_pct ?? 0),
     },
+    grantSemantics: {
+      status_null: Number(gs.status_null ?? 0),
+      application_status_null: Number(gs.application_status_null ?? 0),
+      open_past_deadline: Number(gs.open_past_deadline ?? 0),
+      ghl_unknown: Number(gs.ghl_unknown ?? 0),
+    },
+    sourceIdentity: {
+      blank_source_id: Number(si.blank_source_id ?? 0),
+      canonical_mismatch: Number(si.canonical_mismatch ?? 0),
+      duplicate_shadows: Number(si.duplicate_shadows ?? 0),
+    },
     agents,
     latestAgentRun,
   };
@@ -313,6 +372,13 @@ function ProgressBar({ pct, label }: { pct: number; label: string }) {
 
 export default async function DataHealthPage() {
   const d = await getData();
+  const semanticsHealthy =
+    d.grantSemantics.status_null === 0
+    && d.grantSemantics.application_status_null === 0
+    && d.grantSemantics.open_past_deadline === 0;
+  const sourceIdentityHealthy =
+    d.sourceIdentity.blank_source_id === 0
+    && d.sourceIdentity.canonical_mismatch === 0;
 
   // Calculate max entity type count for bar sizing
   const maxTypeCount = d.entities.by_type.length > 0
@@ -362,6 +428,94 @@ export default async function DataHealthPage() {
             <div className="text-xs font-black text-red-200 uppercase tracking-widest mb-2">Data Freshness</div>
             <div className="text-3xl sm:text-4xl font-black">{relativeTime(d.latestAgentRun)}</div>
             <div className="text-white/50 text-xs font-bold mt-2">last agent run</div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Section 1B: Grant Semantics ─────────── */}
+      <section className="mb-12">
+        <h2 className="text-xl font-black text-bauhaus-black mb-2 uppercase tracking-widest">
+          Grant Semantics
+        </h2>
+        <p className="text-sm text-bauhaus-muted mb-6 max-w-2xl">
+          Lifecycle integrity for grant opportunities. This tracks whether grants have usable status, application status,
+          and deadline semantics instead of silently drifting back into null or stale-open states.
+        </p>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-0">
+          <div className="border-4 border-bauhaus-black p-6 bg-white">
+            <div className="text-xs font-black text-bauhaus-muted uppercase tracking-widest mb-2">Null Status</div>
+            <div className={`text-3xl sm:text-4xl font-black ${d.grantSemantics.status_null === 0 ? 'text-green-600' : 'text-bauhaus-red'}`}>
+              {fmt(d.grantSemantics.status_null)}
+            </div>
+            <div className="text-bauhaus-muted/60 text-xs font-bold mt-2">target: 0</div>
+          </div>
+          <div className="border-4 border-l-0 max-lg:border-l-4 max-lg:border-t-0 border-bauhaus-black p-6 bg-white">
+            <div className="text-xs font-black text-bauhaus-muted uppercase tracking-widest mb-2">Null App Status</div>
+            <div className={`text-3xl sm:text-4xl font-black ${d.grantSemantics.application_status_null === 0 ? 'text-green-600' : 'text-bauhaus-red'}`}>
+              {fmt(d.grantSemantics.application_status_null)}
+            </div>
+            <div className="text-bauhaus-muted/60 text-xs font-bold mt-2">target: 0</div>
+          </div>
+          <div className="border-4 border-l-0 max-lg:border-l-4 max-lg:border-t-0 border-bauhaus-black p-6 bg-white">
+            <div className="text-xs font-black text-bauhaus-muted uppercase tracking-widest mb-2">Open Past Deadline</div>
+            <div className={`text-3xl sm:text-4xl font-black ${d.grantSemantics.open_past_deadline === 0 ? 'text-green-600' : 'text-bauhaus-red'}`}>
+              {fmt(d.grantSemantics.open_past_deadline)}
+            </div>
+            <div className="text-bauhaus-muted/60 text-xs font-bold mt-2">target: 0</div>
+          </div>
+          <div className={`border-4 border-l-0 max-lg:border-l-4 max-lg:border-t-0 border-bauhaus-black p-6 ${semanticsHealthy ? 'bg-green-50' : 'bg-red-50'}`}>
+            <div className="text-xs font-black text-bauhaus-muted uppercase tracking-widest mb-2">Guardrail State</div>
+            <div className={`text-2xl sm:text-3xl font-black ${semanticsHealthy ? 'text-green-700' : 'text-bauhaus-red'}`}>
+              {semanticsHealthy ? 'Healthy' : 'Regression'}
+            </div>
+            <div className="text-bauhaus-muted/80 text-xs font-bold mt-2">
+              {fmt(d.grantSemantics.ghl_unknown)} CRM rows intentionally sit at <span className="font-mono">status=unknown</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Section 1C: Grant Source Identity ───── */}
+      <section className="mb-12">
+        <h2 className="text-xl font-black text-bauhaus-black mb-2 uppercase tracking-widest">
+          Grant Source Identity
+        </h2>
+        <p className="text-sm text-bauhaus-muted mb-6 max-w-2xl">
+          Canonical source-key integrity for grant-engine rows. This tracks whether discovered grants keep stable
+          source ids and whether legacy duplicates are explicitly quarantined instead of leaking into source reporting.
+        </p>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-0">
+          <div className="border-4 border-bauhaus-black p-6 bg-white">
+            <div className="text-xs font-black text-bauhaus-muted uppercase tracking-widest mb-2">Blank Source ID</div>
+            <div className={`text-3xl sm:text-4xl font-black ${d.sourceIdentity.blank_source_id === 0 ? 'text-green-600' : 'text-bauhaus-red'}`}>
+              {fmt(d.sourceIdentity.blank_source_id)}
+            </div>
+            <div className="text-bauhaus-muted/60 text-xs font-bold mt-2">target: 0</div>
+          </div>
+          <div className="border-4 border-l-0 max-lg:border-l-4 max-lg:border-t-0 border-bauhaus-black p-6 bg-white">
+            <div className="text-xs font-black text-bauhaus-muted uppercase tracking-widest mb-2">Canonical Mismatch</div>
+            <div className={`text-3xl sm:text-4xl font-black ${d.sourceIdentity.canonical_mismatch === 0 ? 'text-green-600' : 'text-bauhaus-red'}`}>
+              {fmt(d.sourceIdentity.canonical_mismatch)}
+            </div>
+            <div className="text-bauhaus-muted/60 text-xs font-bold mt-2">target: 0</div>
+          </div>
+          <div className="border-4 border-l-0 max-lg:border-l-4 max-lg:border-t-0 border-bauhaus-black p-6 bg-white">
+            <div className="text-xs font-black text-bauhaus-muted uppercase tracking-widest mb-2">Tracked Duplicates</div>
+            <div className="text-3xl sm:text-4xl font-black text-bauhaus-black">
+              {fmt(d.sourceIdentity.duplicate_shadows)}
+            </div>
+            <div className="text-bauhaus-muted/60 text-xs font-bold mt-2">informational</div>
+          </div>
+          <div className={`border-4 border-l-0 max-lg:border-l-4 max-lg:border-t-0 border-bauhaus-black p-6 ${sourceIdentityHealthy ? 'bg-green-50' : 'bg-red-50'}`}>
+            <div className="text-xs font-black text-bauhaus-muted uppercase tracking-widest mb-2">Guardrail State</div>
+            <div className={`text-2xl sm:text-3xl font-black ${sourceIdentityHealthy ? 'text-green-700' : 'text-bauhaus-red'}`}>
+              {sourceIdentityHealthy ? 'Healthy' : 'Regression'}
+            </div>
+            <div className="text-bauhaus-muted/80 text-xs font-bold mt-2">
+              duplicate rows are intentionally quarantined, not counted as live source drift
+            </div>
           </div>
         </div>
       </section>
