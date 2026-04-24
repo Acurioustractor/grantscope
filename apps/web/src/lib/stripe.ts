@@ -4,71 +4,70 @@ export const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY)
   : null as unknown as Stripe
 
-// Annual discount: 2 months free = ~17% off
-export const ANNUAL_DISCOUNT = 0.17
-
 // Tier configuration — single source of truth
 // Cross-subsidy model: large orgs + foundations fund free community access
 export const TIERS = {
   community: {
     name: 'Community',
     tagline: 'Your work matters more than your budget',
-    description: 'For grassroots NFPs, First Nations orgs, and CLCs under $500K revenue',
+    description: 'For grassroots nonprofits, First Nations organisations, and small teams under $500K revenue',
     price: 0,
     stripePriceId: null,
     features: [
-      'Full grant search (14,000+ opportunities)',
-      'Foundation profiles (9,800+)',
-      'Save & track grants',
+      'Grant search',
+      'Foundation profiles',
+      'Save & shortlist grants',
       'Basic email alerts',
       '1 team member',
     ],
   },
   professional: {
     name: 'Professional',
-    tagline: 'Stop guessing, start winning',
-    description: 'For established NFPs and social enterprises',
+    tagline: 'Match. Monitor. Manage the pipeline.',
+    description: 'For grant consultants, freelance writers, and solo grants or fundraising leads',
     price: 79,
     stripePriceId: process.env.STRIPE_PRICE_PROFESSIONAL,
+    trialDays: 14,
     features: [
       'Everything in Community',
-      'AI grant writing assistant',
-      'Smart match scoring (0-100)',
-      'Custom alert rules',
+      'Org-fit grant matching',
+      'Advanced alerts and watchlists',
       'Pipeline tracking',
-      'Foundation relationship notes',
+      'Foundation prospect notes',
+      'Weekly digest',
       '5 team members',
     ],
   },
   organisation: {
     name: 'Organisation',
-    tagline: 'Your whole funding operation in one place',
-    description: 'For larger NFPs, peak bodies, and multi-program orgs',
+    tagline: 'Shared workflow for funding teams',
+    description: 'For grant teams, development teams, and advisory firms managing multiple active opportunities',
     price: 249,
     stripePriceId: process.env.STRIPE_PRICE_ORGANISATION,
+    trialDays: 14,
     features: [
       'Everything in Professional',
+      'Shared team workspace',
       'Org-wide pipeline dashboard',
-      'Bulk application tracking',
-      'Corporate & philanthropy CRM',
-      'Auto-match new grants to your mission',
+      'Board or client export reports',
       'Calendar integration',
-      'Board-ready export reports',
+      'Funder shortlist collaboration',
       '25 team members',
     ],
   },
   funder: {
     name: 'Funder',
-    tagline: 'See the whole system. Fund what works.',
-    description: 'For foundations, corporate giving, philanthropic advisors, and government',
+    tagline: 'Prospecting and portfolio intelligence',
+    description: 'For foundations, corporate giving, philanthropic advisors, and commissioners',
     price: 499,
     stripePriceId: process.env.STRIPE_PRICE_FUNDER,
+    trialDays: 14,
     features: [
       'Everything in Organisation',
-      'Portfolio view — who you fund, outcomes, geography',
+      'Portfolio intelligence',
       'Gap analysis — where money isn\'t going',
-      'Deal flow — discover aligned orgs',
-      'Data API access',
+      'Prospect discovery across entities',
+      'Read-only API access',
       'White-label option',
       'Unlimited team members',
     ],
@@ -79,6 +78,7 @@ export const TIERS = {
     description: 'For state/federal government, large foundations, and sector-wide deployments',
     price: 1999,
     stripePriceId: process.env.STRIPE_PRICE_ENTERPRISE,
+    trialDays: 0,
     features: [
       'Everything in Funder',
       'Full API access',

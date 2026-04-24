@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { recordProductEvents } from '@/lib/product-events'
 import { createSupabaseServer } from '@/lib/supabase-server'
 import { getServiceSupabase } from '@/lib/supabase'
 import { stripe, TIERS, type TierKey } from '@/lib/stripe'
@@ -12,7 +13,8 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { tier } = body as { tier: TierKey }
+    const { tier, source } = body as { tier: TierKey; source?: string }
+    const checkoutSource = typeof source === 'string' && source.trim().length > 0 ? source.trim().slice(0, 80) : 'unknown'
 
     if (!tier || !(tier in TIERS)) {
       return NextResponse.json({ error: 'Invalid tier' }, { status: 400 })
@@ -69,16 +71,33 @@ export async function POST(request: NextRequest) {
       metadata: {
         org_profile_id: profile.id,
         tier,
+        checkout_source: checkoutSource,
         platform: 'grantscope',
       },
       subscription_data: {
+        ...(tierConfig.trialDays ? { trial_period_days: tierConfig.trialDays } : {}),
         metadata: {
           org_profile_id: profile.id,
           tier,
+          checkout_source: checkoutSource,
           platform: 'grantscope',
         },
       },
     })
+
+    await recordProductEvents([
+      {
+        userId: user.id,
+        orgProfileId: profile.id,
+        eventType: 'checkout_started',
+        metadata: {
+          tier,
+          stripe_session_id: session.id,
+          source: checkoutSource,
+          trial_days: tierConfig.trialDays || 0,
+        },
+      },
+    ])
 
     return NextResponse.json({ url: session.url })
   } catch (error) {
