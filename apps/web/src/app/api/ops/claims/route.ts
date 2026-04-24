@@ -1,24 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServer } from '@/lib/supabase-server';
+import { requireAdminApi } from '@/lib/admin-auth';
 import { getServiceSupabase } from '@/lib/supabase';
 import { sendEmail } from '@/lib/gmail';
 import { findContactByEmail, addTagToContact, removeTagFromContact } from '@/lib/ghl';
 
 export const dynamic = 'force-dynamic';
 
-const ADMIN_EMAILS = ['benjamin@act.place', 'hello@civicgraph.au'];
-
-async function checkAdmin() {
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  if (!ADMIN_EMAILS.includes(user.email || '')) return null;
-  return user;
-}
-
 export async function GET() {
-  const admin = await checkAdmin();
-  if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const auth = await requireAdminApi();
+  if (auth.error) return auth.error;
 
   const db = getServiceSupabase();
   const { data, error } = await db
@@ -71,8 +61,8 @@ export async function GET() {
 }
 
 export async function PUT(request: NextRequest) {
-  const admin = await checkAdmin();
-  if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const auth = await requireAdminApi();
+  if (auth.error) return auth.error;
 
   const body = await request.json();
   const { claim_id, status, admin_notes } = body;
