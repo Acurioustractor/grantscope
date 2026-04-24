@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServer } from '@/lib/supabase-server';
+import { requireAdminApi } from '@/lib/admin-auth';
 import { getServiceSupabase } from '@/lib/supabase';
 import { AGENTS } from '@/lib/agent-registry';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const auth = await requireAdminApi();
+  if (auth.error) return auth.error;
 
   const { searchParams } = request.nextUrl;
   const status = searchParams.get('status');
@@ -32,9 +31,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const auth = await requireAdminApi();
+  if (auth.error) return auth.error;
+  const { user } = auth;
 
   const body = await request.json();
   const { agent_id, priority, params } = body;
@@ -45,6 +44,23 @@ export async function POST(request: NextRequest) {
 
   const agent = AGENTS[agent_id];
   const svc = getServiceSupabase();
+
+  const { data: existingTask, error: existingError } = await svc
+    .from('agent_tasks')
+    .select('id, agent_id, status, priority, created_at')
+    .eq('agent_id', agent_id)
+    .in('status', ['pending', 'running'])
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (existingError) {
+    return NextResponse.json({ error: existingError.message }, { status: 500 });
+  }
+
+  if (existingTask) {
+    return NextResponse.json({ task: existingTask, existing: true }, { status: 409 });
+  }
 
   const { data, error } = await svc
     .from('agent_tasks')
@@ -59,5 +75,5 @@ export async function POST(request: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json({ task: data }, { status: 201 });
+  return NextResponse.json({ task: data, existing: false }, { status: 201 });
 }
