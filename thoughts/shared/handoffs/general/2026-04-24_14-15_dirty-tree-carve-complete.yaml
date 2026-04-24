@@ -1,0 +1,154 @@
+---
+session: general
+date: 2026-04-24
+status: complete
+outcome: SUCCEEDED
+---
+
+goal: Merge all phase-2 PRs (billing, tracker-profile, home-reports, misc-app), carve remaining safe buckets (docs-thoughts, singletons), close out the dirty-tree carve program, and document schema-blocked work for next session.
+now: 13 PRs merged total today (4 phase-1 + 9 phase-2). Main is 14 commits ahead of where the session started. Only remaining snapshot contents are schema-blocked (8 migrations + dependent scripts/code in 3 buckets). Next session is a single, scoped task: prod-schema reconciliation for the org_project_foundation migration set.
+test: gh pr list --state open --json number | jq 'length' == 0
+
+done_this_session:
+  - task: Merged phase-1 PRs #4 #5 #6 (bittensor docs, briefing generator, grant-engine).
+    files: []
+  - task: Opened + merged phase-2 PR #7 (data-api) — 5 files.
+    files: [apps/web/src/app/api/data/]
+  - task: Opened + merged phase-2 PR #8 (auth-signup + continue) — 2 files.
+    files: [apps/web/src/app/auth/, apps/web/src/app/continue/]
+  - task: Opened + merged phase-2 PR #9 (ops pilots + validation-reviews) — 9 files.
+    files: [apps/web/src/app/api/ops/, apps/web/src/lib/pilot-participants.ts, apps/web/src/lib/validation-reviews.ts]
+  - task: Opened + merged phase-2 PR #10 (alerts + shared telemetry infra) — 23 files. Became the base for the stacked fork.
+    files: [apps/web/src/app/alerts/, apps/web/src/app/api/alerts/, apps/web/src/lib/alert-*.ts, apps/web/src/lib/grant-*.ts, apps/web/src/lib/product-events*.ts, apps/web/src/lib/start-checkout.ts, apps/web/src/lib/profile-alerts.ts, apps/web/src/lib/app-url.ts, apps/web/src/lib/subscription.ts]
+  - task: Opened + merged phase-2 PR #11 (mission-control frontier + runtime-sweeps + layout) — 10 files.
+    files: [apps/web/src/app/api/mission-control/, apps/web/src/app/mission-control/layout.tsx]
+  - task: Opened + merged phase-2 PR #13 (foundations-pages 5 new + compare + backlog) — 12 files.
+    files: [apps/web/src/app/foundations/]
+  - task: Opened + merged phase-2 PR #14 (root docs GRANTSCOPE_SIGNOFF etc.) — 4 files.
+    files: [GRANTSCOPE_SIGNOFF.md, OPERATING_PLAN.md, PILOT_SESSION_BRIEFS.md, PILOT_TESTING.md]
+  - task: Recovered the 4 stacked PRs (#12 #15 #16 #17) that were auto-closed when the alerts-infra base branch was deleted — rebased each onto the new main (where alerts-infra was squashed in), force-pushed, and reopened as #18 #19 #20 #21.
+    files: []
+  - task: Opened + merged PR #18 (billing stripe + link tracking) — 6 files.
+    files: [apps/web/src/app/api/billing/, apps/web/src/lib/billing-link-tracking.ts, apps/web/src/lib/stripe.ts]
+  - task: Opened + merged PR #19 (tracker + profile + ops + nav + entity + for-pages refresh) — 14 files.
+    files: [apps/web/src/app/charities/, apps/web/src/app/clarity/, apps/web/src/app/components/nav.tsx, apps/web/src/app/components/workspace-page-header.tsx, apps/web/src/app/entity/, apps/web/src/app/for/, apps/web/src/app/ops/, apps/web/src/app/profile/, apps/web/src/app/tracker/]
+  - task: Opened + merged PR #20 (home workspace refresh + 4 new reports + youth-justice expansion) — 33 files.
+    files: [apps/web/src/app/home/, apps/web/src/app/reports/, apps/web/src/lib/services/report-service.ts]
+  - task: Opened + merged PR #21 (misc-app funding/goods/portfolio/rankings/snow + layout + marketing refresh) — 20 files.
+    files: [apps/web/src/app/layout.tsx, apps/web/src/app/page.tsx, apps/web/src/app/funding-workspace/, apps/web/src/app/goods-intelligence/, apps/web/src/app/goods-workspace/, apps/web/src/app/portfolio-control/, apps/web/src/app/rankings/, apps/web/src/app/snow-foundation/, apps/web/src/app/pricing/, apps/web/src/app/login/, apps/web/src/app/register/, apps/web/src/app/power/, apps/web/src/app/tender-intelligence/, apps/web/src/app/justice-reinvestment/, apps/web/src/lib/auth-redirect.ts, apps/web/src/lib/org-profile.ts]
+  - task: Opened + merged PR #22 (docs-thoughts bundle) — 33 files incl. phase-1/2 handoffs, nyinkka series, civicgraph thesis/memos, snow empathy-ledger OS, national philanthropy plan + blueprint, QLD crime-prevention report, 360giving/snow-foundation updates.
+    files: [thoughts/]
+  - task: Opened + merged PR #23 (singletons) — .claudeignore, ecosystem.config.js, apps/web/public/favicon.ico, package.json script additions.
+    files: [.claudeignore, ecosystem.config.js, apps/web/public/favicon.ico, package.json]
+
+blockers:
+  - schema_reconciliation_required: 8 unversioned migrations sit in supabase/migrations/ on the snapshot branch that were intentionally NOT carved because they need to be reconciled with production state before landing. See `next.schema_reconciliation`.
+
+questions:
+  - Do the 5 org_project_foundation_*.sql migrations need to apply cleanly against prod as-is, or does prod already have some of the tables via manual DDL that needs reverse-migrating first?
+  - Is the schema-reconciliation work a solo task or should it be paired with someone who has prod schema context?
+  - After schema lands, should org-project-foundations (11 files), scripts-misc (29 files), and grant-frontier-scripts (12 files) be carved as one big PR or split?
+
+decisions:
+  - stack_rebase_over_reopen: When the 4 stacked PRs auto-closed after their base was deleted, chose to rebase each onto new-main + open fresh PRs (#18-#21) instead of trying to reopen the closed ones. GitHub's `gh pr reopen` fails if the original base no longer exists; rebase+reopen-as-new is the clean path.
+  - auto_merge_with_admin: Used `gh pr merge --squash --delete-branch --auto` for #23 when Vercel preview was still pending — lets GitHub merge as soon as all required checks go green without blocking on Vercel deploy (Vercel is non-gating).
+  - package_json_scripts_before_backing_files: Merged package.json script additions (preflight, signoff, bittensor, tracker) even though `grantscope-signoff.mjs` and `bittensor-money-model.mjs` don't exist on main yet. Registered-but-unbacked scripts only error if invoked; doesn't fail CI or typecheck. Backing files will land in scripts-misc once schema is sorted.
+  - skip_all_migrations_for_now: Every .sql file in the snapshot's supabase/migrations/ was left out of all carves. One touches a table that may already exist in prod; another normalizes JSONB shape that may be in use; reconciliation > optimism.
+
+findings:
+  - main_head: 9f816c2 (chore: singletons PR #23) — 14 commits ahead of session-start 2618aac
+  - open_prs: 0
+  - working_branch: codex/goods-civicgraph-signoff @ 649ab0c — 2 commits ahead of origin (the two handoff yamls). Has not been merged into main.
+  - snapshot_branch_preserved: wip/working-tree-snapshot-2026-04-24 @ f187e12 — all original WIP still fully preserved. Do NOT delete.
+  - working_tree_clean_of_user_code: After all merges, `git diff origin/main..wip/working-tree-snapshot-2026-04-24 --stat | tail -1` shows only the schema-blocked buckets remaining.
+  - vercel_checks_nongating: Vercel Preview is not a required check but `Vercel Preview Comments` is. The deploy itself can go PENDING for minutes without blocking merge if you use `--auto`.
+  - stacked_pr_auto_close: When you delete a base branch via `gh pr merge --delete-branch`, any PRs that target that branch are auto-CLOSED (not retargeted). Recovery is rebase+new-PR.
+
+worked:
+  - `gh pr list --state open --json number,mergeable,statusCheckRollup` with a python3 pipe gives a compact per-PR status table — use instead of `gh pr checks <n>` in bulk.
+  - `git rebase origin/main` on a stacked branch after the base squash-merges cleanly drops the duplicate commits automatically ("warning: skipped previously applied commit").
+  - `gh pr merge --squash --delete-branch --auto` lets you queue a merge that completes once required checks go green, avoiding manual poll loops.
+  - When the base branch of an open PR is deleted, the PR moves to CLOSED (not MERGED). Reopening fails; rebase + new PR is the only recovery.
+  - Always commit handoffs to `thoughts/shared/handoffs/general/` with the filename pattern `YYYY-MM-DD_HH-MM_<short-description>.yaml` — matches SessionStart hook expectations.
+
+failed:
+  - Deleting the alerts-infra base branch via `--delete-branch` auto-closed 4 dependent PRs (#12 #15 #16 #17). Had to rebase each branch onto new-main and open fresh PRs (#18-#21). Future rule: when squash-merging a PR that is the base of other open PRs, either (a) retarget the dependents to main FIRST via `gh pr edit --base main`, or (b) merge without `--delete-branch` and let the auto-retarget-on-default-base kick in, then delete the branch manually.
+
+next:
+  # --- Schema reconciliation (blocks scripts-misc, grant-frontier-scripts, org-project-foundations) ---
+  schema_reconciliation:
+    - Enumerate prod schema state for the tables the 8 pending migrations touch:
+      - 20260420152000_org_project_foundations.sql
+      - 20260420161000_org_applicant_entities.sql
+      - 20260420170000_org_project_foundation_research.sql
+      - 20260420182000_org_project_foundations_engagement_status.sql
+      - 20260420184500_org_project_foundation_interactions.sql
+      - 20260420191500_org_project_foundations_followup_fields.sql
+      - 20260422192542_ghl_sync_status_guard.sql
+      - 20260424091500_normalize_grant_opportunity_sources_jsonb.sql
+    - For each: `\d <table>` in prod vs migration CREATE/ALTER statements. Identify drift (tables already created by hand, columns added later, constraints that differ).
+    - Write a single consolidated migration if prod state differs from what the 8 migrations assume. Or update the migrations to IF NOT EXISTS / ALTER IF EXISTS patterns that are idempotent against current prod.
+    - Apply locally (via `scripts/gsql.mjs` smoke + `psql -f` dry-run), then to a Supabase branch, then to prod.
+  # --- Carves unblocked by schema ---
+  - After migrations land: carve org-project-foundations bucket (11 files incl. /api/goods-workspace routes, /org admin client, modified org page + components). This completes the goods-workspace UI that's already in #21.
+  - Carve grant-frontier-scripts (12 files: discover-foundation-programs, grantscope-discovery, import-gov-grants, massive-import-run, pipeline-runner, scout-grants-for-profiles, scrape-*, sync-*, grantscope-signoff.mjs, reconcile-grant-source-identity.mjs). Depends on PR #6 (merged) + schema work.
+  - Carve scripts-misc (29 files: ACT seed scripts, bittensor-money-model.mjs, check-grant-semantics-health.mjs, foundation-program-year promoters, 2 migration SQL files).
+  # --- Orthogonal follow-ups ---
+  - Cleanup PR for the 9 pre-existing grant-engine typecheck errors (`.ts` import extensions in 4 files + 2 unknown-type narrows in minimax.ts). Standalone, low-risk.
+  - CEO walkthrough on https://civicgraph.app — still the user-facing gate carried from phase-1.
+  - Decide fate of codex/goods-civicgraph-signoff branch: either merge its 2 handoff commits into main or let it stay as a session working branch.
+
+files:
+  created:
+    - thoughts/shared/handoffs/general/2026-04-24_14-15_dirty-tree-carve-complete.yaml
+  modified: []
+
+branches:
+  working: codex/goods-civicgraph-signoff (2 commits ahead of origin; handoff yamls for phase 1, 2, and this close-out)
+  snapshot: wip/working-tree-snapshot-2026-04-24 (preserved — all unmerged schema-blocked content still here)
+  merged_and_deleted:
+    - feat/bittensor-research-docs (PR #4)
+    - feat/briefing-generator (PR #5)
+    - feat/grant-engine-discovery-events (PR #6)
+    - feat/data-api-rankings (PR #7)
+    - feat/auth-signup-continue (PR #8)
+    - feat/validation-pilots (PR #9)
+    - feat/alerts-infrastructure (PR #10)
+    - feat/mission-control (PR #11)
+    - feat/foundations-pages (PR #13)
+    - docs/signoff-operating-pilot (PR #14)
+    - feat/billing-stripe-tracking (PR #18 — originally #12, recreated after auto-close)
+    - feat/tracker-profile-ops (PR #19 — originally #15)
+    - feat/home-reports-refresh (PR #20 — originally #16)
+    - feat/misc-app-refresh (PR #21 — originally #17)
+    - docs/phase-2-thoughts-bundle (PR #22)
+    - chore/singletons (PR #23)
+
+prs_merged_today:
+  # Session-start baseline: main @ 1334d77
+  - { number: 4, title: "docs: bittensor integration research and money model plans", files: 4 }
+  - { number: 5, title: "feat: briefing generator — composer, controls, lane/output loop bar", files: 8 }
+  - { number: 6, title: "feat(grant-engine): discovery events + 16 council grant sources", files: 30 }
+  - { number: 7, title: "feat(data-api): board-power, catalog, rankings routes", files: 5 }
+  - { number: 8, title: "feat(auth): /auth/signup and /continue routes", files: 2 }
+  - { number: 9, title: "feat(ops): pilots + validation-reviews APIs", files: 9 }
+  - { number: 10, title: "feat(alerts): end-to-end alerts subsystem with notifications, tracking, scout", files: 23 }
+  - { number: 11, title: "feat(mission-control): frontier + runtime-sweeps + layout + MC API enrichments", files: 10 }
+  - { number: 13, title: "feat(foundations): 5 new foundation pages + compare + backlog + review-set", files: 12 }
+  - { number: 14, title: "docs: Goods V1 signoff + operating plan + pilot testing briefs", files: 4 }
+  - { number: 18, title: "feat(billing): stripe track/click + webhook enrichments + link tracking", files: 6 }
+  - { number: 19, title: "feat: tracker + profile + ops + nav + entity + for-pages refresh", files: 14 }
+  - { number: 20, title: "feat(home+reports): home workspace refresh + 4 new reports + youth-justice expansion", files: 33 }
+  - { number: 21, title: "feat(misc-app): funding-workspace, goods-intelligence, goods-workspace, portfolio-control, rankings, snow-foundation + layout + marketing refresh", files: 20 }
+  - { number: 22, title: "docs(thoughts): phase-2 strategy + outreach + handoff bundle", files: 33 }
+  - { number: 23, title: "chore: singletons (.claudeignore, ecosystem.config.js, favicon, package.json scripts)", files: 4 }
+  # Total: 16 PRs, ~217 files merged into main
+
+remaining_snapshot_contents:
+  schema_blocked:
+    - { name: org-project-foundations, files: 11, note: "depends on 5 org_project_foundation_* migrations + org_applicant_entities migration" }
+    - { name: scripts-misc, files: 29, note: "ACT seed scripts + bittensor-money-model.mjs + foundation-program-year promoters + 2 migration SQL files" }
+    - { name: grant-frontier-scripts, files: 12, note: "grantscope-signoff.mjs, discovery/sync/scrape pipeline updates; depends on grant_opportunity_sources_jsonb normalization migration" }
+    - { name: migrations, files: 8, note: "5 org_project_foundation_*, 1 org_applicant_entities, 1 ghl_sync_status_guard, 1 normalize_grant_opportunity_sources_jsonb" }
+  small:
+    - { name: test-mission-counts.mjs, files: 1, note: "stray test script; probably delete not commit" }
