@@ -1,5 +1,7 @@
 # Design System — CivicGraph
 
+> **Inherits identity from** `act-global-infrastructure/.claude/skills/act-brand-alignment/references/brand-core.md` — particularly "uncomfortable truth-telling" and "name extractive systems" promises, which CivicGraph operationalises as a tool. **Visual cluster: Civic Bauhaus** — intentional break from the Editorial Warmth family because data + accountability surfaces require authority, not warmth. Bloomberg Terminal designed by the Bauhaus school. See `act-global-infrastructure/wiki/decisions/act-brand-alignment-map.md`.
+
 ## Product Context
 - **What this is:** Decision infrastructure for Australian government and social sector — entity graph, procurement intelligence, funding allocation analysis, and outcome evidence
 - **Who it's for:** Foundation program officers, government accountability researchers, procurement analysts, community organisations
