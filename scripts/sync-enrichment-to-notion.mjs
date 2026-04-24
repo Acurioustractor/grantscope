@@ -67,14 +67,14 @@ async function fetchStats() {
   
   const [tableSizes, enrichmentCoverage, agentRuns, agentSchedules, discoveries, foundationPrograms] = await Promise.all([
     // Table row counts
-    supabase.rpc('exec_sql', { sql: `
+    supabase.rpc('exec_sql', { query: `
       SELECT relname as tbl, n_live_tup as cnt 
       FROM pg_stat_user_tables 
       WHERE relname IN ('gs_entities','gs_relationships','austender_contracts','foundations','justice_funding','grant_opportunities','state_tenders','person_roles')
       ORDER BY n_live_tup DESC` }).catch(() => ({ data: [] })),
 
     // Enrichment coverage per entity type
-    supabase.rpc('exec_sql', { sql: `
+    supabase.rpc('exec_sql', { query: `
       SELECT entity_type, COUNT(*) as total,
              COUNT(CASE WHEN description IS NOT NULL AND description != '' THEN 1 END) as with_desc
       FROM gs_entities
@@ -102,7 +102,7 @@ async function fetchStats() {
       .limit(10),
 
     // Foundation-program connections (new ones from trustee chain)
-    supabase.rpc('exec_sql', { sql: `
+    supabase.rpc('exec_sql', { query: `
       SELECT 
         f.name as foundation,
         COUNT(DISTINCT fp.id) as program_count,
