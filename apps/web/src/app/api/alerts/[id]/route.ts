@@ -46,7 +46,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         error: 'This alert frequency is not available on your current plan.',
         tier,
         allowed_frequencies: entitlements.frequencies,
-        upgrade_url: '/pricing',
+        upgrade_url: '/support',
       },
       { status: 403 }
     );

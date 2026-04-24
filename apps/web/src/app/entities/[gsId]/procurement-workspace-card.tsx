@@ -136,7 +136,7 @@ export function ProcurementWorkspaceCard({
     setBusyKey(`add:${addShortlistId}`);
     setError('');
     try {
-      const res = await fetch('/api/tender-intelligence/shortlist', {
+      const res = await fetch('/api/procurement/shortlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -180,7 +180,7 @@ export function ProcurementWorkspaceCard({
     setBusyKey(item.id);
     setError('');
     try {
-      const res = await fetch('/api/tender-intelligence/shortlist', {
+      const res = await fetch('/api/procurement/shortlist', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -219,7 +219,7 @@ export function ProcurementWorkspaceCard({
     setBusyKey(item.id);
     setError('');
     try {
-      const res = await fetch('/api/tender-intelligence/shortlist', {
+      const res = await fetch('/api/procurement/shortlist', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -396,7 +396,7 @@ export function ProcurementWorkspaceCard({
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Link
-                      href={`/tender-intelligence?shortlistId=${membership.shortlist_id}#procurement-workspace`}
+                      href={`/procurement?shortlistId=${membership.shortlist_id}#procurement-workspace`}
                       className="px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 border-bauhaus-black text-bauhaus-black hover:bg-white transition-colors"
                     >
                       Open Shortlist

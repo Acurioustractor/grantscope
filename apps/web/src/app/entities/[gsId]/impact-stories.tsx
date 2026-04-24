@@ -101,7 +101,7 @@ export function CommunityEvidence({ gsId, isPremium }: { gsId: string; isPremium
             Community-verified outcomes linked to this entity, with consent-governed provenance.
           </p>
           <Link
-            href="/pricing"
+            href="/support"
             className="inline-block px-4 py-2 bg-bauhaus-black text-white font-black text-xs uppercase tracking-widest hover:bg-bauhaus-blue transition-colors"
           >
             Unlock Full Dossier

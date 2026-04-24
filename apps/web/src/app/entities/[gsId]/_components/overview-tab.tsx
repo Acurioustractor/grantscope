@@ -132,13 +132,13 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
               </p>
               <div className="mt-4 flex flex-col gap-3">
                 <Link
-                  href={`/for/funders/proof/${e.postcode}`}
+                  href={`/foundations/proof/${e.postcode}`}
                   className="inline-block px-4 py-3 text-center font-black text-xs uppercase tracking-widest border-4 border-bauhaus-black bg-white hover:bg-bauhaus-yellow transition-colors"
                 >
                   Open Place Proof
                 </Link>
                 <Link
-                  href={`/for/funders/proof/${e.postcode}/system`}
+                  href={`/foundations/proof/${e.postcode}/system`}
                   className="inline-block px-4 py-3 text-center font-black text-xs uppercase tracking-widest border-4 border-bauhaus-black bg-white hover:bg-link-light transition-colors"
                 >
                   Open System Map
@@ -164,7 +164,7 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
               <h2 className="text-lg font-black text-white">Current workspace decision context</h2>
             </div>
             <Link
-              href={leadWorkspaceMembership ? `/tender-intelligence?shortlistId=${leadWorkspaceMembership.shortlist_id}#procurement-workspace` : '/tender-intelligence'}
+              href={leadWorkspaceMembership ? `/procurement?shortlistId=${leadWorkspaceMembership.shortlist_id}#procurement-workspace` : '/procurement'}
               className="px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 border-white text-white hover:bg-white hover:text-bauhaus-red transition-colors"
             >
               Open Workspace
@@ -1116,7 +1116,7 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
                     Open Place Pressure
                   </Link>
                 )}
-                <Link href="/funding-workspace" className="px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 border-bauhaus-black text-bauhaus-black hover:bg-money-light transition-colors">
+                <Link href="/graph" className="px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 border-bauhaus-black text-bauhaus-black hover:bg-money-light transition-colors">
                   Open Funding Workspace
                 </Link>
                 {ndisSourceLink && (

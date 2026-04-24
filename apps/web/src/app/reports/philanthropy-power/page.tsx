@@ -34,7 +34,7 @@ export default async function PhilanthropyPowerPage() {
           approachable, who remains opaque, and where grantmaking discipline is concentrated by theme and geography.
         </p>
         <div className="mt-4 flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-widest">
-          <Link href="/funding-workspace" className="px-3 py-2 border-2 border-bauhaus-black text-bauhaus-black hover:bg-bauhaus-black hover:text-white transition-colors">
+          <Link href="/graph" className="px-3 py-2 border-2 border-bauhaus-black text-bauhaus-black hover:bg-bauhaus-black hover:text-white transition-colors">
             Open funding workspace
           </Link>
           <Link href="/foundations" className="px-3 py-2 border-2 border-bauhaus-blue text-bauhaus-blue bg-link-light hover:bg-bauhaus-blue hover:text-white transition-colors">

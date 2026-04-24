@@ -99,7 +99,7 @@ export default async function HomePage() {
           primaryLabel: 'Manage billing',
           primaryHref: '/profile',
           secondaryLabel: 'View plans',
-          secondaryHref: '/pricing',
+          secondaryHref: '/support',
         }
       : profile?.subscription_cancel_at_period_end
         ? {
@@ -109,7 +109,7 @@ export default async function HomePage() {
             primaryLabel: 'Manage billing',
             primaryHref: '/profile',
             secondaryLabel: 'Compare plans',
-            secondaryHref: '/pricing',
+            secondaryHref: '/support',
           }
         : ['past_due', 'unpaid'].includes(subscriptionStatus)
           ? {
