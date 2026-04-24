@@ -1,89 +1,65 @@
-# Blocker Analysis — Round B Scrapers
+# Blocker Analysis — Round B Scrapers (UPDATED)
 
 First-principles diagnosis, real root causes, and systematic recovery paths.
-Updated 2026-04-25 after deeper reconnaissance.
+Updated 2026-04-25 after deeper reconnaissance and correction by user.
 
-## 1. NSW political donations
+## 1. NSW political donations — STILL BLOCKED
 
 **Real root cause:** NSW Electoral Funding Authority's public disclosure system
-is an Angular SPA behind Cloudflare. The landing page `/political-
-participants/disclosures` is Kentico CMS content, NOT the disclosure search.
-The actual search is on a separate subdomain that historically existed at
-`efareports.elections.nsw.gov.au` or `publicdisclosures.elections.nsw.gov.au`
-— both now return 000 (no DNS). Wayback has zero CSV/xlsx history. data.nsw
-returns 0 hits for "donations/political finance/disclosure".
-
-**Root-cause classification:** Dynamic-SPA + policy. Not just "we couldn't
-find it" — the agency doesn't publish bulk data.
-
-**Recovery paths (ranked by likelihood × effort):**
-
-| # | Path | Effort | Likelihood | Notes |
-|---|------|--------|------------|-------|
-| 1 | Direct email to EFA | 30 min | 60% | Often works for legitimate research |
-| 2 | Formal GIPAA request | 1 hr | 95% | 14-28 day response time; binding |
-| 3 | Playwright SPA scraper | 6-8 hr | 80% | Real but fragile — Cloudflare risk |
-
-**Recommendation:** start with #1 (email sent via
-`outreach/06-nsw-efa-data-request.md`), fall back to #2 after 14 days,
-build #3 only if #1+#2 both fail and NSW data is load-bearing for a story.
-
-## 2. VIC political donations
-
-**Real root cause:** VEC's disclosure system EXISTS at
-`https://disclosures.vec.vic.gov.au/donations-public/` — I found the URL.
-But it's **currently redirecting to /Maintenance/** (HTTP 308). Temporary
-outage, not a permanent block.
-
-**Root-cause classification:** Temporary availability. Resolvable by waiting.
+is an Angular SPA behind Cloudflare. The landing page at `/political-
+participants/disclosures` is Kentico CMS content, not the actual search.
+The disclosure search historically lived at efareports/publicdisclosures
+subdomains — both now return 000 (no DNS). Wayback has zero CSV/xlsx
+captures. data.nsw returns 0 hits for political finance terms.
 
 **Recovery paths (ranked):**
+1. Direct email to EFA — `outreach/06-nsw-efa-data-request.md` (60% likely)
+2. GIPAA formal request — 14-28 day response (95% likely, binding)
+3. Playwright SPA scraper — 6-8h build (80% likely, Cloudflare risk)
 
-| # | Path | Effort | Likelihood | Notes |
-|---|------|--------|------------|-------|
-| 1 | Wait 24-48h, retry | 0 min wait | 90% | Maintenance usually ends |
-| 2 | Playwright scraper once up | 4-6 hr | 90% | SPA pattern — template in PLAYWRIGHT-SCRAPER-TEMPLATE.md |
-| 3 | Direct email to VEC | 30 min | 60% | `outreach/07-vec-data-request.md` |
+## 2. VIC political donations — TEMPORARY OUTAGE
 
-**Recommendation:** run a watcher that retries the URL daily; when
-`curl -I https://disclosures.vec.vic.gov.au/donations-public/` stops
-redirecting to /Maintenance/, build the Playwright scraper.
+**Real root cause:** Found the actual URL:
+`https://disclosures.vec.vic.gov.au/donations-public/` — currently redirecting
+to `/Maintenance/` (HTTP 308). Temporary, not permanent.
 
-## 3. Black Business Finder
+**Recovery paths:**
+1. Retry in 24-48h, then build Playwright scraper (most likely to succeed)
+2. Direct email to VEC — `outreach/07-vec-data-request.md`
 
-**Real root cause:** `blackbusinessfinder.com.au` DNS doesn't resolve from
-this host (`dig` returns nothing). curl/nslookup also fail. Wayback fetch
-was blocked. Can't distinguish between: (a) DNS issue on our resolver, (b)
-site is down globally, (c) site blocks all automated access.
+## 3. Black Business Finder — SCRAPED!
 
-**Root-cause classification:** Cannot diagnose without external verification.
+**Original mis-diagnosis:** I probed `blackbusinessfinder.com.au` which
+doesn't resolve from this host (DNS dead or site gone).
 
-**Recovery paths (ranked):**
+**Actual URL (user-provided):** `https://gateway.icn.org.au/bbf/capability-
+statements` — hosted by Industry Capability Network (ICN) Gateway platform.
 
-| # | Path | Effort | Likelihood | Notes |
-|---|------|--------|------------|-------|
-| 1 | User verifies from own network | 2 min | — | Tells us if site is alive at all |
-| 2 | Partnership outreach | 30 min | 70% | `outreach/08-bbf-partnership.md` |
-| 3 | Accept Supply Nation coverage | 0 min | — | 6,204 Indigenous businesses already in graph |
+**Status:** Scrapeable end-to-end. No auth required for listings or detail
+pages. Server-rendered HTML, clean ABN extraction from detail pages.
+Respectful throttling at 2.5 req/sec. robots.txt allows all.
 
-**Recommendation:** ask user to try the site in their own browser. If the
-site is dead, this is not a "blocker", it's "the source is gone" — move on.
-If alive, send the partnership email.
+**Built:** `scripts/scrape-bbf-suppliers.mjs`
+- Phase 1: paginates /bbf/capability-statements?page={1..N}, extracts
+  supplier IDs + card metadata
+- Phase 2: fetches /suppliers/{id} detail pages for ABN
+- Phase 3: upserts to gs_entities with tags
+  `['bbf-listed','indigenous-supplier']` and sets
+  is_community_controlled=true
 
-## Summary — what's actually unblockable vs. what's work
+**Sample output (5 pages, 20 detail fetches):**
+- 75 unique suppliers harvested
+- 20/20 detail fetches returned clean ABN (100% hit rate)
+- Clean names, locations (State extracted from "City, STATE" pattern)
 
-| Blocker | Type | Real fix | Time to fix |
-|---------|------|----------|-------------|
-| NSW donations | Policy + SPA | Direct email OR GIPAA | 2-4 weeks |
-| VIC donations | Temporary outage | Wait, then scrape | 1-7 days |
-| BBF | Diagnostic unclear | Verify from user's network | 2 minutes |
+**Usage:**
+```bash
+node --env-file=.env scripts/scrape-bbf-suppliers.mjs --dry-run --pages=5 --detail-limit=20
+node --env-file=.env scripts/scrape-bbf-suppliers.mjs --pages=300 --detail-limit=1500   # live
+```
 
-**None of these are fundamentally unsolvable.** They're just NOT
-write-a-scraper problems. Two need human relationships (email outreach).
-One needs a different network to verify reachability. One needs waiting +
-a non-trivial Playwright build.
+## Summary
 
-The strategic question isn't "can we scrape these" — it's "do we need
-this data for the next 30 days of publication, or is federal-level data
-(already in the atlas) sufficient for the 2-3 investigations we're
-planning?" If federal is enough, these become Round C+ work.
+- NSW donations: POLICY block (no bulk API). Email + GIPAA path.
+- VIC donations: TEMPORARY block (maintenance). Watcher + Playwright.
+- BBF: RESOLVED. Scraper built and running.
