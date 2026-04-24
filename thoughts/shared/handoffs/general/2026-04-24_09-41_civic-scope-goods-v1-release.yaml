@@ -1,0 +1,66 @@
+---
+session: general
+date: 2026-04-24
+status: complete
+outcome: SUCCEEDED
+---
+
+goal: Civic Scope x Goods V1 internal CEO signoff package is implemented, merged to main, deployed, and smoke-verified.
+now: In Claude Code, start with the CEO walkthrough gate: run the 12-minute walkthrough using the production aliases, authenticated for protected routes, and record whether the CEO can complete it without builder narration.
+test: /Users/benknight/Code/grantscope/scripts/goods-signoff-check.sh
+
+done_this_session:
+  - task: Packaged the Civic Scope x Goods V1 CEO signoff release as an internal operating release.
+    files: [apps/web/public/reports/civic-scope-goods-v1-ceo-signoff.html, thoughts/shared/handoffs/civic-scope-goods-v1-ceo-signoff.md]
+  - task: Added stale-deadline labeling for open Goods project pipeline rows.
+    files: [apps/web/src/app/org/_components/pipeline-filter.tsx]
+  - task: Added missing admin auth helper required by existing admin routes.
+    files: [apps/web/src/lib/admin-auth.ts]
+  - task: Hardened preview/CI startup when Supabase public env is absent and added a public E2E smoke test.
+    files: [apps/web/src/lib/supabase-server.ts, apps/web/src/app/layout.tsx, apps/web/src/middleware.ts, apps/web/src/app/api/data/outcomes/route.ts, apps/web/tests/e2e/public-smoke.spec.ts]
+  - task: Merged PR #3 into main and verified production deployment.
+    files: []
+
+blockers: []
+
+questions:
+  - Has the CEO completed the walkthrough in under 15 minutes without builder narration?
+  - Should the remaining unrelated local dirty work be preserved on the current branch, moved to a new branch, or ignored?
+
+decisions:
+  - internal_release_only: V1 is a CEO signoff package, not a public launch.
+  - protected_operating_routes: `/org/act/goods` and `/goods-workspace` remain authenticated routes; production unauthenticated smoke should redirect to `/login?next=...`.
+  - crm_mutation_guard: Did not click `Run identity check`, `Backfill target IDs`, `Push to GHL`, review buttons, or action completion controls because they can mutate CRM/contact/action state.
+  - preview_env_guard: Missing Supabase public env in Vercel/CI should not crash public render/build; app treats auth as logged out where appropriate.
+
+findings:
+  - merge: PR #3 `feat: package Goods V1 CEO signoff` merged to `main` at merge commit `1334d7784bf9cb9b496a8ba8e51cbe2891808a2e`.
+  - grantscope_deploy: Vercel production deployment `dpl_AnuG8FLnwZgSntzqa6B5jwa1EPPo` is Ready; aliases include `https://civicgraph.app` and `https://grantscope.vercel.app`.
+  - production_smoke: `https://civicgraph.app/` returns 200; `/reports/civic-scope-goods-v1-ceo-signoff.html` returns 200 and contains the deck title plus `Release Decision`; `/org/act/goods` and `/goods-workspace` redirect to login as expected.
+  - goods_v2_deploy: Goods v2 production was redeployed earlier to `https://www.goodsoncountry.com`, deployment `dpl_4y7ShYsMmnPcLnTqQt4jX7k7N26L`.
+  - goods_v2_smoke: Live `/admin/qbe-program` exposed `Weekly cockpit`, `Identity health`, `Discovery intake`, `Backfill target IDs`, `Push to GHL`, `Open People`, and linked/needs-decision/unmatched/reviewed chips.
+  - local_state: Current local branch is `codex/goods-civicgraph-signoff` at `c8ef329`; remote main is ahead via merge commit. Many unrelated local dirty files remain. Do not reset or revert them without explicit instruction.
+  - non_blocking_warnings: Vercel production build logged Sentry setup warnings, report-service query timeouts, missing `supplier_state`, and `uuid = text` query warnings, but deployment completed successfully.
+
+worked:
+  - Use `gh pr checks 3 --watch` and `gh run watch <run_id> --exit-status` for CI.
+  - Use Node `fetch` for production route smoke because this shell lacked `curl`, `head`, and `tr`.
+  - Use Vercel CLI `vercel inspect <deployment-url> --scope benjamin-knights-projects` and `vercel ls --scope benjamin-knights-projects` for deployment status.
+  - Keep route smoke assertions structural and stable, not tied to local uncommitted homepage copy.
+
+failed:
+  - `gh pr edit` hit GitHub Projects classic GraphQL deprecation, so PR body was updated via GitHub REST API.
+  - `.Codex/scripts/generate-reasoning.sh` does not exist, so post-commit reasoning generation could not run.
+  - Direct raw Vercel deployment URL is behind Vercel Authentication; use production aliases for public smoke.
+  - Browser Use navigation tools were not exposed at the end of the session, so final production smoke used Node fetch instead of in-app browser.
+
+next:
+  - Open `https://civicgraph.app/reports/civic-scope-goods-v1-ceo-signoff.html` for the CEO deck.
+  - Authenticate to GrantScope and walk `/org/act/goods`, Decision Brief, Capital Routes, Foundations, Procurement Routes, and `/goods-workspace`.
+  - Open `https://www.goodsoncountry.com/admin/qbe-program` and walk the QBE execution cockpit without mutating CRM/action state unless explicitly approved.
+  - Record CEO walkthrough outcome: pass if completed in under 15 minutes without builder narration.
+  - If continuing code work, protect unrelated dirty files; create a fresh branch or stash only with explicit user approval.
+
+files:
+  created: [apps/web/public/reports/civic-scope-goods-v1-ceo-signoff.html, thoughts/shared/handoffs/civic-scope-goods-v1-ceo-signoff.md, apps/web/src/lib/admin-auth.ts, apps/web/tests/e2e/public-smoke.spec.ts, thoughts/shared/handoffs/general/2026-04-24_09-41_civic-scope-goods-v1-release.yaml]
+  modified: [apps/web/src/app/org/_components/pipeline-filter.tsx, apps/web/src/lib/supabase-server.ts, apps/web/src/app/layout.tsx, apps/web/src/middleware.ts, apps/web/src/app/api/data/outcomes/route.ts]

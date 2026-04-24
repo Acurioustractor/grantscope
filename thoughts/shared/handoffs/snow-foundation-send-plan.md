@@ -40,6 +40,7 @@ Send:
 1. short email body
 2. attach or paste the one-pager summary
 3. offer two possible demo slices
+4. keep the public demo route ready to send if they ask to preview before a call
 
 Attach:
 
@@ -51,6 +52,14 @@ Prepare for the call with:
 - [snow-foundation-demo-route.md](/Users/benknight/Code/grantscope/thoughts/shared/handoffs/snow-foundation-demo-route.md)
 - [snow-foundation-board-memo.md](/Users/benknight/Code/grantscope/thoughts/shared/handoffs/snow-foundation-board-memo.md)
 - [snow-foundation-evidence-pack.md](/Users/benknight/Code/grantscope/thoughts/shared/handoffs/snow-foundation-evidence-pack.md)
+
+Public preview route:
+
+- `http://127.0.0.1:3013/snow-foundation`
+
+Use this only as a curated route preview.
+
+Do not send raw internal `/briefing` or `/home/report-builder` links.
 
 ## Recommended subject lines
 
@@ -87,6 +96,8 @@ What feels useful is that this is not a generic dashboard. It is a way of making
 
 We would value 30 minutes to walk you through the working version and get your reaction.
 
+If useful ahead of that, we can send a single public preview route so you can see the shape of the working view before the session.
+
 If useful, we can focus the session on either:
 
 1. RHD and social determinants
@@ -118,7 +129,7 @@ Ben Knight
 If no reply:
 
 - Day 4: short follow-up
-- Day 10: final nudge with one screenshot or one tighter line about the RHD / place-based slice
+- Day 10: final nudge with one screenshot from the public demo route or one tighter line about the RHD / place-based slice
 
 ## Follow-up 1
 
@@ -134,6 +145,8 @@ Following up on the note below in case it is useful.
 
 We now have Snow’s 2024 public grant layer repaired in the platform and can show a working portfolio view across funding, geography, recipient network, and Deadly Hearts evidence.
 
+We also now have a single public demo route for that walkthrough, so if useful we can send that in advance of a conversation.
+
 If useful, we would be glad to walk through it in 30 minutes.
 
 Best,
@@ -146,3 +159,4 @@ Ben
 - any claim based on old Empathy Ledger prospectus numbers
 - any direct ask for funding
 - any unverified statement about Snow members or private data
+- any internal auth-gated route as if it were an external demo surface

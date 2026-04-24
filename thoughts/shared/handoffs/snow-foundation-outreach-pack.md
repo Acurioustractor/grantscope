@@ -16,6 +16,12 @@ The offer is:
 2. Empathy Ledger can make the same portfolio intelligible through lived evidence, culturally safe story capture, and project-specific analysis.
 3. Together, the stack can help Snow make better decisions, report more honestly, and show what is actually happening in the places and systems they care about.
 
+The current safest public entry point for this is now:
+
+- `http://127.0.0.1:3013/snow-foundation`
+
+That page is the fixed external route for the demo. It packages the verified Snow baseline and links only to the curated CivicGraph and Empathy Ledger surfaces that are currently safe to show.
+
 ## Core Thesis
 
 Snow is a strong fit because their public strategy already points toward the exact combination this stack can provide:
@@ -240,6 +246,24 @@ The network is now strong enough to show Snow:
 - geographic concentration across ACT, NSW, VIC, and QLD
 - issue concentration across domestic violence, women and girls, community infrastructure, and RHD
 - the shape of their public grant surface even before deeper portfolio completion
+
+### Current public demo route
+
+Verified locally on 2026-04-18:
+
+- `/snow-foundation` now exists as a public, non-auth-gated Snow demo route in CivicGraph
+- it renders the repaired annual giving baseline, verified 2024 grant count, open-program count, and Snow power posture on one page
+- it links only to:
+  - Snow foundation detail
+  - Snow in foundation search
+  - Clarity handoff for Deadly Hearts Trek
+  - Snow dashboard in Empathy Ledger
+  - Snow transcripts
+  - Snow analysis
+
+Interpretation:
+
+This removes the old external-demo weakness where the walkthrough depended on `/briefing` and `/home/report-builder`, both of which are internal operator routes and remain auth-gated.
 
 ## Empathy Ledger
 

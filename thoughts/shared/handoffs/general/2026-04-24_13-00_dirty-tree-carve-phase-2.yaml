@@ -1,0 +1,173 @@
+---
+session: general
+date: 2026-04-24
+status: complete
+outcome: SUCCEEDED
+---
+
+goal: Finish the post-Goods V1 dirty-tree carve program — merge phase-1 PRs, then carve all remaining user-facing buckets from wip/working-tree-snapshot-2026-04-24 into clean PRs. Stop before schema-blocked buckets.
+now: Phase 2 complete. 11 PRs open (4 direct to main, 5 stacked on feat/alerts-infrastructure, 1 stacked on it indirectly via reports/misc-app, 1 docs-only). Next session: merge-train the 11 open PRs, then tackle schema reconciliation for org_project_foundation bucket.
+test: gh pr list --state open --json number,title | jq 'length' == 11
+
+done_this_session:
+  - task: Merged phase-1 PRs #4 (bittensor docs), #5 (briefing generator), #6 (grant-engine + 16 councils) via squash to main.
+    files: []
+  - task: Carved data-api — 5 files, PR #7, based on main.
+    files: [apps/web/src/app/api/data/board-power/, apps/web/src/app/api/data/catalog/, apps/web/src/app/api/data/data-health/, apps/web/src/app/api/data/rankings/, apps/web/src/app/api/data/route.ts]
+  - task: Carved auth-continue — 2 files, PR #8, based on main.
+    files: [apps/web/src/app/auth/signup/page.tsx, apps/web/src/app/continue/page.tsx]
+  - task: Carved validation-pilots — 9 files, PR #9, based on main.
+    files: [apps/web/src/app/api/ops/claims/, apps/web/src/app/api/ops/health/, apps/web/src/app/api/ops/pilots/, apps/web/src/app/api/ops/route.ts, apps/web/src/app/api/ops/validation-reviews/, apps/web/src/lib/pilot-participants.ts, apps/web/src/lib/validation-reviews.ts]
+  - task: Carved alerts + shared telemetry — 23 files, PR #10, based on main. Became the base for all dependent stacks.
+    files: [apps/web/src/app/alerts/, apps/web/src/app/api/alerts/, apps/web/src/lib/alert-{attribution,events,link-tracking,performance}.ts, apps/web/src/lib/profile-alerts.ts, apps/web/src/lib/grant-{alert-digests,notifications,scout}.ts, apps/web/src/lib/product-events{,-client}.ts, apps/web/src/lib/start-checkout.ts, apps/web/src/lib/app-url.ts, apps/web/src/lib/subscription.ts]
+  - task: Carved mission-control — 10 files, PR #11, based on main.
+    files: [apps/web/src/app/api/mission-control/, apps/web/src/app/mission-control/layout.tsx]
+  - task: Carved billing — 6 files, PR #12, STACKED on feat/alerts-infrastructure (needs product-events, start-checkout, subscription mods).
+    files: [apps/web/src/app/api/billing/, apps/web/src/lib/billing-link-tracking.ts, apps/web/src/lib/stripe.ts]
+  - task: Carved foundations-pages — 12 files, PR #13, based on main.
+    files: [apps/web/src/app/foundations/]
+  - task: Carved root-doc — 4 markdown files, PR #14, based on main.
+    files: [GRANTSCOPE_SIGNOFF.md, OPERATING_PLAN.md, PILOT_SESSION_BRIEFS.md, PILOT_TESTING.md]
+  - task: Carved tracker-profile-ops — 14 files, PR #15, STACKED on feat/alerts-infrastructure (profile-client imports start-checkout).
+    files: [apps/web/src/app/charities/, apps/web/src/app/clarity/, apps/web/src/app/components/nav.tsx, apps/web/src/app/components/workspace-page-header.tsx, apps/web/src/app/entity/, apps/web/src/app/for/, apps/web/src/app/ops/, apps/web/src/app/profile/, apps/web/src/app/tracker/]
+  - task: Carved home-reports — 33 files, PR #16, STACKED on feat/alerts-infrastructure (home+watchlist depend on alerts infra).
+    files: [apps/web/src/app/home/, apps/web/src/app/reports/, apps/web/src/lib/services/report-service.ts]
+  - task: Carved misc-app — 20 files, PR #17, STACKED on feat/alerts-infrastructure.
+    files: [apps/web/src/app/layout.tsx, apps/web/src/app/page.tsx, apps/web/src/app/funding-workspace/, apps/web/src/app/goods-intelligence/, apps/web/src/app/goods-workspace/, apps/web/src/app/portfolio-control/, apps/web/src/app/rankings/, apps/web/src/app/snow-foundation/, apps/web/src/app/pricing/, apps/web/src/app/login/, apps/web/src/app/register/, apps/web/src/app/power/, apps/web/src/app/tender-intelligence/, apps/web/src/app/justice-reinvestment/, apps/web/src/lib/auth-redirect.ts, apps/web/src/lib/org-profile.ts]
+
+blockers: []
+
+questions:
+  - Merge order for the 11 open PRs — recommended below.
+  - Can the 5 unversioned org_project_foundation migrations be reconciled with prod now, or does that need a separate planning session?
+  - Should the leftover buckets (scripts-misc, grant-frontier-scripts, docs-thoughts) be carved after schema work, or bundled into a final cleanup PR?
+
+decisions:
+  - stack_on_alerts_infra: PRs #12 (billing), #15 (tracker-profile), #16 (home-reports), #17 (misc-app) all stack on PR #10 (alerts+telemetry infra) because they import start-checkout, product-events, profile-alerts, AlertEntitlements, or alert-performance. Rationale - keep shared libs in one place, let downstream PRs rebase to main after #10 merges.
+  - subscription_ts_in_alerts: The additive subscription.ts changes (AlertFrequency, AlertEntitlements, getAlertEntitlements) live in PR #10. Billing's stripe/webhook code uses them but adds no additional subscription changes.
+  - report_service_in_home_reports: lib/services/report-service.ts modification (adds PiccProgramDefinition type) went into PR #16 because that's the only carve that needs it.
+  - org_profile_in_misc_app: lib/org-profile.ts extension (mission/description/slug fields on OrgProfileSummary) went into PR #17 because funding-workspace/page.tsx requires it.
+  - skip_schema_blocked: org-project-foundations (11 files, 5 migrations), scripts-misc (29 files, 2 SQL migrations), grant-frontier-scripts (12 files) were NOT carved. They depend on prod schema reconciliation.
+
+findings:
+  - open_prs: 11 (PRs #7-#17). #14 is docs-only. #7, #8, #9, #11, #13 target main directly. #10 targets main (base for stack). #12, #15, #16, #17 stacked on #10.
+  - main_advanced: 1334d77 → 2618aac (after squashing #4 #5 #6). 3 new commits on main now behind all open PRs.
+  - remaining_snapshot_buckets:
+    - org-project-foundations (11 files + 5 migrations) — schema-blocked
+    - scripts-misc (29 files) — includes 2 SQL migrations + ACT seed scripts
+    - grant-frontier-scripts (12 files) — depends on PR #6 (merged) + schema work
+    - docs-thoughts (25 files) — safe but volume; bundle or split by topic
+    - data-files (10 files) — mostly gitignored now
+  - working_tree_non_clean: 78 uncommitted-in-main files remain (mostly the buckets above + gitignored artifacts). Snapshot branch still fully preserves them.
+  - typecheck: Clean across all 11 carved branches.
+  - pr_titles_all_start_with_feat: except #14 (docs) — matches project convention.
+
+worked:
+  - Base dependent carves on feat/alerts-infrastructure before merging it — prevents a big-bang single PR and gives reviewers narrow diffs per subsystem.
+  - Use `git reset --keep <target-ref>` to rebase an already-created branch onto a different base without losing staged files (better than branch delete + recreate when branch is already checked out).
+  - Always `rm -rf apps/web/.next apps/web/tsconfig.tsbuildinfo` before `cd apps/web && npx tsc --noEmit` — stale type stubs from other branches will produce false errors.
+  - Quote bracketed paths in zsh (`'apps/web/src/app/entity/[gsId]/page.tsx'`) — unquoted bracket expansion silently expands to nothing.
+  - `gh pr create --base <branch>` for stacked PRs; reviewers see the stack clearly and can merge in order.
+  - After `git reset --keep` + `git stash pop`, always `git add` the restored files explicitly — they return as unstaged modifications, not as staged. (This caught me on PR #15; fixed with follow-up commit.)
+
+failed:
+  - First tracker-profile carve committed only 1 file because `git reset --keep` unstaged the 13 modifications that stash-pop restored; fixed with a second commit on the same branch before the PR was reviewed.
+  - Initial auth-continue checkout failed with "pathspec did not match" because the shell's cwd was stuck in apps/web/ from a prior typecheck. Moved back to repo root and retried.
+  - Alerts bucket originally estimated at 10 files — actually needed 23 once cross-cutting libs (grant-*, product-events, start-checkout, app-url) were included to satisfy typecheck.
+
+next:
+  # Merge-train order for next session (fastest path to clean main):
+  - Merge PR #7 (data-api) — standalone, green.
+  - Merge PR #8 (auth-continue) — standalone, green.
+  - Merge PR #9 (validation-pilots) — standalone, green.
+  - Merge PR #11 (mission-control) — standalone, green.
+  - Merge PR #13 (foundations-pages) — standalone, green.
+  - Merge PR #14 (docs) — docs-only, green.
+  - Merge PR #10 (alerts+infra) — unblocks the stack.
+  - After #10 merges, retarget #12, #15, #16, #17 to main (or they'll auto-retarget on merge if GitHub is configured for that). Then merge in any order.
+  # Phase 3 work:
+  - Reconcile the 5 unversioned org_project_foundation migrations + 1 grant_opportunity_sources_jsonb migration against prod schema state. Then carve the org-project-foundations bucket (11 files) and unblock scripts-misc + grant-frontier-scripts.
+  - Bundle docs-thoughts (25 files) into one PR or split by topic (bittensor/empathy-ledger/civicgraph-editorial/VC-memo).
+  - Cleanup PR for the 9 pre-existing grant-engine typecheck errors (`.ts` import extensions + 2 unknown-type narrows in minimax.ts).
+  - CEO walkthrough on https://civicgraph.app still pending from phase-1 handoff.
+
+files:
+  created:
+    - thoughts/shared/handoffs/general/2026-04-24_13-00_dirty-tree-carve-phase-2.yaml
+  modified: []
+
+branches:
+  working: feat/misc-app-refresh (current)
+  snapshot: wip/working-tree-snapshot-2026-04-24 (preserved)
+  carved:
+    - feat/data-api-rankings (PR #7, base=main)
+    - feat/auth-signup-continue (PR #8, base=main)
+    - feat/validation-pilots (PR #9, base=main)
+    - feat/alerts-infrastructure (PR #10, base=main)
+    - feat/mission-control (PR #11, base=main)
+    - feat/billing-stripe-tracking (PR #12, base=feat/alerts-infrastructure)
+    - feat/foundations-pages (PR #13, base=main)
+    - docs/signoff-operating-pilot (PR #14, base=main)
+    - feat/tracker-profile-ops (PR #15, base=feat/alerts-infrastructure)
+    - feat/home-reports-refresh (PR #16, base=feat/alerts-infrastructure)
+    - feat/misc-app-refresh (PR #17, base=feat/alerts-infrastructure)
+  merged:
+    - feat/bittensor-research-docs (was PR #4)
+    - feat/briefing-generator (was PR #5)
+    - feat/grant-engine-discovery-events (was PR #6)
+
+prs:
+  - number: 7
+    title: "feat(data-api): board-power, catalog, rankings routes"
+    base: main
+    url: https://github.com/Acurioustractor/grantscope/pull/7
+  - number: 8
+    title: "feat(auth): /auth/signup and /continue routes"
+    base: main
+    url: https://github.com/Acurioustractor/grantscope/pull/8
+  - number: 9
+    title: "feat(ops): pilots + validation-reviews APIs"
+    base: main
+    url: https://github.com/Acurioustractor/grantscope/pull/9
+  - number: 10
+    title: "feat(alerts): end-to-end alerts with notifications, tracking, scout + product-events infra"
+    base: main
+    url: https://github.com/Acurioustractor/grantscope/pull/10
+  - number: 11
+    title: "feat(mission-control): frontier + runtime-sweeps + layout + MC API enrichments"
+    base: main
+    url: https://github.com/Acurioustractor/grantscope/pull/11
+  - number: 12
+    title: "feat(billing): stripe track/click + webhook enrichments + link tracking"
+    base: feat/alerts-infrastructure
+    url: https://github.com/Acurioustractor/grantscope/pull/12
+  - number: 13
+    title: "feat(foundations): 5 new foundation pages + compare + backlog + review-set"
+    base: main
+    url: https://github.com/Acurioustractor/grantscope/pull/13
+  - number: 14
+    title: "docs: Goods V1 signoff + operating plan + pilot testing briefs"
+    base: main
+    url: https://github.com/Acurioustractor/grantscope/pull/14
+  - number: 15
+    title: "feat: tracker + profile + ops + nav + entity + for-pages refresh"
+    base: feat/alerts-infrastructure
+    url: https://github.com/Acurioustractor/grantscope/pull/15
+  - number: 16
+    title: "feat(home+reports): home workspace refresh + 4 new reports + youth-justice expansion"
+    base: feat/alerts-infrastructure
+    url: https://github.com/Acurioustractor/grantscope/pull/16
+  - number: 17
+    title: "feat(misc-app): funding-workspace, goods-intelligence, goods-workspace, portfolio-control, rankings, snow-foundation + layout + marketing refresh"
+    base: feat/alerts-infrastructure
+    url: https://github.com/Acurioustractor/grantscope/pull/17
+
+remaining_buckets_in_snapshot:
+  schema_blocked:
+    - { name: org-project-foundations, files: 11, note: "5 unversioned migrations — RECONCILE WITH PROD SCHEMA FIRST" }
+    - { name: scripts-misc, files: 29, note: "includes 2 SQL migrations + ACT seed scripts — depends on schema work" }
+    - { name: grant-frontier-scripts, files: 12, note: "depends on PR #6 (merged) + schema reconciliation for grant_opportunity_sources_jsonb" }
+  safe_to_carve:
+    - { name: docs-thoughts, files: 25, note: "low risk — bundle as single docs PR or split by topic" }
+    - { name: data-files, files: 10, note: "mostly gitignored now; only non-gitignored files remain" }
+    - { name: singletons, files: 4, note: "package.json scripts, favicon, 2-3 other migrations (org_applicant_entities, ghl_sync_status_guard, normalize_grant_opportunity_sources_jsonb)" }

@@ -25,7 +25,7 @@ Australia has no 360Giving equivalent. The UK has 320+ funders publishing 1M+ gr
 - Full financials: revenue, expenses, grants given (AU + intl), assets, staff
 - **14,882 charities gave grants in 2023** totalling **$8.86 billion**
 - `v_acnc_grant_makers` view identifies grantmaking orgs
-- `mv_acnc_latest` materialized view for most recent year per charity
+- `mv_acnc_latest` materialised view for most recent year per charity
 
 ### Foundation Programs: `foundation_programs` — 2,472 rows
 - Linked to foundations via FK
