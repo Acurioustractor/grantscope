@@ -26,6 +26,7 @@ export default async function WatchlistPage() {
     { data: entityWatches },
     { data: alerts },
     { data: recentDiscoveries },
+    { data: recentAlertRows },
   ] = await Promise.all([
     db.from('saved_grants')
       .select('id, stage, stars, color, notes, updated_at, grant:grant_opportunities(id, name, provider, amount_min, amount_max, closes_at, categories)')
@@ -51,7 +52,61 @@ export default async function WatchlistPage() {
       .eq('dismissed', false)
       .order('created_at', { ascending: false })
       .limit(100),
+    db.from('grant_notification_outbox')
+      .select('id, grant_id, alert_preference_id, notification_type, status, subject, match_score, match_signals, queued_at, sent_at, last_error')
+      .eq('user_id', user.id)
+      .order('queued_at', { ascending: false })
+      .limit(20),
   ]);
+
+  const grantIds = [...new Set((recentAlertRows || []).map((row: { grant_id: string | null }) => row.grant_id).filter(Boolean))] as string[];
+
+  const { data: alertGrants } = grantIds.length > 0
+    ? await db
+      .from('grant_opportunities')
+      .select('id, name, provider, closes_at')
+      .in('id', grantIds)
+    : { data: [] };
+
+  const alertsById = new Map(
+    (alerts || []).map((alert: { id: string | number; name: string; frequency: string; enabled: boolean }) => [
+      String(alert.id),
+      { id: String(alert.id), name: alert.name, frequency: alert.frequency, enabled: alert.enabled },
+    ])
+  );
+
+  const grantsById = new Map(
+    (alertGrants || []).map((grant: { id: string; name: string; provider: string | null; closes_at: string | null }) => [
+      grant.id,
+      grant,
+    ])
+  );
+
+  const recentAlertActivity = (recentAlertRows || []).map((row: {
+    id: string;
+    grant_id: string | null;
+    alert_preference_id: string | number | null;
+    notification_type: string;
+    status: string;
+    subject: string | null;
+    match_score: number | null;
+    match_signals: string[] | null;
+    queued_at: string;
+    sent_at: string | null;
+    last_error: string | null;
+  }) => ({
+    id: row.id,
+    notification_type: row.notification_type,
+    status: row.status,
+    subject: row.subject,
+    match_score: row.match_score,
+    match_signals: row.match_signals || [],
+    queued_at: row.queued_at,
+    sent_at: row.sent_at,
+    last_error: row.last_error,
+    alert: row.alert_preference_id ? alertsById.get(String(row.alert_preference_id)) || null : null,
+    grant: row.grant_id ? grantsById.get(row.grant_id) || null : null,
+  }));
 
   return (
     <div className="max-w-6xl mx-auto py-8 px-4">
@@ -100,6 +155,7 @@ export default async function WatchlistPage() {
         entityWatches={entityWatches || []}
         alerts={alerts || []}
         recentDiscoveries={(recentDiscoveries || []) as any}
+        recentAlertActivity={recentAlertActivity as any}
       />
     </div>
   );

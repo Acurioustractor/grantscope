@@ -219,6 +219,17 @@ export default async function StateYouthJusticePage({ params }: { params: Promis
           <Link href={`/reports/youth-justice/${stateKey}/tracker`} className="text-[10px] font-bold bg-bauhaus-red text-white px-2 py-1 rounded uppercase tracking-wider hover:bg-red-700 transition-colors">
             Accountability Tracker
           </Link>
+          <Link href={`/reports/youth-justice/${stateKey}/trackers`} className="text-[10px] font-bold bg-bauhaus-black text-white px-2 py-1 rounded uppercase tracking-wider hover:bg-bauhaus-blue transition-colors">
+            Tracker Registry
+          </Link>
+          {stateCode === 'QLD' ? (
+            <Link
+              href="/reports/youth-justice/qld/crime-prevention-schools"
+              className="text-[10px] font-bold bg-bauhaus-blue text-white px-2 py-1 rounded uppercase tracking-wider hover:bg-blue-800 transition-colors"
+            >
+              Crime Prevention Schools Investigation
+            </Link>
+          ) : null}
         </div>
         {/* State navigation */}
         <div className="flex flex-wrap gap-2 mt-4">
