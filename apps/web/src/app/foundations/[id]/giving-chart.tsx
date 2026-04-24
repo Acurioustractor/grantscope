@@ -5,7 +5,13 @@ interface GivingHistoryChartProps {
 }
 
 export function GivingHistoryChart({ history }: GivingHistoryChartProps) {
-  const sorted = [...history].sort((a, b) => a.year - b.year);
+  const normalized = Array.from(
+    history.reduce((map, entry) => {
+      map.set(entry.year, (map.get(entry.year) ?? 0) + Number(entry.amount ?? 0));
+      return map;
+    }, new Map<number, number>())
+  ).map(([year, amount]) => ({ year, amount }));
+  const sorted = normalized.sort((a, b) => a.year - b.year);
   const maxAmount = Math.max(...sorted.map(h => h.amount));
 
   function formatMoney(amount: number): string {
