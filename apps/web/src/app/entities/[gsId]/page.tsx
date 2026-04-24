@@ -13,6 +13,7 @@ import { NetworkTab } from './_components/network-tab';
 import { EvidenceTab } from './_components/evidence-tab';
 import { getShortlistIdFromPath, hasDisabilitySignal, districtLabel, validNdisDistrict } from './_lib/formatters';
 import { formatMoney } from './_lib/formatters';
+import { EmpathyLedgerStories } from '@/components/empathy-ledger-stories';
 import type {
   Entity, MvEntityStats, AcncYear,
   FoundationEnrichment, FoundationProgram, CharityEnrichment,
@@ -485,6 +486,9 @@ export default async function EntityDossierPage({
         networkContent={<NetworkTab gsId={e.gs_id} />}
         evidenceContent={<EvidenceTab gsId={e.gs_id} isPremium={isPremium} />}
       />
+
+      {/* Portfolio cross-link — silent no-op unless EL endpoint is live */}
+      <EmpathyLedgerStories identifier={e.abn ?? e.gs_id} />
     </div>
   );
 }
