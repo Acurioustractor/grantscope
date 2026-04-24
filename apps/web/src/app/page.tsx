@@ -159,7 +159,7 @@ export default async function HomePage() {
                 Read The Thesis
               </a>
               <a
-                href="/pricing"
+                href="/support"
                 className="border-y-4 border-r-4 border-bauhaus-black bg-bauhaus-black px-6 py-3 text-xs font-black uppercase tracking-widest text-white transition-colors hover:bg-bauhaus-blue"
               >
                 View Pricing
@@ -425,7 +425,7 @@ export default async function HomePage() {
           </p>
           <div className="mt-4 flex flex-col justify-center gap-4 sm:flex-row">
             <a
-              href="/pricing"
+              href="/support"
               className="inline-block border-4 border-white bg-white px-8 py-3 text-xs font-black uppercase tracking-widest text-bauhaus-black transition-colors hover:bg-bauhaus-yellow"
             >
               See Plans

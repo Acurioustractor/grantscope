@@ -2,7 +2,6 @@ import { getServiceSupabase } from '@/lib/supabase';
 import { createSupabaseServer } from '@/lib/supabase-server';
 import { safeOptionalCount, safeOptionalData } from '@/lib/optional-data';
 import { notFound } from 'next/navigation';
-import { getEntityProcurementMemberships } from '@/app/api/tender-intelligence/_lib/procurement-workspace';
 import { getProofPack } from '@/lib/governed-proof/presentation';
 import type { Metadata } from 'next';
 
@@ -62,7 +61,7 @@ export default async function EntityDossierPage({
     ? resolvedSearchParams.from[0]
     : resolvedSearchParams.from;
   const returnHref = rawReturnPath && rawReturnPath.startsWith('/') ? rawReturnPath : '/entities';
-  const returnLabel = returnHref.startsWith('/tender-intelligence')
+  const returnLabel = returnHref.startsWith('/procurement')
     ? 'Procurement Workspace'
     : returnHref.startsWith('/places/')
       ? 'Place'
@@ -419,29 +418,14 @@ export default async function EntityDossierPage({
   if (financialYears.length > 0 && !charity) crossSystems.push('ATO');
   const crossSystemSummary = { systems: crossSystems, count: crossSystems.length };
 
-  // Auth & workspace context
-  let isPremium = false;
-  let workspaceOrgName: string | null = null;
-  let canEditWorkspace = false;
-  let workspaceShortlists: Array<{ id: string; name: string; is_default: boolean }> = [];
-  let workspaceMemberships: Array<Record<string, unknown>> = [];
-  let workspaceTasks: Array<Record<string, unknown>> = [];
-  try {
-    const supabaseAuth = await createSupabaseServer();
-    const { data: { user } } = await supabaseAuth.auth.getUser();
-    if (user) {
-      const { data: profile } = await supabase.from('org_profiles').select('stripe_customer_id').eq('user_id', user.id).single();
-      isPremium = !!profile?.stripe_customer_id;
-      const workspaceResult = await getEntityProcurementMemberships(supabase, user.id, { gsId, supplierAbn: e.abn, preferredShortlistId });
-      workspaceOrgName = workspaceResult.context.profile?.name || null;
-      canEditWorkspace = workspaceResult.context.currentUserPermissions?.can_edit_shortlist === true;
-      workspaceShortlists = workspaceResult.context.shortlists.map((s) => ({ id: s.id, name: s.name, is_default: s.is_default }));
-      workspaceMemberships = workspaceResult.memberships as unknown as Array<Record<string, unknown>>;
-      workspaceTasks = workspaceResult.tasks as unknown as Array<Record<string, unknown>>;
-    }
-  } catch {
-    // Not logged in — free tier
-  }
+  // Workspace context retired with the tender-intelligence scope cut. Left as empty defaults
+  // so downstream consumers keep compiling; entity pages no longer gate on paid workspace state.
+  const isPremium = false;
+  const workspaceOrgName: string | null = null;
+  const canEditWorkspace = false;
+  const workspaceShortlists: Array<{ id: string; name: string; is_default: boolean }> = [];
+  const workspaceMemberships: Array<Record<string, unknown>> = [];
+  const workspaceTasks: Array<Record<string, unknown>> = [];
 
   const hasEvidence = almaInterventionCount > 0 || justiceFunding.length > 0;
 

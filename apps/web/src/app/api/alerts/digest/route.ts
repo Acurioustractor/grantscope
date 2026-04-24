@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
       {
         error: 'Weekly grant digests are available on the Professional plan and above.',
         tier,
-        upgrade_url: '/pricing',
+        upgrade_url: '/support',
       },
       { status: 403 }
     );

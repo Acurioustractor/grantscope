@@ -103,7 +103,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   <div>
                     <div className="font-black text-lg text-white uppercase tracking-tight mb-2">CivicGraph</div>
                     <p className="text-sm text-bauhaus-muted leading-relaxed">
-                      Decision infrastructure for funding, power, procurement, and reporting. Start with the next move, not the biggest dashboard.
+                      Australia&apos;s accountability atlas. Civic infrastructure by A Curious Tractor. Track action rather than wait for others.
                     </p>
                   </div>
                   <div>
@@ -113,7 +113,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                       <li><a href="/profile/matches" className="text-bauhaus-muted hover:text-white transition-colors">Matched Grants</a></li>
                       <li><a href="/tracker" className="text-bauhaus-muted hover:text-white transition-colors">Grant Tracker</a></li>
                       <li><a href="/alerts" className="text-bauhaus-muted hover:text-white transition-colors">Alerts</a></li>
-                      <li><a href="/pricing" className="text-bauhaus-muted hover:text-white transition-colors">Pricing</a></li>
+                      <li><a href="/support" className="text-bauhaus-muted hover:text-white transition-colors">Support</a></li>
                     </ul>
                   </div>
                   <div>
@@ -121,8 +121,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                     <ul className="space-y-2 text-sm">
                       <li><a href="/foundations" className="text-bauhaus-muted hover:text-white transition-colors">Foundations</a></li>
                       <li><a href="/foundations/tracker" className="text-bauhaus-muted hover:text-white transition-colors">Foundation Tracker</a></li>
-                      <li><a href="/for/community" className="text-bauhaus-muted hover:text-white transition-colors">For Community Teams</a></li>
-                      <li><a href="/for/funders" className="text-bauhaus-muted hover:text-white transition-colors">For Funders</a></li>
+                      <li><a href="/social-enterprises" className="text-bauhaus-muted hover:text-white transition-colors">Social Enterprises</a></li>
                       <li><a href="/reports/grant-frontier" className="text-bauhaus-muted hover:text-white transition-colors">Grant Frontier</a></li>
                     </ul>
                   </div>
@@ -138,16 +137,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   <div>
                     <div className="font-black text-xs text-bauhaus-yellow mb-3 uppercase tracking-widest">Platform</div>
                     <ul className="space-y-2 text-sm">
-                      <li><a href="/developers" className="text-bauhaus-muted hover:text-white transition-colors">API</a></li>
-                      <li><a href="/tender-intelligence" className="text-bauhaus-muted hover:text-white transition-colors">Procurement Intelligence</a></li>
+                      <li><a href="/procurement" className="text-bauhaus-muted hover:text-white transition-colors">Procurement</a></li>
                       <li><a href="/places" className="text-bauhaus-muted hover:text-white transition-colors">Place Packs</a></li>
-                      <li><a href="/reports" className="text-bauhaus-muted hover:text-white transition-colors">Broader Research Layer</a></li>
+                      <li><a href="/graph" className="text-bauhaus-muted hover:text-white transition-colors">Network Graph</a></li>
+                      <li><a href="/snow-foundation" className="text-bauhaus-muted hover:text-white transition-colors">Partners</a></li>
                     </ul>
                   </div>
                 </div>
                 <div className="mt-8 pt-6 border-t-2 border-white/10 text-center text-xs text-bauhaus-muted uppercase tracking-widest">
-                  Built by ACT &middot; Funding pipeline and prospect intelligence &middot; Data updated daily
-                  <a href="/investors" className="ml-4 text-white/20 hover:text-white/60 transition-colors">Investors</a>
+                  Built by A Curious Tractor &middot; Track action rather than wait for others
                   <a href="/ops/health" className="ml-4 text-white/20 hover:text-white/60 transition-colors">&middot;</a>
                 </div>
               </div>

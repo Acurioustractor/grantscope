@@ -705,9 +705,9 @@ export function HomeClient(props: HomeClientProps) {
               <div className="mt-4 grid grid-cols-1 gap-2">
                 {[
                   { href: '/power', label: 'See the field', desc: 'Read power, place, and market context before acting.' },
-                  { href: '/tender-intelligence', label: 'Test the opportunity', desc: 'Check procurement pathways, suppliers, and decision packs.' },
+                  { href: '/procurement', label: 'Test the opportunity', desc: 'Check procurement pathways, suppliers, and decision packs.' },
                   { href: '/briefing', label: 'Build the brief', desc: 'Choose memo, pack, report, or story handoff from one working context.' },
-                  { href: '/clarity', label: 'Prepare the story', desc: 'Keep the evidence chain clear for reporting and narrative work.' },
+                  { href: '/insights', label: 'Prepare the story', desc: 'Keep the evidence chain clear for reporting and narrative work.' },
                 ].map((item) => (
                   <Link
                     key={item.href}
@@ -736,10 +736,10 @@ export function HomeClient(props: HomeClientProps) {
                 { href: trackerHref, label: 'Grant Tracker', icon: '\uD83D\uDCCB' },
                 { href: '/alerts', label: 'Grant Alerts', icon: '\uD83D\uDD14' },
                 { href: '/foundations/tracker', label: 'Foundation Tracker', icon: '\uD83C\uDFDB\uFE0F' },
-                { href: '/tender-intelligence', label: 'Tender Intelligence', icon: '\uD83D\uDCE6' },
+                { href: '/procurement', label: 'Tender Intelligence', icon: '\uD83D\uDCE6' },
                 { href: '/power', label: 'Power Map', icon: '\u26A1' },
                 { href: '/briefing', label: 'Briefing Hub', icon: '\uD83E\uDDFE' },
-                { href: '/clarity', label: 'Data Clarity', icon: '\uD83E\uDDED' },
+                { href: '/insights', label: 'Data Clarity', icon: '\uD83E\uDDED' },
                 { href: '/home/watchlist', label: 'Watchlist', icon: '\uD83D\uDC41\uFE0F' },
                 { href: '/reports', label: 'Reports & Research', icon: '\uD83D\uDCCA' },
                 { href: '/entities', label: 'Entity Graph', icon: '\uD83D\uDD17', count: entityCount },
@@ -906,7 +906,7 @@ export function HomeClient(props: HomeClientProps) {
                           {startingUpgrade ? 'Starting…' : 'Upgrade to Professional'}
                         </button>
                         <Link
-                          href="/pricing"
+                          href="/support"
                           className="rounded-lg border px-3 py-2 text-xs font-medium transition-colors"
                           style={{ borderColor: 'var(--ws-border)', color: 'var(--ws-text-secondary)' }}
                         >

@@ -910,7 +910,7 @@ export default function AlertsPage() {
             >
               {startingUpgrade ? 'Starting checkout…' : 'Upgrade to Professional'}
             </button>
-            <Link href="/pricing" className="text-xs font-black uppercase tracking-widest text-bauhaus-blue hover:underline">
+            <Link href="/support" className="text-xs font-black uppercase tracking-widest text-bauhaus-blue hover:underline">
               Compare plans &rarr;
             </Link>
           </div>
@@ -944,7 +944,7 @@ export default function AlertsPage() {
                 {startingUpgrade ? 'Starting…' : 'Upgrade Now'}
               </button>
               <Link
-                href="/pricing"
+                href="/support"
                 className="border-2 border-white px-5 py-3 font-black uppercase tracking-wider text-white transition-colors hover:bg-white hover:text-bauhaus-blue"
               >
                 View Plans
@@ -1512,7 +1512,7 @@ export default function AlertsPage() {
                           >
                             {startingUpgrade ? 'Starting checkout…' : 'Upgrade'}
                           </button>
-                          <Link href="/pricing" className="text-[11px] font-black uppercase tracking-widest text-bauhaus-muted hover:text-bauhaus-black">
+                          <Link href="/support" className="text-[11px] font-black uppercase tracking-widest text-bauhaus-muted hover:text-bauhaus-black">
                             Compare plans
                           </Link>
                         </div>

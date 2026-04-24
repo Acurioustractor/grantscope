@@ -18,7 +18,7 @@ export function DueDiligenceButton({ gsId }: DueDiligenceButtonProps) {
         return;
       }
       if (res.status === 403) {
-        window.location.href = '/pricing';
+        window.location.href = '/support';
         return;
       }
       if (!res.ok) {

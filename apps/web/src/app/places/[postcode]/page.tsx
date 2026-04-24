@@ -568,7 +568,7 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
                 </p>
               </div>
               <Link
-                href={`/for/funders/proof/${postcode}`}
+                href={`/foundations/proof/${postcode}`}
                 className="mt-4 inline-block px-4 py-3 text-center font-black text-xs uppercase tracking-widest border-4 border-bauhaus-black bg-white hover:bg-bauhaus-yellow transition-colors"
               >
                 Open Governed Proof
@@ -806,7 +806,7 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
                 <Link href="/reports/ndis-market" className="px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 border-bauhaus-black text-bauhaus-black hover:bg-bauhaus-yellow transition-colors">
                   Open NDIS Market
                 </Link>
-                <Link href="/funding-workspace" className="px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 border-bauhaus-black text-bauhaus-black hover:bg-money-light transition-colors">
+                <Link href="/graph" className="px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 border-bauhaus-black text-bauhaus-black hover:bg-money-light transition-colors">
                   Open Funding Workspace
                 </Link>
                 <Link href="/reports/youth-justice" className="px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 border-bauhaus-black text-bauhaus-black hover:bg-link-light transition-colors">

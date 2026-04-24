@@ -267,7 +267,7 @@ export default function CivicGraphThesisPage() {
               <Link href="/reports/philanthropy" className="block text-bauhaus-blue hover:text-bauhaus-red">
                 Foundation Intelligence
               </Link>
-              <Link href="/pricing" className="block text-bauhaus-blue hover:text-bauhaus-red">
+              <Link href="/support" className="block text-bauhaus-blue hover:text-bauhaus-red">
                 Pricing and product wedge
               </Link>
             </div>

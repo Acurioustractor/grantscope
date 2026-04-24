@@ -30,7 +30,7 @@ export default function ModuleGate({ module, currentTier }: { module: Module; cu
         )}
       </p>
       <Link
-        href="/pricing"
+        href="/support"
         className="px-5 py-2.5 text-[13px] font-semibold rounded-lg transition-colors"
         style={{
           background: 'var(--ws-text)',

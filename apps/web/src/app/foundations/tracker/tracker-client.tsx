@@ -247,7 +247,7 @@ export function FoundationTrackerClient() {
         </div>
         <div className="flex flex-col items-end gap-2">
           <a
-            href="/funding-workspace"
+            href="/graph"
             className="inline-flex px-4 py-3 border-2 border-bauhaus-black text-bauhaus-black text-[10px] font-black uppercase tracking-widest hover:bg-bauhaus-black hover:text-white transition-colors"
           >
             Open Funding Workspace
