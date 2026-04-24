@@ -12,13 +12,19 @@ Do not start with feature lists.
 
 Do not open on a dashboard.
 
-Start by showing that we understand Snow's own language, then move from portfolio legibility to project evidence.
+Start on the fixed public Snow route, then move from portfolio legibility to project evidence.
 
 ## Opening frame
 
 Say this in substance:
 
 "We took Snow's public strategy seriously and used it as the frame for a working portfolio view. The question we wanted to test was whether Snow's portfolio can be made more legible across capital, place, and community evidence in one chain."
+
+Open on:
+
+- `http://127.0.0.1:3013/snow-foundation`
+
+Use that page to set the shape of the walkthrough before clicking into individual screens.
 
 ## Segment 1 — Snow's stated strategy
 
@@ -53,6 +59,10 @@ Lead with:
 - `$4,823,622` in verified 2024 grant value
 - `13` Snow program surfaces, `12` currently open-like
 - readiness tier: `high`
+
+If you need a single sentence for the route itself:
+
+- "This page is the public operator frame for the Snow case, not a raw product surface."
 
 Then show three things only:
 

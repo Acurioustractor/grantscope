@@ -1,0 +1,123 @@
+---
+session: general
+date: 2026-04-24
+status: complete
+outcome: SUCCEEDED
+---
+
+goal: Stabilize the post-Goods-V1 working tree (330 dirty files) by gitignoring junk, snapshotting all WIP for safety, and carving the easiest features into clean PRs against main.
+now: Three PRs are open and green; CEO walkthrough on production is still the user-facing gate from the prior handoff. Next phase: continue carving subsystem buckets (alerts/billing/validation-pilots/mission-control/data-api) from the snapshot branch, OR reconcile the unversioned org_project_foundation migrations with prod schema before landing them.
+test: gh pr checks 4 && gh pr checks 5 && gh pr checks 6
+
+done_this_session:
+  - task: Categorized 330 dirty working-tree files into 21 feature buckets and produced an inventory.
+    files: [thoughts/shared/handoffs/general/2026-04-24_dirty-tree-inventory.md]
+  - task: Gitignored stale build/cache artifacts (output/, playwright-report/, .tldr/status, .claude/cache/agents/) and untracked already-committed files in those paths.
+    files: [.gitignore]
+  - task: Gitignored large data sources to prevent committing 705K lines of CSV/PDF (acnc/, aihw/, ndis/, state-procurement/, prf-reports/, annual-reports/, grantconnect/, tracker-evidence/, apps/web/data/aihw/).
+    files: [.gitignore]
+  - task: Snapshotted all remaining WIP (279 files, +57,405/-2,985) into a single safety commit reachable from both codex/goods-civicgraph-signoff and wip/working-tree-snapshot-2026-04-24.
+    files: []
+  - task: Carved feat/bittensor-research-docs from origin/main (4 docs, +664).
+    files: [thoughts/plans/bittensor-integration-spec.md, thoughts/plans/bittensor-money-engine-plan-2026-04-09.md, thoughts/plans/bittensor-money-model.json, thoughts/plans/bittensor-outreach-messages.md]
+  - task: Carved feat/briefing-generator from origin/main (8 files, +1,798), typecheck clean.
+    files: [apps/web/src/app/briefing/page.tsx, apps/web/src/app/briefing/briefing-composer.tsx, apps/web/src/app/components/briefing-control-panel.tsx, apps/web/src/app/components/briefing-entry-section.tsx, apps/web/src/app/components/briefing-generator-controls.tsx, apps/web/src/app/components/briefing-generator-shell.tsx, apps/web/src/app/components/briefing-loop-bar.tsx, apps/web/src/app/components/briefing-page-params.ts]
+  - task: Carved feat/grant-engine-discovery-events from origin/main (30 files, +4,467/-81), typecheck identical to origin/main baseline (no new errors).
+    files: [packages/grant-engine/]
+  - task: Opened and verified PRs #4, #5, #6 — all green across typecheck, unit/integration, e2e, and Vercel preview.
+    files: []
+
+blockers: []
+
+questions:
+  - Has the CEO completed the Goods V1 walkthrough from the prior handoff (gate carried over)?
+  - Should the 5 unversioned org_project_foundation migrations be reconciled with prod schema before any of the dependent code (org/_components, /api/goods-workspace) is carved?
+  - Are PRs #4, #5, #6 ready to merge, or do you want a soak window first?
+
+decisions:
+  - safety_first_snapshot: Before any git carving, all 279 remaining WIP files were committed to wip/working-tree-snapshot-2026-04-24 so nothing can be lost.
+  - data_files_never_committed: Large CSV/PDF data sources are gitignored, not snapshotted — they're external data that can be re-downloaded. This dropped staged size from 705K to 57K lines.
+  - branches_from_origin_main: All carved feat/* branches branched from origin/main (1334d77, the merged Goods V1 PR), not from the working branch, to keep them clean.
+  - dont_touch_d3_preexisting_errors: 9 typecheck errors in packages/grant-engine (minimax.ts, grant-monitor.ts, enrichment-free.ts, foundation-profiler.ts) exist on origin/main and are NOT introduced by D3 — left for a future cleanup PR rather than scope-creeping the discovery-events refactor.
+  - no_carve_for_org_migrations: org_project_foundation has 5 unversioned migrations whose dependent code spans org/_components, api/goods-workspace, and supabase migrations — explicitly NOT carved because schema reconciliation must happen before code lands.
+
+findings:
+  - branches: codex/goods-civicgraph-signoff @ f187e12 (3 ahead of origin), wip/working-tree-snapshot-2026-04-24 @ f187e12, feat/bittensor-research-docs @ fc07fd7, feat/briefing-generator @ 069760f, feat/grant-engine-discovery-events @ 28d7c9e
+  - prs_open: PR #4 (bittensor docs), PR #5 (briefing generator), PR #6 (grant-engine discovery events) — all green
+  - working_tree: clean (0 dirty files on codex/goods-civicgraph-signoff)
+  - stale_caches: tsc/Next.js cache at repo root and apps/web/.next/ contain stale type stubs from old branches; rm -rf both before any cross-branch typecheck
+  - dotenv_warning: '.env line 37 emits "command not found: Knight" — benign zsh source error from comment containing apostrophe; does not affect commands'
+  - inventory: thoughts/shared/handoffs/general/2026-04-24_dirty-tree-inventory.md catalogs all 21 buckets with suggested carve order
+
+worked:
+  - Use `git checkout <snapshot-branch> -- <paths>` to bring specific files into a fresh feature branch carved from origin/main.
+  - Always verify staged file count after `git checkout -- packages/foo/` plus `git stash pop` — the pop only restores tracked-but-modified files, not the new ones; restage with `git add packages/foo/`.
+  - Compare typecheck error counts before and after carving to confirm zero new regressions when the bucket touches files with pre-existing issues.
+  - Clean BOTH .next/ dirs (repo root and apps/web/.next/) plus any *.tsbuildinfo before running tsc on a freshly switched branch — stale type stubs from other branches will cause false positives.
+  - Use `gh pr checks <num>` (not `gh pr view`) for compact CI status.
+
+failed:
+  - First snapshot attempt staged 705,690 insertions (data CSVs/PDFs) — caught and reverted via `git reset HEAD`, then gitignored before retry.
+  - Initial D3 estimate of 17 council sources was wrong — actually 16 sources + 3 contract tests = 19 new files plus 11 modifications = 30 total.
+  - First D2 typecheck attempt failed with stale .next/types references to non-existent /api/alerts/ routes — required clearing .next at both repo root and apps/web/.
+
+next:
+  - Continue CEO walkthrough gate from prior handoff (https://civicgraph.app + protected routes + Goods v2 cockpit).
+  - Decide on PRs #4, #5, #6: merge or hold for review.
+  - If continuing carves, easiest next bucket: data-api (5 files, just adds 3 new routes + modifies 2). After that: validation-pilots (7), mission-control (10), alerts (10), billing (9).
+  - Before carving org-project-foundations or scripts-misc/grant-frontier-scripts: reconcile the 5 unversioned org_project_foundation migrations + 1 grant_opportunity_sources_jsonb migration with production schema state.
+  - Eventually clean up the 9 pre-existing grant-engine typecheck errors (`.ts` import extensions in 4 files + 2 unknown-type narrows in minimax.ts) — small standalone PR.
+  - Watch for any of the carved PRs needing rebase if main moves before merge.
+
+files:
+  created:
+    - thoughts/shared/handoffs/general/2026-04-24_dirty-tree-inventory.md
+    - thoughts/shared/handoffs/general/2026-04-24_11-21_dirty-tree-carve-phase-1.yaml
+  modified:
+    - .gitignore (twice — stale artifacts then large data sources)
+
+branches:
+  working: codex/goods-civicgraph-signoff
+  snapshot: wip/working-tree-snapshot-2026-04-24
+  carved:
+    - feat/bittensor-research-docs (PR #4)
+    - feat/briefing-generator (PR #5)
+    - feat/grant-engine-discovery-events (PR #6)
+
+prs:
+  - number: 4
+    title: "docs: bittensor integration research and money model plans"
+    url: https://github.com/Acurioustractor/grantscope/pull/4
+    status: green
+  - number: 5
+    title: "feat: briefing generator — composer, controls, lane/output loop bar"
+    url: https://github.com/Acurioustractor/grantscope/pull/5
+    status: green
+  - number: 6
+    title: "feat(grant-engine): discovery events + 16 council grant sources"
+    url: https://github.com/Acurioustractor/grantscope/pull/6
+    status: green
+
+remaining_buckets_in_snapshot:
+  small_low_risk:
+    - { name: data-api, files: 5, note: "modifies /api/data + /api/data/data-health, adds board-power/catalog/rankings sub-routes" }
+    - { name: validation-pilots, files: 7, note: "modifies /api/ops/{claims,health,root}, adds pilots/ + validation-reviews/ + 2 lib files" }
+    - { name: auth-continue, files: 2, note: "new /auth and /continue routes" }
+    - { name: bittensor: already carved }
+    - { name: briefing-generator: already carved }
+  medium_risk:
+    - { name: alerts, files: 10, note: "modifies 3 alert routes + /alerts page, adds 5 sub-routes + lib" }
+    - { name: billing, files: 9, note: "Stripe + product events — sensitive; modifies checkout/portal/webhook" }
+    - { name: mission-control, files: 10, note: "modifies 7 MC API routes, adds frontier/ + runtime-sweeps/ + layout" }
+    - { name: data-files, files: 10, note: "mostly large data dumps — most are now gitignored" }
+    - { name: foundations-pages, files: 12, note: "modifies index + [id]/ + giving-chart + prf, adds backlog/compare/ecstra/ian-potter/minderoo/review-set/rio-tinto" }
+    - { name: tracker-profile, files: 14, note: "modifies charities/clarity/entity/for/ops/profile/tracker + nav.tsx + workspace-page-header.tsx" }
+  high_risk_or_entangled:
+    - { name: org-project-foundations, files: 11, note: "5 unversioned migrations — RECONCILE WITH PROD SCHEMA FIRST" }
+    - { name: home-reports, files: 25, note: "modifies home + reports across many surfaces, adds 8 new report pages" }
+    - { name: misc-app, files: 34, note: "homepage, marketing, lib utilities — touches layout.tsx and page.tsx; pick subsets" }
+    - { name: grant-engine: already carved }
+    - { name: grant-frontier-scripts, files: 12, note: "depends on grant-engine + signoff scripts; carve after #6 lands" }
+    - { name: scripts-misc, files: 29, note: "ACT seed scripts + foundation-program-year promoters + 2 SQL migrations; carve after schema work" }
+    - { name: docs-thoughts, files: 25, note: "low risk but lots of content — bundle into a single docs PR or split by topic" }
+    - { name: root-doc, files: 4, note: "GRANTSCOPE_SIGNOFF.md + OPERATING_PLAN.md + 2 PILOT_*.md — likely safe to commit as docs" }
