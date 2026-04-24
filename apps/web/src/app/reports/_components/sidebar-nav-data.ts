@@ -55,7 +55,10 @@ export const reportSections: NavSection[] = [
           {
             label: 'QLD',
             href: '/reports/youth-justice/qld',
-            children: [{ label: 'Tracker', href: '/reports/youth-justice/qld/tracker' }],
+            children: [
+              { label: 'Tracker', href: '/reports/youth-justice/qld/tracker' },
+              { label: 'All Trackers', href: '/reports/youth-justice/qld/trackers' },
+            ],
           },
           { label: 'SA', href: '/reports/youth-justice/sa' },
           { label: 'TAS', href: '/reports/youth-justice/tas' },

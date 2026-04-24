@@ -758,6 +758,37 @@ export async function getYjFoundations(limit = 10) {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 const PICC_ABN = '14640793728';
+const PICC_ORG_PROFILE_ID = 'a1b2c3d4-0000-4000-8000-01cc0f11e001';
+
+export type PiccProgramSourceType =
+  | 'justice_funding_program'
+  | 'alma_intervention'
+  | 'contract_buyer'
+  | 'pipeline_item';
+
+export interface PiccProgramSourceLink {
+  source_type: PiccProgramSourceType;
+  source_key: string;
+  source_label: string | null;
+  parent_funder_name: string | null;
+  parent_funder_gs_id: string | null;
+  funder_name: string | null;
+  funder_gs_id: string | null;
+  funder_abn: string | null;
+  notes: string | null;
+}
+
+export interface PiccProgramDefinition {
+  id: string;
+  name: string;
+  system: string | null;
+  funding_source: string | null;
+  annual_amount_display: string | null;
+  reporting_cycle: string | null;
+  funding_status: string | null;
+  sort_order: number;
+  links: PiccProgramSourceLink[];
+}
 
 /**
  * PICC funding by program (recent)
@@ -765,17 +796,41 @@ const PICC_ABN = '14640793728';
 export async function getPiccFundingByProgram() {
   const supabase = getServiceSupabase();
   return safe(supabase.rpc('exec_sql', {
-    query: `SELECT program_name,
+    query: `WITH funding_map AS (
+              SELECT
+                sl.source_key AS program_name,
+                MAX(COALESCE(sl.parent_funder_name, parent_ge.canonical_name, sl.funder_name, funder_ge.canonical_name)) AS parent_funder_name,
+                MAX(COALESCE(parent_ge.gs_id, funder_ge.gs_id)) AS parent_funder_gs_id,
+                MAX(COALESCE(sl.funder_name, funder_ge.canonical_name, parent_ge.canonical_name)) AS funder_name,
+                MAX(funder_ge.gs_id) AS funder_gs_id
+              FROM org_program_source_links sl
+              JOIN org_programs op ON op.id = sl.org_program_id
+              LEFT JOIN gs_entities parent_ge ON parent_ge.id = sl.parent_funder_entity_id
+              LEFT JOIN gs_entities funder_ge ON funder_ge.id = sl.funder_entity_id
+              WHERE op.org_profile_id = '${PICC_ORG_PROFILE_ID}'
+                AND sl.source_type = 'justice_funding_program'
+              GROUP BY sl.source_key
+            )
+            SELECT jf.program_name,
+              fm.parent_funder_name,
+              fm.parent_funder_gs_id,
+              fm.funder_name,
+              fm.funder_gs_id,
               SUM(amount_dollars)::bigint as total,
               COUNT(*)::int as records,
               MIN(financial_year) as from_fy,
               MAX(financial_year) as to_fy
-       FROM justice_funding
-       WHERE recipient_abn = '${PICC_ABN}'
-       GROUP BY program_name
+       FROM justice_funding jf
+       LEFT JOIN funding_map fm ON fm.program_name = jf.program_name
+       WHERE jf.recipient_abn = '${PICC_ABN}'
+       GROUP BY jf.program_name, fm.parent_funder_name, fm.parent_funder_gs_id, fm.funder_name, fm.funder_gs_id
        ORDER BY total DESC`,
   })) as Promise<Array<{
     program_name: string;
+    parent_funder_name: string | null;
+    parent_funder_gs_id: string | null;
+    funder_name: string | null;
+    funder_gs_id: string | null;
     total: number;
     records: number;
     from_fy: string;
@@ -873,6 +928,92 @@ export async function getPiccEntity() {
 }
 
 /**
+ * PICC canonical program definitions plus source-link crosswalks.
+ */
+export async function getPiccProgramDefinitions() {
+  const supabase = getServiceSupabase();
+  type Row = {
+    program_id: string;
+    name: string;
+    system: string | null;
+    funding_source: string | null;
+    annual_amount_display: string | null;
+    reporting_cycle: string | null;
+    funding_status: string | null;
+    sort_order: number;
+    source_type: PiccProgramSourceType | null;
+    source_key: string | null;
+    source_label: string | null;
+    parent_funder_name: string | null;
+    parent_funder_gs_id: string | null;
+    funder_name: string | null;
+    funder_gs_id: string | null;
+    funder_abn: string | null;
+    notes: string | null;
+  };
+
+  const rows = await safe(supabase.rpc('exec_sql', {
+    query: `SELECT
+              op.id AS program_id,
+              op.name,
+              op.system,
+              op.funding_source,
+              op.annual_amount_display,
+              op.reporting_cycle,
+              op.funding_status,
+              op.sort_order,
+              sl.source_type,
+              sl.source_key,
+              sl.source_label,
+              COALESCE(sl.parent_funder_name, parent_ge.canonical_name) AS parent_funder_name,
+              parent_ge.gs_id AS parent_funder_gs_id,
+              COALESCE(sl.funder_name, funder_ge.canonical_name) AS funder_name,
+              funder_ge.gs_id AS funder_gs_id,
+              COALESCE(sl.funder_abn, funder_ge.abn) AS funder_abn,
+              sl.notes
+            FROM org_programs op
+            LEFT JOIN org_program_source_links sl ON sl.org_program_id = op.id
+            LEFT JOIN gs_entities parent_ge ON parent_ge.id = sl.parent_funder_entity_id
+            LEFT JOIN gs_entities funder_ge ON funder_ge.id = sl.funder_entity_id
+            WHERE op.org_profile_id = '${PICC_ORG_PROFILE_ID}'
+            ORDER BY op.sort_order, op.name, sl.sort_order, sl.source_type, sl.source_key`,
+  })) as Row[] | null;
+
+  const byId = new Map<string, PiccProgramDefinition>();
+  for (const row of rows ?? []) {
+    const existing = byId.get(row.program_id);
+    if (!existing) {
+      byId.set(row.program_id, {
+        id: row.program_id,
+        name: row.name,
+        system: row.system,
+        funding_source: row.funding_source,
+        annual_amount_display: row.annual_amount_display,
+        reporting_cycle: row.reporting_cycle,
+        funding_status: row.funding_status,
+        sort_order: row.sort_order,
+        links: [],
+      });
+    }
+    if (row.source_type && row.source_key) {
+      byId.get(row.program_id)?.links.push({
+        source_type: row.source_type,
+        source_key: row.source_key,
+        source_label: row.source_label,
+        parent_funder_name: row.parent_funder_name,
+        parent_funder_gs_id: row.parent_funder_gs_id,
+        funder_name: row.funder_name,
+        funder_gs_id: row.funder_gs_id,
+        funder_abn: row.funder_abn,
+        notes: row.notes,
+      });
+    }
+  }
+
+  return [...byId.values()].sort((a, b) => a.sort_order - b.sort_order);
+}
+
+/**
  * Related Palm Island entities
  */
 export async function getPalmIslandEntities() {
@@ -901,7 +1042,7 @@ export async function getPiccLeadership() {
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT name, title, bio, external_roles, sort_order
        FROM org_leadership
-       WHERE org_profile_id = 'a1b2c3d4-0000-4000-8000-01cc0f11e001'
+       WHERE org_profile_id = '${PICC_ORG_PROFILE_ID}'
        ORDER BY sort_order`,
   })) as Promise<Array<{
     name: string;
