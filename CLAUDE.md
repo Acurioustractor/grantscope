@@ -217,10 +217,23 @@ Snow $132K · Centrecorp DRAFT $84.7K · Rotary $82.5K · PICC $113.3K · Region
 - For ANY public-facing copy, load `act-global-infrastructure/.claude/skills/act-brand-alignment/references/writing-voice.md`
 
 ### Cross-repo sources
-- **Source-of-truth**: `act-global-infrastructure/wiki/decisions/act-core-facts.md`
+- **Entity facts (source-of-truth)**: `act-global-infrastructure/wiki/decisions/act-core-facts.md`
+- **Brand alignment map (READ BEFORE DESIGNING ANYTHING)**: `act-global-infrastructure/wiki/decisions/act-brand-alignment-map.md`
+- **Parent brand identity**: `act-global-infrastructure/.claude/skills/act-brand-alignment/references/brand-core.md`
+- **Parent writing voice (Curtis method, AI-tells blocklist)**: `act-global-infrastructure/.claude/skills/act-brand-alignment/references/writing-voice.md`
 - **Migration plan**: `act-global-infrastructure/thoughts/shared/plans/act-entity-migration-checklist-2026-06-30.md`
 - **Alignment Loop syntheses (weekly drift signal)**: `act-global-infrastructure/wiki/synthesis/`
-- **Project codes (74 codes, all canonical)**: `act-global-infrastructure/config/project-codes.json`
+- **CEO daily cockpit**: `act-global-infrastructure/wiki/cockpit/today.md` (refreshed daily 07:00 Brisbane)
+- **Project codes (72 codes, all canonical)**: `act-global-infrastructure/config/project-codes.json`
 - **Funder ledger**: `act-global-infrastructure/wiki/narrative/funders.json`
+
+### Visual family (before designing anything in this repo)
+This repo's cluster: see brand alignment map. The map says:
+- **Editorial Warmth** parent: act-regenerative-studio (Fraunces + forest green + warm white)
+- **Editorial Warmth** subfamily: JusticeHub (STAY journal heritage), empathy-ledger-v2 (multi-tenant earth-tone)
+- **Civic Bauhaus**: CivicGraph / grantscope (Satoshi + black + signal red, intentional break)
+- **Unscoped (need decision)**: goods, act-farm, The Harvest Website
+
+**Rule**: read the map before designing. Update the map BEFORE shipping a new design. Never re-decide what's already decided.
 
 <!-- END ACT-CONTEXT -->
