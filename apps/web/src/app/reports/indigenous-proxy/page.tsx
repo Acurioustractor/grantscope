@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getServiceSupabase } from '@/lib/supabase';
 import { safe } from '@/lib/services/utils';
+import { ReportEmailCapture } from '@/components/report-email-capture';
 
 export const revalidate = 3600;
 
@@ -574,6 +575,14 @@ export default async function IndigenousProxyPage() {
           </div>
         </section>
       )}
+
+      {/* Email capture — top of funnel for journalism distribution */}
+      <ReportEmailCapture
+        reportSlug="indigenous-proxy"
+        source="report-indigenous-proxy"
+        headline="When the next investigation lands, get it in your inbox"
+        description="The Indigenous Proxy Problem is one of several cross-system investigations. Subscribe for the next one — Consulting Class follow-ups, board interlocks at scale, where philanthropic money actually flows. Free, irregular cadence, never shared."
+      />
 
       {/* Contribute / advisory review invitation */}
       <section id="contribute" className="mb-10">
