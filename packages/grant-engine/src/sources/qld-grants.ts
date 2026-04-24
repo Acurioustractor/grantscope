@@ -53,6 +53,13 @@ interface DatastoreResult<T> {
   };
 }
 
+type DateFormat = 'dd/mm/yyyy' | 'mm/dd/yyyy';
+
+const QLD_DATE_FIELDS = [
+  'Opening date (date format)',
+  'Closing date (date format)',
+] as const;
+
 function inferCategories(title: string, description: string, category?: string): string[] {
   const text = `${title} ${description} ${category || ''}`.toLowerCase();
   const cats: string[] = [];
@@ -79,14 +86,63 @@ function parseAmount(value: string | undefined | null): number | undefined {
   return isNaN(num) || num <= 0 ? undefined : num;
 }
 
-function parseDate(dateStr: string | undefined | null): string | undefined {
-  if (!dateStr) return undefined;
-  // Format: DD/MM/YYYY → YYYY-MM-DD
-  const match = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (match) {
-    return `${match[3]}-${match[2].padStart(2, '0')}-${match[1].padStart(2, '0')}`;
+function toIsoDate(year: number, month: number, day: number): string | undefined {
+  if (month < 1 || month > 12 || day < 1 || day > 31) return undefined;
+
+  const candidate = new Date(Date.UTC(year, month - 1, day));
+  if (
+    candidate.getUTCFullYear() !== year
+    || candidate.getUTCMonth() !== month - 1
+    || candidate.getUTCDate() !== day
+  ) {
+    return undefined;
   }
-  return dateStr;
+
+  return candidate.toISOString().slice(0, 10);
+}
+
+function inferResourceDateFormat(records: QLDGrantRecord[]): DateFormat {
+  let ddmmyyyy = 0;
+  let mmddyyyy = 0;
+
+  for (const record of records) {
+    for (const field of QLD_DATE_FIELDS) {
+      const value = record[field];
+      if (!value || typeof value !== 'string') continue;
+
+      const match = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (!match) continue;
+
+      const first = Number.parseInt(match[1], 10);
+      const second = Number.parseInt(match[2], 10);
+      if (first > 12 && second <= 12) ddmmyyyy++;
+      if (second > 12 && first <= 12) mmddyyyy++;
+    }
+  }
+
+  return mmddyyyy > ddmmyyyy ? 'mm/dd/yyyy' : 'dd/mm/yyyy';
+}
+
+function parseDate(dateStr: string | undefined | null, preferredFormat: DateFormat = 'dd/mm/yyyy'): string | undefined {
+  if (!dateStr) return undefined;
+
+  const trimmed = dateStr.trim();
+  const match = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!match) return trimmed;
+
+  const first = Number.parseInt(match[1], 10);
+  const second = Number.parseInt(match[2], 10);
+  const year = Number.parseInt(match[3], 10);
+  const candidateOrders = preferredFormat === 'mm/dd/yyyy'
+    ? [[first, second], [second, first]]
+    : [[second, first], [first, second]];
+
+  for (const [month, day] of candidateOrders) {
+    const parsed = toIsoDate(year, month, day);
+    if (parsed) return parsed;
+  }
+
+  return undefined;
 }
 
 export function createQLDGrantsPlugin(): SourcePlugin {
@@ -137,6 +193,7 @@ export function createQLDGrantsPlugin(): SourcePlugin {
 
           const data = await response.json() as DatastoreResult<QLDGrantRecord>;
           if (!data.success || !data.result?.records) continue;
+          const resourceDateFormat = inferResourceDateFormat(data.result.records);
 
           for (const record of data.result.records) {
             const name = record['Program title'] || '';
@@ -178,7 +235,7 @@ export function createQLDGrantsPlugin(): SourcePlugin {
                 min: undefined,
                 max: maxAmount || budget || undefined,
               },
-              deadline: parseDate(record['Closing date (date format)']) || undefined,
+              deadline: parseDate(record['Closing date (date format)'], resourceDateFormat) || undefined,
               description: description.slice(0, 1000) || undefined,
               categories,
               program: name,

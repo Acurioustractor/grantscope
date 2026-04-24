@@ -11,7 +11,8 @@
  */
 
 import * as cheerio from 'cheerio';
-import type { SourcePlugin, DiscoveryQuery, RawGrant } from '../types';
+import type { SourcePlugin, DiscoveryQuery, GrantApplicationStatus, RawGrant } from '../types';
+import { normalizeDate } from '../normalizer';
 
 const NSW_GRANTS_URL = 'https://www.nsw.gov.au/grants-and-funding';
 const NSW_ES_SEARCH = 'https://www.nsw.gov.au/api/v1/elasticsearch/prod_content/_search';
@@ -101,10 +102,50 @@ function unwrapNum(val: unknown): number | undefined {
   return typeof val === 'number' ? val : undefined;
 }
 
+function unwrapBool(val: unknown): boolean | undefined {
+  if (Array.isArray(val)) return typeof val[0] === 'boolean' ? val[0] : undefined;
+  return typeof val === 'boolean' ? val : undefined;
+}
+
 function unwrapArr(val: unknown): string[] {
   if (Array.isArray(val)) return val.map(String);
   if (typeof val === 'string') return [val];
   return [];
+}
+
+function startOfToday(): Date {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today;
+}
+
+function deriveApplicationStatus(deadline: string | undefined, isOngoing: boolean | undefined): GrantApplicationStatus | undefined {
+  if (isOngoing) return 'ongoing';
+  if (!deadline) return undefined;
+
+  const [yearText, monthText, dayText] = deadline.split('-');
+  const year = Number.parseInt(yearText || '', 10);
+  const month = Number.parseInt(monthText || '', 10);
+  const day = Number.parseInt(dayText || '', 10);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
+    return undefined;
+  }
+
+  const closesAt = new Date(year, month - 1, day);
+  closesAt.setHours(0, 0, 0, 0);
+  return closesAt < startOfToday() ? 'closed' : 'open';
+}
+
+function shouldIncludeForStatus(queryStatus: DiscoveryQuery['status'], applicationStatus: GrantApplicationStatus | undefined): boolean {
+  if (queryStatus === 'open') {
+    return applicationStatus !== 'closed';
+  }
+
+  if (queryStatus === 'upcoming') {
+    return applicationStatus === 'upcoming';
+  }
+
+  return true;
 }
 
 /** Try the internal Elasticsearch _search API — structured data, 1600+ grants */
@@ -164,6 +205,7 @@ async function tryElasticsearchAPI(): Promise<RawGrant[] | null> {
 
         const urlPath = unwrap(src.url);
         const url = urlPath ? `https://www.nsw.gov.au${urlPath}` : undefined;
+        const isOngoing = unwrapBool(src.grant_is_ongoing);
 
         // Use structured grant amount fields when available
         const amountMax = unwrapNum(src.grant_amount_max) || unwrapNum(src.grant_amount_single);
@@ -177,8 +219,10 @@ async function tryElasticsearchAPI(): Promise<RawGrant[] | null> {
         ])];
 
         // Deadline from structured field
-        const endDate = unwrap(src.grant_dates_end);
-        const deadline = endDate || extractDeadline(description);
+        const rawDeadline = unwrap(src.grant_dates_end) || extractDeadline(description);
+        const normalizedDeadline = normalizeDate(rawDeadline) || undefined;
+        const applicationStatus = deriveApplicationStatus(normalizedDeadline, isOngoing);
+        const deadline = applicationStatus === 'ongoing' ? undefined : normalizedDeadline;
 
         const agency = unwrap(src.agency_name);
         const provider = agency ? `NSW Government — ${agency}` : 'NSW Government';
@@ -188,7 +232,8 @@ async function tryElasticsearchAPI(): Promise<RawGrant[] | null> {
           provider,
           sourceUrl: url,
           amount: amount.min || amount.max ? amount : undefined,
-          deadline: deadline || undefined,
+          deadline,
+          applicationStatus,
           description: description.slice(0, 500) || undefined,
           categories,
           sourceId: 'nsw-grants',
@@ -252,13 +297,17 @@ async function scrapeHTMLPages(query: DiscoveryQuery): Promise<RawGrant[]> {
 
         const context = $el.closest('li, div, article').text() || '';
         const fullUrl = href.startsWith('http') ? href : `https://www.nsw.gov.au${href}`;
+        const normalizedDeadline = normalizeDate(extractDeadline(context)) || undefined;
+        const applicationStatus = deriveApplicationStatus(normalizedDeadline, false);
+        const deadline = applicationStatus === 'ongoing' ? undefined : normalizedDeadline;
 
         grants.push({
           title: title.slice(0, 200),
           provider: 'NSW Government',
           sourceUrl: fullUrl,
           amount: extractAmounts(context),
-          deadline: extractDeadline(context),
+          deadline,
+          applicationStatus,
           description: context.replace(/\s+/g, ' ').trim().slice(0, 500) || undefined,
           categories: inferCategories(title, context),
           sourceId: 'nsw-grants',
@@ -311,6 +360,10 @@ export function createNSWGrantsPlugin(): SourcePlugin {
         if (query.keywords?.length) {
           const text = `${grant.title} ${grant.description || ''}`.toLowerCase();
           if (!query.keywords.some(k => text.includes(k.toLowerCase()))) continue;
+        }
+
+        if (!shouldIncludeForStatus(query.status, grant.applicationStatus)) {
+          continue;
         }
 
         yield grant;
