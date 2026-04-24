@@ -108,15 +108,15 @@ export default async function HomePage() {
     // DB not yet configured
   }
 
-  const discoveryLine =
-    stats.totalGrants > 0 && stats.totalFoundations > 0 && stats.totalPrograms > 0
-      ? `Search ${fmt(stats.totalGrants)} grant opportunities, track ${fmt(stats.totalPrograms)} foundation programs, and prospect across ${fmt(stats.totalFoundations)} funders from one workflow.`
-      : 'Track grants, foundation programs, and prospecting signals from one workflow.';
+  const scaleLine =
+    stats.totalEntities > 0 && stats.totalRelationships > 0
+      ? `${fmt(stats.totalEntities)} resolved entities. ${fmt(stats.totalRelationships)} cross-system relationships. ${fmt(stats.totalGrants)} live grant opportunities. One public graph.`
+      : 'Resolved entities, cross-system relationships, and live opportunities in one public graph.';
 
-  const evidenceLine =
-    stats.sourceCount > 0 && stats.totalEntities > 0 && stats.totalRelationships > 0
-      ? `Behind the pipeline sits ${fmt(stats.sourceCount)} connected sources, ${fmt(stats.totalEntities)} entities, and ${fmt(stats.totalRelationships)} relationship edges.`
-      : 'Behind the pipeline sits a connected public-data graph, not a static grants directory.';
+  const thesisLine =
+    stats.donorContractorCount > 0
+      ? `${fmt(stats.donorContractorCount)} entities already flagged as donor-contractors — the same orgs giving political money and winning government work. This is what the atlas is for.`
+      : 'Built so community organisations, journalists, and researchers can see the system they operate inside and act on it.';
 
   return (
     <div className="space-y-16 pb-10">
@@ -124,21 +124,21 @@ export default async function HomePage() {
         <div className="grid gap-0 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="p-8 sm:p-12 lg:p-14">
             <p className="mb-5 text-xs font-black uppercase tracking-[0.35em] text-bauhaus-yellow">
-              Funding, Power, Procurement, And Reporting
+              Australia&rsquo;s Accountability Atlas &middot; A Curious Tractor
             </p>
             <h1 className="mb-6 text-4xl font-black leading-[0.9] tracking-tight sm:text-6xl lg:text-7xl">
-              See What Is Happening.
+              See How Power
               <br />
-              Decide What To Do Next.
+              Actually Moves.
             </h1>
             <p className="max-w-2xl text-lg font-medium leading-relaxed text-white/72 sm:text-xl">
-              CivicGraph starts with an always-on funding pipeline, then uses the same graph to read
-              companies, procurement pathways, philanthropy, and place. The point is not to show off the
-              data. It is to help a team act, write the brief, and build a reporting or story surface from
-              the same evidence chain.
+              CivicGraph is the public graph of Australian money, power, and accountability. Contracts,
+              donations, grants, boards, and lived outcomes resolved into one picture. Built for the
+              organisations, journalists, and communities who want to act on what they find, not wait for
+              someone else to fix it.
             </p>
             <p className="mt-5 max-w-2xl text-sm font-bold leading-relaxed text-white/55">
-              {discoveryLine} {evidenceLine}
+              {scaleLine} {thesisLine}
             </p>
 
             <div className="mt-10 max-w-3xl">
@@ -147,22 +147,22 @@ export default async function HomePage() {
 
             <div className="mt-8 flex flex-wrap gap-0">
               <a
-                href="/register"
+                href="/reports"
                 className="border-4 border-bauhaus-black bg-bauhaus-red px-6 py-3 text-xs font-black uppercase tracking-widest text-white transition-colors hover:bg-white hover:text-bauhaus-black"
               >
-                Start Free
+                Read The Investigations
               </a>
               <a
-                href="/reports/civicgraph-thesis"
+                href="/graph"
                 className="border-y-4 border-r-4 border-bauhaus-black bg-white px-6 py-3 text-xs font-black uppercase tracking-widest text-bauhaus-black transition-colors hover:bg-bauhaus-yellow"
               >
-                Read The Thesis
+                Explore The Graph
               </a>
               <a
                 href="/support"
                 className="border-y-4 border-r-4 border-bauhaus-black bg-bauhaus-black px-6 py-3 text-xs font-black uppercase tracking-widest text-white transition-colors hover:bg-bauhaus-blue"
               >
-                View Pricing
+                Partner With Us
               </a>
             </div>
           </div>
@@ -171,25 +171,25 @@ export default async function HomePage() {
             <div className="grid h-full grid-cols-1 divide-y-4 divide-bauhaus-black">
               <div className="p-8 sm:p-10">
                 <p className="text-xs font-black uppercase tracking-widest text-bauhaus-muted">
-                  The Decision Loop
+                  What The Atlas Does
                 </p>
                 <div className="mt-4 space-y-4">
                   {[
                     {
-                      title: 'See',
-                      copy: 'Track opportunities, foundations, company records, and movement in the field from one graph.',
+                      title: 'Expose',
+                      copy: 'Who holds power, where money flows, who is cut out. Across contracts, donations, grants, boards, and lived outcomes.',
                     },
                     {
-                      title: 'Decide',
-                      copy: 'Compare fit, timing, procurement context, and power signals before you commit the team.',
+                      title: 'Resolve',
+                      copy: 'The same organisation across AusTender, ACNC, AEC, and state registers. Entity resolution nobody else does.',
                     },
                     {
-                      title: 'Brief',
-                      copy: 'Turn the same evidence into a board memo, partner pack, procurement note, or next-action export.',
+                      title: 'Publish',
+                      copy: 'Flagship investigations: Consulting Class, Indigenous Proxy Problem, revolving door, board interlocks.',
                     },
                     {
-                      title: 'Tell',
-                      copy: 'Carry approved context into reporting and company-story surfaces rather than rebuilding the argument from scratch.',
+                      title: 'Enable',
+                      copy: 'Free for community orgs, journalists, and researchers. Track action rather than wait for others.',
                     },
                   ].map((item) => (
                     <div key={item.title} className="border-4 border-bauhaus-black bg-white p-4">
@@ -222,16 +222,16 @@ export default async function HomePage() {
         <div className="grid gap-0 md:grid-cols-3">
           {[
             {
-              title: 'For Funding Teams',
-              copy: 'Run the live pipeline, keep signal over noise, and generate the next brief without rebuilding the research every week.',
+              title: 'For Community Organisations',
+              copy: 'Understand the ecosystem you operate in. Find potential partners, unexpected funders, and the procurement pathways you&rsquo;ve been locked out of.',
             },
             {
-              title: 'For Place-Based Funders And Commissioners',
-              copy: 'Use the same graph to understand who is credible, where money already flows, what procurement paths exist, and what is still missing.',
+              title: 'For Journalists And Researchers',
+              copy: 'Query the atlas directly. Follow the money. Cross-reference boards, contracts, and donations across every system. Evidence for the next investigation.',
             },
             {
-              title: 'For Research, Reporting, And Story Teams',
-              copy: 'Move from raw company or field data into defensible public argument, partner reporting, and story-ready context.',
+              title: 'For Communities Pushing Back',
+              copy: 'Who&rsquo;s taking the money in your region? Who&rsquo;s being cut out? Accountability briefs and data you can put in front of your MP, your council, your funders.',
             },
           ].map((card, index) => (
             <div
@@ -248,29 +248,30 @@ export default async function HomePage() {
 
       <section className="border-4 border-bauhaus-black bg-bauhaus-canvas">
         <div className="border-b-4 border-bauhaus-black bg-white p-8 text-center sm:p-10">
-          <p className="text-xs font-black uppercase tracking-[0.3em] text-bauhaus-red">How It Works</p>
+          <p className="text-xs font-black uppercase tracking-[0.3em] text-bauhaus-red">The Curious Tractor Portfolio</p>
           <h2 className="mt-3 text-3xl font-black tracking-tight text-bauhaus-black sm:text-4xl">
-            One Workflow. Four Outputs.
+            Four Lenses. One Philosophy.
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-sm font-medium leading-relaxed text-bauhaus-muted">
-            The product should not feel like a directory or a demo. It should feel like a decision workspace
-            that can generate the next move, the next brief, and the next narrative from one shared base.
+            CivicGraph is civic infrastructure inside the A Curious Tractor portfolio. Track action rather
+            than wait for others. Each project is a different lens on the same civil society operating
+            system.
           </p>
         </div>
 
         <div className="grid gap-0 md:grid-cols-4">
           {[
-            ['1. See Reality', 'Follow the live graph across grants, funders, entities, place, and procurement context.'],
-            ['2. Choose A Move', 'Rank what matters now instead of forcing people to browse disconnected modules.'],
-            ['3. Build The Brief', 'Generate a memo, pack, or report with a visible evidence chain.'],
-            ['4. Tell The Story', 'Carry the approved analysis into reporting and Empathy Ledger-style narrative work.'],
+            ['CivicGraph', 'The power atlas. Who holds it, where it flows, who&rsquo;s cut out. Contracts, donations, grants, boards in one graph.'],
+            ['JusticeHub', 'Sector evidence. ALMA interventions, outcomes, what actually works for youth justice and community-led change.'],
+            ['Empathy Ledger', 'First-person stories from inside the systems. The lived reality behind the data the atlas exposes.'],
+            ['Goods', 'Commerce with accountability. Buy from community-controlled and Indigenous-led organisations doing the work.'],
           ].map(([title, copy], index) => (
             <div
-              key={title}
+              key={title as string}
               className={`p-6 sm:p-8 ${index < 3 ? 'border-b-4 border-bauhaus-black md:border-b-0 md:border-r-4' : ''}`}
             >
               <p className="text-lg font-black text-bauhaus-black">{title}</p>
-              <p className="mt-3 text-sm font-medium leading-relaxed text-bauhaus-muted">{copy}</p>
+              <p className="mt-3 text-sm font-medium leading-relaxed text-bauhaus-muted" dangerouslySetInnerHTML={{ __html: copy as string }} />
             </div>
           ))}
         </div>
@@ -278,46 +279,54 @@ export default async function HomePage() {
 
       <section className="border-4 border-bauhaus-black bg-white">
         <div className="border-b-4 border-bauhaus-black p-8 sm:p-10">
-          <p className="text-xs font-black uppercase tracking-[0.3em] text-bauhaus-blue">Agent Support</p>
+          <p className="text-xs font-black uppercase tracking-[0.3em] text-bauhaus-blue">Live Investigations</p>
           <h2 className="mt-3 text-3xl font-black tracking-tight text-bauhaus-black sm:text-4xl">
-            Same Evidence Chain. Different Agents.
+            What The Atlas Has Already Found
           </h2>
           <p className="mt-4 max-w-3xl text-sm font-medium leading-relaxed text-bauhaus-muted">
-            Agents should not create a second system. They should keep the main loop moving: scout what changed,
-            link the relevant entities, draft the next pack, then prepare reporting or story outputs from the same
-            underlying context.
+            The reports aren&rsquo;t marketing. They&rsquo;re the product in action. Each one uses the same
+            live graph to surface patterns that were previously scattered across a dozen disconnected
+            government registers.
           </p>
         </div>
         <div className="grid gap-0 md:grid-cols-4">
           {[
-            ['Scout', 'Watches frontier pages, deadlines, and funder movement so the team sees what changed first.'],
-            ['Analyst', 'Connects company, foundation, procurement, and place data into a usable decision view.'],
-            ['Brief Builder', 'Turns the evidence into board notes, partner packs, and opportunity memos.'],
-            ['Story Layer', 'Prepares approved analysis for reporting and narrative outputs instead of leaving it trapped in ops.'],
+            ['Consulting Class', '$9.1B in government contracts to 7 firms. $10.5M in donations. 863:1 ROI on political giving. The Donate → Advise → Implement pattern.'],
+            ['Indigenous Proxy', '57% of &ldquo;Indigenous funding&rdquo; flows to non-Indigenous organisations. Where the money actually lands vs. where it&rsquo;s promised.'],
+            ['Revolving Door', 'Entities with two or more influence vectors: lobbying, donations, contracts, funding. 4,700 orgs mapped, scored by concentration.'],
+            ['Board Interlocks', 'People sitting on multiple boards across funders, recipients, and contractors. Who&rsquo;s adjudicating whose funding.'],
           ].map(([title, copy], index) => (
             <div
-              key={title}
+              key={title as string}
               className={`p-6 sm:p-8 ${index < 3 ? 'border-b-4 border-bauhaus-black md:border-b-0 md:border-r-4' : ''}`}
             >
               <p className="text-lg font-black text-bauhaus-black">{title}</p>
-              <p className="mt-3 text-sm font-medium leading-relaxed text-bauhaus-muted">{copy}</p>
+              <p className="mt-3 text-sm font-medium leading-relaxed text-bauhaus-muted" dangerouslySetInnerHTML={{ __html: copy as string }} />
             </div>
           ))}
+        </div>
+        <div className="border-t-4 border-bauhaus-black bg-bauhaus-canvas px-8 py-5 text-center">
+          <a
+            href="/reports"
+            className="inline-block text-xs font-black uppercase tracking-widest text-bauhaus-black hover:text-bauhaus-red transition-colors"
+          >
+            See all investigations &rarr;
+          </a>
         </div>
       </section>
 
       <section className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
         <div className="border-4 border-bauhaus-black bg-white p-8 sm:p-10">
-          <p className="text-xs font-black uppercase tracking-[0.3em] text-bauhaus-blue">Why It Wins</p>
+          <p className="text-xs font-black uppercase tracking-[0.3em] text-bauhaus-blue">Why This Matters</p>
           <h2 className="mt-3 text-3xl font-black tracking-tight text-bauhaus-black">
-            Better Than A Static Grants Product
+            Nobody Else Connects These Systems.
           </h2>
           <div className="mt-6 space-y-4">
             {[
-              'Continuous frontier polling instead of one-off scraping.',
-              'Entity and relationship context, not just opportunity rows.',
-              'Foundation, procurement, place, and company data in one surface.',
-              'The same context can drive alerts, briefs, reporting, and stories.',
+              'AusTender shows contracts. AEC shows donations. ACNC shows charities. Nobody joins them.',
+              'Two years of entity resolution across every public Australian dataset.',
+              'Community-controlled and Indigenous-led organisations flagged and searchable.',
+              'Published under open access for researchers, journalists, and communities.',
             ].map((line) => (
               <div key={line} className="flex gap-3 border-4 border-bauhaus-black bg-bauhaus-canvas p-4">
                 <span className="text-lg font-black text-bauhaus-red">+</span>
@@ -329,25 +338,27 @@ export default async function HomePage() {
 
         <div className="border-4 border-bauhaus-black bg-bauhaus-black p-8 text-white sm:p-10">
           <p className="text-xs font-black uppercase tracking-[0.3em] text-bauhaus-yellow">
-            From Signal To Story
+            Track Action Rather Than Wait
           </p>
           <h2 className="mt-3 text-3xl font-black tracking-tight">
-            Company Data That Can Become A Brief Or A Story.
+            The Atlas Is A Tool For Acting, Not A Dashboard.
           </h2>
           <p className="mt-4 max-w-2xl text-sm font-medium leading-relaxed text-white/70">
-            CivicGraph should be able to start with an entity, a field, or a procurement pathway, then
-            carry that analysis forward into reporting and narrative work. That is where the bridge to
-            Empathy Ledger becomes valuable: shared context, governed voice, and a cleaner path from
-            operational evidence to public story.
+            The Four Corners episode might never come. The Royal Commission might not see this pattern. The
+            Auditor General is five years behind. CivicGraph exists so communities, journalists, and small
+            organisations don&rsquo;t have to wait for institutions to get there. The evidence is here.
+            Take it. Use it. Act.
           </p>
           <div className="mt-6 flex flex-wrap gap-2">
             {[
-              'Company profile',
-              'Funder fit',
-              'Procurement read',
-              'Place context',
-              'Evidence chain',
-              'Reporting narrative',
+              'Contracts',
+              'Donations',
+              'Grants',
+              'Boards',
+              'Lobbying',
+              'ALMA Evidence',
+              'Place',
+              'Indigenous',
             ].map((chip, index) => (
               <span
                 key={chip}
@@ -367,11 +378,11 @@ export default async function HomePage() {
             {[
               {
                 value: fmt(stats.donorContractorCount) || '0',
-                label: 'linked power cases already visible in the graph',
+                label: 'donor-contractor entities already flagged in the graph',
               },
               {
                 value: fmt(stats.totalRelationships) || '0',
-                label: 'relationship edges available for analysis, packs, and reporting',
+                label: 'cross-system relationships available for investigation',
               },
             ].map((item) => (
               <div key={item.label} className="border-4 border-white/20 p-5">
@@ -385,26 +396,26 @@ export default async function HomePage() {
 
       <section className="border-4 border-bauhaus-black bg-white">
         <div className="border-b-4 border-bauhaus-black p-8 sm:p-10">
-          <p className="text-xs font-black uppercase tracking-[0.3em] text-bauhaus-muted">Paid Plans Focus On Outcomes</p>
+          <p className="text-xs font-black uppercase tracking-[0.3em] text-bauhaus-muted">Self-Funded Civic Infrastructure</p>
           <h2 className="mt-3 text-3xl font-black tracking-tight text-bauhaus-black sm:text-4xl">
-            What People Pay For
+            Free For The People It&rsquo;s Built For.
           </h2>
         </div>
         <div className="grid gap-0 md:grid-cols-3">
           {[
             {
-              title: 'Professional',
-              copy: 'Best for solo grant consultants and grants managers who need better matching, alerts, and a cleaner pipeline.',
+              title: 'Communities',
+              copy: 'Small organisations, Indigenous-led groups, and community orgs use CivicGraph free. No tiers. No gates. This is what it exists for.',
               tone: 'bg-white',
             },
             {
-              title: 'Organisation',
-              copy: 'Best for teams that need shared tracking, briefing, reporting, and a consistent prospecting workflow across multiple submissions.',
+              title: 'Journalism & Research',
+              copy: 'Investigative journalists and researchers get data access, collaboration on stories, and co-production. Reach out — we want your byline.',
               tone: 'bg-bauhaus-red text-white',
             },
             {
-              title: 'Intelligence / Enterprise',
-              copy: 'Good later for portfolio intelligence, procurement analysis, reporting pipelines, and API workflows. Valuable, but not the first wedge.',
+              title: 'Institutions',
+              copy: 'Government agencies, universities, and peak bodies commission custom research, briefings, and bespoke analyses. Revenue funds the public good.',
               tone: 'bg-bauhaus-canvas',
             },
           ].map((item, index) => (
@@ -421,20 +432,20 @@ export default async function HomePage() {
         </div>
         <div className="border-t-4 border-bauhaus-black bg-bauhaus-black px-8 py-6 text-center text-white">
           <p className="text-sm font-bold text-white/70">
-            Sell the pipeline first. Let the broader data graph strengthen the proof, not dilute the message.
+            Built by A Curious Tractor. Self-funded. No investors. No customers to keep quiet for. Track action rather than wait for others.
           </p>
           <div className="mt-4 flex flex-col justify-center gap-4 sm:flex-row">
             <a
               href="/support"
               className="inline-block border-4 border-white bg-white px-8 py-3 text-xs font-black uppercase tracking-widest text-bauhaus-black transition-colors hover:bg-bauhaus-yellow"
             >
-              See Plans
+              Partner With Us
             </a>
             <a
-              href="/register"
+              href="/reports"
               className="inline-block border-4 border-white px-8 py-3 text-xs font-black uppercase tracking-widest text-white transition-colors hover:bg-white hover:text-bauhaus-black"
             >
-              Start Free
+              Read The Investigations
             </a>
           </div>
         </div>

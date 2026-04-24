@@ -11,8 +11,8 @@ import type { User } from '@supabase/supabase-js';
 import { cookies, headers } from 'next/headers';
 
 export const metadata: Metadata = {
-  title: 'CivicGraph - Funding Intelligence And Decision Infrastructure',
-  description: 'Track grants, understand power, test procurement context, and turn live data into evidence-backed briefs, reporting, and action.',
+  title: "CivicGraph — Australia's Accountability Atlas",
+  description: "Civic infrastructure for communities, journalists, and researchers. Track action rather than wait for others. Built by A Curious Tractor alongside JusticeHub, Empathy Ledger, and Goods.",
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
