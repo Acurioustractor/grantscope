@@ -8,7 +8,7 @@ import { getServiceSupabase } from '@/lib/supabase';
 import { resolveSubscriptionTier } from '@/lib/subscription';
 import { isAdminEmail } from '@/lib/admin';
 import type { User } from '@supabase/supabase-js';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 
 export const metadata: Metadata = {
   title: 'CivicGraph - Funding Intelligence And Decision Infrastructure',
@@ -16,6 +16,28 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Iframe-embed routes (/embed/*) and API routes render without chrome so they
+  // drop cleanly into partner sites and JSON responses stay clean.
+  const hdrs = await headers();
+  const pathname = hdrs.get('x-pathname') ?? '';
+  const isChromeless = pathname.startsWith('/embed');
+
+  if (isChromeless) {
+    return (
+      <html lang="en">
+        <head>
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+          <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+          <link href="https://api.fontshare.com/v2/css?f[]=satoshi@700,800,900&display=swap" rel="stylesheet" />
+        </head>
+        <body className="font-sans antialiased bg-transparent">
+          {children}
+        </body>
+      </html>
+    );
+  }
+
   let user: User | null = null;
   let subscriptionPlan: string | null = null;
   let userOrgSlug: string | null = null;
