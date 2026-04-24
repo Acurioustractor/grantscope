@@ -40,10 +40,18 @@ async function classify() {
   console.log(`[classify] Indigenous corporations (ORIC): ${oricCount}`);
 
   if (apply) {
-    await supabase
-      .from('gs_entities')
-      .update({ is_community_controlled: true })
-      .eq('entity_type', 'indigenous_corp');
+    // Previous version used supabase.from().update().eq() which silently
+    // failed on bulk updates >~500 rows (PostgREST client quirk). Use
+    // exec_sql RPC for the bulk update — hits the DB directly.
+    const { error: updateError } = await supabase.rpc('exec_sql', {
+      query: `UPDATE gs_entities
+                SET is_community_controlled = true
+              WHERE entity_type = 'indigenous_corp'
+                AND is_community_controlled = false`,
+    });
+    if (updateError) {
+      console.error('[classify] ORIC bulk update failed:', updateError.message);
+    }
   }
 
   // 2. Name-based matching
@@ -66,12 +74,16 @@ async function classify() {
       nameMatchCount += data.length;
       console.log(`[classify] "${pattern}": ${data.length} matches`);
       if (apply) {
-        const ids = data.map(e => e.id);
-        for (let i = 0; i < ids.length; i += 100) {
-          await supabase
-            .from('gs_entities')
-            .update({ is_community_controlled: true })
-            .in('id', ids.slice(i, i + 100));
+        // Same pattern — exec_sql for reliable bulk update
+        const { error: updateError } = await supabase.rpc('exec_sql', {
+          query: `UPDATE gs_entities
+                    SET is_community_controlled = true
+                  WHERE is_community_controlled = false
+                    AND entity_type IN ('charity', 'social_enterprise', 'trust', 'unknown')
+                    AND canonical_name ILIKE '%${pattern.replace(/'/g, "''")}%'`,
+        });
+        if (updateError) {
+          console.error(`[classify] name "${pattern}" update failed:`, updateError.message);
         }
       }
     }
