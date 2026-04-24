@@ -124,7 +124,10 @@ export default async function HomePage() {
         <div className="grid gap-0 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="p-8 sm:p-12 lg:p-14">
             <p className="mb-5 text-xs font-black uppercase tracking-[0.35em] text-bauhaus-yellow">
-              Australia&rsquo;s Accountability Atlas &middot; A Curious Tractor
+              Australia&rsquo;s Accountability Atlas &middot;{' '}
+              <a href="/about/curious-tractor" className="underline decoration-bauhaus-yellow/40 underline-offset-4 hover:decoration-bauhaus-yellow">
+                A Curious Tractor
+              </a>
             </p>
             <h1 className="mb-6 text-4xl font-black leading-[0.9] tracking-tight sm:text-6xl lg:text-7xl">
               See How Power

@@ -167,7 +167,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   </div>
                 </div>
                 <div className="mt-8 pt-6 border-t-2 border-white/10 text-center text-xs text-bauhaus-muted uppercase tracking-widest">
-                  Built by A Curious Tractor &middot; Track action rather than wait for others
+                  Built by{' '}
+                  <a href="/about/curious-tractor" className="text-bauhaus-muted hover:text-white transition-colors underline decoration-white/20 underline-offset-4 hover:decoration-white">
+                    A Curious Tractor
+                  </a>{' '}
+                  &middot; Track action rather than wait for others
                   <a href="/ops/health" className="ml-4 text-white/20 hover:text-white/60 transition-colors">&middot;</a>
                 </div>
               </div>
