@@ -1,6 +1,7 @@
 import { createSupabaseServer } from '@/lib/supabase-server';
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
+import { BriefingGeneratorShell } from '@/app/components/briefing-generator-shell';
+import { buildReportBuilderPageState } from '@/app/components/briefing-page-params';
 import { ReportBuilderClient } from './report-builder-client';
 
 export const dynamic = 'force-dynamic';
@@ -10,29 +11,44 @@ export const metadata = {
   description: 'Build custom funding intelligence reports by topic, state, and LGA.',
 };
 
-export default async function ReportBuilderPage() {
+type SearchParams = {
+  topic?: string;
+  state?: string;
+  focus?: string;
+  autogenerate?: string;
+  lanes?: string;
+};
+
+export default async function ReportBuilderPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const params = await searchParams;
+  const {
+    briefingComposeHref,
+    loop,
+    nextPath,
+  } = buildReportBuilderPageState(params);
+  const initialTopic = params.topic || 'youth-justice';
+  const initialStateFilter = params.state || '';
+  const initialFocus = params.focus || '';
+  const autoGenerate = params.autogenerate === '1';
+
   const supabase = await createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect('/login?next=/home/report-builder');
+  if (!user) redirect(`/login?next=${encodeURIComponent(nextPath)}`);
 
   return (
-    <div className="max-w-6xl mx-auto py-8 px-4">
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
-        <div>
-          <Link href="/home" className="text-xs font-black text-bauhaus-muted uppercase tracking-widest hover:text-bauhaus-black">
-            &larr; Dashboard
-          </Link>
-          <h1 className="text-2xl font-black text-bauhaus-black mt-1">Custom Report Builder</h1>
-          <p className="text-sm text-bauhaus-muted mt-1">
-            Build custom funding intelligence reports by topic, state, and geography.
-          </p>
-        </div>
-        <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest">
-          Funder Intelligence
-        </div>
-      </div>
-
-      <ReportBuilderClient />
-    </div>
+    <BriefingGeneratorShell
+      hubHref={briefingComposeHref}
+      title="Custom Report Builder"
+      description="Build custom funding intelligence reports by topic, state, and geography. Go back to the hub if you need to shift the subject, output type, or story handoff lane first."
+      badge="Funder Intelligence"
+      loop={loop}
+    >
+      <ReportBuilderClient
+        initialTopic={initialTopic}
+        initialStateFilter={initialStateFilter}
+        initialFocus={initialFocus}
+        autoGenerate={autoGenerate}
+      />
+    </BriefingGeneratorShell>
   );
 }

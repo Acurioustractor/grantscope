@@ -7,6 +7,7 @@ import {
   getPiccContracts,
   getPiccAlmaInterventions,
   getPiccEntity,
+  getPiccProgramDefinitions,
   getPalmIslandEntities,
   getPiccLeadership,
   getPiccMatchedGrants,
@@ -60,6 +61,7 @@ export default async function PiccDashboard() {
     contracts,
     almaInterventions,
     entity,
+    programDefinitions,
     palmIslandEntities,
     leadership,
     matchedGrants,
@@ -71,6 +73,7 @@ export default async function PiccDashboard() {
     getPiccContracts(),
     getPiccAlmaInterventions(),
     getPiccEntity(),
+    getPiccProgramDefinitions(),
     getPalmIslandEntities(),
     getPiccLeadership(),
     getPiccMatchedGrants(),
@@ -425,6 +428,7 @@ export default async function PiccDashboard() {
             Click a row to expand details.
           </p>
           <ProgramsTable
+            programs={programDefinitions ?? []}
             funding={fundingByProgram}
             alma={almaInterventions}
             contracts={contracts}

@@ -1,10 +1,15 @@
 'use client';
 
 import { useState, useMemo, Fragment } from 'react';
+import type { PiccProgramDefinition } from '@/lib/services/report-service';
 import { money } from '@/lib/services/report-service';
 
 type FundingRow = {
   program_name: string;
+  parent_funder_name: string | null;
+  parent_funder_gs_id: string | null;
+  funder_name: string | null;
+  funder_gs_id: string | null;
   total: number;
   records: number;
   from_fy: string;
@@ -43,63 +48,13 @@ type UnifiedProgram = {
   source: string;
   annualDisplay: string;
   fundingStatus: FundingStatus;
-  govFunding: { total: number; grants: number; period: string } | null;
+  govFunding: { total: number; grants: number; period: string; parentFunders: string[]; awardingBodies: string[] } | null;
   alma: AlmaRow | null;
+  almaReference: string | null;
   contracts: { total: number; count: number } | null;
   pipeline: PipelineRow | null;
+  pipelineReference: string | null;
   reporting: string;
-};
-
-// Map BAU programs → gov funding program names (fuzzy matching)
-const FUNDING_MAP: Record<string, string[]> = {
-  'Bwgcolman Healing Service': ['NIAA 1.3 - Safety and Wellbeing'],
-  'Family Support Services': ['Families'],
-  'Child Protection Placement': ['Child Protection - Placement Services', 'Child Safety', 'Child Safety Services'],
-  'Making Decisions in Our Way': ['Making Decisions in Our Way (Delegated Authority Support Services)'],
-  'DFV Services': ['Domestic and Family Violence', 'Keeping Women Safe from Violence Grants', 'DFV Rent Assist Brokerage Grants'],
-  'Women\'s Healing Service': ['Women'],
-  'Young Offender Support': ['Young Offender Support Service', 'Community and Youth Justice Services and Aboriginal and Torres Strait Islander Services', 'Community & Youth Justice Services & Aboriginal & Torres Strait Islander Services', 'Community, Youth Justice Services and Women'],
-  'Social Enterprises (Bakery, Fuel, Mechanics)': [],
-  'Movember Men\'s Health': [],
-  'Digital Service Centre': [],
-  'Elders Program & Cultural Knowledge': [],
-};
-
-// Map BAU programs → ALMA intervention names
-const ALMA_MAP: Record<string, string> = {
-  'Bwgcolman Healing Service': 'PICC Safety and Wellbeing Program (NIAA 1.3)',
-  'Child Protection Placement': 'PICC Child Protection Placement Services',
-  'Making Decisions in Our Way': 'PICC Making Decisions in Our Way',
-  'DFV Services': 'PICC Domestic and Family Violence Services',
-  'Young Offender Support': 'PICC Young Offender Support Service',
-  'Elders Program & Cultural Knowledge': 'PICC Elders Program and Cultural Knowledge',
-};
-
-// Map BAU programs → pipeline items
-const PIPELINE_MAP: Record<string, string> = {
-  'Elders Program & Cultural Knowledge': 'ILA "Voices on Country"',
-};
-
-// Map contracts to programs by buyer
-const CONTRACT_BUYER_MAP: Record<string, string> = {
-  'Department of Justice and Attorney-General': 'Young Offender Support',
-  'James Cook University': 'Bwgcolman Healing Service',
-};
-
-// Funding status per program
-const FUNDING_STATUS: Record<string, FundingStatus> = {
-  'Bwgcolman Healing Service': 'secured',       // NIAA $4.8M active contract
-  'Family Support Services': 'secured',          // QLD DCSSDS active
-  'Child Protection Placement': 'secured',       // QLD DCSSDS active
-  'Making Decisions in Our Way': 'secured',      // QLD DCSSDS $211K
-  'DFV Services': 'secured',                     // QLD DCSSDS active
-  'Women\'s Healing Service': 'secured',         // QLD DCSSDS active
-  'Young Offender Support': 'secured',           // QLD DCYJMA active, growing
-  'Digital Service Centre': 'self-funded',       // Telstra, self-sustaining
-  'Movember Men\'s Health': 'secured',           // Movember multi-year
-  'Social Enterprises (Bakery, Fuel, Mechanics)': 'self-funded',
-  'Elders Program & Cultural Knowledge': 'applied', // ILA Voices on Country submitted
-  'Station Precinct Employment Pathways': 'applied', // REAL EOI submitted
 };
 
 const STATUS_STYLES: Record<FundingStatus, { bg: string; label: string }> = {
@@ -114,40 +69,35 @@ const STATUS_STYLES: Record<FundingStatus, { bg: string; label: string }> = {
 const SYSTEM_COLORS: Record<string, string> = {
   'Health': 'bg-green-100 text-green-800',
   'Families': 'bg-blue-100 text-blue-800',
+  'Community Services': 'bg-sky-100 text-sky-800',
   'Child Protection': 'bg-purple-100 text-purple-800',
   'DFV': 'bg-red-100 text-red-800',
   'Women': 'bg-pink-100 text-pink-800',
   'Youth Justice': 'bg-orange-100 text-orange-800',
+  'Disability': 'bg-cyan-100 text-cyan-800',
+  'Housing': 'bg-amber-100 text-amber-800',
   'Economic Dev': 'bg-teal-100 text-teal-800',
   'Enterprise': 'bg-amber-100 text-amber-800',
   'Cultural': 'bg-indigo-100 text-indigo-800',
 };
 
-const BAU_PROGRAMS = [
-  { name: 'Bwgcolman Healing Service', system: 'Health', source: 'NIAA 1.3 Safety & Wellbeing', annual: '$4.8M', reporting: 'Annual (Jun)' },
-  { name: 'Family Support Services', system: 'Families', source: 'QLD DCSSDS', annual: '~$2.5M', reporting: 'Quarterly' },
-  { name: 'Child Protection Placement', system: 'Child Protection', source: 'QLD DCSSDS', annual: '~$1.2M', reporting: 'Quarterly' },
-  { name: 'Making Decisions in Our Way', system: 'Child Protection', source: 'QLD DCSSDS', annual: '$211K', reporting: 'Annual' },
-  { name: 'DFV Services', system: 'DFV', source: 'QLD DCSSDS', annual: '~$1.0M', reporting: 'Quarterly' },
-  { name: 'Women\'s Healing Service', system: 'Women', source: 'QLD DCSSDS', annual: '~$500K', reporting: 'Quarterly' },
-  { name: 'Young Offender Support', system: 'Youth Justice', source: 'QLD DCYJMA', annual: '$340K', reporting: 'Quarterly' },
-  { name: 'Digital Service Centre', system: 'Economic Dev', source: 'Telstra', annual: 'Self-sustaining', reporting: 'Annual' },
-  { name: 'Movember Men\'s Health', system: 'Health', source: 'Movember Foundation', annual: '$1.9M (multi-yr)', reporting: 'Annual' },
-  { name: 'Social Enterprises (Bakery, Fuel, Mechanics)', system: 'Enterprise', source: 'Revenue', annual: 'Self-sustaining', reporting: 'Annual' },
-  { name: 'Elders Program & Cultural Knowledge', system: 'Cultural', source: 'Cross-program', annual: 'Integrated', reporting: 'Ongoing' },
-];
-
-// Also add Station Precinct as a program
-const EXTRA_PROGRAMS = [
-  { name: 'Station Precinct Employment Pathways', system: 'Youth Justice', source: 'REAL Innovation Fund', annual: '$1.2M (proposed)', reporting: 'TBD' },
-];
+function isFundingStatus(value: string | null): value is FundingStatus {
+  return value === 'secured'
+    || value === 'applied'
+    || value === 'upcoming'
+    || value === 'prospect'
+    || value === 'gap'
+    || value === 'self-funded';
+}
 
 export function ProgramsTable({
+  programs,
   funding,
   alma,
   contracts,
   pipeline,
 }: {
+  programs: PiccProgramDefinition[];
   funding: FundingRow[] | null;
   alma: AlmaRow[] | null;
   contracts: ContractRow[] | null;
@@ -158,55 +108,65 @@ export function ProgramsTable({
   const [expandedRow, setExpandedRow] = useState<number | null>(null);
 
   const unified = useMemo(() => {
-    const allPrograms = [...BAU_PROGRAMS, ...EXTRA_PROGRAMS];
-
-    return allPrograms.map((bau): UnifiedProgram => {
-      // Match gov funding
-      const fundingKeys = FUNDING_MAP[bau.name] ?? [];
-      const matchedFunding = funding?.filter(f => fundingKeys.includes(f.program_name)) ?? [];
+    return programs.map((program): UnifiedProgram => {
+      const fundingLinks = program.links.filter(link => link.source_type === 'justice_funding_program');
+      const matchedFunding = funding?.filter(f => fundingLinks.some(link => link.source_key === f.program_name)) ?? [];
       const govFunding = matchedFunding.length > 0
         ? {
             total: matchedFunding.reduce((s, f) => s + Number(f.total), 0),
             grants: matchedFunding.reduce((s, f) => s + f.records, 0),
             period: `${matchedFunding.map(f => f.from_fy).sort()[0]} – ${matchedFunding.map(f => f.to_fy).sort().reverse()[0]}`,
+            parentFunders: [...new Set(
+              fundingLinks
+                .map(link => link.parent_funder_name || link.funder_name)
+                .filter((value): value is string => Boolean(value))
+            )],
+            awardingBodies: [...new Set(
+              fundingLinks
+                .map(link => link.funder_name)
+                .filter((value): value is string => Boolean(value))
+            )],
           }
         : null;
 
-      // Match ALMA
-      const almaName = ALMA_MAP[bau.name];
-      const matchedAlma = almaName ? alma?.find(a => a.name === almaName) ?? null : null;
+      const almaLinks = program.links.filter(link => link.source_type === 'alma_intervention');
+      const matchedAlma = almaLinks
+        .map(link => alma?.find(a => a.name === link.source_key) ?? null)
+        .find((value): value is AlmaRow => Boolean(value)) ?? null;
+      const almaReference = matchedAlma
+        ? matchedAlma.name
+        : almaLinks[0]?.source_label ?? almaLinks[0]?.source_key ?? null;
 
-      // Match contracts
-      const contractBuyers = Object.entries(CONTRACT_BUYER_MAP)
-        .filter(([, prog]) => prog === bau.name)
-        .map(([buyer]) => buyer);
+      const contractBuyers = program.links
+        .filter(link => link.source_type === 'contract_buyer')
+        .map(link => link.source_key);
       const matchedContracts = contracts?.filter(c => contractBuyers.includes(c.buyer_name)) ?? [];
       const contractData = matchedContracts.length > 0
         ? { total: matchedContracts.reduce((s, c) => s + Number(c.value), 0), count: matchedContracts.length }
         : null;
 
-      // Match pipeline
-      const pipelineName = PIPELINE_MAP[bau.name];
-      const matchedPipeline = pipelineName ? pipeline.find(p => p.name === pipelineName) ?? null : null;
-      // Special case: Station Precinct
-      const stationPipeline = bau.name === 'Station Precinct Employment Pathways'
-        ? pipeline.find(p => p.name === 'REAL Innovation Fund EOI') ?? null
-        : matchedPipeline;
+      const pipelineLinks = program.links.filter(link => link.source_type === 'pipeline_item');
+      const matchedPipeline = pipeline.find(p => pipelineLinks.some(link => link.source_key === p.name)) ?? null;
+      const pipelineReference = matchedPipeline
+        ? matchedPipeline.name
+        : pipelineLinks[0]?.source_label ?? pipelineLinks[0]?.source_key ?? null;
 
       return {
-        name: bau.name,
-        system: bau.system,
-        source: bau.source,
-        annualDisplay: bau.annual,
-        fundingStatus: FUNDING_STATUS[bau.name] ?? 'gap',
+        name: program.name,
+        system: program.system ?? 'Other',
+        source: program.funding_source ?? 'Unmapped',
+        annualDisplay: program.annual_amount_display ?? '—',
+        fundingStatus: isFundingStatus(program.funding_status) ? program.funding_status : 'gap',
         govFunding,
         alma: matchedAlma,
+        almaReference,
         contracts: contractData,
-        pipeline: stationPipeline,
-        reporting: bau.reporting,
+        pipeline: matchedPipeline,
+        pipelineReference,
+        reporting: program.reporting_cycle ?? '—',
       };
     });
-  }, [funding, alma, contracts, pipeline]);
+  }, [programs, funding, alma, contracts, pipeline]);
 
   const systems = useMemo(() =>
     [...new Set(unified.map(p => p.system))].sort(),
@@ -374,6 +334,16 @@ export function ProgramsTable({
                               <p className="font-mono font-bold text-sm">{money(p.govFunding.total)}</p>
                               <p className="text-gray-600">{p.govFunding.grants} grants over {p.govFunding.period}</p>
                               <p className="text-gray-500 mt-1">Reporting: {p.reporting}</p>
+                              {p.govFunding.parentFunders.length > 0 && (
+                                <p className="text-gray-500 mt-1">
+                                  Parent funder{p.govFunding.parentFunders.length > 1 ? 's' : ''}: {p.govFunding.parentFunders.join(', ')}
+                                </p>
+                              )}
+                              {p.govFunding.awardingBodies.length > 0 && (
+                                <p className="text-gray-500 mt-1">
+                                  Awarding bod{p.govFunding.awardingBodies.length > 1 ? 'ies' : 'y'}: {p.govFunding.awardingBodies.join(', ')}
+                                </p>
+                              )}
                             </div>
                           ) : (
                             <p className="text-gray-400">No tracked government funding</p>
@@ -388,6 +358,11 @@ export function ProgramsTable({
                               <p className="font-bold">{p.alma.name}</p>
                               <p className="text-gray-600 mt-1">{p.alma.type} — {p.alma.evidence_level}</p>
                               <p className="text-gray-500 mt-1 line-clamp-3">{p.alma.description}</p>
+                            </div>
+                          ) : p.almaReference ? (
+                            <div>
+                              <p className="font-bold">{p.almaReference}</p>
+                              <p className="text-gray-500 mt-1">Crosswalk exists, but the ALMA record is not linked in the live query yet.</p>
                             </div>
                           ) : (
                             <p className="text-gray-400">Not yet registered in ALMA. <span className="text-bauhaus-red font-bold">Add?</span></p>
@@ -415,6 +390,11 @@ export function ProgramsTable({
                               <p className="font-bold">{p.pipeline.name}</p>
                               <p className="text-gray-600">{p.pipeline.amount_display} from {p.pipeline.funder}</p>
                               <p className="text-gray-500">Deadline: {p.pipeline.deadline}</p>
+                            </div>
+                          ) : p.pipelineReference ? (
+                            <div>
+                              <p className="font-bold">{p.pipelineReference}</p>
+                              <p className="text-gray-500">Crosswalk exists, but the live pipeline row is not populated.</p>
                             </div>
                           ) : (
                             <p className="text-gray-400">No active pipeline</p>

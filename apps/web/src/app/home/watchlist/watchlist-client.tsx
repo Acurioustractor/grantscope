@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { DEFAULT_PROFILE_ALERT_NAME } from '@/lib/profile-alerts';
 
 // ── Types ─────────────────────────────────────────────────────────
 
@@ -77,6 +79,40 @@ interface Discovery {
   created_at: string;
 }
 
+interface AlertActivity {
+  id: string;
+  notification_type: string;
+  status: string;
+  subject: string | null;
+  match_score: number | null;
+  match_signals: string[];
+  queued_at: string;
+  sent_at: string | null;
+  last_error: string | null;
+  alert: {
+    id: string;
+    name: string;
+    frequency: string;
+    enabled: boolean;
+  } | null;
+  grant: {
+    id: string;
+    name: string;
+    provider: string | null;
+    closes_at: string | null;
+  } | null;
+}
+
+type ActionFeedback = {
+  tone: 'success' | 'error';
+  message: string;
+};
+
+type NotificationOverride = {
+  status?: string;
+  last_error?: string | null;
+};
+
 type Tab = 'grants' | 'foundations' | 'entities' | 'alerts' | 'feed';
 
 interface Props {
@@ -85,6 +121,7 @@ interface Props {
   entityWatches: EntityWatch[];
   alerts: Alert[];
   recentDiscoveries: Discovery[];
+  recentAlertActivity: AlertActivity[];
 }
 
 // ── Helpers ───────────────────────────────────────────────────────
@@ -143,13 +180,36 @@ const STAGE_COLORS: Record<string, string> = {
   active_relationship: 'bg-green-100 text-green-700',
 };
 
+const ALERT_STATUS_STYLES: Record<string, string> = {
+  queued: 'bg-amber-50 text-amber-700',
+  sent: 'bg-green-100 text-green-700',
+  failed: 'bg-red-50 text-red-600',
+  cancelled: 'bg-gray-100 text-gray-500',
+};
+
 // ── Component ─────────────────────────────────────────────────────
 
-export function WatchlistClient({ savedGrants, savedFoundations, entityWatches, alerts, recentDiscoveries }: Props) {
+export function WatchlistClient({
+  savedGrants,
+  savedFoundations,
+  entityWatches,
+  alerts,
+  recentDiscoveries,
+  recentAlertActivity,
+}: Props) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>('feed');
   const [watchGsId, setWatchGsId] = useState('');
   const [watches, setWatches] = useState(entityWatches);
   const [adding, setAdding] = useState(false);
+  const [pendingTrackGrantId, setPendingTrackGrantId] = useState<string | null>(null);
+  const [pendingPauseAlertId, setPendingPauseAlertId] = useState<string | null>(null);
+  const [pendingNotificationAction, setPendingNotificationAction] = useState<{ id: string; action: 'retry' | 'cancel' } | null>(null);
+  const [optimisticTrackedGrantIds, setOptimisticTrackedGrantIds] = useState<string[]>([]);
+  const [optimisticPausedAlertIds, setOptimisticPausedAlertIds] = useState<string[]>([]);
+  const [notificationOverrides, setNotificationOverrides] = useState<Record<string, NotificationOverride>>({});
+  const [feedback, setFeedback] = useState<ActionFeedback | null>(null);
+  const [isRefreshing, startRefresh] = useTransition();
 
   // Filter discoveries to those matching watched entity IDs
   const watchedEntityIds = new Set(watches.map(w => w.entity_id));
@@ -158,6 +218,24 @@ export function WatchlistClient({ savedGrants, savedFoundations, entityWatches, 
   );
   // Also show all discoveries if no watches yet (onboarding)
   const feedDiscoveries = watches.length > 0 ? watchedDiscoveries : recentDiscoveries.slice(0, 20);
+  const pausedAlertIds = new Set(optimisticPausedAlertIds);
+  const trackedGrantIds = new Set([
+    ...savedGrants.map(item => item.grant?.id).filter(Boolean),
+    ...optimisticTrackedGrantIds,
+  ]);
+  const effectiveRecentAlertActivity = recentAlertActivity.map((activity) => {
+    const override = notificationOverrides[activity.id];
+    return override
+      ? {
+          ...activity,
+          status: override.status ?? activity.status,
+          last_error: override.last_error === undefined ? activity.last_error : override.last_error,
+        }
+      : activity;
+  });
+  const recentFeedAlerts = effectiveRecentAlertActivity.slice(0, 3);
+  const sentAlertCount = effectiveRecentAlertActivity.filter(activity => activity.status === 'sent').length;
+  const queuedAlertCount = effectiveRecentAlertActivity.filter(activity => activity.status === 'queued').length;
 
   const tabs: { key: Tab; label: string; count: number }[] = [
     { key: 'feed', label: 'Feed', count: feedDiscoveries.length },
@@ -166,6 +244,13 @@ export function WatchlistClient({ savedGrants, savedFoundations, entityWatches, 
     { key: 'foundations', label: 'Foundations', count: savedFoundations.length },
     { key: 'alerts', label: 'Alerts', count: alerts.length },
   ];
+  const defaultProfileAlert = alerts.find(alert => alert.name === DEFAULT_PROFILE_ALERT_NAME);
+
+  useEffect(() => {
+    if (!feedback) return;
+    const timeout = window.setTimeout(() => setFeedback(null), 4000);
+    return () => window.clearTimeout(timeout);
+  }, [feedback]);
 
   async function addWatch() {
     if (!watchGsId.trim()) return;
@@ -191,8 +276,130 @@ export function WatchlistClient({ savedGrants, savedFoundations, entityWatches, 
     setWatches(watches.filter(w => w.id !== watchId));
   }
 
+  async function trackGrant(grantId: string, options?: { alertId?: string | null; notificationId?: string | null }) {
+    setPendingTrackGrantId(grantId);
+    setOptimisticTrackedGrantIds((current) => current.includes(grantId) ? current : [...current, grantId]);
+    try {
+      const sourceAlertPreferenceId =
+        options?.alertId && Number.isFinite(Number(options.alertId)) ? Number(options.alertId) : null;
+      const res = await fetch(`/api/tracker/${grantId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          stage: 'discovered',
+          ...(sourceAlertPreferenceId !== null ? { source_alert_preference_id: sourceAlertPreferenceId } : {}),
+          ...(options?.notificationId ? { source_notification_id: options.notificationId } : {}),
+          ...(sourceAlertPreferenceId !== null || options?.notificationId ? { source_attribution_type: 'manual' } : {}),
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to track grant');
+      }
+
+      setFeedback({ tone: 'success', message: 'Grant added to your tracker.' });
+
+      startRefresh(() => {
+        router.refresh();
+      });
+    } catch {
+      setOptimisticTrackedGrantIds((current) => current.filter((id) => id !== grantId));
+      setFeedback({ tone: 'error', message: 'Could not add this grant to your tracker.' });
+    } finally {
+      setPendingTrackGrantId(null);
+    }
+  }
+
+  async function pauseAlert(alertId: string) {
+    setPendingPauseAlertId(alertId);
+    setOptimisticPausedAlertIds((current) => current.includes(alertId) ? current : [...current, alertId]);
+    try {
+      const res = await fetch(`/api/alerts/${alertId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: false }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to pause alert');
+      }
+
+      setFeedback({ tone: 'success', message: 'Alert paused. You can re-enable it from Alerts.' });
+
+      startRefresh(() => {
+        router.refresh();
+      });
+    } catch {
+      setOptimisticPausedAlertIds((current) => current.filter((id) => id !== alertId));
+      setFeedback({ tone: 'error', message: 'Could not pause this alert.' });
+    } finally {
+      setPendingPauseAlertId(null);
+    }
+  }
+
+  async function updateNotification(notificationId: string, action: 'retry' | 'cancel') {
+    setPendingNotificationAction({ id: notificationId, action });
+    setNotificationOverrides((current) => ({
+      ...current,
+      [notificationId]: action === 'retry'
+        ? { status: 'queued', last_error: null }
+        : { status: 'cancelled', last_error: 'Dismissed by user' },
+    }));
+
+    try {
+      const res = await fetch('/api/alerts/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notificationId, action }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to update notification');
+      }
+
+      setFeedback({
+        tone: 'success',
+        message: action === 'retry'
+          ? 'Notification re-queued for delivery.'
+          : 'Notification dismissed from the queue.',
+      });
+
+      startRefresh(() => {
+        router.refresh();
+      });
+    } catch {
+      setNotificationOverrides((current) => {
+        const next = { ...current };
+        delete next[notificationId];
+        return next;
+      });
+      setFeedback({
+        tone: 'error',
+        message: action === 'retry'
+          ? 'Could not retry this notification.'
+          : 'Could not dismiss this notification.',
+      });
+    } finally {
+      setPendingNotificationAction(null);
+    }
+  }
+
   return (
     <div>
+      {feedback && (
+        <div
+          className="mb-6 border-2 px-4 py-3 text-sm font-bold rounded"
+          role={feedback.tone === 'error' ? 'alert' : 'status'}
+          style={{
+            borderColor: feedback.tone === 'error' ? 'rgb(220 38 38)' : 'rgb(22 163 74)',
+            background: feedback.tone === 'error' ? 'rgb(254 242 242)' : 'rgb(240 253 244)',
+            color: feedback.tone === 'error' ? 'rgb(153 27 27)' : 'rgb(22 101 52)',
+          }}
+        >
+          {feedback.message}
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="flex gap-0 border-b-4 border-bauhaus-black mb-6">
         {tabs.map(tab => (
@@ -214,6 +421,56 @@ export function WatchlistClient({ savedGrants, savedFoundations, entityWatches, 
       {/* Feed tab */}
       {activeTab === 'feed' && (
         <div>
+          {recentFeedAlerts.length > 0 ? (
+            <div className="mb-6 border-4 border-bauhaus-black bg-bauhaus-blue/5 p-4">
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-[0.3em] text-bauhaus-blue">Recent Alert Activity</div>
+                  <p className="mt-2 text-sm text-bauhaus-black/80">
+                    Your grant alerts have recent activity. Open the alerts tab for the full queue and delivery history.
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <span className="text-[10px] px-2 py-1 font-black uppercase bg-green-100 text-green-700 rounded-sm">
+                    {sentAlertCount} sent
+                  </span>
+                  <span className="text-[10px] px-2 py-1 font-black uppercase bg-amber-50 text-amber-700 rounded-sm">
+                    {queuedAlertCount} queued
+                  </span>
+                </div>
+              </div>
+              <div className="mt-4 space-y-2">
+                {recentFeedAlerts.map(activity => (
+                  <AlertActivityRow
+                    key={activity.id}
+                    activity={activity}
+                    compact
+                    tracked={!!(activity.grant?.id && trackedGrantIds.has(activity.grant.id))}
+                    tracking={pendingTrackGrantId === activity.grant?.id}
+                    pausing={pendingPauseAlertId === activity.alert?.id}
+                    disabled={isRefreshing}
+                    onTrackGrant={activity.grant?.id ? () => trackGrant(activity.grant!.id, {
+                      alertId: activity.alert?.id || null,
+                      notificationId: activity.id,
+                    }) : undefined}
+                    onPauseAlert={activity.alert?.id && activity.alert.enabled && !pausedAlertIds.has(activity.alert.id) ? () => pauseAlert(activity.alert!.id) : undefined}
+                    retrying={pendingNotificationAction?.id === activity.id && pendingNotificationAction.action === 'retry'}
+                    dismissing={pendingNotificationAction?.id === activity.id && pendingNotificationAction.action === 'cancel'}
+                    onRetry={activity.status === 'failed' || activity.status === 'cancelled' ? () => updateNotification(activity.id, 'retry') : undefined}
+                    onDismiss={activity.status === 'queued' || activity.status === 'failed' ? () => updateNotification(activity.id, 'cancel') : undefined}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : alerts.length > 0 ? (
+            <div className="mb-6 border-2 border-dashed border-bauhaus-black/20 p-4">
+              <div className="text-[10px] font-black uppercase tracking-[0.3em] text-bauhaus-muted">Alert Activity</div>
+              <p className="mt-2 text-sm text-bauhaus-muted">
+                Your alerts are active. Recent grant matches and deliveries will appear here once the scout queues them.
+              </p>
+            </div>
+          ) : null}
+
           {feedDiscoveries.length === 0 ? (
             <EmptyState
               icon="📡"
@@ -432,30 +689,64 @@ export function WatchlistClient({ savedGrants, savedFoundations, entityWatches, 
         <div>
           <div className="flex justify-between items-center mb-4">
             <p className="text-xs text-bauhaus-muted">
-              Alerts notify you when new grants match your criteria.
+              Alerts notify you when new grants match your criteria and update as the scout runs.
             </p>
             <Link
-              href="/tracker"
+              href="/alerts"
               className="text-xs font-black uppercase tracking-widest text-bauhaus-black hover:text-bauhaus-red"
             >
-              Manage in Tracker &rarr;
+              Manage Alerts &rarr;
             </Link>
           </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-0 border-4 border-bauhaus-black mb-6">
+            <div className="p-4 border-b-2 md:border-b-0 md:border-r-2 border-bauhaus-black/10">
+              <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">Recent Activity</div>
+              <div className="text-2xl font-black text-bauhaus-black">{recentAlertActivity.length}</div>
+            </div>
+            <div className="p-4 border-b-2 md:border-b-0 md:border-r-2 border-bauhaus-black/10">
+              <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">Queued</div>
+              <div className="text-2xl font-black text-bauhaus-black">{queuedAlertCount}</div>
+            </div>
+            <div className="p-4">
+              <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">Sent</div>
+              <div className="text-2xl font-black text-bauhaus-black">{sentAlertCount}</div>
+            </div>
+          </div>
+
+          {defaultProfileAlert && (
+            <div className="mb-4 border-4 border-bauhaus-blue bg-bauhaus-blue/5 p-4">
+              <div className="text-[10px] font-black uppercase tracking-[0.3em] text-bauhaus-blue">Auto From Profile</div>
+              <p className="mt-2 text-sm text-bauhaus-black/80">
+                <span className="font-black">{defaultProfileAlert.name}</span> stays in sync with your profile domains and geography, so your
+                core grant alert keeps improving as you refine your organisation profile.
+              </p>
+            </div>
+          )}
 
           {alerts.length === 0 ? (
             <EmptyState
               icon="🔔"
               title="No alerts configured"
-              description="Set up alerts to get notified when new grants match your interests."
-              cta={{ label: 'Go to Tracker', href: '/tracker' }}
+              description="Complete your profile to auto-create a default grant alert, or build custom alerts for specific funding themes."
+              cta={{ label: 'Open Alerts', href: '/alerts' }}
             />
           ) : (
             <div className="space-y-2">
-              {alerts.map(a => (
-                <div key={a.id} className="border-2 border-gray-200 p-4 hover:border-bauhaus-black transition-colors">
+              {alerts.map(a => {
+                const alertEnabled = a.enabled && !pausedAlertIds.has(a.id);
+                return (
+                  <div key={a.id} className="border-2 border-gray-200 p-4 hover:border-bauhaus-black transition-colors">
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0 flex-1">
-                      <div className="font-bold text-sm">{a.name}</div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <div className="font-bold text-sm">{a.name}</div>
+                        {a.name === DEFAULT_PROFILE_ALERT_NAME && (
+                          <span className="text-[10px] px-1.5 py-0.5 font-bold uppercase bg-bauhaus-blue text-white rounded">
+                            Auto
+                          </span>
+                        )}
+                      </div>
                       <div className="flex gap-1 mt-2 flex-wrap">
                         {a.categories?.map(c => (
                           <span key={c} className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">{c}</span>
@@ -474,8 +765,8 @@ export function WatchlistClient({ savedGrants, savedFoundations, entityWatches, 
                       ) : null}
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0">
-                      <span className={`text-[10px] px-2 py-0.5 font-bold uppercase rounded-sm ${a.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
-                        {a.enabled ? 'Active' : 'Paused'}
+                      <span className={`text-[10px] px-2 py-0.5 font-bold uppercase rounded-sm ${alertEnabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
+                        {alertEnabled ? 'Active' : 'Paused'}
                       </span>
                       <span className="text-[10px] text-bauhaus-muted">{a.frequency}</span>
                       {a.match_count != null && (
@@ -483,10 +774,59 @@ export function WatchlistClient({ savedGrants, savedFoundations, entityWatches, 
                       )}
                     </div>
                   </div>
-                </div>
-              ))}
+                  </div>
+                );
+              })}
             </div>
           )}
+
+          <div className="mt-8">
+            <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
+              <div>
+                <h2 className="text-lg font-black uppercase tracking-widest text-bauhaus-black">Recent Alert Activity</h2>
+                <p className="text-xs text-bauhaus-muted mt-1">
+                  Queued and delivered grant notifications for your current alerts.
+                </p>
+              </div>
+              <Link
+                href="/grants"
+                className="text-xs font-black uppercase tracking-widest text-bauhaus-black hover:text-bauhaus-red"
+              >
+                Browse Grants &rarr;
+              </Link>
+            </div>
+
+            {effectiveRecentAlertActivity.length === 0 ? (
+              <EmptyState
+                icon="🔔"
+                title="No alert activity yet"
+                description="Your alerts are configured. Once the scout queues new grant matches or deliveries, they will appear here with score and status."
+                cta={{ label: 'Open Alerts', href: '/alerts' }}
+              />
+            ) : (
+              <div className="space-y-2">
+                {effectiveRecentAlertActivity.map(activity => (
+                  <AlertActivityRow
+                    key={activity.id}
+                    activity={activity}
+                    tracked={!!(activity.grant?.id && trackedGrantIds.has(activity.grant.id))}
+                    tracking={pendingTrackGrantId === activity.grant?.id}
+                    pausing={pendingPauseAlertId === activity.alert?.id}
+                    disabled={isRefreshing}
+                    onTrackGrant={activity.grant?.id ? () => trackGrant(activity.grant!.id, {
+                      alertId: activity.alert?.id || null,
+                      notificationId: activity.id,
+                    }) : undefined}
+                    onPauseAlert={activity.alert?.id && activity.alert.enabled && !pausedAlertIds.has(activity.alert.id) ? () => pauseAlert(activity.alert!.id) : undefined}
+                    retrying={pendingNotificationAction?.id === activity.id && pendingNotificationAction.action === 'retry'}
+                    dismissing={pendingNotificationAction?.id === activity.id && pendingNotificationAction.action === 'cancel'}
+                    onRetry={activity.status === 'failed' || activity.status === 'cancelled' ? () => updateNotification(activity.id, 'retry') : undefined}
+                    onDismiss={activity.status === 'queued' || activity.status === 'failed' ? () => updateNotification(activity.id, 'cancel') : undefined}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -514,6 +854,160 @@ function EmptyState({ icon, title, description, cta }: {
           {cta.label}
         </Link>
       )}
+    </div>
+  );
+}
+
+function AlertActivityRow({
+  activity,
+  compact = false,
+  tracked = false,
+  tracking = false,
+  pausing = false,
+  retrying = false,
+  dismissing = false,
+  disabled = false,
+  onTrackGrant,
+  onPauseAlert,
+  onRetry,
+  onDismiss,
+}: {
+  activity: AlertActivity;
+  compact?: boolean;
+  tracked?: boolean;
+  tracking?: boolean;
+  pausing?: boolean;
+  retrying?: boolean;
+  dismissing?: boolean;
+  disabled?: boolean;
+  onTrackGrant?: () => void;
+  onPauseAlert?: () => void;
+  onRetry?: () => void;
+  onDismiss?: () => void;
+}) {
+  const statusLabel = activity.status === 'sent'
+    ? 'Sent'
+    : activity.status === 'failed'
+      ? 'Failed'
+      : activity.status === 'cancelled'
+        ? 'Cancelled'
+        : 'Queued';
+  const activityTime = activity.sent_at || activity.queued_at;
+
+  return (
+    <div className={`border-2 border-gray-200 p-4 hover:border-bauhaus-black transition-colors ${compact ? 'bg-white' : ''}`}>
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={`text-[10px] px-2 py-0.5 font-bold uppercase rounded-sm ${ALERT_STATUS_STYLES[activity.status] || 'bg-gray-100 text-gray-500'}`}>
+              {statusLabel}
+            </span>
+            {activity.alert?.name ? (
+              <span className="text-[10px] px-2 py-0.5 font-bold uppercase bg-bauhaus-black text-white rounded-sm">
+                {activity.alert.name}
+              </span>
+            ) : null}
+            {activity.match_score != null ? (
+              <span className="text-[10px] px-2 py-0.5 font-bold uppercase bg-bauhaus-blue/10 text-bauhaus-blue rounded-sm">
+                {activity.match_score}% match
+              </span>
+            ) : null}
+          </div>
+
+          <div className="mt-2">
+            {activity.grant ? (
+              <Link
+                href={`/grants/${activity.grant.id}`}
+                className="font-bold text-sm hover:text-bauhaus-red transition-colors line-clamp-1"
+              >
+                {activity.grant.name}
+              </Link>
+            ) : (
+              <div className="font-bold text-sm line-clamp-1">{activity.subject || 'Grant alert activity'}</div>
+            )}
+            <div className="text-xs text-bauhaus-muted mt-1">
+              {activity.grant?.provider || activity.subject || 'Grant alert'}
+            </div>
+          </div>
+
+          {activity.match_signals.length > 0 ? (
+            <div className="flex gap-1 mt-2 flex-wrap">
+              {activity.match_signals.slice(0, compact ? 2 : 4).map(signal => (
+                <span key={signal} className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">
+                  {signal}
+                </span>
+              ))}
+            </div>
+          ) : null}
+
+          {!compact && activity.last_error ? (
+            <div className="mt-2 text-xs text-red-600">
+              {activity.last_error}
+            </div>
+          ) : null}
+
+          <div className="mt-3 flex gap-2 flex-wrap">
+            {activity.grant?.id ? (
+              tracked ? (
+                <Link
+                  href="/tracker"
+                  className="text-[10px] px-2.5 py-1 font-black uppercase tracking-widest border border-bauhaus-black text-bauhaus-black hover:bg-gray-100 transition-colors"
+                >
+                  In Tracker
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onTrackGrant}
+                  disabled={!onTrackGrant || tracking || disabled}
+                  className="text-[10px] px-2.5 py-1 font-black uppercase tracking-widest bg-bauhaus-black text-white hover:bg-bauhaus-red transition-colors disabled:opacity-50"
+                >
+                  {tracking ? 'Saving...' : 'Track Grant'}
+                </button>
+              )
+            ) : null}
+            {activity.alert?.enabled && onPauseAlert ? (
+              <button
+                type="button"
+                onClick={onPauseAlert}
+                disabled={pausing || disabled}
+                className="text-[10px] px-2.5 py-1 font-black uppercase tracking-widest border border-bauhaus-black text-bauhaus-muted hover:text-bauhaus-black hover:bg-gray-100 transition-colors disabled:opacity-50"
+              >
+                {pausing ? 'Pausing...' : 'Pause Alert'}
+              </button>
+            ) : null}
+            {onRetry ? (
+              <button
+                type="button"
+                onClick={onRetry}
+                disabled={retrying || disabled}
+                className="text-[10px] px-2.5 py-1 font-black uppercase tracking-widest border border-bauhaus-blue text-bauhaus-blue hover:bg-bauhaus-blue/5 transition-colors disabled:opacity-50"
+              >
+                {retrying ? 'Retrying...' : 'Retry Delivery'}
+              </button>
+            ) : null}
+            {onDismiss ? (
+              <button
+                type="button"
+                onClick={onDismiss}
+                disabled={dismissing || disabled}
+                className="text-[10px] px-2.5 py-1 font-black uppercase tracking-widest border border-bauhaus-black text-bauhaus-muted hover:text-bauhaus-black hover:bg-gray-100 transition-colors disabled:opacity-50"
+              >
+                {dismissing ? 'Dismissing...' : 'Dismiss'}
+              </button>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="shrink-0 text-right">
+          <div className="text-xs text-bauhaus-muted">{timeAgo(activityTime)}</div>
+          {activity.grant?.closes_at ? (
+            <div className={`mt-1 text-xs font-bold ${daysUntil(activity.grant.closes_at) === 'Closed' ? 'text-red-500' : 'text-bauhaus-muted'}`}>
+              {daysUntil(activity.grant.closes_at)}
+            </div>
+          ) : null}
+        </div>
+      </div>
     </div>
   );
 }

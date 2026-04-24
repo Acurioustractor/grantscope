@@ -5,6 +5,10 @@ import { money } from '@/lib/services/report-service';
 
 type FundingRow = {
   program_name: string;
+  parent_funder_name: string | null;
+  parent_funder_gs_id: string | null;
+  funder_name: string | null;
+  funder_gs_id: string | null;
   total: number;
   records: number;
   from_fy: string;
@@ -17,22 +21,25 @@ function getSystem(program: string): string {
   if (p.includes('child protection') || p.includes('child safety') || p.includes('making decisions')) return 'Child Protection';
   if (p.includes('youth justice') || p.includes('young offender') || p.includes('community and youth')) return 'Youth Justice';
   if (p.includes('domestic') || p.includes('family violence') || p.includes('women') || p.includes('keeping women')) return 'DFV';
-  if (p.includes('families') || p.includes('family') || p.includes('social inclusion')) return 'Families';
-  if (p.includes('disability') || p.includes('mental health')) return 'Disability';
+  if (p.includes('specialised service') || p.includes('social inclusion') || p.includes('service system')) return 'Community Services';
   if (p.includes('housing') || p.includes('homelessness')) return 'Housing';
-  if (p.includes('health') || p.includes('niaa') || p.includes('safety and wellbeing')) return 'Health';
-  if (p.includes('service system')) return 'Capacity';
+  if (p.includes('disability') || p.includes('mental health')) return 'Disability';
+  if (p.includes('digital service centre')) return 'Economic Dev';
+  if (p.includes('primary care') || p.includes('deadly families') || p.includes('health') || p.includes('niaa') || p.includes('safety and wellbeing')) return 'Health';
+  if (p.includes('families') || p.includes('family')) return 'Families';
   return 'Other';
 }
 
 const SYSTEM_COLORS: Record<string, string> = {
   'Health': 'bg-green-100 text-green-800',
   'Families': 'bg-blue-100 text-blue-800',
+  'Community Services': 'bg-sky-100 text-sky-800',
   'Child Protection': 'bg-purple-100 text-purple-800',
   'DFV': 'bg-red-100 text-red-800',
   'Youth Justice': 'bg-orange-100 text-orange-800',
-  'Disability': 'bg-teal-100 text-teal-800',
+  'Disability': 'bg-cyan-100 text-cyan-800',
   'Housing': 'bg-amber-100 text-amber-800',
+  'Economic Dev': 'bg-teal-100 text-teal-800',
   'Capacity': 'bg-gray-100 text-gray-800',
   'Other': 'bg-gray-100 text-gray-800',
 };
@@ -124,7 +131,15 @@ export function FundingTable({ data }: { data: FundingRow[] }) {
           <tbody>
             {filtered.map((p, i) => (
               <tr key={i} className="border-b border-gray-200 hover:bg-gray-50">
-                <td className="py-2 pr-4">{p.program_name}</td>
+                <td className="py-2 pr-4">
+                  <div>{p.program_name}</div>
+                  {p.parent_funder_name && (
+                    <div className="text-[10px] text-gray-500">
+                      {p.parent_funder_name}
+                      {p.funder_name && p.funder_name !== p.parent_funder_name ? ` · via ${p.funder_name}` : ''}
+                    </div>
+                  )}
+                </td>
                 <td className="py-2 px-4">
                   <span className={`text-[10px] px-1.5 py-0.5 font-bold whitespace-nowrap ${SYSTEM_COLORS[p.system] ?? 'bg-gray-100'}`}>
                     {p.system}

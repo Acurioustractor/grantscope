@@ -47,6 +47,47 @@ export default function ReportsPage() {
         </ol>
       </div>
 
+      <section className="mb-6">
+        <a href="/reports/civicgraph-thesis" className="group block">
+          <div className="bg-white border-4 border-bauhaus-black p-8 transition-all group-hover:-translate-y-1" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-red)' }}>
+            <div className="text-xs font-black text-bauhaus-red mb-2 uppercase tracking-widest">Company Memo — New</div>
+            <h3 className="text-2xl font-black text-bauhaus-black mb-3">The CivicGraph Investor Memo</h3>
+            <p className="text-base text-bauhaus-muted leading-relaxed mb-4 max-w-3xl">
+              A shorter 2–3 page case for why CivicGraph can become the intelligence layer for grants,
+              foundation prospecting, and institutional relationship discovery in the Australian social sector.
+            </p>
+            <div className="flex gap-6 text-bauhaus-muted/60 text-sm font-bold">
+              <span>Why this market</span>
+              <span>&middot;</span>
+              <span>Why this wedge</span>
+              <span>&middot;</span>
+              <span>Why it can be a business</span>
+            </div>
+          </div>
+        </a>
+      </section>
+
+      <section className="mb-6">
+        <a href="/reports/why-grant-search-is-not-enough" className="group block">
+          <div className="bg-bauhaus-canvas border-4 border-bauhaus-black p-8 transition-all group-hover:-translate-y-1" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-blue)' }}>
+            <div className="text-xs font-black text-bauhaus-blue mb-2 uppercase tracking-widest">Broad Essay — New</div>
+            <h3 className="text-2xl font-black text-bauhaus-black mb-3">Why Grant Search Is Not Enough</h3>
+            <p className="text-base text-bauhaus-muted leading-relaxed mb-4 max-w-3xl">
+              A broader article on why the next useful category is an intelligence layer for funding,
+              not just a larger grants database. Written to work as CivicGraph publishing and as an
+              Empathy Ledger syndication piece.
+            </p>
+            <div className="flex gap-6 text-bauhaus-muted/60 text-sm font-bold">
+              <span>Workflow to power</span>
+              <span>&middot;</span>
+              <span>Money and voice</span>
+              <span>&middot;</span>
+              <span>Public discussion frame</span>
+            </div>
+          </div>
+        </a>
+      </section>
+
       {/* ===== DOMAIN INTELLIGENCE ===== */}
       <section className="mb-12">
         <div className="mb-5">
@@ -82,6 +123,10 @@ export default function ReportsPage() {
               <a href="/reports/youth-justice/national" className="text-[10px] font-bold text-red-600 hover:underline">National &rarr;</a>
               <span className="text-[10px] text-gray-300">|</span>
               <a href="/reports/youth-justice/qld" className="text-[10px] font-bold text-red-600 hover:underline">QLD &rarr;</a>
+              <a href="/reports/youth-justice/qld/tracker" className="text-[10px] font-bold text-red-600 hover:underline">QLD tracker &rarr;</a>
+              <a href="/reports/youth-justice/qld/trackers" className="text-[10px] font-bold text-red-600 hover:underline">QLD trackers &rarr;</a>
+              <a href="/reports/youth-justice/trackers" className="text-[10px] font-bold text-red-600 hover:underline">Portfolio &rarr;</a>
+              <a href="/reports/youth-justice/qld/crime-prevention-schools" className="text-[10px] font-bold text-red-600 hover:underline">QLD investigation &rarr;</a>
               <a href="/reports/youth-justice/nsw" className="text-[10px] font-bold text-red-600 hover:underline">NSW &rarr;</a>
               <a href="/reports/youth-justice/nt" className="text-[10px] font-bold text-red-600 hover:underline">NT &rarr;</a>
             </div>
@@ -136,6 +181,27 @@ export default function ReportsPage() {
 
       {/* ===== FLAGSHIP: CONVERGENCE ===== */}
       <section className="mb-6">
+        <a href="/reports/reallocation-atlas" className="group block">
+          <div className="border-4 border-bauhaus-black bg-white p-8 transition-all group-hover:-translate-y-1" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-blue)' }}>
+            <div className="mb-2 text-xs font-black uppercase tracking-widest text-bauhaus-blue">Place × Power × Action — NEW FLAGSHIP</div>
+            <h3 className="mb-3 text-2xl font-black text-bauhaus-black">The Reallocation Atlas</h3>
+            <p className="mb-4 text-base leading-relaxed text-bauhaus-muted">
+              A place-first operating surface for Australia. See where money is thin, who captures the flow,
+              where community-controlled alternatives already exist, and what even a small reallocation could
+              unlock in local contracts, grants, philanthropy, and community-owned production.
+            </p>
+            <div className="flex gap-6 text-sm font-bold text-bauhaus-muted/70">
+              <span>Funding-desert map</span>
+              <span>&middot;</span>
+              <span>Power corridor</span>
+              <span>&middot;</span>
+              <span>Community-led reallocation model</span>
+            </div>
+          </div>
+        </a>
+      </section>
+
+      <section className="mb-6">
         <a href="/reports/convergence" className="group block">
           <div className="bg-bauhaus-red border-4 border-bauhaus-black p-8 transition-all group-hover:-translate-y-1" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-black)' }}>
             <div className="text-xs font-black text-bauhaus-yellow mb-2 uppercase tracking-widest">Cross-System Investigation &mdash; FLAGSHIP</div>
@@ -173,6 +239,26 @@ export default function ReportsPage() {
               <span>5,036 grantee links traced</span>
               <span>&middot;</span>
               <span>72 revolving door overlaps</span>
+            </div>
+          </div>
+        </a>
+      </section>
+
+      <section className="mb-6">
+        <a href="/reports/grant-frontier" className="group block">
+          <div className="bg-white border-4 border-bauhaus-black p-8 transition-all group-hover:-translate-y-1" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-blue)' }}>
+            <div className="text-xs font-black text-bauhaus-blue mb-2 uppercase tracking-widest">Operations Surface — NEW</div>
+            <h3 className="text-2xl font-black text-bauhaus-black mb-3">Grant Source Control Surface</h3>
+            <p className="text-base text-bauhaus-muted leading-relaxed mb-4">
+              The live ingestion rail behind CivicGraph grants. See which grant feeds dominate, which foundation queues are still cold,
+              which frontier URLs are due now, and whether the discovery agents are actually doing the work.
+            </p>
+            <div className="flex gap-6 text-bauhaus-muted/60 text-sm font-bold">
+              <span>30K+ grant rows</span>
+              <span>&middot;</span>
+              <span>50K+ frontier URLs</span>
+              <span>&middot;</span>
+              <span>Automation rail</span>
             </div>
           </div>
         </a>

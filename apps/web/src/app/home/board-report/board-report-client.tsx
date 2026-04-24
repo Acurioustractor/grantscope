@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { BriefingEntrySection } from '@/app/components/briefing-entry-section';
 
 function money(n: number | null | undefined): string {
   if (!n) return '—';
@@ -66,16 +67,26 @@ interface EntitySearchResult {
   state: string | null;
 }
 
-export function BoardReportClient() {
-  const [searchTerm, setSearchTerm] = useState('');
+interface BoardReportClientProps {
+  initialSearchTerm?: string;
+  autoSearch?: boolean;
+}
+
+export function BoardReportClient({
+  initialSearchTerm = '',
+  autoSearch = false,
+}: BoardReportClientProps) {
+  const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
   const [searchResults, setSearchResults] = useState<EntitySearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState<BoardReportData | null>(null);
   const [error, setError] = useState('');
+  const [hasAutoSearched, setHasAutoSearched] = useState(false);
 
-  async function searchEntities() {
-    if (!searchTerm.trim()) {
+  async function searchEntities(explicitTerm?: string) {
+    const query = (explicitTerm ?? searchTerm).trim();
+    if (!query) {
       setSearchResults([]);
       return;
     }
@@ -83,7 +94,7 @@ export function BoardReportClient() {
     setSearching(true);
     setError('');
     try {
-      const res = await fetch(`/api/data?type=entities&q=${encodeURIComponent(searchTerm)}&limit=10`);
+      const res = await fetch(`/api/data?type=entities&q=${encodeURIComponent(query)}&limit=10`);
       if (!res.ok) throw new Error('Search failed');
       const data = await res.json();
       setSearchResults(data.data || []);
@@ -93,6 +104,12 @@ export function BoardReportClient() {
       setSearching(false);
     }
   }
+
+  useEffect(() => {
+    if (!autoSearch || hasAutoSearched || !initialSearchTerm.trim()) return;
+    setHasAutoSearched(true);
+    void searchEntities(initialSearchTerm);
+  }, [autoSearch, hasAutoSearched, initialSearchTerm]);
 
   async function generateReport(gsId: string) {
     setLoading(true);
@@ -142,53 +159,62 @@ export function BoardReportClient() {
       `}</style>
 
       {/* Search section */}
-      <div className="no-print border-4 border-bauhaus-black p-6 mb-8">
-        <div className="text-xs font-black text-bauhaus-muted uppercase tracking-widest mb-4">Entity Search</div>
-        <div className="flex gap-3 items-start">
-          <div className="flex-1">
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && searchEntities()}
-              placeholder="Search by entity name or ABN..."
-              className="w-full px-3 py-2 border-2 border-gray-200 text-sm focus:border-bauhaus-black outline-none"
-            />
-          </div>
+      <BriefingEntrySection
+        title="Entity Search"
+        className="no-print"
+        note={
+          initialSearchTerm.trim()
+            ? `Prefilled from the briefing hub${autoSearch ? ' and searched automatically' : ''}.`
+            : undefined
+        }
+        error={error || undefined}
+        rowClassName="flex gap-3 items-start"
+        footer={
+          searchResults.length > 0 ? (
+            <div className="mt-4 border-2 border-gray-200">
+              <div className="text-xs font-black text-bauhaus-muted uppercase tracking-widest px-3 py-2 bg-gray-50 border-b-2 border-gray-200">
+                Select Entity
+              </div>
+              <div className="max-h-64 overflow-y-auto">
+                {searchResults.map((entity) => (
+                  <button
+                    key={entity.gs_id}
+                    onClick={() => generateReport(entity.gs_id)}
+                    className="w-full px-3 py-3 text-left hover:bg-bauhaus-muted/5 border-b border-gray-100 transition-colors"
+                  >
+                    <div className="font-bold text-sm">{entity.canonical_name}</div>
+                    <div className="text-xs text-bauhaus-muted mt-1">
+                      {entity.abn && <span className="mr-3">ABN: {entity.abn}</span>}
+                      <span className="mr-3">{entity.entity_type}</span>
+                      {entity.state && <span>{entity.state}</span>}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null
+        }
+        action={
           <button
-            onClick={searchEntities}
+            onClick={() => void searchEntities()}
             disabled={searching || !searchTerm.trim()}
             className="px-6 py-2 bg-bauhaus-black text-white text-xs font-black uppercase tracking-widest hover:bg-bauhaus-red transition-colors disabled:opacity-50"
           >
             {searching ? 'Searching...' : 'Search'}
           </button>
+        }
+      >
+        <div className="flex-1">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && searchEntities()}
+            placeholder="Search by entity name or ABN..."
+            className="w-full px-3 py-2 border-2 border-gray-200 text-sm focus:border-bauhaus-black outline-none"
+          />
         </div>
-        {error && <p className="text-sm text-bauhaus-red mt-3">{error}</p>}
-
-        {searchResults.length > 0 && (
-          <div className="mt-4 border-2 border-gray-200">
-            <div className="text-xs font-black text-bauhaus-muted uppercase tracking-widest px-3 py-2 bg-gray-50 border-b-2 border-gray-200">
-              Select Entity
-            </div>
-            <div className="max-h-64 overflow-y-auto">
-              {searchResults.map((entity) => (
-                <button
-                  key={entity.gs_id}
-                  onClick={() => generateReport(entity.gs_id)}
-                  className="w-full px-3 py-3 text-left hover:bg-bauhaus-muted/5 border-b border-gray-100 transition-colors"
-                >
-                  <div className="font-bold text-sm">{entity.canonical_name}</div>
-                  <div className="text-xs text-bauhaus-muted mt-1">
-                    {entity.abn && <span className="mr-3">ABN: {entity.abn}</span>}
-                    <span className="mr-3">{entity.entity_type}</span>
-                    {entity.state && <span>{entity.state}</span>}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+      </BriefingEntrySection>
 
       {loading && (
         <div className="text-center py-12">
