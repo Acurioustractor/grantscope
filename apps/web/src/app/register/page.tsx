@@ -2,7 +2,8 @@
 
 import { Suspense, useState } from 'react';
 import { createSupabaseBrowser } from '@/lib/supabase-browser';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { resolveAuthRedirect } from '@/lib/auth-redirect';
 
 export default function RegisterPage() {
   return (
@@ -18,8 +19,10 @@ function RegisterForm() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get('redirect');
+  const redirectPath = resolveAuthRedirect(searchParams);
+  const plan = searchParams.get('plan');
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
@@ -33,9 +36,12 @@ function RegisterForm() {
     }
 
     const supabase = createSupabaseBrowser();
-    const { error: authError } = await supabase.auth.signUp({
+    const { data, error: authError } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        emailRedirectTo: `${window.location.origin}${redirectPath}`,
+      },
     });
 
     if (authError) {
@@ -51,11 +57,19 @@ function RegisterForm() {
       body: JSON.stringify({ email }),
     }).catch(() => {});
 
+    if (data.session) {
+      router.push(redirectPath);
+      router.refresh();
+      return;
+    }
+
     setSuccess(true);
     setLoading(false);
   }
 
-  const loginHref = redirect ? `/login?redirect=${encodeURIComponent(redirect)}` : '/login';
+  const loginHref = redirectPath !== '/continue'
+    ? `/login?redirect=${encodeURIComponent(redirectPath)}`
+    : '/login';
 
   if (success) {
     return (
@@ -70,6 +84,9 @@ function RegisterForm() {
             <h1 className="text-xl font-black text-bauhaus-black mb-3">Check Your Email</h1>
             <p className="text-sm text-bauhaus-muted font-medium leading-relaxed mb-4">
               We&apos;ve sent a confirmation link to <span className="font-black text-bauhaus-black">{email}</span>. Click the link to activate your account.
+            </p>
+            <p className="text-xs text-bauhaus-muted font-medium leading-relaxed mb-4">
+              After confirmation, we&apos;ll take you straight into profile setup and matched grants.
             </p>
             <a
               href={loginHref}
@@ -92,11 +109,16 @@ function RegisterForm() {
               Create Account
             </h1>
             <p className="text-xs text-bauhaus-muted mt-1 uppercase tracking-wider">
-              Claim your charity profile
+              Start your funding pipeline
             </p>
           </div>
 
           <form onSubmit={handleRegister} className="p-6 space-y-4">
+            {plan && (
+              <div className="bg-link-light border-4 border-bauhaus-blue p-3 text-xs font-black text-bauhaus-blue uppercase tracking-widest">
+                Selected plan: {plan}
+              </div>
+            )}
             {error && (
               <div className="bg-danger-light border-4 border-bauhaus-red p-3 text-sm font-bold text-bauhaus-red">
                 {error}

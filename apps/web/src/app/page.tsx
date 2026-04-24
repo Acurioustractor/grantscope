@@ -1,5 +1,5 @@
 import { getServiceSupabase } from '@/lib/supabase';
-import { money, fmt } from '@/lib/format';
+import { fmt } from '@/lib/format';
 import { UnifiedSearch } from './components/unified-search';
 
 export const dynamic = 'force-dynamic';
@@ -42,531 +42,401 @@ async function safeCount(
 async function getStats() {
   const supabase = getServiceSupabase();
 
-  // Use 'estimated' for large tables (>100K rows) to avoid PostgREST timeouts
   const [
     totalGrants,
     totalFoundations,
     profiledFoundations,
-    embeddedGrants,
     openGrants,
     totalPrograms,
-    acncCharities,
-    communityOrgs,
-    withAmounts,
-    socialEnterprises,
     totalEntities,
     totalRelationships,
-    totalAustenderContracts,
-    totalPoliticalDonations,
     donorContractorStats,
   ] = await Promise.all([
     safeCount(supabase.from('grant_opportunities').select('*', { count: 'exact', head: true })),
     safeCount(supabase.from('foundations').select('*', { count: 'exact', head: true })),
-    safeCount(supabase.from('foundations').select('*', { count: 'exact', head: true }).not('enriched_at', 'is', null)),
-    safeCount(supabase.from('grant_opportunities').select('*', { count: 'exact', head: true }).not('embedding', 'is', null)),
-    safeCount(supabase.from('grant_opportunities').select('*', { count: 'exact', head: true }).gt('closes_at', new Date().toISOString())),
-    safeCount(supabase.from('foundation_programs').select('*', { count: 'exact', head: true }).in('status', ['open', 'closed'])),
-    safeCount(supabase.from('acnc_ais').select('*', { count: 'estimated', head: true })),
-    safeCount(supabase.from('community_orgs').select('*', { count: 'exact', head: true })),
-    safeCount(supabase.from('grant_opportunities').select('*', { count: 'exact', head: true }).not('amount_max', 'is', null)),
-    safeCount(supabase.from('social_enterprises').select('*', { count: 'exact', head: true })),
+    safeCount(
+      supabase.from('foundations').select('*', { count: 'exact', head: true }).not('enriched_at', 'is', null),
+    ),
+    safeCount(
+      supabase.from('grant_opportunities').select('*', { count: 'exact', head: true }).gt('closes_at', new Date().toISOString()),
+    ),
+    safeCount(
+      supabase.from('foundation_programs').select('*', { count: 'exact', head: true }).in('status', ['open', 'closed']),
+    ),
     safeCount(supabase.from('gs_entities').select('*', { count: 'estimated', head: true })),
     safeCount(supabase.from('gs_relationships').select('*', { count: 'estimated', head: true })),
-    safeCount(supabase.from('austender_contracts').select('*', { count: 'estimated', head: true })),
-    safeCount(supabase.from('political_donations').select('*', { count: 'estimated', head: true })),
     getDonorContractorHeadlineStats(supabase),
   ]);
 
-  // Grants by state — fetch source column for state scrapers and count client-side
-  const stateSources = ['nsw-grants','vic-grants','qld-grants','sa-grants','wa-grants','tas-grants','act-grants','nt-grants'];
-  const stateCountsArr = await Promise.all(
-    stateSources.map(async (src) => {
-      const cnt = await safeCount(
-        supabase.from('grant_opportunities').select('*', { count: 'exact', head: true }).eq('source', src),
-      );
-      return { source: src, cnt };
-    })
-  );
-  const byState = stateCountsArr.filter(s => s.cnt > 0).sort((a, b) => b.cnt - a.cnt);
-
-  // Distinct source count — fetch a sample of sources
   let sourceCount = 0;
   try {
-    const { data: sourceSample } = await supabase.from('grant_opportunities')
-      .select('source')
-      .limit(10000);
-    sourceCount = sourceSample ? new Set(sourceSample.map((r: { source: string }) => r.source)).size : 0;
-  } catch { /* fallback to 0 */ }
-
-  // Category breakdown
-  const knownCats = ['arts','community','technology','regenerative','enterprise','general','health','education','indigenous','justice','sport','research'];
-  const catCountsArr = await Promise.all(
-    knownCats.map(async (cat) => {
-      const cnt = await safeCount(
-        supabase.from('grant_opportunities').select('*', { count: 'exact', head: true }).contains('categories', [cat]),
-      );
-      return { cat, cnt };
-    })
-  );
-  const categories = catCountsArr.filter(c => c.cnt > 0).sort((a, b) => b.cnt - a.cnt).slice(0, 10);
+    const { data: sourceSample } = await supabase.from('grant_opportunities').select('source').limit(10000);
+    sourceCount = sourceSample ? new Set(sourceSample.map((row: { source: string }) => row.source)).size : 0;
+  } catch {
+    sourceCount = 0;
+  }
 
   return {
     totalGrants,
     totalFoundations,
     profiledFoundations,
-    embeddedGrants,
     openGrants,
     totalPrograms,
-    acncCharities,
-    communityOrgs,
-    socialEnterprises,
-    withAmounts,
     totalEntities,
     totalRelationships,
-    totalAustenderContracts,
-    totalPoliticalDonations,
     donorContractorCount: donorContractorStats.count,
-    dcTotalDonated: donorContractorStats.totalDonated,
-    dcTotalContracts: donorContractorStats.totalContracts,
-    byState,
     sourceCount,
-    categories,
   };
 }
 
-const STATE_LABELS: Record<string, string> = {
-  'nsw-grants': 'NSW',
-  'vic-grants': 'VIC',
-  'qld-grants': 'QLD',
-  'sa-grants': 'SA',
-  'wa-grants': 'WA',
-  'tas-grants': 'TAS',
-  'act-grants': 'ACT',
-  'nt-grants': 'NT',
-};
-
-const STATE_COLORS: Record<string, string> = {
-  'nsw-grants': 'bg-bauhaus-blue',
-  'vic-grants': 'bg-bauhaus-black',
-  'qld-grants': 'bg-bauhaus-red',
-  'sa-grants': 'bg-bauhaus-yellow',
-  'wa-grants': 'bg-bauhaus-blue',
-  'tas-grants': 'bg-bauhaus-red',
-  'act-grants': 'bg-bauhaus-black',
-  'nt-grants': 'bg-bauhaus-yellow',
-};
-
-const CAT_LABELS: Record<string, string> = {
-  arts: 'Arts & Culture',
-  community: 'Community',
-  technology: 'Technology',
-  regenerative: 'Environment',
-  enterprise: 'Business',
-  general: 'General',
-  health: 'Health',
-  education: 'Education',
-  indigenous: 'First Nations',
-  justice: 'Justice',
-  sport: 'Sport',
-  research: 'Research',
-  disaster_relief: 'Disaster Relief',
-};
-
 export default async function HomePage() {
   let stats = {
-    totalGrants: 0, totalFoundations: 0, profiledFoundations: 0,
-    embeddedGrants: 0, openGrants: 0, totalPrograms: 0,
-    acncCharities: 0, communityOrgs: 0, socialEnterprises: 0, withAmounts: 0,
-    totalEntities: 0, totalRelationships: 0,
-    totalAustenderContracts: 0, totalPoliticalDonations: 0,
-    donorContractorCount: 0, dcTotalDonated: 0, dcTotalContracts: 0,
-    byState: null as Array<{ source: string; cnt: number }> | null,
+    totalGrants: 0,
+    totalFoundations: 0,
+    profiledFoundations: 0,
+    openGrants: 0,
+    totalPrograms: 0,
+    totalEntities: 0,
+    totalRelationships: 0,
+    donorContractorCount: 0,
     sourceCount: 0,
-    categories: null as Array<{ cat: string; cnt: number }> | null,
   };
+
   try {
     stats = await getStats();
   } catch {
     // DB not yet configured
   }
 
-  // unused after homepage cleanup: embeddedPct, maxStateCnt, maxCatCnt
-  const heroEvidenceLine =
-    stats.totalEntities > 0 && stats.totalAustenderContracts > 0 && stats.totalPoliticalDonations > 0
-      ? `CivicGraph connects ${fmt(stats.totalEntities)} entities, ${fmt(stats.totalAustenderContracts)} contracts, and ${fmt(stats.totalPoliticalDonations)} donations into the decision layer for Australian public spending.`
-      : 'CivicGraph connects supplier intelligence, place-based funding data, and donation signals into the decision layer for Australian public spending.';
+  const discoveryLine =
+    stats.totalGrants > 0 && stats.totalFoundations > 0 && stats.totalPrograms > 0
+      ? `Search ${fmt(stats.totalGrants)} grant opportunities, track ${fmt(stats.totalPrograms)} foundation programs, and prospect across ${fmt(stats.totalFoundations)} funders from one workflow.`
+      : 'Track grants, foundation programs, and prospecting signals from one workflow.';
+
+  const evidenceLine =
+    stats.sourceCount > 0 && stats.totalEntities > 0 && stats.totalRelationships > 0
+      ? `Behind the pipeline sits ${fmt(stats.sourceCount)} connected sources, ${fmt(stats.totalEntities)} entities, and ${fmt(stats.totalRelationships)} relationship edges.`
+      : 'Behind the pipeline sits a connected public-data graph, not a static grants directory.';
 
   return (
-    <div>
-      {/* Hero */}
-      <section className="py-16 sm:py-24">
-        <p className="text-xs font-black text-bauhaus-red uppercase tracking-[0.3em] mb-4">
-          Decision Infrastructure for Government &amp; Social Sector
-        </p>
-        <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-bauhaus-black mb-6 tracking-tight leading-[0.9]">
-          Know Who to Fund.<br />Know Who to Contract.<br /><span className="text-bauhaus-blue">Know It Worked.</span>
-        </h1>
-        <p className="text-lg text-bauhaus-muted max-w-xl mb-10 leading-relaxed font-medium">
-          Procurement intelligence. Place-based allocation analysis. Governed proof of outcomes.{' '}
-          {heroEvidenceLine}
-        </p>
-
-        <UnifiedSearch />
-
-        <div className="flex gap-0 flex-wrap mb-6">
-          <a href="/tender-intelligence" className="px-6 py-3 bg-bauhaus-black text-white font-black text-xs uppercase tracking-widest border-4 border-bauhaus-black hover:bg-bauhaus-red bauhaus-shadow-sm">
-            Procurement Intelligence
-          </a>
-          <a href="/places" className="px-6 py-3 bg-white text-bauhaus-black font-black text-xs uppercase tracking-widest border-4 border-bauhaus-black hover:bg-bauhaus-yellow">
-            Place Packs
-          </a>
-          <a href="/grants" className="px-6 py-3 bg-white text-bauhaus-black font-black text-xs uppercase tracking-widest border-4 border-bauhaus-black border-l-0 hover:bg-bauhaus-blue hover:text-white">
-            Search Grants
-          </a>
-        </div>
-        <div className="flex gap-2 flex-wrap mb-6 max-w-xl">
-          <span className="text-xs font-black text-bauhaus-muted uppercase tracking-widest self-center mr-1">Quick:</span>
-          {[
-            { label: 'Supplier discovery workflow', href: '/tender-intelligence#discover' },
-            { label: 'Social procurement analyser', href: '/procurement' },
-            { label: 'Intelligence pack preview', href: '/tender-intelligence#pack' },
-            { label: 'Funding gaps by postcode', href: '/places' },
-            { label: 'Due diligence report', href: '/reports/donor-contractors' },
-          ].map(q => (
-            <a
-              key={q.label}
-              href={q.href}
-              className="text-xs px-3 py-1.5 bg-link-light text-bauhaus-blue font-bold border-2 border-bauhaus-blue/20 hover:border-bauhaus-blue transition-colors"
-            >
-              {q.label}
-            </a>
-          ))}
-        </div>
-      </section>
-
-      {/* The Problem */}
-      <section className="border-4 border-bauhaus-black mb-16 bg-bauhaus-black text-white">
-        <div className="p-8 sm:p-12">
-          <h2 className="text-2xl sm:text-3xl font-black mb-6 leading-tight">
-            Every Procurement Decision Is Made With Incomplete Data
-          </h2>
-          <div className="space-y-4 text-base font-medium leading-relaxed text-white/85 max-w-2xl">
-            <p>
-              <strong className="text-bauhaus-yellow">$74 billion</strong> in government contracts awarded annually.
-              Procurement officers make supplier decisions from spreadsheets.
-              Commissioners allocate funding without seeing where money already flows.
-              Nobody connects the contract to the community outcome.
+    <div className="space-y-16 pb-10">
+      <section className="border-4 border-bauhaus-black bg-bauhaus-black text-white">
+        <div className="grid gap-0 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="p-8 sm:p-12 lg:p-14">
+            <p className="mb-5 text-xs font-black uppercase tracking-[0.35em] text-bauhaus-yellow">
+              Funding, Power, Procurement, And Reporting
             </p>
-            <p>
-              CivicGraph is the decision layer that connects supplier intelligence,
-              place-based funding data, and outcome evidence &mdash; so every allocation
-              decision is defensible, every renewal is justified, and every gap is visible.
+            <h1 className="mb-6 text-4xl font-black leading-[0.9] tracking-tight sm:text-6xl lg:text-7xl">
+              See What Is Happening.
+              <br />
+              Decide What To Do Next.
+            </h1>
+            <p className="max-w-2xl text-lg font-medium leading-relaxed text-white/72 sm:text-xl">
+              CivicGraph starts with an always-on funding pipeline, then uses the same graph to read
+              companies, procurement pathways, philanthropy, and place. The point is not to show off the
+              data. It is to help a team act, write the brief, and build a reporting or story surface from
+              the same evidence chain.
             </p>
-          </div>
-          <div className="flex gap-4 flex-wrap mt-8">
-            <a href="/tender-intelligence" className="px-6 py-3 bg-bauhaus-red text-white font-black text-xs uppercase tracking-widest border-4 border-white hover:bg-white hover:text-bauhaus-black transition-colors">
-              See Procurement Intelligence
-            </a>
-            <a href="/for/government" className="px-6 py-3 bg-transparent text-white font-black text-xs uppercase tracking-widest border-4 border-white/40 hover:border-white hover:bg-white hover:text-bauhaus-black transition-colors">
-              For Government
-            </a>
-          </div>
-        </div>
-      </section>
+            <p className="mt-5 max-w-2xl text-sm font-bold leading-relaxed text-white/55">
+              {discoveryLine} {evidenceLine}
+            </p>
 
-      {/* Entity Graph — the flagship finding */}
-      {stats.donorContractorCount > 0 && (
-        <section className="mb-16">
-          <a href="/reports/donor-contractors" className="group block">
-            <div className="border-4 border-bauhaus-black bg-bauhaus-red transition-all group-hover:-translate-y-1" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-black)' }}>
-              <div className="p-8 sm:p-12">
-                <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-3">Entity Graph Investigation</div>
-                <h2 className="text-2xl sm:text-4xl font-black text-white mb-4 leading-tight">
-                  {stats.donorContractorCount} Entities Donate to Political Parties<br />
-                  AND Hold Government Contracts
-                </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-6">
-                  <div>
-                    <div className="text-3xl sm:text-4xl font-black text-white">{money(stats.dcTotalDonated)}</div>
-                    <div className="text-white/60 text-sm font-bold mt-1">donated to parties</div>
-                  </div>
-                  <div>
-                    <div className="text-3xl sm:text-4xl font-black text-white">{money(stats.dcTotalContracts)}</div>
-                    <div className="text-white/60 text-sm font-bold mt-1">received in contracts</div>
-                  </div>
-                  <div>
-                    <div className="text-3xl sm:text-4xl font-black text-bauhaus-yellow">
-                      {stats.dcTotalDonated > 0 ? `${Math.round(stats.dcTotalContracts / stats.dcTotalDonated)}x` : '—'}
-                    </div>
-                    <div className="text-white/60 text-sm font-bold mt-1">return per dollar donated</div>
-                  </div>
-                </div>
-                <p className="text-white/70 text-sm font-medium max-w-2xl mb-4">
-                  Built from {stats.totalEntities.toLocaleString()} entities and {stats.totalRelationships.toLocaleString()} relationships
-                  — cross-referencing AEC political donations, AusTender contracts, ACNC charities,
-                  ORIC Indigenous corporations, ATO tax data, and ASIC company records by ABN.
+            <div className="mt-10 max-w-3xl">
+              <UnifiedSearch />
+            </div>
+
+            <div className="mt-8 flex flex-wrap gap-0">
+              <a
+                href="/register"
+                className="border-4 border-bauhaus-black bg-bauhaus-red px-6 py-3 text-xs font-black uppercase tracking-widest text-white transition-colors hover:bg-white hover:text-bauhaus-black"
+              >
+                Start Free
+              </a>
+              <a
+                href="/reports/civicgraph-thesis"
+                className="border-y-4 border-r-4 border-bauhaus-black bg-white px-6 py-3 text-xs font-black uppercase tracking-widest text-bauhaus-black transition-colors hover:bg-bauhaus-yellow"
+              >
+                Read The Thesis
+              </a>
+              <a
+                href="/pricing"
+                className="border-y-4 border-r-4 border-bauhaus-black bg-bauhaus-black px-6 py-3 text-xs font-black uppercase tracking-widest text-white transition-colors hover:bg-bauhaus-blue"
+              >
+                View Pricing
+              </a>
+            </div>
+          </div>
+
+          <div className="border-t-4 border-bauhaus-black bg-bauhaus-canvas lg:border-l-4 lg:border-t-0">
+            <div className="grid h-full grid-cols-1 divide-y-4 divide-bauhaus-black">
+              <div className="p-8 sm:p-10">
+                <p className="text-xs font-black uppercase tracking-widest text-bauhaus-muted">
+                  The Decision Loop
                 </p>
-                <span className="inline-block px-6 py-2.5 bg-white text-bauhaus-black font-black text-xs uppercase tracking-widest group-hover:bg-bauhaus-yellow transition-colors">
-                  Read the Full Investigation &rarr;
-                </span>
+                <div className="mt-4 space-y-4">
+                  {[
+                    {
+                      title: 'See',
+                      copy: 'Track opportunities, foundations, company records, and movement in the field from one graph.',
+                    },
+                    {
+                      title: 'Decide',
+                      copy: 'Compare fit, timing, procurement context, and power signals before you commit the team.',
+                    },
+                    {
+                      title: 'Brief',
+                      copy: 'Turn the same evidence into a board memo, partner pack, procurement note, or next-action export.',
+                    },
+                    {
+                      title: 'Tell',
+                      copy: 'Carry approved context into reporting and company-story surfaces rather than rebuilding the argument from scratch.',
+                    },
+                  ].map((item) => (
+                    <div key={item.title} className="border-4 border-bauhaus-black bg-white p-4">
+                      <p className="text-xs font-black uppercase tracking-widest text-bauhaus-red">{item.title}</p>
+                      <p className="mt-2 text-sm font-medium text-bauhaus-muted">{item.copy}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2">
+                {[
+                  { label: 'Open Now', value: fmt(stats.openGrants) || '0', tone: 'bg-bauhaus-blue text-white' },
+                  { label: 'Foundations', value: fmt(stats.totalFoundations) || '0', tone: 'bg-white text-bauhaus-black' },
+                  { label: 'Entities', value: fmt(stats.totalEntities) || '0', tone: 'bg-bauhaus-red text-white' },
+                  { label: 'Links', value: fmt(stats.totalRelationships) || '0', tone: 'bg-bauhaus-yellow text-bauhaus-black' },
+                ].map((item) => (
+                  <div key={item.label} className={`border-b-4 border-r-4 border-bauhaus-black p-6 last:border-r-0 [&:nth-child(n+3)]:border-b-0 ${item.tone}`}>
+                    <p className="text-3xl font-black tabular-nums sm:text-4xl">{item.value}</p>
+                    <p className="mt-1 text-[11px] font-black uppercase tracking-widest opacity-70">{item.label}</p>
+                  </div>
+                ))}
               </div>
             </div>
-          </a>
-        </section>
-      )}
-
-      {/* Live Stats — clean, 5 numbers only */}
-      <section className="border-4 border-bauhaus-black mb-16">
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-0">
-          <a href="/grants" className="group border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black">
-            <div className="p-6 text-center transition-all group-hover:bg-bauhaus-blue group-hover:text-white">
-              <div className="text-3xl sm:text-4xl font-black tabular-nums">{stats.totalGrants.toLocaleString()}</div>
-              <div className="text-xs font-black uppercase tracking-widest mt-1 text-bauhaus-muted group-hover:text-white/70">Grants</div>
-            </div>
-          </a>
-          <a href="/foundations" className="group border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black">
-            <div className="p-6 text-center transition-all group-hover:bg-bauhaus-red group-hover:text-white">
-              <div className="text-3xl sm:text-4xl font-black tabular-nums">{stats.totalFoundations.toLocaleString()}</div>
-              <div className="text-xs font-black uppercase tracking-widest mt-1 text-bauhaus-muted group-hover:text-white/70">Foundations</div>
-            </div>
-          </a>
-          <a href="/charities" className="group border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black">
-            <div className="p-6 text-center transition-all group-hover:bg-bauhaus-black group-hover:text-white">
-              <div className="text-3xl sm:text-4xl font-black tabular-nums">{stats.acncCharities.toLocaleString()}</div>
-              <div className="text-xs font-black uppercase tracking-widest mt-1 text-bauhaus-muted group-hover:text-white/70">Charities</div>
-            </div>
-          </a>
-          <a href="/entities" className="group border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black">
-            <div className="p-6 text-center transition-all group-hover:bg-bauhaus-yellow">
-              <div className="text-3xl sm:text-4xl font-black tabular-nums">{stats.totalEntities.toLocaleString()}</div>
-              <div className="text-xs font-black uppercase tracking-widest mt-1 text-bauhaus-muted group-hover:text-bauhaus-black">Entities</div>
-            </div>
-          </a>
-          <a href="/reports" className="group">
-            <div className="p-6 text-center transition-all group-hover:bg-bauhaus-red group-hover:text-white">
-              <div className="text-3xl sm:text-4xl font-black tabular-nums">{stats.totalRelationships.toLocaleString()}</div>
-              <div className="text-xs font-black uppercase tracking-widest mt-1 text-bauhaus-muted group-hover:text-white/70">Relationships</div>
-            </div>
-          </a>
-        </div>
-        <div className="border-t-4 border-bauhaus-black p-3 bg-bauhaus-canvas text-center">
-          <p className="text-[11px] text-bauhaus-muted font-bold">
-            {stats.sourceCount || 44} data sources &middot; {stats.openGrants.toLocaleString()} grants open now &middot; {stats.profiledFoundations.toLocaleString()} AI-profiled foundations &middot; Updated daily
-          </p>
-        </div>
-      </section>
-
-      {/* Three Product Families */}
-      <section className="border-t-4 border-bauhaus-black pt-16 pb-12">
-        <h2 className="text-2xl font-black text-center text-bauhaus-black mb-3">Three Products. One Decision Layer.</h2>
-        <p className="text-sm text-bauhaus-muted text-center mb-10 max-w-2xl mx-auto">
-          From finding the right supplier, to allocating resources where they&apos;re needed,
-          to proving the investment worked. Each layer makes the next more powerful.
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-0">
-          <a href="/tender-intelligence" className="group border-4 border-bauhaus-black p-8 bg-white bauhaus-shadow-sm hover:bg-bauhaus-blue hover:text-white transition-colors">
-            <div className="text-xs font-black text-bauhaus-blue uppercase tracking-widest mb-4 group-hover:text-bauhaus-yellow">Product 1 &mdash; Available Now</div>
-            <h3 className="font-black text-bauhaus-black mb-2 text-lg group-hover:text-white">Procurement Intelligence</h3>
-            <p className="text-sm text-bauhaus-muted leading-relaxed mb-4 group-hover:text-white/70">
-              Discover suppliers. Check compliance. Generate bid-ready intelligence packs.
-              National contract history cross-referenced with {stats.totalEntities.toLocaleString()} entities.
-              Replace spreadsheets with a defensible market view.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {['Supplier Discovery', 'Compliance', 'Intelligence Packs', 'List Enrichment'].map(t => (
-                <span key={t} className="text-[10px] font-black uppercase tracking-widest px-2 py-1 border-2 border-bauhaus-blue/20 text-bauhaus-blue group-hover:border-white/30 group-hover:text-white/80">{t}</span>
-              ))}
-            </div>
-          </a>
-          <a href="/places" className="group border-4 border-l-0 max-md:border-l-4 max-md:border-t-0 border-bauhaus-black p-8 bg-bauhaus-black hover:bg-bauhaus-yellow transition-colors">
-            <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-4 group-hover:text-bauhaus-black">Product 2 &mdash; Available Now</div>
-            <h3 className="font-black text-white mb-2 text-lg group-hover:text-bauhaus-black">Allocation Intelligence</h3>
-            <p className="text-sm text-white/70 leading-relaxed mb-4 group-hover:text-bauhaus-black/70">
-              Place-based funding analysis. Gap scoring. Commissioning intelligence.
-              See where money flows, where it doesn&apos;t, and where
-              capability doesn&apos;t match need.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {['Place Packs', 'Gap Analysis', 'Commissioning', 'SEIFA + Remoteness'].map(t => (
-                <span key={t} className="text-[10px] font-black uppercase tracking-widest px-2 py-1 border-2 border-white/20 text-white/60 group-hover:border-bauhaus-black/20 group-hover:text-bauhaus-black/60">{t}</span>
-              ))}
-            </div>
-          </a>
-          <div className="border-4 border-l-0 max-md:border-l-4 max-md:border-t-0 border-bauhaus-black p-8 bg-bauhaus-red/10">
-            <div className="text-xs font-black text-bauhaus-red uppercase tracking-widest mb-4">Product 3 &mdash; Coming Soon</div>
-            <h3 className="font-black text-bauhaus-black mb-2 text-lg">Governed Proof</h3>
-            <p className="text-sm text-bauhaus-muted leading-relaxed mb-4">
-              Did procurement create community value? Did this commissioning strategy work?
-              Rights-governed, consent-based evidence that helps defend renewals,
-              justify policy, and prove long-term outcomes.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {['Outcome Evidence', 'Community Voice', 'Renewal Defence', 'Policy Proof'].map(t => (
-                <span key={t} className="text-[10px] font-black uppercase tracking-widest px-2 py-1 border-2 border-bauhaus-red/20 text-bauhaus-red/60">{t}</span>
-              ))}
-            </div>
           </div>
         </div>
-        <div className="border-4 border-t-0 border-bauhaus-black bg-bauhaus-canvas p-6 text-center">
-          <p className="text-xs font-black text-bauhaus-muted uppercase tracking-widest mb-1">Together, These Create</p>
-          <p className="text-lg font-black text-bauhaus-black">The Decision Layer for Australian Public Spending</p>
-          <p className="text-sm text-bauhaus-muted">Who gets funded. Who gets contracted. Where services go. How allocations are justified.</p>
-        </div>
       </section>
 
-      {/* Data Sources */}
-      <section className="border-t-4 border-bauhaus-black pt-16 pb-8">
-        <h2 className="text-2xl font-black text-center text-bauhaus-black mb-3">Data Sources</h2>
-        <p className="text-center text-sm text-bauhaus-muted mb-10 max-w-2xl mx-auto">
-          CivicGraph connects {stats.sourceCount || 44} data sources across government procurement, philanthropy,
-          political donations, corporate filings, and community organisations into a single market map.
-        </p>
-        <div className="flex flex-wrap justify-center gap-3 max-w-3xl mx-auto mb-12">
+      <section className="border-4 border-bauhaus-black bg-white">
+        <div className="grid gap-0 md:grid-cols-3">
           {[
-            { name: 'GrantConnect', color: 'bg-bauhaus-blue' },
-            { name: 'ACNC', color: 'bg-bauhaus-red' },
-            { name: 'data.gov.au', color: 'bg-bauhaus-black' },
-            { name: 'NSW.gov.au', color: 'bg-bauhaus-blue' },
-            { name: 'QLD Grants', color: 'bg-bauhaus-red' },
-            { name: 'VIC.gov.au', color: 'bg-bauhaus-black' },
-            { name: 'SA.gov.au', color: 'bg-bauhaus-yellow' },
-            { name: 'WA.gov.au', color: 'bg-bauhaus-blue' },
-            { name: 'TAS.gov.au', color: 'bg-bauhaus-red' },
-            { name: 'NT.gov.au', color: 'bg-bauhaus-yellow' },
-            { name: 'ACT.gov.au', color: 'bg-bauhaus-black' },
-            { name: 'ARC', color: 'bg-bauhaus-blue' },
-            { name: 'NHMRC', color: 'bg-bauhaus-red' },
-            { name: 'business.gov.au', color: 'bg-bauhaus-black' },
-            { name: 'ORIC', color: 'bg-bauhaus-red' },
-            { name: 'AusTender', color: 'bg-bauhaus-blue' },
-            { name: 'ASIC', color: 'bg-bauhaus-black' },
-            { name: 'ATO', color: 'bg-bauhaus-yellow' },
-            { name: 'ASX', color: 'bg-bauhaus-red' },
-            { name: 'AEC Donations', color: 'bg-bauhaus-red' },
-            { name: 'ABR', color: 'bg-bauhaus-yellow' },
-            { name: 'NDIS', color: 'bg-bauhaus-blue' },
-            { name: 'Modern Slavery Register', color: 'bg-bauhaus-black' },
-            { name: 'Lobbying Register', color: 'bg-bauhaus-blue' },
-            { name: 'State Procurement', color: 'bg-bauhaus-red' },
-          ].map(src => (
-            <span key={src.name} className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-bauhaus-black">
-              <span className={`w-2.5 h-2.5 ${src.color} border border-bauhaus-black`} />
-              {src.name}
-            </span>
+            {
+              title: 'For Funding Teams',
+              copy: 'Run the live pipeline, keep signal over noise, and generate the next brief without rebuilding the research every week.',
+            },
+            {
+              title: 'For Place-Based Funders And Commissioners',
+              copy: 'Use the same graph to understand who is credible, where money already flows, what procurement paths exist, and what is still missing.',
+            },
+            {
+              title: 'For Research, Reporting, And Story Teams',
+              copy: 'Move from raw company or field data into defensible public argument, partner reporting, and story-ready context.',
+            },
+          ].map((card, index) => (
+            <div
+              key={card.title}
+              className={`p-8 ${index < 2 ? 'border-b-4 border-bauhaus-black md:border-b-0 md:border-r-4' : ''}`}
+            >
+              <p className="text-xs font-black uppercase tracking-widest text-bauhaus-blue">Built For</p>
+              <h2 className="mt-3 text-2xl font-black tracking-tight text-bauhaus-black">{card.title}</h2>
+              <p className="mt-3 text-sm font-medium leading-relaxed text-bauhaus-muted">{card.copy}</p>
+            </div>
           ))}
         </div>
       </section>
 
-      {/* Reports teasers */}
-      <section className="border-t-4 border-bauhaus-black pt-16 pb-8">
-        <h2 className="text-2xl font-black text-center text-bauhaus-black mb-2">CivicGraph Intelligence</h2>
-        <p className="text-center text-bauhaus-muted mb-10 text-sm font-medium">Living investigations into how money flows — updated as new data arrives</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 max-w-4xl mx-auto">
-          <a href="/reports/convergence" className="group block sm:col-span-2 lg:col-span-3">
-            <div className="bg-bauhaus-blue border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1" style={{ boxShadow: '6px 6px 0px 0px var(--color-bauhaus-black)' }}>
-              <div className="text-xs font-black text-bauhaus-yellow mb-1 uppercase tracking-widest">Flagship Investigation</div>
-              <h3 className="font-black text-white mb-1">One Child. Five Systems. Zero Coordination.</h3>
-              <p className="text-sm text-white/80">Child protection, youth justice, disability, education, welfare — the same communities appear in every system. The money maintains the system, not the person.</p>
+      <section className="border-4 border-bauhaus-black bg-bauhaus-canvas">
+        <div className="border-b-4 border-bauhaus-black bg-white p-8 text-center sm:p-10">
+          <p className="text-xs font-black uppercase tracking-[0.3em] text-bauhaus-red">How It Works</p>
+          <h2 className="mt-3 text-3xl font-black tracking-tight text-bauhaus-black sm:text-4xl">
+            One Workflow. Four Outputs.
+          </h2>
+          <p className="mx-auto mt-4 max-w-2xl text-sm font-medium leading-relaxed text-bauhaus-muted">
+            The product should not feel like a directory or a demo. It should feel like a decision workspace
+            that can generate the next move, the next brief, and the next narrative from one shared base.
+          </p>
+        </div>
+
+        <div className="grid gap-0 md:grid-cols-4">
+          {[
+            ['1. See Reality', 'Follow the live graph across grants, funders, entities, place, and procurement context.'],
+            ['2. Choose A Move', 'Rank what matters now instead of forcing people to browse disconnected modules.'],
+            ['3. Build The Brief', 'Generate a memo, pack, or report with a visible evidence chain.'],
+            ['4. Tell The Story', 'Carry the approved analysis into reporting and Empathy Ledger-style narrative work.'],
+          ].map(([title, copy], index) => (
+            <div
+              key={title}
+              className={`p-6 sm:p-8 ${index < 3 ? 'border-b-4 border-bauhaus-black md:border-b-0 md:border-r-4' : ''}`}
+            >
+              <p className="text-lg font-black text-bauhaus-black">{title}</p>
+              <p className="mt-3 text-sm font-medium leading-relaxed text-bauhaus-muted">{copy}</p>
             </div>
-          </a>
-          <a href="/reports/donor-contractors" className="group block sm:col-span-2 lg:col-span-3">
-            <div className="bg-bauhaus-red border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1" style={{ boxShadow: '6px 6px 0px 0px var(--color-bauhaus-black)' }}>
-              <div className="text-xs font-black text-bauhaus-yellow mb-1 uppercase tracking-widest">Entity Graph Investigation</div>
-              <h3 className="font-black text-white mb-1">Donate. Win Contracts. Repeat.</h3>
-              <p className="text-sm text-white/80">{stats.donorContractorCount} entities donated {money(stats.dcTotalDonated)} to political parties and received {money(stats.dcTotalContracts)} in government contracts.</p>
+          ))}
+        </div>
+      </section>
+
+      <section className="border-4 border-bauhaus-black bg-white">
+        <div className="border-b-4 border-bauhaus-black p-8 sm:p-10">
+          <p className="text-xs font-black uppercase tracking-[0.3em] text-bauhaus-blue">Agent Support</p>
+          <h2 className="mt-3 text-3xl font-black tracking-tight text-bauhaus-black sm:text-4xl">
+            Same Evidence Chain. Different Agents.
+          </h2>
+          <p className="mt-4 max-w-3xl text-sm font-medium leading-relaxed text-bauhaus-muted">
+            Agents should not create a second system. They should keep the main loop moving: scout what changed,
+            link the relevant entities, draft the next pack, then prepare reporting or story outputs from the same
+            underlying context.
+          </p>
+        </div>
+        <div className="grid gap-0 md:grid-cols-4">
+          {[
+            ['Scout', 'Watches frontier pages, deadlines, and funder movement so the team sees what changed first.'],
+            ['Analyst', 'Connects company, foundation, procurement, and place data into a usable decision view.'],
+            ['Brief Builder', 'Turns the evidence into board notes, partner packs, and opportunity memos.'],
+            ['Story Layer', 'Prepares approved analysis for reporting and narrative outputs instead of leaving it trapped in ops.'],
+          ].map(([title, copy], index) => (
+            <div
+              key={title}
+              className={`p-6 sm:p-8 ${index < 3 ? 'border-b-4 border-bauhaus-black md:border-b-0 md:border-r-4' : ''}`}
+            >
+              <p className="text-lg font-black text-bauhaus-black">{title}</p>
+              <p className="mt-3 text-sm font-medium leading-relaxed text-bauhaus-muted">{copy}</p>
             </div>
-          </a>
-          <a href="/reports/big-philanthropy" className="group block sm:col-span-2 lg:col-span-3">
-            <div className="bg-bauhaus-black border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1" style={{ boxShadow: '6px 6px 0px 0px var(--color-bauhaus-red)' }}>
-              <div className="text-xs font-black text-bauhaus-yellow mb-1 uppercase tracking-widest">Data Investigation</div>
-              <h3 className="font-black text-white mb-1">Where Does Australia&apos;s $222 Billion Go?</h3>
-              <p className="text-sm text-bauhaus-muted group-hover:text-white/60">National charity registry analysis with longitudinal ACNC reporting and funding-flow context.</p>
+          ))}
+        </div>
+      </section>
+
+      <section className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
+        <div className="border-4 border-bauhaus-black bg-white p-8 sm:p-10">
+          <p className="text-xs font-black uppercase tracking-[0.3em] text-bauhaus-blue">Why It Wins</p>
+          <h2 className="mt-3 text-3xl font-black tracking-tight text-bauhaus-black">
+            Better Than A Static Grants Product
+          </h2>
+          <div className="mt-6 space-y-4">
+            {[
+              'Continuous frontier polling instead of one-off scraping.',
+              'Entity and relationship context, not just opportunity rows.',
+              'Foundation, procurement, place, and company data in one surface.',
+              'The same context can drive alerts, briefs, reporting, and stories.',
+            ].map((line) => (
+              <div key={line} className="flex gap-3 border-4 border-bauhaus-black bg-bauhaus-canvas p-4">
+                <span className="text-lg font-black text-bauhaus-red">+</span>
+                <p className="text-sm font-bold text-bauhaus-black">{line}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="border-4 border-bauhaus-black bg-bauhaus-black p-8 text-white sm:p-10">
+          <p className="text-xs font-black uppercase tracking-[0.3em] text-bauhaus-yellow">
+            From Signal To Story
+          </p>
+          <h2 className="mt-3 text-3xl font-black tracking-tight">
+            Company Data That Can Become A Brief Or A Story.
+          </h2>
+          <p className="mt-4 max-w-2xl text-sm font-medium leading-relaxed text-white/70">
+            CivicGraph should be able to start with an entity, a field, or a procurement pathway, then
+            carry that analysis forward into reporting and narrative work. That is where the bridge to
+            Empathy Ledger becomes valuable: shared context, governed voice, and a cleaner path from
+            operational evidence to public story.
+          </p>
+          <div className="mt-6 flex flex-wrap gap-2">
+            {[
+              'Company profile',
+              'Funder fit',
+              'Procurement read',
+              'Place context',
+              'Evidence chain',
+              'Reporting narrative',
+            ].map((chip, index) => (
+              <span
+                key={chip}
+                className={`border-2 px-3 py-1 text-[10px] font-black uppercase tracking-widest ${
+                  index % 3 === 0
+                    ? 'border-bauhaus-yellow/40 bg-bauhaus-yellow/10 text-bauhaus-yellow'
+                    : index % 3 === 1
+                      ? 'border-white/20 bg-white/5 text-white/70'
+                      : 'border-bauhaus-blue/40 bg-bauhaus-blue/10 text-bauhaus-blue'
+                }`}
+              >
+                {chip}
+              </span>
+            ))}
+          </div>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2">
+            {[
+              {
+                value: fmt(stats.donorContractorCount) || '0',
+                label: 'linked power cases already visible in the graph',
+              },
+              {
+                value: fmt(stats.totalRelationships) || '0',
+                label: 'relationship edges available for analysis, packs, and reporting',
+              },
+            ].map((item) => (
+              <div key={item.label} className="border-4 border-white/20 p-5">
+                <p className="text-3xl font-black text-bauhaus-yellow">{item.value}</p>
+                <p className="mt-2 text-xs font-black uppercase tracking-widest text-white/45">{item.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="border-4 border-bauhaus-black bg-white">
+        <div className="border-b-4 border-bauhaus-black p-8 sm:p-10">
+          <p className="text-xs font-black uppercase tracking-[0.3em] text-bauhaus-muted">Paid Plans Focus On Outcomes</p>
+          <h2 className="mt-3 text-3xl font-black tracking-tight text-bauhaus-black sm:text-4xl">
+            What People Pay For
+          </h2>
+        </div>
+        <div className="grid gap-0 md:grid-cols-3">
+          {[
+            {
+              title: 'Professional',
+              copy: 'Best for solo grant consultants and grants managers who need better matching, alerts, and a cleaner pipeline.',
+              tone: 'bg-white',
+            },
+            {
+              title: 'Organisation',
+              copy: 'Best for teams that need shared tracking, briefing, reporting, and a consistent prospecting workflow across multiple submissions.',
+              tone: 'bg-bauhaus-red text-white',
+            },
+            {
+              title: 'Intelligence / Enterprise',
+              copy: 'Good later for portfolio intelligence, procurement analysis, reporting pipelines, and API workflows. Valuable, but not the first wedge.',
+              tone: 'bg-bauhaus-canvas',
+            },
+          ].map((item, index) => (
+            <div
+              key={item.title}
+              className={`${item.tone} p-8 sm:p-10 ${index < 2 ? 'border-b-4 border-bauhaus-black md:border-b-0 md:border-r-4' : ''}`}
+            >
+              <p className="text-xs font-black uppercase tracking-widest text-bauhaus-blue">{item.title}</p>
+              <p className={`mt-4 text-sm font-medium leading-relaxed ${item.tone.includes('text-white') ? 'text-white/75' : 'text-bauhaus-muted'}`}>
+                {item.copy}
+              </p>
             </div>
-          </a>
-          <a href="/reports/community-parity" className="group block">
-            <div className="bg-white border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-red group-hover:text-white">
-              <div className="text-xs font-black text-bauhaus-red mb-1 uppercase tracking-widest group-hover:text-bauhaus-yellow">New</div>
-              <h3 className="font-black text-bauhaus-black mb-1 group-hover:text-white">Community Parity</h3>
-              <p className="text-sm text-bauhaus-muted group-hover:text-white/80">0.5% to First Nations. 12% to women. Who misses out.</p>
-            </div>
-          </a>
-          <a href="/reports/community-power" className="group block">
-            <div className="bg-white border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-blue group-hover:text-white">
-              <div className="text-xs font-black text-bauhaus-blue mb-1 uppercase tracking-widest group-hover:text-bauhaus-yellow">New</div>
-              <h3 className="font-black text-bauhaus-black mb-1 group-hover:text-white">Community Power Playbook</h3>
-              <p className="text-sm text-bauhaus-muted group-hover:text-white/80">Co-ops, social enterprise, and alternatives to grants.</p>
-            </div>
-          </a>
-          <a href="/reports/social-enterprise" className="group block">
-            <div className="bg-white border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-red group-hover:text-white">
-              <div className="text-xs font-black text-bauhaus-red mb-1 uppercase tracking-widest group-hover:text-bauhaus-yellow">New</div>
-              <h3 className="font-black text-bauhaus-black mb-1 group-hover:text-white">Social Enterprise in Australia</h3>
-              <p className="text-sm text-bauhaus-muted group-hover:text-white/80">A national market map for social enterprise, Indigenous business, and mission-led providers.</p>
-            </div>
-          </a>
-          <a href="/reports/youth-justice" className="group block">
-            <div className="bg-white border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-red group-hover:text-white">
-              <div className="text-xs font-black text-bauhaus-red mb-1 uppercase tracking-widest group-hover:text-bauhaus-yellow">Flagship</div>
-              <h3 className="font-black text-bauhaus-black mb-1 group-hover:text-white">QLD Youth Justice</h3>
-              <p className="text-sm text-bauhaus-muted group-hover:text-white/80">$343M/year on detention. $1.3M per child. 73% reoffend.</p>
-            </div>
-          </a>
-          <a href="/reports/power-dynamics" className="group block">
-            <div className="bg-white border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-black group-hover:text-white">
-              <div className="text-xs font-black text-purple mb-1 uppercase tracking-widest group-hover:text-bauhaus-yellow">Live</div>
-              <h3 className="font-black text-bauhaus-black mb-1 group-hover:text-white">Power Dynamics</h3>
-              <p className="text-sm text-bauhaus-muted group-hover:text-white/80">Who controls Australia&apos;s philanthropy?</p>
-            </div>
-          </a>
-          <a href="/reports/access-gap" className="group block">
-            <div className="bg-white border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-yellow">
-              <div className="text-xs font-black text-bauhaus-yellow mb-1 uppercase tracking-widest group-hover:text-bauhaus-black">Live</div>
-              <h3 className="font-black text-bauhaus-black mb-1">The Access Gap</h3>
-              <p className="text-sm text-bauhaus-muted group-hover:text-bauhaus-black/70">Small orgs spend 40% on admin. Large orgs spend 15%.</p>
-            </div>
-          </a>
-          <a href="/reports/money-flow" className="group block">
-            <div className="bg-white border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-blue group-hover:text-white">
-              <div className="text-xs font-black text-bauhaus-blue mb-1 uppercase tracking-widest group-hover:text-bauhaus-yellow">Live</div>
-              <h3 className="font-black text-bauhaus-black mb-1 group-hover:text-white">Follow the Dollar</h3>
-              <p className="text-sm text-bauhaus-muted group-hover:text-white/80">Trace funding flows from taxpayer to outcome.</p>
-            </div>
-          </a>
-          <a href="/reports/ndis" className="group block">
-            <div className="bg-white border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-blue group-hover:text-white">
-              <div className="text-xs font-black text-bauhaus-blue mb-1 uppercase tracking-widest group-hover:text-bauhaus-yellow">New</div>
-              <h3 className="font-black text-bauhaus-black mb-1 group-hover:text-white">The Disability Dollar</h3>
-              <p className="text-sm text-bauhaus-muted group-hover:text-white/80">350K NDIS records. Market concentration. Thin markets. Who provides, who misses out.</p>
-            </div>
-          </a>
-          <a href="/reports/research-funding" className="group block">
-            <div className="bg-white border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-black group-hover:text-white">
-              <div className="text-xs font-black text-bauhaus-black mb-1 uppercase tracking-widest group-hover:text-bauhaus-yellow">New</div>
-              <h3 className="font-black text-bauhaus-black mb-1 group-hover:text-white">The $29 Billion Question</h3>
-              <p className="text-sm text-bauhaus-muted group-hover:text-white/80">46K ARC + NHMRC grants. Who gets the research money, and where.</p>
-            </div>
-          </a>
-          <a href="/reports/state-procurement" className="group block">
-            <div className="bg-white border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-yellow">
-              <div className="text-xs font-black text-bauhaus-yellow mb-1 uppercase tracking-widest group-hover:text-bauhaus-black">New</div>
-              <h3 className="font-black text-bauhaus-black mb-1">State Procurement</h3>
-              <p className="text-sm text-bauhaus-muted group-hover:text-bauhaus-black/70">200K state government contracts. Department breakdowns. Supplier intelligence.</p>
-            </div>
-          </a>
-          <a href="/reports/state-of-the-nation" className="group block sm:col-span-2 lg:col-span-3">
-            <div className="bg-bauhaus-red border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1" style={{ boxShadow: '6px 6px 0px 0px var(--color-bauhaus-black)' }}>
-              <div className="text-xs font-black text-bauhaus-yellow mb-1 uppercase tracking-widest">Live Data</div>
-              <h3 className="font-black text-white mb-1">State of the Nation</h3>
-              <p className="text-sm text-white/80">Every entity in Australia — charities, companies, Indigenous corporations, contracts, tax data. Live numbers.</p>
-            </div>
-          </a>
-          <a href="/reports/power-map" className="group block sm:col-span-2 lg:col-span-3">
-            <div className="bg-white border-4 border-bauhaus-black p-5 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-black group-hover:text-white">
-              <div className="text-xs font-black text-bauhaus-black mb-1 uppercase tracking-widest group-hover:text-bauhaus-yellow">Deep Research</div>
-              <h3 className="font-black text-bauhaus-black mb-1 group-hover:text-white">Australia&apos;s Power Map</h3>
-              <p className="text-sm text-bauhaus-muted group-hover:text-white/80">How open data can reshape who holds power. Concentration, procurement, tax, and the case for radical transparency.</p>
-            </div>
-          </a>
+          ))}
+        </div>
+        <div className="border-t-4 border-bauhaus-black bg-bauhaus-black px-8 py-6 text-center text-white">
+          <p className="text-sm font-bold text-white/70">
+            Sell the pipeline first. Let the broader data graph strengthen the proof, not dilute the message.
+          </p>
+          <div className="mt-4 flex flex-col justify-center gap-4 sm:flex-row">
+            <a
+              href="/pricing"
+              className="inline-block border-4 border-white bg-white px-8 py-3 text-xs font-black uppercase tracking-widest text-bauhaus-black transition-colors hover:bg-bauhaus-yellow"
+            >
+              See Plans
+            </a>
+            <a
+              href="/register"
+              className="inline-block border-4 border-white px-8 py-3 text-xs font-black uppercase tracking-widest text-white transition-colors hover:bg-white hover:text-bauhaus-black"
+            >
+              Start Free
+            </a>
+          </div>
         </div>
       </section>
     </div>

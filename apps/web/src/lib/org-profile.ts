@@ -4,10 +4,13 @@ import { getServiceSupabase } from '@/lib/supabase';
 export interface OrgProfileSummary {
   id: string;
   name: string;
+  slug: string | null;
   abn: string | null;
   subscription_plan: string | null;
   org_type: string | null;
   geographic_focus: string[] | null;
+  mission: string | null;
+  description: string | null;
 }
 
 export interface OrgProfileContext {
@@ -61,7 +64,7 @@ export async function getCurrentOrgProfileContext(
   if (impersonateSlug) {
     const { data: impOrg } = await serviceDb
       .from('org_profiles')
-      .select('id, name, abn, subscription_plan, org_type, geographic_focus')
+      .select('id, name, slug, abn, subscription_plan, org_type, geographic_focus, mission, description')
       .eq('slug', impersonateSlug)
       .maybeSingle();
 
@@ -77,7 +80,7 @@ export async function getCurrentOrgProfileContext(
 
   const { data: ownedProfile } = await serviceDb
     .from('org_profiles')
-    .select('id, name, abn, subscription_plan, org_type, geographic_focus')
+    .select('id, name, slug, abn, subscription_plan, org_type, geographic_focus, mission, description')
     .eq('user_id', userId)
     .maybeSingle();
 
@@ -97,10 +100,13 @@ export async function getCurrentOrgProfileContext(
       org_profile:org_profile_id(
         id,
         name,
+        slug,
         abn,
         subscription_plan,
         org_type,
-        geographic_focus
+        geographic_focus,
+        mission,
+        description
       )
     `)
     .eq('user_id', userId)

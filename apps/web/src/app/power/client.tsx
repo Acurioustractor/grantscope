@@ -81,6 +81,8 @@ export function PowerPageClient() {
   const [health, setHealth] = useState<DataHealth | null>(null);
   const [accountability, setAccountability] = useState<any>(null);
   const [foundations, setFoundations] = useState<any>(null);
+  const [boardPower, setBoardPower] = useState<any[]>([]);
+  const [boardPowerTotal, setBoardPowerTotal] = useState(0);
 
   useEffect(() => {
     fetch('/api/power/health').then(r => r.json()).then(d => {
@@ -91,6 +93,12 @@ export function PowerPageClient() {
     }).catch(() => {});
     fetch('/api/power/foundations').then(r => r.json()).then(d => {
       if (!d.error) setFoundations(d);
+    }).catch(() => {});
+    fetch('/api/data/board-power?limit=50&min_seats=3').then(r => r.json()).then(d => {
+      if (!d.error) {
+        setBoardPower(d.results || []);
+        setBoardPowerTotal(d.total || 0);
+      }
     }).catch(() => {});
   }, []);
 
@@ -294,6 +302,70 @@ export function PowerPageClient() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── Board Power Leaderboard ── */}
+      {boardPower.length > 0 && (
+        <section className="px-4 sm:px-6 lg:px-8 pb-12">
+          <div className="max-w-7xl mx-auto">
+            <div className="mb-3">
+              <h2 className="text-2xl font-black text-bauhaus-black">Board Power Leaderboard</h2>
+              <p className="text-sm text-bauhaus-muted font-medium mt-1">
+                {boardPowerTotal.toLocaleString()} people sit on 3+ charity boards simultaneously.
+                Combined revenue shows how much money flows through their governance decisions.
+              </p>
+            </div>
+            <div className="border-4 border-bauhaus-black bg-white overflow-hidden overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-bauhaus-black text-white">
+                    <th className="text-left px-4 py-2 text-[10px] font-black uppercase tracking-widest">#</th>
+                    <th className="text-left px-4 py-2 text-[10px] font-black uppercase tracking-widest">Person</th>
+                    <th className="text-right px-4 py-2 text-[10px] font-black uppercase tracking-widest">Boards</th>
+                    <th className="text-right px-4 py-2 text-[10px] font-black uppercase tracking-widest">Combined Revenue</th>
+                    <th className="text-right px-4 py-2 text-[10px] font-black uppercase tracking-widest">Combined Assets</th>
+                    <th className="text-right px-4 py-2 text-[10px] font-black uppercase tracking-widest">Combined FTE</th>
+                    <th className="text-left px-4 py-2 text-[10px] font-black uppercase tracking-widest">Top Organisations</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {boardPower.map((p: any, i: number) => (
+                    <tr key={i} className={`border-b border-gray-100 hover:bg-blue-50/30 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
+                      <td className="px-4 py-2 text-bauhaus-muted font-medium">{i + 1}</td>
+                      <td className="px-4 py-2 font-bold text-bauhaus-black">{p.person_name}</td>
+                      <td className="px-4 py-2 text-right">
+                        <span className="inline-flex items-center justify-center w-7 h-7 bg-bauhaus-black text-white font-black text-sm">
+                          {p.board_seats}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2 text-right font-medium text-green-700">
+                        {Number(p.total_org_revenue) > 0 ? money(Number(p.total_org_revenue)) : '—'}
+                      </td>
+                      <td className="px-4 py-2 text-right font-medium text-bauhaus-muted">
+                        {Number(p.total_org_assets) > 0 ? money(Number(p.total_org_assets)) : '—'}
+                      </td>
+                      <td className="px-4 py-2 text-right font-medium text-bauhaus-muted">
+                        {Number(p.total_org_fte) > 0 ? Number(p.total_org_fte).toLocaleString() : '—'}
+                      </td>
+                      <td className="px-4 py-2">
+                        <div className="flex flex-wrap gap-1">
+                          {(p.top_organizations || []).slice(0, 3).map((org: string, j: number) => (
+                            <span key={j} className="text-[10px] font-bold bg-bauhaus-canvas text-bauhaus-muted px-1.5 py-0.5 border border-bauhaus-black/10">
+                              {org.length > 30 ? org.substring(0, 30) + '...' : org}
+                            </span>
+                          ))}
+                          {(p.org_count || 0) > 3 && (
+                            <span className="text-[10px] text-bauhaus-muted font-bold">+{p.org_count - 3}</span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </section>

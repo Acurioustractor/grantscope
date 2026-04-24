@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 interface Intervention {
   id: string;
@@ -75,7 +76,7 @@ const EVIDENCE_LEVELS = [
 
 const STATES = ['All', 'NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'NT', 'ACT'];
 
-export default function JusticeReinvestmentPage() {
+function JusticeReinvestmentContent() {
   const [data, setData] = useState<ApiResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -86,6 +87,9 @@ export default function JusticeReinvestmentPage() {
   const [linkedOnly, setLinkedOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const searchParams = useSearchParams();
+  const source = searchParams.get('source');
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -127,6 +131,16 @@ export default function JusticeReinvestmentPage() {
       <Link href="/" className="text-xs font-black text-bauhaus-muted uppercase tracking-widest hover:text-bauhaus-black">
         &larr; Home
       </Link>
+
+      {source === 'judges-campaign' && (
+        <div className="mt-4 bg-bauhaus-red text-white p-4 border-4 border-bauhaus-black flex flex-col md:flex-row gap-4 items-start shadow-[4px_4px_0px_0px_rgba(10,10,10,1)]">
+          <div className="text-xl md:text-2xl font-black shrink-0 md:mt-1 tracking-tight">ACCOUNTABILITY GAP</div>
+          <div>
+            <p className="font-bold text-sm">You are viewing verified community-led programs. Parliamentary records show detention is discussed 5 times more often than these proven alternatives.</p>
+            <p className="text-xs mt-1 opacity-90 font-mono">As part of the JusticeHub judges initiative, use this map to discover structural alternative funding in your jurisdiction.</p>
+          </div>
+        </div>
+      )}
 
       {/* Hero */}
       <div className="mt-4 mb-6">
@@ -410,5 +424,13 @@ export default function JusticeReinvestmentPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function JusticeReinvestmentPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <JusticeReinvestmentContent />
+    </Suspense>
   );
 }

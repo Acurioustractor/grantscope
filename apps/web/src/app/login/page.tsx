@@ -3,6 +3,7 @@
 import { Suspense, useState } from 'react';
 import { createSupabaseBrowser } from '@/lib/supabase-browser';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { resolveAuthRedirect } from '@/lib/auth-redirect';
 
 function LoginForm() {
   const [email, setEmail] = useState('');
@@ -11,7 +12,7 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get('redirect');
+  const redirectPath = resolveAuthRedirect(searchParams);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -30,7 +31,7 @@ function LoginForm() {
       return;
     }
 
-    router.push(redirect || '/tracker');
+    router.push(redirectPath);
     router.refresh();
   }
 
@@ -90,7 +91,7 @@ function LoginForm() {
 
             <p className="text-center text-sm text-bauhaus-muted font-medium">
               Don&apos;t have an account?{' '}
-              <a href={redirect ? `/register?redirect=${encodeURIComponent(redirect)}` : '/register'} className="text-bauhaus-blue hover:text-bauhaus-red font-bold">
+              <a href={redirectPath !== '/continue' ? `/register?redirect=${encodeURIComponent(redirectPath)}` : '/register'} className="text-bauhaus-blue hover:text-bauhaus-red font-bold">
                 Create one
               </a>
             </p>
