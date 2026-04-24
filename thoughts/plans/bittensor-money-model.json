@@ -1,0 +1,106 @@
+{
+  "baseline": {
+    "asOf": "2026-04-09",
+    "entitiesTotal": 587307,
+    "lowSourceEntities": 569424,
+    "foundationsTotal": 10748
+  },
+  "marketAssumptions": {
+    "taoPriceUsd": 480
+  },
+  "scenarios": {
+    "base": {
+      "consumerTrack": {
+        "enrichedEntitiesPerMonth": 3000,
+        "pricePerEnrichedEntityUsd": 4,
+        "costPerEnrichedEntityUsd": 0.8,
+        "attestedExportsPerMonth": 300,
+        "pricePerAttestedExportUsd": 95,
+        "costPerAttestedExportUsd": 1.5,
+        "subscriptionCustomers": 30,
+        "subscriptionArpuUsd": 299,
+        "subscriptionDeliveryCostRate": 0.25
+      },
+      "miningTrack": {
+        "miners": 6,
+        "taoPerMinerPerDay": 0.03,
+        "uptimeRate": 0.93,
+        "infraCostPerMinerUsd": 380,
+        "opsAndMonitoringCostUsd": 1800,
+        "validatorOrDelegationCostUsd": 1200
+      },
+      "signalsTrack": {
+        "monthlyReportClients": 8,
+        "pricePerMonthlyReportUsd": 2400,
+        "apiCustomers": 6,
+        "apiArpuUsd": 1800,
+        "customEngagementsPerMonth": 2,
+        "customEngagementValueUsd": 6500,
+        "deliveryCostRate": 0.3,
+        "fixedTeamCostUsd": 9500
+      }
+    },
+    "push": {
+      "consumerTrack": {
+        "enrichedEntitiesPerMonth": 8000,
+        "pricePerEnrichedEntityUsd": 4.5,
+        "costPerEnrichedEntityUsd": 0.9,
+        "attestedExportsPerMonth": 850,
+        "pricePerAttestedExportUsd": 110,
+        "costPerAttestedExportUsd": 1.7,
+        "subscriptionCustomers": 75,
+        "subscriptionArpuUsd": 349,
+        "subscriptionDeliveryCostRate": 0.22
+      },
+      "miningTrack": {
+        "miners": 14,
+        "taoPerMinerPerDay": 0.035,
+        "uptimeRate": 0.95,
+        "infraCostPerMinerUsd": 420,
+        "opsAndMonitoringCostUsd": 3200,
+        "validatorOrDelegationCostUsd": 2200
+      },
+      "signalsTrack": {
+        "monthlyReportClients": 20,
+        "pricePerMonthlyReportUsd": 2900,
+        "apiCustomers": 20,
+        "apiArpuUsd": 2200,
+        "customEngagementsPerMonth": 4,
+        "customEngagementValueUsd": 10000,
+        "deliveryCostRate": 0.28,
+        "fixedTeamCostUsd": 18000
+      }
+    },
+    "aggressive": {
+      "consumerTrack": {
+        "enrichedEntitiesPerMonth": 20000,
+        "pricePerEnrichedEntityUsd": 5,
+        "costPerEnrichedEntityUsd": 1,
+        "attestedExportsPerMonth": 2500,
+        "pricePerAttestedExportUsd": 130,
+        "costPerAttestedExportUsd": 2,
+        "subscriptionCustomers": 160,
+        "subscriptionArpuUsd": 399,
+        "subscriptionDeliveryCostRate": 0.2
+      },
+      "miningTrack": {
+        "miners": 30,
+        "taoPerMinerPerDay": 0.04,
+        "uptimeRate": 0.96,
+        "infraCostPerMinerUsd": 450,
+        "opsAndMonitoringCostUsd": 6000,
+        "validatorOrDelegationCostUsd": 4500
+      },
+      "signalsTrack": {
+        "monthlyReportClients": 45,
+        "pricePerMonthlyReportUsd": 3200,
+        "apiCustomers": 40,
+        "apiArpuUsd": 2600,
+        "customEngagementsPerMonth": 8,
+        "customEngagementValueUsd": 15000,
+        "deliveryCostRate": 0.25,
+        "fixedTeamCostUsd": 35000
+      }
+    }
+  }
+}
