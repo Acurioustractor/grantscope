@@ -84,6 +84,7 @@ export async function GET(request: Request) {
       },
       health: '/api/data/health',
       export: '/api/data/export?type=foundations&format=csv',
+      catalog: '/api/data/catalog',
       docs: 'All endpoints support limit, offset, and format (json/csv) params.',
     }));
   }
