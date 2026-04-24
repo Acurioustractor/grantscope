@@ -5,6 +5,19 @@ import { getServiceSupabase } from '@/lib/supabase';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
 
+function canonicalSourceSql(): string {
+  return `COALESCE(
+    NULLIF(discovery_method, ''),
+    CASE
+      WHEN source = 'foundation_program' THEN NULL
+      WHEN COALESCE(source_id, '') ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN NULL
+      ELSE NULLIF(source_id, '')
+    END,
+    source,
+    'unknown'
+  )`;
+}
+
 // Wrap a promise with a timeout — returns fallback instead of hanging forever
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function safe(p: PromiseLike<any>, ms = 15000): Promise<any> {
@@ -20,6 +33,7 @@ export async function GET() {
   if (auth.error) return auth.error;
 
   const db = getServiceSupabase();
+  const grantCanonicalSource = canonicalSourceSql();
 
   try {
     // All queries in one parallel batch — RPCs are instant, filtered counts are best-effort
@@ -31,6 +45,10 @@ export async function GET() {
       grantsWithDesc, grantsEnriched, grantsEmbedded, grantsOpen,
       foundationsProfiled, foundationsWithWebsite,
       seEnriched,
+      grantSemanticsSummary,
+      grantSemanticsSources,
+      grantSourceIdentitySummary,
+      grantSourceIdentitySources,
       // Breakdowns + recent runs
       sourceBreakdownResult, confidenceBreakdownResult,
       recentRuns, recentDiscoveryRuns,
@@ -59,6 +77,88 @@ export async function GET() {
         .not('website', 'is', null), 10000),
       safe(db.from('social_enterprises').select('*', { count: 'exact', head: true })
         .not('enriched_at', 'is', null), 10000),
+      safe(db.rpc('exec_sql', { query: `
+        SELECT
+          COUNT(*) FILTER (WHERE status IS NULL) AS status_null_total,
+          COUNT(*) FILTER (WHERE application_status IS NULL) AS application_status_null_total,
+          COUNT(*) FILTER (WHERE status = 'open' AND closes_at < CURRENT_DATE) AS open_past_deadline_total,
+          COUNT(*) FILTER (WHERE source = 'ghl_sync' AND status = 'unknown') AS ghl_sync_unknown_total
+        FROM grant_opportunities
+      ` }), 10000),
+      safe(db.rpc('exec_sql', { query: `
+        SELECT
+          ${grantCanonicalSource} AS source,
+          COUNT(*) FILTER (WHERE status IS NULL) AS status_null,
+          COUNT(*) FILTER (WHERE application_status IS NULL) AS application_status_null,
+          COUNT(*) FILTER (WHERE status = 'open' AND closes_at < CURRENT_DATE) AS open_past_deadline,
+          (
+            COUNT(*) FILTER (WHERE status IS NULL)
+            + COUNT(*) FILTER (WHERE application_status IS NULL)
+            + COUNT(*) FILTER (WHERE status = 'open' AND closes_at < CURRENT_DATE)
+          ) AS total_issues
+        FROM grant_opportunities
+        GROUP BY ${grantCanonicalSource}
+        HAVING (
+          COUNT(*) FILTER (WHERE status IS NULL)
+          + COUNT(*) FILTER (WHERE application_status IS NULL)
+          + COUNT(*) FILTER (WHERE status = 'open' AND closes_at < CURRENT_DATE)
+        ) > 0
+        ORDER BY total_issues DESC, source ASC
+        LIMIT 10
+      ` }), 10000),
+      safe(db.rpc('exec_sql', { query: `
+        SELECT
+          COUNT(*) FILTER (
+            WHERE discovered_by = 'grant_engine'
+              AND COALESCE(discovery_method, '') <> ''
+              AND COALESCE(source_id, '') = ''
+          ) AS blank_source_id_total,
+          COUNT(*) FILTER (
+            WHERE discovered_by = 'grant_engine'
+              AND COALESCE(discovery_method, '') <> ''
+              AND COALESCE(source_id, '') <> ''
+              AND source_id NOT LIKE '%::duplicate::%'
+              AND source_id <> discovery_method
+          ) AS canonical_mismatch_total,
+          COUNT(*) FILTER (
+            WHERE discovered_by = 'grant_engine'
+              AND source_id LIKE '%::duplicate::%'
+              AND status = 'duplicate'
+          ) AS duplicate_shadow_total
+        FROM grant_opportunities
+      ` }), 10000),
+      safe(db.rpc('exec_sql', { query: `
+        SELECT
+          discovery_method AS source,
+          COUNT(*) FILTER (WHERE COALESCE(source_id, '') = '') AS blank_source_id,
+          COUNT(*) FILTER (
+            WHERE COALESCE(source_id, '') <> ''
+              AND source_id NOT LIKE '%::duplicate::%'
+              AND source_id <> discovery_method
+          ) AS canonical_mismatch,
+          (
+            COUNT(*) FILTER (WHERE COALESCE(source_id, '') = '')
+            + COUNT(*) FILTER (
+              WHERE COALESCE(source_id, '') <> ''
+                AND source_id NOT LIKE '%::duplicate::%'
+                AND source_id <> discovery_method
+            )
+          ) AS total_issues
+        FROM grant_opportunities
+        WHERE discovered_by = 'grant_engine'
+          AND COALESCE(discovery_method, '') <> ''
+        GROUP BY discovery_method
+        HAVING (
+          COUNT(*) FILTER (WHERE COALESCE(source_id, '') = '')
+          + COUNT(*) FILTER (
+            WHERE COALESCE(source_id, '') <> ''
+              AND source_id NOT LIKE '%::duplicate::%'
+              AND source_id <> discovery_method
+          )
+        ) > 0
+        ORDER BY total_issues DESC, source ASC
+        LIMIT 10
+      ` }), 10000),
       // Breakdowns
       safe(db.rpc('get_grant_source_breakdown'), 8000),
       safe(db.rpc('get_foundation_confidence_breakdown'), 8000),
@@ -103,6 +203,45 @@ export async function GET() {
     const dcData = donorContractorStats.data ?? [];
     const dcTotalDonated = dcData.reduce((s: number, r: { total_donated: number }) => s + (r.total_donated || 0), 0);
     const dcTotalContracts = dcData.reduce((s: number, r: { total_contract_value: number }) => s + (r.total_contract_value || 0), 0);
+    const gsRows = grantSemanticsSummary.data ?? [];
+    const gs = Array.isArray(gsRows) && gsRows.length > 0 ? gsRows[0] : {};
+    const grantSemantics = {
+      statusNull: Number(gs.status_null_total ?? 0),
+      applicationStatusNull: Number(gs.application_status_null_total ?? 0),
+      openPastDeadline: Number(gs.open_past_deadline_total ?? 0),
+      ghlUnknown: Number(gs.ghl_sync_unknown_total ?? 0),
+      topIssueSources: (grantSemanticsSources.data ?? []).map((row: {
+        source: string;
+        status_null: number | string;
+        application_status_null: number | string;
+        open_past_deadline: number | string;
+        total_issues: number | string;
+      }) => ({
+        source: row.source,
+        statusNull: Number(row.status_null ?? 0),
+        applicationStatusNull: Number(row.application_status_null ?? 0),
+        openPastDeadline: Number(row.open_past_deadline ?? 0),
+        totalIssues: Number(row.total_issues ?? 0),
+      })),
+    };
+    const gsiRows = grantSourceIdentitySummary.data ?? [];
+    const gsi = Array.isArray(gsiRows) && gsiRows.length > 0 ? gsiRows[0] : {};
+    const sourceIdentity = {
+      blankSourceId: Number(gsi.blank_source_id_total ?? 0),
+      canonicalMismatch: Number(gsi.canonical_mismatch_total ?? 0),
+      duplicateShadows: Number(gsi.duplicate_shadow_total ?? 0),
+      topIssueSources: (grantSourceIdentitySources.data ?? []).map((row: {
+        source: string;
+        blank_source_id: number | string;
+        canonical_mismatch: number | string;
+        total_issues: number | string;
+      }) => ({
+        source: row.source,
+        blankSourceId: Number(row.blank_source_id ?? 0),
+        canonicalMismatch: Number(row.canonical_mismatch ?? 0),
+        totalIssues: Number(row.total_issues ?? 0),
+      })),
+    };
 
     const dataFreshness = [
       { dataset: 'Grants', table: 'grant_opportunities', count: tcount('grant_opportunities'), lastUpdated: tfresh('grant_opportunities') },
@@ -168,6 +307,8 @@ export async function GET() {
           enriched: seEnriched.count ?? 0,
         },
       },
+      grantSemantics,
+      sourceIdentity,
       entityGraph: {
         totalEntities: tcount('gs_entities'),
         totalRelationships: tcount('gs_relationships'),
