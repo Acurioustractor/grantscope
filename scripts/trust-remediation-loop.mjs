@@ -15,7 +15,19 @@
 
 import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
-import { spawnSync } from 'node:child_process';
+import { spawnSync, execSync } from 'node:child_process';
+
+// Resolve absolute binary paths at load time — scheduler/cron contexts
+// often have minimal PATH so `psql` and `node` aren't found otherwise.
+function resolveBin(name) {
+  try {
+    return execSync(`which ${name}`, { encoding: 'utf8' }).trim() || name;
+  } catch {
+    return name;
+  }
+}
+const PSQL_BIN = resolveBin('psql');
+const NODE_BIN = process.execPath; // always the absolute path of the running node
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -99,7 +111,7 @@ function runPsql(query) {
     '-c', query,
   ];
 
-  const result = spawnSync('psql', args, {
+  const result = spawnSync(PSQL_BIN, args, {
     env: { ...process.env, PGPASSWORD: DB_PASSWORD },
     encoding: 'utf8',
     timeout: 1_800_000,
@@ -146,7 +158,7 @@ function runNode(scriptPath, args = [], timeoutMs = 300000) {
     return { ok: true };
   }
 
-  const result = spawnSync('node', ['--env-file=.env', scriptPath, ...args], {
+  const result = spawnSync(NODE_BIN, ['--env-file=.env', scriptPath, ...args], {
     encoding: 'utf8',
     timeout: timeoutMs,
     maxBuffer: 10 * 1024 * 1024,

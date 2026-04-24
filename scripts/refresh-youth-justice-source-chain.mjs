@@ -1,6 +1,18 @@
 #!/usr/bin/env node
 import 'dotenv/config';
-import { spawnSync } from 'node:child_process';
+import { spawnSync, execSync } from 'node:child_process';
+
+// Resolve absolute binary paths at load time — cron/scheduler runs don't
+// have /usr/local/bin or nvm shim paths, so `psql` and `node` fail with ENOENT.
+function resolveBin(name) {
+  try {
+    return execSync(`which ${name}`, { encoding: 'utf8' }).trim() || name;
+  } catch {
+    return name;
+  }
+}
+const NODE_BIN = process.execPath;
+const PSQL_BIN = resolveBin('psql');
 import { createClient } from '@supabase/supabase-js';
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
 
@@ -44,7 +56,10 @@ function runStep(step) {
   console.log(`\n[refresh-youth-justice-source-chain] ${step.label}`);
   console.log(`[refresh-youth-justice-source-chain] ${step.command.join(' ')}`);
 
-  const result = spawnSync(step.command[0], step.command.slice(1), {
+  // Resolve 'node' / 'psql' to absolute paths so cron/scheduler context works
+  const cmd = step.command[0];
+  const resolved = cmd === 'node' ? NODE_BIN : cmd === 'psql' ? PSQL_BIN : cmd;
+  const result = spawnSync(resolved, step.command.slice(1), {
     cwd: process.cwd(),
     encoding: 'utf8',
     stdio: 'inherit',
