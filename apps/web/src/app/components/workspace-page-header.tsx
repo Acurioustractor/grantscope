@@ -23,8 +23,8 @@ export function WorkspacePageHeader({
 }: WorkspacePageHeaderProps) {
   return (
     <header className={compact ? 'mb-4' : 'mb-6'}>
-      <div className="flex items-start justify-between gap-4">
-        <div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
           {eyebrow && (
             <p className="text-[11px] font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--ws-text-tertiary)' }}>
               {eyebrow}
@@ -43,7 +43,7 @@ export function WorkspacePageHeader({
           )}
         </div>
         {actions && (
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
             {actions}
           </div>
         )}
