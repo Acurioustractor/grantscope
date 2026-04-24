@@ -18,6 +18,7 @@ dist/
 .claude/tsc-cache/
 .claude/settings.local.json
 .claude/cache/agents/
+.claude/worktrees/
 
 # Large data files (downloaded, not source)
 data/abs/
@@ -29,3 +30,12 @@ data/opensanctions/
 # Large files (exceed GitHub 100MB limit)
 data/nsw-etendering/full.jsonl
 .gstack/
+
+# Generated local runtime artifacts
+apps/web/.next.stale.*/
+apps/web/test-results/
+apps/web/playwright-report/
+logs/
+tmp/
+output/
+.tldr/status
