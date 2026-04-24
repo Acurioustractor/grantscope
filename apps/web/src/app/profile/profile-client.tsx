@@ -2,6 +2,9 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { startCheckoutForTier } from '@/lib/start-checkout';
+import { resolveSubscriptionTier, TIER_LABELS } from '@/lib/subscription';
 
 interface TeamMember {
   id: string;
@@ -143,6 +146,12 @@ interface OrgProfile {
   notify_threshold: number;
   org_status: string;
   auspice_org_name: string;
+  stripe_customer_id?: string | null;
+  subscription_plan?: string | null;
+  subscription_status?: string | null;
+  subscription_trial_end?: string | null;
+  subscription_current_period_end?: string | null;
+  subscription_cancel_at_period_end?: boolean;
 }
 
 const EMPTY_PROFILE: OrgProfile = {
@@ -161,6 +170,12 @@ const EMPTY_PROFILE: OrgProfile = {
   notify_threshold: 0.75,
   org_status: 'exploring',
   auspice_org_name: '',
+  stripe_customer_id: null,
+  subscription_plan: 'community',
+  subscription_status: null,
+  subscription_trial_end: null,
+  subscription_current_period_end: null,
+  subscription_cancel_at_period_end: false,
 };
 
 interface MatchedGrant {
@@ -181,10 +196,121 @@ function getIsImpersonating(): boolean {
   return document.cookie.split(';').some(c => c.trim().startsWith('cg_impersonate_org='));
 }
 
+function getSafeRedirect(value: string | null): string | null {
+  if (!value) return null;
+  if (!value.startsWith('/') || value.startsWith('//')) return null;
+  return value;
+}
+
+function getBillingSource(value: string | null): string {
+  if (!value) return 'profile_billing_panel';
+  const normalized = value.trim().slice(0, 80);
+  return normalized.length > 0 ? normalized : 'profile_billing_panel';
+}
+
+function formatBillingDate(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString('en-AU', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+function getBillingStatusDetails(profile: OrgProfile) {
+  const tier = resolveSubscriptionTier(profile.subscription_plan);
+  const planLabel = TIER_LABELS[tier];
+  const status = (profile.subscription_status || '').toLowerCase();
+  const trialEnd = formatBillingDate(profile.subscription_trial_end);
+  const periodEnd = formatBillingDate(profile.subscription_current_period_end);
+
+  if (profile.subscription_cancel_at_period_end && periodEnd) {
+    return {
+      planLabel,
+      statusLabel: 'Ending',
+      toneClass: 'bg-bauhaus-red text-white',
+      summary: `${planLabel} stays active until ${periodEnd}.`,
+      detail: 'Billing is set to cancel at the end of the current period.',
+      nextLabel: 'Ends',
+      nextValue: periodEnd,
+    };
+  }
+
+  switch (status) {
+    case 'trialing':
+      return {
+        planLabel,
+        statusLabel: 'Trialing',
+        toneClass: 'bg-bauhaus-yellow text-bauhaus-black',
+        summary: `${planLabel} trial is live.`,
+        detail: trialEnd
+          ? `Your free trial ends on ${trialEnd}.`
+          : 'Your free trial is active now.',
+        nextLabel: 'Trial ends',
+        nextValue: trialEnd,
+      };
+    case 'active':
+      return {
+        planLabel,
+        statusLabel: 'Active',
+        toneClass: 'bg-bauhaus-blue text-white',
+        summary: `${planLabel} is active.`,
+        detail: periodEnd
+          ? `Your next renewal is ${periodEnd}.`
+          : 'Billing is active for this workspace.',
+        nextLabel: 'Renews',
+        nextValue: periodEnd,
+      };
+    case 'past_due':
+    case 'unpaid':
+      return {
+        planLabel,
+        statusLabel: 'Needs attention',
+        toneClass: 'bg-bauhaus-red text-white',
+        summary: `Payment needs attention for ${planLabel}.`,
+        detail: periodEnd
+          ? `The current billing period ends on ${periodEnd}.`
+          : 'Update billing details to keep access uninterrupted.',
+        nextLabel: 'Period ends',
+        nextValue: periodEnd,
+      };
+    case 'canceled':
+    case 'cancelled':
+      return {
+        planLabel,
+        statusLabel: 'Ended',
+        toneClass: 'bg-bauhaus-black text-white',
+        summary: `${planLabel} has ended.`,
+        detail: periodEnd
+          ? `Your last billing period ended on ${periodEnd}.`
+          : 'This workspace is currently on the Community plan.',
+        nextLabel: 'Ended',
+        nextValue: periodEnd,
+      };
+    default:
+      return {
+        planLabel,
+        statusLabel: tier === 'community' ? 'Community' : 'Syncing',
+        toneClass: tier === 'community' ? 'bg-bauhaus-black text-white' : 'bg-bauhaus-yellow text-bauhaus-black',
+        summary: tier === 'community' ? 'Community plan is active.' : `${planLabel} checkout completed.`,
+        detail: tier === 'community'
+          ? 'Upgrade when you want alerts, weekly digests, and shared pipeline workflow.'
+          : 'Billing is syncing. Refresh in a moment if the status has not appeared yet.',
+        nextLabel: trialEnd ? 'Trial ends' : periodEnd ? 'Renews' : null,
+        nextValue: trialEnd || periodEnd,
+      };
+  }
+}
+
 export function ProfileClient() {
   const [profile, setProfile] = useState<OrgProfile>(EMPTY_PROFILE);
   const [loading, setLoading] = useState(true);
   const isImpersonating = getIsImpersonating();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [showAdvancedSetup, setShowAdvancedSetup] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
@@ -200,6 +326,9 @@ export function ProfileClient() {
   const [inviting, setInviting] = useState(false);
   const [inviteMessage, setInviteMessage] = useState('');
   const [removingMember, setRemovingMember] = useState<string | null>(null);
+  const [openingBillingPortal, setOpeningBillingPortal] = useState(false);
+  const [startingProfessionalTrial, setStartingProfessionalTrial] = useState(false);
+  const [billingError, setBillingError] = useState('');
 
   useEffect(() => {
     fetch('/api/profile')
@@ -344,7 +473,24 @@ export function ProfileClient() {
       setProfile(prev => ({ ...prev, id: data.id }));
       setSaved(true);
 
-      // Auto-load matches after save
+      const wasFirstRun = !profile.id;
+      const explicitRedirect =
+        getSafeRedirect(searchParams.get('next')) ||
+        getSafeRedirect(searchParams.get('redirect'));
+      const billingSuccess = searchParams.get('billing') === 'success';
+      const shouldAdvanceToMatches = !billingSuccess && wasFirstRun;
+
+      if (explicitRedirect && !billingSuccess) {
+        router.push(explicitRedirect);
+        return;
+      }
+
+      if (shouldAdvanceToMatches) {
+        router.push('/profile/matches?onboarding=1');
+        return;
+      }
+
+      // Auto-load matches after save for in-place profile edits
       loadMatches();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save');
@@ -393,6 +539,39 @@ export function ProfileClient() {
     }
   }
 
+  async function handleOpenBillingPortal() {
+    setBillingError('');
+    setOpeningBillingPortal(true);
+    try {
+      const response = await fetch('/api/billing/portal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source: billingInteractionSource }),
+      });
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok || !data?.url) {
+        throw new Error(data?.error || 'Could not open billing portal.');
+      }
+
+      window.location.href = data.url;
+    } catch (err) {
+      setBillingError(err instanceof Error ? err.message : 'Could not open billing portal.');
+    } finally {
+      setOpeningBillingPortal(false);
+    }
+  }
+
+  async function handleStartProfessionalTrial() {
+    setBillingError('');
+    setStartingProfessionalTrial(true);
+    const result = await startCheckoutForTier('professional', billingInteractionSource);
+    if (!result.ok) {
+      setBillingError(result.error);
+    }
+    setStartingProfessionalTrial(false);
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[40vh]">
@@ -403,17 +582,152 @@ export function ProfileClient() {
     );
   }
 
+  const isFirstRunProfile = !profile.id;
+  const isCompressedOnboarding = isFirstRunProfile && !showAdvancedSetup;
+  const billingSuccess = searchParams.get('billing') === 'success';
+  const billingInteractionSource = getBillingSource(searchParams.get('billing_source'));
+  const billingTier = resolveSubscriptionTier(profile.subscription_plan);
+  const billingDetails = billingSuccess && !profile.subscription_status
+    ? {
+        planLabel: 'Professional',
+        statusLabel: 'Syncing',
+        toneClass: 'bg-bauhaus-yellow text-bauhaus-black',
+        summary: 'Checkout completed.',
+        detail: 'Stripe is still confirming the subscription state. Refresh in a moment if this does not update automatically.',
+        nextLabel: null,
+        nextValue: null,
+      }
+    : getBillingStatusDetails(profile);
+  const showBillingSection = billingSuccess || Boolean(profile.stripe_customer_id) || billingTier !== 'community' || Boolean(profile.subscription_status);
+
   return (
     <div className="space-y-8">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-black uppercase tracking-tight text-bauhaus-black">
-          Organisation Profile
+          {isCompressedOnboarding ? 'Quick Profile Setup' : 'Organisation Profile'}
         </h1>
         <p className="text-sm text-bauhaus-muted mt-1">
-          Describe your organisation to find grants matched to your mission
+          {isCompressedOnboarding
+            ? 'Start with the minimum details needed to unlock matched grants. You can add the rest after your first results.'
+            : 'Describe your organisation so CivicGraph can match grants, funders, and alerts to your work.'}
         </p>
       </div>
+
+      {showBillingSection && (
+        <section className="border-4 border-bauhaus-black bg-white">
+          <div className="bg-bauhaus-red px-5 py-3 flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-sm font-black text-white uppercase tracking-widest">Billing</h2>
+            <span className={`px-3 py-1 text-[10px] font-black uppercase tracking-widest border-2 border-bauhaus-black ${billingDetails.toneClass}`}>
+              {billingDetails.statusLabel}
+            </span>
+          </div>
+          <div className="p-5 space-y-4">
+            {billingSuccess && (
+              <div className="border-2 border-green-700 bg-green-50 px-4 py-3 text-sm font-bold text-green-800">
+                Checkout completed. Your billing status is now syncing with CivicGraph.
+              </div>
+            )}
+
+            <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
+              <div className="space-y-2">
+                <p className="text-sm font-black uppercase tracking-wide text-bauhaus-black">
+                  {billingDetails.summary}
+                </p>
+                <p className="text-sm text-bauhaus-muted">
+                  {billingDetails.detail}
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-3 md:min-w-[260px]">
+                <div className="border-2 border-bauhaus-black px-3 py-3">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Plan</div>
+                  <div className="mt-1 text-sm font-black text-bauhaus-black">{billingDetails.planLabel}</div>
+                </div>
+                <div className="border-2 border-bauhaus-black px-3 py-3">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">
+                    {billingDetails.nextLabel || 'Status'}
+                  </div>
+                  <div className="mt-1 text-sm font-black text-bauhaus-black">
+                    {billingDetails.nextValue || billingDetails.statusLabel}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {profile.subscription_cancel_at_period_end && profile.subscription_current_period_end && (
+              <p className="text-xs font-bold uppercase tracking-widest text-bauhaus-red">
+                Access changes at period end on {formatBillingDate(profile.subscription_current_period_end)}.
+              </p>
+            )}
+
+            {billingError && (
+              <div className="border-2 border-bauhaus-red bg-danger-light px-4 py-3 text-sm font-bold text-bauhaus-red">
+                {billingError}
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-3">
+              {profile.stripe_customer_id ? (
+                <button
+                  type="button"
+                  onClick={handleOpenBillingPortal}
+                  disabled={openingBillingPortal}
+                  className="px-4 py-3 text-xs font-black uppercase tracking-widest bg-bauhaus-black text-white border-4 border-bauhaus-black hover:bg-bauhaus-blue disabled:opacity-50"
+                >
+                  {openingBillingPortal ? 'Opening...' : 'Manage Billing'}
+                </button>
+              ) : !billingSuccess ? (
+                <button
+                  type="button"
+                  onClick={handleStartProfessionalTrial}
+                  disabled={startingProfessionalTrial}
+                  className="px-4 py-3 text-xs font-black uppercase tracking-widest bg-bauhaus-blue text-white border-4 border-bauhaus-black hover:bg-bauhaus-black disabled:opacity-50"
+                >
+                  {startingProfessionalTrial ? 'Starting...' : 'Start Professional Trial'}
+                </button>
+              ) : null}
+              <Link
+                href={`/pricing${billingInteractionSource !== 'profile_billing_panel' ? `?billing_source=${encodeURIComponent(billingInteractionSource)}` : ''}`}
+                className="px-4 py-3 text-xs font-black uppercase tracking-widest bg-white text-bauhaus-black border-4 border-bauhaus-black hover:bg-bauhaus-yellow transition-colors"
+              >
+                Compare Plans
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {(saved || (profile.name && profile.domains.length > 0 && profile.geographic_focus.length > 0)) && (
+        <section className="border-4 border-bauhaus-black bg-bauhaus-canvas">
+          <div className="bg-bauhaus-blue px-5 py-3">
+            <h2 className="text-sm font-black text-white uppercase tracking-widest">Next Step</h2>
+          </div>
+          <div className="p-5 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-sm font-black text-bauhaus-black uppercase tracking-wide">
+                Review matched grants, then save the strongest opportunities into your tracker.
+              </p>
+              <p className="text-sm text-bauhaus-muted mt-2">
+                Your profile is detailed enough to drive better matching and alerting.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/profile/matches"
+                className="px-4 py-3 text-xs font-black uppercase tracking-widest bg-bauhaus-blue text-white border-4 border-bauhaus-black hover:bg-bauhaus-black transition-colors"
+              >
+                Review Matches
+              </Link>
+              <Link
+                href="/tracker?onboarding=1"
+                className="px-4 py-3 text-xs font-black uppercase tracking-widest bg-white text-bauhaus-black border-4 border-bauhaus-black hover:bg-bauhaus-yellow transition-colors"
+              >
+                Open Tracker
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Claimed Charities — only for incorporated orgs, hidden during impersonation */}
       {claims.length > 0 && profile.org_status === 'incorporated' && !isImpersonating && (
@@ -472,438 +786,567 @@ export function ProfileClient() {
           </div>
         )}
 
-        {/* Journey Status */}
-        <section className="border-4 border-bauhaus-black bg-white">
-          <div className="bg-bauhaus-black px-5 py-3">
-            <h2 className="text-sm font-black text-white uppercase tracking-widest">Your Journey</h2>
-          </div>
-          <div className="p-5 space-y-4">
-            <div className="flex flex-wrap items-center gap-2">
-              {ORG_STATUSES.map((status, i) => {
-                const isActive = profile.org_status === status.value;
-                const isPast = ORG_STATUSES.findIndex(s => s.value === profile.org_status) > i;
-                return (
-                  <div key={status.value} className="flex items-center gap-2">
-                    {i > 0 && (
-                      <div className={`hidden sm:block w-6 h-0.5 ${isPast || isActive ? 'bg-bauhaus-black' : 'bg-bauhaus-black/20'}`} />
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => setProfile(p => ({ ...p, org_status: status.value }))}
-                      className={`px-3 py-2 text-xs font-black uppercase tracking-wider border-3 transition-colors ${
-                        isActive
-                          ? 'bg-bauhaus-blue text-white border-bauhaus-black'
-                          : isPast
-                          ? 'bg-bauhaus-blue/20 text-bauhaus-black border-bauhaus-black/40'
-                          : 'bg-white text-bauhaus-black/50 border-bauhaus-black/20 hover:border-bauhaus-black/40'
-                      }`}
-                    >
-                      {status.label}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-            <p className="text-sm text-bauhaus-muted">
-              {ORG_STATUSES.find(s => s.value === profile.org_status)?.description}
-            </p>
-          </div>
-        </section>
-
-        {/* Identity */}
-        <section className="border-4 border-bauhaus-black bg-white">
-          <div className="bg-bauhaus-black px-5 py-3">
-            <h2 className="text-sm font-black text-white uppercase tracking-widest">Identity</h2>
-          </div>
-          <div className="p-5 space-y-4">
-            <div>
-              <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">
-                Organisation Name *
-              </label>
-              <input
-                type="text"
-                value={profile.name}
-                onChange={e => setProfile(p => ({ ...p, name: e.target.value }))}
-                required
-                className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue"
-                placeholder="A Curious Tractor"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">
-                Mission Statement
-              </label>
-              <input
-                type="text"
-                value={profile.mission}
-                onChange={e => setProfile(p => ({ ...p, mission: e.target.value }))}
-                className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue"
-                placeholder="Communities own their narratives, land, and economic futures"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">
-                Description
-              </label>
-              <textarea
-                value={profile.description}
-                onChange={e => setProfile(p => ({ ...p, description: e.target.value }))}
-                rows={4}
-                className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue resize-y"
-                placeholder="What does your organisation do? What communities do you serve?"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {profile.org_status === 'incorporated' && (
-                <div>
-                  <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">
-                    ABN
-                  </label>
-                  <input
-                    type="text"
-                    value={profile.abn}
-                    onChange={e => setProfile(p => ({ ...p, abn: e.target.value }))}
-                    className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue"
-                    placeholder="21 591 780 066"
-                  />
-                </div>
-              )}
-              {profile.org_status === 'auspiced' && (
-                <div>
-                  <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">
-                    Auspicing Organisation
-                  </label>
-                  <input
-                    type="text"
-                    value={profile.auspice_org_name}
-                    onChange={e => setProfile(p => ({ ...p, auspice_org_name: e.target.value }))}
-                    className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue"
-                    placeholder="Name of the organisation auspicing you"
-                  />
-                  <p className="text-xs text-bauhaus-muted mt-1">
-                    You can operate under a registered org&apos;s structure while you grow
-                  </p>
-                </div>
-              )}
-              <div>
-                <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">
-                  Website
-                </label>
-                <input
-                  type="url"
-                  value={profile.website}
-                  onChange={e => setProfile(p => ({ ...p, website: e.target.value }))}
-                  className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue"
-                  placeholder="https://act.place"
-                />
+        {isCompressedOnboarding ? (
+          <>
+            <section className="border-4 border-bauhaus-black bg-bauhaus-canvas">
+              <div className="bg-bauhaus-red px-5 py-3">
+                <h2 className="text-sm font-black text-white uppercase tracking-widest">Quick Setup</h2>
               </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Focus Areas */}
-        <section className="border-4 border-bauhaus-black bg-white">
-          <div className="bg-bauhaus-blue px-5 py-3">
-            <h2 className="text-sm font-black text-white uppercase tracking-widest">Focus Areas</h2>
-          </div>
-          <div className="p-5 space-y-4">
-            <div>
-              <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-3">
-                Domains
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {DOMAIN_OPTIONS.map(domain => (
-                  <button
-                    key={domain}
-                    type="button"
-                    onClick={() => setProfile(p => ({ ...p, domains: toggleArray(p.domains, domain) }))}
-                    className={`px-3 py-1.5 text-xs font-black uppercase tracking-wider border-3 transition-colors ${
-                      profile.domains.includes(domain)
-                        ? 'bg-bauhaus-blue text-white border-bauhaus-black'
-                        : 'bg-white text-bauhaus-black border-bauhaus-black/30 hover:border-bauhaus-black'
-                    }`}
-                  >
-                    {domain}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-3">
-                Geographic Focus
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {GEO_OPTIONS.map(geo => (
-                  <button
-                    key={geo}
-                    type="button"
-                    onClick={() => setProfile(p => ({ ...p, geographic_focus: toggleArray(p.geographic_focus, geo) }))}
-                    className={`px-3 py-1.5 text-xs font-black uppercase tracking-wider border-3 transition-colors ${
-                      profile.geographic_focus.includes(geo)
-                        ? 'bg-bauhaus-yellow text-bauhaus-black border-bauhaus-black'
-                        : 'bg-white text-bauhaus-black border-bauhaus-black/30 hover:border-bauhaus-black'
-                    }`}
-                  >
-                    {geo}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Organisation Details */}
-        <section className="border-4 border-bauhaus-black bg-white">
-          <div className="bg-bauhaus-red px-5 py-3">
-            <h2 className="text-sm font-black text-white uppercase tracking-widest">Details</h2>
-          </div>
-          <div className="p-5 space-y-4">
-            <div>
-              <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">
-                Organisation Type
-              </label>
-              <select
-                value={profile.org_type}
-                onChange={e => setProfile(p => ({ ...p, org_type: e.target.value }))}
-                className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue bg-white"
-              >
-                {ORG_TYPES.map(t => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">
-                  Annual Revenue ($)
-                </label>
-                <input
-                  type="number"
-                  value={profile.annual_revenue}
-                  onChange={e => setProfile(p => ({ ...p, annual_revenue: e.target.value }))}
-                  className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue"
-                  placeholder="250000"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">
-                  Team Size
-                </label>
-                <input
-                  type="number"
-                  value={profile.team_size}
-                  onChange={e => setProfile(p => ({ ...p, team_size: e.target.value }))}
-                  className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue"
-                  placeholder="12"
-                />
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* What Should I Be? — only for exploring/pre_formation */}
-        {(profile.org_status === 'exploring' || profile.org_status === 'pre_formation') && (
-          <section className="border-4 border-bauhaus-black bg-white">
-            <div className="bg-bauhaus-blue px-5 py-3">
-              <h2 className="text-sm font-black text-white uppercase tracking-widest">What Should I Be?</h2>
-            </div>
-            <div className="p-5 space-y-4">
-              <p className="text-sm text-bauhaus-muted">
-                Based on your mission and focus areas, here are some structures to consider.
-                Fill in more details above for better recommendations.
-              </p>
-              {getFormationRecommendations(profile).map(rec => (
-                <div key={rec.type} className="border-2 border-bauhaus-black/20 p-4 space-y-2">
-                  <h3 className="text-sm font-black uppercase tracking-wide text-bauhaus-black">
-                    {rec.type}
-                  </h3>
-                  <p className="text-sm text-bauhaus-black/70">{rec.description}</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                    <div className="bg-green-50 border border-green-200 px-3 py-2">
-                      <span className="font-black text-green-800 uppercase tracking-wider">Benefit:</span>{' '}
-                      <span className="text-green-700">{rec.benefit}</span>
-                    </div>
-                    <div className="bg-amber-50 border border-amber-200 px-3 py-2">
-                      <span className="font-black text-amber-800 uppercase tracking-wider">Requires:</span>{' '}
-                      <span className="text-amber-700">{rec.requirement}</span>
-                    </div>
-                  </div>
-                  <a
-                    href={rec.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-block text-xs font-black text-bauhaus-blue uppercase tracking-widest hover:text-bauhaus-black"
-                  >
-                    Learn more &rarr;
-                  </a>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Projects */}
-        <section className="border-4 border-bauhaus-black bg-white">
-          <div className="bg-bauhaus-black px-5 py-3 flex items-center justify-between">
-            <h2 className="text-sm font-black text-white uppercase tracking-widest">Projects</h2>
-            <button
-              type="button"
-              onClick={addProject}
-              className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest hover:text-white"
-            >
-              + Add
-            </button>
-          </div>
-          <div className="p-5 space-y-4">
-            {profile.projects.length === 0 && (
-              <p className="text-sm text-bauhaus-muted">
-                Add your projects to improve grant matching accuracy
-              </p>
-            )}
-            {profile.projects.map((project, i) => (
-              <div key={i} className="border-2 border-bauhaus-black/20 p-4 space-y-3">
-                <div className="flex items-start gap-3">
-                  <div className="flex-1">
-                    <input
-                      type="text"
-                      value={project.name}
-                      onChange={e => updateProject(i, 'name', e.target.value)}
-                      placeholder="Project name"
-                      className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => removeProject(i)}
-                    className="text-xs font-black text-bauhaus-red uppercase tracking-widest hover:text-bauhaus-black mt-2"
-                  >
-                    Remove
-                  </button>
-                </div>
-                <textarea
-                  value={project.description}
-                  onChange={e => updateProject(i, 'description', e.target.value)}
-                  placeholder="What does this project do?"
-                  rows={2}
-                  className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue resize-y"
-                />
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Team Management */}
-        {profile.id && (
-          <section className="border-4 border-bauhaus-black bg-white">
-            <div className="bg-green-600 px-5 py-3 flex items-center justify-between">
-              <h2 className="text-sm font-black text-white uppercase tracking-widest">Team</h2>
-              <span className="text-xs font-black text-white/80 uppercase tracking-widest">
-                {teamMembers.length} member{teamMembers.length !== 1 ? 's' : ''}
-              </span>
-            </div>
-            <div className="p-5 space-y-4">
-              {/* Member List */}
-              {teamLoading ? (
-                <div className="text-sm font-black uppercase tracking-widest text-bauhaus-muted animate-pulse">
-                  Loading team...
-                </div>
-              ) : teamMembers.length === 0 ? (
-                <p className="text-sm text-bauhaus-muted">
-                  No team members yet. Invite colleagues to share your grant tracker.
+              <div className="p-5 space-y-3">
+                <p className="text-sm text-bauhaus-black font-bold">
+                  These fields are enough to get your first matched grants.
                 </p>
-              ) : (
-                <div className="divide-y-2 divide-bauhaus-black/10">
-                  {teamMembers.map(member => {
-                    const isPending = !member.user_id;
+                <p className="text-sm text-bauhaus-muted">
+                  You can add ABN, projects, revenue, team members, and organisational structure after you see your first results.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowAdvancedSetup(true)}
+                  className="text-xs font-black text-bauhaus-blue uppercase tracking-widest hover:text-bauhaus-black"
+                >
+                  Show Full Setup
+                </button>
+              </div>
+            </section>
+
+            <section className="border-4 border-bauhaus-black bg-white">
+              <div className="bg-bauhaus-black px-5 py-3">
+                <h2 className="text-sm font-black text-white uppercase tracking-widest">Identity</h2>
+              </div>
+              <div className="p-5 space-y-4">
+                <div>
+                  <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">
+                    Organisation Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={profile.name}
+                    onChange={e => setProfile(p => ({ ...p, name: e.target.value }))}
+                    required
+                    className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue"
+                    placeholder="A Curious Tractor"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">
+                    Mission Statement
+                  </label>
+                  <input
+                    type="text"
+                    value={profile.mission}
+                    onChange={e => setProfile(p => ({ ...p, mission: e.target.value }))}
+                    className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue"
+                    placeholder="Communities own their narratives, land, and economic futures"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    value={profile.description}
+                    onChange={e => setProfile(p => ({ ...p, description: e.target.value }))}
+                    rows={3}
+                    className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue resize-y"
+                    placeholder="What does your organisation do? What communities do you serve?"
+                  />
+                </div>
+              </div>
+            </section>
+
+            <section className="border-4 border-bauhaus-black bg-white">
+              <div className="bg-bauhaus-blue px-5 py-3">
+                <h2 className="text-sm font-black text-white uppercase tracking-widest">Focus Areas</h2>
+              </div>
+              <div className="p-5 space-y-4">
+                <div>
+                  <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-3">
+                    Domains
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {DOMAIN_OPTIONS.map(domain => (
+                      <button
+                        key={domain}
+                        type="button"
+                        onClick={() => setProfile(p => ({ ...p, domains: toggleArray(p.domains, domain) }))}
+                        className={`px-3 py-1.5 text-xs font-black uppercase tracking-wider border-3 transition-colors ${
+                          profile.domains.includes(domain)
+                            ? 'bg-bauhaus-blue text-white border-bauhaus-black'
+                            : 'bg-white text-bauhaus-black border-bauhaus-black/30 hover:border-bauhaus-black'
+                        }`}
+                      >
+                        {domain}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-3">
+                    Geographic Focus
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {GEO_OPTIONS.map(geo => (
+                      <button
+                        key={geo}
+                        type="button"
+                        onClick={() => setProfile(p => ({ ...p, geographic_focus: toggleArray(p.geographic_focus, geo) }))}
+                        className={`px-3 py-1.5 text-xs font-black uppercase tracking-wider border-3 transition-colors ${
+                          profile.geographic_focus.includes(geo)
+                            ? 'bg-bauhaus-yellow text-bauhaus-black border-bauhaus-black'
+                            : 'bg-white text-bauhaus-black border-bauhaus-black/30 hover:border-bauhaus-black'
+                        }`}
+                      >
+                        {geo}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </section>
+          </>
+        ) : (
+          <>
+            {/* Journey Status */}
+            <section className="border-4 border-bauhaus-black bg-white">
+              <div className="bg-bauhaus-black px-5 py-3">
+                <h2 className="text-sm font-black text-white uppercase tracking-widest">Your Journey</h2>
+              </div>
+              <div className="p-5 space-y-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  {ORG_STATUSES.map((status, i) => {
+                    const isActive = profile.org_status === status.value;
+                    const isPast = ORG_STATUSES.findIndex(s => s.value === profile.org_status) > i;
                     return (
-                      <div key={member.id} className="py-3 flex items-center justify-between gap-4">
-                        <div className="min-w-0">
-                          <span className={`text-sm font-black truncate block ${isPending ? 'text-bauhaus-muted' : 'text-bauhaus-black'}`}>
-                            {member.email || member.invited_email || (member.user_id ? member.user_id.slice(0, 8) + '...' : 'Unknown')}
-                          </span>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            {isPending ? (
-                              <span className="inline-block px-2 py-0.5 text-[10px] font-black uppercase tracking-widest border-2 border-bauhaus-black bg-gray-200 text-bauhaus-muted">
-                                Pending
-                              </span>
-                            ) : (
-                              <span className={`inline-block px-2 py-0.5 text-[10px] font-black uppercase tracking-widest border-2 border-bauhaus-black ${
-                                member.role === 'admin' ? 'bg-bauhaus-red text-white' :
-                                member.role === 'editor' ? 'bg-bauhaus-blue text-white' :
-                                'bg-bauhaus-yellow text-bauhaus-black'
-                              }`}>
-                                {member.role}
-                              </span>
-                            )}
-                            {member.accepted_at && (
-                              <span className="text-[10px] text-bauhaus-muted">
-                                Joined {new Date(member.accepted_at).toLocaleDateString('en-AU')}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        {currentUserRole === 'admin' && (
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveMember(member.id)}
-                            disabled={removingMember === member.id}
-                            className="text-xs font-black text-bauhaus-red uppercase tracking-widest hover:text-bauhaus-black disabled:opacity-50"
-                          >
-                            {removingMember === member.id ? '...' : isPending ? 'Cancel' : 'Remove'}
-                          </button>
+                      <div key={status.value} className="flex items-center gap-2">
+                        {i > 0 && (
+                          <div className={`hidden sm:block w-6 h-0.5 ${isPast || isActive ? 'bg-bauhaus-black' : 'bg-bauhaus-black/20'}`} />
                         )}
+                        <button
+                          type="button"
+                          onClick={() => setProfile(p => ({ ...p, org_status: status.value }))}
+                          className={`px-3 py-2 text-xs font-black uppercase tracking-wider border-3 transition-colors ${
+                            isActive
+                              ? 'bg-bauhaus-blue text-white border-bauhaus-black'
+                              : isPast
+                              ? 'bg-bauhaus-blue/20 text-bauhaus-black border-bauhaus-black/40'
+                              : 'bg-white text-bauhaus-black/50 border-bauhaus-black/20 hover:border-bauhaus-black/40'
+                          }`}
+                        >
+                          {status.label}
+                        </button>
                       </div>
                     );
                   })}
                 </div>
-              )}
+                <p className="text-sm text-bauhaus-muted">
+                  {ORG_STATUSES.find(s => s.value === profile.org_status)?.description}
+                </p>
+              </div>
+            </section>
 
-              {/* Invite Form (admin only) */}
-              {currentUserRole === 'admin' && (
-                <div className="border-t-2 border-bauhaus-black/10 pt-4">
+            {/* Identity */}
+            <section className="border-4 border-bauhaus-black bg-white">
+              <div className="bg-bauhaus-black px-5 py-3">
+                <h2 className="text-sm font-black text-white uppercase tracking-widest">Identity</h2>
+              </div>
+              <div className="p-5 space-y-4">
+                <div>
                   <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">
-                    Invite Team Member
+                    Organisation Name *
                   </label>
-                  <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={profile.name}
+                    onChange={e => setProfile(p => ({ ...p, name: e.target.value }))}
+                    required
+                    className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue"
+                    placeholder="A Curious Tractor"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">
+                    Mission Statement
+                  </label>
+                  <input
+                    type="text"
+                    value={profile.mission}
+                    onChange={e => setProfile(p => ({ ...p, mission: e.target.value }))}
+                    className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue"
+                    placeholder="Communities own their narratives, land, and economic futures"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    value={profile.description}
+                    onChange={e => setProfile(p => ({ ...p, description: e.target.value }))}
+                    rows={4}
+                    className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue resize-y"
+                    placeholder="What does your organisation do? What communities do you serve?"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {profile.org_status === 'incorporated' && (
+                    <div>
+                      <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">
+                        ABN
+                      </label>
+                      <input
+                        type="text"
+                        value={profile.abn}
+                        onChange={e => setProfile(p => ({ ...p, abn: e.target.value }))}
+                        className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue"
+                        placeholder="21 591 780 066"
+                      />
+                    </div>
+                  )}
+                  {profile.org_status === 'auspiced' && (
+                    <div>
+                      <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">
+                        Auspicing Organisation
+                      </label>
+                      <input
+                        type="text"
+                        value={profile.auspice_org_name}
+                        onChange={e => setProfile(p => ({ ...p, auspice_org_name: e.target.value }))}
+                        className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue"
+                        placeholder="Name of the organisation auspicing you"
+                      />
+                      <p className="text-xs text-bauhaus-muted mt-1">
+                        You can operate under a registered org&apos;s structure while you grow
+                      </p>
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">
+                      Website
+                    </label>
                     <input
-                      type="email"
-                      value={inviteEmail}
-                      onChange={e => setInviteEmail(e.target.value)}
-                      placeholder="colleague@org.au"
-                      className="flex-1 border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue"
+                      type="url"
+                      value={profile.website}
+                      onChange={e => setProfile(p => ({ ...p, website: e.target.value }))}
+                      className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue"
+                      placeholder="https://act.place"
                     />
-                    <select
-                      value={inviteRole}
-                      onChange={e => setInviteRole(e.target.value)}
-                      className="border-4 border-bauhaus-black px-2 py-2 text-xs font-black uppercase tracking-widest bg-white focus:outline-none focus:border-bauhaus-blue"
-                    >
-                      <option value="viewer">Viewer</option>
-                      <option value="editor">Editor</option>
-                      <option value="admin">Admin</option>
-                    </select>
-                    <button
-                      type="button"
-                      onClick={handleInvite}
-                      disabled={inviting || !inviteEmail.trim()}
-                      className="px-4 py-2 text-xs font-black uppercase tracking-widest bg-bauhaus-black text-white hover:bg-bauhaus-blue disabled:opacity-50 border-4 border-bauhaus-black"
-                    >
-                      {inviting ? '...' : 'Invite'}
-                    </button>
                   </div>
-                  {inviteMessage && (
-                    <p className={`text-xs font-bold mt-2 ${inviteMessage.includes('Failed') || inviteMessage.includes('error') ? 'text-bauhaus-red' : 'text-green-700'}`}>
-                      {inviteMessage}
+                </div>
+              </div>
+            </section>
+
+            {/* Focus Areas */}
+            <section className="border-4 border-bauhaus-black bg-white">
+              <div className="bg-bauhaus-blue px-5 py-3">
+                <h2 className="text-sm font-black text-white uppercase tracking-widest">Focus Areas</h2>
+              </div>
+              <div className="p-5 space-y-4">
+                <div>
+                  <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-3">
+                    Domains
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {DOMAIN_OPTIONS.map(domain => (
+                      <button
+                        key={domain}
+                        type="button"
+                        onClick={() => setProfile(p => ({ ...p, domains: toggleArray(p.domains, domain) }))}
+                        className={`px-3 py-1.5 text-xs font-black uppercase tracking-wider border-3 transition-colors ${
+                          profile.domains.includes(domain)
+                            ? 'bg-bauhaus-blue text-white border-bauhaus-black'
+                            : 'bg-white text-bauhaus-black border-bauhaus-black/30 hover:border-bauhaus-black'
+                        }`}
+                      >
+                        {domain}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-3">
+                    Geographic Focus
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {GEO_OPTIONS.map(geo => (
+                      <button
+                        key={geo}
+                        type="button"
+                        onClick={() => setProfile(p => ({ ...p, geographic_focus: toggleArray(p.geographic_focus, geo) }))}
+                        className={`px-3 py-1.5 text-xs font-black uppercase tracking-wider border-3 transition-colors ${
+                          profile.geographic_focus.includes(geo)
+                            ? 'bg-bauhaus-yellow text-bauhaus-black border-bauhaus-black'
+                            : 'bg-white text-bauhaus-black border-bauhaus-black/30 hover:border-bauhaus-black'
+                        }`}
+                      >
+                        {geo}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </section>
+          </>
+        )}
+
+        {!isCompressedOnboarding && (
+          <>
+            {/* Organisation Details */}
+            <section className="border-4 border-bauhaus-black bg-white">
+              <div className="bg-bauhaus-red px-5 py-3">
+                <h2 className="text-sm font-black text-white uppercase tracking-widest">Details</h2>
+              </div>
+              <div className="p-5 space-y-4">
+                <div>
+                  <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">
+                    Organisation Type
+                  </label>
+                  <select
+                    value={profile.org_type}
+                    onChange={e => setProfile(p => ({ ...p, org_type: e.target.value }))}
+                    className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue bg-white"
+                  >
+                    {ORG_TYPES.map(t => (
+                      <option key={t.value} value={t.value}>{t.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">
+                      Annual Revenue ($)
+                    </label>
+                    <input
+                      type="number"
+                      value={profile.annual_revenue}
+                      onChange={e => setProfile(p => ({ ...p, annual_revenue: e.target.value }))}
+                      className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue"
+                      placeholder="250000"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">
+                      Team Size
+                    </label>
+                    <input
+                      type="number"
+                      value={profile.team_size}
+                      onChange={e => setProfile(p => ({ ...p, team_size: e.target.value }))}
+                      className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue"
+                      placeholder="12"
+                    />
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* What Should I Be? — only for exploring/pre_formation */}
+            {(profile.org_status === 'exploring' || profile.org_status === 'pre_formation') && (
+              <section className="border-4 border-bauhaus-black bg-white">
+                <div className="bg-bauhaus-blue px-5 py-3">
+                  <h2 className="text-sm font-black text-white uppercase tracking-widest">What Should I Be?</h2>
+                </div>
+                <div className="p-5 space-y-4">
+                  <p className="text-sm text-bauhaus-muted">
+                    Based on your mission and focus areas, here are some structures to consider.
+                    Fill in more details above for better recommendations.
+                  </p>
+                  {getFormationRecommendations(profile).map(rec => (
+                    <div key={rec.type} className="border-2 border-bauhaus-black/20 p-4 space-y-2">
+                      <h3 className="text-sm font-black uppercase tracking-wide text-bauhaus-black">
+                        {rec.type}
+                      </h3>
+                      <p className="text-sm text-bauhaus-black/70">{rec.description}</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        <div className="bg-green-50 border border-green-200 px-3 py-2">
+                          <span className="font-black text-green-800 uppercase tracking-wider">Benefit:</span>{' '}
+                          <span className="text-green-700">{rec.benefit}</span>
+                        </div>
+                        <div className="bg-amber-50 border border-amber-200 px-3 py-2">
+                          <span className="font-black text-amber-800 uppercase tracking-wider">Requires:</span>{' '}
+                          <span className="text-amber-700">{rec.requirement}</span>
+                        </div>
+                      </div>
+                      <a
+                        href={rec.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-block text-xs font-black text-bauhaus-blue uppercase tracking-widest hover:text-bauhaus-black"
+                      >
+                        Learn more &rarr;
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Projects */}
+            <section className="border-4 border-bauhaus-black bg-white">
+              <div className="bg-bauhaus-black px-5 py-3 flex items-center justify-between">
+                <h2 className="text-sm font-black text-white uppercase tracking-widest">Projects</h2>
+                <button
+                  type="button"
+                  onClick={addProject}
+                  className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest hover:text-white"
+                >
+                  + Add
+                </button>
+              </div>
+              <div className="p-5 space-y-4">
+                {profile.projects.length === 0 && (
+                  <p className="text-sm text-bauhaus-muted">
+                    Add your projects to improve grant matching accuracy
+                  </p>
+                )}
+                {profile.projects.map((project, i) => (
+                  <div key={i} className="border-2 border-bauhaus-black/20 p-4 space-y-3">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1">
+                        <input
+                          type="text"
+                          value={project.name}
+                          onChange={e => updateProject(i, 'name', e.target.value)}
+                          placeholder="Project name"
+                          className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeProject(i)}
+                        className="text-xs font-black text-bauhaus-red uppercase tracking-widest hover:text-bauhaus-black mt-2"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    <textarea
+                      value={project.description}
+                      onChange={e => updateProject(i, 'description', e.target.value)}
+                      placeholder="What does this project do?"
+                      rows={2}
+                      className="w-full border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue resize-y"
+                    />
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* Team Management */}
+            {profile.id && (
+              <section className="border-4 border-bauhaus-black bg-white">
+                <div className="bg-green-600 px-5 py-3 flex items-center justify-between">
+                  <h2 className="text-sm font-black text-white uppercase tracking-widest">Team</h2>
+                  <span className="text-xs font-black text-white/80 uppercase tracking-widest">
+                    {teamMembers.length} member{teamMembers.length !== 1 ? 's' : ''}
+                  </span>
+                </div>
+                <div className="p-5 space-y-4">
+                  {/* Member List */}
+                  {teamLoading ? (
+                    <div className="text-sm font-black uppercase tracking-widest text-bauhaus-muted animate-pulse">
+                      Loading team...
+                    </div>
+                  ) : teamMembers.length === 0 ? (
+                    <p className="text-sm text-bauhaus-muted">
+                      No team members yet. Invite colleagues to share your grant tracker.
                     </p>
+                  ) : (
+                    <div className="divide-y-2 divide-bauhaus-black/10">
+                      {teamMembers.map(member => {
+                        const isPending = !member.user_id;
+                        return (
+                          <div key={member.id} className="py-3 flex items-center justify-between gap-4">
+                            <div className="min-w-0">
+                              <span className={`text-sm font-black truncate block ${isPending ? 'text-bauhaus-muted' : 'text-bauhaus-black'}`}>
+                                {member.email || member.invited_email || (member.user_id ? member.user_id.slice(0, 8) + '...' : 'Unknown')}
+                              </span>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                {isPending ? (
+                                  <span className="inline-block px-2 py-0.5 text-[10px] font-black uppercase tracking-widest border-2 border-bauhaus-black bg-gray-200 text-bauhaus-muted">
+                                    Pending
+                                  </span>
+                                ) : (
+                                  <span className={`inline-block px-2 py-0.5 text-[10px] font-black uppercase tracking-widest border-2 border-bauhaus-black ${
+                                    member.role === 'admin' ? 'bg-bauhaus-red text-white' :
+                                    member.role === 'editor' ? 'bg-bauhaus-blue text-white' :
+                                    'bg-bauhaus-yellow text-bauhaus-black'
+                                  }`}>
+                                    {member.role}
+                                  </span>
+                                )}
+                                {member.accepted_at && (
+                                  <span className="text-[10px] text-bauhaus-muted">
+                                    Joined {new Date(member.accepted_at).toLocaleDateString('en-AU')}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            {currentUserRole === 'admin' && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveMember(member.id)}
+                                disabled={removingMember === member.id}
+                                className="text-xs font-black text-bauhaus-red uppercase tracking-widest hover:text-bauhaus-black disabled:opacity-50"
+                              >
+                                {removingMember === member.id ? '...' : isPending ? 'Cancel' : 'Remove'}
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Invite Form (admin only) */}
+                  {currentUserRole === 'admin' && (
+                    <div className="border-t-2 border-bauhaus-black/10 pt-4">
+                      <label className="block text-xs font-black text-bauhaus-black uppercase tracking-widest mb-2">
+                        Invite Team Member
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="email"
+                          value={inviteEmail}
+                          onChange={e => setInviteEmail(e.target.value)}
+                          placeholder="colleague@org.au"
+                          className="flex-1 border-4 border-bauhaus-black px-3 py-2 text-sm font-medium focus:outline-none focus:border-bauhaus-blue"
+                        />
+                        <select
+                          value={inviteRole}
+                          onChange={e => setInviteRole(e.target.value)}
+                          className="border-4 border-bauhaus-black px-2 py-2 text-xs font-black uppercase tracking-widest bg-white focus:outline-none focus:border-bauhaus-blue"
+                        >
+                          <option value="viewer">Viewer</option>
+                          <option value="editor">Editor</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                        <button
+                          type="button"
+                          onClick={handleInvite}
+                          disabled={inviting || !inviteEmail.trim()}
+                          className="px-4 py-2 text-xs font-black uppercase tracking-widest bg-bauhaus-black text-white hover:bg-bauhaus-blue disabled:opacity-50 border-4 border-bauhaus-black"
+                        >
+                          {inviting ? '...' : 'Invite'}
+                        </button>
+                      </div>
+                      {inviteMessage && (
+                        <p className={`text-xs font-bold mt-2 ${inviteMessage.includes('Failed') || inviteMessage.includes('error') ? 'text-bauhaus-red' : 'text-green-700'}`}>
+                          {inviteMessage}
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
-            </div>
-          </section>
+              </section>
+            )}
+          </>
         )}
 
         {/* Save */}
@@ -913,8 +1356,17 @@ export function ProfileClient() {
             disabled={saving}
             className="bg-bauhaus-red text-white font-black uppercase tracking-widest px-8 py-3 text-sm border-4 border-bauhaus-black hover:bg-bauhaus-black disabled:opacity-50 bauhaus-shadow-sm"
           >
-            {saving ? 'Saving & Matching...' : 'Save & Find Matches'}
+            {saving ? 'Saving & Matching...' : isCompressedOnboarding ? 'Save & See Matches' : 'Save & Find Matches'}
           </button>
+          {isCompressedOnboarding && (
+            <button
+              type="button"
+              onClick={() => setShowAdvancedSetup(true)}
+              className="text-xs font-black text-bauhaus-blue uppercase tracking-widest hover:text-bauhaus-black"
+            >
+              Show Full Setup
+            </button>
+          )}
           {saved && (
             <span className="text-sm font-black text-green-700 uppercase tracking-widest">
               Saved

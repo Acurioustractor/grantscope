@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, useCallback } from 'react';
 import { DragDropContext, Droppable, type DropResult } from '@hello-pangea/dnd';
 import type { SavedGrantRow } from './page';
@@ -45,8 +46,13 @@ function applyFilters(grants: SavedGrantRow[], filters: Filters): SavedGrantRow[
   });
 }
 
-export function KanbanBoard({ initialGrants }: { initialGrants: SavedGrantRow[] }) {
-  const [grants, setGrants] = useState(initialGrants);
+export function KanbanBoard({
+  grants,
+  onGrantsChange,
+}: {
+  grants: SavedGrantRow[];
+  onGrantsChange: (grants: SavedGrantRow[]) => void;
+}) {
   const [filters, setFilters] = useState<Filters>({ minStars: 0, color: null, search: '', sortByDeadline: false });
 
   const filtered = applyFilters(grants, filters);
@@ -65,12 +71,13 @@ export function KanbanBoard({ initialGrants }: { initialGrants: SavedGrantRow[] 
 
   const handleRemove = useCallback(
     (grantId: string) => {
-      setGrants((prev) => prev.filter((g) => g.grant_id !== grantId));
+      const previousGrants = grants;
+      onGrantsChange(previousGrants.filter((g) => g.grant_id !== grantId));
       fetch(`/api/tracker/${grantId}`, { method: 'DELETE' }).catch(() => {
-        setGrants(initialGrants);
+        onGrantsChange(previousGrants);
       });
     },
-    [initialGrants]
+    [grants, onGrantsChange]
   );
 
   const handleDragEnd = useCallback(
@@ -78,15 +85,15 @@ export function KanbanBoard({ initialGrants }: { initialGrants: SavedGrantRow[] 
       if (!result.destination) return;
       const newStage = result.destination.droppableId;
       const grantId = result.draggableId;
+      const previousGrants = grants;
+      const nextGrants = previousGrants.map((g) =>
+        g.grant_id === grantId
+          ? { ...g, stage: newStage, updated_at: new Date().toISOString() }
+          : g
+      );
 
       // Optimistic update
-      setGrants((prev) =>
-        prev.map((g) =>
-          g.grant_id === grantId
-            ? { ...g, stage: newStage, updated_at: new Date().toISOString() }
-            : g
-        )
-      );
+      onGrantsChange(nextGrants);
 
       // Persist
       fetch(`/api/tracker/${grantId}`, {
@@ -95,10 +102,10 @@ export function KanbanBoard({ initialGrants }: { initialGrants: SavedGrantRow[] 
         body: JSON.stringify({ stage: newStage }),
       }).catch(() => {
         // Revert on error
-        setGrants(initialGrants);
+        onGrantsChange(previousGrants);
       });
     },
-    [initialGrants]
+    [grants, onGrantsChange]
   );
 
   return (
@@ -106,14 +113,30 @@ export function KanbanBoard({ initialGrants }: { initialGrants: SavedGrantRow[] 
       <TrackerFilters filters={filters} onChange={setFilters} />
 
       {grants.length === 0 ? (
-        <div className="border-2 border-dashed border-bauhaus-black/20 p-8 text-center">
-          <div className="text-lg font-black text-bauhaus-black uppercase tracking-tight mb-2">
-            No saved grants yet
+        <div className="border-4 border-dashed border-bauhaus-black/20 bg-white p-8 text-center">
+          <div className="text-[10px] font-black uppercase tracking-[0.3em] text-bauhaus-red">
+            Step 3 Needs A Shortlist
           </div>
-          <p className="text-sm text-bauhaus-muted font-medium">
-            Browse <a href="/grants" className="text-bauhaus-blue font-bold hover:underline">grants</a> and
-            use the star rating to save them here.
+          <div className="mt-2 text-lg font-black text-bauhaus-black uppercase tracking-tight">
+            No tracked grants yet
+          </div>
+          <p className="mt-2 text-sm text-bauhaus-muted font-medium max-w-xl mx-auto">
+            Start with your matched grants if you want the fastest path, or browse the full grants index if you are still exploring.
           </p>
+          <div className="mt-5 flex flex-wrap justify-center gap-3">
+            <Link
+              href="/profile/matches"
+              className="px-4 py-3 border-3 border-bauhaus-black text-xs font-black uppercase tracking-widest text-bauhaus-black hover:bg-bauhaus-black hover:text-white transition-colors"
+            >
+              Open Matched Grants
+            </Link>
+            <Link
+              href="/grants"
+              className="px-4 py-3 border-3 border-bauhaus-blue text-xs font-black uppercase tracking-widest text-bauhaus-blue hover:bg-bauhaus-blue hover:text-white transition-colors"
+            >
+              Browse All Grants
+            </Link>
+          </div>
         </div>
       ) : (
         <DragDropContext onDragEnd={handleDragEnd}>

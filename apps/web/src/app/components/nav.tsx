@@ -4,104 +4,56 @@ import { useState, useRef, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { AccountDropdown } from './account-dropdown';
 import { GlobalSearch } from './global-search';
+import { isAdminEmail } from '@/lib/admin';
 import type { Tier, Module } from '@/lib/subscription';
-import { hasModule, TIER_LABELS, MODULE_LABELS, minimumTier } from '@/lib/subscription';
-
-const ADMIN_EMAILS = ['benjamin@act.place', 'hello@civicgraph.au'];
+import { hasModule, TIER_LABELS, minimumTier } from '@/lib/subscription';
 
 /* ─── Public (logged-out) nav ─────────────────────────────── */
 
 const publicLinks = [
-  { href: '/ask', label: 'Ask' },
-  { href: '/entity', label: 'Intelligence' },
-  { href: '/tender-intelligence', label: 'Procurement' },
-  { href: '/places', label: 'Places' },
-  { href: '/grants', label: 'Grants' },
+  { href: '/start', label: 'Start' },
+  { href: '/grants', label: 'Funding' },
+  { href: '/power', label: 'Power' },
   { href: '/reports', label: 'Reports' },
-  { href: '/developers', label: 'API' },
+  { href: '/pricing', label: 'Pricing' },
 ];
 
 const megaMenuSections = [
   {
-    title: 'Intelligence',
+    title: 'Funding Workflow',
     links: [
-      { href: '/entity', label: 'Entity Search', desc: 'Search 560K entities across all datasets' },
-      { href: '/entity/top', label: 'Power Index', desc: 'Top entities ranked by cross-system influence' },
-      { href: '/person', label: 'Who Runs Australia?', desc: 'Board seats, influence & interlocks' },
-      { href: '/sector', label: 'Sector Intelligence', desc: 'Drill into any sector — entities, funding, power' },
-      { href: '/entity/compare', label: 'Compare Entities', desc: 'Side-by-side entity comparison' },
-      { href: '/map', label: 'Funding Desert Map', desc: 'Where disadvantage meets underinvestment' },
-      { href: '/graph', label: 'Network Graph', desc: 'Interactive entity relationship graph' },
+      { href: '/grants', label: 'Grant Search', desc: 'Search live opportunities across government and philanthropic sources' },
+      { href: '/foundations', label: 'Foundation Search', desc: 'Search funders, programs, and giving profiles' },
+      { href: '/profile/matches', label: 'Matched Grants', desc: 'See the strongest opportunities for your organisation' },
+      { href: '/tracker', label: 'Grant Tracker', desc: 'Shortlist, stage, and manage your active pipeline' },
+      { href: '/alerts', label: 'Alerts', desc: 'Get notified when opportunities or deadlines change' },
     ],
   },
   {
-    title: 'Decision Tools',
+    title: 'Market And Power',
     links: [
-      { href: '/ask', label: 'Ask CivicGraph', desc: 'Natural language queries across all datasets' },
-      { href: '/evidence', label: 'Evidence Synthesis', desc: 'ALMA evidence analysis and synthesis' },
-      { href: '/scenarios', label: 'Scenario Modelling', desc: 'What-if allocation analysis' },
+      { href: '/tender-intelligence', label: 'Tender Intelligence', desc: 'Check suppliers, pathways, and procurement options' },
+      { href: '/power', label: 'Power Map', desc: 'See the money, entities, and relationships shaping a field' },
+      { href: '/reports/big-philanthropy', label: 'Big Philanthropy', desc: 'Track foundation power, giving, and concentration' },
+      { href: '/clarity', label: 'Data Clarity', desc: 'Understand what the graph covers and how the systems connect' },
     ],
   },
   {
-    title: 'Procurement Intelligence',
+    title: 'Reporting And Story',
     links: [
-      { href: '/tender-intelligence', label: 'Tender Intelligence', desc: 'Supplier discovery & compliance scoring' },
-      { href: '/tender-intelligence#enrich', label: 'List Enrichment', desc: 'Upload & enrich supplier lists' },
-      { href: '/tender-intelligence#pack', label: 'Intelligence Pack', desc: 'Full procurement analysis report' },
-      { href: '/for/government', label: 'For Government', desc: 'Procurement officers & commissioners' },
+      { href: '/reports', label: 'Investigations', desc: 'Read the stronger public argument emerging from the live graph' },
+      { href: '/reports/civicgraph-thesis', label: 'CivicGraph Thesis', desc: 'See the broader product and category case' },
+      { href: '/start', label: 'Innovation Guide', desc: 'Start with the guided flow and move toward a real organisation or plan' },
+      { href: '/ask', label: 'Ask CivicGraph', desc: 'Query the broader intelligence graph in natural language' },
     ],
   },
   {
-    title: 'Domain Intelligence',
+    title: 'Platform',
     links: [
-      { href: '/reports/youth-justice', label: 'Youth Justice', desc: 'Detention, recidivism, CtG targets, ALMA evidence' },
-      { href: '/reports/child-protection', label: 'Child Protection', desc: 'Notifications, OOHC, substantiation, ROGS 16A' },
-      { href: '/reports/disability', label: 'Disability & NDIS', desc: 'Participation, expenditure, thin markets, ROGS 15A' },
-      { href: '/reports/education', label: 'Education', desc: 'Attendance, retention, ICSEA, ROGS 4A' },
-      { href: '/reports/nsw', label: 'State Dashboards', desc: 'Cross-domain intelligence by jurisdiction' },
-      { href: '/reports/youth-justice/national', label: 'National Comparisons', desc: 'State-by-state outcome comparison' },
-    ],
-  },
-  {
-    title: 'Explore Data',
-    links: [
-      { href: '/grants', label: 'Grants', desc: 'Search live grant opportunities' },
-      { href: '/foundations', label: 'Foundations', desc: 'Search giving foundations and programs' },
-      { href: '/charities', label: 'Charities', desc: 'Search Australian charities' },
-      { href: '/entities', label: 'Entity Graph', desc: 'National entity graph across contracts, grants, and donations' },
-      { href: '/social-enterprises', label: 'Social Enterprises', desc: 'B Corps, indigenous & disability enterprises' },
-      { href: '/dashboard', label: 'Dashboard', desc: 'Overview & key metrics' },
-    ],
-  },
-  {
-    title: 'Investigations',
-    links: [
-      { href: '/reports/power-concentration', label: 'Power Index', desc: '82K entities scored across 7 datasets' },
-      { href: '/reports/political-money', label: 'Political Money', desc: 'Who funds politics & what they get back' },
-      { href: '/reports/donor-contractors', label: 'Donor-Contractors', desc: 'Entities that both donate and hold government contracts' },
-      { href: '/reports/cross-reference', label: '$74B Question', desc: 'Who gets government contracts?' },
-      { href: '/reports/big-philanthropy', label: '$222 Billion', desc: 'Where charity money goes' },
-      { href: '/reports/community-parity', label: 'Community Parity', desc: 'Who benefits, who misses out' },
-      { href: '/reports/who-runs-australia', label: 'Who Runs Australia?', desc: 'Boards, donations, lobbying & contracts' },
-      { href: '/reports/funding-deserts', label: 'Funding Deserts', desc: 'Where disadvantage meets underinvestment' },
-      { href: '/reports/data-health', label: 'Data Health', desc: 'Coverage & completeness across 7 systems' },
-      { href: '/reports/tax-transparency', label: 'Tax Transparency', desc: 'Government contracts vs tax paid' },
-      { href: '/reports/exec-remuneration', label: 'Exec Remuneration', desc: 'Executive pay vs service delivery' },
-      { href: '/reports/board-interlocks', label: 'Board Interlocks', desc: 'Who controls Australia\'s charities?' },
-      { href: '/reports/charity-contracts', label: 'Charity Contracts', desc: 'Charity exec pay vs government contracts' },
-      { href: '/reports/influence-network', label: 'Influence Network', desc: 'Lobby, donate, win contracts — the cycle' },
-      { href: '/reports/power-network', label: 'Power Network', desc: 'Who runs Australia\'s civic sector?' },
-      { href: '/reports/desert-overhead', label: 'Desert Overhead', desc: 'Exec pay in disadvantaged areas' },
-      { href: '/reports/community-efficiency', label: 'ACCO Efficiency', desc: 'Community-controlled orgs deliver more with less' },
-    ],
-  },
-  {
-    title: 'For',
-    links: [
-      { href: '/for/government', label: 'Government', desc: 'Procurement & commissioning intelligence' },
-      { href: '/for/community', label: 'Community Orgs', desc: 'Find grants, track applications' },
-      { href: '/for/funders', label: 'Funders', desc: 'Portfolio intelligence & discovery' },
-      { href: '/for/researchers', label: 'Researchers', desc: 'Open data & living reports' },
+      { href: '/pricing', label: 'Pricing', desc: 'Compare Community, Professional, Organisation, and Funder plans' },
+      { href: '/for/community', label: 'For Community Teams', desc: 'How the product helps nonprofits and grant consultants' },
+      { href: '/developers', label: 'API', desc: 'Programmatic access and developer entry points' },
+      { href: '/places', label: 'Place Packs', desc: 'Place-based funding and allocation intelligence' },
     ],
   },
 ];
@@ -117,10 +69,20 @@ type NavModule = {
 };
 
 const workspaceModules: NavModule[] = [
-  { id: 'home', label: 'Dashboard', href: '/home' },
+  {
+    id: 'home',
+    label: 'Today',
+    href: '/home',
+    children: [
+      { label: 'Home', href: '/home' },
+      { label: 'My Org', href: '/org' },
+      { label: 'Briefing Hub', href: '/briefing' },
+      { label: 'Data Clarity', href: '/clarity' },
+    ],
+  },
   {
     id: 'grants',
-    label: 'Grants',
+    label: 'Funding',
     href: '/grants',
     module: 'grants',
     children: [
@@ -129,12 +91,13 @@ const workspaceModules: NavModule[] = [
       { label: 'Tracker', href: '/tracker' },
       { label: 'Foundations', href: '/foundations' },
       { label: 'Foundation Tracker', href: '/foundations/tracker' },
+      { label: 'Grant Frontier', href: '/reports/grant-frontier' },
       { label: 'Alerts', href: '/alerts' },
     ],
   },
   {
     id: 'procurement',
-    label: 'Procurement',
+    label: 'Markets',
     href: '/tender-intelligence',
     module: 'procurement',
     children: [
@@ -143,27 +106,15 @@ const workspaceModules: NavModule[] = [
     ],
   },
   {
-    id: 'allocation',
-    label: 'Allocation',
-    href: '/reports',
-    module: 'allocation',
-    children: [
-      { label: 'Reports', href: '/reports' },
-      { label: 'Youth Justice', href: '/reports/youth-justice' },
-      { label: 'Child Protection', href: '/reports/child-protection' },
-      { label: 'Disability', href: '/reports/disability' },
-      { label: 'Education', href: '/reports/education' },
-      { label: 'Places', href: '/places' },
-      { label: 'Power Map', href: '/power' },
-    ],
-  },
-  {
     id: 'research',
-    label: 'Research',
+    label: 'Intelligence',
     href: '/reports',
     module: 'research',
     children: [
       { label: 'Reports', href: '/reports' },
+      { label: 'Power Map', href: '/power' },
+      { label: 'Big Philanthropy', href: '/reports/big-philanthropy' },
+      { label: 'Reallocation Atlas', href: '/reports/reallocation-atlas' },
       { label: 'Ask', href: '/ask' },
       { label: 'Evidence', href: '/evidence' },
       { label: 'Scenarios', href: '/scenarios' },
@@ -174,18 +125,8 @@ const workspaceModules: NavModule[] = [
       { label: 'Funding Map', href: '/map' },
       { label: 'Network Graph', href: '/graph' },
       { label: 'Charities', href: '/charities' },
-      { label: 'Social Enterprises', href: '/social-enterprises' },
-    ],
-  },
-  {
-    id: 'relationships',
-    label: 'Relationships',
-    href: '/org',
-    module: 'relationships',
-    children: [
-      { label: 'My Org', href: '/org' },
-      { label: 'Contacts', href: '/org/__SLUG__/contacts' },
-      { label: 'Knowledge Wiki', href: '/knowledge' },
+      { label: 'Place Packs', href: '/places' },
+      { label: 'Thesis', href: '/reports/civicgraph-thesis' },
     ],
   },
 ];
@@ -194,6 +135,7 @@ const workspaceModules: NavModule[] = [
 
 const adminLinks = [
   { href: '/ops', label: 'Ops' },
+  { href: '/portfolio-control', label: 'Portfolio Control' },
   { href: '/mission-control', label: 'Mission Control' },
   { href: '/goods-workspace', label: 'Goods Workspace' },
 ];
@@ -217,7 +159,7 @@ export function NavBar({ initialUserEmail, subscriptionTier = 'community', isImp
   const pathname = usePathname();
 
   const isLoggedIn = !!userEmail;
-  const isAdmin = isLoggedIn && ADMIN_EMAILS.includes(userEmail);
+  const isAdmin = isLoggedIn && isAdminEmail(userEmail);
   const tier = subscriptionTier;
 
   // Resolve org-slug-dependent links (hide links that need a slug when none is available)
@@ -437,13 +379,6 @@ export function NavBar({ initialUserEmail, subscriptionTier = 'community', isImp
               <span className="hidden lg:inline">Search</span>
               <kbd className="hidden lg:inline-block px-1.5 py-0.5 text-[9px] font-black text-bauhaus-muted border border-bauhaus-black/20 ml-1">&#8984;K</kbd>
             </button>
-            <div className="w-px h-6 bg-bauhaus-black/20 mx-1" />
-            <a
-              href="/mission-control"
-              className="px-3 py-2 text-xs font-black uppercase tracking-widest text-bauhaus-red hover:bg-bauhaus-red hover:text-white transition-colors"
-            >
-              Mission Control
-            </a>
             <button
               ref={btnRef}
               onClick={() => { setMegaOpen(!megaOpen); }}
@@ -464,6 +399,12 @@ export function NavBar({ initialUserEmail, subscriptionTier = 'community', isImp
               className="px-3 py-2 text-xs font-black uppercase tracking-widest text-bauhaus-blue hover:bg-bauhaus-blue hover:text-white transition-colors"
             >
               Login
+            </a>
+            <a
+              href="/register"
+              className="px-3 py-2 text-xs font-black uppercase tracking-widest text-white bg-bauhaus-red hover:bg-bauhaus-black transition-colors"
+            >
+              Start Free
             </a>
           </div>
 
@@ -532,6 +473,13 @@ export function NavBar({ initialUserEmail, subscriptionTier = 'community', isImp
               </div>
             ))}
             <div className="mt-4 pt-4 border-t-2 border-bauhaus-black/20">
+              <a
+                href="/register"
+                className="block px-3 py-3 text-sm font-black uppercase tracking-widest text-white bg-bauhaus-red hover:bg-bauhaus-black transition-colors mb-2"
+                onClick={() => setMobileOpen(false)}
+              >
+                Start Free
+              </a>
               <a
                 href="/login"
                 className="block px-3 py-3 text-sm font-black uppercase tracking-widest text-bauhaus-blue hover:bg-bauhaus-blue hover:text-white transition-colors"

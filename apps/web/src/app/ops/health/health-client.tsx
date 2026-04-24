@@ -15,6 +15,30 @@ interface HealthData {
     community: { orgs: number };
     socialEnterprises: { total: number; enriched: number };
   };
+  grantSemantics: {
+    statusNull: number;
+    applicationStatusNull: number;
+    openPastDeadline: number;
+    ghlUnknown: number;
+    topIssueSources: Array<{
+      source: string;
+      statusNull: number;
+      applicationStatusNull: number;
+      openPastDeadline: number;
+      totalIssues: number;
+    }>;
+  };
+  sourceIdentity: {
+    blankSourceId: number;
+    canonicalMismatch: number;
+    duplicateShadows: number;
+    topIssueSources: Array<{
+      source: string;
+      blankSourceId: number;
+      canonicalMismatch: number;
+      totalIssues: number;
+    }>;
+  };
   entityGraph: {
     totalEntities: number;
     totalRelationships: number;
@@ -159,15 +183,15 @@ function freshnessStatus(iso: string | null): { label: string; color: string } {
 }
 
 function computeHealthScore(data: HealthData): number {
-  const { stats, entityGraph, dataFreshness } = data;
+  const { stats, grantSemantics, sourceIdentity, entityGraph, dataFreshness } = data;
 
-  // Data completeness (40%)
+  // Data completeness (30%)
   const grantsEmbedPct = pctNum(stats.grants.embedded, stats.grants.total);
   const foundationsProfiledPct = pctNum(stats.foundations.profiled, stats.foundations.total);
   const entityPopulated = entityGraph.totalEntities > 0 ? 100 : 0;
   const completeness = (grantsEmbedPct + foundationsProfiledPct + entityPopulated) / 3;
 
-  // Data freshness (40%)
+  // Data freshness (30%)
   const freshnessScores = dataFreshness
     .filter(d => d.lastUpdated !== null)
     .map(d => {
@@ -181,11 +205,39 @@ function computeHealthScore(data: HealthData): number {
     ? freshnessScores.reduce((a, b) => a + b, 0) / freshnessScores.length
     : 0;
 
-  // Enrichment quality (20%)
+  // Enrichment quality (15%)
   const grantsEnrichedPct = pctNum(stats.grants.enriched, stats.grants.total);
   const quality = grantsEnrichedPct;
 
-  return Math.round(completeness * 0.4 + avgFreshness * 0.4 + quality * 0.2);
+  // Grant semantics integrity (15%)
+  const semanticsIssueCount =
+    grantSemantics.statusNull
+    + grantSemantics.applicationStatusNull
+    + grantSemantics.openPastDeadline;
+  let semantics = 100;
+  if (grantSemantics.statusNull > 0) semantics -= 35;
+  if (grantSemantics.applicationStatusNull > 0) semantics -= 30;
+  if (grantSemantics.openPastDeadline > 0) semantics -= 35;
+  const ratioPenalty = Math.min(25, (semanticsIssueCount / Math.max(stats.grants.total, 1)) * 2500);
+  semantics = Math.max(0, semantics - ratioPenalty);
+
+  // Grant source identity integrity (10%)
+  const sourceIdentityIssueCount =
+    sourceIdentity.blankSourceId
+    + sourceIdentity.canonicalMismatch;
+  let sourceIdentityIntegrity = 100;
+  if (sourceIdentity.blankSourceId > 0) sourceIdentityIntegrity -= 60;
+  if (sourceIdentity.canonicalMismatch > 0) sourceIdentityIntegrity -= 40;
+  const sourceIdentityRatioPenalty = Math.min(20, (sourceIdentityIssueCount / Math.max(stats.grants.total, 1)) * 2000);
+  sourceIdentityIntegrity = Math.max(0, sourceIdentityIntegrity - sourceIdentityRatioPenalty);
+
+  return Math.round(
+    completeness * 0.30
+    + avgFreshness * 0.30
+    + quality * 0.15
+    + semantics * 0.15
+    + sourceIdentityIntegrity * 0.10
+  );
 }
 
 const PIPELINE_STAGES = [
@@ -237,9 +289,9 @@ const BLOCKERS = [
   },
   {
     severity: 'medium' as const,
-    title: 'No freshness tracking',
-    desc: 'No mechanism to detect stale/expired grants. Grants that disappear from sources are never marked as closed.',
-    fix: null,
+    title: 'Foundation program sync still needs throughput work',
+    desc: 'Grant semantics are now guarded, but foundation profiling and program refresh remain the slowest path in the pipeline. Higher batch size and parallelism still matter.',
+    fix: 'npx tsx scripts/build-foundation-profiles.mjs --limit=100 --concurrency=5',
   },
 ];
 
@@ -307,7 +359,7 @@ export function HealthClient() {
     );
   }
 
-  const { stats, entityGraph, totalRecords, dataFreshness, sourceBreakdown, confidenceBreakdown, recentRuns, discoveryRuns } = data;
+  const { stats, grantSemantics, sourceIdentity, entityGraph, totalRecords, dataFreshness, sourceBreakdown, confidenceBreakdown, recentRuns, discoveryRuns } = data;
   const confMap = Object.fromEntries(confidenceBreakdown.map(c => [c.confidence, c.total]));
   const healthScore = computeHealthScore(data);
 
@@ -361,9 +413,9 @@ export function HealthClient() {
           </div>
           <div className="flex-1">
             <h2 className="text-sm font-black uppercase tracking-widest text-bauhaus-muted mb-3">Composite Health Score</h2>
-            <div className="grid grid-cols-3 gap-4 text-xs">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 text-xs">
               <div>
-                <div className="font-black uppercase tracking-wider text-bauhaus-muted mb-1">Data Completeness (40%)</div>
+                <div className="font-black uppercase tracking-wider text-bauhaus-muted mb-1">Data Completeness (30%)</div>
                 <div className="font-mono">
                   Grants embedded: {pct(stats.grants.embedded, stats.grants.total)}% |
                   Foundations profiled: {pct(stats.foundations.profiled, stats.foundations.total)}% |
@@ -371,15 +423,31 @@ export function HealthClient() {
                 </div>
               </div>
               <div>
-                <div className="font-black uppercase tracking-wider text-bauhaus-muted mb-1">Data Freshness (40%)</div>
+                <div className="font-black uppercase tracking-wider text-bauhaus-muted mb-1">Data Freshness (30%)</div>
                 <div className="font-mono">
                   {dataFreshness.filter(d => d.lastUpdated !== null && ageInDays(d.lastUpdated) < 7).length}/{dataFreshness.filter(d => d.lastUpdated !== null).length} sources updated this week
                 </div>
               </div>
               <div>
-                <div className="font-black uppercase tracking-wider text-bauhaus-muted mb-1">Enrichment Quality (20%)</div>
+                <div className="font-black uppercase tracking-wider text-bauhaus-muted mb-1">Enrichment Quality (15%)</div>
                 <div className="font-mono">
                   Grants enriched: {pct(stats.grants.enriched, stats.grants.total)}%
+                </div>
+              </div>
+              <div>
+                <div className="font-black uppercase tracking-wider text-bauhaus-muted mb-1">Semantics Integrity (15%)</div>
+                <div className="font-mono">
+                  null status: {grantSemantics.statusNull} |
+                  null app: {grantSemantics.applicationStatusNull} |
+                  stale-open: {grantSemantics.openPastDeadline}
+                </div>
+              </div>
+              <div>
+                <div className="font-black uppercase tracking-wider text-bauhaus-muted mb-1">Source Identity (10%)</div>
+                <div className="font-mono">
+                  blank ids: {sourceIdentity.blankSourceId} |
+                  mismatch: {sourceIdentity.canonicalMismatch} |
+                  dupes: {sourceIdentity.duplicateShadows}
                 </div>
               </div>
             </div>
@@ -424,6 +492,115 @@ export function HealthClient() {
           </div>
           <StatCard label="Community Orgs" value={stats.community.orgs} href="/ops/health/community-orgs" />
           <StatCard label="Social Enterprises" value={stats.socialEnterprises?.total ?? 0} total={undefined} href="/ops/health/social-enterprises" />
+        </div>
+      </section>
+
+      {/* ===== GRANT SEMANTICS ===== */}
+      <section className="mb-10">
+        <h2 className="text-sm font-black uppercase tracking-widest text-bauhaus-muted mb-4 border-b-2 border-bauhaus-black pb-2">
+          Grant Semantics
+        </h2>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <StatCard label="Null Status" value={grantSemantics.statusNull} />
+          <StatCard label="Null Application Status" value={grantSemantics.applicationStatusNull} />
+          <StatCard label="Open Past Deadline" value={grantSemantics.openPastDeadline} />
+          <StatCard label="GHL Unknown" value={grantSemantics.ghlUnknown} />
+        </div>
+        <div className="border-4 border-bauhaus-black mt-4 p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <div className="text-xs font-black uppercase tracking-widest text-bauhaus-muted mb-1">Current Guardrail State</div>
+              <div className="text-sm text-bauhaus-black">
+                {grantSemantics.statusNull === 0 && grantSemantics.applicationStatusNull === 0 && grantSemantics.openPastDeadline === 0
+                  ? 'Semantics debt is currently at zero. Pipeline health checks will fail if these counts regress.'
+                  : 'Semantics debt has reappeared. The health check agent should now be treated as a failing pipeline gate.'}
+              </div>
+            </div>
+            <div className={`px-3 py-2 text-xs font-black uppercase tracking-widest border-2 ${
+              grantSemantics.statusNull === 0 && grantSemantics.applicationStatusNull === 0 && grantSemantics.openPastDeadline === 0
+                ? 'border-green-500 text-green-700 bg-green-50'
+                : 'border-red-500 text-red-700 bg-red-50'
+            }`}>
+              {grantSemantics.statusNull === 0 && grantSemantics.applicationStatusNull === 0 && grantSemantics.openPastDeadline === 0
+                ? 'Healthy'
+                : 'Regression'}
+            </div>
+          </div>
+
+          {grantSemantics.topIssueSources.length > 0 ? (
+            <div className="mt-4">
+              <div className="text-xs font-black uppercase tracking-widest text-bauhaus-muted mb-2">Top Regressing Sources</div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {grantSemantics.topIssueSources.map((source) => (
+                  <div key={source.source} className="border-2 border-bauhaus-black/20 p-3">
+                    <div className="text-xs font-black uppercase tracking-wider text-bauhaus-muted">{source.source}</div>
+                    <div className="text-lg font-black">{source.totalIssues.toLocaleString()}</div>
+                    <div className="text-xs font-mono text-bauhaus-muted mt-1">
+                      status={source.statusNull.toLocaleString()} | app={source.applicationStatusNull.toLocaleString()} | stale-open={source.openPastDeadline.toLocaleString()}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="mt-4 text-xs text-green-700 font-mono">
+              No issue sources are currently outstanding.
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ===== SOURCE IDENTITY ===== */}
+      <section className="mb-10">
+        <h2 className="text-sm font-black uppercase tracking-widest text-bauhaus-muted mb-4 border-b-2 border-bauhaus-black pb-2">
+          Grant Source Identity
+        </h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <StatCard label="Blank Source ID" value={sourceIdentity.blankSourceId} />
+          <StatCard label="Canonical Mismatch" value={sourceIdentity.canonicalMismatch} />
+          <StatCard label="Tracked Duplicates" value={sourceIdentity.duplicateShadows} />
+        </div>
+        <div className="border-4 border-bauhaus-black mt-4 p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <div className="text-xs font-black uppercase tracking-widest text-bauhaus-muted mb-1">Current Guardrail State</div>
+              <div className="text-sm text-bauhaus-black">
+                {sourceIdentity.blankSourceId === 0 && sourceIdentity.canonicalMismatch === 0
+                  ? 'Grant-engine source keys are canonical. Duplicate legacy shadows remain explicitly tracked, not silently blank or mis-keyed.'
+                  : 'Grant-engine source identity drift has reappeared. Blank source ids or canonical mismatches now need cleanup before this starts affecting source-level reporting.'}
+              </div>
+            </div>
+            <div className={`px-3 py-2 text-xs font-black uppercase tracking-widest border-2 ${
+              sourceIdentity.blankSourceId === 0 && sourceIdentity.canonicalMismatch === 0
+                ? 'border-green-500 text-green-700 bg-green-50'
+                : 'border-red-500 text-red-700 bg-red-50'
+            }`}>
+              {sourceIdentity.blankSourceId === 0 && sourceIdentity.canonicalMismatch === 0
+                ? 'Healthy'
+                : 'Regression'}
+            </div>
+          </div>
+
+          {sourceIdentity.topIssueSources.length > 0 ? (
+            <div className="mt-4">
+              <div className="text-xs font-black uppercase tracking-widest text-bauhaus-muted mb-2">Top Regressing Sources</div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {sourceIdentity.topIssueSources.map((source) => (
+                  <div key={source.source} className="border-2 border-bauhaus-black/20 p-3">
+                    <div className="text-xs font-black uppercase tracking-wider text-bauhaus-muted">{source.source}</div>
+                    <div className="text-lg font-black">{source.totalIssues.toLocaleString()}</div>
+                    <div className="text-xs font-mono text-bauhaus-muted mt-1">
+                      blank={source.blankSourceId.toLocaleString()} | mismatch={source.canonicalMismatch.toLocaleString()}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="mt-4 text-xs text-green-700 font-mono">
+              No source-identity issue sources are currently outstanding.
+            </div>
+          )}
         </div>
       </section>
 

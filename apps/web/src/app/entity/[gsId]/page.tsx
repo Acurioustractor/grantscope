@@ -56,6 +56,12 @@ interface PowerRow {
   procurement_dollars: number; justice_dollars: number; donation_dollars: number;
   total_dollar_flow: number; distinct_govt_buyers: number; distinct_parties_funded: number;
 }
+interface RankingRow {
+  score_composite: number; rank_composite: number; total_ranked: number;
+  score_revenue: number; score_growth: number; score_leverage: number;
+  score_efficiency: number; score_network: number; score_health: number;
+  cagr: number; revenue: number; network_connections: number;
+}
 interface AtoRow { total_income: number; taxable_income: number; tax_payable: number; effective_tax_rate: number; report_year: string; industry: string }
 interface BoardRow { person_name: string; role_type: string; appointment_date: string | null; cessation_date: string | null; source: string }
 interface RevolvingDoorRow {
@@ -92,7 +98,7 @@ export default async function EntityPage({ params }: { params: Promise<{ gsId: s
 
   const supabase = getServiceSupabase();
 
-  const [funding, contracts, donations, relationships, alma, acnc, power, ato, board, revolvingDoor, impactReports, mmrStats, anaoCompliance, outcomeMetrics, policyEvents] = await Promise.all([
+  const [funding, contracts, donations, relationships, alma, acnc, power, ato, board, revolvingDoor, impactReports, mmrStats, anaoCompliance, outcomeMetrics, policyEvents, charityRanking] = await Promise.all([
     entity.abn ? safe(supabase.rpc('exec_sql', {
       query: `SELECT program_name, SUM(amount_dollars)::bigint as total, COUNT(*)::int as records,
                 MIN(financial_year) as from_fy, MAX(financial_year) as to_fy
@@ -203,6 +209,14 @@ export default async function EntityPage({ params }: { params: Promise<{ gsId: s
          WHERE jurisdiction = '${esc(entity.state)}' AND domain = 'youth-justice' AND severity IN ('critical', 'significant')
          ORDER BY event_date DESC LIMIT 5`,
     })) as Promise<PolicyEventRow[] | null> : null,
+    // Charity ranking
+    entity.abn ? safe(supabase.rpc('exec_sql', {
+      query: `SELECT score_composite, rank_composite, total_ranked,
+                score_revenue::numeric(10,1), score_growth::numeric(10,1), score_leverage::numeric(10,1),
+                score_efficiency::numeric(10,1), score_network::numeric(10,1), score_health::numeric(10,1),
+                cagr::numeric(10,1), revenue::bigint, network_connections
+         FROM mv_charity_rankings WHERE abn = '${entity.abn}' LIMIT 1`,
+    })) as Promise<RankingRow[] | null> : null,
   ]);
 
   const totalFunding = funding?.reduce((s, r) => s + Number(r.total), 0) ?? 0;
@@ -221,6 +235,10 @@ export default async function EntityPage({ params }: { params: Promise<{ gsId: s
   const outcomesData = (outcomeMetrics as OutcomeMetricRow[] | null) ?? [];
   const policyData = (policyEvents as PolicyEventRow[] | null) ?? [];
   const hasJurisdictionContext = outcomesData.length > 0 || policyData.length > 0;
+  const rankingData = (charityRanking as RankingRow[] | null)?.[0] ?? null;
+  const sectorPercentile = rankingData
+    ? ((Number(rankingData.total_ranked) - Number(rankingData.rank_composite) + 1) / Number(rankingData.total_ranked) * 100).toFixed(1)
+    : null;
   const trendSignals = outcomesData.length > 0
     ? pickTopTrends(computeTrendSignals(outcomesData, entity.state ?? ''), 2)
     : [];
@@ -286,6 +304,11 @@ export default async function EntityPage({ params }: { params: Promise<{ gsId: s
                 Community Controlled
               </span>
             )}
+            {rankingData && sectorPercentile && (
+              <Link href="/rankings" className="text-[10px] px-2 py-0.5 bg-bauhaus-blue/20 border border-bauhaus-blue/30 rounded-sm font-bold uppercase tracking-wider text-bauhaus-blue hover:bg-bauhaus-blue/30 transition-colors">
+                Top {sectorPercentile}% — Ranked #{Number(rankingData.rank_composite).toLocaleString()} of {Number(rankingData.total_ranked).toLocaleString()}
+              </Link>
+            )}
           </div>
           {(entity.lga_name || entity.state) && (
             <div className="mt-2 flex items-center gap-3 text-sm text-gray-400">
@@ -331,6 +354,29 @@ export default async function EntityPage({ params }: { params: Promise<{ gsId: s
               <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Power Score</p>
               <p className="text-3xl font-black mt-1">{Number(powerData.power_score).toFixed(1)}</p>
               <p className="text-xs text-gray-400 mt-1">{powerData.system_count} systems</p>
+            </div>
+          )}
+          {rankingData && (
+            <div className="bg-white border-2 border-bauhaus-blue shadow-sm p-4">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Charity Score</p>
+              <p className="text-3xl font-black mt-1 text-bauhaus-blue">{Number(rankingData.score_composite).toFixed(1)}</p>
+              <div className="mt-2 space-y-1">
+                {[
+                  { label: 'Rev', score: Number(rankingData.score_revenue), color: 'bg-green-500' },
+                  { label: 'Growth', score: Number(rankingData.score_growth), color: 'bg-blue-500' },
+                  { label: 'Lever', score: Number(rankingData.score_leverage), color: 'bg-purple-500' },
+                  { label: 'Effic', score: Number(rankingData.score_efficiency), color: 'bg-amber-500' },
+                  { label: 'Net', score: Number(rankingData.score_network), color: 'bg-red-500' },
+                  { label: 'Hlth', score: Number(rankingData.score_health), color: 'bg-teal-500' },
+                ].map(d => (
+                  <div key={d.label} className="flex items-center gap-1.5">
+                    <span className="text-[9px] w-10 text-gray-400 font-bold">{d.label}</span>
+                    <div className="flex-1 h-1.5 bg-gray-100">
+                      <div className={`h-full ${d.color}`} style={{ width: `${Math.min(100, d.score)}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
           {totalDollarFlow > 0 && (

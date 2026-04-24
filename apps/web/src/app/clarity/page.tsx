@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { BriefingLoopBar } from '@/app/components/briefing-loop-bar';
+import { buildClarityPageState } from '@/app/components/briefing-page-params';
 import { getServiceSupabase } from '@/lib/supabase';
 import SchemaGraph from './schema-graph';
 
@@ -32,6 +34,27 @@ interface Finding {
   claim: string;
   evidence: string;
 }
+
+interface DataCatalogLatest {
+  table_name: string;
+  domain: string;
+  owner_team: string;
+  source_of_truth: boolean;
+  pii_level: string;
+  sla_hours: number;
+  row_count: number | null;
+  freshness_hours: number | null;
+  provenance_coverage_pct: number | null;
+  confidence_coverage_pct: number | null;
+  snapshot_at: string | null;
+}
+
+type SearchParams = {
+  subject?: string;
+  state?: string;
+  lanes?: string;
+  output?: string;
+};
 
 /* ─── Helpers ─────────────────────────────────────── */
 
@@ -135,6 +158,7 @@ async function getData() {
     untaggedResult,
     crossSystemResult,
     desertResult,
+    catalogResult,
   ] = await Promise.all([
     // Fast estimated row counts from pg_stat (no table scan!)
     safe(db.rpc('exec_sql', {
@@ -145,10 +169,21 @@ async function getData() {
     })),
     // ALL tables with estimated row counts
     safe(db.rpc('exec_sql', {
-      query: `SELECT relname as table_name, reltuples::bigint as est_rows
-              FROM pg_class
-              WHERE relkind = 'r' AND relnamespace = 'public'::regnamespace AND reltuples > 0
-              ORDER BY reltuples DESC`,
+      query: `SELECT
+                c.relname as table_name,
+                GREATEST(
+                  COALESCE(s.n_live_tup, 0)::bigint,
+                  COALESCE(c.reltuples, 0)::bigint
+                ) as est_rows
+              FROM pg_class c
+              LEFT JOIN pg_stat_user_tables s ON s.relid = c.oid
+              WHERE c.relkind = 'r'
+                AND c.relnamespace = 'public'::regnamespace
+                AND GREATEST(
+                  COALESCE(s.n_live_tup, 0)::bigint,
+                  COALESCE(c.reltuples, 0)::bigint
+                ) > 0
+              ORDER BY est_rows DESC`,
     })),
     safe(db.rpc('exec_sql', {
       query: `SELECT jurisdiction as state, COUNT(DISTINCT metric_name) as metric_types, COUNT(*) as total
@@ -166,6 +201,10 @@ async function getData() {
     safe(db.rpc('exec_sql', {
       query: `SELECT COUNT(*) as deserts FROM mv_funding_deserts WHERE desert_score >= 70`,
     })),
+    safe(db.from('v_data_catalog_latest')
+      .select('table_name, domain, owner_team, source_of_truth, pii_level, sla_hours, row_count, freshness_hours, provenance_coverage_pct, confidence_coverage_pct, snapshot_at')
+      .order('domain', { ascending: true })
+      .order('table_name', { ascending: true })),
   ]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -193,6 +232,7 @@ async function getData() {
     untagged: parse(untaggedResult) as { state: string; untagged: number }[],
     crossSystem: parse(crossSystemResult) as { system_count: number; entities: number }[],
     deserts: parseFirst(desertResult),
+    dataCatalog: parse(catalogResult) as DataCatalogLatest[],
   };
 }
 
@@ -252,8 +292,8 @@ function generateFindings(data: Awaited<ReturnType<typeof getData>>): Finding[] 
   if (missingStates.length > 0) {
     findings.push({
       severity: 'gap',
-      claim: `${missingStates.join(', ')} lack org-level funding data`,
-      evidence: 'Only QLD has granular per-recipient grant data. Other states have aggregate ROGS budget lines only.',
+      claim: `${missingStates.join(', ')} still have thin org-level funding coverage`,
+      evidence: 'QLD is the only dense per-recipient funding lane. Other states now have some org-level records, but the coverage is still much thinner and often needs to be read alongside aggregate ROGS and AIHW layers.',
     });
   }
 
@@ -299,6 +339,7 @@ interface TableEntry {
 const DOMAIN_RULES: { domain: string; color: string; patterns: RegExp[] }[] = [
   { domain: 'Entity Graph', color: 'bg-bauhaus-black', patterns: [
     /^gs_entit/, /^gs_relationship/, /^entity_/, /^canonical_entit/, /^donor_entity/,
+    /^name_alias/, /^cross_system_stat/,
   ]},
   { domain: 'Registries', color: 'bg-green-500', patterns: [
     /^abr_/, /^asic_/, /^acnc_/, /^oric_/, /^asx_/, /^nz_charit/,
@@ -308,7 +349,8 @@ const DOMAIN_RULES: { domain: string; color: string; patterns: RegExp[] }[] = [
   ]},
   { domain: 'Funding & Grants', color: 'bg-yellow-500', patterns: [
     /^justice_fund/, /^grant_/, /^foundation/, /^research_grant/, /^funding_/,
-    /^saved_grant/, /^saved_found/, /^money_flow/,
+    /^saved_grant/, /^saved_found/, /^money_flow/, /^opportunities_unified/,
+    /^source_frontier/, /^government_program/,
   ]},
   { domain: 'Influence & Accountability', color: 'bg-bauhaus-red', patterns: [
     /^political_/, /^ato_/, /^civic_/, /^oversight_/, /^lobbying/,
@@ -320,7 +362,8 @@ const DOMAIN_RULES: { domain: string; color: string; patterns: RegExp[] }[] = [
   ]},
   { domain: 'Evidence & Outcomes', color: 'bg-pink-500', patterns: [
     /^alma_/, /^outcomes_/, /^aihw_/, /^crime_stat/, /^rogs_/,
-    /^justicehub/, /^justice_matrix/, /^international_prog/,
+    /^justicehub/, /^justice_matrix/, /^international_prog/, /^governed_proof_/,
+    /^tracker_evidence_/,
   ]},
   { domain: 'Social & Disability', color: 'bg-teal-500', patterns: [
     /^ndis_/, /^dss_/, /^social_enter/, /^acara_/, /^community_/,
@@ -334,13 +377,15 @@ const DOMAIN_RULES: { domain: string; color: string; patterns: RegExp[] }[] = [
     /^site_health/, /^health_alert/, /^discover/, /^page_view/,
     /^app_/, /^user_/, /^users$/, /^ce_/, /^integration_/,
     /^processing_/, /^migration_/, /^subscription/, /^pending_sub/,
+    /^alert_event/, /^data_catalog/, /^analysis_job/,
   ]},
   { domain: 'Content & Knowledge', color: 'bg-indigo-400', patterns: [
     /^knowledge_/, /^project_/, /^notion_/, /^blog_/, /^article/,
     /^media_/, /^cms_/, /^wiki_/, /^story/, /^content_/, /^transcript/,
     /^sprint_/, /^idea_/, /^exa_/, /^intelligence_/, /^signal_/,
     /^review_/, /^pulse_/, /^campaign_/, /^el_/, /^portrait/, /^photo/,
-    /^quote/, /^ralph_/, /^agentic_/, /^daily_reflect/,
+    /^quote/, /^ralph_/, /^agentic_/, /^daily_reflect/, /^research_item/,
+    /^ai_discover/,
   ]},
   { domain: 'Finance & Ops', color: 'bg-amber-500', patterns: [
     /^xero_/, /^receipt_/, /^bookkeeping/, /^dext_/, /^email_/,
@@ -357,7 +402,8 @@ const DOMAIN_RULES: { domain: string; color: string; patterns: RegExp[] }[] = [
     /^org_profile/, /^org_member/, /^org_grant/, /^org_program/,
     /^org_milestone/, /^org_leader/, /^org_referral/, /^org_session/,
     /^org_pipeline/, /^org_compliance/, /^org_action/, /^org_participant/,
-    /^public_spend/, /^platform_/, /^profile/, /^tab_/,
+    /^public_spend/, /^platform_/, /^profile/, /^tab_/, /^relationship_health/,
+    /^relationship_pipeline/, /^touchpoint/, /^bank_statement_line/,
   ]},
 ];
 
@@ -424,14 +470,50 @@ function fmtRows(n: number): string {
   return String(n);
 }
 
+function catalogStatus(row: DataCatalogLatest): 'fresh' | 'warning' | 'stale' | 'unknown' | 'no_snapshot' {
+  if (!row.snapshot_at) return 'no_snapshot';
+  if (row.freshness_hours === null || Number.isNaN(Number(row.freshness_hours))) return 'unknown';
+  if (row.freshness_hours <= Number(row.sla_hours ?? 0)) return 'fresh';
+  if (row.freshness_hours <= Number(row.sla_hours ?? 0) * 1.5) return 'warning';
+  return 'stale';
+}
+
+function catalogStatusStyles(status: ReturnType<typeof catalogStatus>): string {
+  if (status === 'fresh') return 'bg-green-100 text-green-700';
+  if (status === 'warning') return 'bg-yellow-100 text-yellow-700';
+  if (status === 'stale') return 'bg-bauhaus-red text-white';
+  if (status === 'unknown') return 'bg-gray-200 text-bauhaus-black';
+  return 'bg-gray-100 text-bauhaus-muted';
+}
+
 /* ─── Page ────────────────────────────────────────── */
 
-export default async function ClarityPage() {
+export default async function ClarityPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const params = await searchParams;
+  const {
+    briefingComposeHref,
+    hasBriefingContext,
+    loop,
+  } = buildClarityPageState(params);
   const data = await getData();
   const findings = generateFindings(data);
+  const catalogRows = data.dataCatalog.map((row) => ({
+    ...row,
+    status: catalogStatus(row),
+  }));
+  const catalogSummary = {
+    total: catalogRows.length,
+    fresh: catalogRows.filter((row) => row.status === 'fresh').length,
+    warning: catalogRows.filter((row) => row.status === 'warning').length,
+    stale: catalogRows.filter((row) => row.status === 'stale').length,
+    unknown: catalogRows.filter((row) => row.status === 'unknown').length,
+    noSnapshot: catalogRows.filter((row) => row.status === 'no_snapshot').length,
+  };
 
   // Build full inventory from live data
   const domains = buildDomains(data.allTables);
+  const inventoryTableCount = Object.values(domains).reduce((s, t) => s + t.length, 0);
+  const inventoryEstimatedRows = Object.values(domains).reduce((s, ts) => s + ts.reduce((a, t) => a + t.records, 0), 0);
 
   // Build topic × state matrix
   const topics = [...new Set(data.topicMatrix.map(t => t.topic))].sort();
@@ -507,6 +589,17 @@ export default async function ClarityPage() {
           How CivicGraph connects public data to make government spending, influence, and outcomes visible.
           Every claim we make is traceable to data. Here is what we have, where it connects, and where gaps remain.
         </p>
+        {hasBriefingContext && loop && (
+          <BriefingLoopBar
+            refineHref={briefingComposeHref}
+            output={loop.output}
+            subject={loop.subject}
+            state={loop.state}
+            lanes={loop.lanes}
+            className="mt-6 max-w-4xl"
+            message={loop.message}
+          />
+        )}
       </div>
 
       {/* ─── Section 1: Full Platform Inventory ─────── */}
@@ -514,8 +607,8 @@ export default async function ClarityPage() {
         <h2 className="text-xl font-black text-bauhaus-black mb-2 uppercase tracking-widest">The Full Platform</h2>
         <p className="text-sm text-bauhaus-muted mb-6 max-w-2xl">
           {fmt(Number(data.entities.total ?? 0))} entities connected by {fmt(Number(data.relationships.total ?? 0))} relationships
-          across {Object.values(domains).reduce((s, t) => s + t.length, 0)} tables and {fmt(Object.values(domains).reduce((s, ts) => s + ts.reduce((a, t) => a + t.records, 0), 0))} total records.
-          Live counts from the database — not hardcoded.
+          across {inventoryTableCount} included tables and ~{fmt(inventoryEstimatedRows)} estimated rows.
+          Inventory totals are live database estimates for speed; linkage and coverage sections below use direct live queries.
         </p>
 
         {/* Summary cards */}
@@ -542,7 +635,7 @@ export default async function ClarityPage() {
               <span className={`inline-block w-3 h-3 rounded-full ${domainColor(domain)}`} />
               {domain}
               <span className="text-bauhaus-muted font-mono text-xs font-normal ml-1">
-                {tables.length} tables &middot; {fmtRows(tables.reduce((s, t) => s + t.records, 0))} rows
+                {tables.length} tables &middot; ~{fmtRows(tables.reduce((s, t) => s + t.records, 0))} rows
               </span>
               <span className="text-bauhaus-muted text-xs ml-auto group-open:rotate-90 transition-transform">&#9654;</span>
             </summary>
@@ -551,7 +644,7 @@ export default async function ClarityPage() {
                 <thead>
                   <tr className="bg-bauhaus-black text-white">
                     <th className="text-left p-2 font-black uppercase tracking-widest">Table</th>
-                    <th className="text-right p-2 font-black uppercase tracking-widest">Records</th>
+                    <th className="text-right p-2 font-black uppercase tracking-widest">Est. Records</th>
                     <th className="text-right p-2 font-black uppercase tracking-widest">Size</th>
                   </tr>
                 </thead>
@@ -568,6 +661,75 @@ export default async function ClarityPage() {
             </div>
           </details>
         ))}
+      </section>
+
+      {/* ─── Section 1B: Data Catalog Snapshot ───────── */}
+      <section className="mb-14">
+        <h2 className="text-xl font-black text-bauhaus-black mb-2 uppercase tracking-widest">Data Catalog Snapshot</h2>
+        <p className="text-sm text-bauhaus-muted mb-6 max-w-2xl">
+          Daily snapshots track table freshness against SLA, plus provenance/confidence coverage where fields exist.
+          This is the trust operations view for what is fresh, stale, and weak.
+        </p>
+
+        {catalogRows.length === 0 ? (
+          <div className="border-4 border-bauhaus-black p-5 bg-white text-sm text-bauhaus-muted">
+            No snapshots found yet. Apply migration <span className="font-mono">20260409000001_data_catalog_and_snapshots.sql</span> and run
+            <span className="font-mono"> snapshot_data_catalog()</span>.
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-0 mb-6">
+              {[
+                { label: 'Tracked', value: catalogSummary.total, tone: 'text-bauhaus-black' },
+                { label: 'Fresh', value: catalogSummary.fresh, tone: 'text-green-700' },
+                { label: 'Warning', value: catalogSummary.warning, tone: 'text-yellow-700' },
+                { label: 'Stale', value: catalogSummary.stale, tone: 'text-bauhaus-red' },
+                { label: 'Unknown', value: catalogSummary.unknown, tone: 'text-bauhaus-black' },
+                { label: 'No Snapshot', value: catalogSummary.noSnapshot, tone: 'text-bauhaus-muted' },
+              ].map((item, idx) => (
+                <div key={item.label} className={`border-4 border-bauhaus-black p-3 bg-white ${idx > 0 ? 'border-l-0' : ''} ${idx >= 2 ? 'max-sm:border-t-0' : ''} ${idx >= 3 ? 'sm:border-t-0 lg:border-t-4' : ''} ${idx >= 6 ? 'lg:border-t-0' : ''}`}>
+                  <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest">{item.label}</div>
+                  <div className={`text-2xl font-black ${item.tone}`}>{fmt(item.value)}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="border-4 border-bauhaus-black bg-white overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-bauhaus-black text-white">
+                    <th className="text-left p-2 font-black uppercase tracking-widest">Table</th>
+                    <th className="text-left p-2 font-black uppercase tracking-widest">Domain</th>
+                    <th className="text-right p-2 font-black uppercase tracking-widest">Rows</th>
+                    <th className="text-right p-2 font-black uppercase tracking-widest">Freshness (h)</th>
+                    <th className="text-right p-2 font-black uppercase tracking-widest">SLA (h)</th>
+                    <th className="text-right p-2 font-black uppercase tracking-widest">Prov (%)</th>
+                    <th className="text-right p-2 font-black uppercase tracking-widest">Conf (%)</th>
+                    <th className="text-center p-2 font-black uppercase tracking-widest">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {catalogRows.map((row, idx) => (
+                    <tr key={row.table_name} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                      <td className="p-2 font-mono font-bold text-bauhaus-black">{row.table_name}</td>
+                      <td className="p-2 text-bauhaus-muted font-semibold">{row.domain}</td>
+                      <td className="p-2 text-right font-mono">{fmt(Number(row.row_count ?? 0))}</td>
+                      <td className="p-2 text-right font-mono">{row.freshness_hours === null ? '—' : Number(row.freshness_hours).toFixed(1)}</td>
+                      <td className="p-2 text-right font-mono">{fmt(Number(row.sla_hours ?? 0))}</td>
+                      <td className="p-2 text-right font-mono">{row.provenance_coverage_pct === null ? '—' : Number(row.provenance_coverage_pct).toFixed(1)}</td>
+                      <td className="p-2 text-right font-mono">{row.confidence_coverage_pct === null ? '—' : Number(row.confidence_coverage_pct).toFixed(1)}</td>
+                      <td className="p-2 text-center">
+                        <span className={`inline-block px-2 py-0.5 text-[10px] font-black uppercase tracking-widest ${catalogStatusStyles(row.status)}`}>
+                          {row.status.replace('_', ' ')}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </section>
 
       {/* ─── Section 2: Interactive Schema Graph ──────── */}
@@ -758,7 +920,7 @@ export default async function ClarityPage() {
               <h3 className="font-black text-white mb-2">Entity Resolution</h3>
               <p className="text-white/70 leading-relaxed">
                 The Australian Business Number (ABN) is the universal join key.
-                We resolve 559K+ entities from 8 government data systems using ABN matching
+                We resolve {fmt(Number(data.entities.total ?? 0))}+ entities across multiple public data systems using ABN matching
                 and normalised name fuzzy-matching against ASIC + ACNC registers.
               </p>
             </div>
