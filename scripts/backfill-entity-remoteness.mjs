@@ -17,7 +17,7 @@ function psql(sql, timeout = 600000) {
   // Combine SET + query in single command to avoid session reset between -c calls
   const combined = `SET statement_timeout = '600s'; ${oneLine}`;
   const cmd = `psql "${CONN}" -t -A -c ${JSON.stringify(combined)}`;
-  return execSync(cmd, { encoding: 'utf8', timeout }).trim();
+  return execSync(cmd, { encoding: 'utf8', timeout, maxBuffer: 200 * 1024 * 1024 }).trim();
 }
 
 console.log(DRY_RUN ? '🔍 DRY RUN (use --apply to write)' : '✏️  APPLYING CHANGES');
