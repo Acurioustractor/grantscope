@@ -23,9 +23,18 @@ dist/
 # Large data files (downloaded, not source)
 data/abs/
 data/abr/
+data/acnc/
+data/aihw/
+data/annual-reports/
 data/asic/
+data/grantconnect/
 data/lga/
+data/ndis/
 data/opensanctions/
+data/prf-reports/
+data/state-procurement/
+data/tracker-evidence/
+apps/web/data/aihw/
 
 # Large files (exceed GitHub 100MB limit)
 data/nsw-etendering/full.jsonl
