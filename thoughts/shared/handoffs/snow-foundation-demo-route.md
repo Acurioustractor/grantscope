@@ -2,7 +2,7 @@
 
 Date: 2026-04-12
 Status: Internal
-Purpose: Fixed 8-screen walkthrough across GrantScope and Empathy Ledger
+Purpose: Fixed public walkthrough across GrantScope and Empathy Ledger
 
 ## Local origins
 
@@ -17,7 +17,19 @@ Open these screens in order.
 
 Do not open raw story lists or unfinished admin views.
 
-## Screen 1 — Snow Foundation detail
+## Screen 1 — Snow demo route
+
+URL:
+
+`http://localhost:3003/snow-foundation`
+
+What to say:
+
+- This is the public starting screen for the Snow walkthrough.
+- It packages the repaired Snow baseline, the core verified portfolio signals, and the exact demo sequence.
+- Use this instead of the internal briefing or report-builder routes.
+
+## Screen 2 — Snow Foundation detail
 
 URL:
 
@@ -29,7 +41,7 @@ What to say:
 - Annual giving is now anchored to the annual report at `$13,704,202`.
 - This is the anchor surface for the rest of the walkthrough.
 
-## Screen 2 — Snow funder search context
+## Screen 3 — Snow funder search context
 
 URL:
 
@@ -40,30 +52,7 @@ What to say:
 - This shows Snow in the wider funder landscape instead of as an isolated profile.
 - It positions Snow as part of a broader capital map, not only a single foundation card.
 
-## Screen 3 — Briefing Hub with Snow funding context
-
-URL:
-
-`http://localhost:3003/briefing?start=funding&output=funding-brief&subject=Snow%20Foundation&topic=rheumatic%20heart%20disease&state=ACT&lanes=funding,place,clarity#composer`
-
-What to say:
-
-- This is where the decision object gets composed.
-- We are not jumping straight from profile to story.
-- We are defining the evidence lanes first: funding, place, and story handoff.
-
-## Screen 4 — Funding brief handoff
-
-URL:
-
-`http://localhost:3003/home/report-builder?topic=rheumatic%20heart%20disease&state=ACT&focus=Snow%20Foundation&autogenerate=1&output=funding-brief&lanes=funding,place,clarity`
-
-What to say:
-
-- This is the layer that turns the funder view into a decision-ready brief.
-- The point is memo generation from a defined evidence chain, not a static profile.
-
-## Screen 5 — Clarity handoff
+## Screen 4 — Clarity handoff
 
 URL:
 
@@ -74,7 +63,7 @@ What to say:
 - This is where the evidence chain is made explicit before narrative work.
 - It keeps the portfolio surface and the story surface tied together.
 
-## Screen 6 — Snow dashboard in Empathy Ledger
+## Screen 5 — Snow dashboard in Empathy Ledger
 
 URL:
 
@@ -86,7 +75,7 @@ What to say:
 - It is not for raw exploration.
 - The key point is that a real Snow project and transcript layer exist here.
 
-## Screen 7 — Snow transcripts
+## Screen 6 — Snow transcripts
 
 URL:
 
@@ -97,7 +86,7 @@ What to say:
 - The transcript layer is the strongest current live evidence surface.
 - This is what gives the portfolio view community texture instead of only grant metadata.
 
-## Screen 8 — Snow analysis view
+## Screen 7 — Snow analysis view
 
 URL:
 
@@ -117,29 +106,25 @@ Use these exact transitions if helpful.
 
 ### Screen 1 → 2
 
-`This is Snow on its own. The next view places Snow inside the wider funding landscape.`
+`This page is the fixed operator frame. The next view shows Snow on its own.`
 
 ### Screen 2 → 3
 
-`The question is not just who Snow is. The question is what decision we are trying to support.`
+`This is Snow on its own. The next view places Snow inside the wider funding landscape.`
 
 ### Screen 3 → 4
 
-`Once the evidence lanes are set, the system can produce an actual working brief instead of a loose exploration.`
+`The question is not just who Snow is. The question is how the portfolio view stays accountable to the evidence chain.`
 
 ### Screen 4 → 5
 
-`Before story work starts, we make the evidence chain visible so the narrative is accountable to the underlying portfolio.`
+`Now we move from the portfolio map into the community evidence layer.`
 
 ### Screen 5 → 6
 
-`Now we move from capital and geography into the community evidence layer.`
-
-### Screen 6 → 7
-
 `The dashboard shows the tenant exists. The transcript layer is where the real texture lives.`
 
-### Screen 7 → 8
+### Screen 6 → 7
 
 `The final move is from transcript material into structured project understanding.`
 
