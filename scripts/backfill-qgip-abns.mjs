@@ -36,32 +36,37 @@ async function main() {
   console.log(`[${AGENT_ID}] Starting... ${DRY_RUN ? '(DRY RUN)' : '(LIVE)'}`);
   console.log(`[${AGENT_ID}] Batch size: ${BATCH_SIZE}`);
 
-  // Step 1: Get all distinct unlinked ABNs from QGIP
-  // exec_sql caps at 1000 rows, so paginate
+  // Step 1: Get all distinct unlinked ABNs from QGIP.
+  // Previous impl used GROUP BY + pagination which triggered an 8s statement
+  // timeout on 71K rows. Switched to DISTINCT ON + pure-row fetch + JS dedup
+  // so PostgreSQL doesn't have to do the aggregation work.
   console.log('\n[Step 1] Finding unlinked QGIP ABNs...');
-  const unlinkedRows = [];
+  const abnToName = new Map();
   let offset = 0;
-  const PAGE = 1000;
+  const PAGE = 2000;
   while (true) {
     const { data, error } = await db.rpc('exec_sql', {
       query: `
-        SELECT DISTINCT recipient_abn as abn, MIN(recipient_name) as name
+        SELECT recipient_abn as abn, recipient_name as name
         FROM justice_funding
         WHERE source = 'qgip'
           AND gs_entity_id IS NULL
           AND recipient_abn IS NOT NULL
           AND recipient_abn != ''
-        GROUP BY recipient_abn
-        ORDER BY abn
         LIMIT ${PAGE} OFFSET ${offset}
       `
     });
     if (error) { console.error('Failed to fetch unlinked:', error.message); process.exit(1); }
     if (!data || data.length === 0) break;
-    unlinkedRows.push(...data);
+    for (const row of data) {
+      if (!abnToName.has(row.abn)) abnToName.set(row.abn, row.name);
+    }
     if (data.length < PAGE) break;
     offset += PAGE;
+    // Cap to prevent runaway
+    if (offset > 100000) break;
   }
+  const unlinkedRows = Array.from(abnToName.entries()).map(([abn, name]) => ({ abn, name }));
   console.log(`  Found ${unlinkedRows.length} distinct unlinked ABNs`);
 
   if (unlinkedRows.length === 0) {

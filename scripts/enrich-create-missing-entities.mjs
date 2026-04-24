@@ -39,34 +39,32 @@ function mapEntityType(abrCode) {
   return map[abrCode] || 'company';
 }
 
-async function collectMissingAbns(source, query) {
+/**
+ * Collect (abn → name) pairs from a source table. Returning names alongside
+ * lets us fall back to a minimal entity record when ABR doesn't have the ABN
+ * (which happens for ~99% of supplier ABNs in austender_contracts).
+ */
+async function collectMissingAbns(source) {
   log(`Scanning ${source}...`);
   const PAGE = 1000;
-  const missing = new Set();
+  const missing = new Map(); // abn → first-seen name
   let offset = 0;
 
-  while (true) {
-    const { data, error } = await db.rpc('', {}).maybeSingle(); // placeholder
-    break; // We'll use a different approach
-  }
-
-  // Collect ABNs from source in pages
-  offset = 0;
   while (true) {
     let q;
     if (source === 'contracts') {
       q = db.from('austender_contracts')
-        .select('supplier_abn')
+        .select('supplier_abn, supplier_name')
         .not('supplier_abn', 'is', null)
         .range(offset, offset + PAGE - 1);
     } else if (source === 'justice') {
       q = db.from('justice_funding')
-        .select('recipient_abn')
+        .select('recipient_abn, recipient_name')
         .not('recipient_abn', 'is', null)
         .range(offset, offset + PAGE - 1);
     } else {
       q = db.from('political_donations')
-        .select('donor_abn')
+        .select('donor_abn, donor_name')
         .not('donor_abn', 'is', null)
         .range(offset, offset + PAGE - 1);
     }
@@ -77,9 +75,11 @@ async function collectMissingAbns(source, query) {
 
     for (const row of data) {
       const abn = row.supplier_abn || row.recipient_abn || row.donor_abn;
-      if (abn) missing.add(abn);
+      const name = row.supplier_name || row.recipient_name || row.donor_name;
+      if (abn && !missing.has(abn)) missing.set(abn, name || null);
     }
 
+    if (data.length < PAGE) break;
     offset += PAGE;
     if (offset % 50000 === 0) log(`  ${source}: scanned ${offset.toLocaleString()} rows, ${missing.size.toLocaleString()} unique ABNs`);
   }
@@ -109,76 +109,97 @@ async function main() {
   }
   log(`  ${existingAbns.size.toLocaleString()} existing ABNs in gs_entities`);
 
-  // Step 2: Collect ABNs from all sources
-  const allAbns = new Set();
+  // Step 2: Collect (abn → name) pairs from all sources
+  const abnToName = new Map();
+  const abnSource = new Map(); // for tagging
 
   for (const source of ['contracts', 'justice', 'donations']) {
-    const abns = await collectMissingAbns(source);
-    for (const abn of abns) {
-      if (!existingAbns.has(abn)) allAbns.add(abn);
+    const map = await collectMissingAbns(source);
+    for (const [abn, name] of map) {
+      if (existingAbns.has(abn)) continue;
+      if (!abnToName.has(abn)) {
+        abnToName.set(abn, name);
+        abnSource.set(abn, source);
+      }
     }
   }
 
-  log(`${allAbns.size.toLocaleString()} ABNs in datasets but NOT in gs_entities`);
+  log(`${abnToName.size.toLocaleString()} ABNs in datasets but NOT in gs_entities`);
 
-  // Step 3: Look up each missing ABN in abr_registry and create gs_entity
-  const missingList = [...allAbns];
-  let created = 0;
-  let notInAbr = 0;
-  const BATCH = 100;
+  // Step 3: Look up missing ABNs in abr_registry, fall back to source data
+  // when ABR is missing. Bulk upsert by gs_id so duplicates are silent.
+  const missingList = [...abnToName.keys()];
+  let createdFromAbr = 0;
+  let createdFromSource = 0;
+  let skipped = 0;
+  const BATCH = 500;
 
   for (let i = 0; i < missingList.length; i += BATCH) {
     const batch = missingList.slice(i, i + BATCH);
 
-    // Look up in ABR
+    // ABR lookup (best-effort metadata)
     const { data: abrRecords, error } = await db.from('abr_registry')
-      .select('abn, entity_name, entity_type, entity_type_code, status, state, postcode, acn, acnc_registered')
+      .select('abn, entity_name, entity_type_code, state, postcode')
       .in('abn', batch);
-
     if (error) { log(`  ABR lookup error: ${error.message}`); continue; }
 
     const abrMap = new Map();
     for (const r of (abrRecords || [])) abrMap.set(r.abn, r);
 
-    // Create gs_entities for found ABR records
     const toInsert = [];
     for (const abn of batch) {
       const abr = abrMap.get(abn);
-      if (!abr) { notInAbr++; continue; }
+      const sourceName = abnToName.get(abn);
+      const source = abnSource.get(abn);
 
-      toInsert.push({
-        canonical_name: abr.entity_name,
-        abn: abr.abn,
-        entity_type: mapEntityType(abr.entity_type_code),
-        state: abr.state || null,
-        postcode: abr.postcode || null,
-      });
-    }
-
-    if (toInsert.length > 0) {
-      // Insert one by one to skip duplicates (no unique constraint on abn)
-      for (const row of toInsert) {
-        // Check if ABN already exists
-        const { data: dup } = await db.from('gs_entities')
-          .select('id').eq('abn', row.abn).maybeSingle();
-        if (dup) continue;
-
-        const { error: insertError } = await db.from('gs_entities').insert(row);
-        if (insertError) {
-          // Likely race condition duplicate
-        } else {
-          created++;
-        }
+      if (abr) {
+        toInsert.push({
+          gs_id: `AU-ABN-${abn}`,
+          canonical_name: abr.entity_name || sourceName || `Unknown (${abn})`,
+          abn: abr.abn,
+          entity_type: mapEntityType(abr.entity_type_code),
+          state: abr.state || null,
+          postcode: abr.postcode || null,
+          source_datasets: ['abr', source],
+          source_count: 2,
+          confidence: 'registry',
+          tags: ['abr-matched', `${source}-source`],
+        });
+        createdFromAbr++;
+      } else if (sourceName) {
+        // Fallback: create a minimal entity from the source record name
+        toInsert.push({
+          gs_id: `AU-ABN-${abn}`,
+          canonical_name: sourceName,
+          abn,
+          entity_type: 'company',
+          source_datasets: [source],
+          source_count: 1,
+          confidence: 'reported',
+          tags: [`${source}-source`, 'no-abr-match'],
+        });
+        createdFromSource++;
+      } else {
+        skipped++;
       }
     }
 
-    if ((i + BATCH) % 5000 === 0) {
-      log(`  [${(i + BATCH).toLocaleString()}/${missingList.length.toLocaleString()}] created=${created.toLocaleString()} notInAbr=${notInAbr}`);
+    if (toInsert.length > 0) {
+      const { error: upsertError } = await db
+        .from('gs_entities')
+        .upsert(toInsert, { onConflict: 'gs_id', ignoreDuplicates: true });
+      if (upsertError) {
+        log(`  Upsert error: ${upsertError.message}`);
+      }
+    }
+
+    if ((i + BATCH) % 5000 === 0 || (i + BATCH) >= missingList.length) {
+      log(`  [${Math.min(i + BATCH, missingList.length).toLocaleString()}/${missingList.length.toLocaleString()}] abr=${createdFromAbr.toLocaleString()} source=${createdFromSource.toLocaleString()} skipped=${skipped}`);
     }
   }
 
   const elapsed = ((Date.now() - t0) / 1000 / 60).toFixed(1);
-  log(`=== COMPLETE === ${created.toLocaleString()} entities created, ${notInAbr} not in ABR, in ${elapsed} min`);
+  log(`=== COMPLETE === ${(createdFromAbr + createdFromSource).toLocaleString()} entities created (${createdFromAbr.toLocaleString()} from ABR, ${createdFromSource.toLocaleString()} from source data), ${skipped} skipped (no name), in ${elapsed} min`);
 
   // Final count
   const { count } = await db.from('gs_entities').select('*', { count: 'exact', head: true });

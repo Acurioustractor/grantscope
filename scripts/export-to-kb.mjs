@@ -158,7 +158,7 @@ async function exportDataQuality() {
   let entityTypes = [];
   try {
     const rpcRes = await supabase.rpc('exec_sql', {
-      sql: `SELECT entity_type, COUNT(*) as cnt, COUNT(abn) as with_abn, COUNT(description) as with_desc FROM gs_entities GROUP BY entity_type ORDER BY cnt DESC`
+      query: `SELECT entity_type, COUNT(*) as cnt, COUNT(abn) as with_abn, COUNT(description) as with_desc FROM gs_entities GROUP BY entity_type ORDER BY cnt DESC`
     });
     entityTypes = rpcRes.data || [];
   } catch (_) { entityTypes = []; }
