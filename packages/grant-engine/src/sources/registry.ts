@@ -5,7 +5,7 @@
  * Each plugin runs independently — one failure doesn't stop others.
  */
 
-import type { SourcePlugin, SourcePluginConfig, DiscoveryQuery, RawGrant, DiscoveryRunStats } from '../types';
+import type { SourcePlugin, SourcePluginConfig, DiscoveryQuery, DiscoveryRunStats, DiscoveryEvent } from '../types';
 
 export class SourceRegistry {
   private plugins = new Map<string, SourcePlugin>();
@@ -46,7 +46,7 @@ export class SourceRegistry {
   async *discoverAll(
     query: DiscoveryQuery,
     sourceIds?: string[]
-  ): AsyncGenerator<{ grant: RawGrant; stats: DiscoveryRunStats }> {
+  ): AsyncGenerator<DiscoveryEvent> {
     const plugins = this.getEnabled(sourceIds);
 
     for (const plugin of plugins) {
@@ -61,7 +61,7 @@ export class SourceRegistry {
       try {
         for await (const grant of plugin.discover(query)) {
           stats.grantsFound++;
-          yield { grant, stats };
+          yield { kind: 'grant', grant, stats };
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -70,6 +70,7 @@ export class SourceRegistry {
       }
 
       stats.durationMs = Date.now() - start;
+      yield { kind: 'source-complete', stats: { ...stats, errors: [...stats.errors] } };
     }
   }
 }

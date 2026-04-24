@@ -204,6 +204,7 @@ export function normalize(raw: RawGrant): CanonicalGrant {
     description: raw.description?.trim() || null,
     categories: normalizeCategories(raw.categories || []),
     geography: raw.geography || ['AU'],
+    applicationStatus: raw.applicationStatus || null,
     sources: [source],
     discoveryMethod: raw.sourceId,
     dedupKey: generateDedupKey(raw.provider, raw.title),
