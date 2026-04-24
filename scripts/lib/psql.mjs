@@ -17,9 +17,51 @@
  */
 
 import { execSync } from 'child_process';
-import { writeFileSync, unlinkSync } from 'fs';
+import { readFileSync, writeFileSync, unlinkSync } from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const CONN_STR = `postgresql://postgres.tednluwflfhxyucgwigh:${process.env.DATABASE_PASSWORD}@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres`;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const ROOT = path.resolve(__dirname, '..', '..');
+const DOTENV_PATH = path.join(ROOT, '.env');
+
+function readEnvFileValue(key) {
+  try {
+    const text = readFileSync(DOTENV_PATH, 'utf8');
+    const line = text
+      .split('\n')
+      .map((entry) => entry.trim())
+      .find((entry) => entry.startsWith(`${key}=`));
+    return line ? line.slice(key.length + 1).trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+function resolveDatabaseUrl() {
+  let databaseUrl = readEnvFileValue('DATABASE_URL') || process.env.DATABASE_URL || null;
+  const supabaseUrl = readEnvFileValue('SUPABASE_URL') || process.env.SUPABASE_URL || null;
+
+  if (databaseUrl && databaseUrl.includes('.pooler.supabase.com') && supabaseUrl) {
+    try {
+      const parsedSupabaseUrl = new URL(supabaseUrl);
+      const projectRef = parsedSupabaseUrl.hostname.split('.')[0];
+      const parsedDatabaseUrl = new URL(databaseUrl);
+      parsedDatabaseUrl.hostname = `db.${projectRef}.supabase.co`;
+      if (parsedDatabaseUrl.username.includes('.')) {
+        parsedDatabaseUrl.username = parsedDatabaseUrl.username.split('.')[0];
+      }
+      databaseUrl = parsedDatabaseUrl.toString();
+    } catch {
+      return databaseUrl;
+    }
+  }
+
+  return databaseUrl;
+}
+
+const CONN_STR = resolveDatabaseUrl();
 
 /**
  * Execute a SQL query via psql and return parsed rows.
@@ -33,6 +75,11 @@ const CONN_STR = `postgresql://postgres.tednluwflfhxyucgwigh:${process.env.DATAB
  * @returns {object[]|string} Parsed rows as objects, or raw string if parse=false
  */
 export function psql(sql, { timeout = 120000, parse = true, maxBuffer = 50 * 1024 * 1024, label = 'psql' } = {}) {
+  if (!CONN_STR) {
+    console.error('psql error: DATABASE_URL not available');
+    return parse ? [] : '';
+  }
+
   const tmpFile = `/tmp/${label}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}.sql`;
   writeFileSync(tmpFile, sql);
   try {

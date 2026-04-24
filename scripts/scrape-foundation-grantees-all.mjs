@@ -695,16 +695,14 @@ const FOUNDATIONS = {
     year: 2025,
     dataset: 'macquarie_group_foundation_grantees',
     grantees: [
-      { name: 'OzHarvest', focus: 'community' },
+      { name: 'Oz Harvest Limited', focus: 'community' },
       { name: 'Opportunity International Australia', focus: 'community' },
       { name: 'Australian Indigenous Mentoring Experience', focus: 'indigenous' },
-      { name: 'Juvenile Diabetes Research Foundation', focus: 'health' },
       { name: 'Cancer Council NSW', focus: 'health' },
       { name: 'Cerebral Palsy Alliance', focus: 'health' },
       { name: 'Taronga Conservation Society Australia', focus: 'environment' },
-      { name: 'University of Sydney', focus: 'education' },
+      { name: 'The University of Sydney', focus: 'education' },
       { name: 'Beyond Blue', focus: 'health' },
-      { name: 'Salvation Army', focus: 'community' },
     ],
   },
 
@@ -1119,31 +1117,43 @@ async function processFoundation(key, config) {
   }
 
   // Step 2: Find foundation entity
-  const { data: fEntity } = await db
-    .from('gs_entities')
-    .select('id, canonical_name')
-    .eq('abn', config.abn)
-    .limit(1);
+  let foundationEntity = null;
 
-  if (!fEntity?.length) {
-    log(`  WARNING: Foundation entity not found for ABN ${config.abn}`);
-    // Try foundations table
-    const { data: foundation } = await db
-      .from('foundations')
-      .select('name, acnc_abn')
-      .eq('acnc_abn', config.abn)
+  if (config.abn) {
+    const { data: fEntity } = await db
+      .from('gs_entities')
+      .select('id, canonical_name')
+      .eq('abn', config.abn)
       .limit(1);
 
-    if (foundation?.length) {
-      log(`  Found in foundations table but no gs_entity. Skipping.`);
-    } else {
-      log(`  Not found in foundations table either. Skipping.`);
+    if (fEntity?.length) foundationEntity = fEntity[0];
+  }
+
+  if (!foundationEntity) {
+    const { data: foundation } = await db
+      .from('foundations')
+      .select('id, name, acnc_abn, gs_entity_id')
+      .ilike('name', config.name)
+      .limit(1);
+
+    const foundationRow = foundation?.[0];
+    if (foundationRow?.gs_entity_id) {
+      const { data: entity } = await db
+        .from('gs_entities')
+        .select('id, canonical_name')
+        .eq('id', foundationRow.gs_entity_id)
+        .limit(1);
+      if (entity?.length) foundationEntity = entity[0];
     }
+  }
+
+  if (!foundationEntity) {
+    log(`  WARNING: Foundation entity not found for ${config.abn || config.name}`);
     return { matched: 0, created: 0, skipped: 0, notFound: 0, total: grantees.length };
   }
 
-  const foundationId = fEntity[0].id;
-  log(`  Foundation entity: ${fEntity[0].canonical_name} (${foundationId.substring(0, 8)}...)`);
+  const foundationId = foundationEntity.id;
+  log(`  Foundation entity: ${foundationEntity.canonical_name} (${foundationId.substring(0, 8)}...)`);
 
   // Step 3: Check existing grant edges
   const { data: existing } = await db

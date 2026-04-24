@@ -55,6 +55,17 @@ const FRONTIER_WINDOW_HOURS = frontierWindowArg ? parseInt(frontierWindowArg, 10
 const FOUNDATION_ID = getArgValue('--foundation-id');
 const FOUNDATION_NAME = getArgValue('--foundation-name');
 const FRONTIER_METADATA_FLAG = getArgValue('--frontier-metadata-flag');
+const LONG_TAIL_DISCOVERY_TYPES = new Set([
+  'university',
+  'primary_health_network',
+  'community_foundation',
+  'education_body',
+  'research_body',
+  'indigenous_organisation',
+  'public_ancillary_fund',
+  'private_ancillary_fund',
+  'legal_aid',
+]);
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
@@ -377,7 +388,7 @@ async function markFrontierTargetsChecked(frontierTargets, checkedAt, options = 
 function looksGrantLikeProgramRecord(program) {
   const combined = `${program?.name || ''} ${program?.description || ''} ${program?.application_process || ''} ${program?.eligibility || ''} ${program?.url || ''} ${program?.program_type || ''}`;
   const hasGrantLanguage = /(grant|grant round|community giving|fellowship|scholarship|award|bursary|funding round|apply now|how to apply|applications? open|grant guidelines|expression of interest|eoi)/i.test(combined);
-  const hasGrantPath = /(\/grants?\/|\/grant-programs?\/|\/funding\/|\/apply\/|\/applications?\/|\/community-giving\/|\/fellowships?\/|\/scholarships?\/)/i.test(String(program?.url || '').toLowerCase());
+  const hasGrantPath = /(\/grants?(?:\/|$)|\/grant-programs?(?:\/|$)|\/funding(?:\/|$)|\/apply(?:\/|$)|\/applications?(?:\/|$)|\/community-giving(?:\/|$)|\/community-grants(?:\/|$)|\/fellowships?(?:\/|$)|\/scholarships?(?:\/|$)|\/grants-and-funding(?:\/|$)|\/research\/grants(?:\/|$))/i.test(String(program?.url || '').toLowerCase());
   const looksNonGrant = /(appeal|donation|donate|sponsorship|sponsor a child|child sponsorship|orphan sponsorship|water project|food packs?|relief fund|crisis relief|family support|support program|housing support|clean water|fiscal sponsorship|disaster relief|donations program|community support|direct sponsorship)/i.test(combined);
   const hasStructuredSignal = Boolean(program?.amount_min || program?.amount_max || program?.deadline);
   if (looksNonGrant && !hasGrantLanguage && !hasGrantPath) return false;
@@ -472,6 +483,7 @@ async function getFoundationsToScan() {
     let query = supabase
       .from('source_frontier')
       .select('id, foundation_id, target_url, source_kind, priority, cadence_hours, next_check_at, last_changed_at, metadata, failure_count')
+      .eq('enabled', true)
       .not('foundation_id', 'is', null);
 
     if (FRONTIER_METADATA_FLAG) {
@@ -571,27 +583,103 @@ async function getFoundationsToScan() {
     return [];
   }
 
+  let foundationRows = data || [];
+
+  if (FRONTIER_METADATA_FLAG && frontierStats.size > 0) {
+    const flaggedFoundationIds = [...frontierStats.keys()].filter(Boolean);
+    if (flaggedFoundationIds.length > 0) {
+      const { data: flaggedFoundations, error: flaggedError } = await supabase
+        .from('foundations')
+        .select('id, name, type, website, description, thematic_focus, geographic_focus, total_giving_annual, giving_philosophy, application_tips, open_programs, profile_confidence')
+        .in('id', flaggedFoundationIds)
+        .not('website', 'is', null);
+
+      if (flaggedError) {
+        log(`Error fetching flagged foundations: ${flaggedError.message}`);
+      } else {
+        const byId = new Map(foundationRows.map((foundation) => [foundation.id, foundation]));
+        for (const foundation of flaggedFoundations || []) {
+          byId.set(foundation.id, foundation);
+        }
+        foundationRows = [...byId.values()];
+      }
+    }
+  }
+
   const grantmakerSignals = /(grant|grants|fellowship|scholarship|philanthrop|funding|applications|awards?|EOI|apply now|grant round|community giving|open for applications|grant program)/i;
   const operatorSignals = /(school|schools office|college|grammar|church|parish|diocese|catholic|christian brothers|hospital|medical centre|racing|showground|primary health network|phn|legal aid|university|institute|society|council|commission|australia for|care australia|world vision|red cross|donations fund|relief fund|barnardos|caritas|compassion|flying doctor|medecins sans frontieres|msf|health network|healthcare network)/i;
   const corporateCommunitySignals = /(community|sustainability|social impact|our impact|responsibility)/i;
   const antiGrantmakerSignals = /(not a traditional grant-?maker|operating (school|foundation|organisation)|direct service provider|does not offer grants|engage .* as a partner rather than as a traditional funder|families should contact|enrolment or community partnerships|direct program delivery|fundraising campaigns for specific projects|beneficiaries should review)/i;
   const directServiceSignals = /(childfund|children'?s fund|welfare|relief|refugee|aged care|aged masons widows|orphans|health service|hospital|community health|aid fund|community services|service delivery|service provider|donations fund|benevolence)/i;
   const hardRejectFundNames = /(childfund|welfare fund|relief fund|donations fund|aid fund)/i;
-  const explicitProgramsPathSignals = /(\/grants?\/|\/grant-programs?\/|\/funding\/|\/apply\/|\/applications?\/|\/community-giving\/|\/fellowships?\/|\/scholarships?\/)/i;
+  const explicitProgramsPathSignals = /(\/grants?(?:\/|$)|\/grant-programs?(?:\/|$)|\/funding(?:\/|$)|\/apply(?:\/|$)|\/applications?(?:\/|$)|\/community-giving(?:\/|$)|\/community-grants(?:\/|$)|\/fellowships?(?:\/|$)|\/scholarships?(?:\/|$)|\/grants-and-funding(?:\/|$)|\/research\/grants(?:\/|$))/i;
+  const schoolCollegeEntitySignals = /(school|college|grammar|academy|k-?12|day school|boarding school)/i;
   const grantLikeProgramSignals = /(grant|grant round|community giving|fellowship|scholarship|award|application|eoi|funding round)/i;
+  const nonGrantmakerTypes = new Set([
+    'service_delivery',
+    'primary_health_network',
+    'international_aid',
+    'emergency_relief',
+    'religious_organisation',
+    'peak_body',
+    'education_body',
+  ]);
+  const getFrontierSignals = (foundation) => {
+    const frontier = frontierStats.get(foundation.id);
+    const type = String(foundation.type || '').toLowerCase();
+    const verifiedTargets = (frontier?.frontierTargets || [])
+      .filter((target) => target.source_kind !== 'foundation_candidate_page');
+    const candidateTargets = (frontier?.frontierTargets || [])
+      .filter((target) => target.source_kind === 'foundation_candidate_page');
+    const hasProgramPathTarget = verifiedTargets
+      .some((target) => explicitProgramsPathSignals.test(String(target.target_url || '').toLowerCase()));
+    const hasGrantLikeProgramPage = verifiedTargets
+      .some((target) => target.source_kind === 'foundation_program_page' && target.metadata?.current_status !== 'non_grant');
+    const hasNonGrantProgramPage = verifiedTargets
+      .some((target) => target.source_kind === 'foundation_program_page' && target.metadata?.current_status === 'non_grant');
+    const hasLongTailCandidateSurface =
+      FRONTIER_METADATA_FLAG === 'long_tail_priority'
+      && LONG_TAIL_DISCOVERY_TYPES.has(type)
+      && candidateTargets.some((target) => explicitProgramsPathSignals.test(String(target.target_url || '').toLowerCase()));
+    const hasStrongProgramSurface = hasGrantLikeProgramPage || hasProgramPathTarget || hasLongTailCandidateSurface;
+    const hasFlaggedCandidateSignal = Boolean(FRONTIER_METADATA_FLAG) && Boolean(frontier?.dueCandidatePageCount);
+    const hasStrongFrontierSignal = Boolean(frontier) && (
+      hasStrongProgramSurface
+      || frontier.hasRecentPageChange
+      || frontier.dueKnownPageCount > 0
+      || hasFlaggedCandidateSignal
+    );
+
+    return {
+      frontier,
+      hasStrongProgramSurface,
+      hasStrongFrontierSignal,
+      hasNonGrantProgramPage,
+      hasLongTailCandidateSurface,
+      hasGrantLikeProgramPage,
+      hasProgramPathTarget,
+    };
+  };
 
   const scoreFoundation = (foundation) => {
     const stats = programStats.get(foundation.id);
-    const frontier = frontierStats.get(foundation.id);
+    const { frontier, hasStrongProgramSurface, hasStrongFrontierSignal, hasGrantLikeProgramPage, hasProgramPathTarget } = getFrontierSignals(foundation);
     let total = 0;
     const type = String(foundation.type || '').toLowerCase();
     const joined = `${foundation.name || ''} ${foundation.description || ''} ${foundation.giving_philosophy || ''} ${foundation.application_tips || ''}`;
     const openPrograms = Array.isArray(foundation.open_programs) ? foundation.open_programs : [];
     const hasOpenPrograms = openPrograms.length > 0;
+    const isSchoolCollegeEntity = schoolCollegeEntitySignals.test(`${foundation.name || ''} ${foundation.description || ''}`);
     const hasGrantLikeOpenPrograms = openPrograms.some((program) => {
       const combined = `${program?.name || ''} ${program?.description || ''} ${program?.url || ''}`;
       return grantLikeProgramSignals.test(combined);
     });
+    const hasSchoolGrantApplicationSurface =
+      hasGrantLikeOpenPrograms
+      || hasGrantLikeProgramPage
+      || hasProgramPathTarget
+      || explicitProgramsPathSignals.test(String(foundation.website || '').toLowerCase())
+      || /open for applications|apply now|grant guidelines|how to apply|eligibility|deadline/i.test(String(foundation.application_tips || ''));
     const hasApplicationSurface = Boolean(foundation.application_tips) || hasGrantLikeOpenPrograms || /apply|application|guidelines|eligibility|grant round|EOI/i.test(joined);
     const website = String(foundation.website || '').toLowerCase();
 
@@ -628,11 +716,15 @@ async function getFoundationsToScan() {
     if (hasGrantLikeOpenPrograms) total += 4;
     else if (hasOpenPrograms) total -= 3;
     if (hasApplicationSurface) total += 3;
+    if (hasStrongProgramSurface) total += 6;
+    else if (hasStrongFrontierSignal) total += 3;
     if (explicitProgramsPathSignals.test(website)) total += 4;
     if (foundation.total_giving_annual >= 1000000) total += 4;
     else if (foundation.total_giving_annual >= 250000) total += 2;
     if (/grant|fellowship|scholarship|funding|applications?/i.test(`${foundation.name} ${foundation.description}`)) total += 3;
     if (type === 'corporate_foundation' && corporateCommunitySignals.test(website) && !hasApplicationSurface) total -= 6;
+    if (isSchoolCollegeEntity && !hasSchoolGrantApplicationSurface) total -= 14;
+    else if (isSchoolCollegeEntity && hasSchoolGrantApplicationSurface) total += 2;
     if (/diocese|catholic|christian brothers|donations fund|relief fund/i.test(joined)) total -= 8;
     if (directServiceSignals.test(joined) && !hasApplicationSurface) total -= 8;
     if (operatorSignals.test(String(foundation.name || '')) && !/foundation|trust|fund/i.test(String(foundation.name || '')) && !hasApplicationSurface) total -= 10;
@@ -642,7 +734,7 @@ async function getFoundationsToScan() {
   };
 
   // Prioritise likely grantmakers without programs
-  const strictCandidates = (data || [])
+  const strictCandidates = foundationRows
     .filter((foundation) => {
       const stats = programStats.get(foundation.id);
       if (!stats?.grantLikeCount) return true;
@@ -661,29 +753,47 @@ async function getFoundationsToScan() {
       const joined = `${baseJoined} ${applicationTipsText}`;
 
       const type = String(foundation.type || '').toLowerCase();
+      const { hasStrongProgramSurface, hasStrongFrontierSignal, hasNonGrantProgramPage, hasLongTailCandidateSurface, hasGrantLikeProgramPage, hasProgramPathTarget } = getFrontierSignals(foundation);
       const openPrograms = Array.isArray(foundation.open_programs) ? foundation.open_programs : [];
       const hasOpenPrograms = openPrograms.length > 0;
+      const isSchoolCollegeEntity = schoolCollegeEntitySignals.test(`${name} ${description}`);
       const hasGrantLikeOpenPrograms = openPrograms.some((program) => {
         const combined = `${program?.name || ''} ${program?.description || ''} ${program?.url || ''}`;
         return grantLikeProgramSignals.test(combined);
       });
       const applicationTipsSignal = /grant round|community giving|open for applications|apply now|scholarship|fellowship|grant program|grant guidelines|how to apply|eligibility/i.test(applicationTipsText);
-      const hasApplicationSurface = hasGrantLikeOpenPrograms || /grant round|community giving|open for applications|apply now|grant guidelines|eligibility|EOI/i.test(baseJoined);
+      const longTailCandidateType =
+        FRONTIER_METADATA_FLAG === 'long_tail_priority'
+        && hasLongTailCandidateSurface
+        && LONG_TAIL_DISCOVERY_TYPES.has(type);
+      const hasApplicationSurface =
+        hasGrantLikeOpenPrograms
+        || applicationTipsSignal
+        || /grant round|community giving|open for applications|apply now|grant guidelines|eligibility|EOI/i.test(baseJoined);
       const websiteHasExplicitProgramsPath = explicitProgramsPathSignals.test(website);
+      const hasSchoolGrantApplicationSurface =
+        hasGrantLikeOpenPrograms
+        || hasGrantLikeProgramPage
+        || hasProgramPathTarget
+        || websiteHasExplicitProgramsPath
+        || /open for applications|apply now|grant guidelines|how to apply|eligibility|deadline/i.test(applicationTipsText);
       const explicitPublicFundingSurface =
         hasGrantLikeOpenPrograms ||
+        hasStrongProgramSurface ||
         websiteHasExplicitProgramsPath ||
+        applicationTipsSignal ||
         /grant round|community giving|open for applications|fellowship|scholarship|apply now|applications are open|how to apply|grant program/i.test(baseJoined);
       const nameHasFunderShape = /foundation|trust|fund/i.test(name);
       const websiteHasFunderShape = /foundation|trust|fund|grants?/i.test(website);
       const isPreferredType = ['corporate_foundation', 'private_ancillary_fund', 'public_ancillary_fund', 'trust'].includes(type);
       const isBroadGrantmaker = type === 'grantmaker';
       const isCorporateCommunityPage = type === 'corporate_foundation' && corporateCommunitySignals.test(website) && !hasOpenPrograms && !websiteHasExplicitProgramsPath;
+      const hasFunderShape = nameHasFunderShape || websiteHasFunderShape;
       const looksLikeGrantmaker =
-        grantmakerSignals.test(joined) ||
-        (isPreferredType && (nameHasFunderShape || websiteHasFunderShape)) ||
-        (isBroadGrantmaker && (nameHasFunderShape || websiteHasFunderShape) && (grantmakerSignals.test(joined) || hasApplicationSurface)) ||
-        foundation.total_giving_annual >= 1000000;
+        (grantmakerSignals.test(joined) && (hasFunderShape || explicitPublicFundingSurface || hasStrongFrontierSignal)) ||
+        (isPreferredType && hasFunderShape && (explicitPublicFundingSurface || hasStrongFrontierSignal)) ||
+        (isBroadGrantmaker && hasFunderShape && (explicitPublicFundingSurface || hasStrongFrontierSignal)) ||
+        (longTailCandidateType && (grantmakerSignals.test(joined) || applicationTipsSignal || hasGrantLikeOpenPrograms));
 
       const looksLikeOperator = operatorSignals.test(baseJoined) && !grantmakerSignals.test(baseJoined);
       const looksLikeDirectService = directServiceSignals.test(joined) && !explicitPublicFundingSurface;
@@ -692,23 +802,29 @@ async function getFoundationsToScan() {
       const corporateAllowed =
         type !== 'corporate_foundation' ||
         hasGrantLikeOpenPrograms ||
-        explicitPublicFundingSurface;
+        explicitPublicFundingSurface ||
+        hasStrongProgramSurface ||
+        (Boolean(FRONTIER_METADATA_FLAG) && hasStrongFrontierSignal);
       const allowedByType =
         ((type === 'private_ancillary_fund' || type === 'public_ancillary_fund') &&
-          (explicitPublicFundingSurface || (foundation.profile_confidence !== 'low' && foundation.total_giving_annual >= 1000000 && (nameHasFunderShape || websiteHasFunderShape)))) ||
+          (explicitPublicFundingSurface || hasStrongProgramSurface || (Boolean(FRONTIER_METADATA_FLAG) && hasStrongFrontierSignal))) ||
         (type === 'trust' &&
-          (explicitPublicFundingSurface || (foundation.profile_confidence === 'high' && foundation.total_giving_annual >= 1000000 && (nameHasFunderShape || websiteHasFunderShape)))) ||
-        (type === 'corporate_foundation' && corporateAllowed && explicitPublicFundingSurface) ||
+          (explicitPublicFundingSurface || hasStrongProgramSurface || (Boolean(FRONTIER_METADATA_FLAG) && hasStrongFrontierSignal))) ||
+        (type === 'corporate_foundation' && corporateAllowed && (explicitPublicFundingSurface || hasStrongProgramSurface || (Boolean(FRONTIER_METADATA_FLAG) && hasStrongFrontierSignal))) ||
         (isBroadGrantmaker &&
-          (nameHasFunderShape || websiteHasFunderShape) &&
-          (explicitPublicFundingSurface || (foundation.profile_confidence === 'high' && foundation.total_giving_annual >= 5000000))) ||
-        ((nameHasFunderShape || websiteHasFunderShape) && explicitPublicFundingSurface);
+          hasFunderShape &&
+          (explicitPublicFundingSurface || hasStrongProgramSurface || (Boolean(FRONTIER_METADATA_FLAG) && hasStrongFrontierSignal))) ||
+        (hasFunderShape && (explicitPublicFundingSurface || hasStrongProgramSurface || (Boolean(FRONTIER_METADATA_FLAG) && hasStrongFrontierSignal))) ||
+        longTailCandidateType;
       const strictPublicMode = DISCOVERY_MODE === 'strict-public';
+      if (nonGrantmakerTypes.has(type) && !hasStrongProgramSurface && !longTailCandidateType) return false;
       if (explicitlyNotGrantmaker && !hasGrantLikeOpenPrograms) return false;
+      if (hasNonGrantProgramPage && !hasGrantLikeOpenPrograms) return false;
       if (strictPublicMode && hardRejectFundNames.test(name) && !explicitPublicFundingSurface) return false;
-      if (strictPublicMode && institutionalOperator && !explicitPublicFundingSurface) return false;
+      if (strictPublicMode && institutionalOperator && !hasStrongProgramSurface && !longTailCandidateType) return false;
+      if (isSchoolCollegeEntity && !hasSchoolGrantApplicationSurface) return false;
       if (foundation.profile_confidence === 'low' && !hasOpenPrograms && !websiteHasExplicitProgramsPath && !/grant|fellowship|scholarship/.test(joined)) return false;
-      if (strictPublicMode && !explicitPublicFundingSurface && type !== 'private_ancillary_fund' && type !== 'public_ancillary_fund') return false;
+      if (strictPublicMode && !explicitPublicFundingSurface && !hasStrongProgramSurface && !(Boolean(FRONTIER_METADATA_FLAG) && hasStrongFrontierSignal)) return false;
       return looksLikeGrantmaker && !looksLikeOperator && !looksLikeDirectService && !isCorporateCommunityPage && allowedByType;
     })
     .filter((foundation, index, arr) => {
@@ -720,30 +836,35 @@ async function getFoundationsToScan() {
   const fallbackCandidates = FULL_SWEEP || strictCandidates.length >= LIMIT
     ? []
     : (data || [])
+      .filter(foundation => foundationRows.some(candidate => candidate.id === foundation.id))
       .filter(foundation => !selectedIds.has(foundation.id))
       .filter((foundation) => {
         const website = String(foundation.website || '').toLowerCase();
         if (!website || website.includes('facebook.com') || website.includes('instagram.com')) return false;
 
-        const frontier = frontierStats.get(foundation.id);
-        if (!frontier) return false;
+        const { hasStrongProgramSurface, hasStrongFrontierSignal, hasNonGrantProgramPage, hasLongTailCandidateSurface, hasGrantLikeProgramPage, hasProgramPathTarget } = getFrontierSignals(foundation);
+        const type = String(foundation.type || '').toLowerCase();
+        const longTailCandidateType =
+          FRONTIER_METADATA_FLAG === 'long_tail_priority'
+          && hasLongTailCandidateSurface
+          && LONG_TAIL_DISCOVERY_TYPES.has(type);
+        if (!hasStrongFrontierSignal) return false;
 
         const joined = `${foundation.name || ''} ${foundation.description || ''} ${foundation.giving_philosophy || ''} ${foundation.application_tips || ''}`;
-        const hasStrongProgramSurface =
-          frontier.dueProgramPageCount > 0 ||
-          frontier.recentChangedProgramPageCount > 0 ||
-          (frontier.frontierTargets || []).some(target => explicitProgramsPathSignals.test(String(target.target_url || '').toLowerCase()));
-        const hasStrongFrontierSignal =
-          hasStrongProgramSurface ||
-          frontier.hasRecentPageChange ||
-          frontier.dueKnownPageCount > 0 ||
-          frontier.dueCandidatePageCount >= 2;
-
-        if (!hasStrongFrontierSignal) return false;
-        if (antiGrantmakerSignals.test(joined) && !hasStrongProgramSurface) return false;
-        if (hardRejectFundNames.test(String(foundation.name || '')) && !hasStrongProgramSurface) return false;
+        const isSchoolCollegeEntity = schoolCollegeEntitySignals.test(joined);
+        const hasSchoolGrantApplicationSurface =
+          hasGrantLikeProgramPage
+          || hasProgramPathTarget
+          || explicitProgramsPathSignals.test(website)
+          || Array.isArray(foundation.open_programs) && foundation.open_programs.some((program) => grantLikeProgramSignals.test(`${program?.name || ''} ${program?.description || ''} ${program?.url || ''}`))
+          || /open for applications|apply now|grant guidelines|how to apply|eligibility|deadline/i.test(String(foundation.application_tips || ''));
+        if (nonGrantmakerTypes.has(type) && !hasStrongProgramSurface && !longTailCandidateType) return false;
+        if (hasNonGrantProgramPage && !hasStrongProgramSurface && !longTailCandidateType) return false;
+        if (antiGrantmakerSignals.test(joined) && !hasStrongProgramSurface && !longTailCandidateType) return false;
+        if (hardRejectFundNames.test(String(foundation.name || '')) && !hasStrongProgramSurface && !longTailCandidateType) return false;
         if (directServiceSignals.test(joined) && !hasStrongProgramSurface) return false;
-        if (operatorSignals.test(String(foundation.name || '')) && !/foundation|trust|fund/i.test(String(foundation.name || '')) && !hasStrongProgramSurface) return false;
+        if (operatorSignals.test(String(foundation.name || '')) && !/foundation|trust|fund/i.test(String(foundation.name || '')) && !hasStrongProgramSurface && !longTailCandidateType) return false;
+        if (isSchoolCollegeEntity && !hasSchoolGrantApplicationSurface) return false;
         return true;
       });
 

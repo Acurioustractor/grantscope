@@ -4,7 +4,7 @@ import { cookies } from 'next/headers';
 import { createSupabaseServer } from '@/lib/supabase-server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { isAdminEmail } from '@/lib/admin';
-import { ImpersonateButton } from './_components/impersonate-button';
+import { OrgAdminListClient } from './_components/org-admin-list-client';
 
 export const metadata = {
   title: 'All Organisations — CivicGraph Admin',
@@ -76,9 +76,34 @@ export default async function OrgIndexPage() {
   // Get user emails for each org
   const orgOwnerIds = (orgs ?? []).map(o => o.user_id).filter(Boolean);
   const ownerEmails: Record<string, string> = {};
-  for (const uid of orgOwnerIds) {
-    const { data } = await serviceDb.auth.admin.getUserById(uid);
-    if (data?.user?.email) ownerEmails[uid] = data.user.email;
+  await Promise.all(
+    orgOwnerIds.map(async (uid) => {
+      const { data } = await serviceDb.auth.admin.getUserById(uid);
+      if (data?.user?.email) ownerEmails[uid] = data.user.email;
+    }),
+  );
+
+  const totalOrgs = orgs?.length ?? 0;
+  const ownerLinkedCount = (orgs ?? []).filter((org) => org.user_id && ownerEmails[org.user_id]).length;
+  const withAbnCount = (orgs ?? []).filter((org) => Boolean(org.abn)).length;
+  const revenueTrackedCount = (orgs ?? []).filter((org) => org.annual_revenue != null).length;
+  const orgSlugs = (orgs ?? []).map((org) => org.slug).filter(Boolean) as string[];
+  const { data: projectBackedRows } = orgSlugs.length > 0
+    ? await serviceDb
+        .from('org_projects')
+        .select('slug, name, org_profile:org_profile_id(name, slug)')
+        .in('slug', orgSlugs)
+    : { data: [] as Array<{ slug: string | null; name: string; org_profile: { name: string; slug: string | null } | Array<{ name: string; slug: string | null }> | null }> };
+
+  const projectBackedBySlug = new Map<string, { project_name: string; parent_org_name: string | null; parent_org_slug: string | null }>();
+  for (const row of projectBackedRows ?? []) {
+    if (!row.slug) continue;
+    const parent = Array.isArray(row.org_profile) ? row.org_profile[0] : row.org_profile;
+    projectBackedBySlug.set(row.slug, {
+      project_name: row.name,
+      parent_org_name: parent?.name ?? null,
+      parent_org_slug: parent?.slug ?? null,
+    });
   }
 
   return (
@@ -94,42 +119,43 @@ export default async function OrgIndexPage() {
           <p className="mt-2 text-gray-400">
             {orgs?.length ?? 0} organisations with dashboards. You are viewing as super admin.
           </p>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="border-2 border-white/20 bg-white/5 px-4 py-3">
+              <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">Dashboards</div>
+              <div className="mt-1 text-2xl font-black text-white">{totalOrgs}</div>
+            </div>
+            <div className="border-2 border-white/20 bg-white/5 px-4 py-3">
+              <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">Owner linked</div>
+              <div className="mt-1 text-2xl font-black text-white">{ownerLinkedCount}</div>
+            </div>
+            <div className="border-2 border-white/20 bg-white/5 px-4 py-3">
+              <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">ABN present</div>
+              <div className="mt-1 text-2xl font-black text-white">{withAbnCount}</div>
+            </div>
+            <div className="border-2 border-white/20 bg-white/5 px-4 py-3">
+              <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">Revenue tracked</div>
+              <div className="mt-1 text-2xl font-black text-white">{revenueTrackedCount}</div>
+            </div>
+          </div>
         </div>
       </div>
 
       <div className="mx-auto max-w-7xl px-4 py-8">
-        <div className="grid gap-4">
-          {(orgs ?? []).map((org) => (
-            <div key={org.id} className="border-4 border-bauhaus-black p-5 flex items-center justify-between hover:bg-gray-50">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3 mb-1">
-                  <h2 className="font-black text-lg truncate">{org.name}</h2>
-                  {org.org_type && (
-                    <span className="text-[10px] px-2 py-0.5 bg-gray-100 font-bold uppercase tracking-wider shrink-0">{org.org_type}</span>
-                  )}
-                  <span className="text-[10px] px-2 py-0.5 bg-bauhaus-black text-white font-bold uppercase tracking-wider shrink-0">
-                    {org.subscription_plan ?? 'community'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-4 text-xs text-gray-500">
-                  {org.abn && <span className="font-mono">ABN {org.abn.replace(/(\d{2})(\d{3})(\d{3})(\d{3})/, '$1 $2 $3 $4')}</span>}
-                  {org.team_size && <span>{org.team_size} staff</span>}
-                  {org.annual_revenue && <span>~${(org.annual_revenue / 1_000_000).toFixed(0)}M turnover</span>}
-                  <span>Owner: {ownerEmails[org.user_id] ?? 'unlinked'}</span>
-                </div>
-              </div>
-              <div className="ml-6 shrink-0 flex items-center gap-2">
-                <ImpersonateButton slug={org.slug} />
-                <Link
-                  href={`/org/${org.slug}`}
-                  className="px-5 py-2.5 bg-bauhaus-red text-white font-black uppercase tracking-widest text-sm hover:bg-red-700 transition-colors"
-                >
-                  View Dashboard
-                </Link>
-              </div>
-            </div>
-          ))}
+        <div className="mb-6 border-2 border-bauhaus-black bg-bauhaus-canvas px-5 py-4">
+          <div className="text-[10px] font-black uppercase tracking-[0.18em] text-bauhaus-red">Admin launchpad</div>
+          <p className="mt-2 max-w-3xl text-sm font-medium leading-relaxed text-gray-700">
+            Use this page to jump into an organisation&apos;s operating dashboard, contacts, or funding workflow without
+            scanning the full admin surface first.
+          </p>
         </div>
+
+        <OrgAdminListClient
+          items={(orgs ?? []).map((org) => ({
+            ...org,
+            owner_email: org.user_id ? ownerEmails[org.user_id] ?? null : null,
+            project_backed: org.slug ? projectBackedBySlug.get(org.slug) ?? null : null,
+          }))}
+        />
       </div>
     </main>
   );

@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createSupabaseServer } from '@/lib/supabase-server';
+import { hasProductEvent, recordProductEvents } from '@/lib/product-events';
 import { getServiceSupabase } from '@/lib/supabase';
 import { isAdminEmail } from '@/lib/admin';
+import { buildProfileAlertPreference, DEFAULT_PROFILE_ALERT_NAME } from '@/lib/profile-alerts';
 import { embedQuery } from '@grant-engine/embeddings';
 
 /** If admin is impersonating an org, return that org's slug (otherwise null) */
@@ -116,11 +118,70 @@ export async function PUT(request: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  const profileAlert = buildProfileAlertPreference({
+    domains,
+    geographicFocus: geographic_focus,
+    notifyEmail: notify_email ?? true,
+  });
+
+  if (profileAlert.hasSignal) {
+    const { error: alertError } = await serviceDb
+      .from('alert_preferences')
+      .upsert(
+        {
+          user_id: targetUserId,
+          ...profileAlert.values,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id,name' }
+      );
+
+    if (alertError) {
+      console.error('[profile] Default alert sync failed:', alertError);
+    }
+  } else {
+    const { error: alertDisableError } = await serviceDb
+      .from('alert_preferences')
+      .update({
+        enabled: false,
+        categories: [],
+        focus_areas: [],
+        states: [],
+        keywords: [],
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', targetUserId)
+      .eq('name', DEFAULT_PROFILE_ALERT_NAME);
+
+    if (alertDisableError) {
+      console.error('[profile] Default alert disable failed:', alertDisableError);
+    }
+  }
+
   // Generate project-level embeddings (fire-and-forget — don't block the response)
   if (data?.id && projects?.length && process.env.OPENAI_API_KEY) {
     generateProjectEmbeddings(serviceDb, data.id, projects).catch(err =>
       console.error('[profile] Project embedding generation failed:', err)
     );
+  }
+
+  const profileReady = Boolean(data?.name && data?.domains?.length && data?.geographic_focus?.length);
+  if (profileReady) {
+    const alreadyRecorded = await hasProductEvent(targetUserId, 'profile_ready');
+    if (!alreadyRecorded) {
+      await recordProductEvents([
+        {
+          userId: targetUserId,
+          orgProfileId: data.id,
+          eventType: 'profile_ready',
+          metadata: {
+            domains: data.domains?.length || 0,
+            geographic_focus: data.geographic_focus?.length || 0,
+            org_type: data.org_type || null,
+          },
+        },
+      ]);
+    }
   }
 
   return NextResponse.json(data);

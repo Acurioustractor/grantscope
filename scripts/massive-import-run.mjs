@@ -110,7 +110,7 @@ const steps = [
   {
     id: 'discovery',
     label: 'Step 3: Run Grant Discovery (all sources)',
-    cmd: 'node scripts/grantscope-discovery.mjs',
+    cmd: 'npx tsx scripts/grantscope-discovery.mjs',
   },
   {
     id: 'state-grants',

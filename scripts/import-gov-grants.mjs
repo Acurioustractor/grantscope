@@ -19,6 +19,7 @@
 import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { parse } from 'csv-parse/sync';
+import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -33,6 +34,7 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 const stats = { total: 0, upserted: 0, errors: 0 };
+let currentRunId = null;
 
 // ─── Helpers ────────────────────────────────────────────────
 
@@ -378,6 +380,9 @@ async function importBrisbaneGrants() {
 // ─── Main ───────────────────────────────────────────────────
 
 async function main() {
+  const run = await logStart(supabase, 'import-gov-grants', 'Import Gov Grants');
+  currentRunId = run.id;
+
   console.log('╔═══════════════════════════════════════════╗');
   console.log('║  Government Grants Importer               ║');
   console.log('╚═══════════════════════════════════════════╝');
@@ -417,9 +422,19 @@ async function main() {
   console.log(`  Upserted: ${stats.upserted}`);
   console.log(`  Errors: ${stats.errors}`);
   console.log('Done.');
+
+  await logComplete(supabase, run.id, {
+    items_found: stats.total,
+    items_new: stats.upserted,
+    items_updated: 0,
+    status: stats.errors > 0 ? 'partial' : 'success',
+    errors: stats.errors > 0 ? [`${stats.errors} import-gov-grants errors`] : [],
+  });
 }
 
 main().catch(err => {
   console.error('Fatal error:', err);
+  const message = err instanceof Error ? err.message : String(err);
+  logFailed(supabase, currentRunId, message).catch(() => {});
   process.exit(1);
 });

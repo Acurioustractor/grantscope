@@ -1,13 +1,12 @@
 import { NextResponse } from 'next/server';
-import { createSupabaseServer } from '@/lib/supabase-server';
+import { requireAdminApi } from '@/lib/admin-auth';
 import { AGENTS, CATEGORIES } from '@/lib/agent-registry';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const auth = await requireAdminApi();
+  if (auth.error) return auth.error;
 
   const agents = Object.entries(AGENTS).map(([id, def]) => ({
     id,

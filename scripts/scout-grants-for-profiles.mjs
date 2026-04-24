@@ -26,6 +26,12 @@ const SPECIFIC_USER = process.argv.find(a => a.startsWith('--user-id='))?.split(
 const MIN_SCORE = 65; // Minimum match score to auto-add to pipeline
 const ALERT_MIN_SCORE = 50; // Minimum score to count as alert match
 
+function normalizeThreshold(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return MIN_SCORE;
+  return parsed <= 1 ? Math.round(parsed * 100) : parsed;
+}
+
 // ─── Scoring Logic (mirrors /api/grants/match) ──────────────────────────
 
 function scoreGrant(grant, profile) {
@@ -131,11 +137,14 @@ function scoreGrant(grant, profile) {
 // ─── Alert Matching ─────────────────────────────────────────────────────
 
 function matchesAlert(grant, alert) {
-  // Check categories
-  if (alert.categories?.length > 0) {
+  // Check categories / focus areas
+  const alertTerms = [...(alert.categories || []), ...(alert.focus_areas || [])];
+  if (alertTerms.length > 0) {
     const grantCats = (grant.categories || []).map(c => c.toLowerCase());
-    const alertCats = alert.categories.map(c => c.toLowerCase());
-    if (!alertCats.some(ac => grantCats.some(gc => gc.includes(ac) || ac.includes(gc)))) {
+    const grantFocusAreas = (grant.focus_areas || []).map(f => f.toLowerCase());
+    const grantTerms = [...grantCats, ...grantFocusAreas];
+    const normalizedAlertTerms = alertTerms.map(term => term.toLowerCase());
+    if (!normalizedAlertTerms.some(alertTerm => grantTerms.some(grantTerm => grantTerm.includes(alertTerm) || alertTerm.includes(grantTerm)))) {
       return false;
     }
   }
@@ -166,6 +175,19 @@ function matchesAlert(grant, alert) {
   }
 
   return true;
+}
+
+function alertSpecificity(alert) {
+  return (alert.categories?.length || 0) +
+    (alert.focus_areas?.length || 0) +
+    (alert.states?.length || 0) +
+    (alert.keywords?.length || 0) +
+    (alert.min_amount ? 1 : 0) +
+    (alert.max_amount ? 1 : 0);
+}
+
+function findMatchingAlert(grant, alerts) {
+  return alerts.find(alert => matchesAlert(grant, alert)) || null;
 }
 
 // ─── Main ────────────────────────────────────────────────────────────────
@@ -212,6 +234,14 @@ async function main() {
     for (const profile of profiles) {
       console.log(`\n─── ${profile.name} ───`);
 
+      const { data: alerts } = await supabase
+        .from('alert_preferences')
+        .select('id, name, categories, focus_areas, states, min_amount, max_amount, keywords, last_matched_at')
+        .eq('user_id', profile.user_id)
+        .eq('enabled', true);
+
+      const enabledAlerts = [...(alerts || [])].sort((a, b) => alertSpecificity(b) - alertSpecificity(a));
+
       // 3. Score all grants
       const scored = grants.map(grant => {
         const { score, signals } = scoreGrant(grant, profile);
@@ -235,15 +265,24 @@ async function main() {
 
       const existingIds = new Set((existing || []).map(e => e.grant_id));
       const newGrants = highScoring.filter(g => !existingIds.has(g.id));
+      const matchedAlertsByGrantId = new Map(
+        newGrants.map(grant => [grant.id, findMatchingAlert(grant, enabledAlerts)])
+      );
       console.log(`  ${newGrants.length} new grants to add (${existingIds.size} already tracked)`);
 
       if (!DRY_RUN && newGrants.length > 0) {
         // 5. Auto-add to tracker
+        const attributedAt = new Date().toISOString();
         const rows = newGrants.map(g => ({
           user_id: profile.user_id,
+          org_profile_id: profile.id,
           grant_id: g.id,
           stage: 'discovered',
           notes: `Auto-discovered by Grant Scout. Score: ${g.match_score}%. Signals: ${g.match_signals.join(', ')}`,
+          source_alert_preference_id: matchedAlertsByGrantId.get(g.id)?.id || null,
+          source_notification_id: null,
+          source_attribution_type: 'scout_auto',
+          source_attributed_at: attributedAt,
         }));
 
         const { error: insertError } = await supabase
@@ -259,10 +298,26 @@ async function main() {
 
         // 5b. Queue grant notifications for high-match grants
         if (profile.notify_email) {
-          const notifyThreshold = profile.notify_threshold || MIN_SCORE;
+          const notifyThreshold = normalizeThreshold(profile.notify_threshold);
           const notifiable = newGrants.filter(g => g.match_score >= notifyThreshold);
           if (notifiable.length > 0) {
+            const grantIds = notifiable.map(g => g.id);
+            const { data: existingNotifications, error: existingNotificationsError } = await supabase
+              .from('grant_notification_outbox')
+              .select('grant_id')
+              .eq('user_id', profile.user_id)
+              .eq('notification_type', 'grant_match')
+              .in('status', ['queued', 'sent'])
+              .in('grant_id', grantIds);
+
+            if (existingNotificationsError) {
+              console.error(`  Error checking queued notifications:`, existingNotificationsError.message);
+              continue;
+            }
+
+            const notifiedGrantIds = new Set((existingNotifications || []).map(row => row.grant_id));
             const outboxRows = notifiable.map(g => ({
+              alert_preference_id: matchedAlertsByGrantId.get(g.id)?.id || null,
               user_id: profile.user_id,
               org_profile_id: profile.id,
               grant_id: g.id,
@@ -279,16 +334,30 @@ async function main() {
               ].filter(Boolean).join('\n'),
               match_score: g.match_score,
               match_signals: g.match_signals,
-            }));
+            })).filter(row => !notifiedGrantIds.has(row.grant_id));
+
+            if (outboxRows.length === 0) {
+              continue;
+            }
 
             const { error: outboxError } = await supabase
               .from('grant_notification_outbox')
-              .upsert(outboxRows, { onConflict: 'user_id,grant_id,notification_type', ignoreDuplicates: true });
+              .insert(outboxRows);
 
             if (outboxError) {
               console.error(`  Error queuing notifications:`, outboxError.message);
             } else {
-              console.log(`  ✓ Queued ${notifiable.length} grant notifications`);
+              console.log(`  ✓ Queued ${outboxRows.length} grant notifications`);
+              await supabase
+                .from('alert_events')
+                .insert(outboxRows.map(row => ({
+                  user_id: profile.user_id,
+                  alert_preference_id: row.alert_preference_id,
+                  notification_id: null,
+                  grant_id: row.grant_id,
+                  event_type: 'notification_queued',
+                  metadata: { source: 'scheduled_grant_scout' },
+                })));
             }
           }
         }
@@ -296,14 +365,8 @@ async function main() {
 
       // 6. Update alert match counts
       if (!DRY_RUN) {
-        const { data: alerts } = await supabase
-          .from('alert_preferences')
-          .select('id, categories, states, min_amount, max_amount, keywords, focus_areas')
-          .eq('user_id', profile.user_id)
-          .eq('enabled', true);
-
-        if (alerts?.length) {
-          for (const alert of alerts) {
+        if (enabledAlerts.length) {
+          for (const alert of enabledAlerts) {
             const matches = alertMatches.filter(g => matchesAlert(g, alert));
             if (matches.length > 0) {
               await supabase
@@ -314,10 +377,35 @@ async function main() {
                   updated_at: new Date().toISOString(),
                 })
                 .eq('id', alert.id);
+            } else {
+              await supabase
+                .from('alert_preferences')
+                .update({
+                  match_count: 0,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', alert.id);
             }
           }
-          console.log(`  ✓ Updated ${alerts.length} alert(s)`);
+          console.log(`  ✓ Updated ${enabledAlerts.length} alert(s)`);
         }
+      }
+
+      if (!DRY_RUN) {
+        await supabase
+          .from('alert_events')
+          .insert({
+            user_id: profile.user_id,
+            alert_preference_id: null,
+            notification_id: null,
+            grant_id: null,
+            event_type: 'scout_run',
+            metadata: {
+              matches_found: alertMatches.length,
+              grants_added: newGrants.length,
+              alerts_updated: enabledAlerts.length,
+            },
+          });
       }
 
       totalMatches += alertMatches.length;

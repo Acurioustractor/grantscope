@@ -1,0 +1,64 @@
+# Universal .claudeignore template
+# Copy to any project: cp ~/.claude/templates/claudeignore-universal .claudeignore
+#
+# Excludes binary files, build artifacts, and large data that waste
+# Claude Code context window tokens without providing useful content.
+
+# === Build artifacts & dependencies ===
+node_modules/
+.next/
+dist/
+build/
+out/
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+
+# === Binary documents (convert to markdown first) ===
+*.pdf
+*.docx
+*.xlsx
+*.xls
+*.pptx
+*.doc
+
+# === Images (read individually when needed, not in bulk search) ===
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.ico
+*.webp
+*.avif
+
+# === Media ===
+*.mp4
+*.mp3
+*.wav
+*.mov
+
+# === Data dumps ===
+*.csv
+*.sqlite
+*.db
+
+# === IDE & OS ===
+.vscode/
+.idea/
+.DS_Store
+*.swp
+
+# === Lock files ===
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# === Supabase artifacts ===
+supabase/.temp/
+supabase/.branches/
+
+# === Archives & old docs ===
+docs/archive/
+
+# === Claude cache (stale agent outputs) ===
+.claude/cache/

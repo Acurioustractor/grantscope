@@ -7,9 +7,9 @@
  * discovery plugins and upserts new grants to Supabase.
  *
  * Usage:
- *   node scripts/grantscope-discovery.mjs [--dry-run] [--sources=grantconnect,data-gov-au]
- *   node scripts/grantscope-discovery.mjs [--resolve-sources-only]
- *   node scripts/grantscope-discovery.mjs [--full-sweep]
+ *   npx tsx scripts/grantscope-discovery.mjs [--dry-run] [--sources=grantconnect,data-gov-au]
+ *   npx tsx scripts/grantscope-discovery.mjs [--resolve-sources-only]
+ *   npx tsx scripts/grantscope-discovery.mjs [--full-sweep]
  */
 
 import 'dotenv/config';
@@ -43,6 +43,22 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 function toTimestamp(value) {
   return value ? new Date(value).getTime() : Number.POSITIVE_INFINITY;
+}
+
+function escapeSqlLiteral(value) {
+  return value.replace(/'/g, "''");
+}
+
+function canonicalSourceSql() {
+  return `COALESCE(
+    NULLIF(discovery_method, ''),
+    CASE
+      WHEN source = 'foundation_program' THEN NULL
+      WHEN COALESCE(source_id, '') ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN NULL
+      ELSE NULLIF(source_id, '')
+    END,
+    source
+  )`;
 }
 
 async function resolveSourcesFromFrontier() {
@@ -200,8 +216,74 @@ async function recordDiscoveryFeedback(result, sourceMode) {
   }
 }
 
+async function closeMissingSourceRows(result, runStartedAt) {
+  if (DRY_RUN || !result.sourceStats?.length) {
+    return { totalClosed: 0, rows: [] };
+  }
+
+  const successfulSources = result.sourceStats
+    .filter((stat) => stat.errors.length === 0)
+    .map((stat) => stat.source)
+    .filter(Boolean);
+
+  if (successfulSources.length === 0) {
+    return { totalClosed: 0, rows: [] };
+  }
+
+  const now = new Date().toISOString();
+  const canonicalSource = canonicalSourceSql();
+  const selectQuery = `
+    SELECT id, ${canonicalSource} AS canonical_source
+    FROM grant_opportunities
+    WHERE ${canonicalSource} IN (${successfulSources.map((source) => `'${escapeSqlLiteral(source)}'`).join(', ')})
+      AND COALESCE(status, '') <> 'closed'
+      AND COALESCE(updated_at, created_at) < '${escapeSqlLiteral(runStartedAt)}'
+  `;
+
+  const { data, error } = await supabase.rpc('exec_sql', { query: selectQuery });
+  if (error) {
+    throw new Error(`Failed to load missing source rows: ${error.message}`);
+  }
+
+  const staleRows = data || [];
+  if (staleRows.length === 0) {
+    return { totalClosed: 0, rows: [] };
+  }
+
+  const staleIds = staleRows.map((row) => row.id);
+  const chunkSize = 500;
+  for (let index = 0; index < staleIds.length; index += chunkSize) {
+    const chunk = staleIds.slice(index, index + chunkSize);
+    const { error: updateError } = await supabase
+      .from('grant_opportunities')
+      .update({
+        status: 'closed',
+        application_status: 'closed',
+        last_verified_at: now,
+        updated_at: now,
+      })
+      .in('id', chunk);
+
+    if (updateError) {
+      throw new Error(`Failed to close missing source rows: ${updateError.message}`);
+    }
+  }
+
+  const counts = new Map();
+  for (const row of staleRows) {
+    counts.set(row.canonical_source, (counts.get(row.canonical_source) || 0) + 1);
+  }
+
+  const rows = [...counts.entries()]
+    .map(([source, closed_count]) => ({ source, closed_count }))
+    .sort((a, b) => b.closed_count - a.closed_count || a.source.localeCompare(b.source));
+  const totalClosed = staleRows.length;
+  return { totalClosed, rows };
+}
+
 async function main() {
   const resolved = await resolveSources();
+  const runStartedAt = new Date().toISOString();
 
   console.log('='.repeat(60));
   console.log('GrantScope Discovery Run');
@@ -242,11 +324,12 @@ async function main() {
     });
 
     await recordDiscoveryFeedback(result, resolved.mode);
+    const staleClosure = await closeMissingSourceRows(result, runStartedAt);
 
     await logComplete(supabase, run.id, {
       items_found: result.grantsDiscovered,
       items_new: result.grantsNew,
-      items_updated: result.grantsUpdated,
+      items_updated: result.grantsUpdated + staleClosure.totalClosed,
     });
 
     console.log('\n' + '='.repeat(60));
@@ -255,8 +338,14 @@ async function main() {
     console.log(`  Grants discovered: ${result.grantsDiscovered}`);
     console.log(`  New grants: ${result.grantsNew}`);
     console.log(`  Updated: ${result.grantsUpdated}`);
+    console.log(`  Stale closed: ${staleClosure.totalClosed}`);
     console.log(`  Errors: ${result.errors.length}`);
     console.log(`  Status: ${result.status}`);
+    if (staleClosure.rows.length > 0) {
+      for (const row of staleClosure.rows) {
+        console.log(`    - ${row.source}: ${row.closed_count}`);
+      }
+    }
     console.log('='.repeat(60));
 
     if (result.errors.length > 0) {

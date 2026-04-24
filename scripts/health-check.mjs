@@ -32,18 +32,106 @@ if (showData) {
 
   // Core table counts
   const counts = await sql(`
-    SELECT 'gs_entities' as tbl, COUNT(*) as rows FROM gs_entities
-    UNION ALL SELECT 'gs_relationships', COUNT(*) FROM gs_relationships
-    UNION ALL SELECT 'austender_contracts', COUNT(*) FROM austender_contracts
-    UNION ALL SELECT 'acnc_charities', COUNT(*) FROM acnc_charities
-    UNION ALL SELECT 'justice_funding', COUNT(*) FROM justice_funding
-    UNION ALL SELECT 'political_donations', COUNT(*) FROM political_donations
-    UNION ALL SELECT 'foundations', COUNT(*) FROM foundations
-    UNION ALL SELECT 'grant_opportunities', COUNT(*) FROM grant_opportunities
-    ORDER BY tbl
+    SELECT
+      relname AS tbl,
+      COALESCE(reltuples, 0)::bigint AS rows
+    FROM pg_class
+    WHERE relname IN (
+      'gs_entities',
+      'gs_relationships',
+      'austender_contracts',
+      'acnc_charities',
+      'justice_funding',
+      'political_donations',
+      'foundations',
+      'grant_opportunities'
+    )
+    ORDER BY relname
   `);
   for (const r of counts) {
     console.log(`  ${r.tbl.padEnd(25)} ${Number(r.rows).toLocaleString().padStart(10)} rows`);
+  }
+
+  // Grant integrity
+  console.log('\n  ── GRANT INTEGRITY ──\n');
+  const grantIntegrity = await sql(`
+    SELECT
+      COUNT(*) AS total_grants,
+      COUNT(*) FILTER (WHERE status IS NULL) AS status_null,
+      COUNT(*) FILTER (WHERE application_status IS NULL) AS application_status_null,
+      COUNT(*) FILTER (WHERE status = 'open' AND closes_at < CURRENT_DATE) AS open_past_deadline,
+      COUNT(*) FILTER (
+        WHERE discovered_by = 'grant_engine'
+          AND COALESCE(discovery_method, '') <> ''
+          AND COALESCE(source_id, '') = ''
+      ) AS blank_source_id,
+      COUNT(*) FILTER (
+        WHERE discovered_by = 'grant_engine'
+          AND COALESCE(discovery_method, '') <> ''
+          AND COALESCE(source_id, '') <> ''
+          AND source_id NOT LIKE '%::duplicate::%'
+          AND source_id <> discovery_method
+      ) AS canonical_mismatch,
+      COUNT(*) FILTER (
+        WHERE discovered_by = 'grant_engine'
+          AND source_id LIKE '%::duplicate::%'
+          AND status = 'duplicate'
+      ) AS duplicate_shadows
+    FROM grant_opportunities
+  `);
+  const gi = grantIntegrity[0];
+  const zeroIcon = (value) => Number(value) === 0 ? '✅' : '❌';
+
+  console.log(`  Total grants:              ${Number(gi.total_grants).toLocaleString()}`);
+  console.log(`  ${zeroIcon(gi.status_null)} Null status:               ${Number(gi.status_null).toLocaleString()}`);
+  console.log(`  ${zeroIcon(gi.application_status_null)} Null application status:   ${Number(gi.application_status_null).toLocaleString()}`);
+  console.log(`  ${zeroIcon(gi.open_past_deadline)} Open past deadline:        ${Number(gi.open_past_deadline).toLocaleString()}`);
+  console.log(`  ${zeroIcon(gi.blank_source_id)} Blank source_id:            ${Number(gi.blank_source_id).toLocaleString()}`);
+  console.log(`  ${zeroIcon(gi.canonical_mismatch)} Canonical source mismatch:  ${Number(gi.canonical_mismatch).toLocaleString()}`);
+  console.log(`  ℹ️  Tracked duplicate shadows:   ${Number(gi.duplicate_shadows).toLocaleString()}`);
+
+  const grantIntegrityIssueSources = await sql(`
+    WITH issue_sources AS (
+      SELECT
+        COALESCE(NULLIF(discovery_method, ''), source, 'unknown') AS source,
+        COUNT(*) FILTER (WHERE status IS NULL) AS status_null,
+        COUNT(*) FILTER (WHERE application_status IS NULL) AS application_status_null,
+        COUNT(*) FILTER (WHERE status = 'open' AND closes_at < CURRENT_DATE) AS open_past_deadline,
+        COUNT(*) FILTER (
+          WHERE discovered_by = 'grant_engine'
+            AND COALESCE(discovery_method, '') <> ''
+            AND COALESCE(source_id, '') = ''
+        ) AS blank_source_id,
+        COUNT(*) FILTER (
+          WHERE discovered_by = 'grant_engine'
+            AND COALESCE(discovery_method, '') <> ''
+            AND COALESCE(source_id, '') <> ''
+            AND source_id NOT LIKE '%::duplicate::%'
+            AND source_id <> discovery_method
+        ) AS canonical_mismatch
+      FROM grant_opportunities
+      GROUP BY 1
+    )
+    SELECT
+      source,
+      status_null,
+      application_status_null,
+      open_past_deadline,
+      blank_source_id,
+      canonical_mismatch,
+      (status_null + application_status_null + open_past_deadline + blank_source_id + canonical_mismatch) AS total_issues
+    FROM issue_sources
+    WHERE (status_null + application_status_null + open_past_deadline + blank_source_id + canonical_mismatch) > 0
+    ORDER BY total_issues DESC, source ASC
+    LIMIT 5
+  `);
+  if (grantIntegrityIssueSources.length > 0) {
+    console.log('\n  ⚠️  TOP GRANT INTEGRITY ISSUE SOURCES:');
+    for (const row of grantIntegrityIssueSources) {
+      console.log(
+        `     ${row.source} — total=${Number(row.total_issues).toLocaleString()} | status=${Number(row.status_null).toLocaleString()} | app=${Number(row.application_status_null).toLocaleString()} | stale-open=${Number(row.open_past_deadline).toLocaleString()} | blank-id=${Number(row.blank_source_id).toLocaleString()} | mismatch=${Number(row.canonical_mismatch).toLocaleString()}`
+      );
+    }
   }
 
   // Entity coverage

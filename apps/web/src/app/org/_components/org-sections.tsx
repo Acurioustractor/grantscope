@@ -20,6 +20,7 @@ import type {
   BoardMember,
   DonorCrosslink,
   FoundationFunder,
+  OrgProjectFoundationPortfolioRow,
 } from '@/lib/services/org-dashboard-service';
 import { money } from '@/lib/services/org-dashboard-service';
 import { Section, StatCard, SystemBadge, ContactTypeBadge } from './ui';
@@ -57,6 +58,99 @@ function CuratedSource({ label }: { label: string }) {
   );
 }
 
+function latestCuratedUpdateLabel(items: Array<{ updated_at: string | null | undefined }>) {
+  const timestamps = items
+    .map((item) => item.updated_at)
+    .filter((value): value is string => Boolean(value))
+    .map((value) => new Date(value).getTime())
+    .filter((value) => Number.isFinite(value));
+
+  if (timestamps.length === 0) return null;
+
+  return new Date(Math.max(...timestamps)).toLocaleDateString('en-AU', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+function latestCuratedUpdateTime(items: Array<{ updated_at: string | null | undefined }>) {
+  const timestamps = items
+    .map((item) => item.updated_at)
+    .filter((value): value is string => Boolean(value))
+    .map((value) => new Date(value).getTime())
+    .filter((value) => Number.isFinite(value));
+
+  if (timestamps.length === 0) return null;
+  return Math.max(...timestamps);
+}
+
+function curatedHealthMeta(items: Array<{ updated_at: string | null | undefined }>) {
+  const latest = latestCuratedUpdateTime(items);
+  if (!latest) return null;
+
+  const ageDays = Math.floor((Date.now() - latest) / (24 * 60 * 60 * 1000));
+  if (ageDays <= 45) {
+    return {
+      label: 'Curated and current',
+      className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+    };
+  }
+  if (ageDays <= 120) {
+    return {
+      label: 'Curated; review soon',
+      className: 'border-amber-200 bg-amber-50 text-amber-700',
+    };
+  }
+  return {
+    label: 'Curated but stale',
+    className: 'border-bauhaus-red/20 bg-bauhaus-red/5 text-bauhaus-red',
+  };
+}
+
+function CuratedHealthLine({ items }: { items: Array<{ updated_at: string | null | undefined }> }) {
+  const updatedLabel = latestCuratedUpdateLabel(items);
+  const health = curatedHealthMeta(items);
+
+  if (!updatedLabel || !health) return null;
+
+  return (
+    <div className="mb-4 -mt-2 flex flex-wrap items-center gap-2">
+      <span className={`inline-flex items-center gap-1.5 border px-2 py-1 text-[10px] font-black uppercase tracking-[0.16em] ${health.className}`}>
+        <span className="h-1.5 w-1.5 rounded-full bg-current inline-block" />
+        {health.label}
+      </span>
+      <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-gray-400">
+        Last updated {updatedLabel}
+      </span>
+    </div>
+  );
+}
+
+function SectionTrustLine({
+  label,
+  tone = 'neutral',
+}: {
+  label: string;
+  tone?: 'neutral' | 'auto' | 'heuristic' | 'warning';
+}) {
+  const styles = {
+    neutral: 'border-gray-200 bg-gray-50 text-gray-600',
+    auto: 'border-green-200 bg-green-50 text-green-700',
+    heuristic: 'border-amber-200 bg-amber-50 text-amber-700',
+    warning: 'border-bauhaus-red/20 bg-bauhaus-red/5 text-bauhaus-red',
+  } as const;
+
+  return (
+    <div className="mb-4 -mt-2">
+      <span className={`inline-flex items-center gap-1.5 border px-2 py-1 text-[10px] font-black uppercase tracking-[0.16em] ${styles[tone]}`}>
+        <span className="h-1.5 w-1.5 rounded-full bg-current inline-block" />
+        {label}
+      </span>
+    </div>
+  );
+}
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Stat cards
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -78,6 +172,19 @@ export function KeyStats({
   profile: OrgProfile;
   entity: GsEntity | null;
 }) {
+  const hasProfileMeta =
+    Boolean(profile.team_size) ||
+    Boolean(profile.annual_revenue) ||
+    Boolean(entity?.remoteness) ||
+    Boolean(entity?.seifa_irsd_decile);
+  const profileUpdatedLabel = profile.updated_at
+    ? new Date(profile.updated_at).toLocaleDateString('en-AU', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      })
+    : null;
+
   return (
     <section>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -94,20 +201,37 @@ export function KeyStats({
           <StatCard label="ALMA Programs" value={String(almaCount)} sub="Registered interventions" />
         )}
       </div>
-      {(profile.team_size || profile.annual_revenue) && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-          {profile.team_size && (
-            <StatCard label="Staff" value={String(profile.team_size)} sub="Team size" />
-          )}
-          {profile.annual_revenue && (
-            <StatCard label="Annual Turnover" value={money(profile.annual_revenue)} sub="Latest year" />
-          )}
-          {entity?.remoteness && (
-            <StatCard label="Location" value={entity.lga_name || entity.postcode} sub={entity.remoteness} />
-          )}
-          {entity?.seifa_irsd_decile && (
-            <StatCard label="SEIFA IRSD" value={`Decile ${entity.seifa_irsd_decile}`} sub="Socio-economic index" />
-          )}
+      {hasProfileMeta && (
+        <div className="mt-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                Organisation Profile Inputs
+              </p>
+              {profileUpdatedLabel && (
+                <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.14em] text-gray-400">
+                  Last updated {profileUpdatedLabel}
+                </p>
+              )}
+            </div>
+            <Link href="/profile" className="text-[10px] font-black uppercase tracking-[0.18em] text-bauhaus-blue underline underline-offset-4">
+              Edit profile
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {profile.team_size && (
+              <StatCard label="Staff" value={String(profile.team_size)} sub="Curated profile field" />
+            )}
+            {profile.annual_revenue && (
+              <StatCard label="Annual Turnover" value={money(profile.annual_revenue)} sub="Curated profile field" />
+            )}
+            {entity?.remoteness && (
+              <StatCard label="Location" value={entity.lga_name || entity.postcode} sub={entity.remoteness} />
+            )}
+            {entity?.seifa_irsd_decile && (
+              <StatCard label="SEIFA IRSD" value={`Decile ${entity.seifa_irsd_decile}`} sub="Socio-economic index" />
+            )}
+          </div>
         </div>
       )}
     </section>
@@ -159,10 +283,18 @@ export function PowerScoreSection({ powerIndex, slug }: { powerIndex: PowerIndex
   const activeEntries = systemEntries.filter(
     s => powerIndex[s.key as keyof PowerIndex] && Number(powerIndex[s.key as keyof PowerIndex]) > 0
   );
+  const looksThin =
+    Number(powerIndex.system_count) <= 1 ||
+    Number(powerIndex.total_dollar_flow) === 0;
 
   return (
-    <Section title="Cross-System Power Index">
-      <DataSource label="Auto-computed from CivicGraph" />
+    <Section title="Linked CivicGraph Entity Signals">
+      <DataSource label="Auto-computed from ABN-linked CivicGraph records" />
+      <SectionTrustLine label="Linked external entity snapshot" tone={looksThin ? 'warning' : 'auto'} />
+      <p className="text-xs text-gray-400 mb-4 -mt-2">
+        This card only reflects what CivicGraph has linked to the organisation&apos;s ABN in external datasets. It does not
+        include curated project strategy, internal pipeline work, or portfolio notes shown elsewhere on this page.
+      </p>
       <div className="bg-white border-2 border-bauhaus-black rounded-sm shadow-sm overflow-hidden">
         {/* Header row with score */}
         <div className="p-5 border-b-2 border-bauhaus-black bg-gray-50">
@@ -193,6 +325,17 @@ export function PowerScoreSection({ powerIndex, slug }: { powerIndex: PowerIndex
 
         {/* System presence badges */}
         <div className="p-5">
+          {looksThin && (
+            <div className="mb-4 border-2 border-bauhaus-red/25 bg-bauhaus-red/5 p-3">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-bauhaus-red">
+                Read this as a linked-entity snapshot
+              </p>
+              <p className="mt-1 text-sm font-medium leading-relaxed text-gray-600">
+                This organisation&apos;s curated portfolio may be much richer than its current ABN-linked CivicGraph footprint.
+                Use this section as a data-linking signal, not as the main read on organisational strength.
+              </p>
+            </div>
+          )}
           <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">
             Active Systems
           </p>
@@ -388,6 +531,7 @@ export function RelationshipSummarySection({
   return (
     <Section title="Relationship Network">
       <DataSource label="Auto-discovered from CivicGraph" />
+      <SectionTrustLine label="Linked external relationship graph" tone="auto" />
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {relationships.map(r => {
           const meta = REL_TYPE_LABELS[r.relationship_type] ?? {
@@ -498,6 +642,7 @@ export function LeadershipSection({ leadership }: { leadership: OrgLeader[] }) {
   return (
     <Section title="Governance & Leadership">
       <CuratedSource label="Curated" />
+      <CuratedHealthLine items={leadership} />
       <div className="grid md:grid-cols-2 gap-4">
         {leadership.map((leader) => (
           <div key={leader.id} className="bg-white border border-gray-200 rounded-sm shadow-sm overflow-hidden">
@@ -541,6 +686,7 @@ export function BoardMembersSection({ boardMembers }: { boardMembers: BoardMembe
   return (
     <Section title="Board & Officers">
       <DataSource label="Auto-discovered from ACNC, ORIC, Parliament, ABR" />
+      <SectionTrustLine label="Auto-linked registry records" tone="auto" />
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className={THEAD}>
@@ -730,6 +876,858 @@ export function FoundationFundersSection({ foundationFunders }: { foundationFund
   );
 }
 
+function portfolioReadiness(item: OrgProjectFoundationPortfolioRow) {
+  const statuses = [
+    item.research?.fit_status ?? 'missing',
+    item.research?.proof_status ?? 'missing',
+    item.research?.applicant_status ?? 'missing',
+    item.research?.relationship_status ?? 'missing',
+    item.research?.ask_status ?? 'missing',
+  ];
+  const readyCount = statuses.filter((status) => status === 'ready').length;
+  const missingCount = statuses.filter((status) => status === 'missing').length;
+
+  if (readyCount >= 4 && missingCount === 0) return 'Outreach ready' as const;
+  if (readyCount >= 2 && missingCount <= 2) return 'Build before outreach' as const;
+  return 'Discovery brief' as const;
+}
+
+function engagementLabel(status: OrgProjectFoundationPortfolioRow['engagement_status']) {
+  return {
+    researching: 'Researching',
+    ready_to_approach: 'Ready To Approach',
+    approached: 'Approached',
+    meeting: 'Meeting',
+    proposal: 'Proposal',
+    won: 'Won',
+    lost: 'Lost',
+    parked: 'Parked',
+  }[status];
+}
+
+function shortNames(rows: OrgProjectFoundationPortfolioRow[]) {
+  return rows.slice(0, 3).map((row) => row.foundation.name).join(' · ');
+}
+
+function shortPipelineNames(rows: OrgPipelineItemWithEntity[]) {
+  return rows.slice(0, 3).map((row) => row.name).join(' · ');
+}
+
+function bestLeadProject(rows: OrgProjectFoundationPortfolioRow[]) {
+  return [...rows].sort((left, right) => {
+    const readinessDelta =
+      (portfolioReadiness(right) === 'Outreach ready' ? 2 : portfolioReadiness(right) === 'Build before outreach' ? 1 : 0) -
+      (portfolioReadiness(left) === 'Outreach ready' ? 2 : portfolioReadiness(left) === 'Build before outreach' ? 1 : 0);
+    if (readinessDelta !== 0) return readinessDelta;
+    return (right.fit_score ?? -1) - (left.fit_score ?? -1);
+  })[0] ?? null;
+}
+
+function portfolioNextTouchState(row: OrgProjectFoundationPortfolioRow) {
+  if (!row.next_touch_at) return 'none' as const;
+  const now = Date.now();
+  const touchAt = new Date(row.next_touch_at).getTime();
+  if (touchAt <= now) return 'due' as const;
+  if (touchAt <= now + 14 * 24 * 60 * 60 * 1000) return 'upcoming' as const;
+  return 'scheduled' as const;
+}
+
+function portfolioRelationshipStale(row: OrgProjectFoundationPortfolioRow) {
+  if (!['approached', 'meeting', 'proposal'].includes(row.engagement_status)) return false;
+  if (!row.last_interaction_at) return true;
+  const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  return new Date(row.last_interaction_at).getTime() < thirtyDaysAgo;
+}
+
+function pipelineNeedsAttention(row: OrgPipelineItemWithEntity) {
+  return !['submitted', 'awarded', 'rejected'].includes(row.status);
+}
+
+function pipelineDeadlineSoon(row: OrgPipelineItemWithEntity) {
+  if (!row.deadline || !pipelineNeedsAttention(row)) return false;
+  const deadlineAt = new Date(row.deadline).getTime();
+  if (!Number.isFinite(deadlineAt)) return false;
+  const now = Date.now();
+  const daysUntil = Math.ceil((deadlineAt - now) / (24 * 60 * 60 * 1000));
+  return daysUntil >= 0 && daysUntil <= 21;
+}
+
+function pipelineDeadlineLabel(row: OrgPipelineItemWithEntity) {
+  if (!row.deadline) return 'No deadline';
+  return new Date(row.deadline).toLocaleDateString('en-AU', {
+    day: 'numeric',
+    month: 'short',
+  });
+}
+
+function highestFitRow(rows: OrgProjectFoundationPortfolioRow[]) {
+  return [...rows].sort((left, right) => (right.fit_score ?? -1) - (left.fit_score ?? -1))[0] ?? null;
+}
+
+function earliestNextTouchRow(rows: OrgProjectFoundationPortfolioRow[]) {
+  return [...rows].sort((left, right) => {
+    const leftTime = left.next_touch_at ? new Date(left.next_touch_at).getTime() : Number.POSITIVE_INFINITY;
+    const rightTime = right.next_touch_at ? new Date(right.next_touch_at).getTime() : Number.POSITIVE_INFINITY;
+    return leftTime - rightTime;
+  })[0] ?? null;
+}
+
+export function ActionFocusSection({
+  slug,
+  fundingWorkspaceHref,
+  portfolio,
+  pipeline,
+}: {
+  slug: string;
+  fundingWorkspaceHref: string;
+  portfolio: OrgProjectFoundationPortfolioRow[];
+  pipeline: OrgPipelineItemWithEntity[];
+}) {
+  const dueFollowUps = portfolio.filter((row) => portfolioNextTouchState(row) === 'due');
+  const readyToApproach = portfolio.filter((row) => row.engagement_status === 'ready_to_approach');
+  const needsProof = portfolio.filter((row) => (row.research?.proof_status ?? 'missing') !== 'ready');
+  const deadlineWindow = pipeline
+    .filter((row) => pipelineDeadlineSoon(row))
+    .sort((left, right) => {
+      if (!left.deadline || !right.deadline) return 0;
+      return new Date(left.deadline).getTime() - new Date(right.deadline).getTime();
+    });
+  const dueLead = earliestNextTouchRow(dueFollowUps);
+  const readyLead = highestFitRow(readyToApproach);
+  const proofLead = highestFitRow(needsProof);
+  const deadlineLead = deadlineWindow[0] ?? null;
+  const topPriority = dueLead
+    ? {
+        key: 'due',
+        kicker: 'Top priority',
+        title: `${dueLead.project.name} follow-up is due now`,
+        body:
+          dueLead.next_step ||
+          `Re-open ${dueLead.foundation.name} for ${dueLead.project.name} and move the next touch forward now.`,
+        href: dueLead.project.slug ? `/org/${slug}/${dueLead.project.slug}` : '#curated-philanthropy',
+        cta: dueLead.project.slug ? `Open ${dueLead.project.name}` : 'Open philanthropy',
+        detailHref: `/foundations/${dueLead.foundation.id}`,
+        detailLabel: `Open ${dueLead.foundation.name}`,
+        signals: [
+          portfolioReadiness(dueLead),
+          engagementLabel(dueLead.engagement_status),
+          dueLead.fit_score != null ? `Fit ${dueLead.fit_score}` : null,
+          dueLead.applicant_entity ? `Via ${dueLead.applicant_entity.name}` : null,
+        ].filter((value): value is string => Boolean(value)),
+        meta: dueLead.next_touch_at
+          ? `Due ${new Date(dueLead.next_touch_at).toLocaleDateString('en-AU', {
+              day: 'numeric',
+              month: 'short',
+            })}`
+          : 'Due now',
+        tone: 'border-bauhaus-red bg-bauhaus-red text-white',
+      }
+    : deadlineLead
+      ? {
+          key: 'deadlines',
+          kicker: 'Top priority',
+          title: `${deadlineLead.name} is in the deadline window`,
+          body: `${deadlineLead.funder || 'Funder'} · ${deadlineLead.amount_display || 'Amount not set'} · move this from watching into drafting now.`,
+          href: '#curated-pipeline',
+          cta: 'Open pipeline',
+          detailHref:
+            deadlineLead.grant_opportunity_id
+              ? `/grants/${deadlineLead.grant_opportunity_id}`
+              : deadlineLead.grant_url || null,
+          detailLabel: deadlineLead.grant_url || deadlineLead.grant_opportunity_id ? 'Open grant' : null,
+          detailExternal: Boolean(deadlineLead.grant_url && !deadlineLead.grant_opportunity_id),
+          signals: [
+            deadlineLead.status.replace(/_/g, ' '),
+            deadlineLead.funder_type ? `${deadlineLead.funder_type} funder` : null,
+            deadlineLead.amount_display || null,
+          ].filter((value): value is string => Boolean(value)),
+          meta: `Closes ${pipelineDeadlineLabel(deadlineLead)}`,
+          tone: 'border-bauhaus-blue bg-bauhaus-blue text-white',
+        }
+      : readyLead
+        ? {
+            key: 'ready',
+            kicker: 'Top priority',
+            title: `${readyLead.project.name} has a ready outreach lead`,
+            body:
+              readyLead.message_alignment ||
+              `Open ${readyLead.foundation.name} and turn the current fit into a live outreach move.`,
+            href: readyLead.project.slug ? `/org/${slug}/${readyLead.project.slug}` : '#curated-philanthropy',
+            cta: readyLead.project.slug ? `Open ${readyLead.project.name}` : 'Review ready funders',
+            detailHref: `/foundations/${readyLead.foundation.id}`,
+            detailLabel: `Open ${readyLead.foundation.name}`,
+            signals: [
+              portfolioReadiness(readyLead),
+              engagementLabel(readyLead.engagement_status),
+              readyLead.fit_score != null ? `Fit ${readyLead.fit_score}` : null,
+              readyLead.applicant_entity ? `Via ${readyLead.applicant_entity.name}` : null,
+            ].filter((value): value is string => Boolean(value)),
+            meta: `Fit ${readyLead.fit_score ?? '—'}`,
+            tone: 'border-money bg-money text-white',
+          }
+        : proofLead
+          ? {
+              key: 'proof',
+              kicker: 'Top priority',
+              title: `${proofLead.project.name} needs stronger proof before outreach`,
+              body:
+                proofLead.fit_summary ||
+                `Tighten the evidence case for ${proofLead.foundation.name} before pushing this any further.`,
+              href: proofLead.project.slug
+                ? `${fundingWorkspaceHref}&project=${encodeURIComponent(proofLead.project.slug)}`
+                : fundingWorkspaceHref,
+              cta: proofLead.project.slug ? `Open ${proofLead.project.name} matches` : 'Open funding matches',
+              detailHref: `/foundations/${proofLead.foundation.id}`,
+              detailLabel: `Open ${proofLead.foundation.name}`,
+              signals: [
+                portfolioReadiness(proofLead),
+                proofLead.research?.missing_items?.length
+                  ? `${proofLead.research.missing_items.length} missing`
+                  : null,
+                proofLead.fit_score != null ? `Fit ${proofLead.fit_score}` : null,
+                proofLead.applicant_entity ? `Via ${proofLead.applicant_entity.name}` : null,
+              ].filter((value): value is string => Boolean(value)),
+              meta: proofLead.foundation.name,
+              tone: 'border-bauhaus-black bg-bauhaus-black text-white',
+            }
+          : null;
+
+  const focusCards = [
+    {
+      key: 'due',
+      kicker: 'Due now',
+      count: dueFollowUps.length,
+      tone: 'border-bauhaus-red/25 bg-bauhaus-red/5 text-bauhaus-red',
+      lead:
+        dueLead && dueLead.project.slug
+          ? `${dueLead.project.name} · ${dueLead.foundation.name}`
+          : null,
+      body:
+        dueFollowUps.length > 0
+          ? dueLead?.next_step || `${shortNames(dueFollowUps)}`
+          : 'No philanthropy follow-ups are due right now.',
+      href: dueLead?.project.slug ? `/org/${slug}/${dueLead.project.slug}` : '#curated-philanthropy',
+      cta: dueLead?.project.slug ? `Open ${dueLead.project.name}` : 'Open philanthropy',
+      detailHref: dueLead ? `/foundations/${dueLead.foundation.id}` : null,
+      detailLabel: dueLead ? `Open ${dueLead.foundation.name}` : null,
+      signals: dueLead
+        ? [
+            portfolioReadiness(dueLead),
+            engagementLabel(dueLead.engagement_status),
+            dueLead.fit_score != null ? `Fit ${dueLead.fit_score}` : null,
+          ].filter((value): value is string => Boolean(value))
+        : [],
+    },
+    {
+      key: 'ready',
+      kicker: 'Ready to approach',
+      count: readyToApproach.length,
+      tone: 'border-money bg-money-light text-money',
+      lead:
+        readyLead && readyLead.project.slug
+          ? `${readyLead.project.name} · ${readyLead.foundation.name}`
+          : null,
+      body:
+        readyToApproach.length > 0
+          ? readyLead?.message_alignment || `${shortNames(readyToApproach)}`
+          : 'No foundations are fully ready for outreach yet.',
+      href: readyLead?.project.slug ? `/org/${slug}/${readyLead.project.slug}` : '#curated-philanthropy',
+      cta: readyLead?.project.slug ? `Open ${readyLead.project.name}` : 'Review ready funders',
+      detailHref: readyLead ? `/foundations/${readyLead.foundation.id}` : null,
+      detailLabel: readyLead ? `Open ${readyLead.foundation.name}` : null,
+      signals: readyLead
+        ? [
+            portfolioReadiness(readyLead),
+            engagementLabel(readyLead.engagement_status),
+            readyLead.fit_score != null ? `Fit ${readyLead.fit_score}` : null,
+          ].filter((value): value is string => Boolean(value))
+        : [],
+    },
+    {
+      key: 'deadlines',
+      kicker: 'Deadline window',
+      count: deadlineWindow.length,
+      tone: 'border-bauhaus-blue bg-link-light text-bauhaus-blue',
+      lead: deadlineLead?.name ?? null,
+      body:
+        deadlineWindow.length > 0
+          ? `${deadlineLead?.funder || 'Funder'} · ${shortPipelineNames(deadlineWindow)}`
+          : 'No grant deadlines land in the next three weeks.',
+      meta:
+        deadlineLead
+          ? `Next: ${pipelineDeadlineLabel(deadlineLead)}`
+          : undefined,
+      href: '#curated-pipeline',
+      cta: 'Open pipeline',
+      detailHref:
+        deadlineLead?.grant_opportunity_id
+          ? `/grants/${deadlineLead.grant_opportunity_id}`
+          : deadlineLead?.grant_url || null,
+      detailLabel: deadlineLead?.grant_opportunity_id || deadlineLead?.grant_url ? 'Open grant' : null,
+      detailExternal: Boolean(deadlineLead?.grant_url && !deadlineLead?.grant_opportunity_id),
+      signals: deadlineLead
+        ? [
+            deadlineLead.status.replace(/_/g, ' '),
+            deadlineLead.funder_type ? `${deadlineLead.funder_type} funder` : null,
+            deadlineLead.amount_display || null,
+          ].filter((value): value is string => Boolean(value))
+        : [],
+    },
+    {
+      key: 'proof',
+      kicker: 'Proof to build',
+      count: needsProof.length,
+      tone: 'border-bauhaus-black/10 bg-gray-50 text-bauhaus-black',
+      lead:
+        proofLead && proofLead.project.slug
+          ? `${proofLead.project.name} · ${proofLead.foundation.name}`
+          : null,
+      body:
+        needsProof.length > 0
+          ? proofLead?.fit_summary || `${shortNames(needsProof)}`
+          : 'Proof looks in good shape across the current funder set.',
+      href:
+        proofLead?.project.slug
+          ? `${fundingWorkspaceHref}&project=${encodeURIComponent(proofLead.project.slug)}`
+          : fundingWorkspaceHref,
+      cta:
+        proofLead?.project.slug
+          ? `Open ${proofLead.project.name} matches`
+          : 'Open funding matches',
+      detailHref: proofLead ? `/foundations/${proofLead.foundation.id}` : null,
+      detailLabel: proofLead ? `Open ${proofLead.foundation.name}` : null,
+      signals: proofLead
+        ? [
+            portfolioReadiness(proofLead),
+            proofLead.research?.missing_items?.length
+              ? `${proofLead.research.missing_items.length} missing`
+              : null,
+            proofLead.fit_score != null ? `Fit ${proofLead.fit_score}` : null,
+          ].filter((value): value is string => Boolean(value))
+        : [],
+    },
+  ];
+  const nextMoves = focusCards
+    .filter((card) => card.count > 0)
+    .filter((card) => card.key !== topPriority?.key)
+    .slice(0, 2);
+
+  if (focusCards.every((card) => card.count === 0)) return null;
+
+  return (
+    <Section title="Action Focus">
+      <CuratedSource label="Curated operating priorities" />
+      <p className="mb-4 -mt-2 max-w-3xl text-sm font-medium leading-relaxed text-gray-600">
+        Start here before the rest of the dashboard. This is the short ranked queue for what ACT should do next.
+      </p>
+      {topPriority ? (
+        <div className="mb-4 grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_360px]">
+          <div className="border-2 border-bauhaus-black bg-white p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className={`inline-flex border px-2 py-1 text-[10px] font-black uppercase tracking-[0.18em] ${topPriority.tone}`}>
+                {topPriority.kicker}
+              </div>
+              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-400">
+                {topPriority.meta}
+              </div>
+            </div>
+            <h3 className="mt-3 text-xl font-black uppercase tracking-tight text-bauhaus-black">
+              {topPriority.title}
+            </h3>
+            <p className="mt-2 max-w-4xl text-sm font-medium leading-relaxed text-gray-600 line-clamp-3">
+              {topPriority.body}
+            </p>
+            {topPriority.signals.length > 0 ? (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {topPriority.signals.map((signal) => (
+                  <span
+                    key={signal}
+                    className="border border-bauhaus-black/15 bg-gray-50 px-2 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-gray-500"
+                  >
+                    {signal}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <a
+                href={topPriority.href}
+                className="inline-flex border-2 border-bauhaus-black bg-bauhaus-black px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-white transition-colors hover:bg-white hover:text-bauhaus-black"
+              >
+                {topPriority.cta}
+              </a>
+              {topPriority.detailHref && topPriority.detailLabel ? (
+                <a
+                  href={topPriority.detailHref}
+                  target={topPriority.detailExternal ? '_blank' : undefined}
+                  rel={topPriority.detailExternal ? 'noreferrer' : undefined}
+                  className="inline-flex border-2 border-bauhaus-black/15 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-bauhaus-black transition-colors hover:border-bauhaus-black"
+                >
+                  {topPriority.detailLabel}
+                </a>
+              ) : null}
+            </div>
+          </div>
+          {nextMoves.length > 0 ? (
+            <div className="border-2 border-bauhaus-black bg-white p-4">
+              <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">Next moves</div>
+              <div className="mt-3 space-y-3">
+                {nextMoves.map((card, index) => (
+                  <div key={`next-${card.key}`} className="border-2 border-bauhaus-black/10 bg-gray-50 p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">
+                          #{index + 2} {card.kicker}
+                        </div>
+                        {card.lead ? (
+                          <div className="mt-1 text-sm font-black leading-snug text-bauhaus-black">
+                            {card.lead}
+                          </div>
+                        ) : null}
+                      </div>
+                      <div className="text-lg font-black text-bauhaus-black">{card.count}</div>
+                    </div>
+                    {card.signals.length > 0 ? (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {card.signals.slice(0, 2).map((signal) => (
+                          <span
+                            key={`next-${card.key}-${signal}`}
+                            className="border border-bauhaus-black/15 bg-white px-2 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-gray-500"
+                          >
+                            {signal}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <a
+                        href={card.href}
+                        className="inline-flex border-2 border-bauhaus-black px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-bauhaus-black transition-colors hover:bg-bauhaus-black hover:text-white"
+                      >
+                        {card.cta}
+                      </a>
+                      {card.detailHref && card.detailLabel ? (
+                        <a
+                          href={card.detailHref}
+                          target={card.detailExternal ? '_blank' : undefined}
+                          rel={card.detailExternal ? 'noreferrer' : undefined}
+                          className="inline-flex border-2 border-bauhaus-black/15 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-bauhaus-black transition-colors hover:border-bauhaus-black"
+                        >
+                          {card.detailLabel}
+                        </a>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </Section>
+  );
+}
+
+export function PhilanthropyPortfolioSection({
+  portfolio,
+  slug,
+}: {
+  portfolio: OrgProjectFoundationPortfolioRow[];
+  slug: string;
+}) {
+  if (portfolio.length === 0) return null;
+
+  const byProject = new Map<string, { name: string; slug: string; rows: OrgProjectFoundationPortfolioRow[] }>();
+  for (const row of portfolio) {
+    const existing = byProject.get(row.project.id);
+    if (existing) {
+      existing.rows.push(row);
+    } else {
+      byProject.set(row.project.id, {
+        name: row.project.name,
+        slug: row.project.slug,
+        rows: [row],
+      });
+    }
+  }
+
+  const projectSummaries = Array.from(byProject.values())
+    .map((project) => {
+      const outreachReady = project.rows.filter((row) => portfolioReadiness(row) === 'Outreach ready').length;
+      const buildBeforeOutreach = project.rows.filter((row) => portfolioReadiness(row) === 'Build before outreach').length;
+      const discoveryBrief = project.rows.filter((row) => portfolioReadiness(row) === 'Discovery brief').length;
+      const avgFit =
+        project.rows.filter((row) => row.fit_score != null).reduce((sum, row) => sum + Number(row.fit_score), 0) /
+        Math.max(project.rows.filter((row) => row.fit_score != null).length, 1);
+      return {
+        ...project,
+        outreachReady,
+        buildBeforeOutreach,
+        discoveryBrief,
+        avgFit,
+      };
+    })
+    .sort((left, right) => {
+      if (right.outreachReady !== left.outreachReady) return right.outreachReady - left.outreachReady;
+      if (right.buildBeforeOutreach !== left.buildBeforeOutreach) return right.buildBeforeOutreach - left.buildBeforeOutreach;
+      return right.avgFit - left.avgFit;
+    });
+
+  const recurringFoundations = Array.from(
+    portfolio.reduce((map, row) => {
+      const existing = map.get(row.foundation.id);
+      if (existing) {
+        existing.projects.push(row.project.name);
+        existing.rows.push(row);
+        existing.count += 1;
+      } else {
+        map.set(row.foundation.id, {
+          foundationId: row.foundation.id,
+          name: row.foundation.name,
+          totalGivingAnnual: row.foundation.total_giving_annual,
+          projects: [row.project.name],
+          rows: [row],
+          count: 1,
+        });
+      }
+      return map;
+    }, new Map<string, { foundationId: string; name: string; totalGivingAnnual: number | null; projects: string[]; rows: OrgProjectFoundationPortfolioRow[]; count: number }>())
+  )
+    .map(([, value]) => value)
+    .sort((left, right) => {
+      if (right.count !== left.count) return right.count - left.count;
+      return (right.totalGivingAnnual ?? 0) - (left.totalGivingAnnual ?? 0);
+    });
+
+  const needsProof = portfolio.filter((row) => (row.research?.proof_status ?? 'missing') !== 'ready');
+  const needsRelationship = portfolio.filter((row) => (row.research?.relationship_status ?? 'missing') !== 'ready');
+  const needsApplicant = portfolio.filter((row) => (row.research?.applicant_status ?? 'missing') !== 'ready');
+  const readyToApproach = portfolio.filter((row) => row.engagement_status === 'ready_to_approach');
+  const activeOutreach = portfolio.filter((row) =>
+    ['approached', 'meeting', 'proposal'].includes(row.engagement_status),
+  );
+  const won = portfolio.filter((row) => row.engagement_status === 'won');
+  const dueNow = portfolio.filter((row) => portfolioNextTouchState(row) === 'due');
+  const upcoming = portfolio.filter((row) => portfolioNextTouchState(row) === 'upcoming');
+  const stale = portfolio.filter((row) => portfolioRelationshipStale(row));
+
+  return (
+    <Section title="Philanthropy Portfolio">
+      <CuratedSource label="Curated project-foundation strategy workspace" />
+      <CuratedHealthLine items={portfolio} />
+      <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
+        <div className="border-2 border-bauhaus-black bg-white p-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-[0.18em] text-bauhaus-red">
+                Cross-project pipeline
+              </div>
+              <h3 className="mt-2 text-2xl font-black uppercase tracking-tight text-bauhaus-black">
+                Where ACT should focus next
+              </h3>
+              <p className="mt-2 max-w-3xl text-sm font-medium leading-relaxed text-gray-600">
+                This rollup shows which projects have the strongest philanthropic path right now, which foundations recur
+                across projects, and where proof, relationship, or applicant work is still thin.
+              </p>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="border-2 border-money bg-money-light px-3 py-2 text-center">
+                <div className="text-[10px] font-black uppercase tracking-[0.18em] text-money">Outreach ready</div>
+                <div className="mt-1 text-2xl font-black text-money">
+                  {portfolio.filter((row) => portfolioReadiness(row) === 'Outreach ready').length}
+                </div>
+              </div>
+              <div className="border-2 border-bauhaus-blue bg-link-light px-3 py-2 text-center">
+                <div className="text-[10px] font-black uppercase tracking-[0.18em] text-bauhaus-blue">Build</div>
+                <div className="mt-1 text-2xl font-black text-bauhaus-blue">
+                  {portfolio.filter((row) => portfolioReadiness(row) === 'Build before outreach').length}
+                </div>
+              </div>
+              <div className="border-2 border-bauhaus-red/25 bg-bauhaus-red/5 px-3 py-2 text-center">
+                <div className="text-[10px] font-black uppercase tracking-[0.18em] text-bauhaus-red">Discovery</div>
+                <div className="mt-1 text-2xl font-black text-bauhaus-red">
+                  {portfolio.filter((row) => portfolioReadiness(row) === 'Discovery brief').length}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            <div className="border-2 border-bauhaus-black/10 bg-gray-50 px-3 py-3">
+              <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">Ready to approach</div>
+              <div className="mt-1 text-2xl font-black text-bauhaus-black">{readyToApproach.length}</div>
+            </div>
+            <div className="border-2 border-bauhaus-black/10 bg-gray-50 px-3 py-3">
+              <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">Active outreach</div>
+              <div className="mt-1 text-2xl font-black text-bauhaus-black">{activeOutreach.length}</div>
+            </div>
+            <div className="border-2 border-bauhaus-black/10 bg-gray-50 px-3 py-3">
+              <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">Won</div>
+              <div className="mt-1 text-2xl font-black text-bauhaus-black">{won.length}</div>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            <div className="border-2 border-bauhaus-red/25 bg-bauhaus-red/5 px-3 py-3">
+              <div className="text-[10px] font-black uppercase tracking-[0.18em] text-bauhaus-red">Due now</div>
+              <div className="mt-1 text-2xl font-black text-bauhaus-red">{dueNow.length}</div>
+            </div>
+            <div className="border-2 border-bauhaus-blue bg-link-light px-3 py-3">
+              <div className="text-[10px] font-black uppercase tracking-[0.18em] text-bauhaus-blue">Upcoming</div>
+              <div className="mt-1 text-2xl font-black text-bauhaus-blue">{upcoming.length}</div>
+            </div>
+            <div className="border-2 border-bauhaus-black/10 bg-gray-50 px-3 py-3">
+              <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">Stale</div>
+              <div className="mt-1 text-2xl font-black text-bauhaus-black">{stale.length}</div>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-3">
+            {projectSummaries.map((project) => (
+              <div key={project.slug} className="border-2 border-bauhaus-black/10 bg-gray-50 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <Link href={`/org/${slug}/${project.slug}`} className="text-lg font-black text-bauhaus-black hover:underline">
+                      {project.name}
+                    </Link>
+                    <p className="mt-1 text-sm font-medium text-gray-600">
+                      {project.rows.length} saved foundations · average fit {Number.isFinite(project.avgFit) ? Math.round(project.avgFit) : '—'}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="border-2 border-money bg-money-light px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-money">
+                      Ready {project.outreachReady}
+                    </span>
+                    <span className="border-2 border-bauhaus-blue bg-link-light px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-bauhaus-blue">
+                      Build {project.buildBeforeOutreach}
+                    </span>
+                    <span className="border-2 border-bauhaus-red/25 bg-bauhaus-red/5 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-bauhaus-red">
+                      Discovery {project.discoveryBrief}
+                    </span>
+                  </div>
+                </div>
+                <div className="mt-3 text-sm font-medium leading-relaxed text-gray-600">
+                  {shortNames(project.rows)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="border-2 border-bauhaus-black bg-white p-5">
+            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-bauhaus-red">
+              Recurring foundations
+            </div>
+            <div className="mt-4 space-y-3">
+              {recurringFoundations.slice(0, 6).map((foundation) => {
+                const leadProject = bestLeadProject(foundation.rows);
+                return (
+                  <details key={foundation.foundationId} className="border-2 border-bauhaus-black/10 bg-gray-50 p-3">
+                    <summary className="flex cursor-pointer list-none items-start justify-between gap-3">
+                      <div>
+                        <div className="font-black text-bauhaus-black">{foundation.name}</div>
+                        <div className="mt-1 text-xs font-medium text-gray-500">
+                          {foundation.projects.join(' · ')}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">Projects</div>
+                        <div className="mt-1 text-xl font-black text-bauhaus-black">{foundation.count}</div>
+                      </div>
+                    </summary>
+
+                    <div className="mt-4 space-y-3 border-t border-gray-200 pt-4">
+                      <div className="border-2 border-bauhaus-black/10 bg-white p-3">
+                        <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">
+                          Recommended lead project
+                        </div>
+                        {leadProject ? (
+                          <div className="mt-2">
+                            <Link
+                              href={`/org/${slug}/${leadProject.project.slug}`}
+                              className="font-black text-bauhaus-black hover:underline"
+                            >
+                              {leadProject.project.name}
+                            </Link>
+                            <div className="mt-1 text-xs font-medium text-gray-500">
+                              {portfolioReadiness(leadProject)} · fit {leadProject.fit_score ?? '—'}
+                              {' · '}
+                              {engagementLabel(leadProject.engagement_status)}
+                              {leadProject.next_touch_at ? ` · next ${new Date(leadProject.next_touch_at).toLocaleDateString('en-AU')}` : ''}
+                              {leadProject.applicant_entity ? ` · via ${leadProject.applicant_entity.name}` : ''}
+                            </div>
+                            {leadProject.next_step ? (
+                              <p className="mt-2 text-sm font-medium leading-relaxed text-gray-600">
+                                {leadProject.next_step}
+                              </p>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <p className="mt-2 text-sm font-medium text-gray-600">No lead project identified yet.</p>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        {foundation.rows
+                          .sort((left, right) => (right.fit_score ?? -1) - (left.fit_score ?? -1))
+                          .map((row) => (
+                            <div key={row.id} className="border-2 border-bauhaus-black/10 bg-white p-3">
+                              <div className="flex flex-wrap items-start justify-between gap-3">
+                                <div>
+                                  <Link
+                                    href={`/org/${slug}/${row.project.slug}`}
+                                    className="font-black text-bauhaus-black hover:underline"
+                                  >
+                                    {row.project.name}
+                                  </Link>
+                                  <div className="mt-1 flex flex-wrap gap-2">
+                                    <span className="border border-gray-200 bg-gray-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.18em] text-gray-500">
+                                      {portfolioReadiness(row)}
+                                    </span>
+                                    <span className="border border-gray-200 bg-gray-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.18em] text-gray-500">
+                                      {engagementLabel(row.engagement_status)}
+                                    </span>
+                                    {row.next_touch_at ? (
+                                      <span className={`border px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.18em] ${
+                                        portfolioNextTouchState(row) === 'due'
+                                          ? 'border-bauhaus-red/20 bg-bauhaus-red/5 text-bauhaus-red'
+                                          : 'border-gray-200 bg-gray-50 text-gray-500'
+                                      }`}>
+                                        Next {new Date(row.next_touch_at).toLocaleDateString('en-AU')}
+                                      </span>
+                                    ) : null}
+                                    <span className="border border-gray-200 bg-gray-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.18em] text-gray-500">
+                                      Fit {row.fit_score ?? '—'}
+                                    </span>
+                                    {row.applicant_entity ? (
+                                      <span className="border border-gray-200 bg-gray-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.18em] text-gray-500">
+                                        Via {row.applicant_entity.name}
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">
+                                    Annual giving
+                                  </div>
+                                  <div className="mt-1 text-sm font-black text-bauhaus-black">
+                                    {row.foundation.total_giving_annual ? money(Number(row.foundation.total_giving_annual)) : '—'}
+                                  </div>
+                                </div>
+                              </div>
+                              {row.fit_summary ? (
+                                <p className="mt-2 text-sm font-medium leading-relaxed text-gray-600">{row.fit_summary}</p>
+                              ) : null}
+                              <div className="mt-2 grid gap-2 md:grid-cols-2">
+                                <div>
+                                  <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">Lead with</div>
+                                  <p className="mt-1 text-sm font-medium leading-relaxed text-gray-600">
+                                    {row.message_alignment || 'No message alignment written yet.'}
+                                  </p>
+                                </div>
+                                <div>
+                                  <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">Next move</div>
+                                  <p className="mt-1 text-sm font-medium leading-relaxed text-gray-600">
+                                    {row.next_step || 'No next move recorded yet.'}
+                                  </p>
+                                </div>
+                              </div>
+                              {(row.next_touch_note || row.last_interaction_at || portfolioRelationshipStale(row)) ? (
+                                <div className="mt-2 grid gap-2 md:grid-cols-2">
+                                  <div>
+                                    <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">Follow-up rhythm</div>
+                                    <p className="mt-1 text-sm font-medium leading-relaxed text-gray-600">
+                                      {portfolioNextTouchState(row) === 'due'
+                                        ? 'Follow-up is due now.'
+                                        : portfolioNextTouchState(row) === 'upcoming'
+                                          ? 'Follow-up is scheduled soon.'
+                                          : portfolioRelationshipStale(row)
+                                            ? 'Relationship is stale and needs attention.'
+                                            : 'No active follow-up risk flagged.'}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">Last touch</div>
+                                    <p className="mt-1 text-sm font-medium leading-relaxed text-gray-600">
+                                      {row.last_interaction_at
+                                        ? new Date(row.last_interaction_at).toLocaleString('en-AU')
+                                        : 'No interaction recorded yet.'}
+                                    </p>
+                                  </div>
+                                </div>
+                              ) : null}
+                              {row.next_touch_note ? (
+                                <div className="mt-2">
+                                  <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">Next touch note</div>
+                                  <p className="mt-1 text-sm font-medium leading-relaxed text-gray-600">
+                                    {row.next_touch_note}
+                                  </p>
+                                </div>
+                              ) : null}
+                              {row.research?.missing_items?.length ? (
+                                <div className="mt-2">
+                                  <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">
+                                    Missing before outreach
+                                  </div>
+                                  <div className="mt-1 flex flex-wrap gap-1.5">
+                                    {row.research.missing_items.slice(0, 4).map((item) => (
+                                      <span
+                                        key={`${row.id}-${item}`}
+                                        className="border border-bauhaus-red/20 bg-bauhaus-red/5 px-2 py-0.5 text-[10px] font-bold text-bauhaus-red"
+                                      >
+                                        {item}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              ) : null}
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  </details>
+                );
+              })}
+        </div>
+      </div>
+      </div>
+
+      <div className="mt-4 border-2 border-bauhaus-black bg-white p-5">
+        <div className="text-[10px] font-black uppercase tracking-[0.18em] text-bauhaus-red">
+          Org-wide gaps
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          <div className="border-2 border-bauhaus-black/10 bg-gray-50 p-3">
+            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">Needs proof</div>
+            <div className="mt-1 text-2xl font-black text-bauhaus-black">{needsProof.length}</div>
+            <div className="mt-2 text-sm font-medium text-gray-600">{shortNames(needsProof)}</div>
+          </div>
+          <div className="border-2 border-bauhaus-black/10 bg-gray-50 p-3">
+            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">Needs relationship path</div>
+            <div className="mt-1 text-2xl font-black text-bauhaus-black">{needsRelationship.length}</div>
+            <div className="mt-2 text-sm font-medium text-gray-600">{shortNames(needsRelationship)}</div>
+          </div>
+          <div className="border-2 border-bauhaus-black/10 bg-gray-50 p-3">
+            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">Needs applicant clarity</div>
+            <div className="mt-1 text-2xl font-black text-bauhaus-black">{needsApplicant.length}</div>
+            <div className="mt-2 text-sm font-medium text-gray-600">{shortNames(needsApplicant)}</div>
+          </div>
+          <div className="border-2 border-bauhaus-red/25 bg-bauhaus-red/5 p-3">
+            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-bauhaus-red">Due follow-ups</div>
+            <div className="mt-1 text-2xl font-black text-bauhaus-red">{dueNow.length}</div>
+            <div className="mt-2 text-sm font-medium text-gray-600">{shortNames(dueNow)}</div>
+          </div>
+          <div className="border-2 border-bauhaus-black/10 bg-gray-50 p-3">
+            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">Stale relationships</div>
+            <div className="mt-1 text-2xl font-black text-bauhaus-black">{stale.length}</div>
+            <div className="mt-2 text-sm font-medium text-gray-600">{shortNames(stale)}</div>
+          </div>
+        </div>
+      </div>
+    </Section>
+  );
+}
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Funding by program
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -781,6 +1779,7 @@ export function FundingSection({
           </div>
         )}
       </div>
+      <SectionTrustLine label="Auto-linked public funding records" tone="auto" />
       <div className="bg-white border border-gray-200 rounded-sm shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm border-collapse">
@@ -827,6 +1826,7 @@ export function FundingTimelineSection({ fundingByYear }: { fundingByYear: Fundi
   return (
     <Section title="Funding by Financial Year">
       <DataSource label="Auto-discovered from CivicGraph" />
+      <SectionTrustLine label="Auto-linked public funding records" tone="auto" />
       <div className="bg-white border border-gray-200 rounded-sm shadow-sm overflow-hidden">
         <div className="divide-y divide-gray-100">
           {fundingByYear.map((y, i) => {
@@ -869,6 +1869,7 @@ export function ProgramsSection({ programs }: { programs: OrgProgram[] }) {
   return (
     <Section title="Programs & Reporting Schedule">
       <CuratedSource label="Curated" />
+      <CuratedHealthLine items={programs} />
       <div className="bg-white border border-gray-200 rounded-sm shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm border-collapse">
@@ -913,6 +1914,7 @@ export function AlmaSection({ interventions }: { interventions: AlmaIntervention
   return (
     <Section title="ALMA Registered Interventions">
       <DataSource label="Auto-discovered from CivicGraph" />
+      <SectionTrustLine label="External evidence registry view" tone="auto" />
       <div className="grid md:grid-cols-2 gap-4">
         {interventions.map((a, i) => (
           <div key={i} className="bg-white border border-gray-200 rounded-sm shadow-sm overflow-hidden">
@@ -953,6 +1955,7 @@ export function PipelineSection({
   return (
     <Section title="Grant Pipeline">
       <CuratedSource label="Curated" />
+      <CuratedHealthLine items={pipeline} />
       <PipelineTable orgSlug={orgSlug} orgProfileId={orgProfileId} items={pipeline.map(g => ({
         id: g.id,
         name: g.name,
@@ -986,10 +1989,12 @@ export function MatchedGrantsSection({
 }) {
   if (!matchedGrants || matchedGrants.length === 0) return null;
   return (
-    <Section title="Suggested Grant Opportunities">
-      <DataSource label="Auto-matched from CivicGraph" />
+    <Section title="Broad Opportunity Feed">
+      <DataSource label="Auto-ranked from CivicGraph grants and your org project signals" />
+      <SectionTrustLine label="Heuristic triage feed" tone="heuristic" />
       <p className="text-xs text-gray-400 mb-4 -mt-2">
-        Upcoming grants that may be relevant. Grants already in your pipeline are excluded.
+        Upcoming opportunities that are not already in your pipeline. Ranked using your current projects, funding tags,
+        and org type, but still intended as a triage queue rather than a final recommendation set.
       </p>
       <MatchedGrantsTable grants={matchedGrants} orgProfileId={orgProfileId} />
     </Section>
@@ -1003,8 +2008,9 @@ export function MatchedGrantsSection({
 export function ContactsSection({ contacts }: { contacts: OrgContactWithEntity[] }) {
   if (contacts.length === 0) return null;
   return (
-    <Section title="Partner Network">
+    <Section title="Strategic Network">
       <CuratedSource label="Curated" />
+      <CuratedHealthLine items={contacts} />
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
         {contacts.map((c) => (
           <div key={c.id} className="bg-white border border-gray-200 rounded-sm shadow-sm overflow-hidden hover:shadow-md transition-shadow">

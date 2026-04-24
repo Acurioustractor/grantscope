@@ -163,6 +163,13 @@ function buildProgramKey(program) {
   return `${program.foundations.id}::${program.name}`;
 }
 
+function normalizeGrantAmount(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const amount = Number(value);
+  if (!Number.isFinite(amount) || amount < 1) return null;
+  return Math.round(amount);
+}
+
 function buildGrantPayload(program, foundation) {
   const desiredStatus = getDesiredProgramStatus(program, foundation);
   return {
@@ -170,8 +177,8 @@ function buildGrantPayload(program, foundation) {
     provider: foundation.name,
     program: program.name,
     description: program.description,
-    amount_min: program.amount_min ? Number(program.amount_min) : null,
-    amount_max: program.amount_max ? Number(program.amount_max) : null,
+    amount_min: normalizeGrantAmount(program.amount_min),
+    amount_max: normalizeGrantAmount(program.amount_max),
     deadline: program.deadline,
     closes_at: program.deadline,
     url: normalizeUrl(program.url || foundation.website),
@@ -231,7 +238,15 @@ function recordFoundationSyncStat(statsByFoundation, foundationId, field) {
 }
 
 function isDuplicateUrlError(error) {
-  return /idx_grants_unique_url/i.test(error?.message || '');
+  const text = [
+    error?.code,
+    error?.message,
+    error?.details,
+    error?.hint,
+  ].filter(Boolean).join(' ');
+
+  return /idx_grants_unique_url|grant_opportunities_url_idx/i.test(text)
+    || (error?.code === '23505' && /duplicate key value/i.test(text) && /\burl\b/i.test(text));
 }
 
 async function resolvePriorityFoundationStats() {

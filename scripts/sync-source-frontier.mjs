@@ -231,6 +231,214 @@ const GRANT_SOURCE_TARGETS = [
     metadata: { roles: ['directory'], source_plugin: 'act-grants' },
   },
   {
+    sourceKey: 'grant-source:cityofsydney-grants',
+    sourceKind: 'grant_source_page',
+    sourceName: 'City of Sydney Grants',
+    targetUrl: 'https://www.cityofsydney.nsw.gov.au/grants-sponsorships',
+    parserHint: 'cityofsydney-grants',
+    owningAgentId: 'grantscope-discovery',
+    discoverySource: 'cityofsydney-grants',
+    cadenceHours: 24,
+    priority: 7,
+    changeDetection: 'html',
+    metadata: { roles: ['directory', 'local-government'], source_plugin: 'cityofsydney-grants' },
+  },
+  {
+    sourceKey: 'grant-source:brisbane-city-grants',
+    sourceKind: 'grant_source_page',
+    sourceName: 'Brisbane City Council Grants',
+    targetUrl: 'https://www.brisbane.qld.gov.au/community-support-and-safety/grants-and-sponsorship',
+    parserHint: 'brisbane-city-grants',
+    owningAgentId: 'grantscope-discovery',
+    discoverySource: 'brisbane-city-grants',
+    cadenceHours: 24,
+    priority: 7,
+    changeDetection: 'html',
+    metadata: { roles: ['directory', 'local-government'], source_plugin: 'brisbane-city-grants' },
+  },
+  {
+    sourceKey: 'grant-source:redland-city-grants',
+    sourceKind: 'grant_source_page',
+    sourceName: 'Redland City Council Grants',
+    targetUrl: 'https://www.redland.qld.gov.au/Grants-and-sponsorship',
+    parserHint: 'redland-city-grants',
+    owningAgentId: 'grantscope-discovery',
+    discoverySource: 'redland-city-grants',
+    cadenceHours: 24,
+    priority: 7,
+    changeDetection: 'html',
+    metadata: { roles: ['directory', 'local-government'], source_plugin: 'redland-city-grants' },
+  },
+  {
+    sourceKey: 'grant-source:logan-city-grants',
+    sourceKind: 'grant_source_page',
+    sourceName: 'Logan City Council Grants',
+    targetUrl: 'https://www.logan.qld.gov.au/community/grants',
+    parserHint: 'logan-city-grants',
+    owningAgentId: 'grantscope-discovery',
+    discoverySource: 'logan-city-grants',
+    cadenceHours: 24,
+    priority: 7,
+    changeDetection: 'html',
+    metadata: { roles: ['directory', 'local-government'], source_plugin: 'logan-city-grants' },
+  },
+  {
+    sourceKey: 'grant-source:darwin-city-grants',
+    sourceKind: 'grant_source_page',
+    sourceName: 'City of Darwin Grants',
+    targetUrl: 'https://www.darwin.nt.gov.au/community/programs/funding-opportunities',
+    parserHint: 'darwin-city-grants',
+    owningAgentId: 'grantscope-discovery',
+    discoverySource: 'darwin-city-grants',
+    cadenceHours: 24,
+    priority: 7,
+    changeDetection: 'html',
+    metadata: { roles: ['directory', 'local-government'], source_plugin: 'darwin-city-grants' },
+  },
+  {
+    sourceKey: 'grant-source:tablelands-grants',
+    sourceKind: 'grant_source_page',
+    sourceName: 'Tablelands Regional Council Grants',
+    targetUrl: 'https://www.trc.qld.gov.au/our-community/funding-grants/trc-grants/',
+    parserHint: 'tablelands-grants',
+    owningAgentId: 'grantscope-discovery',
+    discoverySource: 'tablelands-grants',
+    cadenceHours: 24,
+    priority: 7,
+    changeDetection: 'html',
+    metadata: { roles: ['directory', 'local-government'], source_plugin: 'tablelands-grants' },
+  },
+  {
+    sourceKey: 'grant-source:sunshinecoast-grants',
+    sourceKind: 'grant_source_page',
+    sourceName: 'Sunshine Coast Council Grants',
+    targetUrl: 'https://www.sunshinecoast.qld.gov.au/living-and-community/grants-and-funding/grants-programs',
+    parserHint: 'sunshinecoast-grants',
+    owningAgentId: 'grantscope-discovery',
+    discoverySource: 'sunshinecoast-grants',
+    cadenceHours: 24,
+    priority: 7,
+    changeDetection: 'html',
+    metadata: { roles: ['directory', 'local-government'], source_plugin: 'sunshinecoast-grants' },
+  },
+  {
+    sourceKey: 'grant-source:cookshire-grants',
+    sourceKind: 'grant_source_page',
+    sourceName: 'Cook Shire Council Grants',
+    targetUrl: 'https://www.cook.qld.gov.au/grants/',
+    parserHint: 'cookshire-grants',
+    owningAgentId: 'grantscope-discovery',
+    discoverySource: 'cookshire-grants',
+    cadenceHours: 24,
+    priority: 7,
+    changeDetection: 'html',
+    metadata: { roles: ['directory', 'local-government'], source_plugin: 'cookshire-grants' },
+  },
+  {
+    sourceKey: 'grant-source:frasercoast-grants',
+    sourceKind: 'grant_source_page',
+    sourceName: 'Fraser Coast Regional Council Grants',
+    targetUrl: 'https://www.frasercoast.qld.gov.au/Community/Grants-and-Sponsorships',
+    parserHint: 'frasercoast-grants',
+    owningAgentId: 'grantscope-discovery',
+    discoverySource: 'frasercoast-grants',
+    cadenceHours: 24,
+    priority: 7,
+    changeDetection: 'html',
+    metadata: { roles: ['directory', 'local-government'], source_plugin: 'frasercoast-grants' },
+  },
+  {
+    sourceKey: 'grant-source:toowoomba-grants',
+    sourceKind: 'grant_source_page',
+    sourceName: 'Toowoomba Regional Council Grants',
+    targetUrl: 'https://www.tr.qld.gov.au/Community/Grants-funding-and-scholarships',
+    parserHint: 'toowoomba-grants',
+    owningAgentId: 'grantscope-discovery',
+    discoverySource: 'toowoomba-grants',
+    cadenceHours: 24,
+    priority: 7,
+    changeDetection: 'html',
+    metadata: { roles: ['directory', 'local-government'], source_plugin: 'toowoomba-grants' },
+  },
+  {
+    sourceKey: 'grant-source:scenicrim-grants',
+    sourceKind: 'grant_source_page',
+    sourceName: 'Scenic Rim Regional Council Grants',
+    targetUrl: 'https://www.scenicrim.qld.gov.au/Our-Community/Community-and-Culture/Grants-Funding-and-Awards',
+    parserHint: 'scenicrim-grants',
+    owningAgentId: 'grantscope-discovery',
+    discoverySource: 'scenicrim-grants',
+    cadenceHours: 24,
+    priority: 7,
+    changeDetection: 'html',
+    metadata: { roles: ['directory', 'local-government'], source_plugin: 'scenicrim-grants' },
+  },
+  {
+    sourceKey: 'grant-source:whitsunday-grants',
+    sourceKind: 'grant_source_page',
+    sourceName: 'Whitsunday Regional Council Grants',
+    targetUrl: 'https://www.whitsundayrc.qld.gov.au/Community-and-Environment/Our-Community/Grants-and-Community-Assistance',
+    parserHint: 'whitsunday-grants',
+    owningAgentId: 'grantscope-discovery',
+    discoverySource: 'whitsunday-grants',
+    cadenceHours: 24,
+    priority: 7,
+    changeDetection: 'html',
+    metadata: { roles: ['directory', 'local-government'], source_plugin: 'whitsunday-grants' },
+  },
+  {
+    sourceKey: 'grant-source:centralhighlands-grants',
+    sourceKind: 'grant_source_page',
+    sourceName: 'Central Highlands Regional Council Grants',
+    targetUrl: 'https://chrc.qld.gov.au/community-services/grants-and-funding/',
+    parserHint: 'centralhighlands-grants',
+    owningAgentId: 'grantscope-discovery',
+    discoverySource: 'centralhighlands-grants',
+    cadenceHours: 24,
+    priority: 7,
+    changeDetection: 'html',
+    metadata: { roles: ['directory', 'local-government'], source_plugin: 'centralhighlands-grants' },
+  },
+  {
+    sourceKey: 'grant-source:noosa-grants',
+    sourceKind: 'grant_source_page',
+    sourceName: 'Noosa Shire Council Grants',
+    targetUrl: 'https://www.noosa.qld.gov.au/Community/Grants/Council-Grants',
+    parserHint: 'noosa-grants',
+    owningAgentId: 'grantscope-discovery',
+    discoverySource: 'noosa-grants',
+    cadenceHours: 24,
+    priority: 7,
+    changeDetection: 'html',
+    metadata: { roles: ['directory', 'local-government'], source_plugin: 'noosa-grants' },
+  },
+  {
+    sourceKey: 'grant-source:charterstowers-grants',
+    sourceKind: 'grant_source_page',
+    sourceName: 'Charters Towers Regional Council Grants',
+    targetUrl: 'https://www.charterstowers.qld.gov.au/Community/Scholarships-Grants-funding',
+    parserHint: 'charterstowers-grants',
+    owningAgentId: 'grantscope-discovery',
+    discoverySource: 'charterstowers-grants',
+    cadenceHours: 24,
+    priority: 7,
+    changeDetection: 'html',
+    metadata: { roles: ['directory', 'local-government'], source_plugin: 'charterstowers-grants' },
+  },
+  {
+    sourceKey: 'grant-source:lockyervalley-grants',
+    sourceKind: 'grant_source_page',
+    sourceName: 'Lockyer Valley Regional Council Grants',
+    targetUrl: 'https://www.lockyervalley.qld.gov.au/our-council/grants-and-funding',
+    parserHint: 'lockyervalley-grants',
+    owningAgentId: 'grantscope-discovery',
+    discoverySource: 'lockyervalley-grants',
+    cadenceHours: 24,
+    priority: 7,
+    changeDetection: 'html',
+    metadata: { roles: ['directory', 'local-government'], source_plugin: 'lockyervalley-grants' },
+  },
+  {
     sourceKey: 'grant-source:nt-grants:directory',
     sourceKind: 'grant_source_page',
     sourceName: 'NT Grants Directory',
@@ -526,8 +734,7 @@ function deriveGrantSourceLandingUrl(rawUrl) {
 function shouldExpandLongTailFoundation(foundation, programCount) {
   if (!foundation.website) return false;
   if ((programCount || 0) > 0) return false;
-  if (LONG_TAIL_FUNDER_TYPES.has(foundation.type)) return true;
-  return Number(foundation.total_giving_annual || 0) >= 25_000_000;
+  return LONG_TAIL_FUNDER_TYPES.has(foundation.type);
 }
 
 function getLongTailFunderPaths(foundation) {
@@ -634,7 +841,7 @@ async function main() {
       ),
       fetchAll(
         'foundations',
-        'id, name, website, gs_entity_id, total_giving_annual, last_scraped_at, scraped_urls',
+        'id, name, type, website, gs_entity_id, total_giving_annual, last_scraped_at, scraped_urls',
         query => query.not('website', 'is', null).order('total_giving_annual', { ascending: false, nullsFirst: false })
       ),
       fetchAll(
@@ -886,10 +1093,16 @@ async function main() {
 
     const inserted = rowsToUpsert.filter(row => !existingByKey.has(row.source_key)).length;
     const updated = rowsToUpsert.length - inserted;
+    const staleLongTailRows = existingRows.filter((row) => (
+      row.source_kind === 'foundation_candidate_page'
+      && row.metadata?.long_tail_priority === true
+      && !desiredTargets.has(row.source_key)
+    ));
 
     console.log(`Existing frontier rows: ${existingRows.length}`);
     console.log(`Desired frontier rows: ${desiredTargets.size}`);
     console.log(`Pending upserts: ${rowsToUpsert.length} (${inserted} new, ${updated} changed, ${unchanged} unchanged)`);
+    console.log(`Pending long-tail disables: ${staleLongTailRows.length}`);
 
     if (!DRY_RUN && rowsToUpsert.length > 0) {
       for (let i = 0; i < rowsToUpsert.length; i += 500) {
@@ -900,6 +1113,30 @@ async function main() {
 
         if (error) {
           throw new Error(`Failed to upsert source_frontier batch: ${error.message}`);
+        }
+      }
+    }
+
+    if (!DRY_RUN && staleLongTailRows.length > 0) {
+      for (const row of staleLongTailRows) {
+        const metadata = { ...(row.metadata || {}) };
+        metadata.long_tail_priority = false;
+        metadata.long_tail_removed_at = NOW_ISO;
+        if (Array.isArray(metadata.roles)) {
+          metadata.roles = metadata.roles.filter((role) => !String(role).startsWith('long-tail:'));
+        }
+
+        const { error } = await db
+          .from('source_frontier')
+          .update({
+            enabled: false,
+            metadata,
+            updated_at: NOW_ISO,
+          })
+          .eq('source_key', row.source_key);
+
+        if (error) {
+          throw new Error(`Failed to disable stale long-tail frontier row ${row.source_key}: ${error.message}`);
         }
       }
     }

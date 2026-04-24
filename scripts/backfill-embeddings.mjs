@@ -10,11 +10,13 @@
  * Requires: OPENAI_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
  *
  * Usage: node --env-file=.env scripts/backfill-embeddings.mjs [--batch-size 100] [--source foundation_program]
+ *        node --env-file=.env scripts/backfill-embeddings.mjs --grant-ids=<uuid,uuid,...>
+ *        node --env-file=.env scripts/backfill-embeddings.mjs --limit=100 --exclude-sources=foundation_program
  */
 
 import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
-import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
+import { logStart, logComplete } from './lib/log-agent-run.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -32,8 +34,28 @@ if (!OPENAI_API_KEY) {
 
 const batchSize = parseInt(process.argv.find((_, i, a) => a[i - 1] === '--batch-size') || '100', 10);
 const sourceFilter = process.argv.find((_, i, a) => a[i - 1] === '--source') || null;
+const limitArg = process.argv.find(arg => arg.startsWith('--limit='));
+const LIMIT = limitArg ? Math.max(1, Number.parseInt(limitArg.split('=')[1], 10) || 100) : null;
+const grantIdsArg = process.argv.find(arg => arg.startsWith('--grant-ids='));
+const grantIdsFilter = grantIdsArg
+  ? grantIdsArg.split('=')[1].split(',').map(id => id.trim()).filter(Boolean)
+  : [];
+const excludeSourcesArg = process.argv.find(arg => arg.startsWith('--exclude-sources='));
+const excludeSources = new Set(
+  excludeSourcesArg
+    ? excludeSourcesArg.split('=')[1].split(',').map(source => source.trim()).filter(Boolean)
+    : []
+);
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+function chunkArray(items, chunkSize) {
+  const chunks = [];
+  for (let i = 0; i < items.length; i += chunkSize) {
+    chunks.push(items.slice(i, i + chunkSize));
+  }
+  return chunks;
+}
 
 function buildEmbeddingText(grant) {
   return [
@@ -71,52 +93,84 @@ async function generateEmbeddings(texts) {
 console.log('=== Backfill Grant Embeddings ===');
 console.log(`  Batch size: ${batchSize}`);
 if (sourceFilter) console.log(`  Source filter: ${sourceFilter}`);
+if (grantIdsFilter.length > 0) console.log(`  Grant id filter: ${grantIdsFilter.length}`);
+if (LIMIT) console.log(`  Limit: ${LIMIT}`);
+if (excludeSources.size > 0) console.log(`  Excluding sources: ${[...excludeSources].join(', ')}`);
 console.log();
 
-// Fetch grants without embeddings
+// Fetch grants to embed
 const allGrants = [];
-const pageSize = 1000;
-let offset = 0;
 
-while (true) {
-  let query = supabase
-    .from('grant_opportunities')
-    .select('id, name, provider, program, description, categories, source')
-    .is('embedding', null)
-    .order('created_at', { ascending: false })
-    .range(offset, offset + pageSize - 1);
+if (grantIdsFilter.length > 0) {
+  for (const idBatch of chunkArray(grantIdsFilter, 200)) {
+    let query = supabase
+      .from('grant_opportunities')
+      .select('id, name, provider, program, description, categories, source')
+      .in('id', idBatch);
 
-  if (sourceFilter) {
-    query = query.eq('source', sourceFilter);
+    if (sourceFilter) {
+      query = query.eq('source', sourceFilter);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.error('Failed to fetch scoped grants:', error.message);
+      process.exit(1);
+    }
+    allGrants.push(...(data || []));
   }
+} else {
+  const pageSize = 1000;
+  let offset = 0;
 
-  const { data: page, error } = await query;
+  while (true) {
+    let query = supabase
+      .from('grant_opportunities')
+      .select('id, name, provider, program, description, categories, source')
+      .is('embedding', null)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + pageSize - 1);
 
-  if (error) {
-    console.error('Failed to fetch grants:', error.message);
-    process.exit(1);
+    if (sourceFilter) {
+      query = query.eq('source', sourceFilter);
+    }
+
+    const { data: page, error } = await query;
+
+    if (error) {
+      console.error('Failed to fetch grants:', error.message);
+      process.exit(1);
+    }
+
+    if (!page || page.length === 0) break;
+    allGrants.push(...page);
+    if (page.length < pageSize) break;
+    offset += pageSize;
   }
-
-  if (!page || page.length === 0) break;
-  allGrants.push(...page);
-  if (page.length < pageSize) break;
-  offset += pageSize;
 }
 
-if (allGrants.length === 0) {
+let grants = [...new Map(allGrants.map(grant => [grant.id, grant])).values()];
+if (excludeSources.size > 0) {
+  grants = grants.filter(grant => !excludeSources.has(grant.source));
+}
+if (LIMIT) {
+  grants = grants.slice(0, LIMIT);
+}
+
+if (grants.length === 0) {
   console.log('All grants already have embeddings');
   process.exit(0);
 }
 
-console.log(`${allGrants.length} grants need embeddings`);
+console.log(`${grants.length} grants need embeddings`);
 
 const run = await logStart(supabase, 'backfill-embeddings', 'Backfill Embeddings');
 
 let embedded = 0;
 let errors = 0;
 
-for (let i = 0; i < allGrants.length; i += batchSize) {
-  const batch = allGrants.slice(i, i + batchSize);
+for (let i = 0; i < grants.length; i += batchSize) {
+  const batch = grants.slice(i, i + batchSize);
   const texts = batch.map(buildEmbeddingText);
 
   try {
@@ -140,10 +194,10 @@ for (let i = 0; i < allGrants.length; i += batchSize) {
       }
     }
 
-    console.log(`Batch ${Math.floor(i / batchSize) + 1}: ${batch.length} embedded (${embedded}/${allGrants.length})`);
+    console.log(`Batch ${Math.floor(i / batchSize) + 1}: ${batch.length} embedded (${embedded}/${grants.length})`);
 
     // Delay between batches
-    if (i + batchSize < allGrants.length) {
+    if (i + batchSize < grants.length) {
       await new Promise(r => setTimeout(r, 2000));
     }
   } catch (err) {
@@ -153,7 +207,7 @@ for (let i = 0; i < allGrants.length; i += batchSize) {
 }
 
 await logComplete(supabase, run.id, {
-  items_found: allGrants.length,
+  items_found: grants.length,
   items_new: embedded,
   items_updated: 0,
 });

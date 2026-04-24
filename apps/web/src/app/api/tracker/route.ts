@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { requireModule } from '@/lib/api-auth';
+import { MODULE_LABELS, TIER_LABELS, hasModule, minimumTier } from '@/lib/subscription';
 import { getServiceSupabase } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
-  const auth = await requireModule('tracker');
+  const auth = await requireModule('grants');
   if (auth.error) return auth.error;
-  const { user } = auth;
+  const { user, tier } = auth;
 
   const serviceDb = getServiceSupabase();
   const view = request.nextUrl.searchParams.get('view') || 'personal';
@@ -50,6 +51,22 @@ export async function GET(request: NextRequest) {
   }
 
   if (view === 'org' || impersonateOrgId) {
+    if (!hasModule(tier, 'tracker')) {
+      const required = minimumTier('tracker');
+      return NextResponse.json(
+        {
+          error: 'Upgrade required',
+          module: 'tracker',
+          module_label: MODULE_LABELS.tracker,
+          current_tier: tier,
+          required_tier: required,
+          required_tier_label: TIER_LABELS[required],
+          upgrade_url: '/pricing',
+        },
+        { status: 403 }
+      );
+    }
+
     // When impersonating, always use the impersonated org
     let orgProfileId = impersonateOrgId;
 

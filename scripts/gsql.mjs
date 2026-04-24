@@ -15,9 +15,53 @@ import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { readFileSync } from 'fs';
 import { execSync } from 'child_process';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const ROOT = path.resolve(__dirname, '..');
+const DOTENV_PATH = path.join(ROOT, '.env');
+
+function readEnvFileValue(key) {
+  try {
+    const text = readFileSync(DOTENV_PATH, 'utf8');
+    const line = text
+      .split('\n')
+      .map((entry) => entry.trim())
+      .find((entry) => entry.startsWith(`${key}=`));
+    return line ? line.slice(key.length + 1).trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+function resolveDatabaseUrl() {
+  let databaseUrl = readEnvFileValue('DATABASE_URL') || process.env.DATABASE_URL || null;
+  const supabaseUrl = readEnvFileValue('SUPABASE_URL') || process.env.SUPABASE_URL || null;
+
+  if (databaseUrl && databaseUrl.includes('.pooler.supabase.com') && supabaseUrl) {
+    try {
+      const parsedSupabaseUrl = new URL(supabaseUrl);
+      const projectRef = parsedSupabaseUrl.hostname.split('.')[0];
+      const parsedDatabaseUrl = new URL(databaseUrl);
+      parsedDatabaseUrl.hostname = `db.${projectRef}.supabase.co`;
+      if (parsedDatabaseUrl.username.includes('.')) {
+        parsedDatabaseUrl.username = parsedDatabaseUrl.username.split('.')[0];
+      }
+      databaseUrl = parsedDatabaseUrl.toString();
+    } catch {
+      return databaseUrl;
+    }
+  }
+
+  return databaseUrl;
+}
+
+const DIRECT_DATABASE_URL = resolveDatabaseUrl();
 
 const supabase = createClient(
-  process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL,
+  readEnvFileValue('SUPABASE_URL') || process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
@@ -59,8 +103,12 @@ async function run() {
       process.exit(1);
     }
     try {
+      if (!DIRECT_DATABASE_URL) {
+        console.error('DATABASE_URL not set in .env');
+        process.exit(1);
+      }
       const result = execSync(
-        `psql -h aws-0-ap-southeast-2.pooler.supabase.com -p 5432 -U "postgres.tednluwflfhxyucgwigh" -d postgres -c "${sql.replace(/"/g, '\\"')}"`,
+        `psql "${DIRECT_DATABASE_URL}" -c "${sql.replace(/"/g, '\\"')}"`,
         { env: { ...process.env, PGPASSWORD: dbPassword }, encoding: 'utf8', timeout: 120000 }
       );
       console.log(result.trim());

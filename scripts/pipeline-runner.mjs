@@ -8,14 +8,18 @@
  *   2. Grant-source frontier polling
  *   3. Foundation frontier polling
  *   4. Grant Discovery (all sources)
- *   5. State grant scraping
- *   6. Grant deadline refresh
- *   7. Grant enrichment (free LLMs)
- *   8. Foundation profiling
- *   9. Foundation program discovery + stale rescan
- *  10. Foundation relationship extraction
- *  11. Foundation Programs → Grant Search sync
- *  12. Incremental Non-Foundation Embeddings
+ *   5. Grant source-identity reconciliation
+ *   6. State grant scraping
+ *   7. Grant deadline refresh
+ *   8. Grant semantics reconciliation
+ *   9. Grant enrichment (free LLMs)
+ *  10. Foundation profiling
+ *  11. Foundation program discovery + stale rescan
+ *  12. Foundation relationship extraction
+ *  13. Foundation Programs → Grant Search sync
+ *  14. Incremental Non-Foundation Embeddings
+ *  15. Grant Source Identity Health Check
+ *  16. Grant Semantics Health Check
  *
  * Each step logs to agent_runs so the /ops dashboard shows real-time progress.
  *
@@ -25,7 +29,7 @@
  * Options:
  *   --interval=N   Minutes between runs (default: 30)
  *   --once         Run once and exit (no loop)
- *   --skip=a,b     Skip specific steps (frontier,frontier-poll,foundation-frontier-poll,discovery,state,deadlines,enrich,profile,foundation-discovery,foundation-relationships,sync,embed)
+ *   --skip=a,b     Skip specific steps (frontier,frontier-poll,foundation-frontier-poll,discovery,source-identity,state,deadlines,semantics,enrich,profile,foundation-discovery,foundation-relationships,sync,embed,source-identity-health,semantics-health)
  */
 
 import 'dotenv/config';
@@ -76,6 +80,12 @@ const STEPS = [
     timeout: 600_000, // 10 min
   },
   {
+    id: 'source-identity',
+    name: 'Grant Source Identity Reconciliation',
+    cmd: ['node', '--env-file=.env', 'scripts/reconcile-grant-source-identity.mjs', '--apply', '--limit=100'],
+    timeout: 300_000,
+  },
+  {
     id: 'state',
     name: 'State Grant Discovery',
     cmd: ['node', '--env-file=.env', 'scripts/scrape-state-grants.mjs'],
@@ -85,6 +95,12 @@ const STEPS = [
     id: 'deadlines',
     name: 'Grant Deadline Refresh',
     cmd: ['node', '--env-file=.env', 'scripts/scrape-grant-deadlines.mjs', '--apply', '--limit=100'],
+    timeout: 900_000,
+  },
+  {
+    id: 'semantics',
+    name: 'Grant Semantics Reconciliation',
+    cmd: ['node', '--env-file=.env', 'scripts/reconcile-grant-semantics.mjs', '--apply', '--limit=150'],
     timeout: 900_000,
   },
   {
@@ -122,6 +138,18 @@ const STEPS = [
     name: 'Incremental Embeddings',
     cmd: ['node', '--env-file=.env', 'scripts/backfill-embeddings.mjs', '--batch-size', '100', '--limit=100', '--exclude-sources=foundation_program'],
     timeout: 300_000, // 5 min
+  },
+  {
+    id: 'source-identity-health',
+    name: 'Grant Source Identity Health Check',
+    cmd: ['node', '--env-file=.env', 'scripts/check-grant-source-identity-health.mjs', '--max-blank-source-id=0', '--max-canonical-mismatch=0'],
+    timeout: 120_000,
+  },
+  {
+    id: 'semantics-health',
+    name: 'Grant Semantics Health Check',
+    cmd: ['node', '--env-file=.env', 'scripts/check-grant-semantics-health.mjs', '--max-status-null=0', '--max-application-status-null=0', '--max-open-past-deadline=0'],
+    timeout: 120_000,
   },
 ];
 

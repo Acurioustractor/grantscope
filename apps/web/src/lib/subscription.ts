@@ -18,6 +18,14 @@ export type Module =
   | 'governed-proof'   // Outcome evidence, community voice (pilot)
   | 'api';             // Programmatic access
 
+export type AlertFrequency = 'daily' | 'weekly' | 'monthly';
+
+export interface AlertEntitlements {
+  maxAlerts: number;
+  frequencies: AlertFrequency[];
+  weeklyDigest: boolean;
+}
+
 /** Which tier unlocks which modules */
 const TIER_MODULES: Record<Tier, Module[]> = {
   community:     ['grants', 'research'],
@@ -29,6 +37,34 @@ const TIER_MODULES: Record<Tier, Module[]> = {
 
 const TIER_ORDER: Tier[] = ['community', 'professional', 'organisation', 'funder', 'enterprise'];
 
+const TIER_ALERTS: Record<Tier, AlertEntitlements> = {
+  community: {
+    maxAlerts: 1,
+    frequencies: ['weekly'],
+    weeklyDigest: false,
+  },
+  professional: {
+    maxAlerts: 10,
+    frequencies: ['daily', 'weekly', 'monthly'],
+    weeklyDigest: true,
+  },
+  organisation: {
+    maxAlerts: 25,
+    frequencies: ['daily', 'weekly', 'monthly'],
+    weeklyDigest: true,
+  },
+  funder: {
+    maxAlerts: 100,
+    frequencies: ['daily', 'weekly', 'monthly'],
+    weeklyDigest: true,
+  },
+  enterprise: {
+    maxAlerts: 1000,
+    frequencies: ['daily', 'weekly', 'monthly'],
+    weeklyDigest: true,
+  },
+};
+
 export function tierRank(tier: Tier): number {
   return TIER_ORDER.indexOf(tier);
 }
@@ -39,6 +75,10 @@ export function hasModule(tier: Tier, module: Module): boolean {
 
 export function getModules(tier: Tier): Module[] {
   return TIER_MODULES[tier];
+}
+
+export function getAlertEntitlements(tier: Tier): AlertEntitlements {
+  return TIER_ALERTS[tier];
 }
 
 /** Minimum tier required for a module */

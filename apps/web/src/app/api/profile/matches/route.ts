@@ -2,6 +2,29 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase-server';
 import { getServiceSupabase } from '@/lib/supabase';
 
+function labelList(values: string[], limit = 3): string {
+  const cleaned = values
+    .map((value) => value.replace(/[_-]+/g, ' ').trim())
+    .filter(Boolean);
+  return cleaned.slice(0, limit).join(', ');
+}
+
+function findGeoMatches(grantGeography: string | null, profileGeo: string[]): string[] {
+  if (!grantGeography || profileGeo.length === 0) return [];
+
+  const geography = grantGeography.toLowerCase();
+  const matched: string[] = [];
+
+  for (const geo of profileGeo) {
+    const normalized = geo.toLowerCase();
+    if (normalized && (geography.includes(normalized) || normalized.includes(geography))) {
+      matched.push(geo);
+    }
+  }
+
+  return [...new Set(matched)];
+}
+
 export async function GET(request: NextRequest) {
   const supabase = await createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
@@ -163,28 +186,25 @@ export async function GET(request: NextRequest) {
     })
     .map((grant: GrantMatch) => {
       let score = grant.similarity;
+      const categoryMatches = (grant.categories || []).filter(c => orgDomains.has(c.toLowerCase()));
+      const focusMatches = (grant.focus_areas || []).filter(f => orgDomains.has(f.toLowerCase()));
+      const domainMatches = [...new Set([...categoryMatches, ...focusMatches])];
+      const geoMatches = findGeoMatches(grant.geography, matchGeo);
+      const providerLower = grant.provider?.toLowerCase();
 
       // Domain overlap boost (up to +0.05)
-      if (grant.categories?.length && orgDomains.size > 0) {
-        const overlap = grant.categories.filter(c => orgDomains.has(c.toLowerCase())).length;
-        score += Math.min(overlap * 0.025, 0.05);
+      if (categoryMatches.length > 0 && orgDomains.size > 0) {
+        score += Math.min(categoryMatches.length * 0.025, 0.05);
       }
 
       // Focus area overlap boost (up to +0.05)
-      if (grant.focus_areas?.length && orgDomains.size > 0) {
-        const overlap = grant.focus_areas.filter(f => orgDomains.has(f.toLowerCase())).length;
-        score += Math.min(overlap * 0.025, 0.05);
+      if (focusMatches.length > 0 && orgDomains.size > 0) {
+        score += Math.min(focusMatches.length * 0.025, 0.05);
       }
 
       // Geographic relevance boost (+0.03 if grant geography overlaps org geo)
-      if (grant.geography && orgGeo.size > 0) {
-        const geoLower = grant.geography.toLowerCase();
-        for (const g of orgGeo) {
-          if (geoLower.includes(g) || g.includes(geoLower)) {
-            score += 0.03;
-            break;
-          }
-        }
+      if (geoMatches.length > 0 && orgGeo.size > 0) {
+        score += 0.03;
       }
 
       // Penalty for grants with no amount or description (low quality)
@@ -214,7 +234,6 @@ export async function GET(request: NextRequest) {
       }
 
       // Feedback-based penalties and boosts
-      const providerLower = grant.provider?.toLowerCase();
       if (providerLower && penalizedProviders.has(providerLower)) {
         score -= 0.15;
       }
@@ -252,9 +271,36 @@ export async function GET(request: NextRequest) {
         }
       }
 
+      const matchReasons: string[] = [];
+      if (grant.similarity >= 0.82) {
+        matchReasons.push('Strong overall similarity to your profile');
+      } else if (grant.similarity >= 0.72) {
+        matchReasons.push('Good overall similarity to your profile');
+      } else {
+        matchReasons.push('Passed your current profile-fit threshold');
+      }
+
+      if (domainMatches.length > 0) {
+        matchReasons.push(`Domain overlap: ${labelList(domainMatches)}`);
+      }
+
+      if (geoMatches.length > 0) {
+        matchReasons.push(`Geography overlap: ${labelList(geoMatches, 2)}`);
+      }
+
+      const boostedByFeedback =
+        (providerLower && boostedProviders.has(providerLower)) ||
+        domainMatches.some(value => boostedCategories.has(value.toLowerCase())) ||
+        geoMatches.some(value => boostedGeos.has(value.toLowerCase()));
+
+      if (boostedByFeedback) {
+        matchReasons.push('Boosted by your previous shortlist feedback');
+      }
+
       return {
         ...grant,
         fit_score: Math.max(0, Math.min(Math.round(score * 100), 100)),
+        match_reasons: matchReasons.slice(0, 4),
       };
     });
 

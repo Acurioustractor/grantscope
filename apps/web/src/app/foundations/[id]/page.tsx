@@ -39,6 +39,7 @@ interface FoundationDetail {
   notable_grants: string[] | null;
   board_members: string[] | null;
   enriched_at: string | null;
+  last_scraped_at: string | null;
   scraped_urls: string[] | null;
   created_at: string;
 }
@@ -56,6 +57,29 @@ interface ProgramRow {
   program_type: string | null;
   eligibility: string | null;
   application_process: string | null;
+  scraped_at: string | null;
+}
+
+interface ProgramYearRow {
+  id: string;
+  report_year: number | null;
+  fiscal_year: string | null;
+  summary: string | null;
+  reported_amount: number | null;
+  source_report_url: string | null;
+  metadata: Record<string, unknown> | null;
+  partners: Array<{ name?: string; role?: string }> | null;
+  places: Array<{ name?: string; type?: string }> | null;
+  foundation_programs:
+    | {
+        name: string;
+        program_type: string | null;
+      }
+    | Array<{
+    name: string;
+    program_type: string | null;
+      }>
+    | null;
 }
 
 interface LinkedGrant {
@@ -97,6 +121,38 @@ interface SimilarFoundation {
   type: string | null;
 }
 
+interface BoardRoleRow {
+  person_name: string;
+  role_type: string | null;
+  person_entity_id: string | null;
+  source: string | null;
+  confidence: string | null;
+}
+
+const SNOW_FOUNDATION_ID = 'd242967e-0e68-4367-9785-06cf0ec7485e';
+const PRF_FOUNDATION_ID = '4ee5baca-c898-4318-ae2b-d79b95379cc7';
+const MINDEROO_FOUNDATION_ID = '8f8704be-d6e8-40f3-b561-ac6630ce5b36';
+const RIO_TINTO_FOUNDATION_ID = '85f0de43-d004-4122-83a6-287eeecc4da9';
+const IAN_POTTER_FOUNDATION_ID = 'b9e090e5-1672-48ff-815a-2a6314ebe033';
+const ECSTRA_FOUNDATION_ID = '25b80b63-416e-4aaa-b470-2f8dc6fa835f';
+
+const PUBLIC_REVIEW_ROUTE_MAP: Record<string, string> = {
+  [SNOW_FOUNDATION_ID]: '/snow-foundation',
+  [PRF_FOUNDATION_ID]: '/foundations/prf',
+  [MINDEROO_FOUNDATION_ID]: '/foundations/minderoo',
+  [RIO_TINTO_FOUNDATION_ID]: '/foundations/rio-tinto',
+  [IAN_POTTER_FOUNDATION_ID]: '/foundations/ian-potter',
+  [ECSTRA_FOUNDATION_ID]: '/foundations/ecstra',
+};
+
+const REVIEW_SET_COMPARE_TARGETS = [
+  { id: SNOW_FOUNDATION_ID, label: 'Compare with Snow' },
+  { id: PRF_FOUNDATION_ID, label: 'Compare with PRF' },
+  { id: MINDEROO_FOUNDATION_ID, label: 'Compare with Minderoo' },
+  { id: IAN_POTTER_FOUNDATION_ID, label: 'Compare with Ian Potter' },
+  { id: ECSTRA_FOUNDATION_ID, label: 'Compare with ECSTRA' },
+];
+
 function formatMoney(amount: number | null): string {
   if (!amount) return 'Unknown';
   if (amount >= 1000000000) return `$${(amount / 1000000000).toFixed(1)}B`;
@@ -116,6 +172,23 @@ function typeLabel(type: string | null): string {
   return type ? labels[type] || type : 'Foundation';
 }
 
+function formatDateWithRecency(value: string | null): string {
+  if (!value) return 'Unknown';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  const exact = date.toLocaleDateString('en-AU', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+  const daysAgo = Math.max(0, Math.floor((Date.now() - date.getTime()) / 86_400_000));
+
+  if (daysAgo === 0) return `${exact} (today)`;
+  if (daysAgo === 1) return `${exact} (1 day ago)`;
+  return `${exact} (${daysAgo} days ago)`;
+}
+
 function confidenceBadge(c: string) {
   if (c === 'high') return { cls: 'border-money bg-money-light text-money', label: 'High' };
   if (c === 'medium') return { cls: 'border-bauhaus-yellow bg-warning-light text-bauhaus-black', label: 'Medium' };
@@ -132,9 +205,40 @@ function programTypeBadge(type: string | null) {
   }
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function getProgramYearFoundationProgram(row: ProgramYearRow) {
+  if (Array.isArray(row.foundation_programs)) return row.foundation_programs[0] ?? null;
+  return row.foundation_programs ?? null;
+}
+
+function sourceLabel(value: string | null | undefined) {
+  if (!value) return 'Unknown source';
+  return value.replace(/_/g, ' ');
+}
+
+function buildCompareTargets(foundationId: string) {
+  return REVIEW_SET_COMPARE_TARGETS.filter((target) => target.id !== foundationId);
+}
+
+function normalizeGivingHistory(history: Array<{ year: number; amount: number }> | null | undefined) {
+  if (!history || history.length === 0) return [];
+
+  const byYear = new Map<number, number>();
+  for (const entry of history) {
+    byYear.set(entry.year, (byYear.get(entry.year) ?? 0) + Number(entry.amount ?? 0));
+  }
+
+  return Array.from(byYear.entries())
+    .map(([year, amount]) => ({ year, amount }))
+    .sort((left, right) => left.year - right.year);
+}
+
+function getPublicReviewHref(foundationId: string) {
+  return PUBLIC_REVIEW_ROUTE_MAP[foundationId] || null;
+}
+
+function Section({ title, children, id }: { title: string; children: React.ReactNode; id?: string }) {
   return (
-    <section className="mb-8">
+    <section id={id} className="mb-8">
       <h2 className="text-sm font-black text-bauhaus-black mb-3 pb-2 border-b-4 border-bauhaus-black uppercase tracking-widest">
         {title}
       </h2>
@@ -147,14 +251,20 @@ export default async function FoundationDetailPage({ params }: { params: Promise
   const { id } = await params;
   const supabase = getServiceSupabase();
 
-  const [{ data: foundation }, { data: programs }, { data: linkedGrants }] = await Promise.all([
+  const [{ data: foundation }, { data: programs }, { data: linkedGrants }, { data: programYears }] = await Promise.all([
     supabase.from('foundations').select('*').eq('id', id).single(),
     supabase.from('foundation_programs').select('*').eq('foundation_id', id).in('status', ['open', 'closed']).order('deadline', { ascending: true, nullsFirst: false }),
     supabase.from('grant_opportunities').select('id, name, amount_min, amount_max, closes_at, program_type, source, description').eq('foundation_id', id).order('closes_at', { ascending: true, nullsFirst: false }),
+    supabase
+      .from('foundation_program_years')
+      .select('id, report_year, fiscal_year, summary, reported_amount, source_report_url, metadata, partners, places, foundation_programs(name, program_type)')
+      .eq('foundation_id', id)
+      .order('report_year', { ascending: false, nullsFirst: false }),
   ]);
 
   if (!foundation) notFound();
   const f = foundation as FoundationDetail;
+  const givingHistory = normalizeGivingHistory(f.giving_history);
 
   // Fetch ACNC financials, similar foundations, and matching grants in parallel
   interface MatchingGrant {
@@ -166,7 +276,7 @@ export default async function FoundationDetailPage({ params }: { params: Promise
     categories: string[];
   }
 
-  const [{ data: acncData }, { data: similarData }, { data: matchingData }] = await Promise.all([
+  const [{ data: acncData }, { data: similarData }, { data: matchingData }, { data: boardRoleData }] = await Promise.all([
     supabase.from('acnc_ais')
       .select('abn, charity_name, ais_year, total_revenue, total_expenses, total_assets, grants_donations_au, grants_donations_intl, net_surplus_deficit, donations_and_bequests, revenue_from_investments, employee_expenses, net_assets_liabilities, charity_size, fin_report_from, fin_report_to')
       .eq('abn', f.acnc_abn)
@@ -188,6 +298,17 @@ export default async function FoundationDetailPage({ params }: { params: Promise
           .order('closes_at', { ascending: true })
           .limit(8)
       : Promise.resolve({ data: [] }),
+    (() => {
+      const query = supabase
+        .from('person_roles')
+        .select('person_name, role_type, person_entity_id, source, confidence')
+        .is('cessation_date', null)
+        .order('role_type', { ascending: true })
+        .order('person_name', { ascending: true });
+      return f.acnc_abn
+        ? query.eq('company_abn', f.acnc_abn)
+        : query.eq('company_name', f.name);
+    })(),
   ]);
 
   const allAcnc: AcncFinancials[] = (acncData || []) as AcncFinancials[];
@@ -206,6 +327,15 @@ export default async function FoundationDetailPage({ params }: { params: Promise
 
   const similarFoundations = (similarData || []) as SimilarFoundation[];
   const matchingGrants = (matchingData || []) as MatchingGrant[];
+  const boardRoles = ((boardRoleData || []) as BoardRoleRow[]).sort((a, b) => {
+    const order = (value: string | null) => {
+      if (value === 'chair') return 0;
+      if (value === 'director') return 1;
+      return 2;
+    };
+    const rank = order(a.role_type) - order(b.role_type);
+    return rank !== 0 ? rank : a.person_name.localeCompare(b.person_name);
+  });
 
   // Optional: check if logged-in user's org has pipeline items with this foundation
   interface PipelineContext {
@@ -249,8 +379,18 @@ export default async function FoundationDetailPage({ params }: { params: Promise
 
   const badge = confidenceBadge(f.profile_confidence);
   const allPrograms = programs as ProgramRow[] || [];
+  const allProgramYears = (programYears || []) as ProgramYearRow[];
   const allLinkedGrants = (linkedGrants || []) as LinkedGrant[];
+  const compareTargets = buildCompareTargets(f.id);
+  const publicReviewHref = getPublicReviewHref(f.id);
   const hasFinancials = f.parent_company || f.asx_code || f.endowment_size || f.revenue_sources?.length > 0 || f.giving_ratio;
+  const openProgramCount = allPrograms.filter((program) => program.status === 'open').length;
+  const closedProgramCount = allPrograms.filter((program) => program.status === 'closed').length;
+  const latestProgramScrapedAt = allPrograms.reduce<string | null>((latest, program) => {
+    if (!program.scraped_at) return latest;
+    if (!latest) return program.scraped_at;
+    return new Date(program.scraped_at).getTime() > new Date(latest).getTime() ? program.scraped_at : latest;
+  }, null);
 
   // Group programs by type
   const programsByType = allPrograms.reduce((acc, p) => {
@@ -293,6 +433,31 @@ export default async function FoundationDetailPage({ params }: { params: Promise
           <a href={`https://www.acnc.gov.au/charity/charities?search=${encodeURIComponent(f.acnc_abn)}`} target="_blank" rel="noopener noreferrer" className="text-bauhaus-blue hover:text-bauhaus-red text-xs font-black uppercase tracking-wider">
             ACNC Register &rarr;
           </a>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-[0.22em]">
+          {publicReviewHref && (
+            <Link
+              href={publicReviewHref}
+              className="border-2 border-bauhaus-black/20 bg-bauhaus-canvas px-3 py-2 text-bauhaus-black transition-colors hover:border-bauhaus-black hover:bg-bauhaus-black hover:text-white"
+            >
+              Open review route
+            </Link>
+          )}
+          {compareTargets.map((target) => (
+            <Link
+              key={target.id}
+              href={`/foundations/compare?left=${f.id}&right=${target.id}`}
+              className="border-2 border-bauhaus-blue/25 bg-link-light px-3 py-2 text-bauhaus-blue transition-colors hover:border-bauhaus-blue hover:bg-bauhaus-blue hover:text-white"
+            >
+              {target.label}
+            </Link>
+          ))}
+          <Link
+            href="/foundations/compare"
+            className="border-2 border-bauhaus-black/20 bg-bauhaus-canvas px-3 py-2 text-bauhaus-black transition-colors hover:border-bauhaus-black hover:bg-bauhaus-black hover:text-white"
+          >
+            Open compare surface
+          </Link>
         </div>
       </div>
 
@@ -406,16 +571,16 @@ export default async function FoundationDetailPage({ params }: { params: Promise
             </Section>
           )}
 
-          {f.giving_history && f.giving_history.length > 1 && (
+          {givingHistory.length > 1 && (
             <Section title="Giving History">
-              <GivingHistoryChart history={f.giving_history} />
+              <GivingHistoryChart history={givingHistory} />
             </Section>
           )}
 
-          {f.giving_history && f.giving_history.length === 1 && (
+          {givingHistory.length === 1 && (
             <Section title="Giving History">
               <div className="flex gap-3 flex-wrap">
-                {f.giving_history.map(entry => (
+                {givingHistory.map(entry => (
                   <div key={entry.year} className="bg-white border-4 border-bauhaus-black px-4 py-3 text-center">
                     <div className="text-xs text-bauhaus-muted font-black">{entry.year}</div>
                     <div className="text-lg font-black text-bauhaus-black tabular-nums">{formatMoney(entry.amount)}</div>
@@ -424,6 +589,8 @@ export default async function FoundationDetailPage({ params }: { params: Promise
               </div>
             </Section>
           )}
+
+          <div id="program-history" className="scroll-mt-24" />
 
           {acncFinancials.length > 0 && (
             <Section title="ACNC Financial History">
@@ -497,7 +664,13 @@ export default async function FoundationDetailPage({ params }: { params: Promise
           )}
 
           {allPrograms.length > 0 && (
-            <Section title={`Programs & Opportunities (${allPrograms.length})`}>
+            <Section id="programs-opportunities" title={`Programs & Opportunities (${allPrograms.length})`}>
+              <p className="mb-4 text-xs font-medium text-bauhaus-muted">
+                {openProgramCount} open
+                {closedProgramCount > 0 ? ` · ${closedProgramCount} closed` : ''}
+                {' · '}sorted by deadline
+                {latestProgramScrapedAt ? ` · last checked ${formatDateWithRecency(latestProgramScrapedAt)}` : ''}
+              </p>
               {/* Program type summary */}
               {Object.keys(programsByType).length > 1 && (
                 <div className="flex gap-2 mb-4 flex-wrap">
@@ -543,6 +716,79 @@ export default async function FoundationDetailPage({ params }: { params: Promise
                         {p.deadline && <span>Closes {new Date(p.deadline).toLocaleDateString('en-AU')}</span>}
                         {p.url && <a href={p.url} target="_blank" rel="noopener noreferrer" className="text-bauhaus-blue hover:text-bauhaus-red uppercase tracking-wider">Apply &rarr;</a>}
                       </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Section>
+          )}
+
+          {allProgramYears.length > 0 && (
+            <Section title={`Program History (${allProgramYears.length})`}>
+              <p className="mb-4 text-xs font-medium text-bauhaus-muted">
+                Year-specific program memory with visible provenance. This is the bridge between open opportunities and recurring portfolio strands.
+              </p>
+              <div className="space-y-3">
+                {allProgramYears.map((row) => {
+                  const foundationProgram = getProgramYearFoundationProgram(row);
+                  const badge = programTypeBadge(foundationProgram?.program_type || 'program');
+                  const partnerLabel = (row.partners || [])
+                    .map((partner) => partner.name)
+                    .filter(Boolean)
+                    .join(', ');
+                  const placeLabel = (row.places || [])
+                    .map((place) => place.name)
+                    .filter(Boolean)
+                    .join(', ');
+                  const source = typeof row.metadata?.source === 'string' ? row.metadata.source : null;
+
+                  return (
+                    <div key={row.id} className="bg-white border-4 border-bauhaus-black p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <div className="text-[10px] font-black uppercase tracking-[0.18em] text-bauhaus-muted">
+                            {row.fiscal_year || row.report_year || 'Program year'}
+                          </div>
+                          <h3 className="mt-1 text-lg font-black text-bauhaus-black">
+                            {foundationProgram?.name || 'Unnamed program'}
+                          </h3>
+                        </div>
+                        <div className="flex gap-1.5 flex-wrap">
+                          <span className={`text-[11px] font-black px-2 py-0.5 uppercase tracking-wider border-2 ${badge.cls}`}>
+                            {badge.label}
+                          </span>
+                          {row.reported_amount != null ? (
+                            <span className="text-[11px] font-black px-2 py-0.5 uppercase tracking-wider border-2 border-money bg-money-light text-money">
+                              {formatMoney(row.reported_amount)}
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                      {row.summary ? (
+                        <p className="mt-2 text-sm font-medium leading-relaxed text-bauhaus-muted">
+                          {row.summary}
+                        </p>
+                      ) : null}
+                      {(partnerLabel || placeLabel || source || row.source_report_url) && (
+                        <div className="mt-3 flex flex-wrap gap-4 text-xs font-bold text-bauhaus-muted">
+                          {partnerLabel ? <span>Partners: {partnerLabel}</span> : null}
+                          {placeLabel ? <span>Places: {placeLabel}</span> : null}
+                          {source ? <span>Source: {sourceLabel(source)}</span> : null}
+                          {row.source_report_url ? (
+                            <span>
+                              Evidence:{' '}
+                              <a
+                                href={row.source_report_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-bauhaus-red hover:text-bauhaus-blue underline decoration-bauhaus-red underline-offset-4"
+                              >
+                                open source
+                              </a>
+                            </span>
+                          ) : null}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -665,7 +911,38 @@ export default async function FoundationDetailPage({ params }: { params: Promise
             </div>
           )}
 
-          {f.board_members && f.board_members.length > 0 && (
+          <div id="board-leadership" className="scroll-mt-24" />
+
+          {boardRoles.length > 0 && (
+            <div className="bg-white border-4 border-bauhaus-black p-4">
+              <h3 className="text-xs font-black text-bauhaus-black mb-3 uppercase tracking-widest">Board &amp; Leadership</h3>
+              <div className="space-y-2">
+                {boardRoles.map((member) => (
+                  <div key={`${member.person_name}-${member.role_type || 'unknown'}`} className="flex items-start justify-between gap-3 border-b-2 border-bauhaus-black/10 pb-2 last:border-b-0 last:pb-0">
+                    <div className="min-w-0">
+                      <Link
+                        href={`/person/${encodeURIComponent(member.person_name)}`}
+                        className="text-sm font-black text-bauhaus-black hover:text-bauhaus-blue"
+                      >
+                        {member.person_name}
+                      </Link>
+                      <div className="mt-0.5 text-[10px] font-black uppercase tracking-[0.18em] text-bauhaus-muted">
+                        {(member.role_type || 'role').replace(/_/g, ' ')}
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-right text-[10px] font-black uppercase tracking-[0.14em] text-bauhaus-muted">
+                      {member.source === 'acnc_register' ? 'ACNC' : member.source || 'Linked'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 border-t-2 border-bauhaus-black/20 pt-3 text-[10px] font-bold uppercase tracking-[0.16em] text-bauhaus-muted">
+                Linked from structured person roles rather than unstructured foundation summary text.
+              </div>
+            </div>
+          )}
+
+          {boardRoles.length === 0 && f.board_members && f.board_members.length > 0 && (
             <div className="bg-white border-4 border-bauhaus-black p-4">
               <h3 className="text-xs font-black text-bauhaus-black mb-3 uppercase tracking-widest">Board &amp; Leadership</h3>
               <div className="space-y-1.5">
@@ -678,6 +955,8 @@ export default async function FoundationDetailPage({ params }: { params: Promise
               </div>
             </div>
           )}
+
+          <div id="matching-grants" className="scroll-mt-24" />
 
           {matchingGrants.length > 0 && (
             <div className="bg-white border-4 border-bauhaus-black p-4">
@@ -706,12 +985,22 @@ export default async function FoundationDetailPage({ params }: { params: Promise
               <h3 className="text-xs font-black text-bauhaus-black mb-3 uppercase tracking-widest">Similar Foundations</h3>
               <div className="space-y-2">
                 {similarFoundations.map(sf => (
-                  <a key={sf.id} href={`/foundations/${sf.id}`} className="block hover:bg-bauhaus-canvas p-2 -mx-2 transition-colors border-b-2 border-bauhaus-black/10 last:border-0">
-                    <div className="text-sm font-bold text-bauhaus-black leading-tight">{sf.name.length > 45 ? sf.name.slice(0, 45) + '\u2026' : sf.name}</div>
-                    <div className="text-xs text-bauhaus-muted mt-0.5 font-medium">
-                      {sf.total_giving_annual ? formatMoney(sf.total_giving_annual) + '/yr' : typeLabel(sf.type)}
+                  <div key={sf.id} className="border-b-2 border-bauhaus-black/10 py-2 last:border-0">
+                    <Link href={`/foundations/${sf.id}`} className="block -mx-2 px-2 py-1 transition-colors hover:bg-bauhaus-canvas">
+                      <div className="text-sm font-bold text-bauhaus-black leading-tight">{sf.name.length > 45 ? sf.name.slice(0, 45) + '\u2026' : sf.name}</div>
+                      <div className="text-xs text-bauhaus-muted mt-0.5 font-medium">
+                        {sf.total_giving_annual ? formatMoney(sf.total_giving_annual) + '/yr' : typeLabel(sf.type)}
+                      </div>
+                    </Link>
+                    <div className="mt-2 flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-[0.18em]">
+                      <Link
+                        href={`/foundations/compare?left=${f.id}&right=${sf.id}`}
+                        className="border-2 border-bauhaus-blue/25 bg-link-light px-2 py-1 text-bauhaus-blue transition-colors hover:border-bauhaus-blue hover:bg-bauhaus-blue hover:text-white"
+                      >
+                        Compare now
+                      </Link>
                     </div>
-                  </a>
+                  </div>
                 ))}
               </div>
             </div>
@@ -720,9 +1009,14 @@ export default async function FoundationDetailPage({ params }: { params: Promise
           <div className="bg-bauhaus-canvas border-4 border-bauhaus-black p-4 text-xs text-bauhaus-muted space-y-1.5 font-medium">
             <h3 className="text-xs font-black text-bauhaus-black mb-2 uppercase tracking-widest">Data Sources</h3>
             <div>Profile quality: <span className={`font-black ${f.profile_confidence === 'high' ? 'text-money' : f.profile_confidence === 'medium' ? 'text-bauhaus-yellow' : 'text-bauhaus-muted'}`}>{f.profile_confidence}</span></div>
-            {f.enriched_at && <div>Last profiled: {new Date(f.enriched_at).toLocaleDateString('en-AU', { year: 'numeric', month: 'long', day: 'numeric' })}</div>}
+            {f.enriched_at && <div>Foundation profile updated: {formatDateWithRecency(f.enriched_at)}</div>}
+            {latestProgramScrapedAt && <div>Grant/program scan updated: {formatDateWithRecency(latestProgramScrapedAt)}</div>}
+            {!latestProgramScrapedAt && f.last_scraped_at && <div>Website scan updated: {formatDateWithRecency(f.last_scraped_at)}</div>}
+            {latestProgramScrapedAt && f.enriched_at && new Date(latestProgramScrapedAt).getTime() > new Date(f.enriched_at).getTime() && (
+              <div>Program discovery is newer than the foundation profile summary.</div>
+            )}
             {f.scraped_urls && f.scraped_urls.length > 0 && <div>Website pages scraped: {f.scraped_urls.length}</div>}
-            <div>Added: {new Date(f.created_at).toLocaleDateString('en-AU', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+            <div>Added: {formatDateWithRecency(f.created_at)}</div>
             <a href={`https://www.acnc.gov.au/charity/charities?search=${encodeURIComponent(f.acnc_abn)}`} target="_blank" rel="noopener noreferrer" className="text-bauhaus-blue hover:text-bauhaus-red block mt-2 font-black uppercase tracking-wider">
               View on ACNC Register &rarr;
             </a>

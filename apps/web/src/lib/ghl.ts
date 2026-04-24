@@ -47,6 +47,7 @@ export async function createOpportunity(opts: {
   pipelineId: string;
   pipelineStageId: string;
   contactId?: string;
+  assignedTo?: string;
 }) {
   const locationId = process.env.GHL_LOCATION_ID;
   return ghlFetch('/opportunities/', {
@@ -59,13 +60,20 @@ export async function createOpportunity(opts: {
       status: 'open',
       monetaryValue: opts.monetaryValue ?? 0,
       ...(opts.contactId && { contactId: opts.contactId }),
+      ...(opts.assignedTo && { assignedTo: opts.assignedTo }),
     }),
   });
 }
 
 export async function updateOpportunity(
   opportunityId: string,
-  updates: { pipelineStageId?: string; status?: string; monetaryValue?: number }
+  updates: {
+    pipelineStageId?: string;
+    status?: string;
+    monetaryValue?: number;
+    assignedTo?: string;
+    name?: string;
+  }
 ) {
   return ghlFetch(`/opportunities/${opportunityId}`, {
     method: 'PUT',
@@ -163,6 +171,10 @@ export async function upsertContact(opts: {
   tags?: string[];
   source?: string;
   customFields?: Array<{ id: string; value: string }>;
+  projects?: string[];
+  engagementStatus?: string;
+  lastContactDate?: string;
+  website?: string;
 }): Promise<{ id: string }> {
   const locationId = process.env.GHL_LOCATION_ID;
   const data = await ghlFetch('/contacts/upsert', {
@@ -196,6 +208,12 @@ export async function upsertContact(opts: {
       last_name: opts.lastName || null,
       company_name: opts.companyName || null,
       tags: data.contact.tags || opts.tags || [],
+      projects: opts.projects || [],
+      engagement_status: opts.engagementStatus || null,
+      last_contact_date: opts.lastContactDate || null,
+      source: opts.source || null,
+      website: opts.website || null,
+      custom_fields: opts.customFields ?? null,
     },
     { onConflict: 'id' }
   );

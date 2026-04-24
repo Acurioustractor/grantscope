@@ -45,7 +45,11 @@ export async function GET() {
       grantOpCount,
       // 6. Contract coverage
       contractStatsResult,
-      // 7. Agent health
+      // 7. Grant semantics health
+      grantSemanticsResult,
+      // 8. Grant source identity health
+      sourceIdentityResult,
+      // 9. Agent health
       agentHealthResult,
     ] = await Promise.all([
       // Entity stats
@@ -128,6 +132,37 @@ export async function GET() {
           ROUND(COUNT(supplier_abn)::numeric / NULLIF(COUNT(*), 0) * 100, 1) as abn_pct
         FROM austender_contracts`,
       })),
+      // Grant semantics health
+      safe(db.rpc('exec_sql', {
+        query: `SELECT
+          COUNT(*) FILTER (WHERE status IS NULL) as status_null,
+          COUNT(*) FILTER (WHERE application_status IS NULL) as application_status_null,
+          COUNT(*) FILTER (WHERE status = 'open' AND closes_at < CURRENT_DATE) as open_past_deadline,
+          COUNT(*) FILTER (WHERE source = 'ghl_sync' AND status = 'unknown') as ghl_unknown
+        FROM grant_opportunities`,
+      })),
+      // Grant source identity health
+      safe(db.rpc('exec_sql', {
+        query: `SELECT
+          COUNT(*) FILTER (
+            WHERE discovered_by = 'grant_engine'
+              AND COALESCE(discovery_method, '') <> ''
+              AND COALESCE(source_id, '') = ''
+          ) as blank_source_id,
+          COUNT(*) FILTER (
+            WHERE discovered_by = 'grant_engine'
+              AND COALESCE(discovery_method, '') <> ''
+              AND COALESCE(source_id, '') <> ''
+              AND source_id NOT LIKE '%::duplicate::%'
+              AND source_id <> discovery_method
+          ) as canonical_mismatch,
+          COUNT(*) FILTER (
+            WHERE discovered_by = 'grant_engine'
+              AND source_id LIKE '%::duplicate::%'
+              AND status = 'duplicate'
+          ) as duplicate_shadows
+        FROM grant_opportunities`,
+      })),
       // Agent health: latest run per agent
       safe(db.rpc('exec_sql', {
         query: `SELECT DISTINCT ON (agent_name)
@@ -157,6 +192,8 @@ export async function GET() {
     const foundationStats = parseFirst(foundationStatsResult);
     const grantOps = parseFirst(grantOpCount);
     const contractStats = parseFirst(contractStatsResult);
+    const grantSemantics = parseFirst(grantSemanticsResult);
+    const sourceIdentity = parseFirst(sourceIdentityResult);
     const agentHealth = parse(agentHealthResult);
 
     const response = NextResponse.json({
@@ -199,6 +236,17 @@ export async function GET() {
         total: Number(contractStats.total ?? 0),
         with_abn: Number(contractStats.with_abn ?? 0),
         abn_pct: Number(contractStats.abn_pct ?? 0),
+      },
+      grant_semantics: {
+        status_null: Number(grantSemantics.status_null ?? 0),
+        application_status_null: Number(grantSemantics.application_status_null ?? 0),
+        open_past_deadline: Number(grantSemantics.open_past_deadline ?? 0),
+        ghl_unknown: Number(grantSemantics.ghl_unknown ?? 0),
+      },
+      source_identity: {
+        blank_source_id: Number(sourceIdentity.blank_source_id ?? 0),
+        canonical_mismatch: Number(sourceIdentity.canonical_mismatch ?? 0),
+        duplicate_shadows: Number(sourceIdentity.duplicate_shadows ?? 0),
       },
       agents: agentHealth,
     });
