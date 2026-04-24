@@ -7,7 +7,7 @@ import { getServiceSupabase } from '@/lib/supabase';
  * Returns grant_opportunities matching an alert's criteria.
  */
 export async function GET(request: NextRequest) {
-  const auth = await requireModule('tracker');
+  const auth = await requireModule('grants');
   if (auth.error) return auth.error;
   const { user } = auth;
 
