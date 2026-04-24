@@ -51,10 +51,12 @@ export function createGrantMonitor(): AgentConfig {
           .filter((url): url is string => typeof url === 'string' && url.length > 0)
       );
 
-      for await (const { grant, stats } of registry.discoverAll({ status: 'open' })) {
+      for await (const event of registry.discoverAll({ status: 'open' })) {
+        if (event.kind !== 'grant') continue;
         found++;
 
         // Check if this is new
+        const grant = event.grant;
         const normalized = normalize(grant);
         if (existingNames.has(normalized.name.toLowerCase())) continue;
         if (normalized.url && existingUrls.has(normalized.url)) continue;

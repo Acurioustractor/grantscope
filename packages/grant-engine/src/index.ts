@@ -23,6 +23,7 @@ export type {
   DiscoveryQuery,
   DiscoveryRunResult,
   DiscoveryRunStats,
+  DiscoveryEvent,
   RawGrant,
   CanonicalGrant,
   GrantSource,
@@ -48,6 +49,22 @@ export { createACTGrantsPlugin } from './sources/act-grants';
 export { createNTGrantsPlugin } from './sources/nt-grants';
 export { createSAGrantsPlugin } from './sources/sa-grants';
 export { createWAGrantsPlugin } from './sources/wa-grants';
+export { createCityOfSydneyGrantsPlugin } from './sources/cityofsydney-grants';
+export { createBrisbaneCityGrantsPlugin } from './sources/brisbane-city-grants';
+export { createRedlandCityGrantsPlugin } from './sources/redland-city-grants';
+export { createLoganCityGrantsPlugin } from './sources/logan-city-grants';
+export { createDarwinCityGrantsPlugin } from './sources/darwin-city-grants';
+export { createTablelandsGrantsPlugin } from './sources/tablelands-grants';
+export { createSunshineCoastGrantsPlugin } from './sources/sunshinecoast-grants';
+export { createCookShireGrantsPlugin } from './sources/cookshire-grants';
+export { createFraserCoastGrantsPlugin } from './sources/frasercoast-grants';
+export { createToowoombaGrantsPlugin } from './sources/toowoomba-grants';
+export { createScenicRimGrantsPlugin } from './sources/scenicrim-grants';
+export { createWhitsundayGrantsPlugin } from './sources/whitsunday-grants';
+export { createCentralHighlandsGrantsPlugin } from './sources/centralhighlands-grants';
+export { createNoosaGrantsPlugin } from './sources/noosa-grants';
+export { createChartersTowersGrantsPlugin } from './sources/charterstowers-grants';
+export { createLockyerValleyGrantsPlugin } from './sources/lockyervalley-grants';
 export { SourceRegistry } from './sources/registry';
 
 // Foundations

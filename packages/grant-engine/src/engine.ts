@@ -37,6 +37,22 @@ import { createACTGrantsPlugin } from './sources/act-grants';
 import { createNTGrantsPlugin } from './sources/nt-grants';
 import { createSAGrantsPlugin } from './sources/sa-grants';
 import { createWAGrantsPlugin } from './sources/wa-grants';
+import { createCityOfSydneyGrantsPlugin } from './sources/cityofsydney-grants';
+import { createBrisbaneCityGrantsPlugin } from './sources/brisbane-city-grants';
+import { createRedlandCityGrantsPlugin } from './sources/redland-city-grants';
+import { createLoganCityGrantsPlugin } from './sources/logan-city-grants';
+import { createDarwinCityGrantsPlugin } from './sources/darwin-city-grants';
+import { createTablelandsGrantsPlugin } from './sources/tablelands-grants';
+import { createSunshineCoastGrantsPlugin } from './sources/sunshinecoast-grants';
+import { createCookShireGrantsPlugin } from './sources/cookshire-grants';
+import { createFraserCoastGrantsPlugin } from './sources/frasercoast-grants';
+import { createToowoombaGrantsPlugin } from './sources/toowoomba-grants';
+import { createScenicRimGrantsPlugin } from './sources/scenicrim-grants';
+import { createWhitsundayGrantsPlugin } from './sources/whitsunday-grants';
+import { createCentralHighlandsGrantsPlugin } from './sources/centralhighlands-grants';
+import { createNoosaGrantsPlugin } from './sources/noosa-grants';
+import { createChartersTowersGrantsPlugin } from './sources/charterstowers-grants';
+import { createLockyerValleyGrantsPlugin } from './sources/lockyervalley-grants';
 
 export class GrantEngine {
   private registry: SourceRegistry;
@@ -64,6 +80,22 @@ export class GrantEngine {
     this.registry.register(createNTGrantsPlugin());
     this.registry.register(createSAGrantsPlugin());
     this.registry.register(createWAGrantsPlugin());
+    this.registry.register(createCityOfSydneyGrantsPlugin());
+    this.registry.register(createBrisbaneCityGrantsPlugin());
+    this.registry.register(createRedlandCityGrantsPlugin());
+    this.registry.register(createLoganCityGrantsPlugin());
+    this.registry.register(createDarwinCityGrantsPlugin());
+    this.registry.register(createTablelandsGrantsPlugin());
+    this.registry.register(createSunshineCoastGrantsPlugin());
+    this.registry.register(createCookShireGrantsPlugin());
+    this.registry.register(createFraserCoastGrantsPlugin());
+    this.registry.register(createToowoombaGrantsPlugin());
+    this.registry.register(createScenicRimGrantsPlugin());
+    this.registry.register(createWhitsundayGrantsPlugin());
+    this.registry.register(createCentralHighlandsGrantsPlugin());
+    this.registry.register(createNoosaGrantsPlugin());
+    this.registry.register(createChartersTowersGrantsPlugin());
+    this.registry.register(createLockyerValleyGrantsPlugin());
   }
 
   private log(message: string): void {
@@ -84,7 +116,19 @@ export class GrantEngine {
    */
   async discover(query: DiscoveryQuery = {}): Promise<DiscoveryRunResult> {
     const startedAt = new Date().toISOString();
-    const sourcesUsed = this.config.sources || ['grantconnect', 'web-search', 'llm-knowledge'];
+    const sourcesUsed = this.config.sources?.length
+      ? this.config.sources
+      : this.registry.getEnabled().map(plugin => plugin.id);
+
+    try {
+      const staleRunsClosed = await this.repo.cleanupStaleRuns();
+      if (staleRunsClosed > 0) {
+        this.log(`[GrantScope] Marked ${staleRunsClosed} stale discovery runs as failed`);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.log(`[GrantScope] Failed to clean stale discovery runs: ${message}`);
+    }
 
     // Start run record
     let runId: string;
@@ -100,18 +144,19 @@ export class GrantEngine {
     // Step 1: Discover from all sources
     const allRaw: CanonicalGrant[] = [];
     const errors: Array<{ source: string; error: string }> = [];
-    const pluginStats = new Map<string, number>();
+    const sourceStats = new Map<string, { source: string; grantsFound: number; errors: string[]; durationMs: number }>();
 
-    for await (const { grant, stats } of this.registry.discoverAll(query, sourcesUsed)) {
-      const canonical = normalize(grant);
-      allRaw.push(canonical);
+    for await (const event of this.registry.discoverAll(query, sourcesUsed)) {
+      if (event.kind === 'grant') {
+        const canonical = normalize(event.grant);
+        allRaw.push(canonical);
+        continue;
+      }
 
-      const current = pluginStats.get(stats.source) || 0;
-      pluginStats.set(stats.source, current + 1);
-
-      if (stats.errors.length > 0) {
-        for (const err of stats.errors) {
-          errors.push({ source: stats.source, error: err });
+      sourceStats.set(event.stats.source, event.stats);
+      if (event.stats.errors.length > 0) {
+        for (const err of event.stats.errors) {
+          errors.push({ source: event.stats.source, error: err });
         }
       }
     }
@@ -145,7 +190,7 @@ export class GrantEngine {
       // Also try to update existing grants with new source info
       for (const grant of deduped) {
         if (!newGrants.includes(grant) && grant.url) {
-          const result = await this.repo.upsertGrant(grant);
+          const result = await this.repo.updateExistingGrant(grant);
           if (result === 'updated') grantsUpdated++;
         }
       }
@@ -158,9 +203,9 @@ export class GrantEngine {
     }
 
     // Step 5: Update plugin stats
-    for (const [pluginId, count] of pluginStats) {
+    for (const [pluginId, stats] of sourceStats) {
       try {
-        await this.repo.updatePluginStats(pluginId, count, 'success');
+        await this.repo.updatePluginStats(pluginId, stats.grantsFound, stats.errors.length > 0 ? 'partial' : 'success');
       } catch {
         // Non-critical
       }
@@ -173,6 +218,7 @@ export class GrantEngine {
       startedAt,
       completedAt,
       sourcesUsed,
+      sourceStats: [...sourceStats.values()],
       grantsDiscovered: allRaw.length,
       grantsNew,
       grantsUpdated,

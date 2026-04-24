@@ -27,6 +27,10 @@ export interface DiscoveryRunStats {
   durationMs: number;
 }
 
+export type DiscoveryEvent =
+  | { kind: 'grant'; grant: RawGrant; stats: DiscoveryRunStats }
+  | { kind: 'source-complete'; stats: DiscoveryRunStats };
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // GRANTS
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -38,12 +42,15 @@ export interface RawGrant {
   sourceUrl?: string;
   amount?: { min?: number; max?: number };
   deadline?: string;          // any parseable date string
+  applicationStatus?: GrantApplicationStatus;
   description?: string;
   categories?: string[];
   program?: string;
   geography?: string[];       // e.g. ['AU', 'AU-QLD']
   sourceId: string;           // which plugin found this
 }
+
+export type GrantApplicationStatus = 'open' | 'closed' | 'ongoing' | 'upcoming' | 'unknown';
 
 /** Normalized grant ready for storage */
 export interface CanonicalGrant {
@@ -58,6 +65,7 @@ export interface CanonicalGrant {
   description: string | null;
   categories: string[];
   geography: string[];
+  applicationStatus: GrantApplicationStatus | null;
   sources: GrantSource[];
   discoveryMethod: string;
   dedupKey: string;           // lowercase(provider):lowercase(name)
@@ -128,6 +136,7 @@ export interface DiscoveryRunResult {
   startedAt: string;
   completedAt: string;
   sourcesUsed: string[];
+  sourceStats: DiscoveryRunStats[];
   grantsDiscovered: number;
   grantsNew: number;
   grantsUpdated: number;

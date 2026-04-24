@@ -26,6 +26,18 @@ interface GrantConnectConfig {
 }
 
 export function createGrantConnectPlugin(config: GrantConnectConfig = {}): SourcePlugin {
+  function todayInAustralia(): string {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Australia/Brisbane',
+    }).format(new Date());
+  }
+
+  function normalizeDeadline(deadline: string | undefined): string | null {
+    if (!deadline) return null;
+    const parsed = new Date(deadline);
+    if (Number.isNaN(parsed.getTime())) return null;
+    return parsed.toISOString().split('T')[0];
+  }
 
   function extractAgency(title: string, description: string): string {
     const deptMatch = description.match(/Department of ([\w\s]+?)(?:\.|,|\s(?:is|has|will))/i);
@@ -273,26 +285,25 @@ export function createGrantConnectPlugin(config: GrantConnectConfig = {}): Sourc
         listGrants = await scrapeFullList(config.maxListPages ?? 20);
       }
 
-      // Merge: prefer Playwright data (has deadlines), use RSS to fill gaps
-      const seen = new Set<string>();
       const allGrants: RawGrant[] = [];
 
-      // Playwright grants first (richer data)
-      for (const g of listGrants) {
-        const key = g.title.toLowerCase();
-        if (!seen.has(key)) {
-          seen.add(key);
-          allGrants.push(g);
-        }
-      }
+      if (listGrants.length > 0) {
+        // When the live list scrape succeeds, treat it as the source of truth for
+        // currently open opportunities. The RSS feed can contain historical items,
+        // so only use it to enrich matching live rows, never to add RSS-only rows.
+        const rssByTitle = new Map(rssGrants.map(grant => [grant.title.toLowerCase(), grant]));
 
-      // Then RSS grants to fill gaps
-      for (const g of rssGrants) {
-        const key = g.title.toLowerCase();
-        if (!seen.has(key)) {
-          seen.add(key);
-          allGrants.push(g);
+        for (const grant of listGrants) {
+          const rssMatch = rssByTitle.get(grant.title.toLowerCase());
+          allGrants.push({
+            ...grant,
+            description: grant.description || rssMatch?.description,
+            categories: grant.categories?.length ? grant.categories : rssMatch?.categories,
+            provider: grant.provider || rssMatch?.provider || 'Australian Government',
+          });
         }
+      } else {
+        allGrants.push(...rssGrants);
       }
 
       console.log(`[grantconnect] Total: ${allGrants.length} unique grants (${listGrants.length} from list, ${rssGrants.length} from RSS)`);
@@ -300,8 +311,17 @@ export function createGrantConnectPlugin(config: GrantConnectConfig = {}): Sourc
       // Apply query filters
       const queryCategories = new Set(query.categories?.map(c => c.toLowerCase()) || []);
       const queryKeywords = query.keywords?.map(k => k.toLowerCase()) || [];
+      const today = todayInAustralia();
 
       for (const grant of allGrants) {
+        const closesAt = normalizeDeadline(grant.deadline);
+        const inferredStatus = grant.applicationStatus
+          || (closesAt ? (closesAt < today ? 'closed' : 'open') : undefined);
+
+        if (query.status === 'open' && inferredStatus === 'closed') {
+          continue;
+        }
+
         // Filter by categories
         if (queryCategories.size > 0) {
           const hasMatch = grant.categories?.some(c => queryCategories.has(c));
@@ -315,7 +335,10 @@ export function createGrantConnectPlugin(config: GrantConnectConfig = {}): Sourc
           if (!hasMatch) continue;
         }
 
-        yield grant;
+        yield {
+          ...grant,
+          applicationStatus: inferredStatus,
+        };
       }
     },
   };
