@@ -1,15 +1,22 @@
 -- mv_grant_contract_overlap
--- Compounds: grant_opportunities × justice_funding (grant winners) ×
--- austender_contracts (contract winners). Identifies entities that both
--- receive government grants AND win government contracts — a signal of
--- privileged access to public funding across procurement + grants channels.
+-- Compounds: justice_funding (grant winners) × austender_contracts (contract
+-- winners). Identifies entities that both receive government grants AND win
+-- government contracts — privileged access to public funding across two
+-- separate channels.
+--
+-- Wrapped in BEGIN with extended statement_timeout because the per-ABN
+-- aggregations across justice_funding (71K) and austender_contracts (770K)
+-- can exceed Supabase's default 8s timeout.
 
 DROP MATERIALIZED VIEW IF EXISTS mv_grant_contract_overlap CASCADE;
+
+BEGIN;
+SET LOCAL statement_timeout = '600s';
 
 CREATE MATERIALIZED VIEW mv_grant_contract_overlap AS
 WITH grant_totals AS (
   SELECT recipient_abn AS abn,
-         COALESCE(MAX(recipient_name), '') AS recipient_name,
+         (array_agg(recipient_name ORDER BY amount_dollars DESC NULLS LAST))[1] AS recipient_name,
          COUNT(*)::int AS grant_count,
          COALESCE(SUM(amount_dollars), 0)::bigint AS grant_total,
          MIN(financial_year) AS grant_first_year,
@@ -20,7 +27,7 @@ WITH grant_totals AS (
 ),
 contract_totals AS (
   SELECT supplier_abn AS abn,
-         COALESCE(MAX(supplier_name), '') AS supplier_name,
+         (array_agg(supplier_name ORDER BY contract_value DESC NULLS LAST))[1] AS supplier_name,
          COUNT(*)::int AS contract_count,
          COALESCE(SUM(contract_value), 0)::bigint AS contract_total,
          MIN(EXTRACT(YEAR FROM contract_start))::int AS contract_first_year,
@@ -53,6 +60,8 @@ SELECT g.abn,
   FROM grant_totals g
   INNER JOIN contract_totals c ON c.abn = g.abn
   LEFT JOIN gs_entities e ON e.abn = g.abn;
+
+COMMIT;
 
 CREATE INDEX ON mv_grant_contract_overlap (combined_public_funding DESC);
 CREATE INDEX ON mv_grant_contract_overlap (funding_profile);
