@@ -28,8 +28,13 @@ DECLARE
   v_finished TIMESTAMPTZ;
   v_error TEXT;
   v_mv TEXT;
-  -- MVs that need non-concurrent refresh (no unique index OR surrogate key issue)
+  -- MVs that need non-concurrent refresh (no unique index OR surrogate key issue
+  -- OR duplicate-key data quality issues in the MV definition).
+  -- 2026-04-27: funding_by_lga and funding_deserts have duplicates that block
+  -- a unique index until the underlying queries are deduped.
   needs_non_concurrent TEXT[] := ARRAY[
+    'mv_funding_by_lga',
+    'mv_funding_deserts',
     'mv_foundation_grantees',
     'mv_donation_contract_timing'
   ];
