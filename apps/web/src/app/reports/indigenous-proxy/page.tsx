@@ -9,11 +9,11 @@ export const revalidate = 3600;
 export const metadata: Metadata = {
   title: 'The Indigenous Proxy Problem — CivicGraph',
   description:
-    '57% of Australian government funding tagged "Indigenous" flows to non-Indigenous-controlled organisations. Cross-system investigation of where the money actually lands versus where it was promised.',
+    '72% of Australian government funding tagged "Indigenous" flows to non-Indigenous-controlled organisations. Cross-system investigation of where the money actually lands versus where it was promised.',
   openGraph: {
     title: 'The Indigenous Proxy Problem',
     description:
-      '57% of Indigenous-tagged government funding flows to non-Indigenous-controlled organisations. A CivicGraph investigation.',
+      '72% of Indigenous-tagged government funding flows to non-Indigenous-controlled organisations. A CivicGraph investigation.',
     type: 'article',
     siteName: 'CivicGraph',
   },
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'The Indigenous Proxy Problem',
     description:
-      '57% of Indigenous-tagged funding flows to non-Indigenous orgs. CivicGraph investigation.',
+      '72% of Indigenous-tagged funding flows to non-Indigenous orgs. CivicGraph investigation.',
   },
 };
 
