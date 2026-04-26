@@ -210,6 +210,19 @@ async function getData() {
     states: (stateRes || []) as StateSplit[],
     trends: (trendRes || []) as YearTrend[],
     programs: (programRes || []) as ProgramSplit[],
+    lgaProxy: ((await safe(db.from('mv_lga_indigenous_proxy_score')
+      .select('state, lga_name, total_indigenous_tagged_funding, community_controlled_share_pct, proxy_share_pct, unique_recipients')
+      .gte('total_indigenous_tagged_funding', 1000000)
+      .gte('proxy_share_pct', 80)
+      .order('total_indigenous_tagged_funding', { ascending: false })
+      .limit(15), 'lga-proxy')) || []) as Array<{
+        state: string;
+        lga_name: string;
+        total_indigenous_tagged_funding: number;
+        community_controlled_share_pct: number | null;
+        proxy_share_pct: number;
+        unique_recipients: number;
+      }>,
   };
 }
 
@@ -479,6 +492,50 @@ export default async function IndigenousProxyPage() {
           </div>
         </div>
       </section>
+
+      {/* LGA Proxy Score — from mv_lga_indigenous_proxy_score */}
+      {data.lgaProxy.length > 0 && (
+        <section className="mb-10">
+          <h2 className="text-xl font-black uppercase tracking-widest border-b-4 border-bauhaus-black pb-2 mb-6">
+            Worst LGAs — Where The Proxy Problem Hits Hardest
+          </h2>
+          <p className="text-sm text-bauhaus-muted mb-4">
+            Local Government Areas where 80%+ of Indigenous-tagged funding flows to
+            non-Indigenous-controlled organisations. The story isn&rsquo;t even — some LGAs concentrate
+            the leakage in spectacular ways.
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-bauhaus-black text-white text-left">
+                  <th className="px-4 py-3 font-black uppercase tracking-wider text-xs">State</th>
+                  <th className="px-4 py-3 font-black uppercase tracking-wider text-xs">LGA</th>
+                  <th className="px-4 py-3 font-black uppercase tracking-wider text-xs text-right">Funding</th>
+                  <th className="px-4 py-3 font-black uppercase tracking-wider text-xs text-right">CC Share</th>
+                  <th className="px-4 py-3 font-black uppercase tracking-wider text-xs text-right">Proxy Share</th>
+                  <th className="px-4 py-3 font-black uppercase tracking-wider text-xs text-right">Recipients</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.lgaProxy.map((l, i) => (
+                  <tr key={`${l.state}-${l.lga_name}`} className={i % 2 === 0 ? 'bg-white' : 'bg-bauhaus-canvas/40'}>
+                    <td className="px-4 py-3 font-mono text-xs text-bauhaus-muted">{l.state}</td>
+                    <td className="px-4 py-3 font-medium text-bauhaus-black">{l.lga_name}</td>
+                    <td className="px-4 py-3 text-right font-mono font-bold">{money(l.total_indigenous_tagged_funding)}</td>
+                    <td className="px-4 py-3 text-right font-mono text-emerald-700">{l.community_controlled_share_pct ?? 0}%</td>
+                    <td className="px-4 py-3 text-right font-mono text-bauhaus-red font-bold">{l.proxy_share_pct}%</td>
+                    <td className="px-4 py-3 text-right font-mono text-xs">{l.unique_recipients}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-[10px] text-bauhaus-muted mt-3">
+            Source: <code>mv_lga_indigenous_proxy_score</code> — joins justice_funding (Indigenous topic) ×
+            gs_entities (community-controlled flag) × LGA. Filtered to LGAs with ≥$1M funding and ≥80% proxy share.
+          </p>
+        </section>
+      )}
 
       {/* Year-over-Year Trends */}
       {data.trends.length > 0 && (
