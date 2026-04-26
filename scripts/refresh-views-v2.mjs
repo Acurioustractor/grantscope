@@ -73,12 +73,14 @@ const VIEW_LIST = [
   'mv_lga_indigenous_proxy_score',
 ];
 
-// MVs known to lack unique indexes — pre-emptively use non-concurrent
+// MVs known to lack unique indexes — pre-emptively use non-concurrent.
+// 2026-04-27: mv_donor_contract_crossref + mv_revolving_door now have unique
+// indexes (see scripts/sql/add-mv-unique-indexes.sql) — they can use CONCURRENTLY.
+// mv_funding_by_lga + mv_funding_deserts have duplicate-key data quality issues
+// in the MV definition; until those are deduped, they stay non-concurrent.
 const NEEDS_NON_CONCURRENT = new Set([
-  'mv_donor_contract_crossref',
   'mv_funding_by_lga',
   'mv_funding_deserts',
-  'mv_revolving_door',
   'mv_foundation_grantees',
   'mv_donation_contract_timing',
 ]);
