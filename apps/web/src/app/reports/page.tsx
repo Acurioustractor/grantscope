@@ -286,6 +286,50 @@ export default function ReportsPage() {
         </a>
       </section>
 
+      {/* ===== FLAGSHIP: IPP SCOREBOARD ===== */}
+      <section className="mb-6">
+        <a href="/reports/ipp-scoreboard" className="group block">
+          <div className="bg-white border-4 border-bauhaus-black p-8 transition-all group-hover:-translate-y-1" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-red)' }}>
+            <div className="text-xs font-black text-bauhaus-red mb-2 uppercase tracking-widest">Procurement Investigation &mdash; NEW</div>
+            <h3 className="text-2xl font-black text-bauhaus-black mb-3">The IPP Scoreboard</h3>
+            <p className="text-base text-bauhaus-muted leading-relaxed mb-4">
+              Indigenous Procurement Policy was set in 2015 with a 3% target. In 2025, only 33 of 278
+              federal+state agencies hit it. National share: 1.06%. Many agencies awarded $50M+ in
+              contracts at zero Indigenous spend &mdash; named, ranked.
+            </p>
+            <div className="flex gap-6 text-bauhaus-muted/60 text-sm font-bold">
+              <span>278 agencies in 2025</span>
+              <span>&middot;</span>
+              <span>$65.4B contract spend</span>
+              <span>&middot;</span>
+              <span>1.06% Indigenous share</span>
+            </div>
+          </div>
+        </a>
+      </section>
+
+      {/* ===== FLAGSHIP: DOUBLE-DIPPERS ===== */}
+      <section className="mb-6">
+        <a href="/reports/double-dippers" className="group block">
+          <div className="bg-white border-4 border-bauhaus-black p-8 transition-all group-hover:-translate-y-1" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-blue)' }}>
+            <div className="text-xs font-black text-bauhaus-blue mb-2 uppercase tracking-widest">Cross-Channel Investigation &mdash; NEW</div>
+            <h3 className="text-2xl font-black text-bauhaus-black mb-3">The Double-Dippers</h3>
+            <p className="text-base text-bauhaus-muted leading-relaxed mb-4">
+              4,218 Australian entities receive both government grants AND government contracts.
+              Two separate funding channels, one combined relationship with the public purse.
+              Total: $678 billion across the dataset.
+            </p>
+            <div className="flex gap-6 text-bauhaus-muted/60 text-sm font-bold">
+              <span>4,218 cross-channel orgs</span>
+              <span>&middot;</span>
+              <span>$40.9B grants + $637.9B contracts</span>
+              <span>&middot;</span>
+              <span>215 community-controlled</span>
+            </div>
+          </div>
+        </a>
+      </section>
+
       {/* ===== FLAGSHIP: PROCUREMENT OLIGOPOLY ===== */}
       <section className="mb-6">
         <a href="/reports/procurement-oligopoly" className="group block">
