@@ -15,9 +15,23 @@ dist/
 # Session tools
 .tldr/cache/
 .tldr/daemon.pid
+.tldr/status
 .claude/tsc-cache/
 .claude/settings.local.json
 .claude/cache/agents/
+.claude/scheduled_tasks.lock
+
+# Next.js stale build dirs (auto-recovery from crashes)
+apps/web/.next.stale.*/
+
+# Test artifacts
+apps/web/playwright-report/
+apps/web/test-results/
+
+# Generated reports, logs, scrapes
+output/
+logs/
+tmp/
 
 # Large data files (downloaded, not source)
 data/abs/
@@ -25,6 +39,15 @@ data/abr/
 data/asic/
 data/lga/
 data/opensanctions/
+data/acnc/
+data/aihw/
+data/annual-reports/
+data/grantconnect/
+data/ndis/
+data/prf-reports/
+data/state-procurement/
+data/tracker-evidence/
+apps/web/data/aihw/
 
 # Large files (exceed GitHub 100MB limit)
 data/nsw-etendering/full.jsonl
