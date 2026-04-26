@@ -195,6 +195,38 @@ export default async function PipelinePage({
             government procurement, justice funding, political donations, charity register,
             philanthropic giving, ALMA evidence, and NDIS supply. Filter, sort, share the URL.
           </p>
+          <div className="mt-6 flex flex-wrap gap-2">
+            <Link
+              href="/reports/ipp-scoreboard"
+              className="border-2 border-white bg-white/5 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-white transition-colors hover:bg-bauhaus-yellow hover:text-bauhaus-black hover:border-bauhaus-yellow"
+            >
+              IPP Scoreboard →
+            </Link>
+            <Link
+              href="/reports/double-dippers"
+              className="border-2 border-white bg-white/5 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-white transition-colors hover:bg-bauhaus-yellow hover:text-bauhaus-black hover:border-bauhaus-yellow"
+            >
+              Double-Dippers →
+            </Link>
+            <Link
+              href="/reports/indigenous-proxy"
+              className="border-2 border-white bg-white/5 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-white transition-colors hover:bg-bauhaus-yellow hover:text-bauhaus-black hover:border-bauhaus-yellow"
+            >
+              Indigenous Proxy →
+            </Link>
+            <Link
+              href="/reports/consulting-class"
+              className="border-2 border-white bg-white/5 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-white transition-colors hover:bg-bauhaus-yellow hover:text-bauhaus-black hover:border-bauhaus-yellow"
+            >
+              Consulting Class →
+            </Link>
+            <Link
+              href="/reports"
+              className="border-2 border-bauhaus-yellow bg-bauhaus-yellow/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-bauhaus-yellow transition-colors hover:bg-bauhaus-yellow hover:text-bauhaus-black"
+            >
+              All investigations →
+            </Link>
+          </div>
         </div>
       </section>
 
