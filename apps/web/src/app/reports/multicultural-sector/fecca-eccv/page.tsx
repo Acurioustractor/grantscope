@@ -74,6 +74,8 @@ type AnnualReport = {
   evidence_quality: string | null;
   impact_summary: string | null;
   programs_mentioned: string[] | null;
+  top_funders_mentioned: string[] | null;
+  key_quotes: string[] | null;
   pdf_pages: number | null;
   extracted_text_chars: number | null;
   reports_employment: boolean | null;
@@ -84,6 +86,23 @@ type AnnualReport = {
   reports_family_reunification: boolean | null;
   has_quantitative_outcomes: boolean | null;
   has_external_evaluation: boolean | null;
+};
+
+type PowerRow = {
+  abn: string;
+  power_score: number | null;
+  system_count: number | null;
+  in_procurement: number | null;
+  in_charity_registry: number | null;
+  in_justice_funding: number | null;
+  in_political_donations: number | null;
+  has_board_links: number | null;
+  contract_count: number | null;
+  procurement_dollars: number | null;
+  total_dollar_flow: number | null;
+  board_connections: number | null;
+  distinct_directors: number | null;
+  distinct_govt_buyers: number | null;
 };
 
 function money(n: number | null | undefined): string {
@@ -101,7 +120,7 @@ function pct(n: number | null | undefined): string {
 async function getReport() {
   const supabase = getLiveReportSupabase();
 
-  const [anchors, aisYears, fecca_contracts, eccv_contracts, directorsAll, portfolios, annualReports, vicGrantsRaw, siblingGrantsRaw] = await Promise.all([
+  const [anchors, aisYears, fecca_contracts, eccv_contracts, directorsAll, portfolios, annualReports, vicGrantsRaw, siblingGrantsRaw, powerRows] = await Promise.all([
     safe(supabase.rpc('exec_sql', {
       query: `
         SELECT e.gs_id, e.canonical_name, e.abn, e.state,
@@ -218,6 +237,7 @@ async function getReport() {
         SELECT abn, charity_name, report_year, source_url, source_type,
                total_beneficiaries, programs_delivered,
                evidence_quality, impact_summary, programs_mentioned,
+               top_funders_mentioned, key_quotes,
                pdf_pages, extracted_text_chars,
                reports_employment, reports_housing, reports_education,
                reports_cultural_connection, reports_mental_health, reports_family_reunification,
@@ -264,6 +284,25 @@ async function getReport() {
         LIMIT 30
       `,
     })) as Promise<Array<{ recipient_name: string; program_name: string | null; amount: number; financial_year: string | null; dept_source: string; source_url: string | null; recipient_canonical: string | null; recipient_gs_id: string | null }> | null>,
+
+    safe(supabase.rpc('exec_sql', {
+      query: `
+        SELECT abn,
+               power_score::int,
+               system_count::int,
+               in_procurement::int, in_charity_registry::int,
+               in_justice_funding::int, in_political_donations::int,
+               has_board_links::int,
+               contract_count::int,
+               procurement_dollars::bigint,
+               total_dollar_flow::bigint,
+               board_connections::int,
+               distinct_directors::int,
+               distinct_govt_buyers::int
+        FROM public.mv_entity_power_index
+        WHERE abn IN ('${FECCA_ABN}','${ECCV_ABN}')
+      `,
+    })) as Promise<PowerRow[] | null>,
   ]);
 
   const fecca = (anchors ?? []).find(a => a.abn === FECCA_ABN) || null;
@@ -289,6 +328,7 @@ async function getReport() {
     annualReports: annualReports ?? [],
     vicGrants: vicGrantsRaw ?? [],
     siblingGrants: siblingGrantsRaw ?? [],
+    power: powerRows ?? [],
   };
 }
 
@@ -347,6 +387,9 @@ export default async function FeccaEccvPage() {
 
   // ECCV revenue trajectory — render as horizontal bars normalised to peak
   const eccvPeak = Math.max(...r.eccv_ais.map(a => a.total || 0), 1);
+  const feccaPeak = Math.max(...r.fecca_ais.map(a => a.total || 0), 1);
+  const feccaPower = r.power.find(p => p.abn === FECCA_ABN) || null;
+  const eccvPower = r.power.find(p => p.abn === ECCV_ABN) || null;
 
   return (
     <div>
@@ -371,15 +414,45 @@ export default async function FeccaEccvPage() {
         <AnchorCard a={r.eccv} label="Victoria State Council" />
       </div>
 
-      {/* SECTION 1 — ECCV financial trajectory */}
+      {/* SECTION 1 — Financial trajectories */}
       <section className="mb-16">
         <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§1</div>
-        <h2 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">ECCV — Seven Years Of Government Dependence</h2>
+        <h2 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">Financial Trajectories — Government Dependence Over Time</h2>
         <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
-          Total revenue doubled from $1.18M (2017) to $2.40M (2023), peaking at $3.63M in 2022. Government share never dropped below 84%.
-          Donations: zero, every year. The 2022 peak likely reflects a one-time project cycle that did not sustain.
+          Year-by-year revenue mix. Red is government grant revenue; blue is fees + donations. Both peaks &mdash; FECCA&apos;s and ECCV&apos;s &mdash; expose how the federation lives on Commonwealth and state cycles.
         </p>
 
+        <h3 className="text-sm font-black uppercase tracking-widest text-bauhaus-black mb-3">FECCA &mdash; National Peak</h3>
+        <div className="border-4 border-bauhaus-black p-6 bg-white mb-8">
+          {r.fecca_ais.length === 0 ? (
+            <p className="text-bauhaus-muted font-medium">No FECCA AIS data ingested yet.</p>
+          ) : r.fecca_ais.map((a) => {
+            const totalPct = (a.total / feccaPeak) * 100;
+            const govtPct = a.total > 0 ? (a.govt / a.total) * 100 : 0;
+            return (
+              <div key={a.ais_year} className="mb-4 last:mb-0">
+                <div className="flex justify-between text-xs font-mono mb-1">
+                  <span className="font-black text-bauhaus-black">{a.ais_year}</span>
+                  <span className="text-bauhaus-muted">
+                    {money(a.total)} total · {money(a.govt)} govt ({govtPct.toFixed(0)}%) · surplus {money(a.surplus)}
+                  </span>
+                </div>
+                <div className="relative h-8 bg-bauhaus-canvas border-2 border-bauhaus-black">
+                  <div className="absolute inset-y-0 left-0 bg-bauhaus-red" style={{ width: `${(a.govt / feccaPeak) * 100}%` }} />
+                  <div
+                    className="absolute inset-y-0 bg-bauhaus-blue"
+                    style={{ left: `${(a.govt / feccaPeak) * 100}%`, width: `${((a.fees + a.donations) / feccaPeak) * 100}%` }}
+                  />
+                  <div className="absolute inset-0 flex items-center justify-end pr-2 text-xs font-black text-bauhaus-black">
+                    {totalPct.toFixed(0)}%
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <h3 className="text-sm font-black uppercase tracking-widest text-bauhaus-black mb-3">ECCV &mdash; Victoria State Council</h3>
         <div className="border-4 border-bauhaus-black p-6 bg-white">
           {r.eccv_ais.map((a) => {
             const totalPct = (a.total / eccvPeak) * 100;
@@ -458,6 +531,79 @@ export default async function FeccaEccvPage() {
             See <a href="#vic-state-grants" className="text-bauhaus-blue hover:underline font-black">§6</a> for the now-ingested VIC department grants.
           </div>
         )}
+      </section>
+
+      {/* SECTION 2.5 — Cross-System Power Profile */}
+      <section className="mb-16">
+        <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§2b</div>
+        <h2 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">Cross-System Power Profile</h2>
+        <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
+          Where each anchor shows up across CivicGraph&apos;s 7 federal/national systems &mdash; procurement, justice funding, political donations, charity registry, foundations, ALMA evidence, ATO transparency. ECCV&apos;s state-grant flows (now in §6) don&apos;t yet feed this index, which is why the national signal is so thin.
+        </p>
+
+        <div className="grid sm:grid-cols-2 gap-4">
+          {[
+            { row: feccaPower, label: 'FECCA — National Peak' },
+            { row: eccvPower, label: 'ECCV — VIC State Council' },
+          ].map(({ row, label }) => (
+            <div key={label} className="border-4 border-bauhaus-black p-5 bg-white">
+              <div className="text-xs font-black uppercase tracking-widest text-bauhaus-yellow mb-1">{label}</div>
+              {!row ? (
+                <p className="text-bauhaus-muted font-medium text-sm mt-3">No power-index row.</p>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    <div>
+                      <div className="text-xs uppercase tracking-widest text-bauhaus-muted font-black">Power Score</div>
+                      <div className={`font-black text-3xl ${(row.power_score ?? 0) >= 6 ? 'text-bauhaus-red' : 'text-bauhaus-black'} tabular-nums`}>
+                        {row.power_score ?? 0}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs uppercase tracking-widest text-bauhaus-muted font-black">Systems Hit</div>
+                      <div className="font-black text-3xl text-bauhaus-black tabular-nums">
+                        {row.system_count ?? 0} <span className="text-base text-bauhaus-muted">/ 7</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-1 mb-4">
+                    {[
+                      { hit: row.in_procurement, label: 'Procurement' },
+                      { hit: row.in_justice_funding, label: 'Justice $' },
+                      { hit: row.in_political_donations, label: 'Donations' },
+                      { hit: row.in_charity_registry, label: 'ACNC' },
+                      { hit: row.has_board_links, label: 'Board Links' },
+                    ].map(s => (
+                      <span key={s.label} className={`text-xs font-black uppercase tracking-widest px-2 py-1 ${s.hit ? 'bg-bauhaus-black text-white' : 'bg-bauhaus-canvas text-bauhaus-muted line-through'}`}>
+                        {s.label}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 text-xs font-mono">
+                    <div>
+                      <div className="text-bauhaus-muted uppercase tracking-widest font-black mb-1">Total $ Flow</div>
+                      <div className="font-black text-bauhaus-black text-lg">{money(row.total_dollar_flow)}</div>
+                    </div>
+                    <div>
+                      <div className="text-bauhaus-muted uppercase tracking-widest font-black mb-1">Contracts</div>
+                      <div className="font-black text-bauhaus-black text-lg">{row.contract_count ?? 0}</div>
+                    </div>
+                    <div>
+                      <div className="text-bauhaus-muted uppercase tracking-widest font-black mb-1">Govt Buyers</div>
+                      <div className="font-black text-bauhaus-black text-lg">{row.distinct_govt_buyers ?? 0}</div>
+                    </div>
+                    <div>
+                      <div className="text-bauhaus-muted uppercase tracking-widest font-black mb-1">Board Connections</div>
+                      <div className="font-black text-bauhaus-black text-lg">{row.board_connections ?? 0}</div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
       </section>
 
       {/* SECTION 3 — Directors with full portfolios */}
@@ -633,6 +779,23 @@ export default async function FeccaEccvPage() {
                     )}
                   </div>
 
+                  {(rep.total_beneficiaries != null || rep.programs_delivered != null) && (
+                    <div className="grid grid-cols-2 gap-2 mb-3 border-b-2 border-bauhaus-black pb-3">
+                      {rep.total_beneficiaries != null && (
+                        <div>
+                          <div className="text-xs uppercase tracking-widest text-bauhaus-muted font-black">Beneficiaries</div>
+                          <div className="font-black text-2xl text-bauhaus-black tabular-nums">{rep.total_beneficiaries.toLocaleString()}</div>
+                        </div>
+                      )}
+                      {rep.programs_delivered != null && (
+                        <div>
+                          <div className="text-xs uppercase tracking-widest text-bauhaus-muted font-black">Programs</div>
+                          <div className="font-black text-2xl text-bauhaus-black tabular-nums">{rep.programs_delivered}</div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {rep.programs_mentioned && rep.programs_mentioned.length > 0 && (
                     <div className="mb-3">
                       <div className="text-xs uppercase tracking-widest font-black text-bauhaus-muted mb-1">Programs Mentioned</div>
@@ -646,10 +809,33 @@ export default async function FeccaEccvPage() {
                     </div>
                   )}
 
+                  {rep.top_funders_mentioned && rep.top_funders_mentioned.length > 0 && (
+                    <div className="mb-3">
+                      <div className="text-xs uppercase tracking-widest font-black text-bauhaus-muted mb-1">Funders / Agencies Cited</div>
+                      <div className="flex flex-wrap gap-1">
+                        {rep.top_funders_mentioned.slice(0, 6).map((f, i) => (
+                          <span key={i} className="text-xs font-black uppercase tracking-widest bg-bauhaus-blue text-white px-2 py-1">
+                            {f}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {rep.impact_summary && (
                     <p className="text-sm text-bauhaus-black font-medium leading-relaxed mt-3 border-l-4 border-bauhaus-yellow pl-3 py-1">
                       {rep.impact_summary}
                     </p>
+                  )}
+
+                  {rep.key_quotes && rep.key_quotes.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      {rep.key_quotes.slice(0, 2).map((q, i) => (
+                        <blockquote key={i} className="text-xs italic text-bauhaus-black font-medium leading-relaxed border-l-4 border-bauhaus-red pl-3 py-1">
+                          &ldquo;{q}&rdquo;
+                        </blockquote>
+                      ))}
+                    </div>
                   )}
 
                   <div className="flex gap-4 mt-4 pt-3 border-t-2 border-bauhaus-black text-xs font-mono text-bauhaus-muted">
