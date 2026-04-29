@@ -709,29 +709,23 @@ export default async function FeccaEccvPage() {
         )}
       </section>
 
-      {/* Action panel */}
+      {/* Action panel — what's done */}
       <section className="mb-12 border-4 border-bauhaus-black p-8 bg-bauhaus-yellow">
-        <h2 className="text-xl font-black text-bauhaus-black uppercase tracking-tight mb-4">Fill The Gaps</h2>
-        <ol className="space-y-3 text-bauhaus-black font-medium list-decimal list-inside text-sm">
-          <li>
-            <span className="font-black">Get ECCV directors</span> — run the ACNC people scraper for ABN {ECCV_ABN}.
-          </li>
-          <li>
-            <span className="font-black">Scrape annual reports</span> — run{' '}
-            <code className="bg-bauhaus-black text-bauhaus-yellow px-2 py-0.5 text-xs">scrape-charity-annual-reports</code>{' '}
-            for both ABNs to populate this section.
-          </li>
-          <li>
-            <span className="font-black">See ECCV&apos;s state-grant pipeline</span> — drop VMC + DFFH grant register CSVs into{' '}
-            <code className="bg-bauhaus-black text-bauhaus-yellow px-2 py-0.5 text-xs">data/vic-grants-awarded/</code>{' '}
-            then run <code className="bg-bauhaus-black text-bauhaus-yellow px-2 py-0.5 text-xs">import-vic-grants-awarded</code>.
-          </li>
-          <li>
-            <span className="font-black">Bridge to entity graph</span> — run{' '}
-            <code className="bg-bauhaus-black text-bauhaus-yellow px-2 py-0.5 text-xs">bridge-funding-relationships --apply</code>{' '}
-            so VIC awards appear on the <Link href={`/org/${r.eccv?.gs_id ?? ''}`} className="underline">ECCV org page</Link>.
-          </li>
-        </ol>
+        <h2 className="text-xl font-black text-bauhaus-black uppercase tracking-tight mb-4">What&apos;s Done · What&apos;s Next</h2>
+        <ul className="space-y-3 text-bauhaus-black font-medium text-sm">
+          <li className="flex gap-3"><span className="font-black text-bauhaus-blue">✓ DONE</span><span><span className="font-black">ECCV directors</span> — 10 board members synced from <code className="bg-bauhaus-black text-bauhaus-yellow px-1 text-xs">eccv.org.au/about/board</code> (ACNC withholds responsible-person data publicly for ECCV).</span></li>
+          <li className="flex gap-3"><span className="font-black text-bauhaus-blue">✓ DONE</span><span><span className="font-black">Annual reports</span> — 7 reports scraped (4 FECCA, 3 ECCV) into <code className="bg-bauhaus-black text-bauhaus-yellow px-1 text-xs">charity_impact_reports</code> with topic flags + programs.</span></li>
+          <li className="flex gap-3"><span className="font-black text-bauhaus-blue">✓ DONE</span><span><span className="font-black">VIC state-grant pipeline</span> — DFFH + DPC 2023-24 annual reports parsed via Claude Haiku tool-use → 1,002 grants, $202M into <code className="bg-bauhaus-black text-bauhaus-yellow px-1 text-xs">vic_grants_awarded</code>. ECCV&apos;s $962,500 visible in §6.</span></li>
+          <li className="flex gap-3"><span className="font-black text-bauhaus-blue">✓ DONE</span><span><span className="font-black">Bridge to entity graph</span> — 199 grant edges in <code className="bg-bauhaus-black text-bauhaus-yellow px-1 text-xs">gs_relationships</code>. Visible on <Link href={`/org/${r.eccv?.gs_id ?? ''}`} className="underline">ECCV org page</Link> + <Link href="/graph" className="underline">/graph</Link>.</span></li>
+          <li className="flex gap-3"><span className="font-black text-bauhaus-blue">✓ DONE</span><span><span className="font-black">FECCA AIS gap closed</span> — pulled FY2025 financials from ACNC Dynamics API directly ($4.97M govt revenue). National-peak card now populated.</span></li>
+        </ul>
+        <h3 className="text-xs font-black uppercase tracking-widest text-bauhaus-black mt-6 mb-2">Easy follow-ups</h3>
+        <ul className="space-y-2 text-bauhaus-black font-medium text-sm">
+          <li>• Run <code className="bg-bauhaus-black text-bauhaus-yellow px-1 text-xs">scrape-vic-dept-annual-reports --dept=djsir</code> + <code className="bg-bauhaus-black text-bauhaus-yellow px-1 text-xs">--dept=djcs</code> for full VIC coverage (~$0.05/run via Haiku).</li>
+          <li>• Re-run for 2021-22 + 2022-23 annual reports to build a 3-year time series.</li>
+          <li>• Add NSW + QLD: same pattern, different department configs in <code className="bg-bauhaus-black text-bauhaus-yellow px-1 text-xs">DEPT_CONFIG</code>.</li>
+          <li>• Fuzzy-name link the unlinked 79% of grants (apostrophes, &ldquo;Inc&rdquo;/&ldquo;Ltd&rdquo; suffixes) via a name-canonicaliser pass.</li>
+        </ul>
       </section>
     </div>
   );
