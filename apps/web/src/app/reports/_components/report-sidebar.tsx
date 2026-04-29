@@ -3,25 +3,68 @@
 import { useState, useEffect, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { reportSections, bottomLinks, type NavItem, type NavSection } from './sidebar-nav-data';
+import {
+  reportSections,
+  bottomLinks,
+  reportStatusMeta,
+  type NavItem,
+  type NavSection,
+  type ReportStatus,
+} from './sidebar-nav-data';
 
 const STORAGE_KEY = 'cg-report-sidebar-collapsed';
 const RECENT_KEY = 'cg-report-recent';
 const RECENT_MAX = 5;
 
 const SECTION_ABBR: Record<string, string> = {
+  'Current Map': 'CM',
   'Youth Justice': 'YJ',
   'Child Protection': 'CP',
   'Disability': 'DIS',
   'Education': 'ED',
+  'Cross-System': 'CS',
   'Accountability & Power': 'AP',
   'Funding & Equity': 'FE',
   'Social Sector': 'SS',
   'Philanthropy & Corporate': 'PC',
+  'Research & Procurement': 'RP',
   'Data & System': 'DS',
 };
 
 type RecentEntry = { href: string; label: string; section: string };
+
+const STATUS_BADGE_CLASS: Record<ReportStatus, string> = {
+  current: 'border-bauhaus-blue text-bauhaus-blue bg-blue-50',
+  reference: 'border-gray-300 text-gray-500 bg-white',
+  review: 'border-bauhaus-red text-bauhaus-red bg-red-50',
+  archive: 'border-gray-400 text-gray-500 bg-gray-100',
+};
+
+function StatusBadge({ status }: { status?: ReportStatus }) {
+  if (!status) return null;
+  return (
+    <span
+      className={`ml-auto shrink-0 border px-1.5 py-0.5 text-[8px] font-black uppercase tracking-widest ${STATUS_BADGE_CLASS[status]}`}
+      title={reportStatusMeta[status].description}
+    >
+      {reportStatusMeta[status].label}
+    </span>
+  );
+}
+
+function StatusLegend() {
+  return (
+    <div className="mx-3 my-2 border border-bauhaus-black/10 bg-bauhaus-canvas px-3 py-2">
+      <div className="mb-1 text-[9px] font-black uppercase tracking-widest text-bauhaus-black">
+        Review status
+      </div>
+      <div className="space-y-1 text-[10px] leading-snug text-gray-500">
+        <div><span className="font-black text-bauhaus-blue">Current</span> means use now.</div>
+        <div><span className="font-black text-bauhaus-red">Review</span> means check dates and figures first.</div>
+      </div>
+    </div>
+  );
+}
 
 /* ── Helpers ── */
 
@@ -152,7 +195,7 @@ function NavLink({
         <Link
           href={item.href}
           className={`
-            flex-1 block py-1.5 pr-3 text-[13px] leading-tight transition-colors
+            flex-1 block min-w-0 py-1.5 pr-3 text-[13px] leading-tight transition-colors
             ${pl}
             ${active
               ? 'border-l-4 border-bauhaus-red bg-red-50/40 font-black text-bauhaus-black'
@@ -160,7 +203,15 @@ function NavLink({
             }
           `}
         >
-          {item.label}
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span className="truncate">{item.label}</span>
+            <StatusBadge status={item.status} />
+          </span>
+          {item.note && (
+            <span className="mt-0.5 block truncate text-[10px] font-medium text-gray-400">
+              {item.note}
+            </span>
+          )}
         </Link>
         {hasChildren && (
           <button
@@ -307,6 +358,8 @@ export function ReportSidebar() {
 
       {/* Recently Viewed */}
       <RecentlyViewed pathname={pathname} />
+
+      <StatusLegend />
 
       {/* Sections */}
       <div className="flex-1 overflow-y-auto py-2">

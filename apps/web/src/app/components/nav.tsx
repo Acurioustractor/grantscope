@@ -2,11 +2,16 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { AccountDropdown } from './account-dropdown';
-import { GlobalSearch } from './global-search';
 import { isAdminEmail } from '@/lib/admin';
 import type { Tier, Module } from '@/lib/subscription';
 import { hasModule, TIER_LABELS, minimumTier } from '@/lib/subscription';
+
+const GlobalSearch = dynamic(
+  () => import('./global-search').then(mod => mod.GlobalSearch),
+  { loading: () => null }
+);
 
 /* ─── Public (logged-out) nav ─────────────────────────────── */
 
@@ -339,7 +344,7 @@ export function NavBar({ initialUserEmail, subscriptionTier = 'community', isImp
             </div>
           )}
         </nav>
-        <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
+        {searchOpen && <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />}
       </>
     );
   }
@@ -489,7 +494,7 @@ export function NavBar({ initialUserEmail, subscriptionTier = 'community', isImp
           </div>
         </div>
       )}
-      <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
+      {searchOpen && <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />}
     </nav>
   );
 }

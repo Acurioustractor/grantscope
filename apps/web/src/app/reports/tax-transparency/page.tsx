@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/report-supabase';
 import Link from 'next/link';
 import { ReportCTA } from '../_components/report-cta';
 

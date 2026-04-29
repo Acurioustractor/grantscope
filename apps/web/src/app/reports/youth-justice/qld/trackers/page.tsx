@@ -1,20 +1,10 @@
 import Link from 'next/link';
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/report-supabase';
 import { safe } from '@/lib/services/utils';
 import { fmt } from '@/lib/services/report-service';
+import { loadQldLocalTrackerSummaries, type TrackerSummaryRow } from '../tracker-fallback';
 
 export const revalidate = 3600;
-
-type TrackerSummaryRow = {
-  tracker_key: string;
-  event_count: number;
-  official_count: number;
-  mirrored_count: number;
-  gap_count: number;
-  latest_event_date: string | null;
-  first_title: string | null;
-  first_summary: string | null;
-};
 
 function titleFromKey(key: string) {
   return key.replaceAll('-', ' ');
@@ -80,7 +70,7 @@ async function getData() {
     supabase.rpc('exec_sql', { query }) as PromiseLike<{ data: TrackerSummaryRow[] | null; error: unknown }>,
     'qld tracker index',
   );
-  return result ?? [];
+  return result?.length ? result : loadQldLocalTrackerSummaries();
 }
 
 export default async function QldYouthJusticeTrackersIndexPage() {
@@ -98,10 +88,50 @@ export default async function QldYouthJusticeTrackersIndexPage() {
         <div className="mb-1 mt-4 text-xs font-black uppercase tracking-widest text-bauhaus-red">Tracker Registry</div>
         <h1 className="text-3xl font-black text-bauhaus-black sm:text-4xl">QLD Youth Justice Accountability Trackers</h1>
         <p className="mt-3 max-w-4xl text-base font-medium leading-relaxed text-bauhaus-muted sm:text-lg">
-          Generic tracker surfaces backed by <code>tracker_evidence_events</code>. Add a new tracker manifest and sync it, and it
-          appears here automatically without another custom page.
+          Evidence chains for the QLD youth justice story. This uses synced <code>tracker_evidence_events</code> rows when they are
+          available and falls back to the local tracker manifests, so the registry still gets people to the working surfaces while the
+          database mirror catches up.
         </p>
       </div>
+
+      <section className="mb-8 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+        {[
+          {
+            href: '/reports/youth-justice/qld',
+            label: 'QLD report',
+            body: 'Return to the state overview, delivery ledger, funding, outcomes, and evidence coverage.',
+          },
+          {
+            href: '/reports/youth-justice/qld/announcements',
+            label: 'Announcements',
+            body: 'Open the public commitments one at a time and resolve what has actually reached providers.',
+          },
+          {
+            href: '/reports/youth-justice/qld/announcements/services',
+            label: 'Supplier map',
+            body: 'See all named services, ABNs, contact paths, unresolved placeholders, and overlaps.',
+          },
+          {
+            href: '/reports/youth-justice/qld/watchhouse-data',
+            label: 'Watch-house data',
+            body: 'Open the QPS 6am and 6pm custody count beside detention, remand, court, order and support context.',
+          },
+          {
+            href: '/reports/youth-justice/qld/crime-prevention-schools',
+            label: 'Schools dossier',
+            body: 'Use the deeper investigation when the question is tender trails and school operators.',
+          },
+        ].map((route) => (
+          <Link
+            key={route.href}
+            href={route.href}
+            className="group block rounded-sm border-2 border-bauhaus-black bg-white p-4 transition-colors hover:bg-bauhaus-black hover:text-white"
+          >
+            <div className="text-xs font-black uppercase tracking-widest text-bauhaus-blue group-hover:text-white">{route.label}</div>
+            <p className="mt-2 text-sm leading-relaxed text-bauhaus-muted group-hover:text-white/75">{route.body}</p>
+          </Link>
+        ))}
+      </section>
 
       <div className="mb-8 grid grid-cols-2 gap-4 xl:grid-cols-4">
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-center">
@@ -129,7 +159,7 @@ export default async function QldYouthJusticeTrackersIndexPage() {
       </div>
 
       <div className="space-y-4">
-        {trackers.map((tracker) => (
+        {trackers.length > 0 ? trackers.map((tracker) => (
           <Link
             key={tracker.tracker_key}
             href={`/reports/youth-justice/qld/trackers/${tracker.tracker_key}`}
@@ -171,7 +201,23 @@ export default async function QldYouthJusticeTrackersIndexPage() {
               Open tracker &rarr;
             </div>
           </Link>
-        ))}
+        )) : (
+          <div className="rounded-sm border-4 border-bauhaus-black bg-white p-6">
+            <div className="text-xs font-black uppercase tracking-widest text-bauhaus-red">No tracker evidence loaded</div>
+            <p className="mt-2 max-w-3xl text-sm leading-relaxed text-bauhaus-muted">
+              No synced rows or local QLD tracker manifests were found. The next route should be the announcement register or supplier map
+              until a tracker manifest is added.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <Link href="/reports/youth-justice/qld/announcements" className="border-2 border-bauhaus-black px-4 py-2 text-xs font-black uppercase tracking-widest hover:bg-bauhaus-black hover:text-white">
+                Open announcements
+              </Link>
+              <Link href="/reports/youth-justice/qld/announcements/services" className="border-2 border-bauhaus-black px-4 py-2 text-xs font-black uppercase tracking-widest hover:bg-bauhaus-black hover:text-white">
+                Open supplier map
+              </Link>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

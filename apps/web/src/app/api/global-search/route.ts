@@ -6,6 +6,9 @@ import * as FoundationService from '@/lib/services/foundation-service';
 
 export const dynamic = 'force-dynamic';
 
+const FUNDING_SEARCH_TERMS =
+  /\b(grant|grants|fund|funding|foundation|foundations|program|programs|fellowship|fellowships|award|awards|scholarship|scholarships|philanthropy|philanthropic)\b/i;
+
 export async function GET(req: NextRequest) {
 
   const q = req.nextUrl.searchParams.get('q')?.trim();
@@ -17,34 +20,23 @@ export async function GET(req: NextRequest) {
 
   const db = getServiceSupabase();
 
-  // Parallel search across entities, grants, and foundations
-  const [entityResults, grantResults, foundationResults] = await Promise.all([
-    EntityService.search(db, q, Math.min(limit, 10)),
-    GrantService.search(db, q, 5),
-    FoundationService.search(db, q, 5),
-  ]);
-
-  // Enrich entities with relationship counts from MV
-  const entityIds = entityResults.data.map(e => e.id);
-  let statsMap = new Map<string, { total_relationships: number; type_breakdown: Record<string, { count: number; amount: number }> }>();
-  if (entityIds.length > 0) {
-    const { data: statsData } = await db
-      .from('mv_gs_entity_stats')
-      .select('id, total_relationships, type_breakdown')
-      .in('id', entityIds);
-    for (const s of statsData || []) {
-      statsMap.set(s.id, { total_relationships: s.total_relationships, type_breakdown: s.type_breakdown || {} });
-    }
-  }
+  // Entity lookup is the homepage typeahead's fast path. Broad ILIKE scans over
+  // grants/foundations can hit database statement timeouts, so only search those
+  // lanes when the wording suggests a funding query.
+  const entityResults = await EntityService.search(db, q, Math.min(limit, 10));
+  const shouldSearchFunding = FUNDING_SEARCH_TERMS.test(q);
+  const [grantResults, foundationResults] = shouldSearchFunding
+    ? await Promise.all([
+        GrantService.search(db, q, 5),
+        FoundationService.search(db, q, 5),
+      ])
+    : [
+        { data: [], error: null },
+        { data: [], error: null },
+      ];
 
   const entities = (entityResults.data).map((e, i) => {
-    const st = statsMap.get(e.id);
-    const tb = st?.type_breakdown || {};
-    const systems: string[] = [];
-    if ((tb['contract:inbound']?.count ?? 0) > 0 || (tb['contract:outbound']?.count ?? 0) > 0) systems.push('procurement');
-    if ((tb['grant:inbound']?.count ?? 0) > 0) systems.push('grants');
-    if ((tb['donation:outbound']?.count ?? 0) > 0) systems.push('donations');
-    const rels = st?.total_relationships ?? 0;
+    const sourceWeight = Math.min(e.source_count ?? 0, 5);
     return {
       type: 'entity' as const,
       id: e.gs_id,
@@ -54,11 +46,11 @@ export async function GET(req: NextRequest) {
       state: e.state,
       sourceCount: e.source_count,
       revenue: e.latest_revenue,
-      relationships: rels,
-      systems,
+      relationships: 0,
+      systems: [] as string[],
       href: `/entities/${e.gs_id}`,
-      // Blend fuzzy rank with relationship weight for relevance
-      _score: (entityResults.data.length - i) + Math.min(Math.log10(rels + 1) * 3, 15),
+      // Keep the typeahead response lean; detail pages can load relationship stats.
+      _score: (entityResults.data.length - i) + sourceWeight,
     };
   });
 

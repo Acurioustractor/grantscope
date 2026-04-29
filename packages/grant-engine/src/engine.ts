@@ -149,6 +149,7 @@ export class GrantEngine {
     for await (const event of this.registry.discoverAll(query, sourcesUsed)) {
       if (event.kind === 'grant') {
         const canonical = normalize(event.grant);
+        if (!this.isUsableGrantCandidate(canonical)) continue;
         allRaw.push(canonical);
         continue;
       }
@@ -234,6 +235,15 @@ export class GrantEngine {
 
     this.log(`[GrantScope] Complete: ${grantsNew} new, ${grantsUpdated} updated, ${errors.length} errors`);
     return result;
+  }
+
+  private isUsableGrantCandidate(grant: CanonicalGrant): boolean {
+    const text = `${grant.name} ${grant.provider} ${grant.description || ''}`.toLowerCase();
+
+    if (!grant.name || grant.name.length < 5) return false;
+    if (/demo\s+go\s+to\s+test|test\s+document\s+download|a\s+testing\s+agency/.test(text)) return false;
+
+    return true;
   }
 
   /**

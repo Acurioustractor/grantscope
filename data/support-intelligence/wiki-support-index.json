@@ -1,0 +1,3648 @@
+{
+  "generated_at": "2026-04-28T03:21:17.399Z",
+  "generated_by": "scripts/build-wiki-support-index.mjs",
+  "source_roots": {
+    "grantscope": "/Users/benknight/Code/grantscope",
+    "goods": "/Users/benknight/Code/Goods Asset Register",
+    "act_global_infrastructure": "/Users/benknight/Code/act-global-infrastructure"
+  },
+  "summary": {
+    "project_count": 6,
+    "route_count": 12,
+    "support_action_count": 12,
+    "source_document_count": 14,
+    "route_counts": {
+      "procurement": 1,
+      "foundation": 2,
+      "grant": 6,
+      "capital": 1,
+      "evidence": 1,
+      "systems": 1
+    },
+    "primary_use": "Use this index to turn ACT/Goods wiki context into GrantScope search terms, source expansion, project pipeline actions, and application evidence packs."
+  },
+  "ten_area_framework": [
+    "Vision and ambition",
+    "Social objective and impact",
+    "Business model clarity",
+    "Financial management and performance",
+    "Strategic planning and risk",
+    "Process and technology maturity",
+    "Governance, data and reporting",
+    "People and organisation",
+    "Legal structure",
+    "Investors and capital raising"
+  ],
+  "cross_project_terms": [
+    "social enterprise",
+    "First Nations enterprise",
+    "community-controlled",
+    "place-based funding",
+    "impact investment",
+    "procurement pathway",
+    "foundation relationship",
+    "evidence pack",
+    "regional resilience",
+    "circular economy",
+    "Indigenous data sovereignty",
+    "systems change",
+    "remote communities",
+    "community infrastructure"
+  ],
+  "project_code_map": {
+    "_meta": {
+      "description": "ACT Unified Project Codes - Use these codes across ALL systems",
+      "version": "1.8.0",
+      "updated": "2026-04-24",
+      "systems": [
+        "notion",
+        "supabase",
+        "ghl",
+        "xero",
+        "dext",
+        "empathy-ledger",
+        "alma",
+        "syndication"
+      ],
+      "status_values": [
+        "active",
+        "ideation",
+        "sunsetting",
+        "archived",
+        "transferred"
+      ],
+      "tier_values": [
+        "ecosystem",
+        "studio",
+        "satellite"
+      ],
+      "tier_descriptions": {
+        "ecosystem": "The 5 core ACT ecosystem projects — these are the platforms",
+        "studio": "Art, storytelling, and creative projects that feed life into the ecosystem — if art isn't being made and stories aren't being told, the whole system dies",
+        "satellite": "Supporting projects, partnerships, and community initiatives"
+      },
+      "art_medium_values": [
+        "installation",
+        "photography",
+        "film",
+        "interactive",
+        "sculpture",
+        "painting",
+        "performance",
+        "residency",
+        "exhibition",
+        "making"
+      ],
+      "art_tag_values": [
+        "community-portrait",
+        "immersive",
+        "participatory",
+        "justice-art",
+        "cultural-preservation",
+        "public-art",
+        "social-practice",
+        "documentary",
+        "land-art",
+        "digital"
+      ]
+    },
+    "projects": {
+      "ACT-JH": {
+        "name": "JusticeHub",
+        "code": "ACT-JH",
+        "canonical_slug": "justicehub",
+        "category": "justice",
+        "tier": "ecosystem",
+        "priority": "high",
+        "status": "active",
+        "description": "Youth justice reform network",
+        "leads": [
+          "Ben Knight",
+          "Nic Marchesi"
+        ],
+        "notion_page_id": "179ebcf9-81cf-8005-ad63-d2a736280011",
+        "notion_pages": [
+          "JusticeHub",
+          "Justice Hub Network",
+          "JusticeHub - Centre of Excellence"
+        ],
+        "ghl_tags": [
+          "justicehub",
+          "justice",
+          "youth justice",
+          "youth-justice"
+        ],
+        "xero_tracking": "ACT-JH — JusticeHub",
+        "xero_tracking_aliases": [
+          "JusticeHub",
+          "Confit"
+        ],
+        "dext_category": "Justice Projects",
+        "alma_program": "justice-reform",
+        "github_repo": "Acurioustractor/justicehub-platform",
+        "lcaa_themes": [
+          "Listen",
+          "Connect",
+          "Act",
+          "Amplify"
+        ],
+        "syndication_slug": "act_jh",
+        "production_url": "https://www.justicehub.com.au"
+      },
+      "ACT-DG": {
+        "name": "Diagrama",
+        "code": "ACT-DG",
+        "canonical_slug": "diagrama",
+        "category": "justice",
+        "priority": "high",
+        "status": "active",
+        "description": "Alternative education and rehabilitation",
+        "leads": [
+          "Tina Morris",
+          "Kristy Bloomfield"
+        ],
+        "notion_page_id": "179ebcf9-81cf-8076-95f2-e39db7b980a5",
+        "notion_pages": [
+          "Diagrama"
+        ],
+        "ghl_tags": [
+          "diagrama"
+        ],
+        "xero_tracking": "ACT-DG — Diagrama",
+        "dext_category": "Justice Projects",
+        "alma_program": "education-rehab"
+      },
+      "ACT-GD": {
+        "name": "Goods",
+        "code": "ACT-GD",
+        "canonical_slug": "goods",
+        "slug_aliases": [
+          "goods-on-country"
+        ],
+        "category": "enterprise",
+        "tier": "ecosystem",
+        "priority": "high",
+        "status": "active",
+        "description": "Social enterprise marketplace",
+        "leads": [
+          "Maddi Alderuccio"
+        ],
+        "notion_page_id": "177ebcf9-81cf-805f-b111-f407079f9794",
+        "notion_pages": [
+          "Goods."
+        ],
+        "ghl_tags": [
+          "goods"
+        ],
+        "xero_tracking": "ACT-GD — Goods",
+        "xero_tracking_aliases": [
+          "Goods",
+          "Goods."
+        ],
+        "dext_category": "Social Enterprise",
+        "alma_program": "economic-empowerment",
+        "github_repo": "Acurioustractor/goods-asset-tracker",
+        "syndication_slug": "act_gd",
+        "production_url": "https://www.goodsoncountry.com"
+      },
+      "ACT-EL": {
+        "name": "Empathy Ledger",
+        "code": "ACT-EL",
+        "canonical_slug": "empathy-ledger",
+        "category": "stories",
+        "tier": "ecosystem",
+        "priority": "high",
+        "status": "active",
+        "description": "Story collection platform",
+        "leads": [
+          "Ben Knight"
+        ],
+        "notion_page_id": "187ebcf9-81cf-8032-a28f-db8b76442ecd",
+        "notion_pages": [
+          "Empathy Ledger",
+          "Empathy Ledger Platform"
+        ],
+        "ghl_tags": [
+          "empathy-ledger",
+          "empathy ledger",
+          "empathy",
+          "storytelling",
+          "storyteller"
+        ],
+        "xero_tracking": "ACT-EL — Empathy Ledger",
+        "xero_tracking_aliases": [
+          "Empathy Ledger"
+        ],
+        "dext_category": "Technology",
+        "alma_program": "storytelling",
+        "github_repo": "Acurioustractor/empathy-ledger-v2",
+        "lcaa_themes": [
+          "Listen",
+          "Amplify"
+        ],
+        "syndication_slug": "act_el",
+        "production_url": "https://www.empathyledger.com"
+      },
+      "ACT-CORE": {
+        "name": "ACT Regenerative Studio",
+        "code": "ACT-CORE",
+        "canonical_slug": "act-studio",
+        "slug_aliases": [
+          "act-regenerative-studio",
+          "act-place",
+          "act.place"
+        ],
+        "category": "ecosystem",
+        "tier": "ecosystem",
+        "priority": "high",
+        "status": "active",
+        "description": "Public hub, living wiki, and coordination layer for the ACT ecosystem",
+        "leads": [
+          "Ben Knight",
+          "Nic Marchesi"
+        ],
+        "notion_pages": [
+          "ACT Regenerative Studio"
+        ],
+        "ghl_tags": [
+          "act",
+          "studio",
+          "act-studio"
+        ],
+        "xero_tracking": "ACT-CORE — ACT Regenerative Studio",
+        "xero_tracking_aliases": [
+          "ACT",
+          "ACT Studio",
+          "ACT Core"
+        ],
+        "dext_category": "Operations",
+        "alma_program": "ecosystem-infrastructure",
+        "github_repo": "Acurioustractor/act-regenerative-studio",
+        "lcaa_themes": [
+          "Connect",
+          "Act",
+          "Amplify"
+        ],
+        "syndication_slug": "act_core",
+        "production_url": "https://act.place"
+      },
+      "ACT-PI": {
+        "name": "PICC",
+        "code": "ACT-PI",
+        "canonical_slug": "picc",
+        "legacy_codes": [
+          "ACT-PC"
+        ],
+        "category": "indigenous",
+        "tier": "studio",
+        "priority": "high",
+        "status": "active",
+        "description": "Palm Island Community Company",
+        "notion_pages": [
+          "PICC Centre Precinct",
+          "PICC Photo Kiosk / Server"
+        ],
+        "notion_ids": {
+          "centre_precinct": "253ebcf9-81cf-80e8-a8a8-d5dc42530cc5",
+          "photo_kiosk": "22eebcf9-81cf-8002-abe6-d81960ea19da"
+        },
+        "ghl_tags": [
+          "picc",
+          "palm-island"
+        ],
+        "xero_tracking": "ACT-PI — PICC",
+        "xero_tracking_aliases": [
+          "PICC",
+          "PICC Centre",
+          "PICC Annual Report"
+        ],
+        "dext_category": "Indigenous Projects",
+        "alma_program": "first-nations",
+        "github_repo": "Acurioustractor/palm-island-repository",
+        "cultural_protocols": true,
+        "sub_projects": [
+          "ACT-PS",
+          "ACT-SS",
+          "ACT-UA",
+          "ACT-ER"
+        ],
+        "syndication_slug": "act_pi",
+        "production_url": "https://picc.studio"
+      },
+      "ACT-ER": {
+        "name": "PICC Elders Room",
+        "code": "ACT-ER",
+        "canonical_slug": "picc-elders-hull-river",
+        "category": "indigenous",
+        "priority": "high",
+        "status": "archived",
+        "description": "Hull River Elders video premiere, Elders Room launch, and PICC Annual Report - honouring elders through storytelling and cultural spaces",
+        "parent_project": "ACT-PI",
+        "notion_pages": [
+          "PICC Elders' trip to Hull River in October",
+          "PICC Annual Report"
+        ],
+        "notion_ids": {
+          "hull_river": "261ebcf9-81cf-8009-b935-d0224f7ae130",
+          "annual_report": "22eebcf9-81cf-808f-bad4-f9e0a6640252"
+        },
+        "ghl_tags": [
+          "picc",
+          "palm-island",
+          "elders-room",
+          "hull-river",
+          "annual-report"
+        ],
+        "xero_tracking": "ACT-ER — PICC Elders Room",
+        "xero_tracking_aliases": [
+          "PICC"
+        ],
+        "dext_category": "Indigenous Projects",
+        "alma_program": "first-nations",
+        "cultural_protocols": true,
+        "lcaa_themes": [
+          "Listen",
+          "Amplify"
+        ],
+        "launch_date": "2026-02-07",
+        "funding": {
+          "hull_river": 60000,
+          "annual_report": 70000,
+          "total": 130000
+        },
+        "key_deliverables": [
+          "Hull River Elders video premiere",
+          "Elder portraits for wall display",
+          "Elders Room naming consultation",
+          "Elder quotes collection",
+          "PICC Annual Report connection"
+        ]
+      },
+      "ACT-PS": {
+        "name": "PICC On Country Photo Studio",
+        "code": "ACT-PS",
+        "canonical_slug": "picc-on-country-photo-studio",
+        "category": "indigenous",
+        "tier": "studio",
+        "priority": "high",
+        "status": "active",
+        "description": "Mobile photo studio for Palm Island community storytelling",
+        "parent_project": "ACT-PI",
+        "notion_pages": [
+          "PICC On Country Photo Studio"
+        ],
+        "ghl_tags": [
+          "picc",
+          "palm-island",
+          "photo-studio"
+        ],
+        "art_medium": [
+          "photography",
+          "installation"
+        ],
+        "art_tags": [
+          "community-portrait",
+          "cultural-preservation",
+          "participatory"
+        ],
+        "xero_tracking": "ACT-PS — PICC Photo Studio",
+        "xero_tracking_aliases": [
+          "PICC Photo Studio"
+        ],
+        "dext_category": "Indigenous Projects",
+        "alma_program": "first-nations",
+        "cultural_protocols": true,
+        "lcaa_themes": [
+          "Listen",
+          "Amplify"
+        ]
+      },
+      "ACT-SS": {
+        "name": "Storm Stories",
+        "code": "ACT-SS",
+        "canonical_slug": "storm-stories",
+        "category": "indigenous",
+        "priority": "high",
+        "status": "archived",
+        "description": "Documentary and storytelling project capturing Palm Island community resilience",
+        "parent_project": "ACT-PI",
+        "notion_pages": [
+          "PICC - Storm Stories",
+          "PICC Storm Stories"
+        ],
+        "notion_ids": {
+          "main": "178ebcf9-81cf-801c-8815-fb32a9259a1c"
+        },
+        "ghl_tags": [
+          "picc",
+          "palm-island",
+          "storm-stories"
+        ],
+        "xero_tracking": "ACT-SS — Storm Stories",
+        "xero_tracking_aliases": [
+          "PICC",
+          "PICC Storm Stories"
+        ],
+        "dext_category": "Indigenous Projects",
+        "alma_program": "first-nations",
+        "cultural_protocols": true,
+        "lcaa_themes": [
+          "Listen",
+          "Amplify"
+        ]
+      },
+      "ACT-MR": {
+        "name": "MingaMinga Rangers",
+        "code": "ACT-MR",
+        "canonical_slug": "mingaminga-rangers",
+        "category": "indigenous",
+        "priority": "medium",
+        "status": "archived",
+        "description": "Indigenous ranger program",
+        "notion_pages": [
+          "MingaMinga Rangers"
+        ],
+        "ghl_tags": [
+          "mingaminga",
+          "rangers"
+        ],
+        "xero_tracking": "ACT-MR — MingaMinga Rangers",
+        "xero_tracking_aliases": [
+          "MingaMinga"
+        ],
+        "dext_category": "Indigenous Projects",
+        "alma_program": "land-management",
+        "cultural_protocols": true
+      },
+      "ACT-UA": {
+        "name": "Uncle Allan Palm Island Art",
+        "code": "ACT-UA",
+        "canonical_slug": "uncle-allan-palm-island-art",
+        "category": "indigenous",
+        "tier": "studio",
+        "priority": "high",
+        "status": "active",
+        "description": "Indigenous art project",
+        "notion_pages": [
+          "Uncle Allan Palm Island Art"
+        ],
+        "ghl_tags": [
+          "uncle-allan",
+          "palm-island-art"
+        ],
+        "art_medium": [
+          "painting"
+        ],
+        "art_tags": [
+          "cultural-preservation",
+          "documentary"
+        ],
+        "xero_tracking": "ACT-UA — Uncle Allan Palm Island Art",
+        "xero_tracking_aliases": [
+          "Uncle Allan Art"
+        ],
+        "dext_category": "Indigenous Projects",
+        "alma_program": "cultural-arts",
+        "cultural_protocols": true
+      },
+      "ACT-MN": {
+        "name": "Maningrida",
+        "code": "ACT-MN",
+        "canonical_slug": "maningrida",
+        "category": "justice",
+        "priority": "high",
+        "status": "archived",
+        "description": "Justice reinvestment initiative",
+        "notion_page_id": "1e7ebcf9-81cf-8038-9969-ccc7fb897b43",
+        "notion_pages": [
+          "Maningrida - Justice Reinvestment"
+        ],
+        "ghl_tags": [
+          "maningrida"
+        ],
+        "xero_tracking": "ACT-MN — Maningrida",
+        "dext_category": "Justice Projects",
+        "alma_program": "justice-reinvestment",
+        "cultural_protocols": true
+      },
+      "ACT-FN": {
+        "name": "First Nations Youth Advocacy",
+        "code": "ACT-FN",
+        "canonical_slug": "first-nations-youth-advocacy",
+        "category": "justice",
+        "priority": "high",
+        "status": "archived",
+        "description": "Advocacy for First Nations young people",
+        "notion_pages": [
+          "First Nations Youth Advocacy"
+        ],
+        "ghl_tags": [
+          "first-nations",
+          "youth-advocacy"
+        ],
+        "xero_tracking": "ACT-FN — First Nations Youth Advocacy",
+        "xero_tracking_aliases": [
+          "FN Youth Advocacy"
+        ],
+        "dext_category": "Justice Projects",
+        "alma_program": "youth-advocacy",
+        "cultural_protocols": true
+      },
+      "ACT-FM": {
+        "name": "The Farm",
+        "code": "ACT-FM",
+        "canonical_slug": "act-farm",
+        "slug_aliases": [
+          "farm",
+          "the-farm"
+        ],
+        "category": "regenerative",
+        "tier": "ecosystem",
+        "priority": "high",
+        "status": "active",
+        "description": "Land-based healing and cultural connection",
+        "notion_pages": [
+          "The Farm",
+          "ACT Farm"
+        ],
+        "ghl_tags": [
+          "farm",
+          "the-farm"
+        ],
+        "xero_tracking": "ACT-FM — The Farm",
+        "xero_tracking_aliases": [
+          "The Farm"
+        ],
+        "dext_category": "Regenerative",
+        "alma_program": "land-healing",
+        "github_repo": "Acurioustractor/act-farm",
+        "production_url": "https://act-farm.vercel.app"
+      },
+      "ACT-HV": {
+        "name": "The Harvest Witta",
+        "code": "ACT-HV",
+        "canonical_slug": "the-harvest",
+        "slug_aliases": [
+          "harvest",
+          "theharvest"
+        ],
+        "category": "regenerative",
+        "tier": "ecosystem",
+        "priority": "high",
+        "status": "active",
+        "description": "Community hub with therapeutic horticulture and heritage preservation in Witta",
+        "notion_id": "11debcf9-81cf-8082-8fd0-d6031a9709f2",
+        "notion_pages": [
+          "The Harvest Witta",
+          "Witta Harvest HQ"
+        ],
+        "ghl_tags": [
+          "harvest",
+          "the-harvest",
+          "witta",
+          "grant"
+        ],
+        "xero_tracking": "ACT-HV — The Harvest Witta",
+        "xero_tracking_aliases": [
+          "The Harvest"
+        ],
+        "dext_category": "Regenerative",
+        "alma_program": "food-systems",
+        "github_repo": "Acurioustractor/theharvest",
+        "production_url": "https://www.theharvestwitta.com.au",
+        "syndication_slug": "act_hv",
+        "location": "9 Gumland Dr, Maleny QLD (601 Maleny Kenilworth Rd, Witta QLD 4552)",
+        "place": "Gubbi Gubbi Country",
+        "lead": "Nicholas Marchesi",
+        "landlord": "Sonas Properties Pty Ltd",
+        "lease_start": "2026-07-01",
+        "early_access_start": "2026-01-01",
+        "budget_config": "config/harvest-budget.json",
+        "capital_improvement_fund": 250000,
+        "base_rent_annual": 50000,
+        "cost_centres": [
+          "HV-Garden",
+          "HV-Siteworks",
+          "HV-Pavilion",
+          "HV-FireCook",
+          "HV-Kitchen",
+          "HV-MilkBar",
+          "HV-Theatre",
+          "HV-Workshop",
+          "HV-Amenities",
+          "HV-Staffing",
+          "HV-Design",
+          "HV-Contingency",
+          "HV-Ops"
+        ]
+      },
+      "ACT-CN": {
+        "name": "Contained",
+        "code": "ACT-CN",
+        "canonical_slug": "contained",
+        "category": "justice",
+        "tier": "studio",
+        "priority": "medium",
+        "status": "active",
+        "description": "Three-container experiential justice installation exploring what detention actually looks and feels like",
+        "notion_pages": [
+          "Contained"
+        ],
+        "ghl_tags": [
+          "contained"
+        ],
+        "art_medium": [
+          "installation"
+        ],
+        "art_tags": [
+          "immersive",
+          "justice-art",
+          "public-art"
+        ],
+        "xero_tracking": "ACT-CN — Contained",
+        "dext_category": "Social Enterprise",
+        "alma_program": "community-spaces"
+      },
+      "ACT-FO": {
+        "name": "Fishers Oysters",
+        "code": "ACT-FO",
+        "canonical_slug": "fishers-oysters",
+        "category": "regenerative",
+        "tier": "satellite",
+        "priority": "medium",
+        "status": "transferred",
+        "description": "Sustainable oyster farming",
+        "leads": [
+          "Shaun Fisher"
+        ],
+        "notion_pages": [
+          "Fishers Oysters"
+        ],
+        "ghl_tags": [
+          "fishers-oysters",
+          "fishers"
+        ],
+        "xero_tracking": "ACT-FO — Fishers Oysters",
+        "dext_category": "Regenerative",
+        "alma_program": "aquaculture",
+        "syndication_slug": "act_fo",
+        "production_url": "https://www.fishersoysters.com"
+      },
+      "ACT-SM": {
+        "name": "SMART",
+        "code": "ACT-SM",
+        "canonical_slug": "smart-recovery",
+        "category": "health",
+        "tier": "satellite",
+        "priority": "medium",
+        "status": "active",
+        "description": "Health and recovery initiatives",
+        "notion_pages": [
+          "SMART Connect",
+          "SMART Recovery",
+          "SMART HCP GP Uplift Project"
+        ],
+        "ghl_tags": [
+          "smart",
+          "smart-connect"
+        ],
+        "xero_tracking": "ACT-SM — SMART",
+        "xero_tracking_aliases": [
+          "SMART",
+          "Smart Stories"
+        ],
+        "dext_category": "Health",
+        "alma_program": "health-wellbeing"
+      },
+      "ACT-CF": {
+        "name": "The Confessional",
+        "code": "ACT-CF",
+        "canonical_slug": "the-confessional",
+        "slug_aliases": [
+          "confessional"
+        ],
+        "category": "arts",
+        "tier": "studio",
+        "priority": "medium",
+        "status": "active",
+        "description": "Safe space installation for sharing stories in confidence. Art piece creating conditions for truth-telling",
+        "notion_page_id": "229ebcf9-81cf-8004-b7ee-fe9a9683c75a",
+        "notion_pages": [
+          "The Confessional"
+        ],
+        "ghl_tags": [
+          "confessional"
+        ],
+        "art_medium": [
+          "installation",
+          "performance"
+        ],
+        "art_tags": [
+          "immersive",
+          "participatory",
+          "social-practice"
+        ],
+        "xero_tracking": "ACT-CF — The Confessional",
+        "xero_tracking_aliases": [
+          "Confessional"
+        ],
+        "dext_category": "Stories",
+        "alma_program": "storytelling",
+        "lcaa_themes": [
+          "Listen"
+        ]
+      },
+      "ACT-CM": {
+        "name": "CAMPFIRE",
+        "code": "ACT-CM",
+        "canonical_slug": "campfire",
+        "category": "justice",
+        "tier": "satellite",
+        "priority": "medium",
+        "status": "active",
+        "description": "Cultural immersion, fitness, and mentorship program for Indigenous youth in Mount Isa",
+        "leads": [
+          "Brodie Germaine"
+        ],
+        "notion_pages": [
+          "CAMPFIRE"
+        ],
+        "ghl_tags": [
+          "campfire",
+          "mount-isa"
+        ],
+        "xero_tracking": "ACT-CM — CAMPFIRE",
+        "xero_tracking_aliases": [
+          "Campfire",
+          "CAMPFIRE"
+        ],
+        "dext_category": "Justice Projects",
+        "alma_program": "youth-justice",
+        "lcaa_themes": [
+          "Listen",
+          "Act"
+        ],
+        "production_url": "https://campfire-website-amber.vercel.app"
+      },
+      "ACT-GP": {
+        "name": "Gold Phone",
+        "code": "ACT-GP",
+        "canonical_slug": "gold-phone",
+        "slug_aliases": [
+          "goldphone",
+          "gold.phone"
+        ],
+        "category": "arts",
+        "tier": "studio",
+        "priority": "medium",
+        "status": "active",
+        "description": "Hacked vintage payphone randomly connecting strangers globally. Thousands of authentic conversations documented",
+        "notion_pages": [
+          "Gold.Phone"
+        ],
+        "ghl_tags": [
+          "gold-phone",
+          "goldphone"
+        ],
+        "art_medium": [
+          "interactive",
+          "installation"
+        ],
+        "art_tags": [
+          "participatory",
+          "public-art",
+          "social-practice"
+        ],
+        "xero_tracking": "ACT-GP — Gold Phone",
+        "dext_category": "Arts",
+        "alma_program": "connection",
+        "lcaa_themes": [
+          "Listen",
+          "Connect"
+        ]
+      },
+      "ACT-MD": {
+        "name": "ACT Monthly Dinners",
+        "code": "ACT-MD",
+        "canonical_slug": "act-monthly-dinners",
+        "category": "community",
+        "tier": "satellite",
+        "priority": "medium",
+        "status": "active",
+        "description": "Monthly community gatherings",
+        "notion_pages": [
+          "ACT Monthly Dinners"
+        ],
+        "ghl_tags": [
+          "act-monthly",
+          "dinners"
+        ],
+        "xero_tracking": "ACT-MD — ACT Monthly Dinners",
+        "xero_tracking_aliases": [
+          "Monthly Dinners"
+        ],
+        "dext_category": "Events",
+        "alma_program": "community-building",
+        "lcaa_themes": [
+          "Connect"
+        ]
+      },
+      "ACT-QF": {
+        "name": "QFCC Empathy Ledger",
+        "code": "ACT-QF",
+        "canonical_slug": "qfcc-empathy-ledger",
+        "category": "stories",
+        "priority": "high",
+        "status": "archived",
+        "description": "Queensland Family & Child Commission",
+        "notion_page_id": "1d7ebcf9-81cf-8075-8112-d0809ea7b64c",
+        "notion_pages": [
+          "QFCC Empathy Ledger"
+        ],
+        "ghl_tags": [
+          "qfcc"
+        ],
+        "xero_tracking": "ACT-QF — QFCC Empathy Ledger",
+        "xero_tracking_aliases": [
+          "QFCC"
+        ],
+        "dext_category": "Stories",
+        "alma_program": "child-wellbeing"
+      },
+      "ACT-DD": {
+        "name": "Double Disadvantage",
+        "code": "ACT-DD",
+        "canonical_slug": "double-disadvantage",
+        "category": "justice",
+        "priority": "high",
+        "status": "archived",
+        "description": "Supporting young people with disabilities in justice system",
+        "notion_page_id": "1f8ebcf9-81cf-8070-a502-c5e9059a3c67",
+        "notion_pages": [
+          "The Double Disadvantage"
+        ],
+        "ghl_tags": [
+          "double-disadvantage"
+        ],
+        "xero_tracking": "ACT-DD — Double Disadvantage",
+        "dext_category": "Justice Projects",
+        "alma_program": "disability-justice"
+      },
+      "ACT-BM": {
+        "name": "Bimberi",
+        "code": "ACT-BM",
+        "canonical_slug": "bimberi",
+        "category": "justice",
+        "priority": "medium",
+        "status": "archived",
+        "description": "Youth detention holiday programs",
+        "notion_pages": [
+          "Bimberi - Holiday Programs"
+        ],
+        "ghl_tags": [
+          "bimberi"
+        ],
+        "xero_tracking": "ACT-BM — Bimberi",
+        "dext_category": "Justice Projects",
+        "alma_program": "youth-detention"
+      },
+      "ACT-AI": {
+        "name": "AIME",
+        "code": "ACT-AI",
+        "canonical_slug": "aime",
+        "category": "indigenous",
+        "priority": "medium",
+        "status": "archived",
+        "description": "AIME mentoring partnership",
+        "notion_pages": [
+          "AIME"
+        ],
+        "ghl_tags": [
+          "aime"
+        ],
+        "xero_tracking": "ACT-AI — AIME",
+        "dext_category": "Indigenous Projects",
+        "alma_program": "mentoring"
+      },
+      "ACT-JP": {
+        "name": "June's Patch",
+        "code": "ACT-JP",
+        "canonical_slug": "junes-patch",
+        "slug_aliases": [
+          "junes-patch",
+          "junes-patch-garden"
+        ],
+        "category": "regenerative",
+        "tier": "satellite",
+        "priority": "medium",
+        "status": "active",
+        "description": "Community garden project",
+        "notion_pages": [
+          "June's Patch"
+        ],
+        "ghl_tags": [
+          "junes-patch",
+          "patch"
+        ],
+        "xero_tracking": "ACT-JP — June's Patch",
+        "xero_tracking_aliases": [
+          "Junes Patch",
+          "June's Patch"
+        ],
+        "dext_category": "Regenerative",
+        "alma_program": "community-gardens"
+      },
+      "ACT-RT": {
+        "name": "Redtape",
+        "code": "ACT-RT",
+        "canonical_slug": "redtape",
+        "slug_aliases": [
+          "red-tape"
+        ],
+        "category": "arts",
+        "tier": "studio",
+        "priority": "medium",
+        "status": "active",
+        "description": "Art installation making bureaucratic friction physically legible",
+        "notion_pages": [
+          "Redtape"
+        ],
+        "ghl_tags": [
+          "redtape",
+          "red-tape"
+        ],
+        "art_medium": [
+          "installation",
+          "sculpture"
+        ],
+        "art_tags": [
+          "justice-art",
+          "public-art",
+          "social-practice"
+        ],
+        "xero_tracking": "ACT-RT — Redtape",
+        "xero_tracking_aliases": [
+          "Red Tape",
+          "Redtape"
+        ],
+        "dext_category": "Arts",
+        "alma_program": "cultural-arts",
+        "lcaa_themes": [
+          "Art"
+        ]
+      },
+      "ACT-BG": {
+        "name": "BG Fit",
+        "code": "ACT-BG",
+        "canonical_slug": "bg-fit",
+        "category": "health",
+        "tier": "satellite",
+        "priority": "medium",
+        "status": "active",
+        "description": "Fitness and wellbeing program",
+        "notion_pages": [
+          "BG Fit"
+        ],
+        "ghl_tags": [
+          "bg-fit",
+          "bgfit"
+        ],
+        "xero_tracking": "ACT-BG — BG Fit",
+        "xero_tracking_aliases": [
+          "BG Fit"
+        ],
+        "dext_category": "Health",
+        "alma_program": "fitness",
+        "syndication_slug": "act_bg",
+        "production_url": "https://campfire-website-amber.vercel.app"
+      },
+      "ACT-CS": {
+        "name": "Civic Scope",
+        "code": "ACT-CS",
+        "canonical_slug": "civicgraph",
+        "slug_aliases": [
+          "civic-scope",
+          "grantscope"
+        ],
+        "legacy_codes": [
+          "ACT-CG"
+        ],
+        "category": "enterprise",
+        "tier": "satellite",
+        "priority": "high",
+        "status": "active",
+        "description": "Grant pipeline and civic engagement platform",
+        "leads": [
+          "Ben Knight"
+        ],
+        "notion_pages": [
+          "Civic Scope"
+        ],
+        "ghl_tags": [
+          "civic-scope",
+          "grantscope"
+        ],
+        "xero_tracking": "ACT-CS — Civic Scope",
+        "xero_tracking_aliases": [
+          "Civic Scope",
+          "CivicGraph",
+          "GrantScope"
+        ],
+        "dext_category": "Technology",
+        "alma_program": "civic-engagement",
+        "github_repo": "Acurioustractor/grantscope",
+        "syndication_slug": "act_cs",
+        "production_url": "https://civicgraph.app"
+      },
+      "ACT-BV": {
+        "name": "Black Cockatoo Valley",
+        "code": "ACT-BV",
+        "canonical_slug": "black-cockatoo-valley",
+        "slug_aliases": [
+          "act-farm",
+          "bcv",
+          "the-farm"
+        ],
+        "legacy_codes": [
+          "ACT-BCV"
+        ],
+        "category": "regenerative",
+        "tier": "satellite",
+        "priority": "medium",
+        "status": "active",
+        "description": "Regenerative conservation",
+        "notion_pages": [
+          "BCV Reforest",
+          "BCV: Regenerative Conservation"
+        ],
+        "ghl_tags": [
+          "bcv",
+          "black-cockatoo"
+        ],
+        "xero_tracking": "ACT-BV — Black Cockatoo Valley",
+        "xero_tracking_aliases": [
+          "BCV"
+        ],
+        "dext_category": "Regenerative",
+        "alma_program": "conservation"
+      },
+      "ACT-MY": {
+        "name": "Mounty Yarns",
+        "code": "ACT-MY",
+        "canonical_slug": "mounty-yarns",
+        "category": "stories",
+        "tier": "studio",
+        "priority": "medium",
+        "status": "active",
+        "description": "Community storytelling",
+        "notion_pages": [
+          "Mounty Yarns"
+        ],
+        "ghl_tags": [
+          "mounty-yarns"
+        ],
+        "xero_tracking": "ACT-MY — Mounty Yarns",
+        "xero_tracking_aliases": [
+          "Mounty Yarns",
+          "Mounty"
+        ],
+        "dext_category": "Stories",
+        "alma_program": "storytelling",
+        "lcaa_themes": [
+          "Listen",
+          "Amplify"
+        ]
+      },
+      "ACT-TN": {
+        "name": "TOMNET",
+        "code": "ACT-TN",
+        "canonical_slug": "tomnet",
+        "category": "community",
+        "priority": "low",
+        "status": "archived",
+        "description": "Community network",
+        "notion_pages": [
+          "TOMNET"
+        ],
+        "ghl_tags": [
+          "tomnet"
+        ],
+        "xero_tracking": "ACT-TN — TOMNET",
+        "dext_category": "Community",
+        "alma_program": "network-building"
+      },
+      "ACT-10": {
+        "name": "10x10 Retreat",
+        "code": "ACT-10",
+        "canonical_slug": "10x10-retreat",
+        "category": "events",
+        "priority": "medium",
+        "status": "archived",
+        "description": "Leadership retreat",
+        "notion_pages": [
+          "10x10 Community Capital Leadership Retreat"
+        ],
+        "ghl_tags": [
+          "10x10",
+          "retreat"
+        ],
+        "xero_tracking": "ACT-10 — 10x10 Retreat",
+        "xero_tracking_aliases": [
+          "10x10 Retreat",
+          "Community Capital Retreat"
+        ],
+        "dext_category": "Events",
+        "alma_program": "leadership"
+      },
+      "ACT-CP": {
+        "name": "Community Capital",
+        "code": "ACT-CP",
+        "canonical_slug": "community-capital",
+        "slug_aliases": [
+          "10x10-community-capital",
+          "community-capital-retreat"
+        ],
+        "category": "funding",
+        "tier": "satellite",
+        "priority": "medium",
+        "status": "active",
+        "description": "Leadership retreat linking community leaders with capital holders",
+        "notion_pages": [
+          "Community Capital",
+          "10x10 Community Capital Leadership Retreat"
+        ],
+        "ghl_tags": [
+          "community-capital",
+          "10x10",
+          "community capital"
+        ],
+        "xero_tracking": "ACT-CP — Community Capital",
+        "xero_tracking_aliases": [
+          "Community Capital",
+          "10x10 Retreat",
+          "Community Capital Retreat"
+        ],
+        "dext_category": "Funding",
+        "alma_program": "leadership"
+      },
+      "ACT-CT": {
+        "name": "ConFit Pathways",
+        "code": "ACT-CT",
+        "canonical_slug": "confit-pathways",
+        "slug_aliases": [
+          "confit"
+        ],
+        "category": "justice",
+        "tier": "satellite",
+        "priority": "medium",
+        "status": "active",
+        "description": "Lived-experience boxing and mentorship program for young people in or leaving the justice system",
+        "leads": [
+          "Joe Kwon"
+        ],
+        "notion_pages": [
+          "ConFit Pathways"
+        ],
+        "ghl_tags": [
+          "confit",
+          "confit-pathways",
+          "joe-kwon"
+        ],
+        "xero_tracking": "ACT-CT — ConFit Pathways",
+        "xero_tracking_aliases": [
+          "ConFit",
+          "ConFit Pathways"
+        ],
+        "dext_category": "Justice Projects",
+        "alma_program": "youth-justice",
+        "lcaa_themes": [
+          "Act"
+        ]
+      },
+      "ACT-DL": {
+        "name": "DadLab",
+        "code": "ACT-DL",
+        "canonical_slug": "dad-lab-25",
+        "slug_aliases": [
+          "dad-lab",
+          "dadlab"
+        ],
+        "category": "community",
+        "tier": "satellite",
+        "priority": "medium",
+        "status": "active",
+        "description": "Fatherhood and parenting",
+        "notion_pages": [
+          "Dad.Lab.25"
+        ],
+        "ghl_tags": [
+          "dadlab"
+        ],
+        "xero_tracking": "ACT-DL — DadLab",
+        "dext_category": "Community",
+        "alma_program": "parenting"
+      },
+      "ACT-SH": {
+        "name": "The Shed",
+        "code": "ACT-SH",
+        "canonical_slug": "the-shed",
+        "category": "tech",
+        "priority": "low",
+        "status": "archived",
+        "description": "Maker space and tech hub",
+        "notion_page_id": "215ebcf9-81cf-8086-a781-fa9df2559a13",
+        "notion_pages": [
+          "The Shed"
+        ],
+        "ghl_tags": [
+          "shed"
+        ],
+        "xero_tracking": "ACT-SH — The Shed",
+        "dext_category": "Technology",
+        "alma_program": "maker-spaces"
+      },
+      "ACT-SE": {
+        "name": "SEFA Partnership",
+        "code": "ACT-SE",
+        "canonical_slug": "sefa-partnership",
+        "category": "funding",
+        "tier": "satellite",
+        "priority": "medium",
+        "status": "archived",
+        "description": "Social Enterprise Finance Australia",
+        "notion_pages": [
+          "SEFA Partnership"
+        ],
+        "ghl_tags": [
+          "sefa"
+        ],
+        "xero_tracking": "ACT-SE — SEFA Partnership",
+        "xero_tracking_aliases": [
+          "SEFA"
+        ],
+        "dext_category": "Funding",
+        "alma_program": "social-finance"
+      },
+      "ACT-CE": {
+        "name": "Custodian Economy",
+        "code": "ACT-CE",
+        "canonical_slug": "custodian-economy",
+        "category": "enterprise",
+        "tier": "satellite",
+        "priority": "medium",
+        "status": "active",
+        "description": "Economic model for custodianship",
+        "notion_pages": [
+          "Custodian Economy"
+        ],
+        "ghl_tags": [
+          "custodian-economy"
+        ],
+        "xero_tracking": "ACT-CE — Custodian Economy",
+        "dext_category": "Social Enterprise",
+        "alma_program": "economic-models"
+      },
+      "ACT-AS": {
+        "name": "Art for Social Change",
+        "code": "ACT-AS",
+        "canonical_slug": "art-for-social-change",
+        "category": "arts",
+        "priority": "medium",
+        "status": "archived",
+        "description": "Art initiatives for social impact",
+        "notion_pages": [
+          "Art for Social Change"
+        ],
+        "ghl_tags": [
+          "art-social-change"
+        ],
+        "xero_tracking": "ACT-AS — Art for Social Change",
+        "xero_tracking_aliases": [
+          "Art Social Change"
+        ],
+        "dext_category": "Arts",
+        "alma_program": "arts-impact",
+        "lcaa_themes": [
+          "Act",
+          "Amplify"
+        ]
+      },
+      "ACT-RA": {
+        "name": "Regional Arts Fellowship",
+        "code": "ACT-RA",
+        "canonical_slug": "regional-arts-fellowship",
+        "category": "arts",
+        "tier": "studio",
+        "priority": "medium",
+        "status": "active",
+        "description": "Supporting regional arts practitioners through residencies, mentorship, and creative development",
+        "notion_pages": [
+          "Regional Arts Fellowship"
+        ],
+        "ghl_tags": [
+          "regional-arts"
+        ],
+        "art_medium": [
+          "residency"
+        ],
+        "art_tags": [
+          "social-practice"
+        ],
+        "xero_tracking": "ACT-RA — Regional Arts Fellowship",
+        "xero_tracking_aliases": [
+          "Regional Arts",
+          "Radical Scoops"
+        ],
+        "dext_category": "Arts",
+        "alma_program": "regional-arts"
+      },
+      "ACT-WJ": {
+        "name": "Wilya Janta",
+        "code": "ACT-WJ",
+        "canonical_slug": "wilya-janta",
+        "category": "indigenous",
+        "priority": "low",
+        "status": "archived",
+        "description": "Indigenous communications",
+        "notion_pages": [
+          "Wilya Janta Communications"
+        ],
+        "ghl_tags": [
+          "wilya-janta"
+        ],
+        "xero_tracking": "ACT-WJ — Wilya Janta",
+        "dext_category": "Indigenous Projects",
+        "alma_program": "indigenous-comms",
+        "cultural_protocols": true
+      },
+      "ACT-YC": {
+        "name": "YAC Story and Action",
+        "code": "ACT-YC",
+        "canonical_slug": "yac-story-and-action",
+        "category": "justice",
+        "priority": "low",
+        "status": "archived",
+        "description": "Youth Advisory Council",
+        "notion_pages": [
+          "YAC story and action"
+        ],
+        "ghl_tags": [
+          "yac"
+        ],
+        "xero_tracking": "ACT-YC — YAC Story and Action",
+        "xero_tracking_aliases": [
+          "YAC"
+        ],
+        "dext_category": "Justice Projects",
+        "alma_program": "youth-voice"
+      },
+      "ACT-TW": {
+        "name": "Travelling Women's Car",
+        "code": "ACT-TW",
+        "canonical_slug": "travelling-womens-car",
+        "category": "indigenous",
+        "priority": "medium",
+        "status": "archived",
+        "description": "Cultural preservation for women",
+        "notion_pages": [
+          "Travelling women's car"
+        ],
+        "ghl_tags": [
+          "travelling-womens-car"
+        ],
+        "xero_tracking": "ACT-TW — Travelling Women's Car",
+        "xero_tracking_aliases": [
+          "Travelling Womens Car"
+        ],
+        "dext_category": "Indigenous Projects",
+        "alma_program": "cultural-preservation",
+        "cultural_protocols": true
+      },
+      "ACT-HS": {
+        "name": "Project Her-Self",
+        "code": "ACT-HS",
+        "canonical_slug": "project-her-self",
+        "category": "community",
+        "priority": "medium",
+        "status": "archived",
+        "description": "Self-design program for women",
+        "notion_pages": [
+          "Project Her Self design"
+        ],
+        "ghl_tags": [
+          "project-herself"
+        ],
+        "xero_tracking": "ACT-HS — Project Her-Self",
+        "xero_tracking_aliases": [
+          "Project HerSelf"
+        ],
+        "dext_category": "Community",
+        "alma_program": "womens-empowerment"
+      },
+      "ACT-DH": {
+        "name": "Deadly Homes and Gardens",
+        "code": "ACT-DH",
+        "canonical_slug": "deadly-homes-and-gardens",
+        "category": "indigenous",
+        "priority": "medium",
+        "status": "archived",
+        "description": "Indigenous housing and gardens",
+        "notion_pages": [
+          "Deadly Homes and Gardens"
+        ],
+        "ghl_tags": [
+          "deadly-homes"
+        ],
+        "xero_tracking": "ACT-DH — Deadly Homes and Gardens",
+        "xero_tracking_aliases": [
+          "Deadly Homes"
+        ],
+        "dext_category": "Indigenous Projects",
+        "alma_program": "housing",
+        "cultural_protocols": true
+      },
+      "ACT-MM": {
+        "name": "MMEIC Justice",
+        "code": "ACT-MM",
+        "canonical_slug": "mmeic-justice",
+        "category": "justice",
+        "priority": "medium",
+        "status": "archived",
+        "description": "MMEIC Justice initiatives",
+        "notion_pages": [
+          "MMEIC - Justice Projects"
+        ],
+        "ghl_tags": [
+          "mmeic"
+        ],
+        "xero_tracking": "ACT-MM — MMEIC Justice",
+        "xero_tracking_aliases": [
+          "MMEIC"
+        ],
+        "dext_category": "Justice Projects",
+        "alma_program": "justice-reform"
+      },
+      "ACT-MU": {
+        "name": "Murrup + ACT",
+        "code": "ACT-MU",
+        "canonical_slug": "murrup-and-act",
+        "category": "indigenous",
+        "priority": "medium",
+        "status": "archived",
+        "description": "Partnership with Murrup for indigenous programs",
+        "notion_pages": [
+          "Murrup + ACT"
+        ],
+        "ghl_tags": [
+          "murrup"
+        ],
+        "xero_tracking": "ACT-MU — Murrup + ACT",
+        "xero_tracking_aliases": [
+          "Murrup"
+        ],
+        "dext_category": "Indigenous Projects",
+        "alma_program": "first-nations",
+        "cultural_protocols": true
+      },
+      "ACT-OO": {
+        "name": "Oonchiumpa",
+        "code": "ACT-OO",
+        "canonical_slug": "oonchiumpa",
+        "category": "indigenous",
+        "tier": "satellite",
+        "priority": "medium",
+        "status": "active",
+        "description": "Indigenous community partnership",
+        "notion_pages": [
+          "Oonchiumpa"
+        ],
+        "ghl_tags": [
+          "oonchiumpa"
+        ],
+        "xero_tracking": "ACT-OO — Oonchiumpa",
+        "dext_category": "Indigenous Projects",
+        "alma_program": "first-nations",
+        "cultural_protocols": true,
+        "syndication_slug": "act_oo",
+        "production_url": "https://oonchiumpa-app.vercel.app"
+      },
+      "ACT-CA": {
+        "name": "Caring for those who care",
+        "code": "ACT-CA",
+        "canonical_slug": "caring-for-those-who-care",
+        "category": "arts",
+        "tier": "studio",
+        "priority": "medium",
+        "status": "active",
+        "description": "Art exhibition and performance honouring the invisible labour of carers — respite, connection, and recognition",
+        "notion_pages": [
+          "Caring for those who care"
+        ],
+        "ghl_tags": [
+          "caring"
+        ],
+        "art_medium": [
+          "exhibition",
+          "performance"
+        ],
+        "art_tags": [
+          "social-practice",
+          "community-portrait"
+        ],
+        "xero_tracking": "ACT-CA — Caring for those who care",
+        "xero_tracking_aliases": [
+          "Caring"
+        ],
+        "dext_category": "Arts",
+        "alma_program": "arts-impact",
+        "lcaa_themes": [
+          "Listen",
+          "Amplify"
+        ]
+      },
+      "ACT-MC": {
+        "name": "Cars and Microcontrollers",
+        "code": "ACT-MC",
+        "canonical_slug": "cars-and-microcontrollers",
+        "category": "arts",
+        "tier": "studio",
+        "priority": "medium",
+        "status": "active",
+        "description": "Art and technology crossover — combining mechanical craft with microcontroller programming to create interactive installations",
+        "notion_pages": [
+          "Cars and microcontrollers"
+        ],
+        "ghl_tags": [
+          "cars-microcontrollers"
+        ],
+        "art_medium": [
+          "interactive",
+          "making"
+        ],
+        "art_tags": [
+          "digital",
+          "participatory"
+        ],
+        "xero_tracking": "ACT-MC — Cars and Microcontrollers",
+        "xero_tracking_aliases": [
+          "Cars Micro"
+        ],
+        "dext_category": "Arts",
+        "alma_program": "arts-impact"
+      },
+      "ACT-BR": {
+        "name": "ACT Bali Retreat",
+        "code": "ACT-BR",
+        "canonical_slug": "act-bali-retreat",
+        "category": "events",
+        "priority": "medium",
+        "status": "archived",
+        "description": "ACT team retreat and planning in Bali",
+        "notion_pages": [
+          "ACT stop, revive, thrive in Bali"
+        ],
+        "ghl_tags": [
+          "bali",
+          "retreat"
+        ],
+        "xero_tracking": "ACT-BR — ACT Bali Retreat",
+        "xero_tracking_aliases": [
+          "Bali Retreat"
+        ],
+        "dext_category": "Events",
+        "alma_program": "leadership"
+      },
+      "ACT-BB": {
+        "name": "Barkly Backbone",
+        "code": "ACT-BB",
+        "canonical_slug": "barkly-backbone",
+        "category": "indigenous",
+        "tier": "satellite",
+        "priority": "medium",
+        "status": "ideation",
+        "description": "Barkly region backbone infrastructure",
+        "notion_pages": [
+          "Barkly Backbone"
+        ],
+        "ghl_tags": [
+          "barkly"
+        ],
+        "xero_tracking": "ACT-BB — Barkly Backbone",
+        "xero_tracking_aliases": [
+          "Barkly"
+        ],
+        "dext_category": "Indigenous Projects",
+        "alma_program": "first-nations",
+        "cultural_protocols": true
+      },
+      "ACT-JC": {
+        "name": "JusticeHub Centre of Excellence",
+        "code": "ACT-JC",
+        "canonical_slug": "justicehub-centre-of-excellence",
+        "category": "justice",
+        "tier": "satellite",
+        "priority": "high",
+        "status": "ideation",
+        "description": "Centre of excellence for youth justice reform",
+        "parent_project": "ACT-JH",
+        "notion_pages": [
+          "JusticeHub - Centre of Excellence"
+        ],
+        "ghl_tags": [
+          "justicehub",
+          "coe"
+        ],
+        "xero_tracking": "ACT-JC — JusticeHub Centre of Excellence",
+        "dext_category": "Justice Projects",
+        "alma_program": "justice-reform"
+      },
+      "ACT-TR": {
+        "name": "Treacher",
+        "code": "ACT-TR",
+        "canonical_slug": "treacher",
+        "category": "arts",
+        "tier": "studio",
+        "priority": "low",
+        "status": "ideation",
+        "description": "Film exploring themes of trust, betrayal, and institutional accountability",
+        "notion_pages": [
+          "Treacher"
+        ],
+        "ghl_tags": [
+          "treacher"
+        ],
+        "art_medium": [
+          "film"
+        ],
+        "art_tags": [
+          "documentary",
+          "justice-art"
+        ],
+        "xero_tracking": "ACT-TR — Treacher",
+        "dext_category": "Arts",
+        "alma_program": "arts-impact"
+      },
+      "ACT-DO": {
+        "name": "Designing for Obsolescence",
+        "code": "ACT-DO",
+        "canonical_slug": "designing-for-obsolescence",
+        "category": "tech",
+        "tier": "satellite",
+        "priority": "medium",
+        "status": "sunsetting",
+        "description": "Technology design and sustainability",
+        "notion_pages": [
+          "Designing for Obsolescence"
+        ],
+        "ghl_tags": [
+          "obsolescence"
+        ],
+        "xero_tracking": "ACT-DO — Designing for Obsolescence",
+        "xero_tracking_aliases": [
+          "Design Obs"
+        ],
+        "dext_category": "Technology",
+        "alma_program": "economic-models"
+      },
+      "ACT-GL": {
+        "name": "Global Laundry Alliance",
+        "code": "ACT-GL",
+        "canonical_slug": "global-laundry-alliance",
+        "category": "enterprise",
+        "tier": "satellite",
+        "priority": "medium",
+        "status": "transferred",
+        "description": "Orange Sky's global network expansion",
+        "notion_pages": [
+          "Global Laundry Alliance (GLA)"
+        ],
+        "ghl_tags": [
+          "gla",
+          "global-laundry"
+        ],
+        "xero_tracking": "ACT-GL — Global Laundry Alliance",
+        "xero_tracking_aliases": [
+          "GLA"
+        ],
+        "dext_category": "Social Enterprise",
+        "alma_program": "economic-empowerment"
+      },
+      "ACT-CC": {
+        "name": "ACT Conservation Collective",
+        "code": "ACT-CC",
+        "canonical_slug": "act-conservation-collective",
+        "category": "regenerative",
+        "priority": "medium",
+        "status": "archived",
+        "description": "Conservation collective partnership",
+        "notion_pages": [
+          "A Curious Tractor Conservation Collective (ACT-CC)"
+        ],
+        "ghl_tags": [
+          "conservation-collective"
+        ],
+        "xero_tracking": "ACT-CC — Conservation Collective",
+        "dext_category": "Regenerative",
+        "alma_program": "conservation"
+      },
+      "ACT-FP": {
+        "name": "Fairfax PLACE Tech",
+        "code": "ACT-FP",
+        "canonical_slug": "fairfax-place-tech",
+        "category": "tech",
+        "priority": "medium",
+        "status": "archived",
+        "description": "Fairfax and PLACE technology partnership",
+        "notion_pages": [
+          "Fairfax & PLACE tech"
+        ],
+        "ghl_tags": [
+          "fairfax",
+          "place-tech"
+        ],
+        "xero_tracking": "ACT-FP — Fairfax PLACE Tech",
+        "xero_tracking_aliases": [
+          "Fairfax PLACE"
+        ],
+        "dext_category": "Technology",
+        "alma_program": "economic-models"
+      },
+      "ACT-FA": {
+        "name": "Festival Activations",
+        "code": "ACT-FA",
+        "canonical_slug": "festival-activations",
+        "category": "events",
+        "priority": "medium",
+        "status": "archived",
+        "description": "Festival presence and activations",
+        "notion_pages": [
+          "Festival Activations"
+        ],
+        "ghl_tags": [
+          "festivals",
+          "activations"
+        ],
+        "xero_tracking": "ACT-FA — Festival Activations",
+        "dext_category": "Events",
+        "alma_program": "community-building"
+      },
+      "ACT-SF": {
+        "name": "SAF Foundation",
+        "code": "ACT-SF",
+        "canonical_slug": "saf-foundation",
+        "category": "funding",
+        "priority": "medium",
+        "status": "archived",
+        "description": "SAF Foundation master partnership",
+        "notion_pages": [
+          "SAF Foundation Master"
+        ],
+        "ghl_tags": [
+          "saf-foundation"
+        ],
+        "xero_tracking": "ACT-SF — SAF Foundation",
+        "dext_category": "Funding",
+        "alma_program": "social-finance"
+      },
+      "ACT-SX": {
+        "name": "SXSW 2025",
+        "code": "ACT-SX",
+        "canonical_slug": "sxsw-2025",
+        "category": "events",
+        "priority": "high",
+        "status": "archived",
+        "description": "South by Southwest conference presence",
+        "notion_pages": [
+          "SXSW 2025"
+        ],
+        "ghl_tags": [
+          "sxsw",
+          "sxsw-2025"
+        ],
+        "xero_tracking": "ACT-SX — SXSW 2025",
+        "xero_tracking_aliases": [
+          "SXSW"
+        ],
+        "dext_category": "Events",
+        "alma_program": "leadership"
+      },
+      "ACT-WE": {
+        "name": "Westpac Summit 2025",
+        "code": "ACT-WE",
+        "canonical_slug": "westpac-summit-2025",
+        "category": "events",
+        "priority": "medium",
+        "status": "archived",
+        "description": "Westpac Social Sector Summit",
+        "notion_pages": [
+          "Westpac Summit 2025"
+        ],
+        "ghl_tags": [
+          "westpac",
+          "summit"
+        ],
+        "xero_tracking": "ACT-WE — Westpac Summit 2025",
+        "xero_tracking_aliases": [
+          "Westpac Summit"
+        ],
+        "dext_category": "Events",
+        "alma_program": "leadership"
+      },
+      "ACT-RP": {
+        "name": "RPPP Stream Two",
+        "code": "ACT-RP",
+        "canonical_slug": "rppp-stream-two",
+        "category": "indigenous",
+        "priority": "high",
+        "status": "archived",
+        "description": "Regional Precincts and Partnerships Program - Precinct Delivery",
+        "notion_pages": [
+          "RPPP Stream Two: Precinct delivery"
+        ],
+        "ghl_tags": [
+          "rppp",
+          "precinct"
+        ],
+        "xero_tracking": "ACT-RP — RPPP Stream Two",
+        "xero_tracking_aliases": [
+          "RPPP"
+        ],
+        "dext_category": "Indigenous Projects",
+        "alma_program": "first-nations",
+        "cultural_protocols": true
+      },
+      "ACT-OE": {
+        "name": "Olive Express",
+        "code": "ACT-OE",
+        "canonical_slug": "olive-express",
+        "category": "regenerative",
+        "priority": "medium",
+        "status": "archived",
+        "description": "Olive-based regenerative project",
+        "notion_pages": [
+          "Olive Express"
+        ],
+        "ghl_tags": [
+          "olive-express"
+        ],
+        "xero_tracking": "ACT-OE — Olive Express",
+        "dext_category": "Regenerative",
+        "alma_program": "food-systems"
+      },
+      "ACT-OS": {
+        "name": "Orange Sky EL",
+        "code": "ACT-OS",
+        "canonical_slug": "orange-sky-empathy-ledger",
+        "category": "stories",
+        "priority": "low",
+        "status": "archived",
+        "description": "Orange Sky Empathy Ledger project repository",
+        "notion_pages": [
+          "Orange Sky Empathy Ledger Project Repository - review"
+        ],
+        "ghl_tags": [
+          "orange-sky"
+        ],
+        "xero_tracking": "ACT-OS — Orange Sky EL",
+        "xero_tracking_aliases": [
+          "Orange Sky"
+        ],
+        "dext_category": "Stories",
+        "alma_program": "storytelling"
+      },
+      "ACT-IN": {
+        "name": "ACT Infrastructure",
+        "code": "ACT-IN",
+        "canonical_slug": "act-infrastructure",
+        "category": "tech",
+        "tier": "ecosystem",
+        "priority": "high",
+        "status": "active",
+        "description": "Internal operations, technology, admin costs, and travel",
+        "notion_pages": [
+          "ACT business set up",
+          "ACT Notion / Tool Audit {Farm Plan}"
+        ],
+        "ghl_tags": [
+          "infrastructure",
+          "operations"
+        ],
+        "xero_tracking": "ACT-IN — ACT Infrastructure",
+        "xero_tracking_aliases": [
+          "Operations"
+        ],
+        "dext_category": "Technology",
+        "alma_program": "economic-models"
+      },
+      "ACT-GCC": {
+        "name": "Global Community Connections",
+        "code": "ACT-GCC",
+        "canonical_slug": "global-community-connections",
+        "category": "community",
+        "status": "archived",
+        "description": "Building bridges between local and international communities",
+        "notion_pages": [
+          "Global Community Connections"
+        ]
+      },
+      "ACT-EFI": {
+        "name": "Economic Freedom Initiative",
+        "code": "ACT-EFI",
+        "canonical_slug": "economic-freedom-initiative",
+        "category": "enterprise",
+        "status": "archived",
+        "description": "Creating pathways for economic empowerment in regional communities",
+        "notion_pages": [
+          "Economic Freedom Initiative"
+        ]
+      },
+      "ACT-FG": {
+        "name": "Feel Good Project",
+        "code": "ACT-FG",
+        "canonical_slug": "feel-good-project",
+        "category": "community",
+        "tier": "satellite",
+        "priority": "medium",
+        "status": "active",
+        "description": "Community wellbeing initiative",
+        "xero_tracking": "ACT-FG — Feel Good Project",
+        "xero_tracking_aliases": [
+          "Feel Good Project"
+        ],
+        "dext_category": "Community"
+      },
+      "ACT-CB": {
+        "name": "Marriage Celebrant",
+        "code": "ACT-CB",
+        "canonical_slug": "marriage-celebrant",
+        "category": "community",
+        "tier": "satellite",
+        "priority": "low",
+        "status": "active",
+        "description": "Marriage celebrant services",
+        "xero_tracking": "ACT-CB — Marriage Celebrant",
+        "xero_tracking_aliases": [
+          "Marriage Celebrant"
+        ],
+        "dext_category": "Community"
+      }
+    },
+    "categories": {
+      "justice": {
+        "icon": "⚖️",
+        "color": "#E74C3C",
+        "dext": "Justice Projects"
+      },
+      "indigenous": {
+        "icon": "🌏",
+        "color": "#27AE60",
+        "dext": "Indigenous Projects"
+      },
+      "stories": {
+        "icon": "📖",
+        "color": "#9B59B6",
+        "dext": "Stories"
+      },
+      "enterprise": {
+        "icon": "💼",
+        "color": "#3498DB",
+        "dext": "Social Enterprise"
+      },
+      "regenerative": {
+        "icon": "🌱",
+        "color": "#2ECC71",
+        "dext": "Regenerative"
+      },
+      "health": {
+        "icon": "❤️",
+        "color": "#E91E63",
+        "dext": "Health"
+      },
+      "community": {
+        "icon": "👥",
+        "color": "#FF9800",
+        "dext": "Community"
+      },
+      "arts": {
+        "icon": "🎨",
+        "color": "#673AB7",
+        "dext": "Arts"
+      },
+      "events": {
+        "icon": "📅",
+        "color": "#00BCD4",
+        "dext": "Events"
+      },
+      "funding": {
+        "icon": "💰",
+        "color": "#FFC107",
+        "dext": "Funding"
+      },
+      "tech": {
+        "icon": "💻",
+        "color": "#607D8B",
+        "dext": "Technology"
+      }
+    },
+    "lcaa_framework": {
+      "Listen": "Deeply understand community voices and needs",
+      "Connect": "Build relationships and bridge communities",
+      "Act": "Take meaningful action together",
+      "Amplify": "Share stories and scale impact"
+    },
+    "alma_programs": [
+      "justice-reform",
+      "education-rehab",
+      "economic-empowerment",
+      "storytelling",
+      "first-nations",
+      "land-management",
+      "cultural-arts",
+      "justice-reinvestment",
+      "youth-advocacy",
+      "food-systems",
+      "community-spaces",
+      "aquaculture",
+      "health-wellbeing",
+      "connection",
+      "community-building",
+      "child-wellbeing",
+      "disability-justice",
+      "youth-detention",
+      "mentoring",
+      "community-gardens",
+      "fitness",
+      "conservation",
+      "network-building",
+      "leadership",
+      "parenting",
+      "maker-spaces",
+      "social-finance",
+      "economic-models",
+      "arts-impact",
+      "regional-arts",
+      "indigenous-comms",
+      "youth-voice",
+      "cultural-preservation",
+      "womens-empowerment",
+      "housing"
+    ]
+  },
+  "source_inventory": [
+    {
+      "label": "Goods Asset Register README",
+      "role": "goods-evidence",
+      "path": "/Users/benknight/Code/Goods Asset Register/README.md",
+      "exists": true,
+      "bytes": 9891,
+      "lines": 337,
+      "modified_at": "2025-12-02T06:11:53.930Z"
+    },
+    {
+      "label": "Catalysing Impact Application Draft",
+      "role": "grant-application",
+      "path": "/Users/benknight/Code/Goods Asset Register/Catalysing_Impact_Application_DRAFT.md",
+      "exists": true,
+      "bytes": 15916,
+      "lines": 304,
+      "modified_at": "2026-02-02T00:08:51.110Z"
+    },
+    {
+      "label": "Goods Path to Thousands 2026",
+      "role": "procurement-scale-plan",
+      "path": "/Users/benknight/Code/Goods Asset Register/GO_TO_MARKET_THOUSANDS_2026.md",
+      "exists": true,
+      "bytes": 20751,
+      "lines": 261,
+      "modified_at": "2026-04-23T18:49:42.599Z"
+    },
+    {
+      "label": "Goods Market Intelligence 2026",
+      "role": "market-research",
+      "path": "/Users/benknight/Code/Goods Asset Register/MARKET_INTELLIGENCE_2026.md",
+      "exists": true,
+      "bytes": 9858,
+      "lines": 152,
+      "modified_at": "2026-04-23T18:45:46.615Z"
+    },
+    {
+      "label": "Snow Submission Review February 2026",
+      "role": "foundation-review",
+      "path": "/Users/benknight/Code/Goods Asset Register/SNOW_SUBMISSION_REVIEW_FEBRUARY_2026.md",
+      "exists": true,
+      "bytes": 15736,
+      "lines": 293,
+      "modified_at": "2026-02-02T03:19:42.738Z"
+    },
+    {
+      "label": "Goods Expanded Asset CSV",
+      "role": "asset-evidence",
+      "path": "/Users/benknight/Code/Goods Asset Register/data/expanded_assets_final.csv",
+      "exists": true,
+      "bytes": 89288,
+      "lines": 406,
+      "modified_at": "2025-12-02T08:58:12.740Z"
+    },
+    {
+      "label": "Goods QR Manifest",
+      "role": "asset-evidence",
+      "path": "/Users/benknight/Code/Goods Asset Register/data/qr_codes/qr_manifest.csv",
+      "exists": true,
+      "bytes": 57501,
+      "lines": 391,
+      "modified_at": "2025-12-02T06:07:54.190Z"
+    },
+    {
+      "label": "ACT Operational Thesis",
+      "role": "operating-system",
+      "path": "/Users/benknight/Code/act-global-infrastructure/wiki/operations/act-operational-thesis.md",
+      "exists": true,
+      "bytes": 43509,
+      "lines": 784,
+      "modified_at": "2026-04-13T11:36:57.533Z"
+    },
+    {
+      "label": "ACT Knowledge Ops Loop",
+      "role": "knowledge-system",
+      "path": "/Users/benknight/Code/act-global-infrastructure/wiki/technical/act-knowledge-ops-loop.md",
+      "exists": true,
+      "bytes": 10148,
+      "lines": 344,
+      "modified_at": "2026-04-24T03:46:10.389Z"
+    },
+    {
+      "label": "ACT Architecture",
+      "role": "technology-system",
+      "path": "/Users/benknight/Code/act-global-infrastructure/wiki/technical/act-architecture.md",
+      "exists": true,
+      "bytes": 8550,
+      "lines": 201,
+      "modified_at": "2026-04-12T20:50:21.840Z"
+    },
+    {
+      "label": "ACT Project Codes",
+      "role": "project-code-map",
+      "path": "/Users/benknight/Code/act-global-infrastructure/config/project-codes.json",
+      "exists": true,
+      "bytes": 49595,
+      "lines": 1311,
+      "modified_at": "2026-04-24T06:24:16.285Z"
+    },
+    {
+      "label": "ACT Active Projects",
+      "role": "project-map",
+      "path": "/Users/benknight/Code/act-global-infrastructure/config/active-projects.json",
+      "exists": true,
+      "bytes": 7338,
+      "lines": 332,
+      "modified_at": "2026-04-24T03:46:10.150Z"
+    },
+    {
+      "label": "ACT Repo Connections",
+      "role": "repo-map",
+      "path": "/Users/benknight/Code/act-global-infrastructure/config/repo-connections-latest.json",
+      "exists": true,
+      "bytes": 8481,
+      "lines": 279,
+      "modified_at": "2026-04-20T03:00:18.252Z"
+    },
+    {
+      "label": "ACT Dext Supplier Rules",
+      "role": "finance-map",
+      "path": "/Users/benknight/Code/act-global-infrastructure/config/dext-supplier-rules.json",
+      "exists": true,
+      "bytes": 11476,
+      "lines": 339,
+      "modified_at": "2026-02-22T20:35:07.582Z"
+    }
+  ],
+  "support_actions": [
+    {
+      "id": "goods-procurement-remote-housing-and-essential-goods-buyers",
+      "project_slug": "goods",
+      "project_name": "Goods on Country",
+      "project_code": "ACT-GD",
+      "route_type": "procurement",
+      "priority": "high",
+      "title": "Map buyers and procurement notices",
+      "summary": "Remote housing and essential-goods buyers",
+      "next_step": "Create one procurement pack: unit costs, minimum order quantities, delivery model, warranty/support, impact proof, and buyer-specific ask.",
+      "search_terms": [
+        "remote housing fitout",
+        "Aboriginal housing furniture",
+        "durable beds remote communities",
+        "washing machines remote communities",
+        "NT Remote Housing Investment Package",
+        "Aboriginal Hostels Limited",
+        "ALPA Outback Stores",
+        "NACCHO ACCHO infrastructure"
+      ],
+      "grant_finder_href": "/grants?type=open_opportunity&sort=closing_asc&project=goods&quality=ready&q=remote%20housing%20fitout%20Aboriginal%20housing%20furniture%20durable%20beds%20remote%20communities",
+      "source_discovery_queries": [
+        "remote housing fitout procurement tender buyer Australia",
+        "Aboriginal housing furniture procurement tender buyer Australia",
+        "durable beds remote communities procurement tender buyer Australia",
+        "washing machines remote communities procurement tender buyer Australia",
+        "NT Remote Housing Investment Package procurement tender buyer Australia"
+      ],
+      "source_documents": [
+        {
+          "label": "Goods Path to Thousands 2026",
+          "path": "/Users/benknight/Code/Goods Asset Register/GO_TO_MARKET_THOUSANDS_2026.md"
+        },
+        {
+          "label": "Goods Expanded Asset CSV",
+          "path": "/Users/benknight/Code/Goods Asset Register/data/expanded_assets_final.csv"
+        }
+      ]
+    },
+    {
+      "id": "goods-foundation-health-housing-first-nations-circular-economy-foundations",
+      "project_slug": "goods",
+      "project_name": "Goods on Country",
+      "project_code": "ACT-GD",
+      "route_type": "foundation",
+      "priority": "high",
+      "title": "Build funder relationship shortlist",
+      "summary": "Health, housing, First Nations, circular economy foundations",
+      "next_step": "Build a foundation narrative pack with the Catalysing Impact draft, asset evidence, community demand, and a clear repayable/non-repayable funding split.",
+      "search_terms": [
+        "First Nations enterprise grants",
+        "remote housing philanthropy",
+        "circular economy grants Australia",
+        "social enterprise growth fund",
+        "health equity foundations Australia",
+        "Snow Foundation social impact loan",
+        "VFFF social enterprise",
+        "FRRR remote communities"
+      ],
+      "grant_finder_href": "/grants?type=open_opportunity&sort=closing_asc&project=goods&quality=ready&q=First%20Nations%20enterprise%20grants%20remote%20housing%20philanthropy%20circular%20economy%20grants%20Australia",
+      "source_discovery_queries": [
+        "First Nations enterprise grants foundation grant program Australia",
+        "remote housing philanthropy foundation grant program Australia",
+        "circular economy grants Australia foundation grant program Australia",
+        "social enterprise growth fund foundation grant program Australia",
+        "health equity foundations Australia foundation grant program Australia"
+      ],
+      "source_documents": [
+        {
+          "label": "Catalysing Impact Application Draft",
+          "path": "/Users/benknight/Code/Goods Asset Register/Catalysing_Impact_Application_DRAFT.md"
+        },
+        {
+          "label": "Snow Submission Review February 2026",
+          "path": "/Users/benknight/Code/Goods Asset Register/SNOW_SUBMISSION_REVIEW_FEBRUARY_2026.md"
+        }
+      ]
+    },
+    {
+      "id": "goods-grant-open-grants-for-products-capability-evidence-and-regional-delivery",
+      "project_slug": "goods",
+      "project_name": "Goods on Country",
+      "project_code": "ACT-GD",
+      "route_type": "grant",
+      "priority": "high",
+      "title": "Run GrantScope grant scan",
+      "summary": "Open grants for products, capability, evidence, and regional delivery",
+      "next_step": "Use the Goods feed first, then add missing sources to the public-source frontier when the match is real and public.",
+      "search_terms": [
+        "Indigenous business growth grant",
+        "social enterprise capability grant",
+        "circular economy product grant",
+        "regional health infrastructure grant",
+        "remote community infrastructure grant",
+        "climate resilience social enterprise grant",
+        "manufacturing modernisation grant",
+        "Indigenous procurement grant"
+      ],
+      "grant_finder_href": "/grants?type=open_opportunity&sort=closing_asc&project=goods&quality=ready&q=Indigenous%20business%20growth%20grant%20social%20enterprise%20capability%20grant%20circular%20economy%20product%20grant",
+      "source_discovery_queries": [
+        "Indigenous business growth grant grant funding Australia",
+        "social enterprise capability grant grant funding Australia",
+        "circular economy product grant grant funding Australia",
+        "regional health infrastructure grant grant funding Australia",
+        "remote community infrastructure grant grant funding Australia"
+      ],
+      "source_documents": [
+        {
+          "label": "Market Intelligence 2026",
+          "path": "/Users/benknight/Code/Goods Asset Register/MARKET_INTELLIGENCE_2026.md"
+        },
+        {
+          "label": "ACT Operational Thesis",
+          "path": "/Users/benknight/Code/act-global-infrastructure/wiki/operations/act-operational-thesis.md"
+        }
+      ]
+    },
+    {
+      "id": "goods-capital-working-capital-and-impact-investment",
+      "project_slug": "goods",
+      "project_name": "Goods on Country",
+      "project_code": "ACT-GD",
+      "route_type": "capital",
+      "priority": "high",
+      "title": "Build capital stack scan",
+      "summary": "Working capital and impact investment",
+      "next_step": "Turn the 2026 plan into a capital table: ask, source, repayment logic, evidence needed, and owner/date for each route.",
+      "search_terms": [
+        "impact investment social enterprise Australia",
+        "SEFA loan social enterprise",
+        "IBA commercial finance",
+        "First Nations business finance",
+        "social impact loan Australia",
+        "pre purchase contract foundation",
+        "R&D tax incentive product development",
+        "working capital social enterprise"
+      ],
+      "grant_finder_href": "/grants?type=open_opportunity&sort=closing_asc&project=goods&quality=ready&q=impact%20investment%20social%20enterprise%20Australia%20SEFA%20loan%20social%20enterprise%20IBA%20commercial%20finance",
+      "source_discovery_queries": [
+        "impact investment social enterprise Australia impact investment finance Australia",
+        "SEFA loan social enterprise impact investment finance Australia",
+        "IBA commercial finance impact investment finance Australia",
+        "First Nations business finance impact investment finance Australia",
+        "social impact loan Australia impact investment finance Australia"
+      ],
+      "source_documents": [
+        {
+          "label": "Goods Path to Thousands 2026",
+          "path": "/Users/benknight/Code/Goods Asset Register/GO_TO_MARKET_THOUSANDS_2026.md"
+        },
+        {
+          "label": "ACT Dext Supplier Rules",
+          "path": "/Users/benknight/Code/act-global-infrastructure/config/dext-supplier-rules.json"
+        }
+      ]
+    },
+    {
+      "id": "goods-evidence-application-proof-and-impact-measurement",
+      "project_slug": "goods",
+      "project_name": "Goods on Country",
+      "project_code": "ACT-GD",
+      "route_type": "evidence",
+      "priority": "low",
+      "title": "Assemble application proof pack",
+      "summary": "Application proof and impact measurement",
+      "next_step": "Create a repeatable evidence pack: facts, source document, proof status, and where it appears in applications.",
+      "search_terms": [
+        "asset register evidence",
+        "community demand evidence",
+        "remote laundry health evidence",
+        "scabies reduction community laundry",
+        "rheumatic heart disease prevention laundry",
+        "social return remote housing"
+      ],
+      "grant_finder_href": "/grants?type=open_opportunity&sort=closing_asc&project=goods&quality=ready&q=asset%20register%20evidence%20community%20demand%20evidence%20remote%20laundry%20health%20evidence",
+      "source_discovery_queries": [
+        "asset register evidence evidence impact funding Australia",
+        "community demand evidence evidence impact funding Australia",
+        "remote laundry health evidence evidence impact funding Australia",
+        "scabies reduction community laundry evidence impact funding Australia",
+        "rheumatic heart disease prevention laundry evidence impact funding Australia"
+      ],
+      "source_documents": [
+        {
+          "label": "Goods Asset Register README",
+          "path": "/Users/benknight/Code/Goods Asset Register/README.md"
+        },
+        {
+          "label": "Goods QR Manifest",
+          "path": "/Users/benknight/Code/Goods Asset Register/data/qr_codes/qr_manifest.csv"
+        },
+        {
+          "label": "ACT Operational Thesis",
+          "path": "/Users/benknight/Code/act-global-infrastructure/wiki/operations/act-operational-thesis.md"
+        }
+      ]
+    },
+    {
+      "id": "civicgraph-grant-public-source-grant-discovery",
+      "project_slug": "civicgraph",
+      "project_name": "CivicGraph / GrantScope",
+      "project_code": "ACT-CG",
+      "route_type": "grant",
+      "priority": "medium",
+      "title": "Run GrantScope grant scan",
+      "summary": "Public-source grant discovery",
+      "next_step": "Keep expanding the public source frontier and classify sources by state, source family, project fit, and readiness.",
+      "search_terms": [
+        "public grant finder",
+        "foundation program Australia",
+        "council grant finder",
+        "corporate giving Australia",
+        "philanthropy program Australia"
+      ],
+      "grant_finder_href": "/grants?type=open_opportunity&sort=closing_asc&project=civicgraph&quality=ready&q=public%20grant%20finder%20foundation%20program%20Australia%20council%20grant%20finder",
+      "source_discovery_queries": [
+        "public grant finder grant funding Australia",
+        "foundation program Australia grant funding Australia",
+        "council grant finder grant funding Australia",
+        "corporate giving Australia grant funding Australia",
+        "philanthropy program Australia grant funding Australia"
+      ],
+      "source_documents": [
+        {
+          "label": "ACT Architecture",
+          "path": "/Users/benknight/Code/act-global-infrastructure/wiki/technical/act-architecture.md"
+        }
+      ]
+    },
+    {
+      "id": "civicgraph-systems-ghl-and-pipeline-handoff",
+      "project_slug": "civicgraph",
+      "project_name": "CivicGraph / GrantScope",
+      "project_code": "ACT-CG",
+      "route_type": "systems",
+      "priority": "medium",
+      "title": "Set CRM and pipeline handoff",
+      "summary": "GHL and pipeline handoff",
+      "next_step": "Use scored matches to create tasks, contact records, and follow-up notes for the right ACT project lane.",
+      "search_terms": [
+        "GHL grant pipeline",
+        "grant CRM automation",
+        "foundation relationship management"
+      ],
+      "grant_finder_href": "/grants?type=open_opportunity&sort=closing_asc&project=civicgraph&quality=ready&q=GHL%20grant%20pipeline%20grant%20CRM%20automation%20foundation%20relationship%20management",
+      "source_discovery_queries": [
+        "GHL grant pipeline CRM grant pipeline automation",
+        "grant CRM automation CRM grant pipeline automation",
+        "foundation relationship management CRM grant pipeline automation"
+      ],
+      "source_documents": [
+        {
+          "label": "ACT Operational Thesis",
+          "path": "/Users/benknight/Code/act-global-infrastructure/wiki/operations/act-operational-thesis.md"
+        }
+      ]
+    },
+    {
+      "id": "justicehub-grant-youth-justice-and-reintegration-grants",
+      "project_slug": "justicehub",
+      "project_name": "JusticeHub",
+      "project_code": "ACT-JH",
+      "route_type": "grant",
+      "priority": "medium",
+      "title": "Run GrantScope grant scan",
+      "summary": "Youth justice and reintegration grants",
+      "next_step": "Use ALMA/evidence context to distinguish research, implementation, service delivery, and advocacy opportunities.",
+      "search_terms": [
+        "youth justice grant",
+        "diversion program funding",
+        "justice reintegration funding",
+        "community legal education grant",
+        "family violence justice support"
+      ],
+      "grant_finder_href": "/grants?type=open_opportunity&sort=closing_asc&project=justicehub&quality=ready&q=youth%20justice%20grant%20diversion%20program%20funding%20justice%20reintegration%20funding",
+      "source_discovery_queries": [
+        "youth justice grant grant funding Australia",
+        "diversion program funding grant funding Australia",
+        "justice reintegration funding grant funding Australia",
+        "community legal education grant grant funding Australia",
+        "family violence justice support grant funding Australia"
+      ],
+      "source_documents": [
+        {
+          "label": "ACT Active Projects",
+          "path": "/Users/benknight/Code/act-global-infrastructure/config/active-projects.json"
+        }
+      ]
+    },
+    {
+      "id": "justicehub-foundation-systems-change-foundations",
+      "project_slug": "justicehub",
+      "project_name": "JusticeHub",
+      "project_code": "ACT-JH",
+      "route_type": "foundation",
+      "priority": "medium",
+      "title": "Build funder relationship shortlist",
+      "summary": "Systems-change foundations",
+      "next_step": "Create a foundation shortlist with fit, relationship path, proof, and a specific ask per funder.",
+      "search_terms": [
+        "justice reform foundation Australia",
+        "youth justice philanthropy",
+        "First Nations justice funding",
+        "systems change grant"
+      ],
+      "grant_finder_href": "/grants?type=open_opportunity&sort=closing_asc&project=justicehub&quality=ready&q=justice%20reform%20foundation%20Australia%20youth%20justice%20philanthropy%20First%20Nations%20justice%20funding",
+      "source_discovery_queries": [
+        "justice reform foundation Australia foundation grant program Australia",
+        "youth justice philanthropy foundation grant program Australia",
+        "First Nations justice funding foundation grant program Australia",
+        "systems change grant foundation grant program Australia"
+      ],
+      "source_documents": [
+        {
+          "label": "ACT Operational Thesis",
+          "path": "/Users/benknight/Code/act-global-infrastructure/wiki/operations/act-operational-thesis.md"
+        }
+      ]
+    },
+    {
+      "id": "empathy-ledger-grant-data-sovereignty-and-community-evidence-grants",
+      "project_slug": "empathy-ledger",
+      "project_name": "Empathy Ledger",
+      "project_code": "ACT-EL",
+      "route_type": "grant",
+      "priority": "medium",
+      "title": "Run GrantScope grant scan",
+      "summary": "Data sovereignty and community evidence grants",
+      "next_step": "Package Empathy Ledger as the evidence/voice infrastructure that strengthens ACT project applications.",
+      "search_terms": [
+        "Indigenous data sovereignty grant",
+        "community voice platform funding",
+        "ethical AI grant Australia",
+        "impact measurement grant"
+      ],
+      "grant_finder_href": "/grants?type=open_opportunity&sort=closing_asc&project=empathy-ledger&quality=ready&q=Indigenous%20data%20sovereignty%20grant%20community%20voice%20platform%20funding%20ethical%20AI%20grant%20Australia",
+      "source_discovery_queries": [
+        "Indigenous data sovereignty grant grant funding Australia",
+        "community voice platform funding grant funding Australia",
+        "ethical AI grant Australia grant funding Australia",
+        "impact measurement grant grant funding Australia"
+      ],
+      "source_documents": [
+        {
+          "label": "ACT Active Projects",
+          "path": "/Users/benknight/Code/act-global-infrastructure/config/active-projects.json"
+        }
+      ]
+    },
+    {
+      "id": "picc-grant-place-based-acco-support-grants",
+      "project_slug": "picc",
+      "project_name": "PICC and Palm Island support",
+      "project_code": null,
+      "route_type": "grant",
+      "priority": "medium",
+      "title": "Run GrantScope grant scan",
+      "summary": "Place-based ACCO support grants",
+      "next_step": "Keep PICC as a relationship/context lane unless there is a direct project ask and permission to proceed.",
+      "search_terms": [
+        "Palm Island grant",
+        "ACCO funding Queensland",
+        "Aboriginal community controlled organisation grant",
+        "place based funding Queensland"
+      ],
+      "grant_finder_href": "/grants?type=open_opportunity&sort=closing_asc&project=picc&quality=ready&q=Palm%20Island%20grant%20ACCO%20funding%20Queensland%20Aboriginal%20community%20controlled%20organisation%20grant",
+      "source_discovery_queries": [
+        "Palm Island grant grant funding Australia",
+        "ACCO funding Queensland grant funding Australia",
+        "Aboriginal community controlled organisation grant grant funding Australia",
+        "place based funding Queensland grant funding Australia"
+      ],
+      "source_documents": [
+        {
+          "label": "ACT Active Projects",
+          "path": "/Users/benknight/Code/act-global-infrastructure/config/active-projects.json"
+        }
+      ]
+    },
+    {
+      "id": "the-harvest-grant-regenerative-place-and-community-infrastructure-grants",
+      "project_slug": "the-harvest",
+      "project_name": "The Harvest / Green Harvest Witta",
+      "project_code": "ACT-HV",
+      "route_type": "grant",
+      "priority": "medium",
+      "title": "Run GrantScope grant scan",
+      "summary": "Regenerative place and community infrastructure grants",
+      "next_step": "Define whether the ask is land/infrastructure, program delivery, education, health, or creative/community activation before matching.",
+      "search_terms": [
+        "regenerative agriculture grant",
+        "social prescribing nature grant",
+        "community garden infrastructure grant",
+        "regional resilience grant Queensland"
+      ],
+      "grant_finder_href": "/grants?type=open_opportunity&sort=closing_asc&project=the-harvest&quality=ready&q=regenerative%20agriculture%20grant%20social%20prescribing%20nature%20grant%20community%20garden%20infrastructure%20grant",
+      "source_discovery_queries": [
+        "regenerative agriculture grant grant funding Australia",
+        "social prescribing nature grant grant funding Australia",
+        "community garden infrastructure grant grant funding Australia",
+        "regional resilience grant Queensland grant funding Australia"
+      ],
+      "source_documents": [
+        {
+          "label": "ACT Active Projects",
+          "path": "/Users/benknight/Code/act-global-infrastructure/config/active-projects.json"
+        }
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "slug": "goods",
+      "aliases": [
+        "goods-on-country",
+        "act-gd"
+      ],
+      "name": "Goods on Country",
+      "code": "ACT-GD",
+      "summary": "Practical enterprise lane for remote-community essential goods, circular materials, asset tracking, procurement, grants, and impact investment.",
+      "themes": [
+        "Product Design",
+        "Cultural Design",
+        "Sustainability",
+        "Resource Tracking",
+        "Community Assets"
+      ],
+      "source_documents": [
+        {
+          "label": "Goods Asset Register README",
+          "path": "/Users/benknight/Code/Goods Asset Register/README.md"
+        },
+        {
+          "label": "Catalysing Impact Application Draft",
+          "path": "/Users/benknight/Code/Goods Asset Register/Catalysing_Impact_Application_DRAFT.md"
+        },
+        {
+          "label": "Goods on Country Path to Thousands 2026",
+          "path": "/Users/benknight/Code/Goods Asset Register/GO_TO_MARKET_THOUSANDS_2026.md"
+        },
+        {
+          "label": "Market Intelligence 2026",
+          "path": "/Users/benknight/Code/Goods Asset Register/MARKET_INTELLIGENCE_2026.md"
+        },
+        {
+          "label": "Snow Submission Review February 2026",
+          "path": "/Users/benknight/Code/Goods Asset Register/SNOW_SUBMISSION_REVIEW_FEBRUARY_2026.md"
+        },
+        {
+          "label": "Goods Expanded Asset CSV",
+          "path": "/Users/benknight/Code/Goods Asset Register/data/expanded_assets_final.csv"
+        },
+        {
+          "label": "Goods QR Manifest",
+          "path": "/Users/benknight/Code/Goods Asset Register/data/qr_codes/qr_manifest.csv"
+        },
+        {
+          "label": "ACT Operational Thesis",
+          "path": "/Users/benknight/Code/act-global-infrastructure/wiki/operations/act-operational-thesis.md"
+        },
+        {
+          "label": "ACT Knowledge Ops Loop",
+          "path": "/Users/benknight/Code/act-global-infrastructure/wiki/technical/act-knowledge-ops-loop.md"
+        },
+        {
+          "label": "ACT Repo Connections",
+          "path": "/Users/benknight/Code/act-global-infrastructure/config/repo-connections-latest.json"
+        },
+        {
+          "label": "ACT Dext Supplier Rules",
+          "path": "/Users/benknight/Code/act-global-infrastructure/config/dext-supplier-rules.json"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "Tracked deployment proof",
+          "value": "389 assets claimed in README",
+          "detail": "404 current CSV rows and 389 QR manifest rows were found locally; reconcile CSV growth against the 389-asset canonical claim before external use.",
+          "source": "Goods Asset Register"
+        },
+        {
+          "label": "Product mix",
+          "value": "363 Basket Bed, 21 Weave Bed, 20 ID Washing Machine",
+          "detail": "Use product mix to prove real delivery and to forecast replacement, production, freight, and support needs.",
+          "source": "expanded_assets_final.csv"
+        },
+        {
+          "label": "Community footprint",
+          "value": "8 communities in current CSV",
+          "detail": "Tennant Creek (146), Palm Island (141), Utopia Homelands (68), Maningrida (24), Kalgoorlie (20), Mount Isa (2)",
+          "source": "expanded_assets_final.csv"
+        },
+        {
+          "label": "Operating system",
+          "value": "https://www.goodsoncountry.com",
+          "detail": "ACT repo map links Goods to ACT-GD and the Goods production URL.",
+          "source": "repo-connections-latest.json"
+        }
+      ],
+      "routes": [
+        {
+          "type": "procurement",
+          "label": "Remote housing and essential-goods buyers",
+          "why": "Goods already has deployed assets, demand proof, QR support infrastructure, and a 2026 scale plan that names housing, hostels, retail, ACCHO, and community-housing routes.",
+          "search_terms": [
+            "remote housing fitout",
+            "Aboriginal housing furniture",
+            "durable beds remote communities",
+            "washing machines remote communities",
+            "NT Remote Housing Investment Package",
+            "Aboriginal Hostels Limited",
+            "ALPA Outback Stores",
+            "NACCHO ACCHO infrastructure",
+            "state Aboriginal housing",
+            "NDIS SDA community housing fitout"
+          ],
+          "next_action": "Create one procurement pack: unit costs, minimum order quantities, delivery model, warranty/support, impact proof, and buyer-specific ask.",
+          "source_documents": [
+            {
+              "label": "Goods Path to Thousands 2026",
+              "path": "/Users/benknight/Code/Goods Asset Register/GO_TO_MARKET_THOUSANDS_2026.md"
+            },
+            {
+              "label": "Goods Expanded Asset CSV",
+              "path": "/Users/benknight/Code/Goods Asset Register/data/expanded_assets_final.csv"
+            }
+          ]
+        },
+        {
+          "type": "foundation",
+          "label": "Health, housing, First Nations, circular economy foundations",
+          "why": "The strongest foundation case is not generic product funding; it is the link between remote housing, dignity, laundry/health outcomes, circular materials, First Nations production, and community ownership.",
+          "search_terms": [
+            "First Nations enterprise grants",
+            "remote housing philanthropy",
+            "circular economy grants Australia",
+            "social enterprise growth fund",
+            "health equity foundations Australia",
+            "Snow Foundation social impact loan",
+            "VFFF social enterprise",
+            "FRRR remote communities",
+            "Catalysing Impact",
+            "Giant Leap impact investment"
+          ],
+          "next_action": "Build a foundation narrative pack with the Catalysing Impact draft, asset evidence, community demand, and a clear repayable/non-repayable funding split.",
+          "source_documents": [
+            {
+              "label": "Catalysing Impact Application Draft",
+              "path": "/Users/benknight/Code/Goods Asset Register/Catalysing_Impact_Application_DRAFT.md"
+            },
+            {
+              "label": "Snow Submission Review February 2026",
+              "path": "/Users/benknight/Code/Goods Asset Register/SNOW_SUBMISSION_REVIEW_FEBRUARY_2026.md"
+            }
+          ]
+        },
+        {
+          "type": "grant",
+          "label": "Open grants for products, capability, evidence, and regional delivery",
+          "why": "GrantScope should search beyond research grants: manufacturing capability, circular economy, Indigenous business, regional health, climate resilience, social enterprise, logistics, and community infrastructure.",
+          "search_terms": [
+            "Indigenous business growth grant",
+            "social enterprise capability grant",
+            "circular economy product grant",
+            "regional health infrastructure grant",
+            "remote community infrastructure grant",
+            "climate resilience social enterprise grant",
+            "manufacturing modernisation grant",
+            "Indigenous procurement grant",
+            "community laundry grant",
+            "goods for remote communities funding"
+          ],
+          "next_action": "Use the Goods feed first, then add missing sources to the public-source frontier when the match is real and public.",
+          "source_documents": [
+            {
+              "label": "Market Intelligence 2026",
+              "path": "/Users/benknight/Code/Goods Asset Register/MARKET_INTELLIGENCE_2026.md"
+            },
+            {
+              "label": "ACT Operational Thesis",
+              "path": "/Users/benknight/Code/act-global-infrastructure/wiki/operations/act-operational-thesis.md"
+            }
+          ]
+        },
+        {
+          "type": "capital",
+          "label": "Working capital and impact investment",
+          "why": "The current evidence supports a capital stack: pre-purchase contracts, repayable finance, R&D tax, catalytic grants, and a First Nations-owned operating pathway.",
+          "search_terms": [
+            "impact investment social enterprise Australia",
+            "SEFA loan social enterprise",
+            "IBA commercial finance",
+            "First Nations business finance",
+            "social impact loan Australia",
+            "pre purchase contract foundation",
+            "R&D tax incentive product development",
+            "working capital social enterprise"
+          ],
+          "next_action": "Turn the 2026 plan into a capital table: ask, source, repayment logic, evidence needed, and owner/date for each route.",
+          "source_documents": [
+            {
+              "label": "Goods Path to Thousands 2026",
+              "path": "/Users/benknight/Code/Goods Asset Register/GO_TO_MARKET_THOUSANDS_2026.md"
+            },
+            {
+              "label": "ACT Dext Supplier Rules",
+              "path": "/Users/benknight/Code/act-global-infrastructure/config/dext-supplier-rules.json"
+            }
+          ]
+        },
+        {
+          "type": "evidence",
+          "label": "Application proof and impact measurement",
+          "why": "The strongest application material is already split across the asset register, QR manifest, community demand, Catalysing Impact draft, and ACT project-code evidence.",
+          "search_terms": [
+            "asset register evidence",
+            "community demand evidence",
+            "remote laundry health evidence",
+            "scabies reduction community laundry",
+            "rheumatic heart disease prevention laundry",
+            "social return remote housing"
+          ],
+          "next_action": "Create a repeatable evidence pack: facts, source document, proof status, and where it appears in applications.",
+          "source_documents": [
+            {
+              "label": "Goods Asset Register README",
+              "path": "/Users/benknight/Code/Goods Asset Register/README.md"
+            },
+            {
+              "label": "Goods QR Manifest",
+              "path": "/Users/benknight/Code/Goods Asset Register/data/qr_codes/qr_manifest.csv"
+            },
+            {
+              "label": "ACT Operational Thesis",
+              "path": "/Users/benknight/Code/act-global-infrastructure/wiki/operations/act-operational-thesis.md"
+            }
+          ]
+        }
+      ],
+      "readiness_gaps": [
+        "Reconcile the canonical asset count against the latest expanded CSV before sending external claims.",
+        "Confirm the preferred legal/entity pathway for IPP and Supply Nation positioning.",
+        "Create a buyer-ready unit economics sheet for beds, washing machines, freight, warranty, and support.",
+        "Separate grants, procurement revenue, pre-purchase contracts, loans, and R&D tax in the capital stack.",
+        "Turn community demand and health evidence into reusable application language."
+      ],
+      "search_terms": [
+        "remote housing fitout",
+        "Aboriginal housing furniture",
+        "durable beds remote communities",
+        "washing machines remote communities",
+        "NT Remote Housing Investment Package",
+        "Aboriginal Hostels Limited",
+        "ALPA Outback Stores",
+        "NACCHO ACCHO infrastructure",
+        "state Aboriginal housing",
+        "NDIS SDA community housing fitout",
+        "First Nations enterprise grants",
+        "remote housing philanthropy",
+        "circular economy grants Australia",
+        "social enterprise growth fund",
+        "health equity foundations Australia",
+        "Snow Foundation social impact loan",
+        "VFFF social enterprise",
+        "FRRR remote communities",
+        "Catalysing Impact",
+        "Giant Leap impact investment",
+        "Indigenous business growth grant",
+        "social enterprise capability grant",
+        "circular economy product grant",
+        "regional health infrastructure grant",
+        "remote community infrastructure grant",
+        "climate resilience social enterprise grant",
+        "manufacturing modernisation grant",
+        "Indigenous procurement grant",
+        "community laundry grant",
+        "goods for remote communities funding",
+        "impact investment social enterprise Australia",
+        "SEFA loan social enterprise",
+        "IBA commercial finance",
+        "First Nations business finance",
+        "social impact loan Australia",
+        "pre purchase contract foundation",
+        "R&D tax incentive product development",
+        "working capital social enterprise",
+        "asset register evidence",
+        "community demand evidence",
+        "remote laundry health evidence",
+        "scabies reduction community laundry",
+        "rheumatic heart disease prevention laundry",
+        "social return remote housing"
+      ],
+      "support_actions": [
+        {
+          "id": "goods-procurement-remote-housing-and-essential-goods-buyers",
+          "project_slug": "goods",
+          "project_name": "Goods on Country",
+          "project_code": "ACT-GD",
+          "route_type": "procurement",
+          "priority": "high",
+          "title": "Map buyers and procurement notices",
+          "summary": "Remote housing and essential-goods buyers",
+          "next_step": "Create one procurement pack: unit costs, minimum order quantities, delivery model, warranty/support, impact proof, and buyer-specific ask.",
+          "search_terms": [
+            "remote housing fitout",
+            "Aboriginal housing furniture",
+            "durable beds remote communities",
+            "washing machines remote communities",
+            "NT Remote Housing Investment Package",
+            "Aboriginal Hostels Limited",
+            "ALPA Outback Stores",
+            "NACCHO ACCHO infrastructure"
+          ],
+          "grant_finder_href": "/grants?type=open_opportunity&sort=closing_asc&project=goods&quality=ready&q=remote%20housing%20fitout%20Aboriginal%20housing%20furniture%20durable%20beds%20remote%20communities",
+          "source_discovery_queries": [
+            "remote housing fitout procurement tender buyer Australia",
+            "Aboriginal housing furniture procurement tender buyer Australia",
+            "durable beds remote communities procurement tender buyer Australia",
+            "washing machines remote communities procurement tender buyer Australia",
+            "NT Remote Housing Investment Package procurement tender buyer Australia"
+          ],
+          "source_documents": [
+            {
+              "label": "Goods Path to Thousands 2026",
+              "path": "/Users/benknight/Code/Goods Asset Register/GO_TO_MARKET_THOUSANDS_2026.md"
+            },
+            {
+              "label": "Goods Expanded Asset CSV",
+              "path": "/Users/benknight/Code/Goods Asset Register/data/expanded_assets_final.csv"
+            }
+          ]
+        },
+        {
+          "id": "goods-foundation-health-housing-first-nations-circular-economy-foundations",
+          "project_slug": "goods",
+          "project_name": "Goods on Country",
+          "project_code": "ACT-GD",
+          "route_type": "foundation",
+          "priority": "high",
+          "title": "Build funder relationship shortlist",
+          "summary": "Health, housing, First Nations, circular economy foundations",
+          "next_step": "Build a foundation narrative pack with the Catalysing Impact draft, asset evidence, community demand, and a clear repayable/non-repayable funding split.",
+          "search_terms": [
+            "First Nations enterprise grants",
+            "remote housing philanthropy",
+            "circular economy grants Australia",
+            "social enterprise growth fund",
+            "health equity foundations Australia",
+            "Snow Foundation social impact loan",
+            "VFFF social enterprise",
+            "FRRR remote communities"
+          ],
+          "grant_finder_href": "/grants?type=open_opportunity&sort=closing_asc&project=goods&quality=ready&q=First%20Nations%20enterprise%20grants%20remote%20housing%20philanthropy%20circular%20economy%20grants%20Australia",
+          "source_discovery_queries": [
+            "First Nations enterprise grants foundation grant program Australia",
+            "remote housing philanthropy foundation grant program Australia",
+            "circular economy grants Australia foundation grant program Australia",
+            "social enterprise growth fund foundation grant program Australia",
+            "health equity foundations Australia foundation grant program Australia"
+          ],
+          "source_documents": [
+            {
+              "label": "Catalysing Impact Application Draft",
+              "path": "/Users/benknight/Code/Goods Asset Register/Catalysing_Impact_Application_DRAFT.md"
+            },
+            {
+              "label": "Snow Submission Review February 2026",
+              "path": "/Users/benknight/Code/Goods Asset Register/SNOW_SUBMISSION_REVIEW_FEBRUARY_2026.md"
+            }
+          ]
+        },
+        {
+          "id": "goods-grant-open-grants-for-products-capability-evidence-and-regional-delivery",
+          "project_slug": "goods",
+          "project_name": "Goods on Country",
+          "project_code": "ACT-GD",
+          "route_type": "grant",
+          "priority": "high",
+          "title": "Run GrantScope grant scan",
+          "summary": "Open grants for products, capability, evidence, and regional delivery",
+          "next_step": "Use the Goods feed first, then add missing sources to the public-source frontier when the match is real and public.",
+          "search_terms": [
+            "Indigenous business growth grant",
+            "social enterprise capability grant",
+            "circular economy product grant",
+            "regional health infrastructure grant",
+            "remote community infrastructure grant",
+            "climate resilience social enterprise grant",
+            "manufacturing modernisation grant",
+            "Indigenous procurement grant"
+          ],
+          "grant_finder_href": "/grants?type=open_opportunity&sort=closing_asc&project=goods&quality=ready&q=Indigenous%20business%20growth%20grant%20social%20enterprise%20capability%20grant%20circular%20economy%20product%20grant",
+          "source_discovery_queries": [
+            "Indigenous business growth grant grant funding Australia",
+            "social enterprise capability grant grant funding Australia",
+            "circular economy product grant grant funding Australia",
+            "regional health infrastructure grant grant funding Australia",
+            "remote community infrastructure grant grant funding Australia"
+          ],
+          "source_documents": [
+            {
+              "label": "Market Intelligence 2026",
+              "path": "/Users/benknight/Code/Goods Asset Register/MARKET_INTELLIGENCE_2026.md"
+            },
+            {
+              "label": "ACT Operational Thesis",
+              "path": "/Users/benknight/Code/act-global-infrastructure/wiki/operations/act-operational-thesis.md"
+            }
+          ]
+        },
+        {
+          "id": "goods-capital-working-capital-and-impact-investment",
+          "project_slug": "goods",
+          "project_name": "Goods on Country",
+          "project_code": "ACT-GD",
+          "route_type": "capital",
+          "priority": "high",
+          "title": "Build capital stack scan",
+          "summary": "Working capital and impact investment",
+          "next_step": "Turn the 2026 plan into a capital table: ask, source, repayment logic, evidence needed, and owner/date for each route.",
+          "search_terms": [
+            "impact investment social enterprise Australia",
+            "SEFA loan social enterprise",
+            "IBA commercial finance",
+            "First Nations business finance",
+            "social impact loan Australia",
+            "pre purchase contract foundation",
+            "R&D tax incentive product development",
+            "working capital social enterprise"
+          ],
+          "grant_finder_href": "/grants?type=open_opportunity&sort=closing_asc&project=goods&quality=ready&q=impact%20investment%20social%20enterprise%20Australia%20SEFA%20loan%20social%20enterprise%20IBA%20commercial%20finance",
+          "source_discovery_queries": [
+            "impact investment social enterprise Australia impact investment finance Australia",
+            "SEFA loan social enterprise impact investment finance Australia",
+            "IBA commercial finance impact investment finance Australia",
+            "First Nations business finance impact investment finance Australia",
+            "social impact loan Australia impact investment finance Australia"
+          ],
+          "source_documents": [
+            {
+              "label": "Goods Path to Thousands 2026",
+              "path": "/Users/benknight/Code/Goods Asset Register/GO_TO_MARKET_THOUSANDS_2026.md"
+            },
+            {
+              "label": "ACT Dext Supplier Rules",
+              "path": "/Users/benknight/Code/act-global-infrastructure/config/dext-supplier-rules.json"
+            }
+          ]
+        },
+        {
+          "id": "goods-evidence-application-proof-and-impact-measurement",
+          "project_slug": "goods",
+          "project_name": "Goods on Country",
+          "project_code": "ACT-GD",
+          "route_type": "evidence",
+          "priority": "low",
+          "title": "Assemble application proof pack",
+          "summary": "Application proof and impact measurement",
+          "next_step": "Create a repeatable evidence pack: facts, source document, proof status, and where it appears in applications.",
+          "search_terms": [
+            "asset register evidence",
+            "community demand evidence",
+            "remote laundry health evidence",
+            "scabies reduction community laundry",
+            "rheumatic heart disease prevention laundry",
+            "social return remote housing"
+          ],
+          "grant_finder_href": "/grants?type=open_opportunity&sort=closing_asc&project=goods&quality=ready&q=asset%20register%20evidence%20community%20demand%20evidence%20remote%20laundry%20health%20evidence",
+          "source_discovery_queries": [
+            "asset register evidence evidence impact funding Australia",
+            "community demand evidence evidence impact funding Australia",
+            "remote laundry health evidence evidence impact funding Australia",
+            "scabies reduction community laundry evidence impact funding Australia",
+            "rheumatic heart disease prevention laundry evidence impact funding Australia"
+          ],
+          "source_documents": [
+            {
+              "label": "Goods Asset Register README",
+              "path": "/Users/benknight/Code/Goods Asset Register/README.md"
+            },
+            {
+              "label": "Goods QR Manifest",
+              "path": "/Users/benknight/Code/Goods Asset Register/data/qr_codes/qr_manifest.csv"
+            },
+            {
+              "label": "ACT Operational Thesis",
+              "path": "/Users/benknight/Code/act-global-infrastructure/wiki/operations/act-operational-thesis.md"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "civicgraph",
+      "aliases": [
+        "grantscope",
+        "act-cg"
+      ],
+      "name": "CivicGraph / GrantScope",
+      "code": "ACT-CG",
+      "summary": "Infrastructure lane for funding intelligence, source discovery, public data, grant/foundation matching, and relationship evidence.",
+      "themes": [
+        "Funding transparency",
+        "Public-source intelligence",
+        "Data infrastructure",
+        "CRM/pipeline alignment"
+      ],
+      "source_documents": [
+        {
+          "label": "ACT Operational Thesis",
+          "path": "/Users/benknight/Code/act-global-infrastructure/wiki/operations/act-operational-thesis.md"
+        },
+        {
+          "label": "ACT Architecture",
+          "path": "/Users/benknight/Code/act-global-infrastructure/wiki/technical/act-architecture.md"
+        },
+        {
+          "label": "ACT Repo Connections",
+          "path": "/Users/benknight/Code/act-global-infrastructure/config/repo-connections-latest.json"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "Repo linked",
+          "value": "Acurioustractor/grantscope",
+          "detail": "GrantScope is the support layer for finding, scoring, tracking, and sending opportunities into CRM/pipeline workflows.",
+          "source": "repo-connections-latest.json"
+        }
+      ],
+      "routes": [
+        {
+          "type": "grant",
+          "label": "Public-source grant discovery",
+          "why": "Use GrantScope to search public grant sources and convert strong matches into tracked pipeline, not to make users search from scratch.",
+          "search_terms": [
+            "public grant finder",
+            "foundation program Australia",
+            "council grant finder",
+            "corporate giving Australia",
+            "philanthropy program Australia"
+          ],
+          "next_action": "Keep expanding the public source frontier and classify sources by state, source family, project fit, and readiness.",
+          "source_documents": [
+            {
+              "label": "ACT Architecture",
+              "path": "/Users/benknight/Code/act-global-infrastructure/wiki/technical/act-architecture.md"
+            }
+          ]
+        },
+        {
+          "type": "systems",
+          "label": "GHL and pipeline handoff",
+          "why": "The value is in moving real opportunities into contacts, tasks, and follow-up, not just listing grants.",
+          "search_terms": [
+            "GHL grant pipeline",
+            "grant CRM automation",
+            "foundation relationship management"
+          ],
+          "next_action": "Use scored matches to create tasks, contact records, and follow-up notes for the right ACT project lane.",
+          "source_documents": [
+            {
+              "label": "ACT Operational Thesis",
+              "path": "/Users/benknight/Code/act-global-infrastructure/wiki/operations/act-operational-thesis.md"
+            }
+          ]
+        }
+      ],
+      "readiness_gaps": [
+        "Make source quality visible so users know what is ready, stale, local, national, or needs verification."
+      ],
+      "search_terms": [
+        "public grant finder",
+        "foundation program Australia",
+        "council grant finder",
+        "corporate giving Australia"
+      ],
+      "support_actions": [
+        {
+          "id": "civicgraph-grant-public-source-grant-discovery",
+          "project_slug": "civicgraph",
+          "project_name": "CivicGraph / GrantScope",
+          "project_code": "ACT-CG",
+          "route_type": "grant",
+          "priority": "medium",
+          "title": "Run GrantScope grant scan",
+          "summary": "Public-source grant discovery",
+          "next_step": "Keep expanding the public source frontier and classify sources by state, source family, project fit, and readiness.",
+          "search_terms": [
+            "public grant finder",
+            "foundation program Australia",
+            "council grant finder",
+            "corporate giving Australia",
+            "philanthropy program Australia"
+          ],
+          "grant_finder_href": "/grants?type=open_opportunity&sort=closing_asc&project=civicgraph&quality=ready&q=public%20grant%20finder%20foundation%20program%20Australia%20council%20grant%20finder",
+          "source_discovery_queries": [
+            "public grant finder grant funding Australia",
+            "foundation program Australia grant funding Australia",
+            "council grant finder grant funding Australia",
+            "corporate giving Australia grant funding Australia",
+            "philanthropy program Australia grant funding Australia"
+          ],
+          "source_documents": [
+            {
+              "label": "ACT Architecture",
+              "path": "/Users/benknight/Code/act-global-infrastructure/wiki/technical/act-architecture.md"
+            }
+          ]
+        },
+        {
+          "id": "civicgraph-systems-ghl-and-pipeline-handoff",
+          "project_slug": "civicgraph",
+          "project_name": "CivicGraph / GrantScope",
+          "project_code": "ACT-CG",
+          "route_type": "systems",
+          "priority": "medium",
+          "title": "Set CRM and pipeline handoff",
+          "summary": "GHL and pipeline handoff",
+          "next_step": "Use scored matches to create tasks, contact records, and follow-up notes for the right ACT project lane.",
+          "search_terms": [
+            "GHL grant pipeline",
+            "grant CRM automation",
+            "foundation relationship management"
+          ],
+          "grant_finder_href": "/grants?type=open_opportunity&sort=closing_asc&project=civicgraph&quality=ready&q=GHL%20grant%20pipeline%20grant%20CRM%20automation%20foundation%20relationship%20management",
+          "source_discovery_queries": [
+            "GHL grant pipeline CRM grant pipeline automation",
+            "grant CRM automation CRM grant pipeline automation",
+            "foundation relationship management CRM grant pipeline automation"
+          ],
+          "source_documents": [
+            {
+              "label": "ACT Operational Thesis",
+              "path": "/Users/benknight/Code/act-global-infrastructure/wiki/operations/act-operational-thesis.md"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "justicehub",
+      "aliases": [
+        "act-jh"
+      ],
+      "name": "JusticeHub",
+      "code": "ACT-JH",
+      "summary": "Justice-system change lane for evidence, youth justice, diversion, reintegration, community support, and policy/practice alignment.",
+      "themes": [
+        "Systems Change",
+        "Community Support"
+      ],
+      "source_documents": [
+        {
+          "label": "ACT Operational Thesis",
+          "path": "/Users/benknight/Code/act-global-infrastructure/wiki/operations/act-operational-thesis.md"
+        },
+        {
+          "label": "ACT Active Projects",
+          "path": "/Users/benknight/Code/act-global-infrastructure/config/active-projects.json"
+        }
+      ],
+      "evidence": [],
+      "routes": [
+        {
+          "type": "grant",
+          "label": "Youth justice and reintegration grants",
+          "why": "The strongest search terms should cover justice reform, diversion, community-led support, family support, and evidence translation.",
+          "search_terms": [
+            "youth justice grant",
+            "diversion program funding",
+            "justice reintegration funding",
+            "community legal education grant",
+            "family violence justice support"
+          ],
+          "next_action": "Use ALMA/evidence context to distinguish research, implementation, service delivery, and advocacy opportunities.",
+          "source_documents": [
+            {
+              "label": "ACT Active Projects",
+              "path": "/Users/benknight/Code/act-global-infrastructure/config/active-projects.json"
+            }
+          ]
+        },
+        {
+          "type": "foundation",
+          "label": "Systems-change foundations",
+          "why": "JusticeHub needs relationship-led foundation work around justice reform, young people, families, First Nations justice, and systems accountability.",
+          "search_terms": [
+            "justice reform foundation Australia",
+            "youth justice philanthropy",
+            "First Nations justice funding",
+            "systems change grant"
+          ],
+          "next_action": "Create a foundation shortlist with fit, relationship path, proof, and a specific ask per funder.",
+          "source_documents": [
+            {
+              "label": "ACT Operational Thesis",
+              "path": "/Users/benknight/Code/act-global-infrastructure/wiki/operations/act-operational-thesis.md"
+            }
+          ]
+        }
+      ],
+      "readiness_gaps": [
+        "Separate service delivery, advocacy, evidence platform, and policy reform asks before matching funders."
+      ],
+      "search_terms": [
+        "youth justice grant",
+        "justice reform foundation Australia",
+        "diversion program funding"
+      ],
+      "support_actions": [
+        {
+          "id": "justicehub-grant-youth-justice-and-reintegration-grants",
+          "project_slug": "justicehub",
+          "project_name": "JusticeHub",
+          "project_code": "ACT-JH",
+          "route_type": "grant",
+          "priority": "medium",
+          "title": "Run GrantScope grant scan",
+          "summary": "Youth justice and reintegration grants",
+          "next_step": "Use ALMA/evidence context to distinguish research, implementation, service delivery, and advocacy opportunities.",
+          "search_terms": [
+            "youth justice grant",
+            "diversion program funding",
+            "justice reintegration funding",
+            "community legal education grant",
+            "family violence justice support"
+          ],
+          "grant_finder_href": "/grants?type=open_opportunity&sort=closing_asc&project=justicehub&quality=ready&q=youth%20justice%20grant%20diversion%20program%20funding%20justice%20reintegration%20funding",
+          "source_discovery_queries": [
+            "youth justice grant grant funding Australia",
+            "diversion program funding grant funding Australia",
+            "justice reintegration funding grant funding Australia",
+            "community legal education grant grant funding Australia",
+            "family violence justice support grant funding Australia"
+          ],
+          "source_documents": [
+            {
+              "label": "ACT Active Projects",
+              "path": "/Users/benknight/Code/act-global-infrastructure/config/active-projects.json"
+            }
+          ]
+        },
+        {
+          "id": "justicehub-foundation-systems-change-foundations",
+          "project_slug": "justicehub",
+          "project_name": "JusticeHub",
+          "project_code": "ACT-JH",
+          "route_type": "foundation",
+          "priority": "medium",
+          "title": "Build funder relationship shortlist",
+          "summary": "Systems-change foundations",
+          "next_step": "Create a foundation shortlist with fit, relationship path, proof, and a specific ask per funder.",
+          "search_terms": [
+            "justice reform foundation Australia",
+            "youth justice philanthropy",
+            "First Nations justice funding",
+            "systems change grant"
+          ],
+          "grant_finder_href": "/grants?type=open_opportunity&sort=closing_asc&project=justicehub&quality=ready&q=justice%20reform%20foundation%20Australia%20youth%20justice%20philanthropy%20First%20Nations%20justice%20funding",
+          "source_discovery_queries": [
+            "justice reform foundation Australia foundation grant program Australia",
+            "youth justice philanthropy foundation grant program Australia",
+            "First Nations justice funding foundation grant program Australia",
+            "systems change grant foundation grant program Australia"
+          ],
+          "source_documents": [
+            {
+              "label": "ACT Operational Thesis",
+              "path": "/Users/benknight/Code/act-global-infrastructure/wiki/operations/act-operational-thesis.md"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "empathy-ledger",
+      "aliases": [
+        "act-el"
+      ],
+      "name": "Empathy Ledger",
+      "code": "ACT-EL",
+      "summary": "Community voice, Indigenous data sovereignty, consent, storytelling, and accountable evidence infrastructure.",
+      "themes": [
+        "Indigenous Data Sovereignty",
+        "Community Voice"
+      ],
+      "source_documents": [
+        {
+          "label": "ACT Active Projects",
+          "path": "/Users/benknight/Code/act-global-infrastructure/config/active-projects.json"
+        },
+        {
+          "label": "ACT Architecture",
+          "path": "/Users/benknight/Code/act-global-infrastructure/wiki/technical/act-architecture.md"
+        }
+      ],
+      "evidence": [],
+      "routes": [
+        {
+          "type": "grant",
+          "label": "Data sovereignty and community evidence grants",
+          "why": "Search should include community data governance, ethical AI, storytelling infrastructure, consent, and impact measurement.",
+          "search_terms": [
+            "Indigenous data sovereignty grant",
+            "community voice platform funding",
+            "ethical AI grant Australia",
+            "impact measurement grant"
+          ],
+          "next_action": "Package Empathy Ledger as the evidence/voice infrastructure that strengthens ACT project applications.",
+          "source_documents": [
+            {
+              "label": "ACT Active Projects",
+              "path": "/Users/benknight/Code/act-global-infrastructure/config/active-projects.json"
+            }
+          ]
+        }
+      ],
+      "readiness_gaps": [
+        "Clarify when Empathy Ledger is a standalone product, a partner service, or an embedded evidence layer for another project."
+      ],
+      "search_terms": [
+        "Indigenous data sovereignty grant",
+        "community voice platform funding",
+        "ethical AI grant Australia"
+      ],
+      "support_actions": [
+        {
+          "id": "empathy-ledger-grant-data-sovereignty-and-community-evidence-grants",
+          "project_slug": "empathy-ledger",
+          "project_name": "Empathy Ledger",
+          "project_code": "ACT-EL",
+          "route_type": "grant",
+          "priority": "medium",
+          "title": "Run GrantScope grant scan",
+          "summary": "Data sovereignty and community evidence grants",
+          "next_step": "Package Empathy Ledger as the evidence/voice infrastructure that strengthens ACT project applications.",
+          "search_terms": [
+            "Indigenous data sovereignty grant",
+            "community voice platform funding",
+            "ethical AI grant Australia",
+            "impact measurement grant"
+          ],
+          "grant_finder_href": "/grants?type=open_opportunity&sort=closing_asc&project=empathy-ledger&quality=ready&q=Indigenous%20data%20sovereignty%20grant%20community%20voice%20platform%20funding%20ethical%20AI%20grant%20Australia",
+          "source_discovery_queries": [
+            "Indigenous data sovereignty grant grant funding Australia",
+            "community voice platform funding grant funding Australia",
+            "ethical AI grant Australia grant funding Australia",
+            "impact measurement grant grant funding Australia"
+          ],
+          "source_documents": [
+            {
+              "label": "ACT Active Projects",
+              "path": "/Users/benknight/Code/act-global-infrastructure/config/active-projects.json"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "picc",
+      "aliases": [
+        "palm-island-community-company"
+      ],
+      "name": "PICC and Palm Island support",
+      "code": null,
+      "summary": "Place-based Aboriginal community-controlled support lane for Palm Island relationships, programs, governance, and funding context.",
+      "themes": [],
+      "source_documents": [
+        {
+          "label": "ACT Active Projects",
+          "path": "/Users/benknight/Code/act-global-infrastructure/config/active-projects.json"
+        },
+        {
+          "label": "ACT Operational Thesis",
+          "path": "/Users/benknight/Code/act-global-infrastructure/wiki/operations/act-operational-thesis.md"
+        }
+      ],
+      "evidence": [],
+      "routes": [
+        {
+          "type": "grant",
+          "label": "Place-based ACCO support grants",
+          "why": "Match against Palm Island, ACCO, community control, family support, youth, housing, health, and regional development language.",
+          "search_terms": [
+            "Palm Island grant",
+            "ACCO funding Queensland",
+            "Aboriginal community controlled organisation grant",
+            "place based funding Queensland"
+          ],
+          "next_action": "Keep PICC as a relationship/context lane unless there is a direct project ask and permission to proceed.",
+          "source_documents": [
+            {
+              "label": "ACT Active Projects",
+              "path": "/Users/benknight/Code/act-global-infrastructure/config/active-projects.json"
+            }
+          ]
+        }
+      ],
+      "readiness_gaps": [
+        "Separate ACT-owned opportunities from partner-led opportunities and record relationship consent clearly."
+      ],
+      "search_terms": [
+        "Palm Island grant",
+        "ACCO funding Queensland",
+        "place based funding Queensland"
+      ],
+      "support_actions": [
+        {
+          "id": "picc-grant-place-based-acco-support-grants",
+          "project_slug": "picc",
+          "project_name": "PICC and Palm Island support",
+          "project_code": null,
+          "route_type": "grant",
+          "priority": "medium",
+          "title": "Run GrantScope grant scan",
+          "summary": "Place-based ACCO support grants",
+          "next_step": "Keep PICC as a relationship/context lane unless there is a direct project ask and permission to proceed.",
+          "search_terms": [
+            "Palm Island grant",
+            "ACCO funding Queensland",
+            "Aboriginal community controlled organisation grant",
+            "place based funding Queensland"
+          ],
+          "grant_finder_href": "/grants?type=open_opportunity&sort=closing_asc&project=picc&quality=ready&q=Palm%20Island%20grant%20ACCO%20funding%20Queensland%20Aboriginal%20community%20controlled%20organisation%20grant",
+          "source_discovery_queries": [
+            "Palm Island grant grant funding Australia",
+            "ACCO funding Queensland grant funding Australia",
+            "Aboriginal community controlled organisation grant grant funding Australia",
+            "place based funding Queensland grant funding Australia"
+          ],
+          "source_documents": [
+            {
+              "label": "ACT Active Projects",
+              "path": "/Users/benknight/Code/act-global-infrastructure/config/active-projects.json"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "the-harvest",
+      "aliases": [
+        "harvest",
+        "green-harvest-witta"
+      ],
+      "name": "The Harvest / Green Harvest Witta",
+      "code": "ACT-HV",
+      "summary": "Regenerative agriculture, place, learning, therapeutic landscapes, and community infrastructure lane.",
+      "themes": [
+        "Regenerative Agriculture",
+        "Therapeutic Landscapes",
+        "Community Innovation",
+        "Sustainability",
+        "Knowledge Sharing"
+      ],
+      "source_documents": [
+        {
+          "label": "ACT Active Projects",
+          "path": "/Users/benknight/Code/act-global-infrastructure/config/active-projects.json"
+        },
+        {
+          "label": "ACT Repo Connections",
+          "path": "/Users/benknight/Code/act-global-infrastructure/config/repo-connections-latest.json"
+        }
+      ],
+      "evidence": [],
+      "routes": [
+        {
+          "type": "grant",
+          "label": "Regenerative place and community infrastructure grants",
+          "why": "Search should cover land stewardship, community education, social prescribing, circular economy, events infrastructure, and regional resilience.",
+          "search_terms": [
+            "regenerative agriculture grant",
+            "social prescribing nature grant",
+            "community garden infrastructure grant",
+            "regional resilience grant Queensland"
+          ],
+          "next_action": "Define whether the ask is land/infrastructure, program delivery, education, health, or creative/community activation before matching.",
+          "source_documents": [
+            {
+              "label": "ACT Active Projects",
+              "path": "/Users/benknight/Code/act-global-infrastructure/config/active-projects.json"
+            }
+          ]
+        }
+      ],
+      "readiness_gaps": [
+        "Separate lease/infrastructure risk from program funding and earned-revenue planning."
+      ],
+      "search_terms": [
+        "regenerative agriculture grant",
+        "community garden infrastructure grant",
+        "regional resilience grant Queensland"
+      ],
+      "support_actions": [
+        {
+          "id": "the-harvest-grant-regenerative-place-and-community-infrastructure-grants",
+          "project_slug": "the-harvest",
+          "project_name": "The Harvest / Green Harvest Witta",
+          "project_code": "ACT-HV",
+          "route_type": "grant",
+          "priority": "medium",
+          "title": "Run GrantScope grant scan",
+          "summary": "Regenerative place and community infrastructure grants",
+          "next_step": "Define whether the ask is land/infrastructure, program delivery, education, health, or creative/community activation before matching.",
+          "search_terms": [
+            "regenerative agriculture grant",
+            "social prescribing nature grant",
+            "community garden infrastructure grant",
+            "regional resilience grant Queensland"
+          ],
+          "grant_finder_href": "/grants?type=open_opportunity&sort=closing_asc&project=the-harvest&quality=ready&q=regenerative%20agriculture%20grant%20social%20prescribing%20nature%20grant%20community%20garden%20infrastructure%20grant",
+          "source_discovery_queries": [
+            "regenerative agriculture grant grant funding Australia",
+            "social prescribing nature grant grant funding Australia",
+            "community garden infrastructure grant grant funding Australia",
+            "regional resilience grant Queensland grant funding Australia"
+          ],
+          "source_documents": [
+            {
+              "label": "ACT Active Projects",
+              "path": "/Users/benknight/Code/act-global-infrastructure/config/active-projects.json"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

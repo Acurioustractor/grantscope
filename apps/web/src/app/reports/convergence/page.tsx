@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/report-supabase';
 import { safe } from '@/lib/services/utils';
 import { money, fmt } from '@/lib/format';
 import { ReportCTA } from '../_components/report-cta';

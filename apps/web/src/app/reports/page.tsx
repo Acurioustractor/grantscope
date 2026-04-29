@@ -1,4 +1,27 @@
 import { ReportCTA } from './_components/report-cta';
+import { reportSections, reportStatusMeta, type NavItem, type ReportStatus } from './_components/sidebar-nav-data';
+
+type FlatReport = NavItem & { section: string };
+
+function flattenReports(items: NavItem[], section: string): FlatReport[] {
+  return items.flatMap((item) => [
+    { ...item, section },
+    ...(item.children ? flattenReports(item.children, section) : []),
+  ]);
+}
+
+const allReports = reportSections.flatMap((section) => flattenReports(section.items, section.title));
+const uniqueReports = Array.from(
+  new Map(allReports.map((report) => [report.href, report])).values(),
+);
+const statusCounts = uniqueReports.reduce<Record<ReportStatus, number>>(
+  (counts, report) => {
+    if (report.status) counts[report.status] += 1;
+    return counts;
+  },
+  { current: 0, reference: 0, review: 0, archive: 0 },
+);
+const currentReports = uniqueReports.filter((report) => report.status === 'current').slice(0, 6);
 
 export default function ReportsPage() {
   return (
@@ -11,6 +34,60 @@ export default function ReportsPage() {
           donations, and procurement. Start anywhere &mdash; each report links to the others.
         </p>
       </div>
+
+      <section className="mb-10 border-4 border-bauhaus-black bg-white p-5 bauhaus-shadow-sm">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="mb-1 text-xs font-black uppercase tracking-[0.28em] text-bauhaus-blue">
+              Alignment layer
+            </p>
+            <h2 className="text-xl font-black text-bauhaus-black">Use what is current. Review what is old.</h2>
+            <p className="mt-2 max-w-3xl text-sm font-medium leading-relaxed text-bauhaus-muted">
+              The reports library is now marked by status so old investigations do not look like current
+              evidence. Review items before quoting them externally; current items are the working surfaces.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+            {(Object.keys(statusCounts) as ReportStatus[]).map((status) => (
+              <div key={status} className="border-2 border-bauhaus-black px-3 py-2">
+                <div className="text-lg font-black text-bauhaus-black">{statusCounts[status]}</div>
+                <div className="font-black uppercase tracking-widest text-bauhaus-muted">
+                  {reportStatusMeta[status].label}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="grid gap-3 md:grid-cols-[1fr_1.2fr]">
+          <div className="border-2 border-bauhaus-blue bg-blue-50 p-4">
+            <div className="mb-2 text-[10px] font-black uppercase tracking-widest text-bauhaus-blue">
+              Current map
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {currentReports.map((report) => (
+                <a
+                  key={report.href}
+                  href={report.href}
+                  className="border border-bauhaus-blue bg-white px-2 py-1 text-xs font-black text-bauhaus-blue hover:bg-bauhaus-blue hover:text-white"
+                >
+                  {report.label}
+                </a>
+              ))}
+            </div>
+          </div>
+          <div className="border-2 border-bauhaus-red bg-red-50 p-4">
+            <div className="mb-2 text-[10px] font-black uppercase tracking-widest text-bauhaus-red">
+              Review checklist
+            </div>
+            <div className="grid gap-2 text-xs font-bold text-bauhaus-muted sm:grid-cols-2">
+              <span>1. Confirm source date and row counts</span>
+              <span>2. Recheck headline figures</span>
+              <span>3. Decide current, reference, review, or archive</span>
+              <span>4. Point each report to the next action surface</span>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Reading order guide */}
       <div className="bg-bauhaus-canvas border-4 border-bauhaus-black p-5 mb-10 bauhaus-shadow-sm max-w-2xl">
@@ -254,9 +331,9 @@ export default function ReportsPage() {
               which frontier URLs are due now, and whether the discovery agents are actually doing the work.
             </p>
             <div className="flex gap-6 text-bauhaus-muted/60 text-sm font-bold">
-              <span>30K+ grant rows</span>
+              <span>32K grant rows</span>
               <span>&middot;</span>
-              <span>50K+ frontier URLs</span>
+              <span>53K+ frontier URLs</span>
               <span>&middot;</span>
               <span>Automation rail</span>
             </div>
@@ -276,7 +353,7 @@ export default function ReportsPage() {
               to reveal the system as a whole.
             </p>
             <div className="flex gap-6 text-white/60 text-sm font-bold">
-              <span>446 donor-contractors</span>
+              <span>1,442 donor-contractors</span>
               <span>&middot;</span>
               <span>$358M donated &rarr; $35B in contracts</span>
               <span>&middot;</span>
@@ -426,7 +503,7 @@ export default function ReportsPage() {
             <h3 className="text-2xl font-black text-white mb-3">Political Money</h3>
             <p className="text-base text-white/80 leading-relaxed mb-4">
               Who funds Australian politics &mdash; and what do they get in return?
-              312K donation records cross-referenced against 770K government contracts.
+              312K donation records cross-referenced against about 797K government contracts.
               $21.9B in tracked political donations. The donor-to-contractor pipeline, exposed.
             </p>
             <div className="flex gap-6 text-white/60 text-sm font-bold">
@@ -447,16 +524,16 @@ export default function ReportsPage() {
             <div className="text-xs font-black text-bauhaus-yellow mb-2 uppercase tracking-widest">Entity Graph Investigation</div>
             <h3 className="text-2xl font-black text-white mb-3">Donate. Win Contracts. Repeat.</h3>
             <p className="text-base text-white/80 leading-relaxed mb-4">
-              446 entities donate to political parties AND hold government contracts.
+              1,442 entities donate to political parties AND hold government contracts.
               $358M donated. $35.3B received. AEC donation records cross-referenced
-              with AusTender contracts across 138,000 entities by ABN.
+              with AusTender contracts across the resolved entity graph by ABN.
             </p>
             <div className="flex gap-6 text-white/60 text-sm font-bold">
-              <span>446 donor-contractors</span>
+              <span>1,442 donor-contractors</span>
               <span>&middot;</span>
-              <span>138,000 entities</span>
+              <span>591K entities</span>
               <span>&middot;</span>
-              <span>296,000+ relationships</span>
+              <span>1.5M+ relationships</span>
             </div>
           </div>
         </a>
@@ -541,7 +618,7 @@ export default function ReportsPage() {
               <div className="text-xs font-black text-money mb-2 uppercase tracking-widest group-hover:text-bauhaus-yellow">New</div>
               <h3 className="text-xl font-black text-bauhaus-black mb-2 group-hover:text-white">Charity Sector Insights</h3>
               <p className="text-sm text-bauhaus-muted leading-relaxed group-hover:text-white/80">
-                The anatomy of {(64473).toLocaleString()} charities. Size pyramid, geography,
+                The anatomy of {(64988).toLocaleString()} charities. Size pyramid, geography,
                 purposes, beneficiaries, grant-makers, and 7-year financial trends.
               </p>
             </div>

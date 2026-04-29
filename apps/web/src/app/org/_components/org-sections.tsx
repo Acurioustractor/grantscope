@@ -20,11 +20,12 @@ import type {
   BoardMember,
   DonorCrosslink,
   FoundationFunder,
+  OrgProjectSummary,
 } from '@/lib/services/org-dashboard-service';
 import { money } from '@/lib/services/org-dashboard-service';
 import { Section, StatCard, SystemBadge, ContactTypeBadge } from './ui';
 import { PipelineTable } from './pipeline-filter';
-import { MatchedGrantsTable } from './matched-grants';
+import { MatchedGrantsTable, type PipelineProjectOption } from './matched-grants';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Table styling constants
@@ -663,6 +664,7 @@ export function FoundationFundersSection({ foundationFunders }: { foundationFund
   if (foundationFunders.length === 0) return null;
   const hasScores = foundationFunders.some(f => f.foundation_score != null);
   return (
+    <div id="foundation-funders" className="scroll-mt-24">
     <Section title="Foundation Funders">
       <DataSource label="Cross-referenced: foundation grants + entity registry + foundation scores" />
       <div className="overflow-x-auto">
@@ -727,6 +729,7 @@ export function FoundationFundersSection({ foundationFunders }: { foundationFund
         </div>
       )}
     </Section>
+    </div>
   );
 }
 
@@ -951,6 +954,7 @@ export function PipelineSection({
 }) {
   if (pipeline.length === 0) return null;
   return (
+    <div id="pipeline" className="scroll-mt-24">
     <Section title="Grant Pipeline">
       <CuratedSource label="Curated" />
       <PipelineTable orgSlug={orgSlug} orgProfileId={orgProfileId} items={pipeline.map(g => ({
@@ -970,6 +974,7 @@ export function PipelineSection({
         grant_provider: g.grant_provider,
       }))} />
     </Section>
+    </div>
   );
 }
 
@@ -980,20 +985,37 @@ export function PipelineSection({
 export function MatchedGrantsSection({
   matchedGrants,
   orgProfileId,
+  projectOptions = [],
+  defaultProjectId = null,
 }: {
   matchedGrants: MatchedGrant[] | null;
   orgProfileId: string;
+  projectOptions?: PipelineProjectOption[];
+  defaultProjectId?: string | null;
 }) {
   if (!matchedGrants || matchedGrants.length === 0) return null;
   return (
-    <Section title="Suggested Grant Opportunities">
+    <Section title="Funding Feed">
       <DataSource label="Auto-matched from CivicGraph" />
       <p className="text-xs text-gray-400 mb-4 -mt-2">
-        Upcoming grants that may be relevant. Grants already in your pipeline are excluded.
+        Suggested grants for this organisation and its project lanes. Add the useful ones to pipeline; already-tracked grants are excluded.
       </p>
-      <MatchedGrantsTable grants={matchedGrants} orgProfileId={orgProfileId} />
+      <div id="funding-feed" className="scroll-mt-24" />
+      <MatchedGrantsTable
+        grants={matchedGrants}
+        orgProfileId={orgProfileId}
+        projectOptions={projectOptions}
+        defaultProjectId={defaultProjectId}
+      />
     </Section>
   );
+}
+
+export function projectOptionsFromSummaries(projects: OrgProjectSummary[]): PipelineProjectOption[] {
+  return projects.flatMap((project) => [
+    { id: project.id, name: project.name, slug: project.slug },
+    ...projectOptionsFromSummaries(project.children),
+  ]);
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

@@ -169,7 +169,15 @@ export default async function SubProjectDashboard({
 
         <PipelineSection pipeline={pipeline} orgSlug={slug} orgProfileId={profile.id} />
 
-        <MatchedGrantsSection matchedGrants={matchedGrants} orgProfileId={profile.id} />
+        <MatchedGrantsSection
+          matchedGrants={matchedGrants}
+          orgProfileId={profile.id}
+          projectOptions={[
+            { id: parentProject.id, name: parentProject.name, slug: parentProject.slug },
+            { id: subProject.id, name: subProject.name, slug: subProject.slug },
+          ]}
+          defaultProjectId={subProject.id}
+        />
 
         <ContactsSection contacts={contacts} />
 

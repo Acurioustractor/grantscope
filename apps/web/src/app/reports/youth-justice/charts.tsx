@@ -140,14 +140,18 @@ function AlmaBreakdown({ report }: { report: YouthJusticeReport }) {
     typeCounts.set(intervention.type, (typeCounts.get(intervention.type) || 0) + 1);
   }
 
-  const data = Array.from(typeCounts.entries())
-    .map(([type, count]) => ({ type, count }))
-    .sort((a, b) => b.count - a.count);
+  const data = report.almaInterventions.length > 0
+    ? Array.from(typeCounts.entries())
+      .map(([type, count]) => ({ type, count }))
+      .sort((a, b) => b.count - a.count)
+    : report.almaTypeCounts;
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-6">
       <h3 className="text-lg font-black mb-1">What Works: ALMA Intervention Types</h3>
-      <p className="text-sm text-gray-500 mb-4">Distribution of evidence-based youth justice alternatives</p>
+      <p className="text-sm text-gray-500 mb-4">
+        Distribution of evidence-based youth justice alternatives{report.almaInterventions.length === 0 ? ' from the verified ALMA coverage snapshot' : ''}
+      </p>
       <ResponsiveContainer width="100%" height={300}>
         <BarChart data={data} layout="vertical" margin={{ left: 140 }}>
           <CartesianGrid strokeDasharray="3 3" horizontal={false} />

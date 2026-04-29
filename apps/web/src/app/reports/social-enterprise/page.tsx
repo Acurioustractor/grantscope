@@ -1,8 +1,25 @@
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/report-supabase';
 import { TableOfContents } from './toc';
 import { ReportCTA } from '../_components/report-cta';
 
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-static';
+
+const LIVE_REPORTS = process.env.CIVICGRAPH_LIVE_REPORTS === 'true';
+
+const SNAPSHOT_COUNTS = {
+  total: 20000,
+  indigenous: 3300,
+  disability: 600,
+  bcorp: 740,
+  enriched: 4100,
+  topStates: [
+    { state: 'NSW', count: 6200 },
+    { state: 'VIC', count: 5200 },
+    { state: 'QLD', count: 3600 },
+    { state: 'WA', count: 1900 },
+    { state: 'SA', count: 1300 },
+  ],
+};
 
 function Stat({ value, label, color }: { value: string; label: string; color?: string }) {
   return (
@@ -36,6 +53,10 @@ function Callout({ children, color = 'yellow' }: { children: React.ReactNode; co
 }
 
 export default async function SocialEnterpriseReportPage() {
+  if (!LIVE_REPORTS) {
+    return <SocialEnterpriseReportBody {...SNAPSHOT_COUNTS} />;
+  }
+
   const supabase = getServiceSupabase();
 
   const [totalResult, indigenousResult, disabilityResult, bcorpResult, enrichedResult, stateResults] = await Promise.all([
@@ -59,6 +80,24 @@ export default async function SocialEnterpriseReportPage() {
   const enriched = enrichedResult.count || 0;
   const topStates = stateResults.sort((a, b) => b.count - a.count).slice(0, 5);
 
+  return <SocialEnterpriseReportBody total={total} indigenous={indigenous} disability={disability} bcorp={bcorp} enriched={enriched} topStates={topStates} />;
+}
+
+function SocialEnterpriseReportBody({
+  total,
+  indigenous,
+  disability,
+  bcorp,
+  enriched,
+  topStates,
+}: {
+  total: number;
+  indigenous: number;
+  disability: number;
+  bcorp: number;
+  enriched: number;
+  topStates: Array<{ state: string; count: number }>;
+}) {
   return (
     <div className="max-w-6xl mx-auto">
       {/* Header */}

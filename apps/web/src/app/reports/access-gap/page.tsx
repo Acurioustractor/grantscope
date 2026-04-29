@@ -1,4 +1,4 @@
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/report-supabase';
 import { estimateAdminBurden } from '@grant-engine/foundations/community-profiler';
 import { AccessGapCharts } from './charts';
 

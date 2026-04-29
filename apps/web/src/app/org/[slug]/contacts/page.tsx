@@ -23,7 +23,8 @@ export default async function ContactsPage({ params }: { params: Promise<{ slug:
   const profile = await getOrgProfileBySlug(slug);
   if (!profile) notFound();
 
-  const contacts = await getOrgContacts(profile.id);
+  const includeGhl = slug === 'act' || slug === 'a-curious-tractor';
+  const contacts = await getOrgContacts(profile.id, undefined, { includeGhl });
 
   // Count by type
   const typeCounts: Record<string, number> = {};
@@ -35,6 +36,8 @@ export default async function ContactsPage({ params }: { params: Promise<{ slug:
   const personCount = contacts.filter(c => c.person_id).length;
   const emailCount = contacts.filter(c => c.email).length;
   const ghlCount = contacts.filter(c => c.ghl_contact_id).length;
+  const crmCount = contacts.filter(c => c.source_system === 'ghl').length;
+  const civicGraphCount = contacts.filter(c => c.source_system === 'civicgraph').length;
   const notionCount = contacts.filter(c => c.notion_id).length;
   const taggedCount = contacts.filter(c => c.unified_tags?.length > 0).length;
 
@@ -55,7 +58,9 @@ export default async function ContactsPage({ params }: { params: Promise<{ slug:
                 Partner Network
               </h1>
               <p className="mt-2 text-sm text-gray-400">
-                {contacts.length} contacts &middot; {emailCount} with email &middot; {personCount} linked to people &middot; {linkedCount} linked to entities
+                {civicGraphCount} relationship contacts
+                {crmCount > 0 && <> &middot; {crmCount} CRM contacts</>}
+                {' '}&middot; {emailCount} with email &middot; {personCount} linked to people &middot; {linkedCount} linked to entities
                 {ghlCount > 0 && <> &middot; {ghlCount} in GHL</>}
                 {notionCount > 0 && <> &middot; {notionCount} in Notion</>}
                 {taggedCount > 0 && <> &middot; {taggedCount} tagged</>}

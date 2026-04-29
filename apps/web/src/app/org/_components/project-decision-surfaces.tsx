@@ -3,6 +3,7 @@ import type {
   OrgProject,
   OrgProjectFoundationPortfolioRow,
 } from '@/lib/services/org-dashboard-service';
+import { getProjectWorkspaceCopy, isGoodsProject } from '@/lib/project-workspace';
 import Link from 'next/link';
 import { Section, StatusBadge } from './ui';
 
@@ -175,6 +176,7 @@ function topCommercialProcurement(rows: OrgPipelineItem[]) {
 
 export function ProjectDecisionBriefSection({ project }: { project: OrgProject }) {
   const metadata = project.metadata || {};
+  const workspaceCopy = getProjectWorkspaceCopy(project);
   const freshnessLabel = formatFreshnessDate(project.updated_at);
   const operatingThesis = getString(metadata, 'operating_thesis');
   const capitalThesis = getString(metadata, 'capital_thesis');
@@ -208,7 +210,7 @@ export function ProjectDecisionBriefSection({ project }: { project: OrgProject }
       <div className="space-y-4">
         <div className="border-2 border-bauhaus-black bg-white p-3">
           <div className="text-[10px] font-black uppercase tracking-[0.18em] text-bauhaus-red">
-            Compiled From Goods Working Context
+            {workspaceCopy.decisionSource}
           </div>
           {freshnessLabel ? (
             <div className="mt-2 text-[10px] font-black uppercase tracking-[0.18em] text-bauhaus-muted">
@@ -216,7 +218,7 @@ export function ProjectDecisionBriefSection({ project }: { project: OrgProject }
             </div>
           ) : null}
           <p className="mt-2 max-w-4xl text-sm font-medium leading-relaxed text-bauhaus-muted">
-            Operating, capital, and procurement context compiled from the Goods wiki.
+            {workspaceCopy.decisionDescription}
           </p>
 
           <div className="mt-3 grid gap-3 xl:grid-cols-3">
@@ -876,6 +878,7 @@ export function ProjectOperatingQueueSection({
   pipeline: OrgPipelineItem[];
   foundationPortfolio: OrgProjectFoundationPortfolioRow[];
 }) {
+  const goodsProject = isGoodsProject(project);
   const foundationLead = highestFoundationLead(foundationPortfolio);
   const capitalLead = topCapitalPipeline(pipeline);
   const procurementLead = topProcurementPipeline(pipeline);
@@ -891,7 +894,7 @@ export function ProjectOperatingQueueSection({
           Next Moves
         </div>
         <p className="mt-2 max-w-4xl text-sm font-medium leading-relaxed text-bauhaus-muted">
-          Strongest live Goods moves across foundations, capital, and procurement.
+          Strongest live moves across foundations, capital, and procurement.
         </p>
 
         <div className="mt-3 grid gap-3 xl:grid-cols-3">
@@ -956,14 +959,16 @@ export function ProjectOperatingQueueSection({
                     Open grant
                   </Link>
                 ) : null}
-                <a
-                  href="https://www.goodsoncountry.com/admin/qbe-program"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex border-2 border-bauhaus-blue/25 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-bauhaus-blue transition-colors hover:border-bauhaus-blue hover:bg-bauhaus-blue hover:text-white"
-                >
-                  Open QBE Program
-                </a>
+                {goodsProject ? (
+                  <a
+                    href="https://www.goodsoncountry.com/admin/qbe-program"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex border-2 border-bauhaus-blue/25 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-bauhaus-blue transition-colors hover:border-bauhaus-blue hover:bg-bauhaus-blue hover:text-white"
+                  >
+                    Open QBE Program
+                  </a>
+                ) : null}
               </div>
             </div>
           ) : null}
@@ -1057,12 +1062,15 @@ function dueSoonCount(rows: OrgProjectFoundationPortfolioRow[]) {
 }
 
 export function ProjectCapitalRoutesSection({
+  project,
   foundationPortfolio,
   pipeline,
 }: {
+  project: OrgProject;
   foundationPortfolio: OrgProjectFoundationPortfolioRow[];
   pipeline: OrgPipelineItem[];
 }) {
+  const goodsProject = isGoodsProject(project);
   const activeFoundations = activeFoundationRows(foundationPortfolio);
   const capitalRoutes = capitalPipelineRows(pipeline);
   const activeConversations = foundationPortfolio.filter((row) =>
@@ -1083,7 +1091,7 @@ export function ProjectCapitalRoutesSection({
             Capital Surface
           </div>
           <p className="mt-2 max-w-4xl text-sm font-medium leading-relaxed text-bauhaus-muted">
-            Warm funders and capital paths already in motion for Goods.
+            Warm funders and capital paths already in motion for this project.
           </p>
 
           <div className="mt-3 grid gap-3 md:grid-cols-4">
@@ -1196,14 +1204,16 @@ export function ProjectCapitalRoutesSection({
                             Open grant
                           </Link>
                         ) : null}
-                        <a
-                          href="https://www.goodsoncountry.com/admin/qbe-program"
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex border-2 border-bauhaus-black/15 bg-bauhaus-canvas px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-bauhaus-black transition-colors hover:border-bauhaus-black hover:bg-bauhaus-black hover:text-white"
-                        >
-                          Open QBE Program
-                        </a>
+                        {goodsProject ? (
+                          <a
+                            href="https://www.goodsoncountry.com/admin/qbe-program"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex border-2 border-bauhaus-black/15 bg-bauhaus-canvas px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-bauhaus-black transition-colors hover:border-bauhaus-black hover:bg-bauhaus-black hover:text-white"
+                          >
+                            Open QBE Program
+                          </a>
+                        ) : null}
                         <Link
                           href="#project-pipeline"
                           className="inline-flex border-2 border-bauhaus-black/15 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-bauhaus-black transition-colors hover:border-bauhaus-black hover:bg-bauhaus-black hover:text-white"

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { MINIMAX_CHAT_MODEL, OPENAI_CHAT_MODEL } from '@/lib/ai-models';
 import { getServiceSupabase } from '@/lib/supabase';
 import { cleanSqlOutput, validateSql } from '@/lib/sql-validation';
 
@@ -51,6 +52,7 @@ Columns: id, person_name, person_name_normalised, role_type (text: director, sec
 - mv_funding_deserts (~1.6K rows): lga_name, state, remoteness, avg_irsd_score, min_irsd_decile, avg_irsd_decile, indexed_entities, community_controlled_entities, procurement_entities, justice_entities, alma_entities, ndis_entities, procurement_dollars, justice_dollars, donation_dollars, total_dollar_flow, total_funding_all_sources, avg_system_count, avg_power_score, ndis_participants, desert_score (higher = more underserved)
 - mv_revolving_door (~4.7K rows): id, canonical_name, revolving_door_score, influence_vectors, total_donated, total_contracts, total_funded, parties_funded, is_community_controlled
 - mv_board_interlocks: person_name, entities (text[]), shared_board_count
+- v_youth_justice_state_dashboard: financial_year, state, total_expenditure_m, cost_per_detention, recidivism_pct, completion_pct, indigenous_rate_ratio, facility_count, total_beds, facility_indigenous_pct. Use this for state youth justice expenditure/spend questions.
 
 ## Key relationships:
 - gs_entities.abn joins to most tables (austender_contracts.supplier_abn, justice_funding.recipient_abn, political_donations.donor_abn, acnc_charities.abn)
@@ -75,7 +77,560 @@ Columns: id, person_name, person_name_normalised, role_type (text: director, sec
 13. For power/influence questions, use mv_entity_power_index or mv_revolving_door.
 14. For funding desert/gap questions, use mv_funding_deserts.
 15. For board interlock questions, use mv_board_interlocks or person_roles.
+16. For "how much does [state] spend on youth justice", use v_youth_justice_state_dashboard, not justice_funding.
 `;
+
+type YouthJusticeSpendRow = {
+  financial_year: string;
+  state: string;
+  total_expenditure_m: number | string | null;
+  cost_per_detention: number | string | null;
+  facility_count: number | string | null;
+  total_beds: number | string | null;
+  indigenous_rate_ratio: number | string | null;
+};
+
+type PowerScoreRow = {
+  gs_id: string | null;
+  canonical_name: string;
+  entity_type: string | null;
+  abn: string | null;
+  state: string | null;
+  lga_name: string | null;
+  system_count: number | string | null;
+  power_score: number | string | null;
+  procurement_dollars: number | string | null;
+  justice_dollars: number | string | null;
+  donation_dollars: number | string | null;
+  total_dollar_flow: number | string | null;
+};
+
+type JusticeFundingRankRow = {
+  gs_id: string | null;
+  canonical_name: string;
+  entity_type: string | null;
+  state: string | null;
+  postcode: string | null;
+  remoteness: string | null;
+  is_community_controlled: boolean | null;
+  justice_dollars: number | string | null;
+  justice_record_count: number | string | null;
+};
+
+const STATE_ALIASES: Record<string, string> = {
+  qld: 'QLD',
+  queensland: 'QLD',
+  nsw: 'NSW',
+  'new south wales': 'NSW',
+  vic: 'VIC',
+  victoria: 'VIC',
+  wa: 'WA',
+  'western australia': 'WA',
+  sa: 'SA',
+  'south australia': 'SA',
+  nt: 'NT',
+  'northern territory': 'NT',
+  tas: 'TAS',
+  tasmania: 'TAS',
+  act: 'ACT',
+  'australian capital territory': 'ACT',
+};
+
+// Verified from mv_entity_power_index on 2026-04-29. Keep the homepage example
+// instant; live ORDER BY power_score over the large materialized view can take
+// 20s+ in local dev despite the index.
+const TOP_POWER_SCORE_SNAPSHOT = [
+  {
+    rank: 1,
+    gs_id: 'AU-ABN-64804735113',
+    canonical_name: 'La Trobe University',
+    entity_type: 'foundation',
+    state: 'VIC',
+    lga_name: 'Darebin',
+    power_score: 21,
+    system_count: 6,
+    total_dollar_flow: 64988171,
+    procurement_dollars: 62866817,
+    justice_dollars: 545638,
+    donation_dollars: 1575716,
+  },
+  {
+    rank: 2,
+    gs_id: 'AU-ABN-90952801237',
+    canonical_name: 'Macquarie University',
+    entity_type: 'foundation',
+    state: 'NSW',
+    lga_name: 'Ryde',
+    power_score: 21,
+    system_count: 6,
+    total_dollar_flow: 31037100,
+    procurement_dollars: 28359970,
+    justice_dollars: 194314,
+    donation_dollars: 2482816,
+  },
+  {
+    rank: 3,
+    gs_id: 'AU-ABN-53014069881',
+    canonical_name: 'Western Sydney University',
+    entity_type: 'foundation',
+    state: 'NSW',
+    lga_name: 'Penrith',
+    power_score: 20,
+    system_count: 6,
+    total_dollar_flow: 60527361,
+    procurement_dollars: 58298993,
+    justice_dollars: 22076,
+    donation_dollars: 2206292,
+  },
+  {
+    rank: 4,
+    gs_id: 'AU-ABN-61616369313',
+    canonical_name: 'Murdoch University',
+    entity_type: 'foundation',
+    state: 'WA',
+    lga_name: 'Melville',
+    power_score: 20,
+    system_count: 6,
+    total_dollar_flow: 55451979,
+    procurement_dollars: 52434202,
+    justice_dollars: 1821443,
+    donation_dollars: 1196334,
+  },
+  {
+    rank: 5,
+    gs_id: 'AU-ABN-13628586699',
+    canonical_name: 'Swinburne University Of Technology',
+    entity_type: 'foundation',
+    state: 'VIC',
+    lga_name: 'Boroondara',
+    power_score: 19,
+    system_count: 5,
+    total_dollar_flow: 42724002,
+    procurement_dollars: 40669245,
+    justice_dollars: 542159,
+    donation_dollars: 1512598,
+  },
+  {
+    rank: 6,
+    gs_id: 'AU-ABN-83791724622',
+    canonical_name: 'Queensland University Of Technology',
+    entity_type: 'foundation',
+    state: 'QLD',
+    lga_name: 'Brisbane',
+    power_score: 19,
+    system_count: 5,
+    total_dollar_flow: 79655706,
+    procurement_dollars: 74227723,
+    justice_dollars: 3588923,
+    donation_dollars: 1839060,
+  },
+  {
+    rank: 7,
+    gs_id: 'AU-ABN-12377614012',
+    canonical_name: 'Monash University',
+    entity_type: 'foundation',
+    state: 'VIC',
+    lga_name: 'Monash',
+    power_score: 19,
+    system_count: 5,
+    total_dollar_flow: 188511713,
+    procurement_dollars: 152889243,
+    justice_dollars: 32688217,
+    donation_dollars: 2934254,
+  },
+  {
+    rank: 8,
+    gs_id: 'AU-ABN-75792454315',
+    canonical_name: 'The University Of New England',
+    entity_type: 'foundation',
+    state: 'NSW',
+    lga_name: 'Armidale',
+    power_score: 19,
+    system_count: 5,
+    total_dollar_flow: 50506063,
+    procurement_dollars: 48252222,
+    justice_dollars: 754451,
+    donation_dollars: 1499390,
+  },
+  {
+    rank: 9,
+    gs_id: 'AU-ABN-49781030034',
+    canonical_name: 'Royal Melbourne Institute Of Technology',
+    entity_type: 'foundation',
+    state: 'VIC',
+    lga_name: 'Melbourne',
+    power_score: 19,
+    system_count: 5,
+    total_dollar_flow: 98812992,
+    procurement_dollars: 96069170,
+    justice_dollars: 849454,
+    donation_dollars: 1894368,
+  },
+  {
+    rank: 10,
+    gs_id: 'AU-ABN-78106094461',
+    canonical_name: 'Griffith University',
+    entity_type: 'foundation',
+    state: 'QLD',
+    lga_name: 'Brisbane',
+    power_score: 19,
+    system_count: 5,
+    total_dollar_flow: 103468505,
+    procurement_dollars: 82844214,
+    justice_dollars: 19145861,
+    donation_dollars: 1478430,
+  },
+] as const;
+
+function detectState(question: string): string | null {
+  const q = question.toLowerCase();
+  const matchedAlias = Object.keys(STATE_ALIASES)
+    .sort((a, b) => b.length - a.length)
+    .find(alias => new RegExp(`\\b${alias.replace(/\s+/g, '\\s+')}\\b`, 'i').test(q));
+  return matchedAlias ? STATE_ALIASES[matchedAlias] : null;
+}
+
+function formatAud(amount: number): string {
+  return new Intl.NumberFormat('en-AU', {
+    style: 'currency',
+    currency: 'AUD',
+    maximumFractionDigits: amount >= 1_000_000 ? 1 : 0,
+    notation: amount >= 1_000_000 ? 'compact' : 'standard',
+  }).format(amount);
+}
+
+function formatNumber(value: unknown): number | null {
+  if (value === null || value === undefined) return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function detectLimit(question: string, fallback = 10): number {
+  const match = question.match(/\b(?:top|first)\s+(\d{1,3})\b/i);
+  if (!match) return fallback;
+  const parsed = Number(match[1]);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(1, Math.min(parsed, 25));
+}
+
+function detectEntityType(question: string): string | null {
+  const q = question.toLowerCase();
+  if (/\bcharit(?:y|ies)\b/.test(q)) return 'charity';
+  if (/\bfoundations?\b/.test(q)) return 'foundation';
+  if (/\b(indigenous|aboriginal|first nations)\s+(corporations?|corps?|org(?:anisation)?s?)\b/.test(q)) {
+    return 'indigenous_corp';
+  }
+  if (/\bcompanies?\b/.test(q)) return 'company';
+  return null;
+}
+
+function detectRemotenessFilter(question: string): string[] | null {
+  const q = question.toLowerCase();
+  if (/\bvery\s+remote\b/.test(q)) return ['Very Remote Australia'];
+  if (/\bremote\b/.test(q)) return ['Remote Australia', 'Very Remote Australia'];
+  if (/\bouter\s+regional\b/.test(q)) return ['Outer Regional Australia'];
+  if (/\binner\s+regional\b/.test(q)) return ['Inner Regional Australia'];
+  if (/\bmajor\s+cities\b/.test(q)) return ['Major Cities of Australia'];
+  return null;
+}
+
+function formatDisplayValue(key: string, value: unknown): string {
+  const numeric = formatNumber(value);
+  if (numeric !== null) {
+    if (/(amount|dollars|funding|income|flow|revenue|assets|cost|expenditure)/i.test(key)) {
+      return formatAud(numeric);
+    }
+    return numeric.toLocaleString('en-AU');
+  }
+  return String(value ?? 'unknown');
+}
+
+function humanizeFieldName(key: string): string {
+  return key
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, char => char.toUpperCase());
+}
+
+function buildDeterministicExplanation(question: string, results: unknown, count: number): string {
+  const rows = Array.isArray(results) ? results as Array<Record<string, unknown>> : [];
+  if (count === 0 || rows.length === 0) {
+    return `No rows matched "${question}".`;
+  }
+
+  const first = rows[0];
+  const entries = Object.entries(first).filter(([, value]) => value !== null && value !== undefined);
+  if (count === 1 && entries.length === 1) {
+    const [key, value] = entries[0];
+    return `${humanizeFieldName(key)}: ${formatDisplayValue(key, value)}.`;
+  }
+
+  const name = typeof first.canonical_name === 'string'
+    ? first.canonical_name
+    : typeof first.recipient_name === 'string'
+      ? first.recipient_name
+      : typeof first.name === 'string'
+        ? first.name
+        : null;
+  const amountKey = Object.keys(first).find(key => /(amount|dollars|funding|flow|income|revenue|assets|expenditure)/i.test(key));
+  if (name && amountKey) {
+    return `${name} is the first result, with ${humanizeFieldName(amountKey).toLowerCase()} of ${formatDisplayValue(amountKey, first[amountKey])}. ${count.toLocaleString('en-AU')} rows matched.`;
+  }
+
+  return `${count.toLocaleString('en-AU')} ${count === 1 ? 'row' : 'rows'} matched.`;
+}
+
+async function answerJusticeFundingRankingQuestion(question: string) {
+  const normalized = question.toLowerCase();
+  const asksJusticeFunding =
+    /\bjustice\s+funding\b/.test(normalized) ||
+    (/\bjustice\b/.test(normalized) && /\b(funding|funded|grants?|money)\b/.test(normalized));
+  const asksRanking =
+    /\b(which|top|most|highest|rank|ranking|largest)\b/.test(normalized) &&
+    /\b(charit(?:y|ies)|org(?:anisation|anization|s)?|entities|recipients|corporations?|companies|foundations?)\b/.test(normalized);
+
+  if (!asksJusticeFunding || !asksRanking) {
+    return null;
+  }
+
+  const state = detectState(question);
+  const entityType = detectEntityType(question);
+  const remoteness = detectRemotenessFilter(question);
+
+  // Keep this preset scoped to constrained questions. Broad national rankings can
+  // still use the LLM path once the user asks for a more general analysis.
+  if (!state && !entityType && !remoteness) {
+    return null;
+  }
+
+  const limit = detectLimit(question, 20);
+  const supabase = getServiceSupabase();
+  let query = supabase
+    .from('mv_entity_power_index')
+    .select('gs_id, canonical_name, entity_type, state, postcode, remoteness, is_community_controlled, justice_dollars, justice_record_count')
+    .gt('justice_dollars', 0)
+    .order('justice_dollars', { ascending: false })
+    .limit(limit);
+
+  const whereParts = ['justice_dollars > 0'];
+  if (state) {
+    query = query.eq('state', state);
+    whereParts.push(`state = '${state}'`);
+  }
+  if (entityType) {
+    query = query.eq('entity_type', entityType);
+    whereParts.push(`entity_type = '${entityType}'`);
+  }
+  if (remoteness?.length) {
+    query = query.in('remoteness', remoteness);
+    whereParts.push(`remoteness IN (${remoteness.map(r => `'${r}'`).join(', ')})`);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    console.error('[/api/ask] preset justice funding ranking failed:', error.message);
+    return null;
+  }
+
+  const rows = (data || []) as JusticeFundingRankRow[];
+  if (rows.length === 0) {
+    return NextResponse.json({
+      question,
+      generated_sql: `SELECT gs_id, canonical_name, entity_type, state, postcode, remoteness, is_community_controlled,
+       justice_dollars::bigint AS total_justice_funding, justice_record_count::int AS records
+FROM mv_entity_power_index
+WHERE ${whereParts.join('\n  AND ')}
+ORDER BY justice_dollars DESC
+LIMIT ${limit}`,
+      results: [],
+      count: 0,
+      explanation: 'No matching entities with indexed justice funding were found for those filters.',
+    });
+  }
+
+  const results = rows.map((row, index) => ({
+    rank: index + 1,
+    gs_id: row.gs_id,
+    canonical_name: row.canonical_name,
+    entity_type: row.entity_type,
+    state: row.state,
+    postcode: row.postcode,
+    remoteness: row.remoteness,
+    is_community_controlled: row.is_community_controlled,
+    total_justice_funding: Math.round(formatNumber(row.justice_dollars) || 0),
+    records: Math.round(formatNumber(row.justice_record_count) || 0),
+  }));
+
+  const top = results[0];
+  const scope = [
+    remoteness ? remoteness.join(' / ') : null,
+    state,
+    entityType ? entityType.replace(/_/g, ' ') : null,
+  ].filter(Boolean).join(' ');
+  const explanation = `${top.canonical_name} is the highest ranked ${scope || 'matching'} entity by indexed justice funding, with ${formatAud(top.total_justice_funding)} across ${top.records} records. The result uses the precomputed power index so this type of constrained ranking stays fast.`;
+
+  return NextResponse.json({
+    question,
+    generated_sql: `SELECT gs_id, canonical_name, entity_type, state, postcode, remoteness, is_community_controlled,
+       justice_dollars::bigint AS total_justice_funding, justice_record_count::int AS records
+FROM mv_entity_power_index
+WHERE ${whereParts.join('\n  AND ')}
+ORDER BY justice_dollars DESC
+LIMIT ${limit}`,
+    results,
+    count: results.length,
+    explanation,
+  });
+}
+
+async function answerPowerScoreQuestion(question: string) {
+  const normalized = question.toLowerCase();
+  const asksPowerScore =
+    /\b(power\s+score|power\s+index|top\s+\d+\s+entities)\b/.test(normalized) &&
+    /\b(top|rank|ranking|entities|organisations|organizations)\b/.test(normalized);
+
+  if (!asksPowerScore) {
+    return null;
+  }
+
+  const limit = detectLimit(question);
+  if (limit <= TOP_POWER_SCORE_SNAPSHOT.length) {
+    const results = TOP_POWER_SCORE_SNAPSHOT.slice(0, limit);
+    const top = results[0];
+    const explanation = `${top.canonical_name} currently has the highest power score (${top.power_score}) across ${top.system_count} systems, with ${formatAud(top.total_dollar_flow)} in indexed dollar flow. The top ${results.length} list is dominated by large universities that appear across procurement, justice funding, donations, charity, and foundation datasets.`;
+
+    return NextResponse.json({
+      question,
+      generated_sql: `-- April 2026 verified homepage snapshot.
+SELECT gs_id, canonical_name, entity_type, state, lga_name, system_count, power_score,
+       procurement_dollars, justice_dollars, donation_dollars, total_dollar_flow
+FROM mv_entity_power_index
+WHERE system_count >= 1
+ORDER BY power_score DESC NULLS LAST
+LIMIT ${limit}`,
+      results,
+      count: results.length,
+      explanation,
+    });
+  }
+
+  const supabase = getServiceSupabase();
+  const { data, error } = await supabase
+    .from('mv_entity_power_index')
+    .select('gs_id,canonical_name,entity_type,abn,state,lga_name,system_count,power_score,procurement_dollars,justice_dollars,donation_dollars,total_dollar_flow')
+    .gte('system_count', 1)
+    .order('power_score', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error('[/api/ask] preset power score failed:', error.message);
+    return null;
+  }
+
+  const results = ((data || []) as PowerScoreRow[]).map((row, index) => ({
+    rank: index + 1,
+    gs_id: row.gs_id,
+    canonical_name: row.canonical_name,
+    entity_type: row.entity_type,
+    state: row.state,
+    lga_name: row.lga_name,
+    power_score: formatNumber(row.power_score),
+    system_count: formatNumber(row.system_count),
+    total_dollar_flow: Math.round(formatNumber(row.total_dollar_flow) || 0),
+    procurement_dollars: Math.round(formatNumber(row.procurement_dollars) || 0),
+    justice_dollars: Math.round(formatNumber(row.justice_dollars) || 0),
+    donation_dollars: Math.round(formatNumber(row.donation_dollars) || 0),
+  }));
+
+  if (results.length === 0) return null;
+
+  const top = results[0];
+  const explanation = `${top.canonical_name} currently has the highest power score (${top.power_score}) across ${top.system_count} systems, with ${formatAud(top.total_dollar_flow)} in indexed dollar flow. The top ${results.length} list is dominated by large universities that appear across procurement, justice funding, donations, charity, and foundation datasets.`;
+
+  return NextResponse.json({
+    question,
+    generated_sql: `SELECT gs_id, canonical_name, entity_type, abn, state, lga_name, system_count, power_score,
+       procurement_dollars, justice_dollars, donation_dollars, total_dollar_flow
+FROM mv_entity_power_index
+WHERE system_count >= 1
+ORDER BY power_score DESC NULLS LAST
+LIMIT ${limit}`,
+    results,
+    count: results.length,
+    explanation,
+  });
+}
+
+async function answerKnownQuestion(question: string) {
+  const powerScoreAnswer = await answerPowerScoreQuestion(question);
+  if (powerScoreAnswer) {
+    return powerScoreAnswer;
+  }
+
+  const justiceFundingRankingAnswer = await answerJusticeFundingRankingQuestion(question);
+  if (justiceFundingRankingAnswer) {
+    return justiceFundingRankingAnswer;
+  }
+
+  const normalized = question.toLowerCase();
+  const asksYouthJusticeSpend =
+    /\byouth\s+justice\b/.test(normalized) &&
+    /\b(spend|spent|spending|expenditure|cost|costs|funding)\b/.test(normalized);
+  const state = detectState(question);
+
+  if (!asksYouthJusticeSpend || !state) {
+    return null;
+  }
+
+  const supabase = getServiceSupabase();
+  const { data, error } = await supabase
+    .from('v_youth_justice_state_dashboard')
+    .select('financial_year,state,total_expenditure_m,cost_per_detention,facility_count,total_beds,indigenous_rate_ratio')
+    .eq('state', state)
+    .order('financial_year', { ascending: false })
+    .limit(5);
+
+  if (error) {
+    console.error('[/api/ask] preset youth justice spend failed:', error.message);
+    return null;
+  }
+
+  const rows = (data || []) as YouthJusticeSpendRow[];
+  if (rows.length === 0) return null;
+
+  const results = rows.map(row => {
+    const expenditureM = formatNumber(row.total_expenditure_m) || 0;
+    const costPerDay = formatNumber(row.cost_per_detention);
+    return {
+      financial_year: row.financial_year,
+      state: row.state,
+      total_expenditure_aud: Math.round(expenditureM * 1_000_000),
+      total_expenditure_m: Number(expenditureM.toFixed(3)),
+      cost_per_detention_day: costPerDay !== null ? Math.round(costPerDay) : null,
+      facilities: formatNumber(row.facility_count),
+      beds: formatNumber(row.total_beds),
+      indigenous_rate_ratio: formatNumber(row.indigenous_rate_ratio),
+    };
+  });
+
+  const latest = results[0];
+  const previous = results[1];
+  const previousText = previous
+    ? `, up from ${formatAud(previous.total_expenditure_aud)} in ${previous.financial_year}`
+    : '';
+  const explanation = `${state} youth justice expenditure is ${formatAud(latest.total_expenditure_aud)} in ${latest.financial_year}${previousText}. The latest dashboard also shows a detention cost of ${formatAud(latest.cost_per_detention_day || 0)} per day, ${latest.facilities || 0} facilities, and ${latest.beds || 0} beds.`;
+
+  return NextResponse.json({
+    question,
+    generated_sql: `SELECT financial_year, state, total_expenditure_m, cost_per_detention, facility_count, total_beds, indigenous_rate_ratio
+FROM v_youth_justice_state_dashboard
+WHERE state = '${state}'
+ORDER BY financial_year DESC
+LIMIT 5`,
+    results,
+    count: results.length,
+    explanation,
+  });
+}
 
 export async function POST(request: NextRequest) {
   let body: { question?: string };
@@ -95,6 +650,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'question too long (max 500 chars)' }, { status: 400 });
   }
 
+  const knownAnswer = await answerKnownQuestion(question);
+  if (knownAnswer) {
+    return knownAnswer;
+  }
+
   // LLM provider: prefer OpenAI (works from Vercel), fall back to MiniMax
   const openaiKey = process.env.OPENAI_API_KEY;
   const minimaxKey = process.env.MINIMAX_API_KEY;
@@ -107,7 +667,7 @@ export async function POST(request: NextRequest) {
   const baseUrl = useOpenAI
     ? 'https://api.openai.com/v1'
     : (process.env.MINIMAX_BASE_URL || 'https://api.minimax.io/v1');
-  const model = useOpenAI ? 'gpt-4.1-mini' : 'MiniMax-M2';
+  const model = useOpenAI ? OPENAI_CHAT_MODEL : MINIMAX_CHAT_MODEL;
 
   // Step 1: Generate SQL from natural language
   const sqlAbort = AbortController ? new AbortController() : undefined;
@@ -184,42 +744,7 @@ export async function POST(request: NextRequest) {
   const results = data || [];
   const count = Array.isArray(results) ? results.length : 0;
 
-  // Step 3: Generate plain-English explanation
-  let explanation = '';
-  const explainAbort = new AbortController();
-  const explainTimeout = setTimeout(() => explainAbort.abort(), 15_000);
-  try {
-    const explainResponse = await fetch(`${baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        max_tokens: 500,
-        temperature: 0,
-        messages: [
-          {
-            role: 'user',
-            content: `The user asked: "${question}"\n\nThe SQL query returned ${count} rows. Here are the first 10 results:\n${JSON.stringify(Array.isArray(results) ? results.slice(0, 10) : results, null, 2)}\n\nWrite a 2-3 sentence plain-English summary of what the data shows. Be specific with numbers and names. Use Australian dollar formatting (e.g. $1.2M). Do not mention SQL or databases.`,
-          },
-        ],
-      }),
-      signal: explainAbort.signal,
-    });
-
-    if (explainResponse.ok) {
-      const explainJson = await explainResponse.json();
-      const rawExplanation = explainJson.choices?.[0]?.message?.content || '';
-      // Strip <think> blocks from explanation (MiniMax may include reasoning)
-      explanation = rawExplanation.replace(/<think>[\s\S]*?<\/think>\s*/gi, '').trim();
-    }
-  } catch {
-    // Non-critical — return results without explanation
-    console.warn('[/api/ask] Explanation generation failed (non-critical)');
-  }
-  clearTimeout(explainTimeout);
+  const explanation = buildDeterministicExplanation(question, results, count);
 
   return NextResponse.json({
     question,

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/report-supabase';
 import { buildPhilanthropyPowerReport } from '@grant-engine/reports/philanthropy-power';
 
 export const dynamic = 'force-dynamic';

@@ -16,11 +16,13 @@ import { createClient } from '@supabase/supabase-js';
 const BASE_URL = 'https://services.leadconnectorhq.com';
 
 const GHL_TO_STAGE = {
+  'grant opportunity identified': 'discovered',
   'application in progress': 'pursuing',
   'grant submitted': 'submitted',
-  'approved': 'approved',
-  'won': 'realized',
-  'lost': 'lost',
+  'grant awarded': 'approved',
+  'grant reporting due': 'approved',
+  'grant report submitted': 'realized',
+  'grant declined': 'lost',
 };
 
 const dryRun = process.argv.includes('--dry-run');
@@ -60,9 +62,18 @@ async function main() {
     }
   }
 
-  // Fetch all opportunities
+  const configuredPipelineName = process.env.GHL_GRANTS_PIPELINE_NAME || 'Grants';
+  const grantsPipeline = pipelines.find(
+    pipeline => pipeline.name?.toLowerCase() === configuredPipelineName.toLowerCase()
+  );
+  if (!grantsPipeline) {
+    console.log(`No "${configuredPipelineName}" pipeline found`);
+    return;
+  }
+
+  // Fetch all grant opportunities
   const oppsRes = await fetch(
-    `${BASE_URL}/opportunities/search?location_id=${locationId}&pipeline_id=${pipelines[0].id}&limit=100`,
+    `${BASE_URL}/opportunities/search?location_id=${locationId}&pipeline_id=${grantsPipeline.id}&limit=100`,
     {
       method: 'GET',
       headers: {

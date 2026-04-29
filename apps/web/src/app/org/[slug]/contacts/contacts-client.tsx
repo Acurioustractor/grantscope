@@ -119,6 +119,10 @@ export function ContactsClient({
       result = result.filter(c => c.ghl_contact_id);
     } else if (linkFilter === 'notion') {
       result = result.filter(c => c.notion_id);
+    } else if (linkFilter === 'civicgraph') {
+      result = result.filter(c => c.source_system === 'civicgraph');
+    } else if (linkFilter === 'crm') {
+      result = result.filter(c => c.source_system === 'ghl');
     }
 
     if (tagFilter !== 'all') {
@@ -131,6 +135,10 @@ export function ContactsClient({
         c.name.toLowerCase().includes(q) ||
         c.organisation?.toLowerCase().includes(q) ||
         c.role?.toLowerCase().includes(q) ||
+        c.email?.toLowerCase().includes(q) ||
+        c.phone?.toLowerCase().includes(q) ||
+        c.notes?.toLowerCase().includes(q) ||
+        c.source_label?.toLowerCase().includes(q) ||
         c.unified_tags?.some(t => t.toLowerCase().includes(q))
       );
     }
@@ -179,6 +187,9 @@ export function ContactsClient({
   const TD = 'py-3 pr-4';
   const emailCount = contacts.filter(c => c.email).length;
   const ghlCount = contacts.filter(c => c.ghl_contact_id).length;
+  const crmCount = contacts.filter(c => c.source_system === 'ghl').length;
+  const civicGraphCount = contacts.filter(c => c.source_system === 'civicgraph').length;
+  const syncableCount = contacts.filter(c => c.source_system === 'civicgraph' && c.email && !c.ghl_contact_id).length;
 
   return (
     <div className="space-y-4">
@@ -217,6 +228,8 @@ export function ContactsClient({
           <option value="email">Has email</option>
           <option value="ghl">In GHL ({ghlCount})</option>
           <option value="notion">Has Notion page</option>
+          <option value="civicgraph">Relationship layer ({civicGraphCount})</option>
+          <option value="crm">GHL CRM ({crmCount})</option>
         </select>
 
         {/* Tag filter */}
@@ -238,10 +251,10 @@ export function ContactsClient({
         {/* Sync to GHL */}
         <button
           onClick={handleSyncGHL}
-          disabled={syncing || emailCount === 0}
+          disabled={syncing || syncableCount === 0}
           className="px-4 py-2 bg-bauhaus-black text-white font-black uppercase tracking-widest text-xs hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {syncing ? 'Syncing...' : `Sync to GHL (${emailCount})`}
+          {syncing ? 'Syncing...' : `Push CivicGraph to GHL (${syncableCount})`}
         </button>
       </div>
 
@@ -363,13 +376,16 @@ export function ContactsClient({
                       {c.ghl_contact_id && (
                         <span className="w-2 h-2 rounded-full bg-orange-400 inline-block" title="In GHL CRM" />
                       )}
+                      {c.source_system === 'ghl' && (
+                        <span className="w-2 h-2 rounded-full bg-pink-400 inline-block" title="Loaded from GHL CRM" />
+                      )}
                       {c.notion_id && (
                         <span className="w-2 h-2 rounded-full bg-gray-800 inline-block" title="Has Notion page" />
                       )}
                       {c.email && (
                         <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" title="Has email" />
                       )}
-                      {!c.person_id && !c.linked_entity_gs_id && !c.email && (
+                      {!c.person_id && !c.linked_entity_gs_id && !c.email && !c.ghl_contact_id && c.source_system !== 'ghl' && (
                         <span className="text-[10px] text-gray-300">{'\u2014'}</span>
                       )}
                     </div>
@@ -404,6 +420,11 @@ export function ContactsClient({
                           Email
                         </a>
                       )}
+                      {c.ghl_contact_id && (
+                        <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-orange-50 text-orange-700 rounded-sm">
+                          GHL
+                        </span>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -433,6 +454,10 @@ export function ContactsClient({
         <span className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-orange-400 inline-block" />
           GHL CRM
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-pink-400 inline-block" />
+          Loaded from GHL
         </span>
         <span className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-gray-800 inline-block" />

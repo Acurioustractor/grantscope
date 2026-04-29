@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { getServiceSupabase } from '@/lib/supabase';
 import { safe } from '@/lib/services/utils';
 
@@ -112,6 +113,7 @@ export interface OrgProgram {
 
 export interface OrgPipelineItem {
   id: string;
+  project_id: string | null;
   name: string;
   amount_display: string | null;
   amount_numeric: number | null;
@@ -308,7 +310,7 @@ export interface FoundationFunder {
 // Org Projects
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-export async function getOrgProjects(orgProfileId: string): Promise<OrgProject[]> {
+export const getOrgProjects = cache(async function getOrgProjects(orgProfileId: string): Promise<OrgProject[]> {
   const supabase = getServiceSupabase();
   const { data } = await supabase
     .from('org_projects')
@@ -316,9 +318,9 @@ export async function getOrgProjects(orgProfileId: string): Promise<OrgProject[]
     .eq('org_profile_id', orgProfileId)
     .order('sort_order');
   return (data ?? []) as OrgProject[];
-}
+});
 
-export async function getOrgProjectBySlug(orgProfileId: string, slug: string): Promise<OrgProject | null> {
+export const getOrgProjectBySlug = cache(async function getOrgProjectBySlug(orgProfileId: string, slug: string): Promise<OrgProject | null> {
   const supabase = getServiceSupabase();
   const { data, error } = await supabase
     .from('org_projects')
@@ -328,9 +330,9 @@ export async function getOrgProjectBySlug(orgProfileId: string, slug: string): P
     .maybeSingle();
   if (error || !data) return null;
   return data as OrgProject;
-}
+});
 
-export async function getOrgProjectSummaries(orgProfileId: string): Promise<OrgProjectSummary[]> {
+export const getOrgProjectSummaries = cache(async function getOrgProjectSummaries(orgProfileId: string): Promise<OrgProjectSummary[]> {
   const supabase = getServiceSupabase();
 
   // Get all projects
@@ -378,9 +380,9 @@ export async function getOrgProjectSummaries(orgProfileId: string): Promise<OrgP
   }
 
   return roots;
-}
+});
 
-export async function getOrgFoundationPortfolio(orgProfileId: string): Promise<OrgProjectFoundationPortfolioRow[]> {
+export const getOrgFoundationPortfolio = cache(async function getOrgFoundationPortfolio(orgProfileId: string): Promise<OrgProjectFoundationPortfolioRow[]> {
   const supabase = getServiceSupabase();
   const { data, error } = await supabase
     .from('org_project_foundations')
@@ -450,22 +452,27 @@ export async function getOrgFoundationPortfolio(orgProfileId: string): Promise<O
       ? ((row.research[0] as OrgProjectFoundationResearchSummary | undefined) ?? null)
       : null,
   }));
-}
+});
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Org Profile Lookup
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-export async function getOrgProfileBySlug(slug: string): Promise<OrgProfile | null> {
+export const getOrgProfileBySlug = cache(async function getOrgProfileBySlug(slug: string): Promise<OrgProfile | null> {
   const supabase = getServiceSupabase();
+  const slugAliases: Record<string, string> = {
+    'a-curious-tractor': 'act',
+    'curious-tractor': 'act',
+  };
+  const lookupSlug = slugAliases[slug] || slug;
   const { data, error } = await supabase
     .from('org_profiles')
     .select('id, name, abn, slug, linked_gs_entity_id, description, team_size, annual_revenue, org_type, subscription_plan, logo_url, updated_at')
-    .eq('slug', slug)
+    .eq('slug', lookupSlug)
     .maybeSingle();
   if (error || !data) return null;
   return data as OrgProfile;
-}
+});
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Auto-discovered data (by ABN from CivicGraph)
@@ -607,7 +614,7 @@ export async function getOrgPipeline(orgProfileId: string, projectId?: string): 
   const supabase = getServiceSupabase();
   let query = supabase
     .from('org_pipeline')
-    .select('id, name, amount_display, amount_numeric, funder, deadline, status, grant_opportunity_id, notes, funder_entity_id, funder_type, updated_at')
+    .select('id, project_id, name, amount_display, amount_numeric, funder, deadline, status, grant_opportunity_id, notes, funder_entity_id, funder_type, updated_at')
     .eq('org_profile_id', orgProfileId);
   if (projectId) query = query.eq('project_id', projectId);
   const { data } = await query.order('created_at');
@@ -653,6 +660,8 @@ export async function getOrgPipeline(orgProfileId: string, projectId?: string): 
 }
 
 export interface OrgContactWithEntity extends OrgContact {
+  source_system: 'civicgraph' | 'ghl';
+  source_label: string | null;
   linked_entity_gs_id: string | null;
   linked_entity_name: string | null;
   linked_entity_type: string | null;
@@ -667,7 +676,116 @@ export interface OrgContactWithEntity extends OrgContact {
   unified_tags: string[];
 }
 
-export async function getOrgContacts(orgProfileId: string, projectId?: string): Promise<OrgContactWithEntity[]> {
+type GhlContactRow = {
+  id: string;
+  ghl_id: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  full_name: string | null;
+  email: string | null;
+  phone: string | null;
+  company_name: string | null;
+  tags: string[] | null;
+  projects: string[] | null;
+  engagement_status: string | null;
+  last_contact_date: string | null;
+  canonical_entity_id: string | null;
+  source: string | null;
+  first_seen_subject: string | null;
+  website: string | null;
+  updated_at: string | null;
+  ghl_updated_at: string | null;
+};
+
+function deriveGhlContactType(row: GhlContactRow) {
+  const haystack = [
+    ...(row.tags ?? []),
+    ...(row.projects ?? []),
+    row.company_name,
+    row.first_seen_subject,
+  ].filter(Boolean).join(' ').toLowerCase();
+
+  if (/\b(funder|funding|foundation|philanthropy|philanthropic|grant)\b/.test(haystack)) return 'funder';
+  if (/\b(governance|board|director)\b/.test(haystack)) return 'governance';
+  if (/\b(advocacy|policy|campaign)\b/.test(haystack)) return 'advocacy';
+  if (/\b(community|elder|storyteller|participant)\b/.test(haystack)) return 'community';
+  if (/\b(partner|supplier|buyer|procurement|goods)\b/.test(haystack)) return 'partner';
+  return 'crm';
+}
+
+function ghlDisplayName(row: GhlContactRow) {
+  const name = row.full_name || [row.first_name, row.last_name].filter(Boolean).join(' ').trim();
+  return name || row.company_name || row.email || row.phone || 'Unnamed CRM contact';
+}
+
+async function fetchAllGhlContacts(supabase: ReturnType<typeof getServiceSupabase>) {
+  const rows: GhlContactRow[] = [];
+  const pageSize = 1000;
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase
+      .from('ghl_contacts')
+      .select('id, ghl_id, first_name, last_name, full_name, email, phone, company_name, tags, projects, engagement_status, last_contact_date, canonical_entity_id, source, first_seen_subject, website, updated_at, ghl_updated_at')
+      .order('ghl_updated_at', { ascending: false, nullsFirst: false })
+      .range(from, from + pageSize - 1);
+    if (error || !data) break;
+    rows.push(...(data as GhlContactRow[]));
+    if (data.length < pageSize) break;
+  }
+  return rows;
+}
+
+async function fetchEntityMap(
+  supabase: ReturnType<typeof getServiceSupabase>,
+  entityIds: string[],
+) {
+  const uniqueIds = Array.from(new Set(entityIds.filter(Boolean)));
+  const entityMap: Record<string, { gs_id: string; canonical_name: string; entity_type: string; abn: string | null }> = {};
+
+  for (let index = 0; index < uniqueIds.length; index += 500) {
+    const chunk = uniqueIds.slice(index, index + 500);
+    const { data } = await supabase
+      .from('gs_entities')
+      .select('id, gs_id, canonical_name, entity_type, abn')
+      .in('id', chunk);
+    for (const entity of data ?? []) {
+      entityMap[entity.id] = entity;
+    }
+  }
+
+  return entityMap;
+}
+
+async function fetchPeopleByGhlId(
+  supabase: ReturnType<typeof getServiceSupabase>,
+  ghlIds: string[],
+) {
+  const uniqueIds = Array.from(new Set(ghlIds.filter(Boolean)));
+  const personByGhl: Record<string, { person_id: string; notion_id: string | null; unified_tags: string[] }> = {};
+
+  for (let index = 0; index < uniqueIds.length; index += 500) {
+    const chunk = uniqueIds.slice(index, index + 500);
+    const { data } = await supabase
+      .from('person_identity_map')
+      .select('person_id, ghl_contact_id, notion_id, unified_tags')
+      .in('ghl_contact_id', chunk);
+    for (const person of data ?? []) {
+      if (!person.ghl_contact_id) continue;
+      personByGhl[person.ghl_contact_id] = {
+        person_id: person.person_id,
+        notion_id: person.notion_id ?? null,
+        unified_tags: person.unified_tags ?? [],
+      };
+    }
+  }
+
+  return personByGhl;
+}
+
+export async function getOrgContacts(
+  orgProfileId: string,
+  projectId?: string,
+  options: { includeGhl?: boolean } = {},
+): Promise<OrgContactWithEntity[]> {
   const supabase = getServiceSupabase();
   let query = supabase
     .from('org_contacts')
@@ -677,27 +795,23 @@ export async function getOrgContacts(orgProfileId: string, projectId?: string): 
   const { data } = await query.order('contact_type').order('name');
 
   const contacts = (data ?? []) as OrgContact[];
+  const ghlContacts = options.includeGhl && !projectId ? await fetchAllGhlContacts(supabase) : [];
 
   // Enrich with entity data for linked contacts
-  const linkedIds = contacts.map(c => c.linked_entity_id).filter(Boolean) as string[];
-  let entityMap: Record<string, { gs_id: string; canonical_name: string; entity_type: string; abn: string }> = {};
-
-  if (linkedIds.length > 0) {
-    const entityRows = await safe(supabase.rpc('exec_sql', {
-      query: `SELECT id, gs_id, canonical_name, entity_type, abn
-         FROM gs_entities
-         WHERE id IN (${linkedIds.map(id => `'${id}'`).join(',')})`,
-    })) as Array<{ id: string; gs_id: string; canonical_name: string; entity_type: string; abn: string }> | null;
-
-    for (const e of entityRows ?? []) {
-      entityMap[e.id] = e;
-    }
-  }
+  const linkedIds = [
+    ...contacts.map(c => c.linked_entity_id).filter(Boolean),
+    ...ghlContacts.map(c => c.canonical_entity_id).filter(Boolean),
+  ] as string[];
+  const entityMap = await fetchEntityMap(supabase, linkedIds);
 
   // Enrich with person_identity_map + GHL data for linked people
   const personIds = contacts.map(c => c.person_id).filter(Boolean) as string[];
   let personMap: Record<string, { ghl_contact_id: string | null; notion_id: string | null; unified_tags: string[] }> = {};
   let ghlMap: Record<string, { engagement_status: string | null; last_contact_date: string | null }> = {};
+  const personByGhl = await fetchPeopleByGhlId(
+    supabase,
+    ghlContacts.map((contact) => contact.ghl_id).filter(Boolean) as string[],
+  );
 
   if (personIds.length > 0) {
     const personRows = await safe(supabase.rpc('exec_sql', {
@@ -729,11 +843,13 @@ export async function getOrgContacts(orgProfileId: string, projectId?: string): 
     }
   }
 
-  return contacts.map(c => {
+  const civicGraphContacts = contacts.map(c => {
     const person = c.person_id ? personMap[c.person_id] : null;
     const ghl = person?.ghl_contact_id ? ghlMap[person.ghl_contact_id] : null;
     return {
       ...c,
+      source_system: 'civicgraph' as const,
+      source_label: 'CivicGraph relationship',
       linked_entity_gs_id: c.linked_entity_id ? entityMap[c.linked_entity_id]?.gs_id ?? null : null,
       linked_entity_name: c.linked_entity_id ? entityMap[c.linked_entity_id]?.canonical_name ?? null : null,
       linked_entity_type: c.linked_entity_id ? entityMap[c.linked_entity_id]?.entity_type ?? null : null,
@@ -745,6 +861,48 @@ export async function getOrgContacts(orgProfileId: string, projectId?: string): 
       unified_tags: person?.unified_tags ?? [],
     };
   });
+
+  const crmContacts: OrgContactWithEntity[] = ghlContacts.map((contact) => {
+    const entity = contact.canonical_entity_id ? entityMap[contact.canonical_entity_id] : null;
+    const person = contact.ghl_id ? personByGhl[contact.ghl_id] : null;
+    const tags = [
+      ...(contact.tags ?? []).map((tag) => `ghl:${tag}`),
+      ...(contact.projects ?? []).map((project) => `project:${project}`),
+    ];
+    const notes = [
+      contact.first_seen_subject ? `First seen: ${contact.first_seen_subject}` : null,
+      contact.source ? `Source: ${contact.source}` : null,
+    ].filter(Boolean).join(' · ') || null;
+
+    return {
+      id: `ghl:${contact.ghl_id ?? contact.id}`,
+      source_system: 'ghl',
+      source_label: contact.source ?? 'GoHighLevel CRM',
+      name: ghlDisplayName(contact),
+      role: contact.company_name ? 'CRM contact' : null,
+      organisation: contact.company_name,
+      contact_type: deriveGhlContactType(contact),
+      email: contact.email,
+      phone: contact.phone,
+      notes,
+      last_contacted_at: contact.last_contact_date,
+      linked_entity_id: contact.canonical_entity_id,
+      linkedin_url: null,
+      person_id: person?.person_id ?? null,
+      updated_at: contact.updated_at ?? contact.ghl_updated_at,
+      linked_entity_gs_id: entity?.gs_id ?? null,
+      linked_entity_name: entity?.canonical_name ?? null,
+      linked_entity_type: entity?.entity_type ?? null,
+      linked_entity_abn: entity?.abn ?? null,
+      ghl_contact_id: contact.ghl_id,
+      ghl_engagement_status: contact.engagement_status,
+      ghl_last_contact_date: contact.last_contact_date,
+      notion_id: person?.notion_id ?? null,
+      unified_tags: person?.unified_tags?.length ? person.unified_tags : tags,
+    };
+  });
+
+  return [...civicGraphContacts, ...crmContacts];
 }
 
 export async function getOrgLeadership(orgProfileId: string, projectId?: string): Promise<OrgLeader[]> {

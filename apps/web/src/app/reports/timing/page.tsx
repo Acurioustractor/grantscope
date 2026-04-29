@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/report-supabase';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';

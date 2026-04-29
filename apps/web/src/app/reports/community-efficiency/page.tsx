@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/report-supabase';
 import { ReportCTA } from '../_components/report-cta';
 
 export const dynamic = 'force-dynamic';

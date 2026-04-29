@@ -1,4 +1,4 @@
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/report-supabase';
 import { safe } from '@/lib/services/utils';
 import { esc } from '@/lib/sql';
 
@@ -652,17 +652,33 @@ export async function getAccoFundingGap(topic: Topic, state?: string) {
   const supabase = getServiceSupabase();
   const stateFilter = state ? ` AND jf.state = '${assertState(state)}'` : '';
   return safe(supabase.rpc('exec_sql', {
-    query: `SELECT
-              CASE WHEN ge.is_community_controlled THEN 'Community Controlled' ELSE 'Non-Indigenous' END as org_type,
+            query: `SELECT
+              CASE WHEN ge.is_community_controlled THEN 'Community Controlled' ELSE 'Other service providers' END as org_type,
               COUNT(DISTINCT jf.recipient_name)::int as orgs,
               SUM(jf.amount_dollars)::bigint as total_funding,
-              ROUND(AVG(jf.amount_dollars))::bigint as avg_grant
+              ROUND(SUM(jf.amount_dollars) / NULLIF(COUNT(DISTINCT jf.recipient_name), 0))::bigint as avg_per_recipient,
+              ROUND(AVG(jf.amount_dollars))::bigint as avg_grant,
+              COUNT(*)::int as funding_rows,
+              ROUND(
+                SUM(jf.amount_dollars)::numeric
+                / NULLIF(SUM(SUM(jf.amount_dollars)) OVER (), 0)
+                * 100,
+                1
+              )::float as funding_share_pct
             FROM justice_funding jf
             JOIN gs_entities ge ON ge.id = jf.gs_entity_id
             WHERE ${topicFilter(topic, 'jf')}${stateFilter}
+              AND jf.source NOT IN ('austender-direct')
+              AND jf.amount_dollars IS NOT NULL
+              AND jf.amount_dollars > 0
+              AND jf.recipient_name IS NOT NULL
+              AND jf.recipient_name <> ''
+              AND jf.recipient_name <> 'Total'
+              AND jf.recipient_name !~* '^(Department of|Dept |Queensland Government|NSW Government|Victorian Government|Government of|State of|Commonwealth Government)'
+              AND jf.recipient_name NOT IN ('Territory Families, Housing and Communities', 'Community Services Directorate')
               AND jf.program_name NOT LIKE 'ROGS%' AND jf.program_name NOT LIKE 'Total%'
-            GROUP BY CASE WHEN ge.is_community_controlled THEN 'Community Controlled' ELSE 'Non-Indigenous' END`,
-  })) as Promise<Array<{ org_type: string; orgs: number; total_funding: number; avg_grant: number }> | null>;
+            GROUP BY CASE WHEN ge.is_community_controlled THEN 'Community Controlled' ELSE 'Other service providers' END`,
+  })) as Promise<Array<{ org_type: string; orgs: number; total_funding: number; avg_per_recipient: number; avg_grant: number; funding_rows: number; funding_share_pct: number }> | null>;
 }
 
 /**

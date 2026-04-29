@@ -8,15 +8,25 @@ const BASE_URL = 'https://services.leadconnectorhq.com';
 const STAGE_TO_GHL: Record<string, string> = {
   pursuing: 'Application In Progress',
   submitted: 'Grant Submitted',
-  approved: 'Approved',
-  realized: 'Won',
-  lost: 'Lost',
+  approved: 'Grant Awarded',
+  realized: 'Grant Awarded',
+  lost: 'Grant Declined',
+  expired: 'Grant Declined',
 };
 
 const GHL_TO_STAGE: Record<string, string> = {};
 for (const [stage, ghl] of Object.entries(STAGE_TO_GHL)) {
   GHL_TO_STAGE[ghl.toLowerCase()] = stage;
 }
+GHL_TO_STAGE['grant opportunity identified'] = 'discovered';
+GHL_TO_STAGE['grant reporting due'] = 'approved';
+GHL_TO_STAGE['grant report submitted'] = 'realized';
+
+const PIPELINE_NAMES = {
+  grants: 'Grants',
+  goodsBuyer: 'Goods — Buyer Pipeline',
+  goodsDemand: 'Goods — Demand Register',
+} as const;
 
 async function ghlFetch(endpoint: string, options: RequestInit = {}) {
   const apiKey = process.env.GHL_API_KEY;
@@ -83,6 +93,21 @@ export async function getOpportunities(pipelineId: string) {
 export async function getPipelines() {
   const locationId = process.env.GHL_LOCATION_ID;
   return ghlFetch(`/opportunities/pipelines?locationId=${locationId}`);
+}
+
+export function findPipelineByName<T extends { name?: string }>(
+  pipelines: T[] | undefined,
+  pipelineName: string
+): T | undefined {
+  return pipelines?.find((pipeline) => pipeline.name?.toLowerCase() === pipelineName.toLowerCase());
+}
+
+export function findGrantPipeline<T extends { name?: string }>(pipelines: T[] | undefined): T | undefined {
+  const configuredName = process.env.GHL_GRANTS_PIPELINE_NAME;
+  return (
+    (configuredName ? findPipelineByName(pipelines, configuredName) : undefined) ||
+    findPipelineByName(pipelines, PIPELINE_NAMES.grants)
+  );
 }
 
 export async function addTagToContact(contactId: string, tag: string) {
@@ -203,4 +228,4 @@ export async function upsertContact(opts: {
   return { id: contactId };
 }
 
-export { STAGE_TO_GHL, GHL_TO_STAGE };
+export { STAGE_TO_GHL, GHL_TO_STAGE, PIPELINE_NAMES };

@@ -1,11 +1,18 @@
 import { notFound } from 'next/navigation';
 import { cookies } from 'next/headers';
-import { createSupabaseServer } from '@/lib/supabase-server';
 import { isAdminEmail } from '@/lib/admin';
+import { createSupabaseServer } from '@/lib/supabase-server';
+import { ACT_FAST_PROFILE, isActSlug, shouldUseFastLocalOrg } from '@/lib/services/fast-local-org';
 import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  if (shouldUseFastLocalOrg() && isActSlug(slug)) {
+    return {
+      title: `${ACT_FAST_PROFILE.name} — CivicGraph`,
+      description: ACT_FAST_PROFILE.description ?? `Organisation dashboard for ${ACT_FAST_PROFILE.name}`,
+    };
+  }
   const profile = await getOrgProfileBySlug(slug);
   if (!profile) return { title: 'Not Found — CivicGraph' };
   return {
@@ -22,13 +29,21 @@ export default async function OrgLayout({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  if (shouldUseFastLocalOrg() && isActSlug(slug)) {
+    return <>{children}</>;
+  }
+
   const profile = await getOrgProfileBySlug(slug);
   if (!profile) notFound();
 
-  // Check if current user is admin (for "viewing as" banner)
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
-  const admin = user && isAdminEmail(user.email);
+  // Keep org navigation fast. The admin banner is useful, but it should not add
+  // a blocking Supabase auth network call to every org page click.
+  let admin = false;
+  if (process.env.SHOW_SUPER_ADMIN_BANNER === '1') {
+    const supabase = await createSupabaseServer();
+    const { data: { user } } = await supabase.auth.getUser();
+    admin = Boolean(user && isAdminEmail(user.email));
+  }
 
   // Don't show admin banner if impersonating — the global impersonation banner handles it
   const cookieStore = await cookies();

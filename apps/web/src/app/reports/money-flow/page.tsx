@@ -1,4 +1,4 @@
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/report-supabase';
 import { buildSankeyData } from '@grant-engine/reports/money-flow';
 import { MoneyFlowCharts } from './charts';
 

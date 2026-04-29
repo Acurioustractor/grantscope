@@ -86,7 +86,7 @@ export default async function PiccDashboard() {
     'Family Matters QLD': '/entity/AU-ABN-98240660855',
     'A Curious Tractor': '/entity/AU-ABN-88671625498',
     'Oonchiumpa': '/entity/AU-ABN-53658668627',
-    'Brodie Germaine Fitness Aboriginal Corp': '/entity/AU-ABN-57591914579',
+    'Brodie Germaine Fitness Aboriginal Corp': '/entity/AU-ABN-94770726134',
     'Tranby College': '/entity/AU-ABN-82479284570',
     'Movember Foundation': '/entity/AU-ABN-48894537905',
     'Palm Island Community Company': '/entity/AU-ABN-14640793728',

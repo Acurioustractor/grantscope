@@ -117,7 +117,7 @@ export default function CuriousTractorPage() {
               name: 'CivicGraph',
               layer: 'Power',
               colour: 'text-bauhaus-red',
-              copy: 'Australia’s accountability atlas. 559K entities, 1.5M cross-system relationships. Contracts, donations, grants, boards, lobbying, ALMA evidence, ATO tax transparency, all resolved into one public graph. Who holds power, where money flows, who’s being cut out.',
+              copy: 'Australia’s accountability atlas. 591K resolved entities, 1.53M cross-system relationships, and 32K indexed grants. Contracts, donations, grants, boards, lobbying, ALMA evidence, ATO tax transparency, all resolved into one public graph. Who holds power, where money flows, who’s being cut out.',
               href: '/',
               cta: 'Explore the atlas',
             },

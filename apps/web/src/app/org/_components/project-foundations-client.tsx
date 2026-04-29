@@ -1013,6 +1013,21 @@ export function ProjectFoundationsClient({
       stale,
     };
   }, [sortedItems]);
+  const readyFoundationItems = [
+    ...portfolioBoard.outreachReady,
+    ...portfolioBoard.readyToApproach,
+  ].filter((item, index, list) => list.findIndex((candidate) => candidate.id === item.id) === index);
+  const pipelineCandidateNames = pipelineCandidates
+    .slice(0, 3)
+    .map((candidate) => candidate.foundation_name)
+    .join(' · ');
+  const readyNowCount = readyFoundationItems.length > 0 ? readyFoundationItems.length : pipelineCandidates.length;
+  const readyNowSummary =
+    readyFoundationItems.length > 0
+      ? topNames(readyFoundationItems)
+      : pipelineCandidates.length > 0
+        ? `Pipeline prospect${pipelineCandidates.length === 1 ? '' : 's'} waiting to import: ${pipelineCandidateNames}`
+        : 'No strong contact targets yet.';
 
   async function addFoundation(foundation: FoundationSearchResult) {
     const response = await fetch(`/api/org/${orgProfileId}/projects/${projectId}/foundations`, {
@@ -1235,16 +1250,10 @@ export function ProjectFoundationsClient({
                   Ready now
                 </div>
                 <div className="mt-2 text-2xl font-black text-money">
-                  {portfolioBoard.outreachReady.length + portfolioBoard.readyToApproach.length}
+                  {readyNowCount}
                 </div>
                 <p className="mt-2 line-clamp-3 text-sm font-medium leading-relaxed text-bauhaus-black">
-                  {portfolioBoard.outreachReady.length + portfolioBoard.readyToApproach.length > 0
-                    ? topNames(
-                        [...portfolioBoard.outreachReady, ...portfolioBoard.readyToApproach].filter(
-                          (item, index, list) => list.findIndex((candidate) => candidate.id === item.id) === index,
-                        ),
-                      )
-                    : 'No strong contact targets yet.'}
+                  {readyNowSummary}
                 </p>
               </div>
               <div className="border-2 border-bauhaus-blue bg-link-light p-3">
@@ -1370,11 +1379,14 @@ export function ProjectFoundationsClient({
         ) : sortedItems.length === 0 ? (
           <div className="border-2 border-dashed border-bauhaus-black/20 bg-bauhaus-canvas p-4">
             <div className="text-[10px] font-black uppercase tracking-[0.18em] text-bauhaus-muted">
-              No saved foundations for this project yet.
+              {pipelineCandidates.length > 0
+                ? `${pipelineCandidates.length} pipeline-matched foundation prospect${pipelineCandidates.length === 1 ? '' : 's'} waiting to import.`
+                : 'No saved foundations for this project yet.'}
             </div>
             <p className="mt-2 text-sm font-medium leading-relaxed text-bauhaus-muted">
-              Start with one or two foundations you think are the best fit, then write down why,
-              how to frame the work, and what the next move should be.
+              {pipelineCandidates.length > 0
+                ? 'Use Import pipeline prospects above to seed this board, then record why each funder fits, the relationship path, and the next move.'
+                : 'Start with one or two foundations you think are the best fit, then write down why, how to frame the work, and what the next move should be.'}
             </p>
           </div>
         ) : (

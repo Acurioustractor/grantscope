@@ -47,9 +47,9 @@ const PlaceDetail = dynamic(
 const DATA_SOURCES = [
   { name: 'ACNC Charity Register', records: '359,678', updated: 'Monthly' },
   { name: 'AEC Political Donations', records: '50,000+', updated: 'Annual' },
-  { name: 'AusTender Contracts', records: '800,000+', updated: 'Weekly' },
-  { name: 'Foundation Programs', records: '866', updated: 'Ongoing' },
-  { name: 'ORIC Indigenous Corps', records: '3,000+', updated: 'Quarterly' },
+  { name: 'AusTender Contracts', records: '~797,000', updated: 'Weekly' },
+  { name: 'Foundation Programs', records: '3,296', updated: 'Ongoing' },
+  { name: 'ORIC Indigenous Corps', records: '7,369', updated: 'Quarterly' },
   { name: 'ABS SEIFA 2021', records: '2,300 SA2s', updated: '2021 Census' },
 ];
 

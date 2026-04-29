@@ -1,39 +1,11 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/report-supabase';
 import { safe } from '@/lib/services/utils';
 import { fmt } from '@/lib/services/report-service';
+import { loadQldLocalTrackerEvents, type EvidenceEventRow } from '../../tracker-fallback';
 
 export const revalidate = 3600;
-
-type EvidenceEventRow = {
-  tracker_key: string;
-  stage: string;
-  event_date: string;
-  title: string;
-  summary: string | null;
-  source_name: string | null;
-  source_url: string | null;
-  provider_name: string | null;
-  site_names: string[] | null;
-  evidence_strength: string;
-  mirror_status: string;
-  source_doc_title: string | null;
-  source_excerpt: string | null;
-  source_html_title: string | null;
-  source_fetch_status: string | null;
-  source_fetch_error: string | null;
-  source_render_hint: string | null;
-  source_cf_mitigated: string | null;
-  source_fetch_via: string | null;
-  trace_source_id: string | null;
-  trace_issued_by: string | null;
-  trace_unspsc: string | null;
-  trace_released_at: string | null;
-  trace_closing_at: string | null;
-  trace_notice_type: string | null;
-  trace_basis: string | null;
-};
 
 function stageLabel(v: string) {
   return v.replaceAll('_', ' ');
@@ -110,7 +82,7 @@ async function getData(trackerKey: string) {
     supabase.rpc('exec_sql', { query }) as PromiseLike<{ data: EvidenceEventRow[] | null; error: unknown }>,
     `qld tracker detail ${trackerKey}`,
   );
-  return result ?? [];
+  return result?.length ? result : loadQldLocalTrackerEvents(trackerKey);
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ trackerKey: string }> }) {
@@ -136,6 +108,7 @@ export default async function QldYouthJusticeTrackerDetailPage({
   const providerCount = new Set(events.map((row) => row.provider_name).filter(Boolean)).size;
   const siteCount = new Set(events.flatMap((row) => row.site_names || []).filter(Boolean)).size;
   const hasSpecialistPage = trackerKey === 'crime-prevention-schools';
+  const hasWatchhouseDataPage = trackerKey === 'watchhouse-support';
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -149,8 +122,8 @@ export default async function QldYouthJusticeTrackerDetailPage({
         <div className="mb-1 mt-4 text-xs font-black uppercase tracking-widest text-bauhaus-red">Generic Tracker Surface</div>
         <h1 className="text-3xl font-black text-bauhaus-black sm:text-4xl">{sentenceCase(trackerKey)}</h1>
         <p className="mt-3 max-w-4xl text-base font-medium leading-relaxed text-bauhaus-muted sm:text-lg">
-          This generic page is powered only by <code>tracker_evidence_events</code>. It is the reusable accountability layer for new QLD
-          youth justice procurement stories before or alongside a deeper custom investigation page.
+          This page uses synced <code>tracker_evidence_events</code> rows when they are available and local tracker manifests when the
+          mirror is still catching up. Use it to see the evidence chain, source gaps, provider names, sites, and the next proof to collect.
         </p>
         <div className="mt-4 flex flex-wrap gap-3">
           {hasSpecialistPage ? (
@@ -159,6 +132,14 @@ export default async function QldYouthJusticeTrackerDetailPage({
               className="border-2 border-bauhaus-black bg-bauhaus-black px-4 py-2 text-xs font-black uppercase tracking-wider text-white transition-colors hover:bg-white hover:text-bauhaus-black"
             >
               Open specialist tracker
+            </Link>
+          ) : null}
+          {hasWatchhouseDataPage ? (
+            <Link
+              href="/reports/youth-justice/qld/watchhouse-data"
+              className="border-2 border-bauhaus-blue bg-bauhaus-blue px-4 py-2 text-xs font-black uppercase tracking-wider text-white transition-colors hover:bg-white hover:text-bauhaus-blue"
+            >
+              Open daily watch-house data
             </Link>
           ) : null}
           <Link
