@@ -48,35 +48,57 @@ async function main() {
   console.log(`=== VIC Grants Fuzzy Linker ===`);
   console.log(`  mode: ${APPLY ? 'APPLY (writes to DB)' : 'DRY RUN'} | trigram threshold: ${THRESHOLD}`);
 
-  // Step 1: exact normalized-name matches
-  console.log(`\n  Phase 1: exact normalized-name match`);
-  const exactSql = `
-    WITH grants_norm AS (
-      SELECT id AS grant_id, recipient_name,
-             ${NORM_SQL.replace('name_in', 'recipient_name')} AS norm
-      FROM public.vic_grants_awarded
-      WHERE gs_entity_id IS NULL
-    ),
-    ent_norm AS (
-      SELECT id AS entity_id, canonical_name, abn,
-             ${NORM_SQL.replace('name_in', 'canonical_name')} AS norm
-      FROM public.gs_entities
-      WHERE canonical_name IS NOT NULL
-    ),
-    paired AS (
-      SELECT g.grant_id, g.recipient_name,
-             e.entity_id, e.canonical_name, e.abn,
-             ROW_NUMBER() OVER (PARTITION BY g.grant_id ORDER BY length(e.canonical_name)) AS rn
-      FROM grants_norm g
-      JOIN ent_norm e ON e.norm = g.norm
-      WHERE length(g.norm) > 4
-    )
-    SELECT grant_id, recipient_name, entity_id, canonical_name, abn
-    FROM paired WHERE rn = 1
-  `;
-  const { data: exact, error: e1 } = await db.rpc('exec_sql', { query: exactSql });
-  if (e1) { console.error(`  exact-match query failed: ${e1.message}`); await logFailed(db, run.id, e1); process.exit(1); }
-  console.log(`  exact matches: ${exact.length}`);
+  // Step 1: exact normalized-name matches (chunked to fit 8s timeout)
+  console.log(`\n  Phase 1: exact normalized-name match (chunked)`);
+  const allIds = [];
+  let p1Offset = 0;
+  while (true) {
+    const { data: p } = await db.rpc('exec_sql', {
+      query: `SELECT id FROM public.vic_grants_awarded WHERE gs_entity_id IS NULL ORDER BY id LIMIT 1000 OFFSET ${p1Offset}`,
+    });
+    if (!p || p.length === 0) break;
+    p.forEach(r => allIds.push(r.id));
+    if (p.length < 1000) break;
+    p1Offset += 1000;
+  }
+  console.log(`  total unlinked: ${allIds.length}`);
+  const exact = [];
+  const P1_CHUNK = 500;
+  for (let i = 0; i < allIds.length; i += P1_CHUNK) {
+    const ids = allIds.slice(i, i + P1_CHUNK).map(id => `'${id}'`).join(',');
+    const exactSql = `
+      WITH grants_norm AS (
+        SELECT id AS grant_id, recipient_name,
+               ${NORM_SQL.replace('name_in', 'recipient_name')} AS norm
+        FROM public.vic_grants_awarded
+        WHERE id IN (${ids})
+      ),
+      ent_norm AS (
+        SELECT id AS entity_id, canonical_name, abn,
+               ${NORM_SQL.replace('name_in', 'canonical_name')} AS norm
+        FROM public.gs_entities
+        WHERE canonical_name IS NOT NULL
+      ),
+      paired AS (
+        SELECT g.grant_id, g.recipient_name,
+               e.entity_id, e.canonical_name, e.abn,
+               ROW_NUMBER() OVER (PARTITION BY g.grant_id ORDER BY length(e.canonical_name)) AS rn
+        FROM grants_norm g
+        JOIN ent_norm e ON e.norm = g.norm
+        WHERE length(g.norm) > 4
+      )
+      SELECT grant_id, recipient_name, entity_id, canonical_name, abn
+      FROM paired WHERE rn = 1
+    `;
+    const { data, error } = await db.rpc('exec_sql', { query: exactSql });
+    if (error) {
+      console.log(`    chunk ${i / P1_CHUNK + 1} failed: ${error.message.slice(0, 80)}`);
+      continue;
+    }
+    if (data?.length) exact.push(...data);
+    process.stdout.write(`\r    chunk ${i / P1_CHUNK + 1}/${Math.ceil(allIds.length / P1_CHUNK)} — running exact: ${exact.length}`);
+  }
+  console.log(`\n  exact matches: ${exact.length}`);
   if (exact.length) {
     console.log(`  preview:`);
     exact.slice(0, 5).forEach(r => console.log(`    · "${r.recipient_name}" → "${r.canonical_name}" (${r.abn || 'no abn'})`));
@@ -86,10 +108,19 @@ async function main() {
   // statement timeout (~8s).
   console.log(`\n  Phase 2: trigram similarity > ${THRESHOLD} (chunked)`);
   const exactGrantIds = new Set(exact.map(r => r.grant_id));
-  const { data: leftoverIds } = await db.rpc('exec_sql', {
-    query: `SELECT id FROM public.vic_grants_awarded WHERE gs_entity_id IS NULL ${exactGrantIds.size ? `AND id NOT IN (${[...exactGrantIds].map(id => `'${id}'`).join(',')})` : ''}`,
-  });
-  const leftoverArr = (leftoverIds || []).map(r => r.id);
+  // Supabase JS caps at 1000 rows — paginate via OFFSET/LIMIT
+  const leftoverArr = [];
+  let pageOffset = 0;
+  const PAGE = 1000;
+  while (true) {
+    const { data: pageRows } = await db.rpc('exec_sql', {
+      query: `SELECT id FROM public.vic_grants_awarded WHERE gs_entity_id IS NULL ORDER BY id LIMIT ${PAGE} OFFSET ${pageOffset}`,
+    });
+    if (!pageRows || pageRows.length === 0) break;
+    pageRows.forEach(r => { if (!exactGrantIds.has(r.id)) leftoverArr.push(r.id); });
+    if (pageRows.length < PAGE) break;
+    pageOffset += PAGE;
+  }
   console.log(`  leftover unlinked rows: ${leftoverArr.length}`);
 
   const trg = [];
