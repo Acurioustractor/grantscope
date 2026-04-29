@@ -74,14 +74,48 @@ export async function callMiniMaxJSON({ system, user, model = 'MiniMax-M2.7', ma
     max_tokens,
     temperature,
   });
-  // Strip code fences if present
-  const cleaned = text.replace(/^```(?:json)?\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+  // Strip code fences if present, then try to find the first valid JSON
+  // object/array even when MiniMax accidentally writes prose around it.
+  let cleaned = text.replace(/^```(?:json)?\n?/i, '').replace(/\n?```\s*$/i, '').trim();
   let json;
   try {
     json = JSON.parse(cleaned);
-  } catch (err) {
-    throw new Error(`MiniMax returned non-JSON: ${err.message} | preview: ${cleaned.slice(0, 200)}`);
+  } catch {
+    // Fallback: locate the first {...} or [...] block by bracket counting
+    const candidate = extractFirstJsonBlock(cleaned);
+    if (candidate) {
+      try { json = JSON.parse(candidate); }
+      catch (err2) {
+        throw new Error(`MiniMax returned non-JSON (extraction failed): ${err2.message} | preview: ${cleaned.slice(0, 200)}`);
+      }
+    } else {
+      throw new Error(`MiniMax returned non-JSON (no block found): preview: ${cleaned.slice(0, 200)}`);
+    }
   }
   return { json, raw: text, usage };
+}
+
+function extractFirstJsonBlock(s) {
+  // Find first { or [ and walk to matching closer respecting strings.
+  let start = -1;
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] === '{' || s[i] === '[') { start = i; break; }
+  }
+  if (start < 0) return null;
+  const open = s[start], close = open === '{' ? '}' : ']';
+  let depth = 0, inStr = false, esc = false;
+  for (let i = start; i < s.length; i++) {
+    const c = s[i];
+    if (esc) { esc = false; continue; }
+    if (c === '\\') { esc = true; continue; }
+    if (c === '"') { inStr = !inStr; continue; }
+    if (inStr) continue;
+    if (c === open) depth++;
+    else if (c === close) {
+      depth--;
+      if (depth === 0) return s.slice(start, i + 1);
+    }
+  }
+  return null;
 }
 
