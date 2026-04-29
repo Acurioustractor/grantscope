@@ -78,7 +78,7 @@ async function firecrawlMap(url) {
 }
 
 async function firecrawlScrape(url) {
-  console.log(`  fetching ${url}`);
+  console.log(`  fetching (firecrawl) ${url}`);
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), 240_000);
   let res;
@@ -95,6 +95,57 @@ async function firecrawlScrape(url) {
   if (!res.ok) throw new Error(`Firecrawl scrape ${res.status}: ${await res.text()}`);
   const j = await res.json();
   return j?.data?.markdown || j?.markdown || '';
+}
+
+// pdftotext-based extraction: download PDF, extract layout text. Reliable for
+// long government annual reports where Firecrawl truncates.
+async function pdftotextScrape(url) {
+  const { execSync } = await import('child_process');
+  const { writeFileSync: w } = await import('fs');
+  const { tmpdir } = await import('os');
+  const tmpPdf = join(tmpdir(), `vic-annual-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.pdf`);
+  console.log(`  downloading (pdftotext) ${url}`);
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 240_000);
+  let pdfBuf;
+  try {
+    const res = await fetch(url, { signal: ctrl.signal, headers: { 'User-Agent': 'Mozilla/5.0 CivicGraphBot' } });
+    if (!res.ok) throw new Error(`HTTP ${res.status} fetching PDF`);
+    pdfBuf = Buffer.from(await res.arrayBuffer());
+  } finally {
+    clearTimeout(t);
+  }
+  if (pdfBuf.length < 5000) throw new Error(`PDF too small (${pdfBuf.length} bytes)`);
+  w(tmpPdf, pdfBuf);
+  console.log(`    fetched ${(pdfBuf.length / 1024).toFixed(0)} KB → ${tmpPdf}`);
+  let text;
+  try {
+    text = execSync(`pdftotext -layout -nopgbrk "${tmpPdf}" -`, { encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024 });
+  } catch (err) {
+    throw new Error(`pdftotext failed: ${err.message.slice(0, 200)}`);
+  }
+  // Cleanup tmp file (best-effort)
+  try { execSync(`rm -f "${tmpPdf}"`); } catch {}
+  console.log(`    pdftotext extracted ${(text.length / 1024).toFixed(0)} KB of text`);
+  return text;
+}
+
+// Combined fetcher: prefer pdftotext for .pdf URLs, Firecrawl for everything
+// else. Falls back to the other provider on error.
+async function fetchAnnualReport(url) {
+  const isPdf = url.toLowerCase().endsWith('.pdf');
+  if (isPdf) {
+    try { return await pdftotextScrape(url); }
+    catch (err) {
+      console.log(`    pdftotext failed (${err.message.slice(0, 100)}) — falling back to Firecrawl`);
+      return firecrawlScrape(url);
+    }
+  }
+  try { return await firecrawlScrape(url); }
+  catch (err) {
+    console.log(`    firecrawl failed (${err.message.slice(0, 100)}) — trying pdftotext`);
+    return pdftotextScrape(url);
+  }
 }
 
 // ── PDF discovery ──────────────────────────────────────────────────────────
@@ -136,7 +187,7 @@ function inferYearFromUrl(url) {
 // Anchor patterns that signal the start of an actual grants-paid section.
 // Match "Appendix N: Grants ...", "Grants and sponsorships", "Grants paid in YYYY", etc.
 // PDF→markdown often loses heading levels, so don't require leading '#'.
-const GRANTS_ANCHOR_RE = /^(?:#{0,6}\s*)?(?:Appendix\s+\w+:\s*)?(?:Grants?\s+(?:and|&)\s+(?:transfer\s+payments?|sponsorships?|donations?)|Grants?\s+paid(?:\s+in\s+\d{4})?|Output\s+(?:of\s+)?grants|Disclosure\s+of\s+grants(?:\s+and\s+transfer\s+payments?)?|Schedule\s+of\s+grants|Community\s+grants\s+paid)\b/im;
+const GRANTS_ANCHOR_RE = /^(?:#{0,6}\s*)?(?:Appendix\s+\w+:?\s*)?(?:Grants?\s+(?:and|&)\s+(?:transfer\s+payments?|sponsorships?|donations?|related\s+assistance|other\s+assistance|other\s+payments)|Grants?\s+paid(?:\s+in\s+\d{4})?|Output\s+(?:of\s+)?grants|Disclosure\s+of\s+grants(?:\s+and\s+transfer\s+payments?)?|Schedule\s+of\s+grants|Community\s+grants\s+paid|Grant\s+programs?\s+(?:paid|delivered))\b/im;
 
 // Lines that mark the END of a grants section (other major appendices/sections)
 const SECTION_END_RE = /^(?:#{0,6}\s*)?(?:Appendix\s+\w+:|Section\s+\d+:|Disclosure\s+index|Glossary|Compliance\s+with\s+the|Output\s+performance\s+measures|Index)\b/im;
@@ -149,10 +200,16 @@ function locateGrantsSections(md) {
   }
   if (anchors.length === 0) return [];
 
-  // Filter out anchors that are inside a TOC (no table content within next 200 lines)
+  // Filter out anchors that are inside a TOC (no table content nearby)
+  // Markdown tables OR dollar-prefixed money OR comma-formatted numbers
+  // (pdftotext -layout strips currency symbols) OR table-header text
   const real = anchors.filter(start => {
     const lookAhead = lines.slice(start + 1, start + 400).join('\n');
-    return /\|.*\|.*\|/.test(lookAhead) || /\$\s*[\d,]{4,}/.test(lookAhead);
+    if (/\|.*\|.*\|/.test(lookAhead)) return true;
+    if (/\$\s*[\d,]{4,}/.test(lookAhead)) return true;
+    if (/\b\d{1,3}(?:,\d{3}){1,3}\b/.test(lookAhead)) return true; // 1,234 / 1,234,567
+    if (/\b(Organisation|Recipient|Payment\s*\$|Amount\s*\$)\b/i.test(lookAhead)) return true;
+    return false;
   });
   if (real.length === 0) return [];
 
@@ -323,11 +380,11 @@ async function processPdf(pdfUrl, year) {
   const cachePath = join(CACHE_DIR, `${DEPT}-${yearStr}.md`);
 
   let md;
-  if (existsSync(cachePath)) {
+  if (existsSync(cachePath) && !flag('force-refetch')) {
     md = readFileSync(cachePath, 'utf-8');
     console.log(`  cache hit: ${cachePath} (${md.length} chars)`);
   } else {
-    md = await firecrawlScrape(pdfUrl);
+    md = await fetchAnnualReport(pdfUrl);
     if (!md || md.length < 1000) {
       console.log(`  scrape too short (${md?.length ?? 0} chars) — skipping`);
       return { url: pdfUrl, year: yearStr, sections: 0, grants: 0, inserted: 0 };
@@ -416,18 +473,36 @@ async function processPdf(pdfUrl, year) {
   }
   console.log(`  inserted: ${inserted}`);
 
-  // ABN linking
+  // ABN linking — exec_sql RPC only accepts SELECT, so write a temp .sql
+  // and run psql -f. Best-effort; failures don't block the rest of the run.
   if (inserted > 0) {
-    const { error: linkErr } = await db.rpc('exec_sql', {
-      query: `UPDATE vic_grants_awarded vga
-              SET gs_entity_id = ge.id
-              FROM gs_entities ge
-              WHERE ge.abn = vga.recipient_abn
-                AND vga.gs_entity_id IS NULL
-                AND vga.recipient_abn IS NOT NULL
-                AND vga.source = '${cfg.source}'`,
-    });
-    if (linkErr) console.log(`    ABN link error: ${linkErr.message}`);
+    try {
+      const { execSync } = await import('child_process');
+      const { writeFileSync: w, unlinkSync } = await import('fs');
+      const sqlPath = `/tmp/abn-link-${cfg.source}-${Date.now()}.sql`;
+      w(sqlPath, `UPDATE public.vic_grants_awarded vga
+        SET gs_entity_id = ge.id
+        FROM public.gs_entities ge
+        WHERE ge.abn = vga.recipient_abn
+          AND vga.gs_entity_id IS NULL
+          AND vga.recipient_abn IS NOT NULL
+          AND vga.source = '${cfg.source}';
+      `);
+      const PG = process.env.DATABASE_PASSWORD;
+      if (!PG) {
+        console.log(`    ABN link skipped (DATABASE_PASSWORD not set)`);
+      } else {
+        const out = execSync(
+          `PGPASSWORD="${PG}" psql -h aws-0-ap-southeast-2.pooler.supabase.com -p 5432 -U postgres.tednluwflfhxyucgwigh -d postgres -f ${sqlPath} -t -A 2>&1`,
+          { encoding: 'utf-8' }
+        );
+        const m = out.match(/UPDATE (\d+)/);
+        console.log(`    ABN-linked ${m ? m[1] : '?'} rows`);
+        try { unlinkSync(sqlPath); } catch {}
+      }
+    } catch (err) {
+      console.log(`    ABN link error: ${err.message.slice(0, 200)}`);
+    }
   }
 
   return { url: pdfUrl, year: yearStr, sections: sections.length, grants: allGrants.length, inserted };
