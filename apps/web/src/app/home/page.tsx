@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import { redirect } from 'next/navigation';
 import {
   buildAlertPerformanceSnapshot,
   createEmptyAlertPerformanceMetrics,
@@ -13,6 +14,14 @@ import { IntakeClaimer } from './intake-claimer';
 import type { GrantItem, FoundationItem, AgentRun, AlertActivityItem, AlertLearningItem } from './home-client';
 
 export const dynamic = 'force-dynamic';
+
+function safeNextPath(value: string | string[] | undefined) {
+  const target = Array.isArray(value) ? value[0] : value;
+  if (!target) return null;
+  if (!target.startsWith('/') || target.startsWith('//')) return null;
+  if (target === '/home' || target.startsWith('/home?')) return null;
+  return target;
+}
 
 function daysUntil(dateStr: string): number {
   const diff = new Date(dateStr).getTime() - Date.now();
@@ -30,10 +39,18 @@ function formatDate(dateStr: string | null | undefined): string | null {
   });
 }
 
-export default async function HomePage() {
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const supabase = await createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
+
+  const params = searchParams ? await searchParams : {};
+  const nextPath = safeNextPath(params.next);
+  if (nextPath) redirect(nextPath);
 
   const db = getServiceSupabase();
 

@@ -49,6 +49,25 @@ const statePlugins = [
   createNTGrantsPlugin(),
 ];
 
+function isDuplicateUrlError(error) {
+  return error?.code === '23505' && /grant_opportunities_url_idx|url/i.test(error.message || '');
+}
+
+function dedupeGrants(grants) {
+  const seen = new Set();
+  const deduped = [];
+
+  for (const grant of grants) {
+    const sourceId = grant.sourceId || grant.sourceUrl || grant.title;
+    const key = `${grant.title || ''}::${sourceId || ''}`.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(grant);
+  }
+
+  return deduped;
+}
+
 async function main() {
   const run = await logStart(supabase, 'scrape-state-grants', 'Scrape State Grants');
   currentRunId = run.id;
@@ -88,21 +107,24 @@ async function main() {
       continue;
     }
 
-    console.log(`Found ${grants.length} grants from ${plugin.id}`);
-    totalDiscovered += grants.length;
+    const dedupedGrants = dedupeGrants(grants);
+    const duplicateCount = grants.length - dedupedGrants.length;
+
+    console.log(`Found ${grants.length} grants from ${plugin.id}${duplicateCount > 0 ? ` (${duplicateCount} duplicate records removed)` : ''}`);
+    totalDiscovered += dedupedGrants.length;
 
     if (DRY_RUN) {
-      for (const g of grants.slice(0, 10)) {
+      for (const g of dedupedGrants.slice(0, 10)) {
         console.log(`  ${g.title} | ${g.provider} | ${g.sourceUrl || 'no url'}`);
       }
-      if (grants.length > 10) console.log(`  ... and ${grants.length - 10} more`);
+      if (dedupedGrants.length > 10) console.log(`  ... and ${dedupedGrants.length - 10} more`);
       continue;
     }
 
     // Upsert to grant_opportunities
     const BATCH_SIZE = 50;
-    for (let i = 0; i < grants.length; i += BATCH_SIZE) {
-      const batch = grants.slice(i, i + BATCH_SIZE).map(g => ({
+    for (let i = 0; i < dedupedGrants.length; i += BATCH_SIZE) {
+      const batch = dedupedGrants.slice(i, i + BATCH_SIZE).map(g => ({
         name: g.title,
         provider: g.provider,
         url: g.sourceUrl,
@@ -121,17 +143,44 @@ async function main() {
 
       const { data, error } = await supabase
         .from('grant_opportunities')
-        .upsert(batch, { onConflict: 'url', ignoreDuplicates: true });
+        .upsert(batch, { onConflict: 'name,source_id', ignoreDuplicates: false });
 
       if (error) {
-        errors.push(`${plugin.id} upsert: ${error.message}`);
         console.error(`  Upsert error: ${error.message}`);
+        for (const row of batch) {
+          const { error: singleError } = await supabase
+            .from('grant_opportunities')
+            .upsert(row, { onConflict: 'name,source_id', ignoreDuplicates: false });
+
+          if (!singleError) {
+            totalNew++;
+            continue;
+          }
+
+          if (isDuplicateUrlError(singleError)) {
+            const { error: fallbackError } = await supabase
+              .from('grant_opportunities')
+              .upsert({ ...row, url: null }, { onConflict: 'name,source_id', ignoreDuplicates: false });
+
+            if (!fallbackError) {
+              totalNew++;
+              continue;
+            }
+
+            errors.push(`${plugin.id} fallback upsert: ${fallbackError.message}`);
+            console.error(`  Fallback upsert error: ${fallbackError.message}`);
+            continue;
+          }
+
+          errors.push(`${plugin.id} single upsert: ${singleError.message}`);
+          console.error(`  Single upsert error: ${singleError.message}`);
+        }
       } else {
         totalNew += batch.length;
       }
     }
 
-    console.log(`  Upserted ${grants.length} grants from ${plugin.id}`);
+    console.log(`  Upserted ${dedupedGrants.length} grants from ${plugin.id}`);
   }
 
   console.log(`\n=== Summary ===`);

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/report-supabase';
 import { ReportEmailCapture } from '@/components/report-email-capture';
 
 export const revalidate = 3600;

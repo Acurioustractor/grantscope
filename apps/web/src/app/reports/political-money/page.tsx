@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/report-supabase';
 import Link from 'next/link';
 import { ReportCTA } from '../_components/report-cta';
 
@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Political Money | CivicGraph Investigation',
-  description: 'Who funds Australian politics — and what do they get in return? 312K donation records cross-referenced against 770K government contracts.',
+  description: 'Who funds Australian politics — and what do they get in return? 312K donation records cross-referenced against about 797K government contracts.',
   openGraph: {
     title: 'Political Money',
     description: 'Who funds Australian politics — and what do they get in return? $21.9B in tracked political donations cross-referenced against $853B in government contracts.',
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Political Money',
-    description: '312K donation records. 770K government contracts. The donor-to-contractor pipeline.',
+    description: '312K donation records. About 797K government contracts. The donor-to-contractor pipeline.',
   },
 };
 
@@ -264,7 +264,7 @@ export default async function PoliticalMoneyReport() {
         <p className="text-bauhaus-muted text-base sm:text-lg max-w-3xl leading-relaxed font-medium">
           Who funds Australian politics &mdash; and what do they get in return?
           {' '}{fmt(s.totalRecords)} donation records from {s.minYear} to {s.maxYear},
-          cross-referenced against 770K government contracts. {fmt(s.payToPlayCount)} entities
+          cross-referenced against about 797K government contracts. {fmt(s.payToPlayCount)} entities
           appear on both sides: donating to parties AND winning government work.
         </p>
         <div className="mt-4 text-xs text-bauhaus-muted font-bold">

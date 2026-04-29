@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { esc } from '@/lib/sql';
 
 // ── Column sets ──────────────────────────────────────────────────────
 const ENTITY_SUMMARY_COLS =
@@ -12,6 +13,19 @@ const ENTITY_SEARCH_COLS =
 
 const ENTITY_PLACE_COLS =
   'id, gs_id, canonical_name, entity_type, is_community_controlled, latest_revenue' as const;
+
+function sanitizeTextSearch(query: string) {
+  return query.replace(/[%_]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function mergeEntityRows(
+  rowsById: Map<string, EntitySearchResult>,
+  rows: EntitySearchResult[]
+) {
+  for (const row of rows) {
+    if (!rowsById.has(row.id)) rowsById.set(row.id, row);
+  }
+}
 
 // ── Types ────────────────────────────────────────────────────────────
 export interface EntitySummary {
@@ -126,49 +140,67 @@ export async function search(
   limit: number = 10
 ) {
   const cap = Math.min(limit, 50);
+  const cleanQuery = sanitizeTextSearch(query);
 
   // ABN exact match
-  const isAbn = /^\d{9,11}$/.test(query.replace(/\s/g, ''));
+  const compactQuery = query.replace(/\s/g, '');
+  const isAbn = /^\d{9,11}$/.test(compactQuery);
   if (isAbn) {
     const { data, error } = await db
       .from('gs_entities')
       .select(ENTITY_SEARCH_COLS)
-      .eq('abn', query.replace(/\s/g, ''))
+      .eq('abn', compactQuery)
       .limit(cap);
     return { data: (data || []) as EntitySearchResult[], error };
   }
 
-  // Fuzzy trigram search — handles abbreviations, typos, partial matches
-  const { data: fuzzyHits, error: fuzzyErr } = await db.rpc('search_entities_fuzzy', {
-    search_name: query,
-    min_similarity: 0.2,
-    max_results: cap * 2,
+  if (cleanQuery.length < 2) {
+    return { data: [] as EntitySearchResult[], error: null };
+  }
+
+  const rowsById = new Map<string, EntitySearchResult>();
+
+  // Homepage/global search must be bounded and responsive. The fuzzy RPC scans
+  // the full entity table for broad queries, so use indexed prefix/contains
+  // passes here and keep heavier fuzzy matching out of the typeahead path.
+  const indexedPrefix = await db.rpc('exec_sql', {
+    query: `SELECT id, gs_id, canonical_name, entity_type, abn, state, source_count, latest_revenue
+      FROM public.gs_entities
+      WHERE lower(canonical_name) LIKE '${esc(cleanQuery.toLowerCase())}%'
+      ORDER BY source_count DESC NULLS LAST, latest_revenue DESC NULLS LAST, canonical_name ASC
+      LIMIT ${cap}`,
   });
 
-  if (fuzzyErr || !fuzzyHits?.length) {
-    // Fallback to ILIKE for short queries or if trigram index is unavailable
-    const escaped = query.replace(/[%_]/g, '');
-    const { data, error } = await db
-      .from('gs_entities')
-      .select(ENTITY_SEARCH_COLS)
-      .ilike('canonical_name', `%${escaped}%`)
-      .order('source_count', { ascending: false })
-      .limit(cap);
-    return { data: (data || []) as EntitySearchResult[], error };
+  if (!indexedPrefix.error) {
+    return { data: (indexedPrefix.data || []) as EntitySearchResult[], error: null };
   }
 
-  // Fetch full details for fuzzy matches, preserving similarity order
-  const hitIds = fuzzyHits.map((h: { id: string }) => h.id);
-  const { data, error } = await db
+  const prefix = await db
     .from('gs_entities')
     .select(ENTITY_SEARCH_COLS)
-    .in('id', hitIds)
+    .ilike('canonical_name', `${cleanQuery}%`)
+    .order('source_count', { ascending: false, nullsFirst: false })
     .limit(cap);
 
-  const idOrder = new Map<string, number>(hitIds.map((id: string, i: number) => [id, i]));
-  const rows = (data || []) as EntitySearchResult[];
-  rows.sort((a, b) => (idOrder.get(a.id) ?? 999) - (idOrder.get(b.id) ?? 999));
-  return { data: rows, error };
+  if (prefix.error) return { data: [] as EntitySearchResult[], error: prefix.error };
+  mergeEntityRows(rowsById, (prefix.data || []) as EntitySearchResult[]);
+
+  // Prefix hits are enough for typeahead. Only fall back to contains search when
+  // there are no prefix matches, because broad contains searches are noticeably
+  // slower on the public homepage path.
+  if (rowsById.size === 0) {
+    const contains = await db
+      .from('gs_entities')
+      .select(ENTITY_SEARCH_COLS)
+      .ilike('canonical_name', `%${cleanQuery}%`)
+      .order('source_count', { ascending: false, nullsFirst: false })
+      .limit(cap);
+
+    if (contains.error) return { data: Array.from(rowsById.values()), error: contains.error };
+    mergeEntityRows(rowsById, (contains.data || []) as EntitySearchResult[]);
+  }
+
+  return { data: Array.from(rowsById.values()).slice(0, cap), error: null };
 }
 
 /** Filtered + paginated entity list */

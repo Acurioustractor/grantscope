@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { NavBar } from './components/nav';
 import { ImpersonationBanner } from './components/impersonation-banner';
-import { ChatDrawer } from './components/chat-drawer';
+import { DeferredChatDrawer } from './components/deferred-chat-drawer';
 import { createSupabaseServer, hasSupabaseServerEnv } from '@/lib/supabase-server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { resolveSubscriptionTier } from '@/lib/subscription';
@@ -15,22 +15,34 @@ export const metadata: Metadata = {
   description: "Civic infrastructure for communities, journalists, and researchers. Track action rather than wait for others. Built by A Curious Tractor alongside JusticeHub, Empathy Ledger, and Goods.",
 };
 
+const LAYOUT_AUTH_PREFIXES = [
+  '/home',
+  '/tracker',
+  '/foundations/tracker',
+  '/ops',
+  '/profile',
+  '/org',
+  '/settings',
+  '/briefing',
+  '/continue',
+] as const;
+
+function needsLayoutAuth(pathname: string) {
+  return LAYOUT_AUTH_PREFIXES.some(prefix => pathname === prefix || pathname.startsWith(`${prefix}/`));
+}
+
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // Iframe-embed routes (/embed/*) and API routes render without chrome so they
   // drop cleanly into partner sites and JSON responses stay clean.
   const hdrs = await headers();
   const pathname = hdrs.get('x-pathname') ?? '';
   const isChromeless = pathname.startsWith('/embed');
+  const requiresLayoutAuth = needsLayoutAuth(pathname);
+  const isFastPublicPath = !requiresLayoutAuth;
 
   if (isChromeless) {
     return (
       <html lang="en">
-        <head>
-          <link rel="preconnect" href="https://fonts.googleapis.com" />
-          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-          <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-          <link href="https://api.fontshare.com/v2/css?f[]=satoshi@700,800,900&display=swap" rel="stylesheet" />
-        </head>
         <body className="font-sans antialiased bg-transparent">
           {children}
         </body>
@@ -48,7 +60,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const impersonateSlug = cookieStore.get('cg_impersonate_org')?.value ?? null;
 
   // Resolve subscription tier from org_profiles
-  if (hasSupabaseServerEnv()) {
+  if (hasSupabaseServerEnv() && requiresLayoutAuth) {
     const supabase = await createSupabaseServer();
     const {
       data: { user: currentUser },
@@ -88,12 +100,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-        <link href="https://api.fontshare.com/v2/css?f[]=satoshi@700,800,900&display=swap" rel="stylesheet" />
-      </head>
       <body
         className={`font-sans antialiased ${isLoggedIn ? 'ws' : ''}`}
         data-authenticated={user ? 'true' : 'false'}
@@ -178,7 +184,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </footer>
           </>
         )}
-        <ChatDrawer />
+        <DeferredChatDrawer delayMs={isFastPublicPath ? 2500 : 1000} />
       </body>
     </html>
   );

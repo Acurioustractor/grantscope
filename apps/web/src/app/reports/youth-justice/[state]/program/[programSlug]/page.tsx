@@ -1,7 +1,9 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { existsSync, readFileSync } from 'fs';
+import path from 'path';
 import { money, fmt } from '@/lib/services/report-service';
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/report-supabase';
 import { safe } from '@/lib/services/utils';
 
 export const revalidate = 3600;
@@ -34,7 +36,91 @@ type ProgramStats = {
   max_year: string | null;
 };
 
+type SnapshotProgram = {
+  state?: string;
+  program_name: string;
+  total: number | null;
+  grants: number;
+  orgs: number;
+};
+
+type SnapshotPartner = {
+  state?: string;
+  program_name: string;
+  recipient_name: string;
+  recipient_abn: string | null;
+  gs_id: string | null;
+  is_community_controlled: boolean | null;
+  total: number | null;
+  grants: number;
+};
+
+function slugifyProgram(name: string) {
+  return encodeURIComponent(name.toLowerCase().replace(/\s+/g, '-'));
+}
+
+function loadSnapshotProgramDetail(state: string, programSlug: string): {
+  stats: ProgramStats | null;
+  orgs: OrgRow[];
+  exactName: string;
+  leadersByAbn: Record<string, LeaderRow[]>;
+} | null {
+  const candidates = [
+    path.join(process.cwd(), 'data/report-snapshots/youth-justice.json'),
+    path.join(process.cwd(), '../data/report-snapshots/youth-justice.json'),
+    path.join(process.cwd(), '../../data/report-snapshots/youth-justice.json'),
+  ];
+  const snapshotPath = candidates.find(existsSync);
+  if (!snapshotPath) return null;
+
+  try {
+    const parsed = JSON.parse(readFileSync(snapshotPath, 'utf8')) as {
+      report?: {
+        statePrograms?: SnapshotProgram[];
+        stateProgramPartners?: SnapshotPartner[];
+      };
+    };
+    const report = parsed.report || {};
+    const program = (report.statePrograms || []).find(row =>
+      row.state === state && slugifyProgram(row.program_name) === programSlug.toLowerCase()
+    );
+    if (!program) return null;
+
+    const orgs = (report.stateProgramPartners || [])
+      .filter(row => row.state === state && row.program_name === program.program_name)
+      .map(row => ({
+        recipient_name: row.recipient_name,
+        recipient_abn: row.recipient_abn,
+        gs_id: row.gs_id,
+        is_community_controlled: row.is_community_controlled,
+        total: row.total,
+        grants: row.grants,
+        min_year: null,
+        max_year: null,
+      }));
+
+    return {
+      exactName: program.program_name,
+      stats: {
+        program_name: program.program_name,
+        total: program.total,
+        grants: program.grants,
+        orgs: program.orgs,
+        min_year: null,
+        max_year: null,
+      },
+      orgs,
+      leadersByAbn: {},
+    };
+  } catch {
+    return null;
+  }
+}
+
 async function getProgramDetail(state: string, programSlug: string) {
+  const snapshotDetail = loadSnapshotProgramDetail(state, programSlug);
+  if (snapshotDetail) return snapshotDetail;
+
   const supabase = getServiceSupabase();
   const programName = decodeURIComponent(programSlug).replace(/-/g, ' ');
 

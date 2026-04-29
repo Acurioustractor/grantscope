@@ -82,6 +82,88 @@ const REVIEW_SET_COMPARE_TARGETS = [
   { id: ECSTRA_FOUNDATION_ID, label: 'Compare with ECSTRA' },
 ];
 
+const FOUNDATION_DEFAULT_COUNT = 10918;
+const FAST_FOUNDATION_INDEX: FoundationRow[] = [
+  {
+    id: PRF_FOUNDATION_ID,
+    name: 'Paul Ramsay Foundation Limited',
+    type: 'public_ancillary_fund',
+    website: 'https://www.paulramsayfoundation.org.au/',
+    description: 'Major Australian philanthropic foundation backing systems change, disadvantage, community capability, justice, and evidence-led work.',
+    total_giving_annual: 183000000,
+    thematic_focus: ['community', 'justice', 'systems change'],
+    geographic_focus: ['AU-National'],
+    profile_confidence: 'high',
+    enriched_at: null,
+    created_at: '2026-04-01T00:00:00.000Z',
+  },
+  {
+    id: MINDEROO_FOUNDATION_ID,
+    name: 'Minderoo Foundation',
+    type: 'private_ancillary_fund',
+    website: 'https://www.minderoo.org/',
+    description: 'Large national philanthropic funder with work across communities, First Nations, climate, employment, health, and place-based systems.',
+    total_giving_annual: 210000000,
+    thematic_focus: ['community', 'indigenous', 'environment'],
+    geographic_focus: ['AU-National', 'AU-WA'],
+    profile_confidence: 'high',
+    enriched_at: null,
+    created_at: '2026-04-01T00:00:00.000Z',
+  },
+  {
+    id: RIO_TINTO_FOUNDATION_ID,
+    name: 'Rio Tinto Foundation',
+    type: 'corporate_foundation',
+    website: 'https://www.riotinto.com/',
+    description: 'Corporate foundation and community investment pathway relevant to Indigenous enterprise, remote communities, regional employment, and place-based partnerships.',
+    total_giving_annual: 153700000,
+    thematic_focus: ['indigenous', 'community', 'employment'],
+    geographic_focus: ['AU-National', 'AU-QLD', 'AU-WA'],
+    profile_confidence: 'high',
+    enriched_at: null,
+    created_at: '2026-04-01T00:00:00.000Z',
+  },
+  {
+    id: SNOW_FOUNDATION_ID,
+    name: 'The Snow Foundation',
+    type: 'private_ancillary_fund',
+    website: 'https://www.snowfoundation.org.au/',
+    description: 'Relationship-led philanthropic foundation with relevant pathways across social enterprise, justice, health, First Nations, and community-led impact.',
+    total_giving_annual: 35000000,
+    thematic_focus: ['social enterprise', 'community', 'health'],
+    geographic_focus: ['AU-National', 'AU-ACT'],
+    profile_confidence: 'high',
+    enriched_at: null,
+    created_at: '2026-04-01T00:00:00.000Z',
+  },
+  {
+    id: IAN_POTTER_FOUNDATION_ID,
+    name: 'The Ian Potter Foundation',
+    type: 'private_ancillary_fund',
+    website: 'https://www.ianpotter.org.au/',
+    description: 'National funder with programs spanning community wellbeing, environment, public health, research, and capacity-building.',
+    total_giving_annual: 30000000,
+    thematic_focus: ['community', 'environment', 'health'],
+    geographic_focus: ['AU-National'],
+    profile_confidence: 'high',
+    enriched_at: null,
+    created_at: '2026-04-01T00:00:00.000Z',
+  },
+  {
+    id: ECSTRA_FOUNDATION_ID,
+    name: 'Ecstra Foundation',
+    type: 'public_ancillary_fund',
+    website: 'https://www.ecstra.org.au/',
+    description: 'National foundation focused on financial wellbeing, capability, resilience, inclusion, research, and community education.',
+    total_giving_annual: 25000000,
+    thematic_focus: ['education', 'community', 'financial wellbeing'],
+    geographic_focus: ['AU-National'],
+    profile_confidence: 'high',
+    enriched_at: null,
+    created_at: '2026-04-01T00:00:00.000Z',
+  },
+];
+
 function formatGiving(amount: number | null): string {
   if (!amount) return 'Unknown';
   if (amount >= 1000000) return `$${(amount / 1000000).toFixed(1)}M`;
@@ -296,10 +378,23 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
   const pageSize = 25;
   const offset = (page - 1) * pageSize;
 
-  const supabase = getServiceSupabase();
   const useReviewSqlPath = Boolean(reviewFilter) || Boolean(missingFilter) || sortBy === 'review';
   let foundations: FoundationRow[] = [];
   let count = 0;
+  const isFastFoundationIndex =
+    !useReviewSqlPath &&
+    !query &&
+    !typeFilter &&
+    !focusFilter &&
+    !profiledOnly &&
+    !geoFilter &&
+    givingMin == null &&
+    givingMax == null &&
+    sortBy === 'giving' &&
+    page === 1;
+  const supabase = isFastFoundationIndex ? null : getServiceSupabase();
+  let sharedProgramCounts: unknown[] | null = null;
+  let sharedAcncSummary: unknown[] | null = null;
 
   const baseWhereClauses = ['TRUE'];
 
@@ -427,7 +522,11 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
     `;
   }
 
-  if (useReviewSqlPath) {
+  if (isFastFoundationIndex) {
+    foundations = FAST_FOUNDATION_INDEX;
+    count = FOUNDATION_DEFAULT_COUNT;
+  } else if (useReviewSqlPath) {
+    const db = supabase ?? getServiceSupabase();
     const filteredWhereClauses = [...baseWhereClauses];
     if (reviewPredicate) filteredWhereClauses.push(reviewPredicate);
     if (missingPredicate) filteredWhereClauses.push(missingPredicate);
@@ -453,30 +552,31 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
     const reviewCte = buildReviewCte(filteredWhereClauses);
 
     const [{ data: countRows }, { data: foundationRows }, { data: programCounts }, { data: acncSummary }] = await Promise.all([
-      supabase.rpc('exec_sql', {
+      db.rpc('exec_sql', {
         query: `${reviewCte} SELECT COUNT(*)::int AS count FROM filtered`,
       }),
-      supabase.rpc('exec_sql', {
+      db.rpc('exec_sql', {
         query: `${reviewCte}
                 SELECT id, name, type, website, description, total_giving_annual, thematic_focus, geographic_focus, profile_confidence, enriched_at, created_at
                 FROM filtered
                 ORDER BY ${orderClause}
                 LIMIT ${pageSize} OFFSET ${offset}`,
       }),
-      supabase.rpc('get_foundation_program_counts'),
-      supabase.rpc('get_foundation_acnc_summary'),
+      db.rpc('get_foundation_program_counts'),
+      db.rpc('get_foundation_acnc_summary'),
     ]);
 
     foundations = (foundationRows || []) as FoundationRow[];
     count = Number(((countRows as Array<{ count: number }> | null)?.[0]?.count) || 0);
 
-    // rebind for later shared logic
-    var sharedProgramCounts = programCounts;
-    var sharedAcncSummary = acncSummary;
+    sharedProgramCounts = programCounts || [];
+    sharedAcncSummary = acncSummary || [];
   } else {
-    let dbQuery = supabase
+    const db = supabase ?? getServiceSupabase();
+    const foundationFields = 'id, name, type, website, description, total_giving_annual, thematic_focus, geographic_focus, profile_confidence, enriched_at, created_at';
+    let dbQuery = db
       .from('foundations')
-      .select('id, name, type, website, description, total_giving_annual, thematic_focus, geographic_focus, profile_confidence, enriched_at, created_at', { count: 'exact' });
+      .select(foundationFields, { count: 'exact' });
 
     if (query) {
       dbQuery = dbQuery.or(`name.ilike.%${query}%,description.ilike.%${query}%`);
@@ -516,14 +616,14 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
 
     const [{ data: foundationRows, count: totalCount }, { data: programCounts }, { data: acncSummary }] = await Promise.all([
       dbQuery,
-      supabase.rpc('get_foundation_program_counts'),
-      supabase.rpc('get_foundation_acnc_summary'),
+      db.rpc('get_foundation_program_counts'),
+      db.rpc('get_foundation_acnc_summary'),
     ]);
 
     foundations = (foundationRows || []) as FoundationRow[];
     count = totalCount || 0;
-    var sharedProgramCounts = programCounts;
-    var sharedAcncSummary = acncSummary;
+    sharedProgramCounts = programCounts || [];
+    sharedAcncSummary = acncSummary || [];
   }
 
   const reviewBreakdownWhereClauses = [...baseWhereClauses];
@@ -538,41 +638,46 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
   const releaseMissingWhereClauses = [...baseWhereClauses];
   if (reviewPredicate) releaseMissingWhereClauses.push(reviewPredicate);
 
-  const [{ data: reviewBreakdown }, { data: missingSignalSummary }] = await Promise.all([
-    supabase.rpc('exec_sql', {
-      query: `${buildReviewCte(reviewBreakdownWhereClauses)}
-              SELECT review_status, COUNT(*)::int AS count
-              FROM filtered
-              GROUP BY review_status`,
-    }),
-    supabase.rpc('exec_sql', {
-      query: `${buildReviewCte(missingSummaryWhereClauses)}
-              SELECT
-                SUM(CASE WHEN COALESCE(board_roles, 0) <= 0 THEN 1 ELSE 0 END)::int AS missing_governance,
-                SUM(CASE WHEN COALESCE(verified_grants, 0) <= 0 THEN 1 ELSE 0 END)::int AS missing_verified_grants,
-                SUM(CASE WHEN COALESCE(year_memory_count, 0) <= 0 THEN 1 ELSE 0 END)::int AS missing_year_memory,
-                SUM(CASE WHEN COALESCE(verified_source_backed_count, 0) <= 0 THEN 1 ELSE 0 END)::int AS missing_source_backed
-              FROM filtered`,
-    }),
-  ]);
+  const [{ data: reviewBreakdown }, { data: missingSignalSummary }] = isFastFoundationIndex
+    ? [
+        { data: [] },
+        { data: [{ missing_governance: 0, missing_verified_grants: 0, missing_year_memory: 0, missing_source_backed: 0 }] },
+      ]
+    : await Promise.all([
+        supabase!.rpc('exec_sql', {
+          query: `${buildReviewCte(reviewBreakdownWhereClauses)}
+                  SELECT review_status, COUNT(*)::int AS count
+                  FROM filtered
+                  GROUP BY review_status`,
+        }),
+        supabase!.rpc('exec_sql', {
+          query: `${buildReviewCte(missingSummaryWhereClauses)}
+                  SELECT
+                    SUM(CASE WHEN COALESCE(board_roles, 0) <= 0 THEN 1 ELSE 0 END)::int AS missing_governance,
+                    SUM(CASE WHEN COALESCE(verified_grants, 0) <= 0 THEN 1 ELSE 0 END)::int AS missing_verified_grants,
+                    SUM(CASE WHEN COALESCE(year_memory_count, 0) <= 0 THEN 1 ELSE 0 END)::int AS missing_year_memory,
+                    SUM(CASE WHEN COALESCE(verified_source_backed_count, 0) <= 0 THEN 1 ELSE 0 END)::int AS missing_source_backed
+                  FROM filtered`,
+        }),
+      ]);
 
   const [{ data: releaseReviewCountRows }, { data: releaseMissingCountRows }, { data: resetLaneCountRows }] = await Promise.all([
     reviewFilter
-      ? supabase.rpc('exec_sql', {
+      ? supabase!.rpc('exec_sql', {
           query: `${buildReviewCte(releaseReviewWhereClauses)}
                   SELECT COUNT(*)::int AS count
                   FROM filtered`,
         })
       : Promise.resolve({ data: null }),
     missingFilter
-      ? supabase.rpc('exec_sql', {
+      ? supabase!.rpc('exec_sql', {
           query: `${buildReviewCte(releaseMissingWhereClauses)}
                   SELECT COUNT(*)::int AS count
                   FROM filtered`,
         })
       : Promise.resolve({ data: null }),
     reviewFilter || missingFilter
-      ? supabase.rpc('exec_sql', {
+      ? supabase!.rpc('exec_sql', {
           query: `${buildReviewCte(baseWhereClauses)}
                   SELECT COUNT(*)::int AS count
                   FROM filtered`,
@@ -581,13 +686,13 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
   ]);
 
   const foundationIds = ((foundations || []) as FoundationRow[]).map((foundation) => foundation.id);
-  const [{ data: powerProfiles }, { data: yearMemorySummary }, { data: reviewSummary }] = foundationIds.length
+  const [{ data: powerProfiles }, { data: yearMemorySummary }, { data: reviewSummary }] = foundationIds.length && !isFastFoundationIndex
     ? await Promise.all([
-        supabase
+        supabase!
           .from('foundation_power_profiles')
           .select('foundation_id, capital_holder_class, capital_source_class, reportable_in_power_map, openness_score, gatekeeping_score')
           .in('foundation_id', foundationIds),
-        supabase.rpc('exec_sql', {
+        supabase!.rpc('exec_sql', {
           query: `SELECT
                     foundation_id::text AS foundation_id,
                     COUNT(*)::int AS year_memory_count,
@@ -598,7 +703,7 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
                   WHERE foundation_id IN (${foundationIds.map((id) => `'${id}'`).join(', ')})
                   GROUP BY foundation_id`,
         }),
-        supabase.rpc('exec_sql', {
+        supabase!.rpc('exec_sql', {
           query: `SELECT
                     f.id::text AS foundation_id,
                     (SELECT COUNT(*)::int
@@ -626,7 +731,7 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
         { data: [] as FoundationYearMemorySummaryRow[] },
         { data: [] as FoundationReviewSummaryRow[] },
       ];
-  const totalPages = Math.ceil((count || 0) / pageSize);
+  const totalPages = isFastFoundationIndex ? 1 : Math.ceil((count || 0) / pageSize);
 
   // Build lookup map for program counts
   const progCountMap = new Map<string, { programs: number; open: number }>();
@@ -1040,6 +1145,14 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
             );
           })}
         </div>
+        {isFastFoundationIndex && (
+          <div className="mt-4 border-4 border-bauhaus-blue/25 bg-link-light px-4 py-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-bauhaus-blue">Fast foundation desk</p>
+            <p className="mt-1 max-w-3xl text-sm font-bold text-bauhaus-black">
+              Showing priority funders first so the directory opens instantly. Search, filter, or choose a review lane to query the full {(FOUNDATION_DEFAULT_COUNT).toLocaleString()}-foundation index.
+            </p>
+          </div>
+        )}
       </div>
 
       <form method="get" className="flex flex-col sm:flex-row gap-0 mb-4 flex-wrap">

@@ -327,10 +327,11 @@ function PipelineFlow({ stats, stateFilter }: { stats: PipelineStats; stateFilte
 function HeatmapTable({ rows }: { rows: HeatmapRow[] }) {
   const hasCrimeData = rows.some(r => r.crime_rate > 0);
   const scored = useMemo(() => computeScored(rows).slice(0, 50), [rows]);
+  const tableMinWidth = hasCrimeData ? 1220 : 1140;
 
   const heatCell = (val: string | number, score: number, border = false) => (
     <td
-      className={`px-2 py-2 text-right font-mono text-[11px] border-b border-gray-100 ${border ? 'border-l border-gray-200' : ''}`}
+      className={`px-1.5 py-2 text-right font-mono text-[11px] border-b border-gray-100 ${border ? 'border-l border-gray-200' : ''}`}
       style={{ backgroundColor: heatColor(score) }}
     >
       <span className={heatText(score)}>{typeof val === 'number' ? val.toLocaleString() : val}</span>
@@ -338,48 +339,66 @@ function HeatmapTable({ rows }: { rows: HeatmapRow[] }) {
   );
 
   return (
-    <div className="overflow-x-auto border-4 border-bauhaus-black rounded-sm mb-8">
-      <table className="w-full text-sm" style={{ minWidth: 1400 }}>
+    <div className="w-[calc(100vw-1.5rem)] max-w-[1500px] xl:w-[calc(100vw-320px)] overflow-x-auto border-4 border-bauhaus-black rounded-sm mb-8">
+      <table className="w-full table-fixed text-sm" style={{ minWidth: tableMinWidth }}>
+        <colgroup>
+          <col className="w-[150px]" />
+          <col className="w-[42px]" />
+          <col className="w-[64px]" />
+          <col className="w-[62px]" />
+          <col className="w-[66px]" />
+          <col className="w-[66px]" />
+          <col className="w-[84px]" />
+          <col className="w-[84px]" />
+          <col className="w-[74px]" />
+          <col className="w-[68px]" />
+          <col className="w-[80px]" />
+          <col className="w-[80px]" />
+          <col className="w-[70px]" />
+          {hasCrimeData && <col className="w-[82px]" />}
+          <col className="w-[66px]" />
+          <col className="w-[62px]" />
+        </colgroup>
         <thead>
           <tr className="bg-bauhaus-black text-white text-left">
-            <th className="px-2 py-3 font-black uppercase tracking-wider text-[10px]" colSpan={2}>Place</th>
-            <th className="px-2 py-3 font-black uppercase tracking-wider text-[10px] text-center border-l border-gray-600" colSpan={3}>Education</th>
-            <th className="px-2 py-3 font-black uppercase tracking-wider text-[10px] text-center border-l border-gray-600" colSpan={3}>Welfare</th>
-            <th className="px-2 py-3 font-black uppercase tracking-wider text-[10px] text-center border-l border-gray-600" colSpan={4}>Youth Justice <span className="font-normal text-gray-400">(state)</span></th>
-            <th className="px-2 py-3 font-black uppercase tracking-wider text-[10px] text-center border-l border-gray-600">NDIS</th>
-            {hasCrimeData && <th className="px-2 py-3 font-black uppercase tracking-wider text-[10px] text-center border-l border-gray-600">Crime</th>}
-            <th className="px-2 py-3 font-black uppercase tracking-wider text-[10px] text-center border-l border-gray-600">ALMA</th>
-            <th className="px-2 py-3 font-black uppercase tracking-wider text-[10px] text-center border-l border-gray-600">All</th>
+            <th className="px-1.5 py-3 font-black uppercase tracking-wider text-[10px]" colSpan={2}>Place</th>
+            <th className="px-1.5 py-3 font-black uppercase tracking-wider text-[10px] text-center border-l border-gray-600" colSpan={3}>Education</th>
+            <th className="px-1.5 py-3 font-black uppercase tracking-wider text-[10px] text-center border-l border-gray-600" colSpan={3}>Welfare</th>
+            <th className="px-1.5 py-3 font-black uppercase tracking-wider text-[10px] text-center border-l border-gray-600" colSpan={4}>Youth Justice <span className="font-normal text-gray-400">(state)</span></th>
+            <th className="px-1.5 py-3 font-black uppercase tracking-wider text-[10px] text-center border-l border-gray-600">NDIS</th>
+            {hasCrimeData && <th className="px-1.5 py-3 font-black uppercase tracking-wider text-[10px] text-center border-l border-gray-600">Crime</th>}
+            <th className="px-1.5 py-3 font-black uppercase tracking-wider text-[10px] text-center border-l border-gray-600">ALMA</th>
+            <th className="px-1.5 py-3 font-black uppercase tracking-wider text-[10px] text-center border-l border-gray-600">All</th>
           </tr>
           <tr className="bg-gray-800 text-gray-300 text-left text-[9px]">
-            <th className="px-2 py-1 font-bold uppercase tracking-wider">LGA</th>
-            <th className="px-2 py-1 font-bold uppercase tracking-wider w-8">ST</th>
-            <th className="px-2 py-1 font-bold uppercase tracking-wider text-right border-l border-gray-600">Low ICSEA</th>
-            <th className="px-2 py-1 font-bold uppercase tracking-wider text-right">ICSEA</th>
-            <th className="px-2 py-1 font-bold uppercase tracking-wider text-right">Indig %</th>
-            <th className="px-2 py-1 font-bold uppercase tracking-wider text-right border-l border-gray-600">DSP /1K</th>
-            <th className="px-2 py-1 font-bold uppercase tracking-wider text-right">JobSeek /1K</th>
-            <th className="px-2 py-1 font-bold uppercase tracking-wider text-right">Youth A. /1K</th>
-            <th className="px-2 py-1 font-bold uppercase tracking-wider text-right border-l border-gray-600">$/Day</th>
-            <th className="px-2 py-1 font-bold uppercase tracking-wider text-right">Recid %</th>
-            <th className="px-2 py-1 font-bold uppercase tracking-wider text-right">Indig Ratio</th>
-            <th className="px-2 py-1 font-bold uppercase tracking-wider text-right">Det Indig %</th>
-            <th className="px-2 py-1 font-bold uppercase tracking-wider text-right border-l border-gray-600">NDIS /1K</th>
-            {hasCrimeData && <th className="px-2 py-1 font-bold uppercase tracking-wider text-right border-l border-gray-600">Rate/100K</th>}
-            <th className="px-2 py-1 font-bold uppercase tracking-wider text-right border-l border-gray-600">Intrvns</th>
-            <th className="px-2 py-1 font-bold uppercase tracking-wider text-center border-l border-gray-600">Score</th>
+            <th className="px-1.5 py-1 font-bold uppercase tracking-wider">LGA</th>
+            <th className="px-1.5 py-1 font-bold uppercase tracking-wider">ST</th>
+            <th className="px-1.5 py-1 font-bold uppercase tracking-wider text-right border-l border-gray-600">Low ICSEA</th>
+            <th className="px-1.5 py-1 font-bold uppercase tracking-wider text-right">ICSEA</th>
+            <th className="px-1.5 py-1 font-bold uppercase tracking-wider text-right">Indig %</th>
+            <th className="px-1.5 py-1 font-bold uppercase tracking-wider text-right border-l border-gray-600">DSP /1K</th>
+            <th className="px-1.5 py-1 font-bold uppercase tracking-wider text-right">JobSeek /1K</th>
+            <th className="px-1.5 py-1 font-bold uppercase tracking-wider text-right">Youth A. /1K</th>
+            <th className="px-1.5 py-1 font-bold uppercase tracking-wider text-right border-l border-gray-600">$/Day</th>
+            <th className="px-1.5 py-1 font-bold uppercase tracking-wider text-right">Recid %</th>
+            <th className="px-1.5 py-1 font-bold uppercase tracking-wider text-right">Indig Ratio</th>
+            <th className="px-1.5 py-1 font-bold uppercase tracking-wider text-right">Det Indig %</th>
+            <th className="px-1.5 py-1 font-bold uppercase tracking-wider text-right border-l border-gray-600">NDIS /1K</th>
+            {hasCrimeData && <th className="px-1.5 py-1 font-bold uppercase tracking-wider text-right border-l border-gray-600">Rate/100K</th>}
+            <th className="px-1.5 py-1 font-bold uppercase tracking-wider text-right border-l border-gray-600">Intrvns</th>
+            <th className="px-1.5 py-1 font-bold uppercase tracking-wider text-center border-l border-gray-600">Score</th>
           </tr>
         </thead>
         <tbody>
           {scored.map((row) => (
             <tr key={row.lga_name} className={row.alma_count === 0 && row.burden > 0.4 ? 'bg-red-50/30' : ''}>
-              <td className="px-2 py-2 font-bold text-xs border-b border-gray-100 whitespace-nowrap">
+              <td className="px-1.5 py-2 font-bold text-xs border-b border-gray-100 whitespace-nowrap truncate" title={row.lga_name}>
                 {row.lga_name}
                 {row.alma_count === 0 && row.burden > 0.4 && (
                   <span className="ml-1 text-[9px] text-red-500" title="Service desert — no documented ALMA interventions">&#9888;</span>
                 )}
               </td>
-              <td className="px-2 py-2 text-[10px] text-gray-500 border-b border-gray-100">{row.state}</td>
+              <td className="px-1.5 py-2 text-[10px] text-gray-500 border-b border-gray-100">{row.state}</td>
               {heatCell(row.low_icsea, row.scores.lowIcsea, true)}
               {heatCell(row.avg_icsea || '—', row.scores.icsea)}
               {heatCell(`${Math.round(row.indigenous_pct)}%`, row.scores.indigenous)}
@@ -392,7 +411,7 @@ function HeatmapTable({ rows }: { rows: HeatmapRow[] }) {
               {heatCell(`${row.detention_indigenous_pct}%`, row.scores.detIndPct)}
               {heatCell(row.ndis_rate, row.scores.ndis, true)}
               {hasCrimeData && heatCell(row.crime_rate > 0 ? row.crime_rate : '—', row.scores.crime, true)}
-              <td className="px-2 py-2 text-right font-mono text-[11px] border-b border-gray-100 border-l border-gray-200">
+              <td className="px-1.5 py-2 text-right font-mono text-[11px] border-b border-gray-100 border-l border-gray-200">
                 {row.alma_count > 0 ? (
                   <span className="text-emerald-600 font-bold">{row.alma_count}</span>
                 ) : (
@@ -400,7 +419,7 @@ function HeatmapTable({ rows }: { rows: HeatmapRow[] }) {
                 )}
               </td>
               <td
-                className="px-2 py-2 text-center font-mono text-xs font-black border-b border-gray-100 border-l border-gray-200"
+                className="px-1.5 py-2 text-center font-mono text-xs font-black border-b border-gray-100 border-l border-gray-200"
                 style={{ backgroundColor: heatColor(row.burden) }}
               >
                 <span className={heatText(row.burden)}>{Math.round(row.burden * 100)}</span>

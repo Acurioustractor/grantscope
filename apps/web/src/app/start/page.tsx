@@ -70,7 +70,7 @@ export default function StartPage() {
             <FeatureCard
               number="01"
               title="Understand the Landscape"
-              description="See what already exists. 100,000+ organisations, mapped and connected."
+              description="See what already exists. 590,000+ Australian entities, mapped and connected."
             />
             <FeatureCard
               number="02"
@@ -80,7 +80,7 @@ export default function StartPage() {
             <FeatureCard
               number="03"
               title="Match Funding"
-              description="18,000+ grants, 10,800+ foundations, and evidence-based approaches from ALMA."
+              description="31,000+ grant opportunities, 10,900+ foundations, and 2,000+ evidence-based approaches from ALMA."
             />
           </div>
         </div>

@@ -5,6 +5,7 @@ import { STAGE_TO_GHL } from '@/lib/ghl';
 import { getImpersonateSlug } from '@/lib/org-profile';
 
 type RouteContext = { params: Promise<{ grantId: string }> };
+type GhlPipeline = { id: string; name?: string; stages?: Array<{ id: string; name: string }> };
 
 const GHL_SYNC_STAGES = new Set(Object.keys(STAGE_TO_GHL));
 
@@ -73,10 +74,10 @@ async function syncToGHL(
   serviceDb: ReturnType<typeof getServiceSupabase>,
   userId: string
 ) {
-  const { createOpportunity, updateOpportunity, getPipelines } = await import('@/lib/ghl');
+  const { createOpportunity, updateOpportunity, getPipelines, findGrantPipeline } = await import('@/lib/ghl');
 
   const { pipelines } = await getPipelines();
-  const pipeline = pipelines?.[0];
+  const pipeline = findGrantPipeline(pipelines as GhlPipeline[] | undefined);
   if (!pipeline) return;
 
   const ghlStageName = STAGE_TO_GHL[stage];

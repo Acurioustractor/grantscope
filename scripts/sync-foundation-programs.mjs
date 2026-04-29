@@ -787,7 +787,7 @@ async function main() {
 
       if (updateError) {
         if (isDuplicateUrlError(updateError)) {
-          const fallbackGrant = { ...grant, url: existingGrant.url || null, updated_at: new Date().toISOString() };
+          const fallbackGrant = { ...grant, url: null, updated_at: new Date().toISOString() };
           const { error: fallbackUpdateError } = await supabase
             .from('grant_opportunities')
             .update(fallbackGrant)
@@ -802,7 +802,7 @@ async function main() {
             if (existingGrant.name && existingGrant.name !== grant.name) {
               existingByKey.delete(`${foundation.id}::${existingGrant.name}`);
             }
-            const merged = { ...existingGrant, ...grant, url: existingGrant.url || null };
+            const merged = { ...existingGrant, ...grant, url: null };
             existingByKey.set(key, merged);
             existingBySourceId.set(String(program.id), merged);
             recordFoundationSyncStat(foundationSyncStats, foundation.id, 'updated');

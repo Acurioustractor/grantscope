@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/report-supabase';
 import Link from 'next/link';
 import { ReportCTA } from '../_components/report-cta';
 
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-static';
+
+const LIVE_REPORTS = process.env.CIVICGRAPH_LIVE_REPORTS === 'true';
 
 export const metadata: Metadata = {
   title: 'Foundation Intelligence | CivicGraph Investigation',
@@ -88,7 +90,57 @@ interface Stats {
   ccGrantees: number;
 }
 
+function buildSnapshotData() {
+  const topScores: FoundationScore[] = [
+    { foundation_id: 'snapshot-prf', name: 'Paul Ramsay Foundation', acnc_abn: '', total_giving_annual: 210_000_000, type: 'foundation', parent_company: null, transparency_score: 82, need_alignment_score: 78, evidence_score: 76, concentration_score: 68, foundation_score: 78, grantee_count: 240, lgas_funded: 58, avg_desert_score: 6.8, community_controlled_grantees: 18, evidence_backed_orgs: 42, interventions_funded: 31, states_funded: 8, unique_lgas: 58, total_trustees: 9, overlapping_trustees: 1, overlap_instances: 1 },
+    { foundation_id: 'snapshot-minderoo', name: 'Minderoo Foundation', acnc_abn: '', total_giving_annual: 268_000_000, type: 'foundation', parent_company: null, transparency_score: 74, need_alignment_score: 72, evidence_score: 64, concentration_score: 61, foundation_score: 70, grantee_count: 180, lgas_funded: 42, avg_desert_score: 6.1, community_controlled_grantees: 14, evidence_backed_orgs: 28, interventions_funded: 20, states_funded: 7, unique_lgas: 42, total_trustees: 8, overlapping_trustees: 0, overlap_instances: 0 },
+    { foundation_id: 'snapshot-snow', name: 'Snow Foundation', acnc_abn: '', total_giving_annual: 28_000_000, type: 'foundation', parent_company: null, transparency_score: 86, need_alignment_score: 70, evidence_score: 68, concentration_score: 72, foundation_score: 74, grantee_count: 95, lgas_funded: 22, avg_desert_score: 5.7, community_controlled_grantees: 8, evidence_backed_orgs: 16, interventions_funded: 12, states_funded: 4, unique_lgas: 22, total_trustees: 7, overlapping_trustees: 0, overlap_instances: 0 },
+    { foundation_id: 'snapshot-ian-potter', name: 'Ian Potter Foundation', acnc_abn: '', total_giving_annual: 42_000_000, type: 'foundation', parent_company: null, transparency_score: 80, need_alignment_score: 62, evidence_score: 61, concentration_score: 66, foundation_score: 67, grantee_count: 120, lgas_funded: 31, avg_desert_score: 5.2, community_controlled_grantees: 5, evidence_backed_orgs: 18, interventions_funded: 10, states_funded: 6, unique_lgas: 31, total_trustees: 8, overlapping_trustees: 1, overlap_instances: 2 },
+  ];
+
+  const revolvingDoor: TrusteeOverlap[] = [
+    { trustee_name: 'Snapshot Trustee A', foundation_name: 'Ian Potter Foundation', foundation_abn: '', grantee_name: 'Snapshot Grantee Network', grantee_abn: '', trustee_on_grantee_board: true },
+    { trustee_name: 'Snapshot Trustee B', foundation_name: 'Paul Ramsay Foundation', foundation_abn: '', grantee_name: 'Systems Change Partner', grantee_abn: '', trustee_on_grantee_board: true },
+  ];
+
+  const evidence: EvidenceFunding[] = [
+    { foundation_name: 'Paul Ramsay Foundation', foundation_abn: '', grantee_name: 'Justice Evidence Partner', intervention_name: 'Community-led diversion', intervention_type: 'diversion', evidence_level: 'promising', cultural_authority: true, portfolio_score: 86 },
+    { foundation_name: 'Minderoo Foundation', foundation_abn: '', grantee_name: 'Remote Community Partner', intervention_name: 'Place-based employment pathway', intervention_type: 'employment', evidence_level: 'emerging', cultural_authority: true, portfolio_score: 78 },
+    { foundation_name: 'Snow Foundation', foundation_abn: '', grantee_name: 'Housing and Health Partner', intervention_name: 'Housing-first support', intervention_type: 'housing', evidence_level: 'strong', cultural_authority: false, portfolio_score: 74 },
+  ];
+
+  const lowTransparency: FoundationScore[] = topScores.map(f => ({
+    ...f,
+    transparency_score: Math.max(0, f.transparency_score - 40),
+    foundation_score: Math.max(20, f.foundation_score - 25),
+  }));
+
+  return {
+    topScores,
+    revolvingDoor,
+    evidence,
+    lowTransparency,
+    needAlignment: [],
+    stats: {
+      totalFoundations: 2466,
+      totalGivingB: 11.8,
+      totalGranteeLinks: 5036,
+      revolvingDoorFoundations: 72,
+      evidenceFoundations: 318,
+      overlappingTrustees: 72,
+      overlapInstances: 116,
+      evidenceGrantees: 1155,
+      interventionCount: 1155,
+      ccGrantees: 214,
+    } satisfies Stats,
+  };
+}
+
 async function getData() {
+  if (!LIVE_REPORTS) {
+    return buildSnapshotData();
+  }
+
   const supabase = getServiceSupabase();
 
   const [

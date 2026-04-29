@@ -10,6 +10,10 @@ export const metadata = {
   title: 'All Organisations — CivicGraph Admin',
 };
 
+const HIDDEN_TOP_LEVEL_ORG_SLUGS = new Set([
+  'justicehub',
+]);
+
 export default async function OrgIndexPage() {
   const supabase = await createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
@@ -72,9 +76,10 @@ export default async function OrgIndexPage() {
     .select('id, name, slug, abn, org_type, subscription_plan, team_size, annual_revenue, user_id')
     .not('slug', 'is', null)
     .order('name');
+  const visibleOrgs = (orgs ?? []).filter((org) => !HIDDEN_TOP_LEVEL_ORG_SLUGS.has(org.slug));
 
   // Get user emails for each org
-  const orgOwnerIds = (orgs ?? []).map(o => o.user_id).filter(Boolean);
+  const orgOwnerIds = visibleOrgs.map(o => o.user_id).filter(Boolean);
   const ownerEmails: Record<string, string> = {};
   for (const uid of orgOwnerIds) {
     const { data } = await serviceDb.auth.admin.getUserById(uid);
@@ -92,14 +97,14 @@ export default async function OrgIndexPage() {
             All Organisations
           </h1>
           <p className="mt-2 text-gray-400">
-            {orgs?.length ?? 0} organisations with dashboards. You are viewing as super admin.
+            {visibleOrgs.length} organisations with dashboards. You are viewing as super admin.
           </p>
         </div>
       </div>
 
       <div className="mx-auto max-w-7xl px-4 py-8">
         <div className="grid gap-4">
-          {(orgs ?? []).map((org) => (
+          {visibleOrgs.map((org) => (
             <div key={org.id} className="border-4 border-bauhaus-black p-5 flex items-center justify-between hover:bg-gray-50">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-3 mb-1">

@@ -40,7 +40,7 @@ html {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-family: 'DM Sans', 'Avenir Next', 'Helvetica Neue', sans-serif;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 body {
@@ -55,9 +55,9 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Bauhaus headings — Satoshi for display hierarchy */
+/* Bauhaus headings — local/system stack so first paint never waits on remote font CSS. */
 h1, h2, h3, h4 {
-  font-family: 'Satoshi', 'DM Sans', sans-serif;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   letter-spacing: -0.025em;
   line-height: 1.1;
 }
@@ -92,12 +92,12 @@ h1, h2, h3, h4 {
   --ws-green: #16A34A;
   background: var(--ws-surface-0);
   color: var(--ws-text);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
 .ws .mono {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-family: 'SFMono-Regular', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-variant-numeric: tabular-nums;
 }
 

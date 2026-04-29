@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { getServiceSupabase } from '@/lib/supabase';
+import { getLiveReportSupabase } from '@/lib/report-supabase';
 import { safe } from '@/lib/services/utils';
 import { fmt, money } from '@/lib/services/report-service';
 
@@ -169,7 +169,7 @@ function normaliseName(value: string | null | undefined) {
 }
 
 async function getData() {
-  const supabase = getServiceSupabase();
+  const supabase = getLiveReportSupabase();
   const q = <T,>(query: string, context: string) =>
     safe<T[] | null>(
       supabase.rpc('exec_sql', { query }) as PromiseLike<{ data: T[] | null; error: unknown }>,
@@ -309,7 +309,7 @@ async function getData() {
     ),
     q<SiteProviderProfileRow>(
       `
-      WITH target_rows AS (
+      WITH target_rows AS MATERIALIZED (
         SELECT
           jf.recipient_name,
           jf.recipient_abn,
@@ -343,6 +343,20 @@ async function getData() {
           BOOL_OR(COALESCE(is_community_controlled, false)) AS is_community_controlled
         FROM target_rows
         GROUP BY recipient_name
+        ORDER BY COALESCE(SUM(amount_dollars), 0) DESC NULLS LAST
+        LIMIT 80
+      ),
+      provider_contracts AS MATERIALIZED (
+        SELECT
+          sp.recipient_name,
+          COUNT(qcd.*)::int AS contract_rows,
+          COALESCE(SUM(qcd.amount_dollars), 0)::numeric AS contract_total,
+          MAX(qcd.financial_year) AS latest_financial_year
+        FROM site_providers sp
+        LEFT JOIN justice_funding qcd
+          ON qcd.source = 'qld_contract_disclosure'
+         AND LOWER(qcd.recipient_name) = LOWER(sp.recipient_name)
+        GROUP BY sp.recipient_name
       )
       SELECT
         sp.recipient_name,
@@ -354,19 +368,7 @@ async function getData() {
         COALESCE(cf.contract_total, 0)::numeric AS contract_total,
         cf.latest_financial_year
       FROM site_providers sp
-      LEFT JOIN LATERAL (
-        SELECT
-          COUNT(*) AS contract_rows,
-          COALESCE(SUM(amount_dollars), 0)::numeric AS contract_total,
-          MAX(financial_year) AS latest_financial_year
-        FROM justice_funding qcd
-        WHERE qcd.source = 'qld_contract_disclosure'
-          AND (
-            (sp.gs_entity_id IS NOT NULL AND qcd.gs_entity_id::text = sp.gs_entity_id)
-            OR (sp.recipient_abn IS NOT NULL AND qcd.recipient_abn = sp.recipient_abn)
-            OR LOWER(qcd.recipient_name) = LOWER(sp.recipient_name)
-          )
-      ) cf ON TRUE
+      LEFT JOIN provider_contracts cf ON cf.recipient_name = sp.recipient_name
       ORDER BY sp.local_total DESC NULLS LAST
       LIMIT 12
       `,

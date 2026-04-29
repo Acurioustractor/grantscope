@@ -1,106 +1,49 @@
-import { getServiceSupabase } from '@/lib/supabase';
 import { fmt } from '@/lib/format';
 import { UnifiedSearch } from './components/unified-search';
 
 export const dynamic = 'force-dynamic';
 
-async function getDonorContractorHeadlineStats(
-  supabase: ReturnType<typeof getServiceSupabase>,
-) {
-  const [{ count }, { data }] = await Promise.all([
-    supabase.from('mv_gs_donor_contractors').select('gs_id', { count: 'exact', head: true }),
-    supabase.from('mv_gs_donor_contractors').select('total_donated, total_contract_value'),
-  ]);
+type HomeStats = {
+  totalGrants: number;
+  totalFoundations: number;
+  totalPrograms: number;
+  totalEntities: number;
+  totalRelationships: number;
+  donorContractorCount: number;
+  revolvingDoorCount: number;
+};
 
-  let totalDonated = 0;
-  let totalContracts = 0;
+const EMPTY_STATS: HomeStats = {
+  totalGrants: 0,
+  totalFoundations: 0,
+  totalPrograms: 0,
+  totalEntities: 0,
+  totalRelationships: 0,
+  donorContractorCount: 0,
+  revolvingDoorCount: 0,
+};
 
-  for (const row of data || []) {
-    totalDonated += Number(row.total_donated || 0);
-    totalContracts += Number(row.total_contract_value || 0);
-  }
+// Verified from GrantScope Supabase on 2026-04-29.
+// The homepage should not block on live aggregate counts; those calls can exceed
+// the dev/runtime statement timeout on large tables and previously rendered 0s.
+const VERIFIED_HOME_STATS: HomeStats = {
+  totalGrants: 32018,
+  totalFoundations: 10918,
+  totalPrograms: 3296,
+  totalEntities: 591761,
+  totalRelationships: 1526943,
+  donorContractorCount: 1442,
+  revolvingDoorCount: 6628,
+};
 
-  return {
-    count: count || 0,
-    totalDonated,
-    totalContracts,
-  };
-}
-
-/** Safe count helper — returns 0 on failure instead of throwing */
-async function safeCount(
-  query: PromiseLike<{ count: number | null; error: unknown }>,
-): Promise<number> {
-  try {
-    const { count } = await query;
-    return count || 0;
-  } catch {
-    return 0;
-  }
-}
+const DATA_SNAPSHOT_LABEL = 'April 2026 data snapshot';
 
 async function getStats() {
-  const supabase = getServiceSupabase();
-
-  const [
-    totalGrants,
-    totalFoundations,
-    profiledFoundations,
-    openGrants,
-    totalPrograms,
-    totalEntities,
-    totalRelationships,
-    donorContractorStats,
-  ] = await Promise.all([
-    safeCount(supabase.from('grant_opportunities').select('*', { count: 'exact', head: true })),
-    safeCount(supabase.from('foundations').select('*', { count: 'exact', head: true })),
-    safeCount(
-      supabase.from('foundations').select('*', { count: 'exact', head: true }).not('enriched_at', 'is', null),
-    ),
-    safeCount(
-      supabase.from('grant_opportunities').select('*', { count: 'exact', head: true }).gt('closes_at', new Date().toISOString()),
-    ),
-    safeCount(
-      supabase.from('foundation_programs').select('*', { count: 'exact', head: true }).in('status', ['open', 'closed']),
-    ),
-    safeCount(supabase.from('gs_entities').select('*', { count: 'estimated', head: true })),
-    safeCount(supabase.from('gs_relationships').select('*', { count: 'estimated', head: true })),
-    getDonorContractorHeadlineStats(supabase),
-  ]);
-
-  let sourceCount = 0;
-  try {
-    const { data: sourceSample } = await supabase.from('grant_opportunities').select('source').limit(10000);
-    sourceCount = sourceSample ? new Set(sourceSample.map((row: { source: string }) => row.source)).size : 0;
-  } catch {
-    sourceCount = 0;
-  }
-
-  return {
-    totalGrants,
-    totalFoundations,
-    profiledFoundations,
-    openGrants,
-    totalPrograms,
-    totalEntities,
-    totalRelationships,
-    donorContractorCount: donorContractorStats.count,
-    sourceCount,
-  };
+  return VERIFIED_HOME_STATS;
 }
 
 export default async function HomePage() {
-  let stats = {
-    totalGrants: 0,
-    totalFoundations: 0,
-    profiledFoundations: 0,
-    openGrants: 0,
-    totalPrograms: 0,
-    totalEntities: 0,
-    totalRelationships: 0,
-    donorContractorCount: 0,
-    sourceCount: 0,
-  };
+  let stats = EMPTY_STATS;
 
   try {
     stats = await getStats();
@@ -110,7 +53,7 @@ export default async function HomePage() {
 
   const scaleLine =
     stats.totalEntities > 0 && stats.totalRelationships > 0
-      ? `${fmt(stats.totalEntities)} resolved entities. ${fmt(stats.totalRelationships)} cross-system relationships. ${fmt(stats.totalGrants)} live grant opportunities. One public graph.`
+      ? `${fmt(stats.totalEntities)} resolved entities. ${fmt(stats.totalRelationships)} cross-system relationships. ${fmt(stats.totalGrants)} indexed grant records. One public graph.`
       : 'Resolved entities, cross-system relationships, and live opportunities in one public graph.';
 
   const thesisLine =
@@ -142,6 +85,9 @@ export default async function HomePage() {
             </p>
             <p className="mt-5 max-w-2xl text-sm font-bold leading-relaxed text-white/55">
               {scaleLine} {thesisLine}
+            </p>
+            <p className="mt-3 text-[10px] font-black uppercase tracking-[0.25em] text-white/35">
+              {DATA_SNAPSHOT_LABEL}
             </p>
 
             <div className="mt-10 max-w-3xl">
@@ -205,7 +151,7 @@ export default async function HomePage() {
 
               <div className="grid grid-cols-2">
                 {[
-                  { label: 'Open Now', value: fmt(stats.openGrants) || '0', tone: 'bg-bauhaus-blue text-white' },
+                  { label: 'Grants', value: fmt(stats.totalGrants) || '0', tone: 'bg-bauhaus-blue text-white' },
                   { label: 'Foundations', value: fmt(stats.totalFoundations) || '0', tone: 'bg-white text-bauhaus-black' },
                   { label: 'Entities', value: fmt(stats.totalEntities) || '0', tone: 'bg-bauhaus-red text-white' },
                   { label: 'Links', value: fmt(stats.totalRelationships) || '0', tone: 'bg-bauhaus-yellow text-bauhaus-black' },
@@ -296,7 +242,7 @@ export default async function HomePage() {
           {[
             ['Consulting Class', '$9.1B in government contracts to 7 firms. $10.5M in donations. 863:1 ROI on political giving. The Donate → Advise → Implement pattern.'],
             ['Indigenous Proxy', '57% of &ldquo;Indigenous funding&rdquo; flows to non-Indigenous organisations. Where the money actually lands vs. where it&rsquo;s promised.'],
-            ['Revolving Door', 'Entities with two or more influence vectors: lobbying, donations, contracts, funding. 4,700 orgs mapped, scored by concentration.'],
+            ['Revolving Door', `Entities with two or more influence vectors: lobbying, donations, contracts, funding. ${fmt(stats.revolvingDoorCount)} orgs mapped, scored by concentration.`],
             ['Board Interlocks', 'People sitting on multiple boards across funders, recipients, and contractors. Who&rsquo;s adjudicating whose funding.'],
           ].map(([title, copy], index) => (
             <div

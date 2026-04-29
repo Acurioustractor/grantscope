@@ -55,7 +55,10 @@ export function ListPreviewProvider({ children }: { children: React.ReactNode })
       <SlidePanel open={preview?.kind === 'grant'} onClose={close}>
         {preview?.kind === 'grant' && (
           <>
-            <SlidePanelHeader onClose={close} href={`/grants/${preview.data.id}`}>
+            <SlidePanelHeader
+              onClose={close}
+              href={preview.data.source === 'act_pipeline' ? '/org/act#project-pipeline' : `/grants/${preview.data.id}`}
+            >
               <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--ws-text-tertiary)' }}>
                 Grant Preview
               </p>
@@ -149,6 +152,16 @@ function daysUntil(dateStr: string): number {
   return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
 }
 
+function uniqueLabels(values: string[]): string[] {
+  const seen = new Set<string>();
+  return values.filter((value) => {
+    const key = value.trim().toLowerCase();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 function DetailCell({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (
     <div className="rounded-lg px-3 py-2.5" style={{ background: 'var(--ws-surface-2)' }}>
@@ -235,7 +248,7 @@ function GrantPanelContent({ grant }: { grant: GrantPreviewData }) {
         <div>
           <p className="text-[11px] font-medium uppercase tracking-wide mb-2" style={{ color: 'var(--ws-text-tertiary)' }}>Categories</p>
           <div className="flex flex-wrap gap-1.5">
-            {grant.categories.map(c => (
+            {uniqueLabels(grant.categories).map(c => (
               <span key={c} className="text-xs font-medium px-2.5 py-1 rounded-full" style={{ background: 'var(--ws-surface-2)', color: 'var(--ws-text-secondary)' }}>
                 {c}
               </span>
@@ -257,10 +270,18 @@ function GrantPanelContent({ grant }: { grant: GrantPreviewData }) {
       )}
 
       <div className="flex gap-2 pt-2">
-        <SaveToPipelineButton grantId={grant.id} />
-        <Link href={`/grants/${grant.id}`} className="px-4 py-2.5 text-sm font-medium rounded-lg transition-colors" style={{ background: 'var(--ws-accent)', color: '#fff' }}>
-          Full Details
-        </Link>
+        {grant.source === 'act_pipeline' ? (
+          <Link href="/org/act#project-pipeline" className="flex-1 text-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors" style={{ background: 'var(--ws-accent)', color: '#fff' }}>
+            Open ACT Pipeline
+          </Link>
+        ) : (
+          <>
+            <SaveToPipelineButton grantId={grant.id} />
+            <Link href={`/grants/${grant.id}`} className="px-4 py-2.5 text-sm font-medium rounded-lg transition-colors" style={{ background: 'var(--ws-accent)', color: '#fff' }}>
+              Full Details
+            </Link>
+          </>
+        )}
         {grant.url && (
           <a href={grant.url} target="_blank" rel="noopener noreferrer" className="px-4 py-2.5 text-sm font-medium rounded-lg transition-colors border" style={{ borderColor: 'var(--ws-border)', color: 'var(--ws-text-secondary)' }}>
             Source
@@ -303,7 +324,7 @@ function FoundationPanelContent({ foundation }: { foundation: FoundationPreviewD
         <div>
           <p className="text-[11px] font-medium uppercase tracking-wide mb-2" style={{ color: 'var(--ws-text-tertiary)' }}>Thematic Focus</p>
           <div className="flex flex-wrap gap-1.5">
-            {foundation.thematic_focus.map(t => (
+            {uniqueLabels(foundation.thematic_focus).map(t => (
               <span key={t} className="text-xs font-medium px-2.5 py-1 rounded-full" style={{ background: 'var(--ws-surface-2)', color: 'var(--ws-text-secondary)' }}>{t}</span>
             ))}
           </div>
@@ -314,7 +335,7 @@ function FoundationPanelContent({ foundation }: { foundation: FoundationPreviewD
         <div>
           <p className="text-[11px] font-medium uppercase tracking-wide mb-2" style={{ color: 'var(--ws-text-tertiary)' }}>Geographic Focus</p>
           <div className="flex flex-wrap gap-1.5">
-            {foundation.geographic_focus.map(g => (
+            {uniqueLabels(foundation.geographic_focus).map(g => (
               <span key={g} className="text-xs font-medium px-2.5 py-1 rounded-full" style={{ background: 'var(--ws-surface-2)', color: 'var(--ws-text-secondary)' }}>{g}</span>
             ))}
           </div>

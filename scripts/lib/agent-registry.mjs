@@ -1017,6 +1017,48 @@ export const AGENTS = {
     dependencies: [],
   },
 
+  // ── VIC Awarded Grants + Funding Bridges ───────────────────────────────────
+  'import-vic-grants-awarded': {
+    command: ['node', '--env-file=.env', 'scripts/import-vic-grants-awarded.mjs'],
+    displayName: 'VIC Grants Awarded (VMC, DFFH, etc.)',
+    category: 'import',
+    defaultPriority: 2,
+    timeoutMs: 600_000,
+    dependencies: [],
+  },
+  'bridge-funding-relationships': {
+    command: ['node', '--env-file=.env', 'scripts/bridge-funding-relationships.mjs', '--apply'],
+    displayName: 'GrantConnect + VIC → Relationships Bridge',
+    category: 'graph',
+    defaultPriority: 3,
+    timeoutMs: 1_800_000,
+    dependencies: ['ingest-grantconnect', 'import-vic-grants-awarded'],
+  },
+  'scrape-charity-annual-reports': {
+    command: ['node', '--env-file=.env', 'scripts/scrape-charity-annual-reports.mjs'],
+    displayName: 'Charity Annual Report Scraper',
+    category: 'scraping',
+    defaultPriority: 4,
+    timeoutMs: 1_800_000,
+    dependencies: [],
+  },
+  'sync-charity-board': {
+    command: ['node', '--env-file=.env', 'scripts/sync-charity-board.mjs'],
+    displayName: 'Charity Board Sync (focused, ACNC + website fallback)',
+    category: 'scraping',
+    defaultPriority: 4,
+    timeoutMs: 600_000,
+    dependencies: [],
+  },
+  'scrape-vic-dept-annual-reports': {
+    command: ['node', '--env-file=.env', 'scripts/scrape-vic-dept-annual-reports.mjs'],
+    displayName: 'VIC Department Annual Report Scraper (LLM-extracted)',
+    category: 'scraping',
+    defaultPriority: 4,
+    timeoutMs: 3_600_000,
+    dependencies: [],
+  },
+
   // ── State Procurement ──────────────────────────────────────────────────────
   'import-nsw-contracts': {
     command: ['node', '--env-file=.env', 'scripts/import-nsw-contracts.mjs', '--apply'],

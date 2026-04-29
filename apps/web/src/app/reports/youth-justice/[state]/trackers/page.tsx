@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/report-supabase';
 import { safe } from '@/lib/services/utils';
 import { fmt } from '@/lib/services/report-service';
 import { slugifySegment, TRACKER_STATE_META, sentenceCaseTracker } from '../../tracker-meta';

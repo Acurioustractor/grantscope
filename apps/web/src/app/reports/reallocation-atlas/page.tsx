@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/report-supabase';
 import { ReallocationAtlasClient } from './reallocation-atlas-client';
 
 export const dynamic = 'force-dynamic';

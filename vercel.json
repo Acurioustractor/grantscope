@@ -37,6 +37,14 @@
       "schedule": "30 6 * * *"
     },
     {
+      "path": "/api/reports/youth-justice/qld/watchhouse-data/refresh",
+      "schedule": "10 8 * * *"
+    },
+    {
+      "path": "/api/reports/youth-justice/qld/watchhouse-data/refresh",
+      "schedule": "10 20 * * *"
+    },
+    {
       "path": "/api/cron/usage-alerts",
       "schedule": "0 * * * *"
     }

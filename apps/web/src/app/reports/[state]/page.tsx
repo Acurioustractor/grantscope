@@ -10,7 +10,7 @@ import {
   money,
   fmt,
 } from '@/lib/services/report-service';
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/report-supabase';
 import { safe } from '@/lib/services/utils';
 
 export const revalidate = 3600;

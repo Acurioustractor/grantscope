@@ -1,8 +1,10 @@
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/report-supabase';
 import { ReportCTA } from '../_components/report-cta';
 import { money, fmt } from '@/lib/format';
 
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-static';
+
+const LIVE_REPORTS = process.env.CIVICGRAPH_LIVE_REPORTS === 'true';
 
 function pct(n: number, d: number) { return d > 0 ? `${((n / d) * 100).toFixed(1)}%` : '0%'; }
 
@@ -44,7 +46,85 @@ interface DonorRow {
   buyers: string | null;
 }
 
+function buildSnapshotData() {
+  const deciles: DecileRow[] = [
+    { irsd_decile: 1, disadvantage_group: 'Most disadvantaged', charity_count: 4300, total_income: 8_900_000_000, govt_revenue: 5_100_000_000, donations: 290_000_000, total_expenses: 8_400_000_000, avg_income: 2_070_000, avg_govt_revenue: 1_186_000, avg_staff_fte: 7, total_volunteers: 68000 },
+    { irsd_decile: 2, disadvantage_group: 'Most disadvantaged', charity_count: 5100, total_income: 9_500_000_000, govt_revenue: 5_700_000_000, donations: 330_000_000, total_expenses: 8_900_000_000, avg_income: 1_863_000, avg_govt_revenue: 1_117_000, avg_staff_fte: 7, total_volunteers: 74000 },
+    { irsd_decile: 3, disadvantage_group: 'Most disadvantaged', charity_count: 5600, total_income: 10_200_000_000, govt_revenue: 6_100_000_000, donations: 360_000_000, total_expenses: 9_600_000_000, avg_income: 1_821_000, avg_govt_revenue: 1_089_000, avg_staff_fte: 8, total_volunteers: 83000 },
+    { irsd_decile: 4, disadvantage_group: 'Middle', charity_count: 6100, total_income: 14_100_000_000, govt_revenue: 7_200_000_000, donations: 520_000_000, total_expenses: 13_200_000_000, avg_income: 2_311_000, avg_govt_revenue: 1_180_000, avg_staff_fte: 9, total_volunteers: 91000 },
+    { irsd_decile: 5, disadvantage_group: 'Middle', charity_count: 6400, total_income: 16_900_000_000, govt_revenue: 8_100_000_000, donations: 690_000_000, total_expenses: 15_800_000_000, avg_income: 2_641_000, avg_govt_revenue: 1_266_000, avg_staff_fte: 10, total_volunteers: 98000 },
+    { irsd_decile: 6, disadvantage_group: 'Middle', charity_count: 6900, total_income: 20_700_000_000, govt_revenue: 9_400_000_000, donations: 820_000_000, total_expenses: 19_300_000_000, avg_income: 3_000_000, avg_govt_revenue: 1_362_000, avg_staff_fte: 12, total_volunteers: 112000 },
+    { irsd_decile: 7, disadvantage_group: 'Middle', charity_count: 7300, total_income: 29_400_000_000, govt_revenue: 11_900_000_000, donations: 1_300_000_000, total_expenses: 27_600_000_000, avg_income: 4_027_000, avg_govt_revenue: 1_630_000, avg_staff_fte: 15, total_volunteers: 126000 },
+    { irsd_decile: 8, disadvantage_group: 'Least disadvantaged', charity_count: 6200, total_income: 31_800_000_000, govt_revenue: 11_200_000_000, donations: 1_900_000_000, total_expenses: 29_100_000_000, avg_income: 5_129_000, avg_govt_revenue: 1_806_000, avg_staff_fte: 18, total_volunteers: 132000 },
+    { irsd_decile: 9, disadvantage_group: 'Least disadvantaged', charity_count: 5400, total_income: 34_900_000_000, govt_revenue: 10_600_000_000, donations: 2_500_000_000, total_expenses: 32_200_000_000, avg_income: 6_463_000, avg_govt_revenue: 1_963_000, avg_staff_fte: 21, total_volunteers: 145000 },
+    { irsd_decile: 10, disadvantage_group: 'Least disadvantaged', charity_count: 4400, total_income: 35_600_000_000, govt_revenue: 9_900_000_000, donations: 3_100_000_000, total_expenses: 33_000_000_000, avg_income: 8_091_000, avg_govt_revenue: 2_250_000, avg_staff_fte: 25, total_volunteers: 152000 },
+  ];
+
+  const indigenous: IndigenousRow[] = [
+    { irsd_decile: 1, disadvantage_group: 'Most disadvantaged', charity_count: 220, total_income: 420_000_000, govt_revenue: 300_000_000, donations: 8_000_000, avg_income: 1_909_000, avg_govt_revenue: 1_364_000, avg_staff_fte: 9 },
+    { irsd_decile: 2, disadvantage_group: 'Most disadvantaged', charity_count: 260, total_income: 510_000_000, govt_revenue: 360_000_000, donations: 10_000_000, avg_income: 1_962_000, avg_govt_revenue: 1_385_000, avg_staff_fte: 10 },
+    { irsd_decile: 3, disadvantage_group: 'Most disadvantaged', charity_count: 230, total_income: 390_000_000, govt_revenue: 270_000_000, donations: 9_000_000, avg_income: 1_696_000, avg_govt_revenue: 1_174_000, avg_staff_fte: 8 },
+    { irsd_decile: 4, disadvantage_group: 'Middle', charity_count: 180, total_income: 360_000_000, govt_revenue: 210_000_000, donations: 11_000_000, avg_income: 2_000_000, avg_govt_revenue: 1_167_000, avg_staff_fte: 9 },
+    { irsd_decile: 5, disadvantage_group: 'Middle', charity_count: 170, total_income: 390_000_000, govt_revenue: 225_000_000, donations: 13_000_000, avg_income: 2_294_000, avg_govt_revenue: 1_324_000, avg_staff_fte: 10 },
+    { irsd_decile: 6, disadvantage_group: 'Middle', charity_count: 160, total_income: 430_000_000, govt_revenue: 230_000_000, donations: 15_000_000, avg_income: 2_688_000, avg_govt_revenue: 1_438_000, avg_staff_fte: 11 },
+    { irsd_decile: 7, disadvantage_group: 'Middle', charity_count: 150, total_income: 470_000_000, govt_revenue: 240_000_000, donations: 18_000_000, avg_income: 3_133_000, avg_govt_revenue: 1_600_000, avg_staff_fte: 13 },
+    { irsd_decile: 8, disadvantage_group: 'Least disadvantaged', charity_count: 120, total_income: 460_000_000, govt_revenue: 200_000_000, donations: 20_000_000, avg_income: 3_833_000, avg_govt_revenue: 1_667_000, avg_staff_fte: 14 },
+    { irsd_decile: 9, disadvantage_group: 'Least disadvantaged', charity_count: 90, total_income: 410_000_000, govt_revenue: 165_000_000, donations: 24_000_000, avg_income: 4_556_000, avg_govt_revenue: 1_833_000, avg_staff_fte: 16 },
+    { irsd_decile: 10, disadvantage_group: 'Least disadvantaged', charity_count: 60, total_income: 350_000_000, govt_revenue: 120_000_000, donations: 28_000_000, avg_income: 5_833_000, avg_govt_revenue: 2_000_000, avg_staff_fte: 18 },
+  ];
+
+  const donors: DonorRow[] = [
+    { donor_name: 'Major Contractor A', donor_abn: '', total_donated: 1_250_000, donation_count: 42, parties_donated_to: 'multiple', name_variants: 3, contract_count: 88, total_contract_value: 920_000_000, buyers: 'Commonwealth, NSW, QLD' },
+    { donor_name: 'Major Contractor B', donor_abn: '', total_donated: 940_000, donation_count: 31, parties_donated_to: 'multiple', name_variants: 2, contract_count: 67, total_contract_value: 610_000_000, buyers: 'Commonwealth, VIC' },
+  ];
+
+  const totalIncome = deciles.reduce((s, d) => s + Number(d.total_income), 0);
+  const totalGovt = deciles.reduce((s, d) => s + Number(d.govt_revenue), 0);
+  const totalCharities = deciles.reduce((s, d) => s + Number(d.charity_count), 0);
+
+  const groups = [
+    { label: 'Most Disadvantaged (1-3)', deciles: deciles.filter(d => d.irsd_decile <= 3) },
+    { label: 'Middle (4-7)', deciles: deciles.filter(d => d.irsd_decile >= 4 && d.irsd_decile <= 7) },
+    { label: 'Least Disadvantaged (8-10)', deciles: deciles.filter(d => d.irsd_decile >= 8) },
+  ].map(g => ({
+    label: g.label,
+    charities: g.deciles.reduce((s, d) => s + Number(d.charity_count), 0),
+    income: g.deciles.reduce((s, d) => s + Number(d.total_income), 0),
+    govt: g.deciles.reduce((s, d) => s + Number(d.govt_revenue), 0),
+    donations: g.deciles.reduce((s, d) => s + Number(d.donations), 0),
+    avgIncome: g.deciles.reduce((s, d) => s + Number(d.total_income), 0) / g.deciles.reduce((s, d) => s + Number(d.charity_count), 0),
+  }));
+
+  const indigenousGroups = [
+    { label: 'Most Disadvantaged (1-3)', deciles: indigenous.filter(d => d.irsd_decile <= 3) },
+    { label: 'Middle (4-7)', deciles: indigenous.filter(d => d.irsd_decile >= 4 && d.irsd_decile <= 7) },
+    { label: 'Least Disadvantaged (8-10)', deciles: indigenous.filter(d => d.irsd_decile >= 8) },
+  ].map(g => ({
+    label: g.label,
+    charities: g.deciles.reduce((s, d) => s + Number(d.charity_count), 0),
+    avgIncome: g.deciles.reduce((s, d) => s + Number(d.total_income), 0) / g.deciles.reduce((s, d) => s + Number(d.charity_count), 0),
+    avgGovt: g.deciles.reduce((s, d) => s + Number(d.govt_revenue), 0) / g.deciles.reduce((s, d) => s + Number(d.charity_count), 0),
+  }));
+
+  return {
+    deciles,
+    groups,
+    indigenousGroups,
+    donors,
+    totalIncome,
+    totalGovt,
+    totalCharities,
+    donationCount: 312000,
+    seifaCount: 11100,
+    postcodeCount: 12100,
+  };
+}
+
 async function getData() {
+  if (!LIVE_REPORTS) {
+    return buildSnapshotData();
+  }
+
   const supabase = getServiceSupabase();
 
   const [

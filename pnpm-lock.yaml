@@ -66,6 +66,9 @@ importers:
       ai:
         specifier: ^6.0.105
         version: 6.0.105(zod@4.3.6)
+      import-in-the-middle:
+        specifier: ^2.0.6
+        version: 2.0.6
       leaflet:
         specifier: ^1.9.4
         version: 1.9.4
@@ -99,6 +102,9 @@ importers:
       recharts:
         specifier: ^3.7.0
         version: 3.7.0(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react-is@19.2.4)(react@19.2.4)(redux@5.0.1)
+      require-in-the-middle:
+        specifier: ^8.0.1
+        version: 8.0.1
       stripe:
         specifier: ^20.4.0
         version: 20.4.0(@types/node@22.19.13)

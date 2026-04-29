@@ -130,11 +130,13 @@ function ExtractionPill({ label }: { label: string }) {
 // Chat Component
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-const WELCOME_TEXT = `Welcome! I'm your CivicGraph Innovation Guide. I help people like you turn ideas into real organisations \u2014 charities, social enterprises, Indigenous corporations, and more.
+const WELCOME_TEXT = `Welcome! I'm your CivicGraph Innovation Guide. I can help with a new initiative, or work as an advanced support space for A Curious Tractor projects already in CivicGraph.
 
-I have access to data on **100,000+ Australian organisations**, **18,000+ grants**, **10,800+ foundations**, and **1,155 evidence-based interventions** from the Australian Living Map of Alternatives.
+I have access to data on **590,000+ Australian entities**, **31,000+ grant opportunities**, **10,900+ foundations**, and **2,000+ evidence-based interventions** from the Australian Living Map of Alternatives.
 
-**Tell me about your idea.** What problem do you want to solve, and who do you want to help?`;
+For ACT, I can help connect your existing plans across Goods, JusticeHub, CivicGraph, Empathy Ledger, PICC, Harvest/Farm, ALMA, Contained, funders, procurement, evidence, partners, and next actions.
+
+**Tell me what you are trying to move forward.** Name the project, decision, opportunity, partner, funder, or idea, and I will help turn it into a clear path.`;
 
 interface SavedMessage {
   id: string;

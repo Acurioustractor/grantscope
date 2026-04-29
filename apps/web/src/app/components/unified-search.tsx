@@ -275,12 +275,14 @@ export function UnifiedSearch() {
 
       {/* Example chips */}
       <div className="flex flex-wrap gap-2 mt-3">
-        <span className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest py-1">Try:</span>
+        <span className="border-2 border-bauhaus-black bg-white px-2 py-1 text-[10px] font-black uppercase tracking-widest text-bauhaus-black">
+          Try:
+        </span>
         {EXAMPLES.map(ex => (
           <button
             key={ex.label}
             onClick={() => handleExample(ex)}
-            className="px-3 py-1 text-xs font-bold text-bauhaus-black border-2 border-bauhaus-black/15 hover:border-bauhaus-black hover:bg-bauhaus-black hover:text-white transition-colors"
+            className="border-2 border-bauhaus-black bg-white px-3 py-1 text-xs font-black text-bauhaus-black shadow-[2px_2px_0_0_rgba(0,0,0,1)] transition-colors hover:bg-bauhaus-yellow disabled:opacity-60"
             disabled={loading}
           >
             {ex.label}
@@ -438,9 +440,9 @@ export function UnifiedSearch() {
         <div className="mt-4">
           {/* Explanation */}
           {askResult!.explanation && (
-            <div className="border-4 border-bauhaus-blue p-5 mb-4 bg-bauhaus-blue/5">
-              <div className="text-xs font-black text-bauhaus-blue uppercase tracking-widest mb-2">Analysis</div>
-              <p className="text-bauhaus-black font-medium text-sm leading-relaxed">{askResult!.explanation}</p>
+            <div className="mb-4 border-4 border-bauhaus-blue bg-white p-5">
+              <div className="mb-2 text-xs font-black uppercase tracking-widest text-bauhaus-blue">Analysis</div>
+              <p className="text-sm font-bold leading-relaxed text-bauhaus-black">{askResult!.explanation}</p>
             </div>
           )}
 
