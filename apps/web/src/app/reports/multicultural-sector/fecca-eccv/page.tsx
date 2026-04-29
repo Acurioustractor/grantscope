@@ -37,6 +37,25 @@ type AisYearRow = {
   vols: number | null;
 };
 
+type AmesContractRow = {
+  supplier_name: string;
+  contracts: number;
+  total: number;
+};
+
+type TopicMixRow = {
+  topic: string;
+  grants: number;
+  total: number;
+};
+
+type YearMixRow = {
+  financial_year: string;
+  dept: string;
+  grants: number;
+  total: number;
+};
+
 type AisFinancialsRow = {
   abn: string;
   ais_year: number;
@@ -148,7 +167,7 @@ function pct(n: number | null | undefined): string {
 async function getReport() {
   const supabase = getLiveReportSupabase();
 
-  const [anchors, aisYears, fecca_contracts, eccv_contracts, directorsAll, portfolios, annualReports, vicGrantsRaw, siblingGrantsRaw, powerRows, aisLatest] = await Promise.all([
+  const [anchors, aisYears, fecca_contracts, eccv_contracts, directorsAll, portfolios, annualReports, vicGrantsRaw, siblingGrantsRaw, powerRows, aisLatest, amesContractsRaw, topicMixRaw, yearMixRaw] = await Promise.all([
     safe(supabase.rpc('exec_sql', {
       query: `
         SELECT e.gs_id, e.canonical_name, e.abn, e.state,
@@ -359,6 +378,73 @@ async function getReport() {
         ORDER BY abn, ais_year DESC
       `,
     })) as Promise<AisFinancialsRow[] | null>,
+
+    // Top federal contractors in the multicultural / settlement / ethnic-services sector
+    safe(supabase.rpc('exec_sql', {
+      query: `
+        SELECT
+          -- Collapse the obvious AMES variants under one banner
+          CASE
+            WHEN supplier_name ILIKE 'ADULT MULTICULTURAL EDUCATION%' OR supplier_name ILIKE '%AMES Australia%' OR supplier_name ILIKE 'Adult Multicultural Education Services%'
+              THEN 'AMES (Adult Multicultural Education Services)'
+            WHEN supplier_name ILIKE 'ETHNIC INTERPRETERS%'
+              THEN 'Ethnic Interpreters & Translators'
+            WHEN supplier_name ILIKE 'MULTICULTURAL DEVELOPMENT%'
+              THEN 'Multicultural Development Association'
+            ELSE supplier_name
+          END AS supplier_name,
+          COUNT(*)::int AS contracts,
+          SUM(contract_value)::bigint AS total
+        FROM public.austender_contracts
+        WHERE (supplier_name ILIKE '%multicultural%' OR supplier_name ILIKE '%ethnic%')
+          AND contract_value > 0
+        GROUP BY 1
+        ORDER BY total DESC NULLS LAST
+        LIMIT 8
+      `,
+    })) as Promise<AmesContractRow[] | null>,
+
+    // Topic mix across our newly-ingested 5K+ VIC grants
+    safe(supabase.rpc('exec_sql', {
+      query: `
+        SELECT topic, COUNT(*)::int AS grants, SUM(amount_aud)::bigint AS total
+        FROM (
+          SELECT
+            CASE
+              WHEN program_name ILIKE '%aboriginal%' OR program_name ILIKE '%first peoples%' OR program_name ILIKE '%treaty%' OR program_name ILIKE '%self-determination%' THEN 'First Peoples / Treaty'
+              WHEN program_name ILIKE '%multicultural%' OR program_name ILIKE '%ethnic%' OR program_name ILIKE '%refugee%' OR program_name ILIKE '%settlement%' OR program_name ILIKE '%cald%' THEN 'Multicultural / Settlement'
+              WHEN program_name ILIKE '%family violence%' OR program_name ILIKE '%family safety%' OR program_name ILIKE '%violence against%' THEN 'Family Violence'
+              WHEN program_name ILIKE '%children%' OR program_name ILIKE '%family%' OR program_name ILIKE '%kindergarten%' THEN 'Children / Family'
+              WHEN program_name ILIKE '%housing%' OR program_name ILIKE '%homeless%' THEN 'Housing / Homelessness'
+              WHEN program_name ILIKE '%mental%' OR program_name ILIKE '%suicide%' OR program_name ILIKE '%alcohol%' OR program_name ILIKE '%drug%' THEN 'Mental Health / AOD'
+              WHEN program_name ILIKE '%youth%' THEN 'Youth'
+              WHEN program_name ILIKE '%women%' OR program_name ILIKE '%gender%' OR program_name ILIKE '%LGBT%' THEN 'Gender / Equality'
+              WHEN program_name ILIKE '%disability%' OR program_name ILIKE '%NDIS%' THEN 'Disability'
+              WHEN program_name ILIKE '%employ%' OR program_name ILIKE '%jobs%' OR program_name ILIKE '%skills%' THEN 'Jobs / Skills'
+              WHEN program_name ILIKE '%arts%' OR program_name ILIKE '%culture%' OR program_name ILIKE '%creative%' THEN 'Arts / Culture'
+              WHEN program_name ILIKE '%sport%' OR program_name ILIKE '%active%' THEN 'Sport / Recreation'
+              ELSE 'Other / Unclassified'
+            END AS topic
+          FROM public.vic_grants_awarded
+          WHERE program_name IS NOT NULL AND amount_aud > 0
+        ) t
+        GROUP BY 1
+        ORDER BY total DESC NULLS LAST
+      `,
+    })) as Promise<TopicMixRow[] | null>,
+
+    // Year-over-year by department
+    safe(supabase.rpc('exec_sql', {
+      query: `
+        SELECT financial_year, source AS dept,
+               COUNT(*)::int AS grants,
+               SUM(amount_aud)::bigint AS total
+        FROM public.vic_grants_awarded
+        WHERE financial_year IS NOT NULL AND amount_aud > 0
+        GROUP BY 1,2
+        ORDER BY 1,2
+      `,
+    })) as Promise<YearMixRow[] | null>,
   ]);
 
   const fecca = (anchors ?? []).find(a => a.abn === FECCA_ABN) || null;
@@ -386,6 +472,9 @@ async function getReport() {
     siblingGrants: siblingGrantsRaw ?? [],
     power: powerRows ?? [],
     aisLatest: aisLatest ?? [],
+    amesContracts: amesContractsRaw ?? [],
+    topicMix: topicMixRaw ?? [],
+    yearMix: yearMixRaw ?? [],
   };
 }
 
@@ -709,6 +798,45 @@ export default async function FeccaEccvPage() {
             See <a href="#vic-state-grants" className="text-bauhaus-blue hover:underline font-black">§6</a> for the now-ingested VIC department grants.
           </div>
         )}
+      </section>
+
+      {/* SECTION 2c — AMES Asymmetry */}
+      <section className="mb-16">
+        <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§2c</div>
+        <h2 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">The AMES Asymmetry — Where Federal Multicultural Procurement Actually Goes</h2>
+        <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
+          FECCA holds {money(r.fecca_contracts.reduce((s, c) => s + c.contract_value, 0))} of lifetime Commonwealth procurement (§2). For comparison, here are the largest federal contractors with &quot;multicultural&quot; or &quot;ethnic&quot; in their name. The settlement-services market is dominated by AMES &mdash; mostly the Adult Migrant English Program. The federation&apos;s peak bodies barely register in the federal procurement story.
+        </p>
+        {r.amesContracts.length === 0 ? (
+          <div className="border-4 border-bauhaus-yellow p-6 bg-white">
+            <p className="text-bauhaus-black font-medium">No multicultural-sector austender data ingested.</p>
+          </div>
+        ) : (() => {
+          const peak = r.amesContracts[0]?.total || 1;
+          return (
+            <div className="border-4 border-bauhaus-black p-6 bg-white">
+              {r.amesContracts.map((c, i) => {
+                const pct = (c.total / peak) * 100;
+                return (
+                  <div key={i} className="mb-3 last:mb-0">
+                    <div className="flex justify-between text-xs font-mono mb-1">
+                      <span className="font-black text-bauhaus-black truncate pr-3">{c.supplier_name}</span>
+                      <span className="text-bauhaus-muted whitespace-nowrap">{money(c.total)} · {c.contracts} contracts</span>
+                    </div>
+                    <div className="relative h-6 bg-bauhaus-canvas border-2 border-bauhaus-black">
+                      <div className={`absolute inset-y-0 left-0 ${i === 0 ? 'bg-bauhaus-red' : 'bg-bauhaus-blue'}`} style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="mt-4 pt-3 border-t-2 border-bauhaus-black text-xs font-mono text-bauhaus-muted leading-relaxed">
+                AMES holds <span className="font-black text-bauhaus-red">{money(r.amesContracts[0]?.total)}</span> across {r.amesContracts[0]?.contracts} federal contracts — roughly{' '}
+                <span className="font-black">{r.fecca_contracts.reduce((s, c) => s + c.contract_value, 0) > 0 ? Math.round((r.amesContracts[0]?.total || 0) / r.fecca_contracts.reduce((s, c) => s + c.contract_value, 0)).toLocaleString() : '∞'}×</span>{' '}
+                FECCA&apos;s lifetime total. Source: <code className="bg-bauhaus-canvas px-1">austender_contracts</code>.
+              </div>
+            </div>
+          );
+        })()}
       </section>
 
       {/* SECTION 2.5 — Cross-System Power Profile */}
@@ -1040,10 +1168,95 @@ export default async function FeccaEccvPage() {
       {/* SECTION 6 — VIC State Grants (newly ingested via LLM extraction) */}
       <section id="vic-state-grants" className="mb-16 scroll-mt-24">
         <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§6</div>
-        <h2 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">VIC State Grants — Now Visible</h2>
+        <h2 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">VIC State Grants — The Full Picture</h2>
         <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
-          Extracted by LLM from Victorian department annual report PDFs (DPC, DFFH).
-          Each row is a real grant disclosed in 2023-24, parsed via Claude Haiku tool-use → <code className="bg-bauhaus-canvas px-1 text-xs">vic_grants_awarded</code>.
+          {(() => {
+            const total = r.vicGrants.reduce((s, g) => s + g.amount, 0) + r.siblingGrants.reduce((s, g) => s + g.amount, 0);
+            const grandTotal = r.yearMix.reduce((s, y) => s + y.total, 0);
+            const recipients = new Set(r.yearMix.map(y => y.dept)).size;
+            return <>{r.yearMix.length ? `${money(grandTotal)} across ${r.yearMix.reduce((s, y) => s + y.grants, 0).toLocaleString()} grants from ${recipients} VIC departments — extracted by LLM from annual-report PDFs (DPC, DFFH, DJSIR) via pdftotext → Claude Haiku / MiniMax fallback. ${total > 0 ? `Of that, ${money(total)} touches FECCA, ECCV or sister ECCs.` : ''}` : ''}</>;
+          })()}
+        </p>
+
+        {/* Year-over-year stacked bars */}
+        {r.yearMix.length > 0 && (() => {
+          const yearTotals = new Map<string, { total: number; depts: Record<string, number> }>();
+          r.yearMix.forEach(y => {
+            const e = yearTotals.get(y.financial_year) || { total: 0, depts: {} };
+            e.total += y.total;
+            e.depts[y.dept] = y.total;
+            yearTotals.set(y.financial_year, e);
+          });
+          const sortedYears = [...yearTotals.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+          const peak = Math.max(...sortedYears.map(([, v]) => v.total), 1);
+          const deptColor = { dpc: 'bg-bauhaus-red', dffh: 'bg-bauhaus-blue', djsir: 'bg-bauhaus-yellow', djcs: 'bg-bauhaus-black' } as Record<string, string>;
+          return (
+            <div className="border-4 border-bauhaus-black p-6 bg-white mb-6">
+              <h3 className="text-sm font-black uppercase tracking-widest text-bauhaus-black mb-3">Grant Flow by Year &amp; Department</h3>
+              {sortedYears.map(([fy, v]) => {
+                const widthPct = (v.total / peak) * 100;
+                return (
+                  <div key={fy} className="mb-3 last:mb-0">
+                    <div className="flex justify-between text-xs font-mono mb-1">
+                      <span className="font-black text-bauhaus-black">FY {fy}</span>
+                      <span className="text-bauhaus-muted">{money(v.total)} · {Object.keys(v.depts).map(d => `${d.toUpperCase()} ${money(v.depts[d])}`).join(' · ')}</span>
+                    </div>
+                    <div className="relative h-7 bg-bauhaus-canvas border-2 border-bauhaus-black flex" style={{ width: `${widthPct}%` }}>
+                      {Object.entries(v.depts).map(([dept, val]) => (
+                        <div key={dept} className={`${deptColor[dept] || 'bg-bauhaus-muted'} h-full`} style={{ width: `${(val / v.total) * 100}%` }} title={`${dept.toUpperCase()}: ${money(val)}`} />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="flex flex-wrap gap-3 text-[10px] font-black uppercase tracking-widest mt-4 pt-3 border-t-2 border-bauhaus-black">
+                {Object.entries(deptColor).filter(([d]) => sortedYears.some(([, v]) => v.depts[d])).map(([d, c]) => (
+                  <span key={d}><span className={`inline-block w-3 h-3 ${c} mr-1 align-middle`} />{d.toUpperCase()}</span>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Topic-mix breakdown */}
+        {r.topicMix.length > 0 && (() => {
+          const peak = Math.max(...r.topicMix.map(t => t.total), 1);
+          const total = r.topicMix.reduce((s, t) => s + t.total, 0);
+          return (
+            <div className="border-4 border-bauhaus-black p-6 bg-white mb-6">
+              <h3 className="text-sm font-black uppercase tracking-widest text-bauhaus-black mb-1">Topic Mix Across All VIC Grants</h3>
+              <p className="text-xs font-mono text-bauhaus-muted mb-4">
+                Keyword-classified by program_name. The multicultural sector receives a fraction of what flows to First Peoples / Treaty work via these channels.
+              </p>
+              {r.topicMix.map((t, i) => {
+                const pct = (t.total / peak) * 100;
+                const sharePct = total > 0 ? (t.total / total) * 100 : 0;
+                const isMulti = t.topic === 'Multicultural / Settlement';
+                const isFirstPeoples = t.topic === 'First Peoples / Treaty';
+                const barColor = isMulti ? 'bg-bauhaus-yellow' : isFirstPeoples ? 'bg-bauhaus-red' : 'bg-bauhaus-blue';
+                return (
+                  <div key={i} className="mb-2 last:mb-0">
+                    <div className="flex justify-between text-xs font-mono mb-1">
+                      <span className={`font-black ${isMulti || isFirstPeoples ? 'text-bauhaus-black' : 'text-bauhaus-muted'} truncate pr-3`}>{t.topic}</span>
+                      <span className="text-bauhaus-muted whitespace-nowrap">{money(t.total)} · {t.grants} grants · {sharePct.toFixed(1)}%</span>
+                    </div>
+                    <div className="relative h-5 bg-bauhaus-canvas border-2 border-bauhaus-black">
+                      <div className={`absolute inset-y-0 left-0 ${barColor}`} style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="mt-4 pt-3 border-t-2 border-bauhaus-black text-xs font-mono text-bauhaus-muted">
+                <span className="inline-block w-3 h-3 bg-bauhaus-red mr-1 align-middle" /> First Peoples · {' '}
+                <span className="inline-block w-3 h-3 bg-bauhaus-yellow mr-1 align-middle" /> Multicultural · {' '}
+                <span className="inline-block w-3 h-3 bg-bauhaus-blue mr-1 align-middle" /> Other
+              </div>
+            </div>
+          );
+        })()}
+
+        <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
+          The table below is the existing FECCA / ECCV / cluster cut — top-30 by amount.
         </p>
 
         {r.vicGrants.length === 0 ? (
