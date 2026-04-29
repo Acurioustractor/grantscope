@@ -101,7 +101,7 @@ function pct(n: number | null | undefined): string {
 async function getReport() {
   const supabase = getLiveReportSupabase();
 
-  const [anchors, aisYears, fecca_contracts, eccv_contracts, directorsAll, portfolios, annualReports] = await Promise.all([
+  const [anchors, aisYears, fecca_contracts, eccv_contracts, directorsAll, portfolios, annualReports, vicGrantsRaw] = await Promise.all([
     safe(supabase.rpc('exec_sql', {
       query: `
         SELECT e.gs_id, e.canonical_name, e.abn, e.state,
@@ -116,10 +116,10 @@ async function getReport() {
                CASE WHEN a.total_revenue > 0
                     THEN (a.revenue_from_government / a.total_revenue) * 100
                END::numeric(5,1) AS govt_pct
-        FROM gs_entities e
-        LEFT JOIN acnc_charities c ON c.abn = e.abn
+        FROM public.gs_entities e
+        LEFT JOIN public.acnc_charities c ON c.abn = e.abn
         LEFT JOIN LATERAL (
-          SELECT * FROM acnc_ais WHERE abn = e.abn ORDER BY ais_year DESC LIMIT 1
+          SELECT * FROM public.acnc_ais WHERE abn = e.abn ORDER BY ais_year DESC LIMIT 1
         ) a ON true
         WHERE e.abn IN ('${FECCA_ABN}','${ECCV_ABN}')
       `,
@@ -136,7 +136,7 @@ async function getReport() {
                net_surplus_deficit::bigint AS surplus,
                staff_full_time::int AS ft,
                staff_volunteers::int AS vols
-        FROM acnc_ais
+        FROM public.acnc_ais
         WHERE abn IN ('${FECCA_ABN}','${ECCV_ABN}')
         ORDER BY abn, ais_year ASC
       `,
@@ -146,7 +146,7 @@ async function getReport() {
       query: `
         SELECT buyer_name, title, contract_value::bigint AS contract_value,
                contract_start::text, contract_end::text
-        FROM austender_contracts
+        FROM public.austender_contracts
         WHERE supplier_abn = '${FECCA_ABN}'
         ORDER BY contract_value DESC NULLS LAST
       `,
@@ -156,7 +156,7 @@ async function getReport() {
       query: `
         SELECT buyer_name, title, contract_value::bigint AS contract_value,
                contract_start::text, contract_end::text
-        FROM austender_contracts
+        FROM public.austender_contracts
         WHERE supplier_abn = '${ECCV_ABN}'
         ORDER BY contract_value DESC NULLS LAST
       `,
@@ -170,9 +170,9 @@ async function getReport() {
           tgt.canonical_name AS entity,
           r.dataset AS role_dataset,
           r.properties->>'role' AS role
-        FROM gs_relationships r
-        JOIN gs_entities src ON src.id = r.source_entity_id
-        JOIN gs_entities tgt ON tgt.id = r.target_entity_id
+        FROM public.gs_relationships r
+        JOIN public.gs_entities src ON src.id = r.source_entity_id
+        JOIN public.gs_entities tgt ON tgt.id = r.target_entity_id
         WHERE tgt.abn IN ('${FECCA_ABN}','${ECCV_ABN}')
           AND r.relationship_type = 'directorship'
           AND src.gs_id LIKE 'GS-PERSON-%'
@@ -184,9 +184,9 @@ async function getReport() {
       query: `
         WITH cluster_directors AS (
           SELECT DISTINCT src.id AS pid, src.canonical_name AS pname
-          FROM gs_relationships r
-          JOIN gs_entities src ON src.id = r.source_entity_id
-          JOIN gs_entities tgt ON tgt.id = r.target_entity_id
+          FROM public.gs_relationships r
+          JOIN public.gs_entities src ON src.id = r.source_entity_id
+          JOIN public.gs_entities tgt ON tgt.id = r.target_entity_id
           WHERE r.relationship_type = 'directorship'
             AND src.gs_id LIKE 'GS-PERSON-%'
             AND tgt.abn IN ('${FECCA_ABN}','${ECCV_ABN}')
@@ -196,8 +196,8 @@ async function getReport() {
                  array_agg(DISTINCT te.canonical_name ORDER BY te.canonical_name) AS organisations,
                  COUNT(DISTINCT te.id)::int AS local_board_count
           FROM cluster_directors cd
-          JOIN gs_relationships r2 ON r2.source_entity_id = cd.pid AND r2.relationship_type = 'directorship'
-          JOIN gs_entities te ON te.id = r2.target_entity_id
+          JOIN public.gs_relationships r2 ON r2.source_entity_id = cd.pid AND r2.relationship_type = 'directorship'
+          JOIN public.gs_entities te ON te.id = r2.target_entity_id
           GROUP BY cd.pname
         )
         SELECT po.pname AS person_name,
@@ -208,7 +208,7 @@ async function getReport() {
                pi.total_donations::bigint AS total_donations,
                pi.max_influence_score::int AS influence
         FROM person_orgs po
-        LEFT JOIN mv_person_influence pi ON LOWER(pi.person_name) = LOWER(po.pname)
+        LEFT JOIN public.mv_person_influence pi ON LOWER(pi.person_name) = LOWER(po.pname)
         ORDER BY pi.max_influence_score DESC NULLS LAST, po.local_board_count DESC
       `,
     })) as Promise<DirectorPortfolio[] | null>,
@@ -222,11 +222,36 @@ async function getReport() {
                reports_employment, reports_housing, reports_education,
                reports_cultural_connection, reports_mental_health, reports_family_reunification,
                has_quantitative_outcomes, has_external_evaluation
-        FROM charity_impact_reports
+        FROM public.charity_impact_reports
         WHERE abn IN ('${FECCA_ABN}','${ECCV_ABN}')
         ORDER BY abn, report_year DESC
       `,
     })) as Promise<AnnualReport[] | null>,
+    safe(supabase.rpc('exec_sql', {
+      query: `
+        SELECT vga.recipient_name, vga.program_name, vga.amount_aud::bigint AS amount,
+               vga.financial_year, vga.source AS dept_source, vga.source_url,
+               t.canonical_name AS recipient_canonical, t.abn AS recipient_abn, t.gs_id AS recipient_gs_id
+        FROM public.vic_grants_awarded vga
+        LEFT JOIN public.gs_entities t ON t.id = vga.gs_entity_id
+        WHERE vga.recipient_name ILIKE '%ethnic communities%council of victoria%'
+           OR vga.recipient_name ILIKE '%FECCA%'
+           OR vga.recipient_name ILIKE '%federation of ethnic%'
+           OR vga.gs_entity_id IN (SELECT id FROM public.gs_entities WHERE abn IN ('${FECCA_ABN}','${ECCV_ABN}'))
+        ORDER BY vga.amount_aud DESC NULLS LAST
+        LIMIT 50
+      `,
+    })) as Promise<Array<{
+      recipient_name: string;
+      program_name: string | null;
+      amount: number;
+      financial_year: string | null;
+      dept_source: string;
+      source_url: string | null;
+      recipient_canonical: string | null;
+      recipient_abn: string | null;
+      recipient_gs_id: string | null;
+    }> | null>,
   ]);
 
   const fecca = (anchors ?? []).find(a => a.abn === FECCA_ABN) || null;
@@ -250,6 +275,7 @@ async function getReport() {
     eccv_directors,
     portfolios: portfolios ?? [],
     annualReports: annualReports ?? [],
+    vicGrants: vicGrantsRaw ?? [],
   };
 }
 
@@ -415,7 +441,8 @@ export default async function FeccaEccvPage() {
         )}
         {r.eccv_contracts.length === 0 && (
           <div className="mt-6 border-l-4 border-bauhaus-yellow pl-4 text-sm text-bauhaus-muted font-medium">
-            ECCV has zero Commonwealth contracts. Their $1.65M government revenue flows through Victorian state programs (DFFH, VMC, DPC) — currently invisible until those agents run.
+            ECCV has zero Commonwealth contracts. Their government revenue flows through Victorian state programs.
+            See <a href="#vic-state-grants" className="text-bauhaus-blue hover:underline font-black">§6</a> for the now-ingested VIC department grants.
           </div>
         )}
       </section>
@@ -632,6 +659,54 @@ export default async function FeccaEccvPage() {
           Topic flags are regex-matched against extracted text — narrative-only reports may have themes the regex missed.
           A future LLM enrichment pass will extract structured impact narratives.
         </div>
+      </section>
+
+      {/* SECTION 6 — VIC State Grants (newly ingested via LLM extraction) */}
+      <section id="vic-state-grants" className="mb-16 scroll-mt-24">
+        <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§6</div>
+        <h2 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">VIC State Grants — Now Visible</h2>
+        <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
+          Extracted by LLM from Victorian department annual report PDFs (DPC, DFFH).
+          Each row is a real grant disclosed in 2023-24, parsed via Claude Haiku tool-use → <code className="bg-bauhaus-canvas px-1 text-xs">vic_grants_awarded</code>.
+        </p>
+
+        {r.vicGrants.length === 0 ? (
+          <div className="border-4 border-bauhaus-yellow p-6 bg-white">
+            <p className="text-bauhaus-black font-medium">No VIC grants ingested yet for FECCA / ECCV / cluster.</p>
+          </div>
+        ) : (
+          <div className="border-4 border-bauhaus-black overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-bauhaus-black text-white">
+                <tr>
+                  <th className="text-left p-3 font-black uppercase tracking-widest text-xs">Recipient</th>
+                  <th className="text-left p-3 font-black uppercase tracking-widest text-xs">Program</th>
+                  <th className="text-right p-3 font-black uppercase tracking-widest text-xs">Amount</th>
+                  <th className="text-left p-3 font-black uppercase tracking-widest text-xs whitespace-nowrap">FY</th>
+                  <th className="text-left p-3 font-black uppercase tracking-widest text-xs whitespace-nowrap">Dept</th>
+                </tr>
+              </thead>
+              <tbody>
+                {r.vicGrants.map((g, i) => (
+                  <tr key={`${g.recipient_name}-${g.amount}-${i}`} className={i % 2 === 0 ? 'bg-white' : 'bg-bauhaus-canvas'}>
+                    <td className="p-3 font-black text-bauhaus-black">
+                      {g.recipient_gs_id ? (
+                        <Link href={`/org/${g.recipient_gs_id}`} className="hover:underline">{g.recipient_name}</Link>
+                      ) : g.recipient_name}
+                      {g.recipient_canonical && g.recipient_canonical !== g.recipient_name && (
+                        <span className="block text-xs text-bauhaus-muted font-mono">→ {g.recipient_canonical}</span>
+                      )}
+                    </td>
+                    <td className="p-3 text-xs">{g.program_name ?? '—'}</td>
+                    <td className="p-3 text-right font-mono font-black">{money(g.amount)}</td>
+                    <td className="p-3 text-xs font-mono whitespace-nowrap">{g.financial_year ?? '—'}</td>
+                    <td className="p-3 text-xs uppercase tracking-widest font-black text-bauhaus-blue">{g.dept_source}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
       {/* Action panel */}
