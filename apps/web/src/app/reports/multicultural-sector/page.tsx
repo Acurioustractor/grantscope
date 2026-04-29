@@ -90,9 +90,9 @@ async function getReport() {
                END::numeric(5,1) AS govt_pct,
                a.staff_full_time::int AS staff_ft,
                a.staff_volunteers::int AS staff_vols
-        FROM gs_entities e
+        FROM public.gs_entities e
         LEFT JOIN LATERAL (
-          SELECT * FROM acnc_ais WHERE abn = e.abn ORDER BY ais_year DESC LIMIT 1
+          SELECT * FROM public.acnc_ais WHERE abn = e.abn ORDER BY ais_year DESC LIMIT 1
         ) a ON true
         WHERE e.abn IN (${ABNS_SQL})
         ORDER BY a.total_revenue DESC NULLS LAST
@@ -107,8 +107,8 @@ async function getReport() {
                ac.contract_value::bigint AS value,
                ac.contract_start::text,
                ac.contract_end::text
-        FROM austender_contracts ac
-        JOIN gs_entities e ON e.abn = ac.supplier_abn
+        FROM public.austender_contracts ac
+        JOIN public.gs_entities e ON e.abn = ac.supplier_abn
         WHERE ac.supplier_abn IN (${ABNS_SQL})
         ORDER BY ac.contract_value DESC NULLS LAST
         LIMIT 30
@@ -118,12 +118,12 @@ async function getReport() {
     safe(supabase.rpc('exec_sql', {
       query: `
         WITH cluster AS (
-          SELECT id, canonical_name FROM gs_entities WHERE abn IN (${ABNS_SQL})
+          SELECT id, canonical_name FROM public.gs_entities WHERE abn IN (${ABNS_SQL})
         ),
         cluster_directors AS (
           SELECT DISTINCT src.id AS person_id, src.canonical_name AS person_name
-          FROM gs_relationships r
-          JOIN gs_entities src ON src.id = r.source_entity_id
+          FROM public.gs_relationships r
+          JOIN public.gs_entities src ON src.id = r.source_entity_id
           JOIN cluster tgt ON tgt.id = r.target_entity_id
           WHERE r.relationship_type = 'directorship' AND src.gs_id LIKE 'GS-PERSON-%'
         )
@@ -131,8 +131,8 @@ async function getReport() {
                string_agg(DISTINCT te.canonical_name, ' | ' ORDER BY te.canonical_name) AS all_boards,
                COUNT(DISTINCT te.id)::int AS total_boards
         FROM cluster_directors cd
-        JOIN gs_relationships r2 ON r2.source_entity_id = cd.person_id AND r2.relationship_type = 'directorship'
-        JOIN gs_entities te ON te.id = r2.target_entity_id
+        JOIN public.gs_relationships r2 ON r2.source_entity_id = cd.person_id AND r2.relationship_type = 'directorship'
+        JOIN public.gs_entities te ON te.id = r2.target_entity_id
         GROUP BY cd.person_name
         HAVING COUNT(DISTINCT te.id) >= 2
         ORDER BY total_boards DESC, cd.person_name
@@ -143,9 +143,9 @@ async function getReport() {
       query: `
         WITH cluster_directors AS (
           SELECT DISTINCT src.canonical_name AS pname
-          FROM gs_relationships r
-          JOIN gs_entities src ON src.id = r.source_entity_id
-          JOIN gs_entities tgt ON tgt.id = r.target_entity_id
+          FROM public.gs_relationships r
+          JOIN public.gs_entities src ON src.id = r.source_entity_id
+          JOIN public.gs_entities tgt ON tgt.id = r.target_entity_id
           WHERE r.relationship_type = 'directorship'
             AND src.gs_id LIKE 'GS-PERSON-%'
             AND tgt.abn IN (${ABNS_SQL})
@@ -156,7 +156,7 @@ async function getReport() {
                pi.total_justice::bigint AS justice,
                pi.total_donations::bigint AS donations,
                pi.max_influence_score::int AS influence
-        FROM mv_person_influence pi
+        FROM public.mv_person_influence pi
         JOIN cluster_directors cd ON LOWER(cd.pname) = LOWER(pi.person_name)
         ORDER BY pi.max_influence_score DESC NULLS LAST
         LIMIT 20
