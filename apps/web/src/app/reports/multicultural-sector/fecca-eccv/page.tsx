@@ -37,6 +37,34 @@ type AisYearRow = {
   vols: number | null;
 };
 
+type AisFinancialsRow = {
+  abn: string;
+  ais_year: number;
+  // revenue
+  total_revenue: number | null;
+  govt: number | null;
+  donations: number | null;
+  fees: number | null;
+  investments: number | null;
+  other_revenue: number | null;
+  // expenses
+  total_expenses: number | null;
+  employee_expenses: number | null;
+  grants_made_au: number | null;
+  grants_made_intl: number | null;
+  other_expenses: number | null;
+  surplus: number | null;
+  // staff
+  staff_ft: number | null;
+  staff_pt: number | null;
+  staff_casual: number | null;
+  staff_fte: number | null;
+  staff_vols: number | null;
+  // governance
+  num_kmp: number | null;
+  total_paid_kmp: number | null;
+};
+
 type ContractRow = {
   buyer_name: string;
   title: string | null;
@@ -120,7 +148,7 @@ function pct(n: number | null | undefined): string {
 async function getReport() {
   const supabase = getLiveReportSupabase();
 
-  const [anchors, aisYears, fecca_contracts, eccv_contracts, directorsAll, portfolios, annualReports, vicGrantsRaw, siblingGrantsRaw, powerRows] = await Promise.all([
+  const [anchors, aisYears, fecca_contracts, eccv_contracts, directorsAll, portfolios, annualReports, vicGrantsRaw, siblingGrantsRaw, powerRows, aisLatest] = await Promise.all([
     safe(supabase.rpc('exec_sql', {
       query: `
         SELECT e.gs_id, e.canonical_name, e.abn, e.state,
@@ -303,6 +331,34 @@ async function getReport() {
         WHERE abn IN ('${FECCA_ABN}','${ECCV_ABN}')
       `,
     })) as Promise<PowerRow[] | null>,
+
+    safe(supabase.rpc('exec_sql', {
+      query: `
+        SELECT DISTINCT ON (abn)
+               abn, ais_year::int,
+               total_revenue::bigint, revenue_from_government::bigint AS govt,
+               donations_and_bequests::bigint AS donations,
+               revenue_from_goods_services::bigint AS fees,
+               revenue_from_investments::bigint AS investments,
+               (COALESCE(all_other_revenue,0) + COALESCE(other_income,0))::bigint AS other_revenue,
+               total_expenses::bigint, employee_expenses::bigint,
+               grants_donations_au::bigint AS grants_made_au,
+               grants_donations_intl::bigint AS grants_made_intl,
+               all_other_expenses::bigint AS other_expenses,
+               net_surplus_deficit::bigint AS surplus,
+               staff_full_time::int AS staff_ft,
+               staff_part_time::int AS staff_pt,
+               staff_casual::int AS staff_casual,
+               staff_fte::numeric(10,1) AS staff_fte,
+               staff_volunteers::int AS staff_vols,
+               num_key_management_personnel::int AS num_kmp,
+               total_paid_key_management::bigint AS total_paid_kmp
+        FROM public.acnc_ais
+        WHERE abn IN ('${FECCA_ABN}','${ECCV_ABN}')
+          AND total_expenses IS NOT NULL
+        ORDER BY abn, ais_year DESC
+      `,
+    })) as Promise<AisFinancialsRow[] | null>,
   ]);
 
   const fecca = (anchors ?? []).find(a => a.abn === FECCA_ABN) || null;
@@ -329,6 +385,7 @@ async function getReport() {
     vicGrants: vicGrantsRaw ?? [],
     siblingGrants: siblingGrantsRaw ?? [],
     power: powerRows ?? [],
+    aisLatest: aisLatest ?? [],
   };
 }
 
@@ -382,6 +439,112 @@ function AnchorCard({ a, label }: { a: AnchorRow | null; label: string }) {
   );
 }
 
+function StackedBar({ label, total, segments }: { label: string; total: number | null; segments: Array<{ key: string; value: number | null; color: string; label: string }> }) {
+  const t = Math.max(total || 0, 1);
+  return (
+    <div>
+      <div className="flex justify-between text-xs font-mono mb-1">
+        <span className="font-black uppercase tracking-widest text-bauhaus-black">{label}</span>
+        <span className="text-bauhaus-muted">{money(total)}</span>
+      </div>
+      <div className="relative h-7 bg-bauhaus-canvas border-2 border-bauhaus-black flex">
+        {segments.map(s => {
+          const v = s.value || 0;
+          if (v <= 0) return null;
+          const pctW = (v / t) * 100;
+          return <div key={s.key} className={`${s.color} h-full`} style={{ width: `${pctW}%` }} title={`${s.label}: ${money(v)}`} />;
+        })}
+      </div>
+      <div className="flex flex-wrap gap-3 mt-1 text-[10px] font-mono text-bauhaus-muted">
+        {segments.filter(s => (s.value || 0) > 0).map(s => (
+          <span key={s.key}>
+            <span className={`inline-block w-2 h-2 ${s.color} mr-1 align-middle`} />
+            {s.label} {money(s.value)} ({total ? (((s.value || 0) / total) * 100).toFixed(0) : 0}%)
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MoneyAndStaffCard({ row, label }: { row: AisFinancialsRow | null; label: string }) {
+  if (!row) {
+    return (
+      <div className="border-4 border-bauhaus-black p-5 bg-white">
+        <div className="text-xs font-black uppercase tracking-widest text-bauhaus-yellow mb-1">{label}</div>
+        <p className="text-bauhaus-muted font-medium text-sm mt-3">No detailed AIS financials yet (revenue-only row from ACNC Dynamics).</p>
+      </div>
+    );
+  }
+  const empPct = row.total_expenses ? ((row.employee_expenses ?? 0) / row.total_expenses) * 100 : 0;
+  const surplusColor = (row.surplus ?? 0) >= 0 ? 'text-bauhaus-blue' : 'text-bauhaus-red';
+  return (
+    <div className="border-4 border-bauhaus-black p-5 bg-white">
+      <div className="flex justify-between items-start mb-4">
+        <div>
+          <div className="text-xs font-black uppercase tracking-widest text-bauhaus-yellow">{label}</div>
+          <div className="text-2xl font-black text-bauhaus-black tracking-tight">FY {row.ais_year}</div>
+        </div>
+        <div className="text-right">
+          <div className="text-xs uppercase tracking-widest text-bauhaus-muted font-black">Surplus</div>
+          <div className={`font-black text-2xl ${surplusColor} tabular-nums`}>{money(row.surplus)}</div>
+        </div>
+      </div>
+
+      <div className="space-y-4 mb-4">
+        <StackedBar
+          label="Revenue In"
+          total={row.total_revenue}
+          segments={[
+            { key: 'govt', value: row.govt, color: 'bg-bauhaus-red', label: 'Govt grants' },
+            { key: 'fees', value: row.fees, color: 'bg-bauhaus-blue', label: 'Fees / services' },
+            { key: 'don', value: row.donations, color: 'bg-bauhaus-yellow', label: 'Donations' },
+            { key: 'inv', value: row.investments, color: 'bg-bauhaus-black', label: 'Investments' },
+            { key: 'oth', value: row.other_revenue, color: 'bg-bauhaus-muted', label: 'Other' },
+          ]}
+        />
+        <StackedBar
+          label="Spend Out"
+          total={row.total_expenses}
+          segments={[
+            { key: 'emp', value: row.employee_expenses, color: 'bg-bauhaus-red', label: 'Employees' },
+            { key: 'grants_au', value: row.grants_made_au, color: 'bg-bauhaus-blue', label: 'Grants (AU)' },
+            { key: 'grants_int', value: row.grants_made_intl, color: 'bg-bauhaus-yellow', label: 'Grants (Intl)' },
+            { key: 'other', value: row.other_expenses, color: 'bg-bauhaus-black', label: 'Other' },
+          ]}
+        />
+      </div>
+
+      <div className={`text-sm font-medium border-l-4 pl-3 py-1 mb-4 ${empPct >= 70 ? 'border-bauhaus-red text-bauhaus-black' : 'border-bauhaus-yellow text-bauhaus-muted'}`}>
+        {empPct.toFixed(0)}% of spend goes to staff. {(row.grants_made_au ?? 0) + (row.grants_made_intl ?? 0) === 0 ? 'No grants redistributed — this is a service / advocacy body, not a re-granter.' : `${money((row.grants_made_au ?? 0) + (row.grants_made_intl ?? 0))} redistributed as grants.`}
+      </div>
+
+      <div>
+        <div className="text-xs uppercase tracking-widest font-black text-bauhaus-muted mb-2">Workforce</div>
+        <div className="grid grid-cols-5 gap-2 text-center">
+          {[
+            { label: 'FT', val: row.staff_ft },
+            { label: 'PT', val: row.staff_pt },
+            { label: 'Casual', val: row.staff_casual },
+            { label: 'FTE', val: row.staff_fte },
+            { label: 'Volunteers', val: row.staff_vols },
+          ].map(s => (
+            <div key={s.label} className="border-2 border-bauhaus-black p-2 bg-bauhaus-canvas">
+              <div className="text-[10px] uppercase tracking-widest font-black text-bauhaus-muted">{s.label}</div>
+              <div className="text-lg font-black text-bauhaus-black tabular-nums">{s.val ?? '—'}</div>
+            </div>
+          ))}
+        </div>
+        {(row.num_kmp != null && row.num_kmp > 0) || (row.total_paid_kmp ?? 0) > 0 ? (
+          <div className="mt-3 text-xs font-mono text-bauhaus-muted">
+            Key Management: {row.num_kmp ?? 0} people · {money(row.total_paid_kmp)} total comp
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export default async function FeccaEccvPage() {
   const r = await getReport();
 
@@ -390,6 +553,8 @@ export default async function FeccaEccvPage() {
   const feccaPeak = Math.max(...r.fecca_ais.map(a => a.total || 0), 1);
   const feccaPower = r.power.find(p => p.abn === FECCA_ABN) || null;
   const eccvPower = r.power.find(p => p.abn === ECCV_ABN) || null;
+  const feccaFin = r.aisLatest.find(a => a.abn === FECCA_ABN) || null;
+  const eccvFin = r.aisLatest.find(a => a.abn === ECCV_ABN) || null;
 
   return (
     <div>
@@ -482,6 +647,19 @@ export default async function FeccaEccvPage() {
             <span><span className="inline-block w-3 h-3 bg-bauhaus-red mr-2 align-middle" /> Government revenue</span>
             <span><span className="inline-block w-3 h-3 bg-bauhaus-blue mr-2 align-middle" /> Fees + donations</span>
           </div>
+        </div>
+      </section>
+
+      {/* SECTION 1b — Where the Money Goes (revenue + expense + staff) */}
+      <section className="mb-16">
+        <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§1b</div>
+        <h2 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">Where the Money Goes — Spend &amp; Staff</h2>
+        <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
+          Latest ACNC AIS for each anchor, decomposed. The revenue stack shows where the money comes from; the spend stack shows where it ends up. Staff breakdown beneath. ECCV pays out 65–85% as wages and redistributes nothing — they&apos;re a service / advocacy body, not a re-granter.
+        </p>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <MoneyAndStaffCard row={feccaFin} label="FECCA — National Peak" />
+          <MoneyAndStaffCard row={eccvFin} label="ECCV — VIC State Council" />
         </div>
       </section>
 
