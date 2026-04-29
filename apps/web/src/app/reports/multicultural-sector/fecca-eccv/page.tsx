@@ -101,7 +101,7 @@ function pct(n: number | null | undefined): string {
 async function getReport() {
   const supabase = getLiveReportSupabase();
 
-  const [anchors, aisYears, fecca_contracts, eccv_contracts, directorsAll, portfolios, annualReports, vicGrantsRaw] = await Promise.all([
+  const [anchors, aisYears, fecca_contracts, eccv_contracts, directorsAll, portfolios, annualReports, vicGrantsRaw, siblingGrantsRaw] = await Promise.all([
     safe(supabase.rpc('exec_sql', {
       query: `
         SELECT e.gs_id, e.canonical_name, e.abn, e.state,
@@ -252,6 +252,18 @@ async function getReport() {
       recipient_abn: string | null;
       recipient_gs_id: string | null;
     }> | null>,
+    safe(supabase.rpc('exec_sql', {
+      query: `
+        SELECT vga.recipient_name, vga.program_name, vga.amount_aud::bigint AS amount,
+               vga.financial_year, vga.source AS dept_source, vga.source_url,
+               t.canonical_name AS recipient_canonical, t.gs_id AS recipient_gs_id
+        FROM public.vic_grants_awarded vga
+        JOIN public.gs_entities t ON t.id = vga.gs_entity_id
+        WHERE t.abn IN ('37282486762','29252806279','50192038354','55010151256','91163351869','78596425974','64758439692','62711639794','18134375892','89278892329','79445438274','85023648955','86110721406','77674760578','26186698348','88244322400','57738423800','57894189429','66291586945','32390500229')
+        ORDER BY vga.amount_aud DESC NULLS LAST
+        LIMIT 30
+      `,
+    })) as Promise<Array<{ recipient_name: string; program_name: string | null; amount: number; financial_year: string | null; dept_source: string; source_url: string | null; recipient_canonical: string | null; recipient_gs_id: string | null }> | null>,
   ]);
 
   const fecca = (anchors ?? []).find(a => a.abn === FECCA_ABN) || null;
@@ -276,6 +288,7 @@ async function getReport() {
     portfolios: portfolios ?? [],
     annualReports: annualReports ?? [],
     vicGrants: vicGrantsRaw ?? [],
+    siblingGrants: siblingGrantsRaw ?? [],
   };
 }
 
@@ -488,7 +501,7 @@ export default async function FeccaEccvPage() {
                       <td className="p-3 text-xs leading-relaxed">
                         {otherOrgs.length ? otherOrgs.join(' · ') : <span className="text-bauhaus-muted">FECCA only (in dataset)</span>}
                       </td>
-                      <td className="p-3 text-right font-mono">{port?.total_procurement ? money(port.total_procurement) : '—'}</td>
+                      <td className="p-3 text-right font-mono">{port && (port.board_count ?? 1) > 1 && port.total_procurement ? money(port.total_procurement) : '—'}</td>
                     </tr>
                   );
                 })}
@@ -525,7 +538,7 @@ export default async function FeccaEccvPage() {
                 <tr>
                   <th className="text-left p-3 font-black uppercase tracking-widest text-xs">Director</th>
                   <th className="text-left p-3 font-black uppercase tracking-widest text-xs whitespace-nowrap">Role</th>
-                  <th className="text-right p-3 font-black uppercase tracking-widest text-xs whitespace-nowrap">Other Boards</th>
+                  <th className="text-right p-3 font-black uppercase tracking-widest text-xs whitespace-nowrap">Total Boards</th>
                   <th className="text-left p-3 font-black uppercase tracking-widest text-xs">Network Spans</th>
                   <th className="text-right p-3 font-black uppercase tracking-widest text-xs whitespace-nowrap">Procurement $ in Network</th>
                 </tr>
@@ -641,7 +654,6 @@ export default async function FeccaEccvPage() {
 
                   <div className="flex gap-4 mt-4 pt-3 border-t-2 border-bauhaus-black text-xs font-mono text-bauhaus-muted">
                     <span>{rep.extracted_text_chars ? `${(rep.extracted_text_chars / 1000).toFixed(1)}K chars read` : '—'}</span>
-                    {rep.has_quantitative_outcomes && <span className="text-bauhaus-blue font-black">QUANTITATIVE</span>}
                     {rep.has_external_evaluation && <span className="text-bauhaus-red font-black">EVALUATED</span>}
                     {rep.source_url && (
                       <a href={rep.source_url} target="_blank" rel="noopener" className="ml-auto text-bauhaus-blue hover:underline font-black">
@@ -709,6 +721,53 @@ export default async function FeccaEccvPage() {
         )}
       </section>
 
+      {/* SECTION 7 — Cluster Siblings */}
+      <section className="mb-16">
+        <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§7</div>
+        <h2 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">Cluster Siblings — Other VIC Ethnic Communities Councils Funded</h2>
+        <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
+          Grants from VIC departments to the 20 sister organisations across the federation. ECCV is the Victoria peak; these are the regional + cause-specific councils.
+        </p>
+
+        {r.siblingGrants.length === 0 ? (
+          <div className="border-4 border-bauhaus-yellow p-6 bg-white">
+            <p className="text-bauhaus-black font-medium">(no sibling grants ingested yet)</p>
+          </div>
+        ) : (
+          <div className="border-4 border-bauhaus-black overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-bauhaus-black text-white">
+                <tr>
+                  <th className="text-left p-3 font-black uppercase tracking-widest text-xs">Recipient</th>
+                  <th className="text-left p-3 font-black uppercase tracking-widest text-xs">Program</th>
+                  <th className="text-right p-3 font-black uppercase tracking-widest text-xs">Amount</th>
+                  <th className="text-left p-3 font-black uppercase tracking-widest text-xs whitespace-nowrap">FY</th>
+                  <th className="text-left p-3 font-black uppercase tracking-widest text-xs whitespace-nowrap">Dept</th>
+                </tr>
+              </thead>
+              <tbody>
+                {r.siblingGrants.map((g, i) => (
+                  <tr key={`${g.recipient_name}-${g.amount}-${i}`} className={i % 2 === 0 ? 'bg-white' : 'bg-bauhaus-canvas'}>
+                    <td className="p-3 font-black text-bauhaus-black">
+                      {g.recipient_gs_id ? (
+                        <Link href={`/org/${g.recipient_gs_id}`} className="hover:underline">{g.recipient_name}</Link>
+                      ) : g.recipient_name}
+                      {g.recipient_canonical && g.recipient_canonical !== g.recipient_name && (
+                        <span className="block text-xs text-bauhaus-muted font-mono">→ {g.recipient_canonical}</span>
+                      )}
+                    </td>
+                    <td className="p-3 text-xs">{g.program_name ?? '—'}</td>
+                    <td className="p-3 text-right font-mono font-black">{money(g.amount)}</td>
+                    <td className="p-3 text-xs font-mono whitespace-nowrap">{g.financial_year ?? '—'}</td>
+                    <td className="p-3 text-xs uppercase tracking-widest font-black text-bauhaus-blue">{g.dept_source}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
       {/* Action panel — what's done */}
       <section className="mb-12 border-4 border-bauhaus-black p-8 bg-bauhaus-yellow">
         <h2 className="text-xl font-black text-bauhaus-black uppercase tracking-tight mb-4">What&apos;s Done · What&apos;s Next</h2>
@@ -726,6 +785,10 @@ export default async function FeccaEccvPage() {
           <li>• Add NSW + QLD: same pattern, different department configs in <code className="bg-bauhaus-black text-bauhaus-yellow px-1 text-xs">DEPT_CONFIG</code>.</li>
           <li>• Fuzzy-name link the unlinked 79% of grants (apostrophes, &ldquo;Inc&rdquo;/&ldquo;Ltd&rdquo; suffixes) via a name-canonicaliser pass.</li>
         </ul>
+      </section>
+
+      <section className="text-center mb-8">
+        <div className="text-xs font-mono text-bauhaus-muted">Last updated: {new Date().toISOString().slice(0, 10)} · CivicGraph</div>
       </section>
     </div>
   );
