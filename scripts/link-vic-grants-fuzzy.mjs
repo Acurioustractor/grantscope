@@ -30,16 +30,41 @@ const flag = name => process.argv.includes(`--${name}`);
 const APPLY = flag('apply');
 const THRESHOLD = Number(arg('threshold') || 0.85);
 
-// Postgres-side normalize expression (kept identical for both tables)
+// Postgres-side normalize expression (kept identical for both tables).
+// Pipeline:
+//   1. lowercase
+//   2. normalize unicode quotes/dashes to ASCII (smart quotes → '', em/en dashes → space)
+//   3. strip punctuation [' . " & , ( ) / : ;] entirely
+//   4. collapse hyphens to spaces ("hillview-bunyip" → "hillview bunyip")
+//   5. strip leading "the " / "the trustee for " / "trustee for the " / "trustee for "
+//   6. strip trailing org suffixes (Inc, Ltd, Pty, Aboriginal Corporation, RNTBC, Trust, Trustee, "trading as ...", "ABN nnnnnnnnnnn")
+//   7. collapse whitespace runs and trim
 const NORM_SQL = `
-  regexp_replace(
+  trim(
     regexp_replace(
-      lower(name_in),
-      '[''.\"&,()/]', '', 'g'
-    ),
-    '\\s+(incorporated|inc|ltd|limited|pty( ltd)?|the|aboriginal corporation|rntbc|trust|trustee for the |trading as.*|a\\.?b\\.?n\\.? \\d+)\\s*$',
-    '',
-    'gi'
+      regexp_replace(
+        regexp_replace(
+          regexp_replace(
+            regexp_replace(
+              regexp_replace(
+                regexp_replace(
+                  lower(name_in),
+                  '[' || chr(8216) || chr(8217) || chr(8220) || chr(8221) || ']', '', 'g'  -- smart quotes
+                ),
+                '[' || chr(8211) || chr(8212) || ']', ' ', 'g'  -- en/em dashes → space
+              ),
+              '[''."&,();:/]', '', 'g'
+            ),
+            '-', ' ', 'g'
+          ),
+          '^\\s*(?:the\\s+)?(?:trustee\\s+for\\s+(?:the\\s+)?)?', '', 'i'
+        ),
+        '\\s+(?:incorporated|inc|ltd|limited|pty(?:\\s+ltd)?|the|aboriginal corporation|rntbc|trust|trustee|trading as.*|a\\.?b\\.?n\\.?\\s+\\d+)\\s*$',
+        '',
+        'gi'
+      ),
+      '\\s+', ' ', 'g'
+    )
   )
 `;
 
