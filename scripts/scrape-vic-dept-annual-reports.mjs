@@ -30,7 +30,10 @@ const FIRECRAWL_KEY = process.env.FIRECRAWL_API_KEY;
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 if (!SUPABASE_URL || !SUPABASE_KEY) { console.error('Missing SUPABASE creds'); process.exit(1); }
 if (!FIRECRAWL_KEY) { console.error('Missing FIRECRAWL_API_KEY'); process.exit(1); }
-if (!ANTHROPIC_KEY) { console.error('Missing ANTHROPIC_API_KEY'); process.exit(1); }
+if (!ANTHROPIC_KEY && !process.env.MINIMAX_API_KEY) {
+  console.error('Missing ANTHROPIC_API_KEY (or MINIMAX_API_KEY for fallback)');
+  process.exit(1);
+}
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const arg = name => process.argv.find(a => a.startsWith(`--${name}=`))?.split('=')[1] || null;
@@ -228,7 +231,13 @@ Rules:
 - If the chunk has no grants table, return an empty array.
 - Be exact — do not invent recipients. If a row's recipient or amount is ambiguous, skip it.`;
 
-async function extractGrantsFromChunk(chunk, programContext = '') {
+const MINIMAX_SYSTEM = `${SYSTEM_PROMPT}
+
+Return ONLY valid JSON, no prose, no markdown code fences. Schema:
+{"grants": [{"recipient_name": string, "program_name": string, "amount_aud": number, "recipient_abn": string, "region": string}]}
+Use empty string for missing program_name/recipient_abn/region. Use empty array if no grants found.`;
+
+async function extractGrantsViaAnthropic(chunk, programContext = '') {
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -249,7 +258,10 @@ async function extractGrantsFromChunk(chunk, programContext = '') {
   });
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`Anthropic ${res.status}: ${body.slice(0, 300)}`);
+    const err = new Error(`Anthropic ${res.status}: ${body.slice(0, 300)}`);
+    err.status = res.status;
+    err.creditExhausted = res.status === 400 && /credit balance/i.test(body);
+    throw err;
   }
   const data = await res.json();
   const toolUse = data.content?.find(c => c.type === 'tool_use');
@@ -261,6 +273,48 @@ async function extractGrantsFromChunk(chunk, programContext = '') {
     console.log(`      ⚠ truncated at max_tokens — partial grants array`);
   }
   return toolUse.input?.grants || [];
+}
+
+async function extractGrantsViaMiniMax(chunk, programContext = '') {
+  const { callMiniMaxJSON } = await import('./lib/minimax.mjs');
+  const userPrompt = `Extract grants from this Victorian government department annual report section. Department: ${cfg.name}.${programContext ? `\nSection heading context: ${programContext}` : ''}\n\n<chunk>\n${chunk}\n</chunk>`;
+  try {
+    const { json } = await callMiniMaxJSON({ system: MINIMAX_SYSTEM, user: userPrompt, max_tokens: 12000 });
+    const grants = Array.isArray(json) ? json : (json.grants || []);
+    return grants.map(g => ({
+      recipient_name: g.recipient_name || '',
+      program_name: g.program_name || '',
+      amount_aud: typeof g.amount_aud === 'number' ? g.amount_aud : Number(g.amount_aud) || 0,
+      recipient_abn: g.recipient_abn || '',
+      region: g.region || '',
+    }));
+  } catch (err) {
+    console.log(`      MiniMax error: ${err.message.slice(0, 200)}`);
+    return [];
+  }
+}
+
+const PROVIDER = process.env.LLM_PROVIDER || 'auto'; // 'auto' | 'anthropic' | 'minimax'
+let anthropicDead = false;
+
+async function extractGrantsFromChunk(chunk, programContext = '') {
+  if (PROVIDER === 'minimax' || anthropicDead) {
+    return extractGrantsViaMiniMax(chunk, programContext);
+  }
+  if (PROVIDER === 'anthropic') {
+    return extractGrantsViaAnthropic(chunk, programContext);
+  }
+  // auto: try Anthropic, fall back to MiniMax on credit exhaustion
+  try {
+    return await extractGrantsViaAnthropic(chunk, programContext);
+  } catch (err) {
+    if (err.creditExhausted) {
+      console.log(`      ⚠ Anthropic credit exhausted — falling back to MiniMax for remainder of run`);
+      anthropicDead = true;
+      return extractGrantsViaMiniMax(chunk, programContext);
+    }
+    throw err;
+  }
 }
 
 // ── Main pipeline ──────────────────────────────────────────────────────────

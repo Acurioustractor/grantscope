@@ -48,3 +48,40 @@ export async function callMiniMax({ messages, model = 'MiniMax-M2.7', max_tokens
     usage: data.usage || {},
   };
 }
+
+/**
+ * Call MiniMax and parse the response as JSON. Designed for structured
+ * extraction tasks where Anthropic tool-use was the original pattern.
+ *
+ * Strips <think> blocks AND markdown code fences before parsing. If the model
+ * wraps content in ```json ... ``` it'll be unwrapped automatically.
+ *
+ * @param {Object} options
+ * @param {string} options.system - System prompt (must instruct "return ONLY valid JSON")
+ * @param {string} options.user   - User prompt (the chunk to extract from)
+ * @param {string} [options.model='MiniMax-M2.7']
+ * @param {number} [options.max_tokens=8000]
+ * @param {number} [options.temperature=0.1]
+ * @returns {Promise<{ json: any, raw: string, usage: Object }>}
+ */
+export async function callMiniMaxJSON({ system, user, model = 'MiniMax-M2.7', max_tokens = 8000, temperature = 0.1 }) {
+  const { text, usage } = await callMiniMax({
+    messages: [
+      { role: 'system', content: system },
+      { role: 'user', content: user },
+    ],
+    model,
+    max_tokens,
+    temperature,
+  });
+  // Strip code fences if present
+  const cleaned = text.replace(/^```(?:json)?\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+  let json;
+  try {
+    json = JSON.parse(cleaned);
+  } catch (err) {
+    throw new Error(`MiniMax returned non-JSON: ${err.message} | preview: ${cleaned.slice(0, 200)}`);
+  }
+  return { json, raw: text, usage };
+}
+

@@ -415,6 +415,14 @@ export const AGENTS = {
     timeoutMs: 1_200_000,
     dependencies: [],
   },
+  'enrich-annual-reports-llm': {
+    command: ['node', '--env-file=.env', 'scripts/enrich-annual-reports-llm.mjs', '--apply'],
+    displayName: 'Annual Report LLM Enricher',
+    category: 'enrichment',
+    defaultPriority: 5,
+    timeoutMs: 1_800_000,
+    dependencies: [],
+  },
 
   // ── Enrichment ──────────────────────────────────────────────────────────────
   'enrich-grants-free': {
