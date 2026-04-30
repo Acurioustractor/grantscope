@@ -26,6 +26,93 @@ function pct(n: number | null | undefined, digits: number = 0): string {
   return `${Number(n).toFixed(digits)}%`;
 }
 
+/* ─── Curated reference data ─────────────────────────────────────────────
+ *
+ * These items are NOT in the structured dataset yet — they are publicly-
+ * announced QLD government infrastructure and policy moves with citation
+ * URLs. They live as a constant here so the report can surface them with
+ * sources while we build the data-ingestion pipeline. Each entry MUST cite
+ * a verifiable public source.
+ */
+type PlannedFacility = {
+  name: string;
+  status: 'announced' | 'under-construction' | 'recently-opened';
+  capacity: string;
+  location: string;
+  estimatedCost: string | null;
+  source: { label: string; href: string };
+  notes: string;
+};
+
+const QLD_PLANNED_FACILITIES: PlannedFacility[] = [
+  {
+    name: 'Wacol Youth Remand Centre',
+    status: 'recently-opened',
+    capacity: '76 beds (interim remand-only facility)',
+    location: 'Wacol, Brisbane',
+    estimatedCost: '~$250M reported',
+    source: { label: 'QLD Government — Department of Youth Justice news', href: 'https://www.cyjma.qld.gov.au/' },
+    notes: 'Operates as a remand-only facility while the Wacol-area expansion and Woodford facility are built. Reduces watchhouse overflow but adds detention capacity rather than community alternatives.',
+  },
+  {
+    name: 'Woodford Youth Detention Centre',
+    status: 'announced',
+    capacity: 'planned ~80 beds',
+    location: 'Woodford (north of Brisbane)',
+    estimatedCost: 'multi-hundred-million reported',
+    source: { label: 'QLD Cabinet announcements', href: 'https://statements.qld.gov.au/' },
+    notes: 'Greenfield centre announced as part of the broader detention-capacity expansion program. Construction timeline subject to change.',
+  },
+  {
+    name: 'Cairns Youth Detention Centre',
+    status: 'announced',
+    capacity: 'planned (capacity TBD)',
+    location: 'Far North QLD',
+    estimatedCost: 'TBD',
+    source: { label: 'QLD Cabinet announcements', href: 'https://statements.qld.gov.au/' },
+    notes: 'A Far North QLD detention centre has been canvassed in announcements; status and timeline are being tracked publicly.',
+  },
+];
+
+type PolicySignal = {
+  date: string;
+  title: string;
+  thrust: 'punitive' | 'preventive' | 'mixed';
+  summary: string;
+  source: { label: string; href: string };
+};
+
+const QLD_POLICY_SIGNALS: PolicySignal[] = [
+  {
+    date: '2023',
+    title: 'Path to Treaty Act 2023 (subsequently repealed 2024)',
+    thrust: 'mixed',
+    summary: 'The Path to Treaty Act established an Interim Truth and Treaty Body. It was repealed in late 2024 as part of the new government\'s legislative agenda — reshaping the policy environment around First Nations governance and self-determination.',
+    source: { label: 'Queensland Legislation', href: 'https://www.legislation.qld.gov.au/' },
+  },
+  {
+    date: '2024',
+    title: 'Making Queensland Safer Laws — "adult crime, adult time"',
+    thrust: 'punitive',
+    summary: 'A package of amendments increasing penalties for serious offences committed by children, including life imprisonment for some categories — overriding the Childrens Court Act\'s standard sentencing principles. UN bodies and human-rights peaks have flagged international-law concerns.',
+    source: { label: 'Queensland Legislation', href: 'https://www.legislation.qld.gov.au/' },
+  },
+  {
+    date: '2024',
+    title: 'Detention-capacity expansion announcements',
+    thrust: 'punitive',
+    summary: 'Multi-facility expansion announced (Wacol remand, Woodford new build, Cairns proposed). Capital expenditure scaled to multi-hundred-millions per facility. The structural choice has been to expand custody before community.',
+    source: { label: 'QLD Cabinet announcements', href: 'https://statements.qld.gov.au/' },
+  },
+  {
+    date: '2024',
+    title: 'Bail-and-remand law changes',
+    thrust: 'punitive',
+    summary: 'Tighter bail provisions for children charged with prescribed offences. Practical effect: more children on remand for longer; increased pressure on watchhouse and detention bed availability.',
+    source: { label: 'Queensland Legislation', href: 'https://www.legislation.qld.gov.au/' },
+  },
+];
+
 // ACNC legal names are often "THE TRUSTEE FOR X TRUST" or all-caps registered company names,
 // religious legal-entity wrappers ("The Corporation of the Trustees of the X"), etc.
 // Convert to a friendlier display form for the report.
@@ -347,6 +434,23 @@ export default async function QldYjSectorPage() {
                 ))}
               </div>
             )}
+            <div className="border-t-2 border-bauhaus-black pt-3 mt-4">
+              <h4 className="text-sm font-black uppercase tracking-widest text-bauhaus-red mb-3">Planned + recently-opened (curated)</h4>
+              <div className="space-y-3 text-xs">
+                {QLD_PLANNED_FACILITIES.map((f, i) => (
+                  <div key={i} className="border-l-4 border-bauhaus-red pl-3">
+                    <div className="flex justify-between items-baseline mb-1">
+                      <div className="font-black text-bauhaus-black">{f.name}</div>
+                      <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 ${f.status === 'recently-opened' ? 'bg-bauhaus-red text-white' : f.status === 'under-construction' ? 'bg-bauhaus-yellow text-bauhaus-black' : 'bg-bauhaus-canvas text-bauhaus-black border border-bauhaus-black'}`}>{f.status}</span>
+                    </div>
+                    <div className="text-bauhaus-muted font-mono mb-1">{f.location} · {f.capacity}{f.estimatedCost ? ` · ${f.estimatedCost}` : ''}</div>
+                    <p className="text-bauhaus-black leading-relaxed">{f.notes}</p>
+                    <a href={f.source.href} target="_blank" rel="noopener" className="text-bauhaus-blue text-[10px] font-mono hover:underline">{f.source.label} ↗</a>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[10px] text-bauhaus-muted font-mono mt-3 pt-2 border-t border-bauhaus-canvas">Curated from public QLD-government announcements. Not yet ingested into the structured detention dataset; we&apos;re building the pipeline.</p>
+            </div>
           </div>
           <div className="border-4 border-bauhaus-black p-5 bg-white">
             <h4 className="text-sm font-black uppercase tracking-widest text-bauhaus-black mb-3">Children in watchhouses · 60-day trend</h4>
@@ -1063,6 +1167,63 @@ export default async function QldYjSectorPage() {
       </section>
 
       {/* §22 CTG TARGET 11 — covered in §3 — this is the closing prescriptive block instead */}
+
+      {/* ════ VOLUME 7 — POLICY & CAPACITY SIGNALS (curated) ════ */}
+      <div className="mb-10 mt-16 border-l-8 border-bauhaus-red pl-5">
+        <div className="text-xs font-black uppercase tracking-widest text-bauhaus-red">VOLUME 7 · CURATED</div>
+        <h2 className="text-3xl font-black text-bauhaus-black uppercase tracking-tight">Policy &amp; capacity signals</h2>
+        <p className="text-bauhaus-muted font-medium max-w-3xl">Recent QLD legislative and capacity-expansion moves shaping the youth-justice landscape. Curated from public announcements; we&apos;re building structured ingestion of QLD parliamentary and cabinet feeds.</p>
+      </div>
+
+      <section className="mb-16">
+        <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§23 · CURATED</div>
+        <h3 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">Direction of travel — recent QLD policy moves</h3>
+        <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
+          What&apos;s shifted in QLD youth-justice policy and capital over the past 24 months. Each entry tagged by thrust: <span className="text-bauhaus-red font-black">punitive</span> (custody-expanding), <span className="text-bauhaus-blue font-black">preventive</span> (community-investing), <span className="text-bauhaus-yellow font-black">mixed</span> (both / contested). Read for the structural direction the system is moving in.
+        </p>
+        <div className="grid md:grid-cols-2 gap-4">
+          {QLD_POLICY_SIGNALS.map((s, i) => {
+            const tone =
+              s.thrust === 'punitive' ? { border: 'border-bauhaus-red', tag: 'bg-bauhaus-red text-white' } :
+              s.thrust === 'preventive' ? { border: 'border-bauhaus-blue', tag: 'bg-bauhaus-blue text-white' } :
+              { border: 'border-bauhaus-yellow', tag: 'bg-bauhaus-yellow text-bauhaus-black' };
+            return (
+              <div key={i} className={`border-4 ${tone.border} p-5 bg-white`}>
+                <div className="flex justify-between items-baseline mb-2 gap-3">
+                  <div className="text-xs font-mono font-black text-bauhaus-muted">{s.date}</div>
+                  <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 ${tone.tag}`}>{s.thrust}</span>
+                </div>
+                <h4 className="text-base font-black text-bauhaus-black uppercase tracking-tight leading-tight mb-2">{s.title}</h4>
+                <p className="text-xs text-bauhaus-black leading-relaxed mb-3">{s.summary}</p>
+                <a href={s.source.href} target="_blank" rel="noopener" className="text-bauhaus-blue text-[10px] font-mono hover:underline">{s.source.label} ↗</a>
+              </div>
+            );
+          })}
+        </div>
+        <p className="text-xs text-bauhaus-muted font-mono mt-4">Source: curated from publicly-available QLD legislation and Cabinet announcements. Not yet structurally ingested — we are building a parliamentary-record agent. Help us prioritise: <Link href="/feedback?subject=qld-yj-policy-tracking" className="text-bauhaus-blue font-black hover:underline">tell us what to track</Link>.</p>
+      </section>
+
+      <section className="mb-16">
+        <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§24 · CURATED</div>
+        <h3 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">The shape of the choice</h3>
+        <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
+          Each new bed announcement is a structural commitment for 30+ years. Each new piece of bail-tightening legislation lengthens the average remand period. Each repealed prevention framework removes a counter-balancing institution. The cumulative direction of travel — combining the dataset numbers above (§3, §8, §10) with the policy moves in §23 — is unambiguous: <span className="font-black text-bauhaus-red">QLD is structurally expanding custody capacity faster than community capacity</span>. The same dollars could have funded the operational scale-up of every &ldquo;promising&rdquo; ALMA intervention listed in §16, with evaluation budget left over.
+        </p>
+        <div className="border-4 border-bauhaus-black p-6 bg-bauhaus-canvas grid sm:grid-cols-3 gap-4 text-sm">
+          <div>
+            <div className="text-xs font-black uppercase tracking-widest text-bauhaus-red mb-1">Capacity direction</div>
+            <p className="text-bauhaus-black leading-relaxed">Expanding. Multiple new facilities announced; Wacol remand opened; existing centres still running near capacity.</p>
+          </div>
+          <div>
+            <div className="text-xs font-black uppercase tracking-widest text-bauhaus-red mb-1">Sentencing direction</div>
+            <p className="text-bauhaus-black leading-relaxed">Hardening. &ldquo;Adult crime, adult time&rdquo; introduces adult sentences for child offences. Bail provisions tightened.</p>
+          </div>
+          <div>
+            <div className="text-xs font-black uppercase tracking-widest text-bauhaus-blue mb-1">Prevention direction</div>
+            <p className="text-bauhaus-black leading-relaxed">Contracting. Path to Treaty repealed. ACCO funding share unchanged at {accoSharePct}%. {money(r.groupConferencing)} for group conferencing, the most-evidence-backed line.</p>
+          </div>
+        </div>
+      </section>
 
       {/* WHAT WOULD SHIFT THIS */}
       <section className="border-4 border-bauhaus-black p-8 bg-white mt-16 mb-10">
