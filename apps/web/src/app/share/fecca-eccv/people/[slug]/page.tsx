@@ -214,12 +214,9 @@ export default async function SharePersonPage({ params }: { params: Promise<{ sl
       <section className="border-4 border-bauhaus-black p-6 bg-bauhaus-yellow mb-10">
         <h2 className="text-xl font-black text-bauhaus-black uppercase tracking-tight mb-2">Want this depth on every director in your sector?</h2>
         <p className="text-bauhaus-black font-medium leading-relaxed text-sm mb-4 max-w-3xl">
-          CivicGraph has profiles like this for thousands of Australian board members. Map an entire sector&apos;s shadow network, surface conflicts, see who&apos;s on whose pipeline. Available via subscription or commissioned mapping engagements.
+          CivicGraph has profiles like this for thousands of Australian board members. Map an entire sector&apos;s shadow network, surface conflicts, see who&apos;s on whose pipeline. Tell us what would be most useful and how you&apos;d use it.
         </p>
-        <div className="flex flex-wrap gap-2">
-          <Link href="/get-a-report?budget=7500&src=share-person" className="inline-block px-4 py-3 text-xs font-black uppercase tracking-widest bg-bauhaus-black text-white border-2 border-bauhaus-black hover:bg-bauhaus-red">Sector Subscription →</Link>
-          <Link href="/pricing" className="inline-block px-4 py-3 text-xs font-black uppercase tracking-widest bg-white text-bauhaus-black border-2 border-bauhaus-black hover:bg-bauhaus-canvas">See pricing</Link>
-        </div>
+        <Link href="/feedback?subject=fecca-eccv" className="inline-block px-5 py-3 text-sm font-black uppercase tracking-widest bg-bauhaus-black text-white border-2 border-bauhaus-black hover:bg-bauhaus-red">★ Send feedback →</Link>
       </section>
     </div>
   );

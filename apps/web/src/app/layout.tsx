@@ -34,6 +34,7 @@ const LAYOUT_AUTH_PREFIXES = [
 const FORCE_PUBLIC_LAYOUT_PREFIXES = [
   '/pricing',
   '/get-a-report',
+  '/feedback',
   '/about',
 ] as const;
 

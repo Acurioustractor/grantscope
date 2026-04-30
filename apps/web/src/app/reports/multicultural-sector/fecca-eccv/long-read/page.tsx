@@ -350,10 +350,7 @@ export default async function FeccaEccvLongRead({ mode = 'full' }: { mode?: 'ful
           <p className="text-bauhaus-black font-medium leading-relaxed text-sm mb-4 max-w-3xl">
             The dashboard view, network graph of every entity in this report, individual organisation profiles, sector-level funding maps, and 5,200+ Victorian state grants are all part of CivicGraph. Available via subscription or as commissioned reports.
           </p>
-          <div className="flex flex-wrap gap-2">
-            <Link href="/get-a-report?free=true&src=share-related" className="inline-block px-4 py-3 text-xs font-black uppercase tracking-widest bg-bauhaus-red text-white border-2 border-bauhaus-black hover:bg-bauhaus-black">★ Apply for First 5 Free →</Link>
-            <Link href="/pricing" className="inline-block px-4 py-3 text-xs font-black uppercase tracking-widest bg-bauhaus-black text-white border-2 border-bauhaus-black hover:bg-bauhaus-red">See pricing</Link>
-          </div>
+          <Link href="/feedback?subject=fecca-eccv" className="inline-block px-5 py-3 text-sm font-black uppercase tracking-widest bg-bauhaus-black text-white border-2 border-bauhaus-black hover:bg-bauhaus-red">★ Send feedback →</Link>
         </div>
       )}
 
@@ -365,17 +362,13 @@ export default async function FeccaEccvLongRead({ mode = 'full' }: { mode?: 'ful
         <SourcesPanel sources={sources} />
       </ReportSection>
 
-      {/* CTA — Get one of these for your sector */}
+      {/* Tell us what was useful */}
       <section className="border-4 border-bauhaus-black p-8 bg-bauhaus-yellow mb-12">
-        <h2 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-3">Want a report like this for your sector?</h2>
+        <h2 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-3">Was this useful?</h2>
         <p className="text-bauhaus-black font-medium leading-relaxed max-w-3xl mb-5">
-          Same pipeline, applied to whatever organisation, network, or funding stream you care about. <span className="font-black">First 5 reports are free</span> for orgs willing to be a public case study. Standard On-Demand reports are $2,500. Sector subscriptions $7,500/yr.
+          We&apos;re building CivicGraph in public. Help us learn what landed and what to build next &mdash; tick what was valuable, tell us what data layer to go deeper on (procurement / grants / board networks / donations / geographic), leave anonymously if you want.
         </p>
-        <div className="flex flex-wrap gap-2">
-          <Link href="/get-a-report?free=true&src=fecca-eccv-longread" className="inline-block px-4 py-3 text-xs font-black uppercase tracking-widest bg-bauhaus-red text-white border-2 border-bauhaus-black hover:bg-bauhaus-black">★ Apply for First 5 Free →</Link>
-          <Link href="/get-a-report?budget=2500&src=fecca-eccv-longread" className="inline-block px-4 py-3 text-xs font-black uppercase tracking-widest bg-bauhaus-black text-white border-2 border-bauhaus-black hover:bg-bauhaus-red">Request a paid report →</Link>
-          <Link href="/pricing" className="inline-block px-4 py-3 text-xs font-black uppercase tracking-widest bg-white text-bauhaus-black border-2 border-bauhaus-black hover:bg-bauhaus-canvas">See full pricing</Link>
-        </div>
+        <Link href="/feedback?subject=fecca-eccv" className="inline-block px-5 py-3 text-sm font-black uppercase tracking-widest bg-bauhaus-black text-white border-2 border-bauhaus-black hover:bg-bauhaus-red">★ Send feedback (~2 min) →</Link>
       </section>
 
       <div className="text-center mb-8">
