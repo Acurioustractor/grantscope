@@ -201,6 +201,7 @@ type NdisOverlayRow = { state: string; total_participants: number; youth_partici
 type UnfundedRow = { name: string; type: string; evidence_level: string | null; geography: string };
 type DirectorRow = { person_name: string; board_count: number; total_procurement: number; total_justice: number };
 type SpendRow = { recipient_name: string; total: number };
+type MinStatement = { published_at: string; minister_name: string | null; portfolio: string | null; headline: string; source_url: string; topics: string[] | null };
 
 async function getReport() {
   const supabase = getLiveReportSupabase();
@@ -209,7 +210,7 @@ async function getReport() {
     recipients, crossSector, almaTypeCounts, almaInterventions, contracts,
     foundations, heatmap, yearSpend, dssQld, ndisOverlay,
     unfundedPrograms, mentalHealthAlma, aodAlma, mhFundingCount, directors,
-    politicalDonations, spend,
+    politicalDonations, spend, ministerialStatements,
   ] = await Promise.all([
     safe(supabase.rpc('exec_sql', { query: `SELECT source_generated_at::text, total_people, total_adults, total_children, child_first_nations, child_non_indigenous, child_0_2_days, child_3_7_days, child_over_7_days, child_longest_days, adult_first_nations, adult_non_indigenous, adult_over_7_days, adult_longest_days, child_watchhouse_count FROM public.v_qld_watchhouse_latest LIMIT 1` })) as Promise<WatchhouseLatest[] | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT watchhouse_name, age_group, total_in_custody::int, first_nations::int, custody_over_7_days::int, longest_days::int FROM public.qld_watchhouse_snapshot_rows WHERE snapshot_id = (SELECT id FROM public.v_qld_watchhouse_latest LIMIT 1) ORDER BY (CASE WHEN age_group = 'Child' THEN 0 ELSE 1 END), total_in_custody DESC LIMIT 50` })) as Promise<WatchhouseRow[] | null>,
@@ -235,6 +236,7 @@ async function getReport() {
     safe(supabase.rpc('exec_sql', { query: `SELECT person_name, board_count::int, total_procurement::bigint, total_justice::bigint FROM public.mv_person_influence WHERE board_count >= 5 AND total_justice > 0 AND (entity_types::text ILIKE '%charity%' OR entity_types::text ILIKE '%indigenous%') ORDER BY total_justice DESC NULLS LAST LIMIT 12` })) as Promise<DirectorRow[] | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT count(*)::int AS donations, SUM(amount)::bigint AS total FROM public.political_donations pd WHERE pd.donor_abn IN (SELECT recipient_abn FROM public.justice_funding WHERE state = 'QLD' AND topics @> ARRAY['youth-justice'] AND recipient_abn IS NOT NULL)` })) as Promise<Array<{ donations: number; total: number }> | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT recipient_name, SUM(amount_dollars)::bigint AS total FROM public.justice_funding WHERE state = 'QLD' AND recipient_name LIKE 'Youth Justice -%' GROUP BY 1` })) as Promise<SpendRow[] | null>,
+    safe(supabase.rpc('exec_sql', { query: `SELECT published_at::text, minister_name, portfolio, headline, source_url, topics FROM public.civic_ministerial_statements WHERE jurisdiction = 'QLD' AND (topics @> ARRAY['youth-justice'] OR headline ~* '(youth|detention|watch.?house|adult crime|bail|young offender)') AND published_at > NOW() - INTERVAL '24 months' ORDER BY published_at DESC LIMIT 12` })) as Promise<MinStatement[] | null>,
   ]);
 
   const detention = (spend ?? []).find(s => /detention/i.test(s.recipient_name))?.total || 0;
@@ -266,7 +268,17 @@ async function getReport() {
     directors: directors ?? [],
     politicalDonations: politicalDonations?.[0] || null,
     detention, community, groupConferencing,
+    ministerialStatements: ministerialStatements ?? [],
   };
+}
+
+// Heuristic classifier for QLD ministerial statements about youth justice.
+// Reads minister portfolio + headline keywords to bucket the policy thrust.
+function classifyStatement(s: { headline: string; portfolio: string | null }): 'punitive' | 'preventive' | 'mixed' {
+  const h = s.headline.toLowerCase();
+  if (/adult crime|adult time|bail|tougher|crackdown|stronger|watch.?house expansion|new detention|new prison|sentencing|45 offences/.test(h)) return 'punitive';
+  if (/early intervention|rehabilitation|step up step down|career pathways|youth week|prevention|community-led|treaty|justice reinvestment|family-led/.test(h)) return 'preventive';
+  return 'mixed';
 }
 
 /* ─── Dashboard ─────────────────────────────────────────────────────── */
@@ -1168,18 +1180,75 @@ export default async function QldYjSectorPage() {
 
       {/* §22 CTG TARGET 11 — covered in §3 — this is the closing prescriptive block instead */}
 
-      {/* ════ VOLUME 7 — POLICY & CAPACITY SIGNALS (curated) ════ */}
+      {/* ════ VOLUME 7 — POLICY & CAPACITY SIGNALS ════ */}
       <div className="mb-10 mt-16 border-l-8 border-bauhaus-red pl-5">
-        <div className="text-xs font-black uppercase tracking-widest text-bauhaus-red">VOLUME 7 · CURATED</div>
+        <div className="text-xs font-black uppercase tracking-widest text-bauhaus-red">VOLUME 7</div>
         <h2 className="text-3xl font-black text-bauhaus-black uppercase tracking-tight">Policy &amp; capacity signals</h2>
-        <p className="text-bauhaus-muted font-medium max-w-3xl">Recent QLD legislative and capacity-expansion moves shaping the youth-justice landscape. Curated from public announcements; we&apos;re building structured ingestion of QLD parliamentary and cabinet feeds.</p>
+        <p className="text-bauhaus-muted font-medium max-w-3xl">Live QLD ministerial statements scraped daily from <code className="font-mono text-xs">statements.qld.gov.au</code>, filtered to youth-justice keywords and tagged by direction-of-travel.</p>
       </div>
 
       <section className="mb-16">
-        <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§23 · CURATED</div>
-        <h3 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">Direction of travel — recent QLD policy moves</h3>
+        <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§23 · LIVE</div>
+        <h3 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">Direction of travel — recent QLD ministerial statements</h3>
         <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
-          What&apos;s shifted in QLD youth-justice policy and capital over the past 24 months. Each entry tagged by thrust: <span className="text-bauhaus-red font-black">punitive</span> (custody-expanding), <span className="text-bauhaus-blue font-black">preventive</span> (community-investing), <span className="text-bauhaus-yellow font-black">mixed</span> (both / contested). Read for the structural direction the system is moving in.
+          The most-recent {r.ministerialStatements.length} youth-justice statements from QLD ministers. Each tagged by thrust: <span className="text-bauhaus-red font-black">punitive</span> (custody-expanding), <span className="text-bauhaus-blue font-black">preventive</span> (community-investing), <span className="text-bauhaus-yellow font-black">mixed</span> (both / contested). Read for the structural direction the system is moving in.
+        </p>
+
+        {(() => {
+          const counts = r.ministerialStatements.reduce<Record<string, number>>((acc, s) => {
+            const t = classifyStatement(s);
+            acc[t] = (acc[t] ?? 0) + 1;
+            return acc;
+          }, {});
+          const total = r.ministerialStatements.length || 1;
+          return (
+            <div className="border-4 border-bauhaus-black p-4 bg-white mb-6">
+              <div className="text-xs font-black uppercase tracking-widest text-bauhaus-muted mb-3">Thrust mix · last {r.ministerialStatements.length} statements</div>
+              <StackedBar
+                total={total}
+                segments={[
+                  { key: 'p', value: counts.punitive ?? 0, color: 'bg-bauhaus-red', label: `Punitive (${counts.punitive ?? 0})` },
+                  { key: 'm', value: counts.mixed ?? 0, color: 'bg-bauhaus-yellow', label: `Mixed (${counts.mixed ?? 0})` },
+                  { key: 'pr', value: counts.preventive ?? 0, color: 'bg-bauhaus-blue', label: `Preventive (${counts.preventive ?? 0})` },
+                ]}
+              />
+            </div>
+          );
+        })()}
+
+        {r.ministerialStatements.length === 0 ? (
+          <div className="border-4 border-bauhaus-black p-6 bg-white text-bauhaus-muted text-sm">No QLD ministerial statements in the last 24 months matched the youth-justice filter. Re-run <code>scrape-ministerial-statements</code>.</div>
+        ) : (
+          <div className="grid md:grid-cols-2 gap-4">
+            {r.ministerialStatements.map((s, i) => {
+              const thrust = classifyStatement(s);
+              const tone =
+                thrust === 'punitive' ? { border: 'border-bauhaus-red', tag: 'bg-bauhaus-red text-white' } :
+                thrust === 'preventive' ? { border: 'border-bauhaus-blue', tag: 'bg-bauhaus-blue text-white' } :
+                { border: 'border-bauhaus-yellow', tag: 'bg-bauhaus-yellow text-bauhaus-black' };
+              return (
+                <div key={i} className={`border-4 ${tone.border} p-5 bg-white`}>
+                  <div className="flex justify-between items-baseline mb-2 gap-3">
+                    <div className="text-xs font-mono font-black text-bauhaus-muted">{new Date(s.published_at).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                    <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 ${tone.tag}`}>{thrust}</span>
+                  </div>
+                  <h4 className="text-base font-black text-bauhaus-black uppercase tracking-tight leading-tight mb-2">{s.headline}</h4>
+                  <p className="text-[10px] font-mono text-bauhaus-muted mb-3">{s.minister_name?.replace(/^The Honourable /, '') ?? 'Minister'}{s.portfolio ? ` · ${s.portfolio}` : ''}</p>
+                  <a href={s.source_url} target="_blank" rel="noopener" className="text-bauhaus-blue text-[10px] font-mono hover:underline">statements.qld.gov.au ↗</a>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        <p className="text-xs text-bauhaus-muted font-mono mt-4">Source: <code>civic_ministerial_statements</code> scraped from <a href="https://statements.qld.gov.au" target="_blank" rel="noopener" className="text-bauhaus-blue hover:underline">statements.qld.gov.au</a> by the <code>scrape-ministerial-statements</code> agent. Direction-of-travel classifier reads the headline; classification is heuristic, not editorial. Want a different cut? <Link href="/feedback?subject=qld-yj-policy-tracking" className="text-bauhaus-blue font-black hover:underline">Tell us</Link>.</p>
+      </section>
+
+      {/* §23.1 — STRUCTURAL POLICY MOVES (curated, low-frequency) */}
+      <section className="mb-16">
+        <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§23.1 · CURATED LEGISLATION</div>
+        <h3 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">Structural policy backdrop</h3>
+        <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
+          The major QLD legislative and treaty-framework moves over 2023&ndash;2024 that frame every announcement above. These are curated reference items linked to the underlying QLD legislation register.
         </p>
         <div className="grid md:grid-cols-2 gap-4">
           {QLD_POLICY_SIGNALS.map((s, i) => {
@@ -1200,7 +1269,6 @@ export default async function QldYjSectorPage() {
             );
           })}
         </div>
-        <p className="text-xs text-bauhaus-muted font-mono mt-4">Source: curated from publicly-available QLD legislation and Cabinet announcements. Not yet structurally ingested — we are building a parliamentary-record agent. Help us prioritise: <Link href="/feedback?subject=qld-yj-policy-tracking" className="text-bauhaus-blue font-black hover:underline">tell us what to track</Link>.</p>
       </section>
 
       <section className="mb-16">
