@@ -731,23 +731,36 @@ function MoneyAndStaffCard({ row, label }: { row: AisFinancialsRow | null; label
 
       <div>
         <div className="text-xs uppercase tracking-widest font-black text-bauhaus-muted mb-2">Workforce</div>
-        <div className="grid grid-cols-5 gap-2 text-center">
-          {[
+        {(() => {
+          const stats = [
             { label: 'FT', val: row.staff_ft },
             { label: 'PT', val: row.staff_pt },
             { label: 'Casual', val: row.staff_casual },
             { label: 'FTE', val: row.staff_fte },
             { label: 'Volunteers', val: row.staff_vols },
-          ].map(s => (
-            <div key={s.label} className="border-2 border-bauhaus-black p-2 bg-bauhaus-canvas">
-              <div className="text-[10px] uppercase tracking-widest font-black text-bauhaus-muted">{s.label}</div>
-              <div className="text-lg font-black text-bauhaus-black tabular-nums">{s.val ?? '—'}</div>
+          ];
+          const allMissing = stats.every(s => s.val == null);
+          if (allMissing) {
+            return (
+              <div className="border-2 border-bauhaus-black p-3 bg-bauhaus-canvas text-xs text-bauhaus-muted font-medium leading-relaxed">
+                Workforce headcount not disclosed in the audited annual report. ACNC AIS would have these fields, but FECCA is exempt from public AIS bulk publication (see card-source line above).
+              </div>
+            );
+          }
+          return (
+            <div className="grid grid-cols-5 gap-2 text-center">
+              {stats.map(s => (
+                <div key={s.label} className="border-2 border-bauhaus-black p-2 bg-bauhaus-canvas">
+                  <div className="text-[10px] uppercase tracking-widest font-black text-bauhaus-muted">{s.label}</div>
+                  <div className="text-lg font-black text-bauhaus-black tabular-nums">{s.val ?? '—'}</div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          );
+        })()}
         {(row.num_kmp != null && row.num_kmp > 0) || (row.total_paid_kmp ?? 0) > 0 ? (
           <div className="mt-3 text-xs font-mono text-bauhaus-muted">
-            Key Management: {row.num_kmp ?? 0} people · {money(row.total_paid_kmp)} total comp
+            Key Management: {row.num_kmp != null && row.num_kmp > 0 ? `${row.num_kmp} people` : 'count not disclosed'} · {money(row.total_paid_kmp)} total comp
           </div>
         ) : null}
       </div>
