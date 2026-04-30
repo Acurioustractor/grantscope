@@ -9,7 +9,7 @@ import {
 export const dynamic = 'force-dynamic';
 export const metadata = {
   title: 'QLD Youth Justice — The Most-Sourced Report Ever Written · CivicGraph',
-  description: "Six volumes. 14 numbered findings. Live watchhouse data, $1.88B detention vs $1.49B community spend, 12% ACCO funding gap, $1B+ multi-system providers, foundation landscape, director networks, place hotspots — every claim sourced.",
+  description: "Seven volumes. Seventeen numbered findings. Live watchhouse data, the detention-vs-community spend ratio, the ACCO funding gap, multi-system providers, foundation landscape, director networks, place hotspots, policy moves — every claim sourced.",
 };
 
 function money(n: number | null | undefined): string {
@@ -221,6 +221,7 @@ export default async function QldYjLongRead() {
     { id: 'src-treaty-act', label: 'Path to Treaty Act 2023 (Act No. 12 of 2023, repealed 28 Nov 2024)', href: 'https://www.legislation.qld.gov.au/view/html/asmade/act-2023-012', type: 'Legislation' },
     { id: 'src-ohchr-2025', label: 'OHCHR — UN Special Rapporteurs on Australian youth justice (May 2025)', href: 'https://www.ohchr.org/en/media-advisories/2025/05/youth-justice-systems-across-australia-crisis-un-experts', type: 'UN' },
     { id: 'src-yj-dept', label: 'QLD Department of Youth Justice — new detention centres + legislation changes', href: 'https://youthjustice.qld.gov.au/our-department', type: 'Govt' },
+    { id: 'src-skelton-nitv', label: 'SBS NITV — Human-rights leaders take concerns about kids to UN (Skelton CRC quote on QLD legislation)', href: 'https://www.sbs.com.au/nitv/article/human-rights-leaders-take-concerns-about-kids-to-un/blbhrif2a', type: 'News' },
     { id: 'src-oric', label: 'Office of the Registrar of Indigenous Corporations (ORIC) — Aboriginal corporation register', href: 'https://www.oric.gov.au/', type: 'Govt' },
     { id: 'src-nt-rc', label: 'Royal Commission into the Protection and Detention of Children in the Northern Territory (2017) — Final Report', href: 'https://www.royalcommission.gov.au/royal-commission-detention-and-protection-children-northern-territory', type: 'Royal Commission' },
     { id: 'src-aboriginal-deaths', label: 'Royal Commission into Aboriginal Deaths in Custody (1991) — Final Report', href: 'https://www.austlii.edu.au/au/other/IndigLRes/rciadic/', type: 'Royal Commission' },
@@ -244,7 +245,7 @@ export default async function QldYjLongRead() {
             ← Youth Justice Reports
           </Link>
         )}
-        <div className="text-xs font-black text-bauhaus-yellow mt-4 mb-1 uppercase tracking-widest">Long-form Report · 6 Volumes · 14 Findings · ~10 min read</div>
+        <div className="text-xs font-black text-bauhaus-yellow mt-4 mb-1 uppercase tracking-widest">Long-form Report · 7 Volumes · 17 Findings · ~12 min read</div>
         <h1 className="text-4xl sm:text-5xl font-black text-bauhaus-black mb-4 uppercase tracking-tight leading-tight">
           QLD Youth Justice<br />— The State, The Funnel, The Money, The Network, The Evidence, The Place
         </h1>
@@ -260,7 +261,7 @@ export default async function QldYjLongRead() {
       <ReportToc entries={toc} />
 
       {/* ════ EXECUTIVE SUMMARY · 14 FINDINGS ════ */}
-      <ReportSection id="summary" kicker="Executive Summary" title="14 findings · what the data says">
+      <ReportSection id="summary" kicker="Executive Summary" title="17 findings · what the data says">
         <p>
           CivicGraph triangulated four primary datasets — the Queensland Police Service watchhouse-occupancy publication, the QLD state-budget Youth Justice service-delivery statements, the ACNC charity register, AusTender federal procurement — alongside the Australian Living Map of Alternatives evidence base, AIHW child-protection reporting, and NDIS service-district data. Every finding below is a sourced claim with a clickable citation. The pattern they form is structural.
         </p>
@@ -361,13 +362,13 @@ export default async function QldYjLongRead() {
 
         <Finding n={16} title="Making Queensland Safer Act 2024 — &lsquo;detention as last resort&rsquo; principle removed" severity="crit">
           <p>
-            <span className="font-black">Act No. 54 of 2024, assented 13 December 2024.</span> Removed the &ldquo;detention as a last resort&rdquo; principle from the Youth Justice Act. Children charged with 13 listed offences (including murder, manslaughter, robbery, dangerous operation of a vehicle) face the same maximum, mandatory and minimum penalties as adults &mdash; &ldquo;adult crime, adult time&rdquo;. Restorative justice is removed as a sentencing option for those offences. UN Committee on the Rights of the Child chair Ann Skelton described the legislation as a &ldquo;flagrant disregard of children&apos;s rights&rdquo;. UN Special Rapporteurs and the National Children&apos;s Commissioner publicly opposed. <SourceLink href="#src-mqs-act">[30]</SourceLink> <SourceLink href="#src-ohchr-2025">[32]</SourceLink>
+            <span className="font-black">Act No. 54 of 2024, assented 13 December 2024.</span> Removed the &ldquo;detention as a last resort&rdquo; principle from the Youth Justice Act. Children charged with 13 listed offences (including murder, manslaughter, robbery, dangerous operation of a vehicle) face the same maximum, mandatory and minimum penalties as adults &mdash; &ldquo;adult crime, adult time&rdquo;. Restorative justice is removed as a sentencing option for those offences. UN Committee on the Rights of the Child Chair Professor Ann Skelton described the legislation as a &ldquo;flagrant disregard of children&apos;s rights&rdquo; per news coverage in late 2024. <SourceLink href="#src-skelton-nitv">[34]</SourceLink> UN Special Rapporteurs and the National Children&apos;s Commissioner publicly opposed. <SourceLink href="#src-mqs-act">[30]</SourceLink> <SourceLink href="#src-ohchr-2025">[32]</SourceLink>
           </p>
         </Finding>
 
         <Finding n={17} title="QLD detention capacity is expanding by 120 beds (Woodford 80 + Cairns 40); community alternatives are not" severity="warn">
           <p>
-            Wacol Youth Remand Centre (76 beds, ~$250M+ construction + ~$150M ops) opened early 2025. <span className="font-black">Woodford Youth Detention Centre</span> (80 beds, reported up to $627.61M, completion 2026). <span className="font-black">Cairns Youth Detention Centre</span> (40 beds, planned operational 2027). <SourceLink href="#src-yj-dept">[33]</SourceLink> Combined: 120 new beds. The capital pipeline is expanding custody at a multi-hundred-million-per-facility rate while community-based services hold flat at {money(r.community)} (§3) and ACCO funding share holds at {accoSharePct}% (§4).
+            Wacol Youth Remand Centre (76 beds, ~$250M+ construction + ~$150M ops) opened early 2025. <span className="font-black">Woodford Youth Detention Centre</span> (80 beds, reported up to $627.61M per industry-tracker figures pending verification against QLD Budget Paper 3, completion 2026). <span className="font-black">Cairns Youth Detention Centre</span> (40 beds, planned operational 2027). <SourceLink href="#src-yj-dept">[33]</SourceLink> Combined: 120 new beds. The capital pipeline is expanding custody at a multi-hundred-million-per-facility rate while community-based services hold flat at {money(r.community)} (§3) and ACCO funding share holds at {accoSharePct}% (§4).
           </p>
         </Finding>
 
@@ -616,7 +617,7 @@ export default async function QldYjLongRead() {
 
         <h3 className="text-lg font-black uppercase tracking-tight text-bauhaus-black mt-8 mb-3">Path to Treaty repealed on the first day of new government</h3>
         <p>
-          The Path to Treaty Act 2023 (Act No. 12 of 2023, passed 10 May 2023) established the First Nations Treaty Institute and a Truth-telling and Healing Inquiry &mdash; the institutional framework explicitly tying systemic First Nations over-representation in youth justice to a longer-term treaty/truth process. <SourceLink href="#src-treaty-act">[31]</SourceLink> The Crisafulli LNP Government repealed the Act on its <span className="font-black">first day of sitting</span> (28 November 2024), bundling the repeal into a Bill amending the Brisbane Olympic Games Act. QAIHC and Indigenous health peak bodies publicly opposed. The institutional counter-balance was removed before alternative governance architecture replaced it.
+          The Path to Treaty Act 2023 (Act No. 12 of 2023, passed 10 May 2023) established the First Nations Treaty Institute and a Truth-telling and Healing Inquiry &mdash; institutional architecture for addressing the systemic conditions (including youth-justice over-representation) that a treaty / truth process is intended to confront. <SourceLink href="#src-treaty-act">[31]</SourceLink> The Crisafulli LNP Government repealed the Act on its <span className="font-black">first day of sitting</span> (28 November 2024), bundling the repeal into a Bill amending the Brisbane Olympic Games Act. QAIHC and Indigenous health peak bodies publicly opposed. The institutional counter-balance was removed before alternative governance architecture replaced it.
         </p>
 
         <h3 className="text-lg font-black uppercase tracking-tight text-bauhaus-black mt-8 mb-3">Capacity expansion — 120 new beds in the pipeline</h3>
@@ -646,8 +647,8 @@ export default async function QldYjLongRead() {
           A clarification often missed in public reporting: the high-profile <span className="font-black">Cleveland Dodd</span> coronial inquest (16-year-old Yamatji boy, died October 2023) is a <span className="font-black">Western Australian</span> case at Unit 18, Casuarina Prison &mdash; not QLD&apos;s Cleveland Youth Detention Centre in Townsville. We do not surface the Dodd inquest in this QLD report. Specific QLD-jurisdiction youth-death-in-custody coronial findings are searchable at the QLD Coroners Court findings database; we have not yet ingested those structurally.
         </p>
 
-        <PullQuote attribution="Ann Skelton, Chair of the UN Committee on the Rights of the Child (2024)">
-          The Making Queensland Safer Act represents a flagrant disregard of children&apos;s rights and a clear breach of Australia&apos;s international obligations.
+        <PullQuote attribution="UN Committee on the Rights of the Child Chair Professor Ann Skelton (2024) — per SBS NITV reporting">
+          The 2024 QLD legislation is a flagrant disregard of children&apos;s rights and a clear breach of Australia&apos;s international obligations.
         </PullQuote>
 
         <h3 className="text-lg font-black uppercase tracking-tight text-bauhaus-black mt-8 mb-3">Live ministerial-statement feed</h3>

@@ -94,7 +94,7 @@ const QLD_POLICY_SIGNALS: PolicySignal[] = [
     date: '10 May 2023',
     title: 'Path to Treaty Act 2023 — established Truth-telling and Treaty Body',
     thrust: 'preventive',
-    summary: 'Act No. 12 of 2023, passed 10 May 2023. Established the First Nations Treaty Institute and a Truth-telling and Healing Inquiry. Was the policy framework explicitly tying systemic First Nations over-representation in YJ to a longer-term treaty/truth process.',
+    summary: 'Act No. 12 of 2023, passed 10 May 2023. Established the First Nations Treaty Institute and a Truth-telling and Healing Inquiry — institutional architecture for addressing the systemic conditions (including youth-justice over-representation) that a treaty / truth process is intended to confront.',
     source: { label: 'QLD Legislation — Path to Treaty Act 2023', href: 'https://www.legislation.qld.gov.au/view/html/asmade/act-2023-012' },
   },
   {
@@ -349,8 +349,10 @@ async function getReport() {
 // Reads minister portfolio + headline keywords to bucket the policy thrust.
 function classifyStatement(s: { headline: string; portfolio: string | null }): 'punitive' | 'preventive' | 'mixed' {
   const h = s.headline.toLowerCase();
-  if (/adult crime|adult time|bail|tougher|crackdown|stronger|watch.?house expansion|new detention|new prison|sentencing|45 offences/.test(h)) return 'punitive';
-  if (/early intervention|rehabilitation|step up step down|career pathways|youth week|prevention|community-led|treaty|justice reinvestment|family-led/.test(h)) return 'preventive';
+  // "bail" alone doesn't classify — many bail headlines are support/diversion-related;
+  // require a punitive compound (tougher/stronger/breach/monitoring/crackdown).
+  if (/adult crime|adult time|tougher|crackdown|tough\s+on|stronger\s+(youth\s+)?bail|bail\s+(monitoring|breach|crackdown|tough)|new\s+detention|new\s+prison|45\s+offences|expanding\s+adult|harder\s+on|life\s+sentenc|adult\s+penalt/.test(h)) return 'punitive';
+  if (/early intervention|rehabilitation|step up step down|career pathways|youth week|prevention|community-led|treaty|justice reinvestment|family-led|kickstart|wrap.?around|diversion\b|education\b|jobs/.test(h)) return 'preventive';
   return 'mixed';
 }
 
@@ -1408,6 +1410,11 @@ export default async function QldYjSectorPage() {
         {r.hansardRows.length === 0 ? (
           <div className="border-4 border-bauhaus-black p-6 bg-white text-bauhaus-muted text-sm">No QLD Hansard mentions matched the youth-justice filter. Run <code>scrape-qld-hansard</code> to populate.</div>
         ) : (
+          <>
+            <div className="border-l-4 border-bauhaus-yellow bg-bauhaus-canvas p-4 mb-4 text-xs">
+              <p className="font-black text-bauhaus-black mb-1">Verify before citing</p>
+              <p className="text-bauhaus-black leading-relaxed">Speaker names below are parsed from QLD Parliament Hansard PDFs and may render as surname only or partial titles. Snippets are the opening characters of a contribution &mdash; not necessarily a complete or self-contained quote. Always confirm against the official transcript at parliament.qld.gov.au before publication.</p>
+            </div>
           <div className="grid md:grid-cols-2 gap-4">
             {r.hansardRows.map((h, i) => {
               const partyTone =
@@ -1429,6 +1436,7 @@ export default async function QldYjSectorPage() {
               );
             })}
           </div>
+          </>
         )}
         <p className="text-xs text-bauhaus-muted font-mono mt-4">Source: <code>civic_hansard</code> table populated by <code>scrape-qld-hansard</code> agent. {fmt(r.hansardRows.length)} most-recent youth-justice mentions shown; party-bar covers the last 12 months. Speaker-name parsing is best-effort from PDF text and may render as surnames only.</p>
       </section>
