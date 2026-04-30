@@ -760,7 +760,7 @@ function MoneyAndStaffCard({ row, label }: { row: AisFinancialsRow | null; label
         })()}
         {(row.num_kmp != null && row.num_kmp > 0) || (row.total_paid_kmp ?? 0) > 0 ? (
           <div className="mt-3 text-xs font-mono text-bauhaus-muted">
-            Key Management: {row.num_kmp != null && row.num_kmp > 0 ? `${row.num_kmp} people` : 'count not disclosed'} · {money(row.total_paid_kmp)} total comp
+            Key Management: {row.num_kmp != null && row.num_kmp > 0 ? `${row.num_kmp} ${row.num_kmp === 1 ? 'person' : 'people'}` : 'count not disclosed'} · {money(row.total_paid_kmp)} total comp
           </div>
         ) : null}
       </div>
