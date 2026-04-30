@@ -89,8 +89,8 @@ async function getNumbers() {
     safe(supabase.rpc('exec_sql', {
       query: `SELECT name, type, evidence_level
               FROM public.mv_yj_report_unfunded_programs
-              WHERE ('QLD' = ANY(geography) OR 'Queensland' = ANY(geography) OR 'National' = ANY(geography))
-              ORDER BY (CASE WHEN evidence_level ILIKE '%proven%' THEN 0 ELSE 1 END)
+              WHERE (geography::text ILIKE '%QLD%' OR geography::text ILIKE '%Queensland%' OR geography::text ILIKE '%National%')
+              ORDER BY (CASE WHEN evidence_level ILIKE '%proven%' OR evidence_level ILIKE '%effective%' THEN 0 ELSE 1 END)
               LIMIT 6`,
     })) as Promise<UnfundedRow[] | null>,
     safe(supabase.rpc('exec_sql', {
