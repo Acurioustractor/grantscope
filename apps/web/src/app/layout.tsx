@@ -27,8 +27,22 @@ const LAYOUT_AUTH_PREFIXES = [
   '/continue',
 ] as const;
 
+// Public-facing landing/marketing pages should always render with the public
+// container (max-w-7xl mx-auto + horizontal padding), even when an authenticated
+// user visits them. Otherwise the workspace layout's edge-to-edge `<main>`
+// makes content butt against the viewport edges with no breathing room.
+const FORCE_PUBLIC_LAYOUT_PREFIXES = [
+  '/pricing',
+  '/get-a-report',
+  '/about',
+] as const;
+
 function needsLayoutAuth(pathname: string) {
   return LAYOUT_AUTH_PREFIXES.some(prefix => pathname === prefix || pathname.startsWith(`${prefix}/`));
+}
+
+function forcesPublicLayout(pathname: string) {
+  return FORCE_PUBLIC_LAYOUT_PREFIXES.some(prefix => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -115,7 +129,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {impersonatingOrg && (
           <ImpersonationBanner orgName={impersonatingOrg.name} orgSlug={impersonatingOrg.slug} />
         )}
-        {isLoggedIn ? (
+        {isLoggedIn && !forcesPublicLayout(pathname) ? (
           /* Workspace: generous padding, pages control their own max-width */
           <main className="px-6 py-6">
             {children}
