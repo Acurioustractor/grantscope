@@ -71,7 +71,7 @@ type WatchhouseLatest = {
 };
 type WatchhouseRow = { watchhouse_name: string; age_group: string; total_in_custody: number; first_nations: number; custody_over_7_days: number; longest_days: number };
 type WatchhouseTrend = { day: string; total_children: number; child_fn: number };
-type DetentionFacility = { name: string; capacity_beds: number | null; indigenous_population_pct: number | null; postcode: string | null };
+type DetentionFacility = { name: string; capacity_beds: number | null; indigenous_population_percentage: number | null; postcode: string | null };
 type SpendCategory = { category: string; total: number };
 type CtgRow = { financial_year: string; actual_rate: number; trajectory_rate: number | null; gap_from_target: number | null };
 type TopOrgRow = { recipient_name: string | null; recipient_abn: string | null; total_funding: number; grants: number };
@@ -82,7 +82,7 @@ type AlmaInterventionRow = { name: string; type: string; evidence_level: string 
 type AlmaTypeCount = { type: string; count: number };
 type ContractRow = { supplier_name: string; total: number; contracts: number };
 type FoundationRow = { name: string; total_giving_annual: number; thematic_focus: string };
-type HeatmapRow = { lga_name: string; population: number | null; youth_population: number | null; indigenous_pct: number | null; youth_offender_rate: number | null; recidivism_pct: number | null; ndis_youth_participants: number | null; jh_funding_tracked: number | null; alma_count: number | null; school_count: number | null; low_icsea_schools: number | null };
+type HeatmapRow = { lga_name: string; population: number | null; youth_population: number | null; indigenous_pct: number | null; youth_offender_rate: number | null; recidivism_pct: number | null; ndis_youth_participants: number | null; jh_funding_tracked: number | null; school_count: number | null; jobseeker_recipients: number | null };
 type YearSpendRow = { financial_year: string; topic: string; total: number };
 type DssRow = { state: string; payment_type: string; recipient_count: number };
 type NdisOverlayRow = { state: string; total_participants: number; youth_participants: number; psychosocial_participants: number; intellectual_disability_participants: number; autism_participants: number };
@@ -102,7 +102,7 @@ async function getReport() {
     safe(supabase.rpc('exec_sql', { query: `SELECT source_generated_at::text, total_people, total_adults, total_children, child_first_nations, child_non_indigenous, child_0_2_days, child_3_7_days, child_over_7_days, child_longest_days, adult_first_nations, adult_non_indigenous, adult_over_7_days, adult_longest_days, child_watchhouse_count FROM public.v_qld_watchhouse_latest LIMIT 1` })) as Promise<WatchhouseLatest[] | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT watchhouse_name, age_group, total_in_custody::int, first_nations::int, custody_over_7_days::int, longest_days::int FROM public.qld_watchhouse_snapshot_rows WHERE snapshot_id = (SELECT id FROM public.v_qld_watchhouse_latest LIMIT 1) ORDER BY total_in_custody DESC LIMIT 30` })) as Promise<WatchhouseRow[] | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT date_trunc('day', source_generated_at)::date::text AS day, AVG(total_children::numeric)::numeric(10,1) AS total_children, AVG(child_first_nations::numeric)::numeric(10,1) AS child_fn FROM public.qld_watchhouse_snapshots WHERE source_generated_at > NOW() - INTERVAL '60 days' GROUP BY 1 ORDER BY 1` })) as Promise<WatchhouseTrend[] | null>,
-    safe(supabase.rpc('exec_sql', { query: `SELECT name, capacity_beds, indigenous_population_pct, postcode FROM public.youth_detention_facilities WHERE state = 'QLD' AND operational_status = 'operational' ORDER BY capacity_beds DESC NULLS LAST LIMIT 10` })) as Promise<DetentionFacility[] | null>,
+    safe(supabase.rpc('exec_sql', { query: `SELECT name, capacity_beds, indigenous_population_percentage, postcode FROM public.youth_detention_facilities WHERE state = 'QLD' AND operational_status = 'operational' ORDER BY capacity_beds DESC NULLS LAST LIMIT 10` })) as Promise<DetentionFacility[] | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT financial_year, actual_rate::numeric(10,2), trajectory_rate::numeric(10,2), gap_from_target::numeric(10,2) FROM public.v_ctg_youth_justice_progress WHERE state = 'QLD' ORDER BY financial_year` })) as Promise<CtgRow[] | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT recipient_name, recipient_abn, total_funding::bigint, grants::int FROM public.mv_yj_report_state_top_orgs WHERE state = 'QLD' OR state = 'Queensland' ORDER BY total_funding DESC NULLS LAST LIMIT 25` })) as Promise<TopOrgRow[] | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT org_type, orgs::int, total_funding::bigint, avg_per_recipient::bigint, funding_share_pct::int FROM public.mv_yj_report_acco_gap` })) as Promise<AccoGapRow[] | null>,
@@ -112,7 +112,7 @@ async function getReport() {
     safe(supabase.rpc('exec_sql', { query: `SELECT name, type, evidence_level, geography, cost_per_young_person::int, portfolio_score::int, cultural_authority FROM public.alma_interventions WHERE ('QLD' = ANY(geography) OR 'Queensland' = ANY(geography)) AND (topics @> ARRAY['youth-justice'] OR type ILIKE '%diversion%' OR type ILIKE '%justice%' OR type ILIKE '%wraparound%' OR type ILIKE '%community-led%' OR type ILIKE '%therapeutic%') ORDER BY (CASE WHEN evidence_level ILIKE '%proven%' THEN 0 WHEN evidence_level ILIKE '%promising%' THEN 1 ELSE 2 END), portfolio_score DESC NULLS LAST LIMIT 16` })) as Promise<AlmaInterventionRow[] | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT supplier_name, COUNT(*)::int AS contracts, SUM(contract_value)::bigint AS total FROM public.austender_contracts WHERE supplier_name ILIKE ANY (ARRAY['%youth justice%','%PCYC%','%youth advocacy%','%murri watch%','%youth off the streets%','%mission australia%','%lifeline community%','%anglicare%','%uniting%','%liquidlogic%','%halikos%','%Save the Children%']) AND contract_value > 0 GROUP BY 1 ORDER BY total DESC NULLS LAST LIMIT 12` })) as Promise<ContractRow[] | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT name, total_giving_annual::bigint AS total_giving_annual, thematic_focus::text FROM public.foundations WHERE thematic_focus::text ILIKE ANY (ARRAY['%justice%','%youth%','%children%','%first nations%','%indigenous%','%disability%','%mental health%','%aboriginal%']) AND total_giving_annual > 0 ORDER BY total_giving_annual DESC NULLS LAST LIMIT 12` })) as Promise<FoundationRow[] | null>,
-    safe(supabase.rpc('exec_sql', { query: `SELECT lga_name, population::int, youth_population::int, indigenous_pct::numeric(5,1), youth_offender_rate::numeric(7,1), recidivism_pct::numeric(5,1), ndis_youth_participants::int, jh_funding_tracked::bigint, alma_count::int, school_count::int, low_icsea_schools::int FROM public.lga_cross_system_stats WHERE state = 'QLD' AND population > 5000 ORDER BY youth_offender_rate DESC NULLS LAST LIMIT 20` })) as Promise<HeatmapRow[] | null>,
+    safe(supabase.rpc('exec_sql', { query: `SELECT lga_name, population::int, youth_population::int, indigenous_pct::numeric(5,1), youth_offender_rate::numeric(7,1), recidivism_pct::numeric(5,1), ndis_youth_participants::int, jh_funding_tracked::bigint, school_count::int, jobseeker_recipients::int FROM public.lga_cross_system_stats WHERE state = 'QLD' AND population > 5000 ORDER BY youth_offender_rate DESC NULLS LAST LIMIT 20` })) as Promise<HeatmapRow[] | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT financial_year, topic, SUM(amount_dollars)::bigint AS total FROM (SELECT financial_year, unnest(topics) AS topic, amount_dollars FROM public.justice_funding WHERE state = 'QLD' AND amount_dollars > 0 AND financial_year IS NOT NULL) t WHERE topic IN ('youth-justice','child-protection','indigenous','disability','family-services') AND financial_year ~ '^20[0-9]{2}-' GROUP BY 1,2 ORDER BY financial_year, topic` })) as Promise<YearSpendRow[] | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT 'QLD'::text AS state, payment_type, recipient_count::int FROM public.dss_payment_demographics WHERE state = 'QLD' ORDER BY recipient_count DESC NULLS LAST LIMIT 10` })) as Promise<DssRow[] | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT state, total_participants::int, youth_participants::int, psychosocial_participants::int, intellectual_disability_participants::int, autism_participants::int FROM public.v_ndis_youth_justice_overlay WHERE state = 'QLD' OR state = 'Queensland' OR state ILIKE 'QLD%' LIMIT 20` })) as Promise<NdisOverlayRow[] | null>,
@@ -315,7 +315,7 @@ export default async function QldYjSectorPage() {
                   <div key={i} className="flex justify-between items-baseline border-b border-bauhaus-canvas pb-2">
                     <div>
                       <div className="font-black text-bauhaus-black">{f.name}</div>
-                      <div className="text-bauhaus-muted font-mono">postcode {f.postcode ?? '—'} · {pct(f.indigenous_population_pct, 0)} Indigenous</div>
+                      <div className="text-bauhaus-muted font-mono">postcode {f.postcode ?? '—'} · {pct(f.indigenous_population_percentage, 0)} Indigenous</div>
                     </div>
                     <div className="font-black text-bauhaus-black tabular-nums">{f.capacity_beds ?? '—'} beds</div>
                   </div>
@@ -365,33 +365,50 @@ export default async function QldYjSectorPage() {
         </p>
         {r.ctg.length === 0 ? (
           <div className="border-4 border-bauhaus-black p-6 bg-white text-bauhaus-muted text-sm">CTG data not available.</div>
-        ) : (
-          <div className="border-4 border-bauhaus-black p-6 bg-white">
-            <div className="space-y-3">
-              {r.ctg.map(row => {
-                const peak = Math.max(...r.ctg.map(c => Math.max(Number(c.actual_rate) || 0, Number(c.trajectory_rate) || 0)), 1);
-                const actual = Number(row.actual_rate) || 0;
-                const target = Number(row.trajectory_rate) || 0;
-                return (
-                  <div key={row.financial_year}>
-                    <div className="flex justify-between text-xs font-mono mb-1">
-                      <span className="font-black text-bauhaus-black">{row.financial_year}</span>
-                      <span className="text-bauhaus-muted">Actual <span className="font-black text-bauhaus-red">{actual.toFixed(1)}</span>/10K · Target {target.toFixed(1)}/10K · Gap <span className={`font-black ${(row.gap_from_target ?? 0) > 0 ? 'text-bauhaus-red' : 'text-bauhaus-blue'}`}>{(Number(row.gap_from_target) || 0).toFixed(1)}</span></span>
+        ) : (() => {
+          // Closing the Gap official baseline = 2018-19; target = 30% reduction by 2030-31 (12-year window).
+          const baselineRow = r.ctg.find(c => c.financial_year === '2018-19') ?? r.ctg[0];
+          const baselineRate = Number(baselineRow.actual_rate) || 0;
+          const targetRate = baselineRate * 0.7;
+          const baselineYr = parseInt((baselineRow.financial_year || '2018-19').slice(0, 4), 10);
+          const targetYr = 2030;
+          const trajectory = (fy: string) => {
+            const yr = parseInt(fy.slice(0, 4), 10);
+            const span = targetYr - baselineYr;
+            const pos = Math.max(0, Math.min(1, (yr - baselineYr) / span));
+            return baselineRate - (baselineRate - targetRate) * pos;
+          };
+          const enriched = r.ctg.map(row => ({ ...row, traj: trajectory(row.financial_year) }));
+          const peak = Math.max(...enriched.map(c => Math.max(Number(c.actual_rate) || 0, c.traj)), 1);
+          return (
+            <div className="border-4 border-bauhaus-black p-6 bg-white">
+              <div className="space-y-3">
+                {enriched.map(row => {
+                  const actual = Number(row.actual_rate) || 0;
+                  const traj = row.traj;
+                  const gap = actual - traj;
+                  return (
+                    <div key={row.financial_year}>
+                      <div className="flex justify-between text-xs font-mono mb-1">
+                        <span className="font-black text-bauhaus-black">{row.financial_year}</span>
+                        <span className="text-bauhaus-muted">Actual <span className="font-black text-bauhaus-red">{actual.toFixed(1)}</span>/10K · CTG trajectory {traj.toFixed(1)}/10K · Gap <span className={`font-black ${gap > 0 ? 'text-bauhaus-red' : 'text-bauhaus-blue'}`}>{gap > 0 ? '+' : ''}{gap.toFixed(1)}</span></span>
+                      </div>
+                      <div className="relative h-5 bg-bauhaus-canvas border-2 border-bauhaus-black">
+                        <div className="absolute inset-y-0 left-0 bg-bauhaus-blue/40" style={{ width: `${(traj / peak) * 100}%` }} />
+                        <div className="absolute inset-y-0 left-0 bg-bauhaus-red" style={{ width: `${(actual / peak) * 100}%` }} />
+                      </div>
                     </div>
-                    <div className="relative h-5 bg-bauhaus-canvas border-2 border-bauhaus-black">
-                      <div className="absolute inset-y-0 left-0 bg-bauhaus-blue/40" style={{ width: `${(target / peak) * 100}%` }} />
-                      <div className="absolute inset-y-0 left-0 bg-bauhaus-red" style={{ width: `${(actual / peak) * 100}%` }} />
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
+              <div className="flex gap-3 text-[10px] font-mono pt-3 border-t-2 border-bauhaus-black mt-4">
+                <span><span className="inline-block w-2 h-2 bg-bauhaus-red mr-1 align-middle" />Actual rate (per 10,000 First Nations young people)</span>
+                <span><span className="inline-block w-2 h-2 bg-bauhaus-blue/40 mr-1 align-middle" />CTG trajectory: linear path from {baselineRow.financial_year} baseline ({baselineRate.toFixed(1)}) to 30% reduction ({targetRate.toFixed(1)}) by 2030–31</span>
+              </div>
+              <p className="text-[10px] text-bauhaus-muted font-mono mt-2">Source: <code>v_ctg_youth_justice_progress</code>. Trajectory computed from official Closing the Gap baseline year (2018-19) per National Agreement.</p>
             </div>
-            <div className="flex gap-3 text-[10px] font-mono pt-3 border-t-2 border-bauhaus-black mt-4">
-              <span><span className="inline-block w-2 h-2 bg-bauhaus-red mr-1 align-middle" />Actual rate (per 10,000 First Nations young people)</span>
-              <span><span className="inline-block w-2 h-2 bg-bauhaus-blue/40 mr-1 align-middle" />CTG trajectory toward 30% reduction by 2031</span>
-            </div>
-          </div>
-        )}
+          );
+        })()}
       </section>
 
       {/* ════ VOLUME 2 — THE FUNNEL ════ */}
@@ -406,7 +423,7 @@ export default async function QldYjSectorPage() {
         <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§4</div>
         <h3 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">The pipeline — vulnerability hotspots by QLD LGA</h3>
         <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
-          Top 20 QLD Local Government Areas by youth-offender rate, with cross-system context: school count, low-ICSEA schools (advantage&ndash;disadvantage), Indigenous %, NDIS-youth presence, recidivism. The pipeline is geographic.
+          Top 20 QLD Local Government Areas by youth-offender rate, with cross-system context: schools, Indigenous %, JobSeeker recipients (welfare proxy), NDIS-youth presence, recidivism. The pipeline is geographic.
         </p>
         <div className="border-4 border-bauhaus-black overflow-x-auto">
           <table className="w-full text-sm">
@@ -418,8 +435,9 @@ export default async function QldYjSectorPage() {
                 <th className="text-right p-2 font-black uppercase tracking-widest text-[10px] whitespace-nowrap">Indig. %</th>
                 <th className="text-right p-2 font-black uppercase tracking-widest text-[10px] whitespace-nowrap">Recidivism</th>
                 <th className="text-right p-2 font-black uppercase tracking-widest text-[10px] whitespace-nowrap">NDIS youth</th>
-                <th className="text-right p-2 font-black uppercase tracking-widest text-[10px] whitespace-nowrap">ALMA progs</th>
-                <th className="text-right p-2 font-black uppercase tracking-widest text-[10px] whitespace-nowrap">Funding</th>
+                <th className="text-right p-2 font-black uppercase tracking-widest text-[10px] whitespace-nowrap">JobSeeker</th>
+                <th className="text-right p-2 font-black uppercase tracking-widest text-[10px] whitespace-nowrap">Schools</th>
+                <th className="text-right p-2 font-black uppercase tracking-widest text-[10px] whitespace-nowrap">Funding tracked</th>
               </tr>
             </thead>
             <tbody>
@@ -431,7 +449,8 @@ export default async function QldYjSectorPage() {
                   <td className="p-2 text-right font-mono text-xs">{Number(h.indigenous_pct ?? 0).toFixed(1)}%</td>
                   <td className="p-2 text-right font-mono text-xs">{h.recidivism_pct ? `${Number(h.recidivism_pct).toFixed(0)}%` : '—'}</td>
                   <td className="p-2 text-right font-mono text-xs">{h.ndis_youth_participants ? fmt(h.ndis_youth_participants) : '—'}</td>
-                  <td className="p-2 text-right font-mono text-xs">{h.alma_count ?? 0}</td>
+                  <td className="p-2 text-right font-mono text-xs">{h.jobseeker_recipients ? fmt(h.jobseeker_recipients) : '—'}</td>
+                  <td className="p-2 text-right font-mono text-xs">{h.school_count ?? '—'}</td>
                   <td className="p-2 text-right font-mono text-xs">{h.jh_funding_tracked ? money(h.jh_funding_tracked) : '—'}</td>
                 </tr>
               ))}
@@ -951,8 +970,8 @@ export default async function QldYjSectorPage() {
                   <div className="font-black tabular-nums">{h.recidivism_pct ? `${Number(h.recidivism_pct).toFixed(0)}%` : '—'}</div>
                 </div>
                 <div>
-                  <div className="text-[10px] uppercase tracking-widest font-black text-bauhaus-muted">ALMA programs</div>
-                  <div className="font-black tabular-nums">{h.alma_count ?? 0}</div>
+                  <div className="text-[10px] uppercase tracking-widest font-black text-bauhaus-muted">JobSeeker</div>
+                  <div className="font-black tabular-nums">{h.jobseeker_recipients ? fmt(h.jobseeker_recipients) : '—'}</div>
                 </div>
                 <div>
                   <div className="text-[10px] uppercase tracking-widest font-black text-bauhaus-muted">Funding tracked</div>
@@ -964,27 +983,32 @@ export default async function QldYjSectorPage() {
         </div>
       </section>
 
-      {/* §20 CHERBOURG / MOUNT ISA narrative is in long-read; here we add the funding desert */}
+      {/* §20 LGA OFFENDER-RATE RANKING */}
       <section className="mb-16">
         <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§20</div>
-        <h3 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">The funding desert pattern</h3>
+        <h3 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">QLD LGAs ranked by youth-offender rate</h3>
         <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
-          For each high-offender-rate QLD LGA below, the count of evidence-backed ALMA programs operating there. A &quot;0&quot; means there is no community alternative funded in that LGA — leaving detention as the default.
+          The hotspot pattern is geographic. Top 15 QLD LGAs by youth-offender rate (offences per 1,000 young people), with funding tracked through CivicGraph&apos;s dataset shown as the bar magnitude.
         </p>
         <div className="border-4 border-bauhaus-black p-5 bg-white">
           {(() => {
-            const peak = Math.max(...r.heatmap.map(h => h.alma_count || 0), 1);
+            const peak = Math.max(...r.heatmap.map(h => Number(h.youth_offender_rate) || 0), 1);
             return (
               <div className="space-y-2">
-                {r.heatmap.slice(0, 15).map(h => (
-                  <div key={h.lga_name}>
-                    <div className="flex justify-between text-xs font-mono mb-1">
-                      <span className="font-black text-bauhaus-black">{h.lga_name}</span>
-                      <span className="text-bauhaus-muted">{h.alma_count ?? 0} programs · offender rate {Number(h.youth_offender_rate ?? 0).toFixed(1)}</span>
+                {r.heatmap.slice(0, 15).map(h => {
+                  const rate = Number(h.youth_offender_rate) || 0;
+                  const noFunding = !h.jh_funding_tracked || h.jh_funding_tracked === 0;
+                  return (
+                    <div key={h.lga_name}>
+                      <div className="flex justify-between text-xs font-mono mb-1">
+                        <span className="font-black text-bauhaus-black">{h.lga_name}</span>
+                        <span className="text-bauhaus-muted">offender rate {rate.toFixed(1)}/1K · {h.jh_funding_tracked ? money(h.jh_funding_tracked) : 'no tracked funding'}</span>
+                      </div>
+                      <HBar value={rate} peak={peak} color={noFunding ? 'bg-bauhaus-red' : 'bg-bauhaus-blue'} />
                     </div>
-                    <HBar value={h.alma_count ?? 0} peak={peak} color={(h.alma_count ?? 0) === 0 ? 'bg-bauhaus-red' : 'bg-bauhaus-blue'} />
-                  </div>
-                ))}
+                  );
+                })}
+                <p className="text-[10px] text-bauhaus-muted font-mono pt-3 border-t-2 border-bauhaus-black mt-3">Red bars indicate LGAs with no tracked funding for community-based alternatives in CivicGraph&apos;s dataset.</p>
               </div>
             );
           })()}
