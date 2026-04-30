@@ -777,7 +777,7 @@ export default async function FeccaEccvPage() {
           FECCA &amp; ECCV — The Federation&apos;s Money Map
         </h1>
         <p className="text-bauhaus-muted text-base sm:text-lg max-w-3xl leading-relaxed font-medium">
-          Two policy bodies, two single-funder dependencies. FECCA on Commonwealth contracts (100% federal), ECCV on Victorian state grants (84&ndash;95% state).
+          Two policy bodies, two single-funder dependencies. FECCA runs <span className="font-black">86&ndash;100% federal</span> revenue (latest audited FY2023-24: 86% govt, $508K deficit); ECCV ran <span className="font-black">84&ndash;95% Victorian state</span> for 6 years before dropping to <span className="font-black">69% in FY2022-23</span> &mdash; a sudden $750K diversification away from total state-grant dependency.
           Combined revenue ~$7.4M, combined federal contracts $0.77M &mdash; while AMES alone holds <span className="font-black text-bauhaus-red">$1.85B</span> of federal multicultural procurement (§2c).
           This page maps where each anchor&apos;s money comes from, where it goes, who works there, and what happens when a cycle ends.
         </p>
@@ -815,16 +815,16 @@ export default async function FeccaEccvPage() {
             <div className="grid sm:grid-cols-3 gap-4 mb-8">
               <div className="border-4 border-bauhaus-red p-4 bg-white">
                 <div className="text-xs font-black uppercase tracking-widest text-bauhaus-red mb-1">FECCA Funder Concentration</div>
-                <div className="text-3xl font-black text-bauhaus-black tabular-nums">{feccaConcentration != null ? feccaConcentration.toFixed(0) : '—'}%</div>
+                <div className="text-3xl font-black text-bauhaus-black tabular-nums">86&ndash;100%</div>
                 <p className="text-xs text-bauhaus-muted font-medium mt-2 leading-relaxed">
-                  Of FY2025 revenue is government &mdash; <span className="font-black">100% federal</span>, mainly Department of Home Affairs (settlement) + Department of Infrastructure (Australian Mosaic).
+                  Audited FY2023-24: <span className="font-black">86% federal</span> ($3.31M of $3.83M); ACNC Dynamics FY2024-25: <span className="font-black">100% federal</span>. Mainly Department of Home Affairs (settlement) + Department of Infrastructure (Australian Mosaic). Ran a <span className="font-black text-bauhaus-red">$508K deficit in FY2023-24</span>.
                 </p>
               </div>
               <div className="border-4 border-bauhaus-red p-4 bg-white">
                 <div className="text-xs font-black uppercase tracking-widest text-bauhaus-red mb-1">ECCV Funder Concentration</div>
-                <div className="text-3xl font-black text-bauhaus-black tabular-nums">{eccvLatestConcentration != null ? eccvLatestConcentration.toFixed(0) : '—'}%</div>
+                <div className="text-3xl font-black text-bauhaus-black tabular-nums">69&ndash;95%</div>
                 <p className="text-xs text-bauhaus-muted font-medium mt-2 leading-relaxed">
-                  Of FY{eccvAisAsc.length ? eccvAisAsc[eccvAisAsc.length - 1].ais_year : '?'} revenue is government &mdash; <span className="font-black">100% Victorian state</span>, via DPC + DFFH grant cycles. No federal contracts on record.
+                  Was <span className="font-black">84&ndash;95% Victorian state</span> for 6 years through FY2021-22, then <span className="font-black">dropped to 69%</span> in FY2022-23 &mdash; a $750K diversification appears in fees / services. No federal contracts on record.
                 </p>
               </div>
               <div className={`border-4 ${worstDrop && worstDrop.pct < -20 ? 'border-bauhaus-red' : 'border-bauhaus-black'} p-4 bg-white`}>
