@@ -404,7 +404,12 @@ async function getReport() {
       `,
     })) as Promise<AmesContractRow[] | null>,
 
-    // Topic mix across our newly-ingested 5K+ VIC grants
+    // Topic mix across our newly-ingested 5K+ VIC grants.
+    // Two-pass classifier: keywords on program_name first, recipient_name fallback.
+    // The First Peoples bucket includes specific Traditional Owner group names + acronyms
+    // (DDWCAC = Dja Dja Wurrung Clans Aboriginal Corporation, RAP = Reconciliation Action
+    // Plan, Munarra = Yorta-Yorta cultural centre) that wouldn't match a generic
+    // "aboriginal" keyword.
     safe(supabase.rpc('exec_sql', {
       query: `
         SELECT topic, COUNT(*)::int AS grants, SUM(amount_aud)::bigint AS total
@@ -412,18 +417,72 @@ async function getReport() {
           SELECT
             amount_aud,
             CASE
-              WHEN program_name ILIKE '%aboriginal%' OR program_name ILIKE '%first peoples%' OR program_name ILIKE '%treaty%' OR program_name ILIKE '%self-determination%' THEN 'First Peoples / Treaty'
-              WHEN program_name ILIKE '%multicultural%' OR program_name ILIKE '%ethnic%' OR program_name ILIKE '%refugee%' OR program_name ILIKE '%settlement%' OR program_name ILIKE '%cald%' THEN 'Multicultural / Settlement'
-              WHEN program_name ILIKE '%family violence%' OR program_name ILIKE '%family safety%' OR program_name ILIKE '%violence against%' THEN 'Family Violence'
-              WHEN program_name ILIKE '%children%' OR program_name ILIKE '%family%' OR program_name ILIKE '%kindergarten%' THEN 'Children / Family'
-              WHEN program_name ILIKE '%housing%' OR program_name ILIKE '%homeless%' THEN 'Housing / Homelessness'
-              WHEN program_name ILIKE '%mental%' OR program_name ILIKE '%suicide%' OR program_name ILIKE '%alcohol%' OR program_name ILIKE '%drug%' THEN 'Mental Health / AOD'
-              WHEN program_name ILIKE '%youth%' THEN 'Youth'
-              WHEN program_name ILIKE '%women%' OR program_name ILIKE '%gender%' OR program_name ILIKE '%LGBT%' THEN 'Gender / Equality'
-              WHEN program_name ILIKE '%disability%' OR program_name ILIKE '%NDIS%' THEN 'Disability'
-              WHEN program_name ILIKE '%employ%' OR program_name ILIKE '%jobs%' OR program_name ILIKE '%skills%' THEN 'Jobs / Skills'
-              WHEN program_name ILIKE '%arts%' OR program_name ILIKE '%culture%' OR program_name ILIKE '%creative%' THEN 'Arts / Culture'
-              WHEN program_name ILIKE '%sport%' OR program_name ILIKE '%active%' THEN 'Sport / Recreation'
+              -- First Peoples / Treaty: program_name OR recipient_name keywords + named groups
+              WHEN program_name ILIKE '%aboriginal%' OR program_name ILIKE '%first peoples%' OR program_name ILIKE '%treaty%' OR program_name ILIKE '%self-determination%'
+                   OR program_name ILIKE '%traditional owner%' OR program_name ILIKE '%stolen generations%' OR program_name ILIKE '%reconciliation%'
+                   OR program_name ILIKE '%RAP %' OR program_name ILIKE '%RAP-%' OR program_name ILIKE '%native title%' OR program_name ILIKE '%indigenous%'
+                   OR program_name ILIKE '%munarra%' OR program_name ILIKE '%DDWCAC%' OR program_name ILIKE '%taungurung%' OR program_name ILIKE '%yorta yorta%'
+                   OR program_name ILIKE '%wurundjeri%' OR program_name ILIKE '%gunditj%' OR program_name ILIKE '%dja dja wurrung%'
+                   OR program_name ILIKE '%bunurong%' OR program_name ILIKE '%gunaikurnai%' OR program_name ILIKE '%wadawurrung%' OR program_name ILIKE '%boon wurrung%'
+                   OR recipient_name ILIKE '%aboriginal corporation%' OR recipient_name ILIKE '%traditional owner%' OR recipient_name ILIKE '%first peoples%'
+                   OR recipient_name ILIKE '%first nations%' OR recipient_name ILIKE '%RNTBC%'
+                THEN 'First Peoples / Treaty'
+
+              -- Multicultural / Settlement: keyword OR recipient is ethnic/multicultural body OR migrant
+              WHEN program_name ILIKE '%multicultural%' OR program_name ILIKE '%ethnic%' OR program_name ILIKE '%refugee%' OR program_name ILIKE '%settlement%'
+                   OR program_name ILIKE '%cald %' OR program_name ILIKE '% cald%' OR program_name ILIKE '%migrant%' OR program_name ILIKE '%MCIF%'
+                   OR program_name ILIKE '%diversity%' OR program_name ILIKE '%anti-racism%'
+                   OR recipient_name ILIKE '%ethnic communit%' OR recipient_name ILIKE '%multicultural%' OR recipient_name ILIKE '%migrant%'
+                   OR recipient_name ILIKE '%refugee%' OR recipient_name ILIKE '%new and emerging communit%'
+                THEN 'Multicultural / Settlement'
+
+              WHEN program_name ILIKE '%family violence%' OR program_name ILIKE '%family safety%' OR program_name ILIKE '%violence against%'
+                   OR program_name ILIKE '%respectful relationships%' OR program_name ILIKE '%domestic violence%'
+                THEN 'Family Violence'
+
+              WHEN program_name ILIKE '%children%' OR program_name ILIKE '%family%' OR program_name ILIKE '%kindergarten%' OR program_name ILIKE '%early childhood%'
+                   OR program_name ILIKE '%child protection%' OR program_name ILIKE '%parenting%'
+                THEN 'Children / Family'
+
+              WHEN program_name ILIKE '%housing%' OR program_name ILIKE '%homeless%' OR program_name ILIKE '%rooming house%' OR program_name ILIKE '%tenancy%'
+                THEN 'Housing / Homelessness'
+
+              WHEN program_name ILIKE '%mental%' OR program_name ILIKE '%suicide%' OR program_name ILIKE '%alcohol%' OR program_name ILIKE '%drug%'
+                   OR program_name ILIKE '%AOD%' OR program_name ILIKE '%wellbeing%'
+                THEN 'Mental Health / AOD'
+
+              WHEN program_name ILIKE '%youth%' OR program_name ILIKE '%young people%' THEN 'Youth'
+
+              WHEN program_name ILIKE '%women%' OR program_name ILIKE '%gender%' OR program_name ILIKE '%LGBT%' OR program_name ILIKE '%pride%'
+                   OR program_name ILIKE '%equality%'
+                THEN 'Gender / Equality'
+
+              WHEN program_name ILIKE '%disability%' OR program_name ILIKE '%NDIS%' OR program_name ILIKE '%changing places%' OR program_name ILIKE '%accessib%'
+                   OR program_name ILIKE '%inclusion%'
+                THEN 'Disability / Accessibility'
+
+              WHEN program_name ILIKE '%employ%' OR program_name ILIKE '%jobs%' OR program_name ILIKE '%skills%' OR program_name ILIKE '%TAFE%'
+                   OR program_name ILIKE '%apprentic%' OR program_name ILIKE '%vocational%' OR program_name ILIKE '%construction industry%'
+                THEN 'Jobs / Skills'
+
+              WHEN program_name ILIKE '%arts%' OR program_name ILIKE '%culture%' OR program_name ILIKE '%creative%' OR program_name ILIKE '%festival%'
+                   OR program_name ILIKE '%heritage%'
+                THEN 'Arts / Culture'
+
+              WHEN program_name ILIKE '%sport%' OR program_name ILIKE '%active%' OR program_name ILIKE '%athlete%' OR program_name ILIKE '%recreation%'
+                THEN 'Sport / Recreation'
+
+              WHEN program_name ILIKE '%community participation%' OR program_name ILIKE '%community funding%' OR program_name ILIKE '%neighbourhood%'
+                   OR program_name ILIKE '%community grant%'
+                THEN 'Community / Local'
+
+              WHEN program_name ILIKE '%municipal%' OR program_name ILIKE '%essential services%' OR program_name ILIKE '%infrastructure%'
+                   OR program_name ILIKE '%services funding%' OR program_name ILIKE '%operational%'
+                THEN 'Infrastructure / Operating'
+
+              WHEN program_name ILIKE '%veteran%' OR program_name ILIKE '%shrine%' OR program_name ILIKE '%remembrance%' OR program_name ILIKE '%legacy%'
+                THEN 'Veterans / Legacy'
+
               ELSE 'Other / Unclassified'
             END AS topic
           FROM public.vic_grants_awarded
