@@ -60,7 +60,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     || pathname.startsWith('/discover')
     || pathname.startsWith('/feedback')
     || pathname.startsWith('/get-a-report')
-    || pathname.startsWith('/pricing');
+    || pathname.startsWith('/pricing')
+    || pathname.startsWith('/changes')
+    || pathname.startsWith('/account');
   const requiresLayoutAuth = needsLayoutAuth(pathname);
   const isFastPublicPath = !requiresLayoutAuth;
 

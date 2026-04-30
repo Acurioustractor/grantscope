@@ -13,7 +13,7 @@ import type { ReactNode } from 'react';
  * The full app (NavBar, dense footer, /tracker / /alerts / /profile / etc.)
  * is exposed at /app or via login.
  */
-export function LandingChrome({ children, currentPage }: { children: ReactNode; currentPage?: 'discover' | 'feedback' | 'report' | 'pricing' }) {
+export function LandingChrome({ children, currentPage }: { children: ReactNode; currentPage?: 'discover' | 'changes' | 'feedback' | 'report' | 'pricing' | 'account' }) {
   return (
     <div className="min-h-screen flex flex-col bg-bauhaus-canvas">
       <header className="border-b-4 border-bauhaus-black bg-white">
@@ -23,6 +23,7 @@ export function LandingChrome({ children, currentPage }: { children: ReactNode; 
           </Link>
           <nav className="flex flex-wrap items-center gap-1">
             <Link href="/discover" className={`text-xs font-black uppercase tracking-widest px-3 py-2 border-2 border-bauhaus-black ${currentPage === 'discover' ? 'bg-bauhaus-black text-white' : 'bg-white text-bauhaus-black hover:bg-bauhaus-canvas'}`} aria-current={currentPage === 'discover' ? 'page' : undefined}>Discover</Link>
+            <Link href="/changes" className={`text-xs font-black uppercase tracking-widest px-3 py-2 border-2 border-bauhaus-black ${currentPage === 'changes' ? 'bg-bauhaus-black text-white' : 'bg-white text-bauhaus-black hover:bg-bauhaus-canvas'}`} aria-current={currentPage === 'changes' ? 'page' : undefined}>● Live</Link>
             <Link href="/feedback" className={`text-xs font-black uppercase tracking-widest px-3 py-2 border-2 border-bauhaus-black ${currentPage === 'feedback' ? 'bg-bauhaus-black text-white' : 'bg-white text-bauhaus-black hover:bg-bauhaus-canvas'}`} aria-current={currentPage === 'feedback' ? 'page' : undefined}>Feedback</Link>
             <Link href="/get-a-report?free=true" className={`text-xs font-black uppercase tracking-widest px-3 py-2 border-2 border-bauhaus-black ${currentPage === 'report' ? 'bg-bauhaus-black text-white' : 'bg-bauhaus-yellow text-bauhaus-black hover:bg-bauhaus-canvas'}`} aria-current={currentPage === 'report' ? 'page' : undefined}>★ Get a Report</Link>
             <Link href="/login" className="text-xs font-black uppercase tracking-widest px-3 py-2 border-2 border-bauhaus-black bg-white text-bauhaus-muted hover:text-bauhaus-black hover:bg-bauhaus-canvas">Login</Link>
