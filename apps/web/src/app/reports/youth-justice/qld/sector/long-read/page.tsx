@@ -262,27 +262,27 @@ export default async function QldYjLongRead() {
           </p>
         </Finding>
 
-        <Finding n={2} title="Detention beds run 76–92% full; watchhouses become overflow" severity="crit">
+        <Finding n={2} title="Detention beds run near capacity; watchhouses become overflow" severity="crit">
           <p>
-            QLD operates seven youth-detention facilities. Brisbane Youth Detention Centre runs at ~85% occupancy; Cleveland (Townsville) at ~72–92% depending on cohort; West Moreton at ~76%. When detention nears capacity, watchhouses absorb the spillover &mdash; producing the situation in Finding 1. <SourceLink href="#src-aihw-yj">[5]</SourceLink>
+            QLD operates seven youth-detention facilities. AIHW reporting and successive QLD parliamentary committee inquiries describe these facilities running near capacity for sustained periods, particularly the Brisbane Youth Detention Centre and Cleveland (Townsville). When detention nears capacity, watchhouses absorb the spillover &mdash; producing the situation in Finding 1. The facility-level capacity figures are visible in the dashboard view (§2). <SourceLink href="#src-aihw-yj">[5]</SourceLink>
           </p>
         </Finding>
 
         <Finding n={3} title="$1.88B detention vs $1.49B community: ratio is the story" severity="crit">
           <p>
-            QLD&apos;s state-budget Youth Justice line items disclose <span className="font-black">{money(r.detention)}</span> on detention-based services and <span className="font-black">{money(r.community)}</span> on community-based services across the years CivicGraph indexes. Ratio: <span className="font-black text-bauhaus-red">{detentionRatio}:1 detention to community</span>. Group-conferencing — the most evidence-backed early intervention in the budget — gets <span className="font-black">{money(r.groupConferencing)}</span>, ~{totalSpend > 0 ? ((r.groupConferencing/totalSpend)*100).toFixed(1) : '—'}% of the total. Diversion + prevention together sit around <span className="font-black">2%</span> of QLD&apos;s overall justice spend. <SourceLink href="#src-qld-budget">[2]</SourceLink>
+            QLD&apos;s state-budget Youth Justice line items disclose <span className="font-black">{money(r.detention)}</span> on detention-based services and <span className="font-black">{money(r.community)}</span> on community-based services across the years CivicGraph indexes. Ratio: <span className="font-black text-bauhaus-red">{detentionRatio}:1 detention to community</span>. Group-conferencing — the most evidence-backed early intervention in the budget — gets <span className="font-black">{money(r.groupConferencing)}</span>, ~{totalSpend > 0 ? ((r.groupConferencing/totalSpend)*100).toFixed(1) : '—'}% of the three-line Youth Justice total. <SourceLink href="#src-qld-budget">[2]</SourceLink>
           </p>
         </Finding>
 
-        <Finding n={4} title={`ACCOs receive ${accoSharePct}% of dollars for ~70% of the in-custody population`} severity="crit">
+        <Finding n={4} title={`ACCOs receive ${accoSharePct}% of dollars; First Nations children are the majority of in-custody children`} severity="crit">
           <p>
-            Aboriginal Community-Controlled Organisations — those registered with ORIC and consistently outperforming mainstream NGOs on retention and outcomes for First Nations young people — receive <span className="font-black text-bauhaus-red">{accoSharePct}%</span> of named-recipient youth-justice grant dollars in CivicGraph&apos;s dataset, across <span className="font-black">{accoCount}</span> ACCOs. The remaining <span className="font-black">{otherCount}</span> non-ACCO recipients hold the other <span className="font-black">{100 - accoSharePct}%</span>. First Nations children are ~70% of the in-custody population. <SourceLink href="#src-acnc">[6]</SourceLink> <SourceLink href="#src-oric">[15]</SourceLink>
+            Aboriginal Community-Controlled Organisations — those registered with ORIC and consistently outperforming mainstream NGOs on retention and outcomes for First Nations young people — receive <span className="font-black text-bauhaus-red">{accoSharePct}%</span> of named-recipient youth-justice grant dollars in CivicGraph&apos;s dataset, across <span className="font-black">{accoCount}</span> ACCOs. The remaining <span className="font-black">{otherCount}</span> non-ACCO recipients hold the other <span className="font-black">{100 - accoSharePct}%</span>. <SourceLink href="#src-acnc">[6]</SourceLink> Live QLD watchhouse data shows {fnPctChild}% of children currently in custody are First Nations &mdash; in a state where First Nations make up ~5% of the 10–17 population. <SourceLink href="#src-qps-watchhouse">[1]</SourceLink> <SourceLink href="#src-aihw-yj">[5]</SourceLink>
           </p>
         </Finding>
 
-        <Finding n={5} title="Mental-health and AOD have ~zero funding tags. The data gap is the policy gap." severity="warn">
+        <Finding n={5} title="Mental-health and AOD funding tags are scarce. The data gap is the policy gap." severity="warn">
           <p>
-            CivicGraph indexes every QLD justice-funding row against topic tags: youth-justice, child-protection, indigenous, family-services, mental-health, AOD, homelessness, family-violence. Of the rows tagged youth-justice, <span className="font-black text-bauhaus-red">{r.mhFundingCount}</span> are also tagged mental-health or AOD. Practitioners report mental-health and substance-abuse co-morbidities in &gt;70% of the youth-justice cohort. The mismatch between what&apos;s known on the ground and what shows up in funding data is itself the structural problem. <SourceLink href="#src-aihw-yj">[5]</SourceLink>
+            CivicGraph indexes every QLD justice-funding row against topic tags: youth-justice, child-protection, indigenous, family-services, mental-health, AOD, homelessness, family-violence. Of QLD justice-funding rows in the dataset, <span className="font-black text-bauhaus-red">{r.mhFundingCount}</span> carry a mental-health or AOD tag. AIHW Youth Justice reporting consistently identifies high mental-health and substance-use co-morbidity in the cohort. The mismatch between what&apos;s known on the ground and what shows up in funding-line classification is itself the structural problem. <SourceLink href="#src-aihw-yj">[5]</SourceLink>
           </p>
         </Finding>
 
@@ -340,7 +340,7 @@ export default async function QldYjLongRead() {
 
         <Finding n={14} title="Justice Reinvestment sites show outcome data; QLD has no operational equivalent at scale" severity="info">
           <p>
-            Maranguka (Bourke, NSW) is the most-cited operational justice-reinvestment site in Australia — KPMG&apos;s evaluation reported a 23% drop in police-recorded incidents of family violence and a 14% drop in young people charged with serious offences in the first three years. QLD has emerging community-led pilots but no operational equivalent at the same scale. <SourceLink href="#src-jr">[11]</SourceLink>
+            Maranguka (Bourke, NSW) is the most-cited operational justice-reinvestment site in Australia. KPMG&apos;s 2018 Impact Assessment reported a 23% drop in police-recorded incidents of family violence and a 31% increase in Year-12 student retention, alongside a $3.1M gross impact estimate in the evaluation year. QLD has emerging community-led pilots but no operational equivalent at the same scale, time-horizon, or evaluation rigor. <SourceLink href="#src-jr">[11]</SourceLink>
           </p>
         </Finding>
 
@@ -372,7 +372,7 @@ export default async function QldYjLongRead() {
 
         <p>
           Closing the Gap target 11 commits the QLD government to reducing the rate of First Nations young people in detention by 30% by 2031. {r.ctg ? (
-            <>The most recent reported QLD figure is <span className="font-black text-bauhaus-red">{Number(r.ctg.actual_rate).toFixed(1)} per 10,000</span> for {r.ctg.financial_year}, with a <span className="font-black">{Number(r.ctg.gap_from_target).toFixed(1)} per 10,000</span> gap from the trajectory target. The gap is widening, not narrowing.</>
+            <>The most recent reported QLD figure in CivicGraph&apos;s dataset is <span className="font-black text-bauhaus-red">{Number(r.ctg.actual_rate).toFixed(1)} per 10,000</span> for {r.ctg.financial_year}, with a <span className="font-black">{Number(r.ctg.gap_from_target).toFixed(1)} per 10,000</span> gap from the trajectory target.</>
           ) : (
             <>The QLD trajectory data is loading.</>
           )} <SourceLink href="#src-ctg">[12]</SourceLink>
@@ -401,7 +401,7 @@ export default async function QldYjLongRead() {
 
         <h3 className="text-lg font-black uppercase tracking-tight text-bauhaus-black mt-8 mb-3">The mental-health &amp; AOD blind spot</h3>
         <p>
-          Practitioners working with the QLD youth-justice cohort consistently report mental-health and substance-use co-morbidity in &gt;70% of cases. CivicGraph&apos;s funding-tag data shows <span className="font-black text-bauhaus-red">{r.mhFundingCount}</span> QLD justice-funding rows tagged with mental-health or AOD. The data gap is the policy gap: where funding doesn&apos;t classify a need, that need doesn&apos;t show up in commissioning, evaluation, or political accountability.
+          AIHW Youth Justice reporting consistently identifies high rates of mental-health and substance-use co-morbidity in the cohort. <SourceLink href="#src-aihw-yj">[5]</SourceLink> CivicGraph&apos;s funding-tag data shows <span className="font-black text-bauhaus-red">{r.mhFundingCount}</span> QLD justice-funding rows carrying a mental-health or AOD tag. The data gap is the policy gap: where funding doesn&apos;t classify a need, that need doesn&apos;t show up in commissioning, evaluation, or political accountability.
         </p>
 
         <h3 className="text-lg font-black uppercase tracking-tight text-bauhaus-black mt-8 mb-3">Education disengagement &rarr; welfare &rarr; offending</h3>
@@ -424,7 +424,7 @@ export default async function QldYjLongRead() {
         ]} />
 
         <p>
-          The ratio matters because detention is structurally more expensive per child than every alternative. Custodial beds are infrastructure: staffed 24/7, carrying capital, security, and overhead costs &mdash; AIHW reports the marginal cost of a detention bed-day in Australia at $1,700–$2,200. The community line covers diversion, family-led decision-making, school re-engagement, mental-health and AOD support, employment pathways &mdash; the program work the evidence consistently identifies as effective. Group conferencing alone has the most-rigorous evaluation evidence in the QLD budget. <SourceLink href="#src-qld-budget">[2]</SourceLink> <SourceLink href="#src-rogs">[3]</SourceLink>
+          The ratio matters because detention is structurally more expensive per child than every alternative. Custodial beds are infrastructure: staffed 24/7, carrying capital, security, and overhead costs &mdash; ROGS publishes per-jurisdiction recurrent expenditure per young person in detention, and the figure is consistently a multi-fold premium over the per-young-person cost of community-based supervision. The community line covers diversion, family-led decision-making, school re-engagement, mental-health and AOD support, employment pathways &mdash; the program work the evidence consistently identifies as effective. Group conferencing alone has the most-rigorous evaluation evidence among the named QLD budget lines. <SourceLink href="#src-qld-budget">[2]</SourceLink> <SourceLink href="#src-rogs">[3]</SourceLink>
         </p>
 
         <h3 className="text-lg font-black uppercase tracking-tight text-bauhaus-black mt-8 mb-3">Where the community $1.49B actually goes</h3>
@@ -434,7 +434,7 @@ export default async function QldYjLongRead() {
 
         <h3 className="text-lg font-black uppercase tracking-tight text-bauhaus-black mt-8 mb-3">The ACCO funding gap</h3>
         <p>
-          ACCOs receive <span className="font-black text-bauhaus-red">{accoSharePct}%</span> of named-recipient youth-justice grant dollars in CivicGraph&apos;s dataset, while First Nations young people are ~70% of the in-custody population. The gap is structural, not incidental: ACCOs typically operate on shorter funding cycles, smaller per-grant amounts, and higher reporting overheads relative to scale. The Pathways to Justice report (ALRC 2018) flagged this; the gap persists. <SourceLink href="#src-pathways">[18]</SourceLink>
+          ACCOs receive <span className="font-black text-bauhaus-red">{accoSharePct}%</span> of named-recipient youth-justice grant dollars in CivicGraph&apos;s dataset, while First Nations young people are the majority of children in QLD watchhouses on any given day &mdash; live data shows {fnPctChild}% today. <SourceLink href="#src-qps-watchhouse">[1]</SourceLink> The gap is structural, not incidental: ACCOs typically operate on shorter funding cycles, smaller per-grant amounts, and higher reporting overheads relative to scale. The Pathways to Justice report (ALRC 2018) flagged this; the gap persists. <SourceLink href="#src-pathways">[18]</SourceLink>
         </p>
 
         <h3 className="text-lg font-black uppercase tracking-tight text-bauhaus-black mt-8 mb-3">Foundation giving</h3>
@@ -447,8 +447,8 @@ export default async function QldYjLongRead() {
           Federal AusTender contracts to youth-justice-relevant suppliers in CivicGraph&apos;s dataset total <span className="font-black">{money(r.contracts.reduce((s, c) => s + c.total, 0))}</span> across <span className="font-black">{r.contracts.reduce((s, c) => s + c.contracts, 0)}</span> contracts. Federal procurement reaches the same supplier pool that holds state grants &mdash; Mission Australia, UnitingCare, Anglicare, Lifeline &mdash; alongside infrastructure suppliers (detention build, case-management software). <SourceLink href="#src-austender">[7]</SourceLink>
         </p>
 
-        <PullQuote attribution="QLD State Budget — Youth Justice service-delivery statements">
-          {detentionRatio}:1 detention to community. Diversion plus prevention sit at ~2% of total justice spend.
+        <PullQuote attribution="CivicGraph analysis · QLD State Budget Youth Justice line items">
+          {detentionRatio}:1 detention to community. Group conferencing — the most evidence-backed line — sits at ~{totalSpend > 0 ? ((r.groupConferencing/totalSpend)*100).toFixed(1) : '—'}% of the three-line total.
         </PullQuote>
       </ReportSection>
 
@@ -551,14 +551,14 @@ export default async function QldYjLongRead() {
 
         <h3 className="text-lg font-black uppercase tracking-tight text-bauhaus-black mt-8 mb-3">Justice reinvestment — the operational template</h3>
         <p>
-          Maranguka (Bourke, NSW) is the operational reference site. KPMG&apos;s independent evaluation reported a 23% drop in police-recorded incidents of family violence and a 14% drop in young people charged with serious offences in the first three years of the place-based model &mdash; alongside a 38% drop in days-in-custody. The cost-benefit was net positive after 24 months. Maranguka is community-led, place-based, multi-funder (philanthropic + state + federal), and operates with a 10-year time horizon. <SourceLink href="#src-jr">[11]</SourceLink>
+          Maranguka (Bourke, NSW) is the operational reference site. KPMG&apos;s 2018 independent Impact Assessment reported a 23% drop in police-recorded incidents of family violence, a 31% increase in Year-12 retention, and an estimated $3.1M gross impact in the evaluation year. The model is community-led, place-based, multi-funder (philanthropic + state + federal), and operates with a long-term time horizon. <SourceLink href="#src-jr">[11]</SourceLink>
         </p>
         <p>
           Queensland has emerging community-led pilots &mdash; in Townsville, Cherbourg, Mount Isa, and the Cape &mdash; but no operational equivalent at Maranguka&apos;s scale, time-horizon, or evaluation rigor. The structural ingredients (multi-funder commitment, ACCO governance, place-anchored data infrastructure) exist; the political commitment to a 10-year horizon does not.
         </p>
 
         <PullQuote attribution="KPMG (2018) — Maranguka Justice Reinvestment Project Impact Assessment">
-          A 23% drop in family-violence incidents and a 38% drop in days-in-custody within the first three years.
+          A 23% drop in police-recorded family-violence incidents and a 31% increase in Year-12 retention, evaluated independently.
         </PullQuote>
       </ReportSection>
 
@@ -569,7 +569,7 @@ export default async function QldYjLongRead() {
         </p>
 
         <p>
-          <span className="font-black text-bauhaus-red">1. Move the detention-to-community spend ratio.</span> A $200M reallocation from detention to community-based services would be a 13% expansion of the community line &mdash; enough to fund the scale-up of every &ldquo;Promising&rdquo; ALMA intervention with a credible delivery footprint, alongside the evaluation work needed to lift the most-promising ones to &ldquo;Proven&rdquo;.
+          <span className="font-black text-bauhaus-red">1. Move the detention-to-community spend ratio.</span> A $200M reallocation from detention to community-based services would be roughly a {r.community > 0 ? Math.round((200_000_000 / r.community) * 100) : '—'}% expansion of the {money(r.community)} community line &mdash; enough to fund the scale-up of every &ldquo;Promising&rdquo; ALMA intervention with a credible delivery footprint, alongside the evaluation work needed to lift the most-promising ones to &ldquo;Proven&rdquo;.
         </p>
 
         <p>
