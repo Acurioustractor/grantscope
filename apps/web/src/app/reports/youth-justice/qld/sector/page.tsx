@@ -88,6 +88,7 @@ type DssRow = { state: string; payment_type: string; recipient_count: number };
 type NdisOverlayRow = { state: string; total_participants: number; youth_participants: number; psychosocial_participants: number; intellectual_disability_participants: number; autism_participants: number };
 type UnfundedRow = { name: string; type: string; evidence_level: string | null; geography: string[] };
 type DirectorRow = { person_name: string; board_count: number; total_procurement: number; total_justice: number };
+type SpendRow = { recipient_name: string; total: number };
 
 async function getReport() {
   const supabase = getLiveReportSupabase();
@@ -96,7 +97,7 @@ async function getReport() {
     recipients, crossSector, almaTypeCounts, almaInterventions, contracts,
     foundations, heatmap, yearSpend, dssQld, ndisOverlay,
     unfundedPrograms, mentalHealthAlma, aodAlma, mhFundingCount, directors,
-    politicalDonations,
+    politicalDonations, spend,
   ] = await Promise.all([
     safe(supabase.rpc('exec_sql', { query: `SELECT source_generated_at::text, total_people, total_adults, total_children, child_first_nations, child_non_indigenous, child_0_2_days, child_3_7_days, child_over_7_days, child_longest_days, adult_first_nations, adult_non_indigenous, adult_over_7_days, adult_longest_days, child_watchhouse_count FROM public.v_qld_watchhouse_latest LIMIT 1` })) as Promise<WatchhouseLatest[] | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT watchhouse_name, age_group, total_in_custody::int, first_nations::int, custody_over_7_days::int, longest_days::int FROM public.qld_watchhouse_snapshot_rows WHERE snapshot_id = (SELECT id FROM public.v_qld_watchhouse_latest LIMIT 1) ORDER BY total_in_custody DESC LIMIT 30` })) as Promise<WatchhouseRow[] | null>,
@@ -121,7 +122,12 @@ async function getReport() {
     safe(supabase.rpc('exec_sql', { query: `SELECT count(*)::int AS c FROM public.justice_funding WHERE state = 'QLD' AND amount_dollars > 0 AND (topics @> ARRAY['mental-health'] OR topics @> ARRAY['aod'])` })) as Promise<Array<{ c: number }> | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT person_name, board_count::int, total_procurement::bigint, total_justice::bigint FROM public.mv_person_influence WHERE board_count >= 5 AND total_justice > 0 AND (entity_types::text ILIKE '%charity%' OR entity_types::text ILIKE '%indigenous%') ORDER BY total_justice DESC NULLS LAST LIMIT 12` })) as Promise<DirectorRow[] | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT count(*)::int AS donations, SUM(amount)::bigint AS total FROM public.political_donations pd WHERE pd.donor_abn IN (SELECT recipient_abn FROM public.justice_funding WHERE state = 'QLD' AND topics @> ARRAY['youth-justice'] AND recipient_abn IS NOT NULL)` })) as Promise<Array<{ donations: number; total: number }> | null>,
+    safe(supabase.rpc('exec_sql', { query: `SELECT recipient_name, SUM(amount_dollars)::bigint AS total FROM public.justice_funding WHERE state = 'QLD' AND recipient_name LIKE 'Youth Justice -%' GROUP BY 1` })) as Promise<SpendRow[] | null>,
   ]);
+
+  const detention = (spend ?? []).find(s => /detention/i.test(s.recipient_name))?.total || 0;
+  const community = (spend ?? []).find(s => /community/i.test(s.recipient_name))?.total || 0;
+  const groupConferencing = (spend ?? []).find(s => /group conferencing/i.test(s.recipient_name))?.total || 0;
 
   return {
     latest: latest?.[0] || null,
@@ -147,6 +153,7 @@ async function getReport() {
     mhFundingCount: mhFundingCount?.[0]?.c ?? 0,
     directors: directors ?? [],
     politicalDonations: politicalDonations?.[0] || null,
+    detention, community, groupConferencing,
   };
 }
 
@@ -206,8 +213,8 @@ export default async function QldYjSectorPage() {
         {[
           { label: 'Children in custody now', value: ws ? String(ws.total_children) : '—', tone: 'red' },
           { label: 'First Nations %', value: `${fnPctChild}%`, tone: 'red' },
-          { label: 'Detention $ (cum.)', value: '$1.88B', tone: 'red' },
-          { label: 'Community $', value: '$1.49B', tone: 'blue' },
+          { label: 'Detention $ (cum.)', value: money(r.detention), tone: 'red' },
+          { label: 'Community $', value: money(r.community), tone: 'blue' },
           { label: 'ACCO share', value: `${accoSharePct}%`, tone: 'red' },
           { label: 'ALMA programs', value: fmt(totalIntervTypes), tone: 'black' },
           { label: 'LGA hotspots', value: fmt(r.heatmap.length), tone: 'black' },
@@ -534,15 +541,15 @@ export default async function QldYjSectorPage() {
         <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§8</div>
         <h3 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">Detention vs community — the structural ratio</h3>
         <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
-          From the QLD state-budget Youth Justice expenditure lines. <span className="font-black text-bauhaus-red">$1.88B detention</span> vs <span className="font-black text-bauhaus-blue">$1.49B community-based</span> vs <span className="font-black">$0.10B group conferencing</span>. Detention costs ~$1.26 for every $1 spent on community-based work.
+          From the QLD state-budget Youth Justice expenditure lines, queried live from <code className="font-mono text-xs">justice_funding</code>. <span className="font-black text-bauhaus-red">{money(r.detention)} detention</span> vs <span className="font-black text-bauhaus-blue">{money(r.community)} community-based</span> vs <span className="font-black">{money(r.groupConferencing)} group conferencing</span>. Ratio: {r.community > 0 ? (r.detention / r.community).toFixed(2) : '—'}:1 detention to community.
         </p>
         <div className="border-4 border-bauhaus-black p-6 bg-white mb-6">
           <StackedBar
-            total={1880_576_000 + 1_494_230_000 + 101_435_000}
+            total={r.detention + r.community + r.groupConferencing}
             segments={[
-              { key: 'det', value: 1_880_576_000, color: 'bg-bauhaus-red', label: 'Detention services' },
-              { key: 'com', value: 1_494_230_000, color: 'bg-bauhaus-blue', label: 'Community-based services' },
-              { key: 'gc', value: 101_435_000, color: 'bg-bauhaus-yellow', label: 'Group conferencing' },
+              { key: 'det', value: r.detention, color: 'bg-bauhaus-red', label: 'Detention services' },
+              { key: 'com', value: r.community, color: 'bg-bauhaus-blue', label: 'Community-based services' },
+              { key: 'gc', value: r.groupConferencing, color: 'bg-bauhaus-yellow', label: 'Group conferencing' },
             ]}
           />
         </div>
@@ -585,7 +592,7 @@ export default async function QldYjSectorPage() {
       {/* §9 TOP RECIPIENTS */}
       <section className="mb-16">
         <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§9</div>
-        <h3 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">Where the community $1.49B actually goes</h3>
+        <h3 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">Where the community {money(r.community)} actually goes</h3>
         <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
           Top 15 QLD recipients of youth-justice-tagged grants (excluding state department line items). National NGOs hold the largest contracts. Aboriginal Community-Controlled Organisations are funded — but at smaller dollar amounts (see §10).
         </p>
@@ -993,12 +1000,12 @@ export default async function QldYjSectorPage() {
         </p>
         <div className="border-4 border-bauhaus-black p-5 bg-bauhaus-canvas">
           <div className="text-xs font-black uppercase tracking-widest text-bauhaus-yellow mb-2">Maranguka Justice Reinvestment · Bourke NSW</div>
-          <h4 className="text-xl font-black text-bauhaus-black uppercase tracking-tight mb-3">42% reduction in youth offences (2018 vs 2016)</h4>
+          <h4 className="text-xl font-black text-bauhaus-black uppercase tracking-tight mb-3">23% drop in family-violence incidents (2017 baseline year)</h4>
           <ul className="space-y-2 text-sm font-medium text-bauhaus-black leading-relaxed">
             <li>· 31% increase in Year 12 retention</li>
-            <li>· 23% reduction in police charges across major offence categories</li>
-            <li>· $3.1M social return on investment in evaluation year (2018) — KPMG analysis</li>
+            <li>· $3.1M gross impact estimated in the evaluation year — KPMG analysis</li>
             <li>· Aboriginal-led, place-based, data-driven cross-agency coordination</li>
+            <li>· QLD has emerging place-based pilots; no operational equivalent at the same scale, time-horizon, or evaluation rigor</li>
           </ul>
           <p className="text-xs text-bauhaus-muted font-mono mt-3">Source: KPMG (2018) Maranguka Justice Reinvestment Project Impact Assessment.</p>
         </div>
@@ -1013,7 +1020,7 @@ export default async function QldYjSectorPage() {
         <div className="grid md:grid-cols-3 gap-5 text-sm font-medium leading-relaxed text-bauhaus-black">
           <div>
             <div className="text-xs font-black uppercase tracking-widest text-bauhaus-red mb-2">1. Reallocate $200M from detention to community</div>
-            <p>A 13% expansion of the {money(1_494_230_000)} community-services budget — enough to scale-up the most-promising ALMA interventions across the regional QLD network. Detention costs more per child than every alternative.</p>
+            <p>A $200M reallocation is roughly a {r.community > 0 ? Math.round((200_000_000 / r.community) * 100) : '—'}% expansion of the {money(r.community)} community-services line — enough to scale-up the most-promising ALMA interventions across the regional QLD network. Detention costs more per child than every alternative.</p>
           </div>
           <div>
             <div className="text-xs font-black uppercase tracking-widest text-bauhaus-red mb-2">2. Triple the ACCO share</div>
@@ -1035,7 +1042,7 @@ export default async function QldYjSectorPage() {
             <div className="text-xs font-black uppercase tracking-widest text-bauhaus-red mb-2">If you fund youth-justice work in QLD</div>
             <ul className="space-y-2">
               <li><span className="font-black">{accoSharePct}% of dollars for ~70% of in-custody children.</span> Frame your grants against this denominator. ACCOs deliver better outcomes; they don&apos;t get the dollars.</li>
-              <li><span className="font-black">Evidence-vs-spend gap is real and quantifiable.</span> $0.10B group conferencing for the most-evidence-backed early intervention; $1.88B detention for the most-evidence-against last resort.</li>
+              <li><span className="font-black">Evidence-vs-spend gap is real and quantifiable.</span> {money(r.groupConferencing)} group conferencing — the most-evidence-backed early intervention in the budget — versus {money(r.detention)} for detention services.</li>
               <li><span className="font-black">Foundation giving is adjacent, not anchored.</span> See §11 — billions in adjacent giving from Paul Ramsay / Minderoo / BHP / Smith Family. None anchored to QLD YJ specifically.</li>
             </ul>
           </div>
@@ -1058,9 +1065,9 @@ export default async function QldYjSectorPage() {
           <div>
             <div className="text-xs font-black uppercase tracking-widest text-bauhaus-black mb-2">If you run advocacy / a sector peak</div>
             <ul className="space-y-2">
-              <li><span className="font-black">$1.88B detention vs $1.49B community</span> is a campaign-grade statistic. Detention isn&apos;t cheaper; it&apos;s structurally larger.</li>
+              <li><span className="font-black">{money(r.detention)} detention vs {money(r.community)} community</span> is a campaign-grade statistic. Detention isn&apos;t cheaper; it&apos;s structurally larger.</li>
               <li><span className="font-black">First Nations children at {fnPctChild}% of in-custody kids</span> is a Closing the Gap target-11 signal. It&apos;s daily-data, not annual.</li>
-              <li><span className="font-black">12 ALMA-listed alternatives with QLD presence</span> are real, evaluated, community-endorsed work. The &quot;there&apos;s no alternative&quot; framing doesn&apos;t hold.</li>
+              <li><span className="font-black">{fmt(r.almaInterventions.length)} ALMA-listed alternatives with QLD presence</span> are real, evaluated, community-endorsed work. The &quot;there&apos;s no alternative&quot; framing doesn&apos;t hold.</li>
             </ul>
           </div>
         </div>
