@@ -137,7 +137,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         ) : (
           /* Public: centered content with Bauhaus footer */
           <>
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <main className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-16 xl:px-20 py-10">
               {children}
             </main>
             <footer className="border-t-4 border-bauhaus-black mt-16 bg-bauhaus-black">
