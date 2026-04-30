@@ -562,7 +562,13 @@ function MoneyAndStaffCard({ row, label }: { row: AisFinancialsRow | null; label
     return (
       <div className="border-4 border-bauhaus-black p-5 bg-white">
         <div className="text-xs font-black uppercase tracking-widest text-bauhaus-yellow mb-1">{label}</div>
-        <p className="text-bauhaus-muted font-medium text-sm mt-3">No detailed AIS financials yet (revenue-only row from ACNC Dynamics).</p>
+        <p className="text-bauhaus-black font-medium text-sm mt-3">FECCA is <span className="font-black">missing from every public ACNC AIS bulk dataset (2017&ndash;2023)</span>.</p>
+        <p className="text-bauhaus-muted text-xs mt-2 leading-relaxed">
+          We pulled the FY2025 revenue figure from the ACNC Charity Portal Dynamics API, but that endpoint exposes only revenue / govt-share / donations &mdash; no expenses, staff, or KMP comp. Their own annual report PDFs publish narrative + program data, not audited financial statements.
+        </p>
+        <p className="text-bauhaus-muted text-xs mt-2 leading-relaxed">
+          Current visible: revenue $4.97M (100% govt). To get spend / staff / surplus history we&apos;d need either the ACNC Charity Portal HTML scrape (anti-bot) or FY2024+ bulk data once published.
+        </p>
       </div>
     );
   }
@@ -652,14 +658,14 @@ export default async function FeccaEccvPage() {
         <Link href="/reports/multicultural-sector" className="text-xs font-black text-bauhaus-muted uppercase tracking-widest hover:text-bauhaus-black">
           &larr; Multicultural Sector
         </Link>
-        <div className="text-xs font-black text-bauhaus-yellow mt-4 mb-1 uppercase tracking-widest">Deep Dive · Two Anchors</div>
+        <div className="text-xs font-black text-bauhaus-yellow mt-4 mb-1 uppercase tracking-widest">Deep Dive · Two Single-Funder Dependencies</div>
         <h1 className="text-3xl sm:text-4xl font-black text-bauhaus-black mb-3 uppercase tracking-tight">
-          FECCA &amp; ECCV — The Federation&apos;s Two Anchors
+          FECCA &amp; ECCV — The Federation&apos;s Money Map
         </h1>
         <p className="text-bauhaus-muted text-base sm:text-lg max-w-3xl leading-relaxed font-medium">
-          The national peak (FECCA) and Victoria&apos;s state council (ECCV) carry most of the federation&apos;s policy weight.
-          They sit on each other&apos;s referral pathways, share board pipelines through the state↔national bridge,
-          and depend almost entirely on government funding. This is where their wealth, programs, and people meet.
+          Two policy bodies, two single-funder dependencies. FECCA on Commonwealth contracts (100% federal), ECCV on Victorian state grants (84&ndash;95% state).
+          Combined revenue ~$7.4M, combined federal contracts $0.77M &mdash; while AMES alone holds <span className="font-black text-bauhaus-red">$1.85B</span> of federal multicultural procurement (§2c).
+          This page maps where each anchor&apos;s money comes from, where it goes, who works there, and what happens when a cycle ends.
         </p>
       </div>
 
@@ -672,10 +678,57 @@ export default async function FeccaEccvPage() {
       {/* SECTION 1 — Financial trajectories */}
       <section className="mb-16">
         <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§1</div>
-        <h2 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">Financial Trajectories — Government Dependence Over Time</h2>
+        <h2 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">Financial Trajectories — Single-Funder Dependence</h2>
         <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
-          Year-by-year revenue mix. Red is government grant revenue; blue is fees + donations. Both peaks &mdash; FECCA&apos;s and ECCV&apos;s &mdash; expose how the federation lives on Commonwealth and state cycles.
+          Year-by-year revenue mix. Red is government grant revenue; blue is fees + donations. Both anchors run on a single revenue stream &mdash; FECCA on Commonwealth contracts (100% federal), ECCV on Victorian state grants (84&ndash;95% state). With ECCV&apos;s 77% wage-share spend (§1b), there&apos;s no buffer to absorb a cycle-end without staff cuts.
         </p>
+
+        {/* Funder concentration + biggest YoY drop callout */}
+        {(() => {
+          const eccvAisAsc = [...r.eccv_ais].sort((a, b) => a.ais_year - b.ais_year);
+          let worstDrop = null as { from: number; to: number; pct: number; total: number } | null;
+          for (let i = 1; i < eccvAisAsc.length; i++) {
+            const prev = eccvAisAsc[i - 1].total;
+            const cur = eccvAisAsc[i].total;
+            if (prev > 0) {
+              const pct = ((cur - prev) / prev) * 100;
+              if (pct < (worstDrop?.pct ?? 0)) worstDrop = { from: eccvAisAsc[i - 1].ais_year, to: eccvAisAsc[i].ais_year, pct, total: cur };
+            }
+          }
+          const feccaConcentration = r.fecca?.govt_pct ?? null;
+          const eccvLatestConcentration = eccvAisAsc.length ? (eccvAisAsc[eccvAisAsc.length - 1].govt / eccvAisAsc[eccvAisAsc.length - 1].total) * 100 : null;
+          return (
+            <div className="grid sm:grid-cols-3 gap-4 mb-8">
+              <div className="border-4 border-bauhaus-red p-4 bg-white">
+                <div className="text-xs font-black uppercase tracking-widest text-bauhaus-red mb-1">FECCA Funder Concentration</div>
+                <div className="text-3xl font-black text-bauhaus-black tabular-nums">{feccaConcentration != null ? feccaConcentration.toFixed(0) : '—'}%</div>
+                <p className="text-xs text-bauhaus-muted font-medium mt-2 leading-relaxed">
+                  Of FY2025 revenue is government &mdash; <span className="font-black">100% federal</span>, mainly Department of Home Affairs (settlement) + Department of Infrastructure (Australian Mosaic).
+                </p>
+              </div>
+              <div className="border-4 border-bauhaus-red p-4 bg-white">
+                <div className="text-xs font-black uppercase tracking-widest text-bauhaus-red mb-1">ECCV Funder Concentration</div>
+                <div className="text-3xl font-black text-bauhaus-black tabular-nums">{eccvLatestConcentration != null ? eccvLatestConcentration.toFixed(0) : '—'}%</div>
+                <p className="text-xs text-bauhaus-muted font-medium mt-2 leading-relaxed">
+                  Of FY{eccvAisAsc.length ? eccvAisAsc[eccvAisAsc.length - 1].ais_year : '?'} revenue is government &mdash; <span className="font-black">100% Victorian state</span>, via DPC + DFFH grant cycles. No federal contracts on record.
+                </p>
+              </div>
+              <div className={`border-4 ${worstDrop && worstDrop.pct < -20 ? 'border-bauhaus-red' : 'border-bauhaus-black'} p-4 bg-white`}>
+                <div className="text-xs font-black uppercase tracking-widest text-bauhaus-red mb-1">Funding Cycle Risk (ECCV)</div>
+                {worstDrop ? (
+                  <>
+                    <div className={`text-3xl font-black tabular-nums ${worstDrop.pct < -20 ? 'text-bauhaus-red' : 'text-bauhaus-black'}`}>{worstDrop.pct.toFixed(0)}%</div>
+                    <p className="text-xs text-bauhaus-muted font-medium mt-2 leading-relaxed">
+                      Worst single-year revenue drop: FY{worstDrop.from} &rarr; FY{worstDrop.to}. With 77% wage-share, a drop of this size means redundancies unless reserves cover ~{Math.round(Math.abs(worstDrop.pct) * 0.77)}% of payroll.
+                    </p>
+                  </>
+                ) : (
+                  <div className="text-bauhaus-muted text-xs font-medium">Insufficient YoY data.</div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         <h3 className="text-sm font-black uppercase tracking-widest text-bauhaus-black mb-3">FECCA &mdash; National Peak</h3>
         <div className="border-4 border-bauhaus-black p-6 bg-white mb-8">
