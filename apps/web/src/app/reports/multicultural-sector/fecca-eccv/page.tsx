@@ -927,9 +927,40 @@ export default async function FeccaEccvPage() {
         <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
           Latest ACNC AIS for each anchor, decomposed. The revenue stack shows where the money comes from; the spend stack shows where it ends up. Staff breakdown beneath. ECCV pays out 65–85% as wages and redistributes nothing — they&apos;re a service / advocacy body, not a re-granter.
         </p>
-        <div className="grid sm:grid-cols-2 gap-4">
+        <div className="grid sm:grid-cols-2 gap-4 mb-6">
           <MoneyAndStaffCard row={feccaFin} label="FECCA — National Peak" />
           <MoneyAndStaffCard row={eccvFin} label="ECCV — VIC State Council" />
+        </div>
+
+        {/* FECCA structural-stress callout */}
+        <div className="border-4 border-bauhaus-red p-6 bg-white">
+          <div className="text-xs font-black uppercase tracking-widest text-bauhaus-red mb-3">FECCA — A Fragile National Peak (Audited FY2023-24)</div>
+          <div className="grid sm:grid-cols-3 gap-4 mb-4">
+            <div>
+              <div className="text-xs uppercase tracking-widest font-black text-bauhaus-muted mb-1">2-Year Cumulative Deficit</div>
+              <div className="text-2xl font-black text-bauhaus-red tabular-nums">&minus;$1.00M</div>
+              <p className="text-xs text-bauhaus-muted mt-1">
+                FY2022-23: &minus;$494,998 · FY2023-24: &minus;$508,347. Both years disclosed in the Directors&apos; Report.
+              </p>
+            </div>
+            <div>
+              <div className="text-xs uppercase tracking-widest font-black text-bauhaus-muted mb-1">Reserves Remaining</div>
+              <div className="text-2xl font-black text-bauhaus-black tabular-nums">$1.27M</div>
+              <p className="text-xs text-bauhaus-muted mt-1">
+                Accumulated Surplus, FY2024 balance sheet (down from $1.78M). At ~$500K/yr burn rate, <span className="font-black">~2.5 years of buffer</span> at current trajectory.
+              </p>
+            </div>
+            <div>
+              <div className="text-xs uppercase tracking-widest font-black text-bauhaus-muted mb-1">Late ACNC Registration</div>
+              <div className="text-2xl font-black text-bauhaus-black tabular-nums">24 yrs</div>
+              <p className="text-xs text-bauhaus-muted mt-1">
+                ABN active since 01 Nov 1999, GST since 01 Jul 2000, but charity tax concession + ACNC registration both granted <span className="font-black">08 Aug 2023</span>.
+              </p>
+            </div>
+          </div>
+          <div className="border-l-4 border-bauhaus-red pl-4 text-sm font-medium text-bauhaus-black leading-relaxed mt-3">
+            FY2023-24 was a year of structural strain. <span className="font-black">5 of 13 staff (38%) departed</span> during the year &mdash; including the Director of Policy &amp; Advocacy, the Strategy Lead, and the Senior Advisor. CEO Mohammad Al-Khafaji left Aug 2024; Mary Ann Baquero Geronimo took over the following month. Board Chair shifted from Carlo Carli to Peter Doukas. Total Liabilities <span className="font-black">tripled $1.37M &rarr; $3.82M</span> (mostly grants received in advance &mdash; deferred revenue for future periods). The audit&apos;s Directors&apos; Report still says &ldquo;no significant changes in the Corporation&apos;s state of affairs&rdquo;.
+          </div>
         </div>
       </section>
 
