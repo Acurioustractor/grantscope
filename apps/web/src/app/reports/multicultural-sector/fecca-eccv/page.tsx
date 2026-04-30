@@ -82,6 +82,8 @@ type AisFinancialsRow = {
   // governance
   num_kmp: number | null;
   total_paid_kmp: number | null;
+  // provenance — "ACNC AIS" or "Annual Report (LLM-extracted)"
+  data_source: string | null;
 };
 
 type ContractRow = {
@@ -133,6 +135,14 @@ type AnnualReport = {
   reports_family_reunification: boolean | null;
   has_quantitative_outcomes: boolean | null;
   has_external_evaluation: boolean | null;
+  // LLM-extracted financial fields (when source PDF includes audited statements)
+  total_revenue: number | null;
+  revenue_from_government: number | null;
+  total_expenses: number | null;
+  employee_expenses: number | null;
+  net_surplus_deficit: number | null;
+  staff_full_time: number | null;
+  staff_fte: number | null;
 };
 
 type PowerRow = {
@@ -288,7 +298,11 @@ async function getReport() {
                pdf_pages, extracted_text_chars,
                reports_employment, reports_housing, reports_education,
                reports_cultural_connection, reports_mental_health, reports_family_reunification,
-               has_quantitative_outcomes, has_external_evaluation
+               has_quantitative_outcomes, has_external_evaluation,
+               total_revenue::bigint, revenue_from_government::bigint,
+               total_expenses::bigint, employee_expenses::bigint,
+               net_surplus_deficit::bigint,
+               staff_full_time, staff_fte::numeric(10,1)
         FROM public.charity_impact_reports
         WHERE abn IN ('${FECCA_ABN}','${ECCV_ABN}')
         ORDER BY abn, report_year DESC
@@ -353,29 +367,65 @@ async function getReport() {
 
     safe(supabase.rpc('exec_sql', {
       query: `
-        SELECT DISTINCT ON (abn)
-               abn, ais_year::int,
-               total_revenue::bigint, revenue_from_government::bigint AS govt,
-               donations_and_bequests::bigint AS donations,
-               revenue_from_goods_services::bigint AS fees,
-               revenue_from_investments::bigint AS investments,
-               (COALESCE(all_other_revenue,0) + COALESCE(other_income,0))::bigint AS other_revenue,
-               total_expenses::bigint, employee_expenses::bigint,
-               grants_donations_au::bigint AS grants_made_au,
-               grants_donations_intl::bigint AS grants_made_intl,
-               all_other_expenses::bigint AS other_expenses,
-               net_surplus_deficit::bigint AS surplus,
-               staff_full_time::int AS staff_ft,
-               staff_part_time::int AS staff_pt,
-               staff_casual::int AS staff_casual,
-               staff_fte::numeric(10,1) AS staff_fte,
-               staff_volunteers::int AS staff_vols,
-               num_key_management_personnel::int AS num_kmp,
-               total_paid_key_management::bigint AS total_paid_kmp
-        FROM public.acnc_ais
-        WHERE abn IN ('${FECCA_ABN}','${ECCV_ABN}')
-          AND total_expenses IS NOT NULL
-        ORDER BY abn, ais_year DESC
+        -- Latest available P&L per anchor: try ACNC AIS first (audited), fall back to
+        -- LLM-extracted annual-report financials in charity_impact_reports when AIS
+        -- is missing (FECCA's case — it's not in any public ACNC AIS bulk dataset).
+        WITH ais AS (
+          SELECT DISTINCT ON (abn)
+                 abn, ais_year::int,
+                 total_revenue::bigint, revenue_from_government::bigint AS govt,
+                 donations_and_bequests::bigint AS donations,
+                 revenue_from_goods_services::bigint AS fees,
+                 revenue_from_investments::bigint AS investments,
+                 (COALESCE(all_other_revenue,0) + COALESCE(other_income,0))::bigint AS other_revenue,
+                 total_expenses::bigint, employee_expenses::bigint,
+                 grants_donations_au::bigint AS grants_made_au,
+                 grants_donations_intl::bigint AS grants_made_intl,
+                 all_other_expenses::bigint AS other_expenses,
+                 net_surplus_deficit::bigint AS surplus,
+                 staff_full_time::int AS staff_ft,
+                 staff_part_time::int AS staff_pt,
+                 staff_casual::int AS staff_casual,
+                 staff_fte::numeric(10,1) AS staff_fte,
+                 staff_volunteers::int AS staff_vols,
+                 num_key_management_personnel::int AS num_kmp,
+                 total_paid_key_management::bigint AS total_paid_kmp,
+                 'ACNC AIS' AS data_source
+          FROM public.acnc_ais
+          WHERE abn IN ('${FECCA_ABN}','${ECCV_ABN}')
+            AND total_expenses IS NOT NULL
+          ORDER BY abn, ais_year DESC
+        ),
+        cir AS (
+          SELECT DISTINCT ON (abn)
+                 abn, report_year::int AS ais_year,
+                 total_revenue::bigint, revenue_from_government::bigint AS govt,
+                 donations_and_bequests::bigint AS donations,
+                 revenue_from_goods_services::bigint AS fees,
+                 revenue_from_investments::bigint AS investments,
+                 0::bigint AS other_revenue,
+                 total_expenses::bigint, employee_expenses::bigint,
+                 grants_donations_paid::bigint AS grants_made_au,
+                 0::bigint AS grants_made_intl,
+                 (COALESCE(total_expenses,0) - COALESCE(employee_expenses,0) - COALESCE(grants_donations_paid,0))::bigint AS other_expenses,
+                 net_surplus_deficit::bigint AS surplus,
+                 staff_full_time::int AS staff_ft,
+                 staff_part_time::int AS staff_pt,
+                 staff_casual::int AS staff_casual,
+                 staff_fte::numeric(10,1) AS staff_fte,
+                 staff_volunteers::int AS staff_vols,
+                 num_kmp::int AS num_kmp,
+                 total_paid_kmp::bigint AS total_paid_kmp,
+                 'Annual Report (LLM-extracted)' AS data_source
+          FROM public.charity_impact_reports
+          WHERE abn IN ('${FECCA_ABN}','${ECCV_ABN}')
+            AND total_expenses IS NOT NULL
+          ORDER BY abn, report_year DESC
+        )
+        SELECT * FROM ais
+        UNION ALL
+        SELECT * FROM cir WHERE abn NOT IN (SELECT abn FROM ais)
+        ORDER BY abn
       `,
     })) as Promise<AisFinancialsRow[] | null>,
 
@@ -639,6 +689,11 @@ function MoneyAndStaffCard({ row, label }: { row: AisFinancialsRow | null; label
         <div>
           <div className="text-xs font-black uppercase tracking-widest text-bauhaus-yellow">{label}</div>
           <div className="text-2xl font-black text-bauhaus-black tracking-tight">FY {row.ais_year}</div>
+          {row.data_source && (
+            <div className={`text-[10px] font-mono uppercase tracking-widest mt-1 ${row.data_source === 'ACNC AIS' ? 'text-bauhaus-blue' : 'text-bauhaus-red'}`}>
+              source: {row.data_source}
+            </div>
+          )}
         </div>
         <div className="text-right">
           <div className="text-xs uppercase tracking-widest text-bauhaus-muted font-black">Surplus</div>
@@ -1199,7 +1254,7 @@ export default async function FeccaEccvPage() {
                   </div>
 
                   {(rep.total_beneficiaries != null || rep.programs_delivered != null) && (
-                    <div className="grid grid-cols-2 gap-2 mb-3 border-b-2 border-bauhaus-black pb-3">
+                    <div className="grid grid-cols-2 gap-2 mb-3">
                       {rep.total_beneficiaries != null && (
                         <div>
                           <div className="text-xs uppercase tracking-widest text-bauhaus-muted font-black">Beneficiaries</div>
@@ -1210,6 +1265,29 @@ export default async function FeccaEccvPage() {
                         <div>
                           <div className="text-xs uppercase tracking-widest text-bauhaus-muted font-black">Programs</div>
                           <div className="font-black text-2xl text-bauhaus-black tabular-nums">{rep.programs_delivered}</div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {(rep.total_revenue != null || rep.total_expenses != null || rep.staff_full_time != null) && (
+                    <div className="grid grid-cols-3 gap-2 mb-3 border-b-2 border-bauhaus-black pb-3">
+                      {rep.total_revenue != null && (
+                        <div>
+                          <div className="text-[10px] uppercase tracking-widest text-bauhaus-muted font-black">Revenue</div>
+                          <div className="font-black text-base text-bauhaus-black tabular-nums">{money(rep.total_revenue)}</div>
+                        </div>
+                      )}
+                      {rep.total_expenses != null && (
+                        <div>
+                          <div className="text-[10px] uppercase tracking-widest text-bauhaus-muted font-black">Expenses</div>
+                          <div className={`font-black text-base tabular-nums ${rep.net_surplus_deficit != null && rep.net_surplus_deficit < 0 ? 'text-bauhaus-red' : 'text-bauhaus-black'}`}>{money(rep.total_expenses)}</div>
+                        </div>
+                      )}
+                      {(rep.staff_full_time != null || rep.staff_fte != null) && (
+                        <div>
+                          <div className="text-[10px] uppercase tracking-widest text-bauhaus-muted font-black">Staff (FT/FTE)</div>
+                          <div className="font-black text-base text-bauhaus-black tabular-nums">{rep.staff_full_time ?? '—'}/{rep.staff_fte ?? '—'}</div>
                         </div>
                       )}
                     </div>
