@@ -26,6 +26,23 @@ function pct(n: number | null | undefined, digits: number = 0): string {
   return `${Number(n).toFixed(digits)}%`;
 }
 
+// ACNC legal names are often "THE TRUSTEE FOR X TRUST" or all-caps registered company names.
+// Convert to a friendlier display form.
+function displayName(raw: string): string {
+  let s = raw.trim();
+  // Drop common ACNC trustee/registration prefixes
+  s = s.replace(/^the\s+trustee\s+for\s+/i, '');
+  s = s.replace(/\s+(pty|ltd|limited|incorporated|inc\.?|pictures\s+limited|ltd\.)$/i, '');
+  // Title-case ALL-CAPS strings (5+ chars all upper)
+  if (/^[A-Z0-9\s&.,'-]+$/.test(s) && s.length > 4) {
+    s = s.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+    s = s.replace(/\bBhp\b/g, 'BHP'); // preserve known acronyms
+    s = s.replace(/\bAcco\b/g, 'ACCO');
+    s = s.replace(/\bNgo\b/g, 'NGO');
+  }
+  return s;
+}
+
 /* ─── Inline primitives ──────────────────────────────────────────────── */
 
 function StackedBar({ total, segments }: { total: number; segments: Array<{ key: string; value: number; color: string; label: string }> }) {
@@ -680,9 +697,9 @@ export default async function QldYjSectorPage() {
               <tbody>
                 {r.foundations.map((f, i) => (
                   <tr key={f.name} className={i % 2 === 0 ? 'bg-white' : 'bg-bauhaus-canvas'}>
-                    <td className="p-3 font-black text-bauhaus-black">{f.name}</td>
+                    <td className="p-3 font-black text-bauhaus-black">{displayName(f.name)}</td>
                     <td className="p-3 text-right font-mono font-black">{money(f.total_giving_annual)}</td>
-                    <td className="p-3 text-xs font-mono text-bauhaus-muted">{f.thematic_focus.replace(/[{}"]/g, '').slice(0, 80)}</td>
+                    <td className="p-3 text-xs font-mono text-bauhaus-muted">{f.thematic_focus.replace(/[{}"]/g, '').split(',').slice(0, 5).join(', ')}</td>
                   </tr>
                 ))}
               </tbody>
@@ -803,23 +820,26 @@ export default async function QldYjSectorPage() {
       {/* §15 POLITICAL DONATIONS */}
       <section className="mb-16">
         <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§15</div>
-        <h3 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">Political donations from QLD YJ funded organisations</h3>
+        <h3 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">Political donations by orgs that hold QLD YJ funding</h3>
         <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
-          Cross-reference of QLD youth-justice-funded recipients (by ABN) against the federal political_donations register.
+          Cross-reference: QLD youth-justice-funded recipients (by ABN) appear in the federal political-donations register. <span className="font-black">These donations may relate to any of the donor org&apos;s activities, not specifically to youth-justice work.</span> Read as a structural-overlap signal, not as a YJ-attributable transfer.
         </p>
         <div className="border-4 border-bauhaus-black p-6 bg-white">
           {r.politicalDonations && r.politicalDonations.donations > 0 ? (
             <div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <div className="text-xs font-black uppercase tracking-widest text-bauhaus-red">Donations recorded</div>
-                  <div className="text-3xl font-black text-bauhaus-red tabular-nums">{r.politicalDonations.donations}</div>
+                  <div className="text-xs font-black uppercase tracking-widest text-bauhaus-red">Donation records</div>
+                  <div className="text-3xl font-black text-bauhaus-red tabular-nums">{fmt(r.politicalDonations.donations)}</div>
+                  <p className="text-[10px] text-bauhaus-muted font-mono mt-1">Lifetime AEC disclosures from this donor pool</p>
                 </div>
                 <div>
-                  <div className="text-xs font-black uppercase tracking-widest text-bauhaus-red">Total $</div>
+                  <div className="text-xs font-black uppercase tracking-widest text-bauhaus-red">Total disclosed $</div>
                   <div className="text-3xl font-black text-bauhaus-red tabular-nums">{money(r.politicalDonations.total)}</div>
+                  <p className="text-[10px] text-bauhaus-muted font-mono mt-1">Cumulative across the disclosure window — all themes, not YJ-specific</p>
                 </div>
               </div>
+              <p className="text-xs text-bauhaus-muted font-mono mt-4 pt-3 border-t-2 border-bauhaus-black">Source: <code>political_donations</code> federal register. Caveat: state-level donation registers and individual-director donations are not in this dataset; lifetime totals span all causes the donor org has funded.</p>
             </div>
           ) : (
             <p className="text-sm text-bauhaus-black font-medium leading-relaxed">
@@ -843,6 +863,7 @@ export default async function QldYjSectorPage() {
         <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
           The Australian Living Map of Alternatives (ALMA) — a civil-society register of community-endorsed and evaluated diversion / wraparound / justice-reinvestment / therapeutic / community-led programs. National counts by type, and the top {fmt(r.almaInterventions.length)} QLD-relevant interventions ranked by evidence + portfolio score.
         </p>
+        <p className="text-xs text-bauhaus-muted font-mono mb-4 border-l-4 border-bauhaus-yellow pl-3"><span className="font-black uppercase tracking-widest">Methodology:</span> Evidence levels are self-attributed by ALMA submitters at registration time, not independently graded by CivicGraph. &ldquo;Proven&rdquo; / &ldquo;Effective&rdquo; / &ldquo;Promising&rdquo; reflect the program&apos;s own claim about its evaluation status — read as a starting point, not a verdict.</p>
         {r.almaTypeCounts.length > 0 && (
           <div className="border-4 border-bauhaus-black p-5 bg-white mb-6">
             <h4 className="text-sm font-black uppercase tracking-widest text-bauhaus-black mb-3">Interventions by type (national)</h4>
