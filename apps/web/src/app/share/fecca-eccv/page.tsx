@@ -1,11 +1,11 @@
-import LongRead from '../../reports/multicultural-sector/fecca-eccv/long-read/page';
+import Dashboard from '../../reports/multicultural-sector/fecca-eccv/page';
 
 export const metadata = {
-  title: "FECCA & ECCV — The Federation's Money Map · CivicGraph",
-  description: "An investigative deep-dive on Australia's two anchor multicultural peak bodies. Audited financials, federal procurement, state grants, board interlocks. Sourced and citation-grade.",
+  title: "FECCA & ECCV — Dashboard · CivicGraph",
+  description: "Investigative dashboard on Australia's two anchor multicultural peak bodies. 11 sections of charts, board portfolios, contracts, grants — sourced and citation-grade.",
   openGraph: {
     title: "FECCA & ECCV — The Federation's Money Map",
-    description: "Two policy bodies, two single-funder dependencies. $1B of federal multicultural procurement they don't see. AI-assisted investigative report by CivicGraph.",
+    description: "Two policy bodies, two single-funder dependencies. AI-assisted investigative report by CivicGraph.",
     type: 'article',
   },
 };
@@ -13,18 +13,15 @@ export const metadata = {
 export const dynamic = 'force-dynamic';
 
 /**
- * Share landing for the FECCA + ECCV deep-dive.
+ * Share-mode dashboard for FECCA + ECCV.
  *
- * Renders the same long-read content that lives at
- * /reports/multicultural-sector/fecca-eccv/long-read but under /share/* so:
- *   1. The root layout strips the global NavBar and dense footer
- *   2. The /share/layout.tsx wraps it in a minimal "How it works · First 5
- *      Free · Get a Report" bar that routes only to the conversion funnel
- *   3. The recipient never sees /graph, /tracker, /reports nav, etc.
- *
- * Use this URL when you want to send a report to a non-customer (LinkedIn,
- * email, partner intro). Use the /reports/... URL internally.
+ * Same Server Component as /reports/multicultural-sector/fecca-eccv but
+ * detects share-mode via headers().get('x-pathname') and:
+ *   - Hides the "back to Multicultural Sector" breadcrumb
+ *   - Repoints the dashboard ⇄ long-read toggle at /share/* paths
+ *   - Renders org/director/recipient names as plain text instead of <Link>
+ *     so visitors can't drill into /org/* pages they haven't paid for
  */
-export default function ShareFeccaEccv() {
-  return <LongRead mode="share" />;
+export default function ShareFeccaEccvDashboard() {
+  return <Dashboard />;
 }

@@ -15,7 +15,7 @@ export default function ShareLayout({ children }: { children: React.ReactNode })
   return (
     <div className="min-h-screen flex flex-col bg-bauhaus-canvas">
       <header className="border-b-4 border-bauhaus-black bg-white">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+        <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-16 py-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <span className="text-sm font-black text-bauhaus-black uppercase tracking-tight">CivicGraph</span>
             <span className="text-xs font-mono text-bauhaus-muted hidden sm:inline">civic-sector intelligence, sourced</span>
@@ -27,11 +27,11 @@ export default function ShareLayout({ children }: { children: React.ReactNode })
           </nav>
         </div>
       </header>
-      <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-8">
+      <main className="flex-1 max-w-7xl mx-auto w-full px-6 sm:px-10 lg:px-16 py-10">
         {children}
       </main>
       <footer className="border-t-4 border-bauhaus-black bg-bauhaus-black text-white">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+        <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-16 py-10">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
             <div>
               <div className="text-sm font-black uppercase tracking-tight">CivicGraph</div>
