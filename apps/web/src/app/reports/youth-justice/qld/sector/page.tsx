@@ -26,20 +26,28 @@ function pct(n: number | null | undefined, digits: number = 0): string {
   return `${Number(n).toFixed(digits)}%`;
 }
 
-// ACNC legal names are often "THE TRUSTEE FOR X TRUST" or all-caps registered company names.
-// Convert to a friendlier display form.
+// ACNC legal names are often "THE TRUSTEE FOR X TRUST" or all-caps registered company names,
+// religious legal-entity wrappers ("The Corporation of the Trustees of the X"), etc.
+// Convert to a friendlier display form for the report.
 function displayName(raw: string): string {
   let s = raw.trim();
-  // Drop common ACNC trustee/registration prefixes
+  // Religious legal-entity patterns first (most specific)
+  s = s.replace(/^the\s+corporation\s+of\s+the\s+trustees\s+of\s+the\s+/i, '');
+  s = s.replace(/^the\s+corporation\s+of\s+the\s+synod\s+of\s+the\s+diocese\s+of\s+brisbane(\s*-\s*)?/i, 'Anglican Diocese of Brisbane $1');
   s = s.replace(/^the\s+trustee\s+for\s+/i, '');
-  s = s.replace(/\s+(pty|ltd|limited|incorporated|inc\.?|pictures\s+limited|ltd\.)$/i, '');
-  // Title-case ALL-CAPS strings (5+ chars all upper)
+  // Common Pty/Ltd/Incorporated/Pictures-Limited suffix strip
+  s = s.replace(/\s+(pty\s+ltd|pty|ltd\.?|limited|incorporated|inc\.?|pictures\s+limited)$/i, '');
+  // Title-case strings that are mostly ALL-CAPS
   if (/^[A-Z0-9\s&.,'-]+$/.test(s) && s.length > 4) {
     s = s.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
-    s = s.replace(/\bBhp\b/g, 'BHP'); // preserve known acronyms
+    s = s.replace(/\bBhp\b/g, 'BHP');
     s = s.replace(/\bAcco\b/g, 'ACCO');
     s = s.replace(/\bNgo\b/g, 'NGO');
+    s = s.replace(/\bQld\b/g, 'QLD');
+    s = s.replace(/\bNsw\b/g, 'NSW');
   }
+  // Trim trailing dash-spaces left by the diocese rule
+  s = s.replace(/\s*-\s*$/, '').trim();
   return s;
 }
 
@@ -642,7 +650,7 @@ export default async function QldYjSectorPage() {
             <tbody>
               {r.recipients.map((p, i) => (
                 <tr key={p.recipient_name} className={i % 2 === 0 ? 'bg-white' : 'bg-bauhaus-canvas'}>
-                  <td className="p-3 font-black text-bauhaus-black">{p.recipient_name}</td>
+                  <td className="p-3 font-black text-bauhaus-black">{displayName(p.recipient_name)}</td>
                   <td className="p-3 text-right font-mono font-black">{money(p.total)}</td>
                   <td className="p-3 text-right font-mono">{p.grants}</td>
                 </tr>
@@ -767,7 +775,7 @@ export default async function QldYjSectorPage() {
               <tbody>
                 {r.crossSector.map((c, i) => (
                   <tr key={c.recipient_name} className={i % 2 === 0 ? 'bg-white' : 'bg-bauhaus-canvas'}>
-                    <td className="p-3 font-black text-bauhaus-black">{c.recipient_name}</td>
+                    <td className="p-3 font-black text-bauhaus-black">{displayName(c.recipient_name)}</td>
                     <td className="p-3 text-right">
                       <span className={`inline-block px-2 py-1 text-xs font-black ${c.sectors >= 5 ? 'bg-bauhaus-red text-white' : c.sectors >= 4 ? 'bg-bauhaus-yellow text-bauhaus-black' : 'bg-bauhaus-canvas text-bauhaus-black'}`}>{c.sectors}</span>
                     </td>
