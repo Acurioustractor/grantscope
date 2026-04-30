@@ -1250,6 +1250,14 @@ export const AGENTS = {
     timeoutMs: 600_000,
     dependencies: [],
   },
+  'scrape-qld-coroners': {
+    command: ['node', '--env-file=.env', 'scripts/scrape-qld-coroners.mjs', '--limit=15'],
+    displayName: 'QLD Coroners Court Findings',
+    category: 'civicscope',
+    defaultPriority: 4,
+    timeoutMs: 600_000,
+    dependencies: [],
+  },
   'scrape-qld-consultancy-spending': {
     command: ['node', '--env-file=.env', 'scripts/scrape-qld-consultancy-spending.mjs'],
     displayName: 'QLD Consultancy Spending',
