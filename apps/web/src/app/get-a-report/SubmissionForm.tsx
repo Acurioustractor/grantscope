@@ -83,13 +83,69 @@ export default function SubmissionForm({ defaultBudget, defaultFree, defaultSour
               <option value="other">Other</option>
             </select>
           </div>
-          <div>
-            <label className={labelCls} htmlFor="research_questions">Questions you want answered</label>
-            <textarea id="research_questions" name="research_questions" className={inputCls} rows={4} placeholder="e.g. How financially fragile are FECCA + ECCV? Where do their directors sit? How much state vs federal funding flows through them?" />
+
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls} htmlFor="target_abn">ABN(s) (if known)</label>
+              <input id="target_abn" name="target_abn" className={inputCls} placeholder="e.g. 23684792947, 65071572705" />
+            </div>
+            <div>
+              <label className={labelCls} htmlFor="target_geography">Geography / state focus</label>
+              <input id="target_geography" name="target_geography" className={inputCls} placeholder="e.g. QLD, regional NSW, national, Greater Western Sydney" />
+            </div>
+            <div>
+              <label className={labelCls} htmlFor="target_timeframe">Timeframe of interest</label>
+              <input id="target_timeframe" name="target_timeframe" className={inputCls} placeholder="e.g. last 5 years, FY2020 onwards, since the org was founded" />
+            </div>
+            <div>
+              <label className={labelCls} htmlFor="target_topic">Sector / topic tag</label>
+              <input id="target_topic" name="target_topic" className={inputCls} placeholder="e.g. youth-justice, settlement-services, philanthropy, lobbying" />
+            </div>
           </div>
+
           <div>
-            <label className={labelCls} htmlFor="decision_driving">What decision will this inform?</label>
-            <input id="decision_driving" name="decision_driving" className={inputCls} placeholder="e.g. Board strategy review; foundation grantee diligence; public-interest report" />
+            <label className={labelCls} htmlFor="target_sources">Source documents / URLs already on your radar</label>
+            <textarea id="target_sources" name="target_sources" className={inputCls} rows={2} placeholder="e.g. their annual report PDF, an ABC news article, a Senate submission you found, a sector strategy document — paste the URLs (one per line)" />
+          </div>
+
+          <div>
+            <label className={labelCls} htmlFor="research_questions">Questions you want answered *</label>
+            <textarea id="research_questions" name="research_questions" required className={inputCls} rows={5} placeholder="The more specific, the better the report. e.g.&#10;&#10;1. How financially fragile is FECCA? Two years of deficits — sustainable or not?&#10;2. Who are FECCA's directors and what other boards do they sit on?&#10;3. What % of state vs federal funding flows through FECCA + ECCV vs sister state ECCs?&#10;4. Are there foundations quietly funding settlement work we should know about?" />
+          </div>
+
+          <div>
+            <label className={labelCls} htmlFor="decision_driving">What decision will this inform? *</label>
+            <input id="decision_driving" name="decision_driving" required className={inputCls} placeholder="e.g. Board strategy review next month; foundation grantee diligence for a $500K grant; public-interest media piece; advocacy submission to the next federal budget" />
+          </div>
+
+          <div>
+            <label className={labelCls} htmlFor="data_priorities">Which data layers matter most? (tick all)</label>
+            <div className="grid sm:grid-cols-2 gap-1 text-xs">
+              {[
+                { v: 'audited_financials', l: 'Audited financials + cash-flow' },
+                { v: 'federal_procurement', l: 'Federal procurement (Austender)' },
+                { v: 'state_grants', l: 'State / territory grant flows' },
+                { v: 'foundation_giving', l: 'Foundation giving' },
+                { v: 'donations', l: 'Political donations' },
+                { v: 'lobbyists', l: 'Lobbyist register' },
+                { v: 'board_interlocks', l: 'Board / director interlocks' },
+                { v: 'staff_workforce', l: 'Staff / workforce stats' },
+                { v: 'evidence_base', l: 'Programs + evidence (ALMA)' },
+                { v: 'geographic', l: 'Geographic / LGA overlay' },
+                { v: 'demographics', l: 'CALD / demographic context' },
+                { v: 'monitoring', l: 'Live monitoring + change alerts' },
+              ].map(o => (
+                <label key={o.v} className="flex items-start gap-2 font-medium text-bauhaus-black cursor-pointer p-2 border-2 border-bauhaus-black bg-bauhaus-canvas hover:bg-white">
+                  <input type="checkbox" name="data_priorities" value={o.v} className="mt-0.5 border-2 border-bauhaus-black w-3 h-3 shrink-0" />
+                  <span>{o.l}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className={labelCls} htmlFor="prior_work">What's already been tried / what existing knowledge do you have?</label>
+            <textarea id="prior_work" name="prior_work" className={inputCls} rows={2} placeholder="Saves us repeating work. e.g. 'I've read their last 3 annual reports', 'I know they restructured in 2021', 'their CEO is X', 'I've already mapped X via Y tool'" />
           </div>
         </div>
       </fieldset>

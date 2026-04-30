@@ -20,6 +20,8 @@ export async function submitReportRequest(formData: FormData): Promise<Submissio
   const target_subject = String(formData.get('target_subject') || '').trim();
   if (!target_subject) return { ok: false, error: 'Tell us what you want investigated' };
 
+  const dataPriorities = formData.getAll('data_priorities').map(v => String(v).trim()).filter(Boolean);
+
   const db = createClient(SUPABASE_URL, SUPABASE_KEY);
   const { data, error } = await db.from('report_submissions').insert({
     contact_name: String(formData.get('contact_name') || '').trim() || null,
@@ -28,8 +30,15 @@ export async function submitReportRequest(formData: FormData): Promise<Submissio
     contact_role: String(formData.get('contact_role') || '').trim() || null,
     target_subject,
     target_type: String(formData.get('target_type') || '').trim() || null,
+    target_abn: String(formData.get('target_abn') || '').trim() || null,
+    target_geography: String(formData.get('target_geography') || '').trim() || null,
+    target_timeframe: String(formData.get('target_timeframe') || '').trim() || null,
+    target_topic: String(formData.get('target_topic') || '').trim() || null,
+    target_sources: String(formData.get('target_sources') || '').trim() || null,
     research_questions: String(formData.get('research_questions') || '').trim() || null,
     decision_driving: String(formData.get('decision_driving') || '').trim() || null,
+    data_priorities: dataPriorities.length ? dataPriorities : null,
+    prior_work: String(formData.get('prior_work') || '').trim() || null,
     timeline_pref: String(formData.get('timeline_pref') || '').trim() || null,
     budget_signal: String(formData.get('budget_signal') || '').trim() || null,
     free_5_apply: formData.get('free_5_apply') === 'on',

@@ -35,6 +35,7 @@ const FORCE_PUBLIC_LAYOUT_PREFIXES = [
   '/pricing',
   '/get-a-report',
   '/feedback',
+  '/discover',
   '/about',
 ] as const;
 
