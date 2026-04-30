@@ -8,14 +8,16 @@ export const metadata = {
 const FEATURED = [
   {
     href: '/share/qld-youth-justice',
-    kicker: '★ Featured · Live data',
-    title: "QLD Youth Justice — Where the Money, the Children, and the Evidence Go",
-    blurb: "$1.88B detention vs $1.49B community. ~91% of children in QLD watchhouses today are First Nations. 12 evidence-backed alternatives that already exist.",
+    kicker: '★ Featured · 6 Volumes · 22 Sections · Live',
+    title: "QLD Youth Justice — The Most-Sourced Report Ever Written",
+    blurb: "Live watchhouse data, $1.88B detention vs $1.49B community, 12% ACCO funding gap for ~70% of in-custody population, $1B+ multi-system providers, foundation landscape, director networks, place hotspots — every claim sourced.",
     bullets: [
-      'Live watchhouse occupancy refreshed every 12 hours from QPS',
-      'QLD state-budget Youth Justice expenditure across years',
-      'Top-funded community partners + their dollar share',
-      'Australian Living Map of Alternatives (ALMA) interventions',
+      'Volume 1: Live state — watchhouse, detention beds, Closing the Gap',
+      'Volume 2: The funnel — child protection → NDIS → mental health → school',
+      'Volume 3: $1.88B vs $1.49B, ACCO gap, foundations, federal procurement',
+      'Volume 4: Multi-system providers, director networks, political donations',
+      'Volume 5: ALMA evidence base + royal-commission lineage',
+      'Volume 6: LGA hotspots + Maranguka template + place case studies',
     ],
     bg: 'bg-bauhaus-red text-white',
   },
