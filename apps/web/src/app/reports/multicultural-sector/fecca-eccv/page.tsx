@@ -781,6 +781,10 @@ export default async function FeccaEccvPage() {
 
   return (
     <div>
+      <div className="flex flex-wrap items-center gap-0 mb-6">
+        <Link href="/reports/multicultural-sector/fecca-eccv" className="inline-block px-4 py-2 text-xs font-black uppercase tracking-widest border-2 border-bauhaus-black bg-bauhaus-black text-white" aria-current="page">Dashboard</Link>
+        <Link href="/reports/multicultural-sector/fecca-eccv/long-read" className="inline-block px-4 py-2 text-xs font-black uppercase tracking-widest border-2 border-bauhaus-black -ml-0.5 bg-bauhaus-yellow text-bauhaus-black hover:bg-bauhaus-canvas">📖 Read the Long-form Report</Link>
+      </div>
       <div className="mb-10">
         <Link href="/reports/multicultural-sector" className="text-xs font-black text-bauhaus-muted uppercase tracking-widest hover:text-bauhaus-black">
           &larr; Multicultural Sector
