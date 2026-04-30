@@ -32,11 +32,12 @@ function needsLayoutAuth(pathname: string) {
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  // Iframe-embed routes (/embed/*) and API routes render without chrome so they
-  // drop cleanly into partner sites and JSON responses stay clean.
+  // Iframe-embed routes (/embed/*), share landing pages (/share/*), and API
+  // routes render without root chrome so they can be sent to non-customers as
+  // a clean public-facing artefact (or dropped into partner iframes).
   const hdrs = await headers();
   const pathname = hdrs.get('x-pathname') ?? '';
-  const isChromeless = pathname.startsWith('/embed');
+  const isChromeless = pathname.startsWith('/embed') || pathname.startsWith('/share');
   const requiresLayoutAuth = needsLayoutAuth(pathname);
   const isFastPublicPath = !requiresLayoutAuth;
 

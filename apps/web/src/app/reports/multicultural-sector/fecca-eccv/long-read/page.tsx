@@ -61,7 +61,8 @@ async function getNumbers() {
   return { fecca, eccvAisArr, eccvLatest, eccvPrior, totals: totalsRow, ames: amesRow, topics };
 }
 
-export default async function FeccaEccvLongRead() {
+export default async function FeccaEccvLongRead({ mode = 'full' }: { mode?: 'full' | 'share' } = {}) {
+  const isShare = mode === 'share';
   const r = await getNumbers();
   const eccvDropPct = r.eccvLatest && r.eccvPrior && r.eccvPrior.rev > 0
     ? (((r.eccvLatest.rev - r.eccvPrior.rev) / r.eccvPrior.rev) * 100)
@@ -108,17 +109,21 @@ export default async function FeccaEccvLongRead() {
 
   return (
     <div>
-      <ModeToggle
-        dashboardHref="/reports/multicultural-sector/fecca-eccv"
-        longReadHref="/reports/multicultural-sector/fecca-eccv/long-read"
-        current="long-read"
-      />
+      {!isShare && (
+        <ModeToggle
+          dashboardHref="/reports/multicultural-sector/fecca-eccv"
+          longReadHref="/reports/multicultural-sector/fecca-eccv/long-read"
+          current="long-read"
+        />
+      )}
 
       {/* Title */}
       <div className="mb-12">
-        <Link href="/reports/multicultural-sector" className="text-xs font-black text-bauhaus-muted uppercase tracking-widest hover:text-bauhaus-black">
-          ← Multicultural Sector
-        </Link>
+        {!isShare && (
+          <Link href="/reports/multicultural-sector" className="text-xs font-black text-bauhaus-muted uppercase tracking-widest hover:text-bauhaus-black">
+            ← Multicultural Sector
+          </Link>
+        )}
         <div className="text-xs font-black text-bauhaus-yellow mt-4 mb-1 uppercase tracking-widest">Long-form Report · 12 min read</div>
         <h1 className="text-4xl sm:text-5xl font-black text-bauhaus-black mb-4 uppercase tracking-tight leading-tight">
           The Federation&apos;s Money Map
@@ -327,18 +332,32 @@ export default async function FeccaEccvLongRead() {
         </p>
       </ReportSection>
 
-      {/* §8 Related Reads */}
-      <div id="related" className="mb-16 scroll-mt-24">
-        <h2 className="text-2xl sm:text-3xl font-black text-bauhaus-black uppercase tracking-tight mb-6">Related Reads</h2>
-        <RelatedReads items={[
-          { href: '/reports/multicultural-sector/fecca-eccv', kicker: 'Dashboard', title: 'FECCA & ECCV — All the data', description: 'Live dashboard view: 11 sections of charts, contracts, board portfolios, and grant tables. Same numbers as this report, scannable.' },
-          { href: '/reports/multicultural-sector', kicker: 'Sector overview', title: 'Multicultural Sector — Sector overview', description: 'Sector-level view including AMES, the state-by-state ECC federation, and Home Affairs settlement programs.' },
-          { href: '/graph?focus=federation-of-ethnic-communities', kicker: 'Network graph', title: 'See the federation network visually', description: 'Interactive force graph of FECCA + ECCV + sister state ECCs + their shared directors and funded programs.' },
-          { href: '/orgs/AU-ABN-23684792947', kicker: 'Entity profile', title: 'FECCA — full entity profile', description: 'Single-org page: every contract, donation, grant, board seat, and relationship CivicGraph has on FECCA.' },
-          { href: '/orgs/AU-ABN-65071572705', kicker: 'Entity profile', title: 'ECCV — full entity profile', description: 'Single-org page: ECCV’s 7-year financial history, board, programs, partner connections.' },
-          { href: '/funding-deserts', kicker: 'Geography', title: 'Funding deserts — VIC LGAs', description: 'Where the multicultural sector’s state grants land vs where CALD population concentrates.' },
-        ]} />
-      </div>
+      {/* §8 Related Reads (full mode only) — share mode replaces this with a CTA */}
+      {!isShare ? (
+        <div id="related" className="mb-16 scroll-mt-24">
+          <h2 className="text-2xl sm:text-3xl font-black text-bauhaus-black uppercase tracking-tight mb-6">Related Reads</h2>
+          <RelatedReads items={[
+            { href: '/reports/multicultural-sector/fecca-eccv', kicker: 'Dashboard', title: 'FECCA & ECCV — All the data', description: 'Live dashboard view: 11 sections of charts, contracts, board portfolios, and grant tables. Same numbers as this report, scannable.' },
+            { href: '/reports/multicultural-sector', kicker: 'Sector overview', title: 'Multicultural Sector — Sector overview', description: 'Sector-level view including AMES, the state-by-state ECC federation, and Home Affairs settlement programs.' },
+            { href: '/graph?focus=federation-of-ethnic-communities', kicker: 'Network graph', title: 'See the federation network visually', description: 'Interactive force graph of FECCA + ECCV + sister state ECCs + their shared directors and funded programs.' },
+            { href: '/orgs/AU-ABN-23684792947', kicker: 'Entity profile', title: 'FECCA — full entity profile', description: 'Single-org page: every contract, donation, grant, board seat, and relationship CivicGraph has on FECCA.' },
+            { href: '/orgs/AU-ABN-65071572705', kicker: 'Entity profile', title: 'ECCV — full entity profile', description: 'Single-org page: ECCV’s 7-year financial history, board, programs, partner connections.' },
+            { href: '/funding-deserts', kicker: 'Geography', title: 'Funding deserts — VIC LGAs', description: 'Where the multicultural sector’s state grants land vs where CALD population concentrates.' },
+          ]} />
+        </div>
+      ) : (
+        <div id="related" className="mb-16 scroll-mt-24 border-4 border-bauhaus-black p-8 bg-bauhaus-canvas">
+          <div className="text-xs font-black uppercase tracking-widest text-bauhaus-yellow mb-2">More on CivicGraph</div>
+          <h2 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-3">This is one report. The platform has many more.</h2>
+          <p className="text-bauhaus-black font-medium leading-relaxed text-sm mb-4 max-w-3xl">
+            The dashboard view, network graph of every entity in this report, individual organisation profiles, sector-level funding maps, and 5,200+ Victorian state grants are all part of CivicGraph. Available via subscription or as commissioned reports.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/get-a-report?free=true&src=share-related" className="inline-block px-4 py-3 text-xs font-black uppercase tracking-widest bg-bauhaus-red text-white border-2 border-bauhaus-black hover:bg-bauhaus-black">★ Apply for First 5 Free →</Link>
+            <Link href="/pricing" className="inline-block px-4 py-3 text-xs font-black uppercase tracking-widest bg-bauhaus-black text-white border-2 border-bauhaus-black hover:bg-bauhaus-red">See pricing</Link>
+          </div>
+        </div>
+      )}
 
       {/* §9 Sources */}
       <ReportSection id="sources" kicker="08" title="Sources & Methodology">
