@@ -1,8 +1,18 @@
 import Link from 'next/link';
+import { headers } from 'next/headers';
 import { getLiveReportSupabase } from '@/lib/report-supabase';
 import { safe } from '@/lib/services/utils';
 
 export const dynamic = 'force-dynamic';
+
+/**
+ * Renders an org/person link if we're inside the full app, or just bold text
+ * inside `/share/*` so visitors can't drill into pages they haven't paid for.
+ */
+function OrgRef({ gsId, name, isShare }: { gsId: string | null | undefined; name: string; isShare: boolean }) {
+  if (isShare || !gsId) return <span className="font-black">{name}</span>;
+  return <Link href={`/org/${gsId}`} className="hover:underline">{name}</Link>;
+}
 
 const FECCA_ABN = '23684792947';
 const ECCV_ABN = '65071572705';
@@ -588,7 +598,7 @@ async function getReport() {
   };
 }
 
-function AnchorCard({ a, label }: { a: AnchorRow | null; label: string }) {
+function AnchorCard({ a, label, isShare }: { a: AnchorRow | null; label: string; isShare?: boolean }) {
   if (!a) {
     return (
       <div className="border-4 border-bauhaus-black p-6 bg-white">
@@ -600,9 +610,13 @@ function AnchorCard({ a, label }: { a: AnchorRow | null; label: string }) {
   return (
     <div className="border-4 border-bauhaus-black p-6 bg-white">
       <div className="text-xs font-black uppercase tracking-widest text-bauhaus-yellow mb-2">{label}</div>
-      <Link href={`/org/${a.gs_id}`} className="text-xl font-black text-bauhaus-black uppercase tracking-tight hover:underline block mb-2 leading-tight">
-        {a.canonical_name}
-      </Link>
+      {isShare ? (
+        <div className="text-xl font-black text-bauhaus-black uppercase tracking-tight block mb-2 leading-tight">{a.canonical_name}</div>
+      ) : (
+        <Link href={`/org/${a.gs_id}`} className="text-xl font-black text-bauhaus-black uppercase tracking-tight hover:underline block mb-2 leading-tight">
+          {a.canonical_name}
+        </Link>
+      )}
       <div className="text-xs font-mono text-bauhaus-muted mb-4">
         ABN {a.abn} · {a.state ?? '—'} · {a.charity_size ?? '—'} charity
       </div>
@@ -769,6 +783,10 @@ function MoneyAndStaffCard({ row, label }: { row: AisFinancialsRow | null; label
 }
 
 export default async function FeccaEccvPage() {
+  const hdrs = await headers();
+  const isShare = (hdrs.get('x-pathname') ?? '').startsWith('/share/');
+  const dashboardPath = isShare ? '/share/fecca-eccv' : '/reports/multicultural-sector/fecca-eccv';
+  const longReadPath = isShare ? '/share/fecca-eccv/long-read' : '/reports/multicultural-sector/fecca-eccv/long-read';
   const r = await getReport();
 
   // ECCV revenue trajectory — render as horizontal bars normalised to peak
@@ -782,13 +800,15 @@ export default async function FeccaEccvPage() {
   return (
     <div>
       <div className="flex flex-wrap items-center gap-0 mb-6">
-        <Link href="/reports/multicultural-sector/fecca-eccv" className="inline-block px-4 py-2 text-xs font-black uppercase tracking-widest border-2 border-bauhaus-black bg-bauhaus-black text-white" aria-current="page">Dashboard</Link>
-        <Link href="/reports/multicultural-sector/fecca-eccv/long-read" className="inline-block px-4 py-2 text-xs font-black uppercase tracking-widest border-2 border-bauhaus-black -ml-0.5 bg-bauhaus-yellow text-bauhaus-black hover:bg-bauhaus-canvas">📖 Read the Long-form Report</Link>
+        <Link href={dashboardPath} className="inline-block px-4 py-2 text-xs font-black uppercase tracking-widest border-2 border-bauhaus-black bg-bauhaus-black text-white" aria-current="page">Dashboard</Link>
+        <Link href={longReadPath} className="inline-block px-4 py-2 text-xs font-black uppercase tracking-widest border-2 border-bauhaus-black -ml-0.5 bg-bauhaus-yellow text-bauhaus-black hover:bg-bauhaus-canvas">📖 Read the Long-form Report</Link>
       </div>
       <div className="mb-10">
-        <Link href="/reports/multicultural-sector" className="text-xs font-black text-bauhaus-muted uppercase tracking-widest hover:text-bauhaus-black">
-          &larr; Multicultural Sector
-        </Link>
+        {!isShare && (
+          <Link href="/reports/multicultural-sector" className="text-xs font-black text-bauhaus-muted uppercase tracking-widest hover:text-bauhaus-black">
+            &larr; Multicultural Sector
+          </Link>
+        )}
         <div className="text-xs font-black text-bauhaus-yellow mt-4 mb-1 uppercase tracking-widest">Deep Dive · Two Single-Funder Dependencies</div>
         <h1 className="text-3xl sm:text-4xl font-black text-bauhaus-black mb-3 uppercase tracking-tight">
           FECCA &amp; ECCV — The Federation&apos;s Money Map
@@ -802,8 +822,8 @@ export default async function FeccaEccvPage() {
 
       {/* Anchor cards */}
       <div className="grid sm:grid-cols-2 gap-4 mb-12">
-        <AnchorCard a={r.fecca} label="National Peak" />
-        <AnchorCard a={r.eccv} label="Victoria State Council" />
+        <AnchorCard a={r.fecca} label="National Peak" isShare={isShare} />
+        <AnchorCard a={r.eccv} label="Victoria State Council" isShare={isShare} />
       </div>
 
       {/* SECTION 1 — Financial trajectories */}
@@ -1159,7 +1179,7 @@ export default async function FeccaEccvPage() {
                   return (
                     <tr key={d.person_id} className={i % 2 === 0 ? 'bg-white' : 'bg-bauhaus-canvas'}>
                       <td className="p-3 font-black text-bauhaus-black whitespace-nowrap">
-                        <Link href={`/org/${d.person_id}`} className="hover:underline">{d.person_name}</Link>
+                        <OrgRef gsId={d.person_id} name={d.person_name} isShare={isShare} />
                       </td>
                       <td className="p-3 text-right font-mono font-black">
                         <span className={`inline-block px-2 py-1 ${(port?.board_count ?? 1) >= 5 ? 'bg-bauhaus-red text-white' : (port?.board_count ?? 1) >= 3 ? 'bg-bauhaus-yellow text-bauhaus-black' : 'bg-bauhaus-canvas text-bauhaus-black'}`}>
@@ -1218,7 +1238,7 @@ export default async function FeccaEccvPage() {
                   return (
                     <tr key={d.person_id} className={i % 2 === 0 ? 'bg-white' : 'bg-bauhaus-canvas'}>
                       <td className="p-3 font-black text-bauhaus-black whitespace-nowrap">
-                        <Link href={`/org/${d.person_id}`} className="hover:underline">{d.person_name}</Link>
+                        <OrgRef gsId={d.person_id} name={d.person_name} isShare={isShare} />
                       </td>
                       <td className="p-3 text-xs uppercase tracking-widest font-black text-bauhaus-blue whitespace-nowrap">
                         {d.role ?? 'Director'}
@@ -1518,9 +1538,7 @@ export default async function FeccaEccvPage() {
                 {r.vicGrants.map((g, i) => (
                   <tr key={`${g.recipient_name}-${g.amount}-${i}`} className={i % 2 === 0 ? 'bg-white' : 'bg-bauhaus-canvas'}>
                     <td className="p-3 font-black text-bauhaus-black">
-                      {g.recipient_gs_id ? (
-                        <Link href={`/org/${g.recipient_gs_id}`} className="hover:underline">{g.recipient_name}</Link>
-                      ) : g.recipient_name}
+                      <OrgRef gsId={g.recipient_gs_id} name={g.recipient_name} isShare={isShare} />
                       {g.recipient_canonical && g.recipient_canonical !== g.recipient_name && (
                         <span className="block text-xs text-bauhaus-muted font-mono">→ {g.recipient_canonical}</span>
                       )}
@@ -1565,9 +1583,7 @@ export default async function FeccaEccvPage() {
                 {r.siblingGrants.map((g, i) => (
                   <tr key={`${g.recipient_name}-${g.amount}-${i}`} className={i % 2 === 0 ? 'bg-white' : 'bg-bauhaus-canvas'}>
                     <td className="p-3 font-black text-bauhaus-black">
-                      {g.recipient_gs_id ? (
-                        <Link href={`/org/${g.recipient_gs_id}`} className="hover:underline">{g.recipient_name}</Link>
-                      ) : g.recipient_name}
+                      <OrgRef gsId={g.recipient_gs_id} name={g.recipient_name} isShare={isShare} />
                       {g.recipient_canonical && g.recipient_canonical !== g.recipient_name && (
                         <span className="block text-xs text-bauhaus-muted font-mono">→ {g.recipient_canonical}</span>
                       )}

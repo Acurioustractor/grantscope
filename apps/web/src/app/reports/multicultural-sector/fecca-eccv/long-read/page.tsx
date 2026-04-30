@@ -109,13 +109,11 @@ export default async function FeccaEccvLongRead({ mode = 'full' }: { mode?: 'ful
 
   return (
     <div>
-      {!isShare && (
-        <ModeToggle
-          dashboardHref="/reports/multicultural-sector/fecca-eccv"
-          longReadHref="/reports/multicultural-sector/fecca-eccv/long-read"
-          current="long-read"
-        />
-      )}
+      <ModeToggle
+        dashboardHref={isShare ? '/share/fecca-eccv' : '/reports/multicultural-sector/fecca-eccv'}
+        longReadHref={isShare ? '/share/fecca-eccv/long-read' : '/reports/multicultural-sector/fecca-eccv/long-read'}
+        current="long-read"
+      />
 
       {/* Title */}
       <div className="mb-12">
