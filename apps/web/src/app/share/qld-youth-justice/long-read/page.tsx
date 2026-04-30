@@ -12,6 +12,11 @@ export const metadata = {
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * Share-mode landing for the QLD Youth Justice long-form report.
+ * Same component as /reports/youth-justice/qld/sector/long-read — share-mode
+ * detection via headers().get('x-pathname') auto-rewires toggles + sources panel.
+ */
 export default function ShareQldYjLongRead() {
-  return <LongRead mode="share" />;
+  return <LongRead />;
 }
