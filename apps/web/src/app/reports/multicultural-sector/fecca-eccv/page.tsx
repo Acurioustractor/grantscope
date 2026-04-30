@@ -1667,17 +1667,13 @@ export default async function FeccaEccvPage() {
         </div>
       </section>
 
-      {/* Want one of these? CTA */}
+      {/* Tell us what was useful — replaces the conversion CTAs while we learn */}
       <section className="border-4 border-bauhaus-black p-8 bg-bauhaus-yellow mb-12">
-        <h2 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-3">Want one of these for your sector or org?</h2>
+        <h2 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-3">Was this useful?</h2>
         <p className="text-bauhaus-black font-medium leading-relaxed max-w-3xl mb-5">
-          The same pipeline works for any Australian charity, peak body, sector, network, or funding stream. Audited financials, federal procurement, state grants, board interlocks, foundation flows &mdash; cross-referenced and narrated with sourced citations. <span className="font-black">First 5 reports are free</span> for orgs willing to be a public case study. Standard On-Demand reports are $2,500.
+          We&apos;re building CivicGraph in public. Same pipeline works for any Australian charity, peak body, sector, network, or funding stream &mdash; but we want to learn what actually lands before pricing it. Tick what was valuable, tell us what you&apos;d want next, leave anonymously if you want.
         </p>
-        <div className="flex flex-wrap gap-2">
-          <Link href="/get-a-report?free=true&src=fecca-eccv-dashboard" className="inline-block px-4 py-3 text-xs font-black uppercase tracking-widest bg-bauhaus-red text-white border-2 border-bauhaus-black hover:bg-bauhaus-black">★ Apply for First 5 Free →</Link>
-          <Link href="/get-a-report?budget=2500&src=fecca-eccv-dashboard" className="inline-block px-4 py-3 text-xs font-black uppercase tracking-widest bg-bauhaus-black text-white border-2 border-bauhaus-black hover:bg-bauhaus-red">Request a paid report →</Link>
-          <Link href="/pricing" className="inline-block px-4 py-3 text-xs font-black uppercase tracking-widest bg-white text-bauhaus-black border-2 border-bauhaus-black hover:bg-bauhaus-canvas">See full pricing</Link>
-        </div>
+        <Link href="/feedback?subject=fecca-eccv" className="inline-block px-5 py-3 text-sm font-black uppercase tracking-widest bg-bauhaus-black text-white border-2 border-bauhaus-black hover:bg-bauhaus-red">★ Send feedback (~2 min) →</Link>
       </section>
 
       <section className="text-center mb-8">

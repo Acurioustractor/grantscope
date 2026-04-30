@@ -15,7 +15,7 @@ export default async function GetAReportPage({ searchParams }: { searchParams: P
   return (
     <div>
       <div className="mb-12">
-        <Link href="/pricing" className="text-xs font-black text-bauhaus-muted uppercase tracking-widest hover:text-bauhaus-black">← Pricing</Link>
+        <Link href="/feedback" className="text-xs font-black text-bauhaus-muted uppercase tracking-widest hover:text-bauhaus-black">← Send feedback instead</Link>
         <div className="text-xs font-black text-bauhaus-yellow mt-4 mb-1 uppercase tracking-widest">Submit a Request</div>
         <h1 className="text-4xl sm:text-5xl font-black text-bauhaus-black mb-4 uppercase tracking-tight leading-tight">
           {isFree ? 'Apply for First 5 Free' : 'Get a Report'}
@@ -55,14 +55,10 @@ export default async function GetAReportPage({ searchParams }: { searchParams: P
           </div>
 
           <div className="border-4 border-bauhaus-black p-5 bg-bauhaus-canvas">
-            <div className="text-xs font-black uppercase tracking-widest text-bauhaus-muted mb-3">Pricing snapshot</div>
-            <ul className="text-xs text-bauhaus-black font-medium leading-relaxed space-y-2">
-              <li><span className="font-black text-bauhaus-red mr-1">$0</span> First 5 Free (campaign)</li>
-              <li><span className="font-black text-bauhaus-red mr-1">$2,500</span> On-demand report</li>
-              <li><span className="font-black text-bauhaus-red mr-1">$7,500/yr</span> Sector subscription</li>
-              <li><span className="font-black text-bauhaus-red mr-1">$25K+</span> Strategic engagement</li>
-            </ul>
-            <Link href="/pricing" className="block mt-3 text-xs font-black uppercase tracking-widest text-bauhaus-blue hover:underline">Full pricing →</Link>
+            <div className="text-xs font-black uppercase tracking-widest text-bauhaus-muted mb-3">Not sure yet?</div>
+            <p className="text-xs text-bauhaus-black font-medium leading-relaxed">
+              We&apos;re still figuring out what to charge. The fastest way to help is to <Link href="/feedback" className="text-bauhaus-blue font-black hover:underline">send feedback</Link> on what you found valuable and what you&apos;d want next.
+            </p>
           </div>
         </aside>
       </div>

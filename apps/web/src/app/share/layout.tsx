@@ -21,9 +21,7 @@ export default function ShareLayout({ children }: { children: React.ReactNode })
             <span className="text-xs font-mono text-bauhaus-muted hidden sm:inline">civic-sector intelligence, sourced</span>
           </div>
           <nav className="flex flex-wrap items-center gap-1">
-            <Link href="/pricing" className="text-xs font-black uppercase tracking-widest px-3 py-2 border-2 border-bauhaus-black bg-white text-bauhaus-black hover:bg-bauhaus-canvas">How it works</Link>
-            <Link href="/get-a-report?free=true&src=share" className="text-xs font-black uppercase tracking-widest px-3 py-2 border-2 border-bauhaus-black bg-bauhaus-yellow text-bauhaus-black hover:bg-bauhaus-canvas">★ First 5 Free</Link>
-            <Link href="/get-a-report?budget=2500&src=share" className="text-xs font-black uppercase tracking-widest px-3 py-2 border-2 border-bauhaus-black bg-bauhaus-black text-white hover:bg-bauhaus-red">Get a Report →</Link>
+            <Link href="/feedback?subject=fecca-eccv" className="text-xs font-black uppercase tracking-widest px-3 py-2 border-2 border-bauhaus-black bg-bauhaus-yellow text-bauhaus-black hover:bg-bauhaus-canvas">★ Tell us what&apos;s useful →</Link>
           </nav>
         </div>
       </header>
@@ -38,12 +36,11 @@ export default function ShareLayout({ children }: { children: React.ReactNode })
               <p className="text-xs text-bauhaus-muted leading-relaxed mt-1">A Curious Tractor · civic-sector intelligence with citations</p>
             </div>
             <div className="flex flex-wrap items-center gap-1">
-              <Link href="/pricing" className="text-xs font-black uppercase tracking-widest px-3 py-2 border-2 border-white text-white hover:bg-white hover:text-bauhaus-black">Pricing</Link>
-              <Link href="/get-a-report" className="text-xs font-black uppercase tracking-widest px-3 py-2 border-2 border-bauhaus-yellow bg-bauhaus-yellow text-bauhaus-black hover:bg-white">Request a Report →</Link>
+              <Link href="/feedback?subject=fecca-eccv" className="text-xs font-black uppercase tracking-widest px-3 py-2 border-2 border-bauhaus-yellow bg-bauhaus-yellow text-bauhaus-black hover:bg-white">★ Send feedback →</Link>
             </div>
           </div>
           <div className="text-[10px] uppercase tracking-widest text-bauhaus-muted border-t border-white/20 pt-4">
-            This is a CivicGraph deliverable. The full network graph, watchlists, sector dashboards, and cross-org intelligence layer are available via paid tiers. <Link href="/pricing" className="underline">See pricing →</Link>
+            This is a CivicGraph deliverable. We&apos;re building this in public &mdash; tell us what hit, what missed, and what you&apos;d want next at <Link href="/feedback?subject=fecca-eccv" className="underline">/feedback</Link>.
           </div>
         </div>
       </footer>
