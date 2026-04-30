@@ -410,6 +410,7 @@ async function getReport() {
         SELECT topic, COUNT(*)::int AS grants, SUM(amount_aud)::bigint AS total
         FROM (
           SELECT
+            amount_aud,
             CASE
               WHEN program_name ILIKE '%aboriginal%' OR program_name ILIKE '%first peoples%' OR program_name ILIKE '%treaty%' OR program_name ILIKE '%self-determination%' THEN 'First Peoples / Treaty'
               WHEN program_name ILIKE '%multicultural%' OR program_name ILIKE '%ethnic%' OR program_name ILIKE '%refugee%' OR program_name ILIKE '%settlement%' OR program_name ILIKE '%cald%' THEN 'Multicultural / Settlement'
