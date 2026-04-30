@@ -127,57 +127,57 @@ export default function FeedbackForm({ reportSubject }: { reportSubject?: string
     <form onSubmit={onSubmit} className="space-y-6">
       <input type="hidden" name="report_subject" value={reportSubject || ''} />
 
-      <fieldset className={sectionCls}>
-        <legend className={legendCls}>How valuable is this?</legend>
+      <div className={sectionCls}>
+        <h3 className={legendCls}>How valuable is this?</h3>
         <p className="text-xs text-bauhaus-muted font-medium leading-relaxed">Tick everything that applies. There&apos;s no wrong answer.</p>
         <CheckboxGrid name="value_signals" options={VALUE_SIGNALS} columns={2} />
         <div>
           <label className={labelCls}>Overall value rating</label>
           <ValueScore />
         </div>
-      </fieldset>
+      </div>
 
-      <fieldset className={sectionCls}>
-        <legend className={legendCls}>What would you want more of?</legend>
+      <div className={sectionCls}>
+        <h3 className={legendCls}>What would you want more of?</h3>
         <p className="text-xs text-bauhaus-muted font-medium leading-relaxed">CivicGraph already has data across procurement, grants, charities, foundations, donations, lobbyists, ATO transparency, and more. Tick what you&apos;d want surfaced as a report:</p>
         <CheckboxGrid name="topics_wanted" options={TOPICS_WANTED} columns={2} />
         <div>
           <label className={labelCls} htmlFor="topics_wanted_other">Anything else?</label>
           <input id="topics_wanted_other" name="topics_wanted_other" className={inputCls} placeholder="e.g. NDIS provider concentration, religious-charity governance, university spinout grants" />
         </div>
-      </fieldset>
+      </div>
 
-      <fieldset className={sectionCls}>
-        <legend className={legendCls}>How would you use this?</legend>
+      <div className={sectionCls}>
+        <h3 className={legendCls}>How would you use this?</h3>
         <CheckboxGrid name="use_cases" options={USE_CASES} columns={2} />
         <div>
           <label className={labelCls} htmlFor="use_cases_other">Other context?</label>
           <input id="use_cases_other" name="use_cases_other" className={inputCls} placeholder="Tell us how you&apos;d actually use this" />
         </div>
-      </fieldset>
+      </div>
 
-      <fieldset className={sectionCls}>
-        <legend className={legendCls}>What questions would you want answered next?</legend>
+      <div className={sectionCls}>
+        <h3 className={legendCls}>What questions would you want answered next?</h3>
         <p className="text-xs text-bauhaus-muted font-medium leading-relaxed">Free text. The most useful feedback is usually here — what wasn&apos;t covered? What would shift it from interesting to essential for you?</p>
         <textarea name="questions_to_answer" rows={4} className={inputCls} placeholder="e.g. How does ECCV's funding compare to the entire VIC ethnic-services sector? Which foundations are quietly funding settlement work? What's the director-overlap pattern across treaty bodies?" />
-      </fieldset>
+      </div>
 
-      <fieldset className={sectionCls}>
-        <legend className={legendCls}>Any general feedback?</legend>
+      <div className={sectionCls}>
+        <h3 className={legendCls}>Any general feedback?</h3>
         <textarea name="general_feedback" rows={3} className={inputCls} placeholder="The good, the bad, the &lsquo;wait, what?&rsquo; Tell us what hit and what missed." />
-      </fieldset>
+      </div>
 
-      <fieldset className={sectionCls}>
-        <legend className={legendCls}>Indicative budget signal</legend>
+      <div className={sectionCls}>
+        <h3 className={legendCls}>Indicative budget signal</h3>
         <p className="text-xs text-bauhaus-muted font-medium leading-relaxed">No commitment — just helps us understand what people would expect to invest in this kind of intelligence.</p>
         <select name="willingness_to_pay" className={inputCls} defaultValue="">
           <option value="">Skip</option>
           {PAY_OPTIONS.map(o => <option key={o.v} value={o.v}>{o.label}</option>)}
         </select>
-      </fieldset>
+      </div>
 
-      <fieldset className={sectionCls}>
-        <legend className={legendCls}>Optional — leave your contact</legend>
+      <div className={sectionCls}>
+        <h3 className={legendCls}>Optional — leave your contact</h3>
         <p className="text-xs text-bauhaus-muted font-medium leading-relaxed">All anonymous if you skip this. We won&apos;t spam you.</p>
         <div className="grid sm:grid-cols-2 gap-3">
           <div>
@@ -201,7 +201,7 @@ export default function FeedbackForm({ reportSubject }: { reportSubject?: string
           <input type="checkbox" name="follow_up_ok" className="mt-0.5 border-2 border-bauhaus-black w-4 h-4" />
           <span>Yes, send me the next report when it&apos;s published.</span>
         </label>
-      </fieldset>
+      </div>
 
       {result?.error && (
         <div className="border-4 border-bauhaus-red p-3 text-xs font-mono text-bauhaus-red bg-white">✗ {result.error}</div>

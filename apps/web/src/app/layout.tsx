@@ -48,12 +48,19 @@ function forcesPublicLayout(pathname: string) {
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  // Iframe-embed routes (/embed/*), share landing pages (/share/*), and API
-  // routes render without root chrome so they can be sent to non-customers as
-  // a clean public-facing artefact (or dropped into partner iframes).
+  // Iframe-embed routes (/embed/*), share landing pages (/share/*), and the
+  // public marketing/conversion pages (/discover, /feedback, /get-a-report,
+  // /pricing) all render without the dense workspace chrome. They use a
+  // simplified header + footer defined in their own route group layouts so
+  // strangers focus on the conversion path rather than the 30+ deep-app links.
   const hdrs = await headers();
   const pathname = hdrs.get('x-pathname') ?? '';
-  const isChromeless = pathname.startsWith('/embed') || pathname.startsWith('/share');
+  const isChromeless = pathname.startsWith('/embed')
+    || pathname.startsWith('/share')
+    || pathname.startsWith('/discover')
+    || pathname.startsWith('/feedback')
+    || pathname.startsWith('/get-a-report')
+    || pathname.startsWith('/pricing');
   const requiresLayoutAuth = needsLayoutAuth(pathname);
   const isFastPublicPath = !requiresLayoutAuth;
 

@@ -41,8 +41,8 @@ export default function SubmissionForm({ defaultBudget, defaultFree, defaultSour
       <input type="hidden" name="source" value={defaultSource || 'direct'} />
       <input type="hidden" name="raw_referrer" value={typeof window !== 'undefined' ? document.referrer : ''} />
 
-      <fieldset>
-        <legend className="text-sm font-black uppercase tracking-widest text-bauhaus-yellow mb-3 border-b-2 border-bauhaus-yellow pb-2 w-full">About you</legend>
+      <div className="border-4 border-bauhaus-black p-6 bg-white space-y-4">
+        <h3 className="text-sm font-black uppercase tracking-widest text-bauhaus-yellow mb-3 border-b-2 border-bauhaus-yellow pb-2">About you</h3>
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <label className={labelCls} htmlFor="contact_name">Your name</label>
@@ -61,10 +61,10 @@ export default function SubmissionForm({ defaultBudget, defaultFree, defaultSour
             <input id="contact_role" name="contact_role" className={inputCls} placeholder="e.g. CEO" />
           </div>
         </div>
-      </fieldset>
+      </div>
 
-      <fieldset>
-        <legend className="text-sm font-black uppercase tracking-widest text-bauhaus-yellow mb-3 border-b-2 border-bauhaus-yellow pb-2 w-full">What you want investigated</legend>
+      <div className="border-4 border-bauhaus-black p-6 bg-white space-y-4">
+        <h3 className="text-sm font-black uppercase tracking-widest text-bauhaus-yellow mb-3 border-b-2 border-bauhaus-yellow pb-2">What you want investigated</h3>
         <div className="space-y-4">
           <div>
             <label className={labelCls} htmlFor="target_subject">Organisation, network, or sector *</label>
@@ -148,10 +148,10 @@ export default function SubmissionForm({ defaultBudget, defaultFree, defaultSour
             <textarea id="prior_work" name="prior_work" className={inputCls} rows={2} placeholder="Saves us repeating work. e.g. 'I've read their last 3 annual reports', 'I know they restructured in 2021', 'their CEO is X', 'I've already mapped X via Y tool'" />
           </div>
         </div>
-      </fieldset>
+      </div>
 
-      <fieldset>
-        <legend className="text-sm font-black uppercase tracking-widest text-bauhaus-yellow mb-3 border-b-2 border-bauhaus-yellow pb-2 w-full">Timeline &amp; budget signal</legend>
+      <div className="border-4 border-bauhaus-black p-6 bg-white space-y-4">
+        <h3 className="text-sm font-black uppercase tracking-widest text-bauhaus-yellow mb-3 border-b-2 border-bauhaus-yellow pb-2">Timeline &amp; budget signal</h3>
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <label className={labelCls} htmlFor="timeline_pref">Timeline</label>
@@ -189,7 +189,7 @@ export default function SubmissionForm({ defaultBudget, defaultFree, defaultSour
             <span>I give permission for the resulting report to be published publicly on civicgraph.com.au.</span>
           </label>
         </div>
-      </fieldset>
+      </div>
 
       {result?.error && (
         <div className="border-4 border-bauhaus-red p-3 text-xs font-mono text-bauhaus-red bg-white">
