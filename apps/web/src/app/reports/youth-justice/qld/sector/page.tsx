@@ -48,29 +48,29 @@ const QLD_PLANNED_FACILITIES: PlannedFacility[] = [
   {
     name: 'Wacol Youth Remand Centre',
     status: 'recently-opened',
-    capacity: '76 beds (interim remand-only facility)',
+    capacity: '76 beds (remand-only)',
     location: 'Wacol, Brisbane',
-    estimatedCost: '~$250M reported',
-    source: { label: 'QLD Government — Department of Youth Justice news', href: 'https://www.cyjma.qld.gov.au/' },
-    notes: 'Operates as a remand-only facility while the Wacol-area expansion and Woodford facility are built. Reduces watchhouse overflow but adds detention capacity rather than community alternatives.',
+    estimatedCost: '$250M+ construction · ~$150M first three years operations',
+    source: { label: 'QLD Government statement (Sep 2023)', href: 'https://statements.qld.gov.au/statements/98865' },
+    notes: 'Announced 21 Sep 2023 (Palaszczuk Labor Government). Officially opened and began transferring young people in early 2025 under the Crisafulli LNP Government. Operates remand-only — reduces watchhouse overflow but adds detention capacity rather than community alternatives.',
   },
   {
     name: 'Woodford Youth Detention Centre',
-    status: 'announced',
-    capacity: 'planned ~80 beds',
+    status: 'under-construction',
+    capacity: '80 beds (planned)',
     location: 'Woodford (north of Brisbane)',
-    estimatedCost: 'multi-hundred-million reported',
-    source: { label: 'QLD Cabinet announcements', href: 'https://statements.qld.gov.au/' },
-    notes: 'Greenfield centre announced as part of the broader detention-capacity expansion program. Construction timeline subject to change.',
+    estimatedCost: 'up to $627.61M reported (industry tracker; verify against QLD Budget Paper 3)',
+    source: { label: 'QLD Department of Youth Justice — Woodford', href: 'https://youthjustice.qld.gov.au/our-department/strategies-reform/new-youth-detention-centres/woodford' },
+    notes: 'Sod turned February 2024 (Palaszczuk Labor); BESIX Watpac (QLD) Pty Ltd appointed as lead contractor. Project continues under the Crisafulli LNP Government. Completion target 2026.',
   },
   {
     name: 'Cairns Youth Detention Centre',
     status: 'announced',
-    capacity: 'planned (capacity TBD)',
-    location: 'Far North QLD',
+    capacity: '40 beds (planned)',
+    location: 'Far North Queensland',
     estimatedCost: 'TBD',
-    source: { label: 'QLD Cabinet announcements', href: 'https://statements.qld.gov.au/' },
-    notes: 'A Far North QLD detention centre has been canvassed in announcements; status and timeline are being tracked publicly.',
+    source: { label: 'QLD Department of Youth Justice — Cairns', href: 'https://youthjustice.qld.gov.au/our-department/strategies-reform/new-youth-detention-centres/cairns' },
+    notes: 'Announced under Palaszczuk Labor; site selection consultation through 2024. Forecast operational 2027. Combined with Woodford, adds 120 beds to QLD detention capacity.',
   },
 ];
 
@@ -84,32 +84,99 @@ type PolicySignal = {
 
 const QLD_POLICY_SIGNALS: PolicySignal[] = [
   {
-    date: '2023',
-    title: 'Path to Treaty Act 2023 (subsequently repealed 2024)',
-    thrust: 'mixed',
-    summary: 'The Path to Treaty Act established an Interim Truth and Treaty Body. It was repealed in late 2024 as part of the new government\'s legislative agenda — reshaping the policy environment around First Nations governance and self-determination.',
-    source: { label: 'Queensland Legislation', href: 'https://www.legislation.qld.gov.au/' },
+    date: '16 Mar 2023',
+    title: 'Strengthening Community Safety Act 2023 — first override of QLD Human Rights Act',
+    thrust: 'punitive',
+    summary: 'Reinstated the breach-of-bail offence for children. Overrode Queensland\'s own Human Rights Act 2019 — the first such override since the Act commenced. Set the precedent for subsequent youth-justice legislation overriding rights protections.',
+    source: { label: 'AHRI — Overriding the Queensland HR Act', href: 'https://humanrights.unsw.edu.au/students/blogs/overriding-queensland-human-rights-act' },
+  },
+  {
+    date: '10 May 2023',
+    title: 'Path to Treaty Act 2023 — established Truth-telling and Treaty Body',
+    thrust: 'preventive',
+    summary: 'Act No. 12 of 2023, passed 10 May 2023. Established the First Nations Treaty Institute and a Truth-telling and Healing Inquiry. Was the policy framework explicitly tying systemic First Nations over-representation in YJ to a longer-term treaty/truth process.',
+    source: { label: 'QLD Legislation — Path to Treaty Act 2023', href: 'https://www.legislation.qld.gov.au/view/html/asmade/act-2023-012' },
+  },
+  {
+    date: '25 Aug 2023',
+    title: 'Children-in-adult-watchhouses Act — second HR Act override',
+    thrust: 'punitive',
+    summary: 'Child Protection (Offender Reporting and Offender Prohibition Order) and Other Legislation Amendment Act. Overrode QLD HR Act for the second time; explicitly authorised holding children in adult watchhouses. Then-Police Minister Mark Ryan described as a temporary measure until 31 December 2026.',
+    source: { label: 'Al Jazeera coverage', href: 'https://www.aljazeera.com/news/2023/9/18/australian-state-suspends-human-rights-law-to-lock-up-more-children' },
+  },
+  {
+    date: '13 Dec 2024',
+    title: 'Making Queensland Safer Act 2024 — "adult crime, adult time"',
+    thrust: 'punitive',
+    summary: 'Act No. 54 of 2024, assented 13 December 2024. Removed the "detention as a last resort" principle from the Youth Justice Act. Children charged with 13 listed offences (incl. murder, manslaughter, robbery, dangerous operation of a vehicle) face the same maximum, mandatory and minimum penalties as adults. Restorative justice removed as a sentencing option for those offences. UN CRC chair Ann Skelton called it "flagrant disregard of children\'s rights".',
+    source: { label: 'QLD Legislation — Making QLD Safer Act 2024', href: 'https://www.legislation.qld.gov.au/view/whole/html/asmade/act-2024-054' },
+  },
+  {
+    date: '28 Nov 2024',
+    title: 'Path to Treaty Act repealed — first sitting day of new government',
+    thrust: 'punitive',
+    summary: 'Crisafulli LNP Government repealed the Path to Treaty Act on its first day of sitting. Repeal bundled into a Bill amending the Brisbane Olympic Games Act. QAIHC and Indigenous health peak bodies publicly opposed. Removed the institutional treaty/truth framework that explicitly addressed YJ over-representation.',
+    source: { label: 'QLD Statement — Repeal (Nov 2024)', href: 'https://statements.qld.gov.au/statements/101654' },
+  },
+  {
+    date: '2024–25',
+    title: 'Bail Act amendments — wider presumption-against-bail list',
+    thrust: 'punitive',
+    summary: 'Police no longer required to consider alternatives to arrest for bail-condition breaches by children. Presumption-against-bail expanded: unlawful use of motor vehicle (aggravated), burglary, entering premises to commit indictable offences. Electronic monitoring of high-risk youth on bail expanded to Toowoomba, Mt Isa and Cairns. More children on remand for longer.',
+    source: { label: 'QLD Department of Youth Justice — Changes to Acts', href: 'https://youthjustice.qld.gov.au/our-department/our-legislation/changes-act' },
+  },
+  {
+    date: 'May 2025',
+    title: 'Adult Crime Adult Time Amendment Bill 2025 — proposed expansion to ~33 offences',
+    thrust: 'punitive',
+    summary: 'Sought to expand the adult-crime-adult-time list by ~20 further offences including arson, attempted murder, torture, rape, attempted rape, attempted robbery and trafficking in dangerous drugs. UN Special Rapporteurs Alice Jill Edwards (torture) and Albert K. Barume (Indigenous peoples) wrote to Australian authorities expressing concern.',
+    source: { label: 'OHCHR — UN experts on Australian youth justice (May 2025)', href: 'https://www.ohchr.org/en/media-advisories/2025/05/youth-justice-systems-across-australia-crisis-un-experts' },
+  },
+];
+
+type OversightFinding = {
+  date: string;
+  body: string;
+  title: string;
+  summary: string;
+  source: { label: string; href: string };
+};
+
+const QLD_OVERSIGHT_FINDINGS: OversightFinding[] = [
+  {
+    date: '27 Aug 2024',
+    body: 'QLD Ombudsman / Inspector of Detention Services',
+    title: 'Cleveland Youth Detention Centre Inspection Report — separation due to staff shortages',
+    summary: 'Inspector Anthony Reilly tabled findings of chronic staff shortages causing children to be locked alone in their rooms. On one inspection day, 40% of Cleveland\'s 96 inmates were held in bare cells. Average separation length in 2022–23 was 8 hrs 36 min, reduced to 4 hrs 24 min by mid-2024. 15 recommendations.',
+    source: { label: 'QLD Ombudsman — Cleveland inspection report', href: 'https://www.ombudsman.qld.gov.au/publications/detention-inspection-reports/cleveland-youth-detention-centre-inspection-report-focus-on-separation-due-to-staff-shortages' },
   },
   {
     date: '2024',
-    title: 'Making Queensland Safer Laws — "adult crime, adult time"',
-    thrust: 'punitive',
-    summary: 'A package of amendments increasing penalties for serious offences committed by children, including life imprisonment for some categories — overriding the Childrens Court Act\'s standard sentencing principles. UN bodies and human-rights peaks have flagged international-law concerns.',
-    source: { label: 'Queensland Legislation', href: 'https://www.legislation.qld.gov.au/' },
+    body: 'QLD Ombudsman / Inspector of Detention Services',
+    title: 'Cairns and Murgon Watch-Houses Inspection Report — focus on detention of children',
+    summary: 'Inspection of Cairns and Murgon watch-houses with specific focus on the detention of children. Documented operational and welfare issues at both regional sites — directly relevant to the watchhouse-as-overflow pattern in Volume 1.',
+    source: { label: 'QLD Ombudsman — Cairns + Murgon inspection', href: 'https://www.ombudsman.qld.gov.au/publications/detention-inspection-reports/cairns-and-murgon-watch-houses-inspection-report-2024' },
+  },
+  {
+    date: '2025',
+    body: 'QLD Ombudsman / Inspector of Detention Services',
+    title: 'Combined Youth Detention Centres Inspection Report',
+    summary: 'Combined inspection report covering all QLD youth detention centres. Read alongside the 2024 Cleveland report for the across-system pattern.',
+    source: { label: 'QLD Ombudsman — combined YDC inspections 2025', href: 'https://www.ombudsman.qld.gov.au/publications/detention-inspection-reports/ydc-inspections-combined-report-2025' },
+  },
+  {
+    date: '2019',
+    body: 'Australian Human Rights Commission · Amnesty International',
+    title: 'Children in Brisbane City Watchhouse — 89 children, isolation incidents',
+    summary: 'ABC Four Corners + Amnesty International documented 89 children held in the Brisbane City Watchhouse at one point in May 2019. Reported incidents included children losing fingers in cell doors and one young person held in isolation for 23 days. Triggered international and federal-level scrutiny.',
+    source: { label: 'Human Rights Watch — Australia\'s terrifying watch-houses', href: 'https://www.hrw.org/news/2019/06/24/australias-terrifying-watch-houses' },
   },
   {
     date: '2024',
-    title: 'Detention-capacity expansion announcements',
-    thrust: 'punitive',
-    summary: 'Multi-facility expansion announced (Wacol remand, Woodford new build, Cairns proposed). Capital expenditure scaled to multi-hundred-millions per facility. The structural choice has been to expand custody before community.',
-    source: { label: 'QLD Cabinet announcements', href: 'https://statements.qld.gov.au/' },
-  },
-  {
-    date: '2024',
-    title: 'Bail-and-remand law changes',
-    thrust: 'punitive',
-    summary: 'Tighter bail provisions for children charged with prescribed offences. Practical effect: more children on remand for longer; increased pressure on watchhouse and detention bed availability.',
-    source: { label: 'Queensland Legislation', href: 'https://www.legislation.qld.gov.au/' },
+    body: 'Australian Human Rights Commission',
+    title: 'National Children\'s Commissioner — public criticism of QLD reforms',
+    summary: 'The National Children\'s Commissioner publicly criticised QLD\'s 2024 youth-justice reforms as a breach of Australia\'s international child-rights obligations.',
+    source: { label: 'AHRC — Statement on QLD reforms', href: 'https://humanrights.gov.au/about/news/media-releases/national-childrens-commissioner-slams-shocking-new-qld-youth-justice-laws' },
   },
 ];
 
@@ -1272,7 +1339,37 @@ export default async function QldYjSectorPage() {
       </section>
 
       <section className="mb-16">
-        <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§24 · CURATED</div>
+        <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§24 · OVERSIGHT FINDINGS</div>
+        <h3 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">Oversight, inspection &amp; coronial findings</h3>
+        <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
+          What independent inspectors and oversight bodies have found about the QLD youth-justice operation. Sourced from the Inspector of Detention Services, the Australian Human Rights Commission, and human-rights research bodies. Each entry links to the originating report.
+        </p>
+        <div className="border-l-4 border-bauhaus-yellow bg-bauhaus-canvas p-4 mb-6 text-xs">
+          <p className="font-black text-bauhaus-black mb-1">Important clarification</p>
+          <p className="text-bauhaus-black leading-relaxed">The high-profile <span className="font-black">Cleveland Dodd</span> coronial inquest (16-year-old Yamatji boy who died in October 2023) is a <span className="font-black">Western Australian</span> case at Unit 18, Casuarina Prison &mdash; <span className="font-black">not</span> QLD&apos;s Cleveland Youth Detention Centre in Townsville. Public reporting often conflates the two given the shared name. We do not surface the Dodd inquest in this QLD report. WA Coroner&apos;s findings (Dec 2025) called for Unit 18 to close as a matter of urgency.</p>
+        </div>
+        <div className="space-y-4">
+          {QLD_OVERSIGHT_FINDINGS.map((f, i) => (
+            <div key={i} className="border-4 border-bauhaus-black p-5 bg-white">
+              <div className="flex flex-wrap justify-between items-baseline mb-2 gap-3">
+                <div>
+                  <div className="text-xs font-mono font-black text-bauhaus-muted">{f.date}</div>
+                  <div className="text-[10px] uppercase tracking-widest font-black text-bauhaus-blue">{f.body}</div>
+                </div>
+              </div>
+              <h4 className="text-base font-black text-bauhaus-black uppercase tracking-tight leading-tight mb-2">{f.title}</h4>
+              <p className="text-xs text-bauhaus-black leading-relaxed mb-3">{f.summary}</p>
+              <a href={f.source.href} target="_blank" rel="noopener" className="text-bauhaus-blue text-[10px] font-mono hover:underline">{f.source.label} ↗</a>
+            </div>
+          ))}
+        </div>
+        <p className="text-xs text-bauhaus-muted font-mono mt-4">
+          Source: QLD Ombudsman / Inspector of Detention Services (<a href="https://www.ombudsman.qld.gov.au" target="_blank" rel="noopener" className="text-bauhaus-blue hover:underline">ombudsman.qld.gov.au</a>) and Australian Human Rights Commission. Specific QLD-jurisdiction youth-death-in-custody coronial findings are searchable at <a href="https://coronerscourt.qld.gov.au/findings-upcoming-inquests/search-findings" target="_blank" rel="noopener" className="text-bauhaus-blue hover:underline">coronerscourt.qld.gov.au</a> &mdash; we have not yet ingested those structurally.
+        </p>
+      </section>
+
+      <section className="mb-16">
+        <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§25 · SYNTHESIS</div>
         <h3 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">The shape of the choice</h3>
         <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
           Each new bed announcement is a structural commitment for 30+ years. Each new piece of bail-tightening legislation lengthens the average remand period. Each repealed prevention framework removes a counter-balancing institution. The cumulative direction of travel — combining the dataset numbers above (§3, §8, §10) with the policy moves in §23 — is unambiguous: <span className="font-black text-bauhaus-red">QLD is structurally expanding custody capacity faster than community capacity</span>. The same dollars could have funded the operational scale-up of every &ldquo;promising&rdquo; ALMA intervention listed in §16, with evaluation budget left over.
