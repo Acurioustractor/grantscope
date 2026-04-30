@@ -2,89 +2,85 @@ import Link from 'next/link';
 
 export const metadata = {
   title: 'Pricing — CivicGraph',
-  description: 'Pricing for CivicGraph investigative reports, monitoring, and sector subscriptions.',
+  description: 'Investigative civic-sector reports + monitoring + sector subscriptions. Lead with the Snapshot or the full Sector Long-Read; scale to recurring intelligence.',
 };
 
 const tiers = [
   {
-    name: 'Public dashboards',
-    price: 'Free',
-    sub: 'Indexed by Google. No signup.',
-    tone: 'canvas',
-    description: 'Browse every published deep-dive, the live entity graph, and individual organisation profiles.',
-    features: [
-      'Live dashboards (e.g. /reports/multicultural-sector/fecca-eccv)',
-      'Long-form narrative reports for published case studies',
-      'Network graph of 159K Australian entities',
-      'Individual org profiles at /orgs/<id>',
-    ],
-    cta: { label: 'Browse the dashboards', href: '/reports' },
-  },
-  {
-    name: 'First 5 Free',
-    price: '$0',
-    sub: 'Limited campaign — 5 reports total',
-    tone: 'yellow',
-    description: 'Apply for one of five free FECCA-style investigative reports on your sector or organisation. Selected applicants get the full long-read treatment in exchange for case-study permission.',
-    features: [
-      'Full ~12-min narrative report with cited findings',
-      'Live dashboard view of the same data',
-      '1-hour briefing call to walk through findings',
-      'Featured as a Founding Customer case study (with permission)',
-    ],
-    cta: { label: 'Apply for First 5 Free', href: '/get-a-report?free=true' },
-    highlight: true,
-  },
-  {
-    name: 'On-Demand Report',
-    price: '$2,500',
-    sub: 'per report · 5–7 day turnaround',
+    name: 'Snapshot Diagnostic',
+    price: '$1,500',
+    sub: 'one-off · 5 day turnaround',
     tone: 'white',
-    description: 'A one-off investigative deep-dive on the organisation, network, sector, or funding stream of your choice. Same template as the FECCA / ECCV report.',
+    description: 'A focused 4-page diagnostic on one organisation. Audited financial trajectory, governance, funder concentration, three sourced findings. Decision-ready.',
     features: [
-      'Live dashboard + narrative long-read',
+      'Live dashboard view of the org',
+      '4-page narrative diagnostic with sourced citations',
+      'Three findings ranked by materiality',
+      '30-min briefing call',
+    ],
+    cta: { label: 'Order a Snapshot', href: '/get-a-report?budget=1500' },
+  },
+  {
+    name: 'Sector Long-Read',
+    price: '$3,500',
+    sub: 'one-off · 7–10 day turnaround',
+    tone: 'yellow',
+    description: 'Full FECCA / ECCV-style investigative deep-dive on the organisation, peak body, sector, network, or funding stream of your choice. Cross-source triangulation, 9-section narrative, every claim sourced.',
+    features: [
+      'Live interactive dashboard + 12-min narrative report',
       'Cross-source triangulation (ABR · ACNC · Austender · audits)',
-      'Citation list for every claim',
+      'Director / network drill-downs scoped to the report',
+      '"What this means for you" board-ready action items',
+      'Citation list for every finding',
       '1-hour briefing call',
       'Private link or public publication, your choice',
     ],
-    cta: { label: 'Request a paid report', href: '/get-a-report?budget=2500' },
+    cta: { label: 'Order a Long-Read', href: '/get-a-report?budget=3500' },
+    highlight: true,
   },
   {
-    name: 'Sector Subscription',
-    price: '$7,500',
-    sub: 'per year',
+    name: 'Sector Monitor',
+    price: '$9,500',
+    sub: 'per year · recurring',
     tone: 'white',
-    description: 'For foundations, peak bodies, oversight agencies, and donor coalitions tracking a sector over time.',
+    description: 'For foundations, peak bodies, oversight agencies, and donor coalitions tracking a sector continuously. Long-form findings stay current; you get notified when something material moves.',
     features: [
-      '4 long-form sector reports per year',
-      'Monthly briefing memo when something material changes',
+      'One Sector Long-Read at year-start (worth $3,500)',
+      'Quarterly auto-refresh of the live dashboard',
+      'Email alerts when a tracked org has a material change (deficit, leadership, ACNC status, contract win/loss)',
       'Watchlist alerts on up to 50 organisations',
       'Direct analyst access (email + 1 quarterly call)',
       'API access to your watchlist data',
     ],
-    cta: { label: 'Discuss a subscription', href: '/get-a-report?budget=7500' },
+    cta: { label: 'Discuss a subscription', href: '/get-a-report?budget=9500' },
   },
   {
     name: 'Strategic Engagement',
     price: '$25K+',
     sub: 'per project · scoping required',
     tone: 'black',
-    description: 'For royal commissions, state-government oversight bodies, and large foundations. Bespoke sector mapping, multi-org diligence packages, and custom data integration with your internal systems.',
+    description: 'For royal commissions, state-government oversight, large foundations, and sector-mapping engagements. Bespoke scope, multi-org diligence packs, and integration with your internal systems.',
     features: [
       'Full sector or jurisdiction mapping',
       'Multi-organisation diligence packs (10–50 orgs)',
       'Custom data feeds + integration with your stack',
-      'Scoped to your decision timeline',
       'Direct access to the analyst team',
+      'Scoped to your decision timeline',
+      'White-label / branded delivery available',
     ],
     cta: { label: 'Scope an engagement', href: '/get-a-report?budget=25000' },
   },
 ];
 
+const addOns = [
+  { name: 'Branded delivery', price: '+$1,500', description: 'Your logo, your colours, your domain. Show stakeholders the report as a co-authored deliverable.' },
+  { name: 'Public-facing publication', price: '+$500', description: 'Hosted on a public landing page with SEO-optimised social cards. Citation-ready for journalism.' },
+  { name: 'Embed in your stack', price: '+$2,500', description: 'Iframe-embeddable charts and findings drop into your intranet, board portal, or Notion / Confluence.' },
+  { name: 'Custom Q&A', price: '+$500/Q', description: 'Submit a follow-up question after delivery. We answer within 2 business days, sourced.' },
+];
+
 function Tier({ t }: { t: typeof tiers[number] }) {
   const bg = t.tone === 'yellow' ? 'bg-bauhaus-yellow' :
-             t.tone === 'canvas' ? 'bg-bauhaus-canvas' :
              t.tone === 'black' ? 'bg-bauhaus-black text-white' : 'bg-white';
   const txt = t.tone === 'black' ? 'text-white' : 'text-bauhaus-black';
   const border = t.highlight ? 'border-bauhaus-red border-8' : 'border-bauhaus-black border-4';
@@ -94,7 +90,7 @@ function Tier({ t }: { t: typeof tiers[number] }) {
   return (
     <div className={`${bg} ${txt} ${border} p-6 flex flex-col`}>
       {t.highlight && (
-        <div className="text-[10px] font-black text-bauhaus-red uppercase tracking-widest mb-2 inline-block bg-bauhaus-black px-2 py-1 self-start">★ Launch Campaign</div>
+        <div className="text-[10px] font-black text-white uppercase tracking-widest mb-2 inline-block bg-bauhaus-red px-2 py-1 self-start">★ Most chosen</div>
       )}
       <h3 className="text-2xl font-black uppercase tracking-tight leading-tight mb-2">{t.name}</h3>
       <div className="mb-4">
@@ -126,32 +122,57 @@ export default function PricingPage() {
         <h1 className="text-4xl sm:text-5xl font-black text-bauhaus-black mb-4 uppercase tracking-tight leading-tight">
           Civic-sector intelligence, sourced.
         </h1>
-        <p className="text-xl sm:text-2xl text-bauhaus-muted leading-tight font-medium max-w-3xl">
-          Five ways to use CivicGraph &mdash; from free public dashboards through to bespoke royal-commission-grade engagements.
+        <p className="text-xl sm:text-2xl text-bauhaus-muted leading-tight font-medium max-w-3xl mb-3">
+          Four tiers from one-off diagnostic through to royal-commission-grade engagements. Lead with what fits your decision; scale to what fits your sector.
+        </p>
+        <p className="text-sm text-bauhaus-black font-medium max-w-3xl">
+          See the deliverable: <Link href="/share/fecca-eccv" className="font-black text-bauhaus-blue hover:underline">FECCA &amp; ECCV — The Federation&apos;s Money Map</Link> &mdash; this is a $3,500 Sector Long-Read.
         </p>
       </div>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
+      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
         {tiers.map((t, i) => <Tier key={i} t={t} />)}
       </div>
 
+      {/* Add-ons */}
+      <section className="border-4 border-bauhaus-black p-8 bg-white mb-12">
+        <div className="text-xs font-black uppercase tracking-widest text-bauhaus-yellow mb-2">Add-ons (any tier)</div>
+        <h2 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-5">Customise the deliverable</h2>
+        <div className="grid sm:grid-cols-2 gap-4">
+          {addOns.map((a, i) => (
+            <div key={i} className="border-2 border-bauhaus-black p-4 bg-bauhaus-canvas">
+              <div className="flex items-baseline justify-between mb-1">
+                <div className="font-black text-bauhaus-black uppercase tracking-tight text-sm">{a.name}</div>
+                <div className="text-xs font-mono text-bauhaus-red font-black">{a.price}</div>
+              </div>
+              <p className="text-xs text-bauhaus-muted font-medium leading-relaxed">{a.description}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* How it works */}
       <section className="border-4 border-bauhaus-black p-8 bg-bauhaus-canvas mb-12">
         <h2 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-4">How it works</h2>
         <ol className="space-y-3 text-bauhaus-black font-medium text-sm leading-relaxed">
-          <li><span className="font-black text-bauhaus-blue mr-2">01</span>You submit an EOI at <Link href="/get-a-report" className="underline">/get-a-report</Link>. Tell us the org / sector you want investigated and what decision the report will inform.</li>
-          <li><span className="font-black text-bauhaus-blue mr-2">02</span>We do a 30-min triage to confirm scope and timing. For paid reports, you get a quote within 48 hours.</li>
-          <li><span className="font-black text-bauhaus-blue mr-2">03</span>We pull every public source we can find &mdash; ABR, ACNC, Austender, audited annual reports (PDFs), state grant disclosures, board registers &mdash; and triangulate.</li>
-          <li><span className="font-black text-bauhaus-blue mr-2">04</span>You get a live dashboard view + a long-form narrative report with sourced citations. Same template as the <Link href="/reports/multicultural-sector/fecca-eccv/long-read" className="underline">FECCA &amp; ECCV deep-dive</Link>.</li>
-          <li><span className="font-black text-bauhaus-blue mr-2">05</span>1-hour briefing call to walk you through findings and answer questions.</li>
+          <li><span className="font-black text-bauhaus-blue mr-2">01</span>You submit at <Link href="/get-a-report" className="underline">/get-a-report</Link>. Tell us the org / sector / network and what decision the report will inform.</li>
+          <li><span className="font-black text-bauhaus-blue mr-2">02</span>30-minute scoping call within 48 hours. Confirm questions, timeline, deliverable format. Quote sent same day.</li>
+          <li><span className="font-black text-bauhaus-blue mr-2">03</span>We pull every public source — ABR, ACNC, Austender, audited annual reports, state grant disclosures, board registers — and triangulate.</li>
+          <li><span className="font-black text-bauhaus-blue mr-2">04</span>Live dashboard view + narrative report with sourced citations delivered. Same template as the <Link href="/share/fecca-eccv" className="underline">FECCA &amp; ECCV deep-dive</Link>.</li>
+          <li><span className="font-black text-bauhaus-blue mr-2">05</span>Briefing call to walk you through findings and surface follow-up questions.</li>
         </ol>
       </section>
 
-      <section className="border-4 border-bauhaus-yellow p-8 bg-bauhaus-yellow mb-12">
-        <h2 className="text-xl font-black text-bauhaus-black uppercase tracking-tight mb-3">Worked example</h2>
+      {/* First 5 Free — demoted */}
+      <section className="border-4 border-bauhaus-yellow p-6 bg-bauhaus-yellow mb-12">
+        <div className="flex flex-wrap items-baseline gap-3 mb-3">
+          <h2 className="text-lg font-black text-bauhaus-black uppercase tracking-tight">★ First 5 Reports Free — Launch Campaign</h2>
+          <span className="text-xs font-mono text-bauhaus-black font-black">limited</span>
+        </div>
         <p className="text-bauhaus-black font-medium text-sm leading-relaxed mb-4 max-w-3xl">
-          The <Link href="/reports/multicultural-sector/fecca-eccv/long-read" className="underline font-black">FECCA &amp; ECCV — The Federation&apos;s Money Map</Link> report is the standard On-Demand deliverable. ~12-minute read, 9 sections, every claim sourced. Combines audited financials, federal procurement, state grants, board interlocks, and ABR/ACNC registration data into a single sector-decision-ready narrative.
+          The next 5 Sector Long-Reads are free for organisations willing to be a public case study. Selection criteria: orgs whose data produces clear findings; willingness to be featured publicly with full report visibility; commitment to a 30-minute interview after delivery on what was useful and what wasn&apos;t.
         </p>
-        <Link href="/reports/multicultural-sector/fecca-eccv/long-read" className="inline-block px-4 py-3 text-xs font-black uppercase tracking-widest bg-bauhaus-black text-white border-2 border-bauhaus-black hover:bg-bauhaus-red">Read the full FECCA / ECCV report →</Link>
+        <Link href="/get-a-report?free=true&src=pricing-campaign" className="inline-block px-4 py-3 text-xs font-black uppercase tracking-widest bg-bauhaus-black text-white border-2 border-bauhaus-black hover:bg-bauhaus-red">Apply for the campaign →</Link>
       </section>
 
       <section className="text-center mb-8">

@@ -6,11 +6,18 @@ import { safe } from '@/lib/services/utils';
 export const dynamic = 'force-dynamic';
 
 /**
- * Renders an org/person link if we're inside the full app, or just bold text
- * inside `/share/*` so visitors can't drill into pages they haven't paid for.
+ * Renders a name as a link to the full org/person page in /reports/* mode, or
+ * to a scoped person drill-down inside /share/* (people only — orgs render as
+ * plain text in share mode so visitors can't drill into arbitrary /org/* pages).
  */
-function OrgRef({ gsId, name, isShare }: { gsId: string | null | undefined; name: string; isShare: boolean }) {
-  if (isShare || !gsId) return <span className="font-black">{name}</span>;
+function OrgRef({ gsId, name, isShare, kind = 'org' }: { gsId: string | null | undefined; name: string; isShare: boolean; kind?: 'org' | 'person' }) {
+  if (!gsId) return <span className="font-black">{name}</span>;
+  if (isShare) {
+    if (kind === 'person' && gsId.startsWith('GS-PERSON-')) {
+      return <Link href={`/share/fecca-eccv/people/${gsId}`} className="font-black hover:underline">{name}</Link>;
+    }
+    return <span className="font-black">{name}</span>;
+  }
   return <Link href={`/org/${gsId}`} className="hover:underline">{name}</Link>;
 }
 
@@ -1179,7 +1186,7 @@ export default async function FeccaEccvPage() {
                   return (
                     <tr key={d.person_id} className={i % 2 === 0 ? 'bg-white' : 'bg-bauhaus-canvas'}>
                       <td className="p-3 font-black text-bauhaus-black whitespace-nowrap">
-                        <OrgRef gsId={d.person_id} name={d.person_name} isShare={isShare} />
+                        <OrgRef gsId={d.person_id} name={d.person_name} isShare={isShare} kind="person" />
                       </td>
                       <td className="p-3 text-right font-mono font-black">
                         <span className={`inline-block px-2 py-1 ${(port?.board_count ?? 1) >= 5 ? 'bg-bauhaus-red text-white' : (port?.board_count ?? 1) >= 3 ? 'bg-bauhaus-yellow text-bauhaus-black' : 'bg-bauhaus-canvas text-bauhaus-black'}`}>
@@ -1238,7 +1245,7 @@ export default async function FeccaEccvPage() {
                   return (
                     <tr key={d.person_id} className={i % 2 === 0 ? 'bg-white' : 'bg-bauhaus-canvas'}>
                       <td className="p-3 font-black text-bauhaus-black whitespace-nowrap">
-                        <OrgRef gsId={d.person_id} name={d.person_name} isShare={isShare} />
+                        <OrgRef gsId={d.person_id} name={d.person_name} isShare={isShare} kind="person" />
                       </td>
                       <td className="p-3 text-xs uppercase tracking-widest font-black text-bauhaus-blue whitespace-nowrap">
                         {d.role ?? 'Director'}
@@ -1618,6 +1625,46 @@ export default async function FeccaEccvPage() {
           <li>• <span className="font-black">NSW + QLD state ECCs</span> — complete the federation picture; <code className="bg-bauhaus-black text-bauhaus-yellow px-1 text-xs">DEPT_CONFIG</code> + <code className="bg-bauhaus-black text-bauhaus-yellow px-1 text-xs">vic_grants_awarded.state</code> column ready for them.</li>
           <li>• <span className="font-black">ABS CALD population by LGA</span> — unlocks &ldquo;funding-vs-need&rdquo; geographic story.</li>
         </ul>
+      </section>
+
+      {/* What this means / action panel */}
+      <section className="border-4 border-bauhaus-black p-8 bg-white mb-12">
+        <div className="text-xs font-black uppercase tracking-widest text-bauhaus-yellow mb-2">For Boards · Funders · Journalists · Peak-Body CEOs</div>
+        <h2 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-4">What this means for you</h2>
+        <div className="grid md:grid-cols-2 gap-6 text-sm font-medium leading-relaxed text-bauhaus-black">
+          <div>
+            <div className="text-xs font-black uppercase tracking-widest text-bauhaus-red mb-2">If you sit on FECCA / ECCV / a sister ECC board</div>
+            <ul className="space-y-2">
+              <li><span className="font-black">Ask for a 3-year cash-flow forecast.</span> Two consecutive deficits + ~2.5 years of reserves means the next funding cycle decision is existential, not strategic.</li>
+              <li><span className="font-black">Audit the &ldquo;Grants received in advance&rdquo; line.</span> The $1.6M (ECCV) and $2.4M (FECCA) carrying forward should be matched explicitly to deliverables and end-dates.</li>
+              <li><span className="font-black">Force succession planning.</span> 38% staff turnover in one year + an Acting CEO + new Board Chair = key-person risk that&apos;s not in any single risk register.</li>
+            </ul>
+          </div>
+          <div>
+            <div className="text-xs font-black uppercase tracking-widest text-bauhaus-blue mb-2">If you fund this sector</div>
+            <ul className="space-y-2">
+              <li><span className="font-black">Map the funder concentration.</span> 100% federal (FECCA) or 95% state (ECCV) means your grant is a marginal change to a single-funder dependency. Multi-funder coalitions reduce systemic fragility.</li>
+              <li><span className="font-black">Ask grantees to disclose their cycle-end exposure.</span> Most don&apos;t volunteer this; the audited number is in the Directors&apos; Report.</li>
+              <li><span className="font-black">Compare First Peoples vs Multicultural funding shape.</span> Institutional vs fragmented grant patterns shape long-term sector capacity differently.</li>
+            </ul>
+          </div>
+          <div>
+            <div className="text-xs font-black uppercase tracking-widest text-bauhaus-yellow mb-2">If you&apos;re a journalist</div>
+            <ul className="space-y-2">
+              <li><span className="font-black">FECCA&apos;s late ACNC registration (Aug 2023, after 24 years)</span> is publicly verifiable on the ABR. Few orgs of this size have this gap.</li>
+              <li><span className="font-black">The AMES asymmetry</span> — $1.85B federal procurement vs FECCA&apos;s $0.77M lifetime — reframes who actually delivers federal multicultural services.</li>
+              <li><span className="font-black">Director networks span Islamic charities, asylum-seeker advocacy, regional arts, disability advocacy</span> — see §3 for the federation&apos;s shadow network.</li>
+            </ul>
+          </div>
+          <div>
+            <div className="text-xs font-black uppercase tracking-widest text-bauhaus-black mb-2">If you&apos;re a sector peer / competitor</div>
+            <ul className="space-y-2">
+              <li><span className="font-black">Identify the gaps.</span> Multicultural / Settlement gets ~6× less than First Peoples / Treaty through these channels. Programs that bridge both are under-built.</li>
+              <li><span className="font-black">Track the funder pipeline.</span> 2022 election commitments funded the FY2022-23 peak; the next election cycle resets it.</li>
+              <li><span className="font-black">Look for institutional grant patterns.</span> Self-Determination Fund, Treaty Authority, Munarra are the institutional-build precedents — multicultural sector has no equivalent.</li>
+            </ul>
+          </div>
+        </div>
       </section>
 
       {/* Want one of these? CTA */}
