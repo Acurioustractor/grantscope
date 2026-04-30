@@ -271,6 +271,7 @@ type SpendRow = { recipient_name: string; total: number };
 type MinStatement = { published_at: string; minister_name: string | null; portfolio: string | null; headline: string; source_url: string; topics: string[] | null };
 type HansardRow = { sitting_date: string; speaker_name: string | null; speaker_party: string | null; subject: string | null; snippet: string; source_url: string | null };
 type HansardPartyCount = { speaker_party: string | null; speeches: number };
+type BillRow = { bill_name: string; mentions: number; distinct_speakers: number; parties: string[] | null; last_mention: string | null; is_yj_specific: boolean };
 
 async function getReport() {
   const supabase = getLiveReportSupabase();
@@ -279,7 +280,7 @@ async function getReport() {
     recipients, crossSector, almaTypeCounts, almaInterventions, contracts,
     foundations, heatmap, yearSpend, dssQld, ndisOverlay,
     unfundedPrograms, mentalHealthAlma, aodAlma, mhFundingCount, directors,
-    politicalDonations, spend, ministerialStatements, hansardRows, hansardPartyCounts,
+    politicalDonations, spend, ministerialStatements, hansardRows, hansardPartyCounts, bills,
   ] = await Promise.all([
     safe(supabase.rpc('exec_sql', { query: `SELECT source_generated_at::text, total_people, total_adults, total_children, child_first_nations, child_non_indigenous, child_0_2_days, child_3_7_days, child_over_7_days, child_longest_days, adult_first_nations, adult_non_indigenous, adult_over_7_days, adult_longest_days, child_watchhouse_count FROM public.v_qld_watchhouse_latest LIMIT 1` })) as Promise<WatchhouseLatest[] | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT watchhouse_name, age_group, total_in_custody::int, first_nations::int, custody_over_7_days::int, longest_days::int FROM public.qld_watchhouse_snapshot_rows WHERE snapshot_id = (SELECT id FROM public.v_qld_watchhouse_latest LIMIT 1) ORDER BY (CASE WHEN age_group = 'Child' THEN 0 ELSE 1 END), total_in_custody DESC LIMIT 50` })) as Promise<WatchhouseRow[] | null>,
@@ -308,6 +309,7 @@ async function getReport() {
     safe(supabase.rpc('exec_sql', { query: `SELECT published_at::text, minister_name, portfolio, headline, source_url, topics FROM public.civic_ministerial_statements WHERE jurisdiction = 'QLD' AND (topics @> ARRAY['youth-justice'] OR headline ~* '(youth|detention|watch.?house|adult crime|bail|young offender)') AND published_at > NOW() - INTERVAL '24 months' ORDER BY published_at DESC LIMIT 12` })) as Promise<MinStatement[] | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT sitting_date::text, speaker_name, speaker_party, subject, substring(body_text, 1, 280) AS snippet, source_url FROM public.civic_hansard WHERE jurisdiction = 'QLD' AND length(body_text) > 100 AND speaker_name IS NOT NULL AND speaker_name != 'Deputy Speaker' AND speaker_name != 'Speaker' AND speaker_name NOT ILIKE '%Hansard%' AND (body_text ~* '(youth justice|adult crime, adult time|adult time|youth detention|watchhouse|breach of bail|making queensland safer|young offender)') ORDER BY sitting_date DESC NULLS LAST LIMIT 10` })) as Promise<HansardRow[] | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT speaker_party, COUNT(*)::int AS speeches FROM public.civic_hansard WHERE jurisdiction = 'QLD' AND length(body_text) > 100 AND speaker_party IS NOT NULL AND (body_text ~* '(youth justice|adult crime, adult time|adult time|youth detention|watchhouse|breach of bail|making queensland safer|young offender)') AND sitting_date > NOW() - INTERVAL '12 months' GROUP BY 1 ORDER BY 2 DESC` })) as Promise<HansardPartyCount[] | null>,
+    safe(supabase.rpc('exec_sql', { query: `SELECT bill_name, mentions, distinct_speakers, parties::text[] AS parties, last_mention::text, is_yj_specific FROM public.v_qld_yj_bills_active ORDER BY is_yj_specific DESC, mentions DESC LIMIT 10` })) as Promise<BillRow[] | null>,
   ]);
 
   const detention = (spend ?? []).find(s => /detention/i.test(s.recipient_name))?.total || 0;
@@ -342,6 +344,7 @@ async function getReport() {
     ministerialStatements: ministerialStatements ?? [],
     hansardRows: hansardRows ?? [],
     hansardPartyCounts: hansardPartyCounts ?? [],
+    bills: bills ?? [],
   };
 }
 
@@ -1439,6 +1442,36 @@ export default async function QldYjSectorPage() {
           </>
         )}
         <p className="text-xs text-bauhaus-muted font-mono mt-4">Source: <code>civic_hansard</code> table populated by <code>scrape-qld-hansard</code> agent. {fmt(r.hansardRows.length)} most-recent youth-justice mentions shown; party-bar covers the last 12 months. Speaker-name parsing is best-effort from PDF text and may render as surnames only.</p>
+      </section>
+
+      {/* §24.7 — BILLS IN ACTIVE DEBATE */}
+      <section className="mb-16">
+        <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§24.7 · DERIVED FROM HANSARD</div>
+        <h3 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">Bills in active QLD Parliament debate</h3>
+        <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
+          Bills mentioned in QLD Parliament Hansard sittings that touch on youth justice, sentencing, bail, or community safety. Mentions and speaker counts derived from <code className="font-mono text-xs">civic_hansard.body_text</code> via the <code className="font-mono text-xs">v_qld_yj_bills_active</code> view. Yellow rail = the bill name pattern matches youth-justice keywords directly; black rail = adjacent legislation (sentencing, criminal code, education) that surfaces in YJ debates.
+        </p>
+        {r.bills.length === 0 ? (
+          <div className="border-4 border-bauhaus-black p-6 bg-white text-bauhaus-muted text-sm">No bills detected in current Hansard window.</div>
+        ) : (
+          <div className="space-y-3">
+            {r.bills.map((b, i) => (
+              <div key={i} className={`border-4 p-5 bg-white ${b.is_yj_specific ? 'border-bauhaus-yellow' : 'border-bauhaus-black'}`}>
+                <div className="flex flex-wrap justify-between items-baseline gap-3 mb-2">
+                  <h4 className="text-base font-black text-bauhaus-black uppercase tracking-tight leading-tight flex-1">{b.bill_name}</h4>
+                  {b.is_yj_specific && <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 bg-bauhaus-yellow text-bauhaus-black">YJ-specific</span>}
+                </div>
+                <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs font-mono text-bauhaus-muted">
+                  <span><span className="font-black text-bauhaus-black">{b.mentions}</span> hansard mentions</span>
+                  <span><span className="font-black text-bauhaus-black">{b.distinct_speakers}</span> distinct speakers</span>
+                  {b.parties && b.parties.length > 0 && <span>parties: <span className="font-black text-bauhaus-black">{b.parties.filter(Boolean).join(' · ')}</span></span>}
+                  {b.last_mention && <span>last mention: <span className="font-black text-bauhaus-black">{b.last_mention}</span></span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <p className="text-xs text-bauhaus-muted font-mono mt-4">Bill names extracted by regex from PDF Hansard text — minor edge-case captures may include leading sentence fragments. Verify against the QLD Bills register at <a href="https://www.parliament.qld.gov.au" target="_blank" rel="noopener" className="text-bauhaus-blue hover:underline">parliament.qld.gov.au</a> before quoting. The proper bills-register scraper is queued — Hansard-derived list is a free interim cut.</p>
       </section>
 
       <section className="mb-16">
