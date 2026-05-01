@@ -43,13 +43,15 @@ type LgaRow = { lga_name: string; youth_offender_rate: number | null; indigenous
 type DirectorRow = { person_name: string; board_count: number; total_justice: number };
 type NdisRow = { state: string; youth_participants: number };
 type YearTotalRow = { financial_year: string; total: number };
+type OfficialBill = { bill_name: string; sponsor: string | null; sponsor_party: string | null; introduced_date: string | null; status: string | null; status_date: string | null; source_url: string };
+type CoronerFinding = { title: string; deceased_identifier: string | null; finding_date: string | null; coroner_name: string | null; recommendations_count: number | null; topics: string[] | null; source_url: string };
 
 async function getNumbers() {
   const supabase = getLiveReportSupabase();
   const [
     latest, spend, accoGap, foundations, crossSector, ctg, unfunded,
     contracts, hotspots, directors, ndis, mhFundingCount, almaCount, almaQldCount,
-    yearTrend,
+    yearTrend, officialBills, coronerFindings,
   ] = await Promise.all([
     safe(supabase.rpc('exec_sql', {
       query: `SELECT source_generated_at::text, total_people, total_adults, total_children,
@@ -135,6 +137,20 @@ async function getNumbers() {
                 AND financial_year ~ '^20[0-9]{2}-'
               GROUP BY 1 ORDER BY 1`,
     })) as Promise<YearTotalRow[] | null>,
+    safe(supabase.rpc('exec_sql', {
+      query: `SELECT bill_name, sponsor, sponsor_party, introduced_date::text, status, status_date::text, source_url
+              FROM public.qld_bills
+              WHERE is_yj_relevant = true
+              ORDER BY status_date DESC NULLS LAST, introduced_date DESC NULLS LAST
+              LIMIT 8`,
+    })) as Promise<OfficialBill[] | null>,
+    safe(supabase.rpc('exec_sql', {
+      query: `SELECT title, deceased_identifier, finding_date::text, coroner_name, recommendations_count, topics, source_url
+              FROM public.qld_coroners_findings
+              WHERE is_youth_justice = true OR is_in_custody = true
+              ORDER BY finding_date DESC NULLS LAST
+              LIMIT 6`,
+    })) as Promise<CoronerFinding[] | null>,
   ]);
 
   const l = latest?.[0] || null;
@@ -166,6 +182,8 @@ async function getNumbers() {
     yrFirst,
     yrLast,
     trendGrowthPct,
+    officialBills: officialBills ?? [],
+    coronerFindings: coronerFindings ?? [],
   };
 }
 
@@ -620,13 +638,33 @@ export default async function QldYjLongRead() {
           The Path to Treaty Act 2023 (Act No. 12 of 2023, passed 10 May 2023) established the First Nations Treaty Institute and a Truth-telling and Healing Inquiry &mdash; institutional architecture for addressing the systemic conditions (including youth-justice over-representation) that a treaty / truth process is intended to confront. <SourceLink href="#src-treaty-act">[31]</SourceLink> The Crisafulli LNP Government repealed the Act on its <span className="font-black">first day of sitting</span> (28 November 2024), bundling the repeal into a Bill amending the Brisbane Olympic Games Act. QAIHC and Indigenous health peak bodies publicly opposed. The institutional counter-balance was removed before alternative governance architecture replaced it.
         </p>
 
+        <h3 className="text-lg font-black uppercase tracking-tight text-bauhaus-black mt-8 mb-3">The live legislative pipeline</h3>
+        <p>
+          Beyond the four headline Acts above, the QLD Parliament Bills register &mdash; scraped live from <a href="https://www.parliament.qld.gov.au" target="_blank" rel="noopener" className="text-bauhaus-blue font-black hover:underline">parliament.qld.gov.au</a> &mdash; shows {r.officialBills.length} youth-justice-relevant bills currently tracked in <code className="font-mono text-xs">qld_bills</code>. The most-recent are listed below with their official status; each links to the bill text on the parliamentary record.
+        </p>
+        {r.officialBills.length > 0 && (
+          <ul className="list-disc pl-6 space-y-2 my-4">
+            {r.officialBills.map((b, i) => (
+              <li key={i}>
+                <span className="font-black">{b.bill_name}</span>
+                {b.sponsor && <> &mdash; {b.sponsor}{b.sponsor_party ? ` (${b.sponsor_party})` : ''}</>}
+                {b.status && <> &mdash; <span className={`font-black ${(b.status ?? '').toUpperCase().includes('PASSED') ? 'text-bauhaus-red' : 'text-bauhaus-black'}`}>{b.status}{b.status_date ? ` (${b.status_date})` : ''}</span></>}
+                . <a href={b.source_url} target="_blank" rel="noopener" className="text-bauhaus-blue font-mono text-xs hover:underline">[bill text ↗]</a>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p>
+          The cumulative direction is clear: every YJ-relevant Act passed under the current Government has expanded custody powers. Not one has expanded community-based capacity, evaluation, or ACCO funding share.
+        </p>
+
         <h3 className="text-lg font-black uppercase tracking-tight text-bauhaus-black mt-8 mb-3">Capacity expansion — 120 new beds in the pipeline</h3>
         <p>
           Three facility decisions are reshaping QLD&apos;s detention-bed footprint. All were announced under the Palaszczuk Labor Government (2023&ndash;2024) and continue under the Crisafulli LNP Government &mdash; political ownership is bipartisan in practice:
         </p>
         <ul className="list-disc pl-6 space-y-2 my-4">
           <li><span className="font-black">Wacol Youth Remand Centre</span> &mdash; 76 beds, remand-only. Construction $250M+; first three years operations ~$150M. Opened early 2025. <SourceLink href="#src-yj-dept">[33]</SourceLink></li>
-          <li><span className="font-black">Woodford Youth Detention Centre</span> &mdash; 80 beds. Sod turned February 2024. Reported construction cost up to $627.61M (industry tracker; verify against QLD Budget Paper 3). Completion target 2026.</li>
+          <li><span className="font-black">Woodford Youth Detention Centre</span> &mdash; 80 beds. Sod turned February 2024. Reported construction cost up to $627.61M per industry-tracker figures pending verification against QLD Budget Paper 3. Completion target 2026.</li>
           <li><span className="font-black">Cairns Youth Detention Centre</span> &mdash; 40 beds, FNQ. Site selection 2024. Forecast operational 2027.</li>
         </ul>
         <p>
@@ -643,8 +681,34 @@ export default async function QldYjLongRead() {
           <li><span className="font-black">Combined Youth Detention Centres report (2025)</span> &mdash; the cross-system pattern.</li>
           <li><span className="font-black">2019 Brisbane City Watchhouse</span> &mdash; ABC Four Corners + Amnesty International documented 89 children in custody at one point in May 2019, with one young person held in isolation for 23 days. Triggered international scrutiny.</li>
         </ul>
+
+        {r.coronerFindings.length > 0 && (
+          <>
+            <p>
+              CivicGraph also ingests the QLD Coroners Court findings register (live-scraped via Playwright). Recent in-custody / youth-justice-flagged findings include:
+            </p>
+            <ul className="list-disc pl-6 space-y-2 my-4">
+              {r.coronerFindings.map((f, i) => {
+                const isAllLower = f.title === f.title.toLowerCase();
+                const titleCased = isAllLower ? f.title.replace(/\b\w/g, c => c.toUpperCase()) : f.title;
+                const cleanTitle = titleCased.split(/\s+(?:Coroner|Description):/i)[0].trim();
+                return (
+                  <li key={i}>
+                    <span className="font-black">{cleanTitle}</span>
+                    {f.coroner_name && <> &mdash; Coroner {f.coroner_name}</>}
+                    {f.finding_date && <> ({f.finding_date})</>}
+                    {f.recommendations_count != null && f.recommendations_count > 0 && <> &mdash; <span className="font-black text-bauhaus-red">{f.recommendations_count} recommendations</span></>}
+                    {f.topics && f.topics.length > 0 && <> &mdash; <span className="text-xs font-mono text-bauhaus-muted">{f.topics.slice(0, 3).join(', ')}</span></>}
+                    . <a href={f.source_url} target="_blank" rel="noopener" className="text-bauhaus-blue font-mono text-xs hover:underline">[finding PDF ↗]</a>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
+        )}
+
         <p>
-          A clarification often missed in public reporting: the high-profile <span className="font-black">Cleveland Dodd</span> coronial inquest (16-year-old Yamatji boy, died October 2023) is a <span className="font-black">Western Australian</span> case at Unit 18, Casuarina Prison &mdash; not QLD&apos;s Cleveland Youth Detention Centre in Townsville. We do not surface the Dodd inquest in this QLD report. Specific QLD-jurisdiction youth-death-in-custody coronial findings are searchable at the QLD Coroners Court findings database; we have not yet ingested those structurally.
+          A clarification often missed in public reporting: the high-profile <span className="font-black">Cleveland Dodd</span> coronial inquest (16-year-old Yamatji boy, died October 2023) is a <span className="font-black">Western Australian</span> case at Unit 18, Casuarina Prison &mdash; not QLD&apos;s Cleveland Youth Detention Centre in Townsville. We do not surface the Dodd inquest in this QLD report.
         </p>
 
         <PullQuote attribution="UN Committee on the Rights of the Child Chair Professor Ann Skelton (2024) — per SBS NITV reporting">
