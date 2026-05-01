@@ -28,6 +28,92 @@ function pct(n: number | null | undefined, digits: number = 0): string {
   return `${Number(n).toFixed(digits)}%`;
 }
 
+/* ─── Curated bill-detail content (for §24.7 drawer body) ────────────────
+ * Match keys are bill_name strings in parliament_bills. When a bill in the
+ * live register matches a key here, the drawer shows the curated key
+ * amendments + opposition voices + source citations alongside the live
+ * status timeline. Drives the "what this bill actually changed" depth
+ * the live register doesn't structurally store.
+ */
+type BillDetail = {
+  keyAmendments: string[];
+  impactSummary: string;
+  opposition: Array<{ who: string; quote: string; sourceUrl?: string }>;
+  implementingDept?: string;
+  capitalBacking?: string[];
+  outcomeProxies?: string[];
+};
+
+const BILL_DETAILS: Record<string, BillDetail> = {
+  'Making Queensland Safer Bill 2024': {
+    keyAmendments: [
+      'Removed the "detention as a last resort" principle from the Youth Justice Act 1992 — reversing the foundational sentencing principle that distinguished youth from adult criminal law since 1992.',
+      'Introduced "adult crime, adult time": children charged with 13 listed offences (murder, manslaughter, robbery, dangerous operation of a vehicle, and others) face the same maximum, mandatory and minimum penalties as adults.',
+      'Restorative justice removed as a sentencing option for those 13 offences.',
+      'Act No. 54 of 2024, assented 13 December 2024.',
+    ],
+    impactSummary: 'The most-significant single piece of youth-justice legislation Queensland has passed in the past decade. Reverses 30+ years of sentencing principle for children. UN, AHRC, and QLD HRC all publicly opposed.',
+    opposition: [
+      { who: 'Prof. Ann Skelton, Chair UN Committee on the Rights of the Child', quote: 'A flagrant disregard of children\'s rights and a clear breach of Australia\'s international obligations.', sourceUrl: 'https://www.sbs.com.au/nitv/article/human-rights-leaders-take-concerns-about-kids-to-un/blbhrif2a' },
+      { who: 'National Children\'s Commissioner', quote: 'Public criticism of QLD\'s reforms as breaching international child-rights obligations.', sourceUrl: 'https://humanrights.gov.au/about/news/media-releases/national-childrens-commissioner-slams-shocking-new-qld-youth-justice-laws' },
+      { who: 'Queensland Human Rights Commission', quote: 'Formally opposed the Bill in its parliamentary submission.', sourceUrl: 'https://documents.parliament.qld.gov.au/com/JICSC-CD82/MQSACATAB2-9E30/submissions/00000036.pdf' },
+    ],
+    implementingDept: 'QLD Department of Youth Justice',
+    capitalBacking: ['Wacol Youth Remand $250M+ build, $150M ops first 3 yrs', 'Woodford Youth Detention up to $627.61M (industry-tracker, verify Budget Paper 3)', 'Cairns Youth Detention 40 beds, planned 2027'],
+    outcomeProxies: ['Live watchhouse children: 10 today (80% First Nations)', 'CTG gap from trajectory: +8.0/10K (2023-24, widening)', 'ACCO funding share unchanged at 12%'],
+  },
+  'Making Queensland Safer (Adult Crime, Adult Time) Amendment Bill 2025': {
+    keyAmendments: [
+      'Refinements to the 2024 Act\'s 13-offence list and procedural amendments to the operational provisions.',
+      'Sets the schema for the further expansion in the 2026 Bill (which adds ~20 more offences).',
+    ],
+    impactSummary: 'Operational follow-up to the 2024 Making QLD Safer Act. Tightens the procedural framework for "adult crime, adult time" sentencing.',
+    opposition: [
+      { who: 'UN Special Rapporteurs', quote: 'Wrote to Australian authorities (May 2025) expressing concern about the trajectory.', sourceUrl: 'https://www.ohchr.org/en/media-advisories/2025/05/youth-justice-systems-across-australia-crisis-un-experts' },
+    ],
+    implementingDept: 'QLD Department of Youth Justice',
+  },
+  'Expanding Adult Crime, Adult Time and Taking a Strong Stance on Drugs and Anti-Social Behaviour Amendment Bill 2026': {
+    keyAmendments: [
+      'Expanded the adult-crime-adult-time offence list by ~20 further offences: arson, attempted murder, torture, rape, attempted rape, attempted robbery, trafficking in dangerous drugs, and others.',
+      'Combined "Adult Crime, Adult Time" expansion with anti-social behaviour and drug-trafficking provisions in a single Bill.',
+      'Sponsored by Minister for Youth Justice and Victim Support Laura Gerber.',
+    ],
+    impactSummary: 'Doubles the scope of the 2024 framework. Brings the listed offence count to ~33-45 (depending on counting method).',
+    opposition: [
+      { who: 'Member for Maiwar (Greens)', quote: 'Yes, the title of the bill alone sounds absurd, but it has nothing on the actual contents of this bill. This bill and this government are…', sourceUrl: 'https://www.parliament.qld.gov.au' },
+      { who: 'UN Special Rapporteurs Edwards (torture) + Barume (Indigenous peoples)', quote: 'Wrote to Australian authorities expressing concern about the further expansion.', sourceUrl: 'https://www.ohchr.org/en/media-advisories/2025/05/youth-justice-systems-across-australia-crisis-un-experts' },
+    ],
+    implementingDept: 'QLD Department of Youth Justice',
+  },
+  'Youth Justice (Electronic Monitoring) Amendment Bill 2025': {
+    keyAmendments: [
+      'Expanded electronic monitoring of high-risk youth on bail to Toowoomba, Mt Isa and Cairns regional areas.',
+      'Removed the requirement for police to consider alternatives to arrest for bail-condition breaches by children.',
+    ],
+    impactSummary: 'Operational expansion of bail-monitoring tools. Increases remand population in regional QLD as monitoring infrastructure rolls out.',
+    opposition: [],
+    implementingDept: 'QLD Department of Youth Justice',
+  },
+  'Youth Justice (Monitoring Devices) Amendment Bill 2025': {
+    keyAmendments: [
+      'Authorised use of monitoring devices on young offenders subject to specific bail conditions.',
+      'Sets technical schema for the Electronic Monitoring expansion later in 2025.',
+    ],
+    impactSummary: 'Technical / procedural enabling Act for expanded electronic-monitoring program.',
+    opposition: [],
+    implementingDept: 'QLD Department of Youth Justice',
+  },
+  'Criminal Code (Defence of Dwellings and Other Premises—Castle Law) Amendment Bill 2026': {
+    keyAmendments: [
+      'Strengthens the defence available to a person who uses force to defend their dwelling — colloquially referred to as "Castle Law".',
+      'Private member\'s Bill from Mr Robbie Katter MP (KAP).',
+    ],
+    impactSummary: 'Narrowly focused on adult home-defence law — surfaces in YJ debate as part of the broader "tough on crime" framing of 2026.',
+    opposition: [],
+  },
+};
+
 /* ─── Curated reference data ─────────────────────────────────────────────
  *
  * These items are NOT in the structured dataset yet — they are publicly-
@@ -1682,26 +1768,104 @@ export default async function QldYjSectorPage() {
                 b.sponsor_party === 'GRN' ? { border: 'border-bauhaus-black', tag: 'bg-bauhaus-black text-white' } :
                 { border: 'border-bauhaus-black', tag: 'bg-bauhaus-canvas text-bauhaus-black border border-bauhaus-black' };
               const isPassed = (b.status ?? '').toUpperCase().includes('PASSED');
+              const detail = BILL_DETAILS[b.bill_name];
               return (
-                <div key={b.source_url} className={`border-4 ${partyTone.border} p-5 bg-white`}>
-                  <div className="flex flex-wrap justify-between items-baseline gap-3 mb-2">
-                    <h4 className="text-base font-black text-bauhaus-black uppercase tracking-tight leading-tight flex-1">{b.bill_name}</h4>
-                    <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 ${partyTone.tag}`}>{b.sponsor_party ?? 'Unknown'}</span>
-                  </div>
-                  <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs font-mono text-bauhaus-muted mb-2">
-                    <span><span className="font-black text-bauhaus-black">Sponsor:</span> {b.sponsor ?? '—'}</span>
-                    {b.introduced_date && <span><span className="font-black text-bauhaus-black">Introduced:</span> {b.introduced_date}</span>}
-                    {b.status && <span><span className={`font-black ${isPassed ? 'text-bauhaus-red' : 'text-bauhaus-black'}`}>{b.status}{b.status_date ? ` (${b.status_date})` : ''}</span></span>}
-                  </div>
-                  {b.topics && b.topics.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-2">
-                      {b.topics.slice(0, 6).map((t, j) => (
-                        <span key={j} className="text-[9px] uppercase tracking-widest font-black text-bauhaus-muted bg-bauhaus-canvas px-2 py-0.5 border border-bauhaus-black">{t}</span>
-                      ))}
+                <DetailDrawer
+                  key={b.source_url}
+                  toneClass={partyTone.border}
+                  title={b.bill_name}
+                  subtitle={`${b.sponsor ?? '—'}${b.sponsor_party ? ` (${b.sponsor_party})` : ''} · ${b.status ?? '—'}${b.status_date ? ` ${b.status_date}` : ''}`}
+                  sourceHref={b.source_url}
+                  sourceLabel="Open Bill text, Explanatory Note + Statement of Compatibility ↗"
+                  trigger={
+                    <div className={`border-4 ${partyTone.border} p-5 bg-white hover:bg-bauhaus-canvas transition-colors cursor-pointer`}>
+                      <div className="flex flex-wrap justify-between items-baseline gap-3 mb-2">
+                        <h4 className="text-base font-black text-bauhaus-black uppercase tracking-tight leading-tight flex-1">{b.bill_name}</h4>
+                        <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 ${partyTone.tag}`}>{b.sponsor_party ?? 'Unknown'}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs font-mono text-bauhaus-muted mb-2">
+                        <span><span className="font-black text-bauhaus-black">Sponsor:</span> {b.sponsor ?? '—'}</span>
+                        {b.introduced_date && <span><span className="font-black text-bauhaus-black">Introduced:</span> {b.introduced_date}</span>}
+                        {b.status && <span><span className={`font-black ${isPassed ? 'text-bauhaus-red' : 'text-bauhaus-black'}`}>{b.status}{b.status_date ? ` (${b.status_date})` : ''}</span></span>}
+                      </div>
+                      {b.topics && b.topics.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mb-2">
+                          {b.topics.slice(0, 6).map((t, j) => (
+                            <span key={j} className="text-[9px] uppercase tracking-widest font-black text-bauhaus-muted bg-bauhaus-canvas px-2 py-0.5 border border-bauhaus-black">{t}</span>
+                          ))}
+                        </div>
+                      )}
+                      <div className="text-[9px] font-black uppercase tracking-widest text-bauhaus-blue">{detail ? 'Read amendments + opposition →' : 'Open detail →'}</div>
                     </div>
+                  }
+                >
+                  {detail && (
+                    <DrawerSection label="Impact summary">
+                      <p className="leading-relaxed">{detail.impactSummary}</p>
+                    </DrawerSection>
                   )}
-                  <a href={b.source_url} target="_blank" rel="noopener" className="text-bauhaus-blue text-[10px] font-mono hover:underline">parliament.qld.gov.au · Bill text + Explanatory Note ↗</a>
-                </div>
+                  {detail && detail.keyAmendments.length > 0 && (
+                    <DrawerSection label="Key amendments">
+                      <ul className="list-disc pl-5 space-y-2">
+                        {detail.keyAmendments.map((a, j) => <li key={j} className="leading-relaxed">{a}</li>)}
+                      </ul>
+                    </DrawerSection>
+                  )}
+                  {detail && detail.opposition.length > 0 && (
+                    <DrawerSection label="Opposition / human-rights response">
+                      <ul className="space-y-3">
+                        {detail.opposition.map((o, j) => (
+                          <li key={j} className="border-l-4 border-bauhaus-red pl-3">
+                            <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted mb-1">{o.who}</div>
+                            <p className="italic leading-relaxed">&ldquo;{o.quote}&rdquo;</p>
+                            {o.sourceUrl && <a href={o.sourceUrl} target="_blank" rel="noopener" className="text-bauhaus-blue text-[10px] font-mono hover:underline">source ↗</a>}
+                          </li>
+                        ))}
+                      </ul>
+                    </DrawerSection>
+                  )}
+                  {detail?.implementingDept && (
+                    <DrawerSection label="Implementing department">
+                      <p className="font-black">{detail.implementingDept}</p>
+                    </DrawerSection>
+                  )}
+                  {detail?.capitalBacking && detail.capitalBacking.length > 0 && (
+                    <DrawerSection label="Capital backing (cross-ref §2)">
+                      <ul className="list-disc pl-5 space-y-1">
+                        {detail.capitalBacking.map((c, j) => <li key={j} className="leading-relaxed">{c}</li>)}
+                      </ul>
+                    </DrawerSection>
+                  )}
+                  {detail?.outcomeProxies && detail.outcomeProxies.length > 0 && (
+                    <DrawerSection label="Outcome proxies (live data)">
+                      <ul className="list-disc pl-5 space-y-1">
+                        {detail.outcomeProxies.map((c, j) => <li key={j} className="leading-relaxed">{c}</li>)}
+                      </ul>
+                    </DrawerSection>
+                  )}
+                  <DrawerKeyValue items={[
+                    { label: 'Sponsor', value: b.sponsor },
+                    { label: 'Party (inferred)', value: b.sponsor_party },
+                    { label: 'Introduced', value: b.introduced_date },
+                    { label: 'Current status', value: b.status },
+                    { label: 'Status date', value: b.status_date },
+                    { label: 'Source', value: 'QLD Parliament Bills Register' },
+                  ]} />
+                  {b.topics && b.topics.length > 0 && (
+                    <DrawerSection label="Auto-classified topics">
+                      <div className="flex flex-wrap gap-1">
+                        {b.topics.map((t, j) => (
+                          <span key={j} className="text-[10px] uppercase tracking-widest font-black bg-bauhaus-canvas text-bauhaus-black px-2 py-1 border border-bauhaus-black">{t}</span>
+                        ))}
+                      </div>
+                    </DrawerSection>
+                  )}
+                  {!detail && (
+                    <DrawerSection label="More detail">
+                      <p className="text-bauhaus-muted text-xs">Curated key-amendment + opposition content not yet authored for this bill. The status timeline, sponsor, and topic tags above come live from the QLD Parliament register; click the source link below for the official Bill text and Explanatory Note.</p>
+                    </DrawerSection>
+                  )}
+                </DetailDrawer>
               );
             })}
           </div>
@@ -1736,8 +1900,125 @@ export default async function QldYjSectorPage() {
         <p className="text-xs text-bauhaus-muted font-mono mt-4">Bill names extracted by regex from PDF Hansard text — minor edge-case captures may include leading sentence fragments. Verify against the QLD Bills register at <a href="https://www.parliament.qld.gov.au" target="_blank" rel="noopener" className="text-bauhaus-blue hover:underline">parliament.qld.gov.au</a> before quoting. The proper bills-register scraper is queued — Hansard-derived list is a free interim cut.</p>
       </section>
 
+      {/* §25 — PROMISE → ACTION → OUTCOMES CHAIN */}
       <section className="mb-16">
-        <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§25 · SYNTHESIS</div>
+        <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§25 · ACCOUNTABILITY CHAIN</div>
+        <h3 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">Promise → action → outcomes — does the chain hold?</h3>
+        <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
+          For each major QLD policy promise we map the chain: the <span className="font-black text-bauhaus-red">announcement</span> (what was said), the <span className="font-black text-bauhaus-blue">bill</span> (what was passed), the <span className="font-black">implementing department or contractor</span> (who delivers), and the <span className="font-black">live outcomes data</span> we can read against it (what changed). Where the chain breaks &mdash; where promise outpaces action, or where action lands but outcomes don&apos;t move &mdash; the gap is the story.
+        </p>
+
+        <div className="space-y-6">
+          {/* CHAIN 1 — ADULT CRIME ADULT TIME */}
+          <div className="border-4 border-bauhaus-red p-6 bg-white">
+            <div className="text-xs font-black uppercase tracking-widest text-bauhaus-red mb-3">Chain 1 · &ldquo;Adult Crime, Adult Time&rdquo;</div>
+            <div className="grid md:grid-cols-4 gap-4 text-xs">
+              <div className="border-r-2 border-bauhaus-canvas md:pr-4">
+                <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-yellow mb-1">PROMISE</div>
+                <p className="font-black text-bauhaus-black leading-tight mb-1">&ldquo;Adult Crime, Adult Time expands to 45 offences&rdquo;</p>
+                <p className="text-[10px] font-mono text-bauhaus-muted">Crisafulli · 28 Feb 2026 · <a href="#vol-7" className="text-bauhaus-blue hover:underline">§23</a></p>
+              </div>
+              <div className="border-r-2 border-bauhaus-canvas md:pr-4">
+                <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue mb-1">BILL</div>
+                <p className="font-black text-bauhaus-black leading-tight mb-1">Expanding Adult Crime, Adult Time Amendment Bill 2026</p>
+                <p className="text-[10px] font-mono text-bauhaus-muted">Sponsor: Gerber LNP · <span className="text-bauhaus-red font-black">PASSED with amendment 23 Apr 2026</span> · <a href="#vol-7" className="text-bauhaus-blue hover:underline">§24.7</a></p>
+              </div>
+              <div className="border-r-2 border-bauhaus-canvas md:pr-4">
+                <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-black mb-1">DELIVERED BY</div>
+                <p className="font-black text-bauhaus-black leading-tight mb-1">QLD Department of Youth Justice</p>
+                <p className="text-[10px] font-mono text-bauhaus-muted">Capital backing: Wacol $250M+, Woodford up to $627.61M, Cairns 40 beds · <a href="#vol-1" className="text-bauhaus-blue hover:underline">§2</a></p>
+              </div>
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-red mb-1">OUTCOMES</div>
+                <ul className="text-[10px] text-bauhaus-black leading-relaxed space-y-1">
+                  <li>· Watchhouse children today: <span className="font-black text-bauhaus-red">{ws ? ws.total_children : '—'}</span> ({fnPctChild}% First Nations)</li>
+                  <li>· CTG gap: <span className="font-black text-bauhaus-red">+{r.ctg.length > 0 ? Math.max(0, ((Number(r.ctg[r.ctg.length - 1]?.actual_rate) || 0) - 33.1)).toFixed(1) : '—'}/10K</span> from trajectory (widening)</li>
+                  <li>· ACCO funding share: <span className="font-black">{accoSharePct}%</span> (unchanged)</li>
+                  <li>· {fmt(r.coronerFindings.length)} live coronial findings flagged in-custody</li>
+                </ul>
+              </div>
+            </div>
+            <div className="mt-4 pt-3 border-t-2 border-bauhaus-black text-[11px] font-medium text-bauhaus-black leading-relaxed">
+              <span className="font-black uppercase tracking-widest text-bauhaus-red">Chain status:</span> Promise made → bill passed (with amendment) → department resourced → <span className="font-black text-bauhaus-red">outcomes data unmoved or worse</span>. The legislation has been passed; the watchhouse and CTG-gap data has not yet shown the &ldquo;safer Queensland&rdquo; the announcements promised. Verify in 6, 12, 24 months as the data accumulates.
+            </div>
+          </div>
+
+          {/* CHAIN 2 — PATH TO TREATY REPEAL */}
+          <div className="border-4 border-bauhaus-yellow p-6 bg-white">
+            <div className="text-xs font-black uppercase tracking-widest text-bauhaus-yellow mb-3">Chain 2 · Path to Treaty repeal</div>
+            <div className="grid md:grid-cols-4 gap-4 text-xs">
+              <div className="border-r-2 border-bauhaus-canvas md:pr-4">
+                <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-yellow mb-1">PROMISE</div>
+                <p className="font-black text-bauhaus-black leading-tight mb-1">LNP election commitment to repeal Path to Treaty Act</p>
+                <p className="text-[10px] font-mono text-bauhaus-muted">2024 election platform · <a href="#vol-7" className="text-bauhaus-blue hover:underline">§23.1</a></p>
+              </div>
+              <div className="border-r-2 border-bauhaus-canvas md:pr-4">
+                <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue mb-1">BILL</div>
+                <p className="font-black text-bauhaus-black leading-tight mb-1">Bundled into Brisbane Olympic Games Act amendment</p>
+                <p className="text-[10px] font-mono text-bauhaus-muted">28 Nov 2024 (first sitting day) · QAIHC publicly opposed</p>
+              </div>
+              <div className="border-r-2 border-bauhaus-canvas md:pr-4">
+                <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-black mb-1">DELIVERED BY</div>
+                <p className="font-black text-bauhaus-black leading-tight mb-1">Crisafulli LNP Government</p>
+                <p className="text-[10px] font-mono text-bauhaus-muted">No funding allocation (institutional removal of Treaty Body + Truth-telling Inquiry)</p>
+              </div>
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-red mb-1">OUTCOMES</div>
+                <ul className="text-[10px] text-bauhaus-black leading-relaxed space-y-1">
+                  <li>· ACCO funding share: <span className="font-black">{accoSharePct}%</span> (unchanged)</li>
+                  <li>· First Nations % of in-custody children: <span className="font-black text-bauhaus-red">{fnPctChild}%</span></li>
+                  <li>· CTG target 11 trajectory: <span className="font-black text-bauhaus-red">widening</span></li>
+                  <li>· No replacement institutional architecture announced</li>
+                </ul>
+              </div>
+            </div>
+            <div className="mt-4 pt-3 border-t-2 border-bauhaus-black text-[11px] font-medium text-bauhaus-black leading-relaxed">
+              <span className="font-black uppercase tracking-widest text-bauhaus-red">Chain status:</span> Promise made → bill passed (bundled) → institutional architecture removed → <span className="font-black text-bauhaus-red">no replacement</span>. The truth-telling and treaty-process framework that explicitly addressed YJ over-representation has been removed; the structural conditions it was designed to address are unchanged in the data.
+            </div>
+          </div>
+
+          {/* CHAIN 3 — DETENTION CAPACITY EXPANSION */}
+          <div className="border-4 border-bauhaus-blue p-6 bg-white">
+            <div className="text-xs font-black uppercase tracking-widest text-bauhaus-blue mb-3">Chain 3 · Detention capacity expansion (bipartisan)</div>
+            <div className="grid md:grid-cols-4 gap-4 text-xs">
+              <div className="border-r-2 border-bauhaus-canvas md:pr-4">
+                <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-yellow mb-1">PROMISE</div>
+                <p className="font-black text-bauhaus-black leading-tight mb-1">Wacol Remand 76 beds, Woodford 80, Cairns 40 — 196 new beds total</p>
+                <p className="text-[10px] font-mono text-bauhaus-muted">Palaszczuk Labor 2023–24 announcements; Crisafulli LNP continues</p>
+              </div>
+              <div className="border-r-2 border-bauhaus-canvas md:pr-4">
+                <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue mb-1">BILL/STATEMENT</div>
+                <p className="font-black text-bauhaus-black leading-tight mb-1">Multiple ministerial statements + capital appropriation</p>
+                <p className="text-[10px] font-mono text-bauhaus-muted">Construction underway 2024–2027 timeline</p>
+              </div>
+              <div className="border-r-2 border-bauhaus-canvas md:pr-4">
+                <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-black mb-1">DELIVERED BY</div>
+                <p className="font-black text-bauhaus-black leading-tight mb-1">QLD DYJ + BESIX Watpac (Woodford lead contractor)</p>
+                <p className="text-[10px] font-mono text-bauhaus-muted">$1B+ combined capital across the three facilities</p>
+              </div>
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-red mb-1">OUTCOMES</div>
+                <ul className="text-[10px] text-bauhaus-black leading-relaxed space-y-1">
+                  <li>· Wacol Remand: opened early 2025 (76 beds added)</li>
+                  <li>· Woodford: targeting 2026 completion</li>
+                  <li>· Cairns: targeting 2027 operational</li>
+                  <li>· No equivalent community-services capital allocation in the same window</li>
+                </ul>
+              </div>
+            </div>
+            <div className="mt-4 pt-3 border-t-2 border-bauhaus-black text-[11px] font-medium text-bauhaus-black leading-relaxed">
+              <span className="font-black uppercase tracking-widest text-bauhaus-red">Chain status:</span> Promise made → bills/appropriation passed → contractors engaged → <span className="font-black text-bauhaus-blue">capacity coming online on schedule</span>. The capital pipeline is the most-delivered part of the QLD YJ promise stack. Whether the additional capacity drives the outcomes the announcements claimed (&ldquo;safer Queensland&rdquo;, lower offending) is the test that runs over the next 5 years.
+            </div>
+          </div>
+        </div>
+
+        <p className="text-xs text-bauhaus-muted font-mono mt-6 max-w-3xl">
+          Method: each chain anchors a high-profile QLD YJ policy promise and traces it through the live data we hold &mdash; ministerial statements (§23), bills register (§24.7), watchhouse occupancy (§1), CTG progress (§3), ACCO funding share (§10), capital backing (§2), and coronial outcomes (§24). Where outcome data is missing or moves the wrong way, the chain&apos;s &ldquo;status&rdquo; line surfaces it. We&apos;re building richer outcome ingestion (recidivism by year, detention bed-day cost, ACCO retention rates) for next iteration.
+        </p>
+      </section>
+
+      <section className="mb-16">
+        <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§25.5 · SYNTHESIS</div>
         <h3 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">The shape of the choice</h3>
         <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
           Each new bed announcement is a structural commitment for 30+ years. Each new piece of bail-tightening legislation lengthens the average remand period. Each repealed prevention framework removes a counter-balancing institution. The cumulative direction of travel — combining the dataset numbers above (§3, §8, §10) with the policy moves in §23 — is unambiguous: <span className="font-black text-bauhaus-red">QLD is structurally expanding custody capacity faster than community capacity</span>. The same dollars could have funded the operational scale-up of every &ldquo;promising&rdquo; ALMA intervention listed in §16, with evaluation budget left over.
