@@ -272,6 +272,8 @@ type MinStatement = { published_at: string; minister_name: string | null; portfo
 type HansardRow = { sitting_date: string; speaker_name: string | null; speaker_party: string | null; subject: string | null; snippet: string; source_url: string | null };
 type HansardPartyCount = { speaker_party: string | null; speeches: number };
 type BillRow = { bill_name: string; mentions: number; distinct_speakers: number; parties: string[] | null; last_mention: string | null; is_yj_specific: boolean };
+type OfficialBill = { source_url: string; bill_name: string; sponsor: string | null; sponsor_party: string | null; introduced_date: string | null; status: string | null; status_date: string | null; topics: string[] | null };
+type CoronerFinding = { source_url: string; title: string; deceased_identifier: string | null; finding_date: string | null; coroner_name: string | null; recommendations_count: number | null; topics: string[] | null };
 
 async function getReport() {
   const supabase = getLiveReportSupabase();
@@ -281,6 +283,7 @@ async function getReport() {
     foundations, heatmap, yearSpend, dssQld, ndisOverlay,
     unfundedPrograms, mentalHealthAlma, aodAlma, mhFundingCount, directors,
     politicalDonations, spend, ministerialStatements, hansardRows, hansardPartyCounts, bills,
+    officialBills, coronerFindings,
   ] = await Promise.all([
     safe(supabase.rpc('exec_sql', { query: `SELECT source_generated_at::text, total_people, total_adults, total_children, child_first_nations, child_non_indigenous, child_0_2_days, child_3_7_days, child_over_7_days, child_longest_days, adult_first_nations, adult_non_indigenous, adult_over_7_days, adult_longest_days, child_watchhouse_count FROM public.v_qld_watchhouse_latest LIMIT 1` })) as Promise<WatchhouseLatest[] | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT watchhouse_name, age_group, total_in_custody::int, first_nations::int, custody_over_7_days::int, longest_days::int FROM public.qld_watchhouse_snapshot_rows WHERE snapshot_id = (SELECT id FROM public.v_qld_watchhouse_latest LIMIT 1) ORDER BY (CASE WHEN age_group = 'Child' THEN 0 ELSE 1 END), total_in_custody DESC LIMIT 50` })) as Promise<WatchhouseRow[] | null>,
@@ -310,6 +313,8 @@ async function getReport() {
     safe(supabase.rpc('exec_sql', { query: `SELECT sitting_date::text, speaker_name, speaker_party, subject, substring(body_text, 1, 280) AS snippet, source_url FROM public.civic_hansard WHERE jurisdiction = 'QLD' AND length(body_text) > 100 AND speaker_name IS NOT NULL AND speaker_name != 'Deputy Speaker' AND speaker_name != 'Speaker' AND speaker_name NOT ILIKE '%Hansard%' AND (body_text ~* '(youth justice|adult crime, adult time|adult time|youth detention|watchhouse|breach of bail|making queensland safer|young offender)') ORDER BY sitting_date DESC NULLS LAST LIMIT 10` })) as Promise<HansardRow[] | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT speaker_party, COUNT(*)::int AS speeches FROM public.civic_hansard WHERE jurisdiction = 'QLD' AND length(body_text) > 100 AND speaker_party IS NOT NULL AND (body_text ~* '(youth justice|adult crime, adult time|adult time|youth detention|watchhouse|breach of bail|making queensland safer|young offender)') AND sitting_date > NOW() - INTERVAL '12 months' GROUP BY 1 ORDER BY 2 DESC` })) as Promise<HansardPartyCount[] | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT bill_name, mentions, distinct_speakers, parties::text[] AS parties, last_mention::text, is_yj_specific FROM public.v_qld_yj_bills_active ORDER BY is_yj_specific DESC, mentions DESC LIMIT 10` })) as Promise<BillRow[] | null>,
+    safe(supabase.rpc('exec_sql', { query: `SELECT source_url, bill_name, sponsor, sponsor_party, introduced_date::text, status, status_date::text, topics FROM public.qld_bills WHERE is_yj_relevant = true ORDER BY status_date DESC NULLS LAST, introduced_date DESC NULLS LAST LIMIT 10` })) as Promise<OfficialBill[] | null>,
+    safe(supabase.rpc('exec_sql', { query: `SELECT source_url, title, deceased_identifier, finding_date::text, coroner_name, recommendations_count, topics FROM public.qld_coroners_findings WHERE is_youth_justice = true OR is_in_custody = true ORDER BY finding_date DESC NULLS LAST LIMIT 8` })) as Promise<CoronerFinding[] | null>,
   ]);
 
   const detention = (spend ?? []).find(s => /detention/i.test(s.recipient_name))?.total || 0;
@@ -345,6 +350,8 @@ async function getReport() {
     hansardRows: hansardRows ?? [],
     hansardPartyCounts: hansardPartyCounts ?? [],
     bills: bills ?? [],
+    officialBills: officialBills ?? [],
+    coronerFindings: coronerFindings ?? [],
   };
 }
 
@@ -1375,8 +1382,54 @@ export default async function QldYjSectorPage() {
           ))}
         </div>
         <p className="text-xs text-bauhaus-muted font-mono mt-4">
-          Source: QLD Ombudsman / Inspector of Detention Services (<a href="https://www.ombudsman.qld.gov.au" target="_blank" rel="noopener" className="text-bauhaus-blue hover:underline">ombudsman.qld.gov.au</a>) and Australian Human Rights Commission. Specific QLD-jurisdiction youth-death-in-custody coronial findings are searchable at <a href="https://coronerscourt.qld.gov.au/findings-upcoming-inquests/search-findings" target="_blank" rel="noopener" className="text-bauhaus-blue hover:underline">coronerscourt.qld.gov.au</a> &mdash; we have not yet ingested those structurally.
+          Source: QLD Ombudsman / Inspector of Detention Services (<a href="https://www.ombudsman.qld.gov.au" target="_blank" rel="noopener" className="text-bauhaus-blue hover:underline">ombudsman.qld.gov.au</a>) and Australian Human Rights Commission.
         </p>
+
+        {r.coronerFindings.length > 0 && (
+          <div className="mt-10 pt-8 border-t-4 border-bauhaus-black">
+            <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">LIVE · QLD Coroners Court</div>
+            <h4 className="text-xl font-black text-bauhaus-black uppercase tracking-tight mb-2">Recent QLD coronial findings · custody / youth-relevant</h4>
+            <p className="text-bauhaus-muted font-medium max-w-3xl mb-4 text-xs">
+              The {r.coronerFindings.length} most-recent QLD Coroners Court findings flagged as in-custody or youth-justice-relevant by keyword classifier. Scraped via Playwright from <code className="font-mono">coronerscourt.qld.gov.au/findings-upcoming-inquests/search-findings</code>. Each card links to the originating PDF; deceased-identifier fields respect QLD coronial-suppression rules and may be initials only.
+            </p>
+            <div className="space-y-3">
+              {r.coronerFindings.map((f, i) => {
+                // Some titles are URL-slug-derived and arrive lowercase ("findings into the death of atj").
+                // Title-case them only if the whole thing is lowercase.
+                const isAllLower = f.title === f.title.toLowerCase();
+                const title = isAllLower
+                  ? f.title.replace(/\b\w/g, c => c.toUpperCase())
+                  : f.title;
+                // The page-DOM-derived title often runs into the description fields; cut at "Coroner:" or "Description:" if present
+                const cleanTitle = title.split(/\s+(?:Coroner|Description):/i)[0].trim();
+                const desc = title.split(/\s+(?:Coroner|Description):/i).slice(1).join(' ').trim();
+                return (
+                <div key={f.source_url} className="border-4 border-bauhaus-red p-5 bg-white">
+                  <div className="flex flex-wrap justify-between items-baseline gap-3 mb-2">
+                    <h4 className="text-base font-black text-bauhaus-black uppercase tracking-tight leading-tight flex-1">{cleanTitle}</h4>
+                  </div>
+                  {desc && <p className="text-xs text-bauhaus-muted font-mono mb-2 italic">{desc.slice(0, 240)}{desc.length > 240 ? '…' : ''}</p>}
+                  <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs font-mono text-bauhaus-muted mb-2">
+                    {f.deceased_identifier && <span><span className="font-black text-bauhaus-black">Deceased:</span> {f.deceased_identifier}</span>}
+                    {f.coroner_name && <span><span className="font-black text-bauhaus-black">Coroner:</span> {f.coroner_name}</span>}
+                    {f.finding_date && <span><span className="font-black text-bauhaus-black">Finding date:</span> {f.finding_date}</span>}
+                    {f.recommendations_count != null && <span><span className="font-black text-bauhaus-red">{f.recommendations_count}</span> recommendations</span>}
+                  </div>
+                  {f.topics && f.topics.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {f.topics.slice(0, 6).map((t, j) => (
+                        <span key={j} className="text-[9px] uppercase tracking-widest font-black text-bauhaus-muted bg-bauhaus-canvas px-2 py-0.5 border border-bauhaus-black">{t}</span>
+                      ))}
+                    </div>
+                  )}
+                  <a href={f.source_url} target="_blank" rel="noopener" className="text-bauhaus-blue text-[10px] font-mono hover:underline">QLD Coroners Court findings PDF ↗</a>
+                </div>
+                );
+              })}
+            </div>
+            <p className="text-xs text-bauhaus-muted font-mono mt-4">Source: <code>qld_coroners_findings</code> populated by <code>scrape-qld-coroners</code> agent. Title parsing is best-effort from page DOM; metadata extraction (age, finding date, coroner, recommendations) regex-derived from PDF text via Jina Reader. Verify against <a href="https://coronerscourt.qld.gov.au/findings-upcoming-inquests/search-findings" target="_blank" rel="noopener" className="text-bauhaus-blue hover:underline">coronerscourt.qld.gov.au</a> before publication.</p>
+          </div>
+        )}
       </section>
 
       {/* §24.5 — LIVE HANSARD MENTIONS */}
@@ -1444,12 +1497,54 @@ export default async function QldYjSectorPage() {
         <p className="text-xs text-bauhaus-muted font-mono mt-4">Source: <code>civic_hansard</code> table populated by <code>scrape-qld-hansard</code> agent. {fmt(r.hansardRows.length)} most-recent youth-justice mentions shown; party-bar covers the last 12 months. Speaker-name parsing is best-effort from PDF text and may render as surnames only.</p>
       </section>
 
-      {/* §24.7 — BILLS IN ACTIVE DEBATE */}
+      {/* §24.7 — BILLS IN ACTIVE DEBATE — OFFICIAL REGISTER */}
       <section className="mb-16">
-        <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§24.7 · DERIVED FROM HANSARD</div>
-        <h3 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">Bills in active QLD Parliament debate</h3>
+        <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§24.7 · LIVE QLD BILLS REGISTER</div>
+        <h3 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">YJ-relevant bills · official QLD Parliament register</h3>
         <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
-          Bills mentioned in QLD Parliament Hansard sittings that touch on youth justice, sentencing, bail, or community safety. Mentions and speaker counts derived from <code className="font-mono text-xs">civic_hansard.body_text</code> via the <code className="font-mono text-xs">v_qld_yj_bills_active</code> view. Yellow rail = the bill name pattern matches youth-justice keywords directly; black rail = adjacent legislation (sentencing, criminal code, education) that surfaces in YJ debates.
+          From the official QLD Parliament Bills register at <code className="font-mono text-xs">parliament.qld.gov.au/Work-of-the-Assembly/Bills-and-Legislation</code>, scraped via Playwright. Each bill links directly to the source documents (Bill text, Explanatory Note, Statement of Compatibility). Sponsor party inferred from name; verify against parliamentary record before quoting.
+        </p>
+
+        {r.officialBills.length > 0 ? (
+          <div className="space-y-3 mb-8">
+            {r.officialBills.map((b, i) => {
+              const partyTone =
+                b.sponsor_party === 'LNP' ? { border: 'border-bauhaus-blue', tag: 'bg-bauhaus-blue text-white' } :
+                b.sponsor_party === 'ALP' ? { border: 'border-bauhaus-red', tag: 'bg-bauhaus-red text-white' } :
+                b.sponsor_party === 'KAP' ? { border: 'border-bauhaus-yellow', tag: 'bg-bauhaus-yellow text-bauhaus-black' } :
+                b.sponsor_party === 'GRN' ? { border: 'border-bauhaus-black', tag: 'bg-bauhaus-black text-white' } :
+                { border: 'border-bauhaus-black', tag: 'bg-bauhaus-canvas text-bauhaus-black border border-bauhaus-black' };
+              const isPassed = (b.status ?? '').toUpperCase().includes('PASSED');
+              return (
+                <div key={b.source_url} className={`border-4 ${partyTone.border} p-5 bg-white`}>
+                  <div className="flex flex-wrap justify-between items-baseline gap-3 mb-2">
+                    <h4 className="text-base font-black text-bauhaus-black uppercase tracking-tight leading-tight flex-1">{b.bill_name}</h4>
+                    <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 ${partyTone.tag}`}>{b.sponsor_party ?? 'Unknown'}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs font-mono text-bauhaus-muted mb-2">
+                    <span><span className="font-black text-bauhaus-black">Sponsor:</span> {b.sponsor ?? '—'}</span>
+                    {b.introduced_date && <span><span className="font-black text-bauhaus-black">Introduced:</span> {b.introduced_date}</span>}
+                    {b.status && <span><span className={`font-black ${isPassed ? 'text-bauhaus-red' : 'text-bauhaus-black'}`}>{b.status}{b.status_date ? ` (${b.status_date})` : ''}</span></span>}
+                  </div>
+                  {b.topics && b.topics.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {b.topics.slice(0, 6).map((t, j) => (
+                        <span key={j} className="text-[9px] uppercase tracking-widest font-black text-bauhaus-muted bg-bauhaus-canvas px-2 py-0.5 border border-bauhaus-black">{t}</span>
+                      ))}
+                    </div>
+                  )}
+                  <a href={b.source_url} target="_blank" rel="noopener" className="text-bauhaus-blue text-[10px] font-mono hover:underline">parliament.qld.gov.au · Bill text + Explanatory Note ↗</a>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="border-4 border-bauhaus-black p-6 bg-white text-bauhaus-muted text-sm mb-8">No YJ-relevant bills in <code>qld_bills</code>. Run <code>scrape-qld-bills</code> to populate.</div>
+        )}
+
+        <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">Cross-reference · Hansard mention volume</div>
+        <p className="text-bauhaus-muted font-medium max-w-3xl mb-4 text-xs">
+          The same bill names extracted from <code className="font-mono">civic_hansard.body_text</code> via <code className="font-mono">v_qld_yj_bills_active</code> &mdash; how often each appeared in debate. Yellow rail = YJ-specific by name pattern.
         </p>
         {r.bills.length === 0 ? (
           <div className="border-4 border-bauhaus-black p-6 bg-white text-bauhaus-muted text-sm">No bills detected in current Hansard window.</div>
