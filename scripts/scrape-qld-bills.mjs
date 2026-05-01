@@ -123,8 +123,13 @@ async function scrapePage(browser, pageDef) {
     const rawName = b.cells.find(c => /Bill\s+20[12][0-9]/i.test(c)) || '';
     const billName = cleanText(rawName.replace(/\s*\*\s*$/, '')); // strip trailing "*"
 
-    // Source URL — first link href (Bill / Exp Note / Statement of Compatibility all same stem)
-    const sourceUrl = b.links[0]?.href || null;
+    // Each row has up to 3 links: "Bill", "Exp Note" (or "Explanatory Note"),
+    // "Statement of Compatibility" / "SoC". Match by link text.
+    const findLink = (re) => b.links.find(l => re.test(l.text))?.href || null;
+    const billLinkUrl = findLink(/^bill\b/i) || b.links[0]?.href || null;
+    const explanatoryNoteUrl = findLink(/(exp(\.|lanatory)?\s*note|explanatory)/i);
+    const statementOfCompatibilityUrl = findLink(/(statement\s*of\s*compatibility|\bsoc\b|compatibility)/i);
+    const sourceUrl = billLinkUrl;
 
     // Sponsor cell = first cell with "MP" and a (DD/MM/YYYY) date
     const sponsorCell = b.cells.find(c => /\bMP\b/.test(c) && /\d{1,2}\/\d{1,2}\/\d{4}/.test(c)) || '';
@@ -139,7 +144,7 @@ async function scrapePage(browser, pageDef) {
     const status = cleanText(statusMatch?.[1]) || null;
     const statusDate = parseDate(statusMatch?.[2]);
 
-    return { billName, sourceUrl, sponsor, introducedDate, status, statusDate };
+    return { billName, sourceUrl, explanatoryNoteUrl, statementOfCompatibilityUrl, sponsor, introducedDate, status, statusDate };
   }).filter(b => b.billName && b.sourceUrl);
 }
 
@@ -193,6 +198,8 @@ async function main() {
         parliament_session: b.parliament_session,
         is_yj_relevant: cls.isYjRelevant,
         topics: cls.topics,
+        explanatory_note_url: b.explanatoryNoteUrl,
+        statement_of_compatibility_url: b.statementOfCompatibilityUrl,
         updated_at: new Date().toISOString(),
       };
 

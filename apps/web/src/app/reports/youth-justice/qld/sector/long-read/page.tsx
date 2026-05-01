@@ -25,6 +25,21 @@ function fmt(n: number | null | undefined): string {
   return Number(n).toLocaleString();
 }
 
+// Extract the "Policy objectives and the reasons for them" paragraph from a
+// QLD parliament Explanatory Note. Returns the first ~360 chars of the
+// objectives section, or null if the section header isn't present.
+function extractPolicyObjective(text: string | null): string | null {
+  if (!text) return null;
+  const i = text.search(/policy\s+objectives?\s+and\s+(?:the\s+)?reasons?/i);
+  if (i === -1) return null;
+  const after = text.slice(i).split('\n').slice(1).join(' ');
+  const stop = after.search(/\n\s*(achievement\s+of\s+(?:policy|the)|alternative\s+ways|estimated\s+cost|consistency\s+with)/i);
+  const objective = (stop > 0 ? after.slice(0, stop) : after.slice(0, 800))
+    .replace(/\s+/g, ' ').trim();
+  if (objective.length < 40) return null;
+  return objective.length > 360 ? objective.slice(0, 360).replace(/\s+\S*$/, '') + '…' : objective;
+}
+
 type LatestRow = {
   source_generated_at: string;
   total_people: number; total_adults: number; total_children: number;
@@ -43,7 +58,7 @@ type LgaRow = { lga_name: string; youth_offender_rate: number | null; indigenous
 type DirectorRow = { person_name: string; board_count: number; total_justice: number };
 type NdisRow = { state: string; youth_participants: number };
 type YearTotalRow = { financial_year: string; total: number };
-type OfficialBill = { bill_name: string; sponsor: string | null; sponsor_party: string | null; introduced_date: string | null; status: string | null; status_date: string | null; source_url: string };
+type OfficialBill = { bill_name: string; sponsor: string | null; sponsor_party: string | null; introduced_date: string | null; status: string | null; status_date: string | null; source_url: string; explanatory_note_url: string | null; statement_of_compatibility_url: string | null; explanatory_note_text: string | null };
 type CoronerFinding = { title: string; deceased_identifier: string | null; finding_date: string | null; coroner_name: string | null; recommendations_count: number | null; topics: string[] | null; source_url: string };
 
 async function getNumbers() {
@@ -51,7 +66,7 @@ async function getNumbers() {
   const [
     latest, spend, accoGap, foundations, crossSector, ctg, unfunded,
     contracts, hotspots, directors, ndis, mhFundingCount, almaCount, almaQldCount,
-    yearTrend, officialBills, coronerFindings,
+    yearTrend, officialBills, coronerFindings, outcomeMetrics,
   ] = await Promise.all([
     safe(supabase.rpc('exec_sql', {
       query: `SELECT source_generated_at::text, total_people, total_adults, total_children,
@@ -138,7 +153,8 @@ async function getNumbers() {
               GROUP BY 1 ORDER BY 1`,
     })) as Promise<YearTotalRow[] | null>,
     safe(supabase.rpc('exec_sql', {
-      query: `SELECT bill_name, sponsor, sponsor_party, introduced_date::text, status, status_date::text, source_url
+      query: `SELECT bill_name, sponsor, sponsor_party, introduced_date::text, status, status_date::text, source_url,
+                     explanatory_note_url, statement_of_compatibility_url, explanatory_note_text
               FROM public.qld_bills
               WHERE is_yj_relevant = true
               ORDER BY status_date DESC NULLS LAST, introduced_date DESC NULLS LAST
@@ -151,6 +167,19 @@ async function getNumbers() {
               ORDER BY finding_date DESC NULLS LAST
               LIMIT 6`,
     })) as Promise<CoronerFinding[] | null>,
+    // Structured outcomes — recidivism, detention spend, community spend, avg
+    // detention population. Used to compute bed-day cost and the
+    // money-vs-outcome diverging-trend story.
+    safe(supabase.rpc('exec_sql', {
+      query: `SELECT metric_name, metric_value::numeric, period
+              FROM public.outcomes_metrics
+              WHERE jurisdiction = 'QLD' AND domain = 'youth-justice'
+                AND cohort IN ('all','community-controlled')
+                AND metric_name IN ('rogs_recidivism_pct','rogs_total_expenditure_detention',
+                                    'rogs_total_expenditure_community','aihw_avg_nightly_detention',
+                                    'acco_yj_retention_pct')
+              ORDER BY metric_name, period`,
+    })) as Promise<Array<{ metric_name: string; metric_value: number; period: string }> | null>,
   ]);
 
   const l = latest?.[0] || null;
@@ -163,6 +192,51 @@ async function getNumbers() {
   const yrFirst = yt[0]?.total || 0;
   const yrLast = yt[yt.length - 1]?.total || 0;
   const trendGrowthPct = yrFirst > 0 ? Math.round(((yrLast - yrFirst) / yrFirst) * 100) : 0;
+
+  // ── Outcome math (recidivism, bed-day cost, divergence between spend & outcomes)
+  const om = outcomeMetrics ?? [];
+  const byMetric = (n: string) => om.filter(r => r.metric_name === n).sort((a, b) => a.period.localeCompare(b.period));
+  const recidPoints = byMetric('rogs_recidivism_pct');
+  const recidLatest = recidPoints[recidPoints.length - 1] ?? null;
+  const recidPrior = recidPoints.find(p => p.period === '2017-18') ?? recidPoints[0] ?? null;
+  const recidDelta = recidLatest && recidPrior ? Number(recidLatest.metric_value) - Number(recidPrior.metric_value) : null;
+
+  const detPoints = byMetric('rogs_total_expenditure_detention'); // unit: thousands ($'000)
+  const detLatest = detPoints[detPoints.length - 1] ?? null;
+  const detPrior  = detPoints.find(p => p.period === '2017-18') ?? detPoints[0] ?? null;
+  const commPoints = byMetric('rogs_total_expenditure_community');
+  const commLatest = commPoints[commPoints.length - 1] ?? null;
+  // Quarterly avg-nightly figures — average over four quarters of the latest FY we have.
+  const popPoints = byMetric('aihw_avg_nightly_detention');
+  const popLatestFy = popPoints.length ? popPoints[popPoints.length - 1].period.slice(0, 7) : null; // "YYYY-YY"
+  const popLatestQuarters = popLatestFy ? popPoints.filter(p => p.period.startsWith(popLatestFy)) : [];
+  const popLatestAvg = popLatestQuarters.length
+    ? popLatestQuarters.reduce((s, p) => s + Number(p.metric_value), 0) / popLatestQuarters.length
+    : null;
+  // Bed-night cost = detention spend ($) / (avg nightly population × 365)
+  const bedNightCost = detLatest && popLatestAvg
+    ? Math.round((Number(detLatest.metric_value) * 1000) / (popLatestAvg * 365))
+    : null;
+  // Spend-vs-outcome divergence: detention $ growth vs recidivism trend over same window.
+  const detGrowthPct = detLatest && detPrior && Number(detPrior.metric_value) > 0
+    ? Math.round(((Number(detLatest.metric_value) - Number(detPrior.metric_value)) / Number(detPrior.metric_value)) * 100)
+    : null;
+
+  // ACCO retention: filter to "community-controlled" cohort. Skip the current
+  // year's row (next-year hasn't started yet, so retention reads as 0% spuriously).
+  const accoPoints = om
+    .filter(r => r.metric_name === 'acco_yj_retention_pct')
+    .sort((a, b) => a.period.localeCompare(b.period));
+  const currentFy = (() => {
+    const m = new Date();
+    const y = m.getMonth() >= 6 ? m.getFullYear() : m.getFullYear() - 1;
+    return `${y}-${String((y + 1) % 100).padStart(2, '0')}`;
+  })();
+  const accoValid = accoPoints.filter(p => !p.period.startsWith(currentFy));
+  const accoLatest = accoValid[accoValid.length - 1] ?? null;
+  const accoPeak = accoValid.length
+    ? accoValid.reduce((m, p) => Number(p.metric_value) > Number(m.metric_value) ? p : m, accoValid[0])
+    : null;
 
   return {
     l, detention, community, groupConferencing,
@@ -184,6 +258,10 @@ async function getNumbers() {
     trendGrowthPct,
     officialBills: officialBills ?? [],
     coronerFindings: coronerFindings ?? [],
+    recidLatest, recidPrior, recidDelta,
+    detLatest, detPrior, commLatest,
+    popLatestAvg, bedNightCost, detGrowthPct,
+    accoLatest, accoPeak,
   };
 }
 
@@ -268,7 +346,7 @@ export default async function QldYjLongRead() {
           QLD Youth Justice<br />— The State, The Funnel, The Money, The Network, The Evidence, The Place
         </h1>
         <p className="text-xl sm:text-2xl text-bauhaus-muted leading-tight font-medium max-w-3xl mb-6">
-          $1.88B for detention. $1.49B for community-based services. {r.l?.total_children ?? '—'} children in adult police watchhouses today, {fnPctChild}% First Nations.
+          {money(r.detention)} for detention. {money(r.community)} for community-based services. {r.l?.total_children ?? '—'} children in adult police watchhouses today, {fnPctChild}% First Nations.
           ACCOs hold {accoSharePct}% of the funding for ~70% of the in-custody population. {r.almaTotal} evidence-backed alternatives sit in the Australian Living Map of Alternatives — many with no funding link.
         </p>
         <p className="text-xs font-mono text-bauhaus-muted">
@@ -296,7 +374,7 @@ export default async function QldYjLongRead() {
           </p>
         </Finding>
 
-        <Finding n={3} title="$1.88B detention vs $1.49B community: ratio is the story" severity="crit">
+        <Finding n={3} title={`${money(r.detention)} detention vs ${money(r.community)} community: ratio is the story`} severity="crit">
           <p>
             QLD&apos;s state-budget Youth Justice line items disclose <span className="font-black">{money(r.detention)}</span> on detention-based services and <span className="font-black">{money(r.community)}</span> on community-based services across the years CivicGraph indexes. Ratio: <span className="font-black text-bauhaus-red">{detentionRatio}:1 detention to community</span>. Group-conferencing — the most evidence-backed early intervention in the budget — gets <span className="font-black">{money(r.groupConferencing)}</span>, ~{totalSpend > 0 ? ((r.groupConferencing/totalSpend)*100).toFixed(1) : '—'}% of the three-line Youth Justice total. <SourceLink href="#src-qld-budget">[2]</SourceLink>
           </p>
@@ -469,11 +547,64 @@ export default async function QldYjLongRead() {
           { label: 'Detention : Community', value: `${detentionRatio} : 1`, tone: 'red' },
         ]} />
 
+        {(r.bedNightCost || r.recidLatest || r.accoLatest) && (
+          <div className="my-8 border-4 border-bauhaus-black p-5">
+            <div className="text-xs font-black uppercase tracking-widest text-bauhaus-black mb-3">Outcome math · what the spend buys</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {r.bedNightCost && (
+                <div className="border-l-4 border-bauhaus-red pl-3">
+                  <div className="text-3xl font-black tabular-nums">${r.bedNightCost.toLocaleString()}</div>
+                  <div className="text-xs font-black uppercase tracking-widest mt-1">per bed-night, detention</div>
+                  <div className="text-xs mt-1 text-bauhaus-black/70">
+                    {r.detLatest ? `${r.detLatest.period} ROGS detention spend` : '—'}
+                    {' '}÷{' '}
+                    {r.popLatestAvg ? `${Math.round(r.popLatestAvg)} avg nightly population × 365` : '—'}.
+                  </div>
+                </div>
+              )}
+              {r.recidLatest && (
+                <div className="border-l-4 border-bauhaus-red pl-3">
+                  <div className="text-3xl font-black tabular-nums">{Number(r.recidLatest.metric_value).toFixed(1)}%</div>
+                  <div className="text-xs font-black uppercase tracking-widest mt-1">12-month recidivism · {r.recidLatest.period}</div>
+                  <div className="text-xs mt-1 text-bauhaus-black/70">
+                    {r.recidDelta != null && r.recidPrior
+                      ? <>From {Number(r.recidPrior.metric_value).toFixed(1)}% in {r.recidPrior.period} &mdash; <span className={`font-black ${r.recidDelta > 0 ? 'text-bauhaus-red' : 'text-bauhaus-blue'}`}>{r.recidDelta > 0 ? '+' : ''}{r.recidDelta.toFixed(1)} pp</span>.</>
+                      : 'ROGS Section 17, all-cohort.'}
+                  </div>
+                </div>
+              )}
+              {r.detGrowthPct != null && r.detPrior && r.detLatest && (
+                <div className="border-l-4 border-bauhaus-yellow pl-3">
+                  <div className="text-3xl font-black tabular-nums">{r.detGrowthPct > 0 ? '+' : ''}{r.detGrowthPct}%</div>
+                  <div className="text-xs font-black uppercase tracking-widest mt-1">detention spend growth</div>
+                  <div className="text-xs mt-1 text-bauhaus-black/70">
+                    {r.detPrior.period} → {r.detLatest.period}: ${(Number(r.detPrior.metric_value)/1000).toFixed(0)}M → ${(Number(r.detLatest.metric_value)/1000).toFixed(0)}M.
+                  </div>
+                </div>
+              )}
+              {r.accoLatest && (
+                <div className="border-l-4 border-bauhaus-blue pl-3">
+                  <div className="text-3xl font-black tabular-nums">{Number(r.accoLatest.metric_value).toFixed(0)}%</div>
+                  <div className="text-xs font-black uppercase tracking-widest mt-1">ACCO retention · {r.accoLatest.period}</div>
+                  <div className="text-xs mt-1 text-bauhaus-black/70">
+                    {r.accoPeak && r.accoPeak.period !== r.accoLatest.period
+                      ? <>Peak {Number(r.accoPeak.metric_value).toFixed(0)}% in {r.accoPeak.period}. <span className={`font-black ${Number(r.accoLatest.metric_value) < Number(r.accoPeak.metric_value) ? 'text-bauhaus-red' : 'text-bauhaus-blue'}`}>{Number(r.accoLatest.metric_value) < Number(r.accoPeak.metric_value) ? 'Falling.' : 'Held.'}</span></>
+                      : 'Year-over-year continuity of community-controlled YJ providers.'}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="mt-3 text-xs font-mono text-bauhaus-black/60">
+              Sources: <code>outcomes_metrics</code> · Productivity Commission ROGS 2026 (recidivism, expenditure) + AIHW Youth Detention Population 2025 (avg nightly) + CivicGraph derived (ACCO retention via <code>v_acco_yj_retention_qld</code>).
+            </div>
+          </div>
+        )}
+
         <p>
           The ratio matters because detention is structurally more expensive per child than every alternative. Custodial beds are infrastructure: staffed 24/7, carrying capital, security, and overhead costs &mdash; ROGS publishes per-jurisdiction recurrent expenditure per young person in detention, and the figure is consistently a multi-fold premium over the per-young-person cost of community-based supervision. The community line covers diversion, family-led decision-making, school re-engagement, mental-health and AOD support, employment pathways &mdash; the program work the evidence consistently identifies as effective. Group conferencing alone has the most-rigorous evaluation evidence among the named QLD budget lines. <SourceLink href="#src-qld-budget">[2]</SourceLink> <SourceLink href="#src-rogs">[3]</SourceLink>
         </p>
 
-        <h3 className="text-lg font-black uppercase tracking-tight text-bauhaus-black mt-8 mb-3">Where the community $1.49B actually goes</h3>
+        <h3 className="text-lg font-black uppercase tracking-tight text-bauhaus-black mt-8 mb-3">Where the community {money(r.community)} actually goes</h3>
         <p>
           Inside the community-based budget, named-recipient grants flow to a relatively small concentrated set of large national NGOs &mdash; Lifeline Community Care, Anglicare/Synod of Brisbane, Mission Australia, Relationships Australia QLD, Life Without Barriers, UnitingCare Community, and others &mdash; which together hold the bulk of the dollars. Aboriginal Community-Controlled Organisations are funded too, but at smaller dollar amounts and on shorter contract terms. The dashboard view shows the full top-25. <SourceLink href="#src-acnc">[6]</SourceLink>
         </p>
@@ -482,6 +613,17 @@ export default async function QldYjLongRead() {
         <p>
           ACCOs receive <span className="font-black text-bauhaus-red">{accoSharePct}%</span> of named-recipient youth-justice grant dollars in CivicGraph&apos;s dataset, while First Nations young people are the majority of children in QLD watchhouses on any given day &mdash; live data shows {fnPctChild}% today. <SourceLink href="#src-qps-watchhouse">[1]</SourceLink> The gap is structural, not incidental: ACCOs typically operate on shorter funding cycles, smaller per-grant amounts, and higher reporting overheads relative to scale. The Pathways to Justice report (ALRC 2018) flagged this; the gap persists. <SourceLink href="#src-pathways">[18]</SourceLink>
         </p>
+
+        {r.accoLatest && r.accoPeak && (
+          <p>
+            The share number is the static picture. The <span className="font-black">retention number</span> is the moving one. CivicGraph&apos;s <code className="font-mono text-xs">v_acco_yj_retention_qld</code> view computes year-over-year continuity for community-controlled organisations receiving QLD youth-justice funding: of the ACCOs funded in year N, what share are still funded in year N+1? Across {(() => {
+              const peakYr = Number(r.accoPeak.metric_value);
+              const latestYr = Number(r.accoLatest.metric_value);
+              const direction = latestYr < peakYr ? 'fallen' : 'held';
+              return <>2018-19 through 2021-22, retention sat at <span className="font-black">{Math.round(peakYr)}%</span> &mdash; near-perfect continuity. By {r.accoLatest.period}, retention had {direction} to <span className={`font-black ${latestYr < peakYr ? 'text-bauhaus-red' : 'text-bauhaus-blue'}`}>{Math.round(latestYr)}%</span></>;
+            })()}. The cohort sizes are small (10&ndash;14 ACCOs per year), so single contract decisions move the rate substantially &mdash; but the directional break is consistent across the four most recent windows. What the data confirms: of the ACCOs funded in 2023-24, fewer than one in three received QLD YJ funding the following year. Whether that reflects deliberate procurement consolidation, contract-cycle timing, or pipeline gaps is something the data alone can&apos;t adjudicate &mdash; but it is the trend, and it should be a procurement-policy question, not a coincidence.
+          </p>
+        )}
 
         <h3 className="text-lg font-black uppercase tracking-tight text-bauhaus-black mt-8 mb-3">Foundation giving</h3>
         <p>
@@ -643,15 +785,28 @@ export default async function QldYjLongRead() {
           Beyond the four headline Acts above, the QLD Parliament Bills register &mdash; scraped live from <a href="https://www.parliament.qld.gov.au" target="_blank" rel="noopener" className="text-bauhaus-blue font-black hover:underline">parliament.qld.gov.au</a> &mdash; shows {r.officialBills.length} youth-justice-relevant bills currently tracked in <code className="font-mono text-xs">qld_bills</code>. The most-recent are listed below with their official status; each links to the bill text on the parliamentary record.
         </p>
         {r.officialBills.length > 0 && (
-          <ul className="list-disc pl-6 space-y-2 my-4">
-            {r.officialBills.map((b, i) => (
-              <li key={i}>
-                <span className="font-black">{b.bill_name}</span>
-                {b.sponsor && <> &mdash; {b.sponsor}{b.sponsor_party ? ` (${b.sponsor_party})` : ''}</>}
-                {b.status && <> &mdash; <span className={`font-black ${(b.status ?? '').toUpperCase().includes('PASSED') ? 'text-bauhaus-red' : 'text-bauhaus-black'}`}>{b.status}{b.status_date ? ` (${b.status_date})` : ''}</span></>}
-                . <a href={b.source_url} target="_blank" rel="noopener" className="text-bauhaus-blue font-mono text-xs hover:underline">[bill text ↗]</a>
-              </li>
-            ))}
+          <ul className="list-disc pl-6 space-y-3 my-4">
+            {r.officialBills.map((b, i) => {
+              const objective = extractPolicyObjective(b.explanatory_note_text);
+              return (
+                <li key={i}>
+                  <span className="font-black">{b.bill_name}</span>
+                  {b.sponsor && <> &mdash; {b.sponsor}{b.sponsor_party ? ` (${b.sponsor_party})` : ''}</>}
+                  {b.status && <> &mdash; <span className={`font-black ${(b.status ?? '').toUpperCase().includes('PASSED') ? 'text-bauhaus-red' : 'text-bauhaus-black'}`}>{b.status}{b.status_date ? ` (${b.status_date})` : ''}</span></>}
+                  {objective && (
+                    <div className="mt-1 mb-2 border-l-4 border-bauhaus-yellow pl-3 text-sm italic">
+                      <span className="font-black not-italic uppercase tracking-widest text-xs text-bauhaus-black">From the Explanatory Note &mdash; </span>
+                      {objective}
+                    </div>
+                  )}
+                  <span className="font-mono text-xs">
+                    <a href={b.source_url} target="_blank" rel="noopener" className="text-bauhaus-blue hover:underline">[bill text ↗]</a>
+                    {b.explanatory_note_url && <> &middot; <a href={b.explanatory_note_url} target="_blank" rel="noopener" className="text-bauhaus-blue hover:underline">[explanatory note ↗]</a></>}
+                    {b.statement_of_compatibility_url && <> &middot; <a href={b.statement_of_compatibility_url} target="_blank" rel="noopener" className="text-bauhaus-blue hover:underline">[statement of compatibility ↗]</a></>}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         )}
         <p>

@@ -88,10 +88,11 @@ type CrossSectorRow = { recipient_name: string; sectors: number; total: number }
 type AlmaRow = { name: string; type: string; evidence_level: string | null };
 type HansardRow = { sitting_date: string; speaker_name: string | null; speaker_party: string | null; subject: string | null; snippet: string; source_url: string | null };
 type MinStatement = { published_at: string; minister_name: string | null; portfolio: string | null; headline: string; source_url: string };
+type StateBill = { bill_name: string; sponsor: string | null; sponsor_party: string | null; introduced_date: string | null; status: string | null; status_date: string | null; source_url: string; explanatory_note_url: string | null; statement_of_compatibility_url: string | null };
 
 async function getStateReport(stateCode: string) {
   const supabase = getLiveReportSupabase();
-  const [spend, recipients, crossSector, alma, hansard, statements, contracts, almaQldCount] = await Promise.all([
+  const [spend, recipients, crossSector, alma, hansard, statements, contracts, almaQldCount, bills] = await Promise.all([
     safe(supabase.rpc('exec_sql', { query: `SELECT recipient_name, SUM(amount_dollars)::bigint AS total FROM public.justice_funding WHERE state = '${stateCode}' AND recipient_name LIKE 'Youth Justice -%' GROUP BY 1` })) as Promise<SpendRow[] | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT recipient_name, SUM(amount_dollars)::bigint AS total, COUNT(*)::int AS grants FROM public.justice_funding WHERE state = '${stateCode}' AND topics @> ARRAY['youth-justice'] AND amount_dollars > 0 AND recipient_name IS NOT NULL AND length(recipient_name) > 3 AND recipient_name !~ '^[0-9]+$' AND recipient_name NOT ILIKE '%Total%' AND recipient_name NOT ILIKE '%Department of%' AND recipient_name NOT ILIKE 'Youth Justice -%' AND recipient_name NOT ILIKE '%State of %' AND recipient_name NOT ILIKE '(blank)' GROUP BY 1 ORDER BY total DESC NULLS LAST LIMIT 15` })) as Promise<RecipientRow[] | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT recipient_name, COUNT(DISTINCT topic)::int AS sectors, SUM(amount_dollars)::bigint AS total FROM (SELECT recipient_name, unnest(topics) AS topic, amount_dollars FROM public.justice_funding WHERE state = '${stateCode}' AND amount_dollars > 0 AND recipient_name IS NOT NULL AND length(recipient_name) > 3 AND recipient_name !~ '^[0-9]+$' AND recipient_name NOT ILIKE '%Total%' AND recipient_name NOT ILIKE '%Department of%') t WHERE topic IN ('youth-justice','child-protection','disability','ndis','family-services','indigenous','mental-health','homelessness','aod','family-violence') GROUP BY 1 HAVING COUNT(DISTINCT topic) >= 3 ORDER BY total DESC NULLS LAST LIMIT 10` })) as Promise<CrossSectorRow[] | null>,
@@ -100,6 +101,7 @@ async function getStateReport(stateCode: string) {
     safe(supabase.rpc('exec_sql', { query: `SELECT published_at::text, minister_name, portfolio, headline, source_url FROM public.civic_ministerial_statements WHERE jurisdiction = '${stateCode}' AND (topics @> ARRAY['youth-justice'] OR headline ~* '(youth|detention|watch.?house|adult crime|bail|young offender)') AND published_at > NOW() - INTERVAL '24 months' ORDER BY published_at DESC LIMIT 8` })) as Promise<MinStatement[] | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT count(*)::int AS c, SUM(contract_value)::bigint AS total FROM public.austender_contracts WHERE supplier_name ILIKE ANY (ARRAY['%youth justice%','%PCYC%','%mission australia%','%lifeline%','%anglicare%','%uniting%','%save the children%']) AND contract_value > 0` })) as Promise<Array<{ c: number; total: number }> | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT count(*)::int AS c FROM public.alma_interventions WHERE ('${stateCode}' = ANY(geography) OR EXISTS (SELECT 1 FROM unnest(geography) g WHERE g ILIKE '%${stateCode}%'))` })) as Promise<Array<{ c: number }> | null>,
+    safe(supabase.rpc('exec_sql', { query: `SELECT bill_name, sponsor, sponsor_party, introduced_date::text, status, status_date::text, source_url, explanatory_note_url, statement_of_compatibility_url FROM public.parliament_bills WHERE jurisdiction = '${stateCode}' AND is_yj_relevant = true ORDER BY status_date DESC NULLS LAST, introduced_date DESC NULLS LAST LIMIT 10` })) as Promise<StateBill[] | null>,
   ]);
 
   const detention = (spend ?? []).find(s => /detention/i.test(s.recipient_name))?.total || 0;
@@ -115,6 +117,7 @@ async function getStateReport(stateCode: string) {
     statements: statements ?? [],
     contractStats: contracts?.[0] || null,
     almaCount: almaQldCount?.[0]?.c ?? 0,
+    bills: bills ?? [],
   };
 }
 
@@ -329,6 +332,32 @@ export default async function StateYjSectorPage({ params }: { params: Promise<{ 
               );
             })}
           </div>
+        </section>
+      )}
+
+      {/* YJ-RELEVANT BILLS — live from parliament_bills */}
+      {r.bills.length > 0 && (
+        <section className="mb-12">
+          <h2 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">YJ-relevant bills before {meta.label} Parliament</h2>
+          <p className="text-bauhaus-muted font-medium max-w-3xl mb-4">
+            Live from the {meta.label} parliamentary register, scraped via Playwright into <code className="font-mono text-xs">parliament_bills</code> and classified by youth-justice keyword match.
+          </p>
+          <ul className="list-none space-y-3">
+            {r.bills.map((b, i) => (
+              <li key={i} className="border-l-4 border-bauhaus-black pl-4">
+                <div className="font-black text-bauhaus-black">{b.bill_name}</div>
+                <div className="text-xs text-bauhaus-muted font-mono mt-1">
+                  {b.sponsor && <>{b.sponsor}{b.sponsor_party ? ` (${b.sponsor_party})` : ''} · </>}
+                  {b.status && <span className={(b.status ?? '').toUpperCase().includes('PASSED') ? 'text-bauhaus-red font-black' : ''}>{b.status}{b.status_date ? ` (${b.status_date})` : ''}</span>}
+                </div>
+                <div className="text-xs font-mono mt-1">
+                  <a href={b.source_url} target="_blank" rel="noopener" className="text-bauhaus-blue hover:underline">[bill text ↗]</a>
+                  {b.explanatory_note_url && <> · <a href={b.explanatory_note_url} target="_blank" rel="noopener" className="text-bauhaus-blue hover:underline">[explanatory note ↗]</a></>}
+                  {b.statement_of_compatibility_url && <> · <a href={b.statement_of_compatibility_url} target="_blank" rel="noopener" className="text-bauhaus-blue hover:underline">[statement of compatibility ↗]</a></>}
+                </div>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 
