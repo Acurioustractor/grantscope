@@ -658,6 +658,10 @@ export default async function QldYjLongRead() {
           The cumulative direction is clear: every YJ-relevant Act passed under the current Government has expanded custody powers. Not one has expanded community-based capacity, evaluation, or ACCO funding share.
         </p>
 
+        <PullQuote attribution="Hon. David Crisafulli, Premier of Queensland — official media statement (Feb 2026)">
+          Adult Crime, Adult Time expands to 45 offences.
+        </PullQuote>
+
         <h3 className="text-lg font-black uppercase tracking-tight text-bauhaus-black mt-8 mb-3">Capacity expansion — 120 new beds in the pipeline</h3>
         <p>
           Three facility decisions are reshaping QLD&apos;s detention-bed footprint. All were announced under the Palaszczuk Labor Government (2023&ndash;2024) and continue under the Crisafulli LNP Government &mdash; political ownership is bipartisan in practice:
