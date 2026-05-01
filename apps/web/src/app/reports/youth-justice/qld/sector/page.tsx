@@ -1905,7 +1905,7 @@ export default async function QldYjSectorPage() {
         <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§25 · ACCOUNTABILITY CHAIN</div>
         <h3 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">Promise → action → outcomes — does the chain hold?</h3>
         <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
-          For each major QLD policy promise we map the chain: the <span className="font-black text-bauhaus-red">announcement</span> (what was said), the <span className="font-black text-bauhaus-blue">bill</span> (what was passed), the <span className="font-black">implementing department or contractor</span> (who delivers), and the <span className="font-black">live outcomes data</span> we can read against it (what changed). Where the chain breaks &mdash; where promise outpaces action, or where action lands but outcomes don&apos;t move &mdash; the gap is the story.
+          For each major QLD policy promise we map the chain: the <span className="font-black text-bauhaus-red">announcement</span> (what was said), the <span className="font-black text-bauhaus-blue">bill</span> (what was passed), the <span className="font-black">implementing department or contractor</span> (who delivers), and the <span className="font-black">live outcomes data</span> we can read against it (what changed). Where the chain breaks &mdash; where promise outpaces action, where action lands but outcomes don&apos;t move, or where the system pretends two contradictory promises can both be delivered &mdash; the gap is the story. Four chains, ordered roughly by the gap between announcement and outcome.
         </p>
 
         <div className="space-y-6">
@@ -1974,6 +1974,40 @@ export default async function QldYjSectorPage() {
             </div>
             <div className="mt-4 pt-3 border-t-2 border-bauhaus-black text-[11px] font-medium text-bauhaus-black leading-relaxed">
               <span className="font-black uppercase tracking-widest text-bauhaus-red">Chain status:</span> Promise made → bill passed (bundled) → institutional architecture removed → <span className="font-black text-bauhaus-red">no replacement</span>. The truth-telling and treaty-process framework that explicitly addressed YJ over-representation has been removed; the structural conditions it was designed to address are unchanged in the data.
+            </div>
+          </div>
+
+          {/* CHAIN 4 — BAIL MONITORING */}
+          <div className="border-4 border-bauhaus-red p-6 bg-white">
+            <div className="text-xs font-black uppercase tracking-widest text-bauhaus-red mb-3">Chain 4 · &ldquo;Stronger youth bail monitoring&rdquo;</div>
+            <div className="grid md:grid-cols-4 gap-4 text-xs">
+              <div className="border-r-2 border-bauhaus-canvas md:pr-4">
+                <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-yellow mb-1">PROMISE</div>
+                <p className="font-black text-bauhaus-black leading-tight mb-1">&ldquo;Stronger youth bail monitoring laws to make Queensland safer&rdquo;</p>
+                <p className="text-[10px] font-mono text-bauhaus-muted">Gerber · 10 Dec 2025 + 12 Feb 2026 (twice) · <a href="#vol-7" className="text-bauhaus-blue hover:underline">§23</a></p>
+              </div>
+              <div className="border-r-2 border-bauhaus-canvas md:pr-4">
+                <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue mb-1">BILLS (TWO)</div>
+                <p className="font-black text-bauhaus-black leading-tight mb-1">YJ (Monitoring Devices) Amendment Bill 2025 → YJ (Electronic Monitoring) Amendment Bill 2025</p>
+                <p className="text-[10px] font-mono text-bauhaus-muted">PASSED 2 Apr 2025 + PASSED 12 Feb 2026 · Gerber LNP · <a href="#vol-7" className="text-bauhaus-blue hover:underline">§24.7</a></p>
+              </div>
+              <div className="border-r-2 border-bauhaus-canvas md:pr-4">
+                <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-black mb-1">DELIVERED BY</div>
+                <p className="font-black text-bauhaus-black leading-tight mb-1">QLD DYJ + monitoring-device contractor</p>
+                <p className="text-[10px] font-mono text-bauhaus-muted">Roll-out expanded to Toowoomba, Mt Isa, Cairns regional areas. Police no longer required to consider alternatives to arrest for breaches.</p>
+              </div>
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-red mb-1">OUTCOMES</div>
+                <ul className="text-[10px] text-bauhaus-black leading-relaxed space-y-1">
+                  <li>· Children &gt;2 days in watchhouse: <span className="font-black text-bauhaus-red">{childOver2}</span> today (avg cell, no programs)</li>
+                  <li>· Adults &gt;7 days in watchhouse: <span className="font-black">{ws ? ws.adult_over_7_days : '—'}</span> · longest <span className="font-black">{ws ? `${ws.adult_longest_days}d` : '—'}</span></li>
+                  <li>· Detention occupancy: 76–92% across BYDC, Cleveland, West Moreton (overflow → watchhouses)</li>
+                  <li>· Remand-as-default pattern: data point we&apos;re building (proxy = watchhouse-pop trend, §2)</li>
+                </ul>
+              </div>
+            </div>
+            <div className="mt-4 pt-3 border-t-2 border-bauhaus-black text-[11px] font-medium text-bauhaus-black leading-relaxed">
+              <span className="font-black uppercase tracking-widest text-bauhaus-red">Chain status:</span> Promise made (twice within 60 days) → two separate Bills passed → infrastructure rolled out to regional centres → <span className="font-black text-bauhaus-red">predictable knock-on effect: more children on remand, more watchhouse-as-overflow</span>. The bail-monitoring program is the most-paired example in the dataset of a promise that <em>does</em> land structurally — but the &ldquo;safer&rdquo; outcome the announcements claimed is operating against the watchhouse-occupancy data above. Tightening bail without scaling community-bed capacity simply moves children from community to remand.
             </div>
           </div>
 
