@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { headers } from 'next/headers';
 import { getLiveReportSupabase } from '@/lib/report-supabase';
 import { safe } from '@/lib/services/utils';
+import { DetailDrawer, DrawerSection, DrawerKeyValue } from '@/components/reports/DetailDrawer';
+import { summarizeMinisterialStatement, summarizeHansardSpeech, summarizeCoronerFinding } from '@/lib/civicgraph-summary';
 
 export const dynamic = 'force-dynamic';
 export const metadata = {
@@ -268,12 +270,12 @@ type NdisOverlayRow = { state: string; total_participants: number; youth_partici
 type UnfundedRow = { name: string; type: string; evidence_level: string | null; geography: string };
 type DirectorRow = { person_name: string; board_count: number; total_procurement: number; total_justice: number };
 type SpendRow = { recipient_name: string; total: number };
-type MinStatement = { published_at: string; minister_name: string | null; portfolio: string | null; headline: string; source_url: string; topics: string[] | null };
-type HansardRow = { sitting_date: string; speaker_name: string | null; speaker_party: string | null; subject: string | null; snippet: string; source_url: string | null };
+type MinStatement = { published_at: string; minister_name: string | null; portfolio: string | null; headline: string; source_url: string; topics: string[] | null; body_text: string | null };
+type HansardRow = { sitting_date: string; speaker_name: string | null; speaker_party: string | null; subject: string | null; snippet: string; source_url: string | null; body_text: string | null };
 type HansardPartyCount = { speaker_party: string | null; speeches: number };
 type BillRow = { bill_name: string; mentions: number; distinct_speakers: number; parties: string[] | null; last_mention: string | null; is_yj_specific: boolean };
 type OfficialBill = { source_url: string; bill_name: string; sponsor: string | null; sponsor_party: string | null; introduced_date: string | null; status: string | null; status_date: string | null; topics: string[] | null };
-type CoronerFinding = { source_url: string; title: string; deceased_identifier: string | null; finding_date: string | null; coroner_name: string | null; recommendations_count: number | null; topics: string[] | null };
+type CoronerFinding = { source_url: string; title: string; deceased_identifier: string | null; finding_date: string | null; coroner_name: string | null; recommendations_count: number | null; topics: string[] | null; body_text: string | null };
 
 async function getReport() {
   const supabase = getLiveReportSupabase();
@@ -309,12 +311,12 @@ async function getReport() {
     safe(supabase.rpc('exec_sql', { query: `SELECT person_name, board_count::int, total_procurement::bigint, total_justice::bigint FROM public.mv_person_influence WHERE board_count >= 5 AND total_justice > 0 AND (entity_types::text ILIKE '%charity%' OR entity_types::text ILIKE '%indigenous%') ORDER BY total_justice DESC NULLS LAST LIMIT 12` })) as Promise<DirectorRow[] | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT count(*)::int AS donations, SUM(amount)::bigint AS total FROM public.political_donations pd WHERE pd.donor_abn IN (SELECT recipient_abn FROM public.justice_funding WHERE state = 'QLD' AND topics @> ARRAY['youth-justice'] AND recipient_abn IS NOT NULL)` })) as Promise<Array<{ donations: number; total: number }> | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT recipient_name, SUM(amount_dollars)::bigint AS total FROM public.justice_funding WHERE state = 'QLD' AND recipient_name LIKE 'Youth Justice -%' GROUP BY 1` })) as Promise<SpendRow[] | null>,
-    safe(supabase.rpc('exec_sql', { query: `SELECT published_at::text, minister_name, portfolio, headline, source_url, topics FROM public.civic_ministerial_statements WHERE jurisdiction = 'QLD' AND (topics @> ARRAY['youth-justice'] OR headline ~* '(youth|detention|watch.?house|adult crime|bail|young offender)') AND published_at > NOW() - INTERVAL '24 months' ORDER BY published_at DESC LIMIT 12` })) as Promise<MinStatement[] | null>,
-    safe(supabase.rpc('exec_sql', { query: `SELECT sitting_date::text, speaker_name, speaker_party, subject, substring(body_text, 1, 280) AS snippet, source_url FROM public.civic_hansard WHERE jurisdiction = 'QLD' AND length(body_text) > 100 AND speaker_name IS NOT NULL AND speaker_name != 'Deputy Speaker' AND speaker_name != 'Speaker' AND speaker_name NOT ILIKE '%Hansard%' AND (body_text ~* '(youth justice|adult crime, adult time|adult time|youth detention|watchhouse|breach of bail|making queensland safer|young offender)') ORDER BY sitting_date DESC NULLS LAST LIMIT 10` })) as Promise<HansardRow[] | null>,
+    safe(supabase.rpc('exec_sql', { query: `SELECT published_at::text, minister_name, portfolio, headline, source_url, topics, body_text FROM public.civic_ministerial_statements WHERE jurisdiction = 'QLD' AND (topics @> ARRAY['youth-justice'] OR headline ~* '(youth|detention|watch.?house|adult crime|bail|young offender)') AND published_at > NOW() - INTERVAL '24 months' ORDER BY published_at DESC LIMIT 12` })) as Promise<MinStatement[] | null>,
+    safe(supabase.rpc('exec_sql', { query: `SELECT sitting_date::text, speaker_name, speaker_party, subject, substring(body_text, 1, 280) AS snippet, source_url, substring(body_text, 1, 4000) AS body_text FROM public.civic_hansard WHERE jurisdiction = 'QLD' AND length(body_text) > 100 AND speaker_name IS NOT NULL AND speaker_name != 'Deputy Speaker' AND speaker_name != 'Speaker' AND speaker_name NOT ILIKE '%Hansard%' AND (body_text ~* '(youth justice|adult crime, adult time|adult time|youth detention|watchhouse|breach of bail|making queensland safer|young offender)') ORDER BY sitting_date DESC NULLS LAST LIMIT 10` })) as Promise<HansardRow[] | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT speaker_party, COUNT(*)::int AS speeches FROM public.civic_hansard WHERE jurisdiction = 'QLD' AND length(body_text) > 100 AND speaker_party IS NOT NULL AND (body_text ~* '(youth justice|adult crime, adult time|adult time|youth detention|watchhouse|breach of bail|making queensland safer|young offender)') AND sitting_date > NOW() - INTERVAL '12 months' GROUP BY 1 ORDER BY 2 DESC` })) as Promise<HansardPartyCount[] | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT bill_name, mentions, distinct_speakers, parties::text[] AS parties, last_mention::text, is_yj_specific FROM public.v_qld_yj_bills_active ORDER BY is_yj_specific DESC, mentions DESC LIMIT 10` })) as Promise<BillRow[] | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT source_url, bill_name, sponsor, sponsor_party, introduced_date::text, status, status_date::text, topics FROM public.qld_bills WHERE is_yj_relevant = true ORDER BY status_date DESC NULLS LAST, introduced_date DESC NULLS LAST LIMIT 10` })) as Promise<OfficialBill[] | null>,
-    safe(supabase.rpc('exec_sql', { query: `SELECT source_url, title, deceased_identifier, finding_date::text, coroner_name, recommendations_count, topics FROM public.qld_coroners_findings WHERE is_youth_justice = true OR is_in_custody = true ORDER BY finding_date DESC NULLS LAST LIMIT 8` })) as Promise<CoronerFinding[] | null>,
+    safe(supabase.rpc('exec_sql', { query: `SELECT source_url, title, deceased_identifier, finding_date::text, coroner_name, recommendations_count, topics, substring(body_text, 1, 6000) AS body_text FROM public.qld_coroners_findings WHERE is_youth_justice = true OR is_in_custody = true ORDER BY finding_date DESC NULLS LAST LIMIT 8` })) as Promise<CoronerFinding[] | null>,
   ]);
 
   const detention = (spend ?? []).find(s => /detention/i.test(s.recipient_name))?.total || 0;
@@ -1366,20 +1368,61 @@ export default async function QldYjSectorPage() {
               const minister = s.minister_name?.replace(/^The Honourable /, '') ?? null;
               const portfolio = cleanPortfolio(s.portfolio);
               const date = new Date(s.published_at);
+              const summary = summarizeMinisterialStatement(s.body_text);
               return (
-                <a key={i} href={s.source_url} target="_blank" rel="noopener" className={`block border-4 ${tone.border} p-4 bg-white hover:bg-bauhaus-canvas transition-colors group`}>
-                  <div className="flex justify-between items-center mb-3 gap-2">
-                    <div className="text-[10px] font-mono font-black text-bauhaus-muted tabular-nums">{date.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: '2-digit' })}</div>
-                    <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 ${tone.tag}`}>{thrust}</span>
-                  </div>
-                  <h4 className="text-sm font-black text-bauhaus-black uppercase tracking-tight leading-tight mb-3 group-hover:underline">{s.headline}</h4>
-                  {minister && (
-                    <div className="text-[10px] font-mono text-bauhaus-muted leading-tight">
-                      <span className="font-black text-bauhaus-black">{minister}</span>
-                      {portfolio && <><br />{portfolio}</>}
+                <DetailDrawer
+                  key={i}
+                  toneClass={tone.border}
+                  title={s.headline}
+                  subtitle={`${minister ?? 'Minister'}${portfolio ? ` · ${portfolio}` : ''} · ${date.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' })} · ${thrust.toUpperCase()}`}
+                  sourceHref={s.source_url}
+                  sourceLabel="Read full statement on statements.qld.gov.au ↗"
+                  trigger={
+                    <div className={`border-4 ${tone.border} p-4 bg-white hover:bg-bauhaus-canvas transition-colors group cursor-pointer h-full`}>
+                      <div className="flex justify-between items-center mb-3 gap-2">
+                        <div className="text-[10px] font-mono font-black text-bauhaus-muted tabular-nums">{date.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: '2-digit' })}</div>
+                        <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 ${tone.tag}`}>{thrust}</span>
+                      </div>
+                      <h4 className="text-sm font-black text-bauhaus-black uppercase tracking-tight leading-tight mb-3 group-hover:underline">{s.headline}</h4>
+                      {minister && (
+                        <div className="text-[10px] font-mono text-bauhaus-muted leading-tight">
+                          <span className="font-black text-bauhaus-black">{minister}</span>
+                          {portfolio && <><br />{portfolio}</>}
+                        </div>
+                      )}
+                      <div className="text-[9px] font-black uppercase tracking-widest text-bauhaus-blue mt-3">Read summary →</div>
                     </div>
+                  }
+                >
+                  {summary.ledeBullets.length > 0 && (
+                    <DrawerSection label="Key points (lede)">
+                      <ul className="list-disc pl-5 space-y-2">
+                        {summary.ledeBullets.map((b, j) => <li key={j} className="leading-relaxed">{b}</li>)}
+                      </ul>
+                    </DrawerSection>
                   )}
-                </a>
+                  {summary.bodyExcerpt && (
+                    <DrawerSection label="Statement body">
+                      <p className="leading-relaxed">{summary.bodyExcerpt}{summary.bodyExcerpt.length >= 600 ? '…' : ''}</p>
+                    </DrawerSection>
+                  )}
+                  <DrawerKeyValue items={[
+                    { label: 'Date published', value: date.toLocaleDateString('en-AU', { dateStyle: 'long' }) },
+                    { label: 'Speaker', value: minister },
+                    { label: 'Portfolio', value: portfolio },
+                    { label: 'Direction-of-travel', value: thrust.toUpperCase() },
+                    { label: 'Source feed', value: 'statements.qld.gov.au' },
+                  ]} />
+                  {s.topics && s.topics.length > 0 && (
+                    <DrawerSection label="Tagged topics">
+                      <div className="flex flex-wrap gap-1">
+                        {s.topics.map((t, j) => (
+                          <span key={j} className="text-[10px] uppercase tracking-widest font-black bg-bauhaus-canvas text-bauhaus-black px-2 py-1 border border-bauhaus-black">{t}</span>
+                        ))}
+                      </div>
+                    </DrawerSection>
+                  )}
+                </DetailDrawer>
               );
             })}
           </div>
@@ -1455,36 +1498,70 @@ export default async function QldYjSectorPage() {
             </p>
             <div className="space-y-3">
               {r.coronerFindings.map((f, i) => {
-                // Some titles are URL-slug-derived and arrive lowercase ("findings into the death of atj").
-                // Title-case them only if the whole thing is lowercase.
                 const isAllLower = f.title === f.title.toLowerCase();
-                const title = isAllLower
-                  ? f.title.replace(/\b\w/g, c => c.toUpperCase())
-                  : f.title;
-                // The page-DOM-derived title often runs into the description fields; cut at "Coroner:" or "Description:" if present
+                const title = isAllLower ? f.title.replace(/\b\w/g, c => c.toUpperCase()) : f.title;
                 const cleanTitle = title.split(/\s+(?:Coroner|Description):/i)[0].trim();
                 const desc = title.split(/\s+(?:Coroner|Description):/i).slice(1).join(' ').trim();
+                const summary = summarizeCoronerFinding(f.body_text);
                 return (
-                <div key={f.source_url} className="border-4 border-bauhaus-red p-5 bg-white">
-                  <div className="flex flex-wrap justify-between items-baseline gap-3 mb-2">
-                    <h4 className="text-base font-black text-bauhaus-black uppercase tracking-tight leading-tight flex-1">{cleanTitle}</h4>
-                  </div>
-                  {desc && <p className="text-xs text-bauhaus-muted font-mono mb-2 italic">{desc.slice(0, 240)}{desc.length > 240 ? '…' : ''}</p>}
-                  <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs font-mono text-bauhaus-muted mb-2">
-                    {f.deceased_identifier && <span><span className="font-black text-bauhaus-black">Deceased:</span> {f.deceased_identifier}</span>}
-                    {f.coroner_name && <span><span className="font-black text-bauhaus-black">Coroner:</span> {f.coroner_name}</span>}
-                    {f.finding_date && <span><span className="font-black text-bauhaus-black">Finding date:</span> {f.finding_date}</span>}
-                    {f.recommendations_count != null && <span><span className="font-black text-bauhaus-red">{f.recommendations_count}</span> recommendations</span>}
-                  </div>
-                  {f.topics && f.topics.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-2">
-                      {f.topics.slice(0, 6).map((t, j) => (
-                        <span key={j} className="text-[9px] uppercase tracking-widest font-black text-bauhaus-muted bg-bauhaus-canvas px-2 py-0.5 border border-bauhaus-black">{t}</span>
-                      ))}
-                    </div>
-                  )}
-                  <a href={f.source_url} target="_blank" rel="noopener" className="text-bauhaus-blue text-[10px] font-mono hover:underline">QLD Coroners Court findings PDF ↗</a>
-                </div>
+                  <DetailDrawer
+                    key={f.source_url}
+                    toneClass="border-bauhaus-red"
+                    title={cleanTitle}
+                    subtitle={`${f.coroner_name ? `Coroner ${f.coroner_name} · ` : ''}${f.finding_date ?? '—'}${f.recommendations_count != null ? ` · ${f.recommendations_count} recommendations` : ''}`}
+                    sourceHref={f.source_url}
+                    sourceLabel="Open full finding PDF on coronerscourt.qld.gov.au ↗"
+                    trigger={
+                      <div className="border-4 border-bauhaus-red p-5 bg-white hover:bg-bauhaus-canvas transition-colors cursor-pointer">
+                        <div className="flex flex-wrap justify-between items-baseline gap-3 mb-2">
+                          <h4 className="text-base font-black text-bauhaus-black uppercase tracking-tight leading-tight flex-1">{cleanTitle}</h4>
+                        </div>
+                        {desc && <p className="text-xs text-bauhaus-muted font-mono mb-2 italic">{desc.slice(0, 240)}{desc.length > 240 ? '…' : ''}</p>}
+                        <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs font-mono text-bauhaus-muted mb-2">
+                          {f.deceased_identifier && <span><span className="font-black text-bauhaus-black">Deceased:</span> {f.deceased_identifier}</span>}
+                          {f.coroner_name && <span><span className="font-black text-bauhaus-black">Coroner:</span> {f.coroner_name}</span>}
+                          {f.finding_date && <span><span className="font-black text-bauhaus-black">Finding date:</span> {f.finding_date}</span>}
+                          {f.recommendations_count != null && <span><span className="font-black text-bauhaus-red">{f.recommendations_count}</span> recommendations</span>}
+                        </div>
+                        {f.topics && f.topics.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mb-2">
+                            {f.topics.slice(0, 6).map((t, j) => (
+                              <span key={j} className="text-[9px] uppercase tracking-widest font-black text-bauhaus-muted bg-bauhaus-canvas px-2 py-0.5 border border-bauhaus-black">{t}</span>
+                            ))}
+                          </div>
+                        )}
+                        <div className="text-[9px] font-black uppercase tracking-widest text-bauhaus-blue mt-2">Read summary →</div>
+                      </div>
+                    }
+                  >
+                    {desc && (
+                      <DrawerSection label="Catchwords (from coroner)">
+                        <p className="italic text-bauhaus-black leading-relaxed">{desc}</p>
+                      </DrawerSection>
+                    )}
+                    {summary.cause && (
+                      <DrawerSection label="Cause of death">
+                        <p className="leading-relaxed">{summary.cause}</p>
+                      </DrawerSection>
+                    )}
+                    {summary.catchwords && summary.catchwords !== desc && (
+                      <DrawerSection label="Additional catchwords">
+                        <p className="leading-relaxed text-bauhaus-muted text-xs">{summary.catchwords}</p>
+                      </DrawerSection>
+                    )}
+                    {summary.keyExcerpt && (
+                      <DrawerSection label="Key excerpt from finding">
+                        <p className="leading-relaxed text-xs">{summary.keyExcerpt}{summary.keyExcerpt.length >= 800 ? '…' : ''}</p>
+                      </DrawerSection>
+                    )}
+                    <DrawerKeyValue items={[
+                      { label: 'Deceased', value: f.deceased_identifier },
+                      { label: 'Coroner', value: f.coroner_name },
+                      { label: 'Finding date', value: f.finding_date },
+                      { label: 'Recommendations', value: f.recommendations_count != null ? String(f.recommendations_count) : null },
+                      { label: 'Source', value: 'QLD Coroners Court' },
+                    ]} />
+                  </DetailDrawer>
                 );
               })}
             </div>
@@ -1540,16 +1617,45 @@ export default async function QldYjSectorPage() {
                 h.speaker_party === 'KAP' ? { border: 'border-bauhaus-yellow', tag: 'bg-bauhaus-yellow text-bauhaus-black' } :
                 h.speaker_party === 'GRN' ? { border: 'border-bauhaus-black', tag: 'bg-bauhaus-black text-white' } :
                 { border: 'border-bauhaus-black', tag: 'bg-bauhaus-canvas text-bauhaus-black border border-bauhaus-black' };
+              const date = h.sitting_date ? new Date(h.sitting_date) : null;
+              const summary = summarizeHansardSpeech(h.body_text);
               return (
-                <div key={i} className={`border-4 ${partyTone.border} p-5 bg-white`}>
-                  <div className="flex justify-between items-baseline mb-2 gap-3">
-                    <div className="text-xs font-mono font-black text-bauhaus-muted">{h.sitting_date ? new Date(h.sitting_date).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</div>
-                    <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 ${partyTone.tag}`}>{h.speaker_party ?? 'Independent'}</span>
-                  </div>
-                  <h4 className="text-base font-black text-bauhaus-black uppercase tracking-tight leading-tight mb-2">{h.speaker_name ?? 'Unknown'}{h.subject ? ` · ${h.subject.slice(0, 60)}` : ''}</h4>
-                  <p className="text-xs text-bauhaus-black leading-relaxed italic mb-3">&ldquo;{h.snippet.replace(/\s+/g, ' ').trim()}…&rdquo;</p>
-                  {h.source_url && <a href={h.source_url} target="_blank" rel="noopener" className="text-bauhaus-blue text-[10px] font-mono hover:underline">parliament.qld.gov.au ↗</a>}
-                </div>
+                <DetailDrawer
+                  key={i}
+                  toneClass={partyTone.border}
+                  title={`${h.speaker_name ?? 'Unknown'}${h.subject ? ` · ${h.subject.slice(0, 60)}` : ''}`}
+                  subtitle={`${date ? date.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'} · ${h.speaker_party ?? 'Independent'} · QLD Parliament Hansard`}
+                  sourceHref={h.source_url ?? undefined}
+                  sourceLabel="Open full Hansard PDF on parliament.qld.gov.au ↗"
+                  trigger={
+                    <div className={`border-4 ${partyTone.border} p-5 bg-white hover:bg-bauhaus-canvas transition-colors cursor-pointer`}>
+                      <div className="flex justify-between items-baseline mb-2 gap-3">
+                        <div className="text-xs font-mono font-black text-bauhaus-muted">{date ? date.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</div>
+                        <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 ${partyTone.tag}`}>{h.speaker_party ?? 'Independent'}</span>
+                      </div>
+                      <h4 className="text-base font-black text-bauhaus-black uppercase tracking-tight leading-tight mb-2">{h.speaker_name ?? 'Unknown'}{h.subject ? ` · ${h.subject.slice(0, 60)}` : ''}</h4>
+                      <p className="text-xs text-bauhaus-black leading-relaxed italic mb-3">&ldquo;{h.snippet.replace(/\s+/g, ' ').trim()}…&rdquo;</p>
+                      <div className="text-[9px] font-black uppercase tracking-widest text-bauhaus-blue">Read full speech →</div>
+                    </div>
+                  }
+                >
+                  {summary.lede && (
+                    <DrawerSection label="Opening">
+                      <p className="leading-relaxed font-black">&ldquo;{summary.lede}&rdquo;</p>
+                    </DrawerSection>
+                  )}
+                  {summary.excerpt && summary.excerpt !== summary.lede && (
+                    <DrawerSection label="Speech excerpt">
+                      <p className="leading-relaxed text-xs italic">{summary.excerpt}{summary.excerpt.length >= 1200 ? '…' : ''}</p>
+                    </DrawerSection>
+                  )}
+                  <DrawerKeyValue items={[
+                    { label: 'Speaker', value: h.speaker_name },
+                    { label: 'Party', value: h.speaker_party },
+                    { label: 'Sitting date', value: date ? date.toLocaleDateString('en-AU', { dateStyle: 'long' }) : null },
+                    { label: 'Source', value: 'QLD Parliament Hansard' },
+                  ]} />
+                </DetailDrawer>
               );
             })}
           </div>
