@@ -345,7 +345,7 @@ type TopOrgRow = { recipient_name: string | null; recipient_abn: string | null; 
 type AccoGapRow = { org_type: string; orgs: number; total_funding: number; avg_per_recipient: number; funding_share_pct: number };
 type RecipientRow = { recipient_name: string; total: number; grants: number };
 type CrossSectorRow = { recipient_name: string; sectors: number; topic_list: string[]; total: number };
-type AlmaInterventionRow = { name: string; type: string; evidence_level: string | null; geography: string[]; cost_per_young_person: number | null; portfolio_score: number | null; cultural_authority: string | null };
+type AlmaInterventionRow = { name: string; type: string; evidence_level: string | null; geography: string[]; cost_per_young_person: number | null; portfolio_score: number | null; cultural_authority: string | null; description: string | null; topics: string[] | null };
 type AlmaTypeCount = { type: string; count: number };
 type ContractRow = { supplier_name: string; total: number; contracts: number };
 type FoundationRow = { name: string; total_giving_annual: number; thematic_focus: string };
@@ -361,6 +361,7 @@ type HansardRow = { sitting_date: string; speaker_name: string | null; speaker_p
 type HansardPartyCount = { speaker_party: string | null; speeches: number };
 type BillRow = { bill_name: string; mentions: number; distinct_speakers: number; parties: string[] | null; last_mention: string | null; is_yj_specific: boolean };
 type OfficialBill = { source_url: string; bill_name: string; sponsor: string | null; sponsor_party: string | null; introduced_date: string | null; status: string | null; status_date: string | null; topics: string[] | null };
+type ActiveBill = { source_url: string; bill_name: string; sponsor: string | null; sponsor_party: string | null; introduced_date: string | null; status: string | null; status_date: string | null };
 type CoronerFinding = { source_url: string; title: string; deceased_identifier: string | null; finding_date: string | null; coroner_name: string | null; recommendations_count: number | null; topics: string[] | null; body_text: string | null };
 
 async function getReport() {
@@ -371,7 +372,7 @@ async function getReport() {
     foundations, heatmap, yearSpend, dssQld, ndisOverlay,
     unfundedPrograms, mentalHealthAlma, aodAlma, mhFundingCount, directors,
     politicalDonations, spend, ministerialStatements, hansardRows, hansardPartyCounts, bills,
-    officialBills, coronerFindings,
+    officialBills, coronerFindings, activeBills,
   ] = await Promise.all([
     safe(supabase.rpc('exec_sql', { query: `SELECT source_generated_at::text, total_people, total_adults, total_children, child_first_nations, child_non_indigenous, child_0_2_days, child_3_7_days, child_over_7_days, child_longest_days, adult_first_nations, adult_non_indigenous, adult_over_7_days, adult_longest_days, child_watchhouse_count FROM public.v_qld_watchhouse_latest LIMIT 1` })) as Promise<WatchhouseLatest[] | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT watchhouse_name, age_group, total_in_custody::int, first_nations::int, custody_over_7_days::int, longest_days::int FROM public.qld_watchhouse_snapshot_rows WHERE snapshot_id = (SELECT id FROM public.v_qld_watchhouse_latest LIMIT 1) ORDER BY (CASE WHEN age_group = 'Child' THEN 0 ELSE 1 END), total_in_custody DESC LIMIT 50` })) as Promise<WatchhouseRow[] | null>,
@@ -383,7 +384,7 @@ async function getReport() {
     safe(supabase.rpc('exec_sql', { query: `SELECT recipient_name, SUM(amount_dollars)::bigint AS total, COUNT(*)::int AS grants FROM public.justice_funding WHERE state = 'QLD' AND topics @> ARRAY['youth-justice'] AND recipient_name NOT ILIKE '%total%' AND recipient_name NOT ILIKE 'department of youth justice%' AND recipient_name NOT ILIKE 'youth justice -%' AND recipient_name NOT IN ('(blank)','TAFE Queensland') AND amount_dollars > 0 GROUP BY 1 ORDER BY total DESC NULLS LAST LIMIT 15` })) as Promise<RecipientRow[] | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT recipient_name, COUNT(DISTINCT topic)::int AS sectors, ARRAY_AGG(DISTINCT topic) AS topic_list, SUM(amount_dollars)::bigint AS total FROM (SELECT recipient_name, unnest(topics) AS topic, amount_dollars FROM public.justice_funding WHERE state = 'QLD' AND amount_dollars > 0 AND recipient_name IS NOT NULL AND length(recipient_name) > 3 AND recipient_name !~ '^[0-9]+$' AND recipient_name NOT ILIKE '%Total%' AND recipient_name NOT ILIKE '%Department of%' AND recipient_name NOT ILIKE '%State of %' AND recipient_name NOT ILIKE '(blank)') t WHERE topic IN ('youth-justice','child-protection','disability','ndis','family-services','indigenous','mental-health','homelessness','aod','family-violence') GROUP BY 1 HAVING COUNT(DISTINCT topic) >= 3 ORDER BY total DESC NULLS LAST LIMIT 12` })) as Promise<CrossSectorRow[] | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT type, count::int FROM public.mv_yj_report_alma_type_counts ORDER BY count DESC LIMIT 12` })) as Promise<AlmaTypeCount[] | null>,
-    safe(supabase.rpc('exec_sql', { query: `SELECT name, type, evidence_level, geography, cost_per_young_person::int, portfolio_score::int, cultural_authority FROM public.alma_interventions WHERE ('QLD' = ANY(geography) OR 'Queensland' = ANY(geography)) AND (topics @> ARRAY['youth-justice'] OR type ILIKE '%diversion%' OR type ILIKE '%justice%' OR type ILIKE '%wraparound%' OR type ILIKE '%community-led%' OR type ILIKE '%therapeutic%') ORDER BY (CASE WHEN evidence_level ILIKE '%proven%' THEN 0 WHEN evidence_level ILIKE '%promising%' THEN 1 ELSE 2 END), portfolio_score DESC NULLS LAST LIMIT 16` })) as Promise<AlmaInterventionRow[] | null>,
+    safe(supabase.rpc('exec_sql', { query: `SELECT name, type, evidence_level, geography, cost_per_young_person::int, portfolio_score::int, cultural_authority, substring(description, 1, 1500) AS description, topics FROM public.alma_interventions WHERE ('QLD' = ANY(geography) OR 'Queensland' = ANY(geography)) AND (topics @> ARRAY['youth-justice'] OR type ILIKE '%diversion%' OR type ILIKE '%justice%' OR type ILIKE '%wraparound%' OR type ILIKE '%community-led%' OR type ILIKE '%therapeutic%') ORDER BY (CASE WHEN evidence_level ILIKE '%proven%' THEN 0 WHEN evidence_level ILIKE '%promising%' THEN 1 ELSE 2 END), portfolio_score DESC NULLS LAST LIMIT 16` })) as Promise<AlmaInterventionRow[] | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT supplier_name, COUNT(*)::int AS contracts, SUM(contract_value)::bigint AS total FROM public.austender_contracts WHERE supplier_name ILIKE ANY (ARRAY['%youth justice%','%PCYC%','%youth advocacy%','%murri watch%','%youth off the streets%','%mission australia%','%lifeline community%','%anglicare%','%uniting%','%liquidlogic%','%halikos%','%Save the Children%']) AND contract_value > 0 GROUP BY 1 ORDER BY total DESC NULLS LAST LIMIT 12` })) as Promise<ContractRow[] | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT name, total_giving_annual::bigint AS total_giving_annual, thematic_focus::text FROM public.foundations WHERE thematic_focus::text ILIKE ANY (ARRAY['%justice%','%youth%','%children%','%first nations%','%indigenous%','%disability%','%mental health%','%aboriginal%']) AND total_giving_annual > 0 AND name NOT ILIKE '%universit%' AND name NOT ILIKE '%accommodation%' AND name NOT ILIKE '%catholic education%' AND name NOT ILIKE '%hospital%' AND name NOT ILIKE '%council%' ORDER BY total_giving_annual DESC NULLS LAST LIMIT 12` })) as Promise<FoundationRow[] | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT lga_name, population::int, youth_population::int, indigenous_pct::numeric(5,1), pipeline_intensity::numeric(5,1), ndis_youth_participants::int, jh_funding_tracked::bigint, school_count::int, jobseeker_recipients::int FROM public.lga_cross_system_stats WHERE state = 'QLD' AND population > 5000 AND pipeline_intensity IS NOT NULL ORDER BY pipeline_intensity DESC NULLS LAST LIMIT 15` })) as Promise<HeatmapRow[] | null>,
@@ -403,6 +404,7 @@ async function getReport() {
     safe(supabase.rpc('exec_sql', { query: `SELECT bill_name, mentions, distinct_speakers, parties::text[] AS parties, last_mention::text, is_yj_specific FROM public.v_qld_yj_bills_active ORDER BY is_yj_specific DESC, mentions DESC LIMIT 10` })) as Promise<BillRow[] | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT source_url, bill_name, sponsor, sponsor_party, introduced_date::text, status, status_date::text, topics FROM public.qld_bills WHERE is_yj_relevant = true ORDER BY status_date DESC NULLS LAST, introduced_date DESC NULLS LAST LIMIT 10` })) as Promise<OfficialBill[] | null>,
     safe(supabase.rpc('exec_sql', { query: `SELECT source_url, title, deceased_identifier, finding_date::text, coroner_name, recommendations_count, topics, substring(body_text, 1, 6000) AS body_text FROM public.qld_coroners_findings WHERE is_youth_justice = true OR is_in_custody = true ORDER BY finding_date DESC NULLS LAST LIMIT 8` })) as Promise<CoronerFinding[] | null>,
+    safe(supabase.rpc('exec_sql', { query: `SELECT source_url, bill_name, sponsor, sponsor_party, introduced_date::text, status, status_date::text FROM public.parliament_bills WHERE jurisdiction = 'QLD' AND status NOT ILIKE '%PASSED%' AND status NOT ILIKE '%defeated%' AND status NOT ILIKE '%lapsed%' AND status NOT ILIKE '%withdrawn%' AND introduced_date IS NOT NULL ORDER BY introduced_date DESC NULLS LAST LIMIT 6` })) as Promise<ActiveBill[] | null>,
   ]);
 
   const detention = (spend ?? []).find(s => /detention/i.test(s.recipient_name))?.total || 0;
@@ -440,6 +442,7 @@ async function getReport() {
     bills: bills ?? [],
     officialBills: officialBills ?? [],
     coronerFindings: coronerFindings ?? [],
+    activeBills: activeBills ?? [],
   };
 }
 
@@ -1230,18 +1233,53 @@ export default async function QldYjSectorPage() {
         <div className="grid sm:grid-cols-2 gap-3">
           {r.almaInterventions.map((a, i) => {
             const ev = (a.evidence_level || '').toLowerCase();
-            const tone = ev.includes('proven') ? 'border-bauhaus-blue bg-bauhaus-blue/5' : ev.includes('promising') ? 'border-bauhaus-yellow bg-bauhaus-yellow/5' : 'border-bauhaus-black bg-white';
+            const tone = ev.includes('proven') ? 'border-bauhaus-blue' : ev.includes('promising') ? 'border-bauhaus-yellow' : 'border-bauhaus-black';
             return (
-              <div key={i} className={`border-4 ${tone} p-4`}>
-                <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-yellow mb-1">{a.type}</div>
-                <div className="font-black text-bauhaus-black uppercase tracking-tight text-sm leading-tight mb-2">{a.name}</div>
-                <div className="text-[10px] text-bauhaus-muted font-mono leading-relaxed space-y-0.5">
-                  {a.evidence_level && <div>{a.evidence_level}</div>}
-                  {a.cultural_authority && <div>Cultural authority: {a.cultural_authority}</div>}
-                  {Array.isArray(a.geography) && a.geography.length > 0 && <div>Geography: {a.geography.slice(0, 4).join(' · ')}</div>}
-                  {a.cost_per_young_person ? <div>~{money(a.cost_per_young_person)}/young person</div> : null}
-                </div>
-              </div>
+              <DetailDrawer
+                key={i}
+                toneClass={tone}
+                title={a.name}
+                subtitle={`${a.type}${a.evidence_level ? ` · ${a.evidence_level}` : ''}${a.cost_per_young_person ? ` · ~${money(a.cost_per_young_person)}/young person` : ''}`}
+                trigger={
+                  <div className={`border-4 ${tone} p-4 bg-white hover:bg-bauhaus-canvas transition-colors cursor-pointer h-full`}>
+                    <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-yellow mb-1">{a.type}</div>
+                    <div className="font-black text-bauhaus-black uppercase tracking-tight text-sm leading-tight mb-2">{a.name}</div>
+                    <div className="text-[10px] text-bauhaus-muted font-mono leading-relaxed space-y-0.5">
+                      {a.evidence_level && <div>{a.evidence_level}</div>}
+                      {a.cultural_authority && <div>Cultural authority: {a.cultural_authority}</div>}
+                      {Array.isArray(a.geography) && a.geography.length > 0 && <div>Geography: {a.geography.slice(0, 4).join(' · ')}</div>}
+                      {a.cost_per_young_person ? <div>~{money(a.cost_per_young_person)}/young person</div> : null}
+                    </div>
+                    <div className="text-[9px] font-black uppercase tracking-widest text-bauhaus-blue mt-2">Read program detail →</div>
+                  </div>
+                }
+              >
+                {a.description && (
+                  <DrawerSection label="What this program does">
+                    <p className="leading-relaxed">{a.description.replace(/\[\d+\]/g, '').trim()}</p>
+                  </DrawerSection>
+                )}
+                <DrawerKeyValue items={[
+                  { label: 'Intervention type', value: a.type },
+                  { label: 'Evidence level', value: a.evidence_level },
+                  { label: 'Cultural authority', value: a.cultural_authority },
+                  { label: 'Geography', value: Array.isArray(a.geography) ? a.geography.slice(0, 4).join(' · ') : null },
+                  { label: 'Cost per young person', value: a.cost_per_young_person ? `${money(a.cost_per_young_person)}` : null },
+                  { label: 'Portfolio score', value: a.portfolio_score != null ? a.portfolio_score.toFixed(2) : null },
+                ]} />
+                {a.topics && a.topics.length > 0 && (
+                  <DrawerSection label="Topic tags">
+                    <div className="flex flex-wrap gap-1">
+                      {a.topics.map((t, j) => (
+                        <span key={j} className="text-[10px] uppercase tracking-widest font-black bg-bauhaus-canvas text-bauhaus-black px-2 py-1 border border-bauhaus-black">{t}</span>
+                      ))}
+                    </div>
+                  </DrawerSection>
+                )}
+                <DrawerSection label="Methodology note">
+                  <p className="text-xs text-bauhaus-muted leading-relaxed">Evidence level is self-attributed by ALMA submitters at registration time, not independently graded by CivicGraph. &ldquo;Proven&rdquo; / &ldquo;Effective&rdquo; / &ldquo;Promising&rdquo; reflects the program&apos;s own claim about its evaluation status. The Australian Living Map of Alternatives is a civil-society register hosted at <a href="https://justicereinvestment.net.au" target="_blank" rel="noopener" className="text-bauhaus-blue font-black hover:underline">justicereinvestment.net.au</a>.</p>
+                </DrawerSection>
+              </DetailDrawer>
             );
           })}
         </div>
@@ -1750,12 +1788,47 @@ export default async function QldYjSectorPage() {
         <p className="text-xs text-bauhaus-muted font-mono mt-4">Source: <code>civic_hansard</code> table populated by <code>scrape-qld-hansard</code> agent. {fmt(r.hansardRows.length)} most-recent youth-justice mentions shown; party-bar covers the last 12 months. Speaker-name parsing is best-effort from PDF text and may render as surnames only.</p>
       </section>
 
+      {/* §24.6 — WHAT'S COMING NEXT (active bills) */}
+      {r.activeBills.length > 0 && (
+        <section className="mb-16">
+          <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§24.6 · WHAT&apos;S COMING NEXT</div>
+          <h3 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">Currently before QLD Parliament</h3>
+          <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
+            QLD bills introduced but not yet passed (or defeated / lapsed / withdrawn). Read for what&apos;s about to land before it makes it into §24.7&apos;s passed-legislation list. Includes adjacent legislation (criminal code, sentencing, dwelling-defence, etc.) that surfaces in YJ debate.
+          </p>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {r.activeBills.map((b, i) => {
+              const partyTone =
+                b.sponsor_party === 'LNP' ? 'border-bauhaus-blue' :
+                b.sponsor_party === 'ALP' ? 'border-bauhaus-red' :
+                b.sponsor_party === 'KAP' ? 'border-bauhaus-yellow' :
+                b.sponsor_party === 'GRN' ? 'border-bauhaus-black' :
+                'border-bauhaus-black';
+              return (
+                <a key={b.source_url} href={b.source_url} target="_blank" rel="noopener" className={`block border-4 ${partyTone} p-4 bg-white hover:bg-bauhaus-canvas transition-colors group`}>
+                  <div className="flex justify-between items-baseline mb-2 gap-2">
+                    <div className="text-[10px] font-mono font-black text-bauhaus-muted">{b.introduced_date ?? '—'}</div>
+                    <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 bg-bauhaus-canvas border border-bauhaus-black">{b.sponsor_party ?? '—'}</span>
+                  </div>
+                  <h4 className="text-sm font-black text-bauhaus-black uppercase tracking-tight leading-tight mb-2 group-hover:underline">{b.bill_name}</h4>
+                  <div className="text-[10px] font-mono text-bauhaus-muted leading-tight">
+                    {b.sponsor && <div className="font-black text-bauhaus-black">{b.sponsor}</div>}
+                    {b.status && <div>{b.status}{b.status_date ? ` · ${b.status_date}` : ''}</div>}
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+          <p className="text-[10px] text-bauhaus-muted font-mono mt-4">Source: <code>parliament_bills</code> WHERE status not in (PASSED, defeated, lapsed, withdrawn). Track here for early signal of what&apos;s about to be debated. Click through for Bill text + Explanatory Note + Statement of Compatibility.</p>
+        </section>
+      )}
+
       {/* §24.7 — BILLS IN ACTIVE DEBATE — OFFICIAL REGISTER */}
       <section className="mb-16">
-        <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§24.7 · LIVE QLD BILLS REGISTER</div>
-        <h3 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">YJ-relevant bills · official QLD Parliament register</h3>
+        <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§24.7 · LIVE QLD BILLS REGISTER · PASSED LEGISLATION</div>
+        <h3 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">YJ-relevant bills · already-passed</h3>
         <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
-          From the official QLD Parliament Bills register at <code className="font-mono text-xs">parliament.qld.gov.au/Work-of-the-Assembly/Bills-and-Legislation</code>, scraped via Playwright. Each bill links directly to the source documents (Bill text, Explanatory Note, Statement of Compatibility). Sponsor party inferred from name; verify against parliamentary record before quoting.
+          Bills passed (or with amendment) since 2024, scraped via Playwright from the official QLD Parliament register. Each card opens to a curated drawer with key amendments + opposition voices + capital backing + outcome proxies. Read alongside §24.6 (active) for the full pipeline.
         </p>
 
         {r.officialBills.length > 0 ? (
@@ -1974,6 +2047,40 @@ export default async function QldYjSectorPage() {
             </div>
             <div className="mt-4 pt-3 border-t-2 border-bauhaus-black text-[11px] font-medium text-bauhaus-black leading-relaxed">
               <span className="font-black uppercase tracking-widest text-bauhaus-red">Chain status:</span> Promise made → bill passed (bundled) → institutional architecture removed → <span className="font-black text-bauhaus-red">no replacement</span>. The truth-telling and treaty-process framework that explicitly addressed YJ over-representation has been removed; the structural conditions it was designed to address are unchanged in the data.
+            </div>
+          </div>
+
+          {/* CHAIN 5 — TOWNSVILLE STEP UP STEP DOWN (preventive promise) */}
+          <div className="border-4 border-bauhaus-blue p-6 bg-white">
+            <div className="text-xs font-black uppercase tracking-widest text-bauhaus-blue mb-3">Chain 5 · &ldquo;New Townsville Youth Step Up Step Down facility&rdquo; (preventive)</div>
+            <div className="grid md:grid-cols-4 gap-4 text-xs">
+              <div className="border-r-2 border-bauhaus-canvas md:pr-4">
+                <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-yellow mb-1">PROMISE</div>
+                <p className="font-black text-bauhaus-black leading-tight mb-1">&ldquo;New Townsville Youth Step Up Step Down facility site confirmed&rdquo;</p>
+                <p className="text-[10px] font-mono text-bauhaus-muted">Tim Nicholls (Min. Health) · 4 Feb 2026 · <a href="#vol-7" className="text-bauhaus-blue hover:underline">§23</a></p>
+              </div>
+              <div className="border-r-2 border-bauhaus-canvas md:pr-4">
+                <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue mb-1">FUNDING SOURCE</div>
+                <p className="font-black text-bauhaus-black leading-tight mb-1">Mental health levy revenue (election commitment)</p>
+                <p className="text-[10px] font-mono text-bauhaus-muted">Levy hypothecated to youth mental health services. No specific bill — administrative + capital appropriation.</p>
+              </div>
+              <div className="border-r-2 border-bauhaus-canvas md:pr-4">
+                <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-black mb-1">DELIVERED BY</div>
+                <p className="font-black text-bauhaus-black leading-tight mb-1">QLD Department of Health</p>
+                <p className="text-[10px] font-mono text-bauhaus-muted">Step Up Step Down model: short-stay residential mental-health beds, intermediate between community and inpatient. Townsville site selected; build timeline tbd.</p>
+              </div>
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-red mb-1">OUTCOMES</div>
+                <ul className="text-[10px] text-bauhaus-black leading-relaxed space-y-1">
+                  <li>· Site confirmed; not yet operational</li>
+                  <li>· QLD justice grants tagged mental-health/AOD: <span className="font-black text-bauhaus-red">{r.mhFundingCount}</span></li>
+                  <li>· Cleveland (Townsville) detention occupancy: 76–92% — pre-existing demand</li>
+                  <li>· Read against §6 mental-health blind spot for whether the system funds-what-it-names</li>
+                </ul>
+              </div>
+            </div>
+            <div className="mt-4 pt-3 border-t-2 border-bauhaus-black text-[11px] font-medium text-bauhaus-black leading-relaxed">
+              <span className="font-black uppercase tracking-widest text-bauhaus-blue">Chain status:</span> The most-tangible preventive announcement of the past 12 months. Funded through the mental-health levy (not the YJ budget line). <span className="font-black">Builds the kind of community capacity §6 + §16 says is missing</span> — but at one site, against state-wide demand patterns. Useful proof-of-concept; insufficient at scale relative to capital direction in §2 ($1B+ to detention beds). Whether it generalises is the test.
             </div>
           </div>
 
