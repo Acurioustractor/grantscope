@@ -417,16 +417,36 @@ export default async function QldYjSectorPage() {
         </p>
       </div>
 
+      {/* STICKY VOLUME NAV */}
+      <nav aria-label="Volumes" className="sticky top-0 z-30 -mx-2 sm:-mx-4 px-2 sm:px-4 py-2 mb-6 bg-bauhaus-canvas border-b-4 border-bauhaus-black overflow-x-auto">
+        <ol className="flex flex-nowrap items-center gap-1 text-[10px] font-black uppercase tracking-widest whitespace-nowrap">
+          {[
+            { id: 'vol-1', label: 'V1 · State', tone: 'border-bauhaus-red' },
+            { id: 'vol-2', label: 'V2 · Funnel', tone: 'border-bauhaus-yellow' },
+            { id: 'vol-3', label: 'V3 · Money', tone: 'border-bauhaus-blue' },
+            { id: 'vol-4', label: 'V4 · Network', tone: 'border-bauhaus-black' },
+            { id: 'vol-5', label: 'V5 · Evidence', tone: 'border-bauhaus-blue' },
+            { id: 'vol-6', label: 'V6 · Place', tone: 'border-bauhaus-yellow' },
+            { id: 'vol-7', label: 'V7 · Policy + Live', tone: 'border-bauhaus-red' },
+          ].map(v => (
+            <li key={v.id}>
+              <a href={`#${v.id}`} className={`inline-block px-3 py-2 border-2 ${v.tone} bg-white text-bauhaus-black hover:bg-bauhaus-yellow`}>{v.label}</a>
+            </li>
+          ))}
+        </ol>
+      </nav>
+
       {/* HEADLINE STATS BAR */}
-      <section className="mb-12 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+      <section className="mb-12 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 xl:grid-cols-8 gap-3">
         {[
           { label: 'Children in custody now', value: ws ? String(ws.total_children) : '—', tone: 'red' },
           { label: 'First Nations %', value: `${fnPctChild}%`, tone: 'red' },
           { label: 'Detention $ (cum.)', value: money(r.detention), tone: 'red' },
           { label: 'Community $', value: money(r.community), tone: 'blue' },
           { label: 'ACCO share', value: `${accoSharePct}%`, tone: 'red' },
+          { label: 'YJ bills tracked', value: fmt(r.officialBills.length), tone: 'red' },
+          { label: 'Coronial findings', value: fmt(r.coronerFindings.length), tone: 'red' },
           { label: 'ALMA programs', value: fmt(totalIntervTypes), tone: 'black' },
-          { label: 'LGA hotspots', value: fmt(r.heatmap.length), tone: 'black' },
         ].map((s, i) => (
           <div key={i} className="border-4 border-bauhaus-black p-3 bg-white">
             <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">{s.label}</div>
@@ -436,7 +456,7 @@ export default async function QldYjSectorPage() {
       </section>
 
       {/* ════ VOLUME 1 — THE STATE TODAY ════ */}
-      <div className="mb-10 mt-16 border-l-8 border-bauhaus-red pl-5">
+      <div id="vol-1" className="mb-10 mt-16 border-l-8 border-bauhaus-red pl-5 scroll-mt-24">
         <div className="text-xs font-black uppercase tracking-widest text-bauhaus-red">VOLUME 1</div>
         <h2 className="text-3xl font-black text-bauhaus-black uppercase tracking-tight">The State Today</h2>
         <p className="text-bauhaus-muted font-medium max-w-3xl">Live data from the police-custody publication, audited spend lines, and First Nations over-representation trends.</p>
@@ -638,7 +658,7 @@ export default async function QldYjSectorPage() {
       </section>
 
       {/* ════ VOLUME 2 — THE FUNNEL ════ */}
-      <div className="mb-10 mt-16 border-l-8 border-bauhaus-yellow pl-5">
+      <div id="vol-2" className="mb-10 mt-16 border-l-8 border-bauhaus-yellow pl-5 scroll-mt-24">
         <div className="text-xs font-black uppercase tracking-widest text-bauhaus-yellow">VOLUME 2</div>
         <h2 className="text-3xl font-black text-bauhaus-black uppercase tracking-tight">The Funnel</h2>
         <p className="text-bauhaus-muted font-medium max-w-3xl">Cross-linked pathways: child protection, disability, mental health, addiction, and education disengagement that funnel children into the youth-justice system.</p>
@@ -773,7 +793,7 @@ export default async function QldYjSectorPage() {
       </section>
 
       {/* ════ VOLUME 3 — THE MONEY ════ */}
-      <div className="mb-10 mt-16 border-l-8 border-bauhaus-blue pl-5">
+      <div id="vol-3" className="mb-10 mt-16 border-l-8 border-bauhaus-blue pl-5 scroll-mt-24">
         <div className="text-xs font-black uppercase tracking-widest text-bauhaus-blue">VOLUME 3</div>
         <h2 className="text-3xl font-black text-bauhaus-black uppercase tracking-tight">The Money</h2>
         <p className="text-bauhaus-muted font-medium max-w-3xl">Where the dollars actually go: detention vs community, top recipients, the ACCO funding gap, the foundation landscape, federal procurement.</p>
@@ -949,7 +969,7 @@ export default async function QldYjSectorPage() {
       </section>
 
       {/* ════ VOLUME 4 — THE NETWORK ════ */}
-      <div className="mb-10 mt-16 border-l-8 border-bauhaus-black pl-5">
+      <div id="vol-4" className="mb-10 mt-16 border-l-8 border-bauhaus-black pl-5 scroll-mt-24">
         <div className="text-xs font-black uppercase tracking-widest text-bauhaus-black">VOLUME 4</div>
         <h2 className="text-3xl font-black text-bauhaus-black uppercase tracking-tight">The Network</h2>
         <p className="text-bauhaus-muted font-medium max-w-3xl">Multi-system providers, director board interlocks, political donations from contractors. Who&apos;s connected to whom — and what that does to accountability.</p>
@@ -1059,7 +1079,7 @@ export default async function QldYjSectorPage() {
       </section>
 
       {/* ════ VOLUME 5 — THE EVIDENCE ════ */}
-      <div className="mb-10 mt-16 border-l-8 border-bauhaus-blue pl-5">
+      <div id="vol-5" className="mb-10 mt-16 border-l-8 border-bauhaus-blue pl-5 scroll-mt-24">
         <div className="text-xs font-black uppercase tracking-widest text-bauhaus-blue">VOLUME 5</div>
         <h2 className="text-3xl font-black text-bauhaus-black uppercase tracking-tight">The Evidence</h2>
         <p className="text-bauhaus-muted font-medium max-w-3xl">What works, what&apos;s funded, what&apos;s not. The Australian Living Map of Alternatives (ALMA) catalogues evaluated programs; we cross-reference them against funding flows.</p>
@@ -1162,7 +1182,7 @@ export default async function QldYjSectorPage() {
       </section>
 
       {/* ════ VOLUME 6 — THE PLACE ════ */}
-      <div className="mb-10 mt-16 border-l-8 border-bauhaus-yellow pl-5">
+      <div id="vol-6" className="mb-10 mt-16 border-l-8 border-bauhaus-yellow pl-5 scroll-mt-24">
         <div className="text-xs font-black uppercase tracking-widest text-bauhaus-yellow">VOLUME 6</div>
         <h2 className="text-3xl font-black text-bauhaus-black uppercase tracking-tight">The Place</h2>
         <p className="text-bauhaus-muted font-medium max-w-3xl">Geography matters. The system fails specific places repeatedly: Townsville, Logan, Mount Isa, Cherbourg. The hotspots aren&apos;t random.</p>
@@ -1266,7 +1286,7 @@ export default async function QldYjSectorPage() {
       {/* §22 CTG TARGET 11 — covered in §3 — this is the closing prescriptive block instead */}
 
       {/* ════ VOLUME 7 — POLICY & CAPACITY SIGNALS ════ */}
-      <div className="mb-10 mt-16 border-l-8 border-bauhaus-red pl-5">
+      <div id="vol-7" className="mb-10 mt-16 border-l-8 border-bauhaus-red pl-5 scroll-mt-24">
         <div className="text-xs font-black uppercase tracking-widest text-bauhaus-red">VOLUME 7</div>
         <h2 className="text-3xl font-black text-bauhaus-black uppercase tracking-tight">Policy &amp; capacity signals</h2>
         <p className="text-bauhaus-muted font-medium max-w-3xl">Live QLD ministerial statements scraped daily from <code className="font-mono text-xs">statements.qld.gov.au</code>, filtered to youth-justice keywords and tagged by direction-of-travel.</p>
@@ -1593,9 +1613,9 @@ export default async function QldYjSectorPage() {
 
       {/* WHAT WOULD SHIFT THIS */}
       <section className="border-4 border-bauhaus-black p-8 bg-white mt-16 mb-10">
-        <div className="text-xs font-black uppercase tracking-widest text-bauhaus-yellow mb-2">CLOSING — Three structural moves</div>
+        <div className="text-xs font-black uppercase tracking-widest text-bauhaus-yellow mb-2">CLOSING — Four structural moves</div>
         <h2 className="text-3xl font-black text-bauhaus-black uppercase tracking-tight mb-5">What would shift this</h2>
-        <div className="grid md:grid-cols-3 gap-5 text-sm font-medium leading-relaxed text-bauhaus-black">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5 text-sm font-medium leading-relaxed text-bauhaus-black">
           <div>
             <div className="text-xs font-black uppercase tracking-widest text-bauhaus-red mb-2">1. Reallocate $200M from detention to community</div>
             <p>A $200M reallocation is roughly a {r.community > 0 ? Math.round((200_000_000 / r.community) * 100) : '—'}% expansion of the {money(r.community)} community-services line — enough to scale-up the most-promising ALMA interventions across the regional QLD network. Detention costs more per child than every alternative.</p>
@@ -1607,6 +1627,10 @@ export default async function QldYjSectorPage() {
           <div>
             <div className="text-xs font-black uppercase tracking-widest text-bauhaus-red mb-2">3. Resource evaluation alongside delivery</div>
             <p>The reason most ALMA interventions sit at &quot;promising&quot; rather than &quot;proven&quot; isn&apos;t that programs don&apos;t work — it&apos;s that programs are funded to deliver, not to be evaluated. A small percentage of every grant going to monitoring closes the evidence gap within a budget cycle.</p>
+          </div>
+          <div>
+            <div className="text-xs font-black uppercase tracking-widest text-bauhaus-red mb-2">4. Stop overriding the QLD Human Rights Act</div>
+            <p>QLD has overridden its own HR Act <span className="font-black">twice</span> in 18 months to expand custody powers over children (<a href="#vol-7" className="text-bauhaus-blue font-black hover:underline">§23.1</a>). Each Act passed under the current Government has expanded custody, none community capacity. Reversing that legislative direction is the precondition for moves 1–3 to land.</p>
           </div>
         </div>
       </section>
@@ -1621,7 +1645,7 @@ export default async function QldYjSectorPage() {
             <ul className="space-y-2">
               <li><span className="font-black">{accoSharePct}% of dollars for ~70% of in-custody children.</span> Frame your grants against this denominator. ACCOs deliver better outcomes; they don&apos;t get the dollars.</li>
               <li><span className="font-black">Evidence-vs-spend gap is real and quantifiable.</span> {money(r.groupConferencing)} group conferencing — the most-evidence-backed early intervention in the budget — versus {money(r.detention)} for detention services.</li>
-              <li><span className="font-black">Foundation giving is adjacent, not anchored.</span> See §11 — billions in adjacent giving from Paul Ramsay / Minderoo / BHP / Smith Family. None anchored to QLD YJ specifically.</li>
+              <li><span className="font-black">$3B+ committed to detention capacity expansion</span> (<a href="#vol-1" className="text-bauhaus-blue font-black hover:underline">§2</a>: Wacol $250M+ ops $150M; Woodford up to $627.61M; Cairns TBD). Foundation giving is adjacent, not anchored — see <a href="#vol-3" className="text-bauhaus-blue font-black hover:underline">§11</a>.</li>
             </ul>
           </div>
           <div>
@@ -1635,9 +1659,9 @@ export default async function QldYjSectorPage() {
           <div>
             <div className="text-xs font-black uppercase tracking-widest text-bauhaus-yellow mb-2">If you&apos;re a journalist</div>
             <ul className="space-y-2">
-              <li><span className="font-black">The watchhouse data refreshes every 12 hours</span> — pair it with the day&apos;s political news for live context.</li>
-              <li><span className="font-black">{r.mhFundingCount} QLD justice grants tagged mental-health or AOD.</span> The data gap is the policy gap. The system doesn&apos;t fund what it doesn&apos;t name.</li>
-              <li><span className="font-black">Director networks in §14</span> connect QLD YJ orgs to national NGO boards, to advocacy peaks, to government advisory committees. The shadow network is small.</li>
+              <li><span className="font-black">Live coronial findings ({fmt(r.coronerFindings.length)} in-custody / YJ-flagged in <a href="#vol-7" className="text-bauhaus-blue hover:underline">§24</a>).</span> Pilkington 27 recommendations · Schafer prison-murder · Valera family-violence/suicide. PDFs link direct to the QLD Coroners Court source.</li>
+              <li><span className="font-black">{fmt(r.officialBills.length)} live YJ bills tracked from parliament.qld.gov.au</span> with sponsor + party + status (<a href="#vol-7" className="text-bauhaus-blue hover:underline">§24.7</a>). Pair with the watchhouse refresh and the live ministerial-statement feed for any contemporary story.</li>
+              <li><span className="font-black">Director networks in <a href="#vol-4" className="text-bauhaus-blue hover:underline">§14</a></span> connect QLD YJ orgs to national NGO boards, advocacy peaks, and government advisory committees. The shadow network is small.</li>
             </ul>
           </div>
           <div>
