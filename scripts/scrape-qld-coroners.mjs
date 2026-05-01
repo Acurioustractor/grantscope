@@ -2,24 +2,24 @@
 /**
  * scrape-qld-coroners.mjs
  *
- * Scrapes the QLD Coroners Court "findings" search page and inserts youth-
- * justice-relevant inquest findings into qld_coroners_findings.
+ * Scrapes the QLD Coroners Court "Search findings" page via Playwright
+ * (the page is JS-rendered) and inserts youth-justice-relevant inquest
+ * findings into qld_coroners_findings.
  *
  * Source: https://www.coronerscourt.qld.gov.au/findings-upcoming-inquests/search-findings
  *
- * STATUS: SKELETON — the QLD Coroners Court search page is single-page-app
- * (JavaScript-rendered), so Jina + plain fetch returns "0 results" before
- * the search component hydrates. To work, this scraper needs a Playwright
- * step that performs the search (or the site's underlying search-API URL).
- * The schema, dedup, classifier, and metadata extraction below are all
- * usable — the only missing piece is the listing fetcher. See TODO below.
- *
- * Filtering: a finding is flagged is_youth_justice=true if it mentions
- *   detention / watchhouse / police custody / under-18 / youth justice /
- *   the named QLD detention centres / Brisbane City Watchhouse / etc.
+ * Strategy:
+ *   1. Headless Chromium loads the search page; the search results hydrate
+ *      via JS after networkidle.
+ *   2. Click the "Next" pagination control until exhausted (~10 pages
+ *      observed; ~10 findings per page).
+ *   3. For each finding, capture the PDF URL + parent-card text block.
+ *   4. Optional: fetch each PDF via Jina Reader for body extraction +
+ *      metadata regex.
+ *   5. Classify by youth-justice keywords; insert with dedupe.
  *
  * Usage:
- *   node --env-file=.env scripts/scrape-qld-coroners.mjs [--limit=10] [--dry-run]
+ *   node --env-file=.env scripts/scrape-qld-coroners.mjs [--limit=20] [--dry-run] [--no-pdf]
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -33,7 +33,8 @@ const JINA_PREFIX = 'https://r.jina.ai/';
 
 const db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 const DRY_RUN = process.argv.includes('--dry-run');
-const LIMIT = parseInt(process.argv.find(a => a.startsWith('--limit='))?.split('=')[1] || '20');
+const NO_PDF = process.argv.includes('--no-pdf');
+const LIMIT = parseInt(process.argv.find(a => a.startsWith('--limit='))?.split('=')[1] || '40');
 
 const YJ_KEYWORDS = [
   'youth justice', 'youth detention', 'detention centre', 'detention center',
@@ -41,7 +42,6 @@ const YJ_KEYWORDS = [
   'cleveland youth', 'brisbane youth detention', 'west moreton youth',
   'wacol youth remand', 'woodford youth', 'cairns youth detention',
   'juvenile', 'aged 17', 'aged 16', 'aged 15', 'aged 14', 'aged 13', 'aged 12',
-  'school student', 'youth', 'aboriginal child', 'indigenous child',
 ];
 
 const CUSTODY_KEYWORDS = [
@@ -52,62 +52,26 @@ const CUSTODY_KEYWORDS = [
 function log(m) { console.log(`[${new Date().toISOString().slice(11, 19)}] ${m}`); }
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
-// ── Phase 1: fetch the search/listing page via Jina (clean markdown) ───
-
-async function fetchListing() {
-  const url = `${JINA_PREFIX}${SEARCH_URL}`;
-  log(`Fetching findings listing via Jina...`);
-  const res = await fetch(url, {
-    headers: { 'Accept': 'text/plain', 'User-Agent': 'CivicGraph/1.0 (research; civicgraph.au)' },
-  });
-  if (!res.ok) {
-    log(`  Listing returned ${res.status}`);
-    return [];
-  }
-  const md = await res.text();
-
-  // Extract finding entries — Jina gives us markdown links like
-  // [Inquest into the death of XYZ](https://www.coronerscourt.qld.gov.au/__data/assets/pdf_file/.../filename.pdf)
-  const linkRegex = /\[([^\]]+?(?:death of|Inquest into|Inquest finding)[^\]]+?)\]\((https:\/\/[^)]+\.pdf)\)/gi;
-  const findings = [];
-  const seen = new Set();
-  let m;
-  while ((m = linkRegex.exec(md)) !== null) {
-    const title = m[1].replace(/\s+/g, ' ').trim();
-    const url = m[2];
-    const sourceId = url.split('/').pop().replace(/\.pdf$/i, '');
-    if (seen.has(sourceId)) continue;
-    seen.add(sourceId);
-    findings.push({ source_id: sourceId, source_url: url, title });
-  }
-  log(`  Found ${findings.length} findings on listing page`);
-  return findings.slice(0, LIMIT);
-}
-
-// ── Phase 2: classify each finding by YJ-relevance from title ──────────
-
-function classifyFinding(title) {
-  const t = title.toLowerCase();
+function classifyFinding(title, bodySnippet = '') {
+  const t = (title + ' ' + bodySnippet).toLowerCase();
   const matched = YJ_KEYWORDS.filter(k => t.includes(k));
-  const isYJ = matched.length > 0;
-  const isInCustody = CUSTODY_KEYWORDS.some(k => t.includes(k));
-  return { isYJ, isInCustody, matched };
+  return {
+    isYJ: matched.length > 0,
+    isInCustody: CUSTODY_KEYWORDS.some(k => t.includes(k)),
+    matched,
+  };
 }
 
-// ── Phase 3: extract minimal metadata from PDF via Jina ────────────────
-
-async function fetchFindingDetail(sourceUrl) {
-  // Jina can extract text from PDFs too
+async function fetchPdfText(sourceUrl) {
+  if (NO_PDF) return null;
   const jinaUrl = `${JINA_PREFIX}${sourceUrl}`;
   try {
     const res = await fetch(jinaUrl, {
       headers: { 'Accept': 'text/plain', 'User-Agent': 'CivicGraph/1.0' },
     });
     if (!res.ok) return null;
-    const text = await res.text();
-    return text.slice(0, 10000); // first 10K chars; enough for headline + circumstances
-  } catch (e) {
-    log(`  Failed to fetch detail: ${e.message}`);
+    return (await res.text()).slice(0, 12000);
+  } catch {
     return null;
   }
 }
@@ -123,62 +87,120 @@ function extractMetadata(bodyText, title) {
     cause_of_death_summary: null,
     recommendations_count: null,
   };
-  if (!bodyText) return meta;
 
-  // Deceased identifier — usually appears as "death of [Name]" in title or first paragraph
-  const deceasedMatch = title.match(/death of ([A-Z][A-Z\s.,'-]+(?:[A-Z]\.|jr\.|sr\.)?)/i)
-    || bodyText.match(/INQUEST INTO THE DEATH OF\s+([A-Z][A-Z\s.,'-]+)\s/);
+  // Pull deceased identifier from title pattern "death of NAME" or "deaths of A and B"
+  const deceasedMatch = title.match(/death(?:s)? of ([A-Z][^,(]{2,80}?)(?:\s*\(|$|\s+\d)/i);
   if (deceasedMatch) meta.deceased_identifier = deceasedMatch[1].trim().slice(0, 200);
 
-  // Age
+  if (!bodyText) return meta;
+
   const ageMatch = bodyText.match(/aged\s+(\d{1,3})/i);
   if (ageMatch) meta.age_at_death = parseInt(ageMatch[1], 10);
 
-  // Date of death
-  const dodMatch = bodyText.match(/died on\s+(\d{1,2}\s+\w+\s+\d{4})/i)
-    || bodyText.match(/death.*?on\s+(\d{1,2}\s+\w+\s+\d{4})/i);
+  const dodMatch = bodyText.match(/(?:died on|died|date of death)\s+(?:on\s+)?(\d{1,2}\s+\w+\s+\d{4})/i);
   if (dodMatch) {
     const d = new Date(dodMatch[1]);
     if (!isNaN(d.getTime())) meta.date_of_death = d.toISOString().slice(0, 10);
   }
 
-  // Finding/inquest date — often "Findings delivered on" or "Date of findings"
-  const fdMatch = bodyText.match(/(?:findings? delivered|date of findings|delivered on)\s*[:\-]?\s*(\d{1,2}\s+\w+\s+\d{4})/i);
+  const fdMatch = bodyText.match(/(?:findings? delivered|date of findings|delivered on)[:\s-]*(\d{1,2}\s+\w+\s+\d{4})/i);
   if (fdMatch) {
     const d = new Date(fdMatch[1]);
     if (!isNaN(d.getTime())) meta.finding_date = d.toISOString().slice(0, 10);
   }
 
-  // Coroner
-  const corMatch = bodyText.match(/Coroner\s+([A-Z][A-Za-z'.,\- ]{2,40})/);
+  const corMatch = bodyText.match(/Coroner[:\s]+(?:Mr\s+|Ms\s+|Mrs\s+|Dr\s+)?([A-Z][A-Za-z'.,\- ]{2,40})/);
   if (corMatch) meta.coroner_name = corMatch[1].trim().slice(0, 100);
 
-  // Recommendations count
   const recMatch = bodyText.match(/(\d+)\s+recommendations?/i);
   if (recMatch) meta.recommendations_count = parseInt(recMatch[1], 10);
 
+  const causeMatch = bodyText.match(/cause of death[:\s]+([^\n.]{10,200})/i);
+  if (causeMatch) meta.cause_of_death_summary = causeMatch[1].trim().slice(0, 500);
+
   return meta;
 }
-
-// ── Phase 4: dedup + insert ────────────────────────────────────────────
 
 async function getExistingSourceIds() {
   const { data } = await db.from('qld_coroners_findings').select('source_id');
   return new Set((data ?? []).map(r => r.source_id));
 }
 
+async function scrapeListing() {
+  let pw, browser;
+  try {
+    pw = await import('playwright');
+    browser = await pw.chromium.launch({ headless: true });
+  } catch (e) {
+    log(`FATAL: Playwright not installed: ${e.message}`);
+    return [];
+  }
+
+  const ctx = await browser.newContext({
+    userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+  });
+  const page = await ctx.newPage();
+  await page.goto(SEARCH_URL, { waitUntil: 'networkidle', timeout: 60000 });
+  await delay(3000);
+
+  const seen = new Set();
+  const findings = [];
+  let lastCount = 0;
+
+  for (let attempt = 0; attempt < 25; attempt++) {
+    const pageFindings = await page.$$eval('a', as =>
+      as.map(a => ({
+        href: a.href || '',
+        // The PDF link itself has text "Findings PDF, NMB"; the title is in a sibling/parent.
+        // Capture parent card text — typically a heading + a date + the link.
+        parent: a.closest('article, .card, li, div[class*="result"]')?.textContent?.replace(/\s+/g, ' ').trim().slice(0, 500) ?? '',
+        text: a.textContent?.trim() ?? '',
+      }))
+      .filter(a => a.href.includes('.pdf') && /findings|inquest/i.test(a.href))
+    );
+
+    for (const f of pageFindings) {
+      if (seen.has(f.href)) continue;
+      seen.add(f.href);
+      findings.push(f);
+    }
+    log(`  page ${attempt + 1}: ${findings.length} unique findings`);
+    if (findings.length === lastCount) {
+      // Try clicking Next
+      const nextBtn = page.locator('a:has-text("Next"), button:has-text("Next"), a[aria-label="Next"], button[aria-label="Next"]').first();
+      if (await nextBtn.count() === 0) { log('  no Next button'); break; }
+      const isVisible = await nextBtn.isVisible().catch(() => false);
+      if (!isVisible) { log('  Next not visible'); break; }
+      await nextBtn.scrollIntoViewIfNeeded();
+      await nextBtn.click().catch(() => {});
+      await delay(2000);
+    }
+    lastCount = findings.length;
+    if (findings.length >= LIMIT) break;
+  }
+
+  await browser.close();
+  return findings;
+}
+
+function parseTitle(parent, href) {
+  // The parent text typically contains: "Inquest into the death of NAME ... DD Month YYYY ... Findings PDF"
+  // Pull the "Inquest into ..." sentence
+  const inquestMatch = parent.match(/((?:Non-?inquest\s+findings?|Inquest\s+(?:findings?\s+)?into\s+the\s+death(?:s)? of)[^.]{3,120})/i);
+  if (inquestMatch) return inquestMatch[1].trim();
+  // Fallback: derive from URL slug
+  const slug = href.split('/').pop().replace(/\.pdf$/i, '').replace(/-/g, ' ');
+  return slug.charAt(0).toUpperCase() + slug.slice(1);
+}
+
 async function main() {
-  log(`Starting ${AGENT_NAME} (limit=${LIMIT}, dry_run=${DRY_RUN})`);
+  log(`Starting ${AGENT_NAME} (limit=${LIMIT}, dry_run=${DRY_RUN}, no_pdf=${NO_PDF})`);
   const run = await logStart(db, AGENT_ID, AGENT_NAME);
 
-  let inserted = 0;
-  let skipped = 0;
-  let failed = 0;
-
   try {
-    const findings = await fetchListing();
+    const findings = await scrapeListing();
     if (findings.length === 0) {
-      log('No findings extracted from listing — page structure may have changed.');
+      log('No findings extracted.');
       await logComplete(db, run, { items_found: 0, items_new: 0 });
       return;
     }
@@ -186,17 +208,22 @@ async function main() {
     const existing = await getExistingSourceIds();
     log(`${existing.size} findings already in DB`);
 
-    for (const f of findings) {
-      if (existing.has(f.source_id)) { skipped++; continue; }
+    let inserted = 0, skipped = 0, failed = 0, yjFlagged = 0;
 
-      const cls = classifyFinding(f.title);
-      const bodyText = await fetchFindingDetail(f.source_url);
-      const meta = extractMetadata(bodyText ?? '', f.title);
+    for (const f of findings.slice(0, LIMIT)) {
+      const sourceId = f.href.split('/').pop().replace(/\.pdf$/i, '');
+      if (existing.has(sourceId)) { skipped++; continue; }
+
+      const title = parseTitle(f.parent, f.href);
+      const cls = classifyFinding(title, f.parent);
+      if (cls.isYJ) yjFlagged++;
+      const bodyText = await fetchPdfText(f.href);
+      const meta = extractMetadata(bodyText ?? '', title);
 
       const row = {
-        source_id: f.source_id,
-        source_url: f.source_url,
-        title: f.title,
+        source_id: sourceId,
+        source_url: f.href,
+        title,
         ...meta,
         is_youth_justice: cls.isYJ,
         is_in_custody: cls.isInCustody,
@@ -205,22 +232,22 @@ async function main() {
       };
 
       if (DRY_RUN) {
-        log(`  [DRY] would insert: ${f.title.slice(0, 60)} · YJ=${cls.isYJ} · custody=${cls.isInCustody}`);
+        log(`  [DRY] ${cls.isYJ ? '★' : ' '} ${title.slice(0, 75)}${cls.matched.length ? ` · {${cls.matched.slice(0, 3).join(',')}}` : ''}`);
         inserted++;
       } else {
         const { error } = await db.from('qld_coroners_findings').insert(row);
         if (error) {
-          log(`  insert failed: ${error.message}`);
+          if (!/duplicate/i.test(error.message)) log(`  insert failed: ${error.message}`);
           failed++;
         } else {
           inserted++;
         }
       }
 
-      await delay(800); // polite rate-limit (PDF fetches via Jina are slow)
+      await delay(NO_PDF ? 100 : 800);
     }
 
-    log(`Done. inserted=${inserted}, skipped=${skipped}, failed=${failed}`);
+    log(`Done. inserted=${inserted}, skipped=${skipped}, failed=${failed}, YJ-flagged=${yjFlagged}/${findings.length}`);
     await logComplete(db, run, { items_found: findings.length, items_new: inserted });
   } catch (e) {
     log(`FATAL: ${e.message}`);
