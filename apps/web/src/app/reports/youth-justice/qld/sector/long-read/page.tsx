@@ -118,10 +118,10 @@ async function getNumbers() {
  GROUP BY 1 ORDER BY total DESC NULLS LAST LIMIT 6`,
  })) as Promise<ContractRow[] | null>,
  safe(supabase.rpc('exec_sql', {
- query: `SELECT lga_name, youth_offender_rate::numeric(7,1), indigenous_pct::numeric(5,1)
+ query: `SELECT lga_name, pipeline_intensity::numeric(5,1) AS youth_offender_rate, indigenous_pct::numeric(5,1)
  FROM public.lga_cross_system_stats
- WHERE state = 'QLD' AND population > 5000 AND youth_offender_rate IS NOT NULL
- ORDER BY youth_offender_rate DESC NULLS LAST LIMIT 6`,
+ WHERE state = 'QLD' AND population > 5000 AND pipeline_intensity IS NOT NULL
+ ORDER BY pipeline_intensity DESC NULLS LAST LIMIT 6`,
  })) as Promise<LgaRow[] | null>,
  safe(supabase.rpc('exec_sql', {
  query: `SELECT person_name, board_count::int, total_justice::bigint
@@ -275,7 +275,7 @@ export default async function QldYjLongRead() {
  const fnPctChild = r.l && r.l.total_children > 0 ? Math.round((r.l.child_first_nations / r.l.total_children) * 100) : 0;
  const fnPctAdult = r.l && r.l.total_adults > 0 ? Math.round((r.l.adult_first_nations / r.l.total_adults) * 100) : 0;
  const childOver2 = r.l ? r.l.child_3_7_days + r.l.child_over_7_days : 0;
- const detentionRatio = r.community > 0 ? (r.detention / r.community).toFixed(2) : ',';
+ const detentionRatio = r.community > 0 ? (r.detention / r.community).toFixed(2) : '—';
  const totalSpend = r.detention + r.community + r.groupConferencing;
  const accoSharePct = r.acco?.funding_share_pct ?? 12;
  const accoCount = r.acco?.orgs ?? 0;
@@ -346,11 +346,11 @@ export default async function QldYjLongRead() {
  QLD Youth Justice<br /> The State, The Funnel, The Money, The Network, The Evidence, The Place
  </h1>
  <p className="text-xl sm:text-2xl text-bauhaus-muted leading-tight font-medium max-w-3xl mb-6">
- {money(r.detention)} for detention. {money(r.community)} for community-based services. {r.l?.total_children ?? ','} children in adult police watchhouses today, {fnPctChild}% First Nations.
+ {money(r.detention)} for detention. {money(r.community)} for community-based services. {r.l?.total_children ?? '—'} children in adult police watchhouses today, {fnPctChild}% First Nations.
  ACCOs hold {accoSharePct}% of the funding for ~70% of the in-custody population. {r.almaTotal} evidence-backed alternatives sit in the Australian Living Map of Alternatives, many with no funding link.
  </p>
  <p className="text-xs font-mono text-bauhaus-muted">
- Live data. Last refreshed {r.l ? new Date(r.l.source_generated_at).toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short' }) : ','} from QPS. Funding tables refreshed nightly from the QLD State Budget, AusTender, and ACNC.
+ Live data. Last refreshed {r.l ? new Date(r.l.source_generated_at).toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short' }) : '—'} from QPS. Funding tables refreshed nightly from the QLD State Budget, AusTender, and ACNC.
  </p>
  </div>
 
@@ -364,7 +364,7 @@ export default async function QldYjLongRead() {
 
  <Finding n={1} title="Children in adult police watchhouses, right now" severity="crit">
  <p>
- <span className="font-black">{r.l?.total_children ?? ','} children</span> in QLD watchhouses across <span className="font-black">{r.l?.child_watchhouse_count ?? ','}</span> sites. <span className="font-black text-bauhaus-red">{fnPctChild}% First Nations</span>. <span className="font-black">{childOver2}</span> children have been there more than 2 days. Longest current child hold: <span className="font-black">{r.l?.child_longest_days ?? ','} days</span>. <SourceLink href="#src-qps-watchhouse">[1]</SourceLink>
+ <span className="font-black">{r.l?.total_children ?? '—'} children</span> in QLD watchhouses across <span className="font-black">{r.l?.child_watchhouse_count ?? '—'}</span> sites. <span className="font-black text-bauhaus-red">{fnPctChild}% First Nations</span>. <span className="font-black">{childOver2}</span> children have been there more than 2 days. Longest current child hold: <span className="font-black">{r.l?.child_longest_days ?? '—'} days</span>. <SourceLink href="#src-qps-watchhouse">[1]</SourceLink>
  </p>
  </Finding>
 
@@ -376,7 +376,7 @@ export default async function QldYjLongRead() {
 
  <Finding n={3} title={`${money(r.detention)} detention vs ${money(r.community)} community: ratio is the story`} severity="crit">
  <p>
- QLD&apos;s state-budget Youth Justice line items disclose <span className="font-black">{money(r.detention)}</span> on detention-based services and <span className="font-black">{money(r.community)}</span> on community-based services across the years CivicGraph indexes. Ratio: <span className="font-black text-bauhaus-red">{detentionRatio}:1 detention to community</span>. Group-conferencing, the most evidence-backed early intervention in the budget, gets <span className="font-black">{money(r.groupConferencing)}</span>, ~{totalSpend > 0 ? ((r.groupConferencing/totalSpend)*100).toFixed(1) : ','}% of the three-line Youth Justice total. <SourceLink href="#src-qld-budget">[2]</SourceLink>
+ QLD&apos;s state-budget Youth Justice line items disclose <span className="font-black">{money(r.detention)}</span> on detention-based services and <span className="font-black">{money(r.community)}</span> on community-based services across the years CivicGraph indexes. Ratio: <span className="font-black text-bauhaus-red">{detentionRatio}:1 detention to community</span>. Group-conferencing, the most evidence-backed early intervention in the budget, gets <span className="font-black">{money(r.groupConferencing)}</span>, ~{totalSpend > 0 ? ((r.groupConferencing/totalSpend)*100).toFixed(1) : '—'}% of the three-line Youth Justice total. <SourceLink href="#src-qld-budget">[2]</SourceLink>
  </p>
  </Finding>
 
@@ -410,7 +410,7 @@ export default async function QldYjLongRead() {
 
  <Finding n={8} title="Foundation giving is large in adjacent themes; little anchored to QLD YJ specifically" severity="info">
  <p>
- Top Australian foundations index in CivicGraph at <span className="font-black">{r.foundations.length > 0 ? money(r.foundations[0].total_giving_annual) : ','}</span> annual giving (largest). Major givers, Paul Ramsay, Minderoo, BHP Foundation, Smith Family, touch youth, indigenous, education, and child-welfare themes. None are anchored to QLD youth-justice specifically. The headroom is real; the address is unclear. <SourceLink href="#src-pmra">[24]</SourceLink> <SourceLink href="#src-minderoo">[25]</SourceLink>
+ Top Australian foundations index in CivicGraph at <span className="font-black">{r.foundations.length > 0 ? money(r.foundations[0].total_giving_annual) : '—'}</span> annual giving (largest). Major givers, Paul Ramsay, Minderoo, BHP Foundation, Smith Family, touch youth, indigenous, education, and child-welfare themes. None are anchored to QLD youth-justice specifically. The headroom is real; the address is unclear. <SourceLink href="#src-pmra">[24]</SourceLink> <SourceLink href="#src-minderoo">[25]</SourceLink>
  </p>
  </Finding>
 
@@ -469,25 +469,25 @@ export default async function QldYjLongRead() {
  </Finding>
 
  <PullQuote attribution="Queensland Police Service public watchhouse occupancy report">
- {fnPctChild}% of the {r.l?.total_children ?? ','} children currently in QLD custody are First Nations. ~5% of the 10–17 population.
+ {fnPctChild}% of the {r.l?.total_children ?? '—'} children currently in QLD custody are First Nations. ~5% of the 10–17 population.
  </PullQuote>
  </ReportSection>
 
  {/* ════ VOLUME 1 ════ */}
  <ReportSection id="volume-1" kicker="Volume 1" title="The State Today">
  <p>
- The numbers refresh every 12 hours from the QPS public PDF. As of {r.l ? new Date(r.l.source_generated_at).toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short' }) : ','}, there are <span className="font-black">{r.l?.total_people ?? ','}</span> people in Queensland watchhouses, <span className="font-black">{r.l?.total_adults ?? ','}</span> adults and <span className="font-black text-bauhaus-red">{r.l?.total_children ?? ','} children</span>. <SourceLink href="#src-qps-watchhouse">[1]</SourceLink>
+ The numbers refresh every 12 hours from the QPS public PDF. As of {r.l ? new Date(r.l.source_generated_at).toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short' }) : '—'}, there are <span className="font-black">{r.l?.total_people ?? '—'}</span> people in Queensland watchhouses, <span className="font-black">{r.l?.total_adults ?? '—'}</span> adults and <span className="font-black text-bauhaus-red">{r.l?.total_children ?? '—'} children</span>. <SourceLink href="#src-qps-watchhouse">[1]</SourceLink>
  </p>
 
  <StatStrip items={[
- { label: 'Children in custody', value: String(r.l?.total_children ?? ','), tone: 'red' },
+ { label: 'Children in custody', value: String(r.l?.total_children ?? '—'), tone: 'red' },
  { label: 'First Nations %', value: `${fnPctChild}%`, tone: 'red' },
  { label: 'Children > 2 days', value: String(childOver2), tone: 'red' },
- { label: 'Longest hold (child)', value: `${r.l?.child_longest_days ?? ','}d`, tone: 'red' },
+ { label: 'Longest hold (child)', value: `${r.l?.child_longest_days ?? '—'}d`, tone: 'red' },
  ]} />
 
  <p>
- Police watchhouses are designed for adult arrestees on short-term pre-charge or pre-court holds. They have no schooling, no programs, no rehabilitation infrastructure, and limited natural light. Children are mixed in the same buildings as the adult population, even where physical separation is enforced. Adult First Nations representation in the same watchhouses sits at <span className="font-black">{fnPctAdult}%</span>. The longest-current adult hold is <span className="font-black">{r.l?.adult_longest_days ?? ','} days</span>, sustained without programs or court progression.
+ Police watchhouses are designed for adult arrestees on short-term pre-charge or pre-court holds. They have no schooling, no programs, no rehabilitation infrastructure, and limited natural light. Children are mixed in the same buildings as the adult population, even where physical separation is enforced. Adult First Nations representation in the same watchhouses sits at <span className="font-black">{fnPctAdult}%</span>. The longest-current adult hold is <span className="font-black">{r.l?.adult_longest_days ?? '—'} days</span>, sustained without programs or court progression.
  </p>
 
  <p>
@@ -556,9 +556,9 @@ export default async function QldYjLongRead() {
  <div className="text-3xl font-black tabular-nums">${r.bedNightCost.toLocaleString()}</div>
  <div className="text-xs font-black uppercase tracking-widest mt-1">per bed-night, detention</div>
  <div className="text-xs mt-1 text-bauhaus-black/70">
- {r.detLatest ? `${r.detLatest.period} ROGS detention spend` : ','}
+ {r.detLatest ? `${r.detLatest.period} ROGS detention spend` : '—'}
  {' '}÷{' '}
- {r.popLatestAvg ? `${Math.round(r.popLatestAvg)} avg nightly population × 365` : ','}.
+ {r.popLatestAvg ? `${Math.round(r.popLatestAvg)} avg nightly population × 365` : '—'}.
  </div>
  </div>
  )}
@@ -636,7 +636,7 @@ export default async function QldYjLongRead() {
  </p>
 
  <PullQuote attribution="CivicGraph analysis · QLD State Budget Youth Justice line items">
- {detentionRatio}:1 detention to community. Group conferencing, the most evidence-backed line, sits at ~{totalSpend > 0 ? ((r.groupConferencing/totalSpend)*100).toFixed(1) : ','}% of the three-line total.
+ {detentionRatio}:1 detention to community. Group conferencing, the most evidence-backed line, sits at ~{totalSpend > 0 ? ((r.groupConferencing/totalSpend)*100).toFixed(1) : '—'}% of the three-line total.
  </PullQuote>
  </ReportSection>
 
@@ -714,14 +714,14 @@ export default async function QldYjLongRead() {
  {/* ════ VOLUME 6 ════ */}
  <ReportSection id="volume-6" kicker="Volume 6" title="The Place">
  <p>
- Youth justice doesn&apos;t happen statewide; it happens in places. The same handful of QLD LGAs, Townsville, Logan, Mount Isa, Cherbourg, Cairns, appear at the top of every cross-system metric: youth-offender rate, NDIS participant density, low-ICSEA schools, JobSeeker recipients, build-care entries.
+ Youth justice doesn&apos;t happen statewide; it happens in places. The same handful of QLD LGAs, Townsville, Logan, Mount Isa, Cherbourg, Cairns, appear at the top of every cross-system metric: youth-offender rate, NDIS participant density, low-ICSEA schools, JobSeeker recipients, foster-care entries.
  </p>
 
  <h3 className="text-lg font-black uppercase tracking-tight text-bauhaus-black mt-8 mb-3">LGA hotspots</h3>
  <p>
  {r.hotspots.length > 0 ? (
- <>Top {r.hotspots.length} QLD LGAs by youth-offender rate in CivicGraph&apos;s cross-system dataset: {r.hotspots.slice(0, 5).map((h, i) => (
- <span key={i}><span className="font-black">{h.lga_name}</span> ({Number(h.youth_offender_rate ?? 0).toFixed(0)}/10K{h.indigenous_pct != null ? `, ${Number(h.indigenous_pct).toFixed(0)}% Indigenous` : ''}){i < Math.min(4, r.hotspots.length - 1) ? '; ' : '.'}</span>
+ <>Top {r.hotspots.length} QLD LGAs by pipeline-intensity score (composite of welfare density, school disadvantage, Indigenous share) in CivicGraph&apos;s cross-system dataset: {r.hotspots.slice(0, 5).map((h, i) => (
+ <span key={i}><span className="font-black">{h.lga_name}</span> (intensity {Number(h.youth_offender_rate ?? 0).toFixed(1)}{h.indigenous_pct != null ? `, ${Number(h.indigenous_pct).toFixed(0)}% Indigenous` : ''}){i < Math.min(4, r.hotspots.length - 1) ? '; ' : '.'}</span>
  ))}</>
  ) : <>LGA hotspot data is loading.</>}
  </p>
@@ -886,7 +886,7 @@ export default async function QldYjLongRead() {
  </p>
 
  <p>
- <span className="font-black text-bauhaus-red">1. Move the detention-to-community spend ratio.</span> A $200M reallocation from detention to community-based services would be roughly a {r.community > 0 ? Math.round((200_000_000 / r.community) * 100) : ','}% expansion of the {money(r.community)} community line, enough to fund the scale-up of every &ldquo;Promising&rdquo; ALMA intervention with a credible delivery footprint, alongside the evaluation work needed to lift the most-promising ones to &ldquo;Proven&rdquo;.
+ <span className="font-black text-bauhaus-red">1. Move the detention-to-community spend ratio.</span> A $200M reallocation from detention to community-based services would be roughly a {r.community > 0 ? Math.round((200_000_000 / r.community) * 100) : '—'}% expansion of the {money(r.community)} community line, enough to fund the scale-up of every &ldquo;Promising&rdquo; ALMA intervention with a credible delivery footprint, alongside the evaluation work needed to lift the most-promising ones to &ldquo;Proven&rdquo;.
  </p>
 
  <p>

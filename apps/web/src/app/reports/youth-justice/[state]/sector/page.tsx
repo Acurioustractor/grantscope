@@ -131,7 +131,7 @@ export default async function StateYjSectorPage({ params }: { params: Promise<{ 
  const r = await getStateReport(meta.code);
 
  const total = r.detention + r.community + r.groupConferencing;
- const ratio = r.community > 0 ? (r.detention / r.community).toFixed(2) : ',';
+ const ratio = r.community > 0 ? (r.detention / r.community).toFixed(2) : '—';
 
  return (
  <div>
@@ -266,7 +266,7 @@ export default async function StateYjSectorPage({ params }: { params: Promise<{ 
  <div key={i} className={`border-4 ${tone} p-4 bg-white`}>
  <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-yellow mb-1">{a.type}</div>
  <div className="font-black text-bauhaus-black uppercase tracking-tight text-sm leading-tight mb-2">{a.name}</div>
- <div className="text-[10px] text-bauhaus-muted font-mono">{a.evidence_level ?? ','}</div>
+ <div className="text-[10px] text-bauhaus-muted font-mono">{a.evidence_level ?? '—'}</div>
  </div>
  );
  })}
@@ -292,7 +292,7 @@ export default async function StateYjSectorPage({ params }: { params: Promise<{ 
  return (
  <div key={i} className={`border-4 ${partyTone} p-5 bg-white`}>
  <div className="flex justify-between items-baseline mb-2 gap-3">
- <div className="text-xs font-mono font-black text-bauhaus-muted">{h.sitting_date ? new Date(h.sitting_date).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }) : ','}</div>
+ <div className="text-xs font-mono font-black text-bauhaus-muted">{h.sitting_date ? new Date(h.sitting_date).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</div>
  <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 bg-bauhaus-canvas border border-bauhaus-black">{h.speaker_party ?? 'Independent'}</span>
  </div>
  <h4 className="text-base font-black text-bauhaus-black uppercase tracking-tight leading-tight mb-2">{h.speaker_name ?? 'Unknown'}</h4>
@@ -326,7 +326,7 @@ export default async function StateYjSectorPage({ params }: { params: Promise<{ 
  <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 bg-bauhaus-canvas border border-bauhaus-black">{thrust}</span>
  </div>
  <h4 className="text-base font-black text-bauhaus-black uppercase tracking-tight leading-tight mb-2">{s.headline}</h4>
- <p className="text-[10px] font-mono text-bauhaus-muted">{s.minister_name?.replace(/^The Honourable /, '') ?? ','}{s.portfolio ? ` · ${s.portfolio}` : ''}</p>
+ <p className="text-[10px] font-mono text-bauhaus-muted">{s.minister_name?.replace(/^The Honourable /, '') ?? '—'}{s.portfolio ? ` · ${s.portfolio}` : ''}</p>
  <a href={s.source_url} target="_blank" rel="noopener" className="text-bauhaus-blue text-[10px] font-mono hover:underline">source ↗</a>
  </div>
  );
