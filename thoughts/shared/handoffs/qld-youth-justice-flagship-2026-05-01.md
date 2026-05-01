@@ -189,3 +189,71 @@ Picked up the priority list from the morning handoff. Long session, some churn (
 - All sections render, type check clean, server returns 200.
 - Page now ≈2,650 lines — nearing the limit where component-splitting is worth doing.
 - Full chain end-to-end traceable: announcement (§6.5) → bill (§9.6) → $ funded → recipient (drawer) → entity page (governance + relationships).
+
+---
+
+## Session 3 · 2026-05-01 (evening, continuation)
+
+### Shipped this session
+
+**§6.5a Curated Delivery Ledger imported into /sector**
+- Pulls the same 10 announced QLD YJ programs from `qld-youth-justice-announcements.ts` that feed the QLD overview page. Each row clicks to open a `DetailDrawer` (existing native-`<dialog>` client component) with provider leads, source chain, and missing-proof checklist, rendered inline.
+- Drawer content per item: status badge, summary, why-it-matters, service-area chips, provider leads (name + ABN + status + known facts + ask-next + contact), source chain (every `sourceLinks` entry as clickable URL with kind label and note), missing-proof bullet list with "punch list" framing.
+- Counter strip: announced total, money flowing count, provider seen count, announced only count, not yet visible count.
+
+**`/share/qld-youth-justice` lock-down**
+- `isShare` flag (already used elsewhere on the page) extended to gate three click-throughs:
+  1. §6.5a ledger rows render as plain `<div>` instead of `<Link>`. Footer text replaced with "Provider leads, full source chains, named contacts, and missing-proof checklists for each program live in the CivicGraph workspace. Request access ↗".
+  2. §6.5b live-feed deliverer drawers: "→ entity page" link replaced with non-clickable "CivicGraph entity (workspace access)".
+  3. §9.6 Programmes Registry deliverer drawers: same swap.
+- Anonymous /share/ visitor sees ALL the curated data (provider names, ABNs, contacts, sources, missing-proof) but cannot click through to authenticated workspace pages.
+
+**§6.5b live feed: per-announcement match-and-deliverer chain hardened**
+- Extended regex patterns: `kickstart|intensive early intervention|early intervention program` → Kickstarter Grants. Added `tough new drug|drug law|adult crime, adult time|drug penalt|anti.social behaviour` → registry's drug-bill legislation entry.
+- New status buckets: ◇ ADJACENT (Career Pathways, Youth Week, Youth Justice School: real youth programs but not YJ-funded) and — NON-YJ (perinatal MH, cybercrime, applied research disability, firearms/Wieambilla: caught by broad SQL keyword filter but not actually YJ).
+- Result: NO MATCH bucket dropped from 12 cards (52%) to 0 cards (0%). Final breakdown: 10 MATCHED, 5 FUNDED-separate-stream, 1 LEGISLATION-no-$-vehicle, 2 ADJACENT, 5 NON-YJ.
+
+**Plain-English relabel**
+- Status badges and counter labels swept of jargon:
+  - `named-program SQL` → `money flowing` (badge: ✓ Money is flowing · program named in funding data)
+  - `provider SQL` → `provider seen` (badge: ⚠ Provider seen · lead, not proof)
+  - `official-only` → `announced only` (badge: ◇ Announced only · no money trail yet)
+  - `not-visible-yet` → `not yet visible` (badge: ✗ Not yet visible · awaiting tender / contract)
+  - `sql signal` → `visible in funding data` (provider lead pill)
+  - `tracker signal` → `visible in tracker` (provider lead pill)
+
+**Full em-dash + AI-vocab sweep**
+- New tool `scripts/sweep-ai-tells.mjs` (reusable). Replaces ` — ` and ` &mdash; ` with `, ` and swaps AI-vocab tells for plainer verbs (underscore→show, highlight→show, showcase→show, pivotal→key, delve→look, intricate→detailed, interplay→overlap, bolster→back, enduring→lasting, crucial→critical, enhance→improve, foster→build, valuable→useful, boasts→has, meticulous→careful, vibrant→active, robust→strong, tapestry→set, nestled→sited, groundbreaking→new, renowned→known, exemplifies→shows). Strips fillers ("It's important to note that", "It's worth noting that", "in the heart of", "diverse array", "valuable insights").
+- Files swept: QLD /sector page (211 dashes), long-read (149), [state] companion (12), /share metadata for both /sector + /long-read.
+- 372 prose em dashes → 0. ~50KB shaved off the source.
+- Edge cases preserved: `'—'` em-dash fallback strings in `money()` / `fmt()`, SQL queries inside backticks, Promise.all comma boundaries (`>,` after TS generics), `, ...spread` operators, database-driven content (ALMA program names, Hansard quotes).
+
+**Hydration error fixed**
+- DetailDrawer wraps trigger in `<button>`. Initial trigger was also `<button>`, causing nested-button hydration mismatch. Swapped trigger to `<div>`.
+
+### Files touched this session
+- `apps/web/src/app/reports/youth-justice/qld/sector/page.tsx` — ledger import + drawer wrap, /share lock-down, jargon relabel, em-dash sweep
+- `apps/web/src/app/reports/youth-justice/qld/sector/long-read/page.tsx` — em-dash sweep
+- `apps/web/src/app/reports/youth-justice/[state]/sector/page.tsx` — em-dash sweep
+- `apps/web/src/app/share/qld-youth-justice/page.tsx` — metadata em-dash cleanup
+- `apps/web/src/app/share/qld-youth-justice/long-read/page.tsx` — metadata em-dash cleanup
+- `scripts/sweep-ai-tells.mjs` — NEW reusable copy-sweep tool
+
+### Pitfalls discovered this session
+1. **DetailDrawer trigger must not be a `<button>`** — the component already wraps in its own `<button>`. Use a `<div>` or `<span>` instead.
+2. **Be careful with `<` `>` regex when sweeping TSX** — first sweep version included `/(>|^)\s*,\s+/g` to clean leading-comma artifacts. That matched closing-`>` of TS generics like `Promise<X>,` and silently deleted Promise.all comma boundaries, breaking the entire `getReport()` tuple. Removed the rule.
+3. **`/,\s*\./g` matches `, ...spread`** — the trailing-comma-period cleanup ate the comma in `}, ...(condition ? [...] : [])` patterns. Fixed with negative lookahead `(?!\.)`.
+4. **`'—'` fallback strings** — sweep replaced `return '—';` (used for missing-value display) with `return ',';`. Restore via targeted `sed 's/return '\\'',\\'';/return '\\''—'\\'';/g'`.
+5. **Database content stays** — ALMA program names and Hansard quotes contain real em dashes. Don't rewrite those, the sweep only touches source code.
+
+### Next 3 actions (recommended priority)
+1. **Critic review of the swept copy** — run a critic agent over the now-em-dash-free pages to flag any sentences that read awkwardly after the bulk transformation. Some commas may have created comma splices or ambiguous phrasing that a human read won't catch.
+2. **NSW bill keyword tuning** (carried from session 2) — 100 NSW bills, 0 YJ-flagged. Update `scripts/scrape-nsw-bills.mjs` keyword set.
+3. **VIC + WA detail-page sponsor/status** (carried from session 2) — `--detail` mode returns null. Investigate detail-page DOMs and update `fetchDetail()` selectors.
+
+### What's stable as of session-end (2026-05-01 evening)
+- 3 commits this session: `676876d` (programmes registry + deliverer drawers), `391c086` (delivery-ledger drawer + share lock-down + AI-tell sweep).
+- Type check clean across all touched files.
+- /share/qld-youth-justice renders 200 with full curated data + zero leak to authenticated routes.
+- /reports/youth-justice/qld/sector renders 200 with all click-throughs preserved for staff.
+- Em dashes in prose: 0. Em dashes in DB-driven content (ALMA names, Hansard quotes): preserved verbatim.
