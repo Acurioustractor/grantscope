@@ -554,23 +554,90 @@ export default async function QldYjSectorPage() {
         </ol>
       </nav>
 
-      {/* HEADLINE STATS BAR */}
-      <section className="mb-12 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 xl:grid-cols-8 gap-3">
-        {[
-          { label: 'Children in custody now', value: ws ? String(ws.total_children) : '—', tone: 'red' },
-          { label: 'First Nations %', value: `${fnPctChild}%`, tone: 'red' },
-          { label: 'Detention $ (cum.)', value: money(r.detention), tone: 'red' },
-          { label: 'Community $', value: money(r.community), tone: 'blue' },
-          { label: 'ACCO share', value: `${accoSharePct}%`, tone: 'red' },
-          { label: 'YJ bills tracked', value: fmt(r.officialBills.length), tone: 'red' },
-          { label: 'Coronial findings', value: fmt(r.coronerFindings.length), tone: 'red' },
-          { label: 'ALMA programs', value: fmt(totalIntervTypes), tone: 'black' },
-        ].map((s, i) => (
-          <div key={i} className="border-4 border-bauhaus-black p-3 bg-white">
-            <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">{s.label}</div>
-            <div className={`text-xl sm:text-2xl font-black tabular-nums leading-tight ${s.tone === 'red' ? 'text-bauhaus-red' : s.tone === 'blue' ? 'text-bauhaus-blue' : 'text-bauhaus-black'}`}>{s.value}</div>
-          </div>
-        ))}
+      {/* HEADLINE STATS BAR — structural story, not bare numbers */}
+      <section className="mb-12 grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-4 gap-3">
+        {(() => {
+          const detRatio = r.community > 0 ? (r.detention / r.community).toFixed(2) : '—';
+          const ctgGap = r.ctg.length > 0 ? Math.max(0, ((Number(r.ctg[r.ctg.length - 1]?.actual_rate) || 0) - 33.1)) : 0;
+          const cells: Array<{ kicker: string; stat: string; descriptor: string; tone: 'red' | 'blue' | 'yellow' | 'black'; href?: string }> = [
+            {
+              kicker: 'Right now',
+              stat: ws ? String(ws.total_children) : '—',
+              descriptor: `children in adult police watchhouses · ${fnPctChild}% First Nations`,
+              tone: 'red',
+              href: '#vol-1',
+            },
+            {
+              kicker: 'Custody vs community',
+              stat: `${detRatio} : 1`,
+              descriptor: `detention dollars for every $1 of community-based services (${money(r.detention)} vs ${money(r.community)})`,
+              tone: 'red',
+              href: '#vol-3',
+            },
+            {
+              kicker: 'ACCO funding gap',
+              stat: `${accoSharePct}% / ~70%`,
+              descriptor: 'ACCO funding share vs First Nations share of in-custody children',
+              tone: 'red',
+              href: '#vol-3',
+            },
+            {
+              kicker: 'Legislation since 2024',
+              stat: `${fmt(r.officialBills.length)} Acts`,
+              descriptor: 'YJ-relevant bills passed — every one custody-expanding',
+              tone: 'red',
+              href: '#vol-7',
+            },
+            {
+              kicker: 'Capital pipeline',
+              stat: '+120 beds',
+              descriptor: 'Woodford (80) + Cairns (40) in build · Wacol Remand (76) opened 2025',
+              tone: 'blue',
+              href: '#vol-1',
+            },
+            {
+              kicker: 'Coronial findings live',
+              stat: fmt(r.coronerFindings.length),
+              descriptor: 'in-custody / YJ-flagged inquests · 27 recommendations on Pilkington alone',
+              tone: 'red',
+              href: '#vol-7',
+            },
+            {
+              kicker: 'Evidence base',
+              stat: fmt(r.almaInterventions.length),
+              descriptor: `QLD-tagged ALMA programs · ${r.unfundedPrograms.length} effective ones with no funding link`,
+              tone: 'blue',
+              href: '#vol-5',
+            },
+            {
+              kicker: 'CTG target 11',
+              stat: ctgGap > 0 ? `+${ctgGap.toFixed(1)}/10K` : '—',
+              descriptor: 'gap from the trajectory toward a 30% reduction by 2031 — widening, not narrowing',
+              tone: 'red',
+              href: '#vol-1',
+            },
+          ];
+          const toneClasses = (t: string) => ({
+            red: { border: 'border-bauhaus-red', stat: 'text-bauhaus-red' },
+            blue: { border: 'border-bauhaus-blue', stat: 'text-bauhaus-blue' },
+            yellow: { border: 'border-bauhaus-yellow', stat: 'text-bauhaus-black' },
+            black: { border: 'border-bauhaus-black', stat: 'text-bauhaus-black' },
+          }[t] ?? { border: 'border-bauhaus-black', stat: 'text-bauhaus-black' });
+          return cells.map((s, i) => {
+            const t = toneClasses(s.tone);
+            const Wrapper: React.ComponentType<{ children: React.ReactNode; className: string }> =
+              s.href
+                ? (({ children, className }) => <a href={s.href} className={className}>{children}</a>) as React.ComponentType<{ children: React.ReactNode; className: string }>
+                : (({ children, className }) => <div className={className}>{children}</div>);
+            return (
+              <Wrapper key={i} className={`border-4 ${t.border} p-4 bg-white block ${s.href ? 'hover:bg-bauhaus-canvas transition-colors' : ''}`}>
+                <div className="text-[9px] font-black uppercase tracking-widest text-bauhaus-muted mb-2">{s.kicker}</div>
+                <div className={`text-2xl sm:text-3xl font-black tabular-nums leading-none mb-2 ${t.stat}`}>{s.stat}</div>
+                <p className="text-[11px] text-bauhaus-black leading-snug font-medium">{s.descriptor}</p>
+              </Wrapper>
+            );
+          });
+        })()}
       </section>
 
       {/* ════ VOLUME 1 — THE STATE TODAY ════ */}
