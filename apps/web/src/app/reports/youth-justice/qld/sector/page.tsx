@@ -357,6 +357,33 @@ async function getReport() {
 
 // Heuristic classifier for QLD ministerial statements about youth justice.
 // Reads minister portfolio + headline keywords to bucket the policy thrust.
+// The scraper's `portfolio` field often runs into article body text with
+// JSON unicode escapes (literal backslash-u-XXXX) and raw HTML tags. Cut
+// at the first of: a literal "\u" escape sequence, an HTML tag, an
+// "X Y said" speaker reference, or a literal CR/LF (\r\n). Then strip
+// any escaped non-breaking spaces and tags from the remaining text.
+function cleanPortfolio(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  let s = raw;
+  // The DB string literally contains "&" as 6 chars (backslash, u, 0,
+  // 0, 2, 6) — not a real unicode escape. So the regex must match a
+  // literal backslash. In a JS regex literal, `\\u` matches `\u`.
+  const cuts = [
+    s.search(/\\u[0-9a-fA-F]{4}/),
+    s.search(/<\/?[a-zA-Z]/),
+    s.search(/\s+[A-Z][a-z]+\s+[A-Z][a-z]+\s+said\b/),
+    s.search(/\\r\\n|\\n/),
+  ].filter(n => n > 0);
+  if (cuts.length > 0) s = s.slice(0, Math.min(...cuts));
+  // Belt-and-braces: strip any literal-backslash-u escapes / tags / non-breaking-space tokens / CR-LF
+  s = s.replace(/\\u[0-9a-fA-F]{4}[a-z]*;?/g, ' ');
+  s = s.replace(/<[^>]+>/g, ' ');
+  s = s.replace(/&nbsp;|&rsquo;|&ldquo;|&rdquo;|&amp;|&quot;/g, ' ');
+  s = s.trim().replace(/\s+/g, ' ');
+  if (s.length < 4) return null;
+  return s.slice(0, 110);
+}
+
 function classifyStatement(s: { headline: string; portfolio: string | null }): 'punitive' | 'preventive' | 'mixed' {
   const h = s.headline.toLowerCase();
   // "bail" alone doesn't classify — many bail headlines are support/diversion-related;
@@ -1294,9 +1321,9 @@ export default async function QldYjSectorPage() {
 
       <section className="mb-16">
         <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§23 · LIVE</div>
-        <h3 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">Direction of travel — recent QLD ministerial statements</h3>
+        <h3 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">What QLD ministers are saying about youth justice</h3>
         <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
-          The most-recent {r.ministerialStatements.length} youth-justice statements from QLD ministers. Each tagged by thrust: <span className="text-bauhaus-red font-black">punitive</span> (custody-expanding), <span className="text-bauhaus-blue font-black">preventive</span> (community-investing), <span className="text-bauhaus-yellow font-black">mixed</span> (both / contested). Read for the structural direction the system is moving in.
+          The {r.ministerialStatements.length} most-recent statements from <code className="font-mono text-xs">statements.qld.gov.au</code>. Each is auto-tagged by direction-of-travel: <span className="text-bauhaus-red font-black">punitive</span> (custody-expanding), <span className="text-bauhaus-blue font-black">preventive</span> (community-investing), <span className="text-bauhaus-yellow font-black">mixed</span>. Read horizontally for the system&apos;s real direction.
         </p>
 
         {(() => {
@@ -1306,9 +1333,14 @@ export default async function QldYjSectorPage() {
             return acc;
           }, {});
           const total = r.ministerialStatements.length || 1;
+          const punPct = Math.round(((counts.punitive ?? 0) / total) * 100);
+          const prePct = Math.round(((counts.preventive ?? 0) / total) * 100);
           return (
-            <div className="border-4 border-bauhaus-black p-4 bg-white mb-6">
-              <div className="text-xs font-black uppercase tracking-widest text-bauhaus-muted mb-3">Thrust mix · last {r.ministerialStatements.length} statements</div>
+            <div className="border-4 border-bauhaus-black p-5 bg-white mb-6">
+              <div className="flex flex-wrap justify-between items-baseline gap-3 mb-3">
+                <div className="text-xs font-black uppercase tracking-widest text-bauhaus-black">Thrust mix · last {total} statements</div>
+                <div className="text-xs font-mono text-bauhaus-muted">{punPct}% punitive · {prePct}% preventive</div>
+              </div>
               <StackedBar
                 total={total}
                 segments={[
@@ -1324,28 +1356,37 @@ export default async function QldYjSectorPage() {
         {r.ministerialStatements.length === 0 ? (
           <div className="border-4 border-bauhaus-black p-6 bg-white text-bauhaus-muted text-sm">No QLD ministerial statements in the last 24 months matched the youth-justice filter. Re-run <code>scrape-ministerial-statements</code>.</div>
         ) : (
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {r.ministerialStatements.map((s, i) => {
               const thrust = classifyStatement(s);
               const tone =
                 thrust === 'punitive' ? { border: 'border-bauhaus-red', tag: 'bg-bauhaus-red text-white' } :
                 thrust === 'preventive' ? { border: 'border-bauhaus-blue', tag: 'bg-bauhaus-blue text-white' } :
                 { border: 'border-bauhaus-yellow', tag: 'bg-bauhaus-yellow text-bauhaus-black' };
+              const minister = s.minister_name?.replace(/^The Honourable /, '') ?? null;
+              const portfolio = cleanPortfolio(s.portfolio);
+              const date = new Date(s.published_at);
               return (
-                <div key={i} className={`border-4 ${tone.border} p-5 bg-white`}>
-                  <div className="flex justify-between items-baseline mb-2 gap-3">
-                    <div className="text-xs font-mono font-black text-bauhaus-muted">{new Date(s.published_at).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                <a key={i} href={s.source_url} target="_blank" rel="noopener" className={`block border-4 ${tone.border} p-4 bg-white hover:bg-bauhaus-canvas transition-colors group`}>
+                  <div className="flex justify-between items-center mb-3 gap-2">
+                    <div className="text-[10px] font-mono font-black text-bauhaus-muted tabular-nums">{date.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: '2-digit' })}</div>
                     <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 ${tone.tag}`}>{thrust}</span>
                   </div>
-                  <h4 className="text-base font-black text-bauhaus-black uppercase tracking-tight leading-tight mb-2">{s.headline}</h4>
-                  <p className="text-[10px] font-mono text-bauhaus-muted mb-3">{s.minister_name?.replace(/^The Honourable /, '') ?? 'Minister'}{s.portfolio ? ` · ${s.portfolio}` : ''}</p>
-                  <a href={s.source_url} target="_blank" rel="noopener" className="text-bauhaus-blue text-[10px] font-mono hover:underline">statements.qld.gov.au ↗</a>
-                </div>
+                  <h4 className="text-sm font-black text-bauhaus-black uppercase tracking-tight leading-tight mb-3 group-hover:underline">{s.headline}</h4>
+                  {minister && (
+                    <div className="text-[10px] font-mono text-bauhaus-muted leading-tight">
+                      <span className="font-black text-bauhaus-black">{minister}</span>
+                      {portfolio && <><br />{portfolio}</>}
+                    </div>
+                  )}
+                </a>
               );
             })}
           </div>
         )}
-        <p className="text-xs text-bauhaus-muted font-mono mt-4">Source: <code>civic_ministerial_statements</code> scraped from <a href="https://statements.qld.gov.au" target="_blank" rel="noopener" className="text-bauhaus-blue hover:underline">statements.qld.gov.au</a> by the <code>scrape-ministerial-statements</code> agent. Direction-of-travel classifier reads the headline; classification is heuristic, not editorial. Want a different cut? <Link href="/feedback?subject=qld-yj-policy-tracking" className="text-bauhaus-blue font-black hover:underline">Tell us</Link>.</p>
+        <p className="text-xs text-bauhaus-muted font-mono mt-5">
+          Source: <code>civic_ministerial_statements</code> via the <code>scrape-ministerial-statements</code> agent. Classifier reads headlines &mdash; e.g. &ldquo;Adult Crime, Adult Time&rdquo; &rarr; punitive; &ldquo;early intervention&rdquo; &rarr; preventive. Click a card to read the full statement on <a href="https://statements.qld.gov.au" target="_blank" rel="noopener" className="text-bauhaus-blue hover:underline">statements.qld.gov.au</a>.
+        </p>
       </section>
 
       {/* §23.1 — STRUCTURAL POLICY MOVES (curated, low-frequency) */}
