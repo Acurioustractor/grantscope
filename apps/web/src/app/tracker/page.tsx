@@ -21,6 +21,12 @@ export interface SavedGrantRow {
     categories: string[];
     url: string | null;
     application_status: string;
+    updated_at?: string | null;
+    description?: string | null;
+    focus_areas?: string[] | null;
+    source?: string | null;
+    fit_score?: number | null;
+    relevance_score?: number | null;
   };
 }
 

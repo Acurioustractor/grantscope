@@ -34,7 +34,27 @@ const URGENCY_STYLES: Record<string, string> = {
   normal: 'text-bauhaus-muted',
 };
 
-export function KanbanCard({ grant, index, onRemove }: { grant: SavedGrantRow; index: number; onRemove?: (grantId: string) => void }) {
+function recordNoFeedback(grantId: string) {
+  fetch(`/api/grants/${grantId}/feedback`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ vote: -1, reason: 'Not relevant', source_context: 'tracker_no_button' }),
+  }).catch(() => {
+    // The stage change still carries the no-go decision if feedback capture fails.
+  });
+}
+
+export function KanbanCard({
+  grant,
+  index,
+  onRemove,
+  onNoGo,
+}: {
+  grant: SavedGrantRow;
+  index: number;
+  onRemove?: (grantId: string) => void;
+  onNoGo?: (grantId: string) => void;
+}) {
   const amount = formatAmount(grant.grant.amount_min, grant.grant.amount_max);
   const deadline = getDeadlineInfo(grant.grant.closes_at);
 
@@ -83,8 +103,8 @@ export function KanbanCard({ grant, index, onRemove }: { grant: SavedGrantRow; i
             </div>
           )}
 
-          <div className="flex items-center justify-between mt-2">
-            <div className="flex items-center gap-2">
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
               <div className="flex items-center gap-1">
                 {[1, 2, 3].map((s) => (
                   <svg
@@ -100,10 +120,30 @@ export function KanbanCard({ grant, index, onRemove }: { grant: SavedGrantRow; i
                 ))}
               </div>
               <div onClick={(e) => e.stopPropagation()}>
-                <ThumbsVote grantId={grant.grant_id} sourceContext="tracker" />
+                <ThumbsVote
+                  grantId={grant.grant_id}
+                  sourceContext="tracker"
+                  onVote={(vote) => {
+                    if (vote === -1) onNoGo?.(grant.grant_id);
+                  }}
+                />
               </div>
+              {onNoGo && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    recordNoFeedback(grant.grant_id);
+                    onNoGo(grant.grant_id);
+                  }}
+                  className="min-h-8 border-2 border-bauhaus-red px-2 text-[10px] font-black uppercase tracking-widest text-bauhaus-red transition-colors hover:bg-bauhaus-red hover:text-white"
+                  title="No-go this grant"
+                >
+                  No
+                </button>
+              )}
             </div>
-            <div className="flex items-center gap-2 text-xs tabular-nums">
+            <div className="flex shrink-0 items-center gap-2 text-xs tabular-nums">
               {amount && (
                 <span className="font-black text-bauhaus-blue">{amount}</span>
               )}

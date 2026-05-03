@@ -91,12 +91,30 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    const { data: rejectedOrgFeedback } = await serviceDb
+      .from('grant_feedback')
+      .select('grant_id')
+      .eq('org_profile_id', orgProfileId)
+      .eq('vote', -1);
+
+    const rejectedOrgGrantIds = [
+      ...new Set((rejectedOrgFeedback ?? []).map((row) => row.grant_id).filter(Boolean)),
+    ];
+    if (rejectedOrgGrantIds.length > 0) {
+      await serviceDb
+        .from('saved_grants')
+        .update({ stage: 'lost', updated_at: new Date().toISOString() })
+        .eq('org_profile_id', orgProfileId)
+        .in('stage', activeStages)
+        .in('grant_id', rejectedOrgGrantIds);
+    }
+
     // Fetch org-shared grants from saved_grants
     const { data: savedGrants, error } = await serviceDb
       .from('saved_grants')
       .select(`
         *,
-        grant:grant_opportunities(id, name, provider, amount_min, amount_max, closes_at, categories, url, application_status)
+        grant:grant_opportunities(id, name, provider, amount_min, amount_max, closes_at, categories, url, application_status, updated_at, description, focus_areas, source, fit_score, relevance_score)
       `)
       .eq('org_profile_id', orgProfileId)
       .order('updated_at', { ascending: false });
@@ -113,11 +131,11 @@ export async function GET(request: NextRequest) {
 
     // Fetch linked grant details if any pipeline items have grant_opportunity_id
     const grantIds = (pipelineItems ?? []).map(p => p.grant_opportunity_id).filter(Boolean) as string[];
-    let grantsMap: Record<string, { id: string; name: string; provider: string; amount_min: number | null; amount_max: number | null; closes_at: string | null; categories: string[]; url: string | null; application_status: string }> = {};
+    let grantsMap: Record<string, { id: string; name: string; provider: string; amount_min: number | null; amount_max: number | null; closes_at: string | null; categories: string[]; url: string | null; application_status: string; updated_at?: string | null; description?: string | null; focus_areas?: string[] | null; source?: string | null; fit_score?: number | null; relevance_score?: number | null }> = {};
     if (grantIds.length > 0) {
       const { data: grants } = await serviceDb
         .from('grant_opportunities')
-        .select('id, name, provider, amount_min, amount_max, closes_at, categories, url, application_status')
+        .select('id, name, provider, amount_min, amount_max, closes_at, categories, url, application_status, updated_at, description, focus_areas, source, fit_score, relevance_score')
         .in('id', grantIds);
       for (const g of grants ?? []) {
         grantsMap[g.id] = g;
@@ -154,6 +172,12 @@ export async function GET(request: NextRequest) {
           categories: [],
           url: null,
           application_status: p.status,
+          updated_at: null,
+          description: null,
+          focus_areas: [],
+          source: null,
+          fit_score: null,
+          relevance_score: null,
         },
         _source: 'pipeline',
       };
@@ -169,12 +193,30 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(merged);
   }
 
+  const { data: rejectedFeedback } = await serviceDb
+    .from('grant_feedback')
+    .select('grant_id')
+    .eq('user_id', user.id)
+    .eq('vote', -1);
+
+  const rejectedGrantIds = [
+    ...new Set((rejectedFeedback ?? []).map((row) => row.grant_id).filter(Boolean)),
+  ];
+  if (rejectedGrantIds.length > 0) {
+    await serviceDb
+      .from('saved_grants')
+      .update({ stage: 'lost', updated_at: new Date().toISOString() })
+      .eq('user_id', user.id)
+      .in('stage', activeStages)
+      .in('grant_id', rejectedGrantIds);
+  }
+
   // Default: personal grants (backwards compatible)
   const { data, error } = await serviceDb
     .from('saved_grants')
     .select(`
       *,
-      grant:grant_opportunities(id, name, provider, amount_min, amount_max, closes_at, categories, url, application_status)
+      grant:grant_opportunities(id, name, provider, amount_min, amount_max, closes_at, categories, url, application_status, updated_at, description, focus_areas, source, fit_score, relevance_score)
     `)
     .eq('user_id', user.id)
     .order('updated_at', { ascending: false });

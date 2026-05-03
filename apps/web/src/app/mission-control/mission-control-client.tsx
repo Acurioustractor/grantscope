@@ -1547,8 +1547,140 @@ const TYPE_LABELS: Record<string, string> = {
   pattern: 'Pattern',
 };
 
+const WORKFLOW_LABELS: Record<string, { label: string; detail: string; href: string; cta: string }> = {
+  board_appointment: {
+    label: 'Power signal',
+    detail: 'Check the person or board relationship before deciding whether it matters.',
+    href: '/power',
+    cta: 'Open power map',
+  },
+  board_departure: {
+    label: 'Power signal',
+    detail: 'Check whether this changes a funder, buyer, or governance relationship.',
+    href: '/power',
+    cta: 'Open power map',
+  },
+  new_interlock: {
+    label: 'Power signal',
+    detail: 'A shared-director pattern may affect due diligence or relationship strategy.',
+    href: '/power',
+    cta: 'Open power map',
+  },
+  funding_anomaly: {
+    label: 'Due diligence',
+    detail: 'Look for unusual money movement, procurement concentration, or conflict risk.',
+    href: '/power',
+    cta: 'Open power map',
+  },
+  new_contract: {
+    label: 'Procurement signal',
+    detail: 'Check buyer, supplier, value, and whether this points to a useful market lane.',
+    href: '/procurement/tender-pack',
+    cta: 'Open procurement',
+  },
+  entity_change: {
+    label: 'Entity signal',
+    detail: 'Check whether the new or changing entity should affect targeting or diligence.',
+    href: '/entities?view=search',
+    cta: 'Search entities',
+  },
+  gazette_alert: {
+    label: 'Policy signal',
+    detail: 'Check whether the public notice changes timing, risk, or strategy.',
+    href: '/briefing',
+    cta: 'Open briefing',
+  },
+  data_quality: {
+    label: 'System health',
+    detail: 'Fix source quality before using this data in a decision surface.',
+    href: '/ops/health',
+    cta: 'Open health',
+  },
+  pattern: {
+    label: 'Pattern signal',
+    detail: 'Check whether this should become a brief, watchlist item, or cockpit signal.',
+    href: '/briefing',
+    cta: 'Open briefing',
+  },
+};
+
+const ENTITY_TYPE_BROWSE_LABELS: Record<string, string> = {
+  charity: 'charities',
+  company: 'companies',
+  foundation: 'foundations',
+  government_body: 'government bodies',
+  indigenous_corp: 'Indigenous corporations',
+  person: 'people',
+  political_party: 'political parties',
+  program: 'programs',
+  social_enterprise: 'social enterprises',
+  trust: 'trusts',
+};
+
+function getEntityType(discovery: Discovery): string | null {
+  const metadataType = discovery.metadata?.entity_type;
+  if (typeof metadataType === 'string' && metadataType.trim()) {
+    return metadataType.trim();
+  }
+
+  const titleMatch = discovery.title.match(/new\s+([a-z_ -]+)\s+entities/i);
+  if (!titleMatch?.[1]) return null;
+
+  return titleMatch[1].trim().toLowerCase().replace(/[\s-]+/g, '_');
+}
+
+function isAggregateEntityDiscovery(discovery: Discovery): boolean {
+  return discovery.discovery_type === 'entity_change'
+    && (typeof discovery.metadata?.count === 'number' || /^\d[\d,]*\s+new\s+.+\s+entities$/i.test(discovery.title));
+}
+
+function getPrimarySearchTerm(discovery: Discovery): string | null {
+  const metadata = discovery.metadata || {};
+  const candidate = [
+    metadata.supplier_name,
+    metadata.buyer_name,
+    metadata.entity_name,
+    metadata.name,
+  ].find(value => typeof value === 'string' && value.trim().length > 0);
+
+  if (typeof candidate === 'string') return candidate.trim();
+  if (isAggregateEntityDiscovery(discovery)) return null;
+
+  const beforeColon = discovery.title.split(':')[0]?.trim();
+  if (beforeColon && beforeColon.length > 3 && beforeColon.length < 80) return beforeColon;
+
+  return null;
+}
+
+function getWorkflow(discovery: Discovery) {
+  const base = WORKFLOW_LABELS[discovery.discovery_type] || WORKFLOW_LABELS.pattern;
+  const searchTerm = getPrimarySearchTerm(discovery);
+
+  if (discovery.discovery_type === 'entity_change' && isAggregateEntityDiscovery(discovery)) {
+    const entityType = getEntityType(discovery);
+    const label = entityType ? ENTITY_TYPE_BROWSE_LABELS[entityType] || entityType.replace(/_/g, ' ') : 'entities';
+
+    return {
+      ...base,
+      detail: `This is an aggregate ingest signal. Browse the ${label} lane rather than searching the discovery sentence.`,
+      href: entityType ? `/entities?view=search&type=${encodeURIComponent(entityType)}` : base.href,
+      cta: `Browse ${label}`,
+    };
+  }
+
+  if (discovery.discovery_type === 'entity_change' && searchTerm) {
+    return {
+      ...base,
+      href: `/entities?view=search&q=${encodeURIComponent(searchTerm)}`,
+    };
+  }
+
+  return base;
+}
+
 function DiscoveriesFeed({ discoveries, onUpdate }: { discoveries: Discovery[]; onUpdate: () => void }) {
-  const [filter, setFilter] = useState<string>('all');
+  const [reviewFilter, setReviewFilter] = useState<'needs_review' | 'all' | 'reviewed'>('needs_review');
+  const [severityFilter, setSeverityFilter] = useState<string>('all');
   const [acting, setActing] = useState<string | null>(null);
 
   const severityCounts = {
@@ -1558,11 +1690,15 @@ function DiscoveriesFeed({ discoveries, onUpdate }: { discoveries: Discovery[]; 
     info: discoveries.filter(d => d.severity === 'info').length,
   };
 
-  const filtered = filter === 'all'
-    ? discoveries
-    : discoveries.filter(d => d.severity === filter);
-
   const unreviewed = discoveries.filter(d => !d.reviewed_at).length;
+  const reviewed = discoveries.length - unreviewed;
+  const highPriority = discoveries.filter(d => !d.reviewed_at && ['critical', 'significant'].includes(d.severity)).length;
+  const filteredByReview = reviewFilter === 'all'
+    ? discoveries
+    : discoveries.filter(d => reviewFilter === 'needs_review' ? !d.reviewed_at : Boolean(d.reviewed_at));
+  const filtered = severityFilter === 'all'
+    ? filteredByReview
+    : filteredByReview.filter(d => d.severity === severityFilter);
 
   const handleAction = async (id: string, action: 'dismiss' | 'review') => {
     setActing(id);
@@ -1579,24 +1715,48 @@ function DiscoveriesFeed({ discoveries, onUpdate }: { discoveries: Discovery[]; 
 
   return (
     <section className="mb-10">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col gap-4 mb-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="flex items-center gap-3">
-          <h2 className="text-sm font-black uppercase tracking-widest text-bauhaus-muted border-b-2 border-bauhaus-red pb-2">
-            Autoresearch Discoveries
-          </h2>
-          {unreviewed > 0 && (
-            <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider bg-bauhaus-red text-white">
-              {unreviewed} new
+          <div>
+            <h2 className="text-sm font-black uppercase tracking-widest text-bauhaus-muted border-b-2 border-bauhaus-red pb-2">
+              Autoresearch Review Queue
+            </h2>
+            <p className="mt-2 max-w-2xl text-xs font-medium leading-5 text-bauhaus-muted">
+              Agent findings that may affect targeting, due diligence, procurement, or source health. Review keeps the signal visible; no action removes it from the queue.
+            </p>
+          </div>
+          {unreviewed > 0 ? (
+            <span className="self-start px-2 py-0.5 text-[10px] font-black uppercase tracking-wider bg-bauhaus-red text-white">
+              {unreviewed} needs review
+            </span>
+          ) : (
+            <span className="self-start px-2 py-0.5 text-[10px] font-black uppercase tracking-wider bg-green-100 text-green-700">
+              clear
             </span>
           )}
         </div>
-        <div className="flex gap-1">
+        <div className="flex flex-wrap gap-1">
+          {([
+            ['needs_review', `Needs review (${unreviewed})`],
+            ['all', `All (${discoveries.length})`],
+            ['reviewed', `Reviewed (${reviewed})`],
+          ] as const).map(([value, label]) => (
+            <button
+              key={value}
+              onClick={() => setReviewFilter(value)}
+              className={`min-h-9 px-3 py-1 text-[10px] font-black uppercase tracking-wider border-2 transition-colors ${
+                reviewFilter === value ? 'border-bauhaus-black bg-bauhaus-black text-white' : 'border-bauhaus-black/20 hover:border-bauhaus-black'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
           {(['all', 'critical', 'significant', 'notable', 'info'] as const).map(s => (
             <button
               key={s}
-              onClick={() => setFilter(s)}
-              className={`px-2 py-1 text-[10px] font-black uppercase tracking-wider border-2 transition-colors ${
-                filter === s ? 'border-bauhaus-black bg-bauhaus-black text-white' : 'border-bauhaus-black/20 hover:border-bauhaus-black'
+              onClick={() => setSeverityFilter(s)}
+              className={`min-h-9 px-3 py-1 text-[10px] font-black uppercase tracking-wider border-2 transition-colors ${
+                severityFilter === s ? 'border-bauhaus-black bg-bauhaus-black text-white' : 'border-bauhaus-black/20 hover:border-bauhaus-black'
               }`}
             >
               {s} {s !== 'all' && severityCounts[s] > 0 ? `(${severityCounts[s]})` : ''}
@@ -1605,74 +1765,113 @@ function DiscoveriesFeed({ discoveries, onUpdate }: { discoveries: Discovery[]; 
         </div>
       </div>
 
+      <div className="grid grid-cols-1 gap-2 mb-3 sm:grid-cols-3">
+        <div className="border-2 border-bauhaus-black/10 bg-bauhaus-canvas px-3 py-2">
+          <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Review load</div>
+          <div className="text-xl font-black text-bauhaus-black">{unreviewed}</div>
+          <div className="text-[11px] font-medium text-bauhaus-muted">signals waiting for a human pass</div>
+        </div>
+        <div className="border-2 border-bauhaus-black/10 bg-bauhaus-canvas px-3 py-2">
+          <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Start here</div>
+          <div className="text-xl font-black text-bauhaus-red">{highPriority}</div>
+          <div className="text-[11px] font-medium text-bauhaus-muted">critical or significant signals still unreviewed</div>
+        </div>
+        <div className="border-2 border-bauhaus-black/10 bg-bauhaus-canvas px-3 py-2">
+          <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Human action</div>
+          <div className="text-xl font-black text-bauhaus-black">route / review / no action</div>
+          <div className="text-[11px] font-medium text-bauhaus-muted">send useful signals to the right work surface</div>
+        </div>
+      </div>
+
       <div className="border-4 border-bauhaus-black">
         {filtered.length === 0 ? (
-          <div className="p-8 text-center text-sm text-bauhaus-muted">No discoveries matching filter</div>
+          <div className="p-8 text-center text-sm text-bauhaus-muted">No discoveries matching this view</div>
         ) : (
           <div className="divide-y divide-bauhaus-black/10">
-            {filtered.map(d => (
-              <div
-                key={d.id}
-                className={`px-4 py-3 hover:bg-gray-50 transition-colors ${
-                  !d.reviewed_at ? 'border-l-4 border-l-bauhaus-red' : 'border-l-4 border-l-transparent'
-                }`}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider ${SEVERITY_STYLES[d.severity]}`}>
-                        {d.severity}
-                      </span>
-                      <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider bg-bauhaus-black/5 text-bauhaus-muted">
-                        {TYPE_LABELS[d.discovery_type] || d.discovery_type}
-                      </span>
-                      <span className="text-[10px] text-bauhaus-muted font-mono">
-                        {d.agent_id}
-                      </span>
-                    </div>
-                    <div className="text-sm font-bold text-bauhaus-black">{d.title}</div>
-                    {d.description && (
-                      <div className="text-xs text-bauhaus-muted mt-0.5 line-clamp-2">{d.description}</div>
-                    )}
-                    {d.person_names && d.person_names.length > 0 && (
-                      <div className="flex gap-1 mt-1.5 flex-wrap">
-                        {d.person_names.map(name => (
-                          <span key={name} className="px-1.5 py-0.5 text-[9px] font-mono bg-bauhaus-blue/10 text-bauhaus-blue">
-                            {name}
+            {filtered.map(d => {
+              const workflow = getWorkflow(d);
+              return (
+                <div
+                  key={d.id}
+                  className={`px-4 py-4 hover:bg-gray-50 transition-colors ${
+                    !d.reviewed_at ? 'border-l-4 border-l-bauhaus-red' : 'border-l-4 border-l-transparent'
+                  }`}
+                >
+                  <div className="grid gap-4 lg:grid-cols-[1fr_240px]">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <span className={`px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider ${SEVERITY_STYLES[d.severity]}`}>
+                          {d.severity}
+                        </span>
+                        <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider bg-bauhaus-black/5 text-bauhaus-muted">
+                          {TYPE_LABELS[d.discovery_type] || d.discovery_type}
+                        </span>
+                        <span className="text-[10px] text-bauhaus-muted font-mono">
+                          {d.agent_id}
+                        </span>
+                        <span className="text-[10px] text-bauhaus-muted whitespace-nowrap">{timeAgo(d.created_at)}</span>
+                        {d.reviewed_at && (
+                          <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider bg-green-100 text-green-700">
+                            Reviewed
                           </span>
-                        ))}
+                        )}
                       </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-[10px] text-bauhaus-muted whitespace-nowrap">{timeAgo(d.created_at)}</span>
-                    {!d.reviewed_at && (
-                      <>
-                        <button
-                          onClick={() => handleAction(d.id, 'review')}
-                          disabled={acting === d.id}
-                          className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider border border-green-500 text-green-700 hover:bg-green-500 hover:text-white transition-colors"
-                        >
-                          Ack
-                        </button>
+                      <div className="text-sm font-bold text-bauhaus-black">{d.title}</div>
+                      {d.description && (
+                        <div className="text-xs text-bauhaus-muted mt-0.5 leading-5">{d.description}</div>
+                      )}
+                      <div className="mt-2 border-l-2 border-bauhaus-black/10 pl-3">
+                        <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">{workflow.label}</div>
+                        <div className="text-[11px] font-medium leading-4 text-bauhaus-muted">{workflow.detail}</div>
+                      </div>
+                      {d.person_names && d.person_names.length > 0 && (
+                        <div className="flex gap-1 mt-2 flex-wrap">
+                          {d.person_names.map(name => (
+                            <span key={name} className="px-1.5 py-0.5 text-[9px] font-mono bg-bauhaus-blue/10 text-bauhaus-blue">
+                              {name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-2 lg:items-stretch">
+                      <a
+                        href={workflow.href}
+                        className="min-h-10 inline-flex items-center justify-center border-2 border-bauhaus-black bg-bauhaus-black px-3 py-2 text-center text-[10px] font-black uppercase tracking-wider text-white transition-colors hover:bg-white hover:text-bauhaus-black"
+                      >
+                        {workflow.cta}
+                      </a>
+                      {!d.reviewed_at ? (
+                        <>
+                          <button
+                            onClick={() => handleAction(d.id, 'review')}
+                            disabled={acting === d.id}
+                            className="min-h-10 px-3 py-2 text-[10px] font-black uppercase tracking-wider border-2 border-green-500 text-green-700 hover:bg-green-500 hover:text-white transition-colors disabled:opacity-50"
+                          >
+                            Mark reviewed
+                          </button>
+                          <button
+                            onClick={() => handleAction(d.id, 'dismiss')}
+                            disabled={acting === d.id}
+                            className="min-h-10 px-3 py-2 text-[10px] font-black uppercase tracking-wider border-2 border-bauhaus-black/20 text-bauhaus-muted hover:bg-bauhaus-black hover:text-white transition-colors disabled:opacity-50"
+                          >
+                            No action
+                          </button>
+                        </>
+                      ) : (
                         <button
                           onClick={() => handleAction(d.id, 'dismiss')}
                           disabled={acting === d.id}
-                          className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider border border-bauhaus-black/20 text-bauhaus-muted hover:bg-bauhaus-black hover:text-white transition-colors"
+                          className="min-h-10 px-3 py-2 text-[10px] font-black uppercase tracking-wider border-2 border-bauhaus-black/20 text-bauhaus-muted hover:bg-bauhaus-black hover:text-white transition-colors disabled:opacity-50"
                         >
-                          Dismiss
+                          No action
                         </button>
-                      </>
-                    )}
-                    {d.reviewed_at && (
-                      <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider bg-green-100 text-green-700">
-                        Reviewed
-                      </span>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
