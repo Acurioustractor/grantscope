@@ -704,6 +704,576 @@ export function HomeClient(props: HomeClientProps) {
     }
   }
 
+  const priorityByProject = {
+    Goods: sourceFreshness.frontierPriority.filter((item) => item.project === 'Goods'),
+    JusticeHub: sourceFreshness.frontierPriority.filter((item) => item.project === 'JusticeHub'),
+    'Empathy Ledger': sourceFreshness.frontierPriority.filter((item) => item.project === 'Empathy Ledger'),
+  };
+  const firstMove = urgentDeadlines.length > 0
+    ? {
+        label: 'First move today',
+        title: `Decide ${Math.min(3, urgentDeadlines.length)} urgent grant${Math.min(3, urgentDeadlines.length) !== 1 ? 's' : ''}`,
+        detail: `${urgentDeadlines.length} tracked deadline${urgentDeadlines.length !== 1 ? 's' : ''} close this week. Do not browse the database first; decide pursue, park, or no-go on the urgent lane.`,
+        href: '#grant-decisions',
+        action: 'Start deadline decisions',
+        tone: 'danger',
+      }
+    : scenarioFocus?.tone === 'blocked'
+      ? {
+          label: 'First move today',
+          title: 'Clear the Goods blocker',
+          detail: scenarioFocus.nextAction,
+          href: scenarioFocus.href,
+          action: 'Open blocker',
+          tone: 'warning',
+        }
+      : currentReviewSweep.machinePass > 0
+        ? {
+            label: 'First move today',
+            title: 'Clean before review',
+            detail: `${currentReviewSweep.machinePass.toLocaleString()} item${currentReviewSweep.machinePass !== 1 ? 's' : ''} should be machine-cleaned before CT reviews anything by hand.`,
+            href: '#clean-review',
+            action: 'Run pre-sweep',
+            tone: 'info',
+          }
+        : activeCount > 0
+          ? {
+              label: 'First move today',
+              title: 'Move active work',
+              detail: `${activeCount.toLocaleString()} active grant${activeCount !== 1 ? 's' : ''} need evidence, partner contact, or submission movement.`,
+              href: trackerHref,
+              action: 'Open active work',
+              tone: 'info',
+            }
+          : {
+              label: 'First move today',
+              title: 'Choose the next opportunity',
+              detail: 'The urgent queue is clear. Use the router to pick the next ACT-fit pathway across grants, funders, procurement, buyers, and relationships.',
+              href: '/opportunities/ecosystem',
+              action: 'Open router',
+              tone: 'success',
+            };
+  const focusRows = [
+    {
+      priority: '1',
+      work: 'Deadline decisions',
+      metric: urgentDeadlines.length.toLocaleString(),
+      why: urgentDeadlines.length > 0
+        ? `${urgentDeadlines.length} close this week. Decide only the first three before anything else.`
+        : 'No tracked deadlines need immediate action.',
+      action: 'Decide',
+      href: '#grant-decisions',
+      tone: urgentDeadlines.length > 0 ? 'danger' : 'neutral',
+    },
+    {
+      priority: '2',
+      work: 'Goods blocker',
+      metric: scenarioFocus?.tone === 'blocked' ? scenarioFocus.primaryMetric.value : 'Clear',
+      why: scenarioFocus?.tone === 'blocked'
+        ? scenarioFocus.nextAction
+        : 'No critical ACT scenario blocker is stopping promotion.',
+      action: scenarioFocus ? 'Open' : 'View router',
+      href: scenarioFocus?.href || '/opportunities/ecosystem',
+      tone: scenarioFocus?.tone === 'blocked' ? 'warning' : 'neutral',
+    },
+    {
+      priority: '3',
+      work: 'Clean before review',
+      metric: currentReviewSweep.machinePass.toLocaleString(),
+      why: currentReviewSweep.total > 0
+        ? `${currentReviewSweep.total.toLocaleString()} raw discovered item${currentReviewSweep.total !== 1 ? 's' : ''}; ${currentReviewSweep.humanReady.toLocaleString()} ready for a human after cleanup.`
+        : 'The discovered queue is clear.',
+      action: 'Sweep',
+      href: '#clean-review',
+      tone: currentReviewSweep.machinePass > 0 ? 'info' : 'neutral',
+    },
+    {
+      priority: '4',
+      work: 'Live source checks',
+      metric: sourceFreshness.frontierPriority.length.toLocaleString(),
+      why: sourceFreshness.frontierPriority.length > 0
+        ? `Check the top 3 project-shaped sources. Keep the ${sourceFreshness.frontierDue.toLocaleString()} due backlog in source health.`
+        : 'No project-shaped frontier source is ready for today.',
+      action: 'Scout',
+      href: '#source-health',
+      tone: sourceFreshness.frontierPriority.length > 0 ? 'info' : 'neutral',
+    },
+  ] as const;
+  const projectLenses = [
+    {
+      name: 'Goods',
+      status: scenarioFocus?.title.toLowerCase().includes('goods') ? (scenarioFocus.tone === 'blocked' ? 'Blocked' : 'Watch') : 'Watch',
+      opportunity: priorityByProject.Goods[0]?.title || scenarioFocus?.title || 'Capital, buyer, procurement, and governance pathway',
+      missing: scenarioFocus?.title.toLowerCase().includes('goods') ? scenarioFocus.nextAction : 'Confirm buyer need, ask size, vehicle, and support route before promotion.',
+      action: 'Open Goods route',
+      href: '/opportunities/ecosystem?project=Goods',
+      tone: scenarioFocus?.title.toLowerCase().includes('goods') && scenarioFocus.tone === 'blocked' ? 'warning' : 'info',
+      metric: `${priorityByProject.Goods.length} source${priorityByProject.Goods.length !== 1 ? 's' : ''}`,
+    },
+    {
+      name: 'JusticeHub',
+      status: priorityByProject.JusticeHub.length > 0 ? 'Scout' : 'Monitor',
+      opportunity: priorityByProject.JusticeHub[0]?.title || 'Youth justice funders, policy signals, and community-led program evidence',
+      missing: 'Attach live evidence and relationship context before moving a grant or partner path.',
+      action: 'Open JusticeHub route',
+      href: '/opportunities/ecosystem?project=JusticeHub',
+      tone: 'danger',
+      metric: `${priorityByProject.JusticeHub.length} source${priorityByProject.JusticeHub.length !== 1 ? 's' : ''}`,
+    },
+    {
+      name: 'Empathy Ledger',
+      status: priorityByProject['Empathy Ledger'].length > 0 ? 'Scout' : 'Monitor',
+      opportunity: priorityByProject['Empathy Ledger'][0]?.title || 'Story, rights, lived-experience, digital, and data-sovereignty pathways',
+      missing: 'Confirm narrative sovereignty, partner role, and evidence chain before a funder brief.',
+      action: 'Open Empathy route',
+      href: '/opportunities/ecosystem?project=Empathy%20Ledger',
+      tone: 'success',
+      metric: `${priorityByProject['Empathy Ledger'].length} source${priorityByProject['Empathy Ledger'].length !== 1 ? 's' : ''}`,
+    },
+    {
+      name: 'CivicGraph',
+      status: sourceFreshness.frontierFailing > 0 ? 'Needs repair' : 'Healthy',
+      opportunity: `${openGrantCount.toLocaleString()} open grants, ${entityCount.toLocaleString()} entities, ${sourceFreshness.grantsUpdated7d.toLocaleString()} grants refreshed this week`,
+      missing: sourceFreshness.frontierFailing > 0
+        ? `${sourceFreshness.frontierFailing.toLocaleString()} source${sourceFreshness.frontierFailing !== 1 ? 's' : ''} failing; repair in source health.`
+        : 'Keep the source frontier moving and feed only ranked opportunities into ACT decisions.',
+      action: 'Open source health',
+      href: '/reports/grant-frontier',
+      tone: sourceFreshness.frontierFailing > 0 ? 'warning' : 'neutral',
+      metric: `${sourceFreshness.frontierChanged7d.toLocaleString()} changed`,
+    },
+  ] as const;
+  const compactCommands = [
+    { href: '/opportunities/ecosystem', label: 'Opportunity Router', detail: 'Best ACT-fit routes across grants, funders, procurement, buyers, and GHL' },
+    { href: trackerHref, label: 'Active Work', detail: 'Only accepted research, partner, apply, and follow-up work' },
+    { href: '/reports/grant-frontier', label: 'Source Health', detail: 'Live web sources, stale grants, failing URLs, and frontier pressure' },
+    { href: '/mission-control', label: 'System Ops', detail: 'Agents, runs, discoveries, ACK/dismiss, and operational status' },
+    { href: '/briefing', label: 'Briefing Hub', detail: 'Turn evidence into a memo, pack, report, story, or handoff' },
+    { href: '/entities', label: 'Entity Graph', detail: 'Due diligence, relationships, ABNs, funders, contractors, and people' },
+  ] as const;
+  const decisionDeadlines = workbenchDeadlines.slice(0, 5);
+  const topFrontierSources = sourceFreshness.frontierPriority.slice(0, 3);
+  const showDecisionHome = true;
+
+  if (showDecisionHome) {
+    return (
+      <div className="max-w-6xl space-y-6">
+        <header>
+          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--ws-text-tertiary)' }}>
+            CivicGraph operating home
+          </p>
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight" style={{ color: 'var(--ws-text)' }}>
+            {greeting}
+          </h1>
+          <p className="mt-1 text-sm" style={{ color: 'var(--ws-text-secondary)' }}>
+            {contextLine}
+          </p>
+        </header>
+
+        {feedback && (
+          <div
+            className="rounded-lg border px-4 py-3 text-sm font-medium"
+            role={feedback.tone === 'error' ? 'alert' : 'status'}
+            style={{
+              borderColor: feedback.tone === 'error' ? 'var(--ws-red)' : 'var(--ws-green)',
+              background: feedback.tone === 'error' ? 'rgba(220,38,38,0.08)' : 'rgba(22,163,74,0.08)',
+              color: feedback.tone === 'error' ? 'var(--ws-red)' : 'var(--ws-green)',
+            }}
+          >
+            {feedback.message}
+          </div>
+        )}
+
+        {billingStatus && (
+          <div
+            className="rounded-lg border p-4"
+            style={{
+              borderColor:
+                billingStatus.tone === 'error'
+                  ? 'var(--ws-red)'
+                  : billingStatus.tone === 'warning'
+                    ? 'var(--ws-amber)'
+                    : 'var(--ws-accent)',
+              background:
+                billingStatus.tone === 'error'
+                  ? 'rgba(220,38,38,0.06)'
+                  : billingStatus.tone === 'warning'
+                    ? 'rgba(217,119,6,0.06)'
+                    : 'rgba(37,99,235,0.05)',
+            }}
+          >
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-sm font-medium" style={{ color: 'var(--ws-text)' }}>{billingStatus.title}</p>
+                <p className="mt-1 text-xs" style={{ color: 'var(--ws-text-secondary)' }}>{billingStatus.detail}</p>
+              </div>
+              <div className="flex shrink-0 gap-2">
+                <Link href={billingStatus.primaryHref} className="rounded-lg px-3 py-2 text-xs font-medium" style={{ background: 'var(--ws-accent)', color: '#fff' }}>
+                  {billingStatus.primaryLabel}
+                </Link>
+                <Link href={billingStatus.secondaryHref} className="rounded-lg border px-3 py-2 text-xs font-medium" style={{ borderColor: 'var(--ws-border)', color: 'var(--ws-text-secondary)' }}>
+                  {billingStatus.secondaryLabel}
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showActivation ? (
+          <section className="rounded-xl border p-5" style={{ borderColor: 'var(--ws-accent)', background: 'rgba(37,99,235,0.04)' }}>
+            <h2 className="text-base font-semibold" style={{ color: 'var(--ws-text)' }}>Set up the pipeline first</h2>
+            <p className="mt-1 text-sm" style={{ color: 'var(--ws-text-secondary)' }}>
+              Finish the minimum setup before using the operating home: profile, shortlist, then one real tracked opportunity.
+            </p>
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              {[
+                { href: '/profile', step: '1', title: 'Complete profile', desc: 'Mission, domains, geography', done: profileReady },
+                { href: '/profile/matches', step: '2', title: 'Shortlist matches', desc: 'Save only strong matches', done: hasShortlistedGrants },
+                { href: '/tracker?onboarding=1', step: '3', title: 'Move one item', desc: 'Start real pipeline work', done: hasWorkedGrantPipeline },
+              ].map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="rounded-lg border p-3 transition-colors hover:border-[var(--ws-accent)]"
+                  style={{ borderColor: item.done ? 'var(--ws-green)' : 'var(--ws-border)', background: 'var(--ws-surface-1)' }}
+                >
+                  <div className="flex items-start gap-3">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold" style={{ background: item.done ? 'var(--ws-green)' : 'var(--ws-surface-2)', color: item.done ? '#fff' : 'var(--ws-text-secondary)' }}>
+                      {item.done ? 'OK' : item.step}
+                    </span>
+                    <div>
+                      <p className="text-sm font-medium" style={{ color: 'var(--ws-text)' }}>{item.title}</p>
+                      <p className="mt-0.5 text-xs" style={{ color: 'var(--ws-text-tertiary)' }}>{item.desc}</p>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        <section
+          className="rounded-xl border p-5"
+          style={{
+            borderColor:
+              firstMove.tone === 'danger'
+                ? 'var(--ws-red)'
+                : firstMove.tone === 'warning'
+                  ? 'var(--ws-amber)'
+                  : firstMove.tone === 'success'
+                    ? 'var(--ws-green)'
+                    : 'var(--ws-accent)',
+            background:
+              firstMove.tone === 'danger'
+                ? 'rgba(220,38,38,0.06)'
+                : firstMove.tone === 'warning'
+                  ? 'rgba(217,119,6,0.06)'
+                  : firstMove.tone === 'success'
+                    ? 'rgba(22,163,74,0.05)'
+                    : 'rgba(37,99,235,0.05)',
+          }}
+        >
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-end">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--ws-text-tertiary)' }}>
+                {firstMove.label}
+              </p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-tight" style={{ color: 'var(--ws-text)' }}>
+                {firstMove.title}
+              </h2>
+              <p className="mt-2 max-w-3xl text-sm leading-6" style={{ color: 'var(--ws-text-secondary)' }}>
+                {firstMove.detail}
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row lg:flex-col">
+              {firstMove.href === '#clean-review' ? (
+                <button
+                  type="button"
+                  onClick={() => void runPreSweep()}
+                  disabled={isRunningPreSweep || isRefreshing}
+                  className="rounded-lg px-4 py-3 text-sm font-medium transition-opacity disabled:opacity-50"
+                  style={{ background: 'var(--ws-accent)', color: '#fff' }}
+                >
+                  {isRunningPreSweep ? 'Running pre-sweep...' : firstMove.action}
+                </button>
+              ) : (
+                <Link href={firstMove.href} className="rounded-lg px-4 py-3 text-center text-sm font-medium" style={{ background: 'var(--ws-accent)', color: '#fff' }}>
+                  {firstMove.action}
+                </Link>
+              )}
+              <Link href="/opportunities/ecosystem" className="rounded-lg border px-4 py-3 text-center text-sm font-medium" style={{ borderColor: 'var(--ws-border)', color: 'var(--ws-text-secondary)', background: 'var(--ws-surface-0)' }}>
+                Open Opportunity Router
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-xl border p-4" style={{ borderColor: 'var(--ws-border)', background: 'var(--ws-surface-1)' }}>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-semibold" style={{ color: 'var(--ws-text)' }}>Today&apos;s Queue</h2>
+              <p className="mt-1 text-xs" style={{ color: 'var(--ws-text-secondary)' }}>
+                Work this list from top to bottom. Do not open the raw grant database first.
+              </p>
+            </div>
+            <Link href="/briefing" className="shrink-0 text-xs font-medium hover:underline" style={{ color: 'var(--ws-accent)' }}>
+              File the trail
+            </Link>
+          </div>
+          <div className="grid gap-px overflow-hidden rounded-lg border md:grid-cols-4" style={{ borderColor: 'var(--ws-border)', background: 'var(--ws-border)' }}>
+            {focusRows.map((row) => {
+              const toneColor = row.tone === 'danger'
+                ? 'var(--ws-red)'
+                : row.tone === 'warning'
+                  ? 'var(--ws-amber)'
+                  : row.tone === 'info'
+                    ? 'var(--ws-accent)'
+                    : 'var(--ws-text-tertiary)';
+              return (
+                <Link key={row.work} href={row.href} className="flex min-h-[190px] flex-col justify-between p-4 transition-colors hover:bg-[var(--ws-surface-2)]" style={{ background: 'var(--ws-surface-1)' }}>
+                  <div>
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="text-xs font-semibold tabular-nums" style={{ color: toneColor }}>{row.priority}</span>
+                      <span className="text-xl font-semibold tabular-nums" style={{ color: toneColor }}>{row.metric}</span>
+                    </div>
+                    <p className="mt-3 text-sm font-medium" style={{ color: 'var(--ws-text)' }}>{row.work}</p>
+                    <p className="mt-2 text-xs leading-5" style={{ color: 'var(--ws-text-secondary)' }}>{row.why}</p>
+                  </div>
+                  <p className="mt-4 text-[11px] font-semibold uppercase tracking-wide" style={{ color: toneColor }}>{row.action}</p>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+
+        <section>
+          <div className="mb-3">
+            <h2 className="text-base font-semibold" style={{ color: 'var(--ws-text)' }}>Project Lenses</h2>
+            <p className="mt-1 text-xs" style={{ color: 'var(--ws-text-secondary)' }}>
+              Each ACT project gets one readable state: best signal, missing evidence, and next pathway.
+            </p>
+          </div>
+          <div className="grid gap-3 lg:grid-cols-4">
+            {projectLenses.map((project) => {
+              const toneColor = project.tone === 'danger'
+                ? 'var(--ws-red)'
+                : project.tone === 'warning'
+                  ? 'var(--ws-amber)'
+                  : project.tone === 'success'
+                    ? 'var(--ws-green)'
+                    : project.tone === 'info'
+                      ? 'var(--ws-accent)'
+                      : 'var(--ws-text-secondary)';
+              return (
+                <Link key={project.name} href={project.href} className="rounded-xl border p-4 transition-colors hover:border-[var(--ws-accent)]" style={{ borderColor: 'var(--ws-border)', background: 'var(--ws-surface-1)' }}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold" style={{ color: 'var(--ws-text)' }}>{project.name}</p>
+                      <p className="mt-1 text-[11px] font-medium uppercase tracking-wide" style={{ color: toneColor }}>{project.status}</p>
+                    </div>
+                    <span className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium" style={{ background: 'var(--ws-surface-2)', color: 'var(--ws-text-tertiary)' }}>
+                      {project.metric}
+                    </span>
+                  </div>
+                  <p className="mt-4 text-sm leading-5" style={{ color: 'var(--ws-text)' }}>{project.opportunity}</p>
+                  <p className="mt-3 text-xs leading-5" style={{ color: 'var(--ws-text-secondary)' }}>{project.missing}</p>
+                  <p className="mt-4 text-[11px] font-semibold uppercase tracking-wide" style={{ color: toneColor }}>{project.action}</p>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+
+        <section id="clean-review" className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <div id="grant-decisions" className="rounded-xl border p-4" style={{ borderColor: urgentDeadlines.length > 0 ? 'var(--ws-red)' : 'var(--ws-border)', background: 'var(--ws-surface-1)' }}>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-base font-semibold" style={{ color: 'var(--ws-text)' }}>Grant Decisions</h2>
+                <p className="mt-1 text-xs" style={{ color: 'var(--ws-text-secondary)' }}>
+                  These are decision items, not browsing suggestions.
+                </p>
+              </div>
+              <Link href={trackerHref} className="text-xs font-medium hover:underline" style={{ color: 'var(--ws-accent)' }}>
+                Open active work
+              </Link>
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              {[
+                { label: 'Closing 7d', value: urgentDeadlines.length, color: urgentDeadlines.length > 0 ? 'var(--ws-red)' : 'var(--ws-text)' },
+                { label: 'Clean first', value: currentReviewSweep.machinePass, color: currentReviewSweep.machinePass > 0 ? 'var(--ws-accent)' : 'var(--ws-text)' },
+                { label: 'Active', value: activeCount, color: activeCount > 0 ? 'var(--ws-accent)' : 'var(--ws-text)' },
+                { label: 'Won', value: wonCount, color: wonCount > 0 ? 'var(--ws-green)' : 'var(--ws-text)' },
+              ].map((stat) => (
+                <div key={stat.label} className="rounded-lg border px-3 py-2" style={{ borderColor: 'var(--ws-border)', background: 'var(--ws-surface-0)' }}>
+                  <p className="text-lg font-semibold tabular-nums" style={{ color: stat.color }}>{stat.value.toLocaleString()}</p>
+                  <p className="text-[11px]" style={{ color: 'var(--ws-text-tertiary)' }}>{stat.label}</p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 overflow-hidden rounded-lg border" style={{ borderColor: 'var(--ws-border)' }}>
+              {decisionDeadlines.length > 0 ? decisionDeadlines.map((item, index) => {
+                const closesAt = item.grant?.closes_at;
+                const days = closesAt ? daysUntil(closesAt) : null;
+                return (
+                  <Link
+                    key={item.id}
+                    href={item.grant?.id ? `/grants/${item.grant.id}` : trackerHref}
+                    className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-[var(--ws-surface-2)]"
+                    style={{ borderTop: index > 0 ? '1px solid var(--ws-border)' : 'none', background: 'var(--ws-surface-0)' }}
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium" style={{ color: 'var(--ws-text)' }}>{item.grant?.name || 'Untitled grant'}</p>
+                      <p className="mt-1 truncate text-xs" style={{ color: 'var(--ws-text-tertiary)' }}>{item.grant?.provider || 'Provider unknown'}</p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-3 text-xs">
+                      {item.grant?.amount_max ? <span className="font-semibold tabular-nums" style={{ color: 'var(--ws-text)' }}>{formatMoney(item.grant.amount_max)}</span> : null}
+                      {days !== null ? (
+                        <span className="rounded px-2 py-0.5 font-semibold tabular-nums" style={{ background: days <= 7 ? 'rgba(220,38,38,0.1)' : 'var(--ws-surface-2)', color: days <= 7 ? 'var(--ws-red)' : 'var(--ws-text-tertiary)' }}>
+                          {days === 0 ? 'Today' : days === 1 ? '1 day' : `${days}d`}
+                        </span>
+                      ) : null}
+                    </div>
+                  </Link>
+                );
+              }) : (
+                <div className="px-4 py-5" style={{ background: 'var(--ws-surface-0)' }}>
+                  <p className="text-sm font-medium" style={{ color: 'var(--ws-text)' }}>No deadline decision is waiting.</p>
+                  <p className="mt-1 text-xs" style={{ color: 'var(--ws-text-secondary)' }}>Use the router to pick the next ACT-fit opportunity.</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-xl border p-4" style={{ borderColor: 'var(--ws-border)', background: 'var(--ws-surface-1)' }}>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-base font-semibold" style={{ color: 'var(--ws-text)' }}>Clean Before Review</h2>
+                <p className="mt-1 text-xs leading-5" style={{ color: 'var(--ws-text-secondary)' }}>
+                  Agents clean and enrich broadly. CT reviews narrowly.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => void runPreSweep()}
+                disabled={isRunningPreSweep || isRefreshing}
+                className="shrink-0 rounded-lg px-3 py-2 text-xs font-medium transition-opacity disabled:opacity-50"
+                style={{ background: 'var(--ws-accent)', color: '#fff' }}
+              >
+                {isRunningPreSweep ? 'Running...' : 'Run sweep'}
+              </button>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              {[
+                { label: 'Machine clean', value: currentReviewSweep.machinePass },
+                { label: 'Wiki enrich', value: currentReviewSweep.wikiCandidates },
+                { label: 'Online scout', value: currentReviewSweep.onlineFrontier },
+                { label: 'Human-ready', value: currentReviewSweep.humanReady },
+              ].map((stat) => (
+                <div key={stat.label} className="rounded-lg border px-3 py-2" style={{ borderColor: 'var(--ws-border)', background: 'var(--ws-surface-0)' }}>
+                  <p className="text-lg font-semibold tabular-nums" style={{ color: 'var(--ws-text)' }}>{stat.value.toLocaleString()}</p>
+                  <p className="text-[11px]" style={{ color: 'var(--ws-text-tertiary)' }}>{stat.label}</p>
+                </div>
+              ))}
+            </div>
+            {preSweepRun ? (
+              <p className="mt-3 text-xs leading-5" style={{ color: 'var(--ws-text-secondary)' }}>
+                Last sweep ran {relativeTime(preSweepRun.ranAt)} and moved {preSweepRun.applied.expiredUpdated.toLocaleString()} expired item{preSweepRun.applied.expiredUpdated !== 1 ? 's' : ''} out of review.
+              </p>
+            ) : (
+              <p className="mt-3 text-xs leading-5" style={{ color: 'var(--ws-text-secondary)' }}>
+                Review only the human-ready count after the sweep. The raw discovered backlog is system work.
+              </p>
+            )}
+          </div>
+        </section>
+
+        <section id="source-health" className="rounded-xl border p-4" style={{ borderColor: sourceFreshness.frontierFailing > 0 ? 'var(--ws-amber)' : 'var(--ws-border)', background: sourceFreshness.frontierFailing > 0 ? 'rgba(217,119,6,0.05)' : 'var(--ws-surface-1)' }}>
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h2 className="text-base font-semibold" style={{ color: 'var(--ws-text)' }}>System Health</h2>
+              <p className="mt-1 text-xs leading-5" style={{ color: 'var(--ws-text-secondary)' }}>
+                Keep raw infrastructure here: source freshness, failing URLs, alert health, data activity, and database scale.
+              </p>
+            </div>
+            <div className="flex shrink-0 gap-2">
+              <Link href="/reports/grant-frontier" className="rounded-lg border px-3 py-2 text-xs font-medium" style={{ borderColor: 'var(--ws-border)', color: 'var(--ws-text-secondary)', background: 'var(--ws-surface-0)' }}>
+                Source health
+              </Link>
+              <Link href="/mission-control" className="rounded-lg border px-3 py-2 text-xs font-medium" style={{ borderColor: 'var(--ws-border)', color: 'var(--ws-text-secondary)', background: 'var(--ws-surface-0)' }}>
+                Mission Control
+              </Link>
+            </div>
+          </div>
+          <div className="mt-4 grid gap-2 md:grid-cols-4">
+            {[
+              { label: 'Priority checks', value: sourceFreshness.frontierPriority.length },
+              { label: 'Due sources', value: sourceFreshness.frontierDue },
+              { label: 'Failing sources', value: sourceFreshness.frontierFailing },
+              { label: 'Scout agents', value: sourceFreshness.scoutRuns.length },
+            ].map((stat) => (
+              <div key={stat.label} className="rounded-lg border px-3 py-2.5" style={{ borderColor: 'var(--ws-border)', background: 'var(--ws-surface-0)' }}>
+                <p className="text-lg font-semibold tabular-nums" style={{ color: 'var(--ws-text)' }}>{stat.value.toLocaleString()}</p>
+                <p className="text-[11px]" style={{ color: 'var(--ws-text-tertiary)' }}>{stat.label}</p>
+              </div>
+            ))}
+          </div>
+          {topFrontierSources.length > 0 ? (
+            <div className="mt-4 grid gap-2 lg:grid-cols-3">
+              {topFrontierSources.map((item) => (
+                <a key={`${item.project}-${item.id}`} href={item.href} target="_blank" rel="noreferrer" className="rounded-lg border p-3 transition-colors hover:border-[var(--ws-accent)]" style={{ borderColor: 'var(--ws-border)', background: 'var(--ws-surface-0)' }}>
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="min-w-0 truncate text-sm font-medium" style={{ color: 'var(--ws-text)' }}>{item.title}</p>
+                    <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide" style={{ color: item.project === 'Goods' ? 'var(--ws-accent)' : item.project === 'JusticeHub' ? 'var(--ws-red)' : 'var(--ws-green)' }}>
+                      {item.project}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-xs leading-5" style={{ color: 'var(--ws-text-secondary)' }}>{item.reason}</p>
+                </a>
+              ))}
+            </div>
+          ) : null}
+          <div className="mt-4 grid gap-2 md:grid-cols-3">
+            <div className="rounded-lg border px-3 py-2.5" style={{ borderColor: 'var(--ws-border)', background: 'var(--ws-surface-0)' }}>
+              <p className="text-sm font-medium" style={{ color: 'var(--ws-text)' }}>Alerts</p>
+              <p className="mt-1 text-xs" style={{ color: alertNeedsAttention ? 'var(--ws-amber)' : 'var(--ws-text-secondary)' }}>
+                {alertNeedsAttention ? 'Needs tuning or delivery attention' : `${effectiveActiveAlertCount} active, stable unless tuning is needed`}
+              </p>
+            </div>
+            <div className="rounded-lg border px-3 py-2.5" style={{ borderColor: 'var(--ws-border)', background: 'var(--ws-surface-0)' }}>
+              <p className="text-sm font-medium" style={{ color: 'var(--ws-text)' }}>Database</p>
+              <p className="mt-1 text-xs" style={{ color: 'var(--ws-text-secondary)' }}>
+                {entityCount.toLocaleString()} entities, {openGrantCount.toLocaleString()} open grants
+              </p>
+            </div>
+            <div className="rounded-lg border px-3 py-2.5" style={{ borderColor: 'var(--ws-border)', background: 'var(--ws-surface-0)' }}>
+              <p className="text-sm font-medium" style={{ color: 'var(--ws-text)' }}>Recent agents</p>
+              <p className="mt-1 text-xs" style={{ color: 'var(--ws-text-secondary)' }}>
+                {agentRuns[0] ? `${agentRuns[0].agent_name.replace(/-/g, ' ')} ${relativeTime(agentRuns[0].started_at)}` : 'No recent run shown'}
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div className="mb-3">
+            <h2 className="text-base font-semibold" style={{ color: 'var(--ws-text)' }}>Where To Go Next</h2>
+            <p className="mt-1 text-xs" style={{ color: 'var(--ws-text-secondary)' }}>
+              Six lead surfaces. Everything else should hang off one of these.
+            </p>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {compactCommands.map((item) => (
+              <Link key={item.href} href={item.href} className="rounded-xl border p-4 transition-colors hover:border-[var(--ws-accent)]" style={{ borderColor: 'var(--ws-border)', background: 'var(--ws-surface-1)' }}>
+                <p className="text-sm font-semibold" style={{ color: 'var(--ws-text)' }}>{item.label}</p>
+                <p className="mt-2 text-xs leading-5" style={{ color: 'var(--ws-text-secondary)' }}>{item.detail}</p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl">
       {/* Greeting */}
