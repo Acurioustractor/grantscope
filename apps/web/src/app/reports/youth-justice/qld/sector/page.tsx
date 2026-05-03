@@ -699,8 +699,8 @@ async function getReport() {
  safe(supabase.rpc('exec_sql', { query: `SELECT recipient_name, COUNT(DISTINCT topic)::int AS sectors, ARRAY_AGG(DISTINCT topic) AS topic_list, SUM(amount_dollars)::bigint AS total FROM (SELECT recipient_name, unnest(topics) AS topic, amount_dollars FROM public.justice_funding WHERE state = 'QLD' AND amount_dollars > 0 AND recipient_name IS NOT NULL AND length(recipient_name) > 3 AND recipient_name !~ '^[0-9]+$' AND recipient_name NOT ILIKE '%Total%' AND recipient_name NOT ILIKE '%Department of%' AND recipient_name NOT ILIKE '%State of %' AND recipient_name NOT ILIKE '(blank)') t WHERE topic IN ('youth-justice','child-protection','disability','ndis','family-services','indigenous','mental-health','homelessness','aod','family-violence') GROUP BY 1 HAVING COUNT(DISTINCT topic) >= 3 ORDER BY total DESC NULLS LAST LIMIT 12` })) as Promise<CrossSectorRow[] | null>,
  safe(supabase.rpc('exec_sql', { query: `SELECT type, count::int FROM public.mv_yj_report_alma_type_counts ORDER BY count DESC LIMIT 12` })) as Promise<AlmaTypeCount[] | null>,
  safe(supabase.rpc('exec_sql', { query: `SELECT name, type, evidence_level, geography, cost_per_young_person::int, portfolio_score::int, cultural_authority, substring(description, 1, 1500) AS description, topics FROM public.alma_interventions WHERE ('QLD' = ANY(geography) OR 'Queensland' = ANY(geography)) AND (topics @> ARRAY['youth-justice'] OR type ILIKE '%diversion%' OR type ILIKE '%justice%' OR type ILIKE '%wraparound%' OR type ILIKE '%community-led%' OR type ILIKE '%therapeutic%') ORDER BY (CASE WHEN evidence_level ILIKE '%proven%' THEN 0 WHEN evidence_level ILIKE '%promising%' THEN 1 ELSE 2 END), portfolio_score DESC NULLS LAST LIMIT 16` })) as Promise<AlmaInterventionRow[] | null>,
- safe(supabase.rpc('exec_sql', { query: `SELECT supplier_name, COUNT(*)::int AS contracts, SUM(contract_value)::bigint AS total FROM public.austender_contracts WHERE supplier_name ILIKE ANY (ARRAY['%youth justice%','%PCYC%','%youth advocacy%','%murri watch%','%youth off the streets%','%mission australia%','%lifeline community%','%anglicare%','%uniting%','%liquidlogic%','%halikos%','%Save the Children%']) AND contract_value > 0 GROUP BY 1 ORDER BY total DESC NULLS LAST LIMIT 12` })) as Promise<ContractRow[] | null>,
- safe(supabase.rpc('exec_sql', { query: `SELECT name, total_giving_annual::bigint AS total_giving_annual, thematic_focus::text FROM public.foundations WHERE thematic_focus::text ILIKE ANY (ARRAY['%justice%','%youth%','%children%','%first nations%','%indigenous%','%disability%','%mental health%','%aboriginal%']) AND total_giving_annual > 0 AND name NOT ILIKE '%universit%' AND name NOT ILIKE '%accommodation%' AND name NOT ILIKE '%catholic education%' AND name NOT ILIKE '%hospital%' AND name NOT ILIKE '%council%' ORDER BY total_giving_annual DESC NULLS LAST LIMIT 12` })) as Promise<FoundationRow[] | null>,
+ safe(supabase.rpc('exec_sql', { query: `SELECT LOWER(supplier_name) AS supplier_key, MIN(supplier_name) AS supplier_name, COUNT(*)::int AS contracts, SUM(contract_value)::bigint AS total FROM public.austender_contracts WHERE supplier_name ILIKE ANY (ARRAY['%youth justice%','%PCYC%','%youth advocacy%','%murri watch%','%youth off the streets%','%mission australia%','%lifeline community%','%anglicare%','%uniting%','%liquidlogic%','%halikos%','%Save the Children%']) AND contract_value > 0 AND length(supplier_name) < 200 AND supplier_name NOT ILIKE '%;%' GROUP BY LOWER(supplier_name) ORDER BY total DESC NULLS LAST LIMIT 12` })) as Promise<ContractRow[] | null>,
+ safe(supabase.rpc('exec_sql', { query: `SELECT name, total_giving_annual::bigint AS total_giving_annual, thematic_focus::text FROM public.foundations WHERE thematic_focus::text ILIKE ANY (ARRAY['%justice%','%youth%','%children%','%first nations%','%indigenous%','%disability%','%mental health%','%aboriginal%']) AND total_giving_annual > 0 AND name NOT ILIKE '%universit%' AND name NOT ILIKE '%accommodation%' AND name NOT ILIKE '%catholic education%' AND name NOT ILIKE '%hospital%' AND name NOT ILIKE '%council%' AND name NOT ILIKE '%legal aid%' AND name NOT ILIKE '%primary healthcare network%' AND name NOT ILIKE '%phn%' AND name NOT ILIKE '%health network%' AND name NOT ILIKE 'job futures%' AND name NOT ILIKE '%refugee relief%' AND name NOT ILIKE '%world vision%' ORDER BY total_giving_annual DESC NULLS LAST LIMIT 12` })) as Promise<FoundationRow[] | null>,
  safe(supabase.rpc('exec_sql', { query: `SELECT lga_name, population::int, youth_population::int, indigenous_pct::numeric(5,1), pipeline_intensity::numeric(5,1), ndis_youth_participants::int, jh_funding_tracked::bigint, school_count::int, jobseeker_recipients::int, dsp_recipients::int, youth_allowance_recipients::int, low_icsea_schools::int, avg_icsea::int FROM public.lga_cross_system_stats WHERE state = 'QLD' AND population > 5000 AND pipeline_intensity IS NOT NULL ORDER BY pipeline_intensity DESC NULLS LAST LIMIT 15` })) as Promise<HeatmapRow[] | null>,
  safe(supabase.rpc('exec_sql', { query: `SELECT financial_year, topic, SUM(amount_dollars)::bigint AS total FROM (SELECT financial_year, unnest(topics) AS topic, amount_dollars FROM public.justice_funding WHERE state = 'QLD' AND amount_dollars > 0 AND financial_year IS NOT NULL) t WHERE topic IN ('youth-justice','child-protection','indigenous','disability','family-services') AND financial_year ~ '^20[0-9]{2}-' GROUP BY 1,2 ORDER BY financial_year, topic` })) as Promise<YearSpendRow[] | null>,
  safe(supabase.rpc('exec_sql', { query: `SELECT 'QLD'::text AS state, payment_type, recipient_count::int FROM public.dss_payment_demographics WHERE state = 'QLD' ORDER BY recipient_count DESC NULLS LAST LIMIT 10` })) as Promise<DssRow[] | null>,
@@ -828,6 +828,34 @@ async function getReport() {
 // at the first of: a literal "\u" escape sequence, an HTML tag, an
 // "X Y said" speaker reference, or a literal CR/LF (\r\n). Then strip
 // any escaped non-breaking spaces and tags from the remaining text.
+// Hansard speaker-name fallback. PDF parsing sometimes trails the start of a
+// speech into the speaker_name field (e.g., "Head · I take those interjections
+// from all of my colleagues."). When the field is long-ish or contains a `·`,
+// take only the first ~3 words before the separator. Otherwise return as-is.
+function cleanSpeakerName(raw: string | null | undefined): string {
+ if (!raw) return 'Unknown';
+ const trimmed = raw.trim();
+ if (!trimmed) return 'Unknown';
+ // If a `·` separator appears, the part before it is typically the surname
+ const beforeDot = trimmed.split('·')[0]?.trim() ?? trimmed;
+ // Cap at 3 words
+ const words = beforeDot.split(/\s+/);
+ if (words.length <= 3) return beforeDot;
+ return words.slice(0, 3).join(' ');
+}
+
+// Coroner-name fallback. The PDF scraper sometimes pulls the literal
+// section header "CATCHWORDS" or "FINDINGS" into the coroner_name field.
+// Surface those as null so the UI shows nothing rather than a fake name.
+function cleanCoronerName(raw: string | null | undefined): string | null {
+ if (!raw) return null;
+ const trimmed = raw.trim();
+ if (!trimmed) return null;
+ if (/^(catchwords|findings|inquest|coroner|delivered|hearing|date)$/i.test(trimmed)) return null;
+ if (/^[A-Z]{4,}$/.test(trimmed)) return null; // SHOUTING-CASE artefacts
+ return trimmed;
+}
+
 function cleanPortfolio(raw: string | null | undefined): string | null {
  if (!raw) return null;
  let s = raw;
@@ -1543,7 +1571,7 @@ export default async function QldYjSectorPage() {
  ) : (
  <p className="text-bauhaus-muted text-sm">NDIS overlay data not loaded.</p>
  )}
- <p className="text-xs text-bauhaus-muted font-mono mt-3">Source: <code>v_ndis_youth_justice_overlay</code>. AIHW Youth Justice reporting consistently identifies cognitive disability over-representation in the cohort, the NDIS provides one of the only structured records of disability supports for young people 15–18.</p>
+ <p className="text-xs text-bauhaus-muted font-mono mt-3">Source: <code>v_ndis_youth_justice_overlay</code>. AIHW Youth Justice reporting identifies cognitive disability over-representation in the cohort; NDIS data is one of the only structured records of disability supports for young people 15–18. <span className="font-black">Categories are not mutually exclusive:</span> a participant can hold more than one primary disability classification, so the autism / intellectual / psychosocial counts may sum higher than the youth (15–18) total.</p>
  </section>
 
  {/* §6 MENTAL HEALTH / AOD BLIND SPOT */}
@@ -2394,7 +2422,7 @@ export default async function QldYjSectorPage() {
  <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§14</div>
  <h3 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">Director interlocks, who sits on multiple boards</h3>
  <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
- People holding 5+ board / advisory positions across charities or Indigenous corporations connected to justice funding. The federation&apos;s shadow network: governance, advocacy, and funding all run through a small cohort.
+ People holding 5+ board / advisory positions across charities or Indigenous corporations connected to justice funding. The federation&apos;s shadow network: governance, advocacy, and funding all run through a small cohort. <span className="font-black">Read the $ figures as network-cumulative, not per-person:</span> if two listed directors sit on the same board, both rows include that board&apos;s funding total, so the same dollars appear against multiple people. The point of the table is the overlap, not an individual exposure.
  </p>
  {r.directors.length > 0 && (
  <div className="border-4 border-bauhaus-black overflow-x-auto">
@@ -2905,7 +2933,7 @@ export default async function QldYjSectorPage() {
  key={f.source_url}
  toneClass="border-bauhaus-red"
  title={cleanTitle}
- subtitle={`${f.coroner_name ? `Coroner ${f.coroner_name} · ` : ''}${f.finding_date ?? '—'}${f.recommendations_count != null ? ` · ${f.recommendations_count} recommendations` : ''}`}
+ subtitle={`${cleanCoronerName(f.coroner_name) ? `Coroner ${cleanCoronerName(f.coroner_name)} · ` : ''}${f.finding_date ?? '—'}${f.recommendations_count != null ? ` · ${f.recommendations_count} recommendations` : ''}`}
  sourceHref={f.source_url}
  sourceLabel="Open full finding PDF on coronerscourt.qld.gov.au ↗"
  trigger={
@@ -2916,7 +2944,7 @@ export default async function QldYjSectorPage() {
  {desc && <p className="text-xs text-bauhaus-muted font-mono mb-2 italic">{desc.slice(0, 240)}{desc.length > 240 ? '…' : ''}</p>}
  <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs font-mono text-bauhaus-muted mb-2">
  {f.deceased_identifier && <span><span className="font-black text-bauhaus-black">Deceased:</span> {f.deceased_identifier}</span>}
- {f.coroner_name && <span><span className="font-black text-bauhaus-black">Coroner:</span> {f.coroner_name}</span>}
+ {cleanCoronerName(f.coroner_name) && <span><span className="font-black text-bauhaus-black">Coroner:</span> {cleanCoronerName(f.coroner_name)}</span>}
  {f.finding_date && <span><span className="font-black text-bauhaus-black">Finding date:</span> {f.finding_date}</span>}
  {f.recommendations_count != null && <span><span className="font-black text-bauhaus-red">{f.recommendations_count}</span> recommendations</span>}
  </div>
@@ -2953,7 +2981,7 @@ export default async function QldYjSectorPage() {
  )}
  <DrawerKeyValue items={[
  { label: 'Deceased', value: f.deceased_identifier },
- { label: 'Coroner', value: f.coroner_name },
+ { label: 'Coroner', value: cleanCoronerName(f.coroner_name) },
  { label: 'Finding date', value: f.finding_date },
  { label: 'Recommendations', value: f.recommendations_count != null ? String(f.recommendations_count) : null },
  { label: 'Source', value: 'QLD Coroners Court' },
@@ -3020,7 +3048,7 @@ export default async function QldYjSectorPage() {
  <DetailDrawer
  key={i}
  toneClass={partyTone.border}
- title={`${h.speaker_name ?? 'Unknown'}${h.subject ? ` · ${h.subject.slice(0, 60)}` : ''}`}
+ title={`${cleanSpeakerName(h.speaker_name)}${h.subject ? ` · ${h.subject.slice(0, 60)}` : ''}`}
  subtitle={`${date ? date.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'} · ${h.speaker_party ?? 'Independent'} · QLD Parliament Hansard`}
  sourceHref={h.source_url ?? undefined}
  sourceLabel="Open full Hansard PDF on parliament.qld.gov.au ↗"
@@ -3030,7 +3058,7 @@ export default async function QldYjSectorPage() {
  <div className="text-xs font-mono font-black text-bauhaus-muted">{date ? date.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</div>
  <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 ${partyTone.tag}`}>{h.speaker_party ?? 'Independent'}</span>
  </div>
- <h4 className="text-base font-black text-bauhaus-black uppercase tracking-tight leading-tight mb-2">{h.speaker_name ?? 'Unknown'}{h.subject ? ` · ${h.subject.slice(0, 60)}` : ''}</h4>
+ <h4 className="text-base font-black text-bauhaus-black uppercase tracking-tight leading-tight mb-2">{cleanSpeakerName(h.speaker_name)}{h.subject ? ` · ${h.subject.slice(0, 60)}` : ''}</h4>
  <p className="text-xs text-bauhaus-black leading-relaxed italic mb-3">&ldquo;{h.snippet.replace(/\s+/g, ' ').trim()}…&rdquo;</p>
  <div className="text-[9px] font-black uppercase tracking-widest text-bauhaus-blue">Read full speech →</div>
  </div>

@@ -1,9 +1,10 @@
 import Link from 'next/link';
-import { getServiceSupabase } from '@/lib/report-supabase';
+import { getLiveReportSupabase } from '@/lib/report-supabase';
 import { safe } from '@/lib/services/utils';
 import { fmt } from '@/lib/services/report-service';
 
-export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 type GrantSummaryRow = {
   total: number;
@@ -158,11 +159,11 @@ function labelSourceGroup(value: string) {
 }
 
 async function getData() {
-  const supabase = getServiceSupabase();
+  const supabase = getLiveReportSupabase();
   const grantSummaryQuery = `
     SELECT
       COUNT(*)::int AS total,
-      COUNT(*) FILTER (WHERE COALESCE(status, '') IN ('open', 'opening_soon', 'active'))::int AS open_like,
+      COUNT(*) FILTER (WHERE COALESCE(status, '') IN ('open', 'opening_soon', 'active', 'ongoing', 'upcoming', 'pending'))::int AS open_like,
       COUNT(*) FILTER (WHERE COALESCE(deadline, closes_at) >= CURRENT_DATE)::int AS future_deadline,
       COUNT(*) FILTER (WHERE foundation_id IS NOT NULL)::int AS linked_foundation
     FROM grant_opportunities
@@ -184,7 +185,7 @@ async function getData() {
       COUNT(*)::int AS rows,
       COUNT(*) FILTER (WHERE last_success_at IS NOT NULL)::int AS ever_succeeded,
       COUNT(*) FILTER (WHERE last_success_at IS NULL)::int AS never_succeeded,
-      COUNT(*) FILTER (WHERE next_check_at <= NOW())::int AS due_now,
+      COUNT(*) FILTER (WHERE enabled = true AND (next_check_at IS NULL OR next_check_at <= NOW()))::int AS due_now,
       COUNT(*) FILTER (WHERE failure_count > 0)::int AS failing,
       MAX(last_success_at)::text AS latest_success
     FROM source_frontier
@@ -204,7 +205,7 @@ async function getData() {
     FROM source_frontier
     WHERE enabled = true
     ORDER BY
-      CASE WHEN next_check_at <= NOW() THEN 0 ELSE 1 END,
+      CASE WHEN next_check_at IS NULL OR next_check_at <= NOW() THEN 0 ELSE 1 END,
       priority DESC NULLS LAST,
       next_check_at ASC NULLS FIRST,
       failure_count DESC NULLS LAST
@@ -478,6 +479,28 @@ export default async function GrantFrontierPage() {
           >
             Open foundations
           </Link>
+        </div>
+        <div className="mt-6 rounded-sm border-4 border-bauhaus-black bg-white p-5">
+          <div className="text-xs font-black uppercase tracking-widest text-bauhaus-red">How to use this</div>
+          <p className="mt-3 max-w-4xl text-sm font-medium leading-relaxed text-bauhaus-muted">
+            This page is not where ACT decides what to apply for. It is the source-control room for the grant machine:
+            check whether the database is fresh, which source URLs need scouting next, which crawlers are failing, and which
+            high-value funders still have no structured program data.
+          </p>
+          <div className="mt-4 grid gap-3 lg:grid-cols-3">
+            <div className="border-2 border-bauhaus-black/10 p-3">
+              <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-black">1. Check pressure</div>
+              <div className="mt-1 text-sm leading-relaxed text-bauhaus-muted">Use due frontier checks to see whether the scout backlog is under control.</div>
+            </div>
+            <div className="border-2 border-bauhaus-black/10 p-3">
+              <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-black">2. Fix failures</div>
+              <div className="mt-1 text-sm leading-relaxed text-bauhaus-muted">Use blocked frontier rows to repair URLs, parser hints, or agents.</div>
+            </div>
+            <div className="border-2 border-bauhaus-black/10 p-3">
+              <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-black">3. Feed decisions</div>
+              <div className="mt-1 text-sm leading-relaxed text-bauhaus-muted">Use uncovered funders and new program hits to improve Matched, Tracker, Home, and the ACT cockpit.</div>
+            </div>
+          </div>
         </div>
       </div>
 

@@ -1,5 +1,6 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import Link from 'next/link';
+import { EntityPreviewTrigger, ListPreviewProvider, type EntityPreviewData } from '../components/list-preview';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,6 +15,7 @@ function formatMoney(amount: number | null): string {
 const ENTITY_TYPES = [
   { value: 'charity', label: 'Charity' },
   { value: 'foundation', label: 'Foundation' },
+  { value: 'program', label: 'Program' },
   { value: 'company', label: 'Company' },
   { value: 'indigenous_corp', label: 'Indigenous Corp' },
   { value: 'government_body', label: 'Government' },
@@ -31,10 +33,21 @@ const SORT_OPTIONS = [
   { value: 'canonical_name', label: 'Name A-Z' },
 ];
 
+function parseAggregateEntityQuery(query: string | undefined): { type: string; label: string } | null {
+  if (!query) return null;
+  const match = query.match(/^\d[\d,]*\s+new\s+([a-z_ -]+)\s+entities$/i);
+  if (!match?.[1]) return null;
+
+  const type = match[1].trim().toLowerCase().replace(/[\s-]+/g, '_');
+  const label = ENTITY_TYPES.find(t => t.value === type)?.label || type.replace(/_/g, ' ');
+  return { type, label };
+}
+
 function entityTypeBadge(type: string): string {
   const styles: Record<string, string> = {
     charity: 'border-money bg-money-light text-money',
     foundation: 'border-bauhaus-blue bg-link-light text-bauhaus-blue',
+    program: 'border-bauhaus-yellow bg-warning-light text-bauhaus-black',
     company: 'border-bauhaus-black/30 bg-bauhaus-canvas text-bauhaus-black',
     government_body: 'border-bauhaus-yellow bg-warning-light text-bauhaus-black',
     indigenous_corp: 'border-bauhaus-red bg-error-light text-bauhaus-red',
@@ -44,6 +57,77 @@ function entityTypeBadge(type: string): string {
   return styles[type] || 'border-bauhaus-black/20 bg-bauhaus-canvas text-bauhaus-muted';
 }
 
+function asNumber(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function asString(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value : null;
+}
+
+function asStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
+}
+
+function asBoolean(value: unknown): boolean | null {
+  return typeof value === 'boolean' ? value : null;
+}
+
+function entityPreview(row: Record<string, unknown>, foundation?: Record<string, unknown>): EntityPreviewData {
+  return {
+    gs_id: String(row.gs_id || ''),
+    name: String(row.canonical_name || row.entity_name || 'Unnamed entity'),
+    entity_type: asString(row.entity_type),
+    abn: asString(row.abn),
+    description: asString(row.description),
+    website: asString(row.website),
+    state: asString(row.state),
+    postcode: asString(row.postcode),
+    lga_name: asString(row.lga_name),
+    remoteness: asString(row.remoteness),
+    seifa_irsd_decile: asNumber(row.seifa_irsd_decile),
+    sector: asString(row.sector),
+    sub_sector: asString(row.sub_sector),
+    tags: asStringArray(row.tags),
+    source_datasets: asStringArray(row.source_datasets),
+    confidence: asString(row.confidence),
+    first_seen: asString(row.first_seen),
+    last_seen: asString(row.last_seen),
+    is_community_controlled: asBoolean(row.is_community_controlled),
+    source_count: asNumber(row.source_count),
+    latest_revenue: asNumber(row.latest_revenue),
+    latest_assets: asNumber(row.latest_assets),
+    total_donated: asNumber(row.total_donated),
+    total_contract_value: asNumber(row.total_contract_value),
+    donation_count: asNumber(row.donation_count),
+    contract_count: asNumber(row.contract_count),
+    foundation_profile: foundation
+      ? {
+          id: String(foundation.id || ''),
+          name: String(foundation.name || row.canonical_name || 'Foundation profile'),
+          website: asString(foundation.website),
+          description: asString(foundation.description),
+          total_giving_annual: asNumber(foundation.total_giving_annual),
+          avg_grant_size: asNumber(foundation.avg_grant_size),
+          grant_range_min: asNumber(foundation.grant_range_min),
+          grant_range_max: asNumber(foundation.grant_range_max),
+          thematic_focus: asStringArray(foundation.thematic_focus),
+          geographic_focus: asStringArray(foundation.geographic_focus),
+          target_recipients: asStringArray(foundation.target_recipients),
+          application_tips: asString(foundation.application_tips),
+          profile_confidence: asString(foundation.profile_confidence),
+          last_scraped_at: asString(foundation.last_scraped_at),
+        }
+      : null,
+  };
+}
+
 export default async function EntityGraphPage({
   searchParams,
 }: {
@@ -51,6 +135,7 @@ export default async function EntityGraphPage({
 }) {
   const { q, type, view, state: stateFilter, sort } = await searchParams;
   const supabase = getServiceSupabase();
+  const aggregateEntityQuery = parseAggregateEntityQuery(q);
 
   // Default view: donor-contractors (the flagship)
   const showDonorContractors = view === 'donor-contractors' || !view;
@@ -73,7 +158,8 @@ export default async function EntityGraphPage({
     ]);
 
     return (
-      <div className="max-w-5xl">
+      <ListPreviewProvider>
+        <div className="max-w-5xl">
         <h1 className="text-2xl sm:text-3xl font-black text-bauhaus-black mb-2">Entity Graph</h1>
         <p className="text-bauhaus-muted font-medium mb-6">
           {(totalEntities || 0).toLocaleString()} entities &middot; {(totalRels || 0).toLocaleString()} relationships &middot; Mapping money, contracts, and political influence across Australia
@@ -104,35 +190,37 @@ export default async function EntityGraphPage({
           </div>
           <div className="border-b-2 border-bauhaus-black/10 bg-bauhaus-canvas px-4 py-2">
             <p className="text-[11px] font-bold text-bauhaus-muted uppercase tracking-widest">
-              Showing the top 100 ranked by total donated. Open any entity for the full dossier.
+              Showing the top 100 ranked by total donated. Click any row to inspect before opening the full dossier.
             </p>
           </div>
           <div className="divide-y-2 divide-bauhaus-black/5">
             {(donorContractors || []).map((dc: Record<string, unknown>, i: number) => (
-              <Link key={i} href={`/entities/${dc.gs_id}`}
-                className="flex items-center justify-between px-4 py-3 hover:bg-bauhaus-canvas transition-colors">
-                <div className="flex-1 min-w-0">
-                  <div className="font-bold text-bauhaus-black truncate">{dc.canonical_name as string}</div>
-                  <div className="text-[11px] text-bauhaus-muted font-medium">
-                    {dc.entity_type as string} &middot; {dc.state as string || 'National'}
-                    {dc.sector ? <span> &middot; {String(dc.sector)}</span> : null}
+              <EntityPreviewTrigger key={i} entity={entityPreview(dc)}>
+                <div className="flex items-center justify-between px-4 py-3 hover:bg-bauhaus-canvas transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-bauhaus-black truncate">{dc.canonical_name as string}</div>
+                    <div className="text-[11px] text-bauhaus-muted font-medium">
+                      {dc.entity_type as string} &middot; {dc.state as string || 'National'}
+                      {dc.sector ? <span> &middot; {String(dc.sector)}</span> : null}
+                    </div>
+                  </div>
+                  <div className="text-right ml-4 shrink-0">
+                    <div className="text-sm font-black text-bauhaus-red">{formatMoney(dc.total_donated as number)}</div>
+                    <div className="text-[10px] font-bold text-bauhaus-muted">
+                      {(dc.donation_count as number)} donations &middot; {(dc.contract_count as number)} contracts
+                    </div>
+                  </div>
+                  <div className="text-right ml-4 shrink-0 hidden sm:block">
+                    <div className="text-sm font-black text-bauhaus-black">{formatMoney(dc.total_contract_value as number)}</div>
+                    <div className="text-[10px] font-bold text-bauhaus-muted">contract value</div>
                   </div>
                 </div>
-                <div className="text-right ml-4 shrink-0">
-                  <div className="text-sm font-black text-bauhaus-red">{formatMoney(dc.total_donated as number)}</div>
-                  <div className="text-[10px] font-bold text-bauhaus-muted">
-                    {(dc.donation_count as number)} donations &middot; {(dc.contract_count as number)} contracts
-                  </div>
-                </div>
-                <div className="text-right ml-4 shrink-0 hidden sm:block">
-                  <div className="text-sm font-black text-bauhaus-black">{formatMoney(dc.total_contract_value as number)}</div>
-                  <div className="text-[10px] font-bold text-bauhaus-muted">contract value</div>
-                </div>
-              </Link>
+              </EntityPreviewTrigger>
             ))}
           </div>
         </div>
-      </div>
+        </div>
+      </ListPreviewProvider>
     );
   }
 
@@ -145,8 +233,8 @@ export default async function EntityGraphPage({
 
   if (needsQuery) {
     let dbQuery = supabase
-      .from('gs_entities')
-      .select('id, gs_id, canonical_name, entity_type, abn, state, source_count, latest_revenue, latest_assets, sector');
+        .from('gs_entities')
+        .select('id, gs_id, canonical_name, entity_type, abn, description, website, state, postcode, lga_name, remoteness, seifa_irsd_decile, source_count, source_datasets, confidence, latest_revenue, latest_assets, sector, sub_sector, tags, first_seen, last_seen, is_community_controlled');
 
     if (q) {
       const isAbn = /^\d{9,11}$/.test(q.replace(/\s/g, ''));
@@ -180,8 +268,24 @@ export default async function EntityGraphPage({
     results = (data || []) as Record<string, unknown>[];
   }
 
+  let foundationProfilesByAbn = new Map<string, Record<string, unknown>>();
+  const foundationAbns = Array.from(new Set(results.map(row => asString(row.abn)).filter((abn): abn is string => Boolean(abn))));
+  if (foundationAbns.length > 0) {
+    const { data: foundationProfiles } = await supabase
+      .from('foundations')
+      .select('id, acnc_abn, name, website, description, total_giving_annual, avg_grant_size, grant_range_min, grant_range_max, thematic_focus, geographic_focus, target_recipients, application_tips, profile_confidence, last_scraped_at')
+      .in('acnc_abn', foundationAbns);
+
+    foundationProfilesByAbn = new Map<string, Record<string, unknown>>();
+    for (const profile of (foundationProfiles || []) as Record<string, unknown>[]) {
+      const abn = String(profile.acnc_abn || '');
+      if (abn) foundationProfilesByAbn.set(abn, profile);
+    }
+  }
+
   return (
-    <div className="max-w-5xl">
+    <ListPreviewProvider>
+      <div className="max-w-5xl">
       <h1 className="text-2xl sm:text-3xl font-black text-bauhaus-black mb-6">Entity Graph</h1>
 
       {/* View tabs */}
@@ -271,39 +375,57 @@ export default async function EntityGraphPage({
       {results.length > 0 && (
         <div className="border-4 border-bauhaus-black divide-y-2 divide-bauhaus-black/5">
           {results.map((r, i) => (
-            <Link key={i} href={`/entities/${r.gs_id}`}
-              className="flex items-center justify-between px-4 py-3 hover:bg-bauhaus-canvas transition-colors">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-bauhaus-black truncate">{r.canonical_name as string}</span>
-                  <span className={`text-[10px] font-black px-1.5 py-0.5 border uppercase tracking-widest shrink-0 ${entityTypeBadge(r.entity_type as string)}`}>
-                    {(r.entity_type as string).replace(/_/g, ' ')}
-                  </span>
+            <EntityPreviewTrigger key={i} entity={entityPreview(r, r.abn ? foundationProfilesByAbn.get(String(r.abn)) : undefined)}>
+              <div className="flex items-center justify-between px-4 py-3 hover:bg-bauhaus-canvas transition-colors">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-bauhaus-black truncate">{r.canonical_name as string}</span>
+                    <span className={`text-[10px] font-black px-1.5 py-0.5 border uppercase tracking-widest shrink-0 ${entityTypeBadge(r.entity_type as string)}`}>
+                      {(r.entity_type as string).replace(/_/g, ' ')}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-bauhaus-muted font-medium mt-0.5">
+                    {r.abn ? <span>ABN {String(r.abn)}</span> : <span>No ABN</span>}
+                    {r.state ? <span> &middot; {String(r.state)}</span> : null}
+                    {r.sector ? <span> &middot; {String(r.sector)}</span> : null}
+                  </div>
                 </div>
-                <div className="text-[11px] text-bauhaus-muted font-medium mt-0.5">
-                  {r.abn ? <span>ABN {String(r.abn)}</span> : <span>No ABN</span>}
-                  {r.state ? <span> &middot; {String(r.state)}</span> : null}
-                  {r.sector ? <span> &middot; {String(r.sector)}</span> : null}
+                <div className="text-right ml-4 shrink-0">
+                  {(r.latest_revenue as number) ? (
+                    <div className="text-sm font-black text-bauhaus-black">{formatMoney(r.latest_revenue as number)}</div>
+                  ) : null}
+                  <div className="text-[10px] font-bold text-bauhaus-muted">
+                    {r.source_count as number} source{(r.source_count as number) !== 1 ? 's' : ''}
+                  </div>
                 </div>
               </div>
-              <div className="text-right ml-4 shrink-0">
-                {(r.latest_revenue as number) ? (
-                  <div className="text-sm font-black text-bauhaus-black">{formatMoney(r.latest_revenue as number)}</div>
-                ) : null}
-                <div className="text-[10px] font-bold text-bauhaus-muted">
-                  {r.source_count as number} source{(r.source_count as number) !== 1 ? 's' : ''}
-                </div>
-              </div>
-            </Link>
+            </EntityPreviewTrigger>
           ))}
         </div>
       )}
 
       {needsQuery && results.length === 0 && (
-        <p className="text-bauhaus-muted font-medium">
-          {q ? <>No entities found for &ldquo;{q}&rdquo;</> : 'No entities match these filters'}
-          {type || stateFilter ? ' — try broadening your filters' : ''}
-        </p>
+        aggregateEntityQuery ? (
+          <div className="border-4 border-bauhaus-black bg-white p-5">
+            <div className="text-xs font-black uppercase tracking-widest text-bauhaus-muted mb-2">
+              Mission Control aggregate
+            </div>
+            <p className="text-sm font-medium text-bauhaus-muted leading-6 mb-4">
+              &ldquo;{q}&rdquo; is a machine discovery summary, not an entity name. Browse the {aggregateEntityQuery.label.toLowerCase()} lane instead.
+            </p>
+            <Link
+              href={`/entities?view=search&type=${encodeURIComponent(aggregateEntityQuery.type)}`}
+              className="inline-flex min-h-10 items-center border-2 border-bauhaus-black bg-bauhaus-black px-4 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-white hover:text-bauhaus-black"
+            >
+              Browse {aggregateEntityQuery.label}
+            </Link>
+          </div>
+        ) : (
+          <p className="text-bauhaus-muted font-medium">
+            {q ? <>No entities found for &ldquo;{q}&rdquo;</> : 'No entities match these filters'}
+            {type || stateFilter ? ' — try broadening your filters' : ''}
+          </p>
+        )
       )}
 
       {!needsQuery && (
@@ -312,6 +434,7 @@ export default async function EntityGraphPage({
           <p className="text-xs text-bauhaus-muted">Tip: Use <kbd className="px-1.5 py-0.5 border border-bauhaus-black/20 font-black">&#8984;K</kbd> for global search from anywhere</p>
         </div>
       )}
-    </div>
+      </div>
+    </ListPreviewProvider>
   );
 }

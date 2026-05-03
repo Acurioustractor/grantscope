@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { trackProductEvent } from '@/lib/product-events-client';
 import { startCheckoutForTier } from '@/lib/start-checkout';
+import type { ReviewSweepStatus } from '@/lib/review-pre-sweep';
 import type { AlertFrequency, Tier } from '@/lib/subscription';
 import { SlidePanel, SlidePanelHeader, SlidePanelBody } from '../components/slide-panel';
 
@@ -21,6 +22,13 @@ export interface GrantItem {
     amount_max: number | null;
     closes_at: string | null;
     categories: string[];
+    url?: string | null;
+    updated_at?: string | null;
+    focus_areas?: string[] | null;
+    description?: string | null;
+    source?: string | null;
+    fit_score?: number | null;
+    relevance_score?: number | null;
   } | null;
 }
 
@@ -109,6 +117,50 @@ export interface AlertLearningItem {
   } | null;
 }
 
+export interface ScenarioFocus {
+  title: string;
+  detail: string;
+  nextAction: string;
+  href: string;
+  tone: 'ready' | 'blocked' | 'watch';
+  primaryMetric: {
+    label: string;
+    value: string;
+  };
+  secondaryMetric: {
+    label: string;
+    value: string;
+  };
+}
+
+export interface SourceFreshnessStatus {
+  grantsUpdated7d: number;
+  staleOpenGrants: number;
+  grantsMissingUrl: number;
+  frontierDue: number;
+  frontierChanged7d: number;
+  frontierFailing: number;
+  frontierPriority: {
+    id: string;
+    project: 'Goods' | 'JusticeHub' | 'Empathy Ledger';
+    title: string;
+    sourceKind: string;
+    reason: string;
+    href: string;
+    priority: number;
+  }[];
+  scoutRuns: {
+    agent_id: string;
+    agent_name: string;
+    status: string;
+    items_found: number | null;
+    items_new: number | null;
+    items_updated: number | null;
+    started_at: string;
+    completed_at: string | null;
+  }[];
+}
+
 type ActionFeedback = {
   tone: 'success' | 'error';
   message: string;
@@ -117,6 +169,34 @@ type ActionFeedback = {
 type NotificationOverride = {
   status?: string;
   last_error?: string | null;
+};
+
+export type PreSweepRunResult = {
+  ranAt: string;
+  applied: {
+    expiredUpdated: number;
+    staleUpdated: number;
+    missingUrlUpdated: number;
+    noDeadlineUpdated: number;
+  };
+  before: ReviewSweepStatus;
+  sweep: ReviewSweepStatus;
+  decisionBatch: {
+    humanReadyTop5: {
+      savedGrantId: string;
+      grantId: string;
+      name: string | null;
+      provider: string | null;
+      amountMin: number | null;
+      amountMax: number | null;
+      closesAt: string | null;
+      categories: string[];
+      url: string | null;
+      fitScore: number | null;
+      relevanceScore: number | null;
+    }[];
+  };
+  nextSteps: string[];
 };
 
 interface HomeClientProps {
@@ -159,6 +239,11 @@ interface HomeClientProps {
   activeCount: number;
   submittedCount: number;
   wonCount: number;
+  scenarioFocus: ScenarioFocus | null;
+  sourceFreshness: SourceFreshnessStatus;
+  reviewSweep?: ReviewSweepStatus;
+  autoRunPreSweepKey?: string | null;
+  initialPreSweepRun?: PreSweepRunResult | null;
 }
 
 function formatMoney(amount: number | null): string {
@@ -210,15 +295,33 @@ export function HomeClient(props: HomeClientProps) {
   const [optimisticPausedAlertIds, setOptimisticPausedAlertIds] = useState<string[]>([]);
   const [notificationOverrides, setNotificationOverrides] = useState<Record<string, NotificationOverride>>({});
   const [feedback, setFeedback] = useState<ActionFeedback | null>(null);
-  const [isRefreshing, startRefresh] = useTransition();
-  const [startingUpgrade, setStartingUpgrade] = useState(false);
-
   const {
     greeting, contextLine, profileReady, hasShortlistedGrants, hasWorkedGrantPipeline,
     grants, foundations, agentRuns, activeAlertCount, recentAlertActivity, alertLearning, alertLearningSummary, subscriptionTier, alertEntitlements, billingStatus, openGrantCount, entityCount,
     urgentDeadlines, soonDeadlines,
     discoveredCount, activeCount, submittedCount, wonCount,
+    scenarioFocus,
+    sourceFreshness,
+    reviewSweep,
+    autoRunPreSweepKey,
+    initialPreSweepRun,
   } = props;
+  const [preSweepRun, setPreSweepRun] = useState<PreSweepRunResult | null>(initialPreSweepRun || null);
+  const [isRunningPreSweep, setIsRunningPreSweep] = useState(false);
+  const [isRefreshing, startRefresh] = useTransition();
+  const [startingUpgrade, setStartingUpgrade] = useState(false);
+  const baseReviewSweep: ReviewSweepStatus = reviewSweep ?? {
+    total: discoveredCount,
+    machinePass: 0,
+    humanReady: discoveredCount,
+    expired: 0,
+    stale: 0,
+    missingUrl: 0,
+    noDeadline: 0,
+    wikiCandidates: 0,
+    onlineFrontier: sourceFreshness.frontierPriority.length,
+  };
+  const currentReviewSweep = preSweepRun?.sweep ?? baseReviewSweep;
   const showActivation = !profileReady || !hasShortlistedGrants || !hasWorkedGrantPipeline;
   const trackerHref = hasWorkedGrantPipeline ? '/tracker' : '/tracker?onboarding=1';
   const pausedAlertIds = new Set(optimisticPausedAlertIds);
@@ -239,14 +342,197 @@ export function HomeClient(props: HomeClientProps) {
   });
   const recentQueuedAlerts = effectiveRecentAlertActivity.filter((activity) => activity.status === 'queued').length;
   const recentSentAlerts = effectiveRecentAlertActivity.filter((activity) => activity.status === 'sent').length;
-  const visibleAlertLearning = alertLearning.slice(0, 3);
+  const failedAlertCount = effectiveRecentAlertActivity.filter((activity) => activity.status === 'failed').length;
+  const trackedFromAlerts = alertLearning.reduce((sum, alert) => sum + alert.tracked, 0);
+  const visibleAlertLearning = alertLearning.slice(0, 2);
+  const alertNeedsAttention = alertLearningSummary.needsAttention > 0 || failedAlertCount > 0;
+  const visibleAlertActivity = effectiveRecentAlertActivity.filter((activity) => activity.status === 'failed').slice(0, 2);
+  const allWorkbenchDeadlines = [...urgentDeadlines, ...soonDeadlines];
+  const workbenchDeadlines = allWorkbenchDeadlines.slice(0, 6);
+  const hiddenWorkbenchDeadlineCount = Math.max(0, allWorkbenchDeadlines.length - workbenchDeadlines.length);
   const showAlertUpsell = subscriptionTier === 'community';
+  const sourceFreshnessTone =
+    sourceFreshness.frontierFailing > 0 || sourceFreshness.grantsMissingUrl > 100
+      ? 'warning'
+      : sourceFreshness.frontierDue > 0
+        ? 'info'
+        : 'success';
+  const todayActions = [
+    {
+      label: 'Triage deadlines',
+      value: urgentDeadlines.length.toLocaleString(),
+      detail: urgentDeadlines.length > 0
+        ? 'Decide pursue, park, or no-go before the week closes.'
+        : 'No tracked grants close in the next seven days.',
+      href: urgentDeadlines.length > 0 ? '#grant-workbench' : '/grants',
+      tone: urgentDeadlines.length > 0 ? 'danger' : 'calm',
+    },
+    {
+      label: 'Pre-sweep review',
+      value: discoveredCount.toLocaleString(),
+      detail: discoveredCount > 0
+        ? 'Let the system clean, verify, and enrich the backlog before CT reviews it.'
+        : 'The review queue is clear.',
+      href: '#pre-sweep',
+      tone: discoveredCount > 100 ? 'warning' : 'calm',
+    },
+    {
+      label: 'Move active work',
+      value: activeCount.toLocaleString(),
+      detail: activeCount > 0
+        ? 'Push active grants toward evidence, partner contact, or submission.'
+        : 'No active grant work is underway.',
+      href: trackerHref,
+      tone: activeCount > 0 ? 'info' : 'calm',
+    },
+  ] as const;
+  const primaryCommands = [
+    {
+      href: '/grants',
+      label: 'Search grants',
+      detail: `${openGrantCount.toLocaleString()} open opportunities in the database`,
+      context: 'Scout',
+      tone: 'neutral',
+    },
+    {
+      href: trackerHref,
+      label: 'Grant tracker',
+      detail: `${discoveredCount.toLocaleString()} pre-sweep, ${activeCount.toLocaleString()} active`,
+      context: discoveredCount > 100 ? 'Backlog' : 'Pipeline',
+      tone: discoveredCount > 100 ? 'warning' : 'neutral',
+    },
+    {
+      href: '/opportunities/ecosystem',
+      label: 'Opportunity cockpit',
+      detail: scenarioFocus?.title || 'ACT project lenses, source health, and next actions',
+      context: scenarioFocus?.tone === 'blocked' ? 'Blocked' : 'ACT',
+      tone: scenarioFocus?.tone === 'blocked' ? 'warning' : 'info',
+    },
+    {
+      href: '/procurement',
+      label: 'Tender intelligence',
+      detail: 'Buyer pathways, contracts, suppliers, and decision packs',
+      context: 'Procurement',
+      tone: 'neutral',
+    },
+    {
+      href: '/briefing',
+      label: 'Briefing hub',
+      detail: 'Carry the same evidence into memos, packs, reports, and story handoffs',
+      context: 'Brief',
+      tone: 'neutral',
+    },
+    {
+      href: '/entities',
+      label: 'Entity graph',
+      detail: `${entityCount.toLocaleString()} entities for due diligence and relationship mapping`,
+      context: 'Graph',
+      tone: 'neutral',
+    },
+  ] as const;
+  const secondaryCommands = [
+    { href: '/profile/matches', label: 'Matched grants' },
+    { href: '/alerts', label: 'Grant alerts' },
+    { href: '/foundations/tracker', label: 'Foundation tracker' },
+    { href: '/power', label: 'Power map' },
+    { href: '/insights', label: 'Data clarity' },
+    { href: '/reports', label: 'Reports' },
+    { href: '/home/watchlist', label: 'Watchlist' },
+    { href: '/home/api-keys', label: 'API keys' },
+  ] as const;
+  const preSweepLanes = [
+    {
+      label: 'Machine clean',
+      value: currentReviewSweep.machinePass.toLocaleString(),
+      detail: `${currentReviewSweep.expired.toLocaleString()} expired, ${currentReviewSweep.stale.toLocaleString()} stale, ${currentReviewSweep.missingUrl.toLocaleString()} missing URLs, ${currentReviewSweep.noDeadline.toLocaleString()} without deadlines.`,
+      href: '/mission-control',
+      action: 'Run sweep',
+      tone: currentReviewSweep.machinePass > 0 ? 'warning' : 'neutral',
+    },
+    {
+      label: 'Wiki enrich',
+      value: currentReviewSweep.wikiCandidates.toLocaleString(),
+      detail: 'Search Tractorpedia/wiki for project fit, evidence packs, partners, and missing ACT context.',
+      href: '/opportunities/ecosystem',
+      action: 'Open cockpit',
+      tone: currentReviewSweep.wikiCandidates > 0 ? 'info' : 'neutral',
+    },
+    {
+      label: 'Online scout',
+      value: currentReviewSweep.onlineFrontier.toLocaleString(),
+      detail: 'Refresh adjacent source pages, funder sites, procurement pages, and foundation programs before triage.',
+      href: '#source-freshness',
+      action: 'View frontier',
+      tone: currentReviewSweep.onlineFrontier > 0 ? 'info' : 'neutral',
+    },
+    {
+      label: 'Human-ready',
+      value: currentReviewSweep.humanReady.toLocaleString(),
+      detail: 'Only these should become CT decision work after the machine pass has removed obvious noise.',
+      href: trackerHref,
+      action: 'Review tracker',
+      tone: currentReviewSweep.humanReady > 0 ? 'success' : 'neutral',
+    },
+  ] as const;
+  const dailyRhythm = [
+    {
+      step: '1',
+      label: 'Scan',
+      time: '5 min',
+      detail: 'Read the focus stack, Goods blocker, and source freshness before opening any detail page.',
+      href: '#grant-workbench',
+    },
+    {
+      step: '2',
+      label: 'Pre-sweep',
+      time: '20 min',
+      detail: currentReviewSweep.total > 0
+        ? `Clean ${currentReviewSweep.machinePass.toLocaleString()} machine-pass item${currentReviewSweep.machinePass !== 1 ? 's' : ''} before opening the human queue.`
+        : 'No pre-sweep backlog needs attention.',
+      href: '#pre-sweep',
+    },
+    {
+      step: '3',
+      label: 'Decide',
+      time: '20 min',
+      detail: urgentDeadlines.length > 0
+        ? `Resolve the first ${Math.min(3, urgentDeadlines.length)} deadline decision${Math.min(3, urgentDeadlines.length) !== 1 ? 's' : ''}: pursue, park, or no-go.`
+        : 'Review only the human-ready opportunities left after the pre-sweep.',
+      href: '#grant-workbench',
+    },
+    {
+      step: '4',
+      label: 'Scout',
+      time: '15 min',
+      detail: sourceFreshness.frontierPriority.length > 0
+        ? 'Check the first three priority frontier sources, then update or ignore with a reason.'
+        : 'Review source health and decide what needs seeding into the frontier.',
+      href: '#source-freshness',
+    },
+    {
+      step: '5',
+      label: 'File',
+      time: '10 min',
+      detail: 'Leave the trail: tracker stage, cockpit action, brief note, or alert tuning.',
+      href: '/briefing',
+    },
+  ] as const;
 
   useEffect(() => {
     if (!feedback) return;
     const timeout = window.setTimeout(() => setFeedback(null), 4000);
     return () => window.clearTimeout(timeout);
   }, [feedback]);
+
+  useEffect(() => {
+    if (!autoRunPreSweepKey || preSweepRun || isRunningPreSweep) return;
+
+    const storageKey = `home-pre-sweep:${autoRunPreSweepKey}`;
+    if (window.localStorage.getItem(storageKey)) return;
+
+    window.localStorage.setItem(storageKey, 'started');
+    void runPreSweep({ storageKey });
+  }, [autoRunPreSweepKey, preSweepRun, isRunningPreSweep]);
 
   useEffect(() => {
     if (!showAlertUpsell) return;
@@ -267,6 +553,38 @@ export function HomeClient(props: HomeClientProps) {
 
   function openFoundation(item: FoundationItem) {
     setPreview({ type: 'foundation', item });
+  }
+
+  async function runPreSweep(options?: { storageKey?: string }) {
+    setIsRunningPreSweep(true);
+    setFeedback(null);
+    try {
+      const response = await fetch('/api/home/pre-sweep', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ applyExpired: true }),
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Pre-sweep failed');
+      }
+
+      setPreSweepRun(payload as PreSweepRunResult);
+      setFeedback({
+        tone: 'success',
+        message: `Pre-sweep complete. ${payload.applied?.expiredUpdated || 0} expired item${payload.applied?.expiredUpdated === 1 ? '' : 's'} moved out of review.`,
+      });
+      startRefresh(() => router.refresh());
+    } catch (error) {
+      if (options?.storageKey) window.localStorage.removeItem(options.storageKey);
+      setFeedback({
+        tone: 'error',
+        message: error instanceof Error ? error.message : 'Pre-sweep failed',
+      });
+    } finally {
+      setIsRunningPreSweep(false);
+    }
   }
 
   async function trackGrant(grantId: string, options?: { alertId?: string | null; notificationId?: string | null }) {
@@ -387,7 +705,7 @@ export function HomeClient(props: HomeClientProps) {
   }
 
   return (
-    <div className="max-w-5xl">
+    <div className="max-w-7xl">
       {/* Greeting */}
       <header className="mb-8">
         <h1 className="text-2xl font-semibold tracking-tight" style={{ color: 'var(--ws-text)' }}>
@@ -503,7 +821,7 @@ export function HomeClient(props: HomeClientProps) {
             <div>
               <p className="text-sm font-medium" style={{ color: 'var(--ws-text)' }}>Your pipeline is live.</p>
               <p className="text-xs mt-1" style={{ color: 'var(--ws-text-secondary)' }}>
-                Keep triaging new matches, work active grants in the tracker, and use the home dashboard as your daily summary.
+                Start with the focus stack, then use the tracker and opportunity cockpit to move the next real decision.
               </p>
             </div>
             <div className="flex gap-2">
@@ -526,114 +844,331 @@ export function HomeClient(props: HomeClientProps) {
         </div>
       )}
 
+      <section className="mb-6 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="rounded-lg border p-4" style={{ borderColor: 'var(--ws-border)', background: 'var(--ws-surface-1)' }}>
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--ws-text-tertiary)' }}>Today&apos;s Focus</p>
+              <h2 className="mt-1 text-lg font-semibold tracking-tight" style={{ color: 'var(--ws-text)' }}>
+                {urgentDeadlines.length > 0
+                  ? `${urgentDeadlines.length} deadline${urgentDeadlines.length !== 1 ? 's' : ''} need a decision first`
+                  : discoveredCount > 0
+                    ? 'The review queue is the next constraint'
+                    : 'The pipeline is ready for active follow-through'}
+              </h2>
+              <p className="mt-1 text-sm" style={{ color: 'var(--ws-text-secondary)' }}>
+                Run the daily rhythm: scan what matters, pre-sweep the backlog, make the next decision, scout the live edge, then file the trail.
+              </p>
+            </div>
+            <Link
+              href="/opportunities/ecosystem"
+              className="inline-flex shrink-0 items-center justify-center rounded-lg border px-3 py-2 text-xs font-medium transition-colors hover:border-[var(--ws-accent)]"
+              style={{ borderColor: 'var(--ws-border)', color: 'var(--ws-text-secondary)' }}
+            >
+              Open Opportunity Cockpit
+            </Link>
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+            {todayActions.map((action) => {
+              const toneStyle =
+                action.tone === 'danger'
+                  ? { border: 'var(--ws-red)', bg: 'rgba(220,38,38,0.06)', color: 'var(--ws-red)' }
+                  : action.tone === 'warning'
+                    ? { border: 'var(--ws-amber)', bg: 'rgba(217,119,6,0.06)', color: 'var(--ws-amber)' }
+                    : action.tone === 'info'
+                      ? { border: 'var(--ws-accent)', bg: 'rgba(37,99,235,0.05)', color: 'var(--ws-accent)' }
+                      : { border: 'var(--ws-border)', bg: 'var(--ws-surface-0)', color: 'var(--ws-text-secondary)' };
+
+              return (
+                <Link
+                  key={action.label}
+                  href={action.href}
+                  className="rounded-lg border p-3 transition-colors hover:border-[var(--ws-accent)]"
+                  style={{ borderColor: toneStyle.border, background: toneStyle.bg }}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-sm font-medium" style={{ color: 'var(--ws-text)' }}>{action.label}</p>
+                    <p className="text-xl font-semibold tabular-nums" style={{ color: toneStyle.color }}>{action.value}</p>
+                  </div>
+                  <p className="mt-2 text-xs leading-5" style={{ color: 'var(--ws-text-secondary)' }}>{action.detail}</p>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+
+        {scenarioFocus && (
+          <Link
+            href={scenarioFocus.href}
+            className="rounded-lg border p-4 transition-colors hover:border-[var(--ws-accent)]"
+            style={{
+              borderColor:
+                scenarioFocus.tone === 'blocked'
+                  ? 'var(--ws-amber)'
+                  : scenarioFocus.tone === 'ready'
+                    ? 'var(--ws-green)'
+                    : 'var(--ws-border)',
+              background:
+                scenarioFocus.tone === 'blocked'
+                  ? 'rgba(217,119,6,0.06)'
+                  : scenarioFocus.tone === 'ready'
+                    ? 'rgba(22,163,74,0.05)'
+                    : 'var(--ws-surface-1)',
+            }}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--ws-text-tertiary)' }}>ACT Scenario</p>
+              <span
+                className="rounded-full px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide"
+                style={{
+                  background:
+                    scenarioFocus.tone === 'blocked'
+                      ? 'rgba(217,119,6,0.12)'
+                      : scenarioFocus.tone === 'ready'
+                        ? 'rgba(22,163,74,0.1)'
+                        : 'var(--ws-surface-2)',
+                  color:
+                    scenarioFocus.tone === 'blocked'
+                      ? 'var(--ws-amber)'
+                      : scenarioFocus.tone === 'ready'
+                        ? 'var(--ws-green)'
+                        : 'var(--ws-text-secondary)',
+                }}
+              >
+                {scenarioFocus.tone === 'blocked' ? 'Blocked' : scenarioFocus.tone === 'ready' ? 'Ready' : 'Watch'}
+              </span>
+            </div>
+            <h2 className="mt-2 text-base font-semibold leading-snug" style={{ color: 'var(--ws-text)' }}>{scenarioFocus.title}</h2>
+            <p className="mt-2 text-xs leading-5" style={{ color: 'var(--ws-text-secondary)' }}>{scenarioFocus.detail}</p>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              {[scenarioFocus.primaryMetric, scenarioFocus.secondaryMetric].map((metric) => (
+                <div
+                  key={metric.label}
+                  className="rounded-lg border px-3 py-2"
+                  style={{ borderColor: 'var(--ws-border)', background: 'var(--ws-surface-0)' }}
+                >
+                  <p className="text-lg font-semibold tabular-nums" style={{ color: 'var(--ws-text)' }}>{metric.value}</p>
+                  <p className="text-[11px]" style={{ color: 'var(--ws-text-tertiary)' }}>{metric.label}</p>
+                </div>
+              ))}
+            </div>
+            <p className="mt-3 text-xs font-medium leading-5" style={{ color: 'var(--ws-text)' }}>{scenarioFocus.nextAction}</p>
+          </Link>
+        )}
+      </section>
+
       {/* Main grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left column */}
         <div className="lg:col-span-2 space-y-6">
 
-          {/* Urgent deadlines */}
-          {urgentDeadlines.length > 0 && (
-            <section>
-              <div className="rounded-lg border overflow-hidden" style={{ borderColor: 'var(--ws-red)' }}>
-                <div className="px-4 py-2.5 flex items-center justify-between" style={{ background: 'var(--ws-red)' }}>
-                  <span className="text-xs font-semibold text-white uppercase tracking-wide">Closing This Week</span>
-                  <span className="text-xs font-medium text-white/70">{urgentDeadlines.length} grant{urgentDeadlines.length !== 1 ? 's' : ''}</span>
-                </div>
+          {/* Pre-sweep gate */}
+          {currentReviewSweep.total > 0 && (
+            <section id="pre-sweep">
+              <div className="mb-3 flex items-center justify-between gap-3">
                 <div>
-                  {urgentDeadlines.map((item, i) => {
-                    const days = daysUntil(item.grant!.closes_at!);
+                  <h2 className="text-sm font-semibold" style={{ color: 'var(--ws-text)' }}>Pre-Sweep Gate</h2>
+                  <p className="mt-1 text-xs" style={{ color: 'var(--ws-text-secondary)' }}>
+                    Do not manually review all {currentReviewSweep.total.toLocaleString()} discovered items. Clean, enrich, and current-check first.
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void runPreSweep()}
+                    disabled={isRunningPreSweep || isRefreshing}
+                    className="rounded-lg px-3 py-2 text-xs font-medium transition-opacity disabled:opacity-50"
+                    style={{ background: 'var(--ws-accent)', color: '#fff' }}
+                  >
+                    {isRunningPreSweep ? 'Running...' : 'Run one-off pre-sweep'}
+                  </button>
+                  <Link href="/mission-control" className="text-xs font-medium transition-colors hover:underline" style={{ color: 'var(--ws-accent)' }}>
+                    Mission Control &rarr;
+                  </Link>
+                </div>
+              </div>
+
+              <div className="rounded-lg border overflow-hidden" style={{ borderColor: 'var(--ws-border)', background: 'var(--ws-surface-1)' }}>
+                {preSweepRun && (
+                  <div className="px-4 py-3 text-xs leading-5" style={{ borderBottom: '1px solid var(--ws-border)', color: 'var(--ws-text-secondary)', background: 'rgba(22,163,74,0.06)' }}>
+                    Pre-sweep ran {relativeTime(preSweepRun.ranAt)}. Moved {preSweepRun.applied.expiredUpdated.toLocaleString()} expired item{preSweepRun.applied.expiredUpdated !== 1 ? 's' : ''} out of review; the remaining counts are ready for wiki enrichment and source refresh.
+                  </div>
+                )}
+                <div className="grid grid-cols-1 gap-px md:grid-cols-4" style={{ background: 'var(--ws-border)' }}>
+                  {preSweepLanes.map((lane) => {
+                    const color = lane.tone === 'warning'
+                      ? 'var(--ws-amber)'
+                      : lane.tone === 'info'
+                        ? 'var(--ws-accent)'
+                        : lane.tone === 'success'
+                          ? 'var(--ws-green)'
+                          : 'var(--ws-text-secondary)';
+
                     return (
-                      <button
-                        key={item.id}
-                        onClick={() => openGrant(item)}
-                        className="w-full text-left flex items-center justify-between px-4 py-3 transition-colors hover:bg-[var(--ws-surface-2)]"
-                        style={{ borderTop: i > 0 ? '1px solid var(--ws-border)' : 'none' }}
+                      <Link
+                        key={lane.label}
+                        href={lane.href}
+                        className="flex min-h-[180px] flex-col justify-between p-4 transition-colors hover:bg-[var(--ws-surface-2)]"
+                        style={{ background: 'var(--ws-surface-1)' }}
                       >
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate" style={{ color: 'var(--ws-text)' }}>{item.grant?.name}</p>
-                          <p className="text-xs" style={{ color: 'var(--ws-text-tertiary)' }}>{item.grant?.provider}</p>
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--ws-text-tertiary)' }}>{lane.label}</p>
+                          <p className="mt-2 text-2xl font-semibold tabular-nums" style={{ color }}>{lane.value}</p>
+                          <p className="mt-2 text-xs leading-5" style={{ color: 'var(--ws-text-secondary)' }}>{lane.detail}</p>
                         </div>
-                        <div className="flex items-center gap-3 ml-4 shrink-0">
-                          {item.grant?.amount_max && (
-                            <span className="text-sm font-semibold tabular-nums" style={{ color: 'var(--ws-text)' }}>{formatMoney(item.grant.amount_max)}</span>
-                          )}
-                          <span
-                            className="text-[11px] font-semibold px-2 py-0.5 rounded tabular-nums"
-                            style={{ background: 'rgba(220,38,38,0.1)', color: 'var(--ws-red)' }}
-                          >
-                            {days === 0 ? 'Today' : days === 1 ? '1 day' : `${days} days`}
-                          </span>
-                        </div>
-                      </button>
+                        <p className="mt-4 text-[11px] font-semibold uppercase tracking-wide" style={{ color }}>{lane.action}</p>
+                      </Link>
                     );
                   })}
                 </div>
+                <div className="px-4 py-3 text-xs leading-5" style={{ borderTop: '1px solid var(--ws-border)', color: 'var(--ws-text-secondary)' }}>
+                  Operating rule: agents scout and enrich broadly, CT reviews narrowly. The tracker should receive a small decision batch, not a raw discovery dump.
+                </div>
+                {preSweepRun?.decisionBatch.humanReadyTop5.length ? (
+                  <div className="px-4 py-4" style={{ borderTop: '1px solid var(--ws-border)' }}>
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold" style={{ color: 'var(--ws-text)' }}>Today&apos;s Decision Batch</p>
+                        <p className="mt-1 text-xs" style={{ color: 'var(--ws-text-secondary)' }}>
+                          After urgent deadlines, decide these five human-ready items. Leave the rest alone today.
+                        </p>
+                      </div>
+                      <span className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium" style={{ background: 'rgba(22,163,74,0.1)', color: 'var(--ws-green)' }}>
+                        Top 5
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      {preSweepRun.decisionBatch.humanReadyTop5.map((item) => (
+                        <Link
+                          key={item.savedGrantId}
+                          href={`/grants/${item.grantId}`}
+                          className="flex items-center justify-between gap-3 rounded-lg border px-3 py-3 transition-colors hover:border-[var(--ws-accent)]"
+                          style={{ borderColor: 'var(--ws-border)', background: 'var(--ws-surface-0)' }}
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium" style={{ color: 'var(--ws-text)' }}>{item.name}</p>
+                            <p className="mt-1 truncate text-xs" style={{ color: 'var(--ws-text-tertiary)' }}>{item.provider || 'Provider unknown'}</p>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-2 text-xs" style={{ color: 'var(--ws-text-secondary)' }}>
+                            {item.amountMax && <span className="font-semibold tabular-nums">{formatMoney(item.amountMax)}</span>}
+                            <span>{formatDate(item.closesAt)}</span>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </section>
           )}
 
-          {/* Pipeline stats */}
-          {grants.length > 0 && (
-            <section>
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-sm font-semibold" style={{ color: 'var(--ws-text)' }}>Pipeline</h2>
-                <Link href={trackerHref} className="text-xs font-medium transition-colors hover:underline" style={{ color: 'var(--ws-accent)' }}>
+          {/* Grant workbench */}
+          {(grants.length > 0 || workbenchDeadlines.length > 0) && (
+            <section id="grant-workbench">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-sm font-semibold" style={{ color: 'var(--ws-text)' }}>Grant Workbench</h2>
+                  <p className="mt-1 text-xs" style={{ color: 'var(--ws-text-secondary)' }}>
+                    Deadline decisions and pipeline movement in one place.
+                  </p>
+                </div>
+                <Link href={trackerHref} className="shrink-0 text-xs font-medium transition-colors hover:underline" style={{ color: 'var(--ws-accent)' }}>
                   Open Tracker &rarr;
                 </Link>
               </div>
-              <div className="grid grid-cols-4 gap-3">
-                {[
-                  { label: 'To Review', value: discoveredCount, warn: discoveredCount > 20, href: trackerHref },
-                  { label: 'In Progress', value: activeCount, href: trackerHref },
-                  { label: 'Submitted', value: submittedCount, href: trackerHref },
-                  { label: 'Won', value: wonCount, color: 'var(--ws-green)', href: trackerHref },
-                ].map(stat => (
-                  <Link
-                    key={stat.label}
-                    href={stat.href}
-                    className="rounded-lg border p-4 transition-colors hover:border-[var(--ws-accent)]"
-                    style={{ borderColor: 'var(--ws-border)', background: 'var(--ws-surface-1)' }}
-                  >
-                    <p className="text-2xl font-semibold tabular-nums" style={{ color: stat.color || 'var(--ws-text)' }}>
-                      {stat.value}
-                    </p>
-                    <p className="text-xs mt-1" style={{ color: 'var(--ws-text-secondary)' }}>{stat.label}</p>
-                    {stat.warn && (
-                      <p className="text-[11px] font-medium mt-1.5" style={{ color: 'var(--ws-amber)' }}>Needs triaging</p>
-                    )}
-                  </Link>
-                ))}
-              </div>
-            </section>
-          )}
 
-          {/* Upcoming deadlines */}
-          {soonDeadlines.length > 0 && (
-            <section>
-              <h2 className="text-sm font-semibold mb-3" style={{ color: 'var(--ws-text)' }}>Coming Up</h2>
-              <div className="rounded-lg border overflow-hidden" style={{ borderColor: 'var(--ws-border)', background: 'var(--ws-surface-1)' }}>
-                {soonDeadlines.map((item, i) => {
-                  const days = daysUntil(item.grant!.closes_at!);
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => openGrant(item)}
-                      className="w-full text-left flex items-center justify-between px-4 py-3 transition-colors hover:bg-[var(--ws-surface-2)]"
-                      style={{ borderTop: i > 0 ? '1px solid var(--ws-border)' : 'none' }}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate" style={{ color: 'var(--ws-text)' }}>{item.grant?.name}</p>
-                        <p className="text-xs" style={{ color: 'var(--ws-text-tertiary)' }}>{item.grant?.provider}</p>
-                      </div>
-                      <div className="flex items-center gap-3 ml-4 shrink-0">
-                        {item.grant?.amount_max && (
-                          <span className="text-sm font-semibold tabular-nums" style={{ color: 'var(--ws-text)' }}>{formatMoney(item.grant.amount_max)}</span>
-                        )}
-                        <span className="text-xs tabular-nums" style={{ color: 'var(--ws-text-tertiary)' }}>{days}d</span>
-                      </div>
-                    </button>
-                  );
-                })}
+              <div className="rounded-lg border overflow-hidden" style={{ borderColor: urgentDeadlines.length > 0 ? 'var(--ws-red)' : 'var(--ws-border)', background: 'var(--ws-surface-1)' }}>
+                <div className="grid grid-cols-2 gap-px md:grid-cols-4" style={{ background: 'var(--ws-border)' }}>
+                  {[
+                    { label: 'Closing 7d', value: urgentDeadlines.length, tone: urgentDeadlines.length > 0 ? 'danger' : 'neutral' },
+                    { label: 'Pre-sweep', value: discoveredCount, tone: discoveredCount > 100 ? 'warning' : 'neutral' },
+                    { label: 'In progress', value: activeCount, tone: activeCount > 0 ? 'info' : 'neutral' },
+                    { label: 'Won', value: wonCount, tone: wonCount > 0 ? 'success' : 'neutral' },
+                  ].map((stat) => {
+                    const color = stat.tone === 'danger'
+                      ? 'var(--ws-red)'
+                      : stat.tone === 'warning'
+                        ? 'var(--ws-amber)'
+                        : stat.tone === 'info'
+                          ? 'var(--ws-accent)'
+                          : stat.tone === 'success'
+                            ? 'var(--ws-green)'
+                            : 'var(--ws-text)';
+                    return (
+                      <Link
+                        key={stat.label}
+                        href={trackerHref}
+                        className="p-4 transition-colors hover:bg-[var(--ws-surface-2)]"
+                        style={{ background: 'var(--ws-surface-1)' }}
+                      >
+                        <p className="text-2xl font-semibold tabular-nums" style={{ color }}>{stat.value}</p>
+                        <p className="mt-1 text-xs" style={{ color: 'var(--ws-text-secondary)' }}>{stat.label}</p>
+                      </Link>
+                    );
+                  })}
+                </div>
+
+                {workbenchDeadlines.length > 0 ? (
+                  <div>
+                    <div className="flex items-center justify-between px-4 py-2.5" style={{ background: urgentDeadlines.length > 0 ? 'rgba(220,38,38,0.08)' : 'var(--ws-surface-2)' }}>
+                      <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: urgentDeadlines.length > 0 ? 'var(--ws-red)' : 'var(--ws-text-tertiary)' }}>
+                        Deadline lane
+                      </span>
+                      <span className="text-xs" style={{ color: 'var(--ws-text-tertiary)' }}>
+                        {urgentDeadlines.length} urgent / {soonDeadlines.length} next
+                      </span>
+                    </div>
+                    {workbenchDeadlines.map((item, i) => {
+                      const days = daysUntil(item.grant!.closes_at!);
+                      const urgent = days <= 7;
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => openGrant(item)}
+                          className="w-full text-left flex items-center justify-between px-4 py-3 transition-colors hover:bg-[var(--ws-surface-2)]"
+                          style={{ borderTop: i > 0 ? '1px solid var(--ws-border)' : 'none' }}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate" style={{ color: 'var(--ws-text)' }}>{item.grant?.name}</p>
+                            <p className="text-xs" style={{ color: 'var(--ws-text-tertiary)' }}>{item.grant?.provider}</p>
+                          </div>
+                          <div className="ml-4 flex shrink-0 items-center gap-3">
+                            {item.grant?.amount_max && (
+                              <span className="text-sm font-semibold tabular-nums" style={{ color: 'var(--ws-text)' }}>{formatMoney(item.grant.amount_max)}</span>
+                            )}
+                            <span
+                              className="rounded px-2 py-0.5 text-[11px] font-semibold tabular-nums"
+                              style={{
+                                background: urgent ? 'rgba(220,38,38,0.1)' : 'var(--ws-surface-2)',
+                                color: urgent ? 'var(--ws-red)' : 'var(--ws-text-tertiary)',
+                              }}
+                            >
+                              {days === 0 ? 'Today' : days === 1 ? '1 day' : urgent ? `${days} days` : `${days}d`}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                    {hiddenWorkbenchDeadlineCount > 0 && (
+                      <Link
+                        href={trackerHref}
+                        className="flex items-center justify-between gap-3 px-4 py-3 text-xs font-medium transition-colors hover:bg-[var(--ws-surface-2)]"
+                        style={{ borderTop: '1px solid var(--ws-border)', color: 'var(--ws-accent)' }}
+                      >
+                        <span>
+                          Review {hiddenWorkbenchDeadlineCount} more tracked deadline{hiddenWorkbenchDeadlineCount !== 1 ? 's' : ''}
+                        </span>
+                        <span className="shrink-0">Open tracker</span>
+                      </Link>
+                    )}
+                  </div>
+                ) : (
+                  <div className="px-4 py-5">
+                    <p className="text-sm font-medium" style={{ color: 'var(--ws-text)' }}>No tracked deadlines in the next 30 days</p>
+                    <p className="mt-1 text-xs" style={{ color: 'var(--ws-text-secondary)' }}>Use Search Grants or Alerts to bring the next strong opportunities into the tracker.</p>
+                  </div>
+                )}
               </div>
             </section>
           )}
@@ -693,70 +1228,238 @@ export function HomeClient(props: HomeClientProps) {
 
         {/* Right column */}
         <div className="space-y-6">
-          <section>
-            <h2 className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--ws-text-tertiary)' }}>Decision Loop</h2>
+          <section id="daily-rhythm">
+            <h2 className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--ws-text-tertiary)' }}>Daily Rhythm</h2>
             <div className="rounded-lg border p-4" style={{ borderColor: 'var(--ws-border)', background: 'var(--ws-surface-1)' }}>
               <p className="text-sm font-medium" style={{ color: 'var(--ws-text)' }}>
-                Same context, more than one output.
+                Run the dashboard once, top to bottom.
               </p>
               <p className="text-xs mt-1.5" style={{ color: 'var(--ws-text-secondary)' }}>
-                Use the funding graph to pick the next move, then carry the same evidence into a brief, report, or story-ready surface.
+                The routine is deliberately small: sweep the noise, make decisions, check the live edge, and leave a trail.
               </p>
               <div className="mt-4 grid grid-cols-1 gap-2">
-                {[
-                  { href: '/power', label: 'See the field', desc: 'Read power, place, and market context before acting.' },
-                  { href: '/procurement', label: 'Test the opportunity', desc: 'Check procurement pathways, suppliers, and decision packs.' },
-                  { href: '/briefing', label: 'Build the brief', desc: 'Choose memo, pack, report, or story handoff from one working context.' },
-                  { href: '/insights', label: 'Prepare the story', desc: 'Keep the evidence chain clear for reporting and narrative work.' },
-                ].map((item) => (
+                {dailyRhythm.map((item) => (
                   <Link
-                    key={item.href}
+                    key={item.step}
                     href={item.href}
                     className="rounded-lg border px-3 py-3 transition-colors hover:border-[var(--ws-accent)]"
                     style={{ borderColor: 'var(--ws-border)', background: 'var(--ws-surface-0)' }}
                   >
-                    <p className="text-sm font-medium" style={{ color: 'var(--ws-text)' }}>{item.label}</p>
-                    <p className="text-[11px] mt-1 leading-5" style={{ color: 'var(--ws-text-secondary)' }}>{item.desc}</p>
+                    <div className="flex items-start gap-3">
+                      <span
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold tabular-nums"
+                        style={{ background: 'var(--ws-surface-2)', color: 'var(--ws-text-secondary)' }}
+                      >
+                        {item.step}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-sm font-medium" style={{ color: 'var(--ws-text)' }}>{item.label}</p>
+                          <span className="shrink-0 text-[10px] uppercase tracking-wide" style={{ color: 'var(--ws-text-tertiary)' }}>{item.time}</span>
+                        </div>
+                        <p className="mt-1 text-[11px] leading-5" style={{ color: 'var(--ws-text-secondary)' }}>{item.detail}</p>
+                      </div>
+                    </div>
                   </Link>
                 ))}
               </div>
               <p className="text-[11px] mt-3" style={{ color: 'var(--ws-text-tertiary)' }}>
-                Agents should scout, link, and draft from the same data, not force the team into separate tools.
+                Stop when the trail is clear enough for the next person to continue without a catch-up meeting.
               </p>
             </div>
           </section>
 
-          {/* Quick navigation */}
-          <section>
-            <h2 className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--ws-text-tertiary)' }}>Quick Actions</h2>
-            <div className="space-y-1">
-              {[
-                { href: '/grants', label: 'Search Grants', icon: '\uD83D\uDD0D', count: openGrantCount },
-                { href: '/profile/matches', label: 'Matched Grants', icon: '\u2728' },
-                { href: trackerHref, label: 'Grant Tracker', icon: '\uD83D\uDCCB' },
-                { href: '/alerts', label: 'Grant Alerts', icon: '\uD83D\uDD14' },
-                { href: '/foundations/tracker', label: 'Foundation Tracker', icon: '\uD83C\uDFDB\uFE0F' },
-                { href: '/procurement', label: 'Tender Intelligence', icon: '\uD83D\uDCE6' },
-                { href: '/power', label: 'Power Map', icon: '\u26A1' },
-                { href: '/briefing', label: 'Briefing Hub', icon: '\uD83E\uDDFE' },
-                { href: '/insights', label: 'Data Clarity', icon: '\uD83E\uDDED' },
-                { href: '/home/watchlist', label: 'Watchlist', icon: '\uD83D\uDC41\uFE0F' },
-                { href: '/reports', label: 'Reports & Research', icon: '\uD83D\uDCCA' },
-                { href: '/entities', label: 'Entity Graph', icon: '\uD83D\uDD17', count: entityCount },
-                { href: '/home/api-keys', label: 'API Keys', icon: '\uD83D\uDD11' },
-              ].map(item => (
+          {/* Command navigation */}
+          <section id="source-freshness">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h2 className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--ws-text-tertiary)' }}>Commands</h2>
+              <span className="text-[11px]" style={{ color: 'var(--ws-text-tertiary)' }}>Move work, then file the rest</span>
+            </div>
+            <div className="rounded-lg border overflow-hidden" style={{ borderColor: 'var(--ws-border)', background: 'var(--ws-surface-1)' }}>
+              {primaryCommands.map((item, index) => {
+                const toneColor = item.tone === 'warning'
+                  ? 'var(--ws-amber)'
+                  : item.tone === 'info'
+                    ? 'var(--ws-accent)'
+                    : 'var(--ws-text-tertiary)';
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="block px-4 py-3 transition-colors hover:bg-[var(--ws-surface-2)]"
+                    style={{ borderTop: index > 0 ? '1px solid var(--ws-border)' : 'none' }}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium" style={{ color: 'var(--ws-text)' }}>{item.label}</p>
+                        <p className="mt-1 text-[11px] leading-5" style={{ color: 'var(--ws-text-secondary)' }}>{item.detail}</p>
+                      </div>
+                      <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide" style={{ color: toneColor }}>
+                        {item.context}
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {secondaryCommands.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-[var(--ws-surface-2)]"
+                  className="rounded-lg border px-3 py-2.5 text-xs font-medium transition-colors hover:border-[var(--ws-accent)]"
+                  style={{ borderColor: 'var(--ws-border)', color: 'var(--ws-text-secondary)', background: 'var(--ws-surface-0)' }}
                 >
-                  <span className="text-base">{item.icon}</span>
-                  <span className="text-sm font-medium flex-1" style={{ color: 'var(--ws-text)' }}>{item.label}</span>
-                  {item.count != null && (
-                    <span className="text-xs tabular-nums" style={{ color: 'var(--ws-text-tertiary)' }}>{item.count.toLocaleString()}</span>
-                  )}
+                  {item.label}
                 </Link>
               ))}
+            </div>
+          </section>
+
+          {/* Source freshness */}
+          <section>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h2 className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--ws-text-tertiary)' }}>Source Freshness</h2>
+              <Link href="/reports/grant-frontier" className="text-[11px] font-medium hover:underline" style={{ color: 'var(--ws-accent)' }}>
+                Grant frontier
+              </Link>
+            </div>
+            <div
+              className="rounded-lg border p-4"
+              style={{
+                borderColor:
+                  sourceFreshnessTone === 'warning'
+                    ? 'var(--ws-amber)'
+                    : sourceFreshnessTone === 'info'
+                      ? 'var(--ws-accent)'
+                      : 'var(--ws-border)',
+                background:
+                  sourceFreshnessTone === 'warning'
+                    ? 'rgba(217,119,6,0.06)'
+                    : sourceFreshnessTone === 'info'
+                      ? 'rgba(37,99,235,0.05)'
+                      : 'var(--ws-surface-1)',
+              }}
+            >
+              <p className="text-sm font-medium" style={{ color: 'var(--ws-text)' }}>
+                {sourceFreshness.frontierPriority.length > 0
+                  ? `Check the next ${sourceFreshness.frontierPriority.length} sources first.`
+                  : 'No project priority targets are ready.'}
+              </p>
+              <p className="mt-1.5 text-xs leading-5" style={{ color: 'var(--ws-text-secondary)' }}>
+                The backlog is large, so home shows project-shaped frontier targets for Goods, JusticeHub, and Empathy Ledger before the raw due count.
+              </p>
+
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                {[
+                  { label: 'Priority', value: sourceFreshness.frontierPriority.length.toLocaleString() },
+                  { label: 'Updated 7d', value: sourceFreshness.grantsUpdated7d.toLocaleString() },
+                  { label: 'Changed 7d', value: sourceFreshness.frontierChanged7d.toLocaleString() },
+                ].map((stat) => (
+                  <div
+                    key={stat.label}
+                    className="rounded-lg border px-3 py-2"
+                    style={{ borderColor: 'var(--ws-border)', background: 'var(--ws-surface-0)' }}
+                  >
+                    <p className="text-lg font-semibold tabular-nums" style={{ color: 'var(--ws-text)' }}>{stat.value}</p>
+                    <p className="text-[11px]" style={{ color: 'var(--ws-text-tertiary)' }}>{stat.label}</p>
+                  </div>
+                ))}
+              </div>
+
+              {sourceFreshness.frontierPriority.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {sourceFreshness.frontierPriority.slice(0, 6).map((item) => {
+                    const projectColor = item.project === 'Goods'
+                      ? 'var(--ws-accent)'
+                      : item.project === 'JusticeHub'
+                        ? 'var(--ws-red)'
+                        : 'var(--ws-green)';
+
+                    return (
+                      <a
+                        key={`${item.project}-${item.id}`}
+                        href={item.href}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block rounded-lg border px-3 py-3 transition-colors hover:border-[var(--ws-accent)]"
+                        style={{ borderColor: 'var(--ws-border)', background: 'var(--ws-surface-0)' }}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-xs font-medium" style={{ color: 'var(--ws-text)' }}>{item.title}</p>
+                            <p className="mt-1 text-[11px] leading-5" style={{ color: 'var(--ws-text-secondary)' }}>{item.reason}</p>
+                          </div>
+                          <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide" style={{ color: projectColor }}>
+                            {item.project}
+                          </span>
+                        </div>
+                        <p className="mt-2 text-[10px] uppercase tracking-wide" style={{ color: 'var(--ws-text-tertiary)' }}>{item.sourceKind}</p>
+                      </a>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                {[
+                  { label: 'Due backlog', value: sourceFreshness.frontierDue, warn: sourceFreshness.frontierDue > 1000 },
+                  { label: 'Stale open grants', value: sourceFreshness.staleOpenGrants, warn: sourceFreshness.staleOpenGrants > 0 },
+                  { label: 'Missing URLs', value: sourceFreshness.grantsMissingUrl, warn: sourceFreshness.grantsMissingUrl > 0 },
+                  { label: 'Failing sources', value: sourceFreshness.frontierFailing, warn: sourceFreshness.frontierFailing > 0 },
+                  { label: 'Scout agents', value: sourceFreshness.scoutRuns.length, warn: false },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    className="rounded-lg px-3 py-2 text-xs"
+                    style={{
+                      background: item.warn ? 'rgba(217,119,6,0.08)' : 'var(--ws-surface-2)',
+                      color: item.warn ? 'var(--ws-amber)' : 'var(--ws-text-secondary)',
+                    }}
+                  >
+                    <span className="font-semibold tabular-nums">{item.value.toLocaleString()}</span> {item.label.toLowerCase()}
+                  </div>
+                ))}
+              </div>
+
+              {sourceFreshness.scoutRuns.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  {sourceFreshness.scoutRuns.slice(0, 3).map((run) => (
+                    <div key={run.agent_id} className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-medium" style={{ color: 'var(--ws-text)' }}>
+                          {run.agent_name.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                        </p>
+                        <p className="text-[11px]" style={{ color: 'var(--ws-text-tertiary)' }}>
+                          {run.items_new != null && run.items_new > 0
+                            ? `+${run.items_new} new`
+                            : run.items_updated != null && run.items_updated > 0
+                              ? `${run.items_updated} updated`
+                              : run.items_found != null
+                                ? `${run.items_found} checked`
+                                : run.status}
+                          {' \u00B7 '}
+                          {relativeTime(run.started_at)}
+                        </p>
+                      </div>
+                      <span
+                        className="shrink-0 text-[10px] font-semibold uppercase tracking-wide"
+                        style={{
+                          color: run.status === 'success'
+                            ? 'var(--ws-green)'
+                            : run.status === 'error'
+                              ? 'var(--ws-red)'
+                              : 'var(--ws-text-tertiary)',
+                        }}
+                      >
+                        {run.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </section>
 
@@ -802,7 +1505,31 @@ export function HomeClient(props: HomeClientProps) {
                   ))}
                 </div>
 
-                {alertLearning.length > 0 && (
+                {!alertNeedsAttention && alertLearning.length > 0 && (
+                  <div className="rounded-lg border p-4" style={{ borderColor: 'var(--ws-border)', background: 'var(--ws-surface-1)' }}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium" style={{ color: 'var(--ws-text)' }}>Alerts are stable</p>
+                        <p className="text-xs mt-1.5 leading-5" style={{ color: 'var(--ws-text-secondary)' }}>
+                          {alertLearningSummary.stable} active alert{alertLearningSummary.stable !== 1 ? 's' : ''} are producing tracked prospects. Keep the detail in Alerts unless tuning is needed.
+                        </p>
+                      </div>
+                      <span className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium" style={{ color: 'var(--ws-green)', background: 'rgba(22,163,74,0.1)' }}>
+                        {trackedFromAlerts.toLocaleString()} tracked
+                      </span>
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      {visibleAlertLearning.map((item) => (
+                        <div key={item.id} className="flex items-center justify-between gap-3 text-xs">
+                          <span className="min-w-0 truncate" style={{ color: 'var(--ws-text-secondary)' }}>{item.name}</span>
+                          <span className="shrink-0 tabular-nums" style={{ color: 'var(--ws-text-tertiary)' }}>{item.tracked.toLocaleString()} tracked</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {alertNeedsAttention && alertLearning.length > 0 && (
                   <div className="rounded-lg border p-4" style={{ borderColor: 'var(--ws-border)', background: 'var(--ws-surface-1)' }}>
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -917,16 +1644,25 @@ export function HomeClient(props: HomeClientProps) {
                   </div>
                 )}
 
-                {effectiveRecentAlertActivity.length === 0 ? (
+                {visibleAlertActivity.length === 0 ? (
                   <div className="rounded-lg border p-4" style={{ borderColor: 'var(--ws-border)', background: 'var(--ws-surface-1)' }}>
-                    <p className="text-sm font-medium" style={{ color: 'var(--ws-text)' }}>Alerts are live</p>
+                    <p className="text-sm font-medium" style={{ color: 'var(--ws-text)' }}>Alert queue is summarized</p>
                     <p className="text-xs mt-1.5" style={{ color: 'var(--ws-text-secondary)' }}>
-                      New grant matches and recent deliveries will appear here as the scout runs.
+                      Home only surfaces failures or tuning needs. Review queued matches in the Alerts workspace.
                     </p>
+                    {recentQueuedAlerts > 0 && (
+                      <Link
+                        href="/alerts"
+                        className="mt-3 inline-flex rounded-lg border px-3 py-2 text-xs font-medium transition-colors hover:border-[var(--ws-accent)]"
+                        style={{ borderColor: 'var(--ws-border)', color: 'var(--ws-text-secondary)' }}
+                      >
+                        Review {recentQueuedAlerts} queued
+                      </Link>
+                    )}
                   </div>
                 ) : (
                   <div className="rounded-lg border overflow-hidden" style={{ borderColor: 'var(--ws-border)', background: 'var(--ws-surface-1)' }}>
-                    {effectiveRecentAlertActivity.map((activity, i) => (
+                    {visibleAlertActivity.map((activity, i) => (
                       <AlertActivityRow
                         key={activity.id}
                         activity={activity}

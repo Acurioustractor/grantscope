@@ -49,13 +49,25 @@ function applyFilters(grants: SavedGrantRow[], filters: Filters): SavedGrantRow[
 export function KanbanBoard({
   grants,
   onGrantsChange,
+  learningHiddenGrantIds,
+  learningHiddenCount = 0,
 }: {
   grants: SavedGrantRow[];
   onGrantsChange: (grants: SavedGrantRow[]) => void;
+  learningHiddenGrantIds?: Set<string>;
+  learningHiddenCount?: number;
 }) {
   const [filters, setFilters] = useState<Filters>({ minStars: 0, color: null, search: '', sortByDeadline: false });
+  const [showArchive, setShowArchive] = useState(false);
+  const [showLearningHidden, setShowLearningHidden] = useState(false);
 
-  const filtered = applyFilters(grants, filters);
+  const gateFilteredGrants = showLearningHidden
+    ? grants
+    : grants.filter((grant) => {
+      if (grant.stage !== 'discovered') return true;
+      return !learningHiddenGrantIds?.has(grant.grant_id);
+    });
+  const filtered = applyFilters(gateFilteredGrants, filters);
 
   const byStage = (stage: string) => {
     const stageGrants = filtered.filter((g) => g.stage === stage);
@@ -74,6 +86,27 @@ export function KanbanBoard({
       const previousGrants = grants;
       onGrantsChange(previousGrants.filter((g) => g.grant_id !== grantId));
       fetch(`/api/tracker/${grantId}`, { method: 'DELETE' }).catch(() => {
+        onGrantsChange(previousGrants);
+      });
+    },
+    [grants, onGrantsChange]
+  );
+
+  const handleNoGo = useCallback(
+    (grantId: string) => {
+      const previousGrants = grants;
+      const now = new Date().toISOString();
+      const nextGrants = previousGrants.map((g) =>
+        g.grant_id === grantId ? { ...g, stage: 'lost', updated_at: now } : g
+      );
+
+      onGrantsChange(nextGrants);
+
+      fetch(`/api/tracker/${grantId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stage: 'lost' }),
+      }).catch(() => {
         onGrantsChange(previousGrants);
       });
     },
@@ -110,6 +143,26 @@ export function KanbanBoard({
 
   return (
     <div>
+      {learningHiddenCount > 0 && (
+        <div className="mb-4 flex flex-col gap-3 border-4 border-bauhaus-black bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <div className="text-[10px] font-black uppercase tracking-[0.3em] text-bauhaus-red">
+              Review gate active
+            </div>
+            <p className="mt-1 text-sm font-medium leading-5 text-bauhaus-muted">
+              Holding back {learningHiddenCount.toLocaleString()} low-confidence discovered grants so the board starts with the better candidates. Researching, pursuing, and deadline work stay visible.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowLearningHidden((value) => !value)}
+            className="min-h-10 shrink-0 border-2 border-bauhaus-black px-3 py-2 text-[10px] font-black uppercase tracking-widest text-bauhaus-black transition-colors hover:bg-bauhaus-black hover:text-white"
+          >
+            {showLearningHidden ? 'Hide non-reviewable' : 'Show hidden'}
+          </button>
+        </div>
+      )}
+
       <TrackerFilters filters={filters} onChange={setFilters} />
 
       {grants.length === 0 ? (
@@ -162,7 +215,13 @@ export function KanbanBoard({
                     </div>
                     <div className="p-2 space-y-2">
                       {byStage(stage).map((g, i) => (
-                        <KanbanCard key={g.grant_id} grant={g} index={i} onRemove={handleRemove} />
+                        <KanbanCard
+                          key={g.grant_id}
+                          grant={g}
+                          index={i}
+                          onRemove={handleRemove}
+                          onNoGo={handleNoGo}
+                        />
                       ))}
                       {provided.placeholder}
                     </div>
@@ -173,37 +232,49 @@ export function KanbanBoard({
           </div>
 
           {/* Terminal stages */}
-          <div className="grid grid-cols-3 gap-3 mt-4">
-            {TERMINAL_STAGES.map((stage) => (
-              <Droppable key={stage} droppableId={stage}>
-                {(provided, snapshot) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    className={`min-h-[80px] border-4 border-dashed ${
-                      snapshot.isDraggingOver
-                        ? 'border-bauhaus-black bg-bauhaus-yellow/10'
-                        : 'border-bauhaus-black/20'
-                    }`}
-                  >
-                    <div className="px-3 py-2 flex items-center justify-between">
-                      <span className="text-xs font-black text-bauhaus-muted uppercase tracking-widest">
-                        {STAGE_LABELS[stage]}
-                      </span>
-                      <span className="text-xs font-bold text-bauhaus-muted tabular-nums">
-                        {byStage(stage).length}
-                      </span>
-                    </div>
-                    <div className="px-2 pb-2 space-y-2">
-                      {byStage(stage).map((g, i) => (
-                        <KanbanCard key={g.grant_id} grant={g} index={i} onRemove={handleRemove} />
-                      ))}
-                      {provided.placeholder}
-                    </div>
-                  </div>
-                )}
-              </Droppable>
-            ))}
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={() => setShowArchive((value) => !value)}
+              className="border-2 border-bauhaus-black/20 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-bauhaus-muted transition-colors hover:border-bauhaus-black hover:text-bauhaus-black"
+            >
+              {showArchive ? 'Hide closed grants' : `Show closed grants (${TERMINAL_STAGES.reduce((sum, stage) => sum + byStage(stage).length, 0)})`}
+            </button>
+
+            {showArchive && (
+              <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-3">
+                {TERMINAL_STAGES.map((stage) => (
+                  <Droppable key={stage} droppableId={stage}>
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        className={`min-h-[80px] border-4 border-dashed ${
+                          snapshot.isDraggingOver
+                            ? 'border-bauhaus-black bg-bauhaus-yellow/10'
+                            : 'border-bauhaus-black/20'
+                        }`}
+                      >
+                        <div className="px-3 py-2 flex items-center justify-between">
+                          <span className="text-xs font-black text-bauhaus-muted uppercase tracking-widest">
+                            {STAGE_LABELS[stage]}
+                          </span>
+                          <span className="text-xs font-bold text-bauhaus-muted tabular-nums">
+                            {byStage(stage).length}
+                          </span>
+                        </div>
+                        <div className="px-2 pb-2 space-y-2">
+                          {byStage(stage).map((g, i) => (
+                            <KanbanCard key={g.grant_id} grant={g} index={i} onRemove={handleRemove} />
+                          ))}
+                          {provided.placeholder}
+                        </div>
+                      </div>
+                    )}
+                  </Droppable>
+                ))}
+              </div>
+            )}
           </div>
         </DragDropContext>
       )}
