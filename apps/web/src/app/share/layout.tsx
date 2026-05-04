@@ -1,17 +1,26 @@
 import Link from 'next/link';
+import { headers } from 'next/headers';
 
 /**
  * Share-mode layout.
  *
  * Renders chromeless from the root layout (no global NavBar, no full footer).
  * A minimal top bar identifies the artefact as a CivicGraph deliverable and
- * routes new interest to /pricing or /get-a-report — but does NOT link out to
- * /graph, /reports, /orgs, /tracker, or any other internal app surface.
+ * routes new interest to /feedback or partnership email — but does NOT link
+ * out to /graph, /reports, /orgs, /tracker, or any other internal app surface.
  *
- * This is the artefact you send to a non-customer: they see the report, they
- * understand what it is, and the only path forward is the conversion funnel.
+ * Subject is derived from the URL segment so /share/qld-youth-justice routes
+ * feedback to ?subject=qld-youth-justice, /share/fecca-eccv to ?subject=fecca-eccv,
+ * etc. Each artefact's feedback stream stays attributable.
  */
-export default function ShareLayout({ children }: { children: React.ReactNode }) {
+export default async function ShareLayout({ children }: { children: React.ReactNode }) {
+  const hdrs = await headers();
+  const pathname = hdrs.get('x-pathname') ?? '';
+  // /share/qld-youth-justice/long-read → qld-youth-justice
+  const segment = pathname.split('/').filter(Boolean)[1] ?? 'general';
+  const feedbackHref = `/feedback?subject=${segment}`;
+  const partnerHref = `mailto:Benjamin@act.place?subject=${encodeURIComponent('Partnership inquiry — ' + segment)}&body=${encodeURIComponent('Hi Ben, I read the CivicGraph report on ' + segment + ' and would like to talk about ')}`;
+
   return (
     <div className="min-h-screen flex flex-col bg-bauhaus-canvas">
       <header className="border-b-4 border-bauhaus-black bg-white">
@@ -21,7 +30,8 @@ export default function ShareLayout({ children }: { children: React.ReactNode })
             <span className="text-xs font-mono text-bauhaus-muted hidden sm:inline">civic-sector intelligence, sourced</span>
           </div>
           <nav className="flex flex-wrap items-center gap-1">
-            <Link href="/feedback?subject=fecca-eccv" className="text-xs font-black uppercase tracking-widest px-3 py-2 border-2 border-bauhaus-black bg-bauhaus-yellow text-bauhaus-black hover:bg-bauhaus-canvas">★ Tell us what&apos;s useful →</Link>
+            <a href={partnerHref} className="text-xs font-black uppercase tracking-widest px-3 py-2 border-2 border-bauhaus-black bg-white text-bauhaus-black hover:bg-bauhaus-canvas">Partner with us</a>
+            <Link href={feedbackHref} className="text-xs font-black uppercase tracking-widest px-3 py-2 border-2 border-bauhaus-black bg-bauhaus-yellow text-bauhaus-black hover:bg-bauhaus-canvas">★ Tell us what&apos;s useful →</Link>
           </nav>
         </div>
       </header>
@@ -36,11 +46,12 @@ export default function ShareLayout({ children }: { children: React.ReactNode })
               <p className="text-xs text-bauhaus-muted leading-relaxed mt-1">A Curious Tractor · civic-sector intelligence with citations</p>
             </div>
             <div className="flex flex-wrap items-center gap-1">
-              <Link href="/feedback?subject=fecca-eccv" className="text-xs font-black uppercase tracking-widest px-3 py-2 border-2 border-bauhaus-yellow bg-bauhaus-yellow text-bauhaus-black hover:bg-white">★ Send feedback →</Link>
+              <a href={partnerHref} className="text-xs font-black uppercase tracking-widest px-3 py-2 border-2 border-white text-white hover:bg-white hover:text-bauhaus-black">Partner with us →</a>
+              <Link href={feedbackHref} className="text-xs font-black uppercase tracking-widest px-3 py-2 border-2 border-bauhaus-yellow bg-bauhaus-yellow text-bauhaus-black hover:bg-white">★ Send feedback →</Link>
             </div>
           </div>
           <div className="text-[10px] uppercase tracking-widest text-bauhaus-muted border-t border-white/20 pt-4">
-            This is a CivicGraph deliverable. We&apos;re building this in public &mdash; tell us what hit, what missed, and what you&apos;d want next at <Link href="/feedback?subject=fecca-eccv" className="underline">/feedback</Link>.
+            This is a CivicGraph deliverable. We&apos;re building this in public &mdash; tell us what hit, what missed, and what you&apos;d want next at <Link href={feedbackHref} className="underline">/feedback</Link>, or email <a href={partnerHref} className="underline">Benjamin@act.place</a> about partnerships.
           </div>
         </div>
       </footer>
