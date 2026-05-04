@@ -135,19 +135,21 @@ export async function pushFeedbackToGHL(opts: FeedbackPushInput): Promise<Feedba
     if (opts.generalFeedback) lines.push('', '— General feedback:', opts.generalFeedback);
     lines.push('', '---', `Ref: ${opts.feedbackId.slice(0, 8)}`);
 
-    await fetch(`${GHL_API_URL}/conversations/messages/inbound`, {
+    // Attach as a contact NOTE (Custom-type inbound messages require a
+    // conversationProviderId we don't have configured). Notes also fit the
+    // semantic better — structured form submissions, not chat messages.
+    const noteRes = await fetch(`${GHL_API_URL}/contacts/${contactId}/notes`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
         Version: '2021-07-28',
       },
-      body: JSON.stringify({
-        type: 'Custom',
-        contactId,
-        message: lines.join('\n'),
-      }),
+      body: JSON.stringify({ body: lines.join('\n') }),
     });
+    if (!noteRes.ok) {
+      console.error('[feedback-ghl] Note attach failed:', noteRes.status, await noteRes.text().catch(() => ''));
+    }
     return { ok: true, contactId };
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);

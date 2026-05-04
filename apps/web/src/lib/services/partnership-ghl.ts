@@ -95,7 +95,11 @@ export async function pushPartnershipToGHL(opts: PartnershipPushInput): Promise<
       return { ok: false, reason: 'no_contact_id' };
     }
 
-    // Structured inbound message → GHL Messages tab
+    // Attach the structured inquiry as a CONTACT NOTE (visible on the
+    // contact profile under "Notes"). We previously tried Custom-type
+    // inbound messages but those silently 400'd ("conversationProviderId
+    // is required"). Notes are the right semantic fit for "structured form
+    // submission" anyway — they don't pollute the conversation thread.
     const lines: string[] = [
       `[CivicGraph Partnership Inquiry · ${opts.sourceArtefact || 'general'}]`,
       '',
@@ -109,19 +113,20 @@ export async function pushPartnershipToGHL(opts: PartnershipPushInput): Promise<
     if (opts.timeline) lines.push(`Timeline: ${opts.timeline}`);
     lines.push('', '---', '', opts.message, '', '---', `Ref: ${opts.inquiryId.slice(0, 8)}`);
 
-    await fetch(`${GHL_API_URL}/conversations/messages/inbound`, {
+    const noteRes = await fetch(`${GHL_API_URL}/contacts/${contactId}/notes`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
         Version: '2021-07-28',
       },
-      body: JSON.stringify({
-        type: 'Custom',
-        contactId,
-        message: lines.join('\n'),
-      }),
+      body: JSON.stringify({ body: lines.join('\n') }),
     });
+    if (!noteRes.ok) {
+      // Contact upsert succeeded; only the note attachment failed.
+      // Surface to logs but still return ok=true so we don't reprocess.
+      console.error('[partnership-ghl] Note attach failed:', noteRes.status, await noteRes.text().catch(() => ''));
+    }
     return { ok: true, contactId };
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);
