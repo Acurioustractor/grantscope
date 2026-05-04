@@ -28,7 +28,7 @@ export default async function PartnerPage({ searchParams }: { searchParams: Prom
           </p>
         )}
         <p className="text-bauhaus-black font-medium leading-relaxed text-lg max-w-3xl mb-4">
-          CivicGraph reports are built in public, sourced from public data, and shipped fast. The same pipeline that produced the report you just read works for any sector or organisation in Australia. If something landed for you and you want a version of it, this is where to start.
+          CivicGraph reports use public data and ship fast. The same pipeline that produced the report you just read runs for any sector or organisation in Australia. If something landed for you and you want a version of it, this is where to start.
         </p>
         <div className="border-l-4 border-bauhaus-yellow pl-4 max-w-3xl">
           <p className="text-sm text-bauhaus-black font-medium leading-relaxed mb-2"><span className="font-black uppercase tracking-widest text-xs text-bauhaus-yellow">What we&apos;re looking for:</span></p>

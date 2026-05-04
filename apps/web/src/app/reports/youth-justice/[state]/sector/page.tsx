@@ -379,7 +379,7 @@ export default async function StateYjSectorPage({ params }: { params: Promise<{ 
  <section className="border-4 border-bauhaus-black p-8 bg-bauhaus-yellow mb-12">
  <h2 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-3">Was this useful?</h2>
  <p className="text-bauhaus-black font-medium leading-relaxed max-w-3xl mb-5">
- We&apos;re building CivicGraph in public. Same pipeline works for any state, sector, or peak body. Tell us what was useful and what you&apos;d want next, anonymously if you like.
+ Same pipeline runs for any state, sector, or peak body. Tell us what was useful and what you&apos;d want next, anonymously if you like.
  </p>
  <Link href={`/feedback?subject=yj-${state}`} className="inline-block px-5 py-3 text-sm font-black uppercase tracking-widest bg-bauhaus-black text-white border-2 border-bauhaus-black hover:bg-bauhaus-red">★ Send feedback (~2 min) →</Link>
  </section>

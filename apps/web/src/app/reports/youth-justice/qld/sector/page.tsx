@@ -2706,7 +2706,7 @@ export default async function QldYjSectorPage() {
  </>
  ) : isNonYj ? (
  <>
- <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 bg-bauhaus-canvas border-2 border-bauhaus-muted text-bauhaus-muted inline-block">— Not a YJ initiative</span>
+ <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 bg-bauhaus-canvas border-2 border-bauhaus-muted text-bauhaus-muted inline-block">Not a YJ initiative</span>
  <div className="text-[10px] font-mono text-bauhaus-muted mt-1">{(/perinatal/.test(h) ? 'Health stream · perinatal MH' : /cybercrime|tourism/.test(h) ? 'small business · not YJ' : /applied research/.test(h) ? 'workforce funding · not YJ' : /firearm|wieambilla/.test(h) ? 'firearms reform · post-Wieambilla' : 'caught by keyword filter, not YJ')}</div>
  </>
  ) : (
@@ -3593,7 +3593,7 @@ export default async function QldYjSectorPage() {
  <section className="border-4 border-bauhaus-black p-8 bg-bauhaus-yellow mb-12">
  <h2 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-3">Two ways to take this further</h2>
  <p className="text-bauhaus-black font-medium leading-relaxed max-w-3xl mb-5">
- We&apos;re building CivicGraph in public. The same pipeline works for any sector or organisation in Australia: multicultural peak bodies, ACCOs, foundations, lobbyists, federal procurement, place-based investment. Tell us what hit and what missed. Anonymously if you like.
+ The same pipeline that produced this report runs for any sector or organisation in Australia: multicultural peak bodies, ACCOs, foundations, lobbyists, federal procurement, place-based investment. Tell us what hit and what missed. Anonymously if you like.
  </p>
  <div className="flex flex-wrap gap-3 mb-5">
  <Link href="/feedback?subject=qld-youth-justice" className="inline-block px-5 py-3 text-sm font-black uppercase tracking-widest bg-bauhaus-black text-white border-2 border-bauhaus-black hover:bg-bauhaus-red">★ Send feedback (~2 min) →</Link>

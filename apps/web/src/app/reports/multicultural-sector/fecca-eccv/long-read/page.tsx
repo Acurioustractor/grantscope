@@ -366,7 +366,7 @@ export default async function FeccaEccvLongRead({ mode = 'full' }: { mode?: 'ful
       <section className="border-4 border-bauhaus-black p-8 bg-bauhaus-yellow mb-12">
         <h2 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-3">Was this useful?</h2>
         <p className="text-bauhaus-black font-medium leading-relaxed max-w-3xl mb-5">
-          We&apos;re building CivicGraph in public. Help us learn what landed and what to build next &mdash; tick what was valuable, tell us what data layer to go deeper on (procurement / grants / board networks / donations / geographic), leave anonymously if you want.
+          Help us learn what landed and what to build next. Tick what was valuable, tell us what data layer to go deeper on (procurement / grants / board networks / donations / geographic), leave anonymously if you want.
         </p>
         <Link href="/feedback?subject=fecca-eccv" className="inline-block px-5 py-3 text-sm font-black uppercase tracking-widest bg-bauhaus-black text-white border-2 border-bauhaus-black hover:bg-bauhaus-red">★ Send feedback (~2 min) →</Link>
       </section>

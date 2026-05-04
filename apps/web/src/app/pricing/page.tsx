@@ -30,10 +30,10 @@ export default async function PricingPage({ searchParams }: { searchParams: Prom
           What&apos;s this worth to you?
         </h1>
         <p className="text-xl text-bauhaus-muted leading-tight font-medium max-w-3xl mb-4">
-          We&apos;re not guessing at prices. CivicGraph is being built in public, so pricing follows the conversation. Tick what fits, tell us how you&apos;d actually use it, and we&apos;ll come back with something shaped to how you work.
+          We&apos;re not guessing at prices. Pricing follows the conversation. Tick what fits, tell us how you&apos;d actually use it, and we&apos;ll come back with something shaped to how you work.
         </p>
         <div className="border-l-4 border-bauhaus-yellow pl-4 max-w-3xl">
-          <p className="text-xs font-black uppercase tracking-widest text-bauhaus-yellow mb-2">What we want to learn from you</p>
+          <p className="text-xs font-black uppercase tracking-widest text-bauhaus-yellow mb-2">Four questions worth a real answer</p>
           <ul className="text-sm text-bauhaus-black space-y-1 list-disc pl-5 marker:text-bauhaus-yellow">
             <li>Which sectors / data layers should we go deeper on (procurement · grants · donations · contracts · charities · directors)?</li>
             <li>How you&apos;d actually consume it (polished report · live dashboard · alerts · API · embed · briefings · workshop · custom)?</li>

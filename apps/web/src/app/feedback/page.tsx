@@ -19,7 +19,7 @@ export default async function FeedbackPage({ searchParams }: { searchParams: Pro
           What did you find valuable?
         </h1>
         <p className="text-xl text-bauhaus-muted leading-tight font-medium max-w-3xl">
-          We&apos;re building this in public &mdash; structured signals + free text shape what gets built next, where the data goes deeper, and how this gets priced. Tick what fits, leave what doesn&apos;t. Anonymous if you want.
+          Structured signals plus free text shape what gets built next, where the data goes deeper, and how this gets priced. Tick what fits, leave what doesn&apos;t. Anonymous if you want.
         </p>
       </div>
 
@@ -41,7 +41,7 @@ export default async function FeedbackPage({ searchParams }: { searchParams: Pro
           </div>
 
           <div className="border-4 border-bauhaus-black p-5 bg-bauhaus-canvas">
-            <div className="text-xs font-black uppercase tracking-widest text-bauhaus-blue mb-2">What we&apos;re trying to learn</div>
+            <div className="text-xs font-black uppercase tracking-widest text-bauhaus-blue mb-2">Why we&apos;re asking</div>
             <ul className="text-xs text-bauhaus-black font-medium leading-relaxed space-y-2">
               <li><span className="font-black mr-1">·</span>Who finds this most valuable</li>
               <li><span className="font-black mr-1">·</span>What data layer to go deeper on (procurement / grants / boards / donations / etc.)</li>
