@@ -9,8 +9,12 @@ import {
 } from '@/lib/services/fast-local-org';
 import {
   goodsCapitalRows,
+  goodsCoreWorkAreas,
+  goodsFocusedGrantRows,
+  goodsFundingPipelineRows,
   goodsGovernanceRows,
   goodsImpactRows,
+  goodsMoneySnapshot,
   goodsOperatingFacts,
   goodsOperatingOutputs,
   goodsPeopleRows,
@@ -122,6 +126,277 @@ function FastProjectDashboard({
     if (routeType === 'capital') return '#project-capital-routes';
     return '#project-pipeline';
   };
+
+  if (goodsProject) {
+    const qbeHref =
+      wikiSourceHrefByLabel.get('Catalysing Impact Application Draft') ??
+      `/org/${slug}/wiki/goods-operating-system#sources`;
+    const proofDocs = [
+      'Goods Asset Register README',
+      'Goods Expanded Asset CSV',
+      'Catalysing Impact Application Draft',
+      'Goods Path to Thousands 2026',
+      'Goods Market Intelligence 2026',
+      'ACT Project Codes',
+    ];
+    const receivedRows = goodsFundingPipelineRows.filter((row) => row.status.includes('received'));
+    const liveRows = goodsFundingPipelineRows.filter((row) => !row.status.includes('received'));
+    const blockingRows = goodsCoreWorkAreas.filter((row) => row.status.includes('blocking'));
+
+    return (
+      <main className="min-h-screen bg-gray-50 text-bauhaus-black">
+        <div className="border-b-4 border-bauhaus-black bg-bauhaus-black text-white">
+          <div className="mx-auto max-w-7xl px-4 py-7">
+            <nav className="mb-4 flex flex-wrap items-center gap-2 text-sm text-gray-400">
+              <Link href={`/org/${slug}`} className="hover:text-white">
+                {profile.name}
+              </Link>
+              <span>/</span>
+              <span className="text-white">{project.name}</span>
+            </nav>
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-red">Goods control sheet</p>
+                <h1 className="mt-2 text-3xl font-black uppercase tracking-wider">{project.name}</h1>
+                <p className="mt-3 max-w-3xl text-sm leading-relaxed text-gray-300">
+                  Money, funders, blockers, documents, and focused opportunities. Use the full dashboard only when
+                  you need the deeper evidence trail.
+                </p>
+              </div>
+              <div className="flex shrink-0 flex-wrap gap-2">
+                <Link
+                  href={qbeHref}
+                  className="border border-bauhaus-red bg-bauhaus-red px-4 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-white hover:text-bauhaus-black"
+                >
+                  QBE program
+                </Link>
+                <Link
+                  href={`/org/${slug}/wiki/goods-operating-system`}
+                  className="border border-white/20 bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-white hover:text-bauhaus-black"
+                >
+                  Goods OS wiki
+                </Link>
+                <Link
+                  href={`/org/${slug}/${projectSlug}?full=1`}
+                  className="border border-white/20 bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-white hover:text-bauhaus-black"
+                >
+                  Full data view
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mx-auto max-w-7xl space-y-6 px-4 py-8">
+          <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+            {goodsMoneySnapshot.map((fact) => (
+              <div key={fact.label} className="border-4 border-bauhaus-black bg-white p-4">
+                <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue">{fact.label}</p>
+                <div className="mt-2 text-2xl font-black tabular-nums text-bauhaus-black">{fact.value}</div>
+                <p className="mt-2 text-xs leading-relaxed text-gray-600">{fact.detail}</p>
+                <p className="mt-3 text-[10px] font-black uppercase tracking-widest text-gray-400">{fact.source}</p>
+              </div>
+            ))}
+          </section>
+
+          <section className="grid gap-4 lg:grid-cols-[1fr_360px]">
+            <div className="border-4 border-bauhaus-black bg-white p-5">
+              <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-red">Do next</p>
+              <h2 className="mt-2 text-2xl font-black uppercase tracking-wide">Fix the blockers before chasing more grants</h2>
+              <div className="mt-5 grid gap-3 md:grid-cols-2">
+                {goodsCoreWorkAreas.slice(0, 4).map((row) => (
+                  <div key={row.area} className="border border-gray-200 bg-gray-50 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="text-sm font-black text-bauhaus-black">{row.area}</h3>
+                      <span
+                        className={
+                          row.status.includes('blocking')
+                            ? 'border border-bauhaus-red px-2 py-1 text-[10px] font-black uppercase tracking-widest text-bauhaus-red'
+                            : 'border border-gray-300 px-2 py-1 text-[10px] font-black uppercase tracking-widest text-gray-600'
+                        }
+                      >
+                        {row.status}
+                      </span>
+                    </div>
+                    <p className="mt-3 text-xs leading-relaxed text-gray-700">{row.next}</p>
+                    <p className="mt-3 text-[10px] font-black uppercase tracking-widest text-bauhaus-blue">{row.proof}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <aside className="border-4 border-bauhaus-black bg-bauhaus-black p-5 text-white">
+              <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-red">Today</p>
+              <h2 className="mt-2 text-xl font-black uppercase tracking-wide">One clear sequence</h2>
+              <ol className="mt-5 space-y-4">
+                <li>
+                  <div className="text-sm font-black">1. Cost sheet</div>
+                  <p className="mt-1 text-xs leading-relaxed text-gray-300">Last 50 beds delivered cost before QBE/SEFA.</p>
+                </li>
+                <li>
+                  <div className="text-sm font-black">2. QBE pack</div>
+                  <p className="mt-1 text-xs leading-relaxed text-gray-300">Ask, budget, proof, risks, and next 90 days.</p>
+                </li>
+                <li>
+                  <div className="text-sm font-black">3. CRM follow-up</div>
+                  <p className="mt-1 text-xs leading-relaxed text-gray-300">Only qualified Snow/QBE/buyer next touches go into HighLevel.</p>
+                </li>
+              </ol>
+              <div className="mt-6 grid grid-cols-2 gap-2">
+                {goodsOperatingFacts.slice(0, 4).map((fact) => (
+                  <div key={fact.label} className="border border-white/20 p-3">
+                    <div className="text-xl font-black tabular-nums">{fact.value}</div>
+                    <div className="mt-1 text-[10px] font-black uppercase tracking-widest text-gray-400">{fact.label}</div>
+                  </div>
+                ))}
+              </div>
+            </aside>
+          </section>
+
+          <section className="border-4 border-bauhaus-black bg-white">
+            <div className="border-b-4 border-bauhaus-black p-5">
+              <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-red">Funding + foundation pipeline</p>
+              <h2 className="mt-2 text-2xl font-black uppercase tracking-wide">Received, live, upcoming</h2>
+            </div>
+            <div className="grid gap-0 lg:grid-cols-[0.85fr_1.15fr]">
+              <div className="border-b-4 border-bauhaus-black p-5 lg:border-b-0 lg:border-r-4">
+                <h3 className="text-sm font-black uppercase tracking-widest">Already accessed</h3>
+                <div className="mt-4 divide-y divide-gray-200 border border-gray-200">
+                  {receivedRows.map((row) => (
+                    <div key={`${row.name}-${row.status}`} className="grid gap-2 p-3 md:grid-cols-[1fr_auto]">
+                      <div>
+                        <div className="text-sm font-black">{row.name}</div>
+                        <div className="mt-1 text-xs text-gray-500">{row.lane} / {row.status}</div>
+                      </div>
+                      <div className="text-sm font-black tabular-nums text-bauhaus-blue">{row.value}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="p-5">
+                <h3 className="text-sm font-black uppercase tracking-widest">Live and next options</h3>
+                <div className="mt-4 divide-y divide-gray-200 border border-gray-200">
+                  {liveRows.map((row) => (
+                    <div key={`${row.name}-${row.value}`} className="grid gap-3 p-3 xl:grid-cols-[1fr_150px_1.4fr]">
+                      <div>
+                        <div className="text-sm font-black">{row.name}</div>
+                        <div className="mt-1 text-xs text-gray-500">{row.lane} / {row.status}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm font-black tabular-nums text-bauhaus-blue">{row.value}</div>
+                        <div className="mt-1 text-[10px] font-black uppercase tracking-widest text-gray-400">{row.timing}</div>
+                      </div>
+                      <p className="text-xs leading-relaxed text-gray-600">{row.next}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="grid gap-4 lg:grid-cols-[1fr_0.85fr]">
+            <div className="border-4 border-bauhaus-black bg-white p-5">
+              <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue">Core work areas</p>
+              <h2 className="mt-2 text-2xl font-black uppercase tracking-wide">The work board should be these, not a grant pile</h2>
+              <div className="mt-5 grid gap-3 md:grid-cols-2">
+                {goodsCoreWorkAreas.map((row) => (
+                  <div key={row.area} className="border border-gray-200 bg-gray-50 p-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-sm font-black">{row.area}</h3>
+                      <span className="border border-gray-300 bg-white px-2 py-1 text-[10px] font-black uppercase tracking-widest text-gray-600">
+                        {row.status}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xs leading-relaxed text-gray-700">{row.next}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="border-4 border-bauhaus-black bg-white p-5">
+              <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-red">Blockers</p>
+              <h2 className="mt-2 text-2xl font-black uppercase tracking-wide">Do not promote until clear</h2>
+              <div className="mt-5 space-y-3">
+                {blockingRows.map((row) => (
+                  <div key={row.area} className="border border-bauhaus-red bg-red-50 p-4">
+                    <div className="text-sm font-black">{row.area}</div>
+                    <p className="mt-2 text-xs leading-relaxed text-gray-700">{row.next}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          <section className="border-4 border-bauhaus-black bg-white p-5">
+            <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue">Documentation</p>
+                <h2 className="mt-2 text-2xl font-black uppercase tracking-wide">Open the document that answers the question</h2>
+              </div>
+              <Link
+                href={`/org/${slug}/wiki/goods-operating-system#sources`}
+                className="w-fit border border-gray-300 bg-white px-3 py-2 text-[11px] font-black uppercase tracking-widest text-bauhaus-black hover:bg-bauhaus-canvas"
+              >
+                All docs
+              </Link>
+            </div>
+            <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {goodsSourceDocuments
+                .filter((doc) => proofDocs.includes(doc.label))
+                .map((doc) => {
+                  const href = wikiSourceHrefByLabel.get(doc.source) ?? `/org/${slug}/wiki/goods-operating-system#sources`;
+                  return (
+                    <Link
+                      key={doc.label}
+                      href={href}
+                      className="border border-gray-200 bg-gray-50 p-4 hover:border-bauhaus-blue hover:bg-link-light/40"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="text-sm font-black">{doc.label}</div>
+                        <span className="shrink-0 border border-gray-300 bg-white px-2 py-1 text-[10px] font-black uppercase tracking-widest text-bauhaus-blue">
+                          {doc.output}
+                        </span>
+                      </div>
+                      <p className="mt-2 text-xs leading-relaxed text-gray-600">{doc.bestFor}</p>
+                    </Link>
+                  );
+                })}
+            </div>
+          </section>
+
+          <section className="border-4 border-bauhaus-black bg-white p-5">
+            <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-red">Focused opportunity scan</p>
+                <h2 className="mt-2 text-2xl font-black uppercase tracking-wide">Grants sit at the bottom, after the route is clear</h2>
+              </div>
+              <Link
+                href="/opportunities/ecosystem?project=goods"
+                className="w-fit border border-bauhaus-black bg-bauhaus-black px-3 py-2 text-[11px] font-black uppercase tracking-widest text-white hover:bg-bauhaus-red"
+              >
+                Opportunity cockpit
+              </Link>
+            </div>
+            <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+              {goodsFocusedGrantRows.map((row) => (
+                <Link
+                  key={row.lane}
+                  href={row.href}
+                  className="border border-gray-200 bg-gray-50 p-4 hover:border-bauhaus-blue hover:bg-link-light/40"
+                >
+                  <span className="border border-gray-300 bg-white px-2 py-1 text-[10px] font-black uppercase tracking-widest text-bauhaus-blue">
+                    {row.lane}
+                  </span>
+                  <div className="mt-3 text-sm font-black">{row.target}</div>
+                  <p className="mt-2 text-xs leading-relaxed text-gray-600">{row.use}</p>
+                  <p className="mt-3 text-xs font-black leading-relaxed text-bauhaus-black">{row.action}</p>
+                </Link>
+              ))}
+            </div>
+          </section>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-gray-50 text-bauhaus-black">
