@@ -17,9 +17,15 @@ export default async function ShareLayout({ children }: { children: React.ReactN
   const hdrs = await headers();
   const pathname = hdrs.get('x-pathname') ?? '';
   // /share/qld-youth-justice/long-read → qld-youth-justice
-  const segment = pathname.split('/').filter(Boolean)[1] ?? 'general';
+  // /share/partner → partner (special-case below; uses ref query for source artefact)
+  const rawSegment = pathname.split('/').filter(Boolean)[1] ?? 'general';
+  const isOnPartnerForm = rawSegment === 'partner';
+  // When on the partner form, derive the originating artefact from ?ref so the
+  // feedback CTA in the chrome still routes back to the report's subject.
+  const refQuery = isOnPartnerForm ? (hdrs.get('x-search') ?? '').match(/(?:^|[?&])ref=([^&]+)/)?.[1] : undefined;
+  const segment = isOnPartnerForm ? (refQuery ? decodeURIComponent(refQuery) : 'general') : rawSegment;
   const feedbackHref = `/feedback?subject=${segment}`;
-  const partnerHref = `mailto:Benjamin@act.place?subject=${encodeURIComponent('Partnership inquiry — ' + segment)}&body=${encodeURIComponent('Hi Ben, I read the CivicGraph report on ' + segment + ' and would like to talk about ')}`;
+  const partnerHref = `/share/partner?ref=${segment}`;
 
   return (
     <div className="min-h-screen flex flex-col bg-bauhaus-canvas">
@@ -30,7 +36,9 @@ export default async function ShareLayout({ children }: { children: React.ReactN
             <span className="text-xs font-mono text-bauhaus-muted hidden sm:inline">civic-sector intelligence, sourced</span>
           </div>
           <nav className="flex flex-wrap items-center gap-1">
-            <a href={partnerHref} className="text-xs font-black uppercase tracking-widest px-3 py-2 border-2 border-bauhaus-black bg-white text-bauhaus-black hover:bg-bauhaus-canvas">Partner with us</a>
+            {!isOnPartnerForm && (
+              <Link href={partnerHref} className="text-xs font-black uppercase tracking-widest px-3 py-2 border-2 border-bauhaus-black bg-white text-bauhaus-black hover:bg-bauhaus-canvas">Partner with us</Link>
+            )}
             <Link href={feedbackHref} className="text-xs font-black uppercase tracking-widest px-3 py-2 border-2 border-bauhaus-black bg-bauhaus-yellow text-bauhaus-black hover:bg-bauhaus-canvas">★ Tell us what&apos;s useful →</Link>
           </nav>
         </div>
@@ -46,12 +54,14 @@ export default async function ShareLayout({ children }: { children: React.ReactN
               <p className="text-xs text-bauhaus-muted leading-relaxed mt-1">A Curious Tractor · civic-sector intelligence with citations</p>
             </div>
             <div className="flex flex-wrap items-center gap-1">
-              <a href={partnerHref} className="text-xs font-black uppercase tracking-widest px-3 py-2 border-2 border-white text-white hover:bg-white hover:text-bauhaus-black">Partner with us →</a>
+              {!isOnPartnerForm && (
+                <Link href={partnerHref} className="text-xs font-black uppercase tracking-widest px-3 py-2 border-2 border-white text-white hover:bg-white hover:text-bauhaus-black">Partner with us →</Link>
+              )}
               <Link href={feedbackHref} className="text-xs font-black uppercase tracking-widest px-3 py-2 border-2 border-bauhaus-yellow bg-bauhaus-yellow text-bauhaus-black hover:bg-white">★ Send feedback →</Link>
             </div>
           </div>
           <div className="text-[10px] uppercase tracking-widest text-bauhaus-muted border-t border-white/20 pt-4">
-            This is a CivicGraph deliverable. We&apos;re building this in public &mdash; tell us what hit, what missed, and what you&apos;d want next at <Link href={feedbackHref} className="underline">/feedback</Link>, or email <a href={partnerHref} className="underline">Benjamin@act.place</a> about partnerships.
+            This is a CivicGraph deliverable. We&apos;re building this in public &mdash; tell us what hit, what missed, and what you&apos;d want next at <Link href={feedbackHref} className="underline">/feedback</Link>, or <Link href={partnerHref} className="underline">partner with us</Link> on the next one.
           </div>
         </div>
       </footer>

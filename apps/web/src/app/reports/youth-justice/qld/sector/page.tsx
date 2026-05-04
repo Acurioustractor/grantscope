@@ -3597,7 +3597,7 @@ export default async function QldYjSectorPage() {
  </p>
  <div className="flex flex-wrap gap-3 mb-5">
  <Link href="/feedback?subject=qld-youth-justice" className="inline-block px-5 py-3 text-sm font-black uppercase tracking-widest bg-bauhaus-black text-white border-2 border-bauhaus-black hover:bg-bauhaus-red">★ Send feedback (~2 min) →</Link>
- <a href={`mailto:Benjamin@act.place?subject=${encodeURIComponent('Partnership inquiry — QLD Youth Justice report')}&body=${encodeURIComponent('Hi Ben, I read the CivicGraph QLD Youth Justice report and would like to talk about ')}`} className="inline-block px-5 py-3 text-sm font-black uppercase tracking-widest bg-white text-bauhaus-black border-2 border-bauhaus-black hover:bg-bauhaus-canvas">Partner with us →</a>
+ <Link href="/share/partner?ref=qld-youth-justice" className="inline-block px-5 py-3 text-sm font-black uppercase tracking-widest bg-white text-bauhaus-black border-2 border-bauhaus-black hover:bg-bauhaus-canvas">Partner with us →</Link>
  </div>
  <p className="text-xs text-bauhaus-black/70 font-mono leading-relaxed max-w-3xl">
  Partnerships we&apos;re looking for: foundations co-funding sector reports · ACCO + community-controlled orgs that want their own version of this · journalists on a story · sector peaks pitching system change · researchers using the underlying dataset.

@@ -22,6 +22,7 @@ export async function middleware(request: NextRequest) {
   // conditionally skip chrome (nav/footer) for iframe-embed routes.
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-pathname', request.nextUrl.pathname);
+  requestHeaders.set('x-search', request.nextUrl.search);
 
   let supabaseResponse = NextResponse.next({ request: { headers: requestHeaders } });
 
