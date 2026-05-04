@@ -23,7 +23,10 @@ CREATE TABLE IF NOT EXISTS public.partnership_inquiries (
   contact_role        text,
   contact_phone       text,
   -- Telemetry
-  user_agent          text
+  user_agent          text,
+  -- GHL sync tracking (filled by post-insert push)
+  ghl_synced_at       timestamptz,
+  ghl_contact_id      text
 );
 
 CREATE INDEX IF NOT EXISTS partnership_inquiries_submitted_at_idx
@@ -32,6 +35,12 @@ CREATE INDEX IF NOT EXISTS partnership_inquiries_submitted_at_idx
 CREATE INDEX IF NOT EXISTS partnership_inquiries_source_artefact_idx
   ON public.partnership_inquiries (source_artefact)
   WHERE source_artefact IS NOT NULL;
+
+-- Partial index over rows still pending GHL sync; lets a backfill job find
+-- inquiries to retry without scanning the full table.
+CREATE INDEX IF NOT EXISTS partnership_inquiries_ghl_unsynced_idx
+  ON public.partnership_inquiries (ghl_synced_at)
+  WHERE ghl_synced_at IS NULL;
 
 COMMENT ON TABLE public.partnership_inquiries IS
   'Inbound partnership inquiries from /share/partner form. One row per submission. source_artefact ties the inquiry back to the report or share page that drove it.';
