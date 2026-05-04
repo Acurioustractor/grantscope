@@ -53,6 +53,21 @@ const PAY_OPTIONS = [
   { v: 'depends', label: 'Depends — let me discuss' },
 ];
 
+// How would you actually want to interact with the data? — separate from
+// "topics", this asks about the verb (read · query · alert · embed · API)
+const DATA_INTERACTIONS = [
+  { v: 'read_reports', label: 'Read polished reports like this one' },
+  { v: 'live_dashboard', label: 'Live dashboard I can poke at myself' },
+  { v: 'alerts', label: 'Alerts when something I care about changes' },
+  { v: 'csv_download', label: 'Raw CSV / spreadsheet downloads' },
+  { v: 'api_access', label: 'API access for my own tools' },
+  { v: 'embed_widget', label: 'Embed widgets on our site / in our reports' },
+  { v: 'briefings', label: 'Quarterly written briefings tailored to my org' },
+  { v: 'workshop', label: 'Workshop / walkthrough with my board or team' },
+  { v: 'cross_dataset', label: 'Cross-dataset queries (procurement × grants × donations)' },
+  { v: 'custom_report', label: 'Bespoke commissioned report on a sector / org' },
+];
+
 const inputCls = 'w-full border-2 border-bauhaus-black bg-white px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-bauhaus-yellow';
 const labelCls = 'text-xs font-black uppercase tracking-widest text-bauhaus-black mb-1 block';
 const sectionCls = 'border-4 border-bauhaus-black p-6 bg-white space-y-4';
@@ -145,6 +160,12 @@ export default function FeedbackForm({ reportSubject }: { reportSubject?: string
           <label className={labelCls} htmlFor="topics_wanted_other">Anything else?</label>
           <input id="topics_wanted_other" name="topics_wanted_other" className={inputCls} placeholder="e.g. NDIS provider concentration, religious-charity governance, university spinout grants" />
         </div>
+      </div>
+
+      <div className={sectionCls}>
+        <h3 className={legendCls}>How do you want to interact with the data?</h3>
+        <p className="text-xs text-bauhaus-muted font-medium leading-relaxed">Different from topics — this is about the <span className="font-black">verb</span>. Reading polished reports vs. running queries vs. getting alerts when something shifts. Tick what would actually fit how you work.</p>
+        <CheckboxGrid name="data_interactions" options={DATA_INTERACTIONS} columns={2} />
       </div>
 
       <div className={sectionCls}>
