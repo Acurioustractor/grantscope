@@ -147,10 +147,10 @@ export function KanbanBoard({
         <div className="mb-4 flex flex-col gap-3 border-4 border-bauhaus-black bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <div className="text-[10px] font-black uppercase tracking-[0.3em] text-bauhaus-red">
-              Review gate active
+              Noise hidden
             </div>
             <p className="mt-1 text-sm font-medium leading-5 text-bauhaus-muted">
-              Holding back {learningHiddenCount.toLocaleString()} low-confidence discovered grants so the board starts with the better candidates. Researching, pursuing, and deadline work stay visible.
+              {learningHiddenCount.toLocaleString()} weak or cleanup records are hidden so this board stays usable. Active work and urgent deadlines stay visible.
             </p>
           </div>
           <button
@@ -158,7 +158,7 @@ export function KanbanBoard({
             onClick={() => setShowLearningHidden((value) => !value)}
             className="min-h-10 shrink-0 border-2 border-bauhaus-black px-3 py-2 text-[10px] font-black uppercase tracking-widest text-bauhaus-black transition-colors hover:bg-bauhaus-black hover:text-white"
           >
-            {showLearningHidden ? 'Hide non-reviewable' : 'Show hidden'}
+            {showLearningHidden ? 'Hide noise' : 'Show all'}
           </button>
         </div>
       )}

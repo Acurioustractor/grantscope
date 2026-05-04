@@ -328,7 +328,7 @@ export interface OpportunityIntelligenceActionReceipt {
   createdAt: string;
   writeMode: 'planned' | 'confirmed';
   externalWrites: Array<{
-    system: 'ghl' | 'supabase';
+    system: 'ghl' | 'supabase' | 'supabase_decision' | 'supabase_pipeline';
     id: string;
     status: 'created' | 'updated' | 'recorded' | 'skipped';
   }>;
@@ -2370,6 +2370,85 @@ async function recordGhlSyncLog(payload: Record<string, unknown>) {
   await db.from('ghl_sync_log').insert(payload);
 }
 
+function safeUuid(value: string | null | undefined) {
+  if (!value) return null;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+    ? value
+    : null;
+}
+
+async function resolveOrgProfileId(request: OpportunityActionRequest, context?: OpportunityActionContext) {
+  if (request.orgProfileId) return request.orgProfileId;
+  if (!context?.userId) return null;
+
+  const db = getServiceSupabase();
+  const { data } = await db
+    .from('org_profiles')
+    .select('id')
+    .eq('user_id', context.userId)
+    .maybeSingle();
+
+  return data?.id ? String(data.id) : null;
+}
+
+async function upsertRoutePipelineItem(
+  request: OpportunityActionRequest,
+  context: OpportunityActionContext | undefined,
+  status: 'researching' | 'pursuing',
+) {
+  const route = request.route;
+  if (!route) throw new Error('A route payload is required to create pipeline work.');
+
+  const orgProfileId = await resolveOrgProfileId(request, context);
+  if (!orgProfileId) throw new Error('No org profile found for this user.');
+
+  const db = getServiceSupabase();
+  const sourceType = route.source;
+  const sourceRef = route.sourceRef || route.signalId || route.id;
+  const pipelinePayload = {
+    org_profile_id: orgProfileId,
+    name: route.title,
+    amount_display: request.signal?.amount ?? null,
+    amount_numeric: parseMoneyLabel(request.signal?.amount) || null,
+    funder: request.signal?.organisation ?? null,
+    deadline: request.signal?.deadline ?? null,
+    status,
+    grant_opportunity_id: route.source === 'grant' ? safeUuid(route.sourceRef) : null,
+    notes: request.note ?? route.next_action,
+    source_type: sourceType,
+    source_ref: sourceRef,
+    pathway: route.pathway,
+    recommended_role: route.recommended_role,
+    project_code: route.project_code,
+    last_synced_at: new Date().toISOString(),
+  };
+
+  const existing = await db
+    .from('org_pipeline')
+    .select('id')
+    .eq('org_profile_id', orgProfileId)
+    .eq('source_type', sourceType)
+    .eq('source_ref', sourceRef)
+    .maybeSingle();
+
+  if (existing.data?.id) {
+    const { error } = await db
+      .from('org_pipeline')
+      .update(pipelinePayload)
+      .eq('id', existing.data.id);
+    if (error) throw new Error(error.message);
+    return { id: String(existing.data.id), operation: 'updated' as const, orgProfileId };
+  }
+
+  const { data, error } = await db
+    .from('org_pipeline')
+    .insert(pipelinePayload)
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message);
+  return { id: String(data?.id ?? sourceRef), operation: 'created' as const, orgProfileId };
+}
+
 async function sendRouteToGhl(request: OpportunityActionRequest) {
   const route = request.route;
   if (!route) throw new Error('send_to_ghl requires a route payload');
@@ -2566,9 +2645,19 @@ export async function createOpportunityIntelligenceAction(
   if (WRITE_DECISIONS.has(request.kind)) {
     try {
       const decisionId = await recordOpportunityDecision(request, context, receipt.id);
-      if (decisionId) externalWrites.push({ system: 'supabase', id: decisionId, status: 'recorded' });
+      if (decisionId) externalWrites.push({ system: 'supabase_decision', id: decisionId, status: 'recorded' });
     } catch (error) {
       warnings.push(`Decision memory was not recorded: ${error instanceof Error ? error.message : 'unknown error'}`);
+    }
+  }
+
+  if (request.kind === 'research' || request.kind === 'partner_path' || request.kind === 'apply_path') {
+    try {
+      const pipelineStatus = request.kind === 'research' ? 'researching' : 'pursuing';
+      const result = await upsertRoutePipelineItem(request, context, pipelineStatus);
+      externalWrites.push({ system: 'supabase_pipeline', id: result.id, status: result.operation });
+    } catch (error) {
+      warnings.push(`Pipeline work item was not created: ${error instanceof Error ? error.message : 'unknown error'}`);
     }
   }
 
@@ -2595,7 +2684,7 @@ export async function createOpportunityIntelligenceAction(
           last_synced_at: new Date().toISOString(),
         }).select('id').single();
         if (error) throw new Error(error.message);
-        externalWrites.push({ system: 'supabase', id: String(data?.id ?? request.route.id), status: 'created' });
+        externalWrites.push({ system: 'supabase_pipeline', id: String(data?.id ?? request.route.id), status: 'created' });
       } catch (error) {
         warnings.push(`Pipeline promotion failed: ${error instanceof Error ? error.message : 'unknown error'}`);
       }
@@ -2639,5 +2728,11 @@ function nextStepForAction(kind: OpportunityActionKind, targetSystem?: Opportuni
   if (kind === 'request_ingestion' || kind === 'ingest') return 'Queue ingestion with source URL, source owner, and dedupe keys.';
   if (kind === 'contact') return `Queue a human next touch${targetSystem ? ` in ${targetSystem}` : ''}; do not auto-send.`;
   if (kind === 'qualify') return 'Check eligibility, evidence, applicant, budget, co-contribution, and source confidence.';
+  if (kind === 'research') return 'Create a visible research item in the internal pipeline and keep learning from the decision.';
+  if (kind === 'partner_path') return 'Create a visible partner-path item in the internal pipeline.';
+  if (kind === 'apply_path') return 'Create a visible application-path item in the internal pipeline.';
+  if (kind === 'later') return 'Park this route for now and make it less urgent in the next ranking pass.';
+  if (kind === 'no') return 'Record the no decision and make similar routes less likely.';
+  if (kind === 'add_evidence_gap') return 'Record the missing proof so future scans keep asking for it.';
   return 'Monitor the signal and refresh source health before acting.';
 }

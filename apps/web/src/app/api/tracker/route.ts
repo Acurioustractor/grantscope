@@ -54,7 +54,19 @@ export async function GET(request: NextRequest) {
     let orgProfileId = impersonateOrgId;
 
     if (!orgProfileId) {
-      // Fallback: user's own org membership
+      // Prefer the user's own org profile, then fall back to org membership.
+      const { data: ownOrg } = await serviceDb
+        .from('org_profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (ownOrg?.id) {
+        orgProfileId = ownOrg.id;
+      }
+    }
+
+    if (!orgProfileId) {
       const { data: membership } = await serviceDb
         .from('org_members')
         .select('org_profile_id')
@@ -147,15 +159,22 @@ export async function GET(request: NextRequest) {
       prospect: 'discovered',
       upcoming: 'discovered',
       drafting: 'researching',
+      researching: 'researching',
+      pursuing: 'pursuing',
+      negotiating: 'negotiating',
+      approved: 'approved',
       submitted: 'submitted',
       awarded: 'awarded',
+      won: 'awarded',
       rejected: 'rejected',
+      lost: 'lost',
+      expired: 'expired',
     };
     const pipelineAsSaved = (pipelineItems ?? []).map(p => {
       const linkedGrant = p.grant_opportunity_id ? grantsMap[p.grant_opportunity_id] : null;
       return {
         id: p.id,
-        grant_id: p.grant_opportunity_id,
+        grant_id: p.grant_opportunity_id || p.id,
         stars: 0,
         color: null,
         stage: stageMap[p.status] || 'discovered',
