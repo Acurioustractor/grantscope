@@ -3357,7 +3357,7 @@ export default async function QldYjSectorPage() {
  </div>
  </div>
  <div className="mt-4 pt-3 border-t-2 border-bauhaus-black text-[11px] font-medium text-bauhaus-black leading-relaxed">
- <span className="font-black uppercase tracking-widest text-bauhaus-red">Chain status:</span> Promise made → bill passed (with amendment) → department resourced → <span className="font-black text-bauhaus-red">outcome data lag (early — verify in 6–12 months)</span>. The legislation has been passed; the watchhouse and CTG-gap data has not yet shown the &ldquo;safer Queensland&rdquo; the announcements promised. The Apr-2026 amending Bill is too recent to read as outcomes; verify in 6, 12, 24 months as the data accumulates.
+ <span className="font-black uppercase tracking-widest text-bauhaus-red">Chain status:</span> Promise made → bill passed (with amendment) → department resourced → <span className="font-black text-bauhaus-red">outcome data lag (early; verify in 6–12 months)</span>. The legislation has been passed; the watchhouse and CTG-gap data has not yet shown the &ldquo;safer Queensland&rdquo; the announcements promised. The Apr-2026 amending Bill is too recent to read as outcomes; verify in 6, 12, 24 months as the data accumulates.
  </div>
  </div>
 
@@ -3593,7 +3593,7 @@ export default async function QldYjSectorPage() {
  <section className="border-4 border-bauhaus-black p-8 bg-bauhaus-yellow mb-12">
  <h2 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-3">Two ways to take this further</h2>
  <p className="text-bauhaus-black font-medium leading-relaxed max-w-3xl mb-5">
- We&apos;re building CivicGraph in public. Same pipeline works for any sector or organisation in Australia &mdash; multicultural peak bodies, ACCOs, foundations, lobbyists, federal procurement, place-based investment. Tell us what hit, what missed, what you&apos;d want next. Anonymously if you like.
+ We&apos;re building CivicGraph in public. The same pipeline works for any sector or organisation in Australia: multicultural peak bodies, ACCOs, foundations, lobbyists, federal procurement, place-based investment. Tell us what hit and what missed. Anonymously if you like.
  </p>
  <div className="flex flex-wrap gap-3 mb-5">
  <Link href="/feedback?subject=qld-youth-justice" className="inline-block px-5 py-3 text-sm font-black uppercase tracking-widest bg-bauhaus-black text-white border-2 border-bauhaus-black hover:bg-bauhaus-red">★ Send feedback (~2 min) →</Link>

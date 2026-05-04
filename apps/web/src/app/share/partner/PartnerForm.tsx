@@ -6,12 +6,12 @@ import { submitPartnership } from './actions';
 const PARTNERSHIP_TYPES = [
   { v: 'foundation_cofund', label: 'Foundation co-funding a sector report' },
   { v: 'acco_bespoke', label: 'ACCO / community-controlled org wanting our own version' },
-  { v: 'sector_peak', label: 'Sector peak / advocacy body — pitching system change' },
+  { v: 'sector_peak', label: 'Sector peak or advocacy body pitching system change' },
   { v: 'journalist', label: 'Journalist on a story' },
-  { v: 'researcher', label: 'Researcher / academic — dataset access' },
+  { v: 'researcher', label: 'Researcher or academic looking for dataset access' },
   { v: 'gov_oversight', label: 'Government / oversight body' },
-  { v: 'philanthropic_advisor', label: 'Philanthropic advisor — diligence on a grantee' },
-  { v: 'board_director', label: 'Board director — strategic review' },
+  { v: 'philanthropic_advisor', label: 'Philanthropic advisor doing diligence on a grantee' },
+  { v: 'board_director', label: 'Board director running a strategic review' },
   { v: 'other', label: 'Something else (describe below)' },
 ];
 
@@ -101,7 +101,7 @@ export default function PartnerForm({ sourceArtefact }: { sourceArtefact?: strin
 
       <fieldset className={sectionCls}>
         <legend className={legendCls}>What are you trying to do?</legend>
-        <p className="text-xs text-bauhaus-muted font-mono">A sentence or two is enough. Specifics help — sectors, geographies, decisions you&apos;re trying to inform.</p>
+        <p className="text-xs text-bauhaus-muted font-mono">A sentence or two is enough. Specifics help: sectors, geographies, decisions you&apos;re trying to inform.</p>
         <div>
           <label className={labelCls} htmlFor="message">Tell us about it <span className="text-bauhaus-red">*</span></label>
           <textarea id="message" name="message" required rows={5} className={inputCls} placeholder="e.g. We're a foundation with $X to deploy on First Nations youth-justice in QLD. We want a quarterly version of this report tracking ACCO funding share over time so our board can hold a portfolio strategy accountable." />
@@ -126,7 +126,7 @@ export default function PartnerForm({ sourceArtefact }: { sourceArtefact?: strin
 
       <fieldset className={sectionCls}>
         <legend className={legendCls}>How do we reach you?</legend>
-        <p className="text-xs text-bauhaus-muted font-mono">Required for partnership inquiries — we need a way to reply.</p>
+        <p className="text-xs text-bauhaus-muted font-mono">Required for partnership inquiries. We need a way to reply.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={labelCls} htmlFor="contact_name">Your name <span className="text-bauhaus-red">*</span></label>

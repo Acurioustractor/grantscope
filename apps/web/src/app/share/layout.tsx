@@ -61,7 +61,7 @@ export default async function ShareLayout({ children }: { children: React.ReactN
             </div>
           </div>
           <div className="text-[10px] uppercase tracking-widest text-bauhaus-muted border-t border-white/20 pt-4">
-            This is a CivicGraph deliverable. We&apos;re building this in public &mdash; tell us what hit, what missed, and what you&apos;d want next at <Link href={feedbackHref} className="underline">/feedback</Link>, or <Link href={partnerHref} className="underline">partner with us</Link> on the next one.
+            This is a CivicGraph deliverable. We&apos;re building it in public. Tell us what hit and what missed at <Link href={feedbackHref} className="underline">/feedback</Link>, or <Link href={partnerHref} className="underline">partner with us</Link> on the next one.
           </div>
         </div>
       </footer>

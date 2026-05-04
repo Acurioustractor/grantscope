@@ -7,9 +7,9 @@ export const metadata = {
 };
 
 const ARTEFACT_LABELS: Record<string, string> = {
-  'qld-youth-justice': 'QLD Youth Justice — Sector Deep Dive',
-  'fecca-eccv': 'FECCA & ECCV — The Federation’s Money Map',
-  'multicultural-sector': 'Multicultural Sector — Locked Surface',
+  'qld-youth-justice': 'QLD Youth Justice · Sector Deep Dive',
+  'fecca-eccv': "FECCA & ECCV · The Federation's Money Map",
+  'multicultural-sector': 'Multicultural Sector · Locked Surface',
 };
 
 export default async function PartnerPage({ searchParams }: { searchParams: Promise<{ ref?: string }> }) {
@@ -33,11 +33,11 @@ export default async function PartnerPage({ searchParams }: { searchParams: Prom
         <div className="border-l-4 border-bauhaus-yellow pl-4 max-w-3xl">
           <p className="text-sm text-bauhaus-black font-medium leading-relaxed mb-2"><span className="font-black uppercase tracking-widest text-xs text-bauhaus-yellow">What we&apos;re looking for:</span></p>
           <ul className="text-sm text-bauhaus-black space-y-1 list-disc pl-5 marker:text-bauhaus-yellow">
-            <li><span className="font-black">Foundations co-funding sector reports</span> — quarterly cadence, board-grade evidence, shared with the field</li>
-            <li><span className="font-black">ACCOs + community-controlled orgs</span> wanting their own version of this for their funders + boards</li>
-            <li><span className="font-black">Sector peaks + advocacy bodies</span> pitching system change with sourced data, not vibes</li>
-            <li><span className="font-black">Journalists</span> on a story — we&apos;ll point you at the records, the directors, the dollar trail</li>
-            <li><span className="font-black">Researchers</span> using the underlying dataset for academic work or evaluation</li>
+            <li><span className="font-black">Foundations co-funding sector reports.</span> Quarterly cadence, board-grade evidence, shared back to the field.</li>
+            <li><span className="font-black">ACCOs + community-controlled orgs</span> wanting their own version of this for their funders and boards.</li>
+            <li><span className="font-black">Sector peaks + advocacy bodies</span> pitching system change with sourced data, not vibes.</li>
+            <li><span className="font-black">Journalists</span> on a story. We&apos;ll point you at the records, the directors, the dollar trail.</li>
+            <li><span className="font-black">Researchers</span> using the underlying dataset for academic work or evaluation.</li>
           </ul>
         </div>
       </div>

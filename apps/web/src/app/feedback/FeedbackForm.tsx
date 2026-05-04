@@ -50,7 +50,7 @@ const PAY_OPTIONS = [
   { v: 'mid_500_2500', label: '$500 – $2,500' },
   { v: 'high_2500_10000', label: '$2,500 – $10,000' },
   { v: 'enterprise_10k_plus', label: '$10,000+ (enterprise)' },
-  { v: 'depends', label: 'Depends — let me discuss' },
+  { v: 'depends', label: 'Depends, let me discuss' },
 ];
 
 // How would you actually want to interact with the data? — separate from
@@ -126,7 +126,7 @@ export default function FeedbackForm({ reportSubject }: { reportSubject?: string
         <div className="text-xs font-black uppercase tracking-widest text-bauhaus-blue mb-2">✓ Feedback received</div>
         <h2 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-3">Thank you.</h2>
         <p className="text-bauhaus-black font-medium leading-relaxed mb-2">
-          This is genuinely useful — the structured signals shape what gets built next, and the free-text often surfaces things we wouldn&apos;t think to ask.
+          This is genuinely useful. The structured signals shape what gets built next, and the free-text often surfaces things we wouldn&apos;t think to ask.
         </p>
         <p className="text-sm text-bauhaus-muted">
           {result.id && <>Reference: <span className="font-mono">{result.id.slice(0, 8)}…</span></>}
@@ -164,7 +164,7 @@ export default function FeedbackForm({ reportSubject }: { reportSubject?: string
 
       <div className={sectionCls}>
         <h3 className={legendCls}>How do you want to interact with the data?</h3>
-        <p className="text-xs text-bauhaus-muted font-medium leading-relaxed">Different from topics — this is about the <span className="font-black">verb</span>. Reading polished reports vs. running queries vs. getting alerts when something shifts. Tick what would actually fit how you work.</p>
+        <p className="text-xs text-bauhaus-muted font-medium leading-relaxed">Different from topics. This is about the <span className="font-black">verb</span>. Reading polished reports vs. running queries vs. getting alerts when something shifts. Tick what would actually fit how you work.</p>
         <CheckboxGrid name="data_interactions" options={DATA_INTERACTIONS} columns={2} />
       </div>
 
@@ -179,7 +179,7 @@ export default function FeedbackForm({ reportSubject }: { reportSubject?: string
 
       <div className={sectionCls}>
         <h3 className={legendCls}>What questions would you want answered next?</h3>
-        <p className="text-xs text-bauhaus-muted font-medium leading-relaxed">Free text. The most useful feedback is usually here — what wasn&apos;t covered? What would shift it from interesting to essential for you?</p>
+        <p className="text-xs text-bauhaus-muted font-medium leading-relaxed">Free text. The most useful feedback is usually here. What wasn&apos;t covered? What would shift it from interesting to essential for you?</p>
         <textarea name="questions_to_answer" rows={4} className={inputCls} placeholder="e.g. How does ECCV's funding compare to the entire VIC ethnic-services sector? Which foundations are quietly funding settlement work? What's the director-overlap pattern across treaty bodies?" />
       </div>
 
@@ -190,7 +190,7 @@ export default function FeedbackForm({ reportSubject }: { reportSubject?: string
 
       <div className={sectionCls}>
         <h3 className={legendCls}>Indicative budget signal</h3>
-        <p className="text-xs text-bauhaus-muted font-medium leading-relaxed">No commitment — just helps us understand what people would expect to invest in this kind of intelligence.</p>
+        <p className="text-xs text-bauhaus-muted font-medium leading-relaxed">No commitment. Just helps us understand what people would expect to invest in this kind of intelligence.</p>
         <select name="willingness_to_pay" className={inputCls} defaultValue="">
           <option value="">Skip</option>
           {PAY_OPTIONS.map(o => <option key={o.v} value={o.v}>{o.label}</option>)}
@@ -198,7 +198,7 @@ export default function FeedbackForm({ reportSubject }: { reportSubject?: string
       </div>
 
       <div className={sectionCls}>
-        <h3 className={legendCls}>Optional — leave your contact</h3>
+        <h3 className={legendCls}>Optional, leave your contact</h3>
         <p className="text-xs text-bauhaus-muted font-medium leading-relaxed">All anonymous if you skip this. We won&apos;t spam you.</p>
         <div className="grid sm:grid-cols-2 gap-3">
           <div>
