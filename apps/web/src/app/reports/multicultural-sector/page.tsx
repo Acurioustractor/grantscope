@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { headers } from 'next/headers';
 import { getLiveReportSupabase } from '@/lib/report-supabase';
 import { safe } from '@/lib/services/utils';
 
@@ -191,13 +192,17 @@ async function getReport() {
 
 export default async function MulticulturalSectorPage() {
   const r = await getReport();
+  const hdrs = await headers();
+  const isShare = (hdrs.get('x-pathname') ?? '').startsWith('/share/');
 
   return (
     <div>
       <div className="mb-10">
-        <Link href="/reports" className="text-xs font-black text-bauhaus-muted uppercase tracking-widest hover:text-bauhaus-black">
-          &larr; All Reports
-        </Link>
+        {!isShare && (
+          <Link href="/reports" className="text-xs font-black text-bauhaus-muted uppercase tracking-widest hover:text-bauhaus-black">
+            &larr; All Reports
+          </Link>
+        )}
         <div className="text-xs font-black text-bauhaus-yellow mt-4 mb-1 uppercase tracking-widest">Living Report — First Cut</div>
         <h1 className="text-3xl sm:text-4xl font-black text-bauhaus-black mb-3 uppercase tracking-tight">
           The Multicultural Settlement Sector
@@ -261,9 +266,13 @@ export default async function MulticulturalSectorPage() {
                 return (
                   <tr key={e.gs_id} className={i % 2 === 0 ? 'bg-white' : 'bg-bauhaus-canvas'}>
                     <td className="p-3 font-black text-bauhaus-black">
-                      <Link href={`/org/${e.gs_id}`} className="hover:underline">
-                        {e.canonical_name}
-                      </Link>
+                      {isShare ? (
+                        <span>{e.canonical_name}</span>
+                      ) : (
+                        <Link href={`/org/${e.gs_id}`} className="hover:underline">
+                          {e.canonical_name}
+                        </Link>
+                      )}
                     </td>
                     <td className="p-3 font-mono text-xs">{e.state ?? '—'}</td>
                     <td className="p-3 text-right font-mono">{e.total != null ? money(e.total) : '—'}</td>
