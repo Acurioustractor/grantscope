@@ -16,9 +16,14 @@ function createMockDb() {
   chain.range = vi.fn().mockReturnValue(chain);
   chain.single = vi.fn().mockResolvedValue({ data: null, error: null });
 
+  const rpc = vi.fn().mockResolvedValue({ data: [], error: null });
+
   // Terminal: resolve the chain
   const resolveWith = (data: unknown, error: unknown = null, count?: number) => {
     chain.single.mockResolvedValue({ data, error });
+    // EntityService.search now prefers an exec_sql RPC; mirror the chain payload
+    // there so a single _resolveWith call covers both code paths.
+    rpc.mockResolvedValue({ data: Array.isArray(data) ? data : data == null ? [] : [data], error });
     // For non-single queries, make the chain itself thenable
     (chain as Record<string, unknown>).then = (fn: (v: unknown) => void) => {
       return Promise.resolve({ data, error, count }).then(fn);
@@ -35,7 +40,7 @@ function createMockDb() {
 
   const db = {
     from: vi.fn().mockReturnValue(chain),
-    rpc: vi.fn().mockResolvedValue({ data: [], error: null }),
+    rpc,
     _chain: chain,
     _resolveWith: resolveWith,
   };
