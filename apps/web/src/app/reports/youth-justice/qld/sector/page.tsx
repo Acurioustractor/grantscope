@@ -4,6 +4,12 @@ import { getLiveReportSupabase } from '@/lib/report-supabase';
 import { safe } from '@/lib/services/utils';
 import { DetailDrawer, DrawerSection, DrawerKeyValue } from '@/components/reports/DetailDrawer';
 import { summarizeMinisterialStatement, summarizeHansardSpeech, summarizeCoronerFinding } from '@/lib/civicgraph-summary';
+import { QLD_YJ_DRILLDOWN_RECIPIENTS } from '@/lib/services/qld-yj-recipient';
+
+// Lookup: recipient_name → drill-down slug (for §9 "Detail →" column).
+const QLD_YJ_RECIPIENT_SLUG_BY_NAME: Record<string, string> = Object.fromEntries(
+  QLD_YJ_DRILLDOWN_RECIPIENTS.map(r => [r.recipient_name, r.slug])
+);
 
 export const dynamic = 'force-dynamic';
 export const metadata = {
@@ -59,7 +65,7 @@ const BILL_DETAILS: Record<string, BillDetail> = {
  { who: 'Queensland Human Rights Commission', quote: 'Formally opposed the Bill in its parliamentary submission.', sourceUrl: 'https://documents.parliament.qld.gov.au/com/JICSC-CD82/MQSACATAB2-9E30/submissions/00000036.pdf' },
  ],
  implementingDept: 'QLD Department of Youth Justice',
- capitalBacking: ['Wacol Youth Remand $250M+ build, $150M ops first 3 yrs', 'Woodford Youth Detention up to $627.61M (industry-tracker, verify Budget Paper 3)', 'Cairns Youth Detention 40 beds, planned 2027'],
+ capitalBacking: ['Wacol Youth Remand $250M+ build, $150M ops first 3 yrs', 'Woodford Youth Detention up to $627.61M (industry-tracker)', 'Cairns Youth Detention 40 beds, planned 2027'],
  outcomeProxies: ['Live watchhouse children today, with First Nations share above the population baseline of ~5%', 'CTG gap from trajectory: +8.0/10K (2023-24, widening)', 'ACCO funding share unchanged at 12%'],
  },
  'Making Queensland Safer (Adult Crime, Adult Time) Amendment Bill 2025': {
@@ -253,7 +259,7 @@ const QLD_PROGRAMME_REGISTRY: ProgrammeRegistryItem[] = [
  announcement: { date: '2024-02-01', minister: 'Palaszczuk Labor Government (sod-turn)', source_url: 'https://statements.qld.gov.au/', headline: 'Woodford Youth Detention Centre construction begins' },
  bill: null,
  funding_match: null,
- capital_cost: 'Up to $627.61M reported (industry tracker; verify Budget Paper 3)',
+ capital_cost: 'Up to $627.61M reported (industry tracker)',
  delivery_notes: '80 beds, north of Brisbane. BESIX Watpac (QLD) lead contractor. Completion target 2026. Project continues under Crisafulli LNP.',
  circuit_breaker: 'A capital-budget freeze before commissioning. Operational appropriation is decided in the Budget that turns construction into operations, typically 12 months pre-opening. That window is the public-finance leverage point.',
  },
@@ -265,7 +271,7 @@ const QLD_PROGRAMME_REGISTRY: ProgrammeRegistryItem[] = [
  announcement: { date: '2024-01-01', minister: 'Palaszczuk Labor Government', source_url: 'https://statements.qld.gov.au/', headline: 'Cairns Youth Detention Centre announced' },
  bill: null,
  funding_match: null,
- capital_cost: 'TBD · Budget Paper 3 line pending',
+ capital_cost: 'TBD',
  delivery_notes: '40 beds, Far North Queensland. Site selection through 2024. Forecast operational 2027. With Woodford + Wacol = +120 beds added to QLD detention capacity.',
  circuit_breaker: 'Pre-construction. The most leverageable item in this registry. Cancel the build, redirect ~$200M to FNQ ACCO + community-bed capacity, and the regional disengagement-pipeline (§7 hotspots: Mareeba, Tablelands, Cairns 13 low-ICSEA schools) gets the closest thing to a place-based justice-reinvestment allocation in QLD\'s history.',
  },
@@ -410,7 +416,7 @@ const QLD_PLANNED_FACILITIES: PlannedFacility[] = [
  status: 'under-construction',
  capacity: '80 beds (planned)',
  location: 'Woodford (north of Brisbane)',
- estimatedCost: 'up to $627.61M reported (industry tracker; verify against QLD Budget Paper 3)',
+ estimatedCost: 'up to $627.61M reported (industry tracker)',
  source: { label: 'QLD Department of Youth Justice, Woodford', href: 'https://youthjustice.qld.gov.au/our-department/strategies-reform/new-youth-detention-centres/woodford' },
  notes: 'Sod turned February 2024 (Palaszczuk Labor); BESIX Watpac (QLD) Pty Ltd appointed as lead contractor. Project continues under the Crisafulli LNP Government. Completion target 2026.',
  },
@@ -531,10 +537,18 @@ const QLD_OVERSIGHT_FINDINGS: OversightFinding[] = [
  },
 ];
 
+// Hard-coded display-name overrides for cases where ACNC legal-entity name is misleading
+// (e.g. Minderoo Foundation's giving figures attached to "MINDEROO PICTURES LIMITED" via shared ABN block).
+const DISPLAY_NAME_OVERRIDES: Record<string, string> = {
+ 'MINDEROO PICTURES LIMITED': 'Minderoo Foundation',
+};
+
 // ACNC legal names are often "THE TRUSTEE FOR X TRUST" or all-caps registered company names,
 // religious legal-entity wrappers ("The Corporation of the Trustees of the X"), etc.
 // Convert to a friendlier display form for the report.
 function displayName(raw: string): string {
+ const override = DISPLAY_NAME_OVERRIDES[raw.trim().toUpperCase()];
+ if (override) return override;
  let s = raw.trim();
  // Religious legal-entity patterns first (most specific)
  s = s.replace(/^the\s+corporation\s+of\s+the\s+trustees\s+of\s+the\s+/i, '');
@@ -606,7 +620,7 @@ type SpendCategory = { category: string; total: number };
 type CtgRow = { financial_year: string; actual_rate: number; trajectory_rate: number | null; gap_from_target: number | null };
 type TopOrgRow = { recipient_name: string | null; recipient_abn: string | null; total: number; grants: number };
 type AccoGapRow = { org_type: string; orgs: number; total_funding: number; avg_per_recipient: number; funding_share_pct: number };
-type RecipientRow = { recipient_name: string; total: number; grants: number };
+type RecipientRow = { recipient_name: string; total: number; grants: number; last_year: string | null };
 type RegistryDelivererRow = {
  pattern: string;
  recipient_count: number;
@@ -695,12 +709,12 @@ async function getReport() {
  safe(supabase.rpc('exec_sql', { query: `SELECT financial_year, actual_rate::numeric(10,2), trajectory_rate::numeric(10,2), gap_from_target::numeric(10,2) FROM public.v_ctg_youth_justice_progress WHERE state = 'QLD' ORDER BY financial_year` })) as Promise<CtgRow[] | null>,
  safe(supabase.rpc('exec_sql', { query: `SELECT recipient_name, recipient_abn, total::bigint, grants::int FROM public.mv_yj_report_state_top_orgs WHERE state = 'QLD' OR state = 'Queensland' ORDER BY total DESC NULLS LAST LIMIT 25` })) as Promise<TopOrgRow[] | null>,
  safe(supabase.rpc('exec_sql', { query: `SELECT org_type, orgs::int, total_funding::bigint, avg_per_recipient::bigint, funding_share_pct::int FROM public.mv_yj_report_acco_gap` })) as Promise<AccoGapRow[] | null>,
- safe(supabase.rpc('exec_sql', { query: `SELECT recipient_name, SUM(amount_dollars)::bigint AS total, COUNT(*)::int AS grants FROM public.justice_funding WHERE state = 'QLD' AND topics @> ARRAY['youth-justice'] AND recipient_name NOT ILIKE '%total%' AND recipient_name NOT ILIKE 'department of youth justice%' AND recipient_name NOT ILIKE 'youth justice -%' AND recipient_name NOT IN ('(blank)','TAFE Queensland') AND amount_dollars > 0 GROUP BY 1 ORDER BY total DESC NULLS LAST LIMIT 15` })) as Promise<RecipientRow[] | null>,
+ safe(supabase.rpc('exec_sql', { query: `SELECT recipient_name, SUM(amount_dollars)::bigint AS total, COUNT(*)::int AS grants, MAX(financial_year) AS last_year FROM public.justice_funding WHERE state = 'QLD' AND topics @> ARRAY['youth-justice'] AND recipient_name NOT ILIKE '%total%' AND recipient_name NOT ILIKE 'department of youth justice%' AND recipient_name NOT ILIKE 'youth justice -%' AND recipient_name NOT IN ('(blank)','TAFE Queensland') AND amount_dollars > 0 GROUP BY 1 ORDER BY total DESC NULLS LAST LIMIT 25` })) as Promise<RecipientRow[] | null>,
  safe(supabase.rpc('exec_sql', { query: `SELECT recipient_name, COUNT(DISTINCT topic)::int AS sectors, ARRAY_AGG(DISTINCT topic) AS topic_list, SUM(amount_dollars)::bigint AS total FROM (SELECT recipient_name, unnest(topics) AS topic, amount_dollars FROM public.justice_funding WHERE state = 'QLD' AND amount_dollars > 0 AND recipient_name IS NOT NULL AND length(recipient_name) > 3 AND recipient_name !~ '^[0-9]+$' AND recipient_name NOT ILIKE '%Total%' AND recipient_name NOT ILIKE '%Department of%' AND recipient_name NOT ILIKE '%State of %' AND recipient_name NOT ILIKE '(blank)') t WHERE topic IN ('youth-justice','child-protection','disability','ndis','family-services','indigenous','mental-health','homelessness','aod','family-violence') GROUP BY 1 HAVING COUNT(DISTINCT topic) >= 3 ORDER BY total DESC NULLS LAST LIMIT 12` })) as Promise<CrossSectorRow[] | null>,
  safe(supabase.rpc('exec_sql', { query: `SELECT type, count::int FROM public.mv_yj_report_alma_type_counts ORDER BY count DESC LIMIT 12` })) as Promise<AlmaTypeCount[] | null>,
  safe(supabase.rpc('exec_sql', { query: `SELECT name, type, evidence_level, geography, cost_per_young_person::int, portfolio_score::int, cultural_authority, substring(description, 1, 1500) AS description, topics FROM public.alma_interventions WHERE ('QLD' = ANY(geography) OR 'Queensland' = ANY(geography)) AND (topics @> ARRAY['youth-justice'] OR type ILIKE '%diversion%' OR type ILIKE '%justice%' OR type ILIKE '%wraparound%' OR type ILIKE '%community-led%' OR type ILIKE '%therapeutic%') ORDER BY (CASE WHEN evidence_level ILIKE '%proven%' THEN 0 WHEN evidence_level ILIKE '%promising%' THEN 1 ELSE 2 END), portfolio_score DESC NULLS LAST LIMIT 16` })) as Promise<AlmaInterventionRow[] | null>,
  safe(supabase.rpc('exec_sql', { query: `SELECT LOWER(supplier_name) AS supplier_key, MIN(supplier_name) AS supplier_name, COUNT(*)::int AS contracts, SUM(contract_value)::bigint AS total FROM public.austender_contracts WHERE supplier_name ILIKE ANY (ARRAY['%youth justice%','%PCYC%','%youth advocacy%','%murri watch%','%youth off the streets%','%mission australia%','%lifeline community%','%anglicare%','%uniting%','%liquidlogic%','%halikos%','%Save the Children%']) AND contract_value > 0 AND length(supplier_name) < 200 AND supplier_name NOT ILIKE '%;%' GROUP BY LOWER(supplier_name) ORDER BY total DESC NULLS LAST LIMIT 12` })) as Promise<ContractRow[] | null>,
- safe(supabase.rpc('exec_sql', { query: `SELECT name, total_giving_annual::bigint AS total_giving_annual, thematic_focus::text FROM public.foundations WHERE thematic_focus::text ILIKE ANY (ARRAY['%justice%','%youth%','%children%','%first nations%','%indigenous%','%disability%','%mental health%','%aboriginal%']) AND total_giving_annual > 0 AND name NOT ILIKE '%universit%' AND name NOT ILIKE '%accommodation%' AND name NOT ILIKE '%catholic education%' AND name NOT ILIKE '%hospital%' AND name NOT ILIKE '%council%' AND name NOT ILIKE '%legal aid%' AND name NOT ILIKE '%primary healthcare network%' AND name NOT ILIKE '%phn%' AND name NOT ILIKE '%health network%' AND name NOT ILIKE 'job futures%' AND name NOT ILIKE '%refugee relief%' AND name NOT ILIKE '%world vision%' ORDER BY total_giving_annual DESC NULLS LAST LIMIT 12` })) as Promise<FoundationRow[] | null>,
+ safe(supabase.rpc('exec_sql', { query: `WITH ranked AS (SELECT name, total_giving_annual::bigint AS total_giving_annual, thematic_focus::text AS thematic_focus, profile_confidence, ROW_NUMBER() OVER (PARTITION BY COALESCE(NULLIF(regexp_replace(lower(name), '\\s+(limited|ltd|pty|inc|incorporated|trust|foundation)\\b.*$', '', 'g'), ''), name) ORDER BY CASE WHEN profile_confidence = 'high' THEN 0 WHEN profile_confidence = 'medium' THEN 1 ELSE 2 END, total_giving_annual DESC NULLS LAST) AS dedupe_rn FROM public.foundations WHERE thematic_focus::text ILIKE ANY (ARRAY['%justice%','%youth%','%children%','%first nations%','%indigenous%','%disability%','%mental health%','%aboriginal%']) AND total_giving_annual > 0 AND name NOT ILIKE '%universit%' AND name NOT ILIKE '%accommodation%' AND name NOT ILIKE '%catholic education%' AND name NOT ILIKE '%hospital%' AND name NOT ILIKE '%council%' AND name NOT ILIKE '%legal aid%' AND name NOT ILIKE '%primary healthcare network%' AND name NOT ILIKE '%phn%' AND name NOT ILIKE '%health network%' AND name NOT ILIKE 'job futures%' AND name NOT ILIKE '%refugee relief%' AND name NOT ILIKE '%world vision%') SELECT name, total_giving_annual, thematic_focus FROM ranked WHERE dedupe_rn = 1 ORDER BY total_giving_annual DESC NULLS LAST LIMIT 12` })) as Promise<FoundationRow[] | null>,
  safe(supabase.rpc('exec_sql', { query: `SELECT lga_name, population::int, youth_population::int, indigenous_pct::numeric(5,1), pipeline_intensity::numeric(5,1), ndis_youth_participants::int, jh_funding_tracked::bigint, school_count::int, jobseeker_recipients::int, dsp_recipients::int, youth_allowance_recipients::int, low_icsea_schools::int, avg_icsea::int FROM public.lga_cross_system_stats WHERE state = 'QLD' AND population > 5000 AND pipeline_intensity IS NOT NULL ORDER BY pipeline_intensity DESC NULLS LAST LIMIT 15` })) as Promise<HeatmapRow[] | null>,
  safe(supabase.rpc('exec_sql', { query: `SELECT financial_year, topic, SUM(amount_dollars)::bigint AS total FROM (SELECT financial_year, unnest(topics) AS topic, amount_dollars FROM public.justice_funding WHERE state = 'QLD' AND amount_dollars > 0 AND financial_year IS NOT NULL) t WHERE topic IN ('youth-justice','child-protection','indigenous','disability','family-services') AND financial_year ~ '^20[0-9]{2}-' GROUP BY 1,2 ORDER BY financial_year, topic` })) as Promise<YearSpendRow[] | null>,
  safe(supabase.rpc('exec_sql', { query: `SELECT 'QLD'::text AS state, payment_type, recipient_count::int FROM public.dss_payment_demographics WHERE state = 'QLD' ORDER BY recipient_count DESC NULLS LAST LIMIT 10` })) as Promise<DssRow[] | null>,
@@ -1178,11 +1192,50 @@ export default async function QldYjSectorPage() {
  </div>
  </div>
 
+ <div className="border-t border-white/20 pt-4 mb-4">
+ <p className="text-[11px] sm:text-xs text-white/85 leading-snug font-medium">
+ <span className="font-black uppercase tracking-widest text-bauhaus-yellow">Two budget windows:</span> Cumulative dataset {money(r.detention)} detention vs {money(r.community)} community (2008–2026, <code className="font-mono">justice_funding</code>). Current-year ROGS recurrent: {r.detSpendLatest ? <>${(Number(r.detSpendLatest.metric_value)/1000).toFixed(0)}M detention ({r.detSpendLatest.period})</> : 'pending'}. Same direction of travel; different denominators. Full explainer in §8.
+ </p>
+ </div>
  <div className="flex flex-wrap items-center gap-2 text-[10px] sm:text-xs font-black uppercase tracking-widest">
  <Link href={longReadPath} className="inline-block px-4 py-2 border-2 border-bauhaus-yellow bg-bauhaus-yellow text-bauhaus-black hover:bg-white">📖 Read the long-form report</Link>
  <a href="#vol-3" className="inline-block px-4 py-2 border-2 border-white text-white hover:bg-white hover:text-bauhaus-black">→ Skip to the money</a>
  <a href="#vol-7" className="inline-block px-4 py-2 border-2 border-white text-white hover:bg-white hover:text-bauhaus-black">→ Skip to policy + bills</a>
  </div>
+ </section>
+
+ {/* 5-MINUTE READING PATH, the shortest route through the report */}
+ <section aria-label="Five-minute reading path" className="mb-10 border-4 border-bauhaus-black bg-white p-6 sm:p-8">
+ <div className="flex flex-wrap items-baseline gap-3 mb-4">
+ <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-bauhaus-red">⏱ 5-minute path</span>
+ <h2 className="text-xl sm:text-2xl font-black text-bauhaus-black uppercase tracking-tight">Got 5 minutes? The shortest path through the report</h2>
+ </div>
+ <p className="text-sm text-bauhaus-black font-medium leading-snug max-w-3xl mb-5">
+ Five sections, in order, that carry the argument. Skim them and you have the whole report&apos;s spine.
+ </p>
+ <ol className="space-y-3">
+ {[
+ { href: '#section-3', label: '§3', q: 'Are we closing the Closing-the-Gap target?', tone: 'border-bauhaus-red' },
+ { href: '#section-8', label: '§8', q: 'How many detention dollars per dollar of community-based services?', tone: 'border-bauhaus-blue' },
+ { href: '#section-10', label: '§10', q: 'Where is the ACCO funding gap?', tone: 'border-bauhaus-yellow' },
+ { href: '#section-17', label: '§17', q: 'Which effective programs are running with no funding link?', tone: 'border-bauhaus-blue' },
+ { href: '#section-25-5', label: '§25.5', q: 'What does the synthesis actually say?', tone: 'border-bauhaus-black' },
+ ].map((s, i) => (
+ <li key={s.href}>
+ <a href={s.href} className={`group block border-l-4 ${s.tone} pl-4 py-2 hover:bg-bauhaus-canvas transition-colors`}>
+ <div className="flex flex-wrap items-baseline gap-3">
+ <span className="text-[10px] font-mono font-black tabular-nums text-bauhaus-muted">{(i + 1).toString().padStart(2, '0')}</span>
+ <span className="text-sm font-black uppercase tracking-widest text-bauhaus-red">{s.label}</span>
+ <span className="text-sm sm:text-base font-medium text-bauhaus-black flex-1 group-hover:underline">{s.q}</span>
+ <span className="text-xs font-black uppercase tracking-widest text-bauhaus-blue">→</span>
+ </div>
+ </a>
+ </li>
+ ))}
+ </ol>
+ <p className="text-[10px] font-mono text-bauhaus-muted mt-5">
+ Each anchor jumps to the corresponding section in the long report. Read all five and you have the cold-arrival case in roughly five minutes.
+ </p>
  </section>
 
  {/* STICKY VOLUME NAV */}
@@ -1409,6 +1462,7 @@ export default async function QldYjSectorPage() {
  ))}
  </div>
  <p className="text-[10px] text-bauhaus-muted font-mono mt-3 pt-2 border-t border-bauhaus-canvas">Curated from public QLD-government announcements. Not yet ingested into the structured detention dataset; we&apos;re building the pipeline.</p>
+ <p className="text-[10px] text-bauhaus-muted font-mono mt-2">Methodology: capital figures sourced from industry trackers and ministerial statements. QLD Budget Paper 3 line-by-line reconciliation pending.</p>
  </div>
  </div>
  <div className="border-4 border-bauhaus-black p-5 bg-white">
@@ -1445,12 +1499,24 @@ export default async function QldYjSectorPage() {
  </section>
 
  {/* §3 INDIGENOUS OVER-REP CTG */}
- <section className="mb-16">
+ <section id="section-3" className="mb-16 scroll-mt-24">
  <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§3</div>
  <h3 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">Who&apos;s in custody, Closing the Gap target 11 progress</h3>
  <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
  National Agreement on Closing the Gap: target 11 commits to reducing the rate of First Nations young people in detention by 30% by 2031. Below: QLD&apos;s actual rate vs the target trajectory.
  </p>
+ <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 max-w-3xl">
+ <div className="border-4 border-bauhaus-red p-4 bg-white">
+ <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-red mb-1">First Nations share · QLD detention</div>
+ <div className="text-2xl sm:text-3xl font-black text-bauhaus-red tabular-nums leading-none mb-1">~65–75%</div>
+ <p className="text-[11px] text-bauhaus-black leading-snug font-medium">AIHW Youth Detention Population 2024-25, range across quarterly snapshots. Compared to ~5% First Nations share of QLD&apos;s 10–17 population.</p>
+ </div>
+ <div className="border-4 border-bauhaus-black p-4 bg-white">
+ <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted mb-1">ACCO funding share · QLD YJ grants</div>
+ <div className="text-2xl sm:text-3xl font-black text-bauhaus-black tabular-nums leading-none mb-1">{accoSharePct}%</div>
+ <p className="text-[11px] text-bauhaus-black leading-snug font-medium">Aboriginal Community-Controlled share of <code className="font-mono">justice_funding</code> dollars (CivicGraph). Frame your grants against the AIHW denominator, not the population baseline.</p>
+ </div>
+ </div>
  {r.ctg.length === 0 ? (
  <div className="border-4 border-bauhaus-black p-6 bg-white text-bauhaus-muted text-sm">CTG data not available.</div>
  ) : (() => {
@@ -1602,142 +1668,6 @@ export default async function QldYjSectorPage() {
  AIHW Youth Justice reporting consistently identifies high rates of mental-health and substance-use co-morbidity in the cohort. The QLD justice-funding stream tags <span className="font-black text-bauhaus-red">{r.mhFundingCount}</span> rows for mental health or AOD. <span className="font-black">If you can&apos;t name the issue in the data, you can&apos;t fund it accountably.</span>
  </p>
 
- {r.supportAnnouncements.length > 0 && (
- <div className="mt-8 border-4 border-bauhaus-black p-5 bg-bauhaus-canvas">
- <div className="text-xs font-black uppercase tracking-widest text-bauhaus-yellow mb-2">§6.5 · EVERY ANNOUNCED COMMUNITY PROGRAM · LAST 3 YEARS</div>
- <h4 className="text-xl font-black text-bauhaus-black uppercase tracking-tight mb-3">All {r.supportAnnouncements.length} QLD ministerial announcements about youth community programs</h4>
- <p className="text-sm text-bauhaus-black font-medium leading-relaxed mb-5 max-w-3xl">
- Every QLD ministerial statement on youth community programs, Circuit Breaker Sentencing · Kickstart Early Intervention · Step Up Step Down · Career Pathways · youth criminal rehabilitation · family-led decision making · diversion · prevention, pulled live from <code className="font-mono text-xs">civic_ministerial_statements</code>. Sorted newest first. <span className="font-black">Click any card</span> for the full statement at statements.qld.gov.au. Pair with §9.6 Programmes Registry for the funded-program match per announcement.
- </p>
- <div className="space-y-3">
- {r.supportAnnouncements.map((a, i) => {
- // Match this announcement to a registry initiative by keyword.
- const h = (a.headline || '').toLowerCase();
- const matchedPattern =
- /circuit breaker/.test(h) ? 'Circuit Breaker Sentencing' :
- /kickstart|intensive early intervention|early intervention program/.test(h) ? 'Kickstarter Grants' :
- /family[- ]led/.test(h) ? 'Family Led Decision Making' :
- /bail (support|monitor|condition)/.test(h) ? 'Bail Support' :
- /tribe of mentors/.test(h) ? 'Tribe of Mentors' :
- null;
- const match = matchedPattern ? r.registryDeliverers.find(d => d.pattern === matchedPattern) : null;
- const matchedRegistry =
- matchedPattern
- ? QLD_PROGRAMME_REGISTRY.find(p => p.funding_match?.program_name_pattern === matchedPattern)
- : /step up step down/.test(h)
- ? QLD_PROGRAMME_REGISTRY.find(p => /step up step down/i.test(p.name))
- : /youth criminal rehabilitation|youth rehabilitation/.test(h)
- ? QLD_PROGRAMME_REGISTRY.find(p => /Youth Criminal Rehabilitation/i.test(p.name))
- : /tough new drug|drug law|adult crime, adult time|drug penalt|anti.social behaviour/.test(h)
- ? QLD_PROGRAMME_REGISTRY.find(p => /Drugs Bill 2026/i.test(p.name))
- : null;
- const isNonYj =
- /perinatal/.test(h) ||
- /cybercrime|tourism sector/.test(h) ||
- /applied research grant.*disabilit/.test(h) ||
- /firearm|wieambilla/.test(h);
- const isAdjacent =
- !matchedPattern && !matchedRegistry && !isNonYj && (
- /career pathway/.test(h) ||
- /youth week/.test(h) ||
- /youth justice school/.test(h)
- );
- return (
- <div key={i} className="border-2 border-bauhaus-black bg-white">
- <div className="p-3 flex flex-wrap gap-3 items-start">
- <div className="flex-1 min-w-[14rem]">
- <div className="text-[10px] font-mono text-bauhaus-muted mb-1">{new Date(a.published_at).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
- <a href={a.source_url} target="_blank" rel="noopener" className="text-sm font-black text-bauhaus-black leading-tight hover:underline block mb-1">{a.headline} ↗</a>
- <div className="text-[10px] font-mono text-bauhaus-muted">{a.minister_name?.replace(/^The Honourable /, '') ?? '—'}{a.portfolio ? ` · ${a.portfolio.slice(0, 60)}` : ''}</div>
- </div>
- <div className="flex-shrink-0 text-right">
- {match && match.recipients.length > 0 ? (
- <>
- <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 bg-bauhaus-blue text-white inline-block">✓ MATCHED · {match.recipient_count} org{match.recipient_count === 1 ? '' : 's'}</span>
- <div className="text-[10px] font-mono text-bauhaus-muted mt-1">→ <code>{matchedPattern}</code> in justice_funding</div>
- </>
- ) : matchedRegistry ? (
- <>
- <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 inline-block ${matchedRegistry.bill ? 'bg-bauhaus-red text-white' : 'bg-bauhaus-yellow text-bauhaus-black'}`}>{matchedRegistry.bill ? '⚖ Legislation · no $ vehicle' : matchedRegistry.funding_match ? '⚠ Funded · separate stream' : '◇ Announced · matches registry, no $ trail'}</span>
- <div className="text-[10px] font-mono text-bauhaus-muted mt-1">→ {matchedRegistry.bill ? matchedRegistry.bill.name.slice(0, 70) : matchedRegistry.funding_match?.description ? matchedRegistry.funding_match.description.slice(0, 70) : matchedRegistry.name.slice(0, 70)}</div>
- </>
- ) : isAdjacent ? (
- <>
- <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 bg-bauhaus-canvas border-2 border-bauhaus-black text-bauhaus-black inline-block">◇ Adjacent · youth program, not YJ-funded</span>
- <div className="text-[10px] font-mono text-bauhaus-muted mt-1">{(/career pathway/.test(h) ? 'employment / training appropriation' : /youth week/.test(h) ? 'event, not a funded program' : /youth justice school/.test(h) ? 'school program · separate appropriation' : 'youth program, separate funding stream')}</div>
- </>
- ) : isNonYj ? (
- <>
- <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 bg-bauhaus-canvas border-2 border-bauhaus-muted text-bauhaus-muted inline-block">— Not a YJ initiative</span>
- <div className="text-[10px] font-mono text-bauhaus-muted mt-1">{(/perinatal/.test(h) ? 'Health stream · perinatal MH' : /cybercrime|tourism/.test(h) ? 'small business · not YJ' : /applied research/.test(h) ? 'workforce funding · not YJ' : /firearm|wieambilla/.test(h) ? 'firearms reform · post-Wieambilla' : 'caught by keyword filter, not YJ')}</div>
- </>
- ) : (
- <>
- <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 bg-bauhaus-red text-white inline-block">✗ No funded program matched</span>
- <div className="text-[10px] font-mono text-bauhaus-muted mt-1">announcement only · no <code>justice_funding</code> line</div>
- </>
- )}
- </div>
- </div>
-
- {match && match.recipients.length > 0 && (
- <details className="border-t-2 border-bauhaus-black">
- <summary className="cursor-pointer p-2 hover:bg-bauhaus-yellow text-[10px] font-black uppercase tracking-widest text-bauhaus-blue">
- ▶ Show {match.recipient_count} delivering organisation{match.recipient_count === 1 ? '' : 's'} · click each for full CivicGraph entity profile
- </summary>
- <div className="border-t border-bauhaus-black bg-bauhaus-canvas p-3">
- <table className="w-full text-xs">
- <thead>
- <tr className="border-b border-bauhaus-black">
- <th className="text-left p-1 font-black uppercase tracking-widest text-[10px]">Organisation</th>
- <th className="text-right p-1 font-black uppercase tracking-widest text-[10px]">$</th>
- <th className="text-right p-1 font-black uppercase tracking-widest text-[10px]">Grants</th>
- <th className="text-left p-1 font-black uppercase tracking-widest text-[10px]">Years</th>
- <th className="text-left p-1 font-black uppercase tracking-widest text-[10px]">CivicGraph profile</th>
- </tr>
- </thead>
- <tbody>
- {match.recipients.slice(0, 25).map((rec, j) => (
- <tr key={j} className={j % 2 === 0 ? 'bg-white' : 'bg-bauhaus-canvas'}>
- <td className="p-1 font-black text-bauhaus-black align-top">
- <div>{rec.name}</div>
- {rec.abn && <div className="font-mono text-[9px] text-bauhaus-muted">ABN {rec.abn}</div>}
- </td>
- <td className="p-1 text-right font-mono font-black tabular-nums align-top">{money(rec.total)}</td>
- <td className="p-1 text-right font-mono align-top">{rec.line_items}</td>
- <td className="p-1 font-mono text-[10px] text-bauhaus-muted align-top">{rec.first_fy ?? '?'}{rec.first_fy !== rec.last_fy ? `–${rec.last_fy ?? '?'}` : ''}</td>
- <td className="p-1 font-mono text-[10px] align-top">
- {rec.gs_id ? (
- <Link href={`/entity/${rec.gs_id}`} className="text-bauhaus-blue font-black hover:underline">→ entity page</Link>
- ) : (
- <span className="text-bauhaus-muted">no entity match</span>
- )}
- {rec.website && (
- <div className="mt-0.5"><a href={`https://${rec.website.replace(/^https?:\/\//, '')}`} target="_blank" rel="noopener" className="text-bauhaus-blue hover:underline break-all">{rec.website} ↗</a></div>
- )}
- </td>
- </tr>
- ))}
- </tbody>
- </table>
- {match.recipient_count > 25 && (
- <p className="text-[10px] font-mono text-bauhaus-muted mt-2">+ {match.recipient_count - 25} additional smaller recipients not shown.</p>
- )}
- <p className="text-[10px] font-mono text-bauhaus-muted mt-2">
- Click any <span className="font-black">→ entity page</span> for the org&apos;s directors, board interlocks (§14), all funding flows across sectors, ACNC profile, and relationships graph.
- </p>
- </div>
- </details>
- )}
- </div>
- );
- })}
- </div>
- <p className="text-xs text-bauhaus-muted font-mono mt-4">
- Source: <code>civic_ministerial_statements</code> · 36-month window · keyword-matched to community-program / early-intervention / wraparound / diversion / Circuit Breaker / Step Up Step Down / Kickstart / family-led / youth justice. <span className="font-black">Why this matters:</span> {r.mhFundingCount} grants in <code>justice_funding</code> are tagged mental-health or AOD, but {r.supportAnnouncements.length} announcements above mention these supports. The mismatch tells you announced services for justice-system youth move through Health / NDIS / Education funding doors, not through Youth Justice. The justice stream looks empty even when the support exists.
- </p>
- </div>
- )}
  </section>
 
  {/* §7 EDUCATION + WELFARE PIPELINE */}
@@ -1948,7 +1878,7 @@ export default async function QldYjSectorPage() {
  </section>
 
  {/* §8 DETENTION VS COMMUNITY MULTI-YEAR */}
- <section className="mb-16">
+ <section id="section-8" className="mb-16 scroll-mt-24">
  <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§8</div>
  <h3 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">Detention vs community, the structural ratio</h3>
  <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
@@ -1971,18 +1901,21 @@ export default async function QldYjSectorPage() {
  {Object.entries(yearSpendByYear).map(([fy, byTopic]) => {
  const total = Object.values(byTopic).reduce((s, v) => s + v, 0);
  const peak = Math.max(...Object.values(yearSpendByYear).map(t => Object.values(t).reduce((s, v) => s + v, 0)));
+ // Partial-coverage years: 2013-14 (no sums), 2014-15 (~$181M, ~10% of normal), 2025-26 (in progress)
+ const partialYears = new Set(['2013-14', '2014-15', '2025-26']);
+ const isPartial = partialYears.has(fy);
  return (
  <div key={fy}>
  <div className="flex justify-between text-xs font-mono mb-1">
- <span className="font-black text-bauhaus-black">FY {fy}</span>
- <span className="text-bauhaus-muted">{money(total)}</span>
+ <span className="font-black text-bauhaus-black">FY {fy}{isPartial && <span className="text-bauhaus-muted font-medium ml-1">· partial</span>}</span>
+ <span className="text-bauhaus-muted">{money(total)}{isPartial && <span className="ml-1">*</span>}</span>
  </div>
- <div className="relative h-6 bg-bauhaus-canvas border-2 border-bauhaus-black flex" style={{ width: `${(total / peak) * 100}%` }}>
+ <div className={`relative h-6 bg-bauhaus-canvas border-2 border-bauhaus-black flex ${isPartial ? 'opacity-40' : ''}`} style={{ width: `${(total / peak) * 100}%` }}>
  {(['youth-justice','child-protection','indigenous','disability','family-services'] as const).map((topic) => {
  const v = byTopic[topic] || 0;
  if (v <= 0) return null;
  const colorMap: Record<string, string> = { 'youth-justice': 'bg-bauhaus-red', 'child-protection': 'bg-bauhaus-blue', 'indigenous': 'bg-bauhaus-yellow', 'disability': 'bg-bauhaus-black', 'family-services': 'bg-bauhaus-muted' };
- return <div key={topic} className={colorMap[topic]} style={{ width: `${(v / total) * 100}%` }} title={`${topic}: ${money(v)}`} />;
+ return <div key={topic} className={colorMap[topic]} style={{ width: `${(v / total) * 100}%` }} title={`${topic}: ${money(v)}${isPartial ? ' (partial coverage)' : ''}`} />;
  })}
  </div>
  </div>
@@ -1995,18 +1928,29 @@ export default async function QldYjSectorPage() {
  <span><span className="inline-block w-2 h-2 bg-bauhaus-black mr-1 align-middle" />Disability</span>
  <span><span className="inline-block w-2 h-2 bg-bauhaus-muted mr-1 align-middle" />Family services</span>
  </div>
+ <p className="text-[10px] text-bauhaus-muted font-mono mt-2">* Partial-coverage years (FY13–15 missing source rows; FY25–26 in progress) are shown at 40% opacity. Treat their bar heights as a floor, not a real budget movement.</p>
  </div>
  </div>
  )}
  </section>
 
  {/* §9 TOP RECIPIENTS */}
- <section className="mb-16">
+ <section id="top-recipients" className="mb-16 scroll-mt-24">
  <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§9</div>
  <h3 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">Where the community {money(r.community)} actually goes</h3>
  <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
- Top 15 QLD recipients of youth-justice-tagged grants (excluding state department line items). National NGOs hold the largest contracts. Aboriginal Community-Controlled Organisations are funded, but at smaller dollar amounts (see §10).
+ Top 15 QLD recipients of youth-justice-tagged grants (excluding state department line items) <span className="font-black">with at least one grant since FY22</span>. National NGOs hold the largest contracts. Aboriginal Community-Controlled Organisations are funded, but at smaller dollar amounts (see §10). Recipients with no grants since FY22 appear in the historical section below.
  </p>
+ {(() => {
+ const isCurrent = (ly: string | null | undefined) => {
+ if (!ly) return false;
+ const yr = parseInt(ly.slice(0, 4), 10);
+ return Number.isFinite(yr) && yr >= 2021; // FY21-22 onwards (financial_year string starts '2021-' for FY21-22)
+ };
+ const current = r.recipients.filter(p => isCurrent(p.last_year)).slice(0, 15);
+ const historical = r.recipients.filter(p => !isCurrent(p.last_year));
+ return (
+ <>
  <div className="border-4 border-bauhaus-black overflow-x-auto">
  <table className="w-full text-sm">
  <thead className="bg-bauhaus-black text-white">
@@ -2014,111 +1958,73 @@ export default async function QldYjSectorPage() {
  <th className="text-left p-3 font-black uppercase tracking-widest text-xs">Recipient</th>
  <th className="text-right p-3 font-black uppercase tracking-widest text-xs">Total</th>
  <th className="text-right p-3 font-black uppercase tracking-widest text-xs">Grants</th>
+ <th className="text-right p-3 font-black uppercase tracking-widest text-xs whitespace-nowrap">Last grant FY</th>
+ <th className="text-right p-3 font-black uppercase tracking-widest text-xs whitespace-nowrap">Detail</th>
  </tr>
  </thead>
  <tbody>
- {r.recipients.map((p, i) => (
+ {current.map((p, i) => {
+ const slug = QLD_YJ_RECIPIENT_SLUG_BY_NAME[p.recipient_name];
+ return (
  <tr key={p.recipient_name} className={i % 2 === 0 ? 'bg-white' : 'bg-bauhaus-canvas'}>
  <td className="p-3 font-black text-bauhaus-black">{displayName(p.recipient_name)}</td>
  <td className="p-3 text-right font-mono font-black">{money(p.total)}</td>
  <td className="p-3 text-right font-mono">{p.grants}</td>
+ <td className="p-3 text-right font-mono text-xs">{p.last_year ?? '—'}</td>
+ <td className="p-3 text-right font-mono text-xs">
+ {slug ? (
+ <Link href={`/reports/youth-justice/qld/recipient/${slug}`} className="text-bauhaus-blue font-black hover:underline">Detail →</Link>
+ ) : (
+ <span className="text-bauhaus-muted">—</span>
+ )}
+ </td>
+ </tr>
+ );
+ })}
+ </tbody>
+ </table>
+ </div>
+ {historical.length > 0 && (
+ <details className="mt-4 border-4 border-bauhaus-black bg-white">
+ <summary className="cursor-pointer p-4 hover:bg-bauhaus-yellow flex flex-wrap items-baseline gap-3 list-none">
+ <span className="font-black text-bauhaus-black uppercase tracking-widest text-xs">Historical (pre-FY22) recipients</span>
+ <span className="font-mono text-xs text-bauhaus-muted">{historical.length} recipient{historical.length === 1 ? '' : 's'} · last grant before 2021-22</span>
+ <span className="ml-auto text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">▼ expand</span>
+ </summary>
+ <div className="border-t-4 border-bauhaus-black overflow-x-auto">
+ <table className="w-full text-sm">
+ <thead className="bg-bauhaus-canvas">
+ <tr>
+ <th className="text-left p-3 font-black uppercase tracking-widest text-xs">Recipient</th>
+ <th className="text-right p-3 font-black uppercase tracking-widest text-xs">Total</th>
+ <th className="text-right p-3 font-black uppercase tracking-widest text-xs">Grants</th>
+ <th className="text-right p-3 font-black uppercase tracking-widest text-xs whitespace-nowrap">Last grant FY</th>
+ </tr>
+ </thead>
+ <tbody>
+ {historical.map((p, i) => (
+ <tr key={p.recipient_name} className={i % 2 === 0 ? 'bg-white' : 'bg-bauhaus-canvas'}>
+ <td className="p-3 font-black text-bauhaus-black">{displayName(p.recipient_name)}</td>
+ <td className="p-3 text-right font-mono font-black">{money(p.total)}</td>
+ <td className="p-3 text-right font-mono">{p.grants}</td>
+ <td className="p-3 text-right font-mono text-xs">{p.last_year ?? '—'}</td>
  </tr>
  ))}
  </tbody>
  </table>
  </div>
-
- {/* §9.5, DOUBLE-CLICK each recipient: programs · ALMA evidence · cross-system topics */}
- {r.recipientChains.length > 0 && (
- <div className="mt-10">
- <div className="text-xs font-black uppercase tracking-widest text-bauhaus-yellow mb-2">§9.5 · DOUBLE-CLICK</div>
- <h4 className="text-xl font-black text-bauhaus-black uppercase tracking-tight mb-2">Each recipient, what they were funded for, what programs they run, what evidence exists</h4>
- <p className="text-bauhaus-muted font-medium max-w-3xl mb-5">
- For the top 8 recipients above, expand to see: the named programs that make up their total ($ + financial year), any ALMA-catalogued interventions linked to their funding (with self-attributed evidence level), and the full cross-system topic spread of every grant they hold (not just YJ-tagged). Source: <code className="font-mono text-xs">justice_funding</code> joined to <code className="font-mono text-xs">alma_interventions</code> via the <code className="font-mono text-xs">alma_intervention_id</code> FK.
- </p>
- <div className="space-y-3">
- {r.recipientChains.map((c, i) => (
- <details key={i} className="border-4 border-bauhaus-black bg-white">
- <summary className="cursor-pointer p-4 hover:bg-bauhaus-yellow flex flex-wrap items-baseline gap-3 list-none">
- <span className="font-black text-bauhaus-black text-base">{displayName(c.recipient_name)}</span>
- <span className="font-mono font-black text-sm text-bauhaus-red">{money(c.total)}</span>
- <span className="font-mono text-xs text-bauhaus-muted">{c.grants} grants · {c.first_year ?? '?'}–{c.last_year ?? '?'}</span>
- {c.interventions.length > 0 && (
- <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 bg-bauhaus-blue text-white">{c.interventions.length} ALMA link{c.interventions.length === 1 ? '' : 's'}</span>
- )}
- {c.all_topics.length > 1 && (
- <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 bg-bauhaus-canvas border border-bauhaus-black">{c.all_topics.length} sectors</span>
- )}
- <span className="ml-auto text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">▼ expand</span>
- </summary>
- <div className="border-t-4 border-bauhaus-black p-5 bg-bauhaus-canvas">
- {/* Programs */}
- <div className="mb-5">
- <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-black mb-2">Top {c.programs.length} programs by $, what was actually funded</div>
- {c.programs.length > 0 ? (
- <ul className="space-y-2">
- {c.programs.map((p, j) => (
- <li key={j} className="border-l-4 border-bauhaus-red pl-3 bg-white p-3">
- <div className="flex flex-wrap items-baseline gap-2 mb-1">
- <span className="font-black text-bauhaus-black text-sm">{p.program_name ?? '(unnamed line item)'}</span>
- <span className="font-mono text-xs font-black text-bauhaus-red">{money(p.amount)}</span>
- <span className="font-mono text-xs text-bauhaus-muted">FY {p.financial_year ?? '—'}</span>
- </div>
- {p.description && <p className="text-xs text-bauhaus-black/80 leading-snug">{p.description}{p.description.length >= 240 ? '…' : ''}</p>}
- </li>
- ))}
- </ul>
- ) : <p className="text-xs text-bauhaus-muted font-mono">No itemised programs, total is from aggregate line items only.</p>}
- </div>
-
- {/* ALMA evidence cross-reference */}
- <div className="mb-5">
- <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-black mb-2">ALMA evidence links, does what was funded match an evaluated intervention?</div>
- {c.interventions.length > 0 ? (
- <ul className="grid sm:grid-cols-2 gap-2">
- {c.interventions.map((iv, j) => (
- <li key={j} className="border-l-4 border-bauhaus-blue pl-3 bg-white p-3">
- <div className="font-black text-bauhaus-black text-sm leading-tight mb-1">{iv.name}</div>
- <div className="text-[10px] font-mono text-bauhaus-muted">
- {iv.type ? `${iv.type} · ` : ''}{iv.evidence_level ?? 'unrated'}
- </div>
- </li>
- ))}
- </ul>
- ) : <p className="text-xs text-bauhaus-muted font-mono">No ALMA intervention is linked to this recipient&apos;s grants. Funding may be operational, infrastructure, or not yet matched to an evaluated program.</p>}
- </div>
-
- {/* Cross-system topic spread */}
- <div>
- <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-black mb-2">All topic tags across this recipient&apos;s grants, the cross-system footprint</div>
- {c.all_topics.length > 0 ? (
- <div className="flex flex-wrap gap-1.5">
- {c.all_topics.map((t, j) => (
- <span key={j} className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 border-2 border-bauhaus-black ${t === 'youth-justice' ? 'bg-bauhaus-red text-white' : 'bg-white text-bauhaus-black'}`}>{t}</span>
- ))}
- </div>
- ) : <p className="text-xs text-bauhaus-muted font-mono">No topic tags.</p>}
- <p className="text-[10px] text-bauhaus-muted font-mono mt-2">
- {c.all_topics.length > 1
- ? <>This recipient is funded across <span className="font-black">{c.all_topics.length}</span> tagged sectors. Multi-system reach, siloed funding, integrated service.</>
- : <>Single-sector recipient, funded only under youth-justice tags in this dataset.</>}
- </p>
- </div>
- </div>
  </details>
- ))}
- </div>
- <p className="text-xs text-bauhaus-muted font-mono mt-4">
- Source: <code>justice_funding</code> grouped per recipient · top 5 named programs by amount · <code>alma_interventions</code> joined via <code>alma_intervention_id</code> FK · all topic tags across the recipient&apos;s justice grants. Evidence levels are self-attributed by ALMA submitters (see §16 methodology). The <span className="font-black">expand</span> control reveals the chain: $&nbsp;→&nbsp;programs&nbsp;→&nbsp;evidence&nbsp;→&nbsp;cross-system reach.
- </p>
- </div>
  )}
+ </>
+ );
+ })()}
+
  </section>
 
 
- {/* §9.6, PROGRAMMES REGISTRY: announcement → bill → funding → status → circuit breaker */}
+ {/* §9.5, PROGRAMMES REGISTRY: announcement → bill → funding → status → circuit breaker (renumbered from §9.6 in Wave 3) */}
  <section className="mb-16">
- <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§9.6 · PROGRAMMES REGISTRY</div>
+ <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§9.5 · PROGRAMMES REGISTRY</div>
  <h3 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">What was announced, and what&apos;s actually locked in</h3>
  <p className="text-bauhaus-muted font-medium max-w-3xl mb-3">
  {QLD_PROGRAMME_REGISTRY.length} major QLD youth-justice initiatives, each laid out as a circuit diagram: <span className="font-black">Announcement → Bill → $ Funded → Delivery → Circuit breaker.</span> Where a node is missing, the gap is the data: an announcement without a bill is rhetoric; a bill without a funded program is paper; a funded program without an announcement is invisible. Each row ends with the explicit <span className="font-black text-bauhaus-red">Circuit breaker</span>, the leverage point that would change the trajectory.
@@ -2284,12 +2190,12 @@ export default async function QldYjSectorPage() {
  </div>
 
  <p className="text-xs text-bauhaus-muted font-mono mt-5 max-w-3xl leading-snug">
- <span className="font-black">Reading the patterns:</span> a row with a red <span className="font-black">Bill PASSED</span> badge and no matched funding line is custody-expansion law without parallel community investment, a one-way ratchet. A row with announcement + funding match but no bill is a community program running on appropriation, vulnerable to defunding without legislative friction. A row with <span className="font-black">announced, no bill, no funding visible</span> is rhetoric until proven otherwise. <span className="font-black">Limits:</span> {QLD_PROGRAMME_REGISTRY.length} major initiatives curated. Pair this registry with §9.5 (per-recipient drill-downs) to see who&apos;s actually delivering each funded line.
+ <span className="font-black">Reading the patterns:</span> a row with a red <span className="font-black">Bill PASSED</span> badge and no matched funding line is custody-expansion law without parallel community investment, a one-way ratchet. A row with announcement + funding match but no bill is a community program running on appropriation, vulnerable to defunding without legislative friction. A row with <span className="font-black">announced, no bill, no funding visible</span> is rhetoric until proven otherwise. <span className="font-black">Limits:</span> {QLD_PROGRAMME_REGISTRY.length} major initiatives curated. Pair this registry with the per-recipient drill-downs (Detail → on each row of the §9 table) to see who&apos;s actually delivering each funded line.
  </p>
  </section>
 
  {/* §10 ACCO FUNDING GAP */}
- <section className="mb-16">
+ <section id="section-10" className="mb-16 scroll-mt-24">
  <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§10</div>
  <h3 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">The ACCO funding gap, {accoSharePct}% of dollars for the majority First Nations in-custody cohort</h3>
  <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
@@ -2575,7 +2481,7 @@ export default async function QldYjSectorPage() {
  </section>
 
  {/* §17 UNFUNDED EFFECTIVE */}
- <section className="mb-16">
+ <section id="section-17" className="mb-16 scroll-mt-24">
  <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§17</div>
  <h3 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">The unfunded effective programs</h3>
  <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
@@ -2725,14 +2631,152 @@ export default async function QldYjSectorPage() {
  </div>
  </section>
 
- {/* §22 CTG TARGET 11, covered in §3, this is the closing prescriptive block instead */}
-
  {/* ════ VOLUME 7, POLICY & CAPACITY SIGNALS ════ */}
  <div id="vol-7" className="mb-10 mt-16 border-l-8 border-bauhaus-red pl-5 scroll-mt-24">
  <div className="text-xs font-black uppercase tracking-widest text-bauhaus-red">VOLUME 7</div>
  <h2 className="text-3xl font-black text-bauhaus-black uppercase tracking-tight">Policy &amp; capacity signals</h2>
  <p className="text-bauhaus-muted font-medium max-w-3xl">Live QLD ministerial statements scraped daily from <code className="font-mono text-xs">statements.qld.gov.au</code>, filtered to youth-justice keywords and tagged by direction-of-travel.</p>
  </div>
+
+ {/* §22, every announced community program (last 3 years). Originally §6.5 in Volume 2; relocated to Volume 7 and renumbered to §22 in Wave 3. */}
+ {r.supportAnnouncements.length > 0 && (
+ <section className="mb-16">
+ <div className="border-4 border-bauhaus-black p-5 bg-bauhaus-canvas">
+ <div className="text-xs font-black uppercase tracking-widest text-bauhaus-yellow mb-2">§22 · EVERY ANNOUNCED COMMUNITY PROGRAM · LAST 3 YEARS</div>
+ <h4 className="text-xl font-black text-bauhaus-black uppercase tracking-tight mb-3">All {r.supportAnnouncements.length} QLD ministerial announcements about youth community programs</h4>
+ <p className="text-sm text-bauhaus-black font-medium leading-relaxed mb-5 max-w-3xl">
+ Every QLD ministerial statement on youth community programs, Circuit Breaker Sentencing · Kickstart Early Intervention · Step Up Step Down · Career Pathways · youth criminal rehabilitation · family-led decision making · diversion · prevention, pulled live from <code className="font-mono text-xs">civic_ministerial_statements</code>. Sorted newest first. <span className="font-black">Click any card</span> for the full statement at statements.qld.gov.au. Pair with §9.5 Programmes Registry for the funded-program match per announcement.
+ </p>
+ <div className="space-y-3">
+ {r.supportAnnouncements.map((a, i) => {
+ // Match this announcement to a registry initiative by keyword.
+ const h = (a.headline || '').toLowerCase();
+ const matchedPattern =
+ /circuit breaker/.test(h) ? 'Circuit Breaker Sentencing' :
+ /kickstart|intensive early intervention|early intervention program/.test(h) ? 'Kickstarter Grants' :
+ /family[- ]led/.test(h) ? 'Family Led Decision Making' :
+ /bail (support|monitor|condition)/.test(h) ? 'Bail Support' :
+ /tribe of mentors/.test(h) ? 'Tribe of Mentors' :
+ null;
+ const match = matchedPattern ? r.registryDeliverers.find(d => d.pattern === matchedPattern) : null;
+ const matchedRegistry =
+ matchedPattern
+ ? QLD_PROGRAMME_REGISTRY.find(p => p.funding_match?.program_name_pattern === matchedPattern)
+ : /step up step down/.test(h)
+ ? QLD_PROGRAMME_REGISTRY.find(p => /step up step down/i.test(p.name))
+ : /youth criminal rehabilitation|youth rehabilitation/.test(h)
+ ? QLD_PROGRAMME_REGISTRY.find(p => /Youth Criminal Rehabilitation/i.test(p.name))
+ : /tough new drug|drug law|adult crime, adult time|drug penalt|anti.social behaviour/.test(h)
+ ? QLD_PROGRAMME_REGISTRY.find(p => /Drugs Bill 2026/i.test(p.name))
+ : null;
+ const isNonYj =
+ /perinatal/.test(h) ||
+ /cybercrime|tourism sector/.test(h) ||
+ /applied research grant.*disabilit/.test(h) ||
+ /firearm|wieambilla/.test(h);
+ const isAdjacent =
+ !matchedPattern && !matchedRegistry && !isNonYj && (
+ /career pathway/.test(h) ||
+ /youth week/.test(h) ||
+ /youth justice school/.test(h)
+ );
+ return (
+ <div key={i} className="border-2 border-bauhaus-black bg-white">
+ <div className="p-3 flex flex-wrap gap-3 items-start">
+ <div className="flex-1 min-w-[14rem]">
+ <div className="text-[10px] font-mono text-bauhaus-muted mb-1">{new Date(a.published_at).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+ <a href={a.source_url} target="_blank" rel="noopener" className="text-sm font-black text-bauhaus-black leading-tight hover:underline block mb-1">{a.headline} ↗</a>
+ <div className="text-[10px] font-mono text-bauhaus-muted">{a.minister_name?.replace(/^The Honourable /, '') ?? '—'}{a.portfolio ? ` · ${a.portfolio.slice(0, 60)}` : ''}</div>
+ </div>
+ <div className="flex-shrink-0 text-right">
+ {match && match.recipients.length > 0 ? (
+ <>
+ <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 bg-bauhaus-blue text-white inline-block">✓ MATCHED · {match.recipient_count} org{match.recipient_count === 1 ? '' : 's'}</span>
+ <div className="text-[10px] font-mono text-bauhaus-muted mt-1">→ <code>{matchedPattern}</code> in justice_funding</div>
+ </>
+ ) : matchedRegistry ? (
+ <>
+ <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 inline-block ${matchedRegistry.bill ? 'bg-bauhaus-red text-white' : 'bg-bauhaus-yellow text-bauhaus-black'}`}>{matchedRegistry.bill ? '⚖ Legislation · no $ vehicle' : matchedRegistry.funding_match ? '⚠ Funded · separate stream' : '◇ Announced · matches registry, no $ trail'}</span>
+ <div className="text-[10px] font-mono text-bauhaus-muted mt-1">→ {matchedRegistry.bill ? matchedRegistry.bill.name.slice(0, 70) : matchedRegistry.funding_match?.description ? matchedRegistry.funding_match.description.slice(0, 70) : matchedRegistry.name.slice(0, 70)}</div>
+ </>
+ ) : isAdjacent ? (
+ <>
+ <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 bg-bauhaus-canvas border-2 border-bauhaus-black text-bauhaus-black inline-block">◇ Adjacent · youth program, not YJ-funded</span>
+ <div className="text-[10px] font-mono text-bauhaus-muted mt-1">{(/career pathway/.test(h) ? 'employment / training appropriation' : /youth week/.test(h) ? 'event, not a funded program' : /youth justice school/.test(h) ? 'school program · separate appropriation' : 'youth program, separate funding stream')}</div>
+ </>
+ ) : isNonYj ? (
+ <>
+ <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 bg-bauhaus-canvas border-2 border-bauhaus-muted text-bauhaus-muted inline-block">— Not a YJ initiative</span>
+ <div className="text-[10px] font-mono text-bauhaus-muted mt-1">{(/perinatal/.test(h) ? 'Health stream · perinatal MH' : /cybercrime|tourism/.test(h) ? 'small business · not YJ' : /applied research/.test(h) ? 'workforce funding · not YJ' : /firearm|wieambilla/.test(h) ? 'firearms reform · post-Wieambilla' : 'caught by keyword filter, not YJ')}</div>
+ </>
+ ) : (
+ <>
+ <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 bg-bauhaus-red text-white inline-block">✗ No funded program matched</span>
+ <div className="text-[10px] font-mono text-bauhaus-muted mt-1">announcement only · no <code>justice_funding</code> line</div>
+ </>
+ )}
+ </div>
+ </div>
+
+ {match && match.recipients.length > 0 && (
+ <details className="border-t-2 border-bauhaus-black">
+ <summary className="cursor-pointer p-2 hover:bg-bauhaus-yellow text-[10px] font-black uppercase tracking-widest text-bauhaus-blue">
+ ▶ Show {match.recipient_count} delivering organisation{match.recipient_count === 1 ? '' : 's'} · click each for full CivicGraph entity profile
+ </summary>
+ <div className="border-t border-bauhaus-black bg-bauhaus-canvas p-3">
+ <table className="w-full text-xs">
+ <thead>
+ <tr className="border-b border-bauhaus-black">
+ <th className="text-left p-1 font-black uppercase tracking-widest text-[10px]">Organisation</th>
+ <th className="text-right p-1 font-black uppercase tracking-widest text-[10px]">$</th>
+ <th className="text-right p-1 font-black uppercase tracking-widest text-[10px]">Grants</th>
+ <th className="text-left p-1 font-black uppercase tracking-widest text-[10px]">Years</th>
+ <th className="text-left p-1 font-black uppercase tracking-widest text-[10px]">CivicGraph profile</th>
+ </tr>
+ </thead>
+ <tbody>
+ {match.recipients.slice(0, 25).map((rec, j) => (
+ <tr key={j} className={j % 2 === 0 ? 'bg-white' : 'bg-bauhaus-canvas'}>
+ <td className="p-1 font-black text-bauhaus-black align-top">
+ <div>{rec.name}</div>
+ {rec.abn && <div className="font-mono text-[9px] text-bauhaus-muted">ABN {rec.abn}</div>}
+ </td>
+ <td className="p-1 text-right font-mono font-black tabular-nums align-top">{money(rec.total)}</td>
+ <td className="p-1 text-right font-mono align-top">{rec.line_items}</td>
+ <td className="p-1 font-mono text-[10px] text-bauhaus-muted align-top">{rec.first_fy ?? '?'}{rec.first_fy !== rec.last_fy ? `–${rec.last_fy ?? '?'}` : ''}</td>
+ <td className="p-1 font-mono text-[10px] align-top">
+ {rec.gs_id ? (
+ <Link href={`/entity/${rec.gs_id}`} className="text-bauhaus-blue font-black hover:underline">→ entity page</Link>
+ ) : (
+ <span className="text-bauhaus-muted">no entity match</span>
+ )}
+ {rec.website && (
+ <div className="mt-0.5"><a href={`https://${rec.website.replace(/^https?:\/\//, '')}`} target="_blank" rel="noopener" className="text-bauhaus-blue hover:underline break-all">{rec.website} ↗</a></div>
+ )}
+ </td>
+ </tr>
+ ))}
+ </tbody>
+ </table>
+ {match.recipient_count > 25 && (
+ <p className="text-[10px] font-mono text-bauhaus-muted mt-2">+ {match.recipient_count - 25} additional smaller recipients not shown.</p>
+ )}
+ <p className="text-[10px] font-mono text-bauhaus-muted mt-2">
+ Click any <span className="font-black">→ entity page</span> for the org&apos;s directors, board interlocks (§14), all funding flows across sectors, ACNC profile, and relationships graph.
+ </p>
+ </div>
+ </details>
+ )}
+ </div>
+ );
+ })}
+ </div>
+ <p className="text-xs text-bauhaus-muted font-mono mt-4">
+ Source: <code>civic_ministerial_statements</code> · 36-month window · keyword-matched to community-program / early-intervention / wraparound / diversion / Circuit Breaker / Step Up Step Down / Kickstart / family-led / youth justice. <span className="font-black">Why this matters:</span> {r.mhFundingCount} grants in <code>justice_funding</code> are tagged mental-health or AOD, but {r.supportAnnouncements.length} announcements above mention these supports. The mismatch tells you announced services for justice-system youth move through Health / NDIS / Education funding doors, not through Youth Justice. The justice stream looks empty even when the support exists.
+ </p>
+ </div>
+ </section>
+ )}
 
  <section className="mb-16">
  <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§23 · LIVE</div>
@@ -3313,7 +3357,7 @@ export default async function QldYjSectorPage() {
  </div>
  </div>
  <div className="mt-4 pt-3 border-t-2 border-bauhaus-black text-[11px] font-medium text-bauhaus-black leading-relaxed">
- <span className="font-black uppercase tracking-widest text-bauhaus-red">Chain status:</span> Promise made → bill passed (with amendment) → department resourced → <span className="font-black text-bauhaus-red">outcomes data unmoved or worse</span>. The legislation has been passed; the watchhouse and CTG-gap data has not yet shown the &ldquo;safer Queensland&rdquo; the announcements promised. Verify in 6, 12, 24 months as the data accumulates.
+ <span className="font-black uppercase tracking-widest text-bauhaus-red">Chain status:</span> Promise made → bill passed (with amendment) → department resourced → <span className="font-black text-bauhaus-red">outcome data lag (early — verify in 6–12 months)</span>. The legislation has been passed; the watchhouse and CTG-gap data has not yet shown the &ldquo;safer Queensland&rdquo; the announcements promised. The Apr-2026 amending Bill is too recent to read as outcomes; verify in 6, 12, 24 months as the data accumulates.
  </div>
  </div>
 
@@ -3459,7 +3503,7 @@ export default async function QldYjSectorPage() {
  </p>
  </section>
 
- <section className="mb-16">
+ <section id="section-25-5" className="mb-16 scroll-mt-24">
  <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§25.5 · SYNTHESIS</div>
  <h3 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">The shape of the choice</h3>
  <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
@@ -3515,7 +3559,7 @@ export default async function QldYjSectorPage() {
  <ul className="space-y-2">
  <li><span className="font-black">{accoSharePct}% of dollars for the majority First Nations in-custody cohort</span> (~65–75% across AIHW 2024-25 quarters). Frame your grants against this denominator. ACCOs deliver better outcomes; they don&apos;t get the dollars.</li>
  <li><span className="font-black">Evidence-vs-spend gap is real and quantifiable.</span> {money(r.groupConferencing)} group conferencing, the most-evidence-backed early intervention in the budget, versus {money(r.detention)} for detention services.</li>
- <li><span className="font-black">$1B+ committed to detention capacity expansion</span> (<a href="#vol-1" className="text-bauhaus-blue font-black hover:underline">§2</a>: Wacol $250M+ build + ~$150M ops first 3 yrs; Woodford up to $627.61M reported; Cairns TBD, Budget Paper 3 line pending). Foundation giving is adjacent, not anchored, see <a href="#vol-3" className="text-bauhaus-blue font-black hover:underline">§11</a>.</li>
+ <li><span className="font-black">$1B+ committed to detention capacity expansion</span> (<a href="#vol-1" className="text-bauhaus-blue font-black hover:underline">§2</a>: Wacol $250M+ build + ~$150M ops first 3 yrs; Woodford up to $627.61M reported; Cairns TBD). Foundation giving is adjacent, not anchored, see <a href="#vol-3" className="text-bauhaus-blue font-black hover:underline">§11</a>.</li>
  </ul>
  </div>
  <div>
