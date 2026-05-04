@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
 
-export default function QldYouthJusticeRedirect() {
+export default function QldYouthJusticeIndex() {
   redirect('/reports/youth-justice/qld/sector');
 }
