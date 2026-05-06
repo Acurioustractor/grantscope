@@ -827,9 +827,11 @@ async function main() {
       continue;
     }
 
+    // Upsert on (source, name) per partial unique index grant_opportunities_source_name_uniq
+    // (added 2026-05-07 in act-global-infrastructure to stop sync-drift bleed).
     const { data: insertedGrant, error: insertError } = await supabase
       .from('grant_opportunities')
-      .insert(grant)
+      .upsert(grant, { onConflict: 'source,name', ignoreDuplicates: false })
       .select('id')
       .single();
 
