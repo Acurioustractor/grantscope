@@ -192,7 +192,7 @@ SELECT remoteness, COUNT(*) FROM gs_entities WHERE is_community_controlled = tru
 
 > Source upstream of this file: `act-global-infrastructure/wiki/concepts/soul.md`. The two humans and the why behind everything below.
 
-> Last synced: 2026-04-29. **Do not edit this section directly.** Edit the upstream file and run `node scripts/sync-act-context.mjs --apply`. Downstream edits get overwritten.
+> Last synced: 2026-05-09. **Do not edit this section directly.** Edit the upstream file and run `node scripts/sync-act-context.mjs --apply`. Downstream edits get overwritten.
 
 ### Entities (as of 2026-04-25)
 - **A Curious Tractor Pty Ltd** (ACN 697 347 676; ABN PENDING). Registered 2026-04-24. Primary trading entity from 1 July 2026. Shareholders: Knight Family Trust 50 + Marchesi Family Trust 50. Directors: Ben Knight + Nicholas Marchesi. Bank: NAB. Accountant: Standard Ledger.
