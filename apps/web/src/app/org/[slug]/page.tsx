@@ -124,6 +124,12 @@ function FastOrgDashboard({
               >
                 Grant finder
               </Link>
+              <Link
+                href={`/org/${slug}/pipeline`}
+                className="border border-bauhaus-red bg-bauhaus-red px-3 py-2 text-[11px] font-black uppercase tracking-widest text-white hover:bg-bauhaus-black"
+              >
+                Grant kanban
+              </Link>
             </div>
           </div>
           <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -320,6 +326,12 @@ function OrgSupportHub({
               className="border border-bauhaus-black bg-bauhaus-black px-4 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-bauhaus-red"
             >
               {operatingFocus.label}
+            </Link>
+            <Link
+              href={`/org/${slug}/pipeline`}
+              className="border border-bauhaus-red bg-bauhaus-red px-4 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-bauhaus-black"
+            >
+              Grant kanban
             </Link>
             <Link
               href="/grants?type=open_opportunity&sort=closing_asc&quality=ready"
@@ -659,6 +671,8 @@ function OrgSupportHub({
           <a href="#funding-feed" className="text-bauhaus-blue hover:text-bauhaus-red">Opportunity feed</a>
           <span className="text-gray-300">/</span>
           <a href="#pipeline" className="text-bauhaus-blue hover:text-bauhaus-red">Pipeline</a>
+          <span className="text-gray-300">/</span>
+          <Link href={`/org/${slug}/pipeline`} className="text-bauhaus-red hover:text-bauhaus-black">Grant kanban</Link>
           <span className="text-gray-300">/</span>
           <Link href={`/org/${slug}/contacts`} className="text-bauhaus-blue hover:text-bauhaus-red">Contacts {contactCount}</Link>
           <span className="text-gray-300">/</span>
