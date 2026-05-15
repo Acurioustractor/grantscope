@@ -1,0 +1,438 @@
+'use client';
+
+import { useMemo, useState, useTransition } from 'react';
+
+export interface Recommendation {
+  project_code: string;
+  project_name: string;
+  opportunity_id: string;
+  opportunity_name: string;
+  funder_name: string | null;
+  deadline: string | null;
+  min_grant_amount: number | null;
+  max_grant_amount: number | null;
+  is_national: boolean | null;
+  jurisdictions: string[] | null;
+  eligible_org_types: string[] | null;
+  focus_areas: string[] | null;
+  keywords: string[] | null;
+  source_url: string | null;
+  application_url: string | null;
+  theme_score: number;
+  geography_score: number;
+  eligibility_score: number;
+  timing_score: number;
+  fit_score: number;
+  is_strong_fit: boolean;
+  flags: string[] | null;
+}
+
+export interface Decision {
+  project_code: string;
+  opportunity_id: string;
+  decision: string;
+  decided_at: string;
+  notes: string | null;
+  grant_opportunity_id?: string | null;
+}
+
+const DECISION_FILTERS = [
+  { value: 'all', label: 'All' },
+  { value: 'undecided', label: 'Undecided' },
+  { value: 'pursuing', label: 'Pursuing' },
+  { value: 'watching', label: 'Watching' },
+  { value: 'applied', label: 'Applied' },
+  { value: 'submitted', label: 'Submitted' },
+  { value: 'won', label: 'Won' },
+  { value: 'lost', label: 'Lost' },
+  { value: 'passed', label: 'Passed' },
+] as const;
+
+type DecisionFilter = (typeof DECISION_FILTERS)[number]['value'];
+
+function timeAgo(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(ms / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+}
+
+export interface ProjectSummary {
+  project_code: string;
+  project_label: string;
+  home_states: string[];
+  total: number;
+  strong_count: number;
+  top_tier_count: number;
+  max_score: number;
+}
+
+type DecisionState = 'pursuing' | 'watching' | 'passed' | 'applied' | 'submitted' | 'won' | 'lost';
+
+const FLAG_LABELS: Record<string, { text: string; classes: string }> = {
+  requires_dgr: { text: 'DGR req.', classes: 'bg-bauhaus-red text-white' },
+  partner_required: { text: 'Partner req.', classes: 'bg-bauhaus-yellow text-bauhaus-black' },
+  tight_deadline: { text: 'Tight', classes: 'bg-bauhaus-red text-white' },
+  national: { text: 'National', classes: 'bg-bauhaus-blue text-white' },
+  large_grant: { text: 'Large $', classes: 'bg-green-600 text-white' },
+  small_grant: { text: 'Small $', classes: 'bg-gray-300 text-bauhaus-black' },
+};
+
+const DECISION_BADGES: Record<string, string> = {
+  pursuing: 'bg-bauhaus-blue text-white',
+  watching: 'bg-bauhaus-yellow text-bauhaus-black',
+  passed: 'bg-gray-400 text-white',
+  applied: 'bg-bauhaus-blue text-white',
+  submitted: 'bg-bauhaus-blue text-white',
+  won: 'bg-green-600 text-white',
+  lost: 'bg-bauhaus-red text-white',
+};
+
+function formatAmount(min: number | null, max: number | null): string {
+  if (min != null && max != null) return `$${min.toLocaleString()}–$${max.toLocaleString()}`;
+  if (max != null) return `≤ $${max.toLocaleString()}`;
+  if (min != null) return `≥ $${min.toLocaleString()}`;
+  return '—';
+}
+
+function formatDeadline(deadline: string | null): string {
+  if (!deadline) return 'Rolling';
+  const d = new Date(deadline);
+  const days = Math.ceil((d.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  const dateStr = d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+  if (days < 0) return `${dateStr} (past)`;
+  if (days === 0) return `${dateStr} (today)`;
+  if (days < 14) return `${dateStr} (${days}d)`;
+  return dateStr;
+}
+
+export function GrantRecommendationsClient({
+  recommendations,
+  decisions,
+  summary,
+}: {
+  recommendations: Recommendation[];
+  decisions: Decision[];
+  summary: ProjectSummary[];
+}) {
+  const [filterProject, setFilterProject] = useState<string>('all');
+  const [strongFitOnly, setStrongFitOnly] = useState(true);
+  const [decisionFilter, setDecisionFilter] = useState<DecisionFilter>('all');
+  const [decisionMap, setDecisionMap] = useState<Map<string, Decision>>(
+    () => new Map(decisions.map((d) => [`${d.project_code}|${d.opportunity_id}`, d]))
+  );
+  const [isPending, startTransition] = useTransition();
+  const [pendingKey, setPendingKey] = useState<string | null>(null);
+
+  // Count per decision state for the filter UI badges.
+  const decisionCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: recommendations.length, undecided: 0 };
+    for (const r of recommendations) {
+      const d = decisionMap.get(`${r.project_code}|${r.opportunity_id}`);
+      if (!d) counts.undecided = (counts.undecided ?? 0) + 1;
+      else counts[d.decision] = (counts[d.decision] ?? 0) + 1;
+    }
+    return counts;
+  }, [recommendations, decisionMap]);
+
+  const filtered = useMemo(() => {
+    return recommendations.filter((r) => {
+      if (filterProject !== 'all' && r.project_code !== filterProject) return false;
+      if (strongFitOnly && !r.is_strong_fit) return false;
+      if (decisionFilter !== 'all') {
+        const d = decisionMap.get(`${r.project_code}|${r.opportunity_id}`);
+        if (decisionFilter === 'undecided') {
+          if (d) return false;
+        } else {
+          if (!d || d.decision !== decisionFilter) return false;
+        }
+      }
+      return true;
+    });
+  }, [recommendations, filterProject, strongFitOnly, decisionFilter, decisionMap]);
+
+  const byProject = useMemo(() => {
+    const m = new Map<string, Recommendation[]>();
+    for (const r of filtered) {
+      if (!m.has(r.project_code)) m.set(r.project_code, []);
+      m.get(r.project_code)!.push(r);
+    }
+    return m;
+  }, [filtered]);
+
+  async function setDecision(rec: Recommendation, decision: DecisionState) {
+    const key = `${rec.project_code}|${rec.opportunity_id}`;
+    setPendingKey(key);
+    startTransition(async () => {
+      try {
+        const res = await fetch('/api/ops/grant-recommendations/decide', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            project_code: rec.project_code,
+            opportunity_id: rec.opportunity_id,
+            decision,
+          }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const body = await res.json();
+        setDecisionMap((prev) => {
+          const next = new Map(prev);
+          next.set(key, body.decision as Decision);
+          return next;
+        });
+        if (body.tracker_synced) {
+          console.info(`Synced to /tracker as ${body.decision.decision}`);
+        }
+      } catch (err) {
+        console.error('decision failed', err);
+        alert('Decision write failed — check console');
+      } finally {
+        setPendingKey(null);
+      }
+    });
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight">
+            Grant Recommendations
+          </h1>
+          <div className="text-sm text-bauhaus-muted mt-1">
+            Fit-scored opportunities × 6 ACT projects. Decisions sync to Notion (P7).
+          </div>
+        </div>
+        <div className="text-xs text-bauhaus-muted font-mono">
+          {recommendations.length} total · {recommendations.filter((r) => r.is_strong_fit).length} strong fits
+        </div>
+      </div>
+
+      {/* Project summary strip */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
+        {summary.map((s) => (
+          <button
+            key={s.project_code}
+            onClick={() => setFilterProject(filterProject === s.project_code ? 'all' : s.project_code)}
+            className={`border-4 p-3 text-left transition-colors ${
+              filterProject === s.project_code
+                ? 'border-bauhaus-red bg-bauhaus-red/5'
+                : 'border-bauhaus-black bg-bauhaus-canvas hover:bg-white'
+            }`}
+          >
+            <div className="text-xs font-black uppercase tracking-widest text-bauhaus-muted">
+              {s.project_code}
+            </div>
+            <div className="text-2xl font-black text-bauhaus-black tabular-nums mt-1">
+              {s.strong_count}
+            </div>
+            <div className="text-[10px] text-bauhaus-muted uppercase tracking-wider mt-1">
+              strong · {s.top_tier_count} top · max {s.max_score}
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {/* Filters */}
+      <div className="border-4 border-bauhaus-black bg-bauhaus-canvas p-4 mb-6 space-y-3">
+        <div className="flex flex-wrap gap-4 items-center">
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-black uppercase tracking-widest">Project:</label>
+            <select
+              value={filterProject}
+              onChange={(e) => setFilterProject(e.target.value)}
+              className="border-2 border-bauhaus-black bg-white px-2 py-1 text-sm font-mono"
+            >
+              <option value="all">All</option>
+              {summary.map((s) => (
+                <option key={s.project_code} value={s.project_code}>
+                  {s.project_code}
+                </option>
+              ))}
+            </select>
+          </div>
+          <label className="flex items-center gap-2 text-xs font-black uppercase tracking-widest cursor-pointer">
+            <input
+              type="checkbox"
+              checked={strongFitOnly}
+              onChange={(e) => setStrongFitOnly(e.target.checked)}
+              className="w-4 h-4 border-2 border-bauhaus-black"
+            />
+            Strong fits only
+          </label>
+          <div className="ml-auto text-xs font-mono text-bauhaus-muted">
+            Showing {filtered.length} of {recommendations.length}
+          </div>
+        </div>
+
+        {/* Decision history filter chips */}
+        <div className="flex flex-wrap gap-1.5 items-center pt-2 border-t-2 border-bauhaus-black/20">
+          <span className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted mr-2">
+            Decision:
+          </span>
+          {DECISION_FILTERS.map((f) => {
+            const count = decisionCounts[f.value] ?? 0;
+            const active = decisionFilter === f.value;
+            return (
+              <button
+                key={f.value}
+                onClick={() => setDecisionFilter(f.value)}
+                className={`px-2 py-1 text-[10px] font-black uppercase tracking-wider border-2 transition-colors ${
+                  active
+                    ? 'border-bauhaus-red bg-bauhaus-red text-white'
+                    : 'border-bauhaus-black bg-white text-bauhaus-black hover:bg-bauhaus-canvas'
+                }`}
+              >
+                {f.label} <span className="font-mono">({count})</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Project lanes */}
+      {byProject.size === 0 && (
+        <div className="border-4 border-bauhaus-black bg-bauhaus-canvas p-8 text-center">
+          <div className="text-sm font-black uppercase tracking-widest text-bauhaus-muted">
+            No recommendations match these filters.
+          </div>
+        </div>
+      )}
+
+      {Array.from(byProject.entries()).map(([projectCode, recs]) => {
+        const s = summary.find((x) => x.project_code === projectCode);
+        return (
+          <section key={projectCode} className="mb-10">
+            <div className="border-b-4 border-bauhaus-black pb-2 mb-4 flex items-baseline justify-between">
+              <h2 className="text-lg font-black text-bauhaus-black uppercase tracking-tight">
+                {projectCode}
+                {s?.project_label && (
+                  <span className="ml-3 text-sm text-bauhaus-muted normal-case font-medium tracking-normal">
+                    {s.project_label}
+                  </span>
+                )}
+              </h2>
+              <div className="text-xs font-mono text-bauhaus-muted">
+                {recs.length} shown
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              {recs.map((rec) => {
+                const key = `${rec.project_code}|${rec.opportunity_id}`;
+                const decision = decisionMap.get(key);
+                const isLoading = pendingKey === key && isPending;
+                return (
+                  <div
+                    key={rec.opportunity_id}
+                    className="border-4 border-bauhaus-black bg-white p-4 grid grid-cols-12 gap-4 items-center"
+                  >
+                    <div className="col-span-12 md:col-span-5">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <a
+                          href={rec.source_url ?? '#'}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-black text-bauhaus-black hover:text-bauhaus-blue text-sm leading-tight"
+                        >
+                          {rec.opportunity_name}
+                        </a>
+                        {decision && (
+                          <>
+                            <span
+                              className={`px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${
+                                DECISION_BADGES[decision.decision] ?? 'bg-gray-300 text-bauhaus-black'
+                              }`}
+                            >
+                              {decision.decision}
+                            </span>
+                            <span className="text-[10px] font-mono text-bauhaus-muted">
+                              {timeAgo(decision.decided_at)}
+                            </span>
+                            {decision.grant_opportunity_id && (
+                              <a
+                                href="/tracker"
+                                className="text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 border-2 border-bauhaus-blue text-bauhaus-blue hover:bg-bauhaus-blue hover:text-white"
+                                title="Open in /tracker"
+                              >
+                                Tracker ↗
+                              </a>
+                            )}
+                          </>
+                        )}
+                      </div>
+                      <div className="text-xs text-bauhaus-muted mt-1">
+                        {rec.funder_name ?? 'Unknown funder'}
+                      </div>
+                      <div className="flex gap-1 flex-wrap mt-2">
+                        {(rec.flags ?? []).map((f) => {
+                          const lab = FLAG_LABELS[f] ?? { text: f, classes: 'bg-gray-200 text-bauhaus-black' };
+                          return (
+                            <span
+                              key={f}
+                              className={`px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider ${lab.classes}`}
+                            >
+                              {lab.text}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="col-span-6 md:col-span-2 text-center">
+                      <div className="text-3xl font-black text-bauhaus-black tabular-nums leading-none">
+                        {rec.fit_score}
+                      </div>
+                      <div className="text-[10px] font-mono text-bauhaus-muted mt-1">
+                        t{rec.theme_score}·g{rec.geography_score}·e{rec.eligibility_score}·d{rec.timing_score}
+                      </div>
+                    </div>
+
+                    <div className="col-span-6 md:col-span-2 text-xs">
+                      <div className="font-mono text-bauhaus-black">
+                        {formatDeadline(rec.deadline)}
+                      </div>
+                      <div className="text-bauhaus-muted mt-1">
+                        {formatAmount(rec.min_grant_amount, rec.max_grant_amount)}
+                      </div>
+                    </div>
+
+                    <div className="col-span-12 md:col-span-3 flex gap-1 justify-end">
+                      <button
+                        onClick={() => setDecision(rec, 'pursuing')}
+                        disabled={isLoading}
+                        className="px-3 py-1.5 text-xs font-black uppercase tracking-widest border-2 border-bauhaus-black bg-bauhaus-blue text-white hover:bg-bauhaus-black disabled:opacity-50"
+                      >
+                        Apply
+                      </button>
+                      <button
+                        onClick={() => setDecision(rec, 'watching')}
+                        disabled={isLoading}
+                        className="px-3 py-1.5 text-xs font-black uppercase tracking-widest border-2 border-bauhaus-black bg-bauhaus-yellow text-bauhaus-black hover:bg-bauhaus-black hover:text-white disabled:opacity-50"
+                      >
+                        Watch
+                      </button>
+                      <button
+                        onClick={() => setDecision(rec, 'passed')}
+                        disabled={isLoading}
+                        className="px-3 py-1.5 text-xs font-black uppercase tracking-widest border-2 border-bauhaus-black bg-white text-bauhaus-black hover:bg-bauhaus-black hover:text-white disabled:opacity-50"
+                      >
+                        Pass
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        );
+      })}
+    </div>
+  );
+}

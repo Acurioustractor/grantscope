@@ -576,6 +576,7 @@ function WorkspaceAccountMenu({ userEmail, isAdmin, isImpersonating = false }: {
                   { href: '/mission-control', label: 'Mission Control' },
                   { href: '/graph', label: 'Network Graph' },
                   { href: '/ops', label: 'Ops Dashboard' },
+                  { href: '/ops/grant-recommendations', label: 'Grant Recommendations' },
                   { href: '/ops/health', label: 'Data Health' },
                 ].map(item => (
                   <a
