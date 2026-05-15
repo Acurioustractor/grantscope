@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from 'react';
 import { SlidePanel, SlidePanelHeader, SlidePanelBody } from '@/app/components/slide-panel';
+import { FunderDossier, type FunderContext } from './funder-dossier';
 
 export interface Recommendation {
   project_code: string;
@@ -116,11 +117,22 @@ export function GrantRecommendationsClient({
   recommendations,
   decisions,
   summary,
+  contexts,
 }: {
   recommendations: Recommendation[];
   decisions: Decision[];
   summary: ProjectSummary[];
+  contexts: FunderContext[];
 }) {
+  const contextByFunder = useMemo(() => {
+    const m = new Map<string, FunderContext>();
+    for (const c of contexts) {
+      m.set(c.funder_name, c);
+      for (const alias of c.funder_aliases ?? []) m.set(alias, c);
+    }
+    return m;
+  }, [contexts]);
+
   const [filterProject, setFilterProject] = useState<string>('all');
   const [strongFitOnly, setStrongFitOnly] = useState(true);
   const [decisionFilter, setDecisionFilter] = useState<DecisionFilter>('all');
@@ -419,7 +431,10 @@ export function GrantRecommendationsClient({
                   <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted mb-1">
                     Funder
                   </div>
-                  <div className="font-medium">{previewRec.funder_name ?? '—'}</div>
+                  <div className="font-medium mb-2">{previewRec.funder_name ?? '—'}</div>
+                  {previewRec.funder_name && (
+                    <FunderDossier context={contextByFunder.get(previewRec.funder_name) ?? null} />
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -697,6 +712,11 @@ export function GrantRecommendationsClient({
                       <div className="text-xs text-bauhaus-muted mt-1">
                         {rec.funder_name ?? 'Unknown funder'}
                       </div>
+                      {rec.funder_name && (
+                        <div className="mt-2">
+                          <FunderDossier context={contextByFunder.get(rec.funder_name) ?? null} />
+                        </div>
+                      )}
                       <div className="flex gap-1 flex-wrap mt-2">
                         {(rec.flags ?? []).map((f) => {
                           const lab = FLAG_LABELS[f] ?? { text: f, classes: 'bg-gray-200 text-bauhaus-black' };

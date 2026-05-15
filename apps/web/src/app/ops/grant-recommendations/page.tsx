@@ -1,5 +1,6 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import { GrantRecommendationsClient, type Recommendation, type Decision, type ProjectSummary } from './grant-recommendations-client';
+import type { FunderContext } from './funder-dossier';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,6 +28,10 @@ export default async function GrantRecommendationsPage() {
     .eq('in_scope', true)
     .order('project_code');
 
+  const { data: contextsRaw } = await supabase
+    .from('funder_context_snapshot')
+    .select('*');
+
   const recs = (recsRaw ?? []) as Recommendation[];
   const decisions = (decisionsRaw ?? []) as Decision[];
 
@@ -51,6 +56,7 @@ export default async function GrantRecommendationsPage() {
         recommendations={recs}
         decisions={decisions}
         summary={summary}
+        contexts={(contextsRaw ?? []) as FunderContext[]}
       />
     </div>
   );

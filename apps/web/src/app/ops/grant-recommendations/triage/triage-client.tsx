@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
+import { FunderDossier, type FunderContext } from '../funder-dossier';
 
 export interface TriageRow {
   id: string;
@@ -40,8 +41,23 @@ function formatAmount(min: number | null, max: number | null): string {
   return '—';
 }
 
-export function TriageClient({ rows }: { rows: TriageRow[] }) {
+export function TriageClient({
+  rows,
+  contexts,
+}: {
+  rows: TriageRow[];
+  contexts: FunderContext[];
+}) {
   const [currentRows, setCurrentRows] = useState<TriageRow[]>(rows);
+
+  const contextByFunder = useMemo(() => {
+    const m = new Map<string, FunderContext>();
+    for (const c of contexts) {
+      m.set(c.funder_name, c);
+      for (const alias of c.funder_aliases ?? []) m.set(alias, c);
+    }
+    return m;
+  }, [contexts]);
   const [funderFilter, setFunderFilter] = useState<string>('');
   const [isPending, startTransition] = useTransition();
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -162,6 +178,12 @@ export function TriageClient({ rows }: { rows: TriageRow[] }) {
                       </div>
                     </div>
                   </div>
+
+                  {row.funder_name && (
+                    <div className="mb-3">
+                      <FunderDossier context={contextByFunder.get(row.funder_name) ?? null} />
+                    </div>
+                  )}
 
                   {row.description && (
                     <div className="text-xs text-bauhaus-black bg-bauhaus-canvas p-2 mb-3 line-clamp-3">

@@ -19,9 +19,14 @@ export default async function TriagePage() {
     .eq('opportunity_type', 'unverified')
     .order('funder_name', { ascending: true });
 
+  // Funder context dossiers (joined client-side by funder_name)
+  const { data: contexts } = await supabase
+    .from('funder_context_snapshot')
+    .select('*');
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <TriageClient rows={(rows ?? []) as TriageRow[]} />
+      <TriageClient rows={(rows ?? []) as TriageRow[]} contexts={contexts ?? []} />
     </div>
   );
 }
