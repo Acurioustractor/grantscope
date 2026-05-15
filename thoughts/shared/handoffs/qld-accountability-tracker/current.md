@@ -9,13 +9,87 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-03-27T14:00:00Z
-**Goal:** CivicGraph as standalone product + ACT's operating system — revenue, community impact, accountability infrastructure
+**Updated:** 2026-05-15T08:00:00Z
+**Goal:** CivicScope ↔ ACT operating system — fit-scored grants, decisions sync to Notion, Xero-backed funder context
 **Branch:** main
-**Test:** `cd apps/web && npx tsc --noEmit` + `curl http://localhost:3003/foundations/prf`
+**Test:** `cd apps/web && npx tsc --noEmit` + boot `npx next dev --turbopack -p 3003` → visit `/ops/grant-recommendations`
 
 ### Now
-[->] Next session: Send PRF outreach email + build Indigenous Proxy Problem report (57% of Indigenous money goes to non-Indigenous orgs)
+[->] **Next session:** Run real triage pass on 52 unverified rows at `/ops/grant-recommendations/triage`. Classify each as `open_grant` / `placeholder` / `invitation_only` / `award` / `policy` / `partnership`. Snow Foundation rows (score 63, $270K paid via Xero) → likely all `open_grant`. PRF rows → mostly `invitation_only` despite $7K paid + 4 contacts. Then run `Sync decided → Notion` button to push to ACT Notion Opportunities DB.
+
+### This Session (2026-05-15, big architecture build)
+**Pipeline shipped end-to-end: discovery → triage → scoring → decisions → Notion. 7 commits.**
+
+- [x] **P1 — CivicScope ↔ ACT entity bridge** (8b86ca5)
+  - `civicscope_act_entity_bridge` table — 3,074 person→org links via `bridge_civicscope_to_act_exact()` + `_fuzzy()` (pg_trgm GIN). Driver: `scripts/run-bridge-fuzzy.mjs`.
+  - `v_act_organisations` view denormalises canonical_entities × bridge × gs_entities.
+
+- [x] **P2 — Fit-scoring MV** (8b86ca5)
+  - `act_grant_recommendations` MV scores `alma_funding_opportunities` × 6 ACT projects (HV/EL/JH/GD/CORE/FM). ACT-IN merged into ACT-CORE.
+  - Weights: theme 50 / geo 15 / elig 20 / timing 15. `is_strong_fit = theme>0 AND total>=55`. Config in `act_grant_recommendation_projects`.
+
+- [x] **P2.5 — Harvest food/farm seeds** (8b86ca5)
+  - 9 verified rows from FRRR x5, Sustainable Table, Coca-Cola, WELA, LMCF. Harvest 0→4 top-tier fits.
+
+- [x] **P3 — `/ops/grant-recommendations` admin page** (dd94ac8)
+  - Server Component, admin-gated via `/ops` layout. Project lanes, fit-score sorting, slide-out details. Apply/Watch/Pass buttons.
+  - Decisions table `act_grant_recommendation_decisions`. API at `/api/ops/grant-recommendations/decide`.
+
+- [x] **P3.5 — Decision filter + `/tracker` wire-up** (dd94ac8)
+  - 9-state decision filter chips with live counts. Apply mirrors `alma` → `grant_opportunities` → upserts `saved_grants` for admin user.
+
+- [x] **P7 — Notion sync** (8bf0c1d)
+  - `scripts/sync-act-opportunities-to-notion.mjs` + `/api/ops/grant-recommendations/sync-notion`. Idempotent via `notion_page_id` on decisions row.
+  - Notion DB: `361ebcf9-81cf-81c9-bd2f-d017c691f1e2` (ACT Opportunities pipeline). Token: `NOTION_MIRROR_TOKEN` (added to .env).
+  - Decision → Stage mapping verified against actual schema.
+
+- [x] **P8a-d — Data quality re-architecture** (464e5b9)
+  - **CRITICAL audit finding:** Of 28 alma rows, only 7 were verified open grants. Other 21 were policy frameworks, awards, invitation-only, or placeholders. Saved learning to memory.
+  - `alma_funding_opportunities.opportunity_type` (open_grant / invitation_only / award / policy_framework / partnership / tender / placeholder / unverified) + `verification_status` (verified / placeholder / stale / unverified) + `verified_at`.
+  - MV gates on `opportunity_type='open_grant' AND verification_status='verified'`. Strong fits dropped 67 → 17 (ACT-JH 15 → 0 exposing real sourcing gap).
+  - `funder_allowlist` table seeded with 22 vetted Australian funders.
+  - `scripts/verify-alma-opportunities.mjs` — nightly URL ping. 27/30 OK, 3 dead links auto-marked stale.
+  - `scripts/promote-grant-opportunities-to-alma.mjs` — promotes from CivicScope's 24K-row `grant_opportunities` pipeline. Allowlist + theme alignment gate. Promoted rows enter as `unverified` (human triage required).
+
+- [x] **P9 — Triage page** (f22346a)
+  - `/ops/grant-recommendations/triage` — classify promoted rows. 7 buttons per row. Funder filter dropdown. 52 rows currently waiting.
+
+- [x] **P10 — Funder context dossier** (d481b11)
+  - `funder_context_snapshot` table joins foundations + ghl_contacts + foundation_grantees + xero_invoices + notion_organizations + decisions per funder.
+  - `relationship_score` (0-100) composite. WARM/TEPID/LIGHT/COLD badge.
+  - `FunderDossier` component renders inline on triage rows AND in recommendations slide panel.
+  - 71 funders refreshed. Snow Foundation: score 63, $270K paid via Xero, 2 contacts (Alex L.K. last 32d ago).
+  - Refresh script: `scripts/refresh-funder-context.mjs`
+
+### Known limitations / known-not-built
+- `gmail_messages` table EMPTY — email history not yet in Supabase. To populate: Gmail MCP search per funder or build a sync script.
+- P4 auto-discovery cron NOT built — promote + verify + MV refresh run manually. Pending.
+- saved_grants is per-user (UNIQUE on user_id+grant_id) — each admin has their own /tracker. Decisions table is the shared truth.
+- No bulk-classify on triage page yet — one row at a time.
+
+### Schema additions this session
+```
+civicscope_act_entity_bridge        (3,074 rows)  P1
+act_grant_recommendation_projects   (7 rows)      P2
+act_grant_recommendations           MV (~17 strong) P2 → P8a
+act_grant_recommendation_decisions  (0 rows)      P3
+funder_allowlist                    (22 rows)     P8b
+funder_context_snapshot             (71 rows)     P10
+```
+
+### Key SQL one-liners for quick state check
+```bash
+node --env-file=.env scripts/gsql.mjs "SELECT match_method, COUNT(*) FROM civicscope_act_entity_bridge GROUP BY 1"
+node --env-file=.env scripts/gsql.mjs "SELECT opportunity_type, verification_status, COUNT(*) FROM alma_funding_opportunities GROUP BY 1,2 ORDER BY 1,2"
+node --env-file=.env scripts/gsql.mjs "SELECT project_code, COUNT(*) FILTER (WHERE is_strong_fit) FROM act_grant_recommendations GROUP BY 1"
+node --env-file=.env scripts/gsql.mjs "SELECT funder_name, relationship_score, xero_paid_total, contacts_count FROM funder_context_snapshot WHERE relationship_score > 0 ORDER BY 2 DESC LIMIT 10"
+```
+
+### Env vars added
+`NOTION_MIRROR_TOKEN=<REDACTED-NOTION-TOKEN-ROTATED-2026-05-16>`
+`NOTION_OPPORTUNITIES_DB_ID=361ebcf9-81cf-81c9-bd2f-d017c691f1e2`
+
+### Previous Session (2026-03-27, session 3)
 
 ### This Session (2026-03-27, session 3)
 - [x] **Entity pages as killer surface** — cross-system summary banner, govt funding, political donations, lobbying, top contracts, board interlocks, board & leadership sidebar, outcome submissions (8dd3d32)
