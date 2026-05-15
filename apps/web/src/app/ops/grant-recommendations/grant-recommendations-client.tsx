@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
+import { SlidePanel, SlidePanelHeader, SlidePanelBody } from '@/app/components/slide-panel';
 
 export interface Recommendation {
   project_code: string;
@@ -130,6 +131,15 @@ export function GrantRecommendationsClient({
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
+  const [previewKey, setPreviewKey] = useState<string | null>(null);
+
+  const previewRec = useMemo(() => {
+    if (!previewKey) return null;
+    return recommendations.find(
+      (r) => `${r.project_code}|${r.opportunity_id}` === previewKey
+    ) ?? null;
+  }, [previewKey, recommendations]);
+  const previewDecision = previewKey ? decisionMap.get(previewKey) ?? null : null;
 
   async function syncToNotion(includeUndecided: boolean) {
     setSyncing(true);
@@ -356,6 +366,254 @@ export function GrantRecommendationsClient({
         </div>
       )}
 
+      <SlidePanel
+        open={previewRec !== null}
+        onClose={() => setPreviewKey(null)}
+        width={520}
+      >
+        {previewRec && (
+          <>
+            <SlidePanelHeader
+              onClose={() => setPreviewKey(null)}
+              href={previewDecision?.grant_opportunity_id ? `/grants/${previewDecision.grant_opportunity_id}` : undefined}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">
+                  {previewRec.project_code}
+                </span>
+                <span
+                  className={`px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${
+                    previewRec.fit_score >= 80
+                      ? 'bg-green-600 text-white'
+                      : previewRec.fit_score >= 60
+                        ? 'bg-bauhaus-yellow text-bauhaus-black'
+                        : 'bg-gray-200 text-bauhaus-black'
+                  }`}
+                >
+                  Fit {previewRec.fit_score}
+                </span>
+                {previewDecision && (
+                  <span
+                    className={`px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${
+                      DECISION_BADGES[previewDecision.decision] ?? 'bg-gray-300 text-bauhaus-black'
+                    }`}
+                  >
+                    {previewDecision.decision}
+                  </span>
+                )}
+              </div>
+              <h2 className="text-base font-black text-bauhaus-black leading-tight mt-1 truncate">
+                {previewRec.opportunity_name}
+              </h2>
+            </SlidePanelHeader>
+            <SlidePanelBody>
+              <div className="space-y-5 text-sm">
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted mb-1">
+                    Funder
+                  </div>
+                  <div className="font-medium">{previewRec.funder_name ?? '—'}</div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted mb-1">
+                      Deadline
+                    </div>
+                    <div className="font-mono">{formatDeadline(previewRec.deadline)}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted mb-1">
+                      Amount
+                    </div>
+                    <div className="font-mono">
+                      {formatAmount(previewRec.min_grant_amount, previewRec.max_grant_amount)}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Fit breakdown */}
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted mb-2">
+                    Fit breakdown · {previewRec.fit_score}/100
+                  </div>
+                  <div className="grid grid-cols-4 gap-2">
+                    {[
+                      { label: 'Theme', value: previewRec.theme_score, max: 50 },
+                      { label: 'Geo', value: previewRec.geography_score, max: 15 },
+                      { label: 'Elig', value: previewRec.eligibility_score, max: 20 },
+                      { label: 'Timing', value: previewRec.timing_score, max: 15 },
+                    ].map((d) => (
+                      <div key={d.label} className="border-2 border-bauhaus-black p-2">
+                        <div className="text-[9px] font-black uppercase tracking-widest text-bauhaus-muted">
+                          {d.label}
+                        </div>
+                        <div className="text-lg font-black tabular-nums">
+                          {d.value}
+                          <span className="text-[10px] font-mono text-bauhaus-muted ml-0.5">/{d.max}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Flags */}
+                {previewRec.flags && previewRec.flags.length > 0 && (
+                  <div>
+                    <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted mb-2">
+                      Flags
+                    </div>
+                    <div className="flex gap-1 flex-wrap">
+                      {previewRec.flags.map((f) => {
+                        const lab = FLAG_LABELS[f] ?? { text: f, classes: 'bg-gray-200 text-bauhaus-black' };
+                        return (
+                          <span
+                            key={f}
+                            className={`px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${lab.classes}`}
+                          >
+                            {lab.text}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Focus areas */}
+                {previewRec.focus_areas && previewRec.focus_areas.length > 0 && (
+                  <div>
+                    <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted mb-2">
+                      Focus areas
+                    </div>
+                    <div className="flex gap-1 flex-wrap">
+                      {previewRec.focus_areas.map((fa) => (
+                        <span key={fa} className="px-2 py-0.5 text-[11px] bg-bauhaus-canvas border border-bauhaus-black/30">
+                          {fa}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Keywords */}
+                {previewRec.keywords && previewRec.keywords.length > 0 && (
+                  <div>
+                    <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted mb-2">
+                      Keywords
+                    </div>
+                    <div className="flex gap-1 flex-wrap">
+                      {previewRec.keywords.map((k) => (
+                        <span key={k} className="px-2 py-0.5 text-[11px] bg-bauhaus-canvas border border-bauhaus-black/30">
+                          {k}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Jurisdictions / eligible org types */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted mb-1">
+                      Jurisdictions
+                    </div>
+                    <div className="text-xs font-mono">
+                      {previewRec.is_national
+                        ? 'National'
+                        : (previewRec.jurisdictions ?? []).join(', ') || '—'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted mb-1">
+                      Eligible org types
+                    </div>
+                    <div className="text-xs font-mono">
+                      {(previewRec.eligible_org_types ?? []).join(', ') || '—'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Links */}
+                <div className="flex gap-2 flex-wrap pt-2 border-t-2 border-bauhaus-black/20">
+                  {previewRec.source_url && (
+                    <a
+                      href={previewRec.source_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 text-xs font-black uppercase tracking-widest border-2 border-bauhaus-black bg-white hover:bg-bauhaus-canvas"
+                    >
+                      Funder page ↗
+                    </a>
+                  )}
+                  {previewRec.application_url && previewRec.application_url !== previewRec.source_url && (
+                    <a
+                      href={previewRec.application_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 text-xs font-black uppercase tracking-widest border-2 border-bauhaus-black bg-white hover:bg-bauhaus-canvas"
+                    >
+                      Apply form ↗
+                    </a>
+                  )}
+                </div>
+
+                {/* Decision history */}
+                {previewDecision && (
+                  <div className="pt-2 border-t-2 border-bauhaus-black/20">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted mb-2">
+                      Decision history
+                    </div>
+                    <div className="text-xs space-y-1">
+                      <div>
+                        <span className="font-black uppercase">{previewDecision.decision}</span>
+                        <span className="text-bauhaus-muted ml-2 font-mono">
+                          {timeAgo(previewDecision.decided_at)}
+                        </span>
+                      </div>
+                      {previewDecision.grant_opportunity_id && (
+                        <div className="text-bauhaus-muted">
+                          Synced to /tracker as a saved grant
+                        </div>
+                      )}
+                      {previewDecision.notes && (
+                        <div className="text-bauhaus-muted italic">
+                          "{previewDecision.notes}"
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex gap-1 pt-3 border-t-2 border-bauhaus-black/20">
+                  <button
+                    onClick={() => setDecision(previewRec, 'pursuing')}
+                    disabled={isPending}
+                    className="flex-1 px-3 py-2 text-xs font-black uppercase tracking-widest border-2 border-bauhaus-black bg-bauhaus-blue text-white hover:bg-bauhaus-black disabled:opacity-50"
+                  >
+                    Apply
+                  </button>
+                  <button
+                    onClick={() => setDecision(previewRec, 'watching')}
+                    disabled={isPending}
+                    className="flex-1 px-3 py-2 text-xs font-black uppercase tracking-widest border-2 border-bauhaus-black bg-bauhaus-yellow text-bauhaus-black hover:bg-bauhaus-black hover:text-white disabled:opacity-50"
+                  >
+                    Watch
+                  </button>
+                  <button
+                    onClick={() => setDecision(previewRec, 'passed')}
+                    disabled={isPending}
+                    className="flex-1 px-3 py-2 text-xs font-black uppercase tracking-widest border-2 border-bauhaus-black bg-white text-bauhaus-black hover:bg-bauhaus-black hover:text-white disabled:opacity-50"
+                  >
+                    Pass
+                  </button>
+                </div>
+              </div>
+            </SlidePanelBody>
+          </>
+        )}
+      </SlidePanel>
+
       {Array.from(byProject.entries()).map(([projectCode, recs]) => {
         const s = summary.find((x) => x.project_code === projectCode);
         return (
@@ -386,14 +644,25 @@ export function GrantRecommendationsClient({
                   >
                     <div className="col-span-12 md:col-span-5">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <a
-                          href={rec.source_url ?? '#'}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-black text-bauhaus-black hover:text-bauhaus-blue text-sm leading-tight"
+                        <button
+                          onClick={() => setPreviewKey(key)}
+                          className="font-black text-bauhaus-black hover:text-bauhaus-blue text-sm leading-tight text-left underline-offset-4 hover:underline cursor-pointer"
+                          title="Open details"
                         >
                           {rec.opportunity_name}
-                        </a>
+                        </button>
+                        {rec.source_url && (
+                          <a
+                            href={rec.source_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] font-mono text-bauhaus-muted hover:text-bauhaus-blue"
+                            title="Open funder page"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            ↗ funder
+                          </a>
+                        )}
                         {decision && (
                           <>
                             <span
