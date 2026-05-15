@@ -128,6 +128,32 @@ export function GrantRecommendationsClient({
   );
   const [isPending, startTransition] = useTransition();
   const [pendingKey, setPendingKey] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<string | null>(null);
+
+  async function syncToNotion(includeUndecided: boolean) {
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const res = await fetch('/api/ops/grant-recommendations/sync-notion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ include_undecided: includeUndecided }),
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        setSyncResult(`Error: ${body.error ?? res.statusText}`);
+      } else {
+        setSyncResult(
+          `Synced: ${body.created} created · ${body.updated} updated · ${body.skipped} skipped · ${body.failed} failed`
+        );
+      }
+    } catch (err) {
+      setSyncResult(`Error: ${(err as Error).message}`);
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   // Count per decision state for the filter UI badges.
   const decisionCounts = useMemo(() => {
@@ -200,17 +226,42 @@ export function GrantRecommendationsClient({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-start justify-between mb-8 gap-4">
         <div>
           <h1 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight">
             Grant Recommendations
           </h1>
           <div className="text-sm text-bauhaus-muted mt-1">
-            Fit-scored opportunities × 6 ACT projects. Decisions sync to Notion (P7).
+            Fit-scored opportunities × 6 ACT projects. Decisions sync to ACT Notion Opportunities pipeline.
           </div>
+          {syncResult && (
+            <div className="mt-2 px-3 py-1.5 text-xs font-mono bg-bauhaus-canvas border-2 border-bauhaus-black inline-block">
+              {syncResult}
+            </div>
+          )}
         </div>
-        <div className="text-xs text-bauhaus-muted font-mono">
-          {recommendations.length} total · {recommendations.filter((r) => r.is_strong_fit).length} strong fits
+        <div className="flex flex-col items-end gap-2">
+          <div className="text-xs text-bauhaus-muted font-mono">
+            {recommendations.length} total · {recommendations.filter((r) => r.is_strong_fit).length} strong fits
+          </div>
+          <div className="flex gap-1">
+            <button
+              onClick={() => syncToNotion(false)}
+              disabled={syncing}
+              className="px-3 py-1.5 text-xs font-black uppercase tracking-widest border-2 border-bauhaus-black bg-bauhaus-black text-white hover:bg-bauhaus-red disabled:opacity-50"
+              title="Push decided rows to Notion Opportunities DB"
+            >
+              {syncing ? 'Syncing…' : 'Sync decided → Notion'}
+            </button>
+            <button
+              onClick={() => syncToNotion(true)}
+              disabled={syncing}
+              className="px-3 py-1.5 text-xs font-black uppercase tracking-widest border-2 border-bauhaus-black bg-white text-bauhaus-black hover:bg-bauhaus-canvas disabled:opacity-50"
+              title="Push all strong fits (including undecided) to Notion"
+            >
+              + Undecided
+            </button>
+          </div>
         </div>
       </div>
 
