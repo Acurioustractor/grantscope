@@ -373,8 +373,28 @@ async function getData() {
     ORDER BY p.scraped_at DESC NULLS LAST, f.name, p.name
     LIMIT 10
   `;
+  // Phase C — pipeline funnel showing how raw rows flow to verified strong fits to decisions.
+  const pipelineFunnelQuery = `
+    SELECT
+      (SELECT COUNT(*) FROM grant_opportunities)::int AS raw_total,
+      (SELECT COUNT(*) FROM grant_opportunities WHERE application_status = 'open' AND (closes_at IS NULL OR closes_at >= NOW()))::int AS raw_open,
+      (SELECT COUNT(*) FROM alma_funding_opportunities)::int AS alma_total,
+      (SELECT COUNT(*) FROM alma_funding_opportunities WHERE opportunity_type = 'open_grant' AND verification_status = 'verified')::int AS alma_verified,
+      (SELECT COUNT(*) FROM alma_funding_opportunities WHERE opportunity_type = 'open_grant' AND verification_status = 'verified' AND fields_backfilled_at IS NOT NULL)::int AS alma_backfilled,
+      (SELECT COUNT(DISTINCT opportunity_id) FROM act_grant_recommendations)::int AS mv_unique,
+      (SELECT COUNT(DISTINCT opportunity_id) FROM act_grant_recommendations WHERE is_strong_fit)::int AS mv_strong,
+      (SELECT COUNT(*) FROM act_grant_recommendation_decisions)::int AS decisions_total,
+      (SELECT COUNT(*) FROM act_grant_recommendation_decisions WHERE decision = 'pursuing')::int AS decisions_pursuing,
+      (SELECT COUNT(*) FROM act_grant_recommendation_decisions WHERE decision = 'watching')::int AS decisions_watching,
+      (SELECT COUNT(*) FROM act_grant_recommendation_decisions WHERE decision = 'passed')::int AS decisions_passed,
+      (SELECT COUNT(*) FROM funder_blocklist WHERE active = true)::int AS blocklist_size,
+      (SELECT COUNT(*) FROM funder_allowlist WHERE active = true)::int AS allowlist_size,
+      (SELECT COUNT(*) FROM funder_context_snapshot)::int AS funder_contexts,
+      (SELECT COUNT(*) FROM funder_context_snapshot WHERE relationship_score >= 50)::int AS funder_warm,
+      (SELECT COUNT(*) FROM funder_context_snapshot WHERE relationship_score >= 20 AND relationship_score < 50)::int AS funder_tepid
+  `;
 
-  const [grantSummary, grantSources, frontierKinds, frontierQueue, automations, snapshots, failures, foundationSummary, longTailFounders, longTailDiscoveries] = await Promise.all([
+  const [grantSummary, grantSources, frontierKinds, frontierQueue, automations, snapshots, failures, foundationSummary, longTailFounders, longTailDiscoveries, pipelineFunnel] = await Promise.all([
     safe<GrantSummaryRow[] | null>(
       supabase.rpc('exec_sql', { query: grantSummaryQuery }) as PromiseLike<{ data: GrantSummaryRow[] | null; error: unknown }>,
       'grant frontier summary',
@@ -415,6 +435,10 @@ async function getData() {
       supabase.rpc('exec_sql', { query: longTailDiscoveryQuery }) as PromiseLike<{ data: LongTailDiscoveryRow[] | null; error: unknown }>,
       'grant frontier long tail discoveries',
     ),
+    safe<Array<Record<string, number>> | null>(
+      supabase.rpc('exec_sql', { query: pipelineFunnelQuery }) as PromiseLike<{ data: Array<Record<string, number>> | null; error: unknown }>,
+      'grant frontier pipeline funnel',
+    ),
   ]);
 
   return {
@@ -434,11 +458,19 @@ async function getData() {
       foundation_programs: 0,
       open_programs: 0,
     },
+    pipelineFunnel: pipelineFunnel?.[0] || {
+      raw_total: 0, raw_open: 0,
+      alma_total: 0, alma_verified: 0, alma_backfilled: 0,
+      mv_unique: 0, mv_strong: 0,
+      decisions_total: 0, decisions_pursuing: 0, decisions_watching: 0, decisions_passed: 0,
+      blocklist_size: 0, allowlist_size: 0,
+      funder_contexts: 0, funder_warm: 0, funder_tepid: 0,
+    },
   };
 }
 
 export default async function GrantFrontierPage() {
-  const { grantSummary, grantSources, frontierKinds, frontierQueue, automations, snapshots, failures, foundationSummary, longTailFounders, longTailDiscoveries } = await getData();
+  const { grantSummary, grantSources, frontierKinds, frontierQueue, automations, snapshots, failures, foundationSummary, longTailFounders, longTailDiscoveries, pipelineFunnel } = await getData();
   const totalFrontierRows = frontierKinds.reduce((sum, row) => sum + Number(row.rows || 0), 0);
   const totalDueNow = frontierKinds.reduce((sum, row) => sum + Number(row.due_now || 0), 0);
   const totalNeverSucceeded = frontierKinds.reduce((sum, row) => sum + Number(row.never_succeeded || 0), 0);
@@ -522,6 +554,81 @@ export default async function GrantFrontierPage() {
           <div className="mt-1 text-xs text-white/70">Due frontier checks</div>
         </div>
       </div>
+
+      {/* Phase C — Pipeline funnel: raw → promoted → verified → MV → strong fits → decisions */}
+      <section className="mb-8 rounded-sm border-4 border-bauhaus-black bg-white p-6">
+        <div className="mb-2 text-xs font-black uppercase tracking-widest text-bauhaus-red">Pipeline funnel</div>
+        <h2 className="text-2xl font-black text-bauhaus-black">Raw discovery → verified → ACT recommendations → decisions</h2>
+        <p className="mt-2 max-w-4xl text-sm text-bauhaus-muted">
+          One vertical view of how this session&apos;s work flows: scrapers produce raw rows, promotion + LLM auto-classify lifts them into alma, the recommendations MV scores against 6 ACT projects, the user&apos;s decisions feed the blocklist and Notion.
+        </p>
+        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {/* Stage 1 — raw */}
+          <Link href="/grants" className="block rounded-sm border-4 border-bauhaus-black p-4 transition-colors hover:bg-bauhaus-canvas">
+            <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">1. Raw discovery</div>
+            <div className="mt-2 text-3xl font-black tabular-nums text-bauhaus-black">{fmt(pipelineFunnel.raw_total)}</div>
+            <div className="mt-1 text-[10px] font-mono text-bauhaus-muted">
+              grant_opportunities · {fmt(pipelineFunnel.raw_open)} currently open
+            </div>
+            <div className="mt-2 text-xs text-bauhaus-muted">From state portals, foundation programs, GrantConnect, etc.</div>
+          </Link>
+          {/* Stage 2 — alma */}
+          <Link href="/ops/grant-recommendations/triage" className="block rounded-sm border-4 border-bauhaus-black p-4 transition-colors hover:bg-bauhaus-canvas">
+            <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">2. Promoted to alma</div>
+            <div className="mt-2 text-3xl font-black tabular-nums text-bauhaus-black">{fmt(pipelineFunnel.alma_verified)}</div>
+            <div className="mt-1 text-[10px] font-mono text-bauhaus-muted">
+              verified open_grant ({fmt(pipelineFunnel.alma_total)} alma rows total)
+            </div>
+            <div className="mt-2 text-xs text-bauhaus-muted">
+              {fmt(pipelineFunnel.alma_backfilled)} have LLM-backfilled eligibility/jurisdictions.
+            </div>
+          </Link>
+          {/* Stage 3 — MV */}
+          <Link href="/ops/grant-recommendations" className="block rounded-sm border-4 border-bauhaus-black p-4 transition-colors hover:bg-bauhaus-canvas">
+            <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">3. ACT recommendations</div>
+            <div className="mt-2 text-3xl font-black tabular-nums text-bauhaus-black">{fmt(pipelineFunnel.mv_unique)}</div>
+            <div className="mt-1 text-[10px] font-mono text-bauhaus-muted">
+              unique opps · {fmt(pipelineFunnel.mv_strong)} strong fits
+            </div>
+            <div className="mt-2 text-xs text-bauhaus-muted">
+              MV scored × 6 ACT projects. {fmt(pipelineFunnel.blocklist_size)} funders blocked from passes, {fmt(pipelineFunnel.allowlist_size)} on allowlist.
+            </div>
+          </Link>
+          {/* Stage 4 — decisions */}
+          <Link href="/tracker" className="block rounded-sm border-4 border-bauhaus-red bg-bauhaus-red p-4 text-white transition-colors hover:bg-red-700">
+            <div className="text-[10px] font-black uppercase tracking-widest opacity-80">4. Human decisions</div>
+            <div className="mt-2 text-3xl font-black tabular-nums">{fmt(pipelineFunnel.decisions_total)}</div>
+            <div className="mt-1 text-[10px] font-mono opacity-80">
+              {fmt(pipelineFunnel.decisions_pursuing)} pursuing · {fmt(pipelineFunnel.decisions_watching)} watching · {fmt(pipelineFunnel.decisions_passed)} passed
+            </div>
+            <div className="mt-2 text-xs opacity-80">
+              Passes auto-feed the funder blocklist when a funder hits ≥2 with 0 watches.
+            </div>
+          </Link>
+        </div>
+        {/* Funder context sub-row */}
+        <div className="mt-4 rounded-sm border-2 border-bauhaus-black/20 p-3">
+          <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Funder context layer (relationship temperature for the recommendations dossier)</div>
+          <div className="mt-2 grid gap-3 md:grid-cols-4">
+            <div>
+              <div className="text-xl font-black tabular-nums text-bauhaus-black">{fmt(pipelineFunnel.funder_contexts)}</div>
+              <div className="text-[10px] text-bauhaus-muted">funders with context snapshot</div>
+            </div>
+            <div>
+              <div className="text-xl font-black tabular-nums text-green-700">{fmt(pipelineFunnel.funder_warm)}</div>
+              <div className="text-[10px] text-bauhaus-muted">WARM (≥50 score · Xero/contacts)</div>
+            </div>
+            <div>
+              <div className="text-xl font-black tabular-nums text-amber-700">{fmt(pipelineFunnel.funder_tepid)}</div>
+              <div className="text-[10px] text-bauhaus-muted">TEPID (20–49 · partial signal)</div>
+            </div>
+            <div>
+              <div className="text-xl font-black tabular-nums text-bauhaus-muted">{fmt(Math.max(0, pipelineFunnel.funder_contexts - pipelineFunnel.funder_warm - pipelineFunnel.funder_tepid))}</div>
+              <div className="text-[10px] text-bauhaus-muted">LIGHT/COLD (build-before-ask)</div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <section className="mb-8 rounded-sm border-4 border-bauhaus-black bg-white p-6">
         <div className="mb-2 text-xs font-black uppercase tracking-widest text-bauhaus-red">What this tells us</div>

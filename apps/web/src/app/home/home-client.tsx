@@ -32,6 +32,32 @@ export interface GrantItem {
   } | null;
 }
 
+export interface ActRecommendationItem {
+  project_code: string;
+  opportunity_id: string;
+  opportunity_name: string;
+  funder_name: string | null;
+  fit_score: number;
+  deadline: string | null;
+  max_grant_amount: number | null;
+  source_url: string | null;
+  is_strong_fit: boolean;
+  temperature: 'WARM' | 'TEPID' | 'LIGHT' | 'COLD';
+  relationship_score: number;
+  decision: string | null;
+}
+
+export interface ActProjectLens {
+  project_code: string;
+  project_label: string;
+  status: 'active' | 'scout' | 'blocked' | 'needs_repair';
+  status_message: string;
+  strong_fits_count: number;
+  deadlines_30d_count: number;
+  max_score: number;
+  top_fits: ActRecommendationItem[];
+}
+
 export interface FoundationItem {
   id: string;
   stage: string;
@@ -235,6 +261,8 @@ interface HomeClientProps {
   entityCount: number;
   urgentDeadlines: GrantItem[];
   soonDeadlines: GrantItem[];
+  actUrgentRecs: ActRecommendationItem[];
+  actProjectLenses: ActProjectLens[];
   discoveredCount: number;
   activeCount: number;
   submittedCount: number;
@@ -299,6 +327,7 @@ export function HomeClient(props: HomeClientProps) {
     greeting, contextLine, profileReady, hasShortlistedGrants, hasWorkedGrantPipeline,
     grants, foundations, agentRuns, activeAlertCount, recentAlertActivity, alertLearning, alertLearningSummary, subscriptionTier, alertEntitlements, billingStatus, openGrantCount, entityCount,
     urgentDeadlines, soonDeadlines,
+    actUrgentRecs, actProjectLenses,
     discoveredCount, activeCount, submittedCount, wonCount,
     scenarioFocus,
     sourceFreshness,
@@ -753,52 +782,6 @@ export function HomeClient(props: HomeClientProps) {
               action: 'Open router',
               tone: 'success',
             };
-  const focusRows = [
-    {
-      priority: '1',
-      work: 'Deadline decisions',
-      metric: urgentDeadlines.length.toLocaleString(),
-      why: urgentDeadlines.length > 0
-        ? `${urgentDeadlines.length} close this week. Decide only the first three before anything else.`
-        : 'No tracked deadlines need immediate action.',
-      action: 'Decide',
-      href: '#grant-decisions',
-      tone: urgentDeadlines.length > 0 ? 'danger' : 'neutral',
-    },
-    {
-      priority: '2',
-      work: 'Goods blocker',
-      metric: scenarioFocus?.tone === 'blocked' ? scenarioFocus.primaryMetric.value : 'Clear',
-      why: scenarioFocus?.tone === 'blocked'
-        ? scenarioFocus.nextAction
-        : 'No critical ACT scenario blocker is stopping promotion.',
-      action: scenarioFocus ? 'Open' : 'View router',
-      href: scenarioFocus?.href || '/opportunities/ecosystem',
-      tone: scenarioFocus?.tone === 'blocked' ? 'warning' : 'neutral',
-    },
-    {
-      priority: '3',
-      work: 'Clean before review',
-      metric: currentReviewSweep.machinePass.toLocaleString(),
-      why: currentReviewSweep.total > 0
-        ? `${currentReviewSweep.total.toLocaleString()} raw discovered item${currentReviewSweep.total !== 1 ? 's' : ''}; ${currentReviewSweep.humanReady.toLocaleString()} ready for a human after cleanup.`
-        : 'The discovered queue is clear.',
-      action: 'Sweep',
-      href: '#clean-review',
-      tone: currentReviewSweep.machinePass > 0 ? 'info' : 'neutral',
-    },
-    {
-      priority: '4',
-      work: 'Live source checks',
-      metric: sourceFreshness.frontierPriority.length.toLocaleString(),
-      why: sourceFreshness.frontierPriority.length > 0
-        ? `Check the top 3 project-shaped sources. Keep the ${sourceFreshness.frontierDue.toLocaleString()} due backlog in source health.`
-        : 'No project-shaped frontier source is ready for today.',
-      action: 'Scout',
-      href: '#source-health',
-      tone: sourceFreshness.frontierPriority.length > 0 ? 'info' : 'neutral',
-    },
-  ] as const;
   const projectLenses = [
     {
       name: 'Goods',
@@ -857,7 +840,7 @@ export function HomeClient(props: HomeClientProps) {
 
   if (showDecisionHome) {
     return (
-      <div className="max-w-6xl space-y-6">
+      <div className="max-w-[1440px] space-y-6">
         <header>
           <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--ws-text-tertiary)' }}>
             CivicGraph operating home
@@ -1009,38 +992,237 @@ export function HomeClient(props: HomeClientProps) {
         </section>
 
         <section className="rounded-xl border p-4" style={{ borderColor: 'var(--ws-border)', background: 'var(--ws-surface-1)' }}>
-          <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-base font-semibold" style={{ color: 'var(--ws-text)' }}>Today&apos;s Queue</h2>
+              <h2 className="text-base font-semibold" style={{ color: 'var(--ws-text)' }}>Cut Through</h2>
               <p className="mt-1 text-xs" style={{ color: 'var(--ws-text-secondary)' }}>
-                Work this list from top to bottom. Do not open the raw grant database first.
+                Three lanes only: decide what needs a human, build the blocker, and let agents handle the raw system work.
               </p>
             </div>
             <Link href="/briefing" className="shrink-0 text-xs font-medium hover:underline" style={{ color: 'var(--ws-accent)' }}>
               File the trail
             </Link>
           </div>
-          <div className="grid gap-px overflow-hidden rounded-lg border md:grid-cols-4" style={{ borderColor: 'var(--ws-border)', background: 'var(--ws-border)' }}>
-            {focusRows.map((row) => {
-              const toneColor = row.tone === 'danger'
-                ? 'var(--ws-red)'
-                : row.tone === 'warning'
-                  ? 'var(--ws-amber)'
-                  : row.tone === 'info'
-                    ? 'var(--ws-accent)'
-                    : 'var(--ws-text-tertiary)';
-              return (
-                <Link key={row.work} href={row.href} className="flex min-h-[190px] flex-col justify-between p-4 transition-colors hover:bg-[var(--ws-surface-2)]" style={{ background: 'var(--ws-surface-1)' }}>
-                  <div>
-                    <div className="flex items-start justify-between gap-3">
-                      <span className="text-xs font-semibold tabular-nums" style={{ color: toneColor }}>{row.priority}</span>
-                      <span className="text-xl font-semibold tabular-nums" style={{ color: toneColor }}>{row.metric}</span>
-                    </div>
-                    <p className="mt-3 text-sm font-medium" style={{ color: 'var(--ws-text)' }}>{row.work}</p>
-                    <p className="mt-2 text-xs leading-5" style={{ color: 'var(--ws-text-secondary)' }}>{row.why}</p>
+          <div className="grid gap-3 xl:grid-cols-[1.2fr_1fr_1fr]">
+            <div id="grant-decisions" className="rounded-xl border p-4" style={{ borderColor: actUrgentRecs.length > 0 ? 'var(--ws-red)' : 'var(--ws-border)', background: 'var(--ws-surface-0)' }}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--ws-red)' }}>Human decision · ACT-fit</p>
+                  <h3 className="mt-1 text-lg font-semibold" style={{ color: 'var(--ws-text)' }}>Decide the first three deadlines</h3>
+                </div>
+                <span className="text-2xl font-semibold tabular-nums" style={{ color: actUrgentRecs.length > 0 ? 'var(--ws-red)' : 'var(--ws-text-tertiary)' }}>
+                  {actUrgentRecs.length.toLocaleString()}
+                </span>
+              </div>
+              <p className="mt-2 text-xs leading-5" style={{ color: 'var(--ws-text-secondary)' }}>
+                Strong-fit grants in the ACT recommendation MV with deadlines ≤14d. Already filtered by blocklist + your prior decisions.
+              </p>
+              <div className="mt-4 overflow-hidden rounded-lg border" style={{ borderColor: 'var(--ws-border)' }}>
+                {actUrgentRecs.slice(0, 3).length > 0 ? actUrgentRecs.slice(0, 3).map((rec, index) => {
+                  const days = rec.deadline ? daysUntil(rec.deadline) : null;
+                  const tempBg = rec.temperature === 'WARM' ? '#16a34a'
+                    : rec.temperature === 'TEPID' ? '#eab308'
+                    : rec.temperature === 'LIGHT' ? '#9ca3af'
+                    : '#d1d5db';
+                  const tempColor = rec.temperature === 'TEPID' || rec.temperature === 'COLD' ? '#1f2937' : '#fff';
+                  return (
+                    <Link
+                      key={`${rec.project_code}|${rec.opportunity_id}`}
+                      href="/ops/grant-recommendations"
+                      className="block px-3 py-2.5 transition-colors hover:bg-[var(--ws-surface-2)]"
+                      style={{ borderTop: index > 0 ? '1px solid var(--ws-border)' : 'none', background: 'var(--ws-surface-1)' }}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded" style={{ background: tempBg, color: tempColor }}>{rec.temperature}</span>
+                            <span className="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded bg-bauhaus-black text-white" style={{ background: 'var(--ws-text)', color: 'var(--ws-surface-0)' }}>{rec.project_code}</span>
+                            <span className="text-[10px] font-mono tabular-nums" style={{ color: 'var(--ws-text-tertiary)' }}>{rec.fit_score}</span>
+                          </div>
+                          <p className="mt-1 truncate text-sm font-medium" style={{ color: 'var(--ws-text)' }}>{rec.opportunity_name}</p>
+                          <p className="mt-0.5 truncate text-xs" style={{ color: 'var(--ws-text-tertiary)' }}>{rec.funder_name || 'Unknown funder'}</p>
+                        </div>
+                        <div className="shrink-0 text-right text-xs">
+                          {rec.max_grant_amount ? <p className="font-semibold tabular-nums" style={{ color: 'var(--ws-text)' }}>{formatMoney(rec.max_grant_amount)}</p> : null}
+                          {days !== null ? <p className="mt-1 font-semibold tabular-nums" style={{ color: days <= 7 ? 'var(--ws-red)' : 'var(--ws-text-tertiary)' }}>{days === 0 ? 'Today' : days === 1 ? '1 day' : `${days}d`}</p> : null}
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                }) : (
+                  <div className="px-3 py-4" style={{ background: 'var(--ws-surface-1)' }}>
+                    <p className="text-sm font-medium" style={{ color: 'var(--ws-text)' }}>No urgent ACT-fit deadlines.</p>
+                    <p className="mt-1 text-xs" style={{ color: 'var(--ws-text-secondary)' }}>Open the recommendations to scan strong fits, or check Source Health for stale data.</p>
                   </div>
-                  <p className="mt-4 text-[11px] font-semibold uppercase tracking-wide" style={{ color: toneColor }}>{row.action}</p>
+                )}
+              </div>
+              <Link href="/ops/grant-recommendations" className="mt-4 inline-flex rounded-lg px-3 py-2 text-xs font-medium" style={{ background: 'var(--ws-red)', color: '#fff' }}>
+                Open recommendations
+              </Link>
+            </div>
+
+            <div className="rounded-xl border p-4" style={{ borderColor: scenarioFocus?.tone === 'blocked' ? 'var(--ws-amber)' : 'var(--ws-border)', background: 'var(--ws-surface-0)' }}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--ws-amber)' }}>Project build</p>
+                  <h3 className="mt-1 text-lg font-semibold" style={{ color: 'var(--ws-text)' }}>
+                    {scenarioFocus?.tone === 'blocked' ? 'Clear the Goods blocker' : 'Move the strongest project signal'}
+                  </h3>
+                </div>
+                <span className="text-2xl font-semibold tabular-nums" style={{ color: 'var(--ws-amber)' }}>
+                  {scenarioFocus?.tone === 'blocked' ? scenarioFocus.primaryMetric.value : projectLenses.filter((project) => project.status !== 'Monitor').length}
+                </span>
+              </div>
+              <p className="mt-2 text-xs leading-5" style={{ color: 'var(--ws-text-secondary)' }}>
+                {scenarioFocus?.tone === 'blocked'
+                  ? scenarioFocus.nextAction
+                  : 'Pick one project lane and turn the best signal into evidence, a contact, or a route decision.'}
+              </p>
+              <div className="mt-4 space-y-2">
+                {projectLenses.slice(0, 3).map((project) => {
+                  const toneColor = project.tone === 'danger'
+                    ? 'var(--ws-red)'
+                    : project.tone === 'warning'
+                      ? 'var(--ws-amber)'
+                      : project.tone === 'success'
+                        ? 'var(--ws-green)'
+                        : 'var(--ws-accent)';
+                  return (
+                    <Link key={project.name} href={project.href} className="block rounded-lg border px-3 py-2 transition-colors hover:border-[var(--ws-accent)]" style={{ borderColor: 'var(--ws-border)', background: 'var(--ws-surface-1)' }}>
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="text-sm font-medium" style={{ color: 'var(--ws-text)' }}>{project.name}</p>
+                        <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: toneColor }}>{project.status}</span>
+                      </div>
+                      <p className="mt-1 line-clamp-2 text-xs leading-5" style={{ color: 'var(--ws-text-secondary)' }}>{project.missing}</p>
+                    </Link>
+                  );
+                })}
+              </div>
+              <Link href={scenarioFocus?.href || '/opportunities/ecosystem'} className="mt-4 inline-flex rounded-lg px-3 py-2 text-xs font-medium" style={{ background: 'var(--ws-accent)', color: '#fff' }}>
+                Open project route
+              </Link>
+            </div>
+
+            <div id="clean-review" className="rounded-xl border p-4" style={{ borderColor: 'var(--ws-border)', background: 'var(--ws-surface-0)' }}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--ws-accent)' }}>Agent/system work</p>
+                  <h3 className="mt-1 text-lg font-semibold" style={{ color: 'var(--ws-text)' }}>Do not review raw backlog</h3>
+                </div>
+                <span className="text-2xl font-semibold tabular-nums" style={{ color: 'var(--ws-accent)' }}>
+                  {currentReviewSweep.humanReady.toLocaleString()}
+                </span>
+              </div>
+              <p className="mt-2 text-xs leading-5" style={{ color: 'var(--ws-text-secondary)' }}>
+                Agents clean and enrich broadly. CT only reviews the human-ready count after the sweep.
+              </p>
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                {[
+                  { label: 'Clean', value: currentReviewSweep.machinePass },
+                  { label: 'Wiki', value: currentReviewSweep.wikiCandidates },
+                  { label: 'Scout', value: currentReviewSweep.onlineFrontier },
+                  { label: 'Ready', value: currentReviewSweep.humanReady },
+                ].map((stat) => (
+                  <div key={stat.label} className="rounded-lg border px-3 py-2" style={{ borderColor: 'var(--ws-border)', background: 'var(--ws-surface-1)' }}>
+                    <p className="text-lg font-semibold tabular-nums" style={{ color: 'var(--ws-text)' }}>{stat.value.toLocaleString()}</p>
+                    <p className="text-[11px]" style={{ color: 'var(--ws-text-tertiary)' }}>{stat.label}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => void runPreSweep()}
+                  disabled={isRunningPreSweep || isRefreshing}
+                  className="rounded-lg px-3 py-2 text-xs font-medium transition-opacity disabled:opacity-50"
+                  style={{ background: 'var(--ws-accent)', color: '#fff' }}
+                >
+                  {isRunningPreSweep ? 'Running...' : 'Run sweep'}
+                </button>
+                <Link href="#source-health" className="rounded-lg border px-3 py-2 text-center text-xs font-medium" style={{ borderColor: 'var(--ws-border)', color: 'var(--ws-text-secondary)' }}>
+                  Source health
                 </Link>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-3 rounded-lg border px-3 py-2" style={{ borderColor: 'var(--ws-border)', background: 'var(--ws-surface-0)' }}>
+            <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--ws-text-tertiary)' }}>Not today</p>
+            <p className="mt-1 text-xs leading-5" style={{ color: 'var(--ws-text-secondary)' }}>
+              Do not browse {openGrantCount.toLocaleString()} open grants, {sourceFreshness.frontierDue.toLocaleString()} due sources, or {entityCount.toLocaleString()} entities from home. Those stay in Search, Source Health, and Entity Graph until the router asks for them.
+            </p>
+          </div>
+        </section>
+
+        {/* ACT recommendations per project — sourced from act_grant_recommendations MV */}
+        <section>
+          <div className="mb-3 flex items-baseline justify-between">
+            <div>
+              <h2 className="text-base font-semibold" style={{ color: 'var(--ws-text)' }}>ACT Project Lenses · Grant Recommendations</h2>
+              <p className="mt-1 text-xs" style={{ color: 'var(--ws-text-secondary)' }}>
+                Top fits per project from the act_grant_recommendations MV (blocklist + decision filtered). Click into any project to see its full pile.
+              </p>
+            </div>
+            <Link href="/ops/grant-recommendations" className="text-xs font-medium hover:underline" style={{ color: 'var(--ws-accent)' }}>
+              Open recommendations →
+            </Link>
+          </div>
+          <div className="grid gap-3 lg:grid-cols-3 xl:grid-cols-3 mb-6">
+            {actProjectLenses.map((lens) => {
+              const statusColor = lens.status === 'blocked'
+                ? 'var(--ws-red)'
+                : lens.status === 'scout'
+                  ? 'var(--ws-amber)'
+                  : lens.status === 'needs_repair'
+                    ? 'var(--ws-red)'
+                    : 'var(--ws-green)';
+              return (
+                <div key={lens.project_code} className="rounded-xl border p-4" style={{ borderColor: 'var(--ws-border)', background: 'var(--ws-surface-1)' }}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--ws-text-tertiary)' }}>{lens.project_code}</p>
+                      <p className="text-sm font-semibold" style={{ color: 'var(--ws-text)' }}>{lens.project_label}</p>
+                      <p className="mt-1 text-[10px] font-medium uppercase tracking-wide" style={{ color: statusColor }}>{lens.status}</p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="text-2xl font-semibold tabular-nums" style={{ color: 'var(--ws-text)' }}>{lens.strong_fits_count}</p>
+                      <p className="text-[10px]" style={{ color: 'var(--ws-text-tertiary)' }}>strong fits</p>
+                    </div>
+                  </div>
+                  <p className="mt-2 text-[11px] leading-snug" style={{ color: 'var(--ws-text-secondary)' }}>{lens.status_message}</p>
+                  <p className="mt-2 text-[10px] font-mono" style={{ color: 'var(--ws-text-tertiary)' }}>
+                    {lens.deadlines_30d_count} deadline{lens.deadlines_30d_count !== 1 ? 's' : ''} ≤ 30d · max score {lens.max_score}
+                  </p>
+                  <div className="mt-3 space-y-1.5">
+                    {lens.top_fits.length === 0 ? (
+                      <p className="text-[11px] italic" style={{ color: 'var(--ws-text-tertiary)' }}>No undecided strong fits yet.</p>
+                    ) : lens.top_fits.map((fit) => {
+                      const tempBg = fit.temperature === 'WARM' ? '#16a34a'
+                        : fit.temperature === 'TEPID' ? '#eab308'
+                        : fit.temperature === 'LIGHT' ? '#9ca3af'
+                        : '#d1d5db';
+                      const tempColor = fit.temperature === 'TEPID' || fit.temperature === 'COLD' ? '#1f2937' : '#fff';
+                      return (
+                        <Link
+                          key={fit.opportunity_id}
+                          href="/ops/grant-recommendations"
+                          className="block rounded-md border px-2 py-1.5 hover:bg-[var(--ws-surface-2)]"
+                          style={{ borderColor: 'var(--ws-border)', background: 'var(--ws-surface-0)' }}
+                        >
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider rounded" style={{ background: tempBg, color: tempColor }}>{fit.temperature}</span>
+                            <span className="text-[10px] font-mono tabular-nums" style={{ color: 'var(--ws-text-tertiary)' }}>{fit.fit_score}</span>
+                            {fit.deadline && (
+                              <span className="text-[10px] font-mono" style={{ color: 'var(--ws-text-tertiary)' }}>{new Date(fit.deadline).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}</span>
+                            )}
+                          </div>
+                          <p className="mt-1 truncate text-[11px] font-medium leading-snug" style={{ color: 'var(--ws-text)' }}>{fit.opportunity_name}</p>
+                          <p className="truncate text-[10px]" style={{ color: 'var(--ws-text-tertiary)' }}>{fit.funder_name}</p>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
               );
             })}
           </div>
@@ -1081,109 +1263,6 @@ export function HomeClient(props: HomeClientProps) {
                 </Link>
               );
             })}
-          </div>
-        </section>
-
-        <section id="clean-review" className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-          <div id="grant-decisions" className="rounded-xl border p-4" style={{ borderColor: urgentDeadlines.length > 0 ? 'var(--ws-red)' : 'var(--ws-border)', background: 'var(--ws-surface-1)' }}>
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-base font-semibold" style={{ color: 'var(--ws-text)' }}>Grant Decisions</h2>
-                <p className="mt-1 text-xs" style={{ color: 'var(--ws-text-secondary)' }}>
-                  These are decision items, not browsing suggestions.
-                </p>
-              </div>
-              <Link href={trackerHref} className="text-xs font-medium hover:underline" style={{ color: 'var(--ws-accent)' }}>
-                Open active work
-              </Link>
-            </div>
-            <div className="grid grid-cols-4 gap-2">
-              {[
-                { label: 'Closing 7d', value: urgentDeadlines.length, color: urgentDeadlines.length > 0 ? 'var(--ws-red)' : 'var(--ws-text)' },
-                { label: 'Clean first', value: currentReviewSweep.machinePass, color: currentReviewSweep.machinePass > 0 ? 'var(--ws-accent)' : 'var(--ws-text)' },
-                { label: 'Active', value: activeCount, color: activeCount > 0 ? 'var(--ws-accent)' : 'var(--ws-text)' },
-                { label: 'Won', value: wonCount, color: wonCount > 0 ? 'var(--ws-green)' : 'var(--ws-text)' },
-              ].map((stat) => (
-                <div key={stat.label} className="rounded-lg border px-3 py-2" style={{ borderColor: 'var(--ws-border)', background: 'var(--ws-surface-0)' }}>
-                  <p className="text-lg font-semibold tabular-nums" style={{ color: stat.color }}>{stat.value.toLocaleString()}</p>
-                  <p className="text-[11px]" style={{ color: 'var(--ws-text-tertiary)' }}>{stat.label}</p>
-                </div>
-              ))}
-            </div>
-            <div className="mt-4 overflow-hidden rounded-lg border" style={{ borderColor: 'var(--ws-border)' }}>
-              {decisionDeadlines.length > 0 ? decisionDeadlines.map((item, index) => {
-                const closesAt = item.grant?.closes_at;
-                const days = closesAt ? daysUntil(closesAt) : null;
-                return (
-                  <Link
-                    key={item.id}
-                    href={item.grant?.id ? `/grants/${item.grant.id}` : trackerHref}
-                    className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-[var(--ws-surface-2)]"
-                    style={{ borderTop: index > 0 ? '1px solid var(--ws-border)' : 'none', background: 'var(--ws-surface-0)' }}
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium" style={{ color: 'var(--ws-text)' }}>{item.grant?.name || 'Untitled grant'}</p>
-                      <p className="mt-1 truncate text-xs" style={{ color: 'var(--ws-text-tertiary)' }}>{item.grant?.provider || 'Provider unknown'}</p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-3 text-xs">
-                      {item.grant?.amount_max ? <span className="font-semibold tabular-nums" style={{ color: 'var(--ws-text)' }}>{formatMoney(item.grant.amount_max)}</span> : null}
-                      {days !== null ? (
-                        <span className="rounded px-2 py-0.5 font-semibold tabular-nums" style={{ background: days <= 7 ? 'rgba(220,38,38,0.1)' : 'var(--ws-surface-2)', color: days <= 7 ? 'var(--ws-red)' : 'var(--ws-text-tertiary)' }}>
-                          {days === 0 ? 'Today' : days === 1 ? '1 day' : `${days}d`}
-                        </span>
-                      ) : null}
-                    </div>
-                  </Link>
-                );
-              }) : (
-                <div className="px-4 py-5" style={{ background: 'var(--ws-surface-0)' }}>
-                  <p className="text-sm font-medium" style={{ color: 'var(--ws-text)' }}>No deadline decision is waiting.</p>
-                  <p className="mt-1 text-xs" style={{ color: 'var(--ws-text-secondary)' }}>Use the router to pick the next ACT-fit opportunity.</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="rounded-xl border p-4" style={{ borderColor: 'var(--ws-border)', background: 'var(--ws-surface-1)' }}>
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-base font-semibold" style={{ color: 'var(--ws-text)' }}>Clean Before Review</h2>
-                <p className="mt-1 text-xs leading-5" style={{ color: 'var(--ws-text-secondary)' }}>
-                  Agents clean and enrich broadly. CT reviews narrowly.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => void runPreSweep()}
-                disabled={isRunningPreSweep || isRefreshing}
-                className="shrink-0 rounded-lg px-3 py-2 text-xs font-medium transition-opacity disabled:opacity-50"
-                style={{ background: 'var(--ws-accent)', color: '#fff' }}
-              >
-                {isRunningPreSweep ? 'Running...' : 'Run sweep'}
-              </button>
-            </div>
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              {[
-                { label: 'Machine clean', value: currentReviewSweep.machinePass },
-                { label: 'Wiki enrich', value: currentReviewSweep.wikiCandidates },
-                { label: 'Online scout', value: currentReviewSweep.onlineFrontier },
-                { label: 'Human-ready', value: currentReviewSweep.humanReady },
-              ].map((stat) => (
-                <div key={stat.label} className="rounded-lg border px-3 py-2" style={{ borderColor: 'var(--ws-border)', background: 'var(--ws-surface-0)' }}>
-                  <p className="text-lg font-semibold tabular-nums" style={{ color: 'var(--ws-text)' }}>{stat.value.toLocaleString()}</p>
-                  <p className="text-[11px]" style={{ color: 'var(--ws-text-tertiary)' }}>{stat.label}</p>
-                </div>
-              ))}
-            </div>
-            {preSweepRun ? (
-              <p className="mt-3 text-xs leading-5" style={{ color: 'var(--ws-text-secondary)' }}>
-                Last sweep ran {relativeTime(preSweepRun.ranAt)} and moved {preSweepRun.applied.expiredUpdated.toLocaleString()} expired item{preSweepRun.applied.expiredUpdated !== 1 ? 's' : ''} out of review.
-              </p>
-            ) : (
-              <p className="mt-3 text-xs leading-5" style={{ color: 'var(--ws-text-secondary)' }}>
-                Review only the human-ready count after the sweep. The raw discovered backlog is system work.
-              </p>
-            )}
           </div>
         </section>
 

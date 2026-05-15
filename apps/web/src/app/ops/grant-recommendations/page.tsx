@@ -16,7 +16,8 @@ export default async function GrantRecommendationsPage() {
     .from('act_grant_recommendations')
     .select('*')
     .order('project_code', { ascending: true })
-    .order('fit_score', { ascending: false });
+    .order('fit_score', { ascending: false })
+    .range(0, 9999);
 
   const { data: decisionsRaw } = await supabase
     .from('act_grant_recommendation_decisions')

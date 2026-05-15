@@ -26,7 +26,9 @@ import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
 
 const DRY_RUN = process.argv.includes('--dry-run');
 const LIMIT_ARG = process.argv.find((a) => a.startsWith('--limit='));
-const LIMIT = LIMIT_ARG ? parseInt(LIMIT_ARG.split('=')[1], 10) : 200;
+const LIMIT = LIMIT_ARG ? parseInt(LIMIT_ARG.split('=')[1], 10) : 1000;
+const THRESHOLD_ARG = process.argv.find((a) => a.startsWith('--threshold='));
+const ALIGNMENT_THRESHOLD = THRESHOLD_ARG ? parseInt(THRESHOLD_ARG.split('=')[1], 10) : 15;
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL,
@@ -131,16 +133,23 @@ async function run() {
     ]);
     console.log(`Loaded: ${allowlist.length} allowlisted funders, ${themes.length} theme keywords, ${almaIndex.size} existing alma rows`);
 
-    // Pull open grants from the wider pipeline
-    const { data: grants, error } = await supabase
-      .from('grant_opportunities')
-      .select('id, name, description, amount_min, amount_max, deadline, closes_at, provider, program, aligned_projects, categories, focus_areas, application_status, url, eligibility_criteria')
-      .eq('application_status', 'open')
-      .or(`closes_at.is.null,closes_at.gte.${new Date().toISOString().slice(0,10)}`)
-      .limit(2000);
-
-    if (error) throw error;
-    console.log(`Candidates: ${grants?.length ?? 0} open grants in grant_opportunities`);
+    // Pull open grants from the wider pipeline — paginate (PostgREST caps each page at 1000)
+    const today = new Date().toISOString().slice(0, 10);
+    const PAGE_SIZE = 1000;
+    const grants = [];
+    for (let offset = 0; offset < 10000; offset += PAGE_SIZE) {
+      const { data: page, error } = await supabase
+        .from('grant_opportunities')
+        .select('id, name, description, amount_min, amount_max, deadline, closes_at, provider, program, aligned_projects, categories, focus_areas, application_status, url, eligibility_criteria')
+        .eq('application_status', 'open')
+        .or(`closes_at.is.null,closes_at.gte.${today}`)
+        .range(offset, offset + PAGE_SIZE - 1);
+      if (error) throw error;
+      if (!page?.length) break;
+      grants.push(...page);
+      if (page.length < PAGE_SIZE) break;
+    }
+    console.log(`Candidates: ${grants.length} open grants in grant_opportunities`);
 
     let promoted = 0, skippedExisting = 0, skippedNotMatched = 0, skippedNoAlign = 0;
     const toInsert = [];
@@ -149,8 +158,8 @@ async function run() {
       const allowMatch = matchAllowlist(allowlist, g.provider);
       const align = actAlignmentScore(g, themes);
 
-      // Gate: must pass allowlist OR have strong ACT alignment via theme
-      if (!allowMatch && align.score < 30) {
+      // Gate: must pass allowlist OR have ACT alignment via theme (configurable, default 15)
+      if (!allowMatch && align.score < ALIGNMENT_THRESHOLD) {
         skippedNotMatched++;
         continue;
       }

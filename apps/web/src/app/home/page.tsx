@@ -13,7 +13,7 @@ import { getServiceSupabase } from '@/lib/supabase';
 import { classifyReviewSweep, type ReviewSweepGrantRow } from '@/lib/review-pre-sweep';
 import { HomeClient } from './home-client';
 import { IntakeClaimer } from './intake-claimer';
-import type { GrantItem, FoundationItem, AgentRun, AlertActivityItem, AlertLearningItem, ScenarioFocus, SourceFreshnessStatus, PreSweepRunResult } from './home-client';
+import type { GrantItem, FoundationItem, AgentRun, AlertActivityItem, AlertLearningItem, ScenarioFocus, SourceFreshnessStatus, PreSweepRunResult, ActRecommendationItem, ActProjectLens } from './home-client';
 
 export const dynamic = 'force-dynamic';
 
@@ -432,6 +432,120 @@ export default async function HomePage({
     frontierPriority: buildFrontierPriority((dueFrontierRows || []) as FrontierRow[]),
     scoutRuns: Array.from(latestScoutRuns.values()),
   };
+  // ACT recommendations + project lenses (this session's work — wire MV into home)
+  const ACT_PROJECT_CODES = ['ACT-HV', 'ACT-EL', 'ACT-JH', 'ACT-GD', 'ACT-CORE', 'ACT-FM'];
+  const ACT_PROJECT_LABELS: Record<string, string> = {
+    'ACT-HV': 'The Harvest Witta',
+    'ACT-EL': 'Empathy Ledger',
+    'ACT-JH': 'JusticeHub',
+    'ACT-GD': 'Goods',
+    'ACT-CORE': 'ACT Regenerative Studio',
+    'ACT-FM': 'The Farm',
+  };
+  const fourteenDaysIso = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+  const thirtyDaysOutIso = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+  const [
+    { data: actMvRows },
+    { data: actDecisions },
+    { data: funderCtxRows },
+  ] = await Promise.all([
+    db.from('act_grant_recommendations')
+      .select('project_code, opportunity_id, opportunity_name, funder_name, fit_score, deadline, max_grant_amount, source_url, is_strong_fit')
+      .in('project_code', ACT_PROJECT_CODES)
+      .gte('fit_score', 50)
+      .order('fit_score', { ascending: false })
+      .range(0, 999),
+    db.from('act_grant_recommendation_decisions')
+      .select('project_code, opportunity_id, decision'),
+    db.from('funder_context_snapshot')
+      .select('funder_name, relationship_score'),
+  ]);
+
+  const decisionByPair = new Map<string, string>();
+  for (const d of (actDecisions ?? []) as Array<{ project_code: string; opportunity_id: string; decision: string }>) {
+    decisionByPair.set(`${d.project_code}|${d.opportunity_id}`, d.decision);
+  }
+
+  const ctxByFunder = new Map<string, number>();
+  for (const c of (funderCtxRows ?? []) as Array<{ funder_name: string; relationship_score: number }>) {
+    ctxByFunder.set(c.funder_name, c.relationship_score);
+  }
+
+  function temperatureFor(funderName: string | null): ActRecommendationItem['temperature'] {
+    const s = funderName ? ctxByFunder.get(funderName) ?? 0 : 0;
+    if (s >= 50) return 'WARM';
+    if (s >= 20) return 'TEPID';
+    if (s > 0) return 'LIGHT';
+    return 'COLD';
+  }
+
+  const enrichedRecs: ActRecommendationItem[] = ((actMvRows ?? []) as Array<{
+    project_code: string;
+    opportunity_id: string;
+    opportunity_name: string;
+    funder_name: string | null;
+    fit_score: number;
+    deadline: string | null;
+    max_grant_amount: number | null;
+    source_url: string | null;
+    is_strong_fit: boolean;
+  }>).map((r) => ({
+    project_code: r.project_code,
+    opportunity_id: r.opportunity_id,
+    opportunity_name: r.opportunity_name,
+    funder_name: r.funder_name,
+    fit_score: r.fit_score,
+    deadline: r.deadline,
+    max_grant_amount: r.max_grant_amount,
+    source_url: r.source_url,
+    is_strong_fit: r.is_strong_fit,
+    temperature: temperatureFor(r.funder_name),
+    relationship_score: r.funder_name ? ctxByFunder.get(r.funder_name) ?? 0 : 0,
+    decision: decisionByPair.get(`${r.project_code}|${r.opportunity_id}`) ?? null,
+  }));
+
+  // Urgent: deadline within 14d, strong fit, not decided as passed/lost
+  const actUrgentRecs = enrichedRecs
+    .filter((r) =>
+      r.is_strong_fit &&
+      r.deadline &&
+      new Date(r.deadline) <= new Date(fourteenDaysIso) &&
+      new Date(r.deadline) >= new Date() &&
+      (r.decision == null || !['passed', 'lost'].includes(r.decision))
+    )
+    .sort((a, b) => new Date(a.deadline ?? 0).getTime() - new Date(b.deadline ?? 0).getTime())
+    .slice(0, 8);
+
+  // Per-project lenses (one row per ACT project with top 3 fits)
+  const PROJECT_STATUS: Record<string, { status: ActProjectLens['status']; message: string }> = {
+    'ACT-GD': { status: 'blocked', message: 'Blocked — entity option memo required before promoting any major grant.' },
+    'ACT-JH': { status: 'scout', message: 'Scout — attach evidence + relationship context before moving a grant.' },
+    'ACT-EL': { status: 'scout', message: 'Scout — confirm narrative sovereignty + partner role before a brief.' },
+    'ACT-HV': { status: 'active', message: 'Active — Harvest food/farm pipeline is open.' },
+    'ACT-FM': { status: 'active', message: 'Active — Farm land-healing pipeline is open.' },
+    'ACT-CORE': { status: 'active', message: 'Active — cross-cutting / advisory work.' },
+  };
+  const actProjectLenses: ActProjectLens[] = ACT_PROJECT_CODES.map((code) => {
+    const projectRecs = enrichedRecs.filter((r) => r.project_code === code);
+    const strong = projectRecs.filter((r) => r.is_strong_fit);
+    const deadline30 = strong.filter((r) => r.deadline && new Date(r.deadline) <= new Date(thirtyDaysOutIso) && new Date(r.deadline) >= new Date());
+    const topFits = strong
+      .filter((r) => r.decision == null || !['passed', 'lost'].includes(r.decision))
+      .slice(0, 3);
+    const meta = PROJECT_STATUS[code] ?? { status: 'active' as const, message: 'Active' };
+    return {
+      project_code: code,
+      project_label: ACT_PROJECT_LABELS[code] ?? code,
+      status: meta.status,
+      status_message: meta.message,
+      strong_fits_count: strong.length,
+      deadlines_30d_count: deadline30.length,
+      max_score: projectRecs.reduce((m, r) => Math.max(m, r.fit_score), 0),
+      top_fits: topFits,
+    };
+  });
+
   const reviewSweep = classifyReviewSweep(grants as ReviewSweepGrantRow[], {
     staleBefore: new Date(thirtyDaysAgoIso),
     onlineFrontier: sourceFreshness.frontierPriority.length,
@@ -753,6 +867,8 @@ export default async function HomePage({
         entityCount={entityCount || 0}
         urgentDeadlines={urgentDeadlines}
         soonDeadlines={soonDeadlines}
+        actUrgentRecs={actUrgentRecs}
+        actProjectLenses={actProjectLenses}
         discoveredCount={discoveredCount}
         activeCount={activeCount}
         submittedCount={submittedCount}

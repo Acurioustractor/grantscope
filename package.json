@@ -24,7 +24,9 @@
     "funding-autoresearch": "node scripts/funding-autoresearch/autoresearch.mjs",
     "bittensor:money-model": "node scripts/bittensor-money-model.mjs",
     "grant:frontier:snapshot": "node --env-file=.env scripts/snapshot-grant-frontier.mjs",
-    "grant:long-tail:discover": "node --env-file=.env scripts/discover-foundation-programs.mjs --refresh-existing --rescan-days=14 --limit=20 --concurrency=1 --frontier-metadata-flag=long_tail_priority --agent-id=discover-foundation-programs-long-tail --agent-name=\"Discover Foundation Programs Long Tail\"",
+    "grant:programs:discover": "node --env-file=.env scripts/discover-foundation-programs.mjs --refresh-existing --rescan-days=14 --limit=12 --concurrency=1 --frontier-window-hours=48",
+    "grant:programs:discover:grounded": "node --env-file=.env scripts/discover-foundation-programs.mjs --refresh-existing --rescan-days=14 --limit=6 --concurrency=1 --frontier-window-hours=48 --grounded-search",
+    "grant:long-tail:discover": "node --env-file=.env scripts/discover-foundation-programs.mjs --refresh-existing --rescan-days=14 --limit=20 --concurrency=1 --frontier-pages=8 --frontier-metadata-flag=long_tail_priority --agent-id=discover-foundation-programs-long-tail --agent-name=\"Discover Foundation Programs Long Tail\"",
     "tracker:evidence:sync": "node --env-file=.env scripts/sync-tracker-evidence.mjs",
     "tracker:source-chain": "node --env-file=.env scripts/refresh-youth-justice-source-chain.mjs",
     "tracker:refresh": "node --env-file=.env scripts/run-tracker-refresh.mjs",
@@ -41,6 +43,7 @@
     "open-data"
   ],
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
     "@modelcontextprotocol/sdk": "^1.27.1",
     "@supabase/supabase-js": "^2.49.1",
     "cheerio": "^1.2.0",

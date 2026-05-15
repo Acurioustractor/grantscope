@@ -56,6 +56,23 @@ function scoreBadge(score: number): { color: string; label: string } {
   return { color: 'bg-gray-200 text-bauhaus-muted', label: 'COLD' };
 }
 
+function connectionPolicy(score: number, hasContact: boolean, hasXero: boolean): string {
+  if (score >= 50) {
+    return hasXero
+      ? 'WARM — existing money flow. Reach known contact directly; lead with the specific ask + impact update.'
+      : 'WARM — strong history. Reach known contact within 14d, lead with concrete project + ask.';
+  }
+  if (score >= 20) {
+    return hasContact
+      ? 'TEPID — known to ACT but no recent money. Re-warm with impact share + coffee before the ask.'
+      : 'TEPID — light signal. Find a mutual; ask for a 15-min intro call before any pitch.';
+  }
+  if (score > 0) {
+    return 'LIGHT — peripheral signal. Cold outreach risks low yield; prefer a warm referral via shared contact.';
+  }
+  return 'COLD — no relationship. Research thoroughly; lead with values-fit story, not money. Build before ask.';
+}
+
 /**
  * Compact funder dossier panel. Shows what we know about the funder from
  * every system: foundations profile, ACT contacts, Xero financial flow,
@@ -73,6 +90,7 @@ export function FunderDossier({ context }: { context: FunderContext | null }) {
   const badge = scoreBadge(context.relationship_score);
   const topContact = context.contacts?.[0];
   const xeroTotal = (Number(context.xero_paid_total) || 0) + (Number(context.xero_authorised_total) || 0);
+  const policy = connectionPolicy(context.relationship_score, Boolean(topContact), xeroTotal > 0);
 
   return (
     <div className="bg-bauhaus-canvas border-l-4 border-bauhaus-black px-3 py-2 text-xs space-y-2">
@@ -106,6 +124,11 @@ export function FunderDossier({ context }: { context: FunderContext | null }) {
             ACT decisions: {Object.entries(context.decisions ?? {}).map(([k, v]) => `${k}:${v}`).join(' · ')}
           </span>
         )}
+      </div>
+
+      {/* Connection policy — what to do given this temperature */}
+      <div className="text-[11px] font-medium text-bauhaus-black leading-snug border-l-2 border-bauhaus-red pl-2">
+        {policy}
       </div>
 
       {/* Top contact line — the single most-useful field for triage */}
