@@ -255,6 +255,13 @@ export function GrantRecommendationsClient({
             {recommendations.length} total · {recommendations.filter((r) => r.is_strong_fit).length} strong fits
           </div>
           <div className="flex gap-1">
+            <a
+              href="/ops/grant-recommendations/triage"
+              className="px-3 py-1.5 text-xs font-black uppercase tracking-widest border-2 border-bauhaus-black bg-white hover:bg-bauhaus-canvas"
+              title="Classify unverified promoted opportunities"
+            >
+              Triage →
+            </a>
             <button
               onClick={() => syncToNotion(false)}
               disabled={syncing}
