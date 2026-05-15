@@ -368,15 +368,15 @@ export const AGENTS = {
     dependencies: [],
   },
   'discover-foundation-programs': {
-    command: ['node', '--env-file=.env', 'scripts/discover-foundation-programs.mjs', '--refresh-existing', '--rescan-days=14', '--limit=40', '--concurrency=2'],
+    command: ['node', '--env-file=.env', 'scripts/discover-foundation-programs.mjs', '--refresh-existing', '--rescan-days=14', '--limit=20', '--concurrency=1', '--frontier-window-hours=48', '--frontier-pages=8'],
     displayName: 'Discover Foundation Programs',
     category: 'discovery',
     defaultPriority: 4,
-    timeoutMs: 600_000,
+    timeoutMs: 900_000,
     dependencies: [],
   },
   'discover-foundation-programs-full-sweep': {
-    command: ['node', '--env-file=.env', 'scripts/discover-foundation-programs.mjs', '--refresh-existing', '--rescan-days=30', '--limit=120', '--concurrency=2', '--full-sweep', '--agent-id=discover-foundation-programs-full-sweep'],
+    command: ['node', '--env-file=.env', 'scripts/discover-foundation-programs.mjs', '--refresh-existing', '--rescan-days=30', '--limit=60', '--concurrency=1', '--frontier-window-hours=72', '--frontier-pages=8', '--full-sweep', '--agent-id=discover-foundation-programs-full-sweep'],
     displayName: 'Discover Foundation Programs (Full Sweep)',
     category: 'discovery',
     defaultPriority: 6,
@@ -384,7 +384,7 @@ export const AGENTS = {
     dependencies: [],
   },
   'discover-foundation-programs-long-tail': {
-    command: ['node', '--env-file=.env', 'scripts/discover-foundation-programs.mjs', '--refresh-existing', '--rescan-days=14', '--limit=20', '--concurrency=1', '--frontier-metadata-flag=long_tail_priority', '--agent-id=discover-foundation-programs-long-tail', '--agent-name=Discover Foundation Programs (Long Tail)'],
+    command: ['node', '--env-file=.env', 'scripts/discover-foundation-programs.mjs', '--refresh-existing', '--rescan-days=14', '--limit=20', '--concurrency=1', '--frontier-pages=8', '--frontier-metadata-flag=long_tail_priority', '--agent-id=discover-foundation-programs-long-tail', '--agent-name=Discover Foundation Programs (Long Tail)'],
     displayName: 'Discover Foundation Programs (Long Tail)',
     category: 'discovery',
     defaultPriority: 4,
@@ -942,13 +942,29 @@ export const AGENTS = {
     timeoutMs: 300_000,
     dependencies: ['goods-community-census'],
   },
+  'score-goods-relevance': {
+    command: ['node', '--env-file=.env', 'scripts/score-goods-relevance.mjs'],
+    displayName: 'Score Goods Relevance',
+    category: 'goods',
+    defaultPriority: 2,
+    timeoutMs: 600_000,
+    dependencies: [],
+  },
+  'seed-goods-source-frontier': {
+    command: ['node', '--env-file=.env', 'scripts/seed-goods-source-frontier.mjs'],
+    displayName: 'Seed Goods Source Frontier',
+    category: 'goods',
+    defaultPriority: 5,
+    timeoutMs: 120_000,
+    dependencies: [],
+  },
   'goods-procurement-matcher': {
     command: ['node', '--env-file=.env', 'scripts/goods-procurement-matcher.mjs'],
     displayName: 'Goods Procurement Matcher',
     category: 'goods',
     defaultPriority: 2,
     timeoutMs: 300_000,
-    dependencies: ['goods-community-census', 'goods-lifecycle-sync'],
+    dependencies: ['goods-community-census', 'goods-lifecycle-sync', 'score-goods-relevance'],
   },
   'goods-supply-chain-analyst': {
     command: ['node', '--env-file=.env', 'scripts/goods-supply-chain-analyst.mjs'],
@@ -957,6 +973,14 @@ export const AGENTS = {
     defaultPriority: 3,
     timeoutMs: 300_000,
     dependencies: ['goods-community-census'],
+  },
+  'sync-ghl-goods-buyers': {
+    command: ['node', '--env-file=.env', '--env-file=apps/web/.env.local', 'scripts/sync-ghl-goods-buyers.mjs'],
+    displayName: 'Sync GHL Goods Buyers',
+    category: 'goods',
+    defaultPriority: 3,
+    timeoutMs: 300_000,
+    dependencies: [],
   },
 
   // ── New Zealand (NZ data sources) ───────────────────────────────────────────

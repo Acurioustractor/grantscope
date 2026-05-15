@@ -27,6 +27,13 @@ export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request: { headers: requestHeaders } });
 
   const { pathname } = request.nextUrl;
+
+  // Solo-dev escape hatch: SKIP_AUTH_LOCAL=1 lets all routes through without
+  // any auth check. Hard-guarded against production via NODE_ENV.
+  if (process.env.NODE_ENV !== 'production' && process.env.SKIP_AUTH_LOCAL === '1') {
+    return supabaseResponse;
+  }
+
   const protectedPrefixes = ['/home', '/tracker', '/foundations/tracker', '/ops', '/profile', '/org'];
   const isProtectedRoute = protectedPrefixes.some(p => pathname.startsWith(p));
   const isLoginRoute = pathname === '/login';

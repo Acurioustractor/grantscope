@@ -1,0 +1,198 @@
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { ACT_FAST_PROFILE, isActSlug, shouldUseFastLocalOrg } from '@/lib/services/fast-local-org';
+import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
+import { getGoodsCommunitiesHub, type CommunityHubRow } from '@/lib/services/goods-communities-hub';
+
+export const revalidate = 300;
+
+function relAgo(iso: string | null): string {
+  if (!iso) return '—';
+  const t = new Date(iso).getTime();
+  if (isNaN(t)) return '—';
+  const days = Math.round((Date.now() - t) / 86_400_000);
+  if (days < 1) return 'today';
+  if (days < 30) return `${days}d ago`;
+  if (days < 365) return `${Math.round(days / 30)}mo ago`;
+  return `${Math.round(days / 365)}y ago`;
+}
+
+export async function generateMetadata() {
+  return { title: 'Goods Communities Hub - CivicGraph' };
+}
+
+export default async function GoodsCommunitiesHubPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ scope?: string; state?: string; q?: string }>;
+}) {
+  const { slug } = await params;
+  const sp = await searchParams;
+  const profile = shouldUseFastLocalOrg() && isActSlug(slug)
+    ? ACT_FAST_PROFILE
+    : await getOrgProfileBySlug(slug);
+  if (!profile) notFound();
+
+  const scope = (sp.scope as 'active' | 'lead' | 'all' | 'with_deployments') || 'active';
+  const { communities, summary } = await getGoodsCommunitiesHub({
+    scope,
+    state: sp.state,
+    search: sp.q,
+  });
+
+  return (
+    <main className="min-h-screen bg-bauhaus-canvas text-bauhaus-black">
+      <div className="border-b-4 border-bauhaus-black bg-bauhaus-black text-white">
+        <div className="mx-auto max-w-7xl px-4 py-8">
+          <nav className="mb-4 flex flex-wrap items-center gap-2 text-sm text-gray-400">
+            <Link href={`/org/${slug}`} className="hover:text-white">{profile.name}</Link>
+            <span>/</span>
+            <Link href={`/org/${slug}/wiki/goods-operating-system`} className="hover:text-white">Goods OS</Link>
+            <span>/</span>
+            <span className="text-white">Communities</span>
+          </nav>
+          <h1 className="text-4xl font-black uppercase tracking-widest">Goods Communities</h1>
+          <p className="mt-2 max-w-3xl text-sm text-gray-300">
+            Showing {communities.length} communities. Click any row for the full community detail page (buyers, signals, matched grants, push to GHL).
+          </p>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-7xl px-4 py-6 space-y-4">
+        {/* Summary cells */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
+          <Cell label="Communities" value={summary.total} accent />
+          <Cell label="With deployments" value={summary.with_deployments} />
+          <Cell label="With open signals" value={summary.with_open_signals} />
+          <Cell label="With GHL contacts" value={summary.with_ghl} />
+          <Cell label="Beds demanded" value={summary.total_beds_demanded} />
+          <Cell label="Beds deployed" value={summary.total_beds_deployed} />
+        </div>
+
+        {/* Filters */}
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="font-black uppercase tracking-wider">Scope:</span>
+          <Pill href={`/org/${slug}/goods/communities`} active={scope === 'active'} label={`Active (lead+active+warm)`} />
+          <Pill href={`/org/${slug}/goods/communities?scope=lead`} active={scope === 'lead'} label="Lead only" />
+          <Pill href={`/org/${slug}/goods/communities?scope=with_deployments`} active={scope === 'with_deployments'} label="With deployments" />
+          <Pill href={`/org/${slug}/goods/communities?scope=all`} active={scope === 'all'} label="All 1546" />
+
+          <span className="ml-4 font-black uppercase tracking-wider">State:</span>
+          <Pill href={`/org/${slug}/goods/communities${scope !== 'active' ? `?scope=${scope}` : ''}`} active={!sp.state} label="All" />
+          {Object.entries(summary.by_state).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([st, n]) => (
+            <Pill
+              key={st}
+              href={`/org/${slug}/goods/communities?state=${st}${scope !== 'active' ? `&scope=${scope}` : ''}`}
+              active={sp.state === st}
+              label={`${st} (${n})`}
+            />
+          ))}
+        </div>
+
+        {/* Table */}
+        <div className="border-4 border-bauhaus-black bg-white overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead className="bg-bauhaus-black text-white">
+              <tr>
+                <Th>Community</Th>
+                <Th>State</Th>
+                <Th>Region / LC</Th>
+                <Th>Priority</Th>
+                <Th align="right">Beds (D / Demand)</Th>
+                <Th align="right">Washers (D / Demand)</Th>
+                <Th align="right">Open signals</Th>
+                <Th align="right">Buyers (GHL)</Th>
+                <Th>Last action</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {communities.length === 0 ? (
+                <tr><td colSpan={9} className="px-3 py-6 text-center text-gray-500">No communities match this filter.</td></tr>
+              ) : (
+                communities.map((c, i) => <Row key={c.id} c={c} alt={i % 2 === 1} orgSlug={slug} />)
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="border-4 border-bauhaus-black bg-bauhaus-yellow p-4 text-xs">
+          <p className="font-black uppercase tracking-wider">Trip prep checklist (next visit)</p>
+          <ul className="mt-2 list-disc pl-5 space-y-1">
+            <li>Filter to <code className="bg-white px-1">scope=lead</code> for the highest-priority NT/QLD set</li>
+            <li>Click any community for buyers, signals, matched grants, and Push-to-GHL</li>
+            <li>Sort by demand to surface largest unmet beds first</li>
+            <li>Beds-deployed column is sourced from <code className="bg-white px-1">goods_communities.assets_deployed</code>. This counter currently shows 0 or 1 for most rows — the actual Goods asset register isn't yet syncing back. Phase B will add this.</li>
+          </ul>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+function Cell({ label, value, accent }: { label: string; value: number; accent?: boolean }) {
+  return (
+    <div className={`border-4 border-bauhaus-black ${accent ? 'bg-bauhaus-yellow' : 'bg-white'} p-3`}>
+      <div className="text-2xl font-black">{value.toLocaleString()}</div>
+      <div className="mt-1 text-[10px] font-black uppercase tracking-widest text-gray-700">{label}</div>
+    </div>
+  );
+}
+
+function Pill({ href, active, label }: { href: string; active: boolean; label: string }) {
+  return (
+    <Link
+      href={href}
+      className={`border-2 ${active ? 'border-bauhaus-black bg-bauhaus-black text-white' : 'border-bauhaus-black bg-white text-bauhaus-black hover:bg-bauhaus-canvas'} px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider`}
+    >
+      {label}
+    </Link>
+  );
+}
+
+function Th({ children, align }: { children: React.ReactNode; align?: 'left' | 'right' }) {
+  return <th className={`border-b-2 border-bauhaus-black px-2 py-1.5 text-left font-black uppercase tracking-wider text-[10px] ${align === 'right' ? 'text-right' : ''}`}>{children}</th>;
+}
+
+function Row({ c, alt, orgSlug }: { c: CommunityHubRow; alt: boolean; orgSlug: string }) {
+  const pBg = c.priority === 'lead' ? 'bg-bauhaus-red text-white' :
+    c.priority === 'active' ? 'bg-bauhaus-yellow' :
+    c.priority === 'warm' ? 'bg-bauhaus-canvas' : 'bg-gray-200';
+  const deploymentGapBg = c.demand_beds > 0 && c.assets_deployed === 0 ? 'bg-bauhaus-red text-white' : '';
+
+  return (
+    <tr className={alt ? 'bg-bauhaus-canvas' : ''}>
+      <td className="border-b border-gray-300 px-2 py-1.5 align-top">
+        <Link href={`/org/${orgSlug}/goods/community/${c.id}`} className="font-black hover:underline hover:text-bauhaus-red">
+          {c.community_name}
+        </Link>
+        {c.postcode && <div className="text-[10px] text-gray-600">{c.postcode}</div>}
+      </td>
+      <td className="border-b border-gray-300 px-2 py-1.5 align-top font-mono">{c.state || '—'}</td>
+      <td className="border-b border-gray-300 px-2 py-1.5 align-top">
+        <div>{c.region_label || '—'}</div>
+        {c.land_council && <div className="text-[10px] text-gray-600">{c.land_council}</div>}
+      </td>
+      <td className="border-b border-gray-300 px-2 py-1.5 align-top">
+        <span className={`${pBg} px-2 py-0.5 font-mono text-[10px] font-black uppercase tracking-wider`}>{c.priority}</span>
+      </td>
+      <td className={`border-b border-gray-300 px-2 py-1.5 align-top text-right ${deploymentGapBg}`}>
+        <span className="font-black">{c.assets_deployed}</span>
+        <span className="text-gray-500"> / {c.demand_beds}</span>
+      </td>
+      <td className="border-b border-gray-300 px-2 py-1.5 align-top text-right">
+        <span className="text-gray-500">— / {c.demand_washers}</span>
+      </td>
+      <td className="border-b border-gray-300 px-2 py-1.5 align-top text-right">
+        <div className="font-black">{c.open_signals + c.reviewing_signals}</div>
+        {c.reviewing_signals > 0 && <div className="text-[10px] text-gray-600">{c.reviewing_signals} reviewing</div>}
+      </td>
+      <td className="border-b border-gray-300 px-2 py-1.5 align-top text-right">
+        <span className="font-black">{c.mapped_buyer_count}</span>
+        {c.ghl_linked_buyer_count > 0 && <span className="text-bauhaus-yellow bg-bauhaus-black px-1 ml-1 font-mono text-[9px]">{c.ghl_linked_buyer_count}↗</span>}
+      </td>
+      <td className="border-b border-gray-300 px-2 py-1.5 align-top">{relAgo(c.last_action_at)}</td>
+    </tr>
+  );
+}
