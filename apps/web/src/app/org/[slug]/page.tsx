@@ -5,8 +5,9 @@ import { getWikiSupportFrontierQueue, type WikiSupportFrontierQueue } from '@/li
 import { workshopWikiHref } from '@/lib/services/act-workshop-wiki';
 import { ACT_FAST_PROFILE, isActSlug, shouldUseFastLocalOrg } from '@/lib/services/fast-local-org';
 import { ListPreviewProvider, GrantPreviewTrigger } from '../../components/list-preview';
-import { getOrgIncomeHistory } from '@/lib/services/org-income-service';
+import { getOrgIncomeHistory, getOrgExpenseHistory } from '@/lib/services/org-income-service';
 import { IncomeHistorySection } from './_components/income-history-section';
+import { ExpenseHistorySection } from './_components/expense-history-section';
 import {
   getOrgProfileBySlug,
   getOrgFundingByProgram,
@@ -733,6 +734,7 @@ export default async function OrgDashboard({ params, searchParams }: { params: P
     foundationFunders,
     foundationPortfolio,
     incomeHistory,
+    expenseHistory,
   ] = await Promise.all([
     abn ? getOrgFundingByProgram(abn, fundingYearFilter) : null,
     abn ? getOrgFundingByYear(abn) : null,
@@ -754,6 +756,7 @@ export default async function OrgDashboard({ params, searchParams }: { params: P
     abn ? getOrgFoundationFunders(abn) : [],
     getOrgFoundationPortfolio(profile.id),
     getOrgIncomeHistory(slug),
+    getOrgExpenseHistory(slug),
   ]);
 
   // Secondary fetches that depend on entity data
@@ -851,6 +854,26 @@ export default async function OrgDashboard({ params, searchParams }: { params: P
         />
 
         <IncomeHistorySection income={incomeHistory} slug={slug} />
+
+        <ExpenseHistorySection
+          expense={expenseHistory}
+          netByProject={
+            incomeHistory && expenseHistory
+              ? new Map(
+                  Array.from(
+                    new Set([
+                      ...incomeHistory.byProject.map((p) => p.project_code),
+                      ...expenseHistory.byProject.map((p) => p.project_code),
+                    ]),
+                  ).map((code) => {
+                    const inc = incomeHistory.byProject.find((p) => p.project_code === code)?.paid_total ?? 0;
+                    const exp = expenseHistory.byProject.find((p) => p.project_code === code)?.paid_total ?? 0;
+                    return [code, { paid_income: inc, paid_expense: exp, net: inc - exp }];
+                  }),
+                )
+              : undefined
+          }
+        />
 
         {/* Intelligence sections */}
         <FundingDesertSection fundingDesert={fundingDesert} />

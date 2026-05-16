@@ -179,3 +179,185 @@ export const CATEGORY_COLORS: Record<FunderCategory, string> = {
   civil_society: 'bg-green-600 text-white',
   other: 'bg-gray-300 text-bauhaus-black',
 };
+
+// ============================================================================
+// Expense lens — mirror of income for outflows (ACCPAY)
+// ============================================================================
+
+export type PayeeCategory =
+  | 'manufacturing'
+  | 'supplies'
+  | 'travel'
+  | 'software'
+  | 'people_contractors'
+  | 'partner_orgs'
+  | 'banking_fees'
+  | 'utilities_property'
+  | 'compliance'
+  | 'other';
+
+export interface ExpenseByPayeeRow {
+  payee_name: string;
+  payee_category: PayeeCategory;
+  paid_invoice_count: number;
+  auth_invoice_count: number;
+  draft_invoice_count: number;
+  paid_total: number;
+  auth_total: number;
+  draft_total: number;
+  first_paid_date: string | null;
+  last_paid_date: string | null;
+  project_codes: string[] | null;
+  longest_outstanding_days: number | null;
+}
+
+export interface ExpenseByProjectRow {
+  project_code: string;
+  paid_invoice_count: number;
+  paid_total: number;
+  auth_total: number;
+  draft_total: number;
+  distinct_payees: number;
+  first_paid_date: string | null;
+  last_paid_date: string | null;
+}
+
+export interface ExpenseCategorySummary {
+  category: PayeeCategory;
+  payee_count: number;
+  paid_total: number;
+  auth_total: number;
+}
+
+export interface OrgExpenseData {
+  byPayee: ExpenseByPayeeRow[];
+  byProject: ExpenseByProjectRow[];
+  byCategory: ExpenseCategorySummary[];
+  totals: {
+    paid_total: number;
+    auth_total: number;
+    draft_total: number;
+    payee_count: number;
+    paid_invoice_count: number;
+    outstanding_count: number;
+  };
+}
+
+export const getOrgExpenseHistory = cache(async function getOrgExpenseHistory(
+  slug: string,
+): Promise<OrgExpenseData | null> {
+  if (!isActSlug(slug)) return null;
+
+  const supabase = getServiceSupabase();
+
+  const [payeeRes, projectRes] = await Promise.all([
+    supabase
+      .from('v_act_expense_by_payee')
+      .select('*')
+      .order('paid_total', { ascending: false, nullsFirst: false }),
+    supabase
+      .from('v_act_expense_by_project')
+      .select('*')
+      .order('paid_total', { ascending: false, nullsFirst: false }),
+  ]);
+
+  const byPayee = (payeeRes.data ?? []).map(normalisePayee);
+  const byProject = (projectRes.data ?? []).map(normaliseExpenseProject);
+
+  const byCategoryMap = new Map<PayeeCategory, ExpenseCategorySummary>();
+  for (const row of byPayee) {
+    const existing = byCategoryMap.get(row.payee_category) ?? {
+      category: row.payee_category,
+      payee_count: 0,
+      paid_total: 0,
+      auth_total: 0,
+    };
+    existing.payee_count += 1;
+    existing.paid_total += row.paid_total;
+    existing.auth_total += row.auth_total;
+    byCategoryMap.set(row.payee_category, existing);
+  }
+  const byCategory = Array.from(byCategoryMap.values()).sort(
+    (a, b) => b.paid_total - a.paid_total,
+  );
+
+  const totals = byPayee.reduce(
+    (acc, row) => {
+      acc.paid_total += row.paid_total;
+      acc.auth_total += row.auth_total;
+      acc.draft_total += row.draft_total;
+      acc.paid_invoice_count += row.paid_invoice_count;
+      acc.outstanding_count += row.auth_invoice_count + row.draft_invoice_count;
+      return acc;
+    },
+    {
+      paid_total: 0,
+      auth_total: 0,
+      draft_total: 0,
+      payee_count: byPayee.length,
+      paid_invoice_count: 0,
+      outstanding_count: 0,
+    },
+  );
+
+  return { byPayee, byProject, byCategory, totals };
+});
+
+function normalisePayee(row: Record<string, unknown>): ExpenseByPayeeRow {
+  return {
+    payee_name: String(row.payee_name ?? ''),
+    payee_category: (row.payee_category ?? 'other') as PayeeCategory,
+    paid_invoice_count: Number(row.paid_invoice_count ?? 0),
+    auth_invoice_count: Number(row.auth_invoice_count ?? 0),
+    draft_invoice_count: Number(row.draft_invoice_count ?? 0),
+    paid_total: Number(row.paid_total ?? 0),
+    auth_total: Number(row.auth_total ?? 0),
+    draft_total: Number(row.draft_total ?? 0),
+    first_paid_date: (row.first_paid_date as string | null) ?? null,
+    last_paid_date: (row.last_paid_date as string | null) ?? null,
+    project_codes: (row.project_codes as string[] | null) ?? null,
+    longest_outstanding_days:
+      row.longest_outstanding_days == null
+        ? null
+        : Number(row.longest_outstanding_days),
+  };
+}
+
+function normaliseExpenseProject(row: Record<string, unknown>): ExpenseByProjectRow {
+  return {
+    project_code: String(row.project_code ?? ''),
+    paid_invoice_count: Number(row.paid_invoice_count ?? 0),
+    paid_total: Number(row.paid_total ?? 0),
+    auth_total: Number(row.auth_total ?? 0),
+    draft_total: Number(row.draft_total ?? 0),
+    distinct_payees: Number(row.distinct_payees ?? 0),
+    first_paid_date: (row.first_paid_date as string | null) ?? null,
+    last_paid_date: (row.last_paid_date as string | null) ?? null,
+  };
+}
+
+export const PAYEE_CATEGORY_LABELS: Record<PayeeCategory, string> = {
+  manufacturing: 'Manufacturing',
+  supplies: 'Supplies',
+  travel: 'Travel',
+  software: 'Software',
+  people_contractors: 'People / contractors',
+  partner_orgs: 'Partner orgs',
+  banking_fees: 'Banking / fees',
+  utilities_property: 'Utilities / property',
+  compliance: 'Compliance',
+  other: 'Other',
+};
+
+export const PAYEE_CATEGORY_COLORS: Record<PayeeCategory, string> = {
+  manufacturing: 'bg-bauhaus-blue text-white',
+  supplies: 'bg-bauhaus-yellow text-bauhaus-black',
+  travel: 'bg-purple-600 text-white',
+  software: 'bg-gray-700 text-white',
+  people_contractors: 'bg-bauhaus-red text-white',
+  partner_orgs: 'bg-green-600 text-white',
+  banking_fees: 'bg-gray-500 text-white',
+  utilities_property: 'bg-gray-400 text-white',
+  compliance: 'bg-gray-300 text-bauhaus-black',
+  other: 'bg-gray-200 text-bauhaus-black',
+};
