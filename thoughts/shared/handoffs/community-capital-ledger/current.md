@@ -9,13 +9,13 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-03-10T05:30:00Z
+**Updated:** 2026-05-16T08:05:00Z
 **Goal:** Build entity dossiers + community funding gap packs as revenue products for GrantScope. Part of the larger Australian Community Capital Ledger vision.
 **Branch:** main
 **Test:** `cd /Users/benknight/Code/grantscope/apps/web && npx tsc --noEmit`
 
 ### Now
-[->] Foundation enrichment running (494 with websites queued). Launch to first users is #1 priority.
+[->] Outstanding receivables section live on /org/act ($497K across 10 payers, real cash story). Payables kanban data confirmed fictional — A/P tile muted with caveat. Next session: act on receivables (Centrecorp DRAFT to send, Rotary recovery, PICC/Regional Arts to chase).
 
 ### This Session
 - [x] **Sprint A: Entity Dossier Enhancement** — justice funding section, place context card, premium gating
@@ -61,7 +61,17 @@ status: active
 - [x] **Foundation enrichment started** — 100 foundations queued (MiniMax + Gemini providers)
 - **Coverage: Postcode 96.4%, Remoteness 96.4%, LGA 95.1%, SEIFA 93.5%** (was 79%/43%/78%/76%)
 
+### This Session (2026-05-16 — afternoon)
+- [x] **Bulk-select on payables triage kanban** — `/api/ops/payables/decide-bulk` (admin-gated, MAX_BULK=500), per-card checkboxes, per-column Select all / Deselect all, floating action bar with 6 Mark-as buttons. Commit `aeeaee1`.
+- [x] **Triaged 359 60d+ payables in two batches via SQL** — 112 → write_off (over_180d AND <$500), 247 → chase_supplier. Worked at scale. Then…
+- [x] **Discovered the kanban is fictional** — `v_act_payables_triage` filters `status='AUTHORISED'` only, but in this org's workflow most bills are paid via bank-rec without updating Xero invoice status. Only 9/389 AUTHORISED bills had any `xero_payments` record. The "$641K overdue 60d+" headline was a phantom debt.
+- [x] **Pivoted to receivables** — built `org-receivables-service.ts` + `OutstandingReceivablesSection`. Real $497K across 10 payers (matches CLAUDE.md figures). Per-payer rows with priority flags: NEEDS TO BE SENT (Centrecorp $85K DRAFT) / RECOVERY CASE (Rotary $83K, 401d) / CHASE NOW (PICC $97K, Regional Arts $33K) / RECONCILIATION LAG (Aleisha $12K — 27 weekly invoices, admin not chase) / NOT YET DUE (Snow $132K, due in 16d). Mounted on both fast view + full data view.
+- [x] **Retired fictional payables headline** — removed Payables link from FinancialPulseTile, swapped to Receivables. Muted the A/P stat tile and added "most paid via bank rec, not reflected here" caveat. Stops the dashboard from claiming $641K phantom debt. Commit `c0788ac`.
+- [x] **359 bogus payable_decisions remain in `act_payable_decisions` table** — not visible anywhere now (kanban link gone), but should probably be cleaned up next session if anyone wants to reuse the kanban with a fixed view filter.
+
 ### Next
+- [ ] **Act on receivables** — Send Centrecorp DRAFT ($84.7K, ACT-GD), Rotary recovery escalation ($82.5K, 401d), chase PICC ($97K) + Regional Arts ($33K), reconcile Aleisha's 27 weekly invoices against bank feed
+- [ ] **Decide payables kanban fate** — either kill the view + table + page, OR rewrite the filter to `AUTHORISED AND no matching bank_transaction in last 365d` for honest signal. Cleanup the 359 bogus rows in `act_payable_decisions` either way.
 - [ ] **Launch to first users** — #1 priority. Product exists, no users yet.
 - [ ] **Foundation enrichment at scale** — 494 with websites in queue, then ~9K name-only. Run: `node --env-file=.env scripts/enrich-foundations.mjs --limit=500`
 - [ ] **Commit all new scripts + changes** to GrantScope repo
