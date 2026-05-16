@@ -10,6 +10,7 @@ import { IncomeHistorySection } from './_components/income-history-section';
 import { ExpenseHistorySection } from './_components/expense-history-section';
 import { FinancialPulseTile } from './_components/financial-pulse-tile';
 import {
+  orgAbns,
   getOrgProfileBySlug,
   getOrgFundingByProgram,
   getOrgFundingByYear,
@@ -67,7 +68,7 @@ import {
 
 export const revalidate = 3600;
 
-function FastOrgDashboard({
+async function FastOrgDashboard({
   profile,
   slug,
   wikiSupportIndex,
@@ -78,6 +79,8 @@ function FastOrgDashboard({
 }) {
   const visibleProjects = wikiSupportIndex.projects.slice(0, 8);
   const priorityActions = wikiSupportIndex.support_actions.slice(0, 6);
+  // Pulse is the most-asked question on the fast view — surface it inline.
+  const financialPulse = await getOrgFinancialPulse(slug);
 
   return (
     <main className="min-h-screen bg-gray-50 text-bauhaus-black">
@@ -103,6 +106,8 @@ function FastOrgDashboard({
       </div>
 
       <div className="mx-auto max-w-7xl px-4 py-8 space-y-6">
+        <FinancialPulseTile pulse={financialPulse} slug={slug} />
+
         <section className="border-4 border-bauhaus-black bg-white p-5">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div>
@@ -713,6 +718,10 @@ export default async function OrgDashboard({ params, searchParams }: { params: P
   if (!profile) notFound();
 
   const abn = profile.abn;
+  // All ABNs an org operates under (primary + additional). For ACT this is
+  // [sole-trader-ABN, charity-ABN]. Service functions OR-match across them.
+  const abns = orgAbns(profile);
+  const hasAbn = abns.length > 0;
 
   const [
     fundingByProgram,
@@ -738,12 +747,12 @@ export default async function OrgDashboard({ params, searchParams }: { params: P
     expenseHistory,
     financialPulse,
   ] = await Promise.all([
-    abn ? getOrgFundingByProgram(abn, fundingYearFilter) : null,
-    abn ? getOrgFundingByYear(abn) : null,
-    abn ? getOrgFundingYears(abn) : [],
-    abn ? getOrgContracts(abn) : null,
-    abn ? getOrgAlmaInterventions(abn) : null,
-    abn ? getOrgEntity(abn) : null,
+    hasAbn ? getOrgFundingByProgram(abns, fundingYearFilter) : null,
+    hasAbn ? getOrgFundingByYear(abns) : null,
+    hasAbn ? getOrgFundingYears(abns) : [],
+    hasAbn ? getOrgContracts(abns) : null,
+    hasAbn ? getOrgAlmaInterventions(abns) : null,
+    hasAbn ? getOrgEntity(abns) : null,
     getOrgPrograms(profile.id),
     getOrgPipeline(profile.id),
     getOrgContacts(profile.id),
@@ -751,11 +760,11 @@ export default async function OrgDashboard({ params, searchParams }: { params: P
     getMatchedGrantOpportunities(profile.id, profile.org_type, null),
     abn ? getOrgPeerOrgs(abn) : [],
     getOrgProjectSummaries(profile.id),
-    abn ? getOrgPowerIndex(abn) : null,
-    abn ? getOrgRevolvingDoor(abn) : null,
-    abn ? getOrgBoardMembers(abn) : [],
-    abn ? getOrgDonorCrosslinks(abn) : [],
-    abn ? getOrgFoundationFunders(abn) : [],
+    hasAbn ? getOrgPowerIndex(abns) : null,
+    hasAbn ? getOrgRevolvingDoor(abns) : null,
+    hasAbn ? getOrgBoardMembers(abns) : [],
+    hasAbn ? getOrgDonorCrosslinks(abns) : [],
+    hasAbn ? getOrgFoundationFunders(abns) : [],
     getOrgFoundationPortfolio(profile.id),
     getOrgIncomeHistory(slug),
     getOrgExpenseHistory(slug),

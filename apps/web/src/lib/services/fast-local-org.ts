@@ -4,7 +4,9 @@ import type { WikiSupportProject } from '@/lib/services/wiki-support-index';
 export const ACT_FAST_PROFILE: OrgProfile = {
   id: 'act-fast-local',
   name: 'A Curious Tractor',
-  abn: '697347676',
+  abn: '21591780066', // sole trader (where the historical data lives)
+  additional_abns: ['73669029341'], // A Kind Tractor charity
+  acn: '697347676', // A Curious Tractor Pty Ltd
   slug: 'act',
   linked_gs_entity_id: null,
   description: 'A Curious Tractor operating workspace.',

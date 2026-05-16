@@ -88,6 +88,11 @@ export interface OrgProfile {
   id: string;
   name: string;
   abn: string | null;
+  /** Secondary ABNs the org also operates under. Service functions OR-match
+   *  across the union (primary + additional). For ACT: charity ABN. */
+  additional_abns: string[];
+  /** ACN reference, display-only. For lookups always use abn + additional_abns. */
+  acn: string | null;
   slug: string | null;
   linked_gs_entity_id: string | null;
   description: string | null;
@@ -97,6 +102,19 @@ export interface OrgProfile {
   subscription_plan: string | null;
   logo_url: string | null;
   updated_at: string | null;
+}
+
+/**
+ * Returns the full set of ABNs to query for an org: primary + additional,
+ * deduplicated, falsy-stripped. Use this anywhere a service function takes
+ * a list of ABNs for cross-system lookups (gs_entities, austender_contracts,
+ * justice_funding, foundation_grantees, etc).
+ */
+export function orgAbns(profile: Pick<OrgProfile, 'abn' | 'additional_abns'>): string[] {
+  const all = [profile.abn, ...(profile.additional_abns ?? [])].filter(
+    (a): a is string => typeof a === 'string' && a.length > 0,
+  );
+  return Array.from(new Set(all));
 }
 
 export interface OrgProgram {
@@ -467,18 +485,32 @@ export const getOrgProfileBySlug = cache(async function getOrgProfileBySlug(slug
   const lookupSlug = slugAliases[slug] || slug;
   const { data, error } = await supabase
     .from('org_profiles')
-    .select('id, name, abn, slug, linked_gs_entity_id, description, team_size, annual_revenue, org_type, subscription_plan, logo_url, updated_at')
+    .select('id, name, abn, additional_abns, acn, slug, linked_gs_entity_id, description, team_size, annual_revenue, org_type, subscription_plan, logo_url, updated_at')
     .eq('slug', lookupSlug)
     .maybeSingle();
   if (error || !data) return null;
-  return data as OrgProfile;
+  return {
+    ...data,
+    additional_abns: (data.additional_abns as string[] | null) ?? [],
+    acn: (data.acn as string | null) ?? null,
+  } as OrgProfile;
 });
+
+// Helper: format a list of ABNs as a quoted SQL IN clause.
+// Escapes single quotes defensively (ABNs are 11-digit numerics so injection
+// surface is tiny, but be safe). Returns `'a','b','c'` (no parentheses).
+function abnInList(abns: string | string[]): string {
+  const list = Array.isArray(abns) ? abns : [abns];
+  const clean = list.filter((a) => typeof a === 'string' && a.length > 0);
+  if (clean.length === 0) return "''";
+  return clean.map((a) => `'${a.replace(/'/g, "''")}'`).join(',');
+}
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Auto-discovered data (by ABN from CivicGraph)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-export async function getOrgFundingByProgram(abn: string, financialYear?: string): Promise<FundingByProgram[] | null> {
+export async function getOrgFundingByProgram(abn: string | string[], financialYear?: string): Promise<FundingByProgram[] | null> {
   const supabase = getServiceSupabase();
   const yearFilter = financialYear ? ` AND financial_year = '${financialYear}'` : '';
   return safe(supabase.rpc('exec_sql', {
@@ -488,24 +520,24 @@ export async function getOrgFundingByProgram(abn: string, financialYear?: string
               MIN(financial_year) as from_fy,
               MAX(financial_year) as to_fy
        FROM justice_funding
-       WHERE recipient_abn = '${abn}'${yearFilter}
+       WHERE recipient_abn IN (${abnInList(abn)})${yearFilter}
        GROUP BY program_name
        ORDER BY total DESC`,
   })) as Promise<FundingByProgram[] | null>;
 }
 
-export async function getOrgFundingYears(abn: string): Promise<string[]> {
+export async function getOrgFundingYears(abn: string | string[]): Promise<string[]> {
   const supabase = getServiceSupabase();
   const rows = await safe(supabase.rpc('exec_sql', {
     query: `SELECT DISTINCT financial_year
        FROM justice_funding
-       WHERE recipient_abn = '${abn}'
+       WHERE recipient_abn IN (${abnInList(abn)})
        ORDER BY financial_year DESC`,
   })) as Array<{ financial_year: string }> | null;
   return rows?.map(r => r.financial_year) ?? [];
 }
 
-export async function getOrgFundingByYear(abn: string): Promise<FundingByYear[] | null> {
+export async function getOrgFundingByYear(abn: string | string[]): Promise<FundingByYear[] | null> {
   const supabase = getServiceSupabase();
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT financial_year,
@@ -513,43 +545,44 @@ export async function getOrgFundingByYear(abn: string): Promise<FundingByYear[] 
               COUNT(*)::int as grants,
               COUNT(DISTINCT program_name)::int as programs
        FROM justice_funding
-       WHERE recipient_abn = '${abn}'
+       WHERE recipient_abn IN (${abnInList(abn)})
        GROUP BY financial_year
        ORDER BY financial_year`,
   })) as Promise<FundingByYear[] | null>;
 }
 
-export async function getOrgContracts(abn: string): Promise<Contract[] | null> {
+export async function getOrgContracts(abn: string | string[]): Promise<Contract[] | null> {
   const supabase = getServiceSupabase();
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT title, contract_value::bigint as value,
               buyer_name, contract_start, contract_end
        FROM austender_contracts
-       WHERE supplier_abn = '${abn}'
+       WHERE supplier_abn IN (${abnInList(abn)})
        ORDER BY contract_value DESC`,
   })) as Promise<Contract[] | null>;
 }
 
-export async function getOrgAlmaInterventions(abn: string): Promise<AlmaIntervention[] | null> {
+export async function getOrgAlmaInterventions(abn: string | string[]): Promise<AlmaIntervention[] | null> {
   const supabase = getServiceSupabase();
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT ai.name, ai.type, ai.evidence_level,
               ai.target_cohort, ai.description
        FROM alma_interventions ai
        JOIN gs_entities ge ON ge.id = ai.gs_entity_id
-       WHERE ge.abn = '${abn}'
+       WHERE ge.abn IN (${abnInList(abn)})
        ORDER BY ai.name`,
   })) as Promise<AlmaIntervention[] | null>;
 }
 
-export async function getOrgEntity(abn: string): Promise<GsEntity | null> {
+export async function getOrgEntity(abn: string | string[]): Promise<GsEntity | null> {
   const supabase = getServiceSupabase();
   const rows = await safe(supabase.rpc('exec_sql', {
     query: `SELECT id, gs_id, canonical_name, abn, entity_type, sector,
               state, postcode, remoteness, seifa_irsd_decile,
               is_community_controlled, lga_name, lga_code
        FROM gs_entities
-       WHERE abn = '${abn}'`,
+       WHERE abn IN (${abnInList(abn)})
+       ORDER BY canonical_name LIMIT 1`,
   })) as GsEntity[] | null;
   return rows?.[0] ?? null;
 }
@@ -1283,7 +1316,7 @@ export async function getOrgPeerOrgs(abn: string): Promise<PeerOrg[]> {
 // Intelligence data (Power Index, Revolving Door, etc.)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-export async function getOrgPowerIndex(abn: string): Promise<PowerIndex | null> {
+export async function getOrgPowerIndex(abn: string | string[]): Promise<PowerIndex | null> {
   const supabase = getServiceSupabase();
   const rows = await safe(supabase.rpc('exec_sql', {
     query: `SELECT id, gs_id, canonical_name, system_count,
@@ -1302,12 +1335,13 @@ export async function getOrgPowerIndex(abn: string): Promise<PowerIndex | null> 
               alma_intervention_count::int as alma_intervention_count,
               board_connections::int as board_connections
        FROM mv_entity_power_index
-       WHERE abn = '${abn}'`,
+       WHERE abn IN (${abnInList(abn)})
+       ORDER BY procurement_dollars DESC NULLS LAST LIMIT 1`,
   })) as PowerIndex[] | null;
   return rows?.[0] ?? null;
 }
 
-export async function getOrgRevolvingDoor(abn: string): Promise<RevolvingDoor | null> {
+export async function getOrgRevolvingDoor(abn: string | string[]): Promise<RevolvingDoor | null> {
   const supabase = getServiceSupabase();
   const rows = await safe(supabase.rpc('exec_sql', {
     query: `SELECT id, gs_id, canonical_name,
@@ -1319,7 +1353,8 @@ export async function getOrgRevolvingDoor(abn: string): Promise<RevolvingDoor | 
               revolving_door_score,
               parties_funded
        FROM mv_revolving_door
-       WHERE abn = '${abn}'`,
+       WHERE abn IN (${abnInList(abn)})
+       ORDER BY revolving_door_score DESC NULLS LAST LIMIT 1`,
   })) as RevolvingDoor[] | null;
   return rows?.[0] ?? null;
 }
@@ -1360,7 +1395,7 @@ export async function getOrgFundingDesert(lgaName: string): Promise<FundingDeser
 // Board Members (auto-discovered from person_roles)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-export async function getOrgBoardMembers(abn: string): Promise<BoardMember[]> {
+export async function getOrgBoardMembers(abn: string | string[]): Promise<BoardMember[]> {
   const supabase = getServiceSupabase();
   const rows = await safe(supabase.rpc('exec_sql', {
     query: `SELECT person_name_normalised, roles, role_sources,
@@ -1371,7 +1406,7 @@ export async function getOrgBoardMembers(abn: string): Promise<BoardMember[]> {
               donation_dollars::bigint as donation_dollars,
               donation_count::int as donation_count
        FROM mv_person_entity_crosswalk
-       WHERE company_abn = '${abn}'
+       WHERE company_abn IN (${abnInList(abn)})
        ORDER BY (contract_dollars + justice_dollars + donation_dollars) DESC
        LIMIT 30`,
   })) as BoardMember[] | null;
@@ -1382,8 +1417,10 @@ export async function getOrgBoardMembers(abn: string): Promise<BoardMember[]> {
 // Donor→Board Crosslinks
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-export async function getOrgDonorCrosslinks(abn: string): Promise<DonorCrosslink[]> {
+export async function getOrgDonorCrosslinks(abn: string | string[]): Promise<DonorCrosslink[]> {
   const supabase = getServiceSupabase();
+  const abnList = Array.isArray(abn) ? abn : [abn];
+  const abnArrayLiteral = `ARRAY[${abnList.map((a) => `'${a.replace(/'/g, "''")}'`).join(',')}]::text[]`;
   const rows = await safe(supabase.rpc('exec_sql', {
     query: `SELECT dc.donor_name, dc.total_donated::bigint as total_donated,
               dc.donation_count::int as donation_count,
@@ -1393,7 +1430,7 @@ export async function getOrgDonorCrosslinks(abn: string): Promise<DonorCrosslink
               dc.power_score::int as power_score,
               dc.first_donation::text, dc.last_donation::text
        FROM mv_donor_person_crosslink dc
-       WHERE dc.org_abns @> ARRAY['${abn}']
+       WHERE dc.org_abns && ${abnArrayLiteral}
        ORDER BY dc.total_donated DESC
        LIMIT 20`,
   })) as DonorCrosslink[] | null;
@@ -1404,7 +1441,7 @@ export async function getOrgDonorCrosslinks(abn: string): Promise<DonorCrosslink
 // Foundation Funders (who funds this org)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-export async function getOrgFoundationFunders(abn: string): Promise<FoundationFunder[]> {
+export async function getOrgFoundationFunders(abn: string | string[]): Promise<FoundationFunder[]> {
   const supabase = getServiceSupabase();
   const rows = await safe(supabase.rpc('exec_sql', {
     query: `SELECT fg.foundation_name, fg.foundation_abn,
@@ -1419,7 +1456,7 @@ export async function getOrgFoundationFunders(abn: string): Promise<FoundationFu
               MAX(fs.overlapping_trustees)::int as overlapping_trustees
        FROM mv_foundation_grantees fg
        LEFT JOIN mv_foundation_scores fs ON fs.acnc_abn = fg.foundation_abn
-       WHERE fg.grantee_abn = '${abn}'
+       WHERE fg.grantee_abn IN (${abnInList(abn)})
        GROUP BY fg.foundation_name, fg.foundation_abn
        ORDER BY SUM(fg.grant_amount) DESC NULLS LAST
        LIMIT 20`,
