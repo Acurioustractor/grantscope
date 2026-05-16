@@ -5,6 +5,8 @@ import { getWikiSupportFrontierQueue, type WikiSupportFrontierQueue } from '@/li
 import { workshopWikiHref } from '@/lib/services/act-workshop-wiki';
 import { ACT_FAST_PROFILE, isActSlug, shouldUseFastLocalOrg } from '@/lib/services/fast-local-org';
 import { ListPreviewProvider, GrantPreviewTrigger } from '../../components/list-preview';
+import { getOrgIncomeHistory } from '@/lib/services/org-income-service';
+import { IncomeHistorySection } from './_components/income-history-section';
 import {
   getOrgProfileBySlug,
   getOrgFundingByProgram,
@@ -730,6 +732,7 @@ export default async function OrgDashboard({ params, searchParams }: { params: P
     donorCrosslinks,
     foundationFunders,
     foundationPortfolio,
+    incomeHistory,
   ] = await Promise.all([
     abn ? getOrgFundingByProgram(abn, fundingYearFilter) : null,
     abn ? getOrgFundingByYear(abn) : null,
@@ -750,6 +753,7 @@ export default async function OrgDashboard({ params, searchParams }: { params: P
     abn ? getOrgDonorCrosslinks(abn) : [],
     abn ? getOrgFoundationFunders(abn) : [],
     getOrgFoundationPortfolio(profile.id),
+    getOrgIncomeHistory(slug),
   ]);
 
   // Secondary fetches that depend on entity data
@@ -845,6 +849,8 @@ export default async function OrgDashboard({ params, searchParams }: { params: P
           profile={profile}
           entity={entity}
         />
+
+        <IncomeHistorySection income={incomeHistory} slug={slug} />
 
         {/* Intelligence sections */}
         <FundingDesertSection fundingDesert={fundingDesert} />

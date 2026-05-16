@@ -172,6 +172,10 @@ export function OrgPipelineKanban({
       if (!card) return;
       if (card.decision === next) return;
       if (!PIPELINE_COLUMNS.includes(next)) return;
+      if (card.is_historical) {
+        setError('Historical Xero cards are read-only — they reflect xero_invoices PAID rows.');
+        return;
+      }
 
       const previous = cards;
       const nowIso = new Date().toISOString();
@@ -348,16 +352,20 @@ export function OrgPipelineKanban({
                         </div>
                       )}
                       {colCards.map((card, idx) => (
-                        <Draggable key={card.key} draggableId={card.key} index={idx}>
+                        <Draggable key={card.key} draggableId={card.key} index={idx} isDragDisabled={card.is_historical}>
                           {(dragProvided, dragSnapshot) => (
                             <div
                               ref={dragProvided.innerRef}
                               {...dragProvided.draggableProps}
                               {...dragProvided.dragHandleProps}
-                              className={`border-2 bg-white p-2 transition-colors ${
+                              className={`border-2 p-2 transition-colors ${
+                                card.is_historical
+                                  ? 'bg-green-50 border-green-600'
+                                  : 'bg-white'
+                              } ${
                                 dragSnapshot.isDragging
                                   ? 'border-bauhaus-red shadow-lg'
-                                  : 'border-bauhaus-black'
+                                  : card.is_historical ? '' : 'border-bauhaus-black'
                               } ${pendingKey === card.key ? 'opacity-50' : ''}`}
                               onClick={(e) => {
                                 if (dragSnapshot.isDragging) return;
@@ -367,30 +375,41 @@ export function OrgPipelineKanban({
                               }}
                             >
                               <div className="flex items-start gap-1 flex-wrap mb-1">
-                                <span
-                                  className={`px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider ${TEMPERATURE_CLASS[card.temperature]}`}
-                                  title={card.relationship_score != null ? `Relationship score ${card.relationship_score}` : 'No funder context'}
-                                >
-                                  {card.temperature}
-                                </span>
-                                <span
-                                  className={`px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider tabular-nums ${
-                                    card.is_strong_fit
-                                      ? 'bg-bauhaus-black text-white'
-                                      : card.fit_score >= 55
-                                        ? 'bg-bauhaus-blue text-white'
-                                        : 'bg-gray-200 text-bauhaus-black'
-                                  }`}
-                                >
-                                  Fit {card.fit_score}
-                                </span>
-                                {(() => {
-                                  const u = deadlineUrgency(card.deadline);
-                                  if (u === 'past') return <span className="px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider bg-gray-400 text-white">PAST</span>;
-                                  if (u === 'tight') return <span className="px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider bg-bauhaus-red text-white">TIGHT</span>;
-                                  if (u === 'soon') return <span className="px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider bg-bauhaus-yellow text-bauhaus-black">SOON</span>;
-                                  return null;
-                                })()}
+                                {card.is_historical ? (
+                                  <span
+                                    className="px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider bg-green-600 text-white"
+                                    title="Backfilled from xero_invoices PAID"
+                                  >
+                                    HIST · XERO
+                                  </span>
+                                ) : (
+                                  <>
+                                    <span
+                                      className={`px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider ${TEMPERATURE_CLASS[card.temperature]}`}
+                                      title={card.relationship_score != null ? `Relationship score ${card.relationship_score}` : 'No funder context'}
+                                    >
+                                      {card.temperature}
+                                    </span>
+                                    <span
+                                      className={`px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider tabular-nums ${
+                                        card.is_strong_fit
+                                          ? 'bg-bauhaus-black text-white'
+                                          : card.fit_score >= 55
+                                            ? 'bg-bauhaus-blue text-white'
+                                            : 'bg-gray-200 text-bauhaus-black'
+                                      }`}
+                                    >
+                                      Fit {card.fit_score}
+                                    </span>
+                                    {(() => {
+                                      const u = deadlineUrgency(card.deadline);
+                                      if (u === 'past') return <span className="px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider bg-gray-400 text-white">PAST</span>;
+                                      if (u === 'tight') return <span className="px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider bg-bauhaus-red text-white">TIGHT</span>;
+                                      if (u === 'soon') return <span className="px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider bg-bauhaus-yellow text-bauhaus-black">SOON</span>;
+                                      return null;
+                                    })()}
+                                  </>
+                                )}
                               </div>
 
                               <div className="text-sm font-black text-bauhaus-black leading-snug line-clamp-2">
@@ -402,10 +421,14 @@ export function OrgPipelineKanban({
 
                               <div className="flex items-center justify-between mt-2 text-[10px] font-mono">
                                 <span className="text-bauhaus-black">
-                                  {formatDeadline(card.deadline)}
+                                  {card.is_historical
+                                    ? `${card.historical_invoice_count ?? 0} inv${(card.historical_invoice_count ?? 0) === 1 ? '' : 's'}`
+                                    : formatDeadline(card.deadline)}
                                 </span>
-                                <span className="text-bauhaus-muted">
-                                  {formatAmount(card.min_grant_amount, card.max_grant_amount)}
+                                <span className={card.is_historical ? 'text-green-700 font-black' : 'text-bauhaus-muted'}>
+                                  {card.is_historical
+                                    ? `$${Math.round(card.historical_paid_total ?? 0).toLocaleString()}`
+                                    : formatAmount(card.min_grant_amount, card.max_grant_amount)}
                                 </span>
                               </div>
 
@@ -615,23 +638,36 @@ export function OrgPipelineKanban({
                   )}
                 </div>
 
-                <div className="pt-3 border-t-2 border-bauhaus-black/20">
-                  <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted mb-2">
-                    Move to
+                {previewCard.is_historical ? (
+                  <div className="pt-3 border-t-2 border-bauhaus-black/20">
+                    <div className="border-l-4 border-green-600 bg-green-50 px-3 py-2 text-xs">
+                      <div className="text-[10px] font-black uppercase tracking-widest text-green-700 mb-1">
+                        Historical · read-only
+                      </div>
+                      <div className="text-bauhaus-black">
+                        Backfilled from <span className="font-mono">xero_invoices</span> PAID rows. {previewCard.notes ?? ''}
+                      </div>
+                    </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-1">
-                    {PIPELINE_COLUMNS.filter((c) => c !== 'discovered' && c !== previewCard.decision).map((col) => (
-                      <button
-                        key={col}
-                        onClick={() => setDecisionFromPanel(previewCard, col)}
-                        disabled={pendingKey === previewCard.key}
-                        className={`px-3 py-2 text-xs font-black uppercase tracking-widest border-2 border-bauhaus-black ${COLUMN_ACCENT[col]} hover:bg-bauhaus-black hover:text-white disabled:opacity-50`}
-                      >
-                        {COLUMN_LABELS[col]}
-                      </button>
-                    ))}
+                ) : (
+                  <div className="pt-3 border-t-2 border-bauhaus-black/20">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted mb-2">
+                      Move to
+                    </div>
+                    <div className="grid grid-cols-2 gap-1">
+                      {PIPELINE_COLUMNS.filter((c) => c !== 'discovered' && c !== previewCard.decision).map((col) => (
+                        <button
+                          key={col}
+                          onClick={() => setDecisionFromPanel(previewCard, col)}
+                          disabled={pendingKey === previewCard.key}
+                          className={`px-3 py-2 text-xs font-black uppercase tracking-widest border-2 border-bauhaus-black ${COLUMN_ACCENT[col]} hover:bg-bauhaus-black hover:text-white disabled:opacity-50`}
+                        >
+                          {COLUMN_LABELS[col]}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </SlidePanelBody>
           </>

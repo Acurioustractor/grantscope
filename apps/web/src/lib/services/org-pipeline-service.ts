@@ -50,6 +50,12 @@ export interface OrgPipelineCard {
   notes: string | null;
   temperature: 'WARM' | 'TEPID' | 'LIGHT' | 'COLD';
   relationship_score: number | null;
+  /** True for cards backfilled from xero_invoices (historical wins). Not draggable. */
+  is_historical?: boolean;
+  /** Lifetime paid total from Xero, used to render $ on historical Won cards. */
+  historical_paid_total?: number;
+  /** Number of paid invoices in Xero, shown on historical cards. */
+  historical_invoice_count?: number;
 }
 
 export interface OrgPipelineProject {
@@ -242,8 +248,60 @@ export const getOrgPipelineData = cache(async function getOrgPipelineData(
     });
   }
 
+  // ------------------------------------------------------------------
+  // Backfill: append historical "won" cards from v_act_income_by_funder
+  // (xero_invoices PAID rows). One card per (funder, project_code) pair
+  // where the funder paid > $1K. Non-draggable in the UI.
+  // ------------------------------------------------------------------
+  const { data: incomeRows } = await supabase
+    .from('v_act_income_by_funder')
+    .select('funder_name, project_codes, paid_total, paid_invoice_count, last_paid_date')
+    .gt('paid_total', 1000);
+
+  const historicalCards: OrgPipelineCard[] = [];
+  for (const row of incomeRows ?? []) {
+    const projectCodes = (row.project_codes as string[] | null) ?? [];
+    if (projectCodes.length === 0) continue;
+    const funderName = String(row.funder_name ?? '');
+    const paidTotal = Number(row.paid_total ?? 0);
+    const invoiceCount = Number(row.paid_invoice_count ?? 0);
+    const lastPaid = (row.last_paid_date as string | null) ?? null;
+    const primaryProject = projectCodes[0];
+    const otherProjects = projectCodes.slice(1);
+    const temp = temperatureFor(funderName, contextByFunder);
+    historicalCards.push({
+      key: `historical|${primaryProject}|${funderName}`,
+      project_code: primaryProject,
+      also_fits_projects: otherProjects,
+      opportunity_id: `historical-${primaryProject}-${funderName}`,
+      opportunity_name: `${funderName} (lifetime)`,
+      funder_name: funderName,
+      deadline: null,
+      min_grant_amount: null,
+      max_grant_amount: paidTotal,
+      fit_score: 100,
+      is_strong_fit: true,
+      source_url: null,
+      application_url: null,
+      flags: ['historical'],
+      theme_score: 50,
+      geography_score: 15,
+      eligibility_score: 20,
+      timing_score: 15,
+      decision: 'won',
+      decided_at: lastPaid,
+      grant_opportunity_id: null,
+      notes: `${invoiceCount} paid invoice${invoiceCount === 1 ? '' : 's'} via Xero`,
+      temperature: temp.label,
+      relationship_score: temp.score,
+      is_historical: true,
+      historical_paid_total: paidTotal,
+      historical_invoice_count: invoiceCount,
+    });
+  }
+
   return {
-    cards,
+    cards: [...cards, ...historicalCards],
     projects: projects.map((p) => ({
       project_code: p.project_code,
       project_label: p.notes ?? p.project_code,

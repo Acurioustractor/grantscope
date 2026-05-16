@@ -69,16 +69,48 @@ function runProcess(cmd, args) {
 }
 
 async function refreshMv() {
+  // exec_sql can't run DDL — it wraps input in `SELECT row_to_json(...)`.
+  // Use psql directly via spawn (same pattern as scripts/refresh-views-v2.mjs).
   const start = Date.now();
-  // Use Postgres REFRESH via PostgREST RPC if available, otherwise rely on exec_sql
-  const { error } = await supabase.rpc('exec_sql', {
-    query: 'REFRESH MATERIALIZED VIEW act_grant_recommendations',
+  return new Promise((resolve) => {
+    const password = process.env.DATABASE_PASSWORD;
+    if (!password) {
+      return resolve({
+        ok: false,
+        durationMs: Date.now() - start,
+        detail: 'DATABASE_PASSWORD not set — cannot REFRESH MV',
+      });
+    }
+    const proc = spawn(
+      'psql',
+      [
+        '-h', 'aws-0-ap-southeast-2.pooler.supabase.com',
+        '-p', '5432',
+        '-U', 'postgres.tednluwflfhxyucgwigh',
+        '-d', 'postgres',
+        '-v', 'ON_ERROR_STOP=1',
+        '-c', `SET statement_timeout = '600s'; REFRESH MATERIALIZED VIEW CONCURRENTLY act_grant_recommendations`,
+      ],
+      { env: { ...process.env, PGPASSWORD: password }, timeout: 630_000 }
+    );
+    let stderr = '';
+    proc.stderr.on('data', (d) => (stderr += d.toString()));
+    proc.on('close', (code) => {
+      if (code === 0) {
+        resolve({ ok: true, durationMs: Date.now() - start, detail: 'MV refreshed (CONCURRENTLY)' });
+      } else {
+        const errLine = stderr.split('\n').find((l) => l.startsWith('ERROR:'));
+        resolve({
+          ok: false,
+          durationMs: Date.now() - start,
+          detail: (errLine || stderr.split('\n').filter(Boolean).pop() || `psql exit ${code}`).slice(0, 200),
+        });
+      }
+    });
+    proc.on('error', (e) =>
+      resolve({ ok: false, durationMs: Date.now() - start, detail: e.message.slice(0, 200) })
+    );
   });
-  return {
-    ok: !error,
-    durationMs: Date.now() - start,
-    detail: error ? error.message.slice(0, 200) : 'MV refreshed',
-  };
 }
 
 async function reEvaluateBlocklist() {
