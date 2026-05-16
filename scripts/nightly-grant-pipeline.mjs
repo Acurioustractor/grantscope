@@ -115,10 +115,18 @@ async function refreshMv() {
 
 async function reEvaluateBlocklist() {
   const start = Date.now();
-  // Re-run the same query the migration uses, refreshing blocklist with latest decisions
+  // Candidates: funders with 2+ passes AND 0 watches AND 0 pursues.
+  // GUARD: never auto-block a funder who has ever PAID us via Xero — those are
+  // real counterparties. Pass-spamming their unrelated programs shouldn't break
+  // the actual relationship.
   const { data, error } = await supabase.rpc('exec_sql', {
     query: `
-      WITH candidates AS (
+      WITH paid_funders AS (
+        SELECT DISTINCT lower(contact_name) AS funder_lower
+        FROM xero_invoices
+        WHERE type = 'ACCREC' AND status = 'PAID' AND contact_name IS NOT NULL
+      ),
+      candidates AS (
         SELECT
           a.funder_name,
           COUNT(*) FILTER (WHERE d.decision = 'passed')   AS passes,
@@ -129,9 +137,12 @@ async function reEvaluateBlocklist() {
         WHERE a.funder_name IS NOT NULL
         GROUP BY a.funder_name
       )
-      SELECT funder_name, passes, watches, pursues
-      FROM candidates
-      WHERE passes >= 2 AND watches = 0 AND pursues = 0
+      SELECT c.funder_name, c.passes, c.watches, c.pursues
+      FROM candidates c
+      WHERE c.passes >= 2 AND c.watches = 0 AND c.pursues = 0
+        AND NOT EXISTS (
+          SELECT 1 FROM paid_funders pf WHERE pf.funder_lower = lower(c.funder_name)
+        )
     `,
   });
   if (error) {
@@ -160,7 +171,7 @@ async function reEvaluateBlocklist() {
   return {
     ok: true,
     durationMs: Date.now() - start,
-    detail: `${inserted} funders blocklisted (${rows.length} candidates evaluated)`,
+    detail: `${inserted} funders blocklisted (${rows.length} candidates evaluated, paid-funder guard active)`,
   };
 }
 

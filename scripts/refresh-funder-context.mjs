@@ -87,6 +87,26 @@ async function collectFunderNames() {
     }
   }
 
+  // Every Xero ACCREC payer is a real counterparty — surface them in the
+  // snapshot so /org/act dashboard + kanban Won column see consistent context.
+  // Case-insensitive dedup against names already seen from alma/allowlist.
+  const seenLower = new Set([...seen].map((n) => n.toLowerCase()));
+  const { data: xeroPayers } = await supabase
+    .from('xero_invoices')
+    .select('contact_name')
+    .eq('type', 'ACCREC')
+    .in('status', ['PAID', 'AUTHORISED', 'DRAFT']);
+  const xeroNames = new Set();
+  for (const r of xeroPayers ?? []) {
+    if (r.contact_name) xeroNames.add(r.contact_name);
+  }
+  for (const name of xeroNames) {
+    if (seenLower.has(name.toLowerCase())) continue;
+    seen.add(name);
+    seenLower.add(name.toLowerCase());
+    sources.push({ funder_name: name, source: 'xero' });
+  }
+
   return sources;
 }
 
