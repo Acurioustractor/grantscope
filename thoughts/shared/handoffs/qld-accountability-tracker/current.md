@@ -9,12 +9,36 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-05-16T00:00:00Z
-**Goal:** CivicScope ↔ ACT operating system — fit-scored grants, decisions sync to Notion, Xero-backed funder context
-**Branch:** main
-**Test:** `cd apps/web && npx tsc --noEmit` + boot `npx next dev --turbopack -p 3003` → visit `/ops/grant-recommendations`
+**Updated:** 2026-05-16T01:30:00Z
+**Goal:** CivicScope ↔ ACT operating system — fit-scored grants + lifetime financials + payables triage, all queryable via canonical SQL views
+**Branch:** main (8 unpushed commits today)
+**Test:** `cd apps/web && npx tsc --noEmit` + boot `npx next dev --turbopack -p 3003` → visit `/org/act` (default fast view) or `/org/act?full=1` (full)
 
 ### Now
+[done] **Org Pipeline Kanban shipped** (07c0bab) — `/org/[slug]/pipeline` 8-column drag-to-decide kanban. Cards deduped by opportunity, drag calls `/api/ops/grant-recommendations/decide`, slide panel reuses FunderDossier + FunderTimeline. Linked from /org/[slug] dashboard.
+
+[done] **ACT-EL theme expansion** (07c0bab, migration `20260516000010_act_el_theme_keywords_expansion.sql`) — Root cause: of 11 keywords only `arts` matched anything in focus_areas/keywords arrays. Swapped to data-aligned terms. ACT-EL 0 → **48 strong fits**. Total 121 → 169 across all 6 projects.
+
+[done] **Nightly orchestrator verified end-to-end** (1603cf2 + 03c7449) — 9/9 OK in 26m49s, ~$0.40 LLM. Step 8 bug fixed: `refreshMv()` called `exec_sql` RPC which only accepts SELECT; REFRESH MATERIALIZED VIEW errored. Now spawns psql directly. **Self-sustaining**: `refresh-funder-context.mjs` collects from xero_invoices too — funder_context_snapshot 500 → 539. **Blocklist guard**: never auto-blocks funders we've paid via Xero.
+
+[done] **ACT financial story end-to-end** (1603cf2 + 9459d31 + 6ab3c1a) — 8 canonical SQL views over xero_invoices. Lifetime: **$1.52M paid + $412K authorised across 35 funders** (PICC $437K, Snow $271K, SMART Recovery $156K, Centrecorp $123K, Ingkerreke $103K, Sonas $81K, ...). **Cash $587K, runway 31.1mo, monthly net +$34K, working capital +$264K**. Categorised: community_controlled $606K · philanthropic $505K · civil_society $219K · commercial $142K · government $24K. Net per project: ACT-GD +$235K, ACT-IN -$276K, ACT-FM -$96K.
+
+[done] **/org/act dashboard wiring** — IncomeHistorySection + ExpenseHistorySection + FinancialPulseTile (top of page on both fast view and `?full=1`). Pipeline kanban Won column backfilled with 30 historical Xero PAID invoices (HIST·XERO read-only green cards).
+
+[done] **Multi-ABN bridge for ACT** (f7e9827, migration 20260516000070) — `org_profiles.abn` was the ACN. Added `additional_abns text[]` + `acn text`. ACT now: `abn='21591780066'` (sole trader), `additional_abns=['73669029341']` (charity), `acn='697347676'` (Pty). New `orgAbns(profile)` helper + `abnInList(abn)` SQL formatter. 11 service functions updated to OR-match.
+
+[done] **funders.json auto-stub script** (944a15a) — `scripts/stub-funders-from-xero.mjs` idempotent. Initial run added 3 (Department of Housing, UFGC GmbH, Minjerribah Moorgumpin); all 34 Xero counterparties now have wiki entries.
+
+[done] **Payables triage kanban** (6512931, migration 20260516000080) — `/org/[slug]/payables` 7-column drag-to-decide for 389 stale bills ($735K total, $641K overdue 60d+). Decisions: undecided / pay_now / scheduled / chase_supplier / dispute / write_off / paid. View `v_act_payables_triage`, table `act_payable_decisions`, API `/api/ops/payables/decide`. Distribution: 0 this_week, 1 within_30d, 29 in 30-60d ($94K), 77 in 60-90d ($53K), **122 in 90-180d ($396K — biggest pile)**, 160 over_180d ($192K — write-off candidates).
+
+[->] **Next session priorities:**
+  - **Pay-down execution**: User triages the 389 payables. Most over_180d are likely write-offs; 90-180d ($396K) is the big chase pile. Once decisions land, A/P drops and runway improves.
+  - **ACT-EL noise cleanup**: 48 strong fits include some Rio Tinto Community Giving "tag-stuffed" generic grants. Optional: add per-funder tag-density penalty to MV (funders with 10+ tags get theme_score halved).
+  - **Person mapping for ACT** (next big surface): board, contractors, project leads. Mirror income/expense pattern with a `v_act_people` view + dashboard section. Sources: gs_entities Marchesi family (6 people), GHL contacts, xero_invoices people-as-payees (Knight Photography, Aleisha Keating, Jenn Brazier, R M Tanner).
+  - **Grants Won → Notion sync**: 30 historical Won cards exist in kanban but aren't in Notion. Extend `sync-act-opportunities-to-notion.mjs` to write a Funded archive page for each PAID Xero invoice ≥ $5K.
+  - **Pty Ltd cutover (30 June 2026)**: Once ABN issues, update `org_profiles.abn` to switch primary, push old sole-trader ABN into `additional_abns`. Multi-ABN bridge is ready for this.
+
+### Now (previous, 2026-05-15)
 [done] **Phase 3 — LLM auto-classifier** — `scripts/auto-classify-llm.mjs` (Haiku 4.5 with rubric in prompt cache, batch 25). Migration `20260515000080_auto_classify_confidence.sql` adds 4 provenance columns. Classified all 266 unverified: 171 open_grant / 43 award / 27 policy_framework / 14 partnership / 11 invitation_only. Applied 262, left 4 low-confidence for human. Cost $0.15, 4min. Verified open_grants: 181 → **349** (+168). MV: 2,082 rows / 347 unique / **27 strong fits** (up from 21). Roadmap doc: `~/.claude/plans/can-we-use-plan-bubbly-hellman.md` (7 phases volume-first).
 
 [done] **Phase 4 — LLM field backfill** — `scripts/backfill-alma-fields.mjs` (Haiku 4.5 with extraction rubric in prompt cache). Migration `20260515000090_alma_field_provenance.sql` adds `fields_backfilled_at/by/reason`. Ran on 349 verified open_grants → 269 backfilled. Eligibility coverage 6→**256** (73%), jurisdictions 6→**165** (47%). Deadline + amount fields rarely in descriptions (would need URL HTML fetch for those — deferred). **Strong fits 27 → 118** (4.4×). ACT-JH went 0→**43** strong fits — Healing at Home on Country (NSW DCJ), Indigenous Australians' Health Programme NT, Public Purposes Trust Fund (Law Society), Mercy Foundation Grants to End Homelessness all surfaced.
