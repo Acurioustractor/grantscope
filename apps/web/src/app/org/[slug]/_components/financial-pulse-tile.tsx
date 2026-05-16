@@ -74,15 +74,12 @@ export function FinancialPulseTile({
           >
             Pipeline →
           </Link>
-          {pulse.ap_overdue_60d_count > 0 && (
-            <Link
-              href={`/org/${slug}/payables`}
-              className="border border-bauhaus-yellow bg-bauhaus-yellow px-3 py-2 text-[11px] font-black uppercase tracking-widest text-bauhaus-black hover:bg-white"
-              title={`${pulse.ap_overdue_60d_count} stale bills to triage`}
-            >
-              Payables →
-            </Link>
-          )}
+          <Link
+            href={`/org/${slug}#outstanding-receivables`}
+            className="border border-bauhaus-yellow bg-bauhaus-yellow px-3 py-2 text-[11px] font-black uppercase tracking-widest text-bauhaus-black hover:bg-white"
+          >
+            Receivables →
+          </Link>
         </div>
       </div>
 
@@ -149,25 +146,14 @@ export function FinancialPulseTile({
         <div className="px-5 py-4">
           <div className="flex items-baseline justify-between">
             <div>
-              <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-red">Payables (A/P)</div>
-              <div className="mt-1 text-2xl font-black tabular-nums text-bauhaus-red">
+              <div className="text-[10px] font-black uppercase tracking-widest text-gray-500">Payables (A/P) · Xero status only</div>
+              <div className="mt-1 text-2xl font-black tabular-nums text-gray-500">
                 {fmtMoney(pulse.ap_total)}
               </div>
               <div className="text-[10px] font-mono text-gray-500">
-                {pulse.ap_count} bills approved
+                {pulse.ap_count} bills at AUTHORISED — most paid via bank rec, not reflected here
               </div>
             </div>
-            {pulse.ap_overdue_60d > 0 && (
-              <div className="text-right">
-                <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-red">Overdue 60d+</div>
-                <div className="text-xl font-black tabular-nums text-bauhaus-red">
-                  {fmtMoney(pulse.ap_overdue_60d)}
-                </div>
-                <div className="text-[10px] font-mono text-gray-500">
-                  {pulse.ap_overdue_60d_count} stale bills
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>

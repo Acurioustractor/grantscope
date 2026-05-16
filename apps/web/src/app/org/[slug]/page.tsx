@@ -7,10 +7,12 @@ import { ACT_FAST_PROFILE, isActSlug, shouldUseFastLocalOrg } from '@/lib/servic
 import { ListPreviewProvider, GrantPreviewTrigger } from '../../components/list-preview';
 import { getOrgIncomeHistory, getOrgExpenseHistory, getOrgFinancialPulse } from '@/lib/services/org-income-service';
 import { getOrgPeopleNetwork } from '@/lib/services/org-people-service';
+import { getOrgOutstandingReceivables } from '@/lib/services/org-receivables-service';
 import { IncomeHistorySection } from './_components/income-history-section';
 import { ExpenseHistorySection } from './_components/expense-history-section';
 import { FinancialPulseTile } from './_components/financial-pulse-tile';
 import { PeopleSection } from './_components/people-section';
+import { OutstandingReceivablesSection } from './_components/outstanding-receivables-section';
 import {
   orgAbns,
   getOrgProfileBySlug,
@@ -82,7 +84,10 @@ async function FastOrgDashboard({
   const visibleProjects = wikiSupportIndex.projects.slice(0, 8);
   const priorityActions = wikiSupportIndex.support_actions.slice(0, 6);
   // Pulse is the most-asked question on the fast view — surface it inline.
-  const financialPulse = await getOrgFinancialPulse(slug);
+  const [financialPulse, receivables] = await Promise.all([
+    getOrgFinancialPulse(slug),
+    getOrgOutstandingReceivables(slug),
+  ]);
 
   return (
     <main className="min-h-screen bg-gray-50 text-bauhaus-black">
@@ -109,6 +114,8 @@ async function FastOrgDashboard({
 
       <div className="mx-auto max-w-7xl px-4 py-8 space-y-6">
         <FinancialPulseTile pulse={financialPulse} slug={slug} />
+
+        <OutstandingReceivablesSection data={receivables} />
 
         <section className="border-4 border-bauhaus-black bg-white p-5">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
@@ -749,6 +756,7 @@ export default async function OrgDashboard({ params, searchParams }: { params: P
     expenseHistory,
     financialPulse,
     peopleNetwork,
+    receivables,
   ] = await Promise.all([
     hasAbn ? getOrgFundingByProgram(abns, fundingYearFilter) : null,
     hasAbn ? getOrgFundingByYear(abns) : null,
@@ -773,6 +781,7 @@ export default async function OrgDashboard({ params, searchParams }: { params: P
     getOrgExpenseHistory(slug),
     getOrgFinancialPulse(slug),
     getOrgPeopleNetwork(slug),
+    getOrgOutstandingReceivables(slug),
   ]);
 
   // Secondary fetches that depend on entity data
@@ -847,6 +856,8 @@ export default async function OrgDashboard({ params, searchParams }: { params: P
 
       <div className="mx-auto max-w-7xl px-4 py-8 space-y-8">
         <FinancialPulseTile pulse={financialPulse} slug={slug} />
+
+        <OutstandingReceivablesSection data={receivables} />
 
         <ListPreviewProvider>
           <OrgSupportHub
