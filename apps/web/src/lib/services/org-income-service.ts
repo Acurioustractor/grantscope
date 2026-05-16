@@ -361,3 +361,68 @@ export const PAYEE_CATEGORY_COLORS: Record<PayeeCategory, string> = {
   compliance: 'bg-gray-300 text-bauhaus-black',
   other: 'bg-gray-200 text-bauhaus-black',
 };
+
+// ============================================================================
+// Financial pulse — single-row cash + runway snapshot for the top of /org/act
+// ============================================================================
+
+export interface OrgFinancialPulse {
+  cash_total: number;
+  account_count: number;
+  last_balance_sync: string | null;
+  burn_30d: number;
+  burn_90d: number;
+  monthly_burn_avg: number;
+  income_30d: number;
+  income_90d: number;
+  monthly_income_avg: number;
+  net_30d: number;
+  monthly_net_avg: number;
+  runway_months: number | null;
+  ar_total: number;
+  ar_count: number;
+  ar_overdue_60d: number;
+  ar_overdue_60d_count: number;
+  ap_total: number;
+  ap_count: number;
+  ap_overdue_60d: number;
+  ap_overdue_60d_count: number;
+  working_capital: number;
+  computed_at: string;
+}
+
+export const getOrgFinancialPulse = cache(async function getOrgFinancialPulse(
+  slug: string,
+): Promise<OrgFinancialPulse | null> {
+  if (!isActSlug(slug)) return null;
+  const supabase = getServiceSupabase();
+  const { data, error } = await supabase
+    .from('v_act_financial_pulse')
+    .select('*')
+    .maybeSingle();
+  if (error || !data) return null;
+  return {
+    cash_total: Number(data.cash_total ?? 0),
+    account_count: Number(data.account_count ?? 0),
+    last_balance_sync: (data.last_balance_sync as string | null) ?? null,
+    burn_30d: Number(data.burn_30d ?? 0),
+    burn_90d: Number(data.burn_90d ?? 0),
+    monthly_burn_avg: Number(data.monthly_burn_avg ?? 0),
+    income_30d: Number(data.income_30d ?? 0),
+    income_90d: Number(data.income_90d ?? 0),
+    monthly_income_avg: Number(data.monthly_income_avg ?? 0),
+    net_30d: Number(data.net_30d ?? 0),
+    monthly_net_avg: Number(data.monthly_net_avg ?? 0),
+    runway_months: data.runway_months == null ? null : Number(data.runway_months),
+    ar_total: Number(data.ar_total ?? 0),
+    ar_count: Number(data.ar_count ?? 0),
+    ar_overdue_60d: Number(data.ar_overdue_60d ?? 0),
+    ar_overdue_60d_count: Number(data.ar_overdue_60d_count ?? 0),
+    ap_total: Number(data.ap_total ?? 0),
+    ap_count: Number(data.ap_count ?? 0),
+    ap_overdue_60d: Number(data.ap_overdue_60d ?? 0),
+    ap_overdue_60d_count: Number(data.ap_overdue_60d_count ?? 0),
+    working_capital: Number(data.working_capital ?? 0),
+    computed_at: String(data.computed_at ?? new Date().toISOString()),
+  };
+});

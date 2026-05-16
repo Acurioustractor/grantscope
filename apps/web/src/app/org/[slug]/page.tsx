@@ -5,9 +5,10 @@ import { getWikiSupportFrontierQueue, type WikiSupportFrontierQueue } from '@/li
 import { workshopWikiHref } from '@/lib/services/act-workshop-wiki';
 import { ACT_FAST_PROFILE, isActSlug, shouldUseFastLocalOrg } from '@/lib/services/fast-local-org';
 import { ListPreviewProvider, GrantPreviewTrigger } from '../../components/list-preview';
-import { getOrgIncomeHistory, getOrgExpenseHistory } from '@/lib/services/org-income-service';
+import { getOrgIncomeHistory, getOrgExpenseHistory, getOrgFinancialPulse } from '@/lib/services/org-income-service';
 import { IncomeHistorySection } from './_components/income-history-section';
 import { ExpenseHistorySection } from './_components/expense-history-section';
+import { FinancialPulseTile } from './_components/financial-pulse-tile';
 import {
   getOrgProfileBySlug,
   getOrgFundingByProgram,
@@ -735,6 +736,7 @@ export default async function OrgDashboard({ params, searchParams }: { params: P
     foundationPortfolio,
     incomeHistory,
     expenseHistory,
+    financialPulse,
   ] = await Promise.all([
     abn ? getOrgFundingByProgram(abn, fundingYearFilter) : null,
     abn ? getOrgFundingByYear(abn) : null,
@@ -757,6 +759,7 @@ export default async function OrgDashboard({ params, searchParams }: { params: P
     getOrgFoundationPortfolio(profile.id),
     getOrgIncomeHistory(slug),
     getOrgExpenseHistory(slug),
+    getOrgFinancialPulse(slug),
   ]);
 
   // Secondary fetches that depend on entity data
@@ -830,6 +833,8 @@ export default async function OrgDashboard({ params, searchParams }: { params: P
       </div>
 
       <div className="mx-auto max-w-7xl px-4 py-8 space-y-8">
+        <FinancialPulseTile pulse={financialPulse} slug={slug} />
+
         <ListPreviewProvider>
           <OrgSupportHub
             slug={slug}
