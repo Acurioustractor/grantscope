@@ -132,7 +132,7 @@ node --env-file=.env scripts/gsql.mjs "SELECT funder_name, relationship_score, x
 ```
 
 ### Env vars added
-`NOTION_MIRROR_TOKEN=<REDACTED-NOTION-TOKEN-ROTATED-2026-05-16>`
+`NOTION_MIRROR_TOKEN=<REDACTED — rotated 2026-05-16. Stored in .env / .env.local, never commit>`
 `NOTION_OPPORTUNITIES_DB_ID=361ebcf9-81cf-81c9-bd2f-d017c691f1e2`
 
 ### Previous Session (2026-03-27, session 3)
