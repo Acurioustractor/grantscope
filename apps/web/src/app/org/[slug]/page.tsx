@@ -6,9 +6,11 @@ import { workshopWikiHref } from '@/lib/services/act-workshop-wiki';
 import { ACT_FAST_PROFILE, isActSlug, shouldUseFastLocalOrg } from '@/lib/services/fast-local-org';
 import { ListPreviewProvider, GrantPreviewTrigger } from '../../components/list-preview';
 import { getOrgIncomeHistory, getOrgExpenseHistory, getOrgFinancialPulse } from '@/lib/services/org-income-service';
+import { getOrgPeopleNetwork } from '@/lib/services/org-people-service';
 import { IncomeHistorySection } from './_components/income-history-section';
 import { ExpenseHistorySection } from './_components/expense-history-section';
 import { FinancialPulseTile } from './_components/financial-pulse-tile';
+import { PeopleSection } from './_components/people-section';
 import {
   orgAbns,
   getOrgProfileBySlug,
@@ -746,6 +748,7 @@ export default async function OrgDashboard({ params, searchParams }: { params: P
     incomeHistory,
     expenseHistory,
     financialPulse,
+    peopleNetwork,
   ] = await Promise.all([
     hasAbn ? getOrgFundingByProgram(abns, fundingYearFilter) : null,
     hasAbn ? getOrgFundingByYear(abns) : null,
@@ -769,6 +772,7 @@ export default async function OrgDashboard({ params, searchParams }: { params: P
     getOrgIncomeHistory(slug),
     getOrgExpenseHistory(slug),
     getOrgFinancialPulse(slug),
+    getOrgPeopleNetwork(slug),
   ]);
 
   // Secondary fetches that depend on entity data
@@ -888,6 +892,8 @@ export default async function OrgDashboard({ params, searchParams }: { params: P
               : undefined
           }
         />
+
+        <PeopleSection people={peopleNetwork} />
 
         {/* Intelligence sections */}
         <FundingDesertSection fundingDesert={fundingDesert} />
