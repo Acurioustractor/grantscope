@@ -44,12 +44,14 @@ export const getOrgPeopleNetwork = cache(async function getOrgPeopleNetwork(
   if (!isActSlug(slug)) return null;
 
   const supabase = getServiceSupabase();
+  // Supabase enforces a hard 1000-row cap on .limit() unless overridden via
+  // .range(). Use range so the full v_act_people set (~1,200 today) comes back.
   const { data, error } = await supabase
     .from('v_act_people')
     .select('*')
     .order('paid_total', { ascending: false, nullsFirst: false })
     .order('last_contact_date', { ascending: false, nullsFirst: false })
-    .limit(2000);
+    .range(0, 4999);
 
   if (error || !data) return null;
 
