@@ -136,12 +136,12 @@ export async function POST(request: Request) {
   const auth = await requireAdminApi();
   if (auth.error) return auth.error;
 
-  const NOTION_TOKEN = process.env.NOTION_MIRROR_TOKEN || process.env.NOTION_TOKEN;
+  const NOTION_TOKEN = process.env.NOTION_TOKEN;
   const NOTION_DB = process.env.NOTION_OPPORTUNITIES_DB_ID;
 
   if (!NOTION_TOKEN || !NOTION_DB) {
     return NextResponse.json(
-      { error: 'NOTION_MIRROR_TOKEN and NOTION_OPPORTUNITIES_DB_ID must be set in env' },
+      { error: 'NOTION_TOKEN and NOTION_OPPORTUNITIES_DB_ID must be set in env' },
       { status: 500 }
     );
   }

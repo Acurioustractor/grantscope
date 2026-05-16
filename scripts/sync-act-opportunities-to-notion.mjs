@@ -8,7 +8,7 @@
  * runs UPDATE the existing page instead of creating duplicates.
  *
  * Env:
- *   NOTION_MIRROR_TOKEN (or NOTION_TOKEN as fallback)
+ *   NOTION_TOKEN
  *   NOTION_OPPORTUNITIES_DB_ID
  *   NEXT_PUBLIC_SUPABASE_URL · SUPABASE_SERVICE_ROLE_KEY
  *
@@ -22,14 +22,14 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const NOTION_TOKEN = process.env.NOTION_MIRROR_TOKEN || process.env.NOTION_TOKEN;
+const NOTION_TOKEN = process.env.NOTION_TOKEN;
 const NOTION_DB = process.env.NOTION_OPPORTUNITIES_DB_ID;
 const NOTION_API = 'https://api.notion.com/v1';
 const DRY_RUN = process.argv.includes('--dry-run');
 const INCLUDE_UNDECIDED = process.argv.includes('--include-undecided');
 
 if (!NOTION_TOKEN) {
-  console.error('NOTION_MIRROR_TOKEN (or NOTION_TOKEN) not set.');
+  console.error('NOTION_TOKEN not set.');
   process.exit(1);
 }
 if (!NOTION_DB) {
