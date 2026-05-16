@@ -74,6 +74,15 @@ export function FinancialPulseTile({
           >
             Pipeline →
           </Link>
+          {pulse.ap_overdue_60d_count > 0 && (
+            <Link
+              href={`/org/${slug}/payables`}
+              className="border border-bauhaus-yellow bg-bauhaus-yellow px-3 py-2 text-[11px] font-black uppercase tracking-widest text-bauhaus-black hover:bg-white"
+              title={`${pulse.ap_overdue_60d_count} stale bills to triage`}
+            >
+              Payables →
+            </Link>
+          )}
         </div>
       </div>
 
