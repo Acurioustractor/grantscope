@@ -46,6 +46,20 @@ export function PayablesKanban({
   const [searchQuery, setSearchQuery] = useState('');
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Bulk-select: track selected invoice_ids; floating bar appears when non-empty.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkPending, setBulkPending] = useState(false);
+
+  const toggleSelected = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
 
   const filtered = useMemo(() => {
     const search = searchQuery.trim().toLowerCase();
@@ -80,6 +94,61 @@ export function PayablesKanban({
     for (const c of cards) set.add(c.payee_category);
     return Array.from(set).sort();
   }, [cards]);
+
+  const selectedTotal = useMemo(() => {
+    let sum = 0;
+    for (const c of cards) if (selectedIds.has(c.invoice_id)) sum += c.total;
+    return sum;
+  }, [cards, selectedIds]);
+
+  const toggleColumnSelection = useCallback(
+    (col: PayableDecision) => {
+      const colCards = byColumn.get(col) ?? [];
+      const allSelected = colCards.every((c) => selectedIds.has(c.invoice_id));
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        if (allSelected) {
+          for (const c of colCards) next.delete(c.invoice_id);
+        } else {
+          for (const c of colCards) next.add(c.invoice_id);
+        }
+        return next;
+      });
+    },
+    [byColumn, selectedIds],
+  );
+
+  const bulkDecide = useCallback(
+    async (decision: PayableDecision) => {
+      const invoiceIds = Array.from(selectedIds);
+      if (invoiceIds.length === 0) return;
+      setError(null);
+      setBulkPending(true);
+
+      const previous = cards;
+      const nowIso = new Date().toISOString();
+      setCards(previous.map((c) =>
+        selectedIds.has(c.invoice_id) ? { ...c, decision, decided_at: nowIso } : c,
+      ));
+
+      try {
+        const res = await fetch('/api/ops/payables/decide-bulk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ invoice_ids: invoiceIds, decision }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        clearSelection();
+      } catch (err) {
+        console.error('bulk decision failed', err);
+        setError(`Bulk decision failed: ${(err as Error).message}`);
+        setCards(previous);
+      } finally {
+        setBulkPending(false);
+      }
+    },
+    [cards, selectedIds, clearSelection],
+  );
 
   const handleDragEnd = useCallback(
     (result: DropResult) => {
@@ -204,7 +273,19 @@ export function PayablesKanban({
                         <span className="text-xs font-black uppercase tracking-widest">{DECISION_LABELS[col]}</span>
                         <span className="text-xs font-bold tabular-nums">{colCards.length}</span>
                       </div>
-                      <div className="text-[10px] font-mono tabular-nums opacity-80 mt-0.5">{fmtMoney(colSum)}</div>
+                      <div className="flex items-center justify-between mt-0.5">
+                        <span className="text-[10px] font-mono tabular-nums opacity-80">{fmtMoney(colSum)}</span>
+                        {colCards.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => toggleColumnSelection(col)}
+                            className="text-[9px] font-black uppercase tracking-wider underline underline-offset-2 hover:no-underline opacity-90 hover:opacity-100"
+                            title="Toggle select all in this column"
+                          >
+                            {colCards.every((c) => selectedIds.has(c.invoice_id)) ? 'Deselect all' : 'Select all'}
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <div className="p-2 space-y-2">
                       {colCards.length === 0 && (
@@ -220,10 +301,20 @@ export function PayablesKanban({
                               {...dragProvided.draggableProps}
                               {...dragProvided.dragHandleProps}
                               className={`border-2 bg-white p-2 transition-colors ${
-                                dragSnapshot.isDragging ? 'border-bauhaus-red shadow-lg' : 'border-bauhaus-black'
-                              } ${pendingKey === card.key ? 'opacity-50' : ''}`}
+                                dragSnapshot.isDragging ? 'border-bauhaus-red shadow-lg' : selectedIds.has(card.invoice_id) ? 'border-bauhaus-red' : 'border-bauhaus-black'
+                              } ${pendingKey === card.key ? 'opacity-50' : ''} ${
+                                selectedIds.has(card.invoice_id) ? 'bg-bauhaus-red/5' : ''
+                              }`}
                             >
                               <div className="flex items-start gap-1 flex-wrap mb-1">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedIds.has(card.invoice_id)}
+                                  onChange={(e) => { e.stopPropagation(); toggleSelected(card.invoice_id); }}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="w-3.5 h-3.5 border-2 border-bauhaus-black cursor-pointer mr-1"
+                                  aria-label={`Select ${card.payee_name}`}
+                                />
                                 <span className={`px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider ${AGE_BUCKET_COLORS[card.age_bucket]}`}>
                                   {card.days_old}d
                                 </span>
@@ -264,6 +355,43 @@ export function PayablesKanban({
           })}
         </div>
       </DragDropContext>
+
+      {/* Floating bulk action bar */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 border-t-4 border-bauhaus-red bg-bauhaus-black text-white shadow-2xl">
+          <div className="mx-auto max-w-[1600px] px-4 py-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-3">
+              <span className="px-2 py-1 text-xs font-black uppercase tracking-widest bg-bauhaus-red text-white">
+                {selectedIds.size} selected
+              </span>
+              <span className="text-sm font-mono tabular-nums">{fmtMoney(selectedTotal)} total</span>
+              <button
+                type="button"
+                onClick={clearSelection}
+                className="text-[11px] font-mono text-gray-400 hover:text-white underline underline-offset-2"
+              >
+                clear selection
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 mr-1 self-center">
+                Mark as:
+              </span>
+              {PAYABLE_DECISION_COLUMNS.filter((c) => c !== 'undecided').map((col) => (
+                <button
+                  key={col}
+                  type="button"
+                  onClick={() => bulkDecide(col)}
+                  disabled={bulkPending}
+                  className={`px-3 py-1.5 text-xs font-black uppercase tracking-widest border-2 border-white ${DECISION_COLORS[col]} hover:bg-white hover:text-bauhaus-black disabled:opacity-50`}
+                >
+                  {DECISION_LABELS[col]}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
