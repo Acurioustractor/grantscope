@@ -1,0 +1,831 @@
+{
+  "generated": "2026-05-28",
+  "diagnostics": {
+    "goods_contracts": "10626",
+    "distinct_buyers": "366",
+    "total_value": "15102785530"
+  },
+  "warm_targets": [
+    {
+      "buyer_name": "NSW Department of Communities and Justice",
+      "contract_count": "236",
+      "total_value": "1571510596",
+      "first_year": "2008",
+      "last_year": "2025",
+      "active_years": "13",
+      "sample_titles": "{\"A Place To Go (APTG) Home - Mackillop Family Services (prj_5068)\",\"Aboriginal Homelessness Support Service\",\"Aboriginal Outreach Casework Project\"}"
+    },
+    {
+      "buyer_name": "NT Department of Infrastructure, Planning and Logistics - Housing Program Office",
+      "contract_count": "91",
+      "total_value": "211957652",
+      "first_year": "2021",
+      "last_year": "2024",
+      "active_years": "4",
+      "sample_titles": "{\"Alice Springs - Central Australia Region - Provision of Remote Housing Maintenance Service\",\"Alice Springs - Mount Nancy Town Camp - Demolition and Construction of Housing on 9 lots\",\"Alice Springs - Panel Contract for Responsive Maintenance Services to Urban Housing for a \"}"
+    },
+    {
+      "buyer_name": "NT Department of Housing - Housing",
+      "contract_count": "36",
+      "total_value": "39172650",
+      "first_year": "2013",
+      "last_year": "2015",
+      "active_years": "3",
+      "sample_titles": "{\"Alice Springs - Provision of Repairs and Maintenance Services to Evaporative Air Condition\",\"Alice Springs - Provision of Vacate and Planned Works to Department of Housing Assets for \",\"Alice Springs - Real Housing for Growth - Elliott Street Key Worker Rental Initiative Prop\"}"
+    },
+    {
+      "buyer_name": "ACT Community Services Directorate",
+      "contract_count": "23",
+      "total_value": "34719241",
+      "first_year": "2013",
+      "last_year": "2016",
+      "active_years": "3",
+      "sample_titles": "{\"Blue Door Family Service Samaritan House Young Parents Accommodation Support Program Stree\",\"Community Development Services and Social Housing and Homelessness Services\",\"Financial Analysis for Housing and Community Services Total Facilities Management Project\"}"
+    },
+    {
+      "buyer_name": "Department of Families, Housing, Community Services and Indigenous Affairs",
+      "contract_count": "17",
+      "total_value": "3084849",
+      "first_year": "2012",
+      "last_year": "2013",
+      "active_years": "2",
+      "sample_titles": "{45408224,90001410,90001440}"
+    },
+    {
+      "buyer_name": "Dept of Planning, Housing and Infrastructure",
+      "contract_count": "15",
+      "total_value": "33880203",
+      "first_year": "2021",
+      "last_year": "2024",
+      "active_years": "3",
+      "sample_titles": "{\"Architectural Services for the Low and Mid-Rise Housing Pattern Book - Low Rise Apartment \",\"Architectural Services for the Low and Mid-Rise Housing Pattern Book - Semi-Detached Typol\",\"Architectural Services for the Low and Mid-Rise Housing Pattern Book - Terrace Housing Typ\"}"
+    },
+    {
+      "buyer_name": "National Indigenous Australians Agency",
+      "contract_count": "14",
+      "total_value": "1077607",
+      "first_year": "2019",
+      "last_year": "2026",
+      "active_years": "5",
+      "sample_titles": "{NCD09258,NCD09453,NCD09530}"
+    },
+    {
+      "buyer_name": "NT Department of Local Government, Housing and Community Development - Housing Program Delivery",
+      "contract_count": "12",
+      "total_value": "956614",
+      "first_year": "2019",
+      "last_year": "2020",
+      "active_years": "2",
+      "sample_titles": "{\"$100m Stimulus - Alice Springs - Kitchen  Refurbish - Unit 7/57 Albrecht Drive, Larapinta\",\"$100M Stimulus - Alice Springs - Kitchen Refurbishment - 11 Holtermann Court, Larapinta\",\"$100M Stimulus - Alice Springs - Kitchen Refurbishment - 24 Engoordina Drive, Larapinta\"}"
+    },
+    {
+      "buyer_name": "NT Department of Housing - Service Delivery South",
+      "contract_count": "11",
+      "total_value": "12219588",
+      "first_year": "2015",
+      "last_year": "2016",
+      "active_years": "2",
+      "sample_titles": "{\"Alice Springs - Provision of Grounds Maintenance, Litter Control and Cleaning Services to \",\"Alice Springs - Provision of Responsive Repairs and Maintenance Works to Department of Hou\",\"Alice Springs - Yulara - Upgrades to Six (6) Government Employee Housing (GEH) Dwellings\"}"
+    },
+    {
+      "buyer_name": "NT Department of Housing - Housing Supply",
+      "contract_count": "9",
+      "total_value": "1442946",
+      "first_year": "2015",
+      "last_year": "2016",
+      "active_years": "2",
+      "sample_titles": "{\"Alice Springs - Provision of Marketing and Auctioneering Services of Department of Housing\",\"Alice Springs - Provision of Real Housing for Growth Intitiative - Property and Tenancy Ma\",\"Darwin - Consultancy - Business Documentation Consultancy - Real Housing for Growth\"}"
+    },
+    {
+      "buyer_name": "NT Department of Housing - Service Delivery North",
+      "contract_count": "8",
+      "total_value": "11147665",
+      "first_year": "2015",
+      "last_year": "2016",
+      "active_years": "2",
+      "sample_titles": "{\"Darwin - Batchelor - Provision of Grounds Maintenance, Litter Control and Cleaning Service\",\"Darwin - Provision of Arboreal Services to Department of Housing Assets for a Period of 24\",\"Darwin - Provision of Ground Maintenance, Litter Control and Cleaning Services to Departme\"}"
+    },
+    {
+      "buyer_name": "NT Power and Water Corporation - Remote Services",
+      "contract_count": "8",
+      "total_value": "1406311",
+      "first_year": "2019",
+      "last_year": "2019",
+      "active_years": "1",
+      "sample_titles": "{\"Engagement of Hydraulic Engineering Services to Support the Housing Program Works\",\"Gunbalanya and Ramingining - Construction of New Water and Sewer Infrastructures Related t\",\"Kalkarindji, Lajamanu and Pigeon Hole - Construction of New Water and Sewer Infrastructure\"}"
+    },
+    {
+      "buyer_name": "NT Department of Territory Families, Housing and Communities - Housing Programs and Support Services",
+      "contract_count": "6",
+      "total_value": "4289573",
+      "first_year": "2021",
+      "last_year": "2022",
+      "active_years": "2",
+      "sample_titles": "{\"Alice Springs, Darwin and Palmerston - Provision of Marketing and Auctioneering Services f\",\"Consultancy - Assess The Economic Viability of Delivery Options and Pilot Sites under the \",\"Darwin - Consultancy - Request for Services under Panel Contract - D18-0031 - Provision of\"}"
+    },
+    {
+      "buyer_name": "NT Department of Housing and Community Development - Housing Program Delivery",
+      "contract_count": "6",
+      "total_value": "1782715",
+      "first_year": "2017",
+      "last_year": "2018",
+      "active_years": "2",
+      "sample_titles": "{\"$69m Stimulus - Darwin - Painting, Kitchen Benches and Concreting - 114 Dickward Dr - Coco\",\"$69m Stimulus - Darwin - Roof Replacements - 9 and 10 Bedwell Court, Gray, Palmerston\",\"Darwin - Affordable Housing Head Leased Dwellings -  Servicing of Split System Air Conditi\"}"
+    },
+    {
+      "buyer_name": "NT Department of Housing - Contract Implementation",
+      "contract_count": "6",
+      "total_value": "1729301",
+      "first_year": "2015",
+      "last_year": "2016",
+      "active_years": "2",
+      "sample_titles": "{\"Alice Springs - Consultancy - Project  Development for Nyrripi, Kintore and Areyonga  SFNT\",\"Alice Springs - Consultancy - Project Development for SFNT Housing Upgrades in Santa Teres\",\"All Centres - Supply and Delivery of Stoves to Department of Housing for a Period of 12 Mo\"}"
+    },
+    {
+      "buyer_name": "NT Department of Logistics and Infrastructure - Housing Program Office",
+      "contract_count": "5",
+      "total_value": "26410525",
+      "first_year": "2024",
+      "last_year": "2025",
+      "active_years": "2",
+      "sample_titles": "{\"Alice Springs Region - Mutitjulu And Imanpa - Design, Construction, Demolition and Upgrade\",\"Northern Region - Panel Contract - Design and Construct, Storage and Installation of Modul\",\"Southern Region - Panel Contract - Design and Construct, Storage and Installation of Modul\"}"
+    },
+    {
+      "buyer_name": "NT Department of Logistics and Infrastructure - Housing and Land Services",
+      "contract_count": "3",
+      "total_value": "55191963",
+      "first_year": "2025",
+      "last_year": "2025",
+      "active_years": "1",
+      "sample_titles": "{\"Darwin Region - Wurrumiyanga - Demolition of 45 Dwellings and Construction of 44 Replaceme\",\"Tennant Creek Region - Imangara and Wutungurra (Epenarra) - Security Upgrades and Refurbis\",\"Tennant Creek Region - Rockhampton Downs (Wogyala) and Newcastle Waters - Security Upgrade\"}"
+    },
+    {
+      "buyer_name": "NT Department of Housing and Community Development - Remote Program Delivery Office",
+      "contract_count": "3",
+      "total_value": "2546585",
+      "first_year": "2017",
+      "last_year": "2018",
+      "active_years": "2",
+      "sample_titles": "{\"Alice Springs - Provision of Marketing and Auctioneering Services for Chief Executive Offi\",\"Housing Maintenance Program - 2017/2018 - Fencing - Supply, Delivery and Installation of F\",\"Nhulunbuy - Groote Eylandt - Consultancy - Architechtural Services to Assist with the Deli\"}"
+    },
+    {
+      "buyer_name": "NT Department of Housing - Executive",
+      "contract_count": "3",
+      "total_value": "1199688",
+      "first_year": "2013",
+      "last_year": "2014",
+      "active_years": "2",
+      "sample_titles": "{\"Darwin - Consultancy - Provision of Probity Assurance Advisor Services - Remote Housing NT\",\"Darwin - Consultancy - Real Housing for Growth - Planning Consultant Runge Street Re-zonin\",\"Darwin, Katherine, Palmerston - Real Housing for Growth Head-Leasing Initiative - Provisio\"}"
+    },
+    {
+      "buyer_name": "NT Department of Housing and Community Development - Housing Delivery",
+      "contract_count": "3",
+      "total_value": "648946",
+      "first_year": "2017",
+      "last_year": "2017",
+      "active_years": "1",
+      "sample_titles": "{\"Alice Springs - Provision of Property and Tenancy Management of Affordable Housing Dwellin\",\"Consultancy - Identification, Labelling, Recording and Assessment of Risk and Asbestos Con\",\"Tennant Creek - Provision of Property and Tenancy Management of Affordable Housing Dwellin\"}"
+    },
+    {
+      "buyer_name": "ACT Justice and Community Safety Directorate",
+      "contract_count": "3",
+      "total_value": "280988",
+      "first_year": "2016",
+      "last_year": "2016",
+      "active_years": "1",
+      "sample_titles": "{\"12 Moore St - Lpp Level 4 Fitout\",\"Provision of Linen Supply AMC\",\"Supply and Delivery of Bed lights AMC\"}"
+    },
+    {
+      "buyer_name": "NT Department of Housing, Local Government and Community Development - Assets, Infrastructure and Maintenance",
+      "contract_count": "2",
+      "total_value": "5288199",
+      "first_year": "2024",
+      "last_year": "2024",
+      "active_years": "1",
+      "sample_titles": "{\"Alice Springs Region - Repairs and Maintenance of Remote Community Housing and Government \",\"Tennant Creek Region - Repairs and Maintenance of Remote Community Housing and Government \"}"
+    },
+    {
+      "buyer_name": "Department of Communities Tasmania",
+      "contract_count": "2",
+      "total_value": "2996641",
+      "first_year": "2018",
+      "last_year": "2018",
+      "active_years": "1",
+      "sample_titles": "{\"Stronger Remote Aboriginal Services – Cape Barren Island Aboriginal Housing Upgrades\",\"Stronger Remote Aboriginal Services – Flinders Island Aboriginal Housing Upgrades\"}"
+    },
+    {
+      "buyer_name": "NT Department of Housing and Community Development - Service Delivery South",
+      "contract_count": "2",
+      "total_value": "2683116",
+      "first_year": "2017",
+      "last_year": "2019",
+      "active_years": "2",
+      "sample_titles": "{\"Alice Springs - Provision of Housing Management Services in Alice Springs Town Camps for a\",\"Alice Springs - Provision of Responsive Repairs and Maintenance to Public Housing Assets f\"}"
+    },
+    {
+      "buyer_name": "NT Department of Health - Remote Health",
+      "contract_count": "2",
+      "total_value": "1618940",
+      "first_year": "2013",
+      "last_year": "2013",
+      "active_years": "1",
+      "sample_titles": "{\"Alice Springs - Supply Delivery and Installation of EMERGENCY VEHICLE FITOUT REGO 826 783\",\"Alice Springs, Darwin - Customised Fitout of Remote Emergency Vehicles - Toyota Troop Carr\"}"
+    },
+    {
+      "buyer_name": "NSW Aboriginal Housing Office",
+      "contract_count": "2",
+      "total_value": "497842",
+      "first_year": "2025",
+      "last_year": "2025",
+      "active_years": "1",
+      "sample_titles": "{\"Aboriginal Housing Office Asset Portfolio Review\"}"
+    },
+    {
+      "buyer_name": "NT Department of Local Government, Housing and Community Development - Corporate Services",
+      "contract_count": "2",
+      "total_value": "125814",
+      "first_year": "2019",
+      "last_year": "2020",
+      "active_years": "2",
+      "sample_titles": "{\"Darwin - Public Liability Insurance for Urban Public Housing\",\"Public Liability Insurance for Urban Public Housing\"}"
+    },
+    {
+      "buyer_name": "NT Department of Housing and Community Development - Corporate Services",
+      "contract_count": "2",
+      "total_value": "104671",
+      "first_year": "2018",
+      "last_year": "2018",
+      "active_years": "1",
+      "sample_titles": "{\"Darwin - Provision of Public Liability Insurance for Urban Public Housing\",\"Darwin - Supply Delivery and Installation of Office Furniture for CASCOM 5\"}"
+    },
+    {
+      "buyer_name": "NT Department of Local Government, Housing and Community Development - Remote Program Delivery",
+      "contract_count": "2",
+      "total_value": "91177",
+      "first_year": "2019",
+      "last_year": "2019",
+      "active_years": "1",
+      "sample_titles": "{\"Katherine and Alice Springs - Peppimenarti and Willowra Community - Drone Services for Rem\",\"Request for Quantity Surveyor Services - Housing Upgrades - Utopia Homelands\"}"
+    },
+    {
+      "buyer_name": "NT Department of Territory Families, Housing and Communities - Southern Region",
+      "contract_count": "2",
+      "total_value": "70759",
+      "first_year": "2021",
+      "last_year": "2021",
+      "active_years": "1",
+      "sample_titles": "{\"Alice Springs - Supply and Delivery of Office Furniture\",\"Supply Delivery and Installation of Elliot - Supply and Delivery of Office Furniture\"}"
+    },
+    {
+      "buyer_name": "NT Department of Correctional Services - NT Community Corrections",
+      "contract_count": "2",
+      "total_value": "64658",
+      "first_year": "2014",
+      "last_year": "2016",
+      "active_years": "2",
+      "sample_titles": "{\"Alice Springs - Purchase od Two Beds in One Room at Stuart Lodge  for a Period of 14 Month\",\"Alice Springs - Supply and Delivery of Office Furniture\"}"
+    }
+  ],
+  "all_repeat_buyers": [
+    {
+      "buyer_name": "Department of Defence",
+      "contract_count": "3558",
+      "total_value": "364838395",
+      "first_year": "2007",
+      "last_year": "2026",
+      "active_years": "16",
+      "sample_titles": "{1900623817,1900624455,1900624503}"
+    },
+    {
+      "buyer_name": "Services Australia",
+      "contract_count": "1447",
+      "total_value": "171411676",
+      "first_year": "2011",
+      "last_year": "2026",
+      "active_years": "15",
+      "sample_titles": "{8100003176,8100003799,8100004513}"
+    },
+    {
+      "buyer_name": "NT Department of Infrastructure, Planning and Logistics - Infrastructure, Investment and Contracts",
+      "contract_count": "418",
+      "total_value": "470160145",
+      "first_year": "2016",
+      "last_year": "2024",
+      "active_years": "9",
+      "sample_titles": "{\"Alice Spring Region - Nturiya - Remote Community Housing (RCH) Upgrade\",\"Alice Springs - Alice Spring Correctional Centre - Supply and Delivery of Modular Accommod\",\"Alice Springs - Anangu House  - Pandemic Coordination Cell - Fitout\"}"
+    },
+    {
+      "buyer_name": "Homes NSW",
+      "contract_count": "251",
+      "total_value": "419091953",
+      "first_year": "2017",
+      "last_year": "2025",
+      "active_years": "7",
+      "sample_titles": "{\"Architect for Seniors Housing - Merrylands\",\"Architectural and Design Services - Seniors Housing - North St Marys\",\"Architectural Design for Airds Stage 9 Seniors Housing\"}"
+    },
+    {
+      "buyer_name": "NSW Department of Communities and Justice",
+      "contract_count": "236",
+      "total_value": "1571510596",
+      "first_year": "2008",
+      "last_year": "2025",
+      "active_years": "13",
+      "sample_titles": "{\"A Place To Go (APTG) Home - Mackillop Family Services (prj_5068)\",\"Aboriginal Homelessness Support Service\",\"Aboriginal Outreach Casework Project\"}"
+    },
+    {
+      "buyer_name": "Australian Federal Police",
+      "contract_count": "203",
+      "total_value": "9990326",
+      "first_year": "2013",
+      "last_year": "2026",
+      "active_years": "13",
+      "sample_titles": "{0030013644,0030017050,0030017950}"
+    },
+    {
+      "buyer_name": "Department of Health and Human Services",
+      "contract_count": "192",
+      "total_value": "619477021",
+      "first_year": "2002",
+      "last_year": "2018",
+      "active_years": "17",
+      "sample_titles": "{\"1 Carbeen Street Mornington Housing Construction\",\"1 Teal Street Claremont Housing Construction\",\"15 Murray St Evandale Housing Construction\"}"
+    },
+    {
+      "buyer_name": "Department of Industry, Science and Resources",
+      "contract_count": "184",
+      "total_value": "13420618",
+      "first_year": "2011",
+      "last_year": "2026",
+      "active_years": "14",
+      "sample_titles": "{\"AI Bendigo Accommodation MOU\",CON000845,CON001652}"
+    },
+    {
+      "buyer_name": "DoE",
+      "contract_count": "138",
+      "total_value": "12570069",
+      "first_year": "2019",
+      "last_year": "2019",
+      "active_years": "1",
+      "sample_titles": "{\"0036-S00004352-002612 - Travel - Accommodation incl meals\",\"0059-S00057655-00002505 -Travel - Accommodation incl meals\",\"0074-S00012244-7787 -Travel - Accommodation incl meals\"}"
+    },
+    {
+      "buyer_name": "Australian Taxation Office",
+      "contract_count": "135",
+      "total_value": "17535647",
+      "first_year": "2013",
+      "last_year": "2026",
+      "active_years": "12",
+      "sample_titles": "{06.296-0-2,13.123-0-1,13.129}"
+    },
+    {
+      "buyer_name": "Department of Home Affairs",
+      "contract_count": "131",
+      "total_value": "24272611",
+      "first_year": "2012",
+      "last_year": "2025",
+      "active_years": "13",
+      "sample_titles": "{0070000627,0070006082,0070007286}"
+    },
+    {
+      "buyer_name": "Department of Parliamentary Services",
+      "contract_count": "131",
+      "total_value": "8789007",
+      "first_year": "2013",
+      "last_year": "2026",
+      "active_years": "10",
+      "sample_titles": "{0000050855,0000050925,0000050950}"
+    },
+    {
+      "buyer_name": "Department of Foreign Affairs and Trade",
+      "contract_count": "111",
+      "total_value": "23353082",
+      "first_year": "2012",
+      "last_year": "2026",
+      "active_years": "14",
+      "sample_titles": "{4500000529,4500000715,4500000932}"
+    },
+    {
+      "buyer_name": "Department of the House of Representatives",
+      "contract_count": "101",
+      "total_value": "7444955",
+      "first_year": "2013",
+      "last_year": "2026",
+      "active_years": "10",
+      "sample_titles": "{CON/GAUCON/CON000022/1,CON000154,D001470}"
+    },
+    {
+      "buyer_name": "Department of the Prime Minister and Cabinet",
+      "contract_count": "99",
+      "total_value": "5791928",
+      "first_year": "2013",
+      "last_year": "2025",
+      "active_years": "12",
+      "sample_titles": "{CA000503,CA005537,CD007856}"
+    },
+    {
+      "buyer_name": "Department of Finance",
+      "contract_count": "93",
+      "total_value": "5995519",
+      "first_year": "2013",
+      "last_year": "2026",
+      "active_years": "12",
+      "sample_titles": "{2100003741,2100004380,2100004881}"
+    },
+    {
+      "buyer_name": "NT Department of Infrastructure, Planning and Logistics - Housing Program Office",
+      "contract_count": "91",
+      "total_value": "211957652",
+      "first_year": "2021",
+      "last_year": "2024",
+      "active_years": "4",
+      "sample_titles": "{\"Alice Springs - Central Australia Region - Provision of Remote Housing Maintenance Service\",\"Alice Springs - Mount Nancy Town Camp - Demolition and Construction of Housing on 9 lots\",\"Alice Springs - Panel Contract for Responsive Maintenance Services to Urban Housing for a \"}"
+    },
+    {
+      "buyer_name": "Australian Electoral Commission",
+      "contract_count": "89",
+      "total_value": "21391548",
+      "first_year": "2013",
+      "last_year": "2023",
+      "active_years": "11",
+      "sample_titles": "{$700000.00,001198,001777}"
+    },
+    {
+      "buyer_name": "Department of Agriculture, Fisheries and Forestry",
+      "contract_count": "89",
+      "total_value": "4316559",
+      "first_year": "2013",
+      "last_year": "2021",
+      "active_years": "9",
+      "sample_titles": "{0045077507,0045077715,0045078290}"
+    },
+    {
+      "buyer_name": "Australian Signals Directorate",
+      "contract_count": "87",
+      "total_value": "6190498",
+      "first_year": "2018",
+      "last_year": "2026",
+      "active_years": "8",
+      "sample_titles": "{1900001258,3000384431,3000522246}"
+    },
+    {
+      "buyer_name": "Department of Health and Aged Care",
+      "contract_count": "79",
+      "total_value": "7976024",
+      "first_year": "2012",
+      "last_year": "2022",
+      "active_years": "11",
+      "sample_titles": "{4500103681,4500108637,4500109515}"
+    },
+    {
+      "buyer_name": "Department of Agriculture",
+      "contract_count": "77",
+      "total_value": "7333058",
+      "first_year": "2014",
+      "last_year": "2019",
+      "active_years": "6",
+      "sample_titles": "{21867,22680,22759}"
+    },
+    {
+      "buyer_name": "Attorney-General's Department",
+      "contract_count": "75",
+      "total_value": "6362004",
+      "first_year": "2013",
+      "last_year": "2023",
+      "active_years": "10",
+      "sample_titles": "{0041000641,0041000705,0041001052}"
+    },
+    {
+      "buyer_name": "Department of the Treasury",
+      "contract_count": "68",
+      "total_value": "3882294",
+      "first_year": "2012",
+      "last_year": "2022",
+      "active_years": "11",
+      "sample_titles": "{000503-0,000544-0,000573-0}"
+    },
+    {
+      "buyer_name": "NT Department of Infrastructure - Construction",
+      "contract_count": "66",
+      "total_value": "40829602",
+      "first_year": "2013",
+      "last_year": "2014",
+      "active_years": "2",
+      "sample_titles": "{\"Alice Springs - Design and Construct a New Demountable Office/Training Accommodation for W\",\"Alice Springs Hospital - Fire Indicator Panel Replacement At Nurses Quarters and Wedge Acc\",\"Alice Springs Region  - Health Department - Refurbish Two Accommodation houses - Mandatory\"}"
+    },
+    {
+      "buyer_name": "Australian Securities and Investments Commission",
+      "contract_count": "65",
+      "total_value": "5181651",
+      "first_year": "2013",
+      "last_year": "2026",
+      "active_years": "11",
+      "sample_titles": "{003086,003087,003526}"
+    },
+    {
+      "buyer_name": "Austrade",
+      "contract_count": "64",
+      "total_value": "14011475",
+      "first_year": "2010",
+      "last_year": "2025",
+      "active_years": "13",
+      "sample_titles": "{0046000536,0046000607,0046000627}"
+    },
+    {
+      "buyer_name": "Geoscience Australia",
+      "contract_count": "57",
+      "total_value": "4301523",
+      "first_year": "2013",
+      "last_year": "2021",
+      "active_years": "9",
+      "sample_titles": "{32172,33212,33217}"
+    },
+    {
+      "buyer_name": "NT Department of Infrastructure - Building Services",
+      "contract_count": "53",
+      "total_value": "44634323",
+      "first_year": "2014",
+      "last_year": "2016",
+      "active_years": "3",
+      "sample_titles": "{\"Alice Springs Region - 1620 Larapinta Drive - Simpson's Gap National Park - Design, Docume\",\"Alice Springs Region - Alice Plaza - Supply and Install Office Furniture\",\"Alice Springs Region - Areyonga - Government Employees Housing Upgrade\"}"
+    },
+    {
+      "buyer_name": "IP Australia",
+      "contract_count": "53",
+      "total_value": "3062096",
+      "first_year": "2012",
+      "last_year": "2018",
+      "active_years": "7",
+      "sample_titles": "{0000012585,0000012725,0000012986}"
+    },
+    {
+      "buyer_name": "Bureau of Meteorology",
+      "contract_count": "52",
+      "total_value": "6572291",
+      "first_year": "2010",
+      "last_year": "2023",
+      "active_years": "12",
+      "sample_titles": "{19006813,19516620,4500013556}"
+    },
+    {
+      "buyer_name": "Australian Competition and Consumer Commission",
+      "contract_count": "51",
+      "total_value": "7206696",
+      "first_year": "2012",
+      "last_year": "2022",
+      "active_years": "9",
+      "sample_titles": "{130138-C13098,130139-C13099,130176-C13105}"
+    },
+    {
+      "buyer_name": "The University of Queensland",
+      "contract_count": "48",
+      "total_value": "1830393",
+      "first_year": "2019",
+      "last_year": "2019",
+      "active_years": "1",
+      "sample_titles": "{\"Homestay accommodation\",\"Minor Equip / Furniture <$5000\"}"
+    },
+    {
+      "buyer_name": "Department of Education",
+      "contract_count": "44",
+      "total_value": "14750809",
+      "first_year": "2002",
+      "last_year": "2020",
+      "active_years": "15",
+      "sample_titles": "{4400030723,4400035632,4400041116}"
+    },
+    {
+      "buyer_name": "Australian Bureau of Statistics",
+      "contract_count": "41",
+      "total_value": "5131127",
+      "first_year": "2013",
+      "last_year": "2021",
+      "active_years": "9",
+      "sample_titles": "{236367,236470,ABS2015.225d}"
+    },
+    {
+      "buyer_name": "Australian Customs and Border Protection Service",
+      "contract_count": "41",
+      "total_value": "2106069",
+      "first_year": "2011",
+      "last_year": "2015",
+      "active_years": "4",
+      "sample_titles": "{102531,128413,1310472}"
+    },
+    {
+      "buyer_name": "Royal Australian Mint",
+      "contract_count": "40",
+      "total_value": "1056063",
+      "first_year": "2013",
+      "last_year": "2026",
+      "active_years": "11",
+      "sample_titles": "{25560,28443,28577}"
+    },
+    {
+      "buyer_name": "NT Department of Housing - Housing",
+      "contract_count": "36",
+      "total_value": "39172650",
+      "first_year": "2013",
+      "last_year": "2015",
+      "active_years": "3",
+      "sample_titles": "{\"Alice Springs - Provision of Repairs and Maintenance Services to Evaporative Air Condition\",\"Alice Springs - Provision of Vacate and Planned Works to Department of Housing Assets for \",\"Alice Springs - Real Housing for Growth - Elliott Street Key Worker Rental Initiative Prop\"}"
+    },
+    {
+      "buyer_name": "Digital Transformation Agency",
+      "contract_count": "36",
+      "total_value": "2023202",
+      "first_year": "2015",
+      "last_year": "2021",
+      "active_years": "7",
+      "sample_titles": "{4500141625,DTA-418,DTA-419}"
+    },
+    {
+      "buyer_name": "HealthShare NSW",
+      "contract_count": "33",
+      "total_value": "35256307",
+      "first_year": "2021",
+      "last_year": "2024",
+      "active_years": "3",
+      "sample_titles": "{\"Agreement for the Provision of Accommodation and Care Services for  certain patients of HN\",\"Agreement for the Provision of Accommodation and Care Services for certain patients of HNE\",\"BEDS, MATTRESSES & COTS\"}"
+    },
+    {
+      "buyer_name": "Department of Social Services",
+      "contract_count": "33",
+      "total_value": "3220849",
+      "first_year": "2014",
+      "last_year": "2023",
+      "active_years": "10",
+      "sample_titles": "{90003686,90004522,90005283}"
+    },
+    {
+      "buyer_name": "Future Fund Management Agency",
+      "contract_count": "32",
+      "total_value": "2119711",
+      "first_year": "2015",
+      "last_year": "2026",
+      "active_years": "8",
+      "sample_titles": "{FFMA0720,FFMA0726,FFMA0730}"
+    },
+    {
+      "buyer_name": "Old Parliament House",
+      "contract_count": "32",
+      "total_value": "1313374",
+      "first_year": "2013",
+      "last_year": "2022",
+      "active_years": "9",
+      "sample_titles": "{\"OPH 18/19-045\",OPH12/13-016,OPH12/13-050}"
+    },
+    {
+      "buyer_name": "Department of Communications and the Arts",
+      "contract_count": "31",
+      "total_value": "2093143",
+      "first_year": "2012",
+      "last_year": "2019",
+      "active_years": "8",
+      "sample_titles": "{0004602849,0004604036,0004604265}"
+    },
+    {
+      "buyer_name": "Department of Employment, Skills, Small and Family Business",
+      "contract_count": "31",
+      "total_value": "1344484",
+      "first_year": "2014",
+      "last_year": "2019",
+      "active_years": "6",
+      "sample_titles": "{4400018040,4400018190,4400020624}"
+    },
+    {
+      "buyer_name": "Federal Court of Australia",
+      "contract_count": "30",
+      "total_value": "2663092",
+      "first_year": "2014",
+      "last_year": "2025",
+      "active_years": "10",
+      "sample_titles": "{P0200023,P0200031,P0200041}"
+    },
+    {
+      "buyer_name": "QUT",
+      "contract_count": "30",
+      "total_value": "1116854",
+      "first_year": "",
+      "last_year": "",
+      "active_years": "0",
+      "sample_titles": "{\"FURNITURE & FITTINGS < $5000\",\"STAFF TRAVEL - DOMESTIC - ACCOMMODATION\",\"STAFF TRAVEL - INTERNATIONAL - ACCOMMODATION\"}"
+    },
+    {
+      "buyer_name": "James Cook University",
+      "contract_count": "28",
+      "total_value": "866385",
+      "first_year": "2019",
+      "last_year": "2019",
+      "active_years": "1",
+      "sample_titles": "{\"0200046392 - Furniture & Equipment (<$5000)\",\"0200046466 - Furniture & Equipment (<$5000)\",\"0200047062 - Furniture & Equipment (<$5000)\"}"
+    },
+    {
+      "buyer_name": "NT Territory Families - Corporate Services",
+      "contract_count": "27",
+      "total_value": "8632241",
+      "first_year": "2018",
+      "last_year": "2020",
+      "active_years": "2",
+      "sample_titles": "{\"Alice Springs - BIG4 MacDonnell Range Holiday Park - COVID-19 - Accommodation and Meals\",\"Alice Springs - COVID-19 - Aurora Resort - Accommodation and Meals\",\"Alice Springs - COVID-19 - Desert Palms - Accommodation and Meals\"}"
+    },
+    {
+      "buyer_name": "Australian Criminal Intelligence Commission",
+      "contract_count": "27",
+      "total_value": "2637777",
+      "first_year": "2013",
+      "last_year": "2025",
+      "active_years": "12",
+      "sample_titles": "{0000001595,0000001609,0000001663}"
+    },
+    {
+      "buyer_name": "Family Court and Federal Circuit Court",
+      "contract_count": "26",
+      "total_value": "1218365",
+      "first_year": "2013",
+      "last_year": "2016",
+      "active_years": "4",
+      "sample_titles": "{P0203537,P0203550,P0203553}"
+    },
+    {
+      "buyer_name": "NT Department of Infrastructure - Major Projects",
+      "contract_count": "25",
+      "total_value": "26358144",
+      "first_year": "2016",
+      "last_year": "2016",
+      "active_years": "1",
+      "sample_titles": "{\"Alice Springs Region - Areyonga - Demolition of 2 Dwellings and Construction of 2 x 3 Bedr\",\"Alice Springs Region - Atitjere - Demolition of 1 Dwelling and Construct 1 x 3 Bedroom Dwe\",\"Alice Springs Region - Engawala - Remote Community Housing (RCH) Upgrade\"}"
+    },
+    {
+      "buyer_name": "NT Department of Health - Top End Health Service",
+      "contract_count": "25",
+      "total_value": "3172286",
+      "first_year": "2014",
+      "last_year": "2021",
+      "active_years": "6",
+      "sample_titles": "{\"20-1456 - Hill-Rom Pty Ltd - SmartCareTM Beds Preventative Maintenance Service Agreement(C\",\"All Centres - Repairs and Maintenance of and Calibration of Blood Fridges and Freezers for\",\"Covid-19 for PRH Supply Delivery of Mattresses and Consumbales\"}"
+    },
+    {
+      "buyer_name": "Australian Transaction Reports and Analysis Centre",
+      "contract_count": "24",
+      "total_value": "2213695",
+      "first_year": "2013",
+      "last_year": "2023",
+      "active_years": "8",
+      "sample_titles": "{AC1124,AC1126,AC1127}"
+    },
+    {
+      "buyer_name": "ACT Community Services Directorate",
+      "contract_count": "23",
+      "total_value": "34719241",
+      "first_year": "2013",
+      "last_year": "2016",
+      "active_years": "3",
+      "sample_titles": "{\"Blue Door Family Service Samaritan House Young Parents Accommodation Support Program Stree\",\"Community Development Services and Social Housing and Homelessness Services\",\"Financial Analysis for Housing and Community Services Total Facilities Management Project\"}"
+    },
+    {
+      "buyer_name": "Department of Veterans' Affairs",
+      "contract_count": "23",
+      "total_value": "1064955",
+      "first_year": "2014",
+      "last_year": "2022",
+      "active_years": "9",
+      "sample_titles": "{CND002068/1,CND002132/2,CND002552/0}"
+    },
+    {
+      "buyer_name": "Department of Infrastructure, Transport, Regional Development, Communications and the Arts",
+      "contract_count": "23",
+      "total_value": "985260",
+      "first_year": "2014",
+      "last_year": "2023",
+      "active_years": "9",
+      "sample_titles": "{0041006705,0041007341,0041007404}"
+    },
+    {
+      "buyer_name": "Fire and Rescue NSW",
+      "contract_count": "22",
+      "total_value": "59200000",
+      "first_year": "2021",
+      "last_year": "2022",
+      "active_years": "2",
+      "sample_titles": "{\"Class 1 Firefighting Appliances for Fire and Rescue NSW\",\"Class 2 Firefighting Appliances for Fire and Rescue NSW\",\"Class 2 Refurbished Firefighting Appliances for Fire and Rescue NSW\"}"
+    },
+    {
+      "buyer_name": "National Archives of Australia",
+      "contract_count": "22",
+      "total_value": "2600972",
+      "first_year": "2012",
+      "last_year": "2022",
+      "active_years": "10",
+      "sample_titles": "{P12173,PO111200-PO1600167,PO1800047}"
+    },
+    {
+      "buyer_name": "Central Queensland University",
+      "contract_count": "22",
+      "total_value": "681526",
+      "first_year": "2019",
+      "last_year": "2019",
+      "active_years": "1",
+      "sample_titles": "{\"50 days Consulting for Project 8 days Onsite Consulting/Training for Flights & Accommodati\",\"Accommodation (including breakfast)\",\"Accommodation and Meals for Residential\"}"
+    }
+  ]
+}

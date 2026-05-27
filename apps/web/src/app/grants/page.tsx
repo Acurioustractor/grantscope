@@ -14,6 +14,7 @@ interface Grant extends GrantListItem {
   geography?: string | null;
   aligned_projects?: string[] | null;
   grant_type?: string | null;
+  discovery_method?: string | null;
 }
 
 interface CoverageRow {
@@ -137,6 +138,26 @@ interface ActiveProjectPreset extends Omit<ProjectPreset, 'terms'> {
 
 const RESEARCH_SOURCES = new Set(['arc-grants', 'nhmrc']);
 const RESEARCH_TERMS = ['research', 'fellowship', 'scholarship', 'phd', 'postdoctoral', 'clinical trial', 'discovery project'];
+
+// Funding-type segmentation by discovery_method (set by the source-vector seed +
+// open-tender feed). Capital = loans-with-grant-features (IBA/NAIF/Many Rivers/ABA);
+// Procurement = the demand side (Supply Nation + AusTender open tenders); Grant =
+// everything else, including uncategorised rows (so nothing disappears by default).
+const METHOD_CHIPS = [
+  { value: '', label: 'All types', hint: 'capital, procurement and grants' },
+  { value: 'capital', label: 'Capital', hint: 'loans-with-grant: IBA Start-Up Finance, NAIF, Many Rivers, ABA' },
+  { value: 'procurement', label: 'Procurement', hint: 'demand side: Supply Nation + AusTender open tenders' },
+  { value: 'grant', label: 'Grants', hint: 'competitive grant programs' },
+] as const;
+
+function matchesDiscoveryMethod(grant: Grant, method: string): boolean {
+  if (!method) return true;
+  const dm = normalize(grant.discovery_method);
+  if (method === 'capital') return dm === 'indigenous-finance';
+  if (method === 'procurement') return dm === 'procurement';
+  if (method === 'grant') return dm !== 'indigenous-finance' && dm !== 'procurement';
+  return true;
+}
 
 function normalize(value: string | null | undefined): string {
   return (value || '').toLowerCase();
@@ -589,6 +610,7 @@ interface SearchParams {
   include_research?: string;
   family?: string;
   quality?: string;
+  method?: string;
 }
 
 export default async function GrantsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
@@ -608,6 +630,7 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
   const projectFilter = params.project || '';
   const familyFilter = params.family || '';
   const qualityFilter = params.quality || '';
+  const methodFilter = params.method || '';
   const activeProjectPreset = enrichProjectPreset(findProjectPreset(projectFilter));
   const includeResearchParam = params.include_research === '1';
   const includeResearch = shouldIncludeResearch(query, sourceFilter, programTypeFilter, includeResearchParam);
@@ -631,6 +654,7 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
     !familyFilter &&
     !qualityFilter &&
     !includeResearchParam &&
+    !methodFilter &&
     page === 1;
 
   const supabase = getServiceSupabase();
@@ -658,7 +682,7 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
       const { data: semanticDetails } = semanticIds.length > 0
         ? await supabase
             .from(PUBLIC_GRANTS_LIST_TABLE)
-            .select('id, program, program_type, grant_type, source, status, sources, created_at, updated_at, last_verified_at, focus_areas, target_recipients, geography, aligned_projects')
+            .select('id, program, program_type, grant_type, source, status, sources, created_at, updated_at, last_verified_at, focus_areas, target_recipients, geography, aligned_projects, discovery_method')
             .in('id', semanticIds)
         : { data: [] };
       const semanticDetailMap = new Map(
@@ -686,6 +710,7 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
         target_recipients: semanticDetailMap.get(r.id)?.target_recipients ?? [],
         geography: semanticDetailMap.get(r.id)?.geography ?? null,
         aligned_projects: semanticDetailMap.get(r.id)?.aligned_projects ?? [],
+        discovery_method: semanticDetailMap.get(r.id)?.discovery_method ?? null,
         similarity: r.similarity,
       }));
 
@@ -708,6 +733,9 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
       }
       if (activeProjectPreset) {
         grants = grants.filter(g => matchesProjectPreset(g, activeProjectPreset));
+      }
+      if (methodFilter) {
+        grants = grants.filter(g => matchesDiscoveryMethod(g, methodFilter));
       }
       if (familyFilter) {
         grants = grants.filter(g => matchesSourceFamily(g, familyFilter));
@@ -757,6 +785,7 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
       'target_recipients',
       'geography',
       'aligned_projects',
+      'discovery_method',
       'source',
       'status',
       'sources',
@@ -797,6 +826,14 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
       dbQuery = dbQuery.eq('program_type', programTypeFilter);
     }
 
+    // Capital/procurement are tiny sets; pin them at the DB so they survive the
+    // candidate cap. 'grant' is the majority — handled by the client residual filter.
+    if (methodFilter === 'capital') {
+      dbQuery = dbQuery.eq('discovery_method', 'indigenous-finance');
+    } else if (methodFilter === 'procurement') {
+      dbQuery = dbQuery.eq('discovery_method', 'procurement');
+    }
+
     if (closingFilter === '30') {
       dbQuery = dbQuery.gt('closes_at', new Date().toISOString());
       dbQuery = dbQuery.lt('closes_at', new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString());
@@ -829,6 +866,7 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
       .filter((grant) => matchesSearchText(grant, query))
       .filter((grant) => matchesGeography(grant, geoFilter))
       .filter((grant) => matchesProjectPreset(grant, activeProjectPreset))
+      .filter((grant) => matchesDiscoveryMethod(grant, methodFilter))
       .filter((grant) => matchesSourceFamily(grant, familyFilter))
       .filter((grant) => matchesQuality(grant, qualityFilter))
       .filter((grant) => includeResearch || !isResearchHeavy(grant));
@@ -902,6 +940,7 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
   if (sourceFilter) filterParams.set('source', sourceFilter);
   if (programTypeFilter) filterParams.set('program_type', programTypeFilter);
   if (projectFilter) filterParams.set('project', projectFilter);
+  if (methodFilter) filterParams.set('method', methodFilter);
   if (includeResearchParam) filterParams.set('include_research', '1');
   if (familyFilter) filterParams.set('family', familyFilter);
   if (qualityFilter) filterParams.set('quality', qualityFilter);
@@ -938,6 +977,8 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
     if (nextProgramType) next.set('program_type', nextProgramType);
     const nextProject = updates.project ?? projectFilter;
     if (nextProject) next.set('project', nextProject);
+    const nextMethod = updates.method ?? methodFilter;
+    if (nextMethod) next.set('method', nextMethod);
     const nextIncludeResearch = updates.include_research ?? (includeResearchParam ? '1' : '');
     if (nextIncludeResearch) next.set('include_research', nextIncludeResearch);
     return `/grants?${next.toString()}`;
@@ -1043,11 +1084,35 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
         )}
       </div>
 
+      <div className="mb-4 border border-bauhaus-black/10 rounded-lg bg-white p-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <div className="text-xs font-black uppercase tracking-widest text-bauhaus-black">Funding type</div>
+            <div className="text-xs text-bauhaus-muted mt-0.5">
+              Capital (loans-with-grant), procurement (tenders &amp; supply), or competitive grants.
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {METHOD_CHIPS.map((chip) => (
+              <a
+                key={chip.value || 'all'}
+                href={hrefFor({ method: chip.value })}
+                title={chip.hint}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-colors ${methodFilter === chip.value ? 'bg-bauhaus-blue text-white' : 'bg-bauhaus-canvas text-bauhaus-muted hover:bg-bauhaus-black/10'}`}
+              >
+                {chip.label}
+              </a>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Search bar */}
       <form method="get" className="flex gap-2 mb-3">
         <input type="hidden" name="type" value={grantType} />
         <input type="hidden" name="mode" value={searchMode} />
         {projectFilter && <input type="hidden" name="project" value={projectFilter} />}
+        {methodFilter && <input type="hidden" name="method" value={methodFilter} />}
         {familyFilter && <input type="hidden" name="family" value={familyFilter} />}
         {qualityFilter && <input type="hidden" name="quality" value={qualityFilter} />}
         {includeResearchParam && <input type="hidden" name="include_research" value="1" />}
