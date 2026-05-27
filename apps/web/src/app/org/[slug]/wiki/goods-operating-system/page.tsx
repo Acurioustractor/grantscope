@@ -103,6 +103,12 @@ export default async function GoodsOperatingSystemWikiPage({ params }: { params:
                 Goods workspace
               </Link>
               <Link
+                href={`/org/${slug}/goods/funnel`}
+                className="border border-bauhaus-blue bg-bauhaus-blue px-4 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-white hover:text-bauhaus-black"
+              >
+                Goods funnel
+              </Link>
+              <Link
                 href="/grants?type=open_opportunity&sort=closing_asc&project=goods&quality=ready"
                 className="border border-bauhaus-red bg-bauhaus-red px-4 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-white hover:text-bauhaus-black"
               >
