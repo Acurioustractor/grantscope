@@ -165,7 +165,10 @@ async function main() {
     return;
   }
 
-  let ins = 0, enr = 0, ded = 0;
+  let ins = 0, skip = 0, enr = 0, ded = 0;
+  // The (source,name) unique index is PARTIAL, so ON CONFLICT can't infer it.
+  // These rows are net-new; plain INSERT, and a 23505 (unique violation) on a
+  // re-run is a benign "already there" skip — keeps the seeder idempotent.
   for (const r of NET_NEW) {
     const row = {
       name: r.name, provider: r.provider, program: r.program, source: MANUAL_SOURCE,
@@ -176,8 +179,11 @@ async function main() {
       goods_relevance_score: r.score, goods_relevance_scored_at: new Date().toISOString(),
       aligned_projects: r.score >= 50 ? TAGS : [],
     };
-    const { error } = await supabase.from('grant_opportunities').upsert(row, { onConflict: 'source,name' });
-    if (error) console.error(`  upsert "${r.name}": ${error.message.slice(0, 100)}`); else ins++;
+    const { error } = await supabase.from('grant_opportunities').insert(row);
+    if (error) {
+      if (error.code === '23505') { console.log(`  skip (exists): ${r.name}`); skip++; }
+      else console.error(`  insert "${r.name}": ${error.message.slice(0, 100)}`);
+    } else ins++;
   }
   for (const e of ENRICH) {
     const { error } = await supabase.from('grant_opportunities').update({ ...e.patch, updated_at: new Date().toISOString() }).eq('id', e.id);
@@ -187,7 +193,7 @@ async function main() {
     const { error } = await supabase.from('grant_opportunities').update({ status: 'duplicate', goods_relevance_score: 0, aligned_projects: [], updated_at: new Date().toISOString() }).eq('id', d.id);
     if (error) console.error(`  dedup ${d.id.slice(0, 8)}: ${error.message.slice(0, 100)}`); else ded++;
   }
-  console.log(`\n✓ upserted ${ins}/${NET_NEW.length} net-new · enriched ${enr}/${ENRICH.length} · retired ${ded}/${DEDUP.length} dups`);
+  console.log(`\n✓ inserted ${ins}/${NET_NEW.length} net-new (${skip} skipped as existing) · enriched ${enr}/${ENRICH.length} · retired ${ded}/${DEDUP.length} dups`);
   console.log('Next: node --env-file=.env scripts/score-goods-relevance.mjs --rescore-all');
 }
 
