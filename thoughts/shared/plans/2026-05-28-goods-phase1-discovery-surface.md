@@ -1,6 +1,6 @@
 ---
 title: Goods Phase 1 — surface capital/procurement (discovery_method) + repeat-buyer intel
-status: approved — building (2026-05-28). D1=report-only · D2=include B (minimal) · D3=Grant bucket = not-capital/procurement.
+status: BUILT (2026-05-28) — C=0fc6e11 · A=1778d7c · B=f6ab6af on wip/goods-phase1-discovery-surface-2026-05-28. tsc + next build clean; 3 buyer rows verified vs live DB. NOT pushed/PR'd (Tier 3 — awaiting Ben's verb). D1=report-only · D2=include B (minimal) · D3=Grant bucket = not-capital/procurement.
 date: 2026-05-28
 repo: grantscope
 branch: wip/goods-phase1-discovery-surface-2026-05-28
