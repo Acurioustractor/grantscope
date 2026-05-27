@@ -74,7 +74,7 @@ export default async function GoodsSignalsWorkbenchPage({
   const closingSoon = sp.closing === 'soon';
   const typeFilter = sp.type;
 
-  const { signals: allSignals, summary } = await getGoodsSignalsWorkbench({
+  const { signals: allSignals, summary, capital_opportunities } = await getGoodsSignalsWorkbench({
     status: statusFilter,
     priority: sp.priority,
     state: sp.state,
@@ -131,6 +131,27 @@ export default async function GoodsSignalsWorkbenchPage({
           <SummaryCell label="Likely" value={summary.by_confidence.likely || 0} accent />
           <SummaryCell label="Possible" value={summary.by_confidence.possible || 0} />
         </div>
+
+        {/* Capital pipeline — standalone (not signal-bound) */}
+        {capital_opportunities.length > 0 && (
+          <div className="mb-6 border-4 border-bauhaus-black bg-white p-4">
+            <div className="mb-2 flex items-baseline justify-between">
+              <h2 className="text-sm font-black uppercase tracking-widest text-bauhaus-black">Capital pipeline ({capital_opportunities.length})</h2>
+              <span className="text-[10px] uppercase tracking-widest text-gray-500">loans-with-grant · IBA / NAIF / Many Rivers · not signal-bound</span>
+            </div>
+            <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {capital_opportunities.map(c => (
+                <li key={c.id} className="border-2 border-bauhaus-black p-2 text-xs">
+                  <div className="flex items-start justify-between gap-2">
+                    <Link href={`/grants/${c.id}`} className="font-black hover:underline">{c.name.slice(0, 60)}{c.name.length > 60 ? '…' : ''}</Link>
+                    <span className="shrink-0 rounded-sm bg-bauhaus-blue px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white">Capital</span>
+                  </div>
+                  <div className="mt-1 text-gray-700">{c.provider?.slice(0, 32) || '—'} · {money(c.amount_max)} · score {c.goods_relevance_score}</div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* Toolbar: view switcher + search */}
         <ToolbarRow slug={slug} sp={sp} view={view} />
@@ -266,6 +287,8 @@ function SignalCard({ signal, orgSlug }: { signal: GoodsSignalRow; orgSlug: stri
               {signal.matched_grants.slice(0, 3).map(g => (
                 <li key={g.id} className="border-l-2 border-bauhaus-black pl-2">
                   <Link href={`/grants/${g.id}`} className="font-black hover:underline">{g.name.slice(0, 65)}{g.name.length > 65 ? '…' : ''}</Link>
+                  {g.discovery_method === 'procurement' && <span className="ml-1 rounded-sm bg-bauhaus-black px-1 py-0.5 text-[9px] font-black uppercase tracking-wider text-bauhaus-yellow">Procurement</span>}
+                  {g.discovery_method === 'indigenous-finance' && <span className="ml-1 rounded-sm bg-bauhaus-blue px-1 py-0.5 text-[9px] font-black uppercase tracking-wider text-white">Capital</span>}
                   <div className="text-gray-700">
                     {g.provider?.slice(0, 30) || '—'} · {g.geography || '—'} · {money(g.amount_max)} · closes {relDate(g.closes_at)} · score {g.goods_relevance_score}
                   </div>

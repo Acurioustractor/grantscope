@@ -32,6 +32,7 @@ export type GoodsSignalRow = {
     geography: string | null;
     closes_at: string | null;
     goods_relevance_score: number | null;
+    discovery_method: string | null;
   }>;
   matched_foundations: Array<{
     id: string;
@@ -61,9 +62,25 @@ export type GoodsSignalsSummary = {
   with_buyer: number;
 };
 
+// Capital opportunities (loans-with-grant-features: IBA / NAIF / Many Rivers) live
+// in grant_opportunities as discovery_method='indigenous-finance' rows. They are NOT
+// tied to a demand signal, so they can't surface in the signal cards — this standalone
+// list is the workbench's window onto Goods' capital pipeline.
+export type GoodsCapitalOpportunity = {
+  id: string;
+  name: string;
+  provider: string | null;
+  amount_max: number | null;
+  geography: string | null;
+  closes_at: string | null;
+  goods_relevance_score: number | null;
+  url: string | null;
+};
+
 export type GoodsSignalsWorkbench = {
   signals: GoodsSignalRow[];
   summary: GoodsSignalsSummary;
+  capital_opportunities: GoodsCapitalOpportunity[];
 };
 
 const DEFAULT_LIMIT = 200;
@@ -185,7 +202,7 @@ export async function getGoodsSignalsWorkbench({
   const [communitiesData, buyersData, grantsData, foundationsData] = await Promise.all([
     fetchChunked('goods_communities', 'id, community_name, state, postcode, priority', communityIds),
     fetchChunked('goods_procurement_entities', 'id, entity_name, buyer_role', buyerIds),
-    fetchChunked('grant_opportunities', 'id, name, provider, amount_max, geography, closes_at, goods_relevance_score', grantIds),
+    fetchChunked('grant_opportunities', 'id, name, provider, amount_max, geography, closes_at, goods_relevance_score, discovery_method', grantIds),
     fetchChunked('foundations', 'id, name, total_giving_annual, geographic_focus, thematic_focus', foundationIds),
   ]);
   const communityMap = new Map(communitiesData.map((c: any) => [c.id, c]));
@@ -353,5 +370,15 @@ export async function getGoodsSignalsWorkbench({
     if (s.buyer) summary.with_buyer++;
   }
 
-  return { signals, summary };
+  // Capital pipeline — standalone (not signal-bound). High-fit indigenous-finance rows.
+  const { data: capitalRows } = await db
+    .from('grant_opportunities')
+    .select('id, name, provider, amount_max, geography, closes_at, goods_relevance_score, url')
+    .eq('discovery_method', 'indigenous-finance')
+    .gte('goods_relevance_score', 50)
+    .order('goods_relevance_score', { ascending: false, nullsFirst: false })
+    .limit(25);
+  const capital_opportunities = (capitalRows || []) as GoodsCapitalOpportunity[];
+
+  return { signals, summary, capital_opportunities };
 }
