@@ -1,0 +1,1453 @@
+{
+  "at": "2026-05-27T06:20:10.649Z",
+  "inserted": [
+    {
+      "entity_name": "Outback Stores Pty Ltd",
+      "abn": "63120661234",
+      "buyer_role": "store",
+      "community_id": null,
+      "is_community_controlled": false,
+      "relationship_status": "prospect",
+      "website": "https://www.outbackstores.com.au",
+      "govt_contract_value": 92000,
+      "govt_contract_count": 1,
+      "fit_score": 85
+    },
+    {
+      "entity_name": "Miwatj Health Aboriginal Corporation",
+      "abn": "96843428729",
+      "buyer_role": "health_service",
+      "community_id": "9651e030-c893-40de-aee8-2df0d45a6706",
+      "is_community_controlled": true,
+      "relationship_status": "prospect",
+      "website": "https://www.miwatj.com.au",
+      "govt_contract_value": 48000,
+      "govt_contract_count": 1,
+      "fit_score": 85
+    },
+    {
+      "entity_name": "Tangentyere Council Aboriginal Corporation",
+      "abn": "81688672692",
+      "buyer_role": "council",
+      "community_id": "6cec2c4f-d390-4bff-95e1-5ad9db9b08da",
+      "is_community_controlled": true,
+      "relationship_status": "prospect",
+      "website": "https://www.tangentyere.org.au",
+      "govt_contract_value": 3113493.21,
+      "govt_contract_count": 14,
+      "fit_score": 85
+    }
+  ],
+  "alpaDeletedIds": [
+    "1ea92e85-c7d2-4a4c-8be2-26f30b84732e",
+    "7e215c7c-19ad-4128-b255-f9e74f8244f7",
+    "b8adb481-2057-422b-971b-608990c3ac40",
+    "9766a537-52c2-4858-86d9-07f223d6bc4c",
+    "5f859f10-89e8-4b46-9a2a-289fd66ce9c4",
+    "d9f2d3fb-fc65-46f7-bdc4-e460926c95bb",
+    "1c65d8cc-bde1-4ba8-b997-402f2e7386df",
+    "697bea33-7e38-451c-9e24-3ce771a2123c",
+    "623b5cfe-7326-4d28-8429-d145de601f83",
+    "f0814898-bb93-4016-a815-f41b4690fffc",
+    "5a69405d-745b-42ef-9931-924cf8d5907a",
+    "b2d70b03-b69a-4fb0-99e1-1c5c34c8a160",
+    "57cea0c9-c945-492a-bc6f-68f7b4e70c4b",
+    "fca8091f-9554-4824-a892-5f2054e1b0ed",
+    "eed5b2e4-8c77-42e5-8b98-2a30ec36c32f",
+    "d907d705-fea0-40c8-88ca-5ec6aa7ef132",
+    "21810a9c-edf4-496a-859c-4ac0bc538b33",
+    "700494e4-3f39-4708-bfba-ec77815f2005",
+    "587c1f8c-0fb4-4386-94e2-754268d21cc6",
+    "70d1d648-ef19-4803-b087-c83737cbd817",
+    "fd79bed3-8250-46f2-a7f1-063737563038",
+    "c160708f-430a-4c1a-8733-bc7048c23ce4",
+    "ef28089f-8bea-437a-a519-0331280e3932",
+    "081402a3-7090-4f58-8cfe-24490381eaf7",
+    "687ec918-a734-42fb-953d-f1b82b2ccb38",
+    "b2ca0cb7-c20f-44c1-b58c-a90de9dd5309",
+    "1fbb31c6-9346-496a-9bc7-14cfd2938b58",
+    "2fb93376-37a2-408d-96c0-b75879be87ba",
+    "2908a674-dfb3-4b20-83d6-a17980f74d07",
+    "e27e32f7-bfa3-44c1-bba0-bee11407e0e5",
+    "2c62a1f6-646a-4efd-90a5-233bb89303d7",
+    "fd0da4fa-1164-4e60-a9ea-2c0fbc822b4c",
+    "4cae9ea0-2862-4d47-a2f4-08c193086180",
+    "70b2a1c7-9a47-4999-9d50-eec51fb286f2",
+    "54f620d1-5241-4c34-8bb4-c9db373fa0e4",
+    "cb2cd656-e5e1-41fb-a93f-c034b01c4c05",
+    "9f4f7ef1-946a-479f-aaaa-f778a20371df",
+    "216d2895-f8fb-4b8d-aff0-8ca850aeff94",
+    "f51d0d4f-cd32-4d91-b8b2-8b4c5167490c",
+    "603e149e-f3e0-460f-b267-723a18f6d4c6",
+    "23d9dbc4-c2e1-4dac-b463-b8d51eeb3844",
+    "dd0bb1bc-63e0-4599-a5d0-37882ad6898e",
+    "6e603da2-62a1-48e5-8153-2e121f81cd44",
+    "4610425f-42ce-47d7-a6cd-cdebb25e1c2e",
+    "39a277df-75cd-454c-9d1d-0a38108fe286",
+    "b1c5fd0d-7487-4086-b3d7-f6bace799829",
+    "1b3963f1-6f0b-456b-9b3d-238c10b8b6a5",
+    "7c8d8d44-58dc-400a-8799-6976a5d998f4",
+    "afa27860-2fdc-4f9d-a7f1-3288257decbc",
+    "83d32724-c8e4-4efe-b7e6-62d56b5c875f",
+    "519242f8-da1c-4abb-8aed-d2b42f3c0268",
+    "f0630186-cdf8-46e1-ae74-5d4bd3f12e0b",
+    "122d1623-3d05-4a4a-9d89-97ff3aac316d",
+    "54a7c82d-92d0-4f19-a435-105d716901a9",
+    "119369c1-fe0e-47be-bae8-84de7a3fbf7f",
+    "d5918f35-249c-430b-97a4-519e6a227d99",
+    "83c25dd9-6ce8-43fa-b7a5-48353acc0ce3",
+    "6a972a95-07ac-4f16-8c90-366c46e348ca",
+    "c4b7f53d-db2a-4f36-b047-a5c75e7791bb",
+    "7e2f23b5-50e7-4d30-9927-4ab884d7bcdc",
+    "2b3f981d-5349-47d4-be2b-ff538fdd5125",
+    "bdca435b-8084-41ae-ab9c-53b0cf28afb8",
+    "7fa338c3-435b-4e6a-8fca-18192b8637ba",
+    "e1720335-ed90-46d9-9b08-8ece6ab4a77f",
+    "b2f7b058-3376-4785-bc50-0d40085c46be",
+    "a49ea232-88cd-4da1-a516-5d232bac61e4",
+    "bd770ea8-3e6f-4d69-8601-f56202f6a42f",
+    "54844cfc-d08e-4e70-ba32-2a66730e9044",
+    "d1ee7cf8-735c-4fb8-b681-0980bfda0842",
+    "aa4468da-a0f1-44e2-90c7-a7fc17197b6b",
+    "939927d0-b746-4a52-abaa-296880e3ad12",
+    "e33c3ce2-25ff-4177-bef2-94dc9bee3fa0",
+    "8fa143c3-0227-4fe7-84a8-f16518390386",
+    "632da83a-5ccb-4eac-ba63-7636098d6473",
+    "33ee6f13-31e8-49c0-9b96-6b436dc17b21",
+    "576b31ce-5bc0-4304-8cd3-22069e4506f9",
+    "6c351f6a-1984-4735-b9f1-05fdccbc998e",
+    "1bd1b21b-a29f-498b-860f-ef7aee923ee8",
+    "7c957e7a-dbf7-49f7-85ec-50505ce22297",
+    "1e11a6a5-2244-4cf0-9485-ba7d89e1abed",
+    "4493eb52-53a3-43bd-9311-b11b4bf9d3c2",
+    "f5e914d4-fc6f-4a3e-86e5-9d895a0c1b54",
+    "28b560e5-a95f-49b8-8e23-23092238494c",
+    "07a42019-3591-4284-bd1e-0c615f9ccd43",
+    "f526a726-8ec1-4172-bb29-598ec97d51b6",
+    "cd31cf6a-810e-40b7-ad28-a79ee88f5a8f",
+    "cd6e7db7-7115-418b-abf8-ed8f97d8d674",
+    "2a88a25d-2fa9-4fbd-86fe-3178c852bb1e",
+    "f5b03ee4-6619-43f1-aa52-3d16591c0af0",
+    "fe1a3d14-9c66-44f9-8ce5-006a67b94abd",
+    "ee3624bc-fd09-4252-b539-8649e608c0ef",
+    "0baba5a1-11c7-459b-b46d-f91fdc933879",
+    "7cbf8f1f-c43d-4298-ab5b-76ba31c4e56a",
+    "13085b52-6862-48e9-b20b-1df16a2e9479",
+    "4a29d804-f067-43d1-80bc-468651d2844c",
+    "c5d7e8da-1a30-48a5-a75d-94f361d7f0d1",
+    "9081a1ca-4136-4575-bffa-fcb582f84bc7",
+    "fbc17957-b298-413b-977a-7a146b72c6fa",
+    "68b75679-2d49-4501-b66e-b278b524c63d",
+    "5114b30b-12d3-44c5-8a77-31d0cb5e08ce",
+    "247448a1-d53d-4cde-a93c-aa00e06bcc1e",
+    "deca13c9-7b85-4dba-abc2-e45a0e42b9b2",
+    "b91f5948-80b8-4bc6-9f36-b44f2b96f45d",
+    "67bbc246-9ea7-4dc9-9c8a-1772fa780530",
+    "ceb6b125-0cbe-4fd9-9306-69a23c9c9611",
+    "f948744a-be92-48b2-82a0-a7e0cd97f30f",
+    "9a7f2cda-fb08-4d81-b292-7c3c3367f51e",
+    "38213c76-3dfc-451d-846c-b47fc72831ed",
+    "3ab59d2d-9e36-48f9-9672-3370e321b113",
+    "00e5047e-d704-4b19-8c2d-595ab54ab01b",
+    "0d902dc2-fdd8-499e-85af-0e3e116265b1",
+    "b849a589-fd79-4129-a68b-fcd53a2f0589",
+    "da744bfe-4691-4b5a-b61a-dcd9365805de",
+    "b39d2a42-b834-403e-9863-f0486e9c15de",
+    "fc2f09ce-e513-42f0-bf1b-48071dfc7019",
+    "66ce0d88-2bc6-4255-bc7b-6e81394703fa",
+    "162e0e2b-ca3a-4a7f-a976-c87df7b22590",
+    "470a40af-95dc-4026-84dc-19dcb385a4e3",
+    "e39ee05e-070c-442d-9f8d-d782b9878936",
+    "e0d6c895-2311-4f22-aef5-fc3b3094d2e0",
+    "185209fc-7526-44e2-b6c4-da720a21a993",
+    "d0af3542-8d4b-405e-996b-b5afbd6ece2a",
+    "e20aaf9e-88d0-4344-9b2f-5e540ec3791c",
+    "5aa1db08-733d-4d63-b5ad-37caf3dc6bbf",
+    "3f6b44e4-0af1-48ff-b326-61b16eff6ea7",
+    "7e23af80-df68-43bc-8afb-f02615786938",
+    "6a5660a4-a535-4e33-bbe3-eb7eaf07ac89",
+    "fb4d2db8-3417-4e25-8121-f62e95cbe33a"
+  ],
+  "alpaAll": [
+    {
+      "id": "42843ede-f708-454a-9426-2a4fbb45b04e",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "05059406-3078-43c4-85e3-3d74034c426b"
+    },
+    {
+      "id": "1ea92e85-c7d2-4a4c-8be2-26f30b84732e",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "05059406-3078-43c4-85e3-3d74034c426b"
+    },
+    {
+      "id": "9ccce53e-6036-400e-ada2-861aa6a1b36c",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "0969aa07-3121-471e-b9be-14b71bb3ecad"
+    },
+    {
+      "id": "7e215c7c-19ad-4128-b255-f9e74f8244f7",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "0969aa07-3121-471e-b9be-14b71bb3ecad"
+    },
+    {
+      "id": "9ff44c0f-5e76-4e84-829e-e5a9ba375d57",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "0c7a823e-7476-4c12-a965-d939af1fdfbb"
+    },
+    {
+      "id": "b8adb481-2057-422b-971b-608990c3ac40",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "0c7a823e-7476-4c12-a965-d939af1fdfbb"
+    },
+    {
+      "id": "58ad74f8-f12d-4c79-a42d-e54129b064fe",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "0cd2eca7-202f-4f88-9345-e3fb4acc4b4a"
+    },
+    {
+      "id": "9766a537-52c2-4858-86d9-07f223d6bc4c",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "0cd2eca7-202f-4f88-9345-e3fb4acc4b4a"
+    },
+    {
+      "id": "cf4f23ca-1c05-44e4-ac4f-1a09a47997b3",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "0eca684a-cf6d-4c9c-8c6b-49562873221a"
+    },
+    {
+      "id": "5f859f10-89e8-4b46-9a2a-289fd66ce9c4",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "0eca684a-cf6d-4c9c-8c6b-49562873221a"
+    },
+    {
+      "id": "b6ae8b58-0b41-4737-a91b-b92960c03d51",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "0ee1cf48-dbf8-41f3-8f26-02d6f480bd0b"
+    },
+    {
+      "id": "d9f2d3fb-fc65-46f7-bdc4-e460926c95bb",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "0ee1cf48-dbf8-41f3-8f26-02d6f480bd0b"
+    },
+    {
+      "id": "4ee3e6c1-531f-4bfa-bd6d-6cb392193e6a",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "0ef44035-bfdb-46db-8862-44421f1ef906"
+    },
+    {
+      "id": "1c65d8cc-bde1-4ba8-b997-402f2e7386df",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "0ef44035-bfdb-46db-8862-44421f1ef906"
+    },
+    {
+      "id": "156a4ad8-fda6-4e82-bd99-9541d456cfd4",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "10380ad3-cb06-4e7b-ae99-071693283c31"
+    },
+    {
+      "id": "697bea33-7e38-451c-9e24-3ce771a2123c",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "10380ad3-cb06-4e7b-ae99-071693283c31"
+    },
+    {
+      "id": "0bc1fd36-9ffc-4b98-8977-0c2445072416",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "1333d5f7-8428-4575-bd43-d76fce8a04bb"
+    },
+    {
+      "id": "623b5cfe-7326-4d28-8429-d145de601f83",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "1333d5f7-8428-4575-bd43-d76fce8a04bb"
+    },
+    {
+      "id": "dbaf71d5-13f0-458b-88d6-af200731142b",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "15660559-77d0-4a75-ac5a-04537f6c004c"
+    },
+    {
+      "id": "f0814898-bb93-4016-a815-f41b4690fffc",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "15660559-77d0-4a75-ac5a-04537f6c004c"
+    },
+    {
+      "id": "5344bd32-37a4-4586-8016-393893b6c8c7",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "16e4e421-cd3b-4dce-bebd-777df456c4b6"
+    },
+    {
+      "id": "5a69405d-745b-42ef-9931-924cf8d5907a",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "16e4e421-cd3b-4dce-bebd-777df456c4b6"
+    },
+    {
+      "id": "884da29f-9e97-4b03-980f-6b5d9ced3d67",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "181d2c92-c68e-4bf8-b97e-69702e2e8ebc"
+    },
+    {
+      "id": "b2d70b03-b69a-4fb0-99e1-1c5c34c8a160",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "181d2c92-c68e-4bf8-b97e-69702e2e8ebc"
+    },
+    {
+      "id": "3a24ce42-fab7-40fd-8aa7-c238b339f33a",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "1b03f6c1-71c0-4c3d-aeb6-bb17e01604ea"
+    },
+    {
+      "id": "57cea0c9-c945-492a-bc6f-68f7b4e70c4b",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "1b03f6c1-71c0-4c3d-aeb6-bb17e01604ea"
+    },
+    {
+      "id": "a8671a46-44c1-433c-84dc-bd057ec5bd9f",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "1c07aa76-76f2-4b9f-b512-da4d8d85b3f0"
+    },
+    {
+      "id": "fca8091f-9554-4824-a892-5f2054e1b0ed",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "1c07aa76-76f2-4b9f-b512-da4d8d85b3f0"
+    },
+    {
+      "id": "09b20bcf-dfe0-4fd7-9f1f-9e28c7c3b7f4",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "1f033e9b-410e-49e3-8630-6281e4aff947"
+    },
+    {
+      "id": "eed5b2e4-8c77-42e5-8b98-2a30ec36c32f",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "1f033e9b-410e-49e3-8630-6281e4aff947"
+    },
+    {
+      "id": "b702ab5f-e5e4-43a3-a337-857b7454b29f",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "20a4b122-c05d-47ad-86d3-ab3b21b0a857"
+    },
+    {
+      "id": "d907d705-fea0-40c8-88ca-5ec6aa7ef132",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "20a4b122-c05d-47ad-86d3-ab3b21b0a857"
+    },
+    {
+      "id": "92dde1b1-e8fb-489c-9cbf-8404d6777cd4",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "25115d57-334e-4681-83b6-672b65025d34"
+    },
+    {
+      "id": "21810a9c-edf4-496a-859c-4ac0bc538b33",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "25115d57-334e-4681-83b6-672b65025d34"
+    },
+    {
+      "id": "a505e381-1eb1-4a67-b409-995946a214d3",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "254622ed-a732-4468-966d-53d1a0631f4e"
+    },
+    {
+      "id": "700494e4-3f39-4708-bfba-ec77815f2005",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "254622ed-a732-4468-966d-53d1a0631f4e"
+    },
+    {
+      "id": "da021f78-8c23-44d8-bfc3-64c6949a83ce",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "26913bcb-3382-42d0-81f6-20c20cc0056a"
+    },
+    {
+      "id": "587c1f8c-0fb4-4386-94e2-754268d21cc6",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "26913bcb-3382-42d0-81f6-20c20cc0056a"
+    },
+    {
+      "id": "68a7664f-00f4-4215-aab2-8287472fc90d",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "2bab2980-2cc6-4a0e-bdd2-26aebefb6a71"
+    },
+    {
+      "id": "70d1d648-ef19-4803-b087-c83737cbd817",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "2bab2980-2cc6-4a0e-bdd2-26aebefb6a71"
+    },
+    {
+      "id": "98d55dc7-cc47-4460-bc79-8f0331664ce1",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "2d5440fd-c858-4530-b3ec-fa47892d0b1a"
+    },
+    {
+      "id": "fd79bed3-8250-46f2-a7f1-063737563038",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "2d5440fd-c858-4530-b3ec-fa47892d0b1a"
+    },
+    {
+      "id": "626dd13c-821d-4c9e-9065-64f114256707",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "2eef2a86-c557-46c3-9d6a-e9ea5b3b16dc"
+    },
+    {
+      "id": "c160708f-430a-4c1a-8733-bc7048c23ce4",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "2eef2a86-c557-46c3-9d6a-e9ea5b3b16dc"
+    },
+    {
+      "id": "553be114-eb0e-420f-8551-5b7a630aaddd",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "2f751ffe-361f-4acd-b830-e79496806422"
+    },
+    {
+      "id": "ef28089f-8bea-437a-a519-0331280e3932",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "2f751ffe-361f-4acd-b830-e79496806422"
+    },
+    {
+      "id": "54d601e0-4cdd-4e64-b722-f634e1d67078",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "30314bcc-8234-4817-9343-c80b8fdf0335"
+    },
+    {
+      "id": "081402a3-7090-4f58-8cfe-24490381eaf7",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "30314bcc-8234-4817-9343-c80b8fdf0335"
+    },
+    {
+      "id": "e04753fc-c798-47ff-ab5f-fe36e8f230b6",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "3176f7d0-f9f2-47d7-a8f6-c1bd16b2421d"
+    },
+    {
+      "id": "687ec918-a734-42fb-953d-f1b82b2ccb38",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "3176f7d0-f9f2-47d7-a8f6-c1bd16b2421d"
+    },
+    {
+      "id": "5c512b73-1a42-4e0c-b2b4-74746eea617a",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "3192ad9a-efe3-4bae-aa5d-365f47bb8b9d"
+    },
+    {
+      "id": "b2ca0cb7-c20f-44c1-b58c-a90de9dd5309",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "3192ad9a-efe3-4bae-aa5d-365f47bb8b9d"
+    },
+    {
+      "id": "0d9bafde-0982-4443-92d7-283a3711ff5e",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "326d979b-6d53-4466-bc58-99124a03c9ed"
+    },
+    {
+      "id": "1fbb31c6-9346-496a-9bc7-14cfd2938b58",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "326d979b-6d53-4466-bc58-99124a03c9ed"
+    },
+    {
+      "id": "d0caeb07-3486-43f6-ab18-54466753e44c",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "327f04d7-1940-4959-a181-71a2afae932b"
+    },
+    {
+      "id": "2fb93376-37a2-408d-96c0-b75879be87ba",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "327f04d7-1940-4959-a181-71a2afae932b"
+    },
+    {
+      "id": "bf67fdf8-dd32-4697-a465-0a9ce1221b27",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "33a622b9-dd03-4007-830e-a8ba6a7d403e"
+    },
+    {
+      "id": "2908a674-dfb3-4b20-83d6-a17980f74d07",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "33a622b9-dd03-4007-830e-a8ba6a7d403e"
+    },
+    {
+      "id": "1d6f1de5-b639-4a74-a816-0a904a1bb75a",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "33cb0161-b755-4881-8b56-a2c278717ef6"
+    },
+    {
+      "id": "e27e32f7-bfa3-44c1-bba0-bee11407e0e5",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "33cb0161-b755-4881-8b56-a2c278717ef6"
+    },
+    {
+      "id": "334005aa-8631-436c-ac9a-f22389a2593f",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "38b86b4f-b069-41de-9afc-9da31af5537e"
+    },
+    {
+      "id": "2c62a1f6-646a-4efd-90a5-233bb89303d7",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "38b86b4f-b069-41de-9afc-9da31af5537e"
+    },
+    {
+      "id": "13dc2bb5-a297-4cde-a23c-8832e5cb418a",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "3ae1b29e-21bb-4d0f-ab4c-3468da66fc29"
+    },
+    {
+      "id": "fd0da4fa-1164-4e60-a9ea-2c0fbc822b4c",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "3ae1b29e-21bb-4d0f-ab4c-3468da66fc29"
+    },
+    {
+      "id": "68b4c0f3-20df-446f-8a72-0f9dbce3ab4d",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "3fc6250b-e4b0-4237-935c-bfc5b6bd7798"
+    },
+    {
+      "id": "4cae9ea0-2862-4d47-a2f4-08c193086180",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "3fc6250b-e4b0-4237-935c-bfc5b6bd7798"
+    },
+    {
+      "id": "3f48ba47-cbe2-4288-baca-6910caf9d0de",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "40e7112b-7292-4b08-bede-0c130c1303a9"
+    },
+    {
+      "id": "70b2a1c7-9a47-4999-9d50-eec51fb286f2",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "40e7112b-7292-4b08-bede-0c130c1303a9"
+    },
+    {
+      "id": "def0f945-bd2f-46a0-bb1a-80a1087d7070",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "41288e0c-ce52-4c35-9bbd-f60146bb738e"
+    },
+    {
+      "id": "54f620d1-5241-4c34-8bb4-c9db373fa0e4",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "41288e0c-ce52-4c35-9bbd-f60146bb738e"
+    },
+    {
+      "id": "61383236-242f-42f2-bb79-4d623f07abc2",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "4a434d3d-2f89-4aa5-949a-2aeea7efe874"
+    },
+    {
+      "id": "cb2cd656-e5e1-41fb-a93f-c034b01c4c05",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "4a434d3d-2f89-4aa5-949a-2aeea7efe874"
+    },
+    {
+      "id": "682ed82e-7558-4d5d-85cf-4339b4b968f7",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "4e118b9e-6e66-4664-b3d4-e7d227f9fb61"
+    },
+    {
+      "id": "9f4f7ef1-946a-479f-aaaa-f778a20371df",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "4e118b9e-6e66-4664-b3d4-e7d227f9fb61"
+    },
+    {
+      "id": "64ca01d9-cc1c-450c-b3bb-a996965cc2e5",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "4e19b261-4711-486a-92fa-46ccc30699be"
+    },
+    {
+      "id": "216d2895-f8fb-4b8d-aff0-8ca850aeff94",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "4e19b261-4711-486a-92fa-46ccc30699be"
+    },
+    {
+      "id": "363a0791-fce6-4b68-8c86-befec13d3b66",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "4e6b6194-e946-4f73-ae4b-8c11d110a6fb"
+    },
+    {
+      "id": "f51d0d4f-cd32-4d91-b8b2-8b4c5167490c",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "4e6b6194-e946-4f73-ae4b-8c11d110a6fb"
+    },
+    {
+      "id": "c8e54b09-43db-4b92-82b9-93d96b5e4bd2",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "4f019b91-6f85-423b-948e-c804246f908e"
+    },
+    {
+      "id": "603e149e-f3e0-460f-b267-723a18f6d4c6",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "4f019b91-6f85-423b-948e-c804246f908e"
+    },
+    {
+      "id": "3d2784c3-ee5b-45c7-aa08-8b4ed74968aa",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "5189ad94-ca4f-4a75-b61b-fa38feb38947"
+    },
+    {
+      "id": "23d9dbc4-c2e1-4dac-b463-b8d51eeb3844",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "5189ad94-ca4f-4a75-b61b-fa38feb38947"
+    },
+    {
+      "id": "e638ab86-f832-4eac-a76a-030e02de84a6",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "52320561-2f0a-4ee1-8077-0ea959ee8a41"
+    },
+    {
+      "id": "dd0bb1bc-63e0-4599-a5d0-37882ad6898e",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "52320561-2f0a-4ee1-8077-0ea959ee8a41"
+    },
+    {
+      "id": "aee405cd-dae2-4a0e-bb1d-52ae05b74778",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "5453dada-25b6-4562-b39f-78307bda471b"
+    },
+    {
+      "id": "6e603da2-62a1-48e5-8153-2e121f81cd44",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "5453dada-25b6-4562-b39f-78307bda471b"
+    },
+    {
+      "id": "bb229140-aaa3-4e7a-9f3e-dac7b9309219",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "555545c2-5159-4ceb-b326-1d94e3200ab9"
+    },
+    {
+      "id": "4610425f-42ce-47d7-a6cd-cdebb25e1c2e",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "555545c2-5159-4ceb-b326-1d94e3200ab9"
+    },
+    {
+      "id": "26cb7865-902e-4266-80db-e3d60cd461d4",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "559aed4c-452c-42b4-a5c3-efde3496c5a3"
+    },
+    {
+      "id": "39a277df-75cd-454c-9d1d-0a38108fe286",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "559aed4c-452c-42b4-a5c3-efde3496c5a3"
+    },
+    {
+      "id": "1192a6eb-fd9b-4030-a973-dbd8cb9753ef",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "56bb9c94-9ef3-4755-800f-b86d2d15360a"
+    },
+    {
+      "id": "b1c5fd0d-7487-4086-b3d7-f6bace799829",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "56bb9c94-9ef3-4755-800f-b86d2d15360a"
+    },
+    {
+      "id": "f0878825-26d1-46b7-965d-8ea697141ebb",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "57f8f423-3f80-4d12-9872-9c169c848ed2"
+    },
+    {
+      "id": "1b3963f1-6f0b-456b-9b3d-238c10b8b6a5",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "57f8f423-3f80-4d12-9872-9c169c848ed2"
+    },
+    {
+      "id": "268dc74c-c111-46ad-8376-840cd062d9ff",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "587bee01-82d2-4388-b836-695aeaf3bb0c"
+    },
+    {
+      "id": "7c8d8d44-58dc-400a-8799-6976a5d998f4",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "587bee01-82d2-4388-b836-695aeaf3bb0c"
+    },
+    {
+      "id": "3d439055-60c0-49c3-b93e-c6cd4b6a3485",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "5afc7867-6734-4ab7-bdae-c00a481e7123"
+    },
+    {
+      "id": "afa27860-2fdc-4f9d-a7f1-3288257decbc",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "5afc7867-6734-4ab7-bdae-c00a481e7123"
+    },
+    {
+      "id": "72b9a5be-1888-4eb6-b4e6-d1f155679aeb",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "5f28a435-d8a0-4eec-bcc0-fbe462ba39e8"
+    },
+    {
+      "id": "83d32724-c8e4-4efe-b7e6-62d56b5c875f",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "5f28a435-d8a0-4eec-bcc0-fbe462ba39e8"
+    },
+    {
+      "id": "c03ccd06-d689-4f73-8acc-31d98aa43323",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "5febc193-3e36-4abe-be13-6cd3e3a61ec4"
+    },
+    {
+      "id": "519242f8-da1c-4abb-8aed-d2b42f3c0268",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "5febc193-3e36-4abe-be13-6cd3e3a61ec4"
+    },
+    {
+      "id": "72e06d99-44fb-418c-9c0c-72105e9d60c6",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "6638aa15-a453-418b-9770-1b6731ea4ce6"
+    },
+    {
+      "id": "f0630186-cdf8-46e1-ae74-5d4bd3f12e0b",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "6638aa15-a453-418b-9770-1b6731ea4ce6"
+    },
+    {
+      "id": "617502d2-b62a-4a4e-9244-d2a035dd6eec",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "665e4f90-3fc8-4543-a922-f9a8a37dd8ca"
+    },
+    {
+      "id": "122d1623-3d05-4a4a-9d89-97ff3aac316d",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "665e4f90-3fc8-4543-a922-f9a8a37dd8ca"
+    },
+    {
+      "id": "4794d62c-891f-4bb5-b4c1-2fd4118f9a8b",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "693e077d-cabc-4fa8-aa46-8a268d1e3fa4"
+    },
+    {
+      "id": "54a7c82d-92d0-4f19-a435-105d716901a9",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "693e077d-cabc-4fa8-aa46-8a268d1e3fa4"
+    },
+    {
+      "id": "020ca948-610e-48cb-9499-f5cd50d1eb24",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "69cbd105-7d07-42e8-9e9e-ac7bbbe4a4e7"
+    },
+    {
+      "id": "119369c1-fe0e-47be-bae8-84de7a3fbf7f",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "69cbd105-7d07-42e8-9e9e-ac7bbbe4a4e7"
+    },
+    {
+      "id": "b04896d0-8f8c-4bc8-b6a3-cd95cda33967",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "6a49b433-e539-495b-b897-a485d4ea393a"
+    },
+    {
+      "id": "d5918f35-249c-430b-97a4-519e6a227d99",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "6a49b433-e539-495b-b897-a485d4ea393a"
+    },
+    {
+      "id": "cab734ed-5fb4-4cbe-afa7-7978e566f108",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "6d853c0a-3ae8-4d4e-bfe5-ce5cf389fdc7"
+    },
+    {
+      "id": "83c25dd9-6ce8-43fa-b7a5-48353acc0ce3",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "6d853c0a-3ae8-4d4e-bfe5-ce5cf389fdc7"
+    },
+    {
+      "id": "77c05c23-d4d0-4639-8550-2436bef18e10",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "6dca668d-b579-4d2b-9c5b-0a9717dcb4ff"
+    },
+    {
+      "id": "6a972a95-07ac-4f16-8c90-366c46e348ca",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "6dca668d-b579-4d2b-9c5b-0a9717dcb4ff"
+    },
+    {
+      "id": "fee08649-fe02-41a8-9e7d-f3460d960775",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "6e87e403-72cf-4382-8183-4844ceeb4023"
+    },
+    {
+      "id": "c4b7f53d-db2a-4f36-b047-a5c75e7791bb",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "6e87e403-72cf-4382-8183-4844ceeb4023"
+    },
+    {
+      "id": "cc9dcada-dbba-454c-a80b-a8e087f5b937",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "6ebaab14-7739-41c0-baea-edb8eb529690"
+    },
+    {
+      "id": "7e2f23b5-50e7-4d30-9927-4ab884d7bcdc",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "6ebaab14-7739-41c0-baea-edb8eb529690"
+    },
+    {
+      "id": "bf449f88-04f1-4793-b569-2fe08798c181",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "6fa6e58b-792f-4699-8724-152f2d28f3c1"
+    },
+    {
+      "id": "2b3f981d-5349-47d4-be2b-ff538fdd5125",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "6fa6e58b-792f-4699-8724-152f2d28f3c1"
+    },
+    {
+      "id": "2860219b-535a-4d86-a3bb-2f6649081c37",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "7295dc9b-ffe4-4de5-8004-1d2beb8159d2"
+    },
+    {
+      "id": "bdca435b-8084-41ae-ab9c-53b0cf28afb8",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "7295dc9b-ffe4-4de5-8004-1d2beb8159d2"
+    },
+    {
+      "id": "e6eb4cee-0930-4ce2-a122-1c08c98bf70a",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "72b41997-ad23-4091-9fa3-a8dc174e0b17"
+    },
+    {
+      "id": "7fa338c3-435b-4e6a-8fca-18192b8637ba",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "72b41997-ad23-4091-9fa3-a8dc174e0b17"
+    },
+    {
+      "id": "5c58cf47-925c-42d0-ab44-f006a432e076",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "7357848d-de00-448c-a0bd-c39d16cee26b"
+    },
+    {
+      "id": "e1720335-ed90-46d9-9b08-8ece6ab4a77f",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "7357848d-de00-448c-a0bd-c39d16cee26b"
+    },
+    {
+      "id": "2270627e-2a2f-4a1c-a767-ca064b15bee0",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "75625293-fd9c-4bd1-a6b5-4aaad5d83b0a"
+    },
+    {
+      "id": "b2f7b058-3376-4785-bc50-0d40085c46be",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "75625293-fd9c-4bd1-a6b5-4aaad5d83b0a"
+    },
+    {
+      "id": "17ce28e5-9162-47f0-8048-b3c4e96ddabb",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "76eed511-6de0-4e23-bb3b-b61af3a8a449"
+    },
+    {
+      "id": "a49ea232-88cd-4da1-a516-5d232bac61e4",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "76eed511-6de0-4e23-bb3b-b61af3a8a449"
+    },
+    {
+      "id": "91e61d0a-8ecf-4b65-b441-3036c2041f98",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "7757ca13-adfb-44f6-9a53-091049bb0f96"
+    },
+    {
+      "id": "bd770ea8-3e6f-4d69-8601-f56202f6a42f",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "7757ca13-adfb-44f6-9a53-091049bb0f96"
+    },
+    {
+      "id": "9da7ae8b-984f-44a6-8916-5ab5265c3756",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "7d5fb158-562f-4ec6-9c51-d5aebab64e18"
+    },
+    {
+      "id": "54844cfc-d08e-4e70-ba32-2a66730e9044",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "7d5fb158-562f-4ec6-9c51-d5aebab64e18"
+    },
+    {
+      "id": "9714c60c-364a-412b-8136-44eed1620d1c",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "7f2b9909-4473-4c34-94b5-e06e1995e8f1"
+    },
+    {
+      "id": "d1ee7cf8-735c-4fb8-b681-0980bfda0842",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "7f2b9909-4473-4c34-94b5-e06e1995e8f1"
+    },
+    {
+      "id": "d78cbb70-9758-4ad4-9bf4-9be1cd7befcb",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "815f1ccd-b780-4541-992e-06df8cae3a1e"
+    },
+    {
+      "id": "aa4468da-a0f1-44e2-90c7-a7fc17197b6b",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "815f1ccd-b780-4541-992e-06df8cae3a1e"
+    },
+    {
+      "id": "e91062d7-4dcf-4f1c-8720-005dad187089",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "83cdb339-d105-4bcf-b545-3efd80a10d6b"
+    },
+    {
+      "id": "939927d0-b746-4a52-abaa-296880e3ad12",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "83cdb339-d105-4bcf-b545-3efd80a10d6b"
+    },
+    {
+      "id": "4ee55304-6356-44a0-8143-c33a2085137b",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "83de3ac4-b57a-44c1-8c55-8b7752834231"
+    },
+    {
+      "id": "e33c3ce2-25ff-4177-bef2-94dc9bee3fa0",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "83de3ac4-b57a-44c1-8c55-8b7752834231"
+    },
+    {
+      "id": "3202957c-b6c0-4072-ae21-828fbafd4663",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "85f977f6-d92e-4e86-a696-68db873b3afd"
+    },
+    {
+      "id": "8fa143c3-0227-4fe7-84a8-f16518390386",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "85f977f6-d92e-4e86-a696-68db873b3afd"
+    },
+    {
+      "id": "486d7194-626a-4086-86e0-50cc538de7d5",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "874ab15e-4b76-4cf2-902f-dc35e445c747"
+    },
+    {
+      "id": "632da83a-5ccb-4eac-ba63-7636098d6473",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "874ab15e-4b76-4cf2-902f-dc35e445c747"
+    },
+    {
+      "id": "b7ca53b7-cff4-4370-8ca0-e3dfed0c3c88",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "887d6318-fc1b-44d2-ba58-5861d7337f88"
+    },
+    {
+      "id": "33ee6f13-31e8-49c0-9b96-6b436dc17b21",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "887d6318-fc1b-44d2-ba58-5861d7337f88"
+    },
+    {
+      "id": "babe7d35-cc47-4cac-b1c3-01c1e8a119a9",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "8bd07931-33f5-476c-8c1f-64762730fc60"
+    },
+    {
+      "id": "576b31ce-5bc0-4304-8cd3-22069e4506f9",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "8bd07931-33f5-476c-8c1f-64762730fc60"
+    },
+    {
+      "id": "111e0f58-2bf6-481c-9f3c-fae0582ca405",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "9025299a-46cb-4793-b1b8-5281e71eda4c"
+    },
+    {
+      "id": "6c351f6a-1984-4735-b9f1-05fdccbc998e",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "9025299a-46cb-4793-b1b8-5281e71eda4c"
+    },
+    {
+      "id": "d5107417-fedd-45f1-a430-73f852422479",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "91188d0e-a532-4e63-8b14-ae60ab6f86b7"
+    },
+    {
+      "id": "1bd1b21b-a29f-498b-860f-ef7aee923ee8",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "91188d0e-a532-4e63-8b14-ae60ab6f86b7"
+    },
+    {
+      "id": "9ea7aecc-6f36-4710-830f-5c9422288400",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "92ce53e8-9ee5-4eca-ab12-c3bb6e23bc9f"
+    },
+    {
+      "id": "7c957e7a-dbf7-49f7-85ec-50505ce22297",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "92ce53e8-9ee5-4eca-ab12-c3bb6e23bc9f"
+    },
+    {
+      "id": "6bc5444e-464e-4c7b-b207-fb5d6346d603",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "95d53b99-1597-4444-b993-527df1ccebf3"
+    },
+    {
+      "id": "1e11a6a5-2244-4cf0-9485-ba7d89e1abed",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "95d53b99-1597-4444-b993-527df1ccebf3"
+    },
+    {
+      "id": "73370b86-66ce-4f6b-9f8b-2c0cea3aac13",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "97cbc411-879e-48e9-b869-8a55afa41090"
+    },
+    {
+      "id": "4493eb52-53a3-43bd-9311-b11b4bf9d3c2",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "97cbc411-879e-48e9-b869-8a55afa41090"
+    },
+    {
+      "id": "15ff5c47-d23d-4faf-b1d3-3f46a08ddfc4",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "996df6f9-cf4c-4853-944d-d7db32984e7f"
+    },
+    {
+      "id": "f5e914d4-fc6f-4a3e-86e5-9d895a0c1b54",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "996df6f9-cf4c-4853-944d-d7db32984e7f"
+    },
+    {
+      "id": "3a0782ed-02f0-4b8b-856b-5a48020f038d",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "99c0a586-4046-4760-8bbf-ba32930282c7"
+    },
+    {
+      "id": "28b560e5-a95f-49b8-8e23-23092238494c",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "99c0a586-4046-4760-8bbf-ba32930282c7"
+    },
+    {
+      "id": "01bee3bd-e6d8-4485-bc81-58345aff8856",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "9c032753-98bb-4f12-b83e-14fc9021ecd8"
+    },
+    {
+      "id": "07a42019-3591-4284-bd1e-0c615f9ccd43",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "9c032753-98bb-4f12-b83e-14fc9021ecd8"
+    },
+    {
+      "id": "e44f6330-f4a9-4981-bec6-e1a004de39ec",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "a2c90b29-884b-4c3f-8fe4-f4eb7815f8b0"
+    },
+    {
+      "id": "f526a726-8ec1-4172-bb29-598ec97d51b6",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "a2c90b29-884b-4c3f-8fe4-f4eb7815f8b0"
+    },
+    {
+      "id": "1a02eafe-945a-4afb-a2e6-e9da5b654a83",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "a360ee62-c030-41fc-abda-ec987b36d5e2"
+    },
+    {
+      "id": "cd31cf6a-810e-40b7-ad28-a79ee88f5a8f",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "a360ee62-c030-41fc-abda-ec987b36d5e2"
+    },
+    {
+      "id": "9e6a9491-c05e-4d00-946f-cd8400bdd361",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "a3ead96b-c524-496e-b4fd-a9b6ac24db50"
+    },
+    {
+      "id": "cd6e7db7-7115-418b-abf8-ed8f97d8d674",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "a3ead96b-c524-496e-b4fd-a9b6ac24db50"
+    },
+    {
+      "id": "b52e6d66-cd08-48ba-8957-dcc3ef013645",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "a687bbdd-949d-45c2-8b61-5af6c7f8ccbd"
+    },
+    {
+      "id": "2a88a25d-2fa9-4fbd-86fe-3178c852bb1e",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "a687bbdd-949d-45c2-8b61-5af6c7f8ccbd"
+    },
+    {
+      "id": "363ac789-43ee-4671-849f-703c0b6eb27f",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "a844ff90-3557-49c4-920f-6be929d4ddb8"
+    },
+    {
+      "id": "f5b03ee4-6619-43f1-aa52-3d16591c0af0",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "a844ff90-3557-49c4-920f-6be929d4ddb8"
+    },
+    {
+      "id": "8733e859-eeef-42c2-ba56-f66f9ca1f35f",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "a9e3fa98-9626-4848-a7cd-583be703b5f3"
+    },
+    {
+      "id": "fe1a3d14-9c66-44f9-8ce5-006a67b94abd",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "a9e3fa98-9626-4848-a7cd-583be703b5f3"
+    },
+    {
+      "id": "ada1d953-5e80-460d-bcbb-c94d3b61b5a9",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "aac1d53e-ed49-48e4-8d30-eb978df0dc66"
+    },
+    {
+      "id": "ee3624bc-fd09-4252-b539-8649e608c0ef",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "aac1d53e-ed49-48e4-8d30-eb978df0dc66"
+    },
+    {
+      "id": "989592ea-eb2f-4e57-9164-e07abe7d685f",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "ad3be288-5813-4403-ba03-8e54c29871c2"
+    },
+    {
+      "id": "0baba5a1-11c7-459b-b46d-f91fdc933879",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "ad3be288-5813-4403-ba03-8e54c29871c2"
+    },
+    {
+      "id": "9e23b5d1-7544-4f2f-9bd6-dab4f4920c20",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "ae2907cc-0787-4041-af52-277c5b7fa018"
+    },
+    {
+      "id": "7cbf8f1f-c43d-4298-ab5b-76ba31c4e56a",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "ae2907cc-0787-4041-af52-277c5b7fa018"
+    },
+    {
+      "id": "881450ae-8b26-4c79-a6b7-168289dbcd66",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "b0360e22-b4e9-433f-bed8-90a80d7247ec"
+    },
+    {
+      "id": "13085b52-6862-48e9-b20b-1df16a2e9479",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "b0360e22-b4e9-433f-bed8-90a80d7247ec"
+    },
+    {
+      "id": "45898c8c-8a9e-4482-b43d-367332c75156",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "b0d772b5-4483-4d2a-b6c7-c7b4cdad0f79"
+    },
+    {
+      "id": "4a29d804-f067-43d1-80bc-468651d2844c",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "b0d772b5-4483-4d2a-b6c7-c7b4cdad0f79"
+    },
+    {
+      "id": "581d19ad-3681-4a8f-bb68-d94a4a618ff8",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "b2b9da14-5e34-40be-a251-f8c43170c267"
+    },
+    {
+      "id": "c5d7e8da-1a30-48a5-a75d-94f361d7f0d1",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "b2b9da14-5e34-40be-a251-f8c43170c267"
+    },
+    {
+      "id": "5bfc0b5b-817c-4deb-8ae2-794532951b00",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "bab993ab-1242-44ed-bdfd-547ae3cde53d"
+    },
+    {
+      "id": "9081a1ca-4136-4575-bffa-fcb582f84bc7",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "bab993ab-1242-44ed-bdfd-547ae3cde53d"
+    },
+    {
+      "id": "8b5462d8-b430-44b8-aa1d-1c623de30756",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "bf34d173-c2c4-4fa4-b620-40990180ee04"
+    },
+    {
+      "id": "fbc17957-b298-413b-977a-7a146b72c6fa",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "bf34d173-c2c4-4fa4-b620-40990180ee04"
+    },
+    {
+      "id": "98a3c0d6-d4af-4702-aa5d-8477c2667a99",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "bfbb2957-1f35-4bd3-867d-74c1c9a2b0ff"
+    },
+    {
+      "id": "68b75679-2d49-4501-b66e-b278b524c63d",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "bfbb2957-1f35-4bd3-867d-74c1c9a2b0ff"
+    },
+    {
+      "id": "bbdde4ee-445c-4c04-bc14-ea75f2718c7c",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "bfe42149-ff1c-432f-87ea-6e352e029c2d"
+    },
+    {
+      "id": "5114b30b-12d3-44c5-8a77-31d0cb5e08ce",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "bfe42149-ff1c-432f-87ea-6e352e029c2d"
+    },
+    {
+      "id": "f33088bd-5993-4f65-bef1-0a3abca24a97",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "c0dceb21-b206-4239-a7e7-5c87019d503e"
+    },
+    {
+      "id": "247448a1-d53d-4cde-a93c-aa00e06bcc1e",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "c0dceb21-b206-4239-a7e7-5c87019d503e"
+    },
+    {
+      "id": "8d52778c-0c4f-4acf-a0c6-ebeb0b06784f",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "c0ecee8e-7e6c-42a7-b132-e3dacb15af64"
+    },
+    {
+      "id": "deca13c9-7b85-4dba-abc2-e45a0e42b9b2",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "c0ecee8e-7e6c-42a7-b132-e3dacb15af64"
+    },
+    {
+      "id": "9fe7407a-b847-4f5d-840c-4c61e98ef739",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "c5542092-d005-4b18-8625-96a5d5f7b2dc"
+    },
+    {
+      "id": "b91f5948-80b8-4bc6-9f36-b44f2b96f45d",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "c5542092-d005-4b18-8625-96a5d5f7b2dc"
+    },
+    {
+      "id": "fb19b92a-d71b-4675-8568-b38c7c629f6b",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "c5f0b932-f200-46c6-948f-62b82ecb1e12"
+    },
+    {
+      "id": "67bbc246-9ea7-4dc9-9c8a-1772fa780530",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "c5f0b932-f200-46c6-948f-62b82ecb1e12"
+    },
+    {
+      "id": "60806f0e-f422-4a0a-b875-96fb065bf712",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "c69d1467-bbb7-4c88-8994-ed3d9891ea61"
+    },
+    {
+      "id": "ceb6b125-0cbe-4fd9-9306-69a23c9c9611",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "c69d1467-bbb7-4c88-8994-ed3d9891ea61"
+    },
+    {
+      "id": "fe076bcf-cd72-4e84-9200-1ea57ff02e93",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "c79b6112-d0c8-4759-8111-9dc41a4f2eb7"
+    },
+    {
+      "id": "f948744a-be92-48b2-82a0-a7e0cd97f30f",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "c79b6112-d0c8-4759-8111-9dc41a4f2eb7"
+    },
+    {
+      "id": "f8421634-3478-4b16-8866-b3b97c54dcd6",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "d07ce626-a755-4248-97c7-b39bbab5a96f"
+    },
+    {
+      "id": "9a7f2cda-fb08-4d81-b292-7c3c3367f51e",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "d07ce626-a755-4248-97c7-b39bbab5a96f"
+    },
+    {
+      "id": "88964032-4c08-45d1-b5a2-c4428241f395",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "d6bb573d-6f43-448e-b73e-b6db5ba9d850"
+    },
+    {
+      "id": "38213c76-3dfc-451d-846c-b47fc72831ed",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "d6bb573d-6f43-448e-b73e-b6db5ba9d850"
+    },
+    {
+      "id": "8ac42dfb-044c-42bb-b866-5b8b03afa0df",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "d9a7717d-d862-4ea6-b03f-8106779dda88"
+    },
+    {
+      "id": "3ab59d2d-9e36-48f9-9672-3370e321b113",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "d9a7717d-d862-4ea6-b03f-8106779dda88"
+    },
+    {
+      "id": "0a927479-ba1c-4391-843f-436f574fbff9",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "d9e1f554-5130-4595-bf31-2f40407abb08"
+    },
+    {
+      "id": "00e5047e-d704-4b19-8c2d-595ab54ab01b",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "d9e1f554-5130-4595-bf31-2f40407abb08"
+    },
+    {
+      "id": "b9d4fc15-04c9-4700-af4e-c93db471e0a5",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "db3667b2-7590-4b62-9b50-ed5529f92a08"
+    },
+    {
+      "id": "0d902dc2-fdd8-499e-85af-0e3e116265b1",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "db3667b2-7590-4b62-9b50-ed5529f92a08"
+    },
+    {
+      "id": "13f6a83f-38e0-4a79-b7e0-d03a8af8f536",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "dd10c923-3afd-4819-88c4-7d9556ce4278"
+    },
+    {
+      "id": "b849a589-fd79-4129-a68b-fcd53a2f0589",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "dd10c923-3afd-4819-88c4-7d9556ce4278"
+    },
+    {
+      "id": "d037da74-eb05-439c-bed4-1177d85385eb",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "e14a07f2-c509-4f2b-accf-e2dfe9afb8bd"
+    },
+    {
+      "id": "da744bfe-4691-4b5a-b61a-dcd9365805de",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "e14a07f2-c509-4f2b-accf-e2dfe9afb8bd"
+    },
+    {
+      "id": "87b344a3-45c6-4c3e-ab40-fc32d4a267cb",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "e8f18266-8492-4ff2-8c88-962174b21da5"
+    },
+    {
+      "id": "b39d2a42-b834-403e-9863-f0486e9c15de",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "e8f18266-8492-4ff2-8c88-962174b21da5"
+    },
+    {
+      "id": "c4cb139a-b678-4aab-90b6-b2c3d07678bb",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "e9440683-ff23-4f80-94bb-bacb51cf3ea9"
+    },
+    {
+      "id": "fc2f09ce-e513-42f0-bf1b-48071dfc7019",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "e9440683-ff23-4f80-94bb-bacb51cf3ea9"
+    },
+    {
+      "id": "752c2086-89f1-4fc2-90f8-014a26e04981",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "ed0302db-26aa-4276-a9f0-78e9dc564aca"
+    },
+    {
+      "id": "66ce0d88-2bc6-4255-bc7b-6e81394703fa",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "ed0302db-26aa-4276-a9f0-78e9dc564aca"
+    },
+    {
+      "id": "65c9d9b1-07b4-425b-9ea6-533a3c84e5be",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "eea22c27-3d7d-46a9-a69a-000cd24ce85e"
+    },
+    {
+      "id": "162e0e2b-ca3a-4a7f-a976-c87df7b22590",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "eea22c27-3d7d-46a9-a69a-000cd24ce85e"
+    },
+    {
+      "id": "eb404cbf-1d0e-4cd8-a9a3-4e1e77dfaf3e",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "eed61bbb-a742-4b2f-a740-94c05f6f4f24"
+    },
+    {
+      "id": "470a40af-95dc-4026-84dc-19dcb385a4e3",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "eed61bbb-a742-4b2f-a740-94c05f6f4f24"
+    },
+    {
+      "id": "64f206d8-548d-4f8d-9ea6-26d92f5f8271",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "ef58ba70-9ea8-437f-bfb5-c21e992e5c95"
+    },
+    {
+      "id": "e39ee05e-070c-442d-9f8d-d782b9878936",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "ef58ba70-9ea8-437f-bfb5-c21e992e5c95"
+    },
+    {
+      "id": "8f8d358a-142e-4cff-be2e-c6e27b838244",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "f2b5ef75-e846-4ac4-92b1-124c8720e14c"
+    },
+    {
+      "id": "e0d6c895-2311-4f22-aef5-fc3b3094d2e0",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "f2b5ef75-e846-4ac4-92b1-124c8720e14c"
+    },
+    {
+      "id": "3efaceb2-5ab5-4217-8eb2-10e30c493d77",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "f3774fe4-976c-4c61-b570-854d0cbd547f"
+    },
+    {
+      "id": "185209fc-7526-44e2-b6c4-da720a21a993",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "f3774fe4-976c-4c61-b570-854d0cbd547f"
+    },
+    {
+      "id": "5c3a366f-58e5-4d73-b38d-c7aed64bbbae",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "f39425d7-a23c-48f8-bac0-1d8459ff9b04"
+    },
+    {
+      "id": "d0af3542-8d4b-405e-996b-b5afbd6ece2a",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "f39425d7-a23c-48f8-bac0-1d8459ff9b04"
+    },
+    {
+      "id": "102ad8a6-660b-4ae7-bdae-6cdcc8082e37",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "f64c5dc5-678f-42cf-af57-9dcb225ce479"
+    },
+    {
+      "id": "e20aaf9e-88d0-4344-9b2f-5e540ec3791c",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "f64c5dc5-678f-42cf-af57-9dcb225ce479"
+    },
+    {
+      "id": "b017cbc0-5ef7-474e-9f47-51bef2d2cc2d",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "fa1534e6-2279-4567-9019-6af88a6c3689"
+    },
+    {
+      "id": "5aa1db08-733d-4d63-b5ad-37caf3dc6bbf",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "fa1534e6-2279-4567-9019-6af88a6c3689"
+    },
+    {
+      "id": "0de8a1da-640a-4bd6-983d-5e8a56368965",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "fa8193a4-a289-48da-b18f-4ac9f66e4e9c"
+    },
+    {
+      "id": "3f6b44e4-0af1-48ff-b326-61b16eff6ea7",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "fa8193a4-a289-48da-b18f-4ac9f66e4e9c"
+    },
+    {
+      "id": "aea9393a-52b3-4235-9c52-790cc9a97ce8",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "faf22799-7f6f-48fb-a58e-04a30b37e0c9"
+    },
+    {
+      "id": "7e23af80-df68-43bc-8afb-f02615786938",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "faf22799-7f6f-48fb-a58e-04a30b37e0c9"
+    },
+    {
+      "id": "3374b1a3-6a20-4db2-80ca-d2d3002a879d",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "fb62dbd4-5911-410e-8b14-814b5a6a3e81"
+    },
+    {
+      "id": "6a5660a4-a535-4e33-bbe3-eb7eaf07ac89",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "fb62dbd4-5911-410e-8b14-814b5a6a3e81"
+    },
+    {
+      "id": "0f7060c8-8ced-46e7-b614-ad0a690b730c",
+      "entity_name": "The Arnhem Land Progress Aboriginal Corporation",
+      "community_id": "fe5e105f-a264-4ea6-ab09-025ffaf1d149"
+    },
+    {
+      "id": "fb4d2db8-3417-4e25-8121-f62e95cbe33a",
+      "entity_name": "THE ARNHEM LAND PROGRESS ABORIGINAL CORPORATION (52 755 439 387)",
+      "community_id": "fe5e105f-a264-4ea6-ab09-025ffaf1d149"
+    }
+  ]
+}

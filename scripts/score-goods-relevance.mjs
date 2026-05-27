@@ -49,13 +49,15 @@ function pickColumns(row) {
     closes_at: row.closes_at,
     aligned_projects: row.aligned_projects || [],
     goods_relevance_score: row.goods_relevance_score,
+    source: row.source,
+    discovery_method: row.discovery_method,
   };
 }
 
 async function fetchBatch(offset) {
   let q = supabase
     .from('grant_opportunities')
-    .select('id,name,provider,description,geography,amount_max,categories,focus_areas,closes_at,aligned_projects,goods_relevance_score,goods_relevance_scored_at,updated_at')
+    .select('id,name,provider,description,geography,amount_max,categories,focus_areas,closes_at,aligned_projects,goods_relevance_score,goods_relevance_scored_at,updated_at,source,discovery_method')
     .order('id', { ascending: true })
     .range(offset, offset + BATCH - 1);
 
@@ -186,16 +188,36 @@ async function main() {
   let totalScored = 0;
   let totalTagged = 0;
   let totalHighFit = 0;
+  let totalSkippedManual = 0;
   // When incremental (filter on IS NULL), the pool shrinks each batch so we keep
   // offset=0. For rescore-all the offset must advance to walk the whole table.
   let offset = 0;
   const histogram = { '0-19': 0, '20-39': 0, '40-49': 0, '50-69': 0, '70-100': 0 };
 
+  // Curated rows (source LIKE 'manual%') carry hand-set scores — e.g. SEDI First
+  // Nations (88). The scorer must NOT clobber them. We preserve their score and
+  // only stamp scored_at so the incremental IS-NULL pool still drains.
+  const isManual = (row) => /^manual/i.test(String(row.source || ''));
+
   while (totalScored < LIMIT) {
     const batch = await fetchBatch(offset);
     if (batch.length === 0) break;
 
-    const scored = batch.map(row => {
+    const manualRows = batch.filter(isManual);
+    const scorable = batch.filter(row => !isManual(row));
+
+    if (manualRows.length) {
+      totalSkippedManual += manualRows.length;
+      if (!DRY_RUN) {
+        const { error } = await supabase
+          .from('grant_opportunities')
+          .update({ goods_relevance_scored_at: new Date().toISOString() })
+          .in('id', manualRows.map(r => r.id));
+        if (error) console.error(`  preserve manual: ${error.message.slice(0, 80)}`);
+      }
+    }
+
+    const scored = scorable.map(row => {
       const result = scoreGrantForGoods(pickColumns(row));
       if (result.score >= GOODS_TAG_THRESHOLD) totalTagged++;
       if (result.score >= GOODS_HIGH_FIT_THRESHOLD) totalHighFit++;
@@ -220,7 +242,8 @@ async function main() {
   }
 
   console.log('\n=== SUMMARY ===');
-  console.log(`Total scored:    ${totalScored}`);
+  console.log(`Rows processed:  ${totalScored}`);
+  console.log(`Manual preserved:${totalSkippedManual} (source LIKE 'manual%' — score untouched)`);
   console.log(`ACT-GD tagged:   ${totalTagged} (score >= ${GOODS_TAG_THRESHOLD})`);
   console.log(`High-fit:        ${totalHighFit} (score >= ${GOODS_HIGH_FIT_THRESHOLD})`);
   console.log('Distribution:');

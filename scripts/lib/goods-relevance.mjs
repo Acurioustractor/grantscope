@@ -45,10 +45,36 @@ const GOODS_GEOGRAPHIES = new Set(['AU-NT', 'AU-WA', 'AU-QLD', 'AU-SA']);
 
 // Disqualifiers — strong indicators this is NOT Goods-shaped
 const DISQUALIFIERS = [
-  'scholarship', 'phd', 'research grant', 'fellowship', 'sabbatical',
+  'scholarship', 'phd', 'research grant',
   'individual artist', 'individual researcher', 'student bursary',
   'travel grant', 'conference', 'symposium',
 ];
+
+// Soft disqualifiers that ONLY fire in a research/academic context. A
+// "fellowship" from Westpac or Barayamal is founder capability for Goods; a
+// research fellowship is not. (University-provider grants are already hard-zeroed
+// above, so this only governs fellowships from non-university funders.)
+const CONDITIONAL_DISQUALIFIERS = ['fellowship', 'sabbatical'];
+// NB: deliberately excludes 'scholar' — it false-matches philanthropic funders
+// like "Westpac Scholars Trust". 'scholarship' stays a hard DISQUALIFIER above.
+const ACADEMIC_CONTEXT = ['research', 'phd', 'postdoctoral', 'postdoc', 'academic', 'university'];
+
+// Hard structural disqualifiers — Goods (a Pty Ltd / community-controlled social
+// enterprise) cannot apply to these, regardless of how Goods-shaped the text reads.
+// These produce ~71% of the score>=60 noise:
+//   - arc-grants:    ARC university research (DP/LP/DE/LE/FT). The high-scoring
+//                    rows are *real* First Nations research projects (score 100 on
+//                    Indigenous keywords) — eligible-looking, structurally barred.
+//   - qld-arts-data: arts-development grants; Goods is not an arts producer.
+const SOURCE_DISQUALIFIERS = new Set(['arc-grants', 'qld-arts-data']);
+// University / research-council providers are research bodies, not Goods funders
+// or buyers. Matches "X University" and "University of X".
+const UNIVERSITY_PROVIDER = /\buniversit(?:y|ies)\b/;
+
+// discovery_method tags for the parallel money-types GrantScope's grant scorer
+// under-weights (capital + procurement). Boost so they aren't squashed for not
+// reading like a "grant". Forward-looking hook — no such rows exist yet.
+const BOOSTED_DISCOVERY_METHODS = new Set(['indigenous-finance', 'procurement']);
 
 /**
  * Score a single grant. Returns { score, signals } where signals explains the math.
@@ -59,6 +85,22 @@ export function scoreGrantForGoods(grant) {
   const provider = String(grant.provider || '').toLowerCase();
   const description = String(grant.description || '').toLowerCase();
   const haystack = [name, provider, description].join(' ');
+  const source = String(grant.source || '').toLowerCase();
+  const discoveryMethod = String(grant.discovery_method || '').toLowerCase();
+
+  // Hard structural disqualifier — short-circuit to 0 before any scoring. A
+  // First-Nations-themed ARC research grant still scores 0 here: Goods cannot
+  // apply to it. This is the single highest-leverage de-noiser.
+  if (SOURCE_DISQUALIFIERS.has(source) || UNIVERSITY_PROVIDER.test(provider)) {
+    return {
+      score: 0,
+      signals: {
+        hard_disqualified: SOURCE_DISQUALIFIERS.has(source) ? `source:${source}` : 'provider:university',
+        tier1_hits: [], tier2_hits: [], tier3_hits: [],
+        category_hits: [], geography: null, amount_band: null, disqualifier_hits: [],
+      },
+    };
+  }
 
   const categories = Array.isArray(grant.categories) ? grant.categories.map(c => String(c).toLowerCase()) : [];
   const focusAreas = Array.isArray(grant.focus_areas) ? grant.focus_areas.map(c => String(c).toLowerCase()) : [];
@@ -112,6 +154,24 @@ export function scoreGrantForGoods(grant) {
     }
   }
 
+  // SEDI (Social Enterprise Development Initiative) — DSS/IIA capability program,
+  // the strongest open capability fit for Goods. The acronym match is
+  // word-boundary, so it scores "SEDI Capability Building Grant" high while NEVER
+  // matching "sediment". (No DSS/IIA hint exists in goodsProviderHints, so without
+  // this the program scores ~6 despite being a top fit.)
+  if (/\bsedi\b/.test(haystack) || haystack.includes('social enterprise development initiative')) {
+    signals.sedi_hit = true;
+    score += 30;
+  }
+
+  // Capital + procurement opportunities (IBA loans, Supply Nation, remote-housing
+  // supply) don't read like grants and would otherwise score low. Tag-based boost
+  // keyed on discovery_method so they surface alongside grants.
+  if (BOOSTED_DISCOVERY_METHODS.has(discoveryMethod)) {
+    signals.discovery_boost = discoveryMethod;
+    score += 25;
+  }
+
   const goodsCategorySet = new Set([
     'indigenous', 'aboriginal', 'first nations',
     'housing', 'homelessness', 'community',
@@ -163,6 +223,19 @@ export function scoreGrantForGoods(grant) {
     if (name.includes(dq) || description.includes(dq)) {
       signals.disqualifier_hits.push(dq);
       score -= 15;
+    }
+  }
+
+  // Fellowship/sabbatical only disqualify alongside a research/academic marker —
+  // founder-development fellowships (Westpac Social Change, Barayamal) are a
+  // legitimate Goods capability signal and should not be zeroed.
+  const hasAcademicContext = ACADEMIC_CONTEXT.some(m => haystack.includes(m));
+  if (hasAcademicContext) {
+    for (const dq of CONDITIONAL_DISQUALIFIERS) {
+      if (name.includes(dq) || description.includes(dq)) {
+        signals.disqualifier_hits.push(`${dq}(academic)`);
+        score -= 15;
+      }
     }
   }
 
