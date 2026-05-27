@@ -1,0 +1,121 @@
+{
+  "generated": "2026-05-28",
+  "need": {
+    "beds": "12504",
+    "washers": "1563",
+    "communities": "64"
+  },
+  "addressable": {
+    "beds": "72134",
+    "washers": "8430",
+    "communities": "1542"
+  },
+  "ordered": {
+    "count": 9,
+    "total_count": 9,
+    "beds": 10,
+    "washers": 0,
+    "value": 1835571,
+    "byStage": {
+      "Outreach Queued": {
+        "n": 4,
+        "beds": 0,
+        "washers": 0,
+        "value": 1770771
+      },
+      "In Conversation": {
+        "n": 5,
+        "beds": 10,
+        "washers": 0,
+        "value": 64800
+      }
+    }
+  },
+  "funded": {
+    "count": 36,
+    "total_count": 36,
+    "beds": 0,
+    "washers": 0,
+    "value": 1378111,
+    "byStage": {
+      "Identified": {
+        "n": 13,
+        "beds": 0,
+        "washers": 0,
+        "value": 0
+      },
+      "Ask made": {
+        "n": 4,
+        "beds": 0,
+        "washers": 0,
+        "value": 200000
+      },
+      "Cultivating": {
+        "n": 5,
+        "beds": 0,
+        "washers": 0,
+        "value": 5434
+      },
+      "Qualified": {
+        "n": 2,
+        "beds": 0,
+        "washers": 0,
+        "value": 200000
+      },
+      "Lapsed": {
+        "n": 1,
+        "beds": 0,
+        "washers": 0,
+        "value": 82500
+      },
+      "Stewarding / Reporting": {
+        "n": 8,
+        "beds": 0,
+        "washers": 0,
+        "value": 806112
+      },
+      "Renewing": {
+        "n": 2,
+        "beds": 0,
+        "washers": 0,
+        "value": 40065
+      },
+      "Delivering": {
+        "n": 1,
+        "beds": 0,
+        "washers": 0,
+        "value": 44000
+      }
+    }
+  },
+  "demand": {
+    "count": 110,
+    "total_count": 110,
+    "beds": 0,
+    "washers": 0,
+    "value": 9380500,
+    "byStage": {
+      "Signal": {
+        "n": 85,
+        "beds": 0,
+        "washers": 0,
+        "value": 9380500
+      },
+      "Buyer Matched": {
+        "n": 25,
+        "beds": 0,
+        "washers": 0,
+        "value": 0
+      }
+    }
+  },
+  "delivered": {
+    "beds": 520,
+    "washers": 41,
+    "source": "Goods v2 assets sync, 2026-05-27"
+  },
+  "gap": {
+    "beds": 11984,
+    "washers": 1522
+  }
+}
