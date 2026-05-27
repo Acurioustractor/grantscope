@@ -51,6 +51,17 @@ export const AGENTS = {
     timeoutMs: 600_000,
     dependencies: [],
   },
+  // Refreshes the Goods impact film's data module (apps/video/src/goodsImpactData.ts)
+  // from live goods_communities (need/gap) + the v2 assets-sync delivered constant.
+  // Data refresh only — the render (cd apps/video && npm run render:goods) stays manual.
+  'build-goods-impact-data': {
+    command: ['node', '--env-file=.env', 'scripts/build-goods-impact-data.mjs'],
+    displayName: 'Build Goods Impact Film Data',
+    category: 'analytics',
+    defaultPriority: 5,
+    timeoutMs: 120_000,
+    dependencies: [],
+  },
   'sync-ato-tax-transparency': {
     command: ['node', '--env-file=.env', 'scripts/sync-ato-tax-transparency.mjs'],
     displayName: 'Sync ATO Tax Transparency',
