@@ -1,0 +1,1641 @@
+{
+  "removedAt": "2026-05-27T06:17:39.481Z",
+  "communities": [
+    {
+      "id": "d8f51cc1-00cf-454f-9b1b-803873e23113",
+      "community_name": "BANNICK BURN",
+      "state": "QLD",
+      "demand_beds": 52,
+      "demand_washers": 6
+    },
+    {
+      "id": "cf1c1dab-2b62-4da8-9cd0-3e2313d0ab60",
+      "community_name": "JILUNDARINA",
+      "state": "NT",
+      "demand_beds": 52,
+      "demand_washers": 6
+    },
+    {
+      "id": "8497108e-5599-43f0-bc4a-d47d4a4a1d77",
+      "community_name": "AAYKA",
+      "state": "QLD",
+      "demand_beds": 52,
+      "demand_washers": 6
+    },
+    {
+      "id": "9eb2c64a-99ed-422a-9c97-2bde0b1281bc",
+      "community_name": "SHIPTON FLATS",
+      "state": "QLD",
+      "demand_beds": 52,
+      "demand_washers": 6
+    },
+    {
+      "id": "25b7684b-5105-4daa-88b7-3c9a726340f8",
+      "community_name": "GUNUN WOONAM",
+      "state": "QLD",
+      "demand_beds": 52,
+      "demand_washers": 6
+    },
+    {
+      "id": "b48620f5-0cb3-4419-9674-b8bab41f22c7",
+      "community_name": "NEW MERINEE",
+      "state": "NSW",
+      "demand_beds": 52,
+      "demand_washers": 6
+    },
+    {
+      "id": "c03eea29-af8b-4e6c-848c-45305dac1ba7",
+      "community_name": "THULKURR",
+      "state": "QLD",
+      "demand_beds": 52,
+      "demand_washers": 6
+    },
+    {
+      "id": "f0680ba5-b744-4b03-bf68-3e3b14d6397d",
+      "community_name": "FORDY FARM",
+      "state": "QLD",
+      "demand_beds": 52,
+      "demand_washers": 6
+    },
+    {
+      "id": "ca8b8df1-1438-4ae4-9376-bb2726a78759",
+      "community_name": "THAANGKUNH-NHIIN",
+      "state": "QLD",
+      "demand_beds": 52,
+      "demand_washers": 6
+    }
+  ],
+  "ghl": [
+    [
+      "cj7CXxIDLzKMxIVHHpNm",
+      "7sp5Zwueh0OKblAKQirR",
+      "THULKURR"
+    ],
+    [
+      "8CAq5cV6LBlozjP4fmbo",
+      "xBxaigCAdO1v8ARO1lo2",
+      "NEW MERINEE"
+    ],
+    [
+      "7rqTX3XLuiwMz8cvLMw3",
+      "gPxPrnGkA01DbSigTaYM",
+      "GUNUN WOONAM"
+    ],
+    [
+      "HTtygM4ogZ3gacHk3wwE",
+      "dYbBIH1H5deXDEerV5HE",
+      "SHIPTON FLATS"
+    ],
+    [
+      "58uGnRzT5FdHuDAvjKia",
+      "fm0tdDRDfl3EFTOg1JS7",
+      "FORDY FARM"
+    ],
+    [
+      "1HJOMb5vZMw0ulxm2tBS",
+      "jkXvzq4QJDPKCur8akIX",
+      "AAYKA"
+    ],
+    [
+      "NVnUPdbDuJlKwlFT4Zx6",
+      "cAt1QstivkhGfT2ShFAc",
+      "THAANGKUNH-NHIIN"
+    ],
+    [
+      "omkK7FwtMTormWvwpXcK",
+      "wu6SihnJXkEkKrUYtheG",
+      "BANNICK BURN"
+    ],
+    [
+      "seEc4BT9h5csxlXAJVhO",
+      "Q0HsirXpDJJ3vLpNIKmj",
+      "JILUNDARINA"
+    ]
+  ],
+  "cascade": {
+    "entities": 147,
+    "signals": 9
+  },
+  "cascadeEntities": [
+    {
+      "id": "c28719c1-0c5a-4b23-8609-6d20dc4b2d86",
+      "entity_name": "Volunteer Marine Rescue Karumba Inc",
+      "abn": "39394393984",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "25b7684b-5105-4daa-88b7-3c9a726340f8"
+    },
+    {
+      "id": "76ff1ecc-99e5-4793-8575-a48e012b2a75",
+      "entity_name": "Karumba Childrens Centre",
+      "abn": "52202439178",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "25b7684b-5105-4daa-88b7-3c9a726340f8"
+    },
+    {
+      "id": "5e811ff1-d573-4c1c-9ed0-aa98889f54b9",
+      "entity_name": "METRO MINING LIMITED (45 117 763 443)",
+      "abn": "25101655298",
+      "fit_score": 0,
+      "buyer_role": "other",
+      "community_id": "8497108e-5599-43f0-bc4a-d47d4a4a1d77"
+    },
+    {
+      "id": "73a9e205-2517-438b-8755-b1465e8c58f1",
+      "entity_name": "RIBSHIRE PTY LTD T/A GOODLINE",
+      "abn": "40085847892",
+      "fit_score": 15,
+      "buyer_role": "government",
+      "community_id": "8497108e-5599-43f0-bc4a-d47d4a4a1d77"
+    },
+    {
+      "id": "6c373606-7ee5-400e-9d8e-86c81ddc10b0",
+      "entity_name": "Weipa Early Childhood Education Association Inc",
+      "abn": "73435425114",
+      "fit_score": 0,
+      "buyer_role": "education",
+      "community_id": "8497108e-5599-43f0-bc4a-d47d4a4a1d77"
+    },
+    {
+      "id": "93c398b7-a1f8-4a0e-892b-eea8c3196d6d",
+      "entity_name": "Apostolic Jesus Name Fellowship",
+      "abn": "72932643944",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "8497108e-5599-43f0-bc4a-d47d4a4a1d77"
+    },
+    {
+      "id": "185d0b9d-16ad-44fa-a064-3b6f5b1d99cb",
+      "entity_name": "ALNGITH CORPORATION LIMITED",
+      "abn": "98098199832",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "8497108e-5599-43f0-bc4a-d47d4a4a1d77"
+    },
+    {
+      "id": "045199d7-e88e-474d-9163-bd84a9aeab4d",
+      "entity_name": "MOKWIRI NUNG LTD",
+      "abn": "54650651522",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "8497108e-5599-43f0-bc4a-d47d4a4a1d77"
+    },
+    {
+      "id": "7f071a37-39e7-4276-bebb-fb3d4747eb1d",
+      "entity_name": "Napranum Pal Group Limited",
+      "abn": "42110700500",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "8497108e-5599-43f0-bc4a-d47d4a4a1d77"
+    },
+    {
+      "id": "047d9c8b-86a9-4c4b-b011-bb9e46520c70",
+      "entity_name": "Weipa Community Care Assn Inc",
+      "abn": "72964419283",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "8497108e-5599-43f0-bc4a-d47d4a4a1d77"
+    },
+    {
+      "id": "edf33f94-493c-4373-b349-82ee46b37348",
+      "entity_name": "Uca-Napranum Uniting Church",
+      "abn": "36388612170",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "8497108e-5599-43f0-bc4a-d47d4a4a1d77"
+    },
+    {
+      "id": "858a13cb-0e70-469c-8d05-766be0a48695",
+      "entity_name": "Weipa Wildlife Care Inc.",
+      "abn": "60756762974",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "8497108e-5599-43f0-bc4a-d47d4a4a1d77"
+    },
+    {
+      "id": "26f509a2-1a18-44e1-97a8-b47e6f61848b",
+      "entity_name": "HOWARD CHRISTIAN COLLEGE AUSTRALIA LTD",
+      "abn": "50689692877",
+      "fit_score": 0,
+      "buyer_role": "education",
+      "community_id": "8497108e-5599-43f0-bc4a-d47d4a4a1d77"
+    },
+    {
+      "id": "b089707a-a3e9-4286-bba9-e03944343964",
+      "entity_name": "KLUTHUTHU CHRISTIAN COLLEGE LTD",
+      "abn": "19634798520",
+      "fit_score": 0,
+      "buyer_role": "education",
+      "community_id": "8497108e-5599-43f0-bc4a-d47d4a4a1d77"
+    },
+    {
+      "id": "1accfcc0-7218-4a91-9bee-caacce4216e1",
+      "entity_name": "Rsl Queensland Branch Weipa Sub Branch",
+      "abn": "89640595313",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "8497108e-5599-43f0-bc4a-d47d4a4a1d77"
+    },
+    {
+      "id": "e596d9c2-8bac-4a3f-aabc-78cd12034d4b",
+      "entity_name": "COOKTOWN FISHERMANS WHARF",
+      "abn": "93582956627",
+      "fit_score": 30,
+      "buyer_role": "other",
+      "community_id": "9eb2c64a-99ed-422a-9c97-2bde0b1281bc"
+    },
+    {
+      "id": "7b158551-5772-44a8-9848-387e03f4d874",
+      "entity_name": "Health, Opportunity, Purpose and Empowerment Incorporated",
+      "abn": "40484799563",
+      "fit_score": 0,
+      "buyer_role": "health_service",
+      "community_id": "9eb2c64a-99ed-422a-9c97-2bde0b1281bc"
+    },
+    {
+      "id": "47e9d00c-4e03-4837-b701-eeee8d7dc0df",
+      "entity_name": "Juunjuwarra Aboriginal Corporation",
+      "abn": "20733551348",
+      "fit_score": 15,
+      "buyer_role": "community_org",
+      "community_id": "9eb2c64a-99ed-422a-9c97-2bde0b1281bc"
+    },
+    {
+      "id": "3434f836-d308-4663-9753-a3d10c5cefeb",
+      "entity_name": "Cape York Folk Club Inc.",
+      "abn": "75628689675",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "9eb2c64a-99ed-422a-9c97-2bde0b1281bc"
+    },
+    {
+      "id": "ec23faec-7b54-4d75-9567-65a1f7a098b0",
+      "entity_name": "Cooktown District Community Centre Ltd",
+      "abn": "63361686724",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "9eb2c64a-99ed-422a-9c97-2bde0b1281bc"
+    },
+    {
+      "id": "2037ce36-217a-42e5-aca3-0e767a5e578b",
+      "entity_name": "COOKTOWN CREATIVE ARTS ASSOCIATION INCORPORATED",
+      "abn": "84233971672",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "9eb2c64a-99ed-422a-9c97-2bde0b1281bc"
+    },
+    {
+      "id": "09907f58-1cde-4e86-af27-41ff97ab593d",
+      "entity_name": "Cooktown Baptist Fellowship",
+      "abn": "11127864935",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "9eb2c64a-99ed-422a-9c97-2bde0b1281bc"
+    },
+    {
+      "id": "85b996f0-89d6-471b-9ca7-bb76964bf25e",
+      "entity_name": "Cape York Weeds & Feral Animals Inc",
+      "abn": "31169159829",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "9eb2c64a-99ed-422a-9c97-2bde0b1281bc"
+    },
+    {
+      "id": "0c6318dc-2ec5-48ac-a1f0-cf53956f6fbe",
+      "entity_name": "Cooktown Congregation of Jehovah's Witnesses",
+      "abn": "75569784947",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "9eb2c64a-99ed-422a-9c97-2bde0b1281bc"
+    },
+    {
+      "id": "31333472-6809-4cae-a689-519ca657813e",
+      "entity_name": "Cooktown Kindergarten Association Inc",
+      "abn": "65007825127",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "9eb2c64a-99ed-422a-9c97-2bde0b1281bc"
+    },
+    {
+      "id": "a73115e4-3a65-4282-be55-0a95218c2544",
+      "entity_name": "PANDANUS PARK INC",
+      "abn": "83396148426",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "9eb2c64a-99ed-422a-9c97-2bde0b1281bc"
+    },
+    {
+      "id": "b9869a7b-2616-4293-b8a9-df597496c2ac",
+      "entity_name": "COOKTOWN RE-ENACTMENT ASSOCIATION INCORPORATED",
+      "abn": "34843064496",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "9eb2c64a-99ed-422a-9c97-2bde0b1281bc"
+    },
+    {
+      "id": "8760fbef-8b62-4051-b28d-aae9c71469e4",
+      "entity_name": "CUC CAPE YORK LTD",
+      "abn": "36661204995",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "9eb2c64a-99ed-422a-9c97-2bde0b1281bc"
+    },
+    {
+      "id": "6cdab7ff-d26c-4d2a-90a0-7358e6319a18",
+      "entity_name": "Yuku-Baja-Muliku Landowner and Reserves Ltd",
+      "abn": "68124429009",
+      "fit_score": 35,
+      "buyer_role": "community_org",
+      "community_id": "9eb2c64a-99ed-422a-9c97-2bde0b1281bc"
+    },
+    {
+      "id": "fd235b38-5770-4473-9236-8c9d993cbff7",
+      "entity_name": "Vera Scarth-Johnson Gallery Association Inc",
+      "abn": "67189793230",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "9eb2c64a-99ed-422a-9c97-2bde0b1281bc"
+    },
+    {
+      "id": "f4854147-70f4-45b8-8544-2d2822d51436",
+      "entity_name": "The Cooktown And District Historical Society Inc",
+      "abn": "86671012646",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "9eb2c64a-99ed-422a-9c97-2bde0b1281bc"
+    },
+    {
+      "id": "f80671a1-1437-4c75-bbb6-d81dfe73bfd8",
+      "entity_name": "South Cape York Catchments Inc.",
+      "abn": "77532434684",
+      "fit_score": 15,
+      "buyer_role": "community_org",
+      "community_id": "9eb2c64a-99ed-422a-9c97-2bde0b1281bc"
+    },
+    {
+      "id": "d7fbbd00-68a2-4f93-8033-1c04d06938e9",
+      "entity_name": "BRIGHT FOOD ASIA PACIFIC PTY LTD",
+      "abn": "57354565744",
+      "fit_score": 0,
+      "buyer_role": "other",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "f6124d34-0b18-44bd-aa42-2c6fe434a180",
+      "entity_name": "COUNTRY CARE GROUP HOME MODIFICATIONS PTY LTD (81 619 350 435)",
+      "abn": "81619350435",
+      "fit_score": 0,
+      "buyer_role": "other",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "7025a17d-1b8c-4a2a-82bd-03a61d9ab168",
+      "entity_name": "C.M.V. FARMS PTY. LTD. (98 005 880 848)",
+      "abn": "98005880848",
+      "fit_score": 0,
+      "buyer_role": "other",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "3e520d52-65aa-40b5-9805-707bef5a14b6",
+      "entity_name": "Fruitvale Pty Ltd",
+      "abn": "63059307881",
+      "fit_score": 0,
+      "buyer_role": "other",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "88d4d2e4-318b-44c5-93a6-c7323d735f4b",
+      "entity_name": "COUNTRY CARE MANAGEMENT SERVICES PTY LTD (23 606 437 101)",
+      "abn": "23606437101",
+      "fit_score": 0,
+      "buyer_role": "other",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "1cd4fe1a-6d5c-45dc-a496-f9877d48711e",
+      "entity_name": "GTS FREIGHT MANAGEMENT PTY LTD",
+      "abn": "58007997604",
+      "fit_score": 0,
+      "buyer_role": "other",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "25beff5e-6705-45a8-abaa-f1a6b4b8febd",
+      "entity_name": "SMYBB PTY LTD (45 096 514 788)",
+      "abn": "45096514788",
+      "fit_score": 0,
+      "buyer_role": "other",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "78037cd8-504d-4b89-bfaa-ee576ddf9cf7",
+      "entity_name": "HAEUSLERS GROUP PTY LTD",
+      "abn": "72004735700",
+      "fit_score": 15,
+      "buyer_role": "other",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "42773991-0425-4b91-9b5a-db3622e10765",
+      "entity_name": "Tandou Ltd",
+      "abn": "81001014562",
+      "fit_score": 50,
+      "buyer_role": "other",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "73f00bca-7211-4133-825b-86b32ac86d04",
+      "entity_name": "THE COUNTRY CARE GROUP PTY LTD (26 088 222 226)",
+      "abn": "26088222226",
+      "fit_score": 35,
+      "buyer_role": "other",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "db7b3cf1-1a2d-451d-9315-b5264cca8270",
+      "entity_name": "TASCO CARRIERS PTY LTD (39 162 327 175)",
+      "abn": "39162327175",
+      "fit_score": 0,
+      "buyer_role": "other",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "ba172ce3-326b-4d32-b2b9-30c4354b6fd4",
+      "entity_name": "UCCELLO MARKETING PTY LTD (50 602 569 595)",
+      "abn": "50602569595",
+      "fit_score": 0,
+      "buyer_role": "other",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "7ad74f75-a82f-4297-b8b9-f2f416b23bc5",
+      "entity_name": "Mallee Accommodation and Support Program Limited",
+      "abn": "51726968790",
+      "fit_score": 0,
+      "buyer_role": "housing_provider",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "487bcac6-2b3f-496d-b39b-4c4bc5d29153",
+      "entity_name": "K CARE HEALTHCARE SOLUTIONS PTY LTD (47 159 431 099)",
+      "abn": "47159431099",
+      "fit_score": 15,
+      "buyer_role": "health_service",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "34c743cc-ef04-4ad4-8cec-879863bbf1fd",
+      "entity_name": "Pasadena Pre School Association Inc",
+      "abn": "76417827585",
+      "fit_score": 0,
+      "buyer_role": "education",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "469be806-1a67-4dd1-b003-749185d680c8",
+      "entity_name": "MALLEE HOUSING LTD",
+      "abn": "50690640469",
+      "fit_score": 0,
+      "buyer_role": "housing_provider",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "248bbc3c-c889-4885-9f11-dd3562a771ad",
+      "entity_name": "Mildura Base Public Hospital (73 543 496 421)",
+      "abn": "73543496421",
+      "fit_score": 0,
+      "buyer_role": "health_service",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "2f3d0a11-a287-4a2d-b143-84c596fe41e2",
+      "entity_name": "Sunraysia Community Health Services Limited",
+      "abn": "56957121036",
+      "fit_score": 35,
+      "buyer_role": "health_service",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "a805f172-e053-483a-a538-b43677be0661",
+      "entity_name": "Sunraysia Mallee Ethnic Communities Council Inc",
+      "abn": "37282486762",
+      "fit_score": 0,
+      "buyer_role": "government",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "7f9cb0ff-4732-4964-b865-0206e51af3d4",
+      "entity_name": "University Of The Third Age Sunraysia Inc.",
+      "abn": "49791479741",
+      "fit_score": 0,
+      "buyer_role": "education",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "007a6958-d30e-4b4d-8ec8-ce8b531eb2e6",
+      "entity_name": "Oasis-City Common Equity Rental Housing Co-Operative Limited Registered Co-Operative No. G3002N",
+      "abn": "34352726093",
+      "fit_score": 0,
+      "buyer_role": "housing_provider",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "c11d8870-d0ba-4bd4-ba31-278800a1b7e6",
+      "entity_name": "Aljor Constructions",
+      "abn": "59079489099",
+      "fit_score": 0,
+      "buyer_role": "other",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "2e99df8a-d978-44dd-9699-9d3806a884aa",
+      "entity_name": "Agape Orphanage Network (Australia) Inc.",
+      "abn": "97361098908",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "bd953daa-4a44-491c-a3df-a3ccd8f9082f",
+      "entity_name": "MADEC Australia Limited",
+      "abn": "48086804015",
+      "fit_score": 50,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "db4e3e8a-075e-467a-bd3e-a95d9b629478",
+      "entity_name": "MALLEE FAMILY CARE LTD",
+      "abn": "32085588656",
+      "fit_score": 30,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "bd1e23ad-446b-4012-bc52-54a1fcf63699",
+      "entity_name": "ANABELLE BITS PTY LTD (40 068 649 972)",
+      "abn": "72091751656",
+      "fit_score": 0,
+      "buyer_role": "other",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "0b76a8db-dfe5-49f4-9368-71199af5bf06",
+      "entity_name": "Cambodian-Australian Buddhist Temple Association incorporated",
+      "abn": "25940163249",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "7befe938-b10a-4d35-859c-14308a65527b",
+      "entity_name": "Food Next Door Co-op Ltd",
+      "abn": "63220050847",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "13d54f6e-bc1a-4702-a795-d5157fb08e7d",
+      "entity_name": "Rural Business and Community Limited",
+      "abn": "70870481312",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "282ffe82-badf-46ee-8713-b5debeb15087",
+      "entity_name": "OneVine Community Church Inc",
+      "abn": "40168383140",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "3abd1bae-fef2-46ab-a032-6d61ef370c66",
+      "entity_name": "INSTITUTE FOR FUTURE COOPERATION LTD",
+      "abn": "62673241211",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "3c035234-b291-4d90-9789-7d7abda64724",
+      "entity_name": "SKY TEMPLE LTD",
+      "abn": "28677234892",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "881dcf39-cb4f-440e-bc34-1b0c598ac2ec",
+      "entity_name": "PMF-SUNRAYSIA INC",
+      "abn": "43492856387",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "c91d4625-9ca6-4a0c-9246-3503341e5506",
+      "entity_name": "River Edge Church Inc.",
+      "abn": "82148212870",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "0c8fb595-fb61-44b1-a934-3bd2b3fad667",
+      "entity_name": "MATES INCORPORATED MILDURA INC",
+      "abn": "91991750993",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "8a09db0f-8f9e-4668-b919-ba1b9708887b",
+      "entity_name": "Sunraysia Animal Rehousing Group Inc.",
+      "abn": "57383474239",
+      "fit_score": 0,
+      "buyer_role": "housing_provider",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "cb5291c4-5cc4-4d23-baa1-41d56e465d21",
+      "entity_name": "Mildura Legacy Club Incorporated",
+      "abn": "26450652465",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "e17a9841-5839-44f6-8547-170afd43ef5a",
+      "entity_name": "MDAS Limited",
+      "abn": "53602202139",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "f0336aab-8478-4684-a200-34afef3a7d1b",
+      "entity_name": "Mallee Sexual Assault Unit Ltd",
+      "abn": "57685819813",
+      "fit_score": 15,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "f0d39a0b-4da3-43cc-87cf-0e41d57a9910",
+      "entity_name": "Mildura East Congregation of Jehovah's Witnesses",
+      "abn": "83756145361",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "f33a4742-4710-4496-a0b2-6e66bba7058e",
+      "entity_name": "MILDURA CHURCH OF CHRIST INCORPORATED",
+      "abn": "29525047085",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "f3710263-9bb9-4157-804e-7d82b3c9fc9c",
+      "entity_name": "Mildura Baptist Church Incorporated",
+      "abn": "21133229270",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "4e921f80-f48e-4e5e-beb6-0440bc959277",
+      "entity_name": "Srs Creative Futures Inc",
+      "abn": "37716221458",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "ffffc794-2453-4d56-9ad6-ee405f06f0b3",
+      "entity_name": "Mildura Rsl Sub Branch Inc",
+      "abn": "94275221734",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "1679128c-a137-40de-b9db-79e642f6ba8a",
+      "entity_name": "Mildura West Congregation of Jehovah's Witnesses",
+      "abn": "84193768898",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "41f25754-52b7-4ae4-86f9-3abd1a8e4450",
+      "entity_name": "Northern Mallee Leaders Inc.",
+      "abn": "48317418213",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "5182760f-0d97-409f-aed5-95eef9a67ef3",
+      "entity_name": "NORTHERN MALLEE LOCAL LEARNING AND EMPLOYMENT NETWORK",
+      "abn": "78430405938",
+      "fit_score": 15,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "6c99aa5e-58a4-41f5-8c7f-f3b10c85e8e9",
+      "entity_name": "MILDURA WRITERS FESTIVAL LTD",
+      "abn": "51692962771",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "8eabf918-69b4-44b4-9f20-6485dc2f047c",
+      "entity_name": "New Life Christian Church Inc",
+      "abn": "41389926061",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "a5f77b2b-1b19-4586-a625-e8bf4d18ebee",
+      "entity_name": "The Mildura Life Saving Club Incorporated",
+      "abn": "13401094420",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "b01c85af-e554-4712-9e1e-c880cf46f301",
+      "entity_name": "Mildura West Kindergarten Inc.",
+      "abn": "52364764437",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "b05abf62-70ee-41a1-aadb-291a5da02b1a",
+      "entity_name": "No Borders Creative Inc",
+      "abn": "37306164261",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "fc7348b5-78d0-44d8-a271-556be14677e5",
+      "entity_name": "Mildura Show Society Inc",
+      "abn": "44590145044",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "8a32858d-e0a8-4bbc-8726-ed2a864daa95",
+      "entity_name": "St Andrews Uniting Church Mildura",
+      "abn": "52702492922",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "d181c46c-edc4-41aa-8f18-896beb39faf2",
+      "entity_name": "Strata Owners Alliance Inc",
+      "abn": "16614304016",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "d1e6efe5-9caa-4dc1-991d-aae6c0080ed7",
+      "entity_name": "Sunraysia Carers Support Group Incorporated",
+      "abn": "35962018482",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "e709957b-fc77-4fcf-9c34-e66534226c98",
+      "entity_name": "Sunraysia Cancer Resources Incorporated",
+      "abn": "50681685892",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "91909276-07e0-437a-be4c-bb58c4eb6824",
+      "entity_name": "Sunraysia Early Settlers Museum Inc",
+      "abn": "91900692898",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "3d47b967-73e9-40a9-ac32-f72728607776",
+      "entity_name": "WAT KHMER BUDDHIST TEMPLE OF MILDURA VICTORIA IN AUSTRALIA LTD",
+      "abn": "63689135564",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "4220995b-2a67-481c-8979-be846cf8d633",
+      "entity_name": "THE TRUSTEE FOR TASCO INLAND AUSTRALIA UNIT TRUST (64 676 389 090)",
+      "abn": "64676389090",
+      "fit_score": 0,
+      "buyer_role": "other",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "5bd92af4-936d-4e8d-a3ba-a19ca116f533",
+      "entity_name": "UCA Presbytery Of Western Victoria",
+      "abn": "28901597834",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "601c2202-418a-4e3f-8c0f-efa7c47751cf",
+      "entity_name": "The Turkish Islamic Society Mildura Inc.",
+      "abn": "12417895581",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "9add201e-8d27-4231-8c20-4af573e6cfc3",
+      "entity_name": "THE SUNRAYSIA SUSTAINABILITY NETWORK INC",
+      "abn": "37092573714",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "13be74b2-47e2-42cb-a7f6-a65e9a900392",
+      "entity_name": "Zoe Support Australia",
+      "abn": "76161029705",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "09120d84-75e3-4374-baa2-90495b91e75a",
+      "entity_name": "Uniting Church In Australia Parish Of Sunraysia",
+      "abn": "79396267732",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "0355724d-7f08-4f43-8588-1193491637e2",
+      "entity_name": "The Trustee for BAYSIDE BWE UNIT TRUST (69 809 123 175)",
+      "abn": "52006531817",
+      "fit_score": 15,
+      "buyer_role": "other",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "fbfb463d-9462-4bf5-b2ad-ef4fd4a069ab",
+      "entity_name": "MILDURA DISTRICT HOSPITAL FUND LTD. (13 078 202 089)",
+      "abn": "13078202089",
+      "fit_score": 0,
+      "buyer_role": "health_service",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "094402ae-7668-4ca4-b3f3-83baafd42327",
+      "entity_name": "Sunraysia & Murray Group Training Limited",
+      "abn": "19006114076",
+      "fit_score": 35,
+      "buyer_role": "education",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "40b4141d-1751-42a2-a474-f485989c41d2",
+      "entity_name": "Trinity Lutheran College",
+      "abn": "43974264930",
+      "fit_score": 0,
+      "buyer_role": "education",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "bc5d8bf7-750a-437d-b517-ba455303f432",
+      "entity_name": "TRINITY LUTHERAN COLLEGE MILDURA LTD",
+      "abn": "22650100119",
+      "fit_score": 0,
+      "buyer_role": "education",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "5ab2c130-1cd8-4591-8db1-c3a30486ad3d",
+      "entity_name": "All Nations Christian Fellowship Mildura Incorporated",
+      "abn": "83249205656",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "b3fda541-3586-41dd-8ba1-6787c6f97adb",
+      "entity_name": "Living Waters Christian Community",
+      "abn": "45184860981",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "bced9b7f-ed1b-4529-bafb-d281d76da29f",
+      "entity_name": "Sunraysia Regional Consulting Limited",
+      "abn": "70624280413",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "abbce57b-29ae-46db-a7ef-e69c9b1cdae1",
+      "entity_name": "Christie Centre Inc",
+      "abn": "68554592464",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "01a30eb0-259c-42db-974d-9e111d433471",
+      "entity_name": "Sunassist Volunteer Helpers Inc",
+      "abn": "51565565026",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "1fe67c44-2089-4100-9a28-8e85658815ef",
+      "entity_name": "Sunraysia Residential Services Inc",
+      "abn": "88441353792",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "5013f1e4-f58a-4421-8c34-c6c68fc22586",
+      "entity_name": "Sunraysia Community Radio Association Inc.",
+      "abn": "19305406312",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "a55d4426-f29d-4260-b02b-633fbf9a6e83",
+      "entity_name": "K CARE HOLDINGS PTY LTD (80 626 058 035)",
+      "abn": "80626058035",
+      "fit_score": 0,
+      "buyer_role": "other",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "74614ec2-5764-4228-be9b-1cc14f8e73bb",
+      "entity_name": "SPECIALISED MOBILITY PTY LTD (59 159 633 664)",
+      "abn": "59159633664",
+      "fit_score": 0,
+      "buyer_role": "other",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7"
+    },
+    {
+      "id": "35893580-3e8f-4c95-828f-60ea177642ac",
+      "entity_name": "Karumba Childrens Centre",
+      "abn": "52202439178",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "c03eea29-af8b-4e6c-848c-45305dac1ba7"
+    },
+    {
+      "id": "ef6a32a2-f160-4c64-a16a-f3670c4e6759",
+      "entity_name": "Volunteer Marine Rescue Karumba Inc",
+      "abn": "39394393984",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "c03eea29-af8b-4e6c-848c-45305dac1ba7"
+    },
+    {
+      "id": "68465b86-6107-443e-8e1d-b49ceb3b2ebc",
+      "entity_name": "METRO MINING LIMITED (45 117 763 443)",
+      "abn": "25101655298",
+      "fit_score": 0,
+      "buyer_role": "other",
+      "community_id": "ca8b8df1-1438-4ae4-9376-bb2726a78759"
+    },
+    {
+      "id": "4fdf0b6c-09b6-42c5-acdf-e488ad31a8ca",
+      "entity_name": "RIBSHIRE PTY LTD T/A GOODLINE",
+      "abn": "40085847892",
+      "fit_score": 15,
+      "buyer_role": "government",
+      "community_id": "ca8b8df1-1438-4ae4-9376-bb2726a78759"
+    },
+    {
+      "id": "18e754c5-1f86-480a-984a-42560c3fd390",
+      "entity_name": "Weipa Early Childhood Education Association Inc",
+      "abn": "73435425114",
+      "fit_score": 0,
+      "buyer_role": "education",
+      "community_id": "ca8b8df1-1438-4ae4-9376-bb2726a78759"
+    },
+    {
+      "id": "c46fd095-db93-4cd4-979f-0134a4cd6fc3",
+      "entity_name": "Apostolic Jesus Name Fellowship",
+      "abn": "72932643944",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "ca8b8df1-1438-4ae4-9376-bb2726a78759"
+    },
+    {
+      "id": "5325b921-e06d-4986-bc0f-1db2ece8cfa8",
+      "entity_name": "ALNGITH CORPORATION LIMITED",
+      "abn": "98098199832",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "ca8b8df1-1438-4ae4-9376-bb2726a78759"
+    },
+    {
+      "id": "68da334e-fad8-42a3-9b2d-65471b9fba1a",
+      "entity_name": "Napranum Pal Group Limited",
+      "abn": "42110700500",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "ca8b8df1-1438-4ae4-9376-bb2726a78759"
+    },
+    {
+      "id": "b244bac0-f16b-41bd-9cc1-4070d4db8ed4",
+      "entity_name": "MOKWIRI NUNG LTD",
+      "abn": "54650651522",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "ca8b8df1-1438-4ae4-9376-bb2726a78759"
+    },
+    {
+      "id": "d113b411-cc7a-43e8-a4a6-f27be08aa455",
+      "entity_name": "Uca-Napranum Uniting Church",
+      "abn": "36388612170",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "ca8b8df1-1438-4ae4-9376-bb2726a78759"
+    },
+    {
+      "id": "287b8974-9484-4dc9-b638-7fd2426bed20",
+      "entity_name": "Rsl Queensland Branch Weipa Sub Branch",
+      "abn": "89640595313",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "ca8b8df1-1438-4ae4-9376-bb2726a78759"
+    },
+    {
+      "id": "a5b6e42c-0f37-4a61-948c-b51a078cdc80",
+      "entity_name": "Weipa Wildlife Care Inc.",
+      "abn": "60756762974",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "ca8b8df1-1438-4ae4-9376-bb2726a78759"
+    },
+    {
+      "id": "57ebe00c-2f84-4492-a6e9-ff08c4b36ae5",
+      "entity_name": "HOWARD CHRISTIAN COLLEGE AUSTRALIA LTD",
+      "abn": "50689692877",
+      "fit_score": 0,
+      "buyer_role": "education",
+      "community_id": "ca8b8df1-1438-4ae4-9376-bb2726a78759"
+    },
+    {
+      "id": "850de022-c11b-4816-aa8e-ad31ae94b3df",
+      "entity_name": "KLUTHUTHU CHRISTIAN COLLEGE LTD",
+      "abn": "19634798520",
+      "fit_score": 0,
+      "buyer_role": "education",
+      "community_id": "ca8b8df1-1438-4ae4-9376-bb2726a78759"
+    },
+    {
+      "id": "4fa59e70-dd4e-49e1-b865-d437d2d784e5",
+      "entity_name": "Weipa Community Care Assn Inc",
+      "abn": "72964419283",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "ca8b8df1-1438-4ae4-9376-bb2726a78759"
+    },
+    {
+      "id": "4eacf5d0-fbca-4c9d-b900-4495a1e07479",
+      "entity_name": "Northern Land Council",
+      "abn": "56327515336",
+      "fit_score": 74,
+      "buyer_role": "council",
+      "community_id": "cf1c1dab-2b62-4da8-9cd0-3e2313d0ab60"
+    },
+    {
+      "id": "6a7e4c9a-1bbb-45a7-b496-17d78ffbf1d4",
+      "entity_name": "Aboriginal Medical Services Alliance Northern Territory Aboriginal Corporation",
+      "abn": "26263401676",
+      "fit_score": 74,
+      "buyer_role": "health_service",
+      "community_id": "cf1c1dab-2b62-4da8-9cd0-3e2313d0ab60"
+    },
+    {
+      "id": "f217c2aa-141d-4a2e-8601-208e3f91655a",
+      "entity_name": "Karumba Childrens Centre",
+      "abn": "52202439178",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "d8f51cc1-00cf-454f-9b1b-803873e23113"
+    },
+    {
+      "id": "592f00cc-e004-4cec-9dda-d7c43954e126",
+      "entity_name": "Volunteer Marine Rescue Karumba Inc",
+      "abn": "39394393984",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "d8f51cc1-00cf-454f-9b1b-803873e23113"
+    },
+    {
+      "id": "6067cbc2-06be-40a3-a877-73dcd100ef8b",
+      "entity_name": "Health, Opportunity, Purpose and Empowerment Incorporated",
+      "abn": "40484799563",
+      "fit_score": 0,
+      "buyer_role": "health_service",
+      "community_id": "f0680ba5-b744-4b03-bf68-3e3b14d6397d"
+    },
+    {
+      "id": "ab4f7ee7-9b7d-41e1-be0e-fbeab5edd3c6",
+      "entity_name": "Juunjuwarra Aboriginal Corporation",
+      "abn": "20733551348",
+      "fit_score": 15,
+      "buyer_role": "community_org",
+      "community_id": "f0680ba5-b744-4b03-bf68-3e3b14d6397d"
+    },
+    {
+      "id": "daf46569-decf-46ab-b5d7-571b511c14e8",
+      "entity_name": "COOKTOWN FISHERMANS WHARF",
+      "abn": "93582956627",
+      "fit_score": 30,
+      "buyer_role": "other",
+      "community_id": "f0680ba5-b744-4b03-bf68-3e3b14d6397d"
+    },
+    {
+      "id": "626e3776-bdf2-4fe8-8a9c-9f4ff12c5828",
+      "entity_name": "Cape York Weeds & Feral Animals Inc",
+      "abn": "31169159829",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "f0680ba5-b744-4b03-bf68-3e3b14d6397d"
+    },
+    {
+      "id": "92c2d4c3-da1b-43ee-80ab-f7ddd519a02a",
+      "entity_name": "Cape York Folk Club Inc.",
+      "abn": "75628689675",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "f0680ba5-b744-4b03-bf68-3e3b14d6397d"
+    },
+    {
+      "id": "9a76b03b-a455-47d1-bf8c-9060cfea1e8f",
+      "entity_name": "Cooktown District Community Centre Ltd",
+      "abn": "63361686724",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "f0680ba5-b744-4b03-bf68-3e3b14d6397d"
+    },
+    {
+      "id": "1d302148-261e-4270-a07e-9f5ecba0c9d7",
+      "entity_name": "Cooktown Baptist Fellowship",
+      "abn": "11127864935",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "f0680ba5-b744-4b03-bf68-3e3b14d6397d"
+    },
+    {
+      "id": "4c96c8fb-131b-42c8-81b1-8a8363ac71b9",
+      "entity_name": "COOKTOWN CREATIVE ARTS ASSOCIATION INCORPORATED",
+      "abn": "84233971672",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "f0680ba5-b744-4b03-bf68-3e3b14d6397d"
+    },
+    {
+      "id": "e98eb5fe-f154-440d-90a2-3783c1a522a6",
+      "entity_name": "Cooktown Kindergarten Association Inc",
+      "abn": "65007825127",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "f0680ba5-b744-4b03-bf68-3e3b14d6397d"
+    },
+    {
+      "id": "977c0a0f-dbd5-4328-857d-bf2c36780baa",
+      "entity_name": "COOKTOWN RE-ENACTMENT ASSOCIATION INCORPORATED",
+      "abn": "34843064496",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "f0680ba5-b744-4b03-bf68-3e3b14d6397d"
+    },
+    {
+      "id": "cac5963a-cafa-42bf-94e8-cc697a382dc8",
+      "entity_name": "PANDANUS PARK INC",
+      "abn": "83396148426",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "f0680ba5-b744-4b03-bf68-3e3b14d6397d"
+    },
+    {
+      "id": "e170dae5-1165-4a15-a389-274acffc066d",
+      "entity_name": "CUC CAPE YORK LTD",
+      "abn": "36661204995",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "f0680ba5-b744-4b03-bf68-3e3b14d6397d"
+    },
+    {
+      "id": "9fd894d1-011d-47a2-be2e-91482428889a",
+      "entity_name": "South Cape York Catchments Inc.",
+      "abn": "77532434684",
+      "fit_score": 15,
+      "buyer_role": "community_org",
+      "community_id": "f0680ba5-b744-4b03-bf68-3e3b14d6397d"
+    },
+    {
+      "id": "a4b11119-42e7-4360-8462-441f5967cef0",
+      "entity_name": "The Cooktown And District Historical Society Inc",
+      "abn": "86671012646",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "f0680ba5-b744-4b03-bf68-3e3b14d6397d"
+    },
+    {
+      "id": "d3e02220-9822-427f-b553-2fca3b5c5116",
+      "entity_name": "Vera Scarth-Johnson Gallery Association Inc",
+      "abn": "67189793230",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "f0680ba5-b744-4b03-bf68-3e3b14d6397d"
+    },
+    {
+      "id": "77b037eb-b74d-4e87-9def-f944eb3dab0d",
+      "entity_name": "Cooktown Congregation of Jehovah's Witnesses",
+      "abn": "75569784947",
+      "fit_score": 0,
+      "buyer_role": "community_org",
+      "community_id": "f0680ba5-b744-4b03-bf68-3e3b14d6397d"
+    },
+    {
+      "id": "4dea6ecc-4d4c-43f2-85b5-22137d8da0d5",
+      "entity_name": "Yuku-Baja-Muliku Landowner and Reserves Ltd",
+      "abn": "68124429009",
+      "fit_score": 35,
+      "buyer_role": "community_org",
+      "community_id": "f0680ba5-b744-4b03-bf68-3e3b14d6397d"
+    }
+  ],
+  "cascadeSignals": [
+    {
+      "id": "29df0073-eca2-4e3d-b63b-ef105060dc77",
+      "signal_type": "demand_unmet",
+      "priority": "medium",
+      "community_id": "25b7684b-5105-4daa-88b7-3c9a726340f8",
+      "asset_id": null,
+      "product_id": null,
+      "buyer_entity_id": "c28719c1-0c5a-4b23-8609-6d20dc4b2d86",
+      "title": "Unmet demand: GUNUN WOONAM (QLD) — 52 beds, 6 washers",
+      "description": "Unmet demand: GUNUN WOONAM (QLD) — 52 beds, 6 washers\n\nBest buyer match: Volunteer Marine Rescue Karumba Inc (community_org) · 1 more in area.",
+      "estimated_value": null,
+      "estimated_units": 58,
+      "products_needed": [
+        "bed",
+        "washer"
+      ],
+      "matched_grant_ids": [
+        "819d73cc-68e5-4e3e-9e2a-2c7b0f29f02f",
+        "0ab650db-ab1a-416b-9f45-ca27998314d6",
+        "233f3978-6700-4f76-a3b4-ce3a86866785"
+      ],
+      "matched_foundation_ids": [
+        "f7bcab78-8268-45d9-a165-052a0d87a509",
+        "b90cb1d5-af9e-4603-834c-e934ab2043ba",
+        "ea18b7a8-8b1a-49ec-a3f5-bce6345f66c8"
+      ],
+      "funding_confidence": "possible",
+      "status": "new",
+      "assigned_to": null,
+      "action_notes": null,
+      "actioned_at": null,
+      "ghl_contact_id": "gPxPrnGkA01DbSigTaYM",
+      "ghl_synced_at": "2026-04-26T23:52:41.599+00:00",
+      "source_agent": "goods-procurement-matcher",
+      "expires_at": null,
+      "created_at": "2026-04-21T02:01:26.48085+00:00",
+      "updated_at": "2026-05-13T19:41:31.820743+00:00"
+    },
+    {
+      "id": "8f2c22fa-ca3c-4f4e-abf0-52a35b280fc2",
+      "signal_type": "demand_unmet",
+      "priority": "medium",
+      "community_id": "8497108e-5599-43f0-bc4a-d47d4a4a1d77",
+      "asset_id": null,
+      "product_id": null,
+      "buyer_entity_id": "73a9e205-2517-438b-8755-b1465e8c58f1",
+      "title": "Unmet demand: AAYKA (QLD) — 52 beds, 6 washers",
+      "description": "Unmet demand: AAYKA (QLD) — 52 beds, 6 washers\n\nBest buyer match: RIBSHIRE PTY LTD T/A GOODLINE (government) · 9 more in area.",
+      "estimated_value": null,
+      "estimated_units": 58,
+      "products_needed": [
+        "bed",
+        "washer"
+      ],
+      "matched_grant_ids": [
+        "819d73cc-68e5-4e3e-9e2a-2c7b0f29f02f",
+        "0ab650db-ab1a-416b-9f45-ca27998314d6",
+        "233f3978-6700-4f76-a3b4-ce3a86866785"
+      ],
+      "matched_foundation_ids": [
+        "f7bcab78-8268-45d9-a165-052a0d87a509",
+        "b90cb1d5-af9e-4603-834c-e934ab2043ba",
+        "ea18b7a8-8b1a-49ec-a3f5-bce6345f66c8"
+      ],
+      "funding_confidence": "possible",
+      "status": "new",
+      "assigned_to": null,
+      "action_notes": null,
+      "actioned_at": null,
+      "ghl_contact_id": "jkXvzq4QJDPKCur8akIX",
+      "ghl_synced_at": "2026-04-26T23:52:35.591+00:00",
+      "source_agent": "goods-procurement-matcher",
+      "expires_at": null,
+      "created_at": "2026-04-14T08:03:23.780625+00:00",
+      "updated_at": "2026-05-13T19:41:43.956012+00:00"
+    },
+    {
+      "id": "d18789de-c4f0-42ee-b46f-f157ad80c231",
+      "signal_type": "demand_unmet",
+      "priority": "medium",
+      "community_id": "9eb2c64a-99ed-422a-9c97-2bde0b1281bc",
+      "asset_id": null,
+      "product_id": null,
+      "buyer_entity_id": "6cdab7ff-d26c-4d2a-90a0-7358e6319a18",
+      "title": "Unmet demand: SHIPTON FLATS (QLD) — 52 beds, 6 washers",
+      "description": "Unmet demand: SHIPTON FLATS (QLD) — 52 beds, 6 washers\n\nBest buyer match: Yuku-Baja-Muliku Landowner and Reserves Ltd (community_org) · 9 more in area.",
+      "estimated_value": null,
+      "estimated_units": 58,
+      "products_needed": [
+        "bed",
+        "washer"
+      ],
+      "matched_grant_ids": [
+        "819d73cc-68e5-4e3e-9e2a-2c7b0f29f02f",
+        "0ab650db-ab1a-416b-9f45-ca27998314d6",
+        "233f3978-6700-4f76-a3b4-ce3a86866785"
+      ],
+      "matched_foundation_ids": [
+        "f7bcab78-8268-45d9-a165-052a0d87a509",
+        "b90cb1d5-af9e-4603-834c-e934ab2043ba",
+        "ea18b7a8-8b1a-49ec-a3f5-bce6345f66c8"
+      ],
+      "funding_confidence": "possible",
+      "status": "new",
+      "assigned_to": null,
+      "action_notes": null,
+      "actioned_at": null,
+      "ghl_contact_id": "dYbBIH1H5deXDEerV5HE",
+      "ghl_synced_at": "2026-04-26T23:52:39.705+00:00",
+      "source_agent": "goods-procurement-matcher",
+      "expires_at": null,
+      "created_at": "2026-04-21T02:01:26.48085+00:00",
+      "updated_at": "2026-05-13T19:41:29.482734+00:00"
+    },
+    {
+      "id": "df63964b-ee24-4626-9ee3-3a6f3b802f11",
+      "signal_type": "demand_unmet",
+      "priority": "medium",
+      "community_id": "b48620f5-0cb3-4419-9674-b8bab41f22c7",
+      "asset_id": null,
+      "product_id": null,
+      "buyer_entity_id": "73f00bca-7211-4133-825b-86b32ac86d04",
+      "title": "Unmet demand: NEW MERINEE (NSW) — 52 beds, 6 washers",
+      "description": "Unmet demand: NEW MERINEE (NSW) — 52 beds, 6 washers\n\nBest buyer match: THE COUNTRY CARE GROUP PTY LTD (26 088 222 226) (other) · 9 more in area.",
+      "estimated_value": null,
+      "estimated_units": 58,
+      "products_needed": [
+        "bed",
+        "washer"
+      ],
+      "matched_grant_ids": [
+        "ed3cb3a0-52a1-4a30-8805-f8d968664734",
+        "c91e3e47-e0a6-4c89-a67d-3f8b62deca28",
+        "f6865bfc-e4b6-464e-b3d5-1a10071672b6"
+      ],
+      "matched_foundation_ids": [
+        "7ef21e92-51c5-450d-82b3-6ffbc1237372",
+        "f7bcab78-8268-45d9-a165-052a0d87a509",
+        "6a6a4405-d780-472b-a95a-ab93182e641d"
+      ],
+      "funding_confidence": "possible",
+      "status": "new",
+      "assigned_to": null,
+      "action_notes": null,
+      "actioned_at": null,
+      "ghl_contact_id": "xBxaigCAdO1v8ARO1lo2",
+      "ghl_synced_at": "2026-04-26T23:52:43.047+00:00",
+      "source_agent": "goods-procurement-matcher",
+      "expires_at": null,
+      "created_at": "2026-04-21T02:01:26.48085+00:00",
+      "updated_at": "2026-05-13T19:41:30.776773+00:00"
+    },
+    {
+      "id": "f6c726f2-86d1-499a-88aa-e1622ac05429",
+      "signal_type": "demand_unmet",
+      "priority": "medium",
+      "community_id": "c03eea29-af8b-4e6c-848c-45305dac1ba7",
+      "asset_id": null,
+      "product_id": null,
+      "buyer_entity_id": "35893580-3e8f-4c95-828f-60ea177642ac",
+      "title": "Unmet demand: THULKURR (QLD) — 52 beds, 6 washers",
+      "description": "Unmet demand: THULKURR (QLD) — 52 beds, 6 washers\n\nBest buyer match: Karumba Childrens Centre (community_org) · 1 more in area.",
+      "estimated_value": null,
+      "estimated_units": 58,
+      "products_needed": [
+        "bed",
+        "washer"
+      ],
+      "matched_grant_ids": [
+        "819d73cc-68e5-4e3e-9e2a-2c7b0f29f02f",
+        "0ab650db-ab1a-416b-9f45-ca27998314d6",
+        "233f3978-6700-4f76-a3b4-ce3a86866785"
+      ],
+      "matched_foundation_ids": [
+        "f7bcab78-8268-45d9-a165-052a0d87a509",
+        "b90cb1d5-af9e-4603-834c-e934ab2043ba",
+        "ea18b7a8-8b1a-49ec-a3f5-bce6345f66c8"
+      ],
+      "funding_confidence": "possible",
+      "status": "new",
+      "assigned_to": null,
+      "action_notes": null,
+      "actioned_at": null,
+      "ghl_contact_id": "7sp5Zwueh0OKblAKQirR",
+      "ghl_synced_at": "2026-04-26T23:52:44.847+00:00",
+      "source_agent": "goods-procurement-matcher",
+      "expires_at": null,
+      "created_at": "2026-04-21T02:01:26.48085+00:00",
+      "updated_at": "2026-05-13T19:41:29.400089+00:00"
+    },
+    {
+      "id": "3ebc9597-9f37-4a24-b5cf-6c81ab0a7e66",
+      "signal_type": "demand_unmet",
+      "priority": "medium",
+      "community_id": "ca8b8df1-1438-4ae4-9376-bb2726a78759",
+      "asset_id": null,
+      "product_id": null,
+      "buyer_entity_id": "4fdf0b6c-09b6-42c5-acdf-e488ad31a8ca",
+      "title": "Unmet demand: THAANGKUNH-NHIIN (QLD) — 52 beds, 6 washers",
+      "description": "Unmet demand: THAANGKUNH-NHIIN (QLD) — 52 beds, 6 washers\n\nBest buyer match: RIBSHIRE PTY LTD T/A GOODLINE (government) · 9 more in area.",
+      "estimated_value": null,
+      "estimated_units": 58,
+      "products_needed": [
+        "bed",
+        "washer"
+      ],
+      "matched_grant_ids": [
+        "819d73cc-68e5-4e3e-9e2a-2c7b0f29f02f",
+        "0ab650db-ab1a-416b-9f45-ca27998314d6",
+        "233f3978-6700-4f76-a3b4-ce3a86866785"
+      ],
+      "matched_foundation_ids": [
+        "f7bcab78-8268-45d9-a165-052a0d87a509",
+        "b90cb1d5-af9e-4603-834c-e934ab2043ba",
+        "ea18b7a8-8b1a-49ec-a3f5-bce6345f66c8"
+      ],
+      "funding_confidence": "possible",
+      "status": "new",
+      "assigned_to": null,
+      "action_notes": null,
+      "actioned_at": null,
+      "ghl_contact_id": "cAt1QstivkhGfT2ShFAc",
+      "ghl_synced_at": "2026-04-26T23:52:32.134+00:00",
+      "source_agent": "goods-procurement-matcher",
+      "expires_at": null,
+      "created_at": "2026-04-14T08:03:23.780625+00:00",
+      "updated_at": "2026-05-13T19:41:44.990509+00:00"
+    },
+    {
+      "id": "d27d1f72-dac8-4505-af65-d1d57a855500",
+      "signal_type": "demand_unmet",
+      "priority": "medium",
+      "community_id": "cf1c1dab-2b62-4da8-9cd0-3e2313d0ab60",
+      "asset_id": null,
+      "product_id": null,
+      "buyer_entity_id": "4eacf5d0-fbca-4c9d-b900-4495a1e07479",
+      "title": "Unmet demand: JILUNDARINA (NT) — 52 beds, 6 washers",
+      "description": "Unmet demand: JILUNDARINA (NT) — 52 beds, 6 washers\n\nBest buyer match: Northern Land Council (council) · 1 more in area.",
+      "estimated_value": null,
+      "estimated_units": 58,
+      "products_needed": [
+        "bed",
+        "washer"
+      ],
+      "matched_grant_ids": [
+        "767692f2-b796-49e2-bfc5-e128041666e5",
+        "0e970592-0f2e-49e7-a287-02b66bdc6450",
+        "3f9b4d83-4468-40e7-afe1-222b7b7f8920"
+      ],
+      "matched_foundation_ids": [
+        "6e67e605-9cea-4ae8-8416-2745c71d51bb",
+        "b90cb1d5-af9e-4603-834c-e934ab2043ba",
+        "ea18b7a8-8b1a-49ec-a3f5-bce6345f66c8"
+      ],
+      "funding_confidence": "possible",
+      "status": "new",
+      "assigned_to": null,
+      "action_notes": null,
+      "actioned_at": null,
+      "ghl_contact_id": "Q0HsirXpDJJ3vLpNIKmj",
+      "ghl_synced_at": "2026-04-26T23:52:28.701+00:00",
+      "source_agent": "goods-procurement-matcher",
+      "expires_at": null,
+      "created_at": "2026-04-14T08:03:23.780625+00:00",
+      "updated_at": "2026-05-13T19:41:46.110555+00:00"
+    },
+    {
+      "id": "fd81643a-aa6a-477e-a773-f80477314b30",
+      "signal_type": "demand_unmet",
+      "priority": "medium",
+      "community_id": "d8f51cc1-00cf-454f-9b1b-803873e23113",
+      "asset_id": null,
+      "product_id": null,
+      "buyer_entity_id": "f217c2aa-141d-4a2e-8601-208e3f91655a",
+      "title": "Unmet demand: BANNICK BURN (QLD) — 52 beds, 6 washers",
+      "description": "Unmet demand: BANNICK BURN (QLD) — 52 beds, 6 washers\n\nBest buyer match: Karumba Childrens Centre (community_org) · 1 more in area.",
+      "estimated_value": null,
+      "estimated_units": 58,
+      "products_needed": [
+        "bed",
+        "washer"
+      ],
+      "matched_grant_ids": [
+        "819d73cc-68e5-4e3e-9e2a-2c7b0f29f02f",
+        "0ab650db-ab1a-416b-9f45-ca27998314d6",
+        "233f3978-6700-4f76-a3b4-ce3a86866785"
+      ],
+      "matched_foundation_ids": [
+        "f7bcab78-8268-45d9-a165-052a0d87a509",
+        "b90cb1d5-af9e-4603-834c-e934ab2043ba",
+        "ea18b7a8-8b1a-49ec-a3f5-bce6345f66c8"
+      ],
+      "funding_confidence": "possible",
+      "status": "new",
+      "assigned_to": null,
+      "action_notes": null,
+      "actioned_at": null,
+      "ghl_contact_id": "wu6SihnJXkEkKrUYtheG",
+      "ghl_synced_at": "2026-04-26T23:52:30.357+00:00",
+      "source_agent": "goods-procurement-matcher",
+      "expires_at": null,
+      "created_at": "2026-04-14T08:03:23.780625+00:00",
+      "updated_at": "2026-05-13T19:41:43.448041+00:00"
+    },
+    {
+      "id": "87d65b0a-b040-4388-bf77-d27e6abf0ce5",
+      "signal_type": "demand_unmet",
+      "priority": "medium",
+      "community_id": "f0680ba5-b744-4b03-bf68-3e3b14d6397d",
+      "asset_id": null,
+      "product_id": null,
+      "buyer_entity_id": "4dea6ecc-4d4c-43f2-85b5-22137d8da0d5",
+      "title": "Unmet demand: FORDY FARM (QLD) — 52 beds, 6 washers",
+      "description": "Unmet demand: FORDY FARM (QLD) — 52 beds, 6 washers\n\nBest buyer match: Yuku-Baja-Muliku Landowner and Reserves Ltd (community_org) · 9 more in area.",
+      "estimated_value": null,
+      "estimated_units": 58,
+      "products_needed": [
+        "bed",
+        "washer"
+      ],
+      "matched_grant_ids": [
+        "819d73cc-68e5-4e3e-9e2a-2c7b0f29f02f",
+        "0ab650db-ab1a-416b-9f45-ca27998314d6",
+        "233f3978-6700-4f76-a3b4-ce3a86866785"
+      ],
+      "matched_foundation_ids": [
+        "f7bcab78-8268-45d9-a165-052a0d87a509",
+        "b90cb1d5-af9e-4603-834c-e934ab2043ba",
+        "ea18b7a8-8b1a-49ec-a3f5-bce6345f66c8"
+      ],
+      "funding_confidence": "possible",
+      "status": "new",
+      "assigned_to": null,
+      "action_notes": null,
+      "actioned_at": null,
+      "ghl_contact_id": "fm0tdDRDfl3EFTOg1JS7",
+      "ghl_synced_at": "2026-04-26T23:52:37.381+00:00",
+      "source_agent": "goods-procurement-matcher",
+      "expires_at": null,
+      "created_at": "2026-04-14T08:03:23.780625+00:00",
+      "updated_at": "2026-05-13T19:41:43.880864+00:00"
+    }
+  ]
+}
