@@ -1017,6 +1017,14 @@ export const AGENTS = {
     timeoutMs: 300_000,
     dependencies: ['goods-community-census'],
   },
+  'goods-repeat-buyer-intel': {
+    command: ['node', '--env-file=.env', 'scripts/goods-repeat-buyer-intel.mjs'],
+    displayName: 'Goods Repeat-Buyer Intel (procurement targets)',
+    category: 'goods',
+    defaultPriority: 3,
+    timeoutMs: 300_000,
+    dependencies: ['sync-austender-contracts'],
+  },
   'sync-ghl-goods-buyers': {
     command: ['node', '--env-file=.env', '--env-file=apps/web/.env.local', 'scripts/sync-ghl-goods-buyers.mjs'],
     displayName: 'Sync GHL Goods Buyers',
