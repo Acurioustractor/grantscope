@@ -40,6 +40,17 @@ export const AGENTS = {
     timeoutMs: 600_000,
     dependencies: [],
   },
+  // Open ATMs (Approach To Market) — what Goods can BID on now, vs the awarded
+  // contracts above. RSS feed + per-ATM UNSPSC gate → grant_opportunities
+  // (discovery_method='procurement'). Phase 3 of the Goods procurement pipeline.
+  'sync-austender-open-tenders': {
+    command: ['node', '--env-file=.env', 'scripts/sync-austender-open-tenders.mjs', '--apply'],
+    displayName: 'Sync AusTender Open Tenders (Goods)',
+    category: 'sync',
+    defaultPriority: 3,
+    timeoutMs: 600_000,
+    dependencies: [],
+  },
   'sync-ato-tax-transparency': {
     command: ['node', '--env-file=.env', 'scripts/sync-ato-tax-transparency.mjs'],
     displayName: 'Sync ATO Tax Transparency',
