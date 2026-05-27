@@ -1,0 +1,26 @@
+{
+  "name": "@grantscope/video",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Remotion-driven motion graphics for CivicGraph reports.",
+  "scripts": {
+    "dev": "remotion studio src/index.ts",
+    "render:goods": "remotion render src/index.ts GoodsImpact out/goods-impact.mp4",
+    "render:drain": "remotion render src/index.ts Drain out/drain.mp4",
+    "render:tanks": "remotion render src/index.ts Tanks out/tanks.mp4",
+    "render:all": "remotion render src/index.ts Drain out/drain.mp4 && remotion render src/index.ts Tanks out/tanks.mp4"
+  },
+  "dependencies": {
+    "@remotion/bundler": "^4.0.300",
+    "@remotion/cli": "^4.0.300",
+    "@remotion/renderer": "^4.0.300",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "remotion": "^4.0.300"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.0.0"
+  }
+}
