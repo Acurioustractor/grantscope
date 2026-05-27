@@ -1,6 +1,6 @@
 ---
 title: Goods capital + procurement pipelines — SCOPE (item #3)
-status: scoping — needs Ben's phase-priority + build-vs-curate calls before a build session
+status: scoped — Ben chose PHASE 3 (open-tender feed) as the build-session starting point (2026-05-27)
 date: 2026-05-27
 repo: grantscope
 related:
@@ -54,10 +54,18 @@ Goods needs four money-types; GrantScope's grant scorer only finds the weakest w
 ### Phase 4 — NT $4B remote-housing tracker (M–L)
 - Dedicated source for NT DHLGCD remote-housing program + contract vehicles (likely Firecrawl — JS-heavy). Track as procurement opportunities / a tracked program entity. The whale; highest effort, highest ceiling.
 
-## Decisions needed from Ben (gates the build session)
-1. **Phase priority** — start with Phase 1 (surface existing, fastest visible win) or jump to a specific gap (e.g. Phase 3 open-tenders, or Phase 4 NT housing)?
-2. **D3 capital: watch/flag vs auto-crawl vs quarterly-manual.**
-3. **GHL flow now or later** — wire capital/procurement → GHL stages this round, or keep GrantScope-only first?
+## Decisions
+1. **Phase priority — DECIDED: start with PHASE 3 (open-tender feed).** Ben's call, 2026-05-27: the "purchase order > grant" value is the priority. Phase 1 surfacing + Phase 2/4 deferred.
+2. **D3 capital: watch/flag vs auto-crawl vs quarterly-manual** — open, only relevant when Phase 2 is built.
+3. **GHL flow now or later** — for Phase 3: decide whether open-tender opportunities flow to the GHL Buyer stage this round, or land in `grant_opportunities` first and wire GHL after.
+
+## Phase 3 build-session kickoff notes (start here next session)
+Goal: a `sync-austender-open-tenders.mjs` that ingests OPEN AusTender ATMs (Approach To Market), filtered to Goods product, as `grant_opportunities` rows (`discovery_method='procurement'`, `status='open'`).
+First three things to verify before coding:
+1. **Does the AusTender OCDS API expose open-tender / ATM (planning/tender) releases**, not just the `contractPublished`/`contractLastModified` releases the existing `sync-austender-contracts.mjs` uses? Check `https://api.tenders.gov.au/ocds` release types. If OCDS only carries awarded contracts, fall back to the AusTender ATM RSS/HTML or CKAN dataset.
+2. **UNSPSC / category codes for Goods product** — beds/mattresses (UNSPSC 56101500s), whitegoods/appliances (52141500s), furniture (56101700s). Confirm against what ATM records carry; reuse the keyword list already in `hydrate-goods-procurement.mjs`.
+3. **Target shape** — reuse the `grant_opportunities` upsert pattern (D1); set `source='austender-open-tenders'`, `discovery_method='procurement'`; do NOT mark manual (let the scorer's +25 procurement boost score them). Register in `agent-registry.mjs`.
+Fallback if open-ATM ingestion proves infeasible: pivot to Phase 1 repeat-buyer intelligence (mine the existing 672K `austender_contracts` for buyers who already purchase beds/whitegoods) — data already present, no new source.
 
 ## Out of scope
 Re-scoring tuning (done), the GHL Buyer Pipeline itself (built prior sessions), Supply Nation live scraping (currently CSV-fed; separate question).
