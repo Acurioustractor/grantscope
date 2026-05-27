@@ -81,6 +81,30 @@ test('a real Goods-shaped Indigenous housing grant still scores high', () => {
   assert.ok(score >= GOODS_TAG_THRESHOLD, `expected >= ${GOODS_TAG_THRESHOLD}, got ${score}`);
 });
 
+test('founder-development fellowship (no academic context) is NOT zeroed', () => {
+  const { score, signals } = scoreGrantForGoods({
+    name: 'Westpac Social Change Fellowship',
+    provider: 'Westpac Scholars Trust',
+    description: 'Development program for social entrepreneurs creating community change. Indigenous social enterprise founders eligible.',
+    amount_max: 50_000,
+    geography: 'AU',
+    source: 'foundation_program',
+  });
+  assert.ok(!signals.disqualifier_hits.includes('fellowship(academic)'), 'should not penalise a non-academic fellowship');
+  assert.ok(score > 0, `expected > 0, got ${score}`);
+});
+
+test('research fellowship (academic context) is still penalised', () => {
+  const { signals } = scoreGrantForGoods({
+    name: 'Indigenous Health Research Fellowship',
+    provider: 'NHMRC',
+    description: 'Postdoctoral research fellowship for academic study of Aboriginal community health.',
+    amount_max: 500_000,
+    source: 'grantconnect',
+  });
+  assert.ok(signals.disqualifier_hits.includes('fellowship(academic)'), 'academic fellowship should still be penalised');
+});
+
 test('discovery_method=indigenous-finance boosts a capital opportunity', () => {
   const withBoost = scoreGrantForGoods({
     name: 'IBA Start-Up Finance Package',

@@ -45,10 +45,19 @@ const GOODS_GEOGRAPHIES = new Set(['AU-NT', 'AU-WA', 'AU-QLD', 'AU-SA']);
 
 // Disqualifiers — strong indicators this is NOT Goods-shaped
 const DISQUALIFIERS = [
-  'scholarship', 'phd', 'research grant', 'fellowship', 'sabbatical',
+  'scholarship', 'phd', 'research grant',
   'individual artist', 'individual researcher', 'student bursary',
   'travel grant', 'conference', 'symposium',
 ];
+
+// Soft disqualifiers that ONLY fire in a research/academic context. A
+// "fellowship" from Westpac or Barayamal is founder capability for Goods; a
+// research fellowship is not. (University-provider grants are already hard-zeroed
+// above, so this only governs fellowships from non-university funders.)
+const CONDITIONAL_DISQUALIFIERS = ['fellowship', 'sabbatical'];
+// NB: deliberately excludes 'scholar' — it false-matches philanthropic funders
+// like "Westpac Scholars Trust". 'scholarship' stays a hard DISQUALIFIER above.
+const ACADEMIC_CONTEXT = ['research', 'phd', 'postdoctoral', 'postdoc', 'academic', 'university'];
 
 // Hard structural disqualifiers — Goods (a Pty Ltd / community-controlled social
 // enterprise) cannot apply to these, regardless of how Goods-shaped the text reads.
@@ -214,6 +223,19 @@ export function scoreGrantForGoods(grant) {
     if (name.includes(dq) || description.includes(dq)) {
       signals.disqualifier_hits.push(dq);
       score -= 15;
+    }
+  }
+
+  // Fellowship/sabbatical only disqualify alongside a research/academic marker —
+  // founder-development fellowships (Westpac Social Change, Barayamal) are a
+  // legitimate Goods capability signal and should not be zeroed.
+  const hasAcademicContext = ACADEMIC_CONTEXT.some(m => haystack.includes(m));
+  if (hasAcademicContext) {
+    for (const dq of CONDITIONAL_DISQUALIFIERS) {
+      if (name.includes(dq) || description.includes(dq)) {
+        signals.disqualifier_hits.push(`${dq}(academic)`);
+        score -= 15;
+      }
     }
   }
 
