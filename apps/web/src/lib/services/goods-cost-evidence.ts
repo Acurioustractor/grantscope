@@ -1,6 +1,9 @@
 import { createHash } from 'crypto';
 
 import { getServiceSupabase } from '@/lib/supabase';
+import bedCostModel from '@/lib/data/goods-bed-cost-model.json';
+
+type BedCostModelShape = typeof bedCostModel;
 
 const PROJECT_CODE = 'ACT-GD';
 const LAST_50_START = '2025-10-08';
@@ -214,8 +217,52 @@ export type GoodsCostEvidence = {
       source: string;
       confidence: 'verified' | 'inferred' | 'planning' | 'unverified';
     }>;
+    // v3 additions — scenarios + Idiot Index + fundraising offset, sourced
+    // from lib/data/goods-bed-cost-model.json (the OCR-verified model).
+    scenarios: {
+      today: ScenarioRow;
+      target: ScenarioRow;
+      vision: ScenarioRow;
+    };
+    idiotIndex: Array<{
+      element: string;
+      rawLow: string;
+      rawHigh: string;
+      current: string;
+      indexLow: number;
+      indexHigh: number;
+      markupPaysFor: string;
+    }>;
+    fundraisingOffset: {
+      philanthropyDays: number;
+      philanthropyAnnual: string;
+      commercialDays: number;
+      buyerBenchmark: string;
+      buyerSource: string;
+      subsidyAt100: string;
+      subsidyAt500: string;
+    };
+    founderAllocation: Array<{
+      label: string;
+      days: number;
+      annualCost: string;
+      allocateTo: string;
+    }>;
   };
   gaps: string[];
+};
+
+export type ScenarioRow = {
+  label: string;
+  bedsPerYear: number;
+  state: string;
+  direct: string;
+  freight: string;
+  founder: string;
+  admin: string;
+  field: string;
+  total: string;
+  totalNumeric: number;
 };
 
 function toNumber(value: number | string | null | undefined) {
@@ -787,73 +834,138 @@ function extractCapitalRows(bills: XeroSupplierBill[]): GoodsCostEvidence['capit
 }
 
 function buildFunderView(input: {
-  perBedDirect: number; // verified per-bed direct cost (excludes capital, freight TBD)
+  perBedDirect: number;
   capitalTotalKnown: number;
   totalBills: number;
 }): GoodsCostEvidence['funderView'] {
-  // Source-of-truth numbers from the plan + Ben's Notion Bed-Inputs DB (verified-where-possible).
-  const components = {
-    hdpe_kit: { amount: 344.05, label: 'HDPE kit', basis: 'Defy invoices, verified.' },
-    canvas: { amount: 93.50, label: 'Canvas', basis: 'Notion BOM, estimate.' },
-    assembly: { amount: 55.95, label: 'Assembly labour', basis: 'Defy invoices, verified.' },
-    steel: { amount: 27.00, label: 'Steel frame', basis: 'Notion BOM, estimate.' },
-    caps: { amount: 3.20, label: 'End caps / fittings', basis: 'Notion BOM, estimate.' },
-  };
-  const directComponents = Object.values(components).reduce((sum, c) => sum + c.amount, 0);
-  // Freight is the biggest gap (per plan); use the road-freight benchmark of $52
-  // as a placeholder until the actual Syd→Utopia freight invoice lands.
-  const freight = 52;
-  const overhead = Math.max(0, input.perBedDirect - directComponents - freight); // facility amortisation residual
-  const fullyLoaded = directComponents + freight + overhead;
-  const commercialLow = 1500;
-  const commercialHigh = 2000;
+  // v3 model — all numbers come from lib/data/goods-bed-cost-model.json
+  // which is the OCR-verified Defy invoice model. The hero number is the
+  // honest "today @ 100/yr Defy-everything" figure; target/vision are the
+  // trajectory funders fund.
+  const m = bedCostModel as BedCostModelShape;
+
+  const states = Object.entries(m.build_states).reduce(
+    (acc, [key, state]) => {
+      acc[key] = state;
+      return acc;
+    },
+    {} as Record<string, BedCostModelShape['build_states']['state_1_defy_everything']>,
+  );
+  const state1 = states['state_1_defy_everything']!;
+  const state4 = states['state_4_all_in_house']!;
+  const state5 = states['state_5_community_plastic']!;
+  const today = m.volume_scenarios[0]!;
+  const target = m.volume_scenarios[1]!;
+  const vision = m.volume_scenarios[2]!;
+
+  const heroFullyLoaded = today.fully_loaded_state_1; // Today @ 100/yr, Defy-everything — the honest starting point.
+  const directToday = state1.direct_total;
+  const costStack: GoodsCostEvidence['funderView']['costStack'] = state1.components.map((c) => ({
+    label: c.label,
+    amount: money(c.amount),
+    pctOfDirect: c.amount / directToday,
+    basis: 'Defy verified rate (invoice OCR).',
+  }));
+  costStack.push(
+    { label: 'Freight (per bed)', amount: money(today.freight_per_bed), pctOfDirect: today.freight_per_bed / heroFullyLoaded, basis: 'Botany NSW → remote AU benchmark.' },
+    { label: 'Production-related founder time', amount: money(today.production_founder_per_bed), pctOfDirect: today.production_founder_per_bed / heroFullyLoaded, basis: '30 days/yr × $1K/day modelled, allocated to beds only.' },
+    { label: 'Admin overhead', amount: money(today.admin_per_bed), pctOfDirect: today.admin_per_bed / heroFullyLoaded, basis: 'Byo + small accounts ÷ bed count.' },
+    { label: 'Field travel / ops', amount: money(today.field_travel_per_bed), pctOfDirect: today.field_travel_per_bed / heroFullyLoaded, basis: 'Account 493 + retagged Utopia trip costs.' },
+  );
+
+  const buildScenario = (
+    label: string,
+    bedsPerYear: number,
+    state: BedCostModelShape['build_states']['state_1_defy_everything'],
+    scenario: BedCostModelShape['volume_scenarios'][number],
+    fullyLoadedKey: 'fully_loaded_state_1' | 'fully_loaded_state_4' | 'fully_loaded_state_5',
+  ): ScenarioRow => ({
+    label,
+    bedsPerYear,
+    state: state.label,
+    direct: money(state.direct_total),
+    freight: money(scenario.freight_per_bed),
+    founder: money(scenario.production_founder_per_bed),
+    admin: money(scenario.admin_per_bed),
+    field: money(scenario.field_travel_per_bed),
+    total: money(scenario[fullyLoadedKey]),
+    totalNumeric: scenario[fullyLoadedKey],
+  });
+
+  const fr = m.fundraising_offset;
+  const fa = m.founder_time_allocation;
+
   return {
     hero: {
-      value: money(fullyLoaded),
-      label: 'delivers one community-made bed (fully-loaded, ex capital)',
-      provenance: `Components ${money(directComponents)} (HDPE kit + canvas + assembly + steel + caps) + freight ${money(freight)} + facility overhead ${money(overhead)}. Capital is shown separately.`,
+      value: money(heroFullyLoaded),
+      label: 'fully-loaded delivered bed today (~100 beds/yr, Defy-everything)',
+      provenance: `Direct ${money(state1.direct_total)} (Defy verified Single Bed) + freight ${money(today.freight_per_bed)} + production-only founder time ${money(today.production_founder_per_bed)} + admin ${money(today.admin_per_bed)} + field ops ${money(today.field_travel_per_bed)}. Target $${target.fully_loaded_state_4}/bed at 500/yr (State 4 in-house); vision $${vision.fully_loaded_state_5}/bed at 1,000/yr (community plastic).`,
     },
-    costStack: [
-      { label: components.hdpe_kit.label, amount: money(components.hdpe_kit.amount), pctOfDirect: components.hdpe_kit.amount / fullyLoaded, basis: components.hdpe_kit.basis },
-      { label: components.canvas.label, amount: money(components.canvas.amount), pctOfDirect: components.canvas.amount / fullyLoaded, basis: components.canvas.basis },
-      { label: components.assembly.label, amount: money(components.assembly.amount), pctOfDirect: components.assembly.amount / fullyLoaded, basis: components.assembly.basis },
-      { label: components.steel.label, amount: money(components.steel.amount), pctOfDirect: components.steel.amount / fullyLoaded, basis: components.steel.basis },
-      { label: components.caps.label, amount: money(components.caps.amount), pctOfDirect: components.caps.amount / fullyLoaded, basis: components.caps.basis },
-      { label: 'Freight (road)', amount: money(freight), pctOfDirect: freight / fullyLoaded, basis: 'Road-freight benchmark; remote routes higher. Actual Syd→Utopia invoice still TBC.' },
-      { label: 'Facility overhead', amount: money(overhead), pctOfDirect: overhead / fullyLoaded, basis: 'Amortised facility labour + materials per bed, derived from the $550–$650 production band.' },
-    ],
+    costStack,
     capitalSummary: {
-      total: input.capitalTotalKnown > 0 ? compactMoney(input.capitalTotalKnown) : 'identified items only',
+      total: `$${m.capex_required_to_reach_state_4._capital_ask_low / 1000}K–$${m.capex_required_to_reach_state_4._capital_ask_high / 1000}K capital ask`,
       rows: [
-        { label: 'Production facility', amount: '$100K invested to date', note: 'FRRR + initial fit-out; one-off, not per bed.' },
-        { label: 'Carbatec tooling', amount: '$10,046', note: 'Workshop tooling (verified Xero ACT-GD line).' },
-        { label: 'Defy facility materials', amount: '$11,725', note: 'Facility build materials (verified Xero ACT-GD line).' },
-        { label: 'Kirmos facility labour', amount: '$4,500 / month', note: 'Facility labour run-rate; amortised into per-bed overhead.' },
+        { label: 'Production facility (in)', amount: `$${m.capex_required_to_reach_state_4.already_invested_facility / 1000}K invested`, note: 'FRRR + initial fit-out — one-off, not per bed.' },
+        { label: 'Carbatec tooling (in)', amount: money(m.capex_required_to_reach_state_4.already_invested_carbatec_tooling), note: 'Workshop tooling already in place.' },
+        { label: 'Shredder', amount: `${money(m.capex_required_to_reach_state_4.shredder.low)}–${money(m.capex_required_to_reach_state_4.shredder.high)}`, note: 'In-house shred plant.' },
+        { label: 'Hot-press line', amount: `${money(m.capex_required_to_reach_state_4.hot_press_line.low)}–${money(m.capex_required_to_reach_state_4.hot_press_line.high)}`, note: 'In-house sheet pressing — biggest Idiot-Index saving.' },
+        { label: 'CNC router', amount: `${money(m.capex_required_to_reach_state_4.cnc_router.low)}–${money(m.capex_required_to_reach_state_4.cnc_router.high)}`, note: 'In-house cut + finish.' },
       ],
     },
     conversion: [
-      { funds: '$10,000', beds: Math.round(10000 / fullyLoaded), note: 'A single-funder cheque.' },
-      { funds: '$50,000', beds: Math.round(50000 / fullyLoaded), note: 'A typical foundation grant.' },
-      { funds: '$100,000', beds: Math.round(100000 / fullyLoaded), note: 'A community-partnership commitment.' },
-      { funds: '$500,000', beds: Math.round(500000 / fullyLoaded), note: 'Major-gift or capital allocation.' },
+      { funds: '$10,000', beds: Math.round(10000 / heroFullyLoaded), note: 'A single-funder cheque @ today rate.' },
+      { funds: '$50,000', beds: Math.round(50000 / heroFullyLoaded), note: 'A typical foundation grant @ today rate.' },
+      { funds: '$100,000', beds: Math.round(100000 / target.fully_loaded_state_4), note: `A partnership @ target rate ($${target.fully_loaded_state_4}/bed at 500/yr).` },
+      { funds: '$200,000', beds: Math.round(200000 / target.fully_loaded_state_4), note: 'Capital ask to unlock State 4 in-house production.' },
+      { funds: '$500,000', beds: Math.round(500000 / target.fully_loaded_state_4), note: 'Major gift @ target rate.' },
     ],
     counterfactual: {
-      commercialRangeLow: money(commercialLow),
-      commercialRangeHigh: money(commercialHigh),
-      ratioLow: `${(commercialLow / fullyLoaded).toFixed(1)}×`,
-      ratioHigh: `${(commercialHigh / fullyLoaded).toFixed(1)}×`,
-      basis: 'Commercial-equivalent steel-frame bed pricing (retail furniture/contract supply, mid-2026 AU market).',
+      commercialRangeLow: money(m.counterfactual.commercial_steel_frame_bed_au_2026_low),
+      commercialRangeHigh: money(m.counterfactual.commercial_steel_frame_bed_au_2026_high),
+      ratioLow: `${(m.counterfactual.commercial_steel_frame_bed_au_2026_low / heroFullyLoaded).toFixed(2)}×`,
+      ratioHigh: `${(m.counterfactual.commercial_steel_frame_bed_au_2026_high / heroFullyLoaded).toFixed(2)}×`,
+      basis: m.counterfactual.source,
     },
     provenance: [
-      { figure: `${components.hdpe_kit.label} ${money(components.hdpe_kit.amount)}`, source: 'Defy supplier invoices (Notion: Bed Inputs DB)', confidence: 'verified' },
-      { figure: `${components.assembly.label} ${money(components.assembly.amount)}`, source: 'Defy supplier invoices', confidence: 'verified' },
-      { figure: `${components.canvas.label} ${money(components.canvas.amount)}`, source: 'Notion BOM working figure', confidence: 'inferred' },
-      { figure: `${components.steel.label} ${money(components.steel.amount)}`, source: 'Notion BOM working figure', confidence: 'inferred' },
-      { figure: `Freight ${money(freight)}`, source: 'Road-freight benchmark; Syd→Utopia actual TBC', confidence: 'planning' },
-      { figure: `Facility overhead ${money(overhead)}`, source: 'Production-range residual ($550–$650 band)', confidence: 'planning' },
-      { figure: 'Commercial counterfactual $1.5K–$2K', source: 'Retail/contract-supply market scan, mid-2026 AU', confidence: 'inferred' },
-      { figure: `Xero supplier-bills total ${compactMoney(input.totalBills)}`, source: 'xero_invoices (ACT-GD, ACCPAY, non-voided)', confidence: 'verified' },
+      { figure: `Single Bed fully fab'd ${money(600)}`, source: 'INV-1507 Nov 2025 (25 beds, OCR-verified)', confidence: 'verified' },
+      { figure: `Bed kit cut+finished ${money(344.05)}`, source: 'INV-1602 + 2026-03-27 (multiple batches, OCR-verified)', confidence: 'verified' },
+      { figure: `Assembly labour ${money(55.95)}`, source: '2026-03-19 line (8 beds, OCR-verified)', confidence: 'verified' },
+      { figure: `HDPE shred $2/kg`, source: '2026-03-27 (1200kg bulk, OCR-verified)', confidence: 'verified' },
+      { figure: `Half-sheet $200`, source: '2026-03-27 (20 sheets bulk, OCR-verified)', confidence: 'verified' },
+      { figure: `HDPE per bed: 20kg`, source: 'Ben confirmed 2026-05-28', confidence: 'verified' },
+      { figure: `Founder time $1K/day × 150 days/yr`, source: 'Ben confirmed 2026-05-28', confidence: 'verified' },
+      { figure: 'Commercial counterfactual $1.5K–$2K', source: m.counterfactual.source, confidence: 'inferred' },
+      { figure: 'In-house cost estimates (sheet press, CNC, etc.)', source: 'Modelled — pending real quotes for hot-press + CNC capex', confidence: 'planning' },
     ],
+    scenarios: {
+      today: buildScenario(today.label, today.beds_per_year, state1, today, 'fully_loaded_state_1'),
+      target: buildScenario(target.label, target.beds_per_year, state4, target, 'fully_loaded_state_4'),
+      vision: buildScenario(vision.label, vision.beds_per_year, state5, vision, 'fully_loaded_state_5'),
+    },
+    idiotIndex: m.idiot_index.map((row) => ({
+      element: row.element,
+      rawLow: money(row.raw_low),
+      rawHigh: money(row.raw_high),
+      current: money(row.current),
+      indexLow: row.index_low,
+      indexHigh: row.index_high,
+      markupPaysFor: row.markup_pays_for,
+    })),
+    fundraisingOffset: {
+      philanthropyDays: fr.philanthropy_days_per_year,
+      philanthropyAnnual: compactMoney(fr.philanthropy_annual_estimate),
+      commercialDays: fr.commercial_sales_days_per_year,
+      buyerBenchmark: money(fr.commercial_buyer_benchmark_per_bed),
+      buyerSource: fr.commercial_buyer_source,
+      subsidyAt100: money(fr._per_bed_subsidy_at_100_per_year),
+      subsidyAt500: money(fr._per_bed_subsidy_at_500_per_year),
+    },
+    founderAllocation: fa.split.map((entry) => ({
+      label: entry.label,
+      days: entry.days,
+      annualCost: money(entry.annual_cost),
+      allocateTo: entry.allocate_to,
+    })),
   };
 }
 

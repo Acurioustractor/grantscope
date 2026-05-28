@@ -377,6 +377,145 @@ async function FastProjectDashboard({
                   </div>
                 </div>
               </div>
+              <div className="border-t-4 border-bauhaus-black p-5">
+                <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue">Volume scenarios</p>
+                <h3 className="mt-2 text-sm font-black uppercase tracking-wide">Today → target → vision (the trajectory funders fund)</h3>
+                <div className="mt-4 overflow-x-auto">
+                  <table className="min-w-[800px] w-full border-collapse text-left text-xs">
+                    <thead className="bg-gray-50 text-[10px] font-black uppercase tracking-widest text-gray-500">
+                      <tr>
+                        <th className="border-b border-r border-gray-200 p-3">Scenario</th>
+                        <th className="border-b border-r border-gray-200 p-3 text-right">Direct</th>
+                        <th className="border-b border-r border-gray-200 p-3 text-right">Freight</th>
+                        <th className="border-b border-r border-gray-200 p-3 text-right">Founder (prod)</th>
+                        <th className="border-b border-r border-gray-200 p-3 text-right">Admin</th>
+                        <th className="border-b border-r border-gray-200 p-3 text-right">Field</th>
+                        <th className="border-b border-gray-200 p-3 text-right">Fully-loaded</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(['today', 'target', 'vision'] as const).map((key) => {
+                        const row = costEvidence.funderView.scenarios[key];
+                        const isTarget = key === 'target';
+                        return (
+                          <tr key={key} className={isTarget ? 'bg-bauhaus-canvas/50' : ''}>
+                            <td className="border-b border-r border-gray-200 p-3">
+                              <div className="text-sm font-black text-bauhaus-black">{row.label}</div>
+                              <p className="mt-1 text-[10px] leading-relaxed text-gray-500">{row.state}</p>
+                            </td>
+                            <td className="border-b border-r border-gray-200 p-3 text-right tabular-nums">{row.direct}</td>
+                            <td className="border-b border-r border-gray-200 p-3 text-right tabular-nums">{row.freight}</td>
+                            <td className="border-b border-r border-gray-200 p-3 text-right tabular-nums">{row.founder}</td>
+                            <td className="border-b border-r border-gray-200 p-3 text-right tabular-nums">{row.admin}</td>
+                            <td className="border-b border-r border-gray-200 p-3 text-right tabular-nums">{row.field}</td>
+                            <td className="border-b border-gray-200 p-3 text-right text-sm font-black tabular-nums text-bauhaus-red">{row.total}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="mt-3 text-[11px] leading-relaxed text-gray-500">
+                  Commercial counterfactual {costEvidence.funderView.counterfactual.commercialRangeLow}–{costEvidence.funderView.counterfactual.commercialRangeHigh} per bed. Today already competitive at volume; State 4 at 500/yr beats commercial by 2–3×.
+                </p>
+              </div>
+
+              <div className="border-t-4 border-bauhaus-black bg-white p-5">
+                <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue">Idiot Index — where Defy's markup actually is</p>
+                <h3 className="mt-2 text-sm font-black uppercase tracking-wide">Ratio of finished-part cost to raw-material cost — biggest ratios = biggest in-house opportunities</h3>
+                <div className="mt-4 overflow-x-auto">
+                  <table className="min-w-[700px] w-full border-collapse text-left text-xs">
+                    <thead className="bg-gray-50 text-[10px] font-black uppercase tracking-widest text-gray-500">
+                      <tr>
+                        <th className="border-b border-r border-gray-200 p-3">Element</th>
+                        <th className="border-b border-r border-gray-200 p-3 text-right">Raw</th>
+                        <th className="border-b border-r border-gray-200 p-3 text-right">We pay</th>
+                        <th className="border-b border-r border-gray-200 p-3 text-right">Index</th>
+                        <th className="border-b border-gray-200 p-3">Markup pays for</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {costEvidence.funderView.idiotIndex.map((row) => {
+                        const rawDisplay = row.rawLow === row.rawHigh ? row.rawLow : `${row.rawLow}–${row.rawHigh}`;
+                        const indexDisplay =
+                          row.indexLow === row.indexHigh ? `${row.indexLow.toFixed(1)}×` : `${row.indexLow.toFixed(1)}–${row.indexHigh.toFixed(1)}×`;
+                        const indexClass =
+                          row.indexHigh >= 5
+                            ? 'text-bauhaus-red'
+                            : row.indexHigh >= 3
+                              ? 'text-orange-600'
+                              : row.indexHigh >= 2
+                                ? 'text-bauhaus-blue'
+                                : 'text-gray-600';
+                        return (
+                          <tr key={row.element}>
+                            <td className="border-b border-r border-gray-200 p-3 text-sm font-black text-bauhaus-black">{row.element}</td>
+                            <td className="border-b border-r border-gray-200 p-3 text-right tabular-nums text-gray-600">{rawDisplay}</td>
+                            <td className="border-b border-r border-gray-200 p-3 text-right tabular-nums">{row.current}</td>
+                            <td className={`border-b border-r border-gray-200 p-3 text-right text-sm font-black tabular-nums ${indexClass}`}>{indexDisplay}</td>
+                            <td className="border-b border-gray-200 p-3 text-[11px] leading-relaxed text-gray-600">{row.markupPaysFor}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="grid gap-0 border-t-4 border-bauhaus-black lg:grid-cols-2">
+                <div className="border-b-4 border-bauhaus-black p-5 lg:border-b-0 lg:border-r-4">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue">Founder time, properly allocated</p>
+                  <h3 className="mt-2 text-sm font-black uppercase tracking-wide">{costEvidence.funderView.founderAllocation.reduce((s, r) => s + r.days, 0)} days × $1,000/day on Goods</h3>
+                  <div className="mt-3 divide-y divide-gray-200 border border-gray-200">
+                    {costEvidence.funderView.founderAllocation.map((row) => {
+                      const targetClass =
+                        row.allocateTo === 'bed-overhead'
+                          ? 'border-bauhaus-red bg-red-50 text-bauhaus-red'
+                          : row.allocateTo === 'funding-side-offset'
+                            ? 'border-emerald-600 bg-emerald-50 text-emerald-700'
+                            : 'border-gray-400 bg-gray-50 text-gray-700';
+                      return (
+                        <div key={row.label} className="grid gap-2 p-3 md:grid-cols-[1fr_70px_80px_120px]">
+                          <div className="text-xs leading-relaxed text-bauhaus-black">{row.label}</div>
+                          <div className="text-xs font-black tabular-nums text-right">{row.days}d</div>
+                          <div className="text-xs font-black tabular-nums text-right">{row.annualCost}</div>
+                          <span className={`inline-flex w-fit border px-2 py-1 text-[9px] font-black uppercase tracking-widest ${targetClass}`}>
+                            {row.allocateTo.replaceAll('-', ' ')}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p className="mt-3 text-[11px] leading-relaxed text-gray-500">
+                    Only production-related founder time hits the bed cost line. Fundraising + commercial days OFFSET bed cost via dollars raised.
+                  </p>
+                </div>
+                <div className="p-5">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue">Fundraising offset</p>
+                  <h3 className="mt-2 text-sm font-black uppercase tracking-wide">Every $1 raised funds a bed PLUS capex toward $350/bed</h3>
+                  <div className="mt-4 grid gap-3 md:grid-cols-2">
+                    <div className="border border-gray-200 bg-gray-50 p-4">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue">Philanthropy</p>
+                      <div className="mt-2 text-2xl font-black tabular-nums text-bauhaus-black">{costEvidence.funderView.fundraisingOffset.philanthropyAnnual}</div>
+                      <p className="mt-1 text-[11px] leading-relaxed text-gray-600">{costEvidence.funderView.fundraisingOffset.philanthropyDays} founder-days/yr × ~$5K/day raised</p>
+                    </div>
+                    <div className="border border-gray-200 bg-gray-50 p-4">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue">Commercial buyer</p>
+                      <div className="mt-2 text-2xl font-black tabular-nums text-bauhaus-black">{costEvidence.funderView.fundraisingOffset.buyerBenchmark} / bed</div>
+                      <p className="mt-1 text-[11px] leading-relaxed text-gray-600">{costEvidence.funderView.fundraisingOffset.buyerSource}</p>
+                    </div>
+                    <div className="border border-emerald-600 bg-emerald-50 p-4">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700">Subsidy @ 100/yr</p>
+                      <div className="mt-2 text-2xl font-black tabular-nums text-emerald-700">{costEvidence.funderView.fundraisingOffset.subsidyAt100} / bed</div>
+                    </div>
+                    <div className="border border-emerald-600 bg-emerald-50 p-4">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700">Subsidy @ 500/yr</p>
+                      <div className="mt-2 text-2xl font-black tabular-nums text-emerald-700">{costEvidence.funderView.fundraisingOffset.subsidyAt500} / bed</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div className="border-t-4 border-bauhaus-black bg-white p-5">
                 <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue">Provenance</p>
                 <h3 className="mt-2 text-sm font-black uppercase tracking-wide">Every figure traces to a source</h3>
