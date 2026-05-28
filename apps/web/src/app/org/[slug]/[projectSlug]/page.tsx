@@ -48,6 +48,8 @@ import {
   type OrgProfile,
   type OrgProject,
 } from '@/lib/services/org-dashboard-service';
+import { getGoodsCostEvidence } from '@/lib/services/goods-cost-evidence';
+import { GoodsCostAllocationTable } from './goods-cost-allocation-table';
 import { Section } from '../../_components/ui';
 import { ProjectCards } from '../../_components/project-cards';
 import { ProjectFoundationsClient } from '../../_components/project-foundations-client';
@@ -96,7 +98,7 @@ function formatDateLabel(value: number | null) {
   });
 }
 
-function FastProjectDashboard({
+async function FastProjectDashboard({
   profile,
   project,
   slug,
@@ -142,6 +144,7 @@ function FastProjectDashboard({
     const receivedRows = goodsFundingPipelineRows.filter((row) => row.status.includes('received'));
     const liveRows = goodsFundingPipelineRows.filter((row) => !row.status.includes('received'));
     const blockingRows = goodsCoreWorkAreas.filter((row) => row.status.includes('blocking'));
+    const costEvidence = await getGoodsCostEvidence().catch(() => null);
 
     return (
       <main className="min-h-screen bg-gray-50 text-bauhaus-black">
@@ -293,6 +296,51 @@ function FastProjectDashboard({
               </div>
             </div>
           </section>
+
+          {costEvidence && costEvidence.status !== 'error' ? (
+            <section id="project-cost-evidence" className="scroll-mt-24 border-4 border-bauhaus-black bg-white">
+              <div className="border-b-4 border-bauhaus-black p-5">
+                <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-red">Cost evidence</p>
+                    <h2 className="mt-2 text-2xl font-black uppercase tracking-wide">Last 50 beds — direct cost build-up</h2>
+                    <p className="mt-2 max-w-3xl text-sm leading-relaxed text-gray-600">
+                      Sourced from ACT-GD supplier bills in Xero. Each line gets a human treatment decision so the
+                      delivered unit cost is finance-backed, not a planning estimate.
+                    </p>
+                  </div>
+                </div>
+                {costEvidence.totals.length > 0 ? (
+                  <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    {costEvidence.totals.map((total) => (
+                      <div key={total.label} className="border border-gray-200 bg-gray-50 p-4">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue">{total.label}</p>
+                        <div className="mt-2 text-xl font-black tabular-nums text-bauhaus-black">{total.value}</div>
+                        <p className="mt-2 text-xs leading-relaxed text-gray-600">{total.detail}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+              {costEvidence.unitEstimateRows.length > 0 ? (
+                <div className="border-b-4 border-bauhaus-black p-5">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue">Unit estimate confidence</p>
+                  <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    {costEvidence.unitEstimateRows.map((row) => (
+                      <div key={row.label} className="border border-gray-200 bg-gray-50 p-4">
+                        <div className="text-sm font-black text-bauhaus-black">{row.label}</div>
+                        <div className="mt-2 text-lg font-black tabular-nums text-bauhaus-blue">{row.value}</div>
+                        <p className="mt-2 text-[10px] font-black uppercase tracking-widest text-gray-500">{row.confidence}</p>
+                        <p className="mt-2 text-xs leading-relaxed text-gray-600">{row.use}</p>
+                        <p className="mt-2 text-[10px] leading-relaxed text-gray-500">{row.basis}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              <GoodsCostAllocationTable rows={costEvidence.costAllocationRows} />
+            </section>
+          ) : null}
 
           <section className="grid gap-4 lg:grid-cols-[1fr_0.85fr]">
             <div className="border-4 border-bauhaus-black bg-white p-5">
