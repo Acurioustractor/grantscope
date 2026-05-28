@@ -4,6 +4,15 @@ import { recordAlertEvents } from '@/lib/alert-events';
 const MIN_SCORE = 65;
 const ALERT_MIN_SCORE = 50;
 
+// Decision-feedback weights. Tuned so a single prior "won" with a funder
+// lifts a marginal grant above the alert threshold, while two+ "passed"
+// outcomes pull it back down. Capped so feedback can shift score by
+// roughly +/-20 — never enough to override a poor base fit.
+const FUNDER_HISTORY_WIN_BOOST = 20;
+const FUNDER_HISTORY_PASS_PENALTY = 8;
+const FUNDER_HISTORY_PASS_PENALTY_CAP = 15;
+const FUNDER_HISTORY_WATCH_BOOST = 4;
+
 type OrgProfile = {
   id: string;
   user_id: string;
@@ -44,7 +53,20 @@ type GrantOpportunity = {
   geography: string | null;
   source: string | null;
   aligned_projects: string[] | null;
+  dgr_required?: boolean | null;
+  accepts_sole_trader?: boolean | null;
+  accepts_pty_ltd?: boolean | null;
+  accepts_charity?: boolean | null;
 };
+
+type FunderHistory = {
+  wins: number;
+  passes: number;
+  watching: number;
+  pursuing: number;
+};
+
+type FunderHistoryMap = Map<string, FunderHistory>;
 
 type ScoutGrant = GrantOpportunity & {
   match_score: number;
@@ -70,7 +92,63 @@ function normalizeThreshold(value: number | string | null | undefined) {
   return parsed <= 1 ? Math.round(parsed * 100) : parsed;
 }
 
-function scoreGrant(grant: GrantOpportunity, profile: OrgProfile) {
+function providerKey(provider: string | null | undefined): string {
+  return (provider || '').trim().toLowerCase();
+}
+
+function applyFunderHistory(
+  score: number,
+  signals: string[],
+  grant: GrantOpportunity,
+  history: FunderHistoryMap | null
+): number {
+  if (!history) return score;
+  const key = providerKey(grant.provider);
+  if (!key) return score;
+  const h = history.get(key);
+  if (!h) return score;
+
+  let adjusted = score;
+  if (h.wins > 0) {
+    adjusted += FUNDER_HISTORY_WIN_BOOST;
+    signals.push(`Prior win with funder (${h.wins})`);
+  }
+  if (h.passes > 0) {
+    const penalty = Math.min(h.passes * FUNDER_HISTORY_PASS_PENALTY, FUNDER_HISTORY_PASS_PENALTY_CAP);
+    adjusted -= penalty;
+    signals.push(`Prior passes with funder (-${penalty})`);
+  }
+  if (h.watching > 0 && h.wins === 0) {
+    adjusted += FUNDER_HISTORY_WATCH_BOOST;
+    signals.push('Funder on watchlist');
+  }
+  return adjusted;
+}
+
+function dgrEligibilityFilter(
+  grant: GrantOpportunity,
+  profile: OrgProfile
+): { eligible: boolean; reason?: string } {
+  // Only filter when both signal (grant.dgr_required) and profile.org_type are known.
+  // Conservative: degrades gracefully when migration columns are NULL.
+  if (grant.dgr_required !== true) return { eligible: true };
+  const orgType = (profile.org_type || '').toLowerCase();
+  const isCharity =
+    orgType.includes('charity') ||
+    orgType.includes('dgr') ||
+    orgType.includes('not-for-profit') ||
+    orgType.includes('nfp');
+  if (!isCharity) {
+    return { eligible: false, reason: 'DGR required, applicant not DGR-endorsed' };
+  }
+  return { eligible: true };
+}
+
+function scoreGrant(
+  grant: GrantOpportunity,
+  profile: OrgProfile,
+  funderHistory: FunderHistoryMap | null = null
+) {
   let score = 50;
   const signals: string[] = [];
 
@@ -172,7 +250,43 @@ function scoreGrant(grant: GrantOpportunity, profile: OrgProfile) {
     }
   }
 
-  return { score: Math.min(score, 100), signals };
+  const withHistory = applyFunderHistory(score, signals, grant, funderHistory);
+  return { score: Math.max(0, Math.min(withHistory, 100)), signals };
+}
+
+async function loadFunderHistory(db: ReturnType<typeof getServiceSupabase>): Promise<FunderHistoryMap | null> {
+  // Pulls decision history grouped by funder provider.
+  // Degrades gracefully if act_grant_recommendation_decisions does not exist
+  // or grant_opportunities.provider join is empty.
+  try {
+    const { data, error } = await db
+      .from('act_grant_recommendation_decisions')
+      .select('decision, opportunity_id, grant_opportunities!inner(provider)')
+      .not('grant_opportunities.provider', 'is', null);
+    if (error || !data) return null;
+    const map: FunderHistoryMap = new Map();
+    type Row = {
+      decision: string;
+      grant_opportunities: { provider: string | null } | { provider: string | null }[] | null;
+    };
+    for (const row of data as unknown as Row[]) {
+      const grantRel = row.grant_opportunities;
+      const providerRaw = Array.isArray(grantRel)
+        ? grantRel[0]?.provider ?? null
+        : grantRel?.provider ?? null;
+      const provider = providerKey(providerRaw);
+      if (!provider) continue;
+      const existing = map.get(provider) || { wins: 0, passes: 0, watching: 0, pursuing: 0 };
+      if (row.decision === 'won') existing.wins += 1;
+      else if (row.decision === 'passed') existing.passes += 1;
+      else if (row.decision === 'watching') existing.watching += 1;
+      else if (row.decision === 'pursuing') existing.pursuing += 1;
+      map.set(provider, existing);
+    }
+    return map;
+  } catch {
+    return null;
+  }
 }
 
 function matchesAlert(grant: GrantOpportunity, alert: AlertPreference) {
@@ -260,7 +374,7 @@ export async function runGrantScoutForUser(userId: string): Promise<GrantScoutRe
   const now = new Date().toISOString().split('T')[0];
   const { data: grants, error: grantError } = await db
     .from('grant_opportunities')
-    .select('id, name, description, amount_min, amount_max, deadline, provider, url, categories, focus_areas, target_recipients, geography, source, aligned_projects')
+    .select('id, name, description, amount_min, amount_max, deadline, provider, url, categories, focus_areas, target_recipients, geography, source, aligned_projects, dgr_required, accepts_sole_trader, accepts_pty_ltd, accepts_charity')
     .or(`deadline.is.null,deadline.gte.${now}`)
     .order('created_at', { ascending: false })
     .limit(500);
@@ -268,6 +382,8 @@ export async function runGrantScoutForUser(userId: string): Promise<GrantScoutRe
   if (grantError) {
     throw new Error(grantError.message);
   }
+
+  const funderHistory = await loadFunderHistory(db);
 
   let totalAdded = 0;
   let totalMatches = 0;
@@ -289,7 +405,15 @@ export async function runGrantScoutForUser(userId: string): Promise<GrantScoutRe
 
     const scored = ((grants || []) as GrantOpportunity[])
       .map((grant) => {
-        const { score, signals } = scoreGrant(grant, profile);
+        const eligibility = dgrEligibilityFilter(grant, profile);
+        if (!eligibility.eligible) {
+          return {
+            ...grant,
+            match_score: 0,
+            match_signals: [eligibility.reason || 'Ineligible'],
+          };
+        }
+        const { score, signals } = scoreGrant(grant, profile, funderHistory);
         return { ...grant, match_score: score, match_signals: signals };
       })
       .sort((a, b) => b.match_score - a.match_score);

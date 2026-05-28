@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation';
 import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
 import { getOrgPipelineData } from '@/lib/services/org-pipeline-service';
 import { ACT_FAST_PROFILE, isActSlug } from '@/lib/services/fast-local-org';
+import { getActSurfaceCounts } from '@/lib/services/act-surface-counts';
+import { ActSurfaceNav } from '../_components/act-surface-nav';
 import { OrgPipelineKanban } from './pipeline-kanban';
 
 export const dynamic = 'force-dynamic';
@@ -27,7 +29,10 @@ export default async function OrgPipelinePage({
   const profile = (await getOrgProfileBySlug(slug)) ?? (isActSlug(slug) ? ACT_FAST_PROFILE : null);
   if (!profile) notFound();
 
-  const data = await getOrgPipelineData(slug, discoveredMinScore);
+  const [data, counts] = await Promise.all([
+    getOrgPipelineData(slug, discoveredMinScore),
+    getActSurfaceCounts(slug),
+  ]);
 
   if (!data) {
     return (
@@ -99,6 +104,9 @@ export default async function OrgPipelinePage({
                 {data.cards.length} cards · {strongDiscovered} strong undecided · {decidedCount} decided
               </div>
             </div>
+          </div>
+          <div className="mt-6">
+            <ActSurfaceNav slug={slug} current="pipeline" counts={counts} />
           </div>
         </div>
       </div>

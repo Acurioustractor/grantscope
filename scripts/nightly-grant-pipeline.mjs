@@ -30,7 +30,28 @@ const DRY_RUN = process.argv.includes('--dry-run');
 const SKIP_ARG = process.argv.find((a) => a.startsWith('--skip='));
 const SKIPS = new Set(SKIP_ARG ? SKIP_ARG.split('=')[1].split(',') : []);
 
-const AGENT_ID = 'nightly-grant-pipeline';
+// --phase=ingest | enrich | finalize | all (default: all, legacy behaviour)
+// Split phases let each chunk fit under cron timeout (~5 min). Schedule:
+//   ingest    runs every night 02:00 UTC (steps 1-3, scrape + promote)
+//   enrich    runs every night 03:00 UTC (steps 4-5, LLM classify/backfill)
+//   finalize  runs every night 04:30 UTC (steps 6-9, verify/refresh/blocklist)
+const PHASE_ARG = process.argv.find((a) => a.startsWith('--phase='));
+const PHASE = PHASE_ARG ? PHASE_ARG.split('=')[1] : 'all';
+const VALID_PHASES = ['ingest', 'enrich', 'finalize', 'all'];
+if (!VALID_PHASES.includes(PHASE)) {
+  console.error(`Invalid --phase=${PHASE}. Must be one of: ${VALID_PHASES.join(', ')}`);
+  process.exit(2);
+}
+
+const PHASE_KEYS = {
+  ingest: ['scrape', 'promote-grants', 'promote-foundations'],
+  enrich: ['classify', 'backfill'],
+  finalize: ['verify', 'funder-context', 'refresh-mv', 'blocklist'],
+  all: ['scrape', 'promote-grants', 'promote-foundations', 'classify', 'backfill', 'verify', 'funder-context', 'refresh-mv', 'blocklist'],
+};
+const ACTIVE_STEPS = new Set(PHASE_KEYS[PHASE]);
+
+const AGENT_ID = PHASE === 'all' ? 'nightly-grant-pipeline' : `nightly-grant-pipeline-${PHASE}`;
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL,
@@ -176,7 +197,10 @@ async function reEvaluateBlocklist() {
 }
 
 async function run() {
-  const runRow = await logStart(supabase, AGENT_ID, 'Nightly grant pipeline orchestrator');
+  const orchestratorName = PHASE === 'all'
+    ? 'Nightly grant pipeline orchestrator'
+    : `Nightly grant pipeline · ${PHASE}`;
+  const runRow = await logStart(supabase, AGENT_ID, orchestratorName);
   const runId = runRow?.id ?? null;
   const startedAt = Date.now();
 
@@ -184,7 +208,12 @@ async function run() {
   console.log(`=== Nightly grant pipeline · ${new Date().toISOString()} ===`);
   if (DRY_RUN) console.log('[DRY RUN — printing plan only]');
 
+  console.log(`Phase: ${PHASE} (${ACTIVE_STEPS.size} steps)`);
   for (const step of STEPS) {
+    if (!ACTIVE_STEPS.has(step.key)) {
+      // Not in this phase — silent skip (don't pollute logs)
+      continue;
+    }
     if (SKIPS.has(step.key)) {
       console.log(`SKIP  ${step.label}`);
       results.push({ step: step.key, ok: true, durationMs: 0, detail: 'skipped' });

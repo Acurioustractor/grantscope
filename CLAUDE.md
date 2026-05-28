@@ -94,9 +94,9 @@ Colors: `bauhaus-black` #121212, `bauhaus-red` #D02020, `bauhaus-blue` #1040C0, 
 
 | Table | Rows | Key Columns |
 |-------|------|-------------|
-| `gs_entities` | 159K | gs_id, canonical_name, abn, entity_type, sector, postcode, state, remoteness, seifa_irsd_decile, is_community_controlled, lga_name, lga_code |
+| `gs_entities` | 597K | gs_id, canonical_name, abn, entity_type, sector, postcode, state, remoteness, seifa_irsd_decile, is_community_controlled, lga_name, lga_code |
 | `gs_relationships` | 1.08M | source_entity_id, target_entity_id, relationship_type, amount, year, dataset |
-| `austender_contracts` | 770K | title, contract_value, buyer_name, supplier_name, supplier_abn, contract_start, contract_end |
+| `austender_contracts` | 803K | title, contract_value, buyer_name, supplier_name, supplier_abn, contract_start, contract_end |
 | `acnc_charities` | 66K | abn, name, charity_size, state, postcode, purposes, beneficiaries, is_foundation |
 | `justice_funding` | 71K | recipient_name, recipient_abn, gs_entity_id, program_name, amount_dollars, state, financial_year, sector |
 | `political_donations` | 312K | donor_name, donor_abn, donation_to, amount, financial_year |
@@ -105,8 +105,8 @@ Colors: `bauhaus-black` #121212, `bauhaus-red` #D02020, `bauhaus-blue` #1040C0, 
 | `alma_interventions` | 1.2K | name, type, description, evidence_level, cultural_authority, target_cohort, geography, portfolio_score, gs_entity_id |
 | `alma_evidence` | 570 | intervention_id, evidence_type, methodology, sample_size, effect_size |
 | `alma_outcomes` | 506 | intervention_id, outcome_type, measurement_method, indicators |
-| `foundations` | 10.8K | name, acnc_abn, total_giving_annual, thematic_focus, geographic_focus |
-| `grant_opportunities` | 18K | name, amount_min, amount_max, deadline, categories, focus_areas |
+| `foundations` | 10.9K | name, acnc_abn, total_giving_annual, thematic_focus, geographic_focus |
+| `grant_opportunities` | 25K (22K open) | name, amount_min, amount_max, deadline, categories, focus_areas, dgr_required, accepts_sole_trader, accepts_pty_ltd, accepts_charity |
 | `postcode_geo` | 12K | postcode, locality, state, sa2_code, remoteness_2021, lga_name, lga_code |
 | `seifa_2021` | 11K | postcode, index_type, score, decile_national |
 | `org_profiles` | — | user_id, name, abn, stripe_customer_id, subscription_plan |

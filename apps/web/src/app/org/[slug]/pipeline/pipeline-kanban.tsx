@@ -51,6 +51,23 @@ const FLAG_LABELS: Record<string, { text: string; classes: string }> = {
   small_grant: { text: 'Small $', classes: 'bg-gray-300 text-bauhaus-black' },
 };
 
+const QBE_STAGE_LABEL: Record<string, { text: string; classes: string }> = {
+  not_started: { text: 'QBE 0', classes: 'bg-gray-200 text-bauhaus-black' },
+  qualifying: { text: 'QBE Q', classes: 'bg-bauhaus-yellow text-bauhaus-black' },
+  bid_drafting: { text: 'QBE B-draft', classes: 'bg-bauhaus-blue text-white' },
+  bid_submitted: { text: 'QBE B-sub', classes: 'bg-bauhaus-blue text-white' },
+  evaluating: { text: 'QBE E', classes: 'bg-purple-600 text-white' },
+  decided: { text: 'QBE ✓', classes: 'bg-bauhaus-black text-white' },
+};
+
+const OPPORTUNITY_TYPE_LABEL: Record<string, string> = {
+  grant: 'GRANT',
+  foundation: 'FOUND.',
+  procurement: 'PROC.',
+  partnership: 'PART.',
+  capital: 'CAP.',
+};
+
 function formatAmount(min: number | null, max: number | null): string {
   if (min != null && max != null) return `$${min.toLocaleString()}–$${max.toLocaleString()}`;
   if (max != null) return `≤ $${max.toLocaleString()}`;
@@ -408,6 +425,22 @@ export function OrgPipelineKanban({
                                       if (u === 'soon') return <span className="px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider bg-bauhaus-yellow text-bauhaus-black">SOON</span>;
                                       return null;
                                     })()}
+                                    {card.qbe_stage && QBE_STAGE_LABEL[card.qbe_stage] && (
+                                      <span
+                                        className={`px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider ${QBE_STAGE_LABEL[card.qbe_stage].classes}`}
+                                        title={`External QBE stage: ${card.qbe_stage}${card.qbe_bid_amount ? ` · bid $${card.qbe_bid_amount.toLocaleString()}` : ''}`}
+                                      >
+                                        {QBE_STAGE_LABEL[card.qbe_stage].text}
+                                      </span>
+                                    )}
+                                    {card.opportunity_type && card.opportunity_type !== 'grant' && OPPORTUNITY_TYPE_LABEL[card.opportunity_type] && (
+                                      <span
+                                        className="px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider bg-bauhaus-canvas text-bauhaus-black border border-bauhaus-black"
+                                        title={`Opportunity type: ${card.opportunity_type}`}
+                                      >
+                                        {OPPORTUNITY_TYPE_LABEL[card.opportunity_type]}
+                                      </span>
+                                    )}
                                   </>
                                 )}
                               </div>

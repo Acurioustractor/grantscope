@@ -383,6 +383,32 @@ export const AGENTS = {
     timeoutMs: 3_600_000,
     dependencies: [],
   },
+  // Phased orchestrator — 3 chunks staggered so each fits under cron timeout.
+  // See scripts/nightly-grant-pipeline.mjs --phase= for what each runs.
+  'nightly-grant-pipeline-ingest': {
+    command: ['node', '--env-file=.env', 'scripts/nightly-grant-pipeline.mjs', '--phase=ingest'],
+    displayName: 'Nightly grant pipeline · ingest (scrape + promote)',
+    category: 'discovery',
+    defaultPriority: 2,
+    timeoutMs: 600_000,
+    dependencies: [],
+  },
+  'nightly-grant-pipeline-enrich': {
+    command: ['node', '--env-file=.env', 'scripts/nightly-grant-pipeline.mjs', '--phase=enrich'],
+    displayName: 'Nightly grant pipeline · enrich (LLM classify + backfill)',
+    category: 'enrichment',
+    defaultPriority: 2,
+    timeoutMs: 900_000,
+    dependencies: ['nightly-grant-pipeline-ingest'],
+  },
+  'nightly-grant-pipeline-finalize': {
+    command: ['node', '--env-file=.env', 'scripts/nightly-grant-pipeline.mjs', '--phase=finalize'],
+    displayName: 'Nightly grant pipeline · finalize (verify + context + MV + blocklist)',
+    category: 'analytics',
+    defaultPriority: 2,
+    timeoutMs: 900_000,
+    dependencies: ['nightly-grant-pipeline-enrich'],
+  },
   'auto-classify-llm': {
     command: ['node', '--env-file=.env', 'scripts/auto-classify-llm.mjs', '--limit=300'],
     displayName: 'Auto-classify unverified alma rows (LLM)',

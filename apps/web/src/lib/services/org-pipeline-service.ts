@@ -24,6 +24,23 @@ export const PIPELINE_COLUMNS: PipelineColumn[] = [
   'passed',
 ];
 
+export type QbeStage =
+  | 'not_started'
+  | 'qualifying'
+  | 'bid_drafting'
+  | 'bid_submitted'
+  | 'evaluating'
+  | 'decided';
+
+export type QbeOutcome = 'won' | 'lost' | 'withdrawn' | 'no_decision';
+
+export type OpportunityType =
+  | 'grant'
+  | 'foundation'
+  | 'procurement'
+  | 'partnership'
+  | 'capital';
+
 export interface OrgPipelineCard {
   /** Stable id for drag/drop = `${project_code}|${opportunity_id}` */
   key: string;
@@ -56,6 +73,16 @@ export interface OrgPipelineCard {
   historical_paid_total?: number;
   /** Number of paid invoices in Xero, shown on historical cards. */
   historical_invoice_count?: number;
+  /** External Qualify/Bid/Evaluate stage (from org_pipeline join) */
+  qbe_stage?: QbeStage | null;
+  /** Final QBE outcome once decided */
+  qbe_outcome?: QbeOutcome | null;
+  /** Bid amount captured by the QBE process */
+  qbe_bid_amount?: number | null;
+  /** Pipeline row id (org_pipeline.id) — used by QBE write-back endpoint */
+  org_pipeline_id?: string | null;
+  /** grant | foundation | procurement | partnership | capital */
+  opportunity_type?: OpportunityType | null;
 }
 
 export interface OrgPipelineProject {
@@ -106,6 +133,16 @@ interface RawProjectRow {
   notes: string | null;
 }
 
+interface RawPipelineQbeRow {
+  id: string;
+  project_code: string | null;
+  grant_opportunity_id: string | null;
+  qbe_stage: QbeStage | null;
+  qbe_outcome: QbeOutcome | null;
+  qbe_bid_amount: number | null;
+  opportunity_type: OpportunityType | null;
+}
+
 function temperatureFor(
   funderName: string | null,
   contexts: Map<string, FunderContext>,
@@ -140,7 +177,7 @@ export const getOrgPipelineData = cache(async function getOrgPipelineData(
 
   const supabase = getServiceSupabase();
 
-  const [recsRes, decisionsRes, projectsRes, contextsRes] = await Promise.all([
+  const [recsRes, decisionsRes, projectsRes, contextsRes, pipelineQbeRes] = await Promise.all([
     supabase
       .from('act_grant_recommendations')
       .select(
@@ -157,12 +194,30 @@ export const getOrgPipelineData = cache(async function getOrgPipelineData(
       .eq('in_scope', true)
       .order('project_code'),
     supabase.from('funder_context_snapshot').select('*'),
+    supabase
+      .from('org_pipeline')
+      .select('id, project_code, grant_opportunity_id, qbe_stage, qbe_outcome, qbe_bid_amount, opportunity_type')
+      .not('grant_opportunity_id', 'is', null),
   ]);
 
   const recs = (recsRes.data ?? []) as RawRecRow[];
   const decisions = (decisionsRes.data ?? []) as RawDecisionRow[];
   const projects = (projectsRes.data ?? []) as RawProjectRow[];
   const contexts = (contextsRes.data ?? []) as FunderContext[];
+  // pipelineQbeRes may error if migration hasn't been applied (qbe_stage column
+  // not yet present). Degrade gracefully — kanban renders without QBE badges.
+  const pipelineQbeRows = (pipelineQbeRes.error ? [] : (pipelineQbeRes.data ?? [])) as RawPipelineQbeRow[];
+
+  // Index by (project_code, grant_opportunity_id) for fast lookup during card build
+  const qbeByKey = new Map<string, RawPipelineQbeRow>();
+  for (const row of pipelineQbeRows) {
+    if (!row.grant_opportunity_id) continue;
+    qbeByKey.set(`${row.project_code || ''}|${row.grant_opportunity_id}`, row);
+    // Also index by opportunity_id only (cross-project fallback)
+    if (!qbeByKey.has(`*|${row.grant_opportunity_id}`)) {
+      qbeByKey.set(`*|${row.grant_opportunity_id}`, row);
+    }
+  }
 
   const contextByFunder = new Map<string, FunderContext>();
   for (const ctx of contexts) {
@@ -220,6 +275,12 @@ export const getOrgPipelineData = cache(async function getOrgPipelineData(
 
     const temp = temperatureFor(best.funder_name, contextByFunder);
 
+    const lookupGrantId = decision?.grant_opportunity_id ?? best.opportunity_id ?? null;
+    const qbeRow =
+      (lookupGrantId && qbeByKey.get(`${best.project_code}|${lookupGrantId}`)) ||
+      (lookupGrantId && qbeByKey.get(`*|${lookupGrantId}`)) ||
+      null;
+
     cards.push({
       key: `${best.project_code}|${best.opportunity_id}`,
       project_code: best.project_code,
@@ -245,6 +306,11 @@ export const getOrgPipelineData = cache(async function getOrgPipelineData(
       notes: decision?.notes ?? null,
       temperature: temp.label,
       relationship_score: temp.score,
+      qbe_stage: qbeRow?.qbe_stage ?? null,
+      qbe_outcome: qbeRow?.qbe_outcome ?? null,
+      qbe_bid_amount: qbeRow?.qbe_bid_amount ?? null,
+      org_pipeline_id: qbeRow?.id ?? null,
+      opportunity_type: qbeRow?.opportunity_type ?? 'grant',
     });
   }
 

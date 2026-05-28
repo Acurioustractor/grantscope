@@ -1,0 +1,104 @@
+{
+  "at": "2026-05-27T08:55:57.732Z",
+  "inserted": [
+    {
+      "entity_name": "MacDonnell Regional Council",
+      "abn": "21340804903",
+      "buyer_role": "council",
+      "community_id": null,
+      "is_community_controlled": false,
+      "relationship_status": "prospect",
+      "govt_contract_value": 44125295,
+      "govt_contract_count": 32,
+      "fit_score": 70
+    },
+    {
+      "entity_name": "Roper Gulf Regional Council",
+      "abn": "94746956090",
+      "buyer_role": "council",
+      "community_id": null,
+      "is_community_controlled": false,
+      "relationship_status": "prospect",
+      "govt_contract_value": 22248695,
+      "govt_contract_count": 29,
+      "fit_score": 70
+    },
+    {
+      "entity_name": "Victoria Daly Regional Council",
+      "abn": "66931675319",
+      "buyer_role": "council",
+      "community_id": null,
+      "is_community_controlled": false,
+      "relationship_status": "prospect",
+      "govt_contract_value": 9824405,
+      "govt_contract_count": 29,
+      "fit_score": 70
+    },
+    {
+      "entity_name": "West Daly Regional Council",
+      "abn": "25966579574",
+      "buyer_role": "council",
+      "community_id": null,
+      "is_community_controlled": false,
+      "relationship_status": "prospect",
+      "govt_contract_value": 4518868,
+      "govt_contract_count": 17,
+      "fit_score": 70
+    },
+    {
+      "entity_name": "Barkly Regional Council",
+      "abn": "32171281456",
+      "buyer_role": "council",
+      "community_id": null,
+      "is_community_controlled": false,
+      "relationship_status": "prospect",
+      "govt_contract_value": 3591517,
+      "govt_contract_count": 8,
+      "fit_score": 70
+    },
+    {
+      "entity_name": "East Arnhem Regional Council",
+      "abn": "92334301078",
+      "buyer_role": "council",
+      "community_id": null,
+      "is_community_controlled": false,
+      "relationship_status": "prospect",
+      "govt_contract_value": 2701282,
+      "govt_contract_count": 9,
+      "fit_score": 70
+    },
+    {
+      "entity_name": "Central Australian Aboriginal Congress",
+      "abn": "76210591710",
+      "buyer_role": "health_service",
+      "community_id": null,
+      "is_community_controlled": true,
+      "relationship_status": "prospect",
+      "govt_contract_value": 2039174,
+      "govt_contract_count": 5,
+      "fit_score": 70
+    },
+    {
+      "entity_name": "Laynhapuy Homelands Aboriginal Corporation",
+      "abn": "86695642473",
+      "buyer_role": "community_org",
+      "community_id": null,
+      "is_community_controlled": true,
+      "relationship_status": "prospect",
+      "govt_contract_value": 1073818,
+      "govt_contract_count": 11,
+      "fit_score": 70
+    },
+    {
+      "entity_name": "Katherine West Health Board Aboriginal Corporation",
+      "abn": "23351866925",
+      "buyer_role": "health_service",
+      "community_id": null,
+      "is_community_controlled": true,
+      "relationship_status": "prospect",
+      "govt_contract_value": 168217,
+      "govt_contract_count": 1,
+      "fit_score": 70
+    }
+  ]
+}
