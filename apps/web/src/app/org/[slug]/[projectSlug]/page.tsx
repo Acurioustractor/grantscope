@@ -298,11 +298,119 @@ async function FastProjectDashboard({
           </section>
 
           {costEvidence && costEvidence.status !== 'error' ? (
+            <section id="project-funder-cost-evidence" className="scroll-mt-24 border-4 border-bauhaus-black bg-bauhaus-canvas">
+              <div className="border-b-4 border-bauhaus-black bg-bauhaus-black p-5 text-white">
+                <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-red">Funder cost evidence</p>
+                <h2 className="mt-2 text-2xl font-black uppercase tracking-wide">What a community-made bed actually costs</h2>
+                <p className="mt-2 max-w-3xl text-sm leading-relaxed text-gray-300">
+                  Sourced from Defy supplier invoices, the Notion BOM, and ACT-GD bills in Xero. Every figure carries
+                  a confidence grade. Capital is shown separately. No aspirational numbers.
+                </p>
+              </div>
+              <div className="grid gap-0 lg:grid-cols-[1.1fr_0.9fr]">
+                <div className="border-b-4 border-bauhaus-black p-6 lg:border-b-0 lg:border-r-4">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-red">Hero number</p>
+                  <div className="mt-3 text-5xl font-black tabular-nums text-bauhaus-black">{costEvidence.funderView.hero.value}</div>
+                  <p className="mt-3 text-sm leading-relaxed text-gray-700">{costEvidence.funderView.hero.label}</p>
+                  <p className="mt-3 text-[11px] leading-relaxed text-gray-500">{costEvidence.funderView.hero.provenance}</p>
+                </div>
+                <div className="p-6">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-red">Counterfactual</p>
+                  <div className="mt-3 text-2xl font-black tabular-nums text-bauhaus-black">
+                    {costEvidence.funderView.counterfactual.commercialRangeLow} – {costEvidence.funderView.counterfactual.commercialRangeHigh}
+                  </div>
+                  <p className="mt-2 text-sm leading-relaxed text-gray-700">
+                    Commercial-equivalent steel-frame bed. ACT delivers at
+                    {' '}<strong>{costEvidence.funderView.counterfactual.ratioLow}–{costEvidence.funderView.counterfactual.ratioHigh}</strong>
+                    {' '}less cost, with community-made craft and local labour.
+                  </p>
+                  <p className="mt-3 text-[11px] leading-relaxed text-gray-500">{costEvidence.funderView.counterfactual.basis}</p>
+                </div>
+              </div>
+              <div className="border-t-4 border-bauhaus-black p-5">
+                <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue">Cost stack</p>
+                <h3 className="mt-2 text-sm font-black uppercase tracking-wide">How the hero number breaks down per bed</h3>
+                <div className="mt-4 space-y-2">
+                  {costEvidence.funderView.costStack.map((row) => (
+                    <div key={row.label} className="grid items-center gap-3 md:grid-cols-[220px_70px_1fr_1fr]">
+                      <div className="text-sm font-black text-bauhaus-black">{row.label}</div>
+                      <div className="text-sm font-black tabular-nums text-bauhaus-blue">{row.amount}</div>
+                      <div className="h-3 bg-gray-200">
+                        <div
+                          className="h-3 bg-bauhaus-red"
+                          style={{ width: `${Math.max(2, Math.round(row.pctOfDirect * 100))}%` }}
+                        />
+                      </div>
+                      <p className="text-[11px] leading-relaxed text-gray-600">{row.basis}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="grid gap-0 border-t-4 border-bauhaus-black lg:grid-cols-2">
+                <div className="border-b-4 border-bauhaus-black p-5 lg:border-b-0 lg:border-r-4">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue">Capital (one-off, not per-bed)</p>
+                  <h3 className="mt-2 text-sm font-black uppercase tracking-wide">Production plant + tooling, shown separately</h3>
+                  <div className="mt-2 text-2xl font-black tabular-nums text-bauhaus-black">{costEvidence.funderView.capitalSummary.total}</div>
+                  <div className="mt-4 divide-y divide-gray-200 border border-gray-300 bg-white">
+                    {costEvidence.funderView.capitalSummary.rows.map((row) => (
+                      <div key={row.label} className="grid gap-2 p-3 md:grid-cols-[1fr_140px]">
+                        <div>
+                          <div className="text-sm font-black text-bauhaus-black">{row.label}</div>
+                          <p className="mt-1 text-[11px] leading-relaxed text-gray-600">{row.note}</p>
+                        </div>
+                        <div className="text-sm font-black tabular-nums text-bauhaus-blue md:text-right">{row.amount}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="p-5">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue">$ to beds</p>
+                  <h3 className="mt-2 text-sm font-black uppercase tracking-wide">What funding converts to, at the hero number</h3>
+                  <div className="mt-4 divide-y divide-gray-200 border border-gray-300 bg-white">
+                    {costEvidence.funderView.conversion.map((row) => (
+                      <div key={row.funds} className="grid items-center gap-2 p-3 md:grid-cols-[110px_80px_1fr]">
+                        <div className="text-sm font-black tabular-nums text-bauhaus-black">{row.funds}</div>
+                        <div className="text-sm font-black tabular-nums text-bauhaus-red">{row.beds} beds</div>
+                        <p className="text-[11px] leading-relaxed text-gray-600">{row.note}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="border-t-4 border-bauhaus-black bg-white p-5">
+                <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue">Provenance</p>
+                <h3 className="mt-2 text-sm font-black uppercase tracking-wide">Every figure traces to a source</h3>
+                <div className="mt-3 divide-y divide-gray-200 border border-gray-200">
+                  {costEvidence.funderView.provenance.map((row) => {
+                    const confidenceClass =
+                      row.confidence === 'verified'
+                        ? 'border-emerald-600 bg-emerald-50 text-emerald-700'
+                        : row.confidence === 'inferred'
+                          ? 'border-bauhaus-blue bg-link-light text-bauhaus-blue'
+                          : row.confidence === 'planning'
+                            ? 'border-orange-500 bg-orange-50 text-orange-700'
+                            : 'border-bauhaus-red bg-red-50 text-bauhaus-red';
+                    return (
+                      <div key={`${row.figure}-${row.source}`} className="grid gap-2 p-3 md:grid-cols-[1fr_1.4fr_120px]">
+                        <div className="text-sm font-black text-bauhaus-black">{row.figure}</div>
+                        <p className="text-[11px] leading-relaxed text-gray-600">{row.source}</p>
+                        <span className={`inline-flex w-fit border px-2 py-1 text-[10px] font-black uppercase tracking-widest ${confidenceClass}`}>
+                          {row.confidence}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </section>
+          ) : null}
+
+          {costEvidence && costEvidence.status !== 'error' ? (
             <section id="project-cost-evidence" className="scroll-mt-24 border-4 border-bauhaus-black bg-white">
               <div className="border-b-4 border-bauhaus-black p-5">
                 <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-red">Cost evidence</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-red">Cost-evidence operating queue</p>
                     <h2 className="mt-2 text-2xl font-black uppercase tracking-wide">Last 50 beds — direct cost build-up</h2>
                     <p className="mt-2 max-w-3xl text-sm leading-relaxed text-gray-600">
                       Sourced from ACT-GD supplier bills in Xero. Each line gets a human treatment decision so the
@@ -322,6 +430,65 @@ async function FastProjectDashboard({
                   </div>
                 ) : null}
               </div>
+              {costEvidence.dataQualityFlags.length > 0 ? (
+                <div className="border-b-4 border-bauhaus-black bg-red-50/40 p-5">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-red">Data-quality review queue</p>
+                  <h3 className="mt-2 text-sm font-black uppercase tracking-wide">Resolve these before quoting actuals</h3>
+                  <div className="mt-3 space-y-2">
+                    {costEvidence.dataQualityFlags.map((flag) => {
+                      const severityClass =
+                        flag.severity === 'high'
+                          ? 'border-bauhaus-red bg-red-50 text-bauhaus-red'
+                          : flag.severity === 'medium'
+                            ? 'border-orange-500 bg-orange-50 text-orange-700'
+                            : 'border-gray-400 bg-gray-50 text-gray-700';
+                      return (
+                        <div key={flag.id} className="border border-gray-300 bg-white p-3">
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div className="flex-1">
+                              <div className="text-sm font-black text-bauhaus-black">{flag.issue}</div>
+                              <p className="mt-1 text-[11px] leading-relaxed text-gray-600">{flag.evidence}</p>
+                              <p className="mt-1 text-[11px] leading-relaxed text-bauhaus-blue"><strong>Action:</strong> {flag.action}</p>
+                            </div>
+                            <div className="flex flex-col items-end gap-1">
+                              <span className={`inline-flex border px-2 py-1 text-[10px] font-black uppercase tracking-widest ${severityClass}`}>
+                                {flag.severity}
+                              </span>
+                              {flag.amount ? (
+                                <span className="text-sm font-black tabular-nums text-bauhaus-black">{flag.amount}</span>
+                              ) : null}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+              {costEvidence.capitalRows.length > 0 ? (
+                <div className="border-b-4 border-bauhaus-black p-5">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue">Capital items detected in Xero</p>
+                  <h3 className="mt-2 text-sm font-black uppercase tracking-wide">Show separately — not per-bed</h3>
+                  <div className="mt-3 divide-y divide-gray-200 border border-gray-200">
+                    {costEvidence.capitalRows.map((row) => (
+                      <div key={`${row.invoice}-${row.description}-${row.amount}`} className="grid gap-2 p-3 md:grid-cols-[1fr_120px_120px]">
+                        <div>
+                          <div className="text-sm font-black text-bauhaus-black">{row.supplier}</div>
+                          <p className="mt-1 text-[11px] leading-relaxed text-gray-600">{row.description}</p>
+                          <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-gray-500">{row.invoice} · {row.date}</p>
+                          <p className="mt-1 text-[11px] leading-relaxed text-bauhaus-blue">{row.note}</p>
+                        </div>
+                        <div className="text-sm font-black tabular-nums text-bauhaus-blue md:text-right">{row.amount}</div>
+                        <div>
+                          <span className="inline-flex border border-bauhaus-blue bg-link-light px-2 py-1 text-[10px] font-black uppercase tracking-widest text-bauhaus-blue">
+                            {row.bucket.replaceAll('-', ' ')}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
               {costEvidence.unitEstimateRows.length > 0 ? (
                 <div className="border-b-4 border-bauhaus-black p-5">
                   <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue">Unit estimate confidence</p>

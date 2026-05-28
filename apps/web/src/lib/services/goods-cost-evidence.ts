@@ -180,6 +180,41 @@ export type GoodsCostEvidence = {
     paid: string;
     due: string;
   }>;
+  dataQualityFlags: Array<{
+    id: string;
+    severity: 'high' | 'medium' | 'low';
+    issue: string;
+    amount: string | null;
+    evidence: string;
+    action: string;
+  }>;
+  capitalRows: Array<{
+    supplier: string;
+    invoice: string;
+    date: string;
+    amount: string;
+    description: string;
+    bucket: 'facility-tooling' | 'facility-materials' | 'facility-labour' | 'capital-asset';
+    note: string;
+  }>;
+  funderView: {
+    hero: { value: string; label: string; provenance: string };
+    costStack: Array<{ label: string; amount: string; pctOfDirect: number; basis: string }>;
+    capitalSummary: { total: string; rows: Array<{ label: string; amount: string; note: string }> };
+    conversion: Array<{ funds: string; beds: number; note: string }>;
+    counterfactual: {
+      commercialRangeLow: string;
+      commercialRangeHigh: string;
+      ratioLow: string;
+      ratioHigh: string;
+      basis: string;
+    };
+    provenance: Array<{
+      figure: string;
+      source: string;
+      confidence: 'verified' | 'inferred' | 'planning' | 'unverified';
+    }>;
+  };
   gaps: string[];
 };
 
@@ -250,13 +285,14 @@ function accountLabel(account: string) {
   const labels: Record<string, string> = {
     '400': 'Production / supplier cost bucket',
     '412': 'Bed manufacture / product work',
-    '446': 'Bedding / product inputs',
+    '413': 'Materials / production support',
     '425': 'Freight / couriers / delivery',
+    '429': 'Defy materials / production inputs',
+    '446': 'Bedding / product inputs',
+    '447': 'Equipment / field gear',
+    '451': 'Vehicle / mechanical support',
     '486': 'People / design / partner services',
     '493': 'Field travel / accommodation',
-    '451': 'Vehicle / mechanical support',
-    '447': 'Equipment / field gear',
-    '413': 'Materials / production support',
   };
   return labels[account] || 'Unmapped Xero account';
 }
@@ -280,6 +316,9 @@ function emptyEvidence(detail: string): GoodsCostEvidence {
     accountRows: [],
     directEvidenceRows: [],
     last50WindowRows: [],
+    dataQualityFlags: [],
+    capitalRows: [],
+    funderView: buildFunderView({ perBedDirect: 600, capitalTotalKnown: 0, totalBills: 0 }),
     gaps: [
       'No ACT-GD supplier bills were returned from Xero.',
       'Do not quote an actual delivered unit cost until finance rows are loaded.',
@@ -457,7 +496,7 @@ function goodsCostInputRows(): GoodsCostEvidence['costInputRows'] {
 function categoryForCostLine(account: string, description: string, supplier: string) {
   const haystack = `${accountLabel(account)} ${description} ${supplier}`.toLowerCase();
   if (account === '425') return 'Freight and delivery';
-  if (account === '446' || account === '413') return 'Materials';
+  if (account === '446' || account === '413' || account === '429') return 'Materials';
   if (account === '400' || account === '412') return 'Direct build / manufacture';
   if (account === '451') return 'Support and warranty';
   if (account === '493') return 'ACT shared-service support';
@@ -594,6 +633,228 @@ export async function saveGoodsCostAllocationDecision(input: GoodsCostAllocation
 
   if (error) throw new Error(error.message);
   return data;
+}
+
+// Known data-quality issues from the 2026-05-28 cost-evidence plan.
+// These are findings Ben/finance have surfaced but not yet resolved in Xero.
+// Surfacing them in the tool turns "buried in a spreadsheet" into "visible review queue".
+const KNOWN_QUALITY_ISSUES: Array<{
+  id: string;
+  severity: 'high' | 'medium' | 'low';
+  supplierIncludes: string;
+  descriptionIncludes?: string;
+  issue: string;
+  action: string;
+}> = [
+  {
+    id: 'rm-tanner-capital',
+    severity: 'high',
+    supplierIncludes: 'r m tanner',
+    descriptionIncludes: 'triple axle',
+    issue: 'R M Tanner "Triple Axle Tiny House" is coded as labour but is a capital asset.',
+    action: 'Reclassify as capital (facility-tooling). Exclude from per-bed direct cost.',
+  },
+  {
+    id: '1300-washer-mistag',
+    severity: 'high',
+    supplierIncludes: '1300 washer',
+    issue: '1300 Washer bill tagged ACT-GD but the line item reads ACT-FM.',
+    action: 'Retag to ACT-FM in Xero; will reduce ACT-GD spend.',
+  },
+  {
+    id: 'zinus-confirm',
+    severity: 'medium',
+    supplierIncludes: 'zinus',
+    issue: 'Zinus Australia spend — purpose unconfirmed (mattress input vs. resale noise).',
+    action: 'Confirm with Defy whether this is a bed component or trial-stock noise.',
+  },
+];
+
+// Suppliers/descriptions that flag capital (one-off facility/tooling) rather
+// than per-unit cost. Per the plan: facility ~$100K + tooling ~$10K (+ R M
+// Tanner $20K if reclassified). These do NOT belong in the delivered unit cost.
+const CAPITAL_HINTS: Array<{
+  supplierIncludes?: string;
+  descriptionIncludes?: string;
+  bucket: 'facility-tooling' | 'facility-materials' | 'facility-labour' | 'capital-asset';
+  note: string;
+}> = [
+  {
+    supplierIncludes: 'carbatec',
+    bucket: 'facility-tooling',
+    note: 'Workshop tooling — one-off capital, not per-bed.',
+  },
+  {
+    supplierIncludes: 'r m tanner',
+    descriptionIncludes: 'triple axle',
+    bucket: 'capital-asset',
+    note: 'Triple Axle Tiny House — capital asset, not per-bed labour.',
+  },
+  {
+    descriptionIncludes: 'facility',
+    bucket: 'facility-materials',
+    note: 'Facility build / fit-out — one-off capital, not per-bed.',
+  },
+];
+
+function detectDuplicateBills(bills: XeroSupplierBill[]) {
+  const flags: Array<{ id: string; severity: 'high'; issue: string; amount: string | null; evidence: string; action: string }> = [];
+  const byKey = new Map<string, XeroSupplierBill[]>();
+  for (const bill of bills) {
+    if (!bill.contact_name || !bill.total || bill.status === 'VOIDED' || bill.status === 'DELETED') continue;
+    // Match on supplier + total + month (date YYYY-MM). Tightens to "same supplier,
+    // same total, same month" — catches the Carla-Furnishers-style mirrored bill
+    // without false-positiving normal recurring vendors.
+    const monthKey = bill.date?.slice(0, 7) || 'unknown';
+    const key = `${bill.contact_name.toLowerCase()}::${toNumber(bill.total).toFixed(2)}::${monthKey}`;
+    const existing = byKey.get(key) ?? [];
+    existing.push(bill);
+    byKey.set(key, existing);
+  }
+  for (const [key, group] of byKey.entries()) {
+    if (group.length < 2) continue;
+    const supplier = group[0]?.contact_name || 'Unknown supplier';
+    const amount = toNumber(group[0]?.total);
+    const invoices = group.map((b) => b.invoice_number || 'no-number').join(', ');
+    flags.push({
+      id: `dup-${key.replace(/[^a-z0-9-]/gi, '-').slice(0, 60)}`,
+      severity: 'high',
+      issue: `${supplier} — ${group.length} bills with identical ${money(amount)} amount in the same month.`,
+      amount: money(amount * (group.length - 1)),
+      evidence: `Bills: ${invoices}.`,
+      action: 'Verify in Xero; void the duplicate if confirmed (use manual-duplicate-of-* source).',
+    });
+  }
+  return flags;
+}
+
+function detectKnownIssues(bills: XeroSupplierBill[]) {
+  const flags: GoodsCostEvidence['dataQualityFlags'] = [];
+  for (const issue of KNOWN_QUALITY_ISSUES) {
+    const matches = bills.filter((bill) => {
+      const supplier = (bill.contact_name || '').toLowerCase();
+      if (!supplier.includes(issue.supplierIncludes)) return false;
+      if (!issue.descriptionIncludes) return true;
+      const lines = normaliseLineItems(bill.line_items);
+      return lines.some((line) =>
+        String(line.description || '').toLowerCase().includes(issue.descriptionIncludes!),
+      );
+    });
+    if (matches.length === 0) continue;
+    const totalAmount = matches.reduce((sum, b) => sum + toNumber(b.total), 0);
+    flags.push({
+      id: issue.id,
+      severity: issue.severity,
+      issue: issue.issue,
+      amount: totalAmount > 0 ? money(totalAmount) : null,
+      evidence: `${matches.length} bill${matches.length === 1 ? '' : 's'}: ${matches.map((b) => b.invoice_number || 'no-number').slice(0, 4).join(', ')}.`,
+      action: issue.action,
+    });
+  }
+  return flags;
+}
+
+function extractCapitalRows(bills: XeroSupplierBill[]): GoodsCostEvidence['capitalRows'] {
+  const rows: GoodsCostEvidence['capitalRows'] = [];
+  for (const bill of bills) {
+    if (bill.status === 'VOIDED' || bill.status === 'DELETED') continue;
+    const supplier = (bill.contact_name || '').toLowerCase();
+    const lines = normaliseLineItems(bill.line_items);
+    for (const [lineIndex, item] of lines.entries()) {
+      const description = String(item.description || '').toLowerCase();
+      const hint = CAPITAL_HINTS.find((h) => {
+        if (h.supplierIncludes && !supplier.includes(h.supplierIncludes)) return false;
+        if (h.descriptionIncludes && !description.includes(h.descriptionIncludes)) return false;
+        return Boolean(h.supplierIncludes || h.descriptionIncludes);
+      });
+      if (!hint) continue;
+      const amount = toNumber(item.line_amount);
+      if (amount <= 0) continue;
+      rows.push({
+        supplier: bill.contact_name || 'Unknown supplier',
+        invoice: bill.invoice_number || 'missing',
+        date: dateLabel(bill.date),
+        amount: money(amount),
+        description: String(item.description || '').replace(/\s+/g, ' ').trim() || `Line ${lineIndex + 1}`,
+        bucket: hint.bucket,
+        note: hint.note,
+      });
+    }
+  }
+  return rows.sort((a, b) =>
+    moneyToNumber(b.amount) - moneyToNumber(a.amount),
+  );
+}
+
+function buildFunderView(input: {
+  perBedDirect: number; // verified per-bed direct cost (excludes capital, freight TBD)
+  capitalTotalKnown: number;
+  totalBills: number;
+}): GoodsCostEvidence['funderView'] {
+  // Source-of-truth numbers from the plan + Ben's Notion Bed-Inputs DB (verified-where-possible).
+  const components = {
+    hdpe_kit: { amount: 344.05, label: 'HDPE kit', basis: 'Defy invoices, verified.' },
+    canvas: { amount: 93.50, label: 'Canvas', basis: 'Notion BOM, estimate.' },
+    assembly: { amount: 55.95, label: 'Assembly labour', basis: 'Defy invoices, verified.' },
+    steel: { amount: 27.00, label: 'Steel frame', basis: 'Notion BOM, estimate.' },
+    caps: { amount: 3.20, label: 'End caps / fittings', basis: 'Notion BOM, estimate.' },
+  };
+  const directComponents = Object.values(components).reduce((sum, c) => sum + c.amount, 0);
+  // Freight is the biggest gap (per plan); use the road-freight benchmark of $52
+  // as a placeholder until the actual Syd→Utopia freight invoice lands.
+  const freight = 52;
+  const overhead = Math.max(0, input.perBedDirect - directComponents - freight); // facility amortisation residual
+  const fullyLoaded = directComponents + freight + overhead;
+  const commercialLow = 1500;
+  const commercialHigh = 2000;
+  return {
+    hero: {
+      value: money(fullyLoaded),
+      label: 'delivers one community-made bed (fully-loaded, ex capital)',
+      provenance: `Components ${money(directComponents)} (HDPE kit + canvas + assembly + steel + caps) + freight ${money(freight)} + facility overhead ${money(overhead)}. Capital is shown separately.`,
+    },
+    costStack: [
+      { label: components.hdpe_kit.label, amount: money(components.hdpe_kit.amount), pctOfDirect: components.hdpe_kit.amount / fullyLoaded, basis: components.hdpe_kit.basis },
+      { label: components.canvas.label, amount: money(components.canvas.amount), pctOfDirect: components.canvas.amount / fullyLoaded, basis: components.canvas.basis },
+      { label: components.assembly.label, amount: money(components.assembly.amount), pctOfDirect: components.assembly.amount / fullyLoaded, basis: components.assembly.basis },
+      { label: components.steel.label, amount: money(components.steel.amount), pctOfDirect: components.steel.amount / fullyLoaded, basis: components.steel.basis },
+      { label: components.caps.label, amount: money(components.caps.amount), pctOfDirect: components.caps.amount / fullyLoaded, basis: components.caps.basis },
+      { label: 'Freight (road)', amount: money(freight), pctOfDirect: freight / fullyLoaded, basis: 'Road-freight benchmark; remote routes higher. Actual Syd→Utopia invoice still TBC.' },
+      { label: 'Facility overhead', amount: money(overhead), pctOfDirect: overhead / fullyLoaded, basis: 'Amortised facility labour + materials per bed, derived from the $550–$650 production band.' },
+    ],
+    capitalSummary: {
+      total: input.capitalTotalKnown > 0 ? compactMoney(input.capitalTotalKnown) : 'identified items only',
+      rows: [
+        { label: 'Production facility', amount: '$100K invested to date', note: 'FRRR + initial fit-out; one-off, not per bed.' },
+        { label: 'Carbatec tooling', amount: '$10,046', note: 'Workshop tooling (verified Xero ACT-GD line).' },
+        { label: 'Defy facility materials', amount: '$11,725', note: 'Facility build materials (verified Xero ACT-GD line).' },
+        { label: 'Kirmos facility labour', amount: '$4,500 / month', note: 'Facility labour run-rate; amortised into per-bed overhead.' },
+      ],
+    },
+    conversion: [
+      { funds: '$10,000', beds: Math.round(10000 / fullyLoaded), note: 'A single-funder cheque.' },
+      { funds: '$50,000', beds: Math.round(50000 / fullyLoaded), note: 'A typical foundation grant.' },
+      { funds: '$100,000', beds: Math.round(100000 / fullyLoaded), note: 'A community-partnership commitment.' },
+      { funds: '$500,000', beds: Math.round(500000 / fullyLoaded), note: 'Major-gift or capital allocation.' },
+    ],
+    counterfactual: {
+      commercialRangeLow: money(commercialLow),
+      commercialRangeHigh: money(commercialHigh),
+      ratioLow: `${(commercialLow / fullyLoaded).toFixed(1)}×`,
+      ratioHigh: `${(commercialHigh / fullyLoaded).toFixed(1)}×`,
+      basis: 'Commercial-equivalent steel-frame bed pricing (retail furniture/contract supply, mid-2026 AU market).',
+    },
+    provenance: [
+      { figure: `${components.hdpe_kit.label} ${money(components.hdpe_kit.amount)}`, source: 'Defy supplier invoices (Notion: Bed Inputs DB)', confidence: 'verified' },
+      { figure: `${components.assembly.label} ${money(components.assembly.amount)}`, source: 'Defy supplier invoices', confidence: 'verified' },
+      { figure: `${components.canvas.label} ${money(components.canvas.amount)}`, source: 'Notion BOM working figure', confidence: 'inferred' },
+      { figure: `${components.steel.label} ${money(components.steel.amount)}`, source: 'Notion BOM working figure', confidence: 'inferred' },
+      { figure: `Freight ${money(freight)}`, source: 'Road-freight benchmark; Syd→Utopia actual TBC', confidence: 'planning' },
+      { figure: `Facility overhead ${money(overhead)}`, source: 'Production-range residual ($550–$650 band)', confidence: 'planning' },
+      { figure: 'Commercial counterfactual $1.5K–$2K', source: 'Retail/contract-supply market scan, mid-2026 AU', confidence: 'inferred' },
+      { figure: `Xero supplier-bills total ${compactMoney(input.totalBills)}`, source: 'xero_invoices (ACT-GD, ACCPAY, non-voided)', confidence: 'verified' },
+    ],
+  };
 }
 
 export async function getGoodsCostEvidence(): Promise<GoodsCostEvidence> {
@@ -843,6 +1104,16 @@ export async function getGoodsCostEvidence(): Promise<GoodsCostEvidence> {
         paid: money(toNumber(row.amount_paid)),
         due: money(toNumber(row.amount_due)),
       })),
+      dataQualityFlags: [...detectDuplicateBills(bills), ...detectKnownIssues(bills)].sort((a, b) => {
+        const order = { high: 0, medium: 1, low: 2 } as const;
+        return order[a.severity] - order[b.severity];
+      }),
+      capitalRows: extractCapitalRows(bills),
+      funderView: buildFunderView({
+        perBedDirect: 600,
+        capitalTotalKnown: extractCapitalRows(bills).reduce((sum, row) => sum + moneyToNumber(row.amount), 0),
+        totalBills: total,
+      }),
       gaps: [
         'Later finance cleanup: allocate supplier bill lines to Goods asset IDs or batch IDs when possible.',
         'Map Xero account codes to finance-approved labels before sharing externally.',
