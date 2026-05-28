@@ -1,0 +1,246 @@
+{
+  "meta": {
+    "title": "Goods bed cost model v3 — element-by-element with Idiot Index",
+    "created": "2026-05-28",
+    "source_doc": "thoughts/shared/analysis/2026-05-28-goods-bed-cost-model-v3-idiot-index.md",
+    "verified_from": "thoughts/shared/analysis/2026-05-28-defy-invoice-ocr.json"
+  },
+  "physics": {
+    "hdpe_density_g_per_cm3": 0.96,
+    "half_sheet_dims_cm": [120, 120, 1.9],
+    "half_sheet_mass_kg": 26.27,
+    "hdpe_kg_per_bed": 20,
+    "_hdpe_per_bed_source": "Ben confirmed 2026-05-28 — 20kg of HDPE per finished bed (~76% of one half-sheet; the rest is offcuts/press loss).",
+    "raw_hdpe_cost_per_bed": 40.00,
+    "half_sheets_per_bed_equivalent": 0.76
+  },
+  "defy_verified_rates": {
+    "single_bed_fully_fabricated": { "amount": 600.00, "source": "INV-1507 Nov 2025, 25 beds", "confidence": "verified" },
+    "bed_kit_cut_finished": { "amount": 344.05, "source": "INV-1602 (92 kits) + 2026-03-27 (50 kits)", "confidence": "verified" },
+    "cut_and_finish_only": { "amount": 121.00, "source": "INV-1602 (16 beds, pre-purchased sheets)", "confidence": "verified" },
+    "assembly_labour": { "amount": 55.95, "source": "2026-03-19 (8 beds, exact line)", "confidence": "verified" },
+    "half_sheet_bulk_price": { "amount": 200.00, "source": "2026-03-27 (20 sheets bulk discount)", "confidence": "verified" },
+    "hdpe_shred_per_kg": { "amount": 2.00, "source": "2026-03-27 (1200kg bulk bags)", "confidence": "verified" },
+    "worker_day_rate_full": { "amount": 480.00, "source": "INV-1325/1326 (Sam, Todd)", "confidence": "verified" },
+    "worker_day_rate_half": { "amount": 240.00, "source": "INV-1325/1326", "confidence": "verified" },
+    "freight_botany_to_alice_per_pallet_low": { "amount": 808.00, "source": "Multiple Defy freight lines", "confidence": "verified" },
+    "freight_botany_to_alice_per_pallet_high": { "amount": 1480.00, "source": "Multiple Defy freight lines", "confidence": "verified" },
+    "beds_per_pallet_typical": 8
+  },
+  "raw_material_estimates_au_2026": {
+    "hdpe_shred_per_kg": 2.00,
+    "canvas_per_m2_estimate": 17.00,
+    "canvas_m2_per_bed_estimate": 4.0,
+    "steel_per_bed_raw_estimate": 12.00,
+    "end_caps_per_bed_raw_estimate": 0.75
+  },
+  "notion_bom_verified": {
+    "hdpe_kit": { "amount": 344.05, "confidence": "verified", "matches_defy": true },
+    "canvas": { "amount": 93.50, "confidence": "inferred", "matches_defy": "bundled in $600 single bed" },
+    "assembly_labour": { "amount": 55.95, "confidence": "verified", "matches_defy": true },
+    "steel": { "amount": 27.00, "confidence": "inferred", "matches_defy": "bundled" },
+    "end_caps": { "amount": 3.20, "confidence": "inferred", "matches_defy": "bundled" },
+    "direct_total": 523.70
+  },
+  "in_house_estimates": {
+    "sheet_pressing_per_bed": { "amount": 40.00, "basis": "Hot-press energy + machine wear, no labour amortising capital yet", "confidence": "modelled" },
+    "cnc_cut_finish_per_bed": { "amount": 60.00, "basis": "1hr × $60/hr (operator + machine amortised)", "confidence": "modelled" },
+    "shredding_in_house_per_bed": { "amount": 10.00, "basis": "Energy + machine wear at scale", "confidence": "modelled" },
+    "wash_sort_dry_per_bed": { "amount": 20.00, "basis": "Labour line for community-collected plastic", "confidence": "modelled" },
+    "internal_assembly_labour_per_bed": { "amount": 46.67, "basis": "6 beds/day × $280/day award + super C13", "confidence": "modelled" },
+    "internal_assembly_labour_fair_market_per_bed": { "amount": 67.17, "basis": "6 beds/day × $403/day fair-market skilled fabricator", "confidence": "modelled" }
+  },
+  "wage_scenarios": [
+    { "label": "Award C13 (entry fabricator)", "hourly": 26, "daily_8hr": 208, "daily_with_super": 233, "beds_per_day": 6, "per_bed": 38.83 },
+    { "label": "Award C10 (mid-skilled)", "hourly": 32, "daily_8hr": 256, "daily_with_super": 287, "beds_per_day": 6, "per_bed": 47.83 },
+    { "label": "Fair-market skilled trade", "hourly": 45, "daily_8hr": 360, "daily_with_super": 403, "beds_per_day": 6, "per_bed": 67.17 },
+    { "label": "Indigenous community wage + cultural loading", "hourly": 35, "daily_8hr": 280, "daily_with_super": 314, "beds_per_day": 6, "per_bed": 52.33 }
+  ],
+  "community_plastic_pay_scenarios": [
+    { "label": "Bottom (kerbside-equivalent)", "per_kg": 0.20, "kg_per_bed": 40, "per_bed": 8.00 },
+    { "label": "Mid (community-coop rate)", "per_kg": 0.50, "kg_per_bed": 40, "per_bed": 20.00 },
+    { "label": "Premium (ocean/remote story-value)", "per_kg": 1.00, "kg_per_bed": 40, "per_bed": 40.00 },
+    { "label": "High (clean sorted, remote community)", "per_kg": 2.00, "kg_per_bed": 40, "per_bed": 80.00 }
+  ],
+  "build_states": {
+    "state_1_defy_everything": {
+      "label": "Defy does everything (today, INV-1507)",
+      "components": [
+        { "label": "Single Bed fully fabricated", "amount": 600.00 }
+      ],
+      "direct_total": 600.00,
+      "capital_added": 0,
+      "capital_cumulative": 0
+    },
+    "state_2_buy_kit_assemble": {
+      "label": "Buy Defy kit, assemble in-house",
+      "components": [
+        { "label": "Defy bed kit (sheets cut+finished)", "amount": 344.05 },
+        { "label": "Canvas (RW Pacific or via Defy)", "amount": 93.50 },
+        { "label": "Steel poles", "amount": 27.00 },
+        { "label": "End caps + hardware", "amount": 3.20 },
+        { "label": "In-house assembly labour", "amount": 46.67 }
+      ],
+      "direct_total": 514.42,
+      "capital_added": 2000,
+      "capital_cumulative": 2000
+    },
+    "state_3_buy_sheets_cut_assemble": {
+      "label": "Buy pressed sheets, cut+finish+assemble in-house",
+      "components": [
+        { "label": "1.5 half-sheets from Defy @ $200", "amount": 300.00 },
+        { "label": "In-house CNC cut + finish", "amount": 60.00 },
+        { "label": "Canvas", "amount": 93.50 },
+        { "label": "Steel", "amount": 27.00 },
+        { "label": "End caps + hardware", "amount": 3.20 },
+        { "label": "Assembly labour", "amount": 46.67 }
+      ],
+      "direct_total": 530.37,
+      "capital_added": 38000,
+      "capital_cumulative": 40000
+    },
+    "state_4_all_in_house": {
+      "label": "Buy raw HDPE shred, do everything in-house",
+      "components": [
+        { "label": "HDPE shred 20kg @ $2/kg (Ben confirmed)", "amount": 40.00 },
+        { "label": "In-house sheet pressing", "amount": 40.00 },
+        { "label": "In-house CNC cut + finish", "amount": 60.00 },
+        { "label": "Canvas", "amount": 93.50 },
+        { "label": "Steel", "amount": 27.00 },
+        { "label": "End caps + hardware", "amount": 3.20 },
+        { "label": "Assembly labour", "amount": 46.67 }
+      ],
+      "direct_total": 310.37,
+      "capital_added": 160000,
+      "capital_cumulative": 200000
+    },
+    "state_5_community_plastic": {
+      "label": "Community-collected plastic + all in-house (vision)",
+      "components": [
+        { "label": "Community plastic pay @ $1/kg × 20kg", "amount": 20.00 },
+        { "label": "Wash + dry + sort", "amount": 20.00 },
+        { "label": "In-house shredding", "amount": 10.00 },
+        { "label": "In-house sheet pressing", "amount": 40.00 },
+        { "label": "In-house CNC + finish", "amount": 60.00 },
+        { "label": "Canvas", "amount": 93.50 },
+        { "label": "Steel", "amount": 27.00 },
+        { "label": "End caps + hardware", "amount": 3.20 },
+        { "label": "Assembly labour", "amount": 46.67 }
+      ],
+      "direct_total": 320.37,
+      "capital_added": 30000,
+      "capital_cumulative": 230000,
+      "community_jobs_created": true
+    }
+  },
+  "idiot_index": [
+    { "element": "HDPE shred → finished kit", "raw_low": 40.00, "raw_high": 40.00, "current": 344.05, "index_low": 8.6, "index_high": 8.6, "markup_pays_for": "Shredding, sheet pressing, CNC cutting, finishing, Defy margin. BIGGEST LEVERAGE in the model.", "raw_basis": "20kg HDPE × $2/kg (Ben confirmed 2026-05-28)" },
+    { "element": "Half-sheet (1200×1200×19mm)", "raw_low": 52.55, "raw_high": 52.55, "current": 200.00, "index_low": 3.8, "index_high": 3.8, "markup_pays_for": "Hot-press machine time, energy, Defy margin" },
+    { "element": "Cut+finish only", "raw_low": 30.00, "raw_high": 60.00, "current": 121.00, "index_low": 2.0, "index_high": 4.0, "markup_pays_for": "CNC operator + machine time + Defy margin" },
+    { "element": "Assembly labour (Defy)", "raw_low": 52.00, "raw_high": 52.00, "current": 55.95, "index_low": 1.1, "index_high": 1.1, "markup_pays_for": "Already efficient — small Defy margin" },
+    { "element": "Steel (frame + caps)", "raw_low": 10.00, "raw_high": 15.00, "current": 27.00, "index_low": 1.8, "index_high": 2.7, "markup_pays_for": "Cut to length, drill, deliver" },
+    { "element": "Canvas", "raw_low": 45.00, "raw_high": 68.00, "current": 93.50, "index_low": 1.4, "index_high": 2.1, "markup_pays_for": "Cut, hem, grommet, RW Pacific margin" },
+    { "element": "End caps / fittings", "raw_low": 0.50, "raw_high": 1.00, "current": 3.20, "index_low": 3.2, "index_high": 6.4, "markup_pays_for": "Bulk-buy supplier margin" },
+    { "element": "Pallet + packing", "raw_low": 30.00, "raw_high": 50.00, "current": 60.00, "index_low": 1.2, "index_high": 2.0, "markup_pays_for": "Labour + packing materials" }
+  ],
+  "founder_time_allocation": {
+    "rate_per_day": 1000,
+    "total_days_per_year_on_goods": 150,
+    "split": [
+      { "label": "Production-related (oversight, QA, design iteration, supplier rel.)", "days": 30, "annual_cost": 30000, "allocate_to": "bed-overhead" },
+      { "label": "Fundraising / philanthropy (briefs, asks, reporting, donor rel.)", "days": 50, "annual_cost": 50000, "allocate_to": "funding-side-offset" },
+      { "label": "Commercialisation / buyer dev (Centrecorp, councils, sales)", "days": 25, "annual_cost": 25000, "allocate_to": "funding-side-offset" },
+      { "label": "Governance, strategy, comms, brand", "days": 45, "annual_cost": 45000, "allocate_to": "act-wide-overhead" }
+    ],
+    "_principle": "Only production-related founder time goes onto beds. The fundraising/commercial portion OFFSETS bed cost via dollars raised; the governance portion is ACT-wide, not Goods-specific."
+  },
+  "volume_scenarios": [
+    {
+      "label": "Today (100 beds/yr)",
+      "beds_per_year": 100,
+      "production_founder_per_bed": 300,
+      "admin_per_bed": 147,
+      "field_travel_per_bed": 510,
+      "freight_per_bed": 150,
+      "fully_loaded_state_1": 1707,
+      "fully_loaded_state_4": 1417,
+      "fully_loaded_state_5": 1427,
+      "_math_state_1": "600 + 150 + 300 + 147 + 510 = 1707",
+      "_math_state_4": "310.37 + 150 + 300 + 147 + 510 = 1417.37",
+      "_math_state_5": "320.37 + 150 + 300 + 147 + 510 = 1427.37"
+    },
+    {
+      "label": "Target (500 beds/yr)",
+      "beds_per_year": 500,
+      "production_founder_per_bed": 60,
+      "admin_per_bed": 29,
+      "field_travel_per_bed": 100,
+      "freight_per_bed": 100,
+      "fully_loaded_state_1": 889,
+      "fully_loaded_state_4": 599,
+      "fully_loaded_state_5": 609,
+      "_math_state_1": "600 + 100 + 60 + 29 + 100 = 889",
+      "_math_state_4": "310.37 + 100 + 60 + 29 + 100 = 599.37",
+      "_math_state_5": "320.37 + 100 + 60 + 29 + 100 = 609.37"
+    },
+    {
+      "label": "Vision (1,000 beds/yr, in-house assembly)",
+      "beds_per_year": 1000,
+      "production_founder_per_bed": 30,
+      "admin_per_bed": 15,
+      "field_travel_per_bed": 50,
+      "freight_per_bed": 80,
+      "fully_loaded_state_1": 775,
+      "fully_loaded_state_4": 485,
+      "fully_loaded_state_5": 495,
+      "_math_state_1": "600 + 80 + 30 + 15 + 50 = 775",
+      "_math_state_4": "310.37 + 80 + 30 + 15 + 50 = 485.37",
+      "_math_state_5": "320.37 + 80 + 30 + 15 + 50 = 495.37"
+    }
+  ],
+  "fundraising_offset": {
+    "philanthropy_days_per_year": 50,
+    "philanthropy_dollars_per_founder_day_estimate": 5000,
+    "philanthropy_annual_estimate": 250000,
+    "commercial_sales_days_per_year": 25,
+    "commercial_buyer_benchmark_per_bed": 801,
+    "commercial_buyer_source": "Centrecorp INV-0291 (107 beds @ $85,712)",
+    "_per_bed_subsidy_at_100_per_year": 2500,
+    "_per_bed_subsidy_at_500_per_year": 500,
+    "_principle": "Fundraising days are an INVESTMENT that generates revenue offsetting bed cost. Funder pitch is 'every $1 raised funds a bed + capex toward in-house production'."
+  },
+  "counterfactual": {
+    "commercial_steel_frame_bed_au_2026_low": 1500,
+    "commercial_steel_frame_bed_au_2026_high": 2000,
+    "source": "Retail furniture / contract supply mid-2026 AU market scan",
+    "confidence": "inferred"
+  },
+  "capex_required_to_reach_state_4": {
+    "shredder": { "low": 15000, "high": 30000 },
+    "hot_press_line": { "low": 80000, "high": 150000 },
+    "cnc_router": { "low": 15000, "high": 40000 },
+    "workbench_tools": 2000,
+    "total_low": 112000,
+    "total_high": 222000,
+    "already_invested_facility": 100000,
+    "already_invested_carbatec_tooling": 10046,
+    "_capital_ask_low": 90000,
+    "_capital_ask_high": 200000
+  },
+  "mistags_to_fix": [
+    { "supplier": "Defy Washing Machine Cladding (multiple bills)", "amount": 25000, "current_tag": "ACT-GD", "correct_tag": "ACT-FM" },
+    { "supplier": "Defy Coasters (INV-1174 + INV-1637)", "amount": 10000, "current_tag": "ACT-GD", "correct_tag": "ACT-EL (marketing/merch)" },
+    { "supplier": "Defy Design/R&D (INV-1258 design + INV-1259 prototype)", "amount": 7000, "current_tag": "ACT-GD bed-COGS", "correct_tag": "ACT-GD capital/R&D" },
+    { "supplier": "Carbatec Brisbane", "amount": 8726, "current_tag": "ACT-GD", "correct_tag": "ACT-HV" },
+    { "supplier": "Utopia trip flights/accommodation", "amount": 24507, "current_tag": "ACT-IN", "correct_tag": "ACT-GD" },
+    { "supplier": "1300 Washer", "amount": 13980, "current_tag": "ACT-GD", "correct_tag": "ACT-FM" },
+    { "supplier": "Carla Furnishers duplicate", "amount": 11180, "current_tag": "ACT-GD", "correct_tag": "VOID DUPLICATE" },
+    { "supplier": "R M Tanner Triple Axle", "amount": 19950, "current_tag": "ACT-GD labour 486", "correct_tag": "ACT-GD capital" }
+  ],
+  "open_questions_for_defy": [
+    "Volume-quote sheet at 100 / 500 / 1,000 / 5,000 beds/yr — what does $600/bed Single Bed become?",
+    "Build-to-supply: cheaper if ACT sources steel (Steelmart) + canvas (RW Pacific) direct and supplies to Defy?",
+    "At what volume does in-house assembly pay back the $90-200K capex? (i.e. is State 2 or State 4 the right transition point?)",
+    "Half-sheets per bed: how many does the standard bed actually use? (Model assumes 1.5 — Ben to confirm.)"
+  ]
+}
