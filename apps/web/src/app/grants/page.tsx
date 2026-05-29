@@ -79,6 +79,43 @@ const GEO_TERMS: Record<string, string[]> = {
 
 const NATIONAL_GEO_TERMS = GEO_TERMS['AU-National'];
 
+// Unambiguous state names that, if typed in the free-text query, should be read
+// as a geography filter (which already includes National grants) rather than
+// required as literal text in a grant's name/description. Deliberately excludes
+// ambiguous abbreviations (act, sa, wa, nt, vic, tas) and "national"/"australia"
+// so an ordinary topic query is never mis-routed into a state filter.
+const QUERY_GEO_TERMS: Array<[string, string[]]> = [
+  ['AU-QLD', ['queensland', 'qld']],
+  ['AU-NSW', ['new south wales', 'nsw']],
+  ['AU-VIC', ['victoria']],
+  ['AU-WA', ['western australia']],
+  ['AU-SA', ['south australia']],
+  ['AU-TAS', ['tasmania']],
+  ['AU-NT', ['northern territory']],
+  ['AU-ACT', ['australian capital territory']],
+];
+
+/** Pull a recognised state name out of the query text. Returns the matched geo
+ *  key (or '') and the query with that term removed (the remaining topic). So
+ *  "youth justice queensland" becomes topic "youth justice" + geo AU-QLD, which
+ *  surfaces QLD and National grants instead of demanding the literal word. */
+function parseGeoFromQuery(raw: string): { geo: string; topic: string } {
+  if (!raw.trim()) return { geo: '', topic: '' };
+  let topic = raw;
+  let geo = '';
+  for (const [key, terms] of QUERY_GEO_TERMS) {
+    for (const term of terms) {
+      const re = new RegExp(`(^|\\W)${term}(\\W|$)`, 'i');
+      if (re.test(topic)) {
+        geo = key;
+        topic = topic.replace(new RegExp(`(^|\\W)${term}(\\W|$)`, 'ig'), ' ');
+      }
+    }
+    if (geo) break;
+  }
+  return { geo, topic: topic.replace(/\s+/g, ' ').trim() };
+}
+
 const PROJECT_PRESETS = [
   {
     value: 'goods',
@@ -615,13 +652,19 @@ interface SearchParams {
 
 export default async function GrantsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const params = await searchParams;
-  const query = params.q || '';
+  const rawQuery = params.q || '';
   const category = params.category || '';
   const grantType = params.type || 'open_opportunity';
   const searchMode = params.mode || 'keyword';
   const amountMin = params.amount_min ? parseInt(params.amount_min, 10) : null;
   const amountMax = params.amount_max ? parseInt(params.amount_max, 10) : null;
-  const geoFilter = params.geo || '';
+  const rawGeo = params.geo || '';
+  // A recognised state name typed in the query becomes a geography filter (which
+  // includes National grants); the remaining words are the topic we text-match.
+  // An explicit geo chip (rawGeo) always wins.
+  const parsedGeo = parseGeoFromQuery(rawQuery);
+  const query = parsedGeo.topic;
+  const geoFilter = rawGeo || parsedGeo.geo;
   const closingFilter = params.closing || '';
   const sortOrder = params.sort || 'newest';
   const hideOngoing = params.hide_ongoing === '1';
@@ -803,8 +846,25 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
     }
 
     if (query) {
-      const escapedQuery = query.replace(/[%_]/g, '');
-      dbQuery = dbQuery.or(`name.ilike.%${escapedQuery}%,provider.ilike.%${escapedQuery}%,program.ilike.%${escapedQuery}%,description.ilike.%${escapedQuery}%,geography.ilike.%${escapedQuery}%`);
+      // Tokenise: match each term in ANY field and require ALL terms (AND across
+      // terms, OR across fields). This mirrors matchesSearchText so the DB
+      // pre-filter returns the candidate set the client matcher expects, instead
+      // of demanding the whole query as one contiguous substring, which silently
+      // zeroed every multi-word search (e.g. "youth justice queensland").
+      const searchFields = ['name', 'provider', 'program', 'description', 'geography'];
+      const terms = query
+        .toLowerCase()
+        .split(/\s+/)
+        .map((term) => term.replace(/[^a-z0-9-]/g, ''))
+        .filter((term) => term.length > 2);
+      if (terms.length > 0) {
+        for (const term of terms) {
+          dbQuery = dbQuery.or(searchFields.map((field) => `${field}.ilike.%${term}%`).join(','));
+        }
+      } else {
+        const escapedQuery = query.replace(/[%_,()]/g, '');
+        dbQuery = dbQuery.or(searchFields.map((field) => `${field}.ilike.%${escapedQuery}%`).join(','));
+      }
     }
 
     if (category) {
