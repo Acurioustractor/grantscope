@@ -759,7 +759,17 @@ async function getFoundationsToScan() {
         return true;
       });
 
-  const candidates = [...strictCandidates, ...fallbackCandidates];
+  // Hard-exclude types that never run community grant rounds: universities and
+  // schools fund scholarships/research; service-delivery orgs, PHNs and legal aid
+  // operate rather than grant. Aligns with this script's intent to avoid operating
+  // charities/schools, and stops a few high-giving universities (e.g. USQ) from
+  // monopolising the giving-sorted scan order. Applied to the merged set (strict +
+  // fallback) so it catches every candidate source, not just strict selection.
+  const NON_GRANTMAKER_TYPES = new Set([
+    'university', 'education_body', 'service_delivery', 'primary_health_network', 'legal_aid',
+  ]);
+  const candidates = [...strictCandidates, ...fallbackCandidates]
+    .filter((foundation) => !NON_GRANTMAKER_TYPES.has(String(foundation.type || '').toLowerCase()));
   const scoredCandidates = candidates
     .map((foundation) => ({
       foundation,
