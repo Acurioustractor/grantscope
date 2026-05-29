@@ -397,6 +397,18 @@ export const AGENTS = {
     timeoutMs: 900_000,
     dependencies: [],
   },
+  // QLD-prioritised discovery. Distinct agent_id (own runtime cursor + avoids the
+  // orchestrator's per-agent dedup vs the global agent above). --geo=AU-QLD targets
+  // the ~737 QLD foundations with sites but no scraped programs; 40/run works
+  // through them over ~19 runs, then keeps them fresh via --rescan-days.
+  'discover-foundation-programs-qld': {
+    command: ['node', '--env-file=.env', 'scripts/discover-foundation-programs.mjs', '--geo=AU-QLD', '--refresh-existing', '--rescan-days=14', '--limit=40', '--concurrency=1', '--frontier-window-hours=48', '--frontier-pages=8', '--agent-id=discover-foundation-programs-qld', '--agent-name=Discover Foundation Programs (QLD)'],
+    displayName: 'Discover Foundation Programs (QLD)',
+    category: 'discovery',
+    defaultPriority: 4,
+    timeoutMs: 900_000,
+    dependencies: [],
+  },
   'nightly-grant-pipeline': {
     command: ['node', '--env-file=.env', 'scripts/nightly-grant-pipeline.mjs'],
     displayName: 'Nightly grant pipeline (scrape → promote → classify → backfill → verify → context → MV → blocklist)',
