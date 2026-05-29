@@ -94,6 +94,18 @@ export const AGENTS = {
     timeoutMs: 120_000,
     dependencies: [],
   },
+  // Heals gs_entities.source_datasets/source_count drift: the ingest scripts upsert with
+  // ignoreDuplicates, so an ABN appearing in multiple source tables keeps only the first
+  // writer's label. This idempotent ABN-keyed pass re-unions them (e.g. surfaces the
+  // donor-contractor overlap as linked entities). Re-runnable; steady state is cheap.
+  'reconcile-entity-source-datasets': {
+    command: ['node', '--env-file=.env', 'scripts/reconcile-entity-source-datasets.mjs', '--batch=2000'],
+    displayName: 'Reconcile Entity Source Datasets (ABN merge)',
+    category: 'sync',
+    defaultPriority: 4,
+    timeoutMs: 600_000,
+    dependencies: [],
+  },
   'sync-foundation-programs-full-sweep': {
     command: ['node', '--env-file=.env', 'scripts/sync-foundation-programs.mjs', '--cleanup-invalid', '--skip-embed', '--frontier-window-hours=72', '--full-sweep', '--foundation-limit=120', '--agent-id=sync-foundation-programs-full-sweep'],
     displayName: 'Sync Foundation Programs (Full Sweep)',
