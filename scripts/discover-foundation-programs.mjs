@@ -55,6 +55,14 @@ const FRONTIER_WINDOW_HOURS = frontierWindowArg ? parseInt(frontierWindowArg, 10
 const FOUNDATION_ID = getArgValue('--foundation-id');
 const FOUNDATION_NAME = getArgValue('--foundation-name');
 const FRONTIER_METADATA_FLAG = getArgValue('--frontier-metadata-flag');
+// Restrict the batch to a single geography, e.g. --geo=AU-QLD. Matches the
+// canonical focus code plus its regional/remote/rural variants. Lets us target
+// state-specific foundations (e.g. the 737 QLD funders with sites but no
+// scraped programs) instead of sweeping every state.
+const GEO = getArgValue('--geo');
+const GEO_FOCUS_CODES = GEO
+  ? [GEO, `regional-${GEO.replace(/^AU-/, '').toLowerCase()}`, `remote-${GEO.replace(/^AU-/, '').toLowerCase()}`, `rural-${GEO.replace(/^AU-/, '').toLowerCase()}`]
+  : [];
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
@@ -547,7 +555,7 @@ async function getFoundationsToScan() {
 
   // Get foundations that are likely grantmakers with websites + descriptions but no programs yet.
   // Prioritise actual funder language and avoid obvious operating charities / school / event pages.
-  const { data, error } = await supabase
+  let foundationQuery = supabase
     .from('foundations')
     .select('id, name, type, website, description, thematic_focus, geographic_focus, total_giving_annual, giving_philosophy, application_tips, open_programs, profile_confidence')
     .not('website', 'is', null)
@@ -562,7 +570,11 @@ async function getFoundationsToScan() {
       'description.ilike.%philanthrop%',
       'description.ilike.%funding%',
       'description.ilike.%applications%'
-    ].join(','))
+    ].join(','));
+  if (GEO_FOCUS_CODES.length > 0) {
+    foundationQuery = foundationQuery.overlaps('geographic_focus', GEO_FOCUS_CODES);
+  }
+  const { data, error } = await foundationQuery
     .order('total_giving_annual', { ascending: false, nullsFirst: false })
     .limit(FULL_SWEEP ? Math.max(LIMIT * 8, 500) : LIMIT * 4); // fetch extra to filter
 
