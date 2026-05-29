@@ -489,19 +489,28 @@ async function getFoundationsToScan() {
     return query;
   };
 
-  const dueFrontierRows = await fetchAllRows((from, to) => (
-    buildFrontierQuery()
-      .lte('next_check_at', new Date().toISOString())
-      .order('priority', { ascending: false })
-      .range(from, to)
-  ));
-
-  const recentlyChangedFrontierRows = await fetchAllRows((from, to) => (
-    buildFrontierQuery()
-      .gte('last_changed_at', frontierCutoffIso)
-      .order('last_changed_at', { ascending: false })
-      .range(from, to)
-  ));
+  // The frontier fetch scans source_frontier globally (all foundations) and can
+  // hit Supabase's gateway timeout under load. It only informs scan-prioritisation
+  // scoring (everything downstream reads frontier?. optionally), so degrade
+  // gracefully instead of failing the whole discovery run.
+  let dueFrontierRows = [];
+  let recentlyChangedFrontierRows = [];
+  try {
+    dueFrontierRows = await fetchAllRows((from, to) => (
+      buildFrontierQuery()
+        .lte('next_check_at', new Date().toISOString())
+        .order('priority', { ascending: false })
+        .range(from, to)
+    ));
+    recentlyChangedFrontierRows = await fetchAllRows((from, to) => (
+      buildFrontierQuery()
+        .gte('last_changed_at', frontierCutoffIso)
+        .order('last_changed_at', { ascending: false })
+        .range(from, to)
+    ));
+  } catch (err) {
+    log(`Frontier fetch failed (${err?.message || err}); continuing without frontier prioritisation.`);
+  }
 
   const frontierRows = buildUniqueFrontierRows([
     ...(dueFrontierRows || []),
@@ -580,7 +589,7 @@ async function getFoundationsToScan() {
 
   if (error) {
     log(`Error fetching foundations: ${error.message}`);
-    return [];
+    return { foundations: [], fullSweepCursorStart: null, fullSweepCandidateCount: 0 };
   }
 
   const grantmakerSignals = /(grant|grants|fellowship|scholarship|philanthrop|funding|applications|awards?|EOI|apply now|grant round|community giving|open for applications|grant program)/i;
