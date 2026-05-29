@@ -149,6 +149,18 @@ function normalizeUrl(url) {
   return /^https?:\/\//i.test(text) ? text : `https://${text}`;
 }
 
+// Stable, readable slug used as a per-program URL fragment so a foundation's
+// many programs (which often share one page URL) each get a distinct,
+// constraint-safe URL. Same program name always yields the same slug, so
+// re-syncs update in place rather than churning.
+function programSlug(name) {
+  return String(name || 'program')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60) || 'program';
+}
+
 function detectProgramType(name, description) {
   const text = `${name} ${description || ''}`.toLowerCase();
   if (/fellowship/.test(text)) return 'fellowship';
@@ -165,6 +177,12 @@ function buildProgramKey(program) {
 
 function buildGrantPayload(program, foundation) {
   const desiredStatus = getDesiredProgramStatus(program, foundation);
+  // Foundations expose many programs from one page URL, which collides on the
+  // unique-URL index (only one program per foundation would land). Append a
+  // stable per-program fragment (servers ignore it) so each is a distinct,
+  // findable grant. Matching is by source_id/key, not URL, so existing rows
+  // update in place rather than duplicating.
+  const baseUrl = normalizeUrl(program.url || foundation.website);
   return {
     name: program.name,
     provider: foundation.name,
@@ -174,7 +192,12 @@ function buildGrantPayload(program, foundation) {
     amount_max: program.amount_max ? Number(program.amount_max) : null,
     deadline: program.deadline,
     closes_at: program.deadline,
-    url: normalizeUrl(program.url || foundation.website),
+    url: baseUrl ? `${baseUrl.split('#')[0]}#${programSlug(program.name)}` : null,
+    // Carry the funder's geography so state-filtered searches ("queensland ...")
+    // surface these programs; previously left null, so geo queries missed them.
+    geography: Array.isArray(foundation.geographic_focus) && foundation.geographic_focus.length
+      ? foundation.geographic_focus.join(', ')
+      : null,
     source: 'foundation_program',
     source_id: String(program.id),
     grant_type: 'open_opportunity',
@@ -213,6 +236,7 @@ function grantNeedsUpdate(existingGrant, desiredGrant) {
     'application_status',
     'status',
     'source_id',
+    'geography',
   ];
 
   for (const field of comparableFields) {
