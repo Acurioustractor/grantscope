@@ -9,13 +9,13 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-06-07T00:00:00Z
+**Updated:** 2026-06-07T09:45:00+10:00
 **Goal:** Open national registry + evidence layer for Australia's social enterprise supply base, built on the Giving Data Commons. Done when Phases 1-4 shipped: dataset public, profiles evidenced, buyer loop live, grants flywheel + claim-your-profile working.
-**Branch:** codex/australian-giving-data-commons
-**Test:** cd apps/web && npx tsc --noEmit
+**Branch:** main (feature branch merged via PR #55 and deleted)
+**Test:** cd apps/web && npx tsc --noEmit && npx vitest run
 
 ### Now
-[->] All 4 phases shipped. Push `aafde29` + consider PR to main
+[->] Stream complete + repo clean. Next up (pick one): fuzzy/API ABN pass for 1,911 unmatched SEs, or state-directory re-scrape
 
 ### This Session
 - [x] Giving Data Commons committed + migration applied (data_catalog public metadata, data_corrections table, /giving pages, open API envelope)
@@ -31,8 +31,9 @@ status: active
 - [x] Phase 4b: "Claim This Profile" CTA (yellow sidebar block) on every SE profile → `/giving/corrections?target_type=social_enterprise&target_id=…&claim_url=…`; no-ABN correction link carries same params (same commit)
 
 ### Next
-- [ ] Push `aafde29` to origin (Tier 2 — ask first)
-- [ ] Consider PR to main — all 4 phases now landed
+- [x] Pushed + PR #55 merged to main (`d4dfcf6`)
+- [x] CI failure on main fixed: stale rpc mock in `entity-service.test.ts` (PR #37, `893680a`) — main CI fully green (221/221)
+- [x] Branch cleanup: 29 merged/superseded refs deleted (12 local + 17 remote), each verified by content. Kept: claude/scraping-funding-orgs-TeFjK (active other session), curious-tractor-thesis, codex/goods-civicgraph-signoff, wip/working-tree-snapshot-2026-04-24, recovered/civicscope-may22-features
 - [ ] Fuzzy/API ABN pass for remaining 1,911 unmatched SE records (ABN_LOOKUP_GUID in .env; phases 1-2 of backfill-se-abns.mjs were exact/variant only)
 - [ ] Re-scrape state network directories properly (SASEC/QSEC behind login walls — the deleted junk came from crawling nav menus)
 - [ ] Grant pool is thin: only ~322 open non-ARC grants tracked. Grants flywheel improves as discovery agents widen coverage (matching layer is done)
