@@ -46,6 +46,13 @@ const CREATE_UNMATCHED = process.argv.includes('--create-unmatched');
 const SOURCE_FILTER = argVal('source', null);
 const LIMIT = parseInt(argVal('limit', '5000'), 10);
 const THRESHOLD = parseFloat(argVal('threshold', '0.62'));
+// Fuzzy matching only considers org-like entity types. Excludes 'person' (238K
+// rows — the biggest false-match surface), 'program', 'political_party', etc.
+// 'company' stays in: many NFPs are companies limited by guarantee. Override
+// with --entity-types=charity,indigenous_corp to tighten further.
+const ENTITY_TYPES = argVal('entity-types',
+  'charity,foundation,indigenous_corp,social_enterprise,company,government_body')
+  .split(',').map(s => s.trim()).filter(Boolean);
 
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 const log = (msg) => console.log(`[bridge-community-dir] ${msg}`);
@@ -116,6 +123,7 @@ async function loadEntitiesForStates(states) {
       const { data, error } = await db.from('gs_entities')
         .select('id, gs_id, canonical_name, abn, website, email, phone, postcode, state')
         .eq('state', state)
+        .in('entity_type', ENTITY_TYPES)
         .range(offset, offset + PAGE - 1);
       if (error) throw new Error(`load entities (${state}): ${error.message}`);
       if (!data?.length) break;
@@ -145,7 +153,7 @@ async function main() {
   const run = await logStart(db, 'bridge-community-directories', 'Bridge Community Directory to Entities');
   const stats = { listings: 0, linkedAbn: 0, createdAbn: 0, linked: 0, enriched: 0, createdNew: 0, wouldLink: 0, unmatched: 0 };
   try {
-    log(`Mode: ${APPLY ? 'APPLY' : 'DRY RUN'} | source=${SOURCE_FILTER || 'all'} | threshold=${THRESHOLD} | create-unmatched=${CREATE_UNMATCHED}`);
+    log(`Mode: ${APPLY ? 'APPLY' : 'DRY RUN'} | source=${SOURCE_FILTER || 'all'} | threshold=${THRESHOLD} | create-unmatched=${CREATE_UNMATCHED} | types=${ENTITY_TYPES.join('+')}`);
 
     const listings = await loadUnlinkedListings();
     stats.listings = listings.length;

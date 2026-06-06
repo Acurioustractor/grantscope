@@ -1093,10 +1093,11 @@ export const AGENTS = {
     dependencies: [],
   },
   // Promotes community_directory_orgs staging rows into gs_entities: ABN exact +
-  // state-scoped fuzzy name link with contact enrichment. --create-unmatched mints
-  // GS-DIR entities for genuinely-new orgs (added via the full command below).
+  // state-scoped fuzzy name link with contact enrichment. Link/enrich-only by
+  // default (never injects new entities). To mint GS-DIR entities for genuinely-new
+  // orgs, set the schedule param createUnmatched:true once staging is validated.
   'bridge-community-directories': {
-    command: ['node', '--env-file=.env', 'scripts/bridge-community-directories.mjs', '--apply', '--create-unmatched'],
+    command: ['node', '--env-file=.env', 'scripts/bridge-community-directories.mjs', '--apply'],
     displayName: 'Bridge Community Directory to Entities',
     category: 'graph',
     defaultPriority: 3,
