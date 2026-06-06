@@ -18,6 +18,7 @@ const GlobalSearch = dynamic(
 const publicLinks = [
   { href: '/start', label: 'Start' },
   { href: '/grants', label: 'Funding' },
+  { href: '/giving', label: 'Data' },
   { href: '/power', label: 'Power' },
   { href: '/reports', label: 'Reports' },
   { href: '/support', label: 'Support' },
@@ -29,6 +30,7 @@ const megaMenuSections = [
     links: [
       { href: '/grants', label: 'Grant Search', desc: 'Search live opportunities across government and philanthropic sources' },
       { href: '/foundations', label: 'Foundation Search', desc: 'Search funders, programs, and giving profiles' },
+      { href: '/giving', label: 'Giving Commons', desc: 'Free search, downloads, API, sources, quality and corrections' },
       { href: '/profile/matches', label: 'Matched Grants', desc: 'See the strongest opportunities for your organisation' },
       { href: '/tracker', label: 'Grant Tracker', desc: 'Shortlist, stage, and manage your active pipeline' },
       { href: '/alerts', label: 'Alerts', desc: 'Get notified when opportunities or deadlines change' },

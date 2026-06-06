@@ -164,6 +164,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                     <div className="font-black text-xs text-bauhaus-yellow mb-3 uppercase tracking-widest">Pipeline</div>
                     <ul className="space-y-2 text-sm">
                       <li><a href="/grants" className="text-bauhaus-muted hover:text-white transition-colors">Grant Search</a></li>
+                      <li><a href="/giving" className="text-bauhaus-muted hover:text-white transition-colors">Giving Commons</a></li>
                       <li><a href="/profile/matches" className="text-bauhaus-muted hover:text-white transition-colors">Matched Grants</a></li>
                       <li><a href="/tracker" className="text-bauhaus-muted hover:text-white transition-colors">Grant Tracker</a></li>
                       <li><a href="/alerts" className="text-bauhaus-muted hover:text-white transition-colors">Alerts</a></li>
