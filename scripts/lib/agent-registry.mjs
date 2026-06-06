@@ -1092,6 +1092,17 @@ export const AGENTS = {
     timeoutMs: 3_600_000,
     dependencies: [],
   },
+  // Promotes community_directory_orgs staging rows into gs_entities: ABN exact +
+  // state-scoped fuzzy name link with contact enrichment. --create-unmatched mints
+  // GS-DIR entities for genuinely-new orgs (added via the full command below).
+  'bridge-community-directories': {
+    command: ['node', '--env-file=.env', 'scripts/bridge-community-directories.mjs', '--apply', '--create-unmatched'],
+    displayName: 'Bridge Community Directory to Entities',
+    category: 'graph',
+    defaultPriority: 3,
+    timeoutMs: 1_800_000,
+    dependencies: ['scrape-community-directories'],
+  },
   'scrape-acnc-persons': {
     command: ['node', '--env-file=.env', 'scripts/scrape-acnc-responsible-persons.mjs', '--priority-only', '--apply'],
     displayName: 'ACNC Responsible Persons',
