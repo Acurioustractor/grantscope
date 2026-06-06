@@ -1,6 +1,7 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import { notFound } from 'next/navigation';
 import { money } from '@/lib/services/report-service';
+import { matchGrantsForSocialEnterprise, type MatchedGrant } from '@/lib/services/se-grant-match';
 
 export const dynamic = 'force-dynamic';
 
@@ -147,6 +148,9 @@ export default async function SocialEnterpriseDetailPage({ params }: { params: P
   let contractCount = 0;
   let justiceRows: JusticeRow[] = [];
 
+  // Grant matching runs on sector + place, not ABN — every profile gets it
+  const grantMatchPromise = matchGrantsForSocialEnterprise(supabase, enterprise);
+
   if (cleanAbn) {
     const [charityRes, graphRes, contractRes, justiceRes] = await Promise.all([
       supabase.from('acnc_charities').select('abn, name').eq('abn', cleanAbn).maybeSingle(),
@@ -160,6 +164,8 @@ export default async function SocialEnterpriseDetailPage({ params }: { params: P
     contractCount = contractRes.count ?? contracts.length;
     justiceRows = (justiceRes.data || []) as JusticeRow[];
   }
+
+  const { data: matchedGrants } = await grantMatchPromise;
 
   const contractTotal = contracts.reduce((sum, c) => sum + (c.contract_value || 0), 0);
   const topBuyers = Object.entries(
@@ -355,6 +361,40 @@ export default async function SocialEnterpriseDetailPage({ params }: { params: P
             </Section>
           )}
 
+          {/* Open funding matched on sector + place */}
+          {matchedGrants.length > 0 && (
+            <Section title="Open Funding Matches">
+              <div className="bg-white border-4 border-bauhaus-black">
+                <div className="p-4 space-y-3">
+                  {matchedGrants.map((g: MatchedGrant) => (
+                    <div key={g.id} className="flex items-baseline justify-between gap-3 text-sm">
+                      <div className="min-w-0">
+                        <a href={`/grants/${g.id}`} className="font-bold text-bauhaus-blue hover:text-bauhaus-red">{g.name}</a>
+                        <span className="text-bauhaus-muted font-medium">
+                          {g.provider ? ` — ${g.provider}` : ''}
+                          {g.closes_at ? ` · closes ${new Date(g.closes_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}
+                        </span>
+                        {g.matched_on.length > 0 && (
+                          <span className="ml-2 inline-flex gap-1 flex-wrap align-middle">
+                            {g.matched_on.slice(0, 3).map(c => (
+                              <span key={c} className="text-[10px] px-1.5 py-0.5 bg-link-light text-bauhaus-blue font-black uppercase tracking-wider border border-bauhaus-blue/20">{c}</span>
+                            ))}
+                          </span>
+                        )}
+                      </div>
+                      <span className="font-black text-money whitespace-nowrap">
+                        {g.amount_max ? `to ${money(g.amount_max)}` : g.amount_min ? `from ${money(g.amount_min)}` : '—'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-bauhaus-muted px-4 pb-4 font-medium">
+                  Automated match on sector and location against open grants tracked by CivicGraph. Eligibility is not assessed — always check each grant&apos;s criteria.
+                </p>
+              </div>
+            </Section>
+          )}
+
           {/* No ABN — evidence layer unavailable */}
           {!cleanAbn && (
             <Section title="Delivery Evidence">
@@ -362,7 +402,10 @@ export default async function SocialEnterpriseDetailPage({ params }: { params: P
                 <p className="text-sm text-bauhaus-muted font-medium">
                   No ABN on record, so this profile cannot be joined to public contract or grant evidence yet.
                 </p>
-                <a href="/giving/corrections" className="text-xs font-black text-bauhaus-blue hover:text-bauhaus-red uppercase tracking-widest mt-2 inline-block">
+                <a
+                  href={`/giving/corrections?target_type=social_enterprise&target_id=${enterprise.id}&claim_url=${encodeURIComponent(`/social-enterprises/${enterprise.id}`)}`}
+                  className="text-xs font-black text-bauhaus-blue hover:text-bauhaus-red uppercase tracking-widest mt-2 inline-block"
+                >
                   Know the ABN? Submit a correction &rarr;
                 </a>
               </div>
@@ -372,6 +415,20 @@ export default async function SocialEnterpriseDetailPage({ params }: { params: P
 
         {/* Sidebar */}
         <div className="space-y-6">
+          {/* Claim this profile */}
+          <div className="bg-bauhaus-yellow border-4 border-bauhaus-black p-4">
+            <h3 className="text-xs font-black text-bauhaus-black mb-2 uppercase tracking-widest">Is This Your Enterprise?</h3>
+            <p className="text-sm text-bauhaus-black font-medium leading-relaxed mb-3">
+              Claim this profile to correct details, add your ABN or certifications, and strengthen your evidence record.
+            </p>
+            <a
+              href={`/giving/corrections?target_type=social_enterprise&target_id=${enterprise.id}&claim_url=${encodeURIComponent(`/social-enterprises/${enterprise.id}`)}`}
+              className="inline-block border-4 border-bauhaus-black bg-bauhaus-black px-4 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-bauhaus-red"
+            >
+              Claim This Profile &rarr;
+            </a>
+          </div>
+
           {/* Sectors */}
           {enterprise.sector?.length > 0 && (
             <div className="bg-white border-4 border-bauhaus-black p-4">
