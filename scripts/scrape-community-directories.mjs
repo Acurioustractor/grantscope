@@ -10,13 +10,20 @@
  * mission cares about.
  *
  * Sources (public listing pages only — see compliance note below):
- *   - mycommunitydirectory : mycommunitydirectory.com.au (national, category × locality)
+ *   - mycommunitydirectory : mycommunitydirectory.com.au (national, via its public JSON API)
  *   - askizzy              : askizzy.org.au / Infoxchange (stub — needs API/selector config)
  *
- * Extraction strategy: prefer schema.org JSON-LD (Organization / LocalBusiness /
- * GovernmentService / NGO) embedded in listing pages — far more robust than CSS
- * selector guessing and survives directory redesigns. Falls back to CSS heuristics
- * when no structured data is present.
+ * Extraction strategy (mycommunitydirectory): the site renders listings client-side,
+ * so static HTML has NO listing data (verified 2026-06-06). Instead we use the same
+ * public JSON API the site's own frontend calls:
+ *   GET /api/councils                                  → all 563 council regions (id, name, state)
+ *   GET /api/search/council/{id}/0?SearchType=Category
+ *        &Council={id}&PageNo={n}&PageSize=100         → paged listings for a council
+ * Each result carries OrganisationName, Outlet {Nickname, Suburb, Phone, lat/lng},
+ * Category {Name}, Service {DisplayName} and a canonical listing Url.
+ *
+ * For future HTML sources, the JSON-LD (Organization / LocalBusiness / NGO) and CSS
+ * fallback extractors below are kept intact.
  *
  * Writes raw listings to the `community_directory_orgs` STAGING table. A downstream
  * bridge resolves ABNs and promotes matched orgs into gs_entities — scraped, ABN-less
@@ -31,7 +38,8 @@
  *   node --env-file=.env scripts/scrape-community-directories.mjs            # DRY RUN
  *   node --env-file=.env scripts/scrape-community-directories.mjs --apply
  *   node --env-file=.env scripts/scrape-community-directories.mjs --source=mycommunitydirectory --state=QLD --apply
- *   node --env-file=.env scripts/scrape-community-directories.mjs --max-pages=3 --limit=200
+ *   node --env-file=.env scripts/scrape-community-directories.mjs --state=QLD --council=Brisbane --limit=200
+ *   node --env-file=.env scripts/scrape-community-directories.mjs --state=QLD --max-councils=5 --apply
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -56,6 +64,10 @@ const STATE_FILTER = argVal('state', null)?.toUpperCase() || null;
 const MAX_PAGES = parseInt(argVal('max-pages', '5'), 10);
 const LIMIT = parseInt(argVal('limit', '0'), 10); // 0 = no cap
 const DELAY_MS = parseInt(argVal('delay-ms', '1500'), 10);
+const COUNCIL_FILTER = argVal('council', null);           // council id or name substring
+const MAX_COUNCILS = parseInt(argVal('max-councils', '0'), 10); // 0 = all matching
+const PAGE_SIZE = Math.min(parseInt(argVal('page-size', '100'), 10), 100);
+const INCLUDE_NONLOCAL = process.argv.includes('--include-nonlocal');
 
 const USER_AGENT = 'GrantScope/1.0 (community-services research; ben@act.place)';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -73,14 +85,8 @@ const SOURCES = {
   mycommunitydirectory: {
     displayName: 'MyCommunityDirectory',
     base: 'https://www.mycommunitydirectory.com.au',
-    // Browse by state landing pages; each paginates through service listings.
-    seeds: (state) => {
-      const states = state ? [state] : STATES;
-      return states.map(s => `https://www.mycommunitydirectory.com.au/${s}`);
-    },
-    // Links that point at an individual service/organisation listing.
-    listingLinkSelector: 'a[href*="/Service/"], a[href*="/Organisation/"], a[href*="/Listing/"]',
-    nextPageSelector: 'a[rel="next"], a.next, .pagination a[aria-label="Next"]',
+    // Listings come from the site's public JSON API, not HTML (which is JS-rendered).
+    collect: collectFromMcdApi,
   },
 
   askizzy: {
@@ -206,6 +212,90 @@ function fromCss($, sourceUrl) {
   };
 }
 
+// ── MyCommunityDirectory JSON API ───────────────────────────────────────────
+async function fetchJson(url) {
+  const res = await fetch(url, {
+    headers: { 'User-Agent': USER_AGENT, 'Accept': 'application/json' },
+    redirect: 'follow',
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+  return res.json();
+}
+
+// One search result (an outlet-service in a council region) → staging row.
+function fromMcdResult(r, council) {
+  const outlet = r.Outlet || {};
+  const name = cleanStr(r.OrganisationName || outlet.Nickname, 300);
+  if (!name) return null;
+  const serviceType = cleanStr(
+    [r.Category?.Name, r.Service?.DisplayName].filter(Boolean).join(' — '), 200);
+  // Keep raw light: SubResults duplicates sibling outlets of the same service.
+  const { SubResults, ...raw } = r;
+  return {
+    name,
+    description: cleanStr(r.Description),
+    service_type: serviceType,
+    website: null, // not exposed by the search API
+    phone: cleanStr(outlet.Phone || outlet.OutletManager?.Phone, 60),
+    email: cleanStr(outlet.OutletManager?.Email, 200),
+    address: cleanStr(outlet.DisplayAddress, 500),
+    suburb: cleanStr(outlet.Suburb, 120),
+    state: normaliseState(council.state) || null,
+    postcode: extractPostcode(outlet.DisplayAddress),
+    source_url: r.Url ? new URL(r.Url, SOURCES.mycommunitydirectory.base).toString() : null,
+    raw,
+  };
+}
+
+async function collectFromMcdApi(cfg, stats) {
+  const base = cfg.base;
+  const councils = (await fetchJson(`${base}/api/councils`))
+    .map(c => ({
+      id: c.CouncilRegionID,
+      name: c.DisplayName,
+      state: normaliseState(c.StateName),
+    }))
+    .filter(c => c.id && c.name)
+    .filter(c => !STATE_FILTER || c.state === STATE_FILTER)
+    .filter(c => !COUNCIL_FILTER
+      || String(c.id) === COUNCIL_FILTER
+      || c.name.toLowerCase().includes(COUNCIL_FILTER.toLowerCase()));
+  const scoped = MAX_COUNCILS ? councils.slice(0, MAX_COUNCILS) : councils;
+  log(`  ${scoped.length} council regions in scope${STATE_FILTER ? ` (${STATE_FILTER})` : ''}`);
+
+  const rows = [];
+  const seenOutletService = new Set(); // statewide services repeat across councils
+  for (const council of scoped) {
+    let total = null;
+    let kept = 0;
+    for (let page = 1; page <= 200; page++) { // backstop; real stop is Total below
+      const url = `${base}/api/search/council/${council.id}/0`
+        + `?SearchType=Category&Council=${council.id}`
+        + `&SortField=Relevance&SortDirection=DESC&PageNo=${page}&PageSize=${PAGE_SIZE}`;
+      let data;
+      try { data = await fetchJson(url); }
+      catch (err) { stats.errors.push(`${council.name} p${page}: ${err.message}`); break; }
+      total = data.Total ?? total;
+      const results = data.Results || [];
+      if (results.length === 0) break;
+      for (const r of results) {
+        if (!INCLUDE_NONLOCAL && r.IsLocal === false) continue;
+        if (r.OutletServiceID && seenOutletService.has(r.OutletServiceID)) continue;
+        if (r.OutletServiceID) seenOutletService.add(r.OutletServiceID);
+        const row = fromMcdResult(r, council);
+        if (row) { rows.push(row); kept++; }
+      }
+      if (LIMIT && rows.length >= LIMIT) break;
+      if (page * PAGE_SIZE >= (total ?? 0)) break;
+      await sleep(DELAY_MS);
+    }
+    log(`  ${council.name}: ${kept} kept (total reported: ${total ?? '?'})`);
+    if (LIMIT && rows.length >= LIMIT) break;
+    await sleep(DELAY_MS);
+  }
+  return LIMIT ? rows.slice(0, LIMIT) : rows;
+}
+
 // ── Per-source crawl ─────────────────────────────────────────────────────────
 async function collectListingUrls(source, cfg) {
   const seeds = cfg.seeds(STATE_FILTER);
@@ -271,7 +361,7 @@ async function run() {
   const runRow = await logStart(supabase, 'scrape-community-directories', 'Community Services Directory Scraper');
   const stats = { found: 0, written: 0, errors: [] };
   try {
-    log(`Mode: ${APPLY ? 'APPLY' : 'DRY RUN'} | source=${SINGLE_SOURCE || 'all'} | state=${STATE_FILTER || 'all'} | max-pages=${MAX_PAGES} | limit=${LIMIT || '∞'}`);
+    log(`Mode: ${APPLY ? 'APPLY' : 'DRY RUN'} | source=${SINGLE_SOURCE || 'all'} | state=${STATE_FILTER || 'all'} | council=${COUNCIL_FILTER || 'all'} | limit=${LIMIT || '∞'}`);
 
     const sources = SINGLE_SOURCE
       ? { [SINGLE_SOURCE]: SOURCES[SINGLE_SOURCE] }
@@ -280,18 +370,24 @@ async function run() {
     for (const [key, cfg] of Object.entries(sources)) {
       if (!cfg) { log(`Unknown source: ${key}`); continue; }
       log(`── ${cfg.displayName} ──`);
-      const listingUrls = await collectListingUrls(key, cfg);
-      log(`  ${listingUrls.length} listing URLs`);
 
       const collected = [];
-      for (const url of listingUrls) {
-        try {
-          const orgs = await scrapeListing(url);
-          for (const o of orgs) collected.push({ ...o, source: key });
-        } catch (err) {
-          stats.errors.push(`${url}: ${err.message}`);
+      if (cfg.collect) {
+        // API-backed source: returns fully-mapped staging rows.
+        const apiRows = await cfg.collect(cfg, stats);
+        for (const o of apiRows) collected.push({ ...o, source: key });
+      } else {
+        const listingUrls = await collectListingUrls(key, cfg);
+        log(`  ${listingUrls.length} listing URLs`);
+        for (const url of listingUrls) {
+          try {
+            const orgs = await scrapeListing(url);
+            for (const o of orgs) collected.push({ ...o, source: key });
+          } catch (err) {
+            stats.errors.push(`${url}: ${err.message}`);
+          }
+          await sleep(DELAY_MS);
         }
-        await sleep(DELAY_MS);
       }
 
       // Drop rows with no usable name; apply state filter if set.
