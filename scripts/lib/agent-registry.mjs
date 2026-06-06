@@ -535,6 +535,17 @@ export const AGENTS = {
     timeoutMs: 600_000,
     dependencies: ['build-entity-graph'],
   },
+  // v2: set-based psql backfill of websites (+org-profile email/phone) from
+  // already-linked sources (organizations, NDIS register, ACNC AIS, ACNC
+  // programs). Fill-only, with a per-run pre-state snapshot table for rollback.
+  'enrich-entity-contacts-v2': {
+    command: ['node', '--env-file=.env', 'scripts/enrich-entity-contacts-v2.mjs', '--apply'],
+    displayName: 'Entity Contact Enrichment v2',
+    category: 'enrichment',
+    defaultPriority: 3,
+    timeoutMs: 1_800_000,
+    dependencies: ['build-entity-graph'],
+  },
   'enrich-charities': {
     command: ['node', '--env-file=.env', 'scripts/enrich-charities.mjs'],
     displayName: 'Enrich Charities',
