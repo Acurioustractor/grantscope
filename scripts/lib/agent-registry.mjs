@@ -1080,6 +1080,18 @@ export const AGENTS = {
   },
 
   // ── Scraping (external API scraping) ────────────────────────────────────────
+  // Community-services directories (MyCommunityDirectory, Ask Izzy) — discovers
+  // small, active frontline orgs that don't surface in funding/ACNC records, and
+  // enriches their contact details. Lands in the community_directory_orgs staging
+  // table; a downstream ABN-resolve bridge promotes matches into gs_entities.
+  'scrape-community-directories': {
+    command: ['node', '--env-file=.env', 'scripts/scrape-community-directories.mjs', '--apply'],
+    displayName: 'Community Services Directory Scraper',
+    category: 'scraping',
+    defaultPriority: 4,
+    timeoutMs: 3_600_000,
+    dependencies: [],
+  },
   'scrape-acnc-persons': {
     command: ['node', '--env-file=.env', 'scripts/scrape-acnc-responsible-persons.mjs', '--priority-only', '--apply'],
     displayName: 'ACNC Responsible Persons',
