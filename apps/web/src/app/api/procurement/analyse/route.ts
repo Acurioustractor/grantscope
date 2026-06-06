@@ -160,6 +160,72 @@ async function analyseAbns(abns: string[], values: Record<string, number>) {
     else { byDisadvantage.most_advantaged.count++; byDisadvantage.most_advantaged.value += v; }
   }
 
+  // Gap-fill recommendations — name specific social/Indigenous enterprises the
+  // buyer could engage, in the states they already buy from, ranked by public
+  // delivery evidence (AusTender history).
+  const buyerStates = Object.entries(byState)
+    .filter(([st]) => st !== 'Unknown')
+    .sort((a, b) => b[1].value - a[1].value || b[1].count - a[1].count)
+    .slice(0, 3)
+    .map(([st]) => st);
+
+  let candidateQuery = supabase
+    .from('social_enterprises')
+    .select('id, name, abn, state, sector, source_primary, org_type, target_beneficiaries')
+    .not('abn', 'is', null)
+    .limit(60);
+  if (buyerStates.length > 0) candidateQuery = candidateQuery.in('state', buyerStates);
+  const { data: candidateData } = await candidateQuery;
+
+  const submitted = new Set(cleanAbns);
+  const candidates = (candidateData || []).filter(c => c.abn && !submitted.has(c.abn));
+
+  let recommendations: Array<Record<string, unknown>> = [];
+  if (candidates.length > 0) {
+    const candidateAbns = candidates.map(c => c.abn as string);
+    const { data: candidateContracts } = await supabase
+      .from('austender_contracts')
+      .select('supplier_abn, contract_value, buyer_name')
+      .in('supplier_abn', candidateAbns)
+      .not('contract_value', 'is', null)
+      .limit(1000);
+
+    const evidenceByAbn = new Map<string, { count: number; total_value: number; buyers: Set<string> }>();
+    for (const c of candidateContracts || []) {
+      const abn = c.supplier_abn as string;
+      if (!evidenceByAbn.has(abn)) evidenceByAbn.set(abn, { count: 0, total_value: 0, buyers: new Set() });
+      const ev = evidenceByAbn.get(abn)!;
+      ev.count++;
+      ev.total_value += (c.contract_value as number) || 0;
+      if (c.buyer_name) ev.buyers.add(c.buyer_name as string);
+    }
+
+    recommendations = candidates
+      .map(c => {
+        const ev = evidenceByAbn.get(c.abn as string);
+        return {
+          id: c.id,
+          name: c.name,
+          abn: c.abn,
+          state: c.state,
+          sector: c.sector,
+          source: c.source_primary,
+          org_type: c.org_type,
+          target_beneficiaries: c.target_beneficiaries,
+          delivery_evidence: ev
+            ? { contracts: ev.count, total_value: ev.total_value, unique_buyers: ev.buyers.size }
+            : { contracts: 0, total_value: 0, unique_buyers: 0 },
+          profile_url: `/social-enterprises/${c.id}`,
+        };
+      })
+      .sort((a, b) => {
+        const evA = a.delivery_evidence as { total_value: number; contracts: number };
+        const evB = b.delivery_evidence as { total_value: number; contracts: number };
+        return evB.total_value - evA.total_value || evB.contracts - evA.contracts;
+      })
+      .slice(0, 10);
+  }
+
   const summary = {
     total_suppliers: cleanAbns.length,
     matched_suppliers: matched.length,
@@ -201,6 +267,7 @@ async function analyseAbns(abns: string[], values: Record<string, number>) {
   return NextResponse.json({
     summary,
     suppliers,
+    recommendations,
     meta: {
       abns_submitted: cleanAbns.length,
       data_sources: ['gs_entities (99K entities)', 'social_enterprises (10K+)', 'postcode_geo', 'seifa_2021'],

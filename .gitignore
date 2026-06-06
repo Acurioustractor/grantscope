@@ -54,3 +54,4 @@ apps/web/data/aihw/
 # Large files (exceed GitHub 100MB limit)
 data/nsw-etendering/full.jsonl
 .gstack/
+.playwright-mcp/

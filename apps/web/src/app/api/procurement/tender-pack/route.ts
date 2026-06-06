@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { requireModule } from '@/lib/api-auth';
+import { policyInsertsForStates } from '@/lib/social-procurement';
 
 /**
  * POST /api/procurement/tender-pack
@@ -62,8 +63,51 @@ export async function POST(request: NextRequest) {
   const entityResult = await entityQuery.limit(500);
   const entities = entityResult.data || [];
 
+  // Overlay the social/Indigenous enterprise registry on the same geography.
+  // Registered enterprises matching the entity shortlist get verification marks;
+  // ones missing from the entity query are added as suppliers in their own right.
+  let seQuery = supabase
+    .from('social_enterprises')
+    .select('id, name, abn, state, postcode, sector, source_primary, org_type')
+    .not('abn', 'is', null);
+  if (postcodes.length > 0) {
+    seQuery = seQuery.in('postcode', postcodes);
+  } else if (states.length > 0) {
+    seQuery = seQuery.in('state', states);
+  } else {
+    // LGA-only request — social_enterprises has no LGA column, so overlay by ABN only
+    const entityAbns = entities.map(e => e.abn).filter(Boolean) as string[];
+    seQuery = entityAbns.length > 0 ? seQuery.in('abn', entityAbns.slice(0, 200)) : seQuery.limit(0);
+  }
+  if (keywords) {
+    seQuery = seQuery.ilike('name', `%${keywords}%`);
+  }
+  const seResult = await seQuery.limit(300);
+  const seRows = seResult.data || [];
+  const seByAbn = new Map(seRows.map(se => [se.abn as string, se]));
+
+  const entityAbnSet = new Set(entities.map(e => e.abn).filter(Boolean));
+  const seOnly = seRows.filter(se => !entityAbnSet.has(se.abn));
+  const merged = [
+    ...entities,
+    ...seOnly.map(se => ({
+      gs_id: null,
+      canonical_name: se.name,
+      abn: se.abn,
+      entity_type: se.org_type || 'social_enterprise',
+      state: se.state,
+      postcode: se.postcode,
+      remoteness: null,
+      seifa_irsd_decile: null,
+      is_community_controlled: null,
+      lga_name: null,
+      lga_code: null,
+      sector: Array.isArray(se.sector) ? se.sector.join(', ') : se.sector,
+    })),
+  ];
+
   // Get contract history for these entities
-  const abns = entities.map(e => e.abn).filter(Boolean) as string[];
+  const abns = merged.map(e => e.abn).filter(Boolean) as string[];
   let contractHistory: Array<Record<string, unknown>> = [];
   if (abns.length > 0) {
     const contractResult = await supabase
@@ -119,8 +163,9 @@ export async function POST(request: NextRequest) {
   }
 
   // Build supplier shortlist with enrichment
-  const shortlist = entities.map(e => {
+  const shortlist = merged.map(e => {
     const contracts = contractsByAbn.get(e.abn || '') || { count: 0, total_value: 0, buyers: new Set(), latest: '' };
+    const se = e.abn ? seByAbn.get(e.abn) : undefined;
     return {
       gs_id: e.gs_id,
       name: e.canonical_name,
@@ -133,6 +178,9 @@ export async function POST(request: NextRequest) {
       is_community_controlled: e.is_community_controlled,
       lga: e.lga_name,
       sector: e.sector,
+      se_registered: !!se,
+      se_source: se?.source_primary || null,
+      se_profile_url: se ? `/social-enterprises/${se.id}` : null,
       contract_history: {
         count: contracts.count,
         total_value: contracts.total_value,
@@ -145,9 +193,12 @@ export async function POST(request: NextRequest) {
 
   // Compliance forecast
   const totalInArea = shortlist.length;
-  const indigenousInArea = shortlist.filter(s => s.entity_type === 'indigenous_corp').length;
+  const indigenousInArea = shortlist.filter(s =>
+    s.entity_type === 'indigenous_corp' ||
+    (s.se_source && ['supply-nation', 'oric', 'kinaway'].includes(s.se_source))
+  ).length;
   const seInArea = shortlist.filter(s =>
-    s.entity_type === 'social_enterprise' || s.entity_type === 'charity'
+    s.entity_type === 'social_enterprise' || s.entity_type === 'charity' || s.se_registered
   ).length;
   const communityControlled = shortlist.filter(s => s.is_community_controlled).length;
   const withContracts = shortlist.filter(s => s.contract_history.count > 0).length;
@@ -215,6 +266,13 @@ export async function POST(request: NextRequest) {
       sme_achievable: seInArea >= 5,
     },
     gaps,
+    // Social procurement policy inserts for the relevant jurisdictions —
+    // paste-ready text tying this shortlist to the operative policy levers.
+    policy_inserts: policyInsertsForStates(
+      states.length > 0
+        ? states
+        : [...new Set(shortlist.map(s => s.state).filter(Boolean))] as string[],
+    ),
     summary: {
       total_entities: totalInArea,
       by_type: shortlist.reduce((acc, s) => {
