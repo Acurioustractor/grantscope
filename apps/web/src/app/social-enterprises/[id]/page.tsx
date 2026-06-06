@@ -1,5 +1,6 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import { notFound } from 'next/navigation';
+import { money } from '@/lib/services/report-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,8 +19,11 @@ interface SocialEnterprise {
   city: string | null;
   postcode: string | null;
   geographic_focus: string[];
-  certifications: Array<{ body: string; status?: string; since?: string; score?: number }>;
-  sources: Array<{ source: string; url?: string; scraped_at?: string }>;
+  // Elements are either plain strings ("Supply Nation Certified") or objects
+  certifications: Array<string | { body: string; status?: string; since?: string; score?: number }> | null;
+  // Two shapes exist in the data: an array of {source, url, scraped_at} or an
+  // object keyed by source name with per-source sync payloads.
+  sources: Array<{ source: string; url?: string; scraped_at?: string }> | Record<string, { url?: string; synced_at?: string }> | null;
   source_primary: string | null;
   enriched_at: string | null;
   profile_confidence: string;
@@ -68,7 +72,8 @@ function certBodyLabel(body: string): string {
     'buyability': 'BuyAbility',
     'supply-nation': 'Supply Nation',
   };
-  return labels[body] || body;
+  const key = body.replace(/_/g, '-');
+  return labels[key] || body.replace(/[_-]/g, ' ');
 }
 
 function sourceLabel(source: string): string {
@@ -117,16 +122,54 @@ export default async function SocialEnterpriseDetailPage({ params }: { params: P
 
   const enterprise = se as SocialEnterprise;
 
-  // Check if this SE has a matched ACNC charity
+  // Normalise both certification shapes to one list for rendering
+  const certEntries: Array<{ body: string; status?: string }> = (Array.isArray(enterprise.certifications) ? enterprise.certifications : [])
+    .map((c) => (typeof c === 'string' ? { body: c } : c && typeof c === 'object' ? { body: c.body ?? '', status: c.status } : { body: '' }))
+    .filter((c) => c.body);
+
+  // Normalise both source shapes to one list for rendering
+  const sourceEntries: Array<{ source: string; url?: string; scraped_at?: string }> = Array.isArray(enterprise.sources)
+    ? enterprise.sources
+    : enterprise.sources && typeof enterprise.sources === 'object'
+      ? Object.entries(enterprise.sources).map(([source, v]) => ({ source: source.replace(/_/g, '-'), url: v?.url, scraped_at: v?.synced_at }))
+      : [];
+
+  // Evidence layer — everything joins on ABN
+  const cleanAbn = enterprise.abn?.replace(/\s/g, '') ?? null;
+
+  interface GraphEntity { gs_id: string; remoteness: string | null; seifa_irsd_decile: number | null; is_community_controlled: boolean | null; lga_name: string | null; postcode: string | null }
+  interface ContractRow { title: string; contract_value: number; buyer_name: string; contract_start: string | null }
+  interface JusticeRow { program_name: string; amount_dollars: number | null; financial_year: string | null; source: string; sector: string | null }
+
   let matchedCharity: { abn: string; name: string } | null = null;
-  if (enterprise.abn) {
-    const { data: charity } = await supabase
-      .from('acnc_charities')
-      .select('abn, name')
-      .eq('abn', enterprise.abn.replace(/\s/g, ''))
-      .maybeSingle();
-    if (charity) matchedCharity = charity as { abn: string; name: string };
+  let graphEntity: GraphEntity | null = null;
+  let contracts: ContractRow[] = [];
+  let contractCount = 0;
+  let justiceRows: JusticeRow[] = [];
+
+  if (cleanAbn) {
+    const [charityRes, graphRes, contractRes, justiceRes] = await Promise.all([
+      supabase.from('acnc_charities').select('abn, name').eq('abn', cleanAbn).maybeSingle(),
+      supabase.from('gs_entities').select('gs_id, remoteness, seifa_irsd_decile, is_community_controlled, lga_name, postcode').eq('abn', cleanAbn).not('gs_id', 'is', null).limit(1).maybeSingle(),
+      supabase.from('austender_contracts').select('title, contract_value, buyer_name, contract_start', { count: 'exact' }).eq('supplier_abn', cleanAbn).not('contract_value', 'is', null).order('contract_value', { ascending: false }).limit(1000),
+      supabase.from('justice_funding').select('program_name, amount_dollars, financial_year, source, sector').eq('recipient_abn', cleanAbn).order('amount_dollars', { ascending: false, nullsFirst: false }).limit(200),
+    ]);
+    if (charityRes.data) matchedCharity = charityRes.data as { abn: string; name: string };
+    if (graphRes.data) graphEntity = graphRes.data as GraphEntity;
+    contracts = (contractRes.data || []) as ContractRow[];
+    contractCount = contractRes.count ?? contracts.length;
+    justiceRows = (justiceRes.data || []) as JusticeRow[];
   }
+
+  const contractTotal = contracts.reduce((sum, c) => sum + (c.contract_value || 0), 0);
+  const topBuyers = Object.entries(
+    contracts.reduce<Record<string, number>>((acc, c) => {
+      acc[c.buyer_name] = (acc[c.buyer_name] || 0) + (c.contract_value || 0);
+      return acc;
+    }, {}),
+  ).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const justiceTotal = justiceRows.reduce((sum, r) => sum + (r.amount_dollars || 0), 0);
+  const justiceYears = [...new Set(justiceRows.map(r => r.financial_year).filter(Boolean))].sort();
 
   return (
     <div className="max-w-4xl">
@@ -142,7 +185,7 @@ export default async function SocialEnterpriseDetailPage({ params }: { params: P
             <span className={`text-[11px] font-black px-2.5 py-1 border-2 uppercase tracking-widest ${orgTypeBadgeClass(enterprise.org_type)}`}>
               {orgTypeLabel(enterprise.org_type)}
             </span>
-            {enterprise.certifications?.map((cert, i) => (
+            {certEntries.map((cert, i) => (
               <span key={i} className="text-[11px] px-2 py-1 font-black uppercase tracking-widest border-2 border-money bg-money-light text-money">
                 {certBodyLabel(cert.body)}
               </span>
@@ -185,8 +228,8 @@ export default async function SocialEnterpriseDetailPage({ params }: { params: P
         const stats: Array<{ label: string; value: string }> = [];
         if (enterprise.legal_structure) stats.push({ label: 'Legal Structure', value: legalStructureLabel(enterprise.legal_structure) });
         if (enterprise.state) stats.push({ label: 'State', value: enterprise.state });
-        if (enterprise.certifications?.length > 0) stats.push({ label: 'Certifications', value: String(enterprise.certifications.length) });
-        if (enterprise.sources?.length > 0) stats.push({ label: 'Listed In', value: `${enterprise.sources.length} ${enterprise.sources.length === 1 ? 'directory' : 'directories'}` });
+        if (certEntries.length > 0) stats.push({ label: 'Certifications', value: String(certEntries.length) });
+        if (sourceEntries.length > 0) stats.push({ label: 'Listed In', value: `${sourceEntries.length} ${sourceEntries.length === 1 ? 'directory' : 'directories'}` });
 
         if (stats.length === 0) return null;
         return (
@@ -225,6 +268,106 @@ export default async function SocialEnterpriseDetailPage({ params }: { params: P
               </div>
             </Section>
           )}
+
+          {/* Delivery evidence — government contracts (AusTender) */}
+          {cleanAbn && (
+            <Section title="Delivery Evidence">
+              {contractCount > 0 ? (
+                <div className="bg-white border-4 border-bauhaus-black">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 border-b-4 border-bauhaus-black">
+                    <div className="p-4 border-r-4 border-bauhaus-black">
+                      <div className="text-[11px] text-bauhaus-muted uppercase tracking-widest font-black mb-1">Govt Contracts</div>
+                      <div className="text-xl font-black text-bauhaus-black">{contractCount.toLocaleString()}</div>
+                    </div>
+                    <div className="p-4 sm:border-r-4 border-bauhaus-black">
+                      <div className="text-[11px] text-bauhaus-muted uppercase tracking-widest font-black mb-1">Total Value</div>
+                      <div className="text-xl font-black text-money">{money(contractTotal)}{contractCount > contracts.length ? '+' : ''}</div>
+                    </div>
+                    <div className="p-4 col-span-2 sm:col-span-1 border-t-4 sm:border-t-0 border-bauhaus-black">
+                      <div className="text-[11px] text-bauhaus-muted uppercase tracking-widest font-black mb-1">Buyers</div>
+                      <div className="text-xl font-black text-bauhaus-black">{topBuyers.length === 5 ? '5+' : topBuyers.length}</div>
+                    </div>
+                  </div>
+                  <div className="p-4">
+                    <div className="text-[11px] text-bauhaus-muted uppercase tracking-widest font-black mb-2">Largest Contracts</div>
+                    <div className="space-y-2">
+                      {contracts.slice(0, 5).map((c, i) => (
+                        <div key={i} className="flex items-baseline justify-between gap-3 text-sm">
+                          <div className="min-w-0">
+                            <span className="font-bold text-bauhaus-black">{c.title}</span>
+                            <span className="text-bauhaus-muted font-medium"> — {c.buyer_name}{c.contract_start ? `, ${new Date(c.contract_start).getFullYear()}` : ''}</span>
+                          </div>
+                          <span className="font-black text-money whitespace-nowrap">{money(c.contract_value)}</span>
+                        </div>
+                      ))}
+                    </div>
+                    {topBuyers.length > 1 && (
+                      <div className="mt-3 pt-3 border-t-2 border-bauhaus-black/20">
+                        <div className="text-[11px] text-bauhaus-muted uppercase tracking-widest font-black mb-2">Top Buyers</div>
+                        <div className="flex gap-1.5 flex-wrap">
+                          {topBuyers.map(([buyer, value]) => (
+                            <span key={buyer} className="text-xs px-2.5 py-1 bg-bauhaus-canvas text-bauhaus-black font-bold border-2 border-bauhaus-black/20">
+                              {buyer} · {money(value)}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <p className="text-xs text-bauhaus-muted mt-3 font-medium">
+                      Source: AusTender public contract notices. Values can include amendments and may not equal cash paid in a single year.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-bauhaus-muted font-medium">
+                  No federal contract history found in AusTender for this ABN. Absence of a record is not absence of delivery — state and local procurement is not fully covered.
+                </p>
+              )}
+            </Section>
+          )}
+
+          {/* Grant funding history */}
+          {cleanAbn && justiceRows.length > 0 && (
+            <Section title="Grant Funding">
+              <div className="bg-white border-4 border-bauhaus-black p-4">
+                <div className="flex items-baseline gap-3 mb-3">
+                  <span className="text-xl font-black text-money">{money(justiceTotal)}</span>
+                  <span className="text-sm text-bauhaus-muted font-medium">
+                    across {justiceRows.length}{justiceRows.length === 200 ? '+' : ''} tracked grants
+                    {justiceYears.length > 0 && ` (${justiceYears[0]}–${justiceYears[justiceYears.length - 1]})`}
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {justiceRows.slice(0, 5).map((r, i) => (
+                    <div key={i} className="flex items-baseline justify-between gap-3 text-sm">
+                      <div className="min-w-0">
+                        <span className="font-bold text-bauhaus-black">{r.program_name}</span>
+                        <span className="text-bauhaus-muted font-medium">{r.financial_year ? ` — ${r.financial_year}` : ''}{r.sector ? ` · ${r.sector}` : ''}</span>
+                      </div>
+                      <span className="font-black text-money whitespace-nowrap">{r.amount_dollars ? money(r.amount_dollars) : '—'}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-bauhaus-muted mt-3 font-medium">
+                  Source: public funding datasets tracked by CivicGraph. Coverage is partial — this is a floor, not a total.
+                </p>
+              </div>
+            </Section>
+          )}
+
+          {/* No ABN — evidence layer unavailable */}
+          {!cleanAbn && (
+            <Section title="Delivery Evidence">
+              <div className="bg-bauhaus-canvas border-4 border-bauhaus-black p-4">
+                <p className="text-sm text-bauhaus-muted font-medium">
+                  No ABN on record, so this profile cannot be joined to public contract or grant evidence yet.
+                </p>
+                <a href="/giving/corrections" className="text-xs font-black text-bauhaus-blue hover:text-bauhaus-red uppercase tracking-widest mt-2 inline-block">
+                  Know the ABN? Submit a correction &rarr;
+                </a>
+              </div>
+            </Section>
+          )}
         </div>
 
         {/* Sidebar */}
@@ -253,12 +396,54 @@ export default async function SocialEnterpriseDetailPage({ params }: { params: P
             </div>
           )}
 
+          {/* Place context from the entity graph */}
+          {graphEntity && (
+            <div className="bg-white border-4 border-bauhaus-black p-4">
+              <h3 className="text-xs font-black text-bauhaus-black mb-3 uppercase tracking-widest">Place Context</h3>
+              <div className="space-y-2 text-sm">
+                {graphEntity.lga_name && (
+                  <div className="flex justify-between gap-2">
+                    <span className="text-bauhaus-muted font-medium">LGA</span>
+                    <span className="font-bold text-bauhaus-black text-right">{graphEntity.lga_name}</span>
+                  </div>
+                )}
+                {graphEntity.remoteness && (
+                  <div className="flex justify-between gap-2">
+                    <span className="text-bauhaus-muted font-medium">Remoteness</span>
+                    <span className="font-bold text-bauhaus-black text-right">{graphEntity.remoteness}</span>
+                  </div>
+                )}
+                {graphEntity.seifa_irsd_decile != null && (
+                  <div className="flex justify-between gap-2">
+                    <span className="text-bauhaus-muted font-medium">SEIFA Decile</span>
+                    <span className="font-bold text-bauhaus-black">{graphEntity.seifa_irsd_decile}/10</span>
+                  </div>
+                )}
+                {graphEntity.is_community_controlled && (
+                  <div className="text-xs px-2.5 py-1 bg-bauhaus-red/10 text-bauhaus-red font-black border-2 border-bauhaus-red uppercase tracking-widest inline-block">
+                    Community Controlled
+                  </div>
+                )}
+              </div>
+              <div className="mt-3 pt-3 border-t-2 border-bauhaus-black/20 space-y-1.5">
+                {(graphEntity.postcode || enterprise.postcode) && (
+                  <a href={`/places/${graphEntity.postcode || enterprise.postcode}`} className="text-xs font-black text-bauhaus-blue hover:text-bauhaus-red uppercase tracking-widest block">
+                    Place Dossier &rarr;
+                  </a>
+                )}
+                <a href={`/entities/${graphEntity.gs_id}`} className="text-xs font-black text-bauhaus-blue hover:text-bauhaus-red uppercase tracking-widest block">
+                  Full Entity Dossier &rarr;
+                </a>
+              </div>
+            </div>
+          )}
+
           {/* Certifications detail */}
-          {enterprise.certifications?.length > 0 && (
+          {certEntries.length > 0 && (
             <div className="bg-white border-4 border-bauhaus-black p-4">
               <h3 className="text-xs font-black text-bauhaus-black mb-3 uppercase tracking-widest">Certifications</h3>
               <div className="space-y-2">
-                {enterprise.certifications.map((cert, i) => (
+                {certEntries.map((cert, i) => (
                   <div key={i} className="flex items-center justify-between text-sm">
                     <span className="font-bold text-bauhaus-black">{certBodyLabel(cert.body)}</span>
                     <span className="text-[11px] px-1.5 py-0.5 font-black uppercase tracking-wider border-2 border-money bg-money-light text-money">
@@ -273,7 +458,7 @@ export default async function SocialEnterpriseDetailPage({ params }: { params: P
           {/* Data Sources */}
           <div className="bg-bauhaus-canvas border-4 border-bauhaus-black p-4 text-xs text-bauhaus-muted space-y-1.5 font-medium">
             <h3 className="text-xs font-black text-bauhaus-black mb-2 uppercase tracking-widest">Data Sources</h3>
-            {enterprise.sources?.map((src, i) => (
+            {sourceEntries.map((src, i) => (
               <div key={i}>
                 {src.url ? (
                   <a href={src.url} target="_blank" rel="noopener noreferrer" className="text-bauhaus-blue hover:text-bauhaus-red font-bold">
