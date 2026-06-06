@@ -73,9 +73,12 @@ function applyPublicFilters(query: any, type: string, searchParams: URLSearchPar
 
   const state = searchParams.get('state');
   if (state) {
-    if (type === 'entities' || type === 'places') filtered = filtered.eq('state', state.toUpperCase());
+    if (type === 'entities' || type === 'places' || type === 'social-enterprises') filtered = filtered.eq('state', state.toUpperCase());
     if (type === 'foundations') filtered = filtered.contains('geographic_focus', [`AU-${state.toUpperCase()}`]);
   }
+
+  const source = searchParams.get('source');
+  if (source && type === 'social-enterprises') filtered = filtered.eq('source_primary', source);
 
   const postcode = searchParams.get('postcode');
   if (postcode && (type === 'entities' || type === 'places')) {
@@ -104,6 +107,7 @@ function applyPublicFilters(query: any, type: string, searchParams: URLSearchPar
   if (type === 'entities') return filtered.ilike('canonical_name', `%${q}%`);
   if (type === 'foundations') return filtered.ilike('name', `%${q}%`);
   if (type === 'foundation-programs') return filtered.ilike('name', `%${q}%`);
+  if (type === 'social-enterprises') return filtered.or(`name.ilike.%${q}%,description.ilike.%${q}%`);
   if (type === 'grants') return filtered.or(`name.ilike.%${q}%,provider.ilike.%${q}%,program.ilike.%${q}%`);
   if (type === 'contracts') return filtered.or(`title.ilike.%${q}%,buyer_name.ilike.%${q}%,supplier_name.ilike.%${q}%`);
   if (type === 'political-donations') return filtered.or(`donor_name.ilike.%${q}%,donation_to.ilike.%${q}%`);
