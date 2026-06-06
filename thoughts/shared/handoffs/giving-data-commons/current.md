@@ -17,6 +17,9 @@ status: active
 ### Now
 [->] Stream complete + repo clean. Next up (pick one): fuzzy/API ABN pass for 1,911 unmatched SEs, or state-directory re-scrape
 
+### ⚠️ Heads-up (2026-06-07)
+**`claude/scraping-funding-orgs-TeFjK` has another ACTIVE session** — commits as recent as 3h ago (verified via git log). It's building a community-directory ingest pipeline: Ask Izzy/Infoxchange ISS API ingest, MyCommunityDirectory JSON API scraper, SA Community Directory, entity promotion bridge, fuzzy-matching speedups, ACNC AIS `--delta` mode, contact enrichment v2. **Before touching any scraping/ingest code, check that branch for in-flight work** — especially anything under `scripts/` related to directories, ACNC AIS, or entity bridging. Its own ledger: see commit `aeccf52` (community-finder continuity ledger).
+
 ### This Session
 - [x] Giving Data Commons committed + migration applied (data_catalog public metadata, data_corrections table, /giving pages, open API envelope)
 - [x] Deep review: 5 SE directories + landscape → strategy doc `thoughts/shared/research/2026-06-07-social-enterprise-commons-review.md`
