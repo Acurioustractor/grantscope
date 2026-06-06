@@ -3,20 +3,44 @@
  * Ingest ACNC AIS 2023 data (financials + programs)
  * Source: data.gov.au
  *
+ * --delta: ACNC re-publishes the same year's resource files monthly as late
+ * filers submit. Delta mode preloads the ABNs already in acnc_programs for
+ * the report year and inserts only programs from NEW ABNs — re-runnable
+ * without duplicating the original ingest. (Programs only; the AIS-financials
+ * half of this script predates the current acnc_ais schema and is loaded by
+ * import-acnc-financials instead.)
+ *
  * Usage:
  *   node --env-file=.env scripts/ingest-acnc-ais.mjs [--programs-only] [--ais-only]
+ *   node --env-file=.env scripts/ingest-acnc-ais.mjs --programs-only --delta
  */
 
 import { createClient } from '@supabase/supabase-js';
 import { createReadStream } from 'fs';
 import { parse } from 'csv-parse';
 import { pipeline } from 'stream/promises';
+import { spawnSync } from 'node:child_process';
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 const BATCH_SIZE = 500;
 const AIS_FILE = 'data/acnc/datadotgov_ais23.csv';
 const PROGRAMS_FILE = 'data/acnc/datadotgov_ais23_programs.csv';
+const REPORT_YEAR = 2023;
+const DELTA = process.argv.includes('--delta');
+
+// Existing-ABN set for delta mode, fetched in one psql round trip (60K+ rows —
+// too many for paged PostgREST selects to be worth it).
+function loadExistingProgramAbns() {
+  const res = spawnSync('psql', [
+    '-h', 'aws-0-ap-southeast-2.pooler.supabase.com', '-p', '5432',
+    '-U', 'postgres.tednluwflfhxyucgwigh', '-d', 'postgres',
+    '--no-psqlrc', '-qAt', '-c',
+    `SELECT DISTINCT abn FROM acnc_programs WHERE report_year = ${REPORT_YEAR}`,
+  ], { env: { ...process.env, PGPASSWORD: process.env.DATABASE_PASSWORD }, encoding: 'utf8', timeout: 120_000 });
+  if (res.status !== 0) throw new Error(`psql failed: ${(res.stderr || '').slice(0, 300)}`);
+  return new Set(res.stdout.split('\n').filter(Boolean));
+}
 
 function num(v) {
   if (!v || v === '' || v === 'N/A') return null;
@@ -118,7 +142,13 @@ async function ingestAIS() {
 }
 
 async function ingestPrograms() {
-  console.log('Ingesting Programs...');
+  console.log(`Ingesting Programs${DELTA ? ' (delta — new ABNs only)' : ''}...`);
+
+  let existingAbns = new Set();
+  if (DELTA) {
+    existingAbns = loadExistingProgramAbns();
+    console.log(`  ${existingAbns.size} ABNs already have ${REPORT_YEAR} programs — skipping those`);
+  }
 
   const parser = createReadStream(PROGRAMS_FILE).pipe(parse({
     columns: true,
@@ -129,6 +159,7 @@ async function ingestPrograms() {
 
   let batch = [];
   let total = 0;
+  let skipped = 0;
 
   for await (const row of parser) {
     // Collect operating locations
@@ -179,10 +210,11 @@ async function ingestPrograms() {
       operating_locations: locations.length ? locations : null,
       operating_locations_coords: coords.length ? coords : null,
       charity_weblink: row['Charity weblink']?.trim() || null,
-      report_year: 2023,
+      report_year: REPORT_YEAR,
     };
 
     if (!record.abn) continue;
+    if (DELTA && existingAbns.has(record.abn)) { skipped++; continue; }
     batch.push(record);
 
     if (batch.length >= BATCH_SIZE) {
@@ -206,7 +238,7 @@ async function ingestPrograms() {
     total += batch.length;
   }
 
-  console.log(`  Done: ${total} programs ingested`);
+  console.log(`  Done: ${total} programs ingested${DELTA ? ` (${skipped} rows from existing ABNs skipped)` : ''}`);
   return total;
 }
 
