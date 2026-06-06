@@ -1092,6 +1092,17 @@ export const AGENTS = {
     timeoutMs: 3_600_000,
     dependencies: [],
   },
+  // Infoxchange Service System (ISS) API — the durable, cloud-friendly community-org
+  // source (no WAF / datacenter-IP block, unlike HTML directory scraping). Writes to
+  // the same community_directory_orgs staging table; no-ops without an ISS API key.
+  'ingest-infoxchange-services': {
+    command: ['node', '--env-file=.env', 'scripts/ingest-infoxchange-services.mjs', '--apply'],
+    displayName: 'Infoxchange Service Directory Ingest',
+    category: 'import',
+    defaultPriority: 3,
+    timeoutMs: 1_800_000,
+    dependencies: [],
+  },
   // Promotes community_directory_orgs staging rows into gs_entities: ABN exact +
   // state-scoped fuzzy name link with contact enrichment. Link/enrich-only by
   // default (never injects new entities). To mint GS-DIR entities for genuinely-new
