@@ -1103,6 +1103,18 @@ export const AGENTS = {
     timeoutMs: 1_800_000,
     dependencies: [],
   },
+  // Government open-data community directories (CKAN CSV/JSON — SA Community
+  // Directory first). Explicitly licensed (CC-BY), stable schemas, and native ABNs,
+  // so rows promote via the bridge's exact-ABN path. Same staging table as the
+  // scraper and Infoxchange ingest.
+  'ingest-open-community-directories': {
+    command: ['node', '--env-file=.env', 'scripts/ingest-open-community-directories.mjs', '--apply'],
+    displayName: 'Open-Data Community Directory Ingest',
+    category: 'import',
+    defaultPriority: 3,
+    timeoutMs: 1_800_000,
+    dependencies: [],
+  },
   // Promotes community_directory_orgs staging rows into gs_entities: ABN exact +
   // state-scoped fuzzy name link with contact enrichment. Link/enrich-only by
   // default (never injects new entities). To mint GS-DIR entities for genuinely-new
