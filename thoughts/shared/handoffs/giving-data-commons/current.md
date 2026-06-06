@@ -9,13 +9,13 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-06-06T22:36:04Z
+**Updated:** 2026-06-07T00:00:00Z
 **Goal:** Open national registry + evidence layer for Australia's social enterprise supply base, built on the Giving Data Commons. Done when Phases 1-4 shipped: dataset public, profiles evidenced, buyer loop live, grants flywheel + claim-your-profile working.
 **Branch:** codex/australian-giving-data-commons
 **Test:** cd apps/web && npx tsc --noEmit
 
 ### Now
-[->] Phase 4: grants flywheel — SE-eligible grant matching on profiles + claim-your-profile via data_corrections flow
+[->] All 4 phases shipped. Push `aafde29` + consider PR to main
 
 ### This Session
 - [x] Giving Data Commons committed + migration applied (data_catalog public metadata, data_corrections table, /giving pages, open API envelope)
@@ -27,13 +27,15 @@ status: active
 - [x] Phase 3: buyer loop — analyse endpoint returns named SE recommendations; tender-pack overlays SE registry + policy inserts (`lib/social-procurement.ts`: Vic SPF/Buy Qld/NSW/IPP); public `/giving/suppliers` finder
 - [x] Restored `/continuity_ledger` skill from 2026-05-01 pruning archive (refs in CLAUDE.md/permissions/hook were never cleaned)
 - [x] All pushed to origin through `200ad6f`
+- [x] Phase 4a: Open Funding Matches on every SE profile (`lib/services/se-grant-match.ts` + section in `social-enterprises/[id]/page.tsx`) — sector→category + geography match, verified e2e on Indigenous QLD + no-ABN VIC profiles (commit `aafde29`, local only)
+- [x] Phase 4b: "Claim This Profile" CTA (yellow sidebar block) on every SE profile → `/giving/corrections?target_type=social_enterprise&target_id=…&claim_url=…`; no-ABN correction link carries same params (same commit)
 
 ### Next
-- [ ] Phase 4a: grants-for-SEs — filter grant_opportunities by SE-eligible target_recipients; matched funding section on SE profiles
-- [ ] Phase 4b: claim-your-profile — SE correction flow already linked from no-ABN profiles; add "claim this profile" CTA on all SE pages → data_corrections with target_type=social_enterprise
+- [ ] Push `aafde29` to origin (Tier 2 — ask first)
+- [ ] Consider PR to main — all 4 phases now landed
 - [ ] Fuzzy/API ABN pass for remaining 1,911 unmatched SE records (ABN_LOOKUP_GUID in .env; phases 1-2 of backfill-se-abns.mjs were exact/variant only)
 - [ ] Re-scrape state network directories properly (SASEC/QSEC behind login walls — the deleted junk came from crawling nav menus)
-- [ ] Consider PR to main once Phase 4 lands
+- [ ] Grant pool is thin: only ~322 open non-ARC grants tracked. Grants flywheel improves as discovery agents widen coverage (matching layer is done)
 
 ### Decisions
 - Positioning: "open national registry and evidence layer for Australia's social enterprise supply base" — tags/certifications are signals, NOT gates (Ben rejected exclusive directory model; memory: project_supply_base_evidence_layer)
@@ -44,7 +46,13 @@ status: active
 
 ### Open Questions
 - UNCONFIRMED: procurement analyse/tender-pack changes compile + auth-gate (401 verified) but full e2e needs a logged-in session with procurement module
-- UNCONFIRMED: whether grant_opportunities.target_recipients values support clean SE-eligibility filtering (schema check needed before Phase 4a)
+
+### Phase 4a data findings (verified 2026-06-07)
+- `target_recipients` is junk for filtering: 4,630 of 4,946 values are universities/researchers; rest is inconsistent free text → matched on `categories` instead
+- `source='arc-grants'` = 4,335 of 4,657 open grants (ARC research-project scrape, never SE-eligible, often NULL target_recipients + junk auto-categories) → hard-excluded in matcher
+- Eligibility booleans (accepts_pty_ltd etc.) only on 182 open grants — too sparse to use yet
+- Indigenous-targeted grants dominate the non-ARC pool → matcher only surfaces them for SEs with Indigenous signal (sector/org_type/ICN) or shared mission sector
+- Multiple supabase-js `.or()` calls AND together (each is a separate PostgREST `or=` param) — verified, zero filter leaks on 200-row sample
 
 ### Gotchas (rediscovered this session)
 - `scripts/lib/psql.mjs` swallows SQL errors silently → returns [] like an empty result. Re-run failing SQL via gsql/raw psql to see errors
@@ -54,17 +62,18 @@ status: active
 
 ### Workflow State
 pattern: phased-feature-build
-phase: 4
+phase: 4 (complete)
 total_phases: 4
 retries: 0
 max_retries: 3
 
 #### Resolved
-- goal: "Open SE registry + evidence layer, Phases 1-4"
+- goal: "Open SE registry + evidence layer, Phases 1-4" — ALL PHASES SHIPPED
 - resource_allocation: balanced
+- grant_opportunities.target_recipients taxonomy: junk — matched on categories + source exclusion instead
 
 #### Unknowns
-- grant_opportunities.target_recipients taxonomy: UNKNOWN (verify before 4a)
+(none)
 
 #### Last Failure
 (none)
