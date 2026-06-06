@@ -68,9 +68,14 @@ function trigrams(s) {
   for (let i = 0; i < p.length - 2; i++) r.push(p.slice(i, i + 3));
   return r;
 }
-function trigramSimilarity(a, b) {
-  const A = new Set(trigrams(a)), B = new Set(trigrams(b));
-  let inter = 0; for (const t of A) if (B.has(t)) inter++;
+const trigramSet = (s) => new Set(trigrams(s));
+// Jaccard over precomputed trigram sets. Sets are built ONCE per name (not per
+// pair) — at directory scale (10K listings × 20K candidates) per-pair set
+// construction is the difference between seconds and hours.
+function trigramSimilaritySets(A, B) {
+  let inter = 0;
+  const [small, large] = A.size <= B.size ? [A, B] : [B, A];
+  for (const t of small) if (large.has(t)) inter++;
   const union = A.size + B.size - inter;
   return union === 0 ? 0 : inter / union;
 }
@@ -127,12 +132,28 @@ async function loadEntitiesForStates(states) {
         .range(offset, offset + PAGE - 1);
       if (error) throw new Error(`load entities (${state}): ${error.message}`);
       if (!data?.length) break;
-      for (const e of data) cands.push({ ...e, _norm: normName(e.canonical_name) });
+      for (const e of data) {
+        const _norm = normName(e.canonical_name);
+        cands.push({ ...e, _norm, _tri: _norm ? trigramSet(_norm) : null });
+      }
       if (data.length < PAGE) break;
       offset += PAGE;
     }
-    byState.set(state, cands);
-    log(`  candidates for ${state}: ${cands.length}`);
+    // Token inverted index: a trigram similarity ≥ threshold between real org
+    // names implies at least one shared word, so only candidates sharing a
+    // token with the listing need scoring — ~20K candidates → dozens.
+    const tokenIndex = new Map();
+    cands.forEach((e, i) => {
+      if (!e._norm) return;
+      for (const tok of new Set(e._norm.split(' '))) {
+        if (tok.length < 3) continue;
+        let arr = tokenIndex.get(tok);
+        if (!arr) tokenIndex.set(tok, arr = []);
+        arr.push(i);
+      }
+    });
+    byState.set(state, { cands, tokenIndex });
+    log(`  candidates for ${state}: ${cands.length} (${tokenIndex.size} index tokens)`);
   }
   return byState;
 }
@@ -205,22 +226,35 @@ async function main() {
     const entitiesByState = states.length ? await loadEntitiesForStates(states) : new Map();
 
     const leftover = [...noState]; // no state ⇒ can't safely scope ⇒ leave for Phase 3
+    let scanned = 0;
     for (const l of fuzzyCandidates) {
-      const cands = entitiesByState.get(l.state) || [];
+      const { cands, tokenIndex } = entitiesByState.get(l.state) || { cands: [], tokenIndex: new Map() };
       const ln = normName(l.name);
       if (!ln) { leftover.push(l); continue; }
+      const lTri = trigramSet(ln);
+      // Candidates sharing ≥1 indexed token with the listing name.
+      const candIdx = new Set();
+      for (const tok of new Set(ln.split(' '))) {
+        if (tok.length < 3) continue;
+        for (const i of tokenIndex.get(tok) || []) candIdx.add(i);
+      }
       let best = null, bestScore = 0;
-      for (const e of cands) {
-        if (!e._norm) continue;
-        const score = e._norm === ln ? 1 : trigramSimilarity(ln, e._norm);
+      for (const i of candIdx) {
+        const e = cands[i];
+        if (!e._tri) continue;
+        if (e._norm === ln) { best = e; bestScore = 1; break; }
+        // Jaccard upper bound from set sizes — skip pairs that can't reach threshold.
+        const [a, b] = lTri.size <= e._tri.size ? [lTri.size, e._tri.size] : [e._tri.size, lTri.size];
+        if (a / b < THRESHOLD) continue;
+        const score = trigramSimilaritySets(lTri, e._tri);
         if (score > bestScore) { bestScore = score; best = e; }
-        if (score === 1) break;
       }
       if (best && bestScore >= THRESHOLD) {
         await linkAndEnrich(l.id, best, l, stats);
       } else {
         leftover.push(l);
       }
+      if (++scanned % 2000 === 0) log(`  fuzzy progress: ${scanned}/${fuzzyCandidates.length}`);
     }
     log(`Phase 2 (fuzzy): linked total=${stats.linked} enriched=${stats.enriched} (would-link dry=${stats.wouldLink})`);
 

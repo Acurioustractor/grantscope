@@ -1089,7 +1089,8 @@ export const AGENTS = {
     displayName: 'Community Services Directory Scraper',
     category: 'scraping',
     defaultPriority: 4,
-    timeoutMs: 3_600_000,
+    // National API crawl is ~2,900 paged requests at polite 1.5s delays ≈ 90 min.
+    timeoutMs: 10_800_000,
     dependencies: [],
   },
   // Infoxchange Service System (ISS) API — the durable, cloud-friendly community-org
