@@ -18,6 +18,15 @@ The ledger recorded VIC/SA tender portals as Cloudflare/Akamai-walled dead ends.
 | Host | `www.tenders.vic.gov.au` | `www.tenders.sa.gov.au` |
 | Agencies | 314 | 63 |
 | Contracts | ~56,468 | ~3,002 |
+| Public? | **Yes — fully open** | **No — auth-gated** |
+
+**SA correction (2026-06-08):** SA publishes agency names + contract *counts* on
+`/contract/buyerIndex`, but every actual contract list/detail redirects to
+`/login`. SA contract data needs an SA Tenders account — it CANNOT be crawled
+anonymously. VIC is fully public (no login). So the ingest is **VIC-only** until
+someone supplies SA credentials (then the same scraper works with an auth'd
+context). The earlier "SA first to validate" plan is moot — pipeline was instead
+validated on a 5-row VIC `--apply` slice (clean ABN+value+ISO dates in the DB).
 
 Data path (same on both):
 1. `/contract/buyerIndex` → every agency as `<a>… Name (count) → /contract/search?buyerId=<id>&browse=true`
