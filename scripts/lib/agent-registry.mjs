@@ -872,6 +872,22 @@ export const AGENTS = {
     timeoutMs: 600_000,
     dependencies: [],
   },
+  'ingest-grantconnect-go': {
+    command: ['node', '--env-file=.env', 'scripts/ingest-grantconnect-go.mjs'],
+    displayName: 'GrantConnect Open Opportunities',
+    category: 'discovery',
+    defaultPriority: 3,
+    timeoutMs: 600_000,
+    dependencies: [],
+  },
+  'ingest-vic-grants-open': {
+    command: ['node', '--env-file=.env', 'scripts/ingest-vic-grants-open.mjs'],
+    displayName: 'VIC Grants Gateway (Open)',
+    category: 'discovery',
+    defaultPriority: 3,
+    timeoutMs: 300_000,
+    dependencies: [],
+  },
 
   // ── Intelligence (org-facing agents) ──────────────────────────────────────
   'scout-grants-for-profiles': {
