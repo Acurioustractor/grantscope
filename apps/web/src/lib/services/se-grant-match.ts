@@ -7,7 +7,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 // so research-targeted grants are excluded and categories carry the match.
 
 const MATCH_COLS =
-  'id, name, provider, url, amount_min, amount_max, closes_at, deadline, categories, geography' as const;
+  'id, name, provider, url, amount_min, amount_max, closes_at, deadline, categories, geography, dgr_required, accepts_charity, accepts_pty_ltd, accepts_sole_trader' as const;
 
 export interface MatchedGrant {
   id: string;
@@ -29,6 +29,17 @@ interface SocialEnterpriseLike {
   sector?: string[] | null;
   state?: string | null;
   icn?: string | null;
+  // DGR endorsement — set by the caller when the ABN matches a DGR-endorsed
+  // charity (the profile page already does the ACNC lookup). Lets the twin-engine
+  // route DGR-required grants to the charity, not the trading company.
+  is_dgr?: boolean | null;
+}
+
+// Which legal vehicle is this enterprise, for entity-type eligibility gating.
+// Charities (ACNC/CLG) can receive DGR + charity-only grants; a Pty Ltd social
+// enterprise cannot. Goods twin-engine: Butterfly = charity, Goods on Country = company.
+function isCharityVehicle(se: SocialEnterpriseLike): boolean {
+  return se.org_type === 'charity' || se.legal_structure === 'charity' || se.is_dgr === true;
 }
 
 // SE sector tags are a mix of lowercase slugs ("indigenous", "community-development")
@@ -125,7 +136,19 @@ export async function matchGrantsForSocialEnterprise(
 
   const seIsIndigenous = weights.has('indigenous');
 
-  const matched: MatchedGrant[] = (data ?? []).map((g) => {
+  // Entity-type eligibility gate (the Goods twin-engine). Fields come from
+  // enrich-grant-eligibility.mjs; null = the page didn't state it = keep (we
+  // never assume ineligibility). A charity vehicle (Butterfly) and a trading
+  // company (Goods on Country) get different grants from the SAME search.
+  const charity = isCharityVehicle(se);
+  const eligibleRows = (data ?? []).filter((g) => {
+    if (charity) return g.accepts_charity !== false; // charities: drop only explicitly charity-excluded grants
+    if (g.dgr_required === true) return false; // a non-DGR company cannot receive DGR-required funding
+    if (g.accepts_pty_ltd === false) return false; // page explicitly excludes companies
+    return true;
+  });
+
+  const matched: MatchedGrant[] = eligibleRows.map((g) => {
     const categories: string[] = g.categories ?? [];
     const matchedOn = categories.filter((c) => weights.has(c));
     const categoryScore = matchedOn.reduce((sum, c) => sum + (weights.get(c) ?? 0), 0);
