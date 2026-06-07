@@ -40,10 +40,20 @@ const HAS_CERT_MARK = `(
         OR (jsonb_typeof(certifications) = 'array' AND jsonb_array_length(certifications) > 0)))
 )`;
 
+// v2: a row is ALSO verified when its ABN appears in a statutory register we
+// hold (ACNC charities, ORIC corporations) — regardless of how the row was
+// sourced. A self-registered row whose ABN is a 2012-registered charity should
+// not sit at 'identified'. Tier = strength of external verification.
+const STATUTORY_MATCH = `(
+  EXISTS (SELECT 1 FROM acnc_charities c WHERE c.abn = social_enterprises.abn)
+  OR EXISTS (SELECT 1 FROM oric_corporations o WHERE o.abn = social_enterprises.abn AND o.deregistered_on IS NULL)
+)`;
+
 const TIER_CASE = `CASE
   WHEN ${HAS_CERT_MARK} THEN 'certified'
   WHEN abn IS NOT NULL AND abn != ''
-       AND source_primary IN ('oric', 'senvic', 'secna', 'wasec', 'qsec', 'sasec', 'acnc-classified')
+       AND (source_primary IN ('oric', 'senvic', 'secna', 'wasec', 'qsec', 'sasec', 'acnc-classified')
+            OR ${STATUTORY_MATCH})
     THEN 'verified'
   ELSE 'identified'
 END`;
@@ -65,6 +75,12 @@ const BASIS_CASE = `CASE
       WHEN 'acnc-classified' THEN 'ACNC-registered charity, ABN matched'
       ELSE 'State SE network member (' || source_primary || '), ABN matched'
     END
+  WHEN abn IS NOT NULL AND abn != ''
+       AND EXISTS (SELECT 1 FROM acnc_charities c WHERE c.abn = social_enterprises.abn)
+    THEN 'ACNC-registered charity (statutory cross-check), ABN matched'
+  WHEN abn IS NOT NULL AND abn != ''
+       AND EXISTS (SELECT 1 FROM oric_corporations o WHERE o.abn = social_enterprises.abn AND o.deregistered_on IS NULL)
+    THEN 'ORIC-registered corporation (statutory cross-check), ABN matched'
   ELSE 'Directory-identified (' || COALESCE(source_primary, 'unknown') || ')'
 END`;
 
