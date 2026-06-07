@@ -9,78 +9,66 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-06-07T13:00:00+10:00
-**Goal:** Open national registry + evidence layer for Australia's social enterprise supply base, built on the Giving Data Commons. Done when Phases 1-4 shipped: dataset public, profiles evidenced, buyer loop live, grants flywheel + claim-your-profile working.
-**Branch:** main (feature branch merged via PR #55 and deleted)
+**Updated:** 2026-06-07T18:30:00+10:00
+**Goal:** Open national registry + evidence layer for Australia's social enterprise supply base, built on the Giving Data Commons. Phases 1-4 SHIPPED. Current mode: state-by-state coverage deepening (SA done).
+**Branch:** main
 **Test:** cd apps/web && npx tsc --noEmit && npx vitest run
 
 ### Now
-[->] Stream COMPLETE — all reachable state networks captured + ingested, ABN passes applied, everything committed + pushed (main @ fd1d421, working tree clean). No work in flight.
+[->] SA stream COMPLETE — committed + pushed (main @ add0c3e, working tree clean). No work in flight.
 
 ### ⚠️ Heads-up (2026-06-07)
-**`claude/scraping-funding-orgs-TeFjK` has another ACTIVE session** — commits as recent as 3h ago (verified via git log). It's building a community-directory ingest pipeline: Ask Izzy/Infoxchange ISS API ingest, MyCommunityDirectory JSON API scraper, SA Community Directory, entity promotion bridge, fuzzy-matching speedups, ACNC AIS `--delta` mode, contact enrichment v2. **Before touching any scraping/ingest code, check that branch for in-flight work** — especially anything under `scripts/` related to directories, ACNC AIS, or entity bridging. Its own ledger: see commit `aeccf52` (community-finder continuity ledger).
+**`claude/scraping-funding-orgs-TeFjK` has another ACTIVE session** — community-directory ingest pipeline (Ask Izzy/ISS API, MyCommunityDirectory, SA Community Directory, entity promotion bridge, ACNC AIS --delta, contact enrichment v2). **Before touching scraping/ingest code, check that branch** — its ledger: commit `aeccf52`. Its `community_directory_orgs` table (76K rows: sacommunity 14,439 + mycommunitydirectory 61,712) is what this session's SA classifier reads from — read-only, no conflict.
 
-### This Session
-- [x] Giving Data Commons committed + migration applied (data_catalog public metadata, data_corrections table, /giving pages, open API envelope)
-- [x] Deep review: 5 SE directories + landscape → strategy doc `thoughts/shared/research/2026-06-07-social-enterprise-commons-review.md`
-- [x] Phase 1: social_enterprises registered as public Commons dataset (giving-commons.ts entry cascades to /giving pages + export API; catalog migration `20260607000000` applied)
-- [x] Phase 1: ABN backfill 8,410 → 8,735 (`scripts/backfill-se-abns.mjs`, 325 matches via gs_entities + abr_registry)
-- [x] Deleted 144 junk SE rows (sasec/wasec/qsec nav-link scraper artifacts; backup `data/backups/2026-06-07-social-enterprises-junk-rows.csv`). Table: 10,646 rows
-- [x] Phase 2: evidence-enriched SE profiles (`social-enterprises/[id]/page.tsx`) — AusTender contracts, grant funding, place context, verification marks; fixed pre-existing crashes (sources object-shape 7K rows, certifications string-elements 6.8K rows)
-- [x] Phase 3: buyer loop — analyse endpoint returns named SE recommendations; tender-pack overlays SE registry + policy inserts (`lib/social-procurement.ts`: Vic SPF/Buy Qld/NSW/IPP); public `/giving/suppliers` finder
-- [x] Restored `/continuity_ledger` skill from 2026-05-01 pruning archive (refs in CLAUDE.md/permissions/hook were never cleaned)
-- [x] All pushed to origin through `200ad6f`
-- [x] Phase 4a: Open Funding Matches on every SE profile (`lib/services/se-grant-match.ts` + section in `social-enterprises/[id]/page.tsx`) — sector→category + geography match, verified e2e on Indigenous QLD + no-ABN VIC profiles (commit `aafde29`, local only)
-- [x] Phase 4b: "Claim This Profile" CTA (yellow sidebar block) on every SE profile → `/giving/corrections?target_type=social_enterprise&target_id=…&claim_url=…`; no-ABN correction link carries same params (same commit)
-- [x] (post-crash recovery 2026-06-07) Fuzzy ABN backfill `scripts/backfill-se-abns-fuzzy.mjs` APPLIED in 3 passes: 766 + 593 + 53 = 1,412 ABNs (norm-exact / abr-probe / trgm≥.85 / ABN Lookup API score+postcode-gated). API cache `data/abn-lookup-cache-se.jsonl`; audit CSVs in data/backups/
-- [x] State network ingest `scripts/ingest-state-se-networks.mjs` APPLIED: 1,127 new + 129 enriched from data-API payloads in `data/scrapes/` (senvic 834, secna 152, wasec 72, qsec 38, sasec 31 — SASEC Associates excluded). Supports `--source=<key>`; carries certifications jsonb
-- [x] WASEC: directory is a public Livewire app at admin.wasec.org.au (WP page is an empty shell) — `scripts/scrape-wasec-directory.mjs` captures 80 members w/ certs + impact areas
-- [x] SENTAS dead end VERIFIED: rebranded to SECTAS (sectas.org.au), no public member directory (members in private chat platform)
-- [x] FINAL STATE: social_enterprises 11,773 rows, 10,147 with ABN (86%), 1,626 missing. All committed + pushed (e7c59db…fd1d421)
+### This Session (SA deepening, 2026-06-07 afternoon)
+- [x] SA strategy review: 415 SA SEs (thinnest mainland state — SASEC login-walls its 82 members), 63 SA SEs hold 198 AusTender contracts ($359M), 21.8K SA gs_entities, $3.25B SA justice funding tracked
+- [x] **NEW `scripts/classify-directory-se-candidates.mjs`** — mines community_directory_orgs for SE candidates: signal pre-filter (op shops, supported employment, SE mentions) → site grouping + ABN merge → entity-type blocklist (service clubs/CFS/churches sans shop) → multi-provider LLM round-robin → **append-only verdict cache `data/classify-dir-se-cache.jsonl`** (quota-exhausted runs resume, never re-bill). Flags: --state --source --limit --min-confidence --apply
+- [x] SA pass APPLIED: 233 rows → 98 parent orgs → 65 inserted at ≥0.85 conf (`source_primary='sacommunity-classified'`). Caught: Bedford Group, SA Group Enterprises, Salvos Stores [32 sites], Lifeline [18 sites], Red Cross [12 sites], Goods @ Gertrude. Audit: `data/backups/2026-06-07-sa-directory-se-dryrun-final.log`
+- [x] Fuzzy ABN backfill re-run APPLIED: +7 ABNs on new rows (4 via ABN Lookup API score+postcode-gated, 3 norm-exact). Proposals CSV in data/backups/
+- [x] **SA policy insert in `lib/social-procurement.ts`** — SAIPP (min 20% economic-contribution weighting, Office of the Industry Advocate), Economic and Social Procurement Guideline (SE outcomes discretionary — SA has NO mandated SE weighting unlike Vic SPF), Aboriginal direct engagement ≤$550K + 0.5% target. Verified via web research agent against official sa.gov.au sources
+- [x] Committed + pushed: `54efeb0` (scripts/data), `add0c3e` (web policy)
+- [x] FINAL STATE: SA 415 → **480 SEs** (382 with ABN); registry-wide **11,838 rows, 10,181 with ABN (86%)**
+
+### Prior sessions (compressed)
+- Phases 1-4 all shipped (PR #55 → main): Commons dataset public, evidence-enriched SE profiles, buyer loop (analyse + tender-pack + /giving/suppliers), grant matching (`lib/services/se-grant-match.ts`) + claim-your-profile CTA
+- ABN backfills: 8,410 → 10,174 across exact + 3 fuzzy/API passes (caches: `data/abn-lookup-cache-se.jsonl`)
+- State network ingests: senvic 834, secna 152, wasec 72, qsec 38, sasec 31 (`scripts/ingest-state-se-networks.mjs --source=<key>`); SENTAS/SECTAS verified dead end (no public directory)
+- 144 junk SE rows deleted (nav-link artifacts; backup in data/backups/)
 
 ### Next
-- [x] Pushed + PR #55 merged to main (`d4dfcf6`)
-- [x] CI failure on main fixed: stale rpc mock in `entity-service.test.ts` (PR #37, `893680a`) — main CI fully green (221/221)
-- [x] Branch cleanup: 29 merged/superseded refs deleted (12 local + 17 remote), each verified by content. Kept: claude/scraping-funding-orgs-TeFjK (active other session), curious-tractor-thesis, codex/goods-civicgraph-signoff, wip/working-tree-snapshot-2026-04-24, recovered/civicscope-may22-features
-- [x] Fuzzy/API ABN pass — DONE (1,412 applied across 3 passes; see This Session)
-- [x] Re-scrape state network directories — DONE (5 networks ingested, SENTAS/SECTAS confirmed no directory)
-- [ ] Grant pool is thin: only ~322 open non-ARC grants tracked. Grants flywheel improves as discovery agents widen coverage (matching layer is done)
-- [ ] Remaining 1,626 no-ABN SEs are the long tail — thin/ambiguous names the conservative matcher rightly skips; route through claim-your-profile flow, not more automation
+- [ ] **Replicate SA classifier pass for other states**: `--state=VIC|NSW|QLD|WA --source=mycommunitydirectory` (61,712 rows untapped; same script, verdict cache makes it cheap to iterate)
+- [ ] Remaining 33 of 65 new SA rows lack ABN (chain sites: Salvos/Lifeline/Red Cross) — parent-org ABN mapping could attach them, but conservative matcher rightly skips shared trading names; consider a chain→parent-ABN lookup table
+- [ ] Grant pool still thin: ~322 open non-ARC grants. Matching layer done; needs discovery agents to widen coverage
+- [ ] Remaining ~1,657 no-ABN SEs are long tail — route through claim-your-profile flow, not more automation
 
 ### Decisions
-- Positioning: "open national registry and evidence layer for Australia's social enterprise supply base" — tags/certifications are signals, NOT gates (Ben rejected exclusive directory model; memory: project_supply_base_evidence_layer)
-- Public framing: "Social & Indigenous Enterprises" — 9.5K of 10.6K rows are Supply Nation/ORIC; not all are certified SEs. Caveat baked into dataset metadata
-- Evidence beats badges: AusTender contract history = revealed capability (1,135 SEs hold $15.6B); rank search results by delivery evidence
-- Goods on Country = archetype buyer journey ("buy a bed" → evidence profile)
-- Match SE ABNs against gs_entities FIRST, then abr_registry (legal names differ from trading names; abr partial index needs status='Active')
+- Positioning: open registry + evidence layer; tags/certifications are signals NOT gates (memory: project_supply_base_evidence_layer)
+- Evidence beats badges: AusTender contract history = revealed capability; rank by delivery evidence
+- SE classification needs entity-type blocklist on TOP of LLM verdicts — LLM over-classifies service clubs/churches/emergency services that run op shops (Rotary, Lions, CFS, cathedrals at conf 0.8). Blocklist exempts names that ARE the shop ("Waikerie Rotary Opportunity Shop" kept, "Rotary Club of Waikerie" blocked)
+- Site-level chain rows (Salvos Stores ×32) grouped to ONE parent row with sites array in sources jsonb — precedent: senvic already has site-level rows, but grouping is cleaner going forward
+- SA tender-pack copy honestly states SA has no mandated SE weighting — credibility beats overclaiming
+- LLM verdict caching (append-only JSONL keyed by source|state|normname) is now the standard pattern for classification scripts — provider quotas WILL exhaust mid-run (happened twice)
 
 ### Open Questions
-- UNCONFIRMED: procurement analyse/tender-pack changes compile + auth-gate (401 verified) but full e2e needs a logged-in session with procurement module
+- UNCONFIRMED: procurement analyse/tender-pack full e2e with logged-in session (compiles + 401-gates correctly; SA policy insert traced through policyInsertsForStates but not browser-tested)
 
-### Phase 4a data findings (verified 2026-06-07)
-- `target_recipients` is junk for filtering: 4,630 of 4,946 values are universities/researchers; rest is inconsistent free text → matched on `categories` instead
-- `source='arc-grants'` = 4,335 of 4,657 open grants (ARC research-project scrape, never SE-eligible, often NULL target_recipients + junk auto-categories) → hard-excluded in matcher
-- Eligibility booleans (accepts_pty_ltd etc.) only on 182 open grants — too sparse to use yet
-- Indigenous-targeted grants dominate the non-ARC pool → matcher only surfaces them for SEs with Indigenous signal (sector/org_type/ICN) or shared mission sector
-- Multiple supabase-js `.or()` calls AND together (each is a separate PostgREST `or=` param) — verified, zero filter leaks on 200-row sample
-
-### Gotchas (rediscovered this session)
-- `scripts/lib/psql.mjs` swallows SQL errors silently → returns [] like an empty result. Re-run failing SQL via gsql/raw psql to see errors
-- No `COUNT(DISTINCT x) OVER (...)` in Postgres — use GROUP BY + HAVING COUNT(*) = 1
-- `social_enterprises.sources` jsonb has TWO shapes (array | object-keyed-by-source); `certifications` elements are mostly strings not objects
-- Dev server may still be running on :3003 (`lsof -ti:3003` to check/kill)
+### Gotchas (active)
+- LLM providers (groq/deepseek/anthropic/gemini free tiers) exhaust after ~50-80 classification calls — verdict cache + re-run is the recovery path; 4-min cooldown helps
+- `scripts/lib/psql.mjs` swallows SQL errors (returns [] like empty); gsql/raw psql to see errors
+- social_enterprises UNIQUE is (name, state) — NOT abn; ABN dedupe must be done in script logic
+- Auto-mode classifier blocks `--live` mass-update scripts without explicit user approval of THAT action — ask first, then run
+- Dev server port 3003 (`lsof -ti:3003`)
 
 ### Workflow State
-pattern: phased-feature-build
-phase: 4 (complete)
-total_phases: 4
+pattern: state-coverage-deepening
+phase: 1 (SA complete)
+total_phases: open-ended (per-state)
 retries: 0
 max_retries: 3
 
 #### Resolved
-- goal: "Open SE registry + evidence layer, Phases 1-4" — ALL PHASES SHIPPED
+- goal: "SA coverage deepening — what we have, value, next steps" — SHIPPED (classifier + 65 SEs + 7 ABNs + tender-pack policy)
 - resource_allocation: balanced
-- grant_opportunities.target_recipients taxonomy: junk — matched on categories + source exclusion instead
 
 #### Unknowns
 (none)
@@ -97,10 +85,11 @@ North-star memory: `~/.claude/projects/-Users-benknight-Code-grantscope/memory/p
 
 Key files this stream:
 - `apps/web/src/lib/giving-commons.ts` — PUBLIC_DATASETS registry (one entry cascades everywhere), COMMONS_NAV
-- `apps/web/src/lib/social-procurement.ts` — jurisdiction policy inserts
+- `apps/web/src/lib/social-procurement.ts` — jurisdiction policy inserts (VIC/QLD/NSW/SA/Federal)
 - `apps/web/src/app/giving/**` — commons pages incl. new `suppliers/page.tsx`
 - `apps/web/src/app/social-enterprises/[id]/page.tsx` — evidence profile
 - `apps/web/src/app/api/procurement/{analyse,tender-pack}/route.ts` — buyer loop
-- `scripts/backfill-se-abns.mjs` — re-runnable ABN backfill (dry-run default, --live)
+- `scripts/backfill-se-abns.mjs` + `scripts/backfill-se-abns-fuzzy.mjs` — re-runnable ABN backfill (dry-run default, --live)
+- `scripts/classify-directory-se-candidates.mjs` — directory→SE classifier (dry-run default, --apply; verdict cache resumes)
 
-Verified numbers (2026-06-07): social_enterprises 10,646 rows / 8,735 with ABN (82%); 1,135 SEs hold 13,398 AusTender contracts worth $15.6B; 636 SEs received $2.0B tracked grants; 8,410 matched to gs_entities.
+Verified numbers (2026-06-07 evening): social_enterprises 11,838 rows / 10,181 with ABN (86%); SA 480 SEs / 382 with ABN; 63 SA SEs hold 198 contracts ($359M); registry-wide 1,135 SEs hold $15.6B AusTender contracts.
