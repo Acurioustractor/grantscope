@@ -59,6 +59,13 @@ const ORG_TYPE_RULES: Record<string, { cats: string[]; weight: number }> = {
 // small-business grants are a baseline match for all profiles.
 const BASE_CATS = ['enterprise', 'business'];
 
+// Individual-targeted programs (scholarships, fellowships, bursaries) and the
+// NSW per-student "High Learning Support Needs" school-payment series leak into
+// SE matches because they carry org-relevant category tags (community,
+// education, arts) with empty target_recipients. A trading enterprise cannot
+// apply for any of these — exclude by name. ~7% of the open pool.
+const INDIVIDUAL_TARGETED = /\b(scholarships?|fellowships?|bursar(y|ies))\b|high learning support needs/i;
+
 function categoryWeights(se: SocialEnterpriseLike): Map<string, number> {
   const weights = new Map<string, number>();
   const add = (cats: string[], weight: number) => {
@@ -137,6 +144,9 @@ export async function matchGrantsForSocialEnterprise(
       score: categoryScore + geoScore,
     };
   }).filter((g) => {
+    // Scholarships/fellowships/bursaries and per-student school payments target
+    // individuals, not enterprises — never a valid match for an org profile.
+    if (INDIVIDUAL_TARGETED.test(g.name)) return false;
     // Indigenous-targeted programs dominate the tracked pool. Only surface them
     // for SEs with an Indigenous signal, or where a mission sector also matched
     // (not just the generic enterprise/business baseline).
