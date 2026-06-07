@@ -10,6 +10,10 @@
  *   senvic-storepoint.json         SENVIC (VIC) — Storepoint map API (.results.locations)
  *   secna-embeddirectory.json      SECNA (NSW/ACT) — Embeddirectory items + numeric custom fields
  *   sasec-loadmembers.json         SASEC (SA)  — while(1);-prefixed JS-literal "JsonStructure"
+ *   wasec-directory.json           WASEC (WA)  — scrape-wasec-directory.mjs output (Livewire app)
+ *
+ * SENTAS (TAS) rebranded to SECTAS (sectas.org.au) — verified 2026-06-07: no
+ * public member directory exists (members live in a private chat platform).
  *
  * SASEC: only "Social Enterprise Ordinary Member" rows are ingested — Associate
  * Members are supporters (foundations, law firms), not social enterprises.
@@ -28,6 +32,7 @@ import { execSync } from 'node:child_process';
 import { writeFileSync, readFileSync, unlinkSync, mkdirSync } from 'node:fs';
 
 const LIVE = process.argv.includes('--live');
+const ONLY = process.argv.find((a) => a.startsWith('--source='))?.split('=')[1] || null;
 const CONN = `postgresql://postgres.tednluwflfhxyucgwigh:${process.env.DATABASE_PASSWORD}@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres`;
 const SCRAPED_AT = '2026-06-07';
 const PROPOSALS_FILE = `data/backups/${SCRAPED_AT}-state-se-networks-proposals.csv`;
@@ -185,6 +190,28 @@ function parseSasec() {
   return out;
 }
 
+function parseWasec() {
+  // output of scripts/scrape-wasec-directory.mjs (admin.wasec.org.au Livewire app)
+  const { members } = JSON.parse(readFileSync('data/scrapes/wasec-directory.json', 'utf-8'));
+  return members.filter((m) => !m.error).map((m) => ({
+    name: decode(m.name),
+    state: 'WA',
+    description: decode(m.description) || null,
+    website: cleanUrl(m.website),
+    postcode: null,
+    city: null,
+    sector: (m.impact_areas || []).map(decode).filter(Boolean),
+    geographic_focus: (m.service_areas || []).map(decode).filter(Boolean),
+    certifications: (m.certifications || []).map(decode).filter(Boolean),
+    entry: {
+      source: 'wasec', member: true, scraped_at: SCRAPED_AT,
+      url: `https://admin.wasec.org.au/directory/${m.slug}`,
+      ...(m.instagram && { instagram: m.instagram }), ...(m.facebook && { facebook: m.facebook }),
+      ...(m.linkedin && { linkedin: m.linkedin }),
+    },
+  }));
+}
+
 // ---------- SQL ----------
 
 const esc = (v) => String(v).replace(/'/g, "''");
@@ -194,13 +221,13 @@ const sqlJson = (o) => `'${esc(JSON.stringify(o))}'::jsonb`;
 
 function buildSql(rows) {
   const values = rows
-    .map((r) => `(${sqlText(r.name)}, ${sqlText(r.state)}, ${sqlText(r.description)}, ${sqlText(r.website)}, ${sqlText(r.postcode)}, ${sqlText(r.city)}, ${sqlArr(r.sector)}, ${sqlArr(r.geographic_focus)}, '${r.entry.source}', ${sqlJson(r.entry)})`)
+    .map((r) => `(${sqlText(r.name)}, ${sqlText(r.state)}, ${sqlText(r.description)}, ${sqlText(r.website)}, ${sqlText(r.postcode)}, ${sqlText(r.city)}, ${sqlArr(r.sector)}, ${sqlArr(r.geographic_focus)}, ${r.certifications?.length ? sqlJson(r.certifications) : 'NULL'}, '${r.entry.source}', ${sqlJson(r.entry)})`)
     .join(',\n');
 
   return `
 CREATE TEMP TABLE stage (
   name text, state text, description text, website text, postcode text, city text,
-  sector text[], geographic_focus text[], source_key text, source_entry jsonb
+  sector text[], geographic_focus text[], certifications jsonb, source_key text, source_entry jsonb
 );
 
 INSERT INTO stage VALUES
@@ -223,6 +250,7 @@ SET
   state       = COALESCE(se.state, m.state),
   sector      = CASE WHEN se.sector IS NULL OR se.sector = '{}' THEN m.sector ELSE se.sector END,
   geographic_focus = CASE WHEN se.geographic_focus IS NULL OR se.geographic_focus = '{}' THEN m.geographic_focus ELSE se.geographic_focus END,
+  certifications = COALESCE(se.certifications, m.certifications),
   sources = CASE
     WHEN se.sources IS NULL THEN jsonb_build_array(m.source_entry)
     WHEN jsonb_typeof(se.sources) = 'array' AND NOT EXISTS (
@@ -237,8 +265,8 @@ FROM matched m
 WHERE se.id = m.id;
 
 -- insert rows with no existing match
-INSERT INTO social_enterprises (name, state, description, website, postcode, city, sector, geographic_focus, org_type, source_primary, sources)
-SELECT st.name, st.state, st.description, st.website, st.postcode, st.city, st.sector, st.geographic_focus,
+INSERT INTO social_enterprises (name, state, description, website, postcode, city, sector, geographic_focus, certifications, org_type, source_primary, sources)
+SELECT st.name, st.state, st.description, st.website, st.postcode, st.city, st.sector, st.geographic_focus, st.certifications,
        'social_enterprise', st.source_key, jsonb_build_array(st.source_entry)
 FROM stage st
 WHERE NOT EXISTS (
@@ -272,7 +300,9 @@ function main() {
     ...parseSenvic(),
     ...parseSecna(),
     ...parseSasec(),
-  ];
+    ...parseWasec(),
+  ].filter((r) => !ONLY || r.entry.source === ONLY);
+  if (ONLY) console.log(`--source=${ONLY} filter active`);
 
   // validate + dedupe within batch on (upper name, state)
   const seen = new Set();
