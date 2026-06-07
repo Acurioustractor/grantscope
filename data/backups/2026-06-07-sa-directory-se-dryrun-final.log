@@ -1,0 +1,233 @@
+[classify-dir-se] Starting directory SE candidate classification
+[classify-dir-se]   state=SA, source=sacommunity, limit=300, min-confidence=0.85, apply=false
+[classify-dir-se] Pre-filter matched 233 directory rows
+[classify-dir-se] Blocked 25 rows by entity type (service clubs, emergency services, churches)
+[classify-dir-se] Grouped into 98 parent orgs
+[classify-dir-se] Dedupe: 15 skipped by ABN, 0 by name+state — 83 to classify
+[classify-dir-se] Verdict cache: 82 already judged, 1 need LLM
+[classify-dir-se] 
+========== SUMMARY ==========
+[classify-dir-se] Total checked:       83
+[classify-dir-se] Classified as SE:    65
+[classify-dir-se] Inserted:            0
+[classify-dir-se] Errors:              0
+[classify-dir-se] Classification rate: 78.3%
+[classify-dir-se] 
+[classify-dir-se] Sector breakdown:
+[classify-dir-se]   retail: 60
+[classify-dir-se]   community-development: 29
+[classify-dir-se]   food: 6
+[classify-dir-se]   environment: 5
+[classify-dir-se]   employment: 4
+[classify-dir-se]   disability: 3
+[classify-dir-se]   youth: 2
+[classify-dir-se]   education: 2
+[classify-dir-se]   aged-care: 2
+[classify-dir-se]   indigenous: 1
+[classify-dir-se]   housing: 1
+[classify-dir-se]   health: 1
+[classify-dir-se] 
+[classify-dir-se] Provider usage:
+[classify-dir-se]   minimax: 29
+[classify-dir-se]   groq: 51
+[classify-dir-se]   gemini: 3
+[classify-dir-se] =============================
+[classify-dir-se] 
+--- DRY RUN: Classifications (would insert) ---
+[classify-dir-se]   ADRA Op Shop [5 sites] (ABN: 85109435618)
+[classify-dir-se]     Confidence: 0.95, Sector: retail, Suburb: Wallaroo Mines
+[classify-dir-se]     Business model: Sells low‑cost second‑hand clothing and household goods; runs community pantry; profits fund charitable programs.
+[classify-dir-se]   Andamooka Opportunity Shop (ABN: none)
+[classify-dir-se]     Confidence: 0.95, Sector: retail, Suburb: Andamooka
+[classify-dir-se]     Business model: Operates an opportunity shop selling donated second‑hand goods (clothing, toys, books, furniture) to generate income that is reinvested into community support.
+[classify-dir-se]   Animal Welfare League (ABN: none)
+[classify-dir-se]     Confidence: 0.9, Sector: environment, community-development, Suburb: Gawler
+[classify-dir-se]     Business model: op shop sales
+[classify-dir-se]   Arthur's Bazaar Opportunity Shop (ABN: none)
+[classify-dir-se]     Confidence: 0.9, Sector: retail, community-development, Suburb: Loxton
+[classify-dir-se]     Business model: sells donated goods
+[classify-dir-se]   Australian Red Cross [12 sites] (ABN: none)
+[classify-dir-se]     Confidence: 0.9, Sector: retail, Suburb: Blackwood
+[classify-dir-se]     Business model: op shop sales
+[classify-dir-se]   Australian Red Cross Family Store (ABN: none)
+[classify-dir-se]     Confidence: 0.9, Sector: retail, Suburb: Loxton
+[classify-dir-se]     Business model: sells donated goods
+[classify-dir-se]   Bede's Bazaar (ABN: 93957737207)
+[classify-dir-se]     Confidence: 0.9, Sector: retail, Suburb: Semaphore
+[classify-dir-se]     Business model: sells second-hand goods
+[classify-dir-se]   Bedford Group Kadina (ABN: none)
+[classify-dir-se]     Confidence: 0.9, Sector: employment, disability, Suburb: Kadina
+[classify-dir-se]     Business model: supported employment in manufacturing
+[classify-dir-se]   Boomerang Centre Opportunity Shop (ABN: 46810603908)
+[classify-dir-se]     Confidence: 0.9, Sector: retail, Suburb: Elizabeth
+[classify-dir-se]     Business model: sells second-hand goods
+[classify-dir-se]   Bridgewater CFS Opportunity Shop (ABN: none)
+[classify-dir-se]     Confidence: 0.9, Sector: retail, community-development, Suburb: Bridgewater
+[classify-dir-se]     Business model: sells donated items
+[classify-dir-se]   Careworks Cottage Op Shop (ABN: none)
+[classify-dir-se]     Confidence: 0.9, Sector: community-development, retail, Suburb: Torrensville
+[classify-dir-se]     Business model: sells recycled goods
+[classify-dir-se]   Christian Care & Share Inc. (ABN: 80237854675)
+[classify-dir-se]     Confidence: 0.9, Sector: retail, Suburb: Mt Barker
+[classify-dir-se]     Business model: op shops
+[classify-dir-se]   Clifton Street Op Shop (ABN: none)
+[classify-dir-se]     Confidence: 1, Sector: retail, Suburb: Blair Athol
+[classify-dir-se]     Business model: sells donated goods
+[classify-dir-se]   Community Helpers Clothing Shop (ABN: none)
+[classify-dir-se]     Confidence: 0.9, Sector: retail, Suburb: Tanunda
+[classify-dir-se]     Business model: sells second-hand goods
+[classify-dir-se]   Community Helpers Furniture Warehouse (ABN: none)
+[classify-dir-se]     Confidence: 0.9, Sector: retail, community-development, Suburb: Nuriootpa
+[classify-dir-se]     Business model: sells pre-loved furniture
+[classify-dir-se]   Corner Op-Shop (ABN: 81360386279)
+[classify-dir-se]     Confidence: 0.9, Sector: retail, Suburb: Warradale
+[classify-dir-se]     Business model: sells pre-loved goods
+[classify-dir-se]   Cummins Community Opportunity Shop Inc. (ABN: 79353704403)
+[classify-dir-se]     Confidence: 1, Sector: retail, community-development, Suburb: Cummins
+[classify-dir-se]     Business model: sells second-hand goods
+[classify-dir-se]   Foundation 1 Op Shop & Community Pantry [3 sites] (ABN: 17957131245)
+[classify-dir-se]     Confidence: 0.9, Sector: food, retail, Suburb: Mt Barker
+[classify-dir-se]     Business model: op shop and community pantry sales
+[classify-dir-se]   Fusion Mid North SA (ABN: 26001273105)
+[classify-dir-se]     Confidence: 0.9, Sector: retail, youth, community-development, Suburb: Kapunda
+[classify-dir-se]     Business model: op shop
+[classify-dir-se]   Gawler Community House Op Shop (ABN: none)
+[classify-dir-se]     Confidence: 0.9, Sector: retail, community-development, education, Suburb: Gawler
+[classify-dir-se]     Business model: sells donated goods
+[classify-dir-se]   Goods @ Gertrude [2 sites] (ABN: 32415186787)
+[classify-dir-se]     Confidence: 0.95, Sector: retail, Suburb: Port Pirie
+[classify-dir-se]     Business model: Runs an opportunity shop selling donated secondhand clothing, furniture and bric-a-brac, generating income through retail sales to fund its social mission.
+[classify-dir-se]   Goodwill [5 sites] (ABN: none)
+[classify-dir-se]     Confidence: 1, Sector: retail, community-development, Suburb: Blackwood
+[classify-dir-se]     Business model: Sells second-hand goods to the public
+[classify-dir-se]   Goodwill Salisbury (ABN: 16069289133)
+[classify-dir-se]     Confidence: 0.95, Sector: retail, community-development, Suburb: Salisbury
+[classify-dir-se]     Business model: Operates retail store selling donated and new clothing, homewares, toys, books, and furniture to the public, with proceeds supporting charitable programs and community initiatives.
+[classify-dir-se]   Great Revival Shop (ABN: 96173836499)
+[classify-dir-se]     Confidence: 0.95, Sector: retail, community-development, Suburb: Tanunda
+[classify-dir-se]     Business model: Sells second‑hand donated items at low prices to fund charitable activities
+[classify-dir-se]   Gumeracha Op Shop (ABN: none)
+[classify-dir-se]     Confidence: 0.98, Sector: retail, environment, Suburb: Gumeracha
+[classify-dir-se]     Business model: Sells donated recycled clothing and goods, reinvesting profits into community mission
+[classify-dir-se]   Hackham West Community Centre (ABN: 37164327634)
+[classify-dir-se]     Confidence: 0.85, Sector: community-development, retail, food, aged-care, youth, Suburb: Hackham West
+[classify-dir-se]     Business model: Operates multiple trading activities including op shop retail, cafe/food services, venue hire, and fee-based out-of-hours school care. Revenue streams fund community programs serving seniors, families, and disadvantaged community members.
+[classify-dir-se]   Hangar Op Shop (ABN: none)
+[classify-dir-se]     Confidence: 0.95, Sector: retail, community-development, Suburb: Murray Bridge
+[classify-dir-se]     Business model: Operates a retail shop selling second-hand clothing and bric-a-brac, with proceeds reinvested into charitable or community purposes.
+[classify-dir-se]   Heta (ABN: 76004869718)
+[classify-dir-se]     Confidence: 0.95, Sector: employment, disability, indigenous, Suburb: Paralowie
+[classify-dir-se]     Business model: Provides disability and Indigenous employment placement, training and support services funded by government contracts and employer fees.
+[classify-dir-se]   Hutt Street Centre (ABN: 75055179354)
+[classify-dir-se]     Confidence: 0.9, Sector: housing, community-development, retail, education, health, food, Suburb: Adelaide
+[classify-dir-se]     Business model: Operates an opportunity shop to fund services for homeless people
+[classify-dir-se]   Lifeline Op Shop [16 sites] (ABN: none)
+[classify-dir-se]     Confidence: 0.95, Sector: retail, Suburb: Blackwood
+[classify-dir-se]     Business model: Operates retail op shops selling donated secondhand goods (clothing, furniture, books, etc.) to generate profit reinvested into Lifeline's charitable mission.
+[classify-dir-se]   Lifeline Warehouse [2 sites] (ABN: 97272740804)
+[classify-dir-se]     Confidence: 0.95, Sector: retail, Suburb: Mount Gambier
+[classify-dir-se]     Business model: Collects and sorts donated goods, supplies them to Lifeline op shops for resale; proceeds fund Lifeline's charitable mission.
+[classify-dir-se]   Little Shop of Treasures (ABN: none)
+[classify-dir-se]     Confidence: 0.9, Sector: retail, Suburb: Williamstown
+[classify-dir-se]     Business model: sells pre-loved items
+[classify-dir-se]   Luke's Op Shop (ABN: 44014163957)
+[classify-dir-se]     Confidence: 1, Sector: retail, Suburb: Modbury
+[classify-dir-se]     Business model: sells donated goods
+[classify-dir-se]   Mallala Op-shop and Coffee House (ABN: none)
+[classify-dir-se]     Confidence: 1, Sector: retail, food, community-development, Suburb: Mallala
+[classify-dir-se]     Business model: Sells second-hand goods and cafe items to the public.
+[classify-dir-se]   MarionLIFE Community Services Inc. (ABN: 38224372933)
+[classify-dir-se]     Confidence: 0.85, Sector: food, community-development, retail, Suburb: Mitchell Park
+[classify-dir-se]     Business model: Operates opportunity shop (Good Gear) and cafe (Side Gate Cafe) trading goods and affordable meals, with revenues supporting emergency assistance, food vouchers, financial counselling and referral services.
+[classify-dir-se]   North East Community Assistance Project Inc. (ABN: 81414250108)
+[classify-dir-se]     Confidence: 0.9, Sector: community-development, retail, Suburb: Hillcrest
+[classify-dir-se]     Business model: op shop
+[classify-dir-se]   Port Broughton Uniting Church Opportunity Shop (ABN: none)
+[classify-dir-se]     Confidence: 0.9, Sector: retail, community-development, Suburb: Port Broughton
+[classify-dir-se]     Business model: sells donated goods
+[classify-dir-se]   Quaker Shop (ABN: none)
+[classify-dir-se]     Confidence: 0.9, Sector: retail, community-development, Suburb: Norwood
+[classify-dir-se]     Business model: sells donated goods
+[classify-dir-se]   Red Bird Op Shop (ABN: none)
+[classify-dir-se]     Confidence: 0.9, Sector: retail, Suburb: Elizabeth North
+[classify-dir-se]     Business model: sells second-hand goods
+[classify-dir-se]   RSPCA Superstore (ABN: none)
+[classify-dir-se]     Confidence: 0.9, Sector: environment, retail, Suburb: Kidman Park
+[classify-dir-se]     Business model: op shop
+[classify-dir-se]   SA Group Enterprises Inc. (ABN: 40005498775)
+[classify-dir-se]     Confidence: 0.9, Sector: employment, disability, Suburb: Underdale
+[classify-dir-se]     Business model: trades goods/services through studios and workshops
+[classify-dir-se]   Salvation Army Greenwith Op Shop (ABN: none)
+[classify-dir-se]     Confidence: 1, Sector: retail, Suburb: Greenwith
+[classify-dir-se]     Business model: sells donated goods
+[classify-dir-se]   Salvation Army Thrift Shops [2 sites] (ABN: none)
+[classify-dir-se]     Confidence: 0.9, Sector: retail, Suburb: Para Hills
+[classify-dir-se]     Business model: sells secondhand goods
+[classify-dir-se]   Salvation Army Warehouse (ABN: none)
+[classify-dir-se]     Confidence: 0.9, Sector: retail, Suburb: Pooraka
+[classify-dir-se]     Business model: sells second-hand items
+[classify-dir-se]   Salvos Stores [32 sites] (ABN: none)
+[classify-dir-se]     Confidence: 0.9, Sector: retail, Suburb: Aberfoyle Park
+[classify-dir-se]     Business model: sells donated goods
+[classify-dir-se]   Save the Children Australia Opportunity Shop (ABN: none)
+[classify-dir-se]     Confidence: 0.9, Sector: retail, community-development, Suburb: Victor Harbor
+[classify-dir-se]     Business model: sells donated goods
+[classify-dir-se]   Save the Children Shop [4 sites] (ABN: 85504993227)
+[classify-dir-se]     Confidence: 0.9, Sector: retail, community-development, Suburb: Christies Beach
+[classify-dir-se]     Business model: op shop sales
+[classify-dir-se]   Second Chances Op Shop [2 sites] (ABN: 38932849828)
+[classify-dir-se]     Confidence: 0.9, Sector: community-development, retail, Suburb: Richmond
+[classify-dir-se]     Business model: sells pre-loved goods
+[classify-dir-se]   Smithfield Family Store (ABN: none)
+[classify-dir-se]     Confidence: 0.9, Sector: retail, Suburb: Smithfield
+[classify-dir-se]     Business model: sells second-hand goods
+[classify-dir-se]   St Vincent de Paul Society Family Centre [3 sites] (ABN: none)
+[classify-dir-se]     Confidence: 0.9, Sector: retail, community-development, Suburb: Hawthorn
+[classify-dir-se]     Business model: op shop sales
+[classify-dir-se]   St Vincent de Paul Society Opportunity Shop (ABN: none)
+[classify-dir-se]     Confidence: 0.9, Sector: retail, Suburb: Murray Bridge
+[classify-dir-se]     Business model: sells second-hand goods
+[classify-dir-se]   Stirling Community Shop (ABN: none)
+[classify-dir-se]     Confidence: 0.95, Sector: retail, community-development, Suburb: Stirling
+[classify-dir-se]     Business model: Operates a retail op shop selling donated second-hand goods, with proceeds funding local charitable causes.
+[classify-dir-se]   The Salvation Army Thrift Shop (ABN: none)
+[classify-dir-se]     Confidence: 0.95, Sector: retail, Suburb: Millicent
+[classify-dir-se]     Business model: Operates a thrift shop selling donated goods, reinvesting proceeds into Salvation Army community services.
+[classify-dir-se]   Thrifty V (ABN: none)
+[classify-dir-se]     Confidence: 0.95, Sector: retail, Suburb: Elizabeth Vale
+[classify-dir-se]     Business model: Operates a retail opportunity shop selling donated goods, with proceeds supporting Lyell McEwin Volunteers and Hospital.
+[classify-dir-se]   Thrifty V Elizabeth North (ABN: none)
+[classify-dir-se]     Confidence: 0.95, Sector: retail, community-development, Suburb: Elizabeth Vale
+[classify-dir-se]     Business model: Runs a second‑hand op shop selling donated items, with profits reinvested to support Lyell McEwin Volunteers and the hospital.
+[classify-dir-se]   Thrifty V Superstore (ABN: none)
+[classify-dir-se]     Confidence: 0.95, Sector: retail, community-development, Suburb: Elizabeth South
+[classify-dir-se]     Business model: Operates an opportunity shop selling donated goods; proceeds support Lyell McEwin Volunteers and the hospital, with profits reinvested into the social mission.
+[classify-dir-se]   Treasure Boxes Baby Boutique (ABN: 70713175191)
+[classify-dir-se]     Confidence: 0.95, Sector: environment, retail, Suburb: Edwardstown
+[classify-dir-se]     Business model: Operates a secondhand baby clothing retail shop selling pre‑loved items to generate revenue that supports families in need and environmental sustainability.
+[classify-dir-se]   Treasure Chest (ABN: none)
+[classify-dir-se]     Confidence: 0.95, Sector: retail, food, Suburb: Nuriootpa
+[classify-dir-se]     Business model: Operates an opportunity shop selling second‑hand antiques, furniture, bric‑a‑brac and clothing; also distributes food parcels to those in need.
+[classify-dir-se]   Two Wells Craft Shop (ABN: 25018406393)
+[classify-dir-se]     Confidence: 0.85, Sector: retail, community-development, Suburb: Two Wells
+[classify-dir-se]     Business model: Operates as an opportunity shop selling donated goods and crafts to raise funds for heritage restoration of Two Wells Courthouse and community projects.
+[classify-dir-se]   Two Wells Uniting Church 'Treasure Trove' Op Shop (ABN: none)
+[classify-dir-se]     Confidence: 0.95, Sector: retail, Suburb: Two Wells
+[classify-dir-se]     Business model: Operates an op shop selling donated secondhand goods to generate revenue that supports the church’s community and charitable mission.
+[classify-dir-se]   Waikerie Intercare Inc. (ABN: 58908547607)
+[classify-dir-se]     Confidence: 0.95, Sector: retail, community-development, Suburb: Waikerie
+[classify-dir-se]     Business model: Operates an opportunity shop selling second‑hand furniture, generating revenue to support community welfare programs.
+[classify-dir-se]   West Works Recycling Enterprises (ABN: none)
+[classify-dir-se]     Confidence: 0.95, Sector: environment, employment, Suburb: Edinburgh North
+[classify-dir-se]     Business model: Collects and recycles salvaged electrical items, white goods and furniture, sells recovered materials to fund job training and employment programs.
+[classify-dir-se]   Wirraminna Care (ABN: 22047661328)
+[classify-dir-se]     Confidence: 0.85, Sector: aged-care, retail, Suburb: Williamstown
+[classify-dir-se]     Business model: Runs residential aged care, day respite, independent living units and meal services, and operates an opportunity shop selling donated goods to generate profit reinvested into its mission.
+[classify-dir-se]   Women's Community Centre SA Inc. (ABN: 70808968491)
+[classify-dir-se]     Confidence: 0.9, Sector: retail, community-development, Suburb: Stepney
+[classify-dir-se]     Business model: Operates an opportunity shop selling donated clothing, bric-a-brac and toys to fund adult education and women's empowerment programs.
+[classify-dir-se]   Waikerie Rotary Opportunity Shop (ABN: 12808175408)
+[classify-dir-se]     Confidence: 0.95, Sector: retail, Suburb: Waikerie
+[classify-dir-se]     Business model: Operates a second‑hand clothing retail shop, selling donated items to generate profit reinvested into Rotary community service projects.
+[classify-dir-se] 
+Re-run with --apply to insert these records.
