@@ -9,7 +9,7 @@
 **Risks / open questions:**
 - NIAA may view a private evidence layer over THEIR policy as turf. Counter: open registry, attribution-first, we issue no marks.
 - Procurement intelligence may need to enter via a panel (e.g. a digital marketplace listing) — investigate before/after first meeting.
-- Recent contract titles in our data are PO numbers (untitled) — tender-pack demo category should be picked from their published forward procurement plan instead. TODO before any meeting.
+- **Demo scenario DECIDED + data-verified (2026-06-08): keywords "recruitment", states ACT(+NSW).** First People Recruitment Solutions — NIAA's own 50-contract supplier — ranks #1 on evidence (1,008 commonwealth contracts, $140.7M all-buyer total), followed by Zancott, Shine, Rainy Day (all certified, all with delivery history). The pitch moment: "search your category, your own most-trusted supplier tops the list on evidence." Page renders (200), API 401-gates correctly; logged-in e2e still needs Ben's procurement-tier session — server runs on :3003.
 - Find the named IPP/procurement contact — NOT a generic inbox. (NIAA org chart / LinkedIn / annual report.)
 
 **Runner-up packs (build only if NIAA stalls):**
