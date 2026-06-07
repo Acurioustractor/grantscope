@@ -28,8 +28,35 @@ interface SocialEnterprise {
   source_primary: string | null;
   enriched_at: string | null;
   profile_confidence: string;
+  verification_tier: string | null;
+  verification_basis: string | null;
+  verification_computed_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+const TIER_STYLES: Record<string, string> = {
+  certified: 'border-bauhaus-blue bg-link-light text-bauhaus-blue',
+  verified: 'border-money bg-money-light text-money',
+  identified: 'border-bauhaus-black/40 bg-bauhaus-canvas text-bauhaus-muted',
+};
+
+const TIER_TITLES: Record<string, string> = {
+  certified: 'Carries an external certification mark (Social Traders, Supply Nation, BuyAbility, B Corp)',
+  verified: 'On a statutory register (ACNC, ORIC) or state SE network, ABN matched',
+  identified: 'Directory-identified — no external verification mark yet',
+};
+
+function TierBadge({ tier, basis }: { tier: string | null; basis?: string | null }) {
+  if (!tier) return null;
+  return (
+    <span
+      title={basis ?? TIER_TITLES[tier]}
+      className={`text-[11px] px-2.5 py-1 font-black uppercase tracking-widest border-2 ${TIER_STYLES[tier] ?? TIER_STYLES.identified}`}
+    >
+      {tier}
+    </span>
+  );
 }
 
 function orgTypeLabel(type: string): string {
@@ -188,6 +215,7 @@ export default async function SocialEnterpriseDetailPage({ params }: { params: P
         <div className="flex items-start justify-between gap-4 mb-2">
           <h1 className="text-2xl sm:text-3xl font-black text-bauhaus-black">{enterprise.name}</h1>
           <div className="flex gap-1.5 flex-shrink-0 flex-wrap">
+            <TierBadge tier={enterprise.verification_tier} basis={enterprise.verification_basis} />
             <span className={`text-[11px] font-black px-2.5 py-1 border-2 uppercase tracking-widest ${orgTypeBadgeClass(enterprise.org_type)}`}>
               {orgTypeLabel(enterprise.org_type)}
             </span>
@@ -492,6 +520,34 @@ export default async function SocialEnterpriseDetailPage({ params }: { params: P
                   Full Entity Dossier &rarr;
                 </a>
               </div>
+            </div>
+          )}
+
+          {/* Verification tier */}
+          {enterprise.verification_tier && (
+            <div className="bg-white border-4 border-bauhaus-black p-4">
+              <h3 className="text-xs font-black text-bauhaus-black mb-3 uppercase tracking-widest">Verification</h3>
+              <div className="mb-2">
+                <TierBadge tier={enterprise.verification_tier} basis={enterprise.verification_basis} />
+              </div>
+              <p className="text-sm text-bauhaus-black font-medium">
+                {enterprise.verification_basis ?? TIER_TITLES[enterprise.verification_tier]}
+              </p>
+              <p className="text-xs text-bauhaus-muted mt-2 font-medium">
+                Tier reflects the strength of external verification, not how &ldquo;social&rdquo; an
+                enterprise is. Marks belong to their issuing bodies.
+                {enterprise.verification_computed_at && (
+                  <> Checked {new Date(enterprise.verification_computed_at).toLocaleDateString('en-AU', { year: 'numeric', month: 'short' })}.</>
+                )}
+              </p>
+              {enterprise.verification_tier === 'identified' && (
+                <a
+                  href={`/giving/corrections?target_type=social_enterprise&target_id=${enterprise.id}&claim_url=${encodeURIComponent(`/social-enterprises/${enterprise.id}`)}`}
+                  className="text-xs font-black text-bauhaus-blue hover:text-bauhaus-red uppercase tracking-widest mt-2 inline-block"
+                >
+                  Claim and strengthen this profile &rarr;
+                </a>
+              )}
             </div>
           )}
 
