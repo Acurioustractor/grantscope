@@ -185,30 +185,45 @@ async function main() {
     else upserted += chunk.length;
   }
 
+  let failed = 0;
   for (const ag of targets) {
     log(`agency "${ag.name}" (${ag.count} contracts) buyerId=${ag.buyerId}`);
-    await page.goto(`${HOST}/contract/search?buyerId=${ag.buyerId}&browse=true`, { waitUntil: 'domcontentloaded', timeout: 45000 });
-    await sleep(1500);
-    const rows = await page.evaluate(() => {
-      const seen = new Set(); const out = [];
-      for (const a of document.querySelectorAll('a[href*="/contract/view?id="]')) {
-        const id = (a.getAttribute('href').match(/id=(\d+)/) || [])[1];
-        if (!id || seen.has(id)) continue; seen.add(id);
-        const tr = a.closest('tr');
-        out.push({ id, href: a.getAttribute('href'), rowText: (tr?.innerText || '').replace(/\s+/g, ' ').trim() });
-      }
-      return out;
-    });
+    let rows;
+    try {
+      await page.goto(`${HOST}/contract/search?buyerId=${ag.buyerId}&browse=true`, { waitUntil: 'domcontentloaded', timeout: 45000 });
+      await sleep(1500);
+      rows = await page.evaluate(() => {
+        const seen = new Set(); const out = [];
+        for (const a of document.querySelectorAll('a[href*="/contract/view?id="]')) {
+          const id = (a.getAttribute('href').match(/id=(\d+)/) || [])[1];
+          if (!id || seen.has(id)) continue; seen.add(id);
+          const tr = a.closest('tr');
+          out.push({ id, href: a.getAttribute('href'), rowText: (tr?.innerText || '').replace(/\s+/g, ' ').trim() });
+        }
+        return out;
+      });
+    } catch (err) {
+      failed++;
+      log(`  ! skip agency ${ag.buyerId}: ${err.name === 'TimeoutError' ? 'list load timeout' : String(err.message || err).slice(0, 80)}`);
+      continue;
+    }
     for (const r of rows.slice(0, LIMIT_CONTRACTS)) {
       const ocid = `${prefix}-${r.id}`;
       if (done.has(ocid)) { skipped++; continue; }
-      await page.goto(`${HOST}${r.href}`, { waitUntil: 'domcontentloaded', timeout: 45000 });
-      await sleep(DELAY_MS);
-      const detail = await page.evaluate(() => {
-        const body = document.body.innerText.replace(/\r/g, ' ');
-        const contractor = document.querySelector('.contractor-details')?.innerText?.replace(/\s+/g, ' ').trim() || null;
-        return { body, contractor };
-      });
+      let detail;
+      try {
+        await page.goto(`${HOST}${r.href}`, { waitUntil: 'domcontentloaded', timeout: 45000 });
+        await sleep(DELAY_MS);
+        detail = await page.evaluate(() => {
+          const body = document.body.innerText.replace(/\r/g, ' ');
+          const contractor = document.querySelector('.contractor-details')?.innerText?.replace(/\s+/g, ' ').trim() || null;
+          return { body, contractor };
+        });
+      } catch (err) {
+        failed++;
+        log(`  ! skip ${r.id}: ${err.name === 'TimeoutError' ? 'load timeout (retried next run)' : String(err.message || err).slice(0, 80)}`);
+        continue;
+      }
       const f = extractLabelled(detail.body, DETAIL_LABELS);
       const list = parseListRow(r.rowText);
       const supplierRaw = detail.contractor || '';
@@ -244,7 +259,7 @@ async function main() {
   }
   const withAbn = contracts.filter(c => c.supplier_abn).length;
   const withVal = contracts.filter(c => c.contract_value).length;
-  log(`${APPLY ? `upserted ${upserted}` : `wrote ${contracts.length} → ${outPath}`} | ${contracts.length} new, ${skipped} skipped | ${withAbn} with ABN, ${withVal} with value`);
+  log(`${APPLY ? `upserted ${upserted}` : `wrote ${contracts.length} → ${outPath}`} | ${contracts.length} new, ${skipped} skipped, ${failed} failed | ${withAbn} with ABN, ${withVal} with value`);
   if (APPLY) log(`reverse with: DELETE FROM austender_contracts WHERE ocid LIKE '${prefix}-%'. Then refresh evidence MVs + re-run scout-se-buyers.`);
 
   await browser.close();
