@@ -15,7 +15,15 @@ status: active
 **Test:** cd apps/web && npx tsc --noEmit && npx vitest run
 
 ### Now
-[->] VIC classifier pass COMPLETE — committed locally (1 commit ahead of origin/main). Chain-ABN + grant-pool work pushed (origin @ e65322a). No work in flight.
+[->] **STRATEGY PIVOT (2026-06-08): buyer wedge decided** — "free open registry for everyone; paid evidence + tender tools for buyers." Full doc: `docs/strategy/buyer-wedge.md`. Data widening PAUSED. Machinery committed locally; **3 DB applies BLOCKED on Supabase outage** (pool exhausted ~30min, ECHECKOUTTIMEOUT both modes + REST down — check other session/dashboard):
+1. `psql -f migrations/2026-06-08-se-verification-tier.sql`
+2. `node --env-file=.env scripts/compute-se-verification-tiers.mjs --apply` (dry-run first)
+3. `node --env-file=.env scripts/scout-se-buyers.mjs --apply` (dry-run first)
+
+### Strategy session (2026-06-08, this session)
+- Competitive scan (web-verified): NOBODY links supplier profiles to AusTender/funding evidence; nobody does open need-first search. Social Traders SE Identifier (~6K open dashboard) converges on breadth — we win on evidence only. GrantGuru deep-dive: hand-curated (explicitly anti-scraping), council white-label GTM ($418+/mo tiers), no auto-matching, no API — their moat erodes under LLM extraction; their council channel validates a CivicGraph council-embed product
+- Built: `/wedge` skill (strategy guardrail), `/lighthouse` skill (buyer prospecting workflow), `scout-se-buyers.mjs` (austender → se_buyer_prospects), verification-tier migration + compute script (certified>verified>identified), CLAUDE.md strategy pointer
+- Next build (move 2): **need-first search front door** — spec in buyer-wedge.md §need-first
 
 ### VIC pass (2026-06-08, this session)
 - Pre-filter widened for mycommunitydirectory vocabulary ('op shop'/'thrift'/'disability enterprise'/'X Industries'+disability|employment) — sacommunity-only terms missed MCD listings. +97 candidates nationally for future state passes
