@@ -904,6 +904,14 @@ export const AGENTS = {
     timeoutMs: 600_000,
     dependencies: ['compute-se-verification-tiers'],
   },
+  'build-se-search-index': {
+    command: ['node', '--env-file=.env', 'scripts/build-se-search-index.mjs', '--apply'],
+    displayName: 'SE Search Index Builder',
+    category: 'enrichment',
+    defaultPriority: 3,
+    timeoutMs: 600_000,
+    dependencies: ['compute-se-verification-tiers'],
+  },
 
   // ── Intelligence (org-facing agents) ──────────────────────────────────────
   'scout-grants-for-profiles': {

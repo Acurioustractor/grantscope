@@ -28,7 +28,7 @@ The strategy is decided and written down. Your job is to apply it, not re-litiga
 ## Current move status (update as moves complete)
 
 - Move 1 (wedge picked): DONE 2026-06-08
-- Move 2 (need-first search front door): NOT STARTED — spec in the strategy doc
-- Move 3 (lighthouse buyer): machinery built (`scripts/scout-se-buyers.mjs`, `/lighthouse` skill); no buyer engaged yet
-- Move 4 (confidence strata): data layer built (`verification_tier` + compute script); UI badges NOT STARTED
+- Move 2 (need-first search front door): **SHIPPED 2026-06-08** — `/suppliers` (SSR, GET form), `search_suppliers` RPC over `se_search_index` (capability text = AusTender contract titles, weight A; tier + evidence boosts). Index rebuilt by `build-se-search-index` agent
+- Move 3 (lighthouse buyer): NIAA pack built + demo verified; waiting on Ben (named contact, PDF)
+- Move 4 (confidence strata): data layer + tier badges live on /suppliers; v2 statutory cross-check active. Remaining: badges on profile pages
 - Move 5 (widening paused): ACTIVE
