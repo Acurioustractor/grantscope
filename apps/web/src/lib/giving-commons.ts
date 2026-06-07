@@ -261,7 +261,7 @@ export function withCorsHeaders(headers = new Headers()) {
 
 export const COMMONS_NAV = [
   { href: '/giving', label: 'Search' },
-  { href: '/giving/suppliers', label: 'Suppliers' },
+  { href: '/suppliers', label: 'Suppliers' },
   { href: '/giving/downloads', label: 'Downloads' },
   { href: '/giving/api', label: 'API' },
   { href: '/giving/standard', label: 'Standard' },
