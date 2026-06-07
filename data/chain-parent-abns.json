@@ -1,0 +1,283 @@
+{
+  "_readme": [
+    "Chain -> parent-ABN lookup for social_enterprises rows that are site-level shops of a known parent org.",
+    "Applied by scripts/apply-chain-parent-abns.mjs (dry-run by default, --apply to write).",
+    "Every ABN here must be VERIFIED before adding — acnc_charities query, ABR MatchingNames/AbnDetails API, or the org's own website on the directory record. Record how in verified_via.",
+    "match.state null = national entity (applies in any state). match.postcodes (optional) gates to specific shops where one brand has multiple regional operators (e.g. Lifeline).",
+    "Precedent: site rows carrying parent ABN is established (senvic 'Save the Children Op Shop - Ararat' -> 99008610035; 'Lifeline Warehouse' SA south-east -> 97272740804).",
+    "TODO when VIC/NSW/QLD/WA classifier passes run: Salvos NSW/QLD (eastern territory entity not yet verified — ABR 'SALVOS STORES' business name search only returned VIC/SA/WA/NT trusts + 94917169560 unidentified), Vinnies NSW/QLD/WA, Lifeline regional centres per state."
+  ],
+  "entries": [
+    {
+      "chain": "salvation-army",
+      "pattern": "salvation army|salvos",
+      "state": "SA",
+      "abn": "13320346330",
+      "parent_name": "The Salvation Army (SA) Property Trust",
+      "verified_via": "acnc_charities; ABR MatchingNames: business name 'SALVOS STORES' registered to this ABN",
+      "verified_date": "2026-06-07"
+    },
+    {
+      "chain": "salvation-army",
+      "pattern": "salvation army|salvos",
+      "state": "VIC",
+      "abn": "64472238844",
+      "parent_name": "The Trustee for The Salvation Army (Victoria) Property Trust",
+      "verified_via": "acnc_charities; ABR MatchingNames: business name 'Salvos Stores' score 100 on this ABN",
+      "verified_date": "2026-06-07"
+    },
+    {
+      "chain": "salvation-army",
+      "pattern": "salvation army|salvos",
+      "state": "WA",
+      "abn": "25878329270",
+      "parent_name": "The Salvation Army (WA) Property Trust",
+      "verified_via": "acnc_charities; ABR MatchingNames: business name 'SALVOS STORES' registered to this ABN",
+      "verified_date": "2026-06-07"
+    },
+    {
+      "chain": "salvation-army",
+      "pattern": "salvation army|salvos",
+      "state": "NT",
+      "abn": "65906613779",
+      "parent_name": "The Salvation Army (NT) Property Trust",
+      "verified_via": "acnc_charities; ABR MatchingNames: other name 'SALVOS STORES' on this ABN",
+      "verified_date": "2026-06-07"
+    },
+    {
+      "chain": "salvation-army",
+      "pattern": "smithfield family store",
+      "state": "SA",
+      "abn": "13320346330",
+      "parent_name": "The Salvation Army (SA) Property Trust",
+      "verified_via": "sacommunity record website is salvationarmy.org.au ('Family Store' is Salvos branding)",
+      "verified_date": "2026-06-07"
+    },
+    {
+      "chain": "red-cross",
+      "pattern": "red cross",
+      "state": null,
+      "abn": "50169561394",
+      "parent_name": "Australian Red Cross Society",
+      "verified_via": "acnc_charities (single national entity)",
+      "verified_date": "2026-06-07"
+    },
+    {
+      "chain": "vinnies",
+      "pattern": "vincent de paul|vinnies",
+      "state": "SA",
+      "abn": "73591401592",
+      "parent_name": "St Vincent De Paul Society (SA) Inc",
+      "verified_via": "acnc_charities; existing acnc-classified SE row carries same ABN",
+      "verified_date": "2026-06-07"
+    },
+    {
+      "chain": "vinnies",
+      "pattern": "vincent de paul|vinnies",
+      "state": "VIC",
+      "abn": "28911702061",
+      "parent_name": "St Vincent de Paul Society Victoria",
+      "verified_via": "existing acnc-classified SE row in social_enterprises",
+      "verified_date": "2026-06-07"
+    },
+    {
+      "chain": "save-the-children",
+      "pattern": "save the children",
+      "state": null,
+      "abn": "99008610035",
+      "parent_name": "Save The Children Australia",
+      "verified_via": "acnc_charities; precedent senvic row 'Save the Children Op Shop - Ararat'",
+      "verified_date": "2026-06-07"
+    },
+    {
+      "chain": "rspca",
+      "pattern": "rspca",
+      "state": "SA",
+      "abn": "60740135753",
+      "parent_name": "Royal Society For The Prevention Of Cruelty To Animals (South Australia) Limited",
+      "verified_via": "acnc_charities",
+      "verified_date": "2026-06-07"
+    },
+    {
+      "chain": "rspca",
+      "pattern": "rspca",
+      "state": "NSW",
+      "abn": "87000001641",
+      "parent_name": "RSPCA New South Wales",
+      "verified_via": "acnc_charities",
+      "verified_date": "2026-06-07"
+    },
+    {
+      "chain": "rspca",
+      "pattern": "rspca",
+      "state": "VIC",
+      "abn": "56749449191",
+      "parent_name": "RSPCA Victoria",
+      "verified_via": "acnc_charities",
+      "verified_date": "2026-06-07"
+    },
+    {
+      "chain": "rspca",
+      "pattern": "rspca",
+      "state": "QLD",
+      "abn": "74851544037",
+      "parent_name": "RSPCA Queensland",
+      "verified_via": "acnc_charities",
+      "verified_date": "2026-06-07"
+    },
+    {
+      "chain": "rspca",
+      "pattern": "rspca",
+      "state": "WA",
+      "abn": "48626609587",
+      "parent_name": "RSPCA Western Australia",
+      "verified_via": "acnc_charities",
+      "verified_date": "2026-06-07"
+    },
+    {
+      "chain": "rspca",
+      "pattern": "rspca",
+      "state": "TAS",
+      "abn": "71723781546",
+      "parent_name": "RSPCA Tasmania",
+      "verified_via": "acnc_charities",
+      "verified_date": "2026-06-07"
+    },
+    {
+      "chain": "rspca",
+      "pattern": "rspca",
+      "state": "ACT",
+      "abn": "35730738037",
+      "parent_name": "RSPCA ACT",
+      "verified_via": "acnc_charities",
+      "verified_date": "2026-06-07"
+    },
+    {
+      "chain": "rspca",
+      "pattern": "rspca",
+      "state": "NT",
+      "abn": "42603546873",
+      "parent_name": "RSPCA Northern Territory Incorporated",
+      "verified_via": "acnc_charities",
+      "verified_date": "2026-06-07"
+    },
+    {
+      "chain": "animal-welfare-league",
+      "pattern": "animal welfare league",
+      "state": "SA",
+      "abn": "11397137539",
+      "parent_name": "Animal Welfare League Of South Australia Inc",
+      "verified_via": "acnc_charities; existing acnc-classified SE row carries same ABN",
+      "verified_date": "2026-06-07"
+    },
+    {
+      "chain": "animal-welfare-league",
+      "pattern": "animal welfare league",
+      "state": "NSW",
+      "abn": "88000533086",
+      "parent_name": "Animal Welfare League NSW",
+      "verified_via": "acnc_charities",
+      "verified_date": "2026-06-07"
+    },
+    {
+      "chain": "animal-welfare-league",
+      "pattern": "animal welfare league",
+      "state": "QLD",
+      "abn": "75521498584",
+      "parent_name": "Animal Welfare League Of Qld Inc",
+      "verified_via": "acnc_charities",
+      "verified_date": "2026-06-07"
+    },
+    {
+      "chain": "lifeline-adelaide",
+      "pattern": "lifeline",
+      "state": "SA",
+      "postcodes": ["5051"],
+      "abn": "33174490373",
+      "parent_name": "Uniting Communities Incorporated (Lifeline Adelaide)",
+      "verified_via": "ABR AbnDetails: business names 'Lifeline Adelaide' + 'Uniting Communities Lifeline' on this ABN; Blackwood shop shares address+phone with Goodwill Blackwood (goodwill@unitingcommunities.org). NOTE: south-east SA Lifeline shops belong to Lifeline South East (SA) Inc 97272740804 — postcode-gated for that reason",
+      "verified_date": "2026-06-07"
+    },
+    {
+      "chain": "goodwill-sa",
+      "pattern": "^goodwill",
+      "state": "SA",
+      "abn": "33174490373",
+      "parent_name": "Uniting Communities Incorporated",
+      "verified_via": "ABR AbnDetails: business name 'UNITING COMMUNITIES GOODWILL'; sacommunity record email goodwill@unitingcommunities.org",
+      "verified_date": "2026-06-07"
+    },
+    {
+      "chain": "bedford",
+      "pattern": "bedford",
+      "state": "SA",
+      "abn": "34158717447",
+      "parent_name": "Bedford Group Ltd",
+      "verified_via": "acnc_charities; existing buyability SE row 'Bedford Group' carries same ABN",
+      "verified_date": "2026-06-07"
+    },
+    {
+      "chain": "thrifty-v",
+      "pattern": "thrifty v",
+      "state": "SA",
+      "abn": "55911334857",
+      "parent_name": "Lyell McEwin Volunteer Association",
+      "verified_via": "sacommunity records cite lyellmcewinvolunteers.org.au; ABR MatchingNames entity-name score 93, postcode 5112 = Elizabeth Vale shop locations",
+      "verified_date": "2026-06-07"
+    },
+    {
+      "chain": "quakers-sa",
+      "pattern": "quaker shop",
+      "state": "SA",
+      "abn": "66135131741",
+      "parent_name": "The Religious Society Of Friends (South Australia and Northern Territory Regional Meeting) Incorporated",
+      "verified_via": "acnc_charities; sacommunity record website is the SA/NT Regional Meeting's quaker-shop page on quakersaustralia.info",
+      "verified_date": "2026-06-07"
+    },
+    {
+      "chain": "careworks-sa",
+      "pattern": "careworks",
+      "state": "SA",
+      "abn": "54771421307",
+      "parent_name": "CareWorks Inc",
+      "verified_via": "acnc_charities (CareWorks Inc, SA); sacommunity sibling record CareWorks SA cites cwsa.org.au, shop proceeds support CareWorks",
+      "verified_date": "2026-06-07"
+    },
+    {
+      "chain": "anglicare-sa",
+      "pattern": "west works recycling",
+      "state": "SA",
+      "abn": "69187578153",
+      "parent_name": "Anglicare SA Ltd.",
+      "verified_via": "acnc_charities; sacommunity record website is anglicaresa.com.au west-works page",
+      "verified_date": "2026-06-07"
+    },
+    {
+      "chain": "loxcare",
+      "pattern": "arthur'?s bazaar",
+      "state": "SA",
+      "abn": "16020107180",
+      "parent_name": "Loxcare Incorporated",
+      "verified_via": "acnc_charities (Loxcare Incorporated, SA); sacommunity record website loxcare.org.au",
+      "verified_date": "2026-06-07"
+    },
+    {
+      "chain": "journey-uniting-church",
+      "pattern": "mallala op",
+      "state": "SA",
+      "abn": "70226116175",
+      "parent_name": "The Journey Uniting Church",
+      "verified_via": "ABR MatchingNames entity-name score 99 (SA 5097); sacommunity record website journeyuc.com",
+      "verified_date": "2026-06-07"
+    },
+    {
+      "chain": "community-helpers-barossa",
+      "pattern": "community helpers",
+      "state": "SA",
+      "abn": "29110342685",
+      "parent_name": "Community Helpers Incorporated",
+      "verified_via": "ABR MatchingNames entity-name score 99, SA 5352 (Barossa — matches Nuriootpa/Tanunda shop locations)",
+      "verified_date": "2026-06-07"
+    }
+  ]
+}
