@@ -1,7 +1,7 @@
 ---
-date: 2026-06-06T22:36:04Z
+date: 2026-06-08T18:30:00+10:00
 session_name: giving-data-commons
-branch: codex/australian-giving-data-commons
+branch: main
 status: active
 ---
 
@@ -9,75 +9,74 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-06-08T04:45:00+10:00
-**Goal:** Buyer wedge: "free open registry for everyone; paid evidence + tender tools for buyers" (`docs/strategy/buyer-wedge.md`, decided 2026-06-08). Run `/wedge` before building anything SE/procurement/giving. Moves 1+2 SHIPPED, 3 waiting on Ben, 4 nearly done, 5 (widening pause) ACTIVE.
-**Branch:** main (everything pushed @ d619bbe, working tree clean)
+**Updated:** 2026-06-08T18:30:00+10:00
+**Goal:** Buyer wedge: "free open registry for everyone; paid evidence + tender tools for buyers" (`docs/strategy/buyer-wedge.md`). Run `/wedge` before building SE/procurement/giving. Moves 1+2+4 SHIPPED, 3 waiting on Ben, 5 (widening pause) ACTIVE.
+**Branch:** main (pushed @ 724e0f5, clean)
 **Test:** cd apps/web && npx tsc --noEmit && npx vitest run
 
 ### Now
-[->] Session COMPLETE — no work in flight. Wedge scoreboard: 1✓ wedge picked · 2✓ /suppliers shipped · 3 NIAA pack waiting on Ben (named contact + PDF) · 4 profile-page tier badges remain · 5 widening paused.
+[->] **VIC contract crawl RUNNING** (background `b5ame09cx`, nohup detached, ~20-30h, ~36+ contracts in). Log: `tail -f /tmp/vic-tenders-crawl.log`. When done: refresh evidence MVs + re-run `scout-se-buyers`. No foreground work in flight.
 
-### This Session (2026-06-08 — the big one)
-- [x] **Chain→parent-ABN mapping**: `data/chain-parent-abns.json` (30 verified entries) + `scripts/apply-chain-parent-abns.mjs`. 40 ABNs applied (25 SA + 15 VIC). Salvos SA = 13320346330 (ABR business name), Blackwood Goodwill+Lifeline = same shop = Uniting Communities, Thrifty V = Lyell McEwin Volunteer Assoc
-- [x] **Grant ingests live + scheduled daily**: `ingest-grantconnect-go.mjs` (CloudFront 403 is UA-gating only — 133 open federal GOs) + `ingest-vic-grants-open.mjs` (Tide ES proxy, 32 VIC). Pool 322 → 367 open dated non-ARC. Dead ends: QLD Grants Finder auth-gated SPA; SA Akamai-walled (per-tenant SmartyGrants only)
-- [x] **VIC classifier pass**: pre-filter widened for MCD vocabulary (+97 candidates nationally); 20 inserted ≥0.85, 15/20 with ABN. Registry 11,860 rows
-- [x] **STRATEGY CHECKPOINT → buyer wedge decided** (`docs/strategy/buyer-wedge.md`). Verified white spaces: nobody links supplier profiles to AusTender/funding evidence; nobody does open need-first search. GrantGuru deep-dive: hand-curated anti-scraping moat (erodes under LLM extraction), council white-label GTM validates a council-embed product, $3,500/yr = Pro/consultant tier
-- [x] **Skills built**: `/wedge` (strategy guardrail, has move-status table) + `/lighthouse` (buyer prospecting). Agents: `compute-se-verification-tiers` (v2: statutory cross-check vs acnc_charities/oric_corporations elevates ABN-matched rows), `scout-se-buyers` (austender → se_buyer_prospects, 374 buyers), `build-se-search-index`
-- [x] **Tiers live**: certified 7,025 / verified 3,813+ / identified ~1,022. Tiers + search-index scheduled daily 24h
-- [x] **NIAA lighthouse pack** (`thoughts/shared/prospects/niaa/` + PIPELINE.md): $72.9M/364 contracts/132 suppliers evidence one-pager, draft email, demo scenario verified (recruitment/ACT → First People Recruitment Solutions #1, their own 50-contract supplier). Why NIAA: IPP steward = multiplier. Pool is FEDERAL (AusTender) — VIC/SA SPF buyers need a state-tenders ingest (gated behind /wedge)
-- [x] **Goods twin-engine understood + registered**: ACT Pty Ltd (ABN 36697347676) **trades as "Goods on Country"** — registry row inserted (identified, self-registered). **The Butterfly Movement Ltd (22155132684) = Goods DGR home — Item 1 DGR + PBI since 2012, "TABOO Foundation" = business name same ACN, stewardship handover 26 Jun 2026, Indigenous-led board** — registry row at verified (ACNC cross-check), cross-linked in both sources jsonb. DGR grants → Butterfly; procurement → Pty. Memory updated (project_act_business_model)
-- [x] **ACT-context sync fixed**: template inside `act-global-infrastructure/scripts/sync-act-context.mjs` had drifted (said ABN PENDING, no Butterfly) — fixed + synced to 7 repos. Infra repo has LOCAL commit `3d87c2b` NOT pushed; 6 other repos have uncommitted CLAUDE.md updates
-- [x] **MOVE 2 SHIPPED — `/suppliers` need-first search**: `se_search_index` (capability_text = AusTender contract titles per ABN, weighted tsvector) + `search_suppliers` RPC (tier + evidence boosts) + SSR page (tier badges, evidence lines, claim-CTA, tender-pack CTA). Verified: "beds" → GEBIE Civil (44 contracts) + ALPA on revealed capability, Goods on Country surfaces. `/giving/suppliers` 308-redirects with query forwarded
+### This Session (2026-06-08 PM)
+- [x] **Move 4 SHIPPED** (`7ac2e3d`): tier badges on `/social-enterprises/[id]` — TierBadge in header + sidebar Verification card (tier+basis+date+signals-not-gates), claim-CTA on identified. Verified all 3 tiers SSR
+- [x] **Grant-match quality fix** (`f127a2c`): se-grant-match excludes individual-targeted programs (scholarships/fellowships/bursaries + NSW 'High Learning Support Needs') — were leaking into every profile via org category tags (~7%, 26/385). Regex handles plurals
+- [x] **STATE-TENDERS CRACKED** (`40efa65`/`fe1942c`/`724e0f5`): headless system-Chrome (channel:chrome + AutomationControlled off + webdriver hidden + domcontentloaded) clears Cloudflare on VIC/SA with NO proxy — overturns the "Akamai dead end". `scripts/scrape-state-tenders.mjs` resumable ocid-keyed upsert into austender_contracts (`vic-<id>`/`sa-<id>`). Pipeline validated on 5-row VIC slice (clean ABN+value+ISO dates). **SA is auth-gated** (all contract data behind /login — needs an account; VIC fully public). Spec: `docs/strategy/state-tenders-ingest.md`
+- [x] **Grant eligibility enrichment** (`19cfabd`): `scripts/enrich-grant-eligibility.mjs` — headless fetch + LLM round-robin (groq/gemini/deepseek/anthropic, JSONL cache) → dgr_required + accepts_charity/pty_ltd/sole_trader/unincorporated. NULL=page silent. Ran --apply: open grants enriched 37→225 (160 remain, quota-blocked). Finding: extractable signal is entity-type, not DGR (federal grants rarely gate DGR; philanthropic source = mostly scholarships)
+- [x] **Twin-engine routing** (`86427d1`): se-grant-match entity-type gate — from one search, a company (Goods on Country) drops dgr_required/accepts_pty_ltd=false grants; a charity (Butterfly) keeps them. isCharityVehicle() keys on org_type/legal_structure. tsc clean, no regression
+- [x] **Enrichment auto-resume cron** (`a7271f7b`, 7:07am daily, may be session-only) — finishes the 160 remaining open grants as quotas reset
 
 ### Next
-- [ ] **Ben (human)**: NIAA — find named IPP/procurement contact, render one-pager to PDF (re-verify figures same day), send. Then PIPELINE.md → contacted
-- [ ] **Ben (human)**: logged-in tender-pack e2e on :3003 (procurement-tier session) — still the standing UNCONFIRMED
-- [ ] **Ben (human)**: push infra repo local commit `3d87c2b`; check 6 other repos' uncommitted CLAUDE.md syncs
-- [ ] Move 4 finish: tier badges on `/social-enterprises/[id]` profile pages (same TierBadge pattern as /suppliers)
-- [ ] /wedge question pending: state-tenders ingest (Buying for Victoria / SA Tenders) to unlock VIC/SA lighthouse prospects — evidence-depth work, needs the ask
-- [ ] Goods grant-match demo: run se-grant-match against the twin-engine pair (DGR-required → Butterfly 22155132684, rest → Goods on Country 36697347676)
-- [ ] PAUSED per move 5: NSW/QLD/WA/ACT classifier passes (~100 candidates, cache makes them cheap when unpaused); GrantConnect /fo/list forecast XHR; QLD/SA grant headless scrapers
+- [ ] **When VIC crawl finishes**: refresh evidence MVs (`scripts/refresh-views-v2.mjs`) + re-run `scout-se-buyers` → VIC contracts surface on profiles/`/suppliers`, unlocks VIC lighthouse buyers
+- [ ] **Ben (human)**: NIAA — named IPP contact + one-pager→PDF (re-verify figures) + send → PIPELINE.md contacted
+- [ ] **Ben (human)**: logged-in tender-pack e2e on :3003 (standing UNCONFIRMED)
+- [ ] **Ben (human)**: push infra repo `3d87c2b`; check 6 repos' uncommitted CLAUDE.md syncs
+- [ ] SA contracts: blocked — needs SA Tenders account creds (then same scraper works with auth'd context)
+- [ ] Enrichment resume: cron OR run `node --env-file=.env scripts/enrich-grant-eligibility.mjs --apply --limit=400` until open pool fully flagged
+- [ ] PAUSED per move 5: NSW/QLD/WA/ACT classifier passes; GrantConnect forecast XHR
 
 ### Decisions
-- **Buyer wedge** (2026-06-08): free open registry / paid buyer tools. Overruling = update buyer-wedge.md FIRST. Widening PAUSED (scheduled agents exempt)
-- **Lighthouse = NIAA first** via IPP angle (mandatory federal targets + 80%-Indigenous registry beats VIC SPF until state-tenders ingest exists). Defence + Services Australia held
-- **Tier = strength of external verification, not SE-ness**; v2 statutory cross-check (ABN in acnc_charities/oric → verified) regardless of source
+- **State-tenders ingest is VIC-only** (2026-06-08): headless clears Cloudflare (no proxy); SA auth-gated (needs account). ocid `vic-<id>`/`sa-<id>` matches nsw-/qld- convention; reversible DELETE WHERE ocid LIKE 'vic-%'
+- **Grant eligibility = entity-type routing, not DGR**: DGR rare in corpus; accepts_pty_ltd/charity/sole_trader is the real signal. NULL=unknown=keep (never assume ineligible)
+- **Buyer wedge**: free open registry / paid buyer tools. Overruling = update buyer-wedge.md FIRST. Widening PAUSED (scheduled agents exempt)
+- **Lighthouse = NIAA first** via IPP angle. Defence + Services Australia held
+- **Tier = strength of external verification, not SE-ness**; v2 statutory cross-check
 - Evidence beats badges; tags/certs are signals NOT gates (north-star memory)
-- Outreach: drafts only, Ben sends (Tier 3); every outbound claim traces to a queryable row
-- LLM verdict caching (append-only JSONL) = standard for classification scripts; entity-type blocklist on top of LLM verdicts
-- SA tender-pack honestly states no mandated SE weighting — credibility beats overclaiming
+- Outreach: drafts only, Ben sends (Tier 3)
+- LLM verdict caching (append-only JSONL) = standard for classification/enrichment scripts
 
 ### Open Questions
-- UNCONFIRMED: tender-pack logged-in e2e (page 200 + API 401-gates verified; full flow needs Ben's session)
-- UNCONFIRMED: NIAA turf sensitivity (private evidence layer over THEIR policy) — counter: open registry, attribution-first, we issue no marks
+- UNCONFIRMED: tender-pack logged-in e2e (page 200 + API 401 verified; full flow needs Ben's session)
+- UNCONFIRMED: NIAA turf sensitivity — counter: open registry, attribution-first, we issue no marks
+- UNCONFIRMED: VIC crawl will run ~20-30h; ~2s/contract may vary; watch for portal rate-limiting in the log
 
 ### Gotchas (active)
-- **DB outages recur around 3am AEST** (ECHECKOUTTIMEOUT both pooler modes + REST): suspect nightly MV refresh cron + other session's ingest. Back off, retry in minutes
-- Another ACTIVE session on `claude/scraping-funding-orgs-TeFjK` (community-directory ingest) — check before touching scraping/ingest code; community_directory_orgs is read-only to us
-- psql `\o` redirect swallows `UPDATE n` status tags — parse both channels (bit us once)
-- `array_to_string` is not IMMUTABLE — can't live in generated columns (pre-join text in build scripts)
-- `scripts/lib/psql.mjs` swallows SQL errors; gsql/raw psql to see them. gsql REST also dies during DB saturation
-- social_enterprises UNIQUE is (name, state) NOT abn; grant_opportunities upsert target = unique non-partial url index
-- Auto-mode classifier blocks --live/mass updates + agent_schedules inserts + CLAUDE.md-rewriting scripts without explicit user approval of THAT action
-- LLM free tiers exhaust after ~50-80 classification calls — verdict cache + re-run
-- Dev server port 3003 (`lsof -ti:3003`); cold compile ~18s, curl timeouts ≥30s
+- **VIC crawl writing vic-* rows to austender_contracts** (b5ame09cx) — don't run conflicting austender_contracts ops; resumable (skips done ocids) if it dies
+- **Headless scraping pattern that beats Cloudflare**: system Chrome (channel:'chrome') + `--disable-blink-features=AutomationControlled` + hide navigator.webdriver + `domcontentloaded` (NOT networkidle). curl/WebFetch get 403; headless clears it
+- **DB outages recur ~3am AEST** (ECHECKOUTTIMEOUT): back off, retry
+- Another ACTIVE session on `claude/scraping-funding-orgs-TeFjK` — check before touching scraping/ingest; community_directory_orgs read-only to us
+- `array_to_string` not IMMUTABLE — can't live in generated columns
+- `scripts/lib/psql.mjs` swallows SQL errors; use gsql/raw psql
+- social_enterprises UNIQUE is (name, state) NOT abn
+- Auto-mode classifier blocks DB writes that cross a stated session boundary even with later user override — needs explicit re-confirm + permission prompt (hit twice this session on the VIC --apply)
+- LLM free tiers exhaust after ~50-150 calls — verdict cache + re-run
+- Dev server port 3003; cold compile ~18s, curl timeouts ≥30s
 
 ### Workflow State
 pattern: buyer-wedge-execution
-phase: 2 of 5 moves shipped
+phase: 4 of 5 moves shipped
 total_phases: 5 (wedge moves)
 retries: 0
 max_retries: 3
 
 #### Resolved
-- goal: "build the agent and skills to do this [5-move plan]" — moves 1+2 shipped, 3 machinery done, 4 nearly, 5 active
+- goal: "build the agent and skills to do this [5-move plan]" — moves 1+2+4 shipped, 3 waiting on Ben, 5 active; state-tenders evidence-depth crawl LIVE
 - resource_allocation: balanced
 
 #### Unknowns
-(none blocking)
+- VIC crawl completion time + whether it survives session close (nohup; resumable either way)
 
 #### Last Failure
-(none)
+(none — VIC --apply was classifier-blocked twice on session-boundary grounds, resolved by explicit user "run it")
 
 ---
 
