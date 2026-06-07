@@ -888,6 +888,22 @@ export const AGENTS = {
     timeoutMs: 300_000,
     dependencies: [],
   },
+  'compute-se-verification-tiers': {
+    command: ['node', '--env-file=.env', 'scripts/compute-se-verification-tiers.mjs', '--apply'],
+    displayName: 'SE Verification Tiers',
+    category: 'enrichment',
+    defaultPriority: 3,
+    timeoutMs: 300_000,
+    dependencies: [],
+  },
+  'scout-se-buyers': {
+    command: ['node', '--env-file=.env', 'scripts/scout-se-buyers.mjs', '--apply'],
+    displayName: 'SE Buyer Prospect Scout',
+    category: 'analytics',
+    defaultPriority: 4,
+    timeoutMs: 600_000,
+    dependencies: ['compute-se-verification-tiers'],
+  },
 
   // ── Intelligence (org-facing agents) ──────────────────────────────────────
   'scout-grants-for-profiles': {

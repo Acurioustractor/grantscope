@@ -72,6 +72,11 @@ Auto-compaction is lossy and compounds — each compression degrades context. Af
 - Read the handoff/ledger file immediately to recover domain context.
 - Don't guess — verify state by checking git status, running quick DB queries, and reading the plan file.
 
+## SE Registry Strategy (decided 2026-06-08)
+
+**"Free open registry for everyone; paid evidence + tender tools for buyers."**
+Before building or prioritising any SE-registry/procurement/giving feature, check `docs/strategy/buyer-wedge.md` (or run `/wedge`). Data widening is paused; evidence depth and buyer UX are the priority. Lighthouse-buyer workflow: `/lighthouse`.
+
 ## Project Structure
 
 - **Monorepo:** `apps/web` (Next.js 15, Tailwind 4), `scripts/` (data pipeline agents)
