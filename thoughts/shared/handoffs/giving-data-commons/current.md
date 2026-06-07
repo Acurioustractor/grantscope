@@ -9,18 +9,25 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-06-07T18:30:00+10:00
-**Goal:** Open national registry + evidence layer for Australia's social enterprise supply base, built on the Giving Data Commons. Phases 1-4 SHIPPED. Current mode: state-by-state coverage deepening (SA done).
+**Updated:** 2026-06-08T01:30:00+10:00
+**Goal:** Open national registry + evidence layer for Australia's social enterprise supply base, built on the Giving Data Commons. Phases 1-4 SHIPPED. Current mode: state-by-state coverage deepening (SA done) + grant-pool widening (federal+VIC live).
 **Branch:** main
 **Test:** cd apps/web && npx tsc --noEmit && npx vitest run
 
 ### Now
-[->] SA stream COMPLETE — committed + pushed (main @ add0c3e, working tree clean). No work in flight.
+[->] Chain-ABN mapping + grant-pool widening COMPLETE — committed locally (2 commits ahead of origin/main, NOT pushed). No work in flight.
 
 ### ⚠️ Heads-up (2026-06-07)
 **`claude/scraping-funding-orgs-TeFjK` has another ACTIVE session** — community-directory ingest pipeline (Ask Izzy/ISS API, MyCommunityDirectory, SA Community Directory, entity promotion bridge, ACNC AIS --delta, contact enrichment v2). **Before touching scraping/ingest code, check that branch** — its ledger: commit `aeccf52`. Its `community_directory_orgs` table (76K rows: sacommunity 14,439 + mycommunitydirectory 61,712) is what this session's SA classifier reads from — read-only, no conflict.
 
-### This Session (SA deepening, 2026-06-07 afternoon)
+### This Session (chain ABNs + grant pool, 2026-06-07 night)
+- [x] **NEW `data/chain-parent-abns.json` + `scripts/apply-chain-parent-abns.mjs`** — verified chain→parent-ABN lookup (30 entries; every ABN checked against acnc_charities or ABR API, never memory). Pattern+state+postcode-gated, dry-run default, conflict detection, provenance into sources jsonb. APPLIED: 40 ABNs (25 SA + 15 VIC senvic bonus). SA classified no-ABN 33 → 8 (all independents). Registry **86.3% ABN coverage (10,221/11,838)**. Key resolutions: Salvos SA = SA Property Trust 13320346330 (ABR business name 'SALVOS STORES'), both Blackwood Goodwill/Lifeline shops = Uniting Communities 33174490373 (same address+phone), Thrifty V ×3 = Lyell McEwin Volunteer Association 55911334857. Commit `(chain-abn)`
+- [x] **NEW `scripts/ingest-grantconnect-go.mjs`** — GrantConnect CloudFront 403 is UA-gating only; browser UA on www.grants.gov.au/go/list serves full HTML. 133 open federal GOs ingested (99 dated + 34 ongoing). `--details` flag fetches AUD amounts from Show pages
+- [x] **NEW `scripts/ingest-vic-grants-open.mjs`** — vic.gov.au Tide/SDP Elasticsearch proxy (`/api/tide/elasticsearch/content-vic__production__sapi_node/_search`, no auth; direct ES host firewalled). 32 VIC open/ongoing grants with funding ranges
+- [x] **Pool: open non-ARC dated 322 → 367** (+50 ongoing rolling). Both agents registered (discovery, prio 3) + agent_schedules daily 24h (user-approved)
+- [x] Researched dead ends: QLD Grants Finder = auth-gated AWS API Gateway behind Vite SPA (x-api-key from bundle rejected; needs headless/live-token capture). SA gov domains = hard-403 Akamai WAF; only per-tenant SmartyGrants portals reachable (dhs/dpc/lgasa/environmentsa/greenadelaide-sa.smartygrants.com.au) — no cross-tenant listing
+
+### Prior Session (SA deepening, 2026-06-07 afternoon)
 - [x] SA strategy review: 415 SA SEs (thinnest mainland state — SASEC login-walls its 82 members), 63 SA SEs hold 198 AusTender contracts ($359M), 21.8K SA gs_entities, $3.25B SA justice funding tracked
 - [x] **NEW `scripts/classify-directory-se-candidates.mjs`** — mines community_directory_orgs for SE candidates: signal pre-filter (op shops, supported employment, SE mentions) → site grouping + ABN merge → entity-type blocklist (service clubs/CFS/churches sans shop) → multi-provider LLM round-robin → **append-only verdict cache `data/classify-dir-se-cache.jsonl`** (quota-exhausted runs resume, never re-bill). Flags: --state --source --limit --min-confidence --apply
 - [x] SA pass APPLIED: 233 rows → 98 parent orgs → 65 inserted at ≥0.85 conf (`source_primary='sacommunity-classified'`). Caught: Bedford Group, SA Group Enterprises, Salvos Stores [32 sites], Lifeline [18 sites], Red Cross [12 sites], Goods @ Gertrude. Audit: `data/backups/2026-06-07-sa-directory-se-dryrun-final.log`
@@ -36,10 +43,11 @@ status: active
 - 144 junk SE rows deleted (nav-link artifacts; backup in data/backups/)
 
 ### Next
-- [ ] **Replicate SA classifier pass for other states**: `--state=VIC|NSW|QLD|WA --source=mycommunitydirectory` (61,712 rows untapped; same script, verdict cache makes it cheap to iterate)
-- [ ] Remaining 33 of 65 new SA rows lack ABN (chain sites: Salvos/Lifeline/Red Cross) — parent-org ABN mapping could attach them, but conservative matcher rightly skips shared trading names; consider a chain→parent-ABN lookup table
-- [ ] Grant pool still thin: ~322 open non-ARC grants. Matching layer done; needs discovery agents to widen coverage
-- [ ] Remaining ~1,657 no-ABN SEs are long tail — route through claim-your-profile flow, not more automation
+- [ ] **Push the 2 local commits** (chain-ABN + grant ingests) when ready
+- [ ] **Replicate SA classifier pass for other states**: `--state=VIC|NSW|QLD|WA --source=mycommunitydirectory` (61,712 rows untapped; same script, verdict cache makes it cheap to iterate). Chain-ABN lookup ready for those states' Salvos/Vinnies/RSPCA/AWL rows; add NSW/QLD Salvos + remaining Vinnies entries when needed (see TODO in chain-parent-abns.json)
+- [ ] QLD + SA grant sources need headless browser (Playwright) — QLD Grants Finder XHR capture, SA SmartyGrants per-tenant round pages
+- [ ] GrantConnect Forecast list (`/fo/list`) is JS-rendered — underlying XHR uncracked; would add pipeline-stage-earlier opportunities
+- [ ] Remaining ~1,617 no-ABN SEs are long tail — route through claim-your-profile flow, not more automation
 
 ### Decisions
 - Positioning: open registry + evidence layer; tags/certifications are signals NOT gates (memory: project_supply_base_evidence_layer)
