@@ -107,9 +107,9 @@ Colors: `bauhaus-black` #121212, `bauhaus-red` #D02020, `bauhaus-blue` #1040C0, 
 | `political_donations` | 312K | donor_name, donor_abn, donation_to, amount, financial_year |
 | `ato_tax_transparency` | 24K | entity_name, abn, total_income, taxable_income, tax_payable, report_year |
 | `entity_identifiers` | 31K | entity_id, identifier_type, identifier_value, source |
-| `alma_interventions` | 1.2K | name, type, description, evidence_level, cultural_authority, target_cohort, geography, portfolio_score, gs_entity_id |
-| `alma_evidence` | 570 | intervention_id, evidence_type, methodology, sample_size, effect_size |
-| `alma_outcomes` | 506 | intervention_id, outcome_type, measurement_method, indicators |
+| `alma_interventions` | 2.1K | name, type, description, evidence_level, evidence_strength_signal, portfolio_score, gs_entity_id, topics |
+| `alma_evidence` | 570 | id, evidence_type, methodology, sample_size, effect_size — linked to interventions via `alma_intervention_evidence` junction (NO direct intervention_id) |
+| `alma_outcomes` | 506 | id, outcome_type, measurement_method, indicators — linked via `alma_intervention_outcomes` junction (NO direct intervention_id) |
 | `foundations` | 10.8K | name, acnc_abn, total_giving_annual, thematic_focus, geographic_focus |
 | `grant_opportunities` | 18K | name, amount_min, amount_max, deadline, categories, focus_areas |
 | `postcode_geo` | 12K | postcode, locality, state, sa2_code, remoteness_2021, lga_name, lga_code |
