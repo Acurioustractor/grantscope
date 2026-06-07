@@ -306,7 +306,11 @@ function appendCache(group, result) {
 // ---------------------------------------------------------------------------
 
 async function fetchCandidates() {
-  // OR-group of SE signals; nested and() for the enterprise+employment combo
+  // OR-group of SE signals; nested and() for the enterprise+employment combo.
+  // The thrift/disability-enterprise/industries terms cover mycommunitydirectory
+  // vocabulary (sacommunity says "opportunity shop"; MCD listings say "op shop",
+  // "thrift", "Australian Disability Enterprise", "X Industries"). False
+  // positives are gated by the entity-type blocklist + LLM verdict downstream.
   const orFilter = [
     'service_type.ilike.%opportunity shop%',
     'service_type.ilike.%supported employment%',
@@ -315,9 +319,15 @@ async function fetchCandidates() {
     'description.ilike.%supported employment%',
     'description.ilike.%work experience and job creation%',
     'description.ilike.%opportunity shop%',
+    'description.ilike.%disability enterprise%',
+    'description.ilike.%op shop%',
+    'description.ilike.%thrift%',
     'name.ilike.%op shop%',
     'name.ilike.%opportunity shop%',
+    'name.ilike.%thrift%',
     'and(name.ilike.%enterprise%,service_type.ilike.%employment%)',
+    'and(name.ilike.%industries%,service_type.ilike.%disability%)',
+    'and(name.ilike.%industries%,service_type.ilike.%employment%)',
   ].join(',');
 
   const rows = [];

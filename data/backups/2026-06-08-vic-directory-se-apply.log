@@ -1,0 +1,30 @@
+[classify-dir-se] Starting directory SE candidate classification
+[classify-dir-se]   state=VIC, source=mycommunitydirectory, limit=300, min-confidence=0.85, apply=true
+[classify-dir-se] Pre-filter matched 35 directory rows
+[classify-dir-se] Blocked 2 rows by entity type (service clubs, emergency services, churches)
+[classify-dir-se] Grouped into 31 parent orgs
+[classify-dir-se] Dedupe: 0 skipped by ABN, 8 by name+state — 23 to classify
+[classify-dir-se] Verdict cache: 23 already judged, 0 need LLM
+[classify-dir-se] 
+========== SUMMARY ==========
+[classify-dir-se] Total checked:       23
+[classify-dir-se] Classified as SE:    20
+[classify-dir-se] Inserted:            20
+[classify-dir-se] Errors:              0
+[classify-dir-se] Classification rate: 87.0%
+[classify-dir-se] 
+[classify-dir-se] Sector breakdown:
+[classify-dir-se]   community-development: 11
+[classify-dir-se]   retail: 11
+[classify-dir-se]   disability: 6
+[classify-dir-se]   employment: 5
+[classify-dir-se]   environment: 2
+[classify-dir-se]   health: 1
+[classify-dir-se]   education: 1
+[classify-dir-se]   food: 1
+[classify-dir-se]   youth: 1
+[classify-dir-se]   aged-care: 1
+[classify-dir-se] 
+[classify-dir-se] Provider usage:
+[classify-dir-se]   minimax: 23
+[classify-dir-se] =============================

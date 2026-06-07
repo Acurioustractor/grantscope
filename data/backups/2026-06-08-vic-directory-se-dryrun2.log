@@ -1,0 +1,94 @@
+[classify-dir-se] Starting directory SE candidate classification
+[classify-dir-se]   state=VIC, source=mycommunitydirectory, limit=300, min-confidence=0.7, apply=false
+[classify-dir-se] Pre-filter matched 35 directory rows
+[classify-dir-se] Blocked 2 rows by entity type (service clubs, emergency services, churches)
+[classify-dir-se] Grouped into 31 parent orgs
+[classify-dir-se] Dedupe: 0 skipped by ABN, 8 by name+state — 23 to classify
+[classify-dir-se] Verdict cache: 14 already judged, 9 need LLM
+[classify-dir-se] 
+========== SUMMARY ==========
+[classify-dir-se] Total checked:       23
+[classify-dir-se] Classified as SE:    20
+[classify-dir-se] Inserted:            0
+[classify-dir-se] Errors:              0
+[classify-dir-se] Classification rate: 87.0%
+[classify-dir-se] 
+[classify-dir-se] Sector breakdown:
+[classify-dir-se]   retail: 11
+[classify-dir-se]   community-development: 11
+[classify-dir-se]   disability: 6
+[classify-dir-se]   employment: 5
+[classify-dir-se]   environment: 2
+[classify-dir-se]   health: 1
+[classify-dir-se]   education: 1
+[classify-dir-se]   food: 1
+[classify-dir-se]   youth: 1
+[classify-dir-se]   aged-care: 1
+[classify-dir-se] 
+[classify-dir-se] Provider usage:
+[classify-dir-se]   minimax: 23
+[classify-dir-se] =============================
+[classify-dir-se] 
+--- DRY RUN: Classifications (would insert) ---
+[classify-dir-se]   AXIS Employment (ABN: none)
+[classify-dir-se]     Confidence: 0.98, Sector: disability, employment, Suburb: Horsham
+[classify-dir-se]     Business model: Operates multiple business units producing goods and services to provide supported employment for people with disability who cannot access open employment, reinvesting profits into mission.
+[classify-dir-se]   Bright Hospital Opportunity Shop (ABN: none)
+[classify-dir-se]     Confidence: 0.95, Sector: retail, health, Suburb: Bright
+[classify-dir-se]     Business model: Operates two op shops selling second‑hand goods, using the proceeds to fund Alpine Health and local health/emergency services.
+[classify-dir-se]   Doncaster Community Care and Counselling Centre Inc (Doncare) (ABN: none)
+[classify-dir-se]     Confidence: 0.95, Sector: retail, community-development, Suburb: Templestowe Lower
+[classify-dir-se]     Business model: Operates an op shop selling second-hand clothes, books and homewares; profits fund community care services for disadvantaged and vulnerable community members
+[classify-dir-se]   Mallacoota Community Opportunity Shop (ABN: none)
+[classify-dir-se]     Confidence: 0.85, Sector: retail, community-development, Suburb: Mallacoota
+[classify-dir-se]     Business model: Accepts donated goods, prepares and sells them to the local community and visitors, generating revenue to support community benefit activities.
+[classify-dir-se]   MURDOCH COMMUNITY SERVICES A Member of the McCallum Group. (ABN: none)
+[classify-dir-se]     Confidence: 0.85, Sector: disability, employment, Suburb: St Arnaud
+[classify-dir-se]     Business model: Operates as an Australian Disability Enterprise providing supported employment, day programs, and disability accommodation services, likely funded through government contracts and trading activities with people with disabilities producing goods/services.
+[classify-dir-se]   Opportunity Shop (ABN: none)
+[classify-dir-se]     Confidence: 0.95, Sector: environment, retail, community-development, Suburb: Murtoa
+[classify-dir-se]     Business model: Operates as an op shop selling donated recycled clothing and accessories at affordable prices, generating revenue through retail sales that supports community purposes and reinvests profits into mission.
+[classify-dir-se]   Outlook (Aust.) (ABN: none)
+[classify-dir-se]     Confidence: 0.95, Sector: disability, community-development, Suburb: Pakenham
+[classify-dir-se]     Business model: Operates social enterprise activities (e.g., retail, training, supported employment) that generate profit reinvested into disability inclusion programs.
+[classify-dir-se]   PRESTON NEIGHBOURHOOD HOUSE (ABN: none)
+[classify-dir-se]     Confidence: 0.95, Sector: employment, education, food, environment, community-development, Suburb: Preston
+[classify-dir-se]     Business model: Earn revenue through training café and catering, venue hire, childcare fees, adult education courses, and circular economy sales; profits reinvested into community programs and social mission.
+[classify-dir-se]   St Vincent de Paul (ABN: none)
+[classify-dir-se]     Confidence: 0.85, Sector: retail, community-development, Suburb: Ararat
+[classify-dir-se]     Business model: Operates an Opportunity Shop (retail thrift store) trading donated goods to generate revenue funding emergency relief services including food, clothing, furniture and financial assistance.
+[classify-dir-se]   Violet Town Community Op Shop (ABN: none)
+[classify-dir-se]     Confidence: 0.95, Sector: retail, Suburb: Violet Town
+[classify-dir-se]     Business model: Operates a second‑hand shop selling donated goods; proceeds are reinvested to support local community groups and missions, run by volunteers.
+[classify-dir-se]   Waverley Industries (ABN: none)
+[classify-dir-se]     Confidence: 0.95, Sector: employment, disability, Suburb: Notting Hill
+[classify-dir-se]     Business model: Operates six trading divisions (packaging, assembly, catering, wood work, transport, garden/maintenance) that provide paid goods and services to external clients, generating revenue to fund its social mission of creating jobs for disadvantaged workers.
+[classify-dir-se]   Youngster.co (ABN: none)
+[classify-dir-se]     Confidence: 0.95, Sector: youth, aged-care, community-development, Suburb: Bendigo
+[classify-dir-se]     Business model: Provides paid tech assistance to seniors, employing young people; revenue from service fees or contracts, reinvested into mission.
+[classify-dir-se]   Animal Aid [3 sites] (ABN: none)
+[classify-dir-se]     Confidence: 0.95, Sector: community-development, Suburb: Blackburn South
+[classify-dir-se]     Business model: Operates Op Shops (retail thrift stores) selling donated goods; revenue supports animal shelter operations and adoption services for homeless animals.
+[classify-dir-se]   Aspiring Outcomes (ABN: none)
+[classify-dir-se]     Confidence: 0.98, Sector: disability, employment, Suburb: Oakleigh
+[classify-dir-se]     Business model: Operates as an Australian Disability Enterprise providing supported employment and vocational training for people with disability, generating revenue through commercial contracts and sales of goods/services, reinvesting profits into its mission.
+[classify-dir-se]   Auslan services (ABN: none)
+[classify-dir-se]     Confidence: 0.85, Sector: disability, Suburb: --withheld--
+[classify-dir-se]     Business model: Provides affordable support packages to Deaf Australians, serving as an agency providing services to organisations, agencies, businesses and government departments at local, state and national levels
+[classify-dir-se]   Cann River Community Centre (ABN: none)
+[classify-dir-se]     Confidence: 0.85, Sector: community-development, retail, Suburb: Cann River
+[classify-dir-se]     Business model: Operates a neighbourhood house and runs an op shop selling second‑hand goods, using proceeds to fund community programs.
+[classify-dir-se]   Lakes Entrance Neighbourhood House (ABN: none)
+[classify-dir-se]     Confidence: 0.9, Sector: retail, community-development, Suburb: Lakes Entrance
+[classify-dir-se]     Business model: Operates an Op Shop selling second‑hand goods; profits are reinvested into community support, food relief and other services.
+[classify-dir-se]   Salvation Army, Ararat Corps & Community Centre (ABN: none)
+[classify-dir-se]     Confidence: 0.85, Sector: community-development, retail, Suburb: Ararat
+[classify-dir-se]     Business model: Operates a thrift shop (op shop) Monday-Friday trading second-hand clothing and furniture to fund family support services and community programs
+[classify-dir-se]   South Gippsland Animal Aid (ABN: none)
+[classify-dir-se]     Confidence: 0.9, Sector: retail, Suburb: Wonthaggi
+[classify-dir-se]     Business model: Operates a thrift shop selling second‑hand goods to raise funds for animal rescue and rehoming
+[classify-dir-se]   Uniting (Victoria And Tasmania) (ABN: none)
+[classify-dir-se]     Confidence: 0.98, Sector: retail, Suburb: Sale
+[classify-dir-se]     Business model: Operates an op shop selling donated second‑hand goods, using proceeds to support Uniting’s charitable mission.
+[classify-dir-se] 
+Re-run with --apply to insert these records.
