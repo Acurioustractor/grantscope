@@ -24,6 +24,9 @@ status: active
 - Competitive scan (web-verified): NOBODY links supplier profiles to AusTender/funding evidence; nobody does open need-first search. Social Traders SE Identifier (~6K open dashboard) converges on breadth — we win on evidence only. GrantGuru deep-dive: hand-curated (explicitly anti-scraping), council white-label GTM ($418+/mo tiers), no auto-matching, no API — their moat erodes under LLM extraction; their council channel validates a CivicGraph council-embed product
 - Built: `/wedge` skill (strategy guardrail), `/lighthouse` skill (buyer prospecting workflow), `scout-se-buyers.mjs` (austender → se_buyer_prospects), verification-tier migration + compute script (certified>verified>identified), CLAUDE.md strategy pointer
 - Next build (move 2): **need-first search front door** — spec in buyer-wedge.md §need-first
+- `/lighthouse` run: NIAA pack built + demo verified (recruitment/ACT → FPRS #1 on evidence; page 200, API 401-gates). Pipeline: thoughts/shared/prospects/PIPELINE.md. Ben's actions: named NIAA contact + PDF render
+- PENDING (DB down): check Goods on Country has a registry row + evidence profile (`SELECT ... FROM social_enterprises WHERE name ILIKE '%goods%'`) — it's the demo archetype, must exist before any buyer meeting
+- ⚠️ DB outages recurring tonight (ECHECKOUTTIMEOUT, 3 windows): suspect nightly MV refresh cron (3am AEST) + other session's ingest saturating pool — check Supabase dashboard
 
 ### VIC pass (2026-06-08, this session)
 - Pre-filter widened for mycommunitydirectory vocabulary ('op shop'/'thrift'/'disability enterprise'/'X Industries'+disability|employment) — sacommunity-only terms missed MCD listings. +97 candidates nationally for future state passes
