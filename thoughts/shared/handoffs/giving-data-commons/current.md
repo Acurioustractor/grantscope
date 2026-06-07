@@ -9,13 +9,18 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-06-07T09:45:00+10:00
+**Updated:** 2026-06-07T11:30:00+10:00
 **Goal:** Open national registry + evidence layer for Australia's social enterprise supply base, built on the Giving Data Commons. Done when Phases 1-4 shipped: dataset public, profiles evidenced, buyer loop live, grants flywheel + claim-your-profile working.
 **Branch:** main (feature branch merged via PR #55 and deleted)
 **Test:** cd apps/web && npx tsc --noEmit && npx vitest run
 
 ### Now
-[->] Stream complete + repo clean. Next up (pick one): fuzzy/API ABN pass for 1,911 unmatched SEs, or state-directory re-scrape
+[->] Post-merge data passes (session crashed mid-run 2026-06-07 ~10:33, recovered + completed):
+- [x] Fuzzy ABN pass APPLIED: 766 ABNs (30 norm-exact, 105 abr-probe, 30 trgm, 601 API) → 9,501/10,646 with ABN. Script: `scripts/backfill-se-abns-fuzzy.mjs` (dry-run default, --live; cache `data/abn-lookup-cache-se.jsonl`; audit CSV in data/backups/)
+- [x] State network re-scrape APPLIED: 1,055 new + 121 enriched from data-API payloads in `data/scrapes/` (senvic 834, secna 152, qsec 38, sasec 31-of-80 — ordinary members only, Associates excluded). Script: `scripts/ingest-state-se-networks.mjs`. Table: 11,701 rows
+- [x] Second fuzzy ABN pass APPLIED: 593 more (206 norm-exact, 136 abr-probe, 19 trgm, 232 API). Final: 10,094/11,701 with ABN (86%), 1,607 missing
+- Gotcha: pooler statement_timeout ~2min cancels phase-3b live runs — scripts now SET statement_timeout='280s' per session
+- Gotcha: SENVIC map includes interstate-HQ members — state derived from postcode, not network
 
 ### ⚠️ Heads-up (2026-06-07)
 **`claude/scraping-funding-orgs-TeFjK` has another ACTIVE session** — commits as recent as 3h ago (verified via git log). It's building a community-directory ingest pipeline: Ask Izzy/Infoxchange ISS API ingest, MyCommunityDirectory JSON API scraper, SA Community Directory, entity promotion bridge, fuzzy-matching speedups, ACNC AIS `--delta` mode, contact enrichment v2. **Before touching any scraping/ingest code, check that branch for in-flight work** — especially anything under `scripts/` related to directories, ACNC AIS, or entity bridging. Its own ledger: see commit `aeccf52` (community-finder continuity ledger).
