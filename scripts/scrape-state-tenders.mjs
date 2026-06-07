@@ -11,28 +11,34 @@
  *
  * This overturns the ledger's "SA Akamai-walled / dead end" note for TENDERS.
  *
- * STATUS: extract-to-JSONL only. It does NOT write to austender_contracts yet
- * (that 770K-row core table needs a deliberate ocid/dedup design — see the
- * mapping TODO at the bottom + docs/strategy/state-tenders-ingest.md).
- *
  * Data path (both states, same platform):
  *   /contract/buyerIndex                          -> agencies + buyerId + count
  *   /contract/search?buyerId=<id>&browse=true     -> that agency's contracts
  *   /contract/view?id=<id>                         -> detail (supplier, ABN)
  *
- * Usage:
- *   node scripts/scrape-state-tenders.mjs --state=VIC --limit-agencies=3 --limit-contracts=5
- *   node scripts/scrape-state-tenders.mjs --state=SA  --limit-agencies=3
- *   node scripts/scrape-state-tenders.mjs --state=VIC --agencies-only   # just list agencies
+ * Maps to austender_contracts (ocid = '<vic|sa>-<platformId>', upsert on ocid,
+ * matching the existing nsw-/qld- convention). Clean value+dates come from the
+ * list row; supplier+ABN+description from the detail page. --apply is required
+ * to write; without it, extracts to data/state-tenders/<state>.jsonl.
+ * Resumable: an --apply run skips ocids already in the DB.
  *
- * Output: data/state-tenders/<state>.jsonl  (one contract per line)
+ * Usage:
+ *   node --env-file=.env scripts/scrape-state-tenders.mjs --state=SA --limit-agencies=1 --limit-contracts=2   # dry test → JSONL
+ *   node --env-file=.env scripts/scrape-state-tenders.mjs --state=SA --apply                                  # full SA crawl → DB (~1h)
+ *   node --env-file=.env scripts/scrape-state-tenders.mjs --state=VIC --apply                                 # full VIC crawl → DB (~16h)
+ *   node --env-file=.env scripts/scrape-state-tenders.mjs --state=VIC --agencies-only                         # just list agencies
+ *
+ * After a full --apply crawl: refresh evidence MVs + re-run scout-se-buyers so
+ * state contracts surface on SE profiles / /suppliers and unlock VIC/SA buyers.
  */
 
 import { chromium } from 'playwright';
 import { mkdirSync, writeFileSync } from 'node:fs';
+import { createClient } from '@supabase/supabase-js';
 
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith(`--${k}=`)); return a ? a.split('=')[1] : d; };
 const has = (k) => process.argv.includes(`--${k}`);
+const APPLY = has('apply'); // upsert into austender_contracts (else extract→JSONL only)
 
 const STATE = (arg('state', 'VIC')).toUpperCase();
 const HOSTS = {
@@ -42,10 +48,15 @@ const HOSTS = {
 const HOST = HOSTS[STATE];
 if (!HOST) { console.error(`Unknown state ${STATE}. Use VIC or SA.`); process.exit(1); }
 
-const LIMIT_AGENCIES = parseInt(arg('limit-agencies', '3'), 10);
-const LIMIT_CONTRACTS = parseInt(arg('limit-contracts', '5'), 10);
+// default to a full crawl; pass --limit-agencies/--limit-contracts to cap for testing
+const LIMIT_AGENCIES = parseInt(arg('limit-agencies', '0'), 10) || Infinity;
+const LIMIT_CONTRACTS = parseInt(arg('limit-contracts', '0'), 10) || Infinity;
 const AGENCIES_ONLY = has('agencies-only');
 const DELAY_MS = parseInt(arg('delay', '800'), 10);
+
+const db = APPLY
+  ? createClient(process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+  : null;
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 const log = (m) => console.log(`[state-tenders:${STATE}] ${m}`);
@@ -76,13 +87,32 @@ function extractLabelled(text, labels) {
 
 function parseMoney(s) {
   if (!s) return null;
-  const m = String(s).match(/\$?\s*([\d,]+(?:\.\d+)?)/);
-  return m ? Number(m[1].replace(/,/g, '')) : null;
+  // last $-amount on the line (list rows put value last; avoids stray "$1")
+  const all = [...String(s).matchAll(/\$\s*([\d,]+(?:\.\d+)?)/g)];
+  if (!all.length) return null;
+  const v = Number(all[all.length - 1][1].replace(/,/g, ''));
+  return Number.isFinite(v) ? v : null;
 }
 function cleanAbn(s) {
   if (!s) return null;
   const m = String(s).match(/\b(\d{2}\s?\d{3}\s?\d{3}\s?\d{3})\b/);
   return m ? m[1].replace(/\s/g, '') : null;
+}
+const MONTHS = { jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06', jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12' };
+// "18 Feb 2025" / "30 July 2027" -> "2025-02-18"
+function parseDate(s) {
+  if (!s) return null;
+  const m = String(s).match(/\b(\d{1,2})\s+([A-Za-z]{3,})\s+(\d{4})\b/);
+  if (!m) return null;
+  const mon = MONTHS[m[2].slice(0, 3).toLowerCase()];
+  if (!mon) return null;
+  return `${m[3]}-${mon}-${m[1].padStart(2, '0')}`;
+}
+// list rows look like: "<num> <title> <Status> <date1> [<date2>] $<value>"
+function parseListRow(rowText) {
+  const dates = [...String(rowText).matchAll(/\b\d{1,2}\s+[A-Za-z]{3,}\s+\d{4}\b/g)].map(x => parseDate(x[0])).filter(Boolean);
+  const status = (rowText.match(/\b(Current|Expired|Pending|Terminated|Awarded)\b/) || [])[1] || null;
+  return { value: parseMoney(rowText), dates, status };
 }
 
 async function main() {
@@ -125,9 +155,36 @@ async function main() {
     await browser.close(); return;
   }
 
+  // ocid prefix matches the existing convention (nsw-, qld-, …). Reversible:
+  // DELETE FROM austender_contracts WHERE ocid LIKE 'vic-%'  (or 'sa-%').
+  const prefix = STATE === 'SA' ? 'sa' : 'vic';
+
+  // resume: skip contracts already in the DB (so the long crawl survives restarts)
+  const done = new Set();
+  if (APPLY && !has('refresh')) {
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await db.from('austender_contracts').select('ocid').like('ocid', `${prefix}-%`).range(from, from + 999);
+      if (error) { log(`resume fetch error: ${error.message}`); break; }
+      for (const r of data) done.add(r.ocid);
+      if (data.length < 1000) break;
+    }
+    if (done.size) log(`resume: ${done.size} ${prefix}-* contracts already ingested, will skip`);
+  }
+
   // 2) per-agency contract lists + 3) detail pages
   const targets = agencies.filter(a => a.count > 0).slice(0, LIMIT_AGENCIES);
   const contracts = [];
+  let pending = [];
+  let upserted = 0, skipped = 0;
+
+  async function flush() {
+    if (!APPLY || !pending.length) return;
+    const chunk = pending; pending = [];
+    const { error } = await db.from('austender_contracts').upsert(chunk, { onConflict: 'ocid' });
+    if (error) { log(`upsert error (${chunk.length} rows): ${error.message}`); }
+    else upserted += chunk.length;
+  }
+
   for (const ag of targets) {
     log(`agency "${ag.name}" (${ag.count} contracts) buyerId=${ag.buyerId}`);
     await page.goto(`${HOST}/contract/search?buyerId=${ag.buyerId}&browse=true`, { waitUntil: 'domcontentloaded', timeout: 45000 });
@@ -143,6 +200,8 @@ async function main() {
       return out;
     });
     for (const r of rows.slice(0, LIMIT_CONTRACTS)) {
+      const ocid = `${prefix}-${r.id}`;
+      if (done.has(ocid)) { skipped++; continue; }
       await page.goto(`${HOST}${r.href}`, { waitUntil: 'domcontentloaded', timeout: 45000 });
       await sleep(DELAY_MS);
       const detail = await page.evaluate(() => {
@@ -151,45 +210,42 @@ async function main() {
         return { body, contractor };
       });
       const f = extractLabelled(detail.body, DETAIL_LABELS);
+      const list = parseListRow(r.rowText);
       const supplierRaw = detail.contractor || '';
       const abn = cleanAbn(supplierRaw) || cleanAbn(detail.body);
-      const supplier_name = supplierRaw.replace(/\s*ABN\s*\d[\d\s]+$/i, '').trim() || null;
+      const supplier_name = supplierRaw.replace(/\s*A[BC]N\s*\d[\d\s]+.*$/i, '').trim() || null;
+      // austender_contracts schema row (clean values from the list row; supplier from detail)
       const rec = {
-        source: `${STATE.toLowerCase()}-tenders`,
-        source_url: `${HOST}${r.href}`,
-        platform_id: r.id,
-        buyer_name: ag.name,
-        buyer_id: ag.buyerId,
-        contract_number: f['Contract Number'] || null,
+        ocid,
         title: f['Title'] || null,
-        category: f['Type'] || f['Category'] || null,
         description: (f['Description'] || '').slice(0, 2000) || null,
-        contract_value: parseMoney(f['Value of the Contract'] || f['Total Value']) || parseMoney(r.rowText),
-        status: f['Status'] || null,
-        contract_start: f['Start Date'] || null,
-        contract_end: f['End Date'] || null,
-        award_date: f['Award Date'] || null,
+        contract_value: list.value ?? parseMoney(f['Value of the Contract'] || f['Total Value']),
+        currency: 'AUD',
+        category: f['Type'] || f['Category'] || null,
+        contract_start: list.dates[0] || parseDate(f['Start Date']) || null,
+        contract_end: list.dates[1] || parseDate(f['End Date']) || null,
+        buyer_name: ag.name,
+        buyer_id: String(ag.buyerId),
         supplier_name,
         supplier_abn: abn,
+        source_url: `${HOST}${r.href}`,
       };
       contracts.push(rec);
-      log(`  • ${rec.contract_number || rec.platform_id} | ${(rec.title || '').slice(0, 45)} | ${rec.supplier_name || '?'} | ABN ${rec.supplier_abn || '—'} | $${rec.contract_value ?? '—'}`);
+      pending.push(rec);
+      if (pending.length >= 100) await flush();
+      log(`  • ${r.id} | ${(rec.title || '').slice(0, 42)} | ${rec.supplier_name || '?'} | ABN ${rec.supplier_abn || '—'} | $${rec.contract_value ?? '—'} | ${rec.contract_start || '?'}`);
     }
     await sleep(DELAY_MS);
   }
+  await flush();
 
-  writeFileSync(outPath, contracts.map(c => JSON.stringify(c)).join('\n') + '\n');
+  if (!APPLY) {
+    writeFileSync(outPath, contracts.map(c => JSON.stringify(c)).join('\n') + '\n');
+  }
   const withAbn = contracts.filter(c => c.supplier_abn).length;
   const withVal = contracts.filter(c => c.contract_value).length;
-  log(`wrote ${contracts.length} contracts → ${outPath} (${withAbn} with ABN, ${withVal} with value)`);
-
-  // ── NEXT STEP: upsert into austender_contracts ──────────────────────────
-  // ocid is NOT NULL + the natural key. Use `${STATE.toLowerCase()}-tenders-${platform_id}`.
-  // Map: title->title, description->description, contract_value->contract_value,
-  // contract_start/end->dates (parse "18 Feb 2025"), buyer_name->buyer_name,
-  // buyer_id->buyer_id, supplier_name->supplier_name, supplier_abn->supplier_abn,
-  // source_url->source_url. Reversible: DELETE WHERE ocid LIKE 'vic-tenders-%'.
-  // Then refresh evidence MVs so state contracts surface on SE profiles by ABN.
+  log(`${APPLY ? `upserted ${upserted}` : `wrote ${contracts.length} → ${outPath}`} | ${contracts.length} new, ${skipped} skipped | ${withAbn} with ABN, ${withVal} with value`);
+  if (APPLY) log(`reverse with: DELETE FROM austender_contracts WHERE ocid LIKE '${prefix}-%'. Then refresh evidence MVs + re-run scout-se-buyers.`);
 
   await browser.close();
 }
