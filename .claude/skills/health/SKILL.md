@@ -1,5 +1,5 @@
 ---
-description: Data health + agent health dashboard — entity coverage, MV status, agent success rates
+description: Data + agent + scheduled-job health dashboard — entity coverage, MV status & staleness, pg_cron job failures, agent success rates
 ---
 
 # /health — GrantScope Health Dashboard
@@ -23,5 +23,9 @@ node --env-file=.env scripts/health-check.mjs
    - Any stuck agents (running > 1 hour) — likely crashed, mark as failed
    - Entity coverage gaps — suggest enrichment scripts to run
    - Unpopulated materialized views — suggest refresh
+   - **Stale MVs** — "Last successful MV refresh" > 2 days is 🔴. `ispopulated` stays
+     true even when data is weeks old, so trust the staleness line, not the ✅ list.
+   - **Failed pg_cron jobs** — any 🔴 in SCHEDULED JOBS is a silently-failing nightly.
+     Read the `↳` error. Refresh timeouts → `ALTER FUNCTION … SET statement_timeout = 0`.
 
 4. Compare against North Star metrics in MISSION.md if the user asks about progress.
