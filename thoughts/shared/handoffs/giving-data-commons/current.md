@@ -15,7 +15,13 @@ status: active
 **Test:** cd apps/web && npx tsc --noEmit && npx vitest run
 
 ### Now
-[->] Chain-ABN mapping + grant-pool widening COMPLETE — committed locally (2 commits ahead of origin/main, NOT pushed). No work in flight.
+[->] VIC classifier pass COMPLETE — committed locally (1 commit ahead of origin/main). Chain-ABN + grant-pool work pushed (origin @ e65322a). No work in flight.
+
+### VIC pass (2026-06-08, this session)
+- Pre-filter widened for mycommunitydirectory vocabulary ('op shop'/'thrift'/'disability enterprise'/'X Industries'+disability|employment) — sacommunity-only terms missed MCD listings. +97 candidates nationally for future state passes
+- VIC APPLIED: 35 rows → 31 groups → 23 classified → **20 inserted ≥0.85** (`mycommunitydirectory-classified`); +2 chain ABNs + 13 fuzzy ABNs → 15/20 with ABN
+- Registry: **11,858 rows, 10,236 ABN (86.3%)**; VIC 1,493 SEs
+- NOTE: VIC MCD is health/sports-heavy (9,066 rows but only 35 SE-signal matches vs SA's 233/14,439) — NSW (10 extra), QLD (45 extra), ACT (14) passes will be similarly thin; cheap to run with cache
 
 ### ⚠️ Heads-up (2026-06-07)
 **`claude/scraping-funding-orgs-TeFjK` has another ACTIVE session** — community-directory ingest pipeline (Ask Izzy/ISS API, MyCommunityDirectory, SA Community Directory, entity promotion bridge, ACNC AIS --delta, contact enrichment v2). **Before touching scraping/ingest code, check that branch** — its ledger: commit `aeccf52`. Its `community_directory_orgs` table (76K rows: sacommunity 14,439 + mycommunitydirectory 61,712) is what this session's SA classifier reads from — read-only, no conflict.
