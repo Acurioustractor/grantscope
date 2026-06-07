@@ -9,21 +9,13 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-06-07T11:30:00+10:00
+**Updated:** 2026-06-07T13:00:00+10:00
 **Goal:** Open national registry + evidence layer for Australia's social enterprise supply base, built on the Giving Data Commons. Done when Phases 1-4 shipped: dataset public, profiles evidenced, buyer loop live, grants flywheel + claim-your-profile working.
 **Branch:** main (feature branch merged via PR #55 and deleted)
 **Test:** cd apps/web && npx tsc --noEmit && npx vitest run
 
 ### Now
-[->] Post-merge data passes (session crashed mid-run 2026-06-07 ~10:33, recovered + completed):
-- [x] Fuzzy ABN pass APPLIED: 766 ABNs (30 norm-exact, 105 abr-probe, 30 trgm, 601 API) → 9,501/10,646 with ABN. Script: `scripts/backfill-se-abns-fuzzy.mjs` (dry-run default, --live; cache `data/abn-lookup-cache-se.jsonl`; audit CSV in data/backups/)
-- [x] State network re-scrape APPLIED: 1,055 new + 121 enriched from data-API payloads in `data/scrapes/` (senvic 834, secna 152, qsec 38, sasec 31-of-80 — ordinary members only, Associates excluded). Script: `scripts/ingest-state-se-networks.mjs`. Table: 11,701 rows
-- [x] Second fuzzy ABN pass APPLIED: 593 more (206 norm-exact, 136 abr-probe, 19 trgm, 232 API)
-- [x] WASEC captured + APPLIED: directory is a Livewire app at admin.wasec.org.au (WP page is an empty shell) — `scripts/scrape-wasec-directory.mjs` → 80 members w/ certs+impact areas → 72 new + 8 enriched + 53 ABNs. Final: 10,147/11,773 with ABN (86%), 1,626 missing
-- [x] SENTAS dead end VERIFIED: rebranded to SECTAS (sectas.org.au), no public member directory (6-page site, empty project CPT, members in private chat platform)
-- Ingest now supports `--source=<key>` (surgical re-runs) and carries certifications jsonb (WASEC: Social Traders marks)
-- Gotcha: pooler statement_timeout ~2min cancels phase-3b live runs — scripts now SET statement_timeout='280s' per session
-- Gotcha: SENVIC map includes interstate-HQ members — state derived from postcode, not network
+[->] Stream COMPLETE — all reachable state networks captured + ingested, ABN passes applied, everything committed + pushed (main @ fd1d421, working tree clean). No work in flight.
 
 ### ⚠️ Heads-up (2026-06-07)
 **`claude/scraping-funding-orgs-TeFjK` has another ACTIVE session** — commits as recent as 3h ago (verified via git log). It's building a community-directory ingest pipeline: Ask Izzy/Infoxchange ISS API ingest, MyCommunityDirectory JSON API scraper, SA Community Directory, entity promotion bridge, fuzzy-matching speedups, ACNC AIS `--delta` mode, contact enrichment v2. **Before touching any scraping/ingest code, check that branch for in-flight work** — especially anything under `scripts/` related to directories, ACNC AIS, or entity bridging. Its own ledger: see commit `aeccf52` (community-finder continuity ledger).
@@ -40,14 +32,20 @@ status: active
 - [x] All pushed to origin through `200ad6f`
 - [x] Phase 4a: Open Funding Matches on every SE profile (`lib/services/se-grant-match.ts` + section in `social-enterprises/[id]/page.tsx`) — sector→category + geography match, verified e2e on Indigenous QLD + no-ABN VIC profiles (commit `aafde29`, local only)
 - [x] Phase 4b: "Claim This Profile" CTA (yellow sidebar block) on every SE profile → `/giving/corrections?target_type=social_enterprise&target_id=…&claim_url=…`; no-ABN correction link carries same params (same commit)
+- [x] (post-crash recovery 2026-06-07) Fuzzy ABN backfill `scripts/backfill-se-abns-fuzzy.mjs` APPLIED in 3 passes: 766 + 593 + 53 = 1,412 ABNs (norm-exact / abr-probe / trgm≥.85 / ABN Lookup API score+postcode-gated). API cache `data/abn-lookup-cache-se.jsonl`; audit CSVs in data/backups/
+- [x] State network ingest `scripts/ingest-state-se-networks.mjs` APPLIED: 1,127 new + 129 enriched from data-API payloads in `data/scrapes/` (senvic 834, secna 152, wasec 72, qsec 38, sasec 31 — SASEC Associates excluded). Supports `--source=<key>`; carries certifications jsonb
+- [x] WASEC: directory is a public Livewire app at admin.wasec.org.au (WP page is an empty shell) — `scripts/scrape-wasec-directory.mjs` captures 80 members w/ certs + impact areas
+- [x] SENTAS dead end VERIFIED: rebranded to SECTAS (sectas.org.au), no public member directory (members in private chat platform)
+- [x] FINAL STATE: social_enterprises 11,773 rows, 10,147 with ABN (86%), 1,626 missing. All committed + pushed (e7c59db…fd1d421)
 
 ### Next
 - [x] Pushed + PR #55 merged to main (`d4dfcf6`)
 - [x] CI failure on main fixed: stale rpc mock in `entity-service.test.ts` (PR #37, `893680a`) — main CI fully green (221/221)
 - [x] Branch cleanup: 29 merged/superseded refs deleted (12 local + 17 remote), each verified by content. Kept: claude/scraping-funding-orgs-TeFjK (active other session), curious-tractor-thesis, codex/goods-civicgraph-signoff, wip/working-tree-snapshot-2026-04-24, recovered/civicscope-may22-features
-- [ ] Fuzzy/API ABN pass for remaining 1,911 unmatched SE records (ABN_LOOKUP_GUID in .env; phases 1-2 of backfill-se-abns.mjs were exact/variant only)
-- [ ] Re-scrape state network directories properly (SASEC/QSEC behind login walls — the deleted junk came from crawling nav menus)
+- [x] Fuzzy/API ABN pass — DONE (1,412 applied across 3 passes; see This Session)
+- [x] Re-scrape state network directories — DONE (5 networks ingested, SENTAS/SECTAS confirmed no directory)
 - [ ] Grant pool is thin: only ~322 open non-ARC grants tracked. Grants flywheel improves as discovery agents widen coverage (matching layer is done)
+- [ ] Remaining 1,626 no-ABN SEs are the long tail — thin/ambiguous names the conservative matcher rightly skips; route through claim-your-profile flow, not more automation
 
 ### Decisions
 - Positioning: "open national registry and evidence layer for Australia's social enterprise supply base" — tags/certifications are signals, NOT gates (Ben rejected exclusive directory model; memory: project_supply_base_evidence_layer)
