@@ -197,12 +197,13 @@ SELECT remoteness, COUNT(*) FROM gs_entities WHERE is_community_controlled = tru
 
 > Source upstream of this file: `act-global-infrastructure/wiki/concepts/soul.md`. The two humans and the why behind everything below.
 
-> Last synced: 2026-05-09. **Do not edit this section directly.** Edit the upstream file and run `node scripts/sync-act-context.mjs --apply`. Downstream edits get overwritten.
+> Last synced: 2026-06-07. **Do not edit this section directly.** Edit the upstream file and run `node scripts/sync-act-context.mjs --apply`. Downstream edits get overwritten.
 
-### Entities (as of 2026-04-25)
-- **A Curious Tractor Pty Ltd** (ACN 697 347 676; ABN PENDING). Registered 2026-04-24. Primary trading entity from 1 July 2026. Shareholders: Knight Family Trust 50 + Marchesi Family Trust 50. Directors: Ben Knight + Nicholas Marchesi. Bank: NAB. Accountant: Standard Ledger.
+### Entities (as of 2026-06-08)
+- **A Curious Tractor Pty Ltd** (ACN 697 347 676; **ABN 36 697 347 676, issued with GST 2026-06-01**). Registered ASIC 2026-04-24. Primary trading entity from 1 July 2026; **trades as "Goods on Country"** for the Goods commercial arm (contracting, product sales, R&D claimant). Shareholders: Knight Family Trust 50 + Marchesi Family Trust 50. Directors: Ben Knight + Nicholas Marchesi. Bank: NAB. Accountant: Standard Ledger.
 - **Nicholas Marchesi sole trader** (ABN 21 591 780 066). Currently trading; hard cutover to Pty 30 June 2026.
-- **A Kind Tractor Ltd** (ACN 669 029 341, ABN 73 669 029 341). Charitable CLG, ACNC-registered, **NOT DGR**, dormant.
+- **The Butterfly Movement Ltd** (ACN 155 132 684; ABN 22 155 132 684, verified ABR 2026-06-02). **The Goods charity + DGR home: endorsed Item 1 DGR + PBI since 17 Jan 2012**, ACNC-registered since Dec 2012 — can auspice/receipt NOW. "TABOO Foundation" is a business name on the same ACN. Stewardship handover 26 Jun 2026; Indigenous-led board being installed. DGR runs ONLY through Butterfly — never ACT Pty or AKT.
+- **A Kind Tractor Ltd** (ACN 669 029 341, ABN 73 669 029 341). Charitable CLG, ACNC-registered, **NOT DGR**, dormant. **NOT the Goods vehicle** — that is Butterfly.
 - **Harvest entity** + **Farm entity**. Being designed pending Standard Ledger advice.
 
 **Do NOT** use "ACT Foundation" or "ACT Ventures" as legal entity names. They are conceptual labels in older docs, not real entities.
