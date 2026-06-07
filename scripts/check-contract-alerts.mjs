@@ -67,12 +67,12 @@ async function main() {
       // 2. Get shortlist items with ABNs
       const { data: items } = await db
         .from('procurement_shortlist_items')
-        .select('id, entity_name, entity_abn, entity_gs_id')
+        .select('id, supplier_name, supplier_abn, gs_id')
         .eq('shortlist_id', watch.shortlist_id);
 
       if (!items?.length) continue;
 
-      const abnList = items.map(i => i.entity_abn).filter(Boolean);
+      const abnList = items.map(i => i.supplier_abn).filter(Boolean);
       if (!abnList.length) continue;
 
       // 3. Find new contracts for these ABNs since last run
@@ -93,13 +93,13 @@ async function main() {
       stats.new_contracts += newContracts.length;
 
       // Map ABN → shortlist item for attribution
-      const abnToItem = new Map(items.map(i => [i.entity_abn, i]));
+      const abnToItem = new Map(items.map(i => [i.supplier_abn, i]));
 
       for (const contract of newContracts) {
         const item = abnToItem.get(contract.supplier_abn);
         if (!item) continue;
 
-        const alertTitle = `New contract: ${contract.supplier_name || item.entity_name}`;
+        const alertTitle = `New contract: ${contract.supplier_name || item.supplier_name}`;
         const alertBody = `${contract.title} — $${Number(contract.contract_value || 0).toLocaleString()} from ${contract.buyer_name}`;
         const severity = (contract.contract_value || 0) > 1_000_000 ? 'high' : (contract.contract_value || 0) > 100_000 ? 'medium' : 'low';
 
