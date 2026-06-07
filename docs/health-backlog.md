@@ -5,7 +5,7 @@
 > ideas in real queries, and **appends only new, deduped** items. Numbers are point-in-time —
 > re-verify before acting. Exit condition for the loop = Ben's interruption, not "when done".
 
-**Last iteration:** 2026-06-08 (iter 5 — automation freshness · low-yield · loop parked)
+**Last iteration:** 2026-06-08 (iter 6 — VIC crawl landed · fresh supplier data)
 **Entity baseline:** `gs_entities` = 598,150 · `austender_contracts` = 810,118
 
 ---
@@ -144,15 +144,30 @@ scheduling gap** → reinforces **A1/A5**, no net-new action. **Net-new ideas th
 
 ---
 
-**Loop status: PARKED.** Facets [gaps · quality · agent-health · failure-root-cause · linkage ·
-cleaning · automation-freshness] are mined out for the *current* DB state — iter 5 was low-yield, so
-tight-looping stopped. Backlog ≈ 23 ideas. Next genuinely-new state arrives with the VIC crawl finish
-(~tonight) + the 17:00 UTC MV refresh. The loop re-mines after a cheap gate-check confirms that state
-changed; otherwise it re-parks. Exit = Ben interrupts.
+## VIC crawl landed (iter 6) — fresh supplier data
 
-<!-- LOOP STATE: PARKED after iter 5 (low-yield). Resume trigger = crawl finished OR mv_refresh_log shows
-     a 2026-06-08 success. On wake: gate-check those two; if unchanged, re-park (~3600s); if changed,
-     re-mine fresh facets and append iter 6+. -->
+The VIC contract crawl **finished cleanly** (4,891 `vic-` rows; 4,686 upserted this run, 205 skipped,
+3 failed; 3,980 with ABN). New facet from the fresh data:
+
+- **L5 — Ingest/link 1,116 new VIC suppliers.** Of 2,353 distinct supplier ABNs in `vic-` contracts,
+  **1,116 (47%) are not in `gs_entities`** — entities the VIC crawl surfaced that aren't in the graph.
+  Create/link them (mirrors L1/L6) → VIC procurement becomes queryable at entity level. *Wedge: feeds
+  `scout-se-buyers`.*
+
+**Downstream — Ben's call (Tier 2 prod writes, not the loop):** the ledger's gated next-actions are now
+unblocked — refresh the evidence MVs (tonight's 17:00 UTC cron does it automatically now the timeout is
+fixed, or trigger manually) + re-run `scout-se-buyers` against the new VIC suppliers.
+
+---
+
+**Loop status: PARKED again.** Crawl facet mined (iter 6); backlog ≈ 24 ideas. Next genuinely-new state =
+the **17:00 UTC MV refresh** (~18h) — which should also clear the `mv_data_quality` staleness and, if C1
+ships, the dedup MVs. Re-mines on next gate-check if `mv_refresh_log` shows a 2026-06-08 success.
+Exit = Ben interrupts.
+
+<!-- LOOP STATE: PARKED after iter 6. Crawl DONE (no longer a trigger). Resume trigger = mv_refresh_log
+     shows a 2026-06-08 success. On wake: gate-check that one; if unchanged, re-park (~3600s); if changed,
+     re-mine MV-driven facets and append iter 7+. -->
 
 
 
