@@ -9,94 +9,72 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-06-08T01:30:00+10:00
-**Goal:** Open national registry + evidence layer for Australia's social enterprise supply base, built on the Giving Data Commons. Phases 1-4 SHIPPED. Current mode: state-by-state coverage deepening (SA done) + grant-pool widening (federal+VIC live).
-**Branch:** main
+**Updated:** 2026-06-08T04:45:00+10:00
+**Goal:** Buyer wedge: "free open registry for everyone; paid evidence + tender tools for buyers" (`docs/strategy/buyer-wedge.md`, decided 2026-06-08). Run `/wedge` before building anything SE/procurement/giving. Moves 1+2 SHIPPED, 3 waiting on Ben, 4 nearly done, 5 (widening pause) ACTIVE.
+**Branch:** main (everything pushed @ d619bbe, working tree clean)
 **Test:** cd apps/web && npx tsc --noEmit && npx vitest run
 
 ### Now
-[->] **STRATEGY PIVOT (2026-06-08): buyer wedge decided** — "free open registry for everyone; paid evidence + tender tools for buyers." Full doc: `docs/strategy/buyer-wedge.md`. Data widening PAUSED. Machinery committed locally; **3 DB applies BLOCKED on Supabase outage** (pool exhausted ~30min, ECHECKOUTTIMEOUT both modes + REST down — check other session/dashboard):
-1. `psql -f migrations/2026-06-08-se-verification-tier.sql`
-2. `node --env-file=.env scripts/compute-se-verification-tiers.mjs --apply` (dry-run first)
-3. `node --env-file=.env scripts/scout-se-buyers.mjs --apply` (dry-run first)
+[->] Session COMPLETE — no work in flight. Wedge scoreboard: 1✓ wedge picked · 2✓ /suppliers shipped · 3 NIAA pack waiting on Ben (named contact + PDF) · 4 profile-page tier badges remain · 5 widening paused.
 
-### Strategy session (2026-06-08, this session)
-- Competitive scan (web-verified): NOBODY links supplier profiles to AusTender/funding evidence; nobody does open need-first search. Social Traders SE Identifier (~6K open dashboard) converges on breadth — we win on evidence only. GrantGuru deep-dive: hand-curated (explicitly anti-scraping), council white-label GTM ($418+/mo tiers), no auto-matching, no API — their moat erodes under LLM extraction; their council channel validates a CivicGraph council-embed product
-- Built: `/wedge` skill (strategy guardrail), `/lighthouse` skill (buyer prospecting workflow), `scout-se-buyers.mjs` (austender → se_buyer_prospects), verification-tier migration + compute script (certified>verified>identified), CLAUDE.md strategy pointer
-- Next build (move 2): **need-first search front door** — spec in buyer-wedge.md §need-first
-- `/lighthouse` run: NIAA pack built + demo verified (recruitment/ACT → FPRS #1 on evidence; page 200, API 401-gates). Pipeline: thoughts/shared/prospects/PIPELINE.md. Ben's actions: named NIAA contact + PDF render
-- PENDING (DB down): check Goods on Country has a registry row + evidence profile (`SELECT ... FROM social_enterprises WHERE name ILIKE '%goods%'`) — it's the demo archetype, must exist before any buyer meeting
-- ⚠️ DB outages recurring tonight (ECHECKOUTTIMEOUT, 3 windows): suspect nightly MV refresh cron (3am AEST) + other session's ingest saturating pool — check Supabase dashboard
-
-### VIC pass (2026-06-08, this session)
-- Pre-filter widened for mycommunitydirectory vocabulary ('op shop'/'thrift'/'disability enterprise'/'X Industries'+disability|employment) — sacommunity-only terms missed MCD listings. +97 candidates nationally for future state passes
-- VIC APPLIED: 35 rows → 31 groups → 23 classified → **20 inserted ≥0.85** (`mycommunitydirectory-classified`); +2 chain ABNs + 13 fuzzy ABNs → 15/20 with ABN
-- Registry: **11,858 rows, 10,236 ABN (86.3%)**; VIC 1,493 SEs
-- NOTE: VIC MCD is health/sports-heavy (9,066 rows but only 35 SE-signal matches vs SA's 233/14,439) — NSW (10 extra), QLD (45 extra), ACT (14) passes will be similarly thin; cheap to run with cache
-
-### ⚠️ Heads-up (2026-06-07)
-**`claude/scraping-funding-orgs-TeFjK` has another ACTIVE session** — community-directory ingest pipeline (Ask Izzy/ISS API, MyCommunityDirectory, SA Community Directory, entity promotion bridge, ACNC AIS --delta, contact enrichment v2). **Before touching scraping/ingest code, check that branch** — its ledger: commit `aeccf52`. Its `community_directory_orgs` table (76K rows: sacommunity 14,439 + mycommunitydirectory 61,712) is what this session's SA classifier reads from — read-only, no conflict.
-
-### This Session (chain ABNs + grant pool, 2026-06-07 night)
-- [x] **NEW `data/chain-parent-abns.json` + `scripts/apply-chain-parent-abns.mjs`** — verified chain→parent-ABN lookup (30 entries; every ABN checked against acnc_charities or ABR API, never memory). Pattern+state+postcode-gated, dry-run default, conflict detection, provenance into sources jsonb. APPLIED: 40 ABNs (25 SA + 15 VIC senvic bonus). SA classified no-ABN 33 → 8 (all independents). Registry **86.3% ABN coverage (10,221/11,838)**. Key resolutions: Salvos SA = SA Property Trust 13320346330 (ABR business name 'SALVOS STORES'), both Blackwood Goodwill/Lifeline shops = Uniting Communities 33174490373 (same address+phone), Thrifty V ×3 = Lyell McEwin Volunteer Association 55911334857. Commit `(chain-abn)`
-- [x] **NEW `scripts/ingest-grantconnect-go.mjs`** — GrantConnect CloudFront 403 is UA-gating only; browser UA on www.grants.gov.au/go/list serves full HTML. 133 open federal GOs ingested (99 dated + 34 ongoing). `--details` flag fetches AUD amounts from Show pages
-- [x] **NEW `scripts/ingest-vic-grants-open.mjs`** — vic.gov.au Tide/SDP Elasticsearch proxy (`/api/tide/elasticsearch/content-vic__production__sapi_node/_search`, no auth; direct ES host firewalled). 32 VIC open/ongoing grants with funding ranges
-- [x] **Pool: open non-ARC dated 322 → 367** (+50 ongoing rolling). Both agents registered (discovery, prio 3) + agent_schedules daily 24h (user-approved)
-- [x] Researched dead ends: QLD Grants Finder = auth-gated AWS API Gateway behind Vite SPA (x-api-key from bundle rejected; needs headless/live-token capture). SA gov domains = hard-403 Akamai WAF; only per-tenant SmartyGrants portals reachable (dhs/dpc/lgasa/environmentsa/greenadelaide-sa.smartygrants.com.au) — no cross-tenant listing
-
-### Prior Session (SA deepening, 2026-06-07 afternoon)
-- [x] SA strategy review: 415 SA SEs (thinnest mainland state — SASEC login-walls its 82 members), 63 SA SEs hold 198 AusTender contracts ($359M), 21.8K SA gs_entities, $3.25B SA justice funding tracked
-- [x] **NEW `scripts/classify-directory-se-candidates.mjs`** — mines community_directory_orgs for SE candidates: signal pre-filter (op shops, supported employment, SE mentions) → site grouping + ABN merge → entity-type blocklist (service clubs/CFS/churches sans shop) → multi-provider LLM round-robin → **append-only verdict cache `data/classify-dir-se-cache.jsonl`** (quota-exhausted runs resume, never re-bill). Flags: --state --source --limit --min-confidence --apply
-- [x] SA pass APPLIED: 233 rows → 98 parent orgs → 65 inserted at ≥0.85 conf (`source_primary='sacommunity-classified'`). Caught: Bedford Group, SA Group Enterprises, Salvos Stores [32 sites], Lifeline [18 sites], Red Cross [12 sites], Goods @ Gertrude. Audit: `data/backups/2026-06-07-sa-directory-se-dryrun-final.log`
-- [x] Fuzzy ABN backfill re-run APPLIED: +7 ABNs on new rows (4 via ABN Lookup API score+postcode-gated, 3 norm-exact). Proposals CSV in data/backups/
-- [x] **SA policy insert in `lib/social-procurement.ts`** — SAIPP (min 20% economic-contribution weighting, Office of the Industry Advocate), Economic and Social Procurement Guideline (SE outcomes discretionary — SA has NO mandated SE weighting unlike Vic SPF), Aboriginal direct engagement ≤$550K + 0.5% target. Verified via web research agent against official sa.gov.au sources
-- [x] Committed + pushed: `54efeb0` (scripts/data), `add0c3e` (web policy)
-- [x] FINAL STATE: SA 415 → **480 SEs** (382 with ABN); registry-wide **11,838 rows, 10,181 with ABN (86%)**
-
-### Prior sessions (compressed)
-- Phases 1-4 all shipped (PR #55 → main): Commons dataset public, evidence-enriched SE profiles, buyer loop (analyse + tender-pack + /giving/suppliers), grant matching (`lib/services/se-grant-match.ts`) + claim-your-profile CTA
-- ABN backfills: 8,410 → 10,174 across exact + 3 fuzzy/API passes (caches: `data/abn-lookup-cache-se.jsonl`)
-- State network ingests: senvic 834, secna 152, wasec 72, qsec 38, sasec 31 (`scripts/ingest-state-se-networks.mjs --source=<key>`); SENTAS/SECTAS verified dead end (no public directory)
-- 144 junk SE rows deleted (nav-link artifacts; backup in data/backups/)
+### This Session (2026-06-08 — the big one)
+- [x] **Chain→parent-ABN mapping**: `data/chain-parent-abns.json` (30 verified entries) + `scripts/apply-chain-parent-abns.mjs`. 40 ABNs applied (25 SA + 15 VIC). Salvos SA = 13320346330 (ABR business name), Blackwood Goodwill+Lifeline = same shop = Uniting Communities, Thrifty V = Lyell McEwin Volunteer Assoc
+- [x] **Grant ingests live + scheduled daily**: `ingest-grantconnect-go.mjs` (CloudFront 403 is UA-gating only — 133 open federal GOs) + `ingest-vic-grants-open.mjs` (Tide ES proxy, 32 VIC). Pool 322 → 367 open dated non-ARC. Dead ends: QLD Grants Finder auth-gated SPA; SA Akamai-walled (per-tenant SmartyGrants only)
+- [x] **VIC classifier pass**: pre-filter widened for MCD vocabulary (+97 candidates nationally); 20 inserted ≥0.85, 15/20 with ABN. Registry 11,860 rows
+- [x] **STRATEGY CHECKPOINT → buyer wedge decided** (`docs/strategy/buyer-wedge.md`). Verified white spaces: nobody links supplier profiles to AusTender/funding evidence; nobody does open need-first search. GrantGuru deep-dive: hand-curated anti-scraping moat (erodes under LLM extraction), council white-label GTM validates a council-embed product, $3,500/yr = Pro/consultant tier
+- [x] **Skills built**: `/wedge` (strategy guardrail, has move-status table) + `/lighthouse` (buyer prospecting). Agents: `compute-se-verification-tiers` (v2: statutory cross-check vs acnc_charities/oric_corporations elevates ABN-matched rows), `scout-se-buyers` (austender → se_buyer_prospects, 374 buyers), `build-se-search-index`
+- [x] **Tiers live**: certified 7,025 / verified 3,813+ / identified ~1,022. Tiers + search-index scheduled daily 24h
+- [x] **NIAA lighthouse pack** (`thoughts/shared/prospects/niaa/` + PIPELINE.md): $72.9M/364 contracts/132 suppliers evidence one-pager, draft email, demo scenario verified (recruitment/ACT → First People Recruitment Solutions #1, their own 50-contract supplier). Why NIAA: IPP steward = multiplier. Pool is FEDERAL (AusTender) — VIC/SA SPF buyers need a state-tenders ingest (gated behind /wedge)
+- [x] **Goods twin-engine understood + registered**: ACT Pty Ltd (ABN 36697347676) **trades as "Goods on Country"** — registry row inserted (identified, self-registered). **The Butterfly Movement Ltd (22155132684) = Goods DGR home — Item 1 DGR + PBI since 2012, "TABOO Foundation" = business name same ACN, stewardship handover 26 Jun 2026, Indigenous-led board** — registry row at verified (ACNC cross-check), cross-linked in both sources jsonb. DGR grants → Butterfly; procurement → Pty. Memory updated (project_act_business_model)
+- [x] **ACT-context sync fixed**: template inside `act-global-infrastructure/scripts/sync-act-context.mjs` had drifted (said ABN PENDING, no Butterfly) — fixed + synced to 7 repos. Infra repo has LOCAL commit `3d87c2b` NOT pushed; 6 other repos have uncommitted CLAUDE.md updates
+- [x] **MOVE 2 SHIPPED — `/suppliers` need-first search**: `se_search_index` (capability_text = AusTender contract titles per ABN, weighted tsvector) + `search_suppliers` RPC (tier + evidence boosts) + SSR page (tier badges, evidence lines, claim-CTA, tender-pack CTA). Verified: "beds" → GEBIE Civil (44 contracts) + ALPA on revealed capability, Goods on Country surfaces. `/giving/suppliers` 308-redirects with query forwarded
 
 ### Next
-- [ ] **Push the 2 local commits** (chain-ABN + grant ingests) when ready
-- [ ] **Replicate SA classifier pass for other states**: `--state=VIC|NSW|QLD|WA --source=mycommunitydirectory` (61,712 rows untapped; same script, verdict cache makes it cheap to iterate). Chain-ABN lookup ready for those states' Salvos/Vinnies/RSPCA/AWL rows; add NSW/QLD Salvos + remaining Vinnies entries when needed (see TODO in chain-parent-abns.json)
-- [ ] QLD + SA grant sources need headless browser (Playwright) — QLD Grants Finder XHR capture, SA SmartyGrants per-tenant round pages
-- [ ] GrantConnect Forecast list (`/fo/list`) is JS-rendered — underlying XHR uncracked; would add pipeline-stage-earlier opportunities
-- [ ] Remaining ~1,617 no-ABN SEs are long tail — route through claim-your-profile flow, not more automation
+- [ ] **Ben (human)**: NIAA — find named IPP/procurement contact, render one-pager to PDF (re-verify figures same day), send. Then PIPELINE.md → contacted
+- [ ] **Ben (human)**: logged-in tender-pack e2e on :3003 (procurement-tier session) — still the standing UNCONFIRMED
+- [ ] **Ben (human)**: push infra repo local commit `3d87c2b`; check 6 other repos' uncommitted CLAUDE.md syncs
+- [ ] Move 4 finish: tier badges on `/social-enterprises/[id]` profile pages (same TierBadge pattern as /suppliers)
+- [ ] /wedge question pending: state-tenders ingest (Buying for Victoria / SA Tenders) to unlock VIC/SA lighthouse prospects — evidence-depth work, needs the ask
+- [ ] Goods grant-match demo: run se-grant-match against the twin-engine pair (DGR-required → Butterfly 22155132684, rest → Goods on Country 36697347676)
+- [ ] PAUSED per move 5: NSW/QLD/WA/ACT classifier passes (~100 candidates, cache makes them cheap when unpaused); GrantConnect /fo/list forecast XHR; QLD/SA grant headless scrapers
 
 ### Decisions
-- Positioning: open registry + evidence layer; tags/certifications are signals NOT gates (memory: project_supply_base_evidence_layer)
-- Evidence beats badges: AusTender contract history = revealed capability; rank by delivery evidence
-- SE classification needs entity-type blocklist on TOP of LLM verdicts — LLM over-classifies service clubs/churches/emergency services that run op shops (Rotary, Lions, CFS, cathedrals at conf 0.8). Blocklist exempts names that ARE the shop ("Waikerie Rotary Opportunity Shop" kept, "Rotary Club of Waikerie" blocked)
-- Site-level chain rows (Salvos Stores ×32) grouped to ONE parent row with sites array in sources jsonb — precedent: senvic already has site-level rows, but grouping is cleaner going forward
-- SA tender-pack copy honestly states SA has no mandated SE weighting — credibility beats overclaiming
-- LLM verdict caching (append-only JSONL keyed by source|state|normname) is now the standard pattern for classification scripts — provider quotas WILL exhaust mid-run (happened twice)
+- **Buyer wedge** (2026-06-08): free open registry / paid buyer tools. Overruling = update buyer-wedge.md FIRST. Widening PAUSED (scheduled agents exempt)
+- **Lighthouse = NIAA first** via IPP angle (mandatory federal targets + 80%-Indigenous registry beats VIC SPF until state-tenders ingest exists). Defence + Services Australia held
+- **Tier = strength of external verification, not SE-ness**; v2 statutory cross-check (ABN in acnc_charities/oric → verified) regardless of source
+- Evidence beats badges; tags/certs are signals NOT gates (north-star memory)
+- Outreach: drafts only, Ben sends (Tier 3); every outbound claim traces to a queryable row
+- LLM verdict caching (append-only JSONL) = standard for classification scripts; entity-type blocklist on top of LLM verdicts
+- SA tender-pack honestly states no mandated SE weighting — credibility beats overclaiming
 
 ### Open Questions
-- UNCONFIRMED: procurement analyse/tender-pack full e2e with logged-in session (compiles + 401-gates correctly; SA policy insert traced through policyInsertsForStates but not browser-tested)
+- UNCONFIRMED: tender-pack logged-in e2e (page 200 + API 401-gates verified; full flow needs Ben's session)
+- UNCONFIRMED: NIAA turf sensitivity (private evidence layer over THEIR policy) — counter: open registry, attribution-first, we issue no marks
 
 ### Gotchas (active)
-- LLM providers (groq/deepseek/anthropic/gemini free tiers) exhaust after ~50-80 classification calls — verdict cache + re-run is the recovery path; 4-min cooldown helps
-- `scripts/lib/psql.mjs` swallows SQL errors (returns [] like empty); gsql/raw psql to see errors
-- social_enterprises UNIQUE is (name, state) — NOT abn; ABN dedupe must be done in script logic
-- Auto-mode classifier blocks `--live` mass-update scripts without explicit user approval of THAT action — ask first, then run
-- Dev server port 3003 (`lsof -ti:3003`)
+- **DB outages recur around 3am AEST** (ECHECKOUTTIMEOUT both pooler modes + REST): suspect nightly MV refresh cron + other session's ingest. Back off, retry in minutes
+- Another ACTIVE session on `claude/scraping-funding-orgs-TeFjK` (community-directory ingest) — check before touching scraping/ingest code; community_directory_orgs is read-only to us
+- psql `\o` redirect swallows `UPDATE n` status tags — parse both channels (bit us once)
+- `array_to_string` is not IMMUTABLE — can't live in generated columns (pre-join text in build scripts)
+- `scripts/lib/psql.mjs` swallows SQL errors; gsql/raw psql to see them. gsql REST also dies during DB saturation
+- social_enterprises UNIQUE is (name, state) NOT abn; grant_opportunities upsert target = unique non-partial url index
+- Auto-mode classifier blocks --live/mass updates + agent_schedules inserts + CLAUDE.md-rewriting scripts without explicit user approval of THAT action
+- LLM free tiers exhaust after ~50-80 classification calls — verdict cache + re-run
+- Dev server port 3003 (`lsof -ti:3003`); cold compile ~18s, curl timeouts ≥30s
 
 ### Workflow State
-pattern: state-coverage-deepening
-phase: 1 (SA complete)
-total_phases: open-ended (per-state)
+pattern: buyer-wedge-execution
+phase: 2 of 5 moves shipped
+total_phases: 5 (wedge moves)
 retries: 0
 max_retries: 3
 
 #### Resolved
-- goal: "SA coverage deepening — what we have, value, next steps" — SHIPPED (classifier + 65 SEs + 7 ABNs + tender-pack policy)
+- goal: "build the agent and skills to do this [5-move plan]" — moves 1+2 shipped, 3 machinery done, 4 nearly, 5 active
 - resource_allocation: balanced
 
 #### Unknowns
-(none)
+(none blocking)
 
 #### Last Failure
 (none)
@@ -106,15 +84,7 @@ max_retries: 3
 ## Context
 
 Full strategy and provenance: `thoughts/shared/research/2026-06-07-social-enterprise-commons-review.md`
+Strategy doc (source of truth): `docs/strategy/buyer-wedge.md`
 North-star memory: `~/.claude/projects/-Users-benknight-Code-grantscope/memory/project_supply_base_evidence_layer.md`
-
-Key files this stream:
-- `apps/web/src/lib/giving-commons.ts` — PUBLIC_DATASETS registry (one entry cascades everywhere), COMMONS_NAV
-- `apps/web/src/lib/social-procurement.ts` — jurisdiction policy inserts (VIC/QLD/NSW/SA/Federal)
-- `apps/web/src/app/giving/**` — commons pages incl. new `suppliers/page.tsx`
-- `apps/web/src/app/social-enterprises/[id]/page.tsx` — evidence profile
-- `apps/web/src/app/api/procurement/{analyse,tender-pack}/route.ts` — buyer loop
-- `scripts/backfill-se-abns.mjs` + `scripts/backfill-se-abns-fuzzy.mjs` — re-runnable ABN backfill (dry-run default, --live)
-- `scripts/classify-directory-se-candidates.mjs` — directory→SE classifier (dry-run default, --apply; verdict cache resumes)
-
-Verified numbers (2026-06-07 evening): social_enterprises 11,838 rows / 10,181 with ABN (86%); SA 480 SEs / 382 with ABN; 63 SA SEs hold 198 contracts ($359M); registry-wide 1,135 SEs hold $15.6B AusTender contracts.
+ACT/Goods entities memory: `~/.claude/projects/-Users-benknight-Code-grantscope/memory/project_act_business_model.md`
+NIAA prospect pack: `thoughts/shared/prospects/niaa/` · pipeline: `thoughts/shared/prospects/PIPELINE.md`
