@@ -18,11 +18,13 @@ Table: `se_buyer_prospects` (buyer_name, se_supplier_count, contract_count, tota
 
 ## Stage 2 — Shortlist
 
-Query the table; prioritise in this order:
-1. **VIC buyers** — Social Procurement Framework MANDATES weightings on government procurement. Strongest obligation = strongest pull.
-2. **SA buyers** — SAIPP (min 20% economic-contribution weighting, Office of the Industry Advocate). Note: SA has NO mandated SE weighting (our tender-pack copy says so honestly — that honesty is part of the pitch).
-3. High `se_supplier_count` + recent `last_contract_end` (active buyers, not historical).
-4. `certified_supplier_count` > 0 (their suppliers carry marks a probity advisor recognises).
+**Data reality (verified 2026-06-08):** the prospect pool is FEDERAL — AusTender is commonwealth procurement; VIC/SA SPF/SAIPP obligation-holders tender through state systems we don't ingest yet. Top of pool: Defence (255 SE suppliers, $2.3B), Services Australia (174), PM&C (145), DSS (137), NIAA (132).
+
+Prioritise in this order:
+1. **Federal buyers via the IPP angle** — the Indigenous Procurement Policy sets MANDATORY targets for commonwealth buyers, and ~80% of the registry is Supply Nation/ORIC. The pitch: "here is your agency's IPP delivery story, per-supplier, evidence-linked" — no one else can produce it. Strongest combination of obligation + our evidence.
+2. High `se_supplier_count` + recent `last_contract_end` (active buyers, not historical).
+3. `certified_supplier_count` > 0 (their suppliers carry marks a probity advisor recognises).
+4. **VIC/SA buyers** (SPF/SAIPP obligation) — currently NO contract evidence in our DB. Unblocking them needs a Buying-for-Victoria / SA Tenders ingest — raise with the user as a /wedge question before building (it's evidence-depth work, not widening, but it's still a build).
 
 Cross-reference: which shortlisted buyers also appear as policy targets in `apps/web/src/lib/social-procurement.ts` (state policy inserts).
 

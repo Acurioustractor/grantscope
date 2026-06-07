@@ -99,7 +99,9 @@ async function main() {
     return;
   }
 
-  const { stdout } = runPsql(`
+  // \o redirects psql's "UPDATE n" status tag into the output file — parse
+  // both channels so the count survives either way
+  const { out: updOut, stdout } = runPsql(`
     UPDATE social_enterprises SET
       verification_tier = ${TIER_CASE},
       verification_basis = ${BASIS_CASE},
@@ -107,7 +109,7 @@ async function main() {
     WHERE verification_tier IS DISTINCT FROM (${TIER_CASE})
        OR verification_computed_at IS NULL;
   `);
-  const updated = Number((stdout.match(/UPDATE (\d+)/) || [])[1] || 0);
+  const updated = Number(((updOut + stdout).match(/UPDATE (\d+)/) || [])[1] || 0);
   console.log(`\nUpdated ${updated} rows.`);
 
   await logComplete(supabase, activeRun.id, { items_found: updated, items_new: updated });
