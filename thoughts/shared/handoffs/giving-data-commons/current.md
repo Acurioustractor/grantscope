@@ -18,7 +18,10 @@ status: active
 [->] Post-merge data passes (session crashed mid-run 2026-06-07 ~10:33, recovered + completed):
 - [x] Fuzzy ABN pass APPLIED: 766 ABNs (30 norm-exact, 105 abr-probe, 30 trgm, 601 API) → 9,501/10,646 with ABN. Script: `scripts/backfill-se-abns-fuzzy.mjs` (dry-run default, --live; cache `data/abn-lookup-cache-se.jsonl`; audit CSV in data/backups/)
 - [x] State network re-scrape APPLIED: 1,055 new + 121 enriched from data-API payloads in `data/scrapes/` (senvic 834, secna 152, qsec 38, sasec 31-of-80 — ordinary members only, Associates excluded). Script: `scripts/ingest-state-se-networks.mjs`. Table: 11,701 rows
-- [x] Second fuzzy ABN pass APPLIED: 593 more (206 norm-exact, 136 abr-probe, 19 trgm, 232 API). Final: 10,094/11,701 with ABN (86%), 1,607 missing
+- [x] Second fuzzy ABN pass APPLIED: 593 more (206 norm-exact, 136 abr-probe, 19 trgm, 232 API)
+- [x] WASEC captured + APPLIED: directory is a Livewire app at admin.wasec.org.au (WP page is an empty shell) — `scripts/scrape-wasec-directory.mjs` → 80 members w/ certs+impact areas → 72 new + 8 enriched + 53 ABNs. Final: 10,147/11,773 with ABN (86%), 1,626 missing
+- [x] SENTAS dead end VERIFIED: rebranded to SECTAS (sectas.org.au), no public member directory (6-page site, empty project CPT, members in private chat platform)
+- Ingest now supports `--source=<key>` (surgical re-runs) and carries certifications jsonb (WASEC: Social Traders marks)
 - Gotcha: pooler statement_timeout ~2min cancels phase-3b live runs — scripts now SET statement_timeout='280s' per session
 - Gotcha: SENVIC map includes interstate-HQ members — state derived from postcode, not network
 
