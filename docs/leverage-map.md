@@ -57,8 +57,12 @@ All three are **evidence-depth** plays — the wedge's stated #1 tie-breaker ("e
   `austender_contracts` via ABN. Serves: **G3∩G1 (best quadrant)**. Why valuable: **4,225 of 36,805
   justice-funded orgs (11.5%) have also won federal contracts** — orgs with *both* domain credibility
   (justice delivery) and a proven procurement track record. A buyer needing community/justice services
-  gets a defensible shortlist. Evidence: 4,225 ABN-matched. State: **latent**. Effort: M. Wedge:
-  **green**. (Highest-volume best-quadrant find so far.)
+  gets a defensible shortlist. Evidence: 4,225 ABN-matched. State: **BUILT 2026-06-08** —
+  `mv_justice_proven_suppliers` (4,225 rows, migration `20260608060000`; triple-proof MV minus the
+  ACNC gate, ACNC kept as optional signal). Registered in manual + nightly cron refresh. Surfaces as
+  the **"Proven govt delivery"** badge on `/suppliers` search and `/social-enterprises/[id]` profiles
+  (strongest-of-three hierarchy: Proven outcomes > Triple-proof > Proven govt delivery). Commit
+  `5dcff2a`. Effort: M. Wedge: **green**. (Highest-volume best-quadrant find so far.)
 
 - **OP4 — Financial-health signal on justice-funded charities.** Datasets: `justice_funding` ×
   `acnc_charities` / `mv_acnc_ais_yearly` via ABN. Serves: **G3**. Why valuable: **4,366 (12%)** justice
