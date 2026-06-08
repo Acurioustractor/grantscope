@@ -10,6 +10,32 @@ import { policyInsertsForStates } from '@/lib/social-procurement';
  * Input: { lgas?: string[], postcodes?: string[], states?: string[], entity_types?: string[], keywords?: string }
  * Output: Verified supplier shortlist, compliance forecast, gap analysis
  */
+interface SeRow {
+  id: string;
+  name: string | null;
+  abn: string | null;
+  state: string | null;
+  postcode: string | null;
+  sector: string[] | string | null;
+  source_primary: string | null;
+  org_type: string | null;
+}
+
+interface MergedEntity {
+  gs_id: string | null;
+  canonical_name: string | null;
+  abn: string | null;
+  entity_type: string | null;
+  state: string | null;
+  postcode: string | null;
+  remoteness: string | null;
+  seifa_irsd_decile: number | null;
+  is_community_controlled: boolean | null;
+  lga_name: string | null;
+  lga_code: string | null;
+  sector: string | null;
+}
+
 export async function POST(request: NextRequest) {
   const auth = await requireModule('procurement');
   if (auth.error) return auth.error;
@@ -19,6 +45,7 @@ export async function POST(request: NextRequest) {
     lgas = [],
     postcodes = [],
     states = [],
+    se_ids = [],
     entity_types = ['indigenous_corp', 'social_enterprise', 'charity'],
     keywords,
     ipp_target = 3.0,
@@ -27,84 +54,129 @@ export async function POST(request: NextRequest) {
     lgas?: string[];
     postcodes?: string[];
     states?: string[];
+    se_ids?: string[];
     entity_types?: string[];
     keywords?: string;
     ipp_target?: number;
     sme_target?: number;
   };
 
-  if (!lgas.length && !postcodes.length && !states.length) {
+  const fromShortlist = se_ids.length > 0;
+
+  if (!fromShortlist && !lgas.length && !postcodes.length && !states.length) {
     return NextResponse.json(
-      { error: 'Provide at least one of: lgas, postcodes, or states' },
+      { error: 'Provide a shortlist (se_ids) or at least one of: lgas, postcodes, or states' },
       { status: 400 }
     );
   }
 
   const supabase = getServiceSupabase();
 
-  // Build entity query with geographic filters
-  let entityQuery = supabase
-    .from('gs_entities')
-    .select('gs_id, canonical_name, abn, entity_type, state, postcode, remoteness, seifa_irsd_decile, is_community_controlled, lga_name, lga_code, sector')
-    .in('entity_type', entity_types);
+  // Resolve the candidate supplier set two ways:
+  //  - shortlist mode: the buyer's hand-picked social_enterprises (by id), enriched
+  //    with gs_entities geography by ABN;
+  //  - geography mode: gs_entities in the target area, overlaid with the SE registry.
+  const GS_COLS =
+    'gs_id, canonical_name, abn, entity_type, state, postcode, remoteness, seifa_irsd_decile, is_community_controlled, lga_name, lga_code, sector';
 
-  if (lgas.length > 0) {
-    entityQuery = entityQuery.in('lga_name', lgas);
-  } else if (postcodes.length > 0) {
-    entityQuery = entityQuery.in('postcode', postcodes);
-  } else if (states.length > 0) {
-    entityQuery = entityQuery.in('state', states);
-  }
+  let merged: MergedEntity[] = [];
+  const seByAbn = new Map<string, SeRow>();
 
-  if (keywords) {
-    entityQuery = entityQuery.ilike('canonical_name', `%${keywords}%`);
-  }
+  if (fromShortlist) {
+    const seResult = await supabase
+      .from('social_enterprises')
+      .select('id, name, abn, state, postcode, sector, source_primary, org_type')
+      .in('id', se_ids.slice(0, 200));
+    const seRows = (seResult.data || []) as SeRow[];
+    for (const se of seRows) if (se.abn) seByAbn.set(se.abn, se);
 
-  const entityResult = await entityQuery.limit(500);
-  const entities = entityResult.data || [];
+    // Enrich the picked enterprises with gs_entities geography/remoteness/SEIFA by ABN.
+    const seAbns = seRows.map((se) => se.abn).filter(Boolean) as string[];
+    const gsByAbn = new Map<string, MergedEntity>();
+    if (seAbns.length > 0) {
+      const gsResult = await supabase.from('gs_entities').select(GS_COLS).in('abn', seAbns.slice(0, 200));
+      for (const g of (gsResult.data || []) as MergedEntity[]) {
+        if (g.abn) gsByAbn.set(g.abn, g);
+      }
+    }
 
-  // Overlay the social/Indigenous enterprise registry on the same geography.
-  // Registered enterprises matching the entity shortlist get verification marks;
-  // ones missing from the entity query are added as suppliers in their own right.
-  let seQuery = supabase
-    .from('social_enterprises')
-    .select('id, name, abn, state, postcode, sector, source_primary, org_type')
-    .not('abn', 'is', null);
-  if (postcodes.length > 0) {
-    seQuery = seQuery.in('postcode', postcodes);
-  } else if (states.length > 0) {
-    seQuery = seQuery.in('state', states);
+    merged = seRows.map((se) => {
+      const g = se.abn ? gsByAbn.get(se.abn) : undefined;
+      if (g) return g;
+      return {
+        gs_id: null,
+        canonical_name: se.name,
+        abn: se.abn,
+        entity_type: se.org_type || 'social_enterprise',
+        state: se.state,
+        postcode: se.postcode,
+        remoteness: null,
+        seifa_irsd_decile: null,
+        is_community_controlled: null,
+        lga_name: null,
+        lga_code: null,
+        sector: Array.isArray(se.sector) ? se.sector.join(', ') : se.sector,
+      };
+    });
   } else {
-    // LGA-only request — social_enterprises has no LGA column, so overlay by ABN only
-    const entityAbns = entities.map(e => e.abn).filter(Boolean) as string[];
-    seQuery = entityAbns.length > 0 ? seQuery.in('abn', entityAbns.slice(0, 200)) : seQuery.limit(0);
-  }
-  if (keywords) {
-    seQuery = seQuery.ilike('name', `%${keywords}%`);
-  }
-  const seResult = await seQuery.limit(300);
-  const seRows = seResult.data || [];
-  const seByAbn = new Map(seRows.map(se => [se.abn as string, se]));
+    // Geography mode — gs_entities in the target area, overlaid with the SE registry.
+    let entityQuery = supabase.from('gs_entities').select(GS_COLS).in('entity_type', entity_types);
 
-  const entityAbnSet = new Set(entities.map(e => e.abn).filter(Boolean));
-  const seOnly = seRows.filter(se => !entityAbnSet.has(se.abn));
-  const merged = [
-    ...entities,
-    ...seOnly.map(se => ({
-      gs_id: null,
-      canonical_name: se.name,
-      abn: se.abn,
-      entity_type: se.org_type || 'social_enterprise',
-      state: se.state,
-      postcode: se.postcode,
-      remoteness: null,
-      seifa_irsd_decile: null,
-      is_community_controlled: null,
-      lga_name: null,
-      lga_code: null,
-      sector: Array.isArray(se.sector) ? se.sector.join(', ') : se.sector,
-    })),
-  ];
+    if (lgas.length > 0) {
+      entityQuery = entityQuery.in('lga_name', lgas);
+    } else if (postcodes.length > 0) {
+      entityQuery = entityQuery.in('postcode', postcodes);
+    } else if (states.length > 0) {
+      entityQuery = entityQuery.in('state', states);
+    }
+    if (keywords) {
+      entityQuery = entityQuery.ilike('canonical_name', `%${keywords}%`);
+    }
+    const entityResult = await entityQuery.limit(500);
+    const entities = (entityResult.data || []) as MergedEntity[];
+
+    // Registered enterprises matching the entity shortlist get verification marks;
+    // ones missing from the entity query are added as suppliers in their own right.
+    let seQuery = supabase
+      .from('social_enterprises')
+      .select('id, name, abn, state, postcode, sector, source_primary, org_type')
+      .not('abn', 'is', null);
+    if (postcodes.length > 0) {
+      seQuery = seQuery.in('postcode', postcodes);
+    } else if (states.length > 0) {
+      seQuery = seQuery.in('state', states);
+    } else {
+      // LGA-only request — social_enterprises has no LGA column, so overlay by ABN only
+      const entityAbns = entities.map((e) => e.abn).filter(Boolean) as string[];
+      seQuery = entityAbns.length > 0 ? seQuery.in('abn', entityAbns.slice(0, 200)) : seQuery.limit(0);
+    }
+    if (keywords) {
+      seQuery = seQuery.ilike('name', `%${keywords}%`);
+    }
+    const seResult = await seQuery.limit(300);
+    const seRows = (seResult.data || []) as SeRow[];
+    for (const se of seRows) if (se.abn) seByAbn.set(se.abn, se);
+
+    const entityAbnSet = new Set(entities.map((e) => e.abn).filter(Boolean));
+    const seOnly = seRows.filter((se) => !entityAbnSet.has(se.abn));
+    merged = [
+      ...entities,
+      ...seOnly.map((se) => ({
+        gs_id: null,
+        canonical_name: se.name,
+        abn: se.abn,
+        entity_type: se.org_type || 'social_enterprise',
+        state: se.state,
+        postcode: se.postcode,
+        remoteness: null,
+        seifa_irsd_decile: null,
+        is_community_controlled: null,
+        lga_name: null,
+        lga_code: null,
+        sector: Array.isArray(se.sector) ? se.sector.join(', ') : se.sector,
+      })),
+    ];
+  }
 
   // Get contract history for these entities
   const abns = merged.map(e => e.abn).filter(Boolean) as string[];
@@ -248,7 +320,9 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({
     pack: {
-      title: `Tender Intelligence Pack — ${lgas.join(', ') || postcodes.join(', ') || states.join(', ')}`,
+      title: fromShortlist
+        ? `Tender Intelligence Pack — Your shortlist (${merged.length} supplier${merged.length === 1 ? '' : 's'})`
+        : `Tender Intelligence Pack — ${lgas.join(', ') || postcodes.join(', ') || states.join(', ')}`,
       generated_at: new Date().toISOString(),
       filters: { lgas, postcodes, states, entity_types, keywords },
       area_context: areaContext,
@@ -276,7 +350,8 @@ export async function POST(request: NextRequest) {
     summary: {
       total_entities: totalInArea,
       by_type: shortlist.reduce((acc, s) => {
-        acc[s.entity_type] = (acc[s.entity_type] || 0) + 1;
+        const t = s.entity_type || 'unknown';
+        acc[t] = (acc[t] || 0) + 1;
         return acc;
       }, {} as Record<string, number>),
       by_state: shortlist.reduce((acc, s) => {
@@ -290,7 +365,7 @@ export async function POST(request: NextRequest) {
 }
 
 function calculateCapabilityScore(
-  entity: Record<string, unknown>,
+  entity: MergedEntity,
   contracts: { count: number; total_value: number; buyers: Set<string>; latest: string }
 ): number {
   let score = 0;

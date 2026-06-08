@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useShortlist } from '@/app/components/shortlist-context';
 
 interface ShortlistEntity {
   gs_id: string;
@@ -69,7 +70,9 @@ const STATES = ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'NT', 'ACT'];
 export default function TenderPackPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [gate, setGate] = useState<{ kind: 'login' | 'upgrade'; requiredTier?: string } | null>(null);
   const [result, setResult] = useState<TenderPackResult | null>(null);
+  const { items: shortlist, clear: clearShortlist } = useShortlist();
 
   // Filters
   const [lgaInput, setLgaInput] = useState('');
@@ -81,6 +84,7 @@ export default function TenderPackPage() {
   const handleGenerate = async () => {
     setLoading(true);
     setError('');
+    setGate(null);
 
     const lgas = lgaInput.split(/[,;\n]+/).map(l => l.trim()).filter(Boolean);
     const postcodes = postcodeInput.split(/[\s,;]+/).map(p => p.trim()).filter(p => /^\d{4}$/.test(p));
@@ -105,7 +109,43 @@ export default function TenderPackPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || 'Generation failed');
+        if (res.status === 401) {
+          setGate({ kind: 'login' });
+        } else if (res.status === 403) {
+          setGate({ kind: 'upgrade', requiredTier: data.required_tier_label });
+        } else {
+          setError(data.error || 'Generation failed');
+        }
+      } else {
+        setResult(data);
+      }
+    } catch {
+      setError('Network error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const generateFromShortlist = async () => {
+    if (shortlist.length === 0) return;
+    setLoading(true);
+    setError('');
+    setGate(null);
+    try {
+      const res = await fetch('/api/procurement/tender-pack', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ se_ids: shortlist.map((s) => s.se_id) }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (res.status === 401) {
+          setGate({ kind: 'login' });
+        } else if (res.status === 403) {
+          setGate({ kind: 'upgrade', requiredTier: data.required_tier_label });
+        } else {
+          setError(data.error || 'Generation failed');
+        }
       } else {
         setResult(data);
       }
@@ -144,6 +184,103 @@ export default function TenderPackPage() {
 
       {!result ? (
         <div className="space-y-6">
+          {/* Conversion gate — the tender pack is the paid buyer tool. Frame the value, reassure the shortlist is saved. */}
+          {gate && (
+            <div className="border-4 border-bauhaus-black bg-bauhaus-yellow p-6">
+              <div className="text-[11px] font-black uppercase tracking-widest text-bauhaus-red mb-1">
+                {gate.kind === 'login' ? 'One step to your pack' : `Upgrade to ${gate.requiredTier ?? 'a buyer plan'}`}
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tight text-bauhaus-black mb-2">
+                The tender pack is the buyer tool
+              </h2>
+              <p className="text-sm font-medium text-bauhaus-black/80 max-w-2xl mb-1 leading-relaxed">
+                Searching, assessing and shortlisting suppliers is free and open. Turning your shortlist into a
+                tender-ready intelligence pack — compliance forecast against IPP/SME targets, gap analysis and
+                paste-ready policy citations — is a buyer feature.
+              </p>
+              {shortlist.length > 0 && (
+                <p className="text-sm font-bold text-bauhaus-black mb-4">
+                  Your shortlist of {shortlist.length} supplier{shortlist.length === 1 ? '' : 's'} is saved — it&apos;ll be right here when you come back.
+                </p>
+              )}
+              <div className="flex flex-wrap gap-3">
+                {gate.kind === 'login' ? (
+                  <>
+                    <a
+                      href="/login?redirect=/procurement/tender-pack"
+                      className="px-6 py-3 bg-bauhaus-black text-white text-xs font-black uppercase tracking-widest border-2 border-bauhaus-black hover:bg-bauhaus-red transition-colors"
+                    >
+                      Log in
+                    </a>
+                    <a
+                      href="/register?redirect=/procurement/tender-pack"
+                      className="px-6 py-3 bg-bauhaus-red text-white text-xs font-black uppercase tracking-widest border-2 border-bauhaus-black hover:bg-bauhaus-black transition-colors"
+                    >
+                      Start free
+                    </a>
+                  </>
+                ) : (
+                  <a
+                    href="/pricing"
+                    className="px-6 py-3 bg-bauhaus-black text-white text-xs font-black uppercase tracking-widest border-2 border-bauhaus-black hover:bg-bauhaus-red transition-colors"
+                  >
+                    See buyer plans →
+                  </a>
+                )}
+                <button
+                  onClick={() => setGate(null)}
+                  className="px-4 py-3 text-xs font-black uppercase tracking-widest text-bauhaus-black/50 hover:text-bauhaus-black"
+                >
+                  Not now
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* From your shortlist — the buyer's hand-picked suppliers carried from search/profiles */}
+          {shortlist.length > 0 && (
+            <>
+              <div className="border-4 border-bauhaus-black bg-bauhaus-black text-white p-6">
+                <div className="flex items-center justify-between gap-3 mb-1">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-bauhaus-yellow text-bauhaus-black text-xs font-black px-2 py-0.5">{shortlist.length}</span>
+                    <h2 className="text-xs font-black uppercase tracking-widest text-bauhaus-yellow">From your shortlist</h2>
+                  </div>
+                  <button
+                    onClick={clearShortlist}
+                    className="text-[11px] font-black uppercase tracking-widest text-white/40 hover:text-white"
+                  >
+                    Clear
+                  </button>
+                </div>
+                <p className="text-white/70 text-sm font-medium mb-4 max-w-2xl leading-relaxed">
+                  Build the pack from the {shortlist.length} supplier{shortlist.length === 1 ? '' : 's'} you shortlisted —
+                  delivery evidence, compliance forecast and gap analysis for exactly these enterprises.
+                </p>
+                <div className="flex flex-wrap gap-2 mb-5">
+                  {shortlist.map((s) => (
+                    <span key={s.se_id} className="text-[11px] font-bold bg-white/10 border border-white/20 px-2 py-1">
+                      {s.name}{s.state ? ` · ${s.state}` : ''}
+                    </span>
+                  ))}
+                </div>
+                <button
+                  onClick={generateFromShortlist}
+                  disabled={loading}
+                  className="px-6 py-3 bg-bauhaus-yellow text-bauhaus-black font-black text-sm uppercase tracking-widest border-2 border-bauhaus-yellow hover:bg-white hover:border-white transition-colors disabled:opacity-50"
+                >
+                  {loading ? 'Generating pack…' : `Generate from ${shortlist.length} shortlisted`}
+                </button>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-0.5 bg-bauhaus-black/20" />
+                <span className="text-[11px] font-black uppercase tracking-widest text-bauhaus-muted">or build from a project footprint</span>
+                <div className="flex-1 h-0.5 bg-bauhaus-black/20" />
+              </div>
+            </>
+          )}
+
           {/* Filters */}
           <div className="border-4 border-bauhaus-black p-6 space-y-5">
             <h2 className="text-xs font-black uppercase tracking-widest">Project Footprint</h2>

@@ -3,6 +3,8 @@ import './globals.css';
 import { NavBar } from './components/nav';
 import { ImpersonationBanner } from './components/impersonation-banner';
 import { DeferredChatDrawer } from './components/deferred-chat-drawer';
+import { ShortlistProvider } from './components/shortlist-context';
+import { ShortlistBar } from './components/shortlist-bar';
 import { createSupabaseServer, hasSupabaseServerEnv } from '@/lib/supabase-server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { resolveSubscriptionTier } from '@/lib/subscription';
@@ -131,6 +133,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         data-authenticated={user ? 'true' : 'false'}
         data-user-email={user?.email ?? ''}
       >
+        <ShortlistProvider>
         <NavBar
           initialUserEmail={user?.email ?? null}
           subscriptionTier={tier}
@@ -211,7 +214,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </footer>
           </>
         )}
+        <ShortlistBar />
         <DeferredChatDrawer delayMs={isFastPublicPath ? 2500 : 1000} />
+        </ShortlistProvider>
       </body>
     </html>
   );
