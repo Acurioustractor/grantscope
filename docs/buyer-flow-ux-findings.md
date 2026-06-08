@@ -130,3 +130,127 @@ disconnected from the /suppliers search term. Good: "Load example", on-brand Bau
 types pre-set to INDIGENOUS.
 
 ---
+
+# Audit Pass 2 — 2026-06-08 (fresh, post-fix, full flow)
+
+Second pass after F1–F9 shipped (commits `2f0ad30` ← `4a5ddae`). Logged-out buyer view, `:3003`,
+viewport 1280×900. **Two purposes:** (a) verify the Pass-1 fixes are live, (b) extend coverage to
+the steps Pass 1 skipped — **step 3 `/social-enterprises` (directory)** and **step 4 `/procurement`** —
+plus cross-cutting issues. Screenshots: `docs/ux-audit/shots/audit-0{1..6}-*.jpeg`.
+Effort key unchanged: **S** quick edit · **M** component work · **L** data/logic.
+
+## ✅ Pass-1 fixes confirmed live
+- **F1** result cards clickable — whole row is a target, persistent "VIEW PROFILE →" in red. ✓ (`audit-02`)
+- **F5/F8** shortlist spine — "+ Add to pack" on cards + "ADD TO TENDER PACK" rail on the profile;
+  `/procurement/tender-pack` renders a black "FROM YOUR SHORTLIST (N)" panel with supplier chips +
+  "Generate from N shortlisted" above the footprint form. ✓ (verified in `tender-pack/page.tsx:241`)
+- **F7** profile About leads with the evidence sentence ("Delivered $15.5M across 36 government
+  contracts for 5+ buyers"); hedge suppressed. ✓ (`audit-03`)
+- **Paywall converts, not errors** — yellow value-framed gate, reassures "your shortlist is saved",
+  login/register/pricing routes. ✓ (`tender-pack/page.tsx:188`)
+
+## ⚠️ Re-opened
+
+### P2-1. [L · HIGH] Ranking buries on-need specialists — refines F2-RESOLVED.
+Pass 1 closed F2 after checking one top result (Arnhem = legit bed-dwelling construction) and
+concluding recall is fine. Recall **is** fine — but a fresh look at the *whole* "beds" result set
+shows a precision/intent problem the single-result check missed. Confirmed mechanism in
+`supplier-search.ts:6-8`: FTS ranks **contract titles weight A**, name/sectors B, description C,
+**plus a delivery-evidence boost**. Consequences for "beds":
+- Big NT construction contractors (GEBIE, Arnhem) top the list because their *contract titles*
+  contain "bed" (bed-**dwellings** = remote housing) **and** they carry large $ evidence boosts.
+- The keyword conflates two different buyer intents — *buy bed furniture* vs *build bed-dwellings* —
+  and structurally ranks the housing-construction reading above the furniture one.
+- The actual bed-**furniture** specialists (#GoKindly "Bed + Bath", Social Living "sustainable
+  bedding", Goods on Country "beds and furniture") sink to the bottom: they match on name/sector
+  (weight B) with **zero contract evidence**, so the evidence boost that helps everyone else = 0.
+- Clear false positive: TEAM Inc surfaced via "**garden** beds".
+*Net:* the evidence-boost — right in general — actively buries the on-need supplier when the need is
+a consumer good rather than a contracted service. *Fix direction:* keep evidence as a tiebreaker
+*within* a relevance band, not across bands; consider an intent/category signal; down-weight common
+substrings ("garden beds"). *Shot:* `audit-02-suppliers-beds.jpeg`.
+
+## 🆕 New coverage — step 3 (directory) & step 4 (procurement)
+
+### P2-2. [M · HIGH] Directory `/social-enterprises` strips the evidence thesis.
+Pass 1 never audited this page. Cards show category + source badges and sectors but **none** of the
+delivery evidence (`contract_count`/`$`/proof tier) that `/suppliers` surfaces. Sort options are only
+`name | newest | state` (`social-enterprises/page.tsx:76,108`) — **no evidence/proof sort exists**,
+default is **Name A-Z** ("Koolyangarra…" leads). The same supply base, browsed instead of searched,
+loses everything that differentiates the product. *Fix:* proof signal on directory cards
+(triple-proof / proven-outcomes / contract count) + an evidence sort, defaulted. *Shot:* `audit-04`.
+
+### P2-3. [S + YOUR CALL] "Black cladding risk scores" as raw jargon on `/procurement`.
+The hero and Enterprise-API list surface "black cladding risk scoring" with no explainer. It's a
+*pro*-Indigenous-integrity capability (detecting non-Indigenous firms falsely claiming Indigenous
+ownership to win IPP contracts) — but dropped unexplained on a buyer surface for a product that
+centres community-controlled enterprise, it can read badly. Recommend a one-line "what it is / why
+detecting it protects genuine Indigenous business" + your decision on wording. *Shot:* `audit-05`.
+
+### P2-4. [M · conversion] Both generate-forms sell the paid artifact blind.
+`/procurement` (compliance) and `/procurement/tender-pack` gate all value behind a CSV/footprint
+form with no preview of the *output*. The tender pack is the paid thing — show a sample pack (or a
+teaser of its sections) before generate. "Load example" fills inputs, not output. *Shots:* `audit-05`, `audit-06`.
+
+## 🆕 Cross-cutting
+
+### P2-5. [S · HIGH leverage] Per-page `<title>`/metadata missing across the flow.
+Only `/suppliers` sets a real title. Profile, directory, `/procurement`, `/procurement/tender-pack`
+all render the generic root `CivicGraph — Australia's Accountability Atlas`; the profile route has no
+`generateMetadata` at all (`[id]/page.tsx` — only `export const dynamic`). Hurts tabs, **link
+previews when a buyer pastes a profile into a procurement email**, and registry SEO. *Fix:*
+`generateMetadata` on the profile (title = enterprise name; description = the evidence summary) +
+static metadata on directory/procurement pages.
+
+### P2-6. [M] Inconsistent hero system across the flow.
+Three treatments on four pages: `/suppliers` canvas + black text · `/social-enterprises` +
+`/tender-pack` black fill (the latter with a blue hard-shadow) · `/procurement` **full blue fill**.
+DESIGN.md reserves blue for links/info, not hero fills. Pick one hero system. *Shots:* all.
+
+### P2-7. [M · polish] `/suppliers` landing dead zone + zero pre-search proof.
+Below the 3-card explainer the page is empty to the footer; pre-search it's all promise, no evidence.
+A featured "proven outcomes" row or live registry stats (contracts tracked, $ delivered) would fill
+it and *show* value before the first query. The example needs ("Beds"/"Catering"/"Civil works") are
+quoted but not clickable — one-click chips would cut friction to first search. *Shot:* `audit-01`.
+
+### P2-8. [S] Tender-pack **empty** state hides the spine.
+With a populated shortlist the spine is great (confirmed above). But with an **empty** shortlist the
+page shows *only* the cold footprint form — no empty-state nudge ("you haven't shortlisted anyone yet
+— find suppliers →") to reveal that the primary intended path is shortlist-driven. A cold visitor
+never learns the spine exists. *Shot:* `audit-06`.
+
+## Pass-2 recommendation
+Fix the buyer's *first impression* first: **P2-1 (ranking)** + **P2-2 (directory evidence)**. Then
+the cheap high-leverage wins: **P2-5 (metadata)** + **P2-8 (empty-state nudge)**. P2-3 needs your
+call. Not audited either pass: `/procurement/gap-map`, `/commissioning`.
+
+## ✅ Pass-2 fixes shipped (2026-06-08)
+
+### P2-1 — DONE: kept evidence-led ranking, made the match legible. (Ben's call: option A.)
+Measured the real ranking first (`/tmp` diagnostic): a contract-title (weight A) hit scores ~1.0 vs
+~0.2 for a description (weight C) hit *before* any boost, and all description hits score identically —
+so pure ranking cannot separate on-need from off-need. Decision was to keep proven deliverers on top
+and make *why* each matched visible.
+- **RPC** `search_suppliers` (`migrations/2026-06-08-search-suppliers-match-legibility.sql`, applied):
+  returns `match_source` (`capability` = won-contract title / `offering` = name+sectors /
+  `description`) + a `ts_headline` `match_snippet` with the matched term highlighted, computed only on
+  the limited result set. Boosts switched additive → multiplicative (evidence amplifies a relevant
+  match instead of injecting a low-relevance high-evidence one); browse mode still ranks by evidence.
+- **`supplier-search.ts`** — `match_source` / `match_snippet` added to `SupplierResult` (pass-through).
+- **`suppliers/page.tsx`** — `MatchReason` + `HighlightedSnippet` render per card; the full description
+  is suppressed when the description itself is the matched field (also fixes the old F4 ragged cards).
+- **Result (verified live, `audit-07-beds-after.jpeg`):** "beds" now reads — GEBIE/Arnhem green
+  "Matched in a won contract: …Construct 4x2 **Bed** Dwellings…"; CERES/TEAM "Matched in description:
+  …garden **beds**…" (the false positive is now self-evident); #GoKindly/Social Living/Goods "…**Bed**
+  + Bath / sustainable **bedding** / **beds** and furniture…" — the actual suppliers, unmistakable.
+  Order unchanged (evidence-led, thesis intact). tsc clean, 221 tests pass.
+
+### P2-3 — DONE: black-cladding one-line explainer. (Ben's call: add explainer.)
+`procurement/page.tsx` hero now carries, under the headline: *"'Black cladding' is a non-Indigenous
+business fronting a token Indigenous partner to win Indigenous-procurement contracts. Flagging it
+protects genuine Indigenous-owned suppliers."* Verified live (`audit-08-procurement-hero.jpeg`).
+
+**Still open:** P2-2 (directory evidence + sort), P2-4 (output preview), P2-5 (metadata), P2-6 (heroes),
+P2-7 (landing proof), P2-8 (empty-state nudge). Not committed yet — working tree on `chore/tsc-stop-hook`.
+
+---

@@ -58,5 +58,6 @@ For every screen a buyer hits, ask:
 3. `.claude/skills/polish/` — the loop-skill, seeded from the refined rubric above.
 
 ## Status
-- [ ] Audit step 1 `/suppliers`  - [ ] step 2 profile  - [ ] step 3 directory  - [ ] step 4 procurement  - [ ] step 5 tender-pack
-- [ ] Findings doc  - [ ] Top fixes  - [ ] `/polish` skill
+- [x] Audit step 1 `/suppliers`  - [x] step 2 profile  - [x] step 3 directory  - [x] step 4 procurement  - [x] step 5 tender-pack
+- [x] Findings doc (Pass 1 F1–F9 + **Pass 2** 2026-06-08: confirmed fixes live, added directory/procurement + cross-cutting)  - [ ] Top fixes  - [ ] `/polish` skill
+- Pass-2 priority: P2-1 ranking · P2-2 directory evidence · then P2-5 metadata · P2-8 empty-state nudge. P2-3 (black-cladding wording) needs Ben.
