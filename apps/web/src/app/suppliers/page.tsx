@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { searchSuppliers, getRegistryStats, type SupplierResult } from '@/lib/services/supplier-search';
+import { searchSuppliers, getRegistryStats, getProvenOutcomesSuppliers, type SupplierResult } from '@/lib/services/supplier-search';
 import { money } from '@/lib/services/report-service';
 import { AddToPackButton } from '@/app/components/add-to-pack-button';
 import { isHedgeDescription } from '@/lib/supplier-copy';
@@ -141,7 +141,9 @@ export default async function SupplierSearchPage({
     : '';
   const searched = Boolean(q || state);
   const results = searched ? await searchSuppliers(q, state) : [];
-  const stats = searched ? null : await getRegistryStats();
+  const [stats, featured] = searched
+    ? ([null, []] as const)
+    : await Promise.all([getRegistryStats(), getProvenOutcomesSuppliers(6)]);
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-10">
@@ -305,6 +307,43 @@ export default async function SupplierSearchPage({
               ))}
             </div>
           </div>
+
+          {/* Proven-outcomes exemplars — named, clickable proof before the buyer even searches */}
+          {featured.length > 0 && (
+            <section className="mb-10">
+              <div className="text-[11px] font-black uppercase tracking-widest text-bauhaus-muted mb-2">
+                Proven outcomes
+              </div>
+              <p className="text-sm font-medium text-bauhaus-muted max-w-2xl mb-4">
+                The deepest proof in the registry — enterprises with a won government contract, charity
+                governance <strong className="text-bauhaus-black">and</strong> cited evidence with measured
+                outcomes (ALMA). This works, and they can deliver it.
+              </p>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {featured.map((f) => (
+                  <Link
+                    key={f.se_id}
+                    href={`/social-enterprises/${f.se_id}`}
+                    className="group flex flex-col border-4 border-bauhaus-black bg-white p-5 shadow-[4px_4px_0_#121212] hover:bg-bauhaus-yellow/10 transition-colors"
+                  >
+                    <div className="mb-3"><ProvenOutcomesBadge /></div>
+                    <div className="text-base font-black text-bauhaus-black leading-tight group-hover:text-bauhaus-red mb-1 line-clamp-2">
+                      {f.name}
+                    </div>
+                    <div className="text-[11px] font-bold uppercase tracking-widest text-bauhaus-muted mb-3">
+                      {[f.state, f.sector].filter(Boolean).join(' · ')}
+                    </div>
+                    <div className="mt-auto text-sm font-black tabular-nums text-money">
+                      {money(f.contract_value)}
+                      <span className="font-bold text-bauhaus-muted">
+                        {` · ${f.contract_count.toLocaleString()} govt contract${f.contract_count === 1 ? '' : 's'}`}
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
 
           <section className="grid sm:grid-cols-3 gap-0 border-4 border-bauhaus-black mb-8">
             <div className="bg-white p-6 border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black">

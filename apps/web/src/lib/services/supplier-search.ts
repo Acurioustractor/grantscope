@@ -43,6 +43,71 @@ export interface RegistryStats {
   total_contracts: number;
 }
 
+export interface FeaturedSupplier {
+  se_id: string;
+  name: string;
+  state: string | null;
+  sector: string | null;
+  contract_count: number;
+  contract_value: number;
+}
+
+/**
+ * Quad-proof exemplars for the search landing — enterprises that carry triple-proof PLUS cited
+ * ALMA evidence AND measured outcomes (`has_alma_evidence_outcomes`), ranked by total evidence
+ * dollars. Named, clickable proof shown pre-search. Two-query join (no migration): pull the proven
+ * ABNs from the MV, then resolve them to directory profiles. Returns [] on error.
+ */
+export async function getProvenOutcomesSuppliers(limit = 6): Promise<FeaturedSupplier[]> {
+  const supabase = getServiceSupabase();
+  const { data: mv, error } = await supabase
+    .from('mv_triple_proof_suppliers')
+    .select('abn, sector, contract_count, contract_value, total_evidence_dollars')
+    .eq('has_alma_evidence_outcomes', true)
+    .not('abn', 'is', null)
+    // Ordered by the figure the card actually shows (contract value) so the row reads top-down;
+    // every row already clears the proven-outcomes depth bar via has_alma_evidence_outcomes.
+    .order('contract_value', { ascending: false, nullsFirst: false })
+    .limit(limit * 3);
+  if (error || !mv?.length) {
+    if (error) console.error('[supplier-search:proven-outcomes]', error.message);
+    return [];
+  }
+
+  const abns = [...new Set(mv.map((r) => r.abn as string).filter(Boolean))];
+  const { data: ses, error: seError } = await supabase
+    .from('social_enterprises')
+    .select('id, name, state, abn')
+    .in('abn', abns);
+  if (seError) {
+    console.error('[supplier-search:proven-outcomes:se]', seError.message);
+    return [];
+  }
+
+  // First directory profile per ABN (some ABNs have duplicate rows).
+  const seByAbn = new Map<string, { id: string; name: string; state: string | null }>();
+  for (const se of (ses ?? []) as { id: string; name: string; state: string | null; abn: string }[]) {
+    if (se.abn && !seByAbn.has(se.abn)) seByAbn.set(se.abn, { id: se.id, name: se.name, state: se.state });
+  }
+
+  // Preserve the MV's evidence-desc order; keep only those resolvable to a profile.
+  const out: FeaturedSupplier[] = [];
+  for (const r of mv as { abn: string; sector: string | null; contract_count: number; contract_value: number }[]) {
+    const se = seByAbn.get(r.abn);
+    if (!se) continue;
+    out.push({
+      se_id: se.id,
+      name: se.name,
+      state: se.state,
+      sector: r.sector,
+      contract_count: r.contract_count,
+      contract_value: r.contract_value,
+    });
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
 /** Live registry totals for the search landing (pre-search proof). Returns null on error. */
 export async function getRegistryStats(): Promise<RegistryStats | null> {
   const supabase = getServiceSupabase();
