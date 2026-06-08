@@ -114,6 +114,137 @@ function EvidenceTierBadge({ tier }: { tier: EvidenceTier | null }) {
   );
 }
 
+// OP4 — financial-health signal from the latest ACNC Annual Information Statement (AIS),
+// for justice-funded charities. Framed as a CAPACITY signal (where support may be needed),
+// never a buyer warning. Liquidity is NULL when no balance sheet was filed — never inferred.
+type FinancialTier = 'healthy' | 'watch' | 'fragile' | 'unknown';
+
+interface FinancialHealth {
+  ais_year: number;
+  charity_size: string | null;
+  total_revenue: number | null;
+  total_expenses: number | null;
+  net_surplus_deficit: number | null;
+  net_assets_liabilities: number | null;
+  current_ratio: number | null;
+  months_of_reserves: number | null;
+  govt_revenue_share: number | null;
+  is_deficit: boolean | null;
+  net_assets_negative: boolean | null;
+  low_liquidity: boolean | null;
+  low_reserves: boolean | null;
+  high_govt_dependency: boolean | null;
+  fragility_tier: FinancialTier;
+}
+
+const FINANCIAL_TIER_META: Record<FinancialTier, { label: string; sub: string; className: string }> = {
+  healthy: {
+    label: 'Financially resilient',
+    sub: 'Latest ACNC filing shows reserves and a balanced result — well-placed to deliver.',
+    className: 'border-money bg-money-light text-money',
+  },
+  watch: {
+    label: 'Worth a closer look',
+    sub: 'One resilience signal worth noting in the latest filing — not a red flag on its own.',
+    className: 'border-bauhaus-black bg-bauhaus-yellow text-bauhaus-black',
+  },
+  fragile: {
+    label: 'Financially stretched',
+    sub: 'Thin reserves in the latest filing — a delivery partner who may benefit from multi-year or capacity support, not avoidance.',
+    className: 'border-bauhaus-red bg-bauhaus-red/10 text-bauhaus-red',
+  },
+  unknown: {
+    label: 'Limited financial data',
+    sub: 'The latest ACNC filing does not carry enough detail to assess financial resilience.',
+    className: 'border-bauhaus-black/40 bg-bauhaus-canvas text-bauhaus-muted',
+  },
+};
+
+// One metric cell in the financial snapshot grid.
+function FinStat({ label, value, tone }: { label: string; value: string; tone?: 'money' | 'red' | 'default' }) {
+  const valueColor = tone === 'money' ? 'text-money' : tone === 'red' ? 'text-bauhaus-red' : 'text-bauhaus-black';
+  return (
+    <div className="p-3 bg-white border-r-4 border-b-4 border-bauhaus-black last:border-r-0">
+      <div className="text-[10px] text-bauhaus-muted uppercase tracking-widest font-black mb-1 leading-tight">{label}</div>
+      <div className={`text-lg font-black ${valueColor}`}>{value}</div>
+    </div>
+  );
+}
+
+function FinancialHealthSection({ data }: { data: FinancialHealth }) {
+  const m = FINANCIAL_TIER_META[data.fragility_tier];
+  const pct = (n: number) => `${Math.round(n * 100)}%`;
+  const absMoney = (n: number | null | undefined) => (n == null ? '—' : `${n < 0 ? '−' : ''}${money(Math.abs(n))}`);
+
+  // Result: surplus (money-green) vs deficit (red).
+  const resultValue = data.net_surplus_deficit == null
+    ? '—'
+    : `${data.net_surplus_deficit < 0 ? '−' : '+'}${money(Math.abs(data.net_surplus_deficit))}`;
+  const resultTone: 'money' | 'red' | 'default' = data.net_surplus_deficit == null
+    ? 'default' : data.net_surplus_deficit < 0 ? 'red' : 'money';
+
+  // Reserves: months of runway, or net assets when months can't be computed.
+  const reservesValue = data.net_assets_negative
+    ? 'Negative'
+    : data.months_of_reserves != null
+      ? `${data.months_of_reserves < 10 ? data.months_of_reserves.toFixed(1) : Math.round(data.months_of_reserves)} mo`
+      : absMoney(data.net_assets_liabilities);
+  const reservesLabel = data.months_of_reserves != null && !data.net_assets_negative ? 'Reserves runway' : 'Net assets';
+
+  // Active warning signals — only the ones that are true. Govt concentration is a
+  // context flag (these orgs are govt-funded), shown in blue, not as a risk.
+  const signals: Array<{ label: string; className: string }> = [
+    data.net_assets_negative && { label: 'Negative net assets', className: 'border-bauhaus-red text-bauhaus-red' },
+    data.is_deficit && { label: 'Operating deficit', className: 'border-bauhaus-black text-bauhaus-black bg-bauhaus-yellow' },
+    data.low_reserves && { label: 'Under 3 months reserves', className: 'border-bauhaus-black text-bauhaus-black bg-bauhaus-yellow' },
+    data.low_liquidity && { label: 'Current ratio under 1', className: 'border-bauhaus-black text-bauhaus-black bg-bauhaus-yellow' },
+    data.high_govt_dependency && { label: 'Government-revenue concentrated', className: 'border-bauhaus-blue text-bauhaus-blue' },
+  ].filter(Boolean) as Array<{ label: string; className: string }>;
+
+  return (
+    <Section title="Financial Health">
+      <p className="text-xs text-bauhaus-muted font-medium mb-3 -mt-1">
+        A capacity signal from this charity&apos;s latest public ACNC filing — to show where a buyer or
+        funder might offer multi-year or capacity support, not to rank organisations. Not a CivicGraph
+        assessment of the organisation.
+      </p>
+      <div className="bg-white border-4 border-bauhaus-black">
+        <div className={`flex items-baseline justify-between gap-3 flex-wrap px-4 py-3 border-b-4 border-bauhaus-black ${m.className}`}>
+          <span className="text-sm font-black uppercase tracking-widest">{m.label}</span>
+          <span className="text-[11px] font-black uppercase tracking-widest opacity-80">ACNC AIS · FY{data.ais_year}</span>
+        </div>
+        <p className="text-xs font-medium px-4 py-2.5 border-b-4 border-bauhaus-black text-bauhaus-black">{m.sub}</p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 border-b-4 border-bauhaus-black">
+          <FinStat label={`Income FY${String(data.ais_year).slice(-2)}`} value={money(data.total_revenue)} tone="money" />
+          <FinStat label="Surplus / deficit" value={resultValue} tone={resultTone} />
+          <FinStat label={reservesLabel} value={reservesValue} tone={data.net_assets_negative ? 'red' : 'default'} />
+          <FinStat
+            label="Liquidity (current ratio)"
+            value={data.current_ratio != null ? data.current_ratio.toFixed(2) : 'Not filed'}
+            tone={data.low_liquidity ? 'red' : 'default'}
+          />
+        </div>
+        {signals.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 px-4 py-3 border-b-4 border-bauhaus-black">
+            {signals.map((s) => (
+              <span key={s.label} className={`text-[10px] px-2 py-0.5 font-black uppercase tracking-widest border-2 ${s.className}`}>
+                {s.label}
+              </span>
+            ))}
+          </div>
+        )}
+        <p className="text-xs text-bauhaus-muted px-4 py-3 font-medium leading-relaxed">
+          Source: ACNC Annual Information Statement, FY{data.ais_year}
+          {data.charity_size ? ` · ${data.charity_size[0].toUpperCase()}${data.charity_size.slice(1)} charity` : ''}
+          {data.govt_revenue_share != null ? ` · ${pct(data.govt_revenue_share)} of income from government` : ''}.
+          A point-in-time regulatory snapshot — figures can lag a year and a single filing is not a full
+          picture of an organisation&apos;s health. Liquidity is shown only where a balance sheet was filed.
+        </p>
+      </div>
+    </Section>
+  );
+}
+
 // OP1 — Indigenous-proven badge. Orthogonal to the evidence-tier family above: a registered Indigenous
 // corporation (ORIC) with a won federal contract can ALSO be proven-govt-delivery, so both badges show.
 function IndigenousProvenBadge({ shown }: { shown: boolean }) {
@@ -363,18 +494,21 @@ export default async function SocialEnterpriseDetailPage({ params }: { params: P
   // OP8 — Indigenous triple-proof: the above PLUS ACNC charity governance (deeper tier, strongest-wins).
   let indigenousProven = false;
   let indigenousTripleProof = false;
+  // OP4 — financial-health signal (latest ACNC AIS) for justice-funded charities.
+  let financialHealth: FinancialHealth | null = null;
 
   // Grant matching runs on sector + place, not ABN — every profile gets it
   const grantMatchPromise = matchGrantsForSocialEnterprise(supabase, enterprise);
 
   if (cleanAbn) {
-    const [charityRes, graphRes, contractRes, justiceRes, provenRes, indigenousRes] = await Promise.all([
+    const [charityRes, graphRes, contractRes, justiceRes, provenRes, indigenousRes, finHealthRes] = await Promise.all([
       supabase.from('acnc_charities').select('abn, name').eq('abn', cleanAbn).maybeSingle(),
       supabase.from('gs_entities').select('id, gs_id, remoteness, seifa_irsd_decile, is_community_controlled, lga_name, postcode').eq('abn', cleanAbn).not('gs_id', 'is', null).limit(1).maybeSingle(),
       supabase.from('austender_contracts').select('title, contract_value, buyer_name, contract_start', { count: 'exact' }).eq('supplier_abn', cleanAbn).not('contract_value', 'is', null).order('contract_value', { ascending: false }).limit(1000),
       supabase.from('justice_funding').select('program_name, amount_dollars, financial_year, source, sector').eq('recipient_abn', cleanAbn).order('amount_dollars', { ascending: false, nullsFirst: false }).limit(200),
       supabase.from('mv_justice_proven_suppliers').select('has_acnc, has_alma_evidence_outcomes').eq('abn', cleanAbn).maybeSingle(),
       supabase.from('mv_indigenous_proven_suppliers').select('abn, has_acnc').eq('abn', cleanAbn).maybeSingle(),
+      supabase.from('mv_justice_charity_financial_health').select('ais_year, charity_size, total_revenue, total_expenses, net_surplus_deficit, net_assets_liabilities, current_ratio, months_of_reserves, govt_revenue_share, is_deficit, net_assets_negative, low_liquidity, low_reserves, high_govt_dependency, fragility_tier').eq('abn', cleanAbn).maybeSingle(),
     ]);
     if (charityRes.data) matchedCharity = charityRes.data as { abn: string; name: string };
     if (graphRes.data) graphEntity = graphRes.data as GraphEntity;
@@ -390,6 +524,7 @@ export default async function SocialEnterpriseDetailPage({ params }: { params: P
       // OP8: ACNC governance upgrades it to the deeper Indigenous triple-proof tier.
       indigenousTripleProof = Boolean((indigenousRes.data as { has_acnc: boolean | null }).has_acnc);
     }
+    if (finHealthRes.data) financialHealth = finHealthRes.data as FinancialHealth;
     // OP5 — ALMA evidence signals join on the entity UUID, so it runs once the
     // ABN→entity match resolves above.
     if (graphEntity?.id) {
@@ -668,6 +803,9 @@ export default async function SocialEnterpriseDetailPage({ params }: { params: P
               </div>
             </Section>
           )}
+
+          {/* Financial health — latest ACNC AIS signal (OP4) */}
+          {financialHealth && <FinancialHealthSection data={financialHealth} />}
 
           {/* Open funding matched on sector + place */}
           {matchedGrants.length > 0 && (

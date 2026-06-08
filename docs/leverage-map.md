@@ -72,10 +72,20 @@ All three are **evidence-depth** plays — the wedge's stated #1 tie-breaker ("e
   `5dcff2a`. Effort: M. Wedge: **green**. (Highest-volume best-quadrant find so far.)
 
 - **OP4 — Financial-health signal on justice-funded charities.** Datasets: `justice_funding` ×
-  `acnc_charities` / `mv_acnc_ais_yearly` via ABN. Serves: **G3**. Why valuable: **4,366 (12%)** justice
-  recipients are ACNC charities with AIS financials → flag which delivery orgs are financially fragile
-  (the resourced-vs-struggling question the dead ATO lead couldn't answer). Evidence: 4,366 ABN-matched.
-  State: **latent**, moderate coverage. Effort: M. Wedge: **supply-magnet / mission** (not direct revenue).
+  `acnc_ais` via ABN. Serves: **G3**. Why valuable: justice recipients that are ACNC charities with AIS
+  financials → flag which delivery orgs are financially fragile (the resourced-vs-struggling question the
+  dead ATO lead couldn't answer). State: **BUILT 2026-06-09** — `mv_justice_charity_financial_health`
+  (**3,996 rows**; migration `20260609000000`, cron-registered `20260609010000`). The 4,366 ACNC overlap
+  narrows to 3,996 charities that actually filed an AIS. Latest-AIS-per-ABN; computes 4 transparent
+  ratios (surplus margin, current ratio, reserves-runway months, govt-revenue share) + 5 raw flags, rolled
+  into a `fragility_tier` (**healthy 53% / watch 30% / fragile 13.5% / unknown 3%**). **Data-quality gate
+  was load-bearing:** balance-sheet split (current assets/liabs) is only filed by ~49% → `low_liquidity` is
+  NULL-when-unknown, never inferred false. And reserves-runway is the MASTER solvency signal so a weak
+  current ratio never alone flags an asset-rich org fragile (caught universities — 20+ months reserves,
+  sub-1 current ratio — being mislabelled; fixed). Surfaces as a **"Financial Health"** section on
+  `/social-enterprises/[id]`, framed as a supportive capacity signal (where multi-year/capacity support
+  may help), not a buyer warning; no search-results badge (Ben's call — avoids a scarlet-letter effect).
+  Effort: M. Wedge: **supply-magnet / mission** (not direct revenue).
 
 - **OP6 — Community-controlled orgs in funding deserts (the named list).** Datasets: `mv_funding_deserts`
   × `gs_entities(is_community_controlled)` via lga. Serves: **G5∩G4**. Why valuable: the worst-100 desert
