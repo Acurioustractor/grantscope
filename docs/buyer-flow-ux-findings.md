@@ -297,3 +297,154 @@ Possible follow-ups: per-supplier OG/Twitter image cards; featured "proven outco
 landing; LGA/postcode autocomplete on the tender-pack footprint form (old F9).
 
 ---
+
+# Audit Pass 3 — 2026-06-08 — `/procurement/gap-map` + `/procurement/commissioning`
+
+The two routes flagged "not audited either pass". Judged logged-out (the buyer's real first
+impression). Shots: `audit-13-gapmap-empty`, `audit-14-gapmap-401`, `audit-15-commissioning-top`.
+
+## `/procurement/gap-map`
+
+### P3-1. Logged-out buyer hits a dead-end "Authentication required" on the only CTA · **M** · 🔴 top
+The page's single action is "Analyse Gaps". The data API `requireModule('procurement')`
+(`api/procurement/gap-map/route.ts:13`) → 401 for a logged-out visitor. The page catches it and
+renders a bare red box reading only **"Authentication required"** (`gap-map/page.tsx:112-116`,
+`audit-14-gapmap-401.jpeg`) — **no login link, no "Start free", no preview of what the tool does.**
+This is dead-end disease (F1/F5 class) on a paid buyer tool: the gate is correct (per the buyer
+wedge, this is a paid tool), but the *gate UX* is a wall, not a door. A buyer never sees the value
+and isn't told how to unlock it.
+**Fix direction:** turn the 401 into a conversion moment — detect the auth error and show a
+"Sign in / Start free to run the gap analysis" panel with a one-line description of the output and a
+sample/teaser, instead of a raw error string. (Your call on whether to show a blurred sample heatmap.)
+
+### P3-2. Empty default state shows a large blank void · **S/M**
+Logged-out and logged-in, the page renders hero + state buttons + button, then **nothing** until
+"Analyse Gaps" is clicked (`audit-13-gapmap-empty.jpeg`). NSW is preselected but nothing loads. Same
+class as P2-7 (all-promise-no-proof pre-action) / P2-8 (empty state hides the path).
+**Fix direction:** auto-run the default state on mount for entitled users, or show a short "what this
+returns" explainer + legend in the void so the page is never blank. (Folds into P3-1 for logged-out.)
+
+### P3-3. Hero is a full RED fill — diverges from the P2-6 unified hero system · **S**
+DESIGN.md: red = danger/alert accent; **blue is accent, never a hero fill**; P2-6 standardised heroes
+on **black fill + blue hard-shadow**. gap-map's hero is full `bg-bauhaus-red` (`gap-map/page.tsx:75`)
+— a *fifth* hero treatment across the flow. A "gap/alert" red-theme argument exists, but it breaks the
+just-unified system.
+**Fix direction:** black-fill + blue hard-shadow to match the flow (keep red for the critical-gap
+heat cells where it's semantically correct). **Your call:** unify, or keep red as an intentional
+"this is the alert tool" signal.
+
+### P3-4. No own page metadata — inherits generic procurement title · **S**
+Tab title renders "Procurement Compliance Dashboard — CivicGraph" (inherited from
+`procurement/layout.tsx`). Client component can't export metadata. Same P2-5 class.
+**Fix direction:** add `gap-map/layout.tsx` with title "Supply Chain Gap Map — CivicGraph" +
+evidence description. Breaks link previews when a buyer pastes the URL into an email otherwise.
+
+## `/procurement/commissioning`
+
+### P3-5. Buyer-facing page advertises our build gaps · **M** · 🔴 top
+The page is a "Coming Soon" scaffold whose second section is **"Data Needed to Complete"** —
+listing four datasets we *don't have* (health workforce, PHN boundaries, MBS, community voice;
+`commissioning/page.tsx:72-106`). This is internal roadmap framing on a prospective-buyer surface: a
+PHN commissioning officer reads "they haven't built this yet." Inverse of the F3/F7 honesty class —
+instead of overclaiming, we're broadcasting incompleteness to the customer and undercutting trust.
+**Fix direction:** reframe to buyer value (what they can do today) and either delete the "what we
+lack" section or turn it into a private build note. **Your call:** is commissioning a near-term
+product surface worth investing in, or a placeholder to soften to a single value-pitch + waitlist?
+
+### P3-6. Every headline figure is materially stale — understates our own data 2–5× · **S** · 🔴 top
+Hardcoded stats (`commissioning/page.tsx:42-56,133`) vs. live DB (verified 2026-06-08):
+entities **143K → 599K**, relationships **301K → 1.6M**, ALMA interventions **1,155 → 2,087**,
+CC orgs **7.8K → 13.3K** (LGAs 492→489, ALMA evidence 570→631 are close). A buyer-facing page
+stating figures as fact that are 2–5× too small. Honesty/Meaning miss + makes us look smaller.
+**Fix direction:** correct the numbers now; ideally feed them from a live count (the
+`se_registry_stats()` pattern) so they never rot. Round honestly ("600K entities, 1.6M relationships").
+
+### P3-7. Hero is white-fill + blue shadow — another hero variant · **S**
+`commissioning/page.tsx:19` is `bg-white` + blue hard-shadow + black text — a *sixth* hero treatment.
+**Fix direction:** black-fill + blue hard-shadow to match P2-6. Folds in with P3-3 (one hero pass).
+
+### P3-8. No own page metadata · **S**
+Same as P3-4 — inherits generic procurement title. Add `commissioning/layout.tsx`,
+title "Commissioning Intelligence — CivicGraph".
+
+## Pass-3 ranked summary
+- 🔴 **P3-1** (gap-map 401 dead-end, M), **P3-5** (commissioning advertises gaps, M),
+  **P3-6** (stale figures 2–5× low, S) — the three that cost trust/conversion.
+- Cheap wins: **P3-4 + P3-8** (metadata, S×2), **P3-3 + P3-7** (one hero-unify pass, S×2),
+  **P3-2** (empty-void, S/M).
+- **Your-call block:** (a) gap-map 401 → blurred-sample teaser or plain login panel? (b) gap-map
+  red hero — unify to black, or keep as intentional alert-tool signal? (c) commissioning — invest as
+  a real surface, or soften to a single value-pitch + waitlist and stop showing the build gaps?
+
+---
+
+## Pass-3 fixes shipped — 2026-06-08 (verified live, re-screenshotted)
+
+Ben's calls: (a) login/start-free panel · (b) unify both heroes to black · (c) soften commissioning
+to value-pitch + waitlist. tsc clean; unit 219/221 (the 2 fails are flaky live-DB integration tests
+— pass in isolation, unrelated to these frontend-only changes).
+
+### P3-1 — DONE: gap-map 401 is now a conversion panel.
+On a 401/403, `gap-map/page.tsx` sets `needsAuth` and renders a "BUYER TOOL / Sign in to run the gap
+analysis" panel — one-line value, 4 what-you-get bullets, Start free (`/register`) + Log in
+(`/login`) CTAs — instead of the raw "Authentication required" box.
+(before `audit-14-gapmap-401` → after `audit-17-gapmap-authpanel`)
+
+### P3-2 — DONE: empty void replaced with a "How this works" explainer + legend.
+Default state (no analysis yet) now shows the explainer + the heat legend instead of blank space.
+(before `audit-13-gapmap-empty` → after `audit-16-gapmap-explainer`)
+
+### P3-3 / P3-7 — DONE: both heroes unified to black-fill + blue hard-shadow (P2-6 system).
+gap-map was full red, commissioning was white+blue-shadow; both now `bg-bauhaus-black` +
+`var(--color-bauhaus-blue)` shadow. Red kept for the critical-gap heat cells (semantically correct).
+(`audit-16-gapmap-explainer`, `audit-18-commissioning-after`)
+
+### P3-4 / P3-8 — DONE: per-page metadata.
+Added `gap-map/layout.tsx` ("Supply Chain Gap Map — CivicGraph") and
+`commissioning/layout.tsx` ("Commissioning Intelligence — CivicGraph"). Tab titles verified live
+(were both the generic "Procurement Compliance Dashboard").
+
+### P3-5 — DONE: commissioning no longer advertises build gaps.
+Dropped the "Data Needed to Complete" section. Page now leads with "What Commissioning Intelligence
+Does" (4 use-cases), then "Built on CivicGraph + ALMA" (real foundation), then a "Register Interest"
+waitlist CTA. Converted to a Server Component (lost all interactivity; mailto is a plain `<a>`).
+(before `audit-15-commissioning-top` → after `audit-18-commissioning-after`)
+
+### P3-6 — DONE: figures corrected to live counts (verified 2026-06-08).
+600K+ entities · 1.6M relationships · 2,000+ ALMA interventions · 630+ evidence records · 489 LGAs.
+Rounded honestly so they don't read false-precise. (Live feed deferred — page is now a low-traffic
+waitlist; correcting + honest-rounding is proportionate. Re-verify if commissioning is promoted.)
+
+**All Pass-3 findings resolved.** Remaining task-1 follow-ups (separate builds, not audit findings):
+per-supplier OG/Twitter image cards; landing "proven outcomes" row.
+
+---
+
+## Task-1 follow-up builds shipped — 2026-06-08 (verified live)
+
+### OG/Twitter image cards — DONE.
+`social-enterprises/[id]/opengraph-image.tsx` — one file wires BOTH og:image and twitter:image.
+Bauhaus card on black: red square + CIVICGRAPH wordmark, verification-tier badge, enterprise name,
+org-type · state, and the delivery evidence front-and-centre ($X+ across N government contracts,
+green) with a blue "PROVEN DELIVERER" block; no-contract suppliers get the IDENTIFIED tier + a
+"Delivery evidence · Government contracts · Governance" footer. Reuses the profile's ABN→contracts
+query. Uses ImageResponse's default font (no Satoshi fetch — keeps the preview from breaking on a
+font-CDN miss; geometry carries the brand). Satori gotcha fixed: multi-child text nodes
+(`{money}+`, `across {n} contracts`) must be single template-literal children or the route throws
+ERR_EMPTY_RESPONSE. Verified live both branches (`audit-19-og-card-evidence`,
+`audit-20-og-card-noevidence`).
+
+### Landing "proven outcomes" row — DONE.
+New `getProvenOutcomesSuppliers()` in `supplier-search.ts` (two-query join, no migration: proven
+ABNs from `mv_triple_proof_suppliers.has_alma_evidence_outcomes` → directory profiles; all proven
+ABNs store space-free so `.in('abn', …)` matches cleanly). The `/suppliers` non-search landing now
+shows a "Proven outcomes" row of 6 named, clickable quad-proof exemplars (Save the Children $201.8M,
+Yourtown $71.3M, Mercy, …) with the ProvenOutcomesBadge, state · sector and the green contract
+evidence line — placed after Popular needs, before how-it-works. Ordered by contract value (the
+figure shown) for top-down legibility; every card already clears the proven-outcomes depth bar.
+Click-through to profile verified. (`audit-22-suppliers-proven-row-ordered`)
+
+**Task-1 (buyer-flow follow-ups) complete:** gap-map + commissioning polished (Pass 3), per-supplier
+OG cards, landing proven-outcomes row. Not pushed yet (awaiting Tier-2 go).
+
+---
