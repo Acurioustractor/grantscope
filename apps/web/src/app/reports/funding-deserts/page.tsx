@@ -29,6 +29,22 @@ function money(n: number): string {
 }
 function fmt(n: number): string { return n.toLocaleString(); }
 
+// Human-readable entity-type labels (raw values are lower_snake enums).
+const ENTITY_TYPE_LABELS: Record<string, string> = {
+  indigenous_corp: 'Indigenous Corporation',
+  social_enterprise: 'Social Enterprise',
+  charity: 'Charity',
+  foundation: 'Foundation',
+  company: 'Company',
+  nonprofit: 'Nonprofit',
+  cooperative: 'Cooperative',
+  government: 'Government',
+};
+function entityTypeLabel(t: string): string {
+  return ENTITY_TYPE_LABELS[t.toLowerCase()]
+    ?? t.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 interface DesertLGA {
   lga_name: string;
   state: string;
@@ -295,7 +311,7 @@ export default async function FundingDesertsReport() {
           <p className="text-sm text-bauhaus-muted mb-6 max-w-2xl">
             The deepest deserts are not empty. Inside the 100 worst-scoring LGAs,{' '}
             <strong className="text-bauhaus-black">{fmt(d.communitySummary.cc_orgs)} community-controlled organisations</strong> &mdash;
-            locally governed, nearly all of them Aboriginal and Torres Strait Islander corporations &mdash; are already
+            locally governed, the overwhelming majority of them Aboriginal and Torres Strait Islander corporations &mdash; are already
             operating in the places the funding system reaches least. They make up{' '}
             <strong className="text-bauhaus-black">{d.communitySummary.cc_share}%</strong> of every indexed
             organisation in those LGAs, yet <strong className="text-bauhaus-red">{fmt(d.communitySummary.zero_funding_orgs)} of
@@ -349,7 +365,7 @@ export default async function FundingDesertsReport() {
                           <span className="font-bold text-bauhaus-black">{o.canonical_name}</span>
                         )}
                         {o.entity_type && (
-                          <div className="text-[10px] text-bauhaus-muted uppercase tracking-widest mt-0.5">{o.entity_type}</div>
+                          <div className="text-[10px] text-bauhaus-muted tracking-wide mt-0.5">{entityTypeLabel(o.entity_type)}</div>
                         )}
                       </td>
                       <td className="p-3 align-top">
