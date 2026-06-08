@@ -59,5 +59,6 @@ For every screen a buyer hits, ask:
 
 ## Status
 - [x] Audit step 1 `/suppliers`  - [x] step 2 profile  - [x] step 3 directory  - [x] step 4 procurement  - [x] step 5 tender-pack
-- [x] Findings doc (Pass 1 F1–F9 + **Pass 2** 2026-06-08: confirmed fixes live, added directory/procurement + cross-cutting)  - [x] Top fixes (**all Pass-2 P2-1…P2-8 shipped + verified live**)  - [ ] `/polish` skill
-- Pass-2 SHIPPED: P2-1 match legibility · P2-2 directory evidence+sort · P2-3 black-cladding explainer · P2-4 pack preview · P2-5 metadata · P2-6 unified hero · P2-7 landing proof · P2-8 empty-state nudge. Remaining deliverable: `/polish` loop-skill.
+- [x] Findings doc (Pass 1 F1–F9 + **Pass 2** 2026-06-08: confirmed fixes live, added directory/procurement + cross-cutting)  - [x] Top fixes (**all Pass-2 P2-1…P2-8 shipped + verified live**)  - [x] `/polish` skill
+- Pass-2 SHIPPED: P2-1 match legibility · P2-2 directory evidence+sort · P2-3 black-cladding explainer · P2-4 pack preview · P2-5 metadata · P2-6 unified hero · P2-7 landing proof · P2-8 empty-state nudge.
+- **`/polish` loop-skill BUILT** (2026-06-08) → `.claude/skills/polish/` (SKILL.md + references/rubric.md + references/method.md). Self-paced two-phase loop (Tier-1 audit → Ben-in-loop fix → `/ship`); exit = Ben's taste-check. Rubric (Clarity/Value-shown/Meaning/Aesthetic/Friction) calibrated from F1–F9 + P2-1…P2-8. **All 3 deliverables complete.**
