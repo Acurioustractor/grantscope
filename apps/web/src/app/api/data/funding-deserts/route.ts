@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
+import { DESERT_COMMUNITY_ORGS_SQL, mapDesertCommunityOrgs } from '@/lib/funding-deserts';
 
 export const dynamic = 'force-dynamic';
 
@@ -7,7 +8,7 @@ export async function GET() {
   try {
     const supabase = getServiceSupabase();
 
-    const [worstResult, bestResult, remotenessResult, stateResult, summaryResult] = await Promise.all([
+    const [worstResult, bestResult, remotenessResult, stateResult, summaryResult, communityOrgsResult] = await Promise.all([
       // Worst 30 funding deserts (deduplicated by LGA)
       supabase.rpc('exec_sql', {
         query: `SELECT DISTINCT ON (lga_name, state) lga_name, state, remoteness, avg_irsd_decile, avg_irsd_score, indexed_entities, community_controlled_entities, total_funding_all_sources, desert_score FROM mv_funding_deserts WHERE desert_score IS NOT NULL ORDER BY lga_name, state, desert_score DESC`,
@@ -28,6 +29,8 @@ export async function GET() {
       supabase.rpc('exec_sql', {
         query: `WITH deduped AS (SELECT DISTINCT ON (lga_name, state) lga_name, state, remoteness, avg_irsd_decile, indexed_entities, total_funding_all_sources, desert_score FROM mv_funding_deserts WHERE desert_score IS NOT NULL ORDER BY lga_name, state, desert_score DESC) SELECT COUNT(*) as total_lgas, COUNT(CASE WHEN desert_score > 100 THEN 1 END) as severe_deserts, ROUND(AVG(desert_score)::numeric,1) as avg_desert_score, ROUND(MAX(total_funding_all_sources)::numeric,0) as max_funding, ROUND(MIN(CASE WHEN total_funding_all_sources > 0 THEN total_funding_all_sources END)::numeric,0) as min_funding FROM deduped`,
       }),
+      // OP6 — named community-controlled orgs operating in the 100 worst deserts
+      supabase.rpc('exec_sql', { query: DESERT_COMMUNITY_ORGS_SQL }),
     ]);
 
     // Sort worst/best after DISTINCT ON
@@ -44,6 +47,7 @@ export async function GET() {
       byRemoteness: remotenessResult.data || [],
       byState: stateResult.data || [],
       summary: (summaryResult.data as Record<string, unknown>[])?.[0] || {},
+      communityControlledInDeserts: mapDesertCommunityOrgs(communityOrgsResult.data),
     });
   } catch (error) {
     console.error('Funding deserts API error:', error);

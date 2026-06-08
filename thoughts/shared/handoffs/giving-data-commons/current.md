@@ -1,5 +1,5 @@
 ---
-date: 2026-06-08T19:50:00+10:00
+date: 2026-06-09T06:09:58+10:00
 session_name: giving-data-commons
 branch: main
 status: active
@@ -9,13 +9,25 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-06-08T19:50:00+10:00
+**Updated:** 2026-06-09T06:09:58+10:00
 **Goal:** Buyer wedge: "free open registry for everyone; paid evidence + tender tools for buyers" (`docs/strategy/buyer-wedge.md`). Run `/wedge` before building SE/procurement/giving. Evidence-depth plays are the active focus (widening paused).
-**Branch:** **main** (clean) — PRs #57 (buyer-flow), #58 (OP5), #59 (OP3), #60 (OP1), #61 (OP8) all **MERGED**. HEAD `dd7a687`. Working tree clean except 2 pre-existing untracked data leftovers (`data/grant-eligibility-cache.jsonl`, `data/state-tenders/`). Merged remote branch `feat/op8-indigenous-triple-proof` still on origin (delete = Tier-3).
+**Branch:** **main** (clean) — PRs #57 (buyer-flow), #58 (OP5), #59 (OP3), #60 (OP1), #61 (OP8), #62 (OP4) all **MERGED**. HEAD `37470de`. Working tree clean except 2 pre-existing untracked data leftovers (`data/grant-eligibility-cache.jsonl`, `data/state-tenders/`). OP4 branch deleted (local+remote, ref pruned). Merged remote branch `feat/op8-indigenous-triple-proof` still on origin (delete = Tier-3).
 **Test:** cd apps/web && npx tsc --noEmit && npx vitest run
 
 ### Now
-[->] **Green-wedge premium tier COMPLETE** — both governance-deepened premium plays now shipped: **OP7** (justice triple-proof) + **OP8** (Indigenous triple-proof), on top of the Top-3 (OP3 + OP5 + OP1). Nothing in flight. The buyer-revenue/evidence-depth lane of the leverage map is now exhausted at the top tier. **Remaining candidates are both mission/supply-magnet** (wedge ranks them below the buyer plays just shipped): **OP4** — financial-health signal on the 4,366 justice-funded ACNC charities (flag fragile delivery orgs). **OP6** — funding-desert community-controlled named list (108 orgs in worst-100 LGAs). Plus OP7 follow-up (browsable list for the 558 non-SE triple-proof orgs). Re-run `/leverage` only after new state lands (a refresh of existing MVs doesn't count).
+[->] **OP4 shipped — buyer-revenue lane AND the first mission play now done.** Top-3 (OP3+OP5+OP1) + premium tier (OP7+OP8) + **OP4** (financial-health signal) all merged. Nothing in flight. **Remaining leverage candidates (both mission/supply-magnet):** **OP6** — funding-desert community-controlled named list (108 orgs in worst-100 LGAs; `mv_funding_deserts` has the counts, the named list is latent — effort S). Plus **OP7 follow-up** (browsable list for the 558 non-SE triple-proof orgs). Re-run `/leverage` only after new state lands (a refresh of existing MVs doesn't count).
+
+### This Session (2026-06-09, day) — OP4 shipped & merged (PR #62)
+Ben picked **OP4** (financial-health signal on justice-funded ACNC charities) from the OP4/OP6 remaining fork. Built end-to-end (verify data quality FIRST → build MV → correct a real false-positive → wire UI → verify live across all 3 tiers → ship → merge), Ben merging with an explicit "merge" verb.
+- [x] **OP4 BUILT + MERGED** (PR #62, merge `37470de`) — `mv_justice_charity_financial_health` (**3,996 rows** = the justice recipients that actually filed an ACNC AIS, narrowed from the 4,366 ACNC overlap). Latest-AIS-per-ABN → 4 transparent ratios (surplus margin, current ratio, reserves-runway months, govt-revenue share) + 5 raw flags → `fragility_tier`: **healthy 53% / watch 30% / fragile 13.5% / unknown 3%**. Migrations `20260609000000` (MV + unique abn index, CONCURRENTLY-capable) + `20260609010000` (cron `refresh_order` re-dump) **applied live**; registered in `refresh-views-v2.mjs` Tier 2. Surfaces as a **"Financial Health"** section on `/social-enterprises/[id]`, framed as a supportive **capacity** signal (where multi-year/capacity support may help), **not** a buyer warning. **No search-results badge** (Ben's call via AskUserQuestion — avoids a scarlet-letter effect on real community orgs).
+- **Two data-quality gates were load-bearing** (the "verify before scoring" discipline earned its keep): (1) only **~49%** of these charities file a balance sheet (cash-basis / small-charity exempt) → `low_liquidity` is **NULL-when-unknown, never inferred false**. (2) **Reserves-runway is the master solvency signal** — the first cut flagged Monash/RMIT/Deakin as "fragile" purely on current-ratio <1, but they hold **20+ months of reserves** (unis run on non-current assets + deferred revenue). Fixed so strong reserves override a weak current ratio; QUT (0.02 months reserves) correctly stays fragile, Sydney/UQ/ANU are healthy.
+- Verified live across all 3 tiers: St Vincent's (fragile), Ballarat Red Cross / Australian Red Cross Society (healthy — $1.0B income / +$6.2M surplus / 4.7mo reserves, internally consistent), CQU (watch). Gates green throughout (tsc 0, **221/221 tests**). Commit `163acaf`. Leverage map: OP4 marked BUILT.
+
+### This Session (2026-06-09, cross-repo) — JusticeHub Civic Scope detour (NO grantscope change)
+This session ran entirely in **`/Users/benknight/Code/JusticeHub`**, not grantscope. **grantscope state is unchanged** — main still at `dd7a687`, tree clean except the 2 pre-existing untracked data leftovers, tsc 0. Nothing in the buyer-wedge/leverage-map plan moved. Logged here only so the next grantscope session doesn't mistake a clean tree for skipped work.
+- [x] **JusticeHub SA Civic Scope loop run + applied.** Ran the read-only report loop (Adelaide launch queue, civic data backlog) + the SA Tier-1 curation dry-run (11 candidates, 1 strong). Ben applied `propose-sa-tier1-curation-candidates.mjs --apply --yes-production` himself via `!` → **10 proposal rows upserted into JusticeHub's `civic_org_classifications`** (1 existing skipped). Verified persisted (dry-run rerun: existing rows 1 → 11; idempotent). `type-check:search-and-chat` clean. Rows are review candidates only — Tier-1 confirmation still happens by hand in JusticeHub `/admin/civic/tier-1-curation`.
+- [x] **Handed back to JusticeHub** for the "Contained" remand-tour launch (branch `codex/remand-contained-live`, 23-file dirty tree). Handoff: `JusticeHub/thoughts/shared/handoffs/general/2026-06-09... ` → actual file `2026-06-08_20-06_contained-launch-handback-claude-code.yaml` (uncommitted in JusticeHub). It flags the undocumented intent behind the dirty tree + 3 questions for Ben (which Contained surface is the launch priority; commit-as-is vs WIP-reset; is the +268-line `alma/data-sprint` cron change even part of Contained).
+- **Caveat carried forward:** JusticeHub has **no `/resume_handoff` slash command** — its handoffs are read directly. (Does not affect grantscope.)
 
 ### This Session (2026-06-08, night cont.2) — OP8 shipped & merged (PR #61)
 Ben picked OP8 (Indigenous triple-proof) from the OP4/OP6/OP8 fork — the most wedge-aligned (green/buyer-revenue, lowest effort, composes onto the OP1 work just shipped). Built end-to-end (build → apply live → verify all 3 surfaces → ship → CI-green → merge), Ben merging with an explicit "merge" verb.
@@ -86,12 +98,11 @@ Executed `thoughts/shared/plans/buyer-flow-ux-audit.md`. Found the prior session
 - [x] All work committed + pushed: `b9bcb38` enrich-fix · `015365c` health-backlog · `75eb951` leverage skill · `b0330a1` health iter6 · `ed8a767` CLAUDE fix · `33c1e2d` leverage map.
 
 ### Next on resume (priority order)
-> All Top-3 + both premium plays now merged: **OP3 ✅ OP5 ✅ OP1 ✅ OP7 ✅ OP8 ✅.** The green-wedge/evidence-depth top tier is exhausted. Tree clean on `main`. Remaining leverage candidates are mission/supply-magnet (wedge ranks below the buyer plays). **Re-run `/leverage` only after new state lands.**
-1. (Backlog) **OP4** — financial-health signal on justice-funded charities (4,366 ACNC/AIS matches; flag financially-fragile delivery orgs). Supply-magnet/mission, not direct revenue. M. New MV + new surface (NOT just a badge). See `docs/leverage-map.md`.
-2. (Backlog) **OP6** — funding-desert community-controlled named list (108 orgs in worst-100 desert LGAs; counts exist in `mv_funding_deserts`, named list latent). Mission. S. · **OP7 follow-up** — browsable buyer list for the 558 non-SE triple-proof orgs.
-3. (Backlog) Enrichment-fleet timeout fixes (`docs/health-backlog.md`) — several agents at single-digit success.
-4. (Housekeeping, Tier-3) Delete merged remote branch `feat/op8-indigenous-triple-proof` (still on origin) — and sweep for any other stale merged branches.
-5. (Housekeeping) Decide on the 2 untracked data leftovers (`data/grant-eligibility-cache.jsonl`, `data/state-tenders/`) — gitignore, commit, or bin.
+> Top-3 + both premium plays + the first mission play now merged: **OP3 ✅ OP5 ✅ OP1 ✅ OP7 ✅ OP8 ✅ OP4 ✅.** The green-wedge/evidence-depth top tier is exhausted. Tree clean on `main`. Remaining leverage candidates are mission/supply-magnet (wedge ranks below the buyer plays). **Re-run `/leverage` only after new state lands.**
+1. (Backlog) **OP6** — funding-desert community-controlled named list (108 orgs in worst-100 desert LGAs; counts exist in `mv_funding_deserts`, named list latent). Mission. S. · **OP7 follow-up** — browsable buyer list for the 558 non-SE triple-proof orgs.
+2. (Backlog) Enrichment-fleet timeout fixes (`docs/health-backlog.md`) — several agents at single-digit success.
+3. (Housekeeping, Tier-3) Delete merged remote branch `feat/op8-indigenous-triple-proof` (still on origin) — and sweep for any other stale merged branches.
+4. (Housekeeping) Decide on the 2 untracked data leftovers (`data/grant-eligibility-cache.jsonl`, `data/state-tenders/`) — gitignore, commit, or bin.
 
 ### PRIOR SESSION (loop infrastructure — context, still valid)
 
