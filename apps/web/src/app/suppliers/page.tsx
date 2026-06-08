@@ -58,6 +58,17 @@ function TripleProofBadge() {
   );
 }
 
+function ProvenOutcomesBadge() {
+  return (
+    <span
+      title="Proven outcomes — triple-proof PLUS cited evidence and measured outcomes (ALMA). The deepest delivery proof in the registry: this works, and they can deliver it."
+      className="text-[10px] px-2 py-0.5 font-black uppercase tracking-widest border-2 border-bauhaus-black bg-bauhaus-yellow text-bauhaus-black"
+    >
+      Proven outcomes
+    </span>
+  );
+}
+
 function EvidenceLine({ r }: { r: SupplierResult }) {
   if (r.contract_count === 0) return null;
   const lastYear = r.last_contract_end ? new Date(r.last_contract_end).getFullYear() : null;
@@ -163,7 +174,7 @@ export default async function SupplierSearchPage({
                       {r.name}
                     </Link>
                     <div className="flex gap-1.5 flex-wrap">
-                      {r.triple_proof && <TripleProofBadge />}
+                      {r.proven_outcomes ? <ProvenOutcomesBadge /> : r.triple_proof ? <TripleProofBadge /> : null}
                       <TierBadge tier={r.verification_tier} />
                       {r.source_primary && (
                         <span className="text-[10px] px-2 py-0.5 font-black uppercase tracking-widest border-2 border-bauhaus-black/40 text-bauhaus-muted">

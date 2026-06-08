@@ -26,6 +26,8 @@ export interface SupplierResult {
   rank: number;
   /** OP7: org carries all three proof signals — justice delivery + federal contract + ACNC governance. */
   triple_proof: boolean;
+  /** OP10: quad-proof — triple-proof PLUS an ALMA intervention with cited evidence AND measured outcomes. */
+  proven_outcomes: boolean;
 }
 
 export async function searchSuppliers(
@@ -44,21 +46,31 @@ export async function searchSuppliers(
     return [];
   }
 
-  // OP7: flag triple-proof suppliers (justice delivery + federal contract + ACNC governance).
-  // Enrich the ≤30 results by ABN against mv_triple_proof_suppliers — the deepest evidence tier.
-  const base = (data ?? []) as Omit<SupplierResult, 'triple_proof'>[];
+  // OP7/OP10: flag triple-proof suppliers (justice delivery + federal contract + ACNC governance)
+  // and the quad-proof gold tier (those that ALSO carry ALMA evidence + measured outcomes).
+  // Enrich the ≤30 results by ABN against mv_triple_proof_suppliers — the deepest evidence tiers.
+  const base = (data ?? []) as Omit<SupplierResult, 'triple_proof' | 'proven_outcomes'>[];
   const abns = [...new Set(base.map((r) => r.abn).filter((a): a is string => Boolean(a)))];
-  let proven = new Set<string>();
+  const proven = new Set<string>();
+  const provenOutcomes = new Set<string>();
   if (abns.length > 0) {
     const { data: tp, error: tpError } = await supabase
       .from('mv_triple_proof_suppliers')
-      .select('abn')
+      .select('abn, has_alma_evidence_outcomes')
       .in('abn', abns);
     if (tpError) {
       console.error('[supplier-search:triple-proof]', tpError.message);
     } else {
-      proven = new Set((tp ?? []).map((r: { abn: string | null }) => r.abn).filter((a): a is string => Boolean(a)));
+      for (const row of (tp ?? []) as { abn: string | null; has_alma_evidence_outcomes: boolean | null }[]) {
+        if (!row.abn) continue;
+        proven.add(row.abn);
+        if (row.has_alma_evidence_outcomes) provenOutcomes.add(row.abn);
+      }
     }
   }
-  return base.map((r) => ({ ...r, triple_proof: Boolean(r.abn && proven.has(r.abn)) }));
+  return base.map((r) => ({
+    ...r,
+    triple_proof: Boolean(r.abn && proven.has(r.abn)),
+    proven_outcomes: Boolean(r.abn && provenOutcomes.has(r.abn)),
+  }));
 }

@@ -122,10 +122,11 @@ All three are **evidence-depth** plays — the wedge's stated #1 tie-breaker ("e
   an ALMA intervention with BOTH cited evidence AND measured outcomes** — a *fourth* independent proof.
   The deepest defensible "this works, and they can deliver it" shortlist in the estate: domain delivery +
   federal contract + charity governance + evidence-of-what-works. Newly minable now that OP7's MV exists
-  (iter 6). Evidence: 54 quad-proof; 99 of 724 have any ALMA link. State: **latent**. Effort: **S** — add
-  a `has_alma_evidence_outcomes` flag to `mv_triple_proof_suppliers` + a stronger "Proven outcomes" badge
-  tier on `/suppliers`. Wedge: **green**. (Premium-of-the-premium; tiny by rows, deepest by evidence — the
-  wedge's depth>rows thesis at its limit.)
+  (iter 6). Evidence: 54 quad-proof; 99 of 724 have any ALMA link. State: **BUILT 2026-06-08** —
+  `has_alma_evidence_outcomes` flag on `mv_triple_proof_suppliers` (54 true, migration `20260608050000`) +
+  "Proven outcomes" gold badge live on `/suppliers` (fires for the 14 quad-proof that are SEs). Effort: **S**
+  (done). Wedge: **green**. (Premium-of-the-premium; tiny by rows, deepest by evidence — the wedge's
+  depth>rows thesis at its limit.)
 
 ## Dead leads (logged so the loop won't re-mine)
 
