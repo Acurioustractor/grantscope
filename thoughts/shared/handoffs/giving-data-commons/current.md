@@ -1,7 +1,7 @@
 ---
-date: 2026-06-08T18:30:00+10:00
+date: 2026-06-08T21:15:00+10:00
 session_name: giving-data-commons
-branch: chore/tsc-stop-hook
+branch: main
 status: active
 ---
 
@@ -9,13 +9,24 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-06-08T16:35:00+10:00
+**Updated:** 2026-06-08T21:15:00+10:00
 **Goal:** Buyer wedge: "free open registry for everyone; paid evidence + tender tools for buyers" (`docs/strategy/buyer-wedge.md`). Run `/wedge` before building SE/procurement/giving. Moves 1+2+4 SHIPPED, 3 waiting on Ben, 5 (widening pause) ACTIVE.
-**Branch:** chore/tsc-stop-hook — local is **14 commits AHEAD of origin (UNPUSHED)**; origin still at `2f0ad30`. Branched off main @ `2798bdf`.
+**Branch:** **main** @ `ac651c0` — in sync with origin. The whole `chore/tsc-stop-hook` work-stream (38 commits) is **MERGED via PR #56** and the branch is deleted (local + remote). Clean tree except 2 untracked data leftovers (`data/grant-eligibility-cache.jsonl`, `data/state-tenders/`).
 **Test:** cd apps/web && npx tsc --noEmit && npx vitest run
 
 ### Now
-[->] **Buyer-flow UX audit COMPLETE — all 8 Pass-2 findings shipped + verified live.** 14 commits, **local/UNPUSHED** on `chore/tsc-stop-hook`. Gates green (tsc 0, 221 tests). **Two loose ends:** (1) build the **`/polish` loop-skill** from the audit rubric (plan deliverable 3, not started); (2) **push** the 14 commits (Tier-2, ask first). Findings + 12 before/after screenshots in `docs/buyer-flow-ux-findings.md` / `docs/ux-audit/shots/`.
+[->] **Buyer-flow UX audit FULLY CLOSED + merged to main.** All 3 plan deliverables done (findings doc · top fixes shipped+verified · `/polish` loop-skill built). PR #56 merged after CI green (tsc/unit/e2e/Vercel); **all 9 DB migrations verified live on prod** (`mv_triple_proof_suppliers` w/ alma flag · `se_directory` · `se_search_index`+verification_tier · `se_registry_stats()` · `search_suppliers()` match-legibility · OP2 VIC-link gap=0 · refresh cron active 3am AEST). Nothing in flight. Next is **optional buyer-flow follow-ups** or **picking up the next backlog item** — nothing is blocked or half-done.
+
+### This Session (2026-06-08, late) — close-out: /polish built, branch shipped & merged
+Closed every loose end from the evening session. All Tier-2/3 actions asked-then-confirmed per rules.
+- [x] **Pushed the 14 buyer-flow commits** (Tier-2, asked) → origin `aba1be4`.
+- [x] **Built `/polish` loop-skill** (`ed6194f`) → `.claude/skills/polish/` (SKILL.md + references/rubric.md + references/method.md). Repo-level, mirrors `/leverage`'s self-paced structure. Two-phase loop (Tier-1 collect-only audit → Ben-in-loop fix → `/ship`); **exit = Ben's taste-check, not "done"**. Rubric (Clarity / Value-shown / Meaning / Aesthetic / Friction) calibrated from the real F1–F9 + P2-1…P2-8 findings. Plan deliverable 3 — **all 3 deliverables now complete.**
+- [x] **Committed + pushed `/polish`** (`ed6194f`, asked) — pre-commit gate passed.
+- [x] **Opened PR #56** against main (Tier-3, explicit verb). Body organises the 38 commits into 5 themes (UX audit · data/evidence stack · loop-skills · infra · docs). Gates re-verified green at HEAD before opening (tsc 0, 221 tests).
+- [x] **Merged PR #56** (Tier-3, explicit verb) after CI all-green (Type Check 1m25s · Unit/Integration 28s · E2E 1m3s · Vercel deploy). Merge commit `ac651c0` (repo convention = merge commits; repo auto-merge disabled, so waited on CI manually).
+- [x] **Verified all 9 migrations live on prod** (`tednluwflfhxyucgwigh`) — relations + functions exist, both RPCs smoke-tested (se_registry_stats → 11,861/1,131/$53.58B/8,454; search_suppliers('beds') → match_source + «Bed» snippet), MV alma column present, OP2 VIC-link gap = 0, nightly refresh cron active. `information_schema.columns` doesn't cover matviews — used `pg_attribute`.
+- [x] **Deleted `chore/tsc-stop-hook`** (Tier-3, explicit verb) — local (`-d`, confirmed merged) + remote.
+- NOTE: `/close` skill hard-codes `community-capital-ledger/current.md`, but the live ledger this work-stream uses is **`giving-data-commons/current.md`** (this file) — updated the live one. Skill's default path is stale.
 
 ### This Session (2026-06-08, evening) — buyer-flow UX audit Pass 2 (all 8 findings shipped)
 Executed `thoughts/shared/plans/buyer-flow-ux-audit.md`. Found the prior session's Pass-1 (F1–F9) findings doc, confirmed those fixes live, then did a fresh **Pass 2** over all 5 buyer-flow screens (incl. the directory + procurement pages Pass 1 skipped) → appended to `docs/buyer-flow-ux-findings.md`. Each fix decided with Ben, built, verified live (screenshots), gates green throughout (tsc 0, 221 tests). **14 local commits, UNPUSHED.**
@@ -46,12 +57,12 @@ Executed `thoughts/shared/plans/buyer-flow-ux-audit.md`. Found the prior session
 - [x] All work committed + pushed: `b9bcb38` enrich-fix · `015365c` health-backlog · `75eb951` leverage skill · `b0330a1` health iter6 · `ed8a767` CLAUDE fix · `33c1e2d` leverage map.
 
 ### Next on resume (priority order)
-1. **Push the 14 buyer-flow commits** (Tier-2 — ask Ben first). Branch `chore/tsc-stop-hook` is 14 ahead of origin `2f0ad30`. All gates green; DB migrations already applied to prod.
-2. **Build the `/polish` loop-skill** — the audit method + value rubric (Clarity / Value-shown / Meaning / Aesthetic / Friction) from `docs/buyer-flow-ux-findings.md`, the way `/leverage`'s method preceded its loop. Exit = Ben's check, not "when done" (memory `feedback_loop_design_workflow`). Plan deliverable 3, in `thoughts/shared/plans/buyer-flow-ux-audit.md`.
-3. (Buyer-flow follow-ups, optional) per-supplier OG/Twitter image cards; featured "proven outcomes" row on the landing; LGA/postcode autocomplete on the tender-pack footprint (old F9); audit `/procurement/gap-map` + `/commissioning` (untouched both passes).
-4. (Backlog) Remaining leverage builds — OP8 (278 Indigenous triple-proof), OP4 (financial-health on justice charities), OP6 (desert community-controlled named list).
-5. (Backlog) Enrichment-fleet timeout fixes (`docs/health-backlog.md`) — several agents at single-digit success.
-6. (Open, Tier-3) Open a PR for `chore/tsc-stop-hook` when ready.
+> Buyer-flow audit work-stream is fully closed + merged. Below is the open backlog — nothing here is in flight.
+1. (Buyer-flow follow-ups, optional) Run **`/polish`** on the untouched pages — `/procurement/gap-map` + `/commissioning` (skipped both passes). Plus: per-supplier OG/Twitter image cards; featured "proven outcomes" row on the landing; LGA/postcode autocomplete on the tender-pack footprint (old F9).
+2. (Backlog) Remaining leverage builds — OP3 justice proven-suppliers · OP5 ALMA evidence on `/suppliers` · OP1 Indigenous proven-suppliers (Top-3); then OP8 (278 Indigenous triple-proof), OP4 (financial-health on justice charities), OP6 (desert community-controlled named list). See `docs/leverage-map.md`.
+3. (Backlog) Enrichment-fleet timeout fixes (`docs/health-backlog.md`) — several agents at single-digit success.
+4. (Housekeeping) Decide on the 2 untracked data leftovers (`data/grant-eligibility-cache.jsonl`, `data/state-tenders/`) — gitignore, commit, or bin.
+5. (Hygiene) The `/close` skill points at the wrong ledger path (`community-capital-ledger`) — consider fixing it to `giving-data-commons` or making it auto-detect the most-recent `current.md`.
 
 ### PRIOR SESSION (loop infrastructure — context, still valid)
 

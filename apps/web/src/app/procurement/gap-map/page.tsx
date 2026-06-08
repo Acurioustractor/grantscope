@@ -28,6 +28,7 @@ function formatMoney(amount: number): string {
 export default function GapMapPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [needsAuth, setNeedsAuth] = useState(false);
   const [selectedState, setSelectedState] = useState('NSW');
   const [gaps, setGaps] = useState<LgaGap[] | null>(null);
   const [sortBy, setSortBy] = useState<'gap_score' | 'indigenous_entities' | 'total_contract_value'>('gap_score');
@@ -35,11 +36,14 @@ export default function GapMapPage() {
   const handleAnalyse = useCallback(async () => {
     setLoading(true);
     setError('');
+    setNeedsAuth(false);
 
     try {
       const res = await fetch(`/api/procurement/gap-map?state=${selectedState}`);
       const data = await res.json();
-      if (!res.ok) {
+      if (res.status === 401 || res.status === 403) {
+        setNeedsAuth(true);
+      } else if (!res.ok) {
         setError(data.error || 'Analysis failed');
       } else {
         setGaps(data.gaps);
@@ -72,7 +76,7 @@ export default function GapMapPage() {
       </Link>
 
       <div className="mt-4 mb-6">
-        <div className="bg-bauhaus-red border-4 border-bauhaus-black p-6 sm:p-8" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-black)' }}>
+        <div className="bg-bauhaus-black border-4 border-bauhaus-black p-6 sm:p-8" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-blue)' }}>
           <p className="text-xs font-black text-white/60 uppercase tracking-[0.3em] mb-3">CivicGraph</p>
           <h1 className="text-3xl sm:text-4xl font-black text-white leading-tight mb-3">
             Supply Chain Gap Map
@@ -109,9 +113,50 @@ export default function GapMapPage() {
         </button>
       </div>
 
+      {/* Logged-out / unentitled: convert instead of dead-ending on a raw 401 */}
+      {needsAuth && (
+        <div className="border-4 border-bauhaus-black bg-white p-6 sm:p-8 mb-6" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-blue)' }}>
+          <p className="text-xs font-black text-bauhaus-blue uppercase tracking-[0.3em] mb-2">Buyer tool</p>
+          <h2 className="text-2xl font-black text-bauhaus-black mb-3">Sign in to run the gap analysis</h2>
+          <p className="text-sm text-bauhaus-muted font-medium max-w-2xl leading-relaxed mb-5">
+            The Supply Chain Gap Map scans every LGA in {selectedState} and ranks where your supply
+            chain has no Indigenous or social-enterprise suppliers — scored against SEIFA disadvantage,
+            so you can target supplier development and evidence your IPP/SME targets.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 max-w-2xl mb-6 text-sm font-medium text-bauhaus-black">
+            <div className="flex gap-2"><span className="text-bauhaus-blue font-black">&rarr;</span> Per-LGA gap heatmap, ranked by severity</div>
+            <div className="flex gap-2"><span className="text-bauhaus-blue font-black">&rarr;</span> Indigenous &amp; social-enterprise supplier counts</div>
+            <div className="flex gap-2"><span className="text-bauhaus-blue font-black">&rarr;</span> SEIFA disadvantage overlay per area</div>
+            <div className="flex gap-2"><span className="text-bauhaus-blue font-black">&rarr;</span> Exportable detail table for your targets</div>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Link href="/register" className="px-6 py-3 bg-bauhaus-blue text-white text-xs font-black uppercase tracking-widest hover:bg-bauhaus-black transition-colors">Start free</Link>
+            <Link href="/login" className="px-6 py-3 border-2 border-bauhaus-black text-bauhaus-black text-xs font-black uppercase tracking-widest hover:bg-bauhaus-black hover:text-white transition-colors">Log in</Link>
+          </div>
+        </div>
+      )}
+
       {error && (
         <div className="border-4 border-bauhaus-red bg-bauhaus-red/10 p-4 mb-6">
           <p className="text-sm font-bold text-bauhaus-red">{error}</p>
+        </div>
+      )}
+
+      {/* Default state: explain the output instead of a blank void */}
+      {!gaps && !loading && !error && !needsAuth && (
+        <div className="border-4 border-bauhaus-black bg-bauhaus-canvas p-6 mb-6">
+          <h2 className="text-xs font-black uppercase tracking-widest mb-2">How this works</h2>
+          <p className="text-sm text-bauhaus-muted font-medium max-w-2xl leading-relaxed mb-4">
+            Pick a state and hit <span className="font-black text-bauhaus-black">Analyse Gaps</span>.
+            You&apos;ll get a per-LGA heatmap ranking where your supply chain has no Indigenous or
+            social-enterprise suppliers, scored against SEIFA disadvantage.
+          </p>
+          <div className="flex flex-wrap gap-4 text-[10px] font-bold text-bauhaus-muted">
+            <span className="flex items-center gap-1"><span className="w-3 h-3 bg-bauhaus-red inline-block" /> Critical gap</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-3 bg-bauhaus-red/60 inline-block" /> High gap</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-3 bg-bauhaus-blue/60 inline-block" /> Moderate</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-3 bg-money/30 inline-block" /> Adequate</span>
+          </div>
         </div>
       )}
 
