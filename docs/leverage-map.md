@@ -89,23 +89,24 @@ All three are **evidence-depth** plays — the wedge's stated #1 tie-breaker ("e
 
 - **OP6 — Community-controlled orgs in funding deserts (the named list).** Datasets: `mv_funding_deserts`
   × `mv_entity_power_index(is_community_controlled)` via (lga_name, state). Serves: **G5∩G4**. Why valuable:
-  the worst-100 desert LGAs hold **565 community-controlled orgs** — **12% of the 4,672 indexed orgs there**,
-  **514 of 565 (91%) Aboriginal & Torres Strait Islander corporations**, across **56 LGAs**, and **314 of the
-  565 run on zero tracked funding** — the orgs serving the hardest-hit places. The MV had the *counts*; the
+  the worst-100 desert LGAs hold **665 community-controlled orgs** — **13% of the 4,984 indexed orgs there**,
+  **~89% Aboriginal & Torres Strait Islander corporations**, across **56 LGAs**, and **374 of the
+  665 run on zero tracked funding** — the orgs serving the hardest-hit places. The MV had the *counts*; the
   named list is now surfaced. **Data note:** the count is sourced from `mv_entity_power_index` (the same source
   `mv_funding_deserts.community_controlled_entities` aggregates), so the named list reconciles **exactly** with
-  the displayed count (565 = 565). **Figures revised 2026-06-09 (was 102 / 29% / 12 LGAs):** the
-  `postcode_geo.state` backfill (migration `20260609020000`) filled 227 blank-state LGAs and collapsed the
-  phantom zero-entity splits that had padded the old worst-100 — the corrected worst-100 is now real desert
-  LGAs that actually have orgs, so the count rose and the share fell to the true 12%. State: **BUILT
+  the displayed count (665 = 665). **Figures revised twice 2026-06-09 (102 / 29% → 565 / 12% → 665 / 13%):**
+  the `postcode_geo.state` NULL backfill (migration `20260609020000`) filled 227 blank-state LGAs and collapsed
+  the phantom zero-entity splits that had padded the old worst-100 (→565); then the C5 state-contradiction fix
+  (migration `20260609030000`, `gs_entities`+`postcode_geo` from `lga_code`) moved border-LGA entities to their
+  correct state, re-sorting the worst-100 again (→665). The corrected worst-100 is now real desert LGAs that
+  actually have orgs; the page computes live so it tracks the truth automatically. State: **BUILT
   2026-06-09** — a "Who's Already There" section on `/reports/funding-deserts` (named, profile-linked via
   `/entity/{gs_id}`, with Charity/Contracts/Justice evidence tags + tracked-$ flow), and the list exposed on
   `/api/data/funding-deserts` as `communityControlledInDeserts` (the outreach/registry export the link
   promises). Shared SQL + mapper in `lib/funding-deserts.ts` keeps page and API in sync. No new MV/migration
   for OP6 itself (the data was latent in existing MVs). Effort: S. Wedge: **supply-magnet / mission**.
-  **Known residual:** ~130 border-LGA state contradictions (e.g. Laverton entities coded NT vs lga_code WA)
-  remain — fixing them safely needs a coordinated `gs_entities.state` fix (~7K rows) + `mv_entity_power_index`
-  refresh (deferred — app-wide state blast radius).
+  **State data-quality now fixed (C5 done 2026-06-09):** the border-LGA contradictions (Laverton NT→WA etc.)
+  were corrected across `gs_entities` (6,949 rows) + `postcode_geo` (130) from `lga_code`, all 38 MVs refreshed.
 
 - **OP5 — ALMA evidence signals on supplier/entity profiles.** Datasets: `alma_interventions` (inline
   `evidence_strength_signal` + `portfolio_score` + `verification_status`) × `gs_entities` via gs_entity_id.

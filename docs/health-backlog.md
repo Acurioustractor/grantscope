@@ -65,7 +65,13 @@ large. Fixing the agents is higher-leverage than any one-off backfill.
 - **C3 — `acnc_charities` website 33% missing.** Backfill.
 - **C4 — `austender_contracts` value/title hygiene.** 2,627 rows zero/null value; 0.1% no title.
   Flag + source-check.
-- **C5 — `state` contradicts `lga_code` (border-LGA mislabels) [scoped 2026-06-09, M].** The ABS
+- **C5 — `state` contradicts `lga_code` (border-LGA mislabels) [✅ DONE 2026-06-09].** Shipped via migration
+  `20260609030000`: corrected **6,949 `gs_entities`** + **130 `postcode_geo`** rows from `lga_code` in lockstep
+  (also normalised case-variants like "Qld"→"QLD"); refreshed all **38 MVs** (0 failures). Verified: 0
+  remaining contradictions (codes 1-8); Laverton consolidated to 1 WA row / 101 entities (NT phantom gone);
+  funding-deserts has 0 blank-state rows; OP6 reconciles (665 = 665). *Residual:* ~66 case-variant rows with no
+  `lga_code` can't be derived (negligible); 313K entities still have no `lga_code` at all (unrelated — see B3).
+  Original scope below. The ABS
   `lga_code` first digit is the authoritative state (1 NSW · 2 VIC · 3 QLD · 4 SA · 5 WA · 6 TAS ·
   7 NT · 8 ACT) and is 99.97% populated, but the `state` column disagrees for a band of border LGAs:
   **`postcode_geo` 130 rows** (e.g. Laverton coded NT but lga_code 54970 = WA; Albury VIC→NSW;
