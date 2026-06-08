@@ -207,7 +207,7 @@ export default function ProcurementDashboard() {
 
       {/* Hero */}
       <div className="mt-4 mb-6">
-        <div className="bg-bauhaus-blue border-4 border-bauhaus-black p-6 sm:p-8" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-black)' }}>
+        <div className="bg-bauhaus-black border-4 border-bauhaus-black p-6 sm:p-8" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-blue)' }}>
           <p className="text-xs font-black text-white/60 uppercase tracking-[0.3em] mb-3">CivicGraph</p>
           <h1 className="text-3xl sm:text-4xl font-black text-white leading-tight mb-3">
             Procurement Compliance Dashboard
