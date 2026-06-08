@@ -6,8 +6,10 @@
 > (widening is paused). Every row is grounded in a coverage count. Re-verify before acting.
 
 **Inventory snapshot:** 2026-06-08 · `gs_entities` 598K · `austender_contracts` 810K · `justice_funding`
-157K · `oric_corporations` 7.4K · 60+ MVs (last successful refresh 2026-04-30 — **stale**, fix landed,
-17:00 UTC cron will clear it). Spine keys: ABN · gs_entity_id · postcode · lga · person · intervention_id.
+157K · `oric_corporations` 7.4K · 60+ MVs (all 34 nightly MVs refreshed clean **2026-06-08 10:04 AEST —
+fresh**; root cause of the 38-day staleness was a 120s role-level `statement_timeout`, fixed via
+`ALTER ROLE postgres … = 0`, cron self-heals tonight). Spine keys: ABN · gs_entity_id · postcode · lga ·
+person · intervention_id.
 
 **Score = readiness × alignment × novelty** (see `references/method.md`). Highest first.
 
@@ -27,6 +29,11 @@ All three are **evidence-depth** plays — the wedge's stated #1 tie-breaker ("e
 > **Enabler underneath all three: OP2** — link the 1,116 new VIC supplier ABNs into `gs_entities` so the
 > fresh procurement evidence flows into the same profiles.
 
+> **Premium tier (iter 4): OP7/OP8** are the *governance-deepened* versions of OP3/OP1 — the same buyers,
+> the same wedge play, but each org carries **three** independent proof signals instead of two. Fewer rows
+> (724 / 278), strictly deeper evidence. Per the wedge ("depth beats row count"), OP7 is a candidate to
+> *replace* OP3 in the headline as the premium shortlist; OP3 stays as the broad tier.
+
 ---
 
 ## Ranked opportunities (full, iters 0–3)
@@ -41,8 +48,10 @@ All three are **evidence-depth** plays — the wedge's stated #1 tie-breaker ("e
 - **OP2 — Link the 1,116 new VIC suppliers into the registry.** Datasets: `austender_contracts` (vic-) ×
   `gs_entities` × `se_search_index` via ABN. Serves: **G1**. Why valuable: the finished VIC crawl added
   **1,116 distinct supplier ABNs (47% of 2,353) not yet in `gs_entities`** — capability evidence (contract
-  titles) sitting unlinked. Evidence: 1,116 unlinked. State: **latent** (feeds `scout-se-buyers`). Effort:
-  M. Wedge: **green**. (Cross-ref: health-backlog L5.)
+  titles) sitting unlinked. Evidence: 1,116 unlinked. State: **BUILT 2026-06-08** — 1,116 entities created
+  as `AU-ABN-*` (confidence=reported, entity_type=company); VIC suppliers now 0 unlinked. Migration
+  `20260608040000_op2_link_vic_suppliers.sql`. **Downstream TODO (Ben/Tier-2):** re-run `scout-se-buyers`.
+  Effort: M. Wedge: **green**. (Cross-ref: health-backlog L5.)
 
 - **OP3 — Justice-domain proven suppliers for buyers.** Datasets: `justice_funding` ×
   `austender_contracts` via ABN. Serves: **G3∩G1 (best quadrant)**. Why valuable: **4,225 of 36,805
@@ -73,8 +82,58 @@ All three are **evidence-depth** plays — the wedge's stated #1 tie-breaker ("e
   joinable via the junctions `alma_intervention_evidence`/`alma_intervention_outcomes` — **348 entity-linked
   interventions have BOTH cited evidence AND measured outcomes**, the gold-standard buyer proof.
 
+- **OP7 — Triple-proof justice/community suppliers (the premium buyer shortlist).** Datasets:
+  `justice_funding` × `austender_contracts` × `acnc_charities` via ABN. Serves: **G3∩G1 (best quadrant)**.
+  Why valuable: **724 orgs carry all three proofs at once** — justice-domain delivery + a won federal
+  contract + ACNC charity governance/financials. That is the deepest defensible "this supplier is real,
+  capable, and well-governed" shortlist in the estate; it's the 17% of OP3's 4,225 that also stand up to a
+  governance check. Exactly the wedge's #1 asset (evidence depth), stacked. Evidence: 724 ABN-matched
+  across 3 sources (all fresh 2026-06-08). State: **BUILT 2026-06-08** — `mv_triple_proof_suppliers`
+  (724 rows, migration `20260608020000`); registered in manual + nightly cron refresh; triple-proof badge
+  live on `/suppliers` (fires for the 166 that are SEs). Effort: M. Wedge: **green**. (Refines OP3 →
+  premium tier.) **Follow-up:** a browsable buyer list for the 558 non-SE triple-proof orgs.
+
+- **OP8 — Triple-proof Indigenous suppliers.** Datasets: `oric_corporations` × `austender_contracts` ×
+  `acnc_charities` via ABN. Serves: **G4∩G1 (best quadrant)**. Why valuable: **278 of OP1's 325 (86%)
+  contract-winning ORIC corps are also ACNC charities** — Indigenous-controlled orgs with proven federal
+  delivery *and* charity-grade governance. A buyer with Indigenous-procurement targets gets a shortlist
+  that already clears the governance bar. The 86% co-incidence is itself a finding: contract-winning ORIC
+  corps are overwhelmingly ACNC-registered. Evidence: 278 ABN-matched across 3 sources. State:
+  **partially-built** (`mv_indigenous_procurement_score` has the oric×contracts pair; ACNC is the
+  deepening). Effort: S–M. Wedge: **green**. (Refines OP1.)
+
+- **OP9 — Conflict-of-interest risk flag on supplier profiles (narrow).** Datasets: `mv_entity_power_index`
+  (`in_procurement` × `in_political_donations` × `distinct_parties_funded` / `parties_funded`). Serves:
+  **G1 (tender-tools — the risk leg)**, but narrowly. Why valuable: **2,085 of 57,262 suppliers (3.6%)
+  also donate to political parties** — a defensible conflict-of-interest flag for buyer due-diligence on a
+  *named* supplier. Evidence: 2,085 supplier-donors; **but only 3 community-controlled and 126 charity
+  suppliers carry it** — the SE/registry supply base is essentially **clean of political entanglement**, so
+  the flag fires on large corporates, not the wedge's core SEs. State: **latent** (flags exist in
+  `mv_entity_power_index`, not surfaced as risk). Effort: **S** (data already computed). Wedge:
+  **green-but-narrow** — real for per-supplier due-diligence, near-zero as a registry-wide SE signal; **NOT
+  a Top-3**.
+  - *Mission sub-angle (de-ranked per wedge):* **392 justice-funded suppliers (8.3%) also donate to
+    parties** — a G3 "public money meets political influence" accountability thread, but that belongs to
+    the accountability-ledger strand, not the buyer wedge.
+
+- **OP10 — Quad-proof suppliers (the gold tier).** Datasets: `mv_triple_proof_suppliers` ×
+  `alma_interventions` (× `alma_intervention_evidence` × `alma_intervention_outcomes`) via gs_entity_id.
+  Serves: **G3∩G1 (best quadrant, deepest)**. Why valuable: **54 of the 724 triple-proof orgs also carry
+  an ALMA intervention with BOTH cited evidence AND measured outcomes** — a *fourth* independent proof.
+  The deepest defensible "this works, and they can deliver it" shortlist in the estate: domain delivery +
+  federal contract + charity governance + evidence-of-what-works. Newly minable now that OP7's MV exists
+  (iter 6). Evidence: 54 quad-proof; 99 of 724 have any ALMA link. State: **latent**. Effort: **S** — add
+  a `has_alma_evidence_outcomes` flag to `mv_triple_proof_suppliers` + a stronger "Proven outcomes" badge
+  tier on `/suppliers`. Wedge: **green**. (Premium-of-the-premium; tiny by rows, deepest by evidence — the
+  wedge's depth>rows thesis at its limit.)
+
 ## Dead leads (logged so the loop won't re-mine)
 
+- **VIC new entities × justice / acnc / federal (iter 7)** → of the 1,116 newly-linked VIC suppliers
+  (OP2), **0 are in justice_funding, 0 in ACNC, only 5 have federal contracts**. They're net-new
+  *commercial* VIC vendors (the charity/justice/federal ones were already in gs_entities via earlier
+  backfills, which is why they weren't in the unlinked set). No cross-jurisdiction evidence-stack — OP2's
+  value is registry capability evidence (contract titles), not cross-system depth. `thin` — don't re-mine.
 - **justice_funding × ato_tax_transparency (ABN)** → only **184 / 36,805 (0.5%)** overlap. ATO
   transparency covers only >$100M entities; justice recipients are small community orgs. `blocked` — the
   "resourced-vs-struggling recipients" idea has no data behind it via ATO. **Resolved iter 1 → OP4**:
@@ -102,7 +161,21 @@ All three are **evidence-depth** plays — the wedge's stated #1 tie-breaker ("e
 
 ---
 
-<!-- LOOP STATE: iter 3 done — ALL 5 keys mined (ABN, gs_entity_id, postcode/lga, person, intervention_id).
-     Map: Top-3 synthesis + OP1-OP6. iter 3 added OP5 (ALMA inline evidence signals) + alma-orphan flag.
-     Loop PARKED: next state = 17:00 UTC MV refresh. On wake gate-check mv_refresh_log success >= 2026-06-08;
-     if flipped, re-score readiness (fresh MVs) + mine any new state. Exit = Ben interrupts. -->
+<!-- LOOP STATE: iter 7 done — VIC cross-jurisdiction = THIN (the 1,116 new VIC entities are commercial
+     vendors: 0 justice, 0 acnc, 5 federal). Logged as dead lead. That's 1 empty iteration. Iter 6 added
+     OP10 (54 quad-proof). Map now: Top-3 + OP1-OP10 + dead leads.
+     SEAMS EXHAUSTED: all 5 keys + ABN triples + risk + quad-stack + VIC cross-jurisdiction mined. Only G2
+     (supply-magnet) unmined, and it's low-value by design (never revenue) — not worth a forced iter.
+     PARKED (~3600s) until genuinely new state: OP10 built, a new crawl, or an enrichment run. The high-value
+     move now is BUILDING (OP10 gold-tier flag+badge is the cheapest next ship) + committing today's OP7/OP2.
+     On wake: re-inventory; if no new state, mine G2 once then stop. Exit = Ben interrupts. -->
+<!-- LOOP STATE: iter 5 done — mined the risk-signal facet (mv_entity_power_index in_procurement ×
+     in_political_donations). Result NARROW: 2,085/57,262 suppliers (3.6%) donate to parties but only 3 are
+     community-controlled — the SE base is clean, so the COI flag fires on big corporates, not wedge supply.
+     Logged as OP9 (green-but-narrow, NOT Top-3) + the "SE base is clean" finding + a de-ranked G3 accountability
+     sub-angle (392 justice-funded donors).
+     SEAMS NOW LARGELY EXHAUSTED: all 5 pair-keys (iters 0-3) + ABN triple-stacks (iter 4) + risk signal (iter 5)
+     mined. Only unmined facet = G2 supply-magnet, which is low-value by design (never revenue). Diminishing
+     returns — the high-value move now is BUILDING (OP7 724 triple-proof / OP2 link VIC suppliers), not more mining.
+     PARKED (~3600s) until new state: a build landing (e.g. OP7 MV), a finished crawl, or an enrichment run.
+     On wake: re-inventory; if no new state, mine G2 once then stop. Exit = Ben interrupts. -->
