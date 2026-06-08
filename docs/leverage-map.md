@@ -129,6 +129,11 @@ All three are **evidence-depth** plays — the wedge's stated #1 tie-breaker ("e
 
 ## Dead leads (logged so the loop won't re-mine)
 
+- **G2 claim-magnet: SEs with delivery evidence but unclaimed (iter 8)** → only **2** of 11,861 SEs have
+  contract delivery AND an `identified` (unclaimed) tier. The SEs with proven delivery are almost all
+  already `verified`/`certified` via registers (ACNC/ORIC/Supply Nation); unclaimed directory profiles
+  rarely have contract matches. The "claim your profile — you've delivered $X" magnet has no volume.
+  `thin` — and G2 is low-value by design (never revenue) anyway. Don't re-mine.
 - **VIC new entities × justice / acnc / federal (iter 7)** → of the 1,116 newly-linked VIC suppliers
   (OP2), **0 are in justice_funding, 0 in ACNC, only 5 have federal contracts**. They're net-new
   *commercial* VIC vendors (the charity/justice/federal ones were already in gs_entities via earlier
@@ -161,14 +166,15 @@ All three are **evidence-depth** plays — the wedge's stated #1 tie-breaker ("e
 
 ---
 
-<!-- LOOP STATE: iter 7 done — VIC cross-jurisdiction = THIN (the 1,116 new VIC entities are commercial
-     vendors: 0 justice, 0 acnc, 5 federal). Logged as dead lead. That's 1 empty iteration. Iter 6 added
-     OP10 (54 quad-proof). Map now: Top-3 + OP1-OP10 + dead leads.
-     SEAMS EXHAUSTED: all 5 keys + ABN triples + risk + quad-stack + VIC cross-jurisdiction mined. Only G2
-     (supply-magnet) unmined, and it's low-value by design (never revenue) — not worth a forced iter.
-     PARKED (~3600s) until genuinely new state: OP10 built, a new crawl, or an enrichment run. The high-value
-     move now is BUILDING (OP10 gold-tier flag+badge is the cheapest next ship) + committing today's OP7/OP2.
-     On wake: re-inventory; if no new state, mine G2 once then stop. Exit = Ben interrupts. -->
+<!-- LOOP STATE: iter 8 done — LOOP COMPLETE. Mined the last facet G2 (claim-magnet) = THIN (2 targets).
+     That's 2 consecutive empty iters (7 VIC cross-jurisdiction, 8 G2). ALL 5 join keys + ALL 5 goals now
+     mined. Map final: Top-3 synthesis + OP1-OP10 + 5 dead leads. Builds shipped this session: cron fix,
+     OP7 (mv_triple_proof_suppliers + badge), OP2 (1,116 VIC entities), SE index + buyer prospects rebuilt.
+     NO AUTO-WAKE scheduled — the estate is mined out; re-waking would only re-confirm "nothing new". The
+     loop should ONLY resume when genuinely new DATA lands (a new crawl, an enrichment run, or a build like
+     OP10's flag) — re-invoke /leverage then. A refresh of existing structures does NOT count as new state.
+     Cheapest next ship if continuing: OP10 has_alma_evidence_outcomes flag + "Proven outcomes" badge.
+     Exit = Ben. -->
 <!-- LOOP STATE: iter 5 done — mined the risk-signal facet (mv_entity_power_index in_procurement ×
      in_political_donations). Result NARROW: 2,085/57,262 suppliers (3.6%) donate to parties but only 3 are
      community-controlled — the SE base is clean, so the COI flag fires on big corporates, not wedge supply.
