@@ -311,7 +311,7 @@ export default async function FundingDesertsReport() {
           <p className="text-sm text-bauhaus-muted mb-6 max-w-2xl">
             The deepest deserts are not empty. Inside the 100 worst-scoring LGAs,{' '}
             <strong className="text-bauhaus-black">{fmt(d.communitySummary.cc_orgs)} community-controlled organisations</strong> &mdash;
-            locally governed, nearly all of them Aboriginal and Torres Strait Islander corporations &mdash; are already
+            locally governed, the overwhelming majority of them Aboriginal and Torres Strait Islander corporations &mdash; are already
             operating in the places the funding system reaches least. They make up{' '}
             <strong className="text-bauhaus-black">{d.communitySummary.cc_share}%</strong> of every indexed
             organisation in those LGAs, yet <strong className="text-bauhaus-red">{fmt(d.communitySummary.zero_funding_orgs)} of
