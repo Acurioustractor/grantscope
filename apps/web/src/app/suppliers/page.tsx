@@ -85,6 +85,17 @@ function ProvenGovtDeliveryBadge() {
   );
 }
 
+function IndigenousProvenBadge() {
+  return (
+    <span
+      title="Indigenous-proven — a registered Indigenous corporation (ORIC) that has won a federal contract. Verified Indigenous-controlled supply with a proven government delivery record — exactly what a buyer with Indigenous Procurement Policy targets needs."
+      className="text-[10px] px-2 py-0.5 font-black uppercase tracking-widest border-2 border-bauhaus-red bg-bauhaus-red text-bauhaus-canvas"
+    >
+      Indigenous-proven
+    </span>
+  );
+}
+
 function EvidenceLine({ r }: { r: SupplierResult }) {
   if (r.contract_count === 0) return null;
   const lastYear = r.last_contract_end ? new Date(r.last_contract_end).getFullYear() : null;
@@ -239,6 +250,7 @@ export default async function SupplierSearchPage({
                     </Link>
                     <div className="relative z-10 flex gap-1.5 flex-wrap">
                       {r.proven_outcomes ? <ProvenOutcomesBadge /> : r.triple_proof ? <TripleProofBadge /> : r.proven_govt_delivery ? <ProvenGovtDeliveryBadge /> : null}
+                      {r.indigenous_proven ? <IndigenousProvenBadge /> : null}
                       <TierBadge tier={r.verification_tier} />
                       {r.source_primary && (
                         <span className="text-[10px] px-2 py-0.5 font-black uppercase tracking-widest border-2 border-bauhaus-black/40 text-bauhaus-muted">
