@@ -9,13 +9,25 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-06-08T12:35:00+10:00
+**Updated:** 2026-06-08T16:35:00+10:00
 **Goal:** Buyer wedge: "free open registry for everyone; paid evidence + tender tools for buyers" (`docs/strategy/buyer-wedge.md`). Run `/wedge` before building SE/procurement/giving. Moves 1+2+4 SHIPPED, 3 waiting on Ben, 5 (widening pause) ACTIVE.
-**Branch:** chore/tsc-stop-hook — **PUSHED to origin @ `2f0ad30`** (tracking set). Branched off main @ `2798bdf`.
+**Branch:** chore/tsc-stop-hook — local is **14 commits AHEAD of origin (UNPUSHED)**; origin still at `2f0ad30`. Branched off main @ `2798bdf`.
 **Test:** cd apps/web && npx tsc --noEmit && npx vitest run
 
 ### Now
-[->] **Pivoting to the buyer-flow UX/UX audit — plan written, ready to run on fresh context.** Decided with Ben: *audit the buyer-facing surface first, then crystallize the method into a `/polish` loop-skill*; scope = the buyer flow (`/suppliers` → `/social-enterprises/[id]` → `/procurement/tender-pack`). Full method + page list + draft value-rubric in **`thoughts/shared/plans/buyer-flow-ux-audit.md`**. Clean topic switch after a data-heavy session — start the audit fresh (dev server `npx next dev --turbopack -p 3003`, warm with curl, screenshot, judge vs DESIGN.md + the value test). **Everything from this session is committed + pushed to `2f0ad30`.**
+[->] **Buyer-flow UX audit COMPLETE — all 8 Pass-2 findings shipped + verified live.** 14 commits, **local/UNPUSHED** on `chore/tsc-stop-hook`. Gates green (tsc 0, 221 tests). **Two loose ends:** (1) build the **`/polish` loop-skill** from the audit rubric (plan deliverable 3, not started); (2) **push** the 14 commits (Tier-2, ask first). Findings + 12 before/after screenshots in `docs/buyer-flow-ux-findings.md` / `docs/ux-audit/shots/`.
+
+### This Session (2026-06-08, evening) — buyer-flow UX audit Pass 2 (all 8 findings shipped)
+Executed `thoughts/shared/plans/buyer-flow-ux-audit.md`. Found the prior session's Pass-1 (F1–F9) findings doc, confirmed those fixes live, then did a fresh **Pass 2** over all 5 buyer-flow screens (incl. the directory + procurement pages Pass 1 skipped) → appended to `docs/buyer-flow-ux-findings.md`. Each fix decided with Ben, built, verified live (screenshots), gates green throughout (tsc 0, 221 tests). **14 local commits, UNPUSHED.**
+- [x] **P2-1 search match legibility** (`9d5d403`/`4097a63`) — measured first: a contract-title hit scores ~5× a description hit, so the evidence-led order was *thesis-correct* but illegible. RPC `search_suppliers` now returns `match_source` + a `ts_headline` snippet (migration `2026-06-08-search-suppliers-match-legibility.sql`); cards show "Matched in a won contract: …Bed Dwellings…" vs "…in description: …Bed + Bath…". Boosts additive→multiplicative. (Ben's call: keep evidence-led + make legible, not re-rank.)
+- [x] **P2-2 directory evidence + sort** (`1490150`/`7225f69`) — `se_directory` view (migration) LEFT-JOINs delivery evidence + proof flags onto the directory; new **"Delivery Evidence" default sort**; proof badge + green "N contracts · $X" line on cards. Browse now leads with proven deliverers, not "Koolyangarra…".
+- [x] **P2-3 black-cladding explainer** (`dda23be`) — one-line hero explainer framing it as protecting genuine Indigenous suppliers. (Ben's call.)
+- [x] **P2-4 tender-pack output preview** (`7b55703`) — "What's in the pack" panel above generate.
+- [x] **P2-5 per-page metadata** (`7bd3cf2`) — `generateMetadata` on SE profile (title = enterprise name), static on directory, `layout.tsx` for client-component /procurement + /tender-pack. Fixes tabs/link-previews/SEO.
+- [x] **P2-6 unified hero** (`68178bb`) — /procurement blue-fill → black-fill + blue shadow, matching directory/tender-pack.
+- [x] **P2-7 landing pre-search proof** (`0f54c72`/`f8797b8`) — "Popular needs" chips + live "What's already in the registry" strip (11,861 enterprises · 1,131 proven delivery · 8,454 contracts · **$53.6B**) via new `se_registry_stats()` RPC.
+- [x] **P2-8 tender-pack empty-state nudge** (`7b55703`) — "No shortlist yet → find suppliers" reveals the spine on cold entry.
+- **3 DB migrations applied to prod + committed** (search RPC, se_directory view, se_registry_stats RPC) — git and DB in sync.
 
 ### This Session (2026-06-08, afternoon) — verified cron fix + shipped the evidence stack (OP7-OP10)
 - [x] **MV-refresh cron fix VERIFIED then CORRECTED.** The morning's `ALTER FUNCTION … statement_timeout=0` was a NO-OP — pg_cron arms the 120s timer at the outer command level, *before* the function is entered, so a function-entry GUC change can't cancel it. Real fix: **`ALTER ROLE postgres SET statement_timeout=0`** (migration `20260608010000`, `16d2407`) — pg_cron's direct session now starts uncapped. Manually refreshed all 34 MVs → staleness **38d → 0d**. (`mv_abr_name_lookup` needed 123.7s, just over the old 120s cap — the exact bug.)
@@ -34,10 +46,12 @@ status: active
 - [x] All work committed + pushed: `b9bcb38` enrich-fix · `015365c` health-backlog · `75eb951` leverage skill · `b0330a1` health iter6 · `ed8a767` CLAUDE fix · `33c1e2d` leverage map.
 
 ### Next on resume (priority order)
-1. **Buyer-flow UX audit** → execute `thoughts/shared/plans/buyer-flow-ux-audit.md`. Walk `/suppliers` → `/social-enterprises/[id]` → `/procurement/tender-pack` on dev :3003, screenshot, judge vs DESIGN.md + the value test, write `docs/buyer-flow-ux-findings.md`. **Then build the `/polish` skill** from the refined rubric. (Read DESIGN.md before any visual change.)
-2. (Backlog) Remaining leverage builds — OP8 (278 Indigenous triple-proof), OP4 (financial-health on justice charities), OP6 (desert community-controlled named list).
-3. (Backlog) Enrichment-fleet timeout fixes (`docs/health-backlog.md`) — several agents at single-digit success.
-4. (Open, Tier-3) Open a PR for `chore/tsc-stop-hook` when ready.
+1. **Push the 14 buyer-flow commits** (Tier-2 — ask Ben first). Branch `chore/tsc-stop-hook` is 14 ahead of origin `2f0ad30`. All gates green; DB migrations already applied to prod.
+2. **Build the `/polish` loop-skill** — the audit method + value rubric (Clarity / Value-shown / Meaning / Aesthetic / Friction) from `docs/buyer-flow-ux-findings.md`, the way `/leverage`'s method preceded its loop. Exit = Ben's check, not "when done" (memory `feedback_loop_design_workflow`). Plan deliverable 3, in `thoughts/shared/plans/buyer-flow-ux-audit.md`.
+3. (Buyer-flow follow-ups, optional) per-supplier OG/Twitter image cards; featured "proven outcomes" row on the landing; LGA/postcode autocomplete on the tender-pack footprint (old F9); audit `/procurement/gap-map` + `/commissioning` (untouched both passes).
+4. (Backlog) Remaining leverage builds — OP8 (278 Indigenous triple-proof), OP4 (financial-health on justice charities), OP6 (desert community-controlled named list).
+5. (Backlog) Enrichment-fleet timeout fixes (`docs/health-backlog.md`) — several agents at single-digit success.
+6. (Open, Tier-3) Open a PR for `chore/tsc-stop-hook` when ready.
 
 ### PRIOR SESSION (loop infrastructure — context, still valid)
 
