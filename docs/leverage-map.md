@@ -23,8 +23,9 @@ All three are **evidence-depth** plays — the wedge's stated #1 tie-breaker ("e
    (G3∩G1). Biggest best-quadrant base, net-new. The headline buyer asset.
 2. **OP5 · ALMA evidence signals on profiles** — 983 entity-linked interventions with curated evidence +
    portfolio scores, surfaced on `/suppliers` (G3→G1). Highest readiness; directly deepens the registry.
-3. **OP1 · Indigenous proven suppliers** — 325 ORIC corps with won federal contracts (G4∩G1); mostly built
-   in `mv_indigenous_procurement_score`, so the fastest to ship.
+3. **OP1 · Indigenous proven suppliers** — **BUILT 2026-06-08** — 301 *active* ORIC corps with won federal
+   contracts (G4∩G1). `mv_indigenous_proven_suppliers`; surfaces as the red **"Indigenous-proven"** badge on
+   `/suppliers` + profiles, orthogonal to the OP3 justice hierarchy (88 orgs carry both).
 
 > **Enabler underneath all three: OP2** — link the 1,116 new VIC supplier ABNs into `gs_entities` so the
 > fresh procurement evidence flows into the same profiles.
@@ -42,8 +43,13 @@ All three are **evidence-depth** plays — the wedge's stated #1 tie-breaker ("e
   `austender_contracts` (× `gs_entities`) via ABN. Serves: **G4∩G1 (best quadrant)**. Why valuable: **325
   of 3,266 ORIC corps (10%) have won federal contracts** — a defensible shortlist of Indigenous orgs with
   proven delivery, exactly the evidence a buyer with Indigenous-procurement targets needs. Evidence: 325
-  ABN-matched. State: **partially-built** — `mv_indigenous_procurement_score` exists; verify it surfaces
-  *these* to buyers / `/suppliers`. Effort: S–M. Wedge: **green**.
+  ABN-matched. State: **BUILT 2026-06-08** — `mv_indigenous_proven_suppliers` (301 rows, migration
+  `20260608080000`; the 25 *deregistered* ORIC corps are excluded — a buyer shortlist must not recommend a
+  wound-up corp). NB the pre-existing `mv_indigenous_procurement_score` is *agency*-side IPP compliance, not
+  a supplier shortlist — this MV is the supplier-side build. Surfaces as the red **"Indigenous-proven"** badge
+  on `/suppliers` search + `/social-enterprises/[id]`, an ORTHOGONAL axis to OP3's justice hierarchy (88 orgs
+  carry both badges; 9 also clear the ALMA gold tier). Registered in manual + nightly cron refresh. 300 of
+  301 are reachable in the search index + directory. Effort: S–M. Wedge: **green**.
 
 - **OP2 — Link the 1,116 new VIC suppliers into the registry.** Datasets: `austender_contracts` (vic-) ×
   `gs_entities` × `se_search_index` via ABN. Serves: **G1**. Why valuable: the finished VIC crawl added

@@ -47,6 +47,7 @@ const VIEW_LIST = [
   'mv_org_justice_signals',
   'mv_triple_proof_suppliers',
   'mv_justice_proven_suppliers',
+  'mv_indigenous_proven_suppliers',
   'mv_funding_by_postcode',
   'mv_funding_by_lga',
   'mv_funding_by_disadvantage',

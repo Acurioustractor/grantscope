@@ -1,5 +1,5 @@
 ---
-date: 2026-06-08T21:15:00+10:00
+date: 2026-06-08T23:55:00+10:00
 session_name: giving-data-commons
 branch: main
 status: active
@@ -9,13 +9,29 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-06-08T21:15:00+10:00
-**Goal:** Buyer wedge: "free open registry for everyone; paid evidence + tender tools for buyers" (`docs/strategy/buyer-wedge.md`). Run `/wedge` before building SE/procurement/giving. Moves 1+2+4 SHIPPED, 3 waiting on Ben, 5 (widening pause) ACTIVE.
-**Branch:** **main** @ `ac651c0` — in sync with origin. The whole `chore/tsc-stop-hook` work-stream (38 commits) is **MERGED via PR #56** and the branch is deleted (local + remote). Clean tree except 2 untracked data leftovers (`data/grant-eligibility-cache.jsonl`, `data/state-tenders/`).
+**Updated:** 2026-06-08T23:55:00+10:00
+**Goal:** Buyer wedge: "free open registry for everyone; paid evidence + tender tools for buyers" (`docs/strategy/buyer-wedge.md`). Run `/wedge` before building SE/procurement/giving. Evidence-depth plays are the active focus (widening paused).
+**Branch:** **main** (clean) — PRs #57 (buyer-flow), #58 (OP5), #59 (OP3) all **MERGED**. HEAD `38c6c49`. Working tree clean except this ledger + 2 pre-existing untracked data leftovers (`data/grant-eligibility-cache.jsonl`, `data/state-tenders/`).
 **Test:** cd apps/web && npx tsc --noEmit && npx vitest run
 
 ### Now
-[->] **Buyer-flow UX audit FULLY CLOSED + merged to main.** All 3 plan deliverables done (findings doc · top fixes shipped+verified · `/polish` loop-skill built). PR #56 merged after CI green (tsc/unit/e2e/Vercel); **all 9 DB migrations verified live on prod** (`mv_triple_proof_suppliers` w/ alma flag · `se_directory` · `se_search_index`+verification_tier · `se_registry_stats()` · `search_suppliers()` match-legibility · OP2 VIC-link gap=0 · refresh cron active 3am AEST). Nothing in flight. Next is **optional buyer-flow follow-ups** or **picking up the next backlog item** — nothing is blocked or half-done.
+[->] **NEXT: OP1 — Indigenous proven suppliers** (leverage Top-3; likely the fastest win — mostly built in `mv_indigenous_procurement_score`, probably just needs surfacing/verification on `/suppliers`). Then **OP4** — financial-health signal on justice-funded charities (4,366 ACNC matches; supply-magnet, not direct revenue). OP5 + OP3 both SHIPPED + MERGED this session — nothing in flight.
+
+### This Session (2026-06-08, night) — OP5 + OP3 shipped & merged (PRs #58, #59)
+Merged the open buyer-flow PR, then built the next two Top-3 leverage plays end-to-end (build → verify live → ship → CI-green → merge), Ben merging each with an explicit verb.
+- [x] **Merged PR #57** (buyer-flow follow-ups) → main `e0c788d`.
+- [x] **OP5 BUILT + MERGED** (PR #58, merge `0744eb4`) — **Program Evidence** section on `/social-enterprises/[id]`: ALMA programs + the cited-studies / measured-outcomes chain (via junctions) for the ~100 ABN-resolved profiles. New `getEntityEvidencePrograms(db, entityId)` in `report-service.ts`. Honest framing: verifiable counts lead, ALMA signals attributed (not endorsement). Verified live (Save the Children → 3 programs / 8 studies / 3 outcomes). Commits `eab192a` + `c050779`.
+  - **GOTCHA (cost ~6 calls):** `report-service`'s `getServiceSupabase()` returns the report SNAPSHOT db (no live ALMA junction rows) unless `CIVICGRAPH_LIVE_REPORTS=true` → returned `[]` silently, no error. Fix: the function takes the caller's **live** client. Memory: `solution_report_service_snapshot_client.md`.
+- [x] **OP3 BUILT + MERGED** (PR #59, merge `38c6c49`) — **"Proven govt delivery"** tier: `mv_justice_proven_suppliers` (4,225 orgs: justice × federal contract; the triple-proof MV minus the ACNC gate, ACNC kept as optional signal). Migration `20260608060000` + cron re-dump `20260608070000` **applied live**. Badge on `/suppliers` search + `/social-enterprises/[id]` header; strongest-of-three hierarchy (Proven outcomes > Triple-proof > Proven govt delivery), all derived from one MV lookup via `has_acnc` / `has_alma_evidence_outcomes`. Verified: **4,225 rows · 724 has_acnc (== mv_triple_proof_suppliers) · 71 gold**; badge hierarchy correct live on both surfaces. Commits `5dcff2a` + `95b6394`. Plan: `thoughts/shared/plans/op3-justice-proven-suppliers.md`.
+- Gates green throughout (tsc 0, 221/221). Leverage map (`docs/leverage-map.md`) updated: OP5 + OP3 marked BUILT.
+
+### This Session (2026-06-08, evening cont.) — buyer-flow follow-ups shipped (PR #57)
+Did backlog action #1: ran `/polish` on the 2 untouched pages + the 2 follow-up builds. All verified live (re-screenshotted logged-out, `docs/ux-audit/shots/audit-13…22`). Gates green throughout (tsc 0, 221/221). Shipped as **PR #57** (`feat/buyer-flow-followups`) — CI all-green, **NOT merged**.
+- [x] **gap-map (Pass 3)** — logged-out 401 dead-end → "Sign in to run the gap analysis" conversion panel; empty void → "How this works" explainer; red hero → black-fill+blue-shadow; own metadata layout. (P3-1..P3-4)
+- [x] **commissioning (Pass 3)** — dropped "Data Needed to Complete" (was advertising build gaps to PHN buyers); value-first + Register-Interest waitlist; **figures corrected 2–5× to live counts** (143K→599K entities, 301K→1.6M rels, 1,155→2,087 ALMA); black hero; own metadata; now a Server Component. (P3-5..P3-8)
+- [x] **Per-supplier OG/Twitter cards** — `social-enterprises/[id]/opengraph-image.tsx` (one file = both og+twitter). Leads with $ evidence + tier. **Satori gotcha (cost a bisect):** multi-child text nodes throw ERR_EMPTY_RESPONSE → use template literals; next/og DOES work under turbopack dev. Memory: `solution_next_og_satori_gotchas.md`.
+- [x] **Landing "proven outcomes" row** — `/suppliers` non-search view: 6 named, clickable quad-proof exemplars via new `getProvenOutcomesSuppliers()` (two-query join, no migration). Click-through verified.
+- Commits: `74f202c` procurement · `0003fd3` OG cards · `fd7a8c0` proven-outcomes row · `c40f8f5` docs. Pass-3 findings in `docs/buyer-flow-ux-findings.md`.
 
 ### This Session (2026-06-08, late) — close-out: /polish built, branch shipped & merged
 Closed every loose end from the evening session. All Tier-2/3 actions asked-then-confirmed per rules.
@@ -57,12 +73,14 @@ Executed `thoughts/shared/plans/buyer-flow-ux-audit.md`. Found the prior session
 - [x] All work committed + pushed: `b9bcb38` enrich-fix · `015365c` health-backlog · `75eb951` leverage skill · `b0330a1` health iter6 · `ed8a767` CLAUDE fix · `33c1e2d` leverage map.
 
 ### Next on resume (priority order)
-> Buyer-flow audit work-stream is fully closed + merged. Below is the open backlog — nothing here is in flight.
-1. (Buyer-flow follow-ups, optional) Run **`/polish`** on the untouched pages — `/procurement/gap-map` + `/commissioning` (skipped both passes). Plus: per-supplier OG/Twitter image cards; featured "proven outcomes" row on the landing; LGA/postcode autocomplete on the tender-pack footprint (old F9).
-2. (Backlog) Remaining leverage builds — OP3 justice proven-suppliers · OP5 ALMA evidence on `/suppliers` · OP1 Indigenous proven-suppliers (Top-3); then OP8 (278 Indigenous triple-proof), OP4 (financial-health on justice charities), OP6 (desert community-controlled named list). See `docs/leverage-map.md`.
+> Top-3 leverage plays now 2/3 done: **OP5 ✅ + OP3 ✅ merged.** OP1 is the remaining Top-3 and likely the fastest. Tree clean on `main`.
+1. (NOW) **OP1 — Indigenous proven suppliers** (leverage Top-3). 325 ORIC corps that won federal contracts (G4∩G1). **Mostly built** in `mv_indigenous_procurement_score` — verify it surfaces these to buyers, then surface on `/suppliers` (likely an "Indigenous proven supplier" badge/tier in the same family as OP3's "Proven govt delivery"). S–M, may need no migration. See `docs/leverage-map.md`.
+2. (Backlog) **OP4** — financial-health signal on justice-funded charities (4,366 ACNC/AIS matches; flag financially-fragile delivery orgs). Supply-magnet/mission, not direct revenue. M.
+3. (Backlog) **OP8** (278 Indigenous triple-proof) · **OP6** (desert community-controlled named list) · OP7 follow-up (browsable list for the 558 non-SE triple-proof orgs). See `docs/leverage-map.md`.
 3. (Backlog) Enrichment-fleet timeout fixes (`docs/health-backlog.md`) — several agents at single-digit success.
 4. (Housekeeping) Decide on the 2 untracked data leftovers (`data/grant-eligibility-cache.jsonl`, `data/state-tenders/`) — gitignore, commit, or bin.
-5. (Hygiene) The `/close` skill points at the wrong ledger path (`community-capital-ledger`) — consider fixing it to `giving-data-commons` or making it auto-detect the most-recent `current.md`.
+5. (Hygiene) The `/close` skill points at the wrong ledger path (`community-capital-ledger`) — fix to `giving-data-commons` or auto-detect the most-recent `current.md`.
+6. (If merged) After PR #57 merges → delete `feat/buyer-flow-followups` (local + remote).
 
 ### PRIOR SESSION (loop infrastructure — context, still valid)
 
