@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { searchSuppliers, type SupplierResult } from '@/lib/services/supplier-search';
+import { searchSuppliers, getRegistryStats, type SupplierResult } from '@/lib/services/supplier-search';
 import { money } from '@/lib/services/report-service';
 import { AddToPackButton } from '@/app/components/add-to-pack-button';
 import { isHedgeDescription } from '@/lib/supplier-copy';
@@ -14,6 +14,9 @@ export const metadata: Metadata = {
 };
 
 const STATES = ['ACT', 'NSW', 'NT', 'QLD', 'SA', 'TAS', 'VIC', 'WA'] as const;
+
+// One-click example needs for the landing — common procurement categories.
+const EXAMPLE_NEEDS = ['Beds', 'Catering', 'Cleaning', 'Landscaping', 'IT support', 'Construction', 'Recruitment', 'Signage'];
 
 const SOURCE_LABELS: Record<string, string> = {
   'supply-nation': 'Supply Nation',
@@ -138,6 +141,7 @@ export default async function SupplierSearchPage({
     : '';
   const searched = Boolean(q || state);
   const results = searched ? await searchSuppliers(q, state) : [];
+  const stats = searched ? null : await getRegistryStats();
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-10">
@@ -283,29 +287,74 @@ export default async function SupplierSearchPage({
           </div>
         </section>
       ) : (
-        <section className="grid sm:grid-cols-3 gap-0 border-4 border-bauhaus-black mb-10">
-          <div className="bg-white p-6 border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black">
-            <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-red mb-1.5">1 · Search by need</div>
-            <p className="text-sm font-medium text-bauhaus-black">
-              &ldquo;Beds&rdquo;, &ldquo;catering&rdquo;, &ldquo;civil works&rdquo; — matched against
-              names, sectors AND what government actually bought from each enterprise.
-            </p>
+        <>
+          {/* One-click example needs — lower the friction to a first real search */}
+          <div className="mb-8">
+            <div className="text-[11px] font-black uppercase tracking-widest text-bauhaus-muted mb-2">
+              Popular needs
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {EXAMPLE_NEEDS.map((need) => (
+                <Link
+                  key={need}
+                  href={`/suppliers?q=${encodeURIComponent(need.toLowerCase())}`}
+                  className="px-3 py-1.5 text-xs font-black uppercase tracking-wider border-2 border-bauhaus-black bg-white text-bauhaus-black hover:bg-bauhaus-yellow transition-colors"
+                >
+                  {need}
+                </Link>
+              ))}
+            </div>
           </div>
-          <div className="bg-white p-6 border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black">
-            <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-red mb-1.5">2 · Ranked by evidence</div>
-            <p className="text-sm font-medium text-bauhaus-black">
-              Public contract history beats badges. Verification marks (Social Traders, Supply
-              Nation, ACNC, ORIC) appear as signals — never as gates.
-            </p>
-          </div>
-          <div className="bg-white p-6">
-            <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-red mb-1.5">3 · Free and open</div>
-            <p className="text-sm font-medium text-bauhaus-black">
-              11,800+ enterprises, no membership wall. Indigenous business registries are part of
-              the supply base; not every record is a certified social enterprise.
-            </p>
-          </div>
-        </section>
+
+          <section className="grid sm:grid-cols-3 gap-0 border-4 border-bauhaus-black mb-8">
+            <div className="bg-white p-6 border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black">
+              <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-red mb-1.5">1 · Search by need</div>
+              <p className="text-sm font-medium text-bauhaus-black">
+                &ldquo;Beds&rdquo;, &ldquo;catering&rdquo;, &ldquo;civil works&rdquo; — matched against
+                names, sectors AND what government actually bought from each enterprise.
+              </p>
+            </div>
+            <div className="bg-white p-6 border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black">
+              <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-red mb-1.5">2 · Ranked by evidence</div>
+              <p className="text-sm font-medium text-bauhaus-black">
+                Public contract history beats badges. Verification marks (Social Traders, Supply
+                Nation, ACNC, ORIC) appear as signals — never as gates.
+              </p>
+            </div>
+            <div className="bg-white p-6">
+              <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-red mb-1.5">3 · Free and open</div>
+              <p className="text-sm font-medium text-bauhaus-black">
+                11,800+ enterprises, no membership wall. Indigenous business registries are part of
+                the supply base; not every record is a certified social enterprise.
+              </p>
+            </div>
+          </section>
+
+          {/* Pre-search proof — the registry already holds real, public delivery evidence */}
+          {stats && (
+            <section className="mb-10">
+              <div className="text-[11px] font-black uppercase tracking-widest text-bauhaus-muted mb-2">
+                What&apos;s already in the registry
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-0 border-4 border-bauhaus-black">
+                {[
+                  { label: 'Enterprises', value: stats.total.toLocaleString() },
+                  { label: 'With proven govt delivery', value: stats.with_contracts.toLocaleString() },
+                  { label: 'Government contracts', value: stats.total_contracts.toLocaleString() },
+                  { label: 'Delivery tracked', value: money(stats.total_value) },
+                ].map((s, i) => (
+                  <div
+                    key={s.label}
+                    className={`bg-white p-5 border-bauhaus-black ${i < 2 ? 'border-b-4 sm:border-b-0' : ''} ${i < 3 ? 'sm:border-r-4' : ''} ${i % 2 === 0 ? 'border-r-4 sm:border-r-4' : ''}`}
+                  >
+                    <div className="text-2xl font-black text-bauhaus-black tabular-nums">{s.value}</div>
+                    <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted mt-1">{s.label}</div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+        </>
       )}
 
       <p className="text-xs text-bauhaus-muted font-medium">

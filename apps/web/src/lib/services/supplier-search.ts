@@ -36,6 +36,24 @@ export interface SupplierResult {
   proven_outcomes: boolean;
 }
 
+export interface RegistryStats {
+  total: number;
+  with_contracts: number;
+  total_value: number;
+  total_contracts: number;
+}
+
+/** Live registry totals for the search landing (pre-search proof). Returns null on error. */
+export async function getRegistryStats(): Promise<RegistryStats | null> {
+  const supabase = getServiceSupabase();
+  const { data, error } = await supabase.rpc('se_registry_stats').single();
+  if (error) {
+    console.error('[supplier-search:stats]', error.message);
+    return null;
+  }
+  return data as RegistryStats;
+}
+
 export async function searchSuppliers(
   q: string,
   state: string,
