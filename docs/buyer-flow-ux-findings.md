@@ -250,7 +250,21 @@ and make *why* each matched visible.
 business fronting a token Indigenous partner to win Indigenous-procurement contracts. Flagging it
 protects genuine Indigenous-owned suppliers."* Verified live (`audit-08-procurement-hero.jpeg`).
 
-**Still open:** P2-2 (directory evidence + sort), P2-4 (output preview), P2-5 (metadata), P2-6 (heroes),
-P2-7 (landing proof), P2-8 (empty-state nudge). Not committed yet — working tree on `chore/tsc-stop-hook`.
+### P2-2 — DONE: directory now carries delivery evidence + sorts by it.
+The browse path no longer strips the thesis.
+- **View** `se_directory` (`migrations/2026-06-08-se-directory-evidence-view.sql`, applied): thin
+  non-materialized view LEFT JOINing each `social_enterprises` row to its `se_search_index` evidence
+  (contract_count/value, verification_tier) + triple-proof / proven-outcomes flags. 1:1 with
+  social_enterprises (no rows dropped/inflated; triple-proof join deduped on abn). 11,861 rows,
+  1,131 with contracts, 218 triple-proof, 17 proven-outcomes.
+- **`social-enterprises/page.tsx`** — queries `se_directory`; new **"Delivery Evidence" sort,
+  defaulted** (proven deliverers first, then alphabetical); cards show a proof badge
+  (triple-proof / proven-outcomes) + a green "N govt contracts · $X" line, matching `/suppliers`.
+- **Result (verified live, `audit-09-directory-evidence.jpeg`):** default browse now leads with
+  Amnesium ("341 govt contracts · $63.0M") and InteriorCo ("280 · $23.8M") instead of alphabetical
+  "Koolyangarra…". The two list UIs now share one evidence language. tsc clean, 221 tests pass.
+
+**Still open:** P2-4 (output preview), P2-5 (metadata), P2-6 (heroes), P2-7 (landing proof),
+P2-8 (empty-state nudge).
 
 ---
