@@ -83,6 +83,37 @@ function TierBadge({ tier, basis }: { tier: string | null; basis?: string | null
   );
 }
 
+// OP3 — buyer evidence-tier badge family (strongest applicable wins). Mirrors the /suppliers badges.
+type EvidenceTier = 'proven_outcomes' | 'triple_proof' | 'proven_govt_delivery';
+
+const EVIDENCE_TIER_META: Record<EvidenceTier, { label: string; title: string; className: string }> = {
+  proven_outcomes: {
+    label: 'Proven outcomes',
+    title: 'Proven outcomes — justice/community delivery, a won federal contract, ACNC governance, PLUS cited evidence and measured outcomes (ALMA). The deepest delivery proof in the registry.',
+    className: 'border-bauhaus-black bg-bauhaus-yellow text-bauhaus-black',
+  },
+  triple_proof: {
+    label: 'Triple-proof',
+    title: 'Triple-proof — justice/community delivery, a won federal contract, AND ACNC charity governance. The deepest delivery evidence in the registry.',
+    className: 'border-bauhaus-black bg-bauhaus-black text-bauhaus-yellow',
+  },
+  proven_govt_delivery: {
+    label: 'Proven govt delivery',
+    title: 'Proven govt delivery — both justice/community delivery and a won federal contract: documented capability on two independent registers.',
+    className: 'border-bauhaus-blue bg-link-light text-bauhaus-blue',
+  },
+};
+
+function EvidenceTierBadge({ tier }: { tier: EvidenceTier | null }) {
+  if (!tier) return null;
+  const m = EVIDENCE_TIER_META[tier];
+  return (
+    <span title={m.title} className={`text-[11px] px-2.5 py-1 font-black uppercase tracking-widest border-2 ${m.className}`}>
+      {m.label}
+    </span>
+  );
+}
+
 function orgTypeLabel(type: string): string {
   const labels: Record<string, string> = {
     social_enterprise: 'Social Enterprise',
@@ -296,22 +327,30 @@ export default async function SocialEnterpriseDetailPage({ params }: { params: P
   let contractCount = 0;
   let justiceRows: JusticeRow[] = [];
   let evidencePrograms: AlmaEvidenceProgram[] = [];
+  // OP3 — strongest applicable proof tier (one lookup; mv_justice_proven_suppliers carries the
+  // has_acnc / has_alma_evidence_outcomes flags that distinguish all three tiers).
+  let evidenceTier: EvidenceTier | null = null;
 
   // Grant matching runs on sector + place, not ABN — every profile gets it
   const grantMatchPromise = matchGrantsForSocialEnterprise(supabase, enterprise);
 
   if (cleanAbn) {
-    const [charityRes, graphRes, contractRes, justiceRes] = await Promise.all([
+    const [charityRes, graphRes, contractRes, justiceRes, provenRes] = await Promise.all([
       supabase.from('acnc_charities').select('abn, name').eq('abn', cleanAbn).maybeSingle(),
       supabase.from('gs_entities').select('id, gs_id, remoteness, seifa_irsd_decile, is_community_controlled, lga_name, postcode').eq('abn', cleanAbn).not('gs_id', 'is', null).limit(1).maybeSingle(),
       supabase.from('austender_contracts').select('title, contract_value, buyer_name, contract_start', { count: 'exact' }).eq('supplier_abn', cleanAbn).not('contract_value', 'is', null).order('contract_value', { ascending: false }).limit(1000),
       supabase.from('justice_funding').select('program_name, amount_dollars, financial_year, source, sector').eq('recipient_abn', cleanAbn).order('amount_dollars', { ascending: false, nullsFirst: false }).limit(200),
+      supabase.from('mv_justice_proven_suppliers').select('has_acnc, has_alma_evidence_outcomes').eq('abn', cleanAbn).maybeSingle(),
     ]);
     if (charityRes.data) matchedCharity = charityRes.data as { abn: string; name: string };
     if (graphRes.data) graphEntity = graphRes.data as GraphEntity;
     contracts = (contractRes.data || []) as ContractRow[];
     contractCount = contractRes.count ?? contracts.length;
     justiceRows = (justiceRes.data || []) as JusticeRow[];
+    if (provenRes.data) {
+      const p = provenRes.data as { has_acnc: boolean | null; has_alma_evidence_outcomes: boolean | null };
+      evidenceTier = p.has_alma_evidence_outcomes ? 'proven_outcomes' : p.has_acnc ? 'triple_proof' : 'proven_govt_delivery';
+    }
     // OP5 — ALMA evidence signals join on the entity UUID, so it runs once the
     // ABN→entity match resolves above.
     if (graphEntity?.id) {
@@ -344,6 +383,7 @@ export default async function SocialEnterpriseDetailPage({ params }: { params: P
         <div className="flex items-start justify-between gap-4 mb-2">
           <h1 className="text-2xl sm:text-3xl font-black text-bauhaus-black">{enterprise.name}</h1>
           <div className="flex gap-1.5 flex-shrink-0 flex-wrap">
+            <EvidenceTierBadge tier={evidenceTier} />
             <TierBadge tier={enterprise.verification_tier} basis={enterprise.verification_basis} />
             <span className={`text-[11px] font-black px-2.5 py-1 border-2 uppercase tracking-widest ${orgTypeBadgeClass(enterprise.org_type)}`}>
               {orgTypeLabel(enterprise.org_type)}

@@ -30,6 +30,9 @@ export interface SupplierResult {
   /** Highlighted fragment of the matched field (ts_headline, «term» delimiters). Null for offering
    * matches (name/sectors already on the card) and in browse mode. */
   match_snippet: string | null;
+  /** OP3: broad tier — justice/community delivery + a won federal contract (no ACNC requirement).
+   * Superset of triple_proof; the strongest-badge-wins hierarchy shows the deeper badge where it applies. */
+  proven_govt_delivery: boolean;
   /** OP7: org carries all three proof signals — justice delivery + federal contract + ACNC governance. */
   triple_proof: boolean;
   /** OP10: quad-proof — triple-proof PLUS an ALMA intervention with cited evidence AND measured outcomes. */
@@ -138,27 +141,41 @@ export async function searchSuppliers(
   // OP7/OP10: flag triple-proof suppliers (justice delivery + federal contract + ACNC governance)
   // and the quad-proof gold tier (those that ALSO carry ALMA evidence + measured outcomes).
   // Enrich the ≤30 results by ABN against mv_triple_proof_suppliers — the deepest evidence tiers.
-  const base = (data ?? []) as Omit<SupplierResult, 'triple_proof' | 'proven_outcomes'>[];
+  const base = (data ?? []) as Omit<SupplierResult, 'proven_govt_delivery' | 'triple_proof' | 'proven_outcomes'>[];
   const abns = [...new Set(base.map((r) => r.abn).filter((a): a is string => Boolean(a)))];
   const proven = new Set<string>();
   const provenOutcomes = new Set<string>();
+  const provenGovtDelivery = new Set<string>();
   if (abns.length > 0) {
-    const { data: tp, error: tpError } = await supabase
-      .from('mv_triple_proof_suppliers')
-      .select('abn, has_alma_evidence_outcomes')
-      .in('abn', abns);
-    if (tpError) {
-      console.error('[supplier-search:triple-proof]', tpError.message);
+    const [tpRes, jpRes] = await Promise.all([
+      supabase.from('mv_triple_proof_suppliers').select('abn, has_alma_evidence_outcomes').in('abn', abns),
+      // OP3: broad justice + federal-contract tier
+      supabase.from('mv_justice_proven_suppliers').select('abn, has_alma_evidence_outcomes').in('abn', abns),
+    ]);
+    if (tpRes.error) {
+      console.error('[supplier-search:triple-proof]', tpRes.error.message);
     } else {
-      for (const row of (tp ?? []) as { abn: string | null; has_alma_evidence_outcomes: boolean | null }[]) {
+      for (const row of (tpRes.data ?? []) as { abn: string | null; has_alma_evidence_outcomes: boolean | null }[]) {
         if (!row.abn) continue;
         proven.add(row.abn);
+        if (row.has_alma_evidence_outcomes) provenOutcomes.add(row.abn);
+      }
+    }
+    if (jpRes.error) {
+      console.error('[supplier-search:justice-proven]', jpRes.error.message);
+    } else {
+      for (const row of (jpRes.data ?? []) as { abn: string | null; has_alma_evidence_outcomes: boolean | null }[]) {
+        if (!row.abn) continue;
+        provenGovtDelivery.add(row.abn);
+        // The OP3 MV also carries the gold flag, so a justice-proven org with ALMA evidence
+        // still lights up "Proven outcomes" even if it isn't triple-proof.
         if (row.has_alma_evidence_outcomes) provenOutcomes.add(row.abn);
       }
     }
   }
   return base.map((r) => ({
     ...r,
+    proven_govt_delivery: Boolean(r.abn && provenGovtDelivery.has(r.abn)),
     triple_proof: Boolean(r.abn && proven.has(r.abn)),
     proven_outcomes: Boolean(r.abn && provenOutcomes.has(r.abn)),
   }));

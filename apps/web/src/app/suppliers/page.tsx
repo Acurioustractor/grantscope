@@ -74,6 +74,17 @@ function ProvenOutcomesBadge() {
   );
 }
 
+function ProvenGovtDeliveryBadge() {
+  return (
+    <span
+      title="Proven govt delivery — this supplier has both justice/community delivery and a won federal contract: documented capability on two independent registers."
+      className="text-[10px] px-2 py-0.5 font-black uppercase tracking-widest border-2 border-bauhaus-blue bg-link-light text-bauhaus-blue"
+    >
+      Proven govt delivery
+    </span>
+  );
+}
+
 function EvidenceLine({ r }: { r: SupplierResult }) {
   if (r.contract_count === 0) return null;
   const lastYear = r.last_contract_end ? new Date(r.last_contract_end).getFullYear() : null;
@@ -227,7 +238,7 @@ export default async function SupplierSearchPage({
                       {r.name}
                     </Link>
                     <div className="relative z-10 flex gap-1.5 flex-wrap">
-                      {r.proven_outcomes ? <ProvenOutcomesBadge /> : r.triple_proof ? <TripleProofBadge /> : null}
+                      {r.proven_outcomes ? <ProvenOutcomesBadge /> : r.triple_proof ? <TripleProofBadge /> : r.proven_govt_delivery ? <ProvenGovtDeliveryBadge /> : null}
                       <TierBadge tier={r.verification_tier} />
                       {r.source_primary && (
                         <span className="text-[10px] px-2 py-0.5 font-black uppercase tracking-widest border-2 border-bauhaus-black/40 text-bauhaus-muted">
