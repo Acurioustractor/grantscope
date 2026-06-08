@@ -83,6 +83,45 @@ function EvidenceLine({ r }: { r: SupplierResult }) {
   );
 }
 
+// ts_headline marks the matched terms with « » — render those in solid black against muted prose.
+function HighlightedSnippet({ text }: { text: string }) {
+  return (
+    <>
+      {text.split(/[«»]/).map((part, i) =>
+        i % 2 === 1 ? (
+          <strong key={i} className="text-bauhaus-black font-bold">{part}</strong>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      )}
+    </>
+  );
+}
+
+const MATCH_META: Record<string, { label: string; color: string }> = {
+  capability: { label: 'Matched in a won contract', color: 'text-money' },
+  offering: { label: 'Matched in name & sectors', color: 'text-bauhaus-blue' },
+  description: { label: 'Matched in description', color: 'text-bauhaus-muted' },
+};
+
+// Why this result matched the buyer's need — keeps the evidence-led order legible so a
+// "bed dwellings" contractor reads differently from an actual bed supplier.
+function MatchReason({ r }: { r: SupplierResult }) {
+  if (!r.match_source) return null;
+  const meta = MATCH_META[r.match_source];
+  if (!meta) return null;
+  return (
+    <div className="mt-1.5 text-xs font-medium">
+      <span className={`text-[10px] font-black uppercase tracking-widest ${meta.color}`}>{meta.label}</span>
+      {r.match_snippet && (
+        <span className="text-bauhaus-muted">
+          {' '}&ldquo;<HighlightedSnippet text={r.match_snippet} />&rdquo;
+        </span>
+      )}
+    </div>
+  );
+}
+
 function safeTerm(value: string) {
   return value.replace(/[,%()]/g, ' ').trim().slice(0, 120);
 }
@@ -196,7 +235,9 @@ export default async function SupplierSearchPage({
                     {[r.city, r.state].filter(Boolean).join(', ')}
                     {r.sectors && r.sectors.length > 0 && <> · {r.sectors.slice(0, 4).join(' · ')}</>}
                   </div>
-                  {r.description && !isHedgeDescription(r.description) && (
+                  <MatchReason r={r} />
+                  {/* Full description only when it isn't already the matched (and now highlighted) field. */}
+                  {r.description && !isHedgeDescription(r.description) && r.match_source !== 'description' && (
                     <p className="text-sm text-bauhaus-muted font-medium mt-2 line-clamp-2">{r.description}</p>
                   )}
                   <div className="mt-3 flex items-center justify-between gap-3">

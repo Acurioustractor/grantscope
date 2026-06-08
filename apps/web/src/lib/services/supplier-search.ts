@@ -24,6 +24,12 @@ export interface SupplierResult {
   last_contract_end: string | null;
   buyer_count: number;
   rank: number;
+  /** Why this row matched the query: `capability` = won-contract titles (what govt actually bought),
+   * `offering` = name + sectors, `description` = self-described. Null in browse (empty query). */
+  match_source: 'capability' | 'offering' | 'description' | null;
+  /** Highlighted fragment of the matched field (ts_headline, «term» delimiters). Null for offering
+   * matches (name/sectors already on the card) and in browse mode. */
+  match_snippet: string | null;
   /** OP7: org carries all three proof signals — justice delivery + federal contract + ACNC governance. */
   triple_proof: boolean;
   /** OP10: quad-proof — triple-proof PLUS an ALMA intervention with cited evidence AND measured outcomes. */
