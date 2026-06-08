@@ -216,6 +216,10 @@ export default function ProcurementDashboard() {
             Upload your supplier ledger to instantly see your IPP and SME compliance status.
             Get gap calculations, supplier recommendations, and black cladding risk scores — all powered by 143K entities and 754K contracts.
           </p>
+          <p className="text-sm text-white/60 font-medium max-w-3xl leading-relaxed mt-3">
+            &ldquo;Black cladding&rdquo; is a non-Indigenous business fronting a token Indigenous partner to win
+            Indigenous-procurement contracts. Flagging it protects genuine Indigenous-owned suppliers.
+          </p>
         </div>
       </div>
 
