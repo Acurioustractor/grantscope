@@ -16,9 +16,13 @@ Clean close-out for a GrantScope work session.
    - Database changes (migrations, backfills)
    - Current coverage numbers if relevant
 
-5. **Update handoff** — Update the handoff ledger at `thoughts/shared/handoffs/community-capital-ledger/current.md`:
-   - Move completed items from "Next" to "This Session"
-   - Add any new next actions discovered during the session
-   - Update the timestamp
+5. **Update handoff** — Update the **active** handoff ledger (the work-stream this session belongs to). There are several handoff streams and the active one changes, so **do NOT hard-code a work-stream name**. Detect it the same way the SessionStart loader does — the most-recently-modified ledger:
+   ```bash
+   ls -t thoughts/shared/handoffs/*/current.md | head -1
+   ```
+   In that file:
+   - Update the **Ledger** quick-resume block at the top (Updated timestamp · Branch · Goal · the **Now** line). This block is what the SessionStart hook surfaces on resume, so keep it accurate and current.
+   - Add a new dated **This Session** entry summarising the work (move completed "Now"/"Next" items into it).
+   - Refresh the **Next on resume** list with any next actions discovered this session.
 
 6. **Next actions** — List 2-3 recommended next actions for the following session.
