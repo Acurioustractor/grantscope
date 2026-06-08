@@ -1,5 +1,5 @@
 ---
-date: 2026-06-09T00:10:00+10:00
+date: 2026-06-08T19:50:00+10:00
 session_name: giving-data-commons
 branch: main
 status: active
@@ -9,13 +9,19 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-06-09T00:10:00+10:00
+**Updated:** 2026-06-08T19:50:00+10:00
 **Goal:** Buyer wedge: "free open registry for everyone; paid evidence + tender tools for buyers" (`docs/strategy/buyer-wedge.md`). Run `/wedge` before building SE/procurement/giving. Evidence-depth plays are the active focus (widening paused).
-**Branch:** **main** (clean) — PRs #57 (buyer-flow), #58 (OP5), #59 (OP3), #60 (OP1) all **MERGED**. HEAD `288c535`. Working tree clean except this ledger + 2 pre-existing untracked data leftovers (`data/grant-eligibility-cache.jsonl`, `data/state-tenders/`).
+**Branch:** **main** (clean) — PRs #57 (buyer-flow), #58 (OP5), #59 (OP3), #60 (OP1), #61 (OP8) all **MERGED**. HEAD `dd7a687`. Working tree clean except 2 pre-existing untracked data leftovers (`data/grant-eligibility-cache.jsonl`, `data/state-tenders/`). Merged remote branch `feat/op8-indigenous-triple-proof` still on origin (delete = Tier-3).
 **Test:** cd apps/web && npx tsc --noEmit && npx vitest run
 
 ### Now
-[->] **Leverage Top-3 COMPLETE** — OP3 + OP5 + OP1 all BUILT + MERGED. Nothing in flight. **NEXT candidates:** **OP4** — financial-health signal on the 4,366 justice-funded ACNC charities (flag fragile delivery orgs; supply-magnet, not direct revenue). Or **OP7/OP8** — governance-deepened *premium* versions of OP3/OP1. Re-run `/leverage` only after new state lands (a refresh of existing MVs doesn't count).
+[->] **Green-wedge premium tier COMPLETE** — both governance-deepened premium plays now shipped: **OP7** (justice triple-proof) + **OP8** (Indigenous triple-proof), on top of the Top-3 (OP3 + OP5 + OP1). Nothing in flight. The buyer-revenue/evidence-depth lane of the leverage map is now exhausted at the top tier. **Remaining candidates are both mission/supply-magnet** (wedge ranks them below the buyer plays just shipped): **OP4** — financial-health signal on the 4,366 justice-funded ACNC charities (flag fragile delivery orgs). **OP6** — funding-desert community-controlled named list (108 orgs in worst-100 LGAs). Plus OP7 follow-up (browsable list for the 558 non-SE triple-proof orgs). Re-run `/leverage` only after new state lands (a refresh of existing MVs doesn't count).
+
+### This Session (2026-06-08, night cont.2) — OP8 shipped & merged (PR #61)
+Ben picked OP8 (Indigenous triple-proof) from the OP4/OP6/OP8 fork — the most wedge-aligned (green/buyer-revenue, lowest effort, composes onto the OP1 work just shipped). Built end-to-end (build → apply live → verify all 3 surfaces → ship → CI-green → merge), Ben merging with an explicit "merge" verb.
+- [x] **OP8 BUILT + MERGED** (PR #61, merge `dd7a687`) — **"Indigenous triple-proof"** badge: ACNC charity governance added as an OPTIONAL `has_acnc` flag onto `mv_indigenous_proven_suppliers` (migration `20260608100000`, **applied live**) — the OP1 analogue of how OP7 deepened OP3. The MV keeps all **301** rows: **36 stay Indigenous-proven, 265 upgrade to triple-proof** (the verified post-scope count; the leverage map's original 278/325 predated OP1's registered-only scoping), **9 gold**. Pure column-addition → **no new cron migration** (MV name + abn unique index + refresh registration unchanged). New `indigenous_triple_proof` flag in `supplier-search.ts` (selects `has_acnc` in the existing third MV lookup). Red-on-black badge (the registry's "deepest" black-fill convention kept on the Indigenous-axis red), **strongest-wins** over the basic OP1 badge. **Orthogonal** to the OP3 justice hierarchy — South Coast Medical Service carries BOTH the justice "Triple-proof" AND "Indigenous triple-proof". Verified live: triple-proof profile (South Coast Medical) · proven-only profile (PY Ku, non-ACNC → basic badge) · search. Commit `0f12099`. Leverage map: OP8 marked BUILT (entry + premium-tier note).
+- **NB Burrun Dalai** (flagged "Indigenous-proven only" in OP1's close-out) is ACNC Large → it now correctly **upgrades** to Indigenous triple-proof.
+- Gates green throughout (tsc 0, **221/221 tests**; CI green: Type Check 1m16s · Unit/Integration 28s · E2E 1m1s). Migration applied by Ben via `!` (clipboard, absolute paths — relative `.env` path failed first because the `!` shell cwd wasn't the repo root).
 
 ### This Session (2026-06-08, night cont.) — OP1 shipped & merged (PR #60)
 Built the third and final Top-3 leverage play end-to-end (build → apply → verify live → ship → CI-green → merge), Ben merging with an explicit verb. **Caught a stale ledger assumption:** the map said OP1 was "mostly built in `mv_indigenous_procurement_score`" — but that MV is *agency*-side IPP compliance, **not** a supplier shortlist. Built the supplier-side MV from scratch (verify, don't trust the ledger).
@@ -80,14 +86,12 @@ Executed `thoughts/shared/plans/buyer-flow-ux-audit.md`. Found the prior session
 - [x] All work committed + pushed: `b9bcb38` enrich-fix · `015365c` health-backlog · `75eb951` leverage skill · `b0330a1` health iter6 · `ed8a767` CLAUDE fix · `33c1e2d` leverage map.
 
 ### Next on resume (priority order)
-> Top-3 leverage plays now 2/3 done: **OP5 ✅ + OP3 ✅ merged.** OP1 is the remaining Top-3 and likely the fastest. Tree clean on `main`.
-1. (NOW) **OP1 — Indigenous proven suppliers** (leverage Top-3). 325 ORIC corps that won federal contracts (G4∩G1). **Mostly built** in `mv_indigenous_procurement_score` — verify it surfaces these to buyers, then surface on `/suppliers` (likely an "Indigenous proven supplier" badge/tier in the same family as OP3's "Proven govt delivery"). S–M, may need no migration. See `docs/leverage-map.md`.
-2. (Backlog) **OP4** — financial-health signal on justice-funded charities (4,366 ACNC/AIS matches; flag financially-fragile delivery orgs). Supply-magnet/mission, not direct revenue. M.
-3. (Backlog) **OP8** (278 Indigenous triple-proof) · **OP6** (desert community-controlled named list) · OP7 follow-up (browsable list for the 558 non-SE triple-proof orgs). See `docs/leverage-map.md`.
+> All Top-3 + both premium plays now merged: **OP3 ✅ OP5 ✅ OP1 ✅ OP7 ✅ OP8 ✅.** The green-wedge/evidence-depth top tier is exhausted. Tree clean on `main`. Remaining leverage candidates are mission/supply-magnet (wedge ranks below the buyer plays). **Re-run `/leverage` only after new state lands.**
+1. (Backlog) **OP4** — financial-health signal on justice-funded charities (4,366 ACNC/AIS matches; flag financially-fragile delivery orgs). Supply-magnet/mission, not direct revenue. M. New MV + new surface (NOT just a badge). See `docs/leverage-map.md`.
+2. (Backlog) **OP6** — funding-desert community-controlled named list (108 orgs in worst-100 desert LGAs; counts exist in `mv_funding_deserts`, named list latent). Mission. S. · **OP7 follow-up** — browsable buyer list for the 558 non-SE triple-proof orgs.
 3. (Backlog) Enrichment-fleet timeout fixes (`docs/health-backlog.md`) — several agents at single-digit success.
-4. (Housekeeping) Decide on the 2 untracked data leftovers (`data/grant-eligibility-cache.jsonl`, `data/state-tenders/`) — gitignore, commit, or bin.
-5. (Hygiene) The `/close` skill points at the wrong ledger path (`community-capital-ledger`) — fix to `giving-data-commons` or auto-detect the most-recent `current.md`.
-6. (If merged) After PR #57 merges → delete `feat/buyer-flow-followups` (local + remote).
+4. (Housekeeping, Tier-3) Delete merged remote branch `feat/op8-indigenous-triple-proof` (still on origin) — and sweep for any other stale merged branches.
+5. (Housekeeping) Decide on the 2 untracked data leftovers (`data/grant-eligibility-cache.jsonl`, `data/state-tenders/`) — gitignore, commit, or bin.
 
 ### PRIOR SESSION (loop infrastructure — context, still valid)
 
