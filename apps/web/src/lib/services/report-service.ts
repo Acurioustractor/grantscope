@@ -1,3 +1,4 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { getServiceSupabase } from '@/lib/report-supabase';
 import { safe } from '@/lib/services/utils';
 import { esc } from '@/lib/sql';
@@ -359,6 +360,112 @@ export async function getProviderContracts(entityIds: string[], limit = 20) {
     dataset: string;
     relationship_type: string;
   }> | null>;
+}
+
+/**
+ * OP5 — ALMA evidence signals for a buyer-facing supplier/entity profile.
+ *
+ * Returns the programs the Australian Living Map of Alternatives (ALMA) has
+ * documented for a gs_entity (linked by `gs_entity_id`), each carrying ALMA's
+ * evidence assessment plus the concrete chain of cited studies and measured
+ * outcomes — joined via the `alma_intervention_evidence` /
+ * `alma_intervention_outcomes` junctions (there is NO direct intervention_id on
+ * the detail tables, see CLAUDE.md). Ordered so evidence-rich programs lead.
+ *
+ * Honesty note: the study/outcome counts and their content are concrete and
+ * verifiable, so the UI leads with them. The numeric signals are ALMA's own
+ * curation (and can disagree with the categorical evidence level), so they are
+ * surfaced as clearly-attributed assessment, never as fact.
+ *
+ * Takes the caller's live Supabase client (the SE profile already runs its
+ * contract/justice joins on it). The shared report client defaults to the
+ * report *snapshot* DB, which does not carry the live ALMA junction rows.
+ */
+export interface AlmaEvidenceItem {
+  evidence_type: string | null;
+  methodology: string | null;
+  sample_size: number | null;
+  effect_size: string | null;
+  findings: string | null;
+  author: string | null;
+  publication_date: string | null;
+  source_url: string | null;
+}
+
+export interface AlmaOutcomeItem {
+  outcome_type: string | null;
+  name: string | null;
+  measurement_method: string | null;
+  indicators: string | null;
+  time_horizon: string | null;
+}
+
+export interface AlmaEvidenceProgram {
+  id: string;
+  name: string;
+  type: string | null;
+  evidence_level: string | null;
+  verification_status: string | null;
+  evidence_strength_signal: number | null;
+  portfolio_score: number | null;
+  evidence_count: number;
+  outcome_count: number;
+  evidence_items: AlmaEvidenceItem[];
+  outcome_items: AlmaOutcomeItem[];
+}
+
+export async function getEntityEvidencePrograms(db: SupabaseClient, entityId: string, limit = 10): Promise<AlmaEvidenceProgram[]> {
+  const lim = Number.isFinite(limit) ? Math.max(1, Math.floor(limit)) : 10;
+  const rows = await safe(db.rpc('exec_sql', {
+    query: `SELECT
+        ai.id::text AS id,
+        ai.name,
+        ai.type,
+        ai.evidence_level,
+        ai.verification_status,
+        round(ai.evidence_strength_signal::numeric, 2)::float AS evidence_strength_signal,
+        round(ai.portfolio_score::numeric, 2)::float AS portfolio_score,
+        COALESCE(ev.n, 0)::int AS evidence_count,
+        COALESCE(ou.n, 0)::int AS outcome_count,
+        COALESCE(ev.items, '[]'::json) AS evidence_items,
+        COALESCE(ou.items, '[]'::json) AS outcome_items
+      FROM alma_interventions ai
+      LEFT JOIN LATERAL (
+        SELECT COUNT(*) AS n,
+          json_agg(json_build_object(
+            'evidence_type', e.evidence_type,
+            'methodology', e.methodology,
+            'sample_size', e.sample_size,
+            'effect_size', e.effect_size,
+            'findings', left(e.findings, 280),
+            'author', e.author,
+            'publication_date', e.publication_date,
+            'source_url', e.source_url
+          ) ORDER BY e.publication_date DESC NULLS LAST) AS items
+        FROM alma_intervention_evidence je
+        JOIN alma_evidence e ON e.id = je.evidence_id
+        WHERE je.intervention_id = ai.id
+      ) ev ON true
+      LEFT JOIN LATERAL (
+        SELECT COUNT(*) AS n,
+          json_agg(json_build_object(
+            'outcome_type', o.outcome_type,
+            'name', o.name,
+            'measurement_method', o.measurement_method,
+            'indicators', left(o.indicators, 200),
+            'time_horizon', o.time_horizon
+          )) AS items
+        FROM alma_intervention_outcomes jo
+        JOIN alma_outcomes o ON o.id = jo.outcome_id
+        WHERE jo.intervention_id = ai.id
+      ) ou ON true
+      WHERE ai.gs_entity_id = '${esc(entityId)}'
+      ORDER BY (COALESCE(ev.n,0) + COALESCE(ou.n,0)) DESC,
+               ai.evidence_strength_signal DESC NULLS LAST,
+               ai.portfolio_score DESC NULLS LAST
+      LIMIT ${lim}`,
+  })) as AlmaEvidenceProgram[] | null;
+  return rows ?? [];
 }
 
 /**

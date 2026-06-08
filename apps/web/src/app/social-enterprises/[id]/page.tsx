@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { getServiceSupabase } from '@/lib/supabase';
 import { notFound } from 'next/navigation';
-import { money } from '@/lib/services/report-service';
+import { money, getEntityEvidencePrograms, type AlmaEvidenceProgram } from '@/lib/services/report-service';
 import { matchGrantsForSocialEnterprise, type MatchedGrant } from '@/lib/services/se-grant-match';
 import { AddToPackButton } from '@/app/components/add-to-pack-button';
 import { isHedgeDescription } from '@/lib/supplier-copy';
@@ -160,6 +160,103 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
+// OP5 — one ALMA-documented program. Leads with the concrete, verifiable proof
+// (counts + content of cited studies and measured outcomes); ALMA's evidence-level
+// signal is shown as clearly-attributed assessment, never as a hard quality grade.
+function EvidenceProgramCard({ program }: { program: AlmaEvidenceProgram }) {
+  const { name, type, evidence_level, verification_status, evidence_count, outcome_count, evidence_items, outcome_items } = program;
+  const hasDetail = evidence_items.length > 0 || outcome_items.length > 0;
+  return (
+    <div className="bg-white border-4 border-bauhaus-black p-4">
+      <div className="flex items-start justify-between gap-3 mb-2">
+        <div className="min-w-0">
+          <div className="font-black text-bauhaus-black text-[15px] leading-snug">{name}</div>
+          {type && <div className="text-xs text-bauhaus-muted font-bold uppercase tracking-wider mt-0.5">{type}</div>}
+        </div>
+        <div className="flex gap-1.5 flex-shrink-0 flex-wrap justify-end">
+          {evidence_count > 0 && (
+            <span className="text-[11px] px-2 py-1 font-black uppercase tracking-wider border-2 border-bauhaus-blue bg-link-light text-bauhaus-blue whitespace-nowrap">
+              {evidence_count} cited {evidence_count === 1 ? 'study' : 'studies'}
+            </span>
+          )}
+          {outcome_count > 0 && (
+            <span className="text-[11px] px-2 py-1 font-black uppercase tracking-wider border-2 border-money bg-money-light text-money whitespace-nowrap">
+              {outcome_count} measured {outcome_count === 1 ? 'outcome' : 'outcomes'}
+            </span>
+          )}
+          {evidence_count === 0 && outcome_count === 0 && (
+            <span className="text-[11px] px-2 py-1 font-black uppercase tracking-wider border-2 border-bauhaus-black/30 bg-bauhaus-canvas text-bauhaus-muted">
+              Documented
+            </span>
+          )}
+        </div>
+      </div>
+      {evidence_level && (
+        <div className="text-xs text-bauhaus-muted font-medium">
+          ALMA assessment: <span className="font-bold text-bauhaus-black">{evidence_level}</span>
+          {verification_status === 'verified' && (
+            <span className="ml-2 text-[10px] px-1.5 py-0.5 font-black uppercase tracking-wider border-2 border-money/40 bg-money-light text-money">verified</span>
+          )}
+        </div>
+      )}
+      {hasDetail && (
+        <details className="mt-3">
+          <summary className="cursor-pointer text-[11px] font-black uppercase tracking-widest text-bauhaus-blue hover:text-bauhaus-red">
+            Show evidence &amp; outcomes
+          </summary>
+          <div className="mt-3 space-y-3">
+            {evidence_items.length > 0 && (
+              <div>
+                <div className="text-[11px] text-bauhaus-muted uppercase tracking-widest font-black mb-2">Cited Evidence</div>
+                <div className="space-y-2.5">
+                  {evidence_items.map((e, i) => (
+                    <div key={i} className="border-l-4 border-bauhaus-blue pl-3">
+                      <div className="text-sm font-bold text-bauhaus-black">
+                        {e.evidence_type || 'Study'}{e.methodology ? ` · ${e.methodology}` : ''}
+                      </div>
+                      <div className="text-xs text-bauhaus-muted font-medium flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+                        {e.sample_size != null && <span>n = {e.sample_size.toLocaleString()}</span>}
+                        {e.effect_size && <span>Effect: {e.effect_size}</span>}
+                        {e.publication_date && <span>{new Date(e.publication_date).getFullYear()}</span>}
+                        {e.author && <span>{e.author}</span>}
+                      </div>
+                      {e.findings && (
+                        <p className="text-xs text-bauhaus-black/80 font-medium mt-1 leading-relaxed">
+                          {e.findings}{e.findings.length >= 280 ? '…' : ''}
+                        </p>
+                      )}
+                      {e.source_url && (
+                        <a href={e.source_url} target="_blank" rel="noopener noreferrer" className="text-[11px] font-black text-bauhaus-blue hover:text-bauhaus-red uppercase tracking-wider">
+                          Source &rarr;
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {outcome_items.length > 0 && (
+              <div>
+                <div className="text-[11px] text-bauhaus-muted uppercase tracking-widest font-black mb-2">Measured Outcomes</div>
+                <div className="space-y-2.5">
+                  {outcome_items.map((o, i) => (
+                    <div key={i} className="border-l-4 border-money pl-3">
+                      <div className="text-sm font-bold text-bauhaus-black">{o.outcome_type || o.name}</div>
+                      {o.measurement_method && (
+                        <p className="text-xs text-bauhaus-muted font-medium mt-0.5 leading-relaxed">{o.measurement_method}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </details>
+      )}
+    </div>
+  );
+}
+
 export default async function SocialEnterpriseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = getServiceSupabase();
@@ -189,7 +286,7 @@ export default async function SocialEnterpriseDetailPage({ params }: { params: P
   // Evidence layer — everything joins on ABN
   const cleanAbn = enterprise.abn?.replace(/\s/g, '') ?? null;
 
-  interface GraphEntity { gs_id: string; remoteness: string | null; seifa_irsd_decile: number | null; is_community_controlled: boolean | null; lga_name: string | null; postcode: string | null }
+  interface GraphEntity { id: string; gs_id: string; remoteness: string | null; seifa_irsd_decile: number | null; is_community_controlled: boolean | null; lga_name: string | null; postcode: string | null }
   interface ContractRow { title: string; contract_value: number; buyer_name: string; contract_start: string | null }
   interface JusticeRow { program_name: string; amount_dollars: number | null; financial_year: string | null; source: string; sector: string | null }
 
@@ -198,6 +295,7 @@ export default async function SocialEnterpriseDetailPage({ params }: { params: P
   let contracts: ContractRow[] = [];
   let contractCount = 0;
   let justiceRows: JusticeRow[] = [];
+  let evidencePrograms: AlmaEvidenceProgram[] = [];
 
   // Grant matching runs on sector + place, not ABN — every profile gets it
   const grantMatchPromise = matchGrantsForSocialEnterprise(supabase, enterprise);
@@ -205,7 +303,7 @@ export default async function SocialEnterpriseDetailPage({ params }: { params: P
   if (cleanAbn) {
     const [charityRes, graphRes, contractRes, justiceRes] = await Promise.all([
       supabase.from('acnc_charities').select('abn, name').eq('abn', cleanAbn).maybeSingle(),
-      supabase.from('gs_entities').select('gs_id, remoteness, seifa_irsd_decile, is_community_controlled, lga_name, postcode').eq('abn', cleanAbn).not('gs_id', 'is', null).limit(1).maybeSingle(),
+      supabase.from('gs_entities').select('id, gs_id, remoteness, seifa_irsd_decile, is_community_controlled, lga_name, postcode').eq('abn', cleanAbn).not('gs_id', 'is', null).limit(1).maybeSingle(),
       supabase.from('austender_contracts').select('title, contract_value, buyer_name, contract_start', { count: 'exact' }).eq('supplier_abn', cleanAbn).not('contract_value', 'is', null).order('contract_value', { ascending: false }).limit(1000),
       supabase.from('justice_funding').select('program_name, amount_dollars, financial_year, source, sector').eq('recipient_abn', cleanAbn).order('amount_dollars', { ascending: false, nullsFirst: false }).limit(200),
     ]);
@@ -214,6 +312,11 @@ export default async function SocialEnterpriseDetailPage({ params }: { params: P
     contracts = (contractRes.data || []) as ContractRow[];
     contractCount = contractRes.count ?? contracts.length;
     justiceRows = (justiceRes.data || []) as JusticeRow[];
+    // OP5 — ALMA evidence signals join on the entity UUID, so it runs once the
+    // ABN→entity match resolves above.
+    if (graphEntity?.id) {
+      evidencePrograms = await getEntityEvidencePrograms(supabase, graphEntity.id);
+    }
   }
 
   const { data: matchedGrants } = await grantMatchPromise;
@@ -227,6 +330,8 @@ export default async function SocialEnterpriseDetailPage({ params }: { params: P
   ).sort((a, b) => b[1] - a[1]).slice(0, 5);
   const justiceTotal = justiceRows.reduce((sum, r) => sum + (r.amount_dollars || 0), 0);
   const justiceYears = [...new Set(justiceRows.map(r => r.financial_year).filter(Boolean))].sort();
+  const evStudiesTotal = evidencePrograms.reduce((sum, p) => sum + p.evidence_count, 0);
+  const evOutcomesTotal = evidencePrograms.reduce((sum, p) => sum + p.outcome_count, 0);
 
   return (
     <div className="max-w-4xl">
@@ -414,6 +519,43 @@ export default async function SocialEnterpriseDetailPage({ params }: { params: P
                   No federal contract history found in AusTender for this ABN. Absence of a record is not absence of delivery — state and local procurement is not fully covered.
                 </p>
               )}
+            </Section>
+          )}
+
+          {/* Program evidence — ALMA-assessed delivery (OP5) */}
+          {evidencePrograms.length > 0 && (
+            <Section title="Program Evidence">
+              <p className="text-xs text-bauhaus-muted font-medium mb-3 -mt-1">
+                Programs this organisation runs that the Australian Living Map of Alternatives (ALMA)
+                has documented — with the cited studies and measured outcomes behind them. ALMA&apos;s
+                evidence assessment, linked by ABN; not a CivicGraph endorsement.
+              </p>
+              {(evStudiesTotal > 0 || evOutcomesTotal > 0) && (
+                <div className="grid grid-cols-3 border-4 border-bauhaus-black mb-3">
+                  <div className="p-3 border-r-4 border-bauhaus-black bg-white">
+                    <div className="text-[11px] text-bauhaus-muted uppercase tracking-widest font-black mb-1">Programs</div>
+                    <div className="text-xl font-black text-bauhaus-black">{evidencePrograms.length}</div>
+                  </div>
+                  <div className="p-3 border-r-4 border-bauhaus-black bg-white">
+                    <div className="text-[11px] text-bauhaus-muted uppercase tracking-widest font-black mb-1">Cited Studies</div>
+                    <div className="text-xl font-black text-bauhaus-blue">{evStudiesTotal}</div>
+                  </div>
+                  <div className="p-3 bg-white">
+                    <div className="text-[11px] text-bauhaus-muted uppercase tracking-widest font-black mb-1">Measured Outcomes</div>
+                    <div className="text-xl font-black text-money">{evOutcomesTotal}</div>
+                  </div>
+                </div>
+              )}
+              <div className="space-y-3">
+                {evidencePrograms.map((p) => (
+                  <EvidenceProgramCard key={p.id} program={p} />
+                ))}
+              </div>
+              <p className="text-xs text-bauhaus-muted mt-3 font-medium">
+                Source: Australian Living Map of Alternatives (ALMA), a curated evidence base of
+                community programs. Programs are linked to this organisation by ABN; a program may be
+                delivered by another part of the organisation.
+              </p>
             </Section>
           )}
 
