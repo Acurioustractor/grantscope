@@ -77,10 +77,14 @@ All three are **evidence-depth** plays — the wedge's stated #1 tie-breaker ("e
   `evidence_strength_signal` + `portfolio_score` + `verification_status`) × `gs_entities` via gs_entity_id.
   Serves: **G3→G1 (evidence depth — the wedge's #1 tie-breaker)**. Why valuable: **983 entity-linked
   interventions carry curated evidence + portfolio scores** — surface them as buyer-facing proof on
-  `/suppliers` profiles. Evidence: 983 of 1,502 linked (65%). State: **latent** (signals exist, not
-  surfaced). Effort: M. Wedge: **green**. **Even stronger** than the inline signals: the full chain *is*
-  joinable via the junctions `alma_intervention_evidence`/`alma_intervention_outcomes` — **348 entity-linked
-  interventions have BOTH cited evidence AND measured outcomes**, the gold-standard buyer proof.
+  `/suppliers` profiles. Evidence: 983 of 1,502 linked (65%). State: **BUILT 2026-06-08** — a
+  `Program Evidence` section on `/social-enterprises/[id]` surfaces the ALMA programs plus the
+  cited-studies / measured-outcomes chain for the ~100 SE profiles whose ABN resolves to an
+  ALMA-linked entity (`getEntityEvidencePrograms` in `report-service.ts`, commit `eab192a`; uses the
+  caller's live client, not the report snapshot). Effort: M. Wedge: **green**. **Even stronger** than
+  the inline signals: the full chain *is* joinable via the junctions
+  `alma_intervention_evidence`/`alma_intervention_outcomes` — **348 entity-linked interventions have
+  BOTH cited evidence AND measured outcomes**, the gold-standard buyer proof.
 
 - **OP7 — Triple-proof justice/community suppliers (the premium buyer shortlist).** Datasets:
   `justice_funding` × `austender_contracts` × `acnc_charities` via ABN. Serves: **G3∩G1 (best quadrant)**.
