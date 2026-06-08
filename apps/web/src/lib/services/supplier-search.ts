@@ -40,6 +40,10 @@ export interface SupplierResult {
   /** OP1: a registered Indigenous corporation (ORIC) that has won a federal contract. Orthogonal to the
    * justice hierarchy above — an org can be both Indigenous-proven AND proven-govt-delivery at once. */
   indigenous_proven: boolean;
+  /** OP8: Indigenous triple-proof — an Indigenous-proven org (ORIC + federal contract) that ALSO carries
+   * ACNC charity governance. The deeper tier within the Indigenous axis; strongest-wins over the basic
+   * Indigenous-proven badge (mirrors OP3→OP7's has_acnc upgrade). */
+  indigenous_triple_proof: boolean;
 }
 
 export interface RegistryStats {
@@ -144,19 +148,21 @@ export async function searchSuppliers(
   // OP7/OP10: flag triple-proof suppliers (justice delivery + federal contract + ACNC governance)
   // and the quad-proof gold tier (those that ALSO carry ALMA evidence + measured outcomes).
   // Enrich the ≤30 results by ABN against mv_triple_proof_suppliers — the deepest evidence tiers.
-  const base = (data ?? []) as Omit<SupplierResult, 'proven_govt_delivery' | 'triple_proof' | 'proven_outcomes' | 'indigenous_proven'>[];
+  const base = (data ?? []) as Omit<SupplierResult, 'proven_govt_delivery' | 'triple_proof' | 'proven_outcomes' | 'indigenous_proven' | 'indigenous_triple_proof'>[];
   const abns = [...new Set(base.map((r) => r.abn).filter((a): a is string => Boolean(a)))];
   const proven = new Set<string>();
   const provenOutcomes = new Set<string>();
   const provenGovtDelivery = new Set<string>();
   const indigenousProven = new Set<string>();
+  const indigenousTripleProof = new Set<string>();
   if (abns.length > 0) {
     const [tpRes, jpRes, ipRes] = await Promise.all([
       supabase.from('mv_triple_proof_suppliers').select('abn, has_alma_evidence_outcomes').in('abn', abns),
       // OP3: broad justice + federal-contract tier
       supabase.from('mv_justice_proven_suppliers').select('abn, has_alma_evidence_outcomes').in('abn', abns),
-      // OP1: registered Indigenous corporation (ORIC) + federal contract — an orthogonal axis
-      supabase.from('mv_indigenous_proven_suppliers').select('abn, has_alma_evidence_outcomes').in('abn', abns),
+      // OP1/OP8: registered Indigenous corporation (ORIC) + federal contract — an orthogonal axis.
+      // has_acnc upgrades it to the deeper "Indigenous triple-proof" tier (OP8).
+      supabase.from('mv_indigenous_proven_suppliers').select('abn, has_acnc, has_alma_evidence_outcomes').in('abn', abns),
     ]);
     if (tpRes.error) {
       console.error('[supplier-search:triple-proof]', tpRes.error.message);
@@ -181,9 +187,11 @@ export async function searchSuppliers(
     if (ipRes.error) {
       console.error('[supplier-search:indigenous-proven]', ipRes.error.message);
     } else {
-      for (const row of (ipRes.data ?? []) as { abn: string | null; has_alma_evidence_outcomes: boolean | null }[]) {
+      for (const row of (ipRes.data ?? []) as { abn: string | null; has_acnc: boolean | null; has_alma_evidence_outcomes: boolean | null }[]) {
         if (!row.abn) continue;
         indigenousProven.add(row.abn);
+        // OP8: ACNC governance upgrades it to the deeper Indigenous triple-proof tier.
+        if (row.has_acnc) indigenousTripleProof.add(row.abn);
         // OP1 MV carries the gold flag too, so an Indigenous-proven org with ALMA evidence
         // also lights up "Proven outcomes".
         if (row.has_alma_evidence_outcomes) provenOutcomes.add(row.abn);
@@ -196,5 +204,6 @@ export async function searchSuppliers(
     triple_proof: Boolean(r.abn && proven.has(r.abn)),
     proven_outcomes: Boolean(r.abn && provenOutcomes.has(r.abn)),
     indigenous_proven: Boolean(r.abn && indigenousProven.has(r.abn)),
+    indigenous_triple_proof: Boolean(r.abn && indigenousTripleProof.has(r.abn)),
   }));
 }

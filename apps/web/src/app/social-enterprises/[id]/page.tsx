@@ -128,6 +128,21 @@ function IndigenousProvenBadge({ shown }: { shown: boolean }) {
   );
 }
 
+// OP8 — the governance-deepened tier within the Indigenous axis: ORIC + federal contract + ACNC charity
+// governance. Black-fill = the registry's "deepest" convention; red text/border keeps it on the Indigenous
+// axis. Strongest-wins over the basic Indigenous-proven badge.
+function IndigenousTripleProofBadge({ shown }: { shown: boolean }) {
+  if (!shown) return null;
+  return (
+    <span
+      title="Indigenous triple-proof — a registered Indigenous corporation (ORIC) that has won a federal contract AND carries ACNC charity governance. Verified Indigenous-controlled supply with proven federal delivery that also clears a governance bar — the deepest Indigenous-procurement shortlist in the registry."
+      className="text-[11px] px-2.5 py-1 font-black uppercase tracking-widest border-2 border-bauhaus-red bg-bauhaus-black text-bauhaus-red"
+    >
+      Indigenous triple-proof
+    </span>
+  );
+}
+
 function orgTypeLabel(type: string): string {
   const labels: Record<string, string> = {
     social_enterprise: 'Social Enterprise',
@@ -345,7 +360,9 @@ export default async function SocialEnterpriseDetailPage({ params }: { params: P
   // has_acnc / has_alma_evidence_outcomes flags that distinguish all three tiers).
   let evidenceTier: EvidenceTier | null = null;
   // OP1 — Indigenous-proven: registered ORIC corp + federal contract (orthogonal to the tier above).
+  // OP8 — Indigenous triple-proof: the above PLUS ACNC charity governance (deeper tier, strongest-wins).
   let indigenousProven = false;
+  let indigenousTripleProof = false;
 
   // Grant matching runs on sector + place, not ABN — every profile gets it
   const grantMatchPromise = matchGrantsForSocialEnterprise(supabase, enterprise);
@@ -357,7 +374,7 @@ export default async function SocialEnterpriseDetailPage({ params }: { params: P
       supabase.from('austender_contracts').select('title, contract_value, buyer_name, contract_start', { count: 'exact' }).eq('supplier_abn', cleanAbn).not('contract_value', 'is', null).order('contract_value', { ascending: false }).limit(1000),
       supabase.from('justice_funding').select('program_name, amount_dollars, financial_year, source, sector').eq('recipient_abn', cleanAbn).order('amount_dollars', { ascending: false, nullsFirst: false }).limit(200),
       supabase.from('mv_justice_proven_suppliers').select('has_acnc, has_alma_evidence_outcomes').eq('abn', cleanAbn).maybeSingle(),
-      supabase.from('mv_indigenous_proven_suppliers').select('abn').eq('abn', cleanAbn).maybeSingle(),
+      supabase.from('mv_indigenous_proven_suppliers').select('abn, has_acnc').eq('abn', cleanAbn).maybeSingle(),
     ]);
     if (charityRes.data) matchedCharity = charityRes.data as { abn: string; name: string };
     if (graphRes.data) graphEntity = graphRes.data as GraphEntity;
@@ -368,7 +385,11 @@ export default async function SocialEnterpriseDetailPage({ params }: { params: P
       const p = provenRes.data as { has_acnc: boolean | null; has_alma_evidence_outcomes: boolean | null };
       evidenceTier = p.has_alma_evidence_outcomes ? 'proven_outcomes' : p.has_acnc ? 'triple_proof' : 'proven_govt_delivery';
     }
-    indigenousProven = Boolean(indigenousRes.data);
+    if (indigenousRes.data) {
+      indigenousProven = true;
+      // OP8: ACNC governance upgrades it to the deeper Indigenous triple-proof tier.
+      indigenousTripleProof = Boolean((indigenousRes.data as { has_acnc: boolean | null }).has_acnc);
+    }
     // OP5 — ALMA evidence signals join on the entity UUID, so it runs once the
     // ABN→entity match resolves above.
     if (graphEntity?.id) {
@@ -402,7 +423,8 @@ export default async function SocialEnterpriseDetailPage({ params }: { params: P
           <h1 className="text-2xl sm:text-3xl font-black text-bauhaus-black">{enterprise.name}</h1>
           <div className="flex gap-1.5 flex-shrink-0 flex-wrap">
             <EvidenceTierBadge tier={evidenceTier} />
-            <IndigenousProvenBadge shown={indigenousProven} />
+            <IndigenousTripleProofBadge shown={indigenousTripleProof} />
+            <IndigenousProvenBadge shown={indigenousProven && !indigenousTripleProof} />
             <TierBadge tier={enterprise.verification_tier} basis={enterprise.verification_basis} />
             <span className={`text-[11px] font-black px-2.5 py-1 border-2 uppercase tracking-widest ${orgTypeBadgeClass(enterprise.org_type)}`}>
               {orgTypeLabel(enterprise.org_type)}
