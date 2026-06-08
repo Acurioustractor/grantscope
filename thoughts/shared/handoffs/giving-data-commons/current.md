@@ -9,13 +9,37 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-06-08T07:25:00+10:00
+**Updated:** 2026-06-08T12:35:00+10:00
 **Goal:** Buyer wedge: "free open registry for everyone; paid evidence + tender tools for buyers" (`docs/strategy/buyer-wedge.md`). Run `/wedge` before building SE/procurement/giving. Moves 1+2+4 SHIPPED, 3 waiting on Ben, 5 (widening pause) ACTIVE.
-**Branch:** chore/tsc-stop-hook (hook commit `d88b211`, NOT pushed) — branched off main @ `2798bdf`. main itself unpushed-status unverified.
+**Branch:** chore/tsc-stop-hook — **PUSHED to origin @ `2f0ad30`** (tracking set). Branched off main @ `2798bdf`.
 **Test:** cd apps/web && npx tsc --noEmit && npx vitest run
 
 ### Now
-[->] **VIC contract crawl RUNNING** (relaunched 2026-06-08, **PID 7799**, plain nohup — NOT a harness task, no completion notification; check `ps -p 7799` + `tail -f /tmp/vic-tenders-crawl.log`). Resumed 205 → live **2505 vic-* rows**, 0 skips, ~1h05m in (PID 7799 confirmed alive 07:25). ~14h left. Prior run `b5ame09cx` died on a single page.goto timeout — now fixed (`2798bdf`: per-page try/catch, skip+continue, resumable retry). When done: refresh evidence MVs + re-run `scout-se-buyers`. No foreground work in flight. **SYSTEM-HEALTH SWEEP DONE (resume 07:25):** ran the manual overview. Found nightly pg_cron silently broken: (a) `refresh-civicgraph-mvs-nightly` failed ~6wk on a stmt-timeout @ `mv_abr_name_lookup` (whole-txn rollback → ALL MVs stale since 2026-04-30); FIXED via `ALTER FUNCTION refresh_civicgraph_mvs() SET statement_timeout=0` — heavy refresh DEFERRED to tonight's 17:00 UTC cron (post-crawl, complete data). (b) dead `cleanup-rate-limits` job (table `notification_rate_limits` exists nowhere) unscheduled. Both recorded idempotently in `supabase/migrations/20260608000000_cron_health_fixes.sql`. `/health` skill extended to catch MV staleness + failing crons (`scripts/health-check.mjs`). **Next on resume:** when crawl finishes, verify tonight's MV refresh went ✅ (run `/health` → "Last successful MV refresh" should be 0d), then re-run `scout-se-buyers`.**
+[->] **Pivoting to the buyer-flow UX/UX audit — plan written, ready to run on fresh context.** Decided with Ben: *audit the buyer-facing surface first, then crystallize the method into a `/polish` loop-skill*; scope = the buyer flow (`/suppliers` → `/social-enterprises/[id]` → `/procurement/tender-pack`). Full method + page list + draft value-rubric in **`thoughts/shared/plans/buyer-flow-ux-audit.md`**. Clean topic switch after a data-heavy session — start the audit fresh (dev server `npx next dev --turbopack -p 3003`, warm with curl, screenshot, judge vs DESIGN.md + the value test). **Everything from this session is committed + pushed to `2f0ad30`.**
+
+### This Session (2026-06-08, afternoon) — verified cron fix + shipped the evidence stack (OP7-OP10)
+- [x] **MV-refresh cron fix VERIFIED then CORRECTED.** The morning's `ALTER FUNCTION … statement_timeout=0` was a NO-OP — pg_cron arms the 120s timer at the outer command level, *before* the function is entered, so a function-entry GUC change can't cancel it. Real fix: **`ALTER ROLE postgres SET statement_timeout=0`** (migration `20260608010000`, `16d2407`) — pg_cron's direct session now starts uncapped. Manually refreshed all 34 MVs → staleness **38d → 0d**. (`mv_abr_name_lookup` needed 123.7s, just over the old 120s cap — the exact bug.)
+- [x] **OP7 BUILT** (`2502230`) — `mv_triple_proof_suppliers` (724 orgs: justice × federal contract × ACNC) + registered in nightly cron `refresh_order` AND manual refresh + **TRIPLE-PROOF badge** on `/suppliers`.
+- [x] **OP2 BUILT** (`a7aee82`) — linked the 1,116 VIC suppliers into gs_entities (`AU-ABN-*`, confidence=reported); 598,150 → 599,266, 0 unlinked. Then rebuilt **se_search_index** (11,861) + **se_buyer_prospects** (417). NB the 1,116 are *commercial* vendors (0 justice/acnc) — correctly NOT in the SE index.
+- [x] **OP10 BUILT** (`2f0ad30`) — `has_alma_evidence_outcomes` quad-proof flag (54 orgs) + **"Proven outcomes" gold badge** (top tier above triple-proof) on `/suppliers`.
+- [x] **`/leverage` loop COMPLETE** (`be51046`, `980adc8`) — iters 4–8, all 5 keys + 5 goals mined → Top-3 + OP1–OP10 + dead leads in `docs/leverage-map.md`.
+
+### This Session (2026-06-08, continued) — health · enrichment · leverage
+- [x] **System-health sweep → fixed 2 silently-failing crons.** `refresh-civicgraph-mvs-nightly` failed ~6wk (stmt-timeout @ `mv_abr_name_lookup`, whole-txn rollback → ALL MVs stale since 2026-04-30). Fix: `ALTER FUNCTION refresh_civicgraph_mvs() SET statement_timeout=0`. Also killed dead `cleanup-rate-limits` cron. Migration `supabase/migrations/20260608000000_cron_health_fixes.sql`. `/health` extended (MV staleness + pg_cron failures) in `scripts/health-check.mjs`.
+- [x] **VIC crawl FINISHED** — 4,891 `vic-` rows (4,686 upserted, 205 skipped, 3 failed). **Downstream still TODO (Ben/Tier-2):** refresh evidence MVs + re-run `scout-se-buyers`; **1,116 new VIC supplier ABNs (47%) unlinked to gs_entities** (= leverage OP2 / health-backlog L5).
+- [x] **`/health` loop ran** → `docs/health-backlog.md` (6 iters, ~24 ideas). Root cause of data gaps = enrichment agent fleet failing on timeouts (single-digit success: Enrich Social Enterprises 3%).
+- [x] **Grant-eligibility enrichment LLM chain FIXED** (`b9bcb38`) — anthropic+deepseek were dead (credit/balance) but not disabled, stalling the chain. Added **MiniMax-M3** + openai, strip `<think>`, max_tokens 2000, disable-on-credit/balance. Ran `--apply`: open pool **304 → 32 remaining** (the 32 are thin/redirect pages w/ no content — un-enrichable; cron stays). MiniMax-M3 verified live.
+- [x] **Built `/leverage` skill** (`75eb951`) — data-to-goals leverage map, self-paced loop, **connect/deepen-never-widen** (widening paused). Ran iters 0–3 (all 5 join keys) → `docs/leverage-map.md`. **TOP-3 TO BUILD: OP3** justice proven-suppliers (4,225 justice orgs that also won fed contracts, G3∩G1) · **OP5** ALMA evidence signals on `/suppliers` (983 inline / 348 full-chain w/ cited evidence+outcomes, G3→G1) · **OP1** Indigenous proven-suppliers (325 ORIC corps, G4∩G1, mostly built in `mv_indigenous_procurement_score`).
+- [x] **Fixed stale CLAUDE.md** (`ed8a767`) — `alma_evidence`/`alma_outcomes` link to interventions via **junction tables** (`alma_intervention_evidence` 2065, `alma_intervention_outcomes` 2060), NOT a direct `intervention_id` (self-caught analysis error from leverage iter 3).
+- [x] All work committed + pushed: `b9bcb38` enrich-fix · `015365c` health-backlog · `75eb951` leverage skill · `b0330a1` health iter6 · `ed8a767` CLAUDE fix · `33c1e2d` leverage map.
+
+### Next on resume (priority order)
+1. **Buyer-flow UX audit** → execute `thoughts/shared/plans/buyer-flow-ux-audit.md`. Walk `/suppliers` → `/social-enterprises/[id]` → `/procurement/tender-pack` on dev :3003, screenshot, judge vs DESIGN.md + the value test, write `docs/buyer-flow-ux-findings.md`. **Then build the `/polish` skill** from the refined rubric. (Read DESIGN.md before any visual change.)
+2. (Backlog) Remaining leverage builds — OP8 (278 Indigenous triple-proof), OP4 (financial-health on justice charities), OP6 (desert community-controlled named list).
+3. (Backlog) Enrichment-fleet timeout fixes (`docs/health-backlog.md`) — several agents at single-digit success.
+4. (Open, Tier-3) Open a PR for `chore/tsc-stop-hook` when ready.
+
+### PRIOR SESSION (loop infrastructure — context, still valid)
 
 ### This Session — loop infrastructure
 Built 4 verification "loops" — encode Ben's intervention criteria as exit conditions ("stop being the loop"). Memory: `feedback_loop_design_workflow.md`. All persist across clear.
