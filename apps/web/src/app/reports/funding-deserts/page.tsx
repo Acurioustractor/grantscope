@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { getServiceSupabase } from '@/lib/report-supabase';
 import { ReportCTA } from '../_components/report-cta';
+import { DESERT_COMMUNITY_ORGS_SQL, mapDesertCommunityOrgs } from '@/lib/funding-deserts';
 
 export const dynamic = 'force-dynamic';
 
@@ -66,10 +67,11 @@ interface Summary {
   min_funding: number;
 }
 
+
 async function getData() {
   const supabase = getServiceSupabase();
 
-  const [worstResult, bestResult, remotenessResult, stateResult, summaryResult] = await Promise.all([
+  const [worstResult, bestResult, remotenessResult, stateResult, summaryResult, communityOrgsResult, communitySummaryResult] = await Promise.all([
     supabase.rpc('exec_sql', {
       query: `SELECT DISTINCT ON (lga_name, state) lga_name, state, remoteness, avg_irsd_decile, avg_irsd_score, indexed_entities, community_controlled_entities, total_funding_all_sources, desert_score FROM mv_funding_deserts WHERE desert_score IS NOT NULL ORDER BY lga_name, state, desert_score DESC`,
     }),
@@ -84,6 +86,12 @@ async function getData() {
     }),
     supabase.rpc('exec_sql', {
       query: `WITH deduped AS (SELECT DISTINCT ON (lga_name, state) lga_name, state, remoteness, avg_irsd_decile, indexed_entities, total_funding_all_sources, desert_score FROM mv_funding_deserts WHERE desert_score IS NOT NULL ORDER BY lga_name, state, desert_score DESC) SELECT COUNT(*) as total_lgas, COUNT(CASE WHEN desert_score > 100 THEN 1 END) as severe_deserts, ROUND(AVG(desert_score)::numeric,1) as avg_desert_score, ROUND(MAX(total_funding_all_sources)::numeric,0) as max_funding, ROUND(MIN(CASE WHEN total_funding_all_sources > 0 THEN total_funding_all_sources END)::numeric,0) as min_funding FROM deduped`,
+    }),
+    // OP6 — named community-controlled orgs in the 100 worst deserts
+    supabase.rpc('exec_sql', { query: DESERT_COMMUNITY_ORGS_SQL }),
+    // OP6 — coverage summary across the same worst-100 LGAs
+    supabase.rpc('exec_sql', {
+      query: `WITH deserts AS (SELECT DISTINCT ON (lga_name, state) lga_name, state, desert_score, indexed_entities, community_controlled_entities FROM mv_funding_deserts WHERE desert_score IS NOT NULL ORDER BY lga_name, state, desert_score DESC), worst AS (SELECT lga_name, state, desert_score, indexed_entities, community_controlled_entities FROM deserts ORDER BY desert_score DESC LIMIT 100) SELECT SUM(community_controlled_entities) as cc_orgs, COUNT(*) FILTER (WHERE community_controlled_entities > 0) as lgas_with_cc, SUM(indexed_entities) as total_indexed, ROUND(100.0 * SUM(community_controlled_entities) / NULLIF(SUM(indexed_entities), 0), 0) as cc_share FROM worst`,
     }),
   ]);
 
@@ -114,7 +122,17 @@ async function getData() {
     min_funding: Number(summaryRaw.min_funding) || 0,
   };
 
-  return { worst30, best10, worst10, byRemoteness, byState, summary };
+  const communityOrgs = mapDesertCommunityOrgs(communityOrgsResult.data);
+
+  const csRaw = (communitySummaryResult.data as Record<string, unknown>[])?.[0] || {};
+  const communitySummary = {
+    cc_orgs: Number(csRaw.cc_orgs) || communityOrgs.length,
+    lgas_with_cc: Number(csRaw.lgas_with_cc) || 0,
+    cc_share: Number(csRaw.cc_share) || 0,
+    zero_funding_orgs: communityOrgs.filter((o) => o.total_dollar_flow === 0).length,
+  };
+
+  return { worst30, best10, worst10, byRemoteness, byState, summary, communityOrgs, communitySummary };
 }
 
 const REMOTENESS_COLORS: Record<string, string> = {
@@ -266,6 +284,115 @@ export default async function FundingDesertsReport() {
           </a>
         </div>
       </section>
+
+      {/* Section 1b: Community-controlled orgs already in the deepest deserts (OP6) */}
+      {d.communityOrgs.length > 0 && (
+        <section className="mb-12">
+          <div className="text-xs font-black text-bauhaus-red mb-1 uppercase tracking-widest">Community-Controlled Delivery Partners</div>
+          <h2 className="text-xl font-black text-bauhaus-black mb-2 uppercase tracking-widest">
+            Who&apos;s Already There
+          </h2>
+          <p className="text-sm text-bauhaus-muted mb-6 max-w-2xl">
+            The deepest deserts are not empty. Inside the 100 worst-scoring LGAs,{' '}
+            <strong className="text-bauhaus-black">{fmt(d.communitySummary.cc_orgs)} community-controlled organisations</strong> &mdash;
+            locally governed, nearly all of them Aboriginal and Torres Strait Islander corporations &mdash; are already
+            operating in the places the funding system reaches least. They make up{' '}
+            <strong className="text-bauhaus-black">{d.communitySummary.cc_share}%</strong> of every indexed
+            organisation in those LGAs, yet <strong className="text-bauhaus-red">{fmt(d.communitySummary.zero_funding_orgs)} of
+            them run on zero tracked funding</strong>. These are the natural delivery partners for any investment
+            aimed at the hardest-hit communities.
+          </p>
+
+          <div className="grid grid-cols-3 gap-0 mb-6">
+            <div className="border-4 border-bauhaus-black p-5 bg-bauhaus-black text-white">
+              <div className="text-3xl sm:text-4xl font-black">{fmt(d.communitySummary.cc_orgs)}</div>
+              <div className="text-white/60 text-[11px] font-black uppercase tracking-widest mt-2">Community-controlled orgs</div>
+            </div>
+            <div className="border-4 border-l-0 border-bauhaus-black p-5 bg-bauhaus-yellow text-bauhaus-black">
+              <div className="text-3xl sm:text-4xl font-black">{d.communitySummary.cc_share}%</div>
+              <div className="text-bauhaus-black/60 text-[11px] font-black uppercase tracking-widest mt-2">of indexed orgs in these deserts</div>
+            </div>
+            <div className="border-4 border-l-0 border-bauhaus-black p-5 bg-bauhaus-red text-white">
+              <div className="text-3xl sm:text-4xl font-black">{fmt(d.communitySummary.zero_funding_orgs)}</div>
+              <div className="text-white/60 text-[11px] font-black uppercase tracking-widest mt-2">on $0 tracked funding</div>
+            </div>
+          </div>
+
+          <div className="border-4 border-bauhaus-black bg-white overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-bauhaus-black text-white">
+                  <th className="text-left p-3 font-black uppercase tracking-widest text-xs w-8">#</th>
+                  <th className="text-left p-3 font-black uppercase tracking-widest text-xs">Organisation</th>
+                  <th className="text-left p-3 font-black uppercase tracking-widest text-xs">Place</th>
+                  <th className="text-left p-3 font-black uppercase tracking-widest text-xs hidden md:table-cell">Known From</th>
+                  <th className="text-right p-3 font-black uppercase tracking-widest text-xs hidden sm:table-cell">Desert Score</th>
+                  <th className="text-right p-3 font-black uppercase tracking-widest text-xs">Tracked Funding</th>
+                </tr>
+              </thead>
+              <tbody>
+                {d.communityOrgs.map((o, i) => {
+                  const tags = [
+                    o.in_charity_registry ? 'Charity' : null,
+                    o.in_procurement ? 'Contracts' : null,
+                    o.in_justice_funding ? 'Justice' : null,
+                  ].filter(Boolean) as string[];
+                  return (
+                    <tr key={`${o.gs_id ?? o.canonical_name}-${i}`} className={i % 2 === 0 ? 'bg-white' : 'bg-red-50/30'}>
+                      <td className="p-3 font-black text-bauhaus-muted align-top">{i + 1}</td>
+                      <td className="p-3 align-top">
+                        {o.gs_id ? (
+                          <a href={`/entity/${o.gs_id}`} className="font-bold text-bauhaus-black hover:text-bauhaus-blue underline decoration-2 underline-offset-2 decoration-bauhaus-blue/30">
+                            {o.canonical_name}
+                          </a>
+                        ) : (
+                          <span className="font-bold text-bauhaus-black">{o.canonical_name}</span>
+                        )}
+                        {o.entity_type && (
+                          <div className="text-[10px] text-bauhaus-muted uppercase tracking-widest mt-0.5">{o.entity_type}</div>
+                        )}
+                      </td>
+                      <td className="p-3 align-top">
+                        <div className="font-bold text-bauhaus-black text-xs">{o.lga_name}</div>
+                        <div className="text-[10px] text-bauhaus-muted">
+                          {o.state || '—'}{o.remoteness ? ` · ${REMOTENESS_SHORT[o.remoteness] || o.remoteness}` : ''}
+                        </div>
+                      </td>
+                      <td className="p-3 align-top hidden md:table-cell">
+                        {tags.length === 0 ? (
+                          <span className="text-[10px] text-bauhaus-muted font-bold">Registry only</span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1">
+                            {tags.map((t) => (
+                              <span key={t} className="text-[10px] font-black uppercase tracking-widest border-2 border-bauhaus-black px-1.5 py-0.5 bg-bauhaus-canvas">{t}</span>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                      <td className="p-3 text-right font-mono font-black text-bauhaus-red align-top hidden sm:table-cell">
+                        {o.desert_score.toFixed(0)}
+                      </td>
+                      <td className="p-3 text-right font-mono whitespace-nowrap align-top">
+                        {o.total_dollar_flow === 0
+                          ? <span className="text-bauhaus-red font-black">$0</span>
+                          : money(o.total_dollar_flow)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-3 flex justify-between items-center flex-wrap gap-2">
+            <p className="text-xs text-bauhaus-muted font-bold">
+              Source: CivicGraph Entity Power Index &times; Funding Desert Index. Community-controlled flag from the entity registry.
+            </p>
+            <a href="/api/data/funding-deserts" className="text-xs font-black text-bauhaus-blue uppercase tracking-widest hover:text-bauhaus-red">
+              Full Data (API) &rarr;
+            </a>
+          </div>
+        </section>
+      )}
 
       <ReportCTA reportSlug="funding-deserts" reportTitle="Funding Deserts Geographic Analysis" variant="inline" />
 

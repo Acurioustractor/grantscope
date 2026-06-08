@@ -88,11 +88,19 @@ All three are **evidence-depth** plays — the wedge's stated #1 tie-breaker ("e
   Effort: M. Wedge: **supply-magnet / mission** (not direct revenue).
 
 - **OP6 — Community-controlled orgs in funding deserts (the named list).** Datasets: `mv_funding_deserts`
-  × `gs_entities(is_community_controlled)` via lga. Serves: **G5∩G4**. Why valuable: the worst-100 desert
-  LGAs hold **108 community-controlled orgs** (27% of the 401 indexed orgs there) — the orgs serving the
-  hardest-hit places. The MV has the *counts*; the named-org list for outreach/registry is latent.
-  Evidence: 108 in worst-100 LGAs. State: **partially-built** (counts exist, list latent). Effort: S.
-  Wedge: **supply-magnet / mission**.
+  × `mv_entity_power_index(is_community_controlled)` via (lga_name, state). Serves: **G5∩G4**. Why valuable:
+  the worst-100 desert LGAs hold **102 community-controlled orgs** (re-verified 2026-06-09; the original 108
+  was pre-snapshot) — **29% of the 355 indexed orgs there**, and **101 of the 102 (99%) are Aboriginal &
+  Torres Strait Islander corporations** serving the hardest-hit places. The MV had the *counts*; the named
+  list is now surfaced. **Data note:** the count is sourced from `mv_entity_power_index` (the same source
+  `mv_funding_deserts.community_controlled_entities` aggregates), so the named list reconciles **exactly**
+  with the displayed count (102 = 102). They cluster in just **12 of the worst-100 LGAs** (the other 88 are
+  empty of indexed orgs entirely), and **76 of the 102 run on zero tracked funding**. State: **BUILT
+  2026-06-09** — a "Who's Already There" section on `/reports/funding-deserts` (named, profile-linked via
+  `/entity/{gs_id}`, with Charity/Contracts/Justice evidence tags + tracked-$ flow), and the list exposed on
+  `/api/data/funding-deserts` as `communityControlledInDeserts` (the outreach/registry export the link
+  promises). Shared SQL + mapper in `lib/funding-deserts.ts` keeps page and API in sync. No new MV/migration
+  (the data was latent in existing MVs). Effort: S. Wedge: **supply-magnet / mission**.
 
 - **OP5 — ALMA evidence signals on supplier/entity profiles.** Datasets: `alma_interventions` (inline
   `evidence_strength_signal` + `portfolio_score` + `verification_status`) × `gs_entities` via gs_entity_id.
