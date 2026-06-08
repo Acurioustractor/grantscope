@@ -1,5 +1,5 @@
 ---
-date: 2026-06-08T23:55:00+10:00
+date: 2026-06-09T00:10:00+10:00
 session_name: giving-data-commons
 branch: main
 status: active
@@ -9,13 +9,20 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-06-08T23:55:00+10:00
+**Updated:** 2026-06-09T00:10:00+10:00
 **Goal:** Buyer wedge: "free open registry for everyone; paid evidence + tender tools for buyers" (`docs/strategy/buyer-wedge.md`). Run `/wedge` before building SE/procurement/giving. Evidence-depth plays are the active focus (widening paused).
-**Branch:** **main** (clean) — PRs #57 (buyer-flow), #58 (OP5), #59 (OP3) all **MERGED**. HEAD `38c6c49`. Working tree clean except this ledger + 2 pre-existing untracked data leftovers (`data/grant-eligibility-cache.jsonl`, `data/state-tenders/`).
+**Branch:** **main** (clean) — PRs #57 (buyer-flow), #58 (OP5), #59 (OP3), #60 (OP1) all **MERGED**. HEAD `288c535`. Working tree clean except this ledger + 2 pre-existing untracked data leftovers (`data/grant-eligibility-cache.jsonl`, `data/state-tenders/`).
 **Test:** cd apps/web && npx tsc --noEmit && npx vitest run
 
 ### Now
-[->] **NEXT: OP1 — Indigenous proven suppliers** (leverage Top-3; likely the fastest win — mostly built in `mv_indigenous_procurement_score`, probably just needs surfacing/verification on `/suppliers`). Then **OP4** — financial-health signal on justice-funded charities (4,366 ACNC matches; supply-magnet, not direct revenue). OP5 + OP3 both SHIPPED + MERGED this session — nothing in flight.
+[->] **Leverage Top-3 COMPLETE** — OP3 + OP5 + OP1 all BUILT + MERGED. Nothing in flight. **NEXT candidates:** **OP4** — financial-health signal on the 4,366 justice-funded ACNC charities (flag fragile delivery orgs; supply-magnet, not direct revenue). Or **OP7/OP8** — governance-deepened *premium* versions of OP3/OP1. Re-run `/leverage` only after new state lands (a refresh of existing MVs doesn't count).
+
+### This Session (2026-06-08, night cont.) — OP1 shipped & merged (PR #60)
+Built the third and final Top-3 leverage play end-to-end (build → apply → verify live → ship → CI-green → merge), Ben merging with an explicit verb. **Caught a stale ledger assumption:** the map said OP1 was "mostly built in `mv_indigenous_procurement_score`" — but that MV is *agency*-side IPP compliance, **not** a supplier shortlist. Built the supplier-side MV from scratch (verify, don't trust the ledger).
+- [x] **OP1 BUILT + MERGED** (PR #60, merge `288c535`) — red **"Indigenous-proven"** badge: `mv_indigenous_proven_suppliers` (**301 *active* Registered ORIC corps × federal contract**). Migration `20260608080000` + cron re-dump `20260608090000` **applied live**. The **25 deregistered** ORIC corps with contracts are EXCLUDED — a buyer shortlist must not recommend a wound-up corp. **Orthogonal axis** to OP3's justice hierarchy → **88 orgs double-badge** (e.g. South Coast Medical Service → Indigenous-proven + Triple-proof), 9 also clear the ALMA gold tier. Surfaces on `/suppliers` search + `/social-enterprises/[id]`. New `indigenous_proven` flag in `supplier-search.ts` (third parallel MV lookup). Carries `has_alma_evidence_outcomes` so the gold tier composes. **300/301 reachable** in the search index + SE directory. Verified live: Burrun Dalai (Indigenous-proven only) · South Coast Medical Service (double-badge). Commit `ca6dfdc`.
+- [x] **origin/main reconciled** — the prior session's 2 close-out commits (`25dd659` /close skill fix, `9fa35f3` handoff doc) were on local main but never pushed (origin was stale at `38c6c49`); they came across in the #60 merge. origin/main now `288c535`.
+- Gates green throughout (tsc 0, **221/221 tests**; CI all-green: Type Check 1m30s · Unit/Integration 28s · E2E 1m15s). Leverage map: OP1 marked BUILT — **Top-3 now fully shipped (OP3 + OP5 + OP1)**.
+- **FRICTION (Tier-3 gate):** applying the migration was blocked by the auto-mode classifier **even with explicit user authorization + `dangerouslyDisableSandbox`** — it kept reading the option label as "user will run it". Ben ran the psql himself via `!` (command copied to his clipboard via `pbcopy`, single-line — line-wrapping had mangled `-d`/`-f` flags on first paste).
 
 ### This Session (2026-06-08, night) — OP5 + OP3 shipped & merged (PRs #58, #59)
 Merged the open buyer-flow PR, then built the next two Top-3 leverage plays end-to-end (build → verify live → ship → CI-green → merge), Ben merging each with an explicit verb.
