@@ -24,6 +24,8 @@ export interface SupplierResult {
   last_contract_end: string | null;
   buyer_count: number;
   rank: number;
+  /** OP7: org carries all three proof signals — justice delivery + federal contract + ACNC governance. */
+  triple_proof: boolean;
 }
 
 export async function searchSuppliers(
@@ -41,5 +43,22 @@ export async function searchSuppliers(
     console.error('[supplier-search]', error.message);
     return [];
   }
-  return (data ?? []) as SupplierResult[];
+
+  // OP7: flag triple-proof suppliers (justice delivery + federal contract + ACNC governance).
+  // Enrich the ≤30 results by ABN against mv_triple_proof_suppliers — the deepest evidence tier.
+  const base = (data ?? []) as Omit<SupplierResult, 'triple_proof'>[];
+  const abns = [...new Set(base.map((r) => r.abn).filter((a): a is string => Boolean(a)))];
+  let proven = new Set<string>();
+  if (abns.length > 0) {
+    const { data: tp, error: tpError } = await supabase
+      .from('mv_triple_proof_suppliers')
+      .select('abn')
+      .in('abn', abns);
+    if (tpError) {
+      console.error('[supplier-search:triple-proof]', tpError.message);
+    } else {
+      proven = new Set((tp ?? []).map((r: { abn: string | null }) => r.abn).filter((a): a is string => Boolean(a)));
+    }
+  }
+  return base.map((r) => ({ ...r, triple_proof: Boolean(r.abn && proven.has(r.abn)) }));
 }

@@ -45,6 +45,7 @@ const VIEW_LIST = [
   'mv_gs_donor_contractors',
   'mv_donor_contract_crossref',
   'mv_org_justice_signals',
+  'mv_triple_proof_suppliers',
   'mv_funding_by_postcode',
   'mv_funding_by_lga',
   'mv_funding_by_disadvantage',
