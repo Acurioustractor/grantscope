@@ -24,6 +24,34 @@ export interface SupplierResult {
   last_contract_end: string | null;
   buyer_count: number;
   rank: number;
+  /** Why this row matched the query: `capability` = won-contract titles (what govt actually bought),
+   * `offering` = name + sectors, `description` = self-described. Null in browse (empty query). */
+  match_source: 'capability' | 'offering' | 'description' | null;
+  /** Highlighted fragment of the matched field (ts_headline, «term» delimiters). Null for offering
+   * matches (name/sectors already on the card) and in browse mode. */
+  match_snippet: string | null;
+  /** OP7: org carries all three proof signals — justice delivery + federal contract + ACNC governance. */
+  triple_proof: boolean;
+  /** OP10: quad-proof — triple-proof PLUS an ALMA intervention with cited evidence AND measured outcomes. */
+  proven_outcomes: boolean;
+}
+
+export interface RegistryStats {
+  total: number;
+  with_contracts: number;
+  total_value: number;
+  total_contracts: number;
+}
+
+/** Live registry totals for the search landing (pre-search proof). Returns null on error. */
+export async function getRegistryStats(): Promise<RegistryStats | null> {
+  const supabase = getServiceSupabase();
+  const { data, error } = await supabase.rpc('se_registry_stats').single();
+  if (error) {
+    console.error('[supplier-search:stats]', error.message);
+    return null;
+  }
+  return data as RegistryStats;
 }
 
 export async function searchSuppliers(
@@ -41,5 +69,32 @@ export async function searchSuppliers(
     console.error('[supplier-search]', error.message);
     return [];
   }
-  return (data ?? []) as SupplierResult[];
+
+  // OP7/OP10: flag triple-proof suppliers (justice delivery + federal contract + ACNC governance)
+  // and the quad-proof gold tier (those that ALSO carry ALMA evidence + measured outcomes).
+  // Enrich the ≤30 results by ABN against mv_triple_proof_suppliers — the deepest evidence tiers.
+  const base = (data ?? []) as Omit<SupplierResult, 'triple_proof' | 'proven_outcomes'>[];
+  const abns = [...new Set(base.map((r) => r.abn).filter((a): a is string => Boolean(a)))];
+  const proven = new Set<string>();
+  const provenOutcomes = new Set<string>();
+  if (abns.length > 0) {
+    const { data: tp, error: tpError } = await supabase
+      .from('mv_triple_proof_suppliers')
+      .select('abn, has_alma_evidence_outcomes')
+      .in('abn', abns);
+    if (tpError) {
+      console.error('[supplier-search:triple-proof]', tpError.message);
+    } else {
+      for (const row of (tp ?? []) as { abn: string | null; has_alma_evidence_outcomes: boolean | null }[]) {
+        if (!row.abn) continue;
+        proven.add(row.abn);
+        if (row.has_alma_evidence_outcomes) provenOutcomes.add(row.abn);
+      }
+    }
+  }
+  return base.map((r) => ({
+    ...r,
+    triple_proof: Boolean(r.abn && proven.has(r.abn)),
+    proven_outcomes: Boolean(r.abn && provenOutcomes.has(r.abn)),
+  }));
 }

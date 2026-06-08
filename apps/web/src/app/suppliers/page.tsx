@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { searchSuppliers, type SupplierResult } from '@/lib/services/supplier-search';
+import { searchSuppliers, getRegistryStats, type SupplierResult } from '@/lib/services/supplier-search';
 import { money } from '@/lib/services/report-service';
+import { AddToPackButton } from '@/app/components/add-to-pack-button';
+import { isHedgeDescription } from '@/lib/supplier-copy';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,6 +14,9 @@ export const metadata: Metadata = {
 };
 
 const STATES = ['ACT', 'NSW', 'NT', 'QLD', 'SA', 'TAS', 'VIC', 'WA'] as const;
+
+// One-click example needs for the landing — common procurement categories.
+const EXAMPLE_NEEDS = ['Beds', 'Catering', 'Cleaning', 'Landscaping', 'IT support', 'Construction', 'Recruitment', 'Signage'];
 
 const SOURCE_LABELS: Record<string, string> = {
   'supply-nation': 'Supply Nation',
@@ -47,6 +52,28 @@ function TierBadge({ tier }: { tier: string | null }) {
   );
 }
 
+function TripleProofBadge() {
+  return (
+    <span
+      title="Triple-proof — this supplier has justice/community delivery, a won federal contract, AND ACNC charity governance. The deepest delivery evidence in the registry."
+      className="text-[10px] px-2 py-0.5 font-black uppercase tracking-widest border-2 border-bauhaus-black bg-bauhaus-black text-bauhaus-yellow"
+    >
+      Triple-proof
+    </span>
+  );
+}
+
+function ProvenOutcomesBadge() {
+  return (
+    <span
+      title="Proven outcomes — triple-proof PLUS cited evidence and measured outcomes (ALMA). The deepest delivery proof in the registry: this works, and they can deliver it."
+      className="text-[10px] px-2 py-0.5 font-black uppercase tracking-widest border-2 border-bauhaus-black bg-bauhaus-yellow text-bauhaus-black"
+    >
+      Proven outcomes
+    </span>
+  );
+}
+
 function EvidenceLine({ r }: { r: SupplierResult }) {
   if (r.contract_count === 0) return null;
   const lastYear = r.last_contract_end ? new Date(r.last_contract_end).getFullYear() : null;
@@ -56,6 +83,45 @@ function EvidenceLine({ r }: { r: SupplierResult }) {
       {r.buyer_count > 1 ? ` · ${r.buyer_count} buyers` : ''}
       {lastYear ? ` · to ${lastYear}` : ''}
     </span>
+  );
+}
+
+// ts_headline marks the matched terms with « » — render those in solid black against muted prose.
+function HighlightedSnippet({ text }: { text: string }) {
+  return (
+    <>
+      {text.split(/[«»]/).map((part, i) =>
+        i % 2 === 1 ? (
+          <strong key={i} className="text-bauhaus-black font-bold">{part}</strong>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      )}
+    </>
+  );
+}
+
+const MATCH_META: Record<string, { label: string; color: string }> = {
+  capability: { label: 'Matched in a won contract', color: 'text-money' },
+  offering: { label: 'Matched in name & sectors', color: 'text-bauhaus-blue' },
+  description: { label: 'Matched in description', color: 'text-bauhaus-muted' },
+};
+
+// Why this result matched the buyer's need — keeps the evidence-led order legible so a
+// "bed dwellings" contractor reads differently from an actual bed supplier.
+function MatchReason({ r }: { r: SupplierResult }) {
+  if (!r.match_source) return null;
+  const meta = MATCH_META[r.match_source];
+  if (!meta) return null;
+  return (
+    <div className="mt-1.5 text-xs font-medium">
+      <span className={`text-[10px] font-black uppercase tracking-widest ${meta.color}`}>{meta.label}</span>
+      {r.match_snippet && (
+        <span className="text-bauhaus-muted">
+          {' '}&ldquo;<HighlightedSnippet text={r.match_snippet} />&rdquo;
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -75,6 +141,7 @@ export default async function SupplierSearchPage({
     : '';
   const searched = Boolean(q || state);
   const results = searched ? await searchSuppliers(q, state) : [];
+  const stats = searched ? null : await getRegistryStats();
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-10">
@@ -146,12 +213,19 @@ export default async function SupplierSearchPage({
           ) : (
             <div className="border-4 border-bauhaus-black">
               {results.map((r, i) => (
-                <div key={r.se_id} className={`bg-white p-5 ${i < results.length - 1 ? 'border-b-4 border-bauhaus-black' : ''}`}>
+                <div
+                  key={r.se_id}
+                  className={`group relative cursor-pointer bg-white p-5 transition-colors hover:bg-bauhaus-yellow/10 ${i < results.length - 1 ? 'border-b-4 border-bauhaus-black' : ''}`}
+                >
                   <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1.5">
-                    <Link href={`/social-enterprises/${r.se_id}`} className="text-lg font-black text-bauhaus-black hover:text-bauhaus-red">
+                    <Link
+                      href={`/social-enterprises/${r.se_id}`}
+                      className="text-lg font-black text-bauhaus-black group-hover:text-bauhaus-red before:absolute before:inset-0 before:content-['']"
+                    >
                       {r.name}
                     </Link>
-                    <div className="flex gap-1.5 flex-wrap">
+                    <div className="relative z-10 flex gap-1.5 flex-wrap">
+                      {r.proven_outcomes ? <ProvenOutcomesBadge /> : r.triple_proof ? <TripleProofBadge /> : null}
                       <TierBadge tier={r.verification_tier} />
                       {r.source_primary && (
                         <span className="text-[10px] px-2 py-0.5 font-black uppercase tracking-widest border-2 border-bauhaus-black/40 text-bauhaus-muted">
@@ -165,17 +239,29 @@ export default async function SupplierSearchPage({
                     {[r.city, r.state].filter(Boolean).join(', ')}
                     {r.sectors && r.sectors.length > 0 && <> · {r.sectors.slice(0, 4).join(' · ')}</>}
                   </div>
-                  {r.description && (
+                  <MatchReason r={r} />
+                  {/* Full description only when it isn't already the matched (and now highlighted) field. */}
+                  {r.description && !isHedgeDescription(r.description) && r.match_source !== 'description' && (
                     <p className="text-sm text-bauhaus-muted font-medium mt-2 line-clamp-2">{r.description}</p>
                   )}
-                  {r.verification_tier === 'identified' && (
-                    <p className="text-[11px] font-bold text-bauhaus-muted mt-2">
-                      Run this enterprise?{' '}
-                      <Link href="/giving/corrections" className="text-bauhaus-blue hover:text-bauhaus-red">
-                        Claim and complete this profile
-                      </Link>
-                    </p>
-                  )}
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    {r.verification_tier === 'identified' ? (
+                      <p className="relative z-10 text-[11px] font-bold text-bauhaus-muted">
+                        Run this enterprise?{' '}
+                        <Link href="/giving/corrections" className="text-bauhaus-blue hover:text-bauhaus-red">
+                          Claim and complete this profile
+                        </Link>
+                      </p>
+                    ) : (
+                      <span />
+                    )}
+                    <div className="flex items-center gap-3 whitespace-nowrap">
+                      <AddToPackButton item={{ se_id: r.se_id, name: r.name, abn: r.abn, state: r.state }} />
+                      <span className="text-[11px] font-black uppercase tracking-widest text-bauhaus-red transition-transform group-hover:translate-x-1">
+                        View profile →
+                      </span>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -201,29 +287,74 @@ export default async function SupplierSearchPage({
           </div>
         </section>
       ) : (
-        <section className="grid sm:grid-cols-3 gap-0 border-4 border-bauhaus-black mb-10">
-          <div className="bg-white p-6 border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black">
-            <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-red mb-1.5">1 · Search by need</div>
-            <p className="text-sm font-medium text-bauhaus-black">
-              &ldquo;Beds&rdquo;, &ldquo;catering&rdquo;, &ldquo;civil works&rdquo; — matched against
-              names, sectors AND what government actually bought from each enterprise.
-            </p>
+        <>
+          {/* One-click example needs — lower the friction to a first real search */}
+          <div className="mb-8">
+            <div className="text-[11px] font-black uppercase tracking-widest text-bauhaus-muted mb-2">
+              Popular needs
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {EXAMPLE_NEEDS.map((need) => (
+                <Link
+                  key={need}
+                  href={`/suppliers?q=${encodeURIComponent(need.toLowerCase())}`}
+                  className="px-3 py-1.5 text-xs font-black uppercase tracking-wider border-2 border-bauhaus-black bg-white text-bauhaus-black hover:bg-bauhaus-yellow transition-colors"
+                >
+                  {need}
+                </Link>
+              ))}
+            </div>
           </div>
-          <div className="bg-white p-6 border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black">
-            <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-red mb-1.5">2 · Ranked by evidence</div>
-            <p className="text-sm font-medium text-bauhaus-black">
-              Public contract history beats badges. Verification marks (Social Traders, Supply
-              Nation, ACNC, ORIC) appear as signals — never as gates.
-            </p>
-          </div>
-          <div className="bg-white p-6">
-            <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-red mb-1.5">3 · Free and open</div>
-            <p className="text-sm font-medium text-bauhaus-black">
-              11,800+ enterprises, no membership wall. Indigenous business registries are part of
-              the supply base; not every record is a certified social enterprise.
-            </p>
-          </div>
-        </section>
+
+          <section className="grid sm:grid-cols-3 gap-0 border-4 border-bauhaus-black mb-8">
+            <div className="bg-white p-6 border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black">
+              <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-red mb-1.5">1 · Search by need</div>
+              <p className="text-sm font-medium text-bauhaus-black">
+                &ldquo;Beds&rdquo;, &ldquo;catering&rdquo;, &ldquo;civil works&rdquo; — matched against
+                names, sectors AND what government actually bought from each enterprise.
+              </p>
+            </div>
+            <div className="bg-white p-6 border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black">
+              <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-red mb-1.5">2 · Ranked by evidence</div>
+              <p className="text-sm font-medium text-bauhaus-black">
+                Public contract history beats badges. Verification marks (Social Traders, Supply
+                Nation, ACNC, ORIC) appear as signals — never as gates.
+              </p>
+            </div>
+            <div className="bg-white p-6">
+              <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-red mb-1.5">3 · Free and open</div>
+              <p className="text-sm font-medium text-bauhaus-black">
+                11,800+ enterprises, no membership wall. Indigenous business registries are part of
+                the supply base; not every record is a certified social enterprise.
+              </p>
+            </div>
+          </section>
+
+          {/* Pre-search proof — the registry already holds real, public delivery evidence */}
+          {stats && (
+            <section className="mb-10">
+              <div className="text-[11px] font-black uppercase tracking-widest text-bauhaus-muted mb-2">
+                What&apos;s already in the registry
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-0 border-4 border-bauhaus-black">
+                {[
+                  { label: 'Enterprises', value: stats.total.toLocaleString() },
+                  { label: 'With proven govt delivery', value: stats.with_contracts.toLocaleString() },
+                  { label: 'Government contracts', value: stats.total_contracts.toLocaleString() },
+                  { label: 'Delivery tracked', value: money(stats.total_value) },
+                ].map((s, i) => (
+                  <div
+                    key={s.label}
+                    className={`bg-white p-5 border-bauhaus-black ${i < 2 ? 'border-b-4 sm:border-b-0' : ''} ${i < 3 ? 'sm:border-r-4' : ''} ${i % 2 === 0 ? 'border-r-4 sm:border-r-4' : ''}`}
+                  >
+                    <div className="text-2xl font-black text-bauhaus-black tabular-nums">{s.value}</div>
+                    <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted mt-1">{s.label}</div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+        </>
       )}
 
       <p className="text-xs text-bauhaus-muted font-medium">

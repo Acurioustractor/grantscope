@@ -207,7 +207,7 @@ export default function ProcurementDashboard() {
 
       {/* Hero */}
       <div className="mt-4 mb-6">
-        <div className="bg-bauhaus-blue border-4 border-bauhaus-black p-6 sm:p-8" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-black)' }}>
+        <div className="bg-bauhaus-black border-4 border-bauhaus-black p-6 sm:p-8" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-blue)' }}>
           <p className="text-xs font-black text-white/60 uppercase tracking-[0.3em] mb-3">CivicGraph</p>
           <h1 className="text-3xl sm:text-4xl font-black text-white leading-tight mb-3">
             Procurement Compliance Dashboard
@@ -215,6 +215,10 @@ export default function ProcurementDashboard() {
           <p className="text-white/80 font-medium max-w-3xl leading-relaxed">
             Upload your supplier ledger to instantly see your IPP and SME compliance status.
             Get gap calculations, supplier recommendations, and black cladding risk scores — all powered by 143K entities and 754K contracts.
+          </p>
+          <p className="text-sm text-white/60 font-medium max-w-3xl leading-relaxed mt-3">
+            &ldquo;Black cladding&rdquo; is a non-Indigenous business fronting a token Indigenous partner to win
+            Indigenous-procurement contracts. Flagging it protects genuine Indigenous-owned suppliers.
           </p>
         </div>
       </div>

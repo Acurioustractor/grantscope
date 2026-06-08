@@ -37,8 +37,14 @@ const log = (m) => console.log(`[enrich-elig] ${m}`);
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 // ── LLM round-robin (same pattern as classify-directory-se-candidates.mjs) ──
+// Order = preference. groq is free+fast (primary); MiniMax-M3 is the main paid fallback
+// (reasoning model — needs <think> stripping + extra max_tokens); openai is the reliable
+// backstop; gemini is free but flaky on real pages. deepseek/anthropic kept last and
+// auto-disable on credit-balance errors (see callLLM). Provider health verified 2026-06-08.
 const PROVIDERS = [
   { name: 'groq', baseUrl: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.3-70b-versatile', envKey: 'GROQ_API_KEY' },
+  { name: 'minimax', baseUrl: 'https://api.minimax.io/v1/chat/completions', model: 'MiniMax-M3', envKey: 'MINIMAX_API_KEY', maxTokens: 2000 },
+  { name: 'openai', baseUrl: 'https://api.openai.com/v1/chat/completions', model: 'gpt-4o-mini', envKey: 'OPENAI_API_KEY' },
   { name: 'gemini', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', model: 'gemini-2.5-flash', envKey: 'GEMINI_API_KEY' },
   { name: 'deepseek', baseUrl: 'https://api.deepseek.com/chat/completions', model: 'deepseek-chat', envKey: 'DEEPSEEK_API_KEY' },
   { name: 'anthropic', baseUrl: 'https://api.anthropic.com/v1/messages', model: 'claude-haiku-4-5-20251001', envKey: 'ANTHROPIC_API_KEY', isAnthropic: true },
@@ -83,18 +89,21 @@ async function callLLM(prompt) {
         body = JSON.stringify({ model: p.model, max_tokens: 400, messages: [{ role: 'user', content: prompt }] });
       } else {
         headers['Authorization'] = `Bearer ${key}`;
-        body = JSON.stringify({ model: p.model, messages: [{ role: 'user', content: prompt }], temperature: 0.1, max_tokens: 400, response_format: { type: 'json_object' } });
+        body = JSON.stringify({ model: p.model, messages: [{ role: 'user', content: prompt }], temperature: 0.1, max_tokens: p.maxTokens || 400, response_format: { type: 'json_object' } });
       }
       const res = await fetch(p.baseUrl, { method: 'POST', headers, body, signal: AbortSignal.timeout(40000) });
       if (!res.ok) {
         const err = await res.text();
-        if ([401, 402, 429].includes(res.status) || /quota|rate_limit|insufficient|unauthor/i.test(err)) { log(`${p.name} unavailable (${res.status}) — disabling`); p.disabled = true; }
+        if ([401, 402, 429].includes(res.status) || /quota|rate.?limit|insufficient|unauthor|credit|balance/i.test(err)) { log(`${p.name} unavailable (${res.status}) — disabling`); p.disabled = true; }
         else log(`${p.name} ${res.status}: ${err.slice(0, 80)}`);
         continue;
       }
       const json = await res.json();
-      const text = p.isAnthropic ? (json.content?.[0]?.text || '') : (json.choices?.[0]?.message?.content || '');
-      const m = text.replace(/```json|```/g, '').match(/\{[\s\S]*\}/);
+      const raw = p.isAnthropic ? (json.content?.[0]?.text || '') : (json.choices?.[0]?.message?.content || '');
+      // Strip reasoning-model <think> blocks first (MiniMax-M3 etc. emit them before the JSON,
+      // and the reasoning often echoes braces that would poison the greedy {…} match).
+      const text = raw.replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/```json|```/g, '');
+      const m = text.match(/\{[\s\S]*\}/);
       if (!m) { log(`${p.name} no JSON`); continue; }
       providerIdx = (providerIdx + attempt) % PROVIDERS.length; // stick with the one that worked
       return { verdict: JSON.parse(m[0]), provider: p.name };

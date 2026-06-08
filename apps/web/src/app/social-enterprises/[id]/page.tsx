@@ -1,9 +1,33 @@
+import type { Metadata } from 'next';
 import { getServiceSupabase } from '@/lib/supabase';
 import { notFound } from 'next/navigation';
 import { money } from '@/lib/services/report-service';
 import { matchGrantsForSocialEnterprise, type MatchedGrant } from '@/lib/services/se-grant-match';
+import { AddToPackButton } from '@/app/components/add-to-pack-button';
+import { isHedgeDescription } from '@/lib/supplier-copy';
 
 export const dynamic = 'force-dynamic';
+
+// Per-supplier title + description so a buyer pasting a profile into a procurement
+// email gets a real link preview (and tabs/SEO read the enterprise name, not the root title).
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = getServiceSupabase();
+  const { data } = await supabase
+    .from('social_enterprises')
+    .select('name, org_type, state, description')
+    .eq('id', id)
+    .single();
+  if (!data) return { title: 'Social Enterprise — CivicGraph' };
+  const description =
+    data.description && !isHedgeDescription(data.description)
+      ? (data.description as string)
+      : `${orgTypeLabel(data.org_type as string)}${data.state ? ` in ${data.state}` : ''} on CivicGraph — delivery evidence, government contracts and governance.`;
+  return {
+    title: `${data.name} — CivicGraph`,
+    description: description.slice(0, 160),
+  };
+}
 
 interface SocialEnterprise {
   id: string;
@@ -257,6 +281,23 @@ export default async function SocialEnterpriseDetailPage({ params }: { params: P
         </div>
       </div>
 
+      {/* Buyer action rail — the missing verb: collect this supplier toward a tender pack */}
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-4 border-4 border-bauhaus-black bg-bauhaus-canvas p-4">
+        <div>
+          <div className="text-[11px] font-black uppercase tracking-widest text-bauhaus-red mb-0.5">
+            Buying from suppliers like this?
+          </div>
+          <p className="text-sm font-medium text-bauhaus-black max-w-xl">
+            Shortlist this supplier and turn your picks into a tender-ready evidence pack —
+            delivery records, compliance forecast and policy citations.
+          </p>
+        </div>
+        <AddToPackButton
+          item={{ se_id: enterprise.id, name: enterprise.name, abn: enterprise.abn, state: enterprise.state }}
+          variant="profile"
+        />
+      </div>
+
       {/* Stats grid */}
       {(() => {
         const stats: Array<{ label: string; value: string }> = [];
@@ -282,11 +323,27 @@ export default async function SocialEnterpriseDetailPage({ params }: { params: P
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main content */}
         <div className="lg:col-span-2">
-          {enterprise.description && (
-            <Section title="About">
-              <p className="text-bauhaus-muted leading-relaxed text-[15px] font-medium">{enterprise.description}</p>
-            </Section>
-          )}
+          {(() => {
+            // F7: lead with what the evidence proves, not an AI hedge. Suppress
+            // descriptions that contradict the delivery record below them.
+            const isHedge = isHedgeDescription(enterprise.description);
+            const buyerLabel = topBuyers.length === 5 ? '5+ buyers' : `${topBuyers.length} buyer${topBuyers.length === 1 ? '' : 's'}`;
+            const evidenceLead = contractCount > 0
+              ? `Delivered ${money(contractTotal)}${contractCount > contracts.length ? '+' : ''} across ${contractCount.toLocaleString()} government contract${contractCount === 1 ? '' : 's'}${topBuyers.length > 0 ? ` for ${buyerLabel}` : ''}.`
+              : null;
+            const showDesc = Boolean(enterprise.description) && !isHedge;
+            if (!evidenceLead && !showDesc) return null;
+            return (
+              <Section title="About">
+                {evidenceLead && (
+                  <p className="text-bauhaus-black leading-relaxed text-[15px] font-bold mb-2">{evidenceLead}</p>
+                )}
+                {showDesc && (
+                  <p className="text-bauhaus-muted leading-relaxed text-[15px] font-medium">{enterprise.description}</p>
+                )}
+              </Section>
+            );
+          })()}
 
           {/* ACNC Link */}
           {matchedCharity && (
@@ -392,6 +449,9 @@ export default async function SocialEnterpriseDetailPage({ params }: { params: P
           {/* Open funding matched on sector + place */}
           {matchedGrants.length > 0 && (
             <Section title="Open Funding Matches">
+              <p className="text-xs text-bauhaus-muted font-medium mb-2 -mt-1">
+                For this enterprise — open grants it could apply for. Not part of buyer due diligence.
+              </p>
               <div className="bg-white border-4 border-bauhaus-black">
                 <div className="p-4 space-y-3">
                   {matchedGrants.map((g: MatchedGrant) => (
@@ -443,20 +503,6 @@ export default async function SocialEnterpriseDetailPage({ params }: { params: P
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Claim this profile */}
-          <div className="bg-bauhaus-yellow border-4 border-bauhaus-black p-4">
-            <h3 className="text-xs font-black text-bauhaus-black mb-2 uppercase tracking-widest">Is This Your Enterprise?</h3>
-            <p className="text-sm text-bauhaus-black font-medium leading-relaxed mb-3">
-              Claim this profile to correct details, add your ABN or certifications, and strengthen your evidence record.
-            </p>
-            <a
-              href={`/giving/corrections?target_type=social_enterprise&target_id=${enterprise.id}&claim_url=${encodeURIComponent(`/social-enterprises/${enterprise.id}`)}`}
-              className="inline-block border-4 border-bauhaus-black bg-bauhaus-black px-4 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-bauhaus-red"
-            >
-              Claim This Profile &rarr;
-            </a>
-          </div>
-
           {/* Sectors */}
           {enterprise.sector?.length > 0 && (
             <div className="bg-white border-4 border-bauhaus-black p-4">
@@ -600,6 +646,20 @@ export default async function SocialEnterpriseDetailPage({ params }: { params: P
                 Search ACNC &rarr;
               </a>
             )}
+          </div>
+
+          {/* Claim this profile — owner-facing, demoted below buyer-relevant evidence (F6) */}
+          <div className="bg-bauhaus-canvas border-4 border-bauhaus-black p-4">
+            <h3 className="text-xs font-black text-bauhaus-black mb-2 uppercase tracking-widest">Is this your enterprise?</h3>
+            <p className="text-sm text-bauhaus-black font-medium leading-relaxed mb-3">
+              Claim this profile to correct details, add your ABN or certifications, and strengthen your evidence record.
+            </p>
+            <a
+              href={`/giving/corrections?target_type=social_enterprise&target_id=${enterprise.id}&claim_url=${encodeURIComponent(`/social-enterprises/${enterprise.id}`)}`}
+              className="inline-block border-4 border-bauhaus-black bg-bauhaus-black px-4 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-bauhaus-red"
+            >
+              Claim this profile &rarr;
+            </a>
           </div>
         </div>
       </div>

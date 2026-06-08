@@ -87,6 +87,39 @@ if (showData) {
     const icon = mv.ispopulated === true ? '✅' : '❌';
     console.log(`  ${icon} ${mv.matviewname.padEnd(42)} ${mv.size}`);
   }
+
+  // MV staleness — ispopulated stays true even when data is weeks old, so check
+  // the last *successful* logged refresh. > 2 days is a red flag.
+  const [stale] = await sql(`SELECT MAX(finished_at) AS last_good FROM mv_refresh_log WHERE status = 'success'`);
+  if (stale?.last_good) {
+    const days = Math.floor((Date.now() - new Date(stale.last_good).getTime()) / 86400000);
+    const icon = days > 2 ? '🔴' : '✅';
+    console.log(`\n  ${icon} Last successful MV refresh: ${days}d ago (${new Date(stale.last_good).toISOString().slice(0, 10)})`);
+  } else {
+    console.log('\n  ⚠️  No successful MV refresh ever logged');
+  }
+
+  // Scheduled-job health (pg_cron) — surfaces silently-failing nightly jobs.
+  // A refresh cron can fail every night while ispopulated still reads true; this
+  // is the check that would have caught the 6-week-stale MV outage.
+  console.log('\n  ── SCHEDULED JOBS (pg_cron) ──\n');
+  const jobs = await sql(`
+    SELECT j.jobname, j.active, d.status AS last_status, d.start_time AS last_run,
+           LEFT(COALESCE(d.return_message, ''), 90) AS last_msg
+    FROM cron.job j
+    LEFT JOIN LATERAL (
+      SELECT status, start_time, return_message FROM cron.job_run_details
+      WHERE jobid = j.jobid ORDER BY start_time DESC LIMIT 1
+    ) d ON true
+    ORDER BY j.jobname
+  `);
+  for (const j of jobs) {
+    const ok = j.last_status === 'succeeded';
+    const icon = !j.active ? '⏸️ ' : ok ? '✅' : j.last_status ? '🔴' : '—';
+    const when = j.last_run ? `${Math.round((Date.now() - new Date(j.last_run).getTime()) / 3600000)}h ago` : 'never';
+    console.log(`  ${icon} ${(j.jobname || '').padEnd(34)} ${(j.last_status || 'no-runs').padEnd(10)} ${when}`);
+    if (j.active && !ok && j.last_msg) console.log(`       ↳ ${j.last_msg.replace(/\s+/g, ' ').trim()}`);
+  }
 }
 
 // ── Agent Health ──
