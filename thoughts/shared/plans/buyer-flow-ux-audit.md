@@ -59,5 +59,5 @@ For every screen a buyer hits, ask:
 
 ## Status
 - [x] Audit step 1 `/suppliers`  - [x] step 2 profile  - [x] step 3 directory  - [x] step 4 procurement  - [x] step 5 tender-pack
-- [x] Findings doc (Pass 1 F1–F9 + **Pass 2** 2026-06-08: confirmed fixes live, added directory/procurement + cross-cutting)  - [ ] Top fixes  - [ ] `/polish` skill
-- Pass-2 priority: P2-1 ranking · P2-2 directory evidence · then P2-5 metadata · P2-8 empty-state nudge. P2-3 (black-cladding wording) needs Ben.
+- [x] Findings doc (Pass 1 F1–F9 + **Pass 2** 2026-06-08: confirmed fixes live, added directory/procurement + cross-cutting)  - [x] Top fixes (**all Pass-2 P2-1…P2-8 shipped + verified live**)  - [ ] `/polish` skill
+- Pass-2 SHIPPED: P2-1 match legibility · P2-2 directory evidence+sort · P2-3 black-cladding explainer · P2-4 pack preview · P2-5 metadata · P2-6 unified hero · P2-7 landing proof · P2-8 empty-state nudge. Remaining deliverable: `/polish` loop-skill.

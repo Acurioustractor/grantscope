@@ -264,7 +264,36 @@ The browse path no longer strips the thesis.
   Amnesium ("341 govt contracts · $63.0M") and InteriorCo ("280 · $23.8M") instead of alphabetical
   "Koolyangarra…". The two list UIs now share one evidence language. tsc clean, 221 tests pass.
 
-**Still open:** P2-4 (output preview), P2-5 (metadata), P2-6 (heroes), P2-7 (landing proof),
-P2-8 (empty-state nudge).
+### P2-5 — DONE: per-page metadata across the flow.
+`generateMetadata` on the profile (`[id]/page.tsx` — title = enterprise name, description = SE
+description or a constructed evidence line) + static `metadata` on the directory; `layout.tsx` files
+for the client-component `/procurement` and `/procurement/tender-pack`. Verified: profile tab now
+reads "The Arnhem Land Progress Aboriginal Corporation — CivicGraph" (was the generic root title).
+
+### P2-8 — DONE: tender-pack empty state reveals the spine.
+`tender-pack/page.tsx` shows a "No shortlist yet — find suppliers →" nudge (links to `/suppliers`)
+when the shortlist is empty, so a cold visitor learns the intended shortlist-driven path.
+(`audit-12-tenderpack-after.jpeg`)
+
+### P2-4 — DONE: the paid artifact no longer sells blind.
+`tender-pack/page.tsx` now shows a "What's in the pack" panel above the generate button — verified
+supplier shortlist, IPP/SME compliance forecast, gap analysis, paste-ready policy citations — so the
+buyer sees the output before generating. (`audit-12-tenderpack-after.jpeg`)
+
+### P2-6 — DONE: one hero system.
+`/procurement` hero changed from blue-fill to black-fill + blue hard-shadow, matching
+`/procurement/tender-pack` and the directory. Blue is now an accent (shadow), not a hero fill (per
+DESIGN.md). `/suppliers` keeps its distinct search-landing hero by design. (`audit-11-procurement-hero-black.jpeg`)
+
+### P2-7 — DONE: landing dead-zone filled with pre-search proof.
+`suppliers/page.tsx` non-searched view now shows one-click "Popular needs" chips (Beds, Catering,
+Cleaning, …) and a live "What's already in the registry" stats strip — **11,861 enterprises · 1,131
+with proven govt delivery · 8,454 contracts · $53.6B tracked** — via a new `se_registry_stats()` RPC
+(`migrations/2026-06-08-se-registry-stats.sql`) kept live so the figure never rots.
+(`audit-10-landing-after.jpeg`)
+
+**All Pass-2 findings resolved.** Not audited either pass: `/procurement/gap-map`, `/commissioning`.
+Possible follow-ups: per-supplier OG/Twitter image cards; featured "proven outcomes" row on the
+landing; LGA/postcode autocomplete on the tender-pack footprint form (old F9).
 
 ---
