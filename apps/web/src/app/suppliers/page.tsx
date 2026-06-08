@@ -96,6 +96,20 @@ function IndigenousProvenBadge() {
   );
 }
 
+// OP8 — the governance-deepened tier within the Indigenous axis: ORIC + federal contract + ACNC charity
+// governance. Black-fill = the registry's "deepest" convention; red text/border keeps it on the Indigenous
+// axis. Strongest-wins over the basic Indigenous-proven badge.
+function IndigenousTripleProofBadge() {
+  return (
+    <span
+      title="Indigenous triple-proof — a registered Indigenous corporation (ORIC) that has won a federal contract AND carries ACNC charity governance. Verified Indigenous-controlled supply with proven federal delivery that also clears a governance bar — the deepest Indigenous-procurement shortlist in the registry."
+      className="text-[10px] px-2 py-0.5 font-black uppercase tracking-widest border-2 border-bauhaus-red bg-bauhaus-black text-bauhaus-red"
+    >
+      Indigenous triple-proof
+    </span>
+  );
+}
+
 function EvidenceLine({ r }: { r: SupplierResult }) {
   if (r.contract_count === 0) return null;
   const lastYear = r.last_contract_end ? new Date(r.last_contract_end).getFullYear() : null;
@@ -250,7 +264,7 @@ export default async function SupplierSearchPage({
                     </Link>
                     <div className="relative z-10 flex gap-1.5 flex-wrap">
                       {r.proven_outcomes ? <ProvenOutcomesBadge /> : r.triple_proof ? <TripleProofBadge /> : r.proven_govt_delivery ? <ProvenGovtDeliveryBadge /> : null}
-                      {r.indigenous_proven ? <IndigenousProvenBadge /> : null}
+                      {r.indigenous_triple_proof ? <IndigenousTripleProofBadge /> : r.indigenous_proven ? <IndigenousProvenBadge /> : null}
                       <TierBadge tier={r.verification_tier} />
                       {r.source_primary && (
                         <span className="text-[10px] px-2 py-0.5 font-black uppercase tracking-widest border-2 border-bauhaus-black/40 text-bauhaus-muted">

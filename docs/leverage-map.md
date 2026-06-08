@@ -30,10 +30,11 @@ All three are **evidence-depth** plays — the wedge's stated #1 tie-breaker ("e
 > **Enabler underneath all three: OP2** — link the 1,116 new VIC supplier ABNs into `gs_entities` so the
 > fresh procurement evidence flows into the same profiles.
 
-> **Premium tier (iter 4): OP7/OP8** are the *governance-deepened* versions of OP3/OP1 — the same buyers,
-> the same wedge play, but each org carries **three** independent proof signals instead of two. Fewer rows
-> (724 / 278), strictly deeper evidence. Per the wedge ("depth beats row count"), OP7 is a candidate to
-> *replace* OP3 in the headline as the premium shortlist; OP3 stays as the broad tier.
+> **Premium tier (iter 4): OP7/OP8 — both BUILT 2026-06-08.** The *governance-deepened* versions of OP3/OP1
+> — the same buyers, the same wedge play, but each org carries **three** independent proof signals instead
+> of two. Fewer rows (724 / 265), strictly deeper evidence. Per the wedge ("depth beats row count"), OP7 is
+> a candidate to *replace* OP3 in the headline as the premium shortlist; OP3 stays as the broad tier. OP8
+> ships the same play for the Indigenous axis (**"Indigenous triple-proof"** badge, strongest-wins over OP1).
 
 ---
 
@@ -108,13 +109,21 @@ All three are **evidence-depth** plays — the wedge's stated #1 tie-breaker ("e
   premium tier.) **Follow-up:** a browsable buyer list for the 558 non-SE triple-proof orgs.
 
 - **OP8 — Triple-proof Indigenous suppliers.** Datasets: `oric_corporations` × `austender_contracts` ×
-  `acnc_charities` via ABN. Serves: **G4∩G1 (best quadrant)**. Why valuable: **278 of OP1's 325 (86%)
-  contract-winning ORIC corps are also ACNC charities** — Indigenous-controlled orgs with proven federal
-  delivery *and* charity-grade governance. A buyer with Indigenous-procurement targets gets a shortlist
-  that already clears the governance bar. The 86% co-incidence is itself a finding: contract-winning ORIC
-  corps are overwhelmingly ACNC-registered. Evidence: 278 ABN-matched across 3 sources. State:
-  **partially-built** (`mv_indigenous_procurement_score` has the oric×contracts pair; ACNC is the
-  deepening). Effort: S–M. Wedge: **green**. (Refines OP1.)
+  `acnc_charities` via ABN. Serves: **G4∩G1 (best quadrant)**. Why valuable: **265 of OP1's 301 (88%)**
+  *registered* contract-winning ORIC corps are also ACNC charities — Indigenous-controlled orgs with proven
+  federal delivery *and* charity-grade governance. A buyer with Indigenous-procurement targets gets a
+  shortlist that already clears the governance bar. The 88% co-incidence is itself a finding: contract-winning
+  ORIC corps are overwhelmingly ACNC-registered. Evidence: 265 ABN-matched across 3 sources. State:
+  **BUILT 2026-06-08** — ACNC governance added as an OPTIONAL `has_acnc` flag onto `mv_indigenous_proven_suppliers`
+  (migration `20260608100000`, mirroring OP3→OP7's pattern; the MV keeps all 301 rows, 36 stay
+  Indigenous-proven, 265 upgrade). Surfaces as the **"Indigenous triple-proof"** badge (red-on-black) on
+  `/suppliers` search + `/social-enterprises/[id]`, strongest-wins over the basic OP1 badge within the
+  Indigenous axis (orthogonal to the OP3 justice hierarchy — South Coast Medical Service carries BOTH the
+  justice "Triple-proof" and "Indigenous triple-proof"). New `indigenous_triple_proof` flag in
+  `supplier-search.ts`. No new cron migration (MV name + refresh registration unchanged). Verified live:
+  301 rows · 265 triple-proof · 9 gold; badge correct on all three surfaces. Effort: S–M. Wedge: **green**.
+  (Refines OP1 → premium Indigenous tier, the OP1 analogue of OP7.) **NB:** the 278/325 figure in the
+  original find predated OP1's registered-only scoping; 265/301 is the verified post-scope count.
 
 - **OP9 — Conflict-of-interest risk flag on supplier profiles (narrow).** Datasets: `mv_entity_power_index`
   (`in_procurement` × `in_political_donations` × `distinct_parties_funded` / `parties_funded`). Serves:
