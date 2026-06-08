@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { searchSuppliers, type SupplierResult } from '@/lib/services/supplier-search';
 import { money } from '@/lib/services/report-service';
+import { AddToPackButton } from '@/app/components/add-to-pack-button';
+import { isHedgeDescription } from '@/lib/supplier-copy';
 
 export const dynamic = 'force-dynamic';
 
@@ -168,12 +170,18 @@ export default async function SupplierSearchPage({
           ) : (
             <div className="border-4 border-bauhaus-black">
               {results.map((r, i) => (
-                <div key={r.se_id} className={`bg-white p-5 ${i < results.length - 1 ? 'border-b-4 border-bauhaus-black' : ''}`}>
+                <div
+                  key={r.se_id}
+                  className={`group relative cursor-pointer bg-white p-5 transition-colors hover:bg-bauhaus-yellow/10 ${i < results.length - 1 ? 'border-b-4 border-bauhaus-black' : ''}`}
+                >
                   <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1.5">
-                    <Link href={`/social-enterprises/${r.se_id}`} className="text-lg font-black text-bauhaus-black hover:text-bauhaus-red">
+                    <Link
+                      href={`/social-enterprises/${r.se_id}`}
+                      className="text-lg font-black text-bauhaus-black group-hover:text-bauhaus-red before:absolute before:inset-0 before:content-['']"
+                    >
                       {r.name}
                     </Link>
-                    <div className="flex gap-1.5 flex-wrap">
+                    <div className="relative z-10 flex gap-1.5 flex-wrap">
                       {r.proven_outcomes ? <ProvenOutcomesBadge /> : r.triple_proof ? <TripleProofBadge /> : null}
                       <TierBadge tier={r.verification_tier} />
                       {r.source_primary && (
@@ -188,17 +196,27 @@ export default async function SupplierSearchPage({
                     {[r.city, r.state].filter(Boolean).join(', ')}
                     {r.sectors && r.sectors.length > 0 && <> · {r.sectors.slice(0, 4).join(' · ')}</>}
                   </div>
-                  {r.description && (
+                  {r.description && !isHedgeDescription(r.description) && (
                     <p className="text-sm text-bauhaus-muted font-medium mt-2 line-clamp-2">{r.description}</p>
                   )}
-                  {r.verification_tier === 'identified' && (
-                    <p className="text-[11px] font-bold text-bauhaus-muted mt-2">
-                      Run this enterprise?{' '}
-                      <Link href="/giving/corrections" className="text-bauhaus-blue hover:text-bauhaus-red">
-                        Claim and complete this profile
-                      </Link>
-                    </p>
-                  )}
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    {r.verification_tier === 'identified' ? (
+                      <p className="relative z-10 text-[11px] font-bold text-bauhaus-muted">
+                        Run this enterprise?{' '}
+                        <Link href="/giving/corrections" className="text-bauhaus-blue hover:text-bauhaus-red">
+                          Claim and complete this profile
+                        </Link>
+                      </p>
+                    ) : (
+                      <span />
+                    )}
+                    <div className="flex items-center gap-3 whitespace-nowrap">
+                      <AddToPackButton item={{ se_id: r.se_id, name: r.name, abn: r.abn, state: r.state }} />
+                      <span className="text-[11px] font-black uppercase tracking-widest text-bauhaus-red transition-transform group-hover:translate-x-1">
+                        View profile →
+                      </span>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
