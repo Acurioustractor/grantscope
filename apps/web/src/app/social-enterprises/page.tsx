@@ -1,4 +1,5 @@
 import { getServiceSupabase } from '@/lib/supabase';
+import { money } from '@/lib/services/report-service';
 import { SEClient } from './se-client';
 import type { SEMapPoint } from './se-map';
 
@@ -24,6 +25,11 @@ interface SocialEnterprise {
   profile_confidence: string;
   enriched_at: string | null;
   created_at: string;
+  contract_count: number;
+  contract_value: number;
+  verification_tier: 'certified' | 'verified' | 'identified' | null;
+  triple_proof: boolean;
+  proven_outcomes: boolean;
 }
 
 function orgTypeBadge(type: string): { label: string; cls: string } {
@@ -73,6 +79,7 @@ const SECTORS = [
 ];
 
 const SORT_OPTIONS = [
+  { value: 'evidence', label: 'Delivery Evidence' },
   { value: 'name', label: 'Name A-Z' },
   { value: 'newest', label: 'Newest Added' },
   { value: 'state', label: 'By State' },
@@ -105,15 +112,16 @@ export default async function SocialEnterprisesPage({ searchParams }: { searchPa
   const sectorFilter = params.sector || '';
   const sourceFilter = params.source || '';
   const indigenousFilter = params.indigenous || '';
-  const sortBy = params.sort || 'name';
+  const sortBy = params.sort || 'evidence';
   const page = parseInt(params.page || '1', 10);
   const pageSize = 25;
   const offset = (page - 1) * pageSize;
 
   const supabase = getServiceSupabase();
+  // se_directory = social_enterprises LEFT JOINed to delivery evidence + proof flags
   let dbQuery = supabase
-    .from('social_enterprises')
-    .select('id, name, abn, org_type, legal_structure, description, website, state, city, postcode, sector, certifications, source_primary, target_beneficiaries, logo_url, business_model, profile_confidence, enriched_at, created_at', { count: 'exact' });
+    .from('se_directory')
+    .select('id, name, abn, org_type, legal_structure, description, website, state, city, postcode, sector, certifications, source_primary, target_beneficiaries, logo_url, business_model, profile_confidence, enriched_at, created_at, contract_count, contract_value, verification_tier, triple_proof, proven_outcomes', { count: 'exact' });
 
   if (query) dbQuery = dbQuery.or(`name.ilike.%${query}%,description.ilike.%${query}%`);
   if (orgTypeFilter) dbQuery = dbQuery.eq('org_type', orgTypeFilter);
@@ -122,12 +130,18 @@ export default async function SocialEnterprisesPage({ searchParams }: { searchPa
   if (sourceFilter) dbQuery = dbQuery.eq('source_primary', sourceFilter);
   if (indigenousFilter === 'true') dbQuery = dbQuery.or('source_primary.eq.oric,source_primary.eq.supply-nation,source_primary.eq.kinaway');
 
-  if (sortBy === 'newest') {
+  if (sortBy === 'name') {
+    dbQuery = dbQuery.order('name', { ascending: true });
+  } else if (sortBy === 'newest') {
     dbQuery = dbQuery.order('created_at', { ascending: false });
   } else if (sortBy === 'state') {
     dbQuery = dbQuery.order('state', { ascending: true, nullsFirst: false });
   } else {
-    dbQuery = dbQuery.order('name', { ascending: true });
+    // evidence (default): proven deliverers first, then alphabetical
+    dbQuery = dbQuery
+      .order('contract_count', { ascending: false })
+      .order('contract_value', { ascending: false })
+      .order('name', { ascending: true });
   }
 
   dbQuery = dbQuery.range(offset, offset + pageSize - 1);
@@ -143,7 +157,7 @@ export default async function SocialEnterprisesPage({ searchParams }: { searchPa
   if (sectorFilter) filterParams.set('sector', sectorFilter);
   if (sourceFilter) filterParams.set('source', sourceFilter);
   if (indigenousFilter) filterParams.set('indigenous', indigenousFilter);
-  if (sortBy !== 'name') filterParams.set('sort', sortBy);
+  if (sortBy !== 'evidence') filterParams.set('sort', sortBy);
   const filterQS = filterParams.toString();
 
   // Fetch map aggregation data — group by postcode with lat/lng
@@ -309,6 +323,25 @@ export default async function SocialEnterprisesPage({ searchParams }: { searchPa
                       <a href={`/social-enterprises?org_type=${se.org_type}`} className={`text-[11px] px-1.5 py-0.5 font-black uppercase tracking-wider border-2 hover:opacity-80 transition-opacity ${badge.cls}`}>
                         {badge.label}
                       </a>
+                      {(se.proven_outcomes || se.triple_proof) && (
+                        <span
+                          title={se.proven_outcomes
+                            ? 'Proven outcomes — triple-proof plus cited ALMA evidence and measured outcomes. The deepest delivery proof in the registry.'
+                            : 'Triple-proof — justice/community delivery, a won federal contract, and ACNC charity governance.'}
+                          className={`text-[11px] px-1.5 py-0.5 font-black uppercase tracking-wider border-2 ${
+                            se.proven_outcomes
+                              ? 'border-bauhaus-black bg-bauhaus-yellow text-bauhaus-black'
+                              : 'border-bauhaus-black bg-bauhaus-black text-bauhaus-yellow'
+                          }`}
+                        >
+                          {se.proven_outcomes ? 'Proven outcomes' : 'Triple-proof'}
+                        </span>
+                      )}
+                      {se.contract_count > 0 && (
+                        <span className="text-[11px] px-1.5 py-0.5 font-black uppercase tracking-wider border-2 border-money bg-money-light text-money">
+                          {se.contract_count.toLocaleString()} govt contract{se.contract_count === 1 ? '' : 's'} · {money(se.contract_value)}
+                        </span>
+                      )}
                       {se.state && (
                         <a href={`/social-enterprises?state=${se.state}`} className="font-bold hover:text-bauhaus-blue transition-colors">{se.state}</a>
                       )}
