@@ -65,6 +65,25 @@ large. Fixing the agents is higher-leverage than any one-off backfill.
 - **C3 — `acnc_charities` website 33% missing.** Backfill.
 - **C4 — `austender_contracts` value/title hygiene.** 2,627 rows zero/null value; 0.1% no title.
   Flag + source-check.
+- **C5 — `state` contradicts `lga_code` (border-LGA mislabels) [scoped 2026-06-09, M].** The ABS
+  `lga_code` first digit is the authoritative state (1 NSW · 2 VIC · 3 QLD · 4 SA · 5 WA · 6 TAS ·
+  7 NT · 8 ACT) and is 99.97% populated, but the `state` column disagrees for a band of border LGAs:
+  **`postcode_geo` 130 rows** (e.g. Laverton coded NT but lga_code 54970 = WA; Albury VIC→NSW;
+  Goondiwindi NSW→QLD) and **`gs_entities` ~4,556 wrong + 2,393 null** (of the 285K with a usable code;
+  313K entities have no `lga_code` and can't be derived — leave as-is). *Partial fix already shipped:*
+  migration `20260609020000` backfilled the 1,071 `postcode_geo` **nulls** (fixed the 227 funding-desert
+  "Unknown" LGAs); the **contradictions** were deliberately deferred here. **Why it needs care, not a
+  one-liner:** `mv_funding_deserts` FULL JOINs the disadvantage side (`postcode_geo`) to the power side
+  (`mv_entity_power_index` ← `gs_entities.state`) on `(lga_name, state)` — correcting one side alone
+  *creates* phantom split rows (a "Laverton WA / 0 entities" ghost beside the real "Laverton NT / 85").
+  **Recipe:** UPDATE both `gs_entities.state` and `postcode_geo.state` from `LEFT(lga_code,1)` in lockstep
+  (WHERE `lga_code ~ '^[1-8]'` AND state null/empty OR ≠ derived), then refresh `mv_entity_power_index`
+  + downstream (`mv_funding_deserts`, `mv_funding_by_postcode`, `mv_funding_by_lga`, and the power/
+  revolving-door/board MVs that read entity state). **Blast radius:** `gs_entities.state` feeds state
+  filters, dashboards, OP1/OP3 supplier shortlists, and the central power index — app-wide; verify
+  state-keyed counts before/after and spot-check the named border LGAs. **Tier 2-3, Ben's explicit go
+  on the run.** Cross-ref **C1** (adding `lga_code` to `mv_funding_deserts` and keying on it instead of
+  `(lga_name, state)` would structurally eliminate the split — the deeper fix).
 
 ---
 
