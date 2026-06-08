@@ -185,6 +185,44 @@ fixed, or trigger manually) + re-run `scout-se-buyers` against the new VIC suppl
 
 ---
 
+## 🟢 Agent-fleet root causes found + fixed (2026-06-09)
+
+Triaged the failing-agent cluster (A1) live against `agent_runs` + the pm2 `orchestrator` (id 133).
+**The "3% success / silent failure" signal was NOT one bug — it was three, two of them environmental,
+not agent-code:**
+
+1. **`spawn psql ENOENT` (A1 root cause — FIXED + PROVEN + PUSHED).** The pm2 orchestrator spawned every
+   agent (`execFile`) with pm2's minimal PATH, which omits Homebrew, so all agents that shell out to `psql`
+   (Trust Remediation Loop, Refresh Materialized Views, Youth Justice source chain, the `execSync('psql')`
+   backfill/build agents) died with `spawnSync psql ENOENT`. **Fix:** added a `PATH` env (Homebrew + base)
+   to the orchestrator in `ecosystem.config.js` (commit `d7a2aaa`), `pm2 restart … --update-env` + `pm2 save`.
+   **Proven:** queued a Trust Remediation task — it ran **>220s past the old 8.6s→ENOENT death point** with
+   zero ENOENT in logs. `pm2 jlist` confirms the orchestrator env now carries the psql dir.
+
+2. **PostgREST schema-cache error blocked the executor (the dominant *current* blocker — CLEARED).** The
+   orchestrator's `claim_next_task` RPC was failing with *"Could not query the database for the schema
+   cache. Retrying."* → it couldn't claim **any** pending task, so the whole fleet stalled. Shaken loose by
+   this session's DDL migrations + 38-MV refresh (PostgREST reloads its cache on schema changes). **Cleared
+   with `NOTIFY pgrst, 'reload schema';`** — executor immediately resumed claiming + running tasks. *If it
+   recurs after heavy DDL/refresh, the same NOTIFY (or a Supabase schema reload) fixes it; consider issuing
+   it automatically at the end of the nightly MV-refresh job.*
+
+3. **`agent_tasks_priority_check` violations (FIXED).** CHECK is `priority BETWEEN 1 AND 10`; the only
+   offender was the `watch-outcomes-changes` schedule at **priority 50**, so every 5-min scheduler tick
+   failed to create its task. **Fix:** clamped to 10 (migration `20260609050000`).
+
+- **A5 — runs don't terminalize (stuck `running`) — ROOT CAUSE FOUND, fix scoped, NOT yet built.** On
+  orchestrator restart, `shutdown()` kills active child agents but they never call `logComplete`/`logFailed`,
+  so their `agent_runs` rows are orphaned in `status='running'` forever (and read as non-success on the
+  dashboard — this is the real source of the "0ms / silent" signal, *not* an LLM/API failure as iter-2
+  guessed). The wedge-critical enrich agents (Enrich SE/Charities) actually **run clean standalone**.
+  **Fix (orchestrator code):** add a reaper — on startup and on a periodic tick, mark `agent_runs` that are
+  `running` with `started_at` older than a sane timeout (and no live child) → `failed` ("orphaned by
+  restart/timeout"). Then re-measure true agent success rates (likely far higher than the iter-1 3%).
+  *Net: agents now **run** (psql + executor fixed); they don't yet cleanly **close their run log**.*
+
+---
+
 **Loop status: PARKED again.** Crawl facet mined (iter 6); backlog ≈ 24 ideas. Next genuinely-new state =
 the **17:00 UTC MV refresh** (~18h) — which should also clear the `mv_data_quality` staleness and, if C1
 ships, the dedup MVs. Re-mines on next gate-check if `mv_refresh_log` shows a 2026-06-08 success.
