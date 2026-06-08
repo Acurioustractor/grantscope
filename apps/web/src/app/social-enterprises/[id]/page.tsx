@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { getServiceSupabase } from '@/lib/supabase';
 import { notFound } from 'next/navigation';
 import { money } from '@/lib/services/report-service';
@@ -6,6 +7,27 @@ import { AddToPackButton } from '@/app/components/add-to-pack-button';
 import { isHedgeDescription } from '@/lib/supplier-copy';
 
 export const dynamic = 'force-dynamic';
+
+// Per-supplier title + description so a buyer pasting a profile into a procurement
+// email gets a real link preview (and tabs/SEO read the enterprise name, not the root title).
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = getServiceSupabase();
+  const { data } = await supabase
+    .from('social_enterprises')
+    .select('name, org_type, state, description')
+    .eq('id', id)
+    .single();
+  if (!data) return { title: 'Social Enterprise — CivicGraph' };
+  const description =
+    data.description && !isHedgeDescription(data.description)
+      ? (data.description as string)
+      : `${orgTypeLabel(data.org_type as string)}${data.state ? ` in ${data.state}` : ''} on CivicGraph — delivery evidence, government contracts and governance.`;
+  return {
+    title: `${data.name} — CivicGraph`,
+    description: description.slice(0, 160),
+  };
+}
 
 interface SocialEnterprise {
   id: string;

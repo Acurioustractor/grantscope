@@ -1,9 +1,16 @@
+import type { Metadata } from 'next';
 import { getServiceSupabase } from '@/lib/supabase';
 import { money } from '@/lib/services/report-service';
 import { SEClient } from './se-client';
 import type { SEMapPoint } from './se-map';
 
 export const dynamic = 'force-dynamic';
+
+export const metadata: Metadata = {
+  title: 'Australian Social Enterprises — CivicGraph',
+  description:
+    'Free, open directory of 11,800+ Australian social and Indigenous enterprises, ranked by delivery evidence — government contracts, certifications and governance. Supply Nation, ORIC, Social Traders, BuyAbility, B Corp and more.',
+};
 
 interface SocialEnterprise {
   id: string;
