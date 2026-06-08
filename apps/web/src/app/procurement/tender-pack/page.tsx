@@ -281,6 +281,28 @@ export default function TenderPackPage() {
             </>
           )}
 
+          {/* Empty shortlist — reveal the spine: the intended path is shortlist-driven */}
+          {shortlist.length === 0 && (
+            <div className="border-4 border-bauhaus-black bg-bauhaus-canvas p-5 flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <div className="text-[11px] font-black uppercase tracking-widest text-bauhaus-red mb-0.5">
+                  No shortlist yet
+                </div>
+                <p className="text-sm font-medium text-bauhaus-black max-w-xl">
+                  The fastest pack starts from suppliers you&apos;ve picked. Search the open registry, add
+                  the ones that fit, and they&apos;ll seed your pack here — or build straight from a project
+                  footprint below.
+                </p>
+              </div>
+              <Link
+                href="/suppliers"
+                className="px-6 py-3 bg-bauhaus-black text-white text-xs font-black uppercase tracking-widest border-2 border-bauhaus-black hover:bg-bauhaus-red transition-colors whitespace-nowrap"
+              >
+                Find suppliers &rarr;
+              </Link>
+            </div>
+          )}
+
           {/* Filters */}
           <div className="border-4 border-bauhaus-black p-6 space-y-5">
             <h2 className="text-xs font-black uppercase tracking-widest">Project Footprint</h2>
@@ -369,6 +391,27 @@ export default function TenderPackPage() {
                   </button>
                 ))}
               </div>
+            </div>
+          </div>
+
+          {/* What you'll get — earn the generate click by showing the output up front */}
+          <div className="border-4 border-bauhaus-black bg-white p-5">
+            <h3 className="text-xs font-black uppercase tracking-widest text-bauhaus-muted mb-3">What&apos;s in the pack</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+              {[
+                ['Verified supplier shortlist', 'Each enterprise with its delivery evidence — won contracts, value, buyers and verification tier.'],
+                ['IPP / SME compliance forecast', 'Whether this shortlist can meet your Indigenous and SME procurement targets, with the numbers behind it.'],
+                ['Gap analysis', 'Where the supply base is thin for your footprint, flagged by severity.'],
+                ['Paste-ready policy citations', 'The procurement-policy basis for weighting social value, ready to drop into your tender.'],
+              ].map(([t, d]) => (
+                <div key={t} className="flex gap-2">
+                  <span className="text-bauhaus-red font-black">&rarr;</span>
+                  <div>
+                    <div className="font-bold text-bauhaus-black">{t}</div>
+                    <div className="text-bauhaus-muted font-medium">{d}</div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
