@@ -9,6 +9,7 @@ import {
   money, REL_TYPE_LABEL, STAGE_LABEL, warmthBand, bandPill, nextBestAction, relDays,
 } from '@/lib/services/goods-engagement-shared';
 import { ScrapeMoreButton } from './scrape-more-button';
+import { GoodsSubNav } from '../_components/goods-sub-nav';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,28 +23,6 @@ function Stat({ label, value, accent, detail }: { label: string; value: string; 
       <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">{label}</div>
       <div className="mt-1 text-2xl font-black text-bauhaus-black">{value}</div>
       {detail && <div className="mt-1 text-[10px] font-bold text-bauhaus-muted">{detail}</div>}
-    </div>
-  );
-}
-
-function GoodsSubNav({ slug, active }: { slug: string; active: 'engagement' | 'money' | 'intros' }) {
-  const link = (key: 'engagement' | 'money' | 'intros', label: string) => (
-    <Link
-      href={`/org/${slug}/goods/${key}`}
-      className={`border-2 px-2.5 py-1 text-[11px] font-black uppercase tracking-widest ${
-        active === key
-          ? 'border-white bg-white text-bauhaus-black'
-          : 'border-white/40 text-white hover:border-white'
-      }`}
-    >
-      {label}
-    </Link>
-  );
-  return (
-    <div className="mt-4 flex flex-wrap gap-2">
-      {link('engagement', 'Warmth Map')}
-      {link('money', 'Money')}
-      {link('intros', 'Warm Intros')}
     </div>
   );
 }

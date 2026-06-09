@@ -10,6 +10,7 @@ import {
 } from '@/lib/services/goods-engagement-shared';
 import { RelationshipCard } from './relationship-card';
 import { AddPartnerForm } from './add-partner-form';
+import { GoodsSubNav } from '../_components/goods-sub-nav';
 
 export const dynamic = 'force-dynamic';
 
@@ -62,17 +63,7 @@ export default async function GoodsEngagementPage({
             <strong className="text-white"> next best action</strong> to get closer. Hybrid score: computed from stage, recency,
             history and alignment, with manual override.
           </p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Link href={`/org/${slug}/goods/engagement`} className="border-2 border-white bg-white px-2.5 py-1 text-[11px] font-black uppercase tracking-widest text-bauhaus-black">
-              Warmth Map
-            </Link>
-            <Link href={`/org/${slug}/goods/money`} className="border-2 border-white/40 px-2.5 py-1 text-[11px] font-black uppercase tracking-widest text-white hover:border-white">
-              Money
-            </Link>
-            <Link href={`/org/${slug}/goods/intros`} className="border-2 border-white/40 px-2.5 py-1 text-[11px] font-black uppercase tracking-widest text-white hover:border-white">
-              Warm Intros
-            </Link>
-          </div>
+          <GoodsSubNav slug={slug} active="engagement" />
         </div>
       </div>
 

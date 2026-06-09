@@ -4,6 +4,7 @@ import { ACT_FAST_PROFILE, isActSlug, shouldUseFastLocalOrg } from '@/lib/servic
 import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
 import { getGoodsWarmIntros } from '@/lib/services/goods-warm-intros';
 import { REL_TYPE_LABEL, type GoodsRelType } from '@/lib/services/goods-engagement-shared';
+import { GoodsSubNav } from '../_components/goods-sub-nav';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,29 +17,6 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
     <div className={`border-4 ${accent ? 'border-bauhaus-blue bg-link-light' : 'border-bauhaus-black bg-white'} p-3`}>
       <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">{label}</div>
       <div className="mt-1 text-2xl font-black text-bauhaus-black">{value}</div>
-    </div>
-  );
-}
-
-function GoodsSubNav({ slug, active }: { slug: string; active: 'engagement' | 'money' | 'intros' }) {
-  const tabs: [key: 'engagement' | 'money' | 'intros', label: string][] = [
-    ['engagement', 'Warmth Map'],
-    ['money', 'Money'],
-    ['intros', 'Warm Intros'],
-  ];
-  return (
-    <div className="mt-4 flex flex-wrap gap-2">
-      {tabs.map(([key, label]) => (
-        <Link
-          key={key}
-          href={`/org/${slug}/goods/${key}`}
-          className={`border-2 px-2.5 py-1 text-[11px] font-black uppercase tracking-widest ${
-            active === key ? 'border-white bg-white text-bauhaus-black' : 'border-white/40 text-white hover:border-white'
-          }`}
-        >
-          {label}
-        </Link>
-      ))}
     </div>
   );
 }
