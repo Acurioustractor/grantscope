@@ -168,6 +168,29 @@ async function fetchPipelineOpportunities(pipelineId) {
   return all;
 }
 
+/**
+ * Best-effort: fetch all pipelines for the location and build a
+ * pipelineStageId -> human stage name map (e.g. "Stewarding / Reporting").
+ * Used purely for display enrichment in ghl_signal; failure is non-fatal
+ * (names just stay null — the engagement-ladder stage is unaffected).
+ */
+async function fetchStageNames() {
+  const map = new Map();
+  try {
+    const data = await ghlFetch(
+      `${BASE_URL}/opportunities/pipelines?locationId=${encodeURIComponent(LOCATION_ID)}`
+    );
+    for (const p of data.pipelines || []) {
+      for (const s of p.stages || []) {
+        if (s.id && s.name) map.set(s.id, s.name);
+      }
+    }
+  } catch (e) {
+    console.error(`WARN: could not fetch pipeline stage names (non-fatal): ${e.message}`);
+  }
+  return map;
+}
+
 // Double single quotes for safe SQL literal embedding (handles "O'Brien").
 function sqlStr(v) {
   if (v === null || v === undefined) return 'NULL';
@@ -210,6 +233,9 @@ async function main() {
   const perPipeline = [];
   let unmappedCount = 0;
   let skippedNoName = 0;
+  let withTags = 0;
+  const syncedAt = new Date().toISOString();
+  const stageNames = await fetchStageNames(); // pipelineStageId -> human name (best-effort)
   const seenDedupe = new Set(); // relationship_type + ':' + lower(name) — pre-dedupe within run
 
   for (const p of PIPELINES) {
@@ -248,6 +274,22 @@ async function main() {
       const hasPrior = stage === 'committed' || stage === 'repeat';
       const totalReceived = hasPrior ? sqlNum(opp.monetaryValue) : '0';
 
+      // Structured GHL signal — contact tags (temperature, ring, briefs, roles,
+      // place, campaign stage) + opportunity status/stage. Decoded into funder
+      // insight by goods-funder-insight-shared.ts. Full tag set is embedded in
+      // opp.contact.tags (verified complete vs the contacts endpoint).
+      const tags = Array.isArray(opp.contact?.tags)
+        ? opp.contact.tags.filter((t) => typeof t === 'string')
+        : [];
+      if (tags.length) withTags += 1;
+      const ghlSignal = {
+        tags,
+        opportunity_status: opp.status || null,
+        opportunity_stage_name: stageNames.get(opp.pipelineStageId) || null,
+        last_stage_change_at: opp.lastStageChangeAt || null,
+        synced_at: syncedAt,
+      };
+
       rows.push({
         relationship_type: p.relationship_type,
         display_name: displayName,
@@ -258,6 +300,7 @@ async function main() {
         total_received_aud: totalReceived,
         has_prior_support: hasPrior,
         pipeline: p.name,
+        ghl_signal: ghlSignal,
       });
     }
   }
@@ -283,19 +326,20 @@ async function main() {
       contact_id: r.ghl_contact_id,
     };
     const srcJson = sqlStr(JSON.stringify(src)) + '::jsonb';
+    const signalJson = sqlStr(JSON.stringify(r.ghl_signal)) + '::jsonb';
     const stageLit = sqlStr(r.stage);
     const lastTouchLit = sqlTs(r.last_touch_at);
     const totalLit = r.total_received_aud; // already numeric-safe string
     const priorLit = r.has_prior_support ? 'true' : 'false';
 
     lines.push(
-      `INSERT INTO goods_relationships (relationship_type, display_name, ghl_opportunity_id, ghl_contact_id, stage, last_touch_at, total_received_aud, has_prior_support, warmth_computed, source_refs)`
+      `INSERT INTO goods_relationships (relationship_type, display_name, ghl_opportunity_id, ghl_contact_id, stage, last_touch_at, total_received_aud, has_prior_support, warmth_computed, source_refs, ghl_signal)`
     );
     lines.push(
       `SELECT ${sqlStr(r.relationship_type)}, ${sqlStr(r.display_name)}, ${sqlStr(r.ghl_opportunity_id)}, ${sqlStr(r.ghl_contact_id)}, ${stageLit}, ${lastTouchLit}, ${totalLit}::numeric, ${priorLit},`
     );
     lines.push(
-      `       goods_compute_warmth(${stageLit}, ${lastTouchLit}, ${totalLit}::numeric, NULL, ${priorLit}, 0), ${srcJson}`
+      `       goods_compute_warmth(${stageLit}, ${lastTouchLit}, ${totalLit}::numeric, NULL, ${priorLit}, 0), ${srcJson}, ${signalJson}`
     );
     lines.push(
       `ON CONFLICT (dedupe_key) DO UPDATE SET`
@@ -325,6 +369,9 @@ async function main() {
       `  source_refs = goods_relationships.source_refs || EXCLUDED.source_refs,`
     );
     lines.push(
+      `  ghl_signal = EXCLUDED.ghl_signal,`
+    );
+    lines.push(
       `  updated_at = now();`
     );
     lines.push('');
@@ -344,6 +391,8 @@ async function main() {
   const totalOpps = perPipeline.reduce((a, b) => a + b.count, 0);
   console.log(`  TOTAL opportunities: ${totalOpps}`);
   console.log(`Rows emitted (after in-run dedupe): ${rows.length}`);
+  console.log(`Rows with GHL signal tags: ${withTags}`);
+  console.log(`Stage names resolved: ${stageNames.size}`);
   console.log(`Unmapped stageIds (defaulted to 'identified'): ${unmappedCount}`);
   console.log(`Skipped (empty name): ${skippedNoName}`);
   console.log(`SQL written: ${OUT_SQL}`);
