@@ -2,8 +2,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ACT_FAST_PROFILE, isActSlug, shouldUseFastLocalOrg } from '@/lib/services/fast-local-org';
 import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
-import { getGoodsGovernance } from '@/lib/services/goods-governance';
-import { BELONGING_RUNGS, type GovernanceMember, type GovernanceStatus } from '@/lib/services/goods-governance-shared';
+import { getGoodsGovernance, getSupporterLadder } from '@/lib/services/goods-governance';
+import { type GovernanceMember, type GovernanceStatus } from '@/lib/services/goods-governance-shared';
 import { GoodsSubNav } from '../_components/goods-sub-nav';
 
 export const dynamic = 'force-dynamic';
@@ -71,7 +71,7 @@ export default async function GoodsGovernancePage({ params }: { params: Promise<
   const profile = shouldUseFastLocalOrg() && isActSlug(slug) ? ACT_FAST_PROFILE : await getOrgProfileBySlug(slug);
   if (!profile) notFound();
 
-  const { members } = await getGoodsGovernance();
+  const [{ members }, ladder] = await Promise.all([getGoodsGovernance(), getSupporterLadder()]);
 
   return (
     <main className="min-h-screen bg-bauhaus-canvas text-bauhaus-black">
@@ -124,27 +124,41 @@ export default async function GoodsGovernancePage({ params }: { params: Promise<
 
         {/* Supporter belonging ladder (NOT the board) */}
         <div className="mt-10">
-          <h2 className="text-lg font-black uppercase tracking-widest">The supporter belonging ladder</h2>
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-lg font-black uppercase tracking-widest">The supporter belonging ladder</h2>
+            <span className="text-[11px] font-bold uppercase tracking-widest text-bauhaus-muted">
+              {ladder.total} on the ladder{ladder.offLadder > 0 && ` · ${ladder.offLadder} off`}
+            </span>
+          </div>
           <p className="mt-1 max-w-3xl text-[13px] text-bauhaus-black/80">
             How supporters move toward belonging. This is the ACT Belonging Model, the same five rungs across the whole
             ecosystem, with the Goods meaning of each. It applies to funders, members and buyers. It does not apply to
             the board above, and it never applies to the communities the work is with.
           </p>
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-5">
-            {BELONGING_RUNGS.map((rung, i) => (
+            {ladder.rungs.map((rung, i) => (
               <div key={rung.tier} className="border-4 border-bauhaus-black bg-white p-3">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">{`0${i + 1}`}</span>
                   <span className="font-mono text-[9px] uppercase tracking-widest text-bauhaus-muted">tier:{rung.tier}</span>
                 </div>
-                <div className="mt-1 text-base font-black uppercase tracking-widest">{rung.label}</div>
+                <div className="mt-1 flex items-baseline gap-2">
+                  <span className="text-3xl font-black tabular-nums leading-none">{rung.count}</span>
+                  <span className="text-base font-black uppercase tracking-widest">{rung.label}</span>
+                </div>
                 <div className="mt-1 text-[12px] leading-snug text-bauhaus-black/80">{rung.meaning}</div>
+                {rung.examples.length > 0 && (
+                  <div className="mt-2 border-t border-bauhaus-black/10 pt-1.5 text-[10px] leading-snug text-bauhaus-muted">
+                    {rung.examples.join(', ')}
+                  </div>
+                )}
               </div>
             ))}
           </div>
           <p className="mt-2 text-[11px] text-bauhaus-muted">
-            The <code className="bg-white px-1">tier:</code> tag in GoHighLevel stays the source of truth for a
-            supporter&rsquo;s rung. Wiring live supporter counts onto these rungs is the next slice.
+            Counts are live from <code className="bg-white px-1">goods_relationships</code>, mapped from pipeline stage
+            to rung (an explicit <code className="bg-white px-1">tier:</code> tag in GoHighLevel wins when set). Off-ladder
+            counts dormant and declined. Steward fills in as supporters are tagged <code className="bg-white px-1">tier:steward</code>.
           </p>
         </div>
 

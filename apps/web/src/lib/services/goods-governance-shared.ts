@@ -89,3 +89,90 @@ export const BELONGING_RUNGS: readonly BelongingRung[] = [
   { tier: 'active', label: 'Active', meaning: 'Repeat giving, deploys beds, refers others.' },
   { tier: 'steward', label: 'Steward', meaning: 'Champion or advisory; backs community ownership.' },
 ] as const;
+
+export type SupporterRung = BelongingRung['tier'];
+const RUNG_TIERS = new Set<string>(BELONGING_RUNGS.map((r) => r.tier));
+
+/**
+ * Map a Goods engagement-ladder stage to a belonging rung. The Goods pipeline is
+ * more granular than the 5 rungs (the belonging model says stage and tier: tag
+ * stay in sync), so the courtship stages collapse to Connected, committed is
+ * Member, and repeat is Active. dormant/declined are off the ladder (null).
+ * Steward has no pipeline stage; it only comes from an explicit tier:steward tag.
+ */
+const STAGE_TO_RUNG: Record<string, SupporterRung | null> = {
+  identified: 'curious',
+  researching: 'connected',
+  contacted: 'connected',
+  in_conversation: 'connected',
+  proposal: 'connected',
+  committed: 'member',
+  repeat: 'active',
+  dormant: null,
+  declined: null,
+};
+
+export function stageToRung(stage: string | null | undefined): SupporterRung | null {
+  if (!stage) return null;
+  return STAGE_TO_RUNG[stage.toLowerCase()] ?? null;
+}
+
+/**
+ * Resolve a supporter's current rung. An explicit `tier:<rung>` tag is the source
+ * of truth and wins (per the belonging model); otherwise the pipeline stage drives.
+ */
+export function resolveRung(stage: string | null | undefined, tags: string[] | null | undefined): SupporterRung | null {
+  const tierTag = (tags ?? [])
+    .map((t) => String(t).toLowerCase())
+    .find((t) => t.startsWith('tier:'));
+  if (tierTag) {
+    const tier = tierTag.slice('tier:'.length);
+    if (RUNG_TIERS.has(tier)) return tier as SupporterRung;
+  }
+  return stageToRung(stage);
+}
+
+export interface SupporterLadderRow {
+  stage: string | null;
+  tags: string[] | null;
+  name: string;
+}
+
+export interface RungRollup {
+  tier: SupporterRung;
+  label: string;
+  meaning: string;
+  count: number;
+  /** Up to a few example display names, for ambient context. */
+  examples: string[];
+}
+
+export interface SupporterLadder {
+  rungs: RungRollup[]; // always all 5, in ladder order
+  offLadder: number; // dormant / declined / unmapped
+  total: number; // supporters currently on a rung
+}
+
+const EXAMPLE_CAP = 4;
+
+/** Roll a set of supporter rows up into the 5 rungs. Pure + deterministic. */
+export function rollupLadder(rows: SupporterLadderRow[]): SupporterLadder {
+  const buckets = new Map<SupporterRung, RungRollup>();
+  for (const r of BELONGING_RUNGS) {
+    buckets.set(r.tier, { tier: r.tier, label: r.label, meaning: r.meaning, count: 0, examples: [] });
+  }
+  let offLadder = 0;
+  for (const row of rows) {
+    const rung = resolveRung(row.stage, row.tags);
+    if (!rung) {
+      offLadder += 1;
+      continue;
+    }
+    const b = buckets.get(rung)!;
+    b.count += 1;
+    if (b.examples.length < EXAMPLE_CAP && row.name) b.examples.push(row.name);
+  }
+  const rungs = BELONGING_RUNGS.map((r) => buckets.get(r.tier)!);
+  const total = rungs.reduce((acc, r) => acc + r.count, 0);
+  return { rungs, offLadder, total };
+}

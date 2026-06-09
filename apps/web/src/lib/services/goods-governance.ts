@@ -1,5 +1,12 @@
 import { getServiceSupabase } from '@/lib/supabase';
-import { parseGovernanceNotes, type GovernanceMember, type GovernanceStatus } from './goods-governance-shared';
+import {
+  parseGovernanceNotes,
+  rollupLadder,
+  BELONGING_RUNGS,
+  type GovernanceMember,
+  type GovernanceStatus,
+  type SupporterLadder,
+} from './goods-governance-shared';
 
 /**
  * Goods on Country — Governance roster fetch.
@@ -68,5 +75,49 @@ export async function getGoodsGovernance(): Promise<{ members: GovernanceMember[
   } catch (e) {
     console.error('[goods-governance] unexpected:', e);
     return { members: [] };
+  }
+}
+
+const EMPTY_LADDER: SupporterLadder = {
+  rungs: BELONGING_RUNGS.map((r) => ({ tier: r.tier, label: r.label, meaning: r.meaning, count: 0, examples: [] })),
+  offLadder: 0,
+  total: 0,
+};
+
+type LadderRow = {
+  display_name: string | null;
+  stage: string | null;
+  ghl_signal: { tags?: unknown } | null;
+};
+
+/**
+ * The supporter belonging ladder, made live. Rolls every Goods relationship
+ * (funders, buyers, partners, supporters) up into the 5 rungs by stage / tier tag.
+ * The board is NOT here (it lives in org_contacts), so co-owners are never laddered.
+ */
+export async function getSupporterLadder(): Promise<SupporterLadder> {
+  try {
+    const supabase = getServiceSupabase();
+    const { data, error } = await supabase
+      .from('goods_relationships')
+      .select('display_name, stage, ghl_signal');
+
+    if (error) {
+      console.error('[goods-governance] ladder query failed:', error.message);
+      return EMPTY_LADDER;
+    }
+
+    const rows = ((data as LadderRow[] | null) ?? []).map((r) => ({
+      stage: r.stage,
+      name: r.display_name ?? '',
+      tags: Array.isArray(r.ghl_signal?.tags)
+        ? (r.ghl_signal!.tags as unknown[]).filter((t): t is string => typeof t === 'string')
+        : [],
+    }));
+
+    return rollupLadder(rows);
+  } catch (e) {
+    console.error('[goods-governance] ladder unexpected:', e);
+    return EMPTY_LADDER;
   }
 }

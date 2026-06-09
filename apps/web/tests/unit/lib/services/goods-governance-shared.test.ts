@@ -3,6 +3,9 @@ import {
   normalizeStatus,
   parseGovernanceNotes,
   BELONGING_RUNGS,
+  stageToRung,
+  resolveRung,
+  rollupLadder,
 } from '@/lib/services/goods-governance-shared';
 
 describe('normalizeStatus', () => {
@@ -53,6 +56,71 @@ describe('parseGovernanceNotes', () => {
   it('is tolerant of empty / plain-text notes', () => {
     expect(parseGovernanceNotes(null)).toEqual({ status: 'unknown', statusLabel: null, context: null });
     expect(parseGovernanceNotes('just a note').status).toBe('unknown');
+  });
+});
+
+describe('stageToRung', () => {
+  it('maps the engagement ladder onto the 5 rungs', () => {
+    expect(stageToRung('identified')).toBe('curious');
+    expect(stageToRung('researching')).toBe('connected');
+    expect(stageToRung('in_conversation')).toBe('connected');
+    expect(stageToRung('proposal')).toBe('connected');
+    expect(stageToRung('committed')).toBe('member');
+    expect(stageToRung('repeat')).toBe('active');
+  });
+  it('treats dormant/declined/unknown/empty as off-ladder (null)', () => {
+    expect(stageToRung('dormant')).toBeNull();
+    expect(stageToRung('declined')).toBeNull();
+    expect(stageToRung('made_up')).toBeNull();
+    expect(stageToRung(null)).toBeNull();
+  });
+});
+
+describe('resolveRung', () => {
+  it('lets an explicit tier: tag win over the stage', () => {
+    expect(resolveRung('identified', ['tier:steward'])).toBe('steward');
+    expect(resolveRung('committed', ['role:funder', 'tier:active'])).toBe('active');
+  });
+  it('falls back to the stage when no valid tier tag is present', () => {
+    expect(resolveRung('committed', ['tier:bogus'])).toBe('member');
+    expect(resolveRung('identified', [])).toBe('curious');
+    expect(resolveRung('dormant', null)).toBeNull();
+  });
+});
+
+describe('rollupLadder', () => {
+  it('buckets rows into all 5 rungs in order, caps examples, counts off-ladder', () => {
+    const rows = [
+      { stage: 'identified', tags: [], name: 'A' },
+      { stage: 'identified', tags: [], name: 'B' },
+      { stage: 'committed', tags: [], name: 'C' },
+      { stage: 'repeat', tags: [], name: 'D' },
+      { stage: 'proposal', tags: [], name: 'E' },
+      { stage: 'dormant', tags: [], name: 'X' }, // off-ladder
+      { stage: 'declined', tags: [], name: 'Y' }, // off-ladder
+      { stage: 'identified', tags: ['tier:steward'], name: 'Steward1' }, // tag promotes
+    ];
+    const out = rollupLadder(rows);
+    expect(out.rungs.map((r) => r.tier)).toEqual(['curious', 'connected', 'member', 'active', 'steward']);
+    const by = Object.fromEntries(out.rungs.map((r) => [r.tier, r.count]));
+    expect(by).toEqual({ curious: 2, connected: 1, member: 1, active: 1, steward: 1 });
+    expect(out.offLadder).toBe(2);
+    expect(out.total).toBe(6);
+    expect(out.rungs[0].examples).toEqual(['A', 'B']);
+  });
+
+  it('caps examples at 4 even with many rows in a rung', () => {
+    const rows = Array.from({ length: 10 }, (_, i) => ({ stage: 'identified', tags: [], name: `n${i}` }));
+    const out = rollupLadder(rows);
+    expect(out.rungs[0].count).toBe(10);
+    expect(out.rungs[0].examples).toHaveLength(4);
+  });
+
+  it('returns an all-zero ladder for no rows', () => {
+    const out = rollupLadder([]);
+    expect(out.total).toBe(0);
+    expect(out.offLadder).toBe(0);
+    expect(out.rungs).toHaveLength(5);
   });
 });
 
