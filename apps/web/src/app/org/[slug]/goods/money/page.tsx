@@ -26,8 +26,8 @@ function Stat({ label, value, accent, detail }: { label: string; value: string; 
   );
 }
 
-function GoodsSubNav({ slug, active }: { slug: string; active: 'engagement' | 'money' }) {
-  const link = (key: 'engagement' | 'money', label: string) => (
+function GoodsSubNav({ slug, active }: { slug: string; active: 'engagement' | 'money' | 'intros' }) {
+  const link = (key: 'engagement' | 'money' | 'intros', label: string) => (
     <Link
       href={`/org/${slug}/goods/${key}`}
       className={`border-2 px-2.5 py-1 text-[11px] font-black uppercase tracking-widest ${
@@ -43,6 +43,7 @@ function GoodsSubNav({ slug, active }: { slug: string; active: 'engagement' | 'm
     <div className="mt-4 flex flex-wrap gap-2">
       {link('engagement', 'Warmth Map')}
       {link('money', 'Money')}
+      {link('intros', 'Warm Intros')}
     </div>
   );
 }

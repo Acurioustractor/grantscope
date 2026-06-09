@@ -69,6 +69,9 @@ export default async function GoodsEngagementPage({
             <Link href={`/org/${slug}/goods/money`} className="border-2 border-white/40 px-2.5 py-1 text-[11px] font-black uppercase tracking-widest text-white hover:border-white">
               Money
             </Link>
+            <Link href={`/org/${slug}/goods/intros`} className="border-2 border-white/40 px-2.5 py-1 text-[11px] font-black uppercase tracking-widest text-white hover:border-white">
+              Warm Intros
+            </Link>
           </div>
         </div>
       </div>
