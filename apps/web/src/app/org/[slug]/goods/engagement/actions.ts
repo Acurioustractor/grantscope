@@ -2,9 +2,30 @@
 
 import { revalidatePath } from 'next/cache';
 import { getServiceSupabase } from '@/lib/supabase';
+import { createSupabaseServer } from '@/lib/supabase-server';
+import { isAdminEmail } from '@/lib/admin';
+import { shouldUseFastLocalOrg } from '@/lib/services/fast-local-org';
 import { computeWarmth, type GoodsStage } from '@/lib/services/goods-engagement-shared';
 
 export interface ActionResult { ok: boolean; error?: string }
+
+/**
+ * Gate write access to the Goods engagement registry. These actions mutate
+ * shared data with the service-role client, so they must verify the caller
+ * before touching the DB. In production an authenticated super-admin
+ * (`ADMIN_EMAILS`) is required; in local/dev fast-local-org mode writes are
+ * allowed without auth to keep the dev loop frictionless — mirrors the org
+ * layout's own fast-local bypass. Returns a failure `ActionResult` when the
+ * caller is not permitted, or `null` when the write may proceed.
+ */
+async function requireWriteAccess(): Promise<ActionResult | null> {
+  if (shouldUseFastLocalOrg()) return null; // dev/local bypass (NODE_ENV !== 'production')
+  const supabase = await createSupabaseServer();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: 'You must be signed in to make changes.' };
+  if (!isAdminEmail(user.email)) return { ok: false, error: 'You do not have permission to make changes.' };
+  return null;
+}
 
 /**
  * Hybrid-warmth write-back. Setting warmth_override pins the displayed warmth;
@@ -20,6 +41,9 @@ export async function updateRelationship(input: {
   target_stage?: string | null;
   notes?: string | null;
 }): Promise<ActionResult> {
+  const denied = await requireWriteAccess();
+  if (denied) return denied;
+
   const supabase = getServiceSupabase();
   const patch: Record<string, unknown> = {};
 
@@ -68,6 +92,9 @@ export async function addProductionPartner(input: {
   last_touch_at?: string | null;
   notes?: string | null;
 }): Promise<ActionResult> {
+  const denied = await requireWriteAccess();
+  if (denied) return denied;
+
   const name = input.display_name?.trim();
   if (!name) return { ok: false, error: 'Name is required' };
 
