@@ -7,6 +7,7 @@ const TABS = [
   ['proof', 'Proof Pack'],
   ['intros', 'Warm Intros'],
   ['foundations', 'Foundations'],
+  ['governance', 'Governance'],
 ] as const;
 
 export type GoodsTab = (typeof TABS)[number][0];
