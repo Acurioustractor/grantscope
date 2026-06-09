@@ -4,6 +4,7 @@ import { ACT_FAST_PROFILE, isActSlug, shouldUseFastLocalOrg } from '@/lib/servic
 import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
 import { getGoodsFoundationTargets } from '@/lib/services/goods-foundation-targets';
 import { GoodsSubNav } from '../_components/goods-sub-nav';
+import { TrackButton } from './track-button';
 
 export const dynamic = 'force-dynamic';
 
@@ -121,7 +122,7 @@ export default async function GoodsFoundationsPage({
                     <div className="mt-0.5 text-[11px] text-bauhaus-muted">{t.geographicFocus.slice(0, 4).join(' · ')}</div>
                   )}
                 </div>
-                <div className="flex flex-col items-end">
+                <div className="flex flex-col items-end gap-1.5">
                   <span className="text-lg font-black">{compactMoney(t.givingAnnual)}</span>
                   <span className="text-[10px] font-bold uppercase tracking-widest text-bauhaus-muted">giving/yr</span>
                   {(t.grantMin || t.grantMax) && (
@@ -129,6 +130,14 @@ export default async function GoodsFoundationsPage({
                       grants {compactMoney(t.grantMin)}–{compactMoney(t.grantMax)}
                     </span>
                   )}
+                  <TrackButton
+                    slug={slug}
+                    gsEntityId={t.gsEntityId}
+                    name={t.name}
+                    themeHits={t.themeHits}
+                    connector={t.connector}
+                    bridgedOrg={t.bridgedOrg}
+                  />
                 </div>
               </div>
             ))}
@@ -138,7 +147,7 @@ export default async function GoodsFoundationsPage({
         <div className="mt-8 border-4 border-bauhaus-black bg-bauhaus-yellow p-4 text-xs">
           Net-new targets only — foundations already in the warmth registry are excluded. Ranked by theme-fit +
           board-bridge (<code>v_goods_foundation_targets</code>, same 2&ndash;15 board collision gate as Warm Intros) + DGR +
-          giving. Next: a one-click &ldquo;track&rdquo; to drop a target into the warmth map.
+          giving. <strong>Track</strong> drops a target into the warmth registry as a net-new funder — it then leaves this list and appears on the Warmth Map.
         </div>
       </div>
     </main>

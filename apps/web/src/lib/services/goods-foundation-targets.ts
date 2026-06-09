@@ -10,6 +10,7 @@ import { getServiceSupabase } from '@/lib/supabase';
 export type FoundationTarget = {
   id: string;
   name: string;
+  gsEntityId: string | null;
   givingAnnual: number | null;
   avgGrant: number | null;
   grantMin: number | null;
@@ -33,6 +34,7 @@ export type FoundationTargetSummary = {
 type ViewRow = {
   id: string;
   name: string;
+  gs_entity_id: string | null;
   total_giving_annual: number | string | null;
   avg_grant_size: number | string | null;
   grant_range_min: number | string | null;
@@ -63,7 +65,7 @@ export async function getGoodsFoundationTargets(opts?: {
 
     let q = supabase
       .from('v_goods_foundation_targets')
-      .select('id, name, total_giving_annual, avg_grant_size, grant_range_min, grant_range_max, has_dgr, theme_hits, matched_themes, geographic_focus, connector, bridged_org, has_bridge, priority_score')
+      .select('id, name, gs_entity_id, total_giving_annual, avg_grant_size, grant_range_min, grant_range_max, has_dgr, theme_hits, matched_themes, geographic_focus, connector, bridged_org, has_bridge, priority_score')
       .order('priority_score', { ascending: false })
       .limit(opts?.limit ?? 60);
     if (opts?.bridgedOnly) q = q.eq('has_bridge', true);
@@ -84,6 +86,7 @@ export async function getGoodsFoundationTargets(opts?: {
     const targets: FoundationTarget[] = ((rowsRes.data as ViewRow[] | null) ?? []).map((r) => ({
       id: r.id,
       name: r.name,
+      gsEntityId: r.gs_entity_id,
       givingAnnual: num(r.total_giving_annual),
       avgGrant: num(r.avg_grant_size),
       grantMin: num(r.grant_range_min),
