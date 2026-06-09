@@ -4,6 +4,7 @@ const TABS = [
   ['engagement', 'Warmth Map'],
   ['insight', 'Funder Insight'],
   ['money', 'Money'],
+  ['proof', 'Proof Pack'],
   ['intros', 'Warm Intros'],
   ['foundations', 'Foundations'],
 ] as const;
