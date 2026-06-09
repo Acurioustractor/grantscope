@@ -2,16 +2,35 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ACT_FAST_PROFILE, isActSlug, shouldUseFastLocalOrg } from '@/lib/services/fast-local-org';
 import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
-import { getGoodsGovernance, getSupporterLadder } from '@/lib/services/goods-governance';
+import { getGoodsGovernance, getSupporterLadder, getFunderReadiness } from '@/lib/services/goods-governance';
 import { getGoodsWarmIntros } from '@/lib/services/goods-warm-intros';
-import { type GovernanceMember, type GovernanceStatus } from '@/lib/services/goods-governance-shared';
 import {
-  BOARD_MEMBER_DEGREE,
+  summarizeBoard,
+  type GovernanceMember,
+  type GovernanceStatus,
+} from '@/lib/services/goods-governance-shared';
+import {
   summarizeConnections,
   toConnectionDoors,
   type ConnectionDoor,
 } from '@/lib/services/goods-connection-shared';
+import { BUTTERFLY_DGR } from '@/lib/services/goods-engagement-shared';
+import { GOODS_DELIVERED } from '@/lib/services/goods-proof';
 import { GoodsSubNav } from '../_components/goods-sub-nav';
+
+const DOOR_CAP = 8;
+const STEWARDSHIP_HANDOVER = '26 June 2026';
+
+/** "2025-03-14" -> "14 Mar 2025". Returns null for empty/malformed input. */
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function fmtDate(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  if (!m) return null;
+  const mi = Number(m[2]) - 1;
+  if (mi < 0 || mi > 11) return null;
+  return `${Number(m[3])} ${MONTHS[mi]} ${m[1]}`;
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -55,12 +74,31 @@ function MemberCard({ m }: { m: GovernanceMember }) {
             <div className="text-[11px] font-bold uppercase tracking-widest text-bauhaus-muted">{m.organisation}</div>
           )}
           {m.context && <div className="mt-1.5 max-w-2xl text-[13px] leading-snug text-bauhaus-black/80">{m.context}</div>}
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <span className="bg-bauhaus-black px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-white">
-              {BOARD_MEMBER_DEGREE.degreeLabel}
-            </span>
-            <span className="text-[11px] font-bold text-bauhaus-black/70">{BOARD_MEMBER_DEGREE.opener}</span>
-          </div>
+          {(() => {
+            const appointed = fmtDate(m.appointedAt);
+            const termEnds = fmtDate(m.termEndsAt);
+            const indig = m.identifiesIndigenous === true;
+            if (!appointed && !termEnds && !indig) return null;
+            return (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {indig && (
+                  <span className="bg-bauhaus-black px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-white">
+                    Indigenous director
+                  </span>
+                )}
+                {appointed && (
+                  <span className="border-2 border-bauhaus-black px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-bauhaus-black">
+                    Appointed {appointed}
+                  </span>
+                )}
+                {termEnds && (
+                  <span className="border-2 border-bauhaus-black px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-bauhaus-black">
+                    Term ends {termEnds}
+                  </span>
+                )}
+              </div>
+            );
+          })()}
           {m.linkedinUrl ? (
             <a
               href={m.linkedinUrl}
@@ -124,13 +162,18 @@ export default async function GoodsGovernancePage({ params }: { params: Promise<
   const profile = shouldUseFastLocalOrg() && isActSlug(slug) ? ACT_FAST_PROFILE : await getOrgProfileBySlug(slug);
   if (!profile) notFound();
 
-  const [{ members }, ladder, { targets }] = await Promise.all([
+  const [govResult, ladderResult, readiness, { targets }] = await Promise.all([
     getGoodsGovernance(),
     getSupporterLadder(),
+    getFunderReadiness(),
     getGoodsWarmIntros(),
   ]);
-  const doors = toConnectionDoors(targets, 8);
+  const { members, fetchError: govError } = govResult;
+  const { ladder, fetchError: ladderError } = ladderResult;
+  const board = summarizeBoard(members);
+  const doors = toConnectionDoors(targets, DOOR_CAP);
   const connStats = summarizeConnections(targets);
+  const liveError = govError ?? ladderError ?? readiness.fetchError;
 
   return (
     <main className="min-h-screen bg-bauhaus-canvas text-bauhaus-black">
@@ -154,7 +197,130 @@ export default async function GoodsGovernancePage({ params }: { params: Promise<
       </div>
 
       <div className="mx-auto max-w-7xl px-4 py-6">
-        {/* The line that must never blur */}
+        {liveError && (
+          <div className="mb-4 border-2 border-bauhaus-red bg-bauhaus-red px-3 py-1.5 text-[11px] font-black uppercase tracking-widest text-white">
+            Live data unavailable ({liveError})
+          </div>
+        )}
+
+        {/* In-page anchor mini-nav */}
+        <nav className="mb-6 flex flex-wrap gap-2">
+          {[
+            ['readiness', 'Readiness'],
+            ['board', 'Board'],
+            ['ladder', 'Ladder'],
+            ['connections', 'Connections'],
+          ].map(([id, label]) => (
+            <a
+              key={id}
+              href={`#${id}`}
+              className="border-2 border-bauhaus-black px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-bauhaus-black hover:bg-bauhaus-black hover:text-white"
+            >
+              {label}
+            </a>
+          ))}
+        </nav>
+
+        {/* FUNDER-READINESS HEADER — due diligence at a glance */}
+        <section id="readiness" className="mb-8 scroll-mt-4 border-4 border-bauhaus-black bg-white">
+          <div className="flex items-baseline justify-between border-b-4 border-bauhaus-black bg-bauhaus-black px-4 py-2.5 text-white">
+            <h2 className="text-sm font-black uppercase tracking-widest">Funder readiness</h2>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-white/60">Due diligence at a glance</span>
+          </div>
+
+          {/* DGR badge */}
+          <div className="border-b-4 border-bauhaus-black bg-bauhaus-yellow px-4 py-3">
+            <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-black/70">Charity and DGR home</div>
+            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="text-[15px] font-black text-bauhaus-black">{BUTTERFLY_DGR.name}</span>
+              <span className="text-bauhaus-black/40">·</span>
+              <span className="text-[11px] font-black uppercase tracking-widest text-bauhaus-black/70">ABN</span>
+              <code className="select-all bg-white px-1.5 py-0.5 font-mono text-[13px] font-bold text-bauhaus-black">
+                {BUTTERFLY_DGR.abn}
+              </code>
+              <span className="text-bauhaus-black/40">·</span>
+              <span className="text-[12px] font-bold text-bauhaus-black/90">Item 1 DGR + PBI since 17 Jan 2012</span>
+            </div>
+            <div className="mt-1.5 flex flex-wrap gap-3">
+              <a
+                href={BUTTERFLY_DGR.abrUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue hover:underline"
+              >
+                Verify on ABR →
+              </a>
+              <a
+                href={BUTTERFLY_DGR.acncUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue hover:underline"
+              >
+                Verify on ACNC →
+              </a>
+            </div>
+          </div>
+
+          {/* Stat grid */}
+          <div className="grid grid-cols-1 divide-y-4 divide-bauhaus-black sm:grid-cols-2 sm:divide-y-0 sm:divide-x-4 lg:grid-cols-4">
+            {/* Board composition */}
+            <div className="p-4">
+              <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Board composition</div>
+              <div className="mt-1 flex items-baseline gap-2">
+                <span className="text-3xl font-black tabular-nums leading-none">{board.total}</span>
+                <span className="text-[11px] font-black uppercase tracking-widest">members</span>
+              </div>
+              {board.indigenousPct == null ? (
+                <div className="mt-1.5 text-[11px] leading-snug text-bauhaus-muted">
+                  Not yet recorded. Set identifies_indigenous per member.
+                </div>
+              ) : (
+                <div className="mt-1.5 text-[12px] font-bold leading-snug text-bauhaus-black">
+                  {board.indigenous} Indigenous {board.indigenous === 1 ? 'director' : 'directors'} ({board.indigenousPct}% of {board.recorded} recorded)
+                </div>
+              )}
+            </div>
+
+            {/* Committed funders */}
+            <div className="p-4">
+              <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Committed funders</div>
+              <div className="mt-1 flex items-baseline gap-2">
+                <span className="text-3xl font-black tabular-nums leading-none">{readiness.committedFunders}</span>
+                <span className="text-[11px] font-black uppercase tracking-widest">partners</span>
+              </div>
+              <div className="mt-1.5 text-[11px] leading-snug text-bauhaus-muted">
+                Funders, impact investors and repayable finance at committed or repeat stage.
+              </div>
+            </div>
+
+            {/* Lifetime received */}
+            <div className="p-4">
+              <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Lifetime received</div>
+              <div className="mt-1 flex items-baseline gap-2">
+                <span className="text-3xl font-black tabular-nums leading-none text-bauhaus-blue">{readiness.lifetimeReceivedShort}</span>
+              </div>
+              <div className="mt-1.5 text-[11px] leading-snug text-bauhaus-muted">
+                Summed across every Goods relationship on record.
+              </div>
+            </div>
+
+            {/* Proof freshness + handover */}
+            <div className="p-4">
+              <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Proof pack</div>
+              <div className="mt-1 text-[12px] font-bold leading-snug text-bauhaus-black">
+                Delivered figures as of {GOODS_DELIVERED.asOf}
+              </div>
+              <div className="mt-1 text-[11px] leading-snug text-bauhaus-muted">
+                {GOODS_DELIVERED.beds} beds and {GOODS_DELIVERED.washers} washers delivered.
+              </div>
+              <div className="mt-2 border-t border-bauhaus-black/10 pt-1.5 text-[11px] font-bold leading-snug text-bauhaus-black">
+                Stewardship handover {STEWARDSHIP_HANDOVER}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* The line that must never blur (stated once) */}
         <div className="mb-6 border-4 border-bauhaus-black bg-bauhaus-yellow p-4 text-sm">
           <div className="text-[11px] font-black uppercase tracking-widest">Co-owners, not a funnel</div>
           <p className="mt-1 max-w-3xl leading-snug text-bauhaus-black/90">
@@ -165,7 +331,7 @@ export default async function GoodsGovernancePage({ params }: { params: Promise<
         </div>
 
         {/* Board directory */}
-        <div className="mb-2 flex items-baseline justify-between">
+        <div id="board" className="mb-2 flex scroll-mt-4 items-baseline justify-between">
           <h2 className="text-lg font-black uppercase tracking-widest">The Butterfly Movement board</h2>
           <span className="text-[11px] font-bold uppercase tracking-widest text-bauhaus-muted">{members.length} members</span>
         </div>
@@ -182,7 +348,7 @@ export default async function GoodsGovernancePage({ params }: { params: Promise<
         )}
 
         {/* Supporter belonging ladder (NOT the board) */}
-        <div className="mt-10">
+        <div id="ladder" className="mt-10 scroll-mt-4">
           <div className="flex items-baseline justify-between">
             <h2 className="text-lg font-black uppercase tracking-widest">The supporter belonging ladder</h2>
             <span className="text-[11px] font-bold uppercase tracking-widest text-bauhaus-muted">
@@ -219,10 +385,15 @@ export default async function GoodsGovernancePage({ params }: { params: Promise<
             to rung (an explicit <code className="bg-white px-1">tier:</code> tag in GoHighLevel wins when set). Off-ladder
             counts dormant and declined. Steward fills in as supporters are tagged <code className="bg-white px-1">tier:steward</code>.
           </p>
+          {ladder.unrecognisedTier > 0 && (
+            <p className="mt-2 text-[11px] font-bold uppercase tracking-widest text-bauhaus-red">
+              {ladder.unrecognisedTier} {ladder.unrecognisedTier === 1 ? 'supporter has' : 'supporters have'} unrecognised tier tags. They fell back to their pipeline stage. Fix the <code className="bg-white px-1 normal-case">tier:</code> tag in GoHighLevel.
+            </p>
+          )}
         </div>
 
         {/* How Goods is connected — the showcase (slice 4) */}
-        <div className="mt-10">
+        <div id="connections" className="mt-10 scroll-mt-4">
           <div className="flex items-baseline justify-between">
             <h2 className="text-lg font-black uppercase tracking-widest">How Goods is connected</h2>
             <Link
@@ -248,9 +419,16 @@ export default async function GoodsGovernancePage({ params }: { params: Promise<
               No connection doors computed yet. The warm-intro graph needs entity-linked Goods relationships.
             </div>
           ) : (
-            <div className="mt-3 border-4 border-bauhaus-black bg-white">
-              {doors.map((d) => <DoorRow key={d.relId} slug={slug} d={d} />)}
-            </div>
+            <>
+              <div className="mt-3 border-4 border-bauhaus-black bg-white">
+                {doors.map((d) => <DoorRow key={d.relId} slug={slug} d={d} />)}
+              </div>
+              {connStats.totalDoors > doors.length && (
+                <p className="mt-2 text-[11px] font-bold uppercase tracking-widest text-bauhaus-muted">
+                  Showing {doors.length} of {connStats.totalDoors} doors. Open all warm intros for the rest.
+                </p>
+              )}
+            </>
           )}
         </div>
 

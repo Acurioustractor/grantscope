@@ -24,7 +24,7 @@ const FRESH_LABEL: Record<Freshness, string> = {
   'on-record': 'On record',
 };
 
-function SignalCard({ c }: { c: LifeEventCard }) {
+function SignalCard({ slug, c }: { slug: string; c: LifeEventCard }) {
   return (
     <div className="flex items-stretch gap-0 border-4 border-bauhaus-black bg-white">
       <div
@@ -53,9 +53,12 @@ function SignalCard({ c }: { c: LifeEventCard }) {
           <span className="text-[10px] text-bauhaus-muted">·</span>
           <span className="text-[10px] uppercase tracking-widest text-bauhaus-muted">{c.source}</span>
           {c.otherSignals > 0 && (
-            <span className="ml-auto text-[10px] font-black uppercase tracking-widest text-bauhaus-blue">
-              +{c.otherSignals} more {c.otherSignals === 1 ? 'signal' : 'signals'}
-            </span>
+            <Link
+              href={`/org/${slug}/goods/timeline`}
+              className="ml-auto text-[10px] font-black uppercase tracking-widest text-bauhaus-blue hover:underline"
+            >
+              +{c.otherSignals} more {c.otherSignals === 1 ? 'signal' : 'signals'} →
+            </Link>
           )}
         </div>
       </div>
@@ -68,7 +71,8 @@ export default async function GoodsSignalsPage({ params }: { params: Promise<{ s
   const profile = shouldUseFastLocalOrg() && isActSlug(slug) ? ACT_FAST_PROFILE : await getOrgProfileBySlug(slug);
   if (!profile) notFound();
 
-  const { cards, summary } = await getGoodsReasonsToReachOut();
+  const { data, fetchError } = await getGoodsReasonsToReachOut();
+  const { cards, summary } = data;
 
   return (
     <main className="min-h-screen bg-bauhaus-canvas text-bauhaus-black">
@@ -92,6 +96,11 @@ export default async function GoodsSignalsPage({ params }: { params: Promise<{ s
       </div>
 
       <div className="mx-auto max-w-7xl px-4 py-6">
+        {fetchError && (
+          <div className="mb-4 border-2 border-bauhaus-red bg-bauhaus-red px-3 py-1.5 text-[11px] font-black uppercase tracking-widest text-white">
+            Live data unavailable ({fetchError})
+          </div>
+        )}
         <div className="mb-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
           <span className="text-[12px] font-black uppercase tracking-widest text-bauhaus-black">
             {summary.supporters} {summary.supporters === 1 ? 'supporter' : 'supporters'} with a signal
@@ -114,7 +123,7 @@ export default async function GoodsSignalsPage({ params }: { params: Promise<{ s
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {cards.map((c) => <SignalCard key={`${c.relId}-${c.kind}`} c={c} />)}
+            {cards.map((c) => <SignalCard key={`${c.relId}-${c.kind}`} slug={slug} c={c} />)}
           </div>
         )}
 
@@ -125,6 +134,12 @@ export default async function GoodsSignalsPage({ params }: { params: Promise<{ s
         )}
 
         <div className="mt-8 flex flex-wrap items-center gap-4">
+          <Link
+            href={`/org/${slug}/goods/timeline`}
+            className="border-2 border-bauhaus-black bg-white px-3 py-1.5 text-[11px] font-black uppercase tracking-widest hover:bg-bauhaus-black hover:text-white"
+          >
+            See the full dated record → Timeline
+          </Link>
           <Link
             href={`/org/${slug}/goods/insight`}
             className="border-2 border-bauhaus-black bg-white px-3 py-1.5 text-[11px] font-black uppercase tracking-widest hover:bg-bauhaus-black hover:text-white"

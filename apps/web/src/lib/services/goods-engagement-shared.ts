@@ -31,7 +31,50 @@ export interface GoodsRelationship {
   next_action_due: string | null;
   warm_intro_path: string | null;
   notes: string | null;
+  ask_amount_aud: number | null;
+  ask_purpose: string | null;
 }
+
+/**
+ * Funding track — grants and investment need opposite framings, so every
+ * dollar rollup splits by track instead of lumping relationship types.
+ */
+export type FundingTrack = 'grant' | 'investment' | 'procurement' | 'support';
+
+export const REL_TRACK: Record<GoodsRelType, FundingTrack> = {
+  funder: 'grant',
+  impact_investor: 'investment',
+  repayable_finance: 'investment',
+  buyer: 'procurement',
+  production_partner: 'support',
+  supporter: 'support',
+  advocate: 'support',
+};
+
+export const TRACK_LABEL: Record<FundingTrack, string> = {
+  grant: 'Grants (via Butterfly DGR)',
+  investment: 'Impact investment / repayable',
+  procurement: 'Procurement revenue',
+  support: 'Support & advocacy',
+};
+
+/** Stage → probability of close, for expected (stage-weighted) pipeline value. */
+export const STAGE_PROBABILITY: Record<GoodsStage, number> = {
+  identified: 0.05, researching: 0.1, contacted: 0.2, in_conversation: 0.35,
+  proposal: 0.6, committed: 1, repeat: 1, dormant: 0.05, declined: 0,
+};
+
+/**
+ * The Goods DGR vehicle. Philanthropic money routes here — never ACT Pty.
+ * Facts from act-core-facts.md (verified ABR 2026-06-02).
+ */
+export const BUTTERFLY_DGR = {
+  name: 'The Butterfly Movement Ltd',
+  abn: '22 155 132 684',
+  status: 'Item 1 DGR + PBI since 17 Jan 2012 · ACNC-registered since Dec 2012',
+  abrUrl: 'https://abr.business.gov.au/ABN/View?abn=22155132684',
+  acncUrl: 'https://www.acnc.gov.au/charity/charities?search=22155132684',
+} as const;
 
 export type WarmthBand = 'Champion' | 'Hot' | 'Warm' | 'Cool' | 'Cold';
 export const BANDS: WarmthBand[] = ['Champion', 'Hot', 'Warm', 'Cool', 'Cold'];
@@ -93,11 +136,13 @@ export function computeWarmth(p: {
   alignment: number | null;
   hasPrior: boolean;
   advocacy?: number;
+  /** Injectable clock so tests and the SQL-lockstep check are deterministic. */
+  now?: number;
 }): number {
   const stage = STAGE_SCORE[p.stage] ?? 0;
   let recency = 0;
   if (p.lastTouch) {
-    const days = Math.max(0, (Date.now() - new Date(p.lastTouch).getTime()) / 86_400_000);
+    const days = Math.max(0, ((p.now ?? Date.now()) - new Date(p.lastTouch).getTime()) / 86_400_000);
     recency = Math.max(0, 100 * Math.exp(-days / 60));
   }
   const history = p.hasPrior
@@ -108,7 +153,21 @@ export function computeWarmth(p: {
   return Math.round(stage * 0.4 + recency * 0.2 + history * 0.2 + align * 0.15 + adv * 0.05);
 }
 
+/**
+ * Canonical money formatters for ALL Goods surfaces. `money` is exact
+ * ($1,234,567) for tables/ledgers; `moneyShort` is compact ($1.2M / $450K)
+ * for stat call-outs. Do not define local variants in pages.
+ */
 export const money = (n: number) => `$${Math.round(n || 0).toLocaleString('en-AU')}`;
+
+export function moneyShort(n: number): string {
+  const v = n || 0;
+  const abs = Math.abs(v);
+  if (abs >= 1_000_000_000) return `$${(v / 1_000_000_000).toFixed(1)}B`;
+  if (abs >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
+  if (abs >= 10_000) return `$${Math.round(v / 1_000)}K`;
+  return `$${Math.round(v).toLocaleString('en-AU')}`;
+}
 
 export function relDays(iso: string | null): string {
   if (!iso) return 'never';

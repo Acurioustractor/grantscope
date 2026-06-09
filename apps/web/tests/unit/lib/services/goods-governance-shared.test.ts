@@ -78,13 +78,13 @@ describe('stageToRung', () => {
 
 describe('resolveRung', () => {
   it('lets an explicit tier: tag win over the stage', () => {
-    expect(resolveRung('identified', ['tier:steward'])).toBe('steward');
-    expect(resolveRung('committed', ['role:funder', 'tier:active'])).toBe('active');
+    expect(resolveRung('identified', ['tier:steward'])).toEqual({ rung: 'steward', unrecognisedTier: false });
+    expect(resolveRung('committed', ['role:funder', 'tier:active'])).toEqual({ rung: 'active', unrecognisedTier: false });
   });
-  it('falls back to the stage when no valid tier tag is present', () => {
-    expect(resolveRung('committed', ['tier:bogus'])).toBe('member');
-    expect(resolveRung('identified', [])).toBe('curious');
-    expect(resolveRung('dormant', null)).toBeNull();
+  it('falls back to the stage when no valid tier tag is present, flagging unrecognised tiers', () => {
+    expect(resolveRung('committed', ['tier:bogus'])).toEqual({ rung: 'member', unrecognisedTier: true });
+    expect(resolveRung('identified', [])).toEqual({ rung: 'curious', unrecognisedTier: false });
+    expect(resolveRung('dormant', null)).toEqual({ rung: null, unrecognisedTier: false });
   });
 });
 

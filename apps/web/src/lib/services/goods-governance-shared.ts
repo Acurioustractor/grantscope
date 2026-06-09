@@ -27,6 +27,16 @@ export interface GovernanceMember {
   statusLabel: string;
   /** Verified cultural authority / role context. Null when unconfirmed. */
   context: string | null;
+  /** ISO date the member was appointed. Null until the migration is applied / set. */
+  appointedAt: string | null;
+  /** ISO date the member's term ends. Null until the migration is applied / set. */
+  termEndsAt: string | null;
+  /**
+   * Whether the member identifies as Indigenous. Null when not yet recorded
+   * (the org_contacts.identifies_indigenous migration is written but not yet
+   * applied, so reads coerce a missing field to null, never false).
+   */
+  identifiesIndigenous: boolean | null;
 }
 
 /** Map a raw wiki status string to a normalised status. Unknown is the safe default. */
@@ -117,19 +127,31 @@ export function stageToRung(stage: string | null | undefined): SupporterRung | n
   return STAGE_TO_RUNG[stage.toLowerCase()] ?? null;
 }
 
+/** The outcome of resolving a row's rung, distinguishing a bad tier tag from "no rung". */
+export interface RungResolution {
+  rung: SupporterRung | null;
+  /** True when the row carried a `tier:` tag whose value is not a known rung. */
+  unrecognisedTier: boolean;
+}
+
 /**
  * Resolve a supporter's current rung. An explicit `tier:<rung>` tag is the source
  * of truth and wins (per the belonging model); otherwise the pipeline stage drives.
+ * A `tier:` tag whose value is NOT a known rung is flagged as unrecognised rather
+ * than silently ignored, so a typo'd tag surfaces instead of dropping the supporter
+ * off the ladder without explanation.
  */
-export function resolveRung(stage: string | null | undefined, tags: string[] | null | undefined): SupporterRung | null {
+export function resolveRung(stage: string | null | undefined, tags: string[] | null | undefined): RungResolution {
   const tierTag = (tags ?? [])
     .map((t) => String(t).toLowerCase())
     .find((t) => t.startsWith('tier:'));
   if (tierTag) {
     const tier = tierTag.slice('tier:'.length);
-    if (RUNG_TIERS.has(tier)) return tier as SupporterRung;
+    if (RUNG_TIERS.has(tier)) return { rung: tier as SupporterRung, unrecognisedTier: false };
+    // A tier: tag was set but is not one of the five known rungs. Flag it.
+    return { rung: stageToRung(stage), unrecognisedTier: true };
   }
-  return stageToRung(stage);
+  return { rung: stageToRung(stage), unrecognisedTier: false };
 }
 
 export interface SupporterLadderRow {
@@ -151,6 +173,8 @@ export interface SupporterLadder {
   rungs: RungRollup[]; // always all 5, in ladder order
   offLadder: number; // dormant / declined / unmapped
   total: number; // supporters currently on a rung
+  /** Supporters carrying a `tier:` tag whose value is not a known rung. Surfaced, not dropped. */
+  unrecognisedTier: number;
 }
 
 const EXAMPLE_CAP = 4;
@@ -162,8 +186,10 @@ export function rollupLadder(rows: SupporterLadderRow[]): SupporterLadder {
     buckets.set(r.tier, { tier: r.tier, label: r.label, meaning: r.meaning, count: 0, examples: [] });
   }
   let offLadder = 0;
+  let unrecognisedTier = 0;
   for (const row of rows) {
-    const rung = resolveRung(row.stage, row.tags);
+    const { rung, unrecognisedTier: badTier } = resolveRung(row.stage, row.tags);
+    if (badTier) unrecognisedTier += 1;
     if (!rung) {
       offLadder += 1;
       continue;
@@ -174,5 +200,33 @@ export function rollupLadder(rows: SupporterLadderRow[]): SupporterLadder {
   }
   const rungs = BELONGING_RUNGS.map((r) => buckets.get(r.tier)!);
   const total = rungs.reduce((acc, r) => acc + r.count, 0);
-  return { rungs, offLadder, total };
+  return { rungs, offLadder, total, unrecognisedTier };
+}
+
+export interface BoardComposition {
+  total: number;
+  /** Members whose identifies_indigenous field is non-null (true or false). */
+  recorded: number;
+  indigenous: number;
+  /** Indigenous share of members who have the field set, or null when none is set yet. */
+  indigenousPct: number | null;
+}
+
+/**
+ * Summarise the board for the funder-readiness header. Indigenous % is computed
+ * over members where identifies_indigenous is recorded (non-null), never over the
+ * whole board, so an un-migrated/unset field reads as "not yet recorded" rather
+ * than a misleading 0%.
+ */
+export function summarizeBoard(members: GovernanceMember[]): BoardComposition {
+  const total = members.length;
+  let recorded = 0;
+  let indigenous = 0;
+  for (const m of members) {
+    if (m.identifiesIndigenous == null) continue;
+    recorded += 1;
+    if (m.identifiesIndigenous) indigenous += 1;
+  }
+  const indigenousPct = recorded > 0 ? Math.round((indigenous / recorded) * 100) : null;
+  return { total, recorded, indigenous, indigenousPct };
 }

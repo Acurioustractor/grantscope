@@ -33,19 +33,35 @@ const EMPTY: ReasonsToReachOut = {
   summary: { supporters: 0, fresh: 0, feeds: { acnc_filing: 0, gov_contract: 0, justice_funding: 0 } },
 };
 
+// The view holds one most-recent event per (entity, kind), so ~hundreds of rows.
+// 500 is a generous guard against an unbounded fetch if the view ever grows.
+const FETCH_LIMIT = 500;
+
+// Only the columns the presenter reads, instead of '*'.
+const VIEW_COLUMNS =
+  'rel_id, display_name, relationship_type, warmth_display, kind, event_date, event_fy, amount, amount2, period_to, label';
+
+export interface ReasonsResult {
+  data: ReasonsToReachOut;
+  fetchError: string | null;
+}
+
 function num(v: number | string | null): number | null {
   if (v == null) return null;
   const n = typeof v === 'string' ? Number(v) : v;
   return Number.isFinite(n) ? n : null;
 }
 
-export async function getGoodsReasonsToReachOut(asOf: Date = new Date()): Promise<ReasonsToReachOut> {
+export async function getGoodsReasonsToReachOut(asOf: Date = new Date()): Promise<ReasonsResult> {
   try {
     const supabase = getServiceSupabase();
-    const { data, error } = await supabase.from('v_goods_life_events').select('*');
+    const { data, error } = await supabase
+      .from('v_goods_life_events')
+      .select(VIEW_COLUMNS)
+      .limit(FETCH_LIMIT);
     if (error) {
       console.error('[goods-life-events] query failed:', error.message);
-      return EMPTY;
+      return { data: EMPTY, fetchError: error.message };
     }
     const raws: RawLifeEvent[] = ((data as ViewRow[] | null) ?? []).map((r) => ({
       relId: r.rel_id,
@@ -63,9 +79,9 @@ export async function getGoodsReasonsToReachOut(asOf: Date = new Date()): Promis
     // Show the full ranked feed (one card per supporter, ~71 max). Freshest
     // reasons lead; older ACNC filings still surface lower rather than being
     // hidden under the fresh contract wins.
-    return pickReasonsToReachOut(raws, asOf, 80);
+    return { data: pickReasonsToReachOut(raws, asOf, 80), fetchError: null };
   } catch (e) {
     console.error('[goods-life-events] unexpected:', e);
-    return EMPTY;
+    return { data: EMPTY, fetchError: e instanceof Error ? e.message : 'unexpected error' };
   }
 }

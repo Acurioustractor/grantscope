@@ -7,6 +7,7 @@ import {
   type GovernanceStatus,
   type SupporterLadder,
 } from './goods-governance-shared';
+import { moneyShort } from './goods-engagement-shared';
 
 /**
  * Goods on Country — Governance roster fetch.
@@ -27,6 +28,13 @@ type Row = {
   organisation: string | null;
   linkedin_url: string | null;
   notes: string | null;
+  // Added by migration 2026060912xxxx (appointed_at/term_ends_at/identifies_indigenous).
+  // The migration is written but NOT YET APPLIED, so these may be undefined on the row.
+  // We read with select('*') and coerce missing fields with `?? null` (never list them
+  // in an explicit .select(), which would 400 against the live schema until applied).
+  appointed_at?: string | null;
+  term_ends_at?: string | null;
+  identifies_indigenous?: boolean | null;
 };
 
 // Continuing co-owners first, then transitioning, then anything else; stable by name.
@@ -37,12 +45,16 @@ const STATUS_ORDER: Record<GovernanceStatus, number> = {
   unknown: 3,
 };
 
-export async function getGoodsGovernance(): Promise<{ members: GovernanceMember[] }> {
+export async function getGoodsGovernance(): Promise<{ members: GovernanceMember[]; fetchError: string | null }> {
   try {
     const supabase = getServiceSupabase();
+    // select('*') on purpose: the appointed_at / term_ends_at / identifies_indigenous
+    // columns are added by a migration that is not yet applied. Listing them explicitly
+    // would 400 against the live schema; with '*' they simply arrive as undefined and
+    // we coerce them to null below.
     const { data, error } = await supabase
       .from('org_contacts')
-      .select('id, name, role, organisation, linkedin_url, notes')
+      .select('*')
       .eq('org_profile_id', ORG_ID)
       .eq('project_id', PROJECT_ID)
       .eq('contact_type', 'governance')
@@ -50,7 +62,7 @@ export async function getGoodsGovernance(): Promise<{ members: GovernanceMember[
 
     if (error) {
       console.error('[goods-governance] query failed:', error.message);
-      return { members: [] };
+      return { members: [], fetchError: error.message };
     }
 
     const members = ((data as Row[] | null) ?? [])
@@ -65,16 +77,19 @@ export async function getGoodsGovernance(): Promise<{ members: GovernanceMember[
           status: parsed.status,
           statusLabel: parsed.statusLabel ?? 'continuing',
           context: parsed.context,
+          appointedAt: r.appointed_at ?? null,
+          termEndsAt: r.term_ends_at ?? null,
+          identifiesIndigenous: r.identifies_indigenous ?? null,
         };
       })
       .sort((a, b) =>
         STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || a.name.localeCompare(b.name),
       );
 
-    return { members };
+    return { members, fetchError: null };
   } catch (e) {
     console.error('[goods-governance] unexpected:', e);
-    return { members: [] };
+    return { members: [], fetchError: e instanceof Error ? e.message : 'unexpected error' };
   }
 }
 
@@ -82,7 +97,13 @@ const EMPTY_LADDER: SupporterLadder = {
   rungs: BELONGING_RUNGS.map((r) => ({ tier: r.tier, label: r.label, meaning: r.meaning, count: 0, examples: [] })),
   offLadder: 0,
   total: 0,
+  unrecognisedTier: 0,
 };
+
+export interface SupporterLadderResult {
+  ladder: SupporterLadder;
+  fetchError: string | null;
+}
 
 type LadderRow = {
   display_name: string | null;
@@ -95,16 +116,17 @@ type LadderRow = {
  * (funders, buyers, partners, supporters) up into the 5 rungs by stage / tier tag.
  * The board is NOT here (it lives in org_contacts), so co-owners are never laddered.
  */
-export async function getSupporterLadder(): Promise<SupporterLadder> {
+export async function getSupporterLadder(): Promise<SupporterLadderResult> {
   try {
     const supabase = getServiceSupabase();
+    // Only the three columns the rollup needs.
     const { data, error } = await supabase
       .from('goods_relationships')
       .select('display_name, stage, ghl_signal');
 
     if (error) {
       console.error('[goods-governance] ladder query failed:', error.message);
-      return EMPTY_LADDER;
+      return { ladder: EMPTY_LADDER, fetchError: error.message };
     }
 
     const rows = ((data as LadderRow[] | null) ?? []).map((r) => ({
@@ -115,9 +137,74 @@ export async function getSupporterLadder(): Promise<SupporterLadder> {
         : [],
     }));
 
-    return rollupLadder(rows);
+    return { ladder: rollupLadder(rows), fetchError: null };
   } catch (e) {
     console.error('[goods-governance] ladder unexpected:', e);
-    return EMPTY_LADDER;
+    return { ladder: EMPTY_LADDER, fetchError: e instanceof Error ? e.message : 'unexpected error' };
+  }
+}
+
+export interface FunderReadiness {
+  /** Relationships counted as committed funding partners (committed/repeat stage). */
+  committedFunders: number;
+  /** Lifetime received across ALL Goods relationships, summed from total_received_aud. */
+  lifetimeReceived: number;
+  /** Pre-formatted compact AUD of lifetimeReceived. */
+  lifetimeReceivedShort: string;
+  fetchError: string | null;
+}
+
+const FUNDER_TYPES = new Set(['funder', 'impact_investor', 'repayable_finance']);
+const COMMITTED_STAGES = new Set(['committed', 'repeat']);
+
+type ReadinessRow = {
+  relationship_type: string | null;
+  stage: string | null;
+  total_received_aud: number | string | null;
+};
+
+/**
+ * Funder due-diligence rollup for the readiness header: how many committed funding
+ * partners back Goods, and the lifetime money received across every relationship.
+ * Committed = a funder/impact-investor/repayable-finance relationship at the
+ * committed or repeat stage. Lifetime received sums total_received_aud across all rows.
+ */
+export async function getFunderReadiness(): Promise<FunderReadiness> {
+  const empty: FunderReadiness = {
+    committedFunders: 0,
+    lifetimeReceived: 0,
+    lifetimeReceivedShort: moneyShort(0),
+    fetchError: null,
+  };
+  try {
+    const supabase = getServiceSupabase();
+    const { data, error } = await supabase
+      .from('goods_relationships')
+      .select('relationship_type, stage, total_received_aud');
+
+    if (error) {
+      console.error('[goods-governance] readiness query failed:', error.message);
+      return { ...empty, fetchError: error.message };
+    }
+
+    let committedFunders = 0;
+    let lifetimeReceived = 0;
+    for (const r of (data as ReadinessRow[] | null) ?? []) {
+      const type = (r.relationship_type ?? '').toLowerCase();
+      const stage = (r.stage ?? '').toLowerCase();
+      if (FUNDER_TYPES.has(type) && COMMITTED_STAGES.has(stage)) committedFunders += 1;
+      const received = typeof r.total_received_aud === 'string' ? Number(r.total_received_aud) : r.total_received_aud;
+      if (Number.isFinite(received)) lifetimeReceived += received as number;
+    }
+
+    return {
+      committedFunders,
+      lifetimeReceived,
+      lifetimeReceivedShort: moneyShort(lifetimeReceived),
+      fetchError: null,
+    };
+  } catch (e) {
+    console.error('[goods-governance] readiness unexpected:', e);
+    return { ...empty, fetchError: e instanceof Error ? e.message : 'unexpected error' };
   }
 }

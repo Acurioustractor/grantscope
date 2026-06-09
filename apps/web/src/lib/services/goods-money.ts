@@ -1,7 +1,7 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import { getGoodsFinanceLedger, type GoodsFinanceLedger } from './goods-finance-ledger';
-import { getGoodsRelationships, summarize } from './goods-engagement';
-import type { GoodsRelationship, GoodsRelType } from './goods-engagement-shared';
+import { getGoodsRelationshipsSafe, summarize, type TrackRollup } from './goods-engagement';
+import type { GoodsRelationship, GoodsRelType, FundingTrack } from './goods-engagement-shared';
 
 /**
  * Goods Command Center — Phase 2: Money (received + available).
@@ -24,16 +24,57 @@ export type GoodsOpportunity = {
   sourceType: string | null;
 };
 
+/** Open-ask + expected-pipeline dollars, split grant vs investment. */
+export type PipelineStats = {
+  /** Sum of open ask_amount_aud across all money tracks. */
+  openAskTotal: number;
+  /** Stage-weighted expected dollars across all money tracks. */
+  weightedPipeline: number;
+  grant: TrackRollup;
+  investment: TrackRollup;
+};
+
+/**
+ * Honest reconciliation: the warmth registry's lifetimeReceived is hand-entered;
+ * Xero paid-invoices is the source of truth. Surface the delta, don't hide it.
+ */
+export type Reconciliation = {
+  xeroPaid: number;
+  registryReceived: number;
+  delta: number; // registry - xero
+};
+
 export type GoodsMoney = {
   ledger: GoodsFinanceLedger;
   lifetimeReceived: number;
   openAsks: GoodsRelationship[];
   opportunities: GoodsOpportunity[];
   matchedPoolCount: number;
+  pipeline: PipelineStats;
+  reconciliation: Reconciliation;
+  byTrack: Record<FundingTrack, TrackRollup>;
+  /** Honest live-data strip when the registry fetch failed. */
+  fetchError: string | null;
   // Registry agent the "scrape more" button dispatches via /api/mission-control/tasks.
   scrapeAgentId: string;
   scrapeAgentLabel: string;
 };
+
+/** Parse a compact-money string like "$1.2M" / "$450K" / "$1,234" back to a number. */
+function parseMoneyLabel(s: string | null | undefined): number {
+  if (!s) return 0;
+  const cleaned = s.replace(/[$,\s]/g, '');
+  const m = cleaned.match(/^(-?[0-9.]+)([MK]?)$/i);
+  if (!m) {
+    const n = Number(cleaned);
+    return Number.isFinite(n) ? n : 0;
+  }
+  const v = Number(m[1]) || 0;
+  const unit = m[2].toUpperCase();
+  if (unit === 'M') return v * 1_000_000;
+  if (unit === 'K') return v * 1_000;
+  return v;
+}
 
 // The Goods wheelhouse — Indigenous-led social enterprise on Country, remote/
 // regional economic development, regenerative agriculture, employment. These are
@@ -79,11 +120,15 @@ type OppRow = {
 export async function getGoodsMoney(): Promise<GoodsMoney> {
   const supabase = getServiceSupabase();
   const nowIso = new Date().toISOString();
+  // In supabase-js, each chained filter is AND-ed. `.or()` is a single OR-group
+  // that is itself AND-ed with the other filters. So below resolves to:
+  //   status='open' AND focus_areas && GOODS_FOCUS AND (deadline IS NULL OR deadline >= now)
+  // i.e. open status + wheelhouse overlap + (rolling or still-future). All three AND correctly.
   const futureDeadline = `deadline.is.null,deadline.gte.${nowIso}`;
 
-  const [ledger, rels, oppResult, countResult] = await Promise.all([
+  const [ledger, relsResult, oppResult, countResult] = await Promise.all([
     getGoodsFinanceLedger(),
-    getGoodsRelationships(),
+    getGoodsRelationshipsSafe(),
     supabase
       .from('alma_funding_opportunities')
       .select(
@@ -102,6 +147,7 @@ export async function getGoodsMoney(): Promise<GoodsMoney> {
       .or(futureDeadline),
   ]);
 
+  const rels = relsResult.rows;
   const summary = summarize(rels);
 
   const openAsks = rels
@@ -120,12 +166,27 @@ export async function getGoodsMoney(): Promise<GoodsMoney> {
     sourceType: o.source_type,
   }));
 
+  // Reconcile registry (manually entered) against Xero paid invoices (truth).
+  const xeroPaid = parseMoneyLabel(ledger.totals.find((t) => t.label === 'Paid invoices')?.value);
+  const registryReceived = summary.totalReceived;
+
+  const pipeline: PipelineStats = {
+    openAskTotal: summary.openAskTotal,
+    weightedPipeline: summary.weightedPipeline,
+    grant: summary.byTrack.grant,
+    investment: summary.byTrack.investment,
+  };
+
   return {
     ledger,
-    lifetimeReceived: summary.totalReceived,
+    lifetimeReceived: registryReceived,
     openAsks,
     opportunities,
     matchedPoolCount: countResult.count ?? opportunities.length,
+    pipeline,
+    reconciliation: { xeroPaid, registryReceived, delta: registryReceived - xeroPaid },
+    byTrack: summary.byTrack,
+    fetchError: relsResult.fetchError,
     scrapeAgentId: SCRAPE_AGENT_ID,
     scrapeAgentLabel: SCRAPE_AGENT_LABEL,
   };

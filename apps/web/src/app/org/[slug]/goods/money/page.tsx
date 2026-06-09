@@ -6,7 +6,8 @@ import { createSupabaseServer } from '@/lib/supabase-server';
 import { isAdminEmail } from '@/lib/admin';
 import { getGoodsMoney } from '@/lib/services/goods-money';
 import {
-  money, REL_TYPE_LABEL, STAGE_LABEL, warmthBand, bandPill, nextBestAction, relDays,
+  money, moneyShort, REL_TYPE_LABEL, STAGE_LABEL, warmthBand, bandPill, nextBestAction, relDays,
+  BUTTERFLY_DGR,
 } from '@/lib/services/goods-engagement-shared';
 import { ScrapeMoreButton } from './scrape-more-button';
 import { GoodsSubNav } from '../_components/goods-sub-nav';
@@ -87,13 +88,84 @@ export default async function GoodsMoneyPage({ params }: { params: Promise<{ slu
       </div>
 
       <div className="mx-auto max-w-7xl px-4 py-6">
-        {/* portfolio */}
-        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          <Stat label="Received (lifetime)" value={money(m.lifetimeReceived)} accent detail="Across the warmth registry" />
-          <Stat label="Paid (Xero ACT-GD)" value={totalValue('Paid invoices')} />
+        {m.fetchError && (
+          <div className="mb-4 border-4 border-bauhaus-red bg-bauhaus-red px-4 py-2 text-[12px] font-black uppercase tracking-widest text-white">
+            Live data unavailable ({m.fetchError}). Figures below may be incomplete.
+          </div>
+        )}
+
+        {/* ── PRIMARY CALL-OUT: pipeline in play ──────────────────────── */}
+        <div className="mb-3 border-4 border-bauhaus-blue bg-link-light p-5">
+          <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">
+            Pipeline in play · open funder + investor asks
+          </div>
+          <div className="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+            <span className="text-5xl font-black leading-none text-bauhaus-black">{moneyShort(m.pipeline.openAskTotal)}</span>
+            <span className="text-sm font-black uppercase tracking-widest text-bauhaus-muted">total</span>
+            <span className="text-3xl font-black leading-none text-bauhaus-blue">{moneyShort(m.pipeline.weightedPipeline)}</span>
+            <span className="text-sm font-black uppercase tracking-widest text-bauhaus-muted">expected (stage-weighted)</span>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-bold">
+            <span className="border-2 border-bauhaus-black bg-white px-2 py-0.5">
+              Grants {moneyShort(m.pipeline.grant.openAskTotal)} ask · {moneyShort(m.pipeline.grant.weightedPipeline)} expected
+            </span>
+            <span className="border-2 border-bauhaus-black bg-white px-2 py-0.5">
+              Investment {moneyShort(m.pipeline.investment.openAskTotal)} ask · {moneyShort(m.pipeline.investment.weightedPipeline)} expected
+            </span>
+          </div>
+          <div className="mt-2 text-[10px] font-bold text-bauhaus-muted">
+            Expected = each open ask multiplied by its stage close-probability. Grant and investment dollars are kept
+            separate. Ask amounts are entered in the warmth registry and may be incomplete until every conversation is sized.
+          </div>
+        </div>
+
+        {/* secondary stat row */}
+        <div className="mb-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <Stat label="Received (lifetime)" value={money(m.lifetimeReceived)} accent detail="Warmth registry, manually entered" />
+          <Stat label="Paid (Xero ACT-GD)" value={totalValue('Paid invoices')} detail="Source of truth" />
           <Stat label="Due / chase" value={totalValue('Due / chase')} />
           <Stat label="Open money asks" value={String(m.openAsks.length)} accent />
           <Stat label="Matched opportunities" value={String(m.matchedPoolCount)} detail={`${m.opportunities.length} shown`} />
+        </div>
+
+        {/* ── RECONCILIATION STRIP ────────────────────────────────────── */}
+        <div className="mb-4 border-4 border-bauhaus-black bg-white px-4 py-3">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Xero paid</div>
+              <div className="text-xl font-black">{money(m.reconciliation.xeroPaid)}</div>
+            </div>
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Registry received</div>
+              <div className="text-xl font-black">{money(m.reconciliation.registryReceived)}</div>
+            </div>
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Delta</div>
+              <div className={`text-xl font-black ${m.reconciliation.delta === 0 ? 'text-bauhaus-black' : 'text-bauhaus-red'}`}>
+                {money(m.reconciliation.delta)}
+              </div>
+            </div>
+          </div>
+          <p className="mt-1 text-[11px] font-bold text-bauhaus-muted">
+            Registry figure is manually entered; Xero is the source of truth. Delta: {money(m.reconciliation.delta)}.
+          </p>
+        </div>
+
+        {/* ── BUTTERFLY DGR CALLOUT ───────────────────────────────────── */}
+        <div className="mb-6 border-4 border-bauhaus-yellow bg-bauhaus-yellow p-4">
+          <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-black/70">Tax-deductible route</div>
+          <p className="mt-1 text-[13px] font-bold text-bauhaus-black">
+            Tax-deductible donations route through {BUTTERFLY_DGR.name} (ABN {BUTTERFLY_DGR.abn}) — Item 1 DGR + PBI since 2012.
+            Philanthropic money never routes to ACT Pty.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-black uppercase tracking-widest">
+            <a href={BUTTERFLY_DGR.abrUrl} target="_blank" rel="noopener noreferrer" className="border-2 border-bauhaus-black bg-white px-2 py-1 hover:bg-bauhaus-black hover:text-white">
+              Verify on ABR ↗
+            </a>
+            <a href={BUTTERFLY_DGR.acncUrl} target="_blank" rel="noopener noreferrer" className="border-2 border-bauhaus-black bg-white px-2 py-1 hover:bg-bauhaus-black hover:text-white">
+              ACNC register ↗
+            </a>
+          </div>
         </div>
 
         {/* ── RECEIVED ────────────────────────────────────────────────── */}
@@ -244,8 +316,20 @@ export default async function GoodsMoneyPage({ params }: { params: Promise<{ slu
                         o.name
                       )}
                     </div>
-                    <div className="mt-0.5 text-[12px] text-bauhaus-muted">
-                      {o.funder ?? 'Unknown funder'} · {deadlineLabel(o.deadline)}
+                    <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[12px] text-bauhaus-muted">
+                      {(() => {
+                        const isTender = /tender|procure|austender|contract/i.test(o.sourceType ?? '');
+                        return (
+                          <span
+                            className={`px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest ${
+                              isTender ? 'bg-bauhaus-blue text-white' : 'bg-bauhaus-yellow text-bauhaus-black'
+                            }`}
+                          >
+                            {isTender ? 'Tender' : 'Grant'}
+                          </span>
+                        );
+                      })()}
+                      <span>{o.funder ?? 'Unknown funder'} · {deadlineLabel(o.deadline)}</span>
                     </div>
                     {o.focusAreas.length > 0 && (
                       <div className="mt-1 flex flex-wrap gap-1">

@@ -30,6 +30,37 @@ const SOURCE_RAIL: Record<TimelineSource, string> = {
   record: 'bg-bauhaus-black',
 };
 
+const MS_PER_DAY = 86_400_000;
+
+/**
+ * Human "how long ago" from an ISO date to now. Coarse on purpose (the timeline is
+ * about staleness at a glance, not precision). Returns null for unparseable input.
+ */
+function relativeTime(iso: string | null | undefined, now: Date = new Date()): string | null {
+  if (!iso) return null;
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return null;
+  const days = Math.round((now.getTime() - t) / MS_PER_DAY);
+  if (days < 0) return 'upcoming';
+  if (days === 0) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 30) return `${days} days ago`;
+  const months = Math.round(days / 30.437);
+  if (months < 12) return `${months} ${months === 1 ? 'month' : 'months'} ago`;
+  const years = Math.floor(days / 365.25);
+  const remMonths = Math.round((days - years * 365.25) / 30.437);
+  return remMonths > 0 ? `${years}y ${remMonths}mo ago` : `${years} ${years === 1 ? 'year' : 'years'} ago`;
+}
+
+/** The newest (first) dated event on a card, used for the staleness chip. */
+function newestEventDate(events: TimelineEvent[]): string | null {
+  let newest: string | null = null;
+  for (const e of events) {
+    if (e.date && (newest === null || e.date > newest)) newest = e.date;
+  }
+  return newest;
+}
+
 function EventRow({ e }: { e: TimelineEvent }) {
   const when = fmtDate(e.date);
   return (
@@ -51,6 +82,7 @@ function EventRow({ e }: { e: TimelineEvent }) {
 }
 
 function TimelineCard({ t }: { t: SupporterTimeline }) {
+  const lastEvent = relativeTime(newestEventDate(t.events));
   return (
     <div className="border-4 border-bauhaus-black bg-white">
       <div className="flex flex-wrap items-center gap-2 border-b-4 border-bauhaus-black px-4 py-3">
@@ -61,6 +93,11 @@ function TimelineCard({ t }: { t: SupporterTimeline }) {
         {t.stageLabel && (
           <span className="border-2 border-bauhaus-black px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-bauhaus-black">
             {t.stageLabel}
+          </span>
+        )}
+        {lastEvent && (
+          <span className="text-[10px] font-bold uppercase tracking-widest text-bauhaus-muted">
+            Last event {lastEvent}
           </span>
         )}
         <span className="ml-auto flex flex-wrap items-center gap-1">

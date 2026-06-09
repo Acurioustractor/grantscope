@@ -70,6 +70,14 @@ const SOURCE: Record<LifeEventKind, string> = {
 
 const MS_PER_DAY = 86_400_000;
 
+/**
+ * Business rule: a public-record event counts as "new" when it is no more than this
+ * many months old (future-dated contract starts also qualify). ACNC filings lag, so
+ * 8 months is the deliberate boundary between a genuinely fresh signal and one that is
+ * merely on record. Change this number to retune freshness across the Signals feed.
+ */
+export const FRESH_MONTHS = 8;
+
 /** Compact AUD, honest about scale. 407097 -> "$407K", 22219467 -> "$22.2M". */
 export function fmtAud(n: number | null | undefined): string {
   if (n == null || !Number.isFinite(n)) return 'undisclosed';
@@ -135,10 +143,10 @@ export function monthsAgo(fromIso: string | null, asOf: Date): number {
   return (asOf.getTime() - t) / (MS_PER_DAY * 30.437);
 }
 
-/** Freshness tier from the effective date. Future or <=8mo is new; <=24mo recent. */
+/** Freshness tier from the effective date. Future or <=FRESH_MONTHS is new; <=24mo recent. */
 export function freshnessFor(raw: RawLifeEvent, asOf: Date): Freshness {
   const m = monthsAgo(effectiveDate(raw), asOf);
-  if (m <= 8) return 'new'; // includes future-dated contract starts (negative months)
+  if (m <= FRESH_MONTHS) return 'new'; // includes future-dated contract starts (negative months)
   if (m <= 24) return 'recent';
   return 'on-record';
 }

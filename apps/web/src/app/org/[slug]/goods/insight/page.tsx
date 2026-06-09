@@ -4,7 +4,7 @@ import { ACT_FAST_PROFILE, isActSlug, shouldUseFastLocalOrg } from '@/lib/servic
 import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
 import { getGoodsFunderInsight } from '@/lib/services/goods-funder-insight';
 import { TEMP_LABEL, temperatureTone, type FunderInsight, type InsightFlag } from '@/lib/services/goods-funder-insight-shared';
-import { relDays } from '@/lib/services/goods-engagement-shared';
+import { relDays, money, moneyShort } from '@/lib/services/goods-engagement-shared';
 import { GoodsSubNav } from '../_components/goods-sub-nav';
 
 export const dynamic = 'force-dynamic';
@@ -13,13 +13,26 @@ export async function generateMetadata() {
   return { title: 'Goods — Funder Insight' };
 }
 
-function Stat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+function Stat({ label, value, stake }: { label: string; value: string; stake?: string }) {
   return (
-    <div className={`border-4 ${accent ? 'border-bauhaus-red bg-white' : 'border-bauhaus-black bg-white'} p-3`}>
+    <div className="border-4 border-bauhaus-black bg-white p-3">
       <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">{label}</div>
       <div className="mt-1 text-2xl font-black text-bauhaus-black">{value}</div>
+      {stake && <div className="mt-0.5 text-[11px] font-bold text-bauhaus-blue">{stake} at stake</div>}
     </div>
   );
+}
+
+/** Due-date label + overdue styling. Past dates render red. */
+function dueDate(iso: string | null): { label: string; overdue: boolean } | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  const days = Math.ceil((d.getTime() - Date.now()) / 86_400_000);
+  const date = d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+  if (days < 0) return { label: `due ${date} · ${Math.abs(days)}d overdue`, overdue: true };
+  if (days === 0) return { label: `due today (${date})`, overdue: true };
+  return { label: `due ${date} · in ${days}d`, overdue: false };
 }
 
 function flagTone(tone: InsightFlag['tone']): string {
@@ -64,7 +77,22 @@ function InsightCard({ i }: { i: FunderInsight }) {
             ))}
           </div>
 
-          <div className="mt-1 text-[13px] font-bold text-bauhaus-black">{i.nextMove}</div>
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-[13px] font-bold text-bauhaus-black">
+            <span>{i.nextMove}</span>
+            {(() => {
+              const due = dueDate(i.nextActionDue);
+              if (!due) return null;
+              return (
+                <span
+                  className={`px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest ${
+                    due.overdue ? 'bg-bauhaus-red text-white' : 'bg-bauhaus-canvas text-bauhaus-black border-2 border-bauhaus-black/30'
+                  }`}
+                >
+                  {due.label}
+                </span>
+              );
+            })()}
+          </div>
 
           {/* what they care about */}
           {i.interests.length > 0 && (
@@ -95,6 +123,14 @@ function InsightCard({ i }: { i: FunderInsight }) {
         <div className="flex flex-col items-end">
           <span className="text-lg font-black">{i.warmth}</span>
           <span className="text-[10px] font-bold uppercase tracking-widest text-bauhaus-muted">warmth</span>
+          {i.askAmount != null && i.askAmount > 0 && (
+            <span className="mt-0.5 text-[11px] font-black text-bauhaus-blue">{moneyShort(i.askAmount)} ask</span>
+          )}
+          {i.totalReceived > 0 && (
+            <span className="mt-0.5 text-[10px] font-bold text-bauhaus-muted" title="Manually entered, not Xero">
+              {money(i.totalReceived)} rec.
+            </span>
+          )}
           <span className="mt-0.5 text-[10px] text-bauhaus-muted">touched {relDays(i.lastTouchAt)}</span>
           {i.tagCount === 0 && <span className="mt-0.5 text-[9px] uppercase tracking-widest text-bauhaus-muted">no GHL signal</span>}
         </div>
@@ -114,7 +150,7 @@ export default async function GoodsInsightPage({
   const profile = shouldUseFastLocalOrg() && isActSlug(slug) ? ACT_FAST_PROFILE : await getOrgProfileBySlug(slug);
   if (!profile) notFound();
 
-  const { insights, summary } = await getGoodsFunderInsight();
+  const { insights, summary, fetchError } = await getGoodsFunderInsight();
   const actNowOnly = filter === 'act-now';
   const shown = actNowOnly ? insights.filter((i) => i.attention === 'act-now') : insights;
 
@@ -142,11 +178,29 @@ export default async function GoodsInsightPage({
       </div>
 
       <div className="mx-auto max-w-7xl px-4 py-6">
-        <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
-          <Stat label="Act now" value={String(summary.actNow)} accent />
-          <Stat label="Hot" value={String(summary.hot)} />
-          <Stat label="Cooling" value={String(summary.cooling)} />
-          <Stat label="VIP" value={String(summary.vip)} />
+        {fetchError && (
+          <div className="mb-4 border-4 border-bauhaus-red bg-bauhaus-red px-4 py-2 text-[12px] font-black uppercase tracking-widest text-white">
+            Live data unavailable ({fetchError}). Figures below may be incomplete.
+          </div>
+        )}
+
+        {/* Act-now hero — the one thing that demands attention right now. */}
+        <div className="mb-3 border-4 border-bauhaus-red bg-bauhaus-red p-5 text-white">
+          <div className="text-[10px] font-black uppercase tracking-widest text-white/80">Act now</div>
+          <div className="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+            <span className="text-5xl font-black leading-none">{summary.actNow}</span>
+            <span className="text-sm font-black uppercase tracking-widest text-white/80">funders need a move</span>
+            {summary.atStake.actNow > 0 && (
+              <span className="text-2xl font-black leading-none">{moneyShort(summary.atStake.actNow)} at stake</span>
+            )}
+          </div>
+        </div>
+
+        {/* secondary — clearly subordinate to the act-now hero */}
+        <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Stat label="Hot" value={String(summary.hot)} stake={summary.atStake.hot > 0 ? moneyShort(summary.atStake.hot) : undefined} />
+          <Stat label="Cooling" value={String(summary.cooling)} stake={summary.atStake.cooling > 0 ? moneyShort(summary.atStake.cooling) : undefined} />
+          <Stat label="VIP" value={String(summary.vip)} stake={summary.atStake.vip > 0 ? moneyShort(summary.atStake.vip) : undefined} />
           <Stat label="With GHL signal" value={`${summary.withSignal}/${summary.total}`} />
         </div>
 
