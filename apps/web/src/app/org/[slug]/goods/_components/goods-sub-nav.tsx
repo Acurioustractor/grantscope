@@ -3,6 +3,7 @@ import Link from 'next/link';
 const TABS = [
   ['engagement', 'Warmth Map'],
   ['insight', 'Funder Insight'],
+  ['signals', 'Signals'],
   ['money', 'Money'],
   ['proof', 'Proof Pack'],
   ['intros', 'Warm Intros'],
