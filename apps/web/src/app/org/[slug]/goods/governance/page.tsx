@@ -3,7 +3,14 @@ import { notFound } from 'next/navigation';
 import { ACT_FAST_PROFILE, isActSlug, shouldUseFastLocalOrg } from '@/lib/services/fast-local-org';
 import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
 import { getGoodsGovernance, getSupporterLadder } from '@/lib/services/goods-governance';
+import { getGoodsWarmIntros } from '@/lib/services/goods-warm-intros';
 import { type GovernanceMember, type GovernanceStatus } from '@/lib/services/goods-governance-shared';
+import {
+  BOARD_MEMBER_DEGREE,
+  summarizeConnections,
+  toConnectionDoors,
+  type ConnectionDoor,
+} from '@/lib/services/goods-connection-shared';
 import { GoodsSubNav } from '../_components/goods-sub-nav';
 
 export const dynamic = 'force-dynamic';
@@ -48,6 +55,12 @@ function MemberCard({ m }: { m: GovernanceMember }) {
             <div className="text-[11px] font-bold uppercase tracking-widest text-bauhaus-muted">{m.organisation}</div>
           )}
           {m.context && <div className="mt-1.5 max-w-2xl text-[13px] leading-snug text-bauhaus-black/80">{m.context}</div>}
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className="bg-bauhaus-black px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-white">
+              {BOARD_MEMBER_DEGREE.degreeLabel}
+            </span>
+            <span className="text-[11px] font-bold text-bauhaus-black/70">{BOARD_MEMBER_DEGREE.opener}</span>
+          </div>
           {m.linkedinUrl ? (
             <a
               href={m.linkedinUrl}
@@ -66,12 +79,58 @@ function MemberCard({ m }: { m: GovernanceMember }) {
   );
 }
 
+const DOOR_TONE: Record<ConnectionDoor['degree'], string> = {
+  first: 'bg-bauhaus-black text-white',
+  second: 'bg-bauhaus-blue text-white',
+  'board-level': 'bg-bauhaus-canvas text-bauhaus-black',
+  none: 'bg-bauhaus-canvas text-bauhaus-muted',
+};
+
+function DoorRow({ slug, d }: { slug: string; d: ConnectionDoor }) {
+  return (
+    <div className="flex items-start gap-0 border-b border-bauhaus-black/10 last:border-b-0">
+      <div className={`w-1.5 shrink-0 ${d.degree === 'second' ? 'bg-bauhaus-blue' : 'bg-bauhaus-black/30'}`} aria-hidden />
+      <div className="flex flex-1 flex-wrap items-start gap-x-4 gap-y-1 px-4 py-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[15px] font-black text-bauhaus-black">{d.targetName}</span>
+            <span className="bg-bauhaus-black px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-white">
+              {d.relationshipType}
+            </span>
+            <span className={`px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest ${DOOR_TONE[d.degree]}`}>
+              {d.degreeLabel}
+            </span>
+          </div>
+          {d.opener && (
+            <div className="mt-1 text-[13px] leading-snug text-bauhaus-black/80">
+              Best door: <span className="font-bold text-bauhaus-black">{d.opener.person}</span>
+              <span className="text-bauhaus-muted">, {d.opener.rationale}</span>
+            </div>
+          )}
+        </div>
+        <Link
+          href={`/org/${slug}/goods/intros`}
+          className="shrink-0 text-[10px] font-black uppercase tracking-widest text-bauhaus-blue hover:underline"
+        >
+          Open intro →
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 export default async function GoodsGovernancePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const profile = shouldUseFastLocalOrg() && isActSlug(slug) ? ACT_FAST_PROFILE : await getOrgProfileBySlug(slug);
   if (!profile) notFound();
 
-  const [{ members }, ladder] = await Promise.all([getGoodsGovernance(), getSupporterLadder()]);
+  const [{ members }, ladder, { targets }] = await Promise.all([
+    getGoodsGovernance(),
+    getSupporterLadder(),
+    getGoodsWarmIntros(),
+  ]);
+  const doors = toConnectionDoors(targets, 8);
+  const connStats = summarizeConnections(targets);
 
   return (
     <main className="min-h-screen bg-bauhaus-canvas text-bauhaus-black">
@@ -160,6 +219,39 @@ export default async function GoodsGovernancePage({ params }: { params: Promise<
             to rung (an explicit <code className="bg-white px-1">tier:</code> tag in GoHighLevel wins when set). Off-ladder
             counts dormant and declined. Steward fills in as supporters are tagged <code className="bg-white px-1">tier:steward</code>.
           </p>
+        </div>
+
+        {/* How Goods is connected — the showcase (slice 4) */}
+        <div className="mt-10">
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-lg font-black uppercase tracking-widest">How Goods is connected</h2>
+            <Link
+              href={`/org/${slug}/goods/intros`}
+              className="text-[11px] font-black uppercase tracking-widest text-bauhaus-blue hover:underline"
+            >
+              All warm intros →
+            </Link>
+          </div>
+          <p className="mt-1 max-w-3xl text-[13px] text-bauhaus-black/80">
+            Who can help Goods, and how. The board govern directly. For supporters, this reads the door from the
+            board-interlock graph we already hold. A <strong>shared board</strong> means a director who also sits on a
+            board with another Goods relationship, a genuine warm path. A <strong>board-level door</strong> is a real
+            person on the org&apos;s board, an honest opener, not a personal tie.
+          </p>
+          <p className="mt-2 text-[12px] font-bold uppercase tracking-widest text-bauhaus-muted">
+            {connStats.bridges} shared-board {connStats.bridges === 1 ? 'bridge' : 'bridges'} ·{' '}
+            {connStats.boardLevelDoors} board-level {connStats.boardLevelDoors === 1 ? 'door' : 'doors'} ·{' '}
+            {connStats.totalDoors} supporters with a door
+          </p>
+          {doors.length === 0 ? (
+            <div className="mt-3 border-4 border-bauhaus-black bg-white p-6 text-sm text-bauhaus-muted">
+              No connection doors computed yet. The warm-intro graph needs entity-linked Goods relationships.
+            </div>
+          ) : (
+            <div className="mt-3 border-4 border-bauhaus-black bg-white">
+              {doors.map((d) => <DoorRow key={d.relId} slug={slug} d={d} />)}
+            </div>
+          )}
         </div>
 
         <div className="mt-10 border-4 border-bauhaus-black bg-white p-4 text-xs text-bauhaus-muted">
