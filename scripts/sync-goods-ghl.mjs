@@ -23,14 +23,27 @@
 import { writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { execFileSync } from 'node:child_process';
+import { createClient } from '@supabase/supabase-js';
+import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
 
 const BASE_URL = 'https://services.leadconnectorhq.com';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUT_SQL = resolve(__dirname, 'seed-goods-ghl.generated.sql');
 const DUMP_FILE = resolve(__dirname, '.ghl-last-response.json');
 
+// --apply: after generating the SQL, run psql to upsert into goods_relationships
+// and log the run to agent_runs. This is what the scheduled `sync-goods-ghl`
+// agent invokes so the warmth map self-refreshes. Without it, SQL is generated
+// but not applied (the original dry-run behaviour).
+const APPLY = process.argv.includes('--apply');
+const PG_CONN =
+  'host=aws-0-ap-southeast-2.pooler.supabase.com port=6543 user=postgres.tednluwflfhxyucgwigh dbname=postgres connect_timeout=10';
+
 const API_KEY = process.env.GHL_API_KEY;
 const LOCATION_ID = process.env.GHL_LOCATION_ID;
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!API_KEY) {
   console.error('FATAL: GHL_API_KEY not set (run with `node --env-file=.env`)');
@@ -334,6 +347,36 @@ async function main() {
   console.log(`Unmapped stageIds (defaulted to 'identified'): ${unmappedCount}`);
   console.log(`Skipped (empty name): ${skippedNoName}`);
   console.log(`SQL written: ${OUT_SQL}`);
+
+  // --- Optional self-apply (scheduled/agent runs) ---
+  if (!APPLY) {
+    console.log('\nDry-run (SQL only). Re-run with --apply to upsert into goods_relationships.');
+    return;
+  }
+  if (!SUPABASE_URL || !SERVICE_KEY) {
+    console.error('FATAL: --apply needs SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (for agent_runs logging).');
+    process.exit(2);
+  }
+  if (!process.env.DATABASE_PASSWORD) {
+    console.error('FATAL: --apply needs DATABASE_PASSWORD to run psql.');
+    process.exit(2);
+  }
+
+  const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
+  const run = await logStart(supabase, 'sync-goods-ghl', 'Sync Goods GHL Warmth');
+  try {
+    execFileSync('psql', [PG_CONN, '-v', 'ON_ERROR_STOP=1', '-q', '-f', OUT_SQL], {
+      env: { ...process.env, PGPASSWORD: process.env.DATABASE_PASSWORD },
+      stdio: ['ignore', 'inherit', 'inherit'],
+    });
+    // Upsert, so every emitted row is touched; we don't distinguish new vs existing.
+    await logComplete(supabase, run.id, { items_found: totalOpps, items_updated: rows.length });
+    console.log(`\nApplied: ${rows.length} rows upserted into goods_relationships.`);
+  } catch (e) {
+    await logFailed(supabase, run.id, e);
+    console.error('FATAL (apply): psql failed:', e.message);
+    process.exit(4);
+  }
 }
 
 main().catch((e) => {

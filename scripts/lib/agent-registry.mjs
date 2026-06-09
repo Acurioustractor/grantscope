@@ -62,6 +62,18 @@ export const AGENTS = {
     timeoutMs: 120_000,
     dependencies: [],
   },
+  // Pulls live "current partners" from the 3 Goods GHL pipelines, recomputes
+  // warmth inline, and upserts (psql, idempotent) into goods_relationships so the
+  // /org/act/goods/engagement warmth map self-refreshes. --apply does the write +
+  // agent_runs logging. Needs GHL_API_KEY + GHL_LOCATION_ID + DATABASE_PASSWORD.
+  'sync-goods-ghl': {
+    command: ['node', '--env-file=.env', 'scripts/sync-goods-ghl.mjs', '--apply'],
+    displayName: 'Sync Goods GHL Warmth',
+    category: 'sync',
+    defaultPriority: 3,
+    timeoutMs: 300_000,
+    dependencies: [],
+  },
   'sync-ato-tax-transparency': {
     command: ['node', '--env-file=.env', 'scripts/sync-ato-tax-transparency.mjs'],
     displayName: 'Sync ATO Tax Transparency',
