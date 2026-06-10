@@ -57,13 +57,18 @@ describe('CANONICAL_NUMBERS', () => {
 });
 
 describe('reconciliation flag', () => {
-  it('needsReconciliation is true', () => {
-    expect(needsReconciliation).toBe(true);
+  // Reconciled by Ben 2026-06-10: 496 = 363 Basket + 133 Stretch (excludes 21 Weave);
+  // 2,660 kg HDPE = 133 Stretch x 20 kg. 520 retired from external use.
+  it('needsReconciliation is false (reconciled 2026-06-10)', () => {
+    expect(needsReconciliation).toBe(false);
   });
 
-  it('reconciliationNote names both definitions', () => {
+  it('reconciliationNote documents the outcome: both figures and the composition', () => {
     expect(reconciliationNote).toMatch(/496/);
     expect(reconciliationNote).toMatch(/520/);
+    expect(reconciliationNote).toMatch(/363 Basket/);
+    expect(reconciliationNote).toMatch(/133 Stretch/);
+    expect(reconciliationNote).toMatch(/RECONCILED/);
   });
 });
 

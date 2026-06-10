@@ -9,10 +9,10 @@
  *  - target   : a stated goal or aspiration, not yet achieved
  *  - future   : a projection of something that has not happened yet
  *
- * IMPORTANT: two delivered-bed counts coexist on purpose. The reviewer-verified
- * "deployed bed units" (496) and the internal assets-sync "beds delivered" (520)
- * use different definitions and one may be stale. We surface both, flag the
- * mismatch, and leave the reconciliation to a founder. Do not silently pick one.
+ * RECONCILED (Ben, 2026-06-10): 496 = 363 Basket Beds + 133 Stretch Beds (QBE
+ * definition, excludes 21 Weave Beds); 2,660 kg HDPE = 133 Stretch x 20 kg.
+ * 496 is the only externally quoted figure. The assets-sync 520 is retained
+ * below for internal audit but is RETIRED from external use.
  *
  * Plan: thoughts/shared/plans/goods-command-center-2026-06-09.md
  */
@@ -121,7 +121,7 @@ export const CANONICAL_NUMBERS: CanonicalNumber[] = [
     claimLabel: 'verified',
     asOf: ASSETS_SYNC_AS_OF,
     definition:
-      'Internal assets-sync count of beds delivered. This uses a different definition than the QBE deployed-bed-units figure (496) and may be stale. Reconcile before quoting externally.',
+      'RETIRED from external use (reconciled 2026-06-10): internal assets-sync count under a different definition / stale cutoff. Quote 496 (= 363 Basket + 133 Stretch, excludes 21 Weave) externally, never this figure.',
     source: ASSETS_SYNC_SOURCE,
   },
   {
@@ -174,11 +174,11 @@ export const CLAIM_LABEL_MEANINGS: Record<ClaimLabel, string> = {
  * which definition (and which figure) is correct before either is quoted
  * externally.
  */
-export const needsReconciliation = true;
+export const needsReconciliation = false;
 
-/** One-line explanation of the reconciliation flag. */
+/** One-line explanation of the reconciliation outcome. */
 export const reconciliationNote =
-  'Two delivered-count definitions exist: QBE reviewer-verified deployed bed units (496, as of 2026-06-01) versus the internal assets-sync beds-delivered count (520, as of 2026-05-28). One may be stale. Founder reconciliation needed before quoting either externally.';
+  'RECONCILED (Ben, 2026-06-10): 496 deployed bed units = 363 Basket Beds + 133 Stretch Beds (QBE definition, excludes the 21 Weave Beds), and 2,660 kg HDPE diverted = 133 Stretch Beds x 20 kg exactly. 496 is the ONLY externally quoted figure; the assets-sync 520 used a different definition / stale cutoff and is retired from external use.';
 
 /** Lookup helper. Returns undefined if the key is not in the canonical set. */
 export function getCanonical(key: string): CanonicalNumber | undefined {
