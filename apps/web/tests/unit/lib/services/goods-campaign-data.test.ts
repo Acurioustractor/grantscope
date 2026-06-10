@@ -93,10 +93,11 @@ describe('pipelineTotal', () => {
 });
 
 describe('byCommitment', () => {
-  it('groups sources into all four ladder buckets', () => {
+  it('groups sources into the four ladder buckets plus parked', () => {
     const grouped = byCommitment(CAPITAL_STACK);
-    expect(Object.keys(grouped).sort()).toEqual([...COMMITMENT_ORDER].sort());
-    const total = COMMITMENT_ORDER.reduce((n, c) => n + grouped[c].length, 0);
+    expect(Object.keys(grouped).sort()).toEqual([...COMMITMENT_ORDER, 'parked'].sort());
+    // parked sits outside the active ladder, but no source may be dropped
+    const total = COMMITMENT_ORDER.reduce((n, c) => n + grouped[c].length, grouped.parked.length);
     expect(total).toBe(CAPITAL_STACK.length);
   });
 

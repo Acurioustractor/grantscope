@@ -22,9 +22,15 @@ export type CapitalKind =
 /**
  * How committed the source is. Strict ladder — a source only advances past
  * 'eligible' when written evidence is attached. 'signed' is the only state that
- * represents money the funder has put on the record.
+ * represents money the funder has put on the record. 'parked' is off-ladder:
+ * deliberately out of the active raise (paused, not pursued for now).
  */
-export type Commitment = 'target' | 'in_conversation' | 'eligible' | 'signed';
+export type Commitment =
+  | 'target'
+  | 'in_conversation'
+  | 'eligible'
+  | 'signed'
+  | 'parked';
 
 /**
  * Whether the source counts toward the QBE match. Held at 'unknown' for every
@@ -51,6 +57,11 @@ export interface CapitalSource {
   status: string;
   /** The single next action that moves this source forward. */
   nextMove: string;
+  /**
+   * True when the source itself is unverified — i.e. we are not yet sure what it
+   * refers to or whether it belongs in the stack. Renders a red VERIFY chip.
+   */
+  needsVerification?: boolean;
 }
 
 export const KIND_LABEL: Record<CapitalKind, string> = {
@@ -66,9 +77,14 @@ export const COMMITMENT_LABEL: Record<Commitment, string> = {
   in_conversation: 'In conversation',
   eligible: 'Eligible',
   signed: 'Signed',
+  parked: 'Parked',
 };
 
-/** Strict left-to-right ladder order for the board columns. */
+/**
+ * Strict left-to-right ladder order for the active board columns. 'parked' is
+ * deliberately excluded — parked sources render in a muted strip, not on the
+ * active ladder.
+ */
 export const COMMITMENT_ORDER: Commitment[] = [
   'target',
   'in_conversation',
@@ -108,7 +124,9 @@ export const CAPITAL_STACK: CapitalSource[] = [
     matchEligibility: 'unknown',
     registryName: 'Snow Foundation',
     status: 'Applied, awaiting decision',
-    nextMove: 'Chase decision timing; ask what evidence would accelerate',
+    // email sweep 2026-06-10
+    nextMove:
+      'Grant WON — agreement sent 19 May. Ask Snow to convert into signed matched-capital LOI. Email contacts: Sally Grimsley-Ballard / Georgie Byron / Maree Meredith (NOT Carolyn Ludovici — no email history).',
   },
   {
     // TODO(ben-verify): LOI scope and loan terms.
@@ -122,7 +140,9 @@ export const CAPITAL_STACK: CapitalSource[] = [
     matchEligibility: 'unknown',
     registryName: 'SEFA',
     status: 'LOI held; not yet formal',
-    nextMove: 'Convert LOI to formal term sheet',
+    // email sweep 2026-06-10
+    nextMove:
+      'No capital conversation exists in email. Open fresh thread with Chelsea Baker re debt/blended capital LOI.',
   },
   {
     // TODO(ben-verify): PFI EOI status and recoverable-grant terms.
@@ -136,7 +156,10 @@ export const CAPITAL_STACK: CapitalSource[] = [
     matchEligibility: 'unknown',
     registryName: 'PFI',
     status: 'EOI submitted March 2026',
-    nextMove: 'Follow up EOI outcome',
+    // email sweep 2026-06-10
+    nextMove:
+      "No email substrate found for 'PFI' — founder to confirm what PFI refers to before it stays in the stack.",
+    needsVerification: true,
   },
   {
     // TODO(ben-verify): whether IBA debt belongs in this raise at all.
@@ -150,7 +173,8 @@ export const CAPITAL_STACK: CapitalSource[] = [
     matchEligibility: 'unknown',
     registryName: 'IBA',
     status: 'Eligibility confirmed; no application lodged',
-    nextMove: 'Decide whether IBA debt belongs in this raise',
+    // email sweep 2026-06-10
+    nextMove: 'No email relationship at all. Source warm intro via SIH or Snow networks.',
   },
   {
     // TODO(ben-verify): Minderoo catalytic frame and ask size.
@@ -159,12 +183,46 @@ export const CAPITAL_STACK: CapitalSource[] = [
     kind: 'catalytic',
     askAud: 200_000,
     askLabel: '~$200K',
-    commitment: 'target',
+    // email sweep 2026-06-10
+    commitment: 'parked',
     writtenEvidence: null,
     matchEligibility: 'unknown',
     registryName: 'Minderoo',
     status: 'Warm; no formal process started',
-    nextMove: 'Scope a catalytic ask aligned to their climate frame',
+    nextMove:
+      'Lucy Stronach paused justice conversations 14 May (internal). No pitch; light Contained-in-Perth touchpoint July.',
+  },
+  {
+    // TODO(ben-verify): proposal value, board date, and contact still current.
+    // email sweep 2026-06-10
+    id: 'centrecorp-foundation',
+    name: 'Centrecorp Foundation',
+    kind: 'grant',
+    askAud: null,
+    askLabel: 'TBC (130 Stretch Beds proposal)',
+    commitment: 'in_conversation',
+    writtenEvidence: null,
+    matchEligibility: 'unknown',
+    registryName: 'Centrecorp',
+    status: 'Proposal to Centrecorp board 26 June',
+    nextMove:
+      '130 Stretch Beds proposal $106,150 (GHL) goes to Centrecorp board 26 June. Last email 13 Feb — confirm agenda + board pack needs with Randle Walker.',
+  },
+  {
+    // TODO(ben-verify): visit dates, attendance, and ask framing.
+    // email sweep 2026-06-10
+    id: 'bryan-foundation',
+    name: 'The Bryan Foundation',
+    kind: 'grant',
+    askAud: null,
+    askLabel: 'TBC',
+    commitment: 'in_conversation',
+    writtenEvidence: null,
+    matchEligibility: 'unknown',
+    registryName: 'Bryan Foundation',
+    status: 'Site visit + brainstorm proposed 6–7 July',
+    nextMove:
+      'Matthew Cox site visit + brainstorm 6–7 July invited (accepted?). Prepare agenda with explicit matched-capital ask.',
   },
 ];
 
@@ -204,10 +262,28 @@ export function byCommitment(
     in_conversation: [],
     eligible: [],
     signed: [],
+    parked: [],
   };
   for (const s of sources) out[s.commitment].push(s);
   return out;
 }
+
+/**
+ * The QBE Stage-1 headline metric: count of sources that are 'signed' AND carry
+ * written evidence on file. QBE Catalysing Impact Stage 1 requires 3+ signed
+ * LOIs of matched capital by 31 Aug 2026, so this is the number the page leads
+ * with. A 'signed' commitment with no evidence does NOT count — evidence is the
+ * gate, and code never flips evidence (the founder verifies).
+ */
+export function loisSigned(sources: CapitalSource[]): number {
+  return sources.reduce(
+    (n, s) => (s.commitment === 'signed' && s.writtenEvidence !== null ? n + 1 : n),
+    0,
+  );
+}
+
+/** QBE Stage-1 target: minimum signed LOIs required. */
+export const LOI_TARGET = 3;
 
 /**
  * Whole days from `now` until an ISO date. Negative when the date has passed.

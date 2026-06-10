@@ -13,6 +13,7 @@ import {
   reconciliationNote,
   type ClaimLabel,
 } from '@/lib/services/goods-canonical-numbers';
+import { COST_STORY_HEADLINE } from '@/lib/services/goods-pitch-content';
 import { GoodsSubNav } from '../_components/goods-sub-nav';
 import { ClaimChip } from '../_components/claim-chip';
 import { PrintButton } from './print-button';
@@ -412,6 +413,48 @@ export default async function GoodsProofPage({ params }: { params: Promise<{ slu
           </div>
           <div className="mt-2 text-[11px] font-bold uppercase tracking-widest text-bauhaus-muted">
             Planning estimates, not audited actuals.
+          </div>
+        </section>
+
+        {/* ---------------- UNIT ECONOMICS ---------------- */}
+        <section>
+          <SectionHead
+            kicker="The cost ladder QBE asks for"
+            title="Unit economics"
+            blurb="The headline rows of the delivered unit cost, from today's fabricated bed to the in-house transition and the volume curve. The full cost story and capital architecture live on the Pitch page."
+          />
+          <div className="border-4 border-bauhaus-black bg-white">
+            <div className="grid grid-cols-[1fr_auto] gap-x-4 border-b-4 border-bauhaus-black px-3 py-2 text-[10px] font-black uppercase tracking-widest text-bauhaus-muted sm:grid-cols-[1.4fr_1.4fr_auto]">
+              <span>Claim</span>
+              <span className="hidden sm:block">Number</span>
+              <span className="text-right">Label</span>
+            </div>
+            {COST_STORY_HEADLINE.map((r) => (
+              <div
+                key={r.claim}
+                className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 border-b border-bauhaus-black/10 px-3 py-2.5 last:border-b-0 sm:grid-cols-[1.4fr_1.4fr_auto] sm:items-center"
+              >
+                <div className="min-w-0">
+                  <span className="font-black">{r.claim}</span>
+                  <div className="mt-0.5 text-[11px] text-bauhaus-muted">{r.source}</div>
+                </div>
+                <div className="font-black text-bauhaus-black">{r.number}</div>
+                <div className="text-right">
+                  <ClaimChip label={r.claimLabel} />
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+            <span className="text-[11px] font-bold uppercase tracking-widest text-bauhaus-muted">
+              Decision band: ≥25% scale · 15 to 24% workable · 5 to 14% red flag · &lt;5% stop.
+            </span>
+            <Link
+              href={`/org/${slug}/goods/pitch`}
+              className="inline-flex items-center gap-2 border-2 border-bauhaus-black bg-white px-3 py-1.5 text-[11px] font-black uppercase tracking-widest text-bauhaus-black hover:bg-bauhaus-black hover:text-white"
+            >
+              Full cost story + capital architecture →
+            </Link>
           </div>
         </section>
 
