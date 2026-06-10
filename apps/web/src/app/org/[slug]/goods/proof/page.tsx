@@ -4,6 +4,8 @@ import { ACT_FAST_PROFILE, isActSlug, shouldUseFastLocalOrg } from '@/lib/servic
 import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
 import { getGoodsProof } from '@/lib/services/goods-proof';
 import { getGoodsCostEvidence } from '@/lib/services/goods-cost-evidence';
+import { getGoodsTranches } from '@/lib/services/goods-tranches';
+import { trackLabel } from '@/lib/services/goods-tranches-shared';
 import { money as moneyExact, moneyShort } from '@/lib/services/goods-engagement-shared';
 import {
   canonical,
@@ -24,6 +26,20 @@ export async function generateMetadata() {
 const n = (v: number) => v.toLocaleString('en-AU');
 // Compact money for stat call-outs — shared canonical formatter.
 const money = moneyShort;
+
+// Short month-year for tranche date spans (e.g. "Jan 2026").
+function monthYear(iso: string | null): string {
+  if (!iso) return 'undated';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return 'undated';
+  return d.toLocaleDateString('en-AU', { month: 'short', year: 'numeric' });
+}
+
+function dateSpan(earliest: string | null, latest: string | null): string {
+  const a = monthYear(earliest);
+  const b = monthYear(latest);
+  return a === b ? a : `${a} to ${b}`;
+}
 
 function Big({ value, label, sub, accent, claim }: { value: string; label: string; sub?: string; accent?: 'red' | 'blue' | 'yellow'; claim?: ClaimLabel }) {
   const border = accent === 'red' ? 'border-bauhaus-red' : accent === 'blue' ? 'border-bauhaus-blue' : accent === 'yellow' ? 'border-bauhaus-yellow' : 'border-bauhaus-black';
@@ -87,7 +103,11 @@ export default async function GoodsProofPage({ params }: { params: Promise<{ slu
   const profile = shouldUseFastLocalOrg() && isActSlug(slug) ? ACT_FAST_PROFILE : await getOrgProfileBySlug(slug);
   if (!profile) notFound();
 
-  const [proof, costEvidence] = await Promise.all([getGoodsProof(), getGoodsCostEvidence()]);
+  const [proof, costEvidence, tranches] = await Promise.all([
+    getGoodsProof(),
+    getGoodsCostEvidence(),
+    getGoodsTranches(),
+  ]);
   const { impact, commercial, fundingQuantum, deliveredAgeDays, deliveredStale, links, fetchError } = proof;
   // Production + freight cost bands — the honest planning estimate (not audited).
   const productionRow = costEvidence.unitEstimateRows.find((r) => r.label === 'Production range');
@@ -268,6 +288,91 @@ export default async function GoodsProofPage({ params }: { params: Promise<{ slu
                 <LinkOut href={links.qbeCockpit} label="QBE Program" note="internal bid cockpit (admin)" />
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* ---------------- WHERE THE MONEY WENT ---------------- */}
+        <section id="tranches">
+          <SectionHead
+            kicker="Tranche traceability"
+            title="Where the money went"
+            blurb="Every dollar received as a dated tranche, traced to the funder who sent it. These rows are derived from paid Xero ACT-GD invoices, so each total is verified, not modelled."
+          />
+          {tranches.fetchError && (
+            <div className="mb-3 border-4 border-bauhaus-red bg-bauhaus-red px-4 py-2 text-[12px] font-black uppercase tracking-widest text-white print:hidden">
+              Tranche register unavailable ({tranches.fetchError}). Funder rows below may be incomplete.
+            </div>
+          )}
+
+          {/* Track totals — philanthropy and procurement never lumped together. */}
+          {tranches.byTrack.length > 0 && (
+            <div className="mb-3 flex flex-wrap gap-3">
+              {tranches.byTrack.map((t) => (
+                <div key={t.track} className="border-4 border-bauhaus-black bg-white px-4 py-2">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">
+                    {trackLabel(t.track)}
+                  </div>
+                  <div className="mt-0.5 flex items-center gap-1.5">
+                    <span className="text-xl font-black">{moneyExact(t.total)}</span>
+                    <ClaimChip label="verified" />
+                  </div>
+                  <div className="text-[11px] font-bold text-bauhaus-muted">
+                    {n(t.count)} tranche{t.count === 1 ? '' : 's'}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Per-funder rows. */}
+          <div className="border-4 border-bauhaus-black bg-white">
+            <div className="flex items-center justify-between border-b-4 border-bauhaus-black px-3 py-2 text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">
+              <span>Funder</span>
+              <span>Received (verified)</span>
+            </div>
+            {tranches.byFunder.length === 0 ? (
+              <div className="px-3 py-4 text-sm text-bauhaus-muted">No tranches loaded.</div>
+            ) : (
+              tranches.byFunder.map((f) => (
+                <div
+                  key={f.funderName}
+                  className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-bauhaus-black/10 px-3 py-2.5 last:border-b-0"
+                >
+                  <div className="min-w-0 flex-1">
+                    <span className="font-black">{f.funderName}</span>
+                    <span className="ml-2 inline-block bg-bauhaus-canvas px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-bauhaus-muted">
+                      {trackLabel(f.track)}
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-bold text-bauhaus-muted">
+                    {n(f.count)} tranche{f.count === 1 ? '' : 's'} · {dateSpan(f.earliestDate, f.latestDate)}
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-28 text-right font-black">{moneyExact(f.total)}</span>
+                    <ClaimChip label="verified" />
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Honest allocation strip — computed live, never hardcoded. */}
+          <div className="mt-3 border-4 border-bauhaus-yellow bg-bauhaus-yellow p-4">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-black uppercase tracking-widest text-bauhaus-black/70">
+                Allocation still to come
+              </span>
+              <ClaimChip label="future" />
+            </div>
+            <p className="mt-1 text-[13px] font-bold text-bauhaus-black">
+              {n(tranches.allocationStats.allocated)} of {n(tranches.allocationStats.total)} tranches are allocated to
+              specific deployments yet. Allocation curation is the next step. Until then dollars trace to funders, not to
+              communities.
+            </p>
+          </div>
+
+          <div className="mt-2 text-[11px] font-bold uppercase tracking-widest text-bauhaus-muted">
+            Source: goods_tranches, derived from Xero paid ACT-GD invoices.
           </div>
         </section>
 

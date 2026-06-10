@@ -59,6 +59,41 @@ function Chip({ children, muted }: { children: React.ReactNode; muted?: boolean 
   );
 }
 
+/**
+ * "How to talk to them" — compact framing synced from the ACT funder ledger.
+ * Visually subordinate to the next-move line: muted background, small type.
+ * Renders nothing useful unless framing carries at least a tone or a claim.
+ */
+function FramingBlock({ framing }: { framing: FunderInsight['framing'] }) {
+  if (!framing) return null;
+  const lead = (framing.claims_to_lead_with ?? []).filter(Boolean).slice(0, 2);
+  const avoid = (framing.claims_to_avoid ?? []).filter(Boolean).slice(0, 2);
+  const hasAny = !!framing.tone || lead.length > 0 || avoid.length > 0 || !!framing.primary_contact;
+  if (!hasAny) return null;
+
+  return (
+    <div className="mt-1.5 border-l-2 border-bauhaus-black/20 pl-2">
+      <div className="text-[9px] font-black uppercase tracking-widest text-bauhaus-muted">How to talk to them</div>
+      {framing.tone && (
+        <div className="mt-0.5 text-[11px] font-bold text-bauhaus-black">{framing.tone}.</div>
+      )}
+      {lead.map((c) => (
+        <div key={`lead-${c}`} className="mt-0.5 text-[11px] text-bauhaus-black">
+          <span className="font-black text-bauhaus-blue">Lead:</span> {c}
+        </div>
+      ))}
+      {avoid.map((c) => (
+        <div key={`avoid-${c}`} className="mt-0.5 text-[11px] text-bauhaus-red">
+          <span className="font-black">Avoid:</span> {c}
+        </div>
+      ))}
+      {framing.primary_contact && (
+        <div className="mt-0.5 text-[10px] font-bold text-bauhaus-muted">Contact: {framing.primary_contact}</div>
+      )}
+    </div>
+  );
+}
+
 function InsightCard({ i }: { i: FunderInsight }) {
   return (
     <div className="flex items-stretch gap-0 border-b border-bauhaus-black/10 last:border-b-0">
@@ -93,6 +128,9 @@ function InsightCard({ i }: { i: FunderInsight }) {
               );
             })()}
           </div>
+
+          {/* how to talk to them — synced ask-framing, subordinate to the move above */}
+          <FramingBlock framing={i.framing} />
 
           {/* what they care about */}
           {i.interests.length > 0 && (
@@ -236,6 +274,9 @@ export default async function GoodsInsightPage({
           subscribed briefs, comms drips and pipeline stage (<code>goods_relationships.ghl_signal</code>, refreshed by the
           12h <code>sync-goods-ghl</code> agent). GHL holds no message threads for funders; the actual correspondence lives
           in Gmail. Next move is rule-based, not generated — deterministic and inspectable.
+          <span className="mt-2 block">
+            Framing synced from the ACT funder ledger (act-global-infrastructure), not generated.
+          </span>
         </div>
       </div>
     </main>

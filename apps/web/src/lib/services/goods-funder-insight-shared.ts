@@ -26,6 +26,23 @@ export type GhlSignal = {
   synced_at?: string | null;
 };
 
+/**
+ * Per-funder ask-framing synced from the ACT funder ledger
+ * (act-global-infrastructure/wiki/narrative/funders.json) into
+ * goods_relationships.framing by scripts/sync-goods-framing.mjs.
+ * SYNCED, never generated — how to talk to this funder, in their language.
+ */
+export type FunderFraming = {
+  slug?: string;
+  tone?: string | null;
+  framing_notes?: string | null;
+  claims_to_lead_with?: string[];
+  claims_to_avoid?: string[];
+  primary_contact?: string | null;
+  last_communicated_at?: string | null;
+  synced_at?: string | null;
+};
+
 // ---- Decoded dimensions ----
 export type Temperature = 'hot' | 'warm' | 'steady' | 'inquiry' | 'cooling' | 'cold' | 'unknown';
 export type EngagementTier = 'vip' | 'inner' | 'standard';
@@ -51,6 +68,8 @@ export type FunderInsightInput = {
   askAmount?: number | null;
   /** Next action due date (ISO); null when none scheduled. */
   nextActionDue?: string | null;
+  /** Ask-framing synced from the ACT funder ledger; null when no ledger match. */
+  framing?: FunderFraming | null;
   /** injectable clock for deterministic tests; defaults to Date.now() */
   now?: number;
 };
@@ -70,6 +89,8 @@ export type FunderInsight = {
   askAmount: number | null;
   /** Next action due date (ISO); null when none. */
   nextActionDue: string | null;
+  /** Ask-framing synced from the ACT funder ledger; null when no match. */
+  framing: FunderFraming | null;
   // decoded signal
   temperature: Temperature;
   temperatureRank: number;
@@ -243,6 +264,7 @@ export function decodeFunderInsight(input: FunderInsightInput): FunderInsight {
     hasPrior: input.hasPrior,
     askAmount: input.askAmount ?? null,
     nextActionDue: input.nextActionDue ?? null,
+    framing: input.framing ?? null,
     temperature,
     temperatureRank: TEMP_RANK[temperature],
     engagementTier,

@@ -2,7 +2,7 @@ import { getServiceSupabase } from '@/lib/supabase';
 import type { GoodsRelType, GoodsStage } from './goods-engagement-shared';
 import {
   decodeFunderInsight, rankInsights, summariseInsights,
-  type FunderInsight, type FunderInsightSummary, type GhlSignal,
+  type FunderInsight, type FunderInsightSummary, type GhlSignal, type FunderFraming,
 } from './goods-funder-insight-shared';
 
 /**
@@ -31,6 +31,7 @@ type Row = {
   ghl_signal: GhlSignal | null;
   next_action_due?: string | null;
   ask_amount_aud?: number | string | null;
+  framing?: FunderFraming | null;
 };
 
 const num = (v: number | string | null | undefined): number => {
@@ -77,6 +78,7 @@ export async function getGoodsFunderInsight(): Promise<{
           signal: r.ghl_signal ?? {},
           askAmount: r.ask_amount_aud == null ? null : num(r.ask_amount_aud),
           nextActionDue: r.next_action_due ?? null,
+          framing: r.framing ?? null,
         }),
       )
       .sort(rankInsights);

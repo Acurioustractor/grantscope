@@ -5,6 +5,7 @@ import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
 import { createSupabaseServer } from '@/lib/supabase-server';
 import { isAdminEmail } from '@/lib/admin';
 import { getGoodsMoney } from '@/lib/services/goods-money';
+import { getGoodsTranches } from '@/lib/services/goods-tranches';
 import {
   money, moneyShort, REL_TYPE_LABEL, STAGE_LABEL, warmthBand, bandPill, nextBestAction, relDays,
   BUTTERFLY_DGR,
@@ -62,7 +63,7 @@ export default async function GoodsMoneyPage({ params }: { params: Promise<{ slu
     if (!isAdminEmail(user.email)) redirect(`/org/${slug}/goods/engagement`);
   }
 
-  const m = await getGoodsMoney();
+  const [m, tranches] = await Promise.all([getGoodsMoney(), getGoodsTranches()]);
   const totalValue = (label: string) => m.ledger.totals.find((t) => t.label === label)?.value ?? '$0';
   const invoiceRows = m.ledger.moneyRows.slice(0, 8);
 
@@ -155,6 +156,13 @@ export default async function GoodsMoneyPage({ params }: { params: Promise<{ slu
           </div>
           <p className="mt-1 text-[11px] font-bold text-bauhaus-muted">
             Registry figure is manually entered; Xero is the source of truth. Delta: {money(m.reconciliation.delta)}.
+          </p>
+          <p className="mt-2 border-t-2 border-bauhaus-black/10 pt-2 text-[12px] font-bold text-bauhaus-black">
+            Tranche register: {String(tranches.allocationStats.total)} Xero-verified tranches across{' '}
+            {String(tranches.byFunder.length)} funders.{' '}
+            <Link href={`/org/${slug}/goods/proof#tranches`} className="text-bauhaus-blue underline hover:no-underline">
+              See the Proof Pack.
+            </Link>
           </p>
         </div>
 
