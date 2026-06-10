@@ -3,6 +3,7 @@ import {
   parseGovernanceNotes,
   rollupLadder,
   BELONGING_RUNGS,
+  type Advisor,
   type GovernanceMember,
   type GovernanceStatus,
   type SupporterLadder,
@@ -90,6 +91,72 @@ export async function getGoodsGovernance(): Promise<{ members: GovernanceMember[
   } catch (e) {
     console.error('[goods-governance] unexpected:', e);
     return { members: [], fetchError: e instanceof Error ? e.message : 'unexpected error' };
+  }
+}
+
+type AdvisorRow = {
+  id: string;
+  name: string;
+  role: string | null;
+  organisation: string | null;
+  linkedin_url: string | null;
+  // Added by migration 20260610030000_goods_advisory_circle (contact_type CHECK +
+  // these columns). The migration is written but NOT YET APPLIED, so these may be
+  // undefined on the row; we read with select('*') and coerce missing fields.
+  expertise?: string[] | null;
+  last_contacted_at?: string | null;
+  engagement_ask?: string | null;
+};
+
+export interface AdvisorsResult {
+  advisors: Advisor[];
+  fetchError: string | null;
+}
+
+/**
+ * Goods on Country — Advisory Circle (QBE Diagnostic Area 07: advisers are never a board).
+ *
+ * Reads org_contacts (contact_type='advisory', same ACT org + Goods project scope as
+ * the board). This must degrade gracefully TODAY: the migration that adds 'advisory' to
+ * the contact_type CHECK (and the expertise/last_contacted_at/engagement_ask columns) is
+ * not yet applied. Until it is, no row can carry contact_type='advisory', so the query
+ * returns zero rows — that is the normal pre-migration state, NOT an error. We only set
+ * fetchError when Postgres actually errors; select('*') keeps the not-yet-added columns
+ * from 400-ing and we coerce them to []/null.
+ */
+export async function getGoodsAdvisors(): Promise<AdvisorsResult> {
+  try {
+    const supabase = getServiceSupabase();
+    const { data, error } = await supabase
+      .from('org_contacts')
+      .select('*')
+      .eq('org_profile_id', ORG_ID)
+      .eq('project_id', PROJECT_ID)
+      .eq('contact_type', 'advisory')
+      .order('name');
+
+    if (error) {
+      console.error('[goods-governance] advisors query failed:', error.message);
+      return { advisors: [], fetchError: error.message };
+    }
+
+    const advisors = ((data as AdvisorRow[] | null) ?? []).map((r): Advisor => ({
+      id: r.id,
+      name: r.name,
+      role: r.role,
+      organisation: r.organisation,
+      linkedinUrl: r.linkedin_url,
+      expertise: Array.isArray(r.expertise)
+        ? r.expertise.filter((e): e is string => typeof e === 'string')
+        : [],
+      lastContactedAt: r.last_contacted_at ?? null,
+      engagementAsk: r.engagement_ask ?? null,
+    }));
+
+    return { advisors, fetchError: null };
+  } catch (e) {
+    console.error('[goods-governance] advisors unexpected:', e);
+    return { advisors: [], fetchError: e instanceof Error ? e.message : 'unexpected error' };
   }
 }
 

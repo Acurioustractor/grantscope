@@ -10,6 +10,7 @@ import {
   LOI_TARGET,
   byCommitment,
   daysUntil,
+  dgrRoutingWarnings,
   evidenceBackedTotal,
   loisSigned,
   pipelineTotal,
@@ -78,6 +79,37 @@ function SourceCard({ source, slug }: { source: EnrichedCapitalSource; slug: str
         )}
       </div>
 
+      {source.instrument && (
+        <div className="mt-2 border-t-2 border-bauhaus-black/10 pt-2">
+          <div className="text-[9px] font-black uppercase tracking-widest text-bauhaus-muted">
+            What this requires
+          </div>
+          <dl className="mt-1 space-y-0.5 text-[10px] font-bold text-bauhaus-muted">
+            <div className="flex justify-between gap-2">
+              <dt className="uppercase tracking-widest">Repayment</dt>
+              <dd className="text-right text-bauhaus-black">
+                {source.instrument.repayment ?? 'TBC'}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-2">
+              <dt className="uppercase tracking-widest">Security</dt>
+              <dd className="text-right text-bauhaus-black">
+                {source.instrument.security ?? 'TBC'}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-2">
+              <dt className="uppercase tracking-widest">Entity</dt>
+              <dd className="text-right text-bauhaus-black">{source.instrument.entityRequired}</dd>
+            </div>
+          </dl>
+          {source.instrument.dgrRoute && (
+            <span className="mt-1 inline-block border-2 border-bauhaus-blue bg-link-light px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-bauhaus-black">
+              Butterfly DGR route
+            </span>
+          )}
+        </div>
+      )}
+
       {source.live && (
         <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t-2 border-bauhaus-black/10 pt-2">
           <span className="bg-bauhaus-black px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-white">
@@ -124,6 +156,7 @@ export default async function GoodsCampaignPage({ params }: { params: Promise<{ 
   const lois = loisSigned(sources);
   const days = daysUntil(deadline);
   const urgent = days < 60;
+  const dgrWarnings = dgrRoutingWarnings(sources as CapitalSource[]);
 
   return (
     <main className="min-h-screen bg-bauhaus-canvas text-bauhaus-black">
@@ -212,6 +245,19 @@ export default async function GoodsCampaignPage({ params }: { params: Promise<{ 
             The reported cap of up to $400K is unconfirmed and is not treated as committed.
           </div>
         </div>
+
+        {/* DGR routing warning: grant-type sources whose routing is unconfirmed. */}
+        {dgrWarnings.length > 0 && (
+          <div className="mt-4 border-4 border-bauhaus-black bg-bauhaus-yellow p-3">
+            <div className="text-sm font-black uppercase tracking-widest text-bauhaus-black">
+              {dgrWarnings.length} grant-type source{dgrWarnings.length === 1 ? '' : 's'} have unconfirmed DGR routing
+            </div>
+            <div className="mt-1 text-[12px] font-bold text-bauhaus-black">
+              Grants must route via {BUTTERFLY_DGR.name} (Butterfly), never A Curious Tractor Pty Ltd or AKT.
+              Confirm routing for: {dgrWarnings.map((s) => s.name).join(', ')}.
+            </div>
+          </div>
+        )}
 
         {/* The ladder board. */}
         <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">

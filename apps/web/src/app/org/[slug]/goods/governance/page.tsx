@@ -2,10 +2,11 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ACT_FAST_PROFILE, isActSlug, shouldUseFastLocalOrg } from '@/lib/services/fast-local-org';
 import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
-import { getGoodsGovernance, getSupporterLadder, getFunderReadiness } from '@/lib/services/goods-governance';
+import { getGoodsGovernance, getSupporterLadder, getFunderReadiness, getGoodsAdvisors } from '@/lib/services/goods-governance';
 import { getGoodsWarmIntros } from '@/lib/services/goods-warm-intros';
 import {
   summarizeBoard,
+  type Advisor,
   type GovernanceMember,
   type GovernanceStatus,
 } from '@/lib/services/goods-governance-shared';
@@ -113,6 +114,73 @@ function MemberCard({ m }: { m: GovernanceMember }) {
           ) : (
             <div className="mt-1.5 text-[10px] uppercase tracking-widest text-bauhaus-muted">Contact details to confirm</div>
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Adviser card — deliberately distinct from the board roster (red accent rail,
+ * not black) so an adviser is never read as a director. QBE Area 07.
+ */
+function AdvisorCard({ a }: { a: Advisor }) {
+  const lastContacted = fmtDate(a.lastContactedAt);
+  return (
+    <div className="flex items-stretch gap-0 border-b border-bauhaus-black/10 last:border-b-0">
+      <div className="w-1.5 shrink-0 bg-bauhaus-red" aria-hidden />
+      <div className="flex flex-1 flex-wrap items-start gap-x-4 gap-y-2 px-4 py-4">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center border-2 border-bauhaus-red bg-white text-sm font-black tracking-widest text-bauhaus-red">
+          {initials(a.name)}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-lg font-black text-bauhaus-black">{a.name}</span>
+            <span className="bg-bauhaus-red px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-white">
+              Adviser
+            </span>
+          </div>
+          {a.role && <div className="mt-0.5 text-[13px] font-bold text-bauhaus-black">{a.role}</div>}
+          {a.organisation && (
+            <div className="text-[11px] font-bold uppercase tracking-widest text-bauhaus-muted">{a.organisation}</div>
+          )}
+          {a.expertise.length > 0 && (
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              {a.expertise.map((tag) => (
+                <span
+                  key={tag}
+                  className="border-2 border-bauhaus-red px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-bauhaus-red"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+          {a.engagementAsk && (
+            <div className="mt-2 max-w-2xl border-l-4 border-bauhaus-red bg-bauhaus-canvas px-3 py-1.5 text-[13px] leading-snug text-bauhaus-black/90">
+              <span className="text-[9px] font-black uppercase tracking-widest text-bauhaus-red">Current ask</span>
+              <div className="mt-0.5">{a.engagementAsk}</div>
+            </div>
+          )}
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span
+              className={`px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest ${
+                lastContacted ? 'border-2 border-bauhaus-black text-bauhaus-black' : 'bg-bauhaus-canvas text-bauhaus-muted'
+              }`}
+            >
+              {lastContacted ? `Last contacted ${lastContacted}` : 'Last contact not recorded'}
+            </span>
+            {a.linkedinUrl && (
+              <a
+                href={a.linkedinUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[11px] font-black uppercase tracking-widest text-bauhaus-blue hover:underline"
+              >
+                LinkedIn
+              </a>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -249,17 +317,23 @@ export default async function GoodsGovernancePage({ params }: { params: Promise<
   const profile = shouldUseFastLocalOrg() && isActSlug(slug) ? ACT_FAST_PROFILE : await getOrgProfileBySlug(slug);
   if (!profile) notFound();
 
-  const [govResult, ladderResult, readiness, { targets }] = await Promise.all([
+  const [govResult, ladderResult, readiness, { targets }, advisorsResult] = await Promise.all([
     getGoodsGovernance(),
     getSupporterLadder(),
     getFunderReadiness(),
     getGoodsWarmIntros(),
+    getGoodsAdvisors(),
   ]);
   const { members, fetchError: govError } = govResult;
   const { ladder, fetchError: ladderError } = ladderResult;
+  const { advisors, fetchError: advisorsError } = advisorsResult;
   const board = summarizeBoard(members);
   const doors = toConnectionDoors(targets, DOOR_CAP);
   const connStats = summarizeConnections(targets);
+  // advisorsError is intentionally NOT folded into liveError: pre-migration, a missing
+  // 'advisory' contact_type returns zero rows, never an error. We surface a real query
+  // error inline in the Advisory Circle section instead, so a normal empty state never
+  // lights the page-level "live data unavailable" banner.
   const liveError = govError ?? ladderError ?? readiness.fetchError;
   const now = new Date();
   const evidence = getGoodsEvidence(now);
@@ -298,6 +372,7 @@ export default async function GoodsGovernancePage({ params }: { params: Promise<
             ['readiness', 'Readiness'],
             ['evidence', 'Evidence'],
             ['board', 'Board'],
+            ['advisory', 'Advisory'],
             ['ladder', 'Ladder'],
             ['connections', 'Connections'],
           ].map(([id, label]) => (
@@ -491,6 +566,60 @@ export default async function GoodsGovernancePage({ params }: { params: Promise<
             {members.map((m) => <MemberCard key={m.id} m={m} />)}
           </div>
         )}
+
+        {/* Advisory Circle — advisers, NOT a board (QBE Diagnostic Area 07) */}
+        <div id="advisory" className="mt-10 scroll-mt-4">
+          <div className="flex items-baseline justify-between border-l-4 border-bauhaus-red pl-3">
+            <h2 className="text-lg font-black uppercase tracking-widest text-bauhaus-black">Advisory Circle</h2>
+            <span className="text-[11px] font-bold uppercase tracking-widest text-bauhaus-muted">
+              {advisors.length} {advisors.length === 1 ? 'adviser' : 'advisers'}
+            </span>
+          </div>
+          <div className="mt-2 border-4 border-bauhaus-red bg-white px-4 py-2.5">
+            <p className="text-[12px] font-black uppercase tracking-widest text-bauhaus-red">
+              Advisers, not a board.
+            </p>
+            <p className="mt-1 max-w-3xl text-[13px] leading-snug text-bauhaus-black/90">
+              QBE Area 07: advisory relationships are never presented as a board. Advisers are engaged for a
+              specific task, for a time. They do not govern, are not co-owners, and are never seated, scored, or laddered.
+            </p>
+          </div>
+
+          {advisorsError ? (
+            <div className="mt-3 border-4 border-bauhaus-red bg-white p-6 text-sm">
+              <div className="text-[11px] font-black uppercase tracking-widest text-bauhaus-red">
+                Advisory data unavailable
+              </div>
+              <p className="mt-1 leading-snug text-bauhaus-black/80">{advisorsError}</p>
+            </div>
+          ) : advisors.length === 0 ? (
+            <div className="mt-3 border-4 border-bauhaus-red bg-white p-6 text-sm leading-relaxed text-bauhaus-black/80">
+              <div className="text-[11px] font-black uppercase tracking-widest text-bauhaus-red">
+                No advisers recorded yet
+              </div>
+              <p className="mt-2 max-w-3xl">
+                The Advisory Circle is empty because two founder actions are pending. First, the migration that allows
+                an <code className="bg-bauhaus-canvas px-1">advisory</code> contact type (and the{' '}
+                <code className="bg-bauhaus-canvas px-1">expertise</code>,{' '}
+                <code className="bg-bauhaus-canvas px-1">last_contacted_at</code> and{' '}
+                <code className="bg-bauhaus-canvas px-1">engagement_ask</code> fields) is written but not yet applied:
+              </p>
+              <code className="mt-2 block bg-bauhaus-canvas px-2 py-1.5 text-[12px]">
+                psql -f supabase/migrations/20260610030000_goods_advisory_circle.sql
+              </code>
+              <p className="mt-2 max-w-3xl">
+                Second, once applied, add advisers to{' '}
+                <code className="bg-bauhaus-canvas px-1">org_contacts</code> with{' '}
+                <code className="bg-bauhaus-canvas px-1">contact_type=&apos;advisory&apos;</code> scoped to the Goods
+                project. Until then this surface stays empty by design — it never invents an advisory board.
+              </p>
+            </div>
+          ) : (
+            <div className="mt-3 border-4 border-bauhaus-red bg-white">
+              {advisors.map((a) => <AdvisorCard key={a.id} a={a} />)}
+            </div>
+          )}
+        </div>
 
         {/* Supporter belonging ladder (NOT the board) */}
         <div id="ladder" className="mt-10 scroll-mt-4">

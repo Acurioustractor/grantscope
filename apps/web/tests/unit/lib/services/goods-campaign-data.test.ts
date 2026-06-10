@@ -6,6 +6,7 @@ import {
   pipelineTotal,
   byCommitment,
   daysUntil,
+  dgrRoutingWarnings,
   type CapitalSource,
 } from '@/lib/services/goods-campaign-data';
 
@@ -105,6 +106,67 @@ describe('byCommitment', () => {
     const grouped = byCommitment([src({ commitment: 'target' })]);
     expect(grouped.target).toHaveLength(1);
     expect(grouped.in_conversation).toHaveLength(0);
+  });
+});
+
+describe('dgrRoutingWarnings', () => {
+  it('flags grant-like sources whose instrument does not confirm dgrRoute', () => {
+    const sources = [
+      // grant, dgrRoute true → confirmed, not a warning
+      src({
+        id: 'ok',
+        kind: 'grant',
+        instrument: {
+          repayment: 'non-repayable grant',
+          security: null,
+          entityRequired: 'Butterfly',
+          dgrRoute: true,
+        },
+      }),
+      // grant, dgrRoute false → unconfirmed routing, warn
+      src({
+        id: 'warn-false',
+        kind: 'grant',
+        instrument: {
+          repayment: 'non-repayable grant',
+          security: null,
+          entityRequired: 'ACT Pty',
+          dgrRoute: false,
+        },
+      }),
+      // matched_grant, no instrument at all → unconfirmed, warn
+      src({ id: 'warn-missing', kind: 'matched_grant' }),
+      // recoverable_grant, dgrRoute false → warn
+      src({
+        id: 'warn-recoverable',
+        kind: 'recoverable_grant',
+        instrument: { repayment: null, security: null, entityRequired: 'ACT Pty', dgrRoute: false },
+      }),
+      // loan → not grant-like, never a DGR routing warning even with dgrRoute false
+      src({
+        id: 'loan',
+        kind: 'loan',
+        instrument: { repayment: 'debt, terms TBC', security: null, entityRequired: 'ACT Pty', dgrRoute: false },
+      }),
+    ];
+    const warned = dgrRoutingWarnings(sources).map((s) => s.id);
+    expect(warned).toEqual(['warn-false', 'warn-missing', 'warn-recoverable']);
+  });
+
+  it('returns an empty array when every grant-like source confirms dgrRoute', () => {
+    const sources = [
+      src({
+        id: 'g',
+        kind: 'grant',
+        instrument: { repayment: 'grant', security: null, entityRequired: 'Butterfly', dgrRoute: true },
+      }),
+      src({
+        id: 'l',
+        kind: 'loan',
+        instrument: { repayment: 'debt, terms TBC', security: null, entityRequired: 'ACT Pty', dgrRoute: false },
+      }),
+    ];
+    expect(dgrRoutingWarnings(sources)).toEqual([]);
   });
 });
 
