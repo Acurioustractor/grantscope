@@ -1,8 +1,8 @@
 {
-  "source": "Notion — QBE Diagnostic Artifact Database (collection://2cd9505f-2a50-496e-aa86-f03ada2cf95e, db cb3794d427914d72bf1036106d8116f5)",
-  "syncedAt": "2026-06-10T09:30:00+10:00",
-  "syncMethod": "manual MCP snapshot — refresh with scripts/sync-qbe-diagnostic.mjs",
-  "notes": "Claim-label taxonomy: verified | modelled | target | future | internal only. Reviewer evidence pack: Google Doc 1IyfMomcPD9wA6ZzqTqSxPyJnXRO9HftTx5WoWH6PczI.",
+  "source": "Notion — QBE Diagnostic Artifact Database (db cb3794d427914d72bf1036106d8116f5)",
+  "syncedAt": "2026-06-10T00:26:31.856Z",
+  "syncMethod": "scripts/sync-qbe-diagnostic.mjs (Notion API)",
+  "notes": "Claim-label taxonomy: verified | modelled | target | future | internal only. This board mirrors Notion; it does not edit it.",
   "areas": [
     {
       "number": 1,
@@ -41,7 +41,7 @@
       "timing": "0-3 months",
       "due": "2026-06-14",
       "owner": "Nic/Ben",
-      "primaryGap": "HighLevel reauth and buyer pipeline reconciliation against Xero and signed commitments.",
+      "primaryGap": "Buyer pipeline reconciliation against Xero and signed commitments. (HighLevel reauth resolved; API verified 10 Jun 2026.)",
       "nextBuild": "Reauth HighLevel and reconcile buyer pipeline with Xero and cost model before quoting demand as committed.",
       "publicCopyRisk": "Stretch Bed is the only direct-sale product. Washing machines are prototype/register-interest; Basket Bed archived; no Weave Bed references.",
       "notionUrl": "https://app.notion.com/p/36eebcf981cf81fb8aa8de54f38bdeb4"
@@ -58,7 +58,6 @@
       "primaryGap": "Bookkeeper/accountant review of matching gaps and founder decision on gross vs net capital ask.",
       "nextBuild": "Bookkeeper/accountant review of ACT-GD matching gaps; founder decision on gross vs net capital ask.",
       "publicCopyRisk": "Management data only, not audited. Whole-organisation Xero reports are not Goods-only. AP matching gaps are bookkeeper clean-up, not public debt.",
-      "verifiedNumbers": "ACT-GD receivables: AUD 733,410.79 raised, AUD 650,910.79 paid, AUD 82,500 due (checked 2026-06-01).",
       "notionUrl": "https://app.notion.com/p/36eebcf981cf8167884fc3d5ecda0e32"
     },
     {
@@ -84,7 +83,7 @@
       "timing": "Ongoing",
       "due": "2026-06-21",
       "owner": "Ben",
-      "primaryGap": "HighLevel reauthentication and external-account Drive access test.",
+      "primaryGap": "External-account Drive access test. (HighLevel reauth resolved; API verified 10 Jun 2026.)",
       "nextBuild": "Reauth HighLevel, test Drive access externally, and maintain one owner map for money, pipeline, assets, stories, and public copy.",
       "publicCopyRisk": "Do not claim full automation or verified HighLevel pipeline until connector reauth and live search pass.",
       "notionUrl": "https://app.notion.com/p/36eebcf981cf81659f6afab915672b57"
@@ -140,7 +139,7 @@
       "timing": "0-3 months",
       "due": "2026-06-14",
       "owner": "Ben/Nic",
-      "primaryGap": "Signed/eligible capital evidence, HighLevel reauth, QBE rules confirmation, and founder-approved capital ask.",
+      "primaryGap": "Signed/eligible capital evidence, QBE rules confirmation, and founder-approved capital ask. (HighLevel verified 10 Jun 2026; signed/eligible commitment register now live in CivicGraph Match Campaign.)",
       "nextBuild": "Reauth HighLevel, confirm QBE rules, create signed/eligible commitment register, and founder-approve ask/use-of-funds.",
       "publicCopyRisk": "Do not present pipeline as committed capital, claim QBE match is unlocked, quote AUD 400K cap without confirmation, or use unsettled entity/DGR language.",
       "notionUrl": "https://app.notion.com/p/36eebcf981cf81329a11e33e2d121bf9"
@@ -157,7 +156,6 @@
       "primaryGap": "Vendor-quoted equipment/build list for the container and On-Country production facility, plus external-account evidence-pack access test.",
       "nextBuild": "External-account Drive access test; founder/accountant review before QBE or consultant reliance.",
       "publicCopyRisk": "Do not present container or On-Country facility capex as fully actual/quoted. Say bed-level BOM is mostly verified; facility/site capex is modelled pending vendor quotes.",
-      "verifiedNumbers": "Bed-level BOM mostly verified; factory capex modelled AUD 112K-222K gross with AUD 110,046 already invested; On-Country site capex AUD 100K-150K per site unverified pending vendor quotes.",
       "notionUrl": "https://app.notion.com/p/36febcf981cf8146a55de05050e956e9"
     },
     {
@@ -169,7 +167,7 @@
       "timing": "0-3 months",
       "due": "2026-06-14",
       "owner": "Ben/Nic",
-      "primaryGap": "HighLevel reauth, QBE rule confirmation, and written commitments.",
+      "primaryGap": "QBE rule confirmation and written commitments. (HighLevel reauth resolved; API verified 10 Jun 2026.)",
       "nextBuild": "Reauth HighLevel, confirm QBE rules, and move likely-fit targets into signed/eligible commitment tracking.",
       "publicCopyRisk": "Pipeline is not committed capital. QBE match is contingent. Fit scores are planning tools, not investor confirmation.",
       "notionUrl": "https://app.notion.com/p/36febcf981cf81f5ad6dee375364d032"

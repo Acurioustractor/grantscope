@@ -5,7 +5,14 @@ import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
 import { getGoodsProof } from '@/lib/services/goods-proof';
 import { getGoodsCostEvidence } from '@/lib/services/goods-cost-evidence';
 import { money as moneyExact, moneyShort } from '@/lib/services/goods-engagement-shared';
+import {
+  canonical,
+  CLAIM_LABEL_MEANINGS,
+  reconciliationNote,
+  type ClaimLabel,
+} from '@/lib/services/goods-canonical-numbers';
 import { GoodsSubNav } from '../_components/goods-sub-nav';
+import { ClaimChip } from '../_components/claim-chip';
 import { PrintButton } from './print-button';
 
 export const dynamic = 'force-dynamic';
@@ -18,13 +25,36 @@ const n = (v: number) => v.toLocaleString('en-AU');
 // Compact money for stat call-outs — shared canonical formatter.
 const money = moneyShort;
 
-function Big({ value, label, sub, accent }: { value: string; label: string; sub?: string; accent?: 'red' | 'blue' | 'yellow' }) {
+function Big({ value, label, sub, accent, claim }: { value: string; label: string; sub?: string; accent?: 'red' | 'blue' | 'yellow'; claim?: ClaimLabel }) {
   const border = accent === 'red' ? 'border-bauhaus-red' : accent === 'blue' ? 'border-bauhaus-blue' : accent === 'yellow' ? 'border-bauhaus-yellow' : 'border-bauhaus-black';
   return (
     <div className={`border-4 ${border} bg-white p-4`}>
       <div className="text-3xl font-black text-bauhaus-black">{value}</div>
-      <div className="mt-1 text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">{label}</div>
+      <div className="mt-1 flex items-center gap-1.5">
+        <span className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">{label}</span>
+        {claim && <ClaimChip label={claim} />}
+      </div>
       {sub && <div className="mt-0.5 text-[11px] text-bauhaus-muted">{sub}</div>}
+    </div>
+  );
+}
+
+const LEGEND_ORDER: ClaimLabel[] = ['verified', 'modelled', 'target', 'future'];
+
+function ClaimLegend() {
+  return (
+    <div className="border-4 border-bauhaus-black bg-white px-4 py-3">
+      <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">
+        Claim taxonomy (QBE Diagnostic Area 01/04)
+      </div>
+      <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-2">
+        {LEGEND_ORDER.map((label) => (
+          <span key={label} className="inline-flex items-center gap-1.5">
+            <ClaimChip label={label} />
+            <span className="text-[11px] font-bold text-bauhaus-black">{CLAIM_LABEL_MEANINGS[label]}</span>
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
@@ -63,6 +93,15 @@ export default async function GoodsProofPage({ params }: { params: Promise<{ slu
   const productionRow = costEvidence.unitEstimateRows.find((r) => r.label === 'Production range');
   const freightRows = costEvidence.unitEstimateRows.filter((r) => /road|barge|remote/i.test(r.label));
 
+  // Reviewer-safe canonical figures lead the page (funder audience). The
+  // assets-sync delivered counts in `impact` stay available as the secondary,
+  // founder-reconciliation line below.
+  const deployedBeds = canonical('deployed_bed_units');
+  const servedCommunities = canonical('served_communities');
+  const hdpeDiverted = canonical('hdpe_diverted_kg');
+  const bedsSync = canonical('beds_delivered_assets_sync');
+  const washersSync = canonical('washers_delivered_assets_sync');
+
   return (
     <main className="min-h-screen bg-bauhaus-canvas text-bauhaus-black">
       <div className="border-b-4 border-bauhaus-black bg-bauhaus-black text-white">
@@ -90,6 +129,7 @@ export default async function GoodsProofPage({ params }: { params: Promise<{ slu
       </div>
 
       <div className="mx-auto max-w-7xl space-y-10 px-4 py-8">
+        <ClaimLegend />
         {fetchError && (
           <div className="border-4 border-bauhaus-red bg-bauhaus-red px-4 py-2 text-[12px] font-black uppercase tracking-widest text-white print:hidden">
             Live data unavailable ({fetchError}). Figures below may be incomplete.
@@ -107,20 +147,45 @@ export default async function GoodsProofPage({ params }: { params: Promise<{ slu
             title="Impact"
             blurb="What the giving delivers on Country — beds and washers in homes, against the curated demand still unmet. The gap is the ask."
           />
+          {/* Reviewer-verified figures lead — the set safe to quote to funders. */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Big value={n(impact.bedsDelivered)} label="Beds delivered" sub={`as of ${impact.deliveredAsOf}`} accent="red" />
-            <Big value={n(impact.washersDelivered)} label="Washers delivered" accent="red" />
-            <Big value={n(impact.communitiesActive)} label="Active / lead communities" />
-            <Big value={`${impact.pctBedsMet}%`} label="Of bed demand met" sub={`${n(impact.bedsGap)} beds still unmet`} accent="yellow" />
+            <Big value={n(Number(deployedBeds.value))} label="Deployed bed units" sub={`as of ${deployedBeds.asOf}`} accent="red" claim="verified" />
+            <Big value={n(Number(servedCommunities.value))} label="Served communities" sub={`as of ${servedCommunities.asOf}`} claim="verified" />
+            <Big value={n(Number(hdpeDiverted.value))} label="kg HDPE diverted (Stretch)" sub={`as of ${hdpeDiverted.asOf}`} accent="red" claim="verified" />
+            <Big value={`${impact.pctBedsMet}%`} label="Of bed demand met" sub={`${n(impact.bedsGap)} beds still unmet`} accent="yellow" claim="verified" />
+          </div>
+
+          {/* Secondary: internal assets-sync delivered counts + reconciliation flag. */}
+          <div className="mt-3 border-4 border-bauhaus-yellow bg-white p-4">
+            <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+              <span className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">
+                Internal assets sync
+              </span>
+              <span className="text-lg font-black text-bauhaus-black">
+                {n(Number(bedsSync.value))} beds · {n(Number(washersSync.value))} washers
+              </span>
+              <span className="text-[11px] font-bold text-bauhaus-muted">as of {bedsSync.asOf}</span>
+              <ClaimChip label="verified" />
+            </div>
+            <p className="mt-2 border-l-4 border-bauhaus-yellow bg-bauhaus-yellow/40 px-3 py-2 text-[12px] font-bold text-bauhaus-black">
+              Two delivered-count definitions exist (assets sync versus reviewer-verified deployed units).
+              Founder reconciliation needed before quoting either externally.
+            </p>
           </div>
 
           <div className="mt-4 grid gap-4 md:grid-cols-[1fr_1.1fr]">
             <div className="border-4 border-bauhaus-black bg-bauhaus-yellow p-4">
-              <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-black/70">The gap = the opportunity</div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-black uppercase tracking-widest text-bauhaus-black/70">The gap = the opportunity</span>
+                <ClaimChip label="verified" />
+              </div>
               <div className="mt-1 text-2xl font-black text-bauhaus-black">{n(impact.bedsGap)} beds · {n(impact.washersGap)} washers</div>
               <p className="mt-1 text-[13px] text-bauhaus-black">
                 still needed across {n(impact.communitiesActive)} active and lead communities
                 (demand {n(impact.bedsDemand)} beds · {n(impact.washersDemand)} washers).
+              </p>
+              <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-bauhaus-black/60">
+                Source: goods_communities live
               </p>
               <div className="mt-3">
                 <LinkOut href={links.assetRegister} label="Asset Register" note="live bed/asset truth" />
@@ -153,7 +218,7 @@ export default async function GoodsProofPage({ params }: { params: Promise<{ slu
             blurb="The trading story that underwrites repayment — money already received, committed funders, and buyers in the pipeline."
           />
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Big value={money(commercial.lifetimeReceived)} label="Lifetime received" sub="Xero-reconciled registry" accent="blue" />
+            <Big value={money(commercial.lifetimeReceived)} label="Lifetime received" sub="Registry total (manually entered)" accent="blue" claim="modelled" />
             <Big value={n(commercial.committedFunders)} label="Committed funders" sub={`${n(commercial.fundersEngaged)} engaged (excl. declined)`} accent="blue" />
             <Big value={n(commercial.buyersEngaged)} label="Buyers engaged" />
             <Big value={n(commercial.buyersAdvancing)} label="Buyers advancing / committed" />
@@ -184,6 +249,9 @@ export default async function GoodsProofPage({ params }: { params: Promise<{ slu
               funders, with {n(commercial.buyersAdvancing)} buyer{commercial.buyersAdvancing === 1 ? '' : 's'} advancing — the
               delivery trajectory and order book a repayable-finance partner underwrites against.
             </p>
+            <p className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] font-bold text-bauhaus-muted">
+              <ClaimChip label="modelled" /> Manually entered registry total. The Xero-verified paid figure is {moneyExact(650910.79)}.
+            </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <Link
                 href={`/org/${slug}/goods/money`}
@@ -212,7 +280,10 @@ export default async function GoodsProofPage({ params }: { params: Promise<{ slu
           />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="border-4 border-bauhaus-black bg-white p-4">
-              <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Production</div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Production</span>
+                <ClaimChip label="modelled" />
+              </div>
               <div className="mt-1 text-3xl font-black">{moneyExact(550)}&ndash;{moneyExact(650)} <span className="text-base font-bold text-bauhaus-muted">/ bed</span></div>
               <div className="mt-1 text-[11px] text-bauhaus-muted">
                 {productionRow ? productionRow.basis : 'Goods cost register, before route freight, warranty, support or margin.'}
@@ -247,7 +318,10 @@ export default async function GoodsProofPage({ params }: { params: Promise<{ slu
             blurb="What it would take to close the unmet bed gap, at the $600 midpoint planning cost. This is an estimate, expressed as a range."
           />
           <div className="border-4 border-bauhaus-yellow bg-bauhaus-yellow p-5">
-            <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-black/70">Closing the gap (estimate)</div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-black uppercase tracking-widest text-bauhaus-black/70">Closing the gap (estimate)</span>
+              <ClaimChip label="modelled" />
+            </div>
             <div className="mt-1 text-5xl font-black leading-none text-bauhaus-black">
               ≈ {moneyExact(fundingQuantum.mid)}
             </div>
@@ -260,10 +334,12 @@ export default async function GoodsProofPage({ params }: { params: Promise<{ slu
         </section>
 
         <div className="border-4 border-bauhaus-black bg-bauhaus-yellow p-4 text-xs">
-          <strong>Provenance.</strong> Delivered (beds/washers) = Goods v2 assets sync, as of {impact.deliveredAsOf} (link out to the
-          Asset Register for live counts). Demand = the curated active+lead slice of <code>goods_communities</code>. Money received =
-          the Goods relationship registry (<code>total_received_aud</code>), which reconciles to the Xero ACT-GD ledger. No figure on
-          this page is invented.
+          <strong>Provenance.</strong> Headline impact figures (deployed bed units, served communities, HDPE diverted) =
+          QBE reviewer-verified set, checked {deployedBeds.asOf}. The internal assets-sync delivered counts (beds/washers) =
+          Goods v2 assets sync, as of {impact.deliveredAsOf} (link out to the Asset Register for live counts). Demand = the curated
+          active+lead slice of <code>goods_communities</code>. Money received = the Goods relationship registry
+          (<code>total_received_aud</code>), manually entered. No figure on this page is invented.
+          <div className="mt-2 font-bold">Reconciliation: {reconciliationNote}</div>
         </div>
       </div>
     </main>

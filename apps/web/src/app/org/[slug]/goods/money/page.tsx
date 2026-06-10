@@ -11,6 +11,7 @@ import {
 } from '@/lib/services/goods-engagement-shared';
 import { ScrapeMoreButton } from './scrape-more-button';
 import { GoodsSubNav } from '../_components/goods-sub-nav';
+import { ClaimChip } from '../_components/claim-chip';
 
 export const dynamic = 'force-dynamic';
 
@@ -132,11 +133,17 @@ export default async function GoodsMoneyPage({ params }: { params: Promise<{ slu
         <div className="mb-4 border-4 border-bauhaus-black bg-white px-4 py-3">
           <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
             <div>
-              <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Xero paid</div>
+              <div className="flex items-center gap-1.5">
+                <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Xero paid</div>
+                <ClaimChip label="verified" />
+              </div>
               <div className="text-xl font-black">{money(m.reconciliation.xeroPaid)}</div>
             </div>
             <div>
-              <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Registry received</div>
+              <div className="flex items-center gap-1.5">
+                <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Registry received</div>
+                <ClaimChip label="modelled" />
+              </div>
               <div className="text-xl font-black">{money(m.reconciliation.registryReceived)}</div>
             </div>
             <div>

@@ -61,7 +61,9 @@ function mapPage(page) {
     primaryGap: plainText(p['Primary Gap']),
     nextBuild: plainText(p['Next Build']),
     publicCopyRisk: plainText(p['Public Copy Risk']),
-    notionUrl: page.url ?? null,
+    // Slug-free URL: the slugged page.url can contain "…sk-<hex>" sequences that
+    // trip secret scanners; the bare page-id link resolves identically in Notion.
+    notionUrl: page.id ? `https://app.notion.com/p/${page.id.replace(/-/g, '')}` : null,
   };
   const verified = plainText(p['Verified Numbers']);
   if (verified) row.verifiedNumbers = verified;
