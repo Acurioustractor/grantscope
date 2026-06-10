@@ -201,26 +201,48 @@ export const CAPITAL_STACK: CapitalSource[] = [
     },
   },
   {
-    // TODO(ben-verify): PFI EOI status and recoverable-grant terms.
+    // Ben 2026-06-10: PFI = QLD Partnering for Impact (QLD Gov repayable, $640K of a
+    // $3.2M pool, wiki/projects/goods.md). The EOI was NOT submitted — parked, not live.
     id: 'pfi-recoverable-grant',
-    name: 'PFI recoverable grant',
+    name: 'QLD Partnering for Impact (PFI)',
     kind: 'recoverable_grant',
-    askAud: 640_000,
-    askLabel: '$640K',
-    commitment: 'in_conversation',
+    askAud: null,
+    askLabel: '$640K (not applied)',
+    commitment: 'parked',
     writtenEvidence: null,
     matchEligibility: 'unknown',
     registryName: 'PFI',
-    status: 'EOI submitted March 2026',
-    // email sweep 2026-06-10
+    status: 'EOI NOT submitted (Ben, 2026-06-10) — wiki entry was aspirational',
     nextMove:
-      "No email substrate found for 'PFI' — founder to confirm what PFI refers to before it stays in the stack.",
+      'Parked: the QLD Partnering for Impact EOI was never submitted. Revisit only if a new QLD round opens and the QBE raise still needs repayable match.',
+    instrument: {
+      repayment: 'repayable investment (QLD Gov program terms)',
+      security: null,
+      entityRequired: ACT_PTY_ENTITY,
+      dgrRoute: false,
+    },
+  },
+  {
+    // Ben 2026-06-10: "another social impact one — national round open now I think".
+    // Likely the Social Enterprise Development Initiative (SEDI) — a registry row exists
+    // at stage 'identified'. TODO(ben-verify): confirm the program, round dates, ask size, fit.
+    id: 'sedi-national-round',
+    name: 'Social Enterprise Development Initiative (SEDI)',
+    kind: 'grant',
+    askAud: null,
+    askLabel: 'TBC',
+    commitment: 'target',
+    writtenEvidence: null,
+    matchEligibility: 'unknown',
+    registryName: 'Social Enterprise Development Initiative (SEDI)',
+    status: 'National social-enterprise round believed open now (Ben, 2026-06-10) — unconfirmed',
+    nextMove:
+      'Confirm the program Ben means (SEDI?), the round deadline and eligibility, then size the ask. Replaces QLD PFI as the social-impact capital candidate.',
     needsVerification: true,
     instrument: {
-      // Source itself unverified (needsVerification) — nothing known, hold all null.
+      // TODO(ben-verify): grant vs blended; entity + DGR routing unknown until program confirmed.
       repayment: null,
       security: null,
-      // TODO(ben-verify): entity unknown until PFI is confirmed to be real.
       entityRequired: ACT_PTY_ENTITY,
       dgrRoute: false,
     },
