@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { ACT_FAST_PROFILE, isActSlug, shouldUseFastLocalOrg } from '@/lib/services/fast-local-org';
 import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
 import { getGoodsFoundationTargets } from '@/lib/services/goods-foundation-targets';
+import { moneyShort, BUTTERFLY_DGR } from '@/lib/services/goods-engagement-shared';
 import { GoodsSubNav } from '../_components/goods-sub-nav';
 import { TrackButton } from './track-button';
 
@@ -40,7 +41,12 @@ export default async function GoodsFoundationsPage({
   if (!profile) notFound();
 
   const bridgedOnly = filter === 'bridged';
-  const { targets, summary } = await getGoodsFoundationTargets({ bridgedOnly });
+  const { targets, summary, fetchError } = await getGoodsFoundationTargets({ bridgedOnly });
+
+  // Top targets get a visual tier: the 10 highest priority scores in the current view.
+  const topCutoff = [...targets]
+    .map((t) => t.priorityScore)
+    .sort((a, b) => b - a)[Math.min(9, targets.length - 1)] ?? Infinity;
 
   return (
     <main className="min-h-screen bg-bauhaus-canvas text-bauhaus-black">
@@ -65,11 +71,16 @@ export default async function GoodsFoundationsPage({
       </div>
 
       <div className="mx-auto max-w-7xl px-4 py-6">
+        {fetchError && (
+          <div className="mb-4 border-4 border-bauhaus-red bg-bauhaus-red/10 px-3 py-2 text-[11px] font-black uppercase tracking-widest text-bauhaus-red">
+            Live target data unavailable: {fetchError}
+          </div>
+        )}
         <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Stat label="Total addressable giving/yr" value={`${moneyShort(summary.totalAddressableGiving)}/yr`} accent />
           <Stat label="Fit targets" value={summary.total.toLocaleString('en-AU')} accent />
-          <Stat label="Warm bridges" value={String(summary.bridged)} accent />
+          <Stat label="Warm bridges" value={String(summary.bridged)} />
           <Stat label="DGR-endorsed" value={String(summary.dgr)} />
-          <Stat label="Showing" value={String(targets.length)} />
         </div>
 
         {/* filter */}
@@ -94,22 +105,43 @@ export default async function GoodsFoundationsPage({
           </div>
         ) : (
           <div className="border-4 border-bauhaus-black bg-white">
-            {targets.map((t) => (
+            {targets.map((t) => {
+              const isTop = t.priorityScore >= topCutoff;
+              const vintageYear = t.dataVintage ? new Date(t.dataVintage).getFullYear() : null;
+              const stale = vintageYear != null && vintageYear < new Date().getFullYear() - 1;
+              return (
               <div
                 key={t.id}
-                className="flex flex-wrap items-start gap-x-4 gap-y-1 border-b border-bauhaus-black/10 px-3 py-3 last:border-b-0"
+                className={`flex flex-wrap items-start gap-x-4 gap-y-1 border-b border-bauhaus-black/10 px-3 py-3 last:border-b-0 ${isTop ? 'border-l-4 border-l-bauhaus-yellow bg-bauhaus-yellow/5' : ''}`}
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
+                    {isTop && (
+                      <span className="bg-bauhaus-yellow px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-bauhaus-black">Top target</span>
+                    )}
                     <span className="font-black">{t.name}</span>
                     {t.hasDgr && (
                       <span className="bg-bauhaus-yellow px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-bauhaus-black">DGR</span>
+                    )}
+                    {t.requiresDgr && (
+                      <a
+                        href={BUTTERFLY_DGR.abrUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="bg-bauhaus-blue px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-white hover:bg-bauhaus-black"
+                        title="Ancillary funds can only distribute to Item 1 DGR entities. Route this ask via Butterfly DGR."
+                      >
+                        Ancillary fund · route via Butterfly DGR
+                      </a>
                     )}
                     {t.matchedThemes.map((m) => (
                       <span key={m} className="bg-bauhaus-canvas px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-bauhaus-muted">
                         {m.replace(/[-_]/g, ' ')}
                       </span>
                     ))}
+                    {stale && vintageYear != null && (
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-bauhaus-muted">data from {vintageYear}</span>
+                    )}
                   </div>
                   {t.hasBridge && t.connector && (
                     <div className="mt-1 text-[12px]">
@@ -140,7 +172,8 @@ export default async function GoodsFoundationsPage({
                   />
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
 

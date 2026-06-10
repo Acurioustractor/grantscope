@@ -26,6 +26,23 @@ export type GhlSignal = {
   synced_at?: string | null;
 };
 
+/**
+ * Per-funder ask-framing synced from the ACT funder ledger
+ * (act-global-infrastructure/wiki/narrative/funders.json) into
+ * goods_relationships.framing by scripts/sync-goods-framing.mjs.
+ * SYNCED, never generated — how to talk to this funder, in their language.
+ */
+export type FunderFraming = {
+  slug?: string;
+  tone?: string | null;
+  framing_notes?: string | null;
+  claims_to_lead_with?: string[];
+  claims_to_avoid?: string[];
+  primary_contact?: string | null;
+  last_communicated_at?: string | null;
+  synced_at?: string | null;
+};
+
 // ---- Decoded dimensions ----
 export type Temperature = 'hot' | 'warm' | 'steady' | 'inquiry' | 'cooling' | 'cold' | 'unknown';
 export type EngagementTier = 'vip' | 'inner' | 'standard';
@@ -47,6 +64,12 @@ export type FunderInsightInput = {
   totalReceived: number;
   hasPrior: boolean;
   signal: GhlSignal;
+  /** Open ask size in AUD (warmth registry); null until sized / migrated. */
+  askAmount?: number | null;
+  /** Next action due date (ISO); null when none scheduled. */
+  nextActionDue?: string | null;
+  /** Ask-framing synced from the ACT funder ledger; null when no ledger match. */
+  framing?: FunderFraming | null;
   /** injectable clock for deterministic tests; defaults to Date.now() */
   now?: number;
 };
@@ -62,6 +85,12 @@ export type FunderInsight = {
   daysSinceTouch: number | null;
   totalReceived: number;
   hasPrior: boolean;
+  /** Open ask size in AUD; null until sized. Drives dollars-at-stake. */
+  askAmount: number | null;
+  /** Next action due date (ISO); null when none. */
+  nextActionDue: string | null;
+  /** Ask-framing synced from the ACT funder ledger; null when no match. */
+  framing: FunderFraming | null;
   // decoded signal
   temperature: Temperature;
   temperatureRank: number;
@@ -233,6 +262,9 @@ export function decodeFunderInsight(input: FunderInsightInput): FunderInsight {
     daysSinceTouch: days,
     totalReceived: input.totalReceived,
     hasPrior: input.hasPrior,
+    askAmount: input.askAmount ?? null,
+    nextActionDue: input.nextActionDue ?? null,
+    framing: input.framing ?? null,
     temperature,
     temperatureRank: TEMP_RANK[temperature],
     engagementTier,
@@ -306,9 +338,15 @@ export type FunderInsightSummary = {
   cooling: number;
   vip: number;
   withSignal: number;
+  /** Sum of ask_amount_aud (fallback 0) per attention category, "dollars at stake". */
+  atStake: { actNow: number; hot: number; cooling: number; vip: number };
 };
 
+const stakeOf = (i: FunderInsight): number => Number(i.askAmount) || 0;
+
 export function summariseInsights(items: FunderInsight[]): FunderInsightSummary {
+  const sum = (pred: (i: FunderInsight) => boolean) =>
+    items.filter(pred).reduce((acc, i) => acc + stakeOf(i), 0);
   return {
     total: items.length,
     actNow: items.filter((i) => i.attention === 'act-now').length,
@@ -316,5 +354,11 @@ export function summariseInsights(items: FunderInsight[]): FunderInsightSummary 
     cooling: items.filter((i) => i.temperature === 'cooling' || i.temperature === 'cold').length,
     vip: items.filter((i) => i.engagementTier === 'vip').length,
     withSignal: items.filter((i) => i.tagCount > 0).length,
+    atStake: {
+      actNow: sum((i) => i.attention === 'act-now'),
+      hot: sum((i) => i.temperature === 'hot'),
+      cooling: sum((i) => i.temperature === 'cooling' || i.temperature === 'cold'),
+      vip: sum((i) => i.engagementTier === 'vip'),
+    },
   };
 }

@@ -2,7 +2,7 @@ import { getServiceSupabase } from '@/lib/supabase';
 import type { GoodsRelType, GoodsStage } from './goods-engagement-shared';
 import {
   decodeFunderInsight, rankInsights, summariseInsights,
-  type FunderInsight, type FunderInsightSummary, type GhlSignal,
+  type FunderInsight, type FunderInsightSummary, type GhlSignal, type FunderFraming,
 } from './goods-funder-insight-shared';
 
 /**
@@ -17,6 +17,8 @@ import {
 // The "who funds / lends to us" cohort. Buyers get their own surface.
 const FUNDER_TYPES: GoodsRelType[] = ['funder', 'impact_investor', 'repayable_finance'];
 
+// select('*') so the not-yet-migrated ask_amount_aud comes through when applied,
+// alongside next_action_due — never name ask_amount_aud explicitly.
 type Row = {
   id: string;
   display_name: string;
@@ -27,9 +29,12 @@ type Row = {
   total_received_aud: number | string | null;
   has_prior_support: boolean | null;
   ghl_signal: GhlSignal | null;
+  next_action_due?: string | null;
+  ask_amount_aud?: number | string | null;
+  framing?: FunderFraming | null;
 };
 
-const num = (v: number | string | null): number => {
+const num = (v: number | string | null | undefined): number => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -37,21 +42,26 @@ const num = (v: number | string | null): number => {
 export async function getGoodsFunderInsight(): Promise<{
   insights: FunderInsight[];
   summary: FunderInsightSummary;
+  fetchError: string | null;
 }> {
   const empty = {
     insights: [] as FunderInsight[],
-    summary: { total: 0, actNow: 0, hot: 0, cooling: 0, vip: 0, withSignal: 0 },
+    summary: {
+      total: 0, actNow: 0, hot: 0, cooling: 0, vip: 0, withSignal: 0,
+      atStake: { actNow: 0, hot: 0, cooling: 0, vip: 0 },
+    },
+    fetchError: null as string | null,
   };
   try {
     const supabase = getServiceSupabase();
     const { data, error } = await supabase
       .from('goods_relationships')
-      .select('id, display_name, relationship_type, stage, warmth_display, last_touch_at, total_received_aud, has_prior_support, ghl_signal')
+      .select('*')
       .in('relationship_type', FUNDER_TYPES);
 
     if (error) {
       console.error('[goods-funder-insight] query failed:', error.message);
-      return empty;
+      return { ...empty, fetchError: error.message };
     }
 
     const insights = ((data as Row[] | null) ?? [])
@@ -66,13 +76,17 @@ export async function getGoodsFunderInsight(): Promise<{
           totalReceived: num(r.total_received_aud),
           hasPrior: !!r.has_prior_support,
           signal: r.ghl_signal ?? {},
+          askAmount: r.ask_amount_aud == null ? null : num(r.ask_amount_aud),
+          nextActionDue: r.next_action_due ?? null,
+          framing: r.framing ?? null,
         }),
       )
       .sort(rankInsights);
 
-    return { insights, summary: summariseInsights(insights) };
+    return { insights, summary: summariseInsights(insights), fetchError: null };
   } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Unexpected funder-insight load error.';
     console.error('[goods-funder-insight] unexpected:', e);
-    return empty;
+    return { ...empty, fetchError: msg };
   }
 }

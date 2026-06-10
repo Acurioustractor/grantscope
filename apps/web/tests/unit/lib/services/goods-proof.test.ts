@@ -22,6 +22,8 @@ function rel(type: GoodsRelType, stage: GoodsStage, received = 0): GoodsRelation
     next_action_due: null,
     warm_intro_path: null,
     notes: null,
+    ask_amount_aud: null,
+    ask_purpose: null,
   };
 }
 

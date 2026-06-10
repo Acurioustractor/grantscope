@@ -4,9 +4,9 @@ import { ACT_FAST_PROFILE, isActSlug, shouldUseFastLocalOrg } from '@/lib/servic
 import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
 import { getGoodsRelationships, summarize } from '@/lib/services/goods-engagement';
 import {
-  warmthBand, bandFill, bandPill, money,
+  warmthBand, bandFill, bandPill, money, moneyShort,
   REL_TYPE_LABEL, BANDS, TYPES,
-  type GoodsRelType,
+  type GoodsRelType, type WarmthBand,
 } from '@/lib/services/goods-engagement-shared';
 import { RelationshipCard } from './relationship-card';
 import { AddPartnerForm } from './add-partner-form';
@@ -31,16 +31,29 @@ export default async function GoodsEngagementPage({
   params, searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ type?: string }>;
+  searchParams: Promise<{ type?: string; band?: string }>;
 }) {
   const { slug } = await params;
-  const { type } = await searchParams;
+  const { type, band } = await searchParams;
   const profile = shouldUseFastLocalOrg() && isActSlug(slug) ? ACT_FAST_PROFILE : await getOrgProfileBySlug(slug);
   if (!profile) notFound();
 
   const activeType = (TYPES.includes(type as GoodsRelType) ? type : 'all') as GoodsRelType | 'all';
-  const rows = await getGoodsRelationships(activeType === 'all' ? undefined : { type: activeType });
-  const summary = summarize(rows);
+  const activeBand = (BANDS.includes(band as WarmthBand) ? band : null) as WarmthBand | null;
+  // The full set drives the summary + distribution bar; the band filter only narrows the list.
+  const allRows = await getGoodsRelationships(activeType === 'all' ? undefined : { type: activeType });
+  const summary = summarize(allRows);
+  const rows = activeBand ? allRows.filter((r) => warmthBand(r.warmth_display) === activeBand) : allRows;
+
+  // Open-ask pipeline (only meaningful once the ask columns are migrated; skip silently when all null).
+  const openAsks = allRows.filter((r) => (r.ask_amount_aud ?? 0) > 0);
+  const openAskTotal = openAsks.reduce((s, r) => s + (r.ask_amount_aud ?? 0), 0);
+
+  const typeQs = activeType === 'all' ? '' : `type=${activeType}`;
+  const bandHref = (b: WarmthBand) => {
+    const qs = [typeQs, activeBand === b ? '' : `band=${b}`].filter(Boolean).join('&');
+    return `/org/${slug}/goods/engagement${qs ? `?${qs}` : ''}`;
+  };
 
   const grouped = BANDS.map((band) => ({ band, items: rows.filter((r) => warmthBand(r.warmth_display) === band) }))
     .filter((g) => g.items.length > 0);
@@ -77,21 +90,40 @@ export default async function GoodsEngagementPage({
           <Stat label="Champions + Hot" value={String(summary.byBand.Champion + summary.byBand.Hot)} />
         </div>
 
-        {/* warmth distribution */}
+        {/* warmth distribution — each band links to filter the list by that band */}
         <div className="mb-4 border-4 border-bauhaus-black bg-white p-3">
-          <div className="mb-2 text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Warmth distribution</div>
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Warmth distribution</span>
+            {activeBand && (
+              <Link href={bandHref(activeBand)} className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue hover:underline">
+                Clear band filter ×
+              </Link>
+            )}
+          </div>
           <div className="flex h-6 w-full overflow-hidden">
             {BANDS.map((b) => {
               const n = summary.byBand[b];
               const pct = summary.total ? (n / summary.total) * 100 : 0;
               if (!n) return null;
+              const isActive = activeBand === b;
               return (
-                <div key={b} className={`flex items-center justify-center ${bandFill(b)} text-[10px] font-black text-white`} style={{ width: `${pct}%` }} title={`${b}: ${n}`}>
+                <Link
+                  key={b}
+                  href={bandHref(b)}
+                  className={`flex items-center justify-center ${bandFill(b)} text-[10px] font-black text-white transition-opacity hover:opacity-80 ${activeBand && !isActive ? 'opacity-40' : ''} ${isActive ? 'ring-2 ring-inset ring-bauhaus-black' : ''}`}
+                  style={{ width: `${pct}%` }}
+                  title={`${b}: ${n} — click to filter`}
+                >
                   {pct > 7 ? `${b} ${n}` : n}
-                </div>
+                </Link>
               );
             })}
           </div>
+          {openAsks.length > 0 && (
+            <div className="mt-2 text-[11px] font-bold text-bauhaus-black">
+              Open asks: <span className="font-black text-bauhaus-blue">{moneyShort(openAskTotal)}</span> across {openAsks.length} relationship{openAsks.length === 1 ? '' : 's'}.
+            </div>
+          )}
         </div>
 
         {/* type filter + add partner */}
@@ -100,10 +132,13 @@ export default async function GoodsEngagementPage({
             const active = activeType === t;
             const label = t === 'all' ? 'All' : REL_TYPE_LABEL[t as GoodsRelType];
             const count = t === 'all' ? summary.total : summary.byType.find((x) => x.type === t)?.count ?? 0;
+            const bandQs = activeBand ? `band=${activeBand}` : '';
+            const typeQs2 = t === 'all' ? '' : `type=${t}`;
+            const qs = [typeQs2, bandQs].filter(Boolean).join('&');
             return (
               <Link
                 key={t}
-                href={t === 'all' ? `/org/${slug}/goods/engagement` : `/org/${slug}/goods/engagement?type=${t}`}
+                href={`/org/${slug}/goods/engagement${qs ? `?${qs}` : ''}`}
                 className={`border-2 px-2.5 py-1 text-[11px] font-black uppercase tracking-widest ${active ? 'border-bauhaus-black bg-bauhaus-black text-white' : 'border-bauhaus-black/30 bg-white text-bauhaus-black hover:border-bauhaus-black'}`}
               >
                 {label} {count > 0 && <span className={active ? 'text-bauhaus-yellow' : 'text-bauhaus-muted'}>{count}</span>}
@@ -116,8 +151,8 @@ export default async function GoodsEngagementPage({
         {/* grouped list */}
         {rows.length === 0 ? (
           <div className="border-4 border-bauhaus-black bg-white p-6 text-sm text-bauhaus-muted">
-            No relationships{activeType !== 'all' ? ' of this type' : ''} yet.
-            {activeType === 'production_partner' && ' Add one with the button above.'}
+            No relationships{activeType !== 'all' ? ' of this type' : ''}{activeBand ? ` in the ${activeBand} band` : ''} yet.
+            {activeBand && ' Clear the band filter to see the rest.'}
           </div>
         ) : (
           <div className="space-y-5">

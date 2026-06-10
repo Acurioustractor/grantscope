@@ -56,11 +56,15 @@ type MonthlyFinancialRow = {
 
 const PROJECT_CODE = 'ACT-GD';
 const PROJECT_LABEL = 'Goods';
+// Display ordering for the sliced invoice list: surface chaseable receivables
+// first. AUTHORISED (real money still owed, the chase queue) leads, then
+// SUBMITTED/SENT, then DRAFT (needs sending/fixing), then PAID (done). This is
+// presentation only — the paid/due/draft totals are computed independently.
 const STATUS_ORDER: Record<string, number> = {
-  DRAFT: 1,
+  AUTHORISED: 1,
   SUBMITTED: 2,
   SENT: 3,
-  AUTHORISED: 4,
+  DRAFT: 4,
   PAID: 5,
 };
 

@@ -3,9 +3,18 @@ import { createHash } from 'crypto';
 import { getServiceSupabase } from '@/lib/supabase';
 
 const PROJECT_CODE = 'ACT-GD';
-const LAST_50_START = '2025-10-08';
-const LAST_50_END = '2025-12-02';
-const LAST_50_COUNT = 50;
+// FROZEN cost-window: the 50 ACT-GD supplier bills dated 8 Oct - 2 Dec 2025,
+// used as a plausibility proxy for per-bed cost. This is deliberately STATIC,
+// not a rolling "last 50" — it must not silently drift. Re-derive by hand and
+// bump these constants when finance signs off a newer window.
+const LAST_50_WINDOW_START = '2025-10-08';
+const LAST_50_WINDOW_END = '2025-12-02';
+const LAST_50_WINDOW_COUNT = 50;
+const LAST_50_WINDOW_LABEL = `${LAST_50_WINDOW_START} to ${LAST_50_WINDOW_END} (frozen window)`;
+// Back-compat aliases for the existing references below.
+const LAST_50_START = LAST_50_WINDOW_START;
+const LAST_50_END = LAST_50_WINDOW_END;
+const LAST_50_COUNT = LAST_50_WINDOW_COUNT;
 
 type XeroSupplierBill = {
   id: string;
@@ -405,10 +414,10 @@ function goodsUnitEstimateRows(last50WindowTotal?: number): GoodsCostEvidence['u
 
   if (last50WindowTotal && last50WindowTotal > 0) {
     rows.splice(2, 0, {
-      label: 'Xero date-window proxy',
-      value: `${money(last50WindowTotal / LAST_50_COUNT)} / bed`,
-      use: 'Use internally to test whether the estimate is plausible. Do not quote as actual delivered cost.',
-      basis: `${money(last50WindowTotal)} in ACT-GD supplier bills dated ${LAST_50_START} to ${LAST_50_END}, divided by ${LAST_50_COUNT} bed rows.`,
+      label: `Xero date-window proxy · ${LAST_50_WINDOW_LABEL}`,
+      value: `${money(last50WindowTotal / LAST_50_WINDOW_COUNT)} / bed`,
+      use: 'Use internally to test whether the estimate is plausible. Do not quote as actual delivered cost. This window is frozen and will not move on its own.',
+      basis: `${money(last50WindowTotal)} in ACT-GD supplier bills dated ${LAST_50_WINDOW_START} to ${LAST_50_WINDOW_END}, divided by ${LAST_50_WINDOW_COUNT} bed rows.`,
       confidence: 'proxy only',
     });
   }

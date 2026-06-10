@@ -3,34 +3,51 @@
 import { useState, useTransition } from 'react';
 import {
   warmthBand, nextBestAction, bandFill, bandPill, relDays, money,
-  REL_TYPE_LABEL, STAGE_LABEL, STAGE_ORDER,
+  REL_TYPE_LABEL, STAGE_LABEL, STAGE_ORDER, REL_TRACK,
   type GoodsRelationship, type GoodsStage,
 } from '@/lib/services/goods-engagement-shared';
 import { updateRelationship } from './actions';
+
+/** Tracks where a dollar ask is meaningful (grants + investment). */
+const ASK_TRACKS = new Set(['grant', 'investment']);
 
 export function RelationshipCard({ r, slug }: { r: GoodsRelationship; slug: string }) {
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
   const [err, setErr] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
   const [stage, setStage] = useState<GoodsStage>(r.stage);
   const [override, setOverride] = useState<string>(r.warmth_override?.toString() ?? '');
   const [action, setAction] = useState<string>(r.next_action ?? '');
+  const [askAmount, setAskAmount] = useState<string>(r.ask_amount_aud?.toString() ?? '');
+  const [askPurpose, setAskPurpose] = useState<string>(r.ask_purpose ?? '');
 
   const band = warmthBand(r.warmth_display);
   const overridden = r.warmth_override != null;
+  const showAsk = ASK_TRACKS.has(REL_TRACK[r.relationship_type]);
 
   function save() {
     setErr(null);
+    setSaved(false);
     start(async () => {
+      const amountChanged = askAmount.trim() !== (r.ask_amount_aud?.toString() ?? '');
+      const purposeChanged = (askPurpose.trim() || '') !== (r.ask_purpose ?? '');
       const res = await updateRelationship({
         id: r.id,
         slug,
         stage,
         warmth_override: override.trim() === '' ? null : Number(override),
         next_action: action,
+        // Only send ask fields when they actually changed — the columns may not
+        // be migrated yet, so an untouched edit must never reference them.
+        ...(showAsk && amountChanged
+          ? { ask_amount_aud: askAmount.trim() === '' ? null : Number(askAmount) }
+          : {}),
+        ...(showAsk && purposeChanged ? { ask_purpose: askPurpose.trim() || null } : {}),
       });
-      if (!res.ok) setErr(res.error ?? 'Save failed');
-      else setOpen(false);
+      if (!res.ok) { setErr(res.error ?? 'Save failed'); return; }
+      setSaved(true);
+      setTimeout(() => { setSaved(false); setOpen(false); }, 900);
     });
   }
 
@@ -110,6 +127,28 @@ export function RelationshipCard({ r, slug }: { r: GoodsRelationship; slug: stri
               />
             </label>
           </div>
+          {showAsk && (
+            <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
+              <label className="block">
+                <span className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Ask amount (AUD)</span>
+                <input
+                  type="number" min={0} value={askAmount}
+                  onChange={(e) => setAskAmount(e.target.value)}
+                  placeholder="250000"
+                  className="mt-1 w-full border-2 border-bauhaus-black bg-white px-2 py-1 text-sm"
+                />
+              </label>
+              <label className="block md:col-span-2">
+                <span className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Ask purpose</span>
+                <input
+                  type="text" value={askPurpose}
+                  onChange={(e) => setAskPurpose(e.target.value)}
+                  placeholder="Beds for the next on-country build"
+                  className="mt-1 w-full border-2 border-bauhaus-black bg-white px-2 py-1 text-sm"
+                />
+              </label>
+            </div>
+          )}
           <div className="mt-3 flex items-center gap-3">
             <button
               onClick={save} disabled={pending}
@@ -117,8 +156,11 @@ export function RelationshipCard({ r, slug }: { r: GoodsRelationship; slug: stri
             >
               {pending ? 'Saving…' : 'Save'}
             </button>
+            {saved && (
+              <span className="border-2 border-bauhaus-blue bg-bauhaus-blue px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-white">Saved ✓</span>
+            )}
             <button
-              onClick={() => { setOpen(false); setErr(null); setStage(r.stage); setOverride(r.warmth_override?.toString() ?? ''); setAction(r.next_action ?? ''); }}
+              onClick={() => { setOpen(false); setErr(null); setStage(r.stage); setOverride(r.warmth_override?.toString() ?? ''); setAction(r.next_action ?? ''); setAskAmount(r.ask_amount_aud?.toString() ?? ''); setAskPurpose(r.ask_purpose ?? ''); }}
               className="text-[11px] font-bold uppercase tracking-widest text-bauhaus-muted hover:text-bauhaus-black"
             >
               Cancel

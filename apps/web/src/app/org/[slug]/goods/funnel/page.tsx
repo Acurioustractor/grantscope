@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { ACT_FAST_PROFILE, isActSlug, shouldUseFastLocalOrg } from '@/lib/services/fast-local-org';
 import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
 import { getGoodsFunnel, SPINE, SPINE_LABELS, type PipelineFunnel } from '@/lib/services/goods-funnel';
+import { GoodsSubNav } from '../_components/goods-sub-nav';
 
 export const dynamic = 'force-dynamic';
 
@@ -80,8 +81,9 @@ export default async function GoodsFunnelPage({ params }: { params: Promise<{ sl
           </nav>
           <h1 className="text-4xl font-black uppercase tracking-widest">Goods Funnel</h1>
           <p className="mt-2 max-w-3xl text-sm text-gray-300">
-            One need, two funding routes, one delivery — in beds, washing machines and $. A community <strong className="text-white">need</strong> is met by a buyer who <strong className="text-white">pays</strong> (procurement) or a funder who <strong className="text-white">donates</strong> (support), both ending in <strong className="text-white">delivery</strong>.
+            One need, two funding routes, one delivery, in beds, washing machines and dollars. A community <strong className="text-white">need</strong> is met by a buyer who <strong className="text-white">pays</strong> (procurement) or a funder who <strong className="text-white">donates</strong> (support), both ending in <strong className="text-white">delivery</strong>.
           </p>
+          <GoodsSubNav slug={slug} active="funnel" />
         </div>
       </div>
 
