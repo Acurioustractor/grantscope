@@ -9,6 +9,7 @@ const PIPELINE_TABS = [
   ['signals', 'Signals'],
   ['timeline', 'Timeline'],
   ['money', 'Money'],
+  ['campaign', 'Match Campaign'],
   ['funnel', 'Funnel'],
 ] as const;
 

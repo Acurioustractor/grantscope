@@ -16,6 +16,8 @@ import {
 } from '@/lib/services/goods-connection-shared';
 import { BUTTERFLY_DGR } from '@/lib/services/goods-engagement-shared';
 import { GOODS_DELIVERED } from '@/lib/services/goods-proof';
+import { getGoodsEvidence } from '@/lib/services/goods-evidence';
+import { surfaceFor, isOverdue, type QbeArea } from '@/lib/services/goods-evidence-shared';
 import { GoodsSubNav } from '../_components/goods-sub-nav';
 
 const DOOR_CAP = 8;
@@ -157,6 +159,91 @@ function DoorRow({ slug, d }: { slug: string; d: ConnectionDoor }) {
   );
 }
 
+/** Diagnostic-status chip tones: gap red, partial yellow, strength blue, unset muted. */
+function statusChip(status: QbeArea['diagnosticStatus']): { label: string; cls: string } {
+  switch (status) {
+    case 'Priority gap':
+      return { label: 'Priority gap', cls: 'bg-bauhaus-red text-white' };
+    case 'Partial':
+      return { label: 'Partial', cls: 'bg-bauhaus-yellow text-bauhaus-black' };
+    case 'Strength':
+      return { label: 'Strength', cls: 'bg-bauhaus-blue text-white' };
+    default:
+      return { label: 'Unset', cls: 'bg-bauhaus-canvas text-bauhaus-muted' };
+  }
+}
+
+function EvidenceRow({ slug, a, now }: { slug: string; a: QbeArea; now: Date }) {
+  const chip = statusChip(a.diagnosticStatus);
+  const overdue = isOverdue(a.due, now);
+  const due = fmtDate(a.due);
+  const surface = surfaceFor(a.number);
+  const accent =
+    a.diagnosticStatus === 'Priority gap'
+      ? 'bg-bauhaus-red'
+      : a.diagnosticStatus === 'Partial'
+      ? 'bg-bauhaus-yellow'
+      : a.diagnosticStatus === 'Strength'
+      ? 'bg-bauhaus-blue'
+      : 'bg-bauhaus-black/30';
+  return (
+    <div className="flex items-stretch gap-0 border-4 border-bauhaus-black bg-white">
+      <div className={`w-1.5 shrink-0 ${accent}`} aria-hidden />
+      <div className="min-w-0 flex-1 px-4 py-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[15px] font-black text-bauhaus-black">{a.area}</span>
+          <span className={`px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest ${chip.cls}`}>
+            {chip.label}
+          </span>
+          {a.priority === 'P0' && (
+            <span className="bg-bauhaus-black px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-white">
+              P0
+            </span>
+          )}
+          {due && (
+            <span
+              className={`px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest ${
+                overdue ? 'bg-bauhaus-red text-white' : 'border-2 border-bauhaus-black text-bauhaus-black'
+              }`}
+            >
+              {overdue ? 'Overdue ' : 'Due '}
+              {due}
+            </span>
+          )}
+        </div>
+        {a.primaryGap && (
+          <div className="mt-1.5 max-w-2xl text-[13px] leading-snug text-bauhaus-black/80">{a.primaryGap}</div>
+        )}
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+          {a.owner && (
+            <span className="text-[10px] font-bold uppercase tracking-widest text-bauhaus-muted">
+              Owner: {a.owner}
+            </span>
+          )}
+          {a.notionUrl && (
+            <a
+              href={a.notionUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue hover:underline"
+            >
+              Notion ↗
+            </a>
+          )}
+          {surface && (
+            <Link
+              href={`/org/${slug}/goods${surface.href}`}
+              className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue hover:underline"
+            >
+              Live evidence: {surface.label} →
+            </Link>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default async function GoodsGovernancePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const profile = shouldUseFastLocalOrg() && isActSlug(slug) ? ACT_FAST_PROFILE : await getOrgProfileBySlug(slug);
@@ -174,6 +261,8 @@ export default async function GoodsGovernancePage({ params }: { params: Promise<
   const doors = toConnectionDoors(targets, DOOR_CAP);
   const connStats = summarizeConnections(targets);
   const liveError = govError ?? ladderError ?? readiness.fetchError;
+  const now = new Date();
+  const evidence = getGoodsEvidence(now);
 
   return (
     <main className="min-h-screen bg-bauhaus-canvas text-bauhaus-black">
@@ -207,6 +296,7 @@ export default async function GoodsGovernancePage({ params }: { params: Promise<
         <nav className="mb-6 flex flex-wrap gap-2">
           {[
             ['readiness', 'Readiness'],
+            ['evidence', 'Evidence'],
             ['board', 'Board'],
             ['ladder', 'Ladder'],
             ['connections', 'Connections'],
@@ -318,6 +408,61 @@ export default async function GoodsGovernancePage({ params }: { params: Promise<
               </div>
             </div>
           </div>
+        </section>
+
+        {/* QBE EVIDENCE READINESS — the diagnostic database as a living board */}
+        <section id="evidence" className="mb-8 scroll-mt-4 border-4 border-bauhaus-black bg-white">
+          <div className="flex items-baseline justify-between border-b-4 border-bauhaus-black bg-bauhaus-black px-4 py-2.5 text-white">
+            <h2 className="text-sm font-black uppercase tracking-widest">QBE evidence readiness</h2>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-white/60">
+              12 diagnostic areas
+            </span>
+          </div>
+
+          <p className="border-b-4 border-bauhaus-black px-4 py-2.5 text-[12px] leading-snug text-bauhaus-black/80">
+            Synced from the QBE Diagnostic Artifact Database in Notion,{' '}
+            {fmtDate(evidence.syncedAt) ?? evidence.syncedAt}.
+          </p>
+
+          {/* Summary strip */}
+          <div className="grid grid-cols-2 divide-x-4 divide-y-4 divide-bauhaus-black border-b-4 border-bauhaus-black sm:grid-cols-4 sm:divide-y-0">
+            <div className="p-4">
+              <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">P0 areas</div>
+              <div className="mt-1 text-3xl font-black tabular-nums leading-none">{evidence.summary.p0Count}</div>
+            </div>
+            <div className="p-4">
+              <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Priority gaps</div>
+              <div className="mt-1 text-3xl font-black tabular-nums leading-none">{evidence.summary.priorityGaps}</div>
+            </div>
+            <div className="p-4">
+              <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Overdue</div>
+              <div
+                className={`mt-1 text-3xl font-black tabular-nums leading-none ${
+                  evidence.summary.overdueCount > 0 ? 'text-bauhaus-red' : ''
+                }`}
+              >
+                {evidence.summary.overdueCount}
+              </div>
+            </div>
+            <div className="p-4">
+              <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Next due</div>
+              <div className="mt-1 text-[15px] font-black leading-tight text-bauhaus-black">
+                {fmtDate(evidence.summary.nextDue) ?? 'None set'}
+              </div>
+            </div>
+          </div>
+
+          {/* 12 compact rows */}
+          <div className="grid grid-cols-1 gap-3 p-4 xl:grid-cols-2">
+            {evidence.areas.map((a) => (
+              <EvidenceRow key={a.number} slug={slug} a={a} now={now} />
+            ))}
+          </div>
+
+          <p className="border-t-4 border-bauhaus-black px-4 py-2.5 text-[11px] leading-snug text-bauhaus-muted">
+            This board mirrors Notion; it does not edit it. Refresh with{' '}
+            <code className="bg-bauhaus-canvas px-1">scripts/sync-qbe-diagnostic.mjs</code>.
+          </p>
         </section>
 
         {/* The line that must never blur (stated once) */}
