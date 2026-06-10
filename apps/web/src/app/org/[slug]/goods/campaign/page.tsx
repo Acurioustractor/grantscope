@@ -7,9 +7,12 @@ import {
   COMMITMENT_ORDER,
   COMMITMENT_LABEL,
   KIND_LABEL,
+  LOI_TARGET,
   byCommitment,
   daysUntil,
+  dgrRoutingWarnings,
   evidenceBackedTotal,
+  loisSigned,
   pipelineTotal,
   type CapitalSource,
 } from '@/lib/services/goods-campaign-data';
@@ -42,9 +45,16 @@ function SourceCard({ source, slug }: { source: EnrichedCapitalSource; slug: str
     <div className="border-4 border-bauhaus-black bg-white p-3">
       <div className="flex items-start justify-between gap-2">
         <div className="text-sm font-black uppercase tracking-wide text-bauhaus-black">{source.name}</div>
-        <span className={`shrink-0 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest ${KIND_CHIP[source.kind]}`}>
-          {KIND_LABEL[source.kind]}
-        </span>
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+          {source.needsVerification && (
+            <span className="bg-bauhaus-red px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-white">
+              Verify
+            </span>
+          )}
+          <span className={`px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest ${KIND_CHIP[source.kind]}`}>
+            {KIND_LABEL[source.kind]}
+          </span>
+        </div>
       </div>
 
       <div className="mt-2 text-2xl font-black text-bauhaus-black">{source.askLabel}</div>
@@ -68,6 +78,37 @@ function SourceCard({ source, slug }: { source: EnrichedCapitalSource; slug: str
           </div>
         )}
       </div>
+
+      {source.instrument && (
+        <div className="mt-2 border-t-2 border-bauhaus-black/10 pt-2">
+          <div className="text-[9px] font-black uppercase tracking-widest text-bauhaus-muted">
+            What this requires
+          </div>
+          <dl className="mt-1 space-y-0.5 text-[10px] font-bold text-bauhaus-muted">
+            <div className="flex justify-between gap-2">
+              <dt className="uppercase tracking-widest">Repayment</dt>
+              <dd className="text-right text-bauhaus-black">
+                {source.instrument.repayment ?? 'TBC'}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-2">
+              <dt className="uppercase tracking-widest">Security</dt>
+              <dd className="text-right text-bauhaus-black">
+                {source.instrument.security ?? 'TBC'}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-2">
+              <dt className="uppercase tracking-widest">Entity</dt>
+              <dd className="text-right text-bauhaus-black">{source.instrument.entityRequired}</dd>
+            </div>
+          </dl>
+          {source.instrument.dgrRoute && (
+            <span className="mt-1 inline-block border-2 border-bauhaus-blue bg-link-light px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-bauhaus-black">
+              Butterfly DGR route
+            </span>
+          )}
+        </div>
+      )}
 
       {source.live && (
         <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t-2 border-bauhaus-black/10 pt-2">
@@ -109,10 +150,13 @@ export default async function GoodsCampaignPage({ params }: { params: Promise<{ 
 
   const { sources, deadline, fetchError } = await getGoodsCampaign();
   const grouped = byCommitment(sources as CapitalSource[]) as Record<string, EnrichedCapitalSource[]>;
+  const parkedSources = grouped.parked ?? [];
   const backed = evidenceBackedTotal(sources);
   const pipeline = pipelineTotal(sources);
+  const lois = loisSigned(sources);
   const days = daysUntil(deadline);
   const urgent = days < 60;
+  const dgrWarnings = dgrRoutingWarnings(sources as CapitalSource[]);
 
   return (
     <main className="min-h-screen bg-bauhaus-canvas text-bauhaus-black">
@@ -151,8 +195,30 @@ export default async function GoodsCampaignPage({ params }: { params: Promise<{ 
       </div>
 
       <div className="mx-auto max-w-7xl px-4 py-6">
+        {/* LOI headline: the QBE Stage-1 gate. Leads the page. */}
+        <div className="border-4 border-bauhaus-black bg-bauhaus-black p-5 text-white">
+          <div className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+            QBE Catalysing Impact — Stage 1 gate
+          </div>
+          <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <span className={`text-5xl font-black ${lois >= LOI_TARGET ? 'text-bauhaus-yellow' : 'text-white'}`}>
+              {lois} of {LOI_TARGET}+
+            </span>
+            <span className="text-xl font-black uppercase tracking-widest">signed LOIs</span>
+            <span className="text-sm font-bold text-gray-400">·</span>
+            <span className={`text-xl font-black ${urgent ? 'text-bauhaus-red' : 'text-white'}`}>
+              {days > 0 ? `${days} days` : 'closed'}
+            </span>
+            <span className="text-sm font-bold text-gray-400">to {dateLabel(deadline)}</span>
+          </div>
+          <div className="mt-2 text-[11px] font-bold text-gray-300">
+            Stage 1 requires 3+ signed LOIs of matched capital. Only a source that is signed AND has written
+            evidence on file counts here — evidence is the gate, and the founder verifies it.
+          </div>
+        </div>
+
         {/* Primary call-out: the one number rule. */}
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
           <div className="border-4 border-bauhaus-black bg-white p-4">
             <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Evidence-backed capital</div>
             <div className="mt-1 text-4xl font-black text-bauhaus-black">{money(backed)}</div>
@@ -180,6 +246,19 @@ export default async function GoodsCampaignPage({ params }: { params: Promise<{ 
           </div>
         </div>
 
+        {/* DGR routing warning: grant-type sources whose routing is unconfirmed. */}
+        {dgrWarnings.length > 0 && (
+          <div className="mt-4 border-4 border-bauhaus-black bg-bauhaus-yellow p-3">
+            <div className="text-sm font-black uppercase tracking-widest text-bauhaus-black">
+              {dgrWarnings.length} grant-type source{dgrWarnings.length === 1 ? '' : 's'} have unconfirmed DGR routing
+            </div>
+            <div className="mt-1 text-[12px] font-bold text-bauhaus-black">
+              Grants must route via {BUTTERFLY_DGR.name} (Butterfly), never A Curious Tractor Pty Ltd or AKT.
+              Confirm routing for: {dgrWarnings.map((s) => s.name).join(', ')}.
+            </div>
+          </div>
+        )}
+
         {/* The ladder board. */}
         <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {COMMITMENT_ORDER.map((commitment) => {
@@ -205,6 +284,35 @@ export default async function GoodsCampaignPage({ params }: { params: Promise<{ 
             );
           })}
         </div>
+
+        {/* Parked: deliberately out of the active raise. Muted strip below the board. */}
+        {parkedSources.length > 0 && (
+          <div className="mt-6 border-4 border-bauhaus-black/30 bg-bauhaus-canvas p-3 opacity-80">
+            <div className="flex items-center justify-between border-b-2 border-bauhaus-black/15 pb-2">
+              <span className="text-xs font-black uppercase tracking-widest text-bauhaus-muted">
+                Parked — out of the active raise
+              </span>
+              <span className="text-xs font-black text-bauhaus-muted">{parkedSources.length}</span>
+            </div>
+            <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              {parkedSources.map((s) => (
+                <div key={s.id} className="border-2 border-bauhaus-black/30 bg-white p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="text-sm font-black uppercase tracking-wide text-bauhaus-muted">{s.name}</div>
+                    <span className="shrink-0 border-2 border-bauhaus-black/30 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-bauhaus-muted">
+                      Parked
+                    </span>
+                  </div>
+                  <div className="mt-2 text-[11px] font-bold text-bauhaus-muted">{s.status}</div>
+                  <div className="mt-2 border-t-2 border-bauhaus-black/10 pt-2">
+                    <div className="text-[9px] font-black uppercase tracking-widest text-bauhaus-muted">Next move</div>
+                    <div className="text-[11px] font-bold text-bauhaus-black/70">{s.nextMove}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* The advancement rule. */}
         <div className="mt-6 border-4 border-bauhaus-red bg-white p-3">

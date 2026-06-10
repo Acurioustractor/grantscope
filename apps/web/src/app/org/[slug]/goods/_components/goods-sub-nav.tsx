@@ -9,12 +9,14 @@ const PIPELINE_TABS = [
   ['signals', 'Signals'],
   ['timeline', 'Timeline'],
   ['money', 'Money'],
+  ['buyers', 'Buyer Pipeline'],
   ['campaign', 'Match Campaign'],
   ['funnel', 'Funnel'],
 ] as const;
 
 const EVIDENCE_TABS = [
   ['proof', 'Proof Pack'],
+  ['pitch', 'Pitch'],
   ['intros', 'Warm Intros'],
   ['foundations', 'Foundations'],
   ['governance', 'Governance'],

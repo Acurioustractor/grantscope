@@ -24,14 +24,21 @@ export type GoodsOpportunity = {
   sourceType: string | null;
 };
 
-/** Open-ask + expected-pipeline dollars, split grant vs investment. */
+/**
+ * Open-ask + expected-pipeline dollars, split by track. Grant and investment are
+ * the money-IN tracks (philanthropic + capital). Procurement is EARNED revenue —
+ * surfaced as a SEPARATE line and deliberately NOT added into openAskTotal /
+ * weightedPipeline, which stay money-IN only (QBE rule: keep tracks separate).
+ */
 export type PipelineStats = {
-  /** Sum of open ask_amount_aud across all money tracks. */
+  /** Sum of open ask_amount_aud across the money-IN tracks (grant + investment). */
   openAskTotal: number;
-  /** Stage-weighted expected dollars across all money tracks. */
+  /** Stage-weighted expected dollars across the money-IN tracks (grant + investment). */
   weightedPipeline: number;
   grant: TrackRollup;
   investment: TrackRollup;
+  /** Earned procurement revenue track — kept separate, never summed into the above. */
+  procurement: TrackRollup;
 };
 
 /**
@@ -170,11 +177,15 @@ export async function getGoodsMoney(): Promise<GoodsMoney> {
   const xeroPaid = parseMoneyLabel(ledger.totals.find((t) => t.label === 'Paid invoices')?.value);
   const registryReceived = summary.totalReceived;
 
+  // Money-IN pipeline = grant + investment only. Procurement is earned revenue
+  // and is surfaced as its own line — never folded into these totals (QBE rule).
+  // (summary.openAskTotal/weightedPipeline sum every track, so derive money-IN.)
   const pipeline: PipelineStats = {
-    openAskTotal: summary.openAskTotal,
-    weightedPipeline: summary.weightedPipeline,
+    openAskTotal: summary.byTrack.grant.openAskTotal + summary.byTrack.investment.openAskTotal,
+    weightedPipeline: summary.byTrack.grant.weightedPipeline + summary.byTrack.investment.weightedPipeline,
     grant: summary.byTrack.grant,
     investment: summary.byTrack.investment,
+    procurement: summary.byTrack.procurement,
   };
 
   return {

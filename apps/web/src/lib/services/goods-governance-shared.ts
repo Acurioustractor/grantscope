@@ -79,6 +79,29 @@ export function parseGovernanceNotes(notes: string | null | undefined): ParsedGo
   return { status: normalizeStatus(statusLabel), statusLabel, context };
 }
 
+/**
+ * An adviser to Goods on Country — QBE Diagnostic Area 07.
+ * Advisers are engaged for a task, for a time. They are NEVER a board: not seated,
+ * not laddered, not co-owners. The Advisory Circle surface keeps this line explicit.
+ * Source: org_contacts (contact_type='advisory'). The contact_type CHECK that allows
+ * 'advisory', and the expertise/last_contacted_at/engagement_ask columns, are added
+ * by a migration that is written but NOT YET APPLIED, so reads coerce missing fields
+ * to null/[] and zero rows is the normal pre-migration state (never an error).
+ */
+export interface Advisor {
+  id: string;
+  name: string;
+  role: string | null;
+  organisation: string | null;
+  linkedinUrl: string | null;
+  /** Expertise areas, rendered as tags. Empty until recorded. */
+  expertise: string[];
+  /** ISO date this adviser was last engaged. Null until recorded. */
+  lastContactedAt: string | null;
+  /** The specific, time-bound ask of this adviser. Null until recorded. */
+  engagementAsk: string | null;
+}
+
 export interface BelongingRung {
   tier: 'curious' | 'connected' | 'member' | 'active' | 'steward';
   label: string;

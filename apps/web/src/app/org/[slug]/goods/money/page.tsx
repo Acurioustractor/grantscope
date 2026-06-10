@@ -115,9 +115,22 @@ export default async function GoodsMoneyPage({ params }: { params: Promise<{ slu
               Investment {moneyShort(m.pipeline.investment.openAskTotal)} ask · {moneyShort(m.pipeline.investment.weightedPipeline)} expected
             </span>
           </div>
+          {/* Procurement = EARNED revenue. Shown as a separate line, never folded
+              into the money-IN pipeline above (QBE rule: keep tracks separate). */}
+          <div className="mt-2 flex flex-wrap items-center gap-2 border-t-2 border-bauhaus-black/10 pt-2 text-[11px] font-bold">
+            <span className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Separate track</span>
+            <span className="border-2 border-bauhaus-blue bg-white px-2 py-0.5 text-bauhaus-blue">
+              Procurement {moneyShort(m.pipeline.procurement.lifetimeReceived)} received · {moneyShort(m.pipeline.procurement.openAskTotal)} open ask
+              {m.pipeline.procurement.count > 0 && <> · {m.pipeline.procurement.count} buyer{m.pipeline.procurement.count === 1 ? '' : 's'}</>}
+            </span>
+            <Link href={`/org/${slug}/goods/buyers`} className="text-bauhaus-blue underline hover:no-underline">
+              Buyer pipeline →
+            </Link>
+          </div>
           <div className="mt-2 text-[10px] font-bold text-bauhaus-muted">
-            Expected = each open ask multiplied by its stage close-probability. Grant and investment dollars are kept
-            separate. Ask amounts are entered in the warmth registry and may be incomplete until every conversation is sized.
+            Expected = each open ask multiplied by its stage close-probability. Grant, investment and procurement dollars
+            are kept separate — procurement is earned revenue and is never added into the money-IN pipeline above. Ask
+            amounts are entered in the warmth registry and may be incomplete until every conversation is sized.
           </div>
         </div>
 

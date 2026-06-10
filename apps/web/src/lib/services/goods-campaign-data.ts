@@ -22,9 +22,15 @@ export type CapitalKind =
 /**
  * How committed the source is. Strict ladder — a source only advances past
  * 'eligible' when written evidence is attached. 'signed' is the only state that
- * represents money the funder has put on the record.
+ * represents money the funder has put on the record. 'parked' is off-ladder:
+ * deliberately out of the active raise (paused, not pursued for now).
  */
-export type Commitment = 'target' | 'in_conversation' | 'eligible' | 'signed';
+export type Commitment =
+  | 'target'
+  | 'in_conversation'
+  | 'eligible'
+  | 'signed'
+  | 'parked';
 
 /**
  * Whether the source counts toward the QBE match. Held at 'unknown' for every
@@ -32,6 +38,31 @@ export type Commitment = 'target' | 'in_conversation' | 'eligible' | 'signed';
  * source is eligible.
  */
 export type MatchEligibility = 'unknown' | 'eligible' | 'ineligible';
+
+/**
+ * The legal/contracting shape of a capital instrument. We only ever record what
+ * is KNOWN — repayment/security stay null (with a TODO) rather than inventing
+ * loan or security terms we do not hold. `entityRequired` and `dgrRoute` encode
+ * the hard ACT entity rule: tax-deductible philanthropy MUST route via Butterfly
+ * (Item 1 DGR + PBI); commercial/repayable capital contracts through A Curious
+ * Tractor Pty Ltd (t/a Goods on Country). DGR never runs through ACT Pty or AKT.
+ */
+export interface CapitalInstrument {
+  /** e.g. 'non-repayable grant', 'debt, terms TBC', 'recoverable grant'. Null when unknown. */
+  repayment: string | null;
+  /** Security taken against the capital, or null when none/unknown. */
+  security: string | null;
+  /** Which ACT entity must contract / receive the capital. */
+  entityRequired: string;
+  /** True when the capital must route via Butterfly (tax-deductible philanthropy). */
+  dgrRoute: boolean;
+}
+
+/** Canonical ACT contracting entity strings, used verbatim in instrument data. */
+export const ACT_PTY_ENTITY =
+  'A Curious Tractor Pty Ltd (t/a Goods on Country)';
+export const BUTTERFLY_ENTITY =
+  'The Butterfly Movement Ltd (Item 1 DGR + PBI, ABN 22 155 132 684)';
 
 export interface CapitalSource {
   id: string;
@@ -51,6 +82,17 @@ export interface CapitalSource {
   status: string;
   /** The single next action that moves this source forward. */
   nextMove: string;
+  /**
+   * True when the source itself is unverified — i.e. we are not yet sure what it
+   * refers to or whether it belongs in the stack. Renders a red VERIFY chip.
+   */
+  needsVerification?: boolean;
+  /**
+   * The legal/contracting shape of the capital, when known. Optional so a source
+   * can exist before its instrument is understood — but every seeded source sets
+   * one, holding unknown terms at null rather than inventing them.
+   */
+  instrument?: CapitalInstrument;
 }
 
 export const KIND_LABEL: Record<CapitalKind, string> = {
@@ -66,9 +108,14 @@ export const COMMITMENT_LABEL: Record<Commitment, string> = {
   in_conversation: 'In conversation',
   eligible: 'Eligible',
   signed: 'Signed',
+  parked: 'Parked',
 };
 
-/** Strict left-to-right ladder order for the board columns. */
+/**
+ * Strict left-to-right ladder order for the active board columns. 'parked' is
+ * deliberately excluded — parked sources render in a muted strip, not on the
+ * active ladder.
+ */
 export const COMMITMENT_ORDER: Commitment[] = [
   'target',
   'in_conversation',
@@ -95,6 +142,15 @@ export const CAPITAL_STACK: CapitalSource[] = [
     registryName: 'QBE',
     status: '2026 cohort via Social Impact Hub; match rules not confirmed in writing',
     nextMove: 'Confirm match rules and cap in writing with Social Impact Hub',
+    instrument: {
+      // Source: QBE Catalysing Impact diagnostic — non-repayable grant via Social
+      // Impact Hub, gated on legally-binding matched co-funding; agreement signed
+      // 17 Mar 2026. Commercial cohort capital contracts through ACT Pty.
+      repayment: 'non-repayable grant (gated on legally-binding matched co-funding)',
+      security: null,
+      entityRequired: ACT_PTY_ENTITY,
+      dgrRoute: false,
+    },
   },
   {
     // TODO(ben-verify): ask amount and decision timing.
@@ -108,7 +164,17 @@ export const CAPITAL_STACK: CapitalSource[] = [
     matchEligibility: 'unknown',
     registryName: 'Snow Foundation',
     status: 'Applied, awaiting decision',
-    nextMove: 'Chase decision timing; ask what evidence would accelerate',
+    // email sweep 2026-06-10
+    nextMove:
+      'Grant WON — agreement sent 19 May. Ask Snow to convert into signed matched-capital LOI. Email contacts: Sally Grimsley-Ballard / Georgie Byron / Maree Meredith (NOT Carolyn Ludovici — no email history).',
+    instrument: {
+      // Philanthropic grant — must route via Butterfly DGR.
+      repayment: 'non-repayable grant',
+      security: null,
+      // TODO(ben-verify): confirm grant routes via Butterfly (philanthropic DGR), not ACT Pty.
+      entityRequired: BUTTERFLY_ENTITY,
+      dgrRoute: true,
+    },
   },
   {
     // TODO(ben-verify): LOI scope and loan terms.
@@ -122,7 +188,17 @@ export const CAPITAL_STACK: CapitalSource[] = [
     matchEligibility: 'unknown',
     registryName: 'SEFA',
     status: 'LOI held; not yet formal',
-    nextMove: 'Convert LOI to formal term sheet',
+    // email sweep 2026-06-10
+    nextMove:
+      'No capital conversation exists in email. Open fresh thread with Chelsea Baker re debt/blended capital LOI.',
+    instrument: {
+      // Debt/blended capital, no conversation yet — terms unknown, do not invent.
+      repayment: 'debt, terms TBC',
+      // TODO(ben-verify): SEFA security requirements unknown — no conversation held.
+      security: null,
+      entityRequired: ACT_PTY_ENTITY,
+      dgrRoute: false,
+    },
   },
   {
     // TODO(ben-verify): PFI EOI status and recoverable-grant terms.
@@ -136,7 +212,18 @@ export const CAPITAL_STACK: CapitalSource[] = [
     matchEligibility: 'unknown',
     registryName: 'PFI',
     status: 'EOI submitted March 2026',
-    nextMove: 'Follow up EOI outcome',
+    // email sweep 2026-06-10
+    nextMove:
+      "No email substrate found for 'PFI' — founder to confirm what PFI refers to before it stays in the stack.",
+    needsVerification: true,
+    instrument: {
+      // Source itself unverified (needsVerification) — nothing known, hold all null.
+      repayment: null,
+      security: null,
+      // TODO(ben-verify): entity unknown until PFI is confirmed to be real.
+      entityRequired: ACT_PTY_ENTITY,
+      dgrRoute: false,
+    },
   },
   {
     // TODO(ben-verify): whether IBA debt belongs in this raise at all.
@@ -150,7 +237,16 @@ export const CAPITAL_STACK: CapitalSource[] = [
     matchEligibility: 'unknown',
     registryName: 'IBA',
     status: 'Eligibility confirmed; no application lodged',
-    nextMove: 'Decide whether IBA debt belongs in this raise',
+    // email sweep 2026-06-10
+    nextMove: 'No email relationship at all. Source warm intro via SIH or Snow networks.',
+    instrument: {
+      // Indigenous Business Australia finance — terms unknown, no application lodged.
+      // TODO(ben-verify): IBA finance terms (repayment, security) unknown.
+      repayment: 'debt, terms TBC',
+      security: null,
+      entityRequired: ACT_PTY_ENTITY,
+      dgrRoute: false,
+    },
   },
   {
     // TODO(ben-verify): Minderoo catalytic frame and ask size.
@@ -159,12 +255,70 @@ export const CAPITAL_STACK: CapitalSource[] = [
     kind: 'catalytic',
     askAud: 200_000,
     askLabel: '~$200K',
-    commitment: 'target',
+    // email sweep 2026-06-10
+    commitment: 'parked',
     writtenEvidence: null,
     matchEligibility: 'unknown',
     registryName: 'Minderoo',
     status: 'Warm; no formal process started',
-    nextMove: 'Scope a catalytic ask aligned to their climate frame',
+    nextMove:
+      'Lucy Stronach paused justice conversations 14 May (internal). No pitch; light Contained-in-Perth touchpoint July.',
+    instrument: {
+      // Catalytic capital — shape unknown (no formal process started).
+      // TODO(ben-verify): catalytic frame — confirm whether it routes via Butterfly DGR.
+      repayment: 'catalytic, terms TBC',
+      security: null,
+      entityRequired: ACT_PTY_ENTITY,
+      dgrRoute: false,
+    },
+  },
+  {
+    // TODO(ben-verify): proposal value, board date, and contact still current.
+    // email sweep 2026-06-10
+    id: 'centrecorp-foundation',
+    name: 'Centrecorp Foundation',
+    kind: 'grant',
+    askAud: null,
+    askLabel: 'TBC (130 Stretch Beds proposal)',
+    commitment: 'in_conversation',
+    writtenEvidence: null,
+    matchEligibility: 'unknown',
+    registryName: 'Centrecorp',
+    status: 'Proposal to Centrecorp board 26 June',
+    nextMove:
+      '130 Stretch Beds proposal $106,150 (GHL) goes to Centrecorp board 26 June. Last email 13 Feb — confirm agenda + board pack needs with Randle Walker.',
+    instrument: {
+      // Philanthropic foundation grant for product — must route via Butterfly DGR.
+      repayment: 'non-repayable grant',
+      security: null,
+      // TODO(ben-verify): confirm grant routes via Butterfly DGR, not ACT Pty.
+      entityRequired: BUTTERFLY_ENTITY,
+      dgrRoute: true,
+    },
+  },
+  {
+    // TODO(ben-verify): visit dates, attendance, and ask framing.
+    // email sweep 2026-06-10
+    id: 'bryan-foundation',
+    name: 'The Bryan Foundation',
+    kind: 'grant',
+    askAud: null,
+    askLabel: 'TBC',
+    commitment: 'in_conversation',
+    writtenEvidence: null,
+    matchEligibility: 'unknown',
+    registryName: 'Bryan Foundation',
+    status: 'Site visit + brainstorm proposed 6–7 July',
+    nextMove:
+      'Matthew Cox site visit + brainstorm 6–7 July invited (accepted?). Prepare agenda with explicit matched-capital ask.',
+    instrument: {
+      // Philanthropic grant — must route via Butterfly DGR.
+      repayment: 'non-repayable grant',
+      security: null,
+      // TODO(ben-verify): confirm grant routes via Butterfly DGR, not ACT Pty.
+      entityRequired: BUTTERFLY_ENTITY,
+      dgrRoute: true,
+    },
   },
 ];
 
@@ -204,9 +358,50 @@ export function byCommitment(
     in_conversation: [],
     eligible: [],
     signed: [],
+    parked: [],
   };
   for (const s of sources) out[s.commitment].push(s);
   return out;
+}
+
+/**
+ * The QBE Stage-1 headline metric: count of sources that are 'signed' AND carry
+ * written evidence on file. QBE Catalysing Impact Stage 1 requires 3+ signed
+ * LOIs of matched capital by 31 Aug 2026, so this is the number the page leads
+ * with. A 'signed' commitment with no evidence does NOT count — evidence is the
+ * gate, and code never flips evidence (the founder verifies).
+ */
+export function loisSigned(sources: CapitalSource[]): number {
+  return sources.reduce(
+    (n, s) => (s.commitment === 'signed' && s.writtenEvidence !== null ? n + 1 : n),
+    0,
+  );
+}
+
+/** QBE Stage-1 target: minimum signed LOIs required. */
+export const LOI_TARGET = 3;
+
+/** Grant-like kinds whose money must route via Butterfly DGR, never ACT Pty or AKT. */
+export const GRANT_LIKE_KINDS: CapitalKind[] = [
+  'matched_grant',
+  'grant',
+  'recoverable_grant',
+];
+
+/**
+ * Grant-type sources whose DGR routing is NOT yet confirmed. A grant-like source
+ * is a routing risk unless its instrument explicitly sets dgrRoute === true.
+ * Tax-deductible philanthropy must route via Butterfly; a missing instrument or
+ * dgrRoute !== true means the routing is unconfirmed and needs a human check.
+ * NOTE: QBE matched grants are non-repayable but contract through ACT Pty (not a
+ * DGR receipt), so they surface here too — that is intentional: the founder
+ * should confirm each grant-type source's routing rather than the code guessing.
+ */
+export function dgrRoutingWarnings(sources: CapitalSource[]): CapitalSource[] {
+  return sources.filter(
+    (s) =>
+      GRANT_LIKE_KINDS.includes(s.kind) && s.instrument?.dgrRoute !== true,
+  );
 }
 
 /**
