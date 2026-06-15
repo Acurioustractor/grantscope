@@ -1,4 +1,5 @@
 import { getServiceSupabase } from '@/lib/supabase';
+import { getCachedGrantSourceCoverageRows } from '@/lib/services/grant-opportunity-cache';
 import { DashboardCharts } from './charts';
 import { FundingGapMapLoader } from './funding-gap-map-loader';
 
@@ -153,10 +154,7 @@ async function getDashboardData() {
   const geography: GeoRow[] = top10;
 
   // Source coverage
-  const { data: grantSources } = await supabase
-    .from('grant_opportunities')
-    .select('source')
-    .limit(5000);
+  const grantSources = await getCachedGrantSourceCoverageRows();
 
   const sourceMap = new Map<string, number>();
   for (const g of grantSources || []) {

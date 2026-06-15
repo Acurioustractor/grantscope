@@ -4,11 +4,13 @@ function getUrl() {
   return process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
 }
 
+const blockedSqlRpcNames = new Set(['exec_sql', 'exec', 'execute_sql', 'exec_agent_sql']);
+
 /** Client-side Supabase (anon key, RLS enforced) */
 let _supabase: SupabaseClient | null = null;
 export function getSupabase() {
   if (!_supabase) {
-    _supabase = createClient(getUrl(), process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '');
+    _supabase = createRuntimeSupabaseClient(createClient(getUrl(), process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''));
   }
   return _supabase;
 }
@@ -23,13 +25,19 @@ export const supabase = new Proxy({} as SupabaseClient, {
 /** Server-side Supabase (service role, bypasses RLS) */
 let _serviceSupabase: SupabaseClient | null = null;
 
-type QueryResult = { data: null; error: null; count: 0 };
+type LocalQueryError = {
+  message: string;
+  code: string;
+  details: string | null;
+  hint: string | null;
+};
+type QueryResult = { data: null; error: LocalQueryError | null; count: number | null };
 type EmptyQueryBuilder = ((...args: unknown[]) => EmptyQueryBuilder) & PromiseLike<QueryResult>;
 
 const emptyQueryResult: QueryResult = { data: null, error: null, count: 0 };
 
-function createEmptyQueryBuilder(): EmptyQueryBuilder {
-  const result = Promise.resolve(emptyQueryResult);
+function createStaticQueryBuilder(queryResult: QueryResult): EmptyQueryBuilder {
+  const result = Promise.resolve(queryResult);
   let builder: EmptyQueryBuilder;
 
   builder = new Proxy(function noop() {
@@ -47,6 +55,42 @@ function createEmptyQueryBuilder(): EmptyQueryBuilder {
   });
 
   return builder;
+}
+
+function createEmptyQueryBuilder(): EmptyQueryBuilder {
+  return createStaticQueryBuilder(emptyQueryResult);
+}
+
+function createBlockedSqlRpcBuilder(functionName: string): EmptyQueryBuilder {
+  return createStaticQueryBuilder({
+    data: null,
+    error: {
+      message: `${functionName} RPC is disabled in the app runtime. Use typed Supabase reads or a dedicated safe view/RPC instead.`,
+      code: 'SQL_RPC_DISABLED',
+      details: null,
+      hint: 'This avoids repeatedly calling revoked arbitrary-SQL functions in Supabase.',
+    },
+    count: null,
+  });
+}
+
+function createRuntimeSupabaseClient(client: SupabaseClient): SupabaseClient {
+  return new Proxy(client, {
+    get(target, prop, receiver) {
+      if (prop === 'rpc') {
+        const rpc = Reflect.get(target, prop, receiver) as (...args: unknown[]) => unknown;
+        return (functionName: string, ...args: unknown[]) => {
+          if (blockedSqlRpcNames.has(functionName)) {
+            return createBlockedSqlRpcBuilder(functionName);
+          }
+          return rpc.apply(target, [functionName, ...args]);
+        };
+      }
+
+      const value = Reflect.get(target, prop, receiver);
+      return typeof value === 'function' ? value.bind(target) : value;
+    },
+  }) as SupabaseClient;
 }
 
 const reportSnapshotSupabase = new Proxy({} as SupabaseClient, {
@@ -77,7 +121,7 @@ export function getServiceSupabase() {
 
 export function getDirectServiceSupabase() {
   if (!_serviceSupabase) {
-    _serviceSupabase = createClient(getUrl(), process.env.SUPABASE_SERVICE_ROLE_KEY || '');
+    _serviceSupabase = createRuntimeSupabaseClient(createClient(getUrl(), process.env.SUPABASE_SERVICE_ROLE_KEY || ''));
   }
   return _serviceSupabase;
 }

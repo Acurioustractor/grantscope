@@ -5,6 +5,7 @@ import { FundingIntelligenceRail } from '../components/funding-intelligence-rail
 import { ListPreviewProvider, GrantPreviewTrigger } from '../components/list-preview';
 import { dedupeGrantList, sortGrantList, type GrantListItem } from './grant-list-utils';
 import { getWikiSupportProject } from '@/lib/services/wiki-support-index';
+import { getCachedGrantCoverageRows, type GrantCoverageRow as CoverageRow } from '@/lib/services/grant-opportunity-cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,18 +16,6 @@ interface Grant extends GrantListItem {
   aligned_projects?: string[] | null;
   grant_type?: string | null;
   discovery_method?: string | null;
-}
-
-interface CoverageRow {
-  source: string | null;
-  provider: string | null;
-  geography: string | null;
-  status: string | null;
-  application_status: string | null;
-  closes_at: string | null;
-  grant_type: string | null;
-  updated_at: string | null;
-  last_verified_at: string | null;
 }
 
 function formatAmount(min: number | null, max: number | null): string {
@@ -387,7 +376,6 @@ const SOURCES = [
 const PUBLIC_GRANTS_LIST_TABLE = 'grant_opportunities';
 const VERIFIED_GRANT_INDEX_COUNT = 32018;
 const GRANT_LIST_CANDIDATE_LIMIT = 500;
-const GRANT_COVERAGE_SAMPLE_LIMIT = 5000;
 
 function sourceLabel(value: string): string {
   const known = SOURCES.find((source) => source.value === value);
@@ -941,15 +929,7 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
 
   const totalPages = usedSemantic || isFastGrantIndex ? 1 : Math.ceil((count || 0) / pageSize);
   const today = new Date().toISOString().slice(0, 10);
-  const { data: coverageData } = isFastGrantIndex
-    ? { data: [] as CoverageRow[] }
-    : await supabase
-        .from(PUBLIC_GRANTS_LIST_TABLE)
-        .select('source, provider, geography, status, application_status, closes_at, grant_type, updated_at, last_verified_at')
-        .or('status.is.null,status.neq.duplicate')
-        .order('updated_at', { ascending: false, nullsFirst: false })
-        .limit(GRANT_COVERAGE_SAMPLE_LIMIT);
-  const coverageRows = ((coverageData || []) as CoverageRow[]);
+  const coverageRows = isFastGrantIndex ? [] as CoverageRow[] : await getCachedGrantCoverageRows();
   const openCoverageRows = coverageRows.filter((row) => isOpenishCoverage(row, today));
   const coverageFamilies = buildCountMap(openCoverageRows.map(sourceFamily));
   const coverageStates = buildCountMap(openCoverageRows.map(inferCoverageState));

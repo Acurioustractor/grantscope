@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireModule } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
+import { getCachedGrantSourceCoverageRows } from '@/lib/services/grant-opportunity-cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -95,13 +96,10 @@ export async function GET() {
     });
 
     // Source coverage
-    const { data: grantSources } = await supabase
-      .from('grant_opportunities')
-      .select('source, amount_max')
-      .limit(5000);
+    const grantSources = await getCachedGrantSourceCoverageRows();
 
     const sourceMap = new Map<string, { count: number; totalFunding: number; type: string }>();
-    for (const g of grantSources || []) {
+    for (const g of grantSources) {
       const source = (g.source as string) || 'Unknown';
       const existing = sourceMap.get(source) || { count: 0, totalFunding: 0, type: 'government' };
       existing.count++;
