@@ -410,13 +410,27 @@ if (STATE_FILTER) query = query.eq('state', STATE_FILTER);
     }
   }
 
-  log(`\nDone! Total: ${stats.total}, Enriched: ${stats.enriched}, Skipped: ${stats.skipped}, Errors: ${stats.errors}`);
+  // Status reflects the error RATE among *attempted* (non-skipped) items, not a raw
+  // error count. A handful of transient LLM failures shouldn't flag an otherwise
+  // productive run (typically 16-41 of 50 enriched) as failing — that mislabelling is
+  // why this agent read as ~2% success while it was steadily landing coverage.
+  const attempted = stats.enriched + stats.errors;
+  const errorRate = attempted > 0 ? stats.errors / attempted : 0;
+  let status;
+  if (stats.errors === 0) status = 'success';
+  else if (stats.enriched === 0) status = 'failed';
+  else status = errorRate > 0.3 ? 'partial' : 'success';
+
+  log(`\nDone! Total: ${stats.total}, Enriched: ${stats.enriched}, Skipped: ${stats.skipped}, Errors: ${stats.errors} → ${status}`);
   await logComplete(supabase, run.id, {
     items_found: stats.total,
     items_new: stats.enriched,
     items_updated: 0,
-    status: stats.errors > 0 ? 'partial' : 'success',
-    errors: stats.errors > 0 ? [`${stats.errors} social enterprise enrichment errors`] : [],
+    status,
+    // Keep error/skip counts visible even on a 'success' run so nothing is hidden.
+    errors: stats.errors > 0
+      ? [`${stats.errors}/${attempted} enrichment errors (${stats.skipped} skipped — no scrape content)`]
+      : [],
   });
 }
 
