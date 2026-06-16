@@ -170,11 +170,23 @@ async function main() {
     };
   });
 
-  if (snapshotRows.length > 0) {
+  // Snapshot persistence is a non-critical analytics artifact: the scrape + tracker
+  // refresh above are this agent's real work. A snapshot hiccup must NOT abort the
+  // source chain (matches enrich-se / poll-frontier resilience). Two guards:
+  //  1. Skip when run_id is null. idx_tracker_site_snapshots_run_site is UNIQUE on
+  //     (COALESCE(run_id, '0000…'), domain, jurisdiction, site_name), so every
+  //     null-run_id batch buckets to the same zero-uuid and the second one onward
+  //     hits a duplicate-key violation — the deterministic cause of the 0/8 failures.
+  //     A null run_id means logStart never returned an id, so there is no run to
+  //     attach the snapshot to anyway.
+  //  2. On any insert error, warn and continue rather than process.exit(1), so a
+  //     productive run is never marked failed over a snapshot write.
+  if (!runId) {
+    console.warn('[run-tracker-refresh] No run-id; skipping snapshot insert (avoids orphaned null-run_id rows).');
+  } else if (snapshotRows.length > 0) {
     const { error: insertError } = await withRetry(() => db.from('tracker_site_snapshots').insert(snapshotRows), 'snapshot insert');
     if (insertError) {
-      console.error('[run-tracker-refresh] Snapshot insert failed:', insertError.message);
-      process.exit(1);
+      console.warn('[run-tracker-refresh] Snapshot insert skipped (non-fatal):', insertError.message);
     }
   }
 
