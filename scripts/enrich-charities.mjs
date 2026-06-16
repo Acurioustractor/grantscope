@@ -44,6 +44,12 @@ const PREFERRED_PROVIDER = process.argv.find(a => a.startsWith('--provider='))?.
 const sizeArg = process.argv.find(a => a.startsWith('--size='));
 const SIZE_FILTER = sizeArg ? sizeArg.split('=')[1] : null;
 
+// Hard cap per-charity scrape: r.jina.ai can hang past the scraper's 15s-per-fetch
+// bound, and one unresponsive site otherwise consumes the whole 600s orchestrator run.
+const SCRAPE_TIMEOUT_MS = 30_000;
+// Stop launching new batches before the 600s SIGKILL so we can log a real completion.
+const RUN_BUDGET_MS = 540_000;
+
 if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
   process.exit(1);
@@ -298,6 +304,22 @@ async function getCharitiesToEnrichFallback() {
     .slice(0, LIMIT);
 }
 
+const EMPTY_SCRAPE = { websiteContent: null, aboutContent: null, programsContent: null, annualReportContent: null, scrapedUrls: [], errors: [] };
+
+// Race a scrape against a deadline; on timeout, return an empty scrape so the
+// caller's "insufficient content" path skips it gracefully instead of hanging.
+function withTimeout(promise, ms, onTimeout) {
+  let timer;
+  const guard = new Promise((resolve) => {
+    timer = setTimeout(() => resolve({ __timedOut: true }), ms);
+  });
+  promise.catch(() => {});
+  return Promise.race([promise, guard]).then((result) => {
+    clearTimeout(timer);
+    return (result && result.__timedOut) ? onTimeout() : result;
+  });
+}
+
 async function enrichOne(charity, scraper, index, total) {
   const name = charity.name;
   const website = charity.website;
@@ -311,7 +333,14 @@ async function enrichOne(charity, scraper, index, total) {
 
   try {
     // Step 1: Scrape website
-    const scraped = await scraper.scrapeFoundation(website);
+    const scraped = await withTimeout(
+      scraper.scrapeFoundation(website),
+      SCRAPE_TIMEOUT_MS,
+      () => {
+        log(`    Scrape timed out after ${SCRAPE_TIMEOUT_MS / 1000}s — skipping`);
+        return { ...EMPTY_SCRAPE };
+      }
+    );
     log(`    Scraped ${scraped.scrapedUrls.length} pages`);
 
     const webContent = [
@@ -421,8 +450,15 @@ async function main() {
   let errors = 0;
   let processed = 0;
 
-  // Process in parallel batches
+  // Process in parallel batches, stopping before the orchestrator timeout.
+  const t0 = Date.now();
+  let stoppedEarly = false;
   for (let i = 0; i < charities.length; i += CONCURRENCY) {
+    if (Date.now() - t0 > RUN_BUDGET_MS) {
+      stoppedEarly = true;
+      log(`  Time budget (${RUN_BUDGET_MS / 1000}s) reached — stopping after ${processed}/${charities.length}. Rest picked up next run.`);
+      break;
+    }
     const batch = charities.slice(i, i + CONCURRENCY);
     const results = await Promise.allSettled(
       batch.map((c, j) => enrichOne(c, scraper, i + j + 1, charities.length))
@@ -451,7 +487,10 @@ async function main() {
     errors: errors > 0 ? [`${errors} charity enrichment errors`] : [],
   });
 
-  log(`\nComplete: ${enriched} enriched, ${noContent} no content, ${noDescription} no description, ${errors} errors out of ${charities.length}`);
+  log(`\nComplete: ${enriched} enriched, ${noContent} no content, ${noDescription} no description, ${errors} errors out of ${processed}/${charities.length}${stoppedEarly ? ' (stopped at time budget)' : ''}`);
+
+  // Timed-out scrapes leave orphaned fetches pending; exit cleanly so the run ends.
+  process.exit(0);
 }
 
 main().catch(err => {
