@@ -22,6 +22,7 @@ import os from 'node:os';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
+import { withRetry } from './lib/agent-resilience.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -280,36 +281,6 @@ async function fetchSourceMetadata(event) {
       fetched_at: new Date().toISOString(),
     };
   }
-}
-
-// The shared Supabase pooler saturates during the nightly orchestrator batch, so DB
-// calls sporadically throw `fetch failed` / schema-cache errors. Without resilience a
-// single hiccup killed the whole tracker chain (this agent read ~6% success while
-// running clean standalone). Retry transient connection failures — both network throws
-// and transient error VALUES — and let non-transient errors pass through unchanged.
-function isTransientDbError(message) {
-  return /fetch failed|ECONNRESET|ETIMEDOUT|timeout|schema cache|EPIPE|socket hang up|503|terminating connection|too many (clients|connections)|Connection terminated|deadlock|ECONNREFUSED/i.test(String(message || ''));
-}
-
-async function withRetry(fn, label, tries = 4, baseDelayMs = 1500) {
-  let lastResult;
-  for (let attempt = 1; attempt <= tries; attempt++) {
-    try {
-      lastResult = await fn();
-      if (!(lastResult && lastResult.error && isTransientDbError(lastResult.error.message))) {
-        return lastResult;
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      if (!isTransientDbError(message) || attempt === tries) throw err;
-      lastResult = { data: null, error: { message } };
-    }
-    if (attempt === tries) return lastResult;
-    const delay = baseDelayMs * attempt;
-    console.error(`[sync-tracker-evidence] ${label}: transient DB failure (attempt ${attempt}/${tries}): ${lastResult?.error?.message} — retrying in ${delay}ms`);
-    await new Promise((r) => setTimeout(r, delay));
-  }
-  return lastResult;
 }
 
 async function selectOne(query) {

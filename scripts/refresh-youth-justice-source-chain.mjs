@@ -1,16 +1,8 @@
 #!/usr/bin/env node
 import 'dotenv/config';
-import { spawnSync, execSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
+import { resolveBin } from './lib/agent-resilience.mjs';
 
-// Resolve absolute binary paths at load time — cron/scheduler runs don't
-// have /usr/local/bin or nvm shim paths, so `psql` and `node` fail with ENOENT.
-function resolveBin(name) {
-  try {
-    return execSync(`which ${name}`, { encoding: 'utf8' }).trim() || name;
-  } catch {
-    return name;
-  }
-}
 const NODE_BIN = process.execPath;
 const PSQL_BIN = resolveBin('psql');
 import { createClient } from '@supabase/supabase-js';
