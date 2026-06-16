@@ -29,7 +29,10 @@ const DEFAULT_KINDS = ['grant_source_page'];
 const USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 const MAX_BODY_BYTES = 1024 * 1024;
 const AUTO_DISABLE_404_FAILURES = 2;
-const AUTO_DISABLE_REASON = 'repeated_404_candidate_page';
+// 403 is often a transient bot-block (Cloudflare etc.), not a dead page, so give it more
+// chances than a hard 404/410 before pruning. Without this, blocked candidate pages
+// re-fail every run forever and keep flipping the run to 'partial'.
+const AUTO_DISABLE_403_FAILURES = 4;
 const FOUNDATION_SOURCE_KINDS = new Set([
   'foundation_homepage',
   'foundation_known_page',
@@ -159,10 +162,18 @@ function mergeMetadata(existingMetadata, extraMetadata) {
   };
 }
 
-function shouldAutoDisableCandidate(row, status, nextFailureCount) {
-  return row.source_kind === 'foundation_candidate_page'
-    && (status === 404 || status === 410)
-    && nextFailureCount >= AUTO_DISABLE_404_FAILURES;
+// Returns the auto-disable reason string for a repeatedly-failing candidate page, or
+// null if it should keep being polled. Only foundation_candidate_page (speculative,
+// discovered URLs) are ever auto-disabled — known/homepage sources are never pruned.
+function autoDisableReason(row, status, nextFailureCount) {
+  if (row.source_kind !== 'foundation_candidate_page') return null;
+  if ((status === 404 || status === 410) && nextFailureCount >= AUTO_DISABLE_404_FAILURES) {
+    return 'repeated_404_candidate_page';
+  }
+  if (status === 403 && nextFailureCount >= AUTO_DISABLE_403_FAILURES) {
+    return 'repeated_403_candidate_page';
+  }
+  return null;
 }
 
 async function fetchDueTargets() {
@@ -319,7 +330,8 @@ async function probeTarget(row) {
   } catch (error) {
     const nextFailureCount = (row.failure_count || 0) + 1;
     const cadence = nextFailureDecision(row, nextFailureCount);
-    const shouldDisable = shouldAutoDisableCandidate(row, error?.status ?? null, nextFailureCount);
+    const disableReason = autoDisableReason(row, error?.status ?? null, nextFailureCount);
+    const shouldDisable = Boolean(disableReason);
     return {
       rowId: row.id,
       sourceKey: row.source_key,
@@ -339,7 +351,7 @@ async function probeTarget(row) {
           last_effective_cadence_hours: cadence.hours,
           last_effective_base_cadence_hours: cadence.baseHours,
           last_effective_cadence_reason: cadence.reason,
-          auto_disabled_reason: shouldDisable ? AUTO_DISABLE_REASON : row.metadata?.auto_disabled_reason || null,
+          auto_disabled_reason: shouldDisable ? disableReason : row.metadata?.auto_disabled_reason || null,
           auto_disabled_at: shouldDisable ? checkedAt : row.metadata?.auto_disabled_at || null,
           auto_disabled_status: shouldDisable ? String(error?.status ?? '') : row.metadata?.auto_disabled_status || null,
           auto_disabled_failure_count: shouldDisable ? nextFailureCount : row.metadata?.auto_disabled_failure_count || null,
@@ -423,14 +435,26 @@ async function main() {
       }
     }
 
-    log(`Complete: ${changed} changed, ${unchanged} unchanged, ${failed} failed`);
+    // Status reflects the failure RATE, not a raw count. A frontier poller hitting
+    // hundreds of external URLs always has a few 403/404s (dead/blocked sources, which
+    // get auto-disabled anyway) — flagging the whole run 'partial' on any failure made a
+    // productive run (typically 47-90 of 100 changed) read as ~5% success. Only genuinely
+    // degraded runs stay 'partial'; nothing-succeeded is 'failed'.
+    const succeeded = changed + unchanged;
+    let status;
+    if (failed === 0) status = 'success';
+    else if (succeeded === 0) status = 'failed';
+    else status = failed / targets.length > 0.3 ? 'partial' : 'success';
+
+    log(`Complete: ${changed} changed, ${unchanged} unchanged, ${failed} failed → ${status}`);
 
     if (!DRY_RUN) {
       await logComplete(db, run.id, {
         items_found: targets.length,
         items_new: changed,
         items_updated: unchanged,
-        status: failed > 0 ? 'partial' : 'success',
+        status,
+        // Keep the failure list visible even on a 'success' run so nothing is hidden.
         errors: results.filter(result => !result.success).map(result => result.error),
       });
     }
