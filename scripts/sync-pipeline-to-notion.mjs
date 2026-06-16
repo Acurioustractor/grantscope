@@ -170,7 +170,8 @@ async function syncPipeline(userId) {
           'Amount': numberProp(grant.amount_max || grant.amount_min),
           'Deadline': dateProp(grant.closes_at),
           'Funder': textProp(grant.provider),
-          'Stars': numberProp(item.stars || 0),
+          // 'Stars' was removed from the Grant Pipeline Tracker schema; writing it
+          // 400s the whole sync. (Foundation Targets still has Stars — kept below.)
           'Notes': textProp(notesWithId),
           'Key Requirements': textProp(
             (grant.categories || []).concat(grant.focus_areas || []).join(', ')
