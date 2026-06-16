@@ -263,7 +263,7 @@ async function main() {
   try {
     // Fetch charities not already in social_enterprises
     const { data: charities, error: fetchErr } = await supabase
-      .rpc('execute_sql', {
+      .rpc('exec_sql', {
         query: `
           SELECT c.abn, c.name, c.purposes, c.beneficiaries, c.charity_size, c.state, c.postcode
           FROM acnc_charities c
@@ -280,7 +280,7 @@ async function main() {
         `,
       });
 
-    // Fallback: if execute_sql RPC doesn't exist, use supabase-js query
+    // Fallback: if exec_sql RPC errors, use supabase-js query
     let rows;
     if (fetchErr || !charities) {
       log(`RPC not available (${fetchErr?.message || 'no data'}), using supabase-js query`);
