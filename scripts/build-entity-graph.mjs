@@ -31,6 +31,50 @@ function log(msg) {
   console.log(`[entity-graph] ${msg}`);
 }
 
+// Rows that permanently failed to write after adaptive retry (genuine errors,
+// not timeouts or tolerated duplicates). Surfaced loudly at the end of main().
+let writeFailures = 0;
+let writeSplits = 0;
+let duplicatesSkipped = 0;
+
+/**
+ * Write `rows` via `run`, splitting the batch on failure so one bad row never
+ * sinks the whole batch:
+ *   - statement timeout: a 1000-row UPDATE-on-conflict against 159K-row
+ *     gs_entities (or a 200-row insert into 1.08M gs_relationships) can exceed
+ *     statement_timeout even on an idle DB — halve until each statement fits.
+ *   - duplicate key: an insert-or-skip row may collide on a non-conflict-target
+ *     unique index (e.g. idx_gs_entities_abn_unique when the entity already
+ *     exists under a different gs_id) — halve until the offender is isolated so
+ *     the rest still land, then skip just that row.
+ * Any other error is counted so a partial build fails loudly (exit 1) instead
+ * of leaving silent gaps — the bug that hid both of the above for months.
+ */
+async function safeWrite(table, rows, run) {
+  if (dryRun || !rows?.length) return;
+  const { error } = await run(rows);
+  if (!error) return;
+  const msg = error.message || JSON.stringify(error);
+  const isDuplicate = /duplicate key|already exists/i.test(msg);
+  const isTransient = /timeout|canceling statement|deadlock|too many connections|fetch failed|server closed/i.test(msg);
+  if (rows.length > 1 && (isTransient || isDuplicate)) {
+    writeSplits++;
+    const mid = rows.length >> 1;
+    await safeWrite(table, rows.slice(0, mid), run);
+    await safeWrite(table, rows.slice(mid), run);
+    return;
+  }
+  if (isDuplicate) { duplicatesSkipped += rows.length; return; }
+  writeFailures += rows.length;
+  log(`  ${table} write failed (${rows.length} row(s)): ${msg}`);
+}
+
+const upsertEntities = (rows, opts) =>
+  safeWrite('gs_entities', rows, (chunk) => supabase.from('gs_entities').upsert(chunk, opts));
+
+const insertRelationships = (rows) =>
+  safeWrite('gs_relationships', rows, (chunk) => supabase.from('gs_relationships').insert(chunk));
+
 /** Execute raw SQL via Supabase REST API */
 async function execSql(sql) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/exec_sql`, {
@@ -132,12 +176,7 @@ async function buildEntities() {
         confidence: 'registry',
       }));
 
-    if (!dryRun && entities.length) {
-      const { error: upsertErr } = await supabase
-        .from('gs_entities')
-        .upsert(entities, { onConflict: 'gs_id', ignoreDuplicates: false });
-      if (upsertErr) log(`  Upsert error: ${upsertErr.message || JSON.stringify(upsertErr)}`);
-    }
+    await upsertEntities(entities, { onConflict: 'gs_id', ignoreDuplicates: false });
     stats.charities += entities.length;
     offset += batchSize;
     if (offset % 10000 === 0) log(`  ACNC progress: ${offset} processed`);
@@ -174,11 +213,7 @@ async function buildEntities() {
 
       // Upsert merges with existing ACNC records via gs_id conflict
       for (let i = 0; i < updates.length; i += 500) {
-        const chunk = updates.slice(i, i + 500);
-        const { error: uErr } = await supabase
-          .from('gs_entities')
-          .upsert(chunk, { onConflict: 'gs_id', ignoreDuplicates: false });
-        if (uErr) log(`  Foundation upsert error: ${uErr.message}`);
+        await upsertEntities(updates.slice(i, i + 500), { onConflict: 'gs_id', ignoreDuplicates: false });
       }
     }
     stats.foundations += foundations.length;
@@ -222,11 +257,7 @@ async function buildEntities() {
       const entities = Array.from(deduped.values());
 
       for (let i = 0; i < entities.length; i += 500) {
-        const chunk = entities.slice(i, i + 500);
-        const { error: uErr } = await supabase
-          .from('gs_entities')
-          .upsert(chunk, { onConflict: 'gs_id', ignoreDuplicates: false });
-        if (uErr) log(`  ORIC upsert error: ${uErr.message}`);
+        await upsertEntities(entities.slice(i, i + 500), { onConflict: 'gs_id', ignoreDuplicates: false });
       }
     }
     stats.oric += corps.length;
@@ -260,7 +291,7 @@ async function buildEntities() {
 
     for (let i = 0; i < govEntities.length; i += 500) {
       const chunk = govEntities.slice(i, i + 500);
-      await supabase.from('gs_entities').upsert(chunk, { onConflict: 'gs_id', ignoreDuplicates: true });
+      await upsertEntities(chunk, { onConflict: 'gs_id', ignoreDuplicates: true });
     }
   }
   stats.govt = uniqueBuyers.size;
@@ -293,7 +324,7 @@ async function buildEntities() {
 
     for (let i = 0; i < supplierEntities.length; i += 500) {
       const chunk = supplierEntities.slice(i, i + 500);
-      await supabase.from('gs_entities').upsert(chunk, { onConflict: 'gs_id', ignoreDuplicates: true });
+      await upsertEntities(chunk, { onConflict: 'gs_id', ignoreDuplicates: true });
     }
   }
   stats.suppliers = uniqueSuppliers.size;
@@ -323,7 +354,7 @@ async function buildEntities() {
 
     for (let i = 0; i < partyEntities.length; i += 500) {
       const chunk = partyEntities.slice(i, i + 500);
-      await supabase.from('gs_entities').upsert(chunk, { onConflict: 'gs_id', ignoreDuplicates: true });
+      await upsertEntities(chunk, { onConflict: 'gs_id', ignoreDuplicates: true });
     }
   }
   stats.parties = uniqueParties.size;
@@ -354,7 +385,7 @@ async function buildEntities() {
 
       for (let i = 0; i < donorEntities.length; i += 500) {
         const chunk = donorEntities.slice(i, i + 500);
-        await supabase.from('gs_entities').upsert(chunk, { onConflict: 'gs_id', ignoreDuplicates: true });
+        await upsertEntities(chunk, { onConflict: 'gs_id', ignoreDuplicates: true });
       }
     }
     stats.donors += donors.length;
@@ -400,7 +431,7 @@ async function buildEntities() {
         const chunk = atoEntities.slice(i, i + 500);
         // ignoreDuplicates: true — don't overwrite entities already created from ACNC/foundations
         // We'll do a separate bulk update for financial data on existing entities
-        await supabase.from('gs_entities').upsert(chunk, { onConflict: 'gs_id', ignoreDuplicates: true });
+        await upsertEntities(chunk, { onConflict: 'gs_id', ignoreDuplicates: true });
       }
 
       // Bulk update financial data for ALL ATO records (even pre-existing entities)
@@ -454,7 +485,7 @@ async function buildEntities() {
 
     for (let i = 0; i < asxEntities.length; i += 500) {
       const chunk = asxEntities.slice(i, i + 500);
-      await supabase.from('gs_entities').upsert(chunk, { onConflict: 'gs_id', ignoreDuplicates: true });
+      await upsertEntities(chunk, { onConflict: 'gs_id', ignoreDuplicates: true });
     }
     stats.asx = asxEntities.length;
   }
@@ -488,7 +519,7 @@ async function buildEntities() {
 
       for (let i = 0; i < seEntities.length; i += 500) {
         const chunk = seEntities.slice(i, i + 500);
-        await supabase.from('gs_entities').upsert(chunk, { onConflict: 'gs_id', ignoreDuplicates: true });
+        await upsertEntities(chunk, { onConflict: 'gs_id', ignoreDuplicates: true });
       }
     }
     stats.social += ses.length;
@@ -503,14 +534,19 @@ async function buildEntities() {
   while (true) {
     const { data: jhOrgs, error } = await supabase
       .from('organizations')
-      .select('id, name, abn, type, state, postcode')
+      .select('id, name, abn, type, state, postcode, gs_entity_id')
       .not('abn', 'is', null)
       .range(offset, offset + batchSize - 1);
     if (error) { log(`  ERROR: ${error.message}`); break; }
     if (!jhOrgs?.length) break;
 
-    if (!dryRun) {
-      const jhEntities = jhOrgs.map(o => ({
+    // Only process orgs that still need linking (~3K of ~104K), not all of them
+    // every run. Re-processing all 104K with a per-row SELECT + UPDATE was the
+    // N+1 loop (~208K sequential round-trips) that ran this stage past the
+    // orchestrator's wall-clock timeout.
+    const unlinked = jhOrgs.filter(o => !o.gs_entity_id);
+    if (!dryRun && unlinked.length) {
+      const jhEntities = unlinked.map(o => ({
         entity_type: o.type === 'government' ? 'government_body' : (o.type === 'indigenous' ? 'indigenous_corp' : 'charity'),
         canonical_name: o.name,
         abn: o.abn,
@@ -523,24 +559,23 @@ async function buildEntities() {
       }));
 
       for (let i = 0; i < jhEntities.length; i += 500) {
-        const chunk = jhEntities.slice(i, i + 500);
-        await supabase.from('gs_entities').upsert(chunk, { onConflict: 'gs_id', ignoreDuplicates: true });
+        await upsertEntities(jhEntities.slice(i, i + 500), { onConflict: 'gs_id', ignoreDuplicates: true });
       }
 
-      // Auto-link: set gs_entity_id on JH organizations
-      for (const o of jhOrgs) {
-        const gsId = makeGsId({ abn: o.abn });
-        const { data: entity } = await supabase
+      // Auto-link: one bulk SELECT for this batch's entity ids, then update only
+      // the unlinked orgs (was a per-row SELECT + UPDATE on every org).
+      const gsIds = [...new Set(unlinked.map(o => makeGsId({ abn: o.abn })))];
+      const idByGsId = new Map();
+      for (let i = 0; i < gsIds.length; i += 1000) {
+        const { data: ents } = await supabase
           .from('gs_entities')
-          .select('id')
-          .eq('gs_id', gsId)
-          .single();
-        if (entity) {
-          await supabase
-            .from('organizations')
-            .update({ gs_entity_id: entity.id })
-            .eq('id', o.id);
-        }
+          .select('id, gs_id')
+          .in('gs_id', gsIds.slice(i, i + 1000));
+        for (const e of (ents || [])) idByGsId.set(e.gs_id, e.id);
+      }
+      for (const o of unlinked) {
+        const eid = idByGsId.get(makeGsId({ abn: o.abn }));
+        if (eid) await supabase.from('organizations').update({ gs_entity_id: eid }).eq('id', o.id);
       }
     }
     jhCount += jhOrgs.length;
@@ -639,15 +674,9 @@ async function buildDonationRelationships() {
       });
     }
 
-    if (!dryRun && relationships.length) {
+    if (relationships.length) {
       for (let i = 0; i < relationships.length; i += 200) {
-        const chunk = relationships.slice(i, i + 200);
-        const { error: insertErr } = await supabase
-          .from('gs_relationships')
-          .insert(chunk);
-        if (insertErr && !insertErr.message?.includes('duplicate')) {
-          log(`  Insert error: ${insertErr.message}`);
-        }
+        await insertRelationships(relationships.slice(i, i + 200));
       }
     }
     created += relationships.length;
@@ -713,15 +742,9 @@ async function buildContractRelationships() {
       });
     }
 
-    if (!dryRun && relationships.length) {
+    if (relationships.length) {
       for (let i = 0; i < relationships.length; i += 200) {
-        const chunk = relationships.slice(i, i + 200);
-        const { error: insertErr } = await supabase
-          .from('gs_relationships')
-          .insert(chunk);
-        if (insertErr && !insertErr.message?.includes('duplicate')) {
-          log(`  Insert error: ${insertErr.message}`);
-        }
+        await insertRelationships(relationships.slice(i, i + 200));
       }
     }
     created += relationships.length;
@@ -793,15 +816,9 @@ async function buildGrantRelationships() {
       });
     }
 
-    if (!dryRun && relationships.length) {
+    if (relationships.length) {
       for (let i = 0; i < relationships.length; i += 200) {
-        const chunk = relationships.slice(i, i + 200);
-        const { error: insertErr } = await supabase
-          .from('gs_relationships')
-          .insert(chunk);
-        if (insertErr && !insertErr.message?.includes('duplicate')) {
-          log(`  Insert error: ${insertErr.message}`);
-        }
+        await insertRelationships(relationships.slice(i, i + 200));
       }
     }
     created += relationships.length;
@@ -865,10 +882,9 @@ async function buildCrossRegistryLinks() {
       }
     }
 
-    if (!dryRun && linkBatch.length) {
+    if (linkBatch.length) {
       for (let i = 0; i < linkBatch.length; i += 200) {
-        const chunk = linkBatch.slice(i, i + 200);
-        await supabase.from('gs_relationships').insert(chunk);
+        await insertRelationships(linkBatch.slice(i, i + 200));
       }
       created += linkBatch.length;
     }
@@ -939,7 +955,13 @@ async function main() {
   log(`Entity graph build complete in ${elapsed}s`);
   log(`  Entities: ${entityCount ?? '?'}`);
   log(`  Relationships: ${relCount ?? '?'}`);
+  log(`  Batch-splits: ${writeSplits} · duplicates skipped: ${duplicatesSkipped} · permanent write failures: ${writeFailures}`);
   log(`════════════════════════════════════════`);
+
+  if (writeFailures > 0) {
+    log(`⚠ ${writeFailures} row(s) failed to write after adaptive retry — graph is INCOMPLETE`);
+    process.exit(1);
+  }
 }
 
 main().catch(err => {
