@@ -16,17 +16,32 @@
 import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { spawnSync, execSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 
-// Resolve absolute binary paths at load time — scheduler/cron contexts
-// often have minimal PATH so `psql` and `node` aren't found otherwise.
-function resolveBin(name) {
+// Resolve absolute binary paths at load time. Scheduler/cron/pm2 contexts run with a
+// minimal PATH, so BOTH `which psql` and a bare `spawnSync('psql')` fail with ENOENT —
+// that was the actual failure leaving this loop at ~16% success. Probe an env override
+// and known install locations, not just `which`.
+function resolveBin(name, candidates = []) {
+  const envOverride = process.env[`${name.toUpperCase()}_BIN`];
+  if (envOverride && existsSync(envOverride)) return envOverride;
   try {
-    return execSync(`which ${name}`, { encoding: 'utf8' }).trim() || name;
+    const found = execSync(`which ${name}`, { encoding: 'utf8' }).trim();
+    if (found && existsSync(found)) return found;
   } catch {
-    return name;
+    // `which` unavailable or PATH too minimal — fall through to candidates.
   }
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) return candidate;
+  }
+  return name;
 }
-const PSQL_BIN = resolveBin('psql');
+const PSQL_BIN = resolveBin('psql', [
+  '/opt/homebrew/bin/psql',
+  '/opt/homebrew/opt/postgresql@16/bin/psql',
+  '/usr/local/bin/psql',
+  '/Applications/Postgres.app/Contents/Versions/latest/bin/psql',
+]);
 const NODE_BIN = process.execPath; // always the absolute path of the running node
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
 
