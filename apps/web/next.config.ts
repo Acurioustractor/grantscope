@@ -2,6 +2,16 @@ import type { NextConfig } from 'next';
 import { withSentryConfig } from '@sentry/nextjs';
 
 const nextConfig: NextConfig = {
+  // `next build`'s lint + whole-project typecheck phase intermittently hangs on
+  // Vercel's 4-core/8GB builder and gets killed at the 45-min build cap. Both are
+  // already gated in CI (ci.yml `typecheck` job runs `tsc --noEmit`), so running
+  // them again here is pure redundancy that wedges deploys. Skip them in the build.
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
   experimental: {
     externalDir: true,
   },
