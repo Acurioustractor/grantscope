@@ -9,7 +9,13 @@
  *   await logComplete(supabase, run.id, { items_found: 50, items_new: 12, items_updated: 38 });
  *   // or on error:
  *   await logFailed(supabase, run.id, error);
+ *
+ * All three functions are best-effort observability — they retry transient pooler
+ * failures (via withRetry) and NEVER throw into the calling agent. A run-logging
+ * failure must not crash real work or leave a run falsely stuck as `running`.
  */
+
+import { withRetry } from './agent-resilience.mjs';
 
 /**
  * Start a new agent run. Returns the row with its UUID.
@@ -19,22 +25,30 @@
  */
 export async function logStart(supabase, agentId, agentName) {
   const now = new Date().toISOString();
-  const { data, error } = await supabase
-    .from('agent_runs')
-    .insert({
-      agent_id: agentId,
-      agent_name: agentName,
-      started_at: now,
-      status: 'running',
-    })
-    .select('id')
-    .single();
+  try {
+    const { data, error } = await withRetry(
+      () => supabase
+        .from('agent_runs')
+        .insert({
+          agent_id: agentId,
+          agent_name: agentName,
+          started_at: now,
+          status: 'running',
+        })
+        .select('id')
+        .single(),
+      `logStart(${agentId})`,
+    );
 
-  if (error) {
-    console.error('[log-agent-run] Failed to log start:', error.message);
+    if (error) {
+      console.error('[log-agent-run] Failed to log start:', error.message);
+      return { id: null };
+    }
+    return data;
+  } catch (err) {
+    console.error('[log-agent-run] Failed to log start (after retries):', err instanceof Error ? err.message : String(err));
     return { id: null };
   }
-  return data;
 }
 
 /**
@@ -53,34 +67,44 @@ export async function logComplete(supabase, runId, stats = {}) {
   if (!runId) return;
   const now = new Date().toISOString();
 
-  // Fetch started_at to compute duration
-  const { data: run } = await supabase
-    .from('agent_runs')
-    .select('started_at')
-    .eq('id', runId)
-    .single();
+  try {
+    // Fetch started_at to compute duration
+    const { data: run } = await withRetry(
+      () => supabase
+        .from('agent_runs')
+        .select('started_at')
+        .eq('id', runId)
+        .single(),
+      `logComplete.fetch(${runId})`,
+    );
 
-  const durationMs = run
-    ? Date.now() - new Date(run.started_at).getTime()
-    : 0;
+    const durationMs = run
+      ? Date.now() - new Date(run.started_at).getTime()
+      : 0;
 
-  const { error } = await supabase
-    .from('agent_runs')
-    .update({
-      status: stats.status || 'success',
-      completed_at: now,
-      duration_ms: durationMs,
-      items_found: stats.items_found ?? 0,
-      items_new: stats.items_new ?? 0,
-      items_updated: stats.items_updated ?? 0,
-      errors: Array.isArray(stats.errors) && stats.errors.length > 0
-        ? stats.errors.map(err => ({ message: errorToString(err), time: now }))
-        : null,
-    })
-    .eq('id', runId);
+    const { error } = await withRetry(
+      () => supabase
+        .from('agent_runs')
+        .update({
+          status: stats.status || 'success',
+          completed_at: now,
+          duration_ms: durationMs,
+          items_found: stats.items_found ?? 0,
+          items_new: stats.items_new ?? 0,
+          items_updated: stats.items_updated ?? 0,
+          errors: Array.isArray(stats.errors) && stats.errors.length > 0
+            ? stats.errors.map(err => ({ message: errorToString(err), time: now }))
+            : null,
+        })
+        .eq('id', runId),
+      `logComplete.update(${runId})`,
+    );
 
-  if (error) {
-    console.error('[log-agent-run] Failed to log complete:', error.message);
+    if (error) {
+      console.error('[log-agent-run] Failed to log complete:', error.message);
+    }
+  } catch (err) {
+    console.error('[log-agent-run] Failed to log complete (after retries):', err instanceof Error ? err.message : String(err));
   }
 }
 
@@ -110,27 +134,37 @@ export async function logFailed(supabase, runId, err) {
   if (!runId) return;
   const now = new Date().toISOString();
 
-  const { data: run } = await supabase
-    .from('agent_runs')
-    .select('started_at')
-    .eq('id', runId)
-    .single();
+  try {
+    const { data: run } = await withRetry(
+      () => supabase
+        .from('agent_runs')
+        .select('started_at')
+        .eq('id', runId)
+        .single(),
+      `logFailed.fetch(${runId})`,
+    );
 
-  const durationMs = run
-    ? Date.now() - new Date(run.started_at).getTime()
-    : 0;
+    const durationMs = run
+      ? Date.now() - new Date(run.started_at).getTime()
+      : 0;
 
-  const { error } = await supabase
-    .from('agent_runs')
-    .update({
-      status: 'failed',
-      completed_at: now,
-      duration_ms: durationMs,
-      errors: [{ message: errorToString(err), time: now }],
-    })
-    .eq('id', runId);
+    const { error } = await withRetry(
+      () => supabase
+        .from('agent_runs')
+        .update({
+          status: 'failed',
+          completed_at: now,
+          duration_ms: durationMs,
+          errors: [{ message: errorToString(err), time: now }],
+        })
+        .eq('id', runId),
+      `logFailed.update(${runId})`,
+    );
 
-  if (error) {
-    console.error('[log-agent-run] Failed to log failure:', error.message);
+    if (error) {
+      console.error('[log-agent-run] Failed to log failure:', error.message);
+    }
+  } catch (retryErr) {
+    console.error('[log-agent-run] Failed to log failure (after retries):', retryErr instanceof Error ? retryErr.message : String(retryErr));
   }
 }
