@@ -2,6 +2,7 @@
 import 'dotenv/config';
 import { spawnSync } from 'node:child_process';
 import { createClient } from '@supabase/supabase-js';
+import { withRetry } from './lib/agent-resilience.mjs';
 
 const args = process.argv.slice(2);
 const argMap = new Map(
@@ -27,34 +28,6 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 }
 
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
-
-// Retry transient pooler/connection failures (the shared Supabase saturates during the
-// nightly batch). Retries network throws and transient error VALUES; non-transient
-// errors pass through to the caller's existing handling.
-function isTransientDbError(message) {
-  return /fetch failed|ECONNRESET|ETIMEDOUT|timeout|schema cache|EPIPE|socket hang up|503|terminating connection|too many (clients|connections)|Connection terminated|deadlock|ECONNREFUSED/i.test(String(message || ''));
-}
-
-async function withRetry(fn, label, tries = 4, baseDelayMs = 1500) {
-  let lastResult;
-  for (let attempt = 1; attempt <= tries; attempt++) {
-    try {
-      lastResult = await fn();
-      if (!(lastResult && lastResult.error && isTransientDbError(lastResult.error.message))) {
-        return lastResult;
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      if (!isTransientDbError(message) || attempt === tries) throw err;
-      lastResult = { data: null, error: { message } };
-    }
-    if (attempt === tries) return lastResult;
-    const delay = baseDelayMs * attempt;
-    console.error(`[run-tracker-refresh] ${label}: transient DB failure (attempt ${attempt}/${tries}): ${lastResult?.error?.message} — retrying in ${delay}ms`);
-    await new Promise((r) => setTimeout(r, delay));
-  }
-  return lastResult;
-}
 
 function runSync() {
   const result = spawnSync('node', ['--env-file=.env', 'scripts/sync-tracker-evidence.mjs'], {

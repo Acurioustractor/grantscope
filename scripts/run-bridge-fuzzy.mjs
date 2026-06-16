@@ -4,7 +4,9 @@
 // that pass p_min_similarity, returns (inserted, batch_size, last_id, done).
 
 import { spawnSync } from 'child_process';
+import { resolveBin } from './lib/agent-resilience.mjs';
 
+const PSQL_BIN = resolveBin('psql');
 const password = process.env.DATABASE_PASSWORD;
 if (!password) {
   console.error('DATABASE_PASSWORD not set');
@@ -31,7 +33,7 @@ function runBatch(cursor) {
     SELECT rows_inserted || '|' || batch_processed || '|' || COALESCE(last_id::text, '') || '|' || done
     FROM bridge_civicscope_to_act_fuzzy(${BATCH_LIMIT}, ${cursorArg}, ${MIN_SIM});`;
 
-  const res = spawnSync('psql', [...psqlArgs, '-c', sql], {
+  const res = spawnSync(PSQL_BIN, [...psqlArgs, '-c', sql], {
     env: { ...process.env, PGPASSWORD: password },
     encoding: 'utf8',
   });
