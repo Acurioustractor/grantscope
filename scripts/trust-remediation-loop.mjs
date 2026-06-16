@@ -16,7 +16,7 @@
 import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { spawnSync } from 'node:child_process';
-import { resolveBin } from './lib/agent-resilience.mjs';
+import { resolveBin, withRetry } from './lib/agent-resilience.mjs';
 
 const PSQL_BIN = resolveBin('psql');
 const NODE_BIN = process.execPath; // always the absolute path of the running node
@@ -45,36 +45,16 @@ function log(msg) {
   console.log(`[trust-remediation-loop] ${msg}`);
 }
 
-function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function withRetry(label, fn, attempts = 3, baseDelayMs = 1500) {
-  let lastError = null;
-  for (let attempt = 1; attempt <= attempts; attempt += 1) {
-    try {
-      return await fn();
-    } catch (error) {
-      lastError = error;
-      if (attempt < attempts) {
-        log(`${label} failed (attempt ${attempt}/${attempts}) — retrying...`);
-        await delay(baseDelayMs * attempt);
-      }
-    }
-  }
-  throw lastError instanceof Error ? lastError : new Error(String(lastError));
-}
-
 async function selectOne(query) {
-  return withRetry('selectOne', async () => {
+  return withRetry(async () => {
     const { data, error } = await supabase.rpc('exec_sql', { query });
     if (error) throw new Error(error.message);
     return data?.[0] ?? {};
-  });
+  }, 'selectOne');
 }
 
 async function datasetMissingCounts(limit = 20) {
-  return withRetry('datasetMissingCounts', async () => {
+  return withRetry(async () => {
     const { data, error } = await supabase.rpc('exec_sql', {
       query: `
         SELECT dataset, COUNT(*)::bigint AS missing
@@ -87,7 +67,7 @@ async function datasetMissingCounts(limit = 20) {
     });
     if (error) throw new Error(error.message);
     return data ?? [];
-  });
+  }, 'datasetMissingCounts');
 }
 
 function runPsql(query) {
