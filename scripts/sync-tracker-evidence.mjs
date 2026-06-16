@@ -282,14 +282,44 @@ async function fetchSourceMetadata(event) {
   }
 }
 
+// The shared Supabase pooler saturates during the nightly orchestrator batch, so DB
+// calls sporadically throw `fetch failed` / schema-cache errors. Without resilience a
+// single hiccup killed the whole tracker chain (this agent read ~6% success while
+// running clean standalone). Retry transient connection failures — both network throws
+// and transient error VALUES — and let non-transient errors pass through unchanged.
+function isTransientDbError(message) {
+  return /fetch failed|ECONNRESET|ETIMEDOUT|timeout|schema cache|EPIPE|socket hang up|503|terminating connection|too many (clients|connections)|Connection terminated|deadlock|ECONNREFUSED/i.test(String(message || ''));
+}
+
+async function withRetry(fn, label, tries = 4, baseDelayMs = 1500) {
+  let lastResult;
+  for (let attempt = 1; attempt <= tries; attempt++) {
+    try {
+      lastResult = await fn();
+      if (!(lastResult && lastResult.error && isTransientDbError(lastResult.error.message))) {
+        return lastResult;
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (!isTransientDbError(message) || attempt === tries) throw err;
+      lastResult = { data: null, error: { message } };
+    }
+    if (attempt === tries) return lastResult;
+    const delay = baseDelayMs * attempt;
+    console.error(`[sync-tracker-evidence] ${label}: transient DB failure (attempt ${attempt}/${tries}): ${lastResult?.error?.message} — retrying in ${delay}ms`);
+    await new Promise((r) => setTimeout(r, delay));
+  }
+  return lastResult;
+}
+
 async function selectOne(query) {
-  const { data, error } = await db.rpc('exec_sql', { query });
+  const { data, error } = await withRetry(() => db.rpc('exec_sql', { query }), 'selectOne');
   if (error) throw new Error(error.message);
   return data?.[0] ?? {};
 }
 
 async function selectRows(query) {
-  const { data, error } = await db.rpc('exec_sql', { query });
+  const { data, error } = await withRetry(() => db.rpc('exec_sql', { query }), 'selectRows');
   if (error) throw new Error(error.message);
   return data ?? [];
 }
@@ -844,19 +874,25 @@ async function syncConfig(config) {
     return { tracker: config.tracker_key, rows: payload.length, inserted: 0, updated: 0, payload };
   }
 
-  const { data: beforeRows } = await db
-    .from('tracker_evidence_events')
-    .select('id')
-    .eq('domain', config.domain)
-    .eq('jurisdiction', config.jurisdiction)
-    .eq('tracker_key', config.tracker_key);
+  const { data: beforeRows } = await withRetry(
+    () => db
+      .from('tracker_evidence_events')
+      .select('id')
+      .eq('domain', config.domain)
+      .eq('jurisdiction', config.jurisdiction)
+      .eq('tracker_key', config.tracker_key),
+    `beforeRows:${config.tracker_key}`,
+  );
   const before = beforeRows?.length || 0;
 
-  const { error } = await db
-    .from('tracker_evidence_events')
-    .upsert(payload, {
-      onConflict: 'domain,jurisdiction,tracker_key,stage,event_date,title',
-    });
+  const { error } = await withRetry(
+    () => db
+      .from('tracker_evidence_events')
+      .upsert(payload, {
+        onConflict: 'domain,jurisdiction,tracker_key,stage,event_date,title',
+      }),
+    `upsert:${config.tracker_key}`,
+  );
 
   if (error) throw new Error(error.message);
 
