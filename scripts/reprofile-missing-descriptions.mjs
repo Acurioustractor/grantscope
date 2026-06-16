@@ -35,6 +35,13 @@ const LIMIT = limitArg ? parseInt(limitArg.split('=')[1], 10) : 50;
 const concurrencyArg = process.argv.find(a => a.startsWith('--concurrency='));
 const CONCURRENCY = concurrencyArg ? parseInt(concurrencyArg.split('=')[1], 10) : 3;
 
+// Hard cap per-foundation scrape: r.jina.ai can hang well past the scraper's own
+// 15s-per-fetch bound (one unresponsive site otherwise consumes the whole run).
+const SCRAPE_TIMEOUT_MS = 30_000;
+// Stop launching new batches before the orchestrator's 600s SIGKILL so we can log
+// a real completion (the old behaviour was timed_out/duration_ms=0 on every run).
+const RUN_BUDGET_MS = 540_000;
+
 if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
   process.exit(1);
@@ -44,6 +51,22 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 function log(msg) {
   console.log(`[reprofile] ${msg}`);
+}
+
+const EMPTY_SCRAPE = { websiteContent: null, aboutContent: null, programsContent: null, annualReportContent: null, scrapedUrls: [], errors: [] };
+
+// Race a promise against a deadline; on timeout, call onTimeout() for a fallback
+// value instead of hanging. Swallows the loser's late settle to avoid noise.
+function withTimeout(promise, ms, onTimeout) {
+  let timer;
+  const guard = new Promise((resolve) => {
+    timer = setTimeout(() => resolve({ __timedOut: true }), ms);
+  });
+  promise.catch(() => {});
+  return Promise.race([promise, guard]).then((result) => {
+    clearTimeout(timer);
+    return (result && result.__timedOut) ? onTimeout() : result;
+  });
 }
 
 async function getFoundationsToReprofile() {
@@ -94,7 +117,14 @@ async function reprofileOne(foundation, scraper, profiler, index, total) {
       if (!website) log(`    No website — relying on LLM web search/knowledge`);
       else log(`    Skipping scrape — using LLM web search/knowledge only`);
     } else {
-      scraped = await scraper.scrapeFoundation(website);
+      scraped = await withTimeout(
+        scraper.scrapeFoundation(website),
+        SCRAPE_TIMEOUT_MS,
+        () => {
+          log(`    Scrape timed out after ${SCRAPE_TIMEOUT_MS / 1000}s — falling back to LLM-only`);
+          return { ...EMPTY_SCRAPE };
+        }
+      );
       log(`    Scraped ${scraped.scrapedUrls.length} pages`);
       if (scraped.errors.length > 0) {
         log(`    ${scraped.errors.length} scrape errors`);
@@ -201,8 +231,15 @@ async function main() {
   let errors = 0;
   let processed = 0;
 
-  // Process in parallel batches
+  // Process in parallel batches, stopping before the orchestrator timeout.
+  const t0 = Date.now();
+  let stoppedEarly = false;
   for (let i = 0; i < foundations.length; i += CONCURRENCY) {
+    if (Date.now() - t0 > RUN_BUDGET_MS) {
+      stoppedEarly = true;
+      log(`  Time budget (${RUN_BUDGET_MS / 1000}s) reached — stopping after ${processed}/${foundations.length}. Rest picked up next run.`);
+      break;
+    }
     const batch = foundations.slice(i, i + CONCURRENCY);
     const results = await Promise.allSettled(
       batch.map((f, j) => reprofileOne(f, scraper, profiler, i + j + 1, foundations.length))
@@ -228,7 +265,10 @@ async function main() {
     items_updated: 0,
   });
 
-  log(`\nComplete: ${profiled} profiled, ${noDescription} still no description, ${errors} errors out of ${foundations.length}`);
+  log(`\nComplete: ${profiled} profiled, ${noDescription} still no description, ${errors} errors out of ${processed}/${foundations.length}${stoppedEarly ? ' (stopped at time budget)' : ''}`);
+
+  // Timed-out scrapes leave orphaned fetches pending; exit cleanly so the run ends.
+  process.exit(0);
 }
 
 main().catch(err => {
