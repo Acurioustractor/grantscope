@@ -148,7 +148,11 @@ async function runDml(label, sql) {
 /** Run a SELECT via psql and parse each `-A -t` line as a JSON row (delimiter-safe vs `-A`'s `|`). */
 async function selectJsonRows(label, selectSql) {
   const out = await runDml(label, `SELECT row_to_json(_t) FROM (${selectSql}) _t;`);
-  return out.split('\n').map((s) => s.trim()).filter(Boolean).map((line) => JSON.parse(line));
+  // runDml prefixes stdout with psql command tags (e.g. the "SET" from statement_timeout=0).
+  // row_to_json emits exactly one JSON object per line, so keep only `{`-prefixed lines.
+  return out.split('\n').map((s) => s.trim())
+    .filter((line) => line.startsWith('{'))
+    .map((line) => JSON.parse(line));
 }
 
 /**
@@ -392,9 +396,9 @@ async function buildEntities() {
   // set set-based (instant), and keep makeGsId so gs_ids stay consistent across runs
   // (the donations phase joins parties by name, but a stable gs_id prevents dupes).
   log('  Loading political parties...');
-  const partyOut = await runDml('political party recipients',
-    `SELECT DISTINCT donation_to FROM political_donations WHERE donation_to IS NOT NULL;`);
-  const uniqueParties = partyOut.split('\n').map((s) => s.trim()).filter(Boolean);
+  const partyRows = await selectJsonRows('political party recipients',
+    `SELECT DISTINCT donation_to FROM political_donations WHERE donation_to IS NOT NULL`);
+  const uniqueParties = partyRows.map((r) => r.donation_to).filter(Boolean);
 
   if (!dryRun) {
     const partyEntities = uniqueParties.map((name) => ({
