@@ -16,6 +16,8 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { spawnSync } from 'node:child_process';
+import { resolveBin, withRetry } from './lib/agent-resilience.mjs';
 import 'dotenv/config';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -72,9 +74,6 @@ async function safeWrite(table, rows, run) {
 const upsertEntities = (rows, opts) =>
   safeWrite('gs_entities', rows, (chunk) => supabase.from('gs_entities').upsert(chunk, opts));
 
-const insertRelationships = (rows) =>
-  safeWrite('gs_relationships', rows, (chunk) => supabase.from('gs_relationships').insert(chunk));
-
 /** Execute raw SQL via Supabase REST API */
 async function execSql(sql) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/exec_sql`, {
@@ -108,6 +107,66 @@ async function execSqlDirect(sql) {
   }
 }
 
+// ─── Set-based relationship builder (direct psql) ────────────────────────────
+// The relationship phases run as ONE server-side INSERT...SELECT each, instead of
+// pulling every source row into Node and writing 200-row REST chunks. This is ~250x
+// faster (minutes → seconds) AND immune to the in-memory entity-index pagination bug
+// that silently dropped ~⅓ of links: the join resolves against the COMPLETE gs_entities
+// table, never a partial in-memory copy. Writes are additive (ON CONFLICT DO NOTHING on
+// the dedup index) — identical insert-or-skip semantics to the old REST path.
+const PSQL_BIN = resolveBin('psql');
+const PG_PASSWORD = process.env.DATABASE_PASSWORD;
+const PSQL_CONN = [
+  '-h', process.env.PGHOST || 'aws-0-ap-southeast-2.pooler.supabase.com',
+  '-p', process.env.PGPORT || '5432',
+  '-U', process.env.PGUSER || 'postgres.tednluwflfhxyucgwigh',
+  '-d', process.env.PGDATABASE || 'postgres',
+  '-X',                        // skip ~/.psqlrc
+  '-A', '-t',                  // unaligned, tuples-only → clean machine-readable output
+  '-v', 'ON_ERROR_STOP=1',
+];
+
+const DEDUP_TARGET =
+  "(source_entity_id, target_entity_id, relationship_type, dataset, COALESCE(source_record_id, ''::text))";
+
+/** Run one DML/SELECT statement via psql, retrying transient pooler failures. Returns stdout. */
+async function runDml(label, sql) {
+  if (!PG_PASSWORD) throw new Error('DATABASE_PASSWORD not set — set-based relationship phases require direct psql');
+  const stdout = await withRetry(() => {
+    const res = spawnSync(PSQL_BIN, [...PSQL_CONN, '-c', `SET statement_timeout=0;\n${sql}`], {
+      env: { ...process.env, PGPASSWORD: PG_PASSWORD },
+      encoding: 'utf8',
+      maxBuffer: 64 * 1024 * 1024,
+    });
+    if (res.error) throw res.error;                                   // ENOENT / spawn failure
+    if (res.status !== 0) throw new Error((res.stderr || res.stdout || `psql exit ${res.status}`).trim());
+    return res.stdout || '';
+  }, label);
+  return String(stdout);
+}
+
+/**
+ * Build one relationship dataset set-based. `cols` is the parenthesised insert column list;
+ * `selectSql` is the matching SELECT. `prelude` runs first in the SAME psql session — use it to
+ * pre-materialise + index any lookup table the SELECT joins, so the planner gets real stats and
+ * an index scan instead of a nested-loop-over-a-Materialize (the latter turned the donations
+ * join into a ~4-billion-op runaway). Dry-run counts candidate rows instead of writing.
+ */
+async function buildRelationshipsSetBased(label, cols, selectSql, prelude = '') {
+  const pre = prelude ? `${prelude.trim()}\n` : '';
+  if (dryRun) {
+    const out = await runDml(label, `${pre}SELECT count(*) FROM (${selectSql}) _q;`);
+    log(`  [dry-run] ${label}: ${(out.trim().split('\n').pop() || '?')} candidate rows`);
+    return;
+  }
+  const out = await runDml(
+    label,
+    `${pre}INSERT INTO gs_relationships ${cols}\n${selectSql}\nON CONFLICT ${DEDUP_TARGET} DO NOTHING;`,
+  );
+  const m = out.match(/INSERT\s+\d+\s+(\d+)/);
+  log(`  ${label}: ${m ? m[1] : '0'} inserted (existing rows skipped via ON CONFLICT)`);
+}
+
 function makeGsId({ abn, acn, icn, asx_code, buyer_id, name }) {
   if (abn) return 'AU-ABN-' + abn.replace(/\s/g, '');
   if (acn) return 'AU-ACN-' + acn.replace(/\s/g, '');
@@ -126,24 +185,6 @@ function makeGsId({ abn, acn, icn, asx_code, buyer_id, name }) {
   return 'AU-UNK-' + Date.now().toString(36);
 }
 
-/** Load all gs_id → UUID mappings into memory. Advances by actual row count to handle Supabase max_rows. */
-async function loadEntityIndex() {
-  const map = new Map();
-  let offset = 0;
-  while (true) {
-    const { data, error } = await supabase
-      .from('gs_entities')
-      .select('id, gs_id')
-      .order('id', { ascending: true }) // stable order: range() pagination without it overlaps/skips pages → silently dropped ~35% of entities
-      .range(offset, offset + 999);
-    if (error) { log(`  ERROR loading index: ${error.message}`); break; }
-    if (!data?.length) break;
-    for (const e of data) map.set(e.gs_id, e.id);
-    offset += data.length;
-    if (data.length < 1000) break; // last page
-  }
-  return map;
-}
 
 // ─── Phase 1: Build entity registry ──────────────────────────────────────────
 
@@ -604,294 +645,120 @@ async function buildEntities() {
 
 async function buildDonationRelationships() {
   log('\nPhase 2a: Political donation relationships...');
-  let created = 0, skipped = 0;
-
-  // Pre-load ALL entity gs_id → id mappings into memory (faster than per-row lookups)
-  log('  Loading entity ID index...');
-  const entityIdMap = await loadEntityIndex();
-  log(`  Entity index loaded: ${entityIdMap.size} entries`);
-
-  // Get all matched donors with ABNs
-  const { data: matches } = await supabase
-    .from('donor_entity_matches')
-    .select('donor_name, donor_name_normalized, matched_abn')
-    .not('matched_abn', 'is', null);
-
-  if (!matches?.length) { log('  No donor matches found'); return; }
-
-  // Build lookup: normalized donor name → ABN
-  const donorAbnMap = new Map();
-  for (const m of matches) {
-    donorAbnMap.set(m.donor_name.toUpperCase().trim(), m.matched_abn);
-    if (m.donor_name_normalized) {
-      donorAbnMap.set(m.donor_name_normalized.toUpperCase().trim(), m.matched_abn);
-    }
-  }
-  log(`  ${donorAbnMap.size} donor name→ABN mappings loaded`);
-
-  // Process donations in batches
-  let offset = 0;
-  const batchSize = 1000;
-  while (true) {
-    const { data: donations, error } = await supabase
-      .from('political_donations')
-      .select('id, donor_name, donor_abn, donation_to, amount, financial_year, donation_date, return_type, receipt_type')
-      .range(offset, offset + batchSize - 1);
-    if (error) { log(`  ERROR: ${error.message}`); break; }
-    if (!donations?.length) break;
-
-    const relationships = [];
-    for (const d of donations) {
-      // Find donor entity via in-memory index
-      const donorAbn = d.donor_abn || donorAbnMap.get(d.donor_name?.toUpperCase()?.trim());
-      if (!donorAbn) { skipped++; continue; }
-
-      const donorGsId = makeGsId({ abn: donorAbn });
-      const donorEntityId = entityIdMap.get(donorGsId);
-      if (!donorEntityId) { skipped++; continue; }
-
-      // Find party entity via in-memory index
-      const partyGsId = makeGsId({ name: d.donation_to });
-      const partyEntityId = entityIdMap.get(partyGsId);
-      if (!partyEntityId) { skipped++; continue; }
-
-      const year = d.financial_year ? parseInt(d.financial_year.split('-')[0]) : null;
-
-      relationships.push({
-        source_entity_id: donorEntityId,
-        target_entity_id: partyEntityId,
-        relationship_type: 'donation',
-        amount: d.amount,
-        year,
-        dataset: 'aec_donations',
-        source_record_id: d.id?.toString(),
-        confidence: 'registry',
-        properties: {
-          financial_year: d.financial_year,
-          return_type: d.return_type,
-          receipt_type: d.receipt_type,
-          donation_date: d.donation_date,
-        },
-      });
-    }
-
-    if (relationships.length) {
-      for (let i = 0; i < relationships.length; i += 200) {
-        await insertRelationships(relationships.slice(i, i + 200));
-      }
-    }
-    created += relationships.length;
-    offset += batchSize;
-    if (offset % 10000 === 0) log(`  Donations progress: ${offset} processed, ${created} relationships, ${skipped} skipped`);
-  }
-
-  log(`  Donation relationships: ${created} created, ${skipped} skipped (no ABN match)`);
+  // donor ABN: real column first, else donor_entity_matches name→ABN (one ABN per name key,
+  // mirroring the old last-write-wins JS Map). party: the political_party entity whose name
+  // equals donation_to — equivalent to the old AU-NAME-<hash> lookup minus hash collisions
+  // (a name-equality join can never resolve to a wrongly-collided party, the JS path could).
+  await buildRelationshipsSetBased(
+    'Donation relationships',
+    '(source_entity_id, target_entity_id, relationship_type, amount, year, dataset, source_record_id, confidence, properties)',
+    `SELECT
+       donor.id, party.id, 'donation', d.amount,
+       NULLIF(split_part(d.financial_year, '-', 1), '')::int,
+       'aec_donations', d.id::text, 'registry',
+       jsonb_build_object(
+         'financial_year', d.financial_year,
+         'return_type',    d.return_type,
+         'receipt_type',   d.receipt_type,
+         'donation_date',  d.donation_date)
+     FROM political_donations d
+     LEFT JOIN donor_map dm ON dm.key = upper(trim(d.donor_name))
+     JOIN gs_entities donor
+       ON donor.gs_id = 'AU-ABN-' || regexp_replace(coalesce(NULLIF(trim(d.donor_abn), ''), dm.matched_abn), '\\s', '', 'g')
+     JOIN gs_entities party
+       ON party.entity_type = 'political_party'
+      AND upper(trim(party.canonical_name)) = upper(trim(d.donation_to))`,
+    // prelude: materialise + index the donor name→ABN map so the join above is an index scan,
+    // not a nested loop over an unindexed Materialize node (~4B ops → runaway).
+    `CREATE TEMP TABLE donor_map AS
+       SELECT DISTINCT ON (key) key, matched_abn FROM (
+         SELECT upper(trim(donor_name)) AS key, matched_abn
+           FROM donor_entity_matches WHERE matched_abn IS NOT NULL
+         UNION ALL
+         SELECT upper(trim(donor_name_normalized)), matched_abn
+           FROM donor_entity_matches
+           WHERE donor_name_normalized IS NOT NULL AND matched_abn IS NOT NULL
+       ) z ORDER BY key;
+     CREATE INDEX ON donor_map(key);
+     ANALYZE donor_map;`,
+  );
 }
 
 // ─── Phase 2b: AusTender contracts → relationships ──────────────────────────
 
 async function buildContractRelationships() {
   log('\nPhase 2b: Contract relationships...');
-  let created = 0, skipped = 0;
-
-  // Pre-load entity index
-  log('  Loading entity ID index...');
-  const entityIdMap = await loadEntityIndex();
-  log(`  Entity index loaded: ${entityIdMap.size} entries`);
-
-  let offset = 0;
-  const batchSize = 1000;
-  while (true) {
-    const { data: contracts, error } = await supabase
-      .from('austender_contracts')
-      .select('id, ocid, buyer_name, buyer_id, supplier_name, supplier_abn, contract_value, category, procurement_method, contract_start, contract_end, date_published')
-      .not('supplier_abn', 'is', null)
-      .range(offset, offset + batchSize - 1);
-    if (error) { log(`  ERROR: ${error.message}`); break; }
-    if (!contracts?.length) break;
-
-    const relationships = [];
-    for (const c of contracts) {
-      const buyerGsId = makeGsId({ buyer_id: c.buyer_id || c.buyer_name });
-      const supplierGsId = makeGsId({ abn: c.supplier_abn });
-
-      const buyerId = entityIdMap.get(buyerGsId);
-      const supplierId = entityIdMap.get(supplierGsId);
-      if (!buyerId || !supplierId) { skipped++; continue; }
-
-      const year = c.contract_start ? new Date(c.contract_start).getFullYear()
-        : c.date_published ? new Date(c.date_published).getFullYear()
-        : null;
-
-      relationships.push({
-        source_entity_id: buyerId,
-        target_entity_id: supplierId,
-        relationship_type: 'contract',
-        amount: c.contract_value,
-        year,
-        start_date: c.contract_start,
-        end_date: c.contract_end,
-        dataset: 'austender',
-        source_record_id: c.ocid || c.id?.toString(),
-        confidence: 'registry',
-        properties: {
-          category: c.category,
-          procurement_method: c.procurement_method,
-          buyer_name: c.buyer_name,
-          supplier_name: c.supplier_name,
-        },
-      });
-    }
-
-    if (relationships.length) {
-      for (let i = 0; i < relationships.length; i += 200) {
-        await insertRelationships(relationships.slice(i, i + 200));
-      }
-    }
-    created += relationships.length;
-    offset += batchSize;
-    if (offset % 10000 === 0) log(`  Contracts progress: ${offset} processed, ${created} relationships`);
-  }
-
-  log(`  Contract relationships: ${created} created, ${skipped} skipped`);
+  // buyer: AU-GOV-<buyer_id> (falls back to buyer_name, matching makeGsId({buyer_id: id||name})).
+  // supplier: AU-ABN-<abn>. source_record_id mirrors `c.ocid || c.id` (every row has an ocid).
+  await buildRelationshipsSetBased(
+    'Contract relationships',
+    '(source_entity_id, target_entity_id, relationship_type, amount, year, start_date, end_date, dataset, source_record_id, confidence, properties)',
+    `SELECT
+       buyer.id, supplier.id, 'contract', c.contract_value,
+       coalesce(extract(year FROM c.contract_start)::int, extract(year FROM c.date_published)::int),
+       c.contract_start, c.contract_end,
+       'austender', coalesce(NULLIF(c.ocid, ''), c.id::text), 'registry',
+       jsonb_build_object(
+         'category',           c.category,
+         'procurement_method', c.procurement_method,
+         'buyer_name',         c.buyer_name,
+         'supplier_name',      c.supplier_name)
+     FROM austender_contracts c
+     JOIN gs_entities buyer
+       ON buyer.gs_id = 'AU-GOV-' || coalesce(NULLIF(c.buyer_id, ''), c.buyer_name)
+     JOIN gs_entities supplier
+       ON supplier.gs_id = 'AU-ABN-' || regexp_replace(c.supplier_abn, '\\s', '', 'g')
+     WHERE c.supplier_abn IS NOT NULL`,
+  );
 }
 
 // ─── Phase 2b2: Grant opportunities → relationships ─────────────────────────
 
 async function buildGrantRelationships() {
   log('\nPhase 2b2: Grant relationships...');
-  let created = 0, skipped = 0;
-
-  // Pre-load entity index
-  log('  Loading entity ID index...');
-  const entityIdMap = await loadEntityIndex();
-  log(`  Entity index loaded: ${entityIdMap.size} entries`);
-
-  // Get grants that have a foundation_id, join to get foundation ABN
-  let offset = 0;
-  const batchSize = 1000;
-  while (true) {
-    const { data: grants, error } = await supabase
-      .from('grant_opportunities')
-      .select('id, name, foundation_id, amount_min, amount_max, closes_at, categories, provider')
-      .not('foundation_id', 'is', null)
-      .range(offset, offset + batchSize - 1);
-    if (error) { log(`  ERROR: ${error.message}`); break; }
-    if (!grants?.length) break;
-
-    // Get foundation ABNs for this batch
-    const foundationIds = [...new Set(grants.map(g => g.foundation_id))];
-    const { data: foundations } = await supabase
-      .from('foundations')
-      .select('id, acnc_abn')
-      .in('id', foundationIds);
-
-    const foundationAbnMap = new Map();
-    for (const f of (foundations || [])) {
-      if (f.acnc_abn) foundationAbnMap.set(f.id, f.acnc_abn);
-    }
-
-    const relationships = [];
-    for (const g of grants) {
-      const foundationAbn = foundationAbnMap.get(g.foundation_id);
-      if (!foundationAbn) { skipped++; continue; }
-
-      const foundationGsId = makeGsId({ abn: foundationAbn });
-      const foundationEntityId = entityIdMap.get(foundationGsId);
-      if (!foundationEntityId) { skipped++; continue; }
-
-      relationships.push({
-        source_entity_id: foundationEntityId,
-        target_entity_id: foundationEntityId, // self-ref for now (foundation offers grant)
-        relationship_type: 'grant',
-        amount: g.amount_max || g.amount_min || null,
-        dataset: 'grant_opportunities',
-        source_record_id: g.id,
-        confidence: 'registry',
-        properties: {
-          grant_name: g.name,
-          categories: g.categories?.join(', '),
-          closes_at: g.closes_at,
-          provider: g.provider,
-        },
-      });
-    }
-
-    if (relationships.length) {
-      for (let i = 0; i < relationships.length; i += 200) {
-        await insertRelationships(relationships.slice(i, i + 200));
-      }
-    }
-    created += relationships.length;
-    offset += batchSize;
-  }
-
-  log(`  Grant relationships: ${created} created, ${skipped} skipped`);
+  // self-ref edge on the foundation entity (foundation offers grant); amount = max || min.
+  await buildRelationshipsSetBased(
+    'Grant relationships',
+    '(source_entity_id, target_entity_id, relationship_type, amount, dataset, source_record_id, confidence, properties)',
+    `SELECT
+       f_ent.id, f_ent.id, 'grant', coalesce(g.amount_max, g.amount_min),
+       'grant_opportunities', g.id::text, 'registry',
+       jsonb_build_object(
+         'grant_name', g.name,
+         'categories', array_to_string(g.categories, ', '),
+         'closes_at',  g.closes_at,
+         'provider',   g.provider)
+     FROM grant_opportunities g
+     JOIN foundations f
+       ON f.id = g.foundation_id AND f.acnc_abn IS NOT NULL
+     JOIN gs_entities f_ent
+       ON f_ent.gs_id = 'AU-ABN-' || regexp_replace(f.acnc_abn, '\\s', '', 'g')
+     WHERE g.foundation_id IS NOT NULL`,
+  );
 }
 
 // ─── Phase 2c: Cross-registry links ──────────────────────────────────────────
 
 async function buildCrossRegistryLinks() {
   log('\nPhase 2c: Cross-registry links...');
-  let created = 0;
-
-  // Pre-load entity index
-  const entityIdMap = await loadEntityIndex();
-
-  // Foundation → parent company links
   log('  Building foundation → parent company links...');
-  const { data: foundationsWithParent } = await supabase
-    .from('foundations')
-    .select('acnc_abn, name, parent_company, asx_code')
-    .not('parent_company', 'is', null);
-
-  if (foundationsWithParent) {
-    // Build name→id lookup for parent matching
-    const nameIdMap = new Map();
-    let off2 = 0;
-    while (true) {
-      const { data } = await supabase
-        .from('gs_entities')
-        .select('id, canonical_name')
-        .range(off2, off2 + 999);
-      if (!data?.length) break;
-      for (const e of data) nameIdMap.set(e.canonical_name.toUpperCase(), e.id);
-      off2 += data.length;
-      if (data.length < 1000) break;
-    }
-
-    const linkBatch = [];
-    for (const f of foundationsWithParent) {
-      if (!f.acnc_abn || !f.parent_company) continue;
-
-      const foundationGsId = makeGsId({ abn: f.acnc_abn });
-      const foundationEntityId = entityIdMap.get(foundationGsId);
-      if (!foundationEntityId) continue;
-
-      // Try exact name match first, then partial
-      const parentId = nameIdMap.get(f.parent_company.toUpperCase());
-      if (parentId) {
-        linkBatch.push({
-          source_entity_id: parentId,
-          target_entity_id: foundationEntityId,
-          relationship_type: 'subsidiary_of',
-          dataset: 'foundations',
-          source_record_id: f.acnc_abn,
-          confidence: 'reported',
-          properties: { parent_company: f.parent_company },
-        });
-      }
-    }
-
-    if (linkBatch.length) {
-      for (let i = 0; i < linkBatch.length; i += 200) {
-        await insertRelationships(linkBatch.slice(i, i + 200));
-      }
-      created += linkBatch.length;
-    }
-  }
-
-  log(`  Cross-registry links: ${created} created`);
+  // parent matched by exact (case-insensitive) canonical_name = parent_company, mirroring the
+  // old nameIdMap.get(parent_company.toUpperCase()). DISTINCT ON keeps one parent per foundation
+  // (the JS map held a single id per name) — deterministic by parent.id.
+  await buildRelationshipsSetBased(
+    'Cross-registry links',
+    '(source_entity_id, target_entity_id, relationship_type, dataset, source_record_id, confidence, properties)',
+    `SELECT DISTINCT ON (f.acnc_abn)
+       parent.id, f_ent.id, 'subsidiary_of', 'foundations', f.acnc_abn, 'reported',
+       jsonb_build_object('parent_company', f.parent_company)
+     FROM foundations f
+     JOIN gs_entities f_ent
+       ON f_ent.gs_id = 'AU-ABN-' || regexp_replace(f.acnc_abn, '\\s', '', 'g')
+     JOIN gs_entities parent
+       ON upper(parent.canonical_name) = upper(f.parent_company)
+     WHERE f.parent_company IS NOT NULL AND f.acnc_abn IS NOT NULL
+     ORDER BY f.acnc_abn, parent.id`,
+  );
 }
 
 // ─── Phase 3: Refresh materialised views ─────────────────────────────────────
