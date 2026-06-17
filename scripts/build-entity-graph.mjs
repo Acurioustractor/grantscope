@@ -145,6 +145,16 @@ async function runDml(label, sql) {
   return String(stdout);
 }
 
+/** Run a SELECT via psql and parse each `-A -t` line as a JSON row (delimiter-safe vs `-A`'s `|`). */
+async function selectJsonRows(label, selectSql) {
+  const out = await runDml(label, `SELECT row_to_json(_t) FROM (${selectSql}) _t;`);
+  // runDml prefixes stdout with psql command tags (e.g. the "SET" from statement_timeout=0).
+  // row_to_json emits exactly one JSON object per line, so keep only `{`-prefixed lines.
+  return out.split('\n').map((s) => s.trim())
+    .filter((line) => line.startsWith('{'))
+    .map((line) => JSON.parse(line));
+}
+
 /**
  * Build one relationship dataset set-based. `cols` is the parenthesised insert column list;
  * `selectSql` is the matching SELECT. `prelude` runs first in the SAME psql session — use it to
@@ -307,18 +317,19 @@ async function buildEntities() {
   }
   log(`  ORIC corporations: ${stats.oric}`);
 
-  // 1d. Government bodies (from AusTender buyers) — batch upsert
+  // 1d. Government bodies (from AusTender buyers) — set-based distinct read.
+  // The old unpaginated REST select silently hit PostgREST's 1000-row cap (#85 bug class), so it
+  // only saw buyers present in the first 1000 of ~770K contract rows. Push the DISTINCT to the DB
+  // (instant) so every buyer becomes a government_body entity.
   log('  Loading government bodies...');
-  const { data: buyers } = await supabase
-    .from('austender_contracts')
-    .select('buyer_name, buyer_id')
-    .not('buyer_name', 'is', null);
+  const buyerRows = await selectJsonRows('government buyers',
+    `SELECT DISTINCT ON (buyer_id) buyer_id, buyer_name
+       FROM austender_contracts
+      WHERE buyer_name IS NOT NULL AND buyer_id IS NOT NULL`);
 
   const uniqueBuyers = new Map();
-  for (const b of (buyers || [])) {
-    if (b.buyer_id && !uniqueBuyers.has(b.buyer_id)) {
-      uniqueBuyers.set(b.buyer_id, b.buyer_name);
-    }
+  for (const b of buyerRows) {
+    if (!uniqueBuyers.has(b.buyer_id)) uniqueBuyers.set(b.buyer_id, b.buyer_name);
   }
 
   if (!dryRun) {
@@ -339,16 +350,23 @@ async function buildEntities() {
   stats.govt = uniqueBuyers.size;
   log(`  Government bodies: ${stats.govt}`);
 
-  // 1e. AusTender suppliers (by ABN) — batch upsert
+  // 1e. AusTender suppliers (by ABN) — set-based distinct read.
+  // Same #85 cap bug: ~60K distinct supplier ABNs were truncated to whatever appeared in the first
+  // 1000 contract rows. That truncation is the upstream cause of contracts with no supplier entity
+  // (the preserved legacy-only contract edges). Push DISTINCT to the DB so every supplier exists.
+  // Filter to valid 11-digit ABNs: ~12 distinct values are Excel/exempt garbage ('#N/A',
+  // 'Exempt-NonAustralianEntity', ...) that would otherwise collapse hundreds of unrelated suppliers
+  // into one fake hub node. The contract-relationship join applies the same filter (kept in sync).
   log('  Loading AusTender suppliers...');
-  const { data: suppliers } = await supabase
-    .from('austender_contracts')
-    .select('supplier_name, supplier_abn, supplier_entity_type')
-    .not('supplier_abn', 'is', null);
+  const supplierRows = await selectJsonRows('austender suppliers',
+    `SELECT DISTINCT ON (supplier_abn) supplier_abn, supplier_name, supplier_entity_type
+       FROM austender_contracts
+      WHERE supplier_abn IS NOT NULL
+        AND regexp_replace(supplier_abn, '\\s', '', 'g') ~ '^[0-9]{11}$'`);
 
   const uniqueSuppliers = new Map();
-  for (const s of (suppliers || [])) {
-    if (s.supplier_abn && !uniqueSuppliers.has(s.supplier_abn)) {
+  for (const s of supplierRows) {
+    if (!uniqueSuppliers.has(s.supplier_abn)) {
       uniqueSuppliers.set(s.supplier_abn, { name: s.supplier_name, type: s.supplier_entity_type });
     }
   }
@@ -378,9 +396,9 @@ async function buildEntities() {
   // set set-based (instant), and keep makeGsId so gs_ids stay consistent across runs
   // (the donations phase joins parties by name, but a stable gs_id prevents dupes).
   log('  Loading political parties...');
-  const partyOut = await runDml('political party recipients',
-    `SELECT DISTINCT donation_to FROM political_donations WHERE donation_to IS NOT NULL;`);
-  const uniqueParties = partyOut.split('\n').map((s) => s.trim()).filter(Boolean);
+  const partyRows = await selectJsonRows('political party recipients',
+    `SELECT DISTINCT donation_to FROM political_donations WHERE donation_to IS NOT NULL`);
+  const uniqueParties = partyRows.map((r) => r.donation_to).filter(Boolean);
 
   if (!dryRun) {
     const partyEntities = uniqueParties.map((name) => ({
@@ -503,15 +521,17 @@ async function buildEntities() {
   }
   log(`  ATO tax records linked: ${stats.ato}`);
 
-  // 1i. ASX Companies — batch upsert
+  // 1i. ASX Companies — set-based read (was unpaginated; asx_companies has ~2,013 rows so the
+  // 1000-cap truncated it too). NOTE: every asx_companies.abn is currently NULL, so the abn filter
+  // below yields 0 entities regardless — an upstream data-population gap, tracked separately.
+  // Reading the full set is correctness hygiene; it won't add entities until ABNs exist.
   log('  Loading ASX companies...');
-  const { data: asxCompanies } = await supabase
-    .from('asx_companies')
-    .select('asx_code, company_name, abn, gics_industry_group');
+  const asxCompanies = await selectJsonRows('asx companies',
+    `SELECT asx_code, company_name, abn, gics_industry_group FROM asx_companies`);
+  const asxWithAbn = asxCompanies.filter(c => c.abn);
 
-  if (!dryRun && asxCompanies) {
-    const asxEntities = asxCompanies
-      .filter(c => c.abn)
+  if (!dryRun && asxWithAbn.length) {
+    const asxEntities = asxWithAbn
       .map(c => ({
         entity_type: 'company',
         canonical_name: c.company_name,
@@ -529,7 +549,9 @@ async function buildEntities() {
     }
     stats.asx = asxEntities.length;
   }
-  log(`  ASX companies: ${stats.asx}`);
+  log(asxWithAbn.length
+    ? `  ASX companies: ${stats.asx}`
+    : `  ASX companies: 0 (all ${asxCompanies.length} rows have NULL abn — upstream data gap)`);
 
   // 1j. Social Enterprises — batch upsert
   log('  Loading social enterprises...');
@@ -706,7 +728,8 @@ async function buildContractRelationships() {
        ON buyer.gs_id = 'AU-GOV-' || coalesce(NULLIF(c.buyer_id, ''), c.buyer_name)
      JOIN gs_entities supplier
        ON supplier.gs_id = 'AU-ABN-' || regexp_replace(c.supplier_abn, '\\s', '', 'g')
-     WHERE c.supplier_abn IS NOT NULL`,
+     WHERE c.supplier_abn IS NOT NULL
+       AND regexp_replace(c.supplier_abn, '\\s', '', 'g') ~ '^[0-9]{11}$'`,
   );
 }
 
