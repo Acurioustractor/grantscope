@@ -372,20 +372,18 @@ async function buildEntities() {
   stats.suppliers = uniqueSuppliers.size;
   log(`  AusTender suppliers (unique ABNs): ${stats.suppliers}`);
 
-  // 1f. Political parties — batch upsert
+  // 1f. Political parties — one entity per distinct donation_to recipient.
+  // The old unpaginated REST select silently hit PostgREST's 1000-row cap, so only
+  // ~66 of 2,437 distinct recipients ever became party entities. Fetch the distinct
+  // set set-based (instant), and keep makeGsId so gs_ids stay consistent across runs
+  // (the donations phase joins parties by name, but a stable gs_id prevents dupes).
   log('  Loading political parties...');
-  const { data: parties } = await supabase
-    .from('political_donations')
-    .select('donation_to')
-    .not('donation_to', 'is', null);
-
-  const uniqueParties = new Set();
-  for (const p of (parties || [])) {
-    if (p.donation_to) uniqueParties.add(p.donation_to);
-  }
+  const partyOut = await runDml('political party recipients',
+    `SELECT DISTINCT donation_to FROM political_donations WHERE donation_to IS NOT NULL;`);
+  const uniqueParties = partyOut.split('\n').map((s) => s.trim()).filter(Boolean);
 
   if (!dryRun) {
-    const partyEntities = Array.from(uniqueParties).map(name => ({
+    const partyEntities = uniqueParties.map((name) => ({
       entity_type: 'political_party',
       canonical_name: name,
       gs_id: makeGsId({ name }),
@@ -399,7 +397,7 @@ async function buildEntities() {
       await upsertEntities(chunk, { onConflict: 'gs_id', ignoreDuplicates: true });
     }
   }
-  stats.parties = uniqueParties.size;
+  stats.parties = uniqueParties.length;
   log(`  Political parties: ${stats.parties}`);
 
   // 1g. Donors (from donor_entity_matches) — batch upsert
