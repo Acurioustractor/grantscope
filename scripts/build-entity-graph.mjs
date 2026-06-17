@@ -134,6 +134,7 @@ async function loadEntityIndex() {
     const { data, error } = await supabase
       .from('gs_entities')
       .select('id, gs_id')
+      .order('id', { ascending: true }) // stable order: range() pagination without it overlaps/skips pages → silently dropped ~35% of entities
       .range(offset, offset + 999);
     if (error) { log(`  ERROR loading index: ${error.message}`); break; }
     if (!data?.length) break;
