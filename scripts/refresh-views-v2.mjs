@@ -64,6 +64,10 @@ const VIEW_LIST = [
   'mv_person_influence',
   'mv_person_cross_system',
   'mv_person_network',
+  // identity-keyed person disambiguation MVs (depend on mv_person_entity_network +
+  // person_identities; network before influence). See migration 20260619130000.
+  'mv_person_identity_network',
+  'mv_person_identity_influence',
   'mv_foundation_grantees',
   'mv_donation_contract_timing',
   'mv_charity_network',
@@ -100,6 +104,7 @@ const HEAVY = new Set([
   'mv_charity_network',
   'mv_abr_name_lookup',
   'mv_board_interlocks',
+  'mv_person_identity_network',
 ]);
 
 function log(msg) { console.log(`[${new Date().toISOString().split('T')[1].slice(0, 8)}] ${msg}`); }

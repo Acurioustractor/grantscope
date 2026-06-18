@@ -1,6 +1,9 @@
 -- ============================================================================
--- DRAFT FOR REVIEW — NOT APPLIED. Do not move to supabase/migrations/ until Ben
--- approves. This is the leaderboard-changing step of person disambiguation.
+-- APPLIED to prod 2026-06-19 (Ben approved). Identity-keyed MVs for person
+-- disambiguation — the leaderboard-changing step. Built mv_person_identity_network
+-- (328,939 rows) + mv_person_identity_influence (237,815 identities, 65 nominee blocks).
+-- App re-point in same commit: api/data/person leaderboard now reads
+-- mv_person_identity_influence WHERE NOT is_nominee_block.
 -- ============================================================================
 --
 -- Builds NEW identity-keyed MVs ALONGSIDE the existing name-keyed ones
