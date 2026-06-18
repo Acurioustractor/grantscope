@@ -8,6 +8,11 @@ export const dynamic = 'force-dynamic';
 
 const limiter = rateLimit();
 
+// person entities are name-keyed, so common names merge many people into one node with an impossibly
+// high board_seats (max 744). Cap ranked results at a plausible serial-director ceiling so the
+// leaderboard shows real people, not homonym megamerges. See docs/leverage-map.md "DATA-QUALITY GATE".
+const MAX_PLAUSIBLE_BOARDS = 10;
+
 const SORTS = ['board_seats', 'total_org_revenue', 'total_org_assets', 'total_org_fte'] as const;
 
 const schema = z.object({
@@ -31,7 +36,7 @@ export async function GET(request: Request) {
 
   try {
     const supabase = getServiceSupabase();
-    const conditions: string[] = [`board_seats >= ${min_seats}`];
+    const conditions: string[] = [`board_seats >= ${min_seats}`, `board_seats <= ${MAX_PLAUSIBLE_BOARDS}`];
 
     if (q) conditions.push(`person_name ILIKE '%${esc(q)}%'`);
 

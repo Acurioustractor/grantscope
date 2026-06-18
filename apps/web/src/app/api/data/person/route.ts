@@ -8,6 +8,12 @@ export const dynamic = 'force-dynamic';
 
 const limiter = rateLimit();
 
+// Person entities are keyed by normalised NAME (GS-PERSON-<slug>), so common names collapse many
+// distinct people into ONE node (e.g. "Mark Smith" = 714 boards). Above this board count we treat a
+// node as an unresolved homonym merge and keep it OFF the ranked leaderboard (still reachable via
+// search / profile). Real fix = person disambiguation. See docs/leverage-map.md "DATA-QUALITY GATE".
+const MAX_PLAUSIBLE_BOARDS = 10;
+
 const schema = z.object({
   q: z.string().max(200).optional(),
   name: z.string().max(200).optional(),
@@ -58,7 +64,8 @@ export async function GET(request: Request) {
                   total_procurement, total_contracts, total_justice, total_donations,
                   max_influence_score, financial_system_count, acco_boards
            FROM mv_person_influence
-           WHERE financial_system_count > 0 OR board_count > 3
+           WHERE (financial_system_count > 0 OR board_count > 3)
+             AND coalesce(board_count, 0) <= ${MAX_PLAUSIBLE_BOARDS}
            ORDER BY max_influence_score DESC NULLS LAST
            LIMIT ${limit}`,
       });
