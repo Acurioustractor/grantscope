@@ -68,6 +68,9 @@ async function main() {
         .from('person_roles')
         .select('id, person_name, person_name_normalised, role_type, company_name, company_abn, appointment_date, cessation_date, source')
         .not('company_abn', 'is', null)
+        // Stable order by PK is REQUIRED for .range() pagination — without it PostgREST can return
+        // rows in inconsistent order across pages, silently overlapping/dropping ~35% (the #82 bug).
+        .order('id', { ascending: true })
         .range(offset, offset + pageSize - 1);
 
       const { data: page, error } = await query;
