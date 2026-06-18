@@ -4,7 +4,31 @@ function getUrl() {
   return process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
 }
 
-const blockedSqlRpcNames = new Set(['exec_sql', 'exec', 'execute_sql', 'exec_agent_sql']);
+// Arbitrary-SQL agent RPCs that must never run from the app runtime — they bypass RLS and
+// accept writes. `exec_sql` is handled separately: it is the read path the data routes depend
+// on, so SELECT/WITH reads are allowed through (the DB function is itself SELECT-wrapped) while
+// any write shape is rejected. See commit 02213dd.
+const fullyBlockedSqlRpcNames = new Set(['exec', 'execute_sql', 'exec_agent_sql']);
+
+/**
+ * exec_sql read-only guard (defense-in-depth). Allows a single SELECT/WITH read; rejects
+ * non-reads, stacked statements, and data-modifying CTEs. The DB function additionally wraps
+ * input as `SELECT row_to_json(t) FROM (<query>) t`, so writes fail there too.
+ */
+function isReadOnlyExecSql(query: string | undefined): boolean {
+  if (typeof query !== 'string') return false;
+  const stripped = query
+    .replace(/\/\*[\s\S]*?\*\//g, ' ') // block comments
+    .replace(/--[^\n]*/g, ' ') // line comments
+    .trim();
+  if (!stripped) return false;
+  if (!/^(select|with)\b/i.test(stripped)) return false; // top-level read only
+  if (/;\s*\S/.test(stripped.replace(/;\s*$/, ''))) return false; // no stacked statements
+  if (/\b(insert\s+into|update\s+[\w".]+\s+set|delete\s+from|merge\s+into)\b/i.test(stripped)) {
+    return false; // no data-modifying CTE
+  }
+  return true;
+}
 
 /** Client-side Supabase (anon key, RLS enforced) */
 let _supabase: SupabaseClient | null = null;
@@ -74,14 +98,34 @@ function createBlockedSqlRpcBuilder(functionName: string): EmptyQueryBuilder {
   });
 }
 
+function createReadOnlyViolationBuilder(): EmptyQueryBuilder {
+  return createStaticQueryBuilder({
+    data: null,
+    error: {
+      message: 'exec_sql only accepts read-only (SELECT/WITH) queries from the app runtime.',
+      code: 'SQL_RPC_READONLY',
+      details: null,
+      hint: 'Use a typed Supabase read or a dedicated write RPC for mutations.',
+    },
+    count: null,
+  });
+}
+
 function createRuntimeSupabaseClient(client: SupabaseClient): SupabaseClient {
   return new Proxy(client, {
     get(target, prop, receiver) {
       if (prop === 'rpc') {
         const rpc = Reflect.get(target, prop, receiver) as (...args: unknown[]) => unknown;
         return (functionName: string, ...args: unknown[]) => {
-          if (blockedSqlRpcNames.has(functionName)) {
+          if (fullyBlockedSqlRpcNames.has(functionName)) {
             return createBlockedSqlRpcBuilder(functionName);
+          }
+          if (functionName === 'exec_sql') {
+            const params = args[0] as { query?: unknown } | undefined;
+            const query = typeof params?.query === 'string' ? params.query : undefined;
+            if (!isReadOnlyExecSql(query)) {
+              return createReadOnlyViolationBuilder();
+            }
           }
           return rpc.apply(target, [functionName, ...args]);
         };
