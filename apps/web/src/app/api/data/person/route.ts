@@ -59,14 +59,20 @@ export async function GET(request: Request) {
   // Top people mode: return most influential people
   if (!name) {
     try {
+      // Rank by cross-system reach then total dollars, NOT board count. max_influence_score is
+      // board-count-dominated, so with board_count capped at MAX_PLAUSIBLE_BOARDS everyone ties at
+      // the cap. financial_system_count (0-3 across procurement/justice/donations) is the breadth
+      // signal; total_money is the sum of the three dollar columns (total_contracts is a COUNT, not $).
       const { data, error } = await supabase.rpc('exec_sql', {
         query: `SELECT person_name, person_name_normalised, board_count, entity_types, data_sources,
                   total_procurement, total_contracts, total_justice, total_donations,
-                  max_influence_score, financial_system_count, acco_boards
+                  max_influence_score, financial_system_count, acco_boards,
+                  (coalesce(total_procurement, 0) + coalesce(total_justice, 0) + coalesce(total_donations, 0)) AS total_money
            FROM mv_person_influence
            WHERE (financial_system_count > 0 OR board_count > 3)
              AND coalesce(board_count, 0) <= ${MAX_PLAUSIBLE_BOARDS}
-           ORDER BY max_influence_score DESC NULLS LAST
+           ORDER BY financial_system_count DESC NULLS LAST,
+                    (coalesce(total_procurement, 0) + coalesce(total_justice, 0) + coalesce(total_donations, 0)) DESC NULLS LAST
            LIMIT ${limit}`,
       });
       if (error) throw error;

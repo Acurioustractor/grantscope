@@ -15,6 +15,7 @@ interface Person {
   total_contracts: number;
   total_justice: number;
   total_donations: number;
+  total_money: number;
   max_influence_score: number;
   financial_system_count: number;
 }
@@ -73,7 +74,7 @@ export default function PersonSearchPage() {
           <h1 className="text-3xl font-black uppercase tracking-wider">Who Runs Australia?</h1>
           <p className="text-gray-400 text-sm mt-1 max-w-2xl">
             People who sit on multiple boards, control procurement dollars, receive justice funding, or make political donations.
-            Ranked by influence score across all connected entities.
+            Ranked by how many funding systems they span, then total dollars across all connected entities.
           </p>
         </div>
       </div>
@@ -112,7 +113,7 @@ export default function PersonSearchPage() {
                   <th className="text-right py-3 pr-4 font-black uppercase tracking-widest text-[10px] text-gray-400">Procurement $</th>
                   <th className="text-right py-3 pr-4 font-black uppercase tracking-widest text-[10px] text-gray-400">Justice $</th>
                   <th className="text-right py-3 pr-4 font-black uppercase tracking-widest text-[10px] text-gray-400">Donations $</th>
-                  <th className="text-right py-3 pr-4 font-black uppercase tracking-widest text-[10px] text-gray-400">Influence</th>
+                  <th className="text-right py-3 pr-4 font-black uppercase tracking-widest text-[10px] text-gray-400">Total $</th>
                 </tr>
               </thead>
               <tbody>
@@ -152,7 +153,9 @@ export default function PersonSearchPage() {
                         <span className="text-bauhaus-red">{money(Number(p.total_donations))}</span>
                       ) : '—'}
                     </td>
-                    <td className="py-3 pr-4 text-right font-mono font-bold">{Number(p.max_influence_score).toFixed(0)}</td>
+                    <td className="py-3 pr-4 text-right font-mono font-bold">
+                      {Number(p.total_money) > 0 ? money(Number(p.total_money)) : '—'}
+                    </td>
                   </tr>
                 ))}
               </tbody>
