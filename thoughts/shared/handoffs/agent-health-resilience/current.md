@@ -9,9 +9,9 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-06-19 — **PEOPLE-LEADERBOARD WORK SHIPPED + MERGED (#91 then #90); main `9942c11`.** This session, in order: (1) verified the homonym guard live 3 ways (gsql+API+screenshot); (2) found **99 app data routes 500ing in prod since 06-16** — commit `02213dd` blocked ALL `.rpc('exec_sql')` app-side but migrated only ~5 of ~104 routes (DB fn itself still works; pure app-side block); (3) Ben chose "restore reads fast" → narrowed `supabase.ts` to allow read-only SELECT/WITH exec_sql only (17/17 predicate tests; `/person /power /rankings /power-index /who-runs-australia /sector` back to 200) = **PR #91 (`18660e0`)**; (4) ranking polish — re-rank people leaderboards by financial_system_count (breadth) then total cross-system $, not the board-count-tied influence (catherine taylor $2.7B/3sys rose rank 9→4); "Influence" col → "Total $"; /power sorts by revenue = folded into **PR #90 (`9942c11`)**; (5) verified `/api/power/accountability` board-connectors needs NO cap (top-100+ABN-keyed, max board_count=2). **Both PRs MERGED, branches deleted, local main synced.** Prior: bridge rewrite #89 (`3b8568d`); #86/#87/#88. Graph ~605,900 entities · 2,370,061 edges.
+**Updated:** 2026-06-19 (PM #2) — **PERSON DISAMBIGUATION SHIPPED end-to-end (leaderboard now disambiguated) — the "real fix" for the homonym megamerges (was the DATA-QUALITY GATE next-OP below).** Reframe found by reproduction: the ranking-head megamerges are **trustee-company NOMINEE BLOCKS, not homonyms** — one trustee firm's officers listed as responsible persons on hundreds of "The Trustee For X" charities (Mark Smith 714 boards = 689 one NSW/2034 block + 23 real people; Jodi Kennedy 745 = 740 VIC/3001 block + 5). `appointment_date` ~0% / `cessation_date` 0% → **temporal signal dead**; `person_entity_id` is name-keyed (= the megamerge, not an identity key). Approach: per-name co-director graph + union-find (block-officer ≥10-board glue + ≥2-shared-codirector corroboration; nominee = size≥20 + dominant officer + dominant STATE). **SHIPPED THIS SESSION:** (1) read-only gate `scripts/person-disambig-probe.mjs` + shared core `scripts/lib/person-cluster.mjs` → **PR #92 (open)**; (2) **APPLIED TO PROD (explicit auth):** `person_identities` table + 15,809 rows for the 79 names with board_count>50 → **549 identities, 65 nominee blocks** (`scripts/build-person-identities.mjs --apply`; dry-run default). **Nothing reads it yet → leaderboards UNCHANGED**; undo = `DROP TABLE person_identities`. (3) **APPLIED TO PROD (Ben said "apply", 2026-06-19 PM):** MV re-point migration `supabase/migrations/20260619130000_person_identity_mvs.sql` → `mv_person_identity_network` (328,939 rows) + `mv_person_identity_influence` (**237,815 identities, 65 nominee blocks**) ALONGSIDE untouched name-keyed originals; refresh wired into `refresh-views-v2.mjs` (network→influence; +HEAVY). (4) **APP RE-POINTED → PR #93 (open, STACKED on #92, base=`feat/person-disambig-gate`):** `api/data/person` leaderboard mode now reads `mv_person_identity_influence WHERE NOT is_nominee_block` (board-count cap kept as backstop for un-split 11-50-board names; `influence_score AS max_influence_score`; dropped unused `data_sources`). Search/profile modes deliberately stay name-keyed (profile-by-name → multiple identities = picker-UI follow-up). Verified live: leaderboard top rows real people (Claire Rogers, Brendan Murphy…), board counts 4–9, NO megamerge; Mark's 689 block flagged+excluded, SA $3.45M + QLD $155k surface as distinct board_count=1 identities. tsc clean. **NEXT:** merge #92 then #93 (auto-retargets to main) → profile disambiguation-picker UI → extend disambiguation below the 50-board threshold then DROP the `MAX_PLAUSIBLE_BOARDS` cap. Memory: [[project_person_disambiguation]]. — Prior session: people-leaderboard guard+re-rank #90/#91 (`9942c11`); read-only exec_sql restore #91; bridge rewrite #89. Graph ~605,900 entities · 2,370,061 edges.
 **Goal:** Make the CivicGraph relationship graph correct, fast, and self-monitoring. Diagnose by REPRODUCTION (never assumption); every fix validated live before claiming done.
-**Branch:** `main` at `ee617a4`. **No open PRs** (#86/#87/#88 all squash-merged, branches deleted). CI green throughout.
+**Branch:** `feat/person-identities-migration` PUSHED (HEAD `e68c07e`); `main` at `9942c11`. **Open PRs: #92** (read-only gate) + **#93** (migration + re-point, STACKED on #92). person_identities table + identity-keyed MVs LIVE in prod; leaderboard reads them. CI green, tsc clean.
 **Test:** `node --check scripts/build-entity-graph.mjs` · dry-run a phase (`--phase=X --dry-run`) · `node --env-file=.env scripts/check-graph-completeness.mjs` (the gate) · reproduce/validate live before claiming done.
 
 ### Now — DONE + MERGED this session (PR #89, squash `3b8568d`).
@@ -67,8 +67,14 @@ status: active
 3c. **Remaining NEXT-#3 nice-to-haves (not done, low pri):** (a) "ambiguous name — not disambiguated" flag on
    search/profile; (b) lowercase display names like "catherine taylor" (MV uses `min(person_name_display)`).
    Residual risk: money columns can still be homonym-inflated under 10 boards (real fix = NEXT #4 disambiguation).
-4. **New OP: person disambiguation** (the real fix; split homonyms by ABN/co-occurrence) — biggest unlock for
-   the whole people/probity play.
+4. [x] **New OP: person disambiguation — SHIPPED** (the real fix; split homonyms by trustee-nominee-block
+   detection + co-director union-find). `person_identities` table + identity-keyed MVs live in prod; leaderboard
+   re-pointed (PR #92 gate + #93 migration, both open). See Ledger block (3)/(4) above. Remaining tail:
+   - **Merge #92 then #93** (#93 auto-retargets base main→ when #92 lands).
+   - **Profile disambiguation-picker UI** — `api/data/person` profile mode still name-keyed; one name now maps
+     to multiple identities (e.g. Mark Smith → SA person / QLD person / nominee block). Needs a picker.
+   - **Extend disambiguation below the 50-board threshold** (only >50-board names were split; the >10 tier =
+     615 names), then **DROP `MAX_PLAUSIBLE_BOARDS`** from the leaderboard query (currently kept as a backstop).
 5. **[BIG follow-up, tracked] Migrate 99 routes off string-SQL `exec_sql`** to typed Supabase reads / safe
    RPCs/views — the proper fix the `02213dd` block intended. PR #91 is the band-aid (read-only restore). This
    is the durable fix: removes the RLS-bypass + string-interpolation surface entirely. Large (99 files); scope
@@ -77,7 +83,10 @@ status: active
   main synced & clean. **Prod verified recovered** (5/5 data routes 200; guard + re-rank live). Only this
   ledger is uncommitted (working handoff; survives `/clear` — SessionStart reads the file).
 
-### ▶ NEXT SESSION KICKOFF PROMPT (copy-paste to start NEXT #4 — person disambiguation)
+### ▶ [COMPLETED 2026-06-19 PM #2] NEXT SESSION KICKOFF PROMPT (was: start NEXT #4 — person disambiguation)
+<!-- Disambiguation is now SHIPPED (person_identities + identity MVs live, leaderboard re-pointed, PRs #92/#93).
+     This prompt is kept for provenance only. Resume points are NEXT #4's remaining-tail bullets above. -->
+
 > Resume the people/probity workstream on CivicGraph. The homonym GUARD + leaderboard re-rank shipped last
 > session (PRs #90/#91 merged, main `9942c11`, prod verified). Now the REAL fix: **person disambiguation** —
 > split name-collision megamerges into distinct real-person identities.
