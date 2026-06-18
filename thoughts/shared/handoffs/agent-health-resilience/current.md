@@ -9,13 +9,13 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-06-18 (later) — **BRIDGE WRITE-PATH REWRITE DONE (live, uncommitted on `main`).** Both bridges converted to set-based psql `INSERT…SELECT … ON CONFLICT (dedup-expr) DO NOTHING`, sharing the SoT. **justice +81,493 edges (56,630→138,123), gate now OK; person +329,896 edges (5,086→334,982), 333,836 person_roles backfilled.** Graph: **~605,900 entities · 2,370,061 edges** (+411,389 this run). NOT yet committed/PR'd — awaiting Ben's go. Earlier this session: **#86/#87/#88** all merged.
+**Updated:** 2026-06-19 — **PEOPLE-LEADERBOARD WORK SHIPPED + MERGED (#91 then #90); main `9942c11`.** This session, in order: (1) verified the homonym guard live 3 ways (gsql+API+screenshot); (2) found **99 app data routes 500ing in prod since 06-16** — commit `02213dd` blocked ALL `.rpc('exec_sql')` app-side but migrated only ~5 of ~104 routes (DB fn itself still works; pure app-side block); (3) Ben chose "restore reads fast" → narrowed `supabase.ts` to allow read-only SELECT/WITH exec_sql only (17/17 predicate tests; `/person /power /rankings /power-index /who-runs-australia /sector` back to 200) = **PR #91 (`18660e0`)**; (4) ranking polish — re-rank people leaderboards by financial_system_count (breadth) then total cross-system $, not the board-count-tied influence (catherine taylor $2.7B/3sys rose rank 9→4); "Influence" col → "Total $"; /power sorts by revenue = folded into **PR #90 (`9942c11`)**; (5) verified `/api/power/accountability` board-connectors needs NO cap (top-100+ABN-keyed, max board_count=2). **Both PRs MERGED, branches deleted, local main synced.** Prior: bridge rewrite #89 (`3b8568d`); #86/#87/#88. Graph ~605,900 entities · 2,370,061 edges.
 **Goal:** Make the CivicGraph relationship graph correct, fast, and self-monitoring. Diagnose by REPRODUCTION (never assumption); every fix validated live before claiming done.
 **Branch:** `main` at `ee617a4`. **No open PRs** (#86/#87/#88 all squash-merged, branches deleted). CI green throughout.
 **Test:** `node --check scripts/build-entity-graph.mjs` · dry-run a phase (`--phase=X --dry-run`) · `node --env-file=.env scripts/check-graph-completeness.mjs` (the gate) · reproduce/validate live before claiming done.
 
-### Now — DONE this session (live, uncommitted). Next: commit + PR (Ben's go).
-[x] **Converted both bridge agents' WRITE paths to set-based psql** — re-runnable, additive, recovered the dropped edges. Files changed (uncommitted on `main`):
+### Now — DONE + MERGED this session (PR #89, squash `3b8568d`).
+[x] **Converted both bridge agents' WRITE paths to set-based psql** — re-runnable, additive, recovered the dropped edges. Files changed (merged to `main`):
 - **`scripts/lib/graph-edge-datasets.mjs`** — added `justice_funding` dataset entry (read-only `jf_prog_map` prelude + canonical edge SELECT) and two write-side exports: `JUSTICE_PROGRAM_ENSURE_SQL` (creates missing `program` entities) + `JUSTICE_BUILD_GUARD` (`NOT EXISTS` additive guard, write-only).
 - **`scripts/build-entity-graph.mjs`** — new `--phase=justice` (program-ensure → guarded set-based edge insert). Included in `all`.
 - **`scripts/bridge-justice-to-graph.mjs`** — rewritten as a thin set-based psql agent sharing the SoT. `--dry-run` counts; live = program-ensure + guarded `INSERT…ON CONFLICT DO NOTHING`. (Old REST `.upsert` couldn't match the COALESCE-expr index → 0 written: the [[feedback_postgrest_partial_index_upsert]] mode.)
@@ -23,6 +23,94 @@ status: active
 - **Why the justice guard:** the program-node layer is historically split (old `GS-PROG-<slug60>-<state>` + new `<slug80>-<md5x4>-<state>` + slug collisions); 55,811 of 56,630 existing edges sit on OLD-format nodes, so NO clean (name,state)→node map matches them all. The `NOT EXISTS (payment already edged)` guard makes the WRITE touch only un-edged payments → 0 new dups, fully re-runnable. The gate measures the FULL derivation (bare selectSql); only the write appends the guard. Person needs no guard (single gs_id format → gs_id join lands on the existing nodes; `ON CONFLICT` dedups the 5,086).
 - **Results (live):** justice +81,493 (gate justice now **138,055 exp / 138,123 act / OK**); person +329,896 (dir 113,419 + member_of 221,563), 333,836 backfilled, 87 residual unlinked (empty-slug/unmatched-ABN). Total edges 2,370,061.
 - **Gate coverage:** justice_funding now watched (was on the gap list). Person NOT gated (would need 2 entries dir+member_of — follow-up). grant_opportunities/foundations still STALE (pre-existing legacy; separate clean-rebuild).
+
+### Follow-on this session (post-merge: MV refresh → leverage → polish)
+- [x] **All 38 MVs refreshed** (`refresh-views-v2`, 38/38, 22.2 min) so the +411K edges propagated into the
+  power/influence/interlock views (mv_board_interlocks, mv_person_influence, mv_revolving_door,
+  mv_entity_power_index, mv_person_entity_network — now reflect the dense people layer).
+- [x] **`/leverage` iter 9 (docs/leverage-map.md)** — the +330K person edges REVIVED the iter-2 person-facet
+  dead lead. Added OP11–OP14 (all latent/green): OP11 "Connectors" screen surfacing mv_board_interlocks;
+  OP13 supplier↔justice director bridges (5,509, best quadrant); OP12 shared supplier-directors (1,849);
+  OP14 director-is-donor COI (1,222).
+- [!] **KEY DATA-QUALITY FINDING — person homonym collisions.** Person entities are name-keyed
+  (`GS-PERSON-<slug>`), so common names merge many people into one node: mv_board_interlocks head is poisoned
+  (101 nodes >50 boards, e.g. "Mark Smith"=714; max board_seats 744). BUT **93.5% (37,164) sit at a plausible
+  2–10 boards** — the long tail is real; only the ranking head is fake. Logged as the "DATA-QUALITY GATE" in
+  the leverage map. Real fix = **person disambiguation** (ABN/co-occurrence) — a new high-value OP (a deepen).
+- [x] **`/polish` collision guard — SHIPPED as PR #90** (`fix/people-leaderboard-homonym-guard`, commit
+  `2b73ac7`; tsc clean, SQL-verified, NOT screen-verified). Capped the two ranked people leaderboards at
+  `board_count/board_seats <= 10` (named const `MAX_PLAUSIBLE_BOARDS`) so megamerges stay off the default
+  view: `apps/web/src/app/api/data/person/route.ts` (top-people query) +
+  `apps/web/src/app/api/data/board-power/route.ts` (conditions). Search/profile modes left unchanged
+  (intentional lookups). PR also carries the leverage-map iter-9 updates. Screen-verification deferred to
+  the polish phase (NEXT #1).
+- **Polish ranking note:** `max_influence_score` is board-count-dominated (everyone at cap ties ~214) — the
+  leaderboard should really rank by cross-system MONEY/breadth, not seat count. Aesthetic-polish finding.
+
+### NEXT (resume here):
+1. [x] **Screen-verify the guard live** — DONE. gsql + live API + screenshot all confirm: default `/person`
+   leaderboard shows board_count 9–10 only, NO Mark-Smith-714. (Required the PR #91 restore first — the page
+   was 500ing.) Screenshot also confirmed NEXT #3's ranking problem (see below).
+2. [x] **Merged PR #91 (exec_sql restore) then #90 (guard + re-rank)** — both squash-merged, branches
+   deleted, main `9942c11`, restore confirmed preserved on main (5 markers, 0 old-blocked). DONE.
+3. [x] **Ranking re-rank — DONE** (commit `3e236f4` on the #90 branch). The board-count tie (everyone at 214)
+   is fixed: `/api/data/person` now orders by `financial_system_count DESC` (breadth) then total cross-system
+   dollars (proc+justice+donations; total_contracts is a COUNT, excluded), exposes `total_money`; `/person`
+   page swapped the constant "Influence" column for "Total $" + corrected the subtitle; `/power` Board Power
+   Leaderboard sorts by `total_org_revenue` not capped `board_seats`. Verified data+API+screenshot — catherine
+   taylor ($2.7B/3 systems) rose rank 9→4, seats now vary down the board. tsc clean.
+3b. **Board-connectors guard NOT needed — VERIFIED** (gsql, 2026-06-19): `/api/power/accountability`
+   board-connectors query is constrained to the top-100 power entities AND joins on `company_abn` (ABN-keyed,
+   not name-keyed person nodes), so homonyms don't merge — actual max `board_count` = **2**. The earlier "still
+   leaks megamerges" note was an unverified assumption; corrected. Only the two RANKED leaderboards were
+   megamerge-prone, both guarded in #90. (Profile/search left uncapped by design — intentional lookups.)
+3c. **Remaining NEXT-#3 nice-to-haves (not done, low pri):** (a) "ambiguous name — not disambiguated" flag on
+   search/profile; (b) lowercase display names like "catherine taylor" (MV uses `min(person_name_display)`).
+   Residual risk: money columns can still be homonym-inflated under 10 boards (real fix = NEXT #4 disambiguation).
+4. **New OP: person disambiguation** (the real fix; split homonyms by ABN/co-occurrence) — biggest unlock for
+   the whole people/probity play.
+5. **[BIG follow-up, tracked] Migrate 99 routes off string-SQL `exec_sql`** to typed Supabase reads / safe
+   RPCs/views — the proper fix the `02213dd` block intended. PR #91 is the band-aid (read-only restore). This
+   is the durable fix: removes the RLS-bypass + string-interpolation surface entirely. Large (99 files); scope
+   per-section. The frontend inventory is `thoughts/shared/handoffs/frontend-data-audit/frontend-inventory.md`.
+- **Git state:** ALL SHIPPED. #90 + #91 squash-merged to `main` (`9942c11`), both branches deleted, local
+  main synced & clean. **Prod verified recovered** (5/5 data routes 200; guard + re-rank live). Only this
+  ledger is uncommitted (working handoff; survives `/clear` — SessionStart reads the file).
+
+### ▶ NEXT SESSION KICKOFF PROMPT (copy-paste to start NEXT #4 — person disambiguation)
+> Resume the people/probity workstream on CivicGraph. The homonym GUARD + leaderboard re-rank shipped last
+> session (PRs #90/#91 merged, main `9942c11`, prod verified). Now the REAL fix: **person disambiguation** —
+> split name-collision megamerges into distinct real-person identities.
+>
+> **Problem:** person entities are name-keyed (`GS-PERSON-<slug>` / `mv_person_influence.person_name_normalised`),
+> so common names merge many distinct people into one node ("Mark Smith" = 714 boards, "Jodi Kennedy" = 744).
+> 93.5% (37,164) sit at a plausible 2–10 boards (real serial directors) — only the ranking head is fake. The
+> guard (cap board_count ≤ 10 on ranked leaderboards) is a band-aid; money columns can still be homonym-inflated
+> under 10 boards.
+>
+> **Data:** `person_roles` (ABN-keyed directorships: person_name, company_abn, appointment_date,
+> cessation_date), `mv_person_entity_network` (person→entity + financial footprint), `mv_person_influence`
+> (per-name aggregates), `gs_entities` (state/sector/postcode), `entity_identifiers` (any person ids).
+>
+> **Approach to evaluate (don't pre-commit):** cluster a name's connections into distinct people via
+> co-occurrence — shared boards/entities, ABN/identifier linkage, tenure temporal overlap, geography,
+> role/sector patterns. Likely a `scripts/` data-modeling job → stable person-identity key + confidence,
+> materialised into new column(s)/table, then re-point the person MVs at it.
+>
+> **Guardrails:** additive/non-destructive (Ben's standing rule); verify by REPRODUCTION not assumption; build
+> the verification gate BEFORE any scoring ([[feedback_data_quality_before_scoring]]); scope on ONE
+> high-collision name first ("Mark Smith"), prove the split is correct, then generalise; don't break the shipped
+> guard/leaderboards.
+>
+> **First step:** scope the data — distinct person_name count, board-count distribution, secondary-key coverage
+> per role (ABN/dates/geography), and how separable "Mark Smith" is by co-occurrence. Report before designing.
+>
+> **Budget/stop/fallback (xhigh design task):** stop when you have a validated split approach proven on 1–2
+> megamerge names + a written plan; do NOT run a repo-wide migration without Ben's go (separate ship). If no
+> clean signal, return what IS vs ISN'T separable — don't force it.
+>
+> Context: this ledger; memory `[[project_build_entity_graph_setbased]]`, `[[solution_exec_sql_app_block]]`.
+> Optional low-pri warm-ups: #3c (ambiguous-name flag, lowercase display names).
 
 ### Context for that task (verified this session)
 - Only dedup index: `idx_gs_rel_dedup UNIQUE (source_entity_id, target_entity_id, relationship_type, dataset, COALESCE(source_record_id,''::text))`. `gs_relationships_pkey` on `id`.
