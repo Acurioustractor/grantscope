@@ -55,6 +55,9 @@ async function main() {
       .select('id, recipient_name, recipient_abn, program_name, amount_dollars, state, financial_year')
       .not('recipient_abn', 'is', null)
       .gt('amount_dollars', 0)
+      // Stable order by PK is REQUIRED for .range() pagination — without it PostgREST can return
+      // rows in inconsistent order across pages, silently overlapping/dropping ~35% (the #82 bug).
+      .order('id', { ascending: true })
       .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
     if (error) { log(`Error: ${error.message}`); process.exit(1); }
