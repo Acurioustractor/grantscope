@@ -18,6 +18,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { spawnSync } from 'node:child_process';
 import { resolveBin, withRetry } from './lib/agent-resilience.mjs';
+import { edgeDataset } from './lib/graph-edge-datasets.mjs';
 import 'dotenv/config';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -663,99 +664,30 @@ async function buildEntities() {
 
 // ─── Phase 2a: Political donations → relationships ──────────────────────────
 
+// NB: the SQL for these 4 phases lives in scripts/lib/graph-edge-datasets.mjs — the
+// single source of truth shared with check-graph-completeness.mjs, so the gate's
+// "expected" count can never drift from what we actually insert. Edit the SQL there.
+
 async function buildDonationRelationships() {
   log('\nPhase 2a: Political donation relationships...');
-  // donor ABN: real column first, else donor_entity_matches name→ABN (one ABN per name key,
-  // mirroring the old last-write-wins JS Map). party: the political_party entity whose name
-  // equals donation_to — equivalent to the old AU-NAME-<hash> lookup minus hash collisions
-  // (a name-equality join can never resolve to a wrongly-collided party, the JS path could).
-  await buildRelationshipsSetBased(
-    'Donation relationships',
-    '(source_entity_id, target_entity_id, relationship_type, amount, year, dataset, source_record_id, confidence, properties)',
-    `SELECT
-       donor.id, party.id, 'donation', d.amount,
-       NULLIF(split_part(d.financial_year, '-', 1), '')::int,
-       'aec_donations', d.id::text, 'registry',
-       jsonb_build_object(
-         'financial_year', d.financial_year,
-         'return_type',    d.return_type,
-         'receipt_type',   d.receipt_type,
-         'donation_date',  d.donation_date)
-     FROM political_donations d
-     LEFT JOIN donor_map dm ON dm.key = upper(trim(d.donor_name))
-     JOIN gs_entities donor
-       ON donor.gs_id = 'AU-ABN-' || regexp_replace(coalesce(NULLIF(trim(d.donor_abn), ''), dm.matched_abn), '\\s', '', 'g')
-     JOIN gs_entities party
-       ON party.entity_type = 'political_party'
-      AND upper(trim(party.canonical_name)) = upper(trim(d.donation_to))`,
-    // prelude: materialise + index the donor name→ABN map so the join above is an index scan,
-    // not a nested loop over an unindexed Materialize node (~4B ops → runaway).
-    `CREATE TEMP TABLE donor_map AS
-       SELECT DISTINCT ON (key) key, matched_abn FROM (
-         SELECT upper(trim(donor_name)) AS key, matched_abn
-           FROM donor_entity_matches WHERE matched_abn IS NOT NULL
-         UNION ALL
-         SELECT upper(trim(donor_name_normalized)), matched_abn
-           FROM donor_entity_matches
-           WHERE donor_name_normalized IS NOT NULL AND matched_abn IS NOT NULL
-       ) z ORDER BY key;
-     CREATE INDEX ON donor_map(key);
-     ANALYZE donor_map;`,
-  );
+  const d = edgeDataset('aec_donations');
+  await buildRelationshipsSetBased(d.label, d.cols, d.selectSql, d.prelude);
 }
 
 // ─── Phase 2b: AusTender contracts → relationships ──────────────────────────
 
 async function buildContractRelationships() {
   log('\nPhase 2b: Contract relationships...');
-  // buyer: AU-GOV-<buyer_id> (falls back to buyer_name, matching makeGsId({buyer_id: id||name})).
-  // supplier: AU-ABN-<abn>. source_record_id mirrors `c.ocid || c.id` (every row has an ocid).
-  await buildRelationshipsSetBased(
-    'Contract relationships',
-    '(source_entity_id, target_entity_id, relationship_type, amount, year, start_date, end_date, dataset, source_record_id, confidence, properties)',
-    `SELECT
-       buyer.id, supplier.id, 'contract', c.contract_value,
-       coalesce(extract(year FROM c.contract_start)::int, extract(year FROM c.date_published)::int),
-       c.contract_start, c.contract_end,
-       'austender', coalesce(NULLIF(c.ocid, ''), c.id::text), 'registry',
-       jsonb_build_object(
-         'category',           c.category,
-         'procurement_method', c.procurement_method,
-         'buyer_name',         c.buyer_name,
-         'supplier_name',      c.supplier_name)
-     FROM austender_contracts c
-     JOIN gs_entities buyer
-       ON buyer.gs_id = 'AU-GOV-' || coalesce(NULLIF(c.buyer_id, ''), c.buyer_name)
-     JOIN gs_entities supplier
-       ON supplier.gs_id = 'AU-ABN-' || regexp_replace(c.supplier_abn, '\\s', '', 'g')
-     WHERE c.supplier_abn IS NOT NULL
-       AND regexp_replace(c.supplier_abn, '\\s', '', 'g') ~ '^[0-9]{11}$'`,
-  );
+  const d = edgeDataset('austender');
+  await buildRelationshipsSetBased(d.label, d.cols, d.selectSql, d.prelude);
 }
 
 // ─── Phase 2b2: Grant opportunities → relationships ─────────────────────────
 
 async function buildGrantRelationships() {
   log('\nPhase 2b2: Grant relationships...');
-  // self-ref edge on the foundation entity (foundation offers grant); amount = max || min.
-  await buildRelationshipsSetBased(
-    'Grant relationships',
-    '(source_entity_id, target_entity_id, relationship_type, amount, dataset, source_record_id, confidence, properties)',
-    `SELECT
-       f_ent.id, f_ent.id, 'grant', coalesce(g.amount_max, g.amount_min),
-       'grant_opportunities', g.id::text, 'registry',
-       jsonb_build_object(
-         'grant_name', g.name,
-         'categories', array_to_string(g.categories, ', '),
-         'closes_at',  g.closes_at,
-         'provider',   g.provider)
-     FROM grant_opportunities g
-     JOIN foundations f
-       ON f.id = g.foundation_id AND f.acnc_abn IS NOT NULL
-     JOIN gs_entities f_ent
-       ON f_ent.gs_id = 'AU-ABN-' || regexp_replace(f.acnc_abn, '\\s', '', 'g')
-     WHERE g.foundation_id IS NOT NULL`,
-  );
+  const d = edgeDataset('grant_opportunities');
+  await buildRelationshipsSetBased(d.label, d.cols, d.selectSql, d.prelude);
 }
 
 // ─── Phase 2c: Cross-registry links ──────────────────────────────────────────
@@ -763,23 +695,8 @@ async function buildGrantRelationships() {
 async function buildCrossRegistryLinks() {
   log('\nPhase 2c: Cross-registry links...');
   log('  Building foundation → parent company links...');
-  // parent matched by exact (case-insensitive) canonical_name = parent_company, mirroring the
-  // old nameIdMap.get(parent_company.toUpperCase()). DISTINCT ON keeps one parent per foundation
-  // (the JS map held a single id per name) — deterministic by parent.id.
-  await buildRelationshipsSetBased(
-    'Cross-registry links',
-    '(source_entity_id, target_entity_id, relationship_type, dataset, source_record_id, confidence, properties)',
-    `SELECT DISTINCT ON (f.acnc_abn)
-       parent.id, f_ent.id, 'subsidiary_of', 'foundations', f.acnc_abn, 'reported',
-       jsonb_build_object('parent_company', f.parent_company)
-     FROM foundations f
-     JOIN gs_entities f_ent
-       ON f_ent.gs_id = 'AU-ABN-' || regexp_replace(f.acnc_abn, '\\s', '', 'g')
-     JOIN gs_entities parent
-       ON upper(parent.canonical_name) = upper(f.parent_company)
-     WHERE f.parent_company IS NOT NULL AND f.acnc_abn IS NOT NULL
-     ORDER BY f.acnc_abn, parent.id`,
-  );
+  const d = edgeDataset('foundations');
+  await buildRelationshipsSetBased(d.label, d.cols, d.selectSql, d.prelude);
 }
 
 // ─── Phase 3: Refresh materialised views ─────────────────────────────────────

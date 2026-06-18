@@ -673,6 +673,14 @@ export const AGENTS = {
     timeoutMs: 3_600_000,
     dependencies: [],
   },
+  'check-graph-completeness': {
+    command: ['node', '--env-file=.env', 'scripts/check-graph-completeness.mjs'],
+    displayName: 'Check Graph Completeness',
+    category: 'graph',
+    defaultPriority: 4, // run after build-entity-graph (priority 3)
+    timeoutMs: 300_000,
+    dependencies: ['build-entity-graph'],
+  },
   'resolve-donor-entities': {
     command: ['node', '--env-file=.env', 'scripts/resolve-donor-entities.mjs'],
     displayName: 'Resolve Donor Entities',
