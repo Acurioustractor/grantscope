@@ -94,7 +94,7 @@ export function PowerPageClient() {
     fetch('/api/power/foundations').then(r => r.json()).then(d => {
       if (!d.error) setFoundations(d);
     }).catch(() => {});
-    fetch('/api/data/board-power?limit=50&min_seats=3').then(r => r.json()).then(d => {
+    fetch('/api/data/board-power?limit=50&min_seats=3&sort=total_org_revenue').then(r => r.json()).then(d => {
       if (!d.error) {
         setBoardPower(d.results || []);
         setBoardPowerTotal(d.total || 0);

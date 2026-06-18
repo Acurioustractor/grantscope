@@ -5,11 +5,12 @@
 > connections — ones we already have the data for but aren't exploiting. **Connect/deepen, never widen**
 > (widening is paused). Every row is grounded in a coverage count. Re-verify before acting.
 
-**Inventory snapshot:** 2026-06-08 · `gs_entities` 598K · `austender_contracts` 810K · `justice_funding`
-157K · `oric_corporations` 7.4K · 60+ MVs (all 34 nightly MVs refreshed clean **2026-06-08 10:04 AEST —
-fresh**; root cause of the 38-day staleness was a 120s role-level `statement_timeout`, fixed via
-`ALTER ROLE postgres … = 0`, cron self-heals tonight). Spine keys: ABN · gs_entity_id · postcode · lga ·
-person · intervention_id.
+**Inventory snapshot:** 2026-06-18 · `gs_entities` ~606K · `gs_relationships` **2,370,061** (+411,389 today:
+justice grant +81,493 → 138,123; person board/role +329,896 → 334,982 via PR #89). **All 38 MVs refreshed
+clean 2026-06-18 07:42 AEST.** The person/board layer went **5,086 → 334,982 edges (65×)** — which REVIVES
+the iter-2 person-facet dead lead (was "built-but-hollow, 4/2 rows"). See **Person facet REVIVED (iter 9)**
+below. Spine keys: ABN · gs_entity_id · postcode · lga · **person (now dense)** · intervention_id.
+(Prior snapshot 2026-06-08: `austender_contracts` 810K · `justice_funding` 157K · `oric_corporations` 7.4K.)
 
 **Score = readiness × alignment × novelty** (see `references/method.md`). Highest first.
 
@@ -35,6 +36,64 @@ All three are **evidence-depth** plays — the wedge's stated #1 tie-breaker ("e
 > of two. Fewer rows (724 / 265), strictly deeper evidence. Per the wedge ("depth beats row count"), OP7 is
 > a candidate to *replace* OP3 in the headline as the premium shortlist; OP3 stays as the broad tier. OP8
 > ships the same play for the Indigenous axis (**"Indigenous triple-proof"** badge, strongest-wins over OP1).
+
+---
+
+## Person facet REVIVED (iter 9 — 2026-06-18, post +330K person-edge recovery)
+
+**The dead lead is alive.** Iter 2 logged the person facet as a dead lead: board→contractor/donor was
+"built-but-hollow, 4 rows / 2 rows … sparse person↔entity linkage." That sparsity was the *bug* fixed by
+PR #89 — person board/role edges went **5,086 → 334,982 (65×)**. Re-mined; every row below is grounded in a
+post-recovery count. This is the first facet that surfaces **PEOPLE as the connective tissue** between the
+funding systems — the procurement-probity / accountability angle the entity-only layer couldn't reach.
+
+- **OP11 — "The Connectors" people/power screen (surface `mv_board_interlocks`).** Datasets:
+  `mv_board_interlocks` (person × org boards × procurement$/justice$/donation$) via gs_entity_id/person.
+  Serves: **G1 (evidence/probity) ∩ G3/G4 (justice$ + community-controlled flag) — best quadrant.** Why
+  valuable: a freshly-refreshed, rich per-person interlock dataset — **39,757 interlocked people** with
+  `board_count, organisations[], total_procurement_dollars, total_justice_dollars, total_donation_dollars,
+  total_power_score, interlock_score, connects_community_controlled` — and **nothing surfaces it.** Biggest
+  plumbing-vs-storefront gap in the estate: the data is computed, ranked, fresh; it just needs a UI.
+  Evidence: 39,757 rows, MV built+fresh 2026-06-18. State: **latent (MV ready, no surface).** Effort: **S–M**
+  (surface an existing MV). Wedge: **green**. ← **THE `/polish` target.**
+
+- **OP13 — Cross-system director bridges: supplier ↔ justice-funded org (best quadrant).** Datasets:
+  `gs_relationships(person_roles)` × `(austender)` × `(justice_funding)` via gs_entity_id. Serves:
+  **G3∩G1 (best quadrant).** Why valuable: **5,509 directors sit on the board of BOTH a federal supplier
+  AND a justice-funded org** — the people who literally connect the procurement system to justice funding.
+  The accountability-graph headline; "follow the person across the money." Evidence: 5,509. State: **latent.**
+  Effort: M. Wedge: **green** (per-supplier due-diligence) / mission accountability strand.
+
+- **OP12 — Director interlocks across federal suppliers (concentration / probity radar).** Datasets:
+  `person_roles` × `austender` via gs_entity_id (filter `mv_board_interlocks` to procurement>0 & board_count≥2).
+  Serves: **G1 (tender-tools — the risk leg).** Why valuable: **1,849 people sit on ≥2 federal-supplier
+  boards** — exactly what a probity officer needs ("do these 'competing' bidders share directors?").
+  **Overturns the iter-2 dead lead** (`mv_board_contractor_links` was 4 rows → 1,849 real interlocks).
+  Evidence: 1,849. State: **latent.** Effort: S. Wedge: **green**.
+
+- **OP14 — Director-is-donor conflict flag (person-level COI).** Datasets: `person_roles` ×
+  `political_donations` via normalised name. Serves: **G1 (tender-tools risk).** Why valuable: **1,222
+  directors are also political donors** — deepens OP9 (which was *entity*-level, fired only on big corporates)
+  to the PERSON level: a supplier whose *director* donates even when the org doesn't. The board data is
+  ACNC/ORIC-sourced (NFP-heavy), so unlike OP9 this may reach the wedge's SE supply base. Evidence: 1,222
+  name-matched. State: **latent.** Effort: M. Wedge: **green** — **verify-next:** which sector the 1,222 fall
+  in (homonym risk on name-only match; needs ABN/entity disambiguation before it's buyer-grade).
+
+> **Coverage honesty:** only **3,097 of 51,019 federal suppliers (6%) have a board layer** — board data is
+> ACNC/ORIC-sourced, so it covers the **NFP/charity/SE supplier subset**, not commercial vendors. Within that
+> subset the interlock signals above are dense and real. An *evidence-depth* play on the wedge's core supply
+> base, not a universal flag. (ASIC director data would widen the base — paused, out of scope.)
+
+> **⚠ DATA-QUALITY GATE (blocks naive surfacing — `feedback_data_quality_before_scoring`):** person entities
+> are keyed by normalised NAME (`GS-PERSON-<slug>`), so every common name collapses distinct people into one
+> node. `mv_board_interlocks` head is poisoned: **101 nodes have >50 boards** (e.g. "Mark Smith" = 714 boards),
+> **2,492 more at 6–50** — homonym megamerges, not real brokers. **The good news: 37,164 (93.5%) sit at a
+> plausible 2–5 boards.** So the LONG TAIL is real but a `ORDER BY interlock_score DESC` leaderboard shows
+> fakes first. Implication for OP11–OP14: the counts (1,849 / 5,509 / 1,222) are directionally right but
+> inflated at the head; **any surface or score must exclude/flag high-board-count nodes as
+> "ambiguous name — not disambiguated"** before it's buyer-grade. NOT introduced by PR #89 — a latent person-
+> resolution limit that density made visible. Real fix: person disambiguation (ABN/co-occurrence), a deepen
+> not a widen → a new high-value OP in its own right. Cheap interim: cap board_count + a collision flag.
 
 ---
 
@@ -214,6 +273,16 @@ All three are **evidence-depth** plays — the wedge's stated #1 tie-breaker ("e
 
 ---
 
+<!-- LOOP STATE: iter 9 done (2026-06-18) — PERSON FACET REVIVED by new DATA (the exact resume trigger the
+     iter-8 note named: "ONLY resume when genuinely new DATA lands"). PR #89 took person board/role edges
+     5,086 → 334,982 (65×) + justice grants → 138,123; all 38 MVs refreshed. Re-mined the person facet that
+     iter 2 had logged DEAD (sparse linkage). Added OP11-OP14 (all latent, all green): OP11 "The Connectors"
+     screen surfacing mv_board_interlocks (39,757 ppl, rich schema, ZERO surface) = THE /polish target;
+     OP13 supplier↔justice director bridges (5,509, best quadrant); OP12 shared directors across suppliers
+     (1,849, overturns the iter-2 dead lead); OP14 director-is-donor COI (1,222, verify sector next).
+     Coverage caveat logged: 6% of suppliers have a board layer (NFP/SE subset). NOT auto-waking — Ben chained
+     /polish next (build/surface OP11). Verify-next if leverage resumes: OP14 sector split; person→postcode
+     (where do the connectors cluster). Exit = Ben. -->
 <!-- LOOP STATE: iter 8 done — LOOP COMPLETE. Mined the last facet G2 (claim-magnet) = THIN (2 targets).
      That's 2 consecutive empty iters (7 VIC cross-jurisdiction, 8 G2). ALL 5 join keys + ALL 5 goals now
      mined. Map final: Top-3 synthesis + OP1-OP10 + 5 dead leads. Builds shipped this session: cron fix,
