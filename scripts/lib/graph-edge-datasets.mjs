@@ -133,7 +133,91 @@ export const GRAPH_EDGE_DATASETS = [
      WHERE f.parent_company IS NOT NULL AND f.acnc_abn IS NOT NULL
      ORDER BY f.acnc_abn, parent.id`,
   },
+  {
+    dataset: 'justice_funding',
+    relationshipType: 'grant',
+    label: 'Justice funding relationships',
+    sourceTable: 'justice_funding',
+    cols: '(source_entity_id, target_entity_id, relationship_type, amount, year, dataset, source_record_id, properties)',
+    // The program ENTITY layer (gs_entities entity_type='program') is created/refreshed by
+    // JUSTICE_PROGRAM_ENSURE_SQL (below), run by build-entity-graph's justice phase and the bridge
+    // BEFORE the edge insert. It is deliberately NOT in this prelude, so the completeness gate
+    // (which executes preludes to compute "expected") stays strictly read-only.
+    //
+    // Why prog_map + the build-side guard: the program layer accreted two gs_id formats
+    // (old GS-PROG-<slug60>-<state>, new GS-PROG-<slug80>-<md5x4>-<state>) plus slug collisions,
+    // so the ~56K pre-existing edges are split across nodes with NO single clean (name,state)→node
+    // mapping. prog_map collapses each program to ONE node (preferring the node that already carries
+    // justice edges, then old/hash-less format, then lowest id) so newly built edges stay coherent.
+    // The completeness gate measures this FULL derivation; the WRITE additionally appends
+    // JUSTICE_BUILD_GUARD so it only touches payments with no edge yet — making re-runs idempotent
+    // and adding ZERO duplicates regardless of which node a payment's prior edge happens to sit on.
+    prelude: `CREATE TEMP TABLE jf_prog_map AS
+       SELECT DISTINCT ON (canonical_name, norm_state) canonical_name, norm_state, id AS prog_id
+         FROM (
+           SELECT e.id, e.canonical_name,
+                  coalesce(NULLIF(trim(e.state),''),'NAT') AS norm_state,
+                  (e.gs_id ~ '-[0-9a-f]{4}-[a-z]{2,3}$') AS new_fmt,
+                  EXISTS (SELECT 1 FROM gs_relationships r
+                           WHERE r.source_entity_id = e.id
+                             AND r.dataset='justice_funding' AND r.relationship_type='grant') AS has_edges
+             FROM gs_entities e WHERE e.entity_type='program'
+         ) z
+        ORDER BY canonical_name, norm_state, has_edges DESC, new_fmt ASC, id ASC;
+       CREATE INDEX ON jf_prog_map(canonical_name, norm_state);
+       ANALYZE jf_prog_map;`,
+    // source = canonical program node (prog_map); target = recipient matched by exact ABN.
+    // year mirrors parseInt(financial_year): leading digits of e.g. '2016-17' / '2016-ongoing'.
+    selectSql: `SELECT
+       pm.prog_id AS source_entity_id, rec.id AS target_entity_id, 'grant' AS relationship_type,
+       jf.amount_dollars,
+       NULLIF(substring(jf.financial_year from '^[0-9]+'),'')::int,
+       'justice_funding', jf.id::text AS source_record_id,
+       jsonb_build_object('program', jf.program_name, 'state', jf.state, 'recipient', jf.recipient_name)
+     FROM justice_funding jf
+     JOIN gs_entities rec ON rec.abn = jf.recipient_abn
+     JOIN jf_prog_map pm ON pm.canonical_name = jf.program_name
+                        AND pm.norm_state    = coalesce(NULLIF(trim(jf.state),''),'NAT')
+     WHERE jf.recipient_abn IS NOT NULL AND jf.amount_dollars > 0`,
+  },
 ];
+
+/**
+ * Additive write-guard for the justice build: only emit edges for payments that have NO existing
+ * justice edge. Because the historical program-node layer is split across two gs_id formats, a
+ * payment's prior edge may sit on a different node than prog_map now picks; this guard ensures the
+ * write never creates a second (duplicate) edge for an already-edged payment — so re-runs add zero
+ * duplicates and are fully idempotent. The completeness gate measures the bare `selectSql` (the full
+ * derivation); ONLY the WRITE path appends this guard, right before `ON CONFLICT … DO NOTHING`.
+ */
+export const JUSTICE_BUILD_GUARD = `
+     AND NOT EXISTS (SELECT 1 FROM gs_relationships y
+                      WHERE y.dataset='justice_funding' AND y.relationship_type='grant'
+                        AND COALESCE(y.source_record_id,'') = jf.id::text)`;
+
+/**
+ * Ensure a program entity exists for every justice (program_name, state) that has none yet.
+ * Brand-new nodes get the collision-resistant new format (slug80 + md5[:4] + state, mirroring
+ * programGsId() in bridge-justice-to-graph.mjs); any existing node (either format) is reused via
+ * the NOT EXISTS guard. Idempotent (ON CONFLICT (gs_id) DO NOTHING). Run BEFORE the justice edge
+ * insert — NOT from the dataset prelude (keeps the gate read-only).
+ */
+export const JUSTICE_PROGRAM_ENSURE_SQL = `
+  INSERT INTO gs_entities (gs_id, canonical_name, entity_type, sector, state, confidence)
+  SELECT DISTINCT
+    'GS-PROG-'
+      || left(regexp_replace(regexp_replace(lower(jf.program_name),'[^a-z0-9]+','-','g'),'(^-|-$)','','g'),80)
+      || '-' || left(md5(jf.program_name),4)
+      || '-' || lower(coalesce(NULLIF(trim(jf.state),''),'NAT')),
+    jf.program_name, 'program', 'government', NULLIF(trim(jf.state),''), 'inferred'
+  FROM justice_funding jf
+  WHERE jf.recipient_abn IS NOT NULL AND jf.amount_dollars > 0
+    AND NOT EXISTS (
+      SELECT 1 FROM gs_entities e
+       WHERE e.entity_type='program'
+         AND e.canonical_name = jf.program_name
+         AND coalesce(NULLIF(trim(e.state),''),'NAT') = coalesce(NULLIF(trim(jf.state),''),'NAT'))
+  ON CONFLICT (gs_id) DO NOTHING;`;
 
 /** Look up one dataset definition by its `dataset` key; throws if unknown. */
 export function edgeDataset(dataset) {

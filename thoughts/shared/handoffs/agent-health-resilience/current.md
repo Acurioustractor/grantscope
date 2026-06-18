@@ -9,17 +9,20 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-06-18 (late) — THREE PRs shipped this session: **#86** (Phase 1d/1e/1i 1000-cap reads + supplier backfill), **#87** (completeness gate — roadmap Phase 2), **#88** (`.order('id')` on two bridge `.range()` reads). All merged. Graph: **603,572 entities · ~1.96M edges**.
+**Updated:** 2026-06-18 (later) — **BRIDGE WRITE-PATH REWRITE DONE (live, uncommitted on `main`).** Both bridges converted to set-based psql `INSERT…SELECT … ON CONFLICT (dedup-expr) DO NOTHING`, sharing the SoT. **justice +81,493 edges (56,630→138,123), gate now OK; person +329,896 edges (5,086→334,982), 333,836 person_roles backfilled.** Graph: **~605,900 entities · 2,370,061 edges** (+411,389 this run). NOT yet committed/PR'd — awaiting Ben's go. Earlier this session: **#86/#87/#88** all merged.
 **Goal:** Make the CivicGraph relationship graph correct, fast, and self-monitoring. Diagnose by REPRODUCTION (never assumption); every fix validated live before claiming done.
 **Branch:** `main` at `ee617a4`. **No open PRs** (#86/#87/#88 all squash-merged, branches deleted). CI green throughout.
 **Test:** `node --check scripts/build-entity-graph.mjs` · dry-run a phase (`--phase=X --dry-run`) · `node --env-file=.env scripts/check-graph-completeness.mjs` (the gate) · reproduce/validate live before claiming done.
 
-### Now — NEXT TASK (decided with Ben: fresh pass after /clear)
-[->] **Convert the two bridge agents' WRITE paths to set-based psql** so they're re-runnable and actually recover the dropped edges. PR #88 fixed their READS (`.order('id')`) but re-running revealed the writes are broken against the dedup index:
-- **`bridge-justice-to-graph.mjs`** — PostgREST `.upsert({onConflict:'…,source_record_id'})` can't match the only dedup index `idx_gs_rel_dedup` (on EXPRESSION `COALESCE(source_record_id,'')`) → **0 created, 99,999 errors** when run live (count still 56,630, no harm). The [[feedback_postgrest_partial_index_upsert]] failure mode.
-- **`bridge-person-roles.mjs`** — plain `.insert()` (no onConflict) fails whole batches on existing-edge unique violations → can't cleanly re-run.
-- **Fix:** rewrite both writes as `INSERT INTO gs_relationships … SELECT … ON CONFLICT (source_entity_id,target_entity_id,relationship_type,dataset,COALESCE(source_record_id,'')) DO NOTHING` via psql (the `buildRelationshipsSetBased` pattern in build-entity-graph). **Elegant bonus:** lift the justice_funding edge SELECT into `scripts/lib/graph-edge-datasets.mjs`, have build-entity-graph build it, and the completeness gate watches it for free (closes part of the gate coverage gap below). Expected recovery: ~20K justice grant edges + the person edges.
-- Validate the usual way: dry-run candidate count, then live, then `check-graph-completeness.mjs` should show justice OK.
+### Now — DONE this session (live, uncommitted). Next: commit + PR (Ben's go).
+[x] **Converted both bridge agents' WRITE paths to set-based psql** — re-runnable, additive, recovered the dropped edges. Files changed (uncommitted on `main`):
+- **`scripts/lib/graph-edge-datasets.mjs`** — added `justice_funding` dataset entry (read-only `jf_prog_map` prelude + canonical edge SELECT) and two write-side exports: `JUSTICE_PROGRAM_ENSURE_SQL` (creates missing `program` entities) + `JUSTICE_BUILD_GUARD` (`NOT EXISTS` additive guard, write-only).
+- **`scripts/build-entity-graph.mjs`** — new `--phase=justice` (program-ensure → guarded set-based edge insert). Included in `all`.
+- **`scripts/bridge-justice-to-graph.mjs`** — rewritten as a thin set-based psql agent sharing the SoT. `--dry-run` counts; live = program-ensure + guarded `INSERT…ON CONFLICT DO NOTHING`. (Old REST `.upsert` couldn't match the COALESCE-expr index → 0 written: the [[feedback_postgrest_partial_index_upsert]] mode.)
+- **`scripts/bridge-person-roles.mjs`** — rewritten set-based, 3 steps (person entities → edges → `person_roles` backfill), all `ON CONFLICT DO NOTHING` / idempotent UPDATE. `--apply` to write.
+- **Why the justice guard:** the program-node layer is historically split (old `GS-PROG-<slug60>-<state>` + new `<slug80>-<md5x4>-<state>` + slug collisions); 55,811 of 56,630 existing edges sit on OLD-format nodes, so NO clean (name,state)→node map matches them all. The `NOT EXISTS (payment already edged)` guard makes the WRITE touch only un-edged payments → 0 new dups, fully re-runnable. The gate measures the FULL derivation (bare selectSql); only the write appends the guard. Person needs no guard (single gs_id format → gs_id join lands on the existing nodes; `ON CONFLICT` dedups the 5,086).
+- **Results (live):** justice +81,493 (gate justice now **138,055 exp / 138,123 act / OK**); person +329,896 (dir 113,419 + member_of 221,563), 333,836 backfilled, 87 residual unlinked (empty-slug/unmatched-ABN). Total edges 2,370,061.
+- **Gate coverage:** justice_funding now watched (was on the gap list). Person NOT gated (would need 2 entries dir+member_of — follow-up). grant_opportunities/foundations still STALE (pre-existing legacy; separate clean-rebuild).
 
 ### Context for that task (verified this session)
 - Only dedup index: `idx_gs_rel_dedup UNIQUE (source_entity_id, target_entity_id, relationship_type, dataset, COALESCE(source_record_id,''::text))`. `gs_relationships_pkey` on `id`.

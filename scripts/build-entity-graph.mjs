@@ -11,6 +11,7 @@
  *   node scripts/build-entity-graph.mjs --phase=donations  # donations only
  *   node scripts/build-entity-graph.mjs --phase=contracts  # contracts only
  *   node scripts/build-entity-graph.mjs --phase=links      # cross-registry links
+ *   node scripts/build-entity-graph.mjs --phase=justice    # justice funding grant edges
  *   node scripts/build-entity-graph.mjs --phase=refresh    # refresh materialized views
  *   node scripts/build-entity-graph.mjs --dry-run          # count only, no writes
  */
@@ -18,7 +19,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { spawnSync } from 'node:child_process';
 import { resolveBin, withRetry } from './lib/agent-resilience.mjs';
-import { edgeDataset } from './lib/graph-edge-datasets.mjs';
+import { edgeDataset, JUSTICE_PROGRAM_ENSURE_SQL, JUSTICE_BUILD_GUARD } from './lib/graph-edge-datasets.mjs';
 import 'dotenv/config';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -699,6 +700,23 @@ async function buildCrossRegistryLinks() {
   await buildRelationshipsSetBased(d.label, d.cols, d.selectSql, d.prelude);
 }
 
+// ─── Phase 2d: Justice funding → relationships ──────────────────────────────
+
+async function buildJusticeRelationships() {
+  log('\nPhase 2d: Justice funding relationships...');
+  const d = edgeDataset('justice_funding');
+  // Program entities (entity_type='program') are derived from justice_funding itself, so create
+  // them here (additive, idempotent) before building the program→recipient grant edges.
+  if (!dryRun) {
+    const out = await runDml('justice program entities', JUSTICE_PROGRAM_ENSURE_SQL);
+    const m = out.match(/INSERT\s+\d+\s+(\d+)/);
+    log(`  Program entities: ${m ? m[1] : '0'} created (existing reused)`);
+  }
+  // WRITE appends the additive guard (only un-edged payments); the completeness gate uses the bare
+  // selectSql (full derivation), so expected can't drift from the canonical join.
+  await buildRelationshipsSetBased(d.label, d.cols, d.selectSql + JUSTICE_BUILD_GUARD, d.prelude);
+}
+
 // ─── Phase 3: Refresh materialised views ─────────────────────────────────────
 
 async function refreshViews() {
@@ -746,6 +764,10 @@ async function main() {
 
   if (phase === 'all' || phase === 'links') {
     await buildCrossRegistryLinks();
+  }
+
+  if (phase === 'all' || phase === 'justice') {
+    await buildJusticeRelationships();
   }
 
   if (phase === 'all' || phase === 'refresh') {

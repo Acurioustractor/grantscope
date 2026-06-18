@@ -1,239 +1,101 @@
 #!/usr/bin/env node
 
 /**
- * Bridge justice_funding → gs_relationships
+ * Bridge justice_funding → gs_relationships (grant edges: program → recipient).
  *
- * Creates program entities for distinct (program_name, state) pairs,
- * then creates funding relationships: program → recipient entity.
- * Uses source_record_id for dedup, so it's safe to run repeatedly.
+ * Set-based via direct psql, in two additive + idempotent steps:
+ *   1. Ensure a `program` entity exists for every (program_name, state) — JUSTICE_PROGRAM_ENSURE_SQL.
+ *   2. Insert program→recipient `grant` edges, guarded so only payments with NO existing justice
+ *      edge are written (JUSTICE_BUILD_GUARD) → re-runs add zero duplicates.
+ *
+ * The edge SELECT, prog_map prelude and the two write helpers live in
+ * scripts/lib/graph-edge-datasets.mjs — the single source of truth shared with build-entity-graph
+ * (which inserts) and check-graph-completeness (which counts). This agent is therefore equivalent to
+ * `build-entity-graph.mjs --phase=justice`, kept standalone so the data-pipeline can run it alone.
+ *
+ * History: the old REST `.upsert({onConflict:'…,source_record_id'})` path could not match the only
+ * dedup index (idx_gs_rel_dedup, on the COALESCE(source_record_id,'') EXPRESSION), so it errored on
+ * every batch (0 written). Set-based psql with `ON CONFLICT (<the expression>) DO NOTHING` is the fix.
  *
  * Usage:
- *   node --env-file=.env scripts/bridge-justice-to-graph.mjs [--dry-run] [--limit=100000]
+ *   node --env-file=.env scripts/bridge-justice-to-graph.mjs [--dry-run]
  */
 
-import { createClient } from '@supabase/supabase-js';
-import { createHash } from 'crypto';
+import { spawnSync } from 'node:child_process';
+import { resolveBin, withRetry } from './lib/agent-resilience.mjs';
+import { edgeDataset, JUSTICE_PROGRAM_ENSURE_SQL, JUSTICE_BUILD_GUARD } from './lib/graph-edge-datasets.mjs';
+import 'dotenv/config';
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const DRY_RUN = process.argv.includes('--dry-run');
-const LIMIT = parseInt(process.argv.find(a => a.startsWith('--limit='))?.split('=')[1] || '100000');
 
-if (!SUPABASE_URL || !SUPABASE_KEY) {
-  console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
-  process.exit(1);
-}
+const PG_PASSWORD = process.env.DATABASE_PASSWORD;
+const PSQL_BIN = resolveBin('psql');
+const PSQL_CONN = [
+  '-h', process.env.PGHOST || 'aws-0-ap-southeast-2.pooler.supabase.com',
+  '-p', process.env.PGPORT || '5432',
+  '-U', process.env.PGUSER || 'postgres.tednluwflfhxyucgwigh',
+  '-d', process.env.PGDATABASE || 'postgres',
+  '-X', '-A', '-t', '-v', 'ON_ERROR_STOP=1',
+];
 
-const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+// Mirrors build-entity-graph's DEDUP_TARGET (the idx_gs_rel_dedup expression).
+const DEDUP_TARGET =
+  "(source_entity_id, target_entity_id, relationship_type, dataset, COALESCE(source_record_id, ''::text))";
 
 function log(msg) {
   console.log(`[${new Date().toISOString()}] ${msg}`);
 }
 
-function slugify(s) {
-  return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 60);
+/** Run one DML/SELECT via psql, retrying transient pooler failures. Returns stdout. */
+async function runDml(label, sql) {
+  if (!PG_PASSWORD) throw new Error('DATABASE_PASSWORD not set — the justice bridge requires direct psql');
+  const stdout = await withRetry(() => {
+    const res = spawnSync(PSQL_BIN, [...PSQL_CONN, '-c', `SET statement_timeout=0;\n${sql}`], {
+      env: { ...process.env, PGPASSWORD: PG_PASSWORD },
+      encoding: 'utf8',
+      maxBuffer: 64 * 1024 * 1024,
+    });
+    if (res.error) throw res.error;
+    if (res.status !== 0) throw new Error((res.stderr || res.stdout || `psql exit ${res.status}`).trim());
+    return res.stdout || '';
+  }, label);
+  return String(stdout);
 }
 
-/** Collision-resistant gs_id: slug-80 + 4-char hash of full name */
-function programGsId(name, state) {
-  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 80);
-  const hash = createHash('md5').update(name).digest('hex').slice(0, 4);
-  return `GS-PROG-${slug}-${hash}-${state.toLowerCase()}`;
+/** Parse the inserted-row count from psql's "INSERT 0 N" command tag. */
+function insertedCount(out) {
+  const m = String(out).match(/INSERT\s+\d+\s+(\d+)/);
+  return m ? m[1] : '0';
 }
 
 async function main() {
-  log(`=== Justice Funding → Graph Bridge ===`);
-  log(`Mode: ${DRY_RUN ? 'DRY RUN' : 'LIVE'}, Limit: ${LIMIT}`);
+  const d = edgeDataset('justice_funding');
+  log(`=== Justice Funding → Graph Bridge (${DRY_RUN ? 'DRY RUN' : 'LIVE'}) ===`);
 
-  // Step 1: Get justice_funding records with ABNs (paginate past 1000 limit)
-  const records = [];
-  let page = 0;
-  const PAGE_SIZE = 1000;
-  while (records.length < LIMIT) {
-    const { data, error } = await db
-      .from('justice_funding')
-      .select('id, recipient_name, recipient_abn, program_name, amount_dollars, state, financial_year')
-      .not('recipient_abn', 'is', null)
-      .gt('amount_dollars', 0)
-      // Stable order by PK is REQUIRED for .range() pagination — without it PostgREST can return
-      // rows in inconsistent order across pages, silently overlapping/dropping ~35% (the #82 bug).
-      .order('id', { ascending: true })
-      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
-
-    if (error) { log(`Error: ${error.message}`); process.exit(1); }
-    if (!data?.length) break;
-    records.push(...data);
-    page++;
-    if (data.length < PAGE_SIZE) break;
-  }
-  log(`Fetched ${records.length} justice_funding records with ABNs (${page} pages)`);
-
-  // Step 2: Get entity IDs for recipient ABNs
-  const uniqueAbns = [...new Set(records.map(r => r.recipient_abn))];
-  log(`Unique recipient ABNs: ${uniqueAbns.length}`);
-
-  const abnToEntity = new Map();
-  for (let i = 0; i < uniqueAbns.length; i += 500) {
-    const batch = uniqueAbns.slice(i, i + 500);
-    const { data: entities } = await db
-      .from('gs_entities')
-      .select('id, abn')
-      .in('abn', batch);
-    for (const e of (entities || [])) {
-      if (!abnToEntity.has(e.abn)) abnToEntity.set(e.abn, e.id);
-    }
-  }
-  log(`Matched ${abnToEntity.size} ABNs to entities`);
-
-  // Step 3: Find or create program entities for distinct (program_name, state) pairs
-  const programKeys = new Set();
-  for (const rec of records) {
-    programKeys.add(`${rec.program_name}|||${rec.state || 'NAT'}`);
-  }
-  log(`Unique programs: ${programKeys.size}`);
-
-  // Look up existing program entities
-  const programToEntity = new Map(); // key → uuid
-  const { data: existingPrograms } = await db
-    .from('gs_entities')
-    .select('id, gs_id, canonical_name, state')
-    .eq('entity_type', 'program');
-
-  // Build lookup from gs_id → entity id
-  const gsIdToEntity = new Map();
-  for (const ep of (existingPrograms || [])) {
-    gsIdToEntity.set(ep.gs_id, ep.id);
-  }
-  // Match program keys to existing entities (try new format, fall back to old)
-  for (const key of programKeys) {
-    const [name, state] = key.split('|||');
-    const newGsId = programGsId(name, state);
-    const oldGsId = `GS-PROG-${slugify(name)}-${state.toLowerCase()}`;
-    if (gsIdToEntity.has(newGsId)) {
-      programToEntity.set(key, gsIdToEntity.get(newGsId));
-    } else if (gsIdToEntity.has(oldGsId)) {
-      programToEntity.set(key, gsIdToEntity.get(oldGsId));
-    }
-  }
-  log(`Found ${programToEntity.size} existing program entities`);
-
-  // Create missing program entities
-  let programsCreated = 0;
-  for (const key of programKeys) {
-    if (programToEntity.has(key)) continue;
-    const [name, state] = key.split('|||');
-    const gsId = programGsId(name, state);
-
-    if (!DRY_RUN) {
-      const { data: inserted, error: insertErr } = await db
-        .from('gs_entities')
-        .insert({
-          gs_id: gsId,
-          canonical_name: name,
-          entity_type: 'program',
-          sector: 'government',
-          state: state === 'NAT' ? null : state,
-          confidence: 'inferred',
-        })
-        .select('id')
-        .single();
-
-      if (insertErr) {
-        if (insertErr.message.includes('duplicate')) {
-          // Already exists, look it up
-          const { data: existing } = await db
-            .from('gs_entities')
-            .select('id')
-            .eq('gs_id', gsId)
-            .single();
-          if (existing) programToEntity.set(key, existing.id);
-        } else {
-          log(`Program insert error for "${name}" (${state}): ${insertErr.message}`);
-        }
-        continue;
-      }
-      programToEntity.set(key, inserted.id);
-    }
-    programsCreated++;
-  }
-  log(`${DRY_RUN ? 'Would create' : 'Created'} ${programsCreated} program entities`);
-
-  // Step 4: Build relationships (program → recipient)
-  let created = 0;
-  let skipped = 0;
-  let errors = 0;
-  const BATCH_SIZE = 50;
-  let batch = [];
-
-  for (const rec of records) {
-    const targetId = abnToEntity.get(rec.recipient_abn);
-    if (!targetId) { skipped++; continue; }
-
-    const programKey = `${rec.program_name}|||${rec.state || 'NAT'}`;
-    const sourceId = programToEntity.get(programKey);
-    if (!sourceId) { skipped++; continue; }
-
-    batch.push({
-      source_entity_id: sourceId,
-      target_entity_id: targetId,
-      relationship_type: 'grant',
-      amount: rec.amount_dollars,
-      year: parseInt(rec.financial_year) || null,
-      dataset: 'justice_funding',
-      source_record_id: String(rec.id),
-      properties: { program: rec.program_name, state: rec.state, recipient: rec.recipient_name },
-    });
-
-    if (batch.length >= BATCH_SIZE) {
-      if (!DRY_RUN) {
-        const { data, error: insertErr } = await db
-          .from('gs_relationships')
-          .upsert(batch, {
-            onConflict: 'source_entity_id,target_entity_id,relationship_type,dataset,source_record_id',
-            ignoreDuplicates: true,
-            count: 'exact',
-          });
-        if (insertErr) {
-          if (errors < 3) log(`Upsert error: ${insertErr.message}`);
-          errors += batch.length;
-        } else {
-          created += batch.length;
-        }
-      } else {
-        created += batch.length;
-      }
-      batch = [];
-    }
+  if (DRY_RUN) {
+    // Count what the guarded write would insert against CURRENT program entities. (Program
+    // creation is skipped in dry-run, so brand-new programs' rows are not yet counted.)
+    const out = await runDml('justice dry-run',
+      `${d.prelude}\nSELECT count(*) FROM (${d.selectSql}${JUSTICE_BUILD_GUARD}) _q;`);
+    const n = out.trim().split('\n').pop() || '?';
+    log(`Would insert ~${n} grant edges (excludes payments whose program entity is not yet created)`);
+    log('=== DRY RUN COMPLETE ===');
+    return;
   }
 
-  // Flush remaining
-  if (batch.length) {
-    if (!DRY_RUN) {
-      const { error: insertErr } = await db
-        .from('gs_relationships')
-        .upsert(batch, {
-          onConflict: 'source_entity_id,target_entity_id,relationship_type,dataset,source_record_id',
-          ignoreDuplicates: true,
-        });
-      if (insertErr) {
-        if (errors < 3) log(`Upsert error (flush): ${insertErr.message}`);
-        errors += batch.length;
-      } else {
-        created += batch.length;
-      }
-    } else {
-      created += batch.length;
-    }
-  }
+  log('Step 1/2: ensuring program entities (additive)...');
+  const pe = await runDml('justice program entities', JUSTICE_PROGRAM_ENSURE_SQL);
+  log(`  Program entities created: ${insertedCount(pe)} (existing reused)`);
 
-  log(`=== COMPLETE ===`);
-  log(`Programs: ${programsCreated} created, ${programToEntity.size} total`);
-  log(`Relationships: ${created} created`);
-  log(`Skipped (no entity or duplicate): ${skipped}`);
-  log(`Errors: ${errors}`);
+  log('Step 2/2: inserting program→recipient grant edges (additive, guarded)...');
+  const ins = await runDml('justice edges',
+    `${d.prelude}\nINSERT INTO gs_relationships ${d.cols}\n${d.selectSql}${JUSTICE_BUILD_GUARD}\nON CONFLICT ${DEDUP_TARGET} DO NOTHING;`);
+  log(`  Grant edges inserted: ${insertedCount(ins)} (existing skipped via ON CONFLICT)`);
+
+  log('=== COMPLETE ===');
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error('Fatal:', err);
   process.exit(1);
 });
