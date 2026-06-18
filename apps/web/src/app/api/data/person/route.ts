@@ -66,7 +66,7 @@ export async function GET(request: Request) {
       // three dollar columns (total_contracts is a COUNT, not $). Identity grain (see header):
       // NOT is_nominee_block drops trustee megamerges, board-count cap backstops un-split mid-size names.
       const { data, error } = await supabase.rpc('exec_sql', {
-        query: `SELECT person_name, person_name_normalised, board_count, entity_types,
+        query: `SELECT identity_key, person_name, person_name_normalised, board_count, entity_types,
                   total_procurement, total_contracts, total_justice, total_donations,
                   influence_score AS max_influence_score, financial_system_count, acco_boards,
                   (coalesce(total_procurement, 0) + coalesce(total_justice, 0) + coalesce(total_donations, 0)) AS total_money
