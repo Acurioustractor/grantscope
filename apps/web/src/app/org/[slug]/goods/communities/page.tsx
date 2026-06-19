@@ -26,7 +26,7 @@ export default async function GoodsCommunitiesHubPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ scope?: string; state?: string; q?: string }>;
+  searchParams: Promise<{ scope?: string; state?: string; q?: string; sort?: string }>;
 }) {
   const { slug } = await params;
   const sp = await searchParams;
@@ -36,11 +36,25 @@ export default async function GoodsCommunitiesHubPage({
   if (!profile) notFound();
 
   const scope = (sp.scope as 'active' | 'lead' | 'all' | 'with_deployments') || 'active';
+  const sort = (sp.sort as 'priority' | 'serve_next') || 'priority';
   const { communities, summary } = await getGoodsCommunitiesHub({
     scope,
     state: sp.state,
     search: sp.q,
+    sort,
   });
+
+  // Sort toggle hrefs that preserve scope / state / search.
+  const baseParams = new URLSearchParams();
+  if (scope !== 'active') baseParams.set('scope', scope);
+  if (sp.state) baseParams.set('state', sp.state);
+  if (sp.q) baseParams.set('q', sp.q);
+  const sortHref = (s: 'priority' | 'serve_next') => {
+    const p = new URLSearchParams(baseParams);
+    if (s !== 'priority') p.set('sort', s);
+    const qs = p.toString();
+    return `/org/${slug}/goods/communities${qs ? `?${qs}` : ''}`;
+  };
 
   return (
     <main className="min-h-screen bg-bauhaus-canvas text-bauhaus-black">
@@ -64,9 +78,9 @@ export default async function GoodsCommunitiesHubPage({
         {/* Summary cells */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
           <Cell label="Communities" value={summary.total} accent />
+          <Cell label="Most disadvantaged (≤D3)" value={summary.high_disadvantage} />
           <Cell label="With deployments" value={summary.with_deployments} />
           <Cell label="With open signals" value={summary.with_open_signals} />
-          <Cell label="With GHL contacts" value={summary.with_ghl} />
           <Cell label="Beds demanded" value={summary.total_beds_demanded} />
           <Cell label="Beds deployed" value={summary.total_beds_deployed} />
         </div>
@@ -91,6 +105,13 @@ export default async function GoodsCommunitiesHubPage({
           ))}
         </div>
 
+        {/* Sort */}
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="font-black uppercase tracking-wider">Sort:</span>
+          <Pill href={sortHref('priority')} active={sort === 'priority'} label="Priority" />
+          <Pill href={sortHref('serve_next')} active={sort === 'serve_next'} label="Serve next (SEIFA × unmet beds)" />
+        </div>
+
         {/* Table */}
         <div className="border-4 border-bauhaus-black bg-white overflow-x-auto">
           <table className="w-full text-xs">
@@ -100,6 +121,7 @@ export default async function GoodsCommunitiesHubPage({
                 <Th>State</Th>
                 <Th>Region / LC</Th>
                 <Th>Priority</Th>
+                <Th>Disadv. / Serve</Th>
                 <Th align="right">Beds (D / Demand)</Th>
                 <Th align="right">Washers (D / Demand)</Th>
                 <Th align="right">Open signals</Th>
@@ -109,7 +131,7 @@ export default async function GoodsCommunitiesHubPage({
             </thead>
             <tbody>
               {communities.length === 0 ? (
-                <tr><td colSpan={9} className="px-3 py-6 text-center text-gray-500">No communities match this filter.</td></tr>
+                <tr><td colSpan={10} className="px-3 py-6 text-center text-gray-500">No communities match this filter.</td></tr>
               ) : (
                 communities.map((c, i) => <Row key={c.id} c={c} alt={i % 2 === 1} orgSlug={slug} />)
               )}
@@ -160,6 +182,11 @@ function Row({ c, alt, orgSlug }: { c: CommunityHubRow; alt: boolean; orgSlug: s
     c.priority === 'active' ? 'bg-bauhaus-yellow' :
     c.priority === 'warm' ? 'bg-bauhaus-canvas' : 'bg-gray-200';
   const deploymentGapBg = c.demand_beds > 0 && c.assets_deployed === 0 ? 'bg-bauhaus-red text-white' : '';
+  const d = c.seifa_irsd_decile;
+  const disadvantageBg = d == null ? '' :
+    d <= 3 ? 'bg-bauhaus-red text-white' :
+    d <= 7 ? 'bg-bauhaus-yellow text-bauhaus-black' :
+    'bg-bauhaus-canvas text-bauhaus-black';
 
   return (
     <tr className={alt ? 'bg-bauhaus-canvas' : ''}>
@@ -176,6 +203,21 @@ function Row({ c, alt, orgSlug }: { c: CommunityHubRow; alt: boolean; orgSlug: s
       </td>
       <td className="border-b border-gray-300 px-2 py-1.5 align-top">
         <span className={`${pBg} px-2 py-0.5 font-mono text-[10px] font-black uppercase tracking-wider`}>{c.priority}</span>
+      </td>
+      <td className="border-b border-gray-300 px-2 py-1.5 align-top">
+        {c.seifa_irsd_decile == null ? (
+          <span className="text-gray-400">—</span>
+        ) : (
+          <span
+            className={`${disadvantageBg} px-1.5 py-0.5 font-mono text-[10px] font-black`}
+            title={`SEIFA IRSD decile ${c.seifa_irsd_decile}/10 (1 = most disadvantaged)`}
+          >
+            D{c.seifa_irsd_decile}
+          </span>
+        )}
+        {c.serve_next_score > 0 && (
+          <div className="mt-0.5 text-[10px] text-gray-600">serve {c.serve_next_score}</div>
+        )}
       </td>
       <td className={`border-b border-gray-300 px-2 py-1.5 align-top text-right ${deploymentGapBg}`}>
         <span className="font-black">{c.assets_deployed}</span>

@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { ACT_FAST_PROFILE, isActSlug, shouldUseFastLocalOrg } from '@/lib/services/fast-local-org';
 import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
 import { getGoodsFunderInsight } from '@/lib/services/goods-funder-insight';
+import { getGoodsRelationshipPower, powerBand, type RelationshipPower } from '@/lib/services/goods-relationship-power';
 import { TEMP_LABEL, temperatureTone, type FunderInsight, type InsightFlag } from '@/lib/services/goods-funder-insight-shared';
 import { relDays, money, moneyShort } from '@/lib/services/goods-engagement-shared';
 import { GoodsSubNav } from '../_components/goods-sub-nav';
@@ -94,7 +95,31 @@ function FramingBlock({ framing }: { framing: FunderInsight['framing'] }) {
   );
 }
 
-function InsightCard({ i }: { i: FunderInsight }) {
+/**
+ * Cross-system power chip — how embedded this funder is across the 7 power
+ * systems, and whether they sit in the revolving-door set. A high-reach yes
+ * carries weight and opens doors; it is also a public profile worth knowing
+ * before we attach the Goods name. Detail on hover. Renders nothing without signal.
+ */
+function PowerChip({ power }: { power: RelationshipPower | null }) {
+  if (!power || power.systemCount < 1) return null;
+  const band = powerBand(power);
+  const tone =
+    band === 'high' ? 'bg-bauhaus-black text-bauhaus-yellow'
+    : band === 'notable' ? 'bg-bauhaus-blue text-white'
+    : 'bg-bauhaus-canvas text-bauhaus-muted';
+  const rd = power.revolvingDoor ? ` · revolving door (${power.vectors.join(', ')})` : '';
+  return (
+    <span
+      className={`px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest ${tone}`}
+      title={`Cross-system reach: ${power.systems.join(', ') || 'none'}${rd}`}
+    >
+      Power {power.systemCount}/7{power.revolvingDoor ? ' · RD' : ''}
+    </span>
+  );
+}
+
+function InsightCard({ i, power }: { i: FunderInsight; power: RelationshipPower | null }) {
   return (
     <div className="flex items-stretch gap-0 border-b border-bauhaus-black/10 last:border-b-0">
       <div className={`w-1.5 shrink-0 ${ATTENTION_BAR[i.attention]}`} aria-hidden />
@@ -110,6 +135,7 @@ function InsightCard({ i }: { i: FunderInsight }) {
                 {f.label}
               </span>
             ))}
+            <PowerChip power={power} />
           </div>
 
           <div className="mt-1 flex flex-wrap items-center gap-2 text-[13px] font-bold text-bauhaus-black">
@@ -188,7 +214,10 @@ export default async function GoodsInsightPage({
   const profile = shouldUseFastLocalOrg() && isActSlug(slug) ? ACT_FAST_PROFILE : await getOrgProfileBySlug(slug);
   if (!profile) notFound();
 
-  const { insights, summary, fetchError } = await getGoodsFunderInsight();
+  const [{ insights, summary, fetchError }, powerMap] = await Promise.all([
+    getGoodsFunderInsight(),
+    getGoodsRelationshipPower(),
+  ]);
   const actNowOnly = filter === 'act-now';
   const shown = actNowOnly ? insights.filter((i) => i.attention === 'act-now') : insights;
 
@@ -265,7 +294,7 @@ export default async function GoodsInsightPage({
           </div>
         ) : (
           <div className="border-4 border-bauhaus-black bg-white">
-            {shown.map((i) => <InsightCard key={i.id} i={i} />)}
+            {shown.map((i) => <InsightCard key={i.id} i={i} power={powerMap.get(i.id) ?? null} />)}
           </div>
         )}
 

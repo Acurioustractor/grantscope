@@ -12,6 +12,11 @@ export type CommunityHubRow = {
   total_demand: number;
   assets_deployed: number;
   land_council: string | null;
+  // SEIFA disadvantage overlay (v_goods_community_priority)
+  seifa_irsd_decile: number | null;   // 1 = most disadvantaged, 10 = least; null if no SEIFA match
+  disadvantage_score: number | null;  // 0..100, decile 1 -> 100
+  unmet_beds: number;                 // GREATEST(demand_beds - assets_deployed, 0)
+  serve_next_score: number;           // unmet beds amplified up to 2x by disadvantage
   open_signals: number;
   reviewing_signals: number;
   actioned_signals: number;
@@ -28,6 +33,7 @@ export type CommunityHubSummary = {
   with_deployments: number;
   with_open_signals: number;
   with_ghl: number;
+  high_disadvantage: number;  // SEIFA IRSD decile <= 3
   total_beds_demanded: number;
   total_beds_deployed: number;
   total_washers_demanded: number;
@@ -56,10 +62,12 @@ export async function getGoodsCommunitiesHub({
   scope = 'active',
   state,
   search,
+  sort = 'priority',
 }: {
   scope?: 'active' | 'lead' | 'all' | 'with_deployments';
   state?: string;
   search?: string;
+  sort?: 'priority' | 'serve_next';
 } = {}): Promise<CommunitiesHubResult> {
   const db = getServiceSupabase();
 
@@ -90,10 +98,11 @@ export async function getGoodsCommunitiesHub({
 
   const ids = communities.map(c => c.id);
 
-  // Signals and buyers per community — parallel chunked fetches
-  const [signals, buyers] = await Promise.all([
+  // Signals, buyers, and SEIFA/serve-next priority per community — parallel chunked fetches
+  const [signals, buyers, priority] = await Promise.all([
     fetchChunked(db, 'goods_procurement_signals', 'community_id, status, actioned_at', ids),
     fetchChunked(db, 'goods_procurement_entities', 'community_id, ghl_contact_id', ids),
+    fetchChunked(db, 'v_goods_community_priority', 'community_id, seifa_irsd_decile, disadvantage_score, unmet_beds, serve_next_score', ids),
   ]);
 
   const sigByCommunity = new Map<string, { open: number; reviewing: number; actioned: number; total: number; last_action: string | null }>();
@@ -121,9 +130,22 @@ export async function getGoodsCommunitiesHub({
     buyerByCommunity.set(cid, cur);
   }
 
+  const priorityByCommunity = new Map<string, { decile: number | null; disadvantage: number | null; unmet: number; serveNext: number }>();
+  for (const p of priority) {
+    const cid = p.community_id;
+    if (!cid) continue;
+    priorityByCommunity.set(cid, {
+      decile: p.seifa_irsd_decile == null ? null : Number(p.seifa_irsd_decile),
+      disadvantage: p.disadvantage_score == null ? null : Number(p.disadvantage_score),
+      unmet: Number(p.unmet_beds) || 0,
+      serveNext: Number(p.serve_next_score) || 0,
+    });
+  }
+
   const rows: CommunityHubRow[] = communities.map(c => {
     const sig = sigByCommunity.get(c.id) || { open: 0, reviewing: 0, actioned: 0, total: 0, last_action: null };
     const buy = buyerByCommunity.get(c.id) || { mapped: 0, ghl_linked: 0 };
+    const pri = priorityByCommunity.get(c.id) || { decile: null, disadvantage: null, unmet: 0, serveNext: 0 };
     return {
       id: c.id,
       community_name: c.community_name,
@@ -136,6 +158,10 @@ export async function getGoodsCommunitiesHub({
       total_demand: (Number(c.demand_beds) || 0) + (Number(c.demand_washers) || 0),
       assets_deployed: Number(c.assets_deployed) || 0,
       land_council: c.land_council,
+      seifa_irsd_decile: pri.decile,
+      disadvantage_score: pri.disadvantage,
+      unmet_beds: pri.unmet,
+      serve_next_score: pri.serveNext,
       open_signals: sig.open,
       reviewing_signals: sig.reviewing,
       actioned_signals: sig.actioned,
@@ -146,14 +172,23 @@ export async function getGoodsCommunitiesHub({
     };
   });
 
-  // Default sort: priority (lead first) → demand desc → name
-  const priorityRank: Record<string, number> = { lead: 4, active: 3, warm: 2, monitor: 1, background: 0 };
-  rows.sort((a, b) => {
-    const pr = (priorityRank[b.priority] || 0) - (priorityRank[a.priority] || 0);
-    if (pr !== 0) return pr;
-    if (b.total_demand !== a.total_demand) return b.total_demand - a.total_demand;
-    return (a.community_name || '').localeCompare(b.community_name || '');
-  });
+  if (sort === 'serve_next') {
+    // Serve-next: SEIFA-weighted unmet demand desc → demand desc → name
+    rows.sort((a, b) => {
+      if (b.serve_next_score !== a.serve_next_score) return b.serve_next_score - a.serve_next_score;
+      if (b.total_demand !== a.total_demand) return b.total_demand - a.total_demand;
+      return (a.community_name || '').localeCompare(b.community_name || '');
+    });
+  } else {
+    // Default sort: priority (lead first) → demand desc → name
+    const priorityRank: Record<string, number> = { lead: 4, active: 3, warm: 2, monitor: 1, background: 0 };
+    rows.sort((a, b) => {
+      const pr = (priorityRank[b.priority] || 0) - (priorityRank[a.priority] || 0);
+      if (pr !== 0) return pr;
+      if (b.total_demand !== a.total_demand) return b.total_demand - a.total_demand;
+      return (a.community_name || '').localeCompare(b.community_name || '');
+    });
+  }
 
   const summary: CommunityHubSummary = {
     total: rows.length,
@@ -162,6 +197,7 @@ export async function getGoodsCommunitiesHub({
     with_deployments: 0,
     with_open_signals: 0,
     with_ghl: 0,
+    high_disadvantage: 0,
     total_beds_demanded: 0,
     total_beds_deployed: 0,
     total_washers_demanded: 0,
@@ -172,6 +208,7 @@ export async function getGoodsCommunitiesHub({
     if (r.assets_deployed > 0) summary.with_deployments++;
     if (r.open_signals + r.reviewing_signals > 0) summary.with_open_signals++;
     if (r.ghl_linked_buyer_count > 0) summary.with_ghl++;
+    if (r.seifa_irsd_decile != null && r.seifa_irsd_decile <= 3) summary.high_disadvantage++;
     summary.total_beds_demanded += r.demand_beds;
     summary.total_beds_deployed += r.assets_deployed;
     summary.total_washers_demanded += r.demand_washers;
