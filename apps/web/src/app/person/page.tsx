@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { money } from '@/lib/format';
 
 interface Person {
+  identity_key: string;
   person_name: string;
   person_name_normalised: string;
   board_count: number;
@@ -56,7 +57,9 @@ export default function PersonSearchPage() {
     }, 300);
   }, []);
 
-  const personUrl = (name: string) => `/person/${encodeURIComponent(name.replace(/\s+/g, '-'))}`;
+  // Deep-link to the specific identity (search mode has no identity_key → name-level picker).
+  const personUrl = (name: string, identityKey?: string) =>
+    `/person/${encodeURIComponent(name.replace(/\s+/g, '-'))}${identityKey ? `?id=${encodeURIComponent(identityKey)}` : ''}`;
 
   return (
     <main className="min-h-screen bg-gray-50 text-bauhaus-black">
@@ -124,7 +127,7 @@ export default function PersonSearchPage() {
                   >
                     <td className="py-3 pl-4 pr-2 text-xs text-gray-400 font-mono">{i + 1}</td>
                     <td className="py-3 pr-4">
-                      <Link href={personUrl(p.person_name)} className="font-medium text-bauhaus-blue hover:underline">
+                      <Link href={personUrl(p.person_name, p.identity_key)} className="font-medium text-bauhaus-blue hover:underline">
                         {p.person_name}
                       </Link>
                       {p.financial_system_count > 0 && (

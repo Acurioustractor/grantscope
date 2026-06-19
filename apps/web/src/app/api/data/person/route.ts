@@ -10,10 +10,12 @@ const limiter = rateLimit();
 
 // The ranked leaderboard reads mv_person_identity_influence (identity grain): trustee/nominee
 // megamerges are collapsed into one identity and flagged is_nominee_block, so we exclude them with
-// WHERE NOT is_nominee_block. Disambiguation only ran on names with >50 boards, so names in the
-// 11-50 range are still name-level merges (identity_key = name, not flagged); the board-count cap
-// below is kept as a backstop for those. Follow-up: extend disambiguation below 50 boards, then drop
-// the cap. See scripts/build-person-identities.mjs + docs/leverage-map.md "DATA-QUALITY GATE".
+// WHERE NOT is_nominee_block. Disambiguation now covers every name with >10 boards (2026-06-19,
+// scripts/build-person-identities.mjs --min-boards=10), BUT the board-count cap stays: clustering
+// leaves ~158 non-nominee identities with board_count>10 that the nominee test (size>=20 + dominant
+// officer + dominant state) doesn't catch — incl. a 325-board cluster and ~$1B co-director blocks at
+// board_count 12-18 that would dominate the leaderboard top if exposed. Dropping the cap needs the
+// nominee detection tuned to flag those first. See docs/leverage-map.md "DATA-QUALITY GATE".
 const MAX_PLAUSIBLE_BOARDS = 10;
 
 const schema = z.object({
@@ -66,7 +68,7 @@ export async function GET(request: Request) {
       // three dollar columns (total_contracts is a COUNT, not $). Identity grain (see header):
       // NOT is_nominee_block drops trustee megamerges, board-count cap backstops un-split mid-size names.
       const { data, error } = await supabase.rpc('exec_sql', {
-        query: `SELECT person_name, person_name_normalised, board_count, entity_types,
+        query: `SELECT identity_key, person_name, person_name_normalised, board_count, entity_types,
                   total_procurement, total_contracts, total_justice, total_donations,
                   influence_score AS max_influence_score, financial_system_count, acco_boards,
                   (coalesce(total_procurement, 0) + coalesce(total_justice, 0) + coalesce(total_donations, 0)) AS total_money
