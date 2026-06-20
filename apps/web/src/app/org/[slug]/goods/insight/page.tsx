@@ -4,9 +4,11 @@ import { ACT_FAST_PROFILE, isActSlug, shouldUseFastLocalOrg } from '@/lib/servic
 import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
 import { getGoodsFunderInsight } from '@/lib/services/goods-funder-insight';
 import { getGoodsRelationshipPower, powerBand, type RelationshipPower } from '@/lib/services/goods-relationship-power';
+import { getGoodsRelationshipFunding, type RelationshipFunding } from '@/lib/services/goods-relationship-funding';
 import { TEMP_LABEL, temperatureTone, type FunderInsight, type InsightFlag } from '@/lib/services/goods-funder-insight-shared';
 import { relDays, money, moneyShort } from '@/lib/services/goods-engagement-shared';
 import { GoodsSubNav } from '../_components/goods-sub-nav';
+import { FundingChip } from '../_components/goods-funding-chip';
 
 export const dynamic = 'force-dynamic';
 
@@ -119,7 +121,7 @@ function PowerChip({ power }: { power: RelationshipPower | null }) {
   );
 }
 
-function InsightCard({ i, power }: { i: FunderInsight; power: RelationshipPower | null }) {
+function InsightCard({ i, power, funding }: { i: FunderInsight; power: RelationshipPower | null; funding: RelationshipFunding | null }) {
   return (
     <div className="flex items-stretch gap-0 border-b border-bauhaus-black/10 last:border-b-0">
       <div className={`w-1.5 shrink-0 ${ATTENTION_BAR[i.attention]}`} aria-hidden />
@@ -136,6 +138,7 @@ function InsightCard({ i, power }: { i: FunderInsight; power: RelationshipPower 
               </span>
             ))}
             <PowerChip power={power} />
+            <FundingChip funding={funding} />
           </div>
 
           <div className="mt-1 flex flex-wrap items-center gap-2 text-[13px] font-bold text-bauhaus-black">
@@ -214,9 +217,10 @@ export default async function GoodsInsightPage({
   const profile = shouldUseFastLocalOrg() && isActSlug(slug) ? ACT_FAST_PROFILE : await getOrgProfileBySlug(slug);
   if (!profile) notFound();
 
-  const [{ insights, summary, fetchError }, powerMap] = await Promise.all([
+  const [{ insights, summary, fetchError }, powerMap, fundingMap] = await Promise.all([
     getGoodsFunderInsight(),
     getGoodsRelationshipPower(),
+    getGoodsRelationshipFunding(),
   ]);
   const actNowOnly = filter === 'act-now';
   const shown = actNowOnly ? insights.filter((i) => i.attention === 'act-now') : insights;
@@ -294,7 +298,7 @@ export default async function GoodsInsightPage({
           </div>
         ) : (
           <div className="border-4 border-bauhaus-black bg-white">
-            {shown.map((i) => <InsightCard key={i.id} i={i} power={powerMap.get(i.id) ?? null} />)}
+            {shown.map((i) => <InsightCard key={i.id} i={i} power={powerMap.get(i.id) ?? null} funding={fundingMap.get(i.id) ?? null} />)}
           </div>
         )}
 
