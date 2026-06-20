@@ -3,7 +3,11 @@ import { notFound } from 'next/navigation';
 import { ACT_FAST_PROFILE, isActSlug, shouldUseFastLocalOrg } from '@/lib/services/fast-local-org';
 import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
 import { getGoodsBuyerPipeline, type BuyerPipelineRow } from '@/lib/services/goods-buyer-pipeline';
+import { getGoodsRelationshipPower, type RelationshipPower } from '@/lib/services/goods-relationship-power';
+import { getGoodsRelationshipFunding, type RelationshipFunding } from '@/lib/services/goods-relationship-funding';
 import { GoodsSubNav } from '../_components/goods-sub-nav';
+import { PowerChip } from '../_components/goods-power-chip';
+import { FundingChip } from '../_components/goods-funding-chip';
 import {
   money, moneyShort, relDays, STAGE_LABEL, bandPill,
 } from '@/lib/services/goods-engagement-shared';
@@ -44,7 +48,7 @@ function dueDate(iso: string | null): { label: string; overdue: boolean } | null
   return { label: `due ${date} · in ${days}d`, overdue: false };
 }
 
-function BuyerCard({ r }: { r: BuyerPipelineRow }) {
+function BuyerCard({ r, power, funding }: { r: BuyerPipelineRow; power: RelationshipPower | null; funding: RelationshipFunding | null }) {
   const due = dueDate(r.nextActionDue);
   return (
     <div className="flex flex-wrap items-start gap-x-4 gap-y-2 border-b border-bauhaus-black/10 px-3 py-3 last:border-b-0">
@@ -63,6 +67,8 @@ function BuyerCard({ r }: { r: BuyerPipelineRow }) {
               No GHL signal
             </span>
           )}
+          <PowerChip power={power} />
+          <FundingChip funding={funding} />
         </div>
 
         <div className="mt-0.5 text-[12px] text-bauhaus-muted">
@@ -113,7 +119,11 @@ export default async function GoodsBuyersPage({
   const profile = shouldUseFastLocalOrg() && isActSlug(slug) ? ACT_FAST_PROFILE : await getOrgProfileBySlug(slug);
   if (!profile) notFound();
 
-  const { rows, summary, fetchError } = await getGoodsBuyerPipeline();
+  const [{ rows, summary, fetchError }, powerMap, fundingMap] = await Promise.all([
+    getGoodsBuyerPipeline(),
+    getGoodsRelationshipPower(),
+    getGoodsRelationshipFunding(),
+  ]);
   const openOnly = filter === 'open';
   const shown = openOnly ? rows.filter((r) => r.isOpen) : rows;
 
@@ -200,7 +210,7 @@ export default async function GoodsBuyersPage({
           </div>
         ) : (
           <div className="border-4 border-bauhaus-black bg-white">
-            {shown.map((r) => <BuyerCard key={r.id} r={r} />)}
+            {shown.map((r) => <BuyerCard key={r.id} r={r} power={powerMap.get(r.id) ?? null} funding={fundingMap.get(r.id) ?? null} />)}
           </div>
         )}
 
