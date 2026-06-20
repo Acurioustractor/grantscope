@@ -3,8 +3,10 @@ import { notFound } from 'next/navigation';
 import { ACT_FAST_PROFILE, isActSlug, shouldUseFastLocalOrg } from '@/lib/services/fast-local-org';
 import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
 import { getGoodsWarmIntros } from '@/lib/services/goods-warm-intros';
+import { getGoodsRelationshipFunding } from '@/lib/services/goods-relationship-funding';
 import { REL_TYPE_LABEL, type GoodsRelType } from '@/lib/services/goods-engagement-shared';
 import { GoodsSubNav } from '../_components/goods-sub-nav';
+import { FundingChip } from '../_components/goods-funding-chip';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,7 +28,10 @@ export default async function GoodsIntrosPage({ params }: { params: Promise<{ sl
   const profile = shouldUseFastLocalOrg() && isActSlug(slug) ? ACT_FAST_PROFILE : await getOrgProfileBySlug(slug);
   if (!profile) notFound();
 
-  const { targets, summary } = await getGoodsWarmIntros();
+  const [{ targets, summary }, fundingMap] = await Promise.all([
+    getGoodsWarmIntros(),
+    getGoodsRelationshipFunding(),
+  ]);
 
   return (
     <main className="min-h-screen bg-bauhaus-canvas text-bauhaus-black">
@@ -72,6 +77,7 @@ export default async function GoodsIntrosPage({ params }: { params: Promise<{ sl
                     <span className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">
                       {REL_TYPE_LABEL[t.relationshipType as GoodsRelType] ?? t.relationshipType}
                     </span>
+                    <FundingChip funding={fundingMap.get(t.relId) ?? null} />
                   </div>
                   {t.hasBridge && (
                     <span className="bg-bauhaus-blue px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-white">
