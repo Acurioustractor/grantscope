@@ -165,7 +165,7 @@ export default async function GoodsCampaignPage({ params }: { params: Promise<{ 
           <nav className="mb-4 flex flex-wrap items-center gap-2 text-sm text-gray-400">
             <Link href={`/org/${slug}`} className="hover:text-white">{profile.name}</Link>
             <span>/</span>
-            <Link href={`/org/${slug}/goods/funnel`} className="hover:text-white">Goods</Link>
+            <Link href={`/org/${slug}/goods`} className="hover:text-white">Goods</Link>
             <span>/</span>
             <span className="text-white">Match Campaign</span>
           </nav>

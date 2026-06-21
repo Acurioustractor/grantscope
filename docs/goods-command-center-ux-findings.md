@@ -133,6 +133,13 @@ Reading the code (not just the render) showed these three "small wins" are delib
 
 ---
 
+### G1-DONE · the hub front door is built · shot `audit-08-hub.jpeg`
+New `apps/web/src/app/org/[slug]/goods/page.tsx` — "Goods Command Center". Reuses the funnel/money/buyers services (Ben's call: reuse the funnel cockpit) behind `Promise.allSettled` so a saturated query shows a dash, never 500s the front door. Renders a live **STATE OF GOODS** strip (520 beds delivered · 11,984 bed gap · $895,611 received · $3.3M in play · 117 buyers — all matching the tabs) and two "start here" card groups (Work the pipeline / Show the evidence) with live per-destination stats. `GoodsSubNav.active` made optional so the hub highlights no tab. **Reachability:** all 15 "Goods" breadcrumb crumbs re-pointed `/goods/funnel` → `/goods` (the hub now has a handle from every tab). **Verified live** in `audit-08`. Resolves G1 + answers G2 (the hub IS the daily driver / orientation; the two nav rows are the spine).
+
+---
+
 ## Decisions only Ben can make
-- **G1 — RESOLVED (Ben, 2026-06-22):** build a NEW overview/hub page at `/org/act/goods`. Content: workspace summary with key signals (pipeline value, warmth, money, proof count) + clear links into the 14 tabs. A proper "start here." (Implement in the fix phase, after the visual pass.)
-- **G2 — OPEN:** which tab(s) are the daily driver (informs IA hierarchy / what to demote, and what the new hub foregrounds). Answer during the visual pass.
+- **G1 — DONE (2026-06-22):** hub built (see G1-DONE above).
+- **G2 — ANSWERED:** the workspace spine is the two-row split (Work the pipeline / Show the evidence) surfaced in `goods-sub-nav`; the new hub is the orientation/daily-driver front door. No tab needs demoting.
+- **B3 GRANT (Tier 3):** apply `GRANT SELECT ON v_goods_relationship_power, v_goods_relationship_funding TO anon, authenticated, service_role;` to light up the power/funding chips on buyer cards.
+- **P2 / P3 / Pr1:** held as design intent (cent precision, "QBE", proof card colours) — confirm or adjust at leisure.
