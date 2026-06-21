@@ -17,25 +17,21 @@
 --
 -- Set-based (hash join, not a per-row correlated subquery — that times out on
 -- the shared pooler). Idempotent: only touches entity_id IS NULL rows, and the
--- HAVING count = 1 guard skips any display_name that resolves to more than one
--- entity. Safe to re-run.
+-- match_count = 1 window guard skips any display_name that resolves to more than
+-- one entity (min()/aggregates don't apply to uuid). Safe to re-run.
 
-WITH exact_match AS (
-  SELECT gr.id AS rel_id, e.id AS entity_id
+WITH matched AS (
+  SELECT gr.id AS rel_id,
+         e.id  AS entity_id,
+         count(*) OVER (PARTITION BY gr.id) AS match_count
   FROM goods_relationships gr
   JOIN gs_entities e
     ON lower(btrim(e.canonical_name)) = lower(btrim(gr.display_name))
   WHERE gr.entity_id IS NULL
-),
-unique_match AS (
-  -- keep only display_names that resolved to exactly one entity
-  SELECT rel_id, min(entity_id) AS entity_id
-  FROM exact_match
-  GROUP BY rel_id
-  HAVING count(*) = 1
 )
 UPDATE goods_relationships gr
-SET entity_id  = unique_match.entity_id,
+SET entity_id  = matched.entity_id,
     updated_at = now()
-FROM unique_match
-WHERE gr.id = unique_match.rel_id;
+FROM matched
+WHERE gr.id = matched.rel_id
+  AND matched.match_count = 1;  -- only unambiguous (single-entity) display names
