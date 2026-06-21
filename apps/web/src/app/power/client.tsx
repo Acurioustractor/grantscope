@@ -83,6 +83,8 @@ export function PowerPageClient() {
   const [foundations, setFoundations] = useState<any>(null);
   const [boardPower, setBoardPower] = useState<any[]>([]);
   const [boardPowerTotal, setBoardPowerTotal] = useState(0);
+  const [holders, setHolders] = useState<any[]>([]);
+  const [holdersTotal, setHoldersTotal] = useState(0);
 
   useEffect(() => {
     fetch('/api/power/health').then(r => r.json()).then(d => {
@@ -98,6 +100,12 @@ export function PowerPageClient() {
       if (!d.error) {
         setBoardPower(d.results || []);
         setBoardPowerTotal(d.total || 0);
+      }
+    }).catch(() => {});
+    fetch('/api/power/holders').then(r => r.json()).then(d => {
+      if (!d.error) {
+        setHolders(d.holders || []);
+        setHoldersTotal(d.total || 0);
       }
     }).catch(() => {});
   }, []);
@@ -302,6 +310,93 @@ export function PowerPageClient() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── Power Holders (cross-system, de-collided) ── */}
+      {holders.length > 0 && (
+        <section className="px-4 sm:px-6 lg:px-8 pb-12">
+          <div className="max-w-7xl mx-auto">
+            <div className="mb-3">
+              <h2 className="text-2xl font-black text-bauhaus-black">Power Holders</h2>
+              <p className="text-sm text-bauhaus-muted font-medium mt-1">
+                {holdersTotal.toLocaleString()} people sit across two or more money systems — government procurement,
+                justice funding, and political donations — through the boards they govern. Dollars are each
+                person&apos;s <span className="font-bold text-bauhaus-black">attributed share</span>, split evenly
+                across an organisation&apos;s directors, then annotated with the foundations backing those organisations.
+              </p>
+            </div>
+            <div className="border-4 border-bauhaus-black bg-white overflow-hidden overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-bauhaus-black text-white">
+                    <th className="text-left px-4 py-2 text-[10px] font-black uppercase tracking-widest">#</th>
+                    <th className="text-left px-4 py-2 text-[10px] font-black uppercase tracking-widest">Person</th>
+                    <th className="text-right px-4 py-2 text-[10px] font-black uppercase tracking-widest">Boards</th>
+                    <th className="text-right px-4 py-2 text-[10px] font-black uppercase tracking-widest">Systems</th>
+                    <th className="text-right px-4 py-2 text-[10px] font-black uppercase tracking-widest">Procurement</th>
+                    <th className="text-right px-4 py-2 text-[10px] font-black uppercase tracking-widest">Justice</th>
+                    <th className="text-right px-4 py-2 text-[10px] font-black uppercase tracking-widest">Donations</th>
+                    <th className="text-left px-4 py-2 text-[10px] font-black uppercase tracking-widest">Backed By</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {holders.map((p: any, i: number) => (
+                    <tr key={i} className={`border-b border-gray-100 hover:bg-blue-50/30 ${p.acco_boards > 0 ? 'bg-green-50/40' : i % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
+                      <td className="px-4 py-2 text-bauhaus-muted font-medium align-top">{i + 1}</td>
+                      <td className="px-4 py-2 align-top">
+                        <div className="font-bold text-bauhaus-black">{p.person_name}</div>
+                        {(p.top_boards || []).length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {(p.top_boards || []).map((b: string, j: number) => (
+                              <span key={j} className="text-[9px] font-bold bg-bauhaus-canvas text-bauhaus-muted px-1.5 py-0.5 border border-bauhaus-black/10">
+                                {(b || '').length > 32 ? (b || '').substring(0, 32) + '...' : b}
+                              </span>
+                            ))}
+                            {p.acco_boards > 0 && (
+                              <span className="text-[9px] font-black uppercase tracking-widest text-green-700 bg-green-100 px-1.5 py-0.5">ACCO</span>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-2 text-right align-top">
+                        <span className="inline-flex items-center justify-center w-7 h-7 bg-bauhaus-black text-white font-black text-sm">
+                          {p.board_count}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2 text-right font-black text-bauhaus-black align-top">{p.financial_system_count}<span className="text-bauhaus-muted font-medium">/3</span></td>
+                      <td className="px-4 py-2 text-right font-medium align-top">{Number(p.attributed_procurement) > 0 ? money(Number(p.attributed_procurement)) : '—'}</td>
+                      <td className="px-4 py-2 text-right font-medium align-top">{Number(p.attributed_justice) > 0 ? money(Number(p.attributed_justice)) : '—'}</td>
+                      <td className="px-4 py-2 text-right font-medium align-top" style={{ color: Number(p.attributed_donations) > 0 ? '#D02020' : undefined }}>
+                        {Number(p.attributed_donations) > 0 ? money(Number(p.attributed_donations)) : '—'}
+                      </td>
+                      <td className="px-4 py-2 align-top">
+                        {(p.foundation_backers || []).length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {(p.foundation_backers || []).map((fnd: string, j: number) => (
+                              <span key={j} className="text-[9px] font-bold text-bauhaus-red border border-bauhaus-red/40 bg-red-50 px-1.5 py-0.5">
+                                {(fnd || '').replace(/^The Trustee For (The )?/i, '').replace(/ (Limited|Ltd)$/i, '')}
+                              </span>
+                            ))}
+                            {(p.funder_count || 0) > (p.foundation_backers || []).length && (
+                              <span className="text-[9px] text-bauhaus-muted font-bold">+{p.funder_count - (p.foundation_backers || []).length}</span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-bauhaus-muted/50 text-xs">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-bauhaus-muted font-medium">
+              <span className="inline-flex items-center gap-1"><span className="w-3 h-3 bg-green-100 border border-green-300 inline-block" /> Sits on a community-controlled board</span>
+              <span className="inline-flex items-center gap-1"><span className="w-3 h-3 bg-red-50 border border-bauhaus-red/40 inline-block" /> Foundation backing the orgs they govern</span>
+              <span>Dollars = even-split personal share across co-directors (not weighted by role/tenure). Names are board-derived; same-named individuals may merge.</span>
             </div>
           </div>
         </section>
