@@ -6,9 +6,14 @@ import { powerBand, type RelationshipPower } from '@/lib/services/goods-relation
  * carries weight and opens doors; it is also a public profile worth knowing
  * before we attach the Goods name. Detail on hover. Renders nothing without
  * signal — so it degrades silently for registry rows with no entity match.
+ *
+ * Surfaces on EITHER axis: system reach OR revolving-door membership. The two
+ * come from independently-refreshed MVs with no enforced subset invariant, so a
+ * counterpart can sit in the revolving-door set with zero measured system reach
+ * (systemCount 0); we still show the chip rather than silently drop the RD flag.
  */
 export function PowerChip({ power }: { power: RelationshipPower | null }) {
-  if (!power || power.systemCount < 1) return null;
+  if (!power || (power.systemCount < 1 && !power.revolvingDoor)) return null;
   const band = powerBand(power);
   const tone =
     band === 'high' ? 'bg-bauhaus-black text-bauhaus-yellow'
