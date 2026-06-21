@@ -3,11 +3,18 @@
 **Surface:** `/org/act/goods/*` (ACT org Goods workspace) · **Started:** 2026-06-22 · **Mode:** audit-first
 **Method:** dev server :3003 (running, reused); ACT slug renders without login via the `shouldUseFastLocalOrg()` bypass in `org/[slug]/layout.tsx` → screenshots feasible. Rubric: Clarity / Value-shown / Meaning / Aesthetic / Friction (see `.claude/skills/polish/references/rubric.md`).
 
-> ## ▶ RESUME HERE (after `/clear`)
-> Phase 1 structural pass done (G1–G3 below). **Next: the VISUAL pass** — re-invoke `/polish` on the Goods command center.
-> 1. Confirm dev server on :3003 is up (`curl -s -o /dev/null -w "%{http_code}" --max-time 60 http://localhost:3003/org/act/goods/buyers` → 200). It was already running (pid 52483, not ours — leave it).
-> 2. Screenshot each tab in the priority order below (1280×900 → `docs/ux-audit/shots/`), judge against the 5 dims, append per-tab findings. One tab per iteration; self-pace.
-> 3. **Then fix phase:** G1 is DECIDED → build a NEW Goods overview/hub page at `/org/act/goods` (summary: pipeline value, warmth, money, proof count + clear links into the 14 tabs). Plus G2/G3.
+> ## ▶ RESUME HERE (after `/clear`) — updated 2026-06-22, end of session
+> **DONE this session (PR #100, branch `feat/goods-registry-entity-resolution`, commits `5cb1819` + `be58841`, pushed + verified live):**
+> - Batch-1 visual pass = 5 tabs audited (buyers · funnel · pitch · proof · money). See "Phase 1b" below.
+> - **B1 fixed** — buyers no longer leads with `$0·$0·$0` (conditional hero). **Fn1 fixed** — name unified to "Goods".
+> - **G1 done** — new hub front door `/org/act/goods` (`page.tsx`), reachable from all 15 crumbs. **G2 answered** (spine = the two nav rows).
+>
+> **QUEUE (pick one to resume):**
+> 1. **Apply the GRANT (Tier 3, fastest win):** power/funding chips on buyer cards are silently empty — `GRANT SELECT ON v_goods_relationship_power, v_goods_relationship_funding TO anon, authenticated, service_role;` then re-screenshot `/org/act/goods/buyers` to confirm chips populate. (See B3-UPGRADED below.)
+> 2. **Confirm P2/P3/Pr1** (design-intent items held, not changed — see the reclassified block below).
+> 3. **Batch-2 audit:** the other 9 tabs (foundations · intros · signals · timeline · governance · insight · engagement · campaign · communities) — re-invoke `/polish goods command center`, screenshot each (dev server :3003, ACT slug renders logged-out), append findings, fix top ones.
+>
+> Dev server: `npx next dev --turbopack -p 3003` (was pid 52483, not ours — check `lsof -i:3003` first).
 
 ## The surface is bigger than remembered — 14 tabs (memory said 9)
 Routes under `apps/web/src/app/org/[slug]/goods/`:
