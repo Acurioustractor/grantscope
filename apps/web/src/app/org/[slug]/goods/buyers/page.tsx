@@ -3,7 +3,11 @@ import { notFound } from 'next/navigation';
 import { ACT_FAST_PROFILE, isActSlug, shouldUseFastLocalOrg } from '@/lib/services/fast-local-org';
 import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
 import { getGoodsBuyerPipeline, type BuyerPipelineRow } from '@/lib/services/goods-buyer-pipeline';
+import { getGoodsRelationshipPower, type RelationshipPower } from '@/lib/services/goods-relationship-power';
+import { getGoodsRelationshipFunding, type RelationshipFunding } from '@/lib/services/goods-relationship-funding';
 import { GoodsSubNav } from '../_components/goods-sub-nav';
+import { PowerChip } from '../_components/goods-power-chip';
+import { FundingChip } from '../_components/goods-funding-chip';
 import {
   money, moneyShort, relDays, STAGE_LABEL, bandPill,
 } from '@/lib/services/goods-engagement-shared';
@@ -44,7 +48,7 @@ function dueDate(iso: string | null): { label: string; overdue: boolean } | null
   return { label: `due ${date} · in ${days}d`, overdue: false };
 }
 
-function BuyerCard({ r }: { r: BuyerPipelineRow }) {
+function BuyerCard({ r, power, funding }: { r: BuyerPipelineRow; power: RelationshipPower | null; funding: RelationshipFunding | null }) {
   const due = dueDate(r.nextActionDue);
   return (
     <div className="flex flex-wrap items-start gap-x-4 gap-y-2 border-b border-bauhaus-black/10 px-3 py-3 last:border-b-0">
@@ -63,6 +67,8 @@ function BuyerCard({ r }: { r: BuyerPipelineRow }) {
               No GHL signal
             </span>
           )}
+          <PowerChip power={power} />
+          <FundingChip funding={funding} />
         </div>
 
         <div className="mt-0.5 text-[12px] text-bauhaus-muted">
@@ -113,9 +119,18 @@ export default async function GoodsBuyersPage({
   const profile = shouldUseFastLocalOrg() && isActSlug(slug) ? ACT_FAST_PROFILE : await getOrgProfileBySlug(slug);
   if (!profile) notFound();
 
-  const { rows, summary, fetchError } = await getGoodsBuyerPipeline();
+  const [{ rows, summary, fetchError }, powerMap, fundingMap] = await Promise.all([
+    getGoodsBuyerPipeline(),
+    getGoodsRelationshipPower(),
+    getGoodsRelationshipFunding(),
+  ]);
   const openOnly = filter === 'open';
   const shown = openOnly ? rows.filter((r) => r.isOpen) : rows;
+  // No buyer amounts are entered yet (asks + lifetime revenue both $0). When that's
+  // true, leading with three giant $0s reads as "earned nothing / broken" — so we lead
+  // with the pipeline strength that DOES exist and relegate the $0 to an honest footnote
+  // (mirrors the Money tab's "separate track" treatment).
+  const hasMoney = summary.totalReceived > 0 || summary.openAskTotal > 0;
 
   return (
     <main className="min-h-screen bg-bauhaus-canvas text-bauhaus-black">
@@ -124,7 +139,7 @@ export default async function GoodsBuyersPage({
           <nav className="mb-4 flex flex-wrap items-center gap-2 text-sm text-gray-400">
             <Link href={`/org/${slug}`} className="hover:text-white">{profile.name}</Link>
             <span>/</span>
-            <Link href={`/org/${slug}/goods/funnel`} className="hover:text-white">Goods</Link>
+            <Link href={`/org/${slug}/goods`} className="hover:text-white">Goods</Link>
             <span>/</span>
             <span className="text-white">Buyers &amp; Procurement</span>
           </nav>
@@ -153,27 +168,50 @@ export default async function GoodsBuyersPage({
           <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">
             Procurement track · earned revenue, kept separate from grant + investment
           </div>
-          <div className="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-            <span className="text-5xl font-black leading-none text-bauhaus-black">{moneyShort(summary.totalReceived)}</span>
-            <span className="text-sm font-black uppercase tracking-widest text-bauhaus-muted">received (lifetime)</span>
-            <span className="text-3xl font-black leading-none text-bauhaus-blue">{moneyShort(summary.openAskTotal)}</span>
-            <span className="text-sm font-black uppercase tracking-widest text-bauhaus-muted">open asks</span>
-          </div>
-          <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-bold">
-            <span className="border-2 border-bauhaus-black bg-white px-2 py-0.5">
-              {summary.total} buyer{summary.total === 1 ? '' : 's'} · {summary.open} open
-            </span>
-            <span className="border-2 border-bauhaus-black bg-white px-2 py-0.5">
-              Expected (stage-weighted) {moneyShort(summary.weightedPipeline)}
-            </span>
-          </div>
+          {hasMoney ? (
+            <>
+              <div className="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                <span className="text-5xl font-black leading-none text-bauhaus-black">{moneyShort(summary.totalReceived)}</span>
+                <span className="text-sm font-black uppercase tracking-widest text-bauhaus-muted">received (lifetime)</span>
+                <span className="text-3xl font-black leading-none text-bauhaus-blue">{moneyShort(summary.openAskTotal)}</span>
+                <span className="text-sm font-black uppercase tracking-widest text-bauhaus-muted">open asks</span>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-bold">
+                <span className="border-2 border-bauhaus-black bg-white px-2 py-0.5">
+                  {summary.total} buyer{summary.total === 1 ? '' : 's'} · {summary.open} open
+                </span>
+                <span className="border-2 border-bauhaus-black bg-white px-2 py-0.5">
+                  Expected (stage-weighted) {moneyShort(summary.weightedPipeline)}
+                </span>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* No amounts entered yet — lead with the pipeline strength, not $0. */}
+              <div className="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                <span className="text-5xl font-black leading-none text-bauhaus-black">{summary.total}</span>
+                <span className="text-sm font-black uppercase tracking-widest text-bauhaus-muted">buyers in the pipeline</span>
+                <span className="text-3xl font-black leading-none text-bauhaus-blue">{summary.open}</span>
+                <span className="text-sm font-black uppercase tracking-widest text-bauhaus-muted">open conversations</span>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-bold">
+                <span className="border-2 border-bauhaus-black bg-white px-2 py-0.5">
+                  {summary.withGhl}/{summary.total} linked to GHL
+                </span>
+              </div>
+              <div className="mt-2 border-t-2 border-bauhaus-black/10 pt-2 text-[10px] font-bold text-bauhaus-muted">
+                No revenue or ask amounts recorded yet — enter asks and lifetime revenue in the warmth registry to size the
+                pipeline. Cash received reconciles against Xero (the source of truth).
+              </div>
+            </>
+          )}
         </div>
 
         {/* secondary stat row */}
         <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Stat label="Buyers" value={String(summary.total)} accent />
           <Stat label="Open conversations" value={String(summary.open)} />
-          <Stat label="Revenue received" value={money(summary.totalReceived)} detail="Warmth registry, manually entered" />
+          <Stat label="Revenue received" value={money(summary.totalReceived)} detail={summary.totalReceived > 0 ? 'Warmth registry, manually entered' : 'None recorded yet'} />
           <Stat label="With GHL link" value={`${summary.withGhl}/${summary.total}`} />
         </div>
 
@@ -200,7 +238,7 @@ export default async function GoodsBuyersPage({
           </div>
         ) : (
           <div className="border-4 border-bauhaus-black bg-white">
-            {shown.map((r) => <BuyerCard key={r.id} r={r} />)}
+            {shown.map((r) => <BuyerCard key={r.id} r={r} power={powerMap.get(r.id) ?? null} funding={fundingMap.get(r.id) ?? null} />)}
           </div>
         )}
 

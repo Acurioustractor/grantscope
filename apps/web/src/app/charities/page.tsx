@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { getServiceSupabase } from '@/lib/supabase';
+import { unstable_cache } from 'next/cache';
 import { FilterBar } from '../components/filter-bar';
 
 export const dynamic = 'force-dynamic';
@@ -119,6 +120,97 @@ interface SearchParams {
   page?: string;
 }
 
+interface CharitiesQueryArgs {
+  query: string;
+  sizeFilter: string;
+  purposeFilter: string;
+  beneficiaryFilter: string;
+  pbiOnly: boolean;
+  hpcOnly: boolean;
+  stateFilter: string;
+  regStateFilter: string;
+  revenueMin: number | null;
+  revenueMax: number | null;
+  grantsOnly: boolean;
+  foundationsOnly: boolean;
+  sortBy: string;
+  offset: number;
+  pageSize: number;
+}
+
+// v_charity_explorer has no fast/default-view shortcut (unlike grants/foundations'
+// in-memory FAST_*_INDEX) — every hit, filtered or not, runs a `count: 'exact'`
+// scan. Caching by the full filter combo means repeat hits to the same URL
+// (the dominant crawl/traffic shape) skip the DB entirely for 5 minutes.
+const getCharitiesPage = unstable_cache(
+  async (args: CharitiesQueryArgs) => {
+    const supabase = getServiceSupabase();
+    let dbQuery = supabase
+      .from('v_charity_explorer')
+      .select('abn, name, charity_size, state, pbi, hpc, purposes, beneficiaries, operating_states, is_foundation, website, total_revenue, total_grants_given, total_assets, staff_fte, staff_volunteers, latest_financial_year, has_enrichment', { count: 'exact' });
+
+    if (args.query) {
+      dbQuery = dbQuery.ilike('name', `%${args.query}%`);
+    }
+    if (args.sizeFilter) {
+      dbQuery = dbQuery.eq('charity_size', args.sizeFilter);
+    }
+    if (args.purposeFilter) {
+      dbQuery = dbQuery.contains('purposes', [args.purposeFilter]);
+    }
+    if (args.beneficiaryFilter) {
+      dbQuery = dbQuery.contains('beneficiaries', [args.beneficiaryFilter]);
+    }
+    if (args.pbiOnly) {
+      dbQuery = dbQuery.eq('pbi', true);
+    }
+    if (args.hpcOnly) {
+      dbQuery = dbQuery.eq('hpc', true);
+    }
+    if (args.stateFilter) {
+      dbQuery = dbQuery.contains('operating_states', [args.stateFilter]);
+    }
+    if (args.regStateFilter) {
+      dbQuery = dbQuery.eq('state', args.regStateFilter);
+    }
+    if (args.revenueMin) {
+      dbQuery = dbQuery.gte('total_revenue', args.revenueMin);
+    }
+    if (args.revenueMax) {
+      dbQuery = dbQuery.lte('total_revenue', args.revenueMax);
+    }
+    if (args.grantsOnly) {
+      dbQuery = dbQuery.gt('total_grants_given', 0);
+    }
+    if (args.foundationsOnly) {
+      dbQuery = dbQuery.eq('is_foundation', true);
+    }
+
+    if (args.sortBy === 'revenue') {
+      dbQuery = dbQuery.order('total_revenue', { ascending: false, nullsFirst: false });
+    } else if (args.sortBy === 'grants') {
+      dbQuery = dbQuery.order('total_grants_given', { ascending: false, nullsFirst: false });
+    } else if (args.sortBy === 'assets') {
+      dbQuery = dbQuery.order('total_assets', { ascending: false, nullsFirst: false });
+    } else if (args.sortBy === 'fte') {
+      dbQuery = dbQuery.order('staff_fte', { ascending: false, nullsFirst: false });
+    } else if (args.sortBy === 'volunteers') {
+      dbQuery = dbQuery.order('staff_volunteers', { ascending: false, nullsFirst: false });
+    } else if (args.sortBy === 'newest') {
+      dbQuery = dbQuery.order('registration_date', { ascending: false, nullsFirst: false });
+    } else {
+      dbQuery = dbQuery.order('name', { ascending: true });
+    }
+
+    dbQuery = dbQuery.range(args.offset, args.offset + args.pageSize - 1);
+
+    const { data: charities, count } = await dbQuery;
+    return { charities: charities || [], count: count || 0 };
+  },
+  ['charities-query'],
+  { revalidate: 300 },
+);
+
 export default async function CharitiesPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const params = await searchParams;
   const query = params.q || '';
@@ -138,70 +230,23 @@ export default async function CharitiesPage({ searchParams }: { searchParams: Pr
   const pageSize = 50;
   const offset = (page - 1) * pageSize;
 
-  const supabase = getServiceSupabase();
-
-  // Build query
-  let dbQuery = supabase
-    .from('v_charity_explorer')
-    .select('abn, name, charity_size, state, pbi, hpc, purposes, beneficiaries, operating_states, is_foundation, website, total_revenue, total_grants_given, total_assets, staff_fte, staff_volunteers, latest_financial_year, has_enrichment', { count: 'exact' });
-
-  if (query) {
-    dbQuery = dbQuery.ilike('name', `%${query}%`);
-  }
-  if (sizeFilter) {
-    dbQuery = dbQuery.eq('charity_size', sizeFilter);
-  }
-  if (purposeFilter) {
-    dbQuery = dbQuery.contains('purposes', [purposeFilter]);
-  }
-  if (beneficiaryFilter) {
-    dbQuery = dbQuery.contains('beneficiaries', [beneficiaryFilter]);
-  }
-  if (pbiOnly) {
-    dbQuery = dbQuery.eq('pbi', true);
-  }
-  if (hpcOnly) {
-    dbQuery = dbQuery.eq('hpc', true);
-  }
-  if (stateFilter) {
-    dbQuery = dbQuery.contains('operating_states', [stateFilter]);
-  }
-  if (regStateFilter) {
-    dbQuery = dbQuery.eq('state', regStateFilter);
-  }
-  if (revenueMin) {
-    dbQuery = dbQuery.gte('total_revenue', revenueMin);
-  }
-  if (revenueMax) {
-    dbQuery = dbQuery.lte('total_revenue', revenueMax);
-  }
-  if (grantsOnly) {
-    dbQuery = dbQuery.gt('total_grants_given', 0);
-  }
-  if (foundationsOnly) {
-    dbQuery = dbQuery.eq('is_foundation', true);
-  }
-
-  // Sort
-  if (sortBy === 'revenue') {
-    dbQuery = dbQuery.order('total_revenue', { ascending: false, nullsFirst: false });
-  } else if (sortBy === 'grants') {
-    dbQuery = dbQuery.order('total_grants_given', { ascending: false, nullsFirst: false });
-  } else if (sortBy === 'assets') {
-    dbQuery = dbQuery.order('total_assets', { ascending: false, nullsFirst: false });
-  } else if (sortBy === 'fte') {
-    dbQuery = dbQuery.order('staff_fte', { ascending: false, nullsFirst: false });
-  } else if (sortBy === 'volunteers') {
-    dbQuery = dbQuery.order('staff_volunteers', { ascending: false, nullsFirst: false });
-  } else if (sortBy === 'newest') {
-    dbQuery = dbQuery.order('registration_date', { ascending: false, nullsFirst: false });
-  } else {
-    dbQuery = dbQuery.order('name', { ascending: true });
-  }
-
-  dbQuery = dbQuery.range(offset, offset + pageSize - 1);
-
-  const { data: charities, count } = await dbQuery;
+  const { charities, count } = await getCharitiesPage({
+    query,
+    sizeFilter,
+    purposeFilter,
+    beneficiaryFilter,
+    pbiOnly,
+    hpcOnly,
+    stateFilter,
+    regStateFilter,
+    revenueMin,
+    revenueMax,
+    grantsOnly,
+    foundationsOnly,
+    sortBy,
+    offset,
+    pageSize,
+  });
   const totalPages = Math.ceil((count || 0) / pageSize);
 
   // Build filter query string for pagination

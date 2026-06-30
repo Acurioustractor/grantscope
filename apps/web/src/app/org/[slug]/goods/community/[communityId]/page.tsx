@@ -66,7 +66,7 @@ export default async function GoodsCommunityPage({
           <nav className="mb-4 flex flex-wrap items-center gap-2 text-sm text-gray-400">
             <Link href={`/org/${slug}`} className="hover:text-white">{profile.name}</Link>
             <span>/</span>
-            <Link href={`/org/${slug}/wiki/goods-operating-system`} className="hover:text-white">Goods OS</Link>
+            <Link href={`/org/${slug}/goods`} className="hover:text-white">Goods</Link>
             <span>/</span>
             <Link href={`/org/${slug}/wiki/goods-signals`} className="hover:text-white">Signals</Link>
             <span>/</span>

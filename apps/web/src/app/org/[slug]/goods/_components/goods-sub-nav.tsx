@@ -26,7 +26,7 @@ const ALL_TABS = [...PIPELINE_TABS, ...EVIDENCE_TABS] as const;
 
 export type GoodsTab = (typeof ALL_TABS)[number][0];
 
-function TabLink({ slug, tabKey, label, active }: { slug: string; tabKey: GoodsTab; label: string; active: GoodsTab }) {
+function TabLink({ slug, tabKey, label, active }: { slug: string; tabKey: GoodsTab; label: string; active?: GoodsTab }) {
   return (
     <Link
       href={`/org/${slug}/goods/${tabKey}`}
@@ -39,8 +39,9 @@ function TabLink({ slug, tabKey, label, active }: { slug: string; tabKey: GoodsT
   );
 }
 
-/** Shared dark-header sub-nav across the Goods Command Center pages. */
-export function GoodsSubNav({ slug, active }: { slug: string; active: GoodsTab }) {
+/** Shared dark-header sub-nav across the Goods Command Center pages.
+ *  `active` is optional — the hub (/goods index) passes none, so no tab highlights. */
+export function GoodsSubNav({ slug, active }: { slug: string; active?: GoodsTab }) {
   return (
     <div className="mt-4 flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">

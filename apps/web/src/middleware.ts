@@ -17,7 +17,23 @@ function safeRedirectPath(value: string | null, fallback = '/home') {
   return value;
 }
 
+// The bare production Vercel alias (not preview-deployment URLs, which still
+// need to work for QA) was taking ~30k req/day in Firewall data — traffic
+// hitting the project directly rather than discovering it via civicgraph.app.
+// Redirecting it to the canonical domain costs nothing and isn't linked from
+// anywhere we control, so this only affects whoever already found it.
+const BARE_VERCEL_PRODUCTION_HOST = 'grantscope.vercel.app';
+const CANONICAL_HOST = 'civicgraph.app';
+
 export async function middleware(request: NextRequest) {
+  if (request.headers.get('host') === BARE_VERCEL_PRODUCTION_HOST) {
+    const url = request.nextUrl.clone();
+    url.hostname = CANONICAL_HOST;
+    url.protocol = 'https';
+    url.port = '';
+    return NextResponse.redirect(url, 308);
+  }
+
   // Expose the pathname to server components so the root layout can
   // conditionally skip chrome (nav/footer) for iframe-embed routes.
   const requestHeaders = new Headers(request.headers);
