@@ -1,8 +1,42 @@
 import { getServiceSupabase } from '@/lib/supabase';
+import { unstable_cache } from 'next/cache';
 import Link from 'next/link';
 import { EntityPreviewTrigger, ListPreviewProvider, type EntityPreviewData } from '../components/list-preview';
 
 export const dynamic = 'force-dynamic';
+
+// The default view (no params) runs 4 queries incl. two full-table head counts
+// on every hit with no fast path (unlike grants/foundations, which have an
+// in-memory FAST_*_INDEX). It's also the single most-requested URL shape on
+// this route, so it's the highest-value thing to cache here.
+const getDonorContractorsView = unstable_cache(
+  async () => {
+    const supabase = getServiceSupabase();
+    const [
+      { data: donorContractors },
+      { count: donorContractorCount },
+      { count: totalEntities },
+      { count: totalRels },
+    ] = await Promise.all([
+      supabase
+        .from('mv_gs_donor_contractors')
+        .select('*')
+        .order('total_donated', { ascending: false })
+        .limit(100),
+      supabase.from('mv_gs_donor_contractors').select('gs_id', { count: 'exact', head: true }),
+      supabase.from('gs_entities').select('*', { count: 'exact', head: true }),
+      supabase.from('gs_relationships').select('*', { count: 'exact', head: true }),
+    ]);
+    return {
+      donorContractors: (donorContractors || []) as Record<string, unknown>[],
+      donorContractorCount: donorContractorCount || 0,
+      totalEntities: totalEntities || 0,
+      totalRels: totalRels || 0,
+    };
+  },
+  ['entities-donor-contractors-view'],
+  { revalidate: 300 },
+);
 
 function formatMoney(amount: number | null): string {
   if (!amount) return '\u2014';
@@ -141,21 +175,7 @@ export default async function EntityGraphPage({
   const showDonorContractors = view === 'donor-contractors' || !view;
 
   if (showDonorContractors) {
-    const [
-      { data: donorContractors },
-      { count: donorContractorCount },
-      { count: totalEntities },
-      { count: totalRels },
-    ] = await Promise.all([
-      supabase
-        .from('mv_gs_donor_contractors')
-        .select('*')
-        .order('total_donated', { ascending: false })
-        .limit(100),
-      supabase.from('mv_gs_donor_contractors').select('gs_id', { count: 'exact', head: true }),
-      supabase.from('gs_entities').select('*', { count: 'exact', head: true }),
-      supabase.from('gs_relationships').select('*', { count: 'exact', head: true }),
-    ]);
+    const { donorContractors, donorContractorCount, totalEntities, totalRels } = await getDonorContractorsView();
 
     return (
       <ListPreviewProvider>
