@@ -1,6 +1,8 @@
 import type { MetadataRoute } from 'next';
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://civicgraph.com.au';
+// See sitemap.ts — civicgraph.com.au does not resolve, civicgraph.app is the
+// real production domain.
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://civicgraph.app';
 
 /**
  * Open robots policy for the accountability atlas.
