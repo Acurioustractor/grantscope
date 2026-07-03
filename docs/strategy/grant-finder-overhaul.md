@@ -148,7 +148,37 @@ Guided-finder UX rebuild (idea #5), reporting-deadline calendar (#6), council wh
 
 ---
 
-## 4. Sequencing & rationale
+## 4. Access & feasibility — can we actually get these grants?
+
+Short answer: **the sources this plan depends on are open and machine-readable; the paywalled sources are the ones we deliberately don't touch.** The friction is egress policy, not locked data.
+
+### Access model per source
+
+| Source | Access | Auth | Notes |
+|---|---|---|---|
+| GrantConnect **RSS** (`grants.gov.au/public_data/rss/rss.xml`) | Public feed | None | Already used by `sources/grantconnect.ts` **in production today** |
+| GrantConnect **GA weekly export** (CSV) | Public download | None | Already pulled by `scripts/ingest-grantconnect.mjs` |
+| GrantConnect GO **document packs** (guideline PDFs) | Free registration | Login | Listing/metadata is open; only the full doc pack needs an account |
+| data.gov.au / QLD / NSW / VIC **CKAN APIs** | Open data API | None | Built for machine access |
+| The Grants Hub · GrantGuru · Funding Centre · GEMS | Commercial | Paywall/ToS | **Not scraped by this plan** — we ingest primary feeds, not competitors |
+
+The strongest evidence it works: the GrantConnect RSS plugin **already runs on a schedule in the production pipeline**, and the GA CSV ingester already exists. Phase 3 automates and extends proven access — it does not bet on unproven access.
+
+### Two real frictions (and how the plan handles them)
+
+1. **`*.gov.au` bot-blocking.** Some government *HTML pages* return 403 to automated fetchers. This only affects *scraping* — exactly what Phase 3 moves away from. The RSS/CSV/CKAN *data* endpoints are designed for machine access, and the plugins already send a browser UA. Feed fetchers must log per-source yield so a 403 surfaces immediately (Phase 5 health signal).
+2. **Egress allowlist.** The Claude-Code web environment runs a restrictive network policy: only a few hosts (GitHub, npm, Anthropic) are reachable; `data.gov.au`, `data.qld.gov.au`, etc. are denied at the proxy (`403 CONNECT`, an org-policy denial — *not* the sites blocking us). This is a sandbox setting, not a source lock.
+
+### What production needs
+
+- The ingesters' natural home is the **production data pipeline** (its own infra + `.env` creds), where the network isn't sandbox-restricted and where GrantConnect RSS already runs.
+- To live-validate feeds **from a Claude-Code web session**, the environment's network policy must allowlist: `www.grants.gov.au`, `data.gov.au`, `www.data.qld.gov.au`, `data.nsw.gov.au`, `discover.data.vic.gov.au`. Until then, feed validation runs on prod infra, not in-session.
+
+**Bottom line:** no grant data in this plan is locked behind a paywall. The only thing "locked" is this sandbox's outbound network, which is a config choice, not a blocker to the product.
+
+---
+
+## 5. Sequencing & rationale
 
 ```
 Phase 1 (matching)     ██████            ship first — biggest UX win, pure consolidation, no new data
