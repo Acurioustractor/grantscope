@@ -4,8 +4,12 @@
  * Close Stale Grants Agent
  *
  * Automatically closes grants that:
- * 1. Have passed their `closes_at` deadline.
- * 2. Are from external scraping pipelines but haven't been seen (`last_verified_at`) in 14 days.
+ * 1. Have passed their deadline — whichever of `closes_at` or `deadline` is set
+ *    (some sources populate one, some the other).
+ * 2. Are from external scraping pipelines but haven't been seen (`last_verified_at`)
+ *    in 14 days. This last-seen window is our URL-liveness proxy: a live listing
+ *    gets its `last_verified_at` bumped each time the source re-confirms it, so a
+ *    listing that has gone dark is treated as closed.
  *
  * Excludes manual sources from the 14-day rule to prevent destroying CRM data.
  *
@@ -36,9 +40,9 @@ async function main() {
   try {
     const query = `
       WITH past_deadline AS (
-        SELECT id FROM grant_opportunities 
-        WHERE status = 'open' 
-          AND closes_at < CURRENT_DATE
+        SELECT id FROM grant_opportunities
+        WHERE status = 'open'
+          AND COALESCE(closes_at, deadline) < CURRENT_DATE
       ),
       missing_from_source AS (
         SELECT id FROM grant_opportunities

@@ -91,15 +91,15 @@ Each phase is independently shippable and ordered by value-per-effort. Estimates
 - [ ] Backfill any grants missing embeddings via `embeddings.ts:backfillEmbeddings` — **deferred to a DB-connected run** (needs `.env` creds; not runnable in the sandbox).
 - **Verified:** typecheck clean (`npx tsc --noEmit`); scout import chain resolves under `tsx`; pure boost logic unit-checked (arts/VIC grant boosts 82→90, stale penalized-provider sinks 80→27, signals correct). Behavioural parity with `/api/profile/matches` is guaranteed by construction. **Live `--dry-run` against a real org still needs a DB-connected environment.**
 
-### Phase 2 — Trust layer: quarantine unverified grants *(fast win, ~1 d)*
+### Phase 2 — Trust layer: quarantine unverified grants *(fast win, ~1 d)* — ✅ DONE
 
 **Problem:** #3, #5.
 
-- [ ] Add a `verification_status` + `verified_at` surface on grants (derive from existing `confidence` + `verify-alma-opportunities` liveness; migration only if not already stored).
-- [ ] Alert/scout paths **exclude** `confidence = 'llm_knowledge'` and unverified URLs; badge them "unconfirmed" in the UI rather than emailing them.
-- [ ] Combine URL-liveness + deadline in `close-stale-grants.mjs` (a grant past deadline **or** dead URL → closed).
-- [ ] Surface "verified N days ago · source: <feed>" in the grant detail UI (`apps/web/src/app/grants/[id]/page.tsx`) — the trust differentiator.
-- **Verify:** confirm a seeded `llm_knowledge` grant never appears in a scout digest and shows the "unconfirmed" badge in the detail view.
+- [x] Added a single trust classifier — `packages/grant-engine/src/grant-verification.ts:assessGrantVerification()`. Derives level (`verified` / `scraped` / `unconfirmed`) and an `isConfirmed` alert-gate from the row's `sources[].confidence` jsonb + `last_verified_at` + `url`. No migration needed — the signal already lives on the row. Legacy rows with a URL but no `sources` array are treated as scraped (the quarantine targets AI-surfaced grants, not the existing corpus).
+- [x] Scout now **excludes** unconfirmed grants (`llm_knowledge` / no URL) from both auto-add and notifications, and logs how many it held back. They stay browsable in the UI.
+- [x] `close-stale-grants.mjs` now closes on `COALESCE(closes_at, deadline) < today` (either deadline field) alongside the existing 14-day `last_verified_at` liveness proxy.
+- [x] Grant detail UI (`apps/web/src/app/grants/[id]/page.tsx`) shows a trust badge — "Verified 3 days ago · GrantConnect" / "Sourced from VIC Grants" / "Unconfirmed — AI-surfaced, URL not verified" — styled to the Bauhaus system.
+- **Verified:** typecheck clean; classifier unit-checked across 6 cases (llm_knowledge quarantined, verified/scraped/legacy confirmed, no-URL quarantined, JSON-string `sources` parsed). Live confirmation that a seeded `llm_knowledge` grant is absent from a real scout digest still needs a DB-connected run.
 
 ### Phase 3 — Official-feed ingestion *(robustness, ~3–5 d)*
 

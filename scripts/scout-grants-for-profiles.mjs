@@ -18,6 +18,7 @@ import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
 import { scoreGrantsForOrg } from '../packages/grant-engine/src/grant-matching.ts';
+import { assessGrantVerification } from '../packages/grant-engine/src/grant-verification.ts';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -121,19 +122,27 @@ async function main() {
       }
 
       // Enrich candidates with fields the vector RPC does not return
-      // (source, amount_min, deadline, target_recipients) for alert matching + notifications.
+      // (source, amount_min, deadline, target_recipients) for alert matching +
+      // notifications, plus the trust fields (sources, url, last_verified_at)
+      // used to quarantine unconfirmed grants.
       const candidates = matches.filter(g => g.fit_score >= ALERT_MIN_SCORE);
       const enrichMap = new Map();
       if (candidates.length > 0) {
         const { data: fullRows } = await supabase
           .from('grant_opportunities')
-          .select('id, amount_min, deadline, source, target_recipients, aligned_projects')
+          .select('id, amount_min, deadline, source, target_recipients, aligned_projects, sources, url, last_verified_at')
           .in('id', candidates.map(g => g.id));
         for (const row of fullRows || []) enrichMap.set(row.id, row);
       }
 
       const scored = candidates.map(g => {
         const extra = enrichMap.get(g.id) || {};
+        const verification = assessGrantVerification({
+          sources: extra.sources ?? null,
+          url: extra.url ?? g.url ?? null,
+          last_verified_at: extra.last_verified_at ?? null,
+          source: extra.source ?? null,
+        });
         return {
           ...g,
           match_score: g.fit_score,
@@ -142,11 +151,17 @@ async function main() {
           source: extra.source ?? null,
           target_recipients: extra.target_recipients ?? null,
           aligned_projects: extra.aligned_projects ?? null,
+          is_confirmed: verification.isConfirmed,
         };
       });
 
-      const highScoring = scored.filter(g => g.match_score >= MIN_SCORE);
       const alertMatches = scored;
+      // Trust gate: never auto-add or email unconfirmed (llm_knowledge / no verified URL)
+      // grants. They remain browsable in the UI, badged "unconfirmed".
+      const eligible = scored.filter(g => g.match_score >= MIN_SCORE);
+      const highScoring = eligible.filter(g => g.is_confirmed);
+      const quarantined = eligible.length - highScoring.length;
+      if (quarantined > 0) console.log(`  ⚠ ${quarantined} high-scoring grant(s) held back as unconfirmed (not verified)`);
 
       console.log(`  ${highScoring.length} grants scored >= ${MIN_SCORE} (of ${matches.length} candidates)`);
       console.log(`  Top 5:`);

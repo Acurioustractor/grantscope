@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { GrantActions } from '@/app/components/grant-actions';
 import { GrantNotes } from '@/app/components/grant-notes';
 import { PartnerPicker } from '@/app/components/partner-picker';
+import { assessGrantVerification } from '@grant-engine/grant-verification';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,6 +23,7 @@ interface Grant {
   focus_areas: string[];
   target_recipients: string[];
   status: string;
+  source: string | null;
   sources: unknown;
   discovery_method: string | null;
   last_verified_at: string | null;
@@ -235,6 +237,22 @@ export default async function GrantDetailPage({ params }: { params: Promise<{ id
       <div className="text-base text-bauhaus-muted font-medium mb-2">
         {g.provider}{g.program ? ` — ${g.program}` : ''}
       </div>
+      {(() => {
+        const v = assessGrantVerification({ sources: g.sources as never, url: g.url, last_verified_at: g.last_verified_at, source: g.source });
+        const cls =
+          v.level === 'verified'
+            ? 'bg-money-light text-money border-money'
+            : v.level === 'scraped'
+            ? 'bg-white text-bauhaus-black border-bauhaus-black'
+            : 'bg-bauhaus-yellow/20 text-bauhaus-black border-bauhaus-yellow';
+        const mark = v.level === 'verified' ? '✓' : v.level === 'scraped' ? '■' : '⚠';
+        return (
+          <div className={`inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest px-2.5 py-1 border-2 mb-3 ${cls}`}>
+            <span aria-hidden>{mark}</span>
+            {v.label}
+          </div>
+        );
+      })()}
       <GrantActions grantId={g.id} />
       <GrantNotes grantId={g.id} />
       <PartnerPicker
