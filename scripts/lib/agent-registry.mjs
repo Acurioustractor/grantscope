@@ -935,7 +935,7 @@ export const AGENTS = {
 
   // ── Intelligence (org-facing agents) ──────────────────────────────────────
   'scout-grants-for-profiles': {
-    command: ['node', '--env-file=.env', 'scripts/scout-grants-for-profiles.mjs'],
+    command: ['npx', 'tsx', 'scripts/scout-grants-for-profiles.mjs'],
     displayName: 'Grant Scout',
     category: 'intelligence',
     defaultPriority: 2,

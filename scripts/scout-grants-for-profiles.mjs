@@ -8,13 +8,16 @@
  *   3. Update alert_preferences match counts
  *
  * Usage:
- *   node --env-file=.env scripts/scout-grants-for-profiles.mjs [--dry-run] [--user-id=UUID]
+ *   npx tsx scripts/scout-grants-for-profiles.mjs [--dry-run] [--user-id=UUID]
  *
+ * Run under tsx (not plain node) because it imports the shared TS scorer.
  * Designed to run on schedule (daily via agent_schedules).
  */
 
+import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
+import { scoreGrantsForOrg } from '../packages/grant-engine/src/grant-matching.ts';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -25,108 +28,6 @@ const DRY_RUN = process.argv.includes('--dry-run');
 const SPECIFIC_USER = process.argv.find(a => a.startsWith('--user-id='))?.split('=')[1];
 const MIN_SCORE = 65; // Minimum match score to auto-add to pipeline
 const ALERT_MIN_SCORE = 50; // Minimum score to count as alert match
-
-// ─── Scoring Logic (mirrors /api/grants/match) ──────────────────────────
-
-function scoreGrant(grant, profile) {
-  let score = 50;
-  const signals = [];
-
-  // Category match
-  const orgDomains = (profile.domains || []).map(d => d.toLowerCase());
-  const grantCategories = (grant.categories || []).map(c => c.toLowerCase());
-  const grantFocusAreas = (grant.focus_areas || []).map(f => f.toLowerCase());
-  const allGrantTerms = [...grantCategories, ...grantFocusAreas];
-
-  const categoryOverlap = orgDomains.filter(d =>
-    allGrantTerms.some(t => t.includes(d) || d.includes(t))
-  ).length;
-
-  if (categoryOverlap > 0) {
-    score += Math.min(categoryOverlap * 10, 25);
-    signals.push(`${categoryOverlap} category match${categoryOverlap > 1 ? 'es' : ''}`);
-  }
-
-  // Geographic match
-  const orgGeo = (profile.geographic_focus || []).map(g => g.toLowerCase());
-  const grantGeo = (grant.geography || '').toLowerCase();
-
-  if (orgGeo.length > 0 && grantGeo) {
-    const geoMatch = orgGeo.some(g => grantGeo.includes(g) || g.includes(grantGeo));
-    if (geoMatch) {
-      score += 15;
-      signals.push('Geographic match');
-    }
-  }
-
-  // State match (from grant source)
-  const sourceState = {
-    'nsw-grants': 'nsw', 'vic-grants': 'vic', 'qld-grants': 'qld',
-    'sa-grants': 'sa', 'wa-grants': 'wa', 'tas-grants': 'tas',
-    'act-grants': 'act', 'nt-grants': 'nt', 'grantconnect': 'national'
-  }[grant.source];
-  if (sourceState && orgGeo.some(g => g === sourceState || g === 'national')) {
-    score += 10;
-    signals.push(`State match (${sourceState.toUpperCase()})`);
-  }
-
-  // Amount fit
-  if (profile.annual_revenue && grant.amount_max) {
-    const ratio = grant.amount_max / profile.annual_revenue;
-    if (ratio >= 0.01 && ratio <= 0.5) {
-      score += 10;
-      signals.push('Amount fits org size');
-    }
-  }
-
-  // Target recipient match
-  const orgType = (profile.org_type || '').toLowerCase();
-  const grantTargets = (grant.target_recipients || []).map(t => t.toLowerCase());
-  if (grantTargets.length > 0 && orgType) {
-    const recipientMatch = grantTargets.some(t =>
-      t.includes(orgType) || orgType.includes(t) ||
-      (orgType.includes('charity') && t.includes('not-for-profit')) ||
-      (orgType.includes('social_enterprise') && t.includes('not-for-profit'))
-    );
-    if (recipientMatch) {
-      score += 10;
-      signals.push('Target recipient match');
-    }
-  }
-
-  // Mission keyword match
-  if (profile.mission && grant.description) {
-    const missionWords = profile.mission.toLowerCase().split(/\s+/).filter(w => w.length > 4);
-    const descLower = grant.description.toLowerCase();
-    const missionHits = missionWords.filter(w => descLower.includes(w)).length;
-    if (missionHits >= 3) {
-      score += Math.min(missionHits * 3, 15);
-      signals.push(`${missionHits} mission keywords`);
-    }
-  }
-
-  // Deadline urgency bonus
-  if (grant.deadline) {
-    const daysUntil = Math.ceil((new Date(grant.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-    if (daysUntil > 0 && daysUntil <= 30) {
-      score += 5;
-      signals.push('Closing soon');
-    }
-  }
-
-  // Project alignment (check aligned_projects against profile projects)
-  if (profile.projects && grant.aligned_projects?.length > 0) {
-    const projectNames = profile.projects.map(p => p.name?.toLowerCase()).filter(Boolean);
-    const grantProjects = grant.aligned_projects.map(p => p.toLowerCase());
-    const projectMatch = projectNames.some(p => grantProjects.some(gp => gp.includes(p) || p.includes(gp)));
-    if (projectMatch) {
-      score += 10;
-      signals.push('Project alignment');
-    }
-  }
-
-  return { score: Math.min(score, 100), signals };
-}
 
 // ─── Alert Matching ─────────────────────────────────────────────────────
 
@@ -177,7 +78,7 @@ async function main() {
     // 1. Get active org profiles
     let profileQuery = supabase
       .from('org_profiles')
-      .select('id, user_id, name, domains, geographic_focus, org_type, annual_revenue, mission, projects, notify_email, notify_threshold');
+      .select('id, user_id, name, domains, geographic_focus, org_type, annual_revenue, mission, projects, notify_email, notify_threshold, embedding');
 
     if (SPECIFIC_USER) {
       profileQuery = profileQuery.eq('user_id', SPECIFIC_USER);
@@ -194,34 +95,60 @@ async function main() {
     }
     console.log(`Scouting for ${profiles.length} org profile(s)...`);
 
-    // 2. Get open grants (deadline in future or no deadline)
-    const now = new Date().toISOString().split('T')[0];
-    const { data: grants, error: grantError } = await supabase
-      .from('grant_opportunities')
-      .select('id, name, description, amount_min, amount_max, deadline, provider, url, categories, focus_areas, target_recipients, geography, source, aligned_projects')
-      .or(`deadline.is.null,deadline.gte.${now}`)
-      .order('created_at', { ascending: false })
-      .limit(500);
-
-    if (grantError) throw grantError;
-    console.log(`${grants?.length || 0} open grants to score.`);
-
     let totalAdded = 0;
     let totalMatches = 0;
+    let fallbackProfiles = 0; // profiles scored via keyword fallback (no embedding)
 
     for (const profile of profiles) {
       console.log(`\n─── ${profile.name} ───`);
 
-      // 3. Score all grants
-      const scored = grants.map(grant => {
-        const { score, signals } = scoreGrant(grant, profile);
-        return { ...grant, match_score: score, match_signals: signals };
-      }).sort((a, b) => b.match_score - a.match_score);
+      // 3. Score grants via the shared vector scorer (semantic + learning boosts).
+      //    Falls back to keyword heuristics only when the profile has no embedding.
+      const { matches, usedFallback } = await scoreGrantsForOrg(supabase, {
+        embedding: profile.embedding ?? null,
+        domains: profile.domains,
+        geo: profile.geographic_focus,
+        orgType: profile.org_type,
+        annualRevenue: profile.annual_revenue,
+        mission: profile.mission,
+        userId: profile.user_id,
+        threshold: 0.45,
+        limit: 300,
+      });
+      if (usedFallback) {
+        fallbackProfiles++;
+        console.log(`  ⚠ no embedding — used keyword fallback (save profile to enable semantic matching)`);
+      }
+
+      // Enrich candidates with fields the vector RPC does not return
+      // (source, amount_min, deadline, target_recipients) for alert matching + notifications.
+      const candidates = matches.filter(g => g.fit_score >= ALERT_MIN_SCORE);
+      const enrichMap = new Map();
+      if (candidates.length > 0) {
+        const { data: fullRows } = await supabase
+          .from('grant_opportunities')
+          .select('id, amount_min, deadline, source, target_recipients, aligned_projects')
+          .in('id', candidates.map(g => g.id));
+        for (const row of fullRows || []) enrichMap.set(row.id, row);
+      }
+
+      const scored = candidates.map(g => {
+        const extra = enrichMap.get(g.id) || {};
+        return {
+          ...g,
+          match_score: g.fit_score,
+          deadline: extra.deadline ?? g.closes_at ?? null,
+          amount_min: extra.amount_min ?? null,
+          source: extra.source ?? null,
+          target_recipients: extra.target_recipients ?? null,
+          aligned_projects: extra.aligned_projects ?? null,
+        };
+      });
 
       const highScoring = scored.filter(g => g.match_score >= MIN_SCORE);
-      const alertMatches = scored.filter(g => g.match_score >= ALERT_MIN_SCORE);
+      const alertMatches = scored;
 
-      console.log(`  ${highScoring.length} grants scored >= ${MIN_SCORE} (of ${scored.length} total)`);
+      console.log(`  ${highScoring.length} grants scored >= ${MIN_SCORE} (of ${matches.length} candidates)`);
       console.log(`  Top 5:`);
       scored.slice(0, 5).forEach(g => {
         console.log(`    ${g.match_score}% — ${g.name?.slice(0, 60)} [${g.match_signals.join(', ')}]`);
@@ -325,6 +252,7 @@ async function main() {
 
     console.log(`\n═══ Summary ═══`);
     console.log(`Profiles scanned: ${profiles.length}`);
+    console.log(`Semantic matching: ${profiles.length - fallbackProfiles}/${profiles.length} (${fallbackProfiles} keyword fallback)`);
     console.log(`Total matches (>= ${ALERT_MIN_SCORE}): ${totalMatches}`);
     console.log(`Grants added to pipelines: ${totalAdded}`);
     if (DRY_RUN) console.log('(DRY RUN — no changes made)');

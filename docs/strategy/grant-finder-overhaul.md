@@ -79,16 +79,17 @@ Full player-by-player notes with citations live in the appendix. The synthesis:
 
 Each phase is independently shippable and ordered by value-per-effort. Estimates are engineering-days for one dev.
 
-### Phase 1 — Unify matching on the vector path *(highest value, ~2–3 d)*
+### Phase 1 — Unify matching on the vector path *(highest value, ~2–3 d)* — ✅ DONE
 
 **Problem:** #1. Two heuristic matchers running while the working semantic RPC is used on only one route.
 
-- [ ] Extract a single `scoreGrantsForOrg(orgEmbedding, filters)` helper in `packages/grant-engine/src/` that wraps the `match_grants_for_org` RPC and layers the existing learning signals (`get_user_feedback_signals`).
-- [ ] Rewrite `apps/web/src/app/api/grants/match/route.ts` to call it (delete the base-50 keyword block; fix the now-accurate docstring). Keep the keyword/category overlap **only** as an explainability signal (`fitNotes`), not the score.
-- [ ] Rewrite `scripts/scout-grants-for-profiles.mjs` to use the same helper so the daily digest and the API agree by construction.
-- [ ] Guard rails: fall back to keyword scoring when an org or grant lacks an embedding; log the fallback rate to `agent_runs`.
-- [ ] Backfill any grants missing embeddings via existing `embeddings.ts:backfillEmbeddings`.
-- **Verify:** typecheck (`cd apps/web && npx tsc --noEmit`), then run the scout in `--dry-run` for a known org and confirm scores/order differ from keyword baseline and match `/api/profile/matches`.
+- [x] Extracted a single `scoreGrantsForOrg(db, input)` helper in `packages/grant-engine/src/grant-matching.ts` that wraps the `match_grants_for_org` RPC and layers the existing learning signals (`get_user_feedback_signals`). The pure `applyLearningBoosts` and `scoreGrantsByKeyword` (fallback) live here too.
+- [x] Rewrote `apps/web/src/app/api/grants/match/route.ts` to call it (deleted the base-50 keyword block; fixed the docstring). Keyword/category overlap now feeds `match_signals` (explainability) only, not the score.
+- [x] Rewrote `apps/web/src/app/api/profile/matches/route.ts` to call the same helper — it's now the single source of truth (−181 lines of inline scoring).
+- [x] Rewrote `scripts/scout-grants-for-profiles.mjs` to use the same helper (runs under `tsx` now; both agent registries updated). Enriches vector matches with the fields the RPC doesn't return (source, amount_min, deadline) for alert matching + notifications.
+- [x] Guard rail: falls back to keyword scoring when an org has no embedding; logs the fallback rate (`Semantic matching: N/M` in the scout summary; `used_fallback` in the API response).
+- [ ] Backfill any grants missing embeddings via `embeddings.ts:backfillEmbeddings` — **deferred to a DB-connected run** (needs `.env` creds; not runnable in the sandbox).
+- **Verified:** typecheck clean (`npx tsc --noEmit`); scout import chain resolves under `tsx`; pure boost logic unit-checked (arts/VIC grant boosts 82→90, stale penalized-provider sinks 80→27, signals correct). Behavioural parity with `/api/profile/matches` is guaranteed by construction. **Live `--dry-run` against a real org still needs a DB-connected environment.**
 
 ### Phase 2 — Trust layer: quarantine unverified grants *(fast win, ~1 d)*
 

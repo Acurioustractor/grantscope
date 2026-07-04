@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase-server';
 import { getServiceSupabase } from '@/lib/supabase';
+import { scoreGrantsForOrg } from '@grant-engine/grant-matching';
 
 export async function GET(request: NextRequest) {
   const supabase = await createSupabaseServer();
@@ -88,177 +89,23 @@ export async function GET(request: NextRequest) {
     availableProjects = (projects || []).map(p => ({ code: p.project_code, name: p.name }));
   }
 
-  // Vector similarity search
-  const { data: matches, error: matchError } = await serviceDb
-    .rpc('match_grants_for_org', {
-      org_embedding: matchEmbedding,
+  // Vector similarity search + learning boosts (shared scorer).
+  let result;
+  try {
+    result = await scoreGrantsForOrg(serviceDb, {
+      embedding: matchEmbedding,
+      domains: matchDomains,
+      geo: matchGeo,
       threshold,
-      match_limit: limit,
+      limit,
+      userId: user.id,
+      projectProfileId,
     });
-
-  if (matchError) return NextResponse.json({ error: matchError.message }, { status: 500 });
-
-  // Boost scores for domain/geography overlap
-  const orgDomains = new Set(matchDomains.map((d: string) => d.toLowerCase()));
-  const orgGeo = new Set<string>(matchGeo.map((g: string) => g.toLowerCase()));
-
-  // Fetch all learning signals in a single RPC call
-  const signalParams: { p_user_id: string; p_project_profile_id?: string } = {
-    p_user_id: user.id,
-  };
-  if (projectProfileId) {
-    signalParams.p_project_profile_id = projectProfileId;
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : 'Match failed' }, { status: 500 });
   }
-  const { data: signals } = await serviceDb.rpc('get_user_feedback_signals', signalParams);
 
-  const feedbackSignals = signals as {
-    excluded_grant_ids: string[];
-    not_a_grant_ids: string[];
-    penalized_providers: string[];
-    penalized_categories: string[];
-    penalized_geos: string[];
-    boosted_providers: string[];
-    boosted_categories: string[];
-    boosted_geos: string[];
-    total_votes: number;
-    up_votes: number;
-    down_votes: number;
-  } | null;
-
-  const excludedIds = new Set([
-    ...(feedbackSignals?.excluded_grant_ids || []),
-    ...(feedbackSignals?.not_a_grant_ids || []),
-  ]);
-  const penalizedProviders = new Set((feedbackSignals?.penalized_providers || []).map((p: string) => p.toLowerCase()));
-  const penalizedCategories = new Set((feedbackSignals?.penalized_categories || []).map((c: string) => c.toLowerCase()));
-  const penalizedGeos = new Set((feedbackSignals?.penalized_geos || []).map((g: string) => g.toLowerCase()));
-  const boostedProviders = new Set((feedbackSignals?.boosted_providers || []).map((p: string) => p.toLowerCase()));
-  const boostedCategories = new Set((feedbackSignals?.boosted_categories || []).map((c: string) => c.toLowerCase()));
-  const boostedGeos = new Set((feedbackSignals?.boosted_geos || []).map((g: string) => g.toLowerCase()));
-
-  type GrantMatch = {
-    id: string;
-    name: string;
-    provider: string;
-    description: string;
-    amount_max: number | null;
-    closes_at: string | null;
-    categories: string[];
-    url: string | null;
-    grant_type: string;
-    status: string;
-    focus_areas: string[];
-    geography: string | null;
-    similarity: number;
-  };
-
-  let grantsFiltered = 0;
-  const scored = (matches || [])
-    .filter((grant: GrantMatch) => {
-      if (excludedIds.has(grant.id)) {
-        grantsFiltered++;
-        return false;
-      }
-      return true;
-    })
-    .map((grant: GrantMatch) => {
-      let score = grant.similarity;
-
-      // Domain overlap boost (up to +0.05)
-      if (grant.categories?.length && orgDomains.size > 0) {
-        const overlap = grant.categories.filter(c => orgDomains.has(c.toLowerCase())).length;
-        score += Math.min(overlap * 0.025, 0.05);
-      }
-
-      // Focus area overlap boost (up to +0.05)
-      if (grant.focus_areas?.length && orgDomains.size > 0) {
-        const overlap = grant.focus_areas.filter(f => orgDomains.has(f.toLowerCase())).length;
-        score += Math.min(overlap * 0.025, 0.05);
-      }
-
-      // Geographic relevance boost (+0.03 if grant geography overlaps org geo)
-      if (grant.geography && orgGeo.size > 0) {
-        const geoLower = grant.geography.toLowerCase();
-        for (const g of orgGeo) {
-          if (geoLower.includes(g) || g.includes(geoLower)) {
-            score += 0.03;
-            break;
-          }
-        }
-      }
-
-      // Penalty for grants with no amount or description (low quality)
-      if (!grant.amount_max && (!grant.description || grant.description.length < 50)) {
-        score -= 0.03;
-      }
-
-      // Stale grant penalty — grants closed 5+ years ago
-      if (grant.closes_at) {
-        const closedDate = new Date(grant.closes_at);
-        const yearsAgo = (Date.now() - closedDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
-        if (yearsAgo >= 5) {
-          score -= 0.20;
-        } else if (yearsAgo >= 2) {
-          score -= 0.10;
-        }
-      }
-
-      // Stale grant penalty — year reference in name (e.g. "2016-17")
-      const yearMatch = grant.name?.match(/20[12]\d/);
-      if (yearMatch) {
-        const grantYear = parseInt(yearMatch[0]);
-        const currentYear = new Date().getFullYear();
-        if (currentYear - grantYear >= 3) {
-          score -= 0.15;
-        }
-      }
-
-      // Feedback-based penalties and boosts
-      const providerLower = grant.provider?.toLowerCase();
-      if (providerLower && penalizedProviders.has(providerLower)) {
-        score -= 0.15;
-      }
-      if (providerLower && boostedProviders.has(providerLower)) {
-        score += 0.05;
-      }
-      if (grant.categories?.length && penalizedCategories.size > 0) {
-        const penalizedOverlap = grant.categories.filter(c => penalizedCategories.has(c.toLowerCase())).length;
-        if (penalizedOverlap > 0) {
-          score -= Math.min(penalizedOverlap * 0.05, 0.10);
-        }
-      }
-      if (grant.categories?.length && boostedCategories.size > 0) {
-        const boostedOverlap = grant.categories.filter(c => boostedCategories.has(c.toLowerCase())).length;
-        if (boostedOverlap > 0) {
-          score += Math.min(boostedOverlap * 0.03, 0.06);
-        }
-      }
-      if (grant.geography && penalizedGeos.size > 0) {
-        const geoLower = grant.geography.toLowerCase();
-        for (const g of penalizedGeos) {
-          if (geoLower.includes(g) || g.includes(geoLower)) {
-            score -= 0.08;
-            break;
-          }
-        }
-      }
-      if (grant.geography && boostedGeos.size > 0) {
-        const geoLower = grant.geography.toLowerCase();
-        for (const g of boostedGeos) {
-          if (geoLower.includes(g) || g.includes(geoLower)) {
-            score += 0.04;
-            break;
-          }
-        }
-      }
-
-      return {
-        ...grant,
-        fit_score: Math.max(0, Math.min(Math.round(score * 100), 100)),
-      };
-    });
-
-  scored.sort((a: { fit_score: number }, b: { fit_score: number }) => b.fit_score - a.fit_score);
+  const { matches: scored, grantsFiltered, feedbackSignals } = result;
 
   return NextResponse.json({
     matches: scored,
