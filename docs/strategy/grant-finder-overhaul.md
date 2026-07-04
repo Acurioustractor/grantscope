@@ -101,19 +101,24 @@ Each phase is independently shippable and ordered by value-per-effort. Estimates
 - [x] Grant detail UI (`apps/web/src/app/grants/[id]/page.tsx`) shows a trust badge — "Verified 3 days ago · GrantConnect" / "Sourced from VIC Grants" / "Unconfirmed — AI-surfaced, URL not verified" — styled to the Bauhaus system.
 - **Verified:** typecheck clean; classifier unit-checked across 6 cases (llm_knowledge quarantined, verified/scraped/legacy confirmed, no-URL quarantined, JSON-string `sources` parsed). Live confirmation that a seeded `llm_knowledge` grant is absent from a real scout digest still needs a DB-connected run.
 
-### Phase 3 — Official-feed ingestion *(robustness, ~3–5 d)*
+### Phase 3 — Official-feed ingestion *(robustness)* — ⚙️ PARTLY DONE
 
 **Problem:** #2, #6. Replace fragile scrapers with structured CKAN/CSV where a feed exists.
 
-- [ ] New `api`-type source plugins (they satisfy the existing `SourcePlugin` interface, so the registry/normalizer/dedup pipeline is unchanged):
-  - [ ] `data-gov-au-grants-awarded` — [Grants Awarded Data](https://data.gov.au/data/dataset/grants-awarded-data) (CKAN/CSV) → award-history layer.
-  - [ ] `qld-grants-finder` — [QLD Grants Finder dataset](https://www.data.qld.gov.au/dataset/grants-finder) (CKAN) → **replaces** the QLD HTML scraper.
-  - [ ] `data-nsw` — [Data.NSW grants tag](https://data.nsw.gov.au/data/dataset/?tags=grants) + OpenGov NSW API.
-  - [ ] `datavic` — [DataVic CKAN v2.1](https://discover.data.vic.gov.au/dataset/datavic-open-data-api-version-2-1-0) + [vic.gov.au submitted grants](https://www.vic.gov.au/submit-your-grant).
-- [ ] Automate the GrantConnect GA weekly export in `ingest-grantconnect.mjs` (fetch instead of manual download); keep GO capture via RSS.
-- [ ] Demote the now-redundant HTML scrapers to fallback-only (disabled in `SourceRegistry` config unless the feed is down).
-- **Note:** `*.gov.au` blocks automated fetch from some IPs (403). Feed fetchers must use the browser UA already in the plugins and run from an allowlisted egress; log per-source yield so a 403 surfaces immediately.
-- **Verify:** run each new plugin standalone, assert non-zero structured rows with populated amount/deadline fields (no regex extraction needed).
+**Ground-truth correction (found while building):** the codebase was already further along than the plan assumed. `qld-grants.ts` already ingests the **QLD Grants Finder via CKAN**; `nsw-grants.ts` already uses the **NSW elasticsearch API** (with HTML fallback); `data-gov-au.ts` already uses CKAN `package_search`. So the real Phase-3 gap was not "build these plugins" — it was a **correctness bug** in how they page CKAN, plus a shared client and GA automation.
+
+**Done:**
+- [x] **Fixed a silent-truncation bug.** `qld-grants.ts` fetched one `limit=500` page per agency with no offset loop — any agency with >500 grants was silently cut off. New shared client `packages/grant-engine/src/sources/lib/ckan.ts` paginates the whole resource (offset loop, timeout, bounded retry, browser UA) and **logs** when a `maxRecords` cap is hit (no silent caps). `qld-grants.ts` now uses it.
+- [x] **Automated the GrantConnect GA weekly export.** `ingest-grantconnect.mjs` fetches the CSV when `--url=` / `GRANTCONNECT_GA_EXPORT_URL` is set (two known sources: the GrantConnect weekly report, or the data.gov.au "Grants Awarded Data" CKAN CSV), falling back to the local file so a transient fetch error never loses a run. GO capture stays on RSS (already in `grantconnect.ts`).
+- [x] **Tests:** `tests/ckan.test.ts` (mocked fetch) proves multi-page pagination collects all records, short/empty pages stop correctly, `maxRecords` is honoured, and a failed request retries. The retry test caught a real event-loop bug (an `unref`'d backoff timer) before it shipped.
+- [x] No redundant QLD HTML scraper exists to demote — `createQLDGrantsPlugin` **is** the CKAN plugin.
+
+**Still open (needs live endpoint inspection — blocked by the sandbox egress allowlist, do on prod or once hosts are allowlisted):**
+- [ ] `data-gov-au-grants-awarded` — the structured **Grants Awarded** datastore (not the dataset-discovery `package_search` we already do). This is the **award-history** feed → belongs with Phase 6; it needs a target awards schema + entity resolution, so it's deferred there deliberately.
+- [ ] `datavic` + `vic.gov.au` submitted grants — VIC has no clean CKAN *opportunity* dataset (crowdsourced HTML). Low-confidence to build blind; needs inspection.
+- [ ] Port `data-gov-au.ts` onto the shared CKAN client (dedupe its bespoke fetch).
+- **Note:** `*.gov.au` blocks automated fetch from some IPs (403). The client sends a browser UA; run from an allowlisted egress. Per-source yield logging lands with the Phase 5 health signal.
+- **Verify (done, in-sandbox):** typecheck clean; CKAN client unit-tested; refactored QLD plugin loads under `tsx`. **Live run against data.qld (assert full, non-truncated agency ingest) still needs network** — see §4.
 
 ### Phase 4 — CLASSIE taxonomy + LLM auto-classification *(interoperability, ~3 d)*
 
