@@ -120,14 +120,16 @@ Each phase is independently shippable and ordered by value-per-effort. Estimates
 - **Note:** `*.gov.au` blocks automated fetch from some IPs (403). The client sends a browser UA; run from an allowlisted egress. Per-source yield logging lands with the Phase 5 health signal.
 - **Verify (done, in-sandbox):** typecheck clean; CKAN client unit-tested; refactored QLD plugin loads under `tsx`. **Live run against data.qld (assert full, non-truncated agency ingest) still needs network** — see §4.
 
-### Phase 4 — CLASSIE taxonomy + LLM auto-classification *(interoperability, ~3 d)*
+### Phase 4 — CLASSIE taxonomy + LLM auto-classification *(interoperability)* — ✅ DONE
 
 **Problem:** #2 (weak categories), plus the strategic interoperability play.
 
-- [ ] Add a CLASSIE reference table (subjects / populations / SDGs) — small seed dataset, not a data-widening exercise.
-- [ ] Extend `auto-classify-llm.mjs` to emit CLASSIE codes alongside our existing categories; store on grants.
-- [ ] Map our internal category vocabulary → CLASSIE so existing filters keep working.
-- **Verify:** classify a sample of 50 grants, spot-check CLASSIE assignment against ACNC's published usage.
+- [x] **CLASSIE taxonomy module** — `packages/grant-engine/src/classie.ts`: three facets (Subject, Population, SDG). The 17 SDGs are the official UN set; Subject/Population are a **curated seed aligned to CLASSIE's structure** (not the full proprietary list — flagged in the file to reconcile against the official export when licensed). Includes code validators and an LLM-prompt builder constrained to the controlled vocabulary.
+- [x] **Deterministic category→CLASSIE mapper** — `mapCategoriesToClassie()` tags the **entire existing corpus at zero LLM cost** from the categories we already store, so filters keep working and CLASSIE becomes the interoperable layer on top. (Chose a dedicated module over extending `auto-classify-llm.mjs`, which classifies a different axis — opportunity_type — on a different table; conflating them would have been wrong.)
+- [x] **Migration** — `supabase/migrations/20260704000000_grant_classie.sql` adds `classie_subjects[]`, `classie_populations[]`, `sdg_codes[]`, `classie_method`, `classie_classified_at` + GIN indexes.
+- [x] **Classifier script** — `scripts/classify-grants-classie.mjs`: deterministic-first (free), optional `--llm` pass (sanitised to valid codes) only for grants whose categories map to nothing. Registered in both agent registries.
+- [x] **Tests** — `classie.test.ts` (17-SDG invariant, category mapping, dedup, unknown-category handling, per-facet validation, LLM-output sanitisation). 31 grant-engine tests pass.
+- **Verified (in-sandbox):** typecheck clean; taxonomy logic unit-tested; script loads under `tsx`. **Applying the migration + a live classify run (deterministic pass over the real corpus, spot-check vs ACNC usage) needs DB creds.**
 
 ### Phase 5 — Dedup consolidation + source health *(hygiene)* — ✅ DONE
 

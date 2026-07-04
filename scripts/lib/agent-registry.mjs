@@ -697,6 +697,14 @@ export const AGENTS = {
     timeoutMs: 600_000,
     dependencies: [],
   },
+  'classify-grants-classie': {
+    command: ['npx', 'tsx', 'scripts/classify-grants-classie.mjs', '--limit=1000'],
+    displayName: 'Classify Grants (CLASSIE)',
+    category: 'intelligence',
+    defaultPriority: 3,
+    timeoutMs: 300_000,
+    dependencies: [],
+  },
   'close-stale-grants': {
     command: ['node', '--env-file=.env', 'scripts/close-stale-grants.mjs'],
     displayName: 'Close Stale Grants',
