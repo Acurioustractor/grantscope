@@ -1,9 +1,16 @@
 /**
- * Grant Deduplicator
+ * Grant Deduplicator — TIER 1 (canonical, at ingest).
  *
- * Multi-source dedup using fuzzy provider:name keys.
- * Merges grants found by multiple sources into a single record,
- * preserving the most complete data from each.
+ * Key-based dedup using the canonicalized `provider:title` key
+ * (see normalizer.generateDedupKey). Runs during ingest and merges grants
+ * found by multiple sources into a single record, keeping the most complete
+ * data from each. This is the authoritative merge.
+ *
+ * TIER 2 is the semantic backstop `scripts/dedup-grants.mjs`: a post-hoc
+ * pgvector cosine pass that only catches near-duplicates whose keys differ
+ * (different wording, same opportunity) which Tier 1 cannot see. The two are
+ * complementary, not competing — Tier 1 collapses exact/alias matches; Tier 2
+ * mops up semantic matches Tier 1 structurally cannot.
  */
 
 import type { CanonicalGrant, GrantSource, ExistingGrantRecord } from './types';

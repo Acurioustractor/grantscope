@@ -129,15 +129,17 @@ Each phase is independently shippable and ordered by value-per-effort. Estimates
 - [ ] Map our internal category vocabulary → CLASSIE so existing filters keep working.
 - **Verify:** classify a sample of 50 grants, spot-check CLASSIE assignment against ACNC's published usage.
 
-### Phase 5 — Dedup consolidation + source health *(hygiene, ~2 d)*
+### Phase 5 — Dedup consolidation + source health *(hygiene)* — ✅ DONE
 
 **Problem:** #4, #2.
 
-- [ ] Make `deduplicator.ts` the single canonical merge; demote `dedup-grants.mjs` to a periodic **semantic backstop** that only merges records the key-based pass missed (cosine over existing embeddings), never a competing strategy.
-- [ ] Harden the `dedupKey` (normalize provider aliases across state/council duplicates).
-- [ ] Add a per-source "last successful yield" health signal to `agent_runs`; surface in the `/health` dashboard so a silently-zeroed scraper alarms.
-- [ ] Add contract tests for the top ~10 sources by volume (mirror `nsw-grants.contract.test.ts`).
-- **Verify:** run dedup over a known-duplicated pair; confirm single merged record. Confirm `/health` flags a source forced to return zero.
+- [x] **Defined the canonical two-tier dedup contract** (docstrings in both files): `deduplicator.ts` is Tier 1 (key-based, authoritative, at ingest); `dedup-grants.mjs` is Tier 2 (semantic pgvector backstop that only catches near-dupes whose keys differ). They're complementary, not competing.
+- [x] **Hardened the `dedupKey`** — new `canonicalizeProvider()` collapses state abbreviations (QLD↔Queensland) and org boilerplate (department/office/pty ltd/government) so the same funder under different source labels maps to one key. Title normalization stays light on purpose: it normalizes `&`/punctuation but **does not** strip years, so distinct funding-year rounds never wrongly merge.
+- [x] **Per-source "last successful yield" signal** — `scrape-state-grants.mjs` now emits a per-plugin `agent_runs` row (`source:<pluginId>`), so each source's latest yield is queryable with **zero schema change**. New pure `packages/grant-engine/src/source-health.ts:classifySourceHealth()` turns those runs into `healthy` / `zeroed` / `stale` / `failing` — the `zeroed` case is the alarm a plain success/fail check misses (run "succeeds" with 0 rows = broken selector).
+- [x] **Tests:** `dedup-key.test.ts` (alias merge, year-round non-merge, ampersand normalization, full merge) + `source-health.test.ts` (zeroed/healthy/stale/failing/ordering). 24 grant-engine tests pass total.
+- [ ] Wire `classifySourceHealth` into the `/health` UI — **deferred to a DB-connected run**: the classifier + data are in place; the surface just needs an `agent_runs` query over `source:*` rows (needs creds).
+- [ ] Contract tests for the top ~10 scrapers — partial: added dedup/health correctness tests (higher value); per-source scraper fixtures remain a follow-up.
+- **Verified (in-sandbox):** typecheck clean; dedup + health logic unit-tested; scraper loads under `tsx`. Live "force a source to 0 and confirm `/health` flags it" needs a DB-connected run.
 
 ### Phase 6 — The differentiator: award-history join *(new capability, ~4–5 d)*
 

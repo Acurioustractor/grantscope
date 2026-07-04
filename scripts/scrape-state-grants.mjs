@@ -96,6 +96,11 @@ async function main() {
     console.log(`\n--- ${plugin.name} ---`);
     const grants = [];
 
+    // Per-source run so "last successful yield per source" is queryable from
+    // agent_runs — a source whose latest run yields 0 (broken selector) alarms
+    // via classifySourceHealth even though the batch run overall "succeeds".
+    const sourceRun = DRY_RUN ? null : await logStart(supabase, `source:${plugin.id}`, plugin.name);
+
     try {
       for await (const grant of plugin.discover({ geography: ['AU'], status: 'open' })) {
         grants.push(grant);
@@ -104,6 +109,7 @@ async function main() {
       const message = err instanceof Error ? err.message : String(err);
       errors.push(`${plugin.id}: ${message}`);
       console.error(`Error running ${plugin.id}: ${message}`);
+      if (sourceRun) await logFailed(supabase, sourceRun.id, err);
       continue;
     }
 
@@ -120,6 +126,8 @@ async function main() {
       if (dedupedGrants.length > 10) console.log(`  ... and ${dedupedGrants.length - 10} more`);
       continue;
     }
+
+    let sourceNew = 0;
 
     // Upsert to grant_opportunities
     const BATCH_SIZE = 50;
@@ -154,6 +162,7 @@ async function main() {
 
           if (!singleError) {
             totalNew++;
+            sourceNew++;
             continue;
           }
 
@@ -164,6 +173,7 @@ async function main() {
 
             if (!fallbackError) {
               totalNew++;
+              sourceNew++;
               continue;
             }
 
@@ -177,10 +187,17 @@ async function main() {
         }
       } else {
         totalNew += batch.length;
+        sourceNew += batch.length;
       }
     }
 
     console.log(`  Upserted ${dedupedGrants.length} grants from ${plugin.id}`);
+    if (sourceRun) {
+      await logComplete(supabase, sourceRun.id, {
+        items_found: dedupedGrants.length,
+        items_new: sourceNew,
+      });
+    }
   }
 
   console.log(`\n=== Summary ===`);

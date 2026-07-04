@@ -165,18 +165,68 @@ export function normalizeCategories(categories: string[]): string[] {
   return [...result];
 }
 
+/** State abbreviation → full name, so "QLD Government" and "Queensland Government" collapse. */
+const STATE_EXPANSIONS: Record<string, string> = {
+  nsw: 'new south wales',
+  vic: 'victoria',
+  qld: 'queensland',
+  sa: 'south australia',
+  wa: 'western australia',
+  tas: 'tasmania',
+  nt: 'northern territory',
+  act: 'australian capital territory',
+};
+
+/**
+ * Canonicalize a funder/provider name so the same body discovered under
+ * different labels (e.g. "QLD Government" vs "Queensland Government",
+ * "Dept of Health" vs "Department of Health Pty Ltd") maps to one key.
+ * Deliberately conservative — it normalizes org boilerplate, not meaning.
+ */
+export function canonicalizeProvider(provider: string): string {
+  let s = provider
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // Expand state abbreviations as whole words.
+  s = s
+    .split(' ')
+    .map((w) => STATE_EXPANSIONS[w] || w)
+    .join(' ');
+
+  // Drop org boilerplate that varies between sources.
+  s = s
+    .replace(/\b(the|of|for)\b/g, ' ')
+    .replace(/\b(department|dept|office|agency|ministry|division|branch)\b/g, ' ')
+    .replace(/\b(government|govt|australian government|commonwealth)\b/g, ' ')
+    .replace(/\b(pty|ltd|limited|inc|incorporated|co)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return s;
+}
+
 /**
  * Generate a dedup key from provider and title.
- * Strips common noise words and normalizes whitespace.
+ *
+ * Provider is canonicalized (see canonicalizeProvider) to catch cross-source
+ * alias duplicates. Title is only lightly normalized (punctuation/whitespace,
+ * `&`→`and`) — we do NOT strip years or type words, because "2023 Community
+ * Grant" and "2024 Community Grant" are distinct rounds that must NOT merge.
  */
 export function generateDedupKey(provider: string, title: string): string {
-  const normalizeStr = (s: string) =>
-    s.toLowerCase()
-      .replace(/[^a-z0-9\s]/g, '')
+  const normalizeTitle = (s: string) =>
+    s
+      .toLowerCase()
+      .replace(/&/g, ' and ')
+      .replace(/[^a-z0-9\s]/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
 
-  return `${normalizeStr(provider)}:${normalizeStr(title)}`;
+  return `${canonicalizeProvider(provider)}:${normalizeTitle(title)}`;
 }
 
 /**

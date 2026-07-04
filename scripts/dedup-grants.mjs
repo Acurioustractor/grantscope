@@ -1,11 +1,14 @@
 #!/usr/bin/env node
 
 /**
- * Grant Deduplication Agent
+ * Grant Deduplication Agent — TIER 2 (semantic backstop, post-hoc).
  *
- * Uses pgvector cosine similarity to detect semantically identical
- * grants across different portals/sources (e.g. State portal vs GrantConnect).
- * Marks the less-complete duplicate as `status = 'duplicate'`.
+ * The canonical merge is TIER 1, the key-based `deduplicator.ts` that runs at
+ * ingest. This agent is the backstop: a pgvector cosine pass that catches
+ * semantically identical grants whose canonical `provider:title` keys differ
+ * (different wording across portals, e.g. State portal vs GrantConnect) and so
+ * survived Tier 1. It marks the less-complete duplicate as `status='duplicate'`
+ * — it never competes with Tier 1's merge, only mops up what keys can't match.
  *
  * Usage:
  *   node --env-file=.env scripts/dedup-grants.mjs
