@@ -64,6 +64,33 @@ Join key candidates: **funder/provider name** (grant `provider` ↔ award funder
 **category/sector** and the new **`classie_subjects` / `sdg_codes`** facets (now populated
 — use them as the interoperable join axis rather than the weak `categories`).
 
+### ⚠ Data-layer feasibility (probed live 2026-07-05 — read before building)
+
+A quick probe of the join changed the recommended approach. **Don't build the
+award $-history off `gs_relationships` naively.** Findings, using Paul Ramsay
+Foundation Ltd (`gs_entities.id = 92edb50b-b111-45a8-b697-0354410b2d2d`) as the test funder:
+
+- The join concept is sound: the funder has 108 `grant` edges → 79 distinct recipients.
+- **But amount and recipient live on different edges.** The high-$ edges
+  ($2.1M, $1.75M, …, $15.15M total) are **self-loops** (`source_entity_id = target_entity_id`,
+  `year` NULL) — ACNC-style "total grants made" attached to the funder itself.
+  The 79 edges to **real** recipients all have `year` but **0 of 79 have `amount`**.
+  → From `gs_relationships` you can get *who won + when*, NOT *who won how much*.
+  Always filter `source_entity_id <> target_entity_id` or the "past winners" list
+  is just the funder repeated.
+- **Funders fragment** — "Paul Ramsay Foundation" resolves to 6+ entities (ABN entity,
+  holding co, several `GS-PROG-*` program entities). Joining on funder needs canonical
+  resolution (or fuzzy name match); this is the real entity-resolution cost of Phase 6.
+- **`justice_funding` is the clean $-source** (157K rows: 100% `recipient_name`,
+  96% `amount_dollars`, 93% `financial_year`, 81% `gs_entity_id`-resolved, + `topics[]`).
+  `austender_contracts` similarly has clean `supplier_name`/`contract_value`/dates.
+
+**Revised approach:** build the award **$-history** primarily from `justice_funding`
++ `austender_contracts` (clean recipient+amount+year), keyed by sector / `topics[]` /
+the new `classie_subjects`. Use `gs_relationships` only to enrich the *recipient list*
+and funder→recipient existence (self-loops excluded), not for dollar figures. Wire the
+funder match to CLASSIE subject as the interoperable join axis.
+
 ### Build steps
 1. **View/MV** `grant_award_history` (or a function) that, per funder + category/CLASSIE-subject,
    aggregates historical awards: `n_awards`, `total_awarded`, `median_award`,
