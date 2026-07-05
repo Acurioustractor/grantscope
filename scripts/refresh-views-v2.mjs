@@ -79,6 +79,9 @@ const VIEW_LIST = [
   'mv_indigenous_procurement_score',
   'mv_grant_contract_overlap',
   'mv_lga_indigenous_proxy_score',
+  // Phase 6 award-history (justice_funding + gs_entities; both have unique PKs → CONCURRENTLY-safe)
+  'mv_award_history_by_theme',
+  'mv_award_winner_by_theme',
 ];
 
 // MVs known to lack unique indexes — pre-emptively use non-concurrent.
