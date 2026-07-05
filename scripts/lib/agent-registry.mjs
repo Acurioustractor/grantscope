@@ -449,8 +449,8 @@ export const AGENTS = {
   // first `--apply` run and eyeballed the results in the /org pipeline UI,
   // flip command to add '--apply' to make the nightly population autonomous.
   'match-foundations-for-projects': {
-    command: ['node', '--env-file=.env', 'scripts/match-foundations-for-projects.mjs'],
-    displayName: 'Match foundations to ACT projects (philanthropy find agent · dry-run)',
+    command: ['node', '--env-file=.env', 'scripts/match-foundations-for-projects.mjs', '--apply'],
+    displayName: 'Match foundations to ACT projects (philanthropy find agent · apply)',
     category: 'discovery',
     defaultPriority: 3,
     timeoutMs: 300_000,

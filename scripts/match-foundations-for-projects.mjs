@@ -52,11 +52,26 @@ const CROSSWALK = [
   { code: 'ACT-PI', themes: ['indigenous', 'community', 'youth', 'arts'],                    home: ['AU-QLD'],          sec: ['AU-NT', 'AU-National'] },
   { code: 'ACT-GD', themes: ['indigenous', 'community', 'social-enterprise', 'employment'], home: ['AU-QLD', 'AU-NT'], sec: ['AU-NSW', 'AU-WA', 'AU-SA', 'AU-VIC'] },
   { code: 'ACT-HV', themes: ['environment', 'rural_remote', 'community', 'employment'],      home: ['AU-QLD'],          sec: ['AU-NSW', 'AU-National'] },
-  { code: 'ACT-FM', themes: ['environment', 'rural_remote'],                                 home: ['AU-QLD'],          sec: ['AU-NSW'] },
+  { code: 'ACT-FM', themes: ['environment', 'rural_remote', 'community', 'employment', 'indigenous'], home: ['AU-QLD'], sec: ['AU-NSW', 'AU-National'] },
   { code: 'ACT-EL', themes: ['indigenous', 'arts', 'community', 'human_rights'],             home: ['AU-QLD', 'AU-NSW'], sec: ['AU-VIC', 'AU-National', 'AU-NT'] },
 ];
 
 const sqlArr = (a) => `ARRAY[${a.map(s => `'${s.replace(/'/g, "''")}'`).join(',')}]`;
+const ilikeArr = (a) => `ARRAY[${a.map(s => `'%${s.replace(/'/g, "''")}%'`).join(',')}]`;
+
+/**
+ * Values-based exclusion (Ben's call, encoded so no future run re-litigates it):
+ * extractive-industry corporate foundations are filtered out even when they score
+ * high mechanically. Name-pattern match (case-insensitive substring) because these
+ * are specific funders, not a `thematic_focus` tag. Kept tight and named — add a
+ * peer here rather than rejecting the same funder in the UI every nightly run.
+ * NOTE: Minderoo (Forrest/Fortescue-derived) is deliberately NOT here — it's a
+ * borderline call left to human review in the /org pipeline, not auto-filtered.
+ */
+const EXCLUDE_FUNDERS = [
+  'BHP', 'Rio Tinto', 'Glencore', 'Adani', 'Woodside', 'Santos',
+  'Fortescue', 'Whitehaven', 'Peabody', 'Yancoal',
+];
 
 /**
  * The scorer, as a single reusable CTE chain. Both the dry-run SELECT and the
@@ -89,6 +104,7 @@ scored AS (
     ON f.thematic_focus IS NOT NULL
    AND f.thematic_focus && p.themes
    AND NOT ('religion' = ANY(f.thematic_focus))   -- faith-purpose funders are noise for these projects
+   AND NOT (f.name ILIKE ANY (${ilikeArr(EXCLUDE_FUNDERS)}))   -- extractive-industry funders (values exclusion)
 ),
 fit AS (
   SELECT s.*,
