@@ -441,6 +441,21 @@ export const AGENTS = {
     timeoutMs: 3_600_000,
     dependencies: [],
   },
+  // Philanthropy "find" agent — the foundation analogue of the grant pipeline.
+  // Scores every foundation against each active ACT project and lands top fits
+  // into org_project_foundations as candidates (stage=saved / researching),
+  // awaiting human review. FINDS only — never approaches or sends.
+  // Registered as dry-run (Tier 1, no writes). Once a human has approved the
+  // first `--apply` run and eyeballed the results in the /org pipeline UI,
+  // flip command to add '--apply' to make the nightly population autonomous.
+  'match-foundations-for-projects': {
+    command: ['node', '--env-file=.env', 'scripts/match-foundations-for-projects.mjs'],
+    displayName: 'Match foundations to ACT projects (philanthropy find agent · dry-run)',
+    category: 'discovery',
+    defaultPriority: 3,
+    timeoutMs: 300_000,
+    dependencies: [],
+  },
   'auto-classify-llm': {
     command: ['node', '--env-file=.env', 'scripts/auto-classify-llm.mjs', '--limit=300'],
     displayName: 'Auto-classify unverified alma rows (LLM)',
