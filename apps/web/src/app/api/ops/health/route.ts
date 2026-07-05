@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAdminApi } from '@/lib/admin-auth';
 import { getServiceSupabase } from '@/lib/supabase';
+import { classifySourceHealth, type SourceRun } from '@grant-engine/source-health';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
@@ -52,6 +53,7 @@ export async function GET() {
       // Breakdowns + recent runs
       sourceBreakdownResult, confidenceBreakdownResult,
       recentRuns, recentDiscoveryRuns,
+      sourceHealthRuns,
       // Entity graph
       entityTypeBreakdown, relationshipTypeBreakdown,
       donorContractorStats,
@@ -164,6 +166,12 @@ export async function GET() {
       safe(db.rpc('get_foundation_confidence_breakdown'), 8000),
       safe(db.from('agent_runs').select('*').order('completed_at', { ascending: false }).limit(20), 8000),
       safe(db.from('grant_discovery_runs').select('*').order('started_at', { ascending: false }).limit(10), 8000),
+      // Per-source ingest health — latest run per source:* agent
+      safe(db.from('agent_runs')
+        .select('agent_id, agent_name, items_found, status, started_at')
+        .like('agent_id', 'source:%')
+        .order('started_at', { ascending: false })
+        .limit(300), 8000),
       // Entity graph
       safe(db.rpc('get_entity_type_breakdown'), 8000),
       safe(db.rpc('get_relationship_type_breakdown'), 8000),
@@ -267,6 +275,22 @@ export async function GET() {
       { dataset: 'ALMA Evidence', table: 'alma_evidence', count: tcount('alma_evidence'), lastUpdated: tfresh('alma_evidence') },
     ];
 
+    // Per-source ingest health — map agent_runs rows to SourceRun then classify
+    const sourceHealthRows = (sourceHealthRuns.data ?? []) as Array<{
+      agent_id: string;
+      agent_name: string | null;
+      items_found: number | null;
+      status: string | null;
+      started_at: string;
+    }>;
+    const sourceRuns: SourceRun[] = sourceHealthRows.map((row) => ({
+      source: row.agent_id.replace(/^source:/, ''),
+      startedAt: row.started_at,
+      itemsFound: Number(row.items_found ?? 0),
+      status: row.status ?? undefined,
+    }));
+    const sourceHealth = classifySourceHealth(sourceRuns);
+
     const entityTypes = (entityTypeBreakdown as { data: Array<{ entity_type: string; count: number }> }).data ?? [];
     const relTypes = (relationshipTypeBreakdown as { data: Array<{ relationship_type: string; count: number }> }).data ?? [];
     const totalRecords = dataFreshness.reduce((s, d) => s + d.count, 0);
@@ -343,6 +367,7 @@ export async function GET() {
       confidenceBreakdown: confidenceBreakdownResult.data ?? [],
       recentRuns: recentRuns.data ?? [],
       discoveryRuns: recentDiscoveryRuns.data ?? [],
+      sourceHealth,
       lastUpdated: new Date().toISOString(),
     });
 

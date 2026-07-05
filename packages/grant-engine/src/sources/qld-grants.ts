@@ -10,6 +10,7 @@
  */
 
 import type { SourcePlugin, DiscoveryQuery, RawGrant } from '../types';
+import { ckanDatastoreAll } from './lib/ckan';
 
 const QLD_CKAN_BASE = 'https://www.data.qld.gov.au/api/3/action';
 
@@ -43,14 +44,6 @@ interface QLDGrantRecord {
   'Applicant type2'?: string;
   'Service ID'?: number;
   [key: string]: string | number | null | undefined;
-}
-
-interface DatastoreResult<T> {
-  success: boolean;
-  result: {
-    total: number;
-    records: T[];
-  };
 }
 
 type DateFormat = 'dd/mm/yyyy' | 'mm/dd/yyyy';
@@ -157,45 +150,28 @@ export function createQLDGrantsPlugin(): SourcePlugin {
       let agencyResourceIds: string[] = [];
 
       try {
-        const metaResponse = await fetch(
-          `${QLD_CKAN_BASE}/datastore_search?resource_id=${GRANTS_FINDER_META_RESOURCE}&limit=100`
-        );
-        if (!metaResponse.ok) {
-          console.error(`[qld-grants] Meta-resource fetch failed: ${metaResponse.status}`);
-          return;
-        }
-
-        const metaData = await metaResponse.json() as DatastoreResult<AgencyRecord>;
-        if (!metaData.success || !metaData.result?.records) {
+        const agencyRecords = await ckanDatastoreAll<AgencyRecord>(QLD_CKAN_BASE, GRANTS_FINDER_META_RESOURCE);
+        if (!agencyRecords.length) {
           console.error('[qld-grants] No agency records in meta-resource');
           return;
         }
-
-        agencyResourceIds = metaData.result.records.map(r => r.Resource).filter(Boolean);
+        agencyResourceIds = agencyRecords.map(r => r.Resource).filter(Boolean);
         console.log(`[qld-grants] Found ${agencyResourceIds.length} agency resources to query`);
       } catch (err) {
         console.error(`[qld-grants] Meta-resource error: ${err instanceof Error ? err.message : String(err)}`);
         return;
       }
 
-      // Step 2: Fetch grants from each agency resource
+      // Step 2: Fetch grants from each agency resource (fully paginated — no truncation).
       let totalYielded = 0;
 
       for (const resourceId of agencyResourceIds) {
         try {
-          const response = await fetch(
-            `${QLD_CKAN_BASE}/datastore_search?resource_id=${resourceId}&limit=500`
-          );
-          if (!response.ok) {
-            console.error(`[qld-grants] Resource ${resourceId} fetch failed: ${response.status}`);
-            continue;
-          }
+          const records = await ckanDatastoreAll<QLDGrantRecord>(QLD_CKAN_BASE, resourceId);
+          if (!records.length) continue;
+          const resourceDateFormat = inferResourceDateFormat(records);
 
-          const data = await response.json() as DatastoreResult<QLDGrantRecord>;
-          if (!data.success || !data.result?.records) continue;
-          const resourceDateFormat = inferResourceDateFormat(data.result.records);
-
-          for (const record of data.result.records) {
+          for (const record of records) {
             const name = record['Program title'] || '';
             if (!name) continue;
 

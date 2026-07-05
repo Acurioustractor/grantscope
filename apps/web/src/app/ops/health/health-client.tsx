@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import type { SourceHealth } from '@grant-engine/source-health';
 
 function tableToSlug(table: string): string {
   return table.replace(/_/g, '-');
@@ -73,6 +74,7 @@ interface HealthData {
     almaOutcomes: number;
     almaEvidence: number;
   };
+  sourceHealth: SourceHealth[];
   totalRecords: number;
   dataFreshness: Array<{
     dataset: string;
@@ -180,6 +182,17 @@ function freshnessStatus(iso: string | null): { label: string; color: string } {
   if (days < 7) return { label: 'OK', color: 'bg-gray-200 text-bauhaus-black' };
   if (days < 30) return { label: 'STALE', color: 'bg-yellow-500 text-bauhaus-black' };
   return { label: 'CRITICAL', color: 'bg-red-500 text-white' };
+}
+
+function sourceHealthPill(status: SourceHealth['status']): string {
+  switch (status) {
+    case 'failing': return 'bg-red-500 text-white';
+    case 'zeroed': return 'bg-red-500 text-white';
+    case 'stale': return 'bg-yellow-500 text-bauhaus-black';
+    case 'unknown': return 'bg-gray-300 text-bauhaus-black';
+    case 'healthy': return 'bg-green-600 text-white';
+    default: return 'bg-gray-300 text-bauhaus-black';
+  }
 }
 
 function computeHealthScore(data: HealthData): number {
@@ -360,6 +373,7 @@ export function HealthClient() {
   }
 
   const { stats, grantSemantics, sourceIdentity, entityGraph, totalRecords, dataFreshness, sourceBreakdown, confidenceBreakdown, recentRuns, discoveryRuns } = data;
+  const sourceHealth = data.sourceHealth ?? [];
   const confMap = Object.fromEntries(confidenceBreakdown.map(c => [c.confidence, c.total]));
   const healthScore = computeHealthScore(data);
 
@@ -840,6 +854,38 @@ export function HealthClient() {
             </tbody>
           </table>
         </div>
+      </section>
+
+      {/* ===== SOURCE HEALTH ===== */}
+      <section className="mb-10">
+        <h2 className="text-sm font-black uppercase tracking-widest text-bauhaus-muted mb-4 border-b-2 border-bauhaus-black pb-2">
+          Source Health
+        </h2>
+        {sourceHealth.length === 0 ? (
+          <div className="border-4 border-dashed border-bauhaus-black/20 p-8 text-center">
+            <div className="text-sm text-bauhaus-muted">No per-source ingest runs recorded yet</div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {sourceHealth.map((sh) => {
+              const pill = sourceHealthPill(sh.status);
+              return (
+                <div key={sh.source} className="border-4 border-bauhaus-black p-4">
+                  <div className="flex items-center justify-between gap-3 mb-2">
+                    <span className="font-black text-sm font-mono truncate">{sh.source}</span>
+                    <span className={`px-2 py-0.5 text-xs font-black uppercase tracking-wider flex-shrink-0 ${pill}`}>
+                      {sh.status}
+                    </span>
+                  </div>
+                  <div className="text-xs font-mono text-bauhaus-muted">
+                    yield={sh.latestYield.toLocaleString()} | last run {timeAgo(sh.lastRunAt)}
+                  </div>
+                  <p className="text-xs text-bauhaus-muted leading-relaxed mt-2">{sh.note}</p>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       {/* ===== PIPELINE ARCHITECTURE ===== */}

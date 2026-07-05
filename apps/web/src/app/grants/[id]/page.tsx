@@ -4,8 +4,22 @@ import Link from 'next/link';
 import { GrantActions } from '@/app/components/grant-actions';
 import { GrantNotes } from '@/app/components/grant-notes';
 import { PartnerPicker } from '@/app/components/partner-picker';
+import { assessGrantVerification } from '@grant-engine/grant-verification';
+import { CLASSIE_SUBJECTS, CLASSIE_POPULATIONS, SDGS, type ClassieTag } from '@grant-engine/classie';
+import { AwardHistoryCard, type AwardHistoryTheme } from '@/app/components/award-history-card';
+import { getCurrentTier } from '@/lib/subscription-server';
 
 export const dynamic = 'force-dynamic';
+
+// Build a code→label lookup from the curated CLASSIE / SDG tag arrays. Codes with
+// no match fall back to the raw code so nothing renders blank.
+function classieLabeller(tags: ClassieTag[]): (code: string) => string {
+  const map = new Map(tags.map((t) => [t.code, t.label]));
+  return (code: string) => map.get(code) ?? code;
+}
+const subjectLabel = classieLabeller(CLASSIE_SUBJECTS);
+const populationLabel = classieLabeller(CLASSIE_POPULATIONS);
+const sdgLabel = classieLabeller(SDGS);
 
 interface Grant {
   id: string;
@@ -22,6 +36,7 @@ interface Grant {
   focus_areas: string[];
   target_recipients: string[];
   status: string;
+  source: string | null;
   sources: unknown;
   discovery_method: string | null;
   last_verified_at: string | null;
@@ -35,6 +50,9 @@ interface Grant {
   requirements_summary: string | null;
   foundation_id: string | null;
   grant_type: string | null;
+  classie_subjects: string[] | null;
+  classie_populations: string[] | null;
+  sdg_codes: string[] | null;
 }
 
 interface SimilarGrant {
@@ -134,6 +152,28 @@ export default async function GrantDetailPage({ params }: { params: Promise<{ id
     relatedFoundations = (foundations || []) as RelatedFoundation[];
   }
 
+  // Phase 6 — award history ("who's won this kind of money before"). Empty-safe:
+  // returns [] before the migration is applied or when the grant maps to no themes.
+  //
+  // Buyer-tier gate: named winners are paid evidence. We resolve the tier FIRST and ask
+  // the RPC for zero winners on the free tier (p_winner_limit=0) — so the winner names
+  // never even reach the server as an HTTP response. This matters because Next.js patches
+  // fetch (which supabase-js uses) and serializes the raw response into the RSC flight
+  // payload; stripping in JS *after* the fetch would still leak the names via view-source.
+  let awardHistory: AwardHistoryTheme[] = [];
+  let tier: Awaited<ReturnType<typeof getCurrentTier>> = 'community';
+  try {
+    tier = await getCurrentTier();
+    const winnerLimit = tier === 'community' ? 0 : 8;
+    const { data: hist } = await supabase.rpc('get_grant_award_history', {
+      p_grant_id: id,
+      p_winner_limit: winnerLimit,
+    });
+    if (Array.isArray(hist)) awardHistory = hist as AwardHistoryTheme[];
+  } catch {
+    // Award-history RPC not available yet (migration unapplied) — card renders nothing.
+  }
+
   // Check if the logged-in user's org has this grant in their pipeline
   interface PipelineEntry {
     name: string;
@@ -172,7 +212,7 @@ export default async function GrantDetailPage({ params }: { params: Promise<{ id
   const ptBadge = programTypeBadge(g.program_type);
 
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-6xl">
       <a href="/grants" className="text-xs font-black text-bauhaus-muted uppercase tracking-widest hover:text-bauhaus-black">
         &larr; Back to Grants
       </a>
@@ -235,6 +275,22 @@ export default async function GrantDetailPage({ params }: { params: Promise<{ id
       <div className="text-base text-bauhaus-muted font-medium mb-2">
         {g.provider}{g.program ? ` — ${g.program}` : ''}
       </div>
+      {(() => {
+        const v = assessGrantVerification({ sources: g.sources as never, url: g.url, last_verified_at: g.last_verified_at, source: g.source });
+        const cls =
+          v.level === 'verified'
+            ? 'bg-money-light text-money border-money'
+            : v.level === 'scraped'
+            ? 'bg-white text-bauhaus-black border-bauhaus-black'
+            : 'bg-bauhaus-yellow/20 text-bauhaus-black border-bauhaus-yellow';
+        const mark = v.level === 'verified' ? '✓' : v.level === 'scraped' ? '■' : '⚠';
+        return (
+          <div className={`inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest px-2.5 py-1 border-2 mb-3 ${cls}`}>
+            <span aria-hidden>{mark}</span>
+            {v.label}
+          </div>
+        );
+      })()}
       <GrantActions grantId={g.id} />
       <GrantNotes grantId={g.id} />
       <PartnerPicker
@@ -410,6 +466,41 @@ export default async function GrantDetailPage({ params }: { params: Promise<{ id
             </div>
           )}
 
+          {((g.classie_subjects?.length ?? 0) > 0 || (g.classie_populations?.length ?? 0) > 0 || (g.sdg_codes?.length ?? 0) > 0) && (
+            <div className="bg-white border-4 border-bauhaus-black p-4">
+              {(g.classie_subjects?.length ?? 0) > 0 && (
+                <div className="mb-3">
+                  <div className="text-xs font-black text-bauhaus-black mb-2 uppercase tracking-widest">CLASSIE Subjects</div>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {g.classie_subjects!.map((code) => (
+                      <span key={code} className="text-[11px] px-2 py-0.5 bg-bauhaus-black text-white font-black uppercase tracking-wider">{subjectLabel(code)}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {(g.classie_populations?.length ?? 0) > 0 && (
+                <div className="mb-3 pt-3 border-t-2 border-bauhaus-black/20">
+                  <div className="text-xs font-black text-bauhaus-muted mb-2 uppercase tracking-widest">Populations</div>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {g.classie_populations!.map((code) => (
+                      <span key={code} className="text-[11px] px-2 py-0.5 bg-link-light text-bauhaus-blue font-black border-2 border-bauhaus-blue/20">{populationLabel(code)}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {(g.sdg_codes?.length ?? 0) > 0 && (
+                <div className="pt-3 border-t-2 border-bauhaus-black/20">
+                  <div className="text-xs font-black text-bauhaus-muted mb-2 uppercase tracking-widest">UN SDGs</div>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {g.sdg_codes!.map((code) => (
+                      <span key={code} className="text-[11px] px-2 py-0.5 bg-warning-light text-bauhaus-black font-black border-2 border-bauhaus-yellow/30">{sdgLabel(code)}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {structure && (structure.total_amount || structure.duration_years) && (
             <div className="bg-white border-4 border-bauhaus-black p-4">
               <div className="text-xs font-black text-bauhaus-black mb-3 uppercase tracking-widest">Grant Structure</div>
@@ -449,6 +540,9 @@ export default async function GrantDetailPage({ params }: { params: Promise<{ id
           )}
         </div>
       </div>
+
+      {/* Phase 6 — Who's Won This Before (award-history differentiator) */}
+      <AwardHistoryCard themes={awardHistory} tier={tier} />
 
       {/* Similar Grants */}
       {similarGrants.length > 0 && (

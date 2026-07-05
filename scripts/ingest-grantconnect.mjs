@@ -2,25 +2,52 @@
 /**
  * Ingest GrantConnect Awarded Grants
  *
- * Source: grants.gov.au weekly export CSV (manual download required)
- * Download from: https://www.grants.gov.au/reports/gaweeklyexport
- * Save to: data/grantconnect/ga-weekly-export.csv
+ * Source: grants.gov.au weekly GA (Grant Award) export CSV.
+ *
+ * The CSV can be obtained automatically instead of downloaded by hand:
+ *   --url=<csv url>                or  env GRANTCONNECT_GA_EXPORT_URL
+ * When a URL is provided, the file is fetched to CSV_PATH before parsing.
+ * Two known machine-readable sources:
+ *   - GrantConnect weekly export report (grants.gov.au/reports/gaweeklyexport)
+ *   - data.gov.au "Grants Awarded Data" CKAN dataset (CSV resource)
+ * With no URL, it falls back to the local file (the original manual workflow).
  *
  * Usage:
  *   node --env-file=.env scripts/ingest-grantconnect.mjs
  *   node --env-file=.env scripts/ingest-grantconnect.mjs --dry-run
  *   node --env-file=.env scripts/ingest-grantconnect.mjs --file data/grantconnect/custom.csv
+ *   node --env-file=.env scripts/ingest-grantconnect.mjs --url=https://.../ga-weekly-export.csv
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { readFileSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { dirname } from 'path';
 import { parse } from 'csv-parse/sync';
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 const DRY_RUN = process.argv.includes('--dry-run');
 const fileArg = process.argv.find(a => a.startsWith('--file='));
+const urlArg = process.argv.find(a => a.startsWith('--url='));
 const CSV_PATH = fileArg ? fileArg.split('=')[1] : 'data/grantconnect/ga-weekly-export.csv';
+const EXPORT_URL = urlArg ? urlArg.split('=')[1] : process.env.GRANTCONNECT_GA_EXPORT_URL;
+
+/**
+ * Download the GA export CSV to CSV_PATH. Best-effort: on failure we fall back
+ * to whatever is already on disk so a transient fetch error doesn't lose a run.
+ */
+async function fetchExportCsv(url, dest) {
+  console.log(`  Fetching GA export: ${url}`);
+  const res = await fetch(url, {
+    redirect: 'follow',
+    headers: { 'User-Agent': 'GrantScope/1.0 (research; contact@act.place)', Accept: 'text/csv,*/*' },
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const text = await res.text();
+  mkdirSync(dirname(dest), { recursive: true });
+  writeFileSync(dest, text);
+  console.log(`  Saved ${text.length} bytes → ${dest}`);
+}
 
 // Column name mapping — GrantConnect export uses verbose headers
 // These map common GrantConnect header variations to our DB columns
@@ -99,7 +126,17 @@ async function main() {
   console.log('========================');
   console.log(`Mode: ${DRY_RUN ? 'DRY RUN' : 'LIVE'}`);
   console.log(`File: ${CSV_PATH}`);
+  console.log(`Source: ${EXPORT_URL ? EXPORT_URL : 'local file (no --url / GRANTCONNECT_GA_EXPORT_URL set)'}`);
   console.log();
+
+  // Auto-fetch the export when a URL is configured; fall back to local file.
+  if (EXPORT_URL) {
+    try {
+      await fetchExportCsv(EXPORT_URL, CSV_PATH);
+    } catch (err) {
+      console.warn(`  Fetch failed (${err.message}) — falling back to existing ${CSV_PATH}`);
+    }
+  }
 
   // Read and parse CSV
   let raw;
@@ -107,8 +144,8 @@ async function main() {
     raw = readFileSync(CSV_PATH, 'utf-8');
   } catch (e) {
     console.error(`Cannot read ${CSV_PATH}`);
-    console.error('Download from: https://www.grants.gov.au/reports/gaweeklyexport');
-    console.error('Save to: data/grantconnect/ga-weekly-export.csv');
+    console.error('Provide --url=<csv> / GRANTCONNECT_GA_EXPORT_URL to auto-fetch, or');
+    console.error('download from https://www.grants.gov.au/reports/gaweeklyexport → data/grantconnect/ga-weekly-export.csv');
     process.exit(1);
   }
 

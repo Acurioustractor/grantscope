@@ -1,0 +1,213 @@
+# Grant-Finder Overhaul — Fix Plan + AU Competitive Teardown
+
+**Status:** Proposed · **Owner:** engineering · **Date:** 2026-07-03
+**Strategy fit:** Free open registry for everyone; paid evidence + tender tools for buyers (`docs/strategy/buyer-wedge.md`). This plan *deepens* grant discovery and matching — it does **not** widen the data estate. Data widening is paused.
+
+---
+
+## 0. TL;DR
+
+We built a broad grant-ingest pipeline (~40 source plugins, LLM enrichment, dedup, URL verification, nightly orchestration). It works, but it leans on brittle HTML scraping, ships an unverified LLM-knowledge source into user alerts, runs two divergent dedup strategies, and — the biggest miss — **matches grants to users with keyword heuristics while the semantic-vector infrastructure we already built sits unused on the two highest-traffic paths.**
+
+The AU market teardown says the same thing from the outside: every incumbent (GrantConnect, The Grants Hub, GrantGuru, Funding Centre, Strategic Grants) is a **keyword directory**. None joins opportunities to award history to a recipient profile. None publishes a verification/freshness methodology. That is exactly the ground our entity graph is built to own.
+
+Two moves define this plan:
+
+1. **Ingest the mandated/official feeds instead of scraping HTML** — GA notices and QLD/NSW/VIC opportunities are published as free, structured CKAN datasets. Scraping council HTML by hand is a cost we don't need to carry.
+2. **Reason, don't list** — unify matching on the vector path that already works, adopt the CLASSIE taxonomy for interoperability, and join live opportunities to award history so we can tell an org *"grants you're likely to win, and who won them before."* No competitor does this.
+
+---
+
+## 1. What we found in the codebase (grounding)
+
+| # | Problem | Evidence | Sharpened finding |
+|---|---------|----------|-------------------|
+| 1 | Matching ignores the embeddings we built | `apps/web/src/app/api/grants/match/route.ts` scores from a base 50 with keyword/category/amount heuristics — **its own docstring falsely claims "vector similarity."** `scripts/scout-grants-for-profiles.mjs` does the same. Yet `apps/web/src/app/api/profile/matches/route.ts` already calls the `match_grants_for_org(vector,...)` RPC (`supabase/migrations/20260311_grant_learning.sql`, `20260503000019_fix_match_grants_search_path.sql`) with real embeddings + learning signals. | The semantic path **exists and works**. This is a *consolidation* job, not a build. |
+| 2 | ~40 bespoke Cheerio/regex scrapers = maintenance treadmill | `packages/grant-engine/src/sources/*.ts` (per-state + dozens of councils). Amount/deadline extraction is regex-only (`vic-grants.ts:extractAmounts/extractDeadline`). Only **3** contract tests exist (`nsw-grants`, `cityofsydney-grants`, `repository-source-identity`) for ~40 sources. | Silent breakage risk. Replace scrapers with official feeds where they exist; add a per-source health signal for the rest. |
+| 3 | `llm_knowledge` grants have no verified URL | `packages/grant-engine/src/sources/llm-knowledge.ts` emits grants with `confidence: 'llm_knowledge'`; the `confidence` enum already exists in `types.ts` (`'verified' \| 'llm_knowledge' \| 'scraped'`) but is **not** gating user-facing alerts. | Quarantine unverified grants from alerts until URL-verified. Cheap, high trust payoff. |
+| 4 | Two dedup strategies that can disagree | In-pipeline `deduplicator.ts` merges on `dedupKey = lower(provider):lower(name)`; separate `scripts/dedup-grants.mjs` does a semantic/embedding pass. | Same grant can survive twice across two states/councils. Consolidate on one canonical key + one semantic backstop. |
+| 5 | Stale-closing is purely time-based | `scripts/close-stale-grants.mjs`. `verify-alma-opportunities.mjs` already checks URL liveness but the two signals aren't combined. | Combine liveness + deadline to close expired listings faster. |
+| 6 | GrantConnect already half-official | `sources/grantconnect.ts` uses the RSS feed + Playwright fallback; `scripts/ingest-grantconnect.mjs` ingests the weekly GA CSV (manual download). | Good base. Automate the GA export and add the CKAN mirror; keep GO capture via RSS/keyword-email. |
+
+---
+
+## 2. AU competitive teardown (what to copy / what to beat)
+
+Full player-by-player notes with citations live in the appendix. The synthesis:
+
+### Comparison
+
+| Player | Sourcing | Freshness | Matching | Access |
+|---|---|---|---|---|
+| **GrantConnect** (grants.gov.au) | Mandated legal publication (GO + GA notices) | GA ≤21 days post-award; authoritative | Keyword+location email profile; no profile/semantic match | Free; bulk GA via data.gov.au; **no confirmed public GO API** |
+| **business.gov.au** | Manual curation (~550 gov programs) | Curated | **Guided finder + editable filters + shortlist-to-email** | Free; no API; business-only |
+| **SmartyGrants** (Our Community) | Funder-entered admin platform | Live | N/A (admin); **CLASSIE taxonomy + CLASSIEfier** auto-classifier | Paid SaaS; per-funder OData; data private |
+| **The Grants Hub** | Manual curation (7,000+) | Changelog + deadline-change alerts | Saved-search alerts, calendar | Paid membership |
+| **GrantGuru** | Aggregation (9,000+ sources) | "Daily" (claim) | Filter/browse, favourites, alerts | Freemium; **council white-label** |
+| **Strategic Grants (GEMS)** | Human research (90 hrs/wk) | Manual, high-touch | Project-matched 12-mo calendar; **app + reporting-deadline alerts**; CRM sync | Paid; NFP >$1M |
+| **Funding Centre** | Curation (5,500, CLASSIE) | Daily | Custom alerts + "Drafter" writing tool | Paid |
+| **State portals** | VIC crowdsourced; QLD/NSW open data | Varies | Basic filters | Free; **CKAN APIs** |
+
+### The pattern
+
+- **Awards** data is well-covered by free open data (CKAN). Live **opportunities** are fragmented — but QLD Grants Finder and VIC's crowdsourced submissions are machine-readable.
+- Everyone matches by **keyword + filter**. Only business.gov.au does profile-based discovery, and it's business-only.
+- **No one** publishes a freshness/verification methodology.
+- **No one** joins opportunity ↔ award history ↔ recipient profile.
+
+### Top 8 process ideas (ranked)
+
+1. **Ingest mandated/official feeds, don't scrape HTML** — GA via [data.gov.au Grants Awarded Data](https://data.gov.au/data/dataset/grants-awarded-data); QLD/NSW/VIC opportunities via CKAN. Only GrantConnect *GO* needs RSS/keyword capture.
+2. **Adopt CLASSIE as our taxonomy** — the de-facto AU social-sector standard (ACNC, Our Community, SmartyGrants all use it). Interoperability + better classification.
+3. **Auto-classify with an LLM (our "CLASSIEfier")** — kills Strategic Grants' 90-hrs/week manual-research cost. We already run LLM classification (`auto-classify-llm.mjs`); point it at CLASSIE.
+4. **Profile/entity-based matching, not keyword** — we hold `gs_entities` (159K, with sector/remoteness/SEIFA/community-controlled). This is fix #1.
+5. **Copy business.gov.au's guided-finder + editable-filters + shortlist-to-email** UX — cleanest consumer flow in the market, directly transplantable.
+6. **Track reporting deadlines, not just application deadlines** + auto 12-month calendar (Strategic Grants' sticky feature).
+7. **Council/LGA white-label distribution** (GrantGuru's moat) — aligns with `mv_funding_by_lga`. Product/GTM, out of scope for this eng plan but noted.
+8. **Join award history to open opportunities** — "who won similar grants before + your realistic odds." Our graph (`gs_relationships` 1.08M, `austender_contracts`, `justice_funding`) makes this uniquely possible. **This is the differentiator none of them have.**
+
+### Market gaps we can own
+
+- **Opportunity ↔ award-history ↔ profile join.** Directories list; they don't reason.
+- **A trust layer** — explicit "verified 3 days ago · source: [gov feed]" beats everyone's unproven freshness.
+- **Predicted foundation giving** from ACNC AIS (`acnc_charities` 66K, `foundations` 10.8K) — foundation opportunities are opaque to every live directory.
+- **Free-great-UX + paid-depth** — GrantConnect is free-but-bad; everyone with good UX charges. Our wedge flips this.
+
+---
+
+## 3. Engineering plan (phased)
+
+Each phase is independently shippable and ordered by value-per-effort. Estimates are engineering-days for one dev.
+
+### Phase 1 — Unify matching on the vector path *(highest value, ~2–3 d)* — ✅ DONE
+
+**Problem:** #1. Two heuristic matchers running while the working semantic RPC is used on only one route.
+
+- [x] Extracted a single `scoreGrantsForOrg(db, input)` helper in `packages/grant-engine/src/grant-matching.ts` that wraps the `match_grants_for_org` RPC and layers the existing learning signals (`get_user_feedback_signals`). The pure `applyLearningBoosts` and `scoreGrantsByKeyword` (fallback) live here too.
+- [x] Rewrote `apps/web/src/app/api/grants/match/route.ts` to call it (deleted the base-50 keyword block; fixed the docstring). Keyword/category overlap now feeds `match_signals` (explainability) only, not the score.
+- [x] Rewrote `apps/web/src/app/api/profile/matches/route.ts` to call the same helper — it's now the single source of truth (−181 lines of inline scoring).
+- [x] Rewrote `scripts/scout-grants-for-profiles.mjs` to use the same helper (runs under `tsx` now; both agent registries updated). Enriches vector matches with the fields the RPC doesn't return (source, amount_min, deadline) for alert matching + notifications.
+- [x] Guard rail: falls back to keyword scoring when an org has no embedding; logs the fallback rate (`Semantic matching: N/M` in the scout summary; `used_fallback` in the API response).
+- [ ] Backfill any grants missing embeddings via `embeddings.ts:backfillEmbeddings` — **deferred to a DB-connected run** (needs `.env` creds; not runnable in the sandbox).
+- **Verified:** typecheck clean (`npx tsc --noEmit`); scout import chain resolves under `tsx`; pure boost logic unit-checked (arts/VIC grant boosts 82→90, stale penalized-provider sinks 80→27, signals correct). Behavioural parity with `/api/profile/matches` is guaranteed by construction. **Live `--dry-run` against a real org still needs a DB-connected environment.**
+
+### Phase 2 — Trust layer: quarantine unverified grants *(fast win, ~1 d)* — ✅ DONE
+
+**Problem:** #3, #5.
+
+- [x] Added a single trust classifier — `packages/grant-engine/src/grant-verification.ts:assessGrantVerification()`. Derives level (`verified` / `scraped` / `unconfirmed`) and an `isConfirmed` alert-gate from the row's `sources[].confidence` jsonb + `last_verified_at` + `url`. No migration needed — the signal already lives on the row. Legacy rows with a URL but no `sources` array are treated as scraped (the quarantine targets AI-surfaced grants, not the existing corpus).
+- [x] Scout now **excludes** unconfirmed grants (`llm_knowledge` / no URL) from both auto-add and notifications, and logs how many it held back. They stay browsable in the UI.
+- [x] `close-stale-grants.mjs` now closes on `COALESCE(closes_at, deadline) < today` (either deadline field) alongside the existing 14-day `last_verified_at` liveness proxy.
+- [x] Grant detail UI (`apps/web/src/app/grants/[id]/page.tsx`) shows a trust badge — "Verified 3 days ago · GrantConnect" / "Sourced from VIC Grants" / "Unconfirmed — AI-surfaced, URL not verified" — styled to the Bauhaus system.
+- **Verified:** typecheck clean; classifier unit-checked across 6 cases (llm_knowledge quarantined, verified/scraped/legacy confirmed, no-URL quarantined, JSON-string `sources` parsed). Live confirmation that a seeded `llm_knowledge` grant is absent from a real scout digest still needs a DB-connected run.
+
+### Phase 3 — Official-feed ingestion *(robustness)* — ⚙️ PARTLY DONE
+
+**Problem:** #2, #6. Replace fragile scrapers with structured CKAN/CSV where a feed exists.
+
+**Ground-truth correction (found while building):** the codebase was already further along than the plan assumed. `qld-grants.ts` already ingests the **QLD Grants Finder via CKAN**; `nsw-grants.ts` already uses the **NSW elasticsearch API** (with HTML fallback); `data-gov-au.ts` already uses CKAN `package_search`. So the real Phase-3 gap was not "build these plugins" — it was a **correctness bug** in how they page CKAN, plus a shared client and GA automation.
+
+**Done:**
+- [x] **Fixed a silent-truncation bug.** `qld-grants.ts` fetched one `limit=500` page per agency with no offset loop — any agency with >500 grants was silently cut off. New shared client `packages/grant-engine/src/sources/lib/ckan.ts` paginates the whole resource (offset loop, timeout, bounded retry, browser UA) and **logs** when a `maxRecords` cap is hit (no silent caps). `qld-grants.ts` now uses it.
+- [x] **Automated the GrantConnect GA weekly export.** `ingest-grantconnect.mjs` fetches the CSV when `--url=` / `GRANTCONNECT_GA_EXPORT_URL` is set (two known sources: the GrantConnect weekly report, or the data.gov.au "Grants Awarded Data" CKAN CSV), falling back to the local file so a transient fetch error never loses a run. GO capture stays on RSS (already in `grantconnect.ts`).
+- [x] **Tests:** `tests/ckan.test.ts` (mocked fetch) proves multi-page pagination collects all records, short/empty pages stop correctly, `maxRecords` is honoured, and a failed request retries. The retry test caught a real event-loop bug (an `unref`'d backoff timer) before it shipped.
+- [x] No redundant QLD HTML scraper exists to demote — `createQLDGrantsPlugin` **is** the CKAN plugin.
+
+**Still open (needs live endpoint inspection — blocked by the sandbox egress allowlist, do on prod or once hosts are allowlisted):**
+- [ ] `data-gov-au-grants-awarded` — the structured **Grants Awarded** datastore (not the dataset-discovery `package_search` we already do). This is the **award-history** feed → belongs with Phase 6; it needs a target awards schema + entity resolution, so it's deferred there deliberately.
+- [ ] `datavic` + `vic.gov.au` submitted grants — VIC has no clean CKAN *opportunity* dataset (crowdsourced HTML). Low-confidence to build blind; needs inspection.
+- [ ] Port `data-gov-au.ts` onto the shared CKAN client (dedupe its bespoke fetch).
+- **Note:** `*.gov.au` blocks automated fetch from some IPs (403). The client sends a browser UA; run from an allowlisted egress. Per-source yield logging lands with the Phase 5 health signal.
+- **Verify (done, in-sandbox):** typecheck clean; CKAN client unit-tested; refactored QLD plugin loads under `tsx`. **Live run against data.qld (assert full, non-truncated agency ingest) still needs network** — see §4.
+
+### Phase 4 — CLASSIE taxonomy + LLM auto-classification *(interoperability)* — ✅ DONE
+
+**Problem:** #2 (weak categories), plus the strategic interoperability play.
+
+- [x] **CLASSIE taxonomy module** — `packages/grant-engine/src/classie.ts`: three facets (Subject, Population, SDG). The 17 SDGs are the official UN set; Subject/Population are a **curated seed aligned to CLASSIE's structure** (not the full proprietary list — flagged in the file to reconcile against the official export when licensed). Includes code validators and an LLM-prompt builder constrained to the controlled vocabulary.
+- [x] **Deterministic category→CLASSIE mapper** — `mapCategoriesToClassie()` tags the **entire existing corpus at zero LLM cost** from the categories we already store, so filters keep working and CLASSIE becomes the interoperable layer on top. (Chose a dedicated module over extending `auto-classify-llm.mjs`, which classifies a different axis — opportunity_type — on a different table; conflating them would have been wrong.)
+- [x] **Migration** — `supabase/migrations/20260704000000_grant_classie.sql` adds `classie_subjects[]`, `classie_populations[]`, `sdg_codes[]`, `classie_method`, `classie_classified_at` + GIN indexes.
+- [x] **Classifier script** — `scripts/classify-grants-classie.mjs`: deterministic-first (free), optional `--llm` pass (sanitised to valid codes) only for grants whose categories map to nothing. Registered in both agent registries.
+- [x] **Tests** — `classie.test.ts` (17-SDG invariant, category mapping, dedup, unknown-category handling, per-facet validation, LLM-output sanitisation). 31 grant-engine tests pass.
+- **Verified (in-sandbox):** typecheck clean; taxonomy logic unit-tested; script loads under `tsx`. **Applying the migration + a live classify run (deterministic pass over the real corpus, spot-check vs ACNC usage) needs DB creds.**
+
+### Phase 5 — Dedup consolidation + source health *(hygiene)* — ✅ DONE
+
+**Problem:** #4, #2.
+
+- [x] **Defined the canonical two-tier dedup contract** (docstrings in both files): `deduplicator.ts` is Tier 1 (key-based, authoritative, at ingest); `dedup-grants.mjs` is Tier 2 (semantic pgvector backstop that only catches near-dupes whose keys differ). They're complementary, not competing.
+- [x] **Hardened the `dedupKey`** — new `canonicalizeProvider()` collapses state abbreviations (QLD↔Queensland) and org boilerplate (department/office/pty ltd/government) so the same funder under different source labels maps to one key. Title normalization stays light on purpose: it normalizes `&`/punctuation but **does not** strip years, so distinct funding-year rounds never wrongly merge.
+- [x] **Per-source "last successful yield" signal** — `scrape-state-grants.mjs` now emits a per-plugin `agent_runs` row (`source:<pluginId>`), so each source's latest yield is queryable with **zero schema change**. New pure `packages/grant-engine/src/source-health.ts:classifySourceHealth()` turns those runs into `healthy` / `zeroed` / `stale` / `failing` — the `zeroed` case is the alarm a plain success/fail check misses (run "succeeds" with 0 rows = broken selector).
+- [x] **Tests:** `dedup-key.test.ts` (alias merge, year-round non-merge, ampersand normalization, full merge) + `source-health.test.ts` (zeroed/healthy/stale/failing/ordering). 24 grant-engine tests pass total.
+- [ ] Wire `classifySourceHealth` into the `/health` UI — **deferred to a DB-connected run**: the classifier + data are in place; the surface just needs an `agent_runs` query over `source:*` rows (needs creds).
+- [ ] Contract tests for the top ~10 scrapers — partial: added dedup/health correctness tests (higher value); per-source scraper fixtures remain a follow-up.
+- **Verified (in-sandbox):** typecheck clean; dedup + health logic unit-tested; scraper loads under `tsx`. Live "force a source to 0 and confirm `/health` flags it" needs a DB-connected run.
+
+### Phase 6 — The differentiator: award-history join *(new capability, ~4–5 d)*
+
+**Problem:** the market gap. Depends on Phase 3's award data.
+
+- [ ] Build a view joining live `grant_opportunities` → historical awards (`gs_relationships` where `relationship_type` is grant/funding, `austender_contracts`, `justice_funding`) by category/funder/sector.
+- [ ] On the grant detail page: "N similar grants awarded · typical recipient profile · past winners" (respecting premium gating per the buyer wedge).
+- [ ] Feed "realistic odds" as an extra signal into the Phase 1 scorer.
+- **Verify:** for a known repeat-funder grant, confirm past winners surface and match the underlying relationships.
+
+### Explicitly out of scope (noted, not built here)
+
+Guided-finder UX rebuild (idea #5), reporting-deadline calendar (#6), council white-label GTM (#7). These are product/UX tracks — flag to Ben for prioritisation after Phase 1–3 land.
+
+---
+
+## 4. Access & feasibility — can we actually get these grants?
+
+Short answer: **the sources this plan depends on are open and machine-readable; the paywalled sources are the ones we deliberately don't touch.** The friction is egress policy, not locked data.
+
+### Access model per source
+
+| Source | Access | Auth | Notes |
+|---|---|---|---|
+| GrantConnect **RSS** (`grants.gov.au/public_data/rss/rss.xml`) | Public feed | None | Already used by `sources/grantconnect.ts` **in production today** |
+| GrantConnect **GA weekly export** (CSV) | Public download | None | Already pulled by `scripts/ingest-grantconnect.mjs` |
+| GrantConnect GO **document packs** (guideline PDFs) | Free registration | Login | Listing/metadata is open; only the full doc pack needs an account |
+| data.gov.au / QLD / NSW / VIC **CKAN APIs** | Open data API | None | Built for machine access |
+| The Grants Hub · GrantGuru · Funding Centre · GEMS | Commercial | Paywall/ToS | **Not scraped by this plan** — we ingest primary feeds, not competitors |
+
+The strongest evidence it works: the GrantConnect RSS plugin **already runs on a schedule in the production pipeline**, and the GA CSV ingester already exists. Phase 3 automates and extends proven access — it does not bet on unproven access.
+
+### Two real frictions (and how the plan handles them)
+
+1. **`*.gov.au` bot-blocking.** Some government *HTML pages* return 403 to automated fetchers. This only affects *scraping* — exactly what Phase 3 moves away from. The RSS/CSV/CKAN *data* endpoints are designed for machine access, and the plugins already send a browser UA. Feed fetchers must log per-source yield so a 403 surfaces immediately (Phase 5 health signal).
+2. **Egress allowlist.** The Claude-Code web environment runs a restrictive network policy: only a few hosts (GitHub, npm, Anthropic) are reachable; `data.gov.au`, `data.qld.gov.au`, etc. are denied at the proxy (`403 CONNECT`, an org-policy denial — *not* the sites blocking us). This is a sandbox setting, not a source lock.
+
+### What production needs
+
+- The ingesters' natural home is the **production data pipeline** (its own infra + `.env` creds), where the network isn't sandbox-restricted and where GrantConnect RSS already runs.
+- To live-validate feeds **from a Claude-Code web session**, the environment's network policy must allowlist: `www.grants.gov.au`, `data.gov.au`, `www.data.qld.gov.au`, `data.nsw.gov.au`, `discover.data.vic.gov.au`. Until then, feed validation runs on prod infra, not in-session.
+
+**Bottom line:** no grant data in this plan is locked behind a paywall. The only thing "locked" is this sandbox's outbound network, which is a config choice, not a blocker to the product.
+
+---
+
+## 5. Sequencing & rationale
+
+```
+Phase 1 (matching)     ██████            ship first — biggest UX win, pure consolidation, no new data
+Phase 2 (trust)        ░░██              fast, high trust payoff, unblocks honest alerts
+Phase 3 (feeds)        ░░░░██████        robustness; feeds award data for Phase 6
+Phase 4 (CLASSIE)      ░░░░░░████        interoperability; better than regex categories
+Phase 5 (dedup/health) ░░░░░░░░████      hygiene; safe anytime after 3
+Phase 6 (award join)   ░░░░░░░░░░██████  the moat; needs Phase 3 award data
+```
+
+Phase 1 first because it converts infrastructure we already paid for into user-visible quality with zero new data and no scraping risk — and it directly serves the "evidence depth + buyer UX" priority in the buyer wedge. Phase 6 last because it's the durable differentiator and depends on official award data from Phase 3.
+
+---
+
+## Appendix — sources
+
+Federal: GrantConnect [finance.gov.au](https://www.finance.gov.au/individuals/find-grant-grantconnect), [Go/List](https://www.grants.gov.au/Go/List), [help.grants.gov.au](https://help.grants.gov.au/getting-started-with-grantconnect/); [data.gov.au Grants Awarded](https://data.gov.au/data/dataset/grants-awarded-data); [business.gov.au](https://business.gov.au/grants-and-programs).
+Taxonomy/admin: [CLASSIE](https://www.ourcommunity.com.au/classie), [CLASSIEfier](https://www.ourcommunity.com.au/classiefier), [SmartyGrants](https://www.smartygrants.com.au/), [Grants in Australia research](https://www.smartygrants.com.au/research).
+Commercial seeker DBs: [The Grants Hub](https://www.thegrantshub.com.au/), [GrantGuru](https://www.grantguru.com/au/browse), [Strategic Grants GEMS](https://www.strategicgrants.com.au/gems/), [GrantHelper](https://granthelper.com.au/), [Funding Centre](https://www.fundingcentre.com.au/).
+State open data: [data.qld Grants Finder](https://www.data.qld.gov.au/dataset/grants-finder), [Data.NSW grants](https://data.nsw.gov.au/data/dataset/?tags=grants) + [OpenGov NSW API](https://data.nsw.gov.au/data/dataset/opengov-nsw-api), [DataVic CKAN](https://discover.data.vic.gov.au/dataset/datavic-open-data-api-version-2-1-0), [vic.gov.au submit-your-grant](https://www.vic.gov.au/submit-your-grant), [ACNC](https://www.acnc.gov.au/).
+
+**Uncertainty flagged:** no confirmed public REST/ATOM API for GrantConnect *GO* notices — capture via RSS/keyword-email/HTML list until verified.
