@@ -55,16 +55,28 @@ async function main() {
   const run = DRY_RUN ? null : await logStart(supabase, 'classify-grants-classie', 'Classify Grants (CLASSIE)');
 
   try {
-    let query = supabase
-      .from('grant_opportunities')
-      .select('id, name, description, provider, categories')
-      .order('created_at', { ascending: false })
-      .limit(LIMIT);
-    if (!RECLASSIFY) query = query.is('classie_classified_at', null);
-
-    const { data: grants, error } = await query;
-    if (error) throw error;
-    console.log(`Loaded ${grants?.length ?? 0} grants to classify (llm=${USE_LLM}, reclassify=${RECLASSIFY})`);
+    // Paginate past PostgREST's 1000-row cap so the whole backlog is reachable.
+    // Previously a single `.limit(LIMIT)` capped at 1000 and, ordered newest-first,
+    // repeatedly re-fetched the newest 1000 unclassified — starving thousands of
+    // older but mappable grants whenever those newest rows happened to be unmappable.
+    // Fetch-then-write (write happens after the full fetch), so offsets stay stable.
+    const grants = [];
+    const PAGE = 1000;
+    for (let offset = 0; offset < LIMIT; offset += PAGE) {
+      const end = Math.min(offset + PAGE, LIMIT) - 1;
+      let query = supabase
+        .from('grant_opportunities')
+        .select('id, name, description, provider, categories')
+        .order('created_at', { ascending: false })
+        .range(offset, end);
+      if (!RECLASSIFY) query = query.is('classie_classified_at', null);
+      const { data: page, error } = await query;
+      if (error) throw error;
+      if (!page || page.length === 0) break;
+      grants.push(...page);
+      if (page.length < end - offset + 1) break;
+    }
+    console.log(`Loaded ${grants.length} grants to classify (llm=${USE_LLM}, reclassify=${RECLASSIFY})`);
 
     let byCategory = 0;
     let byLlm = 0;
@@ -113,17 +125,29 @@ async function main() {
       return;
     }
 
+    // These are UPDATEs of existing grants, each with distinct values, so a
+    // per-row .update().eq('id') is required. A bulk .upsert() issues an INSERT
+    // that violates the NOT NULL on `name` (the payload only carries classie
+    // fields). Run in bounded-concurrency chunks to stay gentle on the pooler.
     let written = 0;
-    const BATCH = 100;
-    for (let i = 0; i < updates.length; i += BATCH) {
-      const batch = updates.slice(i, i + BATCH);
-      const { error: upErr } = await supabase
-        .from('grant_opportunities')
-        .upsert(batch, { onConflict: 'id' });
-      if (upErr) console.error(`  Batch write error: ${upErr.message}`);
-      else written += batch.length;
+    let failed = 0;
+    const CONCURRENCY = 25;
+    for (let i = 0; i < updates.length; i += CONCURRENCY) {
+      const chunk = updates.slice(i, i + CONCURRENCY);
+      const results = await Promise.all(chunk.map(u => {
+        const { id, ...fields } = u;
+        return supabase
+          .from('grant_opportunities')
+          .update(fields)
+          .eq('id', id)
+          .then(({ error }) => error);
+      }));
+      for (const err of results) {
+        if (err) { failed++; if (failed <= 5) console.error(`  Write error: ${err.message}`); }
+        else written++;
+      }
     }
-    console.log(`Wrote ${written} classifications.`);
+    console.log(`Wrote ${written} classifications${failed ? ` (${failed} failed)` : ''}.`);
 
     if (run) await logComplete(supabase, run.id, { items_found: grants?.length ?? 0, items_updated: written });
   } catch (err) {
