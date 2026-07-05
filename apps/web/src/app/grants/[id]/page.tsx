@@ -154,22 +154,24 @@ export default async function GrantDetailPage({ params }: { params: Promise<{ id
 
   // Phase 6 — award history ("who's won this kind of money before"). Empty-safe:
   // returns [] before the migration is applied or when the grant maps to no themes.
+  //
+  // Buyer-tier gate: named winners are paid evidence. We resolve the tier FIRST and ask
+  // the RPC for zero winners on the free tier (p_winner_limit=0) — so the winner names
+  // never even reach the server as an HTTP response. This matters because Next.js patches
+  // fetch (which supabase-js uses) and serializes the raw response into the RSC flight
+  // payload; stripping in JS *after* the fetch would still leak the names via view-source.
   let awardHistory: AwardHistoryTheme[] = [];
   let tier: Awaited<ReturnType<typeof getCurrentTier>> = 'community';
   try {
-    const [{ data: hist }, resolvedTier] = await Promise.all([
-      supabase.rpc('get_grant_award_history', { p_grant_id: id }),
-      getCurrentTier(),
-    ]);
+    tier = await getCurrentTier();
+    const winnerLimit = tier === 'community' ? 0 : 8;
+    const { data: hist } = await supabase.rpc('get_grant_award_history', {
+      p_grant_id: id,
+      p_winner_limit: winnerLimit,
+    });
     if (Array.isArray(hist)) awardHistory = hist as AwardHistoryTheme[];
-    tier = resolvedTier;
   } catch {
     // Award-history RPC not available yet (migration unapplied) — card renders nothing.
-  }
-  // Buyer-tier gate: named winners are paid evidence. Strip them server-side for the
-  // free tier so they never reach the client (not even in the RSC flight payload).
-  if (tier === 'community') {
-    awardHistory = awardHistory.map((t) => ({ ...t, winners: [] }));
   }
 
   // Check if the logged-in user's org has this grant in their pipeline
@@ -210,7 +212,7 @@ export default async function GrantDetailPage({ params }: { params: Promise<{ id
   const ptBadge = programTypeBadge(g.program_type);
 
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-6xl">
       <a href="/grants" className="text-xs font-black text-bauhaus-muted uppercase tracking-widest hover:text-bauhaus-black">
         &larr; Back to Grants
       </a>
