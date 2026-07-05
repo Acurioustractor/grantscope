@@ -6,6 +6,8 @@ import { GrantNotes } from '@/app/components/grant-notes';
 import { PartnerPicker } from '@/app/components/partner-picker';
 import { assessGrantVerification } from '@grant-engine/grant-verification';
 import { CLASSIE_SUBJECTS, CLASSIE_POPULATIONS, SDGS, type ClassieTag } from '@grant-engine/classie';
+import { AwardHistoryCard, type AwardHistoryTheme } from '@/app/components/award-history-card';
+import { getCurrentTier } from '@/lib/subscription-server';
 
 export const dynamic = 'force-dynamic';
 
@@ -148,6 +150,21 @@ export default async function GrantDetailPage({ params }: { params: Promise<{ id
       .order('total_giving_annual', { ascending: false, nullsFirst: false })
       .limit(5);
     relatedFoundations = (foundations || []) as RelatedFoundation[];
+  }
+
+  // Phase 6 — award history ("who's won this kind of money before"). Empty-safe:
+  // returns [] before the migration is applied or when the grant maps to no themes.
+  let awardHistory: AwardHistoryTheme[] = [];
+  let tier: Awaited<ReturnType<typeof getCurrentTier>> = 'community';
+  try {
+    const [{ data: hist }, resolvedTier] = await Promise.all([
+      supabase.rpc('get_grant_award_history', { p_grant_id: id }),
+      getCurrentTier(),
+    ]);
+    if (Array.isArray(hist)) awardHistory = hist as AwardHistoryTheme[];
+    tier = resolvedTier;
+  } catch {
+    // Award-history RPC not available yet (migration unapplied) — card renders nothing.
   }
 
   // Check if the logged-in user's org has this grant in their pipeline
@@ -516,6 +533,9 @@ export default async function GrantDetailPage({ params }: { params: Promise<{ id
           )}
         </div>
       </div>
+
+      {/* Phase 6 — Who's Won This Before (award-history differentiator) */}
+      <AwardHistoryCard themes={awardHistory} tier={tier} />
 
       {/* Similar Grants */}
       {similarGrants.length > 0 && (

@@ -46,6 +46,7 @@ export async function GET() {
       orgType: profile.org_type,
       annualRevenue: profile.annual_revenue,
       mission: profile.mission,
+      orgAbn: profile.abn ?? null,
       userId: user.id,
       limit: 200,
     });

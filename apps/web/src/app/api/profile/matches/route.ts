@@ -17,12 +17,12 @@ export async function GET(request: NextRequest) {
 
   // Fetch user's org profile (owner or team member)
   let orgProfileId: string | null = null;
-  let profile: { embedding: string; domains: string[]; geographic_focus: string[] } | null = null;
+  let profile: { embedding: string; domains: string[]; geographic_focus: string[]; abn?: string | null } | null = null;
   let profileError = null;
 
   const { data: ownProfile, error: ownError } = await serviceDb
     .from('org_profiles')
-    .select('id, embedding, domains, geographic_focus')
+    .select('id, embedding, domains, geographic_focus, abn')
     .eq('user_id', user.id)
     .maybeSingle();
 
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
     if (membership) {
       const { data: orgProfile, error: orgError } = await serviceDb
         .from('org_profiles')
-        .select('id, embedding, domains, geographic_focus')
+        .select('id, embedding, domains, geographic_focus, abn')
         .eq('id', membership.org_profile_id)
         .single();
       orgProfileId = orgProfile?.id || null;
@@ -100,6 +100,7 @@ export async function GET(request: NextRequest) {
       limit,
       userId: user.id,
       projectProfileId,
+      orgAbn: profile.abn ?? null,
     });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Match failed' }, { status: 500 });

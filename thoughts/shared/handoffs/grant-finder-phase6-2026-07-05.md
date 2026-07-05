@@ -47,7 +47,47 @@ Phases 1–5 were already committed. This session finished the go-live + deferre
 
 ---
 
-## Phase 6 — build the award-history join (~4–5 d)
+## Phase 6 BUILD — DONE (session 2026-07-05 PM). Steps 1–4 built + validated; migration NOT applied.
+
+All four build steps are implemented, typecheck-clean, and tested. The one thing left is
+**Ben applying the migration** (DDL = Tier 3; auto-mode blocks apply) — until then the card is
+empty-safe (renders nothing) and the scorer boost is a no-op.
+
+**Decision locked (Ben, this session):** past-winners card is **peer-first** — headline winners are
+community-sector recipients only (charity / Indigenous corp / social enterprise / foundation);
+companies, TAFEs, state-owned corps (e.g. QUEENSLAND RAIL LTD $4B) and unresolved are gated to a
+"+ N others" count. The data-quality gate that matters: **government departments appearing as
+recipients are excluded** (raw top "winner" for youth-justice was Dept of Justice $10B).
+
+### What was built
+| Step | File | State |
+|---|---|---|
+| 1. Data layer | `supabase/migrations/20260705000000_grant_award_history.sql` | ✅ written + logic validated live via read-only SELECTs. **Not applied.** |
+| — theme axis (SQL) | `award_theme_map()`, `grant_award_themes()`, `v_award_rows`, `mv_award_history_by_theme`, `mv_award_winner_by_theme` (top-25 peers), `get_grant_award_history(uuid,int)` | in the migration |
+| 2. Detail card | `apps/web/src/app/components/award-history-card.tsx` + wired into `grants/[id]/page.tsx` (RPC fetch is empty-safe) | ✅ typecheck-clean |
+| — tier gate | `apps/web/src/lib/subscription-server.ts` (`getCurrentTier`) — free = aggregate hook + blurred teaser; paid = named peers | ✅ |
+| 3. Scorer signal | `packages/grant-engine/src/award-themes.ts` (TS port of `award_theme_map`) + proven-track-record boost in `grant-matching.ts` (`fetchOrgProvenThemes`, `applyLearningBoosts` +0.06 cap); wired via `orgAbn` in both match routes | ✅ typecheck-clean |
+| 4. Tests + verify | `packages/grant-engine/tests/award-history.test.ts` (9 tests) — **40/40 grant-engine tests pass**. Real grants confirmed to derive themes-with-data (e.g. Paul Ramsay "First Nations Targeted Grant" → community/education/health/indigenous). | ✅ |
+
+### Validated numbers (live, non-government, peer-segmented)
+`community` 30,288 recipients / 6,339 peers / $23.6B · `youth-justice` 5,722 / 1,117 / $3.75B (peer median $119K)
+· `legal-services` 11,785 / 2,970 / $3.0B · plus child-protection, family-services, disability, housing,
+indigenous, health, education, corrections.
+
+### TO GO LIVE (Ben — Tier 3)
+1. Apply the migration (dashboard SQL editor, or `! psql -f`):
+   `source .env && PGPASSWORD="$DATABASE_PASSWORD" psql -h aws-0-ap-southeast-2.pooler.supabase.com -p 5432 -U "postgres.tednluwflfhxyucgwigh" -d postgres -f supabase/migrations/20260705000000_grant_award_history.sql`
+2. Add the two MVs to the nightly refresh: `mv_award_history_by_theme` then `mv_award_winner_by_theme` in `scripts/refresh-views-v2.mjs` (both are light — plain, not CONCURRENTLY needed on first build).
+3. Smoke-test: `npx next dev --turbopack -p 3003` → open a justice/community grant (e.g. a Paul Ramsay or QLD youth grant) → confirm the "Who's Won This Before" card renders peers + "+ N others". Toggle a paid vs community org to see the gate.
+
+### Deferred (deliberately, noted)
+- **austender_contracts** as a $-source needs a UNSPSC→theme crosswalk (its `category` is opaque UNSPSC codes) — separate project; v1 is justice_funding-only.
+- Recipient-name artifacts remain (some JF `recipient_name` values are program-round labels, not org names) — a source-data cleaning pass, out of scope for v1.
+- Scorer's "down-weight grants whose winners look nothing like the org" half — v1 ships only the up-weight (proven-track-record) half; the down-weight needs org-profile-vs-winner-profile comparison.
+
+---
+
+## Phase 6 — build the award-history join (~4–5 d) [ORIGINAL PLAN BELOW]
 
 **The market gap / differentiator.** Turn "here's a grant" into "here's a grant, and
 here's who's won this kind of money before + your realistic odds." Everything it needs

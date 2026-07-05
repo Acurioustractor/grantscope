@@ -15,6 +15,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { grantAwardThemes, awardThemeMap } from './award-themes';
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -71,6 +72,12 @@ export interface OrgMatchInput {
   orgType?: string | null;
   annualRevenue?: number | null;
   mission?: string | null;
+  /**
+   * Org ABN. When present, scoreGrantsForOrg looks up the themes the org has
+   * historically won money in (justice_funding) and boosts grants in those themes
+   * — the Phase 6 "proven track record" signal ("you've won this kind of money before").
+   */
+  orgAbn?: string | null;
 }
 
 export interface OrgMatchResult {
@@ -116,10 +123,48 @@ export async function fetchFeedbackSignals(
   return (data as FeedbackSignals) || null;
 }
 
+/**
+ * Themes an org has historically won money in, from justice_funding by ABN.
+ * Maps each award's sector + topics through the same award_theme_map() the MV uses,
+ * in TS — so it works whether or not the Phase 6 migration is applied. Best-effort:
+ * returns [] on any error (the boost simply doesn't fire). Aggregate rows excluded.
+ */
+export async function fetchOrgProvenThemes(db: SupabaseClient, abn: string): Promise<string[]> {
+  const digits = abn.replace(/\D/g, '');
+  if (digits.length !== 11) return [];
+  try {
+    const { data, error } = await db
+      .from('justice_funding')
+      .select('sector, topics')
+      .eq('recipient_abn', digits)
+      .eq('is_aggregate', false)
+      .gt('amount_dollars', 0)
+      .limit(1000);
+    if (error || !data) return [];
+    const themes = new Set<string>();
+    for (const row of data as Array<{ sector: string | null; topics: string[] | null }>) {
+      const s = awardThemeMap(row.sector);
+      if (s) themes.add(s);
+      for (const tp of row.topics ?? []) {
+        const t = awardThemeMap(tp);
+        if (t) themes.add(t);
+      }
+    }
+    return [...themes];
+  } catch {
+    return [];
+  }
+}
+
 // ── Boosts + signals (pure) ──────────────────────────────────────────────────
 
 function toLowerSet(values?: string[]): Set<string> {
   return new Set((values || []).map((v) => v.toLowerCase()));
+}
+
+/** Theme slug → human label for match signals, e.g. 'youth-justice' → 'youth justice'. */
+function themeDisplay(theme: string): string {
+  return theme.replace(/-/g, ' ');
 }
 
 function buildSignals(grant: RawGrantMatch, orgDomains: Set<string>, orgGeo: Set<string>): string[] {
@@ -149,11 +194,18 @@ function buildSignals(grant: RawGrantMatch, orgDomains: Set<string>, orgGeo: Set
  */
 export function applyLearningBoosts(
   matches: RawGrantMatch[],
-  opts: { domains?: string[]; geo?: string[]; feedbackSignals?: FeedbackSignals | null },
+  opts: {
+    domains?: string[];
+    geo?: string[];
+    feedbackSignals?: FeedbackSignals | null;
+    /** Themes the org has historically won money in (Phase 6 proven-track-record boost). */
+    provenThemes?: string[];
+  },
 ): { scored: ScoredGrant[]; grantsFiltered: number } {
   const orgDomains = toLowerSet(opts.domains);
   const orgGeo = toLowerSet(opts.geo);
   const fb = opts.feedbackSignals;
+  const provenThemes = new Set(opts.provenThemes || []);
 
   const excludedIds = new Set([...(fb?.excluded_grant_ids || []), ...(fb?.not_a_grant_ids || [])]);
   const penalizedProviders = toLowerSet(fb?.penalized_providers);
@@ -242,10 +294,24 @@ export function applyLearningBoosts(
         }
       }
 
+      const signals = buildSignals(grant, orgDomains, orgGeo);
+
+      // Phase 6 — proven-track-record boost. If the org has previously won money in
+      // any theme this grant maps to, it is a demonstrably competitive applicant here.
+      // One factor (+0.06 cap), sitting alongside the existing boosts — not a rewrite.
+      if (provenThemes.size > 0) {
+        const grantThemes = grantAwardThemes(grant.categories, grant.focus_areas);
+        const matched = grantThemes.filter((t) => provenThemes.has(t));
+        if (matched.length > 0) {
+          score += Math.min(matched.length * 0.06, 0.06);
+          signals.push(`Proven track record in ${matched.map(themeDisplay).join(', ')}`);
+        }
+      }
+
       return {
         ...grant,
         fit_score: Math.max(0, Math.min(Math.round(score * 100), 100)),
-        match_signals: buildSignals(grant, orgDomains, orgGeo),
+        match_signals: signals,
       };
     });
 
@@ -381,12 +447,16 @@ export async function scoreGrantsForOrg(db: SupabaseClient, input: OrgMatchInput
     input.limit ?? DEFAULT_LIMIT,
   );
 
-  const feedbackSignals = input.userId ? await fetchFeedbackSignals(db, input.userId, input.projectProfileId) : null;
+  const [feedbackSignals, provenThemes] = await Promise.all([
+    input.userId ? fetchFeedbackSignals(db, input.userId, input.projectProfileId) : Promise.resolve(null),
+    input.orgAbn ? fetchOrgProvenThemes(db, input.orgAbn) : Promise.resolve<string[]>([]),
+  ]);
 
   const { scored, grantsFiltered } = applyLearningBoosts(raw, {
     domains: input.domains,
     geo: input.geo,
     feedbackSignals,
+    provenThemes,
   });
 
   return { matches: scored, grantsFiltered, feedbackSignals, usedFallback: false };
