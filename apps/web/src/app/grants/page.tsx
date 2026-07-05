@@ -1,5 +1,6 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import { searchGrantsSemantic } from '@grant-engine/embeddings';
+import { CLASSIE_SUBJECTS } from '@grant-engine/classie';
 import { FilterBar } from '../components/filter-bar';
 import { FundingIntelligenceRail } from '../components/funding-intelligence-rail';
 import { ListPreviewProvider, GrantPreviewTrigger } from '../components/list-preview';
@@ -16,6 +17,19 @@ interface Grant extends GrantListItem {
   aligned_projects?: string[] | null;
   grant_type?: string | null;
   discovery_method?: string | null;
+  classie_subjects?: string[] | null;
+}
+
+// CLASSIE subject code→label lookup for filter chips + card badges. Codes with no
+// curated label fall back to the raw code.
+const CLASSIE_SUBJECT_LABEL = new Map(CLASSIE_SUBJECTS.map((t) => [t.code, t.label]));
+function classieSubjectLabel(code: string): string {
+  return CLASSIE_SUBJECT_LABEL.get(code) ?? code;
+}
+
+function matchesClassieSubject(grant: Grant, code: string): boolean {
+  if (!code) return true;
+  return (grant.classie_subjects ?? []).includes(code);
 }
 
 function formatAmount(min: number | null, max: number | null): string {
@@ -636,6 +650,7 @@ interface SearchParams {
   family?: string;
   quality?: string;
   method?: string;
+  classie?: string;
 }
 
 export default async function GrantsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
@@ -662,6 +677,7 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
   const familyFilter = params.family || '';
   const qualityFilter = params.quality || '';
   const methodFilter = params.method || '';
+  const classieFilter = params.classie || '';
   const activeProjectPreset = enrichProjectPreset(findProjectPreset(projectFilter));
   const includeResearchParam = params.include_research === '1';
   const includeResearch = shouldIncludeResearch(query, sourceFilter, programTypeFilter, includeResearchParam);
@@ -686,6 +702,7 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
     !qualityFilter &&
     !includeResearchParam &&
     !methodFilter &&
+    !classieFilter &&
     page === 1;
 
   const supabase = getServiceSupabase();
@@ -713,7 +730,7 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
       const { data: semanticDetails } = semanticIds.length > 0
         ? await supabase
             .from(PUBLIC_GRANTS_LIST_TABLE)
-            .select('id, program, program_type, grant_type, source, status, sources, created_at, updated_at, last_verified_at, focus_areas, target_recipients, geography, aligned_projects, discovery_method')
+            .select('id, program, program_type, grant_type, source, status, sources, created_at, updated_at, last_verified_at, focus_areas, target_recipients, geography, aligned_projects, discovery_method, classie_subjects')
             .in('id', semanticIds)
         : { data: [] };
       const semanticDetailMap = new Map(
@@ -742,6 +759,7 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
         geography: semanticDetailMap.get(r.id)?.geography ?? null,
         aligned_projects: semanticDetailMap.get(r.id)?.aligned_projects ?? [],
         discovery_method: semanticDetailMap.get(r.id)?.discovery_method ?? null,
+        classie_subjects: semanticDetailMap.get(r.id)?.classie_subjects ?? [],
         similarity: r.similarity,
       }));
 
@@ -767,6 +785,9 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
       }
       if (methodFilter) {
         grants = grants.filter(g => matchesDiscoveryMethod(g, methodFilter));
+      }
+      if (classieFilter) {
+        grants = grants.filter(g => matchesClassieSubject(g, classieFilter));
       }
       if (familyFilter) {
         grants = grants.filter(g => matchesSourceFamily(g, familyFilter));
@@ -817,6 +838,7 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
       'geography',
       'aligned_projects',
       'discovery_method',
+      'classie_subjects',
       'source',
       'status',
       'sources',
@@ -857,6 +879,10 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
 
     if (category) {
       dbQuery = dbQuery.contains('categories', [category]);
+    }
+
+    if (classieFilter) {
+      dbQuery = dbQuery.contains('classie_subjects', [classieFilter]);
     }
 
     if (amountMin) {
@@ -915,6 +941,7 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
       .filter((grant) => matchesGeography(grant, geoFilter))
       .filter((grant) => matchesProjectPreset(grant, activeProjectPreset))
       .filter((grant) => matchesDiscoveryMethod(grant, methodFilter))
+      .filter((grant) => matchesClassieSubject(grant, classieFilter))
       .filter((grant) => matchesSourceFamily(grant, familyFilter))
       .filter((grant) => matchesQuality(grant, qualityFilter))
       .filter((grant) => includeResearch || !isResearchHeavy(grant));
@@ -981,6 +1008,7 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
   if (programTypeFilter) filterParams.set('program_type', programTypeFilter);
   if (projectFilter) filterParams.set('project', projectFilter);
   if (methodFilter) filterParams.set('method', methodFilter);
+  if (classieFilter) filterParams.set('classie', classieFilter);
   if (includeResearchParam) filterParams.set('include_research', '1');
   if (familyFilter) filterParams.set('family', familyFilter);
   if (qualityFilter) filterParams.set('quality', qualityFilter);
@@ -1019,6 +1047,8 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
     if (nextProject) next.set('project', nextProject);
     const nextMethod = updates.method ?? methodFilter;
     if (nextMethod) next.set('method', nextMethod);
+    const nextClassie = updates.classie ?? classieFilter;
+    if (nextClassie) next.set('classie', nextClassie);
     const nextIncludeResearch = updates.include_research ?? (includeResearchParam ? '1' : '');
     if (nextIncludeResearch) next.set('include_research', nextIncludeResearch);
     return `/grants?${next.toString()}`;
@@ -1141,6 +1171,34 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
                 className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-colors ${methodFilter === chip.value ? 'bg-bauhaus-blue text-white' : 'bg-bauhaus-canvas text-bauhaus-muted hover:bg-bauhaus-black/10'}`}
               >
                 {chip.label}
+              </a>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-4 border border-bauhaus-black/10 rounded-lg bg-white p-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <div className="text-xs font-black uppercase tracking-widest text-bauhaus-black">CLASSIE subject</div>
+            <div className="text-xs text-bauhaus-muted mt-0.5">
+              Filter by classified subject area. Shown when grants carry CLASSIE tags.
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            <a
+              href={hrefFor({ classie: '' })}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-colors ${!classieFilter ? 'bg-bauhaus-black text-white' : 'bg-bauhaus-canvas text-bauhaus-muted hover:bg-bauhaus-black/10'}`}
+            >
+              All subjects
+            </a>
+            {CLASSIE_SUBJECTS.map((subject) => (
+              <a
+                key={subject.code}
+                href={hrefFor({ classie: subject.code })}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-colors ${classieFilter === subject.code ? 'bg-bauhaus-blue text-white' : 'bg-bauhaus-canvas text-bauhaus-muted hover:bg-bauhaus-black/10'}`}
+              >
+                {subject.label}
               </a>
             ))}
           </div>
@@ -1613,6 +1671,11 @@ export default async function GrantsPage({ searchParams }: { searchParams: Promi
                 {uniqueLabels(grant.categories).map(c => (
                     <span key={c} className="text-[11px] px-2 py-0.5 bg-bauhaus-canvas text-bauhaus-muted font-medium rounded group-hover:bg-white/20 group-hover:text-white">
                       {c}
+                    </span>
+                  ))}
+                {(grant.classie_subjects ?? []).map(code => (
+                    <span key={`classie-${code}`} className="text-[11px] px-2 py-0.5 bg-bauhaus-black text-white font-medium rounded group-hover:bg-white/20 group-hover:text-white">
+                      {classieSubjectLabel(code)}
                     </span>
                   ))}
                 <span className="ml-auto text-[11px] font-semibold text-bauhaus-muted group-hover:text-white/70">

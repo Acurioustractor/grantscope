@@ -5,8 +5,19 @@ import { GrantActions } from '@/app/components/grant-actions';
 import { GrantNotes } from '@/app/components/grant-notes';
 import { PartnerPicker } from '@/app/components/partner-picker';
 import { assessGrantVerification } from '@grant-engine/grant-verification';
+import { CLASSIE_SUBJECTS, CLASSIE_POPULATIONS, SDGS, type ClassieTag } from '@grant-engine/classie';
 
 export const dynamic = 'force-dynamic';
+
+// Build a code→label lookup from the curated CLASSIE / SDG tag arrays. Codes with
+// no match fall back to the raw code so nothing renders blank.
+function classieLabeller(tags: ClassieTag[]): (code: string) => string {
+  const map = new Map(tags.map((t) => [t.code, t.label]));
+  return (code: string) => map.get(code) ?? code;
+}
+const subjectLabel = classieLabeller(CLASSIE_SUBJECTS);
+const populationLabel = classieLabeller(CLASSIE_POPULATIONS);
+const sdgLabel = classieLabeller(SDGS);
 
 interface Grant {
   id: string;
@@ -37,6 +48,9 @@ interface Grant {
   requirements_summary: string | null;
   foundation_id: string | null;
   grant_type: string | null;
+  classie_subjects: string[] | null;
+  classie_populations: string[] | null;
+  sdg_codes: string[] | null;
 }
 
 interface SimilarGrant {
@@ -421,6 +435,41 @@ export default async function GrantDetailPage({ params }: { params: Promise<{ id
                   <div className="flex gap-1.5 flex-wrap">
                     {g.target_recipients.map(r => (
                       <span key={r} className="text-[11px] px-2 py-0.5 bg-warning-light text-bauhaus-black font-black border-2 border-bauhaus-yellow/30">{r.replace('_', ' ')}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {((g.classie_subjects?.length ?? 0) > 0 || (g.classie_populations?.length ?? 0) > 0 || (g.sdg_codes?.length ?? 0) > 0) && (
+            <div className="bg-white border-4 border-bauhaus-black p-4">
+              {(g.classie_subjects?.length ?? 0) > 0 && (
+                <div className="mb-3">
+                  <div className="text-xs font-black text-bauhaus-black mb-2 uppercase tracking-widest">CLASSIE Subjects</div>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {g.classie_subjects!.map((code) => (
+                      <span key={code} className="text-[11px] px-2 py-0.5 bg-bauhaus-black text-white font-black uppercase tracking-wider">{subjectLabel(code)}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {(g.classie_populations?.length ?? 0) > 0 && (
+                <div className="mb-3 pt-3 border-t-2 border-bauhaus-black/20">
+                  <div className="text-xs font-black text-bauhaus-muted mb-2 uppercase tracking-widest">Populations</div>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {g.classie_populations!.map((code) => (
+                      <span key={code} className="text-[11px] px-2 py-0.5 bg-link-light text-bauhaus-blue font-black border-2 border-bauhaus-blue/20">{populationLabel(code)}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {(g.sdg_codes?.length ?? 0) > 0 && (
+                <div className="pt-3 border-t-2 border-bauhaus-black/20">
+                  <div className="text-xs font-black text-bauhaus-muted mb-2 uppercase tracking-widest">UN SDGs</div>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {g.sdg_codes!.map((code) => (
+                      <span key={code} className="text-[11px] px-2 py-0.5 bg-warning-light text-bauhaus-black font-black border-2 border-bauhaus-yellow/30">{sdgLabel(code)}</span>
                     ))}
                   </div>
                 </div>
