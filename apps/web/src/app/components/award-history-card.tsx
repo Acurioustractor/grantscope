@@ -64,11 +64,6 @@ function money(n: number | null): string {
   return `$${n.toLocaleString()}`;
 }
 
-function moneyExact(n: number | null): string {
-  if (!n || n <= 0) return '—';
-  return `$${Math.round(n).toLocaleString()}`;
-}
-
 function Stat({ label, value, accent }: { label: string; value: string; accent?: string }) {
   return (
     <div>
@@ -78,14 +73,12 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
   );
 }
 
-function WinnerRow({ w, locked }: { w: AwardWinner; locked: boolean }) {
+function WinnerRow({ w }: { w: AwardWinner }) {
   const type = w.entity_type ? TYPE_LABELS[w.entity_type] ?? w.entity_type : null;
   return (
     <div className="flex items-center justify-between gap-3 px-3 py-2 border-b-2 border-bauhaus-black/10 last:border-b-0">
       <div className="min-w-0">
-        <div className={`text-sm font-bold text-bauhaus-black truncate ${locked ? 'blur-sm select-none' : ''}`}>
-          {w.recipient_name}
-        </div>
+        <div className="text-sm font-bold text-bauhaus-black truncate">{w.recipient_name}</div>
         <div className="flex items-center gap-2 mt-0.5">
           {type && (
             <span className="text-[10px] font-black uppercase tracking-wider text-bauhaus-muted">{type}</span>
@@ -96,9 +89,7 @@ function WinnerRow({ w, locked }: { w: AwardWinner; locked: boolean }) {
         </div>
       </div>
       <div className="text-right flex-shrink-0">
-        <div className={`text-sm font-black text-bauhaus-blue tabular-nums ${locked ? 'blur-sm select-none' : ''}`}>
-          {money(w.total_awarded)}
-        </div>
+        <div className="text-sm font-black text-bauhaus-blue tabular-nums">{money(w.total_awarded)}</div>
         <div className="text-[10px] font-bold text-bauhaus-muted tabular-nums">
           {w.n_awards} award{w.n_awards !== 1 ? 's' : ''}{w.latest_year ? ` · to ${w.latest_year}` : ''}
         </div>
@@ -107,11 +98,32 @@ function WinnerRow({ w, locked }: { w: AwardWinner; locked: boolean }) {
   );
 }
 
+/**
+ * Locked placeholder — free tier. Deliberately carries NO real recipient data
+ * (names/amounts are buyer-tier evidence and must never reach the free-tier DOM,
+ * even blurred). Just a shaped skeleton behind the unlock CTA.
+ */
+function LockedRow() {
+  return (
+    <div className="flex items-center justify-between gap-3 px-3 py-2 border-b-2 border-bauhaus-black/10 last:border-b-0" aria-hidden>
+      <div className="min-w-0 w-full">
+        <div className="h-3.5 w-2/3 bg-bauhaus-black/15" />
+        <div className="h-2 w-20 bg-bauhaus-black/10 mt-1.5" />
+      </div>
+      <div className="text-right flex-shrink-0">
+        <div className="h-3.5 w-12 bg-bauhaus-blue/20 ml-auto" />
+        <div className="h-2 w-10 bg-bauhaus-black/10 mt-1.5 ml-auto" />
+      </div>
+    </div>
+  );
+}
+
 function ThemeBlock({ t, isPaid }: { t: AwardHistoryTheme; isPaid: boolean }) {
   const others = Math.max(0, t.distinct_recipients - t.n_peer_recipients);
   const since = t.earliest_year ? ` since ${t.earliest_year}` : '';
-  // Free tier sees the first two winners blurred as a teaser; paid tier sees the full peer list.
-  const shown = isPaid ? t.winners : t.winners.slice(0, 3);
+  // Paid tier sees the named peer winners. Free tier sees only shaped placeholders +
+  // the unlock CTA — no real recipient data reaches the free-tier DOM.
+  const placeholderCount = Math.min(t.winners.length || 3, 3);
 
   return (
     <div className="mb-6 last:mb-0">
@@ -138,9 +150,9 @@ function ThemeBlock({ t, isPaid }: { t: AwardHistoryTheme; isPaid: boolean }) {
         Community-sector orgs who&apos;ve won this
       </div>
       <div className="border-4 border-bauhaus-black bg-white relative">
-        {shown.map((w, i) => (
-          <WinnerRow key={`${w.recipient_name}-${i}`} w={w} locked={!isPaid} />
-        ))}
+        {isPaid
+          ? t.winners.map((w, i) => <WinnerRow key={`${w.recipient_name}-${i}`} w={w} />)
+          : Array.from({ length: placeholderCount }).map((_, i) => <LockedRow key={i} />)}
 
         {/* Free-tier lock overlay */}
         {!isPaid && (

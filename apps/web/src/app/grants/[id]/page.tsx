@@ -166,6 +166,11 @@ export default async function GrantDetailPage({ params }: { params: Promise<{ id
   } catch {
     // Award-history RPC not available yet (migration unapplied) — card renders nothing.
   }
+  // Buyer-tier gate: named winners are paid evidence. Strip them server-side for the
+  // free tier so they never reach the client (not even in the RSC flight payload).
+  if (tier === 'community') {
+    awardHistory = awardHistory.map((t) => ({ ...t, winners: [] }));
+  }
 
   // Check if the logged-in user's org has this grant in their pipeline
   interface PipelineEntry {
