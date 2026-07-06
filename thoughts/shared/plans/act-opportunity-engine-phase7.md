@@ -26,10 +26,21 @@ The sharp asymmetry: **grants self-populate per project; foundations were hand-f
 - Registered in `scripts/lib/agent-registry.mjs` as `match-foundations-for-projects` (dry-run command; flip to `--apply` for nightly once first apply is human-approved).
 - Crosswalk (project coarse-themes) lives in-script (`CROSSWALK` const) — transparent; hardening follow-up = move to an `act_grant_recommendation_projects.foundation_themes` column.
 
-**NEXT (not yet done):**
+**NEXT (foundation-match agent):**
 - Ben authorizes first `--apply` run (Tier 3 — write to shared prod), then eyeball in `/org` pipeline UI.
 - Extractive-industry funders (BHP/Rio Tinto Foundations rank high mechanically) = **values decision** for Ben — kept as candidates, not auto-filtered.
-- Then: Brick 5 (won/lost → scorer + funders.json), coherence cleanup (orphaned tables), and the "connect brain to engine" rewire (`/find-grants` reads `act_grant_recommendations`, not raw `grant_opportunities`).
+
+### Item 4 — Brick 5 (won/lost feedback) + /find-grants→engine rewire — BUILT 2026-07-06 (awaiting Ben's Tier 3 apply)
+Ben's scope decisions: scorer sink = **the per-project engine MV** (not the web-app org scorer); funders.json = **draft-a-diff, Ben applies** (no cross-repo write).
+
+1. **Scorer (Brick 5) — `supabase/migrations/20260706120000_act_grant_recommendations_track_record.sql`.** Rebuilds the `act_grant_recommendations` MV with a decisions-derived `track_record_score` (−10…+15) folded into `fit_score`:
+   - +15 `won_funder_boost` if ACT has a `won` decision with this funder (org-level, any project) → `won_funder=true`, `won_funder` flag.
+   - −10 `passed_penalty` if ACT `passed` on this funder ≥2× for THIS project → `repeatedly_passed` flag.
+   - Excludes terminally-decided opps (won/passed/pursuing) so the feed stays fresh; `watching` kept.
+   - New additive cols: `track_record_score`, `won_funder`. Dependent view `v_act_pipeline_unified` dropped/recreated verbatim; indexes + grants restored.
+   - **Validated in a rolled-back prod txn:** DDL runs clean, 0 decided opps leak, 12 boosts / 25 penalties, `theme_score>0` gate still governs `is_strong_fit`, dependent view resolves. **NOT YET APPLIED — Ben runs psql (Tier 3), then nightly-grant-pipeline's `REFRESH … CONCURRENTLY` keeps it live.**
+2. **Rewire — `act-grant-triage.md`** (skill behind `/find-grants`, canonical in `~/Code/act-claude-plugins`, synced to active plugin dir). Now reads the `act_grant_recommendations` engine MV per project (was raw `grant_opportunities` JOIN `foundations`) — inherits verification gating, blocklist, the decision loop, and per-project `fit_score`/`is_strong_fit`. Plugins repo has one uncommitted file for Ben to commit.
+3. **funders.json half — `scripts/draft-funders-json-from-wins.mjs`** (read-only, never writes the cross-repo ledger). Emits `thoughts/shared/plans/funders-json-from-wins.proposal.md`: 22 proposed updates (add project_code to `projects_funded`, advance genuine funders' pre-funded stage → `active-partner`, bump `last_communicated_at`). Commercial customers already in the ledger at `stage=needs-writeup` are correctly left un-advanced. **Ben reviews + applies by hand.** Note surfaced: the ledger was previously bulk-seeded with commercial customers (Berry Obsession, Bigmeats, etc.) — a hygiene call for Ben, out of scope here.
 
 ---
 
