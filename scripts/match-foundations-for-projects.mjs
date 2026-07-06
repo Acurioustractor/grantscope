@@ -60,17 +60,32 @@ const sqlArr = (a) => `ARRAY[${a.map(s => `'${s.replace(/'/g, "''")}'`).join(','
 const ilikeArr = (a) => `ARRAY[${a.map(s => `'%${s.replace(/'/g, "''")}%'`).join(',')}]`;
 
 /**
- * Values-based exclusion (Ben's call, encoded so no future run re-litigates it):
- * extractive-industry corporate foundations are filtered out even when they score
- * high mechanically. Name-pattern match (case-insensitive substring) because these
- * are specific funders, not a `thematic_focus` tag. Kept tight and named — add a
- * peer here rather than rejecting the same funder in the UI every nightly run.
- * NOTE: Minderoo (Forrest/Fortescue-derived) is deliberately NOT here — it's a
- * borderline call left to human review in the /org pipeline, not auto-filtered.
+ * Values / off-mission exclusion (Ben's call, encoded so no future run re-litigates
+ * it): funders filtered out even when they score high mechanically. Name-pattern
+ * match (case-insensitive substring) because these are specific funders, not a
+ * `thematic_focus` tag. Kept tight and named — add a peer here rather than rejecting
+ * the same funder in the UI every nightly run.
+ *
+ * Two groups:
+ *  - EXTRACTIVE: mining / fossil-fuel corporate foundations.
+ *  - FAITH: faith-mission orgs that dodge the `religion` theme filter (they're tagged
+ *    community/youth, not religion) but are off-mission noise for these projects.
+ *    Specific observed names only — a broad faith-term regex would false-positive on
+ *    legit secular community funders (e.g. some Uniting/Catholic community trusts).
+ *
+ * NOTE 1: Minderoo (Forrest/Fortescue-derived) is deliberately NOT here — borderline,
+ *   left to human review in the /org pipeline, not auto-filtered.
+ * NOTE 2: Aboriginal community benefit-trusts funded by mining royalties (WCCT,
+ *   Groote Eylandt Aboriginal Trust, McArthur River Mine Community Benefits Trust)
+ *   are NOT here — excluding indigenous community money is a distinct values call;
+ *   they're also wrong-geography, so per-project parking handles them.
  */
 const EXCLUDE_FUNDERS = [
+  // extractive
   'BHP', 'Rio Tinto', 'Glencore', 'Adani', 'Woodside', 'Santos',
   'Fortescue', 'Whitehaven', 'Peabody', 'Yancoal',
+  // faith-mission
+  'WIZO', 'Human Appeal', 'Tzedek', 'Bodhicitta', 'Salvation Army', 'Art Of Living',
 ];
 
 /**
