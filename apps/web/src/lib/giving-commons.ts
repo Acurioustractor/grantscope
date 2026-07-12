@@ -82,6 +82,7 @@ export const PUBLIC_DATASETS = {
     caveats: [
       'Giving values are annual estimates where a foundation does not publish a clean current figure.',
       'Foundation openness is a public-signal measure, not a judgement of private grantmaking quality.',
+      'The JSON API adds derived review-completeness, missing-information and freshness fields for foundation rows; bulk table exports remain source-field exports.',
     ],
     piiLevel: 'none',
   },

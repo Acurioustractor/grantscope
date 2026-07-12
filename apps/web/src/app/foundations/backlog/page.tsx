@@ -10,11 +10,17 @@ interface BacklogRow {
   total_giving_annual: number | null;
   board_roles: number;
   verified_grants: number;
+  latest_grant_year: number | null;
   raw_grant_edges: number;
   raw_grant_datasets: number;
   current_program_count: number;
+  open_program_count: number;
+  application_pathway_count: number;
+  latest_program_scraped_at: string | null;
   year_memory_count: number;
   verified_source_backed_count: number;
+  website: string | null;
+  last_scraped_at: string | null;
 }
 
 interface BacklogSearchParams {
@@ -40,7 +46,15 @@ interface PairAlternative {
   candidateType: string | null;
 }
 
-type QueueKind = 'grants' | 'year_memory' | 'source_backed' | 'operator';
+type QueueKind =
+  | 'grants'
+  | 'year_memory'
+  | 'source_backed'
+  | 'application_pathway'
+  | 'recent_grants'
+  | 'high_giving_low_review'
+  | 'open_program_verification'
+  | 'operator';
 
 type QueueStatus = {
   key: string;
@@ -72,6 +86,22 @@ const BACKLOG_QUEUE_META: Record<string, { label: string; detail: string }> = {
     label: 'Missing source-backed memory',
     detail: 'This compare pair already has some memory structure, but it still needs official provenance.',
   },
+  'missing-application-pathway': {
+    label: 'Missing application pathway',
+    detail: 'This foundation has a public program surface, but we still need the practical access route.',
+  },
+  'missing-recent-grants': {
+    label: 'Missing recent grants',
+    detail: 'This foundation needs recent grantee evidence before anyone treats it as a current funder.',
+  },
+  'high-giving-low-review': {
+    label: 'High giving, low review',
+    detail: 'This is the priority quality queue: meaningful giving estimate, weak evidence stack.',
+  },
+  'open-program-needs-verification': {
+    label: 'Open program needs verification',
+    detail: 'This foundation has open programs that need source-backed eligibility and application checks.',
+  },
   'operator-exclusions': {
     label: 'Operator exclusions',
     detail: 'This compare pair is outside the benchmark grantmaker lane and belongs in the exclusion queue for now.',
@@ -99,6 +129,10 @@ const BACKLOG_QUEUE_ORDER = [
   'missing-verified-grants',
   'missing-year-memory',
   'missing-source-backed-memory',
+  'missing-application-pathway',
+  'missing-recent-grants',
+  'high-giving-low-review',
+  'open-program-needs-verification',
   'operator-exclusions',
 ] as const;
 
@@ -132,7 +166,10 @@ function buildBacklogQuery(comparableTypes: string, filter: string) {
             GROUP BY r.source_entity_id
           ),
           fg AS (
-            SELECT foundation_id, COUNT(*)::int AS canonical_grants
+            SELECT
+              foundation_id,
+              COUNT(*)::int AS canonical_grants,
+              MAX(grant_year)::int AS latest_grant_year
             FROM foundation_grantees
             GROUP BY foundation_id
           ),
@@ -145,7 +182,17 @@ function buildBacklogQuery(comparableTypes: string, filter: string) {
             GROUP BY COALESCE(NULLIF(company_abn, ''), company_name)
           ),
           programs AS (
-            SELECT foundation_id, COUNT(*)::int AS current_program_count
+            SELECT
+              foundation_id,
+              COUNT(*)::int AS current_program_count,
+              COUNT(*) FILTER (WHERE status = 'open')::int AS open_program_count,
+              COUNT(*) FILTER (
+                WHERE COALESCE(application_process, '') <> ''
+                   OR COALESCE(application_mode, '') <> ''
+                   OR url IS NOT NULL
+                   OR COALESCE(cardinality(source_urls), 0) > 0
+              )::int AS application_pathway_count,
+              MAX(scraped_at) AS latest_program_scraped_at
             FROM foundation_programs
             WHERE status IN ('open', 'ongoing', 'closed')
             GROUP BY foundation_id
@@ -165,7 +212,11 @@ function buildBacklogQuery(comparableTypes: string, filter: string) {
               foundation_id,
               COUNT(*)::int AS year_memory_count,
               COUNT(*) FILTER (
-                WHERE COALESCE(metadata->>'source', '') NOT ILIKE '%inferred%'
+                WHERE source_report_url IS NOT NULL
+                   OR (
+                     COALESCE(metadata->>'source', '') <> ''
+                     AND COALESCE(metadata->>'source', '') NOT ILIKE '%inferred%'
+                   )
               )::int AS verified_source_backed_count
             FROM foundation_program_years
             GROUP BY foundation_id
@@ -176,14 +227,20 @@ function buildBacklogQuery(comparableTypes: string, filter: string) {
               f.name,
               f.type,
               f.total_giving_annual,
+              f.website,
+              f.last_scraped_at,
               COALESCE(board.board_roles, 0) AS board_roles,
               GREATEST(
                 COALESCE(fg.canonical_grants, 0),
                 COALESCE(rel.relationship_grants, 0)
               ) AS verified_grants,
+              fg.latest_grant_year,
               COALESCE(raw_rel.raw_grant_edges, 0) AS raw_grant_edges,
               COALESCE(raw_rel.raw_grant_datasets, 0) AS raw_grant_datasets,
               COALESCE(programs.current_program_count, 0) AS current_program_count,
+              COALESCE(programs.open_program_count, 0) AS open_program_count,
+              COALESCE(programs.application_pathway_count, 0) AS application_pathway_count,
+              programs.latest_program_scraped_at,
               COALESCE(yrs.year_memory_count, 0) AS year_memory_count,
               COALESCE(yrs.verified_source_backed_count, 0) AS verified_source_backed_count
             FROM foundations f
@@ -252,9 +309,11 @@ function buildPairAlternatives(
   });
 }
 
-function queueHref(row: BacklogRow, queue: 'grants' | 'year_memory' | 'source_backed' | 'operator') {
+function queueHref(row: BacklogRow, queue: QueueKind) {
   if (queue === 'grants') return `/foundations/${row.id}#matching-grants`;
-  if (queue === 'year_memory' || queue === 'source_backed') return `/foundations/${row.id}#program-history`;
+  if (queue === 'year_memory' || queue === 'source_backed' || queue === 'recent_grants' || queue === 'open_program_verification') return `/foundations/${row.id}#program-history`;
+  if (queue === 'application_pathway') return `/foundations/${row.id}#programs-opportunities`;
+  if (queue === 'high_giving_low_review') return `/foundations/${row.id}`;
   return `/foundations/compare?left=${row.id}&right=d242967e-0e68-4367-9785-06cf0ec7485e`;
 }
 
@@ -316,6 +375,76 @@ function queueStatus(row: BacklogRow, queue: QueueKind): QueueStatus {
       detail: 'Program memory exists, but official provenance is still missing.',
       priority: 0,
       tone: 'amber',
+    };
+  }
+
+  if (queue === 'application_pathway') {
+    if (row.current_program_count > 0) {
+      return {
+        key: 'needs_application_pathway',
+        label: 'Needs access route',
+        detail: `Program rows exist (${row.current_program_count}), but application mode, contact route, or source URL still needs extraction.`,
+        priority: 0,
+        tone: 'amber',
+      };
+    }
+
+    return {
+      key: 'blocked_public_surface',
+      label: 'Blocked on public program surface',
+      detail: 'No program row exists yet, so the application pathway cannot be extracted cleanly.',
+      priority: 1,
+      tone: 'red',
+    };
+  }
+
+  if (queue === 'recent_grants') {
+    if (row.latest_grant_year) {
+      return {
+        key: 'stale_recent_grants',
+        label: 'Stale grant layer',
+        detail: `Latest verified grant year is ${row.latest_grant_year}; refresh annual reports or public grant databases for newer examples.`,
+        priority: 0,
+        tone: 'amber',
+      };
+    }
+
+    return {
+      key: 'missing_recent_grants',
+      label: 'No recent grants',
+      detail: 'No verified grant year is available. Extract recent grantees, amounts, and source URLs before using this as a funder lead.',
+      priority: 1,
+      tone: 'red',
+    };
+  }
+
+  if (queue === 'high_giving_low_review') {
+    return {
+      key: 'needs_foundation_review',
+      label: 'Needs review build',
+      detail: 'High annual giving estimate but fewer than two review layers. Build governance, recent grants, program memory, and source-backed evidence before ranking it highly.',
+      priority: 0,
+      tone: 'amber',
+    };
+  }
+
+  if (queue === 'open_program_verification') {
+    if (row.application_pathway_count > 0) {
+      return {
+        key: 'needs_provenance',
+        label: 'Needs source check',
+        detail: `Open program rows exist (${row.open_program_count}) and have an access route, but source-backed memory or latest verification is still thin.`,
+        priority: 0,
+        tone: 'amber',
+      };
+    }
+
+    return {
+      key: 'needs_application_pathway',
+      label: 'Needs access route',
+      detail: `Open program rows exist (${row.open_program_count}), but eligibility and application route need source-backed extraction.`,
+      priority: 0,
+      tone: 'red',
     };
   }
 
@@ -453,6 +582,15 @@ function QueueSection({
               <span className="border-2 border-bauhaus-black/20 px-2.5 py-1 text-bauhaus-black">
                 {row.verified_source_backed_count} source-backed
               </span>
+              <span className="border-2 border-bauhaus-black/20 px-2.5 py-1 text-bauhaus-black">
+                {row.open_program_count} open programs
+              </span>
+              <span className="border-2 border-bauhaus-black/20 px-2.5 py-1 text-bauhaus-black">
+                {row.application_pathway_count} access routes
+              </span>
+              <span className="border-2 border-bauhaus-black/20 px-2.5 py-1 text-bauhaus-black">
+                Latest grant {row.latest_grant_year || 'unknown'}
+              </span>
             </div>
             <p className="mt-4 max-w-3xl text-sm font-medium leading-relaxed text-bauhaus-muted">
               <span className="font-black uppercase tracking-[0.14em] text-bauhaus-black">Blocked:</span>{' '}
@@ -488,7 +626,16 @@ export default async function FoundationsBacklogPage({ searchParams }: { searchP
   const activeStatus = params.status || null;
   const supabase = getServiceSupabase();
   const comparableTypes = GRANTMAKER_TYPES.map((type) => `'${type}'`).join(',');
-  const [missingVerifiedGrantsResult, missingYearMemoryResult, missingSourceBackedResult, operatorExclusionsResult] =
+  const [
+    missingVerifiedGrantsResult,
+    missingYearMemoryResult,
+    missingSourceBackedResult,
+    missingApplicationPathwayResult,
+    missingRecentGrantsResult,
+    highGivingLowReviewResult,
+    openProgramVerificationResult,
+    operatorExclusionsResult,
+  ] =
     await Promise.all([
       supabase.rpc('exec_sql', {
         query: buildBacklogQuery(
@@ -511,6 +658,30 @@ export default async function FoundationsBacklogPage({ searchParams }: { searchP
       supabase.rpc('exec_sql', {
         query: buildBacklogQuery(
           comparableTypes,
+          `type IN (${comparableTypes}) AND current_program_count > 0 AND application_pathway_count = 0`,
+        ),
+      }),
+      supabase.rpc('exec_sql', {
+        query: buildBacklogQuery(
+          comparableTypes,
+          `type IN (${comparableTypes}) AND (latest_grant_year IS NULL OR latest_grant_year < EXTRACT(YEAR FROM CURRENT_DATE)::int - 3)`,
+        ),
+      }),
+      supabase.rpc('exec_sql', {
+        query: buildBacklogQuery(
+          comparableTypes,
+          `type IN (${comparableTypes}) AND total_giving_annual >= 5000000 AND ((board_roles > 0)::int + (verified_grants > 0)::int + (year_memory_count > 0)::int + (verified_source_backed_count > 0)::int) <= 1`,
+        ),
+      }),
+      supabase.rpc('exec_sql', {
+        query: buildBacklogQuery(
+          comparableTypes,
+          `type IN (${comparableTypes}) AND open_program_count > 0 AND (application_pathway_count = 0 OR verified_source_backed_count = 0)`,
+        ),
+      }),
+      supabase.rpc('exec_sql', {
+        query: buildBacklogQuery(
+          comparableTypes,
           `(type IS NULL OR type NOT IN (${comparableTypes})) AND board_roles > 0`,
         ),
       }),
@@ -519,6 +690,10 @@ export default async function FoundationsBacklogPage({ searchParams }: { searchP
   const missingVerifiedGrantsRows = (missingVerifiedGrantsResult.data || []) as BacklogRow[];
   const missingYearMemoryRows = (missingYearMemoryResult.data || []) as BacklogRow[];
   const missingSourceBackedRows = (missingSourceBackedResult.data || []) as BacklogRow[];
+  const missingApplicationPathwayRows = (missingApplicationPathwayResult.data || []) as BacklogRow[];
+  const missingRecentGrantsRows = (missingRecentGrantsResult.data || []) as BacklogRow[];
+  const highGivingLowReviewRows = (highGivingLowReviewResult.data || []) as BacklogRow[];
+  const openProgramVerificationRows = (openProgramVerificationResult.data || []) as BacklogRow[];
   const operatorExclusionsRows = (operatorExclusionsResult.data || []) as BacklogRow[];
   const missingVerifiedGrants = sortBacklogRows(
     missingVerifiedGrantsRows,
@@ -535,6 +710,26 @@ export default async function FoundationsBacklogPage({ searchParams }: { searchP
     'source_backed',
     activeStatus || undefined,
   );
+  const missingApplicationPathway = sortBacklogRows(
+    missingApplicationPathwayRows,
+    'application_pathway',
+    activeStatus || undefined,
+  );
+  const missingRecentGrants = sortBacklogRows(
+    missingRecentGrantsRows,
+    'recent_grants',
+    activeStatus || undefined,
+  );
+  const highGivingLowReview = sortBacklogRows(
+    highGivingLowReviewRows,
+    'high_giving_low_review',
+    activeStatus || undefined,
+  );
+  const openProgramVerification = sortBacklogRows(
+    openProgramVerificationRows,
+    'open_program_verification',
+    activeStatus || undefined,
+  );
   const operatorExclusions = sortBacklogRows(
     operatorExclusionsRows,
     'operator',
@@ -544,6 +739,10 @@ export default async function FoundationsBacklogPage({ searchParams }: { searchP
     'missing-verified-grants': { rows: missingVerifiedGrantsRows, queue: 'grants' as const },
     'missing-year-memory': { rows: missingYearMemoryRows, queue: 'year_memory' as const },
     'missing-source-backed-memory': { rows: missingSourceBackedRows, queue: 'source_backed' as const },
+    'missing-application-pathway': { rows: missingApplicationPathwayRows, queue: 'application_pathway' as const },
+    'missing-recent-grants': { rows: missingRecentGrantsRows, queue: 'recent_grants' as const },
+    'high-giving-low-review': { rows: highGivingLowReviewRows, queue: 'high_giving_low_review' as const },
+    'open-program-needs-verification': { rows: openProgramVerificationRows, queue: 'open_program_verification' as const },
     'operator-exclusions': { rows: operatorExclusionsRows, queue: 'operator' as const },
   };
   const statusCountScope = params.queue && params.queue in rowsByQueue
@@ -576,6 +775,10 @@ export default async function FoundationsBacklogPage({ searchParams }: { searchP
     { key: 'blocked_pipeline', label: 'Blocked on pipeline', count: statusCounts.blocked_pipeline || 0 },
     { key: 'blocked_public_surface', label: 'Blocked on public program surface', count: statusCounts.blocked_public_surface || 0 },
     { key: 'needs_provenance', label: 'Needs provenance pass', count: statusCounts.needs_provenance || 0 },
+    { key: 'needs_application_pathway', label: 'Needs access route', count: statusCounts.needs_application_pathway || 0 },
+    { key: 'missing_recent_grants', label: 'No recent grants', count: statusCounts.missing_recent_grants || 0 },
+    { key: 'stale_recent_grants', label: 'Stale grant layer', count: statusCounts.stale_recent_grants || 0 },
+    { key: 'needs_foundation_review', label: 'Needs review build', count: statusCounts.needs_foundation_review || 0 },
     { key: 'outside_benchmark_lane', label: 'Outside benchmark lane', count: statusCounts.outside_benchmark_lane || 0 },
   ] as const;
   const queueStatusSummaries = {
@@ -631,6 +834,70 @@ export default async function FoundationsBacklogPage({ searchParams }: { searchP
         count: countRowsByStatus(missingSourceBackedRows, 'source_backed').needs_provenance || 0,
         href: buildStatusHref({ ...params, queue: 'missing-source-backed-memory' }, 'needs_provenance'),
         active: params.queue === 'missing-source-backed-memory' && activeStatus === 'needs_provenance',
+      },
+    ],
+    application_pathway: [
+      {
+        key: 'needs_application_pathway',
+        label: 'Needs access route',
+        tone: 'amber' as const,
+        count: countRowsByStatus(missingApplicationPathwayRows, 'application_pathway').needs_application_pathway || 0,
+        href: buildStatusHref({ ...params, queue: 'missing-application-pathway' }, 'needs_application_pathway'),
+        active: params.queue === 'missing-application-pathway' && activeStatus === 'needs_application_pathway',
+      },
+      {
+        key: 'blocked_public_surface',
+        label: 'Blocked on public program surface',
+        tone: 'red' as const,
+        count: countRowsByStatus(missingApplicationPathwayRows, 'application_pathway').blocked_public_surface || 0,
+        href: buildStatusHref({ ...params, queue: 'missing-application-pathway' }, 'blocked_public_surface'),
+        active: params.queue === 'missing-application-pathway' && activeStatus === 'blocked_public_surface',
+      },
+    ],
+    recent_grants: [
+      {
+        key: 'stale_recent_grants',
+        label: 'Stale grant layer',
+        tone: 'amber' as const,
+        count: countRowsByStatus(missingRecentGrantsRows, 'recent_grants').stale_recent_grants || 0,
+        href: buildStatusHref({ ...params, queue: 'missing-recent-grants' }, 'stale_recent_grants'),
+        active: params.queue === 'missing-recent-grants' && activeStatus === 'stale_recent_grants',
+      },
+      {
+        key: 'missing_recent_grants',
+        label: 'No recent grants',
+        tone: 'red' as const,
+        count: countRowsByStatus(missingRecentGrantsRows, 'recent_grants').missing_recent_grants || 0,
+        href: buildStatusHref({ ...params, queue: 'missing-recent-grants' }, 'missing_recent_grants'),
+        active: params.queue === 'missing-recent-grants' && activeStatus === 'missing_recent_grants',
+      },
+    ],
+    high_giving_low_review: [
+      {
+        key: 'needs_foundation_review',
+        label: 'Needs review build',
+        tone: 'amber' as const,
+        count: countRowsByStatus(highGivingLowReviewRows, 'high_giving_low_review').needs_foundation_review || 0,
+        href: buildStatusHref({ ...params, queue: 'high-giving-low-review' }, 'needs_foundation_review'),
+        active: params.queue === 'high-giving-low-review' && activeStatus === 'needs_foundation_review',
+      },
+    ],
+    open_program_verification: [
+      {
+        key: 'needs_provenance',
+        label: 'Needs source check',
+        tone: 'amber' as const,
+        count: countRowsByStatus(openProgramVerificationRows, 'open_program_verification').needs_provenance || 0,
+        href: buildStatusHref({ ...params, queue: 'open-program-needs-verification' }, 'needs_provenance'),
+        active: params.queue === 'open-program-needs-verification' && activeStatus === 'needs_provenance',
+      },
+      {
+        key: 'needs_application_pathway',
+        label: 'Needs access route',
+        tone: 'red' as const,
+        count: countRowsByStatus(openProgramVerificationRows, 'open_program_verification').needs_application_pathway || 0,
+        href: buildStatusHref({ ...params, queue: 'open-program-needs-verification' }, 'needs_application_pathway'),
+        active: params.queue === 'open-program-needs-verification' && activeStatus === 'needs_application_pathway',
       },
     ],
     operator: [
@@ -789,6 +1056,12 @@ export default async function FoundationsBacklogPage({ searchParams }: { searchP
           <span className="border-2 border-bauhaus-blue bg-link-light px-3 py-2 text-bauhaus-blue">
             {missingYearMemory.length} year-memory targets
           </span>
+          <span className="border-2 border-bauhaus-yellow bg-warning-light px-3 py-2 text-bauhaus-black">
+            {missingApplicationPathway.length} access-route targets
+          </span>
+          <span className="border-2 border-bauhaus-black/20 bg-white px-3 py-2 text-bauhaus-black">
+            {highGivingLowReview.length} high-giving low-review targets
+          </span>
           <span className="border-2 border-bauhaus-red bg-bauhaus-red/5 px-3 py-2 text-bauhaus-red">
             {operatorExclusions.length} operator exclusions
           </span>
@@ -839,6 +1112,46 @@ export default async function FoundationsBacklogPage({ searchParams }: { searchP
               }`}
             >
               Missing source-backed memory
+            </a>
+            <a
+              href={comparePairIds.length === 2 ? buildSliceHref(params, 'missing-application-pathway') : '#missing-application-pathway'}
+              className={`px-3 py-2 transition-colors ${
+                params.queue === 'missing-application-pathway'
+                  ? 'border-2 border-bauhaus-red bg-white text-bauhaus-red'
+                  : 'border-2 border-bauhaus-yellow bg-warning-light text-bauhaus-black hover:bg-bauhaus-yellow'
+              }`}
+            >
+              Missing application pathway
+            </a>
+            <a
+              href={comparePairIds.length === 2 ? buildSliceHref(params, 'missing-recent-grants') : '#missing-recent-grants'}
+              className={`px-3 py-2 transition-colors ${
+                params.queue === 'missing-recent-grants'
+                  ? 'border-2 border-bauhaus-red bg-white text-bauhaus-red'
+                  : 'border-2 border-bauhaus-black/20 bg-white text-bauhaus-black hover:border-bauhaus-black hover:bg-bauhaus-black hover:text-white'
+              }`}
+            >
+              Missing recent grants
+            </a>
+            <a
+              href={comparePairIds.length === 2 ? buildSliceHref(params, 'high-giving-low-review') : '#high-giving-low-review'}
+              className={`px-3 py-2 transition-colors ${
+                params.queue === 'high-giving-low-review'
+                  ? 'border-2 border-bauhaus-red bg-white text-bauhaus-red'
+                  : 'border-2 border-bauhaus-blue/25 bg-link-light text-bauhaus-blue hover:border-bauhaus-blue hover:bg-bauhaus-blue hover:text-white'
+              }`}
+            >
+              High giving low review
+            </a>
+            <a
+              href={comparePairIds.length === 2 ? buildSliceHref(params, 'open-program-needs-verification') : '#open-program-needs-verification'}
+              className={`px-3 py-2 transition-colors ${
+                params.queue === 'open-program-needs-verification'
+                  ? 'border-2 border-bauhaus-red bg-white text-bauhaus-red'
+                  : 'border-2 border-money/25 bg-money-light text-money hover:border-money hover:bg-money hover:text-white'
+              }`}
+            >
+              Open program verification
             </a>
             <a
               href={comparePairIds.length === 2 ? buildSliceHref(params, 'operator-exclusions') : '#operator-exclusions'}
@@ -904,6 +1217,46 @@ export default async function FoundationsBacklogPage({ searchParams }: { searchP
           queue="source_backed"
           active={params.queue === 'missing-source-backed-memory'}
           statusSummary={queueStatusSummaries.source_backed}
+        />
+
+        <QueueSection
+          id="missing-application-pathway"
+          title="Missing application pathway"
+          detail="Foundations with program rows but no clear public access route yet. Extract application mode, contact route, eligibility, source URLs, and decision-cycle hints."
+          rows={missingApplicationPathway}
+          queue="application_pathway"
+          active={params.queue === 'missing-application-pathway'}
+          statusSummary={queueStatusSummaries.application_pathway}
+        />
+
+        <QueueSection
+          id="missing-recent-grants"
+          title="Missing recent grants"
+          detail="Grantmaker-like foundations with no recent verified grantee layer. Use annual reports, grants databases, or impact reports to add current grantees, amounts, years, and source URLs."
+          rows={missingRecentGrants}
+          queue="recent_grants"
+          active={params.queue === 'missing-recent-grants'}
+          statusSummary={queueStatusSummaries.recent_grants}
+        />
+
+        <QueueSection
+          id="high-giving-low-review"
+          title="High giving, low review"
+          detail="High-annual-giving foundations with weak review depth. Work these first when improving the public directory because each evidence upgrade changes the most visible funder list."
+          rows={highGivingLowReview}
+          queue="high_giving_low_review"
+          active={params.queue === 'high-giving-low-review'}
+          statusSummary={queueStatusSummaries.high_giving_low_review}
+        />
+
+        <QueueSection
+          id="open-program-needs-verification"
+          title="Open program needs verification"
+          detail="Open foundation programs should not be treated as actionable until eligibility, application route, source URL, and latest checked date are visible."
+          rows={openProgramVerification}
+          queue="open_program_verification"
+          active={params.queue === 'open-program-needs-verification'}
+          statusSummary={queueStatusSummaries.open_program_verification}
         />
 
         <QueueSection
