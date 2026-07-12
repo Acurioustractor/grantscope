@@ -13,6 +13,13 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectPath = resolveAuthRedirect(searchParams);
+  const localDev = process.env.NODE_ENV !== 'production';
+  const localRedirectPath = redirectPath === '/continue' ? '/org/act/goods' : redirectPath;
+
+  function continueLocally() {
+    router.push(localRedirectPath);
+    router.refresh();
+  }
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -26,7 +33,11 @@ function LoginForm() {
     });
 
     if (authError) {
-      setError(authError.message);
+      setError(
+        authError.message === 'Legacy API keys are disabled'
+          ? 'Supabase legacy anon keys are disabled. Add NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, or continue locally as A Curious Tractor.'
+          : authError.message
+      );
       setLoading(false);
       return;
     }
@@ -88,6 +99,16 @@ function LoginForm() {
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
+
+            {localDev && (
+              <button
+                type="button"
+                onClick={continueLocally}
+                className="w-full bg-white text-bauhaus-black font-black uppercase tracking-widest py-3 text-xs border-4 border-bauhaus-black hover:bg-bauhaus-yellow bauhaus-shadow-sm"
+              >
+                Continue locally as A Curious Tractor
+              </button>
+            )}
 
             <p className="text-center text-sm text-bauhaus-muted font-medium">
               Don&apos;t have an account?{' '}
