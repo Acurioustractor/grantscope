@@ -19,12 +19,12 @@ const shortDate = (value: string | null) => value
 
 function Stat({ label, beds, washers, value, accent }: { label: string; beds?: number | null; washers?: number | null; value?: number | null; accent?: boolean }) {
   return (
-    <div className={`border-4 ${accent ? 'border-bauhaus-blue bg-link-light' : 'border-bauhaus-black bg-white'} p-3`}>
-      <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">{label}</div>
-      <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-0.5 text-bauhaus-black">
-        {beds != null && <span className="text-lg font-black">{num(beds)} <span className="text-xs font-bold">beds</span></span>}
-        {washers != null && <span className="text-sm font-black">{num(washers)} <span className="text-[10px] font-bold">wash</span></span>}
-        {value != null && <span className="text-sm font-black text-bauhaus-blue">{money(value)}</span>}
+    <div className={`rounded-2xl border p-4 shadow-sm ${accent ? 'border-[#b9dfce] bg-[#eef8f3]' : 'border-slate-200 bg-white'}`}>
+      <div className="text-[11px] font-semibold text-slate-500">{label}</div>
+      <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-slate-900">
+        {beds != null && <span className="text-2xl font-bold tracking-tight">{num(beds)} <span className="text-xs font-medium text-slate-500">beds</span></span>}
+        {washers != null && <span className="text-lg font-bold">{num(washers)} <span className="text-[11px] font-medium text-slate-500">washers</span></span>}
+        {value != null && <span className="text-sm font-bold text-[#2563eb]">{money(value)}</span>}
       </div>
     </div>
   );
@@ -33,10 +33,10 @@ function Stat({ label, beds, washers, value, accent }: { label: string; beds?: n
 function FunnelColumn({ p }: { p: PipelineFunnel }) {
   const max = Math.max(1, ...SPINE.filter(s => s !== 'dead').map(s => p.spine[s].n));
   return (
-    <div className="border-4 border-bauhaus-black bg-white p-3">
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="mb-2">
-        <div className="text-xs font-black uppercase tracking-widest text-bauhaus-black">{p.label}</div>
-        <div className="text-[11px] text-bauhaus-muted">
+        <div className="text-sm font-bold text-slate-900">{p.label}</div>
+        <div className="mt-1 text-xs text-slate-500">
           {p.total} open · {p.beds ? `${num(p.beds)} beds · ` : ''}{p.washers ? `${num(p.washers)} wash · ` : ''}{p.value ? money(p.value) : '$0'}
         </div>
       </div>
@@ -47,10 +47,10 @@ function FunnelColumn({ p }: { p: PipelineFunnel }) {
           const w = isDead ? 0 : Math.round((c.n / max) * 100);
           return (
             <div key={s} className="flex items-center gap-2 text-[11px]">
-              <div className="w-16 shrink-0 font-bold uppercase tracking-wide text-bauhaus-muted">{SPINE_LABELS[s]}</div>
-              <div className="relative h-5 flex-1 bg-bauhaus-canvas">
-                {!isDead && c.n > 0 && <div className="absolute inset-y-0 left-0 bg-bauhaus-blue/70" style={{ width: `${Math.max(w, 6)}%` }} />}
-                <div className="absolute inset-0 flex items-center px-1.5 font-black text-bauhaus-black">
+              <div className="w-16 shrink-0 font-medium text-slate-500">{SPINE_LABELS[s]}</div>
+              <div className="relative h-6 flex-1 overflow-hidden rounded-full bg-slate-100">
+                {!isDead && c.n > 0 && <div className="absolute inset-y-0 left-0 rounded-full bg-[#69b68e]" style={{ width: `${Math.max(w, 6)}%` }} />}
+                <div className="absolute inset-0 flex items-center px-2 font-semibold text-slate-800">
                   {c.n > 0 ? (
                     <span>{c.n}{c.beds ? ` · ${num(c.beds)}b` : ''}{c.washers ? ` · ${num(c.washers)}w` : ''}{c.value ? ` · ${money(c.value)}` : ''}</span>
                   ) : <span className="text-bauhaus-muted">—</span>}
@@ -112,27 +112,28 @@ export default async function GoodsFunnelPage({ params, searchParams }: { params
   };
 
   return (
-    <main className="min-h-screen bg-bauhaus-canvas text-bauhaus-black">
-      <div className="border-b-4 border-bauhaus-black bg-bauhaus-black text-white">
-        <div className="mx-auto max-w-7xl px-4 py-8">
-          <nav className="mb-4 flex flex-wrap items-center gap-2 text-sm text-gray-400">
+    <main className="min-h-screen bg-[#f6f8f7] text-slate-900">
+      <div className="bg-gradient-to-br from-[#17352b] via-[#1f5d46] to-[#2f8f64] text-white shadow-lg shadow-[#17352b]/10">
+        <div className="mx-auto max-w-[1480px] px-5 py-10 lg:px-8">
+          <nav className="mb-5 flex flex-wrap items-center gap-2 text-sm text-white/55">
             <Link href={`/org/${slug}`} className="hover:text-white">{profile.name}</Link>
             <span>/</span>
             <Link href={`/org/${slug}/goods`} className="hover:text-white">Goods</Link>
             <span>/</span>
             <span className="text-white">Funnel</span>
           </nav>
-          <h1 className="text-4xl font-black uppercase tracking-widest">Goods Funnel</h1>
-          <p className="mt-2 max-w-3xl text-sm text-gray-300">
+          <div className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold text-white/80">Goods on Country · relationship operations</div>
+          <h1 className="mt-4 max-w-4xl text-4xl font-bold tracking-tight sm:text-5xl">From community need to delivery</h1>
+          <p className="mt-4 max-w-3xl text-base leading-7 text-white/70">
             One need, two funding routes, one delivery, in beds, washing machines and dollars. A community <strong className="text-white">need</strong> is met by a buyer who <strong className="text-white">pays</strong> (procurement) or a funder who <strong className="text-white">donates</strong> (support), both ending in <strong className="text-white">delivery</strong>.
           </p>
           <GoodsSubNav slug={slug} active="funnel" />
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 py-6">
+      <div className="mx-auto max-w-[1480px] px-5 py-8 lg:px-8">
         {/* Cockpit */}
-        <div className="mb-2 text-xs font-black uppercase tracking-widest text-bauhaus-black">Cockpit — curated priority slice (active + lead)</div>
+        <div className="mb-3 text-sm font-semibold text-slate-700">Current position</div>
         <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           <Stat label={`Need (${f.need.communities} communities)`} beds={f.need.beds} washers={f.need.washers} accent />
           <Stat label="Ordered (Buyer)" beds={f.ordered.beds} washers={f.ordered.washers} value={f.ordered.value} />
@@ -140,14 +141,14 @@ export default async function GoodsFunnelPage({ params, searchParams }: { params
           <Stat label="Delivered" beds={f.delivered.beds} washers={f.delivered.washers} />
           <Stat label="Gap (need − delivered)" beds={f.gap.beds} washers={f.gap.washers} accent />
         </div>
-        <p className="mb-6 text-[11px] text-bauhaus-muted">
+        <p className="mb-8 text-xs leading-5 text-slate-500">
           Addressable demand (all {num(f.addressable.communities)} communities): {num(f.addressable.beds)} beds · {num(f.addressable.washers)} washers.
           Delivered is a cited constant — {f.delivered.source}.
           {!f.ghlConnected && <span className="text-bauhaus-red"> · GHL not connected in this environment — Ordered/Funded show 0.</span>}
         </p>
 
         {/* Funnel by pipeline, collapsed to the 5-stage spine */}
-        <div className="mb-2 text-xs font-black uppercase tracking-widest text-bauhaus-black">Pipelines — collapsed to the 5-stage spine</div>
+        <div className="mb-3 text-sm font-semibold text-slate-700">Pipeline movement</div>
         <div className="grid gap-3 lg:grid-cols-3">
           {f.pipelines.length === 0 ? (
             <div className="border-4 border-bauhaus-black bg-white p-6 text-sm text-bauhaus-muted lg:col-span-3">
@@ -158,13 +159,13 @@ export default async function GoodsFunnelPage({ params, searchParams }: { params
           )}
         </div>
 
-        <section className="mt-8 border-4 border-bauhaus-black bg-white">
-          <div className="border-b-4 border-bauhaus-black bg-bauhaus-black p-4 text-white">
-            <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-yellow">Relationship command centre</div>
+        <section className="mt-10 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
+          <div className="border-b border-white/10 bg-gradient-to-r from-[#17352b] to-[#1f734f] p-6 text-white">
+            <div className="text-xs font-semibold text-[#a9dfc3]">Relationship command centre</div>
             <div className="mt-1 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
               <div>
-                <h2 className="text-2xl font-black uppercase tracking-widest">Everyone involved in beds and washing</h2>
-                <p className="mt-1 max-w-3xl text-xs leading-relaxed text-gray-300">
+                <h2 className="mt-1 text-2xl font-bold tracking-tight">Everyone involved in beds and washing</h2>
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-white/65">
                   One row per live GHL opportunity across demand, buyers and supporters. Work the next move here; keep detailed correspondence and ask materials linked to the relationship record.
                 </p>
               </div>
