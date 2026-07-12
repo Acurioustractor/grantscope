@@ -443,85 +443,26 @@ export default async function GoodsFunnelPage({ params, searchParams }: { params
                           <div className="max-w-xs font-bold leading-relaxed text-bauhaus-black">{row.nextMove}</div>
                         </td>
                         <td className="p-3">
-                          <details className="group w-72 border-2 border-bauhaus-black bg-white open:bg-bauhaus-canvas">
-                            <summary className="cursor-pointer list-none px-3 py-2 text-[10px] font-black uppercase tracking-widest text-bauhaus-black focus:outline-none focus:ring-2 focus:ring-bauhaus-blue">
-                              <span className="group-open:hidden">Open brief +</span>
-                              <span className="hidden group-open:inline">Close brief −</span>
-                            </summary>
-                            <div className="border-t-2 border-bauhaus-black p-3">
-                              <div className="text-[9px] font-black uppercase tracking-widest text-bauhaus-red">Evidence</div>
-                              <ul className="mt-2 space-y-1.5 text-[11px] leading-relaxed text-bauhaus-black">
-                                <li>GHL opportunity: <span className="font-mono">{row.id}</span></li>
-                                <li>Communication: <strong>{row.communicationStatus}</strong></li>
-                                <li>Owner: <strong>{row.owner || 'not assigned'}</strong></li>
-                                <li>Ask material: <strong>{row.deckStatus}</strong></li>
-                                <li>Products: <strong>{row.beds || 0} beds · {row.washers || 0} washers</strong></li>
-                              </ul>
-
-                              <div className="mt-4 text-[9px] font-black uppercase tracking-widest text-bauhaus-blue">Recommended pack</div>
-                              <div className="mt-2 flex flex-wrap gap-1.5">
-                                <Link href={`/org/${slug}/goods/pitch`} className="border border-bauhaus-black bg-white px-2 py-1 text-[9px] font-black uppercase tracking-wider hover:bg-link-light">Main deck</Link>
-                                <Link href={`/org/${slug}/goods/proof`} className="border border-bauhaus-black bg-white px-2 py-1 text-[9px] font-black uppercase tracking-wider hover:bg-link-light">Proof</Link>
-                                {row.pipeline === 'supporter' ? (
-                                  <Link href={`/org/${slug}/goods/money`} className="border border-bauhaus-black bg-white px-2 py-1 text-[9px] font-black uppercase tracking-wider hover:bg-link-light">Capital ask</Link>
-                                ) : (
-                                  <Link href={`/org/${slug}/goods/buyers`} className="border border-bauhaus-black bg-white px-2 py-1 text-[9px] font-black uppercase tracking-wider hover:bg-link-light">Buyer offer</Link>
-                                )}
-                                {row.charityRelated && <Link href={`/org/${slug}/goods/governance`} className="border border-bauhaus-black bg-bauhaus-yellow px-2 py-1 text-[9px] font-black uppercase tracking-wider">Charity role</Link>}
-                              </div>
-
-                              <div className="mt-4 border-t border-gray-300 pt-3">
-                                <div className="text-[9px] font-black uppercase tracking-widest text-bauhaus-blue">Supporter updates</div>
-                                <p className="mt-1 text-[11px] leading-relaxed text-bauhaus-black">
-                                  <strong>{row.updateReadiness}.</strong>{' '}
-                                  {row.updateReadiness === 'consent evidenced'
-                                    ? `Use only for: ${row.updateTopics.join(', ') || 'general Goods progress'}.`
-                                    : row.updateReadiness === 'consent needed'
-                                      ? 'Request permission before adding this person to ongoing updates.'
-                                      : 'Keep this relationship in its operational context unless the person separately opts in.'}
-                                </p>
-                              </div>
-
-                              <div className="mt-4 border-t border-gray-300 pt-3">
-                                <div className="flex items-center justify-between gap-2">
-                                  <div className="text-[9px] font-black uppercase tracking-widest text-bauhaus-red">Data quality</div>
-                                  <span className="text-[10px] font-black text-bauhaus-black">{row.dataQualityScore}%</span>
-                                </div>
-                                {row.dataQualityIssues.length > 0 ? (
-                                  <ul className="mt-2 space-y-1">
-                                    {row.dataQualityIssues.map(issue => <li key={issue} className="text-[10px] font-bold text-bauhaus-red">• {issue}</li>)}
-                                  </ul>
-                                ) : <p className="mt-1 text-[10px] font-bold text-green-700">Core relationship fields are complete.</p>}
-                              </div>
-
-                              <div className="mt-4 border-t border-gray-300 pt-3">
-                                <div className="text-[9px] font-black uppercase tracking-widest text-bauhaus-red">Entity and charity route</div>
-                                <p className="mt-1 text-[11px] leading-relaxed text-bauhaus-black">
-                                  <strong>{row.vehicleStatus}.</strong>{' '}
-                                  {row.entityRoutes.length > 0
-                                    ? `Current evidence supports: ${row.entityRoutes.join(', ')}.`
-                                    : 'No current tag or pipeline role identifies the correct contracting, charitable or governance vehicle.'}
-                                </p>
-                                <p className="mt-2 text-[10px] leading-relaxed text-bauhaus-muted">
-                                  Public-benefit funding can sit with the charity; product sales, purchase orders and working capital belong with the commercial contracting vehicle; community governance and ownership require the named First Nations partner.
-                                </p>
-                              </div>
-
-                              <div className="mt-4 space-y-2">
-                                {row.sourceUrl && <a href={row.sourceUrl} target="_blank" rel="noreferrer" className="block border-2 border-bauhaus-blue bg-link-light px-3 py-2 text-center text-[9px] font-black uppercase tracking-widest text-bauhaus-blue">Open Gmail evidence</a>}
-                                <Link
-                                  href={`/opportunities/ecosystem?project=Goods&source=crm&q=${encodeURIComponent(row.email || row.name)}`}
-                                  className="block border-2 border-bauhaus-black bg-bauhaus-black px-3 py-2 text-center text-[9px] font-black uppercase tracking-widest text-white"
-                                >
-                                  Review before GHL handoff
-                                </Link>
-                              </div>
-
-                              <p className="mt-3 text-[10px] leading-relaxed text-bauhaus-muted">
-                                Confirm the owner, message angle, source evidence and due date before changing GHL or sending outreach.
-                              </p>
+                          <div className="w-72 border-2 border-bauhaus-black bg-white p-3">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-[9px] font-black uppercase tracking-widest text-bauhaus-red">Brief</span>
+                              <span className="text-[10px] font-black text-bauhaus-black">{row.dataQualityScore}% complete</span>
                             </div>
-                          </details>
+                            <p className="mt-2 text-[11px] leading-relaxed text-bauhaus-black">
+                              {row.communicationStatus}; {row.owner ? `owned by ${row.owner}` : 'owner needed'}; deck {row.deckStatus}.
+                            </p>
+                            {row.dataQualityIssues.length > 0 && <p className="mt-2 text-[10px] font-bold leading-relaxed text-bauhaus-red">Fix: {row.dataQualityIssues.slice(0, 3).join(', ')}.</p>}
+                            <div className="mt-3 flex flex-wrap gap-1.5">
+                              <Link href={`/org/${slug}/goods/pitch`} className="border border-bauhaus-black px-2 py-1 text-[9px] font-black uppercase tracking-wider hover:bg-link-light">Deck</Link>
+                              <Link href={`/org/${slug}/goods/proof`} className="border border-bauhaus-black px-2 py-1 text-[9px] font-black uppercase tracking-wider hover:bg-link-light">Proof</Link>
+                              <Link href={row.pipeline === 'supporter' ? `/org/${slug}/goods/money` : `/org/${slug}/goods/buyers`} className="border border-bauhaus-black px-2 py-1 text-[9px] font-black uppercase tracking-wider hover:bg-link-light">{row.pipeline === 'supporter' ? 'Ask' : 'Buyer offer'}</Link>
+                              {row.charityRelated && <Link href={`/org/${slug}/goods/governance`} className="border border-bauhaus-black bg-bauhaus-yellow px-2 py-1 text-[9px] font-black uppercase tracking-wider">Charity</Link>}
+                            </div>
+                            <div className="mt-3 space-y-1.5">
+                              {row.sourceUrl && <a href={row.sourceUrl} target="_blank" rel="noreferrer" className="block text-[9px] font-black uppercase tracking-widest text-bauhaus-blue underline">Gmail evidence</a>}
+                              <Link href={`/opportunities/ecosystem?project=Goods&source=crm&q=${encodeURIComponent(row.email || row.name)}`} className="block text-[9px] font-black uppercase tracking-widest text-bauhaus-blue underline">Review before GHL handoff</Link>
+                            </div>
+                          </div>
                         </td>
                       </tr>
                     ))}
