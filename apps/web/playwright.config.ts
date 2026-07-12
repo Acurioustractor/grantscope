@@ -8,7 +8,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:3003',
+    baseURL: 'http://localhost:3013',
     trace: 'on-first-retry',
   },
   projects: [
@@ -18,8 +18,13 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'pnpm dev',
-    url: 'http://localhost:3003',
-    reuseExistingServer: !process.env.CI,
+    command: 'pnpm exec next dev --turbopack -p 3013',
+    url: 'http://localhost:3013',
+    reuseExistingServer: false,
+    env: {
+      ...process.env,
+      SKIP_AUTH_LOCAL: '1',
+      ACT_E2E_FIXTURES: '1',
+    },
   },
 });

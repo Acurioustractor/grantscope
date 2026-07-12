@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireOrgAccess } from '../../../../_lib/auth';
+import { requireOrgAccess, requireOrgWriteAccess } from '../../../../_lib/auth';
 import type { getServiceSupabase } from '@/lib/supabase';
 
 type Params = { params: Promise<{ orgProfileId: string; projectId: string }> };
@@ -343,7 +343,7 @@ export async function GET(req: NextRequest, { params }: Params) {
 
 export async function POST(req: NextRequest, { params }: Params) {
   const { orgProfileId, projectId } = await params;
-  const auth = await requireOrgAccess(orgProfileId);
+  const auth = await requireOrgWriteAccess(orgProfileId);
   if (auth instanceof NextResponse) return auth;
 
   const projectCheck = await ensureProjectBelongsToOrg(auth.serviceDb, orgProfileId, projectId);
@@ -564,7 +564,7 @@ export async function POST(req: NextRequest, { params }: Params) {
 
 export async function PATCH(req: NextRequest, { params }: Params) {
   const { orgProfileId, projectId } = await params;
-  const auth = await requireOrgAccess(orgProfileId);
+  const auth = await requireOrgWriteAccess(orgProfileId);
   if (auth instanceof NextResponse) return auth;
 
   const projectCheck = await ensureProjectBelongsToOrg(auth.serviceDb, orgProfileId, projectId);
@@ -682,7 +682,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
 export async function DELETE(req: NextRequest, { params }: Params) {
   const { orgProfileId, projectId } = await params;
-  const auth = await requireOrgAccess(orgProfileId);
+  const auth = await requireOrgWriteAccess(orgProfileId);
   if (auth instanceof NextResponse) return auth;
 
   const projectCheck = await ensureProjectBelongsToOrg(auth.serviceDb, orgProfileId, projectId);

@@ -50,6 +50,7 @@ import {
 } from '@/lib/services/org-dashboard-service';
 import { getGoodsCostEvidence } from '@/lib/services/goods-cost-evidence';
 import { GoodsCostAllocationTable } from './goods-cost-allocation-table';
+import { ActProjectFieldMapScreen } from './act-project-field-map';
 import { Section } from '../../_components/ui';
 import { ProjectCards } from '../../_components/project-cards';
 import { ProjectFoundationsClient } from '../../_components/project-foundations-client';
@@ -99,6 +100,27 @@ function formatDateLabel(value: number | null) {
 }
 
 async function FastProjectDashboard({
+  profile,
+  project,
+  slug,
+  projectSlug,
+}: {
+  profile: OrgProfile;
+  project: OrgProject;
+  slug: string;
+  projectSlug: string;
+}) {
+  return (
+    <ActProjectFieldMapScreen
+      profile={profile}
+      project={project}
+      slug={slug}
+      projectSlug={projectSlug}
+    />
+  );
+}
+
+async function LegacyFastProjectDashboard({
   profile,
   project,
   slug,
@@ -821,8 +843,9 @@ export default async function ProjectDashboard({
 
   if (fastNavigation && isActSlug(slug)) {
     const wikiSupportProject = getWikiSupportProject(projectSlug);
+    const FastView = typeof sp.legacy === 'string' ? LegacyFastProjectDashboard : FastProjectDashboard;
     return (
-      <FastProjectDashboard
+      <FastView
         profile={ACT_FAST_PROFILE}
         project={fastProjectFromWiki(projectSlug, wikiSupportProject)}
         slug="act"

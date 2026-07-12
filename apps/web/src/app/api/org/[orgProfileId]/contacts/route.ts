@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireOrgAccess } from '../../_lib/auth';
+import { requireOrgAccess, requireOrgWriteAccess } from '../../_lib/auth';
 
 type Params = { params: Promise<{ orgProfileId: string }> };
 
@@ -21,7 +21,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
 
 export async function POST(req: NextRequest, { params }: Params) {
   const { orgProfileId } = await params;
-  const auth = await requireOrgAccess(orgProfileId);
+  const auth = await requireOrgWriteAccess(orgProfileId);
   if (auth instanceof NextResponse) return auth;
 
   const body = await req.json();
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest, { params }: Params) {
 
 export async function PATCH(req: NextRequest, { params }: Params) {
   const { orgProfileId } = await params;
-  const auth = await requireOrgAccess(orgProfileId);
+  const auth = await requireOrgWriteAccess(orgProfileId);
   if (auth instanceof NextResponse) return auth;
 
   const { id, ...updates } = await req.json();
@@ -57,7 +57,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
 export async function DELETE(req: NextRequest, { params }: Params) {
   const { orgProfileId } = await params;
-  const auth = await requireOrgAccess(orgProfileId);
+  const auth = await requireOrgWriteAccess(orgProfileId);
   if (auth instanceof NextResponse) return auth;
 
   const { id } = await req.json();

@@ -4,6 +4,7 @@ import {
   type OpportunityActionRequest,
 } from '@/lib/opportunity-intelligence';
 import { requireModule } from '@/lib/api-auth';
+import { requireOrgWriteAccess } from '../../org/_lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,6 +49,13 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as OpportunityActionRequest;
     if (!body.kind) {
       return NextResponse.json({ error: 'kind is required' }, { status: 400 });
+    }
+
+    // This endpoint writes through the service client. General tracker access
+    // is not enough when the caller supplies a target organisation.
+    if (body.orgProfileId) {
+      const orgAuth = await requireOrgWriteAccess(body.orgProfileId);
+      if (orgAuth instanceof NextResponse) return orgAuth;
     }
 
     const receipt = await createOpportunityIntelligenceAction(body, { userId: auth.user.id });

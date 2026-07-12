@@ -1,11 +1,13 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ACT_FAST_PROFILE, isActSlug, shouldUseFastLocalOrg } from '@/lib/services/fast-local-org';
+import { ACT_FAST_PROFILE, fastProjectFromWiki, isActSlug, shouldUseFastLocalOrg } from '@/lib/services/fast-local-org';
 import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
+import { getWikiSupportProject } from '@/lib/services/wiki-support-index';
 import { getGoodsFunnel } from '@/lib/services/goods-funnel';
 import { getGoodsMoney } from '@/lib/services/goods-money';
 import { getGoodsBuyerPipeline } from '@/lib/services/goods-buyer-pipeline';
 import { GoodsSubNav, type GoodsTab } from './_components/goods-sub-nav';
+import { ActProjectFieldMapScreen } from '../[projectSlug]/act-project-field-map';
 
 /**
  * Goods Command Center — the front door (G1).
@@ -20,7 +22,7 @@ export const dynamic = 'force-dynamic';
 export async function generateMetadata() {
   return {
     title: 'Goods — Command Center',
-    description: 'The Goods workspace: move procurement and funder relationships forward, and prove the work to buyers and funders.',
+    description: 'The Goods field map: needs, relationships, procurement, funding, invitations, and proof in one ACT workspace.',
   };
 }
 
@@ -61,9 +63,29 @@ function Dest({ slug, tab, title, blurb, stat }: { slug: string; tab: GoodsTab; 
   );
 }
 
-export default async function GoodsHubPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function GoodsHubPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { slug } = await params;
-  const profile = shouldUseFastLocalOrg() && isActSlug(slug) ? ACT_FAST_PROFILE : await getOrgProfileBySlug(slug);
+  const sp = await searchParams;
+  const fastNavigation = shouldUseFastLocalOrg(typeof sp.full === 'string' ? sp.full : undefined);
+  if (fastNavigation && isActSlug(slug) && typeof sp.legacy !== 'string') {
+    const wikiProject = getWikiSupportProject('goods');
+    return (
+      <ActProjectFieldMapScreen
+        profile={ACT_FAST_PROFILE}
+        project={fastProjectFromWiki('goods', wikiProject)}
+        slug="act"
+        projectSlug="goods"
+      />
+    );
+  }
+
+  const profile = fastNavigation && isActSlug(slug) ? ACT_FAST_PROFILE : await getOrgProfileBySlug(slug);
   if (!profile) notFound();
 
   // Reuse the tabs' own services. allSettled so one saturated query can't 500 the front door.

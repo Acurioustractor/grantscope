@@ -1,0 +1,117 @@
+import type {
+  MatchedGrant,
+  OrgContactWithEntity,
+  OrgPipelineItemWithEntity,
+  OrgProjectSummary,
+} from '@/lib/services/org-dashboard-service';
+import type { WikiSupportFrontierQueue } from '@/lib/services/wiki-support-frontier';
+
+export const ACT_E2E_PROJECTS: OrgProjectSummary[] = [
+  {
+    id: 'e2e-goods',
+    org_profile_id: 'act-fast-local',
+    parent_project_id: null,
+    name: 'Goods on Country',
+    slug: 'goods',
+    code: 'ACT-GD',
+    description: 'Essential goods, circular materials, and community-led procurement.',
+    tier: 'major',
+    category: 'enterprise',
+    status: 'active',
+    sort_order: 1,
+    abn: null,
+    linked_gs_entity_id: null,
+    logo_url: null,
+    metadata: {},
+    updated_at: '2026-07-10T09:00:00.000Z',
+    program_count: 2,
+    pipeline_count: 1,
+    contact_count: 1,
+    pipeline_value: 1_200_000,
+    children: [],
+  },
+];
+
+export const ACT_E2E_PIPELINE: OrgPipelineItemWithEntity[] = [
+  {
+    id: 'e2e-real-eoi',
+    project_id: 'e2e-goods',
+    name: 'REAL Innovation Fund EOI',
+    amount_display: '$1.2M',
+    amount_numeric: 1_200_000,
+    funder: 'Snow Foundation',
+    deadline: null,
+    status: 'submitted',
+    grant_opportunity_id: null,
+    notes: 'EOI submitted; agree the relationship follow-up and evidence owner.',
+    funder_entity_id: null,
+    funder_type: 'foundation',
+    source_type: 'grant',
+    source_ref: 'e2e-real-eoi',
+    pathway: 'foundation',
+    recommended_role: 'partner',
+    project_code: 'ACT-GD',
+    owner_name: null,
+    next_action: null,
+    next_action_at: null,
+    created_at: '2026-07-08T04:00:00.000Z',
+    updated_at: '2026-07-10T09:00:00.000Z',
+    funder_entity_gs_id: null,
+    funder_entity_name: null,
+    grant_url: null,
+    grant_name: null,
+    grant_provider: null,
+  },
+];
+
+export const ACT_E2E_CONTACTS: OrgContactWithEntity[] = [
+  {
+    id: 'e2e-snow-contact',
+    name: 'Alex Snow',
+    role: 'Philanthropy partner',
+    organisation: 'Snow Foundation',
+    contact_type: 'funder',
+    email: 'alex@example.test',
+    phone: null,
+    notes: 'Warm relationship path for Goods on Country.',
+    last_contacted_at: '2026-07-08T03:00:00.000Z',
+    linked_entity_id: null,
+    linkedin_url: null,
+    person_id: null,
+    updated_at: '2026-07-10T09:00:00.000Z',
+    source_system: 'ghl',
+    source_label: 'HighLevel pilot fixture',
+    linked_entity_gs_id: null,
+    linked_entity_name: 'Snow Foundation',
+    linked_entity_type: 'foundation',
+    linked_entity_abn: null,
+    ghl_contact_id: 'e2e-ghl-snow',
+    ghl_engagement_status: 'warm',
+    ghl_last_contact_date: '2026-07-08T03:00:00.000Z',
+    notion_id: null,
+    unified_tags: ['role:funder', 'project:ACT-GD', 'warm', 'source:gmail'],
+  },
+];
+
+export const ACT_E2E_MATCHED_GRANTS: MatchedGrant[] = [
+  {
+    id: 'e2e-goods-grant',
+    name: 'Regional Circular Economy Partnership',
+    description: 'Supports First Nations-led circular economy infrastructure and regional delivery partnerships.',
+    amount_min: 250_000,
+    amount_max: 1_000_000,
+    deadline: null,
+    closes_at: null,
+    provider: 'Snow Foundation',
+    categories: ['Goods on Country'],
+    focus_areas: ['First Nations', 'circular economy', 'regional communities'],
+    url: '/grants/e2e-goods-grant',
+    fit_score: 92,
+  },
+];
+
+export const ACT_E2E_FRONTIER: WikiSupportFrontierQueue = {
+  total: 0,
+  rows: [],
+  by_route: [],
+};

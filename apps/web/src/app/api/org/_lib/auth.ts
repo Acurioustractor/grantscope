@@ -11,6 +11,12 @@ export interface OrgAuthResult {
   serviceDb: ReturnType<typeof getServiceSupabase>;
 }
 
+const ORG_WRITE_ROLES = new Set(['admin', 'editor']);
+
+export function isOrgWriteRole(role: string) {
+  return ORG_WRITE_ROLES.has(role);
+}
+
 /**
  * Verify the current user has access to the given org profile.
  * Super admins can access any org's data.
@@ -49,4 +55,15 @@ export async function requireOrgAccess(
     role: ctx.currentUserRole ?? 'viewer',
     serviceDb,
   };
+}
+
+export async function requireOrgWriteAccess(
+  orgProfileId: string,
+): Promise<OrgAuthResult | NextResponse> {
+  const auth = await requireOrgAccess(orgProfileId);
+  if (auth instanceof NextResponse) return auth;
+  if (!isOrgWriteRole(auth.role)) {
+    return NextResponse.json({ error: 'Editor access is required' }, { status: 403 });
+  }
+  return auth;
 }

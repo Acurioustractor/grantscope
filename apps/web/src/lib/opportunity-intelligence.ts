@@ -2420,6 +2420,8 @@ async function upsertRoutePipelineItem(
     pathway: route.pathway,
     recommended_role: route.recommended_role,
     project_code: route.project_code,
+    owner_name: request.owner ?? null,
+    next_action: route.next_action,
     last_synced_at: new Date().toISOString(),
   };
 
@@ -2568,6 +2570,8 @@ async function sendRouteToGhl(request: OpportunityActionRequest) {
       pathway: route.pathway,
       recommended_role: route.recommended_role,
       project_code: route.project_code,
+      owner_name: request.owner ?? null,
+      next_action: route.next_action,
       last_synced_at: new Date().toISOString(),
     };
     const existing = await db

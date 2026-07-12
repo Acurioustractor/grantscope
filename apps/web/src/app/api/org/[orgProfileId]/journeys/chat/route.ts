@@ -1,7 +1,7 @@
 import { streamText, convertToModelMessages, type UIMessage } from 'ai';
 import { anthropic } from '@ai-sdk/anthropic';
 import { NextRequest, NextResponse } from 'next/server';
-import { requireOrgAccess } from '../../../_lib/auth';
+import { requireOrgWriteAccess } from '../../../_lib/auth';
 import {
   getJourney,
   addJourneyMessage,
@@ -58,7 +58,7 @@ ${almaContext ? `\n## Available ALMA evidence\n${almaContext}` : ''}`;
 
 export async function POST(req: NextRequest, { params }: Params) {
   const { orgProfileId } = await params;
-  const auth = await requireOrgAccess(orgProfileId);
+  const auth = await requireOrgWriteAccess(orgProfileId);
   if (auth instanceof NextResponse) return auth;
 
   const { messages, journeyId } = await req.json() as {

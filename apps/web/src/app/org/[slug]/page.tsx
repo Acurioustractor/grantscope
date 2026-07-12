@@ -3,16 +3,27 @@ import { notFound } from 'next/navigation';
 import { getWikiSupportIndex, type WikiSupportIndex } from '@/lib/services/wiki-support-index';
 import { getWikiSupportFrontierQueue, type WikiSupportFrontierQueue } from '@/lib/services/wiki-support-frontier';
 import { workshopWikiHref } from '@/lib/services/act-workshop-wiki';
-import { ACT_FAST_PROFILE, isActSlug, shouldUseFastLocalOrg } from '@/lib/services/fast-local-org';
+import { ACT_FAST_PROFILE, isActSlug } from '@/lib/services/fast-local-org';
 import { ListPreviewProvider, GrantPreviewTrigger } from '../../components/list-preview';
 import { getOrgIncomeHistory, getOrgExpenseHistory, getOrgFinancialPulse } from '@/lib/services/org-income-service';
 import { getOrgPeopleNetwork } from '@/lib/services/org-people-service';
 import { getOrgOutstandingReceivables } from '@/lib/services/org-receivables-service';
+import { getOrgVerificationStatus } from '@/lib/services/org-verification-service';
+import { getActOpportunityContextStatus } from '@/lib/services/act-opportunity-context';
+import { getOrgDailyActionMemory, getOrgDailyActionStates } from '@/lib/services/act-daily-actions';
+import {
+  ACT_E2E_CONTACTS,
+  ACT_E2E_FRONTIER,
+  ACT_E2E_MATCHED_GRANTS,
+  ACT_E2E_PIPELINE,
+  ACT_E2E_PROJECTS,
+} from '@/lib/services/act-e2e-fixtures';
 import { IncomeHistorySection } from './_components/income-history-section';
 import { ExpenseHistorySection } from './_components/expense-history-section';
 import { FinancialPulseTile } from './_components/financial-pulse-tile';
 import { PeopleSection } from './_components/people-section';
 import { OutstandingReceivablesSection } from './_components/outstanding-receivables-section';
+import { ActOperatingDesk, normalizeActDeskView } from './_components/act-operating-desk';
 import {
   orgAbns,
   getOrgProfileBySlug,
@@ -25,6 +36,7 @@ import {
   getOrgLocalEcosystem,
   getOrgPrograms,
   getOrgPipeline,
+  getOrgOpportunityDecisions,
   getOrgContacts,
   getOrgLeadership,
   getMatchedGrantOpportunities,
@@ -70,143 +82,104 @@ import {
   DashboardFooter,
 } from '../_components/org-sections';
 
-export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
 
 async function FastOrgDashboard({
   profile,
   slug,
   wikiSupportIndex,
+  view,
+  relationship,
+  commitment,
 }: {
   profile: OrgProfile;
   slug: string;
   wikiSupportIndex: WikiSupportIndex;
+  view: string | string[] | undefined;
+  relationship: string | string[] | undefined;
+  commitment: string | string[] | undefined;
 }) {
-  const visibleProjects = wikiSupportIndex.projects.slice(0, 8);
-  const priorityActions = wikiSupportIndex.support_actions.slice(0, 6);
-  // Pulse is the most-asked question on the fast view — surface it inline.
-  const [financialPulse, receivables] = await Promise.all([
+  if (process.env.ACT_E2E_FIXTURES === '1') {
+    return (
+      <ActOperatingDesk
+        profile={profile}
+        orgProfileId={ACT_FAST_PROFILE.id}
+        slug={slug}
+        pulse={null}
+        receivables={null}
+        verification={null}
+        foundationPortfolio={[]}
+        wikiSupportIndex={wikiSupportIndex}
+        frontierQueue={ACT_E2E_FRONTIER}
+        projects={ACT_E2E_PROJECTS}
+        pipeline={ACT_E2E_PIPELINE}
+        contacts={ACT_E2E_CONTACTS}
+        matchedGrants={ACT_E2E_MATCHED_GRANTS}
+        opportunityDecisions={[]}
+        opportunityContext={null}
+        view={normalizeActDeskView(view)}
+        selectedRelationshipId={typeof relationship === 'string' ? relationship : undefined}
+        selectedCommitmentId={typeof commitment === 'string' ? commitment : undefined}
+        dailyActionStates={{}}
+        dailyActionMemory={{}}
+      />
+    );
+  }
+
+  const dataProfile = await getOrgProfileBySlug(slug);
+  const [
+    financialPulse,
+    receivables,
+    verificationStatus,
+    foundationPortfolio,
+    projectSummaries,
+    pipeline,
+    contacts,
+    matchedGrants,
+    frontierQueue,
+    opportunityDecisions,
+    opportunityContext,
+    dailyActionStates,
+    dailyActionMemory,
+  ] = await Promise.all([
     getOrgFinancialPulse(slug),
     getOrgOutstandingReceivables(slug),
+    getOrgVerificationStatus(slug),
+    dataProfile ? getOrgFoundationPortfolio(dataProfile.id) : Promise.resolve([]),
+    dataProfile ? getOrgProjectSummaries(dataProfile.id) : Promise.resolve([]),
+    dataProfile ? getOrgPipeline(dataProfile.id) : Promise.resolve([]),
+    dataProfile ? getOrgContacts(dataProfile.id, undefined, { includeGhl: true, ghlLimit: 60 }) : Promise.resolve([]),
+    dataProfile ? getMatchedGrantOpportunities(dataProfile.id, dataProfile.org_type, null) : Promise.resolve([]),
+    getWikiSupportFrontierQueue(undefined, 12),
+    dataProfile ? getOrgOpportunityDecisions(dataProfile.id) : Promise.resolve([]),
+    dataProfile ? getActOpportunityContextStatus(dataProfile.id) : Promise.resolve(null),
+    dataProfile ? getOrgDailyActionStates(dataProfile.id) : Promise.resolve({}),
+    dataProfile ? getOrgDailyActionMemory(dataProfile.id) : Promise.resolve({}),
   ]);
 
   return (
-    <main className="min-h-screen bg-gray-50 text-bauhaus-black">
-      <div className="border-b-4 border-bauhaus-black bg-bauhaus-black text-white">
-        <div className="mx-auto max-w-7xl px-4 py-8">
-          <p className="text-sm font-black uppercase tracking-widest text-bauhaus-red">Fast operating view</p>
-          <div className="mt-2 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <h1 className="text-3xl font-black uppercase tracking-wider">{profile.name}</h1>
-              <p className="mt-2 max-w-3xl text-sm leading-relaxed text-gray-300">
-                Instant project navigation from the ACT wiki support index. Open the full data dashboard only when you
-                need heavy funding, relationship, contract, and ecosystem evidence.
-              </p>
-            </div>
-            <Link
-              href={`/org/${slug}?full=1`}
-              className="w-fit border border-white/20 bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-white hover:text-bauhaus-black"
-            >
-              Full data view
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      <div className="mx-auto max-w-7xl px-4 py-8 space-y-6">
-        <FinancialPulseTile pulse={financialPulse} slug={slug} />
-
-        <OutstandingReceivablesSection data={receivables} />
-
-        <section className="border-4 border-bauhaus-black bg-white p-5">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue">Start here</p>
-              <h2 className="mt-1 text-2xl font-black text-bauhaus-black">Pick the working surface</h2>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Link
-                href={`/org/${slug}/wiki/goods-operating-system`}
-                className="border border-bauhaus-black bg-bauhaus-black px-3 py-2 text-[11px] font-black uppercase tracking-widest text-white hover:bg-bauhaus-red"
-              >
-                Goods OS
-              </Link>
-              <Link
-                href={`/org/${slug}/wiki/workshop-alignment`}
-                className="border border-gray-300 bg-white px-3 py-2 text-[11px] font-black uppercase tracking-widest text-bauhaus-black hover:bg-bauhaus-canvas"
-              >
-                Workshop OS
-              </Link>
-              <Link
-                href="/grants?type=open_opportunity&sort=closing_asc"
-                className="border border-gray-300 bg-white px-3 py-2 text-[11px] font-black uppercase tracking-widest text-bauhaus-black hover:bg-bauhaus-canvas"
-              >
-                Grant finder
-              </Link>
-              <Link
-                href={`/org/${slug}/pipeline`}
-                className="border border-bauhaus-red bg-bauhaus-red px-3 py-2 text-[11px] font-black uppercase tracking-widest text-white hover:bg-bauhaus-black"
-              >
-                Grant kanban
-              </Link>
-            </div>
-          </div>
-          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            {visibleProjects.map((project) => (
-              <Link
-                key={project.slug}
-                href={`/org/${slug}/${project.slug}`}
-                className="border border-gray-200 bg-gray-50 p-4 hover:border-bauhaus-blue hover:bg-link-light/40"
-              >
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-black text-bauhaus-black">{project.name}</span>
-                  {project.code ? (
-                    <span className="bg-white px-2 py-1 text-[10px] font-black uppercase tracking-widest text-bauhaus-blue">
-                      {project.code}
-                    </span>
-                  ) : null}
-                </div>
-                <p className="mt-2 line-clamp-3 text-xs leading-relaxed text-gray-600">{project.summary}</p>
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  {project.routes.slice(0, 4).map((route) => (
-                    <span
-                      key={`${project.slug}-${route.type}-${route.label}`}
-                      className="bg-white px-2 py-1 text-[10px] font-black uppercase tracking-wider text-gray-500"
-                    >
-                      {route.type}
-                    </span>
-                  ))}
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-
-        <section className="border border-gray-200 bg-white p-5 shadow-sm">
-          <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-red">Run next</p>
-          <h2 className="mt-1 text-2xl font-black text-bauhaus-black">Source-backed actions</h2>
-          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {priorityActions.map((action) => (
-              <Link
-                key={action.id}
-                href={action.grant_finder_href}
-                className="border border-gray-200 bg-gray-50 p-4 hover:border-bauhaus-blue hover:bg-link-light/40"
-              >
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="bg-white px-2 py-1 text-[10px] font-black uppercase tracking-widest text-bauhaus-blue">
-                    {action.route_type}
-                  </span>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-                    {action.priority}
-                  </span>
-                </div>
-                <div className="mt-2 text-sm font-black text-bauhaus-black">{action.title}</div>
-                <p className="mt-2 line-clamp-3 text-xs leading-relaxed text-gray-600">{action.summary}</p>
-              </Link>
-            ))}
-          </div>
-        </section>
-      </div>
-    </main>
+    <ActOperatingDesk
+      profile={profile}
+      orgProfileId={dataProfile?.id ?? profile.id}
+      slug={slug}
+      pulse={financialPulse}
+      receivables={receivables}
+      verification={verificationStatus}
+      foundationPortfolio={foundationPortfolio}
+      wikiSupportIndex={wikiSupportIndex}
+      frontierQueue={frontierQueue}
+      projects={projectSummaries}
+      pipeline={pipeline}
+      contacts={contacts}
+      matchedGrants={matchedGrants}
+      opportunityDecisions={opportunityDecisions}
+      opportunityContext={opportunityContext}
+      view={normalizeActDeskView(view)}
+      selectedRelationshipId={typeof relationship === 'string' ? relationship : undefined}
+      selectedCommitmentId={typeof commitment === 'string' ? commitment : undefined}
+      dailyActionStates={dailyActionStates}
+      dailyActionMemory={dailyActionMemory}
+    />
   );
 }
 
@@ -711,14 +684,17 @@ export default async function OrgDashboard({ params, searchParams }: { params: P
   const { slug } = await params;
   const sp = await searchParams;
   const fundingYearFilter = typeof sp.fy === 'string' ? sp.fy : undefined;
-  const fastNavigation = shouldUseFastLocalOrg(typeof sp.full === 'string' ? sp.full : undefined);
-
-  if (fastNavigation && isActSlug(slug)) {
+  // ACT always opens in the Field Desk. The old full dashboard made production
+  // and `?full=1` behave differently from the daily workspace tested in CI.
+  if (isActSlug(slug)) {
     return (
       <FastOrgDashboard
         profile={ACT_FAST_PROFILE}
         slug="act"
         wikiSupportIndex={getWikiSupportIndex()}
+        view={sp.view}
+        relationship={sp.relationship}
+        commitment={sp.commitment}
       />
     );
   }
