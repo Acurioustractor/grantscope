@@ -1,4 +1,5 @@
 import { getServiceSupabase } from '@/lib/supabase';
+import { isInternalActIdentity } from '@/lib/act-internal-identities';
 import {
   warmthBand,
   REL_TRACK, STAGE_PROBABILITY,
@@ -83,7 +84,12 @@ export async function getGoodsRelationshipsSafe(opts?: {
       console.error('[goods-engagement] query failed:', error.message);
       return { rows: [], fetchError: error.message };
     }
-    return { rows: ((data ?? []) as Record<string, unknown>[]).map(coerceRow), fetchError: null };
+    return {
+      rows: ((data ?? []) as Record<string, unknown>[])
+        .map(coerceRow)
+        .filter((row) => !isInternalActIdentity({ name: row.display_name })),
+      fetchError: null,
+    };
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Unexpected registry load error.';
     console.error('[goods-engagement] unexpected:', e);

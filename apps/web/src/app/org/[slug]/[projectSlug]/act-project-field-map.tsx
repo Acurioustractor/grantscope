@@ -18,6 +18,7 @@ import {
   getOrgProjectSummaries,
 } from '@/lib/services/org-dashboard-service';
 import { goodsCoreWorkAreas } from '@/lib/services/goods-operating-system';
+import { isInternalActIdentity } from '@/lib/act-internal-identities';
 import { getWikiSupportProject } from '@/lib/services/wiki-support-index';
 import type { WikiSupportAction, WikiSupportProject, WikiSupportRouteType } from '@/lib/services/wiki-support-index';
 
@@ -117,6 +118,7 @@ function projectContacts(
 
   return contacts
     .filter((contact) => {
+      if (isInternalActIdentity(contact)) return false;
       const haystack = [contact.name, contact.organisation, contact.role, contact.notes, ...contact.unified_tags].filter(Boolean).join(' ').toLowerCase();
       return terms.some((term) => haystack.includes(term));
     })

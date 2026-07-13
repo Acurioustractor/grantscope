@@ -1,4 +1,5 @@
 import { getServiceSupabase } from '@/lib/supabase';
+import { isInternalActIdentity } from '@/lib/act-internal-identities';
 
 /**
  * Goods 3-pipeline funnel — the management cockpit. One need, two funding routes,
@@ -196,7 +197,7 @@ async function readPipeline(p: { id: string; label: string; role: 'need' | 'orde
         updateReadiness: p.key === 'supporter' ? 'consent needed' as const : 'operational only' as const,
         updateTopics: [],
         charityRelated: false,
-        entityRoutes: p.key === 'buyer' ? ['commercial procurement'] : [],
+        entityRoutes: p.key === 'buyer' ? ['commercial procurement' as const] : [],
         vehicleStatus: p.key === 'buyer' ? 'clear' as const : 'vehicle decision needed' as const,
         deckStatus: 'needed' as const,
         attention: o.assignedTo ? 'ready' as const : 'unassigned' as const,
@@ -206,7 +207,8 @@ async function readPipeline(p: { id: string; label: string; role: 'need' | 'orde
         dataQualityIssues: [],
         nextMove: nextMoveFor(p.key, spineStage),
       };
-    });
+    })
+    .filter((row) => !isInternalActIdentity({ name: row.name, email: row.email, organisation: row.organisation }));
   return { funnel, relationships };
 }
 
