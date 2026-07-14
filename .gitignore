@@ -33,6 +33,9 @@ apps/web/test-results/
 output/
 logs/
 tmp/
+design-qa.md
+goods-buyers-*.jpeg
+goods-buyers-*.md
 
 # Large data files (downloaded, not source)
 data/abs/
