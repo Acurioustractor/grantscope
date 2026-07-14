@@ -24,8 +24,6 @@
  *                + geography (20) + giving-scale signal (10). Must share >=1
  *                theme; faith-purpose funders excluded as noise.
  */
-import { writeFileSync } from 'node:fs';
-import { execSync } from 'node:child_process';
 import { createClient } from '@supabase/supabase-js';
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
 
@@ -142,15 +140,6 @@ ranked AS (
 )`;
 }
 
-/** Human-readable "why" that doubles as agent provenance in fit_summary. */
-const FIT_SUMMARY_SQL = `
-  '[auto-matched] themes: ' || array_to_string(matched_themes, ', ')
-  || CASE WHEN home_match THEN ' · home-state funder'
-          WHEN national THEN ' · national funder'
-          WHEN sec_match THEN ' · secondary-state funder' ELSE '' END
-  || CASE WHEN total_giving_annual >= 50000
-          THEN ' · gives ~$' || to_char(total_giving_annual, 'FM999,999,999') || '/yr' ELSE '' END`;
-
 function runSelect(supabase, sql) {
   return supabase.rpc('exec_sql', { query: sql });
 }
@@ -176,26 +165,56 @@ ORDER BY code, rn`;                       // no trailing ';' — exec_sql wraps 
 }
 
 async function apply(supabase) {
-  const dbPassword = process.env.DATABASE_PASSWORD;
-  if (!dbPassword) throw new Error('DATABASE_PASSWORD not set — required for --apply (INSERT via psql).');
-  const insertSql = `${scorerCTE()}
-INSERT INTO org_project_foundations
-  (org_profile_id, org_project_id, foundation_id, stage, engagement_status, fit_score, fit_summary)
-SELECT '${ACT_ORG_PROFILE_ID}'::uuid, org_project_id, foundation_id,
-       'saved', 'researching', fit_score, ${FIT_SUMMARY_SQL}
+  const selectSql = `${scorerCTE()}
+SELECT org_project_id::text, foundation_id::text, fit_score, matched_themes,
+       home_match, national, sec_match, total_giving_annual
 FROM ranked WHERE rn <= ${PER_PROJECT_LIMIT}
-ON CONFLICT (org_project_id, foundation_id) DO NOTHING;`;
-  const tmp = `/tmp/match-foundations-${AGENT_ID}.sql`;
-  writeFileSync(tmp, insertSql);
-  const out = execSync(
-    `psql -h aws-0-ap-southeast-2.pooler.supabase.com -p 5432 -U "postgres.tednluwflfhxyucgwigh" -d postgres -v ON_ERROR_STOP=1 -f ${tmp}`,
-    { env: { ...process.env, PGPASSWORD: dbPassword }, encoding: 'utf8', timeout: 120000 }
-  );
-  const m = out.match(/INSERT 0 (\d+)/);
-  const inserted = m ? Number(m[1]) : 0;
+ORDER BY code, rn`;
+  const { data, error } = await runSelect(supabase, selectSql);
+  if (error) throw new Error(`candidate selection failed: ${error.message}`);
+
+  const candidates = data ?? [];
+  if (candidates.length === 0) {
+    console.log('No new foundation candidates met the threshold.');
+    return { inserted: 0, candidates: 0 };
+  }
+
+  const payload = candidates.map((row) => {
+    const geography = row.home_match
+      ? 'home-state funder'
+      : row.national
+        ? 'national funder'
+        : row.sec_match
+          ? 'secondary-state funder'
+          : null;
+    const giving = Number(row.total_giving_annual ?? 0);
+    return {
+      org_profile_id: ACT_ORG_PROFILE_ID,
+      org_project_id: row.org_project_id,
+      foundation_id: row.foundation_id,
+      stage: 'saved',
+      engagement_status: 'researching',
+      fit_score: Number(row.fit_score ?? 0),
+      fit_summary: [
+        `[auto-matched] themes: ${(row.matched_themes ?? []).join(', ')}`,
+        geography,
+        giving >= 50000 ? `gives ~$${Math.round(giving).toLocaleString('en-AU')}/yr` : null,
+      ].filter(Boolean).join(' · '),
+    };
+  });
+
+  const { data: insertedRows, error: insertError } = await supabase
+    .from('org_project_foundations')
+    .upsert(payload, {
+      onConflict: 'org_project_id,foundation_id',
+      ignoreDuplicates: true,
+    })
+    .select('id');
+  if (insertError) throw new Error(`candidate insert failed: ${insertError.message}`);
+  const inserted = insertedRows?.length ?? 0;
   console.log(`Inserted ${inserted} new foundation candidates (stage=saved, status=researching) into org_project_foundations.`);
   console.log('These are now visible in the /org pipeline UI, awaiting human review. Nothing was sent.');
-  return { inserted };
+  return { inserted, candidates: candidates.length };
 }
 
 async function main() {

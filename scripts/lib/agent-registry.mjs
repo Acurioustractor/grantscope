@@ -106,6 +106,14 @@ export const AGENTS = {
     timeoutMs: 120_000,
     dependencies: [],
   },
+  'foundation-intelligence-refresh': {
+    command: ['node', '--env-file=.env', 'scripts/foundation-intelligence-refresh.mjs', '--apply', '--limit=80'],
+    displayName: 'Foundation Intelligence Refresh',
+    category: 'analytics',
+    defaultPriority: 5,
+    timeoutMs: 300_000,
+    dependencies: ['poll-foundation-frontier', 'discover-foundation-programs-full-sweep', 'sync-foundation-programs'],
+  },
   // Heals gs_entities.source_datasets/source_count drift: the ingest scripts upsert with
   // ignoreDuplicates, so an ABN appearing in multiple source tables keeps only the first
   // writer's label. This idempotent ABN-keyed pass re-unions them (e.g. surfaces the
