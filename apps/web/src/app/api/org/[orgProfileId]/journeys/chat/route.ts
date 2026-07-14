@@ -1,4 +1,4 @@
-import { streamText, convertToModelMessages, type UIMessage } from 'ai';
+import { streamText, type UIMessage } from 'ai';
 import { anthropic } from '@ai-sdk/anthropic';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireOrgWriteAccess } from '../../../_lib/auth';
@@ -7,7 +7,7 @@ import {
   addJourneyMessage,
   matchStepToData,
 } from '@/lib/services/journey-service';
-import { getTextFromMessage } from '@/lib/ai-chat-helpers';
+import { getTextFromMessage, toTextModelMessages } from '@/lib/ai-chat-helpers';
 
 export const maxDuration = 60;
 
@@ -119,7 +119,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   }
 
   const systemPrompt = buildSystemPrompt(journeyContext, almaContext);
-  const modelMessages = await convertToModelMessages(messages);
+  const modelMessages = toTextModelMessages(messages);
 
   const result = streamText({
     model: anthropic('claude-haiku-4-5-20251001'),
