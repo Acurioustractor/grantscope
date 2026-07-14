@@ -1,0 +1,51 @@
+---
+session: general
+date: 2026-07-14
+status: closed
+outcome: COMPLETE
+---
+
+goal: Integrated the Barkly regional intelligence prototype into ACT Atlas as the first reusable Place Field rather than a separate sidebar workspace.
+now: Closed 2026-07-14. Barkly and Palm Island both run through the Atlas Place Field registry and normalised CivicGraph loader.
+test: cd apps/web && npx tsc --noEmit && npx vitest run src/lib/services/act-atlas.test.ts src/lib/services/act-place-fields.test.ts src/lib/services/act-barkly-field.test.ts
+
+done_this_session:
+  - task: Added a data-driven Place Field registry with Barkly identity, member communities, outcomes, ACT lenses, support pathways and evidence configuration.
+    files: [apps/web/src/lib/services/act-place-fields.ts, apps/web/src/lib/services/act-place-fields.test.ts]
+  - task: Made Place Fields first-class Atlas records with connected communities, lenses, evidence, search ranking and a canonical route.
+    files: [apps/web/src/lib/services/act-atlas.ts, apps/web/src/lib/services/act-atlas.test.ts, apps/web/src/app/org/[slug]/explore/page.tsx, apps/web/src/app/org/[slug]/explore/act-atlas-explorer.tsx, apps/web/src/app/org/[slug]/explore/place/[placeSlug]/page.tsx]
+  - task: Connected Barkly communities, people and organisations back through Atlas while retaining the Goods dossier as an operational path.
+    files: [apps/web/src/app/org/[slug]/barkly/barkly-regional-field.tsx, apps/web/src/app/org/[slug]/barkly/page.tsx]
+  - task: Migrated Palm Island as the second registry-backed Place Field with generic ActPlaceFieldData service types and a shared CivicGraph loader.
+    files: [apps/web/src/lib/services/act-place-fields.ts, apps/web/src/lib/services/act-barkly-field.ts, apps/web/src/app/org/[slug]/explore/place/[placeSlug]/page.tsx, apps/web/src/app/org/[slug]/barkly/barkly-regional-field.tsx]
+  - task: Verified Barkly, Palm Island and Atlas search routes at desktop and mobile widths.
+    files: [output/playwright/palm-atlas-desktop.png, output/playwright/palm-field-desktop.png, output/playwright/palm-field-mobile.png, output/playwright/barkly-field-mobile.png]
+
+blockers: []
+
+questions: []
+
+decisions:
+  - atlas_is_the_entry: Do not add Barkly or future regions as permanent sidebar destinations; search and Place Fields live inside Atlas.
+  - place_is_configuration: New places use a registry entry plus a normalised loader adapter, not copied navigation or workspace UI.
+  - authority_is_separate: Community-controlled status and geographic adjacency are context, not evidence of authority, consent or permission to approach.
+  - preserve_investigation_context: Place communities and organisations route to Atlas search/panels; Goods dossiers remain a secondary operational action.
+
+findings:
+  - live_barkly_state: The rendered field showed 8 indexed communities, 122 regional organisations, 61 community-controlled organisations, 214 Goods assets, 1350 recorded needs, 9 justice records and 0 directly linked ACT people.
+  - search_behaviour: Searching Tennant Creek now orders the exact community first, Barkly Place Field second, then connected organisations.
+  - legacy_route: /org/act/barkly emits a Next redirect instruction to /org/act/explore/place/barkly, but the in-app browser harness did not update its address bar.
+  - live_palm_island_state: The rendered field showed 1 indexed community, 32 regional organisations, 12 community-controlled organisations, 141 Goods assets, 116 recorded needs, 24 justice records and 0 directly linked ACT people.
+  - palm_island_search_behaviour: /org/act/explore?q=Palm%20Island renders Palm Island Atlas results and /org/act/explore/place/palm-island renders the canonical Place Field.
+
+worked: [Using Atlas existing record panel and connection field, registry-driven presentation, canonical nested routing, browser-testing the complete Atlas to Place Field to community flow]
+failed: [Playwright CLI wrapper fell through to a missing global playwright-cli binary; direct workspace Playwright runtime was used instead.]
+
+next:
+  - Build the shared entity drawer so organisations and people can open without replacing Atlas context.
+  - Resolve ACT contact-to-regional-entity identity links; do not infer relationships from missing links.
+  - Review and commit this Place Field work separately from the broader dirty worktree.
+
+files:
+  created: [apps/web/src/lib/services/act-place-fields.ts, apps/web/src/lib/services/act-place-fields.test.ts, apps/web/src/app/org/[slug]/explore/place/[placeSlug]/page.tsx, apps/web/src/app/org/[slug]/explore/place/[placeSlug]/loading.tsx, apps/web/src/lib/services/act-barkly-field.ts, apps/web/src/lib/services/act-barkly-field.test.ts, apps/web/src/app/org/[slug]/barkly/barkly-regional-field.tsx, apps/web/src/app/org/[slug]/barkly/loading.tsx, apps/web/src/app/org/[slug]/barkly/page.tsx]
+  modified: [apps/web/src/lib/services/act-atlas.ts, apps/web/src/lib/services/act-atlas.test.ts, apps/web/src/app/org/[slug]/explore/page.tsx, apps/web/src/app/org/[slug]/explore/act-atlas-explorer.tsx]
