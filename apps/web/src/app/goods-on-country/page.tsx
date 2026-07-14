@@ -29,9 +29,56 @@ const COMMUNITIES = [
   'Maningrida, NT',
 ];
 
+const GOODS_IMAGE_SIZE = { width: 1760, height: 1173 };
+
+const GOODS_IMAGES = {
+  hero: {
+    src: '/goods/hero.jpg',
+    alt: 'Carrying Stretch Beds onto Country at Utopia Homelands',
+  },
+  beforeAfter: {
+    src: '/goods/beforeafter.jpg',
+    alt: 'An Elder on her Stretch Bed beside her home at Utopia Homelands',
+  },
+  build: {
+    src: '/goods/build.jpg',
+    alt: 'Building Stretch Beds on Country at Utopia Homelands',
+  },
+  gallery: [
+    { src: '/goods/offground.jpg', alt: 'Resting on a finished bed, up off the ground' },
+    { src: '/goods/materials.jpg', alt: 'Working the recycled plastic that becomes the bed legs' },
+    { src: '/goods/close.jpg', alt: 'Golden hour at Utopia Homelands' },
+  ],
+} as const;
+
 function Eyebrow({ children, tone = 'red' }: { children: React.ReactNode; tone?: 'red' | 'yellow' | 'muted' }) {
   const color = tone === 'yellow' ? 'text-bauhaus-yellow' : tone === 'muted' ? 'text-bauhaus-muted' : 'text-bauhaus-red';
   return <div className={`text-[11px] font-black uppercase tracking-widest ${color} mb-2`}>{children}</div>;
+}
+
+function GoodsImage({
+  src,
+  alt,
+  className,
+  loading = 'lazy',
+}: {
+  src: string;
+  alt: string;
+  className: string;
+  loading?: 'eager' | 'lazy';
+}) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={alt}
+      width={GOODS_IMAGE_SIZE.width}
+      height={GOODS_IMAGE_SIZE.height}
+      loading={loading}
+      decoding="async"
+      className={className}
+    />
+  );
 }
 
 export default function GoodsOnCountryPage() {
@@ -44,8 +91,7 @@ export default function GoodsOnCountryPage() {
       {/* Hero */}
       <header>
         <div className="relative border-4 border-bauhaus-black overflow-hidden">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/goods/hero.jpg" alt="Carrying Stretch Beds onto Country at Utopia Homelands" className="w-full h-[clamp(320px,52vh,560px)] object-cover" />
+          <GoodsImage {...GOODS_IMAGES.hero} loading="eager" className="block w-full h-[clamp(320px,52vh,560px)] object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-bauhaus-black/85 via-bauhaus-black/30 to-transparent" />
           <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-10">
             <div className="flex flex-wrap gap-1.5 mb-3">
@@ -130,9 +176,8 @@ export default function GoodsOnCountryPage() {
             Now the door is a door again, and the bed is a bed. Off the ground. Washable. Built to last ten years.
           </p>
         </div>
-        <div className="order-1 md:order-2 min-h-[280px]">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/goods/beforeafter.jpg" alt="An Elder on her Stretch Bed beside her home at Utopia Homelands" className="w-full h-full object-cover" />
+        <div className="order-1 md:order-2 aspect-[3/2] md:aspect-auto md:min-h-[280px]">
+          <GoodsImage {...GOODS_IMAGES.beforeAfter} className="block w-full h-full object-cover" />
         </div>
       </section>
 
@@ -141,8 +186,7 @@ export default function GoodsOnCountryPage() {
         <Eyebrow>The story · Utopia Homelands</Eyebrow>
         <div className="border-4 border-bauhaus-black bg-white">
           <div className="min-h-[300px] sm:h-[420px] border-b-4 border-bauhaus-black">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/goods/build.jpg" alt="Building Stretch Beds on Country at Utopia Homelands" className="w-full h-full object-cover" />
+            <GoodsImage {...GOODS_IMAGES.build} className="block w-full h-full object-cover" />
           </div>
           <div className="p-6 sm:p-10 max-w-3xl">
             <p className="text-xl sm:text-2xl font-black text-bauhaus-black leading-snug mb-6">
@@ -178,14 +222,9 @@ export default function GoodsOnCountryPage() {
 
           {/* gallery */}
           <div className="grid grid-cols-3 gap-0 border-t-4 border-bauhaus-black">
-            {[
-              { src: '/goods/offground.jpg', alt: 'Resting on a finished bed, up off the ground' },
-              { src: '/goods/materials.jpg', alt: 'Working the recycled plastic that becomes the bed legs' },
-              { src: '/goods/close.jpg', alt: 'Golden hour at Utopia Homelands' },
-            ].map((img, i) => (
-              <div key={img.src} className={`h-40 sm:h-56 ${i < 2 ? 'border-r-4 border-bauhaus-black' : ''}`}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={img.src} alt={img.alt} className="w-full h-full object-cover" />
+            {GOODS_IMAGES.gallery.map((img, i) => (
+              <div key={img.src} className={`aspect-[3/2] min-h-40 sm:min-h-56 ${i < 2 ? 'border-r-4 border-bauhaus-black' : ''}`}>
+                <GoodsImage {...img} className="block w-full h-full object-cover" />
               </div>
             ))}
           </div>

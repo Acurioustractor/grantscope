@@ -6,7 +6,6 @@ import type {
   OrgProfile,
   OrgProject,
   OrgProjectFoundationPortfolioRow,
-  OrgProjectSummary,
 } from '@/lib/services/org-dashboard-service';
 import {
   getMatchedGrantOpportunities,
@@ -15,12 +14,12 @@ import {
   getOrgPipeline,
   getOrgProfileBySlug,
   getOrgProjectBySlug,
-  getOrgProjectSummaries,
 } from '@/lib/services/org-dashboard-service';
 import { goodsCoreWorkAreas } from '@/lib/services/goods-operating-system';
 import { isInternalActIdentity } from '@/lib/act-internal-identities';
 import { getWikiSupportProject } from '@/lib/services/wiki-support-index';
 import type { WikiSupportAction, WikiSupportProject, WikiSupportRouteType } from '@/lib/services/wiki-support-index';
+import { ActWorkspacePageHeader } from '../_components/act-workspace-page-header';
 
 type FieldTone = 'green' | 'blue' | 'amber' | 'red' | 'purple';
 
@@ -51,7 +50,7 @@ function initials(value: string): string {
   return value.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'ACT';
 }
 
-function shortProjectName(project: OrgProject | OrgProjectSummary): string {
+function shortProjectName(project: OrgProject): string {
   const value = `${project.slug} ${project.name}`.toLowerCase();
   if (/goods/.test(value)) return 'Goods';
   if (/justice/.test(value)) return 'JusticeHub';
@@ -61,16 +60,6 @@ function shortProjectName(project: OrgProject | OrgProjectSummary): string {
   if (/palm island|picc/.test(value)) return 'Palm Island';
   if (/australian living map|\balma\b/.test(value)) return 'ALMA';
   return project.name;
-}
-
-function projectColour(project: OrgProject | OrgProjectSummary): string {
-  const value = `${project.slug} ${project.name}`.toLowerCase();
-  if (/goods/.test(value)) return '#c99a2e';
-  if (/justice/.test(value)) return '#6b78b8';
-  if (/harvest|witta/.test(value)) return '#4f8b63';
-  if (/empathy/.test(value)) return '#a06b8b';
-  if (/civicgraph|civic graph/.test(value)) return '#44899b';
-  return '#758178';
 }
 
 function routeHref(slug: string, projectSlug: string, routeType: WikiSupportRouteType): string {
@@ -190,10 +179,6 @@ function buildNeeds(
     .slice(0, 6);
 }
 
-function flattenProjects(projects: OrgProjectSummary[]): OrgProjectSummary[] {
-  return projects.flatMap((project) => [project, ...flattenProjects(project.children)]);
-}
-
 export async function ActProjectFieldMapScreen({
   profile,
   project,
@@ -209,15 +194,14 @@ export async function ActProjectFieldMapScreen({
   const liveProject = dataProfile ? await getOrgProjectBySlug(dataProfile.id, projectSlug) : null;
   const fieldProject = liveProject ?? project;
   const wikiProject = getWikiSupportProject(projectSlug);
-  const [projectSummaries, allPipeline, foundationPortfolio, contacts, matchedGrants] = dataProfile
+  const [allPipeline, foundationPortfolio, contacts, matchedGrants] = dataProfile
     ? await Promise.all([
-      getOrgProjectSummaries(dataProfile.id),
       getOrgPipeline(dataProfile.id),
       getOrgFoundationPortfolio(dataProfile.id),
       getOrgContacts(dataProfile.id, undefined, { includeGhl: true, ghlLimit: 100 }),
       getMatchedGrantOpportunities(dataProfile.id, dataProfile.org_type, null),
     ])
-    : [[], [], [], [], []];
+    : [[], [], [], []];
 
   const pipelineTerms = [fieldProject.slug, fieldProject.name, fieldProject.code, ...(wikiProject?.aliases ?? [])]
     .filter((value): value is string => Boolean(value && value.length >= 3))
@@ -251,7 +235,6 @@ export async function ActProjectFieldMapScreen({
       project={fieldProject}
       slug={slug}
       projectSlug={projectSlug}
-      allProjects={flattenProjects(projectSummaries)}
       pipeline={projectPipeline}
       relationships={projectRelationships}
       contacts={contacts}
@@ -267,7 +250,6 @@ export function ActProjectFieldMap({
   project,
   slug,
   projectSlug,
-  allProjects,
   pipeline,
   relationships,
   contacts,
@@ -279,7 +261,6 @@ export function ActProjectFieldMap({
   project: OrgProject;
   slug: string;
   projectSlug: string;
-  allProjects: OrgProjectSummary[];
   pipeline: OrgPipelineItemWithEntity[];
   relationships: OrgProjectFoundationPortfolioRow[];
   contacts: OrgContactWithEntity[];
@@ -296,78 +277,31 @@ export function ActProjectFieldMap({
   const needs = buildNeeds(slug, projectSlug, activeItems, actions, wikiProject?.readiness_gaps ?? [], goodsNeeds);
   const pipelineValue = activeItems.reduce((sum, item) => sum + Number(item.amount_numeric || 0), 0);
   const sourceCount = wikiProject?.source_documents.length ?? 0;
-  const projectTabs = [...allProjects]
-    .sort((left, right) => {
-      const preferred = ['goods', 'justicehub', 'harvest', 'empathy-ledger', 'civicgraph'];
-      const leftRank = preferred.findIndex((key) => left.slug.includes(key));
-      const rightRank = preferred.findIndex((key) => right.slug.includes(key));
-      return (leftRank < 0 ? 20 : leftRank) - (rightRank < 0 ? 20 : rightRank) || left.sort_order - right.sort_order;
-    })
-    .slice(0, 6);
 
   return (
-    <main className="ws act-desk min-h-screen bg-[var(--ws-surface-0)] text-[var(--ws-text)]">
-      <header className="border-b border-[var(--ws-border)] bg-[var(--ws-surface-1)]">
-        <div className="mx-auto flex min-h-[74px] max-w-[1440px] items-center gap-5 overflow-x-auto px-4 sm:px-6">
-          <Link href={`/org/${slug}`} className="flex shrink-0 items-center gap-3 pr-3">
-            <span className="grid h-8 w-8 place-items-center rounded bg-[#e7ef65] text-sm font-black text-[#183426]">A</span>
-            <span className="hidden font-mono text-[11px] font-semibold uppercase sm:block">{profile.name}</span>
-          </Link>
-          <nav className="flex min-h-[74px] items-stretch" aria-label="ACT project fields">
-            {projectTabs.map((tab) => {
-              const active = tab.slug === projectSlug;
-              return (
-                <Link
-                  key={tab.id}
-                  href={`/org/${slug}/${tab.slug}`}
-                  className={`flex min-w-[112px] items-center gap-2 border-b-2 px-3 text-xs ${active ? 'border-b-[#4f8b63] bg-[#f4f6f1] font-semibold' : 'border-b-transparent text-[var(--ws-text-secondary)] hover:text-[var(--ws-text)]'}`}
-                >
-                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: projectColour(tab) }} />
-                  <span className="truncate">{shortProjectName(tab)}</span>
-                </Link>
-              );
-            })}
-          </nav>
-          <Link href={`/org/${slug}/${projectSlug}?full=1`} className="ml-auto hidden min-h-10 shrink-0 items-center rounded-md border border-[var(--ws-border)] bg-white px-3 text-xs font-semibold lg:inline-flex">
+    <div className="min-h-screen bg-[var(--ws-surface-0)] text-[var(--ws-text)]">
+      <ActWorkspacePageHeader
+        eyebrow={`${project.code || 'ACT'} / ${profile.name} project field`}
+        title={`${projectName}: what helps move next`}
+        description={compact(wikiProject?.summary || project.description, 'One project view linking money, people, invitations, proof, and opportunities.')}
+        testId="act-project-header"
+        meta={(
+          <Link href={`/org/${slug}/${projectSlug}?full=1`} className="hidden min-h-10 items-center rounded-md border border-[var(--ws-border)] bg-white px-3 text-xs font-semibold sm:inline-flex">
             Deep evidence
           </Link>
-        </div>
-      </header>
+        )}
+      />
 
-      <div className="mx-auto grid min-h-[calc(100vh-74px)] max-w-[1440px] lg:grid-cols-[292px_minmax(0,1fr)]">
-        <aside className="bg-[#203c2d] px-6 py-5 text-white lg:py-7">
-          <div className="font-mono text-[10px] font-semibold uppercase tracking-widest text-[#9fb0a4]">{project.code || 'ACT'} / project field</div>
-          <h1 className="mt-4 text-3xl font-semibold tracking-normal">{projectName}</h1>
-          <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-[#cad5cd] lg:line-clamp-none">{compact(wikiProject?.summary || project.description, 'An active ACT field linking relationships, resources, action, and learning.')}</p>
+      <div className="min-w-0 px-4 pb-8 sm:px-6 lg:px-8">
+        <nav className="flex gap-1 overflow-x-auto border-b border-[var(--ws-border)] py-3" aria-label={`${projectName} record sections`}>
+          <FieldSectionLink href="#field-needs" label="Needs" value={needs.length} />
+          <FieldSectionLink href="#field-people" label="People" value={people.length} />
+          <FieldSectionLink href="#field-openings" label="Openings" value={routes.length + grants.length} />
+          <FieldSectionLink href="#field-proof" label="Proof" value={sourceCount} />
+          <FieldSectionLink href={`/org/${slug}?view=money#money`} label="Money" value={activeItems.length} />
+        </nav>
 
-          <div className="mt-5 grid grid-cols-2 gap-x-6 gap-y-4 border-y border-white/15 py-4 lg:mt-7 lg:gap-y-5 lg:py-5">
-            <FieldSideMetric value={`${activeItems.length}`} label="Active threads" />
-            <FieldSideMetric value={`${people.length}`} label="Warm people" />
-            <FieldSideMetric value={money(pipelineValue)} label="In motion" />
-            <FieldSideMetric value={`${routes.length}`} label="Open routes" />
-          </div>
-
-          <nav className="mt-7 hidden lg:block" aria-label={`${projectName} field sections`}>
-            <FieldSideLink href="#field-needs" label="What needs moving" value={needs.length} active />
-            <FieldSideLink href="#field-people" label="People around the field" value={people.length} />
-            <FieldSideLink href="#field-openings" label="Funding and procurement" value={routes.length + grants.length} />
-            <FieldSideLink href="#field-people" label="Gatherings and invitations" value={people.filter((person) => /event|gather|art|festival/i.test(person.unified_tags.join(' '))).length} />
-            <FieldSideLink href="#field-proof" label="Proof and stories" value={sourceCount} />
-            <FieldSideLink href={`/org/${slug}?view=money#money`} label="Money and commitments" value={activeItems.length} />
-          </nav>
-        </aside>
-
-        <div className="min-w-0 px-4 py-7 sm:px-7">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <div className="font-mono text-[10px] font-semibold uppercase tracking-widest text-[var(--ws-text-secondary)]">The field today</div>
-              <h2 className="mt-2 text-2xl font-semibold tracking-normal">What helps {projectName} move next</h2>
-              <p className="mt-2 text-sm text-[var(--ws-text-secondary)]">One project view linking money, people, invitations, proof, and opportunities.</p>
-            </div>
-            <Link href={`/org/${slug}`} className="inline-flex min-h-10 w-fit items-center rounded-md border border-[var(--ws-border)] bg-white px-3 text-xs font-semibold">Back to Today</Link>
-          </div>
-
-          <section className="mt-6 grid grid-cols-2 border border-[var(--ws-border)] bg-[#f8faf6] xl:grid-cols-4">
+          <section className="mt-5 grid grid-cols-2 border border-[var(--ws-border)] bg-[#f8faf6] xl:grid-cols-4">
             <FieldMetric label="Funding fit" value={`${grants.length} current`} detail={`${actions.filter((action) => action.route_type === 'grant').length} project scans ready`} />
             <FieldMetric label="Relationship energy" value={relationships.length > 0 ? 'Active' : people.length > 0 ? 'Opening' : 'Thin'} detail={`${relationships.length} funder paths, ${people.length} people`} />
             <FieldMetric label="Money in motion" value={money(pipelineValue)} detail={`${activeItems.length} active commitments`} risk={pipelineValue > 0 && activeItems.some((item) => !item.owner_name || !item.next_action)} />
@@ -443,18 +377,13 @@ export function ActProjectFieldMap({
               </div>
             </section>
           </div>
-        </div>
       </div>
-    </main>
+    </div>
   );
 }
 
-function FieldSideMetric({ value, label }: { value: string; label: string }) {
-  return <div><div className="text-2xl font-semibold">{value}</div><div className="mt-1 font-mono text-[8px] uppercase text-[#9fb0a4]">{label}</div></div>;
-}
-
-function FieldSideLink({ href, label, value, active = false }: { href: string; label: string; value: number; active?: boolean }) {
-  return <Link href={href} className={`flex min-h-12 items-center justify-between gap-3 border-b border-white/10 text-xs ${active ? 'font-semibold text-[#e7ef65]' : 'text-[#dbe3dd] hover:text-white'}`}><span>{label}</span><span className="font-mono text-[10px]">{value}</span></Link>;
+function FieldSectionLink({ href, label, value }: { href: string; label: string; value: number }) {
+  return <Link href={href} className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-md px-3 text-xs font-semibold text-[var(--ws-text-secondary)] hover:bg-[var(--ws-surface-2)] hover:text-[var(--ws-text)]"><span>{label}</span><span className="font-mono text-[9px] opacity-70">{value}</span></Link>;
 }
 
 function FieldMetric({ label, value, detail, risk = false }: { label: string; value: string; detail: string; risk?: boolean }) {
