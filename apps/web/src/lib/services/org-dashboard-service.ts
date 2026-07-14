@@ -1020,6 +1020,12 @@ export interface MatchedGrant {
   focus_areas: string[] | null;
   url: string | null;
   fit_score: number | null;
+  last_verified_at?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  status?: string | null;
+  source?: string | null;
+  source_id?: string | null;
 }
 
 type GrantCandidate = MatchedGrant & {
@@ -1203,11 +1209,13 @@ export async function getMatchedGrantOpportunities(
     .select(selectColumns)
     .or(`deadline.gte.${today},closes_at.gte.${today}`)
     .order('deadline', { ascending: true, nullsFirst: false })
+    .order('id', { ascending: true })
     .limit(200);
   let freshQuery = supabase
     .from('grant_opportunities')
     .select(selectColumns)
     .order('updated_at', { ascending: false, nullsFirst: false })
+    .order('id', { ascending: true })
     .limit(200);
 
   if (excludeIds.length > 0) {
@@ -1227,15 +1235,9 @@ export async function getMatchedGrantOpportunities(
   const rows = [...candidateById.values()];
 
   if (keywordTerms.length === 0 && priorityTerms.length === 0) {
-    return rows.slice(0, 8).map(({
+    return rows.map(({
       target_recipients: _targetRecipients,
       geography: _geography,
-      last_verified_at: _lastVerifiedAt,
-      created_at: _createdAt,
-      updated_at: _updatedAt,
-      status: _status,
-      source: _source,
-      source_id: _sourceId,
       ...row
     }) => row);
   }
@@ -1336,16 +1338,9 @@ export async function getMatchedGrantOpportunities(
       const rightDate = right.deadline ?? right.closes_at ?? '9999-12-31';
       return leftDate.localeCompare(rightDate);
     })
-    .slice(0, 8)
     .map(({
       target_recipients: _targetRecipients,
       geography: _geography,
-      last_verified_at: _lastVerifiedAt,
-      created_at: _createdAt,
-      updated_at: _updatedAt,
-      status: _status,
-      source: _source,
-      source_id: _sourceId,
       _hits,
       _bodyHits,
       _taxonomyHits,

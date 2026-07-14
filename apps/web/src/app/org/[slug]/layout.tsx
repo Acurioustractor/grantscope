@@ -1,10 +1,13 @@
 import { notFound } from 'next/navigation';
-import Link from 'next/link';
-import { cookies, headers } from 'next/headers';
+import { Suspense } from 'react';
+import { cookies } from 'next/headers';
 import { isAdminEmail } from '@/lib/admin';
 import { createSupabaseServer } from '@/lib/supabase-server';
 import { ACT_FAST_PROFILE, isActSlug } from '@/lib/services/fast-local-org';
-import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
+import { ACT_E2E_PROJECTS } from '@/lib/services/act-e2e-fixtures';
+import { getOrgProfileBySlug, getOrgProjectSummaries } from '@/lib/services/org-dashboard-service';
+import { ActTestGuide } from './_components/act-test-guide';
+import { ActWorkspaceShell } from './_components/act-workspace-shell';
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -31,35 +34,21 @@ export default async function OrgLayout({
 }) {
   const { slug } = await params;
   if (isActSlug(slug)) {
-    const pathname = (await headers()).get('x-pathname') ?? `/org/${slug}`;
-    const rootPaths = new Set([
-      '/org/act',
-      '/org/a-curious-tractor',
-      '/org/curious-tractor',
-    ]);
+    const storedProfile = process.env.ACT_E2E_FIXTURES === '1' ? ACT_FAST_PROFILE : await getOrgProfileBySlug(slug);
+    const projects = process.env.ACT_E2E_FIXTURES === '1'
+      ? ACT_E2E_PROJECTS
+      : storedProfile
+        ? await getOrgProjectSummaries(storedProfile.id)
+        : [];
 
     return (
       <div className="ws act-workspace min-h-screen" data-act-workspace>
-        {!rootPaths.has(pathname) ? (
-          <header className="sticky top-0 z-40 border-b border-[var(--ws-border)] bg-[var(--ws-surface-0)]/95 backdrop-blur">
-            <div className="mx-auto flex min-h-14 max-w-[1440px] items-center gap-3 px-4 sm:px-6">
-              <Link href={`/org/${slug}`} className="flex shrink-0 items-center gap-2 font-semibold text-[var(--ws-text)]">
-                <span className="grid h-7 w-7 place-items-center rounded bg-[#183426] text-[11px] font-black text-[#e7ef65]">A</span>
-                <span className="hidden text-sm sm:inline">ACT Field Desk</span>
-              </Link>
-              <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto" aria-label="ACT workspace">
-                <ActToolLink href={`/org/${slug}`} label="Today" />
-                <ActToolLink href={`/org/${slug}?view=relationships#relationships`} label="Listen" />
-                <ActToolLink href={`/org/${slug}?view=opportunities#opportunities`} label="Curiosity" />
-                <ActToolLink href={`/org/${slug}?view=pipeline#pipeline`} label="Action" />
-              </nav>
-              <span className="hidden shrink-0 font-mono text-[9px] uppercase tracking-widest text-[var(--ws-text-tertiary)] lg:inline">
-                Powered by CivicGraph
-              </span>
-            </div>
-          </header>
-        ) : null}
-        {children}
+        <ActWorkspaceShell slug={slug} projects={projects}>
+          {children}
+        </ActWorkspaceShell>
+        <Suspense fallback={null}>
+          <ActTestGuide slug={slug} />
+        </Suspense>
       </div>
     );
   }
@@ -99,16 +88,5 @@ export default async function OrgLayout({
       )}
       {children}
     </>
-  );
-}
-
-function ActToolLink({ href, label }: { href: string; label: string }) {
-  return (
-    <Link
-      href={href}
-      className="inline-flex min-h-9 shrink-0 items-center rounded-md px-3 text-xs font-semibold text-[var(--ws-text-secondary)] hover:bg-[var(--ws-surface-2)] hover:text-[var(--ws-text)]"
-    >
-      {label}
-    </Link>
   );
 }

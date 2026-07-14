@@ -132,7 +132,7 @@ export function ActActionQueue({
     : `/org/${orgSlug}?view=relationships#relationships`;
 
   return (
-    <div className="grid min-w-0 xl:grid-cols-[minmax(0,1fr)_360px]">
+    <div className="grid min-w-0 xl:grid-cols-[minmax(420px,1.05fr)_minmax(400px,0.95fr)]">
       <div className="min-w-0 border-b border-[var(--ws-border)] xl:border-b-0 xl:border-r">
         <div className="border-b border-[var(--ws-border)] bg-white px-3 py-3">
           <div className="inline-flex max-w-full overflow-x-auto rounded-md border border-[var(--ws-border)] bg-[var(--ws-surface-2)] p-1" role="tablist" aria-label="Action queue views">
@@ -189,8 +189,8 @@ export function ActActionQueue({
 
       <aside className="bg-[var(--ws-surface-1)]" data-testid="action-selected">
         {selected ? (
-          <div className="sticky top-24">
-            <div className="border-b border-[var(--ws-border)] px-4 py-4">
+          <div className="sticky top-24 2xl:grid 2xl:grid-cols-2">
+            <div className="border-b border-[var(--ws-border)] px-4 py-4 2xl:col-span-2">
               <div className="text-xs font-semibold uppercase tracking-wide text-[var(--ws-text-secondary)]">Selected commitment</div>
               <h3 className="mt-1 text-lg font-semibold leading-snug">{selected.name}</h3>
               <div className="mt-2 text-xs text-[var(--ws-text-secondary)]">
@@ -198,7 +198,7 @@ export function ActActionQueue({
               </div>
             </div>
 
-            <div className="border-b border-[var(--ws-border)] px-4 py-4">
+            <div className="border-b border-[var(--ws-border)] px-4 py-4 2xl:border-r">
               <div className="flex items-center justify-between gap-3">
                 <div className="text-xs font-semibold uppercase tracking-wide text-[var(--ws-text-secondary)]">Connection path</div>
                 <span className="rounded border border-[var(--ws-border)] bg-white px-2 py-1 text-[10px] font-semibold text-[var(--ws-text-secondary)]">
@@ -235,7 +235,7 @@ export function ActActionQueue({
               />
             </div>
 
-            <div className="flex flex-wrap gap-2 px-4 py-4">
+            <div className="flex flex-wrap gap-2 px-4 py-4 2xl:col-span-2">
               {selectedProject ? (
                 <Link href={`/org/${orgSlug}/${selectedProject.slug}`} className="inline-flex min-h-10 items-center rounded-md border border-[var(--ws-border)] bg-white px-3 text-xs font-semibold hover:bg-[var(--ws-surface-2)]">
                   {selectedProject.name}

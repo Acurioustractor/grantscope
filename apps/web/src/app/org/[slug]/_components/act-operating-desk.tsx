@@ -5,6 +5,7 @@ import type { OutstandingReceivablesData, ReceivablePayer } from '@/lib/services
 import type { OrgVerificationStatus } from '@/lib/services/org-verification-service';
 import type {
   ActOpportunityContextEvent,
+  ActOpportunityDiscoveryReceipt,
   ActOpportunityContextSource,
   ActOpportunityContextSourceStatus,
   ActOpportunityContextStatus,
@@ -21,7 +22,9 @@ import type {
 } from '@/lib/services/org-dashboard-service';
 import type { WikiSupportAction, WikiSupportIndex, WikiSupportRouteType } from '@/lib/services/wiki-support-index';
 import type { WikiSupportFrontierQueue } from '@/lib/services/wiki-support-frontier';
-import type { ActDailyActionMemory, ActDailyActionStates } from '@/lib/services/act-daily-actions';
+import { relationshipFollowUpActionId, type ActDailyActionMemory, type ActDailyActionStates } from '@/lib/services/act-daily-actions';
+import type { ActFunderIntelligence } from '@/lib/services/act-funder-intelligence';
+import type { ActRelationshipLedger as ActRelationshipLedgerData } from '@/lib/services/act-relationship-ledger';
 import {
   comparePipelineWork,
   isWorkingPipelineItem,
@@ -30,13 +33,19 @@ import {
 } from '@/lib/services/act-pipeline-learning';
 import {
   applyDecisionMemory,
+  decisionMemoryLabel,
+  latestDecisionFor,
   movePriority,
   relationshipActionHandled,
 } from '@/lib/services/act-recommendation-memory';
+import { deriveOpportunityVerification } from '@/lib/services/act-opportunity-trust';
 import { ActRecordReview, type ActReviewRecord } from './act-record-review';
 import { ActRelationshipActionButtons } from './act-relationship-action-buttons';
 import { ActActionQueue, type ActActionConnectionContext } from './act-action-queue';
 import { ActTodayFocus, type ActTodayFocusItem } from './act-today-focus';
+import { ActFunderIntelligenceDesk } from './act-funder-intelligence-desk';
+import { ActRelationshipLedger } from './act-relationship-ledger';
+import { ActWorkspacePageHeader } from './act-workspace-page-header';
 
 const CLOSED_PIPELINE_STATUSES = new Set(['won', 'lost', 'declined', 'archived', 'no-go', 'passed']);
 
@@ -513,6 +522,7 @@ function eventMetadataList(event: ActOpportunityContextEvent, key: string): stri
 }
 
 function opportunityEventLane(event: ActOpportunityContextEvent): WorkLane {
+  if (event.lane === 'grants_funding') return 'grant';
   if (event.lane === 'grant' || event.lane === 'foundation' || event.lane === 'procurement' || event.lane === 'capital') {
     return event.lane;
   }
@@ -531,6 +541,12 @@ function opportunityEventReadiness(event: ActOpportunityContextEvent): Readiness
   if (value === 'ready' || value === 'needs_proof' || value === 'needs_applicant' || value === 'needs_relationship' || value === 'park') {
     return value;
   }
+  const normalized = value?.toLowerCase() ?? '';
+  if (/\bready\b|immediate response|ready to act/.test(normalized)) return 'ready';
+  if (/applicant|lead entity|legal entity/.test(normalized)) return 'needs_applicant';
+  if (/relationship|warm path|partner|introduction/.test(normalized)) return 'needs_relationship';
+  if (/park|bad match|no[- ]?go/.test(normalized)) return 'park';
+  if (/proof|evidence|eligib|prepare|document|budget|financial|governance/.test(normalized)) return 'needs_proof';
   return event.signalKind === 'forecast_opportunity' ? 'needs_relationship' : 'needs_proof';
 }
 
@@ -546,6 +562,13 @@ function opportunityEventMove(event: ActOpportunityContextEvent, readiness: Read
   ) {
     return value;
   }
+  const normalized = value?.toLowerCase() ?? '';
+  if (/\bapply now\b|\bsubmit\b|lodge application/.test(normalized)) return 'apply_now';
+  if (/intro|introduction/.test(normalized)) return 'ask_for_intro';
+  if (/approach|contact|follow up|next touch|reply/.test(normalized)) return 'approach_now';
+  if (/build|prepare|proof|evidence|eligib|confirm|choose|financial|governance|document/.test(normalized)) return 'build_proof_pack';
+  if (/park|bad match|no[- ]?go/.test(normalized)) return 'park';
+  if (/watch|monitor|wait/.test(normalized)) return 'watch';
   return chooseMove(readiness, opportunityEventLane(event), null, opportunityEventRelationship(event));
 }
 
@@ -605,6 +628,15 @@ function buildContextOpportunityRows(
         confidence,
         evidenceGaps: evidenceGaps.length > 0 ? evidenceGaps : ['final eligibility check'],
         tags: Array.from(new Set([event.signalKind, event.sourceSystem, ...tags])),
+        verification: deriveOpportunityVerification({
+          kind: 'signal',
+          sourceSystem: event.sourceSystem,
+          signalKind: event.signalKind,
+          sourceUrl: event.sourceUrl,
+          reviewSource: eventMetadataString(event, 'review_source'),
+          lastVerifiedAt: eventMetadataString(event, 'verified_at'),
+        }),
+        discoveryState: event.discoveryState,
         relationshipId: relationshipContact?.id ?? null,
         relationshipName: relationshipContact?.name ?? event.actorName ?? event.organisation,
       } satisfies HomeOpportunityRow;
@@ -793,7 +825,7 @@ function buildOpportunityRows({
   projects: OrgProjectSummary[];
 }): HomeOpportunityRow[] {
   const contextRows = buildContextOpportunityRows(contextEvents, contacts);
-  const grantRows: HomeOpportunityRow[] = matchedGrants.slice(0, 8).map((grant) => {
+  const grantRows: HomeOpportunityRow[] = matchedGrants.map((grant) => {
     const relationshipContact = contactForOrganisation(contacts, grant.provider);
     const relationshipState = relationshipFromContact(relationshipContact);
     const readiness = grantReadiness(grant, relationshipState);
@@ -839,6 +871,12 @@ function buildOpportunityRows({
       confidence: confidenceFrom(score, readiness, relationshipState),
       evidenceGaps: evidenceGaps.length > 0 ? evidenceGaps : ['final eligibility check'],
       tags: ['grant', ...(grant.categories ?? []).slice(0, 3)],
+      verification: deriveOpportunityVerification({
+        kind: 'public_program',
+        sourceSystem: grant.source,
+        sourceUrl: grant.url,
+        lastVerifiedAt: grant.last_verified_at,
+      }),
       relationshipId: relationshipContact?.id ?? null,
       relationshipName: relationshipContact?.name ?? grant.provider,
     };
@@ -846,7 +884,6 @@ function buildOpportunityRows({
 
   const foundationRows: HomeOpportunityRow[] = foundationPortfolio
     .filter((row) => row.stage !== 'parked' || row.next_step || row.next_touch_note)
-    .slice(0, 8)
     .map((row) => {
       const relationshipContact = contactForOrganisation(contacts, row.foundation.name);
       const relationshipState = relationshipFromFoundation(row, contacts);
@@ -890,6 +927,7 @@ function buildOpportunityRows({
         confidence: confidenceFrom(score, readiness, relationshipState),
         evidenceGaps,
         tags: ['foundation', row.stage, row.engagement_status],
+        verification: deriveOpportunityVerification({ kind: 'relationship' }),
         relationshipId: relationshipContact?.id ?? null,
         relationshipName: relationshipContact?.name ?? row.foundation.name,
       };
@@ -901,7 +939,6 @@ function buildOpportunityRows({
       const days = daysUntil(item.deadline);
       return days === null || days >= 0;
     })
-    .slice(0, 8)
     .map((item) => {
       const lane: WorkLane = item.funder_type === 'foundation' ? 'foundation' : 'pipeline';
       const source: SourceKind = item.grant_url ? 'grant' : 'notion';
@@ -950,6 +987,10 @@ function buildOpportunityRows({
         confidence: confidenceFrom(score, readiness, relationshipState),
         evidenceGaps: evidenceGaps.length > 0 ? evidenceGaps : ['status decision'],
         tags: ['pipeline', item.status, item.funder_type ?? 'unknown'],
+        verification: deriveOpportunityVerification({
+          kind: 'pipeline',
+          sourceUrl: item.grant_url,
+        }),
         relationshipId: relationshipContact?.id ?? null,
         relationshipName: relationshipContact?.name ?? item.funder ?? item.grant_provider,
       };
@@ -957,7 +998,19 @@ function buildOpportunityRows({
 
   return dedupeOpportunityRows(
     [...contextRows, ...grantRows, ...foundationRows, ...pipelineRows]
-      .map((row) => applyDecisionMemory(row, decisions)),
+      .map((row) => {
+        const adjusted = applyDecisionMemory(row, decisions);
+        const memory = latestDecisionFor(row, decisions);
+        return memory ? {
+          ...adjusted,
+          decisionMemory: {
+            decision: memory.decision,
+            label: decisionMemoryLabel(memory),
+            createdAt: memory.created_at,
+            reason: memory.reason,
+          },
+        } : adjusted;
+      }),
   )
     .sort((left, right) =>
       opportunityQueueSourcePriority(left) - opportunityQueueSourcePriority(right)
@@ -965,8 +1018,7 @@ function buildOpportunityRows({
       || right.confidence - left.confidence
       || right.score - left.score
       || left.title.localeCompare(right.title),
-    )
-    .slice(0, 12);
+    );
 }
 
 function buildContactContext(
@@ -1061,9 +1113,13 @@ export function ActOperatingDesk({
   matchedGrants,
   opportunityDecisions = [],
   opportunityContext,
+  funderIntelligence,
+  relationshipLedger,
   view,
   selectedRelationshipId,
   selectedCommitmentId,
+  selectedLedgerKey,
+  opportunityReview,
   dailyActionStates,
   dailyActionMemory,
 }: {
@@ -1082,9 +1138,13 @@ export function ActOperatingDesk({
   matchedGrants: MatchedGrant[];
   opportunityDecisions?: OrgOpportunityDecision[];
   opportunityContext?: ActOpportunityContextStatus | null;
+  funderIntelligence?: ActFunderIntelligence | null;
+  relationshipLedger?: ActRelationshipLedgerData | null;
   view: ActDeskView;
   selectedRelationshipId?: string;
   selectedCommitmentId?: string;
+  selectedLedgerKey?: string;
+  opportunityReview?: string;
   dailyActionStates: ActDailyActionStates;
   dailyActionMemory: ActDailyActionMemory;
 }) {
@@ -1160,41 +1220,12 @@ export function ActOperatingDesk({
     projects: allProjectRows,
   });
   const sourceActions = wikiSupportIndex.support_actions.slice(0, 8);
-  const fieldProjects = [...projectRows].sort((left, right) => {
-    return projectFieldRank(left) - projectFieldRank(right) || left.name.localeCompare(right.name);
-  });
-  const artProject = fieldProjects.find((project) => /harvest|witta|art/.test(`${project.slug} ${project.name}`.toLowerCase()));
   const contactRows = buildContactContext(
     contacts,
     foundationPortfolio,
     opportunityContext?.recentEvents ?? [],
     opportunityDecisions,
   );
-  const selectedContact = contactRows.find((contact) => contact.id === selectedRelationshipId) ?? contactRows[0] ?? null;
-  const selectedRelationshipEvents = selectedContact
-    ? (opportunityContext?.recentEvents ?? [])
-      .filter((event) => {
-        const values = [event.actorName, event.organisation].filter(Boolean).join(' ').toLowerCase();
-        const contactValues = [selectedContact.name, selectedContact.organisation].filter(Boolean).join(' ').toLowerCase();
-        return values.length > 0 && contactValues.length > 0 && (
-          values.includes(selectedContact.name.toLowerCase())
-          || (selectedContact.organisation ? values.includes(selectedContact.organisation.toLowerCase()) : false)
-          || contactValues.includes(values)
-        );
-      })
-      .slice(0, 6)
-    : [];
-  const connectedOpportunityRows = selectedContact
-    ? opportunityRows.filter((opportunity) => {
-      const haystack = [opportunity.title, opportunity.summary, opportunity.reason, opportunity.project, ...opportunity.tags].join(' ').toLowerCase();
-      const organisation = selectedContact.organisation?.toLowerCase();
-      return Boolean(
-        (organisation && organisation.length > 4 && haystack.includes(organisation))
-        || (selectedContact.name.length > 4 && haystack.includes(selectedContact.name.toLowerCase())),
-      );
-    })
-    : [];
-  const relationshipOpportunities = (connectedOpportunityRows.length > 0 ? connectedOpportunityRows : opportunityRows).slice(0, 2);
   const notionRows = contacts.filter((contact) => contact.notion_id).length;
   const highLevelRows = contacts.filter((contact) => contact.ghl_contact_id).length;
   const contextByKey = new Map((opportunityContext?.sources ?? []).map((source) => [source.key, source]));
@@ -1231,7 +1262,7 @@ export function ActOperatingDesk({
     {
       label: 'GoHighLevel',
       status: sourceStatus('ghl', highLevelRows > 0 ? 'mirror-only' : 'empty'),
-      count: sourceCount('ghl', highLevelRows),
+      count: sourceCount('ghl', highLevelRows > 0 ? highLevelRows : contactRows.length),
       detail: sourceDetail('ghl', 'Local CRM mirror for contacts and relationship context.'),
       href: deskViewHref(slug, 'relationships', 'relationships'),
     },
@@ -1274,6 +1305,10 @@ export function ActOperatingDesk({
       }
       : null;
   const learningStep = opportunityContext?.nextSteps[0] ?? null;
+  const nextLedgerFollowUp = (relationshipLedger?.items ?? [])
+    .filter((item) => item.followUp?.status === 'planned')
+    .sort((left, right) => String(left.followUp?.dueAt ?? '9999-12-31').localeCompare(String(right.followUp?.dueAt ?? '9999-12-31')))[0] ?? null;
+  const ledgerFollowUpDays = daysUntil(nextLedgerFollowUp?.followUp?.dueAt);
   const focusItems = [
     firstOpportunity
       ? {
@@ -1299,6 +1334,19 @@ export function ActOperatingDesk({
         actionLabel: topPayer.oldest_days_overdue >= 60 ? 'Chase' : 'Review',
         priority: topPayer.oldest_days_overdue >= 60 ? 2 : 24,
         tone: topPayer.oldest_days_overdue >= 60 ? 'red' : 'amber',
+      }
+      : null,
+    nextLedgerFollowUp?.followUp
+      ? {
+        id: relationshipFollowUpActionId(nextLedgerFollowUp.followUp.id),
+        label: 'Follow-up',
+        title: nextLedgerFollowUp.organisation,
+        detail: nextLedgerFollowUp.followUp.action,
+        meta: `${nextLedgerFollowUp.followUp.owner} · ${dueLabel(nextLedgerFollowUp.followUp.dueAt)}`,
+        href: `/org/${slug}?view=money&ledger=${encodeURIComponent(nextLedgerFollowUp.key)}#money`,
+        actionLabel: 'Open relationship',
+        priority: ledgerFollowUpDays !== null && ledgerFollowUpDays < 0 ? 1 : ledgerFollowUpDays === 0 ? 3 : ledgerFollowUpDays !== null && ledgerFollowUpDays <= 7 ? 11 : 28,
+        tone: ledgerFollowUpDays !== null && ledgerFollowUpDays < 0 ? 'red' : ledgerFollowUpDays !== null && ledgerFollowUpDays <= 7 ? 'amber' : 'purple',
       }
       : null,
     nextRelationship
@@ -1369,14 +1417,6 @@ export function ActOperatingDesk({
     .sort((left, right) => left.priority - right.priority)
     .slice(0, 3);
 
-  const workModes = [
-    { label: 'Today', href: deskViewHref(slug, 'today'), active: view === 'today' },
-    { label: 'Listen', href: deskViewHref(slug, 'relationships', 'relationships'), active: view === 'relationships' },
-    { label: 'Curiosity', href: deskViewHref(slug, 'opportunities', 'opportunities'), active: view === 'opportunities' || view === 'triage' },
-    { label: 'Action', href: deskViewHref(slug, 'pipeline', 'pipeline'), active: view === 'pipeline' },
-    { label: 'Art', href: artProject ? `/org/${slug}/${artProject.slug}` : deskViewHref(slug, 'triage', 'triage'), active: false },
-  ];
-  const currentSources = sourceStackRows.filter((source) => ['ok', 'verified', 'configured'].includes(source.status)).length;
   const viewHeading = view === 'today'
     ? 'What needs moving today'
     : view === 'relationships'
@@ -1397,61 +1437,22 @@ export function ActOperatingDesk({
   const showSystems = view === 'evidence';
 
   return (
-    <main className="ws act-desk min-h-screen bg-[var(--ws-surface-0)] text-[var(--ws-text)]">
-      <div className="mx-auto grid max-w-[1440px] lg:grid-cols-[232px_minmax(0,1fr)]">
-        <aside className="hidden min-h-screen bg-[#183426] text-white lg:block">
-          <div className="sticky top-16 flex h-[calc(100vh-4rem)] flex-col overflow-y-auto px-4 py-5">
-            <Link href={deskViewHref(slug, 'today')} className="flex min-h-12 items-center gap-3 px-2">
-              <span className="grid h-8 w-8 place-items-center rounded bg-[#e7ef65] text-sm font-black text-[#183426]">A</span>
-              <span className="font-mono text-[11px] font-semibold uppercase tracking-wide">A Curious Tractor</span>
-            </Link>
+    <>
+      <ActWorkspacePageHeader
+        eyebrow={`${new Date().toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' })} / ACT field desk`}
+        title={viewHeading}
+        testId="act-desk-header"
+        meta={(
+          <Link
+            href={deskViewHref(slug, 'opportunities', 'opportunities')}
+            className="hidden min-h-10 items-center rounded-md border border-[var(--ws-border)] bg-[var(--ws-surface-1)] px-3 text-xs font-semibold text-[var(--ws-text)] hover:bg-[var(--ws-surface-2)] sm:inline-flex"
+          >
+            Review {opportunityRows.length} openings
+          </Link>
+        )}
+      />
 
-            <div className="mt-8 px-2 font-mono text-[9px] font-semibold uppercase tracking-widest text-[#8fa196]">Work modes</div>
-            <nav className="mt-2 space-y-1" aria-label="ACT work modes">
-              {workModes.map((mode, index) => (
-                <DeskModeLink key={mode.label} {...mode} index={index + 1} />
-              ))}
-            </nav>
-
-            <div className="mt-8 px-2 font-mono text-[9px] font-semibold uppercase tracking-widest text-[#8fa196]">Project fields</div>
-            <nav className="mt-2" aria-label="ACT project fields">
-              {fieldProjects.slice(0, 6).map((project, index) => (
-                <DeskProjectLink key={project.id} project={project} slug={slug} index={index} />
-              ))}
-              {projectRows.length === 0 ? <div className="px-2 py-3 text-xs text-[#aebcb2]">No project fields loaded.</div> : null}
-            </nav>
-
-            <div className="mt-auto border-t border-white/10 pt-4">
-              <DeskUtilityLink href={deskViewHref(slug, 'money', 'money')} label="Money" detail={`${fmtMoney(overdueAmount)} overdue 60d+`} active={view === 'money'} />
-              <DeskUtilityLink href={deskViewHref(slug, 'evidence', 'systems')} label="Sources" detail={`${currentSources}/${sourceStackRows.length} current`} active={view === 'evidence'} />
-            </div>
-          </div>
-        </aside>
-
-        <div className="min-w-0">
-          <header className="sticky top-0 z-20 border-b border-[var(--ws-border)] bg-[var(--ws-surface-0)]/95 px-4 py-4 backdrop-blur sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between gap-4">
-              <div className="min-w-0">
-                <div className="font-mono text-[10px] font-semibold uppercase tracking-widest text-[var(--ws-text-secondary)]">
-                  {new Date().toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' })} / ACT field desk
-                </div>
-                <h1 className="mt-1 truncate text-2xl font-semibold tracking-normal text-[var(--ws-text)] sm:text-[28px]">
-                  {viewHeading}
-                </h1>
-              </div>
-              <Link
-                href={deskViewHref(slug, 'opportunities', 'opportunities')}
-                className="hidden min-h-10 shrink-0 items-center rounded-md border border-[var(--ws-border)] bg-[var(--ws-surface-1)] px-3 text-xs font-semibold text-[var(--ws-text)] hover:bg-[var(--ws-surface-2)] sm:inline-flex"
-              >
-                Review {opportunityRows.length} openings
-              </Link>
-            </div>
-            <nav className="mt-4 flex gap-1 overflow-x-auto lg:hidden" aria-label="ACT work modes">
-              {workModes.map((mode) => <NavPill key={mode.label} href={mode.href} label={mode.label} active={mode.active} />)}
-            </nav>
-          </header>
-
-          <div className="px-4 pb-8 sm:px-6 lg:px-8">
+      <div className="px-4 pb-8 sm:px-6 lg:px-8">
             {showToday ? (
               <section id="today" className="py-6">
                 <div className="min-w-0 overflow-hidden rounded-md border border-[var(--ws-border)] bg-[var(--ws-surface-1)]">
@@ -1460,6 +1461,9 @@ export function ActOperatingDesk({
                     <h2 className="mt-2 text-xl font-semibold tracking-normal">Do these in order</h2>
                     <p className="mt-1 text-sm text-[var(--ws-text-secondary)]">Finish the first move before opening another queue.</p>
                   </div>
+                  {opportunityContext ? (
+                    <DiscoveryReceipt receipt={opportunityContext.discoveryReceipt} opportunitiesHref={`/org/${slug}?view=opportunities&review=changes#opportunities`} />
+                  ) : null}
                   <ActTodayFocus
                     items={focusItems}
                     orgProfileId={orgProfileId}
@@ -1485,6 +1489,7 @@ export function ActOperatingDesk({
                 .filter((project): project is OrgProjectSummary & { code: string } => Boolean(project.code))
                 .sort((left, right) => projectFieldRank(left) - projectFieldRank(right) || left.name.localeCompare(right.name))
                 .map((project) => ({ code: project.code, name: projectFieldLabel(project), slug: project.slug }))}
+              initialView={opportunityReview}
             />
           </section>
         ) : null}
@@ -1533,141 +1538,13 @@ export function ActOperatingDesk({
           </section>
         ) : null}
 
-        {showRelationships ? (
-          <section id="relationships" className="my-6 min-w-0 scroll-mt-24 overflow-hidden rounded-md border border-[var(--ws-border)] bg-[var(--ws-surface-1)]">
-            <div className="grid min-w-0 lg:grid-cols-[260px_minmax(0,1fr)] min-[1360px]:grid-cols-[280px_minmax(0,1fr)_300px]">
-              <aside className="order-2 min-w-0 border-b border-[var(--ws-border)] bg-[var(--ws-surface-2)] lg:order-1 lg:border-b-0 lg:border-r">
-                <div className="border-b border-[var(--ws-border)] px-5 py-5">
-                  <div className="font-mono text-[10px] font-semibold uppercase tracking-widest text-[var(--ws-text-secondary)]">Relationship studio</div>
-                  <h2 className="mt-2 text-xl font-semibold">People to know</h2>
-                  <p className="mt-2 text-xs leading-relaxed text-[var(--ws-text-secondary)]">Warm people first. Unknown CRM contacts stay out until they carry a useful signal.</p>
-                </div>
-                <div className="divide-y divide-[var(--ws-border)]">
-                  {contactRows.slice(0, 8).map((contact, index) => (
-                    <RelationshipStudioContactRow
-                      key={`${contact.system}-${contact.id}`}
-                      contact={contact}
-                      index={index}
-                      selected={selectedContact?.id === contact.id}
-                      slug={slug}
-                    />
-                  ))}
-                  {contactRows.length === 0 ? <EmptyBlock label="No warm people are ready for review." /> : null}
-                </div>
-              </aside>
-
-              <div className="order-1 min-w-0 border-b border-[var(--ws-border)] lg:order-2 min-[1360px]:border-b-0 min-[1360px]:border-r">
-                {selectedContact ? (
-                  <>
-                    <header className="border-b border-[var(--ws-border)] px-5 py-6 sm:px-7">
-                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-                        <span className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-[#c99a2e] font-mono text-base font-semibold text-white">
-                          {initials(selectedContact.name)}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <h2 className="text-2xl font-semibold tracking-normal">{selectedContact.name}</h2>
-                          <p className="mt-1 text-sm text-[var(--ws-text-secondary)]">{selectedContact.organisation || 'Organisation not yet connected'}</p>
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            <span className={`rounded border px-2 py-1 font-mono text-[9px] font-semibold uppercase ${actionStateClass(selectedContact.state)}`}>{actionStateLabel(selectedContact.state)}</span>
-                            <span className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 font-mono text-[9px] font-semibold uppercase text-emerald-700">{selectedContact.warmth}</span>
-                            <span className="rounded border border-blue-200 bg-blue-50 px-2 py-1 font-mono text-[9px] font-semibold uppercase text-blue-700">{selectedContact.lane}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <ActRelationshipActionButtons
-                        orgProfileId={orgProfileId}
-                        record={{
-                          id: selectedContact.id,
-                          name: selectedContact.name,
-                          organisation: selectedContact.organisation,
-                          state: selectedContact.state,
-                          lane: selectedContact.lane,
-                          recommendedAsk: selectedContact.recommendedAsk,
-                          whyNow: selectedContact.whyNow,
-                          sourceEvidence: selectedContact.sourceEvidence,
-                          tags: selectedContact.tags,
-                        }}
-                      />
-                    </header>
-
-                    <div className="grid border-b border-[var(--ws-border)] bg-[#fbfcfa] sm:grid-cols-3">
-                      <RelationshipFact label="What matters now" value={selectedContact.whyNow} />
-                      <RelationshipFact label="What connects us" value={selectedContact.tags.slice(0, 3).join(' · ') || selectedContact.lane} />
-                      <RelationshipFact label="State of relationship" value={`${actionStateLabel(selectedContact.state)} · ${selectedContact.lastTouch}`} last />
-                    </div>
-
-                    <section className="px-5 py-6 sm:px-7">
-                      <div className="flex items-center justify-between gap-3">
-                        <h3 className="text-lg font-semibold">Relationship history</h3>
-                        <span className="font-mono text-[9px] uppercase text-[var(--ws-text-secondary)]">{selectedContact.sourceEvidence}</span>
-                      </div>
-                      <div className="mt-4 divide-y divide-[var(--ws-border)]">
-                        {selectedRelationshipEvents.map((event) => <RelationshipEventRow key={event.id} event={event} />)}
-                        {selectedRelationshipEvents.length === 0 ? (
-                          <div className="grid grid-cols-[34px_minmax(0,1fr)] gap-3 py-5">
-                            <span className="grid h-8 w-8 place-items-center rounded-full bg-[#e7f1ea] font-mono text-[9px] font-semibold text-[#2f6b4a]">{selectedContact.system[0]}</span>
-                            <div>
-                              <div className="text-sm font-semibold">Latest known signal</div>
-                              <p className="mt-2 text-xs leading-relaxed text-[var(--ws-text-secondary)]">{selectedContact.whyNow}</p>
-                              <div className="mt-2 font-mono text-[9px] uppercase text-[var(--ws-text-tertiary)]">{selectedContact.lastTouch} / {selectedContact.system}</div>
-                            </div>
-                          </div>
-                        ) : null}
-                      </div>
-                    </section>
-                  </>
-                ) : <EmptyBlock label="Choose a person to open their relationship context." />}
-              </div>
-
-              <aside className="order-3 min-w-0 border-t border-[var(--ws-border)] bg-[#f8f9f5] px-5 py-6 lg:col-span-2 min-[1360px]:col-span-1 min-[1360px]:border-t-0">
-                <div className="font-mono text-[10px] font-semibold uppercase tracking-widest text-[var(--ws-text-secondary)]">Relationship intelligence</div>
-                <h2 className="mt-2 text-xl font-semibold">What to do next</h2>
-                {selectedContact ? (
-                  <div className="mt-5 bg-[#183426] p-5 text-white">
-                    <div className="font-mono text-[9px] font-semibold uppercase tracking-widest text-[#9fb0a4]">Recommended next touch</div>
-                    <p className="mt-3 text-base font-semibold leading-relaxed">{selectedContact.recommendedAsk}</p>
-                    <p className="mt-3 text-xs leading-relaxed text-[#c7d3cb]">{selectedContact.whyNow}</p>
-                  </div>
-                ) : null}
-
-                <div className="mt-6 border-t border-[var(--ws-border)] pt-5">
-                  <div className="font-mono text-[9px] font-semibold uppercase tracking-widest text-[var(--ws-text-secondary)]">Connected openings</div>
-                  <div className="mt-2 divide-y divide-[var(--ws-border)]">
-                    {relationshipOpportunities.map((opportunity) => (
-                      <Link key={opportunity.id} href={deskViewHref(slug, 'opportunities', 'opportunities')} className="block py-4 hover:text-[#2f6b4a]">
-                        <span className={`rounded border px-2 py-1 font-mono text-[8px] font-semibold uppercase ${laneClass(opportunity.lane)}`}>{laneLabel(opportunity.lane)}</span>
-                        <h3 className="mt-3 text-sm font-semibold leading-snug">{opportunity.title}</h3>
-                        <p className="mt-2 text-[11px] leading-relaxed text-[var(--ws-text-secondary)]">{compact(opportunity.reason)}</p>
-                      </Link>
-                    ))}
-                    {relationshipOpportunities.length === 0 ? <p className="py-4 text-xs text-[var(--ws-text-secondary)]">No connected openings loaded.</p> : null}
-                  </div>
-                </div>
-
-                <div className="mt-6 border-t border-[var(--ws-border)] pt-5">
-                  <div className="font-mono text-[9px] font-semibold uppercase tracking-widest text-[var(--ws-text-secondary)]">Organisations in the field</div>
-                  <div className="mt-2 divide-y divide-[var(--ws-border)]">
-                    {relationshipRows.slice(0, 3).map((row) => (
-                      <div key={row.id} className="py-3">
-                        <div className="text-xs font-semibold">{row.foundation.name}</div>
-                        <div className="mt-1 font-mono text-[9px] uppercase text-[var(--ws-text-secondary)]">{relationshipStageLabel(row)} / {row.project.name}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="mt-6 border-t border-[var(--ws-border)] pt-5">
-                  <div className="font-mono text-[9px] font-semibold uppercase tracking-widest text-[var(--ws-text-secondary)]">Evidence behind this view</div>
-                  <div className="mt-3 grid grid-cols-2 gap-2">
-                    <EvidenceSource label="Gmail" status={sourceStatus('gmail', 'blocked')} />
-                    <EvidenceSource label="HighLevel" status={sourceStatus('ghl', 'empty')} />
-                    <EvidenceSource label="Decisions" status={sourceStatus('decisions', 'empty')} />
-                    <EvidenceSource label="CivicGraph" status={sourceStatus('grants', 'ok')} />
-                  </div>
-                </div>
-              </aside>
-            </div>
-          </section>
+        {showRelationships && funderIntelligence ? (
+          <ActFunderIntelligenceDesk
+            intelligence={funderIntelligence}
+            relationshipLedger={relationshipLedger}
+            orgProfileId={orgProfileId}
+            initialFoundationId={selectedRelationshipId}
+          />
         ) : null}
 
         {showPipeline ? (
@@ -1693,41 +1570,11 @@ export function ActOperatingDesk({
         {showMoney ? (
           <section id="money" className="mt-4 min-w-0 scroll-mt-20 overflow-hidden rounded-md border border-[var(--ws-border)] bg-[var(--ws-surface-1)]">
           <SectionTitle
-            eyebrow="Money queue"
-            title="Receivables and proof gaps"
+            eyebrow="Money and reciprocity"
+            title="Relationship ledger"
             action={<LinkButton href={`/org/${slug}/payables`} label="Payables" />}
           />
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[820px] text-sm">
-              <thead className="bg-[var(--ws-surface-2)] text-left text-xs font-semibold uppercase tracking-wide text-[var(--ws-text-secondary)]">
-                <tr>
-                  <th className="px-3 py-2">Organisation</th>
-                  <th className="px-3 py-2">Status</th>
-                  <th className="px-3 py-2 text-right">Amount</th>
-                  <th className="px-3 py-2 text-right">Invoices</th>
-                  <th className="px-3 py-2 text-right">Oldest</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--ws-border)]">
-                {payerRows.map((payer) => (
-                  <tr key={payer.payer_name} className="hover:bg-[var(--ws-surface-2)]">
-                    <td className="px-3 py-3 font-semibold">{payer.payer_name}</td>
-                    <td className="px-3 py-3">
-                      <span className={`rounded-md border px-2 py-1 text-xs font-semibold ${payer.oldest_days_overdue >= 60 ? 'border-red-200 bg-red-50 text-red-700' : 'border-stone-200 bg-stone-50 text-stone-700'}`}>
-                        {payerStatus(payer)}
-                      </span>
-                    </td>
-                    <td className="px-3 py-3 text-right font-mono font-semibold tabular-nums">{fmtMoney(payer.total_due)}</td>
-                    <td className="px-3 py-3 text-right font-mono text-xs text-[var(--ws-text-secondary)]">{payer.invoice_count}</td>
-                    <td className="px-3 py-3 text-right font-mono text-xs text-[var(--ws-text-secondary)]">
-                      {payer.oldest_days_overdue > 0 ? `${payer.oldest_days_overdue}d overdue` : `due in ${Math.abs(payer.oldest_days_overdue)}d`}
-                    </td>
-                  </tr>
-                ))}
-                {payerRows.length === 0 ? <EmptyRow colSpan={5} label="No receivables loaded." /> : null}
-              </tbody>
-            </table>
-          </div>
+          <ActRelationshipLedger data={relationshipLedger ?? null} orgProfileId={orgProfileId} initialSelectedKey={selectedLedgerKey} />
           </section>
         ) : null}
 
@@ -1807,74 +1654,8 @@ export function ActOperatingDesk({
           </div>
           </section>
         ) : null}
-          </div>
-        </div>
       </div>
-    </main>
-  );
-}
-
-function DeskModeLink({
-  href,
-  label,
-  active,
-  index,
-}: {
-  href: string;
-  label: string;
-  active: boolean;
-  index: number;
-}) {
-  return (
-    <Link
-      href={href}
-      className={`grid min-h-10 grid-cols-[26px_minmax(0,1fr)] items-center gap-2 rounded-md px-3 py-2 transition-colors ${
-        active ? 'bg-white/10 text-white' : 'text-[#c7d1ca] hover:bg-white/5 hover:text-white'
-      }`}
-    >
-      <span className={`font-mono text-[10px] font-semibold ${active ? 'text-[#e7ef65]' : 'text-[#8fa196]'}`}>
-        {String(index).padStart(2, '0')}
-      </span>
-      <span className="truncate text-sm font-semibold">{label}</span>
-    </Link>
-  );
-}
-
-function DeskProjectLink({
-  project,
-  slug,
-  index,
-}: {
-  project: OrgProjectSummary;
-  slug: string;
-  index: number;
-}) {
-  const colours = ['#c99a2e', '#6b78b8', '#4f8b63', '#a06b8b', '#44899b', '#8b6f56'];
-  return (
-    <Link href={`/org/${slug}/${project.slug}`} className="grid min-h-9 grid-cols-[8px_minmax(0,1fr)_auto] items-center gap-3 px-2 text-[#d7ded9] hover:bg-white/5 hover:text-white">
-      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: colours[index % colours.length] }} />
-      <span className="truncate text-xs">{projectFieldLabel(project)}</span>
-      <span className="font-mono text-[10px] text-[#8fa196]">{project.pipeline_count}</span>
-    </Link>
-  );
-}
-
-function DeskUtilityLink({
-  href,
-  label,
-  detail,
-  active,
-}: {
-  href: string;
-  label: string;
-  detail: string;
-  active: boolean;
-}) {
-  return (
-    <Link href={href} className={`block rounded-md px-2 py-2.5 ${active ? 'bg-white/10' : 'hover:bg-white/5'}`}>
-      <span className="block text-xs font-semibold text-white">{label}</span>
-      <span className="mt-1 block text-[10px] text-[#9fb0a4]">{detail}</span>
-    </Link>
+    </>
   );
 }
 
@@ -1944,21 +1725,6 @@ function EvidenceSource({ label, status }: { label: string; status: HealthStatus
   );
 }
 
-function NavPill({ href, label, active = false }: { href: string; label: string; active?: boolean }) {
-  return (
-    <Link
-      href={href}
-      className={`inline-flex min-h-9 items-center whitespace-nowrap rounded-md border px-3 text-xs font-semibold ${
-        active
-          ? 'border-stone-900 bg-stone-900 text-white'
-          : 'border-[var(--ws-border)] bg-[var(--ws-surface-1)] text-[var(--ws-text-secondary)] hover:text-[var(--ws-text)]'
-      }`}
-    >
-      {label}
-    </Link>
-  );
-}
-
 function ActionTile({
   label,
   value,
@@ -1997,6 +1763,52 @@ function SectionTitle({ eyebrow, title, action }: { eyebrow: string; title: stri
         <h2 className="mt-1 text-lg font-semibold tracking-normal text-[var(--ws-text)]">{title}</h2>
       </div>
       {action ? <div className="self-start sm:self-auto">{action}</div> : null}
+    </div>
+  );
+}
+
+function DiscoveryReceipt({
+  receipt,
+  opportunitiesHref,
+}: {
+  receipt: ActOpportunityDiscoveryReceipt;
+  opportunitiesHref: string;
+}) {
+  const hasActivity = receipt.newSignals + receipt.changedSignals + receipt.refreshedPrograms > 0;
+  return (
+    <div className="border-b border-[var(--ws-border)] bg-[#f1f8f5] px-5 py-4" aria-label="Latest discovery activity">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="grid h-7 w-7 place-items-center rounded-full bg-[#2f8f64] text-xs font-semibold text-white" aria-hidden="true">✓</span>
+            <span className="text-sm font-semibold text-[#183426]">
+              {hasActivity ? 'Discovery activity recorded' : 'Discovery sources checked'}
+            </span>
+            <span className="font-mono text-[9px] uppercase tracking-wide text-[#56715f]">
+              latest stored batch · {fmtDateTime(receipt.latestAt)}
+            </span>
+          </div>
+          <p className="mt-2 text-xs leading-relaxed text-[#4f6657]">
+            {receipt.newSignals} new signal{receipt.newSignals === 1 ? '' : 's'} · {receipt.changedSignals} changed · {receipt.refreshedPrograms} public program{receipt.refreshedPrograms === 1 ? '' : 's'} refreshed. Ignored mail stays out of the app.
+          </p>
+        </div>
+        <div className="flex shrink-0 gap-2">
+          <ReceiptMetric label="Openings" value={receipt.opportunitySignals} />
+          <ReceiptMetric label="Relationships" value={receipt.relationshipSignals} />
+          <Link href={opportunitiesHref} className="inline-flex min-h-11 items-center rounded-md bg-[#183426] px-3 text-xs font-semibold text-white hover:bg-[#24523b] focus:outline-none focus:ring-2 focus:ring-[#2f8f64] focus:ring-offset-2">
+            Review changes
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReceiptMetric({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="min-w-[76px] rounded-md border border-[#cfe0d4] bg-white px-3 py-2 text-center">
+      <div className="font-mono text-base font-semibold tabular-nums text-[#183426]">{value}</div>
+      <div className="mt-0.5 text-[9px] font-semibold uppercase tracking-wide text-[#56715f]">{label}</div>
     </div>
   );
 }
@@ -2219,14 +2031,4 @@ function SystemPanel({
 
 function EmptyBlock({ label }: { label: string }) {
   return <div className="px-3 py-4 text-sm text-[var(--ws-text-secondary)]">{label}</div>;
-}
-
-function EmptyRow({ colSpan, label }: { colSpan: number; label: string }) {
-  return (
-    <tr>
-      <td colSpan={colSpan} className="px-3 py-4 text-sm text-[var(--ws-text-secondary)]">
-        {label}
-      </td>
-    </tr>
-  );
 }

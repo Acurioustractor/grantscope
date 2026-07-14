@@ -37,7 +37,20 @@ export interface ActOpportunityContextEvent {
   signalKind: string;
   confidence: number;
   happenedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  discoveryState: 'new' | 'changed' | null;
   metadata: Record<string, unknown>;
+}
+
+export interface ActOpportunityDiscoveryReceipt {
+  batchWindowMinutes: number;
+  latestAt: string | null;
+  newSignals: number;
+  changedSignals: number;
+  opportunitySignals: number;
+  relationshipSignals: number;
+  refreshedPrograms: number;
 }
 
 export interface ActOpportunityContextStatus {
@@ -56,6 +69,7 @@ export interface ActOpportunityContextStatus {
   };
   sources: ActOpportunityContextSource[];
   nextSteps: ActOpportunityContextStep[];
+  discoveryReceipt: ActOpportunityDiscoveryReceipt;
   recentEvents: ActOpportunityContextEvent[];
 }
 
@@ -63,6 +77,8 @@ interface GrantStatsRow {
   total: number;
   open_count: number;
   due_30d: number;
+  updated_24h: number;
+  latest_batch_updates: number;
   updated_7d: number;
   latest_updated_at: string | null;
   latest_verified_at: string | null;
@@ -90,10 +106,18 @@ interface GmailStatusRow {
 interface GmailContextStatsRow {
   total: number;
   new_24h: number;
+  changed_24h: number;
   recent_14d: number;
   relationship_events: number;
+  opportunity_signals_24h: number;
+  relationship_signals_24h: number;
+  latest_batch_new: number;
+  latest_batch_changed: number;
+  latest_batch_opportunities: number;
+  latest_batch_relationships: number;
   latest_happened_at: string | null;
   latest_created_at: string | null;
+  latest_updated_at: string | null;
 }
 
 interface KnowledgeSyncRow {
@@ -150,6 +174,8 @@ interface ContextEventRow {
   signal_kind: string;
   confidence: number | string | null;
   happened_at: string | null;
+  created_at: string;
+  updated_at: string;
   metadata: Record<string, unknown> | null;
 }
 
@@ -207,6 +233,8 @@ function asGrantStats(row: Record<string, unknown> | undefined): GrantStatsRow {
     total: num(row?.total),
     open_count: num(row?.open_count),
     due_30d: num(row?.due_30d),
+    updated_24h: num(row?.updated_24h),
+    latest_batch_updates: num(row?.latest_batch_updates),
     updated_7d: num(row?.updated_7d),
     latest_updated_at: iso(row?.latest_updated_at),
     latest_verified_at: iso(row?.latest_verified_at),
@@ -227,11 +255,28 @@ function asGmailContextStats(row: Record<string, unknown> | undefined): GmailCon
   return {
     total: num(row?.total),
     new_24h: num(row?.new_24h),
+    changed_24h: num(row?.changed_24h),
     recent_14d: num(row?.recent_14d),
     relationship_events: num(row?.relationship_events),
+    opportunity_signals_24h: num(row?.opportunity_signals_24h),
+    relationship_signals_24h: num(row?.relationship_signals_24h),
+    latest_batch_new: num(row?.latest_batch_new),
+    latest_batch_changed: num(row?.latest_batch_changed),
+    latest_batch_opportunities: num(row?.latest_batch_opportunities),
+    latest_batch_relationships: num(row?.latest_batch_relationships),
     latest_happened_at: iso(row?.latest_happened_at),
     latest_created_at: iso(row?.latest_created_at),
+    latest_updated_at: iso(row?.latest_updated_at),
   };
+}
+
+function discoveryState(createdAt: string, updatedAt: string): ActOpportunityContextEvent['discoveryState'] {
+  const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+  const created = new Date(createdAt).getTime();
+  const updated = new Date(updatedAt).getTime();
+  if (Number.isFinite(created) && created >= cutoff) return 'new';
+  if (Number.isFinite(updated) && updated >= cutoff && updated > created + 1_000) return 'changed';
+  return null;
 }
 
 function asFunderStats(row: Record<string, unknown> | undefined): FunderContextStatsRow {
@@ -268,6 +313,9 @@ function asContextEvents(rows: ContextEventRow[] | null | undefined): ActOpportu
     signalKind: row.signal_kind,
     confidence: num(row.confidence),
     happenedAt: row.happened_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    discoveryState: discoveryState(row.created_at, row.updated_at),
     metadata: row.metadata ?? {},
   }));
 }
@@ -340,10 +388,15 @@ export const getActOpportunityContextStatus = cache(async (
     contextEventRows,
   ] = await Promise.all([
     safe(supabase.rpc('exec_sql', {
-      query: `SELECT
+      query: `WITH latest_grant AS (
+          SELECT MAX(updated_at) AS latest_at FROM grant_opportunities
+        )
+        SELECT
           COUNT(*)::int AS total,
           COUNT(*) FILTER (WHERE COALESCE(closes_at, deadline) >= CURRENT_DATE)::int AS open_count,
           COUNT(*) FILTER (WHERE COALESCE(closes_at, deadline) BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '30 days')::int AS due_30d,
+          COUNT(*) FILTER (WHERE updated_at >= NOW() - INTERVAL '24 hours')::int AS updated_24h,
+          COUNT(*) FILTER (WHERE updated_at >= (SELECT latest_at FROM latest_grant) - INTERVAL '5 minutes')::int AS latest_batch_updates,
           COUNT(*) FILTER (WHERE updated_at >= NOW() - INTERVAL '7 days')::int AS updated_7d,
           MAX(updated_at)::text AS latest_updated_at,
           MAX(last_verified_at)::text AS latest_verified_at
@@ -363,13 +416,27 @@ export const getActOpportunityContextStatus = cache(async (
       .order('updated_at', { ascending: false })
       .limit(1), 'act opportunity context gmail status') as Promise<GmailStatusRow[] | null>,
     safe(supabase.rpc('exec_sql', {
-      query: `SELECT
+      query: `WITH latest_activity AS (
+          SELECT MAX(GREATEST(created_at, updated_at)) AS latest_at
+          FROM opportunity_context_events
+          WHERE org_profile_id = '${safeOrgProfileId}'
+            AND source_system = 'gmail'
+        )
+        SELECT
           COUNT(*)::int AS total,
           COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '24 hours')::int AS new_24h,
+          COUNT(*) FILTER (WHERE updated_at >= NOW() - INTERVAL '24 hours' AND updated_at > created_at + INTERVAL '1 second')::int AS changed_24h,
           COUNT(*) FILTER (WHERE happened_at >= NOW() - INTERVAL '14 days')::int AS recent_14d,
           COUNT(*) FILTER (WHERE lane IN ('relationship', 'foundation', 'procurement', 'arts'))::int AS relationship_events,
+          COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '24 hours' AND signal_kind IN ('open_opportunity', 'procurement_opportunity', 'capital_opportunity', 'forecast_opportunity'))::int AS opportunity_signals_24h,
+          COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '24 hours' AND signal_kind IN ('relationship', 'warm_intro', 'invitation', 'event', 'funding_lead', 'reporting'))::int AS relationship_signals_24h,
+          COUNT(*) FILTER (WHERE created_at >= (SELECT latest_at FROM latest_activity) - INTERVAL '5 minutes')::int AS latest_batch_new,
+          COUNT(*) FILTER (WHERE updated_at >= (SELECT latest_at FROM latest_activity) - INTERVAL '5 minutes' AND created_at < (SELECT latest_at FROM latest_activity) - INTERVAL '5 minutes')::int AS latest_batch_changed,
+          COUNT(*) FILTER (WHERE GREATEST(created_at, updated_at) >= (SELECT latest_at FROM latest_activity) - INTERVAL '5 minutes' AND signal_kind IN ('open_opportunity', 'procurement_opportunity', 'capital_opportunity', 'forecast_opportunity'))::int AS latest_batch_opportunities,
+          COUNT(*) FILTER (WHERE GREATEST(created_at, updated_at) >= (SELECT latest_at FROM latest_activity) - INTERVAL '5 minutes' AND signal_kind IN ('relationship', 'warm_intro', 'invitation', 'event', 'funding_lead', 'reporting'))::int AS latest_batch_relationships,
           MAX(happened_at)::text AS latest_happened_at,
-          MAX(created_at)::text AS latest_created_at
+          MAX(created_at)::text AS latest_created_at,
+          MAX(updated_at)::text AS latest_updated_at
         FROM opportunity_context_events
         WHERE org_profile_id = '${safeOrgProfileId}'
           AND source_system = 'gmail'`,
@@ -422,11 +489,13 @@ export const getActOpportunityContextStatus = cache(async (
           signal_kind,
           confidence,
           happened_at::text,
+          created_at::text,
+          updated_at::text,
           metadata
         FROM opportunity_context_events
         WHERE org_profile_id = '${safeOrgProfileId}'
         ORDER BY COALESCE(happened_at, created_at) DESC
-        LIMIT 20`,
+        LIMIT 500`,
     }), 'act opportunity context recent events') as Promise<ContextEventRow[] | null>,
   ]);
 
@@ -444,7 +513,11 @@ export const getActOpportunityContextStatus = cache(async (
   const latestGhlAt = latestDate([ghlStats.latest_contact_sync, ghlStats.latest_opportunity_sync]);
   const gmailErrors = num(gmailStatus?.error_count);
   const gmailLatestAt = gmailStatus?.last_sync ?? null;
-  const gmailContextLatestAt = gmailContextStats.latest_created_at ?? gmailContextStats.latest_happened_at;
+  const gmailContextLatestAt = latestDate([
+    gmailContextStats.latest_created_at,
+    gmailContextStats.latest_updated_at,
+    gmailContextStats.latest_happened_at,
+  ]);
   const gmailStatusText = gmailStatus
     ? `Mail mirror has ${gmailStatus.synced_messages ?? 0}/${gmailStatus.total_messages ?? 0} messages; last mirror sync ${ageLabel(gmailLatestAt)}.`
     : 'No mailbox mirror status row is available.';
@@ -619,6 +692,15 @@ export const getActOpportunityContextStatus = cache(async (
     },
     sources,
     nextSteps,
+    discoveryReceipt: {
+      batchWindowMinutes: 5,
+      latestAt: latestDate([gmailContextLatestAt, grantStats.latest_updated_at]),
+      newSignals: gmailContextStats.latest_batch_new,
+      changedSignals: gmailContextStats.latest_batch_changed,
+      opportunitySignals: gmailContextStats.latest_batch_opportunities,
+      relationshipSignals: gmailContextStats.latest_batch_relationships,
+      refreshedPrograms: grantStats.latest_batch_updates,
+    },
     recentEvents,
   };
 });

@@ -1,13 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireOrgAccess, requireOrgWriteAccess } from '../../_lib/auth';
+import { requireOrgAccess, requireOrgWriteAccess, type OrgAuthResult } from '../../_lib/auth';
 import {
   dailyActionSourceRef,
   getOrgDailyActionStates,
   isActDailyActionStatus,
   perthDayKey,
+  relationshipFollowUpIdFromAction,
 } from '@/lib/services/act-daily-actions';
 
 type Params = { params: Promise<{ orgProfileId: string }> };
+
+async function updateRelationshipFollowUp(auth: OrgAuthResult, actionId: string, status: 'planned' | 'completed'): Promise<string | null> {
+  const followUpId = relationshipFollowUpIdFromAction(actionId);
+  if (!followUpId) return null;
+  const { data: existing, error: existingError } = await auth.serviceDb.from('opportunity_context_events')
+    .select('id, metadata')
+    .eq('id', followUpId)
+    .eq('org_profile_id', auth.orgProfileId)
+    .eq('signal_kind', 'relationship_follow_up')
+    .maybeSingle();
+  if (existingError || !existing) return existingError?.message || 'Relationship follow-up was not found';
+  const metadata = existing.metadata && typeof existing.metadata === 'object' && !Array.isArray(existing.metadata)
+    ? existing.metadata as Record<string, unknown>
+    : {};
+  const now = new Date().toISOString();
+  const { error } = await auth.serviceDb.from('opportunity_context_events').update({
+    metadata: { ...metadata, status, completed_at: status === 'completed' ? now : null, updated_by: auth.userId },
+    updated_at: now,
+  }).eq('id', followUpId).eq('org_profile_id', auth.orgProfileId);
+  return error?.message ?? null;
+}
 
 export async function GET(_request: NextRequest, { params }: Params) {
   const { orgProfileId } = await params;
@@ -55,6 +77,10 @@ export async function POST(request: NextRequest, { params }: Params) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (status === 'done') {
+    const followUpError = await updateRelationshipFollowUp(auth, actionId, 'completed');
+    if (followUpError) return NextResponse.json({ error: `Today was updated, but the relationship follow-up could not be completed: ${followUpError}` }, { status: 500 });
+  }
   return NextResponse.json({ day, action: data });
 }
 
@@ -76,5 +102,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     .eq('source_ref', dailyActionSourceRef(actionId));
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  const followUpError = await updateRelationshipFollowUp(auth, actionId, 'planned');
+  if (followUpError) return NextResponse.json({ error: `Today was cleared, but the relationship follow-up could not be reopened: ${followUpError}` }, { status: 500 });
   return NextResponse.json({ success: true });
 }

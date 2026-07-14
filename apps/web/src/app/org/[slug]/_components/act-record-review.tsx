@@ -7,7 +7,13 @@ import {
   resolveActOpportunityProject,
   type ActOpportunityProjectOption,
 } from '@/lib/services/act-opportunity-handoff';
-import { applyDecisionMemory, movePriority } from '@/lib/services/act-recommendation-memory';
+import {
+  applyDecisionMemory,
+  decisionMemoryLabel,
+  latestDecisionFor,
+  movePriority,
+} from '@/lib/services/act-recommendation-memory';
+import type { OpportunityVerification } from '@/lib/services/act-opportunity-trust';
 import type { OrgOpportunityDecision } from '@/lib/services/org-dashboard-service';
 
 type ReviewLane =
@@ -52,8 +58,55 @@ export interface ActReviewRecord {
   confidence: number;
   evidenceGaps: string[];
   tags: string[];
+  verification: OpportunityVerification;
+  decisionMemory?: {
+    decision: OrgOpportunityDecision['decision'];
+    label: string;
+    createdAt: string;
+    reason: string | null;
+  } | null;
+  discoveryState?: 'new' | 'changed' | null;
   relationshipId?: string | null;
   relationshipName?: string | null;
+}
+
+function discoveryStateClass(state: NonNullable<ActReviewRecord['discoveryState']>): string {
+  return state === 'new'
+    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+    : 'border-blue-200 bg-blue-50 text-blue-700';
+}
+
+function DiscoveryStateBadge({ state }: { state: ActReviewRecord['discoveryState'] }) {
+  if (!state) return null;
+  return (
+    <span className={`rounded border px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wide ${discoveryStateClass(state)}`}>
+      {state}
+    </span>
+  );
+}
+
+function verificationClass(state: OpportunityVerification['state']): string {
+  if (state === 'verified') return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+  if (state === 'forecast') return 'border-blue-200 bg-blue-50 text-blue-700';
+  if (state === 'relationship') return 'border-violet-200 bg-violet-50 text-violet-700';
+  if (state === 'internal') return 'border-stone-200 bg-stone-50 text-stone-700';
+  return 'border-amber-200 bg-amber-50 text-amber-800';
+}
+
+function VerificationBadge({ verification }: { verification: OpportunityVerification }) {
+  return (
+    <span className={`rounded border px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wide ${verificationClass(verification.state)}`}>
+      {verification.label}
+    </span>
+  );
+}
+
+function DecisionMemoryBadge({ memory }: { memory: NonNullable<ActReviewRecord['decisionMemory']> }) {
+  return (
+    <span className="rounded border border-[#c7d4ca] bg-[#edf3ee] px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wide text-[#2f6b4a]">
+      {memory.label}
+    </span>
+  );
 }
 
 interface ActionReceipt {
@@ -71,7 +124,7 @@ interface ActionReceipt {
 }
 
 type ReviewAction = 'no' | 'later' | 'research' | 'partner_path' | 'apply_path' | 'add_evidence_gap' | 'send_to_ghl';
-type ReviewView = 'all' | 'ready' | 'contact' | 'grant' | 'foundation' | 'procurement' | 'capital' | 'pipeline' | 'arts' | 'gaps';
+type ReviewView = 'changes' | 'all' | 'ready' | 'contact' | 'grant' | 'foundation' | 'procurement' | 'capital' | 'pipeline' | 'arts' | 'gaps' | 'decision';
 
 const ACTIONS: Array<{ kind: ReviewAction; label: string; note: string }> = [
   { kind: 'research', label: 'Research path', note: 'Records a research path and can create/update CivicGraph pipeline work.' },
@@ -82,6 +135,7 @@ const ACTIONS: Array<{ kind: ReviewAction; label: string; note: string }> = [
 ];
 
 const REVIEW_VIEWS: Array<{ id: ReviewView; label: string }> = [
+  { id: 'changes', label: 'New / changed' },
   { id: 'all', label: 'All' },
   { id: 'ready', label: 'Ready' },
   { id: 'contact', label: 'Reach out' },
@@ -92,10 +146,11 @@ const REVIEW_VIEWS: Array<{ id: ReviewView; label: string }> = [
   { id: 'pipeline', label: 'Pipeline' },
   { id: 'arts', label: 'Arts / festivals' },
   { id: 'gaps', label: 'Evidence gaps' },
+  { id: 'decision', label: 'Previously decided' },
 ];
 
-const DAILY_REVIEW_VIEWS = REVIEW_VIEWS.filter((view) => ['all', 'ready', 'contact'].includes(view.id));
-const TYPE_REVIEW_VIEWS = REVIEW_VIEWS.filter((view) => ['grant', 'foundation', 'procurement', 'capital', 'pipeline', 'arts', 'gaps'].includes(view.id));
+const DAILY_REVIEW_VIEWS = REVIEW_VIEWS.filter((view) => ['changes', 'all', 'ready', 'contact'].includes(view.id));
+const TYPE_REVIEW_VIEWS = REVIEW_VIEWS.filter((view) => ['grant', 'foundation', 'procurement', 'capital', 'pipeline', 'arts', 'gaps', 'decision'].includes(view.id));
 
 const ARTS_PATTERNS = [
   /\barts?\b/,
@@ -200,6 +255,10 @@ function recordHaystack(record: ActReviewRecord): string {
     record.readiness,
     record.recommendedMove,
     record.reason,
+    record.verification.label,
+    record.verification.detail,
+    record.decisionMemory?.label,
+    record.decisionMemory?.reason,
     ...record.evidenceGaps,
     ...record.tags,
   ]
@@ -208,10 +267,12 @@ function recordHaystack(record: ActReviewRecord): string {
 }
 
 function recordMatchesView(record: ActReviewRecord, view: ReviewView): boolean {
+  if (view === 'changes') return record.discoveryState === 'new' || record.discoveryState === 'changed';
   if (view === 'all') return true;
   if (view === 'ready') return record.readiness === 'ready' || record.recommendedMove === 'apply_now' || record.recommendedMove === 'approach_now';
   if (view === 'contact') return record.recommendedMove === 'approach_now' || record.recommendedMove === 'ask_for_intro';
   if (view === 'gaps') return record.evidenceGaps.length > 0;
+  if (view === 'decision') return Boolean(record.decisionMemory);
   if (view === 'arts') {
     const haystack = recordHaystack(record);
     return ARTS_PATTERNS.some((pattern) => pattern.test(haystack));
@@ -312,19 +373,32 @@ function sortRecommendationRecords(records: ActReviewRecord[]): ActReviewRecord[
   );
 }
 
+function decisionSummary(decision: OrgOpportunityDecision): NonNullable<ActReviewRecord['decisionMemory']> {
+  return {
+    decision: decision.decision,
+    label: decisionMemoryLabel(decision),
+    createdAt: decision.created_at,
+    reason: decision.reason,
+  };
+}
+
 export function ActRecordReview({
   records,
   orgProfileId,
   orgSlug,
   projects,
+  initialView = 'ready',
 }: {
   records: ActReviewRecord[];
   orgProfileId: string;
   orgSlug: string;
   projects: ActOpportunityProjectOption[];
+  initialView?: string;
 }) {
   const [selectedId, setSelectedId] = useState(records[0]?.id ?? null);
-  const [activeView, setActiveView] = useState<ReviewView>('ready');
+  const [activeView, setActiveView] = useState<ReviewView>(
+    REVIEW_VIEWS.some((view) => view.id === initialView) ? initialView as ReviewView : 'ready',
+  );
   const [activeProject, setActiveProject] = useState('all');
   const [query, setQuery] = useState('');
   const [projectOverrides, setProjectOverrides] = useState<Record<string, string>>({});
@@ -335,8 +409,22 @@ export function ActRecordReview({
   const [localDecisions, setLocalDecisions] = useState<OrgOpportunityDecision[]>([]);
   const displayRecords = useMemo(() => {
     if (localDecisions.length === 0) return records;
-    return sortRecommendationRecords(records.map((record) => applyDecisionMemory(record, localDecisions)));
+    return sortRecommendationRecords(records.map((record) => {
+      const adjusted = applyDecisionMemory(record, localDecisions);
+      const latest = latestDecisionFor(record, localDecisions);
+      return latest ? { ...adjusted, decisionMemory: decisionSummary(latest) } : adjusted;
+    }));
   }, [localDecisions, records]);
+  const coverage = useMemo(() => ({
+    grant: displayRecords.filter((record) => record.lane === 'grant').length,
+    foundation: displayRecords.filter((record) => record.lane === 'foundation').length,
+    procurement: displayRecords.filter((record) => record.lane === 'procurement').length,
+    capital: displayRecords.filter((record) => record.lane === 'capital').length,
+    pipeline: displayRecords.filter((record) => record.lane === 'pipeline').length,
+    verified: displayRecords.filter((record) => record.verification.state === 'verified').length,
+    unverified: displayRecords.filter((record) => record.verification.state === 'unverified' || record.verification.state === 'forecast').length,
+    decided: displayRecords.filter((record) => Boolean(record.decisionMemory)).length,
+  }), [displayRecords]);
   const viewCounts = useMemo(
     () =>
       REVIEW_VIEWS.reduce<Record<ReviewView, number>>(
@@ -345,6 +433,7 @@ export function ActRecordReview({
           return counts;
         },
         {
+          changes: 0,
           all: 0,
           ready: 0,
           contact: 0,
@@ -355,6 +444,7 @@ export function ActRecordReview({
           pipeline: 0,
           arts: 0,
           gaps: 0,
+          decision: 0,
         },
       ),
     [displayRecords],
@@ -430,8 +520,27 @@ export function ActRecordReview({
   }
 
   return (
-    <div className="grid min-w-0 gap-0 xl:grid-cols-[minmax(0,1fr)_320px]">
+    <div className="grid min-w-0 gap-0 xl:grid-cols-[minmax(0,1fr)_340px]" data-testid="act-opportunity-trust-workbench">
       <div className="min-w-0 xl:border-r xl:border-[var(--ws-border)]">
+        <section className="border-b border-[var(--ws-border)] bg-[#f6f8f5] px-3 py-4" data-testid="act-opportunity-coverage">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <div className="font-mono text-[9px] font-semibold uppercase tracking-widest text-[#2f6b4a]">Coverage and trust</div>
+              <h3 className="mt-1 text-base font-semibold">All current ACT-scoped openings in one review queue</h3>
+            </div>
+            <p className="max-w-md text-xs leading-5 text-[var(--ws-text-secondary)]">Public programs, philanthropy relationships, procurement signals and committed pipeline work stay distinct. Official verification is never inferred from an email alone.</p>
+          </div>
+          <div className="mt-3 grid grid-cols-2 overflow-hidden rounded-md border border-[var(--ws-border)] bg-white sm:grid-cols-4">
+            <CoverageMetric label="Grants" value={coverage.grant} />
+            <CoverageMetric label="Philanthropy" value={coverage.foundation} />
+            <CoverageMetric label="Procurement" value={coverage.procurement} />
+            <CoverageMetric label="Capital" value={coverage.capital} />
+            <CoverageMetric label="Tracked pipeline" value={coverage.pipeline} />
+            <CoverageMetric label="Officially verified" value={coverage.verified} tone="good" />
+            <CoverageMetric label="Needs verification" value={coverage.unverified} tone="warning" />
+            <CoverageMetric label="Remembered decisions" value={coverage.decided} />
+          </div>
+        </section>
         <div className="border-b border-[var(--ws-border)] bg-white px-3 py-3">
           <div className="flex flex-col gap-3">
             <div className="inline-flex w-fit rounded-md border border-[var(--ws-border)] bg-[var(--ws-surface-2)] p-1" role="tablist" aria-label="Opportunity review views">
@@ -528,7 +637,10 @@ export function ActRecordReview({
                     </span>
                   </span>
                   <span className="mt-1 block text-xs leading-relaxed text-[var(--ws-text-secondary)]">{compact(record.nextAction, 120)}</span>
-                  <span className="mt-2 flex flex-wrap gap-x-2 text-[10px] font-medium text-[var(--ws-text-secondary)]">
+                  <span className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px] font-medium text-[var(--ws-text-secondary)]">
+                    <DiscoveryStateBadge state={record.discoveryState} />
+                    <VerificationBadge verification={record.verification} />
+                    {record.decisionMemory ? <DecisionMemoryBadge memory={record.decisionMemory} /> : null}
                     <span>{record.project}</span><span>·</span><span>{laneLabel(record.lane)}</span><span>·</span><span>{relationshipLabel(record.relationshipState)}</span><span>·</span><span>{record.date}</span>
                   </span>
                 </span>
@@ -552,12 +664,30 @@ export function ActRecordReview({
 
             <div className="border-b border-[var(--ws-border)] px-3 py-3 text-xs text-[var(--ws-text-secondary)]">
               <div className="flex flex-wrap gap-x-2 gap-y-1">
+                <DiscoveryStateBadge state={selected.discoveryState} />
                 <span>{laneLabel(selected.lane)}</span><span>·</span>
                 <span>{selected.amount}</span><span>·</span>
                 <span>{selected.date}</span><span>·</span>
                 <span>{relationshipLabel(selected.relationshipState)}</span>
               </div>
               <div className="mt-2 truncate">{selected.sourceLabel}</div>
+            </div>
+
+            <div className="border-b border-[var(--ws-border)] px-3 py-3" data-testid="act-opportunity-source-evidence">
+              <div className="flex flex-wrap items-center gap-2">
+                <VerificationBadge verification={selected.verification} />
+                {selected.verification.verifiedAt ? <span className="text-[10px] text-[var(--ws-text-secondary)]">Checked {formatDecisionDate(selected.verification.verifiedAt)}</span> : null}
+              </div>
+              <p className="mt-2 text-xs leading-5 text-[var(--ws-text-secondary)]">{selected.verification.detail}</p>
+              <div className="mt-3 rounded-md border border-[var(--ws-border)] bg-white px-3 py-2">
+                <div className="font-mono text-[9px] font-semibold uppercase tracking-wide text-[var(--ws-text-secondary)]">Decision memory</div>
+                {selected.decisionMemory ? (
+                  <div className="mt-1">
+                    <DecisionMemoryBadge memory={selected.decisionMemory} />
+                    <p className="mt-2 text-xs leading-5 text-[var(--ws-text-secondary)]">Recorded {formatDecisionDate(selected.decisionMemory.createdAt)}{selected.decisionMemory.reason ? ` · ${selected.decisionMemory.reason}` : ''}</p>
+                  </div>
+                ) : <p className="mt-1 text-xs text-[var(--ws-text-secondary)]">No Apply, Partner, Park or Bad-match decision has been recorded for this source reference.</p>}
+              </div>
             </div>
 
             <div className="border-b border-[var(--ws-border)] px-3 py-3">
@@ -736,4 +866,19 @@ function HandoffLink({ label, value, href }: { label: string; value: string; hre
       <span aria-hidden="true">→</span>
     </Link>
   );
+}
+
+function CoverageMetric({ label, value, tone = 'default' }: { label: string; value: number; tone?: 'default' | 'good' | 'warning' }) {
+  const valueClass = tone === 'good' ? 'text-emerald-700' : tone === 'warning' ? 'text-amber-700' : 'text-[var(--ws-text)]';
+  return (
+    <div className="min-w-0 border-b border-r border-[var(--ws-border)] px-3 py-3">
+      <div className={`text-lg font-semibold tabular-nums ${valueClass}`}>{value.toLocaleString('en-AU')}</div>
+      <div className="mt-1 text-[9px] font-semibold uppercase tracking-wide text-[var(--ws-text-secondary)]">{label}</div>
+    </div>
+  );
+}
+
+function formatDecisionDate(value: string): string {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? 'unknown date' : date.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
 }

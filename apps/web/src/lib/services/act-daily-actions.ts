@@ -13,6 +13,16 @@ export interface ActDailyActionMemoryItem {
 
 export type ActDailyActionMemory = Record<string, ActDailyActionMemoryItem>;
 
+const RELATIONSHIP_FOLLOW_UP_PREFIX = 'relationship-follow-up:';
+
+export function relationshipFollowUpActionId(followUpId: string): string {
+  return `${RELATIONSHIP_FOLLOW_UP_PREFIX}${followUpId}`;
+}
+
+export function relationshipFollowUpIdFromAction(actionId: string): string | null {
+  return actionId.startsWith(RELATIONSHIP_FOLLOW_UP_PREFIX) ? actionId.slice(RELATIONSHIP_FOLLOW_UP_PREFIX.length) || null : null;
+}
+
 interface DailyActionMemoryRow {
   source_thread_id: string | null;
   source_ref: string;

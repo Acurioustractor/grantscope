@@ -4,6 +4,8 @@ import {
   dailyActionSourceRef,
   isActDailyActionStatus,
   perthDayKey,
+  relationshipFollowUpActionId,
+  relationshipFollowUpIdFromAction,
 } from './act-daily-actions';
 
 describe('ACT daily action receipts', () => {
@@ -21,6 +23,13 @@ describe('ACT daily action receipts', () => {
     expect(isActDailyActionStatus('waiting')).toBe(true);
     expect(isActDailyActionStatus('tomorrow')).toBe(true);
     expect(isActDailyActionStatus('paid')).toBe(false);
+  });
+
+  it('round-trips relationship follow-up action identities', () => {
+    const actionId = relationshipFollowUpActionId('follow-up-123');
+    expect(actionId).toBe('relationship-follow-up:follow-up-123');
+    expect(relationshipFollowUpIdFromAction(actionId)).toBe('follow-up-123');
+    expect(relationshipFollowUpIdFromAction('collect-sonas')).toBeNull();
   });
 
   it('counts consecutive deferred days before today', () => {

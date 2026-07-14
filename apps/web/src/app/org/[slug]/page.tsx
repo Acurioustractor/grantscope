@@ -11,12 +11,17 @@ import { getOrgOutstandingReceivables } from '@/lib/services/org-receivables-ser
 import { getOrgVerificationStatus } from '@/lib/services/org-verification-service';
 import { getActOpportunityContextStatus } from '@/lib/services/act-opportunity-context';
 import { getOrgDailyActionMemory, getOrgDailyActionStates } from '@/lib/services/act-daily-actions';
+import { getActFunderIntelligence } from '@/lib/services/act-funder-intelligence';
+import { getActRelationshipLedger } from '@/lib/services/act-relationship-ledger';
 import {
   ACT_E2E_CONTACTS,
   ACT_E2E_FRONTIER,
+  ACT_E2E_FUNDER_INTELLIGENCE,
   ACT_E2E_MATCHED_GRANTS,
+  ACT_E2E_OPPORTUNITY_CONTEXT,
   ACT_E2E_PIPELINE,
   ACT_E2E_PROJECTS,
+  ACT_E2E_RELATIONSHIP_LEDGER,
 } from '@/lib/services/act-e2e-fixtures';
 import { IncomeHistorySection } from './_components/income-history-section';
 import { ExpenseHistorySection } from './_components/expense-history-section';
@@ -91,6 +96,8 @@ async function FastOrgDashboard({
   view,
   relationship,
   commitment,
+  ledger,
+  review,
 }: {
   profile: OrgProfile;
   slug: string;
@@ -98,6 +105,8 @@ async function FastOrgDashboard({
   view: string | string[] | undefined;
   relationship: string | string[] | undefined;
   commitment: string | string[] | undefined;
+  ledger: string | string[] | undefined;
+  review: string | string[] | undefined;
 }) {
   if (process.env.ACT_E2E_FIXTURES === '1') {
     return (
@@ -116,10 +125,14 @@ async function FastOrgDashboard({
         contacts={ACT_E2E_CONTACTS}
         matchedGrants={ACT_E2E_MATCHED_GRANTS}
         opportunityDecisions={[]}
-        opportunityContext={null}
+        opportunityContext={ACT_E2E_OPPORTUNITY_CONTEXT}
+        funderIntelligence={ACT_E2E_FUNDER_INTELLIGENCE}
+        relationshipLedger={ACT_E2E_RELATIONSHIP_LEDGER}
         view={normalizeActDeskView(view)}
         selectedRelationshipId={typeof relationship === 'string' ? relationship : undefined}
         selectedCommitmentId={typeof commitment === 'string' ? commitment : undefined}
+        selectedLedgerKey={typeof ledger === 'string' ? ledger : undefined}
+        opportunityReview={typeof review === 'string' ? review : undefined}
         dailyActionStates={{}}
         dailyActionMemory={{}}
       />
@@ -139,6 +152,8 @@ async function FastOrgDashboard({
     frontierQueue,
     opportunityDecisions,
     opportunityContext,
+    funderIntelligence,
+    relationshipLedger,
     dailyActionStates,
     dailyActionMemory,
   ] = await Promise.all([
@@ -153,6 +168,8 @@ async function FastOrgDashboard({
     getWikiSupportFrontierQueue(undefined, 12),
     dataProfile ? getOrgOpportunityDecisions(dataProfile.id) : Promise.resolve([]),
     dataProfile ? getActOpportunityContextStatus(dataProfile.id) : Promise.resolve(null),
+    dataProfile ? getActFunderIntelligence(dataProfile.id) : Promise.resolve(null),
+    dataProfile ? getActRelationshipLedger(slug, dataProfile.id) : Promise.resolve(null),
     dataProfile ? getOrgDailyActionStates(dataProfile.id) : Promise.resolve({}),
     dataProfile ? getOrgDailyActionMemory(dataProfile.id) : Promise.resolve({}),
   ]);
@@ -174,9 +191,13 @@ async function FastOrgDashboard({
       matchedGrants={matchedGrants}
       opportunityDecisions={opportunityDecisions}
       opportunityContext={opportunityContext}
+      funderIntelligence={funderIntelligence}
+      relationshipLedger={relationshipLedger}
       view={normalizeActDeskView(view)}
       selectedRelationshipId={typeof relationship === 'string' ? relationship : undefined}
       selectedCommitmentId={typeof commitment === 'string' ? commitment : undefined}
+      selectedLedgerKey={typeof ledger === 'string' ? ledger : undefined}
+      opportunityReview={typeof review === 'string' ? review : undefined}
       dailyActionStates={dailyActionStates}
       dailyActionMemory={dailyActionMemory}
     />
@@ -695,6 +716,8 @@ export default async function OrgDashboard({ params, searchParams }: { params: P
         view={sp.view}
         relationship={sp.relationship}
         commitment={sp.commitment}
+        ledger={sp.ledger}
+        review={sp.review}
       />
     );
   }
