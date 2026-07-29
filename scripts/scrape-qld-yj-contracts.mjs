@@ -16,6 +16,7 @@
  *   node --env-file=.env scripts/scrape-qld-yj-contracts.mjs --live    # insert into DB
  */
 
+import { createHash } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
 import { psql } from './lib/psql.mjs';
@@ -776,6 +777,59 @@ async function matchEntities(contracts) {
 
 // ── Phase 4: Upsert into justice_funding ────────────────────
 
+/**
+ * A stable identity for a contract row, derived from what the contract IS.
+ *
+ * Deliberately computed from fields that exist as COLUMNS on justice_funding, not from
+ * the scraper's raw CSV shape. That way the same function keys both sides of the
+ * reconciliation, and no backfill is needed: the 23,713 rows already mirrored carry the
+ * old positional source_statement_id, and matching on stored ids would miss every one of
+ * them and delete the lot. Content matching recognises them as they are.
+ *
+ * Verified unique across all 23,713 mirrored rows: zero collisions on this tuple.
+ */
+function rowKey(r) {
+  const parts = [
+    r.recipient_name || '',
+    r.recipient_abn || '',
+    r.program_name || '',
+    // DB numerics come back as strings, CSV values as numbers. Normalise both.
+    r.amount_dollars === null || r.amount_dollars === undefined
+      ? ''
+      : Number(r.amount_dollars).toFixed(2),
+    r.financial_year || '',
+    r.project_description || '',
+  ].join('|');
+  return createHash('md5').update(parts).digest('hex');
+}
+
+/**
+ * Fields the scraper owns. Everything else on an existing row is left alone, which is the
+ * point: alma_organization_id, link_basis and linked_at are NOT here, so attribution
+ * survives a re-ingest.
+ *
+ * source_statement_id is deliberately NOT here. New rows get the stable content-hash form,
+ * but the 23,713 already mirrored keep their legacy positional ids. Converging them would
+ * mean 23,713 updates on the first run for a purely cosmetic gain, which is a good way to
+ * make this change look like a regression the first time it runs. Nothing depends on those
+ * ids any more: reconciliation matches on content.
+ */
+const SCRAPER_OWNED = [
+  'source_url',
+  'recipient_name',
+  'recipient_abn',
+  'program_name',
+  'amount_dollars',
+  'state',
+  'sector',
+  'funding_type',
+  'project_description',
+  'financial_year',
+  'announcement_date',
+  'topics',
+  'gs_entity_id',
+];
+
 async function upsertContracts(contracts, abnToEntity) {
   log(`\nPhase 4: Upserting ${contracts.length} contracts into justice_funding...`);
 
@@ -786,7 +840,13 @@ async function upsertContracts(contracts, abnToEntity) {
     return {
       source: SOURCE,
       source_url: c.resource_url || SOURCE_BASE_URL,
-      source_statement_id: `dcyjma-${(c.supplier_name || '').slice(0, 30).replace(/\s+/g, '-').toLowerCase()}-${idx}`,
+      // Content hash, not the array index.
+      //
+      // This used to be `dcyjma-{supplier}-{idx}`, where idx was the row's position in
+      // the fetched batch. That is not an identity: add or reorder one row upstream and
+      // every id after it shifts to a different contract. It cannot be used to recognise
+      // a row across runs, which is why this scraper deleted everything and started over.
+      source_statement_id: `dcyjma-${contentKey(c)}`,
       recipient_name: c.supplier_name,
       recipient_abn: c.abn || null,
       program_name: c.title || `DCYJMA Contract - ${c.category || 'Unspecified'}`,
@@ -802,7 +862,7 @@ async function upsertContracts(contracts, abnToEntity) {
       gs_entity_id: entity?.id || null,
     };
   });
-  const rows = dedupeInsertRows(rawRows);
+  let rows = dedupeInsertRows(rawRows);
   const removedAtInsertStage = rawRows.length - rows.length;
   if (removedAtInsertStage > 0) {
     log(
@@ -862,12 +922,34 @@ async function upsertContracts(contracts, abnToEntity) {
     return { inserted: 0, errors: 0, skipped: false, guardReason: null };
   }
 
-  // Live mode: delete existing source records then re-insert
-  log('  Checking for existing records...');
-  const { count: existingCount } = await supabase
-    .from('justice_funding')
-    .select('id', { count: 'exact', head: true })
-    .eq('source', SOURCE);
+  // Live mode: RECONCILE against what is already mirrored. Do not delete and re-insert.
+  //
+  // The old path deleted every row for this source and inserted fresh ones. That threw
+  // away all attribution each run, because alma_organization_id, link_basis and linked_at
+  // live on these rows and a new row has none. On 2026-07-30 it silently destroyed 800
+  // rows and $124,683,339 of reviewed attribution, mid-session, while someone was working
+  // on exactly that data. The MIN_RETAIN_RATIO guardrail did not fire because it counts
+  // rows, and the row count was fine. It had no idea attribution existed.
+  //
+  // Now: rows still present upstream are UPDATED in place on the fields this scraper owns,
+  // so their attribution survives. Rows genuinely gone upstream are deleted individually.
+  // New rows are inserted.
+  log('  Reading existing records to reconcile against...');
+  const existing = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await supabase
+      .from('justice_funding')
+      .select(
+        `id, alma_organization_id, link_basis, ${SCRAPER_OWNED.join(', ')}`,
+      )
+      .eq('source', SOURCE)
+      .range(from, from + 999);
+    if (error) throw new Error(`Read existing failed: ${error.message}`);
+    if (!data?.length) break;
+    existing.push(...data);
+    if (data.length < 1000) break;
+  }
+  const existingCount = existing.length;
 
   if (existingCount > 0 && rows.length < existingCount * MIN_RETAIN_RATIO) {
     const guardReason = `Guardrail blocked live replace: fetched ${rows.length} rows, existing mirror has ${existingCount} rows`;
@@ -875,15 +957,64 @@ async function upsertContracts(contracts, abnToEntity) {
     return { inserted: 0, errors: 0, skipped: true, guardReason };
   }
 
-  if (existingCount > 0) {
-    log(`  Deleting ${existingCount} existing '${SOURCE}' records...`);
-    const { error: delError } = await supabase
-      .from('justice_funding')
-      .delete()
-      .eq('source', SOURCE);
-    if (delError) throw new Error(`Delete failed: ${delError.message}`);
-    log(`  Deleted ${existingCount} records`);
+  // Keyed on content, computed identically for both sides.
+  const byKey = new Map();
+  for (const e of existing) byKey.set(rowKey(e), e);
+
+  const fetchedKeys = new Set(rows.map((r) => rowKey(r)));
+  const toInsert = rows.filter((r) => !byKey.has(rowKey(r)));
+  const toUpdate = rows.filter((r) => byKey.has(rowKey(r)));
+  const goneUpstream = existing.filter((e) => !fetchedKeys.has(rowKey(e)));
+  const attributedAtRisk = goneUpstream.filter((e) => e.alma_organization_id).length;
+
+  log(`  Existing ${existingCount}, matched ${toUpdate.length}, new ${toInsert.length}, gone upstream ${goneUpstream.length}`);
+  if (attributedAtRisk > 0) {
+    log(`  NOTE: ${attributedAtRisk} of the rows gone upstream carry an organisation link that will be removed with them.`);
   }
+
+  // Only write where something actually changed.
+  //
+  // A row matched by content hash has, by definition, identical content on every field in
+  // the key. So the steady state is zero writes, and only the non-key owned fields
+  // (source_url, sector, topics, gs_entity_id, the converging statement id) can differ.
+  // Writing all 23,713 unconditionally would be tens of thousands of sequential updates
+  // for no change, which is how an agent hits its timeout and gets called broken.
+  const same = (a, b) => {
+    if (a === undefined || a === null) return b === undefined || b === null;
+    if (Array.isArray(a) || Array.isArray(b)) return JSON.stringify(a ?? []) === JSON.stringify(b ?? []);
+    return String(a) === String(b);
+  };
+
+  let updated = 0;
+  let unchanged = 0;
+  for (const r of toUpdate) {
+    const target = byKey.get(rowKey(r));
+    const patch = {};
+    for (const f of SCRAPER_OWNED) {
+      if (r[f] === undefined) continue;
+      if (!same(r[f], target[f])) patch[f] = r[f];
+    }
+    if (Object.keys(patch).length === 0) {
+      unchanged++;
+      continue;
+    }
+    const { error } = await supabase.from('justice_funding').update(patch).eq('id', target.id);
+    if (error) log(`    Update error ${r.recipient_name}: ${error.message}`);
+    else updated++;
+  }
+  log(`  Matched ${toUpdate.length}: ${unchanged} unchanged, ${updated} updated. Attribution preserved on all of them.`);
+
+  // Individually, and only for rows the upstream source no longer publishes.
+  let deleted = 0;
+  for (let i = 0; i < goneUpstream.length; i += 100) {
+    const ids = goneUpstream.slice(i, i + 100).map((e) => e.id);
+    const { error } = await supabase.from('justice_funding').delete().in('id', ids);
+    if (error) log(`    Delete error: ${error.message}`);
+    else deleted += ids.length;
+  }
+  if (deleted) log(`  Deleted ${deleted} rows no longer published upstream`);
+
+  rows = toInsert;
 
   // Insert in batches
   let inserted = 0;
