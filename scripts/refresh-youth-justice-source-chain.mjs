@@ -51,18 +51,53 @@ function runStep(step) {
   // Resolve 'node' / 'psql' to absolute paths so cron/scheduler context works
   const cmd = step.command[0];
   const resolved = cmd === 'node' ? NODE_BIN : cmd === 'psql' ? PSQL_BIN : cmd;
+
+  // Captured, not inherited.
+  //
+  // With stdio:'inherit' the child's output went to the scheduler's console and was
+  // never recorded, so agent_runs held "exited with status 1" and nothing else. This
+  // chain has failed 67 times out of 98 runs and last succeeded on 2026-06-21, and
+  // three separate commits since have tried to fix it without anyone being able to see
+  // the error. An exit code is not a diagnosis.
   const result = spawnSync(resolved, step.command.slice(1), {
     cwd: process.cwd(),
     encoding: 'utf8',
-    stdio: 'inherit',
+    stdio: ['ignore', 'pipe', 'pipe'],
+    maxBuffer: 32 * 1024 * 1024,
   });
+
+  // Still print everything, so an interactive run behaves as before.
+  if (result.stdout) process.stdout.write(result.stdout);
+  if (result.stderr) process.stderr.write(result.stderr);
 
   if (result.error) {
     throw result.error;
   }
   if (result.status !== 0) {
-    throw new Error(`${step.label} exited with status ${result.status}`);
+    throw new Error(`${step.label} exited with status ${result.status}. ${lastLines(result.stderr, result.stdout)}`);
   }
+}
+
+/**
+ * The tail of what the child actually said, small enough to live in
+ * agent_runs.errors[].message and large enough to name a cause.
+ *
+ * stderr first because that is where the reason usually is, falling back to stdout
+ * because several of these scripts report fatal problems through console.error into a
+ * piped stdout, or die silently with no stderr at all.
+ */
+function lastLines(stderr, stdout, limit = 12, maxChars = 1800) {
+  const pick = (s) =>
+    String(s ?? '')
+      .split('\n')
+      .map((l) => l.trimEnd())
+      .filter(Boolean)
+      .slice(-limit)
+      .join(' | ');
+
+  const tail = pick(stderr) || pick(stdout);
+  if (!tail) return 'No output was captured from the child process.';
+  return `Last output: ${tail.slice(-maxChars)}`;
 }
 
 async function fetchSummary() {
