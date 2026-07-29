@@ -17,9 +17,16 @@ import { execSync } from 'node:child_process';
 import { writeFileSync, readFileSync, unlinkSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
+import { resolveBin } from './lib/agent-resilience.mjs';
 
 const APPLY = process.argv.includes('--apply');
 const CONN = `postgresql://postgres.tednluwflfhxyucgwigh:${process.env.DATABASE_PASSWORD}@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres`;
+
+// Resolve psql by full path. The agent runner starts from a non-interactive
+// shell whose PATH does not include the Postgres bin directory, so a bare
+// `psql` fails with "command not found" in under a second. Every run of this
+// agent failed that way; the scripts that call resolveBin have been fine.
+const PSQL_BIN = resolveBin('psql');
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 if (!process.env.DATABASE_PASSWORD) {
@@ -74,7 +81,7 @@ function runPsql(sql, { label = 'se-search-index' } = {}) {
   const outFile = `/tmp/${label}-${stamp}.out`;
   writeFileSync(sqlFile, `\\t on\n\\a\n\\o ${outFile}\n${sql}\n\\o\n`);
   try {
-    execSync(`psql "${CONN}" -v ON_ERROR_STOP=1 -f ${sqlFile}`, { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'pipe'] });
+    execSync(`"${PSQL_BIN}" "${CONN}" -v ON_ERROR_STOP=1 -f ${sqlFile}`, { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'pipe'] });
     return readFileSync(outFile, 'utf-8').trim();
   } catch (err) {
     throw new Error(`psql failed: ${err.stderr || err.message}`);

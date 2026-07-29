@@ -154,10 +154,32 @@ async function main() {
     return;
   }
 
-  // url has a non-partial UNIQUE index — safe PostgREST onConflict target
+  // grant_opportunities carries FOUR unique indexes: url, (source, name),
+  // (name, source_id) and the primary key. PostgREST ON CONFLICT can only name one,
+  // so an upsert on `url` still trips the others.
+  //
+  // That is what has been failing every run:
+  //   duplicate key value violates "grant_opportunities_source_name_full_uniq"
+  //
+  // The stored rows are clean, so the collision is INSIDE the batch: GrantConnect
+  // lists the same grant name twice under different GoUuids, which produces two
+  // distinct urls and one (source, name). Deduplicate before writing, keeping the
+  // last occurrence, and count what was dropped rather than discarding it silently.
+  const bySourceName = new Map();
+  let collapsed = 0;
+  for (const row of rows) {
+    const key = `${row.source}::${row.name}`;
+    if (bySourceName.has(key)) collapsed += 1;
+    bySourceName.set(key, row);
+  }
+  const deduped = [...bySourceName.values()];
+  if (collapsed > 0) {
+    console.log(`  ${collapsed} duplicate (source, name) rows collapsed before upsert`);
+  }
+
   let upserted = 0;
-  for (let i = 0; i < rows.length; i += 100) {
-    const batch = rows.slice(i, i + 100);
+  for (let i = 0; i < deduped.length; i += 100) {
+    const batch = deduped.slice(i, i + 100);
     const { error } = await supabase.from('grant_opportunities').upsert(batch, { onConflict: 'url', ignoreDuplicates: false });
     if (error) throw new Error(`upsert failed: ${error.message}`);
     upserted += batch.length;
