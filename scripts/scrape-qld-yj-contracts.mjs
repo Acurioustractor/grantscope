@@ -735,6 +735,18 @@ async function downloadAndParseCsvs(resources) {
 
       log(`    Kept ${resourceContracts} contracts (after dedup)`);
 
+      // Per-resource category coverage, using the real CSV parser rather than a naive split.
+      // Category is the only structured field that says what a contract is FOR, and it is
+      // populated on recent vintages and absent on older ones. Whether that is upstream or a
+      // column-name mismatch on our side decides whether 53% of the rows can be scoped at all.
+      const fromThis = allContracts.slice(allContracts.length - resourceContracts);
+      const withCat = fromThis.filter((c) => (c.category || '').trim()).length;
+      const sampleCats = [...new Set(fromThis.map((c) => (c.category || '').trim()).filter(Boolean))].slice(0, 4);
+      log(
+        `    Category: ${withCat}/${resourceContracts} populated` +
+          (sampleCats.length ? ` e.g. ${sampleCats.map((c) => JSON.stringify(c)).join(', ')}` : ''),
+      );
+
       // Be polite — 300ms between downloads
       await new Promise((r) => setTimeout(r, 300));
     } catch (err) {
