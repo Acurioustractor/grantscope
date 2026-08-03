@@ -58,7 +58,15 @@ interface RawSnapshot {
   computed_at: string;
 }
 
-const AREA_ORDER = ['alice-springs', 'barkly', 'remote-nt', 'macdonnell'];
+const AREA_ORDER = [
+  'alice-springs',
+  'barkly',
+  'macdonnell',
+  'central-desert',
+  // Last, because it is the residue rather than a place: organisations whose
+  // council we still cannot record.
+  'remote-unplaced',
+];
 
 function num(value: number | string | null): number {
   if (value === null) return 0;
