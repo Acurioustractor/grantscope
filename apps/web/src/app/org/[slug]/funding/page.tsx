@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { getProjectFundingPortfolio } from '@/lib/services/project-funding-service';
 import { getLatestFundingWeeklyDigest } from '@/lib/services/funding-weekly-digest';
 import { PursueFundingForm } from './pursue-funding-form';
+import { CorrectionForm } from './correction-form';
 
 export const dynamic = 'force-dynamic';
 
@@ -81,6 +82,7 @@ export default async function ProjectFundingPage({ params }: { params: Promise<{
                       {item.sourceUrl ? <a href={item.sourceUrl} target="_blank" rel="noreferrer" className="min-h-11 rounded-lg border border-[#cbd5e1] px-3 py-3 hover:border-[#2f8f64]">Official evidence ↗</a> : null}
                     </div>
                     <PursueFundingForm projectCode={item.projectCode} opportunityId={item.opportunityId} projectSlug={item.projectSlug} orgSlug={slug} />
+                    <CorrectionForm projectCode={item.projectCode} opportunityId={item.opportunityId} opportunityName={item.opportunityName} />
                   </div>
                   <dl className="rounded-lg bg-[#f1f8f5] p-4 text-sm">
                     <dt className="text-xs text-[#64748b]">Deadline</dt>
