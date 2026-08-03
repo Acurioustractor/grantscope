@@ -18,7 +18,8 @@ function money(value: number): string {
 }
 
 export default async function CentralAustraliaPage() {
-  const { areas, unplacedOrgs, unplacedTotal, gapNote } = await getCentralAustraliaIntelligence();
+  const { areas, unplacedOrgs, unplacedTotal, gapNote, deregisteredExcluded } =
+    await getCentralAustraliaIntelligence();
   const computedAt = areas[0]?.computedAt;
 
   return (
@@ -120,7 +121,14 @@ export default async function CentralAustraliaPage() {
             </ul>
             {unplacedTotal > unplacedOrgs.length ? (
               <p className="mt-4 font-mono text-xs">
-                Showing {unplacedOrgs.length} of {unplacedTotal} organisations in this postcode.
+                Showing {unplacedOrgs.length} currently registered organisations of {unplacedTotal} in
+                this postcode.
+              </p>
+            ) : null}
+            {deregisteredExcluded > 0 ? (
+              <p className="mt-2 font-mono text-xs">
+                A further {deregisteredExcluded} corporations here are deregistered with ORIC and are
+                not listed as current organisations.
               </p>
             ) : null}
           </section>

@@ -38,6 +38,8 @@ export interface PlaceIntelligence {
   unplacedOrgs: UnplacedOrg[];
   unplacedTotal: number;
   gapNote: string | null;
+  /** Deregistered corporations withheld from the list, reported rather than hidden. */
+  deregisteredExcluded: number;
 }
 
 interface RawSnapshot {
@@ -68,7 +70,7 @@ export const getCentralAustraliaIntelligence = cache(
   async function getCentralAustraliaIntelligence(): Promise<PlaceIntelligence> {
     const db = getServiceSupabase();
 
-    const [snapshotResult, orgsResult, gapResult] = await Promise.all([
+    const [snapshotResult, orgsResult, gapResult, deregisteredResult] = await Promise.all([
       db.from('place_funding_snapshot')
         .select('area_key, area_label, area_note, org_count, community_controlled_count, contract_count, contract_value, govt_grant_count, govt_grant_value, philanthropic_funder_count, philanthropic_grant_count, lga_resolved, computed_at'),
       // The homelands organisations, named. They have no council area, so the
@@ -76,17 +78,28 @@ export const getCentralAustraliaIntelligence = cache(
       // slice. An alphabetical cap truncates mid-list and quietly drops the
       // Utopia and Urapuntja organisations at the end of the alphabet, which
       // is the same erasure the geocoding bug caused.
+      // Deregistered ORIC corporations are excluded. Listing a defunct
+      // corporation as a current community organisation misrepresents the
+      // community it belonged to, and the first version of this page did
+      // exactly that for 57 of them.
       db.from('gs_entities')
         .select('canonical_name, entity_type, is_community_controlled')
         .eq('state', 'NT')
         .eq('postcode', '0872')
         .or('is_community_controlled.eq.true,entity_type.eq.indigenous_corp')
+        .or('oric_status.is.null,oric_status.neq.Deregistered')
         .order('canonical_name')
         .limit(300),
       db.from('geo_resolution_gaps')
         .select('postcode, required_source, affected_entities, affected_community_controlled')
         .eq('postcode', '0872')
         .maybeSingle(),
+      db.from('gs_entities')
+        .select('id', { count: 'exact', head: true })
+        .eq('state', 'NT')
+        .eq('postcode', '0872')
+        .or('is_community_controlled.eq.true,entity_type.eq.indigenous_corp')
+        .eq('oric_status', 'Deregistered'),
     ]);
 
     if (snapshotResult.error) {
@@ -136,6 +149,7 @@ export const getCentralAustraliaIntelligence = cache(
       gapNote: gap
         ? `${gap.affected_community_controlled} of ${gap.affected_entities} organisations here are community-controlled. Placing them in a council area needs the ${gap.required_source}.`
         : null,
+      deregisteredExcluded: deregisteredResult.error ? 0 : (deregisteredResult.count ?? 0),
     };
   },
 );
