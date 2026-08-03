@@ -104,7 +104,7 @@ async function engineRecs() {
     array_to_string(focus_areas,', ') AS focus_areas, opportunity_type,
     COALESCE(application_url, source_url) AS url, fit_score,
     array_to_string(flags,', ') AS flags
-    FROM act_grant_recommendations
+    FROM act_grant_recommendations_current
     WHERE project_code='${PROJECT}' AND is_strong_fit AND (deadline IS NULL OR deadline >= now())
     ORDER BY fit_score DESC`;
   const { data, error } = await supabase.rpc('exec_sql', { query: sql });

@@ -154,11 +154,14 @@ async function main() {
     return;
   }
 
-  // url has a non-partial UNIQUE index — safe PostgREST onConflict target
+  // GrantConnect can republish the same titled opportunity under a new UUID.
+  // The canonical table contract is one row per (source, name), so conflict on
+  // that key and refresh the URL/source_id instead of colliding with it while
+  // attempting a URL-based insert.
   let upserted = 0;
   for (let i = 0; i < rows.length; i += 100) {
     const batch = rows.slice(i, i + 100);
-    const { error } = await supabase.from('grant_opportunities').upsert(batch, { onConflict: 'url', ignoreDuplicates: false });
+    const { error } = await supabase.from('grant_opportunities').upsert(batch, { onConflict: 'source,name', ignoreDuplicates: false });
     if (error) throw new Error(`upsert failed: ${error.message}`);
     upserted += batch.length;
   }

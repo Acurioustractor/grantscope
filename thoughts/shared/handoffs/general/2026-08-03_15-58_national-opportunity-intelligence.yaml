@@ -1,0 +1,57 @@
+---
+session: general
+date: 2026-08-03
+status: partial
+outcome: PARTIAL_PLUS
+---
+
+goal: Built and verified phase-one GrantScope funding operations, balanced human review, truthful source health, and the foundation for a national Opportunity Commons / Ask GrantScope model.
+now: Start the next coding task by reading this handoff, then build Ask GrantScope as graph-guided evidence retrieval over projects, places, opportunities, entities and official sources; preserve human-review and evidence gates.
+test: cd apps/web && npx tsc --noEmit && npx vitest run tests/unit/lib/services/funding-weekly-digest.test.ts tests/unit/lib/services/act-research-batch.test.ts
+
+done_this_session:
+  - task: Built the portfolio funding desk, project profiles, evidence-safe five-item queue, hybrid retrieval, explicit GHL handoff ledger, optional Notion brief, and persisted Monday digest.
+    files: ['apps/web/src/lib/services/project-funding-service.ts', 'apps/web/src/app/org/[slug]/funding/page.tsx', 'apps/web/src/lib/services/funding-ghl.ts', 'apps/web/src/lib/services/funding-notion.ts', 'apps/web/src/lib/services/funding-weekly-digest.ts']
+  - task: Built balanced benchmark coverage for all 11 active ACT projects, seeded 175 pending review candidates, and enforced a 12-case weekly human-review cap across Goods/commercial, community-partner and arts/cultural lanes.
+    files: ['scripts/build-project-funding-benchmark.mjs', 'apps/web/src/lib/services/act-research.ts', 'apps/web/src/app/org/[slug]/research/benchmark-review.tsx', 'apps/web/src/app/api/ops/act-research/benchmark/review/route.ts']
+  - task: Repaired GrantConnect and VIC live ingestion, latest-run source-health calculation, and the national entity graph build.
+    files: [scripts/ingest-grantconnect-go.mjs, scripts/ingest-vic-grants-open.mjs, scripts/build-entity-graph.mjs]
+  - task: Applied funding_weekly_cycles to Supabase project tednluwflfhxyucgwigh and generated the first live weekly snapshot.
+    files: [supabase/migrations/20260803080000_funding_weekly_cycles.sql, vercel.json]
+
+blockers:
+  - 'GHL sync is the sole latest-run failure because the configured Private Integration token returns HTTP 401; replace the credential before rerunning sync-goods-ghl. Application and cron code are not yet deployed. Dirty worktree contains extensive user-owned changes and must be preserved.'
+
+questions:
+  - 'What is the first public cohort for Opportunity Commons, what information may be shared externally, and should Ask GrantScope launch as an ACT-only authenticated assistant before any public atlas?'
+
+decisions:
+  - evidence_contract: Official source, current timing, applicant eligibility, amount and project fit must pass before an opportunity becomes relevant; generated candidates never become labels automatically.
+  - model_architecture: Use structured hard gates plus lexical, semantic and graph-guided retrieval; do not place the full 3.38M-edge graph in prompts or rely on embeddings alone.
+  - operating_rhythm: Keep five funding decisions and twelve benchmark reviews as separate bounded weekly budgets joined in one Monday digest.
+  - shared_opportunity: External sharing must be opt-in, consent-based and evidence-backed; do not expose private relationship context or infer community authority.
+  - source_health: Count only the latest run per agent, so repaired sources clear rather than leaving historical failures red.
+
+findings:
+  - graph_scale: Verified live graph contains 609372 entities and 3381922 relationships; full build completed with zero permanent write failures and both materialized views refreshed.
+  - funding_state: Latest snapshot has 35 apply-now opportunities, 661 quarantined, a full 5-item queue, 0 of 11 decision-ready profiles, and 12 benchmark reviews remaining.
+  - benchmark_truth: Each active project has a 20-case pool, but no project yet has the required balanced human-labelled baseline; only explicit human reviews count.
+  - source_repairs: GrantConnect refreshed 118 current opportunities; VIC refreshed 31; source failures fell from misleading 15 to one credential-blocked GHL sync.
+  - product_direction: The strategic opportunity is a national activity and opportunity graph powering Ask GrantScope, place/funding-gap intelligence, governed opportunity sharing, and a capability-first Australian atlas.
+
+worked:
+  - 'Migration-first Supabase changes against the verified project, dry-run before live ingestion, live service reads after writes, bounded human review, set-based psql graph operations, preserving existing canonical entities on ABN or gs_id conflicts.'
+failed:
+  - 'URL-targeted grant upserts conflicted with canonical source/name identity; counting all weekly failed runs overstated health; recursive splitting of network-failed graph writes amplified outages; exec_sql RPC could not refresh materialized views; performance benchmark skill was not relevant to dataset benchmark work.'
+
+next:
+  - 'Build Ask GrantScope v1 inside ACT: question intent to hard filters to hybrid/graph retrieval to official evidence to answer with facts, inference, unknowns and next action.'
+  - Add a retrieval API that returns compact evidence packets for project, place, organisation, funder and opportunity questions with provenance and freshness.
+  - Add correction capture so human eligibility and usefulness judgments update benchmark memory without silently retraining production ranking.
+  - Complete the first 12-case review and five-item funding decision session; use results to tune ranking and deepen project profiles.
+  - Replace the GHL Private Integration token, rerun sync-goods-ghl, and verify source health reaches zero.
+  - Deploy only after reviewing the large dirty worktree and confirming environment variables and cron authentication.
+
+files:
+  created: [scripts/build-project-funding-benchmark.mjs, apps/web/src/lib/services/funding-weekly-digest.ts, apps/web/tests/unit/lib/services/funding-weekly-digest.test.ts, apps/web/tests/unit/lib/services/act-research-batch.test.ts, supabase/migrations/20260803080000_funding_weekly_cycles.sql]
+  modified: ['scripts/ingest-grantconnect-go.mjs', 'scripts/ingest-vic-grants-open.mjs', 'scripts/build-entity-graph.mjs', 'apps/web/src/lib/services/act-research.ts', 'apps/web/src/app/org/[slug]/research/page.tsx', 'apps/web/src/app/org/[slug]/research/benchmark-review.tsx', 'apps/web/src/app/api/ops/act-research/benchmark/review/route.ts', 'apps/web/src/app/org/[slug]/funding/page.tsx', 'vercel.json']

@@ -13,7 +13,7 @@ export default async function GrantRecommendationsPage() {
   const supabase = getServiceSupabase();
 
   const { data: recsRaw } = await supabase
-    .from('act_grant_recommendations')
+    .from('act_grant_recommendations_current')
     .select('*')
     .order('project_code', { ascending: true })
     .order('fit_score', { ascending: false })

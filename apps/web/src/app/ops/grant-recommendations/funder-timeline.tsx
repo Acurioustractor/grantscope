@@ -82,6 +82,13 @@ export function FunderTimeline({ funderName }: { funderName: string }) {
   }
 
   if (error) {
+    if (error === 'Unauthorized') {
+      return (
+        <div className="text-[10px] font-mono text-bauhaus-muted">
+          Sign in as an administrator to view the private relationship timeline.
+        </div>
+      );
+    }
     return <div className="text-[10px] font-mono text-bauhaus-red">Timeline error: {error}</div>;
   }
 

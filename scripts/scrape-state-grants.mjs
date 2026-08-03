@@ -68,6 +68,43 @@ function dedupeGrants(grants) {
   return deduped;
 }
 
+function storedStatuses(applicationStatus) {
+  if (applicationStatus === 'closed') return { status: 'closed', application_status: 'closed' };
+  if (applicationStatus === 'upcoming') return { status: 'closed', application_status: 'upcoming' };
+  if (applicationStatus === 'ongoing') return { status: 'ongoing', application_status: 'ongoing' };
+  if (applicationStatus === 'unknown') return { status: 'unknown', application_status: 'unknown' };
+  return { status: 'open', application_status: 'open' };
+}
+
+async function quarantineUnseenNTStubs(currentGrants) {
+  const currentUrls = new Set(currentGrants.map(grant => grant.sourceUrl).filter(Boolean));
+  const { data, error } = await supabase
+    .from('grant_opportunities')
+    .select('id, url, deadline, closes_at')
+    .eq('source_id', 'nt-grants');
+
+  if (error) throw new Error(`Failed to load existing NT grants for reconciliation: ${error.message}`);
+
+  const staleIds = (data || [])
+    .filter(row => !row.url || !currentUrls.has(row.url))
+    .map(row => row.id);
+
+  for (let i = 0; i < staleIds.length; i += 100) {
+    const { error: updateError } = await supabase
+      .from('grant_opportunities')
+      .update({
+        status: 'unknown',
+        application_status: 'unknown',
+        updated_at: new Date().toISOString(),
+      })
+      .in('id', staleIds.slice(i, i + 100));
+
+    if (updateError) throw new Error(`Failed to quarantine stale NT grant stubs: ${updateError.message}`);
+  }
+
+  return staleIds.length;
+}
+
 async function main() {
   const run = await logStart(supabase, 'scrape-state-grants', 'Scrape State Grants');
   currentRunId = run.id;
@@ -128,26 +165,35 @@ async function main() {
     }
 
     let sourceNew = 0;
+    const verifiedAt = new Date().toISOString();
 
     // Upsert to grant_opportunities
     const BATCH_SIZE = 50;
     for (let i = 0; i < dedupedGrants.length; i += BATCH_SIZE) {
-      const batch = dedupedGrants.slice(i, i + BATCH_SIZE).map(g => ({
-        name: g.title,
-        provider: g.provider,
-        url: g.sourceUrl,
-        description: g.description,
-        amount_min: g.amount?.min || null,
-        amount_max: g.amount?.max || null,
-        deadline: g.deadline || null,
-        categories: g.categories,
-        source_id: g.sourceId,
-        geography: g.geography?.[0] || 'AU',
-        status: 'open',
-        grant_type: 'open_opportunity',
-        source: g.provider || 'state-grants',
-        updated_at: new Date().toISOString(),
-      }));
+      const batch = dedupedGrants.slice(i, i + BATCH_SIZE).map(g => {
+        const statuses = storedStatuses(g.applicationStatus);
+        const deadline = g.deadline ? g.deadline.slice(0, 10) : null;
+        return {
+          name: g.title,
+          provider: g.provider,
+          program: g.program || null,
+          url: g.sourceUrl,
+          description: g.description,
+          amount_min: g.amount?.min || null,
+          amount_max: g.amount?.max || null,
+          deadline,
+          closes_at: deadline,
+          categories: g.categories,
+          source_id: g.sourceId,
+          discovery_method: g.sourceId,
+          geography: g.geography?.[0] || 'AU',
+          ...statuses,
+          grant_type: 'open_opportunity',
+          source: g.provider || 'state-grants',
+          last_verified_at: verifiedAt,
+          updated_at: verifiedAt,
+        };
+      });
 
       const { data, error } = await supabase
         .from('grant_opportunities')
@@ -192,6 +238,10 @@ async function main() {
     }
 
     console.log(`  Upserted ${dedupedGrants.length} grants from ${plugin.id}`);
+    if (plugin.id === 'nt-grants') {
+      const quarantined = await quarantineUnseenNTStubs(dedupedGrants);
+      console.log(`  Marked ${quarantined} unseen NT directory stubs as unknown`);
+    }
     if (sourceRun) {
       await logComplete(supabase, sourceRun.id, {
         items_found: dedupedGrants.length,
