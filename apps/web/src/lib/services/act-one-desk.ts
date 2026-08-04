@@ -3,11 +3,13 @@
 // session (2026-08-05): Ben picked the split-desk shape with project and type as
 // filters, never places.
 import { getGoodsFunderScan } from '@/lib/services/goods-funder-scan';
+import { getActRelationshipLedger } from '@/lib/services/act-relationship-ledger';
+import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
 import { getGoodsGrantsTriage } from '@/lib/services/goods-grants-triage';
 import { getGoodsBuyerPipeline } from '@/lib/services/goods-buyer-pipeline';
 import { ghlContactUrl } from '@/lib/ghl-links';
 
-export type DeskRecordKind = 'funder' | 'grant' | 'buyer';
+export type DeskRecordKind = 'funder' | 'grant' | 'buyer' | 'money';
 
 export type DeskRecord = {
   id: string;
@@ -49,12 +51,28 @@ function urgency(r: DeskRecord): number {
 }
 
 export async function getOneDeskPool(slug: string): Promise<DeskRecord[]> {
-  const [scan, triage, buyers] = await Promise.all([
+  const profile = await getOrgProfileBySlug(slug).catch(() => null);
+  const [scan, triage, buyers, ledger] = await Promise.all([
     getGoodsFunderScan().catch(() => null),
     getGoodsGrantsTriage({ scope: 'closing' }).catch(() => null),
     getGoodsBuyerPipeline().catch(() => null),
+    profile ? getActRelationshipLedger(slug, profile.id).catch(() => null) : null,
   ]);
   const pool: DeskRecord[] = [];
+  // Money owed: outstanding invoices become chase records — the old Today
+  // queue's "collect" items, so nothing lives only on that screen.
+  for (const item of ledger?.items ?? []) {
+    if (!item.outstandingTotal || item.outstandingInvoiceCount === 0) continue;
+    pool.push({
+      id: `m-${item.key}`, kind: 'money', project: 'Goods', name: item.organisation,
+      signal: `${item.outstandingInvoiceCount} invoice${item.outstandingInvoiceCount === 1 ? '' : 's'} outstanding`,
+      next: item.nextMove || 'Chase payment',
+      dueDays: item.oldestOverdueDays > 0 ? -item.oldestOverdueDays : null,
+      score: Math.min(99, Math.round(item.outstandingTotal / 1000)),
+      amount: `$${Math.round(item.outstandingTotal / 1000)}K`,
+      ghlUrl: null, workHref: `/org/${slug}?view=relationships#relationships`,
+    });
+  }
   for (const r of scan?.rows ?? []) {
     if (!r.stage || ['parked', 'declined'].includes(r.stage)) continue;
     pool.push({
