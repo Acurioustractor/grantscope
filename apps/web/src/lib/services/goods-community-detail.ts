@@ -17,6 +17,7 @@ export type CommunityDetail = {
   local_government: string | null;
   main_language: string | null;
   estimated_population: number | null;
+  estimated_households: number | null;
   nearest_staging_hub: string | null;
   freight_corridor: string | null;
   last_mile_method: string | null;
@@ -306,7 +307,7 @@ export async function getGoodsCommunityDetail(communityId: string, orgProfileId?
 
   const { data: community, error } = await db
     .from('goods_communities')
-    .select('id, community_name, state, postcode, region_label, service_region, remoteness, lga_name, priority, demand_beds, demand_washers, assets_deployed, land_council, local_government, main_language, estimated_population, nearest_staging_hub, freight_corridor, last_mile_method, total_govt_contract_value, total_justice_funding, total_foundation_grants, proof_line, story, data_quality_score, last_profiled_at, data_sources')
+    .select('id, community_name, state, postcode, region_label, service_region, remoteness, lga_name, priority, demand_beds, demand_washers, assets_deployed, land_council, local_government, main_language, estimated_population, estimated_households, nearest_staging_hub, freight_corridor, last_mile_method, total_govt_contract_value, total_justice_funding, total_foundation_grants, proof_line, story, data_quality_score, last_profiled_at, data_sources')
     .eq('id', communityId)
     .maybeSingle();
   if (error || !community) return null;
