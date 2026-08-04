@@ -66,7 +66,10 @@ function bestMatch(contacts, core) {
   return null;
 }
 
-const WARM_TAGS = ['goods-warm', 'engagement:personal-vip', 'needs-followup', 'relationship:funder'];
+// Temperature signals only. needs-followup / relationship:funder are markers,
+// not warmth — a goods-cold contact can carry needs-followup (seen: NAACT).
+const WARM_TAGS = ['goods-hot', 'goods-warm', 'engagement:personal-vip'];
+const COLD_TAGS = ['goods-cold', 'goods-cooling'];
 const UNWORKED_STAGES = new Set(['saved', 'parked', null, undefined]);
 
 async function main() {
@@ -109,7 +112,7 @@ async function main() {
           .eq('id', row.id);
         if (upErr) console.error(`  ! update ${core}: ${upErr.message}`);
       }
-      const isWarm = tags.some((t) => WARM_TAGS.includes(t));
+      const isWarm = tags.some((t) => WARM_TAGS.includes(t)) && !tags.some((t) => COLD_TAGS.includes(t));
       if (isWarm && UNWORKED_STAGES.has(row.stage)) {
         warmButUnworked.push({ name, stage: row.stage ?? 'none', email: contact.email, tags: tags.filter((t) => WARM_TAGS.includes(t)) });
       }
