@@ -37,7 +37,7 @@ export default async function GoodsMattersPage({ params }: { params: Promise<{ s
         title="Matters"
         description="A matter is a bounded piece of work with a funder, expert, buyer or partner. It carries evidence, unknowns, decisions and promises without pretending the whole relationship has one stage."
       />
-      <div className="mx-auto max-w-7xl px-4 py-6">
+      <div className="mx-auto max-w-[1760px] px-4 py-6">
         <DataModeBanner warning={workspace.dataWarning} />
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <Metric label="Open matters" value={String(open.length)} detail="Open means the question is active" tone="blue" />

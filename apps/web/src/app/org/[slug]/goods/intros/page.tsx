@@ -36,7 +36,7 @@ export default async function GoodsIntrosPage({ params }: { params: Promise<{ sl
   return (
     <main className="min-h-screen bg-bauhaus-canvas text-bauhaus-black">
       <div className="border-b-4 border-bauhaus-black bg-bauhaus-black text-white">
-        <div className="mx-auto max-w-7xl px-4 py-8">
+        <div className="mx-auto max-w-[1760px] px-4 py-8">
           <nav className="mb-4 flex flex-wrap items-center gap-2 text-sm text-gray-400">
             <Link href={`/org/${slug}`} className="hover:text-white">{profile.name}</Link>
             <span>/</span>
@@ -55,7 +55,7 @@ export default async function GoodsIntrosPage({ params }: { params: Promise<{ sl
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 py-6">
+      <div className="mx-auto max-w-[1760px] px-4 py-6">
         <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Stat label="Orgs with a path" value={String(summary.orgsWithIntros)} accent />
           <Stat label="Connectors found" value={String(summary.totalConnectors)} />

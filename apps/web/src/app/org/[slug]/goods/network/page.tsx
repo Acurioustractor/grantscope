@@ -18,6 +18,7 @@ import {
   SectionTitle,
   StatusPill,
 } from '../_components/goods-capital-ui';
+import { GoodsViewToggle, resolveViewMode } from '../_components/goods-view-toggle';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,8 +45,13 @@ function laneTone(lane: GoodsNetworkLane): 'neutral' | 'good' | 'warn' | 'info' 
   return 'neutral';
 }
 
-export default async function GoodsNetworkPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function GoodsNetworkPage({ params, searchParams }: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { slug } = await params;
+  const sp = await searchParams;
+  const peopleView = resolveViewMode(sp.people);
   const profile = shouldUseFastLocalOrg() && isActSlug(slug) ? ACT_FAST_PROFILE : await getOrgProfileBySlug(slug);
   if (!profile) notFound();
   const [workspace, network] = await Promise.all([
@@ -69,7 +75,7 @@ export default async function GoodsNetworkPage({ params }: { params: Promise<{ s
         title="Network"
         description="The human and institutional pathways that can move GOODS toward the QBE raise—while keeping interest, an ask, a commitment and cash as four different facts."
       />
-      <div className="mx-auto max-w-7xl px-4 py-6">
+      <div className="mx-auto max-w-[1760px] px-4 py-6">
         <DataModeBanner warning={combinedWarning} />
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <Metric label="Capital required" value={`${money(workspace.summary.needMinAud)}–${money(workspace.summary.needMaxAud)}`} detail="Five concrete GOODS uses" tone="blue" />
@@ -79,11 +85,63 @@ export default async function GoodsNetworkPage({ params }: { params: Promise<{ s
         </div>
 
         <div className="mt-8">
-          <SectionTitle
-            eyebrow="Current human signals"
-            title="People who have opened a door"
-            description={`${network.people.length} people are attached to a specific pathway. ${directInbound} is direct inbound evidence; reported interest remains labelled as reported until the next conversation produces a concrete route.`}
-          />
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <SectionTitle
+              eyebrow="Current human signals"
+              title="People who have opened a door"
+              description={`${network.people.length} people are attached to a specific pathway. ${directInbound} is direct inbound evidence; reported interest remains labelled as reported until the next conversation produces a concrete route.`}
+            />
+            <GoodsViewToggle basePath={`/org/${slug}/goods/network`} param="people" active={peopleView} />
+          </div>
+          {peopleView === 'table' ? (
+            <div className="overflow-x-auto border-4 border-bauhaus-black bg-white">
+              <table className="w-full text-xs">
+                <thead className="bg-bauhaus-black text-white">
+                  <tr>
+                    {['Person', 'Role · Org', 'Evidence', 'Lane', 'Stage', 'Next move', 'Last touch', ''].map((h) => (
+                      <th key={h} className="px-2 py-2 text-left font-mono text-[9px] font-black uppercase tracking-widest">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {network.people.map((person, i) => (
+                    <tr key={person.id} className={i % 2 === 1 ? 'bg-bauhaus-canvas' : ''}>
+                      <td className="border-b border-gray-300 px-2 py-1.5 align-top font-black">{person.name}</td>
+                      <td className="border-b border-gray-300 px-2 py-1.5 align-top">{person.role ?? 'Role to confirm'}{person.organisation ? ` · ${person.organisation}` : ''}</td>
+                      <td className="border-b border-gray-300 px-2 py-1.5 align-top"><StatusPill tone={evidenceTone(person.evidenceForm)}>{goodsInterestEvidenceLabel(person.evidenceForm)}</StatusPill></td>
+                      <td className="border-b border-gray-300 px-2 py-1.5 align-top"><StatusPill tone={laneTone(person.lane)}>{goodsNetworkLaneLabel(person.lane)}</StatusPill></td>
+                      <td className="border-b border-gray-300 px-2 py-1.5 align-top font-mono uppercase text-[10px]">{words(person.stage)}</td>
+                      <td className="border-b border-gray-300 px-2 py-1.5 align-top max-w-80">{person.nextAction ?? 'Set a specific next action.'}</td>
+                      <td className="border-b border-gray-300 px-2 py-1.5 align-top whitespace-nowrap">{formatWorkspaceDate(person.lastContactedAt)}</td>
+                      <td className="border-b border-gray-300 px-2 py-1.5 align-top">
+                        {person.linkedinUrl ? <a href={person.linkedinUrl} target="_blank" rel="noreferrer" className="font-black text-bauhaus-blue hover:underline">↗</a> : null}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : peopleView === 'compact' ? (
+            <div className="border-4 border-bauhaus-black bg-white">
+              {network.people.map((person, i) => (
+                <details key={person.id} className={i > 0 ? 'border-t-2 border-bauhaus-black/20' : ''}>
+                  <summary className="flex cursor-pointer flex-wrap items-center gap-3 px-4 py-3 hover:bg-bauhaus-canvas">
+                    <span className="font-black">{person.name}</span>
+                    <span className="text-xs text-bauhaus-muted">{person.role ?? 'Role to confirm'}{person.organisation ? ` · ${person.organisation}` : ''}</span>
+                    <span className="ml-auto flex gap-2">
+                      <StatusPill tone={evidenceTone(person.evidenceForm)}>{goodsInterestEvidenceLabel(person.evidenceForm)}</StatusPill>
+                      <StatusPill tone={laneTone(person.lane)}>{goodsNetworkLaneLabel(person.lane)}</StatusPill>
+                    </span>
+                  </summary>
+                  <div className="border-t border-bauhaus-black/10 px-4 py-3 text-sm leading-6">
+                    <p>{person.summary}</p>
+                    <p className="mt-2 text-xs"><span className="font-black uppercase tracking-wider text-bauhaus-blue">QBE:</span> {person.qbeRelevance}</p>
+                    <p className="mt-1 text-xs font-bold">Next: {person.nextAction ?? 'Set a specific next action.'}</p>
+                  </div>
+                </details>
+              ))}
+            </div>
+          ) : (
           <div className="grid gap-4 lg:grid-cols-3">
             {network.people.map((person) => (
               <article key={person.id} className="flex h-full flex-col border-4 border-bauhaus-black bg-white">
@@ -126,6 +184,7 @@ export default async function GoodsNetworkPage({ params }: { params: Promise<{ s
               </article>
             ))}
           </div>
+          )}
         </div>
 
         <div className="mt-8">

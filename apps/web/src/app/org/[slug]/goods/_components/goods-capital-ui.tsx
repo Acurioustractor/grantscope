@@ -22,7 +22,7 @@ export function GoodsWorkspaceHeader({
 }) {
   return (
     <div className="border-b-4 border-bauhaus-black bg-bauhaus-black text-white">
-      <div className="mx-auto max-w-7xl px-4 py-8">
+      <div className="mx-auto max-w-[1760px] px-4 py-8">
         <nav className="mb-4 flex flex-wrap items-center gap-2 text-sm text-white/60" aria-label="Breadcrumb">
           <Link href={`/org/${slug}`} className="hover:text-white">{orgName}</Link>
           <span aria-hidden="true">/</span>

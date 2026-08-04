@@ -55,7 +55,7 @@ export default async function GoodsApplicationRoomPage({ params }: { params: Pro
         )}
       />
 
-      <div className="mx-auto max-w-7xl px-4 py-6">
+      <div className="mx-auto max-w-[1760px] px-4 py-6">
         <DataModeBanner warning={workspace.dataWarning} />
 
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_430px]">
