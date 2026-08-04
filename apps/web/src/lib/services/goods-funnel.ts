@@ -1,5 +1,6 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import { isInternalActIdentity } from '@/lib/act-internal-identities';
+import { canonical } from './goods-canonical-numbers';
 
 /**
  * Goods 3-pipeline funnel — the management cockpit. One need, two funding routes,
@@ -8,7 +9,7 @@ import { isInternalActIdentity } from '@/lib/act-internal-identities';
  *   NEED      ← goods_communities (curated priority slice: active + lead)
  *   ORDERED   ← GHL Buyer Pipeline      (best-effort; degrades to 0 if GHL env absent)
  *   FUNDED    ← GHL Supporter Journey   (best-effort)
- *   DELIVERED ← Goods v2 assets sync    (cited constant — different DB)
+ *   FOOTPRINT ← current Goods Asset Register canon
  *   GAP       = NEED − DELIVERED
  *
  * The 3 GHL pipelines keep their own (12 / 10 / 4) operational stages; this view
@@ -30,10 +31,15 @@ const PIPELINES = {
 const BEDS_FIELD = 'mi9ZW3KLhmpcez14cNbx';
 const WASHERS_FIELD = 'UtxtfnyEd6p1epMEJ0b2';
 
-// DELIVERED — physical goods delivered to date. Source: Goods v2 `assets`
-// (project cwsyhpiuepvdjtxaozwf) via sync-goods-impact-rollups.mjs — a different DB
-// than this app reaches, so carried as a cited constant.
-export const DELIVERED = { beds: 520, washers: 41, source: 'Goods v2 assets sync, 2026-05-27' };
+// Physical footprint from the shared Goods canon. Beds are deployed. Washers
+// use Ben's manual in-community ruling and are not derived from register rows.
+const CANON_BEDS = canonical('deployed_bed_units');
+const CANON_WASHERS = canonical('washers_in_community');
+export const DELIVERED = {
+  beds: Number(CANON_BEDS.value),
+  washers: Number(CANON_WASHERS.value),
+  source: `Goods Asset Register canon, ${CANON_BEDS.asOf}; washers are the manual in-community ruling`,
+};
 
 export const SPINE = ['identified', 'qualified', 'committed', 'delivering', 'closed', 'dead'] as const;
 export type SpineStage = (typeof SPINE)[number];

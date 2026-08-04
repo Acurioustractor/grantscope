@@ -80,3 +80,5 @@ data/grantconnect/ga-published.xlsx
 data/grantconnect/ga-all-agencies.csv
 data/grantconnect/ga-weekly-export.csv
 data/grantconnect/ga-test.csv
+.playwright-cli/
+outputs/

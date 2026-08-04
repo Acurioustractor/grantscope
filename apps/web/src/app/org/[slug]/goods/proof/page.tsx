@@ -114,14 +114,14 @@ export default async function GoodsProofPage({ params }: { params: Promise<{ slu
   const productionRow = costEvidence.unitEstimateRows.find((r) => r.label === 'Production range');
   const freightRows = costEvidence.unitEstimateRows.filter((r) => /road|barge|remote/i.test(r.label));
 
-  // Reviewer-safe canonical figures lead the page (funder audience). The
-  // assets-sync delivered counts in `impact` stay available as the secondary,
-  // founder-reconciliation line below.
+  // Current Goods Asset Register canon leads the page.
   const deployedBeds = canonical('deployed_bed_units');
+  const stretchBeds = canonical('stretch_beds_deployed');
+  const basketBeds = canonical('basket_beds_deployed');
+  const washersInCommunity = canonical('washers_in_community');
   const servedCommunities = canonical('served_communities');
-  const hdpeDiverted = canonical('hdpe_diverted_kg');
-  const bedsSync = canonical('beds_delivered_assets_sync');
-  const washersSync = canonical('washers_delivered_assets_sync');
+  const distinctCommunities = canonical('distinct_communities_touched');
+  const stretchDesignMass = canonical('stretch_design_mass_kg');
 
   return (
     <main className="min-h-screen bg-bauhaus-canvas text-bauhaus-black">
@@ -158,7 +158,7 @@ export default async function GoodsProofPage({ params }: { params: Promise<{ slu
         )}
         {deliveredStale && (
           <div className="border-4 border-bauhaus-yellow bg-bauhaus-yellow px-4 py-2 text-[12px] font-black uppercase tracking-widest text-bauhaus-black">
-            Delivered figures are {deliveredAgeDays} days old. Re-sync from Goods v2.
+            Asset figures are {deliveredAgeDays} days old. Recheck the Goods Asset Register canon.
           </div>
         )}
         {/* ---------------- IMPACT ---------------- */}
@@ -166,31 +166,32 @@ export default async function GoodsProofPage({ params }: { params: Promise<{ slu
           <SectionHead
             kicker="For philanthropy"
             title="Impact"
-            blurb="What the giving delivers on Country — beds and washers in homes, against the curated demand still unmet. The gap is the ask."
+            blurb="What the giving supports on Country: deployed beds and washers in community, against the curated demand still unmet. The gap is the ask."
           />
-          {/* Reviewer-verified figures lead — the set safe to quote to funders. */}
+          {/* Current canonical figures, with computed design mass labelled. */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Big value={n(Number(deployedBeds.value))} label="Deployed bed units" sub={`as of ${deployedBeds.asOf}`} accent="red" claim="verified" />
-            <Big value={n(Number(servedCommunities.value))} label="Served communities" sub={`as of ${servedCommunities.asOf}`} claim="verified" />
-            <Big value={n(Number(hdpeDiverted.value))} label="kg HDPE diverted (Stretch)" sub={`as of ${hdpeDiverted.asOf}`} accent="red" claim="verified" />
+            <Big value={n(Number(deployedBeds.value))} label="Beds deployed" sub={`as of ${deployedBeds.asOf}`} accent="red" claim={deployedBeds.claimLabel} />
+            <Big value={n(Number(servedCommunities.value))} label="Communities served" sub={`${distinctCommunities.value} distinct touched`} claim={servedCommunities.claimLabel} />
+            <Big value={n(Number(stretchDesignMass.value))} label="kg Stretch design mass" sub="177 × 20 kg; not weighbridge data" accent="red" claim={stretchDesignMass.claimLabel} />
             <Big value={`${impact.pctBedsMet}%`} label="Of bed demand met" sub={`${n(impact.bedsGap)} beds still unmet`} accent="yellow" claim="verified" />
           </div>
 
-          {/* Secondary: internal assets-sync delivered counts + reconciliation flag. */}
+          {/* Composition and the manual washer ruling. */}
           <div className="mt-3 border-4 border-bauhaus-yellow bg-white p-4">
             <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
               <span className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">
-                Internal assets sync
+                What the total contains
               </span>
               <span className="text-lg font-black text-bauhaus-black">
-                {n(Number(bedsSync.value))} beds · {n(Number(washersSync.value))} washers
+                {n(Number(stretchBeds.value))} Stretch + {n(Number(basketBeds.value))} Basket · {n(Number(washersInCommunity.value))} washers in community
               </span>
-              <span className="text-[11px] font-bold text-bauhaus-muted">as of {bedsSync.asOf}</span>
-              <ClaimChip label="verified" />
+              <span className="text-[11px] font-bold text-bauhaus-muted">as of {deployedBeds.asOf}</span>
+              <ClaimChip label={deployedBeds.claimLabel} />
             </div>
             <p className="mt-2 border-l-4 border-bauhaus-yellow bg-bauhaus-yellow/40 px-3 py-2 text-[12px] font-bold text-bauhaus-black">
-              Two delivered-count definitions exist (assets sync versus reviewer-verified deployed units).
-              Founder reconciliation needed before quoting either externally.
+              The 22-washer figure is Ben&apos;s manual per-community ruling. It is not yet row-derived because
+              10 stale register rows still await restatusing. The 3,540 kg figure is calculated design mass,
+              not a weighbridge or measured waste-diversion total.
             </p>
           </div>
 
@@ -482,10 +483,11 @@ export default async function GoodsProofPage({ params }: { params: Promise<{ slu
         </section>
 
         <div className="border-4 border-bauhaus-black bg-bauhaus-yellow p-4 text-xs">
-          <strong>Provenance.</strong> Headline impact figures (deployed bed units, served communities, HDPE diverted) =
-          QBE reviewer-verified set, checked {deployedBeds.asOf}. The internal assets-sync delivered counts (beds/washers) =
-          Goods v2 assets sync, as of {impact.deliveredAsOf} (link out to the Asset Register for live counts). Demand = the curated
-          active+lead slice of <code>goods_communities</code>. Money received = the Goods relationship registry
+          <strong>Provenance.</strong> Asset figures are the Goods Asset Register canon checked {deployedBeds.asOf}:
+          540 deployed beds = 177 Stretch + 363 Basket; 11 communities served and 12 distinct touched; 22 washers in
+          community under Ben&apos;s manual ruling. The 3,540 kg Stretch figure is 177 × 20 kg design mass, not a
+          weighbridge measurement. Demand = the curated active+lead slice of <code>goods_communities</code>.
+          Money received = the Goods relationship registry
           (<code>total_received_aud</code>), manually entered. No figure on this page is invented.
           <div className="mt-2 font-bold">Reconciliation: {reconciliationNote}</div>
         </div>

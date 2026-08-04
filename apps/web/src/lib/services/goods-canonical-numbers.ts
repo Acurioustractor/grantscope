@@ -9,10 +9,11 @@
  *  - target   : a stated goal or aspiration, not yet achieved
  *  - future   : a projection of something that has not happened yet
  *
- * RECONCILED (Ben, 2026-06-10): 496 = 363 Basket Beds + 133 Stretch Beds (QBE
- * definition, excludes 21 Weave Beds); 2,660 kg HDPE = 133 Stretch x 20 kg.
- * 496 is the only externally quoted figure. The assets-sync 520 is retained
- * below for internal audit but is RETIRED from external use.
+ * RECONCILED (Goods Asset Register canon, checked 2026-07-25):
+ * 540 deployed beds = 177 Stretch + 363 Basket; 22 washers are in community
+ * under Ben's manual ruling; 11 communities are served (12 distinct places
+ * touched); and 3,540 kg is the Stretch-bed design-mass calculation
+ * (177 x 20 kg), not a weighbridge measurement.
  *
  * Plan: thoughts/shared/plans/goods-command-center-2026-06-09.md
  */
@@ -39,48 +40,92 @@ export type CanonicalNumber = {
 
 const QBE_SOURCE = 'QBE Diagnostic Area 01/04, checked 2026-06-01';
 const QBE_AS_OF = '2026-06-01';
-const ASSETS_SYNC_SOURCE = 'Goods v2 assets sync';
-const ASSETS_SYNC_AS_OF = '2026-05-28';
+const ASSET_CANON_SOURCE =
+  'Goods Asset Register v2 CANONICAL_ASSETS + Ben rulings in CONTEXT.md, checked 2026-07-25';
+const ASSET_CANON_AS_OF = '2026-07-25';
 
 /**
- * The canonical set. Reviewer-safe verified figures first, then the internal
- * assets-sync counts (same claim label but a different definition), then the
- * modelled cost band and the target scale figure.
+ * The canonical set. Current asset canon comes first, followed by verified
+ * finance figures, the modelled cost band and the target scale figure.
  */
 export const CANONICAL_NUMBERS: CanonicalNumber[] = [
-  // ── Reviewer-verified (QBE) ────────────────────────────────────────────
+  // ── Goods Asset Register canon ─────────────────────────────────────────
   {
     key: 'deployed_bed_units',
     label: 'Deployed bed units',
-    value: 496,
+    value: 540,
     unit: 'beds',
     claimLabel: 'verified',
-    asOf: QBE_AS_OF,
+    asOf: ASSET_CANON_AS_OF,
     definition:
-      'Bed units confirmed deployed to communities, counted under the QBE reviewer-verified definition. This is the figure to quote to funders and reviewers.',
-    source: QBE_SOURCE,
+      'Deployed bed units in the current Goods Asset Register canon: 177 Stretch Beds plus 363 Basket Beds.',
+    source: ASSET_CANON_SOURCE,
+  },
+  {
+    key: 'stretch_beds_deployed',
+    label: 'Stretch Beds deployed',
+    value: 177,
+    unit: 'beds',
+    claimLabel: 'verified',
+    asOf: ASSET_CANON_AS_OF,
+    definition: 'Stretch Beds included in the 540 deployed-bed total.',
+    source: ASSET_CANON_SOURCE,
+  },
+  {
+    key: 'basket_beds_deployed',
+    label: 'Basket Beds deployed',
+    value: 363,
+    unit: 'beds',
+    claimLabel: 'verified',
+    asOf: ASSET_CANON_AS_OF,
+    definition: 'Basket Beds included in the 540 deployed-bed total.',
+    source: ASSET_CANON_SOURCE,
+  },
+  {
+    key: 'washers_in_community',
+    label: 'Washers in community',
+    value: 22,
+    unit: 'washers',
+    claimLabel: 'verified',
+    asOf: ASSET_CANON_AS_OF,
+    definition:
+      "Ben's 2026-07-21 manual per-community ruling. This is curated, not row-derived: the register still contains 32 deployed washer rows because 10 stale rows await restatusing.",
+    source: ASSET_CANON_SOURCE,
   },
   {
     key: 'served_communities',
     label: 'Served communities',
-    value: 9,
+    value: 11,
     unit: 'communities',
     claimLabel: 'verified',
-    asOf: QBE_AS_OF,
-    definition: 'Communities that have received deployed Goods units, reviewer-verified.',
-    source: QBE_SOURCE,
+    asOf: ASSET_CANON_AS_OF,
+    definition: 'Communities that have received deployed Goods units under the current canonical served definition.',
+    source: ASSET_CANON_SOURCE,
   },
   {
-    key: 'hdpe_diverted_kg',
-    label: 'HDPE diverted (Stretch only)',
-    value: 2660,
-    unit: 'kg',
+    key: 'distinct_communities_touched',
+    label: 'Distinct communities touched',
+    value: 12,
+    unit: 'communities',
     claimLabel: 'verified',
-    asOf: QBE_AS_OF,
+    asOf: ASSET_CANON_AS_OF,
     definition:
-      'Kilograms of high-density polyethylene diverted from waste, counting the Stretch product line only, reviewer-verified.',
-    source: QBE_SOURCE,
+      'Distinct communities touched by Goods. This is broader than the 11-community served definition and must not replace it in served claims.',
+    source: ASSET_CANON_SOURCE,
   },
+  {
+    key: 'stretch_design_mass_kg',
+    label: 'Stretch-bed plastic design mass',
+    value: 3540,
+    unit: 'kg',
+    claimLabel: 'modelled',
+    asOf: ASSET_CANON_AS_OF,
+    definition:
+      'Calculated as 177 deployed Stretch Beds x 20 kg design mass per bed. This is a design-mass calculation, not a weighbridge measurement or audited waste-diversion total.',
+    source: ASSET_CANON_SOURCE,
+  },
+
+  // ── Reviewer-verified finance figures ──────────────────────────────────
   {
     key: 'receivables_raised',
     label: 'Receivables raised',
@@ -111,30 +156,6 @@ export const CANONICAL_NUMBERS: CanonicalNumber[] = [
     definition: 'ACT-GD receivables raised but not yet paid, reviewer-verified.',
     source: QBE_SOURCE,
   },
-
-  // ── Internal assets-sync (same claim label, different definition) ───────
-  {
-    key: 'beds_delivered_assets_sync',
-    label: 'Beds delivered (assets sync)',
-    value: 520,
-    unit: 'beds',
-    claimLabel: 'verified',
-    asOf: ASSETS_SYNC_AS_OF,
-    definition:
-      'RETIRED from external use (reconciled 2026-06-10): internal assets-sync count under a different definition / stale cutoff. Quote 496 (= 363 Basket + 133 Stretch, excludes 21 Weave) externally, never this figure.',
-    source: ASSETS_SYNC_SOURCE,
-  },
-  {
-    key: 'washers_delivered_assets_sync',
-    label: 'Washers delivered (assets sync)',
-    value: 41,
-    unit: 'washers',
-    claimLabel: 'verified',
-    asOf: ASSETS_SYNC_AS_OF,
-    definition: 'Internal assets-sync count of washers delivered.',
-    source: ASSETS_SYNC_SOURCE,
-  },
-
   // ── Modelled (planning estimates) ──────────────────────────────────────
   {
     key: 'production_cost_band',
@@ -142,7 +163,7 @@ export const CANONICAL_NUMBERS: CanonicalNumber[] = [
     value: '550-650',
     unit: 'AUD / bed',
     claimLabel: 'modelled',
-    asOf: ASSETS_SYNC_AS_OF,
+    asOf: ASSET_CANON_AS_OF,
     definition:
       'Planning band for producing one bed (550 to 650 AUD, 600 midpoint), before route freight, warranty, support or margin. A modelled estimate, not an audited delivered actual.',
     source: 'Goods cost register',
@@ -169,16 +190,12 @@ export const CLAIM_LABEL_MEANINGS: Record<ClaimLabel, string> = {
   future: 'A projection of something not yet happened.',
 };
 
-/**
- * True while the two delivered-bed definitions disagree. A founder must decide
- * which definition (and which figure) is correct before either is quoted
- * externally.
- */
+/** False once the outward asset figures match the current Goods canon. */
 export const needsReconciliation = false;
 
 /** One-line explanation of the reconciliation outcome. */
 export const reconciliationNote =
-  'RECONCILED (Ben, 2026-06-10): 496 deployed bed units = 363 Basket Beds + 133 Stretch Beds (QBE definition, excludes the 21 Weave Beds), and 2,660 kg HDPE diverted = 133 Stretch Beds x 20 kg exactly. 496 is the ONLY externally quoted figure; the assets-sync 520 used a different definition / stale cutoff and is retired from external use.';
+  "RECONCILED (Goods Asset Register canon, checked 2026-07-25): 540 deployed beds = 177 Stretch + 363 Basket; 22 washers in community is Ben's manual per-community ruling and is not yet row-derived; 11 communities are served while 12 distinct communities have been touched; 3,540 kg = 177 Stretch Beds x 20 kg design mass and is not a weighbridge measurement.";
 
 /** Lookup helper. Returns undefined if the key is not in the canonical set. */
 export function getCanonical(key: string): CanonicalNumber | undefined {
