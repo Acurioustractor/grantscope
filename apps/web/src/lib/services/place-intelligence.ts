@@ -90,12 +90,15 @@ export const getCentralAustraliaIntelligence = cache(
     const db = getServiceSupabase();
 
     const [snapshotResult, orgsResult, gapResult, deregisteredResult] = await Promise.all([
-      // v_lga_place_profile, not place_funding_snapshot. The snapshot was built
+      // mv_lga_place_profile, not place_funding_snapshot. The underlying view
+      // aggregates every LGA in the country before filtering, so reading it in
+      // the request path timed out; it is materialized and refreshed after an
+      // ingest instead. The snapshot was built
       // before councils were reattributed to the shires they serve, so it still
       // credited Alice Springs with $749.4M rather than $688.4M, and its grants
       // figure predates GrantConnect entirely — showing $44.1M where delivered
       // grants are $202.8M.
-      db.from('v_lga_place_profile')
+      db.from('mv_lga_place_profile')
         .select('lga_name, state, remoteness, avg_irsd_decile, org_count, community_controlled, without_abn, caring_for_country, employers, contract_count, contract_value_lifetime, contract_value_24m, grants_delivered, grants_delivered_value, local_retention_pct, philanthropic_funders, philanthropic_grants')
         .in('lga_name', ['Alice Springs', 'Barkly', 'MacDonnell', 'Central Desert', 'Anangu Pitjantjatjara Yankunytjatjara'])
         .in('state', ['NT', 'SA']),

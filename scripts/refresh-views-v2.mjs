@@ -69,6 +69,7 @@ const VIEW_LIST = [
   'mv_person_identity_network',
   'mv_person_identity_influence',
   'mv_foundation_grantees',
+  'mv_lga_place_profile',
   'mv_donation_contract_timing',
   'mv_charity_network',
   // Tier 4: heavy or rarely-needed
