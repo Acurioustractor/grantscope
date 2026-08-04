@@ -1,6 +1,7 @@
 import { cache } from 'react';
 import { getServiceSupabase } from '@/lib/supabase';
 import { safe } from '@/lib/services/utils';
+import { ACT_FAST_PROFILE, isActSlug } from '@/lib/services/fast-local-org';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Types
@@ -515,6 +516,12 @@ export const getOrgFoundationPortfolio = cache(async function getOrgFoundationPo
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export const getOrgProfileBySlug = cache(async function getOrgProfileBySlug(slug: string): Promise<OrgProfile | null> {
+  // E2E runs have no Supabase credentials; the fixture flag is the contract
+  // (playwright.config.ts sets it), so every page resolves the fast profile
+  // without each call site needing its own guard.
+  if (process.env.ACT_E2E_FIXTURES === '1' && isActSlug(slug)) {
+    return ACT_FAST_PROFILE;
+  }
   const supabase = getServiceSupabase();
   const slugAliases: Record<string, string> = {
     'a-curious-tractor': 'act',
