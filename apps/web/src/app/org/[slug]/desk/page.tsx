@@ -5,7 +5,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { isActSlug } from '@/lib/services/fast-local-org';
-import { getOneDeskPool, deskHorizon, type DeskRecord, type DeskHorizon } from '@/lib/services/act-one-desk';
+import { getOneDesk, deskHorizon, type DeskRecord, type DeskHorizon } from '@/lib/services/act-one-desk';
+import { DeskMarkButtons } from './desk-mark-buttons';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,7 +43,7 @@ export default async function OneDeskPage({ params, searchParams }: {
   const kind = typeof sp.kind === 'string' && ['funder', 'grant', 'buyer', 'money', 'commitment'].includes(sp.kind) ? (sp.kind as DeskRecord['kind']) : null;
   const project = typeof sp.project === 'string' ? sp.project : null;
 
-  const all = await getOneDeskPool(slug);
+  const { active: all, handled, orgProfileId } = await getOneDesk(slug);
   const projects = [...new Set(all.map((r) => r.project))].sort();
   const pool = all.filter((r) => (!kind || r.kind === kind) && (!project || r.project === project));
   const selected = (typeof sp.rec === 'string' ? pool.find((r) => r.id === sp.rec) : null) ?? pool[0] ?? null;
@@ -67,7 +68,9 @@ export default async function OneDeskPage({ params, searchParams }: {
       <div className="mx-auto max-w-[1760px]">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <div className="font-mono text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">One pool · deadline first · {all.length} records</div>
+            <div className="font-mono text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">
+              One pool · deadline first · {all.length} records{handled.length > 0 ? ` · ${handled.length} handled today` : ''}
+            </div>
             <h1 className="mt-1 text-3xl font-black uppercase tracking-widest">One Desk</h1>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -143,6 +146,11 @@ export default async function OneDeskPage({ params, searchParams }: {
                   <div className="text-[9px] font-black uppercase tracking-widest text-bauhaus-red">Next move</div>
                   <p className="mt-1 font-bold">{selected.next}</p>
                 </div>
+                {orgProfileId ? (
+                  <div className="mt-4">
+                    <DeskMarkButtons orgProfileId={orgProfileId} actionId={selected.id} title={selected.name} detail={selected.next} />
+                  </div>
+                ) : null}
                 <div className="mt-4 flex flex-wrap gap-2">
                   {selected.ghlUrl && (
                     <a href={selected.ghlUrl} target="_blank" rel="noopener noreferrer" className="border-2 border-bauhaus-black bg-bauhaus-yellow px-3 py-1.5 text-xs font-black uppercase tracking-widest hover:bg-bauhaus-black hover:text-white">

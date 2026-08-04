@@ -5,6 +5,7 @@
 import { getGoodsFunderScan } from '@/lib/services/goods-funder-scan';
 import { getActRelationshipLedger } from '@/lib/services/act-relationship-ledger';
 import { getOrgPipelineData } from '@/lib/services/org-pipeline-service';
+import { getOrgDailyActionStates, type ActDailyActionStatus } from '@/lib/services/act-daily-actions';
 import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
 import { getGoodsGrantsTriage } from '@/lib/services/goods-grants-triage';
 import { getGoodsBuyerPipeline } from '@/lib/services/goods-buyer-pipeline';
@@ -59,6 +60,30 @@ function days(iso: string | null): number | null {
 function urgency(r: DeskRecord): number {
   if (r.dueDays != null) return r.dueDays < 0 ? -1000 + r.dueDays : r.dueDays;
   return 500 - r.score;
+}
+
+export type OneDeskPool = {
+  /** Ranked records still needing a move today. */
+  active: DeskRecord[];
+  /** Records marked done/waiting/tomorrow today (same store as the Today queue). */
+  handled: Array<{ record: DeskRecord; status: ActDailyActionStatus }>;
+  orgProfileId: string | null;
+};
+
+export async function getOneDesk(slug: string): Promise<OneDeskPool> {
+  const pool = await getOneDeskPool(slug);
+  const profile = await getOrgProfileBySlug(slug).catch(() => null);
+  const states: Record<string, ActDailyActionStatus> = profile
+    ? await getOrgDailyActionStates(profile.id).catch(() => ({}))
+    : {};
+  const active: DeskRecord[] = [];
+  const handled: OneDeskPool['handled'] = [];
+  for (const r of pool) {
+    const status = states[r.id];
+    if (status) handled.push({ record: r, status });
+    else active.push(r);
+  }
+  return { active, handled, orgProfileId: profile?.id ?? null };
 }
 
 export async function getOneDeskPool(slug: string): Promise<DeskRecord[]> {
