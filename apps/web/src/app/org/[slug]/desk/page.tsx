@@ -14,7 +14,7 @@ export async function generateMetadata() {
 }
 
 const KIND_STYLE: Record<DeskRecord['kind'], string> = {
-  funder: 'bg-purple-700', grant: 'bg-bauhaus-blue', buyer: 'bg-emerald-700', money: 'bg-bauhaus-red',
+  funder: 'bg-purple-700', grant: 'bg-bauhaus-blue', buyer: 'bg-emerald-700', money: 'bg-bauhaus-red', commitment: 'bg-amber-600',
 };
 
 const HORIZON_LABEL: Record<DeskHorizon, string> = {
@@ -39,14 +39,16 @@ export default async function OneDeskPage({ params, searchParams }: {
   const { slug } = await params;
   if (!isActSlug(slug)) notFound();
   const sp = await searchParams;
-  const kind = typeof sp.kind === 'string' && ['funder', 'grant', 'buyer', 'money'].includes(sp.kind) ? (sp.kind as DeskRecord['kind']) : null;
+  const kind = typeof sp.kind === 'string' && ['funder', 'grant', 'buyer', 'money', 'commitment'].includes(sp.kind) ? (sp.kind as DeskRecord['kind']) : null;
+  const project = typeof sp.project === 'string' ? sp.project : null;
 
   const all = await getOneDeskPool(slug);
-  const pool = kind ? all.filter((r) => r.kind === kind) : all;
+  const projects = [...new Set(all.map((r) => r.project))].sort();
+  const pool = all.filter((r) => (!kind || r.kind === kind) && (!project || r.project === project));
   const selected = (typeof sp.rec === 'string' ? pool.find((r) => r.id === sp.rec) : null) ?? pool[0] ?? null;
   const base = `/org/${slug}/desk`;
   const qs = (extra: Record<string, string>) => {
-    const p = new URLSearchParams({ ...(kind ? { kind } : {}), ...extra });
+    const p = new URLSearchParams({ ...(kind ? { kind } : {}), ...(project ? { project } : {}), ...extra });
     const s = p.toString();
     return s ? `${base}?${s}` : base;
   };
@@ -69,11 +71,20 @@ export default async function OneDeskPage({ params, searchParams }: {
             <h1 className="mt-1 text-3xl font-black uppercase tracking-widest">One Desk</h1>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="border-2 border-bauhaus-black bg-bauhaus-yellow px-2 py-1 text-[10px] font-black uppercase tracking-widest">Project: Goods</span>
-            {([null, 'money', 'funder', 'grant', 'buyer'] as const).map((k) => (
+            {projects.map((p) => (
+              <Link
+                key={p}
+                href={project === p ? (kind ? `${base}?kind=${kind}` : base) : qs({ project: p })}
+                className={`border-2 border-bauhaus-black px-2 py-1 text-[10px] font-black uppercase tracking-widest ${project === p ? 'bg-bauhaus-yellow' : 'bg-white hover:bg-bauhaus-canvas'}`}
+              >
+                {p}{project === p ? ' ✕' : ''}
+              </Link>
+            ))}
+            <span className="mx-1 text-bauhaus-muted">·</span>
+            {([null, 'money', 'commitment', 'funder', 'grant', 'buyer'] as const).map((k) => (
               <Link
                 key={k ?? 'all'}
-                href={k ? `${base}?kind=${k}` : base}
+                href={k ? (project ? `${base}?kind=${k}&project=${encodeURIComponent(project)}` : `${base}?kind=${k}`) : (project ? `${base}?project=${encodeURIComponent(project)}` : base)}
                 className={`border-2 border-bauhaus-black px-2 py-1 text-[10px] font-black uppercase tracking-widest ${kind === k ? 'bg-bauhaus-black text-white' : 'bg-white hover:bg-bauhaus-canvas'}`}
               >
                 {k ?? 'everything'}

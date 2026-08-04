@@ -4,17 +4,28 @@
 // filters, never places.
 import { getGoodsFunderScan } from '@/lib/services/goods-funder-scan';
 import { getActRelationshipLedger } from '@/lib/services/act-relationship-ledger';
+import { getOrgPipelineData } from '@/lib/services/org-pipeline-service';
 import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
 import { getGoodsGrantsTriage } from '@/lib/services/goods-grants-triage';
 import { getGoodsBuyerPipeline } from '@/lib/services/goods-buyer-pipeline';
 import { ghlContactUrl } from '@/lib/ghl-links';
 
-export type DeskRecordKind = 'funder' | 'grant' | 'buyer' | 'money';
+export type DeskRecordKind = 'funder' | 'grant' | 'buyer' | 'money' | 'commitment';
+
+const PROJECT_LABELS: Record<string, string> = {
+  'ACT-GD': 'Goods', 'ACT-EL': 'Empathy Ledger', 'ACT-JH': 'JusticeHub',
+  'ACT-HV': 'Harvest', 'ACT-PI': 'Palm Island', 'ACT-MY': 'ACT',
+};
+
+export function deskProjectLabel(code: string | null): string {
+  if (!code) return 'ACT';
+  return PROJECT_LABELS[code] ?? code.replace(/^ACT-/, '');
+}
 
 export type DeskRecord = {
   id: string;
   kind: DeskRecordKind;
-  project: 'Goods';
+  project: string;
   name: string;
   /** Warmth / stage / status chip text. */
   signal: string;
@@ -52,13 +63,30 @@ function urgency(r: DeskRecord): number {
 
 export async function getOneDeskPool(slug: string): Promise<DeskRecord[]> {
   const profile = await getOrgProfileBySlug(slug).catch(() => null);
-  const [scan, triage, buyers, ledger] = await Promise.all([
+  const [scan, triage, buyers, ledger, pipeline] = await Promise.all([
     getGoodsFunderScan().catch(() => null),
     getGoodsGrantsTriage({ scope: 'closing' }).catch(() => null),
     getGoodsBuyerPipeline().catch(() => null),
     profile ? getActRelationshipLedger(slug, profile.id).catch(() => null) : null,
+    getOrgPipelineData(slug).catch(() => null),
   ]);
   const pool: DeskRecord[] = [];
+  // Committed work: human-decided pipeline cards in live stages, any project.
+  for (const card of pipeline?.cards ?? []) {
+    if (card.is_historical) continue;
+    if (!['watching', 'pursuing', 'submitted'].includes(card.decision)) continue;
+    pool.push({
+      id: `c-${card.opportunity_id}`, kind: 'commitment',
+      project: deskProjectLabel(card.project_code),
+      name: card.opportunity_name,
+      signal: card.decision,
+      next: card.decision === 'submitted' ? 'Set owner + next action for the follow-through' : 'Plan the next concrete move',
+      dueDays: days(card.deadline), score: card.fit_score ?? 0,
+      amount: card.max_grant_amount ? `$${Math.round(card.max_grant_amount / 1000)}K` : null,
+      ghlUrl: null,
+      workHref: `/org/${slug}?view=pipeline&commitment=${encodeURIComponent(card.opportunity_id)}#pipeline`,
+    });
+  }
   // Money owed: outstanding invoices become chase records — the old Today
   // queue's "collect" items, so nothing lives only on that screen.
   for (const item of ledger?.items ?? []) {
