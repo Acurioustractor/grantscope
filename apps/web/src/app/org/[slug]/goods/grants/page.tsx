@@ -97,13 +97,13 @@ export default async function GoodsGrantsTriagePage({
           <Cell label="With hard deadline" value={summary.withDeadline} />
         </div>
 
-        {/* Coverage warning */}
-        <div className="border-4 border-bauhaus-red bg-white p-3 text-xs">
-          <span className="font-black uppercase tracking-wider text-bauhaus-red">Coverage gap:</span>{' '}
-          <span className="font-bold">No NT government grants scraper is scheduled.</span> Central Australia is the delivery
-          focus and NT rounds ({summary.byGeography['NT'] ?? 0} rows, all via other sources) are the least covered. WA dominates
-          the live set ({summary.byGeography['WA'] ?? 0}) because its portal is the most scrapable — volume here reflects
-          publishing habits, not opportunity.
+        {/* Coverage note */}
+        <div className="border-4 border-bauhaus-black bg-white p-3 text-xs">
+          <span className="font-black uppercase tracking-wider">Coverage:</span>{' '}
+          NT is scraped daily via <code className="bg-bauhaus-canvas px-1">scrape-state-grants</code> (NT Grants Directory +
+          GrantsNT portal). WA dominates the live set ({summary.byGeography['WA'] ?? 0} rows) because its portal publishes the
+          most — volume by state reflects publishing habits, not opportunity. Philanthropic rounds beyond
+          <code className="bg-bauhaus-canvas px-1">foundation_program</code> remain the thinnest stream.
         </div>
 
         {/* Filters */}
