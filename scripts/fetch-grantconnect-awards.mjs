@@ -77,9 +77,21 @@ startSession();
  * filter it does honour, and most agencies sit well under the cap. The few that
  * do not are subdivided by financial year.
  */
+/** Category codes, also read from the report form. */
+function categoryList(html) {
+  const out = [];
+  const re = /<option value="(\d{3})">([^<]{3,60})/g;
+  let m;
+  while ((m = re.exec(html)) !== null) out.push({ code: m[1], name: m[2].trim() });
+  return out;
+}
+
+let FORM_HTML = '';
+
 function agencyList() {
   const html = execFileSync('curl', ['-sSL', '-m', '120', '-A', UA, '-c', COOKIES,
     'https://www.grants.gov.au/reports/gapublishedform'], { maxBuffer: 1024 * 1024 * 64 }).toString();
+  FORM_HTML = html;
   const out = [];
   const re = /<option[^>]*value="([0-9a-fA-F-]{20,})"[^>]*>([^<]{3,90})/g;
   let m;
@@ -154,13 +166,24 @@ if (BY_AGENCY) {
       return added;
     };
     if (res && res.capped) {
-      // Subdividing a capped agency by year does not work: the export ignores
-      // the date filter and returns the same 50,000 rows for any range. Take
-      // what it gives and record the agency as incomplete rather than spending
-      // ten more requests proving the same point.
-      const n = take(res);
-      capped.push(a.name);
-      console.log(`[${i + 1}/${agencies.length}] ${a.name.slice(0, 46)}: +${n} CAPPED, incomplete`);
+      // Date subdivision does not work — the export ignores its date filter and
+      // returns the same 50,000 rows for any range. Category is honoured, so a
+      // capped agency is walked category by category instead.
+      let n = take(res);
+      const cats = categoryList(FORM_HTML);
+      console.log(`[${i + 1}/${agencies.length}] ${a.name.slice(0, 46)}: capped, splitting across ${cats.length} categories`);
+      const stillCapped = [];
+      for (const cat of cats) {
+        const sub = fetchWindow(`${base}&CategorySearchCode=${cat.code}`, `${a.name} / ${cat.name}`);
+        if (sub && sub.capped) stillCapped.push(cat.name);
+        n += take(sub);
+      }
+      if (stillCapped.length) {
+        capped.push(`${a.name} (${stillCapped.join(', ')})`);
+        console.log(`    +${n} total — still capped in: ${stillCapped.join(', ')}`);
+      } else {
+        console.log(`    +${n} total — complete across categories`);
+      }
     } else {
       const n = take(res);
       console.log(`[${i + 1}/${agencies.length}] ${a.name.slice(0, 46)}: +${n} (total ${byGaId.size})`);

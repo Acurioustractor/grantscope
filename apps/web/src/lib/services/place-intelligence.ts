@@ -45,6 +45,8 @@ export interface PlaceIntelligence {
   unplacedOrgs: UnplacedOrg[];
   unplacedTotal: number;
   gapNote: string | null;
+  /** Share of the region's grant money that carries a delivery location. */
+  deliveryCoverage: { knownM: number; unknownM: number; pct: number } | null;
   /** Deregistered corporations withheld from the list, reported rather than hidden. */
   deregisteredExcluded: number;
 }
@@ -179,6 +181,26 @@ export const getCentralAustraliaIntelligence = cache(
           communityControlled: row.is_community_controlled === true,
         }));
 
+    // How much of the region's grant money can be placed at all. Most cannot:
+    // the agencies funding Indigenous affairs and social services publish a
+    // delivery location on almost nothing, so a map of delivered grants shows a
+    // small and unrepresentative slice.
+    const coverageResult = await db.rpc('exec_sql', {
+      query: `SELECT round(sum(ga.value_aud) FILTER (WHERE ga.delivery_postcode IS NOT NULL)/1e6,1) AS known_m,
+                     round(sum(ga.value_aud) FILTER (WHERE ga.delivery_postcode IS NULL)/1e6,1) AS unknown_m
+                FROM grantconnect_awards ga
+                JOIN gs_entities e ON e.id = ga.gs_entity_id
+               WHERE e.state IN ('NT','SA')
+                 AND (e.lga_name IN ('Alice Springs','Barkly','MacDonnell','Central Desert','Anangu Pitjantjatjara Yankunytjatjara')
+                      OR e.postcode = '0872')`,
+    });
+    const covRow = Array.isArray(coverageResult.data) ? coverageResult.data[0] as Record<string, unknown> : null;
+    const knownM = num((covRow?.known_m as number | string | null) ?? null);
+    const unknownM = num((covRow?.unknown_m as number | string | null) ?? null);
+    const coverage = knownM + unknownM > 0
+      ? { knownM, unknownM, pct: Math.round((100 * knownM) / (knownM + unknownM)) }
+      : null;
+
     const gap = gapResult.error ? null : (gapResult.data as {
       required_source: string;
       affected_entities: number;
@@ -193,6 +215,7 @@ export const getCentralAustraliaIntelligence = cache(
         ? `${gap.affected_community_controlled} of ${gap.affected_entities} organisations here are community-controlled. Placing them in a council area needs the ${gap.required_source}.`
         : null,
       deregisteredExcluded: deregisteredResult.error ? 0 : (deregisteredResult.count ?? 0),
+      deliveryCoverage: coverage,
     };
   },
 );

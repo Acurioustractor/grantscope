@@ -19,7 +19,7 @@ function money(value: number): string {
 }
 
 export default async function CentralAustraliaPage() {
-  const { areas, unplacedOrgs, unplacedTotal, gapNote, deregisteredExcluded } =
+  const { areas, unplacedOrgs, unplacedTotal, gapNote, deregisteredExcluded, deliveryCoverage } =
     await getCentralAustraliaIntelligence();
   const computedAt = areas[0]?.computedAt;
 
@@ -43,6 +43,28 @@ export default async function CentralAustraliaPage() {
       </header>
 
       <div className="mx-auto grid max-w-6xl gap-10 px-5 py-10 lg:px-10">
+        {deliveryCoverage && deliveryCoverage.pct < 50 ? (
+          <section aria-labelledby="coverage-title" className="border-4 border-bauhaus-red bg-white p-6">
+            <h2 id="coverage-title" className="text-xl font-black uppercase tracking-widest text-bauhaus-red">
+              Read the grant figures carefully
+            </h2>
+            <p className="mt-3 max-w-3xl text-sm leading-6">
+              Only <strong>{deliveryCoverage.pct}%</strong> of the grant money reaching organisations here can be
+              placed. Grants are attributed to a place using the delivery location the award publishes, and most
+              awards do not publish one: <strong>${deliveryCoverage.knownM.toLocaleString('en-AU')}M</strong> carries
+              a delivery location while <strong>${deliveryCoverage.unknownM.toLocaleString('en-AU')}M</strong> does
+              not.
+            </p>
+            <p className="mt-3 max-w-3xl text-sm leading-6">
+              The gap is not random. The National Indigenous Australians Agency publishes a delivery location on 2%
+              of its awards, and the Department of Social Services on none — so the funding streams that matter most
+              to these communities are the ones least visible by place. NIAA alone granted $1.25 billion to
+              organisations in this region. The per-place grant figures below therefore describe a small and
+              unrepresentative slice, weighted towards infrastructure and education. They are a floor, not a total.
+            </p>
+          </section>
+        ) : null}
+
         <section aria-labelledby="areas-title">
           <h2 id="areas-title" className="text-2xl font-black uppercase tracking-widest">
             By place
