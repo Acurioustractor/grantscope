@@ -18,6 +18,7 @@ export interface GoodsRelationship {
   display_name: string;
   entity_id: string | null;
   ghl_opportunity_id: string | null;
+  ghl_contact_id: string | null;
   stage: GoodsStage;
   target_stage: string | null;
   warmth_computed: number;

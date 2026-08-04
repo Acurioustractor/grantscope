@@ -15,6 +15,7 @@ export interface FunderScanRow {
   nextStep: string | null;
   givingAnnual: number | null;
   ghlWarmth: GhlWarmth;
+  ghlContactId: string | null;
   ghlEmail: string | null;
   ghlTags: string[];
   ghlSyncedAt: string | null;
@@ -61,7 +62,7 @@ export async function getGoodsFunderScan(): Promise<FunderScanResult> {
   const db = getServiceSupabase();
   const { data, error } = await db
     .from('org_project_foundations')
-    .select('id, stage, fit_score, fit_summary, next_step, ghl_contact_email, ghl_tags, ghl_synced_at, foundations(name, total_giving_annual), org_projects!inner(slug)')
+    .select('id, stage, fit_score, fit_summary, next_step, ghl_contact_id, ghl_contact_email, ghl_tags, ghl_synced_at, foundations(name, total_giving_annual), org_projects!inner(slug)')
     .eq('org_projects.slug', 'goods')
     .order('fit_score', { ascending: false, nullsFirst: false })
     .limit(500);
@@ -79,6 +80,7 @@ export async function getGoodsFunderScan(): Promise<FunderScanResult> {
       nextStep: (r.next_step as string | null) ?? null,
       givingAnnual: f?.total_giving_annual ?? null,
       ghlWarmth: warmthFromTags(r.ghl_synced_at ? tags : null),
+      ghlContactId: (r.ghl_contact_id as string | null) ?? null,
       ghlEmail: (r.ghl_contact_email as string | null) ?? null,
       ghlTags: tags,
       ghlSyncedAt: (r.ghl_synced_at as string | null) ?? null,

@@ -10,6 +10,7 @@ import {
   type GhlWarmth,
 } from '@/lib/services/goods-funder-scan';
 import { GoodsSubNav } from '../../_components/goods-sub-nav';
+import { ghlContactUrl } from '@/lib/ghl-links';
 
 export const dynamic = 'force-dynamic';
 
@@ -156,7 +157,19 @@ export default async function GoodsFunderScanPage({
                       <span className="font-black">{r.name}</span>
                       {r.ghlEmail && <div className="font-mono text-[10px] text-gray-500">{r.ghlEmail}</div>}
                     </td>
-                    <td className="border-b border-gray-300 px-2 py-1.5 align-top"><WarmthChip w={r.ghlWarmth} /></td>
+                    <td className="border-b border-gray-300 px-2 py-1.5 align-top">
+                      {(() => {
+                        const url = ghlContactUrl(r.ghlContactId);
+                        return url ? (
+                          <a href={url} target="_blank" rel="noopener noreferrer" title="Open contact in GHL" className="inline-flex items-center gap-1 hover:opacity-70">
+                            <WarmthChip w={r.ghlWarmth} />
+                            <span className="font-mono text-[10px] text-bauhaus-blue">↗</span>
+                          </a>
+                        ) : (
+                          <WarmthChip w={r.ghlWarmth} />
+                        );
+                      })()}
+                    </td>
                     <td className="border-b border-gray-300 px-2 py-1.5 align-top font-mono uppercase text-[10px]">{r.stage ?? '—'}</td>
                     <td className="border-b border-gray-300 px-2 py-1.5 align-top text-right font-mono font-black">{r.fitScore ?? '—'}</td>
                     <td className="border-b border-gray-300 px-2 py-1.5 align-top text-right font-mono">{money(r.givingAnnual)}</td>

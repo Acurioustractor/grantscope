@@ -8,6 +8,7 @@ import { getGoodsRelationshipFunding, type RelationshipFunding } from '@/lib/ser
 import { GoodsSubNav } from '../_components/goods-sub-nav';
 import { PowerChip } from '../_components/goods-power-chip';
 import { FundingChip } from '../_components/goods-funding-chip';
+import { ghlContactUrl } from '@/lib/ghl-links';
 import {
   money, moneyShort, relDays, STAGE_LABEL, bandPill,
 } from '@/lib/services/goods-engagement-shared';
@@ -74,10 +75,25 @@ function BuyerCard({ r, power, funding }: { r: BuyerPipelineRow; power: Relation
           <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest bg-bauhaus-black text-white">
             Buyer
           </span>
-          {r.ghlOpportunityId ? (
-            <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest bg-bauhaus-blue text-white">
-              GHL linked
-            </span>
+          {r.ghlOpportunityId || r.ghlContactId ? (
+            (() => {
+              const url = ghlContactUrl(r.ghlContactId);
+              return url ? (
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Open contact in GHL"
+                  className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest bg-bauhaus-blue text-white hover:bg-bauhaus-black"
+                >
+                  Open in GHL ↗
+                </a>
+              ) : (
+                <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest bg-bauhaus-blue text-white">
+                  GHL linked
+                </span>
+              );
+            })()
           ) : (
             <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest bg-bauhaus-canvas text-bauhaus-muted">
               No GHL signal

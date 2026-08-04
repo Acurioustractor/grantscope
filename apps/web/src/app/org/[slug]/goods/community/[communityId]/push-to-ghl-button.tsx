@@ -24,7 +24,9 @@ type LinkedState = {
   lastPushedAt?: string;
 };
 
-export function PushToGhlButton({ payload, compact, linked }: { payload: Payload; compact?: boolean; linked?: LinkedState }) {
+export function PushToGhlButton({ payload, compact, linked, ghlLocationId }: { payload: Payload; compact?: boolean; linked?: LinkedState; ghlLocationId?: string | null }) {
+  const contactUrl = (contactId: string) =>
+    ghlLocationId ? `https://app.gohighlevel.com/v2/location/${ghlLocationId}/contacts/detail/${contactId}` : null;
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<{ contactId: string; opportunityId?: string; warning?: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -58,6 +60,16 @@ export function PushToGhlButton({ payload, compact, linked }: { payload: Payload
         <div className={`border-2 border-bauhaus-black bg-bauhaus-yellow font-mono font-black uppercase tracking-wider ${sizeCls}`}>
           {label}
         </div>
+        {contactUrl(done.contactId) && (
+          <a
+            href={contactUrl(done.contactId)!}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`border border-bauhaus-black bg-white font-mono uppercase tracking-wider text-bauhaus-blue hover:bg-bauhaus-canvas ${compact ? 'px-1 py-0 text-[9px]' : 'px-2 py-0.5 text-[10px]'}`}
+          >
+            Open in GHL ↗
+          </a>
+        )}
         {done.warning && <div className="text-[10px] text-bauhaus-red max-w-[160px] text-right">{done.warning}</div>}
       </div>
     );
@@ -68,11 +80,25 @@ export function PushToGhlButton({ payload, compact, linked }: { payload: Payload
     const ago = linked.lastPushedAt ? relativeAgo(linked.lastPushedAt) : '';
     return (
       <div className="flex flex-col items-end gap-1">
-        <div className={`flex items-center gap-1 border-2 border-bauhaus-black bg-bauhaus-yellow font-mono font-black uppercase tracking-wider ${sizeCls}`}>
-          <span>✓ In GHL</span>
-          {linked.stageName && <span className="text-gray-700">· {linked.stageName}</span>}
-          {ago && <span className="text-gray-500">· {ago}</span>}
-        </div>
+        {contactUrl(linked.contactId) ? (
+          <a
+            href={contactUrl(linked.contactId)!}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Open contact in GHL"
+            className={`flex items-center gap-1 border-2 border-bauhaus-black bg-bauhaus-yellow font-mono font-black uppercase tracking-wider hover:bg-bauhaus-canvas ${sizeCls}`}
+          >
+            <span>✓ In GHL ↗</span>
+            {linked.stageName && <span className="text-gray-700">· {linked.stageName}</span>}
+            {ago && <span className="text-gray-500">· {ago}</span>}
+          </a>
+        ) : (
+          <div className={`flex items-center gap-1 border-2 border-bauhaus-black bg-bauhaus-yellow font-mono font-black uppercase tracking-wider ${sizeCls}`}>
+            <span>✓ In GHL</span>
+            {linked.stageName && <span className="text-gray-700">· {linked.stageName}</span>}
+            {ago && <span className="text-gray-500">· {ago}</span>}
+          </div>
+        )}
         <button
           type="button"
           onClick={push}
