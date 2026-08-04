@@ -73,6 +73,13 @@ export interface OrgPipelineData {
   totalRows: number;
 }
 
+const DEFAULT_DISCOVERED_MIN_SCORE = 60;
+const MIN_DISCOVERED_THEME_SCORE = 20;
+const MIN_DISCOVERED_ELIGIBILITY_SCORE = 10;
+const MAX_DISCOVERED_PER_PROJECT = 5;
+const COLD_DEADLINE_BUFFER_DAYS = 5;
+const RESTRICTED_ROUND_PATTERN = /\b(closed non-competitive|by invitation|invitation only|division of service delivery|rolling funding arrangements|indigenous employment initiative|building early education fund|agency collaborates)\b/i;
+
 interface RawRecRow {
   project_code: string;
   opportunity_id: string;
@@ -128,13 +135,13 @@ function isPipelineColumn(value: string): value is PipelineColumn {
  * Pipeline data for an org slug. Currently only `act` (and aliases) has the
  * underlying ACT project codes wired up in act_grant_recommendations.
  *
- * `discoveredMinScore` (default 40) gates which undecided opportunities show
- * up in the Discovered column — 553 unique opps × 6 projects would otherwise
- * dwarf decided rows.
+ * Undecided machine suggestions pass a stricter actionability gate and are
+ * capped per project. Human-decided rows are always retained.
  */
 export const getOrgPipelineData = cache(async function getOrgPipelineData(
   slug: string,
-  discoveredMinScore = 40,
+  discoveredMinScore = DEFAULT_DISCOVERED_MIN_SCORE,
+  includeHistorical = false,
 ): Promise<OrgPipelineData | null> {
   if (!isActSlug(slug)) return null;
 
@@ -142,7 +149,7 @@ export const getOrgPipelineData = cache(async function getOrgPipelineData(
 
   const [recsRes, decisionsRes, projectsRes, contextsRes] = await Promise.all([
     supabase
-      .from('act_grant_recommendations')
+      .from('act_grant_recommendations_current')
       .select(
         'project_code, opportunity_id, opportunity_name, funder_name, deadline, min_grant_amount, max_grant_amount, source_url, application_url, fit_score, is_strong_fit, flags, theme_score, geography_score, eligibility_score, timing_score',
       )
@@ -163,6 +170,16 @@ export const getOrgPipelineData = cache(async function getOrgPipelineData(
   const decisions = (decisionsRes.data ?? []) as RawDecisionRow[];
   const projects = (projectsRes.data ?? []) as RawProjectRow[];
   const contexts = (contextsRes.data ?? []) as FunderContext[];
+
+  if (recsRes.error) {
+    throw new Error(`Grant recommendations unavailable: ${recsRes.error.message}`);
+  }
+  if (decisionsRes.error) {
+    throw new Error(`Grant recommendation decisions unavailable: ${decisionsRes.error.message}`);
+  }
+  if (projectsRes.error) {
+    throw new Error(`Grant recommendation projects unavailable: ${projectsRes.error.message}`);
+  }
 
   const contextByFunder = new Map<string, FunderContext>();
   for (const ctx of contexts) {
@@ -207,18 +224,56 @@ export const getOrgPipelineData = cache(async function getOrgPipelineData(
   }
 
   const cards: OrgPipelineCard[] = [];
+  const discoveredByProject = new Map<string, number>();
+  const discoveredFingerprints = new Set<string>();
   for (const { best, others } of byOpp.values()) {
     const decision = decisionForOpp(best.opportunity_id, best.project_code);
     const decisionState: PipelineColumn = decision && isPipelineColumn(decision.decision)
       ? decision.decision
       : 'discovered';
 
-    if (decisionState === 'discovered' && best.fit_score < discoveredMinScore) {
-      // Below the discovered floor — don't surface in any column.
-      continue;
-    }
-
     const temp = temperatureFor(best.funder_name, contextByFunder);
+    if (decisionState === 'discovered') {
+      const deadlineMs = best.deadline ? new Date(best.deadline).getTime() : null;
+      const daysUntilDeadline = deadlineMs == null
+        ? null
+        : (deadlineMs - Date.now()) / (24 * 60 * 60 * 1000);
+      const isColdRelationship = temp.label === 'COLD' || temp.label === 'LIGHT';
+      const isColdAndTooLate = daysUntilDeadline != null
+        && daysUntilDeadline < COLD_DEADLINE_BUFFER_DAYS
+        && isColdRelationship;
+      const yearsInName = Array.from(best.opportunity_name.matchAll(/\b(20\d{2})\b/g))
+        .map((match) => Number(match[1]));
+      const currentYear = new Date().getUTCFullYear();
+      const namesPastRound = yearsInName.length > 0
+        && Math.max(...yearsInName) < currentYear;
+      const isRestrictedRound = RESTRICTED_ROUND_PATTERN.test(best.opportunity_name);
+      // A relationship is not an open funding round. Rolling opportunities must
+      // carry a reviewed next-action date before they can enter this pipeline.
+      const hasCurrentTimingEvidence = deadlineMs != null;
+      const fingerprint = `${best.funder_name ?? ''}|${best.opportunity_name}`
+        .toLowerCase()
+        .replace(/\b(round|program|grant|grants|funding|the|and|for|of)\b/g, ' ')
+        .replace(/[^a-z0-9]+/g, ' ')
+        .trim();
+      const isActionableSuggestion = best.is_strong_fit
+        && best.fit_score >= discoveredMinScore
+        && best.theme_score >= MIN_DISCOVERED_THEME_SCORE
+        && best.eligibility_score >= MIN_DISCOVERED_ELIGIBILITY_SCORE
+        && Boolean(best.source_url || best.application_url)
+        && hasCurrentTimingEvidence
+        && !isColdAndTooLate
+        && !namesPastRound
+        && !isRestrictedRound
+        && !discoveredFingerprints.has(fingerprint);
+      const projectSuggestionCount = discoveredByProject.get(best.project_code) ?? 0;
+
+      if (!isActionableSuggestion || projectSuggestionCount >= MAX_DISCOVERED_PER_PROJECT) {
+        continue;
+      }
+      discoveredByProject.set(best.project_code, projectSuggestionCount + 1);
+      discoveredFingerprints.add(fingerprint);
+    }
 
     cards.push({
       key: `${best.project_code}|${best.opportunity_id}`,
@@ -258,7 +313,7 @@ export const getOrgPipelineData = cache(async function getOrgPipelineData(
     .select('funder_name, project_codes, paid_total, paid_invoice_count, last_paid_date')
     .gt('paid_total', 1000);
 
-  const historicalCards: OrgPipelineCard[] = [];
+  const historicalCardByKey = new Map<string, OrgPipelineCard>();
   for (const row of incomeRows ?? []) {
     const projectCodes = (row.project_codes as string[] | null) ?? [];
     if (projectCodes.length === 0) continue;
@@ -269,8 +324,9 @@ export const getOrgPipelineData = cache(async function getOrgPipelineData(
     const primaryProject = projectCodes[0];
     const otherProjects = projectCodes.slice(1);
     const temp = temperatureFor(funderName, contextByFunder);
-    historicalCards.push({
-      key: `historical|${primaryProject}|${funderName}`,
+    const historicalKey = `historical|${primaryProject}|${funderName.toLowerCase()}`;
+    const historicalCard: OrgPipelineCard = {
+      key: historicalKey,
       project_code: primaryProject,
       also_fits_projects: otherProjects,
       opportunity_id: `historical-${primaryProject}-${funderName}`,
@@ -297,11 +353,24 @@ export const getOrgPipelineData = cache(async function getOrgPipelineData(
       is_historical: true,
       historical_paid_total: paidTotal,
       historical_invoice_count: invoiceCount,
-    });
+    };
+
+    const existing = historicalCardByKey.get(historicalKey);
+    if (
+      !existing
+      || (historicalCard.decided_at ?? '') > (existing.decided_at ?? '')
+      || (
+        historicalCard.decided_at === existing.decided_at
+        && (historicalCard.historical_paid_total ?? 0) > (existing.historical_paid_total ?? 0)
+      )
+    ) {
+      historicalCardByKey.set(historicalKey, historicalCard);
+    }
   }
+  const historicalCards = Array.from(historicalCardByKey.values());
 
   return {
-    cards: [...cards, ...historicalCards],
+    cards: includeHistorical ? [...cards, ...historicalCards] : cards,
     projects: projects.map((p) => ({
       project_code: p.project_code,
       project_label: p.notes ?? p.project_code,

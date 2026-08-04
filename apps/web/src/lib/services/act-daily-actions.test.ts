@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildDecisionOutcomeMetadata,
   buildDailyActionMemory,
   dailyActionSourceRef,
+  decisionOutcomeSourceRef,
   isActDailyActionStatus,
   perthDayKey,
   relationshipFollowUpActionId,
@@ -16,6 +18,49 @@ describe('ACT daily action receipts', () => {
 
   it('scopes each action receipt to one day', () => {
     expect(dailyActionSourceRef('collect-sonas', '2026-07-11')).toBe('2026-07-11:collect-sonas');
+  });
+
+  it('gives a completed decision action one append-only outcome identity', () => {
+    expect(decisionOutcomeSourceRef('decision-1', 'call-qbe', '2026-07-11'))
+      .toBe('2026-07-11:decision-1:call-qbe');
+  });
+
+  it('records a minimal narrative outcome without inferring an external result', () => {
+    expect(buildDecisionOutcomeMetadata({
+      actionId: 'call-qbe',
+      day: '2026-07-11',
+      decision: 'partner',
+      decisionReason: 'A direct conversation is needed before proposing terms.',
+      decisionEvidenceGaps: ['What form of support is useful to QBE?'],
+      promiseOrReturn: 'Ben promised to send the Goods evidence brief.',
+      recordedBy: 'user-1',
+    })).toEqual({
+      event_type: 'outcome_observed',
+      action_id: 'call-qbe',
+      day: '2026-07-11',
+      decision: 'partner',
+      what_changed: 'A direct conversation is needed before proposing terms.',
+      promise_or_return: 'Ben promised to send the Goods evidence brief.',
+      what_happened: 'Action marked done; an external result has not been recorded yet.',
+      next_question: 'What form of support is useful to QBE?',
+      recorded_by: 'user-1',
+    });
+  });
+
+  it('uses explicit completion reflection instead of guessing from the decision', () => {
+    expect(buildDecisionOutcomeMetadata({
+      actionId: 'return-snow-draft',
+      day: '2026-07-11',
+      decision: 'partner',
+      whatHappened: 'Snow confirmed the revised wording.',
+      promiseOrReturn: 'ACT returned the revised draft.',
+      nextQuestion: 'Who approves publication?',
+      recordedBy: 'user-1',
+    })).toMatchObject({
+      what_happened: 'Snow confirmed the revised wording.',
+      promise_or_return: 'ACT returned the revised draft.',
+      next_question: 'Who approves publication?',
+    });
   });
 
   it('accepts only the three daily workflow outcomes', () => {

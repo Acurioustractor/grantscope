@@ -8,8 +8,8 @@ import { OrgPipelineKanban } from './pipeline-kanban';
 export const dynamic = 'force-dynamic';
 
 export const metadata = {
-  title: 'Pipeline — Org',
-  description: 'Drag-to-decide grant pipeline across 8 decision states.',
+  title: 'ACT Decisions — Org',
+  description: 'Opportunities ACT has consciously accepted for watching or action.',
 };
 
 export default async function OrgPipelinePage({
@@ -21,13 +21,14 @@ export default async function OrgPipelinePage({
 }) {
   const { slug } = await params;
   const sp = await searchParams;
-  const minScoreParam = typeof sp.min === 'string' ? Number(sp.min) : 40;
-  const discoveredMinScore = Number.isFinite(minScoreParam) ? minScoreParam : 40;
+  const minScoreParam = typeof sp.min === 'string' ? Number(sp.min) : 60;
+  const discoveredMinScore = Number.isFinite(minScoreParam) ? minScoreParam : 60;
+  const includeHistorical = sp.history === '1';
 
   const profile = (await getOrgProfileBySlug(slug)) ?? (isActSlug(slug) ? ACT_FAST_PROFILE : null);
   if (!profile) notFound();
 
-  const data = await getOrgPipelineData(slug, discoveredMinScore);
+  const data = await getOrgPipelineData(slug, discoveredMinScore, includeHistorical);
 
   if (!data) {
     return (
@@ -72,12 +73,11 @@ export default async function OrgPipelinePage({
         <div className="mx-auto max-w-7xl px-4 py-8">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-sm font-black uppercase tracking-widest text-bauhaus-red">Pipeline</p>
+              <p className="text-sm font-black uppercase tracking-widest text-bauhaus-red">Decide and act</p>
               <h1 className="text-3xl font-black uppercase tracking-wider">{profile.name}</h1>
               <p className="mt-2 text-sm leading-relaxed text-gray-300">
-                Drag opportunities across 8 decision states. Every move writes to
-                <code className="mx-1 font-mono text-white">act_grant_recommendation_decisions</code>
-                and Pursuing / Applied / Submitted also mirror to your <Link href="/tracker" className="underline hover:text-white">/tracker</Link>.
+                Only verified openings that ACT has deliberately accepted belong here.
+                Move each one from watching to action, outcome, or pass.
               </p>
             </div>
             <div className="flex flex-col items-end gap-2">
@@ -89,10 +89,10 @@ export default async function OrgPipelinePage({
                   Dashboard
                 </Link>
                 <Link
-                  href="/ops/grant-recommendations"
+                  href={`/org/${slug}?view=opportunities#opportunities`}
                   className="border border-white/20 bg-white/10 px-3 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-white hover:text-bauhaus-black"
                 >
-                  Ops view
+                  Observatory
                 </Link>
               </div>
               <div className="text-[11px] font-mono text-gray-300 text-right">

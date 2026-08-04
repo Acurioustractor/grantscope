@@ -15,22 +15,25 @@ import {
   isDirectFunderPerson,
   type ActRelationshipBrief,
 } from '@/lib/services/act-relationship-brief';
-import type { ActRelationshipLedger } from '@/lib/services/act-relationship-ledger';
+import type { ActRelationshipLedger as ActRelationshipLedgerData } from '@/lib/services/act-relationship-ledger';
 import { ActPeopleDirectory } from './act-people-directory';
+import { ActRelationshipLedger as ActRelationshipLedgerView } from './act-relationship-ledger';
 
 type Filter = 'action' | 'connected' | 'research' | 'all';
-type Surface = 'funders' | 'people' | 'resolution';
+type Surface = 'funders' | 'ledger' | 'people' | 'resolution';
 
 export function ActFunderIntelligenceDesk({
   intelligence,
   relationshipLedger,
   orgProfileId,
   initialFoundationId,
+  initialLedgerKey,
 }: {
   intelligence: ActFunderIntelligence;
-  relationshipLedger?: ActRelationshipLedger | null;
+  relationshipLedger?: ActRelationshipLedgerData | null;
   orgProfileId: string;
   initialFoundationId?: string;
+  initialLedgerKey?: string;
 }) {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<Filter>('action');
@@ -87,6 +90,9 @@ export function ActFunderIntelligenceDesk({
 
       <div className="flex border-b border-[var(--ws-border)] bg-white px-4 pt-2" aria-label="Relationship workspace">
         <button type="button" onClick={() => setSurface('funders')} className={`min-h-11 border-b-2 px-4 text-sm font-semibold ${surface === 'funders' ? 'border-[#2f6b4a] text-[#183426]' : 'border-transparent text-[var(--ws-text-secondary)]'}`}>Funders</button>
+        <button type="button" onClick={() => setSurface('ledger')} className={`min-h-11 border-b-2 px-4 text-sm font-semibold ${surface === 'ledger' ? 'border-[#2f6b4a] text-[#183426]' : 'border-transparent text-[var(--ws-text-secondary)]'}`}>
+          Ledger <span className="ml-1 font-mono text-[10px]">{relationshipLedger?.summary.organisations ?? 0}</span>
+        </button>
         <button type="button" onClick={() => setSurface('people')} className={`min-h-11 border-b-2 px-4 text-sm font-semibold ${surface === 'people' ? 'border-[#2f6b4a] text-[#183426]' : 'border-transparent text-[var(--ws-text-secondary)]'}`}>People</button>
         <button type="button" onClick={() => setSurface('resolution')} className={`min-h-11 border-b-2 px-4 text-sm font-semibold ${surface === 'resolution' ? 'border-[#2f6b4a] text-[#183426]' : 'border-transparent text-[var(--ws-text-secondary)]'}`}>
           Resolve contacts <span className="ml-1 font-mono text-[10px]">{intelligence.contactResolution.total}</span>
@@ -142,6 +148,8 @@ export function ActFunderIntelligenceDesk({
             {selected && selectedBrief ? <FunderDossierView key={selected.foundationId} dossier={selected} brief={selectedBrief} intelligence={intelligence} orgProfileId={orgProfileId} /> : <EmptyDossier />}
           </main>
         </div>
+      ) : surface === 'ledger' ? (
+        <ActRelationshipLedgerView data={relationshipLedger ?? null} orgProfileId={orgProfileId} initialSelectedKey={initialLedgerKey} />
       ) : surface === 'people' ? (
         <ActPeopleDirectory orgProfileId={orgProfileId} />
       ) : <ContactResolutionQueue items={intelligence.contactResolution.items} orgProfileId={orgProfileId} />}

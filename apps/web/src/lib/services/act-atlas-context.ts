@@ -1174,7 +1174,7 @@ export async function enrichActAtlasRecords(
       ? db.from('v_project_money_state').select('project_code, income_fy, expenses_fy, net_fy, receivables, pipeline_weighted, pipeline_raw, grants_in_flight, grants_in_flight_count, last_transaction_at, last_opp_update_at').in('project_code', projectCodes)
       : Promise.resolve({ data: [], error: null }),
     projectCodes.length > 0
-      ? db.from('act_grant_recommendations').select('project_code, opportunity_id, opportunity_name, funder_name, deadline, max_grant_amount, fit_score, flags, application_url, source_url, verification_status').in('project_code', projectCodes).eq('is_strong_fit', true).order('fit_score', { ascending: false }).limit(120)
+      ? db.from('act_grant_recommendations_current').select('project_code, opportunity_id, opportunity_name, funder_name, deadline, max_grant_amount, fit_score, flags, application_url, source_url, verification_status').in('project_code', projectCodes).eq('is_strong_fit', true).order('fit_score', { ascending: false }).limit(120)
       : Promise.resolve({ data: [], error: null }),
     projectCodes.length > 0
       ? db.from('act_grant_recommendation_projects').select('project_code, project_label, readiness, current_state, opportunity_alignment, next_question, evidence_we_have').in('project_code', projectCodes)

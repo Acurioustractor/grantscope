@@ -119,7 +119,9 @@ export function ActTestGuide({ slug }: { slug: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-4 right-4 z-50 min-h-11 rounded-md border border-[#315c45] bg-[#183426] px-4 text-xs font-semibold text-white shadow-lg transition hover:bg-[#24523b] focus:outline-none focus:ring-2 focus:ring-[#2f8f64] focus:ring-offset-2"
+        className={`fixed bottom-4 right-4 z-50 min-h-11 rounded-md border border-[#315c45] bg-[#183426] px-4 text-xs font-semibold text-white shadow-lg transition hover:bg-[#24523b] focus:outline-none focus:ring-2 focus:ring-[#2f8f64] focus:ring-offset-2 ${
+          pathname.endsWith('/goods/model') ? 'hidden' : ''
+        }`}
         data-testid="act-test-guide-launcher"
       >
         {completeCount > 0 ? `Resume test drive · ${completeCount}/${TEST_STEPS.length}` : 'Test the whole ACT system'}

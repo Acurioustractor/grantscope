@@ -3,6 +3,16 @@
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import type { ReactNode } from 'react';
+import {
+  CalendarBlank,
+  Cube,
+  Database,
+  FileText,
+  Gavel,
+  Gear,
+  MagnifyingGlass,
+  UsersThree,
+} from '@phosphor-icons/react';
 import type { OrgProjectSummary } from '@/lib/services/org-dashboard-service';
 
 const PROJECT_COLOURS = ['#c99a2e', '#6b78b8', '#4f8b63', '#a06b8b', '#44899b', '#8b6f56'];
@@ -60,6 +70,10 @@ export function ActWorkspaceShell({
   const view = searchParams.get('view') ?? 'today';
   const orgRoot = `/org/${slug}`;
   const onOrgRoot = pathname === orgRoot;
+  const goodsDecisionDesk = pathname.endsWith('/goods/model');
+  const justiceHubDecisionDesk = pathname.endsWith('/justicehub/model');
+  const resourceDesk = pathname.endsWith('/resources');
+  const matterDecisionDesk = goodsDecisionDesk || justiceHubDecisionDesk || resourceDesk;
   const projectRows = flattenProjects(projects)
     .filter((project) => project.status === 'active')
     .sort((left, right) => projectFieldRank(left) - projectFieldRank(right) || left.name.localeCompare(right.name));
@@ -95,12 +109,37 @@ export function ActWorkspaceShell({
       href: rootHref(slug, 'evidence', 'systems'),
       active: onOrgRoot && view === 'evidence',
     },
+    {
+      label: 'Research',
+      detail: 'Experiments & community benefit',
+      href: `/org/${slug}/research`,
+      active: pathname.startsWith(`/org/${slug}/research`),
+    },
+    {
+      label: 'Funding',
+      detail: 'Five weekly decisions',
+      href: `/org/${slug}/funding`,
+      active: pathname.startsWith(`/org/${slug}/funding`) || pathname.endsWith('/funding'),
+    },
   ];
 
   return (
     <div className="act-desk min-h-screen bg-[var(--ws-surface-0)] text-[var(--ws-text)]">
-      <div className="!mx-0 grid min-w-0 !max-w-none lg:grid-cols-[200px_minmax(0,1fr)] 2xl:grid-cols-[208px_minmax(0,1fr)]" data-testid="act-desk-workspace">
+      <div
+        className={`!mx-0 grid min-w-0 !max-w-none ${
+          matterDecisionDesk
+            ? 'lg:grid-cols-[72px_minmax(0,1fr)]'
+            : 'lg:grid-cols-[200px_minmax(0,1fr)] 2xl:grid-cols-[208px_minmax(0,1fr)]'
+        }`}
+        data-testid="act-desk-workspace"
+      >
         <aside className="hidden min-h-screen bg-[#183426] text-white lg:block" data-testid="act-desk-sidebar">
+          {matterDecisionDesk ? (
+            <MatterDecisionRail
+              slug={slug}
+              project={resourceDesk ? 'resources' : justiceHubDecisionDesk ? 'justicehub' : 'goods'}
+            />
+          ) : (
           <div className="sticky top-0 flex h-screen flex-col overflow-hidden px-3 py-3 [@media(max-height:680px)]:py-2" data-testid="act-desk-sidebar-content">
             <Link href={rootHref(slug)} className="flex min-h-10 items-center gap-3 px-2 [@media(max-height:680px)]:min-h-9">
               <span className="grid h-7 w-7 place-items-center rounded bg-[#e7ef65] text-xs font-black text-[#183426]">A</span>
@@ -132,6 +171,7 @@ export function ActWorkspaceShell({
               {utilityLinks.map((link) => <WorkspaceUtilityLink key={link.label} {...link} />)}
             </div>
           </div>
+          )}
         </aside>
 
         <div className="min-w-0">
@@ -140,14 +180,117 @@ export function ActWorkspaceShell({
               A
             </Link>
             <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto" aria-label="ACT mobile work modes">
+              {matterDecisionDesk ? (
+                <MobileWorkspaceLink
+                  href={
+                    resourceDesk
+                      ? `/org/${slug}/resources`
+                      : `/org/${slug}/${justiceHubDecisionDesk ? 'justicehub' : 'goods'}/model`
+                  }
+                  label={resourceDesk ? 'Resources' : justiceHubDecisionDesk ? 'JusticeHub' : 'Goods'}
+                  active
+                />
+              ) : null}
               <MobileWorkspaceLink href={`/org/${slug}/explore`} label="Atlas" active={pathname.startsWith(`/org/${slug}/explore`)} />
               {workModes.slice(0, 4).map((mode) => <MobileWorkspaceLink key={mode.label} {...mode} />)}
               <MobileWorkspaceLink href={rootHref(slug, 'money', 'money')} label="Money" active={onOrgRoot && view === 'money'} />
               <MobileWorkspaceLink href={rootHref(slug, 'evidence', 'systems')} label="Sources" active={onOrgRoot && view === 'evidence'} />
+              <MobileWorkspaceLink href={`/org/${slug}/research`} label="Research" active={pathname.startsWith(`/org/${slug}/research`)} />
             </nav>
           </header>
           {children}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function MatterDecisionRail({
+  slug,
+  project,
+}: {
+  slug: string;
+  project: 'goods' | 'justicehub' | 'resources';
+}) {
+  const isJusticeHub = project === 'justicehub';
+  const isResources = project === 'resources';
+  const links = [
+    { label: 'Today', href: `/org/${slug}`, icon: CalendarBlank, active: false },
+    { label: 'Field', href: `/org/${slug}?view=relationships#relationships`, icon: UsersThree, active: false },
+    {
+      label: isResources ? 'Resources' : isJusticeHub ? 'Justice' : 'Goods',
+      href: isResources ? `/org/${slug}/resources` : `/org/${slug}/${project}/model`,
+      icon: isResources ? Database : isJusticeHub ? Gavel : Cube,
+      active: true,
+    },
+    {
+      label: 'Evidence',
+      href: isResources
+        ? '/grants'
+        : isJusticeHub
+          ? '/reports/youth-justice/qld/announcements'
+          : `/org/${slug}/goods/proof`,
+      icon: FileText,
+      active: false,
+    },
+    { label: 'Sources', href: `/org/${slug}?view=evidence#systems`, icon: Database, active: false },
+  ];
+
+  return (
+    <div
+      className="sticky top-0 flex h-screen flex-col items-center overflow-hidden px-2 py-4"
+      data-testid="act-desk-sidebar-content"
+    >
+      <Link
+        href={`/org/${slug}`}
+        className="grid h-11 w-11 place-items-center rounded-lg bg-[#e7ef65] text-sm font-black text-[#183426] shadow-sm"
+        aria-label="A Curious Tractor"
+      >
+        A
+      </Link>
+
+      <nav
+        className="mt-7 flex w-full flex-col gap-2"
+        aria-label={`${isResources ? 'Resource' : isJusticeHub ? 'JusticeHub' : 'Goods'} decision workspace`}
+      >
+        {links.map((link) => {
+          const Icon = link.icon;
+          return (
+            <Link
+              key={link.label}
+              href={link.href}
+              aria-current={link.active ? 'page' : undefined}
+              title={link.label}
+              className={`flex min-h-[62px] w-full flex-col items-center justify-center gap-1.5 rounded-xl text-[10px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e7ef65] ${
+                link.active
+                  ? 'bg-[#2f8f64] text-white shadow-[0_8px_24px_rgba(0,0,0,0.18)]'
+                  : 'text-[#c7d1ca] hover:bg-white/8 hover:text-white'
+              }`}
+            >
+              <Icon size={24} weight={link.active ? 'fill' : 'regular'} aria-hidden />
+              <span>{link.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+
+      <div className="mt-auto flex w-full flex-col gap-2">
+        <Link
+          href={`/org/${slug}/explore`}
+          title="Search"
+          className="flex min-h-[58px] w-full flex-col items-center justify-center gap-1.5 rounded-xl text-[10px] font-semibold text-[#c7d1ca] transition hover:bg-white/8 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e7ef65]"
+        >
+          <MagnifyingGlass size={23} weight="regular" aria-hidden />
+          Search
+        </Link>
+        <Link
+          href={`/org/${slug}/goods/governance`}
+          title="Structure"
+          className="flex min-h-[58px] w-full flex-col items-center justify-center gap-1.5 rounded-xl text-[10px] font-semibold text-[#c7d1ca] transition hover:bg-white/8 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e7ef65]"
+        >
+          <Gear size={23} weight="regular" aria-hidden />
+          Structure
+        </Link>
       </div>
     </div>
   );
