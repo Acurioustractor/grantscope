@@ -138,11 +138,12 @@ export function OrganisationsMap() {
       </div>
 
       <p className="font-mono text-[11px] leading-5">
-        One circle per postcode, not per organisation — we do not know where an organisation sits beyond its
-        postcode, and postcode 0872 alone is larger than most European countries. Circle area tracks the money in
-        the selected channel. Red means community-controlled organisations hold most of that money here, blue
-        means they do not. Hover for totals, click for the organisations. A faint circle has no money in this
-        channel, which can mean unmatchable rather than unfunded.
+        One circle per council, matching the cards above. Circle area tracks the money in the selected channel.
+        Red means community-controlled organisations hold most of that money, blue means they do not. Hover for
+        totals, click for the largest organisations. Circles sit at the centre of gravity of their
+        organisations&rsquo; postcodes, not on council boundaries — we know an organisation&rsquo;s postcode, not
+        its address, and postcode 0872 alone is larger than most European countries. A faint circle has no money
+        in this channel, which can mean unmatchable rather than unfunded.
       </p>
 
       <div className="overflow-x-auto border-4 border-bauhaus-black bg-white">

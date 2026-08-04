@@ -13,13 +13,18 @@ import type { OrgMarker } from '@/app/api/place/central-australia/organisations/
  * in with next/dynamic and ssr:false, which is allowed in a client component
  * but not in the Server Component page.
  *
- * One marker per postcode, not per organisation. An earlier version scattered
- * every organisation around its postcode centroid, which drew 1,199 markers
- * across five points as dense spiral discs. They read as geographic spread and
- * were nothing of the kind: we do not know where these organisations sit beyond
- * their postcode, and 0872 alone is larger than most European countries.
- * Aggregating is both more readable and more honest — the circle marks the only
- * location we actually hold.
+ * One marker per council, not per organisation and not per postcode.
+ *
+ * The first version scattered all 1,199 organisations around their postcode
+ * centroids, drawing dense spiral discs that read as geographic spread and were
+ * nothing of the kind. The second grouped by postcode, which was honest but
+ * split Alice Springs into five circles — 0870, 0871, 0873, 0874 and 0875 are
+ * all the same town, and 0875 is just Larapinta with one large builder in it.
+ *
+ * Council is the unit the rest of the page reports on, so the map now matches
+ * the cards above it. Organisations with no council keep their own circle
+ * rather than being dropped, because in this region that group is almost
+ * entirely Aboriginal corporations in the homelands.
  */
 
 export interface Positioned { org: OrgMarker; lat: number; lng: number }
@@ -44,19 +49,21 @@ export function MapCanvas({
   max: number;
   money: (v: number) => string;
 }) {
-  const byPostcode = new Map<string, Cluster>();
+  const byCouncil = new Map<string, Cluster & { latSum: number; lngSum: number }>();
   for (const { org, lat, lng } of positions) {
-    const key = org.postcode || `${lat},${lng}`;
-    let cluster = byPostcode.get(key);
+    const key = org.lga || 'No council recorded';
+    let cluster = byCouncil.get(key);
     if (!cluster) {
       cluster = {
-        key, lat, lng, postcode: org.postcode, lga: org.lga,
+        key, lat: 0, lng: 0, latSum: 0, lngSum: 0, postcode: org.postcode, lga: org.lga,
         orgs: [], value: 0, communityControlled: 0, ccValue: 0,
       };
-      byPostcode.set(key, cluster);
+      byCouncil.set(key, cluster);
     }
     const v = valueOf(org);
     cluster.orgs.push(org);
+    cluster.latSum += lat;
+    cluster.lngSum += lng;
     cluster.value += v;
     if (org.communityControlled) {
       cluster.communityControlled += 1;
@@ -64,7 +71,11 @@ export function MapCanvas({
     }
   }
 
-  const clusters = [...byPostcode.values()].sort((a, b) => b.value - a.value);
+  // Placed at the mean of its organisations' postcode centroids, which is a
+  // rough centre of gravity rather than a council boundary.
+  const clusters = [...byCouncil.values()]
+    .map(c => ({ ...c, lat: c.latSum / c.orgs.length, lng: c.lngSum / c.orgs.length }))
+    .sort((a, b) => b.value - a.value);
   const biggest = Math.max(1, ...clusters.map(c => c.value));
 
   return (
@@ -94,21 +105,22 @@ export function MapCanvas({
           >
             <Tooltip direction="top" offset={[0, -4]} opacity={1}>
               <span style={{ fontFamily: 'monospace', fontSize: 11 }}>
-                {cluster.postcode || 'no postcode'} · {cluster.orgs.length} orgs · {money(cluster.value)}
+                {cluster.key} · {cluster.orgs.length} orgs · {money(cluster.value)}
               </span>
             </Tooltip>
             <Popup maxWidth={340}>
               <div style={{ fontSize: 13 }}>
-                <strong>{cluster.lga || 'No council recorded'} · {cluster.postcode || 'no postcode'}</strong>
+                <strong>{cluster.key}</strong>
                 <div style={{ fontFamily: 'monospace', fontSize: 11, marginTop: 4 }}>
                   {cluster.orgs.length} organisations · {cluster.communityControlled} community-controlled
                   <br />
                   {money(cluster.value)} in this channel · {Math.round(ccShare * 100)}% to community-controlled
                 </div>
-                {cluster.postcode === '0872' ? (
+                {!cluster.lga ? (
                   <p style={{ fontSize: 11, marginTop: 8 }}>
-                    Postcode 0872 covers most of the remote centre across three states. This circle marks the
-                    postcode, not a place.
+                    No council can be recorded for these organisations: they share postcode 0872, which spans
+                    seven councils across three states, and ORIC publishes no address. The circle is a centre of
+                    gravity, not a location.
                   </p>
                 ) : null}
                 <table style={{ marginTop: 8, width: '100%', fontSize: 12 }}>
