@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { ACT_FAST_PROFILE, isActSlug } from '@/lib/services/fast-local-org';
+import { ACT_FAST_PROFILE, isActSlug, shouldUseFastLocalOrg } from '@/lib/services/fast-local-org';
 import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
 import { searchActAtlas, type ActAtlasRecordType } from '@/lib/services/act-atlas';
 import { ActAtlasExplorer } from './act-atlas-explorer';
@@ -37,8 +37,9 @@ export default async function ActAtlasPage({
   const requestedState = firstValue(values.state).toUpperCase();
   const state = STATES.has(requestedState) ? requestedState : undefined;
   const mode = firstValue(values.mode) === 'map' ? 'map' : 'list';
-  const storedProfile = await getOrgProfileBySlug(slug);
-  const profile = storedProfile ?? ACT_FAST_PROFILE;
+  const profile = shouldUseFastLocalOrg() && isActSlug(slug)
+    ? ACT_FAST_PROFILE
+    : (await getOrgProfileBySlug(slug)) ?? ACT_FAST_PROFILE;
   const data = await searchActAtlas({
     orgProfileId: profile.id,
     slug,
