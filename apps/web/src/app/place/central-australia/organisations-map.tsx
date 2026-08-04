@@ -30,12 +30,6 @@ function money(value: number): string {
   return `$${Math.round(value)}`;
 }
 
-/** Deterministic offset so a postcode's organisations do not stack on one pixel. */
-function scatter(index: number): [number, number] {
-  const golden = 2.399963;
-  const r = 0.06 * Math.sqrt(index + 1);
-  return [r * Math.cos(index * golden), r * Math.sin(index * golden)];
-}
 
 // ssr:false is legal here because this module is itself a client component.
 const MapCanvas = dynamic(() => import('./map-canvas').then(m => m.MapCanvas), {
@@ -88,16 +82,12 @@ export function OrganisationsMap() {
   const max = useMemo(() => Math.max(1, ...filtered.map(active.get)), [filtered, active]);
   const totalShown = useMemo(() => filtered.reduce((sum, o) => sum + active.get(o), 0), [filtered, active]);
 
-  const positions = useMemo(() => {
-    const seen = new Map<string, number>();
-    return filtered.map(o => {
-      const key = `${o.lat},${o.lng}`;
-      const n = seen.get(key) || 0;
-      seen.set(key, n + 1);
-      const [dy, dx] = scatter(n);
-      return { org: o, lat: o.lat + dy, lng: o.lng + dx };
-    });
-  }, [filtered]);
+  // No jitter: the canvas groups by postcode, so every organisation keeps its
+  // true centroid.
+  const positions = useMemo(
+    () => filtered.map(o => ({ org: o, lat: o.lat, lng: o.lng })),
+    [filtered],
+  );
 
   if (error) return <p className="border-4 border-bauhaus-red bg-white p-4 text-sm">Could not load organisations: {error}</p>;
   if (!orgs) return <p className="border-4 border-bauhaus-black bg-white p-4 font-mono text-xs">Loading organisations…</p>;
@@ -148,11 +138,11 @@ export function OrganisationsMap() {
       </div>
 
       <p className="font-mono text-[11px] leading-5">
-        Red = community-controlled. Blue = other. Circle size is the selected channel. Markers sit on postcode
-        centroids and are scattered slightly so they stay clickable — a dot is a postcode, not an address. Postcode
-        0872 covers most of the remote centre, so those markers mean &ldquo;somewhere in the homelands&rdquo;.
-        A hollow marker has no money in this channel, which may mean it cannot be matched rather than that it
-        receives nothing.
+        One circle per postcode, not per organisation — we do not know where an organisation sits beyond its
+        postcode, and postcode 0872 alone is larger than most European countries. Circle area tracks the money in
+        the selected channel. Red means community-controlled organisations hold most of that money here, blue
+        means they do not. Hover for totals, click for the organisations. A faint circle has no money in this
+        channel, which can mean unmatchable rather than unfunded.
       </p>
 
       <div className="overflow-x-auto border-4 border-bauhaus-black bg-white">

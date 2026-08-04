@@ -1,6 +1,6 @@
 'use client';
 
-import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, CircleMarker, Popup, Tooltip } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { OrgMarker } from '@/app/api/place/central-australia/organisations/route';
 
@@ -12,70 +12,130 @@ import type { OrgMarker } from '@/app/api/place/central-australia/organisations/
  * throws during SSR. Isolating it here lets the parent client component pull it
  * in with next/dynamic and ssr:false, which is allowed in a client component
  * but not in the Server Component page.
+ *
+ * One marker per postcode, not per organisation. An earlier version scattered
+ * every organisation around its postcode centroid, which drew 1,199 markers
+ * across five points as dense spiral discs. They read as geographic spread and
+ * were nothing of the kind: we do not know where these organisations sit beyond
+ * their postcode, and 0872 alone is larger than most European countries.
+ * Aggregating is both more readable and more honest — the circle marks the only
+ * location we actually hold.
  */
 
 export interface Positioned { org: OrgMarker; lat: number; lng: number }
 
+interface Cluster {
+  key: string;
+  lat: number;
+  lng: number;
+  postcode: string | null;
+  lga: string | null;
+  orgs: OrgMarker[];
+  value: number;
+  communityControlled: number;
+  ccValue: number;
+}
+
 export function MapCanvas({
-  positions, valueOf, max, money,
+  positions, valueOf, money,
 }: {
   positions: Positioned[];
   valueOf: (o: OrgMarker) => number;
   max: number;
   money: (v: number) => string;
 }) {
-  return (
+  const byPostcode = new Map<string, Cluster>();
+  for (const { org, lat, lng } of positions) {
+    const key = org.postcode || `${lat},${lng}`;
+    let cluster = byPostcode.get(key);
+    if (!cluster) {
+      cluster = {
+        key, lat, lng, postcode: org.postcode, lga: org.lga,
+        orgs: [], value: 0, communityControlled: 0, ccValue: 0,
+      };
+      byPostcode.set(key, cluster);
+    }
+    const v = valueOf(org);
+    cluster.orgs.push(org);
+    cluster.value += v;
+    if (org.communityControlled) {
+      cluster.communityControlled += 1;
+      cluster.ccValue += v;
+    }
+  }
 
-        <MapContainer center={[-23.7, 133.9]} zoom={6} style={{ height: '100%', width: '100%' }} scrollWheelZoom>
-          <TileLayer
-            attribution='&copy; OpenStreetMap contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          {positions.map(({ org, lat, lng }) => {
-            const value = valueOf(org);
-            const radius = value > 0 ? 5 + 22 * Math.sqrt(value / max) : 4;
-            return (
-              <CircleMarker
-                key={org.id}
-                center={[lat, lng]}
-                radius={radius}
-                pathOptions={{
-                  color: '#121212',
-                  weight: 1,
-                  fillColor: org.communityControlled ? '#D02020' : '#1040C0',
-                  fillOpacity: value > 0 ? 0.75 : 0.25,
-                }}
-              >
-                <Popup>
-                  <div className="text-sm">
-                    <strong>{org.name}</strong>
-                    <div className="mt-1 font-mono text-[11px]">
-                      {org.lga || 'No council recorded'} · {org.postcode || 'no postcode'}
-                      {org.communityControlled ? ' · community-controlled' : ''}
-                      {org.oricStatus ? ` · ORIC ${org.oricStatus}` : ''}
-                    </div>
-                    {org.oricSector ? <div className="mt-1 text-[12px]">{org.oricSector}</div> : null}
-                    <table className="mt-2 text-[12px]">
-                      <tbody>
-                        <tr><td className="pr-3">Contracts</td><td>{money(org.contractValue)}</td></tr>
-                        <tr><td className="pr-3">Grants held</td><td>{money(org.grantsReceived)}</td></tr>
-                        <tr><td className="pr-3">Delivered here</td><td>{money(org.grantsDeliveredHere)}</td></tr>
-                        <tr><td className="pr-3">Other govt</td><td>{money(org.otherGovtGrants)}</td></tr>
-                      </tbody>
-                    </table>
-                    {org.totalTraceable === 0 && org.incomeBand ? (
-                      <p className="mt-2 max-w-[240px] text-[11px]">
-                        No traceable funding, but ORIC records income of {org.incomeBand}
-                        {org.employeeBand ? ` and ${org.employeeBand} staff` : ''}. This organisation is active;
-                        we simply cannot match it to funding records.
-                      </p>
-                    ) : null}
-                  </div>
-                </Popup>
-              </CircleMarker>
-            );
-          })}
-        </MapContainer>
-      
+  const clusters = [...byPostcode.values()].sort((a, b) => b.value - a.value);
+  const biggest = Math.max(1, ...clusters.map(c => c.value));
+
+  return (
+    <MapContainer center={[-23.4, 133.5]} zoom={6} style={{ height: '100%', width: '100%' }} scrollWheelZoom>
+      <TileLayer
+        attribution='&copy; OpenStreetMap contributors'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      />
+      {clusters.map(cluster => {
+        // Radius on a square root so area, not radius, tracks the money.
+        const radius = cluster.value > 0 ? 10 + 32 * Math.sqrt(cluster.value / biggest) : 8;
+        const ccShare = cluster.value > 0 ? cluster.ccValue / cluster.value : 0;
+        const top = [...cluster.orgs].sort((a, b) => valueOf(b) - valueOf(a)).slice(0, 6);
+        return (
+          <CircleMarker
+            key={cluster.key}
+            center={[cluster.lat, cluster.lng]}
+            radius={radius}
+            pathOptions={{
+              color: '#121212',
+              weight: 2,
+              // Red where community-controlled organisations hold most of the
+              // money at this postcode, blue where they do not.
+              fillColor: ccShare >= 0.5 ? '#D02020' : '#1040C0',
+              fillOpacity: cluster.value > 0 ? 0.55 : 0.2,
+            }}
+          >
+            <Tooltip direction="top" offset={[0, -4]} opacity={1}>
+              <span style={{ fontFamily: 'monospace', fontSize: 11 }}>
+                {cluster.postcode || 'no postcode'} · {cluster.orgs.length} orgs · {money(cluster.value)}
+              </span>
+            </Tooltip>
+            <Popup maxWidth={340}>
+              <div style={{ fontSize: 13 }}>
+                <strong>{cluster.lga || 'No council recorded'} · {cluster.postcode || 'no postcode'}</strong>
+                <div style={{ fontFamily: 'monospace', fontSize: 11, marginTop: 4 }}>
+                  {cluster.orgs.length} organisations · {cluster.communityControlled} community-controlled
+                  <br />
+                  {money(cluster.value)} in this channel · {Math.round(ccShare * 100)}% to community-controlled
+                </div>
+                {cluster.postcode === '0872' ? (
+                  <p style={{ fontSize: 11, marginTop: 8 }}>
+                    Postcode 0872 covers most of the remote centre across three states. This circle marks the
+                    postcode, not a place.
+                  </p>
+                ) : null}
+                <table style={{ marginTop: 8, width: '100%', fontSize: 12 }}>
+                  <tbody>
+                    {top.map(o => (
+                      <tr key={o.id}>
+                        <td style={{ paddingRight: 10, verticalAlign: 'top' }}>
+                          {o.communityControlled ? <span style={{ color: '#D02020' }}>● </span> : ''}
+                          {o.name.length > 34 ? `${o.name.slice(0, 34)}…` : o.name}
+                        </td>
+                        <td style={{ textAlign: 'right', verticalAlign: 'top', fontFamily: 'monospace' }}>
+                          {money(valueOf(o))}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {cluster.orgs.length > top.length ? (
+                  <p style={{ fontFamily: 'monospace', fontSize: 11, marginTop: 4 }}>
+                    and {cluster.orgs.length - top.length} more — see the table below.
+                  </p>
+                ) : null}
+              </div>
+            </Popup>
+          </CircleMarker>
+        );
+      })}
+    </MapContainer>
   );
 }
