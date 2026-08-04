@@ -156,13 +156,17 @@ export function ActWorkspaceShell({
             <div className="mt-5 px-2 font-mono text-[9px] font-semibold uppercase tracking-widest text-[#8fa196] [@media(max-height:680px)]:mt-3">Project fields</div>
             <nav className="mt-1" aria-label="ACT project fields">
               {fieldProjects.map((project, index) => (
-                <WorkspaceProjectLink
-                  key={project.id}
-                  project={project}
-                  slug={slug}
-                  index={index}
-                  active={pathname.startsWith(`/org/${slug}/${project.slug}`)}
-                />
+                <div key={project.id}>
+                  <WorkspaceProjectLink
+                    project={project}
+                    slug={slug}
+                    index={index}
+                    active={pathname.startsWith(`/org/${slug}/${project.slug}`)}
+                  />
+                  {project.slug === 'goods' && pathname.startsWith(`/org/${slug}/goods`) ? (
+                    <GoodsRailTree slug={slug} pathname={pathname} />
+                  ) : null}
+                </div>
               ))}
               {fieldProjects.length === 0 ? <div className="px-2 py-3 text-xs text-[#aebcb2]">No project fields loaded.</div> : null}
             </nav>
@@ -310,6 +314,46 @@ function WorkspaceModeLink({ href, label, active, index }: WorkspaceLink & { ind
       </span>
       <span className="truncate text-sm font-semibold">{label}</span>
     </Link>
+  );
+}
+
+// Rail-owned Goods navigation (Ben's call, 2026-08-05): the rail is the ONE
+// nav. These groups replace the pill rows that lived in the green page header.
+const GOODS_RAIL_SECTIONS: ReadonlyArray<{ label: string; items: ReadonlyArray<readonly [string, string]> }> = [
+  { label: 'Work', items: [['today', 'Today'], ['capital', 'Capital'], ['matters', 'Matters'], ['network', 'Network'], ['applications', 'Applications'], ['learning', 'Learning']] },
+  { label: 'Money in', items: [['foundations', 'Foundations'], ['foundations/scan', 'Funder Scan'], ['grants', 'Grants'], ['money', 'Money']] },
+  { label: 'Delivery', items: [['funnel', 'Delivery map'], ['communities', 'Communities'], ['channels', 'Channels'], ['buyers', 'Buyers']] },
+  { label: 'Trust', items: [['model', 'Story & model'], ['proof', 'Evidence'], ['governance', 'Governance']] },
+];
+
+function GoodsRailTree({ slug, pathname }: { slug: string; pathname: string }) {
+  const base = `/org/${slug}/goods`;
+  // Highlight only the deepest matching entry so foundations/scan doesn't also
+  // light up foundations.
+  const allPaths = GOODS_RAIL_SECTIONS.flatMap((s) => s.items.map(([p]) => p));
+  const best = allPaths
+    .filter((p) => pathname === `${base}/${p}` || pathname.startsWith(`${base}/${p}/`))
+    .sort((a, b) => b.length - a.length)[0];
+  return (
+    <div className="ml-3 border-l border-white/15 pb-1 pl-2">
+      {GOODS_RAIL_SECTIONS.map((section) => (
+        <div key={section.label}>
+          <div className="mt-1.5 px-1 font-mono text-[8px] font-semibold uppercase tracking-widest text-[#8fa196]">{section.label}</div>
+          {section.items.map(([path, label]) => (
+            <Link
+              key={path}
+              href={`${base}/${path}`}
+              aria-current={best === path ? 'page' : undefined}
+              className={`block rounded px-1.5 py-1 text-[11px] leading-4 hover:bg-white/5 hover:text-white ${
+                best === path ? 'bg-white/10 font-semibold text-white' : 'text-[#c7d1ca]'
+              }`}
+            >
+              {label}
+            </Link>
+          ))}
+        </div>
+      ))}
+    </div>
   );
 }
 
