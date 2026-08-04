@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { GOODS_UNIT_ECONOMICS } from '@/lib/services/goods-living-investment-model';
 
 export const metadata: Metadata = {
   title: 'Goods on Country — CivicGraph',
@@ -247,8 +248,12 @@ export default function GoodsOnCountryPage() {
           {[
             { v: '60 beds', l: 'Delivered to Utopia Homelands, 7 to 9 Oct 2025', accent: 'text-money' },
             { v: 'A$85,712', l: 'Funded by Centrecorp Foundation', accent: 'text-bauhaus-black' },
-            { v: '$194.05', l: 'Saved per bed by pressing recycled plastic in-house', accent: 'text-money' },
-            { v: '20kg', l: 'Recycled plastic diverted per bed (design value)', accent: 'text-bauhaus-black' },
+            {
+              v: `$${GOODS_UNIT_ECONOMICS.contributionChange.toFixed(2)}`,
+              l: 'Modelled contribution increase per bed if in-house pressing achieves workpaper cost',
+              accent: 'text-money',
+            },
+            { v: '20kg', l: 'Plastic design mass per Stretch Bed, not weighed diversion', accent: 'text-bauhaus-black' },
           ].map((s, i) => (
             <div key={s.l} className={`bg-white p-4 sm:p-5 ${i < 3 ? 'border-r-4' : ''} ${i < 2 ? 'border-b-4 sm:border-b-0' : ''} border-bauhaus-black`}>
               <div className={`text-2xl sm:text-3xl font-black ${s.accent}`}>{s.v}</div>
@@ -265,8 +270,8 @@ export default function GoodsOnCountryPage() {
           </p>
           <p className="text-[11px] font-medium text-bauhaus-muted leading-relaxed pt-1">
             Sources: Goods asset register and the Centrecorp impact report. The 60 beds shown are a verified delivery,
-            not a program total. More beds are in production. Per-bed material and saving figures are design and
-            cost-model values, not yet weighbridge-verified.
+            not a program total. The per-bed contribution change is a cost-model result that still needs an instrumented
+            production run. The 20kg plastic figure is design mass, not a weighed diversion result.
           </p>
         </div>
       </section>
@@ -277,8 +282,8 @@ export default function GoodsOnCountryPage() {
         <p className="text-[15px] sm:text-base font-medium text-white/80 leading-relaxed max-w-3xl mb-4">
           The invention is the loop. Health hardware, circular plastic and local production in one system. Owning the
           press changes cost, margin, jobs and ownership at the same time. Beds are built with community, on Country,
-          from plastic the community collects. The plan moves the making itself to Country, with a profit share back
-          to the artisan communities.
+          from plastic the community collects. The intended destination is not only a profit share. It is an agreed
+          community owner holding the machines, knowledge, customer relationships, margin and next decisions.
         </p>
         <p className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-bauhaus-yellow leading-none">
           Our job is to become unnecessary.

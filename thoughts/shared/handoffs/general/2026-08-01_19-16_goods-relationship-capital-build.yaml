@@ -1,0 +1,83 @@
+---
+session: general
+date: 2026-08-01
+status: complete
+outcome: PARTIAL_PLUS
+---
+
+goal: Transfer the verified GrantScope GOODS relationship and capital work into the real GOODS repository with a build-ready brief for investor, product, production, pilot, relationship and diligence assets.
+now: Start in an isolated worktree from current origin/main in /Users/benknight/Code/Goods Asset Register, audit the existing July deck and live pitch surfaces, reconcile the two capital views, then build one canonical evidence register before changing any collateral.
+test: cd '/Users/benknight/Code/Goods Asset Register/v2' && npx tsc --noEmit && npm test && npm run check:drift && npm run build
+
+done_this_session:
+  - task: Added Gavin Reid, Bodie Green and Tania Carlos to the live GrantScope GOODS network with person-to-relationship links, evidence labels, next actions and privacy-safe notes.
+    files: [/Users/benknight/Code/grantscope/apps/web/src/lib/services/goods-network-people.ts, '/Users/benknight/Code/grantscope/apps/web/src/app/org/[slug]/goods/network/page.tsx']
+  - task: Added seven institution pathways covering QBE, Wyatt CLIF, NT Corrections, Origin Foundation, CDU, SEDI and White Box SELF; applied the migration to GrantScope project tednluwflfhxyucgwigh and deployed civicgraph.app.
+    files: [/Users/benknight/Code/grantscope/supabase/migrations/20260801113000_goods_network_people_and_pathways.sql, /Users/benknight/Code/grantscope/apps/web/src/lib/services/goods-capital-workspace.ts]
+  - task: Verified TypeScript, six focused tests, the production build, post-migration rows and the protected production route. Preserved all unrelated uncommitted work and made no git commit or push.
+    files: [/Users/benknight/Code/grantscope/apps/web/tests/unit/lib/services/goods-network-people.test.ts]
+  - task: Located and inspected the real GOODS application, its canon hierarchy, current deck, product and facility surfaces, funder workflow and existing deliverables so the next phase can consolidate rather than duplicate.
+    files: [/Users/benknight/Code/Goods Asset Register/CLAUDE.md, /Users/benknight/Code/Goods Asset Register/STRATEGY.md, /Users/benknight/Code/Goods Asset Register/CONTEXT.md, /Users/benknight/Code/Goods Asset Register/GRANTSCOPE.md]
+
+blockers:
+  - The real app repo worktree is dirty on feat/pitch-road-ending, ahead 2 and behind 16, with many unrelated modified, deleted and untracked files. Do not edit, stage, reset, rebase or pull in that tree. Create a separate worktree from current origin/main and selectively consult the dirty tree where needed.
+  - QBE match-paper acceptance is not yet confirmed in writing. Ask Jay or Social Impact Hub exactly what document, legal entity, instrument and conditions count before representing any letter as qualifying match.
+  - Neither production browser had a signed-in CivicGraph session, so the protected GrantScope page was build-tested and data-tested but not visually inspected after login.
+  - The measured 50-bed run, sustained-rate time/cost/yield, line-supervisor payer, accountant-signed financial artifact, seller-of-record structure and Butterfly to ACT agreement remain human-gated diligence items.
+
+questions:
+  - Which audience is first after the master pack: QBE and SIH, Bodie and NT Corrections, Gavin and Wyatt, Tania and Origin, or a buyer? Build audience variants only after this priority is set.
+  - Should the July 28 PPTX and /pitch/road be revised in place, or should a dated relationship-capital variant sit beside the canonical road deck?
+  - What exact outcome should the first NT Corrections conversation seek: a feasibility workshop, a small production trial, a training partnership, a facility pathway, procurement, or all sequenced behind a discovery call?
+  - Which legal entity receives each line of money? Working rule is repayable and product money to A Curious Tractor Pty Ltd, DGR giving to The Butterfly Movement Ltd, but QBE and partner-specific recipient mechanics require confirmation.
+  - Which current product testing, WHS, insurance, warranty, IP and quality documents exist and can enter an external data room?
+
+decisions:
+  - source_hierarchy: Public figures come from Goods v2/src/lib/data/canon.ts and asset-canonical.ts; dated human judgements from DECISIONS.md; wording from CONTEXT.md; strategy from STRATEGY.md. GrantScope adds relationship evidence and conflicts but never silently overrides Goods canon.
+  - relationship_evidence: Bodie is direct inbound interest in exploring prisoner-led production capability. Gavin and Tania are user-reported interest. None is a funding, manufacturing, procurement or investment commitment.
+  - privacy: Publish LinkedIn profiles and evidence-safe summaries only. Do not publish Ben's phone/email, private message text, personal contact details, RED records or sacred transcripts.
+  - collateral_architecture: Build one typed evidence register and one canonical narrative, then render audience-specific one-pagers, web pages, PPTX and PDF from it. Do not hand-type repeated figures into independent documents.
+  - narrative: The road and community voices lead. The model, economics and ask arrive near the end. Product, production and diligence packs may be model-first because they serve a different reading job.
+  - money_separation: Keep product making, Goods network costs and community wraparound separate. Keep grants, DGR giving, product orders and repayable capital in their correct legal and accounting doors.
+  - claim_ceiling: Every claim remains verified, workpaper, modelled, target, conflict or retired. Ownership is a pathway, never complete. Scabies to RHD is the why, never a claimed health outcome. Never use co-design.
+
+findings:
+  - target_repo: The actual working app is /Users/benknight/Code/Goods Asset Register. /Users/benknight/Code/goods is a small context folder and is not a git repository.
+  - existing_assets: Reuse and audit deliverables/Goods-Final-Pitch-Deck-2026-07-28.pptx, /pitch/road, /pitch/deck, /pitch/document, /investors, /admin/deck-builder, /admin/ask, /wiki/products/stretch-bed, /wiki/manufacturing/facility-manual, /admin/facility and the production-facility experience component. There is already a large consent-aware photo library and artifact system.
+  - capital_truth_grantscope: The live GrantScope workspace currently shows a required range of AU$367K to AU$620K, AU$925K of planning targets, zero evidenced formal asks in that workspace, zero commitments and zero cash received.
+  - capital_truth_goods: Goods strategy currently says AU$400K in signed external commitments by the internal 31 August gate, with zero signed; AU$607.5K of grants at Ask made and AU$710K repayable at Cultivating. The program application closes in late September with no sourced exact day. Reconcile these definitions explicitly before publishing; do not add or average them.
+  - product_truth: Stretch Bed is the AU$750 flagship X-trestle tension bed made from heavy canvas, galvanised poles and recycled HDPE legs. Forty Maningrida Stretch Beds were pressed end to end at the farm under INV-0303. About AU$685 bought-kit marginal cost and AU$426 pressed-factory marginal cost are the current story, but AU$426 is modelled at sustained rate, not measured.
+  - facility_truth: About AU$110,046 is recorded as already invested workpaper, with only about AU$43,700 bill-evidenced; gross equipment need is modelled at AU$112K to AU$222K. Separate the current farm facility, a mobile/container configuration and selectable community modules. Do not repeat a throughput claim unless canon marks it safe.
+  - claim_conflicts: GrantScope treats 177 Stretch Beds x 20kg as modelled in-product mass, while Goods canon currently describes 20kg diversion as verified. GrantScope calculates AU$259.05 improvement between AU$684.79 and AU$425.74, while Goods also carries a differently defined AU$194 saving. Obtain a ruling before using either as a headline.
+  - people: 'Bodie Green: https://www.linkedin.com/in/bodiegreen/; Assistant Commissioner, Operational Reform; direct inbound offer to explore NT prisoner-led industry capacity. Gavin Reid: https://www.linkedin.com/in/gavin-reid-9b76005a/; Wyatt investment pathway; interest reported by Ben. Tania Carlos: https://www.linkedin.com/in/tania-carlos-37839a77/; Origin Foundation support pathway; interest reported by Ben.'
+  - researched_routes: 'Primary sources: https://www.socialimpacthub.org/catalysing-impact; https://www.wyatt.org.au/what-we-do/stories/investing-to-catalyse-local-impact-clif/; https://corrections.nt.gov.au/corrections/industries-skills-employment-initiative; https://nt.gov.au/law/prisons/correctional-industries-and-private-business; https://www.originfoundation.org.au/who-we-are; https://whiteboxenterprises.com.au/innovate/self/; https://www.dss.gov.au/social-impact-investing/social-enterprise-development-initiative.'
+
+worked:
+  - Migration-first Supabase changes using existing RLS-protected tables and explicit project targeting.
+  - Primary-source research plus evidence labels that distinguish direct inbound, user-reported interest and public research.
+  - Isolated release worktree for production deployment while preserving the dirty main worktree.
+  - Goods existing canon, drift checks, voice checks, cleared-voices gates and road-spine guards. Extend these instead of creating a parallel document canon.
+
+failed:
+  - The Playwright CLI package exposed no runnable CLI and local Chromium launch was blocked by the macOS sandbox; both available controlled browsers were unauthenticated for the protected page.
+  - Treating /Users/benknight/Code/goods as the app would be a dead end; it contains only CLAUDE.md and DESIGN.md.
+
+next:
+  - Create a clean worktree from current origin/main. Read AGENTS.md, CLAUDE.md, STRATEGY.md, newest DECISIONS.md, CONTEXT.md, GRANTSCOPE.md, canon.ts, qbe-readiness.md and the current road-deck sources before editing.
+  - Audit the July 28 deck and all listed live surfaces. Produce a reuse, revise, retire matrix. Do not add another narrative spine or another unregistered deck.
+  - Create a canonical relationship-capital evidence register with claim status, source, as-at date, owner, audience, permitted use and unresolved decision for every number, quote, relationship and image in the pack.
+  - Reconcile the GrantScope AU$367K to AU$620K requirement and AU$925K planning pipeline against Goods' AU$400K signed-capital goal and current GHL stage totals. Record the human ruling in DECISIONS.md and update tests before collateral.
+  - Build a two-page master investment overview: page 1 road, product, proof and why now; page 2 use of funds, three cost centres, sources of capital, QBE dependency, repayment source, risks, evidence labels and a precise next ask.
+  - Update the canonical road investor deck and export PPTX plus PDF. Include a short relationship version for meetings, but keep one data source and retain visible claim labels.
+  - Build a Stretch Bed product dossier covering product anatomy, specifications from products.ts, assembly, materials, field deployment, maintenance, repair, warranty, testing, buyer use case, unit economics and evidence gaps.
+  - Build a production capability dossier separating current farm capability from possible NT Corrections and community facilities. Cover process flow, equipment, layout, inputs, roles, training, WHS, QA, output scenarios, capex/opex, logistics, governance, IP, data rights and transfer checkpoints.
+  - Build a privacy-safe NT Corrections discovery and pilot brief for Bodie. Start with a discovery call; do not invent batch size. Include scope options, responsibilities, participant safeguards, training, materials, QA acceptance, commercial terms to determine, evidence capture, stop/go gates and the people needed in the next meeting.
+  - Build one-page relationship briefs for Gavin and Tania. Gavin brief asks about CLIF fit, South Australian nexus, remaining capacity, instrument, repayment evidence and process. Tania brief asks which Origin mechanism is real: grant, volunteering, pro-bono capability, procurement or introductions.
+  - Build the QBE match-paper kit: SIH clarification email, capital letter template with legal name/amount/instrument/contact/conditions, source-and-use table, commitment register and evidence checklist. Do not call any letter match-eligible until SIH confirms.
+  - Build a diligence data-room index covering entities, governance, DGR, financial workpapers, accountant letter, customer/order evidence, product/IP/testing, facility/WHS/insurance, impact evidence, consent, contracts, risks, capital instruments and missing-artifact owners.
+  - Add investor FAQ, risk register, 90-day action plan, meeting-note template, follow-up email drafts and a weekly relationship review that syncs next action and evidence state back to GHL/GrantScope. No messages are sent automatically.
+  - Render every external asset from canonical data, register it in the Goods artifact system, run voice/consent/canon/drift checks, visually inspect every PDF/PPTX page, then build and deploy only after Ben reviews the new audience variants.
+
+files:
+  created: [/Users/benknight/Code/grantscope/thoughts/shared/handoffs/general/2026-08-01_19-16_goods-relationship-capital-build.yaml, /Users/benknight/Code/grantscope/apps/web/src/lib/services/goods-network-people.ts, /Users/benknight/Code/grantscope/apps/web/tests/unit/lib/services/goods-network-people.test.ts, /Users/benknight/Code/grantscope/supabase/migrations/20260801113000_goods_network_people_and_pathways.sql]
+  modified: [/Users/benknight/Code/grantscope/apps/web/src/lib/services/goods-capital-workspace.ts, '/Users/benknight/Code/grantscope/apps/web/src/app/org/[slug]/goods/network/page.tsx']

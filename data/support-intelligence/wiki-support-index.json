@@ -2693,21 +2693,21 @@
       "evidence": [
         {
           "label": "Tracked deployment proof",
-          "value": "389 assets claimed in README",
-          "detail": "404 current CSV rows and 389 QR manifest rows were found locally; reconcile CSV growth against the 389-asset canonical claim before external use.",
-          "source": "Goods Asset Register"
+          "value": "540 beds deployed",
+          "detail": "Current Goods canon: 177 Stretch Beds + 363 Basket Beds, checked 2026-07-25.",
+          "source": "v2/src/lib/data/asset-canonical.ts"
         },
         {
           "label": "Product mix",
-          "value": "363 Basket Bed, 21 Weave Bed, 20 ID Washing Machine",
-          "detail": "Use product mix to prove real delivery and to forecast replacement, production, freight, and support needs.",
-          "source": "expanded_assets_final.csv"
+          "value": "177 Stretch Bed, 363 Basket Bed",
+          "detail": "3,540 kg is 177 Stretch Beds x 20 kg design mass. It is not a weighbridge or measured diversion total.",
+          "source": "v2/src/lib/data/asset-canonical.ts"
         },
         {
           "label": "Community footprint",
-          "value": "8 communities in current CSV",
-          "detail": "Tennant Creek (146), Palm Island (141), Utopia Homelands (68), Maningrida (24), Kalgoorlie (20), Mount Isa (2)",
-          "source": "expanded_assets_final.csv"
+          "value": "11 communities served; 12 distinct touched",
+          "detail": "22 washers in community is Ben's manual per-community ruling, not a register-row-derived count.",
+          "source": "v2/src/lib/data/asset-canonical.ts + CONTEXT.md"
         },
         {
           "label": "Operating system",
@@ -2857,7 +2857,7 @@
         }
       ],
       "readiness_gaps": [
-        "Reconcile the canonical asset count against the latest expanded CSV before sending external claims.",
+        "Restatus the 10 stale deployed washer rows so the 22-washer manual ruling becomes row-derived.",
         "Confirm the preferred legal/entity pathway for IPP and Supply Nation positioning.",
         "Create a buyer-ready unit economics sheet for beds, washing machines, freight, warranty, and support.",
         "Separate grants, procurement revenue, pre-purchase contracts, loans, and R&D tax in the capital stack.",
