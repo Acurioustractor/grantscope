@@ -72,41 +72,25 @@ function TabLink({ slug, tabKey, label, active }: { slug: string; tabKey: GoodsT
   );
 }
 
-/** Shared dark-header sub-nav across the Goods Command Center pages.
- *  `active` is optional — the hub (/goods index) passes none, so no tab highlights. */
+/** The rail owns Goods navigation now (GoodsRailTree in act-workspace-shell —
+ *  Ben's one-system call, 2026-08-05). This renders a compact nav only below
+ *  lg, where the rail is hidden; on desktop it renders nothing. */
 export function GoodsSubNav({ slug, active }: { slug: string; active?: GoodsTab }) {
   return (
-    <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-white/10 bg-black/10 p-3 backdrop-blur-sm">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="mr-1 text-[10px] font-semibold text-white/45">Capital & relationships</span>
-        {OPERATING_TABS.map(([key, label]) => (
-          <TabLink key={key} slug={slug} tabKey={key} label={label} active={active} />
-        ))}
-      </div>
-      <div className="flex flex-wrap items-center gap-2 border-t border-white/10 pt-3">
-        <span className="mr-1 text-[10px] font-semibold text-white/45">Money in</span>
-        {FUNDING_TABS.map(([path, label]) => (
-          <Link
-            key={path}
-            href={`/org/${slug}/goods/${path}`}
-            className={`inline-flex min-h-9 items-center rounded-full border px-3 py-1.5 text-[11px] font-semibold transition-all ${
-              active === path || (path === 'foundations' && active === 'foundations')
-                ? 'border-white bg-white text-[#17352b] shadow-sm'
-                : 'border-white/15 bg-white/5 text-white/75 hover:border-white/35 hover:bg-white/10 hover:text-white'
-            }`}
-          >
-            {label}
-          </Link>
-        ))}
-        <span className="ml-2 mr-1 text-[10px] font-semibold text-white/45">Delivery</span>
-        {DELIVERY_TABS.map(([key, label]) => (
-          <TabLink key={key} slug={slug} tabKey={key} label={label} active={active} />
-        ))}
-        <span className="ml-2 mr-1 text-[10px] font-semibold text-white/45">Trust & structure</span>
-        {EVIDENCE_TABS.map(([key, label]) => (
-          <TabLink key={key} slug={slug} tabKey={key} label={label} active={active} />
-        ))}
-      </div>
+    <div className="mt-4 flex flex-wrap items-center gap-2 lg:hidden">
+      {[...OPERATING_TABS, ...FUNDING_TABS, ...DELIVERY_TABS, ...EVIDENCE_TABS].map(([key, label]) => (
+        <Link
+          key={key}
+          href={`/org/${slug}/goods/${key}`}
+          className={`inline-flex min-h-8 items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
+            active === key
+              ? 'border-white bg-white text-[#17352b]'
+              : 'border-white/15 bg-white/5 text-white/75'
+          }`}
+        >
+          {label}
+        </Link>
+      ))}
     </div>
   );
 }
