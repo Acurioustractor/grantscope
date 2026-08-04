@@ -17,7 +17,16 @@ const DELIVERY_TABS = [
   ['funnel', 'Delivery map'],
   ['communities', 'Demand & communities'],
   ['channels', 'Channels'],
-  ['buyers', 'Buyers'],
+  ['buyers', 'Buyer pipeline'],
+] as const;
+
+// Money-in surfaces: the funder pipeline is worked here. These were previously
+// buried as "legacy" under Capital — Ben could not find grants/foundations/
+// pipelines from the workspace nav (2026-08-05), so they are first-class now.
+const FUNDING_TABS: ReadonlyArray<readonly [string, string]> = [
+  ['foundations', 'Foundations'],
+  ['foundations/scan', 'Funder Scan'],
+  ['money', 'Money'],
 ] as const;
 
 const EVIDENCE_TABS = [
@@ -75,7 +84,21 @@ export function GoodsSubNav({ slug, active }: { slug: string; active?: GoodsTab 
         ))}
       </div>
       <div className="flex flex-wrap items-center gap-2 border-t border-white/10 pt-3">
-        <span className="mr-1 text-[10px] font-semibold text-white/45">Delivery</span>
+        <span className="mr-1 text-[10px] font-semibold text-white/45">Money in</span>
+        {FUNDING_TABS.map(([path, label]) => (
+          <Link
+            key={path}
+            href={`/org/${slug}/goods/${path}`}
+            className={`inline-flex min-h-9 items-center rounded-full border px-3 py-1.5 text-[11px] font-semibold transition-all ${
+              active === path || (path === 'foundations' && active === 'foundations')
+                ? 'border-white bg-white text-[#17352b] shadow-sm'
+                : 'border-white/15 bg-white/5 text-white/75 hover:border-white/35 hover:bg-white/10 hover:text-white'
+            }`}
+          >
+            {label}
+          </Link>
+        ))}
+        <span className="ml-2 mr-1 text-[10px] font-semibold text-white/45">Delivery</span>
         {DELIVERY_TABS.map(([key, label]) => (
           <TabLink key={key} slug={slug} tabKey={key} label={label} active={active} />
         ))}
