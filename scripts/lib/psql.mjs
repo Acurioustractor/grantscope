@@ -18,8 +18,15 @@
 
 import { execSync } from 'child_process';
 import { writeFileSync, unlinkSync } from 'fs';
+import { resolveBin } from './agent-resilience.mjs';
 
 const CONN_STR = `postgresql://postgres.tednluwflfhxyucgwigh:${process.env.DATABASE_PASSWORD}@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres`;
+
+// Resolve psql by full path. The agent runner starts from a non-interactive shell
+// whose PATH does not include the Postgres bin directory, so a bare `psql` fails
+// with "command not found" in under a second. 18 scripts import this helper, so
+// resolving it here fixes all of them rather than one at a time.
+const PSQL_BIN = resolveBin('psql');
 
 /**
  * Execute a SQL query via psql and return parsed rows.
@@ -37,7 +44,7 @@ export function psql(sql, { timeout = 120000, parse = true, maxBuffer = 50 * 102
   writeFileSync(tmpFile, sql);
   try {
     const result = execSync(
-      `psql "${CONN_STR}" --csv -f ${tmpFile} 2>/dev/null`,
+      `"${PSQL_BIN}" "${CONN_STR}" --csv -f ${tmpFile} 2>/dev/null`,
       { encoding: 'utf-8', maxBuffer, timeout }
     );
     unlinkSync(tmpFile);
