@@ -18,6 +18,7 @@ export interface TriageGrantRow {
   acceptsPtyLtd: boolean | null;
   pipelineStage: string | null;
   url: string | null;
+  ghlOpportunityId: string | null;
 }
 
 export interface SourceFreshness {
@@ -59,7 +60,7 @@ export async function getGoodsGrantsTriage(opts: {
   const [liveRes, corpusRes, schedulesRes, runsRes] = await Promise.all([
     db
       .from('grant_opportunities')
-      .select('id, name, provider, goods_relevance_score, deadline, amount_min, amount_max, geography, dgr_required, accepts_pty_ltd, pipeline_stage, url, status')
+      .select('id, name, provider, goods_relevance_score, deadline, amount_min, amount_max, geography, dgr_required, accepts_pty_ltd, pipeline_stage, url, status, ghl_opportunity_id')
       .in('status', ['open', 'ongoing', 'upcoming'])
       .order('goods_relevance_score', { ascending: false, nullsFirst: false })
       .limit(3000),
@@ -92,6 +93,7 @@ export async function getGoodsGrantsTriage(opts: {
       acceptsPtyLtd: (r.accepts_pty_ltd as boolean | null) ?? null,
       pipelineStage: (r.pipeline_stage as string | null) ?? null,
       url: (r.url as string | null) ?? null,
+      ghlOpportunityId: (r.ghl_opportunity_id as string | null) ?? null,
     };
   }).filter((r) => r.daysToDeadline == null || r.daysToDeadline >= 0);
 

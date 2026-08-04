@@ -186,6 +186,7 @@ export default async function GoodsFunderScanPage({
           <ul className="mt-2 list-disc pl-5 space-y-1">
             <li><strong>GHL warmth is authoritative</strong> — it comes from the tags on the real contact with the email history. Discovery stage is CivicGraph&apos;s opinion.</li>
             <li><strong>Warm but unworked</strong> is money on the table: a live relationship discovery hasn&apos;t ranked. <strong>Push-next</strong> is the reverse: high-fit prospects nobody has contacted.</li>
+            <li><strong>Pushing is deliberate</strong> — work the push-next queue by creating the contact in GHL itself (warmth chips link to synced contacts); there is no one-click push here by design.</li>
             <li>&ldquo;Not in GHL&rdquo; rows were checked against GHL only if synced — run <code className="bg-white px-1">scripts/reconcile-foundations-ghl.mjs</code> after rotating GHL_API_KEY to sync all rows.</li>
           </ul>
         </div>
