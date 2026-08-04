@@ -56,12 +56,16 @@ let duplicatesSkipped = 0;
  */
 async function safeWrite(table, rows, run) {
   if (dryRun || !rows?.length) return;
-  const { error } = await run(rows);
+  const { error } = await withRetry(() => run(rows), `${table} ${rows.length}-row write`);
   if (!error) return;
   const msg = error.message || JSON.stringify(error);
   const isDuplicate = /duplicate key|already exists/i.test(msg);
-  const isTransient = /timeout|canceling statement|deadlock|too many connections|fetch failed|server closed/i.test(msg);
-  if (rows.length > 1 && (isTransient || isDuplicate)) {
+  const isSplittable = /statement timeout|canceling statement|deadlock/i.test(msg);
+  const isConnectivityFailure = /fetch failed|server closed|too many (clients|connections)|ECONN|EPIPE|socket|could not translate host/i.test(msg);
+  if (isConnectivityFailure) {
+    throw new Error(`${table} connectivity failure after retries: ${msg}`);
+  }
+  if (rows.length > 1 && (isSplittable || isDuplicate)) {
     writeSplits++;
     const mid = rows.length >> 1;
     await safeWrite(table, rows.slice(0, mid), run);
@@ -364,7 +368,9 @@ async function buildEntities() {
     `SELECT DISTINCT ON (supplier_abn) supplier_abn, supplier_name, supplier_entity_type
        FROM austender_contracts
       WHERE supplier_abn IS NOT NULL
-        AND regexp_replace(supplier_abn, '\\s', '', 'g') ~ '^[0-9]{11}$'`);
+        AND regexp_replace(supplier_abn, '\\s', '', 'g') ~ '^[0-9]{11}$'
+        AND NULLIF(btrim(supplier_name), '') IS NOT NULL
+      ORDER BY supplier_abn, contract_start DESC NULLS LAST, id DESC`);
 
   const uniqueSuppliers = new Map();
   for (const s of supplierRows) {
@@ -374,20 +380,30 @@ async function buildEntities() {
   }
 
   if (!dryRun) {
-    const supplierEntities = Array.from(uniqueSuppliers.entries()).map(([abn, info]) => ({
-      entity_type: info.type === 'Charity' ? 'charity' : (info.type === 'Indigenous Corp' ? 'indigenous_corp' : 'company'),
-      canonical_name: info.name,
-      abn,
-      gs_id: makeGsId({ abn }),
-      source_datasets: ['austender'],
-      source_count: 1,
-      confidence: 'registry',
-    }));
-
-    for (let i = 0; i < supplierEntities.length; i += 500) {
-      const chunk = supplierEntities.slice(i, i + 500);
-      await upsertEntities(chunk, { onConflict: 'gs_id', ignoreDuplicates: true });
-    }
+    const out = await runDml('austender supplier entities', `
+      INSERT INTO gs_entities (entity_type, canonical_name, abn, gs_id, source_datasets, source_count, confidence)
+      SELECT CASE
+               WHEN supplier_entity_type = 'Charity' THEN 'charity'
+               WHEN supplier_entity_type = 'Indigenous Corp' THEN 'indigenous_corp'
+               ELSE 'company'
+             END,
+             supplier_name,
+             supplier_abn,
+             'AU-ABN-' || regexp_replace(supplier_abn, '\\s', '', 'g'),
+             ARRAY['austender']::text[],
+             1,
+             'registry'
+        FROM (
+          SELECT DISTINCT ON (supplier_abn) supplier_abn, supplier_name, supplier_entity_type
+            FROM austender_contracts
+           WHERE supplier_abn IS NOT NULL
+             AND regexp_replace(supplier_abn, '\\s', '', 'g') ~ '^[0-9]{11}$'
+             AND NULLIF(btrim(supplier_name), '') IS NOT NULL
+           ORDER BY supplier_abn, contract_start DESC NULLS LAST, id DESC
+        ) suppliers
+      ON CONFLICT DO NOTHING;`);
+    const inserted = out.match(/INSERT\s+\d+\s+(\d+)/)?.[1] || '0';
+    log(`  AusTender supplier entities inserted: ${inserted}`);
   }
   stats.suppliers = uniqueSuppliers.size;
   log(`  AusTender suppliers (unique ABNs): ${stats.suppliers}`);
@@ -727,14 +743,14 @@ async function refreshViews() {
   for (const view of views) {
     log(`  Refreshing ${view}...`);
     try {
-      await execSql(`REFRESH MATERIALIZED VIEW CONCURRENTLY ${view}`);
+      await runDml(`refresh ${view}`, `REFRESH MATERIALIZED VIEW CONCURRENTLY ${view};`);
       log(`  ${view} refreshed`);
-    } catch {
+    } catch (concurrentError) {
       try {
-        await execSql(`REFRESH MATERIALIZED VIEW ${view}`);
+        await runDml(`refresh ${view} non-concurrent`, `REFRESH MATERIALIZED VIEW ${view};`);
         log(`  ${view} refreshed (non-concurrent)`);
       } catch (e) {
-        log(`  Warning: ${view} refresh failed — ${e.message}`);
+        log(`  Warning: ${view} refresh failed — concurrent: ${concurrentError.message}; fallback: ${e.message}`);
       }
     }
   }

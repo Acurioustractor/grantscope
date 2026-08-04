@@ -98,6 +98,48 @@ async function recoverStuckTasks() {
   }
 }
 
+/**
+ * A stopped or stale orchestrator can leave several copies of the same scheduled
+ * job queued. Keep the newest pending scheduler task per agent so a restart does
+ * not replay obsolete nightly work. User-created tasks are never coalesced.
+ */
+async function coalesceScheduledTasks() {
+  const { data, error } = await supabase
+    .from('agent_tasks')
+    .select('id, agent_id, created_at')
+    .eq('status', 'pending')
+    .eq('created_by', 'scheduler')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('[orchestrator] Scheduled task coalescing failed:', error.message);
+    return;
+  }
+
+  const newestByAgent = new Set();
+  const obsoleteIds = [];
+  for (const task of data ?? []) {
+    if (!newestByAgent.has(task.agent_id)) {
+      newestByAgent.add(task.agent_id);
+      continue;
+    }
+    obsoleteIds.push(task.id);
+  }
+
+  if (obsoleteIds.length === 0) return;
+  const now = new Date().toISOString();
+  const { error: updateError } = await supabase
+    .from('agent_tasks')
+    .update({ status: 'cancelled', completed_at: now, error: 'Superseded by newer scheduled task during orchestrator startup' })
+    .in('id', obsoleteIds);
+
+  if (updateError) {
+    console.error('[orchestrator] Failed to cancel superseded scheduled tasks:', updateError.message);
+    return;
+  }
+  console.log(`[${timestamp()}] Coalesced ${obsoleteIds.length} superseded scheduled tasks`);
+}
+
 // ─── Task Execution ──────────────────────────────────────────────────────────
 
 async function executeTask(task) {
@@ -356,6 +398,9 @@ async function main() {
 
   // Recover stuck tasks from previous crash
   await recoverStuckTasks();
+
+  // Avoid replaying duplicate scheduled work accumulated while the worker was stale/offline
+  await coalesceScheduledTasks();
 
   // Run scheduler immediately
   await runScheduler();
