@@ -14,12 +14,19 @@ export interface PlaceSnapshot {
   areaKey: string;
   areaLabel: string;
   areaNote: string | null;
+  remoteness: string | null;
+  irsdDecile: number;
   orgCount: number;
   communityControlledCount: number;
+  caringForCountry: number;
+  employers: number;
   contractCount: number;
   contractValue: number;
+  contractValue24m: number;
   govtGrantCount: number;
   govtGrantValue: number;
+  /** Share of delivered grant money held by an organisation based here. */
+  localRetentionPct: number | null;
   philanthropicFunderCount: number;
   philanthropicGrantCount: number;
   lgaResolved: boolean;
@@ -42,20 +49,24 @@ export interface PlaceIntelligence {
   deregisteredExcluded: number;
 }
 
-interface RawSnapshot {
-  area_key: string;
-  area_label: string;
-  area_note: string | null;
+interface RawProfile {
+  lga_name: string;
+  state: string;
+  remoteness: string | null;
+  avg_irsd_decile: number | string | null;
   org_count: number;
-  community_controlled_count: number;
+  community_controlled: number;
+  without_abn: number;
+  caring_for_country: number;
+  employers: number;
   contract_count: number;
-  contract_value: number | string;
-  govt_grant_count: number;
-  govt_grant_value: number | string;
-  philanthropic_funder_count: number;
-  philanthropic_grant_count: number;
-  lga_resolved: boolean;
-  computed_at: string;
+  contract_value_lifetime: number | string;
+  contract_value_24m: number | string;
+  grants_delivered: number;
+  grants_delivered_value: number | string;
+  local_retention_pct: number | string | null;
+  philanthropic_funders: number;
+  philanthropic_grants: number;
 }
 
 const AREA_ORDER = [
@@ -79,8 +90,15 @@ export const getCentralAustraliaIntelligence = cache(
     const db = getServiceSupabase();
 
     const [snapshotResult, orgsResult, gapResult, deregisteredResult] = await Promise.all([
-      db.from('place_funding_snapshot')
-        .select('area_key, area_label, area_note, org_count, community_controlled_count, contract_count, contract_value, govt_grant_count, govt_grant_value, philanthropic_funder_count, philanthropic_grant_count, lga_resolved, computed_at'),
+      // v_lga_place_profile, not place_funding_snapshot. The snapshot was built
+      // before councils were reattributed to the shires they serve, so it still
+      // credited Alice Springs with $749.4M rather than $688.4M, and its grants
+      // figure predates GrantConnect entirely — showing $44.1M where delivered
+      // grants are $202.8M.
+      db.from('v_lga_place_profile')
+        .select('lga_name, state, remoteness, avg_irsd_decile, org_count, community_controlled, without_abn, caring_for_country, employers, contract_count, contract_value_lifetime, contract_value_24m, grants_delivered, grants_delivered_value, local_retention_pct, philanthropic_funders, philanthropic_grants')
+        .in('lga_name', ['Alice Springs', 'Barkly', 'MacDonnell', 'Central Desert', 'Anangu Pitjantjatjara Yankunytjatjara'])
+        .in('state', ['NT', 'SA']),
       // The homelands organisations, named. They have no council area, so the
       // only honest way to show them is by name — and all of them, not a
       // slice. An alphabetical cap truncates mid-list and quietly drops the
@@ -114,23 +132,37 @@ export const getCentralAustraliaIntelligence = cache(
       throw new Error(`Place snapshot unavailable: ${snapshotResult.error.message}`);
     }
 
-    const areas = ((snapshotResult.data || []) as RawSnapshot[])
+    const LABELS: Record<string, { label: string; note: string | null }> = {
+      'Alice Springs': { label: 'Mparntwe (Alice Springs)', note: null },
+      Barkly: { label: 'Barkly, including Tennant Creek', note: 'Includes Tennant Creek, Ali Curung and Ampilatwatja in the Utopia homelands.' },
+      MacDonnell: { label: 'MacDonnell', note: 'Includes Papunya, Hermannsburg and Areyonga.' },
+      'Central Desert': { label: 'Central Desert', note: 'Includes Yuendumu and Atitjere.' },
+      'Anangu Pitjantjatjara Yankunytjatjara': { label: 'APY Lands (South Australia)', note: 'Iwantja, Mimili, Kaltjiti and Pukatja. Their grants are delivered into postcode 0872, which spans seven councils, so most cannot be placed here.' },
+    };
+
+    const areas = ((snapshotResult.data || []) as RawProfile[])
       .map(row => ({
-        areaKey: row.area_key,
-        areaLabel: row.area_label,
-        areaNote: row.area_note,
+        areaKey: row.lga_name,
+        areaLabel: LABELS[row.lga_name]?.label ?? row.lga_name,
+        areaNote: LABELS[row.lga_name]?.note ?? null,
+        remoteness: row.remoteness,
+        irsdDecile: num(row.avg_irsd_decile),
         orgCount: row.org_count,
-        communityControlledCount: row.community_controlled_count,
+        communityControlledCount: row.community_controlled,
+        caringForCountry: row.caring_for_country,
+        employers: row.employers,
         contractCount: row.contract_count,
-        contractValue: num(row.contract_value),
-        govtGrantCount: row.govt_grant_count,
-        govtGrantValue: num(row.govt_grant_value),
-        philanthropicFunderCount: row.philanthropic_funder_count,
-        philanthropicGrantCount: row.philanthropic_grant_count,
-        lgaResolved: row.lga_resolved,
-        computedAt: row.computed_at,
+        contractValue: num(row.contract_value_lifetime),
+        contractValue24m: num(row.contract_value_24m),
+        govtGrantCount: row.grants_delivered,
+        govtGrantValue: num(row.grants_delivered_value),
+        localRetentionPct: row.local_retention_pct === null ? null : num(row.local_retention_pct),
+        philanthropicFunderCount: row.philanthropic_funders,
+        philanthropicGrantCount: row.philanthropic_grants,
+        lgaResolved: true,
+        computedAt: new Date().toISOString(),
       }))
-      .sort((left, right) => AREA_ORDER.indexOf(left.areaKey) - AREA_ORDER.indexOf(right.areaKey));
+      .sort((left, right) => right.contractValue + right.govtGrantValue - (left.contractValue + left.govtGrantValue));
 
     const unplacedOrgs = orgsResult.error
       ? []

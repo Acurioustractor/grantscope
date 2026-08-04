@@ -52,9 +52,10 @@ export default async function CentralAustraliaPage() {
               <article key={area.areaKey} className="border-4 border-bauhaus-black bg-white p-6">
                 <div className="flex items-start justify-between gap-3">
                   <h3 className="text-xl font-black uppercase">{area.areaLabel}</h3>
-                  {!area.lgaResolved ? (
+                  {area.irsdDecile > 0 ? (
                     <span className="shrink-0 bg-bauhaus-yellow px-2 py-1 font-mono text-[10px] font-black uppercase">
-                      No council area
+                      SEIFA {area.irsdDecile}
+                      {area.remoteness ? ` · ${area.remoteness.replace(' Australia', '')}` : ''}
                     </span>
                   ) : null}
                 </div>
@@ -65,17 +66,23 @@ export default async function CentralAustraliaPage() {
                     <dd className="mt-1 text-2xl font-black">{area.orgCount.toLocaleString('en-AU')}</dd>
                     <dd className="font-mono text-[11px]">
                       {area.communityControlledCount.toLocaleString('en-AU')} community-controlled
+                      {area.caringForCountry > 0 ? ` · ${area.caringForCountry} caring for Country` : ''}
                     </dd>
                   </div>
                   <div>
-                    <dt className="font-mono text-[10px] font-bold uppercase tracking-widest">Federal contracts</dt>
+                    <dt className="font-mono text-[10px] font-bold uppercase tracking-widest">Government contracts</dt>
                     <dd className="mt-1 text-2xl font-black">{money(area.contractValue)}</dd>
-                    <dd className="font-mono text-[11px]">{area.contractCount.toLocaleString('en-AU')} contracts</dd>
+                    <dd className="font-mono text-[11px]">
+                      {area.contractCount.toLocaleString('en-AU')} contracts · {money(area.contractValue24m)} in 24 months
+                    </dd>
                   </div>
                   <div>
-                    <dt className="font-mono text-[10px] font-bold uppercase tracking-widest">Government grants</dt>
+                    <dt className="font-mono text-[10px] font-bold uppercase tracking-widest">Grants delivered here</dt>
                     <dd className="mt-1 text-2xl font-black">{money(area.govtGrantValue)}</dd>
-                    <dd className="font-mono text-[11px]">{area.govtGrantCount.toLocaleString('en-AU')} grants</dd>
+                    <dd className="font-mono text-[11px]">
+                      {area.govtGrantCount.toLocaleString('en-AU')} grants
+                      {area.localRetentionPct !== null ? ` · ${area.localRetentionPct}% held locally` : ''}
+                    </dd>
                   </div>
                   <div>
                     <dt className="font-mono text-[10px] font-bold uppercase tracking-widest">Philanthropy traced</dt>
@@ -125,8 +132,11 @@ export default async function CentralAustraliaPage() {
               </p>
             ) : null}
             <ul className="mt-5 grid gap-2 sm:grid-cols-2">
-              {unplacedOrgs.map(org => (
-                <li key={org.name} className="flex items-start gap-2 border-b border-bauhaus-black/15 pb-2 text-sm">
+              {unplacedOrgs.map((org, index) => (
+                // Index included: some organisations share a name in the
+                // register — Kalka Community Aboriginal Corporation appears
+                // twice — and a name-only key makes React drop one of them.
+                <li key={`${org.name}-${index}`} className="flex items-start gap-2 border-b border-bauhaus-black/15 pb-2 text-sm">
                   <span className="mt-1 h-2 w-2 shrink-0 bg-bauhaus-red" aria-hidden="true" />
                   <span>{org.name}</span>
                 </li>
@@ -157,10 +167,10 @@ export default async function CentralAustraliaPage() {
                 Contracts follow the office, not the work
               </h3>
               <p className="mt-2 text-sm leading-6">
-                Contract value is matched to the supplier&apos;s registered address. Many
-                organisations based in Alice Springs deliver into the homelands, so this shows
-                where money is contracted, not where it is spent. It is not a measure of who
-                benefits.
+                Contract value is matched to the supplier&apos;s registered address, because
+                procurement records publish no delivery location. Grants do, so grant figures show
+                where work happens and carry a local-retention share: how much of the money spent
+                here is held by an organisation based here.
               </p>
             </div>
             <div>
@@ -189,8 +199,10 @@ export default async function CentralAustraliaPage() {
         <section aria-labelledby="sources-title">
           <h2 id="sources-title" className="text-2xl font-black uppercase tracking-widest">Sources</h2>
           <ul className="mt-4 grid gap-2 text-sm">
-            <li>Federal contracts: AusTender, matched by supplier ABN.</li>
-            <li>Government grants: published grant and funding registers, matched by recipient ABN.</li>
+            <li>Government contracts: AusTender, matched by supplier ABN. Northern Territory government
+              buyers account for roughly 95% of the value here, so this is not federal spending.</li>
+            <li>Grants: GrantConnect awarded grants, placed by the delivery location the award itself
+              publishes. Two agencies cap their export at 50,000 records, so grant totals are floors.</li>
             <li>Philanthropic grants: ACNC-registered funders, matched to grantees by ABN only.</li>
             <li>Organisation details and community-controlled status: Australian Charities and Not-for-profits Commission register.</li>
           </ul>
