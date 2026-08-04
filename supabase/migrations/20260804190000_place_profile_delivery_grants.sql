@@ -49,17 +49,38 @@ WITH pc_lga AS (
    WHERE e.lga_name IS NOT NULL AND e.abn IS NOT NULL
      AND (c.contract_start IS NULL OR c.contract_start >= '2000-01-01')
    GROUP BY e.lga_name, e.state
+), pc0872 AS (
+  -- The councils postcode 0872 actually spans. A 0872 grant may only be
+  -- credited to a council on this list.
+  SELECT DISTINCT lga_name, state FROM public.postcode_geo WHERE postcode = '0872' AND lga_name IS NOT NULL
 ), delivered AS (
-  -- Grants placed by delivery postcode, with the share retained locally.
-  SELECT d.lga_name, d.state,
+  -- Placement without correlated subqueries: the postcode join does the normal
+  -- case, and the recipient's council covers 0872 only when it is one of the
+  -- seven councils that postcode spans. Without that guard, homelands money is
+  -- credited to Darwin Waterfront, Sydney and South Perth, where those
+  -- recipients happen to be based.
+  SELECT place_lga AS lga_name, place_state AS state,
          count(*) AS grants_delivered,
-         sum(ga.value_aud) AS grants_delivered_value,
-         sum(ga.value_aud) FILTER (WHERE r.lga_name = d.lga_name) AS grants_held_locally_value,
-         sum(ga.value_aud) FILTER (WHERE ga.approval_date >= (now() - interval '24 months')) AS grants_delivered_24m
-    FROM public.grantconnect_awards ga
-    JOIN pc_lga d ON d.postcode = ga.delivery_postcode
-    LEFT JOIN pc_lga r ON r.postcode = ga.recipient_postcode
-   GROUP BY d.lga_name, d.state
+         sum(value_aud) AS grants_delivered_value,
+         sum(value_aud) FILTER (WHERE recipient_lga = place_lga) AS grants_held_locally_value,
+         sum(value_aud) FILTER (WHERE approval_date >= (now() - interval '24 months')) AS grants_delivered_24m
+    FROM (
+      SELECT ga.value_aud, ga.approval_date,
+             coalesce(r.lga_name, re.lga_name) AS recipient_lga,
+             CASE WHEN ga.delivery_postcode = '0872' THEN g0.lga_name ELSE dp.lga_name END AS place_lga,
+             CASE WHEN ga.delivery_postcode = '0872' THEN g0.state ELSE dp.state END AS place_state
+        FROM public.grantconnect_awards ga
+        LEFT JOIN pc_lga dp ON dp.postcode = ga.delivery_postcode AND ga.delivery_postcode <> '0872'
+        -- Joined for every award, not just 0872: the linked entity carries a
+        -- council even where its postcode cannot be mapped, and without it a
+        -- recipient based in 0872 scores as non-local in its own community.
+        LEFT JOIN public.gs_entities re ON re.id = ga.gs_entity_id
+        LEFT JOIN pc0872 g0 ON g0.lga_name = re.lga_name AND ga.delivery_postcode = '0872'
+        LEFT JOIN pc_lga r ON r.postcode = ga.recipient_postcode
+       WHERE ga.delivery_postcode IS NOT NULL
+    ) placed
+   WHERE place_lga IS NOT NULL
+   GROUP BY place_lga, place_state
 ), phil AS (
   SELECT e.lga_name, e.state,
          count(DISTINCT fg.foundation_name) AS philanthropic_funders,
