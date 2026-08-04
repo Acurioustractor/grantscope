@@ -18,6 +18,7 @@ import {
 import { goodsCoreWorkAreas } from '@/lib/services/goods-operating-system';
 import { isInternalActIdentity } from '@/lib/act-internal-identities';
 import { getWikiSupportProject } from '@/lib/services/wiki-support-index';
+import { ACT_FAST_PROFILE } from '@/lib/services/fast-local-org';
 import type { WikiSupportAction, WikiSupportProject, WikiSupportRouteType } from '@/lib/services/wiki-support-index';
 import { ActWorkspacePageHeader } from '../_components/act-workspace-page-header';
 
@@ -190,7 +191,11 @@ export async function ActProjectFieldMapScreen({
   slug: string;
   projectSlug: string;
 }) {
-  const dataProfile = await getOrgProfileBySlug(slug);
+  // In E2E fixture mode the service resolves the fast profile; treat that as
+  // "no stored profile" so the screen renders from its props instead of
+  // fetching live pipeline/portfolio data (CI has no database credentials).
+  const storedProfile = await getOrgProfileBySlug(slug);
+  const dataProfile = storedProfile && storedProfile.id !== ACT_FAST_PROFILE.id ? storedProfile : null;
   const liveProject = dataProfile ? await getOrgProjectBySlug(dataProfile.id, projectSlug) : null;
   const fieldProject = liveProject ?? project;
   const wikiProject = getWikiSupportProject(projectSlug);

@@ -14,6 +14,11 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     externalDir: true,
+    // Vercel's 4-core/8GB builder OOM-SIGKILLs this build repeatedly. Fewer
+    // static-generation workers + webpack memory trimming keeps the total
+    // footprint of all build processes inside the container.
+    cpus: 2,
+    webpackMemoryOptimizations: true,
   },
   serverExternalPackages: ['playwright', 'playwright-core'],
   turbopack: {
