@@ -92,6 +92,12 @@ export function ActWorkspaceShell({
   ];
   const utilityLinks = [
     {
+      label: 'One Desk',
+      detail: 'Everything, ranked',
+      href: `/org/${slug}/desk`,
+      active: pathname.startsWith(`/org/${slug}/desk`),
+    },
+    {
       label: 'Atlas',
       detail: 'Search the whole field',
       href: `/org/${slug}/explore`,
