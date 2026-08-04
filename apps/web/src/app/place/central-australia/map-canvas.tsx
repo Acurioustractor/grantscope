@@ -28,6 +28,7 @@ import type { OrgMarker } from '@/app/api/place/central-australia/organisations/
  */
 
 export interface Positioned { org: OrgMarker; lat: number; lng: number }
+export interface CouncilCentroid { lga: string; state: string | null; lat: number; lng: number; localities: number }
 
 interface Cluster {
   key: string;
@@ -42,13 +43,15 @@ interface Cluster {
 }
 
 export function MapCanvas({
-  positions, valueOf, money,
+  positions, councils, valueOf, money,
 }: {
   positions: Positioned[];
+  councils: CouncilCentroid[];
   valueOf: (o: OrgMarker) => number;
   max: number;
   money: (v: number) => string;
 }) {
+  const councilPoint = new Map(councils.map(c => [c.lga, c]));
   const byCouncil = new Map<string, Cluster & { latSum: number; lngSum: number }>();
   for (const { org, lat, lng } of positions) {
     const key = org.lga || 'No council recorded';
@@ -71,10 +74,27 @@ export function MapCanvas({
     }
   }
 
-  // Placed at the mean of its organisations' postcode centroids, which is a
-  // rough centre of gravity rather than a council boundary.
+  // A council is placed at the mean of its own localities. Averaging its
+  // organisations' postcodes instead put APY Lands, Unincorporated NT and the
+  // unplaced group on one identical point — all three hold only postcode 0872
+  // organisations — and drew APY Lands, which is in South Australia, inside the
+  // Northern Territory.
+  //
+  // Groups with no council have no locality to average, so they fall back to
+  // their organisations' postcodes with a small fixed offset to stay separable.
+  let fallbacks = 0;
   const clusters = [...byCouncil.values()]
-    .map(c => ({ ...c, lat: c.latSum / c.orgs.length, lng: c.lngSum / c.orgs.length }))
+    .map(c => {
+      const point = c.lga ? councilPoint.get(c.lga) : undefined;
+      if (point) return { ...c, lat: point.lat, lng: point.lng, located: true };
+      const nudge = 0.55 * fallbacks++;
+      return {
+        ...c,
+        lat: c.latSum / c.orgs.length - nudge,
+        lng: c.lngSum / c.orgs.length - nudge,
+        located: false,
+      };
+    })
     .sort((a, b) => b.value - a.value);
   const biggest = Math.max(1, ...clusters.map(c => c.value));
 
@@ -116,11 +136,11 @@ export function MapCanvas({
                   <br />
                   {money(cluster.value)} in this channel · {Math.round(ccShare * 100)}% to community-controlled
                 </div>
-                {!cluster.lga ? (
+                {!cluster.located ? (
                   <p style={{ fontSize: 11, marginTop: 8 }}>
-                    No council can be recorded for these organisations: they share postcode 0872, which spans
-                    seven councils across three states, and ORIC publishes no address. The circle is a centre of
-                    gravity, not a location.
+                    These organisations cannot be placed. They share postcode 0872, which spans seven councils
+                    across three states, and ORIC publishes no address for them. This circle is positioned only
+                    so it can be seen and clicked — it is not where they are.
                   </p>
                 ) : null}
                 <table style={{ marginTop: 8, width: '100%', fontSize: 12 }}>

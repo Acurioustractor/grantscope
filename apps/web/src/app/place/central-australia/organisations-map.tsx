@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import type { OrgMarker } from '@/app/api/place/central-australia/organisations/route';
 
+export interface CouncilCentroid { lga: string; state: string | null; lat: number; lng: number; localities: number }
+
 /**
  * Organisations of Central Australia, mapped and filterable.
  *
@@ -43,6 +45,7 @@ export function OrganisationsMap() {
   // Server Component in Next 15.
   const [mounted, setMounted] = useState(false);
   const [orgs, setOrgs] = useState<OrgMarker[] | null>(null);
+  const [councils, setCouncils] = useState<CouncilCentroid[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [channel, setChannel] = useState<Channel>('total');
   const [ccOnly, setCcOnly] = useState(false);
@@ -55,7 +58,11 @@ export function OrganisationsMap() {
   useEffect(() => {
     fetch('/api/place/central-australia/organisations')
       .then(r => r.json())
-      .then(d => (d.error ? setError(d.error) : setOrgs(d.organisations)))
+      .then(d => {
+        if (d.error) { setError(d.error); return; }
+        setOrgs(d.organisations);
+        setCouncils(d.councils || []);
+      })
       .catch(e => setError(String(e)));
   }, []);
 
@@ -133,7 +140,7 @@ export function OrganisationsMap() {
 
       <div className="border-4 border-bauhaus-black" style={{ height: 520 }}>
         {mounted ? (
-          <MapCanvas positions={positions} valueOf={active.get} max={max} money={money} />
+          <MapCanvas positions={positions} councils={councils} valueOf={active.get} max={max} money={money} />
         ) : <p className="p-4 font-mono text-xs">Loading map…</p>}
       </div>
 

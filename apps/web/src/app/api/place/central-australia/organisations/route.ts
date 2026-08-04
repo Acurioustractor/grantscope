@@ -125,8 +125,39 @@ export async function GET() {
 
   markers.sort((a, b) => b.totalTraceable - a.totalTraceable);
 
+  // Council centroids from locality coordinates, not postcode centroids.
+  // Grouping map circles by postcode put APY Lands, Unincorporated NT and the
+  // unplaced organisations on one identical point, because all three hold only
+  // postcode 0872 organisations — and it drew APY Lands, which is in South
+  // Australia, inside the Northern Territory. postcode_geo carries a coordinate
+  // per locality and, since the 0872 rows were repaired, a council too, so the
+  // councils can be placed where they actually are.
+  const councilGeo = await db
+    .from('postcode_geo')
+    .select('lga_name, state, latitude, longitude')
+    .in('lga_name', AREAS)
+    .not('latitude', 'is', null);
+
+  const councilAcc = new Map<string, { latSum: number; lngSum: number; n: number; state: string | null }>();
+  for (const row of (councilGeo.data || []) as Array<{ lga_name: string; state: string | null; latitude: number; longitude: number }>) {
+    const acc = councilAcc.get(row.lga_name) || { latSum: 0, lngSum: 0, n: 0, state: row.state };
+    acc.latSum += row.latitude;
+    acc.lngSum += row.longitude;
+    acc.n += 1;
+    councilAcc.set(row.lga_name, acc);
+  }
+
+  const councils = [...councilAcc.entries()].map(([lga, acc]) => ({
+    lga,
+    state: acc.state,
+    lat: acc.latSum / acc.n,
+    lng: acc.lngSum / acc.n,
+    localities: acc.n,
+  }));
+
   return NextResponse.json({
     organisations: markers,
+    councils,
     generatedAt: new Date().toISOString(),
   });
 }
