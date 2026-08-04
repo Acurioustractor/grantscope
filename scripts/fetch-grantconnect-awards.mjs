@@ -25,6 +25,7 @@ const arg = (name, fallback) => {
   return hit ? hit.split('=')[1] : fallback;
 };
 
+const BY_AGENCY = process.argv.includes('--by-agency');
 const FROM = arg('from', '2024-07');
 const TO = arg('to', '2026-06');
 const OUT = arg('out', 'data/grantconnect/ga-weekly-export.csv');
@@ -68,6 +69,64 @@ function startSession() {
 }
 startSession();
 
+/**
+ * Agencies, read from the report form's own select list.
+ *
+ * Date windows cannot beat the 50,000 cap — the export ignores the date filter
+ * and returns the same rows for a one-week window as for two years. Agency is a
+ * filter it does honour, and most agencies sit well under the cap. The few that
+ * do not are subdivided by financial year.
+ */
+function agencyList() {
+  const html = execFileSync('curl', ['-sSL', '-m', '120', '-A', UA, '-c', COOKIES,
+    'https://www.grants.gov.au/reports/gapublishedform'], { maxBuffer: 1024 * 1024 * 64 }).toString();
+  const out = [];
+  const re = /<option[^>]*value="([0-9a-fA-F-]{20,})"[^>]*>([^<]{3,90})/g;
+  let m;
+  while ((m = re.exec(html)) !== null) {
+    out.push({ uuid: m[1], name: m[2].replace(/&#39;/g, "'").replace(/&amp;/g, '&').trim() });
+  }
+  return out;
+}
+
+function fetchWindow(params, label) {
+  const url = `${BASE}?${params}`;
+  try {
+    execFileSync('curl', ['-sSL', '-m', '600', '-A', UA, '-b', COOKIES, '-c', COOKIES,
+      '-H', 'Referer: https://www.grants.gov.au/Reports/GaPublishedShow',
+      '-o', TMP, url], { stdio: ['ignore', 'ignore', 'pipe'] });
+  } catch (error) {
+    console.log(`  ${label}: fetch failed`);
+    return null;
+  }
+  try {
+    return JSON.parse(execFileSync('python3', ['-c', PY_PARSE], { maxBuffer: 1024 * 1024 * 512 }).toString());
+  } catch {
+    console.log(`  ${label}: parse failed`);
+    return null;
+  }
+}
+
+const PY_PARSE = `
+import openpyxl, json
+wb = openpyxl.load_workbook(${JSON.stringify(TMP)}, read_only=True)
+ws = wb[wb.sheetnames[0]]
+header, data, capped = None, [], False
+for r in ws.iter_rows(values_only=True):
+    vals = [c for c in r if c is not None]
+    if not header:
+        if vals and isinstance(vals[0], str) and 'returned more than' in vals[0]:
+            capped = True
+        if len(vals) >= 6:
+            header = ['' if c is None else str(c).strip() for c in r]
+        continue
+    if all(c is None for c in r):
+        continue
+    data.append(['' if c is None else str(c) for c in r])
+wb.close()
+print(json.dumps({'header': header, 'rows': data, 'capped': capped}))
+`;
+
 // One row per GA ID. Windows are cut on publish date so overlap is unlikely,
 // but a grant can be republished and we would rather drop a duplicate than
 // double-count public money.
@@ -75,7 +134,40 @@ const byGaId = new Map();
 let header = null;
 let windowCount = 0;
 let skipped = 0;
+const capped = [];
 
+if (BY_AGENCY) {
+  const agencies = agencyList();
+  console.log(`agencies found: ${agencies.length}\n`);
+  for (const [i, a] of agencies.entries()) {
+    const base = `AgencyStatus=0&AgencyUuid=${a.uuid}&DateType=Publish&IsAggregate=false`;
+    let res = fetchWindow(`${base}&DateStart=01-Jan-2000&DateEnd=31-Dec-2030`, a.name);
+    const take = r => {
+      if (!r || !r.header) return 0;
+      if (!header) header = r.header;
+      const idx = header.findIndex(h => h.toLowerCase() === 'ga id');
+      let added = 0;
+      for (const row of r.rows) {
+        const key = idx >= 0 ? row[idx] : row.join('|');
+        if (!byGaId.has(key)) { byGaId.set(key, row); added += 1; }
+      }
+      return added;
+    };
+    if (res && res.capped) {
+      // Subdividing a capped agency by year does not work: the export ignores
+      // the date filter and returns the same 50,000 rows for any range. Take
+      // what it gives and record the agency as incomplete rather than spending
+      // ten more requests proving the same point.
+      const n = take(res);
+      capped.push(a.name);
+      console.log(`[${i + 1}/${agencies.length}] ${a.name.slice(0, 46)}: +${n} CAPPED, incomplete`);
+    } else {
+      const n = take(res);
+      console.log(`[${i + 1}/${agencies.length}] ${a.name.slice(0, 46)}: +${n} (total ${byGaId.size})`);
+    }
+    windowCount += 1;
+  }
+} else {
 for (const w of windows(FROM, TO)) {
   const url = `${BASE}?AgencyStatus=0&DateType=Publish&DateStart=${w.start}&DateEnd=${w.end}&IsAggregate=false`;
   process.stdout.write(`${w.label} … `);
@@ -130,6 +222,7 @@ print(json.dumps({'header': header, 'rows': data, 'capped': capped}))
   windowCount += 1;
   if (!parsed.capped) console.log(`${parsed.rows.length} awards (running total ${byGaId.size})`);
 }
+}
 
 if (!header) {
   console.error('No data retrieved.');
@@ -147,4 +240,5 @@ writeFileSync(OUT, lines.join('\n'), 'utf8');
 
 console.log(`\nwindows fetched: ${windowCount}, skipped: ${skipped}`);
 console.log(`unique awards: ${byGaId.size}`);
+if (capped.length) console.log(`INCOMPLETE — these agencies hit the 50,000 cap: ${capped.join('; ')}`);
 console.log(`written: ${OUT}`);
