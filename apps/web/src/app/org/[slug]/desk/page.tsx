@@ -14,7 +14,7 @@ export async function generateMetadata() {
 }
 
 const KIND_STYLE: Record<DeskRecord['kind'], string> = {
-  funder: 'bg-purple-700', grant: 'bg-bauhaus-blue', buyer: 'bg-emerald-700',
+  funder: 'bg-purple-700', grant: 'bg-bauhaus-blue', buyer: 'bg-emerald-700', money: 'bg-bauhaus-red',
 };
 
 const HORIZON_LABEL: Record<DeskHorizon, string> = {
@@ -39,7 +39,7 @@ export default async function OneDeskPage({ params, searchParams }: {
   const { slug } = await params;
   if (!isActSlug(slug)) notFound();
   const sp = await searchParams;
-  const kind = typeof sp.kind === 'string' && ['funder', 'grant', 'buyer'].includes(sp.kind) ? (sp.kind as DeskRecord['kind']) : null;
+  const kind = typeof sp.kind === 'string' && ['funder', 'grant', 'buyer', 'money'].includes(sp.kind) ? (sp.kind as DeskRecord['kind']) : null;
 
   const all = await getOneDeskPool(slug);
   const pool = kind ? all.filter((r) => r.kind === kind) : all;
@@ -70,7 +70,7 @@ export default async function OneDeskPage({ params, searchParams }: {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="border-2 border-bauhaus-black bg-bauhaus-yellow px-2 py-1 text-[10px] font-black uppercase tracking-widest">Project: Goods</span>
-            {([null, 'funder', 'grant', 'buyer'] as const).map((k) => (
+            {([null, 'money', 'funder', 'grant', 'buyer'] as const).map((k) => (
               <Link
                 key={k ?? 'all'}
                 href={k ? `${base}?kind=${k}` : base}
