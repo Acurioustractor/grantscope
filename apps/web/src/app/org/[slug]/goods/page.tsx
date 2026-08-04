@@ -74,7 +74,12 @@ export default async function GoodsHubPage({
   const { slug } = await params;
   const sp = await searchParams;
   const fastNavigation = shouldUseFastLocalOrg(typeof sp.full === 'string' ? sp.full : undefined);
-  if (fastNavigation && isActSlug(slug) && typeof sp.legacy !== 'string') {
+  // The field-map screen is a different design system from the workspace tabs
+  // beneath this route — showing it as the hub front door made the workspace
+  // feel disconnected (Ben, 2026-08-05). It now renders only for E2E fixtures
+  // (which assert on it credential-free) or when explicitly requested.
+  const wantFieldMap = process.env.ACT_E2E_FIXTURES === '1' || typeof sp.fieldmap === 'string';
+  if (fastNavigation && isActSlug(slug) && wantFieldMap) {
     const wikiProject = getWikiSupportProject('goods');
     return (
       <ActProjectFieldMapScreen
@@ -106,7 +111,7 @@ export default async function GoodsHubPage({
   return (
     <main className="min-h-screen bg-bauhaus-canvas text-bauhaus-black">
       <div className="border-b-4 border-bauhaus-black bg-bauhaus-black text-white">
-        <div className="mx-auto max-w-7xl px-4 py-8">
+        <div className="mx-auto max-w-[1760px] px-4 py-8">
           <nav className="mb-4 flex flex-wrap items-center gap-2 text-sm text-gray-400">
             <Link href={`/org/${slug}`} className="hover:text-white">{profile.name}</Link>
             <span>/</span>
@@ -122,7 +127,7 @@ export default async function GoodsHubPage({
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 py-6">
+      <div className="mx-auto max-w-[1760px] px-4 py-6">
         {/* ── THE LOOP — demand → channels → capital ──────────────────── */}
         <div className="mb-2 text-xs font-black uppercase tracking-widest text-bauhaus-black">The loop</div>
         <div className="mb-6 grid gap-3 lg:grid-cols-3">

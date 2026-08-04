@@ -38,7 +38,7 @@ export default async function GoodsLearningPage({ params }: { params: Promise<{ 
         title="Learning"
         description="Keep the old case visible, attribute interpretations, and change the model only when real work exposes a missing distinction. No silent scoring or model-weight changes."
       />
-      <div className="mx-auto max-w-7xl px-4 py-6">
+      <div className="mx-auto max-w-[1760px] px-4 py-6">
         <DataModeBanner warning={workspace.dataWarning} />
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <Metric label="Human reads" value={String(workspace.decisions.length)} detail="Append-only matter judgments" tone="blue" />

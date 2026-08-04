@@ -49,7 +49,7 @@ export default async function GoodsApplicationsPage({ params }: { params: Promis
         title="Applications"
         description="Each room is a real grant, finance or capital route. The six hard gates make weak routes visible before GOODS spends a fortnight drafting them."
       />
-      <div className="mx-auto max-w-7xl px-4 py-6">
+      <div className="mx-auto max-w-[1760px] px-4 py-6">
         <DataModeBanner warning={workspace.dataWarning} />
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <Metric label="Route rooms" value={String(workspace.applications.length)} detail="One per current capital target" tone="blue" />

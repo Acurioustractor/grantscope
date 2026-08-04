@@ -59,7 +59,7 @@ export default async function GoodsCommunitiesHubPage({
   return (
     <main className="min-h-screen bg-bauhaus-canvas text-bauhaus-black">
       <div className="border-b-4 border-bauhaus-black bg-bauhaus-black text-white">
-        <div className="mx-auto max-w-7xl px-4 py-8">
+        <div className="mx-auto max-w-[1760px] px-4 py-8">
           <nav className="mb-4 flex flex-wrap items-center gap-2 text-sm text-gray-400">
             <Link href={`/org/${slug}`} className="hover:text-white">{profile.name}</Link>
             <span>/</span>
@@ -74,7 +74,7 @@ export default async function GoodsCommunitiesHubPage({
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 py-6 space-y-4">
+      <div className="mx-auto max-w-[1760px] px-4 py-6 space-y-4">
         {/* Summary cells */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
           <Cell label="Communities" value={summary.total} accent />

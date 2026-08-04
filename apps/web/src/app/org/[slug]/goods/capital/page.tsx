@@ -57,7 +57,7 @@ export default async function GoodsCapitalPage({ params }: { params: Promise<{ s
         )}
       />
 
-      <div className="mx-auto max-w-7xl px-4 py-6">
+      <div className="mx-auto max-w-[1760px] px-4 py-6">
         <DataModeBanner warning={workspace.dataWarning} />
 
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">

@@ -205,7 +205,7 @@ export default async function GoodsInsightPage({
   return (
     <main className="min-h-screen bg-bauhaus-canvas text-bauhaus-black">
       <div className="border-b-4 border-bauhaus-black bg-bauhaus-black text-white">
-        <div className="mx-auto max-w-7xl px-4 py-8">
+        <div className="mx-auto max-w-[1760px] px-4 py-8">
           <nav className="mb-4 flex flex-wrap items-center gap-2 text-sm text-gray-400">
             <Link href={`/org/${slug}`} className="hover:text-white">{profile.name}</Link>
             <span>/</span>
@@ -225,7 +225,7 @@ export default async function GoodsInsightPage({
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 py-6">
+      <div className="mx-auto max-w-[1760px] px-4 py-6">
         {fetchError && (
           <div className="mb-4 border-4 border-bauhaus-red bg-bauhaus-red px-4 py-2 text-[12px] font-black uppercase tracking-widest text-white">
             Live data unavailable ({fetchError}). Figures below may be incomplete.
