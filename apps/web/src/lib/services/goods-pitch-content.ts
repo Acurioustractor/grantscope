@@ -29,7 +29,7 @@ import type { ClaimLabel } from './goods-canonical-numbers';
  * margin frame, then the matched-capital ask. Quote it whole.
  */
 export const PITCH_SPINE =
-  'Goods on Country builds the bed that does not break: recycled-HDPE Stretch Beds designed for remote conditions, 496 bed units deployed across 9 communities, 2,660 kg of HDPE diverted, and $650,910.79 of receivables paid through A Curious Tractor. We know our delivered cost to the invoice line, we know the margin band that makes scale honest, and we are raising matched capital to move production from supplier-fabricated to community-operated.';
+  'Goods on Country builds the bed that does not break: 540 beds deployed across 11 served communities, made up of 177 Stretch Beds and 363 Basket Beds; 22 washers in community under the current manual ruling; a calculated 3,540 kg of Stretch-bed plastic design mass, not a weighed diversion total; and $650,910.79 of receivables paid through A Curious Tractor. We know our delivered cost to the invoice line, we know the margin band that makes scale honest, and we are raising matched capital to move production from supplier-fabricated to community-operated.';
 
 /** The verified spine facts, broken out so they can be claim-chipped inline. */
 export type SpineFact = {
@@ -39,9 +39,9 @@ export type SpineFact = {
 };
 
 export const PITCH_SPINE_FACTS: SpineFact[] = [
-  { value: '496', label: 'Bed units deployed', claimLabel: 'verified' },
-  { value: '9', label: 'Communities served', claimLabel: 'verified' },
-  { value: '2,660 kg', label: 'HDPE diverted (Stretch only)', claimLabel: 'verified' },
+  { value: '540', label: 'Beds deployed (177 Stretch + 363 Basket)', claimLabel: 'verified' },
+  { value: '11', label: 'Communities served (12 distinct touched)', claimLabel: 'verified' },
+  { value: '3,540 kg', label: 'Stretch design mass (177 × 20 kg)', claimLabel: 'modelled' },
   { value: '$650,910.79', label: 'Receivables paid (Xero)', claimLabel: 'verified' },
 ];
 
@@ -281,7 +281,7 @@ export const AUDIENCE_SHAPES: AudienceShape[] = [
     examples: 'Centrecorp, WHSAC, councils, health services',
     moves: [
       'Delivered price by route.',
-      'Proof pack (496 beds / 9 communities).',
+      'Proof pack (540 beds / 11 served communities; 22 washers in community under the manual ruling).',
       'Local-jobs trajectory (States 4 to 5 = community fabrication wages, $38.83 to $67.17 / bed labour across wage scenarios).',
       'Indigenous-led governance trajectory (Butterfly handover 26 Jun).',
     ],

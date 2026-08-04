@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireOrgAccess, requireOrgWriteAccess, type OrgAuthResult } from '../../_lib/auth';
 import {
+  buildDecisionOutcomeMetadata,
   dailyActionSourceRef,
+  decisionOutcomeSourceRef,
   getOrgDailyActionStates,
   isActDailyActionStatus,
   perthDayKey,
@@ -9,6 +11,38 @@ import {
 } from '@/lib/services/act-daily-actions';
 
 type Params = { params: Promise<{ orgProfileId: string }> };
+
+interface LinkedOpportunityDecision {
+  id: string;
+  decision: string;
+  reason: string | null;
+  evidence_gaps: string[] | null;
+  judgment: unknown;
+}
+
+function plainText(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function objectValue(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function optionalText(body: Record<string, unknown>, key: string, limit = 800): string | null {
+  return plainText(body[key])?.slice(0, limit) ?? null;
+}
+
+function judgmentPromiseOrReturn(judgment: Record<string, unknown>): string | null {
+  const commitment = objectValue(judgment.commitment);
+  if (!commitment) return null;
+  const detail = plainText(commitment.action);
+  if (!detail) return null;
+  const owner = plainText(commitment.owner);
+  const kind = plainText(commitment.kind) === 'return' ? 'Return' : 'Promise';
+  return owner ? `${kind} — ${owner}: ${detail}` : `${kind} — ${detail}`;
+}
 
 async function updateRelationshipFollowUp(auth: OrgAuthResult, actionId: string, status: 'planned' | 'completed'): Promise<string | null> {
   const followUpId = relationshipFollowUpIdFromAction(actionId);
@@ -48,6 +82,7 @@ export async function POST(request: NextRequest, { params }: Params) {
   const title = typeof body.title === 'string' ? body.title.trim().slice(0, 300) : '';
   const detail = typeof body.detail === 'string' ? body.detail.trim().slice(0, 800) : '';
   const href = typeof body.href === 'string' ? body.href.trim().slice(0, 800) : '';
+  const decisionId = optionalText(body, 'decision_id', 100);
   const status = body.status;
   if (!actionId || !title || !isActDailyActionStatus(status)) {
     return NextResponse.json({ error: 'action_id, title, and a valid status are required' }, { status: 400 });
@@ -55,6 +90,22 @@ export async function POST(request: NextRequest, { params }: Params) {
 
   const day = perthDayKey();
   const now = new Date().toISOString();
+  let linkedDecision: LinkedOpportunityDecision | null = null;
+
+  if (status === 'done' && decisionId) {
+    const { data: decision, error: decisionError } = await auth.serviceDb
+      .from('opportunity_decisions')
+      .select('id, decision, reason, evidence_gaps, judgment')
+      .eq('id', decisionId)
+      .eq('org_profile_id', orgProfileId)
+      .maybeSingle();
+    if (decisionError) return NextResponse.json({ error: decisionError.message }, { status: 500 });
+    if (!decision) {
+      return NextResponse.json({ error: 'The linked decision was not found for this organisation' }, { status: 400 });
+    }
+    linkedDecision = decision as LinkedOpportunityDecision;
+  }
+
   const { data, error } = await auth.serviceDb
     .from('opportunity_context_events')
     .upsert({
@@ -81,7 +132,54 @@ export async function POST(request: NextRequest, { params }: Params) {
     const followUpError = await updateRelationshipFollowUp(auth, actionId, 'completed');
     if (followUpError) return NextResponse.json({ error: `Today was updated, but the relationship follow-up could not be completed: ${followUpError}` }, { status: 500 });
   }
-  return NextResponse.json({ day, action: data });
+
+  let decisionOutcome = null;
+  if (status === 'done' && linkedDecision) {
+    const judgment = objectValue(linkedDecision.judgment) ?? {};
+    const metadata = buildDecisionOutcomeMetadata({
+      actionId,
+      day,
+      decision: linkedDecision.decision,
+      decisionReason: plainText(judgment.whatChanged) ?? linkedDecision.reason,
+      decisionEvidenceGaps: linkedDecision.evidence_gaps ?? [],
+      whatHappened: optionalText(body, 'what_happened'),
+      promiseOrReturn: optionalText(body, 'promise_or_return') ?? judgmentPromiseOrReturn(judgment),
+      nextQuestion: optionalText(body, 'next_question') ?? plainText(judgment.nextLearningQuestion),
+      recordedBy: auth.userId,
+    });
+    const { data: outcome, error: outcomeError } = await auth.serviceDb
+      .from('opportunity_context_events')
+      .upsert({
+        org_profile_id: orgProfileId,
+        decision_id: linkedDecision.id,
+        source_system: 'civicgraph',
+        source_type: 'daily_action',
+        source_ref: decisionOutcomeSourceRef(linkedDecision.id, actionId, day),
+        source_thread_id: actionId,
+        source_url: href || null,
+        title: `Outcome · ${title}`,
+        summary: String(metadata.what_happened),
+        lane: 'operations',
+        signal_kind: 'decision_outcome',
+        confidence: 1,
+        happened_at: now,
+        metadata,
+        updated_at: now,
+      }, {
+        onConflict: 'org_profile_id,source_system,source_ref,signal_kind',
+        ignoreDuplicates: true,
+      })
+      .select('id, decision_id, source_thread_id, happened_at, metadata')
+      .maybeSingle();
+    if (outcomeError) {
+      return NextResponse.json({
+        error: `Today was updated, but the decision outcome could not be appended: ${outcomeError.message}`,
+      }, { status: 500 });
+    }
+    decisionOutcome = outcome;
+  }
+
+  return NextResponse.json({ day, action: data, outcome: decisionOutcome });
 }
 
 export async function DELETE(request: NextRequest, { params }: Params) {

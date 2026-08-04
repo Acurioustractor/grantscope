@@ -160,11 +160,26 @@ export interface OrgOpportunityDecision {
   source_ref: string;
   project_code: string | null;
   pathway: string | null;
-  decision: 'no' | 'later' | 'research' | 'partner' | 'apply' | 'send_to_ghl' | 'won' | 'lost' | 'more_info';
+  decision: 'no' | 'later' | 'research' | 'partner' | 'apply' | 'send_to_ghl' | 'won' | 'lost' | 'more_info' | 'review';
   reason: string | null;
   notes: string | null;
   evidence_gaps: string[];
   outcome: string | null;
+  judgment?: {
+    schemaVersion?: number;
+    whatChanged?: string;
+    nextMove?: 'act' | 'listen' | 'verify' | 'revisit' | 'close';
+    nextLearningQuestion?: string;
+    revisitAt?: string;
+    commitment?: {
+      kind?: 'commitment' | 'return';
+      owner?: string;
+      beneficiary?: string;
+      action?: string;
+      dueAt?: string;
+    };
+  } | null;
+  supersedes_id?: string | null;
   created_at: string;
 }
 
@@ -662,7 +677,7 @@ export async function getOrgOpportunityDecisions(orgProfileId: string, limit = 3
   const supabase = getServiceSupabase();
   const { data, error } = await supabase
     .from('opportunity_decisions')
-    .select('id, source_type, source_ref, project_code, pathway, decision, reason, notes, evidence_gaps, outcome, created_at')
+    .select('id, source_type, source_ref, project_code, pathway, decision, reason, notes, evidence_gaps, outcome, judgment, supersedes_id, created_at')
     .eq('org_profile_id', orgProfileId)
     .order('created_at', { ascending: false })
     .limit(limit);
@@ -679,6 +694,11 @@ export async function getOrgOpportunityDecisions(orgProfileId: string, limit = 3
     notes: (row.notes as string | null) ?? null,
     evidence_gaps: Array.isArray(row.evidence_gaps) ? (row.evidence_gaps as string[]) : [],
     outcome: (row.outcome as string | null) ?? null,
+    judgment:
+      row.judgment && typeof row.judgment === 'object' && !Array.isArray(row.judgment)
+        ? row.judgment as OrgOpportunityDecision['judgment']
+        : null,
+    supersedes_id: (row.supersedes_id as string | null) ?? null,
     created_at: row.created_at as string,
   }));
 }

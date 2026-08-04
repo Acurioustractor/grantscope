@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 export async function generateMetadata() {
   return {
     title: 'ACT Atlas — CivicGraph',
-    description: 'A unified view of the communities, people, organisations, funding, procurement, and projects connected to ACT.',
+    description: 'The communities, people, organisations, projects and opportunity signals connected to ACT.',
   };
 }
 

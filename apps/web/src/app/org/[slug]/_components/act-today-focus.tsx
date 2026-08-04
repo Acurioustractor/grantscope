@@ -14,6 +14,7 @@ export interface ActTodayFocusItem {
   actionLabel: string;
   tone: 'red' | 'green' | 'blue' | 'purple' | 'amber' | 'stone';
   carryDays?: number;
+  decisionId?: string;
 }
 
 const STATUS_LABELS: Record<ActDailyActionStatus, string> = {
@@ -53,6 +54,7 @@ export function ActTodayFocus({
           detail: item.detail,
           href: item.href,
           status,
+          decision_id: item.decisionId,
         }),
       });
       const body = await response.json() as { error?: string };
@@ -126,7 +128,7 @@ export function ActTodayFocus({
       {handledItems.length > 0 ? (
         <div className="flex flex-col gap-2 border-t border-[var(--ws-border)] bg-[var(--ws-surface-2)] px-5 py-3 text-xs text-[var(--ws-text-secondary)] sm:flex-row sm:items-center sm:justify-between">
           <span>{handledItems.length} handled today</span>
-          {lastHandled ? (
+          {lastHandled && (!lastHandled.decisionId || states[lastHandled.id] !== 'done') ? (
             <button
               type="button"
               disabled={pendingId !== null}

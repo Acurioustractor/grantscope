@@ -38,6 +38,7 @@ import {
   movePriority,
   relationshipActionHandled,
 } from '@/lib/services/act-recommendation-memory';
+import { selectRelationalReviewMatters } from '@/lib/services/act-relational-review';
 import { deriveOpportunityVerification } from '@/lib/services/act-opportunity-trust';
 import { ActRecordReview, type ActReviewRecord } from './act-record-review';
 import { ActRelationshipActionButtons } from './act-relationship-action-buttons';
@@ -637,6 +638,7 @@ function buildContextOpportunityRows(
           lastVerifiedAt: eventMetadataString(event, 'verified_at'),
         }),
         discoveryState: event.discoveryState,
+        evidenceChangedAt: event.updatedAt,
         relationshipId: relationshipContact?.id ?? null,
         relationshipName: relationshipContact?.name ?? event.actorName ?? event.organisation,
       } satisfies HomeOpportunityRow;
@@ -996,19 +998,41 @@ function buildOpportunityRows({
       };
     });
 
+  const decisionOutcomes = contextEvents
+    .filter((event) => event.signalKind === 'decision_outcome' && event.decisionId)
+    .map((event) => ({
+      decisionId: event.decisionId ?? null,
+      happenedAt: event.happenedAt,
+      metadata: event.metadata,
+    }));
+
   return dedupeOpportunityRows(
     [...contextRows, ...grantRows, ...foundationRows, ...pipelineRows]
       .map((row) => {
-        const adjusted = applyDecisionMemory(row, decisions);
+        const adjusted = applyDecisionMemory(row, decisions, decisionOutcomes);
         const memory = latestDecisionFor(row, decisions);
+        const judgment = memory?.judgment;
+        const commitment = judgment?.commitment;
+        const obligation = commitment?.action?.trim()
+          ? [
+              commitment.kind === 'return' ? 'Return' : 'Promise',
+              commitment.owner?.trim() ? `— ${commitment.owner.trim()}:` : '—',
+              commitment.action.trim(),
+              commitment.dueAt ? `by ${fmtDate(commitment.dueAt)}` : null,
+            ].filter(Boolean).join(' ')
+          : null;
         return memory ? {
           ...adjusted,
           decisionMemory: {
+            id: memory.id,
             decision: memory.decision,
             label: decisionMemoryLabel(memory),
             createdAt: memory.created_at,
-            reason: memory.reason,
+            reason: judgment?.whatChanged?.trim() || memory.reason,
           },
+          revisitAt: judgment?.nextMove === 'revisit' ? judgment.revisitAt ?? null : null,
+          actObligations: obligation ? [obligation] : [],
+          suggestedNextQuestion: judgment?.nextLearningQuestion?.trim() || null,
         } : adjusted;
       }),
   )
@@ -1254,8 +1278,8 @@ export function ActOperatingDesk({
       detail: sourceDetail(
         'decisions',
         opportunityDecisions.length > 0
-          ? 'Accept, park, bad-match, and proof-gap choices are feeding recommendation order.'
-          : 'No ACT opportunity decisions recorded yet. Use Accept, Park, or Bad match to train the queue.',
+          ? 'Prior human reads are available as case memory; they do not change recommendation weights.'
+          : 'No human read is recorded yet. Capture only a material change or learning move.',
       ),
       href: deskViewHref(slug, 'opportunities', 'opportunities'),
     },
@@ -1288,7 +1312,7 @@ export function ActOperatingDesk({
       href: deskViewHref(slug, 'money', 'money'),
     },
   ];
-  const firstOpportunity = opportunityRows[0] ?? null;
+  const firstReviewMatter = selectRelationalReviewMatters(opportunityRows)[0]?.record ?? null;
   const nextDeadline = pipelineDueSoon[0]
     ? {
       title: pipelineDueSoon[0].name,
@@ -1305,21 +1329,68 @@ export function ActOperatingDesk({
       }
       : null;
   const learningStep = opportunityContext?.nextSteps[0] ?? null;
+  const completedReviewDecisionIds = new Set(
+    (opportunityContext?.recentEvents ?? [])
+      .filter((event) => event.signalKind === 'decision_outcome' && event.decisionId)
+      .map((event) => event.decisionId as string),
+  );
+  const nextReviewObligation = (opportunityContext?.recentEvents ?? [])
+    .filter((event) =>
+      (event.signalKind === 'relationship_commitment' || event.signalKind === 'relationship_return')
+      && event.decisionId
+      && !completedReviewDecisionIds.has(event.decisionId),
+    )
+    .sort((left, right) => {
+      const leftDue = eventMetadataString(left, 'dueAt') ?? '9999-12-31';
+      const rightDue = eventMetadataString(right, 'dueAt') ?? '9999-12-31';
+      return leftDue.localeCompare(rightDue)
+        || String(left.happenedAt ?? left.createdAt).localeCompare(String(right.happenedAt ?? right.createdAt));
+    })[0] ?? null;
+  const reviewObligationDueAt = nextReviewObligation
+    ? eventMetadataString(nextReviewObligation, 'dueAt')
+    : null;
+  const reviewObligationDays = daysUntil(reviewObligationDueAt);
   const nextLedgerFollowUp = (relationshipLedger?.items ?? [])
     .filter((item) => item.followUp?.status === 'planned')
     .sort((left, right) => String(left.followUp?.dueAt ?? '9999-12-31').localeCompare(String(right.followUp?.dueAt ?? '9999-12-31')))[0] ?? null;
   const ledgerFollowUpDays = daysUntil(nextLedgerFollowUp?.followUp?.dueAt);
   const focusItems = [
-    firstOpportunity
+    nextReviewObligation?.decisionId
       ? {
-        id: `opportunity-${firstOpportunity.id}`,
-        label: 'Decide',
-        title: firstOpportunity.title,
-        detail: firstOpportunity.nextAction,
-        meta: `${recommendedMoveLabel(firstOpportunity.recommendedMove)} · ${firstOpportunity.project} · ${firstOpportunity.score}`,
+        id: `decision-action:${nextReviewObligation.id}`,
+        decisionId: nextReviewObligation.decisionId,
+        label: nextReviewObligation.signalKind === 'relationship_return' ? 'Return owed' : 'Promise',
+        title: nextReviewObligation.title,
+        detail: nextReviewObligation.summary,
+        meta: `${nextReviewObligation.actorName || 'Owner to confirm'} · ${dueLabel(reviewObligationDueAt)}`,
+        href: '/opportunities/ecosystem',
+        actionLabel: 'Review evidence',
+        priority:
+          reviewObligationDays !== null && reviewObligationDays < 0
+            ? 0
+            : reviewObligationDays === 0
+              ? 3
+              : reviewObligationDays !== null && reviewObligationDays <= 7
+                ? 10
+                : 22,
+        tone:
+          reviewObligationDays !== null && reviewObligationDays < 0
+            ? 'red'
+            : reviewObligationDays !== null && reviewObligationDays <= 7
+              ? 'amber'
+              : 'purple',
+      }
+      : null,
+    firstReviewMatter
+      ? {
+        id: `opportunity-${firstReviewMatter.id}`,
+        label: 'Understand',
+        title: firstReviewMatter.title,
+        detail: firstReviewMatter.summary,
+        meta: `${firstReviewMatter.project} · ${firstReviewMatter.date}`,
         href: deskViewHref(slug, 'opportunities', 'opportunities'),
-        actionLabel: 'Decide',
-        priority: firstOpportunity.recommendedMove === 'apply_now' || firstOpportunity.recommendedMove === 'approach_now' ? 18 : 32,
+        actionLabel: 'Read',
+        priority: 18,
         tone: 'blue',
       }
       : null,
@@ -1394,12 +1465,12 @@ export function ActOperatingDesk({
     learningStep
       ? {
         id: `learning-${learningStep.sourceKey}-${learningStep.label}`,
-        label: 'Learning',
+        label: 'Evidence',
         title: learningStep.label,
         detail: learningStep.detail,
-        meta: `${learningStep.priority} priority`,
+        meta: learningStep.sourceKey,
         href: deskViewHref(slug, learningStep.sourceKey === 'decisions' ? 'opportunities' : 'evidence', learningStep.sourceKey),
-        actionLabel: 'Train',
+        actionLabel: 'Inspect',
         priority: learningStep.priority === 'high' ? 20 : learningStep.priority === 'medium' ? 36 : 48,
         tone: learningStep.priority === 'high' ? 'red' : learningStep.priority === 'medium' ? 'amber' : 'stone',
       }
@@ -1421,8 +1492,10 @@ export function ActOperatingDesk({
     ? 'What needs moving today'
     : view === 'relationships'
       ? 'Listen to the relationship field'
-      : view === 'opportunities' || view === 'triage'
-        ? 'Follow the strongest openings'
+      : view === 'opportunities'
+        ? 'Read what is changing'
+        : view === 'triage'
+          ? 'Check what the evidence supports'
         : view === 'pipeline'
           ? 'Move committed work forward'
           : view === 'money'
@@ -1447,7 +1520,7 @@ export function ActOperatingDesk({
             href={deskViewHref(slug, 'opportunities', 'opportunities')}
             className="hidden min-h-10 items-center rounded-md border border-[var(--ws-border)] bg-[var(--ws-surface-1)] px-3 text-xs font-semibold text-[var(--ws-text)] hover:bg-[var(--ws-surface-2)] sm:inline-flex"
           >
-            Review {opportunityRows.length} openings
+            Read current matters
           </Link>
         )}
       />
@@ -1477,8 +1550,8 @@ export function ActOperatingDesk({
         {showOpportunityWorkbench ? (
           <section id="opportunities" className="min-w-0 scroll-mt-20 overflow-hidden rounded-md border border-[var(--ws-border)] bg-[var(--ws-surface-1)]">
             <SectionTitle
-              eyebrow="Curiosity"
-              title="Choose the next opening"
+              eyebrow="Evidence and decision layer"
+              title="Understand what is happening now"
               action={<LinkButton href="/opportunities/ecosystem" label="Deep view" />}
             />
             <ActRecordReview
@@ -1497,8 +1570,8 @@ export function ActOperatingDesk({
         {showTriage ? (
           <section id="triage" className="mt-4 min-w-0 scroll-mt-20 overflow-hidden rounded-md border border-[var(--ws-border)] bg-[var(--ws-surface-1)]">
           <SectionTitle
-            eyebrow="Triage inbox"
-            title="Incoming leads before they enter the real pipeline"
+            eyebrow="Verify"
+            title="Prove each signal before ACT decides"
             action={<LinkButton href="/opportunities/ecosystem#opportunity-cockpit" label="Deep triage" />}
           />
           <div className="grid gap-0 lg:grid-cols-2">
@@ -1544,6 +1617,7 @@ export function ActOperatingDesk({
             relationshipLedger={relationshipLedger}
             orgProfileId={orgProfileId}
             initialFoundationId={selectedRelationshipId}
+            initialLedgerKey={selectedLedgerKey}
           />
         ) : null}
 

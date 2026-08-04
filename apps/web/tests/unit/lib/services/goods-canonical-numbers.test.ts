@@ -8,6 +8,7 @@ import {
   canonical,
   type ClaimLabel,
 } from '@/lib/services/goods-canonical-numbers';
+import { PITCH_SPINE, PITCH_SPINE_FACTS } from '@/lib/services/goods-pitch-content';
 
 const VALID_LABELS: ClaimLabel[] = ['verified', 'modelled', 'target', 'future'];
 
@@ -35,18 +36,34 @@ describe('CANONICAL_NUMBERS', () => {
     }
   });
 
-  it('carries both delivered-bed counts (496 deployed and 520 assets-sync)', () => {
+  it('carries the current deployed-bed total and product composition', () => {
     const deployed = getCanonical('deployed_bed_units');
-    const assetsSync = getCanonical('beds_delivered_assets_sync');
-    expect(deployed?.value).toBe(496);
+    const stretch = getCanonical('stretch_beds_deployed');
+    const basket = getCanonical('basket_beds_deployed');
+    expect(deployed?.value).toBe(540);
     expect(deployed?.claimLabel).toBe('verified');
-    expect(assetsSync?.value).toBe(520);
-    expect(assetsSync?.claimLabel).toBe('verified');
+    expect(stretch?.value).toBe(177);
+    expect(basket?.value).toBe(363);
+    expect(Number(stretch?.value) + Number(basket?.value)).toBe(deployed?.value);
   });
 
-  it('includes the reviewer-safe verified figures', () => {
-    expect(getCanonical('served_communities')?.value).toBe(9);
-    expect(getCanonical('hdpe_diverted_kg')?.value).toBe(2660);
+  it('includes the current community and washer definitions', () => {
+    expect(getCanonical('washers_in_community')?.value).toBe(22);
+    expect(getCanonical('washers_in_community')?.definition).toMatch(/manual per-community ruling/i);
+    expect(getCanonical('washers_in_community')?.definition).toMatch(/not row-derived/i);
+    expect(getCanonical('served_communities')?.value).toBe(11);
+    expect(getCanonical('distinct_communities_touched')?.value).toBe(12);
+  });
+
+  it('labels the 3,540 kg design-mass calculation as modelled, not measured diversion', () => {
+    const designMass = getCanonical('stretch_design_mass_kg');
+    expect(designMass?.value).toBe(3540);
+    expect(designMass?.claimLabel).toBe('modelled');
+    expect(designMass?.definition).toMatch(/177 deployed Stretch Beds x 20 kg/);
+    expect(designMass?.definition).toMatch(/not a weighbridge measurement/i);
+  });
+
+  it('retains the reviewer-safe verified finance figures', () => {
     expect(getCanonical('receivables_paid')?.value).toBe(650910.79);
   });
 
@@ -57,17 +74,19 @@ describe('CANONICAL_NUMBERS', () => {
 });
 
 describe('reconciliation flag', () => {
-  // Reconciled by Ben 2026-06-10: 496 = 363 Basket + 133 Stretch (excludes 21 Weave);
-  // 2,660 kg HDPE = 133 Stretch x 20 kg. 520 retired from external use.
-  it('needsReconciliation is false (reconciled 2026-06-10)', () => {
+  it('needsReconciliation is false under the 2026-07-25 Goods canon', () => {
     expect(needsReconciliation).toBe(false);
   });
 
-  it('reconciliationNote documents the outcome: both figures and the composition', () => {
-    expect(reconciliationNote).toMatch(/496/);
-    expect(reconciliationNote).toMatch(/520/);
+  it('reconciliationNote documents the current composition and caveats', () => {
+    expect(reconciliationNote).toMatch(/540/);
     expect(reconciliationNote).toMatch(/363 Basket/);
-    expect(reconciliationNote).toMatch(/133 Stretch/);
+    expect(reconciliationNote).toMatch(/177 Stretch/);
+    expect(reconciliationNote).toMatch(/22 washers/);
+    expect(reconciliationNote).toMatch(/11 communities/);
+    expect(reconciliationNote).toMatch(/12 distinct/);
+    expect(reconciliationNote).toMatch(/3,540 kg/);
+    expect(reconciliationNote).toMatch(/not a weighbridge/);
     expect(reconciliationNote).toMatch(/RECONCILED/);
   });
 });
@@ -87,6 +106,21 @@ describe('lookup helpers', () => {
 
   it('canonical throws for unknown keys', () => {
     expect(() => canonical('nope')).toThrow();
-    expect(canonical('deployed_bed_units').value).toBe(496);
+    expect(canonical('deployed_bed_units').value).toBe(540);
+  });
+});
+
+describe('public pitch canon', () => {
+  it('uses the current footprint and carries the two material caveats', () => {
+    expect(PITCH_SPINE).toMatch(/540 beds deployed/);
+    expect(PITCH_SPINE).toMatch(/177 Stretch Beds and 363 Basket Beds/);
+    expect(PITCH_SPINE).toMatch(/22 washers in community.*manual ruling/);
+    expect(PITCH_SPINE).toMatch(/3,540 kg.*not a weighed diversion total/);
+    expect(PITCH_SPINE).not.toMatch(/\b(?:496|520)\b|2,660 kg|41 washers/);
+  });
+
+  it('labels calculated Stretch design mass as modelled', () => {
+    const designMass = PITCH_SPINE_FACTS.find((fact) => fact.value === '3,540 kg');
+    expect(designMass?.claimLabel).toBe('modelled');
   });
 });

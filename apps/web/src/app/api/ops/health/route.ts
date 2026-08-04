@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAdminApi } from '@/lib/admin-auth';
 import { getServiceSupabase } from '@/lib/supabase';
 import { classifySourceHealth, type SourceRun } from '@grant-engine/source-health';
+import { classifyPipelineHealth } from '@grant-engine/pipeline-health';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
@@ -54,6 +55,7 @@ export async function GET() {
       sourceBreakdownResult, confidenceBreakdownResult,
       recentRuns, recentDiscoveryRuns,
       sourceHealthRuns,
+      pipelineSchedules, pipelineTasks, pipelineRuns,
       // Entity graph
       entityTypeBreakdown, relationshipTypeBreakdown,
       donorContractorStats,
@@ -172,6 +174,20 @@ export async function GET() {
         .like('agent_id', 'source:%')
         .order('started_at', { ascending: false })
         .limit(300), 8000),
+      safe(db.from('agent_schedules')
+        .select('agent_id, enabled, interval_hours, last_run_at')
+        .in('agent_id', ['nightly-grant-pipeline-ingest', 'nightly-grant-pipeline-enrich', 'nightly-grant-pipeline-finalize']), 8000),
+      safe(db.from('agent_tasks')
+        .select('agent_id, status, created_at, started_at, error')
+        .in('agent_id', ['nightly-grant-pipeline-ingest', 'nightly-grant-pipeline-enrich', 'nightly-grant-pipeline-finalize'])
+        .in('status', ['pending', 'running'])
+        .order('created_at', { ascending: false })
+        .limit(100), 8000),
+      safe(db.from('agent_runs')
+        .select('agent_id, status, started_at, completed_at')
+        .in('agent_id', ['nightly-grant-pipeline-ingest', 'nightly-grant-pipeline-enrich', 'nightly-grant-pipeline-finalize'])
+        .order('started_at', { ascending: false })
+        .limit(30), 8000),
       // Entity graph
       safe(db.rpc('get_entity_type_breakdown'), 8000),
       safe(db.rpc('get_relationship_type_breakdown'), 8000),
@@ -290,6 +306,21 @@ export async function GET() {
       status: row.status ?? undefined,
     }));
     const sourceHealth = classifySourceHealth(sourceRuns);
+    const pipelineHealth = classifyPipelineHealth(
+      (pipelineSchedules.data ?? []).map((row: Record<string, unknown>) => ({
+        agentId: String(row.agent_id), enabled: Boolean(row.enabled), intervalHours: Number(row.interval_hours ?? 24),
+        lastScheduledAt: typeof row.last_run_at === 'string' ? row.last_run_at : null,
+      })),
+      (pipelineTasks.data ?? []).map((row: Record<string, unknown>) => ({
+        agentId: String(row.agent_id), status: String(row.status), createdAt: String(row.created_at),
+        startedAt: typeof row.started_at === 'string' ? row.started_at : null,
+        error: typeof row.error === 'string' ? row.error : null,
+      })),
+      (pipelineRuns.data ?? []).map((row: Record<string, unknown>) => ({
+        agentId: String(row.agent_id), status: String(row.status), startedAt: String(row.started_at),
+        completedAt: typeof row.completed_at === 'string' ? row.completed_at : null,
+      })),
+    );
 
     const entityTypes = (entityTypeBreakdown as { data: Array<{ entity_type: string; count: number }> }).data ?? [];
     const relTypes = (relationshipTypeBreakdown as { data: Array<{ relationship_type: string; count: number }> }).data ?? [];
@@ -368,6 +399,7 @@ export async function GET() {
       recentRuns: recentRuns.data ?? [],
       discoveryRuns: recentDiscoveryRuns.data ?? [],
       sourceHealth,
+      pipelineHealth,
       lastUpdated: new Date().toISOString(),
     });
 

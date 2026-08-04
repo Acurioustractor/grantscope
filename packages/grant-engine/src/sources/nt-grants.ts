@@ -16,7 +16,30 @@ import type { SourcePlugin, DiscoveryQuery, RawGrant } from '../types';
 
 const NT_DIRECTORY_URL = 'https://nt.gov.au/community/grants-and-volunteers/grants/grants-directory';
 const GRANTS_NT_SEARCH = 'https://grantsnt.nt.gov.au/grants';
+const GRANTS_NT_API = 'https://grantsnt.nt.gov.au/api/v1/grants/search';
+const GRANTS_NT_CLIENT_VERSION = '3.3.7.1';
 const BROWSER_UA = 'GrantScope/1.0 (research; contact@act.place)';
+
+interface GrantsNTSearchResult {
+  publicContentId: number;
+  title: string;
+  applicationsOpen: string | null;
+  applicationsClose: string | null;
+  slug: string;
+  grantRoundSlug: string | null;
+  agency: string;
+  isIndividualEligible: boolean;
+  isOrganisationEligible: boolean;
+  showGlobalMaxFunding: boolean;
+  globalFundingMax: number | null;
+  overviewHtml: string | null;
+  categories: string[];
+}
+
+interface GrantsNTSearchResponse {
+  totalRecords: number;
+  results: GrantsNTSearchResult[];
+}
 
 function inferCategories(title: string, description: string, sectionName?: string): string[] {
   const text = `${title} ${description} ${sectionName || ''}`.toLowerCase();
@@ -87,6 +110,91 @@ async function fetchPage(url: string): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+function applicationStatus(opensAt: string | null, closesAt: string | null, now = new Date()): RawGrant['applicationStatus'] {
+  const opens = opensAt ? new Date(opensAt) : null;
+  const closes = closesAt ? new Date(closesAt) : null;
+
+  if (opens && !Number.isNaN(opens.getTime()) && now < opens) return 'upcoming';
+  if (closes && !Number.isNaN(closes.getTime()) && now > closes) return 'closed';
+  if (opens || closes) return 'open';
+  return 'unknown';
+}
+
+function htmlToText(html: string | null): string | undefined {
+  if (!html) return undefined;
+  const text = cheerio.load(html).text().replace(/\s+/g, ' ').trim();
+  return text || undefined;
+}
+
+export function mapGrantsNTResult(result: GrantsNTSearchResult, now = new Date()): RawGrant {
+  const description = htmlToText(result.overviewHtml);
+  const amount = result.globalFundingMax && result.globalFundingMax > 0
+    ? { max: result.globalFundingMax }
+    : extractAmounts(description || '');
+  const categories = [
+    ...new Set([
+      ...result.categories.map(category => category.trim()).filter(Boolean),
+      ...inferCategories(result.title, description || '', result.categories.join(' ')),
+    ]),
+  ];
+
+  return {
+    title: result.title.trim().slice(0, 200),
+    provider: result.agency?.trim() || 'Northern Territory Government',
+    sourceUrl: `https://grantsnt.nt.gov.au/grants/${result.grantRoundSlug || result.slug}`,
+    amount,
+    deadline: result.applicationsClose || undefined,
+    applicationStatus: applicationStatus(result.applicationsOpen, result.applicationsClose, now),
+    description: description?.slice(0, 4000),
+    categories,
+    program: result.grantRoundSlug || result.slug,
+    sourceId: 'nt-grants',
+    geography: ['AU-NT'],
+  };
+}
+
+/** Fetch the authoritative GrantsNT public search API, including all result pages. */
+async function fetchGrantsNTApi(): Promise<RawGrant[]> {
+  const pageSize = 100;
+  const grants: RawGrant[] = [];
+  let page = 1;
+  let totalRecords = Number.POSITIVE_INFINITY;
+
+  while (grants.length < totalRecords) {
+    const response = await fetch(GRANTS_NT_API, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'ClientVersion': GRANTS_NT_CLIENT_VERSION,
+        'Referer': GRANTS_NT_SEARCH,
+        'User-Agent': BROWSER_UA,
+      },
+      body: JSON.stringify({
+        agencies: [],
+        categories: [],
+        beneficiaries: [],
+        publicContentTypes: [],
+        pageSize,
+        page,
+        sortColumn: 'PublishDateFrom',
+        sortDirection: 2,
+        contentSlug: '',
+      }),
+      signal: AbortSignal.timeout(30000),
+    });
+
+    if (!response.ok) throw new Error(`GrantsNT API returned ${response.status}`);
+    const payload = await response.json() as GrantsNTSearchResponse;
+    totalRecords = payload.totalRecords;
+    grants.push(...payload.results.map(result => mapGrantsNTResult(result)));
+
+    if (payload.results.length === 0 || payload.results.length < pageSize) break;
+    page += 1;
+  }
+
+  return grants;
 }
 
 /** Scrape the NT Government Grants Directory — structured accordion with 100+ grants */
@@ -161,7 +269,14 @@ async function scrapeGrantsDirectory(): Promise<RawGrant[]> {
 async function scrapeGrantsNTPortal(): Promise<RawGrant[]> {
   const grants: RawGrant[] = [];
 
-  // Try Firecrawl first if available (GrantsNT is likely JS-rendered)
+  try {
+    console.log('[nt-grants] Fetching authoritative GrantsNT API...');
+    return await fetchGrantsNTApi();
+  } catch (error) {
+    console.warn(`[nt-grants] GrantsNT API failed; using portal fallbacks: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
+  // Browser-rendered fallback for unexpected API changes.
   try {
     const { default: FirecrawlApp } = await import('@mendable/firecrawl-js');
     const apiKey = process.env.FIRECRAWL_API_KEY;

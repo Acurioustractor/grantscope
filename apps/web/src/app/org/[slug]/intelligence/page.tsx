@@ -426,7 +426,7 @@ export default async function IntelligencePage({ params }: { params: Promise<{ s
                   {relationships.map((r, i) => (
                     <tr key={i} className={ROW(i)}>
                       <td className={`${TD} pl-4 font-medium`}>
-                        <Link href={`/entity/${encodeURIComponent(r.partner_gs_id)}`} className="text-bauhaus-blue hover:underline">
+                        <Link href={`/entities/${encodeURIComponent(r.partner_gs_id)}`} className="text-bauhaus-blue hover:underline">
                           {r.partner_name}
                         </Link>
                       </td>

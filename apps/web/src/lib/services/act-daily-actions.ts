@@ -15,6 +15,18 @@ export type ActDailyActionMemory = Record<string, ActDailyActionMemoryItem>;
 
 const RELATIONSHIP_FOLLOW_UP_PREFIX = 'relationship-follow-up:';
 
+export interface ActDecisionOutcomeMetadataInput {
+  actionId: string;
+  day: string;
+  decision: string;
+  decisionReason?: string | null;
+  decisionEvidenceGaps?: string[];
+  whatHappened?: string | null;
+  promiseOrReturn?: string | null;
+  nextQuestion?: string | null;
+  recordedBy: string;
+}
+
 export function relationshipFollowUpActionId(followUpId: string): string {
   return `${RELATIONSHIP_FOLLOW_UP_PREFIX}${followUpId}`;
 }
@@ -47,6 +59,28 @@ export function perthDayKey(date = new Date()): string {
 
 export function dailyActionSourceRef(actionId: string, day = perthDayKey()): string {
   return `${day}:${actionId}`;
+}
+
+export function decisionOutcomeSourceRef(
+  decisionId: string,
+  actionId: string,
+  day = perthDayKey(),
+): string {
+  return `${day}:${decisionId}:${actionId}`;
+}
+
+export function buildDecisionOutcomeMetadata(input: ActDecisionOutcomeMetadataInput): Record<string, unknown> {
+  return {
+    event_type: 'outcome_observed',
+    action_id: input.actionId,
+    day: input.day,
+    decision: input.decision,
+    what_changed: input.decisionReason || `Decision "${input.decision}" moved into action.`,
+    promise_or_return: input.promiseOrReturn || null,
+    what_happened: input.whatHappened || 'Action marked done; an external result has not been recorded yet.',
+    next_question: input.nextQuestion || input.decisionEvidenceGaps?.[0] || null,
+    recorded_by: input.recordedBy,
+  };
 }
 
 function metadataFor(row: { metadata: unknown }): Record<string, unknown> {

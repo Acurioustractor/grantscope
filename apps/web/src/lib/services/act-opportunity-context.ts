@@ -24,6 +24,7 @@ export interface ActOpportunityContextStep {
 
 export interface ActOpportunityContextEvent {
   id: string;
+  decisionId?: string | null;
   sourceSystem: string;
   sourceType: string;
   sourceRef: string;
@@ -161,6 +162,7 @@ interface AgentRunRow {
 
 interface ContextEventRow {
   id: string;
+  decision_id: string | null;
   source_system: string;
   source_type: string;
   source_ref: string;
@@ -300,6 +302,7 @@ function asDecisionStats(row: Record<string, unknown> | undefined): DecisionStat
 function asContextEvents(rows: ContextEventRow[] | null | undefined): ActOpportunityContextEvent[] {
   return (rows ?? []).map((row) => ({
     id: row.id,
+    decisionId: row.decision_id,
     sourceSystem: row.source_system,
     sourceType: row.source_type,
     sourceRef: row.source_ref,
@@ -476,6 +479,7 @@ export const getActOpportunityContextStatus = cache(async (
     safe(supabase.rpc('exec_sql', {
       query: `SELECT
           id::text,
+          decision_id::text,
           source_system,
           source_type,
           source_ref,

@@ -24,6 +24,7 @@ const community: CommunityDetail = {
   local_government: null,
   main_language: null,
   estimated_population: null,
+  estimated_households: null,
   nearest_staging_hub: null,
   freight_corridor: null,
   last_mile_method: null,

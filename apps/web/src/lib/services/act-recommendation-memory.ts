@@ -16,6 +16,20 @@ export interface RecommendationMemoryRecord {
   tags: string[];
 }
 
+export interface RecommendationPriorCase {
+  id: string;
+  decision: OrgOpportunityDecision['decision'];
+  label: string;
+  decidedAt: string;
+  summary: string;
+}
+
+export interface RecommendationDecisionOutcome {
+  decisionId: string | null;
+  happenedAt?: string | null;
+  metadata: unknown;
+}
+
 export interface RelationshipMemoryRecord {
   id: string;
   signalAt: string | null;
@@ -48,7 +62,7 @@ export function latestDecisionFor<T extends RecommendationMemoryRecord>(
   record: T,
   decisions: OrgOpportunityDecision[] | undefined,
 ): OrgOpportunityDecision | null {
-  return (decisions ?? []).find((decision) => decisionMatchesRecord(decision, record)) ?? null;
+  return matchingDecisionsFor(record, decisions)[0] ?? null;
 }
 
 function validTimestamp(value: string | null | undefined): number | null {
@@ -80,93 +94,101 @@ export function relationshipActionHandled<T extends RelationshipMemoryRecord>(
 }
 
 export function decisionMemoryLabel(decision: OrgOpportunityDecision): string {
-  if (decision.decision === 'no' || decision.decision === 'lost') return 'Past no';
-  if (decision.decision === 'later') return 'Parked before';
-  if (decision.decision === 'more_info') return 'Proof requested';
-  if (decision.decision === 'apply') return 'Application accepted';
-  if (decision.decision === 'partner') return 'Relationship accepted';
-  if (decision.decision === 'research') return 'Research accepted';
-  if (decision.decision === 'send_to_ghl') return 'GHL planned';
+  const kind = String(decision.decision);
+  if (kind === 'review') return 'Prior review';
+  if (kind === 'no' || kind === 'lost') return 'Past no';
+  if (kind === 'later') return 'Parked before';
+  if (kind === 'more_info') return 'Proof requested';
+  if (kind === 'apply') return 'Application accepted';
+  if (kind === 'partner') return 'Relationship accepted';
+  if (kind === 'research') return 'Research accepted';
+  if (kind === 'send_to_ghl') return 'GHL planned';
   return 'Won before';
+}
+
+function objectValue(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function textValue(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function judgmentFor(decision: OrgOpportunityDecision): Record<string, unknown> {
+  const withJudgment = decision as OrgOpportunityDecision & { judgment?: unknown };
+  return objectValue(withJudgment.judgment) ?? {};
+}
+
+function promiseOrReturnFor(judgment: Record<string, unknown>): string | null {
+  const action = objectValue(judgment.commitment);
+  if (!action) return null;
+  const kind = textValue(action.kind) === 'return' ? 'Return' : 'Commitment';
+  const owner = textValue(action.owner);
+  const detail = textValue(action.action);
+  if (!detail) return null;
+  return owner ? `${kind} — ${owner}: ${detail}` : `${kind} — ${detail}`;
+}
+
+function linkedOutcomeFor(
+  decisionId: string,
+  outcomes: RecommendationDecisionOutcome[],
+): string | null {
+  const latest = outcomes
+    .filter((outcome) => outcome.decisionId === decisionId)
+    .sort((left, right) => String(right.happenedAt ?? '').localeCompare(String(left.happenedAt ?? '')))[0];
+  return textValue(objectValue(latest?.metadata)?.what_happened);
+}
+
+function priorCaseSummary(
+  decision: OrgOpportunityDecision,
+  outcomes: RecommendationDecisionOutcome[],
+): string {
+  const judgment = judgmentFor(decision);
+  const whatChanged = textValue(judgment.whatChanged) ?? decision.reason ?? decisionMemoryLabel(decision);
+  const promiseOrReturn = promiseOrReturnFor(judgment);
+  const whatHappened = linkedOutcomeFor(decision.id, outcomes);
+  const nextQuestion = textValue(judgment.nextLearningQuestion) ?? decision.evidence_gaps[0] ?? null;
+  const facts = [
+    `What changed: ${compact(whatChanged)}`,
+    promiseOrReturn ? `Promise / return: ${compact(promiseOrReturn)}` : null,
+    `What happened: ${whatHappened ? compact(whatHappened) : 'Not recorded yet'}`,
+    nextQuestion ? `Next question: ${compact(nextQuestion)}` : null,
+  ].filter((fact): fact is string => Boolean(fact));
+  return facts.join(' · ');
+}
+
+export function matchingDecisionsFor<T extends RecommendationMemoryRecord>(
+  record: T,
+  decisions: OrgOpportunityDecision[] | undefined,
+): OrgOpportunityDecision[] {
+  return (decisions ?? [])
+    .filter((decision) => decisionMatchesRecord(decision, record))
+    .sort((left, right) => right.created_at.localeCompare(left.created_at));
+}
+
+export function priorCasesFor<T extends RecommendationMemoryRecord>(
+  record: T,
+  decisions: OrgOpportunityDecision[] | undefined,
+  outcomes: RecommendationDecisionOutcome[] = [],
+): RecommendationPriorCase[] {
+  return matchingDecisionsFor(record, decisions).map((decision) => ({
+    id: decision.id,
+    decision: decision.decision,
+    label: decisionMemoryLabel(decision),
+    decidedAt: decision.created_at,
+    summary: priorCaseSummary(decision, outcomes),
+  }));
 }
 
 export function applyDecisionMemory<T extends RecommendationMemoryRecord>(
   record: T,
   decisions: OrgOpportunityDecision[] | undefined,
-): T {
-  const latest = latestDecisionFor(record, decisions);
-  if (!latest) return record;
-
-  const baseReason = `${record.reason} Learning memory: ${decisionMemoryLabel(latest).toLowerCase()}${
-    latest.reason ? ` (${compact(latest.reason, 'decision reason')})` : ''
-  }.`;
-  const baseTags = [...record.tags, `memory:${latest.decision}`];
-  const decisionGaps = latest.evidence_gaps?.length ? latest.evidence_gaps : [];
-
-  if (latest.decision === 'no' || latest.decision === 'lost') {
-    return {
-      ...record,
-      readiness: 'park',
-      recommendedMove: 'park',
-      confidence: Math.max(20, record.confidence - 35),
-      reason: baseReason,
-      evidenceGaps: decisionGaps.length ? decisionGaps : record.evidenceGaps,
-      tags: baseTags,
-    };
-  }
-
-  if (latest.decision === 'later') {
-    return {
-      ...record,
-      recommendedMove: 'watch',
-      confidence: Math.max(20, record.confidence - 18),
-      reason: baseReason,
-      tags: baseTags,
-    };
-  }
-
-  if (latest.decision === 'more_info') {
-    return {
-      ...record,
-      readiness: 'needs_proof',
-      recommendedMove: 'build_proof_pack',
-      confidence: Math.max(20, record.confidence - 8),
-      reason: baseReason,
-      evidenceGaps: Array.from(new Set([...record.evidenceGaps, ...decisionGaps])),
-      tags: baseTags,
-    };
-  }
-
-  if (latest.decision === 'apply') {
-    return {
-      ...record,
-      readiness: 'ready',
-      recommendedMove: 'apply_now',
-      confidence: Math.min(95, record.confidence + 12),
-      reason: baseReason,
-      tags: baseTags,
-    };
-  }
-
-  if (latest.decision === 'partner' || latest.decision === 'send_to_ghl') {
-    return {
-      ...record,
-      readiness: record.readiness === 'park' ? 'needs_relationship' : record.readiness,
-      recommendedMove: 'approach_now',
-      confidence: Math.min(95, record.confidence + 10),
-      reason: baseReason,
-      tags: baseTags,
-    };
-  }
-
-  if (latest.decision === 'research' || latest.decision === 'won') {
-    return {
-      ...record,
-      confidence: Math.min(95, record.confidence + 8),
-      reason: baseReason,
-      tags: baseTags,
-    };
-  }
-
-  return record;
+  outcomes: RecommendationDecisionOutcome[] = [],
+): T & { priorCases: RecommendationPriorCase[] } {
+  return {
+    ...record,
+    priorCases: priorCasesFor(record, decisions, outcomes),
+  };
 }

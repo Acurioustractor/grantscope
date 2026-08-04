@@ -450,7 +450,7 @@ export default async function HomePage({
     { data: actDecisions },
     { data: funderCtxRows },
   ] = await Promise.all([
-    db.from('act_grant_recommendations')
+    db.from('act_grant_recommendations_current')
       .select('project_code, opportunity_id, opportunity_name, funder_name, fit_score, deadline, max_grant_amount, source_url, is_strong_fit')
       .in('project_code', ACT_PROJECT_CODES)
       .gte('fit_score', 50)

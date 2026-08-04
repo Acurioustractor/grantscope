@@ -1,6 +1,7 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import { getGoodsRelationshipsSafe } from './goods-engagement';
 import { REL_TRACK } from './goods-engagement-shared';
+import { canonical } from './goods-canonical-numbers';
 import type { GoodsRelationship, GoodsRelType, GoodsStage, FundingTrack } from './goods-engagement-shared';
 
 // Midpoint planning cost per bed (from goods-cost-evidence: $550-$650 production
@@ -14,19 +15,24 @@ export const DELIVERED_STALE_DAYS = 30;
 /**
  * Goods Command Center — Proof Pack (the artifacts showcase).
  * Assembles the proof we ALREADY hold into two audience-framed views:
- *  - Impact (for philanthropy): beds/washers delivered vs the curated demand
- *    gap (goods_communities active+lead), communities served, top demand.
+ *  - Impact (for philanthropy): beds deployed / washers in community vs the
+ *    curated demand gap (goods_communities active+lead), communities served,
+ *    top demand.
  *  - Commercial scale (for loans): lifetime received (Xero-reconciled registry),
  *    buyers engaged/advancing, committed funders — the repayment-capacity story.
  * No fabricated figures; link-outs to the live Asset Register for asset truth.
  * Plan: thoughts/shared/plans/goods-command-center-2026-06-09.md
  */
 
-// DELIVERED — sourced from the Goods v2 assets sync (project cwsyhpiuepvdjtxaozwf),
-// a DIFFERENT database than CivicGraph's, so it can't be queried here. Keep in
-// lockstep with scripts/build-goods-impact-data.mjs (DELIVERED const) +
-// apps/video/src/goodsImpactData.ts. As of 2026-05-28.
-export const GOODS_DELIVERED = { beds: 520, washers: 41, asOf: '2026-05-28' };
+// Current physical footprint from the shared Goods canon. Beds are deployed;
+// washers are the manual in-community ruling, not a count of register rows.
+const CANON_BEDS = canonical('deployed_bed_units');
+const CANON_WASHERS = canonical('washers_in_community');
+export const GOODS_DELIVERED = {
+  beds: Number(CANON_BEDS.value),
+  washers: Number(CANON_WASHERS.value),
+  asOf: CANON_BEDS.asOf,
+};
 
 export const ASSET_REGISTER_URL = 'https://www.goodsoncountry.com';
 export const QBE_COCKPIT_URL = 'https://www.goodsoncountry.com/admin/qbe-program';

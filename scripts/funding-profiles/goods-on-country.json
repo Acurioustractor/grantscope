@@ -1,0 +1,331 @@
+{
+  "schemaVersion": "project-funding-profile-v1",
+  "profileVersion": "goods-on-country-2026-08-01-v2",
+  "projectCode": "ACT-GD",
+  "projectName": "Goods on Country",
+  "asOf": "2026-08-01",
+  "publicSummary": "Goods on Country makes the Stretch Bed, a durable bed for remote Aboriginal communities built from recycled HDPE plastic. It has delivered 540 beds across 11 communities and is developing an on-Country manufacturing pathway that can move to community ownership.",
+  "entities": [
+    {
+      "id": "charity",
+      "legalName": "The Butterfly Movement Ltd",
+      "legalType": "charity",
+      "attributes": ["acnc_registered", "dgr_item_1", "pbi", "not_for_profit"],
+      "acceptedOrgTypes": ["charity", "registered_charity", "not_for_profit", "dgr", "pbi"],
+      "acceptedInstruments": ["grant", "philanthropic_grant", "donation", "recoverable_grant"],
+      "fundingBlockIds": ["measured_run", "running_cover", "servicing_and_scoping"],
+      "meetsIndigenousOwnershipGate": false
+    },
+    {
+      "id": "company",
+      "legalName": "A Curious Tractor Pty Ltd",
+      "legalType": "pty_ltd",
+      "attributes": ["australian_company", "social_enterprise", "trading_business"],
+      "acceptedOrgTypes": ["company", "pty_ltd", "business", "social_enterprise", "small_business"],
+      "acceptedInstruments": ["loan", "concessional_loan", "impact_investment", "recoverable_grant", "equity", "other_repayable"],
+      "fundingBlockIds": ["equipment", "working_capital"],
+      "meetsIndigenousOwnershipGate": false
+    }
+  ],
+  "fundingNeed": {
+    "amountMin": 367000,
+    "amountMax": 620000,
+    "currency": "AUD",
+    "blocks": [
+      {
+        "id": "equipment",
+        "label": "Production equipment",
+        "lane": "repayable",
+        "entityId": "company",
+        "amountMin": 112000,
+        "amountMax": 222000,
+        "priority": 10,
+        "keywords": ["equipment", "machinery", "press line", "shredder", "cnc", "tooling", "plant", "productive assets", "capital expenditure", "capex", "manufacturing equipment"]
+      },
+      {
+        "id": "working_capital",
+        "label": "Working capital",
+        "lane": "repayable",
+        "entityId": "company",
+        "amountMin": 80000,
+        "amountMax": 145000,
+        "priority": 9,
+        "keywords": ["working capital", "inventory finance", "purchase order finance", "trade finance", "patient capital", "cash flow", "materials", "stock", "receivables"]
+      },
+      {
+        "id": "measured_run",
+        "label": "Measured 50-bed production run",
+        "lane": "grant",
+        "entityId": "charity",
+        "amountMin": 60000,
+        "amountMax": 80000,
+        "priority": 8,
+        "keywords": ["pilot", "demonstration", "production run", "community delivery", "project costs", "materials", "essential goods", "beds", "housing hardware", "proof of concept"]
+      },
+      {
+        "id": "running_cover",
+        "label": "Operating cover while volume grows",
+        "lane": "grant",
+        "entityId": "charity",
+        "amountMin": 110000,
+        "amountMax": 165000,
+        "priority": 10,
+        "hardestMoney": true,
+        "keywords": ["operating costs", "operational costs", "core costs", "core funding", "unrestricted funding", "running costs", "overheads", "wages", "salaries", "capacity building", "organisational capacity", "administration"]
+      },
+      {
+        "id": "servicing_and_scoping",
+        "label": "Servicing and first on-Country site scoping",
+        "lane": "grant",
+        "entityId": "charity",
+        "amountMin": 5000,
+        "amountMax": 8000,
+        "priority": 6,
+        "smallGrantException": true,
+        "keywords": ["servicing", "maintenance", "repair", "site scoping", "feasibility", "community consultation", "travel", "technical assistance", "planning"]
+      }
+    ]
+  },
+  "themes": [
+    "remote communities",
+    "first nations",
+    "aboriginal communities",
+    "circular economy",
+    "recycled plastic",
+    "social enterprise",
+    "manufacturing",
+    "community infrastructure",
+    "housing hardware",
+    "essential goods",
+    "economic development",
+    "employment pathways",
+    "place-based resilience"
+  ],
+  "geographies": ["AU", "AU-NT", "AU-QLD", "AU-WA", "AU-SA"],
+  "searchLanes": [
+    {
+      "id": "impact_lending",
+      "label": "Concessional and impact lenders",
+      "priority": 10,
+      "queries": [
+        "Australia applications open 2026 social enterprise impact loan equipment working capital patient capital $50,000 $300,000 official",
+        "Australia concessional finance circular economy manufacturing social enterprise equipment working capital official program 2026",
+        "Australia social enterprise repayable capital equipment loan applications open 2026 official"
+      ]
+    },
+    {
+      "id": "operating_support",
+      "label": "Foundations funding operating costs",
+      "priority": 10,
+      "queries": [
+        "Australia foundation grant core operating costs unrestricted funding registered charity applications open 2026 official",
+        "Australia philanthropic grant operational costs wages overheads organisational capacity charity 2026 official program",
+        "Australia foundation capacity building core costs charity funding round open 2026 official"
+      ]
+    },
+    {
+      "id": "circular_economy",
+      "label": "Circular economy and recycling",
+      "priority": 9,
+      "queries": [
+        "Australia circular economy recycling plastic manufacturing equipment grant applications open 2026 official",
+        "Australia recycled materials productive equipment social enterprise funding round 2026 official",
+        "site:gov.au circular economy equipment recycling grant open 2026 plastic manufacturing"
+      ]
+    },
+    {
+      "id": "first_nations_economic_development",
+      "label": "First Nations economic development without an ownership gate",
+      "priority": 9,
+      "queries": [
+        "Australia First Nations economic development grant social enterprise partnership community ownership pathway applications open 2026 official",
+        "Australia Aboriginal remote community enterprise manufacturing infrastructure funding 2026 eligible partners official",
+        "Social Enterprise Development Initiative 2026 grant official Australia"
+      ]
+    },
+    {
+      "id": "corporate_foundations",
+      "label": "Corporate foundations with remote-community footprints",
+      "priority": 8,
+      "queries": [
+        "Australia corporate foundation remote Aboriginal communities mining energy insurance logistics grants open 2026 official",
+        "Australia corporate community grant Northern Territory Queensland Western Australia remote communities 2026 official",
+        "Australia corporate foundation DGR remote community grant September 2026 official"
+      ]
+    },
+    {
+      "id": "housing_hardware",
+      "label": "Health-adjacent housing hardware",
+      "priority": 8,
+      "queries": [
+        "Australia grant remote community housing hardware furniture beds essential goods First Nations applications open 2026 official",
+        "Australia remote Aboriginal housing community infrastructure household equipment funding round 2026 official",
+        "Australia charity grant essential household goods remote communities applications open 2026 official"
+      ]
+    }
+  ],
+  "sourceSeeds": [
+    {
+      "id": "export-finance-small-business-export-loan",
+      "name": "Small Business Export Loan",
+      "funderName": "Export Finance Australia",
+      "url": "https://www.exportfinance.gov.au/small-business/",
+      "description": "An ongoing $20,000–$350,000 loan pathway for eligible Australian small businesses, including export-related working capital and plant or equipment.",
+      "searchLanes": ["impact_lending"],
+      "instruments": ["loan"],
+      "recordType": "open_opportunity",
+      "status": "open",
+      "amountMin": 20000,
+      "amountMax": 350000,
+      "intakeType": "rolling",
+      "geography": "AU",
+      "supportedCostTypes": ["working capital", "plant or equipment"],
+      "fundingBlockIds": ["equipment", "working_capital"],
+      "criticalConditions": [
+        "Finance must support export-related activity or a credible export plan.",
+        "Applicant must have an ACN, at least two years of trading history, annual turnover above $250,000 and demonstrated profitable operations."
+      ]
+    },
+    {
+      "id": "sedi-general-2026-27",
+      "name": "SEDI Capability Building Grants 2026–27",
+      "funderName": "Australian Government Department of Social Services / Impact Investing Australia",
+      "url": "https://impactinvestingaustralia.com/looking-for-funding-or-investors/",
+      "description": "Rolling grants of up to $120,000 for eligible Australian social enterprises to purchase capability-building services.",
+      "searchLanes": ["operating_support", "first_nations_economic_development"],
+      "instruments": ["grant"],
+      "recordType": "open_opportunity",
+      "status": "open",
+      "supportedCostTypes": ["capability-building services"],
+      "ownershipGate": {
+        "required": false,
+        "thresholdPercent": null
+      },
+      "criticalConditions": [
+        "Applicant must directly benefit people experiencing entrenched disadvantage and satisfy the trading-revenue threshold.",
+        "Funds purchase capability-building services; they are not general production equipment or unrestricted operating cover."
+      ]
+    },
+    {
+      "id": "sedi-first-nations-2026-27",
+      "name": "SEDI First Nations Capability Building Grants 2026–27",
+      "funderName": "Australian Government Department of Social Services / Impact Investing Australia / Malu",
+      "url": "https://impactinvestingaustralia.com/sedi-first-nations-grants/",
+      "description": "Rolling $50,000–$120,000 capability grants for eligible First Nations enterprises; live eligibility must be checked for an ownership gate.",
+      "searchLanes": ["first_nations_economic_development"],
+      "instruments": ["grant"],
+      "recordType": "open_opportunity",
+      "status": "open",
+      "ownershipGate": {
+        "required": true,
+        "thresholdPercent": 50
+      }
+    },
+    {
+      "id": "auda-community-grant-2026",
+      "name": "auDA Community Grant Program 2026",
+      "funderName": ".au Domain Administration Limited",
+      "url": "https://www.auda.org.au/public-impact/public-benefit-program/community-grant-program/",
+      "description": "A current national community grant round for ACNC-registered not-for-profits, with rural, remote and First Nations priority groups.",
+      "deadline": "2026-08-31",
+      "searchLanes": ["corporate_foundations", "housing_hardware"],
+      "instruments": ["grant"],
+      "recordType": "open_opportunity",
+      "status": "open",
+      "criticalConditions": ["The project must create a direct digital-inclusion or internet-utility outcome, not merely serve a priority community."]
+    },
+    {
+      "id": "mazda-foundation-september-2026",
+      "name": "Mazda Foundation application round to 30 September 2026",
+      "funderName": "Mazda Foundation",
+      "url": "https://mazdafoundation.org.au/obtaining-funding/",
+      "description": "A current charitable foundation application pathway closing 30 September 2026; priorities and eligible costs require verification.",
+      "deadline": "2026-09-30",
+      "searchLanes": ["corporate_foundations", "operating_support"],
+      "instruments": ["philanthropic_grant"],
+      "recordType": "open_opportunity",
+      "status": "open",
+      "criticalConditions": ["The Foundation's current nominated priority and eligible cost categories must be confirmed before pursuit."]
+    },
+    {
+      "id": "nsw-bin-trim-round-2",
+      "name": "Bin Trim Equipment Rebates Program Round 2",
+      "funderName": "NSW Environment Protection Authority",
+      "url": "https://www.nsw.gov.au/grants-and-funding/bin-trim-equipment-rebates-program-round-2",
+      "description": "Circular-economy equipment rebate page requiring live status verification.",
+      "searchLanes": ["circular_economy"],
+      "instruments": ["grant"],
+      "recordType": "historical_or_closed",
+      "status": "closed"
+    },
+    {
+      "id": "qld-circular-economy-investment-program",
+      "name": "Circular Economy Investment Program",
+      "funderName": "Queensland Government",
+      "url": "https://www.qld.gov.au/environment/waste-reduction-recycling/funding-grants/circular-economy-investment-program",
+      "description": "Queensland circular-economy investment program page requiring live status verification.",
+      "searchLanes": ["circular_economy"],
+      "instruments": ["grant"],
+      "recordType": "historical_or_closed",
+      "status": "closed"
+    }
+  ],
+  "hardRules": {
+    "deadlineOnOrBefore": "2026-09-30",
+    "minimumCandidateAmount": 25000,
+    "maximumCandidateMinimum": 620000,
+    "blockGeographyMismatch": true,
+    "smallGrantMinimum": 5000,
+    "smallGrantExceptionBlockIds": ["servicing_and_scoping"],
+    "blockIndigenousOwnershipGate": true,
+    "excludedOpportunityKinds": ["buyer", "procurement", "award", "scholarship", "job", "event", "closed_program"],
+    "excludedAcademicTerms": ["scholarship", "phd", "postdoctoral", "academic fellowship", "researcher only", "university researchers"],
+    "excludedHosts": [
+      "dataportal.arc.gov.au",
+      "search.jobs.wa.gov.au",
+      "rsm.global",
+      "smartcompany.com.au",
+      "probonoaustralia.com.au",
+      "podbean.com",
+      "andpurpose.world"
+    ],
+    "excludedSources": ["arc-grants", "qld-arts-data"],
+    "excludedFunderTerms": ["university", "australian research council"],
+    "alreadyEngagedFunders": [
+      {"name": "Snow Foundation", "aliases": ["The Snow Foundation"]},
+      {"name": "Tim Fairfax Family Foundation", "aliases": ["Tim Fairfax"]},
+      {"name": "White Box Enterprises", "aliases": ["White Box"]},
+      {"name": "Minderoo Foundation", "aliases": ["Minderoo"]},
+      {"name": "Centrecorp Foundation", "aliases": ["Centrecorp"]},
+      {"name": "The Ian Potter Foundation", "aliases": ["Ian Potter"]},
+      {"name": "Bryan Foundation", "aliases": []},
+      {"name": "Brian M Davis Charitable Foundation", "aliases": ["Brian M Davis"]},
+      {"name": "Paul Ramsay Foundation", "aliases": ["Paul Ramsay"]},
+      {"name": "Vincent Fairfax Family Foundation", "aliases": ["VFFF"]},
+      {"name": "Dusseldorp Forum", "aliases": ["Dusseldorp"]},
+      {"name": "Social Enterprise Finance Australia", "aliases": ["SEFA"]},
+      {"name": "LendForGood", "aliases": []},
+      {"name": "Invest NT", "aliases": ["Investment Territory"]},
+      {"name": "Clean Energy Finance Corporation", "aliases": ["CEFC"]},
+      {"name": "National Australia Bank", "aliases": ["NAB", "NAB Foundation"]},
+      {"name": "First Nations Finance", "aliases": ["First Nations Foundation"]},
+      {"name": "QBE", "aliases": ["QBE Foundation", "QBE Catalysing Impact"]},
+      {"name": "Foundation for Rural & Regional Renewal", "aliases": ["FRRR"]},
+      {"name": "John Villiers Trust", "aliases": ["John Villiers"]},
+      {"name": "The Funding Network", "aliases": []},
+      {"name": "AMP Foundation", "aliases": ["AMP"]},
+      {"name": "Oranges & Sardines Foundation", "aliases": ["Oranges and Sardines", "Oranges & Sardines"]},
+      {"name": "Philanthropy Australia", "aliases": []}
+    ]
+  },
+  "matchProgram": {
+    "name": "QBE Catalysing Impact Stage 2",
+    "commitmentFloor": 150000,
+    "matchCap": 400000,
+    "decisionDeadline": "2026-09-30",
+    "signedToday": 0,
+    "acceptedInstruments": ["grant", "philanthropic_grant", "donation", "loan", "concessional_loan", "impact_investment", "recoverable_grant", "equity", "other_repayable"],
+    "commitmentLetterFields": ["amount", "instrument", "funder_legal_name", "named_contact"],
+    "conditionalApprovalAllowed": true
+  }
+}

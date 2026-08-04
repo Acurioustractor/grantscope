@@ -62,6 +62,25 @@ export interface ActRelationshipFollowUp {
   completedAt: string | null;
 }
 
+export type ActRelationshipObligationKind = 'commitment' | 'return';
+
+/**
+ * A promise or return captured by a human review.
+ *
+ * This is deliberately separate from a contribution (something that already
+ * moved) and a legacy follow-up (a mutable task row). Review obligations stay
+ * append-only here; their completion belongs to the outcome-event path.
+ */
+export interface ActRelationshipObligation {
+  id: string;
+  kind: ActRelationshipObligationKind;
+  action: string;
+  owner: string;
+  beneficiary: string | null;
+  dueAt: string | null;
+  happenedAt: string | null;
+}
+
 export interface ActRelationshipExchangeSuggestion {
   id: string;
   source: 'gmail' | 'notion';
@@ -76,7 +95,7 @@ export interface ActRelationshipExchangeSuggestion {
   reason: string;
 }
 
-export type ActRelationshipTimelineKind = 'invoice' | 'payment' | 'exchange' | 'conversation';
+export type ActRelationshipTimelineKind = 'invoice' | 'payment' | 'exchange' | 'conversation' | 'obligation';
 
 export interface ActRelationshipTimelineEvent {
   id: string;
@@ -113,6 +132,7 @@ export interface ActRelationshipLedgerItem {
   people: ActRelationshipPerson[];
   conversations: ActRelationshipConversation[];
   contributions: ActRelationshipContribution[];
+  obligations?: ActRelationshipObligation[];
   followUp: ActRelationshipFollowUp | null;
   invoices: ActRelationshipInvoice[];
 }
@@ -190,6 +210,9 @@ const LEGAL_TOKENS = new Set(['the', 'pty', 'ltd', 'limited', 'inc', 'incorporat
 const INTERNAL_ORGANISATIONS = new Set(['a curious tractor', 'act', 'goods on country']);
 const EXPLICIT_SUPPORT_PATTERN = /\b(provided|introduced|connected|helped|supported|hosted|donated|contributed|offered to|keen to support|would love to work)\b/i;
 const ACT_GAVE_PATTERN = /\b(act|ben|benjamin|nic|nicholas|we)\s+(provided|introduced|connected|helped|supported|hosted|donated|contributed|offered)\b/i;
+const RELATIONSHIP_OBLIGATION_SIGNAL_KINDS = new Set(['relationship_commitment', 'relationship_return']);
+
+export const ACT_RELATIONSHIP_CONTEXT_SOURCE_SYSTEMS = ['gmail', 'notion', 'civicgraph', 'human_review'] as const;
 
 function numberValue(value: unknown): number {
   const number = Number(value ?? 0);
@@ -224,6 +247,46 @@ export function relationshipCounterparties(values: Array<string | null | undefin
     if (organisation && !counterparties.some((existing) => relationshipNamesMatch(existing, organisation))) counterparties.push(organisation);
   }
   return counterparties;
+}
+
+function metadataString(metadata: Record<string, unknown> | null, key: string): string | null {
+  const value = metadata?.[key];
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+export function isHumanReviewRelationshipObligation(row: ActRelationshipSourceSignal): boolean {
+  return row.source_system === 'human_review' && RELATIONSHIP_OBLIGATION_SIGNAL_KINDS.has(row.signal_kind ?? '');
+}
+
+export function relationshipOrganisationForSignal(row: ActRelationshipSourceSignal): string | null {
+  const organisation = row.organisation?.trim();
+  if (organisation) return organisation;
+  if (!isHumanReviewRelationshipObligation(row)) return null;
+  return metadataString(row.metadata, 'beneficiary');
+}
+
+export function relationshipObligationFromSignal(row: ActRelationshipSourceSignal): ActRelationshipObligation | null {
+  if (!isHumanReviewRelationshipObligation(row)) return null;
+
+  const owner = metadataString(row.metadata, 'owner');
+  const action = metadataString(row.metadata, 'action');
+  if (!owner || !action) return null;
+
+  return {
+    id: row.id,
+    kind: row.signal_kind === 'relationship_return' ? 'return' : 'commitment',
+    action,
+    owner,
+    beneficiary: metadataString(row.metadata, 'beneficiary') ?? row.organisation?.trim() ?? null,
+    dueAt: metadataString(row.metadata, 'dueAt'),
+    happenedAt: row.happened_at,
+  };
+}
+
+function isRelationshipLedgerMemory(row: ActRelationshipSourceSignal): boolean {
+  return row.signal_kind === 'relationship_contribution'
+    || row.signal_kind === 'relationship_follow_up'
+    || isHumanReviewRelationshipObligation(row);
 }
 
 export function suggestRelationshipExchange(row: ActRelationshipSourceSignal): ActRelationshipExchangeSuggestion | null {
@@ -264,6 +327,17 @@ export function suggestRelationshipExchange(row: ActRelationshipSourceSignal): A
 
 export function buildActRelationshipTimeline(item: ActRelationshipLedgerItem): ActRelationshipTimelineEvent[] {
   const events: ActRelationshipTimelineEvent[] = [
+    ...(item.obligations ?? []).map((obligation): ActRelationshipTimelineEvent => ({
+      id: `obligation:${obligation.id}`,
+      kind: 'obligation',
+      happenedAt: obligation.happenedAt,
+      title: obligation.kind === 'return' ? 'Return owed' : 'Promise recorded',
+      summary: obligation.dueAt ? `${obligation.action} Due ${obligation.dueAt}.` : obligation.action,
+      source: 'human review',
+      amount: null,
+      status: obligation.kind === 'return' ? 'return_owed' : 'promise_recorded',
+      person: obligation.owner,
+    })),
     ...item.contributions.map((contribution): ActRelationshipTimelineEvent => ({
       id: `exchange:${contribution.id}`,
       kind: 'exchange',
@@ -367,11 +441,22 @@ function recommendedMove(input: {
   lastContactAt: string | null;
   work: string[];
   contributions: ActRelationshipContribution[];
+  obligations: ActRelationshipObligation[];
 }): string {
   if (input.outstanding > 0 && input.oldestOverdue > 0) {
     return `Confirm payment and the relationship next step; the oldest invoice is ${input.oldestOverdue} days overdue.`;
   }
   if (input.outstanding > 0) return 'Confirm the payment date and keep delivery expectations explicit.';
+  const datedObligations = [...input.obligations].sort((left, right) =>
+    String(left.dueAt ?? '9999-12-31').localeCompare(String(right.dueAt ?? '9999-12-31'))
+    || String(left.happenedAt ?? '').localeCompare(String(right.happenedAt ?? '')));
+  const nextObligation = datedObligations[0];
+  if (nextObligation?.kind === 'return') {
+    return `Recorded return for ${nextObligation.owner}: ${nextObligation.action}`;
+  }
+  if (nextObligation) {
+    return `Recorded promise for ${nextObligation.owner}: ${nextObligation.action}`;
+  }
   if (input.paidInvoices > 1) return `Reconnect around the strongest previous work and shape the next useful piece together.`;
   if (input.received > 0) return 'Ask what was most useful, what changed, and whether there is a natural next piece of work.';
   const unpaidGiven = input.contributions.find((contribution) => contribution.direction === 'given' && contribution.payment === 'unpaid');
@@ -400,7 +485,7 @@ export const getActRelationshipLedger = cache(async function getActRelationshipL
       .eq('type', 'ACCPAY').range(0, 999),
     db.from('org_contacts').select('id, name, email, role, organisation, last_contacted_at').eq('org_profile_id', orgProfileId),
     db.from('opportunity_context_events').select('id, source_system, organisation, actor_name, actor_email, title, summary, happened_at, signal_kind, metadata')
-      .eq('org_profile_id', orgProfileId).in('source_system', ['gmail', 'notion', 'civicgraph'])
+      .eq('org_profile_id', orgProfileId).in('source_system', [...ACT_RELATIONSHIP_CONTEXT_SOURCE_SYSTEMS])
       .order('happened_at', { ascending: false, nullsFirst: false }).range(0, 999),
   ]);
 
@@ -409,7 +494,7 @@ export const getActRelationshipLedger = cache(async function getActRelationshipL
   const contextRows = (contextResult.data ?? []) as ActRelationshipSourceSignal[];
   const counterparties = relationshipCounterparties([
     ...incomeRows.map((row) => row.contact_name),
-    ...contextRows.filter((row) => row.signal_kind === 'relationship_contribution' || row.signal_kind === 'relationship_follow_up').map((row) => row.organisation),
+    ...contextRows.filter(isRelationshipLedgerMemory).map(relationshipOrganisationForSignal),
   ]);
   const ghlResult = counterparties.length > 0
     ? await db.from('ghl_contacts').select('id, full_name, email, company_name, last_contact_date').in('company_name', counterparties).range(0, 999)
@@ -453,7 +538,10 @@ export const getActRelationshipLedger = cache(async function getActRelationshipL
     const actPaidThemTotal = expenseRows
       .filter((row) => relationshipNamesMatch(row.contact_name, organisation) && row.status === 'PAID')
       .reduce((sum, row) => sum + numberValue(row.amount_paid || row.total), 0);
-    const relatedContext = contextRows.filter((row) => relationshipNamesMatch(row.organisation, organisation));
+    const relatedContext = contextRows.filter((row) => relationshipNamesMatch(relationshipOrganisationForSignal(row), organisation));
+    const obligations = relatedContext
+      .map(relationshipObligationFromSignal)
+      .filter((obligation): obligation is ActRelationshipObligation => obligation !== null);
     const contributions = relatedContext.filter((row) => row.signal_kind === 'relationship_contribution')
       .map((row): ActRelationshipContribution => {
         const metadata = row.metadata ?? {};
@@ -474,6 +562,7 @@ export const getActRelationshipLedger = cache(async function getActRelationshipL
       });
     const conversations = relatedContext.filter((row) => row.signal_kind !== 'relationship_contribution')
       .filter((row) => row.signal_kind !== 'relationship_follow_up' && row.signal_kind !== 'relationship_contribution_review')
+      .filter((row) => !isHumanReviewRelationshipObligation(row))
       .map((row): ActRelationshipConversation => ({
         id: row.id,
         source: row.source_system,
@@ -509,7 +598,7 @@ export const getActRelationshipLedger = cache(async function getActRelationshipL
     const projectCodes = [...new Set(activeInvoices.map((invoice) => invoice.projectCode).filter((value): value is string => Boolean(value)))].sort();
     const lastContactAt = [...people.map((person) => person.lastContactAt), ...conversations.map((row) => row.happenedAt)]
       .filter((value): value is string => Boolean(value)).sort().at(-1) ?? null;
-    const input = { organisation, outstanding: outstandingTotal, oldestOverdue: oldestOverdueDays, paidInvoices: paidInvoiceCount, received: receivedTotal, lastContactAt, work, contributions };
+    const input = { organisation, outstanding: outstandingTotal, oldestOverdue: oldestOverdueDays, paidInvoices: paidInvoiceCount, received: receivedTotal, lastContactAt, work, contributions, obligations };
     return {
       key: normaliseRelationshipIdentity(organisation),
       organisation,
@@ -534,10 +623,12 @@ export const getActRelationshipLedger = cache(async function getActRelationshipL
         conversations.length === 0 ? 'conversation history' : null,
         work.length === 0 && contributions.length === 0 ? 'description of what ACT delivered' : null,
         contributions.length === 0 ? 'unbilled or freely contributed work is not yet captured' : null,
+        obligations.some((obligation) => !obligation.dueAt) ? 'date for an open promise or return' : null,
       ].filter((value): value is string => Boolean(value)),
       people,
       conversations,
       contributions,
+      obligations,
       followUp,
       invoices,
     };

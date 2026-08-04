@@ -1,0 +1,22 @@
+{
+  "data": {
+    "results": [
+      {
+        "id": "fixture-1",
+        "title": "First Nations Community Infrastructure Grants Round 2",
+        "url": "https://www.example.gov.au/grants/first-nations-infrastructure-round-2",
+        "highlight": "Applications are open for eligible Aboriginal community-controlled organisations. The round closes 30 September 2026 and offers grants up to $100,000."
+      },
+      {
+        "id": "fixture-2",
+        "title": "Community Grants",
+        "url": "https://www.facebook.com/example/posts/123",
+        "highlight": "A community grant may be available."
+      }
+    ]
+  },
+  "meta": {
+    "cost_usd": 0.004
+  }
+}
+

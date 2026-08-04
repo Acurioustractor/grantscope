@@ -8,6 +8,7 @@ import { getGoodsRelationshipFunding, type RelationshipFunding } from '@/lib/ser
 import { GoodsSubNav } from '../_components/goods-sub-nav';
 import { PowerChip } from '../_components/goods-power-chip';
 import { FundingChip } from '../_components/goods-funding-chip';
+import { ghlContactUrl } from '@/lib/ghl-links';
 import {
   money, moneyShort, relDays, STAGE_LABEL, bandPill,
 } from '@/lib/services/goods-engagement-shared';
@@ -48,20 +49,51 @@ function dueDate(iso: string | null): { label: string; overdue: boolean } | null
   return { label: `due ${date} · in ${days}d`, overdue: false };
 }
 
+/** Pipedrive-style deal rot: days a row can idle before it reads as stale, per stage.
+ *  Early stages can sit longer; live conversations rot fast. */
+const ROT_DAYS: Partial<Record<string, number>> = {
+  identified: 90, researching: 60, contacted: 21, in_conversation: 14, proposal: 10,
+};
+
+function isRotting(r: BuyerPipelineRow): boolean {
+  if (!r.isOpen) return false;
+  const limit = ROT_DAYS[r.stage];
+  if (!limit) return false;
+  if (!r.lastTouchAt) return true;
+  const t = new Date(r.lastTouchAt).getTime();
+  return !Number.isNaN(t) && (Date.now() - t) / 86_400_000 > limit;
+}
+
 function BuyerCard({ r, power, funding }: { r: BuyerPipelineRow; power: RelationshipPower | null; funding: RelationshipFunding | null }) {
   const due = dueDate(r.nextActionDue);
+  const rotting = isRotting(r);
   return (
-    <div className="flex flex-wrap items-start gap-x-4 gap-y-2 border-b border-bauhaus-black/10 px-3 py-3 last:border-b-0">
+    <div className={`flex flex-wrap items-start gap-x-4 gap-y-2 border-b border-bauhaus-black/10 px-3 py-3 last:border-b-0 ${rotting ? 'border-l-8 border-l-bauhaus-red bg-red-50' : ''}`}>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-black">{r.name}</span>
           <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest bg-bauhaus-black text-white">
             Buyer
           </span>
-          {r.ghlOpportunityId ? (
-            <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest bg-bauhaus-blue text-white">
-              GHL linked
-            </span>
+          {r.ghlOpportunityId || r.ghlContactId ? (
+            (() => {
+              const url = ghlContactUrl(r.ghlContactId);
+              return url ? (
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Open contact in GHL"
+                  className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest bg-bauhaus-blue text-white hover:bg-bauhaus-black"
+                >
+                  Open in GHL ↗
+                </a>
+              ) : (
+                <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest bg-bauhaus-blue text-white">
+                  GHL linked
+                </span>
+              );
+            })()
           ) : (
             <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest bg-bauhaus-canvas text-bauhaus-muted">
               No GHL signal
@@ -73,6 +105,11 @@ function BuyerCard({ r, power, funding }: { r: BuyerPipelineRow; power: Relation
 
         <div className="mt-0.5 text-[12px] text-bauhaus-muted">
           {STAGE_LABEL[r.stage]} · last touch {relDays(r.lastTouchAt)}
+          {rotting && (
+            <span className="ml-2 bg-bauhaus-red px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-white">
+              Going quiet
+            </span>
+          )}
         </div>
 
         <div className="mt-1 flex flex-wrap items-center gap-2 text-[13px] font-bold text-bauhaus-black">
@@ -125,7 +162,10 @@ export default async function GoodsBuyersPage({
     getGoodsRelationshipFunding(),
   ]);
   const openOnly = filter === 'open';
-  const shown = openOnly ? rows.filter((r) => r.isOpen) : rows;
+  const noNext = filter === 'no_next';
+  const rottingCount = rows.filter(isRotting).length;
+  const noNextRows = rows.filter((r) => r.isOpen && !r.nextActionDue);
+  const shown = openOnly ? rows.filter((r) => r.isOpen) : noNext ? noNextRows : rows;
   // No buyer amounts are entered yet (asks + lifetime revenue both $0). When that's
   // true, leading with three giant $0s reads as "earned nothing / broken" — so we lead
   // with the pipeline strength that DOES exist and relegate the $0 to an honest footnote
@@ -228,6 +268,18 @@ export default async function GoodsBuyersPage({
           >
             Open only {summary.open > 0 && <span className={openOnly ? 'text-bauhaus-yellow' : 'text-bauhaus-blue'}>{summary.open}</span>}
           </Link>
+          <Link
+            href={`/org/${slug}/goods/buyers?filter=no_next`}
+            className={`border-2 px-2.5 py-1 text-[11px] font-black uppercase tracking-widest ${noNext ? 'border-bauhaus-red bg-bauhaus-red text-white' : 'border-bauhaus-black/30 bg-white text-bauhaus-black hover:border-bauhaus-black'}`}
+            title="Open buyers with no scheduled next action — this list should be empty"
+          >
+            No next step {noNextRows.length > 0 && <span className={noNext ? 'text-bauhaus-yellow' : 'text-bauhaus-red'}>{noNextRows.length}</span>}
+          </Link>
+          {rottingCount > 0 && (
+            <span className="border-2 border-bauhaus-red bg-red-50 px-2.5 py-1 text-[11px] font-black uppercase tracking-widest text-bauhaus-red">
+              {rottingCount} going quiet
+            </span>
+          )}
         </div>
 
         {shown.length === 0 ? (

@@ -31,6 +31,8 @@ export type BuyerPipelineRow = {
   stage: GoodsStage;
   /** Linked GHL opportunity id, if this buyer is wired to GoHighLevel. */
   ghlOpportunityId: string | null;
+  /** Linked GHL contact id — the reliable deep-link target. */
+  ghlContactId: string | null;
   warmth: number;
   band: WarmthBand;
   lastTouchAt: string | null;
@@ -90,6 +92,7 @@ function toPipelineRow(r: GoodsRelationship): BuyerPipelineRow {
     name: r.display_name,
     stage: r.stage,
     ghlOpportunityId: r.ghl_opportunity_id ?? null,
+    ghlContactId: r.ghl_contact_id ?? null,
     warmth,
     band: warmthBand(warmth),
     lastTouchAt: r.last_touch_at,

@@ -138,12 +138,12 @@ export default async function GoodsFunnelPage({ params, searchParams }: { params
           <Stat label={`Need (${f.need.communities} communities)`} beds={f.need.beds} washers={f.need.washers} accent />
           <Stat label="Ordered (Buyer)" beds={f.ordered.beds} washers={f.ordered.washers} value={f.ordered.value} />
           <Stat label="Funded (Supporter)" beds={f.funded.beds} washers={f.funded.washers} value={f.funded.value} />
-          <Stat label="Delivered" beds={f.delivered.beds} washers={f.delivered.washers} />
+          <Stat label="Current footprint" beds={f.delivered.beds} washers={f.delivered.washers} />
           <Stat label="Gap (need − delivered)" beds={f.gap.beds} washers={f.gap.washers} accent />
         </div>
         <p className="mb-8 text-xs leading-5 text-slate-500">
           Addressable demand (all {num(f.addressable.communities)} communities): {num(f.addressable.beds)} beds · {num(f.addressable.washers)} washers.
-          Delivered is a cited constant — {f.delivered.source}.
+          The footprint uses deployed beds and washers in community. {f.delivered.source}.
           {!f.ghlConnected && <span className="text-bauhaus-red"> · GHL not connected in this environment — Ordered/Funded show 0.</span>}
         </p>
 

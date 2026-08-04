@@ -1,0 +1,401 @@
+{
+  "benchmarkVersion": "goods-funding-fit-v2",
+  "profileVersion": "goods-on-country-2026-08-01-v2",
+  "cases": [
+    {
+      "id": "operating-cost-foundation",
+      "expectedRelevant": true,
+      "expectedBlocked": false,
+      "candidate": {
+        "name": "Remote Community Core Support Round 2026",
+        "funderName": "Example Community Foundation",
+        "description": "Unrestricted core funding for charities working with First Nations remote communities, including wages, overheads and operating costs.",
+        "opportunityKind": "grant",
+        "instruments": ["philanthropic_grant"],
+        "eligibleOrgTypes": ["registered_charity", "dgr"],
+        "ownershipGate": {"required": false},
+        "supportedCostTypes": ["operating costs", "wages", "overheads"],
+        "amountMin": 100000,
+        "amountMax": 175000,
+        "deadline": "2026-09-18",
+        "geography": "AU",
+        "officialSourceConfirmed": true,
+        "evidenceCompleteness": 100,
+        "commitmentLetterPossible": true,
+        "commitmentLetterFields": ["amount", "instrument", "funder_legal_name", "named_contact"]
+      }
+    },
+    {
+      "id": "impact-equipment-loan",
+      "expectedRelevant": true,
+      "expectedBlocked": false,
+      "candidate": {
+        "name": "Purpose Enterprise Patient Capital Facility",
+        "funderName": "Example Impact Capital Ltd",
+        "description": "Patient capital for Australian social enterprises purchasing manufacturing equipment or funding inventory and receivables.",
+        "opportunityKind": "loan",
+        "instruments": ["concessional_loan"],
+        "eligibleOrgTypes": ["pty_ltd", "social_enterprise"],
+        "ownershipGate": {"required": false},
+        "supportedCostTypes": ["manufacturing equipment", "working capital", "inventory finance"],
+        "amountMin": 50000,
+        "amountMax": 300000,
+        "intakeType": "rolling",
+        "geography": "AU",
+        "officialSourceConfirmed": true,
+        "evidenceCompleteness": 100
+      }
+    },
+    {
+      "id": "circular-equipment-recoverable-grant",
+      "expectedRelevant": true,
+      "expectedBlocked": false,
+      "candidate": {
+        "name": "Circular Manufacturing Catalyst",
+        "funderName": "Example Circular Economy Fund",
+        "description": "Recoverable grants for recycled plastic manufacturing equipment, tooling and productive assets in Australia.",
+        "opportunityKind": "grant",
+        "instruments": ["recoverable_grant"],
+        "eligibleOrgTypes": ["company", "social_enterprise"],
+        "ownershipGate": {"required": false},
+        "supportedCostTypes": ["equipment", "tooling", "recycled plastic manufacturing"],
+        "amountMin": 75000,
+        "amountMax": 200000,
+        "deadline": "2026-09-25",
+        "geography": "AU",
+        "officialSourceConfirmed": true,
+        "evidenceCompleteness": 100
+      }
+    },
+    {
+      "id": "servicing-small-grant-exception",
+      "expectedRelevant": true,
+      "expectedBlocked": false,
+      "candidate": {
+        "name": "Remote Equipment Servicing Micro Grant",
+        "funderName": "Example Regional Trust",
+        "description": "Small grants for servicing, repair, community consultation and technical site scoping in remote communities.",
+        "opportunityKind": "grant",
+        "instruments": ["grant"],
+        "eligibleOrgTypes": ["charity"],
+        "ownershipGate": {"required": false},
+        "supportedCostTypes": ["servicing", "repair", "site scoping"],
+        "amountMin": 5000,
+        "amountMax": 8000,
+        "deadline": "2026-09-10",
+        "geography": "AU-NT",
+        "officialSourceConfirmed": true,
+        "evidenceCompleteness": 100
+      }
+    },
+    {
+      "id": "first-nations-economic-development-no-gate",
+      "expectedRelevant": true,
+      "expectedBlocked": false,
+      "candidate": {
+        "name": "Remote Enterprise Demonstration Fund",
+        "funderName": "Example Regional Development Agency",
+        "description": "A First Nations economic development grant open to charities working in partnership with remote Aboriginal communities. Indigenous ownership is not required.",
+        "opportunityKind": "grant",
+        "instruments": ["grant"],
+        "eligibleOrgTypes": ["registered_charity"],
+        "ownershipGate": {"required": false},
+        "supportedCostTypes": ["pilot", "community delivery", "materials", "employment pathways"],
+        "amountMin": 50000,
+        "amountMax": 100000,
+        "deadline": "2026-09-29",
+        "geography": "AU-QLD",
+        "officialSourceConfirmed": true,
+        "evidenceCompleteness": 100
+      }
+    },
+    {
+      "id": "corporate-remote-community-run",
+      "expectedRelevant": true,
+      "expectedBlocked": false,
+      "candidate": {
+        "name": "Remote Communities Essential Goods Fund",
+        "funderName": "Example Logistics Foundation",
+        "description": "Grants for registered charities delivering beds, household equipment and essential goods in remote Aboriginal communities.",
+        "opportunityKind": "grant",
+        "instruments": ["philanthropic_grant"],
+        "eligibleOrgTypes": ["charity", "dgr"],
+        "ownershipGate": {"required": false},
+        "supportedCostTypes": ["beds", "essential goods", "community delivery"],
+        "amountMin": 50000,
+        "amountMax": 100000,
+        "deadline": "2026-09-15",
+        "geography": "AU-WA",
+        "officialSourceConfirmed": true,
+        "evidenceCompleteness": 100
+      }
+    },
+    {
+      "id": "ownership-gate",
+      "expectedRelevant": false,
+      "expectedBlocked": true,
+      "expectedBlockIncludes": "Indigenous ownership/control is required",
+      "candidate": {
+        "name": "Indigenous Business Equipment Finance",
+        "funderName": "Example Indigenous Finance Agency",
+        "description": "Equipment and working capital finance for businesses that are at least 51% Indigenous owned and controlled.",
+        "opportunityKind": "loan",
+        "instruments": ["concessional_loan"],
+        "eligibleOrgTypes": ["pty_ltd"],
+        "ownershipGate": {"required": true, "thresholdPercent": 51},
+        "supportedCostTypes": ["equipment", "working capital"],
+        "amountMax": 300000,
+        "intakeType": "rolling",
+        "geography": "AU",
+        "officialSourceConfirmed": true,
+        "evidenceCompleteness": 100
+      }
+    },
+    {
+      "id": "already-engaged-snow",
+      "expectedRelevant": false,
+      "expectedBlocked": true,
+      "expectedBlockIncludes": "already engaged",
+      "candidate": {
+        "name": "The Snow Foundation Community Grant",
+        "funderName": "The Snow Foundation",
+        "description": "Operating and equipment support for remote communities.",
+        "opportunityKind": "grant",
+        "instruments": ["grant"],
+        "eligibleOrgTypes": ["charity"],
+        "ownershipGate": {"required": false},
+        "supportedCostTypes": ["operating costs", "equipment"],
+        "amountMax": 200000,
+        "deadline": "2026-09-20",
+        "officialSourceConfirmed": true,
+        "evidenceCompleteness": 100
+      }
+    },
+    {
+      "id": "deadline-too-late",
+      "expectedRelevant": false,
+      "expectedBlocked": true,
+      "expectedBlockIncludes": "deadline is after",
+      "candidate": {
+        "name": "Circular Economy Growth Grant",
+        "funderName": "Example Sustainability Department",
+        "description": "Equipment grants for recycled plastic manufacturing.",
+        "opportunityKind": "grant",
+        "instruments": ["recoverable_grant"],
+        "eligibleOrgTypes": ["company"],
+        "ownershipGate": {"required": false},
+        "supportedCostTypes": ["manufacturing equipment"],
+        "amountMax": 200000,
+        "deadline": "2026-10-15",
+        "officialSourceConfirmed": true,
+        "evidenceCompleteness": 100
+      }
+    },
+    {
+      "id": "buyer-not-funder",
+      "expectedRelevant": false,
+      "expectedBlocked": true,
+      "expectedBlockIncludes": "excluded opportunity kind",
+      "candidate": {
+        "name": "Remote Housing Bed Purchase Tender",
+        "funderName": "Example Housing Authority",
+        "description": "A procurement opportunity to purchase beds for remote housing.",
+        "opportunityKind": "procurement",
+        "eligibleOrgTypes": ["company"],
+        "ownershipGate": {"required": false},
+        "amountMax": 500000,
+        "deadline": "2026-09-10",
+        "officialSourceConfirmed": true,
+        "evidenceCompleteness": 100
+      }
+    },
+    {
+      "id": "small-non-servicing-grant",
+      "expectedRelevant": false,
+      "expectedBlocked": true,
+      "expectedBlockIncludes": "maximum amount is below",
+      "candidate": {
+        "name": "Community Bed Pilot Grant",
+        "funderName": "Example Local Foundation",
+        "description": "Project funding for a small production run of essential goods.",
+        "opportunityKind": "grant",
+        "instruments": ["grant"],
+        "eligibleOrgTypes": ["charity"],
+        "ownershipGate": {"required": false},
+        "supportedCostTypes": ["pilot", "beds"],
+        "amountMax": 10000,
+        "deadline": "2026-09-20",
+        "officialSourceConfirmed": true,
+        "evidenceCompleteness": 100
+      }
+    },
+    {
+      "id": "expired-round",
+      "expectedRelevant": false,
+      "expectedBlocked": true,
+      "expectedBlockIncludes": "deadline has passed",
+      "candidate": {
+        "name": "Remote Infrastructure Round 2025",
+        "funderName": "Example Government Agency",
+        "description": "Equipment and community infrastructure grants.",
+        "opportunityKind": "grant",
+        "instruments": ["grant"],
+        "eligibleOrgTypes": ["charity"],
+        "ownershipGate": {"required": false},
+        "supportedCostTypes": ["equipment"],
+        "amountMax": 200000,
+        "deadline": "2026-07-15",
+        "officialSourceConfirmed": true,
+        "evidenceCompleteness": 100
+      }
+    },
+    {
+      "id": "scholarship-noise",
+      "expectedRelevant": false,
+      "expectedBlocked": true,
+      "expectedBlockIncludes": "excluded opportunity kind",
+      "candidate": {
+        "name": "First Nations Manufacturing Scholarship",
+        "funderName": "Example University",
+        "description": "A scholarship for individual university students researching recycled plastics.",
+        "opportunityKind": "scholarship",
+        "eligibleOrgTypes": ["individual"],
+        "amountMax": 50000,
+        "deadline": "2026-09-20",
+        "officialSourceConfirmed": true,
+        "evidenceCompleteness": 100
+      }
+    },
+    {
+      "id": "project-only-refuses-needed-costs",
+      "expectedRelevant": false,
+      "expectedBlocked": true,
+      "expectedBlockIncludes": "project-only funding excludes",
+      "candidate": {
+        "name": "Community Awareness Project Grant",
+        "funderName": "Example Awareness Trust",
+        "description": "Project funding only for awareness events. Operating costs and equipment are ineligible.",
+        "opportunityKind": "grant",
+        "instruments": ["grant"],
+        "eligibleOrgTypes": ["charity"],
+        "ownershipGate": {"required": false},
+        "supportedCostTypes": ["events", "awareness campaign"],
+        "excludedCostTypes": ["operating costs", "equipment"],
+        "projectOnly": true,
+        "amountMax": 100000,
+        "deadline": "2026-09-20",
+        "officialSourceConfirmed": true,
+        "evidenceCompleteness": 100
+      }
+    },
+    {
+      "id": "theme-only-unknowns",
+      "expectedRelevant": false,
+      "expectedBlocked": false,
+      "candidate": {
+        "name": "Community Innovation Fund",
+        "funderName": "Unknown Fund",
+        "description": "Supports innovative community ideas across Australia.",
+        "opportunityKind": "grant",
+        "instruments": ["grant"],
+        "geography": "AU",
+        "officialSourceConfirmed": false,
+        "evidenceCompleteness": 14
+      }
+    },
+    {
+      "id": "arc-award-record-noise",
+      "expectedRelevant": false,
+      "expectedBlocked": true,
+      "expectedBlockIncludes": "excluded source host",
+      "candidate": {
+        "name": "ARC Grant Project Record — Circular Manufacturing",
+        "funderName": "RMIT University",
+        "description": "A historical research award record mentioning circular economy manufacturing and recycled plastic.",
+        "sourceUrl": "https://dataportal.arc.gov.au/NCGP/Web/Grant/Grant/DP260100001",
+        "source": "arc-grants",
+        "opportunityKind": "award",
+        "instruments": ["grant"],
+        "amountMax": 450000,
+        "officialSourceConfirmed": true,
+        "evidenceCompleteness": 80
+      }
+    },
+    {
+      "id": "government-jobs-page-noise",
+      "expectedRelevant": false,
+      "expectedBlocked": true,
+      "expectedBlockIncludes": "excluded source host",
+      "candidate": {
+        "name": "Grant Funding Administrator",
+        "funderName": "Government of Western Australia",
+        "description": "Employment vacancy administering grants to community organisations.",
+        "sourceUrl": "https://search.jobs.wa.gov.au/page.php?pageID=160&AdvertID=999999",
+        "opportunityKind": "job",
+        "amountMax": 120000,
+        "deadline": "2026-09-01",
+        "officialSourceConfirmed": true,
+        "evidenceCompleteness": 80
+      }
+    },
+    {
+      "id": "advisory-article-noise",
+      "expectedRelevant": false,
+      "expectedBlocked": true,
+      "expectedBlockIncludes": "excluded source host",
+      "candidate": {
+        "name": "How manufacturers can transition to a circular economy",
+        "funderName": "RSM Australia",
+        "description": "An advisory article discussing equipment, grants and recycled plastic manufacturing, not an application round.",
+        "sourceUrl": "https://www.rsm.global/australia/insights/circular-economy-manufacturing",
+        "opportunityKind": "unknown",
+        "amountMax": 200000,
+        "deadline": "2026-09-20",
+        "officialSourceConfirmed": false,
+        "evidenceCompleteness": 30
+      }
+    },
+    {
+      "id": "outside-delivery-footprint",
+      "expectedRelevant": false,
+      "expectedBlocked": true,
+      "expectedBlockIncludes": "geography is outside",
+      "candidate": {
+        "name": "NSW Circular Manufacturing Grant",
+        "funderName": "Example NSW Agency",
+        "description": "Equipment support for recycled plastic manufacturing at a site in NSW.",
+        "opportunityKind": "grant",
+        "instruments": ["grant"],
+        "eligibleOrgTypes": ["charity"],
+        "supportedCostTypes": ["equipment", "manufacturing"],
+        "amountMin": 100000,
+        "amountMax": 300000,
+        "deadline": "2026-09-10",
+        "geography": "AU-NSW",
+        "officialSourceConfirmed": true,
+        "evidenceCompleteness": 100
+      }
+    },
+    {
+      "id": "minimum-ask-exceeds-need",
+      "expectedRelevant": false,
+      "expectedBlocked": true,
+      "expectedBlockIncludes": "minimum funding amount exceeds",
+      "candidate": {
+        "name": "National Low Carbon Mega Projects Fund",
+        "funderName": "Example National Agency",
+        "description": "Capital grants for manufacturing equipment and low-carbon production.",
+        "opportunityKind": "grant",
+        "instruments": ["grant"],
+        "eligibleOrgTypes": ["charity"],
+        "supportedCostTypes": ["manufacturing equipment"],
+        "amountMin": 5000000,
+        "amountMax": 30000000,
+        "deadline": "2026-08-25",
+        "geography": "AU",
+        "officialSourceConfirmed": true,
+        "evidenceCompleteness": 100
+      }
+    }
+  ]
+}

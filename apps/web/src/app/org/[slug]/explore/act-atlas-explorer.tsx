@@ -22,7 +22,7 @@ const TYPE_FILTERS: Array<{ value: ActAtlasRecordType | ''; label: string }> = [
   { value: 'organisation', label: 'Organisations' },
   { value: 'funder', label: 'Funders' },
   { value: 'project', label: 'ACT projects' },
-  { value: 'opportunity', label: 'Opportunities' },
+  { value: 'opportunity', label: 'Opportunity signals' },
 ];
 
 const STATES = ['', 'ACT', 'NSW', 'NT', 'QLD', 'SA', 'TAS', 'VIC', 'WA'];
@@ -34,7 +34,7 @@ const TYPE_LABELS: Record<ActAtlasRecordType, string> = {
   organisation: 'Organisation',
   funder: 'Funder',
   project: 'ACT project',
-  opportunity: 'Opportunity',
+  opportunity: 'Opportunity signal',
 };
 
 type AtlasDrawerSubject =

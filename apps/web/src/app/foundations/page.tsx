@@ -1231,10 +1231,20 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
           placeholder="Search foundations..."
           className="flex-1 min-w-[200px] px-4 py-2.5 border-4 border-bauhaus-black text-sm font-bold bg-white focus:bg-bauhaus-yellow focus:outline-none"
         />
-        <select name="type" defaultValue={typeFilter} className="px-4 py-2.5 border-4 border-l-0 border-bauhaus-black text-sm font-bold bg-white focus:outline-none">
+        {/* Type is unverified — see the COMMENT on foundations.type. No legal-form
+            field exists in the ACNC payload and abr_entity_type is null for every
+            row, so these values were assigned without an authoritative source and
+            are wrong at scale. Filtering by them hides real funders, so the
+            control says so rather than looking authoritative. */}
+        <select
+          name="type"
+          defaultValue={typeFilter}
+          title="Classification is unverified and incomplete. Filtering by type will hide funders that belong in the results."
+          className="px-4 py-2.5 border-4 border-l-0 border-bauhaus-black text-sm font-bold bg-white focus:outline-none"
+        >
           <option value="">All types</option>
           {types.map(t => (
-            <option key={t} value={t}>{typeLabel(t)}</option>
+            <option key={t} value={t}>{typeLabel(t)} (unverified)</option>
           ))}
         </select>
         <select name="focus" defaultValue={focusFilter} className="px-4 py-2.5 border-4 border-l-0 border-bauhaus-black text-sm font-bold bg-white focus:outline-none">

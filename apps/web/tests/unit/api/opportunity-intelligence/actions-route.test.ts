@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 const mockRequireModule = vi.fn();
 const mockRequireOrgWriteAccess = vi.fn();
 const mockCreateAction = vi.fn();
+const mockValidateAction = vi.fn();
 
 vi.mock('@/lib/api-auth', () => ({
   requireModule: mockRequireModule,
@@ -15,6 +16,7 @@ vi.mock('@/app/api/org/_lib/auth', () => ({
 
 vi.mock('@/lib/opportunity-intelligence', () => ({
   createOpportunityIntelligenceAction: mockCreateAction,
+  validateOpportunityActionRequest: mockValidateAction,
 }));
 
 const { POST } = await import('@/app/api/opportunity-intelligence/actions/route');
@@ -32,6 +34,7 @@ describe('POST /api/opportunity-intelligence/actions', () => {
     vi.clearAllMocks();
     mockRequireModule.mockResolvedValue({ user: { id: 'user-1' }, tier: 'funder' });
     mockCreateAction.mockResolvedValue({ status: 'written', id: 'receipt-1' });
+    mockValidateAction.mockReturnValue(null);
   });
 
   it('requires tracker module access', async () => {
@@ -72,5 +75,59 @@ describe('POST /api/opportunity-intelligence/actions', () => {
       expect.objectContaining({ kind: 'research', orgProfileId: 'org-act' }),
       { userId: 'user-1' },
     );
+  });
+
+  it('rejects an incomplete relational review before any write', async () => {
+    mockValidateAction.mockReturnValue('judgment.whatChanged is required');
+
+    const response = await POST(
+      request({
+        kind: 'record_review',
+        orgProfileId: 'org-act',
+        judgment: { nextMove: 'listen' },
+      }) as never,
+    );
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'judgment.whatChanged is required' });
+    expect(mockRequireOrgWriteAccess).not.toHaveBeenCalled();
+    expect(mockCreateAction).not.toHaveBeenCalled();
+  });
+
+  it('passes a minimal authorised relational review to the append-only action service', async () => {
+    mockRequireOrgWriteAccess.mockResolvedValue({
+      userId: 'user-1',
+      orgProfileId: 'org-act',
+      role: 'owner',
+      serviceDb: {},
+    });
+    const body = {
+      kind: 'record_review',
+      orgProfileId: 'org-act',
+      signal: {
+        id: 'goods:qbe',
+        title: 'QBE relationship review',
+        source: 'goods',
+        sourceRef: 'qbe',
+        sourceUrl: null,
+        lane: 'relationship',
+        project: 'goods',
+        projects: ['goods'],
+        organisation: 'QBE',
+        amount: null,
+        deadline: null,
+      },
+      judgment: {
+        whatChanged: 'QBE confirmed the relationship is active, while the current funding terms remain unknown.',
+        nextMove: 'verify',
+        nextLearningQuestion: 'Who can confirm the current terms?',
+      },
+    };
+
+    const response = await POST(request(body) as never);
+
+    expect(response.status).toBe(200);
+    expect(mockRequireOrgWriteAccess).toHaveBeenCalledWith('org-act');
+    expect(mockCreateAction).toHaveBeenCalledWith(body, { userId: 'user-1' });
   });
 });

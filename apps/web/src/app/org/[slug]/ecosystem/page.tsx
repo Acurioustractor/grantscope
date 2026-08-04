@@ -83,7 +83,7 @@ export default async function EcosystemPage({ params }: { params: Promise<{ slug
                   <tr key={i} className={ROW(i)}>
                     <td className={`${TD} pl-4 text-gray-300 text-xs`}>{i + 1}</td>
                     <td className={`${TD} font-medium`}>
-                      <Link href={`/entity/${encodeURIComponent(e.gs_id)}`} className="text-bauhaus-blue hover:underline">
+                      <Link href={`/entities/${encodeURIComponent(e.gs_id)}`} className="text-bauhaus-blue hover:underline">
                         {e.canonical_name}
                       </Link>
                     </td>
@@ -94,7 +94,7 @@ export default async function EcosystemPage({ params }: { params: Promise<{ slug
                     </td>
                     <td className={`${TD} text-gray-500 text-xs`}>{e.sector || '—'}</td>
                     <td className={`${TD} text-gray-400 font-mono text-xs`}>
-                      <Link href={`/entity/${encodeURIComponent(e.gs_id)}`} className="hover:text-bauhaus-blue hover:underline">
+                      <Link href={`/entities/${encodeURIComponent(e.gs_id)}`} className="hover:text-bauhaus-blue hover:underline">
                         {e.abn?.replace(/(\d{2})(\d{3})(\d{3})(\d{3})/, '$1 $2 $3 $4') || '—'}
                       </Link>
                     </td>

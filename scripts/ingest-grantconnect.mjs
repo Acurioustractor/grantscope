@@ -52,6 +52,15 @@ async function fetchExportCsv(url, dest) {
 // Column name mapping — GrantConnect export uses verbose headers
 // These map common GrantConnect header variations to our DB columns
 const COLUMN_MAP = {
+  'recipient suburb': 'recipient_suburb',
+  'recipient town/city': 'recipient_town_city',
+  'recipient postcode': 'recipient_postcode',
+  'recipient state/territory': 'recipient_state',
+  'delivery state/territory': 'delivery_state',
+  'delivery postcode': 'delivery_postcode',
+  'grant program': 'grant_program',
+  'grant activity': 'grant_activity',
+  'purpose': 'purpose',
   'ga id': 'ga_id',
   'ga_id': 'ga_id',
   'parent ga id': 'parent_ga_id',

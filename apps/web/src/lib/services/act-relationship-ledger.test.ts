@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { buildActRelationshipTimeline, normaliseRelationshipIdentity, relationshipCounterparties, relationshipNamesMatch, suggestRelationshipExchange } from './act-relationship-ledger';
+import {
+  ACT_RELATIONSHIP_CONTEXT_SOURCE_SYSTEMS,
+  buildActRelationshipTimeline,
+  normaliseRelationshipIdentity,
+  relationshipCounterparties,
+  relationshipNamesMatch,
+  relationshipObligationFromSignal,
+  relationshipOrganisationForSignal,
+  suggestRelationshipExchange,
+} from './act-relationship-ledger';
 
 describe('ACT relationship ledger identity matching', () => {
   it('matches legal-name wrappers without collapsing distinctive names', () => {
@@ -48,18 +57,83 @@ describe('ACT relationship ledger identity matching', () => {
     })).toBeNull();
   });
 
-  it('orders invoices, payments, exchanges, and conversations as one relationship story', () => {
+  it('loads append-only human review memory without reclassifying it as an exchange', () => {
+    expect(ACT_RELATIONSHIP_CONTEXT_SOURCE_SYSTEMS).toContain('human_review');
+    const event = {
+      id: 'review-return-1',
+      source_system: 'human_review',
+      signal_kind: 'relationship_return',
+      organisation: null,
+      actor_name: 'Ben',
+      actor_email: null,
+      title: 'Return: share the delivery evidence',
+      summary: 'Share the confirmed delivery evidence.',
+      happened_at: '2026-07-11',
+      metadata: {
+        kind: 'return',
+        owner: 'Ben',
+        beneficiary: 'Community partner',
+        action: 'Share the confirmed delivery evidence.',
+        dueAt: '2026-07-18',
+      },
+    };
+
+    expect(relationshipOrganisationForSignal(event)).toBe('Community partner');
+    expect(relationshipObligationFromSignal(event)).toEqual({
+      id: 'review-return-1',
+      kind: 'return',
+      action: 'Share the confirmed delivery evidence.',
+      owner: 'Ben',
+      beneficiary: 'Community partner',
+      dueAt: '2026-07-18',
+      happenedAt: '2026-07-11',
+    });
+  });
+
+  it('does not infer a counterparty or obligation from incomplete or machine-sourced rows', () => {
+    const missingRelationship = {
+      id: 'review-return-unknown',
+      source_system: 'human_review',
+      signal_kind: 'relationship_return',
+      organisation: null,
+      actor_name: 'Ben',
+      actor_email: null,
+      title: 'Return recorded',
+      summary: 'Something must be returned.',
+      happened_at: '2026-07-11',
+      metadata: { action: 'Something must be returned.' },
+    };
+    const machineSignal = {
+      ...missingRelationship,
+      id: 'machine-return',
+      source_system: 'gmail',
+      organisation: 'Community partner',
+      metadata: {
+        owner: 'Ben',
+        beneficiary: 'Community partner',
+        action: 'Something must be returned.',
+      },
+    };
+
+    expect(relationshipOrganisationForSignal(missingRelationship)).toBeNull();
+    expect(relationshipObligationFromSignal(missingRelationship)).toBeNull();
+    expect(relationshipObligationFromSignal(machineSignal)).toBeNull();
+  });
+
+  it('orders promises and returns alongside invoices, payments, exchanges, and conversations as distinct memory', () => {
     const timeline = buildActRelationshipTimeline({
       key: 'example', organisation: 'Example Partner', balance: 'repeat_paid', invoicedTotal: 1000, receivedTotal: 1000,
       outstandingTotal: 0, actPaidThemTotal: 0, paidInvoiceCount: 1, outstandingInvoiceCount: 0, invoiceCount: 1,
       oldestOverdueDays: 0, firstInvoiceAt: '2026-07-01', lastInvoiceAt: '2026-07-01', lastPaidAt: '2026-07-08',
       lastContactAt: '2026-07-09', projectCodes: [], work: ['Facilitation'], nextMove: 'Reconnect.', evidenceGaps: [], people: [],
+      obligations: [{ id: 'obligation-1', kind: 'commitment', action: 'Send the agreed evidence.', owner: 'Ben', beneficiary: 'Example Partner', dueAt: '2026-07-18', happenedAt: '2026-07-11' }],
       contributions: [{ id: 'exchange-1', direction: 'received', kind: 'introduction', summary: 'Made a useful introduction.', payment: 'not_expected', amount: null, person: 'Ari', happenedAt: '2026-07-10' }],
       conversations: [{ id: 'conversation-1', source: 'gmail', title: 'Planning yarn', summary: 'Agreed the next step.', person: 'Ari', happenedAt: '2026-07-09' }],
       followUp: null,
       invoices: [{ id: 'invoice-1', number: 'INV-1', status: 'PAID', date: '2026-07-01', dueDate: '2026-07-07', fullyPaidDate: '2026-07-08', total: 1000, paid: 1000, due: 0, daysOverdue: 0, projectCode: null, reference: null, work: ['Facilitation'] }],
     });
-    expect(timeline.map((event) => event.kind)).toEqual(['exchange', 'conversation', 'payment', 'invoice']);
+    expect(timeline.map((event) => event.kind)).toEqual(['obligation', 'exchange', 'conversation', 'payment', 'invoice']);
+    expect(timeline[0]).toMatchObject({ amount: null, source: 'human review', status: 'promise_recorded' });
     expect(timeline.find((event) => event.kind === 'payment')).toMatchObject({ amount: 1000, status: 'paid' });
   });
 });

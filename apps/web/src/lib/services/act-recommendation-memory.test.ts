@@ -4,6 +4,7 @@ import {
   decisionMatchesRecord,
   latestRelationshipDecisionFor,
   movePriority,
+  priorCasesFor,
   relationshipActionHandled,
   type RecommendationMemoryRecord,
 } from './act-recommendation-memory';
@@ -22,7 +23,9 @@ const baseRecord: RecommendationMemoryRecord = {
   tags: ['grant'],
 };
 
-function decision(overrides: Partial<OrgOpportunityDecision>): OrgOpportunityDecision {
+function decision(
+  overrides: Partial<OrgOpportunityDecision> & { judgment?: unknown },
+): OrgOpportunityDecision {
   return {
     id: 'decision-1',
     source_type: 'grant',
@@ -36,7 +39,7 @@ function decision(overrides: Partial<OrgOpportunityDecision>): OrgOpportunityDec
     outcome: null,
     created_at: '2026-07-09T00:00:00.000Z',
     ...overrides,
-  };
+  } as OrgOpportunityDecision;
 }
 
 describe('act recommendation decision memory', () => {
@@ -48,53 +51,72 @@ describe('act recommendation decision memory', () => {
     expect(decisionMatchesRecord(decision({ pathway: 'foundation' }), baseRecord)).toBe(false);
   });
 
-  it('parks rows with no or lost decisions', () => {
-    const adjusted = applyDecisionMemory(baseRecord, [decision({ decision: 'no', reason: 'Poor eligibility' })]);
-
-    expect(adjusted.readiness).toBe('park');
-    expect(adjusted.recommendedMove).toBe('park');
-    expect(adjusted.confidence).toBe(35);
-    expect(adjusted.reason).toContain('Learning memory: past no');
-    expect(adjusted.tags).toContain('memory:no');
-  });
-
-  it('lowers urgency for later decisions', () => {
-    const adjusted = applyDecisionMemory(baseRecord, [decision({ decision: 'later' })]);
-
-    expect(adjusted.recommendedMove).toBe('watch');
-    expect(adjusted.confidence).toBe(52);
-    expect(adjusted.reason).toContain('Learning memory: parked before');
-  });
-
-  it('moves more_info decisions back to proof pack with merged gaps', () => {
-    const adjusted = applyDecisionMemory(baseRecord, [
-      decision({ decision: 'more_info', evidence_gaps: ['audited accounts', 'partner letter'] }),
+  it('adds prior cases without changing the current recommendation', () => {
+    const remembered = applyDecisionMemory(baseRecord, [
+      decision({
+        decision: 'more_info',
+        reason: 'The applicant authority was not confirmed',
+        notes: 'This legacy note is not assumed to be a promise.',
+        evidence_gaps: ['Who has authority to apply?'],
+        outcome: '45c10bbb-ab94-42f6-b184-adc806f0404d',
+        judgment: {
+          whatChanged: 'The community partner needs to choose the applicant.',
+          commitment: {
+            kind: 'return',
+            owner: 'Ben',
+            action: 'Return the applicant options to the community partner.',
+          },
+          nextLearningQuestion: 'Who does the community partner authorise to apply?',
+        },
+      }),
+    ], [
+      {
+        decisionId: 'decision-1',
+        happenedAt: '2026-07-12T00:00:00.000Z',
+        metadata: { what_happened: 'The community partner selected its preferred applicant.' },
+      },
     ]);
 
-    expect(adjusted.readiness).toBe('needs_proof');
-    expect(adjusted.recommendedMove).toBe('build_proof_pack');
-    expect(adjusted.confidence).toBe(62);
-    expect(adjusted.evidenceGaps).toEqual(['final eligibility check', 'audited accounts', 'partner letter']);
+    expect(remembered).toMatchObject(baseRecord);
+    expect(remembered.readiness).toBe(baseRecord.readiness);
+    expect(remembered.recommendedMove).toBe(baseRecord.recommendedMove);
+    expect(remembered.confidence).toBe(baseRecord.confidence);
+    expect(remembered.reason).toBe(baseRecord.reason);
+    expect(remembered.evidenceGaps).toEqual(baseRecord.evidenceGaps);
+    expect(remembered.tags).toEqual(baseRecord.tags);
+    expect(remembered.priorCases).toEqual([
+      {
+        id: 'decision-1',
+        decision: 'more_info',
+        label: 'Proof requested',
+        decidedAt: '2026-07-09T00:00:00.000Z',
+        summary: 'What changed: The community partner needs to choose the applicant. · Promise / return: Return — Ben: Return the applicant options to the community partner. · What happened: The community partner selected its preferred applicant. · Next question: Who does the community partner authorise to apply?',
+      },
+    ]);
   });
 
-  it('boosts accepted application and partner decisions', () => {
-    const applyAdjusted = applyDecisionMemory(
-      { ...baseRecord, recommendedMove: 'watch', readiness: 'needs_proof' },
-      [decision({ decision: 'apply' })],
-    );
-    const partnerAdjusted = applyDecisionMemory(baseRecord, [decision({ decision: 'partner' })]);
+  it('returns matching cases newest first, excludes unrelated decisions, and keeps unknown outcomes explicit', () => {
+    const cases = priorCasesFor(baseRecord, [
+      decision({ id: 'older', created_at: '2026-07-08T00:00:00.000Z', decision: 'later', reason: null }),
+      decision({ id: 'unrelated', source_ref: 'other-grant', created_at: '2026-07-11T00:00:00.000Z' }),
+      decision({
+        id: 'newer',
+        created_at: '2026-07-10T00:00:00.000Z',
+        decision: 'apply',
+        reason: 'Authority confirmed',
+        outcome: '45c10bbb-ab94-42f6-b184-adc806f0404d',
+      }),
+    ]);
 
-    expect(applyAdjusted.readiness).toBe('ready');
-    expect(applyAdjusted.recommendedMove).toBe('apply_now');
-    expect(applyAdjusted.confidence).toBe(82);
-    expect(partnerAdjusted.recommendedMove).toBe('approach_now');
-    expect(partnerAdjusted.confidence).toBe(80);
+    expect(cases.map((item) => item.id)).toEqual(['newer', 'older']);
+    expect(cases[0]?.summary).toBe('What changed: Authority confirmed · What happened: Not recorded yet');
+    expect(cases[1]?.summary).toBe('What changed: Parked before · What happened: Not recorded yet');
   });
 
-  it('leaves nonmatching decisions untouched', () => {
-    const adjusted = applyDecisionMemory(baseRecord, [decision({ source_ref: 'other-grant', decision: 'no' })]);
+  it('adds an empty priorCases list for a recommendation with no matching case', () => {
+    const remembered = applyDecisionMemory(baseRecord, [decision({ source_ref: 'other-grant', decision: 'no' })]);
 
-    expect(adjusted).toEqual(baseRecord);
+    expect(remembered).toEqual({ ...baseRecord, priorCases: [] });
   });
 
   it('orders direct action moves before proof, watch, and park', () => {

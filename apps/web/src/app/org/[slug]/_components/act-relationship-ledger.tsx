@@ -23,11 +23,24 @@ export function ActRelationshipLedger({ data, orgProfileId, initialSelectedKey }
     if (!data) return [];
     const needle = query.trim().toLowerCase();
     return data.items.filter((item) => {
-      if (filter === 'action' && item.outstandingTotal <= 0 && item.followUp?.status !== 'planned' && !item.contributions.some((contribution) => contribution.payment === 'unpaid')) return false;
+      if (
+        filter === 'action'
+        && item.outstandingTotal <= 0
+        && item.followUp?.status !== 'planned'
+        && !item.contributions.some((contribution) => contribution.payment === 'unpaid')
+        && (item.obligations ?? []).length === 0
+      ) return false;
       if (filter === 'repeat' && item.paidInvoiceCount <= 1) return false;
       if (filter === 'exchange' && item.contributions.length === 0) return false;
       if (!needle) return true;
-      return [item.organisation, ...item.projectCodes, ...item.work, ...item.people.map((person) => person.name), ...item.contributions.flatMap((contribution) => [contribution.summary, contribution.person ?? ''])]
+      return [
+        item.organisation,
+        ...item.projectCodes,
+        ...item.work,
+        ...item.people.map((person) => person.name),
+        ...item.contributions.flatMap((contribution) => [contribution.summary, contribution.person ?? '']),
+        ...(item.obligations ?? []).flatMap((obligation) => [obligation.action, obligation.owner, obligation.beneficiary ?? '']),
+      ]
         .join(' ').toLowerCase().includes(needle);
     });
   }, [data, filter, query]);
@@ -77,7 +90,15 @@ export function ActRelationshipLedger({ data, orgProfileId, initialSelectedKey }
                 <div className="mt-2 flex items-center justify-between gap-3">
                   <BalancePill balance={item.balance} />
                   <span className={`font-mono text-[9px] ${item.outstandingTotal > 0 ? 'font-semibold text-red-700' : 'text-[var(--ws-text-tertiary)]'}`}>
-                    {item.outstandingTotal > 0 ? `${money(item.outstandingTotal)} owed` : item.followUp?.status === 'planned' ? `follow-up ${date(item.followUp.dueAt)}` : item.contributions.length > 0 ? `${item.contributions.length} exchange${item.contributions.length === 1 ? '' : 's'}` : `${item.paidInvoiceCount} paid`}
+                    {item.outstandingTotal > 0
+                      ? `${money(item.outstandingTotal)} owed`
+                      : item.followUp?.status === 'planned'
+                        ? `follow-up ${date(item.followUp.dueAt)}`
+                        : (item.obligations ?? []).length > 0
+                          ? obligationLabel(item)
+                          : item.contributions.length > 0
+                            ? `${item.contributions.length} exchange${item.contributions.length === 1 ? '' : 's'}`
+                            : `${item.paidInvoiceCount} paid`}
                   </span>
                 </div>
               </button>
@@ -102,7 +123,10 @@ export function ActRelationshipLedger({ data, orgProfileId, initialSelectedKey }
                     <CompactMetric label="Received" value={money(selected.receivedTotal)} />
                     <CompactMetric label="Owed" value={money(selected.outstandingTotal)} warning={selected.outstandingTotal > 0} />
                     <CompactMetric label="ACT paid" value={money(selected.actPaidThemTotal)} />
-                    <CompactMetric label="Conversations" value={String(selected.conversations.length)} />
+                    <CompactMetric
+                      label={(selected.obligations ?? []).length > 0 ? 'Promises / returns' : 'Conversations'}
+                      value={String((selected.obligations ?? []).length > 0 ? (selected.obligations ?? []).length : selected.conversations.length)}
+                    />
                   </div>
                 </div>
               </header>
@@ -262,7 +286,7 @@ function RelationshipHistory({ item }: { item: ActRelationshipLedgerItem }) {
               </div>
             </div>
           ))}
-        </div> : <EmptyLine text="No invoices, exchanges, or conversations are connected yet." />
+        </div> : <EmptyLine text="No invoices, promises, returns, exchanges, or conversations are connected yet." />
       ) : (
         item.invoices.length > 0 ? <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[680px] border-collapse text-left">
@@ -294,6 +318,7 @@ function timelineKindClass(kind: ReturnType<typeof buildActRelationshipTimeline>
   if (kind === 'payment') return 'border-emerald-200 bg-emerald-50 text-emerald-700';
   if (kind === 'invoice') return 'border-stone-200 bg-stone-50 text-stone-700';
   if (kind === 'exchange') return 'border-blue-200 bg-blue-50 text-blue-700';
+  if (kind === 'obligation') return 'border-amber-200 bg-amber-50 text-amber-800';
   return 'border-violet-200 bg-violet-50 text-violet-700';
 }
 
@@ -526,6 +551,14 @@ function date(value: string | null): string {
   if (!value) return 'Unknown';
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function obligationLabel(item: ActRelationshipLedgerItem): string {
+  const obligation = [...(item.obligations ?? [])].sort((left, right) =>
+    String(left.dueAt ?? '9999-12-31').localeCompare(String(right.dueAt ?? '9999-12-31')))[0];
+  if (!obligation) return 'No promise recorded';
+  const kind = obligation.kind === 'return' ? 'return' : 'promise';
+  return obligation.dueAt ? `${kind} ${date(obligation.dueAt)}` : `${kind} needs a date`;
 }
 
 function localDateValue(): string {

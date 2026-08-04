@@ -86,6 +86,13 @@ export default async function GoodsFoundationsPage({
         {/* filter */}
         <div className="mb-4 flex flex-wrap gap-2">
           <Link
+            href={`/org/${slug}/goods/foundations/scan`}
+            className="border-2 border-bauhaus-blue bg-bauhaus-blue px-2.5 py-1 text-[11px] font-black uppercase tracking-widest text-white hover:bg-bauhaus-black"
+            title="The worked pipeline with GHL relationship state — who's in, who's out, and the mismatches"
+          >
+            Funder scan →
+          </Link>
+          <Link
             href={`/org/${slug}/goods/foundations`}
             className={`border-2 px-2.5 py-1 text-[11px] font-black uppercase tracking-widest ${!bridgedOnly ? 'border-bauhaus-black bg-bauhaus-black text-white' : 'border-bauhaus-black/30 bg-white text-bauhaus-black hover:border-bauhaus-black'}`}
           >

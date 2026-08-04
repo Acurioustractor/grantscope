@@ -89,7 +89,17 @@ export default async function GoodsCommunityPage({
           </div>
         </section>
 
-        <section className="mt-4 grid grid-cols-2 overflow-hidden rounded-md border border-[var(--ws-border)] bg-white sm:grid-cols-3 xl:grid-cols-6" aria-label="Community operating snapshot">
+        <section className="mt-4 grid grid-cols-2 overflow-hidden rounded-md border border-[var(--ws-border)] bg-white sm:grid-cols-4 xl:grid-cols-8" aria-label="Community operating snapshot">
+          <Metric
+            label="People"
+            value={community.estimated_population ? community.estimated_population.toLocaleString('en-AU') : '—'}
+            detail={community.estimated_households ? `~${community.estimated_households.toLocaleString('en-AU')} households` : 'households unknown'}
+          />
+          <Metric
+            label="Language"
+            value={community.main_language || '—'}
+            detail={community.remoteness || 'remoteness unknown'}
+          />
           <Metric label="Recorded need" value={totalDemand.toLocaleString('en-AU')} detail="beds + washers" />
           <Metric label="Assets" value={assets.total.toLocaleString('en-AU')} detail={`${assets.overdue.toLocaleString('en-AU')} overdue`} warning={assets.overdue > 0} />
           <Metric label="ACT people" value={relationshipPeople.length.toLocaleString('en-AU')} detail="through local orgs" />
@@ -97,6 +107,23 @@ export default async function GoodsCommunityPage({
           <Metric label="Tracked funding" value={formatMoney(funding.total_funding)} detail={`${formatMoney(funding.community_controlled_funding)} community-controlled`} />
           <Metric label="Active signals" value={activeSignals.length.toLocaleString('en-AU')} detail="interpret locally" warning={activeSignals.length > 0} />
         </section>
+
+        {totalDemand > 0 ? (
+          <section className="mt-2 rounded-md border border-[var(--ws-border)] bg-white px-4 py-3" aria-label="Need versus delivered">
+            <div className="flex flex-wrap items-baseline justify-between gap-2 text-xs">
+              <span className="font-mono text-[9px] font-semibold uppercase tracking-widest text-[var(--ws-text-tertiary)]">Need · delivered · gap</span>
+              <span className="text-[var(--ws-text-secondary)]">
+                <strong>{assets.total.toLocaleString('en-AU')}</strong> delivered of <strong>{totalDemand.toLocaleString('en-AU')}</strong> recorded need
+                {totalDemand > assets.total ? <> · <strong className="text-amber-700">{(totalDemand - assets.total).toLocaleString('en-AU')} short</strong></> : null}
+              </span>
+            </div>
+            <div className="mt-2 flex h-2.5 overflow-hidden rounded-sm border border-[var(--ws-border)] bg-white" title={`${assets.total} delivered of ${totalDemand} needed`}>
+              <div className="bg-[#2f6b4a]" style={{ width: `${Math.min(100, (assets.total / totalDemand) * 100)}%` }} />
+              <div className="flex-1 bg-amber-200" />
+            </div>
+            <p className="mt-1.5 text-[10px] leading-4 text-[var(--ws-text-tertiary)]">Need is recorded demand (beds + washers), not a survey of every household. The gap is stated so it cannot be read as coverage.</p>
+          </section>
+        ) : null}
 
         <div className="mt-5 grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(330px,0.55fr)]">
           <div className="min-w-0 space-y-5">

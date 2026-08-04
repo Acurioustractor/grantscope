@@ -74,6 +74,18 @@ export const AGENTS = {
     timeoutMs: 300_000,
     dependencies: [],
   },
+  // Syncs GHL relationship state (the system of record) onto the Goods
+  // foundation discovery rows so /goods/foundations/scan shows real warmth.
+  // Read-only against GHL; writes only org_project_foundations ghl_* columns.
+  // Needs GHL_API_KEY + GHL_LOCATION_ID.
+  'reconcile-foundations-ghl': {
+    command: ['node', '--env-file=.env', 'scripts/reconcile-foundations-ghl.mjs'],
+    displayName: 'Reconcile Foundations vs GHL',
+    category: 'sync',
+    defaultPriority: 4,
+    timeoutMs: 300_000,
+    dependencies: [],
+  },
   'sync-ato-tax-transparency': {
     command: ['node', '--env-file=.env', 'scripts/sync-ato-tax-transparency.mjs'],
     displayName: 'Sync ATO Tax Transparency',
@@ -421,6 +433,14 @@ export const AGENTS = {
     timeoutMs: 1_800_000,
     dependencies: [],
   },
+  'discover-act-opportunities-octen': {
+    command: ['node', '--env-file=.env', 'scripts/discover-act-opportunities.mjs', '--provider=octen', '--count=8'],
+    displayName: 'ACT Opportunity Observatory · Octen discovery',
+    category: 'discovery',
+    defaultPriority: 4,
+    timeoutMs: 300_000,
+    dependencies: [],
+  },
   'discover-foundation-programs': {
     command: ['node', '--env-file=.env', 'scripts/discover-foundation-programs.mjs', '--refresh-existing', '--rescan-days=14', '--limit=20', '--concurrency=1', '--frontier-window-hours=48', '--frontier-pages=8'],
     displayName: 'Discover Foundation Programs',
@@ -447,6 +467,30 @@ export const AGENTS = {
     category: 'discovery',
     defaultPriority: 2,
     timeoutMs: 3_600_000,
+    dependencies: [],
+  },
+  'nightly-grant-pipeline-ingest': {
+    command: ['node', '--env-file=.env', 'scripts/nightly-grant-pipeline.mjs'],
+    displayName: 'Grant pipeline · ingest and promote',
+    category: 'discovery',
+    defaultPriority: 2,
+    timeoutMs: 1_200_000,
+    dependencies: [],
+  },
+  'nightly-grant-pipeline-enrich': {
+    command: ['node', '--env-file=.env', 'scripts/nightly-grant-pipeline.mjs'],
+    displayName: 'Grant pipeline · classify, enrich and verify',
+    category: 'enrichment',
+    defaultPriority: 3,
+    timeoutMs: 1_200_000,
+    dependencies: [],
+  },
+  'nightly-grant-pipeline-finalize': {
+    command: ['node', '--env-file=.env', 'scripts/nightly-grant-pipeline.mjs'],
+    displayName: 'Grant pipeline · context, recommendations and feedback',
+    category: 'analytics',
+    defaultPriority: 4,
+    timeoutMs: 600_000,
     dependencies: [],
   },
   // Philanthropy "find" agent — the foundation analogue of the grant pipeline.
