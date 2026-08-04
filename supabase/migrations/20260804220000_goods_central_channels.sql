@@ -33,6 +33,8 @@ WHERE p.lga_name IN ('Alice Springs', 'MacDonnell', 'Central Desert', 'Barkly')
   AND p.community_controlled = true
 ORDER BY p.total_traceable_value DESC NULLS LAST;
 
+GRANT SELECT ON v_goods_central_channels TO anon, authenticated, service_role;
+
 -- Seed the missing top-tier channel orgs as buyer prospects.
 INSERT INTO goods_relationships
   (relationship_type, display_name, entity_id, stage, next_action, notes)
