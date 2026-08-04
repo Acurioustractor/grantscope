@@ -4,6 +4,7 @@ import { ACT_FAST_PROFILE, isActSlug, shouldUseFastLocalOrg } from '@/lib/servic
 import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
 import { getGoodsGrantsTriage, type TriageGrantRow } from '@/lib/services/goods-grants-triage';
 import { GoodsSubNav } from '../_components/goods-sub-nav';
+import { PushGrantGhlButton } from './push-grant-ghl-button';
 
 export const dynamic = 'force-dynamic';
 
@@ -131,11 +132,12 @@ export default async function GoodsGrantsTriagePage({
                 <Th align="right">Amount</Th>
                 <Th>Where</Th>
                 <Th>Entity fit</Th>
+                <Th>Pipeline</Th>
               </tr>
             </thead>
             <tbody>
               {grants.length === 0 ? (
-                <tr><td colSpan={7} className="px-3 py-6 text-center text-gray-500">Nothing matches this filter.</td></tr>
+                <tr><td colSpan={8} className="px-3 py-6 text-center text-gray-500">Nothing matches this filter.</td></tr>
               ) : (
                 grants.map((g, i) => <Row key={g.id} g={g} alt={i % 2 === 1} />)
               )}
@@ -233,6 +235,9 @@ function Row({ g, alt }: { g: TriageGrantRow; alt: boolean }) {
         ) : (
           <span className="text-gray-400">check</span>
         )}
+      </td>
+      <td className="border-b border-gray-300 px-2 py-1.5 align-top whitespace-nowrap">
+        <PushGrantGhlButton g={g} />
       </td>
     </tr>
   );

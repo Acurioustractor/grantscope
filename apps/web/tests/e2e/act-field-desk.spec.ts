@@ -1,10 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 test.describe('ACT Field Desk pilot workflow', () => {
-  // FIXME(2026-08-04): the view=opportunities surface was redesigned (no
-  // 'Choose the next opening' heading). Re-spec this walkthrough against the
-  // current operating desk before re-enabling.
-  test.fixme('walks through every gold-standard surface with persistent progress', async ({ page }) => {
+  test('walks through every gold-standard surface with persistent progress', async ({ page }) => {
     await page.goto('/org/act?walkthrough=1');
 
     const guide = page.getByTestId('act-test-guide');
@@ -19,7 +16,7 @@ test.describe('ACT Field Desk pilot workflow', () => {
     await guide.getByRole('link', { name: 'Open live opportunities screen' }).click();
     await expect(page).toHaveURL(/view=opportunities/);
     await expect(page).toHaveURL(/walkthrough=1/);
-    await expect(page.getByRole('heading', { name: 'Choose the next opening' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Read what is changing' })).toBeVisible();
     await expect(page.getByTestId('act-test-guide').getByLabel('Mark Whole system test complete')).toBeChecked();
     await expect(page.getByTestId('act-test-guide')).toContainText('Current screen');
 
@@ -27,24 +24,24 @@ test.describe('ACT Field Desk pilot workflow', () => {
     await expect(page.getByTestId('act-test-guide-launcher')).toContainText('Resume test drive · 1/6');
   });
 
-  // FIXME(2026-08-04): review=changes became the matter-review desk (max five
-  // matters, evidence-changed triggers); the 'New / changed' filter no longer
-  // exists. Re-spec against the new desk before re-enabling.
-  test.fixme('shows the latest discovery receipt and marks new openings', async ({ page }) => {
+  test('routes the discovery receipt into the matter-review desk', async ({ page }) => {
     await page.goto('/org/act');
 
     const receipt = page.getByLabel('Latest discovery activity');
     await expect(receipt).toContainText('Discovery activity recorded');
-    await expect(receipt).toContainText('2 new signals · 1 changed · 1 public program refreshed');
     await expect(receipt).toContainText('Openings');
     await expect(receipt).toContainText('Relationships');
 
     await receipt.getByRole('link', { name: 'Review changes' }).click();
     await expect(page).toHaveURL(/review=changes/);
-    await expect(page.getByRole('button', { name: /^New \/ changed / })).toHaveAttribute('aria-pressed', 'true');
-    const opening = page.getByRole('button', { name: /New Goods partnership round/ });
-    await expect(opening).toContainText('New');
-    await expect(opening).toContainText('Build proof pack');
+
+    // The review surface is now the matter desk: at most five matters, shown
+    // only under explicit attention conditions. Zero matters is a valid state.
+    const workbench = page.getByTestId('act-relational-review-workbench');
+    await expect(workbench.getByRole('heading', { name: 'What needs understanding now' })).toBeVisible();
+    await expect(
+      workbench.getByText(/(matters? needs? a read|No matters currently meet the weekly attention conditions)/),
+    ).toBeVisible();
   });
 
   test('completes and restores the first Today action', async ({ page }) => {

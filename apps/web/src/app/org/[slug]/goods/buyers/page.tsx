@@ -95,7 +95,10 @@ function BuyerCard({ r, power, funding }: { r: BuyerPipelineRow; power: Relation
               );
             })()
           ) : (
-            <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest bg-bauhaus-canvas text-bauhaus-muted">
+            <span
+              className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest bg-bauhaus-canvas text-bauhaus-muted"
+              title="Push this buyer from its community dossier — pushes are deliberate, not inline"
+            >
               No GHL signal
             </span>
           )}

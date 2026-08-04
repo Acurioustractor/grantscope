@@ -9,6 +9,8 @@ import {
   type LocalEntity,
 } from '@/lib/services/goods-community-detail';
 import { RecordDeploymentButton } from './record-deployment';
+import { PushToGhlButton } from './push-to-ghl-button';
+import { ghlLocationId } from '@/lib/ghl-links';
 
 export const revalidate = 300;
 
@@ -231,6 +233,49 @@ export default async function GoodsCommunityPage({
                 <FactRow label="Freight corridor" value={community.freight_corridor || 'Not recorded'} />
                 <FactRow label="Last-mile method" value={community.last_mile_method || 'Not recorded'} />
               </dl>
+            </Section>
+
+            <Section title="Buyers and procurement pathways" eyebrow="GHL is the system of record">
+              {mappedBuyers.length > 0 ? (
+                <ul className="space-y-2">
+                  {mappedBuyers.slice(0, 8).map((buyer) => (
+                    <li key={buyer.id} className="flex items-start justify-between gap-3 rounded-md border border-[var(--ws-border)] bg-[#fafbf9] px-3 py-3">
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold leading-5">{buyer.entity_name}</div>
+                        <div className="mt-1 text-[10px] text-[var(--ws-text-secondary)]">
+                          {humanise(buyer.buyer_role || 'buyer')}
+                          {buyer.relationship_status ? ` · ${humanise(buyer.relationship_status)}` : ''}
+                        </div>
+                        {buyer.next_action ? <div className="mt-1 text-[10px] leading-4 text-[var(--ws-text-secondary)]">Next: {buyer.next_action}</div> : null}
+                      </div>
+                      <PushToGhlButton
+                        compact
+                        ghlLocationId={ghlLocationId()}
+                        payload={{
+                          entityName: buyer.entity_name,
+                          buyerRole: buyer.buyer_role,
+                          abn: buyer.abn,
+                          website: buyer.website,
+                          communityName: community.community_name,
+                          communityState: community.state,
+                          isCommunityControlled: buyer.is_community_controlled ?? false,
+                          relationshipStatus: buyer.relationship_status,
+                          govtContractValue: buyer.govt_contract_value,
+                          communityId: community.id,
+                          entityId: buyer.entity_id,
+                          buyerEntityRowId: buyer.id,
+                        }}
+                        linked={buyer.ghl_contact_id ? {
+                          contactId: buyer.ghl_contact_id,
+                          opportunityId: buyer.ghl_opportunity_id ?? undefined,
+                          stageName: buyer.ghl_stage_name ?? undefined,
+                          lastPushedAt: buyer.ghl_last_pushed_at ?? undefined,
+                        } : undefined}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              ) : <Empty text="No mapped buyers yet." />}
             </Section>
 
             <Section title="Procurement and funding signals" eyebrow="Verify before action">
