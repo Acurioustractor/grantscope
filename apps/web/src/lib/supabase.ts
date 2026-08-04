@@ -1,7 +1,8 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { getSupabasePublicKey, getSupabaseSecretKey, getSupabaseUrl } from './supabase-env';
 
 function getUrl() {
-  return process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
+  return getSupabaseUrl();
 }
 
 // Arbitrary-SQL agent RPCs that must never run from the app runtime — they bypass RLS and
@@ -34,7 +35,7 @@ function isReadOnlyExecSql(query: string | undefined): boolean {
 let _supabase: SupabaseClient | null = null;
 export function getSupabase() {
   if (!_supabase) {
-    _supabase = createRuntimeSupabaseClient(createClient(getUrl(), process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''));
+    _supabase = createRuntimeSupabaseClient(createClient(getUrl(), getSupabasePublicKey()));
   }
   return _supabase;
 }
@@ -165,7 +166,7 @@ export function getServiceSupabase() {
 
 export function getDirectServiceSupabase() {
   if (!_serviceSupabase) {
-    _serviceSupabase = createRuntimeSupabaseClient(createClient(getUrl(), process.env.SUPABASE_SERVICE_ROLE_KEY || ''));
+    _serviceSupabase = createRuntimeSupabaseClient(createClient(getUrl(), getSupabaseSecretKey()));
   }
   return _serviceSupabase;
 }

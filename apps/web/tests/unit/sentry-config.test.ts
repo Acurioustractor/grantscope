@@ -6,19 +6,20 @@ import { readFileSync } from 'fs';
 describe('Sentry Configuration', () => {
   const webDir = join(__dirname, '../..');
 
-  it('should have sentry.client.config.ts', () => {
-    const clientConfig = join(webDir, 'sentry.client.config.ts');
-    expect(existsSync(clientConfig)).toBe(true);
+  it('uses the current Next.js server instrumentation convention', () => {
+    const instrumentation = join(webDir, 'src/instrumentation.ts');
+    expect(existsSync(instrumentation)).toBe(true);
+    const content = readFileSync(instrumentation, 'utf-8');
+    expect(content).toContain('export async function register()');
+    expect(content).toContain('Sentry.captureRequestError');
   });
 
-  it('should have sentry.server.config.ts', () => {
-    const serverConfig = join(webDir, 'sentry.server.config.ts');
-    expect(existsSync(serverConfig)).toBe(true);
-  });
-
-  it('should have sentry.edge.config.ts', () => {
-    const edgeConfig = join(webDir, 'sentry.edge.config.ts');
-    expect(existsSync(edgeConfig)).toBe(true);
+  it('uses client instrumentation with navigation tracing', () => {
+    const instrumentation = join(webDir, 'src/instrumentation-client.ts');
+    expect(existsSync(instrumentation)).toBe(true);
+    const content = readFileSync(instrumentation, 'utf-8');
+    expect(content).toContain('Sentry.init');
+    expect(content).toContain('Sentry.captureRouterTransitionStart');
   });
 
   it('should have global-error.tsx', () => {

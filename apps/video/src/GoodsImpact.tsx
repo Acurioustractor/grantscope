@@ -104,7 +104,7 @@ export const GoodsImpact: React.FC<{ data?: GoodsImpactData }> = ({ data = goods
     <AbsoluteFill style={{ background: STONE_900, fontFamily: FONT }}>
       <Sequence durationInFrames={120}><Scene durationInFrames={120}><Title /></Scene></Sequence>
       <Sequence from={120} durationInFrames={240}><Scene durationInFrames={240}><BigStat kicker="The need" value={data.need.beds} suffix="beds" sub={`across ${data.need.communities} priority communities`} /></Scene></Sequence>
-      <Sequence from={360} durationInFrames={240}><Scene durationInFrames={240}><BigStat kicker="Delivered so far" value={data.delivered.beds} suffix="beds" sub={`and ${data.delivered.washers} washing machines`} /></Scene></Sequence>
+      <Sequence from={360} durationInFrames={240}><Scene durationInFrames={240}><BigStat kicker="Current footprint" value={data.delivered.beds} suffix="beds deployed" sub={`${data.delivered.washers} washing machines in community (manual ruling; canon ${data.footprintAsOf})`} /></Scene></Sequence>
       <Sequence from={600} durationInFrames={240}><Scene durationInFrames={240}><BigStat kicker="The gap" value={data.gap.beds} suffix="beds to go" sub="this is the job" /></Scene></Sequence>
       <Sequence from={840} durationInFrames={600}><Scene durationInFrames={600}><Communities data={data} /></Scene></Sequence>
       <Sequence from={1440} durationInFrames={360}><Scene durationInFrames={360}><Closing /></Scene></Sequence>

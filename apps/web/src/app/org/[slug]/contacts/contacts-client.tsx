@@ -174,9 +174,21 @@ export function ContactsClient({
         method: 'POST',
       });
       const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || `Sync failed with ${res.status}`);
+      }
       setSyncResult(data);
-    } catch {
-      setSyncResult({ synced: 0, errors: 1, details: [{ contact_id: '', name: '', status: 'error', error: 'Network error' }] });
+    } catch (error) {
+      setSyncResult({
+        synced: 0,
+        errors: 1,
+        details: [{
+          contact_id: '',
+          name: 'GHL sync',
+          status: 'error',
+          error: error instanceof Error ? error.message : 'Network error',
+        }],
+      });
     } finally {
       setSyncing(false);
     }
@@ -311,7 +323,7 @@ export function ContactsClient({
                     <div className="flex items-center gap-2">
                       {c.linked_entity_gs_id ? (
                         <Link
-                          href={`/entity/${encodeURIComponent(c.linked_entity_gs_id)}`}
+                          href={`/entities/${encodeURIComponent(c.linked_entity_gs_id)}`}
                           className="text-bauhaus-blue hover:underline"
                         >
                           {c.name}
@@ -326,7 +338,7 @@ export function ContactsClient({
                     {c.organisation && c.organisation !== c.name ? (
                       c.linked_entity_gs_id ? (
                         <Link
-                          href={`/entity/${encodeURIComponent(c.linked_entity_gs_id)}`}
+                          href={`/entities/${encodeURIComponent(c.linked_entity_gs_id)}`}
                           className="text-bauhaus-blue hover:underline"
                         >
                           {c.organisation}

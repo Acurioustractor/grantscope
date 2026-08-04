@@ -1,15 +1,35 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const { mockFrom, mockRpc } = vi.hoisted(() => ({
+  mockFrom: vi.fn(),
+  mockRpc: vi.fn(),
+}));
+
+vi.mock('@/lib/supabase', () => ({
+  getServiceSupabase: () => ({
+    from: mockFrom,
+    rpc: mockRpc,
+  }),
+}));
+
 import {
   buildOpportunityActionReceipt,
   buildOpportunityRoutes,
+  createOpportunityIntelligenceAction,
   dedupeOpportunitySignals,
   filterOpportunitySignals,
   scoreOpportunitySignal,
   type OpportunityIntelligenceResponse,
   type OpportunitySignal,
+  validateOpportunityActionRequest,
 } from '@/lib/opportunity-intelligence';
 import { buildOpportunitySystemSweep } from '@/lib/opportunity-system-sweep';
 import { buildGoodsReadinessSnapshotFromRows } from '@/lib/goods-readiness-snapshot';
+
+beforeEach(() => {
+  mockFrom.mockReset();
+  mockRpc.mockReset();
+});
 
 function signal(overrides: Partial<OpportunitySignal>): OpportunitySignal {
   return {
@@ -139,6 +159,144 @@ describe('opportunity intelligence action receipts', () => {
     expect(receipt.writeMode).toBe('planned');
     expect(receipt.externalWrites).toEqual([]);
     expect(receipt.warnings.join(' ')).toContain('needs confirmation');
+  });
+
+  it('accepts a minimal relational review without planning a pipeline write', () => {
+    const request = {
+      kind: 'record_review' as const,
+      orgProfileId: 'e38c903a-8764-4f63-8553-d7fbd1c6fb62',
+      signalId: 'signal:goods',
+      signal: signal({ id: 'signal:goods' }),
+      judgment: {
+        whatChanged: 'The buyer confirmed beds are the immediate need; washer demand is still unverified.',
+        nextMove: 'verify' as const,
+        commitment: {
+          owner: 'Ben',
+          action: 'Confirm washer demand with the community contact.',
+          dueAt: '2026-05-08',
+        },
+      },
+    };
+
+    expect(validateOpportunityActionRequest(request)).toBeNull();
+
+    const receipt = buildOpportunityActionReceipt(
+      request,
+      new Date('2026-05-01T00:00:00.000Z'),
+    );
+
+    expect(receipt.status).toBe('planned');
+    expect(receipt.externalWrites).toEqual([]);
+    expect(receipt.nextStep).toContain('explicitly promote');
+  });
+
+  it('appends a review and linked commitment through one RPC without touching the pipeline', async () => {
+    mockRpc.mockResolvedValue({
+      data: [
+        {
+          decision_id: '8ffc3dc9-c21c-40cb-b407-d12cf28f2968',
+          action_event_id: '5aab5334-3e7d-4d8d-9bfa-c9617264c24f',
+        },
+      ],
+      error: null,
+    });
+
+    const receipt = await createOpportunityIntelligenceAction(
+      {
+        kind: 'record_review',
+        orgProfileId: 'e38c903a-8764-4f63-8553-d7fbd1c6fb62',
+        supersedesId: '230295e6-20b9-47d2-9f3d-084c9404c46a',
+        signal: signal({ id: 'signal:goods' }),
+        judgment: {
+          whatChanged: 'The buyer confirmed beds are the immediate need.',
+          nextMove: 'act',
+          commitment: {
+            kind: 'return',
+            owner: 'Ben',
+            beneficiary: 'Community partner',
+            action: 'Return the confirmed delivery plan.',
+            dueAt: '2026-05-08',
+          },
+        },
+      },
+      { userId: 'user-1' },
+    );
+
+    expect(mockRpc).toHaveBeenCalledWith(
+      'record_opportunity_review',
+      expect.objectContaining({
+        p_source_type: 'procurement',
+        p_source_ref: 'source-1',
+        p_supersedes_id: '230295e6-20b9-47d2-9f3d-084c9404c46a',
+        p_judgment: expect.objectContaining({
+          whatChanged: 'The buyer confirmed beds are the immediate need.',
+          commitment: expect.objectContaining({
+            kind: 'return',
+            action: 'Return the confirmed delivery plan.',
+          }),
+        }),
+      }),
+    );
+    expect(mockFrom).not.toHaveBeenCalled();
+    expect(receipt.status).toBe('written');
+    expect(receipt.externalWrites).toEqual([
+      {
+        system: 'supabase_decision',
+        id: '8ffc3dc9-c21c-40cb-b407-d12cf28f2968',
+        status: 'recorded',
+      },
+      {
+        system: 'supabase',
+        id: '5aab5334-3e7d-4d8d-9bfa-c9617264c24f',
+        status: 'recorded',
+      },
+    ]);
+  });
+
+  it('blocks instead of reporting success when review memory is not saved', async () => {
+    mockRpc.mockResolvedValue({
+      data: null,
+      error: { message: 'record_opportunity_review is unavailable' },
+    });
+
+    const receipt = await createOpportunityIntelligenceAction({
+      kind: 'record_review',
+      orgProfileId: 'e38c903a-8764-4f63-8553-d7fbd1c6fb62',
+      signal: signal({ id: 'signal:goods' }),
+      judgment: {
+        whatChanged: 'The current terms remain unverified.',
+        nextMove: 'verify',
+      },
+    });
+
+    expect(receipt.status).toBe('blocked');
+    expect(receipt.externalWrites).toEqual([]);
+    expect(receipt.warnings.join(' ')).toContain('record_opportunity_review is unavailable');
+  });
+
+  it('requires a human read and a dated revisit when that is the next move', () => {
+    const base = {
+      kind: 'record_review' as const,
+      orgProfileId: 'e38c903a-8764-4f63-8553-d7fbd1c6fb62',
+      signal: signal({ id: 'signal:goods' }),
+    };
+
+    expect(
+      validateOpportunityActionRequest({
+        ...base,
+        judgment: { whatChanged: ' ', nextMove: 'listen' },
+      }),
+    ).toBe('judgment.whatChanged is required');
+
+    expect(
+      validateOpportunityActionRequest({
+        ...base,
+        judgment: {
+          whatChanged: 'The decision is intentionally parked.',
+          nextMove: 'revisit',
+        },
+      }),
+    ).toBe('judgment.revisitAt is required when the next move is revisit');
   });
 });
 

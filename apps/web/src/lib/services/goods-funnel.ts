@@ -1,4 +1,6 @@
 import { getServiceSupabase } from '@/lib/supabase';
+import { isInternalActIdentity } from '@/lib/act-internal-identities';
+import { canonical } from './goods-canonical-numbers';
 
 /**
  * Goods 3-pipeline funnel — the management cockpit. One need, two funding routes,
@@ -7,7 +9,7 @@ import { getServiceSupabase } from '@/lib/supabase';
  *   NEED      ← goods_communities (curated priority slice: active + lead)
  *   ORDERED   ← GHL Buyer Pipeline      (best-effort; degrades to 0 if GHL env absent)
  *   FUNDED    ← GHL Supporter Journey   (best-effort)
- *   DELIVERED ← Goods v2 assets sync    (cited constant — different DB)
+ *   FOOTPRINT ← current Goods Asset Register canon
  *   GAP       = NEED − DELIVERED
  *
  * The 3 GHL pipelines keep their own (12 / 10 / 4) operational stages; this view
@@ -29,10 +31,15 @@ const PIPELINES = {
 const BEDS_FIELD = 'mi9ZW3KLhmpcez14cNbx';
 const WASHERS_FIELD = 'UtxtfnyEd6p1epMEJ0b2';
 
-// DELIVERED — physical goods delivered to date. Source: Goods v2 `assets`
-// (project cwsyhpiuepvdjtxaozwf) via sync-goods-impact-rollups.mjs — a different DB
-// than this app reaches, so carried as a cited constant.
-export const DELIVERED = { beds: 520, washers: 41, source: 'Goods v2 assets sync, 2026-05-27' };
+// Physical footprint from the shared Goods canon. Beds are deployed. Washers
+// use Ben's manual in-community ruling and are not derived from register rows.
+const CANON_BEDS = canonical('deployed_bed_units');
+const CANON_WASHERS = canonical('washers_in_community');
+export const DELIVERED = {
+  beds: Number(CANON_BEDS.value),
+  washers: Number(CANON_WASHERS.value),
+  source: `Goods Asset Register canon, ${CANON_BEDS.asOf}; washers are the manual in-community ruling`,
+};
 
 export const SPINE = ['identified', 'qualified', 'committed', 'delivering', 'closed', 'dead'] as const;
 export type SpineStage = (typeof SPINE)[number];
@@ -62,6 +69,40 @@ export type PipelineFunnel = {
   value: number;
   spine: Record<SpineStage, SpineCell>;
 };
+export type GoodsRelationship = {
+  id: string;
+  pipeline: 'demand' | 'buyer' | 'supporter';
+  pipelineLabel: string;
+  name: string;
+  organisation: string | null;
+  email: string | null;
+  phone: string | null;
+  stage: string;
+  spineStage: SpineStage;
+  beds: number;
+  washers: number;
+  value: number;
+  updatedAt: string | null;
+  owner: string | null;
+  nextAction: string | null;
+  nextActionAt: string | null;
+  communicationStatus: 'reply evidenced' | 'contact recorded' | 'no communication evidence';
+  lastContactAt: string | null;
+  sourceUrl: string | null;
+  supporterUpdates: boolean;
+  updateReadiness: 'consent evidenced' | 'consent needed' | 'operational only';
+  updateTopics: string[];
+  charityRelated: boolean;
+  entityRoutes: Array<'commercial procurement' | 'charity/public benefit' | 'First Nations governance'>;
+  vehicleStatus: 'clear' | 'shared role' | 'vehicle decision needed';
+  deckStatus: 'shared' | 'ready' | 'needed';
+  attention: 'overdue' | 'waiting' | 'ready' | 'unassigned';
+  priorityScore: number;
+  priorityReasons: string[];
+  dataQualityScore: number;
+  dataQualityIssues: string[];
+  nextMove: string;
+};
 export type GoodsFunnel = {
   generatedAt: string;
   ghlConnected: boolean;
@@ -72,6 +113,7 @@ export type GoodsFunnel = {
   delivered: typeof DELIVERED;
   gap: { beds: number; washers: number };
   pipelines: PipelineFunnel[];
+  relationships: GoodsRelationship[];
 };
 
 async function ghlFetch(path: string) {
@@ -95,7 +137,16 @@ function emptySpine(): Record<SpineStage, SpineCell> {
   return Object.fromEntries(SPINE.map(s => [s, { n: 0, beds: 0, washers: 0, value: 0 }])) as Record<SpineStage, SpineCell>;
 }
 
-async function rollupPipeline(p: { id: string; label: string; role: 'need' | 'ordered' | 'funded'; key: string }): Promise<PipelineFunnel> {
+function nextMoveFor(pipeline: GoodsRelationship['pipeline'], stage: SpineStage) {
+  if (stage === 'dead') return 'Leave parked unless new evidence arrives.';
+  if (stage === 'closed') return pipeline === 'supporter' ? 'Add to supporter updates and steward the relationship.' : 'Confirm delivery, outcomes and the next order.';
+  if (stage === 'delivering') return 'Confirm delivery owner, timing and evidence capture.';
+  if (stage === 'committed') return pipeline === 'supporter' ? 'Close the commitment and confirm reporting.' : 'Confirm purchase order, quantity and delivery date.';
+  if (stage === 'qualified') return pipeline === 'supporter' ? 'Prepare the tailored ask and evidence pack.' : 'Confirm quantity, budget, buyer process and written intent.';
+  return 'Confirm the relationship owner and make the first human contact.';
+}
+
+async function readPipeline(p: { id: string; label: string; role: 'need' | 'ordered' | 'funded'; key: GoodsRelationship['pipeline'] }) {
   const spine = emptySpine();
   let total = 0, beds = 0, washers = 0, value = 0;
   // Stage map for this pipeline.
@@ -121,7 +172,50 @@ async function rollupPipeline(p: { id: string; label: string; role: 'need' | 'or
     const cell = spine[sp];
     cell.n++; cell.beds += b; cell.washers += w; cell.value += v;
   }
-  return { key: p.key, label: p.label, role: p.role, total, beds, washers, value, spine };
+  const funnel: PipelineFunnel = { key: p.key, label: p.label, role: p.role, total, beds, washers, value, spine };
+  const relationships: GoodsRelationship[] = opps
+    .filter(o => (o.status || 'open') === 'open')
+    .map(o => {
+      const contact = o.contact || o.relations?.find((relation: any) => relation.objectKey === 'contact') || {};
+      const stage = stageMap.get(o.pipelineStageId) || 'Identified';
+      const spineStage = spineOf(stage);
+      return {
+        id: o.id,
+        pipeline: p.key,
+        pipelineLabel: p.label,
+        name: contact.name || contact.contactName || contact.fullName || o.name || 'Unnamed relationship',
+        organisation: contact.companyName || null,
+        email: contact.email || null,
+        phone: contact.phone || null,
+        stage,
+        spineStage,
+        beds: unitOf(o, BEDS_FIELD),
+        washers: unitOf(o, WASHERS_FIELD),
+        value: Number(o.monetaryValue) || 0,
+        updatedAt: o.updatedAt || o.lastStageChangeAt || null,
+        owner: o.assignedTo || null,
+        nextAction: null,
+        nextActionAt: null,
+        communicationStatus: 'no communication evidence' as const,
+        lastContactAt: null,
+        sourceUrl: null,
+        supporterUpdates: false,
+        updateReadiness: p.key === 'supporter' ? 'consent needed' as const : 'operational only' as const,
+        updateTopics: [],
+        charityRelated: false,
+        entityRoutes: p.key === 'buyer' ? ['commercial procurement' as const] : [],
+        vehicleStatus: p.key === 'buyer' ? 'clear' as const : 'vehicle decision needed' as const,
+        deckStatus: 'needed' as const,
+        attention: o.assignedTo ? 'ready' as const : 'unassigned' as const,
+        priorityScore: 0,
+        priorityReasons: [],
+        dataQualityScore: 0,
+        dataQualityIssues: [],
+        nextMove: nextMoveFor(p.key, spineStage),
+      };
+    })
+    .filter((row) => !isInternalActIdentity({ name: row.name, email: row.email, organisation: row.organisation }));
+  return { funnel, relationships };
 }
 
 export async function getGoodsFunnel(): Promise<GoodsFunnel> {
@@ -136,14 +230,142 @@ export async function getGoodsFunnel(): Promise<GoodsFunnel> {
 
   const ghlConnected = Boolean(GHL_API_KEY && GHL_LOCATION_ID);
   let pipelines: PipelineFunnel[] = [];
+  let relationships: GoodsRelationship[] = [];
   if (ghlConnected) {
     try {
-      pipelines = await Promise.all([
-        rollupPipeline({ ...PIPELINES.demand, key: 'demand' }),
-        rollupPipeline({ ...PIPELINES.buyer, key: 'buyer' }),
-        rollupPipeline({ ...PIPELINES.supporter, key: 'supporter' }),
+      const results = await Promise.all([
+        readPipeline({ ...PIPELINES.demand, key: 'demand' }),
+        readPipeline({ ...PIPELINES.buyer, key: 'buyer' }),
+        readPipeline({ ...PIPELINES.supporter, key: 'supporter' }),
       ]);
+      pipelines = results.map(result => result.funnel);
+      relationships = results.flatMap(result => result.relationships);
     } catch { pipelines = []; }
+  }
+
+  if (relationships.length > 0) {
+    const emails = relationships.map(row => row.email?.toLowerCase()).filter(Boolean) as string[];
+    const opportunityIds = relationships.map(row => row.id);
+    const [{ data: contactRows }, { data: gmailRows }, { data: pipelineRows }] = await Promise.all([
+      emails.length > 0
+        ? db
+            .from('ghl_contacts')
+            .select('email, tags, engagement_status, last_contact_date')
+            .in('email', emails)
+        : Promise.resolve({ data: [] }),
+      emails.length > 0
+        ? db
+            .from('opportunity_context_events')
+            .select('actor_email, source_url, happened_at')
+            .eq('source_system', 'gmail')
+            .in('actor_email', emails)
+            .order('happened_at', { ascending: false })
+        : Promise.resolve({ data: [] }),
+      db
+        .from('org_pipeline')
+        .select('ghl_opportunity_id, owner_name, next_action, next_action_at')
+        .in('ghl_opportunity_id', opportunityIds),
+    ]);
+    const contactByEmail = new Map((contactRows || []).map((row: any) => [String(row.email || '').toLowerCase(), row]));
+    const gmailByEmail = new Map<string, any>();
+    for (const row of gmailRows || []) {
+      const email = String(row.actor_email || '').toLowerCase();
+      if (email && !gmailByEmail.has(email)) gmailByEmail.set(email, row);
+    }
+    const pipelineByOpportunity = new Map((pipelineRows || []).map((row: any) => [String(row.ghl_opportunity_id || ''), row]));
+    relationships = relationships.map(row => {
+      const key = row.email?.toLowerCase() || '';
+      const contact = contactByEmail.get(key);
+      const gmail = gmailByEmail.get(key);
+      const pipeline = pipelineByOpportunity.get(row.id);
+      const tags = (contact?.tags || []).map((tag: string) => tag.toLowerCase());
+      const owner = pipeline?.owner_name || row.owner;
+      const nextActionAt = pipeline?.next_action_at || null;
+      const dueAt = nextActionAt ? new Date(nextActionAt).getTime() : null;
+      const isOverdue = dueAt != null && dueAt < Date.now();
+      const deckStatus = tags.some((tag: string) => /deck[: -]?(shared|sent)|pitch[: -]?sent/.test(tag))
+        ? 'shared' as const
+        : tags.some((tag: string) => /deck[: -]?ready|ask[: -]?ready|pitch[: -]?ready/.test(tag))
+          ? 'ready' as const
+          : 'needed' as const;
+      const supporterUpdates = tags.some((tag: string) => /newsletter|supporter|updates/.test(tag));
+      const charityRelated = tags.some((tag: string) => /charity|butterfly|nfp|public benefit/.test(tag));
+      const firstNationsRelated = tags.some((tag: string) => /first nations|indigenous|aboriginal|community-controlled|acco/.test(tag));
+      const entityRoutes = [
+        row.pipeline === 'buyer' || tags.some((tag: string) => /buyer|procurement|contract/.test(tag)) ? 'commercial procurement' as const : null,
+        charityRelated ? 'charity/public benefit' as const : null,
+        firstNationsRelated ? 'First Nations governance' as const : null,
+      ].filter(Boolean) as GoodsRelationship['entityRoutes'];
+      const updateTopics = [
+        row.beds > 0 || tags.some((tag: string) => /bed|housing/.test(tag)) ? 'beds' : null,
+        row.washers > 0 || tags.some((tag: string) => /wash/.test(tag)) ? 'washing' : null,
+        row.pipeline === 'buyer' || tags.some((tag: string) => /buyer|procurement/.test(tag)) ? 'procurement' : null,
+        row.pipeline === 'supporter' ? 'supporter progress' : null,
+        tags.some((tag: string) => /community|first nations|indigenous/.test(tag)) ? 'community' : null,
+        tags.some((tag: string) => /impact|funder|foundation|capital/.test(tag)) ? 'impact and funding' : null,
+      ].filter(Boolean) as string[];
+      const attention = !owner ? 'unassigned' as const : isOverdue ? 'overdue' as const : gmail && !pipeline?.next_action ? 'waiting' as const : 'ready' as const;
+      const priorityReasons = [
+        isOverdue ? 'overdue action' : null,
+        !owner ? 'owner missing' : null,
+        gmail ? 'reply evidenced' : null,
+        row.spineStage === 'qualified' ? 'qualified relationship' : null,
+        row.spineStage === 'committed' ? 'commitment stage' : null,
+        row.beds + row.washers >= 100 ? 'high-volume demand' : null,
+        row.value >= 100000 ? 'high-value opportunity' : null,
+        !pipeline?.next_action ? 'next action missing' : null,
+      ].filter(Boolean) as string[];
+      const priorityScore = Math.min(100,
+        (isOverdue ? 25 : 0) +
+        (!owner ? 14 : 0) +
+        (gmail ? 18 : contact?.last_contact_date ? 8 : 0) +
+        (row.spineStage === 'committed' ? 22 : row.spineStage === 'qualified' ? 16 : 4) +
+        (row.beds + row.washers >= 100 ? 12 : row.beds + row.washers > 0 ? 6 : 0) +
+        (row.value >= 100000 ? 12 : row.value > 0 ? 6 : 0) +
+        (!pipeline?.next_action ? 8 : 0)
+      );
+      return {
+        ...row,
+        owner,
+        nextAction: pipeline?.next_action || null,
+        nextActionAt,
+        communicationStatus: gmail ? 'reply evidenced' : contact?.last_contact_date ? 'contact recorded' : 'no communication evidence',
+        lastContactAt: gmail?.happened_at || contact?.last_contact_date || row.updatedAt,
+        sourceUrl: gmail?.source_url || null,
+        supporterUpdates,
+        updateReadiness: supporterUpdates ? 'consent evidenced' : row.pipeline === 'supporter' ? 'consent needed' : 'operational only',
+        updateTopics: [...new Set(updateTopics)],
+        charityRelated,
+        entityRoutes,
+        vehicleStatus: entityRoutes.length > 1 ? 'shared role' : entityRoutes.length === 1 ? 'clear' : 'vehicle decision needed',
+        deckStatus,
+        attention,
+        priorityScore,
+        priorityReasons,
+      };
+    });
+    const emailCounts = new Map<string, number>();
+    for (const row of relationships) {
+      const email = row.email?.toLowerCase();
+      if (email) emailCounts.set(email, (emailCounts.get(email) || 0) + 1);
+    }
+    relationships = relationships.map(row => {
+      const issues = [
+        !row.email ? 'email missing' : null,
+        row.email && (emailCounts.get(row.email.toLowerCase()) || 0) > 1 ? 'duplicate email relationship' : null,
+        !row.owner ? 'owner missing' : null,
+        !row.nextAction ? 'next action missing' : null,
+        !row.nextActionAt ? 'due date missing' : null,
+        row.beds <= 0 && row.washers <= 0 ? 'product quantity unscoped' : null,
+        row.communicationStatus === 'no communication evidence' ? 'communication evidence missing' : null,
+        row.vehicleStatus === 'vehicle decision needed' ? 'entity route unresolved' : null,
+      ].filter(Boolean) as string[];
+      return {
+        ...row,
+        dataQualityIssues: issues,
+        dataQualityScore: Math.max(0, Math.round(100 - issues.length * 12.5)),
+      };
+    });
   }
   const buyer = pipelines.find(p => p.key === 'buyer');
   const supporter = pipelines.find(p => p.key === 'supporter');
@@ -154,6 +376,6 @@ export async function getGoodsFunnel(): Promise<GoodsFunnel> {
   return {
     generatedAt: new Date().toISOString(),
     ghlConnected: ghlConnected && pipelines.length > 0,
-    need, addressable, ordered, funded, delivered: DELIVERED, gap, pipelines,
+    need, addressable, ordered, funded, delivered: DELIVERED, gap, pipelines, relationships,
   };
 }

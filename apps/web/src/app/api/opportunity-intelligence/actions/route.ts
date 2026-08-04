@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   createOpportunityIntelligenceAction,
   type OpportunityActionRequest,
+  validateOpportunityActionRequest,
 } from '@/lib/opportunity-intelligence';
 import { requireModule } from '@/lib/api-auth';
+import { requireOrgWriteAccess } from '../../org/_lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,6 +20,7 @@ export async function GET() {
       'research',
       'partner_path',
       'apply_path',
+      'record_review',
       'add_evidence_gap',
       'promote_to_pipeline',
       'send_to_ghl',
@@ -35,6 +38,7 @@ export async function GET() {
     safety: [
       'No email or SMS send in V1.',
       'No automatic GHL or Notion stage changes from ranking.',
+      'record_review appends human judgment and never creates a pipeline item.',
       'send_to_ghl requires confirmWrite=true and a route payload.',
     ],
   });
@@ -46,8 +50,16 @@ export async function POST(request: NextRequest) {
     if (auth.error) return auth.error;
 
     const body = (await request.json()) as OpportunityActionRequest;
-    if (!body.kind) {
-      return NextResponse.json({ error: 'kind is required' }, { status: 400 });
+    const validationError = validateOpportunityActionRequest(body);
+    if (validationError) {
+      return NextResponse.json({ error: validationError }, { status: 400 });
+    }
+
+    // This endpoint writes through the service client. General tracker access
+    // is not enough when the caller supplies a target organisation.
+    if (body.orgProfileId) {
+      const orgAuth = await requireOrgWriteAccess(body.orgProfileId);
+      if (orgAuth instanceof NextResponse) return orgAuth;
     }
 
     const receipt = await createOpportunityIntelligenceAction(body, { userId: auth.user.id });

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireOrgAccess } from '../../_lib/auth';
+import { requireOrgAccess, requireOrgWriteAccess } from '../../_lib/auth';
 import { getJourneys, createJourney } from '@/lib/services/journey-service';
 
 type Params = { params: Promise<{ orgProfileId: string }> };
@@ -18,7 +18,7 @@ export async function GET(req: NextRequest, { params }: Params) {
 
 export async function POST(req: NextRequest, { params }: Params) {
   const { orgProfileId } = await params;
-  const auth = await requireOrgAccess(orgProfileId);
+  const auth = await requireOrgWriteAccess(orgProfileId);
   if (auth instanceof NextResponse) return auth;
 
   const body = await req.json();

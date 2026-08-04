@@ -142,7 +142,45 @@ export interface OrgPipelineItem {
   notes: string | null;
   funder_entity_id: string | null;
   funder_type: string | null;
+  source_type: string | null;
+  source_ref: string | null;
+  pathway: string | null;
+  recommended_role: string | null;
+  project_code: string | null;
+  owner_name: string | null;
+  next_action: string | null;
+  next_action_at: string | null;
+  created_at: string | null;
   updated_at: string | null;
+}
+
+export interface OrgOpportunityDecision {
+  id: string;
+  source_type: string;
+  source_ref: string;
+  project_code: string | null;
+  pathway: string | null;
+  decision: 'no' | 'later' | 'research' | 'partner' | 'apply' | 'send_to_ghl' | 'won' | 'lost' | 'more_info' | 'review';
+  reason: string | null;
+  notes: string | null;
+  evidence_gaps: string[];
+  outcome: string | null;
+  judgment?: {
+    schemaVersion?: number;
+    whatChanged?: string;
+    nextMove?: 'act' | 'listen' | 'verify' | 'revisit' | 'close';
+    nextLearningQuestion?: string;
+    revisitAt?: string;
+    commitment?: {
+      kind?: 'commitment' | 'return';
+      owner?: string;
+      beneficiary?: string;
+      action?: string;
+      dueAt?: string;
+    };
+  } | null;
+  supersedes_id?: string | null;
+  created_at: string;
 }
 
 export interface OrgContact {
@@ -635,6 +673,36 @@ export async function getOrgPrograms(orgProfileId: string, projectId?: string): 
   return (data ?? []) as OrgProgram[];
 }
 
+export async function getOrgOpportunityDecisions(orgProfileId: string, limit = 300): Promise<OrgOpportunityDecision[]> {
+  const supabase = getServiceSupabase();
+  const { data, error } = await supabase
+    .from('opportunity_decisions')
+    .select('id, source_type, source_ref, project_code, pathway, decision, reason, notes, evidence_gaps, outcome, judgment, supersedes_id, created_at')
+    .eq('org_profile_id', orgProfileId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error || !data) return [];
+  return (data as Array<Record<string, unknown>>).map((row) => ({
+    id: row.id as string,
+    source_type: row.source_type as string,
+    source_ref: row.source_ref as string,
+    project_code: (row.project_code as string | null) ?? null,
+    pathway: (row.pathway as string | null) ?? null,
+    decision: row.decision as OrgOpportunityDecision['decision'],
+    reason: (row.reason as string | null) ?? null,
+    notes: (row.notes as string | null) ?? null,
+    evidence_gaps: Array.isArray(row.evidence_gaps) ? (row.evidence_gaps as string[]) : [],
+    outcome: (row.outcome as string | null) ?? null,
+    judgment:
+      row.judgment && typeof row.judgment === 'object' && !Array.isArray(row.judgment)
+        ? row.judgment as OrgOpportunityDecision['judgment']
+        : null,
+    supersedes_id: (row.supersedes_id as string | null) ?? null,
+    created_at: row.created_at as string,
+  }));
+}
+
 export interface OrgPipelineItemWithEntity extends OrgPipelineItem {
   funder_entity_gs_id: string | null;
   funder_entity_name: string | null;
@@ -647,7 +715,7 @@ export async function getOrgPipeline(orgProfileId: string, projectId?: string): 
   const supabase = getServiceSupabase();
   let query = supabase
     .from('org_pipeline')
-    .select('id, project_id, name, amount_display, amount_numeric, funder, deadline, status, grant_opportunity_id, notes, funder_entity_id, funder_type, updated_at')
+    .select('id, project_id, name, amount_display, amount_numeric, funder, deadline, status, grant_opportunity_id, notes, funder_entity_id, funder_type, source_type, source_ref, pathway, recommended_role, project_code, owner_name, next_action, next_action_at, created_at, updated_at')
     .eq('org_profile_id', orgProfileId);
   if (projectId) query = query.eq('project_id', projectId);
   const { data } = await query.order('created_at');
@@ -751,17 +819,19 @@ function ghlDisplayName(row: GhlContactRow) {
   return name || row.company_name || row.email || row.phone || 'Unnamed CRM contact';
 }
 
-async function fetchAllGhlContacts(supabase: ReturnType<typeof getServiceSupabase>) {
+async function fetchAllGhlContacts(supabase: ReturnType<typeof getServiceSupabase>, limit?: number) {
   const rows: GhlContactRow[] = [];
   const pageSize = 1000;
   for (let from = 0; ; from += pageSize) {
+    const to = limit ? Math.min(from + pageSize - 1, limit - 1) : from + pageSize - 1;
     const { data, error } = await supabase
       .from('ghl_contacts')
       .select('id, ghl_id, first_name, last_name, full_name, email, phone, company_name, tags, projects, engagement_status, last_contact_date, canonical_entity_id, source, first_seen_subject, website, updated_at, ghl_updated_at')
       .order('ghl_updated_at', { ascending: false, nullsFirst: false })
-      .range(from, from + pageSize - 1);
+      .range(from, to);
     if (error || !data) break;
     rows.push(...(data as GhlContactRow[]));
+    if (limit && rows.length >= limit) break;
     if (data.length < pageSize) break;
   }
   return rows;
@@ -817,7 +887,7 @@ async function fetchPeopleByGhlId(
 export async function getOrgContacts(
   orgProfileId: string,
   projectId?: string,
-  options: { includeGhl?: boolean } = {},
+  options: { includeGhl?: boolean; ghlLimit?: number } = {},
 ): Promise<OrgContactWithEntity[]> {
   const supabase = getServiceSupabase();
   let query = supabase
@@ -828,7 +898,7 @@ export async function getOrgContacts(
   const { data } = await query.order('contact_type').order('name');
 
   const contacts = (data ?? []) as OrgContact[];
-  const ghlContacts = options.includeGhl && !projectId ? await fetchAllGhlContacts(supabase) : [];
+  const ghlContacts = options.includeGhl && !projectId ? await fetchAllGhlContacts(supabase, options.ghlLimit) : [];
 
   // Enrich with entity data for linked contacts
   const linkedIds = [
@@ -970,12 +1040,23 @@ export interface MatchedGrant {
   focus_areas: string[] | null;
   url: string | null;
   fit_score: number | null;
+  last_verified_at?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  status?: string | null;
+  source?: string | null;
+  source_id?: string | null;
 }
 
 type GrantCandidate = MatchedGrant & {
   target_recipients: string[] | null;
   geography: string | null;
   last_verified_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  status: string | null;
+  source: string | null;
+  source_id: string | null;
 };
 
 const GRANT_MATCH_STOP_WORDS = new Set([
@@ -1125,7 +1206,7 @@ export async function getMatchedGrantOpportunities(
       ),
       ...orgTypeTerms(orgType),
     ]),
-  ).slice(0, 18);
+  ).slice(0, 80);
 
   const priorityTerms = Array.from(
     new Set(
@@ -1139,30 +1220,51 @@ export async function getMatchedGrantOpportunities(
         })
         .map((item) => item.toLowerCase())
     ),
-  ).slice(0, 18);
+  ).slice(0, 80);
 
-  // Build query — future deadlines, then rank locally using org project signals.
-  let query = supabase
+  const selectColumns = 'id, name, description, amount_min, amount_max, deadline, closes_at, provider, categories, focus_areas, target_recipients, geography, url, fit_score, last_verified_at, created_at, updated_at, status, source, source_id';
+  const today = new Date().toISOString().slice(0, 10);
+  let dueQuery = supabase
     .from('grant_opportunities')
-    .select('id, name, description, amount_min, amount_max, deadline, closes_at, provider, categories, focus_areas, target_recipients, geography, url, fit_score, last_verified_at')
-    .or('deadline.gte.now(),closes_at.gte.now(),deadline.is.null')
+    .select(selectColumns)
+    .or(`deadline.gte.${today},closes_at.gte.${today}`)
     .order('deadline', { ascending: true, nullsFirst: false })
-    .limit(120);
+    .order('id', { ascending: true })
+    .limit(200);
+  let freshQuery = supabase
+    .from('grant_opportunities')
+    .select(selectColumns)
+    .order('updated_at', { ascending: false, nullsFirst: false })
+    .order('id', { ascending: true })
+    .limit(200);
 
   if (excludeIds.length > 0) {
-    query = query.not('id', 'in', `(${excludeIds.join(',')})`);
+    const excluded = `(${excludeIds.join(',')})`;
+    dueQuery = dueQuery.not('id', 'in', excluded);
+    freshQuery = freshQuery.not('id', 'in', excluded);
   }
 
-  const { data } = await query;
-  const rows = (data ?? []) as GrantCandidate[];
+  const [{ data: dueData }, { data: freshData }] = await Promise.all([dueQuery, freshQuery]);
+  const candidateById = new Map<string, GrantCandidate>();
+  for (const row of [...(dueData ?? []), ...(freshData ?? [])] as GrantCandidate[]) {
+    const closeDate = row.deadline ?? row.closes_at;
+    if (closeDate && closeDate < today) continue;
+    if (['closed', 'expired', 'duplicate', 'archived'].includes((row.status ?? '').toLowerCase())) continue;
+    candidateById.set(row.id, row);
+  }
+  const rows = [...candidateById.values()];
 
   if (keywordTerms.length === 0 && priorityTerms.length === 0) {
-    return rows.slice(0, 8).map(({ target_recipients: _targetRecipients, geography: _geography, last_verified_at: _lastVerifiedAt, ...row }) => row);
+    return rows.map(({
+      target_recipients: _targetRecipients,
+      geography: _geography,
+      ...row
+    }) => row);
   }
 
   const ranked = rows
     .map((row) => {
-      const thematicHits = textOverlapScore(
+      const taxonomyHits = textOverlapScore(
         [
           ...(row.categories ?? []),
           ...(row.focus_areas ?? []),
@@ -1170,21 +1272,19 @@ export async function getMatchedGrantOpportunities(
         ],
         keywordTerms,
       );
-      const keywordHits = textOverlapScore(
+      const bodyHits = textOverlapScore(
         [
           row.name,
           row.description,
-          ...(row.categories ?? []),
-          ...(row.focus_areas ?? []),
-          ...(row.target_recipients ?? []),
-          row.provider,
         ],
         keywordTerms,
       );
-      const priorityHits = textOverlapScore(
+      const priorityBodyHits = textOverlapScore(
+        [row.name, row.description],
+        priorityTerms,
+      );
+      const priorityTaxonomyHits = textOverlapScore(
         [
-          row.name,
-          row.description,
           ...(row.categories ?? []),
           ...(row.focus_areas ?? []),
           ...(row.target_recipients ?? []),
@@ -1196,46 +1296,60 @@ export async function getMatchedGrantOpportunities(
         provider.includes('university') || provider.includes('institute of technology');
       const researchHeavy =
         textOverlapScore([...(row.categories ?? []), ...(row.focus_areas ?? []), row.name], ['research', 'science', 'discovery']) > 0;
+      const evidenceAt = row.last_verified_at ?? row.updated_at ?? row.created_at;
+      const evidenceAgeDays = evidenceAt
+        ? Math.floor((Date.now() - new Date(evidenceAt).getTime()) / 86_400_000)
+        : null;
+      const freshEvidence = evidenceAgeDays !== null && evidenceAgeDays <= 21;
+      const broadTaxonomy = (row.categories?.length ?? 0) >= 8;
 
-      let score = thematicHits * 5 + keywordHits * 2 + priorityHits * 4;
+      let score = 36
+        + Math.min(bodyHits * 6, 30)
+        + Math.min(priorityBodyHits * 10, 30)
+        + Math.min(taxonomyHits * 2, 10)
+        + Math.min(priorityTaxonomyHits * 3, 12);
 
-      if (geographyMatches(row.geography, geoFocus)) score += 3;
+      if (geographyMatches(row.geography, geoFocus)) score += 4;
       if (
         orgType &&
         (row.target_recipients ?? []).some((entry) => entry.toLowerCase().includes(orgType.toLowerCase()))
       ) {
-        score += 2;
+        score += 4;
       }
 
       if (universityProvider) {
-        score -= 6;
+        score -= 25;
       }
-      if (researchHeavy && priorityHits === 0) {
-        score -= 6;
+      if (researchHeavy && priorityBodyHits === 0) {
+        score -= 15;
       }
+      if (broadTaxonomy && bodyHits === 0 && priorityBodyHits === 0) score -= 18;
+      if (!row.url) score -= 8;
+      if (!row.deadline && !row.closes_at && !freshEvidence) score -= 15;
+      if (freshEvidence) score += 5;
 
       const deadline = row.deadline ?? row.closes_at;
       if (deadline) {
         const days = Math.ceil((new Date(deadline).getTime() - Date.now()) / 86400000);
-        if (days >= 0 && days <= 45) score += 2;
-        else if (days > 45 && days <= 120) score += 1;
-      } else if (row.last_verified_at) {
-        score += 1;
+        if (days >= 0 && days <= 45) score += 4;
+        else if (days > 45 && days <= 120) score += 2;
       }
 
       return {
         ...row,
-        fit_score: score,
-        _hits: thematicHits + keywordHits + priorityHits,
-        _thematicHits: thematicHits,
-        _priorityHits: priorityHits,
+        fit_score: Math.max(0, Math.min(95, score)),
+        _hits: taxonomyHits + bodyHits + priorityBodyHits + priorityTaxonomyHits,
+        _bodyHits: bodyHits,
+        _taxonomyHits: taxonomyHits,
+        _priorityBodyHits: priorityBodyHits,
+        _freshEvidence: freshEvidence,
         _universityProvider: universityProvider,
       };
     })
     .filter((row) => row._hits > 0)
-    .filter((row) => row._thematicHits > 0 || row._priorityHits > 0)
+    .filter((row) => row._bodyHits > 0 || row._priorityBodyHits > 0 || (row._taxonomyHits >= 2 && row._freshEvidence))
     .filter((row) => !row._universityProvider)
-    .filter((row) => (row.fit_score ?? 0) >= 8)
+    .filter((row) => (row.fit_score ?? 0) >= 55)
     .sort((left, right) => {
       if ((right.fit_score ?? 0) !== (left.fit_score ?? 0)) {
         return (right.fit_score ?? 0) - (left.fit_score ?? 0);
@@ -1244,14 +1358,14 @@ export async function getMatchedGrantOpportunities(
       const rightDate = right.deadline ?? right.closes_at ?? '9999-12-31';
       return leftDate.localeCompare(rightDate);
     })
-    .slice(0, 8)
     .map(({
       target_recipients: _targetRecipients,
       geography: _geography,
-      last_verified_at: _lastVerifiedAt,
       _hits,
-      _thematicHits,
-      _priorityHits,
+      _bodyHits,
+      _taxonomyHits,
+      _priorityBodyHits,
+      _freshEvidence,
       _universityProvider,
       ...row
     }) => row);

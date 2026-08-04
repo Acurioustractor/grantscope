@@ -1,6 +1,24 @@
+import { canonical } from './goods-canonical-numbers';
+
+const DEPLOYED_BEDS = canonical('deployed_bed_units');
+const STRETCH_BEDS = canonical('stretch_beds_deployed');
+const BASKET_BEDS = canonical('basket_beds_deployed');
+const WASHERS_IN_COMMUNITY = canonical('washers_in_community');
+const SERVED_COMMUNITIES = canonical('served_communities');
+const DISTINCT_COMMUNITIES = canonical('distinct_communities_touched');
+const STRETCH_DESIGN_MASS = canonical('stretch_design_mass_kg');
+
 export const goodsOperatingFacts = [
-  { label: 'Tracked assets', value: '389', detail: '369 beds, 20 washing machines, QR register ready' },
-  { label: 'Communities', value: '8', detail: 'Palm Island, Tennant Creek, Kalgoorlie, Maningrida and others' },
+  {
+    label: 'Beds deployed',
+    value: String(DEPLOYED_BEDS.value),
+    detail: `${STRETCH_BEDS.value} Stretch + ${BASKET_BEDS.value} Basket. ${Number(STRETCH_DESIGN_MASS.value).toLocaleString('en-AU')} kg is calculated design mass, not weighbridge data.`,
+  },
+  {
+    label: 'Communities served',
+    value: String(SERVED_COMMUNITIES.value),
+    detail: `${DISTINCT_COMMUNITIES.value} distinct touched. ${WASHERS_IN_COMMUNITY.value} washers in community is the manual ruling, not yet row-derived.`,
+  },
   { label: 'Demand proof', value: '200-350', detail: 'additional bed requests already documented' },
   { label: 'Scale target', value: '5,000+', detail: 'stretch beds plus 500+ washing machines in the 2026 plan' },
 ];
@@ -133,8 +151,8 @@ export const goodsJourneyStages = [
   {
     label: 'Proof live',
     status: 'done',
-    measure: '389 assets / 8 communities',
-    next: 'Keep asset and QR evidence clean.',
+    measure: `${DEPLOYED_BEDS.value} beds / ${SERVED_COMMUNITIES.value} served communities`,
+    next: 'Keep 177 Stretch + 363 Basket explicit. Treat 22 washers as the manual in-community ruling until stale rows are restatused.',
   },
   {
     label: 'QBE readiness',
@@ -308,7 +326,7 @@ export const goodsCoreWorkAreas = [
   {
     area: 'Evidence pack',
     status: 'ready but needs hygiene',
-    next: 'Reconcile 389 canonical asset claim with 404 CSV rows and keep QR/source links clean.',
+    next: `Use ${DEPLOYED_BEDS.value} deployed beds (${STRETCH_BEDS.value} Stretch + ${BASKET_BEDS.value} Basket). Restatus the 10 stale washer rows so the ${WASHERS_IN_COMMUNITY.value}-washer ruling becomes query-derived.`,
     proof: 'Asset register + QR manifest',
   },
   {
@@ -391,7 +409,7 @@ export const goodsOperatingOutputs = [
 export const goodsRoadmap = [
   {
     stage: '1. Evidence base',
-    now: '389 tracked assets, QR register, expanded asset CSV, early community demand, and deployment records.',
+    now: `${DEPLOYED_BEDS.value} deployed beds across ${SERVED_COMMUNITIES.value} served communities, ${WASHERS_IN_COMMUNITY.value} washers in community under the manual ruling, QR records, early community demand, and deployment records.`,
     operatingUse: 'Prove that Goods is already operating, not just proposed.',
   },
   {

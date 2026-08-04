@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { getSupabasePublicKey, getSupabaseUrl } from './lib/supabase-env';
 
 function hasSupabaseAuthCookie(request: NextRequest) {
   return request.cookies.getAll().some(({ name, value }) => {
@@ -66,13 +67,13 @@ export async function middleware(request: NextRequest) {
   let isAuthed = fastCookieAuth ? hasAuthCookie : false;
 
   if (!fastCookieAuth && (isProtectedRoute || isLoginRoute)) {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const supabaseUrl = getSupabaseUrl();
+    const supabasePublicKey = getSupabasePublicKey();
 
-    if (supabaseUrl && supabaseAnonKey) {
+    if (supabaseUrl && supabasePublicKey) {
       const supabase = createServerClient(
         supabaseUrl,
-        supabaseAnonKey,
+        supabasePublicKey,
         {
           cookies: {
             getAll() {

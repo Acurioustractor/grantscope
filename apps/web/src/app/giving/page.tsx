@@ -122,7 +122,7 @@ async function searchCommons(rawQuery: string): Promise<SearchResult[]> {
     results.push({
       type: 'Entity',
       label: String(row.canonical_name),
-      href: `/entity/${row.gs_id || row.id}`,
+      href: row.gs_id ? `/entities/${row.gs_id}` : `/entities?view=search&q=${encodeURIComponent(String(row.canonical_name))}`,
       detail: [row.entity_type, row.state, row.abn ? `ABN ${row.abn}` : null].filter(Boolean).join(' | '),
       source: 'gs_entities',
     });

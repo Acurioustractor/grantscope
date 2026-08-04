@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import type { SourceHealth } from '@grant-engine/source-health';
+import type { PipelineHealth } from '@grant-engine/pipeline-health';
 
 function tableToSlug(table: string): string {
   return table.replace(/_/g, '-');
@@ -75,6 +76,7 @@ interface HealthData {
     almaEvidence: number;
   };
   sourceHealth: SourceHealth[];
+  pipelineHealth: PipelineHealth;
   totalRecords: number;
   dataFreshness: Array<{
     dataset: string;
@@ -374,6 +376,7 @@ export function HealthClient() {
 
   const { stats, grantSemantics, sourceIdentity, entityGraph, totalRecords, dataFreshness, sourceBreakdown, confidenceBreakdown, recentRuns, discoveryRuns } = data;
   const sourceHealth = data.sourceHealth ?? [];
+  const pipelineHealth = data.pipelineHealth;
   const confMap = Object.fromEntries(confidenceBreakdown.map(c => [c.confidence, c.total]));
   const healthScore = computeHealthScore(data);
 
@@ -856,6 +859,33 @@ export function HealthClient() {
         </div>
       </section>
 
+      {/* ===== PIPELINE RUNTIME ===== */}
+      {pipelineHealth && (
+        <section className="mb-10">
+          <h2 className="text-sm font-black uppercase tracking-widest text-bauhaus-muted mb-4 border-b-2 border-bauhaus-black pb-2">
+            Funding Pipeline Runtime
+          </h2>
+          <div className={`border-4 p-5 ${pipelineHealth.status === 'backlogged' || pipelineHealth.status === 'failing' ? 'border-bauhaus-red' : 'border-bauhaus-black'}`}>
+            <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
+              <div>
+                <div className="font-black uppercase tracking-widest">{pipelineHealth.status}</div>
+                <p className="text-xs text-bauhaus-muted mt-1">{pipelineHealth.note}</p>
+              </div>
+              <div className="text-xs font-mono">queued={pipelineHealth.pending} | running={pipelineHealth.running}</div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {pipelineHealth.phases.map((phase) => (
+                <div key={phase.agentId} className="border-2 border-bauhaus-black p-3">
+                  <div className="font-black text-xs uppercase tracking-wider">{phase.agentId.replace('nightly-grant-pipeline-', '')}</div>
+                  <div className="font-mono text-xs mt-2">{phase.status} · queued {phase.pending}</div>
+                  <p className="text-xs text-bauhaus-muted mt-1">{phase.note}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* ===== SOURCE HEALTH ===== */}
       <section className="mb-10">
         <h2 className="text-sm font-black uppercase tracking-widest text-bauhaus-muted mb-4 border-b-2 border-bauhaus-black pb-2">
@@ -909,7 +939,7 @@ export function HealthClient() {
           ))}
         </div>
         <div className="text-xs text-bauhaus-muted mt-3">
-          Orchestrated by <code className="bg-gray-100 px-1 py-0.5 border border-bauhaus-black/10">pipeline-runner.mjs</code> — runs every 30 min or <code className="bg-gray-100 px-1 py-0.5 border border-bauhaus-black/10">--once</code>
+          Orchestrated by <code className="bg-gray-100 px-1 py-0.5 border border-bauhaus-black/10">agent-orchestrator.mjs</code> using scheduled ingest, enrich, and finalize phases.
         </div>
       </section>
 

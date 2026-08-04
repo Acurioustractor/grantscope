@@ -96,6 +96,38 @@ h1, h2, h3, h4 {
   -webkit-font-smoothing: antialiased;
 }
 
+.ws.act-desk,
+.ws.act-workspace {
+  --ws-surface-0: #F4F5F1;
+  --ws-surface-1: #FFFFFF;
+  --ws-surface-2: #F8F9F5;
+  --ws-border: #DCE1DC;
+  --ws-border-strong: #183426;
+  --ws-text: #17231B;
+  --ws-text-secondary: #687169;
+  --ws-text-tertiary: #9AA39C;
+  --ws-accent: #2F6B4A;
+  --ws-red: #A44235;
+  --ws-amber: #AD691C;
+  --ws-green: #2F6B4A;
+}
+
+.act-workspace {
+  min-height: 100vh;
+  background: var(--ws-surface-0);
+}
+
+/* Older ACT tools keep their structure while inheriting the calmer Field Desk skin. */
+.act-workspace .bg-gray-50 { background-color: var(--ws-surface-0) !important; }
+.act-workspace .bg-gray-100 { background-color: var(--ws-surface-2) !important; }
+.act-workspace .border-gray-100,
+.act-workspace .border-gray-200,
+.act-workspace .border-gray-300 { border-color: var(--ws-border) !important; }
+.act-workspace .text-gray-400 { color: var(--ws-text-tertiary) !important; }
+.act-workspace .text-gray-500,
+.act-workspace .text-gray-600,
+.act-workspace .text-gray-700 { color: var(--ws-text-secondary) !important; }
+
 .ws .mono {
   font-family: 'SFMono-Regular', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-variant-numeric: tabular-nums;

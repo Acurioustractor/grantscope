@@ -6,6 +6,7 @@ import { GrantActionsProvider, GrantCardActions } from '@/app/components/grant-c
 import { FoundationActionsProvider, FoundationCardActions } from '@/app/components/foundation-card-actions';
 import { FoundationDetailActions } from './foundation-detail-actions';
 import { PipelineContextBanner } from './pipeline-context-banner';
+import { assessFoundationReview } from '@/lib/foundation-review';
 
 // ISR: page output must stay anonymous (no per-user/org data baked in — see
 // PipelineContextBanner, which fetches a logged-in user's private pipeline
@@ -278,7 +279,7 @@ export default async function FoundationDetailPage({ params }: { params: Promise
     categories: string[];
   }
 
-  const [{ data: acncData }, { data: similarData }, { data: matchingData }, { data: boardRoleData }] = await Promise.all([
+  const [{ data: acncData }, { data: similarData }, { data: matchingData }, { data: boardRoleData }, { count: verifiedGrantCount }] = await Promise.all([
     supabase.from('acnc_ais')
       .select('abn, charity_name, ais_year, total_revenue, total_expenses, total_assets, grants_donations_au, grants_donations_intl, net_surplus_deficit, donations_and_bequests, revenue_from_investments, employee_expenses, net_assets_liabilities, charity_size, fin_report_from, fin_report_to')
       .eq('abn', f.acnc_abn)
@@ -311,6 +312,7 @@ export default async function FoundationDetailPage({ params }: { params: Promise
         ? query.eq('company_abn', f.acnc_abn)
         : query.eq('company_name', f.name);
     })(),
+    supabase.from('foundation_grantees').select('id', { count: 'exact', head: true }).eq('foundation_id', id),
   ]);
 
   const allAcnc: AcncFinancials[] = (acncData || []) as AcncFinancials[];
@@ -361,6 +363,36 @@ export default async function FoundationDetailPage({ params }: { params: Promise
     acc[type].push(p);
     return acc;
   }, {} as Record<string, ProgramRow[]>);
+
+  const sourceBackedProgramYears = allProgramYears.filter((row) => {
+    const source = typeof row.metadata?.source === 'string' ? row.metadata.source : '';
+    return Boolean(row.source_report_url) || Boolean(source && !source.toLowerCase().includes('inferred'));
+  }).length;
+  const applicationPathwayCount = allPrograms.filter((program) =>
+    Boolean(program.application_process)
+    || Boolean(program.url)
+    || Boolean(program.eligibility)
+  ).length;
+  const reviewAssessment = assessFoundationReview({
+    acncAbn: f.acnc_abn,
+    website: f.website,
+    description: f.description,
+    totalGivingAnnual: f.total_giving_annual,
+    profileConfidence: f.profile_confidence,
+    enrichedAt: f.enriched_at,
+    lastScrapedAt: f.last_scraped_at,
+    thematicFocus: f.thematic_focus,
+    geographicFocus: f.geographic_focus,
+    programCount: allPrograms.length,
+    openProgramCount,
+    applicationPathwayCount,
+    boardRoles: boardRoles.length,
+    verifiedGrants: verifiedGrantCount || 0,
+    yearMemoryCount: allProgramYears.length,
+    verifiedSourceBackedCount: sourceBackedProgramYears,
+    scrapedUrlCount: f.scraped_urls?.length || 0,
+    latestProgramScrapedAt,
+  });
 
   return (
     <FoundationActionsProvider>
@@ -426,6 +458,73 @@ export default async function FoundationDetailPage({ params }: { params: Promise
       {/* Pipeline Context Banner — fetched client-side so the page itself stays
           anonymous and cacheable; see pipeline-context-banner.tsx */}
       <PipelineContextBanner foundationId={f.id} foundationName={f.name} />
+
+      <div className="mb-8 border-4 border-bauhaus-black bg-white p-4">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-[0.24em] text-bauhaus-red">
+              Review completeness
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <div className="text-3xl font-black tabular-nums text-bauhaus-black">
+                {reviewAssessment.score}/100
+              </div>
+              <span className={`border-2 px-2.5 py-1 text-[11px] font-black uppercase tracking-widest ${reviewAssessment.className}`}>
+                {reviewAssessment.label}
+              </span>
+              {reviewAssessment.freshestAt ? (
+                <span className={`border-2 px-2.5 py-1 text-[11px] font-black uppercase tracking-widest ${reviewAssessment.stale ? 'border-bauhaus-red/25 bg-bauhaus-red/5 text-bauhaus-red' : 'border-bauhaus-black/15 bg-bauhaus-canvas text-bauhaus-muted'}`}>
+                  Fresh {formatDateWithRecency(reviewAssessment.freshestAt)}
+                </span>
+              ) : null}
+            </div>
+          </div>
+          {reviewAssessment.nextBestActions.length > 0 ? (
+            <div className="max-w-md border-l-4 border-bauhaus-yellow bg-warning-light px-4 py-3">
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-bauhaus-muted">
+                Next upgrade
+              </div>
+              <p className="mt-1 text-sm font-bold leading-relaxed text-bauhaus-black">
+                {reviewAssessment.nextBestActions[0]}
+              </p>
+            </div>
+          ) : null}
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-bauhaus-muted">
+              Available signals
+            </div>
+            <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] font-black uppercase tracking-[0.16em]">
+              {reviewAssessment.signals.length > 0 ? reviewAssessment.signals.map((signal) => (
+                <span key={signal} className="border-2 border-money/25 bg-money-light px-2 py-1 text-money">
+                  {signal}
+                </span>
+              )) : (
+                <span className="border-2 border-bauhaus-black/15 bg-bauhaus-canvas px-2 py-1 text-bauhaus-muted">
+                  Identity only
+                </span>
+              )}
+            </div>
+          </div>
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-bauhaus-muted">
+              Missing information
+            </div>
+            <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] font-black uppercase tracking-[0.16em]">
+              {reviewAssessment.missing.length > 0 ? reviewAssessment.missing.map((item) => (
+                <span key={item} className="border-2 border-bauhaus-red/20 bg-bauhaus-red/5 px-2 py-1 text-bauhaus-red">
+                  {item}
+                </span>
+              )) : (
+                <span className="border-2 border-money/25 bg-money-light px-2 py-1 text-money">
+                  No core gaps
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Key stats — adaptive, only show fields with data */}
       {(() => {

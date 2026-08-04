@@ -384,21 +384,21 @@ async function main() {
       evidence: [
         {
           label: 'Tracked deployment proof',
-          value: '389 assets claimed in README',
-          detail: `${assetRows.length} current CSV rows and ${qrRows.length} QR manifest rows were found locally; reconcile CSV growth against the 389-asset canonical claim before external use.`,
-          source: 'Goods Asset Register',
+          value: '540 beds deployed',
+          detail: 'Current Goods canon: 177 Stretch Beds + 363 Basket Beds, checked 2026-07-25.',
+          source: 'v2/src/lib/data/asset-canonical.ts',
         },
         {
           label: 'Product mix',
-          value: productCounts.slice(0, 3).map((item) => `${item.count} ${item.label}`).join(', '),
-          detail: 'Use product mix to prove real delivery and to forecast replacement, production, freight, and support needs.',
-          source: 'expanded_assets_final.csv',
+          value: '177 Stretch Bed, 363 Basket Bed',
+          detail: '3,540 kg is 177 Stretch Beds x 20 kg design mass. It is not a weighbridge or measured diversion total.',
+          source: 'v2/src/lib/data/asset-canonical.ts',
         },
         {
           label: 'Community footprint',
-          value: `${communityCounts.length} communities in current CSV`,
-          detail: communityCounts.slice(0, 6).map((item) => `${item.label} (${item.count})`).join(', '),
-          source: 'expanded_assets_final.csv',
+          value: '11 communities served; 12 distinct touched',
+          detail: "22 washers in community is Ben's manual per-community ruling, not a register-row-derived count.",
+          source: 'v2/src/lib/data/asset-canonical.ts + CONTEXT.md',
         },
         {
           label: 'Operating system',
@@ -409,7 +409,7 @@ async function main() {
       ],
       routes: goodsRoutes,
       readiness_gaps: [
-        'Reconcile the canonical asset count against the latest expanded CSV before sending external claims.',
+        'Restatus the 10 stale deployed washer rows so the 22-washer manual ruling becomes row-derived.',
         'Confirm the preferred legal/entity pathway for IPP and Supply Nation positioning.',
         'Create a buyer-ready unit economics sheet for beds, washing machines, freight, warranty, and support.',
         'Separate grants, procurement revenue, pre-purchase contracts, loans, and R&D tax in the capital stack.',

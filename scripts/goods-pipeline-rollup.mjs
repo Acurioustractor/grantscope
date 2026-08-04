@@ -8,7 +8,7 @@
  *   NEED       ← goods_communities (curated priority slice: active + lead)
  *   ORDERED    ← GHL Buyer Pipeline  (monetaryValue + Goods:Beds/Washing-machines)
  *   FUNDED     ← GHL Supporter Journey (monetaryValue committed + units funded)
- *   DELIVERED  ← Goods v2 `assets` sync (cited constant — different DB)
+ *   FOOTPRINT  ← current Goods Asset Register canon
  *   GAP        = NEED − DELIVERED
  *
  * No writes. Emits thoughts/shared/reports/goods-pipeline-rollup-<date>.{md,json}.
@@ -33,11 +33,13 @@ const PIPELINES = {
 const BEDS_FIELD = 'mi9ZW3KLhmpcez14cNbx';
 const WASHERS_FIELD = 'UtxtfnyEd6p1epMEJ0b2';
 
-// DELIVERED — physical goods delivered to date. Source: Goods v2 `assets` table
-// (project cwsyhpiuepvdjtxaozwf) via sync-goods-impact-rollups.mjs. That's a
-// different DB than this script reaches, so it's carried as a cited constant;
-// refresh when the v2 sync reports new totals.
-const DELIVERED = { beds: 520, washers: 41, source: 'Goods v2 assets sync, 2026-05-27' };
+// Current Goods Asset Register canon, checked 2026-07-25. Beds are deployed.
+// Washers are Ben's manual in-community ruling, not a register-row count.
+const DELIVERED = {
+  beds: 540,
+  washers: 22,
+  source: 'Goods Asset Register canon, 2026-07-25; washers are the manual in-community ruling',
+};
 
 async function ghlFetch(path) {
   const res = await fetch(`${GHL_API_URL}${path}`, {

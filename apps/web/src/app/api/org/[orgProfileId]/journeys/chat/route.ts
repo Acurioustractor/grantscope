@@ -1,13 +1,13 @@
-import { streamText, convertToModelMessages, type UIMessage } from 'ai';
+import { streamText, type UIMessage } from 'ai';
 import { anthropic } from '@ai-sdk/anthropic';
 import { NextRequest, NextResponse } from 'next/server';
-import { requireOrgAccess } from '../../../_lib/auth';
+import { requireOrgWriteAccess } from '../../../_lib/auth';
 import {
   getJourney,
   addJourneyMessage,
   matchStepToData,
 } from '@/lib/services/journey-service';
-import { getTextFromMessage } from '@/lib/ai-chat-helpers';
+import { getTextFromMessage, toTextModelMessages } from '@/lib/ai-chat-helpers';
 
 export const maxDuration = 60;
 
@@ -58,7 +58,7 @@ ${almaContext ? `\n## Available ALMA evidence\n${almaContext}` : ''}`;
 
 export async function POST(req: NextRequest, { params }: Params) {
   const { orgProfileId } = await params;
-  const auth = await requireOrgAccess(orgProfileId);
+  const auth = await requireOrgWriteAccess(orgProfileId);
   if (auth instanceof NextResponse) return auth;
 
   const { messages, journeyId } = await req.json() as {
@@ -119,7 +119,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   }
 
   const systemPrompt = buildSystemPrompt(journeyContext, almaContext);
-  const modelMessages = await convertToModelMessages(messages);
+  const modelMessages = toTextModelMessages(messages);
 
   const result = streamText({
     model: anthropic('claude-haiku-4-5-20251001'),

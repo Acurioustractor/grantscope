@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireOrgAccess } from '../../../_lib/auth';
+import { requireOrgWriteAccess } from '../../../_lib/auth';
 import { upsertContact } from '@/lib/ghl';
 
 type Params = { params: Promise<{ orgProfileId: string }> };
 
 export async function POST(req: NextRequest, { params }: Params) {
   const { orgProfileId } = await params;
-  const auth = await requireOrgAccess(orgProfileId);
+  const auth = await requireOrgWriteAccess(orgProfileId);
   if (auth instanceof NextResponse) return auth;
 
   // Get org slug for tagging

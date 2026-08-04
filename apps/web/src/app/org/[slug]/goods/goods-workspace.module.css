@@ -1,0 +1,130 @@
+.workspace {
+  --act-brand-50: #f1f8f5;
+  --act-brand-100: #dcefe5;
+  --act-brand-500: #2f8f64;
+  --act-brand-600: #1f734f;
+  --act-brand-900: #17352b;
+  --act-ocean-50: #eff6ff;
+  --act-ocean-600: #2563eb;
+  --act-clay-50: #f8fafc;
+  --act-clay-100: #f1f5f9;
+  --act-clay-300: #cbd5e1;
+  --act-clay-600: #475569;
+  --act-clay-900: #0f172a;
+  color: var(--act-clay-900);
+  background: #f6f8f7;
+}
+
+.workspace :global(main) {
+  background: #f6f8f7 !important;
+  color: var(--act-clay-900) !important;
+}
+
+/* Compatibility layer while legacy Goods pages move onto shared components. */
+.workspace :global(main > div:first-child) {
+  border-color: transparent !important;
+  background: linear-gradient(135deg, var(--act-brand-900), var(--act-brand-600), var(--act-brand-500)) !important;
+  box-shadow: 0 12px 35px rgb(23 53 43 / 12%);
+}
+
+.workspace :global(main > div:first-child > div) {
+  max-width: 1480px !important;
+  padding: 2.5rem 1.5rem !important;
+}
+
+.workspace :global(h1) {
+  font-weight: 750 !important;
+  letter-spacing: -0.035em !important;
+  text-transform: none !important;
+  text-wrap: balance;
+}
+
+.workspace :global(h2),
+.workspace :global(h3) {
+  letter-spacing: -0.02em !important;
+  text-transform: none !important;
+  text-wrap: balance;
+}
+
+.workspace :global(.border-4) {
+  border-width: 1px !important;
+  border-color: var(--act-clay-300) !important;
+  border-radius: 1rem;
+}
+
+.workspace :global(.border-b-4) {
+  border-bottom-width: 1px !important;
+  border-bottom-color: var(--act-clay-300) !important;
+}
+
+.workspace :global(.border-t-4) {
+  border-top-width: 1px !important;
+  border-top-color: var(--act-clay-300) !important;
+}
+
+.workspace :global(.border-r-4) {
+  border-right-width: 1px !important;
+  border-right-color: var(--act-clay-300) !important;
+}
+
+.workspace :global(.bg-bauhaus-canvas) {
+  background: #f6f8f7 !important;
+}
+
+.workspace :global(.bg-bauhaus-black) {
+  background: var(--act-brand-900) !important;
+}
+
+.workspace :global(.bg-bauhaus-yellow) {
+  background: #fff8df !important;
+}
+
+.workspace :global(.bg-link-light) {
+  background: var(--act-ocean-50) !important;
+}
+
+.workspace :global(.text-bauhaus-black) {
+  color: var(--act-clay-900) !important;
+}
+
+.workspace :global(.text-bauhaus-muted) {
+  color: var(--act-clay-600) !important;
+}
+
+.workspace :global(.text-bauhaus-blue) {
+  color: var(--act-ocean-600) !important;
+}
+
+.workspace :global(.text-bauhaus-red) {
+  color: #b42318 !important;
+}
+
+.workspace :global(.bg-white) {
+  box-shadow: 0 1px 2px rgb(15 23 42 / 4%);
+}
+
+.workspace :global(a),
+.workspace :global(button),
+.workspace :global(input),
+.workspace :global(select) {
+  transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.workspace :global(a:focus-visible),
+.workspace :global(button:focus-visible),
+.workspace :global(input:focus-visible),
+.workspace :global(select:focus-visible) {
+  outline: 3px solid rgb(37 99 235 / 35%);
+  outline-offset: 2px;
+}
+
+@media (max-width: 767px) {
+  .workspace :global(main > div:first-child > div) {
+    padding: 2rem 1rem !important;
+  }
+
+  .workspace :global(h1) {
+    font-size: 2.25rem !important;
+    line-height: 1.05 !important;
+  }
+}

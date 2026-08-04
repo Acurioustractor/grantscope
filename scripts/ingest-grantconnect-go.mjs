@@ -155,16 +155,15 @@ async function main() {
   }
 
   // grant_opportunities carries FOUR unique indexes: url, (source, name),
-  // (name, source_id) and the primary key. PostgREST ON CONFLICT can only name one,
-  // so an upsert on `url` still trips the others.
-  //
-  // That is what has been failing every run:
-  //   duplicate key value violates "grant_opportunities_source_name_full_uniq"
-  //
-  // The stored rows are clean, so the collision is INSIDE the batch: GrantConnect
-  // lists the same grant name twice under different GoUuids, which produces two
-  // distinct urls and one (source, name). Deduplicate before writing, keeping the
-  // last occurrence, and count what was dropped rather than discarding it silently.
+  // (name, source_id) and the primary key. PostgREST ON CONFLICT can only name one.
+  // Two distinct failure modes, both real:
+  //   1. GrantConnect lists the same grant name twice under different GoUuids in
+  //      ONE feed pull — two urls, one (source, name). Dedupe inside the batch,
+  //      keeping the last occurrence, and count what was dropped.
+  //   2. GrantConnect republishes the same titled opportunity under a NEW UUID
+  //      across runs — the fresh url misses the stored row and trips the
+  //      (source, name) unique index. Conflict on that key so the upsert
+  //      refreshes url/source_id instead of colliding.
   const bySourceName = new Map();
   let collapsed = 0;
   for (const row of rows) {
@@ -180,7 +179,7 @@ async function main() {
   let upserted = 0;
   for (let i = 0; i < deduped.length; i += 100) {
     const batch = deduped.slice(i, i + 100);
-    const { error } = await supabase.from('grant_opportunities').upsert(batch, { onConflict: 'url', ignoreDuplicates: false });
+    const { error } = await supabase.from('grant_opportunities').upsert(batch, { onConflict: 'source,name', ignoreDuplicates: false });
     if (error) throw new Error(`upsert failed: ${error.message}`);
     upserted += batch.length;
   }

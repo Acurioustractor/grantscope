@@ -1,4 +1,4 @@
-import { streamText, convertToModelMessages, type UIMessage } from 'ai';
+import { streamText, type UIMessage } from 'ai';
 import { anthropic } from '@ai-sdk/anthropic';
 import { requireModule } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
@@ -47,7 +47,7 @@ function formatMoney(n: number | null): string {
   return `$${n.toLocaleString()}`;
 }
 
-import { getTextFromMessage } from '@/lib/ai-chat-helpers';
+import { getTextFromMessage, toTextModelMessages } from '@/lib/ai-chat-helpers';
 import { getEffectiveOrgId } from '@/lib/org-profile';
 
 export async function POST(req: Request) {
@@ -152,8 +152,7 @@ export async function POST(req: Request) {
     ? `${SYSTEM_PROMPT}\n\nHere is relevant data from the CivicGraph database for the user's query:${contextText}`
     : SYSTEM_PROMPT;
 
-  // Convert UIMessages to model messages for streamText
-  const modelMessages = await convertToModelMessages(messages);
+  const modelMessages = toTextModelMessages(messages);
 
   const result = streamText({
     model: anthropic('claude-haiku-4-5-20251001'),

@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ACT Dashboard Directions</title>
+  <style>
+    :root {
+      --bg: #f4f5f1;
+      --surface: #ffffff;
+      --ink: #17231b;
+      --muted: #687169;
+      --line: #dce1dc;
+      --forest: #183426;
+      --green: #2f6b4a;
+      --green-soft: #e7f1ea;
+      --lime: #e7ef65;
+      --blue: #2d63a6;
+      --blue-soft: #eaf1f8;
+      --amber: #ad691c;
+      --amber-soft: #fbf0dd;
+      --red: #a44235;
+      --red-soft: #f8e8e5;
+      --purple: #705287;
+      --purple-soft: #f0ebf4;
+      --gold: #c99a2e;
+      --shadow: 0 10px 35px rgba(23, 35, 27, .07);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: #d9ddd8; color: var(--ink); font-family: Inter, Arial, sans-serif; }
+    body { display: grid; gap: 80px; padding: 0; }
+    button { font: inherit; }
+    .screen { width: 1440px; height: 1024px; overflow: hidden; position: relative; background: var(--bg); }
+    .mono { font-family: "SFMono-Regular", Consolas, monospace; letter-spacing: 0; }
+    .eyebrow { color: var(--muted); font-size: 10px; line-height: 1; font-weight: 700; text-transform: uppercase; letter-spacing: 1.1px; }
+    .badge { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border-radius: 4px; font-size: 9px; font-weight: 800; text-transform: uppercase; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+    .avatar { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; color: white; font: 700 11px "SFMono-Regular", monospace; flex: none; }
+    .primary-button { height: 42px; border: 0; border-radius: 5px; background: var(--forest); color: white; padding: 0 18px; font-size: 12px; font-weight: 750; }
+
+    .rail { position: absolute; inset: 0 auto 0 0; width: 232px; background: var(--forest); color: white; padding: 26px 16px; }
+    .brand { height: 46px; display: flex; align-items: center; gap: 12px; padding: 0 8px; font: 700 12px "SFMono-Regular", monospace; }
+    .brand-mark { width: 32px; height: 32px; border-radius: 4px; background: var(--lime); color: var(--forest); display: grid; place-items: center; font-weight: 900; }
+    .rail-label { margin: 34px 8px 12px; color: #8fa196; font: 700 9px "SFMono-Regular", monospace; letter-spacing: 1.1px; }
+    .rail-item { height: 44px; display: flex; align-items: center; gap: 13px; padding: 0 14px; border-radius: 6px; color: #c7d1ca; font-size: 14px; }
+    .rail-item.active { background: rgba(255,255,255,.09); color: white; font-weight: 700; }
+    .rail-icon { width: 18px; color: #a8b7ac; font: 700 13px "SFMono-Regular", monospace; }
+    .rail-item.active .rail-icon { color: var(--lime); }
+    .project-item { height: 36px; display: grid; grid-template-columns: 9px 1fr auto; align-items: center; gap: 10px; padding: 0 9px; color: #d7ded9; font-size: 13px; }
+    .project-count { color: #90a095; font: 11px "SFMono-Regular", monospace; }
+    .source-health { position: absolute; left: 24px; bottom: 28px; display: flex; align-items: center; gap: 9px; color: #bac5bd; font-size: 11px; }
+
+    .workspace { position: absolute; inset: 0 0 0 232px; padding: 28px 36px 36px; }
+    .topbar { height: 54px; display: flex; align-items: flex-start; justify-content: space-between; }
+    .topbar h1 { margin: 6px 0 0; font-size: 26px; line-height: 1; letter-spacing: 0; }
+    .command { width: 420px; height: 44px; display: flex; align-items: center; gap: 11px; padding: 0 14px; border: 1px solid var(--line); background: white; border-radius: 6px; color: #8a938c; font-size: 13px; }
+    .command kbd { margin-left: auto; color: var(--muted); font: 10px "SFMono-Regular", monospace; }
+
+    /* Concept 1 */
+    .focus-grid { height: 880px; margin-top: 26px; display: grid; grid-template-columns: minmax(0, 1fr) 352px; gap: 24px; }
+    .attention { border: 1px solid var(--line); border-radius: 6px; background: white; overflow: hidden; }
+    .attention-head { height: 86px; padding: 20px 22px; display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--line); }
+    .attention-head h2 { margin: 8px 0 0; font-size: 22px; }
+    .attention-row { height: 198px; display: grid; grid-template-columns: 30px minmax(0, 1fr) 90px; gap: 8px; align-items: center; padding: 22px; border-bottom: 1px solid var(--line); }
+    .attention-row:last-child { border-bottom: 0; }
+    .order { align-self: start; padding-top: 3px; color: #9aa19c; font: 700 11px "SFMono-Regular", monospace; }
+    .row-meta { display: flex; gap: 12px; align-items: center; font: 700 9px "SFMono-Regular", monospace; color: var(--muted); text-transform: uppercase; }
+    .row-kind { font-weight: 800; }
+    .row-title { margin-top: 19px; font-size: 16px; font-weight: 750; }
+    .row-detail { margin-top: 9px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .row-action { height: 38px; border-radius: 5px; background: white; font-size: 12px; font-weight: 750; }
+    .side-stack { display: grid; grid-template-rows: 280px 1fr; gap: 20px; }
+    .momentum { position: relative; padding: 20px; border-radius: 6px; background: #e6efe7; }
+    .momentum h3, .radar h3 { margin: 9px 0 18px; font-size: 19px; }
+    .momentum-line { position: absolute; left: 73px; top: 88px; bottom: 30px; width: 1px; background: #b8c9bd; }
+    .momentum-row { position: relative; height: 47px; display: grid; grid-template-columns: 58px 1fr; gap: 12px; }
+    .momentum-row::before { content: ""; position: absolute; left: 50px; top: 5px; width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+    .momentum-date { color: var(--green); font: 700 10px "SFMono-Regular", monospace; }
+    .momentum-title { font-size: 13px; font-weight: 700; }
+    .momentum-type { margin-top: 4px; color: var(--muted); font: 700 8px "SFMono-Regular", monospace; }
+    .radar { padding: 20px; border: 1px solid var(--line); border-radius: 6px; background: white; }
+    .radar-head { display: flex; align-items: baseline; justify-content: space-between; }
+    .radar-head span { color: var(--muted); font: 700 9px "SFMono-Regular", monospace; }
+    .radar-intro { margin-top: -7px; color: var(--muted); font-size: 12px; }
+    .person-line { height: 78px; display: flex; align-items: center; gap: 13px; border-bottom: 1px solid var(--line); }
+    .person-copy { min-width: 0; }
+    .person-name { font-size: 13px; font-weight: 750; }
+    .person-org { margin-top: 5px; color: var(--muted); font-size: 11px; }
+    .person-state { margin-left: auto; font: 800 8px "SFMono-Regular", monospace; }
+    .nudge { padding-top: 24px; }
+    .nudge-title { margin-top: 12px; font-size: 15px; line-height: 1.35; font-weight: 750; }
+    .nudge-copy { margin: 12px 0 18px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .nudge button { width: 100%; }
+
+    /* Concept 2 */
+    .field-screen { background: #eef0eb; }
+    .field-top { position: absolute; inset: 0 0 auto 0; height: 78px; background: #fcfcf8; border-bottom: 1px solid #ccd2cc; display: flex; align-items: center; padding: 0 30px; gap: 22px; }
+    .field-top .brand { color: var(--forest); padding: 0; margin-right: 20px; }
+    .field-tabs { display: flex; align-items: center; height: 100%; gap: 4px; }
+    .field-tab { height: 100%; min-width: 128px; padding: 0 18px; display: flex; align-items: center; gap: 10px; border-bottom: 3px solid transparent; color: var(--muted); font-size: 13px; }
+    .field-tab.active { color: var(--ink); background: #f4f6f1; border-bottom-color: #4f8b63; font-weight: 750; }
+    .field-tools { margin-left: auto; display: flex; gap: 10px; }
+    .field-tool { height: 38px; padding: 0 14px; border: 1px solid #ccd2cc; border-radius: 5px; background: white; color: var(--ink); font-size: 12px; font-weight: 700; }
+    .field-body { position: absolute; inset: 78px 0 0 0; display: grid; grid-template-columns: 292px 1fr; }
+    .field-context { padding: 28px 24px; background: #203c2d; color: white; }
+    .field-context h1 { margin: 15px 0 10px; font-size: 30px; }
+    .field-context .lead { color: #c9d4cc; font-size: 13px; line-height: 1.55; }
+    .field-score { margin-top: 28px; padding: 18px 0; border-top: 1px solid rgba(255,255,255,.18); border-bottom: 1px solid rgba(255,255,255,.18); display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .field-score strong { display: block; font-size: 24px; }
+    .field-score span { color: #9fb0a4; font: 9px "SFMono-Regular", monospace; }
+    .field-menu { margin-top: 28px; }
+    .field-menu-item { height: 48px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,.1); color: #dbe3dd; font-size: 13px; }
+    .field-menu-item.active { color: var(--lime); font-weight: 750; }
+    .field-main { padding: 28px 34px; overflow: hidden; }
+    .field-heading { display: flex; align-items: flex-end; justify-content: space-between; }
+    .field-heading h2 { margin: 9px 0 0; font-size: 26px; }
+    .field-heading p { margin: 9px 0 0; color: var(--muted); font-size: 13px; }
+    .field-strip { margin-top: 26px; height: 124px; display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid #ced5ce; background: #f8faf6; }
+    .field-metric { padding: 20px 22px; border-right: 1px solid #ced5ce; }
+    .field-metric:last-child { border-right: 0; }
+    .field-metric .value { margin-top: 15px; font-size: 25px; font-weight: 800; }
+    .field-metric .sub { margin-top: 5px; color: var(--muted); font-size: 11px; }
+    .field-columns { height: 660px; margin-top: 24px; display: grid; grid-template-columns: 1.12fr .88fr; gap: 24px; }
+    .field-panel { border-top: 3px solid var(--green); background: white; box-shadow: var(--shadow); }
+    .field-panel-head { height: 74px; padding: 18px 22px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; }
+    .field-panel-head h3 { margin: 5px 0 0; font-size: 18px; }
+    .need-row { min-height: 114px; padding: 18px 22px; display: grid; grid-template-columns: 34px 1fr 100px; gap: 14px; align-items: start; border-bottom: 1px solid var(--line); }
+    .need-num { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--green-soft); color: var(--green); font: 800 10px "SFMono-Regular", monospace; }
+    .need-title { font-size: 14px; font-weight: 750; }
+    .need-copy { margin-top: 8px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .need-owner { text-align: right; color: var(--muted); font: 700 9px "SFMono-Regular", monospace; }
+    .opportunity-row { padding: 17px 20px; border-bottom: 1px solid var(--line); }
+    .opportunity-row .top { display: flex; align-items: center; justify-content: space-between; }
+    .opportunity-row h4 { margin: 12px 0 7px; font-size: 14px; }
+    .opportunity-row p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
+    .invite-band { margin: 18px 20px 0; padding: 16px; background: #f2f4ed; border-left: 3px solid var(--gold); }
+    .invite-people { margin-top: 12px; display: flex; gap: 8px; }
+
+    /* Concept 3 */
+    .relationship-screen { background: #f3f2ee; }
+    .studio-bar { height: 76px; background: white; border-bottom: 1px solid var(--line); display: flex; align-items: center; padding: 0 28px; gap: 26px; }
+    .studio-bar .brand { color: var(--forest); padding: 0; }
+    .studio-nav { display: flex; align-items: center; gap: 28px; margin-left: 30px; color: var(--muted); font-size: 13px; }
+    .studio-nav .active { color: var(--ink); font-weight: 800; }
+    .studio-search { margin-left: auto; width: 360px; height: 40px; display: flex; align-items: center; padding: 0 14px; border: 1px solid var(--line); border-radius: 5px; color: #89918b; font-size: 12px; }
+    .studio-body { height: 948px; display: grid; grid-template-columns: 310px 1fr 340px; }
+    .contact-list { background: #f9faf7; border-right: 1px solid var(--line); }
+    .list-head { height: 116px; padding: 24px; border-bottom: 1px solid var(--line); }
+    .list-head h1 { margin: 9px 0 0; font-size: 24px; }
+    .filters { margin-top: 18px; display: flex; gap: 7px; }
+    .filter { padding: 7px 9px; border: 1px solid var(--line); border-radius: 4px; background: white; color: var(--muted); font-size: 10px; font-weight: 700; }
+    .filter.active { color: var(--green); border-color: #9eb8a7; background: var(--green-soft); }
+    .contact { height: 92px; padding: 17px 20px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--line); }
+    .contact.selected { background: white; border-left: 4px solid var(--green); padding-left: 16px; }
+    .contact-main { min-width: 0; }
+    .contact-name { font-size: 13px; font-weight: 750; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .contact-org { margin-top: 5px; color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .contact-signal { margin-left: auto; align-self: flex-start; font: 800 8px "SFMono-Regular", monospace; }
+    .record { background: white; overflow: hidden; }
+    .record-head { height: 180px; padding: 30px 34px; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: 74px 1fr auto; gap: 20px; align-items: start; }
+    .record-avatar { width: 70px; height: 70px; border-radius: 50%; background: var(--gold); color: white; display: grid; place-items: center; font: 800 18px "SFMono-Regular", monospace; }
+    .record h1 { margin: 2px 0 6px; font-size: 28px; }
+    .record-org { color: var(--muted); font-size: 13px; }
+    .record-tags { margin-top: 17px; display: flex; gap: 8px; }
+    .record-actions { display: flex; gap: 8px; }
+    .record-action { height: 38px; padding: 0 13px; border: 1px solid var(--line); border-radius: 5px; background: white; font-size: 11px; font-weight: 750; }
+    .record-action.primary { color: white; background: var(--forest); border-color: var(--forest); }
+    .record-body { height: 768px; display: grid; grid-template-rows: 142px 1fr; }
+    .relationship-summary { padding: 24px 34px; display: grid; grid-template-columns: repeat(3,1fr); gap: 28px; border-bottom: 1px solid var(--line); background: #fbfcfa; }
+    .summary-item strong { display: block; margin-top: 10px; font-size: 14px; line-height: 1.35; }
+    .summary-item span { display: block; margin-top: 7px; color: var(--muted); font-size: 11px; line-height: 1.4; }
+    .timeline { padding: 26px 34px; overflow: hidden; }
+    .timeline-head { display: flex; align-items: center; justify-content: space-between; }
+    .timeline-head h2 { margin: 0; font-size: 18px; }
+    .timeline-source { color: var(--muted); font: 9px "SFMono-Regular", monospace; }
+    .event { position: relative; min-height: 108px; padding: 23px 0 20px 50px; border-bottom: 1px solid var(--line); }
+    .event-icon { position: absolute; left: 0; top: 22px; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--green-soft); color: var(--green); font: 800 10px "SFMono-Regular", monospace; }
+    .event-top { display: flex; justify-content: space-between; }
+    .event-title { font-size: 13px; font-weight: 750; }
+    .event-date { color: var(--muted); font: 9px "SFMono-Regular", monospace; }
+    .event-copy { margin-top: 9px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .intel { border-left: 1px solid var(--line); background: #f8f9f6; padding: 26px 22px; }
+    .intel h2 { margin: 8px 0 0; font-size: 20px; }
+    .intel-section { margin-top: 24px; padding-top: 22px; border-top: 1px solid var(--line); }
+    .next-touch { margin-top: 13px; padding: 18px; background: var(--forest); color: white; }
+    .next-touch h3 { margin: 11px 0 9px; font-size: 16px; line-height: 1.35; }
+    .next-touch p { margin: 0; color: #c7d3cb; font-size: 11px; line-height: 1.5; }
+    .next-touch button { width: 100%; margin-top: 18px; background: var(--lime); color: var(--forest); }
+    .connected-opportunity { margin-top: 13px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+    .connected-opportunity h4 { margin: 9px 0 6px; font-size: 13px; }
+    .connected-opportunity p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
+    .evidence-grid { margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .evidence-source { padding: 11px; background: white; border: 1px solid var(--line); }
+    .evidence-source strong { display: block; font-size: 11px; }
+    .evidence-source span { display: block; margin-top: 5px; color: var(--muted); font-size: 9px; }
+  </style>
+</head>
+<body>
+  <section class="screen" id="focus-desk">
+    <aside class="rail">
+      <div class="brand"><span class="brand-mark">A</span><span>A CURIOUS TRACTOR</span></div>
+      <div class="rail-label">WORK MODES</div>
+      <div class="rail-item active"><span class="rail-icon">01</span>Today</div>
+      <div class="rail-item"><span class="rail-icon">02</span>Listen</div>
+      <div class="rail-item"><span class="rail-icon">03</span>Curiosity</div>
+      <div class="rail-item"><span class="rail-icon">04</span>Action</div>
+      <div class="rail-item"><span class="rail-icon">05</span>Art</div>
+      <div class="rail-label">PROJECT FIELDS</div>
+      <div class="project-item"><span class="dot" style="background:#c99a2e"></span><span>Goods</span><span class="project-count">6</span></div>
+      <div class="project-item"><span class="dot" style="background:#6b78b8"></span><span>JusticeHub</span><span class="project-count">4</span></div>
+      <div class="project-item"><span class="dot" style="background:#4f8b63"></span><span>Harvest</span><span class="project-count">5</span></div>
+      <div class="project-item"><span class="dot" style="background:#a06b8b"></span><span>Empathy Ledger</span><span class="project-count">3</span></div>
+      <div class="project-item"><span class="dot" style="background:#44899b"></span><span>CivicGraph</span><span class="project-count">8</span></div>
+      <div class="source-health"><span class="dot" style="background:#64c985"></span>4/7 sources current</div>
+    </aside>
+    <main class="workspace">
+      <header class="topbar">
+        <div><div class="eyebrow mono">Thursday / 10 July</div><h1>Good morning, Ben</h1></div>
+        <div class="command"><span>Search</span><span>Find people, opportunities, invoices or ask ACT...</span><kbd>CMD K</kbd></div>
+      </header>
+      <div class="focus-grid">
+        <section class="attention">
+          <div class="attention-head"><div><div class="eyebrow mono">Needs your attention</div><h2>Four moves that change the week</h2></div><span class="badge" style="color:var(--blue);background:var(--blue-soft)">12 in inbox</span></div>
+          <div class="attention-row"><div class="order">01</div><div><div class="row-meta"><span class="row-kind" style="color:var(--blue)">Grant</span><span>Harvest / closes 18 Jul</span></div><div class="row-title">Regional Arts Fund - Quick Response</div><div class="row-detail">Choose the Harvest or Artlands activity and confirm the eligible applicant.</div></div><button class="row-action" style="border:1px solid var(--blue);color:var(--blue);background:var(--blue-soft)">Commit</button></div>
+          <div class="attention-row"><div class="order">02</div><div><div class="row-meta"><span class="row-kind" style="color:var(--green)">Relationship</span><span>JusticeHub / warm</span></div><div class="row-title">Justice Matrix - National Justice Project</div><div class="row-detail">Prepare the trial brief and confirm the meeting with Tiara and UN co-leads.</div></div><button class="row-action" style="border:1px solid var(--green);color:var(--green);background:var(--green-soft)">Prepare</button></div>
+          <div class="attention-row"><div class="order">03</div><div><div class="row-meta"><span class="row-kind" style="color:var(--amber)">Follow up</span><span>CivicGraph / result unknown</span></div><div class="row-title">REAL Innovation Fund EOI</div><div class="row-detail">Submitted with no recorded result, owner or follow-up date.</div></div><button class="row-action" style="border:1px solid var(--amber);color:var(--amber);background:var(--amber-soft)">Assign</button></div>
+          <div class="attention-row"><div class="order">04</div><div><div class="row-meta"><span class="row-kind" style="color:var(--red)">Money</span><span>Harvest / 140 days overdue</span></div><div class="row-title">Sonas Properties Pty Ltd</div><div class="row-detail">Two invoices need a recovery decision and a named owner today.</div></div><button class="row-action" style="border:1px solid var(--red);color:var(--red);background:var(--red-soft)">Chase</button></div>
+        </section>
+        <aside class="side-stack">
+          <section class="momentum"><div class="eyebrow mono" style="color:var(--green)">Next 14 days</div><h3>Momentum rail</h3><div class="momentum-line"></div>
+            <div class="momentum-row"><div class="momentum-date">15 JUL</div><div><div class="momentum-title">Justice Matrix prep</div><div class="momentum-type">MEETING / JUSTICEHUB</div></div></div>
+            <div class="momentum-row"><div class="momentum-date">18 JUL</div><div><div class="momentum-title">Regional Arts closes</div><div class="momentum-type">GRANT / HARVEST</div></div></div>
+            <div class="momentum-row"><div class="momentum-date">23 JUL</div><div><div class="momentum-title">Bunnings follow-up</div><div class="momentum-type">RELATIONSHIP / GOODS</div></div></div>
+            <div class="momentum-row"><div class="momentum-date">31 JUL</div><div><div class="momentum-title">ALIVE payment due</div><div class="momentum-type">MONEY / ACT</div></div></div>
+          </section>
+          <section class="radar"><div class="radar-head"><h3>Relationship radar</h3><span>6 ACTIVE</span></div><p class="radar-intro">People where one thoughtful move can open a door.</p>
+            <div class="person-line"><span class="avatar" style="background:#6b78b8">TD</span><div class="person-copy"><div class="person-name">Tiara De Silva</div><div class="person-org">National Justice Project</div></div><span class="person-state" style="color:#6b78b8">OPENING</span></div>
+            <div class="person-line"><span class="avatar" style="background:#4f8b63">MV</span><div class="person-copy"><div class="person-name">Michelle VanZanden</div><div class="person-org">Goods on Country partner</div></div><span class="person-state" style="color:#4f8b63">GROWING</span></div>
+            <div class="person-line"><span class="avatar" style="background:#c99a2e">KN</span><div class="person-copy"><div class="person-name">Katie Norman</div><div class="person-org">Regional Arts Australia</div></div><span class="person-state" style="color:#ad691c">RECIPROCAL</span></div>
+            <div class="nudge"><div class="eyebrow mono">Next nudge</div><div class="nudge-title">Send Katie the Harvest gathering invitation.</div><div class="nudge-copy">Why now: Regional Arts closes in 8 days and her last reply was warm.</div><button class="primary-button">Draft a personal note</button></div>
+          </section>
+        </aside>
+      </div>
+    </main>
+  </section>
+
+  <section class="screen field-screen" id="field-map">
+    <header class="field-top">
+      <div class="brand"><span class="brand-mark">A</span><span>A CURIOUS TRACTOR</span></div>
+      <nav class="field-tabs"><div class="field-tab"><span class="dot" style="background:#c99a2e"></span>Goods</div><div class="field-tab"><span class="dot" style="background:#6b78b8"></span>JusticeHub</div><div class="field-tab active"><span class="dot" style="background:#4f8b63"></span>Harvest</div><div class="field-tab"><span class="dot" style="background:#a06b8b"></span>Empathy Ledger</div><div class="field-tab"><span class="dot" style="background:#44899b"></span>CivicGraph</div></nav>
+      <div class="field-tools"><button class="field-tool">Find a person</button><button class="primary-button">Ask about Harvest</button></div>
+    </header>
+    <div class="field-body">
+      <aside class="field-context">
+        <div class="eyebrow mono" style="color:#9fb0a4">ACT-HV / Project field</div><h1>The Harvest</h1><p class="lead">Regenerative agriculture, gathering, therapeutic landscapes and community infrastructure at Witta.</p>
+        <div class="field-score"><div><strong>7</strong><span>ACTIVE THREADS</span></div><div><strong>4</strong><span>WARM PEOPLE</span></div><div><strong>$81K</strong><span>OPEN FUNDING</span></div><div><strong>3</strong><span>EVENT PATHS</span></div></div>
+        <div class="field-menu"><div class="field-menu-item active"><span>What needs moving</span><span>6</span></div><div class="field-menu-item"><span>People around the field</span><span>18</span></div><div class="field-menu-item"><span>Funding and procurement</span><span>9</span></div><div class="field-menu-item"><span>Gatherings and invitations</span><span>5</span></div><div class="field-menu-item"><span>Proof and stories</span><span>12</span></div><div class="field-menu-item"><span>Money and commitments</span><span>4</span></div></div>
+      </aside>
+      <main class="field-main">
+        <div class="field-heading"><div><div class="eyebrow mono">The field today</div><h2>What helps Harvest move next</h2><p>One project view linking money, people, invitations and opportunities.</p></div><button class="field-tool">Change project</button></div>
+        <div class="field-strip"><div class="field-metric"><div class="eyebrow mono">Funding fit</div><div class="value">3 strong</div><div class="sub">2 close within 30 days</div></div><div class="field-metric"><div class="eyebrow mono">Relationship energy</div><div class="value">Warm</div><div class="sub">Katie replied 4 days ago</div></div><div class="field-metric"><div class="eyebrow mono">Cash exposure</div><div class="value" style="color:var(--red)">$181K</div><div class="sub">Sonas invoices need a decision</div></div><div class="field-metric"><div class="eyebrow mono">Next gathering</div><div class="value">23 Aug</div><div class="sub">11 people to invite</div></div></div>
+        <div class="field-columns">
+          <section class="field-panel"><div class="field-panel-head"><div><div class="eyebrow mono">Priority sequence</div><h3>What the field needs next</h3></div><span class="badge" style="background:var(--green-soft);color:var(--green)">6 open</span></div>
+            <div class="need-row"><div class="need-num">01</div><div><div class="need-title">Confirm the Regional Arts activity</div><div class="need-copy">Use the gathering program as the lead activity and connect Katie before committing.</div></div><div class="need-owner">BEN<br>18 JUL</div></div>
+            <div class="need-row"><div class="need-num">02</div><div><div class="need-title">Invite the right people into Witta</div><div class="need-copy">Katie, Michelle, Charlie and two Sunshine Coast arts contacts are warm enough now.</div></div><div class="need-owner">COMMS<br>THIS WEEK</div></div>
+            <div class="need-row"><div class="need-num">03</div><div><div class="need-title">Decide the Sonas recovery path</div><div class="need-copy">Two invoices are 140 days overdue. Record the decision before forecasting new work.</div></div><div class="need-owner">BEN<br>TODAY</div></div>
+            <div class="need-row"><div class="need-num">04</div><div><div class="need-title">Build the proof pack once</div><div class="need-copy">Reuse the place, participation and land-care evidence across three live applications.</div></div><div class="need-owner">STORY<br>25 JUL</div></div>
+            <div class="need-row"><div class="need-num">05</div><div><div class="need-title">Open a procurement conversation</div><div class="need-copy">Package landscape, learning and gathering capability for council and health buyers.</div></div><div class="need-owner">GOODS<br>NEXT</div></div>
+          </section>
+          <section class="field-panel" style="border-top-color:var(--gold)"><div class="field-panel-head"><div><div class="eyebrow mono">Signals worth following</div><h3>Openings around Harvest</h3></div><span class="badge" style="background:var(--amber-soft);color:var(--amber)">Ranked</span></div>
+            <div class="opportunity-row"><div class="top"><span class="badge" style="background:var(--blue-soft);color:var(--blue)">Grant / 86 fit</span><span class="eyebrow mono">Closes 18 Jul</span></div><h4>Regional Arts Fund - Quick Response</h4><p>Strong for a gathering or regional creative development activity. Katie is a warm bridge.</p></div>
+            <div class="opportunity-row"><div class="top"><span class="badge" style="background:var(--green-soft);color:var(--green)">Partner / warm</span><span class="eyebrow mono">Reply 4d ago</span></div><h4>Regional Arts Australia</h4><p>Relationship, funding knowledge and an invitation pathway are all connected.</p></div>
+            <div class="opportunity-row"><div class="top"><span class="badge" style="background:var(--purple-soft);color:var(--purple)">Festival</span><span class="eyebrow mono">Aug-Nov</span></div><h4>Sunshine Coast creative program</h4><p>Possible artist exchange, place-based program and Witta invitation path.</p></div>
+            <div class="invite-band"><div class="eyebrow mono">Invite into the field</div><div style="margin-top:9px;font-size:14px;font-weight:750">Five people can connect funding, story and attendance.</div><div class="invite-people"><span class="avatar" style="background:#c99a2e">KN</span><span class="avatar" style="background:#4f8b63">MV</span><span class="avatar" style="background:#6b78b8">CM</span><span class="avatar" style="background:#a06b8b">EW</span><span class="avatar" style="background:#44899b">+1</span></div></div>
+          </section>
+        </div>
+      </main>
+    </div>
+  </section>
+
+  <section class="screen relationship-screen" id="relationship-studio">
+    <header class="studio-bar"><div class="brand"><span class="brand-mark">A</span><span>A CURIOUS TRACTOR</span></div><nav class="studio-nav"><span>Home</span><span>Inbox</span><span class="active">Relationships</span><span>Commitments</span><span>Money</span></nav><div class="studio-search">Search a person, organisation or conversation...</div></header>
+    <div class="studio-body">
+      <aside class="contact-list"><div class="list-head"><div class="eyebrow mono">Relationship studio</div><h1>People to know</h1><div class="filters"><span class="filter active">Warm</span><span class="filter">Needs touch</span><span class="filter">All</span></div></div>
+        <div class="contact selected"><span class="avatar" style="background:#c99a2e">KN</span><div class="contact-main"><div class="contact-name">Katie Norman</div><div class="contact-org">Regional Arts Australia</div></div><span class="contact-signal" style="color:var(--green)">WARM</span></div>
+        <div class="contact"><span class="avatar" style="background:#6b78b8">TD</span><div class="contact-main"><div class="contact-name">Tiara De Silva</div><div class="contact-org">National Justice Project</div></div><span class="contact-signal" style="color:#6b78b8">OPEN</span></div>
+        <div class="contact"><span class="avatar" style="background:#4f8b63">MV</span><div class="contact-main"><div class="contact-name">Michelle VanZanden</div><div class="contact-org">Goods on Country partner</div></div><span class="contact-signal" style="color:var(--green)">GROWING</span></div>
+        <div class="contact"><span class="avatar" style="background:#a06b8b">AC</span><div class="contact-main"><div class="contact-name">Amelia Kate Clifford</div><div class="contact-org">Harvest network</div></div><span class="contact-signal" style="color:var(--purple)">ACTIVE</span></div>
+        <div class="contact"><span class="avatar" style="background:#44899b">CM</span><div class="contact-main"><div class="contact-name">Charlie Mgee</div><div class="contact-org">Harvest / events</div></div><span class="contact-signal" style="color:var(--amber)">NUDGE</span></div>
+        <div class="contact"><span class="avatar" style="background:#65766b">BW</span><div class="contact-main"><div class="contact-name">Bunnings Trade</div><div class="contact-org">Goods procurement path</div></div><span class="contact-signal" style="color:var(--green)">WARM</span></div>
+        <div class="contact"><span class="avatar" style="background:#7c6e58">EW</span><div class="contact-main"><div class="contact-name">Eve Witney</div><div class="contact-org">Harvest membership</div></div><span class="contact-signal" style="color:var(--muted)">QUIET</span></div>
+      </aside>
+      <main class="record">
+        <header class="record-head"><div class="record-avatar">KN</div><div><h1>Katie Norman</h1><div class="record-org">Regional Arts Australia / relationship owner: Ben</div><div class="record-tags"><span class="badge" style="background:var(--green-soft);color:var(--green)">Warm</span><span class="badge" style="background:var(--amber-soft);color:var(--amber)">Reciprocal</span><span class="badge" style="background:var(--blue-soft);color:var(--blue)">Harvest</span></div></div><div class="record-actions"><button class="record-action">Add note</button><button class="record-action">Invite</button><button class="record-action primary">Draft message</button></div></header>
+        <div class="record-body">
+          <section class="relationship-summary"><div class="summary-item"><div class="eyebrow mono">What matters to Katie</div><strong>Regional arts, creative practice and equitable access.</strong><span>Inferred from Regional Arts Australia and recent threads.</span></div><div class="summary-item"><div class="eyebrow mono">What connects us</div><strong>Harvest gatherings, regional practice and place.</strong><span>Two-way value is clearer than a cold funding ask.</span></div><div class="summary-item"><div class="eyebrow mono">State of relationship</div><strong>Warm, active and ready for a specific invitation.</strong><span>Last meaningful reply: 4 days ago.</span></div></section>
+          <section class="timeline"><div class="timeline-head"><h2>Relationship history</h2><span class="timeline-source">GMAIL + HIGHLEVEL + NOTES</span></div>
+            <div class="event"><div class="event-icon">G</div><div class="event-top"><span class="event-title">Katie replied warmly to the Harvest update</span><span class="event-date">6 JUL 2026</span></div><div class="event-copy">Interested in the gathering format and asked what regional artists could contribute. No invitation has been sent yet.</div></div>
+            <div class="event"><div class="event-icon">N</div><div class="event-top"><span class="event-title">ACT noted a possible Regional Arts Fund fit</span><span class="event-date">4 JUL 2026</span></div><div class="event-copy">The Quick Response stream could support a gathering or regional creative development activity. Katie is a useful sense-check, not just a funder contact.</div></div>
+            <div class="event"><div class="event-icon">H</div><div class="event-top"><span class="event-title">Met through the regional practice network</span><span class="event-date">18 MAY 2026</span></div><div class="event-copy">Shared interest in place-based practice, local participation and stronger pathways for artists outside capital cities.</div></div>
+            <div class="event"><div class="event-icon">A</div><div class="event-top"><span class="event-title">ACT offered the Witta space for a future exchange</span><span class="event-date">2 APR 2026</span></div><div class="event-copy">The offer remains open. The next move should renew that invitation with a concrete date and purpose.</div></div>
+          </section>
+        </div>
+      </main>
+      <aside class="intel"><div class="eyebrow mono">Relationship intelligence</div><h2>What to do next</h2><div class="next-touch"><div class="eyebrow mono" style="color:#9fb0a4">Recommended next touch</div><h3>Invite Katie to shape the August Harvest gathering.</h3><p>Lead with creative exchange and regional participation. Mention the grant only as a secondary sense-check.</p><button class="primary-button">Draft from real context</button></div>
+        <div class="intel-section"><div class="eyebrow mono">Connected openings</div><div class="connected-opportunity"><span class="badge" style="background:var(--blue-soft);color:var(--blue)">Grant / 86 fit</span><h4>Regional Arts Fund - Quick Response</h4><p>Closes 18 Jul. Harvest activity and applicant still need confirmation.</p></div><div class="connected-opportunity"><span class="badge" style="background:var(--purple-soft);color:var(--purple)">Gathering</span><h4>Harvest artist exchange</h4><p>Potential invitation for August with a regional practice focus.</p></div></div>
+        <div class="intel-section"><div class="eyebrow mono">Evidence behind this view</div><div class="evidence-grid"><div class="evidence-source"><strong>Gmail</strong><span>3 threads / current</span></div><div class="evidence-source"><strong>HighLevel</strong><span>Profile / current</span></div><div class="evidence-source"><strong>Notion</strong><span>2 notes / 6 Jul</span></div><div class="evidence-source"><strong>CivicGraph</strong><span>1 grant / current</span></div></div></div>
+      </aside>
+    </div>
+  </section>
+</body>
+</html>

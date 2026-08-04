@@ -1,13 +1,17 @@
 import { notFound } from 'next/navigation';
+import { Suspense } from 'react';
 import { cookies } from 'next/headers';
 import { isAdminEmail } from '@/lib/admin';
 import { createSupabaseServer } from '@/lib/supabase-server';
-import { ACT_FAST_PROFILE, isActSlug, shouldUseFastLocalOrg } from '@/lib/services/fast-local-org';
-import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
+import { ACT_FAST_PROFILE, isActSlug } from '@/lib/services/fast-local-org';
+import { ACT_E2E_PROJECTS } from '@/lib/services/act-e2e-fixtures';
+import { getOrgProfileBySlug, getOrgProjectSummaries } from '@/lib/services/org-dashboard-service';
+import { ActTestGuide } from './_components/act-test-guide';
+import { ActWorkspaceShell } from './_components/act-workspace-shell';
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  if (shouldUseFastLocalOrg() && isActSlug(slug)) {
+  if (isActSlug(slug)) {
     return {
       title: `${ACT_FAST_PROFILE.name} — CivicGraph`,
       description: ACT_FAST_PROFILE.description ?? `Organisation dashboard for ${ACT_FAST_PROFILE.name}`,
@@ -29,8 +33,24 @@ export default async function OrgLayout({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  if (shouldUseFastLocalOrg() && isActSlug(slug)) {
-    return <>{children}</>;
+  if (isActSlug(slug)) {
+    const storedProfile = process.env.ACT_E2E_FIXTURES === '1' ? ACT_FAST_PROFILE : await getOrgProfileBySlug(slug);
+    const projects = process.env.ACT_E2E_FIXTURES === '1'
+      ? ACT_E2E_PROJECTS
+      : storedProfile
+        ? await getOrgProjectSummaries(storedProfile.id)
+        : [];
+
+    return (
+      <div className="ws act-workspace min-h-screen" data-act-workspace>
+        <ActWorkspaceShell slug={slug} projects={projects}>
+          {children}
+        </ActWorkspaceShell>
+        <Suspense fallback={null}>
+          <ActTestGuide slug={slug} />
+        </Suspense>
+      </div>
+    );
   }
 
   const profile = await getOrgProfileBySlug(slug);

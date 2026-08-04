@@ -347,7 +347,7 @@ export function OrgPipelineKanban({
                       {colCards.length === 0 && (
                         <div className="text-[10px] font-mono text-bauhaus-muted italic px-1 py-3 text-center">
                           {col === 'discovered'
-                            ? 'No undecided opportunities meet the score floor.'
+                            ? 'No current machine suggestions pass the evidence gate.'
                             : `Drag cards here to mark ${COLUMN_LABELS[col]}.`}
                         </div>
                       )}

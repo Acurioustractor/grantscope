@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { OrgFinancialPulse } from '@/lib/services/org-income-service';
+import type { PayablesReconciliationStatus } from '@/lib/services/org-verification-service';
 
 function fmtMoney(n: number, opts: { sign?: boolean } = {}): string {
   if (!Number.isFinite(n) || n === 0) return '$0';
@@ -21,9 +22,11 @@ function runwayLabel(months: number | null): { value: string; tone: 'green' | 'y
 export function FinancialPulseTile({
   pulse,
   slug,
+  payablesVerification,
 }: {
   pulse: OrgFinancialPulse | null;
   slug: string;
+  payablesVerification?: PayablesReconciliationStatus | null;
 }) {
   if (!pulse) return null;
 
@@ -146,14 +149,22 @@ export function FinancialPulseTile({
         <div className="px-5 py-4">
           <div className="flex items-baseline justify-between">
             <div>
-              <div className="text-[10px] font-black uppercase tracking-widest text-gray-500">Payables (A/P) · Xero status only</div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-gray-500">Payables (A/P) · proof checked</div>
               <div className="mt-1 text-2xl font-black tabular-nums text-gray-500">
                 {fmtMoney(pulse.ap_total)}
               </div>
               <div className="text-[10px] font-mono text-gray-500">
-                {pulse.ap_count} bills at AUTHORISED — most paid via bank rec, not reflected here
+                {payablesVerification
+                  ? `${payablesVerification.exactBankRecMatchCount} payment-link proofs (${fmtMoney(payablesVerification.exactBankRecMatchTotal)}); ${fmtMoney(payablesVerification.unresolvedTotal)} unproved`
+                  : `${pulse.ap_count} bills at AUTHORISED; payment proof not loaded`}
               </div>
             </div>
+            <Link
+              href={`/org/${slug}/payables`}
+              className="ml-4 shrink-0 border border-gray-600 bg-white/5 px-2 py-1 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white hover:text-bauhaus-black"
+            >
+              Triage
+            </Link>
           </div>
         </div>
       </div>

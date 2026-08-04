@@ -188,17 +188,19 @@ The system enables grassroots programs to "fork" proven models, access AI insigh
   {
     category: 'capacity',
     question: "Describe the Goods on Country project and its operations.",
-    answer: `Goods on Country is a circular-economy venture co-designing essential products (beds, mattresses, washing machines) for remote Indigenous communities while converting local waste into manufacturing inputs.
+    answer: `Goods on Country works on essential products designed in community, with community, while testing how local plastic can become a manufacturing input.
 
 Current Operations:
-- 389 individual assets deployed: 363 Basket Beds, 6 Weave Beds, 20 ID Washing Machines
-- 8 remote communities served: Palm Island (141 assets), Tennant Creek (139), Alice Homelands (60), Maningrida (24), Kalgoorlie (20), and more
+- 540 beds deployed: 177 Stretch Beds and 363 Basket Beds
+- 11 communities served, with 12 distinct communities touched
+- 22 washers in community under Ben's manual per-community ruling; this is not yet register-row-derived
+- 3,540 kg Stretch-bed plastic design mass, calculated as 177 x 20 kg; not a weighbridge or measured diversion total
 - Real-time IoT monitoring of 10 washing machines via Particle.io
 - QR code tracking system with 389 unique codes for immediate support access
 - Automated alerts for maintenance, overuse, and high-priority tickets
 - Consumer platform (v2) with e-commerce, community storytelling, and sponsorship program ("Buy for a Community")
 
-Revenue Model: Communities own production and profits. 40% profit-sharing to source communities. E-commerce revenue + sponsorship + circular manufacturing reduces material costs.
+Operating direction: Goods. is the current maker and seller inside A Curious Tractor. Goods on Country is the charity. A community production enterprise is the intended future form for local making, contracts, margin, knowledge and decisions, but that form and any profit-sharing terms are not yet settled.
 
 Domain: goodsoncountry.com.au`,
     tags: ['goods', 'circular-economy', 'remote-communities', 'assets'],
@@ -226,7 +228,9 @@ Justice & Evidence:
 - 10+ organisations adopting open-source tools
 
 Community Infrastructure:
-- 389 assets (beds, washing machines) deployed across 8 remote communities
+- 540 beds deployed across 11 served communities, with 12 distinct communities touched
+- 22 washers in community under the current manual ruling, not a register-row-derived count
+- 3,540 kg calculated Stretch-bed design mass, not measured waste diversion
 - Real-time IoT monitoring protecting community investments
 - QR-code support system enabling immediate maintenance access
 
@@ -606,7 +610,7 @@ Not permanent interventions — designed for obsolescence: By 2036, ACT should b
 Concrete examples:
 - ALMA provides transparent, replicable evaluation that 10+ orgs already use independently
 - Empathy Ledger's OCAP architecture means communities own their data infrastructure
-- Goods on Country transfers production ownership to source communities
+- Goods is testing pathways through which a community production enterprise could come to own the making; no transfer is claimed complete
 - The Harvest builds community governance group to carry program forward
 - BCV transitions to Indigenous land trust with Jinibara partnership`,
     tags: ['systems-change', 'power-transfer', 'infrastructure'],
@@ -621,7 +625,7 @@ Data Sovereignty as Architecture: Empathy Ledger embeds OCAP (Ownership, Control
 
 Community Authority in Evaluation: ALMA weights community authority highest (30%) in evaluating youth justice interventions. This means Indigenous-led programs are structurally prioritised, inverting traditional evidence hierarchies that favour academic credentials over community knowledge.
 
-Economic Transfer: 40% profit-sharing commitment in governance. Goods on Country co-designs products with remote communities and transfers production ownership. BCV creates Indigenous land-care jobs funded by eco-cottage revenue and biodiversity credits.
+Economic Transfer: Goods products are designed in community, with community. The direction is for an agreed community production enterprise to come to hold local making, contracts, margin, knowledge and decisions. The form and terms are not yet settled, and no ownership transfer is claimed complete. BCV creates Indigenous land-care jobs funded by eco-cottage revenue and biodiversity credits.
 
 Cultural Preservation: 1,000+ stories protected through Empathy Ledger. 15 years of Palm Island reports digitized with AI search. Sacred content protection with Elder review workflows. Renewable consent management respecting cultural protocols.
 

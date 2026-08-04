@@ -473,10 +473,10 @@ export default async function GoodsGovernancePage({ params }: { params: Promise<
             <div className="p-4">
               <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Proof pack</div>
               <div className="mt-1 text-[12px] font-bold leading-snug text-bauhaus-black">
-                Delivered figures as of {GOODS_DELIVERED.asOf}
+                Asset canon as of {GOODS_DELIVERED.asOf}
               </div>
               <div className="mt-1 text-[11px] leading-snug text-bauhaus-muted">
-                {GOODS_DELIVERED.beds} beds and {GOODS_DELIVERED.washers} washers delivered.
+                {GOODS_DELIVERED.beds} beds deployed and {GOODS_DELIVERED.washers} washers in community.
               </div>
               <div className="mt-2 border-t border-bauhaus-black/10 pt-1.5 text-[11px] font-bold leading-snug text-bauhaus-black">
                 Stewardship handover {STEWARDSHIP_HANDOVER}

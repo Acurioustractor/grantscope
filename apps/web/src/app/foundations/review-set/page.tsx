@@ -181,7 +181,11 @@ export default async function FoundationReviewSetPage() {
                 foundation_id,
                 COUNT(*)::int AS year_memory_count,
                 COUNT(*) FILTER (
-                  WHERE COALESCE(metadata->>'source', '') NOT ILIKE '%inferred%'
+                  WHERE source_report_url IS NOT NULL
+                     OR (
+                       COALESCE(metadata->>'source', '') <> ''
+                       AND COALESCE(metadata->>'source', '') NOT ILIKE '%inferred%'
+                     )
                 )::int AS verified_source_backed_count
               FROM foundation_program_years
               GROUP BY foundation_id

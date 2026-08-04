@@ -11,6 +11,8 @@
     "signoff": "node --env-file=.env scripts/grantscope-signoff.mjs",
     "signoff:full": "node --env-file=.env scripts/grantscope-signoff.mjs --full",
     "branch:check": "node scripts/grantscope-signoff.mjs --branch-only",
+    "xero:sync:act": "node scripts/sync-act-xero.mjs",
+    "xero:sync:act:deep": "node scripts/sync-act-xero.mjs --days=365 --payments-days=365",
     "wiki:support:index": "node scripts/build-wiki-support-index.mjs",
     "wiki:support:frontier": "node --env-file=.env scripts/seed-wiki-support-frontier.mjs",
     "report:youth-justice:cache": "node --env-file=.env scripts/refresh-youth-justice-report-cache.mjs",
@@ -18,8 +20,11 @@
     "report:youth-justice:refresh": "npm run report:youth-justice:cache && npm run report:youth-justice:snapshot",
     "report:youth-justice:source-refresh": "node --env-file=.env scripts/refresh-youth-justice-source-chain.mjs && node --env-file=.env scripts/run-tracker-refresh.mjs --domain=youth-justice --all-jurisdictions && npm run report:youth-justice:refresh",
     "discover": "tsx scripts/grantscope-discovery.mjs",
+    "discover:act:octen": "node --env-file=.env scripts/discover-act-opportunities.mjs --provider=octen --count=8",
+    "discover:act:fixture": "node --env-file=.env scripts/discover-act-opportunities.mjs --provider=octen --fixture=scripts/fixtures/octen-act-opportunities.json --project=ACT-GD --dry-run",
     "sync-acnc": "tsx scripts/sync-acnc-register.mjs",
     "funding-benchmark:build": "node scripts/funding-autoresearch/build-benchmark-set.mjs",
+    "funding-benchmark:act": "node --env-file=.env scripts/build-act-opportunity-benchmark.mjs",
     "funding-benchmark:evaluate": "node scripts/funding-autoresearch/evaluate.mjs --save",
     "funding-autoresearch": "node scripts/funding-autoresearch/autoresearch.mjs",
     "bittensor:money-model": "node scripts/bittensor-money-model.mjs",
@@ -33,7 +38,9 @@
     "tracker:refresh:qld": "node --env-file=.env scripts/run-tracker-refresh.mjs --domain=youth-justice --jurisdiction=QLD",
     "tracker:refresh:nsw": "node --env-file=.env scripts/run-tracker-refresh.mjs --domain=youth-justice --jurisdiction=NSW",
     "tracker:refresh:nt": "node --env-file=.env scripts/run-tracker-refresh.mjs --domain=youth-justice --jurisdiction=NT",
-    "tracker:refresh:portfolio": "node --env-file=.env scripts/run-tracker-refresh.mjs --domain=youth-justice --all-jurisdictions"
+    "tracker:refresh:portfolio": "node --env-file=.env scripts/run-tracker-refresh.mjs --domain=youth-justice --all-jurisdictions",
+    "funding-fit:goods:evaluate": "node scripts/evaluate-project-funding-fit.mjs",
+    "funding:research:goods": "node --env-file=.env scripts/research-project-funding.mjs --profile=scripts/funding-profiles/goods-on-country.json"
   },
   "keywords": [
     "grants",

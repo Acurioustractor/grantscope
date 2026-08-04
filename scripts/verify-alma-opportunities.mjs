@@ -54,35 +54,65 @@ async function run() {
   const runId = runRow?.id ?? null;
   const startedAt = Date.now();
 
-  const { data: rows, error } = await supabase
-    .from('alma_funding_opportunities')
-    .select('id, name, funder_name, source_url, deadline, verification_status, opportunity_type')
-    .neq('opportunity_type', 'unverified');
-
-  if (error) {
-    console.error('Read failed:', error.message);
-    if (runId) await logFailed(supabase, runId, error);
-    process.exit(1);
+  const rows = [];
+  const pageSize = 1000;
+  for (let from = 0; ; from += pageSize) {
+    const { data: page, error } = await supabase
+      .from('alma_funding_opportunities')
+      .select('id, name, funder_name, source_url, deadline, verification_status, verified_at, opportunity_type')
+      .neq('opportunity_type', 'unverified')
+      .order('id', { ascending: true })
+      .range(from, from + pageSize - 1);
+    if (error) {
+      console.error('Read failed:', error.message);
+      if (runId) await logFailed(supabase, runId, error);
+      process.exit(1);
+    }
+    rows.push(...(page ?? []));
+    if (!page || page.length < pageSize) break;
   }
 
   let verified = 0, stale = 0, unchanged = 0, skipped = 0;
-  const updates = [];
+  const concurrencyArg = process.argv.find((arg) => arg.startsWith('--concurrency='));
+  const concurrency = Math.max(1, Number.parseInt(concurrencyArg?.split('=')[1] || '10', 10));
+  const maxAgeArg = process.argv.find((arg) => arg.startsWith('--max-age-hours='));
+  const maxAgeHours = Math.max(0, Number.parseInt(maxAgeArg?.split('=')[1] || '24', 10));
 
-  for (const row of rows ?? []) {
+  async function persist(row, verificationStatus, reason) {
+    if (DRY_RUN) return;
+    const checkedAt = new Date().toISOString();
+    const { error: updateError } = await supabase
+      .from('alma_funding_opportunities')
+      .update({
+        verification_status: verificationStatus,
+        verified_at: checkedAt,
+        verification_notes: `Auto-check: ${reason} at ${checkedAt}`,
+      })
+      .eq('id', row.id);
+    if (updateError) throw new Error(`Update failed for ${row.id}: ${updateError.message}`);
+  }
+
+  async function verifyRow(row) {
     // Deadline auto-stale: past-deadline rows can't be verified-active
     if (row.deadline && new Date(row.deadline) < new Date()) {
       if (row.verification_status !== 'stale') {
-        updates.push({ id: row.id, verification_status: 'stale', verified_at: new Date().toISOString(), reason: 'past_deadline' });
+        await persist(row, 'stale', 'past_deadline');
         stale++;
       } else {
         unchanged++;
       }
-      continue;
+      return;
     }
 
     if (!row.source_url) {
       skipped++;
-      continue;
+      return;
+    }
+
+    const lastVerifiedAt = row.verified_at ? new Date(row.verified_at).getTime() : 0;
+    if (maxAgeHours > 0 && lastVerifiedAt >= Date.now() - maxAgeHours * 3_600_000) {
+      skipped++;
+      return;
     }
 
     const result = await checkUrl(row.source_url);
@@ -102,17 +132,12 @@ async function run() {
     }
 
     if (newStatus !== row.verification_status) {
-      updates.push({
-        id: row.id,
-        verification_status: newStatus,
-        verified_at: new Date().toISOString(),
-        reason: result.status === 'ok' ? 'live_check' : `http_${result.code}`,
-      });
+      await persist(row, newStatus, result.status === 'ok' ? 'live_check' : `http_${result.code}`);
       if (newStatus === 'verified') verified++;
       else if (newStatus === 'stale') stale++;
     } else if (result.status === 'ok' && wasVerified) {
       // refresh verified_at on live OK
-      updates.push({ id: row.id, verification_status: 'verified', verified_at: new Date().toISOString(), reason: 'refresh' });
+      await persist(row, 'verified', 'refresh');
       unchanged++;
     } else {
       unchanged++;
@@ -121,25 +146,22 @@ async function run() {
     console.log(`  ${result.status.padEnd(12)} ${row.funder_name?.slice(0,30).padEnd(30)} ${row.name.slice(0,60)}`);
   }
 
-  if (!DRY_RUN && updates.length) {
-    for (const u of updates) {
-      await supabase
-        .from('alma_funding_opportunities')
-        .update({
-          verification_status: u.verification_status,
-          verified_at: u.verified_at,
-          verification_notes: `Auto-check: ${u.reason} at ${new Date().toISOString()}`,
-        })
-        .eq('id', u.id);
+  const queue = rows;
+  let nextIndex = 0;
+  async function worker() {
+    while (nextIndex < queue.length) {
+      const row = queue[nextIndex++];
+      await verifyRow(row);
     }
   }
+  await Promise.all(Array.from({ length: Math.min(concurrency, queue.length) }, () => worker()));
 
-  const summary = { verified, stale, unchanged, skipped, total: rows?.length ?? 0 };
+  const summary = { verified, stale, unchanged, skipped, total: rows.length };
   console.log(`\n${DRY_RUN ? '[dry-run] ' : ''}Done in ${(Date.now() - startedAt) / 1000}s:`, summary);
 
   if (runId) {
     await logComplete(supabase, runId, {
-      items_found: rows?.length ?? 0,
+      items_found: rows.length,
       items_new: verified,
       items_updated: stale,
       metadata: summary,

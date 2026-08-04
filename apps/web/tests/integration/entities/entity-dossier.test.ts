@@ -30,14 +30,15 @@ function gsqlJson(query: string): Record<string, unknown>[] {
 }
 
 describeDb('Entity Dossier - MV data', () => {
-  it('returns correct stats for Defence (>100K relationships)', () => {
+  it('returns high-volume stats for Defence after relationship deduplication', () => {
     const result = gsql(
       "SELECT total_relationships, total_outbound_amount FROM mv_gs_entity_stats WHERE gs_id = 'AU-GOV-0ec9911c9e99d1b7bb1b77f4abffc583'"
     );
-    // Relationship count grows with data ingestion — use range, not exact match
+    // Rebuilds can reduce this deduplicated count as well as grow it. Keep this
+    // assertion focused on the expected data scale rather than a stale snapshot.
     const match = result.match(/(\d{5,})\s*\|/);
     expect(match).not.toBeNull();
-    expect(Number(match![1])).toBeGreaterThan(300000);
+    expect(Number(match![1])).toBeGreaterThan(250000);
     // Should have significant outbound amount
     expect(result).toMatch(/\d{10,}/); // 10+ digit number
   });

@@ -4,10 +4,7 @@
  * grantscope's `goods_relationships` table.
  *
  * Run:    node --env-file=.env scripts/sync-goods-ghl.mjs
- * Apply:  source .env && PGPASSWORD="$DATABASE_PASSWORD" psql \
- *           "host=aws-0-ap-southeast-2.pooler.supabase.com port=6543 \
- *            user=postgres.tednluwflfhxyucgwigh dbname=postgres connect_timeout=10" \
- *           -f scripts/seed-goods-ghl.generated.sql
+ * Apply:  node --env-file=.env scripts/sync-goods-ghl.mjs --apply
  *
  * Pages through 3 Goods pipelines, normalizes each opportunity's stage onto the
  * goods_relationships engagement ladder, and emits an idempotent SQL file that
@@ -23,7 +20,6 @@
 import { writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { execFileSync } from 'node:child_process';
 import { createClient } from '@supabase/supabase-js';
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
 
@@ -32,14 +28,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUT_SQL = resolve(__dirname, 'seed-goods-ghl.generated.sql');
 const DUMP_FILE = resolve(__dirname, '.ghl-last-response.json');
 
-// --apply: after generating the SQL, run psql to upsert into goods_relationships
-// and log the run to agent_runs. This is what the scheduled `sync-goods-ghl`
-// agent invokes so the warmth map self-refreshes. Without it, SQL is generated
-// but not applied (the original dry-run behaviour).
+// --apply: after generating the reviewable SQL artifact, upsert through the
+// Supabase service API and log the run. This works in the scheduled runtime,
+// which intentionally does not ship a local psql binary.
 const APPLY = process.argv.includes('--apply');
-const PG_CONN =
-  'host=aws-0-ap-southeast-2.pooler.supabase.com port=6543 user=postgres.tednluwflfhxyucgwigh dbname=postgres connect_timeout=10';
-
 const API_KEY = process.env.GHL_API_KEY;
 const LOCATION_ID = process.env.GHL_LOCATION_ID;
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -217,6 +209,27 @@ function sqlNum(v) {
   return Number.isFinite(n) ? String(n) : '0';
 }
 
+function computeWarmth(stage, lastTouch, totalReceived, hasPriorSupport) {
+  const stageScore = {
+    identified: 10,
+    researching: 25,
+    contacted: 40,
+    in_conversation: 60,
+    proposal: 75,
+    committed: 90,
+    repeat: 100,
+    dormant: 20,
+    declined: 0,
+  }[stage] ?? 0;
+  const touchedAt = lastTouch ? new Date(lastTouch).getTime() : Number.NaN;
+  const days = Number.isNaN(touchedAt) ? null : Math.max(0, (Date.now() - touchedAt) / 86_400_000);
+  const recency = days === null ? 0 : Math.max(0, 100 * Math.exp(-days / 60));
+  const history = hasPriorSupport
+    ? Math.min(100, 50 + 12 * Math.log(Math.max(1, totalReceived) / 1000 + 1))
+    : 0;
+  return Math.round(stageScore * 0.4 + recency * 0.2 + history * 0.2);
+}
+
 function contactName(opp) {
   const c = opp.contact || {};
   const name =
@@ -272,7 +285,7 @@ async function main() {
       const ghlContactId = opp.contactId || opp.contact?.id || null;
       const lastTouch = opp.updatedAt || opp.lastStatusChangeAt || null;
       const hasPrior = stage === 'committed' || stage === 'repeat';
-      const totalReceived = hasPrior ? sqlNum(opp.monetaryValue) : '0';
+      const totalReceived = hasPrior ? Number(sqlNum(opp.monetaryValue)) : 0;
 
       // Structured GHL signal — contact tags (temperature, ring, briefs, roles,
       // place, campaign stage) + opportunity status/stage. Decoded into funder
@@ -383,7 +396,7 @@ async function main() {
   writeFileSync(OUT_SQL, lines.join('\n'));
 
   // --- Summary to stdout (NO raw GHL JSON) ---
-  console.log('GHL → goods_relationships sync (SQL generated, not yet applied)');
+  console.log(`GHL → goods_relationships sync (${APPLY ? 'Supabase apply' : 'SQL review only'})`);
   console.log('Opportunities pulled per pipeline:');
   for (const pp of perPipeline) {
     console.log(`  ${pp.name} [${pp.type}]: ${pp.count}`);
@@ -406,24 +419,60 @@ async function main() {
     console.error('FATAL: --apply needs SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (for agent_runs logging).');
     process.exit(2);
   }
-  if (!process.env.DATABASE_PASSWORD) {
-    console.error('FATAL: --apply needs DATABASE_PASSWORD to run psql.');
-    process.exit(2);
-  }
-
   const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
   const run = await logStart(supabase, 'sync-goods-ghl', 'Sync Goods GHL Warmth');
   try {
-    execFileSync('psql', [PG_CONN, '-v', 'ON_ERROR_STOP=1', '-q', '-f', OUT_SQL], {
-      env: { ...process.env, PGPASSWORD: process.env.DATABASE_PASSWORD },
-      stdio: ['ignore', 'inherit', 'inherit'],
+    const dedupeKeys = rows.map((row) => `${row.relationship_type}:${row.display_name.trim().toLowerCase()}`);
+    const existingByKey = new Map();
+    for (let offset = 0; offset < dedupeKeys.length; offset += 200) {
+      const { data: existing, error: existingError } = await supabase
+        .from('goods_relationships')
+        .select('dedupe_key, total_received_aud, has_prior_support, source_refs')
+        .in('dedupe_key', dedupeKeys.slice(offset, offset + 200));
+      if (existingError) throw new Error(`existing relationship lookup failed: ${existingError.message}`);
+      for (const relationship of existing ?? []) existingByKey.set(relationship.dedupe_key, relationship);
+    }
+
+    const payload = rows.map((row) => {
+      const dedupeKey = `${row.relationship_type}:${row.display_name.trim().toLowerCase()}`;
+      const existing = existingByKey.get(dedupeKey);
+      const totalReceived = Math.max(Number(existing?.total_received_aud ?? 0), Number(row.total_received_aud ?? 0));
+      const hasPriorSupport = Boolean(existing?.has_prior_support) || row.has_prior_support;
+      const sourceRefs = {
+        ...(existing?.source_refs && typeof existing.source_refs === 'object' ? existing.source_refs : {}),
+        source: 'ghl',
+        pipeline: row.pipeline,
+        opportunity_id: row.ghl_opportunity_id,
+        contact_id: row.ghl_contact_id,
+      };
+      return {
+        relationship_type: row.relationship_type,
+        display_name: row.display_name,
+        ghl_opportunity_id: row.ghl_opportunity_id,
+        ghl_contact_id: row.ghl_contact_id,
+        stage: row.stage,
+        last_touch_at: row.last_touch_at ? new Date(row.last_touch_at).toISOString() : null,
+        total_received_aud: totalReceived,
+        has_prior_support: hasPriorSupport,
+        warmth_computed: computeWarmth(row.stage, row.last_touch_at, totalReceived, hasPriorSupport),
+        source_refs: sourceRefs,
+        ghl_signal: row.ghl_signal,
+        updated_at: new Date().toISOString(),
+      };
     });
-    // Upsert, so every emitted row is touched; we don't distinguish new vs existing.
+
+    for (let offset = 0; offset < payload.length; offset += 200) {
+      const { error } = await supabase
+        .from('goods_relationships')
+        .upsert(payload.slice(offset, offset + 200), { onConflict: 'dedupe_key' });
+      if (error) throw new Error(`goods relationship upsert failed: ${error.message}`);
+    }
+
     await logComplete(supabase, run.id, { items_found: totalOpps, items_updated: rows.length });
     console.log(`\nApplied: ${rows.length} rows upserted into goods_relationships.`);
   } catch (e) {
     await logFailed(supabase, run.id, e);
-    console.error('FATAL (apply): psql failed:', e.message);
+    console.error('FATAL (apply): Supabase upsert failed:', e.message);
     process.exit(4);
   }
 }

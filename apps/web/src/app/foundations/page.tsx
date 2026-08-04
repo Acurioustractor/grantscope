@@ -3,11 +3,13 @@ import { FilterBar } from '../components/filter-bar';
 import { FoundationActionsProvider, FoundationCardActions } from '../components/foundation-card-actions';
 import { FundingIntelligenceRail } from '../components/funding-intelligence-rail';
 import { ListPreviewProvider, FoundationPreviewTrigger } from '../components/list-preview';
+import { assessFoundationReview } from '@/lib/foundation-review';
 
 export const dynamic = 'force-dynamic';
 
 interface FoundationRow {
   id: string;
+  acnc_abn?: string | null;
   name: string;
   type: string | null;
   website: string | null;
@@ -17,6 +19,8 @@ interface FoundationRow {
   geographic_focus: string[];
   profile_confidence: string;
   enriched_at: string | null;
+  last_scraped_at?: string | null;
+  scraped_urls?: string[] | null;
   created_at: string;
 }
 
@@ -40,6 +44,14 @@ interface FoundationReviewSummaryRow {
   board_roles: number;
   table_grants: number;
   relationship_grants: number;
+}
+
+interface FoundationProgramSummaryRow {
+  foundation_id: string;
+  program_count: number;
+  open_count: number;
+  application_pathway_count: number;
+  latest_program_scraped_at: string | null;
 }
 
 interface ReviewBreakdownRow {
@@ -169,6 +181,13 @@ function formatGiving(amount: number | null): string {
   if (amount >= 1000000) return `$${(amount / 1000000).toFixed(1)}M`;
   if (amount >= 1000) return `$${(amount / 1000).toFixed(0)}K`;
   return `$${amount.toLocaleString()}`;
+}
+
+function formatShortDate(value: string | null | undefined): string {
+  if (!value) return 'Unknown';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 function typeLabel(type: string | null): string {
@@ -482,7 +501,11 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
           foundation_id,
           COUNT(*)::int AS year_memory_count,
           COUNT(*) FILTER (
-            WHERE COALESCE(metadata->>'source', '') NOT ILIKE '%inferred%'
+            WHERE source_report_url IS NOT NULL
+               OR (
+                 COALESCE(metadata->>'source', '') <> ''
+                 AND COALESCE(metadata->>'source', '') NOT ILIKE '%inferred%'
+               )
           )::int AS verified_source_backed_count
         FROM foundation_program_years
         GROUP BY foundation_id
@@ -557,7 +580,7 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
       }),
       db.rpc('exec_sql', {
         query: `${reviewCte}
-                SELECT id, name, type, website, description, total_giving_annual, thematic_focus, geographic_focus, profile_confidence, enriched_at, created_at
+                SELECT id, acnc_abn, name, type, website, description, total_giving_annual, thematic_focus, geographic_focus, profile_confidence, enriched_at, last_scraped_at, scraped_urls, created_at
                 FROM filtered
                 ORDER BY ${orderClause}
                 LIMIT ${pageSize} OFFSET ${offset}`,
@@ -573,7 +596,7 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
     sharedAcncSummary = acncSummary || [];
   } else {
     const db = supabase ?? getServiceSupabase();
-    const foundationFields = 'id, name, type, website, description, total_giving_annual, thematic_focus, geographic_focus, profile_confidence, enriched_at, created_at';
+    const foundationFields = 'id, acnc_abn, name, type, website, description, total_giving_annual, thematic_focus, geographic_focus, profile_confidence, enriched_at, last_scraped_at, scraped_urls, created_at';
     let dbQuery = db
       .from('foundations')
       .select(foundationFields, { count: 'exact' });
@@ -686,7 +709,7 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
   ]);
 
   const foundationIds = ((foundations || []) as FoundationRow[]).map((foundation) => foundation.id);
-  const [{ data: powerProfiles }, { data: yearMemorySummary }, { data: reviewSummary }] = foundationIds.length && !isFastFoundationIndex
+  const [{ data: powerProfiles }, { data: yearMemorySummary }, { data: reviewSummary }, { data: programSummary }] = foundationIds.length && !isFastFoundationIndex
     ? await Promise.all([
         supabase!
           .from('foundation_power_profiles')
@@ -697,7 +720,11 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
                     foundation_id::text AS foundation_id,
                     COUNT(*)::int AS year_memory_count,
                     COUNT(*) FILTER (
-                      WHERE COALESCE(metadata->>'source', '') NOT ILIKE '%inferred%'
+                      WHERE source_report_url IS NOT NULL
+                         OR (
+                           COALESCE(metadata->>'source', '') <> ''
+                           AND COALESCE(metadata->>'source', '') NOT ILIKE '%inferred%'
+                         )
                     )::int AS verified_source_backed_count
                   FROM foundation_program_years
                   WHERE foundation_id IN (${foundationIds.map((id) => `'${id}'`).join(', ')})
@@ -725,19 +752,60 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
                   FROM foundations f
                   WHERE f.id IN (${foundationIds.map((id) => `'${id}'`).join(', ')})`,
         }),
+        supabase!.rpc('exec_sql', {
+          query: `SELECT
+                    foundation_id::text AS foundation_id,
+                    COUNT(*)::int AS program_count,
+                    COUNT(*) FILTER (WHERE status = 'open')::int AS open_count,
+                    COUNT(*) FILTER (
+                      WHERE COALESCE(application_process, '') <> ''
+                         OR COALESCE(application_mode, '') <> ''
+                         OR url IS NOT NULL
+                         OR COALESCE(cardinality(source_urls), 0) > 0
+                    )::int AS application_pathway_count,
+                    MAX(scraped_at) AS latest_program_scraped_at
+                  FROM foundation_programs
+                  WHERE foundation_id IN (${foundationIds.map((id) => `'${id}'`).join(', ')})
+                  GROUP BY foundation_id`,
+        }),
       ])
     : [
         { data: [] as FoundationPowerProfileRow[] },
         { data: [] as FoundationYearMemorySummaryRow[] },
         { data: [] as FoundationReviewSummaryRow[] },
+        { data: [] as FoundationProgramSummaryRow[] },
       ];
   const totalPages = isFastFoundationIndex ? 1 : Math.ceil((count || 0) / pageSize);
 
   // Build lookup map for program counts
-  const progCountMap = new Map<string, { programs: number; open: number }>();
+  const progCountMap = new Map<string, {
+    programs: number;
+    open: number;
+    applicationPathwayCount: number;
+    latestProgramScrapedAt: string | null;
+  }>();
   if (sharedProgramCounts) {
     for (const pc of sharedProgramCounts as Array<{ foundation_id: string; program_count: number; open_count: number }>) {
-      progCountMap.set(pc.foundation_id, { programs: Number(pc.program_count), open: Number(pc.open_count) });
+      progCountMap.set(pc.foundation_id, {
+        programs: Number(pc.program_count),
+        open: Number(pc.open_count),
+        applicationPathwayCount: 0,
+        latestProgramScrapedAt: null,
+      });
+    }
+  }
+  if (programSummary) {
+    for (const row of programSummary as FoundationProgramSummaryRow[]) {
+      const existing = progCountMap.get(row.foundation_id);
+      progCountMap.set(row.foundation_id, {
+        programs: Number(row.program_count),
+        open: Number(row.open_count),
+        applicationPathwayCount: Number(row.application_pathway_count),
+        latestProgramScrapedAt: row.latest_program_scraped_at,
+      });
+      if (existing && Number(row.program_count) === 0) {
+        progCountMap.set(row.foundation_id, existing);
+      }
     }
   }
 
@@ -1163,10 +1231,20 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
           placeholder="Search foundations..."
           className="flex-1 min-w-[200px] px-4 py-2.5 border-4 border-bauhaus-black text-sm font-bold bg-white focus:bg-bauhaus-yellow focus:outline-none"
         />
-        <select name="type" defaultValue={typeFilter} className="px-4 py-2.5 border-4 border-l-0 border-bauhaus-black text-sm font-bold bg-white focus:outline-none">
+        {/* Type is unverified — see the COMMENT on foundations.type. No legal-form
+            field exists in the ACNC payload and abr_entity_type is null for every
+            row, so these values were assigned without an authoritative source and
+            are wrong at scale. Filtering by them hides real funders, so the
+            control says so rather than looking authoritative. */}
+        <select
+          name="type"
+          defaultValue={typeFilter}
+          title="Classification is unverified and incomplete. Filtering by type will hide funders that belong in the results."
+          className="px-4 py-2.5 border-4 border-l-0 border-bauhaus-black text-sm font-bold bg-white focus:outline-none"
+        >
           <option value="">All types</option>
           {types.map(t => (
-            <option key={t} value={t}>{typeLabel(t)}</option>
+            <option key={t} value={t}>{typeLabel(t)} (unverified)</option>
           ))}
         </select>
         <select name="focus" defaultValue={focusFilter} className="px-4 py-2.5 border-4 border-l-0 border-bauhaus-black text-sm font-bold bg-white focus:outline-none">
@@ -1530,6 +1608,26 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
                 verifiedSourceBacked: yearMemory?.verified || 0,
               })
             : [];
+          const assessment = assessFoundationReview({
+            acncAbn: f.acnc_abn,
+            website: f.website,
+            description: f.description,
+            totalGivingAnnual: f.total_giving_annual,
+            profileConfidence: f.profile_confidence,
+            enrichedAt: f.enriched_at,
+            lastScrapedAt: f.last_scraped_at,
+            thematicFocus: f.thematic_focus || [],
+            geographicFocus: f.geographic_focus || [],
+            programCount: pc?.programs || 0,
+            openProgramCount: pc?.open || 0,
+            applicationPathwayCount: pc?.applicationPathwayCount || 0,
+            boardRoles: review?.boardRoles || 0,
+            verifiedGrants: review?.verifiedGrants || 0,
+            yearMemoryCount: yearMemory?.total || 0,
+            verifiedSourceBackedCount: yearMemory?.verified || 0,
+            scrapedUrlCount: Array.isArray(f.scraped_urls) ? f.scraped_urls.length : 0,
+            latestProgramScrapedAt: pc?.latestProgramScrapedAt || null,
+          });
           const nextMove = missingSignals.length > 0 ? nextMoveForFoundation(f.id, missingSignals) : null;
           const publicReviewHref = getPublicReviewHref(f.id);
           return (
@@ -1568,6 +1666,9 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
                     {f.website && (
                       <span className="text-[11px] px-1.5 py-0.5 font-black uppercase tracking-wider border-2 border-bauhaus-blue/20 bg-link-light text-bauhaus-blue">Web</span>
                     )}
+                    <span className={`text-[11px] px-1.5 py-0.5 font-black uppercase tracking-wider border-2 ${assessment.className}`}>
+                      {assessment.score}/100 {assessment.label}
+                    </span>
                     {yearMemory && yearMemory.total > 0 && (
                       <span className="text-[11px] px-1.5 py-0.5 font-black uppercase tracking-wider border-2 border-bauhaus-black/20 bg-bauhaus-canvas text-bauhaus-black">
                         {yearMemory.total} year-memory
@@ -1604,12 +1705,30 @@ export default async function FoundationsPage({ searchParams }: { searchParams: 
                       </>
                     )}
                   </div>
-                  {f.description && (
-                    <div className="text-sm text-bauhaus-muted mt-1 line-clamp-2">
-                      {f.description}
-                    </div>
-                  )}
-                  {signalSummary.length > 0 && (
+	                  {f.description && (
+	                    <div className="text-sm text-bauhaus-muted mt-1 line-clamp-2">
+	                      {f.description}
+	                    </div>
+	                  )}
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.18em]">
+                    <span className="text-bauhaus-muted">Missing</span>
+                    {assessment.missing.slice(0, 4).map((item) => (
+                      <span key={item} className="border-2 border-bauhaus-red/20 bg-bauhaus-red/5 px-1.5 py-0.5 text-bauhaus-red">
+                        {item}
+                      </span>
+                    ))}
+                    {assessment.missing.length === 0 && (
+                      <span className="border-2 border-money/25 bg-money-light px-1.5 py-0.5 text-money">
+                        Complete
+                      </span>
+                    )}
+                    {assessment.freshestAt && (
+                      <span className={`border-2 px-1.5 py-0.5 ${assessment.stale ? 'border-bauhaus-red/20 bg-bauhaus-red/5 text-bauhaus-red' : 'border-bauhaus-black/15 bg-bauhaus-canvas text-bauhaus-muted'}`}>
+                        Fresh {formatShortDate(assessment.freshestAt)}
+                      </span>
+                    )}
+                  </div>
+	                  {signalSummary.length > 0 && (
                     <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.2em]">
                       <span className="text-bauhaus-muted">Review signals</span>
                       {signalSummary.map((signal) => (

@@ -11,26 +11,28 @@ import {
   getPublicDataset,
   withCorsHeaders,
 } from '@/lib/giving-commons';
+import { assessFoundationReview } from '@/lib/foundation-review';
 
 const publicLimiter = rateLimit({ windowMs: 60_000, max: 30 });
 const authenticatedLimiter = rateLimit({ windowMs: 60_000, max: 120 });
 
-// Module-level vars set by GET handler for usage logging
-let _apiKeyId: string | null = null;
-let _startMs = 0;
-let _ip = 'unknown';
-let _rateLimitVal = 30;
+type PublicRequestContext = {
+  apiKeyId: string | null;
+  startMs: number;
+  ip: string;
+  rateLimitVal: number;
+};
 
 /** Add rate-limit and cache headers + fire usage log */
-function withPublicHeaders(response: NextResponse): NextResponse {
+function withPublicHeaders(response: NextResponse, context?: PublicRequestContext): NextResponse {
   response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
-  response.headers.set('X-RateLimit-Limit', String(_rateLimitVal));
+  response.headers.set('X-RateLimit-Limit', String(context?.rateLimitVal ?? 30));
   response.headers.set('X-RateLimit-Window', '60');
   response.headers.set('X-CivicGraph-Schema-Version', GIVING_SCHEMA_VERSION);
   withCorsHeaders(response.headers);
   // Fire-and-forget usage log
-  if (_apiKeyId) {
-    logUsage(_apiKeyId, 'data-api', Date.now() - _startMs, response.status, _ip);
+  if (context?.apiKeyId) {
+    logUsage(context.apiKeyId, 'data-api', Date.now() - context.startMs, response.status, context.ip);
   }
   return response;
 }
@@ -49,8 +51,8 @@ function apiEnvelope(request: Request, type: string | null, payload: Record<stri
   };
 }
 
-function dataResponse(request: Request, type: string, payload: Record<string, unknown>, init?: ResponseInit) {
-  return withPublicHeaders(NextResponse.json(apiEnvelope(request, type, payload), init));
+function dataResponse(context: PublicRequestContext, request: Request, type: string, payload: Record<string, unknown>, init?: ResponseInit) {
+  return withPublicHeaders(NextResponse.json(apiEnvelope(request, type, payload), init), context);
 }
 
 function errorResponse(body: Record<string, unknown>, init: ResponseInit) {
@@ -99,11 +101,13 @@ export async function GET(request: Request) {
     return limited;
   }
 
-  _apiKeyId = apiKey?.id ?? null;
-  _startMs = startMs;
-  _rateLimitVal = apiKey ? apiKey.rateLimitPerMin || 120 : 30;
-  _ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-    ?? request.headers.get('x-real-ip') ?? 'unknown';
+  const context: PublicRequestContext = {
+    apiKeyId: apiKey?.id ?? null,
+    startMs,
+    rateLimitVal: apiKey ? apiKey.rateLimitPerMin || 120 : 30,
+    ip: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+      ?? request.headers.get('x-real-ip') ?? 'unknown',
+  };
 
   const { searchParams } = new URL(request.url);
   const type = searchParams.get('type');
@@ -141,7 +145,7 @@ export async function GET(request: Request) {
       corrections: '/api/data/corrections',
       docs: 'All endpoints support limit, offset, and format (json/csv) params.',
       public_export_types: PUBLIC_DATASET_KEYS,
-    }));
+    }), context);
   }
 
   try {
@@ -175,7 +179,7 @@ export async function GET(request: Request) {
 
         const { data, error } = await query;
         if (error) return errorResponse({ error: error.message }, { status: 500 });
-        return dataResponse(request, 'entities', { type: 'entities', data, limit, offset });
+        return dataResponse(context, request, 'entities', { type: 'entities', data, limit, offset });
       }
 
       case 'relationships': {
@@ -199,7 +203,7 @@ export async function GET(request: Request) {
 
         const { data, error } = await query;
         if (error) return errorResponse({ error: error.message }, { status: 500 });
-        return dataResponse(request, 'relationships', { type: 'relationships', data, limit, offset });
+        return dataResponse(context, request, 'relationships', { type: 'relationships', data, limit, offset });
       }
 
       case 'social-enterprises': {
@@ -223,13 +227,13 @@ export async function GET(request: Request) {
 
         const { data, error } = await query;
         if (error) return errorResponse({ error: error.message }, { status: 500 });
-        return dataResponse(request, 'social-enterprises', { type: 'social-enterprises', data, limit, offset });
+        return dataResponse(context, request, 'social-enterprises', { type: 'social-enterprises', data, limit, offset });
       }
 
       case 'foundations': {
         let query = supabase
           .from('foundations')
-          .select('id, name, type, website, total_giving_annual, thematic_focus, geographic_focus, profile_confidence, created_at')
+          .select('id, acnc_abn, name, type, website, description, total_giving_annual, thematic_focus, geographic_focus, profile_confidence, last_scraped_at, enriched_at, scraped_urls, created_at', { count: 'exact' })
           .order('total_giving_annual', { ascending: false, nullsFirst: false })
           .range(offset, offset + limit - 1);
 
@@ -241,7 +245,132 @@ export async function GET(request: Request) {
 
         const { data, count, error } = await query;
         if (error) return errorResponse({ error: error.message }, { status: 500 });
-        return dataResponse(request, 'foundations', { type: 'foundations', data, total: count, limit, offset });
+
+        const foundationIds = (data ?? []).map((row) => row.id).filter(Boolean);
+        const reviewMetrics = new Map<string, Record<string, unknown>>();
+        if (foundationIds.length > 0) {
+          const idValues = foundationIds.map((id) => `('${String(id).replace(/'/g, "''")}'::uuid)`).join(',');
+          const { data: metrics, error: metricsError } = await supabase.rpc('exec_sql', {
+            query: `WITH ids(id) AS (VALUES ${idValues}),
+                    program_counts AS (
+                      SELECT
+                        foundation_id,
+                        COUNT(*)::int AS program_count,
+                        COUNT(*) FILTER (WHERE status = 'open')::int AS open_program_count,
+                        COUNT(*) FILTER (
+                          WHERE COALESCE(application_process, '') <> ''
+                             OR COALESCE(application_mode, '') <> ''
+                             OR url IS NOT NULL
+                             OR COALESCE(cardinality(source_urls), 0) > 0
+                        )::int AS application_pathway_count,
+                        MAX(scraped_at) AS latest_program_scraped_at
+                      FROM foundation_programs
+                      WHERE foundation_id IN (SELECT id FROM ids)
+                      GROUP BY foundation_id
+                    ),
+                    grant_counts AS (
+                      SELECT foundation_id, COUNT(*)::int AS verified_grants
+                      FROM foundation_grantees
+                      WHERE foundation_id IN (SELECT id FROM ids)
+                      GROUP BY foundation_id
+                    ),
+                    board_counts AS (
+                      SELECT
+                        f.id AS foundation_id,
+                        COUNT(pr.*)::int AS board_roles
+                      FROM foundations f
+                      LEFT JOIN person_roles pr
+                        ON (
+                          f.acnc_abn IS NOT NULL
+                          AND f.acnc_abn <> ''
+                          AND pr.company_abn = f.acnc_abn
+                          AND pr.cessation_date IS NULL
+                        )
+                        OR (
+                          (f.acnc_abn IS NULL OR f.acnc_abn = '')
+                          AND pr.company_name = f.name
+                          AND pr.cessation_date IS NULL
+                        )
+                      WHERE f.id IN (SELECT id FROM ids)
+                      GROUP BY f.id
+                    ),
+                    year_counts AS (
+                      SELECT
+                        foundation_id,
+                        COUNT(*)::int AS year_memory_count,
+                        COUNT(*) FILTER (
+                          WHERE source_report_url IS NOT NULL
+                             OR (
+                               COALESCE(metadata->>'source', '') <> ''
+                               AND COALESCE(metadata->>'source', '') NOT ILIKE '%inferred%'
+                             )
+                        )::int AS verified_source_backed_count
+                      FROM foundation_program_years
+                      WHERE foundation_id IN (SELECT id FROM ids)
+                      GROUP BY foundation_id
+                    )
+                    SELECT
+                      ids.id::text AS foundation_id,
+                      COALESCE(program_counts.program_count, 0)::int AS program_count,
+                      COALESCE(program_counts.open_program_count, 0)::int AS open_program_count,
+                      COALESCE(program_counts.application_pathway_count, 0)::int AS application_pathway_count,
+                      program_counts.latest_program_scraped_at,
+                      COALESCE(grant_counts.verified_grants, 0)::int AS verified_grants,
+                      COALESCE(board_counts.board_roles, 0)::int AS board_roles,
+                      COALESCE(year_counts.year_memory_count, 0)::int AS year_memory_count,
+                      COALESCE(year_counts.verified_source_backed_count, 0)::int AS verified_source_backed_count
+                    FROM ids
+                    LEFT JOIN program_counts ON program_counts.foundation_id = ids.id
+                    LEFT JOIN grant_counts ON grant_counts.foundation_id = ids.id
+                    LEFT JOIN board_counts ON board_counts.foundation_id = ids.id
+                    LEFT JOIN year_counts ON year_counts.foundation_id = ids.id`,
+          });
+          if (!metricsError) {
+            for (const metric of (metrics ?? []) as Array<Record<string, unknown>>) {
+              reviewMetrics.set(String(metric.foundation_id), metric);
+            }
+          }
+        }
+
+        const reviewedData = (data ?? []).map((row) => {
+          const metrics = reviewMetrics.get(String(row.id)) ?? {};
+          const assessment = assessFoundationReview({
+            acncAbn: row.acnc_abn,
+            website: row.website,
+            description: row.description,
+            totalGivingAnnual: row.total_giving_annual,
+            profileConfidence: row.profile_confidence,
+            enrichedAt: row.enriched_at,
+            lastScrapedAt: row.last_scraped_at,
+            thematicFocus: row.thematic_focus,
+            geographicFocus: row.geographic_focus,
+            programCount: Number(metrics.program_count ?? 0),
+            openProgramCount: Number(metrics.open_program_count ?? 0),
+            applicationPathwayCount: Number(metrics.application_pathway_count ?? 0),
+            boardRoles: Number(metrics.board_roles ?? 0),
+            verifiedGrants: Number(metrics.verified_grants ?? 0),
+            yearMemoryCount: Number(metrics.year_memory_count ?? 0),
+            verifiedSourceBackedCount: Number(metrics.verified_source_backed_count ?? 0),
+            scrapedUrlCount: Array.isArray(row.scraped_urls) ? row.scraped_urls.length : 0,
+            latestProgramScrapedAt: typeof metrics.latest_program_scraped_at === 'string' ? metrics.latest_program_scraped_at : null,
+          });
+
+          return {
+            ...row,
+            source_url_count: Array.isArray(row.scraped_urls) ? row.scraped_urls.length : 0,
+            scraped_urls: undefined,
+            review_completeness_score: assessment.score,
+            review_band: assessment.band,
+            review_label: assessment.label,
+            review_signals: assessment.signals,
+            missing_information: assessment.missing,
+            next_best_actions: assessment.nextBestActions,
+            freshest_at: assessment.freshestAt,
+            stale: assessment.stale,
+          };
+        });
+
+        return dataResponse(context, request, 'foundations', { type: 'foundations', data: reviewedData, total: count, limit, offset });
       }
 
       case 'grants': {
@@ -262,7 +391,7 @@ export async function GET(request: Request) {
 
         const { data, error } = await query;
         if (error) return errorResponse({ error: error.message }, { status: 500 });
-        return dataResponse(request, 'grants', { type: 'grants', data, limit, offset });
+        return dataResponse(context, request, 'grants', { type: 'grants', data, limit, offset });
       }
 
       case 'foundation-programs': {
@@ -283,7 +412,7 @@ export async function GET(request: Request) {
 
         const { data, error } = await query;
         if (error) return errorResponse({ error: error.message }, { status: 500 });
-        return dataResponse(request, 'foundation-programs', { type: 'foundation-programs', data, limit, offset });
+        return dataResponse(context, request, 'foundation-programs', { type: 'foundation-programs', data, limit, offset });
       }
 
       case 'places': {
@@ -304,7 +433,7 @@ export async function GET(request: Request) {
 
         const { data, error } = await query;
         if (error) return errorResponse({ error: error.message }, { status: 500 });
-        return dataResponse(request, 'places', { type: 'places', data, limit, offset });
+        return dataResponse(context, request, 'places', { type: 'places', data, limit, offset });
       }
 
       case 'political-donations': {
@@ -328,7 +457,7 @@ export async function GET(request: Request) {
 
         const { data, error } = await query;
         if (error) return errorResponse({ error: error.message }, { status: 500 });
-        return dataResponse(request, 'political-donations', { type: 'political-donations', data, limit, offset });
+        return dataResponse(context, request, 'political-donations', { type: 'political-donations', data, limit, offset });
       }
 
       case 'contracts': {
@@ -355,7 +484,7 @@ export async function GET(request: Request) {
 
         const { data, error } = await query;
         if (error) return errorResponse({ error: error.message }, { status: 500 });
-        return dataResponse(request, 'contracts', { type: 'contracts', data, limit, offset });
+        return dataResponse(context, request, 'contracts', { type: 'contracts', data, limit, offset });
       }
 
       case 'data-catalog': {
@@ -379,7 +508,7 @@ export async function GET(request: Request) {
           };
         });
 
-        return dataResponse(request, 'data-catalog', {
+        return dataResponse(context, request, 'data-catalog', {
           type: 'data-catalog',
           data: rows.slice(offset, offset + limit),
           total: rows.length,
@@ -403,7 +532,7 @@ export async function GET(request: Request) {
 
         const { data, error } = await query;
         if (error) return errorResponse({ error: error.message }, { status: 500 });
-        return dataResponse(request, 'money-flows', { type: 'money-flows', data, limit, offset });
+        return dataResponse(context, request, 'money-flows', { type: 'money-flows', data, limit, offset });
       }
 
       case 'community-orgs': {
@@ -418,7 +547,7 @@ export async function GET(request: Request) {
 
         const { data, error } = await query;
         if (error) return errorResponse({ error: error.message }, { status: 500 });
-        return dataResponse(request, 'community-orgs', { type: 'community-orgs', data, limit, offset });
+        return dataResponse(context, request, 'community-orgs', { type: 'community-orgs', data, limit, offset });
       }
 
       case 'government-programs': {
@@ -436,7 +565,7 @@ export async function GET(request: Request) {
 
         const { data, error } = await query;
         if (error) return errorResponse({ error: error.message }, { status: 500 });
-        return dataResponse(request, 'government-programs', { type: 'government-programs', data, limit, offset });
+        return dataResponse(context, request, 'government-programs', { type: 'government-programs', data, limit, offset });
       }
 
       case 'outcomes': {
@@ -453,7 +582,7 @@ export async function GET(request: Request) {
 
         const { data, error } = await supabase.rpc('exec_sql', { query: sql });
         if (error) return errorResponse({ error: error.message }, { status: 500 });
-        return dataResponse(request, 'outcomes', { type: 'outcomes', data, limit, offset });
+        return dataResponse(context, request, 'outcomes', { type: 'outcomes', data, limit, offset });
       }
 
       case 'reports': {
@@ -463,7 +592,7 @@ export async function GET(request: Request) {
           .order('last_generated_at', { ascending: false });
 
         if (error) return errorResponse({ error: error.message }, { status: 500 });
-        return dataResponse(request, 'reports', { type: 'reports', data });
+        return dataResponse(context, request, 'reports', { type: 'reports', data });
       }
 
       default:

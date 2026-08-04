@@ -1,19 +1,20 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { getSupabasePublicKey, getSupabaseUrl, hasSupabasePublicEnv } from './supabase-env';
 
 function getSupabaseServerEnv() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const url = getSupabaseUrl();
+  const publicKey = getSupabasePublicKey();
 
-  if (!url || !anonKey) {
+  if (!url || !publicKey) {
     return null;
   }
 
-  return { url, anonKey };
+  return { url, publicKey };
 }
 
 export function hasSupabaseServerEnv() {
-  return getSupabaseServerEnv() !== null;
+  return hasSupabasePublicEnv();
 }
 
 export async function createSupabaseServer() {
@@ -26,7 +27,7 @@ export async function createSupabaseServer() {
 
   return createServerClient(
     env.url,
-    env.anonKey,
+    env.publicKey,
     {
       cookies: {
         getAll() {

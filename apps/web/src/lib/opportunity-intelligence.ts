@@ -103,6 +103,7 @@ export type OpportunityActionKind =
   | 'promote_to_pipeline'
   | 'send_to_ghl'
   | 'send_to_notion'
+  | 'record_review'
   | 'mark_no_go'
   | 'create_brief_task'
   | 'request_ingestion'
@@ -264,6 +265,7 @@ export interface OpportunityIntelligenceFilters {
   q?: string;
   deadline?: 'overdue' | '30d' | '60d' | '90d' | 'none';
   minScore?: number;
+  limit?: number;
 }
 
 export interface OpportunityIntelligenceResponse {
@@ -283,6 +285,25 @@ export interface OpportunityIntelligenceResponse {
     externalWrites: 'disabled-by-default';
     notes: string[];
   };
+}
+
+export type OpportunityReviewNextMove = 'act' | 'listen' | 'verify' | 'revisit' | 'close';
+
+export interface OpportunityReviewCommitment {
+  kind?: 'commitment' | 'return';
+  owner: string;
+  beneficiary?: string;
+  action: string;
+  dueAt?: string;
+}
+
+export interface OpportunityReviewJudgment {
+  schemaVersion?: number;
+  whatChanged: string;
+  nextMove?: OpportunityReviewNextMove;
+  nextLearningQuestion?: string;
+  revisitAt?: string;
+  commitment?: OpportunityReviewCommitment;
 }
 
 export interface OpportunityActionRequest {
@@ -313,6 +334,8 @@ export interface OpportunityActionRequest {
   orgProfileId?: string;
   reason?: string;
   evidenceGaps?: string[];
+  supersedesId?: string;
+  judgment?: OpportunityReviewJudgment;
 }
 
 export interface OpportunityActionContext {
@@ -523,6 +546,8 @@ interface OpportunityDecisionRow {
   notes: string | null;
   evidence_gaps: string[] | null;
   outcome: string | null;
+  judgment?: OpportunityReviewJudgment | null;
+  supersedes_id?: string | null;
   created_at: string | null;
 }
 
@@ -600,6 +625,7 @@ const PROJECT_CODE_BY_LENS: Record<string, string> = Object.fromEntries(
 const PROJECT_NAME_BY_CODE = new Map(ACT_PROJECT_STATES.map((project) => [project.code, project.name]));
 
 const WRITE_DECISIONS = new Set<OpportunityActionKind>([
+  'record_review',
   'no',
   'later',
   'research',
@@ -1182,7 +1208,7 @@ async function fetchSupabaseSources() {
       safeQuery<OpportunityDecisionRow>(
         db
           .from('opportunity_decisions')
-          .select('id, source_type, source_ref, project_code, pathway, decision, reason, notes, evidence_gaps, outcome, created_at')
+          .select('id, source_type, source_ref, project_code, pathway, decision, reason, notes, evidence_gaps, outcome, judgment, supersedes_id, created_at')
           .order('created_at', { ascending: false, nullsFirst: false })
           .limit(300),
       ),
@@ -2221,11 +2247,12 @@ export async function getOpportunityIntelligence(
   }
 
   const normalisedFilters = normaliseFilters(filters);
-  const filteredSignals = filterOpportunitySignals(allSignals, normalisedFilters).slice(0, 60);
+  const resultLimit = normalisedFilters.limit ?? 60;
+  const filteredSignals = filterOpportunitySignals(allSignals, normalisedFilters).slice(0, resultLimit);
   const filteredSignalIds = new Set(filteredSignals.map((signal) => signal.id));
   const routes = buildOpportunityRoutes(allSignals, sources.decisions.rows)
     .filter((route) => filteredSignalIds.has(route.signalId))
-    .slice(0, 40);
+    .slice(0, resultLimit * 2);
 
   return {
     generatedAt,
@@ -2284,17 +2311,122 @@ function normaliseFilters(filters: OpportunityIntelligenceFilters): OpportunityI
       typeof filters.minScore === 'number' && Number.isFinite(filters.minScore)
         ? Math.max(0, Math.min(100, filters.minScore))
         : undefined,
+    limit:
+      typeof filters.limit === 'number' && Number.isFinite(filters.limit)
+        ? Math.max(1, Math.min(500, Math.round(filters.limit)))
+        : undefined,
   };
 }
 
-function decisionForAction(kind: OpportunityActionKind): OpportunityDecisionRow['decision'] | null {
-  if (kind === 'no' || kind === 'mark_no_go' || kind === 'no-go') return 'no';
-  if (kind === 'later') return 'later';
-  if (kind === 'research') return 'research';
-  if (kind === 'partner_path') return 'partner';
-  if (kind === 'apply_path') return 'apply';
-  if (kind === 'send_to_ghl') return 'send_to_ghl';
-  if (kind === 'add_evidence_gap') return 'more_info';
+const OPPORTUNITY_REVIEW_NEXT_MOVES = new Set<OpportunityReviewNextMove>([
+  'act',
+  'listen',
+  'verify',
+  'revisit',
+  'close',
+]);
+
+function cleanReviewText(value: unknown) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function validDateInput(value: unknown) {
+  return Boolean(
+    typeof value === 'string' &&
+    value.trim() &&
+    !Number.isNaN(new Date(value).getTime()),
+  );
+}
+
+function reviewAction(
+  judgment: OpportunityReviewJudgment | undefined,
+): OpportunityReviewCommitment | null {
+  if (!judgment || typeof judgment !== 'object') return null;
+  const raw = judgment.commitment;
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+
+  return {
+    kind: raw.kind ?? 'commitment',
+    owner: cleanReviewText(raw.owner),
+    beneficiary: cleanReviewText(raw.beneficiary) || undefined,
+    action: cleanReviewText(raw.action),
+    dueAt: cleanReviewText(raw.dueAt) || undefined,
+  };
+}
+
+export function validateOpportunityActionRequest(
+  request: Partial<OpportunityActionRequest> | null | undefined,
+) {
+  if (!request?.kind) return 'kind is required';
+  if (request.kind !== 'record_review') return null;
+
+  if (!request.orgProfileId) return 'orgProfileId is required for a relational review';
+
+  const sourceType = request.route?.source ?? request.signal?.source;
+  const sourceRef = request.route?.sourceRef ?? request.signal?.sourceRef ?? request.signalId;
+  if (!sourceType || !sourceRef) {
+    return 'A relational review requires a signal or route with source and sourceRef';
+  }
+
+  const judgment = request.judgment;
+  if (!cleanReviewText(judgment?.whatChanged)) return 'judgment.whatChanged is required';
+  if (!judgment?.nextMove && !cleanReviewText(judgment?.nextLearningQuestion)) {
+    return 'Add a next move or next learning question';
+  }
+  if (judgment?.nextMove && !OPPORTUNITY_REVIEW_NEXT_MOVES.has(judgment.nextMove)) {
+    return 'judgment.nextMove must be act, listen, verify, revisit, or close';
+  }
+  if (judgment?.nextMove === 'revisit' && !validDateInput(judgment.revisitAt)) {
+    return 'judgment.revisitAt is required when the next move is revisit';
+  }
+  if (judgment?.revisitAt && !validDateInput(judgment.revisitAt)) {
+    return 'judgment.revisitAt must be a valid date';
+  }
+
+  const action = reviewAction(judgment);
+  const rawAction =
+    judgment && typeof judgment === 'object'
+      ? judgment.commitment
+      : undefined;
+  if (rawAction && !action) return 'A commitment or return must be an object';
+  if (action?.kind && !['commitment', 'return'].includes(action.kind)) {
+    return 'A commitment or return kind must be commitment or return';
+  }
+  if (action && (!action.owner || !action.action)) {
+    return 'A commitment or return requires who is responsible and what they will do';
+  }
+  if (action?.dueAt && !validDateInput(action.dueAt)) {
+    return 'A commitment or return due date must be a valid date';
+  }
+  if (request.supersedesId && !safeUuid(request.supersedesId)) {
+    return 'supersedesId must be a UUID';
+  }
+
+  return null;
+}
+
+function normaliseReviewJudgment(request: OpportunityActionRequest): OpportunityReviewJudgment {
+  const judgment = request.judgment as OpportunityReviewJudgment;
+  const action = reviewAction(judgment);
+  return {
+    schemaVersion: judgment.schemaVersion ?? 1,
+    whatChanged: cleanReviewText(judgment.whatChanged),
+    nextMove: judgment.nextMove,
+    nextLearningQuestion: cleanReviewText(judgment.nextLearningQuestion) || undefined,
+    revisitAt: cleanReviewText(judgment.revisitAt) || undefined,
+    commitment: action ?? undefined,
+  };
+}
+
+function decisionForAction(request: OpportunityActionRequest): OpportunityDecisionRow['decision'] | null {
+  if (request.kind === 'record_review') return 'review';
+  if (request.kind === 'no' || request.kind === 'mark_no_go' || request.kind === 'no-go') return 'no';
+  if (request.kind === 'later') return 'later';
+  if (request.kind === 'research') return 'research';
+  if (request.kind === 'partner_path') return 'partner';
+  if (request.kind === 'apply_path') return 'apply';
+  if (request.kind === 'send_to_ghl') return 'send_to_ghl';
+  if (request.kind === 'add_evidence_gap') return 'more_info';
   return null;
 }
 
@@ -2318,7 +2450,7 @@ async function recordOpportunityDecision(
   context: OpportunityActionContext | undefined,
   receiptId: string,
 ) {
-  const decision = decisionForAction(request.kind);
+  const decision = decisionForAction(request);
   const route = request.route;
   const signal = request.signal;
   const sourceType = route?.source ?? signal?.source;
@@ -2326,6 +2458,37 @@ async function recordOpportunityDecision(
   if (!decision || !sourceType || !sourceRef) return null;
 
   const db = getServiceSupabase();
+  if (request.kind === 'record_review') {
+    const validationError = validateOpportunityActionRequest(request);
+    if (validationError) throw new Error(validationError);
+
+    const { data, error } = await db.rpc('record_opportunity_review', {
+      p_user_id: context?.userId ?? null,
+      p_org_profile_id: request.orgProfileId ?? null,
+      p_source_type: sourceType,
+      p_source_ref: sourceRef,
+      p_project_code: route?.project_code ?? null,
+      p_pathway: route?.pathway ?? signal?.lane ?? null,
+      p_reason: request.reason ?? null,
+      p_notes: request.note ?? null,
+      p_evidence_gaps: request.evidenceGaps ?? route?.evidence_gaps ?? [],
+      p_outcome: receiptId,
+      p_judgment: normaliseReviewJudgment(request),
+      p_supersedes_id: request.supersedesId ?? null,
+    });
+    if (error) throw new Error(error.message);
+    const result = Array.isArray(data) ? data[0] : data;
+    if (!result || typeof result !== 'object') {
+      throw new Error('The relational review RPC did not return a decision');
+    }
+    const row = result as { decision_id?: unknown; action_event_id?: unknown };
+    if (!row.decision_id) throw new Error('The relational review RPC returned no decision id');
+    return {
+      decisionId: String(row.decision_id),
+      actionEventId: row.action_event_id ? String(row.action_event_id) : null,
+    };
+  }
+
   const row = {
     user_id: context?.userId ?? null,
     org_profile_id: request.orgProfileId ?? null,
@@ -2341,7 +2504,10 @@ async function recordOpportunityDecision(
   };
   const { data, error } = await db.from('opportunity_decisions').insert(row).select('id').single();
   if (error) throw new Error(error.message);
-  return data?.id ? String(data.id) : null;
+  return {
+    decisionId: data?.id ? String(data.id) : null,
+    actionEventId: null,
+  };
 }
 
 type GhlPipeline = {
@@ -2420,6 +2586,8 @@ async function upsertRoutePipelineItem(
     pathway: route.pathway,
     recommended_role: route.recommended_role,
     project_code: route.project_code,
+    owner_name: request.owner ?? null,
+    next_action: route.next_action,
     last_synced_at: new Date().toISOString(),
   };
 
@@ -2568,6 +2736,8 @@ async function sendRouteToGhl(request: OpportunityActionRequest) {
       pathway: route.pathway,
       recommended_role: route.recommended_role,
       project_code: route.project_code,
+      owner_name: request.owner ?? null,
+      next_action: route.next_action,
       last_synced_at: new Date().toISOString(),
     };
     const existing = await db
@@ -2598,8 +2768,13 @@ export function buildOpportunityActionReceipt(
   const routeLike = routeSignalLike(request);
   const signalId = routeLike.signalId;
   const kind = request.kind;
-  const blocked = !kind || (['send_to_ghl', 'send_to_notion', 'promote_to_pipeline'].includes(kind) && !signalId);
+  const validationError = validateOpportunityActionRequest(request);
+  const blocked =
+    Boolean(validationError) ||
+    !kind ||
+    (['send_to_ghl', 'send_to_notion', 'promote_to_pipeline'].includes(kind) && !signalId);
   const warnings = [
+    validationError,
     request.confirmWrite
       ? 'Confirmed action requested. No email or SMS is sent by this workflow.'
       : 'Mirror-plus-actions: no external write occurs unless confirmWrite=true on an explicit write action.',
@@ -2618,7 +2793,7 @@ export function buildOpportunityActionReceipt(
     externalWrites: [],
     warnings,
     nextStep: blocked
-      ? 'Attach a signalId or full signal before promoting this action.'
+      ? validationError ?? 'Attach a signalId or full signal before promoting this action.'
       : nextStepForAction(kind, request.targetSystem),
     payload: {
       source: routeLike.source,
@@ -2644,14 +2819,31 @@ export async function createOpportunityIntelligenceAction(
 
   if (WRITE_DECISIONS.has(request.kind)) {
     try {
-      const decisionId = await recordOpportunityDecision(request, context, receipt.id);
-      if (decisionId) externalWrites.push({ system: 'supabase_decision', id: decisionId, status: 'recorded' });
+      const recorded = await recordOpportunityDecision(request, context, receipt.id);
+      if (recorded?.decisionId) {
+        externalWrites.push({ system: 'supabase_decision', id: recorded.decisionId, status: 'recorded' });
+      }
+      if (recorded?.actionEventId) {
+        externalWrites.push({ system: 'supabase', id: recorded.actionEventId, status: 'recorded' });
+      }
     } catch (error) {
       warnings.push(`Decision memory was not recorded: ${error instanceof Error ? error.message : 'unknown error'}`);
+      if (request.kind === 'record_review') {
+        return {
+          ...receipt,
+          status: 'blocked',
+          externalWrites,
+          warnings,
+          nextStep: 'The relational review was not saved. Fix the decision-memory write and retry.',
+        };
+      }
     }
   }
 
-  if (request.kind === 'research' || request.kind === 'partner_path' || request.kind === 'apply_path') {
+  if (
+    !request.judgment &&
+    (request.kind === 'research' || request.kind === 'partner_path' || request.kind === 'apply_path')
+  ) {
     try {
       const pipelineStatus = request.kind === 'research' ? 'researching' : 'pursuing';
       const result = await upsertRoutePipelineItem(request, context, pipelineStatus);
@@ -2720,6 +2912,7 @@ export async function createOpportunityIntelligenceAction(
 }
 
 function nextStepForAction(kind: OpportunityActionKind, targetSystem?: OpportunityActionRequest['targetSystem']) {
+  if (kind === 'record_review') return 'Keep the human read in the review ledger; explicitly promote only if pipeline work is needed.';
   if (kind === 'promote_to_pipeline') return 'Review the source refs, then explicitly create or update an org_pipeline row.';
   if (kind === 'send_to_ghl') return 'Open the GHL write workflow and confirm pipeline, stage, contact, and next touch.';
   if (kind === 'send_to_notion') return 'Open the Notion write workflow and confirm tracker row fields before sync.';
@@ -2731,8 +2924,8 @@ function nextStepForAction(kind: OpportunityActionKind, targetSystem?: Opportuni
   if (kind === 'research') return 'Create a visible research item in the internal pipeline and keep learning from the decision.';
   if (kind === 'partner_path') return 'Create a visible partner-path item in the internal pipeline.';
   if (kind === 'apply_path') return 'Create a visible application-path item in the internal pipeline.';
-  if (kind === 'later') return 'Park this route for now and make it less urgent in the next ranking pass.';
-  if (kind === 'no') return 'Record the no decision and make similar routes less likely.';
-  if (kind === 'add_evidence_gap') return 'Record the missing proof so future scans keep asking for it.';
+  if (kind === 'later') return 'Keep the prior read and bring the matter back only on a named date or when evidence changes.';
+  if (kind === 'no') return 'Keep the decision as a prior case without changing recommendation weights.';
+  if (kind === 'add_evidence_gap') return 'Record the missing proof and bring the matter back when relevant evidence changes.';
   return 'Monitor the signal and refresh source health before acting.';
 }

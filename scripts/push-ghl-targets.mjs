@@ -7,7 +7,11 @@
  *
  * Env: GHL_API_KEY, GHL_LOCATION_ID, GHL_GOODS_PIPELINE_ID (optional)
  *
- * Run: node --env-file=.env scripts/push-ghl-targets.mjs [--dry-run] [--limit 100]
+ * Dry run (default):
+ *   node --env-file=.env scripts/push-ghl-targets.mjs [--limit 100]
+ *
+ * Deliberately write research-only place placeholders:
+ *   node --env-file=.env scripts/push-ghl-targets.mjs --apply --allow-placeholders [--limit 100]
  */
 import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
@@ -22,7 +26,9 @@ const GHL_API_KEY = process.env.GHL_API_KEY;
 const GHL_LOCATION_ID = process.env.GHL_LOCATION_ID;
 
 const args = process.argv.slice(2);
-const DRY_RUN = args.includes('--dry-run');
+const APPLY = args.includes('--apply');
+const ALLOW_PLACEHOLDERS = args.includes('--allow-placeholders');
+const DRY_RUN = !APPLY;
 const limitIdx = args.indexOf('--limit');
 const LIMIT = limitIdx >= 0 ? parseInt(args[limitIdx + 1], 10) : 100;
 
@@ -93,6 +99,13 @@ function scoreCommunity(c) {
 
 async function main() {
   console.log(`=== Push Goods Targets to GHL ===${DRY_RUN ? ' (DRY RUN)' : ''}\n`);
+
+  if (APPLY && !ALLOW_PLACEHOLDERS) {
+    throw new Error(
+      'Refusing to create synthetic GHL place contacts without --allow-placeholders. ' +
+      'Promote a verified organisation/contact through the Goods workbench where possible.',
+    );
+  }
 
   // 1. Load communities with demand data
   const communities = await sqlAll(`
@@ -228,10 +241,14 @@ async function main() {
             lastName: t.state,
             email: slugEmail,
             companyName: `${t.community_name}, ${t.state}`,
+            dnd: true,
             tags: [
               `goods-${t.tier}`,
               `state-${t.state}`,
               t.remoteness ? `remoteness-${t.remoteness.replace(/\s+/g, '-').toLowerCase()}` : null,
+              'record:place-signal',
+              'status:research-only',
+              'comms:do-not-contact',
             ].filter(Boolean),
             source: 'CivicGraph Goods Intelligence',
           }),

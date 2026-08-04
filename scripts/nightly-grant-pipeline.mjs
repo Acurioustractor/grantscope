@@ -29,8 +29,10 @@ import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
 const DRY_RUN = process.argv.includes('--dry-run');
 const SKIP_ARG = process.argv.find((a) => a.startsWith('--skip='));
 const SKIPS = new Set(SKIP_ARG ? SKIP_ARG.split('=')[1].split(',') : []);
+const PHASE_ARG = process.argv.find((a) => a.startsWith('--phase='));
+const PHASE = PHASE_ARG ? PHASE_ARG.split('=')[1] : 'all';
 
-const AGENT_ID = 'nightly-grant-pipeline';
+const AGENT_ID = PHASE === 'all' ? 'nightly-grant-pipeline' : `nightly-grant-pipeline-${PHASE}`;
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL,
@@ -48,6 +50,17 @@ const STEPS = [
   { key: 'refresh-mv', label: '8. Refresh act_grant_recommendations MV', cmd: 'internal', args: ['refresh-mv'] },
   { key: 'blocklist', label: '9. Re-evaluate funder_blocklist', cmd: 'internal', args: ['blocklist'] },
 ];
+
+const PHASE_STEPS = {
+  all: new Set(STEPS.map((step) => step.key)),
+  ingest: new Set(['scrape', 'promote-grants', 'promote-foundations']),
+  enrich: new Set(['classify', 'backfill', 'verify']),
+  finalize: new Set(['funder-context', 'refresh-mv', 'blocklist']),
+};
+
+if (!PHASE_STEPS[PHASE]) {
+  throw new Error(`Unknown --phase=${PHASE}; expected all, ingest, enrich, or finalize`);
+}
 
 function runProcess(cmd, args) {
   return new Promise((resolve) => {
@@ -181,10 +194,11 @@ async function run() {
   const startedAt = Date.now();
 
   const results = [];
-  console.log(`=== Nightly grant pipeline · ${new Date().toISOString()} ===`);
+  console.log(`=== Nightly grant pipeline · phase=${PHASE} · ${new Date().toISOString()} ===`);
   if (DRY_RUN) console.log('[DRY RUN — printing plan only]');
 
   for (const step of STEPS) {
+    if (!PHASE_STEPS[PHASE].has(step.key)) continue;
     if (SKIPS.has(step.key)) {
       console.log(`SKIP  ${step.label}`);
       results.push({ step: step.key, ok: true, durationMs: 0, detail: 'skipped' });

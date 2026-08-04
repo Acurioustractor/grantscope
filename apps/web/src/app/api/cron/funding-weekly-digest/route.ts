@@ -1,0 +1,3 @@
+import { NextResponse } from 'next/server'; import { generateFundingWeeklyDigest } from '@/lib/services/funding-weekly-digest';
+export const maxDuration = 60;
+export async function GET(request: Request) { const expected = process.env.CRON_SECRET || process.env.API_SECRET_KEY; const supplied = request.headers.get('authorization'); if (expected && supplied !== `Bearer ${expected}`) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }); try { return NextResponse.json(await generateFundingWeeklyDigest('act')); } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : 'Weekly digest failed' }, { status: 500 }); } }

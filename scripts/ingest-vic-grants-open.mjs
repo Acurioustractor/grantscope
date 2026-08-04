@@ -18,8 +18,46 @@ const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.
 
 const DRY_RUN = process.argv.includes('--dry-run');
 const ENDPOINT = 'https://www.vic.gov.au/api/tide/elasticsearch/content-vic__production__sapi_node/_search';
+const FETCH_ATTEMPTS = 4;
+const FETCH_TIMEOUT_MS = 30_000;
 
 const first = (v) => (Array.isArray(v) ? v[0] : v) ?? null;
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function fetchGateway(body) {
+  let lastError;
+  for (let attempt = 1; attempt <= FETCH_ATTEMPTS; attempt += 1) {
+    try {
+      const response = await fetch(ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Referer': 'https://www.vic.gov.au/grants',
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0 Safari/537.36',
+        },
+        body,
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      });
+      if (response.ok) return response;
+      const detail = (await response.text()).slice(0, 300);
+      const error = new Error(`ES proxy HTTP ${response.status}: ${detail}`);
+      if (response.status < 500 && response.status !== 429) {
+        error.retryable = false;
+        throw error;
+      }
+      lastError = error;
+    } catch (error) {
+      if (error?.retryable === false) throw error;
+      lastError = error;
+      if (attempt === FETCH_ATTEMPTS) break;
+    }
+    const delay = 1_000 * (2 ** (attempt - 1));
+    console.warn(`  gateway attempt ${attempt}/${FETCH_ATTEMPTS} failed; retrying in ${delay / 1000}s: ${lastError?.message || lastError}`);
+    await sleep(delay);
+  }
+  const cause = lastError?.cause?.code || lastError?.code || lastError?.name || 'unknown';
+  throw new Error(`VIC Grants Gateway unavailable after ${FETCH_ATTEMPTS} attempts (${cause}): ${lastError?.message || lastError}`);
+}
 
 // same taxonomy as import-gov-grants.mjs
 function inferCategories(title, description = '') {
@@ -67,16 +105,7 @@ async function main() {
     ],
   };
 
-  const res = await fetch(ENDPOINT, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Referer': 'https://www.vic.gov.au/grants',
-      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0 Safari/537.36',
-    },
-    body: JSON.stringify(query),
-  });
-  if (!res.ok) throw new Error(`ES proxy ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  const res = await fetchGateway(JSON.stringify(query));
   const data = await res.json();
   const hits = data.hits?.hits || [];
   console.log(`${hits.length} open/ongoing grants returned (total matched: ${data.hits?.total?.value})`);
@@ -123,8 +152,9 @@ async function main() {
     return;
   }
 
-  // url has a non-partial UNIQUE index — safe PostgREST onConflict target
-  const { error } = await supabase.from('grant_opportunities').upsert(rows, { onConflict: 'url', ignoreDuplicates: false });
+  // The canonical table contract is one row per source/name. Refresh a
+  // republished grant's URL and source_id instead of inserting a duplicate.
+  const { error } = await supabase.from('grant_opportunities').upsert(rows, { onConflict: 'source,name', ignoreDuplicates: false });
   if (error) throw new Error(`upsert failed: ${error.message}`);
   console.log(`Upserted ${rows.length} rows (source=vic-grants-gateway)`);
 

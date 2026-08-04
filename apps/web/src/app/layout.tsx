@@ -57,6 +57,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // strangers focus on the conversion path rather than the 30+ deep-app links.
   const hdrs = await headers();
   const pathname = hdrs.get('x-pathname') ?? '';
+  const isActWorkspacePath = pathname === '/org/act'
+    || pathname.startsWith('/org/act/')
+    || pathname === '/org/a-curious-tractor'
+    || pathname.startsWith('/org/a-curious-tractor/')
+    || pathname === '/org/curious-tractor'
+    || pathname.startsWith('/org/curious-tractor/');
   const isChromeless = pathname.startsWith('/embed')
     || pathname.startsWith('/share')
     || pathname.startsWith('/discover')
@@ -64,7 +70,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     || pathname.startsWith('/get-a-report')
     || pathname.startsWith('/pricing')
     || pathname.startsWith('/changes')
-    || pathname.startsWith('/account');
+    || pathname.startsWith('/account')
+    || isActWorkspacePath;
   const requiresLayoutAuth = needsLayoutAuth(pathname);
   const isFastPublicPath = !requiresLayoutAuth;
 

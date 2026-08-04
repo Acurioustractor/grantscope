@@ -30,13 +30,40 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 function runSync() {
-  const result = spawnSync('node', ['--env-file=.env', 'scripts/sync-tracker-evidence.mjs'], {
+  // process.execPath, not 'node'.
+  //
+  // The calling script resolves node to an absolute path specifically "so
+  // cron/scheduler context works", then this nested spawn undid it by asking PATH
+  // again. Under a scheduler with a minimal PATH that fails with ENOENT, and because
+  // the failure was reported as a bare exit status it looked identical to the script
+  // running and rejecting the data.
+  const result = spawnSync(process.execPath, ['--env-file=.env', 'scripts/sync-tracker-evidence.mjs'], {
     cwd: process.cwd(),
-    stdio: 'inherit',
+    stdio: ['ignore', 'pipe', 'pipe'],
     encoding: 'utf8',
+    maxBuffer: 32 * 1024 * 1024,
   });
 
+  if (result.stdout) process.stdout.write(result.stdout);
+  if (result.stderr) process.stderr.write(result.stderr);
+
+  if (result.error) {
+    console.error('[run-tracker-refresh] Could not start sync-tracker-evidence:', result.error.message);
+    process.exit(1);
+  }
+
   if (result.status !== 0) {
+    // Say why, on the stream the parent now captures, instead of exiting mute.
+    const tail = String(result.stderr || result.stdout || '')
+      .split('\n')
+      .map((l) => l.trimEnd())
+      .filter(Boolean)
+      .slice(-8)
+      .join(' | ');
+    console.error(
+      `[run-tracker-refresh] sync-tracker-evidence exited with status ${result.status}.` +
+        (tail ? ` Last output: ${tail}` : ' No output was captured.'),
+    );
     process.exit(result.status ?? 1);
   }
 }

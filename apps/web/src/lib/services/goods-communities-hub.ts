@@ -46,13 +46,16 @@ export type CommunitiesHubResult = {
 
 const ACTIVE_PRIORITIES = ['lead', 'active', 'warm'];
 
-async function fetchChunked(db: any, table: string, columns: string, ids: string[], chunkSize = 100): Promise<any[]> {
+async function fetchChunked(db: any, table: string, columns: string, ids: string[], chunkSize = 100, optional = false): Promise<any[]> {
   if (ids.length === 0) return [];
   const chunks: string[][] = [];
   for (let i = 0; i < ids.length; i += chunkSize) chunks.push(ids.slice(i, i + chunkSize));
   const results = await Promise.all(chunks.map(async slice => {
     const { data, error } = await db.from(table).select(columns).in('community_id', slice);
-    if (error) throw new Error(`${table} chunk fetch: ${error.message}`);
+    if (error) {
+      if (optional) return [];
+      throw new Error(`${table} chunk fetch: ${error.message}`);
+    }
     return data || [];
   }));
   return results.flat();
@@ -102,7 +105,7 @@ export async function getGoodsCommunitiesHub({
   const [signals, buyers, priority] = await Promise.all([
     fetchChunked(db, 'goods_procurement_signals', 'community_id, status, actioned_at', ids),
     fetchChunked(db, 'goods_procurement_entities', 'community_id, ghl_contact_id', ids),
-    fetchChunked(db, 'v_goods_community_priority', 'community_id, seifa_irsd_decile, disadvantage_score, unmet_beds, serve_next_score', ids),
+    fetchChunked(db, 'v_goods_community_priority', 'community_id, seifa_irsd_decile, disadvantage_score, unmet_beds, serve_next_score', ids, 100, true),
   ]);
 
   const sigByCommunity = new Map<string, { open: number; reviewing: number; actioned: number; total: number; last_action: string | null }>();

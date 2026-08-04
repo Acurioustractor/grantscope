@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeImpactGap, rollupCommercial } from '@/lib/services/goods-proof';
+import { computeImpactGap, GOODS_DELIVERED, rollupCommercial } from '@/lib/services/goods-proof';
 import type { GoodsRelationship, GoodsRelType, GoodsStage } from '@/lib/services/goods-engagement-shared';
 
 function rel(type: GoodsRelType, stage: GoodsStage, received = 0): GoodsRelationship {
@@ -9,6 +9,7 @@ function rel(type: GoodsRelType, stage: GoodsStage, received = 0): GoodsRelation
     display_name: 'X',
     entity_id: null,
     ghl_opportunity_id: null,
+    ghl_contact_id: null,
     stage,
     target_stage: null,
     warmth_computed: 0,
@@ -28,11 +29,15 @@ function rel(type: GoodsRelType, stage: GoodsStage, received = 0): GoodsRelation
 }
 
 describe('computeImpactGap', () => {
+  it('uses the current Goods physical-footprint canon', () => {
+    expect(GOODS_DELIVERED).toEqual({ beds: 540, washers: 22, asOf: '2026-07-25' });
+  });
+
   it('computes gap and % met from delivered vs demand', () => {
-    const g = computeImpactGap({ beds: 520, washers: 41 }, { beds: 12504, washers: 1563 });
-    expect(g.bedsGap).toBe(11984);
-    expect(g.washersGap).toBe(1522);
-    expect(g.pctBedsMet).toBe(4); // 520/12504 ≈ 4%
+    const g = computeImpactGap(GOODS_DELIVERED, { beds: 12504, washers: 1563 });
+    expect(g.bedsGap).toBe(11964);
+    expect(g.washersGap).toBe(1541);
+    expect(g.pctBedsMet).toBe(4); // 540/12504 ≈ 4%
   });
 
   it('never returns a negative gap when delivered exceeds demand', () => {
