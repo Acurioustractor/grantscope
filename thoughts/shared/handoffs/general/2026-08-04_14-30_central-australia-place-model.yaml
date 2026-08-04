@@ -1,0 +1,159 @@
+---
+session: central-australia-place-model
+date: 2026-08-04
+status: partial
+outcome: PARTIAL_PLUS
+---
+
+goal: >
+  Make it possible for a community to see what money reaches its place, who holds it, and
+  what is missing — starting with Mparntwe (Alice Springs), Tennant Creek and the Utopia
+  homelands. Built the data model, the corrections and a live map. The accuracy ceiling is
+  now understood and is set by what governments publish, not by our code.
+
+now: >
+  Read first_principles below, then work the accuracy_ladder in order. The single highest
+  leverage item is that 93% of grant money reaching Central Australian organisations cannot
+  be placed geographically, and the gap is biased against exactly the communities this work
+  exists to serve.
+
+test: cd apps/web && npx tsc --noEmit && npx vitest run tests/unit/lib/services/
+
+first_principles:
+  what_this_is_for: >
+    Not a grants database. A way for a community to answer three questions about its own
+    money — what comes here, who holds it, and who decided — using only public records that
+    can be checked. Everything else is scaffolding.
+  the_governing_rule: >
+    A wrong number about a real community is worse than no number. Internally a bad figure
+    costs an afternoon; published, it becomes a claim about people who did not ask to be
+    described. So every layer carries its own grade, absence is shown rather than implied,
+    and inference is labelled as inference. This is why the page leads with what it cannot
+    tell you.
+  why_place_is_hard: >
+    Australian funding records answer "which organisation was paid", never "where the work
+    happened" — except GrantConnect, which publishes a delivery location on a minority of
+    awards. Every distortion found this session came from reading an organisation's
+    registered address as a statement about place.
+  the_pattern_worth_internalising: >
+    Nearly every error found ran in the same direction: it erased or understated Aboriginal
+    community-controlled organisations. Remote NT mapped to a Western Australian shire. An
+    alphabetical cap that cut off the Utopia names. Deregistered corporations shown as
+    live. Councils crediting the hub. None of it malicious — all of it the result of
+    infrastructure built around ACNC, postcodes and procurement, none of which fit remote
+    Aboriginal Australia. Assume the next bug does the same thing and look for it there.
+
+done_this_session:
+  - task: Fixed remote geography. Postcode 0872 had all 80 localities stamped Laverton WA, so 210 NT organisations (202 community-controlled) sat in a Western Australian shire, carrying $21.4M of NT money into mv_funding_by_lga.
+    files: [supabase/migrations/20260803240000_fix_0872_remote_geocoding.sql, supabase/migrations/20260804120000_fix_0872_state_apy.sql]
+  - task: Loaded the ABS ASGS locality-to-LGA correspondence (15,353 localities, 92.2% resolving to one council) and placed 1,181 entities. MacDonnell, Central Desert and APY Lands appeared for the first time.
+    files: [supabase/migrations/20260804090000_abs_locality_lga.sql, supabase/migrations/20260804091000_place_entities_from_abs_locality.sql]
+  - task: Joined oric_corporations to gs_entities for the first time — 7,369 rows that had sat unused. Brought registration status, sector, size, income band and workforce band onto entities.
+    files: [supabase/migrations/20260803260000_oric_status_and_location.sql, supabase/migrations/20260804130000_oric_sector_size_onto_entities.sql]
+  - task: Attributed 115 councils nationally to the shire they serve rather than their head office, moving $61M out of Alice Springs alone.
+    files: [supabase/migrations/20260804160000_attribute_councils_to_shires_served.sql, supabase/migrations/20260804170000_attribute_councils_nationally.sql]
+  - task: Ingested GrantConnect awards, which had never been loaded. 291,264 awards worth $230B, 210,761 linked by ABN, and captured the delivery-location columns that were being discarded.
+    files: [scripts/fetch-grantconnect-awards.mjs, scripts/ingest-grantconnect.mjs, supabase/migrations/20260804180000_grantconnect_location_fields.sql]
+  - task: Built the place and organisation model plus a live map with filters at /place/central-australia.
+    files: [supabase/migrations/20260804190000_place_profile_delivery_grants.sql, supabase/migrations/20260804200000_org_funding_profile.sql, supabase/migrations/20260804210000_materialize_place_profile.sql, 'apps/web/src/app/place/central-australia/']
+
+corrections_made_to_earlier_conclusions:
+  - claim: Central Australia is a construction economy where community-controlled organisations hold 24% of the money.
+    correction: >
+      True of contracts alone, and contracts are the minority channel. With grants included the
+      total is $3,626M rather than $789.7M and the community-controlled share is 60%, not 24%.
+      Central Australian Aboriginal Congress holds $332M, Nganampa Health $200M with no contracts
+      at all. The error was calling contracts "the money".
+  - claim: The Utopia arts and land corporations are culturally significant organisations invisible to every map.
+    correction: >
+      They are deregistered. ORIC publishes no address once a corporation is deregistered, which
+      is why they had no location. Showing them as current would have been the error.
+  - claim: Delivery attribution lets remote communities finally be seen.
+    correction: >
+      It does, across 7% of the money. NIAA publishes a delivery location on 2% of its 11,856
+      awards and Social Services on none of 30,068, so the streams that matter most here are the
+      least visible by place.
+
+accuracy_ladder:
+  - rank: 1
+    item: Delivery-location coverage
+    detail: >
+      $242.7M of grant money to this region is placeable, $3,233M is not. The bias is not random:
+      infrastructure and education publish delivery, Indigenous affairs and social services do
+      not. No ingest fixes this — it is a publishing choice. Options are to model delivery from
+      grant purpose text, to ask NIAA directly, or to state the limit and stop implying place
+      coverage we do not have. Currently stated in red at the top of the page.
+  - rank: 2
+    item: Land council and royalty flows
+    detail: >
+      Mining royalties reach communities through the Aboriginal Benefit Account and the four NT
+      land councils. 129 ABA awards ($47.4M) are in GrantConnect, but per-corporation royalty
+      distribution is not public. Land councils appear in gs_relationships only through
+      shared_director links with no amounts. Sources would be NIAA annual report tables or land
+      council annual reports, neither of which is bulk data.
+  - rank: 3
+    item: 123 organisations that cannot be placed
+    detail: >
+      75 registered Aboriginal corporations plus 43 deregistered, mostly homeland and outstation
+      bodies with language names. 41 of 75 have no ABN, so they are unmatchable to funding data
+      regardless of geography. ORIC states it is not its practice to provide data services to
+      external parties; the ABN Bulk Extract carries only state and postcode, which we already
+      have. Closing this needs a direct approach to ORIC or to the communities.
+  - rank: 4
+    item: One remaining GrantConnect cap
+    detail: >
+      Department of Education / Children, Youth and Youth at Risk still exceeds 50,000 rows.
+      Agency and category are honoured as filters; date is not. A third filter — selection
+      process or value range — may subdivide it.
+  - rank: 5
+    item: Person identity for relationship paths
+    detail: >
+      funder_board_paths is built on person_identities, but cross-organisation identity cannot be
+      verified without a real person key such as an ASIC director ID. 1,917 of 2,651 paths are
+      high collision risk. Do not present any path as fact.
+
+data_model:
+  entities: gs_entities — now carries oric_status, oric_sector, oric_size, oric_income_band, oric_employee_band, lga_source
+  place: mv_lga_place_profile — one row per council; refresh CONCURRENTLY after any ingest
+  organisations: v_org_funding_profile — one row per organisation, each funding channel separate
+  geography: abs_locality_lga — ABS locality to council, the reference postcodes cannot provide
+  gaps_register: geo_resolution_gaps — what is missing and the source that would close it
+  grants: grantconnect_awards — includes recipient and delivery location
+  do_not_use:
+    - mv_funding_deserts — 1,988 rows for 1,103 LGAs with conflicting values; superseded by mv_lga_place_profile
+    - place_funding_snapshot — orphaned, predates the council fix and GrantConnect
+    - foundations.type — unverified, wrong at scale, no authoritative source exists
+
+worked:
+  - Verifying every inference against the data before applying it. The jurisdiction guard caught Western Aranda Health matching a Canberra suburb and Research "Us" matching a Melbourne suburb.
+  - Rehearsing migrations in BEGIN/ROLLBACK before applying. It caught a latent duplicate that made mv_evidence_backed_funding unrebuildable.
+  - Grading every field rather than blending into one score. It made the claimed-versus-demonstrated gap visible for funders claiming an Indigenous focus they do not fund.
+  - Asking what a number would look like if it were wrong, then checking that specific thing.
+
+failed:
+  - Trusting gs_entities.state for postcode 0872. The state was itself inherited from the postcode, which spans three states.
+  - Scattering 1,199 organisations around postcode centroids to keep markers clickable. It invented geography.
+  - Applying a limit before a filter, three times: region filtered in JS after a 2,000 row cap, PostgREST's hard 1,000 row cap on a postcode lookup, and an alphabetical cap that cut the Utopia names.
+  - next/dynamic with ssr:false in a Server Component, against the rule in CLAUDE.md.
+  - Assuming date windows could beat the GrantConnect 50,000 cap. The export ignores its own date filter.
+
+next:
+  - Decide whether the place page should publish at all given 7% delivery coverage, or wait until delivery can be modelled.
+  - Approach NIAA about delivery location, and ORIC about addresses. Both are relationship moves rather than engineering.
+  - Build the email version of the place page, which was in the original ask and is not done.
+  - Drop place_funding_snapshot and rebuild_place_funding_snapshot, now orphaned.
+  - Re-check mv_funding_deserts consumers — anything reading it today is reading noise.
+
+open_question: >
+  Should council-delivered money read as reaching the community, or be distinguished from money
+  a community organisation holds directly? Those are different stories about self-determination
+  and the data can now tell them apart. Local retention is the measure: Alice Springs 76.2%,
+  Barkly 73.7%, MacDonnell 5.8%.
+
+files:
+  page: apps/web/src/app/place/central-australia/
+  api: apps/web/src/app/api/place/central-australia/organisations/route.ts
+  service: apps/web/src/lib/services/place-intelligence.ts
+  fetcher: scripts/fetch-grantconnect-awards.mjs
+  branch: feat/funding-ops-and-ask
+  pr: 106
