@@ -9,6 +9,7 @@ const OPERATING_TABS = [
   ['matters', 'Matters'],
   ['network', 'Network'],
   ['applications', 'Applications'],
+  ['grants', 'Grants'],
   ['learning', 'Learning'],
 ] as const;
 
