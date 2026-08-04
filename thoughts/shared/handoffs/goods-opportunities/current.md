@@ -9,13 +9,26 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-08-04T19:30:00+10:00
-**Goal:** Work the current Goods opportunities — funders, grants, buyers — through the now-live workspace. The infrastructure session is DONE; next session is about moving actual asks.
-**Branch:** feat/funding-ops-and-ask (PR #106 — large, consider merging before new work)
-**Test:** cd apps/web && npx tsc --noEmit && npx vitest run
+**Updated:** 2026-08-05T09:15:00+10:00
+**Goal:** Work the current Goods opportunities via **One Desk** (/org/act/desk — the new one-system front door). The 2026-08-05 session became a major UX consolidation instead of ask-work; the asks are still the next session.
+**Branch:** main (everything merged; work in small PR-per-change loops)
+**Test:** cd apps/web && npx tsc --noEmit && npx vitest run; E2E: kill dev server on 3013 first, then npx playwright test (21/21, no fixmes)
 
 ### Now
-[->] Work the live opportunities: Balnaves EOI, auDA deadline (~27d from Aug 4), QBE Stage 2 deadline confirmation
+[->] Work the live opportunities FROM ONE DESK: Balnaves EOI (in funder queue, fit 90), auDA (31 Aug), QBE Stage 2 deadline confirmation
+
+### Session 2026-08-05 (UX consolidation — all merged to main, PRs #104–#115)
+- [x] PR #106 + stacked #104 merged (30 commits incl. 4 rescued uncommitted-workspace commits); main E2E repaired (fixture guard in getOrgProfileBySlug — see memory vercel-oom-and-e2e-fixture-contract)
+- [x] GHL handoff G1–G7 shipped: deep links everywhere (lib/ghl-links.ts), dossier buyers section + push button rewired, grants triage push→GHL Grants pipeline (mirrors seeder, idempotent via grant_opportunities.ghl_opportunity_id)
+- [x] Balnaves data bug fixed: was seeded on empathy-ledger project row; moved to goods (Ben ran the UPDATE) — now visible on Funder Scan
+- [x] Workspace coherence rounds: real hub fronts /org/act/goods (field-map only under E2E fixtures/?fieldmap=1); 1760px containers; GoodsViewToggle (cards/table/compact, URL-param); "Money in" nav group; rail owns ALL Goods nav (GoodsRailTree in act-workspace-shell, header pills mobile-only)
+- [x] **One Desk** (/org/act/desk): Ben's chosen model from /prototype (B split-desk + A do-this-now + C horizon groups). One ranked pool (lib/services/act-one-desk.ts): funders + grants + buyers + money (overdue invoices) + commitments (pipeline cards, ALL projects). Project + kind are filter chips. Done/Waiting/Tomorrow persists via daily-actions store (shared with old Today). Rail work-mode 01.
+- [x] Vercel OOM fixed for real: next.config cpus:2 + webpackMemoryOptimizations + 4GB heap in vercel.json
+
+### Consolidation next (the retirement list)
+- [ ] Retire/absorb duplicated screens: old Today queue panel on /org/act, org pipeline kanban (/org/act/pipeline) — One Desk supersedes both
+- [ ] Desk gaps: decision obligations (returns/promises) + review matters not yet in pool; funders/buyers/grants pools are Goods-only (other projects only via commitments)
+- [ ] Visual seam: soft-green header style vs Bauhaus tabs — one visual family pass if it still grates
 
 ### This Session
 - [x] v_goods_central_channels + 4 channel prospects seeded (RASAC, Tangentyere, Tjuwanpa, Waltja)
