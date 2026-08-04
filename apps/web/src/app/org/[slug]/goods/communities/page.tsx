@@ -82,7 +82,7 @@ export default async function GoodsCommunitiesHubPage({
           <Cell label="With deployments" value={summary.with_deployments} />
           <Cell label="With open signals" value={summary.with_open_signals} />
           <Cell label="Beds demanded" value={summary.total_beds_demanded} />
-          <Cell label="Beds deployed" value={summary.total_beds_deployed} />
+          <Cell label="Beds deployed in this view" value={summary.total_beds_deployed} />
         </div>
 
         {/* Filters */}
@@ -222,6 +222,15 @@ function Row({ c, alt, orgSlug }: { c: CommunityHubRow; alt: boolean; orgSlug: s
       <td className={`border-b border-gray-300 px-2 py-1.5 align-top text-right ${deploymentGapBg}`}>
         <span className="font-black">{c.assets_deployed}</span>
         <span className="text-gray-500"> / {c.demand_beds}</span>
+        {c.demand_beds > 0 && (
+          <div
+            className="mt-1 flex h-1.5 w-16 ml-auto overflow-hidden border border-bauhaus-black/40 bg-white"
+            title={`${c.assets_deployed} delivered of ${c.demand_beds} needed`}
+          >
+            <div className="bg-bauhaus-black" style={{ width: `${Math.min(100, (c.assets_deployed / c.demand_beds) * 100)}%` }} />
+            <div className="flex-1 bg-bauhaus-red/60" />
+          </div>
+        )}
       </td>
       <td className="border-b border-gray-300 px-2 py-1.5 align-top text-right">
         <span className="text-gray-500">— / {c.demand_washers}</span>
