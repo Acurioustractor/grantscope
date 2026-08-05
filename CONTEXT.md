@@ -35,7 +35,9 @@ no Org role at all.
 ### Role (Person↔Org)
 A typed connection between a Person and an Org — multiple hats, hats change,
 the Person persists. Minimal starter set: **works-at**, **board-of**,
-**decides-for** (sits on a committee/panel that decides an Ask's fate). New
+**decides-for** (sits on a committee/panel that decides an Ask's fate), and
+**opens-into** (can introduce ACT into that Org — the Person-level warm
+bridge; the *why* stays CivicGraph annotation, e.g. shared directorships). New
 role types earn their way in, like Relationship types did. Roles are ACT's
 structural knowledge and live in Supabase, not GHL.
 
@@ -55,10 +57,14 @@ and relationships evolve. Types:
 - **collaborates** — works on a program together (e.g. Oonchiumpa: ACT works on
   their program with them — setup first, then a facility; the relationship
   deepens over time)
-- **opens** — can introduce ACT into another Org (warm bridges: shared board
-  directors, peer funders like KKT, LGANT offering the CDU intro). Cultivated
+- **opens** — can introduce ACT into another Org (warm bridges: peer funders
+  like KKT, LGANT offering the CDU intro). Kept for genuinely *institutional*
+  bridges only; the moment you know the human behind the bridge, record it on
+  the Person as an **opens-into** role instead (the bias rule). Cultivated
   like any relationship, with its own next actions; the mechanism behind the
-  best Asks.
+  best Asks. On surfaces, an Org's opens display rolls up native bridges plus
+  bridges via its People — always attributed ("via Jay"), derived at display
+  time, never stored on the Org.
 
 Example of why identity typing fails: Anyinginyi is simultaneously a Buyer
 (washer quote), a Channel into Barkly, and a delivery collaborator. "Is X a
