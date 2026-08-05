@@ -83,7 +83,9 @@ export function ActWorkspaceShell({
     // The one-system front door: every workable record, one ranked queue.
     // "Today" retired 2026-08-05 — One Desk IS today (CONTEXT.md).
     { label: 'One Desk', href: `/org/${slug}/desk`, active: pathname.startsWith(`/org/${slug}/desk`) || (onOrgRoot && view === 'today') },
-    { label: 'Listen', href: rootHref(slug, 'relationships', 'relationships'), active: onOrgRoot && view === 'relationships' },
+    // Listen folded into Orgs 2026-08-05 — the Org record + one list.
+    // Legacy lens stays reachable at ?view=relationships (not on the rail).
+    { label: 'Orgs', href: `/org/${slug}/orgs`, active: pathname.startsWith(`/org/${slug}/orgs`) },
     { label: 'Curiosity', href: rootHref(slug, 'opportunities', 'opportunities'), active: onOrgRoot && (view === 'opportunities' || view === 'triage') },
     { label: 'Action', href: rootHref(slug, 'pipeline', 'pipeline'), active: onOrgRoot && view === 'pipeline' },
     {

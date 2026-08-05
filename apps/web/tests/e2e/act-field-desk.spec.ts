@@ -344,6 +344,26 @@ test.describe('ACT Field Desk pilot workflow', () => {
     await expect(page.locator('nav[aria-label="ACT project fields"]')).toHaveCount(1);
   });
 
+  test('reaches the Orgs list from the rail and opens an Org record from it', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.goto('/org/act/desk');
+
+    const sidebar = page.getByTestId('act-desk-sidebar');
+    await expect(sidebar.getByRole('link', { name: 'Listen' })).toHaveCount(0);
+    await sidebar.getByRole('link', { name: 'Orgs' }).click();
+    await expect(page).toHaveURL(/\/org\/act\/orgs/);
+    const list = page.getByTestId('act-orgs-list');
+    await expect(list).toBeVisible();
+    await expect(list.getByRole('heading', { name: 'Orgs' })).toBeVisible();
+
+    const firstOrg = list.locator('tbody tr td a').first();
+    if (await firstOrg.count()) {
+      await firstOrg.click();
+      await expect(page).toHaveURL(/\/org\/act\/orgs\/.+/);
+      await expect(page.getByTestId('act-org-record')).toBeVisible();
+    }
+  });
+
   test('opens an Org record with relationships, asks, money and history sections', async ({ page }) => {
     await page.goto('/org/act/orgs/snow-foundation');
 
