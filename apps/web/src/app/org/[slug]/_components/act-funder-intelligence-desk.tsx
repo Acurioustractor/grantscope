@@ -70,7 +70,7 @@ export function ActFunderIntelligenceDesk({
 
   return (
     <section id="relationships" className="my-6 min-w-0 scroll-mt-24 overflow-hidden rounded-md border border-[var(--ws-border)] bg-[var(--ws-surface-1)]">
-      <header className="border-b border-[var(--ws-border)] bg-[#183426] px-5 py-5 text-white sm:px-7">
+      <header className="border-b border-[var(--ws-border)] bg-[#211F1C] px-5 py-5 text-white sm:px-7">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-2xl">
             <div className="font-mono text-[10px] font-semibold uppercase tracking-widest text-[#b8c8bd]">Relationship brief</div>
@@ -88,13 +88,13 @@ export function ActFunderIntelligenceDesk({
         </div>
       </header>
 
-      <div className="flex border-b border-[var(--ws-border)] bg-white px-4 pt-2" aria-label="Relationship workspace">
-        <button type="button" onClick={() => setSurface('funders')} className={`min-h-11 border-b-2 px-4 text-sm font-semibold ${surface === 'funders' ? 'border-[#2f6b4a] text-[#183426]' : 'border-transparent text-[var(--ws-text-secondary)]'}`}>Funders</button>
-        <button type="button" onClick={() => setSurface('ledger')} className={`min-h-11 border-b-2 px-4 text-sm font-semibold ${surface === 'ledger' ? 'border-[#2f6b4a] text-[#183426]' : 'border-transparent text-[var(--ws-text-secondary)]'}`}>
+      <div className="flex border-b border-[var(--ws-border)] bg-ql-surface px-4 pt-2" aria-label="Relationship workspace">
+        <button type="button" onClick={() => setSurface('funders')} className={`min-h-11 border-b-2 px-4 text-sm font-semibold ${surface === 'funders' ? 'border-[#5F725C] text-[#211F1C]' : 'border-transparent text-[var(--ws-text-secondary)]'}`}>Funders</button>
+        <button type="button" onClick={() => setSurface('ledger')} className={`min-h-11 border-b-2 px-4 text-sm font-semibold ${surface === 'ledger' ? 'border-[#5F725C] text-[#211F1C]' : 'border-transparent text-[var(--ws-text-secondary)]'}`}>
           Ledger <span className="ml-1 font-mono text-[10px]">{relationshipLedger?.summary.organisations ?? 0}</span>
         </button>
-        <button type="button" onClick={() => setSurface('people')} className={`min-h-11 border-b-2 px-4 text-sm font-semibold ${surface === 'people' ? 'border-[#2f6b4a] text-[#183426]' : 'border-transparent text-[var(--ws-text-secondary)]'}`}>People</button>
-        <button type="button" onClick={() => setSurface('resolution')} className={`min-h-11 border-b-2 px-4 text-sm font-semibold ${surface === 'resolution' ? 'border-[#2f6b4a] text-[#183426]' : 'border-transparent text-[var(--ws-text-secondary)]'}`}>
+        <button type="button" onClick={() => setSurface('people')} className={`min-h-11 border-b-2 px-4 text-sm font-semibold ${surface === 'people' ? 'border-[#5F725C] text-[#211F1C]' : 'border-transparent text-[var(--ws-text-secondary)]'}`}>People</button>
+        <button type="button" onClick={() => setSurface('resolution')} className={`min-h-11 border-b-2 px-4 text-sm font-semibold ${surface === 'resolution' ? 'border-[#5F725C] text-[#211F1C]' : 'border-transparent text-[var(--ws-text-secondary)]'}`}>
           Resolve contacts <span className="ml-1 font-mono text-[10px]">{intelligence.contactResolution.total}</span>
         </button>
       </div>
@@ -109,7 +109,7 @@ export function ActFunderIntelligenceDesk({
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder="Search funders or people"
-                  className="min-h-11 w-full rounded-md border border-[var(--ws-border)] bg-white px-3 text-sm text-[var(--ws-text)] outline-none focus:border-[#2f6b4a] focus:ring-2 focus:ring-[#2f6b4a]/15"
+                  className="min-h-11 w-full rounded-md border border-[var(--ws-border)] bg-ql-surface px-3 text-sm text-[var(--ws-text)] outline-none focus:border-[#5F725C] focus:ring-2 focus:ring-[#5F725C]/15"
                 />
               </label>
               <div className="mt-3 flex gap-1 overflow-x-auto" aria-label="Funder filters">
@@ -123,7 +123,7 @@ export function ActFunderIntelligenceDesk({
                     key={value}
                     type="button"
                     onClick={() => setFilter(value)}
-                    className={`min-h-9 shrink-0 rounded-md px-3 text-xs font-semibold ${filter === value ? 'bg-[#183426] text-white' : 'text-[var(--ws-text-secondary)] hover:bg-white'}`}
+                    className={`min-h-9 shrink-0 rounded-md px-3 text-xs font-semibold ${filter === value ? 'bg-[#211F1C] text-white' : 'text-[var(--ws-text-secondary)] hover:bg-ql-surface'}`}
                   >
                     {label}
                   </button>
@@ -197,14 +197,14 @@ function ContactResolutionQueue({ items: initialItems, orgProfileId }: { items: 
     <div className="min-w-0 bg-[#fbfcfa]">
       <header className="grid border-b border-[var(--ws-border)] sm:grid-cols-[minmax(0,1fr)_repeat(3,120px)]">
         <div className="px-5 py-5 sm:px-7">
-          <div className="font-mono text-[9px] font-semibold uppercase tracking-widest text-[#2f6b4a]">CRM identity review</div>
+          <div className="font-mono text-[9px] font-semibold uppercase tracking-widest text-[#5F725C]">CRM identity review</div>
           <h3 className="mt-2 text-lg font-semibold text-[var(--ws-text)]">Unlinked ACT contacts</h3>
         </div>
         <ResolutionMetric label="Suggested" value={counts.suggested} />
         <ResolutionMetric label="Ambiguous" value={counts.ambiguous} />
         <ResolutionMetric label="Research" value={counts.research} />
       </header>
-      {error ? <div role="alert" className="border-b border-red-200 bg-red-50 px-5 py-3 text-sm text-red-700 sm:px-7">{error}</div> : null}
+      {error ? <div role="alert" className="border-b border-ql-alert/40 bg-ql-alert/10 px-5 py-3 text-sm text-ql-alert sm:px-7">{error}</div> : null}
       <div className="max-h-[820px] divide-y divide-[var(--ws-border)] overflow-y-auto">
         {items.map((item) => (
           <div key={item.contactId} className="grid min-w-0 gap-4 px-5 py-5 sm:px-7 lg:grid-cols-[minmax(180px,0.8fr)_minmax(280px,1.2fr)_120px] lg:items-center">
@@ -223,7 +223,7 @@ function ContactResolutionQueue({ items: initialItems, orgProfileId }: { items: 
                   <select
                     value={selected[item.contactId] || ''}
                     onChange={(event) => setSelected((current) => ({ ...current, [item.contactId]: event.target.value }))}
-                    className="min-h-11 w-full rounded-md border border-[var(--ws-border)] bg-white px-3 text-xs text-[var(--ws-text)] outline-none focus:border-[#2f6b4a] focus:ring-2 focus:ring-[#2f6b4a]/15"
+                    className="min-h-11 w-full rounded-md border border-[var(--ws-border)] bg-ql-surface px-3 text-xs text-[var(--ws-text)] outline-none focus:border-[#5F725C] focus:ring-2 focus:ring-[#5F725C]/15"
                   >
                     {item.candidates.map((candidate) => (
                       <option key={candidate.entityId} value={candidate.entityId}>
@@ -240,7 +240,7 @@ function ContactResolutionQueue({ items: initialItems, orgProfileId }: { items: 
                   type="button"
                   onClick={() => linkEntity(item)}
                   disabled={pending === item.contactId}
-                  className="min-h-11 rounded-md bg-[#183426] px-4 text-xs font-semibold text-white hover:bg-[#245139] disabled:cursor-wait disabled:opacity-60"
+                  className="min-h-11 rounded-md bg-[#211F1C] px-4 text-xs font-semibold text-white hover:bg-[#245139] disabled:cursor-wait disabled:opacity-60"
                 >
                   {pending === item.contactId ? 'Linking…' : 'Link entity'}
                 </button>
@@ -265,9 +265,9 @@ function ResolutionMetric({ label, value }: { label: string; value: number }) {
 
 function ResolutionStatus({ status }: { status: ActContactResolutionItem['status'] }) {
   const classes = status === 'suggested'
-    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+    ? 'border-ql-moss/40 bg-ql-moss/10 text-ql-moss'
     : status === 'ambiguous'
-      ? 'border-amber-200 bg-amber-50 text-amber-700'
+      ? 'border-ql-accent/40 bg-ql-accent/10 text-ql-accent'
       : 'border-gray-200 bg-gray-50 text-gray-600';
   return <span className={`rounded border px-1.5 py-0.5 font-mono text-[8px] font-semibold uppercase ${classes}`}>{status}</span>;
 }
@@ -287,13 +287,13 @@ function FunderListRow({ dossier, selected, onSelect }: { dossier: ActFunderDoss
     <button
       type="button"
       onClick={onSelect}
-      className={`block min-h-[92px] w-full px-4 py-4 text-left transition-colors ${selected ? 'bg-white shadow-[inset_3px_0_0_#2f6b4a]' : 'hover:bg-white/80'}`}
+      className={`block min-h-[92px] w-full px-4 py-4 text-left transition-colors ${selected ? 'bg-ql-surface shadow-[inset_3px_0_0_#5F725C]' : 'hover:bg-ql-surface/80'}`}
     >
       <div className="min-w-0">
         <div className="line-clamp-2 text-sm font-semibold leading-snug text-[var(--ws-text)]">{cleanFoundationName(dossier.name)}</div>
         <div className="mt-2 flex flex-wrap gap-1.5">
           <RelationshipPill state={dossier.relationshipState} />
-          {dossier.nextTouchAt ? <span className="rounded border border-blue-200 bg-blue-50 px-1.5 py-0.5 font-mono text-[8px] font-semibold uppercase text-blue-700">follow-up {formatDate(dossier.nextTouchAt)}</span> : null}
+          {dossier.nextTouchAt ? <span className="rounded border border-ql-kind-grant/40 bg-ql-kind-grant/10 px-1.5 py-0.5 font-mono text-[8px] font-semibold uppercase text-ql-kind-grant">follow-up {formatDate(dossier.nextTouchAt)}</span> : null}
         </div>
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[9px] text-[var(--ws-text-secondary)]">
@@ -331,8 +331,8 @@ function FunderDossierView({
               {dossier.abn ? `ABN ${dossier.abn}` : 'ABN not resolved'} · {dossier.projects.join(' · ') || 'No project assigned'}
             </p>
             <div className="mt-4 flex flex-wrap gap-3 text-xs font-semibold">
-              <a href={`/foundations/${dossier.foundationId}`} className="text-[#2f6b4a] hover:underline">Open CivicGraph dossier</a>
-              {dossier.website ? <a href={dossier.website} target="_blank" rel="noreferrer" className="text-[#2f6b4a] hover:underline">Open funder website</a> : null}
+              <a href={`/foundations/${dossier.foundationId}`} className="text-[#5F725C] hover:underline">Open CivicGraph dossier</a>
+              {dossier.website ? <a href={dossier.website} target="_blank" rel="noreferrer" className="text-[#5F725C] hover:underline">Open funder website</a> : null}
             </div>
           </div>
           <div className="grid shrink-0 grid-cols-2 divide-x divide-y divide-[var(--ws-border)] border border-[var(--ws-border)] bg-[#fbfcfa] sm:grid-cols-4 sm:divide-y-0">
@@ -345,14 +345,14 @@ function FunderDossierView({
       </header>
 
       <section className="border-b border-[var(--ws-border)] bg-[#edf3ee] px-5 py-5 sm:px-7">
-        <div className="font-mono text-[9px] font-semibold uppercase tracking-widest text-[#2f6b4a]">Concrete follow-up</div>
+        <div className="font-mono text-[9px] font-semibold uppercase tracking-widest text-[#5F725C]">Concrete follow-up</div>
         <ol className="mt-3 divide-y divide-[#c9d9cd] border-y border-[#c9d9cd]">
           {brief.actions.map((action, index) => (
             <li key={action.id} className="grid gap-2 py-4 sm:grid-cols-[28px_minmax(0,1fr)]">
               <span className="font-mono text-[10px] font-semibold text-[#607668]">{String(index + 1).padStart(2, '0')}</span>
               <div>
-                <p className="text-sm font-semibold leading-relaxed text-[#183426]">{action.title}</p>
-                <p className="mt-1 text-xs leading-relaxed text-[#4f6657]">{action.detail}</p>
+                <p className="text-sm font-semibold leading-relaxed text-[#211F1C]">{action.title}</p>
+                <p className="mt-1 text-xs leading-relaxed text-[#70685F]">{action.detail}</p>
               </div>
             </li>
           ))}
@@ -409,7 +409,7 @@ function FunderDossierView({
 
       <section className="border-b border-[var(--ws-border)] px-5 py-6 sm:px-7">
         <SectionHeader title="People" value={`${brief.directPeople.length} direct · ${brief.researchPeople.length} research`} />
-        <h3 className="mt-4 font-mono text-[9px] font-semibold uppercase text-[#2f6b4a]">People ACT can contact</h3>
+        <h3 className="mt-4 font-mono text-[9px] font-semibold uppercase text-[#5F725C]">People ACT can contact</h3>
         {brief.directPeople.length > 0 ? <PersonRows people={brief.directPeople} /> : <EmptyLine text="No direct ACT contact is linked yet." />}
         <details className="mt-5 border-y border-[var(--ws-border)] py-3">
           <summary className="cursor-pointer text-xs font-semibold text-[var(--ws-text)]">Research people: board, registry, and possible introduction routes ({brief.researchPeople.length})</summary>
@@ -423,7 +423,7 @@ function FunderDossierView({
           <div className="mt-3 divide-y divide-[var(--ws-border)] border-y border-[var(--ws-border)]">
             {dossier.interactions.slice(0, 6).map((interaction) => (
               <div key={interaction.id} className="grid gap-2 py-4 sm:grid-cols-[110px_minmax(0,1fr)_110px]">
-                <div className="font-mono text-[9px] font-semibold uppercase text-[#2f6b4a]">{humanise(interaction.type)}</div>
+                <div className="font-mono text-[9px] font-semibold uppercase text-[#5F725C]">{humanise(interaction.type)}</div>
                 <div className="text-xs leading-relaxed text-[var(--ws-text)]">{interaction.summary}</div>
                 <div className="font-mono text-[9px] uppercase text-[var(--ws-text-tertiary)] sm:text-right">{formatDate(interaction.happenedAt)}</div>
               </div>
@@ -454,7 +454,7 @@ function FunderDossierView({
               <tbody className="divide-y divide-[var(--ws-border)]">
                 {dossier.grantees.slice(0, 8).map((grantee) => (
                   <tr key={grantee.id} className="text-xs">
-                    <td className="py-3 pr-3 font-semibold text-[var(--ws-text)]">{grantee.sourceUrl ? <a href={grantee.sourceUrl} target="_blank" rel="noreferrer" className="hover:text-[#2f6b4a] hover:underline">{grantee.name}</a> : grantee.name}</td>
+                    <td className="py-3 pr-3 font-semibold text-[var(--ws-text)]">{grantee.sourceUrl ? <a href={grantee.sourceUrl} target="_blank" rel="noreferrer" className="hover:text-[#5F725C] hover:underline">{grantee.name}</a> : grantee.name}</td>
                     <td className="max-w-[220px] truncate py-3 pr-3 text-[var(--ws-text-secondary)]">{grantee.program || 'Not named'}</td>
                     <td className="py-3 pr-3 font-mono text-[var(--ws-text-secondary)]">{grantee.year ?? '—'}</td>
                     <td className="py-3 text-right font-mono text-[var(--ws-text)]">{formatMoney(grantee.amount)}</td>
@@ -471,14 +471,14 @@ function FunderDossierView({
         <SectionHeader title="Focus and ways to engage" value={`${dossier.applicationPathCount} routes`} />
         {dossier.description ? <p className="mt-3 text-sm leading-relaxed text-[var(--ws-text-secondary)]">{dossier.description}</p> : null}
         <div className="mt-4 flex flex-wrap gap-2">
-          {[...dossier.thematicFocus, ...dossier.geographicFocus].slice(0, 14).map((focus) => <span key={focus} className="rounded border border-[var(--ws-border)] bg-[#f8f9f5] px-2 py-1 text-[10px] font-semibold text-[var(--ws-text-secondary)]">{humanise(focus)}</span>)}
+          {[...dossier.thematicFocus, ...dossier.geographicFocus].slice(0, 14).map((focus) => <span key={focus} className="rounded border border-[var(--ws-border)] bg-[#F6F1E8] px-2 py-1 text-[10px] font-semibold text-[var(--ws-text-secondary)]">{humanise(focus)}</span>)}
         </div>
         {dossier.programs.length > 0 ? (
           <div className="mt-5 divide-y divide-[var(--ws-border)] border-y border-[var(--ws-border)]">
             {dossier.programs.slice(0, 8).map((program) => (
               <div key={program.id} className="grid gap-2 py-4 sm:grid-cols-[minmax(0,1fr)_130px]">
                 <div>
-                  <div className="text-sm font-semibold">{program.url ? <a href={program.url} target="_blank" rel="noreferrer" className="hover:text-[#2f6b4a] hover:underline">{program.name}</a> : program.name}</div>
+                  <div className="text-sm font-semibold">{program.url ? <a href={program.url} target="_blank" rel="noreferrer" className="hover:text-[#5F725C] hover:underline">{program.name}</a> : program.name}</div>
                   <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[var(--ws-text-secondary)]">{program.applicationProcess || program.applicationMode || 'Application route needs confirmation.'}</p>
                 </div>
                 <div className="font-mono text-[9px] uppercase text-[var(--ws-text-secondary)] sm:text-right">
@@ -487,12 +487,12 @@ function FunderDossierView({
                 </div>
               </div>
             ))}
-            {dossier.programs.length > 8 ? <p className="py-3 text-[11px] text-[var(--ws-text-secondary)]">Showing 8 of {dossier.programs.length} known program records.</p> : null}
+            {dossier.programCount > 8 ? <p className="py-3 text-[11px] text-[var(--ws-text-secondary)]">Showing 8 of {dossier.programCount} known program records.</p> : null}
           </div>
         ) : <EmptyLine text="No current program surface is connected." />}
       </section>
 
-      <section className="grid border-t border-[var(--ws-border)] bg-[#f8f9f5] lg:grid-cols-2 lg:divide-x lg:divide-[var(--ws-border)]">
+      <section className="grid border-t border-[var(--ws-border)] bg-[#F6F1E8] lg:grid-cols-2 lg:divide-x lg:divide-[var(--ws-border)]">
         <div className="px-5 py-6 sm:px-7">
           <SectionHeader title="What we still need to learn" value={`${brief.unknowns.length} unknown`} />
           {brief.unknowns.length > 0 ? (
@@ -504,7 +504,7 @@ function FunderDossierView({
                 </li>
               ))}
             </ol>
-          ) : <p className="mt-3 text-xs text-emerald-700">No material evidence gap is recorded for this brief.</p>}
+          ) : <p className="mt-3 text-xs text-ql-moss">No material evidence gap is recorded for this brief.</p>}
         </div>
         <div className="px-5 py-6 sm:px-7">
           <SectionHeader title="Where these facts came from" value={`${dossier.sourceAudit.length} source groups`} />
@@ -531,7 +531,7 @@ function PersonRows({ people }: { people: ActFunderDossier['people'] }) {
             <p className="mt-2 text-[11px] leading-relaxed text-[var(--ws-text-secondary)]">{person.evidence}</p>
           </div>
           <div className="text-left sm:text-right">
-            <div className="font-mono text-[9px] font-semibold uppercase text-[#2f6b4a]">{person.source}</div>
+            <div className="font-mono text-[9px] font-semibold uppercase text-[#5F725C]">{person.source}</div>
             <div className="mt-1 text-[10px] text-[var(--ws-text-tertiary)]">{person.lastContactAt ? formatDate(person.lastContactAt) : person.confidence}</div>
           </div>
         </div>
@@ -587,11 +587,11 @@ function FunderOutcome({ dossier, orgProfileId }: { dossier: ActFunderDossier; o
         <button
           type="button"
           onClick={() => setEditing(true)}
-          className="min-h-10 rounded-md border border-[#9fb8a6] bg-white px-4 text-xs font-semibold text-[#183426] hover:bg-[#f7faf8]"
+          className="min-h-10 rounded-md border border-[#9fb8a6] bg-ql-surface px-4 text-xs font-semibold text-[#211F1C] hover:bg-[#f7faf8]"
         >
           Record outcome
         </button>
-        {saved ? <span className="text-xs font-semibold text-emerald-700">Outcome learned</span> : null}
+        {saved ? <span className="text-xs font-semibold text-ql-moss">Outcome learned</span> : null}
       </div>
     );
   }
@@ -600,12 +600,12 @@ function FunderOutcome({ dossier, orgProfileId }: { dossier: ActFunderDossier; o
     <div className="mt-4 border-t border-[#c9d9cd] pt-4 sm:col-span-2">
       <div className="grid gap-3 sm:grid-cols-[170px_minmax(0,1fr)]">
         <label className="block">
-          <span className="text-[10px] font-semibold uppercase text-[#4f6657]">Outcome</span>
+          <span className="text-[10px] font-semibold uppercase text-[#70685F]">Outcome</span>
           <select
             aria-label="Funder outcome"
             value={outcome}
             onChange={(event) => setOutcome(event.target.value as ActFunderOutcome)}
-            className="mt-1 min-h-10 w-full rounded-md border border-[#b9cbbd] bg-white px-2 text-xs text-[#183426]"
+            className="mt-1 min-h-10 w-full rounded-md border border-[#b9cbbd] bg-ql-surface px-2 text-xs text-[#211F1C]"
           >
             <option value="meeting_held">Meeting held</option>
             <option value="positive_reply">Positive reply</option>
@@ -616,34 +616,34 @@ function FunderOutcome({ dossier, orgProfileId }: { dossier: ActFunderDossier; o
           </select>
         </label>
         <label className="block">
-          <span className="text-[10px] font-semibold uppercase text-[#4f6657]">What happened</span>
+          <span className="text-[10px] font-semibold uppercase text-[#70685F]">What happened</span>
           <input
             aria-label="Funder outcome summary"
             value={summary}
             onChange={(event) => setSummary(event.target.value)}
             maxLength={1_200}
             placeholder="Record the useful fact, not a transcript"
-            className="mt-1 min-h-10 w-full rounded-md border border-[#b9cbbd] bg-white px-3 text-xs text-[#183426]"
+            className="mt-1 min-h-10 w-full rounded-md border border-[#b9cbbd] bg-ql-surface px-3 text-xs text-[#211F1C]"
           />
         </label>
         <label className="block sm:col-start-2">
-          <span className="text-[10px] font-semibold uppercase text-[#4f6657]">Next move, if any</span>
+          <span className="text-[10px] font-semibold uppercase text-[#70685F]">Next move, if any</span>
           <input
             aria-label="Outcome next move"
             value={nextStep}
             onChange={(event) => setNextStep(event.target.value)}
             maxLength={600}
-            className="mt-1 min-h-10 w-full rounded-md border border-[#b9cbbd] bg-white px-3 text-xs text-[#183426]"
+            className="mt-1 min-h-10 w-full rounded-md border border-[#b9cbbd] bg-ql-surface px-3 text-xs text-[#211F1C]"
           />
         </label>
         <label className="block sm:col-start-2">
-          <span className="text-[10px] font-semibold uppercase text-[#4f6657]">Follow-up date</span>
+          <span className="text-[10px] font-semibold uppercase text-[#70685F]">Follow-up date</span>
           <input
             aria-label="Outcome follow-up date"
             type="date"
             value={nextTouchAt}
             onChange={(event) => setNextTouchAt(event.target.value)}
-            className="mt-1 min-h-10 w-full rounded-md border border-[#b9cbbd] bg-white px-2 text-xs text-[#183426]"
+            className="mt-1 min-h-10 w-full rounded-md border border-[#b9cbbd] bg-ql-surface px-2 text-xs text-[#211F1C]"
           />
         </label>
       </div>
@@ -652,12 +652,12 @@ function FunderOutcome({ dossier, orgProfileId }: { dossier: ActFunderDossier; o
           type="button"
           onClick={save}
           disabled={pending || !summary.trim()}
-          className="min-h-10 rounded-md bg-[#183426] px-4 text-xs font-semibold text-white hover:bg-[#244b38] disabled:cursor-not-allowed disabled:opacity-50"
+          className="min-h-10 rounded-md bg-[#211F1C] px-4 text-xs font-semibold text-white hover:bg-[#244b38] disabled:cursor-not-allowed disabled:opacity-50"
         >
           {pending ? 'Recording...' : 'Record and learn'}
         </button>
-        <button type="button" onClick={() => setEditing(false)} className="min-h-10 px-3 text-xs font-semibold text-[#4f6657] hover:underline">Cancel</button>
-        {error ? <span className="text-xs text-red-700">{error}</span> : null}
+        <button type="button" onClick={() => setEditing(false)} className="min-h-10 px-3 text-xs font-semibold text-[#70685F] hover:underline">Cancel</button>
+        {error ? <span className="text-xs text-ql-alert">{error}</span> : null}
       </div>
     </div>
   );
@@ -708,11 +708,11 @@ function FunderNextMove({ dossier, orgProfileId }: { dossier: ActFunderDossier; 
         <button
           type="button"
           onClick={() => setEditing(true)}
-          className="min-h-10 rounded-md bg-[#183426] px-4 text-xs font-semibold text-white hover:bg-[#244b38]"
+          className="min-h-10 rounded-md bg-[#211F1C] px-4 text-xs font-semibold text-white hover:bg-[#244b38]"
         >
           Plan next move
         </button>
-        {saved ? <span className="text-xs font-semibold text-emerald-700">Saved to ACT Today</span> : null}
+        {saved ? <span className="text-xs font-semibold text-ql-moss">Saved to ACT Today</span> : null}
       </div>
     );
   }
@@ -721,12 +721,12 @@ function FunderNextMove({ dossier, orgProfileId }: { dossier: ActFunderDossier; 
     <div className="mt-4 border-t border-[#c9d9cd] pt-4 sm:col-span-2">
       <div className="grid gap-3 sm:grid-cols-[150px_minmax(0,1fr)_150px]">
         <label className="block">
-          <span className="text-[10px] font-semibold uppercase text-[#4f6657]">Relationship state</span>
+          <span className="text-[10px] font-semibold uppercase text-[#70685F]">Relationship state</span>
           <select
             aria-label="Relationship state"
             value={engagementStatus}
             onChange={(event) => setEngagementStatus(event.target.value)}
-            className="mt-1 min-h-10 w-full rounded-md border border-[#b9cbbd] bg-white px-2 text-xs text-[#183426]"
+            className="mt-1 min-h-10 w-full rounded-md border border-[#b9cbbd] bg-ql-surface px-2 text-xs text-[#211F1C]"
           >
             <option value="researching">Researching</option>
             <option value="ready_to_approach">Ready to approach</option>
@@ -737,23 +737,23 @@ function FunderNextMove({ dossier, orgProfileId }: { dossier: ActFunderDossier; 
           </select>
         </label>
         <label className="block">
-          <span className="text-[10px] font-semibold uppercase text-[#4f6657]">Next move</span>
+          <span className="text-[10px] font-semibold uppercase text-[#70685F]">Next move</span>
           <input
             aria-label="Funder next move"
             value={nextStep}
             onChange={(event) => setNextStep(event.target.value)}
             maxLength={600}
-            className="mt-1 min-h-10 w-full rounded-md border border-[#b9cbbd] bg-white px-3 text-xs text-[#183426]"
+            className="mt-1 min-h-10 w-full rounded-md border border-[#b9cbbd] bg-ql-surface px-3 text-xs text-[#211F1C]"
           />
         </label>
         <label className="block">
-          <span className="text-[10px] font-semibold uppercase text-[#4f6657]">Follow-up date</span>
+          <span className="text-[10px] font-semibold uppercase text-[#70685F]">Follow-up date</span>
           <input
             aria-label="Funder follow-up date"
             type="date"
             value={nextTouchAt}
             onChange={(event) => setNextTouchAt(event.target.value)}
-            className="mt-1 min-h-10 w-full rounded-md border border-[#b9cbbd] bg-white px-2 text-xs text-[#183426]"
+            className="mt-1 min-h-10 w-full rounded-md border border-[#b9cbbd] bg-ql-surface px-2 text-xs text-[#211F1C]"
           />
         </label>
       </div>
@@ -762,12 +762,12 @@ function FunderNextMove({ dossier, orgProfileId }: { dossier: ActFunderDossier; 
           type="button"
           onClick={save}
           disabled={pending || !nextStep.trim()}
-          className="min-h-10 rounded-md bg-[#183426] px-4 text-xs font-semibold text-white hover:bg-[#244b38] disabled:cursor-not-allowed disabled:opacity-50"
+          className="min-h-10 rounded-md bg-[#211F1C] px-4 text-xs font-semibold text-white hover:bg-[#244b38] disabled:cursor-not-allowed disabled:opacity-50"
         >
           {pending ? 'Saving...' : 'Save next move'}
         </button>
-        <button type="button" onClick={() => setEditing(false)} className="min-h-10 px-3 text-xs font-semibold text-[#4f6657] hover:underline">Cancel</button>
-        {error ? <span className="text-xs text-red-700">{error}</span> : null}
+        <button type="button" onClick={() => setEditing(false)} className="min-h-10 px-3 text-xs font-semibold text-[#70685F] hover:underline">Cancel</button>
+        {error ? <span className="text-xs text-ql-alert">{error}</span> : null}
       </div>
     </div>
   );
@@ -787,8 +787,8 @@ function SourceRow({ label, detail, status }: { label: string; detail: string; s
 
 function StatusDot({ status }: { status: ActFunderEvidenceStatus }) {
   const styles: Record<ActFunderEvidenceStatus, string> = {
-    strong: 'bg-emerald-500',
-    partial: 'bg-amber-500',
+    strong: 'bg-ql-moss',
+    partial: 'bg-ql-accent',
     missing: 'bg-red-500',
     stale: 'bg-gray-400',
   };
@@ -797,16 +797,16 @@ function StatusDot({ status }: { status: ActFunderEvidenceStatus }) {
 
 function RelationshipPill({ state }: { state: ActFunderRelationshipState }) {
   const styles: Record<ActFunderRelationshipState, string> = {
-    active: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+    active: 'border-ql-moss/40 bg-ql-moss/10 text-ql-moss',
     warm: 'border-lime-200 bg-lime-50 text-lime-800',
-    known: 'border-amber-200 bg-amber-50 text-amber-700',
+    known: 'border-ql-accent/40 bg-ql-accent/10 text-ql-accent',
     cold: 'border-gray-200 bg-gray-50 text-gray-600',
   };
   return <span className={`rounded border px-1.5 py-0.5 font-mono text-[8px] font-semibold uppercase ${styles[state]}`}>{state}</span>;
 }
 
 function StagePill({ value }: { value: string }) {
-  return <span className="rounded border border-blue-200 bg-blue-50 px-1.5 py-0.5 font-mono text-[8px] font-semibold uppercase text-blue-700">{humanise(value)}</span>;
+  return <span className="rounded border border-ql-kind-grant/40 bg-ql-kind-grant/10 px-1.5 py-0.5 font-mono text-[8px] font-semibold uppercase text-ql-kind-grant">{humanise(value)}</span>;
 }
 
 function CompactMetric({ label, value }: { label: string; value: string }) {
