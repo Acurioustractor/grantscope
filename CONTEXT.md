@@ -113,9 +113,13 @@ rows, deadline-first:
    one decision: *pursue* (mints an Ask) or *pass* (gone forever).
    Default thresholds: grants deadline ≤ 30d or fit ≥ 85; funders fit ≥ 85;
    open-stage buyers always in.
-4. **Obligations** — open Obligations, due/overdue-first.
+4. **Obligations** — open Obligations, due/overdue-first. Default threshold:
+   overdue, due ≤ 30d, or undated (undated is ALWAYS visible — if it can be
+   parked it should be Dropped or given a date). Distant dated ones live in
+   the delivery surfaces.
 5. **People with due next actions** — cultivated People whose next action
-   (including watches) is due.
+   (including watches) has a review-by/due date ≤ 7d away or past. Otherwise
+   they stay in /org/act/people.
 The undecided tail (low-fit foundations, distant rounds, non-due People and
 Obligations) lives in workspace lists and never touches the desk. No sibling
 queue: checking the desk is sufficient.
