@@ -25,6 +25,22 @@ status: active
 - [x] **One Desk** (/org/act/desk): Ben's chosen model from /prototype (B split-desk + A do-this-now + C horizon groups). One ranked pool (lib/services/act-one-desk.ts): funders + grants + buyers + money (overdue invoices) + commitments (pipeline cards, ALL projects). Project + kind are filter chips. Done/Waiting/Tomorrow persists via daily-actions store (shared with old Today). Rail work-mode 01.
 - [x] Vercel OOM fixed for real: next.config cpus:2 + webpackMemoryOptimizations + 4GB heap in vercel.json
 
+### Session 2026-08-05 afternoon (domain model + desk contract, PRs #116–#119)
+- [x] Quiet Ledger theme: ql-* tokens in globals.css (mirror pencil-new.pen component library), One Desk re-skinned, fonts via next/font; brand decision recorded in act-brand-alignment-map (Bauhaus stays public-facing)
+- [x] Domain model grilled + merged: CONTEXT.md (Ask/Grant Round/Signal; Org + 6 relationship types incl. opens; Target; 5 stages; desk contract; GHL-owns-the-Ask) + docs/adr/0001
+- [x] Desk contract enforced: asks + decisions-due only (fit>=85 / deadline<=30d thresholds), decide rings, Target header ($0 committed of $367–620K)
+- [x] One Desk IS today: bare /org/act redirects to /desk, Today left the rail; legacy views behind ?view=/?full=1; 22/22 E2E
+
+### NEXT BUILD BLOCK (fresh session): the Org record surface
+Listen is the last app-within-app. Fold: build /org/act/orgs/[org] in Quiet
+Ledger = everything ACT knows about one Org (relationships held w/ 6 types,
+Ask states in the 5 stages, follow-ups, people, money history, GHL door,
+freshness badges). Data already exists in the Listen view's loaders
+(relationship brief / act-relationship-ledger / funder context). Then: desk
+workHrefs point at Org records; Listen becomes an "Orgs" list (saved filter +
+density toggle) and retires from the rail; then Curiosity (keep matter desk as
+depth) and Action (redundant → retire).
+
 ### Consolidation next (the retirement list)
 - [ ] Retire/absorb duplicated screens: old Today queue panel on /org/act, org pipeline kanban (/org/act/pipeline) — One Desk supersedes both
 - [ ] Desk gaps: decision obligations (returns/promises) + review matters not yet in pool; funders/buyers/grants pools are Goods-only (other projects only via commitments)
