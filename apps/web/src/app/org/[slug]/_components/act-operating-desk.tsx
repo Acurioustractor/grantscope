@@ -1493,7 +1493,7 @@ export function ActOperatingDesk({
     : view === 'relationships'
       ? 'Listen to the relationship field'
       : view === 'opportunities'
-        ? 'Read what is changing'
+        ? 'Curiosity — decisions due'
         : view === 'triage'
           ? 'Check what the evidence supports'
         : view === 'pipeline'
@@ -1547,13 +1547,11 @@ export function ActOperatingDesk({
               </section>
             ) : null}
 
+        {/* One heading (the page title) + one contract line inside the workbench.
+            The old label stack (eyebrow / section title / review title) is gone
+            per Ben's Curiosity cut, 2026-08-05. */}
         {showOpportunityWorkbench ? (
           <section id="opportunities" className="min-w-0 scroll-mt-20 overflow-hidden rounded-md border border-[var(--ws-border)] bg-[var(--ws-surface-1)]">
-            <SectionTitle
-              eyebrow="Evidence and decision layer"
-              title="Understand what is happening now"
-              action={<LinkButton href="/opportunities/ecosystem" label="Deep view" />}
-            />
             <ActRecordReview
               records={opportunityRows}
               orgProfileId={orgProfileId}
