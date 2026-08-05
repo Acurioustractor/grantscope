@@ -344,6 +344,19 @@ test.describe('ACT Field Desk pilot workflow', () => {
     await expect(page.locator('nav[aria-label="ACT project fields"]')).toHaveCount(1);
   });
 
+  test('opens an Org record with relationships, asks, money and history sections', async ({ page }) => {
+    await page.goto('/org/act/orgs/snow-foundation');
+
+    const record = page.getByTestId('act-org-record');
+    await expect(record).toBeVisible();
+    await expect(record.getByRole('heading', { level: 1 })).toContainText(/snow/i);
+    await expect(record.getByRole('heading', { name: /Asks · the five stages/i })).toBeVisible();
+    await expect(record.getByRole('heading', { name: /Money · Xero/i })).toBeVisible();
+    await expect(record.getByRole('heading', { name: /Conversations & history/i })).toBeVisible();
+    // The workspace shell stays around the record.
+    await expect(page.getByTestId('act-desk-sidebar')).toBeVisible();
+  });
+
   test('surfaces ACT history and known people for an Atlas funder', async ({ page }) => {
     await page.goto('/org/act/explore?q=Snow%20Foundation');
 
