@@ -38,12 +38,23 @@ audit actually caught:
    copy must not contradict the evidence beside it → the AI-hedge "activities not well-documented"
    sitting above $7.8M of contracts (F3, F7), and raw jargon with no explainer ("black cladding", P2-3).
    Run copy claims through `/ground` if a figure or status is asserted.
-4. **Aesthetic** — does it match `DESIGN.md` (Bauhaus Industrial: Satoshi / DM Sans / JetBrains Mono,
-   `border-4` black, zero radius, signal red; **blue is link/accent, never a hero fill**), or has it
-   drifted? → three different hero systems across four pages (P2-6).
+4. **Aesthetic** — does it match its visual family? **Two families exist (decided 2026-08-05):**
+   public-facing CivicGraph surfaces = `DESIGN.md` Bauhaus Industrial (Satoshi / DM Sans / JetBrains
+   Mono, `border-4` black, zero radius, signal red; **blue is link/accent, never a hero fill**);
+   the ACT workspace (`/org/act/*`) = **Quiet Ledger** (ql-* tokens in globals.css, Newsreader +
+   IBM Plex Mono, warm paper). Judge each screen against ITS family; a Bauhaus class on a new ACT
+   surface is a finding, and vice versa.
 5. **Friction** — anything that makes a user bounce? Empty states that hide the intended path (P2-8),
    free-text where a picker belongs (F9), quoted-but-unclickable example chips (P2-7), missing
    per-page metadata that breaks link previews when a buyer pastes a profile into an email (P2-5).
+
+Ben's confirmed rage-triggers on ACT-workspace surfaces (live review 2026-08-05, PRs #133–#137 —
+hunt these first): **stacked meta-labels** (eyebrow + section title + inner title all restating one
+sentence); **filter chips that read as tabs** (filters nest under their rail entry or get an explicit
+"only show" label); **database vocabulary in UI copy** (bare "commitment"/"money"/"opportunity" —
+use Money owed to us / Committed work / Grant rounds, and CONTEXT.md words: Signal, Ask,
+pursue/pass); **the primary verb buried** below evidence links; **explanation captions in nav**.
+Full taste record: auto-memory `ben-ux-taste-one-desk`.
 
 ## Loop discipline (self-paced, like `/leverage`)
 
@@ -53,7 +64,7 @@ Two phases. **Never fix mid-audit** — collect the whole pass first, then fix t
 1. **Scope the surface.** Default target = the **buyer flow** (revenue surface, per the buyer-wedge):
    `/suppliers` → `/social-enterprises/[id]` → `/social-enterprises` → `/procurement` →
    `/procurement/tender-pack`. If Ben names a different surface, audit that. One screen per iteration.
-2. **See the real screen.** Server is fragile — `npx next dev --turbopack -p 3003`, warm each route
+2. **See the real screen.** Server is fragile — `npx next dev --turbopack -p 3013`, warm each route
    with `curl` (60s timeout; cold compile + DB ≈ 18s) *before* screenshotting. Capture the **logged-out
    buyer view** at 1280×900 → `docs/ux-audit/shots/`. Don't trust the code's intent — look at what
    renders. (Full method: `references/method.md`.)

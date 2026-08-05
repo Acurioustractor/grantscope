@@ -14,6 +14,6 @@ node --env-file=.env scripts/preflight.mjs
    - **Environment:** List missing env vars and where to get them
    - **Git:** Show uncommitted files, offer to commit
    - **TypeScript:** Run `cd apps/web && npx tsc --noEmit` and fix errors
-   - **Port 3003:** Show what process is using it
+   - **Port 3013:** Show what process is using it
 
 3. If all checks pass, confirm the session is ready for work.
