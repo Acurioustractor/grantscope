@@ -1240,8 +1240,12 @@ export async function loadActFunderIntelligence(orgProfileId: string): Promise<A
       boardRoleCount: numberValue(foundation.board_role_count),
       pipelineCount: numberValue(foundation.pipeline_count),
       people,
-      grantees: granteesByFoundation.get(foundation.foundation_id) ?? [],
-      programs: programsByFoundation.get(foundation.foundation_id) ?? [],
+      // Capped: the desk shows 8 of each (true totals travel as granteeCount /
+      // programCount). Uncapped these pushed the payload past Next's 2MB
+      // unstable_cache limit, so the cache silently never stored and every
+      // request re-ran the full load (~17s warm page loads, 2026-08-05).
+      grantees: (granteesByFoundation.get(foundation.foundation_id) ?? []).slice(0, 12),
+      programs: (programsByFoundation.get(foundation.foundation_id) ?? []).slice(0, 12),
       interactions: interactionHistory.slice(0, 10),
       paths: paths.slice(0, 10),
       sourceAudit,
