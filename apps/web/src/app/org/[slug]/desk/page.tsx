@@ -93,6 +93,12 @@ export default async function OneDeskPage({ params, searchParams }: {
           <div>
             <div className="font-ql-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-ql-accent">
               {asks.length} asks · {decisions.length} decisions due{handled.length > 0 ? ` · ${handled.length} handled today` : ''}
+              {kind ? (
+                <>
+                  {' · showing '}{KIND_FILTER_LABEL[kind].toLowerCase()}{' '}
+                  <Link href={project ? `${base}?project=${encodeURIComponent(project)}` : base} className="underline hover:text-ql-ink">✕</Link>
+                </>
+              ) : null}
             </div>
             <h1 className="mt-1 font-ql-display text-4xl font-semibold">One Desk</h1>
             {target ? (
@@ -103,29 +109,15 @@ export default async function OneDeskPage({ params, searchParams }: {
               </p>
             ) : null}
           </div>
-          {/* These are FILTERS of the one pool, not tabs — labelled so they
-              can't be mistaken for navigation (Ben's review, 2026-08-05). */}
-          <div className="flex flex-col items-end gap-1.5">
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              <span className="font-ql-mono text-[9px] font-semibold uppercase tracking-[0.12em] text-ql-muted">Only show project</span>
-              {projects.map((p) => (
-                <Link key={p} href={project === p ? (kind ? `${base}?kind=${kind}` : base) : qs({ project: p })} className={chip(project === p)}>
-                  {p}{project === p ? ' ✕' : ''}
-                </Link>
-              ))}
-            </div>
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              <span className="font-ql-mono text-[9px] font-semibold uppercase tracking-[0.12em] text-ql-muted">Only show</span>
-              {([null, 'money', 'commitment', 'funder', 'grant', 'buyer'] as const).map((k) => (
-                <Link
-                  key={k ?? 'all'}
-                  href={k ? (project ? `${base}?kind=${k}&project=${encodeURIComponent(project)}` : `${base}?kind=${k}`) : (project ? `${base}?project=${encodeURIComponent(project)}` : base)}
-                  className={chip(kind === k)}
-                >
-                  {k ? KIND_FILTER_LABEL[k] : 'Everything'}{kind === k && k ? ' ✕' : ''}
-                </Link>
-              ))}
-            </div>
+          {/* Kind lenses moved to the rail under One Desk (Ben, 2026-08-05);
+              the header keeps only the project filter. */}
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <span className="font-ql-mono text-[9px] font-semibold uppercase tracking-[0.12em] text-ql-muted">Only show project</span>
+            {projects.map((p) => (
+              <Link key={p} href={project === p ? (kind ? `${base}?kind=${kind}` : base) : qs({ project: p })} className={chip(project === p)}>
+                {p}{project === p ? ' ✕' : ''}
+              </Link>
+            ))}
           </div>
         </div>
 

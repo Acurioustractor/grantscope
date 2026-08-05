@@ -126,7 +126,12 @@ export function ActWorkspaceShell({
             <div className="mt-5 px-2 font-mono text-[9px] font-semibold uppercase tracking-widest text-[#8fa196] [@media(max-height:680px)]:mt-3">Where you work</div>
             <nav className="mt-1.5 space-y-1" aria-label="ACT work modes">
               {workModes.map((mode, index) => (
-                <WorkspaceModeLink key={mode.label} {...mode} index={index + 1} />
+                <div key={mode.label}>
+                  <WorkspaceModeLink {...mode} index={index + 1} />
+                  {mode.label === 'One Desk' && pathname.startsWith(`/org/${slug}/desk`) ? (
+                    <DeskRailTree slug={slug} activeKind={searchParams.get('kind')} project={searchParams.get('project')} />
+                  ) : null}
+                </div>
               ))}
             </nav>
 
@@ -302,6 +307,42 @@ const GOODS_RAIL_SECTIONS: ReadonlyArray<{ label: string; items: ReadonlyArray<r
   { label: 'Delivery', items: [['funnel', 'Delivery map'], ['communities', 'Communities'], ['channels', 'Channels'], ['buyers', 'Buyers']] },
   { label: 'Trust', items: [['model', 'Story & model'], ['proof', 'Evidence'], ['governance', 'Governance']] },
 ];
+
+/** The desk's lenses live under One Desk on the rail (Ben, 2026-08-05):
+ * click a lens to filter the one pool in place; the detail pane's
+ * "Open full workspace" remains the full-screen jump. */
+const DESK_LENSES: ReadonlyArray<readonly [string | null, string]> = [
+  [null, 'Everything'],
+  ['money', 'Money owed to us'],
+  ['commitment', 'Committed work'],
+  ['funder', 'Funders'],
+  ['grant', 'Grant rounds'],
+  ['buyer', 'Buyers'],
+];
+
+function DeskRailTree({ slug, activeKind, project }: { slug: string; activeKind: string | null; project: string | null }) {
+  const href = (kind: string | null) => {
+    const params = new URLSearchParams({ ...(kind ? { kind } : {}), ...(project ? { project } : {}) });
+    const qs = params.toString();
+    return qs ? `/org/${slug}/desk?${qs}` : `/org/${slug}/desk`;
+  };
+  return (
+    <div className="ml-3 border-l border-white/15 pb-1 pl-2">
+      {DESK_LENSES.map(([kind, label]) => (
+        <Link
+          key={kind ?? 'all'}
+          href={href(kind)}
+          aria-current={activeKind === kind || (!activeKind && !kind) ? 'page' : undefined}
+          className={`block rounded px-1.5 py-1 text-[11px] leading-4 hover:bg-white/5 hover:text-white ${
+            activeKind === kind || (!activeKind && !kind) ? 'bg-white/10 font-semibold text-white' : 'text-[#c7d1ca]'
+          }`}
+        >
+          {label}
+        </Link>
+      ))}
+    </div>
+  );
+}
 
 function GoodsRailTree({ slug, pathname }: { slug: string; pathname: string }) {
   const base = `/org/${slug}/goods`;
