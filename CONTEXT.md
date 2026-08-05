@@ -104,22 +104,37 @@ funder?" is the wrong question; ask "what relationships do we hold with X?"
 ## Screen ownership
 
 ### One Desk (`/org/act/desk`)
-The directed queue. Its contract: **everything on it is either committed work
-or a decision due now.** Exactly three kinds of rows, deadline-first:
+The directed queue. Its contract (widened 2026-08-06): **everything on it is
+committed work of any kind, or a decision due now.** Exactly five kinds of
+rows, deadline-first:
 1. **Asks** — every live Ask (owner + next action). Always present.
 2. **Money chases** — outstanding invoices (Asks against people who already owe).
 3. **Decision-due items** — Signals / Grant Rounds above threshold, framed as
    one decision: *pursue* (mints an Ask) or *pass* (gone forever).
    Default thresholds: grants deadline ≤ 30d or fit ≥ 85; funders fit ≥ 85;
    open-stage buyers always in.
-The undecided tail (low-fit foundations, distant rounds) lives in workspace
-lists and never touches the desk.
+4. **Obligations** — open Obligations, due/overdue-first.
+5. **People with due next actions** — cultivated People whose next action
+   (including watches) is due.
+The undecided tail (low-fit foundations, distant rounds, non-due People and
+Obligations) lives in workspace lists and never touches the desk. No sibling
+queue: checking the desk is sufficient.
 
-### Workspace surfaces (`/org/act/goods/*` etc.)
-Per-noun homes: full lists (saved filters of the one pool with density
-toggles), record detail, evidence. Where browsing and research happen.
-The desk links into them ("Open full workspace →"); they feed decisions back
-to the desk.
+### Money surfaces (`/org/act/goods/*` etc.)
+Per-noun homes for grant-chasing browsing and research: Signals, Grant Rounds,
+Orgs + Relationships, Asks lists, Targets — full lists (saved filters of the
+one pool with density toggles), record detail, evidence. The desk links into
+them ("Open full workspace →"); they feed decisions back to the desk.
+
+### Delivery surfaces (same per-project workspace family)
+Supports & delivery: Obligation lists + Obligation detail, per project — a
+Goods acquittal lives in the Goods workspace.
+
+### People surface (`/org/act/people`, org-wide)
+The cultivated humans: People list + Person detail (roles, warmth, opens-into,
+next actions/watches), project chips on rows. Org-wide, not per-project —
+People are the one genuinely cross-project noun; splitting them would recreate
+the identity-typing mistake the Relationship model exists to kill.
 
 ### Target
 What the Asks serve: a per-project, per-relationship-type goal with a date
