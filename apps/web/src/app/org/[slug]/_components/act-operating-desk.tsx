@@ -218,32 +218,32 @@ function routeTypeToLane(type: WikiSupportRouteType | 'unknown'): WorkLane {
 }
 
 function laneClass(lane: WorkLane): string {
-  if (lane === 'grant') return 'border-blue-200 bg-blue-50 text-blue-700';
-  if (lane === 'foundation' || lane === 'capital') return 'border-emerald-200 bg-emerald-50 text-emerald-700';
-  if (lane === 'procurement') return 'border-amber-200 bg-amber-50 text-amber-800';
-  if (lane === 'relationship') return 'border-purple-200 bg-purple-50 text-purple-700';
-  return 'border-stone-200 bg-stone-50 text-stone-700';
+  if (lane === 'grant') return 'border-ql-kind-grant/40 bg-ql-kind-grant/10 text-ql-kind-grant';
+  if (lane === 'foundation' || lane === 'capital') return 'border-ql-moss/40 bg-ql-moss/10 text-ql-moss';
+  if (lane === 'procurement') return 'border-ql-accent/40 bg-ql-accent/10 text-ql-accent';
+  if (lane === 'relationship') return 'border-ql-kind-funder/40 bg-ql-kind-funder/10 text-ql-kind-funder';
+  return 'border-ql-border bg-ql-surface2 text-ql-ink';
 }
 
 function sourceClass(source: SourceKind): string {
-  if (source === 'grant' || source === 'supabase') return 'border-blue-200 bg-blue-50 text-blue-700';
-  if (source === 'foundation') return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+  if (source === 'grant' || source === 'supabase') return 'border-ql-kind-grant/40 bg-ql-kind-grant/10 text-ql-kind-grant';
+  if (source === 'foundation') return 'border-ql-moss/40 bg-ql-moss/10 text-ql-moss';
   if (source === 'highlevel') return 'border-indigo-200 bg-indigo-50 text-indigo-700';
-  if (source === 'gmail') return 'border-purple-200 bg-purple-50 text-purple-700';
+  if (source === 'gmail') return 'border-ql-kind-funder/40 bg-ql-kind-funder/10 text-ql-kind-funder';
   if (source === 'xero') return 'border-teal-200 bg-teal-50 text-teal-700';
-  if (source === 'notion') return 'border-stone-300 bg-white text-stone-700';
+  if (source === 'notion') return 'border-ql-border bg-ql-surface text-ql-ink';
   if (source === 'goods') return 'border-cyan-200 bg-cyan-50 text-cyan-700';
-  return 'border-stone-200 bg-stone-50 text-stone-700';
+  return 'border-ql-border bg-ql-surface2 text-ql-ink';
 }
 
 function healthClass(status: HealthStatus): string {
-  if (status === 'ok' || status === 'verified') return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+  if (status === 'ok' || status === 'verified') return 'border-ql-moss/40 bg-ql-moss/10 text-ql-moss';
   if (status === 'configured' || status === 'mirror-only' || status === 'partial') {
-    return 'border-amber-200 bg-amber-50 text-amber-800';
+    return 'border-ql-accent/40 bg-ql-accent/10 text-ql-accent';
   }
   if (status === 'stale') return 'border-orange-200 bg-orange-50 text-orange-800';
-  if (status === 'empty') return 'border-stone-200 bg-stone-50 text-stone-700';
-  return 'border-red-200 bg-red-50 text-red-700';
+  if (status === 'empty') return 'border-ql-border bg-ql-surface2 text-ql-ink';
+  return 'border-ql-alert/40 bg-ql-alert/10 text-ql-alert';
 }
 
 function relationshipStageLabel(row: OrgProjectFoundationPortfolioRow): string {
@@ -1531,7 +1531,7 @@ export function ActOperatingDesk({
                 <div className="min-w-0 overflow-hidden rounded-md border border-[var(--ws-border)] bg-[var(--ws-surface-1)]">
                   <div className="border-b border-[var(--ws-border)] px-5 py-5">
                     <div className="font-mono text-[10px] font-semibold uppercase tracking-widest text-[var(--ws-text-secondary)]">Today</div>
-                    <h2 className="mt-2 text-xl font-semibold tracking-normal">Do these in order</h2>
+                    <h2 className="mt-2 font-ql-display text-xl font-semibold tracking-normal">Do these in order</h2>
                     <p className="mt-1 text-sm text-[var(--ws-text-secondary)]">Finish the first move before opening another queue.</p>
                   </div>
                   {opportunityContext ? (
@@ -1590,7 +1590,7 @@ export function ActOperatingDesk({
                       </span>
                     </div>
                     {row.grant_finder_href ? (
-                      <Link href={row.grant_finder_href} className="mt-2 inline-flex text-xs font-semibold text-blue-700 hover:underline">
+                      <Link href={row.grant_finder_href} className="mt-2 inline-flex text-xs font-semibold text-ql-kind-grant hover:underline">
                         Open search
                       </Link>
                     ) : null}
@@ -1744,12 +1744,12 @@ function RelationshipStudioContactRow({
   selected: boolean;
   slug: string;
 }) {
-  const colours = ['#c99a2e', '#6b78b8', '#4f8b63', '#a06b8b', '#44899b', '#65766b'];
+  const colours = ['#9A673B', '#3F6577', '#5F725C', '#6B5B8A', '#3F6577', '#70685F'];
   return (
     <Link
       href={deskRelationshipHref(slug, contact.id)}
       className={`flex min-h-[82px] items-center gap-3 border-l-4 px-4 py-3 transition-colors ${
-        selected ? 'border-l-[#2f6b4a] bg-white' : 'border-l-transparent hover:bg-white'
+        selected ? 'border-l-[#5F725C] bg-ql-surface' : 'border-l-transparent hover:bg-ql-surface'
       }`}
     >
       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full font-mono text-[10px] font-semibold text-white" style={{ backgroundColor: colours[index % colours.length] }}>
@@ -1759,7 +1759,7 @@ function RelationshipStudioContactRow({
         <span className="block truncate text-xs font-semibold">{contact.name}</span>
         <span className="mt-1 block truncate text-[10px] text-[var(--ws-text-secondary)]">{contact.organisation || contact.lane}</span>
       </span>
-      <span className="shrink-0 font-mono text-[8px] font-semibold uppercase text-[#2f6b4a]">{contact.warmth}</span>
+      <span className="shrink-0 font-mono text-[8px] font-semibold uppercase text-[#5F725C]">{contact.warmth}</span>
     </Link>
   );
 }
@@ -1776,7 +1776,7 @@ function RelationshipFact({ label, value, last = false }: { label: string; value
 function RelationshipEventRow({ event }: { event: ActOpportunityContextEvent }) {
   return (
     <div className="grid grid-cols-[34px_minmax(0,1fr)] gap-3 py-5">
-      <span className="grid h-8 w-8 place-items-center rounded-full bg-[#e7f1ea] font-mono text-[9px] font-semibold uppercase text-[#2f6b4a]">
+      <span className="grid h-8 w-8 place-items-center rounded-full bg-[#F2E5D6] font-mono text-[9px] font-semibold uppercase text-[#5F725C]">
         {event.sourceSystem.slice(0, 1)}
       </span>
       <div className="min-w-0">
@@ -1792,7 +1792,7 @@ function RelationshipEventRow({ event }: { event: ActOpportunityContextEvent }) 
 
 function EvidenceSource({ label, status }: { label: string; status: HealthStatus }) {
   return (
-    <div className="border border-[var(--ws-border)] bg-white px-3 py-2.5">
+    <div className="border border-[var(--ws-border)] bg-ql-surface px-3 py-2.5">
       <div className="text-[11px] font-semibold">{label}</div>
       <div className="mt-1 font-mono text-[8px] uppercase text-[var(--ws-text-secondary)]">{status}</div>
     </div>
@@ -1813,15 +1813,15 @@ function ActionTile({
   tone: 'red' | 'green' | 'blue' | 'purple' | 'amber';
 }) {
   const tones = {
-    red: 'border-red-200 bg-red-50 text-red-700',
-    green: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-    blue: 'border-blue-200 bg-blue-50 text-blue-700',
-    purple: 'border-purple-200 bg-purple-50 text-purple-700',
-    amber: 'border-amber-200 bg-amber-50 text-amber-800',
+    red: 'border-ql-alert/40 bg-ql-alert/10 text-ql-alert',
+    green: 'border-ql-moss/40 bg-ql-moss/10 text-ql-moss',
+    blue: 'border-ql-kind-grant/40 bg-ql-kind-grant/10 text-ql-kind-grant',
+    purple: 'border-ql-kind-funder/40 bg-ql-kind-funder/10 text-ql-kind-funder',
+    amber: 'border-ql-accent/40 bg-ql-accent/10 text-ql-accent',
   };
 
   return (
-    <Link href={href} className={`block rounded-md border p-3 transition hover:bg-white ${tones[tone]}`}>
+    <Link href={href} className={`block rounded-md border p-3 transition hover:bg-ql-surface ${tones[tone]}`}>
       <div className="text-xs font-semibold uppercase tracking-wide opacity-80">{label}</div>
       <div className="mt-1 font-mono text-2xl font-semibold tabular-nums">{value}</div>
       <div className="mt-1 line-clamp-2 text-xs leading-snug opacity-90">{detail}</div>
@@ -1850,26 +1850,26 @@ function DiscoveryReceipt({
 }) {
   const hasActivity = receipt.newSignals + receipt.changedSignals + receipt.refreshedPrograms > 0;
   return (
-    <div className="border-b border-[var(--ws-border)] bg-[#f1f8f5] px-5 py-4" aria-label="Latest discovery activity">
+    <div className="border-b border-[var(--ws-border)] bg-[#F6F1E8] px-5 py-4" aria-label="Latest discovery activity">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="grid h-7 w-7 place-items-center rounded-full bg-[#2f8f64] text-xs font-semibold text-white" aria-hidden="true">✓</span>
-            <span className="text-sm font-semibold text-[#183426]">
+            <span className="grid h-7 w-7 place-items-center rounded-full bg-[#5F725C] text-xs font-semibold text-white" aria-hidden="true">✓</span>
+            <span className="text-sm font-semibold text-[#211F1C]">
               {hasActivity ? 'Discovery activity recorded' : 'Discovery sources checked'}
             </span>
-            <span className="font-mono text-[9px] uppercase tracking-wide text-[#56715f]">
+            <span className="font-mono text-[9px] uppercase tracking-wide text-[#70685F]">
               latest stored batch · {fmtDateTime(receipt.latestAt)}
             </span>
           </div>
-          <p className="mt-2 text-xs leading-relaxed text-[#4f6657]">
+          <p className="mt-2 text-xs leading-relaxed text-[#70685F]">
             {receipt.newSignals} new signal{receipt.newSignals === 1 ? '' : 's'} · {receipt.changedSignals} changed · {receipt.refreshedPrograms} public program{receipt.refreshedPrograms === 1 ? '' : 's'} refreshed. Ignored mail stays out of the app.
           </p>
         </div>
         <div className="flex shrink-0 gap-2">
           <ReceiptMetric label="Openings" value={receipt.opportunitySignals} />
           <ReceiptMetric label="Relationships" value={receipt.relationshipSignals} />
-          <Link href={opportunitiesHref} className="inline-flex min-h-11 items-center rounded-md bg-[#183426] px-3 text-xs font-semibold text-white hover:bg-[#24523b] focus:outline-none focus:ring-2 focus:ring-[#2f8f64] focus:ring-offset-2">
+          <Link href={opportunitiesHref} className="inline-flex min-h-11 items-center rounded-md bg-[#211F1C] px-3 text-xs font-semibold text-white hover:bg-[#27221D] focus:outline-none focus:ring-2 focus:ring-[#5F725C] focus:ring-offset-2">
             Review changes
           </Link>
         </div>
@@ -1880,9 +1880,9 @@ function DiscoveryReceipt({
 
 function ReceiptMetric({ label, value }: { label: string; value: number }) {
   return (
-    <div className="min-w-[76px] rounded-md border border-[#cfe0d4] bg-white px-3 py-2 text-center">
-      <div className="font-mono text-base font-semibold tabular-nums text-[#183426]">{value}</div>
-      <div className="mt-0.5 text-[9px] font-semibold uppercase tracking-wide text-[#56715f]">{label}</div>
+    <div className="min-w-[76px] rounded-md border border-[#DDD4C7] bg-ql-surface px-3 py-2 text-center">
+      <div className="font-mono text-base font-semibold tabular-nums text-[#211F1C]">{value}</div>
+      <div className="mt-0.5 text-[9px] font-semibold uppercase tracking-wide text-[#70685F]">{label}</div>
     </div>
   );
 }
@@ -1958,9 +1958,9 @@ function ContextSourceRow({ source }: { source: ActOpportunityContextSource }) {
 }
 
 function priorityClass(priority: ActOpportunityContextStep['priority']): string {
-  if (priority === 'high') return 'border-red-200 bg-red-50 text-red-700';
-  if (priority === 'medium') return 'border-amber-200 bg-amber-50 text-amber-800';
-  return 'border-stone-200 bg-stone-50 text-stone-700';
+  if (priority === 'high') return 'border-ql-alert/40 bg-ql-alert/10 text-ql-alert';
+  if (priority === 'medium') return 'border-ql-accent/40 bg-ql-accent/10 text-ql-accent';
+  return 'border-ql-border bg-ql-surface2 text-ql-ink';
 }
 
 function ContextStepRow({ step }: { step: ActOpportunityContextStep }) {
@@ -2016,19 +2016,19 @@ function actionStateLabel(state: RelationshipActionState): string {
 }
 
 function actionStateClass(state: RelationshipActionState): string {
-  if (state === 'ready_to_reply' || state === 'proposal_path') return 'border-emerald-200 bg-emerald-50 text-emerald-700';
-  if (state === 'meeting_needed') return 'border-blue-200 bg-blue-50 text-blue-700';
-  if (state === 'waiting') return 'border-amber-200 bg-amber-50 text-amber-800';
-  if (state === 'parked') return 'border-stone-300 bg-stone-100 text-stone-600';
-  return 'border-purple-200 bg-purple-50 text-purple-700';
+  if (state === 'ready_to_reply' || state === 'proposal_path') return 'border-ql-moss/40 bg-ql-moss/10 text-ql-moss';
+  if (state === 'meeting_needed') return 'border-ql-kind-grant/40 bg-ql-kind-grant/10 text-ql-kind-grant';
+  if (state === 'waiting') return 'border-ql-accent/40 bg-ql-accent/10 text-ql-accent';
+  if (state === 'parked') return 'border-ql-border bg-ql-warm text-ql-text2';
+  return 'border-ql-kind-funder/40 bg-ql-kind-funder/10 text-ql-kind-funder';
 }
 
 function ContactRow({ contact, orgProfileId }: { contact: ContactContextRow; orgProfileId: string }) {
   const warmth = contact.warmth === 'hot'
-    ? 'border-red-200 bg-red-50 text-red-700'
+    ? 'border-ql-alert/40 bg-ql-alert/10 text-ql-alert'
     : contact.warmth === 'warm'
-      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-      : 'border-stone-200 bg-stone-50 text-stone-700';
+      ? 'border-ql-moss/40 bg-ql-moss/10 text-ql-moss'
+      : 'border-ql-border bg-ql-surface2 text-ql-ink';
 
   return (
     <div className="px-3 py-3 text-sm">
