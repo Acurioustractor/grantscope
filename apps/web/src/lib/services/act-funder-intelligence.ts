@@ -610,6 +610,8 @@ export async function loadActFunderIntelligence(orgProfileId: string): Promise<A
   if (!UUID_RE.test(orgProfileId)) return emptyIntelligence();
   const db = getServiceSupabase();
 
+  const tPhase = process.env.DEBUG_FUNDER_INTEL_SIZE === '1' ? Date.now() : 0;
+  const mark = (label: string) => { if (tPhase) console.error(`[intel-time] ${label} +${Date.now() - tPhase}ms`); };
   const foundationRows = await safe(db.rpc('exec_sql', {
     query: `WITH portfolio AS (
         SELECT
@@ -703,6 +705,7 @@ export async function loadActFunderIntelligence(orgProfileId: string): Promise<A
       ORDER BY (NOT ('parked' = ANY(p.stages))) DESC, p.fit_score DESC NULLS LAST, f.name`,
   })) as FoundationRow[] | null;
 
+  mark('mega');
   if (!foundationRows?.length) return emptyIntelligence();
   const ids = foundationRows.map((row) => `'${row.foundation_id}'`).join(',');
 
@@ -796,14 +799,19 @@ export async function loadActFunderIntelligence(orgProfileId: string): Promise<A
         ORDER BY last_contacted_at DESC NULLS LAST, updated_at DESC`,
     })) as Promise<RawOrgContact[] | null>,
     safe(db.rpc('exec_sql', {
-      query: `WITH unresolved AS (
+      // cfg raises the trigram threshold for this statement (default 0.3
+      // fetched huge candidate sets that the >=58 nameScore filter discarded
+      // anyway — 13s -> 3s on 2026-08-05). Referenced from `unresolved` so it
+      // evaluates before the lateral probes.
+      query: `WITH cfg AS (SELECT set_config('pg_trgm.similarity_threshold', '0.5', true)),
+        unresolved AS (
           SELECT id, name, COALESCE(NULLIF(organisation, ''), name) AS organisation, email,
             CASE
               WHEN email IS NULL AND name <> COALESCE(organisation, '') AND name NOT LIKE '%/%'
                 THEN name
               ELSE COALESCE(NULLIF(organisation, ''), name)
             END AS search_name
-          FROM org_contacts
+          FROM org_contacts, cfg
           WHERE org_profile_id = '${orgProfileId}' AND linked_entity_id IS NULL
         )
         SELECT c.id::text AS contact_id, c.name AS contact_name, c.organisation, c.email,
@@ -909,6 +917,7 @@ export async function loadActFunderIntelligence(orgProfileId: string): Promise<A
     })) as Promise<Array<Record<string, unknown>> | null>,
   ]);
 
+  mark('parallel');
   const granteesByFoundation = new Map<string, ActFunderGrantee[]>();
   for (const row of granteeRows ?? []) {
     const foundationId = String(row.foundation_id);
@@ -1277,6 +1286,7 @@ export async function loadActFunderIntelligence(orgProfileId: string): Promise<A
   const withContacts = dossiers.filter((row) => row.people.some((person) => ['gmail', 'contact', 'ghl', 'portfolio'].includes(person.source))).length;
   const withWarmPath = dossiers.filter((row) => row.paths.some((path) => path.verified || path.kind === 'direct_contact')).length;
   const contactResolutionItems = buildContactResolutionItems(contactResolutionRows ?? []);
+  mark('assembled');
   if (process.env.DEBUG_FUNDER_INTEL_SIZE === '1') {
     const size = (v: unknown) => JSON.stringify(v)?.length ?? 0;
     const fields: Record<string, number> = {};
