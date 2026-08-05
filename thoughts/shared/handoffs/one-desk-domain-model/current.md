@@ -15,7 +15,7 @@ status: active
 **Test:** docs-only so far; cd apps/web && npx tsc --noEmit when build starts
 
 ### Now
-[->] Next wayfinder session: pick a frontier ticket — #154 (UX spec: People surface), #155 (UX spec: Delivery surfaces), or #156 (migration/backfill prompt list)
+[->] Next wayfinder session: pick a frontier ticket — #155 (UX spec: Delivery surfaces), or #156 (migration/backfill prompt list)
 
 ### This Session
 - [x] #145 Person entity — deliberate-minting, typed roles (works-at/board-of/decides-for/opens-into), warmth+warm-via, GHL SoR (ADR 0002)
@@ -30,7 +30,7 @@ status: active
 
 ### Next
 - [x] #153 UX spec widened One Desk — RESOLVED, spec at docs/specs/one-desk-widened-ux-spec.md (interleaved pool, undated-obligations pin, any-kind hero, header owed/people counts)
-- [ ] #154 UX spec People surface (minting flow per ADR 0002)
+- [x] #154 UX spec People surface — RESOLVED, spec at docs/specs/people-surface-ux-spec.md (replaces /contacts, full mint flow, split pane)
 - [ ] #155 UX spec Delivery surfaces (mint-on-Won prompt + mismatch report)
 - [ ] #156 backfill prompt-list decision (grilling with Ben)
 
