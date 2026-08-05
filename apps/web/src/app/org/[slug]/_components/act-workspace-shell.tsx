@@ -81,8 +81,8 @@ export function ActWorkspaceShell({
   const artProject = projectRows.find((project) => /harvest|witta|art/.test(`${project.slug} ${project.name}`.toLowerCase()));
   const workModes: WorkspaceLink[] = [
     // The one-system front door: every workable record, one ranked queue.
-    { label: 'One Desk', href: `/org/${slug}/desk`, active: pathname.startsWith(`/org/${slug}/desk`) },
-    { label: 'Today', href: rootHref(slug), active: onOrgRoot && view === 'today' },
+    // "Today" retired 2026-08-05 — One Desk IS today (CONTEXT.md).
+    { label: 'One Desk', href: `/org/${slug}/desk`, active: pathname.startsWith(`/org/${slug}/desk`) || (onOrgRoot && view === 'today') },
     { label: 'Listen', href: rootHref(slug, 'relationships', 'relationships'), active: onOrgRoot && view === 'relationships' },
     { label: 'Curiosity', href: rootHref(slug, 'opportunities', 'opportunities'), active: onOrgRoot && (view === 'opportunities' || view === 'triage') },
     { label: 'Action', href: rootHref(slug, 'pipeline', 'pipeline'), active: onOrgRoot && view === 'pipeline' },

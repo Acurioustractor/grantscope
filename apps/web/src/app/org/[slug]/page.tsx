@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { getWikiSupportIndex, type WikiSupportIndex } from '@/lib/services/wiki-support-index';
 import { getWikiSupportFrontierQueue, type WikiSupportFrontierQueue } from '@/lib/services/wiki-support-frontier';
 import { workshopWikiHref } from '@/lib/services/act-workshop-wiki';
@@ -705,8 +705,12 @@ export default async function OrgDashboard({ params, searchParams }: { params: P
   const { slug } = await params;
   const sp = await searchParams;
   const fundingYearFilter = typeof sp.fy === 'string' ? sp.fy : undefined;
-  // ACT always opens in the Field Desk. The old full dashboard made production
-  // and `?full=1` behave differently from the daily workspace tested in CI.
+  // One Desk IS today (CONTEXT.md screen ownership): the bare org root goes to
+  // the desk. The legacy field-desk views stay reachable only when a view,
+  // walkthrough, or deep-link param is explicitly present, until they retire.
+  if (isActSlug(slug) && !sp.view && !sp.walkthrough && !sp.review && !sp.relationship && !sp.commitment && !sp.ledger && !sp.full) {
+    redirect(`/org/${slug}/desk`);
+  }
   if (isActSlug(slug)) {
     return (
       <FastOrgDashboard
