@@ -9,13 +9,20 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-08-05T09:15:00+10:00
-**Goal:** Work the current Goods opportunities via **One Desk** (/org/act/desk — the new one-system front door). The 2026-08-05 session became a major UX consolidation instead of ask-work; the asks are still the next session.
+**Updated:** 2026-08-05T16:30:00+10:00
+**Goal:** The one-system fold is DONE (Org records + Orgs list + rail cleanup, PRs #121–#124). Next session is ask-work, not building: make the Balnaves ask.
 **Branch:** main (everything merged; work in small PR-per-change loops)
-**Test:** cd apps/web && npx tsc --noEmit && npx vitest run; E2E: kill dev server on 3013 first, then npx playwright test (21/21, no fixmes)
+**Test:** cd apps/web && npx tsc --noEmit && npx vitest run; E2E: kill dev server on 3013 first, then npx playwright test (24/24, no fixmes)
 
 ### Now
-[->] Work the live opportunities FROM ONE DESK: Balnaves EOI (in funder queue, fit 90), auDA (31 Aug), QBE Stage 2 deadline confirmation
+[->] NO MORE BUILDING. Work the live opportunities FROM ONE DESK: Balnaves EOI first (in funder queue, fit 90 — use /act-voice + /ground before outreach copy), then auDA (31 Aug), QBE Stage 2 deadline confirmation
+
+### Session 2026-08-05 evening (Org record surface + one-system fold, PRs #121–#124)
+- [x] PR #121: **Org record** /org/act/orgs/[org] (Quiet Ledger): six typed Relationships (funds/buys/distributes/auspices/collaborates/opens mapped from goods_relationships in lib/services/act-org-record.ts), Asks in the five stages (GoodsStage→stage mapping table there too), next moves + follow-ups + brief actions, People, Xero money history, conversations timeline, GHL door + freshness badges (stale >24h). Composes the Listen loaders (act-relationship-ledger / act-funder-intelligence / act-relationship-brief) — no rebuilt queries. Unknown org slugs render an honest empty record, not 404.
+- [x] PR #122: desk workHrefs → Org records for org rows (money chases, in-GHL funders, buyers). Decision-due funders keep the scan (decision surface); Grant Rounds keep triage (a round is not an Org).
+- [x] PR #123: **Listen folded** → /org/act/orgs list (search, relationship chips + warmth, cards/table/compact density). Rail: Orgs replaces Listen; ?view=relationships stays reachable as legacy.
+- [x] PR #124: **Action retired** from the rail (One Desk owns committed work, kind=commitment); ?view=pipeline legacy. Curiosity kept (matter-review desk earns its depth).
+- Org identity note: [org] slug = normaliseRelationshipIdentity hyphenated (actOrgSlug/actOrgHref in act-org-record.ts); spans ledger keys, goods_relationships display names, and dossier names.
 
 ### Session 2026-08-05 (UX consolidation — all merged to main, PRs #104–#115)
 - [x] PR #106 + stacked #104 merged (30 commits incl. 4 rescued uncommitted-workspace commits); main E2E repaired (fixture guard in getOrgProfileBySlug — see memory vercel-oom-and-e2e-fixture-contract)
@@ -31,15 +38,8 @@ status: active
 - [x] Desk contract enforced: asks + decisions-due only (fit>=85 / deadline<=30d thresholds), decide rings, Target header ($0 committed of $367–620K)
 - [x] One Desk IS today: bare /org/act redirects to /desk, Today left the rail; legacy views behind ?view=/?full=1; 22/22 E2E
 
-### NEXT BUILD BLOCK (fresh session): the Org record surface
-Listen is the last app-within-app. Fold: build /org/act/orgs/[org] in Quiet
-Ledger = everything ACT knows about one Org (relationships held w/ 6 types,
-Ask states in the 5 stages, follow-ups, people, money history, GHL door,
-freshness badges). Data already exists in the Listen view's loaders
-(relationship brief / act-relationship-ledger / funder context). Then: desk
-workHrefs point at Org records; Listen becomes an "Orgs" list (saved filter +
-density toggle) and retires from the rail; then Curiosity (keep matter desk as
-depth) and Action (redundant → retire).
+### NEXT BUILD BLOCK — none. Org record surface SHIPPED (see evening session above)
+The session after this one works Balnaves, not more building.
 
 ### Consolidation next (the retirement list)
 - [ ] Retire/absorb duplicated screens: old Today queue panel on /org/act, org pipeline kanban (/org/act/pipeline) — One Desk supersedes both

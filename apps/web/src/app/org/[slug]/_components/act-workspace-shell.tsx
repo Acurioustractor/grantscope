@@ -87,7 +87,8 @@ export function ActWorkspaceShell({
     // Legacy lens stays reachable at ?view=relationships (not on the rail).
     { label: 'Orgs', href: `/org/${slug}/orgs`, active: pathname.startsWith(`/org/${slug}/orgs`) },
     { label: 'Curiosity', href: rootHref(slug, 'opportunities', 'opportunities'), active: onOrgRoot && (view === 'opportunities' || view === 'triage') },
-    { label: 'Action', href: rootHref(slug, 'pipeline', 'pipeline'), active: onOrgRoot && view === 'pipeline' },
+    // Action retired from the rail 2026-08-05 — One Desk owns committed work
+    // (kind=commitment). Legacy lens stays reachable at ?view=pipeline.
     {
       label: 'Art',
       href: artProject ? `/org/${slug}/${artProject.slug}` : rootHref(slug, 'triage', 'triage'),
