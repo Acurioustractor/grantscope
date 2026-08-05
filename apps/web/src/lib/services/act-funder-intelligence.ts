@@ -1,5 +1,4 @@
 import { cache } from 'react';
-import { unstable_cache } from 'next/cache';
 import { getServiceSupabase } from '@/lib/supabase';
 import { safe } from '@/lib/services/utils';
 import { isInternalActIdentity } from '@/lib/act-internal-identities';
@@ -1278,6 +1277,14 @@ export async function loadActFunderIntelligence(orgProfileId: string): Promise<A
   const withContacts = dossiers.filter((row) => row.people.some((person) => ['gmail', 'contact', 'ghl', 'portfolio'].includes(person.source))).length;
   const withWarmPath = dossiers.filter((row) => row.paths.some((path) => path.verified || path.kind === 'direct_contact')).length;
   const contactResolutionItems = buildContactResolutionItems(contactResolutionRows ?? []);
+  if (process.env.DEBUG_FUNDER_INTEL_SIZE === '1') {
+    const size = (v: unknown) => JSON.stringify(v)?.length ?? 0;
+    const fields: Record<string, number> = {};
+    for (const d of dossiers) for (const [k, v] of Object.entries(d)) fields[k] = (fields[k] ?? 0) + size(v);
+    console.error('[intel-size] dossiers', dossiers.length, 'total', size(dossiers),
+      Object.entries(fields).sort((a, b) => b[1] - a[1]).slice(0, 10),
+      'sourceAudit', size(sourceAudit), 'contactResolution', size(contactResolutionItems));
+  }
   return {
     generatedAt: new Date().toISOString(),
     summary: {
@@ -1314,10 +1321,23 @@ export async function loadActFunderIntelligence(orgProfileId: string): Promise<A
   };
 }
 
-const getCachedActFunderIntelligence = unstable_cache(
-  loadActFunderIntelligence,
-  ['act-funder-intelligence-v5'],
-  { revalidate: 300, tags: ['act-funder-intelligence'] },
-);
+/**
+ * In-process TTL memo instead of unstable_cache: the payload (~3.3MB for 493
+ * dossiers, people + sourceAudit dominating) exceeds Next's 2MB data-cache
+ * limit, so unstable_cache silently never stored and every request re-ran the
+ * full ~15s load (2026-08-05). Memory has no size cap; sharing the in-flight
+ * promise also collapses concurrent loads into one.
+ */
+const INTEL_TTL_MS = 300_000;
+const intelMemo = new Map<string, { at: number; promise: Promise<ActFunderIntelligence> }>();
+
+function getCachedActFunderIntelligence(orgProfileId: string): Promise<ActFunderIntelligence> {
+  const hit = intelMemo.get(orgProfileId);
+  if (hit && Date.now() - hit.at < INTEL_TTL_MS) return hit.promise;
+  const promise = loadActFunderIntelligence(orgProfileId);
+  intelMemo.set(orgProfileId, { at: Date.now(), promise });
+  promise.catch(() => intelMemo.delete(orgProfileId));
+  return promise;
+}
 
 export const getActFunderIntelligence = cache(getCachedActFunderIntelligence);
