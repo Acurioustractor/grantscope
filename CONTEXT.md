@@ -166,6 +166,7 @@ docs/adr/0001-ask-lives-in-ghl.md)
 | Evidence around the Ask: fit, deadlines, grant round facts, org intelligence, warm bridges | **CivicGraph** (read-only annotations, synced via reconcile agents) |
 | Person existence, warmth, warm-via, owner, next action, last touch | **GHL** (Supabase read-mirror for surfaces) |
 | Person↔Org roles | **Supabase** |
+| Obligation existence, state, owner, next action, due date | **Supabase** (native — no GHL involvement; ADR 0003) |
 | Person evidence: board interlocks, influence, "opens" bridges | **CivicGraph** (read-only annotations) |
 | Dollars received | **Xero** |
 | The produced artefact (application doc, EOI) | **Notion** |
@@ -176,6 +177,11 @@ Rules:
 - **Not in GHL = not a Person** either — minting a Person = creating/claiming
   the GHL contact (ADR 0002). Surfaces query the Supabase mirror, never GHL
   live.
+- **The ownership rule (ADR 0003): GHL owns relationship truth; Supabase owns
+  work truth.** "Not in GHL = not real" does NOT extend to Obligations — their
+  reality test is minting. On relationship facts GHL wins silently; on
+  Obligations there is no second opinion to lose to. Watch-items ride the
+  Person rail (GHL next action + review-by, read via the mirror).
 - **On any state disagreement, GHL wins silently.** CivicGraph's opinion
   appears only in mismatch reports (warm-but-unworked etc.), never as status.
 - **Every foreign fact displays its age** (`last_synced_at`); stale badge when
