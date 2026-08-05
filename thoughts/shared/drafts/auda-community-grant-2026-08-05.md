@@ -13,7 +13,12 @@ Apply via the portal link inside their Guidelines PDF (auda.org.au → Community
 | Co-contribution | At least 10% of the grant, in-kind or financial |
 | Priority groups matched | Rural/remote Australians, Aboriginal and Torres Strait Islander peoples, young Australians 12–24 |
 
-Their rules, verified from the site 2026-08-05: ACNC-registered NFP with a current Charity Register entry and a weblink to the most recent Annual Report; excludes device purchases and basic digital skills training; websites/apps only if they deliver high-impact functionality with accessibility features or serve under-served languages; community-led with partner letters; outputs broadly accessible online; AI-assisted applications must be disclosed.
+Their rules, verified from the 2026 Guidelines PDF (fetched 2026-08-05): **$750K total, 15 grants of $50,000 each**, released in full on signed agreement. Submit via the GivingData portal (auda.givingdata.com/portal/campaign/2026CommunityGrantProgram), open now, closes 5pm AEST 31 Aug. One application per organisation. ACNC-registered NFP, **up to date with ACNC reporting, publicly available annual report, most recent audited financials signed by auditors and Board Chair, current board listed** — auDA checks the Charity Register directly. Letters of support must show financial/in-kind partner backing; the 10% grantee contribution can't come from third parties. AI-assisted applications must be disclosed.
+
+**Exclusions that bite this framing (Guidelines s7):**
+- "For-profit organisations, **including any projects which grant material proprietary rights to the project outcomes to for-profit partners**" — the Asset Register is operating infrastructure for ACT Pty's commercial arm. As framed, this is a direct hit. It only survives if the funded thing is genuinely open: CC-licensed (they require Creative Commons on project materials anyway), publicly accessible, held by Butterfly, with ACT Pty holding no proprietary rights in the grant-funded work.
+- "Ongoing service delivery or existing committed programs" excluded, but "new/innovative additions to an existing program" considered — the community-facing layer must read as a new addition, not as running the register.
+- "General digital capability for your organisation" and "projects which will not deliver material benefit by way of public rights of access" — same pressure: public, open, community-owned or it's out.
 
 ## The framing decision (Ben's call before anything else)
 
@@ -41,8 +46,9 @@ Alternatives if the register angle doesn't sit right: an Empathy Ledger-based co
 2. **Butterfly's ACNC hygiene.** Their eligibility requires current Charity Register details (contacts, responsible persons, financial reporting) and a public Annual Report weblink. Butterfly is mid-handover; is its register entry current, and does an Annual Report link exist? [UNVERIFIED — check acnc.gov.au before drafting further.]
 3. **The 10% co-contribution** — cash or in-kind, and whose budget line.
 4. **Partner letters** — which communities/orgs, with sign-off, in time for 31 August.
-5. **Grant size and count**: "fifteen $50,000 grants" comes from our DB row; today's site fetch confirmed neither the $50K figure nor the count (it only says total project budget must exceed $50K). Check the Guidelines PDF before fixing the ask amount.
+5. ~~Grant size and count~~ RESOLVED 2026-08-05: Guidelines confirm 15 × $50,000 ($750K total).
 6. **Asset Register live status**: "infrastructure that already works" is inferred from the repo, the 404 DB records, and the production URL; confirm the tracker's actual operational state before it anchors the pitch.
+7. **The openness question (new, and it reshapes the framing decision):** the for-profit-rights exclusion plus the mandatory CC licence means the funded work must be genuinely open and Butterfly-held, with no proprietary benefit flowing to ACT Pty. Are you willing to open-source the community-facing register layer? If no, this round is a pass. If yes, the framing actually strengthens: open community asset infrastructure, CC-licensed, any community can run it.
 
 ## Sources
 - Round facts: auda.org.au community-grant-program page (fetched 2026-08-05)
