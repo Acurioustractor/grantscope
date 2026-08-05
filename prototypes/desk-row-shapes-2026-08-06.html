@@ -1,0 +1,128 @@
+<title>Desk row shapes — People + Obligations (prototype)</title>
+<style>
+  /* PROTOTYPE — throwaway. Quiet Ledger tokens mirrored from apps/web globals.css.
+     Single-theme by design: the real desk is paper-light only. */
+  :root{
+    --canvas:#E9E2D7; --surface:#FFFCF7; --surface2:#F6F1E8; --warm:#F2E5D6;
+    --ink:#27221D; --bar:#211F1C; --text2:#70685F; --muted:#AAA49B;
+    --inverse:#FFFCF7; --accent:#9A673B; --moss:#5F725C; --alert:#A44A3B;
+    --border:#DDD4C7;
+    --k-money:#A44A3B; --k-funder:#6B5B8A; --k-grant:#3F6577; --k-buyer:#5F725C;
+    --k-oblig:#9A673B; --k-person:#8A5B6B;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--surface2);color:var(--ink);
+    font:14px/1.45 "Helvetica Neue",Arial,sans-serif;padding:24px 24px 96px}
+  .wrap{max-width:760px;margin:0 auto}
+  h1{font-family:Georgia,serif;font-weight:600;font-size:30px;margin:0 0 2px}
+  .sub{color:var(--text2);font-size:13px;margin:0 0 18px}
+  .mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
+  .eyebrow{font-family:ui-monospace,monospace;font-size:10px;font-weight:600;
+    text-transform:uppercase;letter-spacing:.14em;color:var(--accent)}
+  .list{border:1px solid var(--border);border-radius:8px;background:var(--surface);overflow:hidden;margin-top:16px}
+  .hdr{padding:6px 16px;font-family:ui-monospace,monospace;font-size:9px;font-weight:600;
+    text-transform:uppercase;letter-spacing:.14em;color:var(--inverse);background:var(--bar)}
+  .hdr.over{background:var(--alert)}
+  .row{display:flex;align-items:center;gap:10px;padding:10px 16px;border-top:1px solid rgba(221,212,199,.6);cursor:default}
+  .row:hover{background:var(--surface2)}
+  .row .name{flex:1;min-width:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row .ctx{font-weight:400;color:var(--text2)}
+  .chip{border-radius:4px;padding:2px 6px;font-family:ui-monospace,monospace;font-size:8.5px;
+    font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--inverse);flex:none}
+  .c-money{background:var(--k-money)} .c-funder{background:var(--k-funder)}
+  .c-grant{background:var(--k-grant)} .c-buyer{background:var(--k-buyer)}
+  .c-oblig{background:var(--k-oblig)} .c-person{background:var(--k-person)}
+  .chip.outline{background:transparent;border:1px solid currentColor;color:var(--k-person)}
+  .chip.outline.o{color:var(--k-oblig)}
+  .due{font-family:ui-monospace,monospace;font-size:10px;flex:none}
+  .due.hot{color:var(--alert);font-weight:600}
+  .due.dim{color:var(--muted)}
+  .amt{font-family:ui-monospace,monospace;font-size:11px;font-weight:600;flex:none}
+  .decide{border:1px solid var(--accent);color:var(--accent);border-radius:999px;
+    padding:2px 8px;font-family:ui-monospace,monospace;font-size:8.5px;font-weight:600;
+    text-transform:uppercase;letter-spacing:.08em;flex:none}
+  .owed{font-family:ui-monospace,monospace;font-size:9px;color:var(--text2);flex:none;letter-spacing:.04em}
+  .via{font-size:12px;color:var(--text2);flex:none;font-style:italic}
+  .note{margin-top:14px;padding:12px 16px;background:var(--warm);border-radius:6px;font-size:13px;color:var(--ink)}
+  .note b{font-weight:600}
+  .variant{display:none}
+  .variant.on{display:block}
+  .switch{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);
+    display:flex;gap:6px;background:var(--bar);padding:8px;border-radius:999px;box-shadow:0 4px 16px rgba(0,0,0,.25)}
+  .switch button{border:0;border-radius:999px;padding:8px 16px;font:600 12px/1 "Helvetica Neue",Arial,sans-serif;
+    background:transparent;color:var(--inverse);cursor:pointer}
+  .switch button.on{background:var(--surface);color:var(--ink)}
+</style>
+<div class="wrap">
+  <div class="eyebrow">Prototype · wayfinder #150 · not production</div>
+  <h1>Desk row shapes — People &amp; Obligations</h1>
+  <p class="sub">Three treatments of the two new row kinds, mixed into the real desk list (Quiet Ledger skin). Existing rows shown for contrast. Switch variants below.</p>
+
+  <!-- ═══════════ VARIANT A — same grammar, two new chips ═══════════ -->
+  <div class="variant on" id="A">
+    <div class="note"><b>A · Same grammar.</b> New kinds get solid chips exactly like the existing five: <b>we owe</b> (obligation) and <b>person</b>. No extra fields — the name column carries the context in plain words. Least new UI; watches read like any row.</div>
+    <div class="list">
+      <div class="hdr over">Overdue · 2</div>
+      <div class="row"><span class="chip c-oblig">we owe</span><span class="name">Hackathon video for Jay <span class="ctx">· Catalysing Impact</span></span><span class="due hot">14d overdue</span></div>
+      <div class="row"><span class="chip c-money">owed</span><span class="name">Rotary INV-0222</span><span class="amt">$82.5K</span><span class="due hot">380d overdue</span></div>
+      <div class="hdr">This fortnight · 4</div>
+      <div class="row"><span class="chip c-oblig">we owe</span><span class="name">Balnaves progress report <span class="ctx">· acquittal Q1</span></span><span class="due hot">9d</span></div>
+      <div class="row"><span class="chip c-person">person</span><span class="name">Brian M Davis <span class="ctx">· watch: grants committee outcome</span></span><span class="due hot">7d</span></div>
+      <div class="row"><span class="chip c-grant">round</span><span class="name">auDA Foundation 2026</span><span class="decide">decide</span><span class="amt">$50K</span><span class="due hot">25d</span></div>
+      <div class="row"><span class="chip c-funder">funder</span><span class="name">Snow Foundation</span><span class="amt">$132K</span><span class="due">12d</span></div>
+      <div class="hdr">This quarter · 2</div>
+      <div class="row"><span class="chip c-oblig">we owe</span><span class="name">Maningrida check-in <span class="ctx">· deployment follow-through</span></span><span class="due dim">—</span></div>
+      <div class="row"><span class="chip c-person">person</span><span class="name">Jay <span class="ctx">· intro to CDU procurement</span></span><span class="due">31d</span></div>
+    </div>
+  </div>
+
+  <!-- ═══════════ VARIANT B — owed-to split + warm-via ═══════════ -->
+  <div class="variant" id="B">
+    <div class="note"><b>B · Who's waiting.</b> Obligation rows say who's disappointed if dropped — a small <b>→ funder</b> / <b>→ community</b> tag after the name. Person rows carry <b>via Nic</b> (the warm-via holder). One extra fact per row, still one line.</div>
+    <div class="list">
+      <div class="hdr over">Overdue · 2</div>
+      <div class="row"><span class="chip c-oblig">we owe</span><span class="name">Hackathon video for Jay</span><span class="owed">→ community</span><span class="due hot">14d overdue</span></div>
+      <div class="row"><span class="chip c-money">owed</span><span class="name">Rotary INV-0222</span><span class="amt">$82.5K</span><span class="due hot">380d overdue</span></div>
+      <div class="hdr">This fortnight · 4</div>
+      <div class="row"><span class="chip c-oblig">we owe</span><span class="name">Balnaves progress report</span><span class="owed">→ funder</span><span class="due hot">9d</span></div>
+      <div class="row"><span class="chip c-person">person</span><span class="name">Brian M Davis <span class="ctx">· watch: grants committee</span></span><span class="via">via Anita</span><span class="due hot">7d</span></div>
+      <div class="row"><span class="chip c-grant">round</span><span class="name">auDA Foundation 2026</span><span class="decide">decide</span><span class="amt">$50K</span><span class="due hot">25d</span></div>
+      <div class="row"><span class="chip c-funder">funder</span><span class="name">Snow Foundation</span><span class="amt">$132K</span><span class="due">12d</span></div>
+      <div class="hdr">This quarter · 2</div>
+      <div class="row"><span class="chip c-oblig">we owe</span><span class="name">Maningrida check-in</span><span class="owed">→ community</span><span class="due dim">—</span></div>
+      <div class="row"><span class="chip c-person">person</span><span class="name">Jay <span class="ctx">· intro to CDU procurement</span></span><span class="via">via Nic</span><span class="due">31d</span></div>
+    </div>
+  </div>
+
+  <!-- ═══════════ VARIANT C — quiet outline chips ═══════════ -->
+  <div class="variant" id="C">
+    <div class="note"><b>C · Money loud, work quiet.</b> The five money kinds keep solid chips; the two new kinds get <b>outline</b> chips so money still dominates the scan. Same fields as B otherwise. Tests whether delivery work should visually sit behind money on a money-critical desk.</div>
+    <div class="list">
+      <div class="hdr over">Overdue · 2</div>
+      <div class="row"><span class="chip outline o">we owe</span><span class="name">Hackathon video for Jay</span><span class="owed">→ community</span><span class="due hot">14d overdue</span></div>
+      <div class="row"><span class="chip c-money">owed</span><span class="name">Rotary INV-0222</span><span class="amt">$82.5K</span><span class="due hot">380d overdue</span></div>
+      <div class="hdr">This fortnight · 4</div>
+      <div class="row"><span class="chip outline o">we owe</span><span class="name">Balnaves progress report</span><span class="owed">→ funder</span><span class="due hot">9d</span></div>
+      <div class="row"><span class="chip outline">person</span><span class="name">Brian M Davis <span class="ctx">· watch: grants committee</span></span><span class="via">via Anita</span><span class="due hot">7d</span></div>
+      <div class="row"><span class="chip c-grant">round</span><span class="name">auDA Foundation 2026</span><span class="decide">decide</span><span class="amt">$50K</span><span class="due hot">25d</span></div>
+      <div class="row"><span class="chip c-funder">funder</span><span class="name">Snow Foundation</span><span class="amt">$132K</span><span class="due">12d</span></div>
+      <div class="hdr">This quarter · 2</div>
+      <div class="row"><span class="chip outline o">we owe</span><span class="name">Maningrida check-in</span><span class="owed">→ community</span><span class="due dim">—</span></div>
+      <div class="row"><span class="chip outline">person</span><span class="name">Jay <span class="ctx">· intro to CDU procurement</span></span><span class="via">via Nic</span><span class="due">31d</span></div>
+    </div>
+  </div>
+
+  <div class="note" style="margin-top:20px">Open question baked in: the existing <b>work</b> chip (kind "commitment") likely becomes the <b>we owe</b> Obligation kind — one word to pick. Row data is illustrative, not live.</div>
+</div>
+<div class="switch">
+  <button class="on" data-v="A">A · Same grammar</button>
+  <button data-v="B">B · Who's waiting</button>
+  <button data-v="C">C · Money loud</button>
+</div>
+<script>
+document.querySelectorAll('.switch button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.switch button').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.variant').forEach(v=>v.classList.remove('on'));
+  b.classList.add('on');document.getElementById(b.dataset.v).classList.add('on');
+});
+</script>
