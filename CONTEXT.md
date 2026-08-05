@@ -41,6 +41,24 @@ bridge; the *why* stays CivicGraph annotation, e.g. shared directorships). New
 role types earn their way in, like Relationship types did. Roles are ACT's
 structural knowledge and live in Supabase, not GHL.
 
+### Obligation
+Work ACT owes because of a commitment — the post-Won and post-promise side the
+money vocabulary missed. One entity with an **owed-to** type:
+- **owed-to-funder** — reports, acquittals, anything a grant agreement requires
+- **owed-to-community** — delivery, check-ins, promises made (the Maningrida
+  follow-through, "Nic's video for Jay")
+Human-minted only, prompted by events: a Won Ask prompts minting from the
+grant's terms but never auto-creates; a community promise is minted when
+someone records it. Minting = acknowledging the promise, not starting the
+work. A Won Ask with no minted Obligations is a standing mismatch report
+(same pattern as warm-but-unworked), never an auto-create.
+Lifecycle is minimal: owner + next action + optional due date; **Open → Done**
+plus **Dropped** (consciously released — renegotiated or let go, recorded,
+never silently deleted). Overdue is derived from the due date, not a state.
+Open-ended community work is Open with no due date, living on its next action.
+Obligations don't negotiate, they discharge — no Ask-style stages; a
+Submitted-vs-Acquitted split must earn its way in.
+
 ### Org
 An organisation as an entity — one row, one GHL contact. An Org is never "a
 funder" or "a partner" as identity; it *holds Relationships* with ACT.
