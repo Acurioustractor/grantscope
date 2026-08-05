@@ -151,14 +151,14 @@ export function ActWorkspaceShell({
               <span className="truncate font-mono text-[10px] font-semibold uppercase tracking-wide">A Curious Tractor</span>
             </Link>
 
-            <div className="mt-5 px-2 font-mono text-[9px] font-semibold uppercase tracking-widest text-[#8fa196] [@media(max-height:680px)]:mt-3">Work modes</div>
+            <div className="mt-5 px-2 font-mono text-[9px] font-semibold uppercase tracking-widest text-[#8fa196] [@media(max-height:680px)]:mt-3">Where you work</div>
             <nav className="mt-1.5 space-y-1" aria-label="ACT work modes">
               {workModes.map((mode, index) => (
                 <WorkspaceModeLink key={mode.label} {...mode} index={index + 1} />
               ))}
             </nav>
 
-            <div className="mt-5 px-2 font-mono text-[9px] font-semibold uppercase tracking-widest text-[#8fa196] [@media(max-height:680px)]:mt-3">Project fields</div>
+            <div className="mt-5 px-2 font-mono text-[9px] font-semibold uppercase tracking-widest text-[#8fa196] [@media(max-height:680px)]:mt-3">Jump to a project</div>
             <nav className="mt-1" aria-label="ACT project fields">
               {fieldProjects.map((project, index) => (
                 <div key={project.id}>

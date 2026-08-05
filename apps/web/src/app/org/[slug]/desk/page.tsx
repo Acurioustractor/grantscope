@@ -19,6 +19,17 @@ const KIND_STYLE: Record<DeskRecord['kind'], string> = {
   money: 'bg-ql-kind-money', commitment: 'bg-ql-kind-commitment',
 };
 
+/** Plain words for the record kinds — the internal names (money/commitment)
+ * confused the one human this desk serves (Ben, 2026-08-05 review). */
+const KIND_FILTER_LABEL: Record<DeskRecord['kind'], string> = {
+  money: 'Money owed to us', commitment: 'Committed work',
+  funder: 'Funders', grant: 'Grant rounds', buyer: 'Buyers',
+};
+
+const KIND_CHIP_LABEL: Record<DeskRecord['kind'], string> = {
+  money: 'owed', commitment: 'work', funder: 'funder', grant: 'round', buyer: 'buyer',
+};
+
 const HORIZON_LABEL: Record<DeskHorizon, string> = {
   overdue: 'Overdue', fortnight: 'This fortnight', quarter: 'This quarter', undated: 'No date · ranked by fit',
 };
@@ -33,7 +44,7 @@ function Due({ d }: { d: number | null }) {
 function KindChip({ k }: { k: DeskRecord['kind'] }) {
   return (
     <span className={`rounded px-1.5 py-0.5 font-ql-mono text-[8.5px] font-semibold uppercase tracking-[0.08em] text-ql-inverse ${KIND_STYLE[k]}`}>
-      {k === 'commitment' ? 'commit' : k}
+      {KIND_CHIP_LABEL[k]}
     </span>
   );
 }
@@ -92,22 +103,29 @@ export default async function OneDeskPage({ params, searchParams }: {
               </p>
             ) : null}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {projects.map((p) => (
-              <Link key={p} href={project === p ? (kind ? `${base}?kind=${kind}` : base) : qs({ project: p })} className={chip(project === p)}>
-                {p}{project === p ? ' ✕' : ''}
-              </Link>
-            ))}
-            <span className="mx-1 text-ql-muted">·</span>
-            {([null, 'money', 'commitment', 'funder', 'grant', 'buyer'] as const).map((k) => (
-              <Link
-                key={k ?? 'all'}
-                href={k ? (project ? `${base}?kind=${k}&project=${encodeURIComponent(project)}` : `${base}?kind=${k}`) : (project ? `${base}?project=${encodeURIComponent(project)}` : base)}
-                className={chip(kind === k)}
-              >
-                {k ?? 'everything'}
-              </Link>
-            ))}
+          {/* These are FILTERS of the one pool, not tabs — labelled so they
+              can't be mistaken for navigation (Ben's review, 2026-08-05). */}
+          <div className="flex flex-col items-end gap-1.5">
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <span className="font-ql-mono text-[9px] font-semibold uppercase tracking-[0.12em] text-ql-muted">Only show project</span>
+              {projects.map((p) => (
+                <Link key={p} href={project === p ? (kind ? `${base}?kind=${kind}` : base) : qs({ project: p })} className={chip(project === p)}>
+                  {p}{project === p ? ' ✕' : ''}
+                </Link>
+              ))}
+            </div>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <span className="font-ql-mono text-[9px] font-semibold uppercase tracking-[0.12em] text-ql-muted">Only show</span>
+              {([null, 'money', 'commitment', 'funder', 'grant', 'buyer'] as const).map((k) => (
+                <Link
+                  key={k ?? 'all'}
+                  href={k ? (project ? `${base}?kind=${k}&project=${encodeURIComponent(project)}` : `${base}?kind=${k}`) : (project ? `${base}?project=${encodeURIComponent(project)}` : base)}
+                  className={chip(kind === k)}
+                >
+                  {k ? KIND_FILTER_LABEL[k] : 'Everything'}{kind === k && k ? ' ✕' : ''}
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
 
