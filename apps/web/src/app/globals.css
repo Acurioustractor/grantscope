@@ -118,20 +118,23 @@ h1, h2, h3, h4 {
   -webkit-font-smoothing: antialiased;
 }
 
+/* ACT workspace speaks Quiet Ledger (2026-08-05): the soft-green family is
+   retired; these vars mirror the ql-* tokens so every legacy ACT surface
+   (Curiosity, ?view= lenses, shell) joins the one visual family. */
 .ws.act-desk,
 .ws.act-workspace {
-  --ws-surface-0: #F4F5F1;
-  --ws-surface-1: #FFFFFF;
-  --ws-surface-2: #F8F9F5;
-  --ws-border: #DCE1DC;
-  --ws-border-strong: #183426;
-  --ws-text: #17231B;
-  --ws-text-secondary: #687169;
-  --ws-text-tertiary: #9AA39C;
-  --ws-accent: #2F6B4A;
-  --ws-red: #A44235;
-  --ws-amber: #AD691C;
-  --ws-green: #2F6B4A;
+  --ws-surface-0: #F6F1E8;
+  --ws-surface-1: #FFFCF7;
+  --ws-surface-2: #F2E5D6;
+  --ws-border: #DDD4C7;
+  --ws-border-strong: #211F1C;
+  --ws-text: #27221D;
+  --ws-text-secondary: #70685F;
+  --ws-text-tertiary: #AAA49B;
+  --ws-accent: #9A673B;
+  --ws-red: #A44A3B;
+  --ws-amber: #9A673B;
+  --ws-green: #5F725C;
 }
 
 .act-workspace {

@@ -27,7 +27,7 @@ export function ActWorkspacePageHeader({
       <div className={hasControls ? 'grid min-w-0 gap-3 lg:grid-cols-[minmax(200px,300px)_minmax(300px,1fr)_auto] lg:items-center' : 'flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4'}>
         <div className="min-w-0">
           <div className="font-mono text-[9px] font-semibold uppercase tracking-widest text-[var(--ws-text-secondary)] sm:text-[10px]">{eyebrow}</div>
-          <h1 className="mt-1 break-words text-xl font-semibold tracking-normal text-[var(--ws-text)] sm:truncate sm:text-2xl">{title}</h1>
+          <h1 className="mt-1 break-words font-ql-display text-2xl font-semibold tracking-normal text-[var(--ws-text)] sm:truncate sm:text-2xl">{title}</h1>
           {description ? <p className="mt-0.5 truncate text-xs text-[var(--ws-text-secondary)]">{description}</p> : null}
         </div>
         {controls ? <div className="min-w-0">{controls}</div> : null}

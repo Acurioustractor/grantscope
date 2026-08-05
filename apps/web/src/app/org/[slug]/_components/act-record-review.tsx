@@ -111,10 +111,10 @@ function triggerLabel(trigger: QueueTrigger): string {
 }
 
 function triggerClass(trigger: QueueTrigger): string {
-  if (trigger === 'official_evidence_changed') return 'border-blue-200 bg-blue-50 text-blue-800';
-  if (trigger === 'deadline_due') return 'border-amber-200 bg-amber-50 text-amber-900';
-  if (trigger === 'evidence_gap') return 'border-stone-300 bg-stone-50 text-stone-700';
-  return 'border-violet-200 bg-violet-50 text-violet-800';
+  if (trigger === 'official_evidence_changed') return 'border-ql-kind-grant/40 bg-ql-kind-grant/10 text-ql-kind-grant';
+  if (trigger === 'deadline_due') return 'border-ql-accent/40 bg-ql-accent/10 text-ql-accent';
+  if (trigger === 'evidence_gap') return 'border-ql-border bg-ql-surface2 text-ql-ink';
+  return 'border-ql-kind-funder/40 bg-ql-kind-funder/10 text-ql-kind-funder';
 }
 
 function whyNow(item: WeeklyReviewItem): string {
@@ -145,11 +145,11 @@ function suggestedQuestion(item: WeeklyReviewItem): string {
 }
 
 function verificationClass(state: OpportunityVerification['state']): string {
-  if (state === 'verified') return 'border-emerald-200 bg-emerald-50 text-emerald-800';
-  if (state === 'forecast') return 'border-blue-200 bg-blue-50 text-blue-800';
-  if (state === 'relationship') return 'border-violet-200 bg-violet-50 text-violet-800';
-  if (state === 'internal') return 'border-stone-200 bg-stone-50 text-stone-700';
-  return 'border-amber-200 bg-amber-50 text-amber-900';
+  if (state === 'verified') return 'border-ql-moss/40 bg-ql-moss/10 text-ql-moss';
+  if (state === 'forecast') return 'border-ql-kind-grant/40 bg-ql-kind-grant/10 text-ql-kind-grant';
+  if (state === 'relationship') return 'border-ql-kind-funder/40 bg-ql-kind-funder/10 text-ql-kind-funder';
+  if (state === 'internal') return 'border-ql-border bg-ql-surface2 text-ql-ink';
+  return 'border-ql-accent/40 bg-ql-accent/10 text-ql-accent';
 }
 
 function VerificationBadge({ verification }: { verification: OpportunityVerification }) {
@@ -298,24 +298,24 @@ export function ActRecordReview({
   return (
     <div className="grid min-w-0 gap-0 xl:grid-cols-[minmax(0,1fr)_420px]" data-testid="act-relational-review-workbench">
       <div className="min-w-0 xl:border-r xl:border-[var(--ws-border)]">
-        <section className="border-b border-[var(--ws-border)] bg-[#f1f8f5] px-4 py-5">
-          <div className="font-mono text-[10px] font-semibold uppercase tracking-widest text-[#1f734f]">Goods relational review</div>
-          <h3 className="mt-2 text-xl font-semibold tracking-normal text-[var(--ws-text)]">What needs understanding now</h3>
+        <section className="border-b border-[var(--ws-border)] bg-[#F6F1E8] px-4 py-5">
+          <div className="font-mono text-[10px] font-semibold uppercase tracking-widest text-[#5F725C]">Goods relational review</div>
+          <h3 className="mt-2 font-ql-display text-xl font-semibold tracking-normal text-[var(--ws-text)]">What needs understanding now</h3>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--ws-text-secondary)]">
             GrantScope shows at most five matters, and only when official evidence changed, a decision is due within 30 days, a named unknown blocks the work, or a human revisit date has arrived.
           </p>
         </section>
 
         {lastReceipt ? (
-          <div className="border-b border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900" role="status">
+          <div className="border-b border-ql-moss/40 bg-ql-moss/10 px-4 py-3 text-sm text-ql-moss" role="status">
             <div className="font-semibold">Review captured as learning.</div>
-            <div className="mt-1 text-xs leading-5 text-emerald-800">
+            <div className="mt-1 text-xs leading-5 text-ql-moss">
               {lastReceipt.nextStep ?? 'The note was appended without moving a relationship stage or creating a CRM opportunity.'}
             </div>
           </div>
         ) : null}
 
-        <div className="border-b border-[var(--ws-border)] bg-white px-4 py-3 text-xs text-[var(--ws-text-secondary)]">
+        <div className="border-b border-[var(--ws-border)] bg-ql-surface px-4 py-3 text-xs text-[var(--ws-text-secondary)]">
           {queue.length === 0
             ? 'No matters currently meet the weekly attention conditions.'
             : `${queue.length} ${queue.length === 1 ? 'matter needs' : 'matters need'} a read · ${reviewedIds.length} captured in this session`}
@@ -334,10 +334,10 @@ export function ActRecordReview({
                   setSelectedId(record.id);
                   setLastReceipt(null);
                 }}
-                className={`min-h-28 w-full border-l-4 px-4 py-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#2f8f64] ${
+                className={`min-h-28 w-full border-l-4 px-4 py-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#5F725C] ${
                   isSelected
-                    ? 'border-l-[#2f8f64] bg-[#f1f8f5]'
-                    : 'border-l-transparent bg-white hover:bg-[var(--ws-surface-2)]'
+                    ? 'border-l-[#5F725C] bg-[#F6F1E8]'
+                    : 'border-l-transparent bg-ql-surface hover:bg-[var(--ws-surface-2)]'
                 }`}
                 aria-current={isSelected ? 'true' : undefined}
               >
@@ -408,7 +408,7 @@ function RelationalMatterNarrative({
   return (
     <div className="divide-y divide-[var(--ws-border)]">
       <section className="px-4 py-4">
-        <div className="font-mono text-[9px] font-semibold uppercase tracking-widest text-[#1f734f]">Read before deciding</div>
+        <div className="font-mono text-[9px] font-semibold uppercase tracking-widest text-[#5F725C]">Read before deciding</div>
         <h3 className="mt-2 text-lg font-semibold leading-snug tracking-normal text-[var(--ws-text)]">{record.title}</h3>
         <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-[var(--ws-text-secondary)]">
           <span>{project?.name ?? record.project}</span>
@@ -444,7 +444,7 @@ function RelationalMatterNarrative({
           <ul className="mt-3 space-y-1.5">
             {record.evidenceGaps.map((gap) => (
               <li key={gap} className="flex gap-2">
-                <span className="text-amber-700" aria-hidden="true">?</span>
+                <span className="text-ql-accent" aria-hidden="true">?</span>
                 <span>{gap}</span>
               </li>
             ))}
@@ -453,7 +453,7 @@ function RelationalMatterNarrative({
           <p className="mt-2 text-[var(--ws-text-secondary)]">No named evidence gap is attached.</p>
         )}
         {record.priorCases && record.priorCases.length > 0 ? (
-          <div className="mt-3 rounded border border-[var(--ws-border)] bg-white px-3 py-2">
+          <div className="mt-3 rounded border border-[var(--ws-border)] bg-ql-surface px-3 py-2">
             <div className="font-mono text-[9px] font-semibold uppercase tracking-wide text-[var(--ws-text-secondary)]">What earlier cases remember</div>
             <ul className="mt-2 space-y-2">
               {record.priorCases.slice(0, 3).map((priorCase) => (
@@ -467,7 +467,7 @@ function RelationalMatterNarrative({
             </ul>
           </div>
         ) : record.decisionMemory ? (
-          <div className="mt-3 rounded border border-[var(--ws-border)] bg-white px-3 py-2">
+          <div className="mt-3 rounded border border-[var(--ws-border)] bg-ql-surface px-3 py-2">
             <div className="font-mono text-[9px] font-semibold uppercase tracking-wide text-[var(--ws-text-secondary)]">Prior human read</div>
             <p className="mt-1">{record.decisionMemory.label} · {formatDate(record.decisionMemory.createdAt)}</p>
             {record.decisionMemory.reason ? <p className="mt-1 text-[var(--ws-text-secondary)]">{record.decisionMemory.reason}</p> : null}
@@ -477,21 +477,21 @@ function RelationalMatterNarrative({
           {record.sourceUrl ? (
             <Link
               href={record.sourceUrl}
-              className="inline-flex min-h-11 items-center rounded border border-[var(--ws-border)] bg-white px-3 font-semibold text-[var(--ws-text)] hover:bg-[var(--ws-surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2f8f64]"
+              className="inline-flex min-h-11 items-center rounded border border-[var(--ws-border)] bg-ql-surface px-3 font-semibold text-[var(--ws-text)] hover:bg-[var(--ws-surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5F725C]"
             >
               Open source
             </Link>
           ) : null}
           <Link
             href="/opportunities/ecosystem"
-            className="inline-flex min-h-11 items-center rounded border border-[var(--ws-border)] bg-white px-3 font-semibold text-[var(--ws-text)] hover:bg-[var(--ws-surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2f8f64]"
+            className="inline-flex min-h-11 items-center rounded border border-[var(--ws-border)] bg-ql-surface px-3 font-semibold text-[var(--ws-text)] hover:bg-[var(--ws-surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5F725C]"
           >
             See connected evidence
           </Link>
           {record.relationshipId ? (
             <Link
               href={`/org/${orgSlug}?view=relationships&relationship=${encodeURIComponent(record.relationshipId)}#relationships`}
-              className="inline-flex min-h-11 items-center rounded border border-[var(--ws-border)] bg-white px-3 font-semibold text-[var(--ws-text)] hover:bg-[var(--ws-surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2f8f64]"
+              className="inline-flex min-h-11 items-center rounded border border-[var(--ws-border)] bg-ql-surface px-3 font-semibold text-[var(--ws-text)] hover:bg-[var(--ws-surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5F725C]"
             >
               See relationship
             </Link>
@@ -618,8 +618,8 @@ function RelationalReviewForm({
   }
 
   return (
-    <form onSubmit={submitReview} className="border-t-4 border-[#183426] bg-white px-4 py-5">
-      <div className="font-mono text-[9px] font-semibold uppercase tracking-widest text-[#1f734f]">Human reflection</div>
+    <form onSubmit={submitReview} className="border-t-4 border-[#211F1C] bg-ql-surface px-4 py-5">
+      <div className="font-mono text-[9px] font-semibold uppercase tracking-widest text-[#5F725C]">Human reflection</div>
       <h4 className="mt-2 text-base font-semibold text-[var(--ws-text)]">Record only the material change</h4>
       <p className="mt-1 text-xs leading-5 text-[var(--ws-text-secondary)]">
         The system keeps the evidence. You add the meaning, any real obligation, and what happens next.
@@ -634,7 +634,7 @@ function RelationalReviewForm({
           rows={3}
           maxLength={600}
           required
-          className="mt-2 w-full rounded-md border border-[var(--ws-border)] bg-white px-3 py-2 text-sm leading-6 outline-none focus:border-[#2f8f64] focus:ring-2 focus:ring-[#dce9df]"
+          className="mt-2 w-full rounded-md border border-[var(--ws-border)] bg-ql-surface px-3 py-2 text-sm leading-6 outline-none focus:border-[#5F725C] focus:ring-2 focus:ring-[#DDD4C7]"
         />
       </label>
 
@@ -652,10 +652,10 @@ function RelationalReviewForm({
                   if (move.value !== 'revisit') setRevisitAt('');
                 }}
                 aria-pressed={selected}
-                className={`min-h-14 rounded-md border px-3 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2f8f64] ${
+                className={`min-h-14 rounded-md border px-3 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5F725C] ${
                   selected
-                    ? 'border-[#2f8f64] bg-[#f1f8f5] text-[#183426]'
-                    : 'border-[var(--ws-border)] bg-white text-[var(--ws-text)] hover:bg-[var(--ws-surface-2)]'
+                    ? 'border-[#5F725C] bg-[#F6F1E8] text-[#211F1C]'
+                    : 'border-[var(--ws-border)] bg-ql-surface text-[var(--ws-text)] hover:bg-[var(--ws-surface-2)]'
                 }`}
               >
                 <span className="block text-sm font-semibold">{move.label}</span>
@@ -674,7 +674,7 @@ function RelationalReviewForm({
             value={revisitAt}
             onChange={(event) => setRevisitAt(event.target.value)}
             required
-            className="mt-2 min-h-11 w-full rounded-md border border-[var(--ws-border)] bg-white px-3 text-sm outline-none focus:border-[#2f8f64] focus:ring-2 focus:ring-[#dce9df]"
+            className="mt-2 min-h-11 w-full rounded-md border border-[var(--ws-border)] bg-ql-surface px-3 text-sm outline-none focus:border-[#5F725C] focus:ring-2 focus:ring-[#DDD4C7]"
           />
         </label>
       ) : null}
@@ -687,7 +687,7 @@ function RelationalReviewForm({
           value={nextLearningQuestion}
           onChange={(event) => setNextLearningQuestion(event.target.value)}
           maxLength={300}
-          className="mt-2 min-h-11 w-full rounded-md border border-[var(--ws-border)] bg-white px-3 text-sm outline-none focus:border-[#2f8f64] focus:ring-2 focus:ring-[#dce9df]"
+          className="mt-2 min-h-11 w-full rounded-md border border-[var(--ws-border)] bg-ql-surface px-3 text-sm outline-none focus:border-[#5F725C] focus:ring-2 focus:ring-[#DDD4C7]"
         />
       </label>
 
@@ -695,7 +695,7 @@ function RelationalReviewForm({
         <summary className="flex min-h-11 cursor-pointer items-center px-3 text-sm font-semibold text-[var(--ws-text)]">
           Add a promise or return <span className="ml-2 text-xs font-normal text-[var(--ws-text-secondary)]">(optional)</span>
         </summary>
-        <div className="space-y-3 border-t border-[var(--ws-border)] bg-white p-3">
+        <div className="space-y-3 border-t border-[var(--ws-border)] bg-ql-surface p-3">
           <fieldset>
             <legend className="text-xs font-semibold text-[var(--ws-text)]">What kind of obligation is this?</legend>
             <div className="mt-2 grid grid-cols-2 gap-2">
@@ -710,8 +710,8 @@ function RelationalReviewForm({
                   aria-pressed={commitmentKind === value}
                   className={`min-h-11 rounded border px-3 text-sm font-semibold ${
                     commitmentKind === value
-                      ? 'border-[#2f8f64] bg-[#f1f8f5] text-[#183426]'
-                      : 'border-[var(--ws-border)] bg-white text-[var(--ws-text)]'
+                      ? 'border-[#5F725C] bg-[#F6F1E8] text-[#211F1C]'
+                      : 'border-[var(--ws-border)] bg-ql-surface text-[var(--ws-text)]'
                   }`}
                 >
                   {label}
@@ -726,7 +726,7 @@ function RelationalReviewForm({
               value={commitmentOwner}
               onChange={(event) => setCommitmentOwner(event.target.value)}
               maxLength={160}
-              className="mt-1 min-h-11 w-full rounded border border-[var(--ws-border)] px-3 text-sm outline-none focus:border-[#2f8f64] focus:ring-2 focus:ring-[#dce9df]"
+              className="mt-1 min-h-11 w-full rounded border border-[var(--ws-border)] px-3 text-sm outline-none focus:border-[#5F725C] focus:ring-2 focus:ring-[#DDD4C7]"
             />
           </label>
           <label className="block">
@@ -736,7 +736,7 @@ function RelationalReviewForm({
               value={commitmentAction}
               onChange={(event) => setCommitmentAction(event.target.value)}
               maxLength={300}
-              className="mt-1 min-h-11 w-full rounded border border-[var(--ws-border)] px-3 text-sm outline-none focus:border-[#2f8f64] focus:ring-2 focus:ring-[#dce9df]"
+              className="mt-1 min-h-11 w-full rounded border border-[var(--ws-border)] px-3 text-sm outline-none focus:border-[#5F725C] focus:ring-2 focus:ring-[#DDD4C7]"
             />
           </label>
           <label className="block">
@@ -745,14 +745,14 @@ function RelationalReviewForm({
               type="date"
               value={commitmentDueAt}
               onChange={(event) => setCommitmentDueAt(event.target.value)}
-              className="mt-1 min-h-11 w-full rounded border border-[var(--ws-border)] px-3 text-sm outline-none focus:border-[#2f8f64] focus:ring-2 focus:ring-[#dce9df]"
+              className="mt-1 min-h-11 w-full rounded border border-[var(--ws-border)] px-3 text-sm outline-none focus:border-[#5F725C] focus:ring-2 focus:ring-[#DDD4C7]"
             />
           </label>
         </div>
       </details>
 
       {error ? (
-        <p className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-xs leading-5 text-red-800" role="alert">
+        <p className="mt-4 rounded-md border border-ql-alert/40 bg-ql-alert/10 p-3 text-xs leading-5 text-ql-alert" role="alert">
           {error}
         </p>
       ) : null}
@@ -760,7 +760,7 @@ function RelationalReviewForm({
       <button
         type="submit"
         disabled={pending}
-        className="mt-5 flex min-h-12 w-full items-center justify-between rounded-md bg-[#183426] px-4 text-sm font-semibold text-white hover:bg-[#24523b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2f8f64] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60"
+        className="mt-5 flex min-h-12 w-full items-center justify-between rounded-md bg-[#211F1C] px-4 text-sm font-semibold text-white hover:bg-[#27221D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5F725C] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60"
       >
         <span>{pending ? 'Recording reflection…' : 'Record reflection and continue'}</span>
         <span aria-hidden="true">→</span>
