@@ -1,6 +1,12 @@
 import { expect, test } from '@playwright/test';
 
 test.describe('ACT Field Desk pilot workflow', () => {
+  test('bare org root lands on One Desk', async ({ page }) => {
+    await page.goto('/org/act');
+    await expect(page).toHaveURL(/\/org\/act\/desk/);
+    await expect(page.getByRole('heading', { name: 'One Desk' })).toBeVisible();
+  });
+
   test('walks through every gold-standard surface with persistent progress', async ({ page }) => {
     await page.goto('/org/act?walkthrough=1');
 
@@ -25,7 +31,7 @@ test.describe('ACT Field Desk pilot workflow', () => {
   });
 
   test('routes the discovery receipt into the matter-review desk', async ({ page }) => {
-    await page.goto('/org/act');
+    await page.goto('/org/act?view=today');
 
     const receipt = page.getByLabel('Latest discovery activity');
     await expect(receipt).toContainText('Discovery activity recorded');
@@ -49,7 +55,7 @@ test.describe('ACT Field Desk pilot workflow', () => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
     });
 
-    await page.goto('/org/act');
+    await page.goto('/org/act?view=today');
 
     const today = page.getByTestId('act-today-focus');
     await expect(today.getByTestId('today-primary')).toContainText('Return: share the delivery evidence');
@@ -265,7 +271,7 @@ test.describe('ACT Field Desk pilot workflow', () => {
 
   test('keeps the daily desk usable on a phone-sized viewport', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto('/org/act');
+    await page.goto('/org/act?view=today');
 
     await expect(page.getByRole('heading', { name: 'What needs moving today' })).toBeVisible();
     await expect(page.getByTestId('today-primary')).toBeVisible();
@@ -319,7 +325,7 @@ test.describe('ACT Field Desk pilot workflow', () => {
 
   test('keeps one ACT shell across the desk, Atlas, and project records', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
-    await page.goto('/org/act');
+    await page.goto('/org/act?view=today');
 
     const sidebar = page.getByTestId('act-desk-sidebar');
     await expect(sidebar).toBeVisible();
