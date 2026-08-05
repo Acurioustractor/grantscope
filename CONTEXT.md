@@ -41,6 +41,16 @@ bridge; the *why* stays CivicGraph annotation, e.g. shared directorships). New
 role types earn their way in, like Relationship types did. Roles are ACT's
 structural knowledge and live in Supabase, not GHL.
 
+### Watch-item (not an entity)
+"Watch Brian M Davis" is NOT its own thing — it is the next action on a
+cultivated Person (or Org). The commitment is the Person's cultivation itself;
+the watch is what attending currently looks like. Every watch-style next
+action carries a **review-by date** so it can't rot silently. It ends when the
+awaited event happens (usually minting something — an Ask, an Obligation, a
+warmth change) or the review-by date forces a keep-watching / let-go decision.
+Never silent drift. Watches reach the desk as Person rows with due next
+actions, not as a fourth row kind.
+
 ### Obligation
 Work ACT owes because of a commitment — the post-Won and post-promise side the
 money vocabulary missed. One entity with an **owed-to** type:
