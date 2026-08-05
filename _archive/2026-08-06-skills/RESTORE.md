@@ -15,4 +15,5 @@ lighthouse, health.
 ## Restore
 ```bash
 git mv _archive/2026-08-06-skills/<skill> .claude/skills/<skill>
+mv .claude/skills/<skill>/SKILL.archived.md .claude/skills/<skill>/SKILL.md
 ```
