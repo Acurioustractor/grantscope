@@ -26,6 +26,19 @@ method, review timing, exclusions, special conditions (child safety, First
 Nations leadership/partnership rules). Never draft against remembered or
 DB-cached requirements; the DB row is a lead, the site is the source.
 
+Lessons from the first runs (Balnaves + auDA, 2026-08-05):
+- **Get the Guidelines PDF, not just the webpage.** auDA's killer clauses
+  (grant size/count, no-proprietary-rights-to-for-profit-partners, mandatory
+  CC licence, audited-financials bar) lived ONLY in the PDF.
+- **Quantify any revenue-percentage cap against the applicant's real income.**
+  ACNC API works when the website times out:
+  `curl https://www.acnc.gov.au/api/dynamics/entity/<uuid>` — gives income,
+  reporting currency, responsible people, lodgement history. Butterfly's ~$124K
+  income turned Balnaves's 15% cap from a footnote into the structural risk.
+- **Sweep Gmail before trusting any remembered deadline.** The "QBE Stage 2
+  deadline" was a phantom; the mailbox showed ACT was already inside the
+  program with a different overdue item entirely.
+
 ### 3. Frame the ask against the capital plan
 - Grant-side blocks and amounts: `GOODS_CAPITAL_BLOCK_SEED` in `apps/web/src/lib/services/goods-capital-workspace.ts`. Grants route via Butterfly; repayable/equipment route via ACT Pty — never mix them in one ask.
 - The ask amount = the blocks that fit the funder's range, named as blocks.

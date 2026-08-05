@@ -118,8 +118,8 @@ Take a screenshot of the current graph and provide specific visual feedback:
 
 ```bash
 # Warm up then screenshot
-curl -s -o /dev/null "http://localhost:3003/graph" --max-time 60
-B=$(~/.claude/skills/browse/bin/find-browse) && $B goto "http://localhost:3003/graph" && sleep 25 && $B screenshot /tmp/graph-review.png
+curl -s -o /dev/null "http://localhost:3013/graph" --max-time 60
+B=$(~/.claude/skills/browse/bin/find-browse) && $B goto "http://localhost:3013/graph" && sleep 25 && $B screenshot /tmp/graph-review.png
 ```
 
 Critique:
