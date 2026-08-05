@@ -9,13 +9,27 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-08-05T16:30:00+10:00
-**Goal:** The one-system fold is DONE (Org records + Orgs list + rail cleanup, PRs #121–#124). Next session is ask-work, not building: make the Balnaves ask.
+**Updated:** 2026-08-06T00:30:00+10:00
+**Goal:** Fold DONE (#121–#124) + ask machinery DONE (/make-the-ask, Balnaves + auDA grounded drafts, #125–#132) + Ben's live UX review DONE (#133–#137). Next session: Ben's decisions, then submissions.
 **Branch:** main (everything merged; work in small PR-per-change loops)
 **Test:** cd apps/web && npx tsc --noEmit && npx vitest run; E2E: kill dev server on 3013 first, then npx playwright test (24/24, no fixmes)
 
 ### Now
-[->] NO MORE BUILDING. Work the live opportunities FROM ONE DESK: Balnaves EOI first (in funder queue, fit 90 — use /act-voice + /ground before outreach copy), then auDA (31 Aug), QBE Stage 2 deadline confirmation
+[->] BEN'S DECISION QUEUE (everything else is done or waiting on these):
+1. Balnaves 15% answer — Butterfly 2026 income ~$124K (ACNC API) so cap ≈ $18.7K vs $175–253K ask; the EOI explanation clause carries it. Draft: thoughts/shared/drafts/balnaves-eoi-2026-08-05.md + Notion "Ask — Balnaves"
+2. auDA open-or-pass by 31 Aug — funded work must be CC-licensed, no proprietary rights to ACT Pty (Guidelines s7/s10); 15×$50K confirmed; GivingData portal open now
+3. KKT intro send/edit — drafted (thoughts/shared/drafts/kkt-intro-2026-08-05.md), Maningrida line bracketed pending real count
+4. Nic's hackathon video for Jay — ~2 weeks overdue (Catalysing Impact); cohort check-in 3 Sept
+5. Watch Brian M Davis — grants committee took the Butterfly work this week (Anita's thread)
+
+### Session 2026-08-05 late (asks + perf + Ben's live UX review, PRs #125–#137)
+- [x] **/make-the-ask skill** + Notion "Ask template — Goods funding" + filled Balnaves + auDA instances under Goods Sales Hub (extends the July "Goods Investment Ask Template + Workflow" page, adds claims-and-grounding table) (#125, #126)
+- [x] Balnaves EOI grounded draft (15% risk quantified via ACNC API; Maningrida count UNVERIFIED — goods_deployment_batches is EMPTY vs proof_line's "24 assets"); auDA draft blocked on open-source framing call (#131, #132)
+- [x] QBE "Stage 2" was a PHANTOM (Gmail sweep): ACT is in Catalysing Impact cohort; Local Grants EOI closed 16 Mar, none submitted. Real item = hackathon video
+- [x] **Perf**: funder-intelligence unstable_cache never stored (3.3MB > 2MB cap) → in-process TTL memo; trigram threshold 0.3→0.5 on contact resolution (13.2s→3.1s). Warm 17.4s→~2s, cold ~17s→~10s. Debug timers behind DEBUG_FUNDER_INTEL_SIZE (#128–#130)
+- [x] **Quiet Ledger everywhere**: .ws.act-desk CSS vars re-pointed at ql tokens + Curiosity/funder-desk hex sweep — soft-green retired (#127; Bauhaus stays public + Goods tabs)
+- [x] **Ben's review cuts** (his taste, encoded): Curiosity = one heading + "pursue or pass" contract line, Pursue/Pass primary verb pair (maps to act/close API) (#133) · desk filters labelled + plain words (Money owed to us / Committed work / Grant rounds) (#134) · Funding retired from rail (#135) · rail cut to the spine: One Desk / Orgs / Curiosity + projects + Atlas only (Art/Money/Sources/Research off-rail, URLs legacy) (#136) · desk kind-lenses moved INTO the rail under One Desk, header keeps only project filter (#137)
+- Known gaps accepted: mobile can't switch desk lenses (rail hidden); Goods 14-tab sub-tree + "Test the whole ACT system" floater un-reviewed; orgs-list E2E occasionally flaky under cold compile (30s timeouts added)
 
 ### Session 2026-08-05 evening (Org record surface + one-system fold, PRs #121–#124)
 - [x] PR #121: **Org record** /org/act/orgs/[org] (Quiet Ledger): six typed Relationships (funds/buys/distributes/auspices/collaborates/opens mapped from goods_relationships in lib/services/act-org-record.ts), Asks in the five stages (GoodsStage→stage mapping table there too), next moves + follow-ups + brief actions, People, Xero money history, conversations timeline, GHL door + freshness badges (stale >24h). Composes the Listen loaders (act-relationship-ledger / act-funder-intelligence / act-relationship-brief) — no rebuilt queries. Unknown org slugs render an honest empty record, not 404.
