@@ -10,6 +10,7 @@ import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
 import { getGoodsGrantsTriage } from '@/lib/services/goods-grants-triage';
 import { getGoodsBuyerPipeline } from '@/lib/services/goods-buyer-pipeline';
 import { ghlContactUrl } from '@/lib/ghl-links';
+import { actOrgHref } from '@/lib/services/act-org-record';
 import { getGoodsCapitalWorkspace } from '@/lib/services/goods-capital-workspace';
 
 export type DeskRecordKind = 'funder' | 'grant' | 'buyer' | 'money' | 'commitment';
@@ -146,7 +147,7 @@ export async function getOneDeskPool(slug: string): Promise<DeskRecord[]> {
       dueDays: item.oldestOverdueDays > 0 ? -item.oldestOverdueDays : null,
       score: Math.min(99, Math.round(item.outstandingTotal / 1000)),
       amount: `$${Math.round(item.outstandingTotal / 1000)}K`,
-      ghlUrl: null, workHref: `/org/${slug}?view=relationships#relationships`,
+      ghlUrl: null, workHref: actOrgHref(slug, item.organisation),
     });
   }
   // The desk contract (CONTEXT.md): committed work or a decision due now.
@@ -162,7 +163,7 @@ export async function getOneDeskPool(slug: string): Promise<DeskRecord[]> {
       next: inGhl ? (r.nextStep || 'Set a next step') : 'Decide: pursue (mint the Ask in GHL) or pass',
       dueDays: null,
       score: r.fitScore ?? 0, amount: null, ghlUrl: ghlContactUrl(r.ghlContactId),
-      workHref: `/org/${slug}/goods/foundations/scan`,
+      workHref: inGhl ? actOrgHref(slug, r.name) : `/org/${slug}/goods/foundations/scan`,
       isDecision: !inGhl,
     });
   }
@@ -189,7 +190,7 @@ export async function getOneDeskPool(slug: string): Promise<DeskRecord[]> {
       signal: `${b.band} ${b.warmth}`, next: b.nextMove,
       dueDays: days(b.nextActionDue), score: b.warmth,
       amount: b.askAmount ? `$${Math.round(b.askAmount / 1000)}K` : null,
-      ghlUrl: ghlContactUrl(b.ghlContactId), workHref: `/org/${slug}/goods/buyers`,
+      ghlUrl: ghlContactUrl(b.ghlContactId), workHref: actOrgHref(slug, b.name),
     });
   }
   return pool.sort((a, b) => urgency(a) - urgency(b));
