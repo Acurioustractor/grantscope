@@ -95,12 +95,17 @@ interface ActionReceipt {
   detail?: string;
 }
 
-const NEXT_MOVES: Array<{ value: ReviewNextMove; label: string; note: string }> = [
-  { value: 'act', label: 'Act', note: 'Make a concrete move now.' },
-  { value: 'listen', label: 'Listen / relationship', note: 'Talk with the right people before deciding.' },
-  { value: 'verify', label: 'Verify', note: 'Resolve an evidence gap first.' },
-  { value: 'revisit', label: 'Revisit', note: 'Return on a named date.' },
-  { value: 'close', label: 'Close', note: 'Consciously stop this line of work.' },
+/** The primary verb pair (CONTEXT.md: a Signal wants pursue or pass). Values
+ * keep the existing API vocabulary: pursue = 'act', pass = 'close'. */
+const PRIMARY_CALLS: Array<{ value: ReviewNextMove; label: string; note: string }> = [
+  { value: 'act', label: 'Pursue', note: 'Chase it: make the move, mint the Ask.' },
+  { value: 'close', label: 'Pass', note: 'Consciously let this one go.' },
+];
+
+const DEFER_MOVES: Array<{ value: ReviewNextMove; label: string; note: string }> = [
+  { value: 'listen', label: 'Listen first', note: 'Talk with the right people before the call.' },
+  { value: 'verify', label: 'Verify first', note: 'Resolve an evidence gap before the call.' },
+  { value: 'revisit', label: 'Revisit', note: 'Bring it back on a named date.' },
 ];
 
 function triggerLabel(trigger: QueueTrigger): string {
@@ -272,6 +277,8 @@ export function ActRecordReview({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reviewedIds, setReviewedIds] = useState<string[]>([]);
   const [lastReceipt, setLastReceipt] = useState<ActionReceipt | null>(null);
+  // The verb pair at the top of the pane preselects the call in the capture form.
+  const [pendingCall, setPendingCall] = useState<ReviewNextMove | null>(null);
   const availableRecords = useMemo(
     () => records.filter((record) => !reviewedIds.includes(record.id)),
     [records, reviewedIds],
@@ -298,17 +305,15 @@ export function ActRecordReview({
   return (
     <div className="grid min-w-0 gap-0 xl:grid-cols-[minmax(0,1fr)_420px]" data-testid="act-relational-review-workbench">
       <div className="min-w-0 xl:border-r xl:border-[var(--ws-border)]">
-        <section className="border-b border-[var(--ws-border)] bg-[#F6F1E8] px-4 py-5">
-          <div className="font-mono text-[10px] font-semibold uppercase tracking-widest text-[#5F725C]">Goods relational review</div>
-          <h3 className="mt-2 font-ql-display text-xl font-semibold tracking-normal text-[var(--ws-text)]">What needs understanding now</h3>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--ws-text-secondary)]">
-            GrantScope shows at most five matters, and only when official evidence changed, a decision is due within 30 days, a named unknown blocks the work, or a human revisit date has arrived.
+        <section className="border-b border-[var(--ws-border)] bg-[#F6F1E8] px-4 py-4">
+          <p className="max-w-3xl text-sm leading-6 text-[var(--ws-text)]">
+            Five matters at most; each wants one call: <span className="font-semibold">pursue or pass</span>.
           </p>
         </section>
 
         {lastReceipt ? (
           <div className="border-b border-ql-moss/40 bg-ql-moss/10 px-4 py-3 text-sm text-ql-moss" role="status">
-            <div className="font-semibold">Review captured as learning.</div>
+            <div className="font-semibold">Decision recorded.</div>
             <div className="mt-1 text-xs leading-5 text-ql-moss">
               {lastReceipt.nextStep ?? 'The note was appended without moving a relationship stage or creating a CRM opportunity.'}
             </div>
@@ -317,8 +322,8 @@ export function ActRecordReview({
 
         <div className="border-b border-[var(--ws-border)] bg-ql-surface px-4 py-3 text-xs text-[var(--ws-text-secondary)]">
           {queue.length === 0
-            ? 'No matters currently meet the weekly attention conditions.'
-            : `${queue.length} ${queue.length === 1 ? 'matter needs' : 'matters need'} a read · ${reviewedIds.length} captured in this session`}
+            ? 'No decisions are due right now.'
+            : `${queue.length} decision${queue.length === 1 ? '' : 's'} due · ${reviewedIds.length} made this session`}
         </div>
 
         <div className="divide-y divide-[var(--ws-border)]">
@@ -333,6 +338,7 @@ export function ActRecordReview({
                 onClick={() => {
                   setSelectedId(record.id);
                   setLastReceipt(null);
+                  setPendingCall(null);
                 }}
                 className={`min-h-28 w-full border-l-4 px-4 py-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#5F725C] ${
                   isSelected
@@ -373,18 +379,27 @@ export function ActRecordReview({
       <aside className="border-t border-[var(--ws-border)] bg-[var(--ws-surface-1)] xl:border-t-0">
         {selected ? (
           <div className="xl:sticky xl:top-24">
-            <RelationalMatterNarrative item={selected} orgSlug={orgSlug} projects={projects} />
+            <RelationalMatterNarrative
+              item={selected}
+              orgSlug={orgSlug}
+              projects={projects}
+              onCall={(call) => {
+                setPendingCall(call);
+                document.getElementById('curiosity-call-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
+            />
             <RelationalReviewForm
               key={selected.record.id}
               item={selected}
               orgProfileId={orgProfileId}
               projects={projects}
+              preselectedCall={pendingCall}
               onRecorded={handleRecorded}
             />
           </div>
         ) : (
           <div className="p-5 text-sm leading-6 text-[var(--ws-text-secondary)]">
-            Nothing needs a relational review right now.
+            No decisions are due right now.
           </div>
         )}
       </aside>
@@ -396,10 +411,12 @@ function RelationalMatterNarrative({
   item,
   orgSlug,
   projects,
+  onCall,
 }: {
   item: WeeklyReviewItem;
   orgSlug: string;
   projects: ActOpportunityProjectOption[];
+  onCall: (call: ReviewNextMove) => void;
 }) {
   const { record } = item;
   const project = resolveActOpportunityProject(record, projects);
@@ -408,7 +425,7 @@ function RelationalMatterNarrative({
   return (
     <div className="divide-y divide-[var(--ws-border)]">
       <section className="px-4 py-4">
-        <div className="font-mono text-[9px] font-semibold uppercase tracking-widest text-[#5F725C]">Read before deciding</div>
+        <div className="font-mono text-[9px] font-semibold uppercase tracking-widest text-[#5F725C]">Signal</div>
         <h3 className="mt-2 text-lg font-semibold leading-snug tracking-normal text-[var(--ws-text)]">{record.title}</h3>
         <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-[var(--ws-text-secondary)]">
           <span>{project?.name ?? record.project}</span>
@@ -416,6 +433,23 @@ function RelationalMatterNarrative({
           <span>{record.sourceLabel}</span>
           <span aria-hidden="true">·</span>
           <span>{record.amount}</span>
+        </div>
+        {/* The primary verb pair: the one decision this surface collects. */}
+        <div className="mt-3 flex gap-2">
+          <button
+            type="button"
+            onClick={() => onCall('act')}
+            className="inline-flex min-h-11 flex-1 items-center justify-center rounded-md bg-[#211F1C] px-4 text-sm font-semibold text-white hover:bg-[#27221D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5F725C]"
+          >
+            Pursue
+          </button>
+          <button
+            type="button"
+            onClick={() => onCall('close')}
+            className="inline-flex min-h-11 flex-1 items-center justify-center rounded-md border border-[#211F1C] bg-ql-surface px-4 text-sm font-semibold text-[#211F1C] hover:bg-[var(--ws-surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5F725C]"
+          >
+            Pass
+          </button>
         </div>
       </section>
 
@@ -536,17 +570,22 @@ function RelationalReviewForm({
   item,
   orgProfileId,
   projects,
+  preselectedCall,
   onRecorded,
 }: {
   item: WeeklyReviewItem;
   orgProfileId: string;
   projects: ActOpportunityProjectOption[];
+  preselectedCall: ReviewNextMove | null;
   onRecorded: (recordId: string, receipt: ActionReceipt) => void;
 }) {
   const { record } = item;
   const project = resolveActOpportunityProject(record, projects);
   const [whatChanged, setWhatChanged] = useState('');
   const [nextMove, setNextMove] = useState<ReviewNextMove | null>(null);
+  useEffect(() => {
+    if (preselectedCall) setNextMove(preselectedCall);
+  }, [preselectedCall]);
   const [nextLearningQuestion, setNextLearningQuestion] = useState('');
   const [revisitAt, setRevisitAt] = useState('');
   const [commitmentKind, setCommitmentKind] = useState<CommitmentKind>('commitment');
@@ -618,11 +657,11 @@ function RelationalReviewForm({
   }
 
   return (
-    <form onSubmit={submitReview} className="border-t-4 border-[#211F1C] bg-ql-surface px-4 py-5">
-      <div className="font-mono text-[9px] font-semibold uppercase tracking-widest text-[#5F725C]">Human reflection</div>
-      <h4 className="mt-2 text-base font-semibold text-[var(--ws-text)]">Record only the material change</h4>
+    <form id="curiosity-call-form" onSubmit={submitReview} className="border-t-4 border-[#211F1C] bg-ql-surface px-4 py-5">
+      <div className="font-mono text-[9px] font-semibold uppercase tracking-widest text-[#5F725C]">The call</div>
+      <h4 className="mt-2 text-base font-semibold text-[var(--ws-text)]">Make the call, record why</h4>
       <p className="mt-1 text-xs leading-5 text-[var(--ws-text-secondary)]">
-        The system keeps the evidence. You add the meaning, any real obligation, and what happens next.
+        The system keeps the evidence. You add the decision, the reason, and any real obligation.
       </p>
 
       <label className="mt-4 block">
@@ -639,9 +678,34 @@ function RelationalReviewForm({
       </label>
 
       <fieldset className="mt-5">
-        <legend className="text-xs font-semibold text-[var(--ws-text)]">What is the next move?</legend>
-        <div className="mt-2 grid gap-2 sm:grid-cols-2">
-          {NEXT_MOVES.map((move) => {
+        <legend className="text-xs font-semibold text-[var(--ws-text)]">The call</legend>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          {PRIMARY_CALLS.map((move) => {
+            const selected = nextMove === move.value;
+            return (
+              <button
+                key={move.value}
+                type="button"
+                onClick={() => {
+                  setNextMove(move.value);
+                  setRevisitAt('');
+                }}
+                aria-pressed={selected}
+                className={`min-h-14 rounded-md border-2 px-3 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5F725C] ${
+                  selected
+                    ? 'border-[#211F1C] bg-[#211F1C] text-white'
+                    : 'border-[#211F1C] bg-ql-surface text-[#211F1C] hover:bg-[var(--ws-surface-2)]'
+                }`}
+              >
+                <span className="block text-sm font-semibold">{move.label}</span>
+                <span className={`mt-0.5 block text-[10px] leading-4 ${selected ? 'text-white/70' : 'text-[var(--ws-text-secondary)]'}`}>{move.note}</span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="mt-3 text-[11px] font-medium text-[var(--ws-text-secondary)]">Not ready to call it:</div>
+        <div className="mt-1.5 grid gap-2 sm:grid-cols-3">
+          {DEFER_MOVES.map((move) => {
             const selected = nextMove === move.value;
             return (
               <button
@@ -652,13 +716,13 @@ function RelationalReviewForm({
                   if (move.value !== 'revisit') setRevisitAt('');
                 }}
                 aria-pressed={selected}
-                className={`min-h-14 rounded-md border px-3 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5F725C] ${
+                className={`min-h-11 rounded-md border px-3 py-1.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5F725C] ${
                   selected
                     ? 'border-[#5F725C] bg-[#F6F1E8] text-[#211F1C]'
                     : 'border-[var(--ws-border)] bg-ql-surface text-[var(--ws-text)] hover:bg-[var(--ws-surface-2)]'
                 }`}
               >
-                <span className="block text-sm font-semibold">{move.label}</span>
+                <span className="block text-xs font-semibold">{move.label}</span>
                 <span className="mt-0.5 block text-[10px] leading-4 text-[var(--ws-text-secondary)]">{move.note}</span>
               </button>
             );
@@ -762,7 +826,7 @@ function RelationalReviewForm({
         disabled={pending}
         className="mt-5 flex min-h-12 w-full items-center justify-between rounded-md bg-[#211F1C] px-4 text-sm font-semibold text-white hover:bg-[#27221D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5F725C] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60"
       >
-        <span>{pending ? 'Recording reflection…' : 'Record reflection and continue'}</span>
+        <span>{pending ? 'Recording the call…' : 'Record the decision and continue'}</span>
         <span aria-hidden="true">→</span>
       </button>
       <p className="mt-2 text-[10px] leading-4 text-[var(--ws-text-secondary)]">
