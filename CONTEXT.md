@@ -23,6 +23,22 @@ A machine-discovered maybe (matched foundation, detected round, procurement
 lead) that no human has decided on yet. Discovery-side only. Promotion path:
 Signal → Ask (human decision), never automatic.
 
+### Person
+A human ACT deliberately cultivates, independent of any Org. Minted by a human
+decision that this person matters (Brian M Davis, Jay) — appearing in a dataset
+(GHL contact, CivicGraph person row) does NOT make a Person; those are Signals
+about potential People. Same deliberate-commitment pattern as Ask vs Signal.
+Carries one **warmth** value (ACT↔Person is a single edge) plus a "warm via"
+holder ("warm via Nic"), an owner, and a next action. A Person can exist with
+no Org role at all.
+
+### Role (Person↔Org)
+A typed connection between a Person and an Org — multiple hats, hats change,
+the Person persists. Minimal starter set: **works-at**, **board-of**,
+**decides-for** (sits on a committee/panel that decides an Ask's fate). New
+role types earn their way in, like Relationship types did. Roles are ACT's
+structural knowledge and live in Supabase, not GHL.
+
 ### Org
 An organisation as an entity — one row, one GHL contact. An Org is never "a
 funder" or "a partner" as identity; it *holds Relationships* with ACT.
@@ -99,12 +115,18 @@ docs/adr/0001-ask-lives-in-ghl.md)
 |---|---|
 | Ask existence, stage, warmth, owner, next action, last touch | **GHL** |
 | Evidence around the Ask: fit, deadlines, grant round facts, org intelligence, warm bridges | **CivicGraph** (read-only annotations, synced via reconcile agents) |
+| Person existence, warmth, warm-via, owner, next action, last touch | **GHL** (Supabase read-mirror for surfaces) |
+| Person↔Org roles | **Supabase** |
+| Person evidence: board interlocks, influence, "opens" bridges | **CivicGraph** (read-only annotations) |
 | Dollars received | **Xero** |
 | The produced artefact (application doc, EOI) | **Notion** |
 
 Rules:
 - **Not in GHL = not an Ask** — it's still a Signal. Pushing to GHL is minting
   the Ask.
+- **Not in GHL = not a Person** either — minting a Person = creating/claiming
+  the GHL contact (ADR 0002). Surfaces query the Supabase mirror, never GHL
+  live.
 - **On any state disagreement, GHL wins silently.** CivicGraph's opinion
   appears only in mismatch reports (warm-but-unworked etc.), never as status.
 - **Every foreign fact displays its age** (`last_synced_at`); stale badge when
