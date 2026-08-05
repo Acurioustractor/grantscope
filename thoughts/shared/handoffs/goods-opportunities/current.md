@@ -61,7 +61,7 @@ The session after this one works Balnaves, not more building.
 ### Next
 - [ ] Balnaves EOI — open door: multi-year $150-250K/yr, First Nations health-hardware framing, via Butterfly DGR (balnavesfoundation.com/how-to-apply, EOI reviewed in 4 weeks)
 - [ ] auDA 2026 Community Grant — deadline 31 Aug 2026, digital-inclusion framing needed
-- [ ] Confirm QBE Stage 2 exact deadline (flagged unverified in applications workspace)
+- [x] QBE "Stage 2" RESOLVED 2026-08-05 (Gmail sweep): there is no pending QBE application stage — ACT is already IN the QBE-funded Catalysing Impact cohort (participation grant paid, advisory live with Matt Allen/Malcolm Aikman, hackathon under way). The 2026 QBE Local Grants EOI window closed 16 Mar; no EOI from ACT in the mailbox. Real QBE-adjacent actions instead: **hackathon video owed to Jay (promised 22 July, now ~2 weeks overdue)**; cohort check-in 3 Sept 2pm AEST. Remove the phantom deadline from the applications workspace.
 - [ ] Anyinginyi: chase Tony Miles on the 9 Feb washer quote (live thread, GHL next-action)
 - [ ] KKT intro email (mail@kkt.org.au) — peer/co-funder framing, not cold ask
 - [ ] Barkly beachhead: Julalikari (repeat, warmth 75) + Anyinginyi (in_conversation) same town
@@ -75,7 +75,9 @@ The session after this one works Balnaves, not more building.
 - Grants are deadline-driven not stage-driven; NT IS covered by scrape-state-grants (audit claim wrong)
 
 ### Open Questions
-- UNCONFIRMED: QBE Stage 2 exact deadline + acceptable commitment evidence
+- RESOLVED: QBE Stage 2 was a phantom — see Next section (Catalysing Impact is the real QBE relationship; hackathon video is the overdue item)
+- LIVE + TIME-SENSITIVE (found in Gmail 2026-08-05): **Brian M Davis Charitable Foundation** — Anita Hopkins takes the Butterfly/ACT work to their Grants Committee "early August" (this week); Nic's thread, DGR objects reviewed and confirmed. Expect an update imminently; nothing to chase yet.
+- auDA framing decision now includes the openness question: funded work must be CC-licensed + no proprietary rights to ACT Pty (Guidelines s7/s10) — open-source the register layer or pass
 - UNCONFIRMED: whether Ben wants Balnaves EOI drafted this coming session (use /act-voice + /ground before any outreach copy)
 - Ben decisions pending (tag cleanup session): status:quarantine 1,806 contacts keep-or-archive; Harvest cohabitation in GHL location
 
