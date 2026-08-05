@@ -352,6 +352,8 @@ test.describe('ACT Field Desk pilot workflow', () => {
     await expect(sidebar.getByRole('link', { name: 'Listen' })).toHaveCount(0);
     // Action retired from the rail — One Desk owns committed work (kind=commitment).
     await expect(sidebar.getByRole('link', { name: 'Action', exact: true })).toHaveCount(0);
+    // Funding retired 2026-08-05 — Curiosity + the desk absorbed the ritual.
+    await expect(sidebar.getByRole('link', { name: /^Funding/ })).toHaveCount(0);
     await expect(sidebar.getByRole('link', { name: 'Curiosity' })).toBeVisible();
     await sidebar.getByRole('link', { name: 'Orgs' }).click();
     await expect(page).toHaveURL(/\/org\/act\/orgs/);

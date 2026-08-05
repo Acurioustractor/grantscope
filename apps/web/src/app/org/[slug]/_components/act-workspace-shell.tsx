@@ -120,12 +120,8 @@ export function ActWorkspaceShell({
       href: `/org/${slug}/research`,
       active: pathname.startsWith(`/org/${slug}/research`),
     },
-    {
-      label: 'Funding',
-      detail: 'Five weekly decisions',
-      href: `/org/${slug}/funding`,
-      active: pathname.startsWith(`/org/${slug}/funding`) || pathname.endsWith('/funding'),
-    },
+    // 'Funding — five weekly decisions' retired from the rail 2026-08-05:
+    // Curiosity + One Desk absorbed the ritual. /funding stays reachable as legacy.
   ];
 
   return (
