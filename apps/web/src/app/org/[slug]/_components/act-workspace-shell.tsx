@@ -78,7 +78,6 @@ export function ActWorkspaceShell({
     .filter((project) => project.status === 'active')
     .sort((left, right) => projectFieldRank(left) - projectFieldRank(right) || left.name.localeCompare(right.name));
   const fieldProjects = projectRows.slice(0, 7);
-  const artProject = projectRows.find((project) => /harvest|witta|art/.test(`${project.slug} ${project.name}`.toLowerCase()));
   const workModes: WorkspaceLink[] = [
     // The one-system front door: every workable record, one ranked queue.
     // "Today" retired 2026-08-05 — One Desk IS today (CONTEXT.md).
@@ -87,41 +86,18 @@ export function ActWorkspaceShell({
     // Legacy lens stays reachable at ?view=relationships (not on the rail).
     { label: 'Orgs', href: `/org/${slug}/orgs`, active: pathname.startsWith(`/org/${slug}/orgs`) },
     { label: 'Curiosity', href: rootHref(slug, 'opportunities', 'opportunities'), active: onOrgRoot && (view === 'opportunities' || view === 'triage') },
-    // Action retired from the rail 2026-08-05 — One Desk owns committed work
-    // (kind=commitment). Legacy lens stays reachable at ?view=pipeline.
-    {
-      label: 'Art',
-      href: artProject ? `/org/${slug}/${artProject.slug}` : rootHref(slug, 'triage', 'triage'),
-      active: Boolean(artProject && pathname.startsWith(`/org/${slug}/${artProject.slug}`)),
-    },
+    // Rail cut to the spine (Ben, 2026-08-05): Action, Art, Money, Sources,
+    // Research and Funding all left the rail. Art = the Harvest project, which
+    // the project list already carries; the rest stay reachable by URL
+    // (?view=pipeline, ?view=money, ?view=evidence, /research, /funding).
   ];
   const utilityLinks = [
     {
       label: 'Atlas',
-      detail: 'Search the whole field',
+      detail: 'Search everything',
       href: `/org/${slug}/explore`,
       active: pathname.startsWith(`/org/${slug}/explore`),
     },
-    {
-      label: 'Money',
-      detail: 'Payments & contribution',
-      href: rootHref(slug, 'money', 'money'),
-      active: onOrgRoot && view === 'money',
-    },
-    {
-      label: 'Sources',
-      detail: 'Evidence & freshness',
-      href: rootHref(slug, 'evidence', 'systems'),
-      active: onOrgRoot && view === 'evidence',
-    },
-    {
-      label: 'Research',
-      detail: 'Experiments & community benefit',
-      href: `/org/${slug}/research`,
-      active: pathname.startsWith(`/org/${slug}/research`),
-    },
-    // 'Funding — five weekly decisions' retired from the rail 2026-08-05:
-    // Curiosity + One Desk absorbed the ritual. /funding stays reachable as legacy.
   ];
 
   return (
