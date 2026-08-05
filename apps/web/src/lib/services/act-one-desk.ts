@@ -10,6 +10,7 @@ import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
 import { getGoodsGrantsTriage } from '@/lib/services/goods-grants-triage';
 import { getGoodsBuyerPipeline } from '@/lib/services/goods-buyer-pipeline';
 import { ghlContactUrl } from '@/lib/ghl-links';
+import { getGoodsCapitalWorkspace } from '@/lib/services/goods-capital-workspace';
 
 export type DeskRecordKind = 'funder' | 'grant' | 'buyer' | 'money' | 'commitment';
 
@@ -40,6 +41,17 @@ export type DeskRecord = {
   ghlUrl: string | null;
   /** Deep link to the record's full workspace surface. */
   workHref: string | null;
+  /** True when this row is a decision due (pursue or pass), not yet an Ask. */
+  isDecision?: boolean;
+};
+
+/** The primary Target the Asks serve (CONTEXT.md: Target). */
+export type DeskTarget = {
+  label: string;
+  needMinAud: number;
+  needMaxAud: number;
+  committedAud: number;
+  askMadeAud: number;
 };
 
 export type DeskHorizon = 'overdue' | 'fortnight' | 'quarter' | 'undated';
@@ -68,10 +80,21 @@ export type OneDeskPool = {
   /** Records marked done/waiting/tomorrow today (same store as the Today queue). */
   handled: Array<{ record: DeskRecord; status: ActDailyActionStatus }>;
   orgProfileId: string | null;
+  target: DeskTarget | null;
 };
 
 export async function getOneDesk(slug: string): Promise<OneDeskPool> {
-  const pool = await getOneDeskPool(slug);
+  const [pool, capital] = await Promise.all([
+    getOneDeskPool(slug),
+    getGoodsCapitalWorkspace().catch(() => null),
+  ]);
+  const target: DeskTarget | null = capital ? {
+    label: 'Goods capital plan',
+    needMinAud: capital.summary.needMinAud,
+    needMaxAud: capital.summary.needMaxAud,
+    committedAud: capital.summary.committedAud,
+    askMadeAud: capital.summary.askMadeAud,
+  } : null;
   const profile = await getOrgProfileBySlug(slug).catch(() => null);
   const states: Record<string, ActDailyActionStatus> = profile
     ? await getOrgDailyActionStates(profile.id).catch(() => ({}))
@@ -83,7 +106,7 @@ export async function getOneDesk(slug: string): Promise<OneDeskPool> {
     if (status) handled.push({ record: r, status });
     else active.push(r);
   }
-  return { active, handled, orgProfileId: profile?.id ?? null };
+  return { active, handled, orgProfileId: profile?.id ?? null, target };
 }
 
 export async function getOneDeskPool(slug: string): Promise<DeskRecord[]> {
@@ -126,24 +149,37 @@ export async function getOneDeskPool(slug: string): Promise<DeskRecord[]> {
       ghlUrl: null, workHref: `/org/${slug}?view=relationships#relationships`,
     });
   }
+  // The desk contract (CONTEXT.md): committed work or a decision due now.
+  // Funders: in GHL = an Ask being worked; not in GHL = decision-due only at
+  // fit >= 85 (pursue mints the Ask, pass removes it).
   for (const r of scan?.rows ?? []) {
     if (!r.stage || ['parked', 'declined'].includes(r.stage)) continue;
+    const inGhl = r.ghlWarmth !== 'not_in_ghl';
+    if (!inGhl && (r.fitScore ?? 0) < 85) continue;
     pool.push({
       id: `f-${r.id}`, kind: 'funder', project: 'Goods', name: r.name,
-      signal: r.ghlWarmth === 'not_in_ghl' ? 'not in GHL' : r.ghlWarmth,
-      next: r.nextStep || 'Set a next step', dueDays: null,
+      signal: inGhl ? r.ghlWarmth : `fit ${r.fitScore} · not yet an Ask`,
+      next: inGhl ? (r.nextStep || 'Set a next step') : 'Decide: pursue (mint the Ask in GHL) or pass',
+      dueDays: null,
       score: r.fitScore ?? 0, amount: null, ghlUrl: ghlContactUrl(r.ghlContactId),
       workHref: `/org/${slug}/goods/foundations/scan`,
+      isDecision: !inGhl,
     });
   }
-  for (const g of (triage?.grants ?? []).slice(0, 40)) {
+  // Grant Rounds: decision-due when closing within 30 days or fit >= 85;
+  // already-in-GHL rounds are Asks being worked.
+  for (const g of triage?.grants ?? []) {
+    const inGhl = Boolean(g.ghlOpportunityId);
+    const decisionDue = (g.daysToDeadline != null && g.daysToDeadline <= 30) || (g.goodsScore ?? 0) >= 85;
+    if (!inGhl && !decisionDue) continue;
     pool.push({
       id: `g-${g.id}`, kind: 'grant', project: 'Goods', name: g.name,
-      signal: g.ghlOpportunityId ? 'in GHL' : 'live round',
-      next: g.ghlOpportunityId ? 'Work the application' : 'Decide: pursue or pass',
+      signal: inGhl ? 'in GHL' : 'live round · not yet an Ask',
+      next: inGhl ? 'Work the application' : 'Decide: pursue (push to GHL) or pass',
       dueDays: g.daysToDeadline, score: g.goodsScore ?? 0,
       amount: g.amountMax ? `$${Math.round(g.amountMax / 1000)}K` : null,
       ghlUrl: null, workHref: `/org/${slug}/goods/grants`,
+      isDecision: !inGhl,
     });
   }
   for (const b of buyers?.rows ?? []) {

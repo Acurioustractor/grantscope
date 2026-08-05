@@ -48,7 +48,10 @@ export default async function OneDeskPage({ params, searchParams }: {
   const kind = typeof sp.kind === 'string' && ['funder', 'grant', 'buyer', 'money', 'commitment'].includes(sp.kind) ? (sp.kind as DeskRecord['kind']) : null;
   const project = typeof sp.project === 'string' ? sp.project : null;
 
-  const { active: all, handled, orgProfileId } = await getOneDesk(slug);
+  const { active: all, handled, orgProfileId, target } = await getOneDesk(slug);
+  const money = (n: number) => (n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` : `$${Math.round(n / 1e3)}K`);
+  const asks = all.filter((r) => !r.isDecision);
+  const decisions = all.filter((r) => r.isDecision);
   const projects = [...new Set(all.map((r) => r.project))].sort();
   const pool = all.filter((r) => (!kind || r.kind === kind) && (!project || r.project === project));
   const selected = (typeof sp.rec === 'string' ? pool.find((r) => r.id === sp.rec) : null) ?? pool[0] ?? null;
@@ -78,9 +81,16 @@ export default async function OneDeskPage({ params, searchParams }: {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <div className="font-ql-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-ql-accent">
-              One pool · deadline first · {all.length} records{handled.length > 0 ? ` · ${handled.length} handled today` : ''}
+              {asks.length} asks · {decisions.length} decisions due{handled.length > 0 ? ` · ${handled.length} handled today` : ''}
             </div>
             <h1 className="mt-1 font-ql-display text-4xl font-semibold">One Desk</h1>
+            {target ? (
+              <p className="mt-1.5 text-sm text-ql-text2">
+                <span className="font-medium text-ql-ink">{target.label}:</span>{' '}
+                <span className={`font-ql-mono font-semibold ${target.committedAud > 0 ? 'text-ql-moss' : 'text-ql-alert'}`}>{money(target.committedAud)}</span>
+                {' '}committed of {money(target.needMinAud)}–{money(target.needMaxAud)} needed · {money(target.askMadeAud)} asked
+              </p>
+            ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {projects.map((p) => (
@@ -126,6 +136,7 @@ export default async function OneDeskPage({ params, searchParams }: {
                   >
                     <KindChip k={r.kind} />
                     <span className="min-w-0 flex-1 truncate font-semibold">{r.name}</span>
+                    {r.isDecision && <span className="rounded-full border border-ql-accent px-2 py-0.5 font-ql-mono text-[8.5px] font-semibold uppercase tracking-[0.08em] text-ql-accent">decide</span>}
                     {r.amount && <span className="font-ql-mono text-[11px] font-semibold">{r.amount}</span>}
                     <Due d={r.dueDays} />
                   </Link>
