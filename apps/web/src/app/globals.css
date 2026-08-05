@@ -1,6 +1,28 @@
 @import 'tailwindcss';
 
 @theme {
+  /* Quiet Ledger palette (ACT one-system theme — source of truth: pencil-new.pen tokens) */
+  --color-ql-canvas: #E9E2D7;
+  --color-ql-surface: #FFFCF7;
+  --color-ql-surface2: #F6F1E8;
+  --color-ql-warm: #F2E5D6;
+  --color-ql-ink: #27221D;
+  --color-ql-bar: #211F1C;
+  --color-ql-text2: #70685F;
+  --color-ql-muted: #AAA49B;
+  --color-ql-inverse: #FFFCF7;
+  --color-ql-accent: #9A673B;
+  --color-ql-moss: #5F725C;
+  --color-ql-alert: #A44A3B;
+  --color-ql-border: #DDD4C7;
+  --color-ql-kind-money: #A44A3B;
+  --color-ql-kind-funder: #6B5B8A;
+  --color-ql-kind-grant: #3F6577;
+  --color-ql-kind-buyer: #5F725C;
+  --color-ql-kind-commitment: #9A673B;
+  --font-ql-display: var(--font-newsreader, Georgia), Georgia, serif;
+  --font-ql-mono: var(--font-plex-mono, ui-monospace), ui-monospace, monospace;
+
   /* Bauhaus primary palette */
   --color-bauhaus-red: #D02020;
   --color-bauhaus-blue: #1040C0;

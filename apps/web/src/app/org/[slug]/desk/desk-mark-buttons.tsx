@@ -33,19 +33,19 @@ export function DeskMarkButtons({ orgProfileId, actionId, title, detail }: {
     }
   }
 
-  const btn = 'border-2 border-bauhaus-black px-3 py-1.5 text-xs font-black uppercase tracking-widest disabled:opacity-50';
+  const btn = 'rounded-md px-4 py-2 text-xs font-semibold transition-colors disabled:opacity-50';
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <button type="button" onClick={() => mark('done')} disabled={busy !== null} className={`${btn} bg-bauhaus-black text-white hover:bg-bauhaus-red`}>
+      <button type="button" onClick={() => mark('done')} disabled={busy !== null} className={`${btn} bg-ql-bar text-ql-inverse hover:bg-ql-ink`}>
         {busy === 'done' ? '…' : 'Done → next'}
       </button>
-      <button type="button" onClick={() => mark('waiting')} disabled={busy !== null} className={`${btn} bg-white hover:bg-bauhaus-canvas`}>
+      <button type="button" onClick={() => mark('waiting')} disabled={busy !== null} className={`${btn} border border-ql-border bg-ql-surface text-ql-ink hover:bg-ql-surface2`}>
         {busy === 'waiting' ? '…' : 'Waiting'}
       </button>
-      <button type="button" onClick={() => mark('tomorrow')} disabled={busy !== null} className={`${btn} bg-white hover:bg-bauhaus-canvas`}>
+      <button type="button" onClick={() => mark('tomorrow')} disabled={busy !== null} className={`${btn} border border-ql-border bg-ql-surface text-ql-ink hover:bg-ql-surface2`}>
         {busy === 'tomorrow' ? '…' : 'Tomorrow'}
       </button>
-      {error && <span className="text-[10px] text-bauhaus-red">{error}</span>}
+      {error && <span className="text-[10px] text-ql-alert">{error}</span>}
     </div>
   );
 }

@@ -1,5 +1,11 @@
 import type { Metadata } from 'next';
+import { Newsreader, IBM_Plex_Mono } from 'next/font/google';
 import './globals.css';
+
+// Quiet Ledger fonts — exposed as CSS vars the ql-* theme tokens reference.
+const newsreader = Newsreader({ subsets: ['latin'], weight: ['400', '500', '600'], style: ['normal', 'italic'], variable: '--font-newsreader' });
+const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-plex-mono' });
+const qlFontVars = `${newsreader.variable} ${plexMono.variable}`;
 import { NavBar } from './components/nav';
 import { ImpersonationBanner } from './components/impersonation-banner';
 import { DeferredChatDrawer } from './components/deferred-chat-drawer';
@@ -78,7 +84,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   if (isChromeless) {
     return (
       <html lang="en">
-        <body className="font-sans antialiased bg-transparent">
+        <body className={`font-sans antialiased bg-transparent ${qlFontVars}`}>
           {children}
         </body>
       </html>
@@ -136,7 +142,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en">
       <body
-        className={`font-sans antialiased ${isLoggedIn ? 'ws' : ''}`}
+        className={`font-sans antialiased ${qlFontVars} ${isLoggedIn ? 'ws' : ''}`}
         data-authenticated={user ? 'true' : 'false'}
         data-user-email={user?.email ?? ''}
       >
