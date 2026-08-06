@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
+import { isActSlug } from '@/lib/services/fast-local-org';
 import {
   getOrgProfileBySlug,
   getOrgContacts,
@@ -20,6 +21,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function ContactsPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  // ACT's contacts surface is replaced by /people (spec §1, Ben 2026-08-06):
+  // un-minted contacts reappear only as minting candidates there. Delete this
+  // route for ACT (and this redirect) one release after /people ships.
+  if (isActSlug(slug)) redirect(`/org/${slug}/people`);
   const profile = await getOrgProfileBySlug(slug);
   if (!profile) notFound();
 
