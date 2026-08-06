@@ -118,7 +118,7 @@ export async function getCommunityRecord(orgProfileId: string, slug: string): Pr
   }));
 
   type OblRow = Parameters<typeof mapObligation>[0];
-  const obligations = ((oblRes.data ?? []) as OblRow[]).map(mapObligation);
+  const obligations = ((oblRes.data ?? []) as OblRow[]).map((r) => mapObligation(r, community));
 
   const touches = [
     ...links.map((l) => l.lastTouch),
@@ -141,7 +141,7 @@ function mapObligation(r: {
   source_ask_ghl_id: string | null; source_ask_name: string | null;
   promised_to: string | null; artefact_url: string | null; drop_reason: string | null;
   minted_at: string; discharged_at: string | null;
-}): Obligation {
+}, community: { id: string; name: string; slug: string }): Obligation {
   const t = r.due_date ? new Date(`${r.due_date}T00:00:00`).getTime() : NaN;
   return {
     id: r.id, orgProfileId: r.org_profile_id, projectCode: r.project_code,
@@ -150,5 +150,6 @@ function mapObligation(r: {
     owner: r.owner, sourceAskGhlId: r.source_ask_ghl_id, sourceAskName: r.source_ask_name,
     promisedTo: r.promised_to, artefactUrl: r.artefact_url, dropReason: r.drop_reason,
     mintedAt: r.minted_at, dischargedAt: r.discharged_at,
+    communityId: community.id, communityName: community.name, communitySlug: community.slug,
   };
 }
