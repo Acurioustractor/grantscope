@@ -1,47 +1,41 @@
----
-date: 2026-08-06T12:30:00+10:00
-session_name: one-desk-domain-model
-branch: main
-status: active
----
-
-# Work Stream: one-desk-domain-model
+# Handoff — One Desk domain model → Engagement layer
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-08-06T17:30:00+10:00
-**Goal:** Wayfinder map #143 — One Desk domain-model extension (People, Obligations, surface delineation). MAP COMPLETE — all 12 tickets resolved. Specs in docs/specs/ (one-desk-widened, people-surface, delivery-surfaces, backfill-prompt-list). Way is clear: build sessions execute the specs (build order in backfill-prompt-list.md).
-**Branch:** main (all decisions committed+pushed through 0d832ff)
-**Test:** docs-only so far; cd apps/web && npx tsc --noEmit when build starts
+**Updated:** 2026-08-06T21:30:00+10:00
+**Goal:** Map #143 (One Desk domain model) COMPLETE + built slice 1. New map #158 (Engagement layer) CHARTED with 5 tickets. Separate urgent sprint: ACT site launch + first newsletters (GHL) THIS WEEK — not started.
+**Branch:** main (all merged through PR #157, squash 64ab9b6; local == origin)
+**Test:** cd apps/web && npx tsc --noEmit (repo has no vitest test files)
 
 ### Now
-[->] Map #143 done. Next: build sessions — 1) We-owe tab + mint modal (mismatch off), 2) triage sitting with Ben (day shift), 3) desk widening + /people, enable mismatch rows
+[->] Three parallel tracks, pick per session:
+1. **Newsletter sprint (URGENT, day shift):** ACT site live this week + newsletters via GHL for Goods + JusticeHub + ACT general. Needs: GHL email/audience capability check, content in ACT voice (/act-voice skill), Ben in loop. NOT STARTED.
+2. **Triage sitting OPEN:** 11 live Won opportunities need obligation terms dictated by Ben (5 Snow/Centrecorp funder grants, 6 buyer sales to community orgs — list in act_ask_none_owed context below). Mint via /api or We-owe tab.
+3. **Engagement map:** `/mattpocock-skills:wayfinder 158` — 4 grilling tickets open (#159 Community entity, #160 digest, #161 GHL tasks bridge, #162 grants→Notion). #163 research: RESOLVED+CLOSED — findings in docs/funder-pipeline-gap-audit.md on branch research/funder-pipeline-gaps (pipeline split across 4 surfaces, no five-stage rendering, no $-weighted view, fit-70–84 invisible). Likely spawns a 'one pipeline screen' spec ticket on #158.
 
-### This Session
-- [x] #145 Person entity — deliberate-minting, typed roles (works-at/board-of/decides-for/opens-into), warmth+warm-via, GHL SoR (ADR 0002)
-- [x] #146 opens dual-level — Person `opens-into` + institutional Org `opens`; Org views roll up "via Jay"
-- [x] #147 Obligation — one entity, owed-to funder/community; human-minted (Won prompts, never auto); Open→Done/Dropped
-- [x] #148 Watch-items — NOT an entity; Person next action + mandatory review-by date
-- [x] #149 Surface delineation — desk widens to 5 row kinds; money/delivery/org-wide People (/org/act/people) surfaces
-- [x] #150 Desk row shapes — Ben picked Variant B (→ funder/community tag; via <holder>); "commitment" kind folds into `we owe`; branch prototype/desk-row-shapes
-- [x] #151 Data trust — Obligations Supabase-NATIVE; GHL=relationship truth, Supabase=work truth (ADR 0003)
-- [x] #152 Thresholds — Obligations: overdue/≤30d/undated-always; People: review-by ≤7d
-- [x] Fog graduated: #156 migration/backfill ticket created (prompt list, NOT bulk import)
+### This Session (2026-08-06 afternoon)
+- [x] Map #143 finished: #153 (widened desk spec), #154 (people surface spec), #155 (delivery surfaces spec), #156 (backfill) — all specs in docs/specs/
+- [x] BUILT + MERGED PR #157: We-owe tab at /org/act/goods/we-owe — act_obligations + act_ask_none_owed tables (migration APPLIED to prod), act-obligations.ts service (incl. getDeskObligations desk feed, thresholds baked), org-scoped API (Done/Dropped terminal, community drops need reason), Bauhaus skin
+- [x] Triage sitting part 1: 19 of 30 Won opps bulk-flagged none-owed (17 'A Curious Tractor' 2025 pipeline rows + 2 historical Xero rows) — flagged_by='ben-triage-2026-08-06', reversible per-row
+- [x] Charted map #158 + tickets #159–#163; fired research agent on #163
+- Ben's charting decisions: notifications = email digest + GHL tasks ONLY (desk stays primary, no new realtime channel); community unit = place records; newsletter = separate sprint
 
 ### Next
-- [x] #153 UX spec widened One Desk — RESOLVED, spec at docs/specs/one-desk-widened-ux-spec.md (interleaved pool, undated-obligations pin, any-kind hero, header owed/people counts)
-- [x] #154 UX spec People surface — RESOLVED, spec at docs/specs/people-surface-ux-spec.md (replaces /contacts, full mint flow, split pane)
-- [x] #155 UX spec Delivery surfaces — RESOLVED, spec at docs/specs/delivery-surfaces-ux-spec.md (We-owe tab, batch Won modal, desk+banner mismatch)
-- [x] #156 backfill — RESOLVED, docs/specs/backfill-prompt-list.md (curated People slice, live-grants-only triage, one sitting before desk mismatch)
+- [ ] Newsletter sprint session (fresh context, day shift)
+- [ ] Ben dictates terms for 11 live Wons → mint obligations
+- [ ] Wayfinder 158 tickets, one per session
+- [ ] Later build order (from docs/specs/backfill-prompt-list.md): desk widening (obligation+person rows, service feed exists) + /people surface + enable mismatch rows AFTER triage completes
 
 ### Decisions
-- All in CONTEXT.md (glossary + screen ownership + data trust) and docs/adr/0002, 0003 — read those, not this ledger, for detail
-- Map #143 body is the index; remaining fog: whether CONTEXT.md needs sectioning (judge when a spec touches it)
+- All domain decisions in CONTEXT.md + docs/adr/0001–0003 + docs/specs/*.md — read those, not this ledger
+- Desk mismatch rows stay OFF until triage sitting completes (backfill-prompt-list.md)
+- We-owe tab uses Bauhaus (workspace family consistency), desk stays Quiet Ledger
 
 ### Open Questions
-- UNCONFIRMED: none — all state is on the tracker/CONTEXT.md/ADRs
+- 11 live Wons' real obligation terms — only Ben knows
 
----
-
-## Context
-Wayfinder effort on GitHub: map issue #143 (label wayfinder:map), child tickets as sub-issues, native issue dependencies for blocking. Ritual per ticket: claim (assign @me) → grill Ben one question at a time with recommendations → confirm summary → record (CONTEXT.md/ADR + resolution comment + close + map Decisions-so-far) → commit → ask before push (Tier 2). Ben's prior decision queue (Balnaves/auDA/KKT) is a separate stream — see the asks ledger.
+## Key artifacts
+- Specs: docs/specs/{one-desk-widened,people-surface,delivery-surfaces}-ux-spec.md, docs/specs/backfill-prompt-list.md
+- Maps: gh issues #143 (closed-out, all decisions indexed) and #158 (live)
+- We-owe: apps/web/src/app/org/[slug]/goods/we-owe/, lib/services/act-obligations.ts, api/org/[orgProfileId]/obligations/
+- Migration applied: supabase/migrations/20260806100000_act_obligations.sql
