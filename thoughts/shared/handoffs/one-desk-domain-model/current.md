@@ -2,13 +2,13 @@
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-08-06T12:45:00+10:00
-**Goal:** Newsletter sprint PARKED mid-flight by Ben (2026-08-06 — "not sure grantscope is the right repo to work this from"; all work committed, resumable). Map #158 (Engagement layer) charted with 4 open tickets. Triage sitting still open.
-**Branch:** feat/newsletter-tag-alignment (local commit ca55d2a, NOT pushed; main == origin at 64ab9b6)
+**Updated:** 2026-08-06T14:15:00+10:00
+**Goal:** Newsletter bulk cleanup APPLIED (111 contacts, 0 failures; harvest 10 still skipped). Wayfinder #159 (Community vocabulary) RESOLVED — spec + ADR 0004 on main. Open: #160–#162, triage sitting (11 Wons need terms).
+**Branch:** main (local docs commits NOT pushed); feat/newsletter-tag-alignment local at 4043bf8, NOT pushed
 **Test:** cd apps/web && npx tsc --noEmit (repo has no vitest test files)
 
 ### Now
-[->] PARKED: Newsletter sprint — resume point is the bulk tag cleanup, gated on Ben's canary soak check. Ben to decide which repo/context hosts the rest of the sprint. Other tracks: triage sitting (11 Wons need terms) · wayfinder #158 tickets.
+[->] Next #158 ticket (one per session): #160 grants digest, #161 GHL tasks bridge, or #162 grants→Notion handoff. #159 DONE 2026-08-06 (spec docs/specs/community-records-spec.md, ADR 0004, CONTEXT.md glossary; Communities Supabase-native, never mint desk rows). Community↔Obligations/People wiring now unblocked (build session).
 
 ### Newsletter sprint state (2026-08-06 midday session — PARKED)
 - [x] GHL tag audit re-run (3,365 contacts): newsletter segments = comms:act-newsletter 140 / goods 128 / justicehub 34 / harvest 222 + strays
@@ -21,7 +21,7 @@
 - [x] All 3 site opt-in forms verified already canonical (comms tag + newsletter_consent atomic) — no rewiring needed
 
 ### Newsletter resume checklist
-- [ ] Ben: soak check (no rogue emails/enrolments from canary) → run `node --env-file=.env scripts/cleanup-newsletter-tags.mjs --apply --skip-harvest` (~102 contacts)
+- [x] Soak clean (Ben confirmed 2026-08-06 pm) → bulk --apply --skip-harvest RUN: 111 contacts, 0 failures (74 goods-newsletter→comms:, 53 stale newsletter-stream:* removed). Report committed on branch (4043bf8)
 - [ ] Ben (GHL UI): check Harvest workflow triggers → final --apply for the 10 harvest contacts
 - [ ] Ben (GHL UI): dedicated sending domain check + 3 smart lists (comms:<x>-newsletter AND newsletter_consent=Yes AND not DND)
 - [ ] Draft first issues (/act-voice + /ground) + re-permission email — day shift
