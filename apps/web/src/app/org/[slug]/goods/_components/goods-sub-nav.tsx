@@ -15,6 +15,7 @@ const OPERATING_TABS = [
 
 const DELIVERY_TABS = [
   ['funnel', 'Delivery map'],
+  ['we-owe', 'We owe'],
   ['communities', 'Demand & communities'],
   ['channels', 'Channels'],
   ['buyers', 'Buyer pipeline'],
