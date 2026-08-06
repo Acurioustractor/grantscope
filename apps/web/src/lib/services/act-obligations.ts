@@ -25,6 +25,10 @@ export type Obligation = {
   dropReason: string | null;
   mintedAt: string;
   dischargedAt: string | null;
+  /** Community this is owed to/tagged with (ADR 0004) — null = untagged. */
+  communityId: string | null;
+  communityName: string | null;
+  communitySlug: string | null;
 };
 
 export type ObligationPool = {
@@ -51,6 +55,8 @@ type Row = {
   drop_reason: string | null;
   minted_at: string;
   discharged_at: string | null;
+  community_id?: string | null;
+  act_communities?: { name: string; slug: string } | null;
 };
 
 function dueDays(iso: string | null): number | null {
@@ -78,6 +84,9 @@ function fromRow(r: Row): Obligation {
     dropReason: r.drop_reason,
     mintedAt: r.minted_at,
     dischargedAt: r.discharged_at,
+    communityId: r.community_id ?? null,
+    communityName: r.act_communities?.name ?? null,
+    communitySlug: r.act_communities?.slug ?? null,
   };
 }
 
@@ -86,7 +95,7 @@ export async function getObligationPool(orgProfileId: string, projectCode: strin
   const db = getServiceSupabase();
   const { data, error } = await db
     .from('act_obligations')
-    .select('*')
+    .select('*, act_communities(name, slug)')
     .eq('org_profile_id', orgProfileId)
     .eq('project_code', projectCode)
     .order('minted_at', { ascending: false });

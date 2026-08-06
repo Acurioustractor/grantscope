@@ -71,12 +71,85 @@ export function ObligationStateButtons({ orgProfileId, obligationId, owedTo }: {
   );
 }
 
-export function MintObligationForm({ orgProfileId, projectCode }: { orgProfileId: string; projectCode: string }) {
+type CommunityOption = { id: string; name: string };
+
+/** Community tag on an Obligation (ADR 0004) — set, change, or clear.
+ * owed-to-community first, but any Obligation can carry the tag. */
+export function ObligationCommunityPicker({ orgProfileId, obligationId, communityId, communityName, communitySlug, orgSlug, communities, readOnly }: {
+  orgProfileId: string;
+  obligationId: string;
+  communityId: string | null;
+  communityName: string | null;
+  communitySlug: string | null;
+  orgSlug: string;
+  communities: CommunityOption[];
+  readOnly: boolean;
+}) {
+  const router = useRouter();
+  const [editing, setEditing] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function set(value: string | null) {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/org/${orgProfileId}/obligations`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: obligationId, community_id: value }),
+      });
+      if (!res.ok) throw new Error(((await res.json()) as { error?: string }).error || 'failed');
+      setEditing(false);
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'failed');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className={label}>Community</span>
+      {editing ? (
+        <>
+          <select
+            className="border-2 border-bauhaus-black bg-white px-2 py-1.5 text-xs"
+            defaultValue={communityId ?? ''}
+            disabled={busy}
+            onChange={(e) => set(e.target.value || null)}
+          >
+            <option value="">— none —</option>
+            {communities.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+          <button type="button" className="text-xs font-bold underline" onClick={() => setEditing(false)}>cancel</button>
+        </>
+      ) : communityName ? (
+        <>
+          <a href={`/org/${orgSlug}/communities/${communitySlug}`} className="border-2 border-bauhaus-black px-2 py-0.5 text-[10px] font-black uppercase tracking-widest hover:bg-bauhaus-yellow/40">
+            {communityName}
+          </a>
+          {!readOnly && (
+            <button type="button" className="text-xs font-bold underline" onClick={() => setEditing(true)}>change</button>
+          )}
+        </>
+      ) : !readOnly ? (
+        <button type="button" className="text-xs font-bold underline" onClick={() => setEditing(true)}>+ tag a community</button>
+      ) : (
+        <span className="text-xs text-neutral-500">—</span>
+      )}
+      {error && <span className="text-xs font-bold text-bauhaus-red">{error}</span>}
+    </div>
+  );
+}
+
+export function MintObligationForm({ orgProfileId, projectCode, communities }: { orgProfileId: string; projectCode: string; communities: CommunityOption[] }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState({ title: '', owed_to: 'community', due_date: '', next_action: '', promised_to: '', owner: '' });
+  const [form, setForm] = useState({ title: '', owed_to: 'community', due_date: '', next_action: '', promised_to: '', owner: '', community_id: '' });
 
   async function submit() {
     setBusy(true);
@@ -93,10 +166,11 @@ export function MintObligationForm({ orgProfileId, projectCode }: { orgProfileId
           next_action: form.next_action || undefined,
           promised_to: form.promised_to || undefined,
           owner: form.owner || undefined,
+          community_id: form.community_id || undefined,
         }),
       });
       if (!res.ok) throw new Error(((await res.json()) as { error?: string }).error || 'failed');
-      setForm({ title: '', owed_to: 'community', due_date: '', next_action: '', promised_to: '', owner: '' });
+      setForm({ title: '', owed_to: 'community', due_date: '', next_action: '', promised_to: '', owner: '', community_id: '' });
       setOpen(false);
       router.refresh();
     } catch (e) {
@@ -134,9 +208,18 @@ export function MintObligationForm({ orgProfileId, projectCode }: { orgProfileId
           <input type="date" className={field} value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} />
         </div>
       </div>
-      <div>
-        <span className={label}>Promised to (optional)</span>
-        <input className={field} value={form.promised_to} onChange={(e) => setForm({ ...form, promised_to: e.target.value })} placeholder="Who did we promise?" />
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <span className={label}>Promised to (optional)</span>
+          <input className={field} value={form.promised_to} onChange={(e) => setForm({ ...form, promised_to: e.target.value })} placeholder="Who did we promise?" />
+        </div>
+        <div>
+          <span className={label}>Community (optional)</span>
+          <select className={field} value={form.community_id} onChange={(e) => setForm({ ...form, community_id: e.target.value })}>
+            <option value="">— none —</option>
+            {communities.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </div>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>

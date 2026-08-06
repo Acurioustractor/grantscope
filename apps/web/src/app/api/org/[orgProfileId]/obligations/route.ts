@@ -43,6 +43,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       source_ask_name: text(body.source_ask_name, 300),
       promised_to: text(body.promised_to, 300),
       artefact_url: text(body.artefact_url, 800),
+      community_id: text(body.community_id, 60),
       minted_by: auth.userId,
     })
     .select('id')
@@ -97,6 +98,8 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     if (key in body) patch[key] = text(body[key], limit);
   }
   if ('due_date' in body) patch.due_date = isoDate(body.due_date);
+  // Community tag (ADR 0004) — null untags; the FK rejects unknown ids.
+  if ('community_id' in body) patch.community_id = text(body.community_id, 60);
   if ('owed_to' in body) {
     const owedTo = OWED_TO.find((t) => t === body.owed_to);
     if (!owedTo) return NextResponse.json({ error: 'owed_to must be funder or community' }, { status: 400 });

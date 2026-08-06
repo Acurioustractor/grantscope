@@ -8,8 +8,9 @@ import { notFound } from 'next/navigation';
 import { ACT_FAST_PROFILE, isActSlug, shouldUseFastLocalOrg } from '@/lib/services/fast-local-org';
 import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
 import { getObligationPool, type Obligation } from '@/lib/services/act-obligations';
+import { getServiceSupabase } from '@/lib/supabase';
 import { GoodsWorkspaceHeader } from '../_components/goods-capital-ui';
-import { MintObligationForm, ObligationStateButtons } from './we-owe-actions';
+import { MintObligationForm, ObligationStateButtons, ObligationCommunityPicker } from './we-owe-actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,6 +48,14 @@ export default async function GoodsWeOwePage({ params, searchParams }: {
   const sp = await searchParams;
 
   const pool = await getObligationPool(profile.id, GOODS_PROJECT_CODE);
+  // Community tag options (ADR 0004: hand-minted, expected size 5–15 — the
+  // whole list ships to the client pickers). #165's service owns the record
+  // pages; this stays a plain lookup to avoid a cross-branch file.
+  const { data: communityRows } = await getServiceSupabase()
+    .from('act_communities')
+    .select('id, name')
+    .order('name');
+  const communities = (communityRows ?? []) as Array<{ id: string; name: string }>;
   const selected = (typeof sp.rec === 'string' ? [...pool.open, ...pool.closed].find((o) => o.id === sp.rec) : null) ?? pool.open[0] ?? null;
   const base = `/org/${slug}/goods/we-owe`;
 
@@ -70,7 +79,7 @@ export default async function GoodsWeOwePage({ params, searchParams }: {
       />
       <div className="mx-auto max-w-[1760px] px-4 py-6">
         <div className="mb-4">
-          <MintObligationForm orgProfileId={profile.id} projectCode={GOODS_PROJECT_CODE} />
+          <MintObligationForm orgProfileId={profile.id} projectCode={GOODS_PROJECT_CODE} communities={communities} />
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
@@ -88,6 +97,9 @@ export default async function GoodsWeOwePage({ params, searchParams }: {
                   >
                     <span className="bg-bauhaus-black px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-white">we owe</span>
                     <span className="min-w-0 flex-1 truncate font-bold">{o.title}</span>
+                    {o.communityName ? (
+                      <span className="hidden border-2 border-bauhaus-black px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest md:inline">{o.communityName}</span>
+                    ) : null}
                     <OwedToTag t={o.owedTo} />
                     <Due d={o.dueDays} />
                   </Link>
@@ -145,6 +157,18 @@ export default async function GoodsWeOwePage({ params, searchParams }: {
                     Open artefact ↗
                   </a>
                 ) : null}
+                <div className="mt-4">
+                  <ObligationCommunityPicker
+                    orgProfileId={profile.id}
+                    obligationId={selected.id}
+                    communityId={selected.communityId}
+                    communityName={selected.communityName}
+                    communitySlug={selected.communitySlug}
+                    orgSlug={slug}
+                    communities={communities}
+                    readOnly={selected.state !== 'open'}
+                  />
+                </div>
                 {selected.state === 'open' ? (
                   <div className="mt-5">
                     <ObligationStateButtons orgProfileId={profile.id} obligationId={selected.id} owedTo={selected.owedTo} />
