@@ -73,6 +73,18 @@ Submitted-vs-Acquitted split must earn its way in.
 An organisation as an entity — one row, one GHL contact. An Org is never "a
 funder" or "a partner" as identity; it *holds Relationships* with ACT.
 
+### Community
+A place ACT is deliberately engaged with (Barkly, Utopia, Palm Island).
+Human-minted — same reality test as Ask and Person; appearing in a dataset
+never creates one, and there is no Community-Signal tier. Identity is the
+name ACT actually uses, never an ABS code; LGA/postcode/SA2 attach as
+optional CivicGraph annotations for evidence joins. A hub, not a hierarchy:
+Orgs, People, Obligations, Asks and Targets opt in via typed edges/tags
+(nothing is required to have one). No warmth of its own — warmth stays on
+People and Orgs. Supabase-native (ADR 0004). Never mints desk rows; it
+surfaces work only through what it contains. Full spec:
+docs/specs/community-records-spec.md.
+
 ### Relationship
 A typed connection between an Org and ACT. One Org can hold several at once,
 and relationships evolve. Types:
