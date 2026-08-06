@@ -7,6 +7,7 @@ import { notFound } from 'next/navigation';
 import { isActSlug } from '@/lib/services/fast-local-org';
 import { getOneDesk, deskHorizon, type DeskRecord, type DeskHorizon } from '@/lib/services/act-one-desk';
 import { DeskMarkButtons } from './desk-mark-buttons';
+import { DeskObligationButtons } from './desk-obligation-buttons';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,18 +17,18 @@ export async function generateMetadata() {
 
 const KIND_STYLE: Record<DeskRecord['kind'], string> = {
   funder: 'bg-ql-kind-funder', grant: 'bg-ql-kind-grant', buyer: 'bg-ql-kind-buyer',
-  money: 'bg-ql-kind-money', commitment: 'bg-ql-kind-commitment',
+  money: 'bg-ql-kind-money', obligation: 'bg-ql-kind-obligation', person: 'bg-ql-kind-person',
 };
 
-/** Plain words for the record kinds — the internal names (money/commitment)
- * confused the one human this desk serves (Ben, 2026-08-05 review). */
+/** Plain words for the record kinds — the internal names confused the one
+ * human this desk serves (Ben, 2026-08-05 review). */
 const KIND_FILTER_LABEL: Record<DeskRecord['kind'], string> = {
-  money: 'Money owed to us', commitment: 'Committed work',
+  money: 'Money owed to us', obligation: 'We owe', person: 'People',
   funder: 'Funders', grant: 'Grant rounds', buyer: 'Buyers',
 };
 
 const KIND_CHIP_LABEL: Record<DeskRecord['kind'], string> = {
-  money: 'owed', commitment: 'work', funder: 'funder', grant: 'round', buyer: 'buyer',
+  money: 'owed', obligation: 'we owe', person: 'person', funder: 'funder', grant: 'round', buyer: 'buyer',
 };
 
 const HORIZON_LABEL: Record<DeskHorizon, string> = {
@@ -56,13 +57,15 @@ export default async function OneDeskPage({ params, searchParams }: {
   const { slug } = await params;
   if (!isActSlug(slug)) notFound();
   const sp = await searchParams;
-  const kind = typeof sp.kind === 'string' && ['funder', 'grant', 'buyer', 'money', 'commitment'].includes(sp.kind) ? (sp.kind as DeskRecord['kind']) : null;
+  const kind = typeof sp.kind === 'string' && ['funder', 'grant', 'buyer', 'money', 'obligation', 'person'].includes(sp.kind) ? (sp.kind as DeskRecord['kind']) : null;
   const project = typeof sp.project === 'string' ? sp.project : null;
 
   const { active: all, handled, orgProfileId, target } = await getOneDesk(slug);
   const money = (n: number) => (n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` : `$${Math.round(n / 1e3)}K`);
-  const asks = all.filter((r) => !r.isDecision);
+  const asks = all.filter((r) => !r.isDecision && r.kind !== 'obligation' && r.kind !== 'person');
   const decisions = all.filter((r) => r.isDecision);
+  const owedCount = all.filter((r) => r.kind === 'obligation').length;
+  const peopleCount = all.filter((r) => r.kind === 'person').length;
   const projects = [...new Set(all.map((r) => r.project))].sort();
   const pool = all.filter((r) => (!kind || r.kind === kind) && (!project || r.project === project));
   const selected = (typeof sp.rec === 'string' ? pool.find((r) => r.id === sp.rec) : null) ?? pool[0] ?? null;
@@ -92,7 +95,7 @@ export default async function OneDeskPage({ params, searchParams }: {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <div className="font-ql-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-ql-accent">
-              {asks.length} asks · {decisions.length} decisions due{handled.length > 0 ? ` · ${handled.length} handled today` : ''}
+              {asks.length} asks · {decisions.length} decisions due · {owedCount} owed · {peopleCount} people{handled.length > 0 ? ` · ${handled.length} handled today` : ''}
               {kind ? (
                 <>
                   {' · showing '}{KIND_FILTER_LABEL[kind].toLowerCase()}{' '}
@@ -145,15 +148,31 @@ export default async function OneDeskPage({ params, searchParams }: {
                     className={`flex items-center gap-2.5 border-t border-ql-border/60 px-4 py-2.5 text-sm first:border-t-0 ${selected?.id === r.id ? 'bg-ql-warm' : 'hover:bg-ql-surface2'}`}
                   >
                     <KindChip k={r.kind} />
-                    <span className="min-w-0 flex-1 truncate font-semibold">{r.name}</span>
+                    <span className="min-w-0 flex-1 truncate font-semibold">
+                      {r.name}
+                      {r.kind === 'person' && <span className="font-normal text-ql-text2"> · {r.next}</span>}
+                    </span>
                     {r.isDecision && <span className="rounded-full border border-ql-accent px-2 py-0.5 font-ql-mono text-[8.5px] font-semibold uppercase tracking-[0.08em] text-ql-accent">decide</span>}
+                    {r.kind === 'obligation' && r.owedTo && <span className="font-ql-mono text-[10px] text-ql-muted">→ {r.owedTo}</span>}
+                    {r.kind === 'person' && r.via && <span className="text-[10px] italic text-ql-muted">via {r.via}</span>}
                     {r.amount && <span className="font-ql-mono text-[11px] font-semibold">{r.amount}</span>}
                     <Due d={r.dueDays} />
                   </Link>
                 ))}
               </div>
             ))}
-            {pool.length === 0 ? <div className="px-4 py-10 text-center text-sm text-ql-text2">Nothing matches this filter.</div> : null}
+            {pool.length === 0 ? (
+              <div className="px-4 py-10 text-center text-sm text-ql-text2">
+                {all.length === 0 ? (
+                  <>
+                    Desk clear.{' '}
+                    <Link href={`/org/${slug}/goods/we-owe`} className="underline hover:text-ql-ink">obligations later</Link>
+                    {' · '}
+                    <Link href={`/org/${slug}/people`} className="underline hover:text-ql-ink">people cultivated</Link>
+                  </>
+                ) : 'Nothing matches this filter.'}
+              </div>
+            ) : null}
           </div>
 
           <div className="rounded-lg border border-ql-border bg-ql-surface p-7">
@@ -166,7 +185,16 @@ export default async function OneDeskPage({ params, searchParams }: {
                 <h2 className="mt-2.5 font-ql-display text-3xl font-semibold leading-tight">{selected.name}</h2>
                 <div className="mt-2 flex items-center gap-3">
                   {selected.amount && <span className="font-ql-mono text-sm font-semibold">{selected.amount}</span>}
+                  {selected.kind === 'obligation' && selected.owedTo && (
+                    <span className="font-ql-mono text-[11px] text-ql-muted">owed to {selected.owedTo}</span>
+                  )}
+                  {selected.kind === 'person' && selected.via && (
+                    <span className="text-xs italic text-ql-text2">via {selected.via}</span>
+                  )}
                   <Due d={selected.dueDays} />
+                  {selected.kind === 'person' && selected.lastSyncedAt && (Date.now() - new Date(selected.lastSyncedAt).getTime()) > 86_400_000 && (
+                    <span className="rounded border border-ql-alert px-1.5 py-0.5 font-ql-mono text-[9px] uppercase text-ql-alert">stale sync</span>
+                  )}
                 </div>
                 <div className="mt-5 rounded-md bg-ql-warm px-4 py-3">
                   <div className="font-ql-mono text-[9px] font-semibold uppercase tracking-[0.14em] text-ql-accent">Next move</div>
@@ -174,7 +202,12 @@ export default async function OneDeskPage({ params, searchParams }: {
                 </div>
                 {orgProfileId ? (
                   <div className="mt-5">
-                    <DeskMarkButtons orgProfileId={orgProfileId} actionId={selected.id} title={selected.name} detail={selected.next} />
+                    {selected.kind === 'obligation' && selected.obligationId ? (
+                      // Terminal states only (#147) — an Obligation discharges, it isn't "handled".
+                      <DeskObligationButtons orgProfileId={orgProfileId} obligationId={selected.obligationId} owedTo={selected.owedTo ?? 'funder'} />
+                    ) : (
+                      <DeskMarkButtons orgProfileId={orgProfileId} actionId={selected.id} title={selected.name} detail={selected.next} />
+                    )}
                   </div>
                 ) : null}
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -185,7 +218,7 @@ export default async function OneDeskPage({ params, searchParams }: {
                   )}
                   {selected.workHref && (
                     <Link href={selected.workHref} className="rounded-md border border-ql-border bg-ql-surface px-4 py-2 text-xs font-semibold text-ql-ink hover:bg-ql-surface2">
-                      Open full workspace →
+                      {selected.kind === 'obligation' ? 'Open in delivery workspace →' : selected.kind === 'person' ? 'Open person →' : 'Open full workspace →'}
                     </Link>
                   )}
                 </div>

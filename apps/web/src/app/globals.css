@@ -19,7 +19,8 @@
   --color-ql-kind-funder: #6B5B8A;
   --color-ql-kind-grant: #3F6577;
   --color-ql-kind-buyer: #5F725C;
-  --color-ql-kind-commitment: #9A673B;
+  --color-ql-kind-obligation: #9A673B;
+  --color-ql-kind-person: #4A5D8A;
   --font-ql-display: var(--font-newsreader, Georgia), Georgia, serif;
   --font-ql-mono: var(--font-plex-mono, ui-monospace), ui-monospace, monospace;
 
