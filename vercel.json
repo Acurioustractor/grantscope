@@ -45,6 +45,10 @@
       "schedule": "10 20 * * *"
     },
     {
+      "path": "/api/cron/desk-digest",
+      "schedule": "0 21 * * *"
+    },
+    {
       "path": "/api/cron/usage-alerts",
       "schedule": "0 * * * *"
     },
