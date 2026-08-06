@@ -48,6 +48,22 @@ export const PROJECT_TAGS = [
   'project:contained-adelaide-2026',
 ];
 
+/**
+ * Comms-list membership (newsletter segments). Decision 2026-08-06 (Ben):
+ * comms:* is UN-deprecated — it is the newsletter membership family from
+ * act-global-infrastructure wiki/decisions/act-site-form-alignment.md §4a.
+ * A comms tag is a SEGMENT, not consent: sends require the GHL custom field
+ * newsletter_consent=Yes AND no unsubscribe (see newsletter-consent-policy.md).
+ * Only these exact tags are allowed; other comms:* are unregistered.
+ */
+export const COMMS_TAGS = [
+  'comms:act-newsletter',
+  'comms:goods-newsletter',
+  'comms:justicehub-newsletter',
+  'comms:harvest-newsletter',
+  'comms:do-not-contact',
+];
+
 /** Record shape. */
 export const RECORD_TAGS = ['record:person', 'record:org'];
 
@@ -65,7 +81,7 @@ export const CAMPAIGN_TAG_PATTERN = /^campaign:[a-z0-9-]+-20\d{2}$/;
  * Deprecated families. Still on many contacts; do not write them in new code.
  * Collapse plan (in order):
  *   engagement:* + ring:*        → the single goods-* warmth tag
- *   comms:* + newsletter-stream:* → smart lists driven by role + warmth
+ *   newsletter-stream:*           → the allowed comms:* newsletter tags
  *   source:*                      → the contact `source` field
  *   scope:*                       → project:* tags
  *   campaign-stage:*              → pipeline stage or a dated campaign tag
@@ -74,7 +90,6 @@ export const CAMPAIGN_TAG_PATTERN = /^campaign:[a-z0-9-]+-20\d{2}$/;
 export const DEPRECATED_PREFIXES = [
   'engagement:',
   'ring:',
-  'comms:',
   'newsletter-stream:',
   'source:',
   'scope:',
@@ -87,6 +102,7 @@ const EXACT_ALLOWED = new Set([
   ...WARMTH_TAGS,
   ...ROLE_TAGS,
   ...PROJECT_TAGS,
+  ...COMMS_TAGS,
   ...RECORD_TAGS,
   ...MARKER_TAGS,
 ]);

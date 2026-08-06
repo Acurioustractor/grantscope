@@ -1,0 +1,604 @@
+DRY RUN — 2026-08-06T02:31:50.628Z
+contacts scanned: 3365
+contacts with changes: 117
+
+change totals:
+     78  ~ goods-newsletter → comms:goods-newsletter
+     28  - newsletter-stream:youth-justice-brief
+     27  - newsletter-stream:contained-adelaide-invite
+     26  ~ comms:newsletter → comms:act-newsletter
+     21  - newsletter-stream:future-tour-update
+     14  - newsletter-stream:daily-adelaide-recap
+      9  - newsletter-stream:funder-brief
+      8  ~ newsletter → comms:harvest-newsletter
+      8  - newsletter-stream:media-pack
+      1  ~ newsletter → comms:act-newsletter
+      1  ~ harvest-newsletter → comms:harvest-newsletter
+      1  ~ comms:newsletter → comms:harvest-newsletter
+
+=== per-contact detail ===
+
+1aRoV3cZyFEXFdK7gcYa  benjamin@act.place
+  before: pulse-weekly-digest, justicehub, newsletter, pulse_test, tier: engaged, project:act-jh, source:event:contained, interest:justice-reform, place:qld, engagement:warm, interest:contained-brisbane-host, role:partner, status:contained-brisbane-inbox-recorded, status:contained-brisbane-ack-sent, inactive_7d
+  after:  comms:act-newsletter, engagement:warm, inactive_7d, interest:contained-brisbane-host, interest:justice-reform, justicehub, place:qld, project:act-jh, pulse-weekly-digest, pulse_test, role:partner, source:event:contained, status:contained-brisbane-ack-sent, status:contained-brisbane-inbox-recorded, tier: engaged
+  ~ newsletter → comms:act-newsletter
+
+dr2mmogKiX6pzAK4W7Cd  helenkilleen@bigpond.com
+  before: contact-form, harvest-website, harvest-inbox, act-inquiry, project-harvest, newsletter, harvest-newsletter, project:act-hv
+  after:  act-inquiry, comms:harvest-newsletter, contact-form, harvest-inbox, harvest-website, project-harvest, project:act-hv
+  ~ newsletter → comms:harvest-newsletter · ~ harvest-newsletter → comms:harvest-newsletter
+
+Ktm6aDokztnOYsToBWrR  todd@defydesign.org
+  before: goods-inquiry, goods-newsletter, source:inquiry, project:act-gd, role:community, source:gmail-discovery, role:partner, lane:community, role:buyer, goods-tier-aware, campaign-stage:warm-review, engagement:hot, cohort:public, project:goods-on-country, record:person, source:company-link-repair, scope:contained-justicehub, scope:contained, scope:justicehub
+  after:  campaign-stage:warm-review, cohort:public, comms:goods-newsletter, engagement:hot, goods-inquiry, goods-tier-aware, lane:community, project:act-gd, project:goods-on-country, record:person, role:buyer, role:community, role:partner, scope:contained, scope:contained-justicehub, scope:justicehub, source:company-link-repair, source:gmail-discovery, source:inquiry
+  ~ goods-newsletter → comms:goods-newsletter
+
+pXbha9a8lYxHuD9oAM8S  narelle@picc.com.au
+  before: goods-inquiry, goods-newsletter, source:inquiry, project:act-gd, role:community, source:gmail-discovery, role:partner, priority:high, lane:community, role:buyer, goods-tier-aware, campaign-stage:warm-review, engagement:hot, cohort:public, project:goods-on-country, record:person, source:company-link-repair, scope:contained-justicehub, scope:contained, scope:justicehub
+  after:  campaign-stage:warm-review, cohort:public, comms:goods-newsletter, engagement:hot, goods-inquiry, goods-tier-aware, lane:community, priority:high, project:act-gd, project:goods-on-country, record:person, role:buyer, role:community, role:partner, scope:contained, scope:contained-justicehub, scope:justicehub, source:company-link-repair, source:gmail-discovery, source:inquiry
+  ~ goods-newsletter → comms:goods-newsletter
+
+hQdMEJd33LmL3jzONRGh  ceo@jvtrust.org.au
+  before: goods-inquiry, goods-newsletter, project:act-gd, goods-warm, source:inquiry, role:supporter, comms:goods-newsletter, source:gmail-discovery, role:funder, comms:funder-drip, comms:supporter-drip, ring:15, role:buyer, goods-tier-aware, campaign-stage:personal-invite, engagement:personal-vip, newsletter-stream:daily-adelaide-recap, newsletter-stream:funder-brief, newsletter-stream:media-pack, newsletter-stream:youth-justice-brief, project:contained, project:contained-adelaide-2026, ring:vip, cohort:public, philanthropic, monitor, project:goods-on-country, record:person, source:company-link-repair, scope:contained-justicehub, scope:contained, scope:youth-justice, scope:justicehub
+  after:  campaign-stage:personal-invite, cohort:public, comms:funder-drip, comms:goods-newsletter, comms:supporter-drip, engagement:personal-vip, goods-inquiry, goods-tier-aware, goods-warm, monitor, philanthropic, project:act-gd, project:contained, project:contained-adelaide-2026, project:goods-on-country, record:person, ring:15, ring:vip, role:buyer, role:funder, role:supporter, scope:contained, scope:contained-justicehub, scope:justicehub, scope:youth-justice, source:company-link-repair, source:gmail-discovery, source:inquiry
+  ~ goods-newsletter → comms:goods-newsletter · - newsletter-stream:daily-adelaide-recap · - newsletter-stream:funder-brief · - newsletter-stream:media-pack · - newsletter-stream:youth-justice-brief
+
+5EfSDhGNzQmIcgLz5LuH  pene.curtis@bigpond.com
+  before: goods-inquiry, goods-newsletter, project:act-gd, goods-warm, source:inquiry, source:gmail-discovery, role:partner, comms:goods-newsletter, role:funder, comms:funder-drip, ring:150, role:buyer, goods-tier-aware, campaign-stage:personal-invite, engagement:personal-vip, newsletter-stream:daily-adelaide-recap, newsletter-stream:funder-brief, newsletter-stream:media-pack, newsletter-stream:youth-justice-brief, ring:vip, cohort:public, philanthropic, needs-followup, project:goods-on-country, record:person, source:company-link-repair, scope:contained-justicehub, scope:youth-justice, scope:contained, scope:justicehub
+  after:  campaign-stage:personal-invite, cohort:public, comms:funder-drip, comms:goods-newsletter, engagement:personal-vip, goods-inquiry, goods-tier-aware, goods-warm, needs-followup, philanthropic, project:act-gd, project:goods-on-country, record:person, ring:150, ring:vip, role:buyer, role:funder, role:partner, scope:contained, scope:contained-justicehub, scope:justicehub, scope:youth-justice, source:company-link-repair, source:gmail-discovery, source:inquiry
+  ~ goods-newsletter → comms:goods-newsletter · - newsletter-stream:daily-adelaide-recap · - newsletter-stream:funder-brief · - newsletter-stream:media-pack · - newsletter-stream:youth-justice-brief
+
+FlyntveGZxWzVeDmFwZ5  willhemina.wahlin@portable.com.au
+  before: goods-inquiry, goods-newsletter, source:inquiry, project:act-gd, role:supporter, comms:goods-newsletter, comms:supporter-drip, role:buyer, goods-tier-aware, project:goods-on-country, record:person, source:company-link-repair
+  after:  comms:goods-newsletter, comms:supporter-drip, goods-inquiry, goods-tier-aware, project:act-gd, project:goods-on-country, record:person, role:buyer, role:supporter, source:company-link-repair, source:inquiry
+  ~ goods-newsletter → comms:goods-newsletter
+
+V8YinCOfEn8BdsujGzW0  grantluff@gmail.com
+  before: goods-inquiry, goods-newsletter, source:inquiry, project:act-gd, role:supporter, source:gmail-discovery, role:community, lane:community, role:buyer, goods-tier-aware, campaign-stage:warm-review, engagement:hot, cohort:public, project:goods-on-country, record:person, source:company-link-repair, scope:contained-justicehub, scope:contained, scope:justicehub
+  after:  campaign-stage:warm-review, cohort:public, comms:goods-newsletter, engagement:hot, goods-inquiry, goods-tier-aware, lane:community, project:act-gd, project:goods-on-country, record:person, role:buyer, role:community, role:supporter, scope:contained, scope:contained-justicehub, scope:justicehub, source:company-link-repair, source:gmail-discovery, source:inquiry
+  ~ goods-newsletter → comms:goods-newsletter
+
+6IijuIN8YUSD200siSc8  amy.elson@nt.gov.au
+  before: goods-inquiry, goods-newsletter, source:inquiry, project:act-gd, role:supporter, comms:goods-newsletter, source:gmail-discovery, role:gov, comms:supporter-drip, ring:150, role:buyer, goods-tier-aware, campaign-stage:warm-review, engagement:hot, cohort:public, pulse-weekly-digest, project:goods-on-country, record:person, source:company-link-repair, scope:contained-justicehub, scope:contained, scope:justicehub
+  after:  campaign-stage:warm-review, cohort:public, comms:goods-newsletter, comms:supporter-drip, engagement:hot, goods-inquiry, goods-tier-aware, project:act-gd, project:goods-on-country, pulse-weekly-digest, record:person, ring:150, role:buyer, role:gov, role:supporter, scope:contained, scope:contained-justicehub, scope:justicehub, source:company-link-repair, source:gmail-discovery, source:inquiry
+  ~ goods-newsletter → comms:goods-newsletter
+
+xzRV6dT0WTQhJP5BCsHX  tara@queenslandgives.org.au
+  before: goods-inquiry, goods-newsletter, source:inquiry, project:act-gd, role:community, lane:community, role:buyer, goods-tier-aware, project:goods-on-country, record:person, source:company-link-repair
+  after:  comms:goods-newsletter, goods-inquiry, goods-tier-aware, lane:community, project:act-gd, project:goods-on-country, record:person, role:buyer, role:community, source:company-link-repair, source:inquiry
+  ~ goods-newsletter → comms:goods-newsletter
+
+Fe8nEezHRiBho7G6ev5V  adam@streetsmartaustralia.org
+  before: goods-inquiry, goods-newsletter, source:inquiry, role:funder, project:act-gd, comms:goods-newsletter, project:act-jh, role:partner, comms:funder-drip, role:buyer, goods-tier-aware, pulse-weekly-digest, project:goods-on-country, record:person, source:company-link-repair, scope:contained-justicehub, scope:justicehub, scope:contained
+  after:  comms:funder-drip, comms:goods-newsletter, goods-inquiry, goods-tier-aware, project:act-gd, project:act-jh, project:goods-on-country, pulse-weekly-digest, record:person, role:buyer, role:funder, role:partner, scope:contained, scope:contained-justicehub, scope:justicehub, source:company-link-repair, source:inquiry
+  ~ goods-newsletter → comms:goods-newsletter
+
+jatY7yhZL4h5OtexuCJ1  s.pearson@frrr.org.au
+  before: goods-inquiry, goods-newsletter, goods-cooling, source:inquiry, project:act-gd, role:community, source:gmail-discovery, role:funder, lane:community, role:buyer, goods-tier-aware, campaign-stage:personal-invite, engagement:personal-vip, newsletter-stream:daily-adelaide-recap, newsletter-stream:funder-brief, newsletter-stream:media-pack, newsletter-stream:youth-justice-brief, ring:vip, cohort:public, philanthropic, monitor, project:goods-on-country, role:funder-network, source:gmail-notion-sweep, comms:manual-relationship, record:person, source:company-link-repair, project:contained, source:justicehub-civicgraph, org-link:proposed, scope:contained-justicehub, scope:contained, scope:justicehub, scope:youth-justice
+  after:  campaign-stage:personal-invite, cohort:public, comms:goods-newsletter, comms:manual-relationship, engagement:personal-vip, goods-cooling, goods-inquiry, goods-tier-aware, lane:community, monitor, org-link:proposed, philanthropic, project:act-gd, project:contained, project:goods-on-country, record:person, ring:vip, role:buyer, role:community, role:funder, role:funder-network, scope:contained, scope:contained-justicehub, scope:justicehub, scope:youth-justice, source:company-link-repair, source:gmail-discovery, source:gmail-notion-sweep, source:inquiry, source:justicehub-civicgraph
+  ~ goods-newsletter → comms:goods-newsletter · - newsletter-stream:daily-adelaide-recap · - newsletter-stream:funder-brief · - newsletter-stream:media-pack · - newsletter-stream:youth-justice-brief
+
+wFviTiFi7euS3VyRWwLn  ceo@deadlyscience.org.au
+  before: goods-inquiry, goods-newsletter, source:inquiry, comms:goods-newsletter, project:act-gd, role:buyer, goods-tier-aware, audience-brand, comms:act-newsletter, project:goods-on-country, relationship:advisor, source:gmail-goods-sweep, comms:manual-relationship, record:person, source:company-link-repair
+  after:  audience-brand, comms:act-newsletter, comms:goods-newsletter, comms:manual-relationship, goods-inquiry, goods-tier-aware, project:act-gd, project:goods-on-country, record:person, relationship:advisor, role:buyer, source:company-link-repair, source:gmail-goods-sweep, source:inquiry
+  ~ goods-newsletter → comms:goods-newsletter
+
+c7ieIClxZbohQeuihgyq  judith@orangesky.org.au
+  before: goods-inquiry, goods-newsletter, source:inquiry, project:act-gd, role:advisory, role:supporter, comms:goods-newsletter, comms:supporter-drip, role:advisor, role:buyer, goods-tier-aware, campaign-stage:warm-review, engagement:hot, cohort:public, project:goods-on-country, relationship:advisor, source:gmail-goods-sweep, comms:manual-relationship, record:person, source:company-link-repair, scope:contained-justicehub, scope:contained, scope:justicehub
+  after:  campaign-stage:warm-review, cohort:public, comms:goods-newsletter, comms:manual-relationship, comms:supporter-drip, engagement:hot, goods-inquiry, goods-tier-aware, project:act-gd, project:goods-on-country, record:person, relationship:advisor, role:advisor, role:advisory, role:buyer, role:supporter, scope:contained, scope:contained-justicehub, scope:justicehub, source:company-link-repair, source:gmail-goods-sweep, source:inquiry
+  ~ goods-newsletter → comms:goods-newsletter
+
+dMiQCeVDknPCK9Mhy5fg  sam@defydesign.org
+  before: goods-inquiry, goods-newsletter, source:inquiry, project:act-gd, role:supporter, comms:goods-newsletter, source:gmail-discovery, role:partner, comms:supporter-drip, ring:15, role:buyer, goods-tier-aware, audience-brand, supplier-hdpe, role:supplier, comms:act-newsletter, comms:buyer-drip, project:goods-on-country, relationship:design-and-manufacturing-partner, source:gmail-goods-sweep, comms:manual-relationship, record:person, source:company-link-repair
+  after:  audience-brand, comms:act-newsletter, comms:buyer-drip, comms:goods-newsletter, comms:manual-relationship, comms:supporter-drip, goods-inquiry, goods-tier-aware, project:act-gd, project:goods-on-country, record:person, relationship:design-and-manufacturing-partner, ring:15, role:buyer, role:partner, role:supplier, role:supporter, source:company-link-repair, source:gmail-discovery, source:gmail-goods-sweep, source:inquiry, supplier-hdpe
+  ~ goods-newsletter → comms:goods-newsletter
+
+NSn2Ywjd0g0RIlWp66Fs  s.grimsley-ballard@snowfoundation.org.au
+  before: goods-inquiry, goods-newsletter, project:act-gd, goods-hot, source:inquiry, role:funder, comms:goods-newsletter, source:footer, role:partner, comms:funder-drip, ring:50, role:buyer, goods-tier-aware, campaign-stage:personal-invite, engagement:personal-vip, newsletter-stream:daily-adelaide-recap, newsletter-stream:funder-brief, newsletter-stream:media-pack, newsletter-stream:youth-justice-brief, ring:vip, cohort:public, project:goods-on-country, role:funder-network, source:gmail-notion-sweep, comms:manual-relationship, record:person, source:company-link-repair, project:contained, source:justicehub-civicgraph, org-link:proposed, scope:contained-justicehub, scope:contained, scope:justicehub, scope:youth-justice
+  after:  campaign-stage:personal-invite, cohort:public, comms:funder-drip, comms:goods-newsletter, comms:manual-relationship, engagement:personal-vip, goods-hot, goods-inquiry, goods-tier-aware, org-link:proposed, project:act-gd, project:contained, project:goods-on-country, record:person, ring:50, ring:vip, role:buyer, role:funder, role:funder-network, role:partner, scope:contained, scope:contained-justicehub, scope:justicehub, scope:youth-justice, source:company-link-repair, source:footer, source:gmail-notion-sweep, source:inquiry, source:justicehub-civicgraph
+  ~ goods-newsletter → comms:goods-newsletter · - newsletter-stream:daily-adelaide-recap · - newsletter-stream:funder-brief · - newsletter-stream:media-pack · - newsletter-stream:youth-justice-brief
+
+qSAr8aMM9bgCPXzuTL1R  final-check@example.com
+  before: goods-inquiry, goods-newsletter, source:inquiry, comms:goods-newsletter, source:event:parliament-demo, project:act-gd, role:buyer, source:event:parliament-house-demo, goods-tier-engaged, project:goods-on-country, record:person, source:company-link-repair
+  after:  comms:goods-newsletter, goods-inquiry, goods-tier-engaged, project:act-gd, project:goods-on-country, record:person, role:buyer, source:company-link-repair, source:event:parliament-demo, source:event:parliament-house-demo, source:inquiry
+  ~ goods-newsletter → comms:goods-newsletter
+
+GWbymO5vTuzl0ELUsM0O  nicholas@act.place
+  before: source:inquiry, project:act-gd, interest:bulk-order, role:buyer, newsletter, comms:harvest-newsletter, source:website, interest:membership, interest:events, interest:community, interest:workshops, interest:markets, interest:venue, interest:volunteer, interest:food, interest:sustainability, interest:garden, project:act-hv, tier:member, comms:act-newsletter, lane:community, role:storyteller, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, scope:contained-justicehub, scope:contained, scope:justicehub
+  after:  campaign-stage:captured-newsletter-nurture, cohort:public, comms:act-newsletter, comms:harvest-newsletter, engagement:nurture, interest:bulk-order, interest:community, interest:events, interest:food, interest:garden, interest:markets, interest:membership, interest:sustainability, interest:venue, interest:volunteer, interest:workshops, lane:community, project:act-gd, project:act-hv, role:buyer, role:storyteller, scope:contained, scope:contained-justicehub, scope:justicehub, source:inquiry, source:website, tier:member
+  ~ newsletter → comms:harvest-newsletter
+
+bkZQ6vDNekvTtUVV1TpI  lstronach@minderoo.org
+  before: project:act-gd, goods-steady, role:funder, comms:funder-drip, ring:50, goods-newsletter, contained-personal-outreach, contained, project:act-ce, audience-brand, role:supporter, comms:goods-newsletter, project:act-jh, interest:justice-reform, role:partner, project:act-cn, comms:newsletter, comms:supporter-drip, comms:partner-drip, comms:justicehub-newsletter, comms:act-newsletter, campaign-stage:needs-enrichment, engagement:warm, newsletter-stream:funder-brief, newsletter-stream:youth-justice-brief, project:contained, project:contained-adelaide-2026, cohort:public, catalytic, cultivate, goods-capital-target, qbe-tier-1, qbe-match-target, source:qbe-opportunity-register, goods-funder, instrument:grant, project:goods-on-country, role:funder-network, source:gmail-notion-sweep, comms:manual-relationship, record:person, source:company-link-repair, source:justicehub-civicgraph, org-link:proposed, scope:contained-justicehub, scope:contained, scope:justicehub, scope:youth-justice
+  after:  audience-brand, campaign-stage:needs-enrichment, catalytic, cohort:public, comms:act-newsletter, comms:funder-drip, comms:goods-newsletter, comms:justicehub-newsletter, comms:manual-relationship, comms:partner-drip, comms:supporter-drip, contained, contained-personal-outreach, cultivate, engagement:warm, goods-capital-target, goods-funder, goods-steady, instrument:grant, interest:justice-reform, org-link:proposed, project:act-ce, project:act-cn, project:act-gd, project:act-jh, project:contained, project:contained-adelaide-2026, project:goods-on-country, qbe-match-target, qbe-tier-1, record:person, ring:50, role:funder, role:funder-network, role:partner, role:supporter, scope:contained, scope:contained-justicehub, scope:justicehub, scope:youth-justice, source:company-link-repair, source:gmail-notion-sweep, source:justicehub-civicgraph, source:qbe-opportunity-register
+  ~ goods-newsletter → comms:goods-newsletter · ~ comms:newsletter → comms:act-newsletter · - newsletter-stream:funder-brief · - newsletter-stream:youth-justice-brief
+
+ORCR9yml6dCRlrD87rMm  rebekahsdaw@gmail.com
+  before: newsletter, source:contact-form, source:website, comms:harvest-newsletter, tier:curious, comms:act-newsletter, project:act-hv, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, role:supporter, harvest-inbox
+  after:  campaign-stage:captured-newsletter-nurture, cohort:public, comms:act-newsletter, comms:harvest-newsletter, engagement:nurture, harvest-inbox, project:act-hv, role:supporter, source:contact-form, source:website, tier:curious
+  ~ newsletter → comms:harvest-newsletter
+
+M6SIDwBoUo4NxKaMXF6G  a.lageleekean@snowfoundation.org.au
+  before: goods-newsletter, source:inquiry, project:act-gd, comms:goods-newsletter, role:funder, role:supporter, comms:funder-drip, comms:supporter-drip, role:buyer, campaign-stage:personal-invite, engagement:personal-vip, newsletter-stream:daily-adelaide-recap, newsletter-stream:funder-brief, newsletter-stream:media-pack, newsletter-stream:youth-justice-brief, ring:vip, cohort:public, pulse-weekly, pulse-weekly-digest, project:goods-on-country, role:funder-network, source:gmail-notion-sweep, comms:manual-relationship, record:person, source:company-link-repair, project:contained, source:justicehub-civicgraph, org-link:proposed, scope:contained-justicehub, scope:contained, scope:justicehub, scope:youth-justice
+  after:  campaign-stage:personal-invite, cohort:public, comms:funder-drip, comms:goods-newsletter, comms:manual-relationship, comms:supporter-drip, engagement:personal-vip, org-link:proposed, project:act-gd, project:contained, project:goods-on-country, pulse-weekly, pulse-weekly-digest, record:person, ring:vip, role:buyer, role:funder, role:funder-network, role:supporter, scope:contained, scope:contained-justicehub, scope:justicehub, scope:youth-justice, source:company-link-repair, source:gmail-notion-sweep, source:inquiry, source:justicehub-civicgraph
+  ~ goods-newsletter → comms:goods-newsletter · - newsletter-stream:daily-adelaide-recap · - newsletter-stream:funder-brief · - newsletter-stream:media-pack · - newsletter-stream:youth-justice-brief
+
+x4EfbfBlRvMu6ouCOowT  hello@ameliacliffordconsulting.com
+  before: photo-wall, harvest-gathering-photos, newsletter, project:act-hv, source:website, source:event:gathering, role:partner, interest:workshops, role:health-service, role:funder, comms:harvest-newsletter, comms:act-newsletter, tier:connected, role:advisor, interest:education, interest:garden, campaign-stage:personal-invite, engagement:personal-vip, ring:vip, cohort:public, harvest-website, interest:membership, interest:events, interest:community, interest:sustainability, tier:member, member-comments, harvest-inbox, source:other
+  after:  campaign-stage:personal-invite, cohort:public, comms:act-newsletter, comms:harvest-newsletter, engagement:personal-vip, harvest-gathering-photos, harvest-inbox, harvest-website, interest:community, interest:education, interest:events, interest:garden, interest:membership, interest:sustainability, interest:workshops, member-comments, photo-wall, project:act-hv, ring:vip, role:advisor, role:funder, role:health-service, role:partner, source:event:gathering, source:other, source:website, tier:connected, tier:member
+  ~ newsletter → comms:harvest-newsletter
+
+XzYIATpLL8iVflrf1Hll  max.broadley@murrup.org.au
+  before: goods-newsletter, source:inquiry, project:act-gd, role:community, source:gmail-discovery, lane:community, role:buyer, campaign-stage:warm-review, engagement:hot, cohort:public, project:goods-on-country, record:person, source:company-link-repair
+  after:  campaign-stage:warm-review, cohort:public, comms:goods-newsletter, engagement:hot, lane:community, project:act-gd, project:goods-on-country, record:person, role:buyer, role:community, source:company-link-repair, source:gmail-discovery, source:inquiry
+  ~ goods-newsletter → comms:goods-newsletter
+
+JGpJ2UCTsJlHT4GQDNGs  greg@marlowcanete.com.au
+  before: goods-newsletter, source:inquiry, source:gmail-discovery, role:partner, project:act-gd, comms:goods-newsletter, role:buyer, campaign-stage:warm-review, engagement:hot, cohort:public, project:goods-on-country, record:person, source:company-link-repair
+  after:  campaign-stage:warm-review, cohort:public, comms:goods-newsletter, engagement:hot, project:act-gd, project:goods-on-country, record:person, role:buyer, role:partner, source:company-link-repair, source:gmail-discovery, source:inquiry
+  ~ goods-newsletter → comms:goods-newsletter
+
+RI1TytFSVn0qCj3OpxMQ  final-check@example.com
+  before: goods-newsletter, source:inquiry, comms:goods-newsletter, source:event:parliament-demo, project:act-gd, role:buyer, source:event:parliament-house-demo, project:goods-on-country, record:person, source:company-link-repair
+  after:  comms:goods-newsletter, project:act-gd, project:goods-on-country, record:person, role:buyer, source:company-link-repair, source:event:parliament-demo, source:event:parliament-house-demo, source:inquiry
+  ~ goods-newsletter → comms:goods-newsletter
+
+38zTrONPDE7cLUlj0EQI  jeffbonnick01@gmail.com
+  before: newsletter, source:contact-form, source:website, comms:harvest-newsletter, project:act-hv, comms:act-newsletter, tier:connected, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, role:supporter
+  after:  campaign-stage:captured-newsletter-nurture, cohort:public, comms:act-newsletter, comms:harvest-newsletter, engagement:nurture, project:act-hv, role:supporter, source:contact-form, source:website, tier:connected
+  ~ newsletter → comms:harvest-newsletter
+
+Z64QDb873qrasSCb7OCX  hayley.passmore@uwa.edu.au
+  before: inbound, meeting-held, project:act-jh, role:partner, place:perth, source:inbound, action:meeting-held, project:act-gd, interest:venue, role:researcher, campaign-stage:future-city-partner, engagement:warm, newsletter-stream:contained-adelaide-invite, newsletter-stream:future-tour-update, newsletter-stream:youth-justice-brief, place:wa, project:contained, project:contained-adelaide-2026, cohort:public, scope:contained-justicehub, scope:contained, scope:youth-justice, scope:justicehub
+  after:  action:meeting-held, campaign-stage:future-city-partner, cohort:public, engagement:warm, inbound, interest:venue, meeting-held, place:perth, place:wa, project:act-gd, project:act-jh, project:contained, project:contained-adelaide-2026, role:partner, role:researcher, scope:contained, scope:contained-justicehub, scope:justicehub, scope:youth-justice, source:inbound
+  - newsletter-stream:contained-adelaide-invite · - newsletter-stream:future-tour-update · - newsletter-stream:youth-justice-brief
+
+HABAwRKk7dKtPNDRsn3S  maree.z.patane@gmail.com
+  before: newsletter, photo-wall, harvest-gathering-photos, source:website, project:act-hv, source:event:gathering, comms:harvest-newsletter, comms:act-newsletter, tier:connected, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, role:supporter
+  after:  campaign-stage:captured-newsletter-nurture, cohort:public, comms:act-newsletter, comms:harvest-newsletter, engagement:nurture, harvest-gathering-photos, photo-wall, project:act-hv, role:supporter, source:event:gathering, source:website, tier:connected
+  ~ newsletter → comms:harvest-newsletter
+
+wHWVWBV4762pDYvsRIsw  plamaro@ascentgroup.org.au
+  before: contained-hot-lead, project:act-ce, project:act-jh, interest:justice-reform, role:partner, place:regional-nsw, interest:container, project:act-cn, comms:justicehub-newsletter, campaign-stage:warm-review, engagement:hot, newsletter-stream:contained-adelaide-invite, newsletter-stream:future-tour-update, newsletter-stream:youth-justice-brief, project:contained, project:contained-adelaide-2026, cohort:public, source:justicehub-civicgraph, org-link:proposed, scope:contained-justicehub, scope:contained, scope:justicehub, scope:youth-justice
+  after:  campaign-stage:warm-review, cohort:public, comms:justicehub-newsletter, contained-hot-lead, engagement:hot, interest:container, interest:justice-reform, org-link:proposed, place:regional-nsw, project:act-ce, project:act-cn, project:act-jh, project:contained, project:contained-adelaide-2026, role:partner, scope:contained, scope:contained-justicehub, scope:justicehub, scope:youth-justice, source:justicehub-civicgraph
+  - newsletter-stream:contained-adelaide-invite · - newsletter-stream:future-tour-update · - newsletter-stream:youth-justice-brief
+
+qZAN8H2SBfxvmYCA92ud  irene.portelli@wemadeit.com.au
+  before: contained-hot-lead, project:act-ce, project:act-jh, interest:justice-reform, role:partner, place:cairns, interest:container, project:act-cn, comms:justicehub-newsletter, campaign-stage:warm-review, engagement:hot, newsletter-stream:contained-adelaide-invite, newsletter-stream:future-tour-update, newsletter-stream:youth-justice-brief, project:contained, project:contained-adelaide-2026, cohort:public, scope:contained-justicehub, scope:contained, scope:justicehub, scope:youth-justice
+  after:  campaign-stage:warm-review, cohort:public, comms:justicehub-newsletter, contained-hot-lead, engagement:hot, interest:container, interest:justice-reform, place:cairns, project:act-ce, project:act-cn, project:act-jh, project:contained, project:contained-adelaide-2026, role:partner, scope:contained, scope:contained-justicehub, scope:justicehub, scope:youth-justice
+  - newsletter-stream:contained-adelaide-invite · - newsletter-stream:future-tour-update · - newsletter-stream:youth-justice-brief
+
+Q5m6C54kTgx4zPM3dMfu  lewina.schrale@decyp.tas.gov.au
+  before: contained-hot-lead, project:act-ce, project:act-jh, interest:justice-reform, role:partner, place:tasmania, role:gov, interest:container, project:act-cn, comms:justicehub-newsletter, campaign-stage:warm-review, engagement:hot, newsletter-stream:contained-adelaide-invite, newsletter-stream:future-tour-update, newsletter-stream:youth-justice-brief, place:tas, project:contained, project:contained-adelaide-2026, cohort:public, scope:contained-justicehub, scope:contained, scope:justicehub, scope:youth-justice
+  after:  campaign-stage:warm-review, cohort:public, comms:justicehub-newsletter, contained-hot-lead, engagement:hot, interest:container, interest:justice-reform, place:tas, place:tasmania, project:act-ce, project:act-cn, project:act-jh, project:contained, project:contained-adelaide-2026, role:gov, role:partner, scope:contained, scope:contained-justicehub, scope:justicehub, scope:youth-justice
+  - newsletter-stream:contained-adelaide-invite · - newsletter-stream:future-tour-update · - newsletter-stream:youth-justice-brief
+
+SA723TCBUsGizxCfNs4n  loic.fery@gmail.com
+  before: contained-hot-lead, project:act-ce, project:act-jh, interest:justice-reform, role:partner, place:tasmania, interest:container, project:act-cn, comms:justicehub-newsletter, campaign-stage:warm-review, engagement:hot, newsletter-stream:contained-adelaide-invite, newsletter-stream:future-tour-update, newsletter-stream:youth-justice-brief, place:tas, project:contained, project:contained-adelaide-2026, cohort:public, scope:contained-justicehub, scope:contained, scope:justicehub, scope:youth-justice
+  after:  campaign-stage:warm-review, cohort:public, comms:justicehub-newsletter, contained-hot-lead, engagement:hot, interest:container, interest:justice-reform, place:tas, place:tasmania, project:act-ce, project:act-cn, project:act-jh, project:contained, project:contained-adelaide-2026, role:partner, scope:contained, scope:contained-justicehub, scope:justicehub, scope:youth-justice
+  - newsletter-stream:contained-adelaide-invite · - newsletter-stream:future-tour-update · - newsletter-stream:youth-justice-brief
+
+qIuqGLFoVusIOhYSL0Hf  paiden.4892@gmail.com
+  before: contained-hot-lead, project:act-ce, project:act-jh, interest:justice-reform, role:partner, place:cape-york, role:community-controlled, interest:container, project:act-cn, lane:community, role:community, campaign-stage:warm-review, engagement:hot, newsletter-stream:contained-adelaide-invite, newsletter-stream:future-tour-update, newsletter-stream:youth-justice-brief, project:contained, project:contained-adelaide-2026, cohort:public, scope:contained-justicehub, scope:contained, scope:youth-justice, scope:justicehub
+  after:  campaign-stage:warm-review, cohort:public, contained-hot-lead, engagement:hot, interest:container, interest:justice-reform, lane:community, place:cape-york, project:act-ce, project:act-cn, project:act-jh, project:contained, project:contained-adelaide-2026, role:community, role:community-controlled, role:partner, scope:contained, scope:contained-justicehub, scope:justicehub, scope:youth-justice
+  - newsletter-stream:contained-adelaide-invite · - newsletter-stream:future-tour-update · - newsletter-stream:youth-justice-brief
+
+RmiaAGfDHtChd5HxDECM  michaelhajiali@hotmail.com
+  before: contained-hot-lead, project:act-ce, project:act-jh, interest:justice-reform, role:partner, place:perth, role:community-controlled, interest:container, project:act-cn, lane:community, role:community, campaign-stage:warm-review, engagement:hot, newsletter-stream:contained-adelaide-invite, newsletter-stream:future-tour-update, newsletter-stream:youth-justice-brief, place:wa, project:contained, project:contained-adelaide-2026, cohort:public, scope:contained-justicehub, scope:contained, scope:youth-justice, scope:justicehub
+  after:  campaign-stage:warm-review, cohort:public, contained-hot-lead, engagement:hot, interest:container, interest:justice-reform, lane:community, place:perth, place:wa, project:act-ce, project:act-cn, project:act-jh, project:contained, project:contained-adelaide-2026, role:community, role:community-controlled, role:partner, scope:contained, scope:contained-justicehub, scope:justicehub, scope:youth-justice
+  - newsletter-stream:contained-adelaide-invite · - newsletter-stream:future-tour-update · - newsletter-stream:youth-justice-brief
+
+a6a3faSs6GGfjAAJw0ts  romina.ilad@gmail.com
+  before: contained-hot-lead, project:act-ce, project:act-jh, interest:justice-reform, role:funder, interest:container, project:act-cn, role:partner, comms:justicehub-newsletter, campaign-stage:personal-invite, engagement:personal-vip, newsletter-stream:daily-adelaide-recap, newsletter-stream:funder-brief, newsletter-stream:media-pack, newsletter-stream:youth-justice-brief, project:contained, project:contained-adelaide-2026, ring:vip, cohort:public, scope:contained-justicehub, scope:contained, scope:justicehub, scope:youth-justice
+  after:  campaign-stage:personal-invite, cohort:public, comms:justicehub-newsletter, contained-hot-lead, engagement:personal-vip, interest:container, interest:justice-reform, project:act-ce, project:act-cn, project:act-jh, project:contained, project:contained-adelaide-2026, ring:vip, role:funder, role:partner, scope:contained, scope:contained-justicehub, scope:justicehub, scope:youth-justice
+  - newsletter-stream:daily-adelaide-recap · - newsletter-stream:funder-brief · - newsletter-stream:media-pack · - newsletter-stream:youth-justice-brief
+
+1MIZAZ9Kqj0vQveEZydt  dmagilla@icloud.com
+  before: contained-personal-outreach, project:act-ce, project:act-jh, interest:justice-reform, role:partner, place:rockhampton, role:community-controlled, interest:container, project:act-cn, lane:community, role:community, campaign-stage:warm-review, engagement:hot, newsletter-stream:contained-adelaide-invite, newsletter-stream:future-tour-update, newsletter-stream:youth-justice-brief, project:contained, project:contained-adelaide-2026, cohort:public, scope:contained-justicehub, scope:contained, scope:youth-justice, scope:justicehub
+  after:  campaign-stage:warm-review, cohort:public, contained-personal-outreach, engagement:hot, interest:container, interest:justice-reform, lane:community, place:rockhampton, project:act-ce, project:act-cn, project:act-jh, project:contained, project:contained-adelaide-2026, role:community, role:community-controlled, role:partner, scope:contained, scope:contained-justicehub, scope:justicehub, scope:youth-justice
+  - newsletter-stream:contained-adelaide-invite · - newsletter-stream:future-tour-update · - newsletter-stream:youth-justice-brief
+
+fHCJVf3yWEnLg2eTspTK  stephen@stephenalexander.com.au
+  before: newsletter, member-comments, harvest-inbox, project:act-hv, source:website, source:event:eoi-gathering-2026, comms:newsletter, comms:harvest-newsletter, interest:membership, interest:events, interest:community, interest:garden, interest:workshops, interest:volunteer, tier:member, comms:act-newsletter, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, role:supporter, platform:mighty-active, harvest-website
+  after:  campaign-stage:captured-newsletter-nurture, cohort:public, comms:act-newsletter, comms:harvest-newsletter, engagement:nurture, harvest-inbox, harvest-website, interest:community, interest:events, interest:garden, interest:membership, interest:volunteer, interest:workshops, member-comments, platform:mighty-active, project:act-hv, role:supporter, source:event:eoi-gathering-2026, source:website, tier:member
+  ~ newsletter → comms:harvest-newsletter · ~ comms:newsletter → comms:harvest-newsletter
+
+9eSq6vFfQEVxCToD8Mru  leeza@treehousearts.com.au
+  before: newsletter, shop-follow-up, project:act-hv, source:event:eoi-gathering-2026, source:website, comms:harvest-newsletter, interest:membership, interest:events, interest:community, interest:markets, interest:workshops, interest:garden, interest:food, interest:volunteer, tier:member, role:supplier, comms:act-newsletter, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, platform:mighty-active, harvest-website
+  after:  campaign-stage:captured-newsletter-nurture, cohort:public, comms:act-newsletter, comms:harvest-newsletter, engagement:nurture, harvest-website, interest:community, interest:events, interest:food, interest:garden, interest:markets, interest:membership, interest:volunteer, interest:workshops, platform:mighty-active, project:act-hv, role:supplier, shop-follow-up, source:event:eoi-gathering-2026, source:website, tier:member
+  ~ newsletter → comms:harvest-newsletter
+
+c2WPF9Kr2cb56KgKPXGZ  chair@foodconnectshed.com.au
+  before: goods-newsletter, project:act-gd, role:supporter, role:community, lane:community, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, project:goods-on-country, record:person, source:company-link-repair
+  after:  campaign-stage:captured-newsletter-nurture, cohort:public, comms:goods-newsletter, engagement:nurture, lane:community, project:act-gd, project:goods-on-country, record:person, role:community, role:supporter, source:company-link-repair
+  ~ goods-newsletter → comms:goods-newsletter
+
+b0ma8b1Gj8MnvCk7zHjS  camille.dobson@rocketmail.com
+  before: goods-newsletter, project:act-gd, role:supporter, comms:goods-newsletter, comms:supporter-drip, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, project:goods-on-country, record:person, source:company-link-repair
+  after:  campaign-stage:captured-newsletter-nurture, cohort:public, comms:goods-newsletter, comms:supporter-drip, engagement:nurture, project:act-gd, project:goods-on-country, record:person, role:supporter, source:company-link-repair
+  ~ goods-newsletter → comms:goods-newsletter
+
+Z7OBTZkhvGwXGrDuTFBE  susan.clear@gmail.com
+  before: goods-newsletter, project:act-gd, role:supporter, comms:goods-newsletter, comms:supporter-drip, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, project:goods-on-country, relationship:advisor, source:gmail-goods-sweep, comms:manual-relationship, record:person, source:company-link-repair
+  after:  campaign-stage:captured-newsletter-nurture, cohort:public, comms:goods-newsletter, comms:manual-relationship, comms:supporter-drip, engagement:nurture, project:act-gd, project:goods-on-country, record:person, relationship:advisor, role:supporter, source:company-link-repair, source:gmail-goods-sweep
+  ~ goods-newsletter → comms:goods-newsletter
+
+9xn4Hn689ubEtXdRkR84  m.meredith@snowfoundation.org.au
+  before: goods-newsletter, project:act-gd, role:supporter, comms:goods-newsletter, comms:supporter-drip, ring:50, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, project:goods-on-country, role:funder-network, source:gmail-notion-sweep, comms:manual-relationship, record:person, source:company-link-repair
+  after:  campaign-stage:captured-newsletter-nurture, cohort:public, comms:goods-newsletter, comms:manual-relationship, comms:supporter-drip, engagement:nurture, project:act-gd, project:goods-on-country, record:person, ring:50, role:funder-network, role:supporter, source:company-link-repair, source:gmail-notion-sweep
+  ~ goods-newsletter → comms:goods-newsletter
+
+ua7d7GzRAlKkivxPTsrv  a.machuca@snowfoundation.org.au
+  before: goods-newsletter, project:act-gd, goods-hot, role:supporter, comms:goods-newsletter, role:funder, comms:funder-drip, comms:supporter-drip, campaign-stage:personal-invite, engagement:personal-vip, ring:vip, cohort:public, project:goods-on-country, role:funder-network, source:gmail-notion-sweep, comms:manual-relationship, record:person, source:company-link-repair
+  after:  campaign-stage:personal-invite, cohort:public, comms:funder-drip, comms:goods-newsletter, comms:manual-relationship, comms:supporter-drip, engagement:personal-vip, goods-hot, project:act-gd, project:goods-on-country, record:person, ring:vip, role:funder, role:funder-network, role:supporter, source:company-link-repair, source:gmail-notion-sweep
+  ~ goods-newsletter → comms:goods-newsletter
+
+biTWj8ZEBLtP0abMMjS9  shannon.lemanski@aquaubique.com.au
+  before: contained-hot-lead, contained-original-requester, project:act-ce, role:funder, project:act-jh, interest:justice-reform, project:act-cn, role:partner, comms:justicehub-newsletter, campaign-stage:personal-invite, engagement:personal-vip, newsletter-stream:daily-adelaide-recap, newsletter-stream:funder-brief, newsletter-stream:media-pack, newsletter-stream:youth-justice-brief, project:contained, project:contained-adelaide-2026, ring:vip, cohort:public, scope:contained-justicehub, scope:contained, scope:justicehub, scope:youth-justice
+  after:  campaign-stage:personal-invite, cohort:public, comms:justicehub-newsletter, contained-hot-lead, contained-original-requester, engagement:personal-vip, interest:justice-reform, project:act-ce, project:act-cn, project:act-jh, project:contained, project:contained-adelaide-2026, ring:vip, role:funder, role:partner, scope:contained, scope:contained-justicehub, scope:justicehub, scope:youth-justice
+  - newsletter-stream:daily-adelaide-recap · - newsletter-stream:funder-brief · - newsletter-stream:media-pack · - newsletter-stream:youth-justice-brief
+
+c0n7ndKiUlKYR6huBQn0  marketing@melbournefringe.com.au
+  before: audience-brand, project:act-gd, role:supporter, comms:goods-newsletter, comms:supporter-drip, comms:act-newsletter, campaign-stage:future-city-partner, engagement:warm, newsletter-stream:contained-adelaide-invite, newsletter-stream:future-tour-update, project:contained, project:contained-adelaide-2026, cohort:public, project:goods-on-country, record:person, source:company-link-repair, source:justicehub-civicgraph, org-link:proposed, scope:contained-justicehub, scope:contained, scope:justicehub
+  after:  audience-brand, campaign-stage:future-city-partner, cohort:public, comms:act-newsletter, comms:goods-newsletter, comms:supporter-drip, engagement:warm, org-link:proposed, project:act-gd, project:contained, project:contained-adelaide-2026, project:goods-on-country, record:person, role:supporter, scope:contained, scope:contained-justicehub, scope:justicehub, source:company-link-repair, source:justicehub-civicgraph
+  - newsletter-stream:contained-adelaide-invite · - newsletter-stream:future-tour-update
+
+tr58drIUZzB7slo70af6  anne.gripper@outlook.com
+  before: goods-newsletter, role:funder, project:act-jh, project:act-gd, comms:goods-newsletter, comms:funder-drip, campaign-stage:personal-invite, engagement:personal-vip, ring:vip, cohort:public, pulse-weekly-digest, project:goods-on-country, record:person, source:company-link-repair
+  after:  campaign-stage:personal-invite, cohort:public, comms:funder-drip, comms:goods-newsletter, engagement:personal-vip, project:act-gd, project:act-jh, project:goods-on-country, pulse-weekly-digest, record:person, ring:vip, role:funder, source:company-link-repair
+  ~ goods-newsletter → comms:goods-newsletter
+
+8f3onwaS2iK3Lk7ThsiA  jf@wilyajanta.org
+  before: goods-newsletter, audience-brand, project:act-gd, role:storyteller, lane:community, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, project:goods-on-country, relationship:community-partner, source:gmail-notion-community-sweep, comms:manual-relationship, record:person, source:company-link-repair
+  after:  audience-brand, campaign-stage:captured-newsletter-nurture, cohort:public, comms:goods-newsletter, comms:manual-relationship, engagement:nurture, lane:community, project:act-gd, project:goods-on-country, record:person, relationship:community-partner, role:storyteller, source:company-link-repair, source:gmail-notion-community-sweep
+  ~ goods-newsletter → comms:goods-newsletter
+
+CINaVh3o4cgFjBuscV0C  delaicee.power@julalikari.com.au
+  before: goods-newsletter, audience-brand, project:act-gd, role:community, lane:community, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, project:goods-on-country, record:person, source:company-link-repair, relationship:community-partner, source:verified-org-expansion
+  after:  audience-brand, campaign-stage:captured-newsletter-nurture, cohort:public, comms:goods-newsletter, engagement:nurture, lane:community, project:act-gd, project:goods-on-country, record:person, relationship:community-partner, role:community, source:company-link-repair, source:verified-org-expansion
+  ~ goods-newsletter → comms:goods-newsletter
+
+laCUDrYPbaEP5rC9UEcf  c.ludovici@snowfoundation.org.au
+  before: goods-newsletter, goods-hot, role:funder, project:act-gd, comms:goods-newsletter, comms:funder-drip, campaign-stage:personal-invite, engagement:personal-vip, ring:vip, cohort:public, philanthropic, monitor, project:goods-on-country, record:person, source:company-link-repair
+  after:  campaign-stage:personal-invite, cohort:public, comms:funder-drip, comms:goods-newsletter, engagement:personal-vip, goods-hot, monitor, philanthropic, project:act-gd, project:goods-on-country, record:person, ring:vip, role:funder, source:company-link-repair
+  ~ goods-newsletter → comms:goods-newsletter
+
+G9PItuZMWk1c8x6unFvB  sr@office.org.au
+  before: goods-newsletter, audience-brand, project:act-gd, role:community, lane:community, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, project:goods-on-country, record:person, source:company-link-repair
+  after:  audience-brand, campaign-stage:captured-newsletter-nurture, cohort:public, comms:goods-newsletter, engagement:nurture, lane:community, project:act-gd, project:goods-on-country, record:person, role:community, source:company-link-repair
+  ~ goods-newsletter → comms:goods-newsletter
+
+X4qlBT2huXIB5I5XJ2dK  keiron.lander@ygcc.com.au
+  before: goods-newsletter, audience-brand, project:act-gd, role:storyteller, lane:community, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, project:goods-on-country, record:person, source:company-link-repair
+  after:  audience-brand, campaign-stage:captured-newsletter-nurture, cohort:public, comms:goods-newsletter, engagement:nurture, lane:community, project:act-gd, project:goods-on-country, record:person, role:storyteller, source:company-link-repair
+  ~ goods-newsletter → comms:goods-newsletter
+
+kRGsqyjG9hLiv9YL290S  nicole@futureanything.com
+  before: audience-brand, project:act-gd, role:supporter, comms:goods-newsletter, comms:supporter-drip, comms:act-newsletter, campaign-stage:future-city-partner, engagement:warm, newsletter-stream:contained-adelaide-invite, newsletter-stream:future-tour-update, project:contained, project:contained-adelaide-2026, cohort:public, project:goods-on-country, record:person, source:company-link-repair, scope:contained-justicehub, scope:contained, scope:justicehub
+  after:  audience-brand, campaign-stage:future-city-partner, cohort:public, comms:act-newsletter, comms:goods-newsletter, comms:supporter-drip, engagement:warm, project:act-gd, project:contained, project:contained-adelaide-2026, project:goods-on-country, record:person, role:supporter, scope:contained, scope:contained-justicehub, scope:justicehub, source:company-link-repair
+  - newsletter-stream:contained-adelaide-invite · - newsletter-stream:future-tour-update
+
+M1RznjJDE42PSI2RCtSA  dmcguire@diagrama.org.uk
+  before: ring:15, campaign-stage:personal-invite, engagement:active-delivery, newsletter-stream:contained-adelaide-invite, newsletter-stream:daily-adelaide-recap, project:contained, project:contained-adelaide-2026, ring:delivery-circle, cohort:public, role:supporter, scope:contained-justicehub, scope:contained, scope:justicehub
+  after:  campaign-stage:personal-invite, cohort:public, engagement:active-delivery, project:contained, project:contained-adelaide-2026, ring:15, ring:delivery-circle, role:supporter, scope:contained, scope:contained-justicehub, scope:justicehub
+  - newsletter-stream:contained-adelaide-invite · - newsletter-stream:daily-adelaide-recap
+
+K9tX5VZ7kLi4bencvHSm  grants@streetsmartaustralia.org
+  before: goods-newsletter, project:act-gd, comms:goods-newsletter, project:act-jh, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, role:supporter, project:goods-on-country, record:person, source:company-link-repair
+  after:  campaign-stage:captured-newsletter-nurture, cohort:public, comms:goods-newsletter, engagement:nurture, project:act-gd, project:act-jh, project:goods-on-country, record:person, role:supporter, source:company-link-repair
+  ~ goods-newsletter → comms:goods-newsletter
+
+AIrpQMtxPZJvHG45duw9  katherine@yac.net.au
+  before: contained-hot-lead, contained-original-requester, project:act-ce, project:act-jh, interest:justice-reform, project:act-cn, role:partner, comms:justicehub-newsletter, campaign-stage:warm-review, engagement:hot, newsletter-stream:contained-adelaide-invite, newsletter-stream:future-tour-update, newsletter-stream:youth-justice-brief, project:contained, project:contained-adelaide-2026, cohort:public, scope:contained-justicehub, scope:contained, scope:justicehub, scope:youth-justice
+  after:  campaign-stage:warm-review, cohort:public, comms:justicehub-newsletter, contained-hot-lead, contained-original-requester, engagement:hot, interest:justice-reform, project:act-ce, project:act-cn, project:act-jh, project:contained, project:contained-adelaide-2026, role:partner, scope:contained, scope:contained-justicehub, scope:justicehub, scope:youth-justice
+  - newsletter-stream:contained-adelaide-invite · - newsletter-stream:future-tour-update · - newsletter-stream:youth-justice-brief
+
+xIjgrNst0t7q3xDPqOE4  rhian@epicpathways.org.au
+  before: contained-hot-lead, contained-original-requester, project:act-ce, project:act-jh, interest:justice-reform, role:partner, place:brisbane, interest:container, project:act-cn, comms:justicehub-newsletter, campaign-stage:warm-review, engagement:hot, newsletter-stream:contained-adelaide-invite, newsletter-stream:future-tour-update, newsletter-stream:youth-justice-brief, place:qld, project:contained, project:contained-adelaide-2026, cohort:public, scope:contained-justicehub, scope:contained, scope:justicehub, scope:youth-justice
+  after:  campaign-stage:warm-review, cohort:public, comms:justicehub-newsletter, contained-hot-lead, contained-original-requester, engagement:hot, interest:container, interest:justice-reform, place:brisbane, place:qld, project:act-ce, project:act-cn, project:act-jh, project:contained, project:contained-adelaide-2026, role:partner, scope:contained, scope:contained-justicehub, scope:justicehub, scope:youth-justice
+  - newsletter-stream:contained-adelaide-invite · - newsletter-stream:future-tour-update · - newsletter-stream:youth-justice-brief
+
+z54hf3IrFhNzQeMW6Gzv  info@impactfrontiers.org
+  before: goods-newsletter, audience-brand, project:act-gd, role:community, lane:community, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, project:goods-on-country, record:person, source:company-link-repair
+  after:  audience-brand, campaign-stage:captured-newsletter-nurture, cohort:public, comms:goods-newsletter, engagement:nurture, lane:community, project:act-gd, project:goods-on-country, record:person, role:community, source:company-link-repair
+  ~ goods-newsletter → comms:goods-newsletter
+
+vw6Jm7f2nthXcoQ2izyX  ludmila@youngperspectives.org
+  before: contained-hot-lead, contained-original-requester, project:act-ce, project:act-jh, interest:justice-reform, role:partner, place:international, interest:container, project:act-cn, comms:justicehub-newsletter, ring:50, campaign-stage:warm-review, engagement:hot, newsletter-stream:contained-adelaide-invite, newsletter-stream:future-tour-update, newsletter-stream:youth-justice-brief, project:contained, project:contained-adelaide-2026, cohort:public, scope:contained-justicehub, scope:contained, scope:justicehub, scope:youth-justice
+  after:  campaign-stage:warm-review, cohort:public, comms:justicehub-newsletter, contained-hot-lead, contained-original-requester, engagement:hot, interest:container, interest:justice-reform, place:international, project:act-ce, project:act-cn, project:act-jh, project:contained, project:contained-adelaide-2026, ring:50, role:partner, scope:contained, scope:contained-justicehub, scope:justicehub, scope:youth-justice
+  - newsletter-stream:contained-adelaide-invite · - newsletter-stream:future-tour-update · - newsletter-stream:youth-justice-brief
+
+Hfckaos5BIXAiDWhkD6v  mcarman@reddust.org.au
+  before: goods-newsletter, audience-brand, project:act-gd, role:community, lane:community, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, project:goods-on-country, relationship:community-delivery-partner, source:gmail-notion-community-sweep, comms:manual-relationship, record:person, source:company-link-repair
+  after:  audience-brand, campaign-stage:captured-newsletter-nurture, cohort:public, comms:goods-newsletter, comms:manual-relationship, engagement:nurture, lane:community, project:act-gd, project:goods-on-country, record:person, relationship:community-delivery-partner, role:community, source:company-link-repair, source:gmail-notion-community-sweep
+  ~ goods-newsletter → comms:goods-newsletter
+
+Ey9kam5sowAbMwokN54B  zita.whalley@diagrama.org.uk
+  before: campaign-stage:personal-invite, engagement:active-delivery, newsletter-stream:contained-adelaide-invite, newsletter-stream:daily-adelaide-recap, project:contained, project:contained-adelaide-2026, ring:delivery-circle, cohort:public, role:supporter, scope:contained-justicehub, scope:contained, scope:justicehub
+  after:  campaign-stage:personal-invite, cohort:public, engagement:active-delivery, project:contained, project:contained-adelaide-2026, ring:delivery-circle, role:supporter, scope:contained, scope:contained-justicehub, scope:justicehub
+  - newsletter-stream:contained-adelaide-invite · - newsletter-stream:daily-adelaide-recap
+
+6gXuoINuNymNoysZNECI  alice.motion@sydney.edu.au
+  before: audience-brand, project:act-gd, role:supporter, comms:goods-newsletter, comms:supporter-drip, comms:act-newsletter, campaign-stage:future-city-partner, engagement:warm, newsletter-stream:contained-adelaide-invite, newsletter-stream:future-tour-update, newsletter-stream:youth-justice-brief, project:contained, project:contained-adelaide-2026, cohort:public, pulse-weekly-digest, project:goods-on-country, record:person, source:company-link-repair, scope:contained-justicehub, scope:contained, scope:youth-justice, scope:justicehub
+  after:  audience-brand, campaign-stage:future-city-partner, cohort:public, comms:act-newsletter, comms:goods-newsletter, comms:supporter-drip, engagement:warm, project:act-gd, project:contained, project:contained-adelaide-2026, project:goods-on-country, pulse-weekly-digest, record:person, role:supporter, scope:contained, scope:contained-justicehub, scope:justicehub, scope:youth-justice, source:company-link-repair
+  - newsletter-stream:contained-adelaide-invite · - newsletter-stream:future-tour-update · - newsletter-stream:youth-justice-brief
+
+iDm1tAtvOAh9SVJnhCxi  environment@ministerial.qld.gov.au
+  before: audience-brand, project:act-gd, role:supporter, comms:goods-newsletter, comms:supporter-drip, comms:act-newsletter, campaign-stage:future-city-partner, engagement:warm, newsletter-stream:contained-adelaide-invite, newsletter-stream:future-tour-update, project:contained, project:contained-adelaide-2026, cohort:public, project:goods-on-country, record:person, source:company-link-repair, scope:contained-justicehub, scope:contained, scope:justicehub
+  after:  audience-brand, campaign-stage:future-city-partner, cohort:public, comms:act-newsletter, comms:goods-newsletter, comms:supporter-drip, engagement:warm, project:act-gd, project:contained, project:contained-adelaide-2026, project:goods-on-country, record:person, role:supporter, scope:contained, scope:contained-justicehub, scope:justicehub, source:company-link-repair
+  - newsletter-stream:contained-adelaide-invite · - newsletter-stream:future-tour-update
+
+MCNT6MZyAW4S0Fg0wLol  peter.bent@impactfrontiers.org
+  before: goods-newsletter, audience-brand, project:act-gd, role:community, lane:community, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, project:goods-on-country, record:person, source:company-link-repair
+  after:  audience-brand, campaign-stage:captured-newsletter-nurture, cohort:public, comms:goods-newsletter, engagement:nurture, lane:community, project:act-gd, project:goods-on-country, record:person, role:community, source:company-link-repair
+  ~ goods-newsletter → comms:goods-newsletter
+
+P5Qw6atbYWZIKKsVhKSQ  ren@relove.org.au
+  before: goods-newsletter, audience-brand, project:act-gd, role:community, lane:community, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, project:goods-on-country, record:person, source:company-link-repair
+  after:  audience-brand, campaign-stage:captured-newsletter-nurture, cohort:public, comms:goods-newsletter, engagement:nurture, lane:community, project:act-gd, project:goods-on-country, record:person, role:community, source:company-link-repair
+  ~ goods-newsletter → comms:goods-newsletter
+
+Z1kOiaNiVGNOuscHED4V  csm@bawinanga.org.au
+  before: goods-newsletter, audience-brand, project:act-gd, role:community, lane:community, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, project:goods-on-country, record:person, source:company-link-repair
+  after:  audience-brand, campaign-stage:captured-newsletter-nurture, cohort:public, comms:goods-newsletter, engagement:nurture, lane:community, project:act-gd, project:goods-on-country, record:person, role:community, source:company-link-repair
+  ~ goods-newsletter → comms:goods-newsletter
+
+MLDUH7oecmisGwYJ7y8Q  rowena.cann@aracy.org.au
+  before: goods-newsletter, audience-brand, project:act-gd, role:community, lane:community, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, project:goods-on-country, record:person, source:company-link-repair
+  after:  audience-brand, campaign-stage:captured-newsletter-nurture, cohort:public, comms:goods-newsletter, engagement:nurture, lane:community, project:act-gd, project:goods-on-country, record:person, role:community, source:company-link-repair
+  ~ goods-newsletter → comms:goods-newsletter
+
+avh1foMDU4rpglfjDxp3  phillip.allan@bawinanga.org.au
+  before: goods-newsletter, audience-brand, project:act-gd, role:community, lane:community, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, project:goods-on-country, record:person, source:company-link-repair
+  after:  audience-brand, campaign-stage:captured-newsletter-nurture, cohort:public, comms:goods-newsletter, engagement:nurture, lane:community, project:act-gd, project:goods-on-country, record:person, role:community, source:company-link-repair
+  ~ goods-newsletter → comms:goods-newsletter
+
+7ox7Rp2Dr3OZdLNXjHVW  alee@infoxchange.org
+  before: goods-newsletter, audience-brand, project:act-gd, role:community, lane:community, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, pulse-weekly-digest, project:goods-on-country, record:person, source:company-link-repair
+  after:  audience-brand, campaign-stage:captured-newsletter-nurture, cohort:public, comms:goods-newsletter, engagement:nurture, lane:community, project:act-gd, project:goods-on-country, pulse-weekly-digest, record:person, role:community, source:company-link-repair
+  ~ goods-newsletter → comms:goods-newsletter
+
+qd0lpqQ9dZpyDDERIMhE  gien@good-design.org
+  before: goods-newsletter, audience-brand, project:act-gd, role:community, lane:community, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, project:goods-on-country, record:person, source:company-link-repair
+  after:  audience-brand, campaign-stage:captured-newsletter-nurture, cohort:public, comms:goods-newsletter, engagement:nurture, lane:community, project:act-gd, project:goods-on-country, record:person, role:community, source:company-link-repair
+  ~ goods-newsletter → comms:goods-newsletter
+
+qvnemoBQU7FjnSdfEwPP  applications@brianmdavis.org.au
+  before: goods-newsletter, audience-brand, project:act-gd, role:community, lane:community, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, pulse-weekly-digest, project:goods-on-country, record:person, source:company-link-repair
+  after:  audience-brand, campaign-stage:captured-newsletter-nurture, cohort:public, comms:goods-newsletter, engagement:nurture, lane:community, project:act-gd, project:goods-on-country, pulse-weekly-digest, record:person, role:community, source:company-link-repair
+  ~ goods-newsletter → comms:goods-newsletter
+
+1rDuJ5zT9KmK4Hmg9Jxk  marina.rubio@diagrama.org.uk
+  before: campaign-stage:personal-invite, engagement:active-delivery, newsletter-stream:contained-adelaide-invite, newsletter-stream:daily-adelaide-recap, project:contained, project:contained-adelaide-2026, ring:delivery-circle, cohort:public, role:supporter, scope:contained-justicehub, scope:contained, scope:justicehub
+  after:  campaign-stage:personal-invite, cohort:public, engagement:active-delivery, project:contained, project:contained-adelaide-2026, ring:delivery-circle, role:supporter, scope:contained, scope:contained-justicehub, scope:justicehub
+  - newsletter-stream:contained-adelaide-invite · - newsletter-stream:daily-adelaide-recap
+
+10phNqWAjEmflMzAzXYT  admin@myerfoundation.org.au
+  before: goods-newsletter, audience-brand, project:act-gd, role:community, lane:community, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, pulse-weekly-digest, project:goods-on-country, record:person, source:company-link-repair
+  after:  audience-brand, campaign-stage:captured-newsletter-nurture, cohort:public, comms:goods-newsletter, engagement:nurture, lane:community, project:act-gd, project:goods-on-country, pulse-weekly-digest, record:person, role:community, source:company-link-repair
+  ~ goods-newsletter → comms:goods-newsletter
+
+iRmsOTOvF1DgmmJ6QpzT  erin@reddust.org.au
+  before: goods-newsletter, audience-brand, project:act-gd, role:community, lane:community, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, project:goods-on-country, relationship:community-delivery-partner, source:gmail-notion-community-sweep, comms:manual-relationship, record:person, source:company-link-repair
+  after:  audience-brand, campaign-stage:captured-newsletter-nurture, cohort:public, comms:goods-newsletter, comms:manual-relationship, engagement:nurture, lane:community, project:act-gd, project:goods-on-country, record:person, relationship:community-delivery-partner, role:community, source:company-link-repair, source:gmail-notion-community-sweep
+  ~ goods-newsletter → comms:goods-newsletter
+
+sd5V2TQpNpCLe4hKRgWB  communications@yac.net.au
+  before: meeting-held, project:act-jh, role:partner, interest:venue, action:meeting-held, place:brisbane, campaign-stage:future-city-partner, engagement:warm, newsletter-stream:contained-adelaide-invite, newsletter-stream:future-tour-update, newsletter-stream:youth-justice-brief, place:qld, project:contained, project:contained-adelaide-2026, cohort:public, scope:contained-justicehub, scope:contained, scope:youth-justice, scope:justicehub
+  after:  action:meeting-held, campaign-stage:future-city-partner, cohort:public, engagement:warm, interest:venue, meeting-held, place:brisbane, place:qld, project:act-jh, project:contained, project:contained-adelaide-2026, role:partner, scope:contained, scope:contained-justicehub, scope:justicehub, scope:youth-justice
+  - newsletter-stream:contained-adelaide-invite · - newsletter-stream:future-tour-update · - newsletter-stream:youth-justice-brief
+
+KZ7RJfJUV7Pd720EYBVv  anita.pahor@lkg.com.au
+  before: contained-hot-lead, contained-original-requester, project:act-ce, project:act-jh, interest:justice-reform, role:partner, place:melbourne, interest:container, project:act-cn, comms:justicehub-newsletter, campaign-stage:warm-review, engagement:hot, newsletter-stream:contained-adelaide-invite, newsletter-stream:future-tour-update, newsletter-stream:youth-justice-brief, place:vic, project:contained, project:contained-adelaide-2026, cohort:public, pulse-weekly-digest, scope:contained-justicehub, scope:contained, scope:justicehub, scope:youth-justice
+  after:  campaign-stage:warm-review, cohort:public, comms:justicehub-newsletter, contained-hot-lead, contained-original-requester, engagement:hot, interest:container, interest:justice-reform, place:melbourne, place:vic, project:act-ce, project:act-cn, project:act-jh, project:contained, project:contained-adelaide-2026, pulse-weekly-digest, role:partner, scope:contained, scope:contained-justicehub, scope:justicehub, scope:youth-justice
+  - newsletter-stream:contained-adelaide-invite · - newsletter-stream:future-tour-update · - newsletter-stream:youth-justice-brief
+
+VbPl2qLoyWZlYL2HmOtY  soniarandhawa1@yahoo.com.my
+  before: contained-hot-lead, contained-original-requester, project:act-ce, project:act-jh, interest:justice-reform, role:media, interest:container, project:act-cn, role:partner, comms:justicehub-newsletter, campaign-stage:personal-invite, engagement:personal-vip, newsletter-stream:daily-adelaide-recap, newsletter-stream:funder-brief, newsletter-stream:media-pack, newsletter-stream:youth-justice-brief, project:contained, project:contained-adelaide-2026, ring:vip, cohort:public, scope:contained-justicehub, scope:contained, scope:justicehub, scope:youth-justice
+  after:  campaign-stage:personal-invite, cohort:public, comms:justicehub-newsletter, contained-hot-lead, contained-original-requester, engagement:personal-vip, interest:container, interest:justice-reform, project:act-ce, project:act-cn, project:act-jh, project:contained, project:contained-adelaide-2026, ring:vip, role:media, role:partner, scope:contained, scope:contained-justicehub, scope:justicehub, scope:youth-justice
+  - newsletter-stream:daily-adelaide-recap · - newsletter-stream:funder-brief · - newsletter-stream:media-pack · - newsletter-stream:youth-justice-brief
+
+4nTVTPHZJcIaXPnZNpLL  pkaur@paulramsayfoundation.org.au
+  before: goods-newsletter, audience-brand, project:act-gd, role:community, project:act-jh, role:partner, lane:community, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, project:goods-on-country, record:person, source:company-link-repair, relationship:funder, source:verified-org-expansion
+  after:  audience-brand, campaign-stage:captured-newsletter-nurture, cohort:public, comms:goods-newsletter, engagement:nurture, lane:community, project:act-gd, project:act-jh, project:goods-on-country, record:person, relationship:funder, role:community, role:partner, source:company-link-repair, source:verified-org-expansion
+  ~ goods-newsletter → comms:goods-newsletter
+
+KEQIoozb2cHAcdUsOT8E  dmilliken@diagrama.org.uk
+  before: campaign-stage:personal-invite, engagement:active-delivery, newsletter-stream:contained-adelaide-invite, newsletter-stream:daily-adelaide-recap, project:contained, project:contained-adelaide-2026, ring:delivery-circle, cohort:public, role:supporter, scope:contained-justicehub, scope:contained, scope:justicehub
+  after:  campaign-stage:personal-invite, cohort:public, engagement:active-delivery, project:contained, project:contained-adelaide-2026, ring:delivery-circle, role:supporter, scope:contained, scope:contained-justicehub, scope:justicehub
+  - newsletter-stream:contained-adelaide-invite · - newsletter-stream:daily-adelaide-recap
+
+Ja3sGsiivyv4Hjc52byI  jess@theopenarms.com.au
+  before: contained-personal-outreach, project:act-ce, project:act-jh, interest:justice-reform, role:partner, place:melbourne, interest:container, project:act-cn, comms:justicehub-newsletter, campaign-stage:warm-review, engagement:hot, newsletter-stream:contained-adelaide-invite, newsletter-stream:future-tour-update, newsletter-stream:youth-justice-brief, place:vic, project:contained, project:contained-adelaide-2026, cohort:public, scope:contained-justicehub, scope:contained, scope:justicehub, scope:youth-justice
+  after:  campaign-stage:warm-review, cohort:public, comms:justicehub-newsletter, contained-personal-outreach, engagement:hot, interest:container, interest:justice-reform, place:melbourne, place:vic, project:act-ce, project:act-cn, project:act-jh, project:contained, project:contained-adelaide-2026, role:partner, scope:contained, scope:contained-justicehub, scope:justicehub, scope:youth-justice
+  - newsletter-stream:contained-adelaide-invite · - newsletter-stream:future-tour-update · - newsletter-stream:youth-justice-brief
+
+vcpRdRWPqykY2oHXrJ9I  hannah@justicereforminitiative.org.au
+  before: contained-hot-lead, contained-original-requester, meeting-held, project:act-ce, project:act-jh, interest:justice-reform, role:partner, place:adelaide, interest:container, action:meeting-held, project:act-cn, comms:justicehub-newsletter, ring:50, interest:venue, campaign-stage:personal-invite, engagement:active-delivery, newsletter-stream:contained-adelaide-invite, newsletter-stream:daily-adelaide-recap, newsletter-stream:youth-justice-brief, place:sa, project:contained, project:contained-adelaide-2026, ring:delivery-circle, cohort:public, scope:contained-justicehub, scope:contained, scope:justicehub, scope:youth-justice
+  after:  action:meeting-held, campaign-stage:personal-invite, cohort:public, comms:justicehub-newsletter, contained-hot-lead, contained-original-requester, engagement:active-delivery, interest:container, interest:justice-reform, interest:venue, meeting-held, place:adelaide, place:sa, project:act-ce, project:act-cn, project:act-jh, project:contained, project:contained-adelaide-2026, ring:50, ring:delivery-circle, role:partner, scope:contained, scope:contained-justicehub, scope:justicehub, scope:youth-justice
+  - newsletter-stream:contained-adelaide-invite · - newsletter-stream:daily-adelaide-recap · - newsletter-stream:youth-justice-brief
+
+yIYUvOBZMemF5tynz5wL  gm@bawinanga.org.au
+  before: goods-newsletter, audience-brand, project:act-gd, role:community, lane:community, campaign-stage:future-city-partner, engagement:warm, newsletter-stream:contained-adelaide-invite, newsletter-stream:future-tour-update, project:contained, project:contained-adelaide-2026, cohort:public, project:goods-on-country, record:person, source:company-link-repair, scope:contained-justicehub, scope:contained, scope:justicehub
+  after:  audience-brand, campaign-stage:future-city-partner, cohort:public, comms:goods-newsletter, engagement:warm, lane:community, project:act-gd, project:contained, project:contained-adelaide-2026, project:goods-on-country, record:person, role:community, scope:contained, scope:contained-justicehub, scope:justicehub, source:company-link-repair
+  ~ goods-newsletter → comms:goods-newsletter · - newsletter-stream:contained-adelaide-invite · - newsletter-stream:future-tour-update
+
+K4ejYaIJ3ILO9yQTFBhm  eula.rohan@aracy.org.au
+  before: goods-newsletter, audience-brand, project:act-gd, role:community, lane:community, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, project:goods-on-country, record:person, source:company-link-repair
+  after:  audience-brand, campaign-stage:captured-newsletter-nurture, cohort:public, comms:goods-newsletter, engagement:nurture, lane:community, project:act-gd, project:goods-on-country, record:person, role:community, source:company-link-repair
+  ~ goods-newsletter → comms:goods-newsletter
+
+rmrG40t5m6Yn8cGcoznb  alice@cornerstorenetwork.org.au
+  before: contained-personal-outreach, project:act-ce, project:act-jh, interest:justice-reform, role:partner, place:melbourne, interest:container, project:act-cn, comms:justicehub-newsletter, campaign-stage:warm-review, engagement:hot, newsletter-stream:contained-adelaide-invite, newsletter-stream:future-tour-update, newsletter-stream:youth-justice-brief, place:vic, project:contained, project:contained-adelaide-2026, cohort:public, pulse-weekly-digest, scope:contained-justicehub, scope:contained, scope:justicehub, scope:youth-justice
+  after:  campaign-stage:warm-review, cohort:public, comms:justicehub-newsletter, contained-personal-outreach, engagement:hot, interest:container, interest:justice-reform, place:melbourne, place:vic, project:act-ce, project:act-cn, project:act-jh, project:contained, project:contained-adelaide-2026, pulse-weekly-digest, role:partner, scope:contained, scope:contained-justicehub, scope:justicehub, scope:youth-justice
+  - newsletter-stream:contained-adelaide-invite · - newsletter-stream:future-tour-update · - newsletter-stream:youth-justice-brief
+
+tf12kWs3CZiR5WYCDswA  jonas@paulramsayfoundation.org.au
+  before: goods-newsletter, project:act-gd, goods-steady, role:partner, project:act-jh, comms:goods-newsletter, role:funder, comms:funder-drip, campaign-stage:personal-invite, engagement:personal-vip, project:contained, project:contained-adelaide-2026, ring:vip, cohort:public, project:goods-on-country, record:person, source:company-link-repair, relationship:funder, source:verified-org-expansion, source:justicehub-civicgraph, org-link:proposed, scope:contained-justicehub, scope:contained, scope:justicehub
+  after:  campaign-stage:personal-invite, cohort:public, comms:funder-drip, comms:goods-newsletter, engagement:personal-vip, goods-steady, org-link:proposed, project:act-gd, project:act-jh, project:contained, project:contained-adelaide-2026, project:goods-on-country, record:person, relationship:funder, ring:vip, role:funder, role:partner, scope:contained, scope:contained-justicehub, scope:justicehub, source:company-link-repair, source:justicehub-civicgraph, source:verified-org-expansion
+  ~ goods-newsletter → comms:goods-newsletter
+
+BTMtHeL4MpDwYX2Uppc9  nicholas@orangesky.org.au
+  before: goods-newsletter, comms:goods-newsletter, project:act-gd, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, role:supporter, project:goods-on-country, record:person, source:company-link-repair
+  after:  campaign-stage:captured-newsletter-nurture, cohort:public, comms:goods-newsletter, engagement:nurture, project:act-gd, project:goods-on-country, record:person, role:supporter, source:company-link-repair
+  ~ goods-newsletter → comms:goods-newsletter
+
+lQ4ROlknfvUmlVbCJhVu  tanya.turner@oonchiumpa.com.au
+  before: project:act-jh, role:partner, priority:high, project:act-gd, role:storyteller, lane:community, source:inquiry, role:buyer, campaign-stage:warm-review, engagement:hot, newsletter-stream:youth-justice-brief, cohort:public, project:goods-on-country, relationship:community-partner, source:gmail-goods-sweep, comms:manual-relationship, place:utopia, place:alice-springs, source:community-os-pilot, record:person, source:company-link-repair, project:contained, source:justicehub-civicgraph, org-link:proposed, scope:contained-justicehub, scope:contained, scope:justicehub, scope:youth-justice
+  after:  campaign-stage:warm-review, cohort:public, comms:manual-relationship, engagement:hot, lane:community, org-link:proposed, place:alice-springs, place:utopia, priority:high, project:act-gd, project:act-jh, project:contained, project:goods-on-country, record:person, relationship:community-partner, role:buyer, role:partner, role:storyteller, scope:contained, scope:contained-justicehub, scope:justicehub, scope:youth-justice, source:community-os-pilot, source:company-link-repair, source:gmail-goods-sweep, source:inquiry, source:justicehub-civicgraph
+  - newsletter-stream:youth-justice-brief
+
+DdlevaALhR53yslwYmfY  tina.morris@diagrama.org.uk
+  before: project:act-ca, role:partner, campaign-stage:personal-invite, engagement:active-delivery, newsletter-stream:contained-adelaide-invite, newsletter-stream:daily-adelaide-recap, project:contained, project:contained-adelaide-2026, ring:delivery-circle, cohort:public, scope:contained-justicehub, scope:contained, scope:justicehub
+  after:  campaign-stage:personal-invite, cohort:public, engagement:active-delivery, project:act-ca, project:contained, project:contained-adelaide-2026, ring:delivery-circle, role:partner, scope:contained, scope:contained-justicehub, scope:justicehub
+  - newsletter-stream:contained-adelaide-invite · - newsletter-stream:daily-adelaide-recap
+
+JFLhPLmeKVq7ECTCf4DO  bunningstrade@powerpass.bunnings.com.au
+  before: goods-newsletter, audience-brand, project:act-gd, role:supporter, comms:goods-newsletter, comms:newsletter, comms:supporter-drip, comms:act-newsletter, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, project:goods-on-country, record:person, source:company-link-repair
+  after:  audience-brand, campaign-stage:captured-newsletter-nurture, cohort:public, comms:act-newsletter, comms:goods-newsletter, comms:supporter-drip, engagement:nurture, project:act-gd, project:goods-on-country, record:person, role:supporter, source:company-link-repair
+  ~ goods-newsletter → comms:goods-newsletter · ~ comms:newsletter → comms:act-newsletter
+
+pZ9kGnooEvG4MG13E6KA  rohan.lulham@sydney.edu.au
+  before: contained-hot-lead, contained-original-requester, project:act-ce, project:act-jh, interest:justice-reform, role:partner, place:sydney, role:researcher, interest:container, project:act-cn, comms:justicehub-newsletter, ring:50, campaign-stage:warm-review, engagement:hot, newsletter-stream:contained-adelaide-invite, newsletter-stream:future-tour-update, newsletter-stream:youth-justice-brief, place:nsw, project:contained, project:contained-adelaide-2026, cohort:public, scope:contained-justicehub, scope:contained, scope:justicehub, scope:youth-justice
+  after:  campaign-stage:warm-review, cohort:public, comms:justicehub-newsletter, contained-hot-lead, contained-original-requester, engagement:hot, interest:container, interest:justice-reform, place:nsw, place:sydney, project:act-ce, project:act-cn, project:act-jh, project:contained, project:contained-adelaide-2026, ring:50, role:partner, role:researcher, scope:contained, scope:contained-justicehub, scope:justicehub, scope:youth-justice
+  - newsletter-stream:contained-adelaide-invite · - newsletter-stream:future-tour-update · - newsletter-stream:youth-justice-brief
+
+wQVJE0BSUbasxNGSUuSE  seana@queenslandgives.org.au
+  before: goods-newsletter, project:act-jh, audience-brand, project:act-gd, role:supporter, comms:goods-newsletter, role:funder, comms:newsletter, comms:funder-drip, comms:supporter-drip, comms:act-newsletter, ring:50, campaign-stage:personal-invite, engagement:personal-vip, project:contained, project:contained-adelaide-2026, ring:vip, cohort:public, project:goods-on-country, record:person, source:company-link-repair, scope:contained-justicehub, scope:contained
+  after:  audience-brand, campaign-stage:personal-invite, cohort:public, comms:act-newsletter, comms:funder-drip, comms:goods-newsletter, comms:supporter-drip, engagement:personal-vip, project:act-gd, project:act-jh, project:contained, project:contained-adelaide-2026, project:goods-on-country, record:person, ring:50, ring:vip, role:funder, role:supporter, scope:contained, scope:contained-justicehub, source:company-link-repair
+  ~ goods-newsletter → comms:goods-newsletter · ~ comms:newsletter → comms:act-newsletter
+
+3Zj23DFHnxadPi1t8bBW  andy.beecroft@adelaidefringe.com.au
+  before: goods-newsletter, project:act-ce, audience-brand, project:act-gd, role:supporter, comms:goods-newsletter, interest:festivals, role:partner, comms:newsletter, comms:supporter-drip, comms:partner-drip, comms:act-newsletter, project:goods-on-country, record:person, source:company-link-repair
+  after:  audience-brand, comms:act-newsletter, comms:goods-newsletter, comms:partner-drip, comms:supporter-drip, interest:festivals, project:act-ce, project:act-gd, project:goods-on-country, record:person, role:partner, role:supporter, source:company-link-repair
+  ~ goods-newsletter → comms:goods-newsletter · ~ comms:newsletter → comms:act-newsletter
+
+G4vUZfUSQadk1R4KGRZC  elschwanke@vfff.org.au
+  before: goods-newsletter, project:act-gd, goods-cooling, audience-brand, role:supporter, comms:goods-newsletter, role:funder, role:partner, comms:newsletter, comms:funder-drip, comms:supporter-drip, comms:partner-drip, comms:act-newsletter, philanthropic, monitor, project:goods-on-country, record:person, source:company-link-repair
+  after:  audience-brand, comms:act-newsletter, comms:funder-drip, comms:goods-newsletter, comms:partner-drip, comms:supporter-drip, goods-cooling, monitor, philanthropic, project:act-gd, project:goods-on-country, record:person, role:funder, role:partner, role:supporter, source:company-link-repair
+  ~ goods-newsletter → comms:goods-newsletter · ~ comms:newsletter → comms:act-newsletter
+
+7NVtg5cAWxbYn12ZixJU  madeline.alderuccio@thefundingnetwork.com.au
+  before: goods-newsletter, project:act-ca, project:act-gd, goods-cooling, audience-brand, role:supporter, comms:goods-newsletter, role:funder, role:partner, comms:newsletter, comms:funder-drip, comms:supporter-drip, comms:partner-drip, comms:act-newsletter, project:goods-on-country, record:person, source:company-link-repair, relationship:funder-network, source:verified-org-expansion
+  after:  audience-brand, comms:act-newsletter, comms:funder-drip, comms:goods-newsletter, comms:partner-drip, comms:supporter-drip, goods-cooling, project:act-ca, project:act-gd, project:goods-on-country, record:person, relationship:funder-network, role:funder, role:partner, role:supporter, source:company-link-repair, source:verified-org-expansion
+  ~ goods-newsletter → comms:goods-newsletter · ~ comms:newsletter → comms:act-newsletter
+
+ehnCEv62bCaGNTd1QuGp  randle@centrecorp.com.au
+  before: goods-newsletter, project:act-gd, project:act-ca, goods-hot, audience-brand, goods-impact-report-needed, goods-report-board-pack, goods-report-centrecorp-june26, goods-story-consent-needed, role:supporter, comms:goods-newsletter, role:corporate, role:funder, role:partner, comms:newsletter, comms:funder-drip, comms:supporter-drip, comms:partner-drip, comms:act-newsletter, buyer, monitor, split:buyer-funder, linked-supporter-journey, qbe-centrecorp-split, project:goods-on-country, role:funder-network, source:gmail-notion-sweep, comms:manual-relationship, record:person, source:company-link-repair
+  after:  audience-brand, buyer, comms:act-newsletter, comms:funder-drip, comms:goods-newsletter, comms:manual-relationship, comms:partner-drip, comms:supporter-drip, goods-hot, goods-impact-report-needed, goods-report-board-pack, goods-report-centrecorp-june26, goods-story-consent-needed, linked-supporter-journey, monitor, project:act-ca, project:act-gd, project:goods-on-country, qbe-centrecorp-split, record:person, role:corporate, role:funder, role:funder-network, role:partner, role:supporter, source:company-link-repair, source:gmail-notion-sweep, split:buyer-funder
+  ~ goods-newsletter → comms:goods-newsletter · ~ comms:newsletter → comms:act-newsletter
+
+vNbxzxUXGBjx5QaJq8N5  tamsin@smallgiants.com.au
+  before: goods-newsletter, audience-brand, project:act-gd, role:supporter, comms:goods-newsletter, comms:newsletter, comms:supporter-drip, comms:act-newsletter, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, project:goods-on-country, record:person, source:company-link-repair, relationship:supporter-network, source:verified-org-expansion
+  after:  audience-brand, campaign-stage:captured-newsletter-nurture, cohort:public, comms:act-newsletter, comms:goods-newsletter, comms:supporter-drip, engagement:nurture, project:act-gd, project:goods-on-country, record:person, relationship:supporter-network, role:supporter, source:company-link-repair, source:verified-org-expansion
+  ~ goods-newsletter → comms:goods-newsletter · ~ comms:newsletter → comms:act-newsletter
+
+V6CCMRZkvacxfweuDEby  danny@smallgiants.com.au
+  before: goods-newsletter, audience-brand, project:act-gd, role:supporter, comms:goods-newsletter, comms:newsletter, comms:supporter-drip, comms:act-newsletter, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, project:goods-on-country, record:person, source:company-link-repair, relationship:supporter-network, source:verified-org-expansion
+  after:  audience-brand, campaign-stage:captured-newsletter-nurture, cohort:public, comms:act-newsletter, comms:goods-newsletter, comms:supporter-drip, engagement:nurture, project:act-gd, project:goods-on-country, record:person, relationship:supporter-network, role:supporter, source:company-link-repair, source:verified-org-expansion
+  ~ goods-newsletter → comms:goods-newsletter · ~ comms:newsletter → comms:act-newsletter
+
+HniMghKhq56Ne2hL667f  annabelle.macansh@miwatj.com.au
+  before: goods-newsletter, audience-brand, project:act-gd, role:supporter, comms:goods-newsletter, comms:newsletter, comms:supporter-drip, comms:act-newsletter, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, project:goods-on-country, record:person, source:company-link-repair
+  after:  audience-brand, campaign-stage:captured-newsletter-nurture, cohort:public, comms:act-newsletter, comms:goods-newsletter, comms:supporter-drip, engagement:nurture, project:act-gd, project:goods-on-country, record:person, role:supporter, source:company-link-repair
+  ~ goods-newsletter → comms:goods-newsletter · ~ comms:newsletter → comms:act-newsletter
+
+ef3tYp3HPNOmUNeu05gc  madelyn.hay@miwatj.com.au
+  before: goods-newsletter, project:act-gd, audience-brand, role:supporter, role:health-service, place:nt, role:community-controlled, role:partner, lane:community, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, role:buyer, interest:goods-washer, interest:washable-beds, source:gmail, pathway:goods-buyer-pipeline, project:goods-on-country, record:person, source:company-link-repair
+  after:  audience-brand, campaign-stage:captured-newsletter-nurture, cohort:public, comms:goods-newsletter, engagement:nurture, interest:goods-washer, interest:washable-beds, lane:community, pathway:goods-buyer-pipeline, place:nt, project:act-gd, project:goods-on-country, record:person, role:buyer, role:community-controlled, role:health-service, role:partner, role:supporter, source:company-link-repair, source:gmail
+  ~ goods-newsletter → comms:goods-newsletter
+
+SpkbvX2o2NduUdpOrQOZ  tboyley@redarc.com.au
+  before: goods-newsletter, audience-brand, project:act-gd, role:supporter, comms:goods-newsletter, comms:newsletter, comms:supporter-drip, comms:act-newsletter, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, project:goods-on-country, record:person, source:company-link-repair, relationship:corporate-supporter, source:verified-org-expansion
+  after:  audience-brand, campaign-stage:captured-newsletter-nurture, cohort:public, comms:act-newsletter, comms:goods-newsletter, comms:supporter-drip, engagement:nurture, project:act-gd, project:goods-on-country, record:person, relationship:corporate-supporter, role:supporter, source:company-link-repair, source:verified-org-expansion
+  ~ goods-newsletter → comms:goods-newsletter · ~ comms:newsletter → comms:act-newsletter
+
+zMrf3zHyyzmHxHksnbUR  talialiddle@gmail.com
+  before: goods-newsletter, audience-brand, project:act-gd, role:supporter, comms:goods-newsletter, comms:newsletter, comms:supporter-drip, comms:act-newsletter, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, project:goods-on-country, record:person, source:company-link-repair
+  after:  audience-brand, campaign-stage:captured-newsletter-nurture, cohort:public, comms:act-newsletter, comms:goods-newsletter, comms:supporter-drip, engagement:nurture, project:act-gd, project:goods-on-country, record:person, role:supporter, source:company-link-repair
+  ~ goods-newsletter → comms:goods-newsletter · ~ comms:newsletter → comms:act-newsletter
+
+UJPGFZbcjcdslJC8jN6T  sq@wilyajanta.org
+  before: goods-newsletter, audience-brand, project:act-gd, role:partner, comms:goods-newsletter, source:inquiry, comms:newsletter, comms:partner-drip, comms:act-newsletter, role:buyer, goods-inquiry, goods-tier-aware, project:goods-on-country, lane:community, relationship:community-governance-partner, source:gmail-notion-community-sweep, comms:manual-relationship, place:tennant-creek, source:community-os-pilot, record:person, source:company-link-repair
+  after:  audience-brand, comms:act-newsletter, comms:goods-newsletter, comms:manual-relationship, comms:partner-drip, goods-inquiry, goods-tier-aware, lane:community, place:tennant-creek, project:act-gd, project:goods-on-country, record:person, relationship:community-governance-partner, role:buyer, role:partner, source:community-os-pilot, source:company-link-repair, source:gmail-notion-community-sweep, source:inquiry
+  ~ goods-newsletter → comms:goods-newsletter · ~ comms:newsletter → comms:act-newsletter
+
+II1BhBXv0iuzv888Wb7x  shellee.strickland@murrup.org.au
+  before: goods-newsletter, audience-brand, project:act-gd, role:community, lane:community, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, project:goods-on-country, record:person, source:company-link-repair
+  after:  audience-brand, campaign-stage:captured-newsletter-nurture, cohort:public, comms:goods-newsletter, engagement:nurture, lane:community, project:act-gd, project:goods-on-country, record:person, role:community, source:company-link-repair
+  ~ goods-newsletter → comms:goods-newsletter
+
+P6VhI44tqkgOfBcYJeBo  reception@winnunga.org.au
+  before: goods-newsletter, audience-brand, project:act-gd, role:supporter, comms:goods-newsletter, comms:newsletter, comms:supporter-drip, comms:act-newsletter, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, project:goods-on-country, record:person, source:company-link-repair, relationship:community-health-partner, source:verified-org-expansion
+  after:  audience-brand, campaign-stage:captured-newsletter-nurture, cohort:public, comms:act-newsletter, comms:goods-newsletter, comms:supporter-drip, engagement:nurture, project:act-gd, project:goods-on-country, record:person, relationship:community-health-partner, role:supporter, source:company-link-repair, source:verified-org-expansion
+  ~ goods-newsletter → comms:goods-newsletter · ~ comms:newsletter → comms:act-newsletter
+
+SZLSRjrKt8W7C5BFNdPE  sarah.williams@philanthropynetwork.org
+  before: goods-newsletter, audience-brand, role:funder, project:act-gd, comms:goods-newsletter, comms:newsletter, comms:funder-drip, comms:act-newsletter, campaign-stage:personal-invite, engagement:personal-vip, ring:vip, cohort:public, project:goods-on-country, record:person, source:company-link-repair
+  after:  audience-brand, campaign-stage:personal-invite, cohort:public, comms:act-newsletter, comms:funder-drip, comms:goods-newsletter, engagement:personal-vip, project:act-gd, project:goods-on-country, record:person, ring:vip, role:funder, source:company-link-repair
+  ~ goods-newsletter → comms:goods-newsletter · ~ comms:newsletter → comms:act-newsletter
+
+FNVDamtQMZD7urBYy5fx  hello@nina-fitzgerald.com
+  before: goods-newsletter, audience-brand, project:act-gd, role:partner, comms:goods-newsletter, comms:newsletter, comms:partner-drip, comms:act-newsletter, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, project:goods-on-country, relationship:advisor, source:gmail-goods-sweep, comms:manual-relationship, record:person, source:company-link-repair
+  after:  audience-brand, campaign-stage:captured-newsletter-nurture, cohort:public, comms:act-newsletter, comms:goods-newsletter, comms:manual-relationship, comms:partner-drip, engagement:nurture, project:act-gd, project:goods-on-country, record:person, relationship:advisor, role:partner, source:company-link-repair, source:gmail-goods-sweep
+  ~ goods-newsletter → comms:goods-newsletter · ~ comms:newsletter → comms:act-newsletter
+
+Nr2qqEkJhQyjGkQClVPW  mtaylor@bryanfamilygroup.com.au
+  before: goods-newsletter, audience-brand, role:funder, project:act-gd, comms:goods-newsletter, comms:newsletter, comms:funder-drip, comms:act-newsletter, campaign-stage:personal-invite, engagement:personal-vip, project:contained, project:contained-adelaide-2026, ring:vip, cohort:public, project:goods-on-country, record:person, source:company-link-repair, scope:contained-justicehub, scope:contained
+  after:  audience-brand, campaign-stage:personal-invite, cohort:public, comms:act-newsletter, comms:funder-drip, comms:goods-newsletter, engagement:personal-vip, project:act-gd, project:contained, project:contained-adelaide-2026, project:goods-on-country, record:person, ring:vip, role:funder, scope:contained, scope:contained-justicehub, source:company-link-repair
+  ~ goods-newsletter → comms:goods-newsletter · ~ comms:newsletter → comms:act-newsletter
+
+MgsF7e1f2HSeuFcZZVhF  mcox@thebryanfoundation.org.au
+  before: goods-newsletter, project:act-gd, goods-warm, audience-brand, role:funder, comms:goods-newsletter, comms:newsletter, comms:funder-drip, comms:act-newsletter, campaign-stage:personal-invite, engagement:personal-vip, project:contained, project:contained-adelaide-2026, ring:vip, cohort:public, philanthropic, needs-followup, project:goods-on-country, record:person, source:company-link-repair, relationship:funder, source:verified-org-expansion, source:justicehub-civicgraph, org-link:proposed, scope:contained-justicehub, scope:contained, scope:justicehub
+  after:  audience-brand, campaign-stage:personal-invite, cohort:public, comms:act-newsletter, comms:funder-drip, comms:goods-newsletter, engagement:personal-vip, goods-warm, needs-followup, org-link:proposed, philanthropic, project:act-gd, project:contained, project:contained-adelaide-2026, project:goods-on-country, record:person, relationship:funder, ring:vip, role:funder, scope:contained, scope:contained-justicehub, scope:justicehub, source:company-link-repair, source:justicehub-civicgraph, source:verified-org-expansion
+  ~ goods-newsletter → comms:goods-newsletter · ~ comms:newsletter → comms:act-newsletter
+
+ot4pX3AbwrBSIzKRrAgC  matt.davies@ingkerreke.org.au
+  before: goods-newsletter, audience-brand, project:act-gd, role:supporter, comms:goods-newsletter, comms:newsletter, comms:supporter-drip, comms:act-newsletter, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, project:goods-on-country, record:person, source:company-link-repair
+  after:  audience-brand, campaign-stage:captured-newsletter-nurture, cohort:public, comms:act-newsletter, comms:goods-newsletter, comms:supporter-drip, engagement:nurture, project:act-gd, project:goods-on-country, record:person, role:supporter, source:company-link-repair
+  ~ goods-newsletter → comms:goods-newsletter · ~ comms:newsletter → comms:act-newsletter
+
+rWhSuvCxYVITE1OfReO2  m.breen@snowfoundation.org.au
+  before: goods-newsletter, project:act-gd, comms:goods-newsletter, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, role:supporter, project:goods-on-country, record:person, source:company-link-repair
+  after:  campaign-stage:captured-newsletter-nurture, cohort:public, comms:goods-newsletter, engagement:nurture, project:act-gd, project:goods-on-country, record:person, role:supporter, source:company-link-repair
+  ~ goods-newsletter → comms:goods-newsletter
+
+U6JBvrURgkIAvaFftsz4  kathy.mcconnell@ingkerreke.org.au
+  before: goods-newsletter, audience-brand, project:act-gd, role:supporter, comms:goods-newsletter, comms:newsletter, comms:supporter-drip, comms:act-newsletter, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, project:goods-on-country, record:person, source:company-link-repair
+  after:  audience-brand, campaign-stage:captured-newsletter-nurture, cohort:public, comms:act-newsletter, comms:goods-newsletter, comms:supporter-drip, engagement:nurture, project:act-gd, project:goods-on-country, record:person, role:supporter, source:company-link-repair
+  ~ goods-newsletter → comms:goods-newsletter · ~ comms:newsletter → comms:act-newsletter
+
+0ShRsxG5CBklEgpCIQQU  jwelfare@qic.com
+  before: goods-newsletter, goods-cooling, audience-brand, project:act-gd, role:partner, comms:goods-newsletter, role:funder, comms:newsletter, comms:funder-drip, comms:partner-drip, comms:act-newsletter, campaign-stage:personal-invite, engagement:personal-vip, ring:vip, cohort:public, philanthropic, monitor, project:goods-on-country, record:person, source:company-link-repair, relationship:funder-investor, source:verified-org-expansion
+  after:  audience-brand, campaign-stage:personal-invite, cohort:public, comms:act-newsletter, comms:funder-drip, comms:goods-newsletter, comms:partner-drip, engagement:personal-vip, goods-cooling, monitor, philanthropic, project:act-gd, project:goods-on-country, record:person, relationship:funder-investor, ring:vip, role:funder, role:partner, source:company-link-repair, source:verified-org-expansion
+  ~ goods-newsletter → comms:goods-newsletter · ~ comms:newsletter → comms:act-newsletter
+
+BSkTz0lYEJo8MVQJGFtc  jpayne@paulramsayfoundation.org.au
+  before: goods-newsletter, project:act-gd, comms:goods-newsletter, project:act-jh, role:partner, comms:partner-drip, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, project:goods-on-country, record:person, source:company-link-repair, relationship:funder, source:verified-org-expansion
+  after:  campaign-stage:captured-newsletter-nurture, cohort:public, comms:goods-newsletter, comms:partner-drip, engagement:nurture, project:act-gd, project:act-jh, project:goods-on-country, record:person, relationship:funder, role:partner, source:company-link-repair, source:verified-org-expansion
+  ~ goods-newsletter → comms:goods-newsletter
+
+mFT1yhDtpViYdgoth8bE  jordy.burrows@winning.com.au
+  before: goods-newsletter, audience-brand, project:act-gd, role:supporter, comms:goods-newsletter, comms:newsletter, comms:supporter-drip, comms:act-newsletter, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, project:goods-on-country, record:person, source:company-link-repair, relationship:buyer-partner, source:verified-org-expansion
+  after:  audience-brand, campaign-stage:captured-newsletter-nurture, cohort:public, comms:act-newsletter, comms:goods-newsletter, comms:supporter-drip, engagement:nurture, project:act-gd, project:goods-on-country, record:person, relationship:buyer-partner, role:supporter, source:company-link-repair, source:verified-org-expansion
+  ~ goods-newsletter → comms:goods-newsletter · ~ comms:newsletter → comms:act-newsletter
+
+HTujeK3XWvJRt32IoyqQ  jim.rebbechi@ingkerreke.org.au
+  before: goods-newsletter, project:act-ca, audience-brand, project:act-gd, role:supporter, comms:goods-newsletter, role:funder, role:partner, comms:newsletter, comms:funder-drip, comms:supporter-drip, comms:partner-drip, comms:act-newsletter, campaign-stage:personal-invite, engagement:personal-vip, project:contained, project:contained-adelaide-2026, ring:vip, cohort:public, project:goods-on-country, record:person, source:company-link-repair, scope:contained-justicehub, scope:contained
+  after:  audience-brand, campaign-stage:personal-invite, cohort:public, comms:act-newsletter, comms:funder-drip, comms:goods-newsletter, comms:partner-drip, comms:supporter-drip, engagement:personal-vip, project:act-ca, project:act-gd, project:contained, project:contained-adelaide-2026, project:goods-on-country, record:person, ring:vip, role:funder, role:partner, role:supporter, scope:contained, scope:contained-justicehub, source:company-link-repair
+  ~ goods-newsletter → comms:goods-newsletter · ~ comms:newsletter → comms:act-newsletter
+
+WDTK77UPRktCuJ7drc1G  c.sullivan@qic.com
+  before: goods-newsletter, project:act-gd, goods-cooling, audience-brand, role:partner, comms:goods-newsletter, role:funder, comms:newsletter, comms:funder-drip, comms:partner-drip, comms:act-newsletter, campaign-stage:personal-invite, engagement:personal-vip, ring:vip, cohort:public, project:goods-on-country, record:person, source:company-link-repair, relationship:funder-investor, source:verified-org-expansion
+  after:  audience-brand, campaign-stage:personal-invite, cohort:public, comms:act-newsletter, comms:funder-drip, comms:goods-newsletter, comms:partner-drip, engagement:personal-vip, goods-cooling, project:act-gd, project:goods-on-country, record:person, relationship:funder-investor, ring:vip, role:funder, role:partner, source:company-link-repair, source:verified-org-expansion
+  ~ goods-newsletter → comms:goods-newsletter · ~ comms:newsletter → comms:act-newsletter
+
+oGrp0otuvFuZGJh7ntgK  ben@josephmark.com.au
+  before: goods-newsletter, audience-brand, project:act-gd, role:supporter, comms:goods-newsletter, comms:newsletter, comms:supporter-drip, comms:act-newsletter, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, project:goods-on-country, record:person, source:company-link-repair, relationship:strategic-partner, source:verified-org-expansion
+  after:  audience-brand, campaign-stage:captured-newsletter-nurture, cohort:public, comms:act-newsletter, comms:goods-newsletter, comms:supporter-drip, engagement:nurture, project:act-gd, project:goods-on-country, record:person, relationship:strategic-partner, role:supporter, source:company-link-repair, source:verified-org-expansion
+  ~ goods-newsletter → comms:goods-newsletter · ~ comms:newsletter → comms:act-newsletter
+
+vgrJGVhkqFXrq8eJNiWM  along@srau.org.au
+  before: goods-newsletter, audience-brand, role:partner, comms:goods-newsletter, project:act-gd, comms:newsletter, comms:partner-drip, comms:act-newsletter, campaign-stage:captured-newsletter-nurture, engagement:nurture, cohort:public, pulse-weekly-digest, project:goods-on-country, relationship:advisor, source:gmail-goods-sweep, comms:manual-relationship, record:person, source:company-link-repair
+  after:  audience-brand, campaign-stage:captured-newsletter-nurture, cohort:public, comms:act-newsletter, comms:goods-newsletter, comms:manual-relationship, comms:partner-drip, engagement:nurture, project:act-gd, project:goods-on-country, pulse-weekly-digest, record:person, relationship:advisor, role:partner, source:company-link-repair, source:gmail-goods-sweep
+  ~ goods-newsletter → comms:goods-newsletter · ~ comms:newsletter → comms:act-newsletter
