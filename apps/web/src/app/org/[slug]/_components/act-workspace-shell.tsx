@@ -85,6 +85,8 @@ export function ActWorkspaceShell({
     // Listen folded into Orgs 2026-08-05 — the Org record + one list.
     // Legacy lens stays reachable at ?view=relationships (not on the rail).
     { label: 'Orgs', href: `/org/${slug}/orgs`, active: pathname.startsWith(`/org/${slug}/orgs`) },
+    // The one cross-project noun (ADR 0002): cultivated humans, org-wide.
+    { label: 'People', href: `/org/${slug}/people`, active: pathname.startsWith(`/org/${slug}/people`) },
     { label: 'Curiosity', href: rootHref(slug, 'opportunities', 'opportunities'), active: onOrgRoot && (view === 'opportunities' || view === 'triage') },
     // Rail cut to the spine (Ben, 2026-08-05): Action, Art, Money, Sources,
     // Research and Funding all left the rail. Art = the Harvest project, which
