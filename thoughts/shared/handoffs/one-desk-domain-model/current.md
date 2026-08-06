@@ -2,18 +2,32 @@
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-08-06T21:30:00+10:00
-**Goal:** Map #143 (One Desk domain model) COMPLETE + built slice 1. New map #158 (Engagement layer) CHARTED with 5 tickets. Separate urgent sprint: ACT site launch + first newsletters (GHL) THIS WEEK — not started.
-**Branch:** main (all merged through PR #157, squash 64ab9b6; local == origin)
+**Updated:** 2026-08-06T12:45:00+10:00
+**Goal:** Newsletter sprint PARKED mid-flight by Ben (2026-08-06 — "not sure grantscope is the right repo to work this from"; all work committed, resumable). Map #158 (Engagement layer) charted with 4 open tickets. Triage sitting still open.
+**Branch:** feat/newsletter-tag-alignment (local commit ca55d2a, NOT pushed; main == origin at 64ab9b6)
 **Test:** cd apps/web && npx tsc --noEmit (repo has no vitest test files)
 
 ### Now
-[->] Three parallel tracks, pick per session:
-1. **Newsletter sprint (URGENT, day shift):** ACT site live this week + newsletters via GHL for Goods + JusticeHub + ACT general. Needs: GHL email/audience capability check, content in ACT voice (/act-voice skill), Ben in loop. NOT STARTED.
-2. **Triage sitting OPEN:** 11 live Won opportunities need obligation terms dictated by Ben (5 Snow/Centrecorp funder grants, 6 buyer sales to community orgs — list in act_ask_none_owed context below). Mint via /api or We-owe tab.
-3. **Engagement map:** `/mattpocock-skills:wayfinder 158` — 4 grilling tickets open (#159 Community entity, #160 digest, #161 GHL tasks bridge, #162 grants→Notion). #163 research: RESOLVED+CLOSED — findings in docs/funder-pipeline-gap-audit.md on branch research/funder-pipeline-gaps (pipeline split across 4 surfaces, no five-stage rendering, no $-weighted view, fit-70–84 invisible). Likely spawns a 'one pipeline screen' spec ticket on #158.
+[->] PARKED: Newsletter sprint — resume point is the bulk tag cleanup, gated on Ben's canary soak check. Ben to decide which repo/context hosts the rest of the sprint. Other tracks: triage sitting (11 Wons need terms) · wayfinder #158 tickets.
 
-### This Session (2026-08-06 afternoon)
+### Newsletter sprint state (2026-08-06 midday session — PARKED)
+- [x] GHL tag audit re-run (3,365 contacts): newsletter segments = comms:act-newsletter 140 / goods 128 / justicehub 34 / harvest 222 + strays
+- [x] DECIDED (Ben): comms:* un-deprecated — it IS the newsletter membership family (act-site-form-alignment.md §4a wins over old registry direction); consent = newsletter_consent field only (newsletter-consent-policy.md); first sends consented-only + re-permission email to ~350 tagged-unconsented
+- [x] Registry updated: scripts/lib/ghl-tag-registry.mjs COMMS_TAGS (4 newsletters + do-not-contact)
+- [x] scripts/cleanup-newsletter-tags.mjs: dry-run default, --apply/--max/--skip-harvest staged rollout, harvest-context routing for bare `newsletter` (8 of 9 were Harvest). 117 contacts change total. Reports in data/newsletter-tag-*.txt
+- [x] CANARY APPLIED to GHL (5 contacts incl. benjamin@act.place, verified by re-fetch, 0 failures)
+- [x] Risk audit: ALL newsletter workflows in GHL are drafts (can't fire); only unverifiable exposure = published Harvest workflows × the 10 contacts gaining comms:harvest-newsletter (hence --skip-harvest)
+- [x] Per-repo email authoring scaffolds COMMITTED in 3 repos: act-regenerative-studio/emails (f5ba684, + README = the process doc), JusticeHub/emails (fb60446e), "Goods Asset Register/v2"/emails (3685da9). Brand-true email-safe masters + build.mjs; test render act-regenerative-studio/emails/issues/2026-08-test/dist.html
+- [x] All 3 site opt-in forms verified already canonical (comms tag + newsletter_consent atomic) — no rewiring needed
+
+### Newsletter resume checklist
+- [ ] Ben: soak check (no rogue emails/enrolments from canary) → run `node --env-file=.env scripts/cleanup-newsletter-tags.mjs --apply --skip-harvest` (~102 contacts)
+- [ ] Ben (GHL UI): check Harvest workflow triggers → final --apply for the 10 harvest contacts
+- [ ] Ben (GHL UI): dedicated sending domain check + 3 smart lists (comms:<x>-newsletter AND newsletter_consent=Yes AND not DND)
+- [ ] Draft first issues (/act-voice + /ground) + re-permission email — day shift
+- [ ] Decide push/PR for feat/newsletter-tag-alignment (local only right now)
+
+### This Session (2026-08-06 afternoon, earlier)
 - [x] Map #143 finished: #153 (widened desk spec), #154 (people surface spec), #155 (delivery surfaces spec), #156 (backfill) — all specs in docs/specs/
 - [x] BUILT + MERGED PR #157: We-owe tab at /org/act/goods/we-owe — act_obligations + act_ask_none_owed tables (migration APPLIED to prod), act-obligations.ts service (incl. getDeskObligations desk feed, thresholds baked), org-scoped API (Done/Dropped terminal, community drops need reason), Bauhaus skin
 - [x] Triage sitting part 1: 19 of 30 Won opps bulk-flagged none-owed (17 'A Curious Tractor' 2025 pipeline rows + 2 historical Xero rows) — flagged_by='ben-triage-2026-08-06', reversible per-row
