@@ -2,13 +2,14 @@
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-08-06T14:15:00+10:00
-**Goal:** Newsletter bulk cleanup APPLIED (111 contacts, 0 failures; harvest 10 still skipped). Wayfinder #159 (Community vocabulary) RESOLVED — spec + ADR 0004 on main. Open: #160–#162, triage sitting (11 Wons need terms).
-**Branch:** main (local docs commits NOT pushed); feat/newsletter-tag-alignment local at 4043bf8, NOT pushed
+**Updated:** 2026-08-06T16:30:00+10:00
+**Goal:** Build phase STARTED. Two PRs open for Ben's preview review: #164 (widened desk, five row kinds) + #165 (communities screens + digest preview; act_communities migration + 3-community seed APPLIED to prod). Grilled + specced #159/#160/#161 (specs + ADR 0004 pushed on main). Open: #162 grilling, triage sitting (11 Wons need terms), 10 harvest newsletter contacts.
+**Branch:** main == origin (c5cce68); PR branches feat/desk-widening + feat/engagement-screens pushed; feat/newsletter-tag-alignment pushed (no PR, Ben's call)
 **Test:** cd apps/web && npx tsc --noEmit (repo has no vitest test files)
 
 ### Now
-[->] Next #158 ticket (one per session): #160 grants digest, #161 GHL tasks bridge, or #162 grants→Notion handoff. #159 DONE 2026-08-06 (spec docs/specs/community-records-spec.md, ADR 0004, CONTEXT.md glossary; Communities Supabase-native, never mint desk rows). Community↔Obligations/People wiring now unblocked (build session).
+[->] Ben reviews PR #164 (desk: /org/act/desk — check it doesn't feel empty without commitment rows) + PR #165 (/org/act/communities, /communities/barkly, /digest-preview) on Vercel previews. Then: people surface + act_people mirror (#154 — also brings desk person rows to life), #162 grilling, digest/bridge edge-function build (specs locked: grants-digest-spec.md + ghl-tasks-bridge-spec.md).
+#159/#160/#161 all RESOLVED+specced 2026-08-06. act_communities/act_community_links/act_obligations.community_id LIVE in prod, 3 communities minted (barkly, utopia, palm-island).
 
 ### Newsletter sprint state (2026-08-06 midday session — PARKED)
 - [x] GHL tag audit re-run (3,365 contacts): newsletter segments = comms:act-newsletter 140 / goods 128 / justicehub 34 / harvest 222 + strays
