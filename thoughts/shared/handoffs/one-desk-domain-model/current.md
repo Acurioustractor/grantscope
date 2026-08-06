@@ -2,15 +2,21 @@
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-08-06T19:55:00+10:00 (landing session)
-**Goal:** EVERYTHING LANDED. All 8 PRs merged via /land walkthrough with Ben: #164 #165 #166 #167 #168 #169 (artefact_url, built+applied this session) #99 (reaper) #170 (hotfix). Main == prod DB now. DIGEST IS ARMED: first 07:00 Brisbane run tomorrow (2026-08-07) emails Ben (RESEND_API_KEY in Vercel prod, verified) + creates ~8 [desk] GHL tasks.
-**Branch:** main == origin (9011049), clean
+**Updated:** 2026-08-07T00:35:00+10:00 (landing session closed)
+**Goal:** EVERYTHING LANDED — 9 PRs merged with Ben (#164–#171 + #99). Prod is on syd1 (was iad1 — the "very slow" root cause), sidebar clarity pass shipped (#171), login publishable-key outage fixed. DIGEST ARMED: first 07:00 Brisbane run TODAY 2026-08-07 emails Ben + creates ~8 [desk] GHL tasks.
+**Branch:** main == origin (5ae7a47), clean
 **Test:** cd apps/web && npx tsc --noEmit (repo has no vitest test files)
 
 ### Now
-[->] NEXT SESSION: watch first digest run lands OK (digest_log + Ben's inbox + GHL [desk] tasks), then #156 backfill prep + desk pane "Open draft in Notion ↗" (act-ask-artefacts service ready on main).
+[->] NEXT SESSION: verify first digest run landed (digest_log row + Ben's inbox + GHL [desk] tasks; route /api/cron/desk-digest, cron 21:00 UTC). Then: #156 backfill prep + desk pane "Open draft in Notion ↗" (act-ask-artefacts service ready on main, unused).
 
-### This Session (2026-08-06 landing)
+### This Session part 2 (2026-08-06 night — prod fixes after Ben's walkthrough)
+- [x] LOGIN OUTAGE: Supabase disabled legacy anon keys project-wide → civicgraph.app login dead. Fixed: NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (sb_publishable_…, via MCP get_publishable_keys) added to Vercel prod + redeploy. NOTE: vercel CLI must run from REPO ROOT (root .vercel is linked; apps/web/.vercel is not); redeploy needs --scope benjamin-knights-projects
+- [x] PERF ROOT CAUSE: functions in iad1, DB in ap-southeast-2 → ~12 queries × ~200ms RTT = multi-second pages. vercel.json regions:["syd1"] shipped in #171. Local same-region SSR was 0.85s warm. If a page is still slow, it's that page's query count
+- [x] SIDEBAR CLARITY (#171, Ben approved preview): SHOW ONLY micro-header on desk lenses, person lens People→Follow-ups (room 03 owns "People"), right-side room hints (What needs you / Look one up / Who we cultivate / New leads)
+- [x] Open question from flightboard, unresolved: CivicGraph project shows pipeline_count 0 next to Goods 22 — real or count bug? Not investigated
+
+### This Session part 1 (2026-08-06 landing)
 - [x] PR #169 artefact_url (#162): act_ask_artefacts table (APPLIED+verified), act-ask-artefacts.ts service, scripts/set-ask-artefact.mjs, make-the-ask skill step 6. Desk pane link = follow-up (service is ready, unused)
 - [x] LIVE BUG found by new /land migrations panel: act_communities + act_obligations had NO service_role grant (42501 permission denied in prod — We-owe/Communities service reads were broken). Ben applied grant via `!` (classifier blocks ALL GRANT statements, every tool)
 - [x] All PRs landed in order: #169+#99 (no-look) → #164 → #166 (rebased, shell-file overlap) → #165 → #168 → #170 hotfix → #167 (rebased, dup-migration conflicts resolved to main's copies)
@@ -20,8 +26,8 @@
 - [x] Prod verify: main CI green, deployment Ready; curl blocked by Vercel bot challenge (x-vercel-mitigated) — human click is the live check. Prod domain = civicgraph.app
 
 ### Ben's queue (day shift)
-- [ ] Click https://civicgraph.app/org/act/desk once (curl can't verify — bot challenge)
-- [ ] Tomorrow ~07:00 Brisbane: first digest email + ~8 [desk] GHL tasks appear. Optional env: DESK_DIGEST_TO/FROM, GHL_TRIAGE_CONTACT_ID
+- [x] Prod walkthrough done (login fixed, speed fixed, sidebar approved)
+- [ ] TODAY ~07:00 Brisbane: first digest email + ~8 [desk] GHL tasks appear. Optional env: DESK_DIGEST_TO/FROM, GHL_TRIAGE_CONTACT_ID
 - [ ] Terms for 11 live Wons → mint obligations on /goods/we-owe (community-tag at mint works now)
 - [ ] Newsletter leftovers: Harvest workflow check → final --apply for 10 harvest contacts · sending domain + 3 smart lists · push/PR call on feat/newsletter-tag-alignment
 - [ ] Reconcile agent (reconcile-act-people-ghl.mjs) daily home — candidate: same cron pass or pm2
