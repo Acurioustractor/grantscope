@@ -313,11 +313,12 @@ const GOODS_RAIL_SECTIONS: ReadonlyArray<{ label: string; items: ReadonlyArray<r
  * "Open full workspace" remains the full-screen jump. */
 const DESK_LENSES: ReadonlyArray<readonly [string | null, string]> = [
   [null, 'Everything'],
-  ['money', 'Money owed to us'],
-  ['commitment', 'Committed work'],
   ['funder', 'Funders'],
   ['grant', 'Grant rounds'],
   ['buyer', 'Buyers'],
+  ['money', 'Money owed to us'],
+  ['obligation', 'We owe'],
+  ['person', 'People'],
 ];
 
 function DeskRailTree({ slug, activeKind, project }: { slug: string; activeKind: string | null; project: string | null }) {

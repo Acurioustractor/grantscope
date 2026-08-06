@@ -4,7 +4,6 @@
 // filters, never places.
 import { getGoodsFunderScan } from '@/lib/services/goods-funder-scan';
 import { getActRelationshipLedger } from '@/lib/services/act-relationship-ledger';
-import { getOrgPipelineData } from '@/lib/services/org-pipeline-service';
 import { getOrgDailyActionStates, type ActDailyActionStatus } from '@/lib/services/act-daily-actions';
 import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
 import { getGoodsGrantsTriage } from '@/lib/services/goods-grants-triage';
@@ -12,8 +11,12 @@ import { getGoodsBuyerPipeline } from '@/lib/services/goods-buyer-pipeline';
 import { ghlContactUrl } from '@/lib/ghl-links';
 import { actOrgHref } from '@/lib/services/act-org-record';
 import { getGoodsCapitalWorkspace } from '@/lib/services/goods-capital-workspace';
+import { getDeskObligations } from '@/lib/services/act-obligations';
+import { getDeskPeople } from '@/lib/services/act-desk-people';
 
-export type DeskRecordKind = 'funder' | 'grant' | 'buyer' | 'money' | 'commitment';
+// Five row kinds (CONTEXT.md: One Desk; widened spec #153). The legacy
+// `commitment` kind is gone — committed work IS an Obligation (#150).
+export type DeskRecordKind = 'funder' | 'grant' | 'buyer' | 'money' | 'obligation' | 'person';
 
 const PROJECT_LABELS: Record<string, string> = {
   'ACT-GD': 'Goods', 'ACT-EL': 'Empathy Ledger', 'ACT-JH': 'JusticeHub',
@@ -44,6 +47,14 @@ export type DeskRecord = {
   workHref: string | null;
   /** True when this row is a decision due (pursue or pass), not yet an Ask. */
   isDecision?: boolean;
+  /** Obligation rows: who the work is owed to. */
+  owedTo?: 'funder' | 'community';
+  obligationId?: string;
+  /** Person rows: warm-via holder (null/absent when warmth is direct). */
+  via?: string;
+  personId?: string;
+  /** Person rows: mirror sync age for the stale badge (data-trust rule). */
+  lastSyncedAt?: string | null;
 };
 
 /** The primary Target the Asks serve (CONTEXT.md: Target). */
@@ -112,28 +123,52 @@ export async function getOneDesk(slug: string): Promise<OneDeskPool> {
 
 export async function getOneDeskPool(slug: string): Promise<DeskRecord[]> {
   const profile = await getOrgProfileBySlug(slug).catch(() => null);
-  const [scan, triage, buyers, ledger, pipeline] = await Promise.all([
+  const [scan, triage, buyers, ledger, obligations, people] = await Promise.all([
     getGoodsFunderScan().catch(() => null),
     getGoodsGrantsTriage({ scope: 'closing' }).catch(() => null),
     getGoodsBuyerPipeline().catch(() => null),
     profile ? getActRelationshipLedger(slug, profile.id).catch(() => null) : null,
-    getOrgPipelineData(slug).catch(() => null),
+    profile ? getDeskObligations(profile.id).catch(() => []) : [],
+    profile ? getDeskPeople(profile.id).catch(() => []) : [],
   ]);
   const pool: DeskRecord[] = [];
-  // Committed work: human-decided pipeline cards in live stages, any project.
-  for (const card of pipeline?.cards ?? []) {
-    if (card.is_historical) continue;
-    if (!['watching', 'pursuing', 'submitted'].includes(card.decision)) continue;
+  // Obligations (ADR 0003, #152): open + (overdue | due ≤ 30d | undated).
+  // Undated pin the top of the No-date group, newest-minted first — committed
+  // work with no date must never hide (score encodes the pin: 200 - idx keeps
+  // their urgency below every fit-ranked undated Signal's).
+  const undatedRank = obligations
+    .filter((o) => o.dueDays == null)
+    .sort((a, b) => b.mintedAt.localeCompare(a.mintedAt))
+    .map((o) => o.id);
+  for (const o of obligations) {
     pool.push({
-      id: `c-${card.opportunity_id}`, kind: 'commitment',
-      project: deskProjectLabel(card.project_code),
-      name: card.opportunity_name,
-      signal: card.decision,
-      next: card.decision === 'submitted' ? 'Set owner + next action for the follow-through' : 'Plan the next concrete move',
-      dueDays: days(card.deadline), score: card.fit_score ?? 0,
-      amount: card.max_grant_amount ? `$${Math.round(card.max_grant_amount / 1000)}K` : null,
-      ghlUrl: null,
-      workHref: `/org/${slug}?view=pipeline&commitment=${encodeURIComponent(card.opportunity_id)}#pipeline`,
+      id: `o-${o.id}`, kind: 'obligation', obligationId: o.id,
+      project: deskProjectLabel(o.projectCode),
+      name: o.title,
+      signal: o.sourceAskName ? `minted from ${o.sourceAskName}` : `owed to ${o.owedTo}`,
+      next: o.nextAction || 'Set the next action',
+      dueDays: o.dueDays,
+      score: o.dueDays == null ? 200 - undatedRank.indexOf(o.id) : 0,
+      amount: null, ghlUrl: null,
+      workHref: o.projectCode === 'ACT-GD' ? `/org/${slug}/goods/we-owe` : null,
+      owedTo: o.owedTo,
+    });
+  }
+  // People (ADR 0002 mirror): cultivated humans whose next action / watch is
+  // due within 7 days or past. Empty until the #154 mirror ships.
+  for (const p of people) {
+    pool.push({
+      id: `p-${p.id}`, kind: 'person', personId: p.id,
+      project: 'ACT',
+      name: p.name,
+      signal: p.warmth ?? 'cultivated',
+      next: p.nextAction,
+      dueDays: p.dueDays, score: 0,
+      amount: null,
+      ghlUrl: ghlContactUrl(p.ghlContactId),
+      workHref: `/org/${slug}/people`,
+      via: p.via ?? undefined,
+      lastSyncedAt: p.lastSyncedAt,
     });
   }
   // Money owed: outstanding invoices become chase records — the old Today
