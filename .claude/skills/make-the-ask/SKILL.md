@@ -68,6 +68,18 @@ become the other. Reference run: "Ask — Balnaves Foundation — 2026-08". The
 repo copy under `thoughts/shared/drafts/` is working scratch; Notion is where
 production lives once the draft survives grounding.
 
+**Final parking step — link the artefact to its Ask (wayfinder #162).** If the
+Ask is already a GHL card, record the Notion page URL against it so the desk
+can show "Open draft in Notion ↗":
+
+```bash
+node --env-file=.env scripts/set-ask-artefact.mjs <ghl_opportunity_id> <notion_page_url> --name "Ask — [Funder] — [YYYY-MM]"
+```
+
+Supabase-side annotation only (`act_ask_artefacts`), never a GHL field. If the
+Ask is still a Signal (no GHL card yet), skip this — run it once the card
+exists.
+
 ### 7. Set the next action (GHL)
 The Ask's state lives in GHL. If it's already a card: update next action to
 "review + submit EOI" with Ben as owner (Tier 2: one-line confirm first). If
