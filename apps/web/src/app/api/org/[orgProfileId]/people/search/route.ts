@@ -15,6 +15,25 @@ export async function GET(request: NextRequest, { params }: Params) {
   if (q.length < 2) return NextResponse.json({ results: [] });
   const like = `%${q.replace(/[%_]/g, '')}%`;
 
+  // ?type=ask — search the ghl_opportunities mirror for the "warms N Asks"
+  // link picker (act_ask_warmers). Open Asks only; ADR 0001 keeps the Ask in GHL.
+  if (request.nextUrl.searchParams.get('type') === 'ask') {
+    const { data } = await auth.serviceDb
+      .from('ghl_opportunities')
+      .select('ghl_id, name, pipeline_name, stage_name, status')
+      .ilike('name', like)
+      .eq('status', 'open')
+      .limit(10);
+    return NextResponse.json({
+      results: (data ?? []).map((o) => ({
+        source: 'ask' as const,
+        ghlOpportunityId: o.ghl_id as string,
+        name: o.name as string,
+        detail: [o.pipeline_name, o.stage_name].filter(Boolean).join(' · ') || null,
+      })),
+    });
+  }
+
   const [ghl, civic, minted] = await Promise.all([
     auth.serviceDb
       .from('ghl_contacts')

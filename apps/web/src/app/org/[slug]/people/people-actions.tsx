@@ -15,7 +15,18 @@ const ROLES = [
   { value: 'opens_into', label: 'opens into' },
 ] as const;
 
-const inputCls = 'w-full rounded-md border border-ql-border bg-ql-surface px-3 py-2 text-sm text-ql-ink placeholder:text-ql-muted focus:border-ql-accent focus:outline-none';
+// Mirror of PROJECT_CODE_OPTIONS + deskProjectLabel (server-side) — plain
+// words for the mint modal and detail-pane project picker.
+const PROJECTS: Array<{ code: string; label: string }> = [
+  { code: 'ACT-GD', label: 'Goods' },
+  { code: 'ACT-JH', label: 'JusticeHub' },
+  { code: 'ACT-HV', label: 'Harvest' },
+  { code: 'ACT-EL', label: 'Empathy Ledger' },
+  { code: 'ACT-PI', label: 'Palm Island' },
+  { code: 'ACT-MY', label: 'ACT' },
+];
+
+const inputCls ='w-full rounded-md border border-ql-border bg-ql-surface px-3 py-2 text-sm text-ql-ink placeholder:text-ql-muted focus:border-ql-accent focus:outline-none';
 const btnPrimary = 'rounded-md bg-ql-bar px-4 py-2 text-xs font-semibold text-ql-inverse transition-colors hover:bg-ql-ink disabled:opacity-50';
 const btnQuiet = 'rounded-md border border-ql-border bg-ql-surface px-4 py-2 text-xs font-semibold text-ql-ink transition-colors hover:bg-ql-surface2 disabled:opacity-50';
 
@@ -164,6 +175,159 @@ export function AddRoleInline({ orgProfileId, personId }: { orgProfileId: string
   );
 }
 
+function ProjectChips({ value, onToggle }: { value: string[]; onToggle: (code: string) => void }) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {PROJECTS.map((p) => (
+        <button
+          key={p.code}
+          type="button"
+          onClick={() => onToggle(p.code)}
+          className={`rounded-full border px-3 py-1 text-[11px] font-medium ${value.includes(p.code) ? 'border-ql-bar bg-ql-bar text-ql-inverse' : 'border-ql-border text-ql-text2 hover:border-ql-muted'}`}
+        >
+          {p.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Detail-pane project ties editor — set by humans, never derived. */
+export function ProjectsInline({ orgProfileId, personId, projectCodes }: {
+  orgProfileId: string;
+  personId: string;
+  projectCodes: string[];
+}) {
+  const { patch, busy, error } = usePatch(orgProfileId);
+  const [open, setOpen] = useState(false);
+  const [codes, setCodes] = useState(projectCodes);
+
+  useEffect(() => {
+    setOpen(false);
+    setCodes(projectCodes);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [personId]);
+
+  return (
+    <div className="mt-4">
+      <div className="font-ql-mono text-[9px] font-semibold uppercase tracking-[0.14em] text-ql-muted">Projects</div>
+      {open ? (
+        <div className="mt-1.5 space-y-2">
+          <ProjectChips value={codes} onToggle={(c) => setCodes((v) => (v.includes(c) ? v.filter((x) => x !== c) : [...v, c]))} />
+          <div className="flex gap-2">
+            <button type="button" className={btnPrimary} disabled={busy} onClick={async () => { if (await patch({ id: personId, project_codes: codes })) setOpen(false); }}>
+              {busy ? '…' : 'Save'}
+            </button>
+            <button type="button" className={btnQuiet} onClick={() => { setCodes(projectCodes); setOpen(false); }}>Cancel</button>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+          {projectCodes.map((c) => (
+            <span key={c} className="rounded-full border border-ql-border px-2.5 py-0.5 font-ql-mono text-[9px] uppercase tracking-[0.06em] text-ql-text2">
+              {PROJECTS.find((p) => p.code === c)?.label ?? c}
+            </span>
+          ))}
+          <button type="button" className="text-xs font-semibold text-ql-accent hover:underline" onClick={() => setOpen(true)}>
+            {projectCodes.length ? 'edit' : '+ add projects'}
+          </button>
+        </div>
+      )}
+      {error ? <p className="mt-1 text-xs font-semibold text-ql-alert">{error}</p> : null}
+    </div>
+  );
+}
+
+type AskSearchResult = { ghlOpportunityId: string; name: string; detail: string | null };
+
+/** "Warms N Asks" — human-minted Ask↔Person links (act_ask_warmers). */
+export function AskLinksInline({ orgProfileId, personId, askLinks }: {
+  orgProfileId: string;
+  personId: string;
+  askLinks: Array<{ ghlOpportunityId: string; askName: string | null }>;
+}) {
+  const { patch, busy, error } = usePatch(orgProfileId);
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState('');
+  const [results, setResults] = useState<AskSearchResult[]>([]);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    setOpen(false);
+    setQ('');
+    setResults([]);
+  }, [personId]);
+
+  function onSearch(v: string) {
+    setQ(v);
+    if (timer.current) clearTimeout(timer.current);
+    if (v.trim().length < 2) return setResults([]);
+    timer.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/org/${orgProfileId}/people/search?type=ask&q=${encodeURIComponent(v.trim())}`);
+        if (res.ok) setResults(((await res.json()) as { results: AskSearchResult[] }).results);
+      } catch { /* best-effort */ }
+    }, 250);
+  }
+
+  return (
+    <div className="mt-4">
+      <div className="font-ql-mono text-[9px] font-semibold uppercase tracking-[0.14em] text-ql-muted">
+        Warms {askLinks.length > 0 ? `${askLinks.length} ask${askLinks.length === 1 ? '' : 's'}` : ''}
+      </div>
+      {askLinks.length > 0 ? (
+        <ul className="mt-1.5 space-y-1 text-sm">
+          {askLinks.map((l) => (
+            <li key={l.ghlOpportunityId} className="flex items-center gap-2">
+              <span className="min-w-0 flex-1 truncate font-medium">{l.askName ?? l.ghlOpportunityId}</span>
+              <button type="button" className="text-xs text-ql-muted hover:text-ql-alert" disabled={busy} onClick={() => patch({ id: personId, unlink_ask: l.ghlOpportunityId })}>
+                ✕
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {open ? (
+        <div className="mt-2">
+          <input className={inputCls} value={q} onChange={(e) => onSearch(e.target.value)} placeholder="Search open Asks by name" autoFocus />
+          {results.length > 0 ? (
+            <div className="mt-1 max-h-36 overflow-y-auto rounded-md border border-ql-border">
+              {results
+                .filter((r) => !askLinks.some((l) => l.ghlOpportunityId === r.ghlOpportunityId))
+                .map((r) => (
+                  <button
+                    key={r.ghlOpportunityId}
+                    type="button"
+                    className="flex w-full items-center gap-2 border-t border-ql-border/60 px-3 py-1.5 text-left text-xs first:border-t-0 hover:bg-ql-surface2"
+                    disabled={busy}
+                    onClick={async () => {
+                      if (await patch({ id: personId, link_ask: { ghl_opportunity_id: r.ghlOpportunityId, ask_name: r.name } })) {
+                        setOpen(false);
+                        setQ('');
+                        setResults([]);
+                      }
+                    }}
+                  >
+                    <span className="min-w-0 flex-1 truncate">
+                      <span className="font-medium">{r.name}</span>
+                      {r.detail ? <span className="text-ql-text2"> · {r.detail}</span> : null}
+                    </span>
+                  </button>
+                ))}
+            </div>
+          ) : null}
+          <button type="button" className="mt-1.5 text-xs font-semibold text-ql-text2 hover:underline" onClick={() => setOpen(false)}>Cancel</button>
+        </div>
+      ) : (
+        <button type="button" className="mt-1.5 text-xs font-semibold text-ql-accent hover:underline" onClick={() => setOpen(true)}>
+          + link an Ask
+        </button>
+      )}
+      {error ? <p className="mt-1 text-xs font-semibold text-ql-alert">{error}</p> : null}
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Minting (spec §5): one modal for every entry point. Mandatory at mint:
 // warmth (+ via when indirect) AND a next action with a review-by date.
@@ -187,6 +351,7 @@ export function MintPersonButton({ orgProfileId, prefill, small }: {
   const [warmVia, setWarmVia] = useState('');
   const [roleType, setRoleType] = useState('');
   const [roleOrg, setRoleOrg] = useState('');
+  const [projects, setProjects] = useState<string[]>([]);
   const [nextAction, setNextAction] = useState('');
   const [reviewBy, setReviewBy] = useState(defaultReviewBy());
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -223,6 +388,7 @@ export function MintPersonButton({ orgProfileId, prefill, small }: {
           warm_via: warmVia.trim() || null,
           next_action: nextAction.trim(),
           review_by: reviewBy,
+          project_codes: projects,
           ...(roleType && roleOrg.trim() ? { role: { role_type: roleType, org_name: roleOrg.trim() } } : {}),
         }),
       });
@@ -288,6 +454,8 @@ export function MintPersonButton({ orgProfileId, prefill, small }: {
                 ))}
               </div>
               <input className={inputCls} value={warmVia} onChange={(e) => setWarmVia(e.target.value)} placeholder="Warm via (leave empty when direct)" />
+
+              <ProjectChips value={projects} onToggle={(c) => setProjects((v) => (v.includes(c) ? v.filter((x) => x !== c) : [...v, c]))} />
 
               <div className="flex gap-2">
                 <select className="rounded-md border border-ql-border bg-ql-surface px-2 py-2 text-xs" value={roleType} onChange={(e) => setRoleType(e.target.value)}>

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireOrgWriteAccess } from '../../_lib/auth';
-import { WARMTH_VALUES, ROLE_TYPES } from '@/lib/services/act-people';
+import { WARMTH_VALUES, ROLE_TYPES, PROJECT_CODE_OPTIONS } from '@/lib/services/act-people';
 import {
   createPersonContact,
   setWarmthTag,
@@ -17,6 +17,12 @@ function text(v: unknown, limit = 400): string | null {
 function isoDate(v: unknown): string | null {
   const s = text(v, 10);
   return s && /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null;
+}
+
+function projectCodes(v: unknown): string[] | null {
+  if (!Array.isArray(v)) return null;
+  const codes = v.filter((c): c is string => typeof c === 'string' && (PROJECT_CODE_OPTIONS as readonly string[]).includes(c));
+  return [...new Set(codes)];
 }
 
 // Mint a Person (spec §5, ADR 0002): create/claim the GHL contact, write
@@ -60,6 +66,7 @@ export async function POST(request: NextRequest, { params }: Params) {
         next_action: nextAction,
         review_by: reviewBy,
         ghl_task_id: ghlTaskId,
+        project_codes: projectCodes(body.project_codes) ?? [],
         minted_by: auth.userId,
         last_synced_at: new Date().toISOString(),
       })
@@ -135,6 +142,35 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     const removeRoleId = text(body.remove_role_id, 60);
     if (removeRoleId) {
       await auth.serviceDb.from('act_person_roles').delete().eq('id', removeRoleId).eq('person_id', id);
+    }
+
+    // Project ties — set by humans, never derived (Ben, 2026-08-06).
+    if ('project_codes' in body) {
+      const codes = projectCodes(body.project_codes);
+      if (!codes) return NextResponse.json({ error: 'project_codes must be an array of known ACT codes' }, { status: 400 });
+      patch.project_codes = codes;
+    }
+
+    // Ask↔Person warm-via links (act_ask_warmers) — human-minted, Supabase-owned.
+    const linkAsk = body.link_ask as Record<string, unknown> | undefined;
+    if (linkAsk) {
+      const oppId = text(linkAsk.ghl_opportunity_id, 120);
+      if (!oppId) return NextResponse.json({ error: 'link_ask needs ghl_opportunity_id' }, { status: 400 });
+      const { error } = await auth.serviceDb.from('act_ask_warmers').upsert(
+        {
+          ghl_opportunity_id: oppId,
+          person_id: id,
+          org_profile_id: orgProfileId,
+          ask_name: text(linkAsk.ask_name, 300),
+          created_by: auth.userId,
+        },
+        { onConflict: 'ghl_opportunity_id,person_id' }
+      );
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    const unlinkAsk = text(body.unlink_ask, 120);
+    if (unlinkAsk) {
+      await auth.serviceDb.from('act_ask_warmers').delete().eq('ghl_opportunity_id', unlinkAsk).eq('person_id', id);
     }
 
     // Warmth — GHL tag replace first.

@@ -24,6 +24,15 @@ export type PersonRole = {
   orgRef: string | null;
 };
 
+/** The ACT projects a Person can be tied to (set at mint, edited in the
+ * detail pane — never derived; Ben 2026-08-06). Labels via deskProjectLabel. */
+export const PROJECT_CODE_OPTIONS = ['ACT-GD', 'ACT-JH', 'ACT-HV', 'ACT-EL', 'ACT-PI', 'ACT-MY'] as const;
+
+export type AskLink = {
+  ghlOpportunityId: string;
+  askName: string | null;
+};
+
 export type ActPerson = {
   id: string;
   name: string;
@@ -41,6 +50,9 @@ export type ActPerson = {
   ghlContactId: string;
   ghlUrl: string | null;
   roles: PersonRole[];
+  projectCodes: string[];
+  /** Live Asks this Person warms (act_ask_warmers, human-minted links). */
+  askLinks: AskLink[];
 };
 
 const WARMTH_RANK: Record<string, number> = { hot: 0, warm: 1, steady: 2, cooling: 3, cold: 4 };
@@ -57,7 +69,7 @@ export async function getActPeople(orgProfileId: string): Promise<ActPerson[]> {
   const { data, error } = await db
     .from('act_people')
     .select(
-      'id, name, warmth, warm_via, owner, next_action, review_by, last_touch_at, last_synced_at, ghl_contact_id, act_person_roles(id, role_type, org_name, org_ref)'
+      'id, name, warmth, warm_via, owner, next_action, review_by, last_touch_at, last_synced_at, ghl_contact_id, project_codes, act_person_roles(id, role_type, org_name, org_ref), act_ask_warmers(ghl_opportunity_id, ask_name)'
     )
     .eq('org_profile_id', orgProfileId);
   if (error) return []; // mirror not migrated yet — surface renders empty, honestly
@@ -84,6 +96,11 @@ export async function getActPeople(orgProfileId: string): Promise<ActPerson[]> {
         roleType: role.role_type as RoleType,
         orgName: role.org_name as string,
         orgRef: (role.org_ref as string) ?? null,
+      })),
+      projectCodes: ((r.project_codes as string[]) ?? []).filter(Boolean),
+      askLinks: ((r.act_ask_warmers as unknown as Array<Record<string, unknown>>) ?? []).map((l) => ({
+        ghlOpportunityId: l.ghl_opportunity_id as string,
+        askName: (l.ask_name as string) ?? null,
       })),
     } satisfies ActPerson;
   });

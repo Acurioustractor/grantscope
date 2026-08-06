@@ -17,7 +17,8 @@ import {
   type RoleType,
   type Warmth,
 } from '@/lib/services/act-people';
-import { PersonNextMove, AddRoleInline, MintPersonButton } from './people-actions';
+import { deskProjectLabel } from '@/lib/services/act-one-desk';
+import { PersonNextMove, AddRoleInline, MintPersonButton, ProjectsInline, AskLinksInline } from './people-actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,6 +62,7 @@ export default async function PeoplePage({ params, searchParams }: {
 
   const sp = await searchParams;
   const warmthFilter = WARMTH_VALUES.find((w) => w === sp.warmth) ?? null;
+  const projectFilter = typeof sp.project === 'string' ? sp.project : null;
   const roleFilter = ROLE_TYPES.find((r) => r === sp.role) ?? null;
   const dueOnly = sp.due === '1';
 
@@ -72,6 +74,7 @@ export default async function PeoplePage({ params, searchParams }: {
   const pool = all.filter(
     (p) =>
       (!warmthFilter || p.warmth === warmthFilter) &&
+      (!projectFilter || p.projectCodes.includes(projectFilter)) &&
       (!roleFilter || p.roles.some((r) => r.roleType === roleFilter)) &&
       (!dueOnly || p.dueDays != null)
   );
@@ -88,7 +91,7 @@ export default async function PeoplePage({ params, searchParams }: {
   const qs = (extra: Record<string, string | null>) => {
     const merged: Record<string, string> = {};
     for (const [k, v] of Object.entries({
-      warmth: warmthFilter, role: roleFilter, due: dueOnly ? '1' : null, ...extra,
+      warmth: warmthFilter, role: roleFilter, project: projectFilter, due: dueOnly ? '1' : null, ...extra,
     })) {
       if (v) merged[k] = v;
     }
@@ -142,6 +145,12 @@ export default async function PeoplePage({ params, searchParams }: {
             </Link>
           ))}
           <span className="mx-1 text-ql-border">·</span>
+          {[...new Set(all.flatMap((p) => p.projectCodes))].sort().map((c) => (
+            <Link key={c} href={qs({ project: projectFilter === c ? null : c, rec: null })} className={chip(projectFilter === c)}>
+              {deskProjectLabel(c)}
+            </Link>
+          ))}
+          <span className="mx-1 text-ql-border">·</span>
           <Link href={qs({ due: dueOnly ? null : '1', rec: null })} className={chip(dueOnly)}>
             due only
           </Link>
@@ -166,9 +175,9 @@ export default async function PeoplePage({ params, searchParams }: {
                         <span className="font-semibold">{p.name}</span>
                         {p.nextAction ? <span className="text-ql-text2"> · {p.nextAction}</span> : null}
                       </span>
-                      {p.roles.slice(0, 2).map((r) => (
-                        <span key={r.id} className="hidden rounded-full border border-ql-border px-2 py-0.5 font-ql-mono text-[8.5px] uppercase tracking-[0.06em] text-ql-text2 xl:inline">
-                          {r.orgName}
+                      {p.projectCodes.slice(0, 2).map((c) => (
+                        <span key={c} className="hidden rounded-full border border-ql-border px-2 py-0.5 font-ql-mono text-[8.5px] uppercase tracking-[0.06em] text-ql-text2 xl:inline">
+                          {deskProjectLabel(c)}
                         </span>
                       ))}
                       {p.warmVia ? <span className="hidden text-xs italic text-ql-text2 md:inline">via {p.warmVia}</span> : null}
@@ -248,6 +257,9 @@ export default async function PeoplePage({ params, searchParams }: {
                   ) : null}
                   <AddRoleInline orgProfileId={orgProfileId} personId={selected.id} />
                 </div>
+
+                <ProjectsInline orgProfileId={orgProfileId} personId={selected.id} projectCodes={selected.projectCodes} />
+                <AskLinksInline orgProfileId={orgProfileId} personId={selected.id} askLinks={selected.askLinks} />
 
                 <PersonNextMove
                   orgProfileId={orgProfileId}
