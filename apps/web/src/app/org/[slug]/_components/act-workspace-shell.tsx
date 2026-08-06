@@ -21,6 +21,8 @@ type WorkspaceLink = {
   label: string;
   href: string;
   active: boolean;
+  /** Quiet right-aligned answer to "what's in this room?" (same pattern as the Atlas row). */
+  hint?: string;
 };
 
 function flattenProjects(projects: OrgProjectSummary[]): OrgProjectSummary[] {
@@ -81,13 +83,13 @@ export function ActWorkspaceShell({
   const workModes: WorkspaceLink[] = [
     // The one-system front door: every workable record, one ranked queue.
     // "Today" retired 2026-08-05 — One Desk IS today (CONTEXT.md).
-    { label: 'One Desk', href: `/org/${slug}/desk`, active: pathname.startsWith(`/org/${slug}/desk`) || (onOrgRoot && view === 'today') },
+    { label: 'One Desk', hint: 'What needs you', href: `/org/${slug}/desk`, active: pathname.startsWith(`/org/${slug}/desk`) || (onOrgRoot && view === 'today') },
     // Listen folded into Orgs 2026-08-05 — the Org record + one list.
     // Legacy lens stays reachable at ?view=relationships (not on the rail).
-    { label: 'Orgs', href: `/org/${slug}/orgs`, active: pathname.startsWith(`/org/${slug}/orgs`) },
+    { label: 'Orgs', hint: 'Look one up', href: `/org/${slug}/orgs`, active: pathname.startsWith(`/org/${slug}/orgs`) },
     // The one cross-project noun (ADR 0002): cultivated humans, org-wide.
-    { label: 'People', href: `/org/${slug}/people`, active: pathname.startsWith(`/org/${slug}/people`) },
-    { label: 'Curiosity', href: rootHref(slug, 'opportunities', 'opportunities'), active: onOrgRoot && (view === 'opportunities' || view === 'triage') },
+    { label: 'People', hint: 'Who we cultivate', href: `/org/${slug}/people`, active: pathname.startsWith(`/org/${slug}/people`) },
+    { label: 'Curiosity', hint: 'New leads', href: rootHref(slug, 'opportunities', 'opportunities'), active: onOrgRoot && (view === 'opportunities' || view === 'triage') },
     // Rail cut to the spine (Ben, 2026-08-05): Action, Art, Money, Sources,
     // Research and Funding all left the rail. Art = the Harvest project, which
     // the project list already carries; the rest stay reachable by URL
@@ -284,12 +286,12 @@ function MatterDecisionRail({
   );
 }
 
-function WorkspaceModeLink({ href, label, active, index }: WorkspaceLink & { index: number }) {
+function WorkspaceModeLink({ href, label, active, index, hint }: WorkspaceLink & { index: number }) {
   return (
     <Link
       href={href}
       aria-current={active ? 'page' : undefined}
-      className={`grid min-h-10 grid-cols-[26px_minmax(0,1fr)] items-center gap-2 rounded-md px-3 py-2 transition-colors [@media(max-height:680px)]:min-h-9 ${
+      className={`grid min-h-10 grid-cols-[26px_minmax(0,1fr)_auto] items-center gap-2 rounded-md px-3 py-2 transition-colors [@media(max-height:680px)]:min-h-9 ${
         active ? 'bg-white/10 text-white' : 'text-[#c7d1ca] hover:bg-white/5 hover:text-white'
       }`}
     >
@@ -297,6 +299,7 @@ function WorkspaceModeLink({ href, label, active, index }: WorkspaceLink & { ind
         {String(index).padStart(2, '0')}
       </span>
       <span className="truncate text-sm font-semibold">{label}</span>
+      {hint ? <span className="min-w-0 truncate text-right font-mono text-[8px] text-[#9fb0a4]">{hint}</span> : null}
     </Link>
   );
 }
@@ -320,7 +323,9 @@ const DESK_LENSES: ReadonlyArray<readonly [string | null, string]> = [
   ['buyer', 'Buyers'],
   ['money', 'Money owed to us'],
   ['obligation', 'We owe'],
-  ['person', 'People'],
+  // NOT "People" — room 03 owns that word. This lens shows Person rows whose
+  // next touch is due; "Follow-ups" says what you do with them.
+  ['person', 'Follow-ups'],
 ];
 
 function DeskRailTree({ slug, activeKind, project }: { slug: string; activeKind: string | null; project: string | null }) {
@@ -331,6 +336,7 @@ function DeskRailTree({ slug, activeKind, project }: { slug: string; activeKind:
   };
   return (
     <div className="ml-3 border-l border-white/15 pb-1 pl-2">
+      <div className="mt-0.5 px-1.5 font-mono text-[8px] font-semibold uppercase tracking-widest text-[#8fa196]">Show only</div>
       {DESK_LENSES.map(([kind, label]) => (
         <Link
           key={kind ?? 'all'}
