@@ -2,13 +2,29 @@
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-08-06T21:30:00+10:00
-**Goal:** Map #158 build phase DONE. 5 PRs open for Ben's review: #164 (widened desk) #165 (communities+digest preview) #166 (People surface #154) #167 (digest+bridge #160/#161) #168 (community↔obligation tagging #159). Prod DB is AHEAD of main: act_people/act_person_roles/act_ask_warmers/digest_log/ghl_task_bridge tables + service_role grants APPLIED 2026-08-06 evening (plus earlier act_communities). Merging the PRs is what makes the UI catch up.
-**Branch:** main == origin (ae08505); PR branches feat/people-surface, feat/digest-bridge, feat/community-obligation-tagging, feat/desk-widening, feat/engagement-screens all pushed
+**Updated:** 2026-08-06T19:55:00+10:00 (landing session)
+**Goal:** EVERYTHING LANDED. All 8 PRs merged via /land walkthrough with Ben: #164 #165 #166 #167 #168 #169 (artefact_url, built+applied this session) #99 (reaper) #170 (hotfix). Main == prod DB now. DIGEST IS ARMED: first 07:00 Brisbane run tomorrow (2026-08-07) emails Ben (RESEND_API_KEY in Vercel prod, verified) + creates ~8 [desk] GHL tasks.
+**Branch:** main == origin (9011049), clean
 **Test:** cd apps/web && npx tsc --noEmit (repo has no vitest test files)
 
 ### Now
-[->] NEXT SESSION: artefact_url wiring on /make-the-ask (small), then #156 backfill prep — OR whatever Ben's PR reviews surface. All other build items are gated on Ben (below).
+[->] NEXT SESSION: watch first digest run lands OK (digest_log + Ben's inbox + GHL [desk] tasks), then #156 backfill prep + desk pane "Open draft in Notion ↗" (act-ask-artefacts service ready on main).
+
+### This Session (2026-08-06 landing)
+- [x] PR #169 artefact_url (#162): act_ask_artefacts table (APPLIED+verified), act-ask-artefacts.ts service, scripts/set-ask-artefact.mjs, make-the-ask skill step 6. Desk pane link = follow-up (service is ready, unused)
+- [x] LIVE BUG found by new /land migrations panel: act_communities + act_obligations had NO service_role grant (42501 permission denied in prod — We-owe/Communities service reads were broken). Ben applied grant via `!` (classifier blocks ALL GRANT statements, every tool)
+- [x] All PRs landed in order: #169+#99 (no-look) → #164 → #166 (rebased, shell-file overlap) → #165 → #168 → #170 hotfix → #167 (rebased, dup-migration conflicts resolved to main's copies)
+- [x] CROSS-PR BREAKAGE + FIX #170: #168 added communityId/Name/Slug to Obligation type; #165's act-communities.ts (branched earlier) built Obligation without them → main tsc RED after both merged (each was green pre-merge). /land now needs eyes on main CI after multi-PR sittings
+- [x] RESEND_API_KEY: Ben pasted into .env (as RESEND= — renamed), pushed to Vercel prod via vercel env add, verified with env ls
+- [x] /land skill gained migrations panel (applied-to-prod? + service_role grant check)
+- [x] Prod verify: main CI green, deployment Ready; curl blocked by Vercel bot challenge (x-vercel-mitigated) — human click is the live check. Prod domain = civicgraph.app
+
+### Ben's queue (day shift)
+- [ ] Click https://civicgraph.app/org/act/desk once (curl can't verify — bot challenge)
+- [ ] Tomorrow ~07:00 Brisbane: first digest email + ~8 [desk] GHL tasks appear. Optional env: DESK_DIGEST_TO/FROM, GHL_TRIAGE_CONTACT_ID
+- [ ] Terms for 11 live Wons → mint obligations on /goods/we-owe (community-tag at mint works now)
+- [ ] Newsletter leftovers: Harvest workflow check → final --apply for 10 harvest contacts · sending domain + 3 smart lists · push/PR call on feat/newsletter-tag-alignment
+- [ ] Reconcile agent (reconcile-act-people-ghl.mjs) daily home — candidate: same cron pass or pm2
 
 ### This Session (2026-08-06 evening)
 - [x] PR #166 People surface (#154): act_people mirror + act_person_roles (APPLIED to prod), GHL write path (warmth=goods-* tag replace, next action=contact task w/ ghl_task_id on mirror, warm_via mirror-authoritative + echoed in task body), /org/act/people Quiet Ledger split, mint modal (GHL claim vs CivicGraph create search), contacts→people redirect (ACT only), reconcile agent scripts/reconcile-act-people-ghl.mjs (GHL wins silently, --dry-run)
