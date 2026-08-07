@@ -26,12 +26,19 @@ function FactorBar({ candidate }: { candidate: ApplyNowCandidate }) {
   );
 }
 
-function CandidateCard({ candidate }: { candidate: ApplyNowCandidate }) {
+function CandidateCard({ candidate, showBestAvailable }: { candidate: ApplyNowCandidate; showBestAvailable?: boolean }) {
   return (
     <article className="rounded-xl border border-[#dbe4df] bg-white p-5 shadow-sm">
       <div className="flex flex-wrap items-center gap-2">
         {candidate.isStrongFit ? (
           <span className="rounded-full bg-[#dcfce7] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-[#166534]">Strong fit</span>
+        ) : null}
+        {/* Relative, and labelled as such. "Strong fit" is an absolute claim about
+            the round; this only says it is the best this project has. */}
+        {showBestAvailable && !candidate.isStrongFit && (candidate.projectRank ?? 99) <= 3 ? (
+          <span className="rounded-full bg-[#f1f5f9] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-[#475569]">
+            Best available · #{candidate.projectRank}
+          </span>
         ) : null}
         {candidate.wonFunder ? (
           <span className="rounded-full bg-[#eff6ff] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-[#2563eb]">We have won from this funder</span>
@@ -122,10 +129,20 @@ export default async function FundingProfilePage({ params }: { params: Promise<{
                 Dated rounds for this project, soonest first.
                 {applyNow ? ` ${applyNow.totalConsidered} verified opportunities considered.` : ''}
               </p>
+              {/* An absence of highlights reads as "we found nothing", which is not
+                  what it means. Say what it does mean. */}
+              {applyNow?.noStrongFits ? (
+                <p className="mt-3 max-w-3xl rounded-lg bg-[#f1f5f9] p-3 text-xs leading-5 text-[#475569]">
+                  Nothing here clears the portfolio-wide strong-fit bar, so these are ranked
+                  best-available for this project rather than flagged as strong. The rounds are real
+                  and current; they score lower on theme, geography or eligibility than rounds the
+                  bar was set for. Worth reading, worth a judgement call, not worth assuming.
+                </p>
+              ) : null}
             </div>
           </div>
           <div className="mt-4 grid gap-3">
-            {applyNow?.dated.map((candidate) => <CandidateCard key={candidate.opportunityId} candidate={candidate} />)}
+            {applyNow?.dated.map((candidate) => <CandidateCard key={candidate.opportunityId} candidate={candidate} showBestAvailable={applyNow.noStrongFits} />)}
             {!applyNow?.dated.length ? (
               <p className="rounded-lg bg-[#f8fafc] p-4 text-sm text-[#64748b]">
                 No dated round is currently open for this project. Rolling programs below have no deadline and can be approached any time.
@@ -138,7 +155,7 @@ export default async function FundingProfilePage({ params }: { params: Promise<{
           <h2 className="text-xl font-black">Always open</h2>
           <p className="mt-1 text-sm text-[#64748b]">Rolling programs with no published deadline, ranked by fit rather than urgency.</p>
           <div className="mt-4 grid gap-3">
-            {applyNow?.rolling.map((candidate) => <CandidateCard key={candidate.opportunityId} candidate={candidate} />)}
+            {applyNow?.rolling.map((candidate) => <CandidateCard key={candidate.opportunityId} candidate={candidate} showBestAvailable={applyNow.noStrongFits} />)}
             {!applyNow?.rolling.length ? (
               <p className="rounded-lg bg-[#f8fafc] p-4 text-sm text-[#64748b]">No rolling programs matched this project yet.</p>
             ) : null}

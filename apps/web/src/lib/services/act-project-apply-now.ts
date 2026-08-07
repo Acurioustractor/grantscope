@@ -28,7 +28,10 @@ export interface ApplyNowCandidate {
   minAmount: number | null;
   maxAmount: number | null;
   fitScore: number | null;
+  /** Absolute claim: this round is a good match on its merits. */
   isStrongFit: boolean;
+  /** Relative position within this project's own list. Never a quality claim. */
+  projectRank: number | null;
   /** The five factors behind the score, so the number is inspectable. */
   factors: { label: string; score: number | null }[];
   sourceUrl: string | null;
@@ -45,6 +48,14 @@ export interface ProjectApplyNow {
   dated: ApplyNowCandidate[];
   rolling: ApplyNowCandidate[];
   totalConsidered: number;
+  /**
+   * True when nothing in this project's list clears the portfolio-wide strong-fit
+   * bar. The list is still real — Contained's Touring and Travel Fund and Visit
+   * Victoria Regional Events ($500K) score 40 against a bar of 55 — so the page
+   * says "best available for this project" rather than showing an unexplained
+   * absence of highlights.
+   */
+  noStrongFits: boolean;
 }
 
 const PER_LANE_LIMIT = 10;
@@ -68,6 +79,7 @@ function toCandidate(r: Record<string, unknown>): ApplyNowCandidate {
     maxAmount: (r.max_grant_amount as number | null) ?? null,
     fitScore: (r.fit_score as number | null) ?? null,
     isStrongFit: Boolean(r.is_strong_fit),
+    projectRank: (r.project_rank as number | null) ?? null,
     factors: [
       { label: 'Theme', score: (r.theme_score as number | null) ?? null },
       { label: 'Geography', score: (r.geography_score as number | null) ?? null },
@@ -111,6 +123,7 @@ export async function getProjectApplyNow(projectSlug: string): Promise<ProjectAp
       dated: [],
       rolling: [],
       totalConsidered: 0,
+      noStrongFits: true,
     };
   }
 
@@ -146,5 +159,6 @@ export async function getProjectApplyNow(projectSlug: string): Promise<ProjectAp
       .sort((a, b) => (b.fitScore ?? 0) - (a.fitScore ?? 0))
       .slice(0, PER_LANE_LIMIT),
     totalConsidered: unique.length,
+    noStrongFits: unique.length > 0 && !unique.some((c) => c.isStrongFit),
   };
 }
