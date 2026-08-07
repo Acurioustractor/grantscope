@@ -288,3 +288,52 @@ which is a billing action, not a code one.
 **The one open action: the Anthropic API key is out of credit.** No new opportunity can
 reach `open_grant` until it is topped up, so 344 is a ceiling rather than a floor.
 5,436 rows are backlogged; roughly $0.55 of Haiku clears them.
+
+---
+
+## Final state (2026-08-07, end of session)
+
+The classifier backlog is cleared and the feed is rebuilt.
+
+| | morning | now |
+|---|---|---|
+| Opportunities the ACT engine can see | 18 | **1,535** |
+| Feed status | 34 apply_now · 662 quarantined | **387 apply_now · 1,572 rolling** · 633 quarantined |
+| Unclassified backlog | 5,436 (dead classifier) | **23** |
+| Strong fits, portfolio-wide | 7 | **63** |
+| Projects with a working funding page | 0 | 11 |
+
+2,662 rows classified in 66 minutes on Gemini 2.5 Flash's free tier at no cost —
+1,193 open_grant, 830 award, 373 invitation_only, 165 policy_framework,
+80 partnership, 21 placeholder. 23 errors, 25 held below the confidence threshold.
+
+Strong fits fell from 185 to 63 on purpose. The old flag fired at `fit_score >= 55`,
+which did not discriminate — a $1,000 computer grant and a $1M Paul Ramsay round
+scored identically. The bar now also requires a geography signal, a grant of
+$50,000 or more, or a funder ACT has won from before.
+
+PICC's list is the test case worth reading: Building Early Education Fund's ACCO
+grant opportunity ($3M), Paul Ramsay First Nations Targeted Round ($500K), Just
+Futures ($1M, fit 78), Yadha Muru City-Country Partnerships ($6.7M). Those are
+the right rounds for a Palm Island Aboriginal community organisation.
+
+### Two defects remain, both visible in that list
+
+**Near-duplicate programs survive dedup.** Paul Ramsay's Just Futures appears
+three times under three names — "Just Futures", "Just Futures (New Open Grant
+Round to Help Prevent Contact with the Justice System)", "Just Futures: National
+Open Grant Round". Dedup keys on exact (name, funder); these need fuzzy matching
+on the funder plus a name stem.
+
+**Geography still leaks.** Victorian and NSW-only programs reach PICC, a
+Queensland organisation — the Aboriginal Justice Agreement Bail and Remand
+program, Environmental Restoration NSW, Geelong Community Foundation. The
+`geography_score` exists but only adds points; it never excludes.
+
+### Open, unchanged
+
+- Four projects still have zero strong fits: Gold.Phone, CivicGraph, Contained,
+  ACT Core. Their theme keywords are thin, which is a content problem, not a
+  pipeline one.
+- `project_funding_profiles.next_question` remains unwired.
+- `/org/act/funding` still has no inbound links.
