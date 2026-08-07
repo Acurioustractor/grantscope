@@ -41,10 +41,31 @@ export interface ApplyNowCandidate {
   flags: string[];
 }
 
+/** How the project is actually funded. Anything but 'grants' means an empty
+ *  grant list is the expected result, not a discovery failure. */
+export type FundingRoute = 'grants' | 'buyers' | 'overhead' | 'earned' | 'mixed';
+
+export const FUNDING_ROUTE_NOTE: Record<Exclude<FundingRoute, 'grants' | 'mixed'>, string> = {
+  buyers:
+    'This project is funded by buyers, not grant rounds — free open registry for everyone, paid evidence and tender tools for buyers. Two candidate grants exist in the whole corpus, so an empty list here is the strategy working, not a gap.',
+  overhead:
+    'This is studio overhead — governance, operating model, cross-cutting infrastructure. Grants rarely fund overhead, and only 20 capacity-building or core-cost rounds exist across the corpus. Expect this list to stay short.',
+  earned:
+    'This project is funded by earned revenue rather than grant rounds. Anything below is opportunistic, not the plan.',
+};
+
 export interface ProjectApplyNow {
   projectSlug: string;
   projectCode: string | null;
   projectLabel: string | null;
+  /** Recorded route; null when the project has no registry row yet. */
+  fundingRoute: FundingRoute | null;
+  /**
+   * The question blocking a confident ranking, written by whoever knows the
+   * project. Surfaced instead of guessing past it — the recommender saying
+   * "I cannot rank these until you answer X" beats a fabricated score.
+   */
+  nextQuestion: string | null;
   dated: ApplyNowCandidate[];
   rolling: ApplyNowCandidate[];
   totalConsidered: number;
@@ -108,18 +129,24 @@ export async function getProjectApplyNow(projectSlug: string): Promise<ProjectAp
 
   const { data: registry } = await db
     .from('act_grant_recommendation_projects')
-    .select('project_code, project_label')
+    .select('project_code, project_label, primary_funding_route, next_question')
     .eq('org_project_id', (project as { id: string }).id)
     .maybeSingle();
+  const reg = registry as {
+    project_code?: string; project_label?: string;
+    primary_funding_route?: FundingRoute; next_question?: string;
+  } | null;
 
   // A project with no registry row simply has no recommendations yet — an empty
   // page is the honest answer, not a 404.
-  const projectCode = (registry as { project_code?: string } | null)?.project_code ?? null;
+  const projectCode = reg?.project_code ?? null;
   if (!projectCode) {
     return {
       projectSlug,
       projectCode: null,
       projectLabel: null,
+      fundingRoute: null,
+      nextQuestion: null,
       dated: [],
       rolling: [],
       totalConsidered: 0,
@@ -147,7 +174,9 @@ export async function getProjectApplyNow(projectSlug: string): Promise<ProjectAp
   return {
     projectSlug,
     projectCode,
-    projectLabel: (registry as { project_label?: string } | null)?.project_label ?? null,
+    projectLabel: reg?.project_label ?? null,
+    fundingRoute: reg?.primary_funding_route ?? null,
+    nextQuestion: reg?.next_question ?? null,
     // Dated rounds rank by urgency — a closing deadline is the actionable signal.
     dated: unique
       .filter((c) => c.feedStatus === 'apply_now')

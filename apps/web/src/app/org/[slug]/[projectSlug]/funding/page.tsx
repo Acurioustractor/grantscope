@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getProjectFundingPortfolio } from '@/lib/services/project-funding-service';
-import { getProjectApplyNow, type ApplyNowCandidate } from '@/lib/services/act-project-apply-now';
+import { getProjectApplyNow, FUNDING_ROUTE_NOTE, type ApplyNowCandidate } from '@/lib/services/act-project-apply-now';
 
 export const dynamic = 'force-dynamic';
 
@@ -113,6 +113,35 @@ export default async function FundingProfilePage({ params }: { params: Promise<{
           </div>
           <dl className="mt-7 grid gap-3 sm:grid-cols-3"><div className="rounded-xl bg-[#f1f8f5] p-4"><dt className="text-xs text-[#64748b]">Applicant entities</dt><dd className="mt-1 text-2xl font-black">{profile.entities}</dd></div><div className="rounded-xl bg-[#eff6ff] p-4"><dt className="text-xs text-[#64748b]">Funding blocks</dt><dd className="mt-1 text-2xl font-black">{profile.fundingBlocks}</dd></div><div className="rounded-xl bg-[#f8fafc] p-4"><dt className="text-xs text-[#64748b]">Geographies</dt><dd className="mt-1 text-2xl font-black">{profile.geographies.length}</dd></div></dl>
         </div>
+
+        {/* Route first. Where grants are not the plan, an empty list below is the
+            expected result — saying so stops it reading as a discovery failure and
+            stops anyone "fixing" it by loosening the matcher. */}
+        {applyNow?.fundingRoute && applyNow.fundingRoute !== 'grants' && applyNow.fundingRoute !== 'mixed' ? (
+          <section className="mt-6 rounded-2xl border border-[#cbd5e1] bg-[#f8fafc] p-6">
+            <p className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-[#475569]">
+              How this project is funded · {applyNow.fundingRoute}
+            </p>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-[#334155]">
+              {FUNDING_ROUTE_NOTE[applyNow.fundingRoute as keyof typeof FUNDING_ROUTE_NOTE]}
+            </p>
+          </section>
+        ) : null}
+
+        {/* The recommender's own open question. Better it asks than guesses — a
+            fabricated ranking is what made the last queue untrustworthy. */}
+        {applyNow?.nextQuestion ? (
+          <section className="mt-6 rounded-2xl border border-[#b8d2c5] bg-[#183426] p-6 text-white">
+            <p className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-[#b7e4cc]">
+              Blocking a confident ranking
+            </p>
+            <p className="mt-2 max-w-3xl text-base leading-7">{applyNow.nextQuestion}</p>
+            <p className="mt-3 text-xs leading-5 text-[#dbe9e1]">
+              Until this is answered the ranking below is a best guess on partial information.
+              Answer it in the project registry and the next run will rank on it.
+            </p>
+          </section>
+        ) : null}
 
         <section className="mt-6 rounded-2xl border border-[#dbe4df] bg-white p-6 shadow-sm">
           <h2 className="text-xl font-black">What must be resolved</h2>
