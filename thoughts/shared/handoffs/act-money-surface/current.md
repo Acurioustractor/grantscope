@@ -9,13 +9,13 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-08-07T22:53:28Z
+**Updated:** 2026-08-08T00:05:00Z
 **Goal:** Make grants and philanthropy findable and actionable across ALL ACT projects, not just Goods. Done when every active project has a working funding page ranked on evidence rather than invented numbers.
-**Branch:** fix/act-grant-feed-status-filter
+**Branch:** feat/funding-rail-slot (PR #172 merged to main as 17acf23)
 **Test:** `cd apps/web && npx tsc --noEmit && npx vitest run`
 
 ### Now
-[->] Nothing in flight. PR #172 is green and awaiting Ben's merge decision (Tier 3 — needs explicit verb).
+[->] PR #173 (funding rail slot) is green and awaiting Ben's merge decision (Tier 3 — needs explicit verb). PR #172 is MERGED.
 
 ### This Session
 - [x] Audit written: `docs/strategy/act-money-surface-audit-2026-08-07.md` (audits Phase 1 plan, 3 Aug)
@@ -34,12 +34,16 @@ status: active
 - [x] `project_rank` / "Best available" for projects with nothing clearing the absolute bar
 - [x] `primary_funding_route` + `next_question` surfaced per project
 - [x] PR #172 opened, body + title rewritten to match all 15 commits, CI green
+- [x] **PR #172 MERGED** to main as 17acf23 (Ben, 2026-08-08)
+- [x] All four open judgement calls answered by Ben and recorded in the audit
+- [x] `/org/act/funding` given rail room 05 — "Funding · Money worth chasing"
+- [x] Found + fixed two vacuous E2E rail guards (anchored/exact matchers can never match a numbered room)
+- [x] PR #173 opened for the rail slot, CI green
 
 ### Next
-- [ ] Ben's merge decision on PR #172 (Tier 3 — do NOT merge without an explicit verb)
-- [ ] `/org/act/funding` has zero inbound links — needs a rail slot or deletion (Ben's taste call)
-- [ ] ALMA, Elders Room, Station Precinct have no registry row — sub-projects; do they fundraise independently?
+- [ ] Ben's merge decision on PR #173 (Tier 3 — do NOT merge without an explicit verb)
 - [ ] Optional: schedule the classifier now that it no longer depends on one provider
+- [ ] Content problem, not pipeline: Gold.Phone, CivicGraph, Contained and ACT Core have thin theme keywords, which is why they clear zero strong fits
 
 ### Decisions
 - **Grade evidence, don't gate on money.** Only 6 of 5,190 themed grantmakers have a real giving figure, so gating on verified money would empty the queue. A = recorded grants on file, B = DGR or verified giving, C = theme overlap only (never written to the pipeline).
@@ -50,8 +54,11 @@ status: active
 - **Multi-provider by default.** A single-provider dependency is what killed the classifier for three months. Chain: groq → gemini → ollama → deepseek → anthropic.
 
 ### Open Questions
-- UNCONFIRMED: whether Ben wants extractive funders (BHP, Fortescue, Rio Tinto, Santos Foundations) blocked for *grants* as well as philanthropy. I applied his encoded values exclusion to both paths; he may want them split.
-- UNCONFIRMED: whether Gold.Phone / Mounty Yarns / ACT Core should stay as the `org_projects` rows I created, or be modelled differently.
+All four resolved by Ben on 2026-08-08. Recorded in `docs/strategy/act-money-surface-audit-2026-08-07.md` under "Ben's calls (2026-08-08)".
+- RESOLVED: extractive funders (BHP, Fortescue, Rio Tinto, Santos) stay blocked on **both** paths, grants and philanthropy. It is a values decision about whose money ACT takes, so it does not care which door the money comes through. Do not split.
+- RESOLVED: Gold.Phone / Mounty Yarns / ACT Core **stay** as `org_projects` rows.
+- RESOLVED: ALMA / Elders Room / Station Precinct **fundraise through a parent**. No rows, no funding pages; their money shows on the parent's page. Absence from the registry is now a decision, not a gap to close.
+- RESOLVED: `/org/act/funding` **gets a rail slot** rather than deletion. Note this reverses the 2026-08-05 cut, knowingly: the room was cut when the feed held 18 opportunities and is back now it holds ~1,535. The rest of that cut stands.
 
 ### Workflow State
 pattern: diagnose-then-fix
@@ -65,8 +72,8 @@ max_retries: 3
 - resource_allocation: aggressive (max effort session)
 
 #### Unknowns
-- extractive_funder_policy_for_grants: UNCONFIRMED
-- sub_project_fundraising_model: UNCONFIRMED
+- extractive_funder_policy_for_grants: RESOLVED — blocked on both paths
+- sub_project_fundraising_model: RESOLVED — sub-projects fundraise through a parent
 
 #### Last Failure
 (none — CI green: Type Check, Unit & Integration, E2E, Vercel all pass)
