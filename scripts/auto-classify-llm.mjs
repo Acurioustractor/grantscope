@@ -85,6 +85,16 @@ const PROVIDERS = {
 const PROVIDER_ARG = process.argv.find((a) => a.startsWith('--provider='));
 const FALLBACK_ORDER = ['groq', 'gemini', 'ollama', 'deepseek', 'anthropic'];
 
+// Sorting a grant into six buckets does not need a large model, and the big ones
+// are the slow ones: gpt-oss:20b sustained ~6s/row locally and the 70B hit Groq's
+// free-tier throttle after a few hundred rows. --model= swaps the default without
+// touching code, e.g. --provider=groq --model=llama-3.1-8b-instant.
+const MODEL_ARG = process.argv.find((a) => a.startsWith('--model='));
+if (MODEL_ARG) {
+  const override = MODEL_ARG.split('=').slice(1).join('=');
+  for (const p of Object.values(PROVIDERS)) p.model = override;
+}
+
 /** Providers that are actually usable right now, in preference order. */
 function availableProviders() {
   const requested = PROVIDER_ARG?.split('=')[1];
@@ -130,16 +140,27 @@ Confidence rules:
 - 0.0-0.49: don't know — needs human review`;
 
 async function loadUnverified() {
-  // Pull unverified rows ordered by ones most likely to be high-value (have funder + URL)
-  const { data, error } = await supabase
-    .from('alma_funding_opportunities')
-    .select('id, name, description, funder_name, source_url, focus_areas, keywords, min_grant_amount, max_grant_amount')
-    .eq('opportunity_type', 'unverified')
-    .is('auto_classify_confidence', null)
-    .order('funder_name', { ascending: true })
-    .limit(LIMIT);
-  if (error) throw error;
-  return data ?? [];
+  // Pull unverified rows ordered by ones most likely to be high-value (have funder + URL).
+  //
+  // Paginated because PostgREST silently caps a single response at 1,000 rows:
+  // `--limit=2300` quietly returned 1,000 and the run looked complete at less
+  // than half the backlog. Silent truncation reads as "done" when it isn't.
+  const PAGE = 1000;
+  const rows = [];
+  for (let offset = 0; rows.length < LIMIT; offset += PAGE) {
+    const { data, error } = await supabase
+      .from('alma_funding_opportunities')
+      .select('id, name, description, funder_name, source_url, focus_areas, keywords, min_grant_amount, max_grant_amount')
+      .eq('opportunity_type', 'unverified')
+      .is('auto_classify_confidence', null)
+      .order('funder_name', { ascending: true })
+      .range(offset, offset + Math.min(PAGE, LIMIT - rows.length) - 1);
+    if (error) throw error;
+    if (!data?.length) break;
+    rows.push(...data);
+    if (data.length < PAGE) break;
+  }
+  return rows;
 }
 
 function formatRowForLLM(row) {
@@ -193,21 +214,32 @@ async function classifyWithOpenAICompatible(rows, rowsText, provider) {
   const headers = { 'Content-Type': 'application/json' };
   if (provider.keyEnv) headers.Authorization = `Bearer ${process.env[provider.keyEnv]}`;
 
-  const res = await fetch(`${provider.baseUrl}/chat/completions`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({
-      model: provider.model,
-      temperature: 0,
-      response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: RUBRIC },
-        { role: 'user', content: `Classify these ${rows.length} grants. Return JSON only.\n\n${rowsText}` },
-      ],
-    }),
+  const payload = JSON.stringify({
+    model: provider.model,
+    temperature: 0,
+    response_format: { type: 'json_object' },
+    messages: [
+      { role: 'system', content: RUBRIC },
+      { role: 'user', content: `Classify these ${rows.length} grants. Return JSON only.\n\n${rowsText}` },
+    ],
   });
+
+  // Free tiers throttle hard once a burst lands. A 429 is "wait", not "fail" —
+  // treating it as failure burned through every batch in seconds and classified
+  // nothing. Honour Retry-After when the server sends it, else back off.
+  let res;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    res = await fetch(`${provider.baseUrl}/chat/completions`, { method: 'POST', headers, body: payload });
+    if (res.status !== 429) break;
+    const retryAfter = Number(res.headers.get('retry-after'));
+    const waitMs = Number.isFinite(retryAfter) && retryAfter > 0
+      ? Math.min(retryAfter * 1000, 60_000)
+      : Math.min(2_000 * 2 ** attempt, 30_000);
+    if (attempt === 3) break;
+    await new Promise((r) => setTimeout(r, waitMs));
+  }
   if (!res.ok) {
-    throw new Error(`${res.status} ${(await res.text()).slice(0, 300)}`);
+    throw new Error(`${res.status} ${(await res.text()).slice(0, 200)}`);
   }
   const body = await res.json();
   const content = body.choices?.[0]?.message?.content;
