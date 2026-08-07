@@ -15,8 +15,9 @@ Every figure below was queried directly against `tednluwflfhxyucgwigh` on 2026-0
 
 ## Progress (same day)
 
-Two commits landed on `fix/act-grant-feed-status-filter`. The grants half of the diagnosis below
-is largely addressed; the philanthropy/foundations half and the registry split are not.
+Four commits landed on `fix/act-grant-feed-status-filter`. Everything diagnosed below is addressed
+except the classifier credit, which is a billing action. See "Closed out" at the end for the
+item-by-item state.
 
 | | before | after |
 |---|---|---|
