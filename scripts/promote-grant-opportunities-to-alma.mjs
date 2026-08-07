@@ -196,10 +196,16 @@ async function run() {
     }
     console.log(`Candidates: ${grants.length} open grants in grant_opportunities`);
 
-    let promoted = 0, skippedExisting = 0, skippedNotMatched = 0, skippedNoAlign = 0, skippedAcademic = 0;
+    let promoted = 0, skippedExisting = 0, skippedNotMatched = 0, skippedNoAlign = 0, skippedAcademic = 0, skippedNoFunder = 0;
     const toInsert = [];
 
     for (const g of grants ?? []) {
+      // `alma_funding_opportunities.funder_name` is NOT NULL, and an opportunity
+      // with no named funder cannot be verified or applied for anyway.
+      if (!g.provider?.trim()) {
+        skippedNoFunder++;
+        continue;
+      }
       const allowMatch = matchAllowlist(allowlist, g.provider);
       const align = actAlignmentScore(g, themes);
 
@@ -278,7 +284,14 @@ async function run() {
           .from('alma_funding_opportunities')
           .insert(batch);
         if (insErr) {
-          console.error(`Insert batch ${i / 50} failed:`, insErr.message);
+          // A batch insert is all-or-nothing, so one malformed row used to cost
+          // the other 49. Retry the batch row-by-row and report only the losses.
+          console.error(`Insert batch ${i / 50} failed (${insErr.message}) — retrying row-by-row`);
+          for (const row of batch) {
+            const { error: rowErr } = await supabase.from('alma_funding_opportunities').insert(row);
+            if (rowErr) console.error(`  skipped "${row.name?.slice(0, 60)}": ${rowErr.message}`);
+            else promoted += 1;
+          }
         } else {
           promoted += batch.length;
         }
@@ -294,7 +307,7 @@ async function run() {
     // The feed quarantines any row without timing, so report how many promoted
     // rows can actually reach `apply_now` rather than just how many were written.
     const withDeadline = toInsert.filter((t) => t.deadline).length;
-    const summary = { promoted: DRY_RUN ? toInsert.length : promoted, withDeadline, skippedExisting, skippedNotMatched, skippedNoAlign, skippedAcademic, candidates: grants?.length ?? 0 };
+    const summary = { promoted: DRY_RUN ? toInsert.length : promoted, withDeadline, skippedExisting, skippedNotMatched, skippedNoAlign, skippedAcademic, skippedNoFunder, candidates: grants?.length ?? 0 };
     console.log(`\n${DRY_RUN ? '[dry-run] ' : ''}Done in ${(Date.now() - startedAt) / 1000}s:`, summary);
 
     if (runId) {

@@ -257,6 +257,21 @@ async function run() {
       (totalCacheRead * 0.1) / 1_000_000;
     console.log(`Approx cost: $${cost.toFixed(4)} (elapsed ${elapsed.toFixed(1)}s)`);
 
+    // A run where every batch errored is a failed run, not a successful one that
+    // happened to classify nothing. Reporting success here hid a three-month
+    // outage: the API key ran out of credit around 2026-05-16, every batch 400'd,
+    // and agent_runs kept logging `success` with items_found=300, items_new=0
+    // while the unverified backlog grew to 5,436 rows and the ACT feed starved.
+    if (classified === 0 && errors > 0) {
+      const reason = new Error(
+        `auto-classify made no progress: ${errors} row(s) errored, 0 classified. ` +
+        `Check the Anthropic API key credit balance.`
+      );
+      console.error(reason.message);
+      if (runId) await logFailed(supabase, runId, reason);
+      process.exit(1);
+    }
+
     if (runId) {
       await logComplete(supabase, runId, {
         items_found: rows.length,
