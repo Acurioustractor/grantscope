@@ -13,6 +13,41 @@ Every figure below was queried directly against `tednluwflfhxyucgwigh` on 2026-0
 
 ---
 
+## Progress (same day)
+
+Two commits landed on `fix/act-grant-feed-status-filter`. The grants half of the diagnosis below
+is largely addressed; the philanthropy/foundations half and the registry split are not.
+
+| | before | after |
+|---|---|---|
+| Opportunities the ACT engine can see | 18 | **344** |
+| Feed status | 34 apply_now · 662 quarantined | 34 apply_now · **337 rolling** · 325 quarantined |
+| Recommendation rows | 197 | 3,783 |
+| Strong fits, portfolio-wide | 7 | **185** (PICC 7→106, Mounty Yarns 1→34, Goods 1→30) |
+
+Three root causes were found below the ones diagnosed here:
+
+1. **`application_status` semantics.** The promotion filtered `='open'` (372 live rows) while
+   `not_applied` held 4,087 of the 4,463 future-deadline grants. Fixed; 596 rows promoted.
+2. **The alignment gate passed 94% of candidates.** It substring-matched a flattened set of all
+   11 projects' keywords, where `support` (2,971 rows), `research` (2,747) and `community` (2,525)
+   each hit a quarter of the corpus — any two cleared the 15-point threshold, and 43% of the pool
+   is university research ACT never applies for. Now word-boundary matched, generic words
+   suppressed, phrases weighted 25 vs 10, academic providers and scholarships excluded.
+3. **The LLM classifier has been dead since ~2026-05-16.** It moves rows from `unverified` to
+   `open_grant`, so nothing reaches the feed without it. Its API key is out of credit, every batch
+   400s, and it logged `status: success` with `items_found: 300, items_new: 0` throughout. 26 rows
+   have ever been classified; **5,436 are backlogged.** It now fails loudly. **Unblocking it needs
+   an Anthropic API credit top-up — roughly $0.55 clears the entire backlog at Haiku rates.**
+
+The rolling lane is live: a verified, URL-live row with no deadline is an open rolling program, not
+a timing failure. That distinction alone recovered 337 opportunities.
+
+**Still open:** the foundations/philanthropy queue (1,005 `saved`, placeholder giving figures), the
+two-registry split, the Goods hardcode, and the per-project "Apply now" page.
+
+---
+
 ## The finding
 
 Finding grants is not the problem. There are five parallel discovery engines, one project wired to
