@@ -352,8 +352,9 @@ test.describe('ACT Field Desk pilot workflow', () => {
     await expect(sidebar.getByRole('link', { name: 'Listen' })).toHaveCount(0);
     // Action retired from the rail — One Desk owns committed work (kind=commitment).
     await expect(sidebar.getByRole('link', { name: 'Action', exact: true })).toHaveCount(0);
-    // Funding retired 2026-08-05 — Curiosity + the desk absorbed the ritual.
-    await expect(sidebar.getByRole('link', { name: /^Funding/ })).toHaveCount(0);
+    // Funding returned 2026-08-08 — the feed went from 18 opportunities to
+    // ~1,535, so the portfolio-wide decision queue is a room again.
+    await expect(sidebar.getByRole('link', { name: /^Funding/ })).toBeVisible();
     await expect(sidebar.getByRole('link', { name: 'Curiosity' })).toBeVisible();
     await sidebar.getByRole('link', { name: 'Orgs' }).click();
     await expect(page).toHaveURL(/\/org\/act\/orgs/);
