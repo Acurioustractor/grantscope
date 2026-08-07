@@ -365,13 +365,25 @@ async function run() {
     console.log('\nSample decisions:');
     for (const e of examples) console.log(e);
     console.log(`\nTokens — input: ${totalInput}  output: ${totalOutput}  cached read: ${totalCacheRead}  cached write: ${totalCacheWrite}`);
-    // Haiku 4.5: input $1/Mtok, output $5/Mtok, cache write $1.25/Mtok, cache read $0.10/Mtok
+    // Price by the provider that actually ran, not by Haiku regardless. Reporting
+    // an Anthropic bill for a free-tier Groq run reads as a real cost and was the
+    // kind of misleading signal that let this job's outage hide for three months.
+    // USD per million tokens: [input, output, cacheWrite, cacheRead].
+    const RATES = {
+      anthropic: [1, 5, 1.25, 0.1],
+      deepseek: [0.27, 1.1, 0, 0],
+      gemini: [0, 0, 0, 0],   // free tier
+      groq: [0, 0, 0, 0],     // free tier
+      ollama: [0, 0, 0, 0],   // local
+    };
+    const [rIn, rOut, rCw, rCr] = RATES[activeProvider] ?? RATES.anthropic;
     const cost =
-      (totalInput * 1) / 1_000_000 +
-      (totalOutput * 5) / 1_000_000 +
-      (totalCacheWrite * 1.25) / 1_000_000 +
-      (totalCacheRead * 0.1) / 1_000_000;
-    console.log(`Approx cost: $${cost.toFixed(4)} (elapsed ${elapsed.toFixed(1)}s)`);
+      (totalInput * rIn) / 1_000_000 +
+      (totalOutput * rOut) / 1_000_000 +
+      (totalCacheWrite * rCw) / 1_000_000 +
+      (totalCacheRead * rCr) / 1_000_000;
+    const label = cost === 0 ? 'no charge (free tier / local)' : `$${cost.toFixed(4)}`;
+    console.log(`Cost via ${activeProvider ?? 'unknown'}: ${label} (elapsed ${elapsed.toFixed(1)}s)`);
 
     // A run where every batch errored is a failed run, not a successful one that
     // happened to classify nothing. Reporting success here hid a three-month
