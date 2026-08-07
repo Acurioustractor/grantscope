@@ -266,3 +266,24 @@ All figures queried 2026-08-07 against project `tednluwflfhxyucgwigh` via `scrip
 Tables: `org_projects`, `org_profiles`, `org_project_foundations`, `org_pipeline`, `foundations`,
 `grant_opportunities`, `act_grant_recommendations_current`, `act_grant_recommendation_decisions`,
 `project_funding_profiles`. Code claims verified by reading the named files and line numbers.
+
+---
+
+## Closed out (2026-08-07, same day)
+
+All five items from the order of work below are now done except the classifier credit,
+which is a billing action, not a code one.
+
+| Item | State |
+|---|---|
+| 1. Reconcile the two registries | **Done.** `act_grant_recommendation_projects.org_project_id` FK added; all 12 rows linked; zero orphans. Contained (ACT-CN/ACT-JH-CT) and CivicGraph (ACT-CS/ACT-JH-CG) collisions resolved. Gold.Phone, Mounty Yarns and ACT Core created as `org_projects` rows — Phase 1 names them as canonical but they were never registered. |
+| 2. Gate on verified money | **Done, differently than planned.** Gating on money would have left 6 funders, so the gate grades evidence instead: A = recorded grants on file, B = DGR or verified giving, C = theme overlap only. 1,063 rows graded 179 A / 248 B / 636 C. |
+| 3. Delete the Goods hardcode | **Done.** `getFunderScan(slug?)` replaces the pinned `.eq(…,'goods')`; One Desk scans portfolio-wide and shows each funder's real project. |
+| 4. Per-project "Apply now" ten | **Done.** `getProjectApplyNow()` reads the project's own ranked list, split into dated (urgency-ranked) and rolling (fit-ranked). Every one of the 11 projects now resolves 17–18 dated + 326 rolling. |
+| 5. Retire the losers | **Partly.** `goods_relevance_score` is no longer the One Desk gate. `/org/act/funding` still has zero inbound links — it needs a rail slot or deletion, which is Ben's call. |
+| 6. Give the recommender a mouth | **Not done.** `project_funding_profiles.next_question` remains unwired. |
+| 7. The dark projects | **Partly.** Gold.Phone, Mounty Yarns and ACT Core now exist and receive recommendations. ALMA, Elders Room and Station Precinct still have no registry row — they are sub-projects, and whether they fundraise independently is a judgement call, not a data fix. |
+
+**The one open action: the Anthropic API key is out of credit.** No new opportunity can
+reach `open_grant` until it is topped up, so 344 is a ceiling rather than a floor.
+5,436 rows are backlogged; roughly $0.55 of Haiku clears them.
