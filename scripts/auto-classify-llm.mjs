@@ -36,8 +36,71 @@ const CONF_ARG = process.argv.find((a) => a.startsWith('--min-confidence='));
 const MIN_CONFIDENCE = CONF_ARG ? parseFloat(CONF_ARG.split('=')[1]) : 0.7;
 
 const BATCH_SIZE = 25;
-const MODEL = 'claude-haiku-4-5-20251001';
 const AGENT_ID = 'auto-classify-llm';
+
+/**
+ * Providers, cheapest-and-most-available first.
+ *
+ * This job died silently for three months because it could only talk to one
+ * provider and that provider's credit ran out. Classifying a grant into six
+ * buckets does not need a frontier model, so the default order prefers free
+ * capacity and falls back rather than stopping.
+ *
+ * Groq, DeepSeek, Ollama and Gemini all speak the OpenAI chat-completions API,
+ * so one client covers them; Anthropic keeps its own path for prompt caching.
+ *
+ *   groq     — free tier, 131k context, fastest of these
+ *   gemini   — free tier via the OpenAI-compatible endpoint
+ *   ollama   — fully local, no quota, no network, needs `ollama serve`
+ *   deepseek — paid but very cheap
+ *   anthropic — best quality, needs credit
+ */
+const PROVIDERS = {
+  groq: {
+    baseUrl: 'https://api.groq.com/openai/v1',
+    model: 'llama-3.3-70b-versatile',
+    keyEnv: 'GROQ_API_KEY',
+  },
+  gemini: {
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+    model: 'gemini-2.5-flash',
+    keyEnv: 'GEMINI_API_KEY',
+  },
+  ollama: {
+    baseUrl: 'http://localhost:11434/v1',
+    model: process.env.OLLAMA_CLASSIFY_MODEL || 'gpt-oss:20b',
+    keyEnv: null, // local, no key
+  },
+  deepseek: {
+    baseUrl: 'https://api.deepseek.com/v1',
+    model: 'deepseek-chat',
+    keyEnv: 'DEEPSEEK_API_KEY',
+  },
+  anthropic: {
+    model: 'claude-haiku-4-5-20251001',
+    keyEnv: 'ANTHROPIC_API_KEY',
+  },
+};
+
+const PROVIDER_ARG = process.argv.find((a) => a.startsWith('--provider='));
+const FALLBACK_ORDER = ['groq', 'gemini', 'ollama', 'deepseek', 'anthropic'];
+
+/** Providers that are actually usable right now, in preference order. */
+function availableProviders() {
+  const requested = PROVIDER_ARG?.split('=')[1];
+  if (requested) {
+    if (!PROVIDERS[requested]) {
+      throw new Error(`Unknown provider "${requested}". Options: ${Object.keys(PROVIDERS).join(', ')}`);
+    }
+    return [requested];
+  }
+  return FALLBACK_ORDER.filter((name) => {
+    const p = PROVIDERS[name];
+    return p.keyEnv === null || Boolean(process.env[p.keyEnv]);
+  });
+}
+
+let MODEL = PROVIDERS[availableProviders()[0] ?? 'anthropic'].model;
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL,
@@ -94,44 +157,97 @@ function formatRowForLLM(row) {
   return fields.join(' | ');
 }
 
-async function classifyBatch(rows) {
-  const rowsText = rows.map(formatRowForLLM).join('\n');
+function parseItems(raw) {
+  let text = raw.trim();
+  // Smaller models wrap JSON in markdown, and some prepend a sentence.
+  if (text.startsWith('```')) {
+    text = text.replace(/^```(?:json)?\s*/, '').replace(/```$/, '').trim();
+  }
+  const firstBrace = text.indexOf('{');
+  const lastBrace = text.lastIndexOf('}');
+  if (firstBrace > 0 || lastBrace < text.length - 1) {
+    if (firstBrace === -1 || lastBrace === -1) throw new Error(`No JSON object in response: ${text.slice(0, 200)}`);
+    text = text.slice(firstBrace, lastBrace + 1);
+  }
+  const parsed = JSON.parse(text);
+  if (!parsed.items || !Array.isArray(parsed.items)) {
+    throw new Error(`Unexpected response shape: ${text.slice(0, 200)}`);
+  }
+  return parsed.items;
+}
 
+async function classifyWithAnthropic(rows, rowsText, model) {
   const response = await anthropic.messages.create({
-    model: MODEL,
+    model,
     max_tokens: 4096,
-    system: [
-      {
-        type: 'text',
-        text: RUBRIC,
-        cache_control: { type: 'ephemeral' },
-      },
-    ],
-    messages: [
-      {
-        role: 'user',
-        content: `Classify these ${rows.length} grants. Return JSON only.\n\n${rowsText}`,
-      },
-    ],
+    system: [{ type: 'text', text: RUBRIC, cache_control: { type: 'ephemeral' } }],
+    messages: [{ role: 'user', content: `Classify these ${rows.length} grants. Return JSON only.\n\n${rowsText}` }],
   });
-
   const textBlock = response.content.find((c) => c.type === 'text');
   if (!textBlock) throw new Error('No text in LLM response');
+  return { items: parseItems(textBlock.text), usage: response.usage };
+}
 
-  // Strip code fences if Haiku wraps in markdown
-  let raw = textBlock.text.trim();
-  if (raw.startsWith('```')) {
-    raw = raw.replace(/^```(?:json)?\s*/, '').replace(/```$/, '').trim();
-  }
+/** Groq, Gemini, Ollama and DeepSeek all speak this shape. */
+async function classifyWithOpenAICompatible(rows, rowsText, provider) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (provider.keyEnv) headers.Authorization = `Bearer ${process.env[provider.keyEnv]}`;
 
-  const parsed = JSON.parse(raw);
-  if (!parsed.items || !Array.isArray(parsed.items)) {
-    throw new Error(`Unexpected response shape: ${raw.slice(0, 200)}`);
+  const res = await fetch(`${provider.baseUrl}/chat/completions`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      model: provider.model,
+      temperature: 0,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: RUBRIC },
+        { role: 'user', content: `Classify these ${rows.length} grants. Return JSON only.\n\n${rowsText}` },
+      ],
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`${res.status} ${(await res.text()).slice(0, 300)}`);
   }
+  const body = await res.json();
+  const content = body.choices?.[0]?.message?.content;
+  if (!content) throw new Error(`No content in response: ${JSON.stringify(body).slice(0, 200)}`);
   return {
-    items: parsed.items,
-    usage: response.usage,
+    items: parseItems(content),
+    usage: {
+      input_tokens: body.usage?.prompt_tokens ?? 0,
+      output_tokens: body.usage?.completion_tokens ?? 0,
+    },
   };
+}
+
+let activeProvider = null;
+
+async function classifyBatch(rows) {
+  const rowsText = rows.map(formatRowForLLM).join('\n');
+  // Stick with the first provider that works, so one outage does not cost every
+  // batch a retry cascade — but re-enter the chain if the sticky one starts failing.
+  const chain = activeProvider ? [activeProvider, ...availableProviders().filter((p) => p !== activeProvider)] : availableProviders();
+  if (chain.length === 0) throw new Error('No LLM provider configured. Set GROQ_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY, or run `ollama serve`.');
+
+  const failures = [];
+  for (const name of chain) {
+    const provider = PROVIDERS[name];
+    try {
+      const result = name === 'anthropic'
+        ? await classifyWithAnthropic(rows, rowsText, provider.model)
+        : await classifyWithOpenAICompatible(rows, rowsText, provider);
+      if (activeProvider !== name) {
+        console.log(`  provider: ${name} (${provider.model})`);
+        activeProvider = name;
+        MODEL = provider.model;
+      }
+      return result;
+    } catch (err) {
+      failures.push(`${name}: ${err.message.slice(0, 140)}`);
+    }
+  }
+  throw new Error(`All providers failed — ${failures.join(' | ')}`);
 }
 
 async function run() {
