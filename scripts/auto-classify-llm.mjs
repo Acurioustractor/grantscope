@@ -36,8 +36,81 @@ const CONF_ARG = process.argv.find((a) => a.startsWith('--min-confidence='));
 const MIN_CONFIDENCE = CONF_ARG ? parseFloat(CONF_ARG.split('=')[1]) : 0.7;
 
 const BATCH_SIZE = 25;
-const MODEL = 'claude-haiku-4-5-20251001';
 const AGENT_ID = 'auto-classify-llm';
+
+/**
+ * Providers, cheapest-and-most-available first.
+ *
+ * This job died silently for three months because it could only talk to one
+ * provider and that provider's credit ran out. Classifying a grant into six
+ * buckets does not need a frontier model, so the default order prefers free
+ * capacity and falls back rather than stopping.
+ *
+ * Groq, DeepSeek, Ollama and Gemini all speak the OpenAI chat-completions API,
+ * so one client covers them; Anthropic keeps its own path for prompt caching.
+ *
+ *   groq     — free tier, 131k context, fastest of these
+ *   gemini   — free tier via the OpenAI-compatible endpoint
+ *   ollama   — fully local, no quota, no network, needs `ollama serve`
+ *   deepseek — paid but very cheap
+ *   anthropic — best quality, needs credit
+ */
+const PROVIDERS = {
+  groq: {
+    baseUrl: 'https://api.groq.com/openai/v1',
+    model: 'llama-3.3-70b-versatile',
+    keyEnv: 'GROQ_API_KEY',
+  },
+  gemini: {
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+    model: 'gemini-2.5-flash',
+    keyEnv: 'GEMINI_API_KEY',
+  },
+  ollama: {
+    baseUrl: 'http://localhost:11434/v1',
+    model: process.env.OLLAMA_CLASSIFY_MODEL || 'gpt-oss:20b',
+    keyEnv: null, // local, no key
+  },
+  deepseek: {
+    baseUrl: 'https://api.deepseek.com/v1',
+    model: 'deepseek-chat',
+    keyEnv: 'DEEPSEEK_API_KEY',
+  },
+  anthropic: {
+    model: 'claude-haiku-4-5-20251001',
+    keyEnv: 'ANTHROPIC_API_KEY',
+  },
+};
+
+const PROVIDER_ARG = process.argv.find((a) => a.startsWith('--provider='));
+const FALLBACK_ORDER = ['groq', 'gemini', 'ollama', 'deepseek', 'anthropic'];
+
+// Sorting a grant into six buckets does not need a large model, and the big ones
+// are the slow ones: gpt-oss:20b sustained ~6s/row locally and the 70B hit Groq's
+// free-tier throttle after a few hundred rows. --model= swaps the default without
+// touching code, e.g. --provider=groq --model=llama-3.1-8b-instant.
+const MODEL_ARG = process.argv.find((a) => a.startsWith('--model='));
+if (MODEL_ARG) {
+  const override = MODEL_ARG.split('=').slice(1).join('=');
+  for (const p of Object.values(PROVIDERS)) p.model = override;
+}
+
+/** Providers that are actually usable right now, in preference order. */
+function availableProviders() {
+  const requested = PROVIDER_ARG?.split('=')[1];
+  if (requested) {
+    if (!PROVIDERS[requested]) {
+      throw new Error(`Unknown provider "${requested}". Options: ${Object.keys(PROVIDERS).join(', ')}`);
+    }
+    return [requested];
+  }
+  return FALLBACK_ORDER.filter((name) => {
+    const p = PROVIDERS[name];
+    return p.keyEnv === null || Boolean(process.env[p.keyEnv]);
+  });
+}
+
+let MODEL = PROVIDERS[availableProviders()[0] ?? 'anthropic'].model;
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL,
@@ -67,16 +140,27 @@ Confidence rules:
 - 0.0-0.49: don't know — needs human review`;
 
 async function loadUnverified() {
-  // Pull unverified rows ordered by ones most likely to be high-value (have funder + URL)
-  const { data, error } = await supabase
-    .from('alma_funding_opportunities')
-    .select('id, name, description, funder_name, source_url, focus_areas, keywords, min_grant_amount, max_grant_amount')
-    .eq('opportunity_type', 'unverified')
-    .is('auto_classify_confidence', null)
-    .order('funder_name', { ascending: true })
-    .limit(LIMIT);
-  if (error) throw error;
-  return data ?? [];
+  // Pull unverified rows ordered by ones most likely to be high-value (have funder + URL).
+  //
+  // Paginated because PostgREST silently caps a single response at 1,000 rows:
+  // `--limit=2300` quietly returned 1,000 and the run looked complete at less
+  // than half the backlog. Silent truncation reads as "done" when it isn't.
+  const PAGE = 1000;
+  const rows = [];
+  for (let offset = 0; rows.length < LIMIT; offset += PAGE) {
+    const { data, error } = await supabase
+      .from('alma_funding_opportunities')
+      .select('id, name, description, funder_name, source_url, focus_areas, keywords, min_grant_amount, max_grant_amount')
+      .eq('opportunity_type', 'unverified')
+      .is('auto_classify_confidence', null)
+      .order('funder_name', { ascending: true })
+      .range(offset, offset + Math.min(PAGE, LIMIT - rows.length) - 1);
+    if (error) throw error;
+    if (!data?.length) break;
+    rows.push(...data);
+    if (data.length < PAGE) break;
+  }
+  return rows;
 }
 
 function formatRowForLLM(row) {
@@ -94,44 +178,108 @@ function formatRowForLLM(row) {
   return fields.join(' | ');
 }
 
-async function classifyBatch(rows) {
-  const rowsText = rows.map(formatRowForLLM).join('\n');
+function parseItems(raw) {
+  let text = raw.trim();
+  // Smaller models wrap JSON in markdown, and some prepend a sentence.
+  if (text.startsWith('```')) {
+    text = text.replace(/^```(?:json)?\s*/, '').replace(/```$/, '').trim();
+  }
+  const firstBrace = text.indexOf('{');
+  const lastBrace = text.lastIndexOf('}');
+  if (firstBrace > 0 || lastBrace < text.length - 1) {
+    if (firstBrace === -1 || lastBrace === -1) throw new Error(`No JSON object in response: ${text.slice(0, 200)}`);
+    text = text.slice(firstBrace, lastBrace + 1);
+  }
+  const parsed = JSON.parse(text);
+  if (!parsed.items || !Array.isArray(parsed.items)) {
+    throw new Error(`Unexpected response shape: ${text.slice(0, 200)}`);
+  }
+  return parsed.items;
+}
 
+async function classifyWithAnthropic(rows, rowsText, model) {
   const response = await anthropic.messages.create({
-    model: MODEL,
+    model,
     max_tokens: 4096,
-    system: [
-      {
-        type: 'text',
-        text: RUBRIC,
-        cache_control: { type: 'ephemeral' },
-      },
-    ],
+    system: [{ type: 'text', text: RUBRIC, cache_control: { type: 'ephemeral' } }],
+    messages: [{ role: 'user', content: `Classify these ${rows.length} grants. Return JSON only.\n\n${rowsText}` }],
+  });
+  const textBlock = response.content.find((c) => c.type === 'text');
+  if (!textBlock) throw new Error('No text in LLM response');
+  return { items: parseItems(textBlock.text), usage: response.usage };
+}
+
+/** Groq, Gemini, Ollama and DeepSeek all speak this shape. */
+async function classifyWithOpenAICompatible(rows, rowsText, provider) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (provider.keyEnv) headers.Authorization = `Bearer ${process.env[provider.keyEnv]}`;
+
+  const payload = JSON.stringify({
+    model: provider.model,
+    temperature: 0,
+    response_format: { type: 'json_object' },
     messages: [
-      {
-        role: 'user',
-        content: `Classify these ${rows.length} grants. Return JSON only.\n\n${rowsText}`,
-      },
+      { role: 'system', content: RUBRIC },
+      { role: 'user', content: `Classify these ${rows.length} grants. Return JSON only.\n\n${rowsText}` },
     ],
   });
 
-  const textBlock = response.content.find((c) => c.type === 'text');
-  if (!textBlock) throw new Error('No text in LLM response');
-
-  // Strip code fences if Haiku wraps in markdown
-  let raw = textBlock.text.trim();
-  if (raw.startsWith('```')) {
-    raw = raw.replace(/^```(?:json)?\s*/, '').replace(/```$/, '').trim();
+  // Free tiers throttle hard once a burst lands. A 429 is "wait", not "fail" —
+  // treating it as failure burned through every batch in seconds and classified
+  // nothing. Honour Retry-After when the server sends it, else back off.
+  let res;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    res = await fetch(`${provider.baseUrl}/chat/completions`, { method: 'POST', headers, body: payload });
+    if (res.status !== 429) break;
+    const retryAfter = Number(res.headers.get('retry-after'));
+    const waitMs = Number.isFinite(retryAfter) && retryAfter > 0
+      ? Math.min(retryAfter * 1000, 60_000)
+      : Math.min(2_000 * 2 ** attempt, 30_000);
+    if (attempt === 3) break;
+    await new Promise((r) => setTimeout(r, waitMs));
   }
-
-  const parsed = JSON.parse(raw);
-  if (!parsed.items || !Array.isArray(parsed.items)) {
-    throw new Error(`Unexpected response shape: ${raw.slice(0, 200)}`);
+  if (!res.ok) {
+    throw new Error(`${res.status} ${(await res.text()).slice(0, 200)}`);
   }
+  const body = await res.json();
+  const content = body.choices?.[0]?.message?.content;
+  if (!content) throw new Error(`No content in response: ${JSON.stringify(body).slice(0, 200)}`);
   return {
-    items: parsed.items,
-    usage: response.usage,
+    items: parseItems(content),
+    usage: {
+      input_tokens: body.usage?.prompt_tokens ?? 0,
+      output_tokens: body.usage?.completion_tokens ?? 0,
+    },
   };
+}
+
+let activeProvider = null;
+
+async function classifyBatch(rows) {
+  const rowsText = rows.map(formatRowForLLM).join('\n');
+  // Stick with the first provider that works, so one outage does not cost every
+  // batch a retry cascade — but re-enter the chain if the sticky one starts failing.
+  const chain = activeProvider ? [activeProvider, ...availableProviders().filter((p) => p !== activeProvider)] : availableProviders();
+  if (chain.length === 0) throw new Error('No LLM provider configured. Set GROQ_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY, or run `ollama serve`.');
+
+  const failures = [];
+  for (const name of chain) {
+    const provider = PROVIDERS[name];
+    try {
+      const result = name === 'anthropic'
+        ? await classifyWithAnthropic(rows, rowsText, provider.model)
+        : await classifyWithOpenAICompatible(rows, rowsText, provider);
+      if (activeProvider !== name) {
+        console.log(`  provider: ${name} (${provider.model})`);
+        activeProvider = name;
+        MODEL = provider.model;
+      }
+      return result;
+    } catch (err) {
+      failures.push(`${name}: ${err.message.slice(0, 140)}`);
+    }
+  }
+  throw new Error(`All providers failed — ${failures.join(' | ')}`);
 }
 
 async function run() {
@@ -249,13 +397,40 @@ async function run() {
     console.log('\nSample decisions:');
     for (const e of examples) console.log(e);
     console.log(`\nTokens — input: ${totalInput}  output: ${totalOutput}  cached read: ${totalCacheRead}  cached write: ${totalCacheWrite}`);
-    // Haiku 4.5: input $1/Mtok, output $5/Mtok, cache write $1.25/Mtok, cache read $0.10/Mtok
+    // Price by the provider that actually ran, not by Haiku regardless. Reporting
+    // an Anthropic bill for a free-tier Groq run reads as a real cost and was the
+    // kind of misleading signal that let this job's outage hide for three months.
+    // USD per million tokens: [input, output, cacheWrite, cacheRead].
+    const RATES = {
+      anthropic: [1, 5, 1.25, 0.1],
+      deepseek: [0.27, 1.1, 0, 0],
+      gemini: [0, 0, 0, 0],   // free tier
+      groq: [0, 0, 0, 0],     // free tier
+      ollama: [0, 0, 0, 0],   // local
+    };
+    const [rIn, rOut, rCw, rCr] = RATES[activeProvider] ?? RATES.anthropic;
     const cost =
-      (totalInput * 1) / 1_000_000 +
-      (totalOutput * 5) / 1_000_000 +
-      (totalCacheWrite * 1.25) / 1_000_000 +
-      (totalCacheRead * 0.1) / 1_000_000;
-    console.log(`Approx cost: $${cost.toFixed(4)} (elapsed ${elapsed.toFixed(1)}s)`);
+      (totalInput * rIn) / 1_000_000 +
+      (totalOutput * rOut) / 1_000_000 +
+      (totalCacheWrite * rCw) / 1_000_000 +
+      (totalCacheRead * rCr) / 1_000_000;
+    const label = cost === 0 ? 'no charge (free tier / local)' : `$${cost.toFixed(4)}`;
+    console.log(`Cost via ${activeProvider ?? 'unknown'}: ${label} (elapsed ${elapsed.toFixed(1)}s)`);
+
+    // A run where every batch errored is a failed run, not a successful one that
+    // happened to classify nothing. Reporting success here hid a three-month
+    // outage: the API key ran out of credit around 2026-05-16, every batch 400'd,
+    // and agent_runs kept logging `success` with items_found=300, items_new=0
+    // while the unverified backlog grew to 5,436 rows and the ACT feed starved.
+    if (classified === 0 && errors > 0) {
+      const reason = new Error(
+        `auto-classify made no progress: ${errors} row(s) errored, 0 classified. ` +
+        `Check the Anthropic API key credit balance.`
+      );
+      console.error(reason.message);
+      if (runId) await logFailed(supabase, runId, reason);
+      process.exit(1);
+    }
 
     if (runId) {
       await logComplete(supabase, runId, {

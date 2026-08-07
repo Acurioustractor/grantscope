@@ -1,0 +1,50 @@
+-- Tag opportunities from their own text, and what it revealed.
+-- Applied via Supabase MCP. Follows 2026-08-08-geography-and-program-dedupe.sql.
+--
+-- THE DEFECT
+--
+-- act_grant_recommendations matches project theme keywords only against an
+-- opportunity's focus_areas || keywords arrays. That vocabulary is a closed
+-- 17-term taxonomy: community, health, arts, indigenous, education, research,
+-- enterprise, environment, youth, regenerative, sport, disability, human_rights,
+-- justice, disaster_relief, technology, regional.
+--
+-- Anything outside those 17 words cannot match, however well it describes a
+-- project. Measured on Contained: matching its keywords against the tag arrays
+-- finds 11 opportunities; matching the same keywords against name + description
+-- finds 256. 23x the signal was being discarded.
+--
+-- Fix: tag the opportunities from their own text so the matcher finds what is
+-- already there. Word-boundary matched, so "art" cannot hit "arteries" — the
+-- failure that made the promotion gate pass 94% of candidates before it was fixed.
+-- 1,816 of 2,369 open grants gained tags, averaging 1.9 each.
+--
+-- WHAT IT FIXED
+--
+-- Strong fits rose for the projects that had them: PICC 16 to 19, Goods 7 to 11,
+-- Farm 1 to 3, JusticeHub 2 to 3, Harvest 1 to 2.
+--
+-- WHAT IT DID NOT FIX, AND WHY THAT IS THE RIGHT ANSWER
+--
+-- Gold.Phone, CivicGraph, Contained and ACT Core still show zero strong fits.
+-- The first pass excluded 'tour', 'touring', 'events' and 'experience' as generic
+-- — which they are for most projects and are not for Contained, whose identity
+-- they are. Restoring them (second statement below) surfaced the right rounds:
+-- the Touring and Travel Fund and Visit Victoria's Regional Events Fund ($500K)
+-- now appear in Contained's list. They score 40, under the 55 strong-fit bar,
+-- because eligibility scores 5 and geography 0. Contained's list works; nothing
+-- in it is labelled "strong".
+--
+-- For the other three the zero is close to correct. Counted across the 2,369
+-- open grants:
+--
+--   touring / public art / immersive / festival   61
+--   capacity building / core costs                20
+--   storytelling                                   7
+--   open data / civic tech                         2
+--
+-- CivicGraph has two candidate opportunities in the entire corpus. Its funding
+-- route is buyers, not grants — which is what docs/strategy/buyer-wedge.md
+-- already says. ACT Core is studio overhead, and grants rarely fund overhead;
+-- 2 theme matches in 713 rows is roughly the truth. Neither is a pipeline defect,
+-- and adding keywords to chase a number would only manufacture false fits.

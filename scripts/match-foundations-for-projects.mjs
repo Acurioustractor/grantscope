@@ -110,7 +110,26 @@ scored AS (
     (f.geographic_focus && p.home_geo)        AS home_match,
     ('AU-National' = ANY(f.geographic_focus)) AS national,
     (f.geographic_focus && p.sec_geo)         AS sec_match,
-    f.total_giving_annual
+    -- total_giving_annual is a placeholder on 85% of the table (25,000 on 6,940
+    -- rows, 100,000 on 1,474, 500,000 on 816 — only 958 real figures in 11,159).
+    -- Carry the verified figure separately so nothing scores or asserts on a
+    -- default. See docs/strategy/act-money-surface-audit-2026-08-07.md.
+    CASE WHEN f.total_giving_annual NOT IN (25000, 100000, 500000)
+         THEN f.total_giving_annual END AS verified_giving,
+    ac.is_foundation AS confirmed_grantmaker,
+    COALESCE(array_length(f.notable_grants, 1), 0) AS notable_grant_count,
+    f.has_dgr,
+    -- Evidence grade, not a confidence score. Only 6 of 5,190 themed grantmakers
+    -- carry a verified giving figure, so gating on money would empty the queue.
+    -- Grade instead on what is actually provable:
+    --   A — notable_grants: named recipients, amounts, years. Proof they give.
+    --   B — DGR endorsement or a verified giving figure. Proof they can give.
+    --   C — theme and geography overlap only. A suggestion, never a desk record.
+    CASE
+      WHEN COALESCE(array_length(f.notable_grants, 1), 0) > 0 THEN 'A'
+      WHEN f.has_dgr OR f.total_giving_annual NOT IN (25000, 100000, 500000) THEN 'B'
+      ELSE 'C'
+    END AS evidence_grade
   FROM proj p
   JOIN org_projects op ON op.code = p.code
   JOIN foundations f
@@ -118,6 +137,10 @@ scored AS (
    AND f.thematic_focus && p.themes
    AND NOT ('religion' = ANY(f.thematic_focus))   -- faith-purpose funders are noise for these projects
    AND NOT (f.name ILIKE ANY (${ilikeArr(EXCLUDE_FUNDERS)}))   -- extractive-industry funders (values exclusion)
+  LEFT JOIN acnc_charities ac ON ac.abn = f.acnc_abn
+  -- A program-delivering charity is not a grantmaker. Bravehearts scored 100
+  -- against Empathy Ledger on theme overlap alone before this gate existed.
+  WHERE ac.is_foundation IS TRUE
 ),
 fit AS (
   SELECT s.*,
@@ -125,18 +148,44 @@ fit AS (
       LEAST(theme_overlap,3)/3.0 * 55
       + LEAST(target_overlap,2)/2.0 * 15
       + CASE WHEN home_match THEN 20 WHEN national THEN 15 WHEN sec_match THEN 10 ELSE 0 END
-      + CASE WHEN total_giving_annual >= 50000 THEN 10 WHEN total_giving_annual > 0 THEN 5 ELSE 0 END
+      -- Only a real figure earns capacity points. A default earns nothing.
+      + CASE WHEN verified_giving >= 50000 THEN 10 WHEN verified_giving > 0 THEN 5 ELSE 0 END
     )::int AS fit_score
   FROM scored s
 ),
-ranked AS (
+deduped AS (
+  -- One funder split across sub-regional trusts used to occupy several slots at
+  -- identical scores (WCCT Southern/Northern/Central + Western Cape Communities
+  -- Trust, all 100). Keep the best-scoring row per funder stem per project.
   SELECT fit.*,
-    ROW_NUMBER() OVER (PARTITION BY fit.code ORDER BY fit.fit_score DESC, fit.total_giving_annual DESC NULLS LAST) AS rn
+    ROW_NUMBER() OVER (
+      PARTITION BY fit.org_project_id,
+        regexp_replace(
+          regexp_replace(lower(fit.foundation),
+            '\\m(the trustee for|the |ltd|limited|pty|inc|incorporated|foundation|trust|fund)\\M', '', 'g'),
+          '\\m(northern|southern|central|eastern|western|sub-regional|regional)\\M', '', 'g')
+      ORDER BY fit.evidence_grade, fit.fit_score DESC, fit.notable_grant_count DESC
+    ) AS dupe_rn
   FROM fit
+),
+ranked AS (
+  SELECT deduped.*,
+    -- Evidence outranks fit. A grade-B funder that demonstrably gives beats a
+    -- grade-C one that merely shares a theme tag, whatever the theme score says.
+    ROW_NUMBER() OVER (
+      PARTITION BY deduped.code
+      ORDER BY deduped.evidence_grade, deduped.notable_grant_count DESC, deduped.fit_score DESC
+    ) AS rn
+  FROM deduped
   LEFT JOIN org_project_foundations existing
-    ON existing.org_project_id = fit.org_project_id AND existing.foundation_id = fit.foundation_id
+    ON existing.org_project_id = deduped.org_project_id AND existing.foundation_id = deduped.foundation_id
   WHERE existing.id IS NULL            -- never touch a foundation already in the pipeline (human-curated)
-    AND fit.fit_score >= ${MIN_SCORE}
+    AND deduped.dupe_rn = 1
+    AND deduped.fit_score >= ${MIN_SCORE}
+    -- Grade C stays out of the pipeline entirely. It is a suggestion, not a
+    -- record, and writing suggestions as records is what left 1,005 rows at
+    -- "saved" that nobody could trust enough to work.
+    AND deduped.evidence_grade <> 'C'
 )`;
 }
 
@@ -148,7 +197,7 @@ async function dryRun(supabase) {
   const sql = `${scorerCTE()}
 SELECT code, rn, fit_score, LEFT(foundation, 48) AS foundation,
        array_to_string(matched_themes, ',') AS themes,
-       COALESCE(total_giving_annual,0)::bigint AS giving
+       verified_giving::bigint AS giving, evidence_grade, notable_grant_count
 FROM ranked WHERE rn <= ${PER_PROJECT_LIMIT}
 ORDER BY code, rn`;                       // no trailing ';' — exec_sql wraps the query and rejects one
   const { data, error } = await runSelect(supabase, sql);
@@ -157,7 +206,7 @@ ORDER BY code, rn`;                       // no trailing ';' — exec_sql wraps 
   let lastCode = null;
   for (const r of rows) {
     if (r.code !== lastCode) { console.log(`\n${r.code}`); lastCode = r.code; }
-    console.log(`  ${String(r.fit_score).padStart(3)}  ${String(r.foundation).padEnd(50)} [${r.themes}] $${Number(r.giving).toLocaleString()}`);
+    console.log(`  ${String(r.fit_score).padStart(3)}  ${String(r.foundation).padEnd(50)} [${r.evidence_grade}] [${r.themes}] ${r.giving == null ? "giving n/p" : "$" + Number(r.giving).toLocaleString()}`);
   }
   console.log(`\n${rows.length} candidate matches across ${new Set(rows.map(r => r.code)).size} projects (min-score ${MIN_SCORE}, top ${PER_PROJECT_LIMIT}/project).`);
   console.log('Dry-run only — no rows written. Re-run with --apply to land these as "saved / researching" in the pipeline.');
@@ -167,7 +216,8 @@ ORDER BY code, rn`;                       // no trailing ';' — exec_sql wraps 
 async function apply(supabase) {
   const selectSql = `${scorerCTE()}
 SELECT org_project_id::text, foundation_id::text, fit_score, matched_themes,
-       home_match, national, sec_match, total_giving_annual
+       home_match, national, sec_match, verified_giving, foundation,
+       evidence_grade, notable_grant_count, has_dgr
 FROM ranked WHERE rn <= ${PER_PROJECT_LIMIT}
 ORDER BY code, rn`;
   const { data, error } = await runSelect(supabase, selectSql);
@@ -187,7 +237,11 @@ ORDER BY code, rn`;
         : row.sec_match
           ? 'secondary-state funder'
           : null;
-    const giving = Number(row.total_giving_annual ?? 0);
+    // Only a verified figure is stated. Where the source carries a placeholder
+    // the summary says so, rather than asserting an invented number as fact —
+    // 276 of the 286 high-fit rows used to read "gives ~$500,000/yr" off a
+    // default, which is why the queue was never trusted or worked.
+    const giving = row.verified_giving == null ? null : Number(row.verified_giving);
     return {
       org_profile_id: ACT_ORG_PROFILE_ID,
       org_project_id: row.org_project_id,
@@ -196,10 +250,22 @@ ORDER BY code, rn`;
       engagement_status: 'researching',
       fit_score: Number(row.fit_score ?? 0),
       fit_summary: [
-        `[auto-matched] themes: ${(row.matched_themes ?? []).join(', ')}`,
+        `[evidence ${row.evidence_grade}] themes: ${(row.matched_themes ?? []).join(', ')}`,
         geography,
-        giving >= 50000 ? `gives ~$${Math.round(giving).toLocaleString('en-AU')}/yr` : null,
+        'ACNC-confirmed grantmaker',
+        Number(row.notable_grant_count) > 0
+          ? `${row.notable_grant_count} recorded grant${Number(row.notable_grant_count) === 1 ? '' : 's'} on file`
+          : null,
+        row.has_dgr ? 'DGR endorsed' : null,
+        giving != null
+          ? `gives $${Math.round(giving).toLocaleString('en-AU')}/yr`
+          : 'annual giving not published',
       ].filter(Boolean).join(' · '),
+      // Every promoted row arrives with the next move already on it. 19 of 1,063
+      // rows carried one before this, which is most of why 1,005 sat at "saved".
+      next_step: Number(row.notable_grant_count) > 0
+        ? 'Read the recorded grants for pattern and size, then decide pursue or pass'
+        : 'Confirm open rounds and giving size from the funder site before deciding',
     };
   });
 

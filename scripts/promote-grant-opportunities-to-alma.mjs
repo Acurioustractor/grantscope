@@ -38,6 +38,32 @@ const supabase = createClient(
 const AGENT_ID = 'promote-grant-opportunities-to-alma';
 const ACT_PROJECT_CODES = ['ACT-HV', 'ACT-EL', 'ACT-JH', 'ACT-GD', 'ACT-CORE', 'ACT-FM'];
 
+/** Single words that appear in a quarter to a third of the grant corpus on their
+ *  own, so any two of them cleared the old 15-point threshold and let academic
+ *  research rounds through (audit 2026-08-07: support 2,971 rows, research 2,747,
+ *  community 2,525 of 9,536 candidates). The multi-word phrases that contain them
+ *  — "community-led", "social procurement", "lived experience" — still score, and
+ *  score higher, because those are the ones that actually discriminate. */
+const GENERIC_THEME_WORDS = new Set([
+  'support', 'research', 'public', 'foundation', 'strategy', 'community',
+  'operations', 'sustainability', 'events', 'rights', 'seed', 'partner',
+  'engagement', 'infrastructure', 'cultural', 'environment', 'intervention',
+  'voice', 'arts', 'tour', 'teens', 'remote', 'rural', 'regional', 'civic',
+]);
+
+/** Academic research and individual scholarship rounds are 43% of the candidate
+ *  pool (4,132 university/college providers) and ACT applies for none of them.
+ *  They are excluded unless a specific multi-word ACT phrase matches. */
+const SCHOLARLY_NAME = /\b(scholarship|fellowship|phd|postdoctoral|postdoc|honours|dissertation|thesis)\b/i;
+const ACADEMIC_PROVIDER = /\b(universit|college|institute of technolog|school of medicine)/i;
+
+function wordBoundaryHit(haystack, term) {
+  // Substring matching turned "arts" into a hit on "parts"/"quarters" and made
+  // every keyword far wider than intended. Match on word boundaries instead.
+  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`, 'i').test(haystack);
+}
+
 function normalise(s) {
   return (s ?? '')
     .toLowerCase()
@@ -100,10 +126,25 @@ function actAlignmentScore(grant, themes) {
     grant.description ?? '',
   ].join(' ').toLowerCase();
 
-  const hits = themes.filter((t) => haystack.includes(t));
-  if (hits.length) {
-    score += Math.min(50, hits.length * 10);
-    reasons.push(`themes:${hits.slice(0, 5).join(',')}`);
+  const hits = themes.filter((t) => wordBoundaryHit(haystack, t));
+  // A multi-word phrase ("palm island", "market garden", "narrative sovereignty")
+  // names something specific; a bare generic word does not. Weight accordingly so
+  // one real phrase clears the bar and a pile of generic words never does.
+  const phraseHits = hits.filter((t) => /[ -]/.test(t));
+  const wordHits = hits.filter((t) => !/[ -]/.test(t) && !GENERIC_THEME_WORDS.has(t));
+  score += Math.min(50, phraseHits.length * 25 + wordHits.length * 10);
+  if (phraseHits.length || wordHits.length) {
+    reasons.push(`themes:${[...phraseHits, ...wordHits].slice(0, 5).join(',')}`);
+  }
+
+  // ACT does not apply for university research rounds or individual scholarships,
+  // so a theme match on one is a false positive however specific it looks — an
+  // RMIT zinc-ion battery grant matches "clean energy" and is still not ours.
+  // Allowlisted funders bypass this upstream; partnership-shaped research reaches
+  // ACT through a relationship, not the grant feed.
+  const academic = ACADEMIC_PROVIDER.test(grant.provider ?? '') || SCHOLARLY_NAME.test(grant.name ?? '');
+  if (academic) {
+    return { score: 0, reasons: [], excluded: 'academic_or_scholarship' };
   }
   return { score, reasons };
 }
@@ -141,7 +182,11 @@ async function run() {
       const { data: page, error } = await supabase
         .from('grant_opportunities')
         .select('id, name, description, amount_min, amount_max, deadline, closes_at, provider, program, aligned_projects, categories, focus_areas, application_status, url, eligibility_criteria')
-        .eq('application_status', 'open')
+        // `application_status` tracks ACT's own application state, not whether the
+        // round is live: 'not_applied' holds 4,087 of the 4,463 future-deadline
+        // grants (92%), while 'open' holds only 372. Filtering on 'open' alone
+        // starved the ACT feed to 18 opportunities (audit 2026-08-07).
+        .in('application_status', ['open', 'not_applied', 'upcoming'])
         .or(`closes_at.is.null,closes_at.gte.${today}`)
         .range(offset, offset + PAGE_SIZE - 1);
       if (error) throw error;
@@ -151,12 +196,23 @@ async function run() {
     }
     console.log(`Candidates: ${grants.length} open grants in grant_opportunities`);
 
-    let promoted = 0, skippedExisting = 0, skippedNotMatched = 0, skippedNoAlign = 0;
+    let promoted = 0, skippedExisting = 0, skippedNotMatched = 0, skippedNoAlign = 0, skippedAcademic = 0, skippedNoFunder = 0;
     const toInsert = [];
 
     for (const g of grants ?? []) {
+      // `alma_funding_opportunities.funder_name` is NOT NULL, and an opportunity
+      // with no named funder cannot be verified or applied for anyway.
+      if (!g.provider?.trim()) {
+        skippedNoFunder++;
+        continue;
+      }
       const allowMatch = matchAllowlist(allowlist, g.provider);
       const align = actAlignmentScore(g, themes);
+
+      if (!allowMatch && align.excluded === 'academic_or_scholarship') {
+        skippedAcademic++;
+        continue;
+      }
 
       // Gate: must pass allowlist OR have ACT alignment via theme (configurable, default 15)
       if (!allowMatch && align.score < ALIGNMENT_THRESHOLD) {
@@ -174,7 +230,10 @@ async function run() {
         continue;
       }
 
-      const deadline = g.closes_at ? new Date(g.closes_at).toISOString() : null;
+      // Fall back to `deadline` when `closes_at` is absent — the feed quarantines
+      // any row without timing, so a dropped date silently costs the opportunity.
+      const rawDeadline = g.closes_at ?? g.deadline;
+      const deadline = rawDeadline ? new Date(rawDeadline).toISOString() : null;
       const focus = g.focus_areas ?? g.categories ?? [];
 
       toInsert.push({
@@ -225,7 +284,14 @@ async function run() {
           .from('alma_funding_opportunities')
           .insert(batch);
         if (insErr) {
-          console.error(`Insert batch ${i / 50} failed:`, insErr.message);
+          // A batch insert is all-or-nothing, so one malformed row used to cost
+          // the other 49. Retry the batch row-by-row and report only the losses.
+          console.error(`Insert batch ${i / 50} failed (${insErr.message}) — retrying row-by-row`);
+          for (const row of batch) {
+            const { error: rowErr } = await supabase.from('alma_funding_opportunities').insert(row);
+            if (rowErr) console.error(`  skipped "${row.name?.slice(0, 60)}": ${rowErr.message}`);
+            else promoted += 1;
+          }
         } else {
           promoted += batch.length;
         }
@@ -238,7 +304,10 @@ async function run() {
       }
     }
 
-    const summary = { promoted: DRY_RUN ? toInsert.length : promoted, skippedExisting, skippedNotMatched, skippedNoAlign, candidates: grants?.length ?? 0 };
+    // The feed quarantines any row without timing, so report how many promoted
+    // rows can actually reach `apply_now` rather than just how many were written.
+    const withDeadline = toInsert.filter((t) => t.deadline).length;
+    const summary = { promoted: DRY_RUN ? toInsert.length : promoted, withDeadline, skippedExisting, skippedNotMatched, skippedNoAlign, skippedAcademic, skippedNoFunder, candidates: grants?.length ?? 0 };
     console.log(`\n${DRY_RUN ? '[dry-run] ' : ''}Done in ${(Date.now() - startedAt) / 1000}s:`, summary);
 
     if (runId) {

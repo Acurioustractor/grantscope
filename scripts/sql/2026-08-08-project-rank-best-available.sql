@@ -1,0 +1,30 @@
+-- "Best available for this project", alongside "strong fit". Applied via Supabase MCP.
+--
+-- is_strong_fit is an absolute claim: this round is a good match on its merits.
+-- Four projects — Gold.Phone, CivicGraph, Contained, ACT Core — have nothing that
+-- clears it, so their pages rendered a ranked list with no highlight and no
+-- explanation, which reads as "we found nothing" when it is not true.
+--
+-- Contained's list is real and correct: FRRR Small & Vital, StreetSmart, Visit
+-- Victoria's Regional Events Fund ($500K), the Touring and Travel Fund. They score
+-- 40-50 against a bar of 55.
+--
+-- The wrong fix is lowering the bar, which would relabel weak rounds as strong
+-- across every project and undo the tightening that removed the epilepsy research
+-- funds and the $1,000 computer grant.
+--
+-- The right fix is a second, differently-named signal. project_rank orders each
+-- project's own list, so the UI can say "best available for this project" and mean
+-- exactly that — relative, never dressed up as absolute. The page also states
+-- plainly when nothing clears the bar, rather than leaving an unexplained absence
+-- of badges.
+--
+-- The full view definition is in 2026-08-08-geography-and-program-dedupe.sql; this
+-- pass appends one column:
+--
+--   ROW_NUMBER() OVER (
+--     PARTITION BY project_code
+--     ORDER BY fit_score DESC NULLS LAST, max_grant_amount DESC NULLS LAST, deadline NULLS LAST
+--   )::int AS project_rank
+--
+-- Rollback: drop project_rank from the final SELECT.
