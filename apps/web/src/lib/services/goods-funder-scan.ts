@@ -9,6 +9,10 @@ export type GhlWarmth = 'hot' | 'warm' | 'steady' | 'cooling' | 'cold' | 'not_in
 export interface FunderScanRow {
   id: string;
   name: string;
+  projectSlug: string | null;
+  projectName: string | null;
+  /** A = recorded grants on file · B = DGR or verified giving · C = theme overlap only. */
+  evidenceGrade: 'A' | 'B' | 'C' | null;
   stage: string | null;
   fitScore: number | null;
   fitSummary: string | null;
@@ -58,27 +62,47 @@ export interface FunderScanResult {
 
 const UNWORKED = new Set(['saved', 'parked']);
 
-export async function getGoodsFunderScan(): Promise<FunderScanResult> {
+/**
+ * Funder scan for one ACT project, or the whole portfolio when no slug is given.
+ *
+ * This was pinned to `goods` by a single `.eq()`, which is why Goods owned the
+ * only funder surface while Empathy Ledger (99 high-fit) and PICC (84) had none.
+ * Ordering is by `evidence_grade` first: A = recorded grants on file, B = DGR or
+ * a verified giving figure, C = theme overlap only. `fit_score` is a secondary
+ * sort because it was inflated by placeholder giving values on 85% of the
+ * foundations table (audit 2026-08-07).
+ */
+export async function getFunderScan(projectSlug?: string): Promise<FunderScanResult> {
   const db = getServiceSupabase();
-  const { data, error } = await db
+  let query = db
     .from('org_project_foundations')
-    .select('id, stage, fit_score, fit_summary, next_step, ghl_contact_id, ghl_contact_email, ghl_tags, ghl_synced_at, foundations(name, total_giving_annual), org_projects!inner(slug)')
-    .eq('org_projects.slug', 'goods')
+    .select('id, stage, fit_score, fit_summary, next_step, evidence_grade, ghl_contact_id, ghl_contact_email, ghl_tags, ghl_synced_at, foundations(name, total_giving_annual), org_projects!inner(slug, name)');
+  if (projectSlug) query = query.eq('org_projects.slug', projectSlug);
+  const { data, error } = await query
+    .order('evidence_grade', { ascending: true, nullsFirst: false })
     .order('fit_score', { ascending: false, nullsFirst: false })
     .limit(500);
   if (error) throw new Error(`funder scan: ${error.message}`);
 
   const rows: FunderScanRow[] = (data || []).map((r: Record<string, unknown>) => {
     const f = r.foundations as { name?: string; total_giving_annual?: number } | null;
+    const p = r.org_projects as { slug?: string; name?: string } | null;
     const tags = (r.ghl_tags as string[] | null) || [];
+    // The stored figure is a placeholder on 85% of rows (25,000 / 100,000 /
+    // 500,000). Surface null rather than a number nobody can stand behind.
+    const giving = f?.total_giving_annual ?? null;
+    const PLACEHOLDER_GIVING = new Set([25000, 100000, 500000]);
     return {
       id: r.id as string,
       name: f?.name ?? '(unknown foundation)',
+      projectSlug: p?.slug ?? null,
+      projectName: p?.name ?? null,
+      evidenceGrade: (r.evidence_grade as FunderScanRow['evidenceGrade']) ?? null,
       stage: (r.stage as string | null) ?? null,
       fitScore: (r.fit_score as number | null) ?? null,
       fitSummary: (r.fit_summary as string | null) ?? null,
       nextStep: (r.next_step as string | null) ?? null,
-      givingAnnual: f?.total_giving_annual ?? null,
+      givingAnnual: giving != null && PLACEHOLDER_GIVING.has(giving) ? null : giving,
       ghlWarmth: warmthFromTags(r.ghl_synced_at ? tags : null),
       ghlContactId: (r.ghl_contact_id as string | null) ?? null,
       ghlEmail: (r.ghl_contact_email as string | null) ?? null,
@@ -97,7 +121,14 @@ export async function getGoodsFunderScan(): Promise<FunderScanResult> {
       byWarmth,
       synced: rows.filter((r) => r.ghlSyncedAt).length,
       warmButUnworked: rows.filter((r) => (r.ghlWarmth === 'hot' || r.ghlWarmth === 'warm') && (!r.stage || UNWORKED.has(r.stage))),
-      hotButUnpushed: rows.filter((r) => r.ghlWarmth === 'not_in_ghl' && (r.fitScore ?? 0) >= 85),
+      // Was `fitScore >= 85`, which surfaced 286 rows ranked on placeholder money.
+      // Evidence grade A means recorded grants on file — provable, not inferred.
+      hotButUnpushed: rows.filter((r) => r.ghlWarmth === 'not_in_ghl' && r.evidenceGrade === 'A'),
     },
   };
+}
+
+/** Goods-scoped view, kept for the Goods funder-scan page. */
+export function getGoodsFunderScan(): Promise<FunderScanResult> {
+  return getFunderScan('goods');
 }

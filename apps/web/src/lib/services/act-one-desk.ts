@@ -2,7 +2,7 @@
 // merged into a single deadline-first ranked queue. Born from the /prototype-one
 // session (2026-08-05): Ben picked the split-desk shape with project and type as
 // filters, never places.
-import { getGoodsFunderScan } from '@/lib/services/goods-funder-scan';
+import { getFunderScan } from '@/lib/services/goods-funder-scan';
 import { getActRelationshipLedger } from '@/lib/services/act-relationship-ledger';
 import { getOrgDailyActionStates, type ActDailyActionStatus } from '@/lib/services/act-daily-actions';
 import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
@@ -124,7 +124,10 @@ export async function getOneDesk(slug: string): Promise<OneDeskPool> {
 export async function getOneDeskPool(slug: string): Promise<DeskRecord[]> {
   const profile = await getOrgProfileBySlug(slug).catch(() => null);
   const [scan, triage, buyers, ledger, obligations, people] = await Promise.all([
-    getGoodsFunderScan().catch(() => null),
+    // Portfolio-wide, not Goods-only (audit 2026-08-07): Goods had 10 high-fit
+    // funders and the only surface, while Empathy Ledger had 99 and PICC 84 with
+    // none. Passing no slug scans every ACT project.
+    getFunderScan().catch(() => null),
     getGoodsGrantsTriage({ scope: 'closing' }).catch(() => null),
     getGoodsBuyerPipeline().catch(() => null),
     profile ? getActRelationshipLedger(slug, profile.id).catch(() => null) : null,
@@ -191,10 +194,15 @@ export async function getOneDeskPool(slug: string): Promise<DeskRecord[]> {
   for (const r of scan?.rows ?? []) {
     if (!r.stage || ['parked', 'declined'].includes(r.stage)) continue;
     const inGhl = r.ghlWarmth !== 'not_in_ghl';
-    if (!inGhl && (r.fitScore ?? 0) < 85) continue;
+    // Grade A only for undecided funders: recorded grants on file. The old gate
+    // was fit >= 85, which admitted 286 rows ranked on placeholder giving values
+    // and is most of why 1,005 matches sat untouched at "saved".
+    if (!inGhl && r.evidenceGrade !== 'A') continue;
     pool.push({
-      id: `f-${r.id}`, kind: 'funder', project: 'Goods', name: r.name,
-      signal: inGhl ? r.ghlWarmth : `fit ${r.fitScore} · not yet an Ask`,
+      id: `f-${r.id}`, kind: 'funder',
+      project: r.projectName ?? 'ACT',
+      name: r.name,
+      signal: inGhl ? r.ghlWarmth : 'recorded grants on file · not yet an Ask',
       next: inGhl ? (r.nextStep || 'Set a next step') : 'Decide: pursue (mint the Ask in GHL) or pass',
       dueDays: null,
       score: r.fitScore ?? 0, amount: null, ghlUrl: ghlContactUrl(r.ghlContactId),
