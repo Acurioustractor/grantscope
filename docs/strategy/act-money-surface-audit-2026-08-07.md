@@ -337,3 +337,40 @@ program, Environmental Restoration NSW, Geelong Community Foundation. The
   pipeline one.
 - `project_funding_profiles.next_question` remains unwired.
 - `/org/act/funding` still has no inbound links.
+
+---
+
+## Ben's calls (2026-08-08)
+
+Four judgement questions the audit could not answer for itself. Answered, so
+nobody re-opens them.
+
+**Extractive funders stay blocked on both paths.** BHP, Fortescue, Rio Tinto and
+Santos are excluded from grant rounds as well as philanthropy. The exclusion is a
+values decision about whose money ACT takes, not a claim about the quality of the
+round, so it does not care which door the money comes through. Do not split the
+paths.
+
+**`/org/act/funding` gets a rail slot.** It was cut from the rail on 2026-08-05
+when the feed held 18 opportunities and the room was empty. The feed now backs
+~1,535 across 11 projects, so the portfolio-wide decision queue earns a door.
+Curiosity stays the raw-leads room; Funding is the ranked five. The rest of the
+2026-08-05 cut stands.
+
+**ALMA, Elders Room and Station Precinct fundraise through a parent.** They are
+programs inside another project, not fundraising units. No `org_projects` rows,
+no funding pages, and their money shows on the parent's page. Their absence from
+the registry is now a recorded decision, not a gap to be closed. Item 7 is
+closed on this basis.
+
+**Gold.Phone, Mounty Yarns and ACT Core stay as registry rows.** Created during
+the 2026-08-07 session because Phase 1 names them as canonical. Reviewed and
+kept.
+
+### Closed since
+
+- `project_funding_profiles.next_question` is wired. It renders above the
+  ranking on `/org/{slug}/{project}/funding`, with the ranking marked a best
+  guess until the question is answered.
+- `/org/act/funding` now has an inbound link: rail room 05, "Funding · Money
+  worth chasing".

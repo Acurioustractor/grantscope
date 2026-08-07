@@ -351,9 +351,18 @@ test.describe('ACT Field Desk pilot workflow', () => {
     const sidebar = page.getByTestId('act-desk-sidebar');
     await expect(sidebar.getByRole('link', { name: 'Listen' })).toHaveCount(0);
     // Action retired from the rail — One Desk owns committed work (kind=commitment).
-    await expect(sidebar.getByRole('link', { name: 'Action', exact: true })).toHaveCount(0);
-    // Funding retired 2026-08-05 — Curiosity + the desk absorbed the ritual.
-    await expect(sidebar.getByRole('link', { name: /^Funding/ })).toHaveCount(0);
+    // Not exact: true — the rail numbers its rooms, so an exact whole-string
+    // match on "Action" could never fire and the guard was vacuous.
+    await expect(sidebar.getByRole('link', { name: 'Action' })).toHaveCount(0);
+    // Funding returned 2026-08-08 — the feed went from 18 opportunities to
+    // ~1,535, so the portfolio-wide decision queue is a room again.
+    // Substring, not /^Funding/: the rail prefixes each room with its number,
+    // so the accessible name is "05 Funding Money worth chasing" and an
+    // anchored regex can never match. The absence assertion this replaces was
+    // passing vacuously for that reason — it never guarded anything.
+    const fundingRoom = sidebar.getByRole('link', { name: /Funding/ });
+    await expect(fundingRoom).toBeVisible();
+    await expect(fundingRoom).toHaveAttribute('href', '/org/act/funding');
     await expect(sidebar.getByRole('link', { name: 'Curiosity' })).toBeVisible();
     await sidebar.getByRole('link', { name: 'Orgs' }).click();
     await expect(page).toHaveURL(/\/org\/act\/orgs/);

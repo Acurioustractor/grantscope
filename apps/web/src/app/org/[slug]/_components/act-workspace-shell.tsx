@@ -90,10 +90,15 @@ export function ActWorkspaceShell({
     // The one cross-project noun (ADR 0002): cultivated humans, org-wide.
     { label: 'People', hint: 'Who we cultivate', href: `/org/${slug}/people`, active: pathname.startsWith(`/org/${slug}/people`) },
     { label: 'Curiosity', hint: 'New leads', href: rootHref(slug, 'opportunities', 'opportunities'), active: onOrgRoot && (view === 'opportunities' || view === 'triage') },
-    // Rail cut to the spine (Ben, 2026-08-05): Action, Art, Money, Sources,
-    // Research and Funding all left the rail. Art = the Harvest project, which
-    // the project list already carries; the rest stay reachable by URL
-    // (?view=pipeline, ?view=money, ?view=evidence, /research, /funding).
+    // Funding came back 2026-08-08 (Ben). It was cut on 2026-08-05 because the
+    // feed held 18 opportunities and the room had nothing in it. The feed now
+    // backs ~1,535 across all 11 projects, so the portfolio-wide decision queue
+    // is worth a door. Curiosity is raw leads; this is the ranked five.
+    { label: 'Funding', hint: 'Money worth chasing', href: `/org/${slug}/funding`, active: pathname.startsWith(`/org/${slug}/funding`) },
+    // Rail otherwise stays cut to the spine (Ben, 2026-08-05): Action, Art,
+    // Money, Sources and Research left and have not come back. Art = the Harvest
+    // project, which the project list already carries; the rest stay reachable
+    // by URL (?view=pipeline, ?view=money, ?view=evidence, /research).
   ];
   const utilityLinks = [
     {
@@ -182,7 +187,7 @@ export function ActWorkspaceShell({
                 />
               ) : null}
               <MobileWorkspaceLink href={`/org/${slug}/explore`} label="Atlas" active={pathname.startsWith(`/org/${slug}/explore`)} />
-              {workModes.slice(0, 4).map((mode) => <MobileWorkspaceLink key={mode.label} {...mode} />)}
+              {workModes.map((mode) => <MobileWorkspaceLink key={mode.label} {...mode} />)}
               <MobileWorkspaceLink href={rootHref(slug, 'money', 'money')} label="Money" active={onOrgRoot && view === 'money'} />
               <MobileWorkspaceLink href={rootHref(slug, 'evidence', 'systems')} label="Sources" active={onOrgRoot && view === 'evidence'} />
               <MobileWorkspaceLink href={`/org/${slug}/research`} label="Research" active={pathname.startsWith(`/org/${slug}/research`)} />
