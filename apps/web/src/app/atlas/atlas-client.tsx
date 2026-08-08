@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { money } from '@/lib/format';
 import {
@@ -11,6 +12,15 @@ import {
   type AtlasFeature,
   type AtlasLiveLayer,
 } from '@/lib/atlas/layers';
+import {
+  buildAtlasUrl,
+  councilCsv,
+  councilJson,
+  exportFilename,
+  parseAtlasUrl,
+  placeSlug,
+  resolvePlace,
+} from '@/lib/atlas/share';
 
 // Lazy-load the map to avoid SSR issues with Leaflet
 const AtlasMap = dynamic(() => import('./atlas-map'), { ssr: false });
@@ -20,7 +30,33 @@ const LAYERS = visibleAtlasLayers('public');
 
 const STATES = ['ALL', 'NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'NT', 'ACT'];
 
-export default function AtlasClient() {
+/** A council that has a full /place/council/[slug] prose page. */
+export interface CouncilPageLink {
+  slug: string;
+  lgaName: string;
+  state: string | null;
+}
+
+interface RailEntity {
+  gs_id: string;
+  canonical_name: string;
+  entity_type: string;
+  power_score: number | null;
+  system_count: number | null;
+  is_community_controlled: boolean;
+}
+
+function downloadFile(name: string, mime: string, text: string) {
+  const blob = new Blob([text], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export default function AtlasClient({ councilPages }: { councilPages: CouncilPageLink[] }) {
   const [features, setFeatures] = useState<AtlasFeature[]>([]);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -30,6 +66,12 @@ export default function AtlasClient() {
   // painted (the map) is always the last live pick.
   const [activeKey, setActiveKey] = useState(DEFAULT_ATLAS_LAYER_KEY);
   const [mapKey, setMapKey] = useState(DEFAULT_ATLAS_LAYER_KEY);
+  const [query, setQuery] = useState('');
+  const [entities, setEntities] = useState<RailEntity[]>([]);
+  const [loadingEntities, setLoadingEntities] = useState(false);
+  const [copied, setCopied] = useState(false);
+  // URL state only starts writing after the inbound URL has been applied.
+  const urlReady = useRef(false);
 
   // One fetch: the API returns every council and both metrics in one payload.
   // The state filter slices client-side.
@@ -55,6 +97,68 @@ export default function AtlasClient() {
     if (layer && isLiveLayer(layer)) setMapKey(key);
   }
 
+  function selectPlace(f: AtlasFeature) {
+    setSelected(f);
+    setQuery('');
+    // A selection hidden by the state filter would be invisible — follow it.
+    if (stateFilter !== 'ALL' && f.state !== stateFilter) setStateFilter(f.state);
+  }
+
+  // Apply the inbound URL once the payload exists: a link IS the presentation.
+  useEffect(() => {
+    if (loading || urlReady.current) return;
+    const wanted = parseAtlasUrl(window.location.search);
+    if (wanted.layerKey && LAYERS.some(l => l.key === wanted.layerKey)) {
+      pickLayer(wanted.layerKey);
+    }
+    let nextFilter = stateFilter;
+    if (wanted.state && STATES.includes(wanted.state)) {
+      nextFilter = wanted.state;
+      setStateFilter(wanted.state);
+    }
+    if (wanted.place) {
+      const place = resolvePlace(features, wanted.place, wanted.pst, nextFilter);
+      if (place) {
+        setSelected(place);
+        if (nextFilter !== 'ALL' && place.state !== nextFilter) setStateFilter(place.state);
+      }
+    }
+    urlReady.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, features]);
+
+  // Reflect the current view into the URL without navigating.
+  useEffect(() => {
+    if (!urlReady.current) return;
+    const url = buildAtlasUrl({
+      layerKey: activeKey,
+      defaultLayerKey: DEFAULT_ATLAS_LAYER_KEY,
+      stateFilter,
+      selected,
+    });
+    window.history.replaceState(null, '', url);
+  }, [activeKey, stateFilter, selected]);
+
+  // Fetch the selected place's top entities — the same endpoint the boxed
+  // /map panel used.
+  useEffect(() => {
+    if (!selected) {
+      setEntities([]);
+      return;
+    }
+    setLoadingEntities(true);
+    fetch(`/api/data/entity/search?lga=${encodeURIComponent(selected.lga_name)}&limit=10`)
+      .then(r => r.json())
+      .then(data => {
+        setEntities(data.results || []);
+        setLoadingEntities(false);
+      })
+      .catch(() => {
+        setEntities([]);
+        setLoadingEntities(false);
+      });
+  }, [selected]);
+
   const filtered = useMemo(
     () => (stateFilter === 'ALL' ? features : features.filter(f => f.state === stateFilter)),
     [features, stateFilter]
@@ -66,6 +170,54 @@ export default function AtlasClient() {
     () => LAYERS.filter(isLiveLayer).filter(l => l.key !== mapLayer.key),
     [mapLayer.key]
   );
+
+  // Search over every council we hold, not just the filtered view.
+  const searchResults = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (q.length < 2) return [];
+    const starts: AtlasFeature[] = [];
+    const contains: AtlasFeature[] = [];
+    for (const f of features) {
+      const name = f.lga_name.toLowerCase();
+      if (name.startsWith(q)) starts.push(f);
+      else if (name.includes(q)) contains.push(f);
+    }
+    return [...starts, ...contains].slice(0, 8);
+  }, [features, query]);
+
+  const topPlaces = useMemo(() => {
+    return [...filtered]
+      .map(f => ({ f, v: mapLayer.value(f) }))
+      .filter((x): x is { f: AtlasFeature; v: number } => x.v !== null)
+      .sort((a, b) => b.v - a.v)
+      .slice(0, 10);
+  }, [filtered, mapLayer]);
+
+  // The full prose page for the selected council, when one exists.
+  const selectedPage = useMemo(() => {
+    if (!selected) return null;
+    const slug = placeSlug(selected.lga_name);
+    const candidates = councilPages.filter(c => c.slug === slug);
+    if (candidates.length === 0) return null;
+    return (
+      candidates.find(c => (c.state ?? '').toUpperCase() === selected.state) ?? candidates[0]
+    );
+  }, [selected, councilPages]);
+
+  function copyLink() {
+    const url =
+      window.location.origin +
+      buildAtlasUrl({
+        layerKey: activeKey,
+        defaultLayerKey: DEFAULT_ATLAS_LAYER_KEY,
+        stateFilter,
+        selected,
+      });
+    navigator.clipboard?.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }
 
   return (
     <div className="fixed inset-0 z-0 bg-bauhaus-canvas">
@@ -90,7 +242,7 @@ export default function AtlasClient() {
             features={filtered}
             layer={mapLayer}
             selected={selected}
-            onSelect={setSelected}
+            onSelect={selectPlace}
           />
         )}
       </div>
@@ -148,6 +300,14 @@ export default function AtlasClient() {
               </button>
             ))}
           </div>
+
+          {/* The URL always mirrors the view, so the link IS the presentation */}
+          <button
+            onClick={copyLink}
+            className="mt-4 w-full border-2 border-bauhaus-black px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest hover:bg-bauhaus-black hover:text-white transition-colors"
+          >
+            {copied ? 'Link copied' : 'Copy link to this view'}
+          </button>
         </div>
 
         {/* The caveat, attached to the number — not a help page */}
@@ -200,79 +360,220 @@ export default function AtlasClient() {
         </div>
       )}
 
-      {/* Selected place — the numbers, with the caveat one glance away */}
-      {selected && (
-        <div className="absolute right-4 top-20 z-[900] w-[min(20rem,calc(100vw-2rem))] max-h-[calc(100dvh-6.5rem)] overflow-y-auto">
-          <div className="bg-white border-4 border-bauhaus-black shadow-[8px_8px_0_0_#121212] p-4">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <h3 className="font-black text-lg uppercase tracking-wider leading-tight">{selected.lga_name}</h3>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  {selected.state}{selected.remoteness ? ` · ${selected.remoteness}` : ''}
+      {/* Right rail: the door to every place. Search when nothing is chosen,
+          the place's numbers when something is. On small screens the rail
+          appears only for a selection. */}
+      {!loading && !failed && (
+        <div className={`absolute right-4 top-20 z-[900] w-[min(20rem,calc(100vw-2rem))] max-h-[calc(100dvh-6.5rem)] overflow-y-auto ${selected ? '' : 'hidden lg:block'}`}>
+          {selected ? (
+            <div className="bg-white border-4 border-bauhaus-black shadow-[8px_8px_0_0_#121212] p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <h3 className="font-black text-lg uppercase tracking-wider leading-tight">{selected.lga_name}</h3>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {selected.state}{selected.remoteness ? ` · ${selected.remoteness}` : ''}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setSelected(null)}
+                  aria-label="Close"
+                  className="shrink-0 w-7 h-7 border-2 border-bauhaus-black font-black hover:bg-bauhaus-black hover:text-white transition-colors"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="mt-4 flex justify-between items-baseline">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{mapLayer.name}</span>
+                <span className="text-3xl font-black">
+                  {(() => {
+                    const v = mapLayer.value(selected);
+                    return v === null ? '—' : mapLayer.format(v);
+                  })()}
+                </span>
+              </div>
+
+              <div className="mt-3 space-y-2">
+                {otherLiveLayers.map(layer => {
+                  const v = layer.value(selected);
+                  return (
+                    <div key={layer.key} className="flex justify-between items-baseline">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{layer.name}</span>
+                      <span className="text-sm font-black">{v === null ? '—' : layer.format(v)}</span>
+                    </div>
+                  );
+                })}
+                <div className="flex justify-between items-baseline">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Recorded funding</span>
+                  <span className="text-sm font-black text-green-700">
+                    {selected.total_funding_all_sources === null ? '—' : money(Number(selected.total_funding_all_sources))}
+                  </span>
+                </div>
+                <div className="flex justify-between items-baseline">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">SEIFA decile</span>
+                  <span className="text-sm font-black">{selected.avg_irsd_decile ?? '—'}</span>
+                </div>
+                <div className="flex justify-between items-baseline">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Entities</span>
+                  <span className="text-sm font-black">{selected.indexed_entities ?? '—'}</span>
+                </div>
+                <div className="flex justify-between items-baseline">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Community controlled</span>
+                  <span className="text-sm font-black">{selected.community_controlled_entities ?? '—'}</span>
+                </div>
+                <div className="flex justify-between items-baseline">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Cannot place</span>
+                  <span className={`text-sm font-black ${Number(selected.unplaced_share) >= 50 ? 'text-bauhaus-red' : ''}`}>
+                    {selected.unplaced_count}
+                    {selected.unplaced_share !== null && (
+                      <span className="text-xs font-bold text-gray-400 ml-1">({Number(selected.unplaced_share).toFixed(0)}%)</span>
+                    )}
+                  </span>
+                </div>
+              </div>
+
+              {selectedPage && (
+                <Link
+                  href={`/place/council/${selectedPage.slug}`}
+                  className="mt-4 block border-2 border-bauhaus-black bg-bauhaus-black text-white px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-center hover:bg-white hover:text-bauhaus-black transition-colors"
+                >
+                  Read the full place page →
+                </Link>
+              )}
+
+              {/* Top entities — the same endpoint the boxed /map panel used */}
+              <div className="mt-4 pt-3 border-t border-gray-200">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">
+                  Top entities here
+                </p>
+                {loadingEntities ? (
+                  <div className="flex items-center gap-2 text-gray-400 text-xs">
+                    <span className="inline-block w-3 h-3 border-2 border-gray-300 border-t-bauhaus-red rounded-full animate-spin" />
+                    Loading…
+                  </div>
+                ) : entities.length > 0 ? (
+                  <div className="space-y-1">
+                    {entities.map(e => (
+                      <Link
+                        key={e.gs_id}
+                        href={`/entity/${encodeURIComponent(e.gs_id)}`}
+                        className="block text-xs hover:bg-gray-50 px-1 py-1 transition-colors group"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-medium truncate group-hover:text-bauhaus-red transition-colors">
+                            {e.canonical_name}
+                          </span>
+                          {e.power_score !== null && Number(e.power_score) > 0 && (
+                            <span className="font-mono font-bold text-gray-500 shrink-0">
+                              {Number(e.power_score).toFixed(0)}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-[9px] px-1.5 py-0.5 bg-gray-100 text-gray-500">{e.entity_type}</span>
+                          {e.is_community_controlled && (
+                            <span className="text-[9px] px-1.5 py-0.5 bg-bauhaus-red/10 text-bauhaus-red">CC</span>
+                          )}
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-400">No indexed entities placed in this council.</p>
+                )}
+              </div>
+
+              {/* Take the data — the caveats travel inside the files */}
+              <div className="mt-4 pt-3 border-t border-gray-200">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">
+                  Take the data
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => downloadFile(`${exportFilename(selected)}.csv`, 'text/csv', councilCsv(selected))}
+                    className="flex-1 border-2 border-bauhaus-black px-2 py-1.5 text-[10px] font-bold uppercase tracking-widest hover:bg-bauhaus-black hover:text-white transition-colors"
+                  >
+                    CSV
+                  </button>
+                  <button
+                    onClick={() =>
+                      downloadFile(
+                        `${exportFilename(selected)}.json`,
+                        'application/json',
+                        JSON.stringify({ generated_at: new Date().toISOString(), ...councilJson(selected) }, null, 2)
+                      )
+                    }
+                    className="flex-1 border-2 border-bauhaus-black px-2 py-1.5 text-[10px] font-bold uppercase tracking-widest hover:bg-bauhaus-black hover:text-white transition-colors"
+                  >
+                    JSON
+                  </button>
+                </div>
+                <p className="text-[10px] text-gray-400 mt-2 leading-snug">
+                  Every layer's caveat ships inside the file. All councils at once:{' '}
+                  <a href="/api/data/map" target="_blank" rel="noopener noreferrer" className="underline hover:text-bauhaus-black">
+                    GET /api/data/map
+                  </a>
+                  .
                 </p>
               </div>
-              <button
-                onClick={() => setSelected(null)}
-                aria-label="Close"
-                className="shrink-0 w-7 h-7 border-2 border-bauhaus-black font-black hover:bg-bauhaus-black hover:text-white transition-colors"
-              >
-                ×
-              </button>
-            </div>
 
-            <div className="mt-4 flex justify-between items-baseline">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{mapLayer.name}</span>
-              <span className="text-3xl font-black">
-                {(() => {
-                  const v = mapLayer.value(selected);
-                  return v === null ? '—' : mapLayer.format(v);
-                })()}
-              </span>
+              <p className="text-[11px] text-gray-400 mt-4 pt-3 border-t border-gray-200 leading-snug">
+                {mapLayer.honestAtNote}
+              </p>
             </div>
-
-            <div className="mt-3 space-y-2">
-              {otherLiveLayers.map(layer => {
-                const v = layer.value(selected);
-                return (
-                  <div key={layer.key} className="flex justify-between items-baseline">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{layer.name}</span>
-                    <span className="text-sm font-black">{v === null ? '—' : layer.format(v)}</span>
-                  </div>
-                );
-              })}
-              <div className="flex justify-between items-baseline">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Recorded funding</span>
-                <span className="text-sm font-black text-green-700">
-                  {selected.total_funding_all_sources === null ? '—' : money(Number(selected.total_funding_all_sources))}
-                </span>
-              </div>
-              <div className="flex justify-between items-baseline">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">SEIFA decile</span>
-                <span className="text-sm font-black">{selected.avg_irsd_decile ?? '—'}</span>
-              </div>
-              <div className="flex justify-between items-baseline">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Entities</span>
-                <span className="text-sm font-black">{selected.indexed_entities ?? '—'}</span>
-              </div>
-              <div className="flex justify-between items-baseline">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Community controlled</span>
-                <span className="text-sm font-black">{selected.community_controlled_entities ?? '—'}</span>
-              </div>
-              <div className="flex justify-between items-baseline">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Cannot place</span>
-                <span className={`text-sm font-black ${Number(selected.unplaced_share) >= 50 ? 'text-bauhaus-red' : ''}`}>
-                  {selected.unplaced_count}
-                  {selected.unplaced_share !== null && (
-                    <span className="text-xs font-bold text-gray-400 ml-1">({Number(selected.unplaced_share).toFixed(0)}%)</span>
+          ) : (
+            <div className="bg-white border-4 border-bauhaus-black shadow-[8px_8px_0_0_#121212] p-4">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Find a place</p>
+              <input
+                type="text"
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                placeholder="Council name…"
+                className="w-full border-2 border-bauhaus-black px-3 py-2 text-sm focus:outline-none focus:border-bauhaus-blue"
+              />
+              {query.trim().length >= 2 && (
+                <div className="mt-2 space-y-0.5">
+                  {searchResults.length > 0 ? (
+                    searchResults.map(f => (
+                      <button
+                        key={`${f.lga_name}|${f.state}`}
+                        onClick={() => selectPlace(f)}
+                        className="w-full flex items-center justify-between gap-2 text-xs px-1 py-1 hover:bg-gray-50 text-left transition-colors"
+                      >
+                        <span className="font-medium truncate">{f.lga_name}</span>
+                        <span className="text-gray-400 shrink-0">{f.state}</span>
+                      </button>
+                    ))
+                  ) : (
+                    <p className="text-xs text-gray-400 px-1 py-1">
+                      No council by that name in our records.
+                    </p>
                   )}
-                </span>
+                </div>
+              )}
+
+              <div className="mt-4 pt-3 border-t border-gray-200">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">
+                  Highest: {mapLayer.name}
+                </p>
+                <div className="space-y-1">
+                  {topPlaces.map(({ f, v }) => (
+                    <button
+                      key={`${f.lga_name}|${f.state}`}
+                      onClick={() => selectPlace(f)}
+                      className="w-full flex items-center justify-between gap-2 text-xs px-1 py-0.5 hover:bg-gray-50 text-left transition-colors"
+                    >
+                      <span className="font-medium truncate">{f.lga_name}</span>
+                      <span className="flex items-center gap-2 shrink-0">
+                        <span className="text-gray-400">{f.state}</span>
+                        <span className="font-mono font-bold text-bauhaus-red">{mapLayer.format(v)}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-
-            <p className="text-[11px] text-gray-400 mt-4 pt-3 border-t border-gray-200 leading-snug">
-              {mapLayer.honestAtNote}
-            </p>
-          </div>
+          )}
         </div>
       )}
     </div>
