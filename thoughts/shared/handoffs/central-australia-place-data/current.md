@@ -4,11 +4,11 @@
 <!-- This section is extracted by SessionStart hook for quick resume -->
 **Updated:** 2026-08-08T14:15:00Z
 **Goal:** Apply the Ceduna treatment across remote Australia. **Four regions done:** Central Australia, Far West Coast, the Kimberley, Cape York.
-**Branch:** `feat/place-central-australia` — worktree `/Users/benknight/Code/grantscope-place`, 1 commit, **stacked on `feat/place-funding-far-west` (PR #175, still unmerged)**
-**Test:** `cd /Users/benknight/Code/grantscope-place/apps/web && npx tsc --noEmit && npx vitest run` (559 passing, was 550)
+**Branch:** `feat/place-central-australia` — worktree `/Users/benknight/Code/grantscope-place`, 10 commits, **PR #176 open, all checks green, awaiting Ben's review**. #175 MERGED 8 Aug and live on main
+**Test:** `cd /Users/benknight/Code/grantscope-place/apps/web && npx tsc --noEmit && npx vitest run` (566 passing, was 550)
 
 ### Now
-[->] Nothing running. Dev server stopped.
+[->] Nothing running. Dev server stopped. **Only open item is Ben's review of the #176 Vercel preview.**
 
 ### This Session
 - [x] **Central Australia survived the migrations.** `mv_lga_place_profile` matches live `gs_entities` counts exactly for all five councils. This was the thing worth re-checking rather than assuming, and it held
@@ -86,6 +86,23 @@ Same shape as Utopia, verified the same way. **ARDYALOON, DJARINDJIN, LOMBADINA,
 
 `unplaced` now takes a list of postcodes. Naming only the largest would have reported a fraction as the whole.
 
+### The renewal cliff — consistent enough to look structural
+
+Added last, and the most alarming thing the work surfaced. Between **58% and 64%** of committed federal money ends inside two years, in every region:
+
+| Region | Committed now | Ends within 24 months | Share |
+|---|---|---|---|
+| Central Australia | $1,829.1M | $1,170.6M | **64%** |
+| The Kimberley | $1,085.5M | $634.6M | **58%** |
+| Cape York | $369.2M | $224.8M | **61%** |
+| Far West Coast | $215.7M | (own page) | — |
+
+Named largest-first with agency and month. Central Land Council's Jobs, Land and the Economy agreement is $58M ending June 2028; MacDonnell Regional Council's Community Child Care Fund $30.2M, October 2027.
+
+**Framing on the page is hedged deliberately:** *"An agreement ending is not the same as funding stopping, but it is the moment a decision gets made somewhere else."* An expiring agreement is not a cut. It is a decision point, and typically not a local one.
+
+Region scope deliberately matches the delivery-coverage query — every council plus the unplaced postcodes — so organisations with no council area are counted. They are the most likely to be missed, and a cliff they are standing on is the last thing that should be invisible.
+
 ### Cape York — the region that broke the model
 
 Verified the same way, and the org-by-org step earned its keep: it caught a shape the type could not express.
@@ -127,11 +144,13 @@ Four shires — **Hope Vale, Mapoon, Napranum, Lockhart River** — hold **zero*
 I told Ben #175 shipped a user-visible bug (a page claiming Maralinga Tjarutja carries the Ceduna township). **That was wrong.** `getPlaceIntelligence` has no consumer outside its own module; the Far West Coast page runs its own hardcoded query and its own prose, which is accurate. The stale registry entry was dead config, fixed on this branch. No cherry-pick was needed.
 
 ### Next
-- [ ] **Merge PR #175 first.** This branch is stacked on it and cannot land before it
+- [x] **PR #175 MERGED** 8 Aug, squash, all checks green. Ceduna and Far West are live on main
+- [ ] **Review the #176 preview and merge.** Ten commits, four regions, all checks green. The argument is visual — whether a reader in Tennant Creek, Utopia or Hope Vale recognises their own place
 - [ ] Correct the stale 107/109-Stretch prose in three Notion fields (147 is confirmed correct)
 - [ ] Utopia consent is `Not checked` — that gates any public Goods surface, not just storyteller names
 - [ ] `mv_lga_place_profile` is delivery-keyed. Any other page reading it understates the same way. Worth an audit of consumers
-- [ ] **Do NOT converge Far West into `RegionReport`.** It is the richer page. What is left to lift *up* from it: `getPostcodeFundingPicture` (per-postcode registered-address funding with ending-soon awards) and crime suppression. Both are genuinely useful to every region
+- [x] **DONE: `getPostcodeFundingPicture` lifted up.** Its three queries differed only in which organisations they counted, so the scope is a predicate now and a postcode and a region are the same question. Every region has the renewal cliff; Far West unchanged at $215.7M committed
+- [ ] **Still do NOT converge Far West into `RegionReport`.** It remains the richer page. The one thing left to lift up is crime suppression (`getLgaAttribution`)
 - [x] **FIXED: councils with no `mv_lga_place_profile` row no longer vanish.** Five were missing — Maralinga Tjarutja plus the Hope Vale, Mapoon, Napranum and Lockhart River shires, **four of the five Aboriginal shire councils**. Cape York was showing 9 of its 13. Councils are now built from the region's declared `lgaNames`, and a missing row renders as an explicit "nothing in our records" card, *not* a row of zeros — zeros would claim nothing happens there, which is false: Lockhart River's council runs a youth service with 45 grants worth $13.2M, all counted under Cairns. Empty councils sort last and alphabetically. A guard now requires every declared council to carry a label
 - [ ] Kimberley unplaced list is capped at 300 of 721 for display. The cap is reported, but the other 421 organisations are named nowhere. Cape York shows 109 of 345, Central Australia 87 of 143 — both under the cap
 - [ ] The "Showing N of M" caption compares two populations: N is community-controlled and currently-registered, M is every unplaced organisation in the postcodes. Honest but not obvious
