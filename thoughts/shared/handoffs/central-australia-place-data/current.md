@@ -55,18 +55,24 @@ It is the whole argument for the evidence layer, so it should not be lost:
 |---|---|---|
 | Alice Springs | 823 orgs, $2,441M held, $688M contracts | **16 beds**, 1 washing machine — the build base |
 | Tennant Creek | 108 orgs, $402M held, $35M contracts | **160 beds**, 9 washing machines, deepest co-design history |
-| Utopia / Urapuntja | **no council area at all** | **147 beds** (Notion property) / **169** per the page note |
+| Utopia / Urapuntja | **no council area at all** | **147 beds** (60 Basket + 87 Stretch) |
 
 The money map and the delivery map point opposite ways. The place with the most money on paper has the least delivered; the place with the second-most delivered is geographically nowhere.
 
 **Ben had already hand-corrected this pattern inside Goods' own data.** The Alice Springs row carries the note *"Do not double-count Utopia/Urapuntja basket beds here — those sit on the Utopia row."* The hub-administration distortion is not only in government registers. It reaches into Goods' own delivery ledger, and a human caught it there manually.
 
-**Data quality note:** the Utopia row's properties say Basket 60 + Stretch 87 = 147, but its own note says *"60 Basket + 109 Stretch"* = 169. The properties look stale against the note. Worth reconciling before either number is used anywhere.
+**Utopia bed count, confirmed by Ben 2026-08-08: 60 Basket + 87 Stretch = 147.** The properties are right. The **prose is stale** in three places in Notion, all claiming a 107-Stretch May figure that was later revised:
+
+- Utopia row, `Next action`: *"Split held as 60 Basket + 109 Stretch (107 May + 2 latest)"*
+- Utopia row, `What this place proves or tests`: *"107 Stretch from May field-note trip; +2 Stretch on latest trip. Total 169 (60 Basket + 109 Stretch)"*
+- Alice Springs row, `Next action`: *"those sit on the Utopia row (60 Basket + 107 May Stretch)"*
+
+Not yet corrected — Notion edits are Tier 2 and need Ben's go-ahead.
 
 ### Next
 - [ ] **Merge PR #175 first.** This branch is stacked on it and cannot land before it
 - [ ] **The Far West Coast label bug is in #175 as written.** It is fixed on this branch, not on #175. If #175 merges alone it ships a page saying Maralinga Tjarutja carries the township when it holds nothing
-- [ ] Reconcile the Utopia bed count (147 vs 169) in Notion
+- [ ] Correct the stale 107/109-Stretch prose in three Notion fields (147 is confirmed correct)
 - [ ] Utopia consent is `Not checked` — that gates any public Goods surface, not just storyteller names
 - [ ] `mv_lga_place_profile` is delivery-keyed. Any other page reading it understates the same way. Worth an audit of consumers
 - [ ] The Far West Coast page runs its own hardcoded LGA query rather than `getPlaceIntelligence`, so it does not benefit from `hubAdministration` or the registered-address figure. Converging them would remove a whole class of drift
@@ -81,7 +87,7 @@ The money map and the delivery map point opposite ways. The place with the most 
 
 ### Open Questions
 - UNCONFIRMED: whether Urapuntja people would accept "Sandover" as the name for the place, given ABS has no entry for Urapuntja. Question for the room
-- UNCONFIRMED: whether the 147/169 bed discrepancy is a stale property or a real double-count
+- ~~UNCONFIRMED: the 147/169 bed discrepancy~~ **RESOLVED 2026-08-08: 147 is correct. The prose was stale, not the properties**
 - The 64,801 wall is unmoved. Postcode 0872 holds **139 unplaced organisations, 137 of them community-controlled** (98.6%), only 65 with an ABN. Compare postcode 0820, Darwin's suburbs: 657 orgs, 49 community-controlled. The wall falls almost entirely on community-controlled organisations
 
 ### Workflow State
@@ -97,6 +103,8 @@ max_retries: 3
 - goods_surface: nowhere yet, handoff only — applied
 - hub_pattern: generalised to a typed registry field for both regions
 
+#### Resolved (continued)
+- utopia_bed_count: **147 (60 Basket + 87 Stretch)**, confirmed by Ben 2026-08-08. Stale prose in three Notion fields still to correct
+
 #### Unknowns
 - next_region: UNKNOWN — Ben's pick (APY / Kimberley / Cape York)
-- utopia_bed_count: 147 vs 169, unreconciled
