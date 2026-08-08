@@ -110,6 +110,49 @@ task to just do:
 Until then, SA gives buyer names and contract counts. That is enough to choose a target and size it. It is
 not enough to show a buyer their own supplier story, which is the whole pitch.
 
+### Running SA once you have an account
+
+**Sign up:** <https://www.tenders.sa.gov.au/terms?needAck=y>
+
+That is the actual target of the "Sign Up" link on the login page, verified 2026-08-08 — registration
+begins with a terms acknowledgement. There is no `/register` URL; going there directly 404s behind the
+Cloudflare wall. Choose **Supplier**, not Agency. ACT Pty details: ABN 36 697 347 676.
+
+**On the terms question I raised:** I read them. 8,695 characters, searched for every relevant term family
+— automated, robot, spider, scrape, crawl, bulk, extract, data mining, harvest, screen scraping. **No
+clause on any of them.** So the terms do not prohibit automated retrieval. Two honest caveats: `robots.txt`
+sits behind Cloudflare and could not be read anonymously, and absence of a prohibition is not the same as
+permission. But the concern is materially smaller than when I first flagged it, and the decision is now
+mostly about relationship rather than compliance.
+
+Then, one time:
+
+```bash
+node --env-file=.env scripts/scrape-state-tenders.mjs --state=SA --login
+```
+
+That opens a **real browser window** at the SA login page. Sign in there yourself. The script never sees,
+stores or transmits the password — it only saves the resulting session cookies to
+`data/state-tenders/sa-auth.json`, which is gitignored. Before it reports success it navigates to a real
+contract list and confirms the session actually renders contracts, so an account that signs in but lacks
+contract-view permission is caught immediately rather than after a crawl returns nothing.
+
+After that, ordinary runs pick the session up automatically:
+
+```bash
+# wedge agencies: housing, human services, child protection, AG, corrections (~15 min)
+node --env-file=.env scripts/scrape-state-tenders.mjs --state=SA --apply \
+  --buyer-id=267553,84271,94146,56683,223646,56713
+
+# whole of SA (~75 min)
+node --env-file=.env scripts/scrape-state-tenders.mjs --state=SA --apply
+```
+
+If the session is missing or expires, the crawl **aborts loudly** rather than continuing. That is
+deliberate: without it, every agency would record zero contracts, which reads as "this buyer uses no
+social enterprises" when it actually means "we could not look". Silent zeros are worse than a failed run,
+because they look like findings.
+
 ## Everything else
 
 The largest agencies in VIC are Transport and Planning (5,224), Education (3,906) and Energy/Environment

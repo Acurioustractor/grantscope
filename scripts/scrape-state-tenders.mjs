@@ -33,7 +33,7 @@
  */
 
 import { chromium } from 'playwright';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync, existsSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
 
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith(`--${k}=`)); return a ? a.split('=')[1] : d; };
@@ -53,6 +53,13 @@ const LIMIT_AGENCIES = parseInt(arg('limit-agencies', '0'), 10) || Infinity;
 const LIMIT_CONTRACTS = parseInt(arg('limit-contracts', '0'), 10) || Infinity;
 const AGENCIES_ONLY = has('agencies-only');
 const DELAY_MS = parseInt(arg('delay', '800'), 10);
+
+// SA gates every contract list behind an account. --login opens a REAL browser
+// window, you sign in yourself, and only the resulting session cookies are
+// saved. No password is ever passed through, stored, or seen by this script.
+// The saved session lives under data/state-tenders/, which is gitignored.
+const LOGIN = has('login');
+const AUTH_PATH = `data/state-tenders/${STATE.toLowerCase()}-auth.json`;
 
 const db = APPLY
   ? createClient(process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
@@ -148,15 +155,66 @@ async function main() {
   mkdirSync('data/state-tenders', { recursive: true });
   const outPath = `data/state-tenders/${STATE.toLowerCase()}.jsonl`;
 
-  const browser = await chromium.launch({ headless: true, channel: 'chrome', args: ['--disable-blink-features=AutomationControlled'] });
+  const haveAuth = existsSync(AUTH_PATH);
+  const browser = await chromium.launch({
+    headless: !LOGIN, // --login needs a window you can actually type into
+    channel: 'chrome',
+    args: ['--disable-blink-features=AutomationControlled'],
+  });
   const ctx = await browser.newContext({
     locale: 'en-AU', timezoneId: STATE === 'SA' ? 'Australia/Adelaide' : 'Australia/Melbourne',
     viewport: { width: 1440, height: 900 },
     userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36',
+    ...(haveAuth && !LOGIN ? { storageState: AUTH_PATH } : {}),
   });
   await ctx.addInitScript(() => { Object.defineProperty(navigator, 'webdriver', { get: () => undefined }); });
 
   const page = await ctx.newPage();
+
+  if (LOGIN) {
+    await page.goto(`${HOST}/login`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await settle(page, 45000);
+    log('');
+    log('  A browser window is open at the login page.');
+    log('  Sign in there yourself. This script never sees your password.');
+    log('  When you are signed in, leave the window alone — it saves automatically.');
+    log('');
+    let waited = 0;
+    for (;;) {
+      const state = await page.evaluate(() => ({
+        url: location.href,
+        loggedIn: /log ?out|sign ?out|my account/i.test(document.body.innerText || ''),
+      })).catch(() => ({ url: '', loggedIn: false }));
+      if (state.loggedIn && !/\/login/.test(state.url)) break;
+      if (waited >= 600000) { log('timed out after 10 minutes without a completed login'); await browser.close(); process.exit(2); }
+      await sleep(3000); waited += 3000;
+    }
+    // Verify the session actually unlocks contract data before claiming success.
+    await page.goto(`${HOST}/contract/buyerIndex`, { waitUntil: 'domcontentloaded', timeout: 45000 });
+    await settle(page);
+    const firstBuyer = await page.evaluate(() => {
+      const a = [...document.querySelectorAll('a')].find(x => /buyerId=\d+/.test(x.getAttribute('href') || ''));
+      return a ? a.getAttribute('href') : null;
+    });
+    let unlocked = false;
+    if (firstBuyer) {
+      await page.goto(firstBuyer.startsWith('http') ? firstBuyer : HOST + firstBuyer, { waitUntil: 'domcontentloaded', timeout: 45000 });
+      await settle(page);
+      unlocked = await page.evaluate(() =>
+        !/\/login/.test(location.href) &&
+        [...document.querySelectorAll('a')].some(a => /\/contract\/view\?id=\d+/.test(a.getAttribute('href') || '')));
+    }
+    await ctx.storageState({ path: AUTH_PATH });
+    log(`session saved → ${AUTH_PATH}`);
+    log(unlocked
+      ? 'VERIFIED: contract lists are now reachable. Re-run without --login to crawl.'
+      : 'WARNING: signed in, but contract lists still did not render. The account may need approval, or may not carry contract-view permission.');
+    await browser.close();
+    return;
+  }
+
+  if (haveAuth) log(`using saved session from ${AUTH_PATH}`);
+  else if (STATE === 'SA') log('NOTE: no saved session. SA contract lists require one — run with --login first.');
 
   // 1) agency index
   log('loading buyerIndex…');
@@ -239,6 +297,16 @@ async function main() {
       await page.goto(`${HOST}/contract/search?buyerId=${ag.buyerId}&browse=true`, { waitUntil: 'domcontentloaded', timeout: 45000 });
       await settle(page);
       await sleep(1000);
+      // Bounced to login = no valid session. Abort loudly: crawling on would
+      // record every agency as having zero contracts, which reads as "this
+      // buyer uses no social enterprises" when it means "we could not look".
+      if (/\/login/.test(page.url())) {
+        log(`AUTH REQUIRED: ${HOST} redirected the contract list to /login.`);
+        log(`  Run: node --env-file=.env scripts/scrape-state-tenders.mjs --state=${STATE} --login`);
+        await flush();
+        await browser.close();
+        process.exit(3);
+      }
       rows = await page.evaluate(() => {
         const seen = new Set(); const out = [];
         for (const a of document.querySelectorAll('a[href*="/contract/view?id="]')) {
