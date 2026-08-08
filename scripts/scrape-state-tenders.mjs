@@ -93,6 +93,14 @@ function parseMoney(s) {
   const v = Number(all[all.length - 1][1].replace(/,/g, ''));
   return Number.isFinite(v) ? v : null;
 }
+// Count of contracts whose value the publisher withheld — reported per run so a
+// low-value crawl is never mistaken for a low-spend buyer.
+let undisclosedCount = 0;
+/** VIC's $1.00 sentinel means "withheld", not "one dollar". Null it. */
+function undisclosed(v) {
+  if (v !== null && v <= 1) { undisclosedCount++; return null; }
+  return v;
+}
 function cleanAbn(s) {
   if (!s) return null;
   const m = String(s).match(/\b(\d{2}\s?\d{3}\s?\d{3}\s?\d{3})\b/);
@@ -234,11 +242,20 @@ async function main() {
         ocid,
         title: f['Title'] || null,
         description: (f['Description'] || '').slice(0, 2000) || null,
-        contract_value: list.value ?? parseMoney(f['Value of the Contract'] || f['Total Value']),
+        // Detail-page labelled fields are authoritative; the list row is a
+        // fallback. This order used to be reversed.
+        //
+        // The stray "$1" values are NOT a parse failure — they are real. VIC
+        // publishes "Total Value of the Contract $1.00 (Estimate)" as a
+        // sentinel when the real figure is withheld as Genuinely Confidential
+        // Business Information. Storing that as a dollar value would silently
+        // understate every aggregate built on it, so it becomes null: the
+        // value is undisclosed, not one dollar.
+        contract_value: undisclosed(parseMoney(f['Value of the Contract'] || f['Total Value']) ?? list.value ?? null),
         currency: 'AUD',
         category: f['Type'] || f['Category'] || null,
-        contract_start: list.dates[0] || parseDate(f['Start Date']) || null,
-        contract_end: list.dates[1] || parseDate(f['End Date']) || null,
+        contract_start: parseDate(f['Start Date']) || list.dates[0] || null,
+        contract_end: parseDate(f['End Date']) || list.dates[1] || null,
         buyer_name: ag.name,
         buyer_id: String(ag.buyerId),
         supplier_name,
@@ -259,7 +276,7 @@ async function main() {
   }
   const withAbn = contracts.filter(c => c.supplier_abn).length;
   const withVal = contracts.filter(c => c.contract_value).length;
-  log(`${APPLY ? `upserted ${upserted}` : `wrote ${contracts.length} → ${outPath}`} | ${contracts.length} new, ${skipped} skipped, ${failed} failed | ${withAbn} with ABN, ${withVal} with value`);
+  log(`${APPLY ? `upserted ${upserted}` : `wrote ${contracts.length} → ${outPath}`} | ${contracts.length} new, ${skipped} skipped, ${failed} failed | ${withAbn} with ABN, ${withVal} with value, ${undisclosedCount} value withheld by publisher`);
   if (APPLY) log(`reverse with: DELETE FROM austender_contracts WHERE ocid LIKE '${prefix}-%'. Then refresh evidence MVs + re-run scout-se-buyers.`);
 
   await browser.close();

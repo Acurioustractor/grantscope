@@ -1,6 +1,8 @@
 # State-Tenders Ingest — VIC + SA Awarded Contracts
 
-**Status:** Feasibility PROVEN 2026-06-08. Scaffold scraper landed (`scripts/scrape-state-tenders.mjs`). Full ingest into `austender_contracts` = a deliberate next session (not done).
+**Status (2026-08-08):** VIC scraper is **built, hardened and validated** — `--apply` upserts, resume-by-ocid survives restarts, politeness delay, per-run data-quality counts. What has NOT happened is the **full crawl**: ~57,349 contracts across 316 agencies at ~1s each is roughly **16 hours**. That is a deliberate decision to make, not a thing to start by accident, because it means sustained traffic to a government site.
+
+**SA is blocked and cannot be unblocked by us.** SA publishes agency names and contract counts anonymously, but every contract list and detail page redirects to `/login`. SA needs an SA Tenders account. Until someone supplies credentials, "VIC/SA ingest" means VIC.
 
 **Why:** Unlocks VIC/SA lighthouse buyers (SPF / SAIPP social-procurement obligations). Adds state contract evidence to SE profiles by ABN — the wedge's "evidence depth" lane. Today the evidence layer is federal-only (AusTender), so a VIC/SA buyer can't see their own social-procurement story.
 
@@ -44,9 +46,29 @@ ACCS            WIC…   Office Tenancy Cleaning…    Pickwick Group Pty Ltd AB
 
 6/6 sample rows had supplier ABN + value — exactly the evidence-join keys.
 
+## The `$1` values were never a parser bug (found 2026-08-08)
+
+The note below assumed stray `$1` values meant the parser was misreading. It was
+not. **VIC publishes `Total Value of the Contract $1.00 (Estimate)` as a sentinel
+when the real figure is withheld.** Contract 227360 says so in as many words:
+
+> "the Total Estimated Value of this contract has not been disclosed as it
+> constitutes as Genuinely Confidential Business Information"
+
+Ingesting that as a dollar value would silently understate every aggregate built
+on it — the same class of error as the SE-buyer-scout inflation. The scraper now
+nulls any value ≤ $1 and reports a per-run count of "value withheld by
+publisher", so a crawl full of undisclosed values can never read as a low-spend
+buyer. Undisclosed is not zero and it is not one dollar.
+
+Field precedence was also corrected: detail-page labelled fields are
+authoritative, the list row is the fallback. It used to be the other way round.
+
 ## Remaining work (the focused next session)
 
-1. **Parser hardening** — value occasionally mis-parses (saw `$1`); key the value/date extraction on the detail-page label DOM, not a text fallback. Parse dates ("18 Feb 2025" → ISO).
+1. ~~**Parser hardening**~~ — DONE 2026-08-08. Value/date precedence fixed, the
+   `$1` sentinel handled, dates parse to ISO. Validated on a live slice: 8/8 rows
+   with ABN, 7 with value, 1 correctly recorded as withheld.
 2. **Full crawl** — ~59K contracts × ~1s = ~16h. Run as a rate-limited background job, resumable (checkpoint by buyerId; skip already-seen `platform_id`). Be polite (≥800ms delay, off-peak).
 3. **Upsert into `austender_contracts`** — `ocid` is NOT NULL + the natural key. Use `ocid = '<state>-tenders-<platform_id>'`. Map title/description/contract_value/dates/buyer_name/buyer_id/supplier_name/supplier_abn/source_url. Fully reversible: `DELETE FROM austender_contracts WHERE ocid LIKE 'vic-tenders-%'`.
 4. **Refresh evidence MVs** so state contracts surface on `/suppliers`, SE profiles, and buyer prospecting by ABN.
