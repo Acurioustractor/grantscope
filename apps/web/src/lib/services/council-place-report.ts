@@ -29,7 +29,32 @@ export interface CouncilSummary {
   communityControlled: number;
 }
 
+/**
+ * The rest of the picture for a place, and the parts of it we do not hold.
+ *
+ * Assembled deliberately rather than by joining everything available on
+ * postcode. Joining `social_enterprises` that way credited Central Desert with
+ * 150 of them, all of which sit in postcode 0872 — a postcode spanning eight
+ * councils and a third of the continent. That number would have looked entirely
+ * plausible on a page. Anything that cannot be placed honestly is reported as a
+ * gap instead of a figure.
+ */
+export interface PlaceContext {
+  /** SEIFA deciles, 1 is the most disadvantaged tenth of Australia. */
+  seifa: { irsd: number | null; ieo: number | null; ier: number | null; postcodes: number } | null;
+  indigenousCorporations: number;
+  communityControlled: number;
+  /** Crime rows held for this council. Zero means we hold none, not that there is none. */
+  crimeRows: number;
+  /**
+   * Social enterprises sharing this council's postcodes. Not a count of social
+   * enterprises here, and never rendered as one.
+   */
+  socialEnterprisesInPostcodes: number;
+}
+
 export interface CouncilPlaceReport extends CouncilSummary {
+  context: PlaceContext;
   /** Postcodes the council's own organisations use. */
   postcodes: string[];
   /**
@@ -126,6 +151,13 @@ export const getCouncilPlaceReport = cache(async function getCouncilPlaceReport(
   if (postcodes.length === 0) {
     return {
       ...council,
+      context: {
+        seifa: null,
+        indigenousCorporations: 0,
+        communityControlled: council.communityControlled,
+        crimeRows: 0,
+        socialEnterprisesInPostcodes: 0,
+      },
       postcodes: [],
       unplacedOrgs: [],
       unplacedTotal: 0,
@@ -136,6 +168,39 @@ export const getCouncilPlaceReport = cache(async function getCouncilPlaceReport(
   }
 
   const inPostcodes = quoted(postcodes);
+  // Social enterprises join on ABN through gs_entities, never on postcode.
+  // Postcode credited Central Desert with 150 of them, all sitting in 0872.
+  // The ABN join gives 8. It inherits whatever placement error the entity
+  // carries, which is documented, rather than inventing a new one.
+  const contextResult = db.rpc('exec_sql', {
+    query: `SELECT
+              -- SEIFA is keyed on the postcodes ABS assigns to this council,
+              -- not the postcodes its organisations are registered in. Those
+              -- are different sets, and using the organisations' would put the
+              -- registered-address distortion inside a need measure — the one
+              -- thing these signals exist to stay clear of.
+              (SELECT round(avg(s.decile_national),1) FROM seifa_2021 s
+                WHERE s.index_type='IRSD' AND s.postcode IN
+                  (SELECT postcode FROM postcode_geo WHERE lga_name='${lga}')) AS irsd,
+              (SELECT round(avg(s.decile_national),1) FROM seifa_2021 s
+                WHERE s.index_type='IEO' AND s.postcode IN
+                  (SELECT postcode FROM postcode_geo WHERE lga_name='${lga}')) AS ieo,
+              (SELECT round(avg(s.decile_national),1) FROM seifa_2021 s
+                WHERE s.index_type='IER' AND s.postcode IN
+                  (SELECT postcode FROM postcode_geo WHERE lga_name='${lga}')) AS ier,
+              (SELECT count(DISTINCT s.postcode) FROM seifa_2021 s
+                WHERE s.postcode IN
+                  (SELECT postcode FROM postcode_geo WHERE lga_name='${lga}')) AS seifa_postcodes,
+              (SELECT count(*) FROM gs_entities
+                WHERE lga_name='${lga}' AND entity_type='indigenous_corp') AS indigenous_corps,
+              (SELECT count(*) FROM gs_entities
+                WHERE lga_name='${lga}' AND is_community_controlled) AS community_controlled,
+              (SELECT count(*) FROM crime_stats_lga WHERE lga_name='${lga}') AS crime_rows,
+              (SELECT count(*) FROM social_enterprises se
+                 JOIN gs_entities e ON e.abn = se.abn
+                WHERE e.lga_name='${lga}') AS social_enterprises`,
+  });
+
   const [unplacedResult, countResult, gapsResult] = await Promise.all([
     // Community-controlled and Indigenous corporations only. A list of every
     // unplaced business in five postcodes is not a question anyone can answer.
@@ -170,9 +235,28 @@ export const getCouncilPlaceReport = cache(async function getCouncilPlaceReport(
   const countRow = Array.isArray(countResult.data)
     ? (countResult.data[0] as Record<string, unknown> | undefined)
     : undefined;
+  const ctx = Array.isArray((await contextResult).data)
+    ? (((await contextResult).data as Array<Record<string, unknown>>)[0] ?? {})
+    : {};
+  const seifaPostcodes = num(ctx.seifa_postcodes);
 
   return {
     ...council,
+    context: {
+      seifa:
+        seifaPostcodes > 0
+          ? {
+              irsd: ctx.irsd === null || ctx.irsd === undefined ? null : num(ctx.irsd),
+              ieo: ctx.ieo === null || ctx.ieo === undefined ? null : num(ctx.ieo),
+              ier: ctx.ier === null || ctx.ier === undefined ? null : num(ctx.ier),
+              postcodes: seifaPostcodes,
+            }
+          : null,
+      indigenousCorporations: num(ctx.indigenous_corps),
+      communityControlled: num(ctx.community_controlled),
+      crimeRows: num(ctx.crime_rows),
+      socialEnterprisesInPostcodes: num(ctx.social_enterprises),
+    },
     postcodes,
     unplacedOrgs: (Array.isArray(unplacedResult.data) ? unplacedResult.data : []).map(entry => {
       const row = entry as Record<string, unknown>;

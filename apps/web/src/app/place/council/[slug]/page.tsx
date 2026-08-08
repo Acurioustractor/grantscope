@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { getCouncilPlaceReport } from '@/lib/services/council-place-report';
 import { getSchoolNeedSignal } from '@/lib/services/school-need-signal';
 import { SchoolNeed } from '../../school-need';
+import { PlaceContextPanel } from '../../place-context';
 
 export const dynamic = 'force-dynamic';
 
@@ -60,6 +61,12 @@ export default async function CouncilPage({ params }: { params: Promise<{ slug: 
 
       <div className="mx-auto grid max-w-5xl gap-10 px-5 py-10 lg:px-10">
         {schools ? <SchoolNeed signal={schools} placeLabel={report.lgaName} /> : null}
+
+        <PlaceContextPanel
+          context={report.context}
+          remoteness={report.remoteness}
+          placeLabel={report.lgaName}
+        />
 
         {report.unplacedTotal > 0 ? (
           <section aria-labelledby="unplaced-title" className="border-4 border-bauhaus-red bg-white p-6">
