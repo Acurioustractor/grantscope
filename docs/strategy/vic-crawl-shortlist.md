@@ -1,0 +1,79 @@
+# VIC crawl shortlist — pick targets before crawling
+
+**Built:** 2026-08-08 from the live VIC agency index — 316 agencies, 57,349 contracts. Nothing has been
+crawled. This exists so the crawl is aimed rather than exhaustive.
+
+The index itself lives at `data/state-tenders/vic-agencies.json`, which is **gitignored**. Regenerate it
+(about 20 seconds, no bulk crawling) with:
+
+```bash
+node --env-file=.env scripts/scrape-state-tenders.mjs --state=VIC --agencies-only
+```
+
+Timing below assumes ~1.5s per contract (page load plus the 800ms politeness delay). The full index is
+about **24 hours** at that rate, not the 16 the ingest spec estimated.
+
+## The thing worth noticing first
+
+**81 of the 316 agencies are health, justice, housing or community**, holding 13,942 contracts — about 4
+hours. But most of those are *closed* predecessor entities. VIC has reorganised its human-services
+departments repeatedly, so the same delivery relationship is split across "Dept of Human Services - Office
+of Housing - CLOSED", "DHHS", "Department of Health and Human Services (CLOSED)" and "Department of
+Families, Fairness and Housing". Any VIC buyer pack has to reconcile those or it will understate history.
+
+## Tranche 1 — the NSW DCJ analogue (recommended first crawl)
+
+| Agency | Contracts | buyerId | Why |
+|---|---|---|---|
+| **Department of Justice and Community Safety** | 2,578 | 320019 | The live VIC justice department, and the direct parallel to the NSW DCJ pack already built. VIC is the state with *mandated* SPF weightings, so this is the strongest obligation story available anywhere in the data. |
+
+**~65 minutes.** One agency, one command, and it produces a VIC lighthouse prospect that can be compared
+like-for-like against NSW DCJ.
+
+```bash
+node --env-file=.env scripts/scrape-state-tenders.mjs --state=VIC --apply --buyer-id=320019
+```
+
+`--buyer-id` accepts a comma-separated list. Verified against DJCS 2026-08-08: it resolves the agency,
+reports the contract count up front, and warns on any id not present in the index. Do not use
+`--limit-agencies` to pick a target — it takes the first N of the index in page order, which is
+alphabetical.
+
+## Tranche 2 — the rest of the live justice and community picture
+
+| Agency | Contracts | buyerId |
+|---|---|---|
+| Department of Justice (predecessor of DJCS) | 2,128 | 277022 |
+| Department of Health | 673 | 714739 |
+| Department of Families, Fairness and Housing | 443 | 714822 |
+| Court Services Victoria | 698 | (see index) |
+| Dept of Families, Fairness and Housing - Homes Victoria & Director of Housing | 182 | 320509 |
+
+**~2 hours.** Completes the live picture without touching the closed entities.
+
+## Tranche 3 — historical depth
+
+| Agency | Contracts | buyerId |
+|---|---|---|
+| Dept of Human Services - Office of Housing - CLOSED | 2,948 | 295639 |
+| Department of Health & Human Services (DHHS) | 1,174 | 319978 |
+| ~70 further closed sub-entities | ~3,100 | (see index) |
+
+**~3 hours.** Only worth it if a buyer asks for history beyond the current department's own records.
+
+## Everything else
+
+The largest agencies in VIC are Transport and Planning (5,224), Education (3,906) and Energy/Environment
+(3,366). They are big but off-wedge — crawl them only if a specific buyer conversation calls for it.
+
+## Before any of this is quoted at a buyer
+
+- **`$1.00` means withheld, not one dollar.** VIC publishes that sentinel when a value is Genuinely
+  Confidential Business Information. The scraper nulls it and counts it; any pack must say "value withheld"
+  rather than treating it as zero.
+- **Reversible.** `DELETE FROM austender_contracts WHERE ocid LIKE 'vic-%'`, then refresh the evidence MVs
+  and re-run `scout-se-buyers.mjs`.
+- **Resume is by ocid**, so a stopped crawl restarts without re-fetching, and a narrow tranche now does not
+  waste work if the crawl is widened later.
+- **SA is not available.** Every SA contract list and detail page redirects to `/login`. It needs an SA
+  Tenders account.

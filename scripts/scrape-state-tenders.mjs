@@ -159,7 +159,14 @@ async function main() {
   log(`found ${agencies.length} agencies (${agencies.reduce((s, a) => s + a.count, 0)} contracts total)`);
 
   if (AGENCIES_ONLY) {
-    console.log(JSON.stringify(agencies.slice(0, 50), null, 1));
+    // Write the FULL index — it is the input to choosing which agencies are
+    // worth crawling, and a 50-row console slice cannot answer that.
+    const idxPath = `data/state-tenders/${STATE.toLowerCase()}-agencies.json`;
+    const sorted = [...agencies].sort((a, b) => b.count - a.count);
+    writeFileSync(idxPath, JSON.stringify(sorted, null, 1));
+    log(`wrote ${sorted.length} agencies → ${idxPath}`);
+    log(`top 25 by contract count:`);
+    for (const a of sorted.slice(0, 25)) log(`  ${String(a.count).padStart(5)}  ${a.name}`);
     await browser.close(); return;
   }
 
@@ -180,7 +187,18 @@ async function main() {
   }
 
   // 2) per-agency contract lists + 3) detail pages
-  const targets = agencies.filter(a => a.count > 0).slice(0, LIMIT_AGENCIES);
+  // --buyer-id=320019[,277022] targets named agencies. Without it, --limit-agencies
+  // takes the first N of the index in page order (alphabetical), which is almost
+  // never what you want when crawling a shortlist — see docs/strategy/vic-crawl-shortlist.md.
+  const wantIds = (arg('buyer-id', '') || '').split(',').map(s => s.trim()).filter(Boolean);
+  let targets = agencies.filter(a => a.count > 0);
+  if (wantIds.length) {
+    targets = targets.filter(a => wantIds.includes(String(a.buyerId)));
+    const missing = wantIds.filter(id => !targets.some(a => String(a.buyerId) === id));
+    if (missing.length) log(`WARNING: buyerId not found in index: ${missing.join(', ')}`);
+    log(`targeting ${targets.length} agencies by buyerId (${targets.reduce((s, a) => s + a.count, 0)} contracts)`);
+  }
+  targets = targets.slice(0, LIMIT_AGENCIES);
   const contracts = [];
   let pending = [];
   let upserted = 0, skipped = 0;
