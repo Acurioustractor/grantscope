@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { money } from '@/lib/format';
@@ -11,13 +11,16 @@ const MapView = dynamic(() => import('./map-view'), { ssr: false });
 interface LgaFeature {
   lga_name: string;
   state: string;
-  remoteness: string;
-  avg_irsd_decile: number;
-  avg_irsd_score: number;
-  indexed_entities: number;
-  community_controlled_entities: number;
-  total_funding_all_sources: number;
-  desert_score: number;
+  remoteness: string | null;
+  avg_irsd_decile: number | null;
+  avg_irsd_score: number | null;
+  indexed_entities: number | null;
+  community_controlled_entities: number | null;
+  total_funding_all_sources: number | null;
+  desert_score: number | null;
+  unplaced_count: number;
+  placed_count: number;
+  unplaced_share: number | null;
   lat: number;
   lng: number;
   lga_code: string;
@@ -28,16 +31,34 @@ interface Summary {
   severe_deserts: number;
   avg_desert_score: string;
   max_desert_score: string;
+  high_uncertainty_lgas: number;
+  undrawn_lgas: number;
 }
+
+export type MapMetric = 'desert_score' | 'unplaced_share';
 
 const STATES = ['ALL', 'NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'NT', 'ACT'];
 const REMOTENESS_ORDER = ['Major Cities of Australia', 'Inner Regional Australia', 'Outer Regional Australia', 'Remote Australia', 'Very Remote Australia'];
+
+const METRIC_COPY: Record<MapMetric, { title: string; description: string }> = {
+  desert_score: {
+    title: 'Funding Desert Map',
+    description:
+      'Where disadvantage is highest but funding is lowest. Each area is an LGA scored by SEIFA disadvantage vs actual funding received across all government systems.',
+  },
+  unplaced_share: {
+    title: 'Unplaced Organisations',
+    description:
+      'Organisations registered in a council’s postcodes that our records cannot tie to any council. A postcode can span several councils, so an unplaced organisation counts toward each place it might belong to. The higher the share, the less certain everything else on this map is.',
+  },
+};
 
 export default function FundingDesertMapPage() {
   const [features, setFeatures] = useState<LgaFeature[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
   const [stateFilter, setStateFilter] = useState('ALL');
+  const [metric, setMetric] = useState<MapMetric>('desert_score');
   const [selected, setSelected] = useState<LgaFeature | null>(null);
   const [lgaEntities, setLgaEntities] = useState<Array<{
     gs_id: string; canonical_name: string; entity_type: string;
@@ -56,6 +77,7 @@ export default function FundingDesertMapPage() {
       .catch(() => { setLgaEntities([]); setLoadingEntities(false); });
   }, [selected]);
 
+  // The API returns both metrics in one payload; switching metric costs no fetch.
   useEffect(() => {
     setLoading(true);
     const url = stateFilter === 'ALL'
@@ -71,16 +93,17 @@ export default function FundingDesertMapPage() {
       .catch(() => setLoading(false));
   }, [stateFilter]);
 
-  // Stats by remoteness
+  // Stats by remoteness — desert stats, so only rows that carry a score
   const remotenessBuckets = useMemo(() => {
     const buckets = new Map<string, { count: number; avgDesert: number; avgFunding: number; totalEntities: number }>();
     for (const f of features) {
+      if (f.desert_score === null) continue;
       const r = f.remoteness || 'Unknown';
       const b = buckets.get(r) || { count: 0, avgDesert: 0, avgFunding: 0, totalEntities: 0 };
       b.count++;
       b.avgDesert += Number(f.desert_score);
-      b.avgFunding += Number(f.total_funding_all_sources);
-      b.totalEntities += Number(f.indexed_entities);
+      b.avgFunding += Number(f.total_funding_all_sources ?? 0);
+      b.totalEntities += Number(f.indexed_entities ?? 0);
       buckets.set(r, b);
     }
     for (const [, b] of buckets) {
@@ -94,6 +117,18 @@ export default function FundingDesertMapPage() {
         return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
       });
   }, [features]);
+
+  // Top-10 list for the active metric
+  const topFeatures = useMemo(() => {
+    if (metric === 'desert_score') {
+      return features.filter(f => f.desert_score !== null).slice(0, 10);
+    }
+    return [...features]
+      .sort((a, b) => Number(b.unplaced_count) - Number(a.unplaced_count))
+      .slice(0, 10);
+  }, [features, metric]);
+
+  const copy = METRIC_COPY[metric];
 
   return (
     <main className="min-h-screen bg-gray-50 text-bauhaus-black">
@@ -114,11 +149,10 @@ export default function FundingDesertMapPage() {
             </div>
           </div>
           <h1 className="text-3xl font-black uppercase tracking-wider">
-            Funding Desert Map
+            {copy.title}
           </h1>
           <p className="text-gray-400 text-sm mt-1 max-w-2xl">
-            Where disadvantage is highest but funding is lowest. Each circle represents an LGA
-            scored by SEIFA disadvantage vs actual funding received across all government systems.
+            {copy.description}
           </p>
         </div>
       </div>
@@ -126,32 +160,65 @@ export default function FundingDesertMapPage() {
       {/* Controls + Summary */}
       <div className="mx-auto max-w-7xl px-4 py-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          {/* State filter */}
-          <div className="flex items-center gap-1">
-            {STATES.map(s => (
-              <button
-                key={s}
-                onClick={() => { setStateFilter(s); setSelected(null); }}
-                className={`text-[10px] px-3 py-1.5 font-bold uppercase tracking-wider transition-all ${
-                  stateFilter === s
-                    ? 'bg-bauhaus-black text-white'
-                    : 'bg-white text-gray-500 border border-gray-200 hover:border-bauhaus-black'
-                }`}
-              >
-                {s}
-              </button>
-            ))}
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Metric toggle */}
+            <div className="flex items-center gap-1">
+              {([
+                ['desert_score', 'Funding deserts'],
+                ['unplaced_share', 'Unplaced orgs'],
+              ] as Array<[MapMetric, string]>).map(([m, label]) => (
+                <button
+                  key={m}
+                  onClick={() => setMetric(m)}
+                  className={`text-[10px] px-3 py-1.5 font-bold uppercase tracking-wider transition-all ${
+                    metric === m
+                      ? 'bg-bauhaus-red text-white'
+                      : 'bg-white text-gray-500 border border-gray-200 hover:border-bauhaus-red'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* State filter */}
+            <div className="flex items-center gap-1">
+              {STATES.map(s => (
+                <button
+                  key={s}
+                  onClick={() => { setStateFilter(s); setSelected(null); }}
+                  className={`text-[10px] px-3 py-1.5 font-bold uppercase tracking-wider transition-all ${
+                    stateFilter === s
+                      ? 'bg-bauhaus-black text-white'
+                      : 'bg-white text-gray-500 border border-gray-200 hover:border-bauhaus-black'
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Summary stats */}
           {summary && (
             <div className="flex items-center gap-4 text-xs text-gray-500">
               <span><strong className="text-bauhaus-black">{summary.total_lgas}</strong> LGAs</span>
-              <span><strong className="text-bauhaus-red">{summary.severe_deserts}</strong> severe deserts</span>
-              <span>Avg score <strong className="text-bauhaus-black">{summary.avg_desert_score}</strong></span>
+              {metric === 'desert_score' ? (
+                <>
+                  <span><strong className="text-bauhaus-red">{summary.severe_deserts}</strong> severe deserts</span>
+                  <span>Avg score <strong className="text-bauhaus-black">{summary.avg_desert_score}</strong></span>
+                </>
+              ) : (
+                <span><strong className="text-bauhaus-red">{summary.high_uncertainty_lgas}</strong> mostly unplaceable</span>
+              )}
             </div>
           )}
         </div>
+        {summary && summary.undrawn_lgas > 0 && (
+          <p className="mt-2 text-xs text-gray-400">
+            {summary.undrawn_lgas} councils hold data but have no coordinates in our records, so they are not drawn here.
+          </p>
+        )}
       </div>
 
       {/* Map + Detail panel */}
@@ -169,6 +236,7 @@ export default function FundingDesertMapPage() {
                 features={features}
                 selected={selected}
                 onSelect={setSelected}
+                metric={metric}
               />
             )}
           </div>
@@ -181,19 +249,19 @@ export default function FundingDesertMapPage() {
                   <h3 className="font-black text-lg uppercase tracking-wider">{selected.lga_name}</h3>
                   <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
                     <span>{selected.state}</span>
-                    <span>{selected.remoteness}</span>
+                    <span>{selected.remoteness ?? ''}</span>
                   </div>
                   <div className="mt-4 space-y-3">
                     <div className="flex justify-between items-baseline">
                       <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Desert Score</span>
                       <span className={`text-2xl font-black ${Number(selected.desert_score) > 100 ? 'text-bauhaus-red' : 'text-bauhaus-black'}`}>
-                        {Number(selected.desert_score).toFixed(1)}
+                        {selected.desert_score === null ? '—' : Number(selected.desert_score).toFixed(1)}
                       </span>
                     </div>
                     <div className="flex justify-between items-baseline">
                       <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Total Funding</span>
                       <span className="text-lg font-black text-green-700">
-                        {money(Number(selected.total_funding_all_sources))}
+                        {selected.total_funding_all_sources === null ? '—' : money(Number(selected.total_funding_all_sources))}
                       </span>
                     </div>
                     <div className="flex justify-between items-baseline">
@@ -202,11 +270,20 @@ export default function FundingDesertMapPage() {
                     </div>
                     <div className="flex justify-between items-baseline">
                       <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Entities</span>
-                      <span className="text-lg font-black">{selected.indexed_entities}</span>
+                      <span className="text-lg font-black">{selected.indexed_entities ?? '—'}</span>
                     </div>
                     <div className="flex justify-between items-baseline">
                       <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Community Controlled</span>
-                      <span className="text-lg font-black">{selected.community_controlled_entities}</span>
+                      <span className="text-lg font-black">{selected.community_controlled_entities ?? '—'}</span>
+                    </div>
+                    <div className="flex justify-between items-baseline">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Unplaced in its postcodes</span>
+                      <span className={`text-lg font-black ${Number(selected.unplaced_share) >= 50 ? 'text-bauhaus-red' : 'text-bauhaus-black'}`}>
+                        {selected.unplaced_count}
+                        {selected.unplaced_share !== null && (
+                          <span className="text-xs font-bold text-gray-400 ml-1.5">({Number(selected.unplaced_share).toFixed(0)}%)</span>
+                        )}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -255,12 +332,14 @@ export default function FundingDesertMapPage() {
                   )}
                 </div>
                 <p className="text-xs text-gray-400">
-                  Desert score = disadvantage x (1 / funding). Higher = more underserved.
+                  {metric === 'desert_score'
+                    ? 'Desert score = disadvantage x (1 / funding). Higher = more underserved.'
+                    : 'Unplaced = registered in this council’s postcodes but not placeable to any council. A shared postcode counts toward every council it touches.'}
                 </p>
               </>
             ) : (
               <div className="bg-white border border-gray-200 p-4">
-                <p className="text-sm text-gray-500">Click a circle on the map to see LGA details.</p>
+                <p className="text-sm text-gray-500">Click an area on the map to see LGA details.</p>
               </div>
             )}
 
@@ -282,11 +361,13 @@ export default function FundingDesertMapPage() {
               </div>
             </div>
 
-            {/* Top 10 worst */}
+            {/* Top 10 for the active metric */}
             <div className="bg-white border border-gray-200 p-4">
-              <h3 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Worst Funding Deserts</h3>
+              <h3 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">
+                {metric === 'desert_score' ? 'Worst Funding Deserts' : 'Most Unplaced Organisations'}
+              </h3>
               <div className="space-y-1.5">
-                {features.slice(0, 10).map((f, i) => (
+                {topFeatures.map((f, i) => (
                   <button
                     key={i}
                     onClick={() => setSelected(f)}
@@ -295,7 +376,16 @@ export default function FundingDesertMapPage() {
                     <span className="font-medium truncate max-w-40">{f.lga_name}</span>
                     <div className="flex items-center gap-2">
                       <span className="text-gray-400">{f.state}</span>
-                      <span className="font-mono font-bold text-bauhaus-red">{Number(f.desert_score).toFixed(0)}</span>
+                      {metric === 'desert_score' ? (
+                        <span className="font-mono font-bold text-bauhaus-red">{Number(f.desert_score).toFixed(0)}</span>
+                      ) : (
+                        <span className="font-mono font-bold text-bauhaus-red">
+                          {f.unplaced_count}
+                          {f.unplaced_share !== null && (
+                            <span className="text-gray-400 font-normal"> ({Number(f.unplaced_share).toFixed(0)}%)</span>
+                          )}
+                        </span>
+                      )}
                     </div>
                   </button>
                 ))}

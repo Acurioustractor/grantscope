@@ -10,13 +10,16 @@ const MapView = dynamic(() => import('@/app/map/map-view'), { ssr: false });
 type LgaFeature = {
   lga_name: string;
   state: string;
-  remoteness: string;
+  remoteness: string | null;
   avg_irsd_decile: number;
   avg_irsd_score: number;
   indexed_entities: number;
   community_controlled_entities: number;
   total_funding_all_sources: number;
   desert_score: number;
+  unplaced_count: number;
+  placed_count: number;
+  unplaced_share: number | null;
   lat: number;
   lng: number;
   lga_code: string;
@@ -101,7 +104,7 @@ function priorityReasons(feature: LgaFeature | null, localCommunityCount: number
   if (feature.total_funding_all_sources <= 250_000) reasons.push('very low recorded funding base');
   if (feature.community_controlled_entities <= 2) reasons.push('thin visible community-controlled footprint');
   if (localCommunityCount > 0) reasons.push(`${localCommunityCount} community-controlled organisations already present`);
-  if (feature.remoteness.includes('Very Remote')) reasons.push('very remote logistics and service burden');
+  if ((feature.remoteness ?? '').includes('Very Remote')) reasons.push('very remote logistics and service burden');
 
   return reasons.slice(0, 4);
 }
@@ -131,7 +134,11 @@ export function ReallocationAtlasClient({ atlasData }: { atlasData: AtlasData })
       .then((res) => res.json())
       .then((data) => {
         if (ignore) return;
-        const nextFeatures = (data.features || []) as LgaFeature[];
+        // The map API now also returns councils that carry only placement
+        // uncertainty (no desert score); this page reasons about desert
+        // scores, so keep its universe to scored councils as before.
+        const nextFeatures = ((data.features || []) as Array<LgaFeature & { desert_score: number | null }>)
+          .filter((f): f is LgaFeature => f.desert_score !== null);
         setFeatures(nextFeatures);
         setSummary(data.summary || null);
         setSelected((current) => {
@@ -316,7 +323,9 @@ export function ReallocationAtlasClient({ atlasData }: { atlasData: AtlasData })
                   Loading reallocation atlas...
                 </div>
               ) : (
-                <MapView features={features} selected={selected} onSelect={setSelected} />
+                // MapView only selects from features this page passed in, so
+                // the callback value is one of our filtered, desert-scored rows.
+                <MapView features={features} selected={selected} onSelect={(f) => setSelected(f as LgaFeature)} />
               )}
             </div>
 
