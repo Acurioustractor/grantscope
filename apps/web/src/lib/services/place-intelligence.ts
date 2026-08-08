@@ -543,7 +543,10 @@ export const getPlaceIntelligence = cache(
             .or('is_community_controlled.eq.true,entity_type.eq.indigenous_corp')
             .or('oric_status.is.null,oric_status.neq.Deregistered')
             .order('canonical_name')
-            .limit(300)
+            // 1000 is PostgREST's per-request ceiling, and above every current
+            // region's count (the Kimberley holds 721). If a region ever
+            // exceeds it, the page's "showing X of Y" line reports the gap.
+            .limit(1000)
         : Promise.resolve({ data: [], error: null }),
       region.unplaced
         ? db.from('geo_resolution_gaps')

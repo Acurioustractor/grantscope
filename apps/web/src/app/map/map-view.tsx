@@ -20,8 +20,11 @@ interface LgaFeature {
   unplaced_count: number;
   placed_count: number;
   unplaced_share: number | null;
-  lat: number;
-  lng: number;
+  // Null when the council has no point coordinates; it still renders where a
+  // boundary matches its name. Number(null) is 0, not NaN — filter nulls
+  // before coercing or a coordless council drags bounds to the equator.
+  lat: number | null;
+  lng: number | null;
   lga_code: string;
 }
 
@@ -116,8 +119,9 @@ function FitBounds({ features }: { features: LgaFeature[] }) {
   const map = useMap();
   useEffect(() => {
     if (features.length === 0) return;
-    const lats = features.map(f => Number(f.lat)).filter(v => !isNaN(v));
-    const lngs = features.map(f => Number(f.lng)).filter(v => !isNaN(v));
+    const located = features.filter(f => f.lat != null && f.lng != null);
+    const lats = located.map(f => Number(f.lat)).filter(v => !isNaN(v));
+    const lngs = located.map(f => Number(f.lng)).filter(v => !isNaN(v));
     if (lats.length === 0) return;
     const bounds = L.latLngBounds(
       [Math.min(...lats), Math.min(...lngs)],
@@ -209,8 +213,9 @@ export default function MapView({ features, selected, onSelect, metric = 'desert
   // Compute center from features
   const center = useMemo<[number, number]>(() => {
     if (features.length === 0) return [-25.5, 134.0];
-    const lats = features.map(f => Number(f.lat)).filter(v => !isNaN(v));
-    const lngs = features.map(f => Number(f.lng)).filter(v => !isNaN(v));
+    const located = features.filter(f => f.lat != null && f.lng != null);
+    const lats = located.map(f => Number(f.lat)).filter(v => !isNaN(v));
+    const lngs = located.map(f => Number(f.lng)).filter(v => !isNaN(v));
     if (lats.length === 0) return [-25.5, 134.0];
     return [
       (Math.min(...lats) + Math.max(...lats)) / 2,
@@ -254,6 +259,7 @@ export default function MapView({ features, selected, onSelect, metric = 'desert
 
       {/* Fallback: CircleMarkers when no GeoJSON loaded */}
       {features.filter(() => !geoData).map((f, i) => {
+        if (f.lat == null || f.lng == null) return null;
         const lat = Number(f.lat);
         const lng = Number(f.lng);
         if (isNaN(lat) || isNaN(lng)) return null;
