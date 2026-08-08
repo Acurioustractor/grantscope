@@ -49,48 +49,17 @@ export async function GET(request: Request) {
     // postcode spanning three councils counts toward all three. That is the
     // semantics, not a bug: an organisation that could be in any of them makes
     // each council's picture less certain.
-    const undrawnPromise = supabase.rpc('exec_sql', {
-      query: `WITH no_lat AS (
-        SELECT lga_name, UPPER(state) AS state
-        FROM postcode_geo
-        WHERE lga_name IS NOT NULL ${stateClause}
-        GROUP BY 1, 2
-        HAVING count(latitude) = 0
-      ),
-      unplaced_pc AS MATERIALIZED (
-        SELECT postcode, COUNT(*) AS n
-        FROM gs_entities
-        WHERE lga_name IS NULL AND postcode IS NOT NULL
-        GROUP BY postcode
-      ),
-      cpc AS MATERIALIZED (
-        SELECT DISTINCT lga_name, UPPER(state) AS state, postcode
-        FROM postcode_geo
-        WHERE lga_name IS NOT NULL
-      ),
-      counts AS (
-        SELECT nl.lga_name, nl.state, COALESCE(SUM(u.n), 0)::int AS unplaced
-        FROM no_lat nl
-        LEFT JOIN cpc ON cpc.lga_name = nl.lga_name AND cpc.state = nl.state
-        LEFT JOIN unplaced_pc u USING (postcode)
-        GROUP BY 1, 2
-      )
-      SELECT count(*)::int AS undrawn_lgas FROM counts c
-      WHERE c.unplaced > 0 OR EXISTS (
-        SELECT 1 FROM mv_funding_deserts d
-        WHERE d.lga_name = c.lga_name AND UPPER(d.state) = c.state
-          AND d.desert_score IS NOT NULL
-      )`,
-    });
-
+    // Councils without point coordinates stay in the payload with a null
+    // lat/lng: the choropleth paints them by boundary-name match, which needs
+    // no centroid. Coordinates only drive bounds-fitting and fallback markers.
     const { data, error } = await supabase.rpc('exec_sql', {
       query: `WITH lga_centroids AS (
-        SELECT lga_name, lga_code, UPPER(state) as state,
+        SELECT lga_name, MAX(lga_code) AS lga_code, UPPER(state) as state,
                AVG(latitude::float) as lat,
                AVG(longitude::float) as lng
         FROM postcode_geo
-        WHERE lga_name IS NOT NULL AND latitude IS NOT NULL ${stateClause}
-        GROUP BY lga_name, lga_code, UPPER(state)
+        WHERE lga_name IS NOT NULL ${stateClause}
+        GROUP BY lga_name, UPPER(state)
       ),
       modal_remoteness AS (
         SELECT DISTINCT ON (lga_name, UPPER(state))
@@ -160,20 +129,17 @@ export async function GET(request: Request) {
 
     if (error) throw error;
 
-    // A council with data but no coordinates cannot be drawn. Failing to say
-    // so would present the drawable subset as the whole country.
-    const { data: undrawnData } = await undrawnPromise;
-    const undrawnLgas = Array.isArray(undrawnData) && undrawnData.length > 0
-      ? Number((undrawnData[0] as { undrawn_lgas?: number }).undrawn_lgas ?? 0)
-      : 0;
-
     const features = (data || []) as Array<{
       lga_name: string; state: string; remoteness: string | null;
       avg_irsd_decile: number | null; desert_score: number | null;
       indexed_entities: number | null; community_controlled_entities: number | null;
-      total_funding_all_sources: number | null; lat: number; lng: number;
+      total_funding_all_sources: number | null; lat: number | null; lng: number | null;
       unplaced_count: number; placed_count: number; unplaced_share: number | null;
     }>;
+
+    // Councils with data but no point coordinates render only where a map
+    // boundary matches their name; the summary says how many that covers.
+    const undrawnLgas = features.filter(f => f.lat === null).length;
 
     const desertFeatures = features.filter(f => f.desert_score !== null);
 

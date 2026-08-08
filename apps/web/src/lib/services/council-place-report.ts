@@ -195,7 +195,11 @@ export const getCouncilPlaceReport = cache(async function getCouncilPlaceReport(
                 WHERE lga_name='${lga}' AND entity_type='indigenous_corp') AS indigenous_corps,
               (SELECT count(*) FROM gs_entities
                 WHERE lga_name='${lga}' AND is_community_controlled) AS community_controlled,
-              (SELECT count(*) FROM crime_stats_lga WHERE lga_name='${lga}') AS crime_rows,
+              -- State-qualified: LGA names repeat across states (Bayside is
+              -- both NSW and VIC), and counting another state's rows would
+              -- claim we hold crime records for this council when we do not.
+              (SELECT count(*) FROM crime_stats_lga
+                WHERE lga_name='${lga}'${council.state ? ` AND state='${council.state.replace(/'/g, "''")}'` : ''}) AS crime_rows,
               (SELECT count(*) FROM social_enterprises se
                  JOIN gs_entities e ON e.abn = se.abn
                 WHERE e.lga_name='${lga}') AS social_enterprises`,

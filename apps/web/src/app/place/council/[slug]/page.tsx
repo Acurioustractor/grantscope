@@ -4,6 +4,7 @@ import { getCouncilPlaceReport } from '@/lib/services/council-place-report';
 import { getSchoolNeedSignal } from '@/lib/services/school-need-signal';
 import { SchoolNeed } from '../../school-need';
 import { PlaceContextPanel } from '../../place-context';
+import { CorrectionForm } from '../../correction-form';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,9 +24,9 @@ export default async function CouncilPage({ params }: { params: Promise<{ slug: 
   if (!report) notFound();
   const schools = await getSchoolNeedSignal(report.lgaName);
 
-  // The correction goes to a person, not a database. A public form writing
-  // straight into the register would need moderation we do not have, and the
-  // first thing a community tells us is likely to need a conversation anyway.
+  // The correction still goes to a person — the form writes to a review
+  // queue (place_corrections) that a person reads, never to the register.
+  // The mailto stays as the fallback so a failed request loses nothing.
   const correctionSubject = encodeURIComponent(`Correction: ${report.lgaName}`);
   const correctionBody = encodeURIComponent(
     `Council area: ${report.lgaName}\n` +
@@ -145,16 +146,15 @@ export default async function CouncilPage({ params }: { params: Promise<{ slug: 
             that would make this page true.
           </p>
           <p className="mt-3 max-w-3xl text-base leading-7">
-            It goes to a person, not a form. We will say what we changed and why.
+            It goes to a person, not a pipeline. We will say what we changed and why.
           </p>
-          <p className="mt-5">
-            <a
-              href={`mailto:hello@civicgraph.au?subject=${correctionSubject}&body=${correctionBody}`}
-              className="inline-block border-4 border-bauhaus-black bg-white px-5 py-3 text-xs font-black uppercase tracking-widest"
-            >
-              Send a correction
-            </a>
-          </p>
+          <div className="mt-5 max-w-3xl">
+            <CorrectionForm
+              pageRoute={`/place/council/${report.slug}`}
+              lgaName={report.lgaName}
+              mailtoHref={`mailto:hello@civicgraph.au?subject=${correctionSubject}&body=${correctionBody}`}
+            />
+          </div>
         </section>
 
         <section className="text-sm leading-6">

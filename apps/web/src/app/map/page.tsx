@@ -21,8 +21,8 @@ interface LgaFeature {
   unplaced_count: number;
   placed_count: number;
   unplaced_share: number | null;
-  lat: number;
-  lng: number;
+  lat: number | null;
+  lng: number | null;
   lga_code: string;
 }
 
@@ -216,7 +216,7 @@ export default function FundingDesertMapPage() {
         </div>
         {summary && summary.undrawn_lgas > 0 && (
           <p className="mt-2 text-xs text-gray-400">
-            {summary.undrawn_lgas} councils hold data but have no coordinates in our records, so they are not drawn here.
+            {summary.undrawn_lgas} councils hold data but no point coordinates in our records; they appear only where a map boundary matches their name.
           </p>
         )}
       </div>
