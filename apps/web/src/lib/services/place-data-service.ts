@@ -17,6 +17,8 @@ export interface CrimeSummary {
     ten_year_trend_pct: number | null;
   }>;
   year_period: string | null;
+  /** Set when the figures are withheld because the council cannot be trusted. */
+  withheld_reason?: string;
 }
 
 export interface SchoolProfile {
@@ -62,16 +64,79 @@ function stripLgaSuffix(lgaName: string): string {
   return lgaName.replace(/\s*\(.*?\)\s*$/, '').trim();
 }
 
+/**
+ * Can offences reported in this postcode honestly be labelled with this council?
+ *
+ * crime_stats_lga is built by aggregating SAPOL's suburb-level counts up to an
+ * LGA through postcode_geo, which holds one council per postcode and takes the
+ * first it sees. Postcode 5690 spans three, so every offence reported in Ceduna
+ * township is currently filed against Maralinga Tjarutja, a community of a few
+ * hundred people: 905 offences and 336 assaults that did not happen there.
+ *
+ * ABS ASGS is the authority and we already hold it in abs_locality_lga. Until
+ * postcode_geo is rebuilt from it, refuse to label a crime figure with a council
+ * where ABS disagrees or where the postcode genuinely spans several. Attributing
+ * a town's offences to a small community is not a rounding error, and a place
+ * page is read by the people being counted.
+ */
+async function getLgaAttribution(
+  db: SupabaseClient,
+  postcode: string,
+  lgaName: string | null,
+): Promise<{ safe: boolean; reason: string | null }> {
+  if (!lgaName) return { safe: false, reason: null };
+  if (!/^\d{4}$/.test(postcode)) return { safe: false, reason: null };
+
+  const { data } = await db.rpc('exec_sql', {
+    query: `SELECT DISTINCT a.lga_name
+              FROM postcode_geo p
+              JOIN abs_locality_lga a ON upper(a.locality) = upper(p.locality)
+             WHERE p.postcode = '${postcode}'`,
+  });
+  const absLgas = (Array.isArray(data) ? data : [])
+    .map(row => String((row as Record<string, unknown>).lga_name ?? ''))
+    .filter(Boolean);
+
+  // No ABS coverage for these localities: no basis to contradict, so allow.
+  if (absLgas.length === 0) return { safe: true, reason: null };
+
+  const claimed = stripLgaSuffix(lgaName);
+  if (absLgas.length > 1) {
+    return {
+      safe: false,
+      reason: `Postcode ${postcode} spans ${absLgas.length} council areas (${absLgas.slice(0, 4).join(', ')}). Police counts here are recorded by suburb and rolled up to a single council, so we cannot say which of them a figure belongs to.`,
+    };
+  }
+  if (absLgas[0] !== claimed) {
+    return {
+      safe: false,
+      reason: `Our postcode-to-council mapping puts ${postcode} in ${claimed}, but the ABS records it as ${absLgas[0]}. Crime figures are withheld until that disagreement is resolved.`,
+    };
+  }
+  return { safe: true, reason: null };
+}
+
 // ── Query functions ────────────────────────────────────────────────────
 
 async function getCrimeStats(
   db: SupabaseClient,
+  postcode: string,
   lgaName: string | null,
   state: string | null,
 ): Promise<CrimeSummary | null> {
   if (!lgaName || !state) return null;
 
   const cleanLga = stripLgaSuffix(lgaName);
+
+  // Checked before the numbers are fetched, not after. A suppressed figure that
+  // still travels in the RSC payload has not been suppressed.
+  const attribution = await getLgaAttribution(db, postcode, lgaName);
+  if (!attribution.safe) {
+    return attribution.reason
+      ? { lga_name: cleanLga, offences: [], year_period: null, withheld_reason: attribution.reason }
+      : null;
+  }
+
   const { data } = await db.rpc('exec_sql', {
     query: `SELECT offence_group, SUM(incidents) as total_incidents,
               AVG(rate_per_100k) as rate_per_100k,
@@ -231,7 +296,7 @@ export async function getPlaceDataLayers(
   state: string | null,
 ): Promise<PlaceDataLayers> {
   const [crime, schools, ndis_participants, dss_payments] = await Promise.all([
-    getCrimeStats(db, lgaName, state).catch(() => null),
+    getCrimeStats(db, postcode, lgaName, state).catch(() => null),
     getSchools(db, postcode).catch(() => []),
     getNdisParticipants(db, lgaCode, lgaName).catch(() => null),
     getDssPayments(db, postcode, lgaCode).catch(() => []),

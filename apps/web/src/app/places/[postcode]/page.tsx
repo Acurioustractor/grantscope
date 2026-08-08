@@ -3,6 +3,7 @@ import { safeOptionalData } from '@/lib/optional-data';
 import { createGovernedProofService } from '@/lib/governed-proof/service';
 import { getProofPack } from '@/lib/governed-proof/presentation';
 import { getPlaceBrief } from '@/lib/services/place-brief-service';
+import { getPostcodeFundingPicture } from '@/lib/services/place-intelligence';
 import { getPlaceDataLayers } from '@/lib/services/place-data-service';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
@@ -94,7 +95,10 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
       .select('postcode, locality, state, remoteness_2021, sa2_code, sa2_name, sa3_name, lga_name, lga_code')
       .eq('postcode', postcode)
       .not('state', 'is', null)
-      .limit(1),
+      // Every locality, not one. A postcode can span several councils and the
+      // page needs to know that before it labels itself with one of them.
+      .order('locality')
+      .limit(200),
     supabase
       .from('seifa_2021')
       .select('decile_national, score')
@@ -123,7 +127,22 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
 
   if (!geoData?.length) notFound();
 
-  const geo = geoData[0];
+  // geoData[0] is whatever the planner returned first, which named postcode
+  // 5690 after BOOKABIE. Prefer the locality that shares its name with one of
+  // the postcode's councils: regional service towns are almost always the seat
+  // of the council named after them, so 5690 resolves to CEDUNA.
+  const geoRows = geoData as Array<{ locality: string | null; lga_name: string | null; [k: string]: unknown }>;
+  const lgaNames = new Set(
+    geoRows.map(row => (row.lga_name || '').trim().toLowerCase()).filter(Boolean)
+  );
+  const geo = (geoRows.find(row => lgaNames.has((row.locality || '').trim().toLowerCase())) ?? geoRows[0]) as typeof geoData[number];
+
+  // Every distinct council this postcode touches. One label is a coin toss when
+  // a postcode spans several, and 5690 spans four.
+  const spannedLgas = Array.from(
+    new Set(geoRows.map(row => (row.lga_name || '').trim()).filter(Boolean))
+  ).sort();
+
   const stateCode = typeof geo.state === 'string' && geo.state.trim().length > 0 ? geo.state : null;
   const placeTitle = stateCode ? `${geo.locality || postcode}, ${stateCode}` : (geo.locality || postcode);
   const socialEnterprisesHref = stateCode ? `/social-enterprises?state=${encodeURIComponent(stateCode)}` : '/social-enterprises';
@@ -381,9 +400,12 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
 
   // Place Brief — EL transcripts + ALMA interventions + alignment score
   // Place Data Layers — crime, schools, NDIS participants, DSS payments
-  const [placeBrief, dataLayers] = await Promise.all([
+  // Federal grants held by organisations registered here. Separate from the
+  // gs_relationships totals above, which do not carry GrantConnect at all.
+  const [placeBrief, dataLayers, federalFunding] = await Promise.all([
     getPlaceBrief(supabase, postcode, geo.locality, geo.state),
     getPlaceDataLayers(supabase, postcode, geo.lga_name, geo.lga_code, geo.state),
+    getPostcodeFundingPicture(postcode).catch(() => null),
   ]);
 
   // Filter grants relevant to this area (by state match or national scope)
@@ -452,9 +474,9 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
               SEIFA Decile {seifa.decile_national}/10
             </span>
           )}
-          {geo.lga_name && (
+          {spannedLgas.length > 0 && (
             <span className="text-[11px] font-black px-2.5 py-1 border-2 border-bauhaus-blue/30 bg-blue-50 text-bauhaus-blue uppercase tracking-widest">
-              LGA: {geo.lga_name}
+              {spannedLgas.length === 1 ? `LGA: ${spannedLgas[0]}` : `${spannedLgas.length} LGAs: ${spannedLgas.join(' · ')}`}
             </span>
           )}
           {geo.sa2_code && (
@@ -490,16 +512,29 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
           <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">Entities</div>
           <div className="text-2xl font-black text-bauhaus-black">{entityList.length}</div>
         </div>
+        {/* The headline carries the federal committed figure where we have it.
+            totalFunding comes from gs_relationships, which has no GrantConnect
+            in it, so on a place like Ceduna it under-reports by roughly 30x and
+            was the most prominent wrong number on the page. */}
         <div className="p-4 border-b-2 sm:border-b-0 sm:border-r-2 border-bauhaus-black/10">
-          <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">Total Funding</div>
-          <div className="text-2xl font-black text-bauhaus-black">{formatMoney(totalFunding)}</div>
+          <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">
+            {federalFunding ? 'Federal Committed' : 'Total Funding'}
+          </div>
+          <div className="text-2xl font-black text-bauhaus-black">
+            {formatMoney(federalFunding ? federalFunding.activeValue : totalFunding)}
+          </div>
         </div>
         <div className="p-4 border-r-2 border-bauhaus-black/10">
           <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">Community-Controlled</div>
           <div className="text-2xl font-black text-bauhaus-black">{communityControlledCount}</div>
         </div>
+        {/* Sits beside a GrantConnect headline but is computed from
+            gs_relationships, a different and much smaller base. Labelled so the
+            two are not read as numerator and denominator of each other. */}
         <div className="p-4">
-          <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">CC Funding Share</div>
+          <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">
+            CC Share {federalFunding ? '(excl. federal)' : ''}
+          </div>
           <div className={`text-2xl font-black ${communityControlledShare < 30 ? 'text-bauhaus-red' : communityControlledShare < 60 ? 'text-orange-600' : 'text-money'}`}>
             {communityControlledShare}%
           </div>
@@ -594,6 +629,50 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Content */}
         <div className="lg:col-span-2">
+          {/* Federal grants held by organisations registered here. This leads
+              because it is the largest real number on the page: the block below
+              reads gs_relationships, which does not carry GrantConnect. */}
+          {federalFunding && (
+            <Section title="Federal Grants Held Here">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+                <div>
+                  <div className="text-xl font-black text-bauhaus-black">{formatMoney(federalFunding.activeValue)}</div>
+                  <div className="text-[10px] text-bauhaus-muted font-medium uppercase tracking-widest">Committed now</div>
+                </div>
+                <div>
+                  <div className="text-xl font-black text-bauhaus-red">{formatMoney(federalFunding.endingWithin24mValue)}</div>
+                  <div className="text-[10px] text-bauhaus-muted font-medium uppercase tracking-widest">Ends within 24 months</div>
+                </div>
+                <div>
+                  <div className="text-xl font-black text-bauhaus-black">{federalFunding.activeAwards}</div>
+                  <div className="text-[10px] text-bauhaus-muted font-medium uppercase tracking-widest">Live agreements</div>
+                </div>
+                <div>
+                  <div className="text-xl font-black text-bauhaus-black">{federalFunding.recipients}</div>
+                  <div className="text-[10px] text-bauhaus-muted font-medium uppercase tracking-widest">Organisations</div>
+                </div>
+              </div>
+              {federalFunding.topPrograms.length > 0 && (
+                <div className="space-y-0 mb-4">
+                  {federalFunding.topPrograms.map((p, i) => (
+                    <div key={i} className="flex items-center justify-between py-2 border-b-2 border-bauhaus-black/5 last:border-b-0">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-bauhaus-black text-sm truncate">{p.program}</div>
+                        <div className="text-[11px] text-bauhaus-muted font-medium truncate">{p.agency} &middot; {p.awards} award{p.awards === 1 ? '' : 's'}</div>
+                      </div>
+                      <div className="font-black text-bauhaus-black ml-4">{formatMoney(p.value)}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p className="text-[11px] text-bauhaus-muted font-medium leading-relaxed">
+                GrantConnect awards, counted by the recipient&rsquo;s registered address.
+                {' '}{federalFunding.awards} award{federalFunding.awards === 1 ? '' : 's'} totalling {formatMoney(federalFunding.lifetimeValue)} since 2015; only {federalFunding.withDeliveryPostcode} publish a delivery location.
+                An organisation registered here may deliver elsewhere, and work delivered here may be run from a city. Values are whole-of-agreement, not annual.
+              </p>
+            </Section>
+          )}
+
           {/* Top Recipients */}
           {topRecipients.length > 0 && (
             <Section title="Top Funded Entities">
@@ -952,6 +1031,16 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
                   </div>
                 ))}
               </div>
+            </Section>
+          )}
+
+          {/* Crime figures withheld: the council they would be labelled with is
+              not one we can stand behind for this postcode. Saying so beats an
+              empty space, which reads as a place with no crime data at all. */}
+          {dataLayers.crime?.withheld_reason && (
+            <Section title="Crime &amp; Safety">
+              <p className="text-xs text-bauhaus-black font-bold mb-2">Withheld for this postcode.</p>
+              <p className="text-xs text-bauhaus-muted leading-relaxed">{dataLayers.crime.withheld_reason}</p>
             </Section>
           )}
 
