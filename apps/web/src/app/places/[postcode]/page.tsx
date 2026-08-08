@@ -1011,6 +1011,16 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
             </Section>
           )}
 
+          {/* Crime figures withheld: the council they would be labelled with is
+              not one we can stand behind for this postcode. Saying so beats an
+              empty space, which reads as a place with no crime data at all. */}
+          {dataLayers.crime?.withheld_reason && (
+            <Section title="Crime &amp; Safety">
+              <p className="text-xs text-bauhaus-black font-bold mb-2">Withheld for this postcode.</p>
+              <p className="text-xs text-bauhaus-muted leading-relaxed">{dataLayers.crime.withheld_reason}</p>
+            </Section>
+          )}
+
           {/* Crime & Safety */}
           {dataLayers.crime && dataLayers.crime.offences.length > 0 && (
             <Section title={`Crime & Safety — ${dataLayers.crime.lga_name} LGA`}>
