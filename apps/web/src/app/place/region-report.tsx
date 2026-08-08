@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { getRegionSchoolNeedSignal } from '@/lib/services/school-need-signal';
 import { getRhdSignalForRegion, ratePerHundred } from '@/lib/services/rhd-signal';
+import { getIrseoForRegion, IRSEO_CITATION } from '@/lib/services/irseo-signal';
 import { SchoolNeed } from './school-need';
 import {
   getCrossBorderPicture,
@@ -54,6 +55,7 @@ export async function RegionReport({ regionKey, title, intro, children }: Region
   const computedAt = areas[0]?.computedAt;
   const region = PLACE_REGIONS[regionKey];
   const rhd = getRhdSignalForRegion(regionKey);
+  const irseo = getIrseoForRegion(regionKey);
   const gazetteerGaps = region.gazetteerGaps;
   const communities = region.communities;
   const unplacedPostcodes = region.unplaced?.postcodes ?? [];
@@ -176,6 +178,70 @@ export async function RegionReport({ regionKey, title, intro, children }: Region
         ) : null}
 
         {schools ? <SchoolNeed signal={schools} placeLabel={title} /> : null}
+
+        {irseo ? (
+          <section aria-labelledby="irseo-title" className="border-4 border-bauhaus-blue bg-white p-6">
+            <p className="font-mono text-[11px] font-black uppercase tracking-widest text-bauhaus-blue">
+              The only map that has these communities on it
+            </p>
+            <h2 id="irseo-title" className="mt-2 text-2xl font-black uppercase tracking-widest">
+              {irseo.areas.length} Indigenous Areas
+            </h2>
+            <p className="mt-3 max-w-3xl text-base leading-7">
+              Indigenous Areas are drawn by the ABS for First Nations statistics rather than for
+              rates and roads, and they are the only geography here that names these communities as
+              places in their own right. IRSEO scores each one on the socioeconomic outcomes of the
+              First Nations people living there — unlike SEIFA, which measures everybody and so
+              describes a different population in every town.
+            </p>
+            <p className="mt-3 max-w-3xl text-base leading-7">
+              Percentiles run the opposite way to SEIFA: <strong>100 is the most disadvantaged</strong>{' '}
+              in Australia, 1 the least. The median across this region is{' '}
+              <strong>{irseo.medianPercentile}</strong>, and{' '}
+              <strong>{irseo.mostDisadvantaged.length}</strong> of these areas sit at or above the
+              90th percentile.
+            </p>
+
+            <table className="mt-6 w-full border-collapse text-left text-sm">
+              <thead>
+                <tr className="border-b-4 border-bauhaus-black">
+                  <th scope="col" className="pb-2 font-mono text-[10px] font-black uppercase tracking-widest">Indigenous Area</th>
+                  <th scope="col" className="pb-2 font-mono text-[10px] font-black uppercase tracking-widest">Type</th>
+                  <th scope="col" className="pb-2 text-right font-mono text-[10px] font-black uppercase tracking-widest">Percentile</th>
+                </tr>
+              </thead>
+              <tbody>
+                {irseo.areas.map(area => (
+                  <tr key={area.code} className="border-b border-bauhaus-black/15">
+                    <th scope="row" className="py-2 pr-3 text-left font-normal">
+                      {area.name}
+                      <span className="font-mono text-[11px] text-bauhaus-black/60"> · {area.code}</span>
+                    </th>
+                    <td className="py-2 pr-3 font-mono text-[11px]">{area.locationType}</td>
+                    <td className="py-2 text-right tabular-nums">
+                      <span className={area.percentile2021 >= 90 ? 'font-black text-bauhaus-blue' : ''}>
+                        {area.percentile2021}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {irseo.missing.length > 0 ? (
+              <p className="mt-3 font-mono text-xs">
+                {irseo.missing.length} area codes named in our records are not in the published
+                dataset: {irseo.missing.join(', ')}.
+              </p>
+            ) : null}
+
+            <p className="mt-4 max-w-3xl font-mono text-xs leading-5">
+              {IRSEO_CITATION} Used with attribution. Indigenous Areas do not nest inside council
+              areas, so these are matched to this region by name rather than derived from a
+              boundary.
+            </p>
+          </section>
+        ) : null}
 
         {rhd ? (
           <section aria-labelledby="rhd-title" className="border-4 border-bauhaus-red bg-white p-6">
