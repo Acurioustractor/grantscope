@@ -235,11 +235,33 @@ export async function RegionReport({ regionKey, title, intro, children }: Region
               </p>
             ) : null}
 
-            <p className="mt-4 max-w-3xl font-mono text-xs leading-5">
-              {IRSEO_CITATION} Used with attribution. Indigenous Areas do not nest inside council
-              areas, so these are matched to this region by name rather than derived from a
-              boundary.
-            </p>
+            <div className="mt-6 border-l-4 border-bauhaus-blue bg-bauhaus-canvas p-4">
+              <p className="font-mono text-[10px] font-black uppercase tracking-widest">
+                Whose work this is
+              </p>
+              <p className="mt-2 max-w-3xl text-sm leading-6">
+                IRSEO was built by <strong>Nicholas Biddle and Francis Markham</strong> at the Centre
+                for Aboriginal Economic Policy Research, Australian National University, and
+                published in 2023 from the 2016 and 2021 Censuses. It exists because standard
+                measures describe the whole population of an area, which tells you little about the
+                First Nations people living in it. CAEPR built it so communities and organisations
+                could argue for resources on the basis of their own relative need rather than
+                someone else&apos;s average.
+              </p>
+              <p className="mt-2 max-w-3xl text-sm leading-6">
+                The authors retain copyright. It is published open access and reproduced here with
+                attribution, in the ordinary scholarly way, rather than under a Creative Commons
+                licence. If you are citing these figures onward, cite them:
+              </p>
+              <p className="mt-2 max-w-3xl font-mono text-xs leading-5">{IRSEO_CITATION}</p>
+              <p className="mt-3 max-w-3xl text-sm leading-6">
+                One limit worth stating: Indigenous Areas do not nest inside council areas and their
+                names do not match council names, so the areas above were matched to this region by
+                reading them one at a time, not by a boundary calculation. And IRSEO is a single
+                combined index — it is built partly from housing adequacy, but it does not publish
+                overcrowding as a separate figure for each area.
+              </p>
+            </div>
           </section>
         ) : null}
 
@@ -668,7 +690,34 @@ export async function RegionReport({ regionKey, title, intro, children }: Region
               rather than guessed.</li>
             <li>Organisation details and community-controlled status: Australian Charities and
               Not-for-profits Commission register.</li>
+            <li>Schools, enrolments, Indigenous enrolment share and ICSEA: ACARA school profiles,
+              2025.</li>
+            <li>Overcrowding and rheumatic heart disease: based on Australian Institute of Health
+              and Welfare material, Aboriginal and Torres Strait Islander Health Performance
+              Framework measures 2.01 and 1.06, licensed CC BY 4.0.</li>
+            <li>Indigenous Areas and IRSEO: Biddle &amp; Markham 2023, Centre for Aboriginal
+              Economic Policy Research, ANU. Authors retain copyright; reproduced with
+              attribution.</li>
           </ul>
+
+          <div className="mt-6 border-4 border-bauhaus-black p-5">
+            <h3 className="font-mono text-[11px] font-black uppercase tracking-widest">
+              Why the sources are mixed, and what that costs you
+            </h3>
+            <p className="mt-2 max-w-3xl text-sm leading-6">
+              Nothing on this page comes from one place, and the pieces do not share a geography.
+              Money is recorded against organisations, so it lands wherever an organisation is
+              registered. Schools sit where their students are. Overcrowding is published by
+              remoteness class and rheumatic heart disease by health region, because case numbers in
+              small communities would identify people. Indigenous Areas are drawn for First Nations
+              statistics and match none of the others.
+            </p>
+            <p className="mt-2 max-w-3xl text-sm leading-6">
+              We have not reconciled them into a single number, because doing so would mean
+              inventing the joins that do not exist. Each figure says what it is a figure of. Where
+              two disagree, that disagreement is usually the most useful thing on the page.
+            </p>
+          </div>
           {computedAt ? (
             <p className="mt-4 font-mono text-xs">
               Figures computed {new Date(computedAt).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })}.
