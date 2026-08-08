@@ -21,6 +21,13 @@ import {
   placeSlug,
   resolvePlace,
 } from '@/lib/atlas/share';
+import {
+  ATLAS_STORY,
+  ATLAS_STORY_MEASURED_AT,
+  getStoryStep,
+  storyStepIndex,
+  type AtlasStoryStep,
+} from '@/lib/atlas/story';
 
 // Lazy-load the map to avoid SSR issues with Leaflet
 const AtlasMap = dynamic(() => import('./atlas-map'), { ssr: false });
@@ -70,6 +77,8 @@ export default function AtlasClient({ councilPages }: { councilPages: CouncilPag
   const [entities, setEntities] = useState<RailEntity[]>([]);
   const [loadingEntities, setLoadingEntities] = useState(false);
   const [copied, setCopied] = useState(false);
+  // Story mode: index into ATLAS_STORY, or null when browsing freely.
+  const [storyIdx, setStoryIdx] = useState<number | null>(null);
   // URL state only starts writing after the inbound URL has been applied.
   const urlReady = useRef(false);
 
@@ -90,6 +99,7 @@ export default function AtlasClient({ councilPages }: { councilPages: CouncilPag
 
   const activeLayer = getAtlasLayer(activeKey) ?? LAYERS[0];
   const mapLayer = (getAtlasLayer(mapKey) ?? LAYERS[0]) as AtlasLiveLayer;
+  const story = storyIdx !== null ? ATLAS_STORY[storyIdx] : null;
 
   function pickLayer(key: string) {
     setActiveKey(key);
@@ -104,10 +114,51 @@ export default function AtlasClient({ councilPages }: { councilPages: CouncilPag
     if (stateFilter !== 'ALL' && f.state !== stateFilter) setStateFilter(f.state);
   }
 
+  // A story step is a saved view plus a paragraph: apply the view.
+  function applyStoryStep(step: AtlasStoryStep, all: AtlasFeature[]) {
+    pickLayer(step.view.layerKey);
+    setStateFilter(step.view.state ?? 'ALL');
+    setQuery('');
+    if (step.view.place) {
+      setSelected(resolvePlace(all, step.view.place, step.view.pst, step.view.state));
+    } else {
+      setSelected(null);
+    }
+  }
+
+  function enterStory(idx: number) {
+    const step = ATLAS_STORY[idx];
+    if (!step) return;
+    setStoryIdx(idx);
+    applyStoryStep(step, features);
+  }
+
+  function moveStory(delta: number) {
+    if (storyIdx === null) return;
+    const next = storyIdx + delta;
+    if (next < 0 || next >= ATLAS_STORY.length) return;
+    enterStory(next);
+  }
+
+  function exitStory() {
+    setStoryIdx(null);
+  }
+
   // Apply the inbound URL once the payload exists: a link IS the presentation.
   useEffect(() => {
     if (loading || urlReady.current) return;
     const wanted = parseAtlasUrl(window.location.search);
+    // A story link defines the whole view; the other params stay unread.
+    if (wanted.story) {
+      const idx = storyStepIndex(wanted.story);
+      const step = getStoryStep(wanted.story);
+      if (step && idx >= 0) {
+        setStoryIdx(idx);
+        applyStoryStep(step, features);
+        urlReady.current = true;
+        return;
+      }
+    }
     if (wanted.layerKey && LAYERS.some(l => l.key === wanted.layerKey)) {
       pickLayer(wanted.layerKey);
     }
@@ -135,9 +186,29 @@ export default function AtlasClient({ councilPages }: { councilPages: CouncilPag
       defaultLayerKey: DEFAULT_ATLAS_LAYER_KEY,
       stateFilter,
       selected,
+      story: storyIdx !== null ? ATLAS_STORY[storyIdx].id : null,
     });
     window.history.replaceState(null, '', url);
-  }, [activeKey, stateFilter, selected]);
+  }, [activeKey, stateFilter, selected, storyIdx]);
+
+  // In a room the presenter holds arrow keys, not a mouse.
+  useEffect(() => {
+    if (storyIdx === null) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') {
+        e.preventDefault();
+        moveStory(1);
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'PageUp') {
+        e.preventDefault();
+        moveStory(-1);
+      } else if (e.key === 'Escape') {
+        exitStory();
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storyIdx]);
 
   // Fetch the selected place's top entities — the same endpoint the boxed
   // /map panel used.
@@ -212,6 +283,7 @@ export default function AtlasClient({ councilPages }: { councilPages: CouncilPag
         defaultLayerKey: DEFAULT_ATLAS_LAYER_KEY,
         stateFilter,
         selected,
+        story: storyIdx !== null ? ATLAS_STORY[storyIdx].id : null,
       });
     navigator.clipboard?.writeText(url).then(() => {
       setCopied(true);
@@ -247,7 +319,9 @@ export default function AtlasClient({ councilPages }: { councilPages: CouncilPag
         )}
       </div>
 
-      {/* Left rail: what you are looking at, and what it contains */}
+      {/* Left rail: what you are looking at, and what it contains.
+          Story mode clears the stage: the paragraph does this job there. */}
+      {!story && (
       <div className="absolute left-4 top-20 z-[900] w-[min(22rem,calc(100vw-2rem))] max-h-[calc(100dvh-6.5rem)] overflow-y-auto space-y-4 pr-1">
         {/* Brand + layer picker */}
         <div className="bg-white border-4 border-bauhaus-black shadow-[8px_8px_0_0_#121212] p-4">
@@ -308,6 +382,14 @@ export default function AtlasClient({ councilPages }: { councilPages: CouncilPag
           >
             {copied ? 'Link copied' : 'Copy link to this view'}
           </button>
+
+          {/* The fixed sequence for a room */}
+          <button
+            onClick={() => enterStory(0)}
+            className="mt-2 w-full border-2 border-bauhaus-blue text-bauhaus-blue px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest hover:bg-bauhaus-blue hover:text-white transition-colors"
+          >
+            Story mode · tell it in a room
+          </button>
         </div>
 
         {/* The caveat, attached to the number — not a help page */}
@@ -337,10 +419,12 @@ export default function AtlasClient({ councilPages }: { councilPages: CouncilPag
           </div>
         </div>
       </div>
+      )}
 
-      {/* Legend for the painted layer */}
+      {/* Legend for the painted layer. It stays up in story mode — the room
+          needs to know what the colours mean — but yields on small screens. */}
       {!loading && !failed && (
-        <div className="absolute left-4 bottom-4 z-[900] bg-white border-2 border-bauhaus-black p-3 w-[min(15rem,calc(100vw-2rem))]">
+        <div className={`absolute left-4 bottom-4 z-[900] bg-white border-2 border-bauhaus-black p-3 w-[min(15rem,calc(100vw-2rem))] ${story ? 'hidden lg:block' : ''}`}>
           <p className="text-[10px] font-bold uppercase tracking-widest mb-2">{mapLayer.name}</p>
           <div className="space-y-1">
             {mapLayer.scale.map(stop => (
@@ -362,8 +446,8 @@ export default function AtlasClient({ councilPages }: { councilPages: CouncilPag
 
       {/* Right rail: the door to every place. Search when nothing is chosen,
           the place's numbers when something is. On small screens the rail
-          appears only for a selection. */}
-      {!loading && !failed && (
+          appears only for a selection. Story mode clears it. */}
+      {!loading && !failed && !story && (
         <div className={`absolute right-4 top-20 z-[900] w-[min(20rem,calc(100vw-2rem))] max-h-[calc(100dvh-6.5rem)] overflow-y-auto ${selected ? '' : 'hidden lg:block'}`}>
           {selected ? (
             <div className="bg-white border-4 border-bauhaus-black shadow-[8px_8px_0_0_#121212] p-4">
@@ -574,6 +658,73 @@ export default function AtlasClient({ councilPages }: { councilPages: CouncilPag
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Story mode: one map state, one paragraph, read aloud. */}
+      {story && (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[950] w-[min(46rem,calc(100vw-2rem))]">
+          <div className="bg-white border-4 border-bauhaus-black shadow-[8px_8px_0_0_#121212] p-5 md:p-6">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-bauhaus-red">
+                Story · {storyIdx! + 1} / {ATLAS_STORY.length}
+              </p>
+              <div className="flex items-center gap-3">
+                <p className="text-[10px] text-gray-400 uppercase tracking-widest hidden sm:block">
+                  Measured {ATLAS_STORY_MEASURED_AT} · public registers
+                </p>
+                <button
+                  onClick={exitStory}
+                  aria-label="Exit story mode"
+                  className="shrink-0 w-7 h-7 border-2 border-bauhaus-black font-black hover:bg-bauhaus-black hover:text-white transition-colors"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            <h2 className="text-xl md:text-2xl font-black uppercase tracking-wider leading-tight mt-2">
+              {story.title}
+            </h2>
+            <p className="text-base md:text-lg leading-relaxed mt-3">{story.paragraph}</p>
+
+            {story.cannotSay && (
+              <div className="mt-4 border-l-4 border-bauhaus-red pl-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-bauhaus-red">
+                  What we cannot say
+                </p>
+                <p className="text-sm text-gray-600 mt-1">{story.cannotSay}</p>
+              </div>
+            )}
+
+            <div className="mt-5 flex items-center justify-between gap-3">
+              <button
+                onClick={() => moveStory(-1)}
+                disabled={storyIdx === 0}
+                className="border-2 border-bauhaus-black px-4 py-2 text-[10px] font-bold uppercase tracking-widest disabled:opacity-30 disabled:cursor-default hover:enabled:bg-bauhaus-black hover:enabled:text-white transition-colors"
+              >
+                ← Back
+              </button>
+              <p className="text-[10px] text-gray-400 uppercase tracking-widest hidden md:block">
+                Arrow keys move · Esc leaves
+              </p>
+              {storyIdx === ATLAS_STORY.length - 1 ? (
+                <button
+                  onClick={exitStory}
+                  className="border-2 border-bauhaus-black bg-bauhaus-black text-white px-4 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-white hover:text-bauhaus-black transition-colors"
+                >
+                  Open the Atlas →
+                </button>
+              ) : (
+                <button
+                  onClick={() => moveStory(1)}
+                  className="border-2 border-bauhaus-black bg-bauhaus-black text-white px-4 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-white hover:text-bauhaus-black transition-colors"
+                >
+                  Next →
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

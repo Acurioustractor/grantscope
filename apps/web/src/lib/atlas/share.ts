@@ -31,6 +31,9 @@ export interface AtlasUrlState {
   /** The selected place's state. Council names repeat across states
    * (Bayside exists in NSW and VIC), so the slug alone is ambiguous. */
   pst?: string;
+  /** Story-mode step id. When present it defines the whole view, so the
+   * other params are neither written nor read. */
+  story?: string;
 }
 
 /** Read Atlas state out of a query string. Unknown params are ignored;
@@ -46,17 +49,21 @@ export function parseAtlasUrl(search: string): AtlasUrlState {
     state: read('state')?.toUpperCase(),
     place: read('place')?.toLowerCase(),
     pst: read('pst')?.toUpperCase(),
+    story: read('story')?.toLowerCase(),
   };
 }
 
 /** Build the shareable path. Defaults are omitted so a fresh Atlas is just
- * /atlas; pst always accompanies place because slugs collide across states. */
+ * /atlas; pst always accompanies place because slugs collide across states.
+ * A story step id defines the whole view, so it travels alone. */
 export function buildAtlasUrl(input: {
   layerKey: string;
   defaultLayerKey: string;
   stateFilter: string;
   selected: AtlasFeature | null;
+  story?: string | null;
 }): string {
+  if (input.story) return `/atlas?story=${encodeURIComponent(input.story)}`;
   const params = new URLSearchParams();
   if (input.layerKey !== input.defaultLayerKey) params.set('layer', input.layerKey);
   if (input.stateFilter && input.stateFilter !== 'ALL') params.set('state', input.stateFilter);
