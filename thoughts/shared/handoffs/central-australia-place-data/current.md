@@ -3,7 +3,7 @@
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
 **Updated:** 2026-08-08T14:15:00Z
-**Goal:** Apply the Ceduna treatment to Central Australia, focused on Alice Springs, the Utopia homelands and Tennant Creek. **Done and committed.**
+**Goal:** Apply the Ceduna treatment across remote Australia. **Four regions done:** Central Australia, Far West Coast, the Kimberley, Cape York.
 **Branch:** `feat/place-central-australia` — worktree `/Users/benknight/Code/grantscope-place`, 1 commit, **stacked on `feat/place-funding-far-west` (PR #175, still unmerged)**
 **Test:** `cd /Users/benknight/Code/grantscope-place/apps/web && npx tsc --noEmit && npx vitest run` (559 passing, was 550)
 
@@ -86,6 +86,42 @@ Same shape as Utopia, verified the same way. **ARDYALOON, DJARINDJIN, LOMBADINA,
 
 `unplaced` now takes a list of postcodes. Naming only the largest would have reported a fraction as the whole.
 
+### Cape York — the region that broke the model
+
+Verified the same way, and the org-by-org step earned its keep: it caught a shape the type could not express.
+
+**The hub is outside the region.** Every earlier region had a hub inside it. On Cape York each community has its own shire council, so there is no in-region hub, and the distortion is *worse* rather than absent. **$661.1M** ($645.2M grants + $15.9M contracts) is recorded against **Cairns**, which is not on Cape York:
+
+| Organisation | Counted under | Grants |
+|---|---|---|
+| Apunipima Cape York Health Council | Cairns · 4870 | $273.8M |
+| Cape York Solutions | Cairns · 4870 | $113.9M |
+| Cape York Land Council | Cairns · 4870 | $112.2M |
+| Cape York Employment | Cairns · 4870 | $56.7M |
+| AFL Cape York | Cairns · 4870 | $29.2M |
+| **Kowanyama Aboriginal Council** | Cairns · 4870 | $26.1M |
+| Cape York Institute | Cairns · 4870 | $14.9M |
+| Lockhart River Aboriginal Shire Council Youth Support | Cairns · 4870 | $13.2M |
+
+Kowanyama Aboriginal Council is a **local government**, recorded as a Cairns organisation. Kowanyama shire holds one organisation.
+
+**Three things this region taught us:**
+
+1. **`hubIsOutsideRegion` was needed.** The guard required `hubLga ∈ lgaNames`. That held twice and would have forced Cape York to either mislabel Cairns as a Cape York council or drop the finding. Adding Cairns to `lgaNames` was the wrong fix — thousands of unrelated orgs would bury the peninsula in its own page.
+2. **A confident wrong answer is worse than a null.** Utopia and the Dampier Peninsula fall out of the gazetteer and land unplaced, which a page can say. Kowanyama Aboriginal Council is placed, wrongly, with nothing signalling doubt. **Cape York has zero gazetteer gaps** — the reference data is fine and the addresses are not.
+3. **A community can scatter across four councils.** Kowanyama appears under Cairns, Carpentaria, Kowanyama and Tablelands. Carpentaria and Tablelands are not on Cape York.
+
+Four shires — **Hope Vale, Mapoon, Napranum, Lockhart River** — hold **zero** organisations in our records.
+
+### Bug found and fixed while reading
+
+**The unplaced list never filtered on `lga_name`.** It printed every organisation in the postcode under a heading saying none of them could be placed. Urapuntja Aboriginal Corporation appeared as unplaceable on the same page that showed it counted under Alice Springs. Central Australia's list is now 87 genuinely unplaced organisations.
+
+### Correction to two claims I made about the next steps
+
+1. **"Converging Far West into RegionReport is the obvious next refactor" — wrong, it would be a downgrade.** I said Far West showed "neither the hub section nor the registered-address grant figure". It has both: a hub section at line 113 and `getPostcodeFundingPicture` for 5690 *and* 5680. It also has crime suppression, per-community distances and the corrections narrative, none of which `RegionReport` had. And **Maralinga Tjarutja has no `mv_lga_place_profile` row**, so `RegionReport` cannot render its card at all — the line "holds no organisations, not because none work there" would silently vanish, which is the erasure that page exists to stop. The arrow points the other way, and the communities table has now been lifted *up* into `RegionReport`.
+2. **"Cape York may not fit the pattern" — right instinct, wrong reason.** The shires do each have a council. That is precisely *why* the distortion is worse: the councils exist and are still credited elsewhere.
+
 ### Correction to an earlier claim in this handoff
 
 I told Ben #175 shipped a user-visible bug (a page claiming Maralinga Tjarutja carries the Ceduna township). **That was wrong.** `getPlaceIntelligence` has no consumer outside its own module; the Far West Coast page runs its own hardcoded query and its own prose, which is accurate. The stale registry entry was dead config, fixed on this branch. No cherry-pick was needed.
@@ -95,9 +131,11 @@ I told Ben #175 shipped a user-visible bug (a page claiming Maralinga Tjarutja c
 - [ ] Correct the stale 107/109-Stretch prose in three Notion fields (147 is confirmed correct)
 - [ ] Utopia consent is `Not checked` — that gates any public Goods surface, not just storyteller names
 - [ ] `mv_lga_place_profile` is delivery-keyed. Any other page reading it understates the same way. Worth an audit of consumers
-- [ ] **The Far West Coast page is now the odd one out.** Central Australia and the Kimberley both render from the shared `RegionReport`; Far West still runs its own hardcoded query and prose, so it shows neither `hubAdministration` nor the registered-address grant figure. Converging it is the obvious next refactor and would remove a whole class of drift
-- [ ] Next region: APY Lands or Cape York. Cape York may not show the hub pattern the same way — each community there has its own shire council, so the distortion may sit with Cairns instead. Worth checking before assuming
-- [ ] Kimberley unplaced list is capped at 300 of 721 for display. The cap is reported on the page, but the other 421 organisations are named nowhere
+- [ ] **Do NOT converge Far West into `RegionReport`.** It is the richer page. What is left to lift *up* from it: `getPostcodeFundingPicture` (per-postcode registered-address funding with ending-soon awards) and crime suppression. Both are genuinely useful to every region
+- [ ] **`RegionReport` cannot show a council with no `mv_lga_place_profile` row.** Maralinga Tjarutja is the known case. Any council whose organisations all get nulled disappears from its own region page rather than showing zero. Worth a left-join against `lgaNames` so a council can render as an explicit zero
+- [ ] Kimberley unplaced list is capped at 300 of 721 for display. The cap is reported, but the other 421 organisations are named nowhere. Cape York shows 109 of 345, Central Australia 87 of 143 — both under the cap
+- [ ] The "Showing N of M" caption compares two populations: N is community-controlled and currently-registered, M is every unplaced organisation in the postcodes. Honest but not obvious
+- [ ] Next region: APY Lands. It is currently a single council row inside `central-australia` with 5 orgs and $0 delivered, which almost certainly understates it the way Ceduna was understated
 
 ### Decisions
 - **State it, don't move it.** The Utopia orgs keep their Alice Springs attribution. Nulling them would have been consistent with the Ceduna precedent but would make Utopia *less* visible, and ABS offers nothing to re-place them with. The correction is editorial and reversible; the database is unchanged
