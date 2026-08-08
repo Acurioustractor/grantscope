@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
+import { getRegionSchoolNeedSignal } from '@/lib/services/school-need-signal';
+import { SchoolNeed } from './school-need';
 import {
   getCrossBorderPicture,
   getHubAdministrationPicture,
@@ -40,11 +42,13 @@ export async function RegionReport({ regionKey, title, intro, children }: Region
     hub,
     funding,
     crossBorder,
+    schools,
   ] = await Promise.all([
     getPlaceIntelligence(regionKey),
     getHubAdministrationPicture(regionKey),
     getRegionFundingPicture(regionKey),
     getCrossBorderPicture(regionKey),
+    getRegionSchoolNeedSignal(PLACE_REGIONS[regionKey]?.lgaNames ?? []),
   ]);
   const computedAt = areas[0]?.computedAt;
   const region = PLACE_REGIONS[regionKey];
@@ -168,6 +172,8 @@ export async function RegionReport({ regionKey, title, intro, children }: Region
             ) : null}
           </section>
         ) : null}
+
+        {schools ? <SchoolNeed signal={schools} placeLabel={title} /> : null}
 
         <section aria-labelledby="areas-title">
           <h2 id="areas-title" className="text-2xl font-black uppercase tracking-widest">

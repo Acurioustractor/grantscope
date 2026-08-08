@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getCouncilPlaceReport } from '@/lib/services/council-place-report';
+import { getSchoolNeedSignal } from '@/lib/services/school-need-signal';
+import { SchoolNeed } from '../../school-need';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,6 +20,7 @@ export default async function CouncilPage({ params }: { params: Promise<{ slug: 
   const { slug } = await params;
   const report = await getCouncilPlaceReport(slug);
   if (!report) notFound();
+  const schools = await getSchoolNeedSignal(report.lgaName);
 
   // The correction goes to a person, not a database. A public form writing
   // straight into the register would need moderation we do not have, and the
@@ -56,6 +59,8 @@ export default async function CouncilPage({ params }: { params: Promise<{ slug: 
       </header>
 
       <div className="mx-auto grid max-w-5xl gap-10 px-5 py-10 lg:px-10">
+        {schools ? <SchoolNeed signal={schools} placeLabel={report.lgaName} /> : null}
+
         {report.unplacedTotal > 0 ? (
           <section aria-labelledby="unplaced-title" className="border-4 border-bauhaus-red bg-white p-6">
             <h2 id="unplaced-title" className="text-2xl font-black uppercase tracking-widest">
