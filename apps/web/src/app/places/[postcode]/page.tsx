@@ -3,6 +3,7 @@ import { safeOptionalData } from '@/lib/optional-data';
 import { createGovernedProofService } from '@/lib/governed-proof/service';
 import { getProofPack } from '@/lib/governed-proof/presentation';
 import { getPlaceBrief } from '@/lib/services/place-brief-service';
+import { getPostcodeFundingPicture } from '@/lib/services/place-intelligence';
 import { getPlaceDataLayers } from '@/lib/services/place-data-service';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
@@ -381,9 +382,12 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
 
   // Place Brief — EL transcripts + ALMA interventions + alignment score
   // Place Data Layers — crime, schools, NDIS participants, DSS payments
-  const [placeBrief, dataLayers] = await Promise.all([
+  // Federal grants held by organisations registered here. Separate from the
+  // gs_relationships totals above, which do not carry GrantConnect at all.
+  const [placeBrief, dataLayers, federalFunding] = await Promise.all([
     getPlaceBrief(supabase, postcode, geo.locality, geo.state),
     getPlaceDataLayers(supabase, postcode, geo.lga_name, geo.lga_code, geo.state),
+    getPostcodeFundingPicture(postcode).catch(() => null),
   ]);
 
   // Filter grants relevant to this area (by state match or national scope)
@@ -490,9 +494,17 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
           <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">Entities</div>
           <div className="text-2xl font-black text-bauhaus-black">{entityList.length}</div>
         </div>
+        {/* The headline carries the federal committed figure where we have it.
+            totalFunding comes from gs_relationships, which has no GrantConnect
+            in it, so on a place like Ceduna it under-reports by roughly 30x and
+            was the most prominent wrong number on the page. */}
         <div className="p-4 border-b-2 sm:border-b-0 sm:border-r-2 border-bauhaus-black/10">
-          <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">Total Funding</div>
-          <div className="text-2xl font-black text-bauhaus-black">{formatMoney(totalFunding)}</div>
+          <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">
+            {federalFunding ? 'Federal Committed' : 'Total Funding'}
+          </div>
+          <div className="text-2xl font-black text-bauhaus-black">
+            {formatMoney(federalFunding ? federalFunding.activeValue : totalFunding)}
+          </div>
         </div>
         <div className="p-4 border-r-2 border-bauhaus-black/10">
           <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">Community-Controlled</div>
@@ -594,6 +606,50 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Content */}
         <div className="lg:col-span-2">
+          {/* Federal grants held by organisations registered here. This leads
+              because it is the largest real number on the page: the block below
+              reads gs_relationships, which does not carry GrantConnect. */}
+          {federalFunding && (
+            <Section title="Federal Grants Held Here">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+                <div>
+                  <div className="text-xl font-black text-bauhaus-black">{formatMoney(federalFunding.activeValue)}</div>
+                  <div className="text-[10px] text-bauhaus-muted font-medium uppercase tracking-widest">Committed now</div>
+                </div>
+                <div>
+                  <div className="text-xl font-black text-bauhaus-red">{formatMoney(federalFunding.endingWithin24mValue)}</div>
+                  <div className="text-[10px] text-bauhaus-muted font-medium uppercase tracking-widest">Ends within 24 months</div>
+                </div>
+                <div>
+                  <div className="text-xl font-black text-bauhaus-black">{federalFunding.activeAwards}</div>
+                  <div className="text-[10px] text-bauhaus-muted font-medium uppercase tracking-widest">Live agreements</div>
+                </div>
+                <div>
+                  <div className="text-xl font-black text-bauhaus-black">{federalFunding.recipients}</div>
+                  <div className="text-[10px] text-bauhaus-muted font-medium uppercase tracking-widest">Organisations</div>
+                </div>
+              </div>
+              {federalFunding.topPrograms.length > 0 && (
+                <div className="space-y-0 mb-4">
+                  {federalFunding.topPrograms.map((p, i) => (
+                    <div key={i} className="flex items-center justify-between py-2 border-b-2 border-bauhaus-black/5 last:border-b-0">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-bauhaus-black text-sm truncate">{p.program}</div>
+                        <div className="text-[11px] text-bauhaus-muted font-medium truncate">{p.agency} &middot; {p.awards} award{p.awards === 1 ? '' : 's'}</div>
+                      </div>
+                      <div className="font-black text-bauhaus-black ml-4">{formatMoney(p.value)}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p className="text-[11px] text-bauhaus-muted font-medium leading-relaxed">
+                GrantConnect awards, counted by the recipient&rsquo;s registered address.
+                {' '}{federalFunding.awards} award{federalFunding.awards === 1 ? '' : 's'} totalling {formatMoney(federalFunding.lifetimeValue)} since 2015; only {federalFunding.withDeliveryPostcode} publish a delivery location.
+                An organisation registered here may deliver elsewhere, and work delivered here may be run from a city. Values are whole-of-agreement, not annual.
+              </p>
+            </Section>
+          )}
+
           {/* Top Recipients */}
           {topRecipients.length > 0 && (
             <Section title="Top Funded Entities">
