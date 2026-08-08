@@ -61,6 +61,11 @@ const megaMenuSections = [
       { href: '/social-enterprises', label: 'Social Enterprises', desc: 'Community-controlled and Indigenous-led organisations' },
       { href: '/snow-foundation', label: 'Partners', desc: 'Our funding partners and collaborators' },
       { href: '/places', label: 'Place Packs', desc: 'Place-based funding and allocation intelligence' },
+      // /place and /places are different routes. Place Packs is postcode
+      // funding-gap analysis; this is the per-place account of where public
+      // money is recorded and where our records fail. Labelled by what each
+      // does, because the URLs will never tell anyone them apart.
+      { href: '/place/council', label: 'Remote Communities', desc: 'What we can and cannot tell you about public money in 117 remote council areas' },
     ],
   },
 ];
