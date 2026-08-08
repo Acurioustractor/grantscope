@@ -134,8 +134,14 @@ export interface PlaceRegion {
   key: string;
   lgaNames: string[];
   states: string[];
-  /** Organisations here cannot be placed in a council area at all. */
-  unplaced: { postcode: string; state: string } | null;
+  /**
+   * Postcodes whose organisations cannot be placed in a council area at all.
+   *
+   * A list rather than one postcode because the Kimberley's unplaced
+   * organisations are spread across five of them, and naming only the largest
+   * would have hidden more than half of them.
+   */
+  unplaced: { postcodes: string[]; state: string } | null;
   labels: Record<string, { label: string; note: string | null }>;
   hubAdministration: HubAdministration | null;
   gazetteerGaps: GazetteerGap[];
@@ -146,7 +152,7 @@ export const PLACE_REGIONS: Record<string, PlaceRegion> = {
     key: 'central-australia',
     lgaNames: ['Alice Springs', 'Barkly', 'MacDonnell', 'Central Desert', 'Anangu Pitjantjatjara Yankunytjatjara'],
     states: ['NT', 'SA'],
-    unplaced: { postcode: '0872', state: 'NT' },
+    unplaced: { postcodes: ['0872'], state: 'NT' },
     labels: {
       'Alice Springs': {
         label: 'Mparntwe (Alice Springs)',
@@ -234,6 +240,65 @@ export const PLACE_REGIONS: Record<string, PlaceRegion> = {
     },
     gazetteerGaps: [],
   },
+  // The Kimberley. Verified 8 August 2026, org by org, the same way as the
+  // other two: read lga_name on each organisation, then check the localities
+  // against ABS rather than against what the names suggest.
+  //
+  // The wall is worse here than anywhere yet measured. Halls Creek has five
+  // organisations with a council area and 100 without, 75 of them
+  // community-controlled.
+  kimberley: {
+    key: 'kimberley',
+    lgaNames: ['Broome', 'Derby-West Kimberley', 'Halls Creek', 'Wyndham-East Kimberley'],
+    states: ['WA'],
+    unplaced: { postcodes: ['6725', '6743', '6770', '6765', '6740'], state: 'WA' },
+    labels: {
+      Broome: {
+        label: 'Rubibi (Broome)',
+        note: 'Also carries organisations working on the Dampier Peninsula, several hundred kilometres north, because their post comes to Broome. See what this number contains, below.',
+      },
+      'Derby-West Kimberley': {
+        label: 'Derby and the West Kimberley',
+        note: 'Covers Fitzroy Crossing and part of the Dampier Peninsula. Postcode 6765 splits between here and Halls Creek.',
+      },
+      'Halls Creek': {
+        label: 'Halls Creek',
+        note: 'Five organisations here have a council area and 100 in postcode 6770 have none. Read the five as a fragment, not a picture.',
+      },
+      'Wyndham-East Kimberley': {
+        label: 'Wyndham and the East Kimberley',
+        note: 'Includes Kununurra and Warmun.',
+      },
+    },
+    hubAdministration: {
+      hubLga: 'Broome',
+      administeredCommunities: ['Ardyaloon (One Arm Point)', 'Djarindjin', 'Lombadina', 'Beagle Bay'],
+      creditedOrgs: [
+        'Djarindjin Aboriginal Corporation',
+        'Ardyaloon Incorporated',
+        'Bardi and Jawi Niimidiman Aboriginal Corporation RNTBC',
+        'Ardyaloon Art & Culture Aboriginal Corporation',
+      ],
+      note:
+        'These organisations work on the Dampier Peninsula, up to 200km north of town by road. Their ACNC record gives Broome as the town, because that is where the post goes, so their money is counted as money reaching Broome.',
+    },
+    gazetteerGaps: [
+      {
+        place: 'Ardyaloon, Djarindjin, Lombadina, Beagle Bay',
+        containingLocality: 'DAMPIER PENINSULA',
+        straddles: ['Broome', 'Derby-West Kimberley'],
+        note:
+          'None of these communities is a locality in ABS SAL_2021. The one that contains them, DAMPIER PENINSULA, is — and it spans two councils, so resolving to it would still not name one.',
+      },
+      {
+        place: 'Bidyadanga',
+        containingLocality: null,
+        straddles: [],
+        note:
+          'The largest remote Aboriginal community in Western Australia, and it has no entry in ABS SAL_2021. Its organisations sit in postcode 6725 with no council area.',
+      },
+    ],
+  },
 };
 
 function num(value: number | string | null): number {
@@ -276,7 +341,7 @@ export const getPlaceIntelligence = cache(
         ? db.from('gs_entities')
             .select('canonical_name, entity_type, is_community_controlled')
             .eq('state', region.unplaced.state)
-            .eq('postcode', region.unplaced.postcode)
+            .in('postcode', region.unplaced.postcodes)
             .or('is_community_controlled.eq.true,entity_type.eq.indigenous_corp')
             .or('oric_status.is.null,oric_status.neq.Deregistered')
             .order('canonical_name')
@@ -285,14 +350,13 @@ export const getPlaceIntelligence = cache(
       region.unplaced
         ? db.from('geo_resolution_gaps')
             .select('postcode, required_source, affected_entities, affected_community_controlled')
-            .eq('postcode', region.unplaced.postcode)
-            .maybeSingle()
+            .in('postcode', region.unplaced.postcodes)
         : Promise.resolve({ data: null, error: null }),
       region.unplaced
         ? db.from('gs_entities')
             .select('id', { count: 'exact', head: true })
             .eq('state', region.unplaced.state)
-            .eq('postcode', region.unplaced.postcode)
+            .in('postcode', region.unplaced.postcodes)
             .or('is_community_controlled.eq.true,entity_type.eq.indigenous_corp')
             .eq('oric_status', 'Deregistered')
         : Promise.resolve({ count: 0, error: null }),
@@ -346,7 +410,7 @@ export const getPlaceIntelligence = cache(
     // small and unrepresentative slice.
     const quoted = (values: string[]) => values.map(value => `'${value.replace(/'/g, "''")}'`).join(',');
     const unplacedClause = region.unplaced
-      ? ` OR e.postcode = '${region.unplaced.postcode.replace(/'/g, "''")}'`
+      ? ` OR e.postcode IN (${quoted(region.unplaced.postcodes)})`
       : '';
     const coverageResult = await db.rpc('exec_sql', {
       query: `SELECT round(sum(ga.value_aud) FILTER (WHERE ga.delivery_postcode IS NOT NULL)/1e6,1) AS known_m,
@@ -392,18 +456,30 @@ export const getPlaceIntelligence = cache(
       ? { knownM, unknownM, pct: Math.round((100 * knownM) / (knownM + unknownM)) }
       : null;
 
-    const gap = gapResult.error ? null : (gapResult.data as {
-      required_source: string;
-      affected_entities: number;
-      affected_community_controlled: number;
-    } | null);
+    // Summed across every unplaced postcode. The Kimberley's wall is spread
+    // over five of them, so reading one row would report a fifth of it.
+    const gapRows = gapResult.error
+      ? []
+      : ((gapResult.data || []) as Array<{
+          required_source: string;
+          affected_entities: number;
+          affected_community_controlled: number;
+        }>);
+    const gapTotals = gapRows.reduce(
+      (total, row) => ({
+        entities: total.entities + (row.affected_entities || 0),
+        communityControlled: total.communityControlled + (row.affected_community_controlled || 0),
+      }),
+      { entities: 0, communityControlled: 0 },
+    );
+    const requiredSources = [...new Set(gapRows.map(row => row.required_source).filter(Boolean))];
 
     return {
       areas,
       unplacedOrgs,
-      unplacedTotal: gap?.affected_entities ?? unplacedOrgs.length,
-      gapNote: gap
-        ? `${gap.affected_community_controlled} of ${gap.affected_entities} organisations here are community-controlled. Placing them in a council area needs the ${gap.required_source}.`
+      unplacedTotal: gapTotals.entities || unplacedOrgs.length,
+      gapNote: gapRows.length
+        ? `${gapTotals.communityControlled} of ${gapTotals.entities} organisations here are community-controlled. Placing them in a council area needs the ${requiredSources.join(', or the ')}.`
         : null,
       deregisteredExcluded: deregisteredResult.error ? 0 : (deregisteredResult.count ?? 0),
       deliveryCoverage: coverage,

@@ -74,15 +74,40 @@ describe('PLACE_REGIONS', () => {
     }
   });
 
-  it('holds the two regions that have been checked against the register', () => {
+  it('holds the three regions that have been checked against the register', () => {
     // Deliberately specific. A region added without verifying it against the
     // database should fail here and be checked before it reaches a page.
-    expect(Object.keys(PLACE_REGIONS).sort()).toEqual(['central-australia', 'far-west-coast']);
+    expect(Object.keys(PLACE_REGIONS).sort()).toEqual([
+      'central-australia',
+      'far-west-coast',
+      'kimberley',
+    ]);
   });
 
-  it('records that Alice Springs and Ceduna both carry money earned elsewhere', () => {
+  it('records the hub council for every region that has one', () => {
     expect(PLACE_REGIONS['central-australia'].hubAdministration?.hubLga).toBe('Alice Springs');
     expect(PLACE_REGIONS['far-west-coast'].hubAdministration?.hubLga).toBe('Ceduna');
+    expect(PLACE_REGIONS.kimberley.hubAdministration?.hubLga).toBe('Broome');
+  });
+
+  it('names at least one unplaced postcode wherever it declares any', () => {
+    // An empty list would render as "these organisations share postcodes ,"
+    // and silently widen every unplaced query to nothing.
+    for (const [key, region] of regions) {
+      if (!region.unplaced) continue;
+      expect(region.unplaced.postcodes.length, `${key} declares unplaced with no postcodes`).toBeGreaterThan(0);
+      expect(new Set(region.unplaced.postcodes).size, `${key} repeats an unplaced postcode`).toBe(
+        region.unplaced.postcodes.length,
+      );
+    }
+  });
+
+  it('keeps the Dampier Peninsula recorded as unplaceable rather than placed', () => {
+    // Same shape as Sandover: the communities are absent from the gazetteer and
+    // the locality above them spans two councils.
+    const gap = PLACE_REGIONS.kimberley.gazetteerGaps.find(entry => entry.place.includes('Ardyaloon'));
+    expect(gap?.containingLocality).toBe('DAMPIER PENINSULA');
+    expect(gap?.straddles).toEqual(['Broome', 'Derby-West Kimberley']);
   });
 
   it('keeps the Utopia homelands recorded as unplaceable rather than placed', () => {
