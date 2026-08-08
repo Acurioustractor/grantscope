@@ -5,7 +5,12 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { fmt, money } from '@/lib/format';
 
-const MapView = dynamic(() => import('@/app/map/map-view'), { ssr: false });
+import { getAtlasLayer, type AtlasLiveLayer } from '@/lib/atlas/layers';
+
+const AtlasMap = dynamic(() => import('@/app/atlas/atlas-map'), { ssr: false });
+
+// This report reads one Atlas layer; the registry owns its scale and caveat.
+const FUNDING_DESERTS = getAtlasLayer('funding-deserts') as AtlasLiveLayer;
 
 type LgaFeature = {
   lga_name: string;
@@ -323,9 +328,9 @@ export function ReallocationAtlasClient({ atlasData }: { atlasData: AtlasData })
                   Loading reallocation atlas...
                 </div>
               ) : (
-                // MapView only selects from features this page passed in, so
+                // AtlasMap only selects from features this page passed in, so
                 // the callback value is one of our filtered, desert-scored rows.
-                <MapView features={features} selected={selected} onSelect={(f) => setSelected(f as LgaFeature)} />
+                <AtlasMap features={features} layer={FUNDING_DESERTS} selected={selected} onSelect={(f) => setSelected(f as LgaFeature)} />
               )}
             </div>
 

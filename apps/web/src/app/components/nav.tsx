@@ -134,7 +134,7 @@ const workspaceModules: NavModule[] = [
       { label: 'Entity Intel', href: '/entity' },
       { label: 'Power Index', href: '/entity/top' },
       { label: 'People', href: '/person' },
-      { label: 'Funding Map', href: '/map' },
+      { label: 'The Atlas', href: '/atlas' },
       { label: 'Network Graph', href: '/graph' },
       { label: 'Charities', href: '/charities' },
       { label: 'Place Packs', href: '/places' },
