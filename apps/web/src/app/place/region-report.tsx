@@ -87,7 +87,10 @@ export async function RegionReport({ regionKey, title, intro, children }: Region
           </h2>
           <div className="mt-5 grid gap-5 md:grid-cols-2">
             {areas.map(area => (
-              <article key={area.areaKey} className="border-4 border-bauhaus-black bg-white p-6">
+              <article
+                key={area.areaKey}
+                className={`border-4 bg-white p-6 ${area.hasRecord ? 'border-bauhaus-black' : 'border-dashed border-bauhaus-black/40'}`}
+              >
                 <div className="flex items-start justify-between gap-3">
                   <h3 className="text-xl font-black uppercase">{area.areaLabel}</h3>
                   {area.irsdDecile > 0 ? (
@@ -98,6 +101,27 @@ export async function RegionReport({ regionKey, title, intro, children }: Region
                   ) : null}
                 </div>
 
+                {/* A row of zeros would read as "nothing happens here". What we
+                    actually know is narrower: we hold nothing, which is a fact
+                    about our records. */}
+                {!area.hasRecord ? (
+                  <>
+                    <p className="mt-5 font-mono text-[11px] font-black uppercase tracking-widest text-bauhaus-red">
+                      Nothing in our records
+                    </p>
+                    <p className="mt-2 text-sm leading-6">
+                      We hold no organisations under this council. That is a statement about our
+                      records, not about the place. Organisations working here are most likely
+                      registered to an address somewhere else, which is what the rest of this page
+                      is about.
+                    </p>
+                    {area.areaNote ? (
+                      <p className="mt-4 border-l-4 border-bauhaus-red bg-bauhaus-canvas p-3 text-sm leading-6">
+                        {area.areaNote}
+                      </p>
+                    ) : null}
+                  </>
+                ) : (
                 <dl className="mt-5 grid grid-cols-2 gap-4">
                   <div>
                     <dt className="font-mono text-[10px] font-bold uppercase tracking-widest">Organisations</dt>
@@ -137,8 +161,9 @@ export async function RegionReport({ regionKey, title, intro, children }: Region
                     </dd>
                   </div>
                 </dl>
+                )}
 
-                {area.areaNote ? (
+                {area.hasRecord && area.areaNote ? (
                   <p className="mt-5 border-l-4 border-bauhaus-yellow bg-bauhaus-canvas p-3 text-sm leading-6">
                     {area.areaNote}
                   </p>

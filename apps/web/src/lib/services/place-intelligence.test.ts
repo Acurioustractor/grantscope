@@ -22,6 +22,18 @@ describe('PLACE_REGIONS', () => {
     }
   });
 
+  it('labels every council it declares', () => {
+    // Councils with no records now render as an explicit "nothing in our
+    // records" card. Without a label that card is a bare council name and a
+    // disclaimer, which tells a reader from Hope Vale nothing about why their
+    // shire is empty.
+    for (const [key, region] of regions) {
+      for (const lgaName of region.lgaNames) {
+        expect(region.labels[lgaName], `${key} declares ${lgaName} with no label`).toBeDefined();
+      }
+    }
+  });
+
   it('labels only council areas the region actually reads', () => {
     for (const [key, region] of regions) {
       for (const labelled of Object.keys(region.labels)) {

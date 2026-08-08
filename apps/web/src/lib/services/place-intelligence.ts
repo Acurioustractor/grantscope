@@ -38,6 +38,16 @@ export interface PlaceSnapshot {
   philanthropicFunderCount: number;
   philanthropicGrantCount: number;
   lgaResolved: boolean;
+  /**
+   * False when we hold no organisations for this council at all.
+   *
+   * The distinction matters more than it looks. A council with no record is not
+   * a council where nothing happens — it is usually one whose organisations are
+   * all registered somewhere else. Rendering it as a row of zeros would say the
+   * first thing; leaving it out entirely, which is what happened before, said
+   * nothing and hid four Cape York Aboriginal shires from their own page.
+   */
+  hasRecord: boolean;
   computedAt: string;
 }
 
@@ -384,10 +394,12 @@ export const PLACE_REGIONS: Record<string, PlaceRegion> = {
       Kowanyama: { label: 'Kowanyama Shire', note: 'Holds one organisation. Kowanyama Aboriginal Council, the local government itself, is counted under Cairns.' },
       'Wujal Wujal': { label: 'Wujal Wujal Shire', note: 'Holds one organisation.' },
       Weipa: { label: 'Weipa', note: null },
-      'Hope Vale': { label: 'Hope Vale Shire', note: 'No organisations in our records. Not because none work there.' },
-      Mapoon: { label: 'Mapoon Shire', note: 'No organisations in our records.' },
-      Napranum: { label: 'Napranum Shire', note: 'No organisations in our records.' },
-      'Lockhart River': { label: 'Lockhart River Shire', note: 'No organisations in our records, though its council runs a youth service counted under Cairns.' },
+      // Notes here appear beneath the "nothing in our records" card, so they
+      // should add a fact rather than restate it. Left null where we have none.
+      'Hope Vale': { label: 'Hope Vale Shire', note: null },
+      Mapoon: { label: 'Mapoon Shire', note: 'Old Mapoon Aboriginal Corporation is registered in Cairns and counted there.' },
+      Napranum: { label: 'Napranum Shire', note: null },
+      'Lockhart River': { label: 'Lockhart River Shire', note: 'Its council runs a youth service that has taken 45 grants worth $13.2M, all counted under Cairns.' },
     },
     // Verified 8 August 2026 by reading lga_name on each organisation. All are
     // postcode 4870, all counted under Cairns.
@@ -496,31 +508,57 @@ export const getPlaceIntelligence = cache(
       throw new Error(`Place snapshot unavailable: ${snapshotResult.error.message}`);
     }
 
-    const areas = ((snapshotResult.data || []) as RawProfile[])
-      .map(row => ({
-        areaKey: row.lga_name,
-        areaLabel: region.labels[row.lga_name]?.label ?? row.lga_name,
-        areaNote: region.labels[row.lga_name]?.note ?? null,
-        remoteness: row.remoteness,
-        irsdDecile: num(row.avg_irsd_decile),
-        orgCount: row.org_count,
-        communityControlledCount: row.community_controlled,
-        caringForCountry: row.caring_for_country,
-        employers: row.employers,
-        contractCount: row.contract_count,
-        contractValue: num(row.contract_value_lifetime),
-        contractValue24m: num(row.contract_value_24m),
-        govtGrantCount: row.grants_delivered,
-        govtGrantValue: num(row.grants_delivered_value),
-        grantsHeldCount: 0,
-        grantsHeldValue: 0,
-        localRetentionPct: row.local_retention_pct === null ? null : num(row.local_retention_pct),
-        philanthropicFunderCount: row.philanthropic_funders,
-        philanthropicGrantCount: row.philanthropic_grants,
-        lgaResolved: true,
-        computedAt: new Date().toISOString(),
-      }))
-      .sort((left, right) => right.contractValue + right.govtGrantValue - (left.contractValue + left.govtGrantValue));
+    const profileByLga = new Map<string, RawProfile>();
+    for (const row of (snapshotResult.data || []) as RawProfile[]) {
+      profileByLga.set(row.lga_name, row);
+    }
+
+    // Built from the councils the region declares, not from the rows that came
+    // back. A council whose organisations were all nulled produces no row, so
+    // reading only the result set deleted it from its own region page. That is
+    // how Maralinga Tjarutja and the Hope Vale, Mapoon, Napranum and Lockhart
+    // River shires disappeared — five councils, four of them Aboriginal shires,
+    // absent from pages about the places they govern.
+    const computedAt = new Date().toISOString();
+    const areas: PlaceSnapshot[] = region.lgaNames
+      .map(lgaName => {
+        const row = profileByLga.get(lgaName);
+        return {
+          areaKey: lgaName,
+          areaLabel: region.labels[lgaName]?.label ?? lgaName,
+          areaNote: region.labels[lgaName]?.note ?? null,
+          hasRecord: Boolean(row),
+          remoteness: row?.remoteness ?? null,
+          irsdDecile: num(row?.avg_irsd_decile ?? null),
+          orgCount: row?.org_count ?? 0,
+          communityControlledCount: row?.community_controlled ?? 0,
+          caringForCountry: row?.caring_for_country ?? 0,
+          employers: row?.employers ?? 0,
+          contractCount: row?.contract_count ?? 0,
+          contractValue: num(row?.contract_value_lifetime ?? null),
+          contractValue24m: num(row?.contract_value_24m ?? null),
+          govtGrantCount: row?.grants_delivered ?? 0,
+          govtGrantValue: num(row?.grants_delivered_value ?? null),
+          grantsHeldCount: 0,
+          grantsHeldValue: 0,
+          localRetentionPct:
+            row?.local_retention_pct === null || row?.local_retention_pct === undefined
+              ? null
+              : num(row.local_retention_pct),
+          philanthropicFunderCount: row?.philanthropic_funders ?? 0,
+          philanthropicGrantCount: row?.philanthropic_grants ?? 0,
+          lgaResolved: true,
+          computedAt,
+        };
+      })
+      // Councils we hold nothing for sort last, and alphabetically among
+      // themselves, so they read as a group rather than as the bottom of a
+      // league table they were never in.
+      .sort((left, right) => {
+        if (left.hasRecord !== right.hasRecord) return left.hasRecord ? -1 : 1;
+        if (!left.hasRecord) return left.areaLabel.localeCompare(right.areaLabel);
+        return right.contractValue + right.govtGrantValue - (left.contractValue + left.govtGrantValue);
+      });
 
     const unplacedOrgs = orgsResult.error
       ? []
