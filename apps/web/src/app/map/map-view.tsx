@@ -10,22 +10,28 @@ import { money } from '@/lib/format';
 interface LgaFeature {
   lga_name: string;
   state: string;
-  remoteness: string;
-  avg_irsd_decile: number;
-  avg_irsd_score: number;
-  indexed_entities: number;
-  community_controlled_entities: number;
-  total_funding_all_sources: number;
-  desert_score: number;
+  remoteness: string | null;
+  avg_irsd_decile: number | null;
+  avg_irsd_score: number | null;
+  indexed_entities: number | null;
+  community_controlled_entities: number | null;
+  total_funding_all_sources: number | null;
+  desert_score: number | null;
+  unplaced_count: number;
+  placed_count: number;
+  unplaced_share: number | null;
   lat: number;
   lng: number;
   lga_code: string;
 }
 
+type MapMetric = 'desert_score' | 'unplaced_share';
+
 interface MapViewProps {
   features: LgaFeature[];
   selected: LgaFeature | null;
   onSelect: (f: LgaFeature) => void;
+  metric?: MapMetric;
 }
 
 const STATE_ABBREV: Record<string, string> = {
@@ -57,6 +63,54 @@ function desertOpacity(score: number): number {
   return 0.3;
 }
 
+// Share of organisations in a council's postcodes we cannot place, 0–100
+function shareColor(pct: number): string {
+  if (pct >= 75) return '#D02020';
+  if (pct >= 50) return '#E06C18';
+  if (pct >= 25) return '#F0C020';
+  if (pct >= 10) return '#4CB876';
+  return '#1040C0';
+}
+
+function shareOpacity(pct: number): number {
+  if (pct >= 75) return 0.7;
+  if (pct >= 50) return 0.6;
+  if (pct >= 25) return 0.5;
+  if (pct >= 10) return 0.4;
+  return 0.3;
+}
+
+function metricValue(f: LgaFeature, metric: MapMetric): number | null {
+  const v = metric === 'desert_score' ? f.desert_score : f.unplaced_share;
+  return v === null || v === undefined ? null : Number(v);
+}
+
+function metricColor(value: number, metric: MapMetric): string {
+  return metric === 'desert_score' ? desertColor(value) : shareColor(value);
+}
+
+function metricOpacity(value: number, metric: MapMetric): number {
+  return metric === 'desert_score' ? desertOpacity(value) : shareOpacity(value);
+}
+
+function tooltipHtml(data: LgaFeature): string {
+  const desert = data.desert_score === null
+    ? '—'
+    : `<strong>${Number(data.desert_score).toFixed(1)}</strong>`;
+  const funding = data.total_funding_all_sources === null
+    ? ''
+    : `Funding: ${money(Number(data.total_funding_all_sources))}<br/>`;
+  const entities = data.indexed_entities === null
+    ? ''
+    : `Entities: ${data.indexed_entities}${Number(data.community_controlled_entities) > 0 ? ` (${data.community_controlled_entities} CC)` : ''}<br/>`;
+  const share = data.unplaced_share === null ? '' : ` (${Number(data.unplaced_share).toFixed(0)}%)`;
+  return `<div class="text-xs">
+    <strong>${data.lga_name}</strong> (${data.state})<br/>
+    Desert Score: ${desert}<br/>
+    ${funding}${entities}Cannot place: <strong>${data.unplaced_count}</strong>${share}
+  </div>`;
+}
+
 // Fit bounds when data changes
 function FitBounds({ features }: { features: LgaFeature[] }) {
   const map = useMap();
@@ -74,7 +128,7 @@ function FitBounds({ features }: { features: LgaFeature[] }) {
   return null;
 }
 
-export default function MapView({ features, selected, onSelect }: MapViewProps) {
+export default function MapView({ features, selected, onSelect, metric = 'desert_score' }: MapViewProps) {
   const [geoData, setGeoData] = useState<FeatureCollection | null>(null);
   const [geoLoading, setGeoLoading] = useState(true);
 
@@ -111,7 +165,9 @@ export default function MapView({ features, selected, onSelect }: MapViewProps) 
       const data = desertLookup.get(`${lga_name}|${stateAbbrev}`) || desertLookup.get(lga_name);
       const isSelected = selected?.lga_name === data?.lga_name && selected?.state === data?.state;
 
-      if (!data) {
+      const value = data ? metricValue(data, metric) : null;
+
+      if (!data || value === null) {
         return {
           fillColor: '#e5e7eb',
           fillOpacity: 0.15,
@@ -121,16 +177,15 @@ export default function MapView({ features, selected, onSelect }: MapViewProps) 
         };
       }
 
-      const score = Number(data.desert_score);
       return {
-        fillColor: desertColor(score),
-        fillOpacity: isSelected ? 0.85 : desertOpacity(score),
+        fillColor: metricColor(value, metric),
+        fillOpacity: isSelected ? 0.85 : metricOpacity(value, metric),
         weight: isSelected ? 3 : 0.8,
         color: isSelected ? '#121212' : '#666',
         opacity: isSelected ? 1 : 0.4,
       };
     };
-  }, [desertLookup, selected]);
+  }, [desertLookup, selected, metric]);
 
   // Click handler for GeoJSON features
   const onEachFeature = useMemo(() => {
@@ -140,20 +195,11 @@ export default function MapView({ features, selected, onSelect }: MapViewProps) 
       const data = desertLookup.get(`${lga_name}|${stateAbbrev}`) || desertLookup.get(lga_name);
 
       if (data) {
-        (layer as L.Path).bindTooltip(
-          `<div class="text-xs">
-            <strong>${data.lga_name}</strong> (${data.state})<br/>
-            Desert Score: <strong>${Number(data.desert_score).toFixed(1)}</strong><br/>
-            Funding: ${money(Number(data.total_funding_all_sources))}<br/>
-            Entities: ${data.indexed_entities}
-            ${Number(data.community_controlled_entities) > 0 ? ` (${data.community_controlled_entities} CC)` : ''}
-          </div>`,
-          { sticky: true }
-        );
+        (layer as L.Path).bindTooltip(tooltipHtml(data), { sticky: true });
         layer.on('click', () => onSelect(data));
       } else {
         (layer as L.Path).bindTooltip(
-          `<div class="text-xs"><strong>${lga_name}</strong> (${stateAbbrev})<br/>No funding data</div>`,
+          `<div class="text-xs"><strong>${lga_name}</strong> (${stateAbbrev})<br/>No data held</div>`,
           { sticky: true }
         );
       }
@@ -173,7 +219,10 @@ export default function MapView({ features, selected, onSelect }: MapViewProps) 
   }, [features]);
 
   // Key to force GeoJSON re-render when style changes
-  const geoKey = useMemo(() => `${selected?.lga_name}-${selected?.state}-${features.length}`, [selected, features]);
+  const geoKey = useMemo(
+    () => `${selected?.lga_name}-${selected?.state}-${features.length}-${metric}`,
+    [selected, features, metric]
+  );
 
   return (
     <MapContainer
@@ -203,25 +252,22 @@ export default function MapView({ features, selected, onSelect }: MapViewProps) 
         pane="tooltipPane"
       />
 
-      {/* Fallback: CircleMarkers for LGAs not matched to boundaries */}
-      {features.filter(f => {
-        if (!geoData) return true;
-        // Show circles only if no GeoJSON loaded
-        return !geoData;
-      }).map((f, i) => {
+      {/* Fallback: CircleMarkers when no GeoJSON loaded */}
+      {features.filter(() => !geoData).map((f, i) => {
         const lat = Number(f.lat);
         const lng = Number(f.lng);
         if (isNaN(lat) || isNaN(lng)) return null;
-        const score = Number(f.desert_score);
+        const value = metricValue(f, metric);
+        if (value === null) return null;
         return (
           <CircleMarker
             key={`circle-${f.lga_name}-${f.state}-${i}`}
             center={[lat, lng]}
-            radius={Math.max(3, Math.min(Math.sqrt(score) * 1.2, 20))}
+            radius={Math.max(3, Math.min(Math.sqrt(value) * 1.2, 20))}
             pathOptions={{
-              fillColor: desertColor(score),
+              fillColor: metricColor(value, metric),
               fillOpacity: 0.7,
-              color: desertColor(score),
+              color: metricColor(value, metric),
               weight: 1,
             }}
             eventHandlers={{ click: () => onSelect(f) }}
@@ -229,7 +275,7 @@ export default function MapView({ features, selected, onSelect }: MapViewProps) 
             <Tooltip>
               <div className="text-xs">
                 <strong>{f.lga_name}</strong> ({f.state})<br />
-                Desert Score: <strong>{score.toFixed(1)}</strong>
+                {metric === 'desert_score' ? 'Desert Score' : 'Unplaced share'}: <strong>{value.toFixed(1)}{metric === 'unplaced_share' ? '%' : ''}</strong>
               </div>
             </Tooltip>
           </CircleMarker>
