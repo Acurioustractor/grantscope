@@ -36,10 +36,20 @@ if (!process.env.DATABASE_PASSWORD) {
 const BUILD_SQL = `
 SET statement_timeout = '280s';
 
+-- One row per ABN. DISTINCT over the whole tuple is NOT enough: 527 registry
+-- rows share an ABN with a different name/tier/state, and each duplicate fans
+-- the contract join out, multiplying contract_count and total_value. That put
+-- DSS at $10.9B when the true figure is $4.0B. Buyer-facing numbers come from
+-- here, so the dedupe is deterministic: strongest verification mark wins.
 CREATE TEMP TABLE _se_abns AS
-  SELECT DISTINCT abn, name, verification_tier, state
+  SELECT DISTINCT ON (abn) abn, name, verification_tier, state
   FROM social_enterprises
-  WHERE abn IS NOT NULL AND abn != '';
+  WHERE abn IS NOT NULL AND abn != ''
+  ORDER BY abn,
+    CASE verification_tier
+      WHEN 'certified' THEN 1 WHEN 'verified' THEN 2 WHEN 'identified' THEN 3 ELSE 4
+    END,
+    name;
 
 CREATE TABLE IF NOT EXISTS se_buyer_prospects (
   buyer_name text PRIMARY KEY,
@@ -87,8 +97,13 @@ LIMIT 20;
 const DRY_SQL = `
 SET statement_timeout = '280s';
 CREATE TEMP TABLE _se_abns AS
-  SELECT DISTINCT abn, name, verification_tier, state
-  FROM social_enterprises WHERE abn IS NOT NULL AND abn != '';
+  SELECT DISTINCT ON (abn) abn, name, verification_tier, state
+  FROM social_enterprises WHERE abn IS NOT NULL AND abn != ''
+  ORDER BY abn,
+    CASE verification_tier
+      WHEN 'certified' THEN 1 WHEN 'verified' THEN 2 WHEN 'identified' THEN 3 ELSE 4
+    END,
+    name;
 SELECT ac.buyer_name,
        COUNT(DISTINCT ac.supplier_abn) AS se_suppliers,
        COUNT(*) AS contracts,

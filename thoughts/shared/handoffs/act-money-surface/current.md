@@ -15,7 +15,7 @@ status: active
 **Test:** `cd apps/web && npx tsc --noEmit && npx vitest run`
 
 ### Now
-[->] PR #173 (funding rail slot) is green and awaiting Ben's merge decision (Tier 3 — needs explicit verb). PR #172 is MERGED.
+[->] Nothing in flight. PR #172 and PR #173 are both MERGED; main is at 362840a and deployed.
 
 ### This Session
 - [x] Audit written: `docs/strategy/act-money-surface-audit-2026-08-07.md` (audits Phase 1 plan, 3 Aug)
@@ -39,11 +39,27 @@ status: active
 - [x] `/org/act/funding` given rail room 05 — "Funding · Money worth chasing"
 - [x] Found + fixed two vacuous E2E rail guards (anchored/exact matchers can never match a numbered room)
 - [x] PR #173 opened for the rail slot, CI green
+- [x] **PR #173 MERGED** as 362840a (Ben, 2026-08-08); production deploy green
+- [x] Traced the classifier scheduling question to ground: already scheduled via the enrich phase, backlog is one day's inflow not decay
 
 ### Next
-- [ ] Ben's merge decision on PR #173 (Tier 3 — do NOT merge without an explicit verb)
-- [ ] Optional: schedule the classifier now that it no longer depends on one provider
-- [ ] Content problem, not pipeline: Gold.Phone, CivicGraph, Contained and ACT Core have thin theme keywords, which is why they clear zero strong fits
+- [ ] **DO NOT "schedule the classifier" — it is already scheduled.** An earlier version of this
+  line said scheduling it was an open optional task. That is wrong and cost a chunk of the
+  2026-08-08 session. `auto-classify-llm` has no `agent_schedules` row of its own, which looks
+  like a gap and is not: it runs as the `classify` step of `nightly-grant-pipeline-enrich`, which
+  IS scheduled (24h, enabled) and carries `params = {"phase":"enrich"}`, expanding to
+  classify → backfill → verify. Adding a row for `auto-classify-llm` duplicates the job.
+  Verify with: `SELECT agent_id, params, enabled FROM agent_schedules WHERE agent_id LIKE 'nightly-grant-pipeline%'`
+- [ ] Unverified: no scheduled run has yet exercised the multi-provider classifier — the fix landed
+  on 2026-08-07 *after* that day's enrich run, and the 12:45 orchestrator run shows `timed_out`.
+  Tell: if the 23 unclassified rows (22 from 08-07 + 1 straggler from 08-03) clear on the next
+  nightly run, it works. If they are still there with a fresh day stacked behind them, it does not.
+  Check: `SELECT date_trunc('day',created_at)::date, COUNT(*) FROM alma_funding_opportunities WHERE opportunity_type='unverified' AND auto_classify_confidence IS NULL GROUP BY 1 ORDER BY 1 DESC`
+  A long tail across many days = decay. One day's inflow = healthy.
+- [ ] Optional: a health check that fails loudly when unclassified rows older than 48h exist. This is
+  the gap the original three-month silent outage actually exposed — the classifier logged
+  `status: success` throughout while doing nothing.
+- [ ] Content problem, not pipeline: Gold.Phone, CivicGraph, Contained and ACT Core have thin theme keywords, which is why they clear zero strong fits. Needs Ben's words about what each project does, NOT a looser matcher.
 
 ### Decisions
 - **Grade evidence, don't gate on money.** Only 6 of 5,190 themed grantmakers have a real giving figure, so gating on verified money would empty the queue. A = recorded grants on file, B = DGR or verified giving, C = theme overlap only (never written to the pipeline).
@@ -98,6 +114,9 @@ All DB work was applied via Supabase MCP and **does not depend on the merge**. M
 4. **PostgREST silently caps a response at 1,000 rows.** `.limit(2300)` returns 1,000 and a half-finished run looks complete.
 5. **`grant_opportunities.application_status` is ACT's own application state, not round liveness.** `not_applied` is the discovery pool.
 6. **The ACT feed reads `alma_funding_opportunities`, not `grant_opportunities`.** Pipeline: promote → `auto-classify-llm.mjs` → `verify-alma-opportunities.mjs` → `act_funding_opportunity_current_status` → `act_grant_recommendations_current`.
+7. **An agent absent from `agent_schedules` is NOT proof it is unscheduled.** Agents run as *steps inside* other scheduled agents, and the step's phase lives in the schedule's `params` jsonb, not in the registry `command`. `auto-classify-llm` has no row and runs nightly regardless, inside `nightly-grant-pipeline-enrich`. Check the orchestrating agents and their `params` before concluding anything is unscheduled. (2026-08-08: I concluded "~22/day of silent decay" from the missing row and was wrong.)
+8. **Backlog size means nothing without its age distribution.** 23 unclassified rows is healthy (one night's inflow) or a dead pipeline, and the count cannot tell you which. `GROUP BY date_trunc('day', created_at)` is what separates them: a tail across many days is decay, one bar is normal.
+9. **Neither `curl` nor the browse tool can verify a production render.** civicgraph.app runs Vercel attack-challenge mode, so every non-browser client gets a permanent `HTTP 429` + `x-vercel-mitigated: challenge` (not a rate limit — waiting does not help). The Chrome extension gets further but its `find`/`get_page_text` fail with `document_idle waited 45000ms` because the app holds a persistent connection. Navigation itself works. To verify a prod render: CI's E2E, or Ben's eyes. Don't burn attempts rediscovering this.
 
 ### Classifier throughput, measured
 llama-3.1-8b (groq) 0.13s/row until 429 · gemini-2.5-flash 1.7s/row steady, no throttle · llama-3.3-70b (groq) 2.5s/row throttled · gpt-oss:20b (local ollama) 6.0s/row. Run unpinned to get the fallback chain; `--provider=` pins and disables it.
