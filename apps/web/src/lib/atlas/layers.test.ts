@@ -6,6 +6,7 @@ import {
   atlasStyleFor,
   getAtlasLayer,
   isLiveLayer,
+  isPointLayer,
   visibleAtlasLayers,
   type AtlasFeature,
   type AtlasLayer,
@@ -61,6 +62,18 @@ describe('the registry contract', () => {
     }
   });
 
+  it('the goods layer is org-tier, point-grain, and carries no figures', () => {
+    const goods = getAtlasLayer('goods-delivered');
+    expect(goods).not.toBeNull();
+    expect(goods!.consent).toBe('org');
+    expect(goods!.honestAt).toBe('community');
+    expect(isPointLayer(goods!)).toBe(true);
+    // The registry entry may ship in a public bundle; the numbers may not.
+    // Any digit in the caveat or notes is a Goods figure leaking public.
+    const text = `${goods!.name} ${goods!.unit} ${goods!.caveat} ${goods!.honestAtNote}`;
+    expect(text).not.toMatch(/\d/);
+  });
+
   it('the default layer is live and public', () => {
     const layer = getAtlasLayer(DEFAULT_ATLAS_LAYER_KEY);
     expect(layer).not.toBeNull();
@@ -102,10 +115,16 @@ describe('consent tiers gate surfaces', () => {
     }
   });
 
-  it('the seeded registry is entirely public today', () => {
-    // When this fails, someone added an org or withheld layer: make sure its
-    // data is stripped server-side before its surface renders, then update.
-    expect(visibleAtlasLayers('public').length).toBe(ATLAS_LAYERS.length);
+  it('the public surface sees exactly the public seed layers', () => {
+    // goods-delivered is org-tier: its points arrive only via the org page's
+    // server fetch, so the public surface never lists it and never holds its
+    // data. If this list grows, check the new layer's data path first.
+    expect(visibleAtlasLayers('public').map(l => l.key)).toEqual([
+      'funding-deserts',
+      'unplaced-orgs',
+      'renewal-cliff',
+    ]);
+    expect(visibleAtlasLayers('org').map(l => l.key)).toContain('goods-delivered');
   });
 });
 

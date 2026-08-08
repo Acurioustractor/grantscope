@@ -79,6 +79,8 @@ interface AtlasLayerCommon {
 
 export interface AtlasLiveLayer extends AtlasLayerCommon {
   status: 'live';
+  /** Paints the council choropleth by reading a value off each map feature. */
+  kind: 'choropleth';
   scale: AtlasScaleStop[];
   /** Legend entry for places where this layer holds nothing. */
   noDataLabel: string;
@@ -88,25 +90,61 @@ export interface AtlasLiveLayer extends AtlasLayerCommon {
   format(value: number): string;
 }
 
+/** A layer whose grain is points, not council areas — communities, mostly.
+ * Its data never lives in the registry or the public map payload: a surface
+ * that may render it receives the points server-side (the org RSC fetches
+ * them behind auth), so a public bundle carries the contract and nothing
+ * else. */
+export interface AtlasPointLayer extends AtlasLayerCommon {
+  status: 'live';
+  kind: 'points';
+  scale: AtlasScaleStop[];
+  /** Legend entry meaning "a point with none of the unit yet". */
+  noDataLabel: string;
+  format(value: number): string;
+}
+
+/** One point of an AtlasPointLayer, produced server-side by the surface that
+ * is allowed to see it. */
+export interface AtlasPoint {
+  name: string;
+  lat: number;
+  lng: number;
+  value: number;
+  /** Extra lines for the tooltip, already formatted. */
+  detail?: Array<{ label: string; value: string }>;
+}
+
 export interface AtlasDeclaredLayer extends AtlasLayerCommon {
   status: 'declared';
   /** What has to exist before this layer can turn on. User-facing. */
   waitingOn: string;
 }
 
-export type AtlasLayer = AtlasLiveLayer | AtlasDeclaredLayer;
+export type AtlasLayer = AtlasLiveLayer | AtlasPointLayer | AtlasDeclaredLayer;
 
-export function isLiveLayer(layer: AtlasLayer): layer is AtlasLiveLayer {
+export function isLiveLayer(layer: AtlasLayer): layer is AtlasLiveLayer | AtlasPointLayer {
   return layer.status === 'live';
+}
+
+/** The layers that paint the council choropleth and read map features.
+ * Point layers are live but carry their own data; feature-reading call
+ * sites (the map style, CSV export, panel rows) must use this guard. */
+export function isChoroplethLayer(layer: AtlasLayer): layer is AtlasLiveLayer {
+  return layer.status === 'live' && layer.kind === 'choropleth';
+}
+
+export function isPointLayer(layer: AtlasLayer): layer is AtlasPointLayer {
+  return layer.status === 'live' && layer.kind === 'points';
 }
 
 /** Style painted for places a live layer holds nothing about. */
 export const ATLAS_NO_DATA_STYLE = { color: '#e5e7eb', fillOpacity: 0.15 } as const;
 
-/** Resolve a live layer's paint for a value. Null → the no-data style; a
+/** Resolve a scaled layer's paint for a value. Null → the no-data style; a
  * value below every stop clamps to the lowest stop. */
 export function atlasStyleFor(
-  layer: AtlasLiveLayer,
+  layer: { scale: AtlasScaleStop[] },
   value: number | null
 ): { color: string; fillOpacity: number } {
   if (value === null) return ATLAS_NO_DATA_STYLE;
@@ -128,6 +166,7 @@ function num(raw: unknown): number | null {
 const fundingDeserts: AtlasLiveLayer = {
   key: 'funding-deserts',
   status: 'live',
+  kind: 'choropleth',
   name: 'Funding deserts',
   unit: 'desert score',
   caveat:
@@ -156,6 +195,7 @@ const fundingDeserts: AtlasLiveLayer = {
 const unplacedOrgs: AtlasLiveLayer = {
   key: 'unplaced-orgs',
   status: 'live',
+  kind: 'choropleth',
   name: 'Unplaced organisations',
   unit: '% of organisations we cannot place',
   caveat:
@@ -203,7 +243,47 @@ const renewalCliff: AtlasDeclaredLayer = {
     'Atlas needs it for every council before the layer can turn on.',
 };
 
-export const ATLAS_LAYERS: readonly AtlasLayer[] = [fundingDeserts, unplacedOrgs, renewalCliff];
+// The inverse layer: CivicGraph shows money recorded, Goods shows things in
+// community. Consent tier 'org' — it renders only inside the logged-in
+// workspace, its points arrive only from the org page's server fetch, and
+// this registry entry deliberately carries NO figures: the contract may ship
+// in a public bundle, the numbers may not. Public activation is per-place
+// and waits on the consent conversation (step 5), by design.
+const goodsDelivered: AtlasPointLayer = {
+  key: 'goods-delivered',
+  status: 'live',
+  kind: 'points',
+  name: 'Goods in community',
+  unit: 'units the asset register places here',
+  caveat:
+    'Beds and washing machines with an active row in the Goods asset register, ' +
+    'counted at the community the register names. The register itemises fewer ' +
+    'units by place than the canonical deployed total, so places that received ' +
+    'Stretch Beds read low here — the Utopia homelands most of all. And a unit ' +
+    'recorded at a town may have been staged through it: the register does not ' +
+    'distinguish delivered-to from staged-at.',
+  honestAt: 'community',
+  honestAtNote:
+    'Community points, not council areas. A place with no point holds no register ' +
+    'rows, which is not the same as nothing delivered.',
+  consent: 'org',
+  scale: [
+    { min: 100, color: '#D02020', fillOpacity: 0.85, label: '100+ units' },
+    { min: 50, color: '#E06C18', fillOpacity: 0.85, label: '50–100' },
+    { min: 20, color: '#F0C020', fillOpacity: 0.85, label: '20–50' },
+    { min: 1, color: '#4CB876', fillOpacity: 0.85, label: '1–20' },
+    { min: 0, color: '#1040C0', fillOpacity: 0.85, label: 'Demand recorded, none yet' },
+  ],
+  noDataLabel: 'No register rows',
+  format: v => `${v.toFixed(0)} units`,
+};
+
+export const ATLAS_LAYERS: readonly AtlasLayer[] = [
+  fundingDeserts,
+  unplacedOrgs,
+  renewalCliff,
+  goodsDelivered,
+];
 
 export const DEFAULT_ATLAS_LAYER_KEY = fundingDeserts.key;
 

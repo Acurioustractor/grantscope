@@ -6,7 +6,7 @@
 // same file: the number never ships without what it contains.
 
 import {
-  isLiveLayer,
+  isChoroplethLayer,
   visibleAtlasLayers,
   type AtlasFeature,
   type AtlasLiveLayer,
@@ -114,8 +114,10 @@ const PLACE_COLUMNS: Array<{ header: string; read(f: AtlasFeature): unknown }> =
   { header: 'placed_count', read: f => f.placed_count },
 ];
 
+// Only choropleth layers read council features; a point layer's data never
+// rides a council export.
 function liveLayers(surface: AtlasSurface): AtlasLiveLayer[] {
-  return visibleAtlasLayers(surface).filter(isLiveLayer);
+  return visibleAtlasLayers(surface).filter(isChoroplethLayer);
 }
 
 /** One council as CSV: a header row and a data row. Each live layer

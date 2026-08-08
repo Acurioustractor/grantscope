@@ -10,6 +10,8 @@ import {
   ATLAS_NO_DATA_STYLE,
   type AtlasFeature,
   type AtlasLiveLayer,
+  type AtlasPoint,
+  type AtlasPointLayer,
 } from '@/lib/atlas/layers';
 
 interface AtlasMapProps {
@@ -17,6 +19,10 @@ interface AtlasMapProps {
   layer: AtlasLiveLayer;
   selected: AtlasFeature | null;
   onSelect: (f: AtlasFeature) => void;
+  /** A point-grain layer drawn over the choropleth. Its data arrives from
+   * the surface that is allowed to hold it; this component just draws. */
+  pointLayer?: AtlasPointLayer | null;
+  points?: AtlasPoint[];
 }
 
 const STATE_ABBREV: Record<string, string> = {
@@ -49,7 +55,7 @@ function FitBounds({ features }: { features: AtlasFeature[] }) {
   return null;
 }
 
-export default function AtlasMap({ features, layer, selected, onSelect }: AtlasMapProps) {
+export default function AtlasMap({ features, layer, selected, onSelect, pointLayer, points }: AtlasMapProps) {
   const [geoData, setGeoData] = useState<FeatureCollection | null>(null);
   const [geoLoading, setGeoLoading] = useState(true);
 
@@ -223,6 +229,40 @@ export default function AtlasMap({ features, layer, selected, onSelect }: AtlasM
               <div className="text-xs">
                 <strong>{f.lga_name}</strong> ({f.state})<br />
                 {layer.name}: <strong>{layer.format(value)}</strong>
+              </div>
+            </Tooltip>
+          </CircleMarker>
+        );
+      })}
+
+      {/* Point-grain layer over the choropleth (e.g. Goods in community,
+          org-side). Radius follows the square root so a big place does not
+          drown a small one. */}
+      {pointLayer && points?.map(p => {
+        const paint = atlasStyleFor(pointLayer, p.value);
+        return (
+          <CircleMarker
+            key={`point-${p.name}`}
+            center={[p.lat, p.lng]}
+            radius={Math.max(6, Math.min(6 + Math.sqrt(p.value) * 1.6, 26))}
+            pathOptions={{
+              fillColor: paint.color,
+              fillOpacity: paint.fillOpacity,
+              color: '#121212',
+              weight: 2,
+            }}
+          >
+            <Tooltip>
+              <div className="text-xs">
+                <strong>{p.name}</strong>
+                <br />
+                {pointLayer.name}: <strong>{pointLayer.format(p.value)}</strong>
+                {p.detail?.map(d => (
+                  <span key={d.label}>
+                    <br />
+                    {d.label}: {d.value}
+                  </span>
+                ))}
               </div>
             </Tooltip>
           </CircleMarker>

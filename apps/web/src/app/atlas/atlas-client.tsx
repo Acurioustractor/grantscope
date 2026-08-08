@@ -7,10 +7,14 @@ import { money } from '@/lib/format';
 import {
   DEFAULT_ATLAS_LAYER_KEY,
   getAtlasLayer,
+  isChoroplethLayer,
   isLiveLayer,
+  isPointLayer,
   visibleAtlasLayers,
   type AtlasFeature,
   type AtlasLiveLayer,
+  type AtlasPoint,
+  type AtlasSurface,
 } from '@/lib/atlas/layers';
 import {
   buildAtlasUrl,
@@ -32,9 +36,6 @@ import {
 // Lazy-load the map to avoid SSR issues with Leaflet
 const AtlasMap = dynamic(() => import('./atlas-map'), { ssr: false });
 
-// This is the public surface: org and withheld layers never reach it.
-const LAYERS = visibleAtlasLayers('public');
-
 const STATES = ['ALL', 'NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'NT', 'ACT'];
 
 /** A council that has a full /place/council/[slug] prose page. */
@@ -42,6 +43,24 @@ export interface CouncilPageLink {
   slug: string;
   lgaName: string;
   state: string | null;
+}
+
+interface AtlasClientProps {
+  councilPages: CouncilPageLink[];
+  /** Which consent tiers render here. 'public' (default) shows public layers
+   * only; 'org' adds org-tier layers. Withheld renders nowhere. */
+  surface?: AtlasSurface;
+  /** Point-layer data, keyed by layer key. Only a server component that sits
+   * behind the right gate may pass this — it is how org data stays org-side. */
+  pointsByLayer?: Partial<Record<string, AtlasPoint[]>>;
+  /** Server-fed lines shown under a layer's caveat (e.g. canon figures that
+   * must not ship in the public registry bundle). */
+  layerNotes?: Partial<Record<string, string>>;
+  /** Layer to open on. Falls back to the default when it is not visible here. */
+  initialLayerKey?: string;
+  /** Escape hatch for chromeless surfaces (the org workspace has no global
+   * nav above the Atlas). */
+  backLink?: { href: string; label: string };
 }
 
 interface RailEntity {
@@ -63,15 +82,31 @@ function downloadFile(name: string, mime: string, text: string) {
   URL.revokeObjectURL(url);
 }
 
-export default function AtlasClient({ councilPages }: { councilPages: CouncilPageLink[] }) {
+export default function AtlasClient({
+  councilPages,
+  surface = 'public',
+  pointsByLayer,
+  layerNotes,
+  initialLayerKey,
+  backLink,
+}: AtlasClientProps) {
+  // The one sanctioned filter: org and withheld layers never reach a public
+  // instance of this component.
+  const LAYERS = useMemo(() => visibleAtlasLayers(surface), [surface]);
+
   const [features, setFeatures] = useState<AtlasFeature[]>([]);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [stateFilter, setStateFilter] = useState('ALL');
   const [selected, setSelected] = useState<AtlasFeature | null>(null);
-  // The layer being read (caveat card) can be declared; the layer being
-  // painted (the map) is always the last live pick.
-  const [activeKey, setActiveKey] = useState(DEFAULT_ATLAS_LAYER_KEY);
+  // The layer being read (caveat card) can be declared or point-grain; the
+  // layer painting the choropleth is always the last choropleth pick.
+  const [activeKey, setActiveKey] = useState(() => {
+    const initial = initialLayerKey ? getAtlasLayer(initialLayerKey) : null;
+    return initial && visibleAtlasLayers(surface).some(l => l.key === initial.key)
+      ? initial.key
+      : DEFAULT_ATLAS_LAYER_KEY;
+  });
   const [mapKey, setMapKey] = useState(DEFAULT_ATLAS_LAYER_KEY);
   const [query, setQuery] = useState('');
   const [entities, setEntities] = useState<RailEntity[]>([]);
@@ -104,7 +139,7 @@ export default function AtlasClient({ councilPages }: { councilPages: CouncilPag
   function pickLayer(key: string) {
     setActiveKey(key);
     const layer = getAtlasLayer(key);
-    if (layer && isLiveLayer(layer)) setMapKey(key);
+    if (layer && isChoroplethLayer(layer)) setMapKey(key);
   }
 
   function selectPlace(f: AtlasFeature) {
@@ -238,8 +273,16 @@ export default function AtlasClient({ councilPages }: { councilPages: CouncilPag
   const undrawn = useMemo(() => filtered.filter(f => f.lat === null).length, [filtered]);
 
   const otherLiveLayers = useMemo(
-    () => LAYERS.filter(isLiveLayer).filter(l => l.key !== mapLayer.key),
-    [mapLayer.key]
+    () => LAYERS.filter(isChoroplethLayer).filter(l => l.key !== mapLayer.key),
+    [LAYERS, mapLayer.key]
+  );
+
+  // The active layer's points, when it is point-grain and this surface holds
+  // data for it. A public instance passes no points, so nothing renders.
+  const activePointLayer = isPointLayer(activeLayer) ? activeLayer : null;
+  const activePoints = useMemo(
+    () => (activePointLayer ? pointsByLayer?.[activePointLayer.key] ?? [] : []),
+    [activePointLayer, pointsByLayer]
   );
 
   // Search over every council we hold, not just the filtered view.
@@ -315,9 +358,21 @@ export default function AtlasClient({ councilPages }: { councilPages: CouncilPag
             layer={mapLayer}
             selected={selected}
             onSelect={selectPlace}
+            pointLayer={activePointLayer}
+            points={activePoints}
           />
         )}
       </div>
+
+      {/* Escape hatch for chromeless surfaces (org workspace) */}
+      {backLink && (
+        <Link
+          href={backLink.href}
+          className="absolute right-4 top-4 z-[950] bg-white border-2 border-bauhaus-black px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest hover:bg-bauhaus-black hover:text-white transition-colors"
+        >
+          ← {backLink.label}
+        </Link>
+      )}
 
       {/* Left rail: what you are looking at, and what it contains.
           Story mode clears the stage: the paragraph does this job there. */}
@@ -411,6 +466,13 @@ export default function AtlasClient({ councilPages }: { councilPages: CouncilPag
             </div>
           )}
 
+          {/* Server-fed note: figures that belong to this surface only */}
+          {layerNotes?.[activeLayer.key] && (
+            <p className="mt-3 border-l-4 border-bauhaus-blue pl-3 text-xs text-gray-600">
+              {layerNotes[activeLayer.key]}
+            </p>
+          )}
+
           <div className="mt-3 pt-3 border-t border-gray-200">
             <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
               Honest at: <span className="text-bauhaus-black">{activeLayer.honestAt}</span> level
@@ -425,19 +487,29 @@ export default function AtlasClient({ councilPages }: { councilPages: CouncilPag
           needs to know what the colours mean — but yields on small screens. */}
       {!loading && !failed && (
         <div className={`absolute left-4 bottom-4 z-[900] bg-white border-2 border-bauhaus-black p-3 w-[min(15rem,calc(100vw-2rem))] ${story ? 'hidden lg:block' : ''}`}>
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-2">{mapLayer.name}</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-2">
+            {activePointLayer ? activePointLayer.name : mapLayer.name}
+          </p>
           <div className="space-y-1">
-            {mapLayer.scale.map(stop => (
+            {(activePointLayer ?? mapLayer).scale.map(stop => (
               <div key={stop.min} className="flex items-center gap-2 text-[11px] text-gray-600">
-                <span className="inline-block w-3.5 h-3.5 border border-bauhaus-black/30 shrink-0" style={{ backgroundColor: stop.color, opacity: 0.85 }} />
+                <span
+                  className={`inline-block w-3.5 h-3.5 border shrink-0 ${activePointLayer ? 'border-bauhaus-black' : 'border-bauhaus-black/30'}`}
+                  style={{ backgroundColor: stop.color, opacity: 0.85 }}
+                />
                 <span>{stop.label}</span>
               </div>
             ))}
             <div className="flex items-center gap-2 text-[11px] text-gray-400">
               <span className="inline-block w-3.5 h-3.5 border border-gray-300 shrink-0" style={{ backgroundColor: '#e5e7eb' }} />
-              <span>{mapLayer.noDataLabel}</span>
+              <span>{(activePointLayer ?? mapLayer).noDataLabel}</span>
             </div>
           </div>
+          {activePointLayer && (
+            <p className="text-[10px] text-gray-400 mt-2 leading-snug">
+              Circles sit over the {mapLayer.name.toLowerCase()} choropleth.
+            </p>
+          )}
           <p className="text-[10px] text-gray-400 mt-2 leading-snug">
             {filtered.length} councils{undrawn > 0 ? `; ${undrawn} hold no coordinates and render only where a boundary name matches` : ''}.
           </p>
