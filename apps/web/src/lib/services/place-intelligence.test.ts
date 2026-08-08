@@ -30,13 +30,49 @@ describe('PLACE_REGIONS', () => {
     }
   });
 
-  it('names a hub council the region actually reads', () => {
+  it('names a hub council the region reads, unless the hub is declared outside it', () => {
+    // Cape York's hub is Cairns, which is not on Cape York. That is the
+    // finding, not a mistake — but it has to be declared, so an in-region hub
+    // that quietly falls out of lgaNames still fails here.
     for (const [key, region] of regions) {
-      if (!region.hubAdministration) continue;
-      expect(
-        region.lgaNames,
-        `${key} names a hub council it does not query: ${region.hubAdministration.hubLga}`,
-      ).toContain(region.hubAdministration.hubLga);
+      const hub = region.hubAdministration;
+      if (!hub) continue;
+      if (hub.hubIsOutsideRegion) {
+        expect(
+          region.lgaNames,
+          `${key} declares ${hub.hubLga} as outside the region but also queries it`,
+        ).not.toContain(hub.hubLga);
+      } else {
+        expect(
+          region.lgaNames,
+          `${key} names a hub council it does not query: ${hub.hubLga}`,
+        ).toContain(hub.hubLga);
+      }
+    }
+  });
+
+  it('describes every community it lists', () => {
+    for (const [key, region] of regions) {
+      for (const community of region.communities) {
+        expect(community.name.trim().length, key).toBeGreaterThan(0);
+        expect(community.note.trim().length, `${key}: ${community.name} has no note`).toBeGreaterThan(0);
+      }
+      const names = region.communities.map(community => community.name);
+      expect(new Set(names).size, `${key} lists a community twice`).toBe(names.length);
+    }
+  });
+
+  it('only counts a community against a council the region reads', () => {
+    // A community attributed to a council this region never queries would show
+    // a figure the reader cannot find anywhere else on the page.
+    for (const [key, region] of regions) {
+      for (const community of region.communities) {
+        if (!community.council) continue;
+        expect(
+          region.lgaNames,
+          `${key}: ${community.name} is counted under ${community.council}, which this region does not query`,
+        ).toContain(community.council);
+      }
     }
   });
 
@@ -74,10 +110,11 @@ describe('PLACE_REGIONS', () => {
     }
   });
 
-  it('holds the three regions that have been checked against the register', () => {
+  it('holds the four regions that have been checked against the register', () => {
     // Deliberately specific. A region added without verifying it against the
     // database should fail here and be checked before it reaches a page.
     expect(Object.keys(PLACE_REGIONS).sort()).toEqual([
+      'cape-york',
       'central-australia',
       'far-west-coast',
       'kimberley',
@@ -88,6 +125,21 @@ describe('PLACE_REGIONS', () => {
     expect(PLACE_REGIONS['central-australia'].hubAdministration?.hubLga).toBe('Alice Springs');
     expect(PLACE_REGIONS['far-west-coast'].hubAdministration?.hubLga).toBe('Ceduna');
     expect(PLACE_REGIONS.kimberley.hubAdministration?.hubLga).toBe('Broome');
+    expect(PLACE_REGIONS['cape-york'].hubAdministration?.hubLga).toBe('Cairns');
+  });
+
+  it('keeps Cairns out of Cape York while still naming it as the hub', () => {
+    // Folding Cairns into lgaNames would add thousands of unrelated
+    // organisations and bury the peninsula in its own page.
+    const capeYork = PLACE_REGIONS['cape-york'];
+    expect(capeYork.hubAdministration?.hubIsOutsideRegion).toBe(true);
+    expect(capeYork.lgaNames).not.toContain('Cairns');
+  });
+
+  it('records that Cape York has no gazetteer gaps', () => {
+    // The distinguishing fact about this region: the reference data is fine and
+    // the addresses are not. If a gap is added later, it should be deliberate.
+    expect(PLACE_REGIONS['cape-york'].gazetteerGaps).toEqual([]);
   });
 
   it('names at least one unplaced postcode wherever it declares any', () => {

@@ -103,6 +103,17 @@ interface RawProfile {
 export interface HubAdministration {
   /** The council credited with money earned elsewhere. */
   hubLga: string;
+  /**
+   * True when the hub is not one of this region's councils at all.
+   *
+   * Cape York broke the assumption that a hub is always inside the region it
+   * distorts. Its communities each have their own shire council, and those
+   * councils are still credited to Cairns, which is not on Cape York. The money
+   * therefore appears in no figure on the region's own page — a stronger
+   * statement than "one council is overstated", and one the earlier shape could
+   * not express.
+   */
+  hubIsOutsideRegion: boolean;
   /** Communities administered from the hub, named as people there name them. */
   administeredCommunities: string[];
   /**
@@ -145,6 +156,22 @@ export interface PlaceRegion {
   labels: Record<string, { label: string; note: string | null }>;
   hubAdministration: HubAdministration | null;
   gazetteerGaps: GazetteerGap[];
+  /**
+   * Communities in the region and the council they are counted under.
+   *
+   * Lifted from the Far West Coast page, which listed them by hand. A council
+   * area is an administrative unit and a community is a place people are from;
+   * naming both together is the only way a reader can see when the two come
+   * apart.
+   */
+  communities: RegionCommunity[];
+}
+
+export interface RegionCommunity {
+  name: string;
+  /** The council our records place it under, or null when there is none. */
+  council: string | null;
+  note: string;
 }
 
 export const PLACE_REGIONS: Record<string, PlaceRegion> = {
@@ -173,6 +200,7 @@ export const PLACE_REGIONS: Record<string, PlaceRegion> = {
     // here. Every one of them sits inside the Alice Springs figures above.
     hubAdministration: {
       hubLga: 'Alice Springs',
+      hubIsOutsideRegion: false,
       administeredCommunities: ['Utopia / Urapuntja homelands', 'Arlparra', 'Ampilatwatja'],
       creditedOrgs: [
         'Urapuntja Health Service Aboriginal Corporation',
@@ -201,6 +229,15 @@ export const PLACE_REGIONS: Record<string, PlaceRegion> = {
         note: 'Homelands with no entry in ABS SAL_2021 and no locality above them that has one.',
       },
     ],
+    communities: [
+      { name: 'Mparntwe (Alice Springs)', council: 'Alice Springs', note: 'The regional centre. Administers much of the rest of this list.' },
+      { name: 'Tennant Creek', council: 'Barkly', note: 'Postcode 0860. Placed correctly.' },
+      { name: 'Utopia / Urapuntja homelands', council: null, note: 'No council area. Its organisations are counted under Alice Springs or nowhere.' },
+      { name: 'Arlparra', council: 'Alice Springs', note: 'In the Utopia homelands, counted under Alice Springs.' },
+      { name: 'Ampilatwatja', council: 'Barkly', note: 'ABS places the locality in Barkly, and the health centre resolves there. The art centre, filed to a town address, resolves to Alice Springs.' },
+      { name: 'Ali Curung', council: 'Barkly', note: 'Kaytetye country. Not part of the Utopia homelands, despite older notes here saying so.' },
+      { name: 'Atitjere', council: 'Central Desert', note: 'Placed correctly by ABS.' },
+    ],
   },
   // Wirangu country and the Far West Coast.
   //
@@ -228,6 +265,7 @@ export const PLACE_REGIONS: Record<string, PlaceRegion> = {
     // Verified 8 August 2026 by reading lga_name on each organisation named.
     hubAdministration: {
       hubLga: 'Ceduna',
+      hubIsOutsideRegion: false,
       administeredCommunities: ['Oak Valley', 'Yalata', 'Koonibba', 'Scotdesco'],
       creditedOrgs: [
         'Oak Valley (Maralinga) Aboriginal Corporation',
@@ -239,6 +277,10 @@ export const PLACE_REGIONS: Record<string, PlaceRegion> = {
         'Oak Valley is around 700km from Ceduna. Its corporation, Yalata, Koonibba and the Maralinga Tjarutja administration itself all carry Ceduna addresses, so their money is counted as reaching Ceduna.',
     },
     gazetteerGaps: [],
+    // Left empty deliberately. The Far West Coast page lists its communities by
+    // hand, with distances, and is not rendered by RegionReport. Duplicating
+    // that list here would give it two sources that can disagree.
+    communities: [],
   },
   // The Kimberley. Verified 8 August 2026, org by org, the same way as the
   // other two: read lga_name on each organisation, then check the localities
@@ -272,6 +314,7 @@ export const PLACE_REGIONS: Record<string, PlaceRegion> = {
     },
     hubAdministration: {
       hubLga: 'Broome',
+      hubIsOutsideRegion: false,
       administeredCommunities: ['Ardyaloon (One Arm Point)', 'Djarindjin', 'Lombadina', 'Beagle Bay'],
       creditedOrgs: [
         'Djarindjin Aboriginal Corporation',
@@ -297,6 +340,88 @@ export const PLACE_REGIONS: Record<string, PlaceRegion> = {
         note:
           'The largest remote Aboriginal community in Western Australia, and it has no entry in ABS SAL_2021. Its organisations sit in postcode 6725 with no council area.',
       },
+    ],
+    communities: [
+      { name: 'Rubibi (Broome)', council: 'Broome', note: 'The regional centre. Administers the Dampier Peninsula communities below.' },
+      { name: 'Ardyaloon (One Arm Point)', council: 'Broome', note: 'On the Dampier Peninsula. Counted under Broome because its ACNC town is Broome.' },
+      { name: 'Djarindjin', council: 'Broome', note: 'On the Dampier Peninsula. Counted under Broome. Holds the largest single grant total of the four.' },
+      { name: 'Lombadina', council: null, note: 'On the Dampier Peninsula. Absent from ABS SAL_2021.' },
+      { name: 'Beagle Bay', council: null, note: 'Absent from ABS SAL_2021. Its organisations sit in postcode 6725 with no council area.' },
+      { name: 'Bidyadanga', council: null, note: 'The largest remote Aboriginal community in WA, and absent from the gazetteer entirely.' },
+      { name: 'Fitzroy Crossing', council: 'Derby-West Kimberley', note: 'Postcode 6765, which splits between Derby-West Kimberley and Halls Creek.' },
+      { name: 'Warmun', council: 'Halls Creek', note: 'Placed correctly by ABS, in postcode 6743.' },
+    ],
+  },
+  // Cape York. Verified 8 August 2026 and it broke the model.
+  //
+  // Every other region here has a hub inside it: Alice Springs is in Central
+  // Australia, Broome is in the Kimberley. On Cape York each community has its
+  // own shire council, so there is no in-region hub — and the distortion is
+  // worse rather than absent. The councils themselves are registered in Cairns,
+  // which is not on Cape York, so their money appears in no figure on this
+  // region's page at all.
+  //
+  // It is also the first region where the failure mode is confident and wrong
+  // rather than absent. Utopia and the Dampier Peninsula fall out of the
+  // gazetteer and land unplaced, which the page can say. Kowanyama Aboriginal
+  // Council is placed, in Cairns, with nothing to signal doubt.
+  'cape-york': {
+    key: 'cape-york',
+    lgaNames: [
+      'Aurukun', 'Cook', 'Hope Vale', 'Kowanyama', 'Lockhart River', 'Mapoon',
+      'Napranum', 'Northern Peninsula Area', 'Pormpuraaw', 'Torres',
+      'Torres Strait Island', 'Weipa', 'Wujal Wujal',
+    ],
+    states: ['QLD'],
+    unplaced: { postcodes: ['4871', '4874', '4876', '4892', '4895'], state: 'QLD' },
+    labels: {
+      Cook: { label: 'Cook Shire', note: 'Covers Coen, Laura and Cooktown. The largest council on the peninsula by organisation count, and it holds 24.' },
+      Torres: { label: 'Torres Shire', note: 'Thursday Island and the inner islands.' },
+      'Northern Peninsula Area': { label: 'Northern Peninsula Area', note: 'Bamaga, Seisia, Injinoo, Umagico and New Mapoon. Placed correctly through their ACNC town.' },
+      'Torres Strait Island': { label: 'Torres Strait Island Regional Council', note: null },
+      Aurukun: { label: 'Aurukun Shire', note: 'Holds three organisations in our records.' },
+      Pormpuraaw: { label: 'Pormpuraaw Shire', note: 'Holds three organisations in our records.' },
+      Kowanyama: { label: 'Kowanyama Shire', note: 'Holds one organisation. Kowanyama Aboriginal Council, the local government itself, is counted under Cairns.' },
+      'Wujal Wujal': { label: 'Wujal Wujal Shire', note: 'Holds one organisation.' },
+      Weipa: { label: 'Weipa', note: null },
+      'Hope Vale': { label: 'Hope Vale Shire', note: 'No organisations in our records. Not because none work there.' },
+      Mapoon: { label: 'Mapoon Shire', note: 'No organisations in our records.' },
+      Napranum: { label: 'Napranum Shire', note: 'No organisations in our records.' },
+      'Lockhart River': { label: 'Lockhart River Shire', note: 'No organisations in our records, though its council runs a youth service counted under Cairns.' },
+    },
+    // Verified 8 August 2026 by reading lga_name on each organisation. All are
+    // postcode 4870, all counted under Cairns.
+    hubAdministration: {
+      hubLga: 'Cairns',
+      hubIsOutsideRegion: true,
+      administeredCommunities: ['Kowanyama', 'Lockhart River', 'Mapoon', 'Aurukun', 'Seisia'],
+      creditedOrgs: [
+        'Apunipima Cape York Health Council Aboriginal Corporation',
+        'Cape York Solutions',
+        'Cape York Land Council Aboriginal Corporation',
+        'Cape York Employment Pty Ltd',
+        'AFL Cape York',
+        'Kowanyama Aboriginal Council',
+        'CAPE YORK INSTITUTE FOR POLICY AND LEADERSHIP LTD',
+        'Lockhart River Aboriginal Shire Council Youth Support',
+        'Cape York Natural Resource Management Ltd.',
+        'Balkanu Cape York Development Corporation Pty Ltd',
+      ],
+      note:
+        'These organisations carry Cape York in their names or serve its communities, and every one of them is registered in Cairns, off the peninsula. Kowanyama Aboriginal Council is a local government; it is recorded as a Cairns organisation. Cairns is not a Cape York council, so none of this money appears in any figure on this page.',
+    },
+    // No gazetteer gaps found. The communities here are in ABS SAL_2021 and
+    // have their own councils. That is what makes this region different: the
+    // reference data is fine and the addresses are not.
+    gazetteerGaps: [],
+    communities: [
+      { name: 'Kowanyama', council: 'Kowanyama', note: 'Also appears under Cairns, Carpentaria and Tablelands, depending which address each organisation filed. Carpentaria and Tablelands are not on Cape York.' },
+      { name: 'Aurukun', council: 'Aurukun', note: 'Its community corporation is placed correctly; a tourism business with the same name is counted under Cairns.' },
+      { name: 'Pormpuraaw', council: 'Pormpuraaw', note: 'The art centre is placed correctly. The sports club is counted under Carpentaria.' },
+      { name: 'Lockhart River', council: null, note: 'No organisations placed here. Its council runs a youth service counted under Cairns.' },
+      { name: 'Bamaga and Seisia', council: 'Northern Peninsula Area', note: 'Placed correctly through their ACNC town. One Seisia corporation is counted under Cairns.' },
+      { name: 'Wujal Wujal', council: 'Wujal Wujal', note: 'Its justice group is placed correctly.' },
+      { name: 'Hope Vale, Mapoon, Napranum', council: null, note: 'No organisations in our records under any council.' },
     ],
   },
 };
@@ -337,11 +462,16 @@ export const getPlaceIntelligence = cache(
       // corporation as a current community organisation misrepresents the
       // community it belonged to, and the first version of this page did
       // exactly that for 57 of them.
+      // lga_name IS NULL matters. Without it this listed every organisation in
+      // the postcode under a heading saying none of them can be placed, so
+      // Urapuntja Aboriginal Corporation appeared as unplaceable on the same
+      // page that showed it counted under Alice Springs.
       region.unplaced
         ? db.from('gs_entities')
             .select('canonical_name, entity_type, is_community_controlled')
             .eq('state', region.unplaced.state)
             .in('postcode', region.unplaced.postcodes)
+            .is('lga_name', null)
             .or('is_community_controlled.eq.true,entity_type.eq.indigenous_corp')
             .or('oric_status.is.null,oric_status.neq.Deregistered')
             .order('canonical_name')

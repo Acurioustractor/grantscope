@@ -38,6 +38,7 @@ export async function RegionReport({ regionKey, title, intro, children }: Region
   const computedAt = areas[0]?.computedAt;
   const region = PLACE_REGIONS[regionKey];
   const gazetteerGaps = region.gazetteerGaps;
+  const communities = region.communities;
   const unplacedPostcodes = region.unplaced?.postcodes ?? [];
 
   return (
@@ -51,9 +52,9 @@ export async function RegionReport({ regionKey, title, intro, children }: Region
           <div className="mt-4 max-w-3xl text-base leading-7">{intro}</div>
           {hub ? (
             <p className="mt-3 max-w-3xl text-base leading-7">
-              The largest thing it cannot tell you: remote organisations are administered from town,
-              so money earned in the communities is recorded as money reaching {hub.hubLga}. That is
-              set out below rather than left for you to find.
+              {hub.hubIsOutsideRegion
+                ? `The largest thing it cannot tell you: many organisations serving this region are registered in ${hub.hubLga}, which is not part of it. Their money appears in none of the figures below. That is set out rather than left for you to find.`
+                : `The largest thing it cannot tell you: remote organisations are administered from town, so money earned in the communities is recorded as money reaching ${hub.hubLga}. That is set out below rather than left for you to find.`}
             </p>
           ) : null}
         </div>
@@ -157,13 +158,15 @@ export async function RegionReport({ regionKey, title, intro, children }: Region
             </h2>
             <p className="mt-3 max-w-3xl text-base leading-7">{hub.note}</p>
             <p className="mt-3 max-w-3xl text-base leading-7">
-              At least <strong>{money(hub.creditedValue)}</strong> of the money shown against{' '}
-              {hub.hubLga} above was earned by organisations working in{' '}
+              At least <strong>{money(hub.creditedValue)}</strong>{' '}
+              {hub.hubIsOutsideRegion
+                ? `is counted against ${hub.hubLga} rather than anywhere on this page, and it is money for work in `
+                : `of the money shown against ${hub.hubLga} above was earned by organisations working in `}
               {hub.administeredCommunities.slice(0, -1).join(', ')} and{' '}
-              {hub.administeredCommunities[hub.administeredCommunities.length - 1]}. It is not that
-              the figure is wrong. It is that &ldquo;money reaching {hub.hubLga}&rdquo; and
-              &ldquo;money reaching the people of {hub.hubLga}&rdquo; are different things, and the
-              register only records the first.
+              {hub.administeredCommunities[hub.administeredCommunities.length - 1]}.{' '}
+              {hub.hubIsOutsideRegion
+                ? `Adding ${hub.hubLga} to this page would not fix that: it is a city with thousands of organisations of its own, and folding it in would bury the region rather than describe it.`
+                : `It is not that the figure is wrong. It is that “money reaching ${hub.hubLga}” and “money reaching the people of ${hub.hubLga}” are different things, and the register only records the first.`}
             </p>
 
             <table className="mt-6 w-full border-collapse text-left text-sm">
@@ -239,6 +242,42 @@ export async function RegionReport({ regionKey, title, intro, children }: Region
                 </li>
               ))}
             </ul>
+          </section>
+        ) : null}
+
+        {communities.length > 0 ? (
+          <section aria-labelledby="communities-title">
+            <h2 id="communities-title" className="text-2xl font-black uppercase tracking-widest">
+              The communities and the councils they are counted under
+            </h2>
+            <p className="mt-1 max-w-3xl text-sm leading-6">
+              A council area is an administrative unit. A community is a place people are from. This
+              is where the two come apart.
+            </p>
+            <table className="mt-5 w-full border-collapse text-left text-sm">
+              <thead>
+                <tr className="border-b-4 border-bauhaus-black">
+                  <th scope="col" className="pb-2 font-mono text-[10px] font-black uppercase tracking-widest">Community</th>
+                  <th scope="col" className="pb-2 font-mono text-[10px] font-black uppercase tracking-widest">Counted under</th>
+                  <th scope="col" className="pb-2 font-mono text-[10px] font-black uppercase tracking-widest">What that means</th>
+                </tr>
+              </thead>
+              <tbody>
+                {communities.map(community => (
+                  <tr key={community.name} className="border-b border-bauhaus-black/15 align-top">
+                    <th scope="row" className="py-2 pr-3 text-left font-black">{community.name}</th>
+                    <td className="py-2 pr-3">
+                      {community.council ?? (
+                        <span className="bg-bauhaus-red px-1.5 py-0.5 font-mono text-[10px] font-black uppercase text-white">
+                          No council
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-2 leading-6">{community.note}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </section>
         ) : null}
 
