@@ -1,5 +1,6 @@
 import { cache } from 'react';
 import { getServiceSupabase } from '@/lib/supabase';
+import { placeSlug } from '@/lib/atlas/share';
 
 /**
  * The part of a place report that needs no local knowledge.
@@ -72,12 +73,9 @@ export interface CouncilPlaceReport extends CouncilSummary {
   computedAt: string;
 }
 
-export function councilSlug(lgaName: string): string {
-  return lgaName
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
-}
+// The Atlas builds the same slug client-side (lib/atlas/share.ts); one
+// implementation means /atlas links and /place/council/[slug] cannot drift.
+export const councilSlug = placeSlug;
 
 function quoted(values: string[]): string {
   return values.map(value => `'${value.replace(/'/g, "''")}'`).join(',');
