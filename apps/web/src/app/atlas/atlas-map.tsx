@@ -37,14 +37,29 @@ const STATE_ABBREV: Record<string, string> = {
   'Other Territories': 'OT',
 };
 
+// External territories (Christmas Island, Cocos, Norfolk) are real councils
+// and still render, but letting them drive the frame drags the view halfway
+// to Indonesia. The camera fits the mainland box; the data keeps everything.
+function frameCoords(features: AtlasFeature[]): { lats: number[]; lngs: number[] } {
+  const located = features.filter(f => f.lat != null && f.lng != null);
+  const inFrame = located.filter(f => {
+    const lat = Number(f.lat);
+    const lng = Number(f.lng);
+    return lat >= -44.5 && lat <= -9 && lng >= 112 && lng <= 154.5;
+  });
+  const use = inFrame.length > 0 ? inFrame : located;
+  return {
+    lats: use.map(f => Number(f.lat)).filter(v => !isNaN(v)),
+    lngs: use.map(f => Number(f.lng)).filter(v => !isNaN(v)),
+  };
+}
+
 // Fit bounds when the visible set changes
 function FitBounds({ features }: { features: AtlasFeature[] }) {
   const map = useMap();
   useEffect(() => {
     if (features.length === 0) return;
-    const located = features.filter(f => f.lat != null && f.lng != null);
-    const lats = located.map(f => Number(f.lat)).filter(v => !isNaN(v));
-    const lngs = located.map(f => Number(f.lng)).filter(v => !isNaN(v));
+    const { lats, lngs } = frameCoords(features);
     if (lats.length === 0) return;
     const bounds = L.latLngBounds(
       [Math.min(...lats), Math.min(...lngs)],
@@ -156,9 +171,7 @@ export default function AtlasMap({ features, layer, selected, onSelect, pointLay
   // Compute center from features
   const center = useMemo<[number, number]>(() => {
     if (features.length === 0) return [-25.5, 134.0];
-    const located = features.filter(f => f.lat != null && f.lng != null);
-    const lats = located.map(f => Number(f.lat)).filter(v => !isNaN(v));
-    const lngs = located.map(f => Number(f.lng)).filter(v => !isNaN(v));
+    const { lats, lngs } = frameCoords(features);
     if (lats.length === 0) return [-25.5, 134.0];
     return [
       (Math.min(...lats) + Math.max(...lats)) / 2,
@@ -180,8 +193,9 @@ export default function AtlasMap({ features, layer, selected, onSelect, pointLay
       scrollWheelZoom={true}
       zoomControl={false}
     >
-      {/* Default zoom control sits top-left, which the Atlas overlays occupy */}
-      <ZoomControl position="bottomright" />
+      {/* Top-left holds the Atlas overlays; bottom-right holds the chat
+          bubble and attribution. Bottom-left is the quiet corner. */}
+      <ZoomControl position="bottomleft" />
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
         url="https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png"

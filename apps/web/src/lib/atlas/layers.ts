@@ -75,6 +75,8 @@ interface AtlasLayerCommon {
   /** One or two sentences on where the honesty ends. */
   honestAtNote: string;
   consent: AtlasConsentTier;
+  /** How the colour bands were chosen, when that needs saying. */
+  scaleNote?: string;
 }
 
 export interface AtlasLiveLayer extends AtlasLayerCommon {
@@ -180,13 +182,19 @@ const fundingDeserts: AtlasLiveLayer = {
     'Council level only. Within a council it cannot say which town the money reached, and ' +
     'in remote areas regional-office recording can move money to the wrong council entirely.',
   consent: 'public',
+  // Quantile breaks of the actual score distribution (checked 2026-08-09:
+  // min 20, median 110, p75 135, p90 152, max 205). The old 20/50/100/200
+  // stops painted three-quarters of the country one orange and made Severe
+  // nearly unreachable.
   scale: [
-    { min: 200, color: '#D02020', fillOpacity: 0.7, label: 'Severe' },
-    { min: 100, color: '#E06C18', fillOpacity: 0.6, label: 'High' },
-    { min: 50, color: '#F0C020', fillOpacity: 0.5, label: 'Elevated' },
-    { min: 20, color: '#4CB876', fillOpacity: 0.4, label: 'Mild' },
+    { min: 150, color: '#D02020', fillOpacity: 0.7, label: 'Severe' },
+    { min: 135, color: '#E06C18', fillOpacity: 0.6, label: 'High' },
+    { min: 110, color: '#F0C020', fillOpacity: 0.5, label: 'Elevated' },
+    { min: 80, color: '#4CB876', fillOpacity: 0.4, label: 'Mild' },
     { min: 0, color: '#1040C0', fillOpacity: 0.3, label: 'Low' },
   ],
+  scaleNote:
+    'Bands are quantile breaks of the current scores: the top tenth of councils reads Severe.',
   noDataLabel: 'No score held',
   value: f => num(f.desert_score),
   format: v => v.toFixed(0),

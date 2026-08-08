@@ -133,12 +133,14 @@ describe('style resolution', () => {
   const unplaced = getAtlasLayer('unplaced-orgs') as AtlasLiveLayer;
 
   it('picks the first stop the value clears, boundaries inclusive', () => {
-    expect(atlasStyleFor(deserts, 250).color).toBe('#D02020');
-    expect(atlasStyleFor(deserts, 200).color).toBe('#D02020');
-    expect(atlasStyleFor(deserts, 150).color).toBe('#E06C18');
-    expect(atlasStyleFor(deserts, 60).color).toBe('#F0C020');
-    expect(atlasStyleFor(deserts, 30).color).toBe('#4CB876');
-    expect(atlasStyleFor(deserts, 5).color).toBe('#1040C0');
+    // Desert stops are quantile breaks (2026-08-09 distribution: median 110,
+    // p90 152, max 205) — re-derive before moving them.
+    expect(atlasStyleFor(deserts, 205).color).toBe('#D02020');
+    expect(atlasStyleFor(deserts, 150).color).toBe('#D02020');
+    expect(atlasStyleFor(deserts, 140).color).toBe('#E06C18');
+    expect(atlasStyleFor(deserts, 120).color).toBe('#F0C020');
+    expect(atlasStyleFor(deserts, 90).color).toBe('#4CB876');
+    expect(atlasStyleFor(deserts, 20).color).toBe('#1040C0');
     expect(atlasStyleFor(unplaced, 80).color).toBe('#D02020');
     expect(atlasStyleFor(unplaced, 12).color).toBe('#4CB876');
     expect(atlasStyleFor(unplaced, 0).color).toBe('#1040C0');
