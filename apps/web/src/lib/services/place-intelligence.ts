@@ -25,6 +25,14 @@ export interface PlaceSnapshot {
   contractValue24m: number;
   govtGrantCount: number;
   govtGrantValue: number;
+  /**
+   * Federal grants held by organisations registered here, whatever their
+   * delivery location. The delivered figure above is keyed on a delivery
+   * postcode that 93% of awards in this region do not publish, so on its own it
+   * reports Central Desert at $2.8M against $212.8M actually held there.
+   */
+  grantsHeldCount: number;
+  grantsHeldValue: number;
   /** Share of delivered grant money held by an organisation based here. */
   localRetentionPct: number | null;
   philanthropicFunderCount: number;
@@ -79,6 +87,49 @@ interface RawProfile {
  * whose organisations have no council area at all, and labels that use the
  * names people there actually use.
  */
+/**
+ * Outstations are administered from the regional centre, so postcode,
+ * registered address and postal locality all point at the hub. The hub is then
+ * credited with money earned by the communities it administers.
+ *
+ * This is not a defect waiting to be repaired. No source records where the work
+ * happened, and inventing one would be worse than the distortion. It is a fact
+ * about the register, so the page states it rather than quietly carrying it.
+ *
+ * It holds wherever a regional centre services remote communities: Central
+ * Australia, the APY Lands, the Kimberley, Cape York. Declaring it per region
+ * means the next region needs a registry entry, not new prose.
+ */
+export interface HubAdministration {
+  /** The council credited with money earned elsewhere. */
+  hubLga: string;
+  /** Communities administered from the hub, named as people there name them. */
+  administeredCommunities: string[];
+  /**
+   * Organisations checked one by one and found credited to the hub.
+   * A name list, not a rule: no heuristic separates a homeland organisation
+   * from a town one, and guessing would put words in a community's mouth.
+   */
+  creditedOrgs: string[];
+  note: string;
+}
+
+/**
+ * A place people live in that the national gazetteer has no entry for.
+ *
+ * ABS SAL_2021 is the authority the rest of this pipeline resolves against, so
+ * a place missing from it cannot be placed at all — not placed wrongly, simply
+ * absent. Recording why makes the absence checkable rather than an oversight.
+ */
+export interface GazetteerGap {
+  place: string;
+  /** The ABS locality containing it, where one exists. */
+  containingLocality: string | null;
+  /** Councils that locality spans. More than one means we cannot choose. */
+  straddles: string[];
+  note: string;
+}
+
 export interface PlaceRegion {
   key: string;
   lgaNames: string[];
@@ -86,6 +137,8 @@ export interface PlaceRegion {
   /** Organisations here cannot be placed in a council area at all. */
   unplaced: { postcode: string; state: string } | null;
   labels: Record<string, { label: string; note: string | null }>;
+  hubAdministration: HubAdministration | null;
+  gazetteerGaps: GazetteerGap[];
 }
 
 export const PLACE_REGIONS: Record<string, PlaceRegion> = {
@@ -95,26 +148,91 @@ export const PLACE_REGIONS: Record<string, PlaceRegion> = {
     states: ['NT', 'SA'],
     unplaced: { postcode: '0872', state: 'NT' },
     labels: {
-      'Alice Springs': { label: 'Mparntwe (Alice Springs)', note: null },
-      Barkly: { label: 'Barkly, including Tennant Creek', note: 'Includes Tennant Creek, Ali Curung and Ampilatwatja in the Utopia homelands.' },
+      'Alice Springs': {
+        label: 'Mparntwe (Alice Springs)',
+        note: 'Also carries organisations that belong to the Utopia homelands, because those organisations are administered from town. See what this number contains, below.',
+      },
+      Barkly: {
+        label: 'Barkly, including Tennant Creek',
+        note: 'Tennant Creek, Ali Curung and Ampilatwatja. Ampilatwatja is an Alyawarr community near the Utopia homelands; Ali Curung is Kaytetye and is not part of Utopia.',
+      },
       MacDonnell: { label: 'MacDonnell', note: 'Includes Papunya, Hermannsburg and Areyonga.' },
       'Central Desert': { label: 'Central Desert', note: 'Includes Yuendumu and Atitjere.' },
-      'Anangu Pitjantjatjara Yankunytjatjara': { label: 'APY Lands (South Australia)', note: 'Iwantja, Mimili, Kaltjiti and Pukatja. Their grants are delivered into postcode 0872, which spans seven councils, so most cannot be placed here.' },
+      'Anangu Pitjantjatjara Yankunytjatjara': {
+        label: 'APY Lands (South Australia)',
+        note: 'Iwantja, Mimili, Kaltjiti and Pukatja. Their grants are delivered into postcode 0872, which spans eight councils, so most cannot be placed here.',
+      },
     },
+    // Verified 8 August 2026 by reading lga_name on each organisation named
+    // here. Every one of them sits inside the Alice Springs figures above.
+    hubAdministration: {
+      hubLga: 'Alice Springs',
+      administeredCommunities: ['Utopia / Urapuntja homelands', 'Arlparra', 'Ampilatwatja'],
+      creditedOrgs: [
+        'Urapuntja Health Service Aboriginal Corporation',
+        'Urapuntja Aboriginal Corporation',
+        'The Artists of Ampilatwatja Aboriginal Corporation',
+        'Arlparra Aboriginal Corporation',
+        'Utopia Farms Aboriginal Corporation',
+      ],
+      note:
+        'These organisations work in the Utopia homelands, roughly 250km north-east of town. They are registered to Alice Springs postcodes because that is where the post goes, so every dollar they receive is counted as money reaching Alice Springs.',
+    },
+    // Utopia is not one place. It is roughly sixteen homelands across the
+    // Sandover, and the gazetteer holds none of them.
+    gazetteerGaps: [
+      {
+        place: 'Urapuntja (Utopia homelands)',
+        containingLocality: 'SANDOVER',
+        straddles: ['Barkly', 'Central Desert'],
+        note:
+          'URAPUNTJA is not a locality in ABS SAL_2021. The locality that contains it, SANDOVER, is — and it spans two councils, so even resolving to it would not name a council.',
+      },
+      {
+        place: 'Mulga Bore, Aherrenge, Antewenegerrde, Thangkenharenge',
+        containingLocality: null,
+        straddles: [],
+        note: 'Homelands with no entry in ABS SAL_2021 and no locality above them that has one.',
+      },
+    ],
   },
-  // Wirangu country and the Far West Coast. Both council areas are listed
-  // because postcode 5690 maps every locality in it, Ceduna township included,
-  // to Maralinga Tjarutja. Reading only one of them loses most of the region.
+  // Wirangu country and the Far West Coast.
+  //
+  // This entry described the opposite of the current data until 8 August 2026.
+  // Postcode 5690 used to map every locality in it, Ceduna township included,
+  // to Maralinga Tjarutja. Rebuilding postcode_geo from ABS reversed that:
+  // Maralinga Tjarutja now holds no organisations at all and Ceduna holds all
+  // 23, Oak Valley and Yalata among them. Same distortion, other direction.
   'far-west-coast': {
     key: 'far-west-coast',
     lgaNames: ['Ceduna', 'Maralinga Tjarutja', 'Streaky Bay'],
     states: ['SA'],
     unplaced: null,
     labels: {
-      Ceduna: { label: 'Ceduna (District Council)', note: 'Holds far fewer organisations than the town does, because postcode 5690 attributes most of them to Maralinga Tjarutja.' },
-      'Maralinga Tjarutja': { label: 'Maralinga Tjarutja', note: 'Carries Oak Valley, and also most Ceduna township organisations through the postcode 5690 mapping. Read it as the Far West Coast rather than as the Maralinga Tjarutja lands alone.' },
+      Ceduna: {
+        label: 'Ceduna (District Council)',
+        note: 'Holds every organisation on the Far West Coast, including ones that work at Oak Valley, Yalata and Koonibba rather than in town. See what this number contains, below.',
+      },
+      'Maralinga Tjarutja': {
+        label: 'Maralinga Tjarutja',
+        note: 'Holds no organisations in our records. Not because none work there, but because all of them are registered to Ceduna addresses.',
+      },
       'Streaky Bay': { label: 'Streaky Bay', note: null },
     },
+    // Verified 8 August 2026 by reading lga_name on each organisation named.
+    hubAdministration: {
+      hubLga: 'Ceduna',
+      administeredCommunities: ['Oak Valley', 'Yalata', 'Koonibba', 'Scotdesco'],
+      creditedOrgs: [
+        'Oak Valley (Maralinga) Aboriginal Corporation',
+        'Yalata Anangu Aboriginal Corporation',
+        'Koonibba Community Aboriginal Corporation',
+        'Maralinga Tjarutja',
+      ],
+      note:
+        'Oak Valley is around 700km from Ceduna. Its corporation, Yalata, Koonibba and the Maralinga Tjarutja administration itself all carry Ceduna addresses, so their money is counted as reaching Ceduna.',
+    },
+    gazetteerGaps: [],
   },
 };
 
@@ -200,6 +318,8 @@ export const getPlaceIntelligence = cache(
         contractValue24m: num(row.contract_value_24m),
         govtGrantCount: row.grants_delivered,
         govtGrantValue: num(row.grants_delivered_value),
+        grantsHeldCount: 0,
+        grantsHeldValue: 0,
         localRetentionPct: row.local_retention_pct === null ? null : num(row.local_retention_pct),
         philanthropicFunderCount: row.philanthropic_funders,
         philanthropicGrantCount: row.philanthropic_grants,
@@ -236,6 +356,35 @@ export const getPlaceIntelligence = cache(
                WHERE e.state IN (${quoted(region.states)})
                  AND (e.lga_name IN (${quoted(region.lgaNames)})${unplacedClause})`,
     });
+    // Grants keyed on the recipient's registered address rather than the
+    // award's delivery postcode — the basis the Ceduna work settled on, because
+    // most awards publish no delivery location at all. Kept beside the
+    // delivered figure rather than replacing it: one says where money is spent,
+    // the other says which organisations hold it, and neither is the whole
+    // answer.
+    const heldResult = await db.rpc('exec_sql', {
+      query: `SELECT e.lga_name, count(*) AS awards, sum(ga.value_aud) AS value
+                FROM grantconnect_awards ga
+                JOIN gs_entities e ON e.id = ga.gs_entity_id
+               WHERE e.state IN (${quoted(region.states)})
+                 AND e.lga_name IN (${quoted(region.lgaNames)})
+               GROUP BY e.lga_name`,
+    });
+    const heldByLga = new Map<string, { awards: number; value: number }>();
+    if (Array.isArray(heldResult.data)) {
+      for (const row of heldResult.data as Array<Record<string, unknown>>) {
+        heldByLga.set(String(row.lga_name), {
+          awards: num((row.awards as number | string | null) ?? null),
+          value: num((row.value as number | string | null) ?? null),
+        });
+      }
+    }
+    for (const area of areas) {
+      const held = heldByLga.get(area.areaKey);
+      area.grantsHeldCount = held?.awards ?? 0;
+      area.grantsHeldValue = held?.value ?? 0;
+    }
+
     const covRow = Array.isArray(coverageResult.data) ? coverageResult.data[0] as Record<string, unknown> : null;
     const knownM = num((covRow?.known_m as number | string | null) ?? null);
     const unknownM = num((covRow?.unknown_m as number | string | null) ?? null);
@@ -265,6 +414,117 @@ export const getPlaceIntelligence = cache(
 export function getCentralAustraliaIntelligence(): Promise<PlaceIntelligence> {
   return getPlaceIntelligence('central-australia');
 }
+
+export interface CreditedOrg {
+  name: string;
+  /** Null when the organisation is in no council area at all. */
+  lgaName: string | null;
+  postcode: string | null;
+  grants: number;
+  grantValue: number;
+  contracts: number;
+  contractValue: number;
+}
+
+export interface HubAdministrationPicture extends HubAdministration {
+  orgs: CreditedOrg[];
+  /** Money credited to the hub that was earned in the communities it administers. */
+  creditedValue: number;
+  /** Organisations named in the registry we could not find. Reported, not hidden. */
+  missing: string[];
+}
+
+/**
+ * What a hub council's figure actually contains.
+ *
+ * Computed from the register on every request rather than written into the
+ * registry, because a hardcoded total silently goes stale the next time an
+ * award lands or an address changes — and a stale number on a page about
+ * misattributed numbers would be its own joke.
+ */
+export const getHubAdministrationPicture = cache(
+  async function getHubAdministrationPicture(regionKey: string): Promise<HubAdministrationPicture | null> {
+    const region = PLACE_REGIONS[regionKey];
+    if (!region?.hubAdministration) return null;
+    const hub = region.hubAdministration;
+    const db = getServiceSupabase();
+
+    const { data: entityRows, error } = await db
+      .from('gs_entities')
+      .select('id, abn, canonical_name, lga_name, postcode')
+      .in('canonical_name', hub.creditedOrgs);
+    if (error) return null;
+
+    const entities = (entityRows || []) as Array<{
+      id: string;
+      abn: string | null;
+      canonical_name: string;
+      lga_name: string | null;
+      postcode: string | null;
+    }>;
+    if (entities.length === 0) {
+      return { ...hub, orgs: [], creditedValue: 0, missing: hub.creditedOrgs };
+    }
+
+    const abns = entities.map(row => row.abn).filter((abn): abn is string => Boolean(abn));
+    const [awardsResult, contractsResult] = await Promise.all([
+      db
+        .from('grantconnect_awards')
+        .select('gs_entity_id, value_aud')
+        .in('gs_entity_id', entities.map(row => row.id)),
+      abns.length
+        ? db.from('austender_contracts').select('supplier_abn, contract_value').in('supplier_abn', abns)
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+
+    const grantsByEntity = new Map<string, { count: number; value: number }>();
+    for (const row of (awardsResult.data || []) as Array<{ gs_entity_id: string; value_aud: number | string | null }>) {
+      const tally = grantsByEntity.get(row.gs_entity_id) ?? { count: 0, value: 0 };
+      tally.count += 1;
+      tally.value += num(row.value_aud);
+      grantsByEntity.set(row.gs_entity_id, tally);
+    }
+
+    const contractsByAbn = new Map<string, { count: number; value: number }>();
+    for (const row of (contractsResult.data || []) as Array<{ supplier_abn: string; contract_value: number | string | null }>) {
+      const tally = contractsByAbn.get(row.supplier_abn) ?? { count: 0, value: 0 };
+      tally.count += 1;
+      tally.value += num(row.contract_value);
+      contractsByAbn.set(row.supplier_abn, tally);
+    }
+
+    const orgs: CreditedOrg[] = entities
+      .map(row => {
+        const grants = grantsByEntity.get(row.id) ?? { count: 0, value: 0 };
+        const contracts = (row.abn && contractsByAbn.get(row.abn)) || { count: 0, value: 0 };
+        return {
+          name: row.canonical_name,
+          lgaName: row.lga_name,
+          postcode: row.postcode,
+          grants: grants.count,
+          grantValue: grants.value,
+          contracts: contracts.count,
+          contractValue: contracts.value,
+        };
+      })
+      .sort((left, right) => right.grantValue + right.contractValue - (left.grantValue + left.contractValue));
+
+    // Only money sitting inside the hub's own figure counts as credited to it.
+    // An organisation the register places elsewhere, or nowhere, is not
+    // inflating the hub, and adding it here would overstate the problem.
+    const creditedValue = orgs
+      .filter(org => org.lgaName === hub.hubLga)
+      .reduce((total, org) => total + org.grantValue + org.contractValue, 0);
+
+    const found = new Set(entities.map(row => row.canonical_name));
+    return {
+      ...hub,
+      orgs,
+      creditedValue,
+      missing: hub.creditedOrgs.filter(name => !found.has(name)),
+    };
+  },
+);
 
 /**
  * Federal grants held by organisations registered in a postcode.
