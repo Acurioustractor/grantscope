@@ -110,6 +110,47 @@ task to just do:
 Until then, SA gives buyer names and contract counts. That is enough to choose a target and size it. It is
 not enough to show a buyer their own supplier story, which is the whole pitch.
 
+### SA is crawlable and still not usable — found 2026-08-08, after logging in
+
+An account was created and the session verified. SA contract lists and detail pages render fine. Then the
+actual blocker appeared, and it is worse than the login wall:
+
+**SA does not publish supplier ABNs.** Ten contracts sampled across SA Housing Trust, Attorney-General's
+Department and Department of Human Services: **zero** carried an ABN. No "ABN" string, no 11-digit run,
+anywhere on the detail page. VIC publishes them in `.contractor-details`; SA does not publish them at all.
+
+The ABN is the join key. Without it, SA contracts cannot be matched to the registry, and ABN-keyed contract
+evidence is the entire differentiator.
+
+**Name matching does not rescue it.** Tested six real SA supplier names against `social_enterprises` with
+trigram similarity at 0.4:
+
+| SA supplier | Best match | Verdict |
+|---|---|---|
+| Relationships Australia South Australia Ltd | Relationships Australia South Australia | correct |
+| Centacare Catholic Community Services | Novacare Community Services Limited | **wrong org, wrong ABN** |
+| TCB Transport Pty Ltd | FIRST TRANSPORT PTY LTD | **wrong company** |
+| MoneyMob Talkabout Ltd | none | miss |
+| South Australian Financial Counsellors Association Inc | none | miss |
+| Interpreter IO | none | miss |
+
+Two confident false positives in six, each attaching a real ABN **and** a verification tier to the wrong
+organisation. In a pack handed to a government buyer that is the worst available error: it does not look
+like missing data, it looks like a finding. Raising the threshold kills coverage instead.
+
+**What SA could still support:** a hand-curated list. SA DHS's suppliers are visibly social-sector —
+MoneyMob Talkabout, Centacare, Relationships Australia SA, SA Financial Counsellors Association, with
+contract values from $0.66M to $3.2M. A human could verify 20–50 suppliers by eye and produce something
+defensible. That is human work, not a crawl, and it should be costed as such.
+
+**Also fixed while here (matters beyond SA):** the contractor block is not just an organisation name. SA
+appends the postal address and a named contact with work email and phone — in one case a deactivated staff
+account, `rgreen@finsbury.com.au.deleted`. The scraper was putting that whole string in `supplier_name`.
+It now cuts at the first address, email or phone marker, so no personal contact details of named
+individuals enter the database. Verified against VIC too: ABN extraction there is unaffected.
+
+**Nothing from SA has been written to the database.** Every run above was extract-only.
+
 ### Running SA once you have an account
 
 **Sign up:** <https://www.tenders.sa.gov.au/terms?needAck=y>

@@ -129,6 +129,33 @@ function undisclosed(v) {
   if (v !== null && v <= 1) { undisclosedCount++; return null; }
   return v;
 }
+/**
+ * The contractor block is not just an organisation name. SA appends the postal
+ * address AND a named contact with their work email and phone — sometimes a
+ * deactivated staff account. Storing that would put personal contact details of
+ * named individuals in the database for no analytical gain, so cut the string at
+ * the first thing that is not part of the organisation's name.
+ */
+function cleanSupplierName(raw) {
+  if (!raw) return null;
+  const cuts = [
+    /\s*A[BC]N\s*\d[\d\s]+/i,        // VIC: "Lenovo ABN 90614012985"
+    /\s*\S+@\S+/,                     // any email
+    /\s*(Phone|Office|Mobile|Fax)\s*:/i,
+    /\s*(Level|Ground|Basement)\s+\d/i,      // "Level 8, 197 St George's Terrace"
+    /\s*\d+(st|nd|rd|th)\s+Floor/i,          // "1st Floor, 191 Flinders Street"
+    /\s*(Unit|Suite)\s+\d/i,
+    /\s+\d+\/\d/,                            // unit notation: "Inc 2/4 Briar Rd"
+    /\s+\d{1,4}\s+[A-Z]/,                    // trailing street number: "Ltd 63 Todd Mall"
+    /\s*\d{1,5}[a-zA-Z]?[\s,]+[A-Z][a-z]+\s+(St|Street|Rd|Road|Tce|Terrace|Ave|Avenue|Mall|Pde|Parade|Hwy|Highway|Dr|Drive|Ln|Lane|Cres|Crescent|Ct|Court|Pl|Place|Blvd)\b/,
+  ];
+  let out = String(raw);
+  for (const re of cuts) {
+    const m = out.match(re);
+    if (m && m.index > 0) out = out.slice(0, m.index);
+  }
+  return out.replace(/\s+/g, ' ').trim() || null;
+}
 function cleanAbn(s) {
   if (!s) return null;
   const m = String(s).match(/\b(\d{2}\s?\d{3}\s?\d{3}\s?\d{3})\b/);
@@ -181,10 +208,22 @@ async function main() {
     log('');
     let waited = 0;
     for (;;) {
-      const state = await page.evaluate(() => ({
-        url: location.href,
-        loggedIn: /log ?out|sign ?out|my account/i.test(document.body.innerText || ''),
-      })).catch(() => ({ url: '', loggedIn: false }));
+      // Detect on the DOM, not on visible text. The log-out link sits inside a
+      // collapsed user menu, so innerText does not contain it until the menu is
+      // opened — which made a completed login look like it had not happened.
+      // textContent and hrefs see hidden nodes; the absence of a password field
+      // is the backstop.
+      const state = await page.evaluate(() => {
+        const hasLogoutLink = [...document.querySelectorAll('a')]
+          .some(a => /log ?-?out|sign ?-?out/i.test(a.getAttribute('href') || '') ||
+                     /log ?out|sign ?out/i.test(a.textContent || ''));
+        const hasPasswordField = !!document.querySelector('input[type="password"]');
+        return {
+          url: location.href,
+          loggedIn: (hasLogoutLink || /log ?out|sign ?out|my account|edit my details/i.test(document.body.textContent || ''))
+                    && !hasPasswordField,
+        };
+      }).catch(() => ({ url: '', loggedIn: false }));
       if (state.loggedIn && !/\/login/.test(state.url)) break;
       if (waited >= 600000) { log('timed out after 10 minutes without a completed login'); await browser.close(); process.exit(2); }
       await sleep(3000); waited += 3000;
@@ -344,7 +383,7 @@ async function main() {
       const list = parseListRow(r.rowText);
       const supplierRaw = detail.contractor || '';
       const abn = cleanAbn(supplierRaw) || cleanAbn(detail.body);
-      const supplier_name = supplierRaw.replace(/\s*A[BC]N\s*\d[\d\s]+.*$/i, '').trim() || null;
+      const supplier_name = cleanSupplierName(supplierRaw);
       // austender_contracts schema row (clean values from the list row; supplier from detail)
       const rec = {
         ocid,
