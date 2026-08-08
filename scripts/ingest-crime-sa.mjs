@@ -1,23 +1,43 @@
 #!/usr/bin/env node
 /**
- * Ingest South Australia crime data into crime_stats_lga.
+ * Ingest South Australia crime data into crime_stats_lga, keyed on suburb.
  *
- * Source: SA Police (SAPOL) reported crime statistics
- *   - CSV with suburb/postcode-level offence counts (daily granularity)
- *   - Aggregated to LGA level via postcode_geo lookup
+ * Source: SA Police reported crime statistics, published per suburb.
+ *   https://data.sa.gov.au/data/dataset/crime-statistics
+ *
+ * WHY THIS WAS REWRITTEN
+ *
+ * The previous version aggregated to LGA through postcode_geo, which stored one
+ * council per postcode and took whichever it saw first. Postcode 5690 spans
+ * four councils, so every offence reported anywhere in it was filed against
+ * Maralinga Tjarutja: 905 offences and 336 assaults attributed to a community of
+ * a few hundred people. Oak Valley, the community actually in Maralinga
+ * Tjarutja, reported 8 offences in 2024-25. Ceduna township reported 649.
+ *
+ * SAPOL publishes the suburb. It always did. The old script parsed it and then
+ * threw it away in favour of the postcode. This one uses it, resolving suburb to
+ * council through abs_locality_lga (ABS ASGS Ed3 SAL_2021 + LGA_2025).
+ *
+ * WHAT IT REFUSES TO DO
+ *
+ * Where ABS puts a locality in more than one council, the offences are not
+ * assigned. They are counted, reported at the end, and left out. A number
+ * attributed to the wrong community is worse than a number we admit we cannot
+ * place, and this whole rewrite exists because of what the guess cost.
  *
  * Usage:
- *   node --env-file=.env scripts/ingest-crime-sa.mjs [path-to-csv]
+ *   node --env-file=.env scripts/ingest-crime-sa.mjs <path-to-csv>            # dry run
+ *   node --env-file=.env scripts/ingest-crime-sa.mjs <path-to-csv> --apply
  */
 
 import { readFileSync } from 'fs';
 import { createClient } from '@supabase/supabase-js';
 
-const CSV_PATH = process.argv[2] || '/tmp/sa-crime-2024-25.csv';
+const args = process.argv.slice(2);
+const APPLY = args.includes('--apply');
+const CSV_PATH = args.find((a) => !a.startsWith('--')) || '/tmp/sa-crime-2024-25.csv';
+const PERIOD = args.find((a) => a.startsWith('--period='))?.split('=')[1] || 'July 2024 - June 2025';
 
-// ---------------------------------------------------------------------------
-// Map SA offence Level 2 descriptions to normalised groups/types
-// ---------------------------------------------------------------------------
 const OFFENCE_MAP = {
   'HOMICIDE AND RELATED OFFENCES':          { group: 'Homicide', type: 'Homicide & related' },
   'ACTS INTENDED TO CAUSE INJURY':          { group: 'Assault', type: 'Assault & related' },
@@ -32,211 +52,120 @@ const OFFENCE_MAP = {
   'OTHER OFFENCES AGAINST PROPERTY':        { group: 'Other offences', type: 'Other property offences' },
 };
 
-// ---------------------------------------------------------------------------
-// Parse CSV (simple — no quoted commas in this dataset)
-// ---------------------------------------------------------------------------
-console.log(`Reading ${CSV_PATH}...`);
-const raw = readFileSync(CSV_PATH, 'utf-8');
-const lines = raw.trim().split('\n');
-const headers = lines[0].split(',');
-console.log(`Headers: ${headers.join(' | ')}`);
-console.log(`Data rows: ${lines.length - 1}`);
+const db = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY,
+);
 
-// Parse rows: Reported Date, Suburb, Postcode, Level1, Level2, Level3, Count
-const records = [];
-for (let i = 1; i < lines.length; i++) {
-  const parts = lines[i].split(',');
-  if (parts.length < 7) continue;
-  records.push({
-    date: parts[0],
-    suburb: parts[1],
-    postcode: parts[2],
-    level1: parts[3],
-    level2: parts[4],
-    level3: parts[5],
-    count: parseInt(parts[6]) || 0,
-  });
+// Suburb -> council, SA only, and only where ABS gives exactly one answer.
+// Paged: PostgREST caps a response at 1,000 rows whatever .limit() says.
+const absRows = [];
+for (let from = 0; ; from += 1000) {
+  const { data: page, error } = await db
+    .from('abs_locality_lga')
+    .select('locality, lga_name, lga_count')
+    .eq('state_name', 'South Australia')
+    .range(from, from + 999);
+  if (error) { console.error('ABS lookup failed:', error.message); process.exit(1); }
+  if (!page?.length) break;
+  absRows.push(...page);
+  if (page.length < 1000) break;
 }
-console.log(`Parsed ${records.length} records`);
 
-// Determine year period from date range
-const dates = records.map(r => {
-  const [d, m, y] = r.date.split('/');
-  return new Date(`${y}-${m}-${d}`);
-}).sort((a, b) => a - b);
-const startDate = dates[0];
-const endDate = dates[dates.length - 1];
-const yearPeriod = `July ${startDate.getFullYear()} - June ${endDate.getFullYear()}`;
-console.log(`Period: ${yearPeriod}`);
+const suburbToLga = new Map();
+const ambiguous = new Set();
+for (const row of absRows) {
+  const key = row.locality.replace(/\s*\([A-Z]{2,3}\)\s*$/, '').trim().toUpperCase();
+  if (row.lga_count === 1) suburbToLga.set(key, row.lga_name);
+  else ambiguous.add(key);
+}
+console.log(`ABS: ${suburbToLga.size} SA suburbs resolve to one council, ${ambiguous.size} straddle several`);
 
 // ---------------------------------------------------------------------------
-// Load postcode→LGA mapping from Supabase
-// ---------------------------------------------------------------------------
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-if (!supabaseUrl || !supabaseKey) {
-  console.error('Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+const raw = readFileSync(CSV_PATH, 'utf-8').trim().split('\n');
+const headers = raw[0].split(',').map((h) => h.trim());
+const col = {
+  suburb: headers.indexOf('Suburb - Incident'),
+  level2: headers.indexOf('Offence Level 2 Description'),
+  count: headers.indexOf('Offence count'),
+};
+if (Object.values(col).some((i) => i < 0)) {
+  console.error(`Unexpected columns: ${headers.join(' | ')}`);
   process.exit(1);
 }
-const supabase = createClient(supabaseUrl, supabaseKey);
+console.log(`Reading ${CSV_PATH}: ${raw.length - 1} rows\n`);
 
-console.log('\nLoading SA postcode→LGA mapping...');
-const { data: postcodeRows, error: pgErr } = await supabase
-  .from('postcode_geo')
-  .select('postcode, lga_name')
-  .eq('state', 'SA')
-  .not('lga_name', 'is', null);
+const tally = new Map();          // "LGA|group|type" -> incidents
+const lgaTotals = new Map();
+let placed = 0, unplacedAmbiguous = 0, unplacedUnknown = 0, unmappedOffence = 0;
+const unknownSuburbs = new Map();
 
-if (pgErr) {
-  console.error('Error loading postcode_geo:', pgErr.message);
-  process.exit(1);
-}
+for (let i = 1; i < raw.length; i++) {
+  const parts = raw[i].split(',');
+  const suburb = (parts[col.suburb] || '').trim().toUpperCase();
+  const level2 = (parts[col.level2] || '').trim().toUpperCase();
+  const count = parseInt(parts[col.count] || '0', 10) || 0;
+  if (!suburb || !count) continue;
 
-// Build postcode→LGA map (some postcodes span multiple LGAs — take first)
-const postcodeLga = new Map();
-for (const row of postcodeRows) {
-  if (!postcodeLga.has(row.postcode)) {
-    postcodeLga.set(row.postcode, row.lga_name);
-  }
-}
-console.log(`Postcode→LGA mappings: ${postcodeLga.size}`);
+  const mapping = OFFENCE_MAP[level2];
+  if (!mapping) { unmappedOffence += count; continue; }
 
-// ---------------------------------------------------------------------------
-// Aggregate: postcode → LGA, Level 2 → normalised offence group/type
-// ---------------------------------------------------------------------------
-const lgaOffenceMap = new Map(); // key: "LGA|group|type" -> incidents
-let unmappedPostcodes = 0;
-let unmappedOffences = 0;
-const unmappedPostcodeSet = new Set();
-
-for (const rec of records) {
-  const lga = postcodeLga.get(rec.postcode);
+  const lga = suburbToLga.get(suburb);
   if (!lga) {
-    unmappedPostcodes++;
-    unmappedPostcodeSet.add(rec.postcode);
+    if (ambiguous.has(suburb)) unplacedAmbiguous += count;
+    else { unplacedUnknown += count; unknownSuburbs.set(suburb, (unknownSuburbs.get(suburb) || 0) + count); }
     continue;
   }
 
-  const mapping = OFFENCE_MAP[rec.level2];
-  if (!mapping) {
-    unmappedOffences++;
-    continue;
-  }
-
+  placed += count;
   const key = `${lga}|${mapping.group}|${mapping.type}`;
-  lgaOffenceMap.set(key, (lgaOffenceMap.get(key) || 0) + rec.count);
+  tally.set(key, (tally.get(key) || 0) + count);
+  lgaTotals.set(lga, (lgaTotals.get(lga) || 0) + count);
 }
 
-console.log(`\nUnmapped postcodes: ${unmappedPostcodes} records (${unmappedPostcodeSet.size} unique postcodes)`);
-if (unmappedPostcodeSet.size > 0 && unmappedPostcodeSet.size <= 20) {
-  console.log(`  Postcodes: ${[...unmappedPostcodeSet].sort().join(', ')}`);
+const rows = [];
+for (const [key, incidents] of tally) {
+  const [lga_name, offence_group, offence_type] = key.split('|');
+  rows.push({ lga_name, state: 'SA', offence_group, offence_type, year_period: PERIOD, incidents, source: 'SAPOL' });
 }
-console.log(`Unmapped offence types: ${unmappedOffences} records`);
-
-// Build insert rows
-const insertRows = [];
-const lgaNames = new Set();
-const lgaTotals = new Map(); // LGA → total incidents
-
-for (const [key, incidents] of lgaOffenceMap) {
-  const [lga, group, type] = key.split('|');
-  if (incidents === 0) continue;
-
-  lgaNames.add(lga);
-  lgaTotals.set(lga, (lgaTotals.get(lga) || 0) + incidents);
-
-  insertRows.push({
-    lga_name: lga,
-    state: 'SA',
-    offence_group: group,
-    offence_type: type,
-    year_period: yearPeriod,
-    incidents,
-    rate_per_100k: null, // SAPOL CSV doesn't include population rates
-    source: 'SAPOL',
-  });
+for (const [lga_name, incidents] of lgaTotals) {
+  rows.push({ lga_name, state: 'SA', offence_group: 'Total', offence_type: 'All offences', year_period: PERIOD, incidents, source: 'SAPOL' });
 }
 
-// Add total row per LGA
-for (const [lga, total] of lgaTotals) {
-  insertRows.push({
-    lga_name: lga,
-    state: 'SA',
-    offence_group: 'Total',
-    offence_type: 'All offences',
-    year_period: yearPeriod,
-    incidents: total,
-    rate_per_100k: null,
-    source: 'SAPOL',
-  });
+const total = placed + unplacedAmbiguous + unplacedUnknown + unmappedOffence;
+console.log(`Placed:              ${placed} offences across ${lgaTotals.size} councils`);
+console.log(`Unplaced, ambiguous: ${unplacedAmbiguous}  (suburb straddles councils in ABS)`);
+console.log(`Unplaced, unknown:   ${unplacedUnknown}  (suburb not in ABS)`);
+console.log(`Offence not mapped:  ${unmappedOffence}`);
+console.log(`Total in file:       ${total}  (${((100 * placed) / total).toFixed(1)}% placed)\n`);
+
+if (unknownSuburbs.size) {
+  const worst = [...unknownSuburbs.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
+  console.log('Largest unrecognised suburbs:');
+  for (const [name, n] of worst) console.log(`  ${String(n).padStart(6)}  ${name}`);
+  console.log();
 }
 
-console.log(`\nLGAs found: ${lgaNames.size}`);
-console.log(`Total rows to insert: ${insertRows.length}`);
+console.log('Far West check:');
+for (const name of ['Ceduna', 'Maralinga Tjarutja', 'Streaky Bay']) {
+  console.log(`  ${name.padEnd(20)} ${lgaTotals.get(name) ?? 0}`);
+}
+console.log();
 
-// ---------------------------------------------------------------------------
-// Delete existing SA data for this period (idempotent re-runs)
-// ---------------------------------------------------------------------------
-console.log(`\nDeleting existing SA/SAPOL data for period "${yearPeriod}"...`);
-const { error: delErr } = await supabase
+if (!APPLY) {
+  console.log(`Dry run: ${rows.length} rows ready. Re-run with --apply to replace SA rows for "${PERIOD}".`);
+  process.exit(0);
+}
+
+const { error: delError } = await db
   .from('crime_stats_lga')
   .delete()
   .eq('state', 'SA')
-  .eq('source', 'SAPOL')
-  .eq('year_period', yearPeriod);
+  .eq('year_period', PERIOD);
+if (delError) { console.error('Delete failed:', delError.message); process.exit(1); }
 
-if (delErr) {
-  console.error('Delete error:', delErr.message);
-} else {
-  console.log('  Deleted existing rows (if any)');
+for (let i = 0; i < rows.length; i += 500) {
+  const { error: insError } = await db.from('crime_stats_lga').insert(rows.slice(i, i + 500));
+  if (insError) { console.error('Insert failed:', insError.message); process.exit(1); }
 }
-
-// Insert in batches of 500
-const BATCH_SIZE = 500;
-let inserted = 0;
-let errors = 0;
-
-for (let i = 0; i < insertRows.length; i += BATCH_SIZE) {
-  const batch = insertRows.slice(i, i + BATCH_SIZE);
-  const { error: insertErr } = await supabase
-    .from('crime_stats_lga')
-    .insert(batch);
-
-  if (insertErr) {
-    console.error(`  Batch ${Math.floor(i / BATCH_SIZE) + 1} error:`, insertErr.message);
-    errors++;
-  } else {
-    inserted += batch.length;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Report
-// ---------------------------------------------------------------------------
-console.log('\n=== INGEST REPORT ===');
-console.log(`Source: SA Police (SAPOL)`);
-console.log(`Period: ${yearPeriod}`);
-console.log(`LGAs: ${lgaNames.size}`);
-console.log(`Rows inserted: ${inserted}`);
-console.log(`Batch errors: ${errors}`);
-
-// Sample data
-console.log('\n=== SAMPLE DATA (first 10 rows) ===');
-for (const row of insertRows.slice(0, 10)) {
-  console.log(`  ${row.lga_name} | ${row.offence_group} | ${row.offence_type} | incidents=${row.incidents}`);
-}
-
-// Top LGAs by total incidents
-const totals = insertRows.filter(r => r.offence_group === 'Total');
-totals.sort((a, b) => b.incidents - a.incidents);
-console.log('\n=== TOP 15 LGAs BY TOTAL INCIDENTS ===');
-for (const row of totals.slice(0, 15)) {
-  console.log(`  ${row.lga_name}: ${row.incidents.toLocaleString()}`);
-}
-
-// Bottom 5 LGAs
-totals.sort((a, b) => a.incidents - b.incidents);
-console.log('\n=== BOTTOM 5 LGAs BY TOTAL INCIDENTS ===');
-for (const row of totals.slice(0, 5)) {
-  console.log(`  ${row.lga_name}: ${row.incidents.toLocaleString()}`);
-}
+console.log(`Wrote ${rows.length} rows for ${PERIOD}.`);
