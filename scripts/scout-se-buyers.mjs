@@ -51,6 +51,16 @@ CREATE TEMP TABLE _se_abns AS
     END,
     name;
 
+-- Two evidence sources, deliberately kept distinguishable.
+--   austender_contracts  — real contract_start/contract_end dates. Despite the
+--                          name it carries NSW eTender rows as well as federal.
+--   state_tenders        — QLD departmental disclosure logs. No contract dates
+--                          exist; published_date is the END of the period the
+--                          disclosure file covered, backfilled from the source
+--                          filename by backfill-state-tenders-dates.mjs. It
+--                          means "disclosed as at", never "awarded on".
+-- State buyers are prefixed with their state so QLD's Department of Education
+-- cannot collide with the Commonwealth one.
 CREATE TABLE IF NOT EXISTS se_buyer_prospects (
   buyer_name text PRIMARY KEY,
   se_supplier_count int,
@@ -62,32 +72,44 @@ CREATE TABLE IF NOT EXISTS se_buyer_prospects (
   states jsonb,
   computed_at timestamptz DEFAULT now()
 );
+ALTER TABLE se_buyer_prospects ADD COLUMN IF NOT EXISTS evidence_basis text;
 
 TRUNCATE se_buyer_prospects;
 
 INSERT INTO se_buyer_prospects
   (buyer_name, se_supplier_count, contract_count, total_value, last_contract_end,
-   certified_supplier_count, example_suppliers, states, computed_at)
+   certified_supplier_count, example_suppliers, states, evidence_basis, computed_at)
+WITH evidence AS (
+  SELECT ac.buyer_name, ac.supplier_abn, ac.contract_value,
+         ac.contract_end AS last_date, 'contract-dates' AS basis
+  FROM austender_contracts ac
+  WHERE ac.buyer_name IS NOT NULL
+  UNION ALL
+  SELECT COALESCE(st.state || ' ', '') || st.buyer_name, st.supplier_abn, st.contract_value,
+         st.published_date::date, 'disclosure-period'
+  FROM state_tenders st
+  WHERE st.buyer_name IS NOT NULL
+)
 SELECT
-  ac.buyer_name,
-  COUNT(DISTINCT ac.supplier_abn)                                   AS se_supplier_count,
+  e.buyer_name,
+  COUNT(DISTINCT e.supplier_abn)                                    AS se_supplier_count,
   COUNT(*)                                                          AS contract_count,
-  SUM(ac.contract_value)                                            AS total_value,
-  MAX(ac.contract_end)                                              AS last_contract_end,
-  COUNT(DISTINCT ac.supplier_abn)
+  SUM(e.contract_value)                                             AS total_value,
+  MAX(e.last_date)                                                  AS last_contract_end,
+  COUNT(DISTINCT e.supplier_abn)
     FILTER (WHERE se.verification_tier = 'certified')               AS certified_supplier_count,
   to_jsonb((ARRAY_AGG(DISTINCT se.name))[1:5])                      AS example_suppliers,
   jsonb_agg(DISTINCT se.state) FILTER (WHERE se.state IS NOT NULL)  AS states,
+  CASE WHEN COUNT(DISTINCT e.basis) > 1 THEN 'mixed' ELSE MIN(e.basis) END AS evidence_basis,
   now()
-FROM austender_contracts ac
-JOIN _se_abns se ON se.abn = ac.supplier_abn
-WHERE ac.buyer_name IS NOT NULL
-GROUP BY ac.buyer_name;
+FROM evidence e
+JOIN _se_abns se ON se.abn = e.supplier_abn
+GROUP BY e.buyer_name;
 `;
 
 const RANK_SQL = `
 SELECT buyer_name, se_supplier_count, contract_count,
-       ROUND(total_value / 1e6, 1) AS value_m, last_contract_end
+       ROUND(total_value / 1e6, 1) AS value_m, last_contract_end, evidence_basis
 FROM se_buyer_prospects
 ORDER BY se_supplier_count DESC, total_value DESC
 LIMIT 20;
@@ -104,15 +126,24 @@ CREATE TEMP TABLE _se_abns AS
       WHEN 'certified' THEN 1 WHEN 'verified' THEN 2 WHEN 'identified' THEN 3 ELSE 4
     END,
     name;
-SELECT ac.buyer_name,
-       COUNT(DISTINCT ac.supplier_abn) AS se_suppliers,
+WITH evidence AS (
+  SELECT ac.buyer_name, ac.supplier_abn, ac.contract_value,
+         ac.contract_end AS last_date, 'contract-dates' AS basis
+  FROM austender_contracts ac WHERE ac.buyer_name IS NOT NULL
+  UNION ALL
+  SELECT COALESCE(st.state || ' ', '') || st.buyer_name, st.supplier_abn, st.contract_value,
+         st.published_date::date, 'disclosure-period'
+  FROM state_tenders st WHERE st.buyer_name IS NOT NULL
+)
+SELECT e.buyer_name,
+       COUNT(DISTINCT e.supplier_abn) AS se_suppliers,
        COUNT(*) AS contracts,
-       ROUND(SUM(ac.contract_value) / 1e6, 1) AS value_m,
-       MAX(ac.contract_end) AS last_end
-FROM austender_contracts ac
-JOIN _se_abns se ON se.abn = ac.supplier_abn
-WHERE ac.buyer_name IS NOT NULL
-GROUP BY ac.buyer_name
+       ROUND(SUM(e.contract_value) / 1e6, 1) AS value_m,
+       MAX(e.last_date) AS last_end,
+       CASE WHEN COUNT(DISTINCT e.basis) > 1 THEN 'mixed' ELSE MIN(e.basis) END AS basis
+FROM evidence e
+JOIN _se_abns se ON se.abn = e.supplier_abn
+GROUP BY e.buyer_name
 ORDER BY 2 DESC, SUM(ac.contract_value) DESC
 LIMIT 20;
 `;
