@@ -1,40 +1,22 @@
 'use client';
 
 import { useMemo, useEffect, useState } from 'react';
-import { MapContainer, TileLayer, GeoJSON, CircleMarker, Tooltip, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, GeoJSON, CircleMarker, Tooltip, ZoomControl, useMap } from 'react-leaflet';
 import type { FeatureCollection, Feature, Geometry } from 'geojson';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { money } from '@/lib/format';
+import {
+  atlasStyleFor,
+  ATLAS_NO_DATA_STYLE,
+  type AtlasFeature,
+  type AtlasLiveLayer,
+} from '@/lib/atlas/layers';
 
-interface LgaFeature {
-  lga_name: string;
-  state: string;
-  remoteness: string | null;
-  avg_irsd_decile: number | null;
-  avg_irsd_score: number | null;
-  indexed_entities: number | null;
-  community_controlled_entities: number | null;
-  total_funding_all_sources: number | null;
-  desert_score: number | null;
-  unplaced_count: number;
-  placed_count: number;
-  unplaced_share: number | null;
-  // Null when the council has no point coordinates; it still renders where a
-  // boundary matches its name. Number(null) is 0, not NaN — filter nulls
-  // before coercing or a coordless council drags bounds to the equator.
-  lat: number | null;
-  lng: number | null;
-  lga_code: string;
-}
-
-type MapMetric = 'desert_score' | 'unplaced_share';
-
-interface MapViewProps {
-  features: LgaFeature[];
-  selected: LgaFeature | null;
-  onSelect: (f: LgaFeature) => void;
-  metric?: MapMetric;
+interface AtlasMapProps {
+  features: AtlasFeature[];
+  layer: AtlasLiveLayer;
+  selected: AtlasFeature | null;
+  onSelect: (f: AtlasFeature) => void;
 }
 
 const STATE_ABBREV: Record<string, string> = {
@@ -49,73 +31,8 @@ const STATE_ABBREV: Record<string, string> = {
   'Other Territories': 'OT',
 };
 
-// Bauhaus-inspired color scale: blue (low) → green → yellow → orange → red (high)
-function desertColor(score: number): string {
-  if (score > 200) return '#D02020';
-  if (score > 100) return '#E06C18';
-  if (score > 50) return '#F0C020';
-  if (score > 20) return '#4CB876';
-  return '#1040C0';
-}
-
-function desertOpacity(score: number): number {
-  if (score > 200) return 0.7;
-  if (score > 100) return 0.6;
-  if (score > 50) return 0.5;
-  if (score > 20) return 0.4;
-  return 0.3;
-}
-
-// Share of organisations in a council's postcodes we cannot place, 0–100
-function shareColor(pct: number): string {
-  if (pct >= 75) return '#D02020';
-  if (pct >= 50) return '#E06C18';
-  if (pct >= 25) return '#F0C020';
-  if (pct >= 10) return '#4CB876';
-  return '#1040C0';
-}
-
-function shareOpacity(pct: number): number {
-  if (pct >= 75) return 0.7;
-  if (pct >= 50) return 0.6;
-  if (pct >= 25) return 0.5;
-  if (pct >= 10) return 0.4;
-  return 0.3;
-}
-
-function metricValue(f: LgaFeature, metric: MapMetric): number | null {
-  const v = metric === 'desert_score' ? f.desert_score : f.unplaced_share;
-  return v === null || v === undefined ? null : Number(v);
-}
-
-function metricColor(value: number, metric: MapMetric): string {
-  return metric === 'desert_score' ? desertColor(value) : shareColor(value);
-}
-
-function metricOpacity(value: number, metric: MapMetric): number {
-  return metric === 'desert_score' ? desertOpacity(value) : shareOpacity(value);
-}
-
-function tooltipHtml(data: LgaFeature): string {
-  const desert = data.desert_score === null
-    ? '—'
-    : `<strong>${Number(data.desert_score).toFixed(1)}</strong>`;
-  const funding = data.total_funding_all_sources === null
-    ? ''
-    : `Funding: ${money(Number(data.total_funding_all_sources))}<br/>`;
-  const entities = data.indexed_entities === null
-    ? ''
-    : `Entities: ${data.indexed_entities}${Number(data.community_controlled_entities) > 0 ? ` (${data.community_controlled_entities} CC)` : ''}<br/>`;
-  const share = data.unplaced_share === null ? '' : ` (${Number(data.unplaced_share).toFixed(0)}%)`;
-  return `<div class="text-xs">
-    <strong>${data.lga_name}</strong> (${data.state})<br/>
-    Desert Score: ${desert}<br/>
-    ${funding}${entities}Cannot place: <strong>${data.unplaced_count}</strong>${share}
-  </div>`;
-}
-
-// Fit bounds when data changes
-function FitBounds({ features }: { features: LgaFeature[] }) {
+// Fit bounds when the visible set changes
+function FitBounds({ features }: { features: AtlasFeature[] }) {
   const map = useMap();
   useEffect(() => {
     if (features.length === 0) return;
@@ -132,11 +49,11 @@ function FitBounds({ features }: { features: LgaFeature[] }) {
   return null;
 }
 
-export default function MapView({ features, selected, onSelect, metric = 'desert_score' }: MapViewProps) {
+export default function AtlasMap({ features, layer, selected, onSelect }: AtlasMapProps) {
   const [geoData, setGeoData] = useState<FeatureCollection | null>(null);
   const [geoLoading, setGeoLoading] = useState(true);
 
-  // Load GeoJSON boundaries
+  // Load GeoJSON boundaries — the same 16MB file /map already served
   useEffect(() => {
     fetch('/data/lga-boundaries.geojson')
       .then(r => r.json())
@@ -147,12 +64,12 @@ export default function MapView({ features, selected, onSelect, metric = 'desert
       .catch(() => setGeoLoading(false));
   }, []);
 
-  // Build lookup from lga_name+state → desert data
-  const desertLookup = useMemo(() => {
-    const map = new Map<string, LgaFeature>();
+  // Lookup from lga_name+state → feature; coordless councils still resolve
+  // here, painted wherever a boundary name matches
+  const featureLookup = useMemo(() => {
+    const map = new Map<string, AtlasFeature>();
     for (const f of features) {
       map.set(`${f.lga_name}|${f.state}`, f);
-      // Also index by just lga_name for fuzzy matching
       if (!map.has(f.lga_name)) {
         map.set(f.lga_name, f);
       }
@@ -160,55 +77,75 @@ export default function MapView({ features, selected, onSelect, metric = 'desert
     return map;
   }, [features]);
 
+  const tooltipHtml = useMemo(() => {
+    return (data: AtlasFeature): string => {
+      const value = layer.value(data);
+      const line = value === null
+        ? layer.noDataLabel
+        : `${layer.name}: <strong>${layer.format(value)}</strong>`;
+      // Uncertainty travels with every number: unless the unplaced layer is
+      // the one being read, say how much of this place we cannot place.
+      const share = data.unplaced_share === null ? '' : ` (${Number(data.unplaced_share).toFixed(0)}%)`;
+      const uncertainty = layer.key === 'unplaced-orgs'
+        ? ''
+        : `<br/>Cannot place: <strong>${data.unplaced_count}</strong>${share}`;
+      return `<div class="text-xs">
+        <strong>${data.lga_name}</strong> (${data.state})<br/>
+        ${line}${uncertainty}
+      </div>`;
+    };
+  }, [layer]);
+
   // Style function for GeoJSON polygons
   const style = useMemo(() => {
     return (feature: Feature<Geometry, { lga_name: string; state: string }> | undefined) => {
       if (!feature?.properties) return { fillColor: '#ccc', fillOpacity: 0.1, weight: 0.5, color: '#999' };
       const { lga_name, state } = feature.properties;
       const stateAbbrev = STATE_ABBREV[state] || state;
-      const data = desertLookup.get(`${lga_name}|${stateAbbrev}`) || desertLookup.get(lga_name);
+      const data = featureLookup.get(`${lga_name}|${stateAbbrev}`) || featureLookup.get(lga_name);
       const isSelected = selected?.lga_name === data?.lga_name && selected?.state === data?.state;
 
-      const value = data ? metricValue(data, metric) : null;
+      const value = data ? layer.value(data) : null;
 
       if (!data || value === null) {
         return {
-          fillColor: '#e5e7eb',
-          fillOpacity: 0.15,
+          fillColor: ATLAS_NO_DATA_STYLE.color,
+          fillOpacity: ATLAS_NO_DATA_STYLE.fillOpacity,
           weight: 0.3,
           color: '#d1d5db',
           opacity: 0.5,
         };
       }
 
+      const paint = atlasStyleFor(layer, value);
       return {
-        fillColor: metricColor(value, metric),
-        fillOpacity: isSelected ? 0.85 : metricOpacity(value, metric),
+        fillColor: paint.color,
+        fillOpacity: isSelected ? 0.85 : paint.fillOpacity,
         weight: isSelected ? 3 : 0.8,
         color: isSelected ? '#121212' : '#666',
         opacity: isSelected ? 1 : 0.4,
       };
     };
-  }, [desertLookup, selected, metric]);
+  }, [featureLookup, selected, layer]);
 
   // Click handler for GeoJSON features
   const onEachFeature = useMemo(() => {
-    return (feature: Feature<Geometry, { lga_name: string; state: string }>, layer: L.Layer) => {
+    return (feature: Feature<Geometry, { lga_name: string; state: string }>, mapLayer: L.Layer) => {
       const { lga_name, state } = feature.properties;
       const stateAbbrev = STATE_ABBREV[state] || state;
-      const data = desertLookup.get(`${lga_name}|${stateAbbrev}`) || desertLookup.get(lga_name);
+      const data = featureLookup.get(`${lga_name}|${stateAbbrev}`) || featureLookup.get(lga_name);
 
       if (data) {
-        (layer as L.Path).bindTooltip(tooltipHtml(data), { sticky: true });
-        layer.on('click', () => onSelect(data));
+        (mapLayer as L.Path).bindTooltip(tooltipHtml(data), { sticky: true });
+        mapLayer.on('click', () => onSelect(data));
       } else {
-        (layer as L.Path).bindTooltip(
+        (mapLayer as L.Path).bindTooltip(
           `<div class="text-xs"><strong>${lga_name}</strong> (${stateAbbrev})<br/>No data held</div>`,
           { sticky: true }
         );
       }
     };
-  }, [desertLookup, onSelect]);
+  }, [featureLookup, onSelect, tooltipHtml]);
 
   // Compute center from features
   const center = useMemo<[number, number]>(() => {
@@ -225,8 +162,8 @@ export default function MapView({ features, selected, onSelect, metric = 'desert
 
   // Key to force GeoJSON re-render when style changes
   const geoKey = useMemo(
-    () => `${selected?.lga_name}-${selected?.state}-${features.length}-${metric}`,
-    [selected, features, metric]
+    () => `${selected?.lga_name}-${selected?.state}-${features.length}-${layer.key}`,
+    [selected, features, layer]
   );
 
   return (
@@ -235,7 +172,10 @@ export default function MapView({ features, selected, onSelect, metric = 'desert
       zoom={5}
       style={{ height: '100%', width: '100%' }}
       scrollWheelZoom={true}
+      zoomControl={false}
     >
+      {/* Default zoom control sits top-left, which the Atlas overlays occupy */}
+      <ZoomControl position="bottomright" />
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
         url="https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png"
@@ -263,17 +203,18 @@ export default function MapView({ features, selected, onSelect, metric = 'desert
         const lat = Number(f.lat);
         const lng = Number(f.lng);
         if (isNaN(lat) || isNaN(lng)) return null;
-        const value = metricValue(f, metric);
+        const value = layer.value(f);
         if (value === null) return null;
+        const paint = atlasStyleFor(layer, value);
         return (
           <CircleMarker
             key={`circle-${f.lga_name}-${f.state}-${i}`}
             center={[lat, lng]}
             radius={Math.max(3, Math.min(Math.sqrt(value) * 1.2, 20))}
             pathOptions={{
-              fillColor: metricColor(value, metric),
+              fillColor: paint.color,
               fillOpacity: 0.7,
-              color: metricColor(value, metric),
+              color: paint.color,
               weight: 1,
             }}
             eventHandlers={{ click: () => onSelect(f) }}
@@ -281,7 +222,7 @@ export default function MapView({ features, selected, onSelect, metric = 'desert
             <Tooltip>
               <div className="text-xs">
                 <strong>{f.lga_name}</strong> ({f.state})<br />
-                {metric === 'desert_score' ? 'Desert Score' : 'Unplaced share'}: <strong>{value.toFixed(1)}{metric === 'unplaced_share' ? '%' : ''}</strong>
+                {layer.name}: <strong>{layer.format(value)}</strong>
               </div>
             </Tooltip>
           </CircleMarker>
