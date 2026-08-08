@@ -61,6 +61,55 @@ alphabetical.
 
 **~3 hours.** Only worth it if a buyer asks for history beyond the current department's own records.
 
+## SA — mapped 2026-08-08, and it is small
+
+SA was re-tested properly rather than taken from the June note, because two "settled" conclusions have
+already fallen over today. The June finding survives, but the picture around it is much better than
+recorded.
+
+**The wall is real.** With a warmed session that had already cleared Cloudflare, `/contract/search?buyerId=…`
+and `/contracts/organisationWide` both redirect to `/login`. That is an authentication wall, not a bot
+challenge.
+
+**There is no open-data route.** `data.sa.gov.au` runs a CKAN API at `/data/api/3/action/…`. Datasets with
+`jurisdiction:"South Australia"` matching "contract": **zero**. The only SA procurement dataset is *State
+Procurement Board Annual Report Data* (XLSX, last modified 2021-10-25) — aggregate annual figures, no
+supplier ABNs, no contract lines. SA simply does not publish what QLD publishes prolifically.
+
+**But the buyer index IS public, and SA is tiny.** 66 agencies, **2,979 contracts total** — about 1/19th of
+VIC. Behind the login, the whole of SA is roughly a 75-minute crawl.
+
+| SA agency | Contracts | buyerId |
+|---|---|---|
+| Department for Education | 538 | 56694 |
+| Department for Infrastructure and Transport | 446 | 56644 |
+| SA Health | 247 | 56691 |
+| SA Housing Trust | 113 | 267553 |
+| Department of Human Services (DHS) | 98 | 84271 |
+| Housing SA - Asset Services | 74 | 94146 |
+| Attorney Generals Department | 59 | 56683 |
+| Department for Child Protection | 59 | 223646 |
+| South Australia Police | 51 | 56697 |
+| Department for Correctional Services | 23 | 56713 |
+
+The wedge-relevant set — housing, human services, child protection, attorney-general, corrections — is **14
+agencies and 500 contracts, about 15 minutes**.
+
+### What unblocking SA actually needs
+
+The portal offers Supplier Login, Agency Login and **Sign Up**. A supplier account is the plausible route,
+and ACT is a real supplier so registering is not a pretence. Two things make this Ben's call and not a
+task to just do:
+
+1. **Creating an account on an external system in ACT's name is Tier 3.** It needs an explicit decision.
+2. **Crawling behind an authenticated session engages the site's terms of use** in a way anonymous access
+   does not. Worth reading those terms before pointing a scraper at it, rather than after. The scraper
+   supports an authenticated context technically; whether it *should* be used that way is a judgement about
+   ACT's standing with a government buyer it may later want to sell to.
+
+Until then, SA gives buyer names and contract counts. That is enough to choose a target and size it. It is
+not enough to show a buyer their own supplier story, which is the whole pitch.
+
 ## Everything else
 
 The largest agencies in VIC are Transport and Planning (5,224), Education (3,906) and Energy/Environment

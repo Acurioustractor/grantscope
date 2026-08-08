@@ -61,6 +61,27 @@ const db = APPLY
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 const log = (m) => console.log(`[state-tenders:${STATE}] ${m}`);
 
+const CHALLENGE_RE = /just a moment|attention required|performing security verification|checking your browser/i;
+
+/**
+ * Cloudflare's managed challenge clears itself after a few seconds. The scraper
+ * used to sample the page on a fixed delay and abort if a challenge was showing,
+ * which threw away pages that were about to load — fatal on a multi-hour crawl,
+ * and it is why SA looked harder to reach than it is. Poll instead.
+ * Returns true if the page settled, false if the challenge never cleared.
+ */
+async function settle(page, maxMs = 30000) {
+  let waited = 0;
+  for (;;) {
+    let title = '';
+    try { title = await page.title(); } catch { /* navigating */ }
+    if (title && !CHALLENGE_RE.test(title)) return true;
+    if (waited >= maxMs) return false;
+    await sleep(2500);
+    waited += 2500;
+  }
+}
+
 // Ordered contract-detail labels. We extract each field as the text between its
 // label and the next label that appears (Struts app renders flat label/value).
 const DETAIL_LABELS = [
@@ -140,12 +161,11 @@ async function main() {
   // 1) agency index
   log('loading buyerIndex…');
   await page.goto(`${HOST}/contract/buyerIndex`, { waitUntil: 'domcontentloaded', timeout: 45000 });
-  await sleep(2000);
-  const title = await page.title();
-  if (/just a moment|attention required|blocked/i.test(title)) {
-    log(`BLOCKED at buyerIndex (title="${title}") — Cloudflare did not clear this run. Retry.`);
+  if (!await settle(page, 45000)) {
+    log(`BLOCKED at buyerIndex (title="${await page.title()}") — challenge did not clear in 45s. Retry.`);
     await browser.close(); process.exit(2);
   }
+  await sleep(1000); // let the agency list render after the challenge clears
   const agencies = await page.evaluate(() =>
     [...document.querySelectorAll('a')]
       .map(a => ({ name: a.textContent.trim(), href: a.getAttribute('href') }))
@@ -217,7 +237,8 @@ async function main() {
     let rows;
     try {
       await page.goto(`${HOST}/contract/search?buyerId=${ag.buyerId}&browse=true`, { waitUntil: 'domcontentloaded', timeout: 45000 });
-      await sleep(1500);
+      await settle(page);
+      await sleep(1000);
       rows = await page.evaluate(() => {
         const seen = new Set(); const out = [];
         for (const a of document.querySelectorAll('a[href*="/contract/view?id="]')) {
@@ -239,6 +260,7 @@ async function main() {
       let detail;
       try {
         await page.goto(`${HOST}${r.href}`, { waitUntil: 'domcontentloaded', timeout: 45000 });
+        if (!await settle(page)) { failed++; log(`  ! skip ${r.id}: challenge did not clear`); continue; }
         await sleep(DELAY_MS);
         detail = await page.evaluate(() => {
           const body = document.body.innerText.replace(/\r/g, ' ');

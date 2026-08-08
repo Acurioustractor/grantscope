@@ -2,7 +2,7 @@
 
 **Status (2026-08-08):** VIC scraper is **built, hardened and validated** — `--apply` upserts, resume-by-ocid survives restarts, politeness delay, per-run data-quality counts. What has NOT happened is the **full crawl**: ~57,349 contracts across 316 agencies at ~1s each is roughly **16 hours**. That is a deliberate decision to make, not a thing to start by accident, because it means sustained traffic to a government site.
 
-**SA is blocked and cannot be unblocked by us.** SA publishes agency names and contract counts anonymously, but every contract list and detail page redirects to `/login`. SA needs an SA Tenders account. Until someone supplies credentials, "VIC/SA ingest" means VIC.
+**SA is account-gated, and it is small.** Re-tested 2026-08-08 with a warmed session: contract lists and `/contracts/organisationWide` genuinely redirect to `/login`, and `data.sa.gov.au` has no SA contract-level dataset (zero `jurisdiction:"South Australia"` contract datasets; the only SA procurement dataset is State Procurement Board annual aggregates, stale since Oct 2021). But the public buyer index shows SA is **66 agencies and 2,979 contracts** — about a 75-minute crawl in total, 15 minutes for the wedge-relevant subset. The blocker is purely the account. See `docs/strategy/vic-crawl-shortlist.md` for the SA agency table and the terms-of-use question that comes with using one.
 
 **Why:** Unlocks VIC/SA lighthouse buyers (SPF / SAIPP social-procurement obligations). Adds state contract evidence to SE profiles by ABN — the wedge's "evidence depth" lane. Today the evidence layer is federal-only (AusTender), so a VIC/SA buyer can't see their own social-procurement story.
 
