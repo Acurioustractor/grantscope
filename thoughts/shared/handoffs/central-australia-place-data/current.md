@@ -1,188 +1,120 @@
-# Central Australia place data
+# Place data — regions, councils, and the need layer
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-08-08T14:15:00Z
-**Goal:** Apply the Ceduna treatment across remote Australia. **Four regions done:** Central Australia, Far West Coast, the Kimberley, Cape York.
-**Branch:** `feat/place-central-australia` — worktree `/Users/benknight/Code/grantscope-place`, 10 commits, **PR #176 open, all checks green, awaiting Ben's review**. #175 MERGED 8 Aug and live on main
-**Test:** `cd /Users/benknight/Code/grantscope-place/apps/web && npx tsc --noEmit && npx vitest run` (566 passing, was 550)
+**Updated:** 2026-08-08T18:00:00Z
+**Goal:** Make public money legible per place across remote Australia, and say plainly where the records fail. **Shipped, unreviewed.**
+**Branch:** `feat/place-central-australia` — worktree `/Users/benknight/Code/grantscope-place`, **19 commits, PR #176 open, all checks green, NOT merged.** PR #175 merged 8 Aug and is live on main.
+**Test:** `cd /Users/benknight/Code/grantscope-place/apps/web && npx tsc --noEmit && npx vitest run` (589 passing, was 550)
+**Local:** `cd apps/web && npx next dev --turbopack -p 3013` → http://localhost:3013/place/council
 
 ### Now
-[->] Nothing running. Dev server stopped. **Only open item is Ben's review of the #176 Vercel preview.**
+[->] Nothing running except possibly a dev server on 3013 (`pkill -f "next dev.*3013"`). **The only open task is Ben reviewing the pages and merging #176.**
 
-### This Session
-- [x] **Central Australia survived the migrations.** `mv_lga_place_profile` matches live `gs_entities` counts exactly for all five councils. This was the thing worth re-checking rather than assuming, and it held
-- [x] **The Far West Coast did not survive.** The postcode_geo rebuild moved all 23 organisations from Maralinga Tjarutja to Ceduna. Maralinga Tjarutja now holds **zero**. The registry entry claimed the opposite — fixed
-- [x] **Hub administration is now a typed registry field** (`HubAdministration`), declared for both regions, with the credited total computed per request
-- [x] **$93.6M of Utopia money is credited to Alice Springs**, verified org by org
-- [x] **Utopia is not in the national gazetteer** — recorded as `GazetteerGap`
-- [x] **Grants now read on registered address** beside the delivered figure. Delivery-keyed alone understated Central Desert by 76x
-- [x] Verified by render: `/place/central-australia` HTTP 200 with $93.6M, $401.8M, $212.8M matching the register
+---
 
-### The two figures, side by side
+## What exists now
 
-| Council | Delivered here (old, delivery-keyed) | Held by orgs based here (new) |
-|---|---|---|
-| Alice Springs | $207.3M | **$2,441.1M** |
-| Barkly (Tennant Creek) | $18.4M | **$401.8M** |
-| MacDonnell | $7.0M | **$285.1M** |
-| Central Desert | $2.8M | **$212.8M** |
-| APY Lands | $0 | **$5.3M** |
+**Nav → Platform → "Remote Communities"** → `/place/council`. Nothing linked to any of this until the final commit; it was reachable only by typing URLs.
 
-93% of awards in this region publish no delivery location. The old figure was a 7% slice presented as a total.
+| Route | What it is |
+|---|---|
+| `/place/council` | Index of all **117 remote councils** holding 1,769 community-controlled orgs |
+| `/place/council/[slug]` | Generated per-council page — unplaced orgs, gazetteer gaps, schools, overcrowding, SEIFA, org types, explicit gaps, correction invite |
+| `/place/central-australia` | Fullest hand-done region. Everything |
+| `/place/kimberley` | Hand-done |
+| `/place/cape-york` | Hand-done |
+| `/place/far-west-coast` | The original Ceduna page. **Deliberately NOT converged** — it is richer than `RegionReport` |
 
-### The $93.6M, org by org
+`/places` (plural) is a **different, older route** — postcode funding-gap analysis. Do not confuse them.
 
-All five carry `lga_name = 'Alice Springs'`. All five work in the Utopia homelands, roughly 250km north-east.
+---
 
-| Organisation | Postcode | Grants | Contracts |
+## The five misattribution mechanisms
+
+The intellectual core. Each region revealed a different one; none was predictable from the last.
+
+1. **Hub inside the region.** Alice Springs carries **$93.6M** of Utopia money (Urapuntja Health Service $49.6M, Urapuntja Aboriginal Corp $41.4M, Artists of Ampilatwatja, Arlparra, Utopia Farms). Broome carries **$17.1M** of Dampier Peninsula money. Ceduna carries Oak Valley, Yalata, Koonibba.
+2. **Hub outside the region.** Cape York: **$661.1M** recorded against **Cairns**, which is not on Cape York. Includes **Kowanyama Aboriginal Council — a local government — at $26.1M**. Forced the `hubIsOutsideRegion` flag.
+3. **Absent from the gazetteer.** URAPUNTJA, MULGA BORE, AHERRENGE, ARDYALOON, DJARINDJIN, LOMBADINA, BEAGLE BAY, BIDYADANGA have no ABS SAL_2021 entry. The localities above them (SANDOVER, DAMPIER PENINSULA) each straddle two councils, so resolving to them still names no council.
+4. **Confidently wrong.** Cape York has **zero** gazetteer gaps — reference data is fine, addresses are not. Worse than absence: nothing signals doubt.
+5. **Wrong state.** **13 APY Lands organisations recorded as NT / Alice Springs**, carrying ~$6.4M. The APY Lands are South Australian. Breaks the coarsest geography there is.
+
+---
+
+## Data layers added, with licences
+
+| Layer | Source | Licence | Grain |
 |---|---|---|---|
-| Urapuntja Health Service Aboriginal Corporation | 0871 | $49.6M / 27 | — |
-| Urapuntja Aboriginal Corporation | 0872 | $41.4M / 21 | $427,174 |
-| The Artists of Ampilatwatja Aboriginal Corporation | 0871 | $1.6M / 5 | — |
-| Arlparra Aboriginal Corporation | 0872 | $558,030 / 3 | — |
-| Utopia Farms Aboriginal Corporation | 0870 | — | — |
+| **Schools** — ICSEA, enrolments, Indigenous % | `acara_schools` (already in DB, 9,755, 2025) | — | council + real lat/lng |
+| **Overcrowding** | AIHW HPF measure 2.01, table D2.01.10 | **CC BY 4.0** | remoteness class |
+| **RHD** | AIHW HPF measure 1.06, table D1.06.12 | **CC BY 4.0** | NT regions only |
+| **IRSEO** — 401 Indigenous Areas | Biddle & Markham 2023, CAEPR ANU | **Authors retain copyright**, used with attribution on Ben's call | Indigenous Area |
+| SEIFA IRSD / **IEO** / **IER** | already in DB | — | postcode |
 
-`Ampilatwatja Health Centre Aboriginal Corporation` ($34.1M) correctly resolves to Barkly — the same community, a different filed address, a different council. `Alyawarr Ingkerr-wenh Aboriginal Corporation` is in no council area at all.
+Data file: `apps/web/src/data/irseo-2021.json` (401 areas, 53KB). Modules: `school-need-signal.ts`, `overcrowding-signal.ts`, `rhd-signal.ts`, `irseo-signal.ts` — all typed with guards, no DB tables added.
 
-### The Goods contrast — deliberately not on any surface
+**Headline figures:** Very remote Australia — **31.3%** of First Nations households overcrowded vs 2.7% of others (**11.6×**), 933 need 4+ extra bedrooms. Central Australia RHD — **625 First Nations people, 2.9 in every 100, rate ratio 31**. Central Desert schools — ICSEA **612**, 3.9 SD below the mean, 96.3% Indigenous. **Urapuntja is Indigenous Area 709012, 99th percentile of disadvantage** — the only geography in the codebase that names Utopia.
 
-Ben's call this session: **nowhere yet.** All three Notion community rows are `Publish to site = NO`, and Utopia's consent status is `Not checked` with storyteller permissions still to be packaged. So this lives here and nowhere else until consent is packaged.
+**The renewal cliff:** 58–64% of committed federal money ends within 24 months in every region. Central Australia $1,829.1M committed, $1,170.6M ending.
 
-It is the whole argument for the evidence layer, so it should not be lost:
+---
 
-| Place | CivicGraph says (money) | Goods ledger says (delivery) |
+## Bugs found and fixed this session
+
+- **Far West registry described the inverse of the data.** The postcode_geo rebuild moved all 23 orgs from Maralinga Tjarutja to Ceduna; the entry still claimed the opposite. Dead config, not user-visible.
+- **Unplaced list never filtered on `lga_name`** — printed every org in the postcode under a heading saying none could be placed.
+- **Five councils vanished from their own pages**, four of them Aboriginal shires (Maralinga Tjarutja, Hope Vale, Mapoon, Napranum, Lockhart River). Councils were built from returned MV rows; a council whose orgs were all nulled produces no row. Cape York showed 9 of 13.
+- **Grants read on delivery location** — a 7% slice presented as a total. Central Desert $2.8M vs $212.8M actually held.
+- **SEIFA read the postcodes the council's organisations are registered in**, not the postcodes ABS assigns to the council. Put the registered-address distortion inside a need measure. Central Desert reported 3/4.5/2; correct is 1/1/1.
+- **Social enterprises joined on postcode** — credited Central Desert with 150, all in 0872. ABN join gives 8.
+- **Nothing linked to any of it.** Found only when Ben asked where the pages were.
+
+---
+
+## Corrections to my own claims (so they are not repeated)
+
+- **`/map` does not show duplicate councils** — `/api/data/map` already wraps `mv_funding_deserts` in `DISTINCT ON`. I diagnosed the table and reported it as the screen.
+- **Converging Far West into `RegionReport` would be a downgrade.** It already has a hub section and `getPostcodeFundingPicture`, plus crime suppression and per-community distances. And `Maralinga Tjarutja` has no MV row, so `RegionReport` cannot render its card at all.
+- **#175 had no user-visible bug** — `getPlaceIntelligence` has no consumer outside its own module.
+- **IRSEO does not carry overcrowding as a column.** It is an input to the composite, not a field. Community-level crowding remains unsolved.
+- **An `ILIKE '%APY %'` matched "therAPY "** and produced a confident wrong answer. Beware short acronyms.
+
+---
+
+## Next
+
+- [ ] **Review the preview and merge #176.** 19 commits, nothing live until it lands
+- [ ] **`/map` shows stale attribution.** `mv_entity_power_index` holds 161,689 placed entities vs 235,818 live — one refresh behind, so Ceduna reads as 1 org instead of 23. Fix: `node --env-file=.env scripts/refresh-views-v2.mjs --view mv_entity_power_index` then `--view mv_funding_deserts`. **Production refresh, needs Ben's go-ahead**
+- [ ] **`/map` dedup rule biases the map.** `ORDER BY desert_score DESC` picks the most-severe row for councils spanning remoteness classes. Should order by modal remoteness
+- [ ] `mv_funding_deserts` is genuinely duplicated (2,019 rows / 1,133 councils). Corrected definition written and dry-run — yields exactly 1,133 — but **two MVs depend on it** (`mv_disability_landscape`, `mv_foundation_need_alignment`) so it cannot be replaced without dropping all three. Not worth the blast radius for the map
+- [ ] Confidence overlay on `/map`: "share of organisations we cannot place" as a selectable measure. All data now exists
+- [ ] Corrections currently go to a **mailto**, which does not accumulate. A `place_corrections` table + moderation queue is the real version — DDL, needs Ben
+- [ ] IRSEO joined by **name**, not point-in-polygon. A true join needs the ABS Indigenous Structure boundary file
+- [ ] Kimberley unplaced list capped at 300 of 721; the other 421 are named nowhere
+- [ ] Crime coverage is wildly uneven — NSW 99 councils, NT 6. Shown as an explicit gap
+- [ ] `Top End` RHD figures loaded but unused; appear if a Top End region is added
+
+## Decisions
+- **State it, don't move it.** Utopia orgs keep their Alice Springs attribution. Nulling would make Utopia *less* visible and ABS offers nothing to re-place them with. Editorial and reversible; **the database is unchanged**
+- **No Goods data on any surface.** All three Notion rows are `Publish to site = NO`; Utopia consent `Not checked`
+- **Credited-org lists are hand-checked names, never heuristics.** No rule separates a homeland org from a town one
+- **Both grant figures shown**, delivered and held — neither replaced
+- **Empty councils render as "nothing in our records", not zeros.** Zeros claim nothing happens there
+- **Only signals with honest geography go on the page.** Broken ones render as named gaps
+- **IRSEO used with scholarly attribution**, Ben's call, not under an open licence
+
+## Open questions
+- Does it read as respectful or as a deficit inventory? Every page describes communities by disadvantage
+- Is Central Australia now too dense — nine or ten sections?
+- Have the caveats passed honest into exhausting?
+- **UNVERIFIED by a human: whether someone from Utopia or Hope Vale would recognise themselves in it.** That was always the actual test
+
+## Goods contrast — still not on any surface
+| Place | CivicGraph (money) | Goods ledger (delivery) |
 |---|---|---|
-| Alice Springs | 823 orgs, $2,441M held, $688M contracts | **16 beds**, 1 washing machine — the build base |
-| Tennant Creek | 108 orgs, $402M held, $35M contracts | **160 beds**, 9 washing machines, deepest co-design history |
-| Utopia / Urapuntja | **no council area at all** | **147 beds** (60 Basket + 87 Stretch) |
+| Alice Springs | 823 orgs, $2,441M held | **16 beds** — the build base |
+| Tennant Creek | 108 orgs, $402M held | **160 beds**, 9 washing machines |
+| Utopia / Urapuntja | **no council area** | **147 beds** (60 Basket + 87 Stretch, confirmed) |
 
-The money map and the delivery map point opposite ways. The place with the most money on paper has the least delivered; the place with the second-most delivered is geographically nowhere.
-
-**Ben had already hand-corrected this pattern inside Goods' own data.** The Alice Springs row carries the note *"Do not double-count Utopia/Urapuntja basket beds here — those sit on the Utopia row."* The hub-administration distortion is not only in government registers. It reaches into Goods' own delivery ledger, and a human caught it there manually.
-
-**Utopia bed count, confirmed by Ben 2026-08-08: 60 Basket + 87 Stretch = 147.** The properties are right. The **prose is stale** in three places in Notion, all claiming a 107-Stretch May figure that was later revised:
-
-- Utopia row, `Next action`: *"Split held as 60 Basket + 109 Stretch (107 May + 2 latest)"*
-- Utopia row, `What this place proves or tests`: *"107 Stretch from May field-note trip; +2 Stretch on latest trip. Total 169 (60 Basket + 109 Stretch)"*
-- Alice Springs row, `Next action`: *"those sit on the Utopia row (60 Basket + 107 May Stretch)"*
-
-Not yet corrected — Notion edits are Tier 2 and need Ben's go-ahead.
-
-### The Kimberley (added same session)
-
-Same shape as Utopia, verified the same way. **ARDYALOON, DJARINDJIN, LOMBADINA, BEAGLE BAY, BIDYADANGA are all absent from ABS SAL_2021.** DAMPIER PENINSULA, the locality above four of them, spans **Broome and Derby-West Kimberley** — so resolving to it still names no council. Bidyadanga is the largest remote Aboriginal community in WA and has no gazetteer entry at all.
-
-**$17.1M credited to Broome**, four organisations, each checked individually:
-
-| Organisation | Counted under | Grants | Contracts |
-|---|---|---|---|
-| Djarindjin Aboriginal Corporation | Broome · 6725 | $10.1M / 14 | $635,659 |
-| Ardyaloon Incorporated | Broome · 6725 | $4.0M / 15 | $644,184 |
-| Bardi and Jawi Niimidiman Aboriginal Corporation RNTBC | Broome · 6725 | $1.5M / 3 | — |
-| Ardyaloon Art & Culture Aboriginal Corporation | Broome · 6725 | $231,000 / 2 | — |
-
-**The wall is worse here than anywhere yet measured.** Halls Creek: 5 organisations with a council area, 100 in postcode 6770 without, 75 of them community-controlled. Region-wide, **391 of 721 unplaced organisations are community-controlled**, spread across five postcodes (6725, 6743, 6770, 6765, 6740).
-
-`unplaced` now takes a list of postcodes. Naming only the largest would have reported a fraction as the whole.
-
-### The renewal cliff — consistent enough to look structural
-
-Added last, and the most alarming thing the work surfaced. Between **58% and 64%** of committed federal money ends inside two years, in every region:
-
-| Region | Committed now | Ends within 24 months | Share |
-|---|---|---|---|
-| Central Australia | $1,829.1M | $1,170.6M | **64%** |
-| The Kimberley | $1,085.5M | $634.6M | **58%** |
-| Cape York | $369.2M | $224.8M | **61%** |
-| Far West Coast | $215.7M | (own page) | — |
-
-Named largest-first with agency and month. Central Land Council's Jobs, Land and the Economy agreement is $58M ending June 2028; MacDonnell Regional Council's Community Child Care Fund $30.2M, October 2027.
-
-**Framing on the page is hedged deliberately:** *"An agreement ending is not the same as funding stopping, but it is the moment a decision gets made somewhere else."* An expiring agreement is not a cut. It is a decision point, and typically not a local one.
-
-Region scope deliberately matches the delivery-coverage query — every council plus the unplaced postcodes — so organisations with no council area are counted. They are the most likely to be missed, and a cliff they are standing on is the last thing that should be invisible.
-
-### Cape York — the region that broke the model
-
-Verified the same way, and the org-by-org step earned its keep: it caught a shape the type could not express.
-
-**The hub is outside the region.** Every earlier region had a hub inside it. On Cape York each community has its own shire council, so there is no in-region hub, and the distortion is *worse* rather than absent. **$661.1M** ($645.2M grants + $15.9M contracts) is recorded against **Cairns**, which is not on Cape York:
-
-| Organisation | Counted under | Grants |
-|---|---|---|
-| Apunipima Cape York Health Council | Cairns · 4870 | $273.8M |
-| Cape York Solutions | Cairns · 4870 | $113.9M |
-| Cape York Land Council | Cairns · 4870 | $112.2M |
-| Cape York Employment | Cairns · 4870 | $56.7M |
-| AFL Cape York | Cairns · 4870 | $29.2M |
-| **Kowanyama Aboriginal Council** | Cairns · 4870 | $26.1M |
-| Cape York Institute | Cairns · 4870 | $14.9M |
-| Lockhart River Aboriginal Shire Council Youth Support | Cairns · 4870 | $13.2M |
-
-Kowanyama Aboriginal Council is a **local government**, recorded as a Cairns organisation. Kowanyama shire holds one organisation.
-
-**Three things this region taught us:**
-
-1. **`hubIsOutsideRegion` was needed.** The guard required `hubLga ∈ lgaNames`. That held twice and would have forced Cape York to either mislabel Cairns as a Cape York council or drop the finding. Adding Cairns to `lgaNames` was the wrong fix — thousands of unrelated orgs would bury the peninsula in its own page.
-2. **A confident wrong answer is worse than a null.** Utopia and the Dampier Peninsula fall out of the gazetteer and land unplaced, which a page can say. Kowanyama Aboriginal Council is placed, wrongly, with nothing signalling doubt. **Cape York has zero gazetteer gaps** — the reference data is fine and the addresses are not.
-3. **A community can scatter across four councils.** Kowanyama appears under Cairns, Carpentaria, Kowanyama and Tablelands. Carpentaria and Tablelands are not on Cape York.
-
-Four shires — **Hope Vale, Mapoon, Napranum, Lockhart River** — hold **zero** organisations in our records.
-
-### Bug found and fixed while reading
-
-**The unplaced list never filtered on `lga_name`.** It printed every organisation in the postcode under a heading saying none of them could be placed. Urapuntja Aboriginal Corporation appeared as unplaceable on the same page that showed it counted under Alice Springs. Central Australia's list is now 87 genuinely unplaced organisations.
-
-### Correction to two claims I made about the next steps
-
-1. **"Converging Far West into RegionReport is the obvious next refactor" — wrong, it would be a downgrade.** I said Far West showed "neither the hub section nor the registered-address grant figure". It has both: a hub section at line 113 and `getPostcodeFundingPicture` for 5690 *and* 5680. It also has crime suppression, per-community distances and the corrections narrative, none of which `RegionReport` had. And **Maralinga Tjarutja has no `mv_lga_place_profile` row**, so `RegionReport` cannot render its card at all — the line "holds no organisations, not because none work there" would silently vanish, which is the erasure that page exists to stop. The arrow points the other way, and the communities table has now been lifted *up* into `RegionReport`.
-2. **"Cape York may not fit the pattern" — right instinct, wrong reason.** The shires do each have a council. That is precisely *why* the distortion is worse: the councils exist and are still credited elsewhere.
-
-### Correction to an earlier claim in this handoff
-
-I told Ben #175 shipped a user-visible bug (a page claiming Maralinga Tjarutja carries the Ceduna township). **That was wrong.** `getPlaceIntelligence` has no consumer outside its own module; the Far West Coast page runs its own hardcoded query and its own prose, which is accurate. The stale registry entry was dead config, fixed on this branch. No cherry-pick was needed.
-
-### Next
-- [x] **PR #175 MERGED** 8 Aug, squash, all checks green. Ceduna and Far West are live on main
-- [ ] **Review the #176 preview and merge.** Ten commits, four regions, all checks green. The argument is visual — whether a reader in Tennant Creek, Utopia or Hope Vale recognises their own place
-- [ ] Correct the stale 107/109-Stretch prose in three Notion fields (147 is confirmed correct)
-- [ ] Utopia consent is `Not checked` — that gates any public Goods surface, not just storyteller names
-- [ ] `mv_lga_place_profile` is delivery-keyed. Any other page reading it understates the same way. Worth an audit of consumers
-- [x] **DONE: `getPostcodeFundingPicture` lifted up.** Its three queries differed only in which organisations they counted, so the scope is a predicate now and a postcode and a region are the same question. Every region has the renewal cliff; Far West unchanged at $215.7M committed
-- [ ] **Still do NOT converge Far West into `RegionReport`.** It remains the richer page. The one thing left to lift up is crime suppression (`getLgaAttribution`)
-- [x] **FIXED: councils with no `mv_lga_place_profile` row no longer vanish.** Five were missing — Maralinga Tjarutja plus the Hope Vale, Mapoon, Napranum and Lockhart River shires, **four of the five Aboriginal shire councils**. Cape York was showing 9 of its 13. Councils are now built from the region's declared `lgaNames`, and a missing row renders as an explicit "nothing in our records" card, *not* a row of zeros — zeros would claim nothing happens there, which is false: Lockhart River's council runs a youth service with 45 grants worth $13.2M, all counted under Cairns. Empty councils sort last and alphabetically. A guard now requires every declared council to carry a label
-- [ ] Kimberley unplaced list is capped at 300 of 721 for display. The cap is reported, but the other 421 organisations are named nowhere. Cape York shows 109 of 345, Central Australia 87 of 143 — both under the cap
-- [ ] The "Showing N of M" caption compares two populations: N is community-controlled and currently-registered, M is every unplaced organisation in the postcodes. Honest but not obvious
-- [ ] Next region: APY Lands. It is currently a single council row inside `central-australia` with 5 orgs and $0 delivered, which almost certainly understates it the way Ceduna was understated
-
-### Decisions
-- **State it, don't move it.** The Utopia orgs keep their Alice Springs attribution. Nulling them would have been consistent with the Ceduna precedent but would make Utopia *less* visible, and ABS offers nothing to re-place them with. The correction is editorial and reversible; the database is unchanged
-- **No Goods data on any surface**, public or internal, until consent is packaged
-- **Credited orgs are a name list, not a heuristic.** No rule separates a homeland organisation from a town one. Each name was checked against `lga_name` individually
-- **Both grant figures shown, neither replaced.** Delivered says where money is spent; held says which organisations hold it. Neither is the whole answer
-- **Only orgs sitting inside the hub's own figure count toward the credited total.** An org placed elsewhere, or nowhere, is not inflating the hub, and including it would overstate the problem
-
-### Open Questions
-- UNCONFIRMED: whether Urapuntja people would accept "Sandover" as the name for the place, given ABS has no entry for Urapuntja. Question for the room
-- ~~UNCONFIRMED: the 147/169 bed discrepancy~~ **RESOLVED 2026-08-08: 147 is correct. The prose was stale, not the properties**
-- The 64,801 wall is unmoved. Postcode 0872 holds **139 unplaced organisations, 137 of them community-controlled** (98.6%), only 65 with an ABN. Compare postcode 0820, Darwin's suburbs: 657 orgs, 49 community-controlled. The wall falls almost entirely on community-controlled organisations
-
-### Workflow State
-pattern: diagnose-then-fix
-phase: 5
-total_phases: 5
-retries: 0
-max_retries: 3
-
-#### Resolved
-- goal: "apply the Ceduna treatment to Central Australia" — DONE
-- utopia_attribution: state it, don't move it — applied, DB unchanged
-- goods_surface: nowhere yet, handoff only — applied
-- hub_pattern: generalised to a typed registry field for both regions
-
-#### Resolved (continued)
-- utopia_bed_count: **147 (60 Basket + 87 Stretch)**, confirmed by Ben 2026-08-08. Stale prose in three Notion fields still to correct
-
-#### Unknowns
-- next_region: UNKNOWN — Ben's pick (APY / Kimberley / Cape York)
+Notion bed-count prose corrected 8 Aug to 147 across three fields.
