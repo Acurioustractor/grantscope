@@ -31,6 +31,26 @@ grounding that prompt assumes, verified rather than remembered.
 
 Also built: `/procurement/tender-pack`, `/procurement/gap-map`, `/procurement/commissioning`.
 
+## RESOLVED 2026-08-08 — and the fork below was built on a false premise
+
+**Outcome: NSW Department of Communities and Justice.** Pack built at `thoughts/shared/prospects/nsw-dcj/`.
+
+The claim below that "every one of the 417 prospects is a Commonwealth agency" is **wrong**.
+`austender_contracts` carries NSW eTender disclosures (`source_url` = `tenders.nsw.gov.au`) alongside
+Commonwealth rows, so state buyers were in the pool the whole time — NSW DCJ ranks 8th overall with 91 SE
+suppliers and $3.69B. That made a third path available: a state buyer, with a state obligation, whose
+evidence needs no ingest at all. Neither Path A nor Path B was the right answer.
+
+Two further corrections found while verifying:
+
+- **`scout-se-buyers.mjs` was inflating every figure.** Its ABN lookup deduped on the whole tuple, not the
+  ABN, so 527 duplicate registry rows fanned the contract join out. The "$10.8B DSS" number quoted in
+  Path A below is really **$3.98B**. Fixed and rebuilt 2026-08-08.
+- **An NIAA pack has been built and demo-ready since 2026-06-09**, which this plan did not mention. See
+  `thoughts/shared/prospects/PIPELINE.md`. Its figures are now stale and are corrected there.
+
+Everything below is left as written, for the record.
+
 ## The fork that has to be resolved first
 
 `docs/strategy/buyer-wedge.md` says to target **a Vic or SA government buyer** with SPF/SAIPP mandated
