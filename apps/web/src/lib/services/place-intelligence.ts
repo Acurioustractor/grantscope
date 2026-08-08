@@ -90,14 +90,6 @@ interface RawProfile {
 }
 
 /**
- * A region this service can describe.
- *
- * These were hardcoded to Central Australia. They are configuration now because
- * the same shape holds anywhere: a set of council areas, optionally a postcode
- * whose organisations have no council area at all, and labels that use the
- * names people there actually use.
- */
-/**
  * Outstations are administered from the regional centre, so postcode,
  * registered address and postal locality all point at the hub. The hub is then
  * credited with money earned by the communities it administers.
@@ -151,6 +143,14 @@ export interface GazetteerGap {
   note: string;
 }
 
+/**
+ * A region this service can describe.
+ *
+ * These were hardcoded to Central Australia. They are configuration now because
+ * the same shape holds anywhere: a set of council areas, optionally the
+ * postcodes whose organisations have no council area at all, and labels that
+ * use the names people there actually use.
+ */
 export interface PlaceRegion {
   key: string;
   lgaNames: string[];
@@ -576,7 +576,6 @@ export const getPlaceIntelligence = cache(
     // the agencies funding Indigenous affairs and social services publish a
     // delivery location on almost nothing, so a map of delivered grants shows a
     // small and unrepresentative slice.
-    const quoted = (values: string[]) => values.map(value => `'${value.replace(/'/g, "''")}'`).join(',');
     const unplacedClause = region.unplaced
       ? ` OR e.postcode IN (${quoted(region.unplaced.postcodes)})`
       : '';
@@ -785,8 +784,7 @@ export const getHubAdministrationPicture = cache(
  * elsewhere, and a service delivered here may be run from Adelaide. Both
  * caveats travel to the page rather than sitting in this comment.
  */
-export interface PostcodeFundingPicture {
-  postcode: string;
+export interface FundingPicture {
   awards: number;
   recipients: number;
   lifetimeValue: number;
@@ -800,75 +798,117 @@ export interface PostcodeFundingPicture {
   endingSoon: Array<{ recipient: string; agency: string; program: string; value: number; endDate: string }>;
 }
 
+export interface PostcodeFundingPicture extends FundingPicture {
+  postcode: string;
+}
+
+/** Quote a list for an IN clause. Values here are code-defined, never user input. */
+function quoted(values: string[]): string {
+  return values.map(value => `'${value.replace(/'/g, "''")}'`).join(',');
+}
+
+/**
+ * The funding picture for any set of recipients.
+ *
+ * The three queries differ only in which organisations they count, so the scope
+ * is a predicate on `e` and everything else is shared. A postcode and a region
+ * are then the same question asked of a different set of people.
+ */
+async function fundingPictureForScope(scopeSql: string): Promise<FundingPicture | null> {
+  const db = getServiceSupabase();
+
+  const [totals, programs, ending] = await Promise.all([
+    db.rpc('exec_sql', {
+      query: `SELECT count(*) AS awards,
+                     count(DISTINCT ga.recipient_abn) AS recipients,
+                     coalesce(sum(ga.value_aud),0) AS lifetime_value,
+                     count(*) FILTER (WHERE ga.end_date >= current_date) AS active_awards,
+                     coalesce(sum(ga.value_aud) FILTER (WHERE ga.end_date >= current_date),0) AS active_value,
+                     coalesce(sum(ga.value_aud) FILTER (WHERE ga.end_date >= current_date
+                                                          AND ga.end_date < current_date + interval '24 months'),0) AS ending_24m_value,
+                     count(*) FILTER (WHERE ga.delivery_postcode IS NOT NULL) AS with_delivery_pc
+                FROM grantconnect_awards ga
+                JOIN gs_entities e ON e.id = ga.gs_entity_id
+               WHERE ${scopeSql}`,
+    }),
+    db.rpc('exec_sql', {
+      query: `SELECT ga.agency, ga.grant_program AS program, count(*) AS awards, coalesce(sum(ga.value_aud),0) AS value
+                FROM grantconnect_awards ga
+                JOIN gs_entities e ON e.id = ga.gs_entity_id
+               WHERE ${scopeSql} AND ga.grant_program IS NOT NULL
+               GROUP BY 1,2 ORDER BY value DESC LIMIT 8`,
+    }),
+    db.rpc('exec_sql', {
+      query: `SELECT ga.recipient_name AS recipient, ga.agency, ga.grant_program AS program,
+                     coalesce(ga.value_aud,0) AS value, ga.end_date::text AS end_date
+                FROM grantconnect_awards ga
+                JOIN gs_entities e ON e.id = ga.gs_entity_id
+               WHERE ${scopeSql}
+                 AND ga.end_date >= current_date
+                 AND ga.end_date < current_date + interval '24 months'
+               ORDER BY ga.value_aud DESC NULLS LAST LIMIT 10`,
+    }),
+  ]);
+
+  const row = Array.isArray(totals.data) ? (totals.data[0] as Record<string, unknown>) : null;
+  if (!row || num(row.awards as number | string | null) === 0) return null;
+
+  return {
+    awards: num(row.awards as number | string | null),
+    recipients: num(row.recipients as number | string | null),
+    lifetimeValue: num(row.lifetime_value as number | string | null),
+    activeAwards: num(row.active_awards as number | string | null),
+    activeValue: num(row.active_value as number | string | null),
+    endingWithin24mValue: num(row.ending_24m_value as number | string | null),
+    withDeliveryPostcode: num(row.with_delivery_pc as number | string | null),
+    topPrograms: (Array.isArray(programs.data) ? programs.data : []).map(entry => {
+      const record = entry as Record<string, unknown>;
+      return {
+        agency: String(record.agency ?? ''),
+        program: String(record.program ?? ''),
+        awards: num(record.awards as number | string | null),
+        value: num(record.value as number | string | null),
+      };
+    }),
+    endingSoon: (Array.isArray(ending.data) ? ending.data : []).map(entry => {
+      const record = entry as Record<string, unknown>;
+      return {
+        recipient: String(record.recipient ?? ''),
+        agency: String(record.agency ?? ''),
+        program: String(record.program ?? ''),
+        value: num(record.value as number | string | null),
+        endDate: String(record.end_date ?? ''),
+      };
+    }),
+  };
+}
+
+/**
+ * The same picture for a whole region: every council it reads, plus the
+ * postcodes whose organisations have no council at all.
+ *
+ * Scoped exactly like the delivery-coverage query, so the unplaced
+ * organisations are counted here rather than falling between the two. They are
+ * the ones most likely to be missed, and a renewal cliff they are standing on
+ * is the last thing that should be invisible.
+ */
+export const getRegionFundingPicture = cache(
+  async function getRegionFundingPicture(regionKey: string): Promise<FundingPicture | null> {
+    const region = PLACE_REGIONS[regionKey];
+    if (!region) return null;
+    const unplacedClause = region.unplaced
+      ? ` OR e.postcode IN (${quoted(region.unplaced.postcodes)})`
+      : '';
+    return fundingPictureForScope(
+      `e.state IN (${quoted(region.states)}) AND (e.lga_name IN (${quoted(region.lgaNames)})${unplacedClause})`,
+    );
+  },
+);
+
 export const getPostcodeFundingPicture = cache(
   async function getPostcodeFundingPicture(postcode: string): Promise<PostcodeFundingPicture | null> {
     if (!/^\d{4}$/.test(postcode)) return null;
-    const db = getServiceSupabase();
-
-    const [totals, programs, ending] = await Promise.all([
-      db.rpc('exec_sql', {
-        query: `SELECT count(*) AS awards,
-                       count(DISTINCT ga.recipient_abn) AS recipients,
-                       coalesce(sum(ga.value_aud),0) AS lifetime_value,
-                       count(*) FILTER (WHERE ga.end_date >= current_date) AS active_awards,
-                       coalesce(sum(ga.value_aud) FILTER (WHERE ga.end_date >= current_date),0) AS active_value,
-                       coalesce(sum(ga.value_aud) FILTER (WHERE ga.end_date >= current_date
-                                                            AND ga.end_date < current_date + interval '24 months'),0) AS ending_24m_value,
-                       count(*) FILTER (WHERE ga.delivery_postcode IS NOT NULL) AS with_delivery_pc
-                  FROM grantconnect_awards ga
-                  JOIN gs_entities e ON e.id = ga.gs_entity_id
-                 WHERE e.postcode = '${postcode}'`,
-      }),
-      db.rpc('exec_sql', {
-        query: `SELECT ga.agency, ga.grant_program AS program, count(*) AS awards, coalesce(sum(ga.value_aud),0) AS value
-                  FROM grantconnect_awards ga
-                  JOIN gs_entities e ON e.id = ga.gs_entity_id
-                 WHERE e.postcode = '${postcode}' AND ga.grant_program IS NOT NULL
-                 GROUP BY 1,2 ORDER BY value DESC LIMIT 8`,
-      }),
-      db.rpc('exec_sql', {
-        query: `SELECT ga.recipient_name AS recipient, ga.agency, ga.grant_program AS program,
-                       coalesce(ga.value_aud,0) AS value, ga.end_date::text AS end_date
-                  FROM grantconnect_awards ga
-                  JOIN gs_entities e ON e.id = ga.gs_entity_id
-                 WHERE e.postcode = '${postcode}'
-                   AND ga.end_date >= current_date
-                   AND ga.end_date < current_date + interval '24 months'
-                 ORDER BY ga.value_aud DESC NULLS LAST LIMIT 10`,
-      }),
-    ]);
-
-    const row = Array.isArray(totals.data) ? totals.data[0] as Record<string, unknown> : null;
-    if (!row || num(row.awards as number | string | null) === 0) return null;
-
-    return {
-      postcode,
-      awards: num(row.awards as number | string | null),
-      recipients: num(row.recipients as number | string | null),
-      lifetimeValue: num(row.lifetime_value as number | string | null),
-      activeAwards: num(row.active_awards as number | string | null),
-      activeValue: num(row.active_value as number | string | null),
-      endingWithin24mValue: num(row.ending_24m_value as number | string | null),
-      withDeliveryPostcode: num(row.with_delivery_pc as number | string | null),
-      topPrograms: (Array.isArray(programs.data) ? programs.data : []).map(entry => {
-        const record = entry as Record<string, unknown>;
-        return {
-          agency: String(record.agency ?? ''),
-          program: String(record.program ?? ''),
-          awards: num(record.awards as number | string | null),
-          value: num(record.value as number | string | null),
-        };
-      }),
-      endingSoon: (Array.isArray(ending.data) ? ending.data : []).map(entry => {
-        const record = entry as Record<string, unknown>;
-        return {
-          recipient: String(record.recipient ?? ''),
-          agency: String(record.agency ?? ''),
-          program: String(record.program ?? ''),
-          value: num(record.value as number | string | null),
-          endDate: String(record.end_date ?? ''),
-        };
-      }),
-    };
+    const picture = await fundingPictureForScope(`e.postcode = '${postcode}'`);
+    return picture ? { postcode, ...picture } : null;
   },
 );

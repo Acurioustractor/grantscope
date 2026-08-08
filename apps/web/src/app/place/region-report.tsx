@@ -3,6 +3,7 @@ import Link from 'next/link';
 import {
   getHubAdministrationPicture,
   getPlaceIntelligence,
+  getRegionFundingPicture,
   PLACE_REGIONS,
 } from '@/lib/services/place-intelligence';
 
@@ -33,8 +34,12 @@ function money(value: number): string {
 }
 
 export async function RegionReport({ regionKey, title, intro, children }: RegionReportProps) {
-  const [{ areas, unplacedOrgs, unplacedTotal, gapNote, deregisteredExcluded, deliveryCoverage }, hub] =
-    await Promise.all([getPlaceIntelligence(regionKey), getHubAdministrationPicture(regionKey)]);
+  const [{ areas, unplacedOrgs, unplacedTotal, gapNote, deregisteredExcluded, deliveryCoverage }, hub, funding] =
+    await Promise.all([
+      getPlaceIntelligence(regionKey),
+      getHubAdministrationPicture(regionKey),
+      getRegionFundingPicture(regionKey),
+    ]);
   const computedAt = areas[0]?.computedAt;
   const region = PLACE_REGIONS[regionKey];
   const gazetteerGaps = region.gazetteerGaps;
@@ -78,6 +83,83 @@ export async function RegionReport({ regionKey, title, intro, children }: Region
               place. Each council below is therefore shown two ways: what organisations based there
               hold, and the much smaller slice that names the place as a delivery location.
             </p>
+          </section>
+        ) : null}
+
+        {funding && funding.activeValue > 0 ? (
+          <section aria-labelledby="committed-title" className="border-4 border-bauhaus-black bg-white p-6">
+            <h2 id="committed-title" className="text-2xl font-black uppercase tracking-widest">
+              What is committed, and what runs out
+            </h2>
+            <p className="mt-3 max-w-3xl text-base leading-7">
+              Federal grants held by organisations across this region, counted by where the
+              recipient is registered. An agreement ending is not the same as funding stopping, but
+              it is the moment a decision gets made somewhere else.
+            </p>
+
+            <dl className="mt-6 grid gap-5 sm:grid-cols-3">
+              <div className="border-l-4 border-bauhaus-black pl-4">
+                <dt className="font-mono text-[10px] font-bold uppercase tracking-widest">Committed now</dt>
+                <dd className="mt-1 text-3xl font-black">{money(funding.activeValue)}</dd>
+                <dd className="font-mono text-[11px]">
+                  {funding.activeAwards.toLocaleString('en-AU')} live agreements
+                </dd>
+              </div>
+              <div className="border-l-4 border-bauhaus-red pl-4">
+                <dt className="font-mono text-[10px] font-bold uppercase tracking-widest text-bauhaus-red">
+                  Ends within 24 months
+                </dt>
+                <dd className="mt-1 text-3xl font-black text-bauhaus-red">
+                  {money(funding.endingWithin24mValue)}
+                </dd>
+                <dd className="font-mono text-[11px]">
+                  {funding.activeValue > 0
+                    ? `${Math.round((100 * funding.endingWithin24mValue) / funding.activeValue)}% of what is committed`
+                    : ''}
+                </dd>
+              </div>
+              <div className="border-l-4 border-bauhaus-black pl-4">
+                <dt className="font-mono text-[10px] font-bold uppercase tracking-widest">All time</dt>
+                <dd className="mt-1 text-3xl font-black">{money(funding.lifetimeValue)}</dd>
+                <dd className="font-mono text-[11px]">
+                  {funding.awards.toLocaleString('en-AU')} awards to{' '}
+                  {funding.recipients.toLocaleString('en-AU')} recipients
+                </dd>
+              </div>
+            </dl>
+
+            {funding.endingSoon.length > 0 ? (
+              <div className="mt-8">
+                <h3 className="font-mono text-[11px] font-black uppercase tracking-widest">
+                  The largest agreements ending soonest
+                </h3>
+                <table className="mt-3 w-full border-collapse text-left text-sm">
+                  <thead>
+                    <tr className="border-b-4 border-bauhaus-black">
+                      <th scope="col" className="pb-2 font-mono text-[10px] font-black uppercase tracking-widest">Recipient</th>
+                      <th scope="col" className="pb-2 font-mono text-[10px] font-black uppercase tracking-widest">Program</th>
+                      <th scope="col" className="pb-2 text-right font-mono text-[10px] font-black uppercase tracking-widest">Value</th>
+                      <th scope="col" className="pb-2 text-right font-mono text-[10px] font-black uppercase tracking-widest">Ends</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {funding.endingSoon.map(award => (
+                      <tr key={`${award.recipient}-${award.program}-${award.endDate}`} className="border-b border-bauhaus-black/15 align-top">
+                        <th scope="row" className="py-2 pr-3 text-left font-normal">{award.recipient}</th>
+                        <td className="py-2 pr-3">
+                          {award.program}
+                          {award.agency ? <span className="font-mono text-[11px]"> · {award.agency}</span> : null}
+                        </td>
+                        <td className="py-2 pr-3 text-right tabular-nums">{money(award.value)}</td>
+                        <td className="py-2 text-right font-mono text-xs tabular-nums">
+                          {new Date(award.endDate).toLocaleDateString('en-AU', { month: 'short', year: 'numeric' })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
           </section>
         ) : null}
 
