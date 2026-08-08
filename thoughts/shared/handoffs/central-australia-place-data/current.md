@@ -69,14 +69,35 @@ The money map and the delivery map point opposite ways. The place with the most 
 
 Not yet corrected — Notion edits are Tier 2 and need Ben's go-ahead.
 
+### The Kimberley (added same session)
+
+Same shape as Utopia, verified the same way. **ARDYALOON, DJARINDJIN, LOMBADINA, BEAGLE BAY, BIDYADANGA are all absent from ABS SAL_2021.** DAMPIER PENINSULA, the locality above four of them, spans **Broome and Derby-West Kimberley** — so resolving to it still names no council. Bidyadanga is the largest remote Aboriginal community in WA and has no gazetteer entry at all.
+
+**$17.1M credited to Broome**, four organisations, each checked individually:
+
+| Organisation | Counted under | Grants | Contracts |
+|---|---|---|---|
+| Djarindjin Aboriginal Corporation | Broome · 6725 | $10.1M / 14 | $635,659 |
+| Ardyaloon Incorporated | Broome · 6725 | $4.0M / 15 | $644,184 |
+| Bardi and Jawi Niimidiman Aboriginal Corporation RNTBC | Broome · 6725 | $1.5M / 3 | — |
+| Ardyaloon Art & Culture Aboriginal Corporation | Broome · 6725 | $231,000 / 2 | — |
+
+**The wall is worse here than anywhere yet measured.** Halls Creek: 5 organisations with a council area, 100 in postcode 6770 without, 75 of them community-controlled. Region-wide, **391 of 721 unplaced organisations are community-controlled**, spread across five postcodes (6725, 6743, 6770, 6765, 6740).
+
+`unplaced` now takes a list of postcodes. Naming only the largest would have reported a fraction as the whole.
+
+### Correction to an earlier claim in this handoff
+
+I told Ben #175 shipped a user-visible bug (a page claiming Maralinga Tjarutja carries the Ceduna township). **That was wrong.** `getPlaceIntelligence` has no consumer outside its own module; the Far West Coast page runs its own hardcoded query and its own prose, which is accurate. The stale registry entry was dead config, fixed on this branch. No cherry-pick was needed.
+
 ### Next
 - [ ] **Merge PR #175 first.** This branch is stacked on it and cannot land before it
-- [ ] **The Far West Coast label bug is in #175 as written.** It is fixed on this branch, not on #175. If #175 merges alone it ships a page saying Maralinga Tjarutja carries the township when it holds nothing
 - [ ] Correct the stale 107/109-Stretch prose in three Notion fields (147 is confirmed correct)
 - [ ] Utopia consent is `Not checked` — that gates any public Goods surface, not just storyteller names
 - [ ] `mv_lga_place_profile` is delivery-keyed. Any other page reading it understates the same way. Worth an audit of consumers
-- [ ] The Far West Coast page runs its own hardcoded LGA query rather than `getPlaceIntelligence`, so it does not benefit from `hubAdministration` or the registered-address figure. Converging them would remove a whole class of drift
-- [ ] Next region: APY Lands, Kimberley or Cape York. `HubAdministration` and `GazetteerGap` are ready; each needs its credited-org list verified org by org before it goes on a page
+- [ ] **The Far West Coast page is now the odd one out.** Central Australia and the Kimberley both render from the shared `RegionReport`; Far West still runs its own hardcoded query and prose, so it shows neither `hubAdministration` nor the registered-address grant figure. Converging it is the obvious next refactor and would remove a whole class of drift
+- [ ] Next region: APY Lands or Cape York. Cape York may not show the hub pattern the same way — each community there has its own shire council, so the distortion may sit with Cairns instead. Worth checking before assuming
+- [ ] Kimberley unplaced list is capped at 300 of 721 for display. The cap is reported on the page, but the other 421 organisations are named nowhere
 
 ### Decisions
 - **State it, don't move it.** The Utopia orgs keep their Alice Springs attribution. Nulling them would have been consistent with the Ceduna precedent but would make Utopia *less* visible, and ABS offers nothing to re-place them with. The correction is editorial and reversible; the database is unchanged
