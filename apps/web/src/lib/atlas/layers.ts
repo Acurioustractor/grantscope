@@ -24,6 +24,8 @@
 // DATA must also be stripped server-side (RSC/API) — never sent and hidden
 // client-side. The registry itself holds no figures, only the contract.
 
+import { money } from '@/lib/format';
+
 /** One row of the /api/data/map payload. */
 export interface AtlasFeature {
   lga_name: string;
@@ -38,6 +40,7 @@ export interface AtlasFeature {
   unplaced_count: number;
   placed_count: number;
   unplaced_share: number | null;
+  justice_funding_total: number | null;
   /** Null when the council has no point coordinates; it still renders where a
    * boundary matches its name. Coordinates only drive bounds-fitting. */
   lat: number | null;
@@ -52,6 +55,20 @@ export type AtlasConsentTier = 'public' | 'org' | 'withheld';
  * its own caveat. */
 export type AtlasGeography = 'national' | 'state' | 'council' | 'postcode' | 'community';
 
+/** Picker groups. Substantive layers lead; the map's own error bars sit
+ * last under "How sure are we" — uncertainty qualifies the other layers,
+ * it does not compete with them (Ben, 2026-08-09). */
+export type AtlasLayerGroup = 'money' | 'need' | 'delivery' | 'data-quality';
+
+export const ATLAS_GROUP_ORDER: readonly AtlasLayerGroup[] = ['money', 'need', 'delivery', 'data-quality'];
+
+export const ATLAS_GROUP_LABELS: Record<AtlasLayerGroup, string> = {
+  money: 'Money',
+  need: 'Need',
+  delivery: 'Delivery',
+  'data-quality': 'How sure are we',
+};
+
 /** A step of a layer's color scale. Stops are ordered from highest `min` to
  * lowest; the first stop whose `min` is <= the value wins. */
 export interface AtlasScaleStop {
@@ -64,6 +81,7 @@ export interface AtlasScaleStop {
 
 interface AtlasLayerCommon {
   key: string;
+  group: AtlasLayerGroup;
   /** Plain words. What a person in a room would call it. */
   name: string;
   /** What one unit of the number means, e.g. "% of organisations". */
@@ -169,6 +187,7 @@ const fundingDeserts: AtlasLiveLayer = {
   key: 'funding-deserts',
   status: 'live',
   kind: 'choropleth',
+  group: 'money',
   name: 'Funding deserts',
   unit: 'desert score',
   caveat:
@@ -200,10 +219,107 @@ const fundingDeserts: AtlasLiveLayer = {
   format: v => v.toFixed(0),
 };
 
+// Order-of-magnitude bands, not quantiles: the distribution is extreme-tail
+// (checked 2026-08-09: median council $0, p90 $30M, max $281B).
+const moneyRecorded: AtlasLiveLayer = {
+  key: 'money-recorded',
+  status: 'live',
+  kind: 'choropleth',
+  group: 'money',
+  name: 'Recorded money',
+  unit: '$ recorded reaching the council',
+  caveat:
+    'Every dollar our records can see reaching organisations based in this council — ' +
+    'justice funding, contracts and grants together. Counted where it was recorded, ' +
+    "not where it landed, so a regional hub administering its neighbours' programs " +
+    'reads rich while the places the work reaches read poor. The biggest numbers on ' +
+    'this layer are capital cities and hubs: that is the recording, not the need.',
+  honestAt: 'council',
+  honestAtNote:
+    "Council of the recipient's registered address. Where the work is delivered is " +
+    'mostly unrecorded.',
+  consent: 'public',
+  scale: [
+    { min: 1_000_000_000, color: '#D02020', fillOpacity: 0.7, label: '$1B or more' },
+    { min: 100_000_000, color: '#E06C18', fillOpacity: 0.6, label: '$100M–1B' },
+    { min: 10_000_000, color: '#F0C020', fillOpacity: 0.5, label: '$10M–100M' },
+    { min: 1_000_000, color: '#4CB876', fillOpacity: 0.4, label: '$1M–10M' },
+    { min: 0, color: '#1040C0', fillOpacity: 0.3, label: 'Under $1M' },
+  ],
+  scaleNote: 'Order-of-magnitude bands: half of all councils hold under $1M recorded.',
+  noDataLabel: 'No funding records held',
+  value: f => num(f.total_funding_all_sources),
+  format: v => money(v),
+};
+
+// Same recording caveat as all money here; blank means no records tied to a
+// placed organisation, never "no justice spending".
+const justiceFunding: AtlasLiveLayer = {
+  key: 'justice-funding',
+  status: 'live',
+  kind: 'choropleth',
+  group: 'money',
+  name: 'Justice money',
+  unit: '$ of justice program funding recorded',
+  caveat:
+    'State and federal justice program funding recorded to organisations based in ' +
+    'this council — youth justice, legal services, diversion and adjacent programs. ' +
+    "Recorded at the recipient's registered address like everything else here, so " +
+    'hub crediting applies. Blank does not mean no justice spending: it means no ' +
+    'records our pipeline could tie to a placed organisation.',
+  honestAt: 'council',
+  honestAtNote:
+    "Council of the recipient's registered address; the program itself may run " +
+    'somewhere else entirely.',
+  consent: 'public',
+  // Checked 2026-08-09: 540 councils hold justice records; median $1.2M,
+  // p75 $11M, p90 $55M, max $29B (a capital-city hub).
+  scale: [
+    { min: 50_000_000, color: '#D02020', fillOpacity: 0.7, label: '$50M or more' },
+    { min: 10_000_000, color: '#E06C18', fillOpacity: 0.6, label: '$10M–50M' },
+    { min: 1_000_000, color: '#F0C020', fillOpacity: 0.5, label: '$1M–10M' },
+    { min: 50_000, color: '#4CB876', fillOpacity: 0.4, label: '$50K–1M' },
+    { min: 0, color: '#1040C0', fillOpacity: 0.3, label: 'Under $50K' },
+  ],
+  noDataLabel: 'No justice records held',
+  value: f => num(f.justice_funding_total),
+  format: v => money(v),
+};
+
+// The scale runs backwards on purpose: decile 1 is the most disadvantaged
+// tenth of Australia, so red sits at the LOW end.
+const seifaDisadvantage: AtlasLiveLayer = {
+  key: 'seifa-disadvantage',
+  status: 'live',
+  kind: 'choropleth',
+  group: 'need',
+  name: 'SEIFA disadvantage',
+  unit: 'IRSD decile · 1 is the most disadvantaged tenth',
+  caveat:
+    'The ABS index of relative socio-economic disadvantage, averaged across the ' +
+    "council's postcodes. Decile 1 means the most disadvantaged tenth of Australia; " +
+    'decile 10 the least. Averaging flattens pockets: a comfortable council can ' +
+    'contain a street in decile 1, and this layer will not show it.',
+  honestAt: 'council',
+  honestAtNote: 'Postcode SEIFA averaged to council. Suburb-sized pockets vanish in the average.',
+  consent: 'public',
+  scale: [
+    { min: 9, color: '#1040C0', fillOpacity: 0.3, label: 'Deciles 9–10 · least disadvantaged' },
+    { min: 7, color: '#4CB876', fillOpacity: 0.4, label: 'Deciles 7–8' },
+    { min: 5, color: '#F0C020', fillOpacity: 0.5, label: 'Deciles 5–6' },
+    { min: 3, color: '#E06C18', fillOpacity: 0.6, label: 'Deciles 3–4' },
+    { min: 0, color: '#D02020', fillOpacity: 0.7, label: 'Deciles 1–2 · most disadvantaged' },
+  ],
+  noDataLabel: 'No SEIFA held',
+  value: f => num(f.avg_irsd_decile),
+  format: v => `decile ${v.toFixed(0)}`,
+};
+
 const unplacedOrgs: AtlasLiveLayer = {
   key: 'unplaced-orgs',
   status: 'live',
   kind: 'choropleth',
+  group: 'data-quality',
   name: 'Unplaced organisations',
   unit: '% of organisations we cannot place',
   caveat:
@@ -234,6 +350,7 @@ const unplacedOrgs: AtlasLiveLayer = {
 const renewalCliff: AtlasDeclaredLayer = {
   key: 'renewal-cliff',
   status: 'declared',
+  group: 'money',
   name: 'Funding renewal cliff',
   unit: '% of visible funding ending within 24 months',
   caveat:
@@ -261,6 +378,7 @@ const goodsDelivered: AtlasPointLayer = {
   key: 'goods-delivered',
   status: 'live',
   kind: 'points',
+  group: 'delivery',
   name: 'Goods in community',
   unit: 'units the asset register places here',
   caveat:
@@ -288,9 +406,12 @@ const goodsDelivered: AtlasPointLayer = {
 
 export const ATLAS_LAYERS: readonly AtlasLayer[] = [
   fundingDeserts,
-  unplacedOrgs,
+  moneyRecorded,
+  justiceFunding,
   renewalCliff,
+  seifaDisadvantage,
   goodsDelivered,
+  unplacedOrgs,
 ];
 
 export const DEFAULT_ATLAS_LAYER_KEY = fundingDeserts.key;

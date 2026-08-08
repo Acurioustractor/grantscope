@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ATLAS_GROUP_ORDER,
   ATLAS_LAYERS,
   ATLAS_NO_DATA_STYLE,
   DEFAULT_ATLAS_LAYER_KEY,
@@ -27,6 +28,7 @@ function feature(overrides: Partial<AtlasFeature> = {}): AtlasFeature {
     unplaced_count: 40,
     placed_count: 60,
     unplaced_share: 40,
+    justice_funding_total: 2000000,
     lat: -32.1,
     lng: 133.7,
     lga_code: 'LGA00000',
@@ -86,6 +88,7 @@ describe('consent tiers gate surfaces', () => {
   const orgLayer: AtlasLayer = {
     key: 'test-org-layer',
     status: 'declared',
+    group: 'delivery',
     name: 'Org-only test layer',
     unit: 'things',
     caveat: 'A layer that must never appear on the public surface, used to prove the filter holds.',
@@ -121,10 +124,22 @@ describe('consent tiers gate surfaces', () => {
     // data. If this list grows, check the new layer's data path first.
     expect(visibleAtlasLayers('public').map(l => l.key)).toEqual([
       'funding-deserts',
-      'unplaced-orgs',
+      'money-recorded',
+      'justice-funding',
       'renewal-cliff',
+      'seifa-disadvantage',
+      'unplaced-orgs',
     ]);
     expect(visibleAtlasLayers('org').map(l => l.key)).toContain('goods-delivered');
+  });
+
+  it('substantive groups lead; uncertainty qualifies from the back', () => {
+    for (const layer of ATLAS_LAYERS) {
+      expect(ATLAS_GROUP_ORDER).toContain(layer.group);
+    }
+    expect(getAtlasLayer('unplaced-orgs')!.group).toBe('data-quality');
+    // data-quality is the LAST group the picker renders.
+    expect(ATLAS_GROUP_ORDER[ATLAS_GROUP_ORDER.length - 1]).toBe('data-quality');
   });
 });
 
@@ -153,6 +168,31 @@ describe('style resolution', () => {
 
   it('a value below every stop clamps to the lowest stop', () => {
     expect(atlasStyleFor(deserts, -1).color).toBe('#1040C0');
+  });
+});
+
+describe('the substantive layers', () => {
+  const seifa = getAtlasLayer('seifa-disadvantage') as AtlasLiveLayer;
+  const recorded = getAtlasLayer('money-recorded') as AtlasLiveLayer;
+  const justice = getAtlasLayer('justice-funding') as AtlasLiveLayer;
+
+  it('SEIFA runs backwards on purpose: decile 1 is red, decile 10 is blue', () => {
+    expect(atlasStyleFor(seifa, 1).color).toBe('#D02020');
+    expect(atlasStyleFor(seifa, 2).color).toBe('#D02020');
+    expect(atlasStyleFor(seifa, 5).color).toBe('#F0C020');
+    expect(atlasStyleFor(seifa, 10).color).toBe('#1040C0');
+    expect(seifa.value(feature({ avg_irsd_decile: 1 }))).toBe(1);
+  });
+
+  it('money layers use order-of-magnitude bands and read their own fields', () => {
+    expect(atlasStyleFor(recorded, 2_000_000_000).color).toBe('#D02020');
+    expect(atlasStyleFor(recorded, 500_000).color).toBe('#1040C0');
+    expect(recorded.value(feature({ total_funding_all_sources: 4200000 }))).toBe(4200000);
+    expect(atlasStyleFor(justice, 60_000_000).color).toBe('#D02020');
+    expect(justice.value(feature({ justice_funding_total: null }))).toBeNull();
+    expect(justice.value(feature())).toBe(2000000);
+    // Dollar formatting comes from the shared money() helper.
+    expect(recorded.format(4200000)).toMatch(/\$/);
   });
 });
 

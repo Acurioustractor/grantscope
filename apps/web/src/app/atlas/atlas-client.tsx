@@ -5,6 +5,8 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { money } from '@/lib/format';
 import {
+  ATLAS_GROUP_LABELS,
+  ATLAS_GROUP_ORDER,
   DEFAULT_ATLAS_LAYER_KEY,
   getAtlasLayer,
   isChoroplethLayer,
@@ -112,6 +114,9 @@ export default function AtlasClient({
   const [entities, setEntities] = useState<RailEntity[]>([]);
   const [loadingEntities, setLoadingEntities] = useState(false);
   const [copied, setCopied] = useState(false);
+  // The right rail docks open and can be hidden; selecting a place reopens
+  // it, because a selection with nowhere to land is a dead click.
+  const [railOpen, setRailOpen] = useState(true);
   // Story mode: index into ATLAS_STORY, or null when browsing freely.
   const [storyIdx, setStoryIdx] = useState<number | null>(null);
   // URL state only starts writing after the inbound URL has been applied.
@@ -145,6 +150,7 @@ export default function AtlasClient({
   function selectPlace(f: AtlasFeature) {
     setSelected(f);
     setQuery('');
+    setRailOpen(true);
     // A selection hidden by the state filter would be invisible — follow it.
     if (stateFilter !== 'ALL' && f.state !== stateFilter) setStateFilter(f.state);
   }
@@ -335,8 +341,10 @@ export default function AtlasClient({
   }
 
   return (
-    <div className="fixed inset-0 z-0 bg-bauhaus-canvas">
-      {/* The map is the page. Everything else overlays it. */}
+    <div className="fixed inset-0 z-0 bg-bauhaus-canvas flex">
+      {/* CENTER — the map between the rails. isolate traps Leaflet's
+          internal z-indexes so the docked rails paint above its edges. */}
+      <div className="relative flex-1 min-w-0 order-2 isolate">
       <div className="absolute inset-0">
         {loading ? (
           <div className="flex items-center justify-center h-full">
@@ -374,12 +382,23 @@ export default function AtlasClient({
         </Link>
       )}
 
-      {/* Left rail: what you are looking at, and what it contains.
+      {/* Reopen tab when the right rail is hidden */}
+      {!story && !railOpen && !loading && !failed && (
+        <button
+          onClick={() => setRailOpen(true)}
+          className="absolute right-0 top-24 z-[900] bg-bauhaus-black text-white px-1.5 py-4 text-[10px] font-bold uppercase tracking-widest [writing-mode:vertical-rl] hover:bg-bauhaus-red transition-colors cursor-pointer"
+        >
+          Place rail ◂
+        </button>
+      )}
+      </div>
+
+      {/* LEFT — the locked rail: what you are looking at, what it contains.
           Story mode clears the stage: the paragraph does this job there. */}
       {!story && (
-      <div className="absolute left-4 top-20 z-[900] w-[min(22rem,calc(100vw-2rem))] max-h-[calc(100dvh-11.5rem)] overflow-y-auto space-y-4 pr-1">
+      <aside className="order-1 relative z-10 hidden md:block w-[21rem] shrink-0 bg-white border-r-4 border-bauhaus-black overflow-y-auto pt-20 px-4 pb-6">
         {/* Brand + layer picker */}
-        <div className="bg-white border-4 border-bauhaus-black shadow-[8px_8px_0_0_#121212] p-4">
+        <div>
           <p className="text-[10px] font-bold uppercase tracking-widest text-bauhaus-red">CivicGraph</p>
           <h1 className="text-2xl font-black uppercase tracking-wider leading-none mt-1">The Atlas</h1>
           <p className="text-xs text-gray-500 mt-2">
@@ -389,32 +408,43 @@ export default function AtlasClient({
           <p className="mt-4 mb-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-400">
             Layers · pick one to switch the map
           </p>
-          <div className="space-y-1.5">
-            {LAYERS.map(layer => {
-              const active = layer.key === activeKey;
-              const declared = !isLiveLayer(layer);
-              return (
-                <button
-                  key={layer.key}
-                  onClick={() => pickLayer(layer.key)}
-                  className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider transition-colors border-2 cursor-pointer ${
-                    active
-                      ? 'bg-bauhaus-red border-bauhaus-red text-white'
-                      : declared
-                        ? 'bg-white border-dashed border-gray-300 text-gray-400 hover:border-bauhaus-yellow'
-                        : 'bg-white border-bauhaus-black text-bauhaus-black hover:bg-bauhaus-black hover:text-white'
-                  }`}
-                >
-                  <span>{layer.name}</span>
-                  {declared && (
-                    <span className={`shrink-0 text-[9px] px-1.5 py-0.5 border ${active ? 'border-white/60 text-white' : 'border-bauhaus-yellow bg-bauhaus-yellow/20 text-bauhaus-black'}`}>
-                      Not yet held
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+          {ATLAS_GROUP_ORDER.map(groupKey => {
+            const groupLayers = LAYERS.filter(l => l.group === groupKey);
+            if (groupLayers.length === 0) return null;
+            return (
+              <div key={groupKey} className="mb-2.5">
+                <p className="mb-1 text-[9px] font-bold uppercase tracking-widest text-gray-300">
+                  {ATLAS_GROUP_LABELS[groupKey]}
+                </p>
+                <div className="space-y-1.5">
+                  {groupLayers.map(layer => {
+                    const active = layer.key === activeKey;
+                    const declared = !isLiveLayer(layer);
+                    return (
+                      <button
+                        key={layer.key}
+                        onClick={() => pickLayer(layer.key)}
+                        className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider transition-colors border-2 cursor-pointer ${
+                          active
+                            ? 'bg-bauhaus-red border-bauhaus-red text-white'
+                            : declared
+                              ? 'bg-white border-dashed border-gray-300 text-gray-400 hover:border-bauhaus-yellow'
+                              : 'bg-white border-bauhaus-black text-bauhaus-black hover:bg-bauhaus-black hover:text-white'
+                        }`}
+                      >
+                        <span>{layer.name}</span>
+                        {declared && (
+                          <span className={`shrink-0 text-[9px] px-1.5 py-0.5 border ${active ? 'border-white/60 text-white' : 'border-bauhaus-yellow bg-bauhaus-yellow/20 text-bauhaus-black'}`}>
+                            Not yet held
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
 
           {/* State filter */}
           <p className="mt-4 mb-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-400">
@@ -451,10 +481,10 @@ export default function AtlasClient({
           >
             Story mode · tell it in a room
           </button>
-        </div>
 
-        {/* The caveat, attached to the number — not a help page */}
-        <div className="bg-white border-4 border-bauhaus-black shadow-[8px_8px_0_0_#121212] p-4">
+          {/* The caveat, attached to the number — same card, one explanation
+              (Ben 2026-08-09: separate floating boxes read as clutter) */}
+          <div className="mt-4 pt-4 border-t-2 border-bauhaus-black">
           <p className="text-[10px] font-bold uppercase tracking-widest text-bauhaus-red">
             What this number contains
           </p>
@@ -524,17 +554,26 @@ export default function AtlasClient({
             </p>
             <p className="text-xs text-gray-500 mt-1">{activeLayer.honestAtNote}</p>
           </div>
+          </div>
         </div>
-      </div>
+      </aside>
       )}
 
       {/* Right rail: the door to every place. Search when nothing is chosen,
           the place's numbers when something is. On small screens the rail
           appears only for a selection. Story mode clears it. */}
-      {!loading && !failed && !story && (
-        <div className={`absolute right-4 top-20 z-[900] w-[min(20rem,calc(100vw-2rem))] max-h-[calc(100dvh-10.5rem)] overflow-y-auto ${selected ? '' : 'hidden lg:block'}`}>
+      {!loading && !failed && !story && railOpen && (
+        <aside className="order-3 relative z-10 hidden sm:block w-[min(20rem,85vw)] shrink-0 bg-white border-l-4 border-bauhaus-black overflow-y-auto pt-20 px-4 pb-6">
+          <div className="flex justify-end mb-2">
+            <button
+              onClick={() => setRailOpen(false)}
+              className="text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-bauhaus-black transition-colors cursor-pointer"
+            >
+              Hide ▸
+            </button>
+          </div>
           {selected ? (
-            <div className="bg-white border-4 border-bauhaus-black shadow-[8px_8px_0_0_#121212] p-4">
+            <div>
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <h3 className="font-black text-lg uppercase tracking-wider leading-tight">{selected.lga_name}</h3>
@@ -560,6 +599,14 @@ export default function AtlasClient({
                   })()}
                 </span>
               </div>
+
+              {/* Uncertainty travels with every number, on every layer */}
+              {Number(selected.unplaced_share) >= 50 && (
+                <p className="mt-2 text-[11px] text-bauhaus-red leading-snug">
+                  Half or more of what might be here cannot be placed — read every
+                  number on this panel gently.
+                </p>
+              )}
 
               <div className="mt-3 space-y-2">
                 {otherLiveLayers.map(layer => {
@@ -690,7 +737,7 @@ export default function AtlasClient({
               </p>
             </div>
           ) : (
-            <div className="bg-white border-4 border-bauhaus-black shadow-[8px_8px_0_0_#121212] p-4">
+            <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Find a place</p>
               <input
                 type="text"
@@ -742,7 +789,7 @@ export default function AtlasClient({
               </div>
             </div>
           )}
-        </div>
+        </aside>
       )}
 
       {/* Story mode: one map state, one paragraph, read aloud. */}

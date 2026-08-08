@@ -54,6 +54,18 @@ function frameCoords(features: AtlasFeature[]): { lats: number[]; lngs: number[]
   };
 }
 
+// Docked rails resize the map's container when they open and close; Leaflet
+// has to be told, or it leaves a grey band where the rail used to be.
+function InvalidateOnResize() {
+  const map = useMap();
+  useEffect(() => {
+    const observer = new ResizeObserver(() => map.invalidateSize());
+    observer.observe(map.getContainer());
+    return () => observer.disconnect();
+  }, [map]);
+  return null;
+}
+
 // Fit bounds when the visible set changes
 function FitBounds({ features }: { features: AtlasFeature[] }) {
   const map = useMap();
@@ -284,6 +296,7 @@ export default function AtlasMap({ features, layer, selected, onSelect, pointLay
       })}
 
       <FitBounds features={features} />
+      <InvalidateOnResize />
     </MapContainer>
   );
 }
