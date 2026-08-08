@@ -95,7 +95,10 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
       .select('postcode, locality, state, remoteness_2021, sa2_code, sa2_name, sa3_name, lga_name, lga_code')
       .eq('postcode', postcode)
       .not('state', 'is', null)
-      .limit(1),
+      // Every locality, not one. A postcode can span several councils and the
+      // page needs to know that before it labels itself with one of them.
+      .order('locality')
+      .limit(200),
     supabase
       .from('seifa_2021')
       .select('decile_national, score')
@@ -124,7 +127,22 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
 
   if (!geoData?.length) notFound();
 
-  const geo = geoData[0];
+  // geoData[0] is whatever the planner returned first, which named postcode
+  // 5690 after BOOKABIE. Prefer the locality that shares its name with one of
+  // the postcode's councils: regional service towns are almost always the seat
+  // of the council named after them, so 5690 resolves to CEDUNA.
+  const geoRows = geoData as Array<{ locality: string | null; lga_name: string | null; [k: string]: unknown }>;
+  const lgaNames = new Set(
+    geoRows.map(row => (row.lga_name || '').trim().toLowerCase()).filter(Boolean)
+  );
+  const geo = (geoRows.find(row => lgaNames.has((row.locality || '').trim().toLowerCase())) ?? geoRows[0]) as typeof geoData[number];
+
+  // Every distinct council this postcode touches. One label is a coin toss when
+  // a postcode spans several, and 5690 spans four.
+  const spannedLgas = Array.from(
+    new Set(geoRows.map(row => (row.lga_name || '').trim()).filter(Boolean))
+  ).sort();
+
   const stateCode = typeof geo.state === 'string' && geo.state.trim().length > 0 ? geo.state : null;
   const placeTitle = stateCode ? `${geo.locality || postcode}, ${stateCode}` : (geo.locality || postcode);
   const socialEnterprisesHref = stateCode ? `/social-enterprises?state=${encodeURIComponent(stateCode)}` : '/social-enterprises';
@@ -456,9 +474,9 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
               SEIFA Decile {seifa.decile_national}/10
             </span>
           )}
-          {geo.lga_name && (
+          {spannedLgas.length > 0 && (
             <span className="text-[11px] font-black px-2.5 py-1 border-2 border-bauhaus-blue/30 bg-blue-50 text-bauhaus-blue uppercase tracking-widest">
-              LGA: {geo.lga_name}
+              {spannedLgas.length === 1 ? `LGA: ${spannedLgas[0]}` : `${spannedLgas.length} LGAs: ${spannedLgas.join(' · ')}`}
             </span>
           )}
           {geo.sa2_code && (
@@ -510,8 +528,13 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
           <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">Community-Controlled</div>
           <div className="text-2xl font-black text-bauhaus-black">{communityControlledCount}</div>
         </div>
+        {/* Sits beside a GrantConnect headline but is computed from
+            gs_relationships, a different and much smaller base. Labelled so the
+            two are not read as numerator and denominator of each other. */}
         <div className="p-4">
-          <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">CC Funding Share</div>
+          <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">
+            CC Share {federalFunding ? '(excl. federal)' : ''}
+          </div>
           <div className={`text-2xl font-black ${communityControlledShare < 30 ? 'text-bauhaus-red' : communityControlledShare < 60 ? 'text-orange-600' : 'text-money'}`}>
             {communityControlledShare}%
           </div>
