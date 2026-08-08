@@ -77,6 +77,18 @@ describe('atlas URLs', () => {
     expect(parsed.place).toBe('ceduna');
     expect(parsed.pst).toBe('SA');
   });
+
+  it('a story step travels alone: it defines the whole view', () => {
+    const url = buildAtlasUrl({
+      layerKey: 'unplaced-orgs',
+      defaultLayerKey: 'funding-deserts',
+      stateFilter: 'SA',
+      selected: feature(),
+      story: 'utopia-alice-springs',
+    });
+    expect(url).toBe('/atlas?story=utopia-alice-springs');
+    expect(parseAtlasUrl(url.split('?')[1]).story).toBe('utopia-alice-springs');
+  });
 });
 
 describe('resolvePlace', () => {
