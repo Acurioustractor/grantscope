@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import {
+  getCrossBorderPicture,
   getHubAdministrationPicture,
   getPlaceIntelligence,
   getRegionFundingPicture,
@@ -34,12 +35,17 @@ function money(value: number): string {
 }
 
 export async function RegionReport({ regionKey, title, intro, children }: RegionReportProps) {
-  const [{ areas, unplacedOrgs, unplacedTotal, gapNote, deregisteredExcluded, deliveryCoverage }, hub, funding] =
-    await Promise.all([
-      getPlaceIntelligence(regionKey),
-      getHubAdministrationPicture(regionKey),
-      getRegionFundingPicture(regionKey),
-    ]);
+  const [
+    { areas, unplacedOrgs, unplacedTotal, gapNote, deregisteredExcluded, deliveryCoverage },
+    hub,
+    funding,
+    crossBorder,
+  ] = await Promise.all([
+    getPlaceIntelligence(regionKey),
+    getHubAdministrationPicture(regionKey),
+    getRegionFundingPicture(regionKey),
+    getCrossBorderPicture(regionKey),
+  ]);
   const computedAt = areas[0]?.computedAt;
   const region = PLACE_REGIONS[regionKey];
   const gazetteerGaps = region.gazetteerGaps;
@@ -321,6 +327,45 @@ export async function RegionReport({ regionKey, title, intro, children }: Region
               <p className="mt-3 max-w-3xl font-mono text-xs leading-5">
                 {hub.missing.length} organisation{hub.missing.length === 1 ? '' : 's'} named in our
                 records could not be found in the register: {hub.missing.join(', ')}.
+              </p>
+            ) : null}
+          </section>
+        ) : null}
+
+        {crossBorder && crossBorder.orgs.length > 0 ? (
+          <section aria-labelledby="crossborder-title" className="border-4 border-bauhaus-black bg-bauhaus-black p-6 text-white">
+            <p className="font-mono text-[11px] font-black uppercase tracking-widest text-bauhaus-yellow">
+              A border in the wrong place
+            </p>
+            <h2 id="crossborder-title" className="mt-2 text-2xl font-black uppercase tracking-widest text-bauhaus-yellow">
+              {crossBorder.orgs.length} organisations recorded in the wrong state
+            </h2>
+            <p className="mt-3 max-w-3xl text-base leading-7">{crossBorder.note}</p>
+            <p className="mt-3 max-w-3xl text-base leading-7">
+              They work in {crossBorder.communities.slice(0, -1).join(', ')} and{' '}
+              {crossBorder.communities[crossBorder.communities.length - 1]}, in{' '}
+              {crossBorder.actualState}. The register places them in {crossBorder.recordedState},
+              under {crossBorder.recordedLga}, and{' '}
+              <strong className="text-bauhaus-yellow">{money(crossBorder.misattributedValue)}</strong>{' '}
+              travels with them.
+            </p>
+            <ul className="mt-5 grid gap-2 sm:grid-cols-2">
+              {crossBorder.orgs.map(org => (
+                <li key={org.name} className="border-b border-white/20 pb-2 text-sm leading-6">
+                  {org.name}
+                  <span className="block font-mono text-[11px] text-white/70">
+                    {org.lgaName ?? 'no council'}
+                    {org.postcode ? ` · ${org.postcode}` : ''}
+                    {org.grantValue > 0 ? ` · ${money(org.grantValue)}` : ''}
+                    {org.records > 1 ? ` · ${org.records} records in the register` : ''}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            {crossBorder.missing.length > 0 ? (
+              <p className="mt-4 font-mono text-xs leading-5 text-white/70">
+                {crossBorder.missing.length} named in our records could not be found in the
+                register: {crossBorder.missing.join(', ')}.
               </p>
             ) : null}
           </section>

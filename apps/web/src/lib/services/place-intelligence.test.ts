@@ -148,6 +148,32 @@ describe('PLACE_REGIONS', () => {
     expect(capeYork.lgaNames).not.toContain('Cairns');
   });
 
+  it('describes any cross-border misattribution it declares', () => {
+    for (const [key, region] of regions) {
+      const crossBorder = region.crossBorder;
+      if (!crossBorder) continue;
+      // A state boundary in the wrong place is only worth stating if we can
+      // say which way round it is wrong.
+      expect(crossBorder.recordedState, key).not.toBe(crossBorder.actualState);
+      expect(crossBorder.orgNames.length, `${key} declares cross-border with no organisations`).toBeGreaterThan(0);
+      expect(new Set(crossBorder.orgNames).size, `${key} lists an organisation twice`).toBe(
+        crossBorder.orgNames.length,
+      );
+      expect(crossBorder.communities.length, key).toBeGreaterThan(0);
+      expect(crossBorder.note.trim().length, key).toBeGreaterThan(0);
+    }
+  });
+
+  it('records that the APY Lands are recorded in the Northern Territory', () => {
+    // The APY Lands are South Australian. If this ever flips to SA the data has
+    // been fixed upstream and the section should come down, deliberately.
+    const crossBorder = PLACE_REGIONS['central-australia'].crossBorder;
+    expect(crossBorder?.actualState).toBe('SA');
+    expect(crossBorder?.recordedState).toBe('NT');
+    expect(crossBorder?.recordedLga).toBe('Alice Springs');
+    expect(crossBorder?.orgNames.length).toBe(13);
+  });
+
   it('records that Cape York has no gazetteer gaps', () => {
     // The distinguishing fact about this region: the reference data is fine and
     // the addresses are not. If a gap is added later, it should be deliberate.

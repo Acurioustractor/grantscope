@@ -175,6 +175,32 @@ export interface PlaceRegion {
    * apart.
    */
   communities: RegionCommunity[];
+  crossBorder: CrossBorderMisattribution | null;
+}
+
+/**
+ * Organisations recorded in the wrong state.
+ *
+ * The APY Lands are South Australian, governed under South Australian land
+ * rights legislation, and most of their organisations are recorded as Northern
+ * Territory organisations in Alice Springs. Their post goes to Alice Springs
+ * and the register followed the post across a state border.
+ *
+ * Kept separate from HubAdministration on purpose. A hub crediting itself with
+ * a homeland's money is one error; a state boundary in the wrong place is
+ * another, and it breaks the coarsest geography there is. Anything counting by
+ * state gets both jurisdictions wrong at once.
+ */
+export interface CrossBorderMisattribution {
+  /** Where the register puts them. */
+  recordedState: string;
+  /** Where they are. */
+  actualState: string;
+  recordedLga: string;
+  communities: string[];
+  /** Checked one by one, like every other list here. */
+  orgNames: string[];
+  note: string;
 }
 
 export interface RegionCommunity {
@@ -247,7 +273,34 @@ export const PLACE_REGIONS: Record<string, PlaceRegion> = {
       { name: 'Ampilatwatja', council: 'Barkly', note: 'ABS places the locality in Barkly, and the health centre resolves there. The art centre, filed to a town address, resolves to Alice Springs.' },
       { name: 'Ali Curung', council: 'Barkly', note: 'Kaytetye country. Not part of the Utopia homelands, despite older notes here saying so.' },
       { name: 'Atitjere', council: 'Central Desert', note: 'Placed correctly by ABS.' },
+      { name: 'APY Lands (South Australia)', council: 'Alice Springs', note: 'Pukatja, Amata, Mimili, Kaltjiti, Iwantja, Kalka, Nyapari and Watarru. Most of their organisations are recorded in the Northern Territory. See below.' },
     ],
+    // Verified 8 August 2026 by reading state and lga_name on each name here.
+    // 12 carry state 'NT' and Alice Springs; Ernabella Arts carries no state at
+    // all. Three APY organisations are recorded correctly and are not listed.
+    crossBorder: {
+      recordedState: 'NT',
+      actualState: 'SA',
+      recordedLga: 'Alice Springs',
+      communities: ['Pukatja', 'Amata', 'Mimili', 'Kaltjiti', 'Iwantja', 'Kalka', 'Nyapari', 'Watarru'],
+      orgNames: [
+        'APY Art Centre Collective Aboriginal Corporation',
+        'Ernabella Arts Incorporated',
+        'Pukatja Supermarket and Associated Stores Aboriginal Corporation',
+        'Kaltjiti Arts and Crafts Aboriginal Corporation',
+        'Kaltjiti Community (Aboriginal Corporation)',
+        'Indulkana Community Store Aboriginal Corporation',
+        'INDULKANA SOCIAL CLUB INC',
+        'IWANTJA COMMUNITY INC GRANTE DOWNS',
+        'Amata Anangu Store Aboriginal Corporation',
+        'Mimili Maku Store Aboriginal Corporation',
+        'Kalka Community Aboriginal Corporation',
+        'NYAPARI COMMUNITY INC',
+        'Watarru Community (Aboriginal Corporation)',
+      ],
+      note:
+        'The APY Lands are in South Australia, governed under South Australian land rights legislation. Their post comes to Alice Springs, and the register followed it across the border. Anything counting by state gets both jurisdictions wrong at once: South Australia is short these organisations and the Northern Territory is credited with them.',
+    },
   },
   // Wirangu country and the Far West Coast.
   //
@@ -291,6 +344,7 @@ export const PLACE_REGIONS: Record<string, PlaceRegion> = {
     // hand, with distances, and is not rendered by RegionReport. Duplicating
     // that list here would give it two sources that can disagree.
     communities: [],
+    crossBorder: null,
   },
   // The Kimberley. Verified 8 August 2026, org by org, the same way as the
   // other two: read lga_name on each organisation, then check the localities
@@ -361,6 +415,7 @@ export const PLACE_REGIONS: Record<string, PlaceRegion> = {
       { name: 'Fitzroy Crossing', council: 'Derby-West Kimberley', note: 'Postcode 6765, which splits between Derby-West Kimberley and Halls Creek.' },
       { name: 'Warmun', council: 'Halls Creek', note: 'Placed correctly by ABS, in postcode 6743.' },
     ],
+    crossBorder: null,
   },
   // Cape York. Verified 8 August 2026 and it broke the model.
   //
@@ -435,6 +490,7 @@ export const PLACE_REGIONS: Record<string, PlaceRegion> = {
       { name: 'Wujal Wujal', council: 'Wujal Wujal', note: 'Its justice group is placed correctly.' },
       { name: 'Hope Vale, Mapoon, Napranum', council: null, note: 'No organisations in our records under any council.' },
     ],
+    crossBorder: null,
   },
 };
 
@@ -660,6 +716,15 @@ export function getCentralAustraliaIntelligence(): Promise<PlaceIntelligence> {
 
 export interface CreditedOrg {
   name: string;
+  /**
+   * How many rows the register holds for this organisation.
+   *
+   * Usually one. Kalka Community Aboriginal Corporation has two — an ABN
+   * registration placed in Alice Springs and an ORIC registration placed
+   * nowhere. They are merged so one organisation counts once, and the number is
+   * shown rather than swallowed.
+   */
+  records: number;
   /** Null when the organisation is in no council area at all. */
   lgaName: string | null;
   postcode: string | null;
@@ -667,6 +732,13 @@ export interface CreditedOrg {
   grantValue: number;
   contracts: number;
   contractValue: number;
+}
+
+export interface CrossBorderPicture extends CrossBorderMisattribution {
+  orgs: CreditedOrg[];
+  /** Money recorded in the wrong state. */
+  misattributedValue: number;
+  missing: string[];
 }
 
 export interface HubAdministrationPicture extends HubAdministration {
@@ -685,87 +757,130 @@ export interface HubAdministrationPicture extends HubAdministration {
  * award lands or an address changes — and a stale number on a page about
  * misattributed numbers would be its own joke.
  */
+/**
+ * Money and council for a named list of organisations.
+ *
+ * Shared by the hub and cross-border pictures. Both ask the same question of a
+ * different list, and both compute it per request rather than storing a total,
+ * because a hardcoded figure on a page about wrong figures would be its own
+ * joke.
+ */
+async function describeOrgs(names: string[]): Promise<{ orgs: CreditedOrg[]; missing: string[] } | null> {
+  const db = getServiceSupabase();
+  const { data, error } = await db
+    .from('gs_entities')
+    .select('id, abn, canonical_name, lga_name, postcode')
+    .in('canonical_name', names);
+  if (error) return null;
+
+  const entities = (data || []) as Array<{
+    id: string;
+    abn: string | null;
+    canonical_name: string;
+    lga_name: string | null;
+    postcode: string | null;
+  }>;
+  if (entities.length === 0) return { orgs: [], missing: names };
+
+  const abns = entities.map(row => row.abn).filter((abn): abn is string => Boolean(abn));
+  const [awardsResult, contractsResult] = await Promise.all([
+    db.from('grantconnect_awards').select('gs_entity_id, value_aud').in('gs_entity_id', entities.map(row => row.id)),
+    abns.length
+      ? db.from('austender_contracts').select('supplier_abn, contract_value').in('supplier_abn', abns)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  const grantsByEntity = new Map<string, { count: number; value: number }>();
+  for (const row of (awardsResult.data || []) as Array<{ gs_entity_id: string; value_aud: number | string | null }>) {
+    const tally = grantsByEntity.get(row.gs_entity_id) ?? { count: 0, value: 0 };
+    tally.count += 1;
+    tally.value += num(row.value_aud);
+    grantsByEntity.set(row.gs_entity_id, tally);
+  }
+
+  const contractsByAbn = new Map<string, { count: number; value: number }>();
+  for (const row of (contractsResult.data || []) as Array<{ supplier_abn: string; contract_value: number | string | null }>) {
+    const tally = contractsByAbn.get(row.supplier_abn) ?? { count: 0, value: 0 };
+    tally.count += 1;
+    tally.value += num(row.contract_value);
+    contractsByAbn.set(row.supplier_abn, tally);
+  }
+
+  // Merged by name. The register holds more than one row for some
+  // organisations, and counting an organisation twice because it registered
+  // twice would overstate the very problem these lists exist to describe.
+  // A placed council wins over an unplaced one: if any record locates it, that
+  // is where the money is being counted.
+  const byName = new Map<string, CreditedOrg>();
+  for (const row of entities) {
+    const grants = grantsByEntity.get(row.id) ?? { count: 0, value: 0 };
+    const contracts = (row.abn && contractsByAbn.get(row.abn)) || { count: 0, value: 0 };
+    const existing = byName.get(row.canonical_name);
+    if (!existing) {
+      byName.set(row.canonical_name, {
+        name: row.canonical_name,
+        records: 1,
+        lgaName: row.lga_name,
+        postcode: row.postcode,
+        grants: grants.count,
+        grantValue: grants.value,
+        contracts: contracts.count,
+        contractValue: contracts.value,
+      });
+      continue;
+    }
+    existing.records += 1;
+    existing.lgaName = existing.lgaName ?? row.lga_name;
+    existing.postcode = existing.postcode ?? row.postcode;
+    existing.grants += grants.count;
+    existing.grantValue += grants.value;
+    existing.contracts += contracts.count;
+    existing.contractValue += contracts.value;
+  }
+
+  const orgs: CreditedOrg[] = [...byName.values()].sort(
+    (left, right) => right.grantValue + right.contractValue - (left.grantValue + left.contractValue),
+  );
+
+  const found = new Set(entities.map(row => row.canonical_name));
+  return { orgs, missing: names.filter(name => !found.has(name)) };
+}
+
+/**
+ * Organisations this region's page has to report as recorded in another state.
+ */
+export const getCrossBorderPicture = cache(
+  async function getCrossBorderPicture(regionKey: string): Promise<CrossBorderPicture | null> {
+    const region = PLACE_REGIONS[regionKey];
+    if (!region?.crossBorder) return null;
+    const crossBorder = region.crossBorder;
+    const described = await describeOrgs(crossBorder.orgNames);
+    if (!described) return null;
+    return {
+      ...crossBorder,
+      orgs: described.orgs,
+      misattributedValue: described.orgs.reduce((total, org) => total + org.grantValue + org.contractValue, 0),
+      missing: described.missing,
+    };
+  },
+);
+
 export const getHubAdministrationPicture = cache(
   async function getHubAdministrationPicture(regionKey: string): Promise<HubAdministrationPicture | null> {
     const region = PLACE_REGIONS[regionKey];
     if (!region?.hubAdministration) return null;
     const hub = region.hubAdministration;
-    const db = getServiceSupabase();
-
-    const { data: entityRows, error } = await db
-      .from('gs_entities')
-      .select('id, abn, canonical_name, lga_name, postcode')
-      .in('canonical_name', hub.creditedOrgs);
-    if (error) return null;
-
-    const entities = (entityRows || []) as Array<{
-      id: string;
-      abn: string | null;
-      canonical_name: string;
-      lga_name: string | null;
-      postcode: string | null;
-    }>;
-    if (entities.length === 0) {
-      return { ...hub, orgs: [], creditedValue: 0, missing: hub.creditedOrgs };
-    }
-
-    const abns = entities.map(row => row.abn).filter((abn): abn is string => Boolean(abn));
-    const [awardsResult, contractsResult] = await Promise.all([
-      db
-        .from('grantconnect_awards')
-        .select('gs_entity_id, value_aud')
-        .in('gs_entity_id', entities.map(row => row.id)),
-      abns.length
-        ? db.from('austender_contracts').select('supplier_abn, contract_value').in('supplier_abn', abns)
-        : Promise.resolve({ data: [], error: null }),
-    ]);
-
-    const grantsByEntity = new Map<string, { count: number; value: number }>();
-    for (const row of (awardsResult.data || []) as Array<{ gs_entity_id: string; value_aud: number | string | null }>) {
-      const tally = grantsByEntity.get(row.gs_entity_id) ?? { count: 0, value: 0 };
-      tally.count += 1;
-      tally.value += num(row.value_aud);
-      grantsByEntity.set(row.gs_entity_id, tally);
-    }
-
-    const contractsByAbn = new Map<string, { count: number; value: number }>();
-    for (const row of (contractsResult.data || []) as Array<{ supplier_abn: string; contract_value: number | string | null }>) {
-      const tally = contractsByAbn.get(row.supplier_abn) ?? { count: 0, value: 0 };
-      tally.count += 1;
-      tally.value += num(row.contract_value);
-      contractsByAbn.set(row.supplier_abn, tally);
-    }
-
-    const orgs: CreditedOrg[] = entities
-      .map(row => {
-        const grants = grantsByEntity.get(row.id) ?? { count: 0, value: 0 };
-        const contracts = (row.abn && contractsByAbn.get(row.abn)) || { count: 0, value: 0 };
-        return {
-          name: row.canonical_name,
-          lgaName: row.lga_name,
-          postcode: row.postcode,
-          grants: grants.count,
-          grantValue: grants.value,
-          contracts: contracts.count,
-          contractValue: contracts.value,
-        };
-      })
-      .sort((left, right) => right.grantValue + right.contractValue - (left.grantValue + left.contractValue));
+    const described = await describeOrgs(hub.creditedOrgs);
+    if (!described) return null;
 
     // Only money sitting inside the hub's own figure counts as credited to it.
     // An organisation the register places elsewhere, or nowhere, is not
     // inflating the hub, and adding it here would overstate the problem.
-    const creditedValue = orgs
+    const creditedValue = described.orgs
       .filter(org => org.lgaName === hub.hubLga)
       .reduce((total, org) => total + org.grantValue + org.contractValue, 0);
 
-    const found = new Set(entities.map(row => row.canonical_name));
-    return {
-      ...hub,
-      orgs,
-      creditedValue,
-      missing: hub.creditedOrgs.filter(name => !found.has(name)),
-    };
+    return { ...hub, orgs: described.orgs, creditedValue, missing: described.missing };
   },
 );
 
