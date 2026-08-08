@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { getRegionSchoolNeedSignal } from '@/lib/services/school-need-signal';
+import { getRhdSignalForRegion, ratePerHundred } from '@/lib/services/rhd-signal';
 import { SchoolNeed } from './school-need';
 import {
   getCrossBorderPicture,
@@ -52,6 +53,7 @@ export async function RegionReport({ regionKey, title, intro, children }: Region
   ]);
   const computedAt = areas[0]?.computedAt;
   const region = PLACE_REGIONS[regionKey];
+  const rhd = getRhdSignalForRegion(regionKey);
   const gazetteerGaps = region.gazetteerGaps;
   const communities = region.communities;
   const unplacedPostcodes = region.unplaced?.postcodes ?? [];
@@ -174,6 +176,68 @@ export async function RegionReport({ regionKey, title, intro, children }: Region
         ) : null}
 
         {schools ? <SchoolNeed signal={schools} placeLabel={title} /> : null}
+
+        {rhd ? (
+          <section aria-labelledby="rhd-title" className="border-4 border-bauhaus-red bg-white p-6">
+            <p className="font-mono text-[11px] font-black uppercase tracking-widest text-bauhaus-red">
+              A disease of housing
+            </p>
+            <h2 id="rhd-title" className="mt-2 text-2xl font-black uppercase tracking-widest">
+              Rheumatic heart disease in {rhd.region}
+            </h2>
+            <p className="mt-3 max-w-3xl text-base leading-7">
+              Rheumatic heart disease begins with a strep infection and is driven by crowded housing.
+              It is close to absent in wealthy Australia and endemic here. Like the school figures
+              above, this does not depend on us placing an organisation correctly — it comes from a
+              register of notified cases.
+            </p>
+
+            <dl className="mt-6 grid gap-5 sm:grid-cols-3">
+              <div className="border-l-4 border-bauhaus-red pl-4">
+                <dt className="font-mono text-[10px] font-bold uppercase tracking-widest text-bauhaus-red">
+                  First Nations people living with RHD
+                </dt>
+                <dd className="mt-1 text-3xl font-black text-bauhaus-red">
+                  {rhd.firstNationsCases.toLocaleString('en-AU')}
+                </dd>
+                <dd className="font-mono text-[11px]">
+                  {ratePerHundred(rhd.firstNationsRatePer100k)} in every 100 people
+                </dd>
+              </div>
+              <div className="border-l-4 border-bauhaus-black pl-4">
+                <dt className="font-mono text-[10px] font-bold uppercase tracking-widest">
+                  Non-Indigenous
+                </dt>
+                <dd className="mt-1 text-3xl font-black">
+                  {rhd.nonIndigenousCases.toLocaleString('en-AU')}
+                </dd>
+                <dd className="font-mono text-[11px]">
+                  {ratePerHundred(rhd.nonIndigenousRatePer100k)} in every 100 people
+                </dd>
+              </div>
+              <div className="border-l-4 border-bauhaus-red pl-4">
+                <dt className="font-mono text-[10px] font-bold uppercase tracking-widest text-bauhaus-red">
+                  Rate ratio
+                </dt>
+                <dd className="mt-1 text-3xl font-black text-bauhaus-red">{rhd.rateRatio}×</dd>
+                <dd className="font-mono text-[11px]">the non-Indigenous rate</dd>
+              </div>
+            </dl>
+
+            <p className="mt-5 max-w-3xl border-l-4 border-bauhaus-red bg-bauhaus-canvas p-3 text-sm leading-6">
+              {rhd.boundaryNote} It is a regional figure, not a figure for any one community, and
+              the register does not publish below this level — case numbers in small communities
+              would identify people.
+            </p>
+
+            <p className="mt-4 font-mono text-xs leading-5">
+              Prevalence as at {rhd.asAt}. Based on Australian Institute of Health and Welfare
+              material: Aboriginal and Torres Strait Islander Health Performance Framework measure
+              1.06, table {rhd.sourceTable}, from the National Rheumatic Heart Disease Data
+              Collection. Licensed CC BY 4.0.
+            </p>
+          </section>
+        ) : null}
 
         <section aria-labelledby="areas-title">
           <h2 id="areas-title" className="text-2xl font-black uppercase tracking-widest">
