@@ -1,11 +1,32 @@
 import type { Metadata } from 'next';
-import { Newsreader, IBM_Plex_Mono } from 'next/font/google';
+import { Newsreader, IBM_Plex_Mono, DM_Sans, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 
 // Quiet Ledger fonts — exposed as CSS vars the ql-* theme tokens reference.
 const newsreader = Newsreader({ subsets: ['latin'], weight: ['400', '500', '600'], style: ['normal', 'italic'], variable: '--font-newsreader' });
 const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-plex-mono' });
-const qlFontVars = `${newsreader.variable} ${plexMono.variable}`;
+// Bauhaus fonts (DESIGN.md): DM Sans body + JetBrains Mono, self-hosted by
+// next/font so no page ever waits on a remote font host for them. Satoshi is
+// Fontshare-only, linked below with display=swap — first paint renders the
+// fallback and upgrades; it never blocks. Until 2026-08-10 none of these were
+// applied at all: globals.css pinned system fonts and the font config lived
+// in a Tailwind-3 file Tailwind 4 ignores, so every Bauhaus surface rendered
+// system-ui while Satoshi downloaded unused.
+const dmSans = DM_Sans({ subsets: ['latin'], variable: '--font-dm-sans' });
+const jetBrains = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jetbrains' });
+const qlFontVars = `${newsreader.variable} ${plexMono.variable} ${dmSans.variable} ${jetBrains.variable}`;
+
+const SATOSHI_CSS = 'https://api.fontshare.com/v2/css?f[]=satoshi@700,800,900&display=swap';
+
+function BrandFontLinks() {
+  return (
+    <>
+      <link rel="preconnect" href="https://api.fontshare.com" crossOrigin="anonymous" />
+      <link rel="preconnect" href="https://cdn.fontshare.com" crossOrigin="anonymous" />
+      <link rel="stylesheet" href={SATOSHI_CSS} precedence="default" />
+    </>
+  );
+}
 import { NavBar } from './components/nav';
 import { ImpersonationBanner } from './components/impersonation-banner';
 import { DeferredChatDrawer } from './components/deferred-chat-drawer';
@@ -85,6 +106,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     return (
       <html lang="en">
         <body className={`font-sans antialiased bg-transparent ${qlFontVars}`}>
+          <BrandFontLinks />
           {children}
         </body>
       </html>
@@ -146,6 +168,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         data-authenticated={user ? 'true' : 'false'}
         data-user-email={user?.email ?? ''}
       >
+        <BrandFontLinks />
         <ShortlistProvider>
         <NavBar
           initialUserEmail={user?.email ?? null}

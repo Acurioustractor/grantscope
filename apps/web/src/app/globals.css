@@ -24,6 +24,15 @@
   --font-ql-display: var(--font-newsreader, Georgia), Georgia, serif;
   --font-ql-mono: var(--font-plex-mono, ui-monospace), ui-monospace, monospace;
 
+  /* Bauhaus fonts (DESIGN.md). These override Tailwind's font-sans/font-mono
+     defaults and add font-display. DM Sans + JetBrains Mono are self-hosted
+     via next/font (vars set on <body>); Satoshi arrives via Fontshare with
+     display=swap, so first paint never blocks — the old reason for pinning
+     system fonts, which had left the entire design system unrendered. */
+  --font-sans: var(--font-dm-sans, 'DM Sans'), 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: 'Satoshi', var(--font-dm-sans, 'DM Sans'), 'DM Sans', -apple-system, sans-serif;
+  --font-mono: var(--font-jetbrains, 'JetBrains Mono'), 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
   /* Bauhaus primary palette */
   --color-bauhaus-red: #D02020;
   --color-bauhaus-blue: #1040C0;
@@ -67,7 +76,9 @@ html {
 }
 
 body {
-  font-family: inherit;
+  /* Unlayered on purpose: this must beat the layered font-sans utility, and
+     `inherit` here used to drag the html system stack over it. */
+  font-family: var(--font-sans);
   color: var(--color-navy-900);
   background: var(--color-bauhaus-canvas);
   line-height: 1.6;
@@ -78,9 +89,11 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Bauhaus headings — local/system stack so first paint never waits on remote font CSS. */
+/* Bauhaus headings — Satoshi per DESIGN.md, swapping in over the fallback.
+   (The previous system-font pin here, kept for first paint, silently
+   unrendered the whole design system; display=swap gives both.) */
 h1, h2, h3, h4 {
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-display);
   letter-spacing: -0.025em;
   line-height: 1.1;
 }
