@@ -1,0 +1,150 @@
+  ALICE SPRINGS  Wirrmalyanya Aboriginal Corporation — postal locality only
+  GIBSON DESERT NORTH Tjamu Tjamu (Aboriginal Corporation) RNTBC — postal locality only
+  ALICE SPRINGS  Desert Garden Produce Aboriginal Corporation — postal locality only
+  PAPUNYA        Papunya Tjupi Art Centre Aboriginal Corporation — community line beats postal (ALICE SPRINGS)
+  ALICE SPRINGS  Aherrenge Community Store Aboriginal Corporation — postal locality only
+  YUENDUMU       Warlukurlangu Artists Aboriginal Corporation — community line beats postal (ALICE SPRINGS)
+  ALICE SPRINGS  Kaltjiti Arts and Crafts Aboriginal Corporation — postal locality only
+  GIBSON DESERT NORTH Tjirrkarli (Aboriginal Corporation) — postal locality only
+  ALICE SPRINGS  Iwantja Social Club Aboriginal Corporation — postal locality only
+  NYIRRIPI       Nyirripi Aboriginal Corporation — community line beats postal (ALICE SPRINGS)
+  ALICE SPRINGS  Ninuku Arts Indigenous Corporation — postal locality only
+  HAASTS BLUFF   Kanparrka Store Aboriginal Corporation — community line beats postal (ALICE SPRINGS)
+  ALICE SPRINGS  Allalgara/Annangara Aboriginal Corporation — postal locality only
+  KINTORE        Pulikutjarra Aboriginal Corporation — community line beats postal (ALICE SPRINGS)
+  ALICE SPRINGS  Tjunkupu Aboriginal Corporation — postal locality only
+  BURT PLAIN     Mpweringe - Arnapipe Outstation Council Aboriginal Corporation — community line beats postal (ALICE SPRINGS)
+  ALICE SPRINGS  Aluralkwa Aboriginal Corporation — postal locality only
+  AREYONGA       Utju Health Service Aboriginal Corporation — community line beats postal (ALICE SPRINGS)
+  BURT PLAIN     Apmwerre Aboriginal Corporation — community line beats postal (ALICE SPRINGS)
+  AMPILATWATJA   Honeymoon Bore, akngerr-rnem akarreryel - Women?s Aboriginal Corporation — postal locality only
+  HUGH           Itperlyenge Aboriginal Corporation — postal locality only
+  YULARA         Nyangatjatjara Aboriginal Corporation — postal locality only
+  ATITJERE       Atitjere Homelands Store Aboriginal Corporation — community line beats postal (ALICE SPRINGS)
+  ALICE SPRINGS  Kaltjiti Community (Aboriginal Corporation) — postal locality only
+  CANTEEN CREEK  Areyn Aboriginal Corporation — community line beats postal (ALICE SPRINGS)
+  AMPILATWATJA   Ampilatwatja Health Centre Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Akapertatyeke Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Tjukurla Community Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Pitjantjatjara Yankunytjatjara Media (Aboriginal Corporation) — postal locality only
+  HERMANNSBURG   Hermannsburg Potters Aboriginal Corporation — postal locality only
+  NYAPARI        Tjungu Palya Aboriginal Corporation — postal locality only
+  HERMANNSBURG   Tjuwanpa Outstation Resource Centre (Aboriginal Corporation) — community line beats postal (ALICE SPRINGS)
+  INDULKANA (IWANTJA) Iwantja Arts and Crafts Aboriginal Corporation — postal locality only
+  HERMANNSBURG   Ipolera Aboriginal Corporation — postal locality only
+  MUTITJULU      Mutitjulu Community Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Ulpanyali Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Wanmarra Aboriginal Corporation — postal locality only
+  BARROW CREEK   Thangkenharenge Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Ilpurla Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Irrerlirre Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Anyungyumba Aboriginal Corporation — postal locality only
+  TJUKURLA       Tjarlirli Art Indigenous Corporation — postal locality only
+  ALICE SPRINGS  Wanarn Community (Aboriginal Corporation) — postal locality only
+  ALICE SPRINGS  Kaltjiti Anangu Store Aboriginal Corporation — postal locality only
+  HERMANNSBURG   Labrabuntja Aboriginal Corporation — postal locality only
+  HERMANNSBURG   Ekarlta Mangkitjika Aboriginal Corporation — postal locality only
+  YUELAMU        Alpirakina Store Aboriginal Corporation — postal locality only
+  MUTITJULU      Anangu Uwankaraku Punu Aboriginal Corporation — postal locality only
+  ENGAWALA       Alcoota Aboriginal Corporation — community line beats postal (ALICE SPRINGS)
+  TI TREE        Pmara Jutunta Aboriginal Corporation — community line beats postal (ALICE SPRINGS)
+  ALICE SPRINGS  Ilperle Aboriginal Corporation — postal locality only
+  HERMANNSBURG   Western Aranda Health Aboriginal Corporation — postal locality only
+  YUENDUMU       Warlpiri Media Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Irlentye Aboriginal Corporation — postal locality only
+  YULARA         Alpara Pastoral Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Irrulangkwele Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Pantharrpilenhe Aboriginal Corporation — postal locality only
+  MOUNT ZEIL     Menge Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Mamp Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Imperrenth Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Yangkunytjatjara Kutu Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Waju Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Warnpurru (Aboriginal Corporation) RNTBC — postal locality only
+  ALICE SPRINGS  M'Bunghara Indigenous Corporation — postal locality only
+  ALICE SPRINGS  Meercantie Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Kurripi Aboriginal Corporation — postal locality only
+  ENGAWALA       Engawala Art Centre Aboriginal Corporation — postal locality only
+  MIMILI         Ananguku Mimili Maku Arts Aboriginal Corporation — postal locality only
+  CANTEEN CREEK  Canteen Creek Landholding Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Kalka Community Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  The Living Water United Pentecostal Church Yuendumu Indigenous Corporation — community line beats postal (YUENDUMU)
+  ALICE SPRINGS  Atite Cattle Aboriginal Corporation — postal locality only
+  IMANPA         Imanpa General Store Anangu Aboriginal Corporation — community line beats postal (ALICE SPRINGS)
+  ALICE SPRINGS  Inelye Aboriginal Corporation — postal locality only
+  IMANPA         Umalka Tjintjira Aboriginal Corporation — community line beats postal (ALICE SPRINGS)
+  ALICE SPRINGS  Tyantyenge Aboriginal Corporation — postal locality only
+  KINTORE        Ninti Education Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Western Outstations Enterprise Development Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Warakurna Artists Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Warlpiri Youth Development Aboriginal Corporation — community line beats postal (YUENDUMU)
+  MOUNT ZEIL     M'Bunghara Self Sustainability Aboriginal Corporation — postal locality only
+  TANAMI         Milpingi Ngapa Desert Aboriginal Corporation — community line beats postal (YUENDUMU)
+  YUENDUMU       Yapa-Kurlangu Ngurrara Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Arramwelke Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Ngkerralye Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Pulkurru Land Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Tyerreng Aboriginal Corporation — postal locality only
+  PAPUNYA        Papunya Community Store Aboriginal Corporation — community line beats postal (ALICE SPRINGS)
+  AREYONGA       Areyonga Store Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  APY Art Centre Collective Aboriginal Corporation — postal locality only
+  CANTEEN CREEK  Canteen Creek Owairtilla Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Iyangka Kularta Aboriginal Corporation RNTBC — postal locality only
+  FINKE          Aputula Housing Aboriginal Corporation — community line beats postal (ALICE SPRINGS)
+  WILLOWRA       Wirliyajarrayi Pastoral Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Arlpwe Artists Aboriginal Corporation — community line beats postal (ALI CURUNG)
+  SANTA TERESA   Mpwelarre Health Aboriginal Corporation — community line beats postal (ALICE SPRINGS)
+  AMOONGUNA      Ilmwernekenhe Health Service Aboriginal Corporation — community line beats postal (ALICE SPRINGS)
+  PETERMANN      Watarrka Aboriginal Corporation — postal locality only
+  YUENDUMU       Yuendumu Magpies Football Aboriginal Corporation — community line beats postal (ALICE SPRINGS)
+  YUELAMU        Inkwareny Artists of Yuelamu Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Huckitta Aboriginal Corporation RNTBC — postal locality only
+  TITJIKALA      Titjikala Community Store Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Mimili Anangu Community Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Murputja Homelands Council (Aboriginal Corporation) — postal locality only
+  ALICE SPRINGS  Wetenngerr Aboriginal Corporation — postal locality only
+  FINKE          Aputula Aboriginal Corporation — community line beats postal (ALICE SPRINGS)
+  FINKE          Yalka Ratara Aboriginal Corporation — community line beats postal (ALICE SPRINGS)
+  PUKATJA        Warraritja Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  PY Ku Aboriginal Corporation — postal locality only
+  MUTITJULU      Umpiyara Tourism Aboriginal Corporation — community line beats postal (YULARA)
+  ALICE SPRINGS  Iwantja Community Aboriginal Corporation — postal locality only
+  YUENDUMU       Double Y Traditional Owners Association Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Tywele Aboriginal Corporation RNTBC — postal locality only
+  GIBSON DESERT SOUTH Patjarr Aboriginal Corporation — postal locality only
+  ERNABELLA (PUKATJA) Pukatja Roadhouse Aboriginal Corporation — postal locality only
+  YUENDUMU       Southern Tanami Kurdiji Indigenous Corporation — postal locality only
+  GIBSON DESERT NORTH Kiwirrkurra Council Aboriginal Corporation — postal locality only
+  KINTORE        Pintupi Homelands Health Service (Aboriginal Corporation) — postal locality only
+  LARAMBA        Laramba Community Store Aboriginal Corporation — community line beats postal (ALICE SPRINGS)
+  ALICE SPRINGS  Orrtipa Thurra Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Ukaka Aboriginal Corporation — postal locality only
+  HAASTS BLUFF   Ikuntji Artists Aboriginal Corporation — community line beats postal (ALICE SPRINGS)
+  ALICE SPRINGS  Wetenngerr Community Store Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Urlampe Aboriginal Corporation — postal locality only
+  HERMANNSBURG   Tnorala Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Uruna Potara Aboriginal Corporation — postal locality only
+  NGAANYATJARRA-GILES Papulankutja Artists Aboriginal Corporation — postal locality only
+  PUKATJA COMMUNITY Pitjantjatjara Yankunytjatjara Education Committee Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Tjala Arts Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Indulkana Community Store Aboriginal Corporation — postal locality only
+  YUENDUMU       Yuendumu Women's Centre Aboriginal Corporation — postal locality only
+  TITJIKALA      Tapatjatjaka Art and Craft Aboriginal Corporation — community line beats postal (ALICE SPRINGS)
+  SANTA TERESA   Atyenhenge-atherre Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Oak Valley Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Wirliyajarrayi Aboriginal Corporation — community line beats postal (WILLOWRA)
+  SANDOVER       Arlparra Aboriginal Corporation — community line beats postal (ALICE SPRINGS)
+  SANTA TERESA   Keringke Arts Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Pwerte Arntarntarenhe Aboriginal Corporation — postal locality only
+  MOUNT ZEIL     Irtnwere Tyewelkere Aboriginal Corporation — postal locality only
+  HERMANNSBURG   Western Arrarntaka Yia Aboriginal Corporation — postal locality only
+  ALICE SPRINGS  Pukatja Supermarket and Associated Stores Aboriginal Corporation — postal locality only
+  YUENDUMU       Yuendumu Social Club Aboriginal Corporation — postal locality only
+  ENGAWALA       Ntjaminya General Store Aboriginal Corporation — community line beats postal (ALICE SPRINGS)
+  ALI CURUNG     Mirnirri Aboriginal Corporation — postal locality only
+  MUTITJULU      Mutitjulu Urungka Tjurpipai Aboriginal Corporation — postal locality only
+  MOUNT ZEIL     Taarna Arts & Culture Centre Aboriginal Corporation — postal locality only
+
+150/150 localities parsed
+
+Dry run. Re-run with --apply to write gs_entities.lga_name.

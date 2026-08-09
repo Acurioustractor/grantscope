@@ -1,0 +1,29 @@
+23 corporation(s) to look up, 2000ms apart
+
+  GUNYANGARA     Gumatj Aboriginal Corporation — postal locality only
+  GUNYANGARA     Marngarr Resource Centre Aboriginal Corporation — postal locality only
+  NHULUNBUY      Djalkiri Foundation Aboriginal Corporation — postal locality only
+  GAPUWIYAK      Gong-Dal Aboriginal Corporation — postal locality only
+  NHULUNBUY      North East Arnhem Land Aboriginal Corporation — postal locality only
+  YIRRKALA       Lirrwi Yolngu Tourism Aboriginal Corporation — postal locality only
+  GAPUWIYAK      Gapuwiyak Culture  &  Arts Aboriginal Corporation — postal locality only
+  NHULUNBUY      Nyinyikay Dha Wuba Aboriginal Corporation — postal locality only
+  NHULUNBUY      Dhimurru  Aboriginal Corporation — postal locality only
+  NHULUNBUY      Burarrwanga Gumatj Aboriginal Corporation — postal locality only
+  NHULUNBUY      Liya Wanhurr Aboriginal Corporation — postal locality only
+  GUNYANGARA     Ngarrariyal Aboriginal Corporation — postal locality only
+  YIRRKALA       Laynhapuy Homelands Aboriginal Corporation — postal locality only
+  GAPUWIYAK      Milindji Aboriginal Corporation — postal locality only
+  NHULUNBUY      Yolngu Nations (Aboriginal Corporation) — postal locality only
+  NHULUNBUY      Mikan Aboriginal Corporation — postal locality only
+  NHULUNBUY      Culture College Arnhem Land Aboriginal Corporation — postal locality only
+  YIRRKALA       Rivers and Seas Aboriginal Corporation — postal locality only
+  GAPUWIYAK      Shine Out Aboriginal Corporation — postal locality only
+  YIRRKALA       Bawaka Aboriginal Corporation — postal locality only
+  NHULUNBUY      Bukudal Dhanbul Aboriginal Corporation — postal locality only
+  NHULUNBUY      Miwatj Health Aboriginal Corporation — postal locality only
+  YIRRKALA       Yarrwidi Aboriginal Corporation — postal locality only
+
+23/23 localities parsed
+
+Dry run. Re-run with --apply to write gs_entities.lga_name.

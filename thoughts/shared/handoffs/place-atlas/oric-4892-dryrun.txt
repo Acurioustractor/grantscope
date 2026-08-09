@@ -1,0 +1,35 @@
+29 corporation(s) to look up, 2000ms apart
+
+  PORMPURAAW     Thaa-Nguigarr Strathgordon Aboriginal Corporation RNTBC — postal locality only
+  GUNUNA         Kaiadilt Aboriginal Corporation — postal locality only
+  COEN           Moompa-Awu Aboriginal Corporation — postal locality only
+  AURUKUN        Wik Warriors Aboriginal Corporation — postal locality only
+  GUNUNA         Junkuri Laka Community Legal Centre Aboriginal Corporation — postal locality only
+  COEN           Coen Regional Aboriginal Corporation — postal locality only
+  PORMPURAAW     Wurrathaa Aboriginal Corporation — postal locality only
+  PORMPURAAW     Ngokal Weendi Aboriginal Corporation — postal locality only
+  COEN           Kulpa Aboriginal Corporation — postal locality only
+  AURUKUN        Wik & Kugu Art & Craft Aboriginal Corporation — postal locality only
+  COEN           Kalan Enterprises Aboriginal Corporation — postal locality only
+  LOCKHART RIVER Lockhart River Arts Indigenous Corporation — postal locality only
+  LOCKHART RIVER Chuulangun Aboriginal Corporation — postal locality only
+  PORMPURAAW     Poonko/Strathgordon Aboriginal Corporation — postal locality only
+  AURUKUN        Aurukun Community Indigenous Corporation — postal locality only
+  LOCKHART RIVER Kuuku Ya'u Aboriginal Corporation RNTBC — postal locality only
+  LOCKHART RIVER Angkum Aboriginal Corporation — postal locality only
+  KOWANYAMA      Yam Aboriginal Corporation — postal locality only
+  KOWANYAMA      Abm Elgoring Ambung Aboriginal Corporation RNTBC — postal locality only
+  COEN           Nyacha Kumapinta Aboriginal Corporation — postal locality only
+  GUNUNA         Mirndiyan Gununa Aboriginal Corporation — postal locality only
+  LAURA          Ang-Gnarra Aboriginal Corporation of Laura — postal locality only
+  PORMPURAAW     Ngamp Raak Mela Ngamp� Agu Kuungi Aboriginal Corporation — postal locality only
+  LOCKHART RIVER Yelan-awu Aboriginal Corporation — postal locality only
+  LOCKHART RIVER Puuya Ngulkuma Aboriginal & Torres Strait Island Corporation — postal locality only
+  GUNUNA         Rimirimi Aboriginal Corporation — postal locality only
+  PORMPURAAW     Pormpur Ngamplin Pam Mongthak Aboriginal Corporation — postal locality only
+  PORMPURAAW     Maatchangk Aboriginal Corporation — postal locality only
+  LOCKHART RIVER Lockhart River Social Club Aboriginal Corporation — postal locality only
+
+29/29 localities parsed
+
+Dry run. Re-run with --apply to write gs_entities.lga_name.

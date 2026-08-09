@@ -1,0 +1,76 @@
+70 corporation(s) to look up, 2000ms apart
+
+  THURSDAY ISLAND Kirriri Dorge Mudh Indigenous Corporation — postal locality only
+  IAMA ISLAND    Iama Mura Mabaigal Torres Strait Islander Corporation — community line beats postal (YAM ISLAND)
+  THURSDAY ISLAND Building and Construction Indigenous Corporation — postal locality only
+  THURSDAY ISLAND Naga Tribal Torres Strait Islanders Corporation — postal locality only
+  THURSDAY ISLAND Ware Corner Elders (Torres Strait Islander) Corporation — postal locality only
+  BADU ISLAND    Mura Badulgal (Torres Strait Islanders) Corporation RNTBC — postal locality only
+  THURSDAY ISLAND Gebaralgal (Torres Strait Islanders) Corporation RNTBC — postal locality only
+  BADU ISLAND    Badulgau Indigenous Corporation — postal locality only
+  HORN           Horn Island Aboriginal Corporation — postal locality only
+  SAIBAI ISLAND  Saibai Mura Buway (Torres Strait Islanders) Corporation RNTBC — postal locality only
+  —              Kaurareg Native Title Aboriginal Corporation  RNTBC — no locality parsed
+  PORUMA ISLAND  Kulkalgal (Torres Strait Islanders) Corporation RNTBC — postal locality only
+  THURSDAY ISLAND Magani Lagaugal (Torres Strait Islanders) Corporation RNTBC — postal locality only
+  PORUMA ISLAND  Saint Andrew's Anglican Church Torres Strait Islander Corporation — community line beats postal (THURSDAY ISLAND)
+  COCONUT ISLAND Garboi (Torres Strait Islanders) Corporation RNTBC — postal locality only
+  BADU ISLAND    Dhadhin Geai Warriors & Sport's Torres Strait Islander Corporation — postal locality only
+  THURSDAY ISLAND The Voice of One, Power of the Spirit Ministry Aboriginal and Torres Strait Islander Corporation — postal locality only
+  MURRAY ISLAND  Mer Gedkem Le (Torres Strait Islanders) Corporation RNTBC — postal locality only
+  SAIBAI ISLAND  Dhoeyoema Clan Torres Strait Islanders Corporation — postal locality only
+  MURRAY ISLAND  Dowar Waier Development Torres Strait Islanders Corporation — postal locality only
+  SAIBAI ISLAND  Dhamuway Torres Strait Islanders Corporation — postal locality only
+  MABUIAG ISLAND Goemulgaw (Torres Strait Islanders) Corporation RNTBC — community line beats postal (THURSDAY ISLAND)
+  DAUAN ISLAND   Dauanalgaw (Torres Strait Islanders) Corporation RNTBC — postal locality only
+  MABUIAG ISLAND Bari Dhabu Fisheries (Torres Strait Islanders) Corporation — postal locality only
+  ERUB ISLAND    Erubam Le Traditional Land and Sea Owners (Torres Strait Islanders) Corporation RNTBC — postal locality only
+  MOA ISLAND     Mualgal Torres Strait Islanders Corporation RNTBC — postal locality only
+  MER ISLAND     Mer, Dowar and Waier Torres Strait Islanders Corporation For Fisheries — community line beats postal (THURSDAY ISLAND)
+  YORKE ISLAND   Masigalgal (Torres Strait Islanders) Corporation RNTBC — postal locality only
+  WARRABER ISLET Warraberalgal (Torres Strait Islanders) Corporation RNTBC — postal locality only
+  STEPHENS ISLAND Ugar Ged Kem Le Zeuber Er Kep Le (Torres Strait Islanders) Corporation RNTBC — postal locality only
+  BOIGU ISLAND   Malu Kiai (Torres Strait Islanders) Corporation RNTBC — community line beats postal (THURSDAY ISLAND)
+  MURRAY ISLAND  Meriam Tribal Nation Secretariat Torres Strait Islander Indigenous Corporation — postal locality only
+  BOIGU ISLAND   Maluilgal (Torres Strait Islanders) Corporation RNTBC — postal locality only
+  MOA ISLAND     Badu Ar Mua Migi Lagal (Torres Strait Islanders) Corporation RNTBC — postal locality only
+  ERUB ISLAND    Erub Erwer Meta Torres Strait Islander  Corporation — postal locality only
+  IAMA ISLAND    Wakeyama (Torres Strait Islanders) Corporation RNTBC — community line beats postal (THURSDAY ISLAND)
+  WARRABER ISLET Power of the Spirit Ministry Torres Strait Islander Corporation — postal locality only
+  BADU ISLAND    TAGAI Indigenous Corporation — postal locality only
+  ERUB ISLAND    Erub Fisheries Management Torres Strait Islander Corporation — postal locality only
+  THURSDAY ISLAND Thursday Island Justice Torres Strait Islander and Aboriginal Corporation — postal locality only
+  PORUMA ISLAND  Poruma Zagethau Lag Torres Strait Islander Corporation — community line beats postal (THURSDAY ISLAND)
+  MER ISLAND     Opnor Bakir Atabur (Torres Strait Islander) Corporation — community line beats postal (MURRAY ISLAND)
+  SAIBAI ISLAND  Saibai Community Development (Torres Strait Islander) Corporation — postal locality only
+  THURSDAY ISLAND Malu Lamar (Torres Strait Islander) Corporation RNTBC — postal locality only
+  MABUIAG ISLAND Maigi Apu Torres Strait Islander Corporation — postal locality only
+  THURSDAY ISLAND Torres Health Indigenous Corporation — postal locality only
+  COCONUT ISLAND Buthu Lagau Saral Torres Strait Islander Corporation — postal locality only
+  THURSDAY ISLAND The PuipiKak Malu Indigenous Corporation — postal locality only
+  ERUB ISLAND    Ged Erub Trading Homeland Enterprise (Torres Strait Islander) Corporation — postal locality only
+  BADU ISLAND    Badhulgaw Kuthinaw Mudh Torres Strait Islander Corporation — postal locality only
+  THURSDAY ISLAND TRAWQ Indigenous Corporation — postal locality only
+  MER ISLAND     Op Ged Makrems Rugby League Torres Strait Islander Corporation — community line beats postal (MURRAY ISLAND)
+  THURSDAY ISLAND Kanamuri Aboriginal and Torres Strait Islander Corporation — postal locality only
+  SAIBAI ISLAND  Thoegayn Baw Indigenous Corporation — postal locality only
+  BADU ISLAND    Aragan Tribal Council (Torres Strait Islander Corporation) — postal locality only
+  THURSDAY ISLAND Torres Strait Islander Nurses Indigenous Corporation — postal locality only
+  DAUAN ISLAND   Port Cornwallis Fisheries (Aboriginal and Torres Strait Islander) Corporation — postal locality only
+  THURSDAY ISLAND Northern Cape and Torres Strait United Indigenous Corporation RNTBC — postal locality only
+  THURSDAY ISLAND Kerkar Bau Mens Indigenous Corporation — postal locality only
+  WARRABER ISLET SURUMAU GLADIATORS FOOTBALL CLUB TORRES STRAIT ISLANDER CORPORATION — postal locality only
+  DAUAN ISLAND   Woesa Kula Indigenous Corporation — postal locality only
+  THURSDAY ISLAND Kos and Abob Fisheries (Torres Strait Islander Corporation) — postal locality only
+  DAUAN ISLAND   Dhoengawan Torres Strait Islander Corporation — postal locality only
+  BOIGU ISLAND   Malu Kiai - Mura Buai Fishing Torres Strait Islander Corporation — postal locality only
+  MOA ISLAND     Ngalmun Lagau Minaral Torres Strait Islander Corporation — postal locality only
+  COCONUT ISLAND Porumalgal (Torres Strait Islanders) Corporation RNTBC — postal locality only
+  MABUIAG ISLAND Mabuygiw Garkaziw Kupay Torres Strait Islander Corporation — community line beats postal (THURSDAY ISLAND)
+  MOA ISLAND     Kozan Outreach Fellowship Ministry Indigenous Corporation — postal locality only
+  ERUB ISLAND    Zion Fellowship Power of the Spirit Ministry Torres Strait Islander Corporation — postal locality only
+  ERUB ISLAND    Buai Giz Torres Strait Islander Corporation — postal locality only
+
+69/70 localities parsed
+
+Dry run. Re-run with --apply to write gs_entities.lga_name.

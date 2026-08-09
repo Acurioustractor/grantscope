@@ -1,0 +1,37 @@
+31 corporation(s) to look up, 2000ms apart
+
+  HOPE VALE      Dhubbi Warra Aboriginal Corporation RNTBC — postal locality only
+  HOPE VALE      Waarnthuurr-iin Aboriginal Corporation — postal locality only
+  HOPE VALE      Binthi Land Holding Group Aboriginal Corporation — postal locality only
+  COOKTOWN       Yuuru Aboriginal Corporation — postal locality only
+  WUJAL WUJAL    Wujal Wujal Justice Group Indigenous Corporation — postal locality only
+  HOPE VALE      Hopevale Aboriginal Corporation for Arts and Culture — postal locality only
+  BLOOMFIELD     Lundinwarra Aboriginal Corporation — community line beats postal (COOKTOWN)
+  COOKTOWN       Nguurruumungu Indigenous Corporation — postal locality only
+  COOKTOWN       YBM Enterprises Aboriginal Corporation — postal locality only
+  BLOOMFIELD     Burungu Aboriginal Corporation — postal locality only
+  HOPE VALE      Jarradama Warra Western Yalanji Aboriginal Corporation — postal locality only
+  HOPE VALE      Asai Gibson Aboriginal Corporation — postal locality only
+  COOKTOWN       Buubu Gujin Aboriginal Corporation — postal locality only
+  HOPE VALE      MMET - Daarpa Aboriginal Corporation (Daarpa Nation) — postal locality only
+  COOKTOWN       Muunthiwarra Aboriginal Corporation — postal locality only
+  HOPE VALE      Juunjuwarra Aboriginal Corporation — postal locality only
+  —              Rinyirru (Lakefield) Aboriginal Corporation — no locality parsed
+  HOPE VALE      Coral?s Retreat Aboriginal Corporation — postal locality only
+  COOKTOWN       Normanby Aboriginal Corporation — postal locality only
+  COOKTOWN       Gungarde Community Centre Aboriginal Corporation — postal locality only
+  COOKTOWN       Cicada Nguuruumungu Aboriginal Corporation — postal locality only
+  HOPE VALE      TDT Aboriginal Corporation — postal locality only
+  HOPE VALE      Branigan's Aboriginal Corporation — postal locality only
+  HOPE VALE      Walmbaar Aboriginal Corporation RNTBC — postal locality only
+  HOPE VALE      Hopevale Thurrpiil Community Justice Group Aboriginal Corporation — postal locality only
+  COOKTOWN       Alka Bawar (Kalpowar) Aboriginal Corporation — postal locality only
+  ROSSVILLE      Dabu Jajikal Aboriginal Corporation — community line beats postal (BLOOMFIELD)
+  COOKTOWN       Kalka Jaka Aboriginal Corporation — postal locality only
+  HOPE VALE      Thanil Aboriginal Corporation — postal locality only
+  COOKTOWN       Balnggarrawarra Aboriginal Corporation — postal locality only
+  HOPE VALE      D.E.L.P.A Thiithaarr Warra Aboriginal Corporation — postal locality only
+
+30/31 localities parsed
+
+Dry run. Re-run with --apply to write gs_entities.lga_name.

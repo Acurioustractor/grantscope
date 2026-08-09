@@ -1,0 +1,51 @@
+45 corporation(s) to look up, 2000ms apart
+
+  YARRALIN       Walangeri Ngumpinku Aboriginal Corporation — postal locality only
+  BESWICK        Djilpin Arts Aboriginal Corporation — postal locality only
+  NGUKURR        Ngukurr Language Centre Aboriginal Corporation — postal locality only
+  LAJAMANU       Lajamanu Progress Aboriginal Corporation — postal locality only
+  KATHERINE      Mulluyu Aboriginal Corporation — postal locality only
+  KALKARINDJI    Gurindji Aboriginal Corporation RNTBC — postal locality only
+  NGUKURR COMMUNITY Nyanyalindiyi Burrunju Aboriginal Corporation — postal locality only
+  YARRALIN       Kyang-Kyang Aboriginal Corporation — postal locality only
+  KATHERINE      Alawa Aboriginal Corporation — postal locality only
+  BESWICK        Wuduluk Progress Aboriginal Corporation — postal locality only
+  PIGEON HOLE    Nitjpurru Aboriginal Corporation — community line beats postal (KATHERINE)
+  VICTORIA RIVER Camfield Mudbura Aboriginal Corporation — postal locality only
+  BAINES         Jiylinum Aboriginal Corporation — postal locality only
+  BARUNGA        Bagala Aboriginal Corporation — community line beats postal (KATHERINE)
+  JILKMINGGAN    Dungalan Aboriginal Corporation — community line beats postal (MATARANKA)
+  KATHERINE      Jutamaling Aboriginal Corporation — postal locality only
+  KATHERINE      Warliburru Store Aboriginal Corporation — postal locality only
+  TIMBER CREEK   Wirib Aboriginal Corporation — postal locality only
+  NGUKURR        Ngukurr Arts Aboriginal Corporation — postal locality only
+  KALKARINDJI    Karungkarni Art and Culture Aboriginal Corporation — postal locality only
+  NGUKURR        Millwarparra Aboriginal Corporation — postal locality only
+  KATHERINE      Bulla Goorbidgim Aboriginal Corporation — postal locality only
+  DAGURAGU       Daguragu Community Store Aboriginal Corporation — postal locality only
+  MATARANKA      Namul-Namul Aboriginal Corporation — postal locality only
+  KATHERINE      Warnayaka Art & Cultural Aboriginal Corporation — community line beats postal (LAJAMANU)
+  NGUKURR        Yugul Mangi Development Aboriginal Corporation — postal locality only
+  BULMAN WEEMOL  Gulin Gulin Community Store Aboriginal Corporation — community line beats postal (KATHERINE)
+  TIMBER CREEK   Ngaliwurru-Wuli Aboriginal Corporation — postal locality only
+  TIMBER CREEK   Walmoong Aboriginal Corporation — postal locality only
+  TIMBER CREEK   Djuliki Aboriginal Corporation — postal locality only
+  BAINES         Janyima Store Aboriginal Corporation — community line beats postal (TIMBER CREEK)
+  BINJARI        Binjari Community Aboriginal Corporation — community line beats postal (KATHERINE)
+  NGUKURR        Wuyagiba Bush Hub Aboriginal Corporation — postal locality only
+  TIMBER CREEK   Gunamu Aboriginal Corporation — postal locality only
+  TIMBER CREEK   Brumby Plains Aboriginal Corporation — postal locality only
+  ROBINSON RIVER Mungoorbada Aboriginal Corporation — community line beats postal (KATHERINE)
+  YARRALIN       Lingarra - Ngaringman Aboriginal Corporation — community line beats postal (KATHERINE)
+  KATHERINE      Djarrung Aboriginal Corporation — postal locality only
+  LAJAMANU       The Wulaign Homelands Council Aboriginal Corporation — postal locality only
+  KATHERINE      Urapunga Aboriginal Corporation — postal locality only
+  KATHERINE      Nagurunguru Community Store Aboriginal Corporation — postal locality only
+  LAJAMANU       Kurdiji Aboriginal Corporation — community line beats postal (KATHERINE)
+  JILKMINGGAN    Jilkminggan Community Aboriginal Corporation — postal locality only
+  BARUNGA        Bagala Store Aboriginal Corporation — postal locality only
+  TIMBER CREEK   Nguwulidi Aboriginal Corporation — postal locality only
+
+45/45 localities parsed
+
+Dry run. Re-run with --apply to write gs_entities.lga_name.

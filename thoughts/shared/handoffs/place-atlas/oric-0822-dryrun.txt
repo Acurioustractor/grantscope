@@ -1,0 +1,85 @@
+79 corporation(s) to look up, 2000ms apart
+
+  WURRUMIYANGA   Tiwi Designs Aboriginal Corporation — community line beats postal (BATHURST ISLAND)
+  WEST ARNHEM    Namunidjbuk Aboriginal Corporation — postal locality only
+  RAKULA         A Daiyi Aboriginal Corporation — postal locality only
+  WADEYE         Palngun Wurnangat Aboriginal Corporation — postal locality only
+  GALIWINKU      Ganydjuling Aboriginal Corporation — postal locality only
+  WARRUWI        Ajurumu Store Aboriginal Corporation — community line beats postal (GOULBURN ISLAND)
+  KAKADU         Werenbun Association Aboriginal Corporation — postal locality only
+  WURRUMIYANGA   Mantiyupwi Aboriginal Corporation — community line beats postal (BATHURST ISLAND)
+  MILIKAPITI     Milikapiti Community Indigenous Corporation — postal locality only
+  PIRLANGIMPI    Munupi Arts and Crafts Association-Aboriginal Corporation — postal locality only
+  WARRUWI        Yagbani Aboriginal Corporation — community line beats postal (GOULBURN ISLAND)
+  DALY RIVER     Delye Aboriginal Corporation — postal locality only
+  WINNELLIE      Yantjarrwu Outstation Resource Centre Aboriginal Corporation — postal locality only
+  WURRUMIYANGA   Bathurst Island Housing Aboriginal Corporation — postal locality only
+  WINNELLIE      Garrawurra Aboriginal Corporation — postal locality only
+  CHARLOTTE      Anju Yinirrikun Aboriginal Corporation — postal locality only
+  RAKULA         Ngatpuk Aboriginal Corporation — postal locality only
+  NUMBULWAR      Numburindi Development Aboriginal Corporation — postal locality only
+  MILINGIMBI     Milingimbi Art and Cultural Aboriginal Corporation — postal locality only
+  MANINGRIDA     Bawinanga Homelands Aboriginal Corporation — postal locality only
+  RAKULA         Twin Hill Aboriginal Corporation — postal locality only
+  GUNBALANYA     DEMED Aboriginal Corporation — postal locality only
+  GUNBALANYA     Injalak Arts & Crafts Aboriginal Corporation — postal locality only
+  NAUIYU         Dak Milng Aboriginal Corporation — community line beats postal (DALY RIVER)
+  DALY RIVER     Durrmu Arts Aboriginal Corporation — community line beats postal (PEPPIMENARTI)
+  PEPPIMENARTI   Peppimenarti Store Indigenous Corporation — postal locality only
+  RAMINGINING    Bulabula Arts Aboriginal Corporation — postal locality only
+  RAMINGINING    Arafura Swamp Rangers Aboriginal Corporation — postal locality only
+  GALIWINKU      Marthakal Homelands and Resource Centre Aboriginal Corporation — postal locality only
+  WADEYE         Thamarrurr Youth Indigenous Corporation — postal locality only
+  EAST ARNHEM    Baniyala Garrangali Aboriginal Corporation — postal locality only
+  GALIWINKU      Gurilka Indigenous Corporation — postal locality only
+  NAUIYU         Nauiyu Nambiyu Aboriginal Corporation — community line beats postal (DALY RIVER)
+  ANGURUGU       Anindilyakwa Housing Aboriginal Corporation — postal locality only
+  DALY RIVER     Maddaingya (Malak Malak) Aboriginal Corporation — postal locality only
+  ANGURUGU       Mission Field Outreach Indigenous Corporation — postal locality only
+  ANGURUGU       Groote Eylandt Bickerton Island Primary College Aboriginal Corporation — postal locality only
+  MILINGIMBI     Lanarra Homelands Aboriginal Corporation — postal locality only
+  ANGURUGU       Warningakalinga Aboriginal Corporation — postal locality only
+  PEPPIMENARTI   Peppimenarti Health Services Aboriginal Corporation — postal locality only
+  EAST ARM       The Arnhem Land Progress Aboriginal Corporation — postal locality only
+  DALY RIVER     Mount Greenwood Aboriginal Corporation — postal locality only
+  DALY RIVER     Uminyuluk Indigenous Corporation — postal locality only
+  GUNBALANYA     Adjumarllarl Aboriginal Corporation — postal locality only
+  BEES CREEK     Dalabon Aboriginal Corporation — postal locality only
+  NUMBULWAR      Magalawa Indigenous Corporation — postal locality only
+  GALIWINKU      Yalu Aboriginal Corporation — postal locality only
+  GALIWINKU      Galiwin'ku Women's Space Aboriginal Corporation — postal locality only
+  MANINGRIDA     Role Aboriginal Corporation — postal locality only
+  UMBAKUMBA      Mikbamurra Aboriginal Corporation — postal locality only
+  ANGURUGU       Aruburabura Aboriginal Corporation — postal locality only
+  ANGURUGU       Anindilyakwa Services Aboriginal Corporation — postal locality only
+  WURRUMIYANGA   Tarntipi Homelands Aboriginal Corporation — community line beats postal (TIWI ISLANDS)
+  UMBAKUMBA      Numayanga Aboriginal Corporation — postal locality only
+  RAMINGINING    Gupulul Marayuwu Aboriginal Corporation — postal locality only
+  MILINGIMBI     Milingimbi and Outstations Progress Resources Aboriginal Corporation — postal locality only
+  NGANMARRIYANGA Nganmarriyanga Mensheds Aboriginal Corporation — postal locality only
+  WINNELLIE      Bamburrurrnga Aboriginal Corporation — community line beats postal (GALIWINKU)
+  LLOYD CREEK    Boorooberongal Gulyangarri Aboriginal Corporation — postal locality only
+  PIRLANGIMPI    Munupi Aboriginal Corporation — postal locality only
+  ACACIA HILLS   Northern Australian Dingo Aboriginal & Torres Strait Islander Corporation — postal locality only
+  BATHURST ISLAND Nguiu Club Aboriginal Corporation — postal locality only
+  MILIKAPITI     Yimpinari Aboriginal Corporation — postal locality only
+  NAUIYU         Merrepen Arts, Culture and Language Aboriginal Corporation — community line beats postal (DALY RIVER)
+  GUNBALANYA     Njanjma Aboriginal Corporation — postal locality only
+  MANINGRIDA     Mala'la Health Service Aboriginal Corporation — postal locality only
+  BELYUEN        Tjaetaba Aboriginal Corporation — community line beats postal (BELYUEN COMMUNITY)
+  UMBAKUMBA      Aminjarrinja Enterprises Aboriginal Corporation — postal locality only
+  NAUIYU         Green River Aboriginal Corporation — community line beats postal (DALY RIVER)
+  WINNELLIE      Mulyung Aboriginal Corporation — postal locality only
+  PEPPIMENARTI   Deewin Kirim Aboriginal Corporation — postal locality only
+  EAST ARNHEM    Djalkiripuyngu Aboriginal Corporation RNTBC — postal locality only
+  GUNBALANYA     Muburridj Aboriginal Corporation — community line beats postal (OENPELLI)
+  OENPELLI       Namurgardabu Aboriginal Corporation — postal locality only
+  WEST ARNHEM    Malbak Aboriginal Corporation — postal locality only
+  GALIWINKU      Golarri Aboriginal Corporation — postal locality only
+  PIRLANGIMPI    Mamirnikuwi Rangers Indigenous Corporation — community line beats postal (TIWI ISLANDS)
+  WURRUMIYANGA   Tampu King Aboriginal Corporation — postal locality only
+  NAUIYU         Miriam Rose Foundation Aboriginal Corporation — postal locality only
+
+79/79 localities parsed
+
+Dry run. Re-run with --apply to write gs_entities.lga_name.

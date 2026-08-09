@@ -1,0 +1,20 @@
+14 corporation(s) to look up, 2000ms apart
+
+  NAPRANUM       Luthik Aboriginal Corporation — postal locality only
+  MAPOON         Namaleta Aboriginal Corporation — postal locality only
+  MAPOON         Tjungundji Aboriginal Corporation — postal locality only
+  NAPRANUM       TWAL Justice Indigenous Corporation — postal locality only
+  MAPOON         Wei'Num Arts and Crafts Aboriginal and Torres Strait Islander Corporation — postal locality only
+  MAPOON         Yinwum Aboriginal Corporation — postal locality only
+  WEIPA          Sisters in Sharing Aboriginal and Torres Strait Islander Corporation — postal locality only
+  MAPOON         Mapoon Men's Group Indigenous Corporation — postal locality only
+  NAPRANUM       Napranum Men's Group Indigenous Corporation — postal locality only
+  NAPRANUM       Choolathah Women's Business Indigenous Corporation — postal locality only
+  MAPOON         Taepathiggi Batavia Clan Group Aboriginal Corporation — postal locality only
+  WEIPA          Mokwiri Aboriginal Corporation RNTBC — postal locality only
+  NAPRANUM       Ruguupyne Aboriginal Corporation — postal locality only
+  MAPOON         Teppethiggi Ni'Ripono Landcare Aboriginal Corporation — postal locality only
+
+14/14 localities parsed
+
+Dry run. Re-run with --apply to write gs_entities.lga_name.
