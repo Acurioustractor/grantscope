@@ -1,4 +1,5 @@
 import { cache } from 'react';
+import { unstable_cache } from 'next/cache';
 import { getServiceSupabase } from '@/lib/supabase';
 import { placeSlug } from '@/lib/atlas/share';
 
@@ -102,16 +103,20 @@ function num(value: unknown): number {
  * Grouping by name also merges the 7,850 organisations that carry a council
  * with no state at all, which the view splits into a separate row.
  */
-export const getRemoteCouncils = cache(async function getRemoteCouncils(): Promise<CouncilSummary[]> {
-  const db = getServiceSupabase();
-  // Counts cover EVERY organisation placed under the council, whatever its
-  // row-level remoteness — the header "we hold N" must match the Atlas's
-  // who's-here, and a placed row with a missing remoteness field is still
-  // held (Ceduna read 52 vs the register's 53 until this was split, found
-  // 2026-08-10). Remoteness only decides which councils get a page: those
-  // holding at least one remote or very-remote community-controlled org.
-  const result = await db.rpc('exec_sql', {
-    query: `SELECT lga_name,
+// The list moves slowly and the query is a national GROUP BY, so it runs at
+// most every 15 minutes per instance, not per pageview. Between refreshes a
+// pooler blip serves the stale list instead of failing anyone's page.
+const fetchRemoteCouncils = unstable_cache(
+  async (): Promise<CouncilSummary[]> => {
+    const db = getServiceSupabase();
+    // Counts cover EVERY organisation placed under the council, whatever its
+    // row-level remoteness — the header "we hold N" must match the Atlas's
+    // who's-here, and a placed row with a missing remoteness field is still
+    // held (Ceduna read 52 vs the register's 53 until this was split, found
+    // 2026-08-10). Remoteness only decides which councils get a page: those
+    // holding at least one remote or very-remote community-controlled org.
+    const result = await db.rpc('exec_sql', {
+      query: `SELECT lga_name,
                    mode() WITHIN GROUP (ORDER BY state) AS state,
                    mode() WITHIN GROUP (ORDER BY remoteness) AS remoteness,
                    count(*) AS orgs,
@@ -124,18 +129,31 @@ export const getRemoteCouncils = cache(async function getRemoteCouncils(): Promi
                 AND remoteness IN ('Remote Australia','Very Remote Australia')
             ) > 0
              ORDER BY cc DESC`,
-  });
-  if (!Array.isArray(result.data)) return [];
+    });
+    // A failure must THROW, never return []: an empty list reads as "no such
+    // council" downstream, and a pooler timeout was rendering real pages as
+    // 404s (Ben hit it live, 2026-08-10). An error page tells the truth.
+    if (result.error) {
+      throw new Error(`remote councils query failed: ${String(result.error.message ?? result.error)}`);
+    }
+    if (!Array.isArray(result.data)) {
+      throw new Error('remote councils query returned no rowset');
+    }
 
-  return (result.data as Array<Record<string, unknown>>).map(row => ({
-    lgaName: String(row.lga_name ?? ''),
-    slug: councilSlug(String(row.lga_name ?? '')),
-    state: (row.state as string | null) || null,
-    remoteness: (row.remoteness as string | null) || null,
-    orgCount: num(row.orgs),
-    communityControlled: num(row.cc),
-  }));
-});
+    return (result.data as Array<Record<string, unknown>>).map(row => ({
+      lgaName: String(row.lga_name ?? ''),
+      slug: councilSlug(String(row.lga_name ?? '')),
+      state: (row.state as string | null) || null,
+      remoteness: (row.remoteness as string | null) || null,
+      orgCount: num(row.orgs),
+      communityControlled: num(row.cc),
+    }));
+  },
+  ['remote-councils'],
+  { revalidate: 900 }
+);
+
+export const getRemoteCouncils = cache(fetchRemoteCouncils);
 
 export const getCouncilPlaceReport = cache(async function getCouncilPlaceReport(
   slug: string,

@@ -40,22 +40,39 @@ export default async function CouncilPage({ params }: { params: Promise<{ slug: 
 
   return (
     <main className="min-h-screen bg-bauhaus-canvas text-bauhaus-black">
-      <header className="border-b-4 border-bauhaus-black bg-white px-5 py-10 lg:px-10">
-        <div className="mx-auto max-w-5xl">
+      <header className="px-5 pt-10 lg:px-10">
+        <div className="mx-auto max-w-5xl border-4 border-bauhaus-black bg-white p-6 shadow-[8px_8px_0_0_#121212] lg:p-8">
           <p className="font-mono text-[11px] font-black uppercase tracking-widest text-bauhaus-red">
             <Link href="/place/council" className="underline">Every remote council</Link>
           </p>
           <h1 className="mt-3 text-4xl font-black uppercase tracking-tight lg:text-5xl">
             {report.lgaName}
           </h1>
-          <p className="mt-4 max-w-3xl text-base leading-7">
-            We hold <strong>{report.orgCount.toLocaleString('en-AU')}</strong> organisations under
-            this council, <strong>{report.communityControlled.toLocaleString('en-AU')}</strong> of
-            them community-controlled. This page is about the ones we could not place, and the
-            reasons we could not.
+          <p className="mt-1 font-mono text-[11px] uppercase tracking-widest text-bauhaus-muted">
+            {report.state ?? ''}{report.remoteness ? ` · ${report.remoteness}` : ''}
           </p>
-          <p className="mt-3 max-w-3xl text-base leading-7">
-            It was generated, not researched. Nobody has been through this council area by hand, so
+
+          <dl className="mt-6 grid gap-5 sm:grid-cols-3">
+            <div className="border-l-4 border-bauhaus-black pl-4">
+              <dt className="font-mono text-[10px] font-bold uppercase tracking-widest">Placed here</dt>
+              <dd className="mt-1 text-3xl font-black">{report.orgCount.toLocaleString('en-AU')}</dd>
+              <dd className="font-mono text-[11px]">organisations</dd>
+            </div>
+            <div className="border-l-4 border-bauhaus-black pl-4">
+              <dt className="font-mono text-[10px] font-bold uppercase tracking-widest">Community-controlled</dt>
+              <dd className="mt-1 text-3xl font-black">{report.communityControlled.toLocaleString('en-AU')}</dd>
+              <dd className="font-mono text-[11px]">of the placed</dd>
+            </div>
+            <div className="border-l-4 border-bauhaus-red pl-4">
+              <dt className="font-mono text-[10px] font-bold uppercase tracking-widest text-bauhaus-red">Cannot be placed</dt>
+              <dd className="mt-1 text-3xl font-black text-bauhaus-red">{report.unplacedTotal.toLocaleString('en-AU')}</dd>
+              <dd className="font-mono text-[11px]">share these postcodes</dd>
+            </div>
+          </dl>
+
+          <p className="mt-6 max-w-3xl text-base leading-7">
+            This page is about the ones we could not place, and the reasons we could not. It was
+            generated, not researched: nobody has been through this council area by hand, so
             everything below is what a register can say about itself and no more.
           </p>
         </div>
