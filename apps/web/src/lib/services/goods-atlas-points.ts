@@ -1,13 +1,16 @@
 import { getServiceSupabase } from '@/lib/supabase';
-import type { AtlasPoint } from '@/lib/atlas/layers';
+import { isGoodsPlacePublic, type AtlasPoint, type AtlasSurface } from '@/lib/atlas/layers';
 
 /**
- * The Goods-in-community points for the org-side Atlas.
+ * The Goods-in-community points, per surface.
  *
- * Server-side only, behind the /org middleware gate: this feed is how the
- * 'org' consent tier is actually enforced. The public Atlas never calls it,
- * so the public payload never contains a Goods figure — the registry entry
- * it renders from carries the contract and no numbers.
+ * Server-side only: this feed is how the Goods consent tiers are actually
+ * enforced. The org surface (behind the /org middleware gate) receives every
+ * register row. A public surface receives ONLY communities on the per-place
+ * consent list (GOODS_PUBLIC_PLACES in the layer registry) — empty until the
+ * in-person consent conversation lands, so today the public feed returns
+ * nothing and the public payload never contains a Goods figure. Adding a
+ * consented place to that list is the whole flip.
  *
  * Source is goods_communities.assets_deployed — the same per-community
  * register the Communities hub tab shows, so the org surface agrees with
@@ -30,7 +33,9 @@ function num(raw: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-export async function getGoodsDeliveredPoints(): Promise<AtlasPoint[]> {
+export async function getGoodsDeliveredPoints(
+  surface: AtlasSurface = 'org'
+): Promise<AtlasPoint[]> {
   const db = getServiceSupabase();
   const { data, error } = await db.rpc('exec_sql', {
     query: `SELECT gc.community_name, gc.state,
@@ -50,6 +55,10 @@ export async function getGoodsDeliveredPoints(): Promise<AtlasPoint[]> {
 
   const points: AtlasPoint[] = [];
   for (const entry of data as Array<Record<string, unknown>>) {
+    // Public surfaces receive consented places only — filtered here, on the
+    // raw register name, before anything is shaped for the client.
+    const rawName = String(entry.community_name ?? '');
+    if (surface === 'public' && !isGoodsPlacePublic(rawName)) continue;
     const lat = entry.lat === null ? null : Number(entry.lat);
     const lng = entry.lng === null ? null : Number(entry.lng);
     // A community the register cannot locate cannot be a point; it stays in

@@ -4,8 +4,10 @@ import {
   ATLAS_LAYERS,
   ATLAS_NO_DATA_STYLE,
   DEFAULT_ATLAS_LAYER_KEY,
+  GOODS_PUBLIC_PLACES,
   atlasStyleFor,
   getAtlasLayer,
+  isGoodsPlacePublic,
   isLiveLayer,
   isPointLayer,
   visibleAtlasLayers,
@@ -64,10 +66,19 @@ describe('the registry contract', () => {
     }
   });
 
-  it('the goods layer is org-tier, point-grain, and carries no figures', () => {
+  it('the goods layer is point-grain, carries no figures, and its tier follows per-place consent', () => {
     const goods = getAtlasLayer('goods-delivered');
     expect(goods).not.toBeNull();
-    expect(goods!.consent).toBe('org');
+    // The whole public flip is the consent list: empty means org-only, and
+    // the first consented place turns the layer public (with the server feed
+    // shipping only consented places — goods-atlas-points enforces that).
+    expect(goods!.consent).toBe(GOODS_PUBLIC_PLACES.length > 0 ? 'public' : 'org');
+    if (GOODS_PUBLIC_PLACES.length === 0) {
+      expect(isGoodsPlacePublic('Anywhere At All')).toBe(false);
+    } else {
+      // Consent matching must survive the register's casing.
+      expect(GOODS_PUBLIC_PLACES.every(p => isGoodsPlacePublic(p.toUpperCase()))).toBe(true);
+    }
     expect(goods!.honestAt).toBe('community');
     expect(isPointLayer(goods!)).toBe(true);
     // The registry entry may ship in a public bundle; the numbers may not.
@@ -119,15 +130,19 @@ describe('consent tiers gate surfaces', () => {
   });
 
   it('the public surface sees exactly the public seed layers', () => {
-    // goods-delivered is org-tier: its points arrive only via the org page's
-    // server fetch, so the public surface never lists it and never holds its
-    // data. If this list grows, check the new layer's data path first.
+    // goods-delivered joins this list only when a place has consented: its
+    // points arrive via a server fetch that ships consented places only.
+    // If this list grows, check the new layer's data path first.
+    // Federal grants leads Recorded money: the richer, truer window first.
     expect(visibleAtlasLayers('public').map(l => l.key)).toEqual([
       'funding-deserts',
+      'grants-awarded',
       'money-recorded',
       'justice-funding',
       'renewal-cliff',
       'seifa-disadvantage',
+      'whats-working',
+      ...(GOODS_PUBLIC_PLACES.length > 0 ? ['goods-delivered'] : []),
       'unplaced-orgs',
     ]);
     expect(visibleAtlasLayers('org').map(l => l.key)).toContain('goods-delivered');
@@ -182,6 +197,35 @@ describe('the substantive layers', () => {
     expect(atlasStyleFor(seifa, 5).color).toBe('#F0C020');
     expect(atlasStyleFor(seifa, 10).color).toBe('#1040C0');
     expect(seifa.value(feature({ avg_irsd_decile: 1 }))).toBe(1);
+    // One decimal so 2.52 never rounds up to a softer-looking "decile 3";
+    // whole numbers drop the trailing zero.
+    expect(seifa.format(2.5238)).toBe('decile 2.5');
+    expect(seifa.format(7)).toBe('decile 7');
+  });
+
+  it('federal grants reads its own field; absent means no-data, never zero', () => {
+    const grants = getAtlasLayer('grants-awarded') as AtlasLiveLayer;
+    expect(grants.value(feature({ grants_awarded_total: 205853273 }))).toBe(205853273);
+    expect(atlasStyleFor(grants, 205_853_273).color).toBe('#E06C18');
+    // The fixture carries no grants field — an old cached payload — so the
+    // layer must paint no-data, not $0.
+    expect(grants.value(feature())).toBeNull();
+    expect(grants.format(205853273)).toMatch(/\$/);
+  });
+
+  it('what-works treats zero as a real answer and absent as no-data', () => {
+    const works = getAtlasLayer('whats-working') as AtlasLiveLayer;
+    // Ceduna today: the join ran, nothing is linked. Zero paints the "none
+    // linked yet" stop; it is never coerced to the no-data grey.
+    expect(works.value(feature({ alma_linked_count: 0 }))).toBe(0);
+    expect(atlasStyleFor(works, 0).color).toBe('#1040C0');
+    // Zero paints near-invisibly (a 0.2 wash made the layer read broken) and
+    // formats as words — never a giant "0" beside a place name.
+    expect(atlasStyleFor(works, 0).fillOpacity).toBeLessThan(0.1);
+    expect(works.value(feature())).toBeNull();
+    expect(atlasStyleFor(works, null)).toEqual(ATLAS_NO_DATA_STYLE);
+    expect(works.format(0)).toBe('None yet');
+    expect(works.format(3)).toBe('3 linked');
   });
 
   it('money layers use order-of-magnitude bands and read their own fields', () => {

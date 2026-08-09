@@ -45,6 +45,13 @@ export interface AtlasFeature {
    * the field existed may still hydrate a newer client. */
   unplaced_reasons?: Record<string, number> | null;
   justice_funding_total: number | null;
+  /** GrantConnect awards to organisations placed in this council. Optional
+   * for the same cached-payload reason as unplaced_reasons. */
+  grants_awarded_total?: number | null;
+  /** Interventions in the Australian Living Map of Alternatives linked to an
+   * organisation placed in this council. Zero is a real answer (the join ran
+   * and found none); null/absent means the payload predates the field. */
+  alma_linked_count?: number | null;
   /** Null when the council has no point coordinates; it still renders where a
    * boundary matches its name. Coordinates only drive bounds-fitting. */
   lat: number | null;
@@ -233,11 +240,12 @@ const moneyRecorded: AtlasLiveLayer = {
   name: 'Recorded money',
   unit: '$ recorded reaching the council',
   caveat:
-    'Every dollar our records can see reaching organisations based in this council — ' +
-    'justice funding, contracts and grants together. Counted where it was recorded, ' +
-    "not where it landed, so a regional hub administering its neighbours' programs " +
-    'reads rich while the places the work reaches read poor. The biggest numbers on ' +
-    'this layer are capital cities and hubs: that is the recording, not the need.',
+    'Dollars the entity-graph pipeline can see reaching organisations based in this ' +
+    'council — justice funding, contracts and grants together. It does not include ' +
+    'the GrantConnect feed, which is newer and often far larger: read the Federal ' +
+    'grants layer beside this one. Counted where it was recorded, not where it ' +
+    "landed, so a regional hub administering its neighbours' programs reads rich " +
+    'while the places the work reaches read poor.',
   honestAt: 'council',
   honestAtNote:
     "Council of the recipient's registered address. Where the work is delivered is " +
@@ -290,6 +298,44 @@ const justiceFunding: AtlasLiveLayer = {
   format: v => money(v),
 };
 
+// The richest vein in the place data: the Commonwealth's own grants register,
+// joined to placed organisations by entity id. Same order-of-magnitude bands
+// as Recorded money (checked 2026-08-10: 801 councils hold linked awards;
+// median $13M, p90 $366M, max $19B).
+const grantsAwarded: AtlasLiveLayer = {
+  key: 'grants-awarded',
+  status: 'live',
+  kind: 'choropleth',
+  group: 'money',
+  name: 'Federal grants',
+  unit: '$ of GrantConnect awards to organisations here',
+  caveat:
+    "Grant awards on the Commonwealth's GrantConnect register, counted where the " +
+    'receiving organisation is placed. About seven in ten awards can be tied to an ' +
+    'organisation our records can place; the rest are counted nowhere on this map. ' +
+    "Awarded at the recipient's registered address like everything else here, so a " +
+    'regional hub reads richer than the communities its programs reach. This feed ' +
+    'is newer and broader than the pipeline behind the Recorded money layer — the ' +
+    'two are different windows, never a sum.',
+  honestAt: 'council',
+  honestAtNote:
+    "Council of the recipient's registered address. A multi-year award is counted " +
+    'once, in full, where it was recorded — not spread over the places or years ' +
+    'the money actually reaches.',
+  consent: 'public',
+  scale: [
+    { min: 1_000_000_000, color: '#D02020', fillOpacity: 0.7, label: '$1B or more' },
+    { min: 100_000_000, color: '#E06C18', fillOpacity: 0.6, label: '$100M–1B' },
+    { min: 10_000_000, color: '#F0C020', fillOpacity: 0.5, label: '$10M–100M' },
+    { min: 1_000_000, color: '#4CB876', fillOpacity: 0.4, label: '$1M–10M' },
+    { min: 0, color: '#1040C0', fillOpacity: 0.3, label: 'Under $1M' },
+  ],
+  scaleNote: 'Order-of-magnitude bands, matching the Recorded money layer.',
+  noDataLabel: 'No linked awards held',
+  value: f => num(f.grants_awarded_total),
+  format: v => money(v),
+};
+
 // The scale runs backwards on purpose: decile 1 is the most disadvantaged
 // tenth of Australia, so red sits at the LOW end.
 const seifaDisadvantage: AtlasLiveLayer = {
@@ -316,7 +362,9 @@ const seifaDisadvantage: AtlasLiveLayer = {
   ],
   noDataLabel: 'No SEIFA held',
   value: f => num(f.avg_irsd_decile),
-  format: v => `decile ${v.toFixed(0)}`,
+  // One decimal, trailing zero trimmed: Ceduna's 2.52 must read "decile 2.5",
+  // not round up to a softer "decile 3" (Ben, 2026-08-10).
+  format: v => `decile ${v.toFixed(1).replace(/\.0$/, '')}`,
 };
 
 const unplacedOrgs: AtlasLiveLayer = {
@@ -372,12 +420,72 @@ const renewalCliff: AtlasDeclaredLayer = {
     'Atlas needs it for every council before the layer can turn on.',
 };
 
+// What works here, from the Australian Living Map of Alternatives. Zero is a
+// real answer on this layer: the join ran and found no intervention linked to
+// an organisation placed there — which is a fact about our linking, never
+// proof that nothing works in that place. The caveat carries that weight.
+// (Checked 2026-08-10: 1,332 linked interventions across 163 councils;
+// median council holds 3, p90 13, max 216.)
+const whatsWorking: AtlasLiveLayer = {
+  key: 'whats-working',
+  status: 'live',
+  kind: 'choropleth',
+  group: 'delivery',
+  name: 'What works here',
+  unit: 'interventions linked to organisations here',
+  caveat:
+    'Interventions in the Australian Living Map of Alternatives that are linked to ' +
+    'an organisation placed in this council. The linking is young: most documented ' +
+    'interventions are not yet tied to an organisation, so a place showing none ' +
+    'means our linking has not reached it — not that nothing works there. What is ' +
+    'missing is our record, not their work.',
+  honestAt: 'council',
+  honestAtNote:
+    "Council of the linked organisation's registered address; the intervention " +
+    'itself may run across many places or somewhere else entirely.',
+  consent: 'public',
+  scale: [
+    { min: 50, color: '#D02020', fillOpacity: 0.7, label: '50 or more' },
+    { min: 20, color: '#E06C18', fillOpacity: 0.6, label: '20–50' },
+    { min: 10, color: '#F0C020', fillOpacity: 0.5, label: '10–20' },
+    { min: 1, color: '#4CB876', fillOpacity: 0.4, label: '1–10' },
+    // Zero stays a real, clickable answer but paints almost invisibly: at
+    // 0.2 it washed the whole country blue and the layer read as broken
+    // (Ben, 2026-08-10 morning). Colour belongs to places linking reached.
+    { min: 0, color: '#1040C0', fillOpacity: 0.06, label: 'None linked yet' },
+  ],
+  scaleNote:
+    'Counts of linked interventions, not effectiveness. Most of the country reads ' +
+    '"none linked yet" because the linking is young — that near-blank paint is the ' +
+    'honest picture, not a fault.',
+  noDataLabel: 'No linkage data in this payload',
+  value: f => num(f.alma_linked_count),
+  // Zero formats as words, not "0 linked": beside a place name and the layer
+  // title "What works here", a giant zero reads as a verdict on the place.
+  format: v => (v === 0 ? 'None yet' : `${v.toFixed(0)} linked`),
+};
+
+/** Communities whose in-person consent to appear on the PUBLIC Goods layer
+ * has been gathered and recorded. Adding a community name here is the whole
+ * flip: the layer's consent tier derives from this list, and the server feed
+ * ships only consented places to public surfaces. Empty until the consent
+ * conversation lands (Atlas step 5) — names are matched case-insensitively
+ * against the Goods register's community_name. */
+export const GOODS_PUBLIC_PLACES: readonly string[] = [];
+
+export function isGoodsPlacePublic(communityName: string): boolean {
+  const wanted = communityName.trim().toLowerCase();
+  return GOODS_PUBLIC_PLACES.some(place => place.trim().toLowerCase() === wanted);
+}
+
 // The inverse layer: CivicGraph shows money recorded, Goods shows things in
-// community. Consent tier 'org' — it renders only inside the logged-in
-// workspace, its points arrive only from the org page's server fetch, and
-// this registry entry deliberately carries NO figures: the contract may ship
-// in a public bundle, the numbers may not. Public activation is per-place
-// and waits on the consent conversation (step 5), by design.
+// community. Consent tier derives from the per-place consent list above:
+// with no consented places it is 'org' — it renders only inside the
+// logged-in workspace, its points arrive only from the org page's server
+// fetch, and this registry entry deliberately carries NO figures: the
+// contract may ship in a public bundle, the numbers may not. Once a place
+// consents, the layer turns public and the server feed (goods-atlas-points)
+// ships ONLY consented places to public surfaces.
 const goodsDelivered: AtlasPointLayer = {
   key: 'goods-delivered',
   status: 'live',
@@ -396,7 +504,7 @@ const goodsDelivered: AtlasPointLayer = {
   honestAtNote:
     'Community points, not council areas. A place with no point holds no register ' +
     'rows, which is not the same as nothing delivered.',
-  consent: 'org',
+  consent: GOODS_PUBLIC_PLACES.length > 0 ? 'public' : 'org',
   scale: [
     { min: 100, color: '#D02020', fillOpacity: 0.85, label: '100+ units' },
     { min: 50, color: '#E06C18', fillOpacity: 0.85, label: '50–100' },
@@ -408,12 +516,17 @@ const goodsDelivered: AtlasPointLayer = {
   format: v => `${v.toFixed(0)} units`,
 };
 
+// Federal grants sits above Recorded money on purpose (Ben, 2026-08-10):
+// the GrantConnect feed is the richer, truer window, and the older pipeline
+// number must not lead when the two sit side by side.
 export const ATLAS_LAYERS: readonly AtlasLayer[] = [
   fundingDeserts,
+  grantsAwarded,
   moneyRecorded,
   justiceFunding,
   renewalCliff,
   seifaDisadvantage,
+  whatsWorking,
   goodsDelivered,
   unplacedOrgs,
 ];

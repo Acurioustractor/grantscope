@@ -34,6 +34,7 @@ import {
   totalOf,
   type StateReasonCount,
 } from '@/lib/atlas/reasons';
+import { stampFamilyRows, stampLabel } from '@/lib/atlas/stamps';
 import {
   ATLAS_STORY,
   ATLAS_STORY_MEASURED_AT,
@@ -77,8 +78,25 @@ interface RailEntity {
   canonical_name: string;
   entity_type: string;
   power_score: number | null;
-  system_count: number | null;
-  is_community_controlled: boolean;
+  is_community_controlled: boolean | null;
+  /** The placement stamp — how this organisation got its council. */
+  lga_source: string | null;
+}
+
+/** The /api/data/place/[code] payload: one council's live joins, keyed by
+ * LGA code. Every count in here is a real answer — the joins ran. */
+interface PlaceDetail {
+  lga_code: string;
+  org_count: number;
+  cc_count: number;
+  money: {
+    grants: { records: number; total: number };
+    justice: { records: number; total: number };
+    contracts: { records: number; total: number };
+  };
+  alma_linked: number;
+  stamps: Record<string, number>;
+  orgs: RailEntity[];
 }
 
 function downloadFile(name: string, mime: string, text: string) {
@@ -121,8 +139,11 @@ export default function AtlasClient({
   });
   const [mapKey, setMapKey] = useState(DEFAULT_ATLAS_LAYER_KEY);
   const [query, setQuery] = useState('');
-  const [entities, setEntities] = useState<RailEntity[]>([]);
-  const [loadingEntities, setLoadingEntities] = useState(false);
+  // The selected place's live joins. Null while nothing is selected, while
+  // loading, or after a failure — detailFailed tells those apart.
+  const [detail, setDetail] = useState<PlaceDetail | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [detailFailed, setDetailFailed] = useState(false);
   const [copied, setCopied] = useState(false);
   // The right rail docks open and can be hidden; selecting a place reopens
   // it, because a selection with nowhere to land is a dead click.
@@ -262,24 +283,44 @@ export default function AtlasClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storyIdx]);
 
-  // Fetch the selected place's top entities — the same endpoint the boxed
-  // /map panel used.
+  // Fetch the selected place's live joins, keyed by LGA code — who is placed
+  // here, the money reaching them, what the Australian Living Map of
+  // Alternatives links here, and the stamps behind the placements. The
+  // cancelled flag stops a slow response landing under the wrong header.
   useEffect(() => {
     if (!selected) {
-      setEntities([]);
+      setDetail(null);
+      setDetailFailed(false);
       return;
     }
-    setLoadingEntities(true);
-    fetch(`/api/data/entity/search?lga=${encodeURIComponent(selected.lga_name)}&limit=10`)
-      .then(r => r.json())
+    if (!selected.lga_code) {
+      // A council without an LGA code in our records cannot be live-joined.
+      setDetail(null);
+      setDetailFailed(true);
+      return;
+    }
+    let cancelled = false;
+    setLoadingDetail(true);
+    setDetailFailed(false);
+    fetch(`/api/data/place/${encodeURIComponent(selected.lga_code)}`)
+      .then(r => {
+        if (!r.ok) throw new Error(String(r.status));
+        return r.json();
+      })
       .then(data => {
-        setEntities(data.results || []);
-        setLoadingEntities(false);
+        if (cancelled) return;
+        setDetail(data);
+        setLoadingDetail(false);
       })
       .catch(() => {
-        setEntities([]);
-        setLoadingEntities(false);
+        if (cancelled) return;
+        setDetail(null);
+        setDetailFailed(true);
+        setLoadingDetail(false);
       });
+    return () => {
+      cancelled = true;
+    };
   }, [selected]);
 
   const filtered = useMemo(
@@ -650,6 +691,10 @@ export default function AtlasClient({
                 </span>
               </div>
 
+              {/* The other map layers' readings for this place. The panel's
+                  own sections below carry the live joins; these rows are the
+                  cached choropleth payload, and each formats through its
+                  layer so the caveat-bearing registry stays the only voice. */}
               <div className="mt-3 space-y-2">
                 {otherLiveLayers.map(layer => {
                   const v = layer.value(selected);
@@ -660,25 +705,158 @@ export default function AtlasClient({
                     </div>
                   );
                 })}
-                <div className="flex justify-between items-baseline">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Recorded funding</span>
-                  <span className="text-sm font-black text-green-700">
-                    {selected.total_funding_all_sources === null ? '—' : money(Number(selected.total_funding_all_sources))}
-                  </span>
-                </div>
-                <div className="flex justify-between items-baseline">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">SEIFA decile</span>
-                  <span className="text-sm font-black">{selected.avg_irsd_decile ?? '—'}</span>
-                </div>
-                <div className="flex justify-between items-baseline">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Entities</span>
-                  <span className="text-sm font-black">{selected.indexed_entities ?? '—'}</span>
-                </div>
-                <div className="flex justify-between items-baseline">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Community controlled</span>
-                  <span className="text-sm font-black">{selected.community_controlled_entities ?? '—'}</span>
-                </div>
               </div>
+
+              {loadingDetail && (
+                <div className="mt-4 pt-3 border-t border-gray-200 flex items-center gap-2 text-gray-400 text-xs">
+                  <span className="inline-block w-3 h-3 border-2 border-gray-300 border-t-bauhaus-red rounded-full animate-spin" />
+                  Joining the registers live…
+                </div>
+              )}
+              {detailFailed && (
+                <p className="mt-4 pt-3 border-t border-gray-200 text-xs text-bauhaus-red leading-snug">
+                  The live joins did not load. Everything above is the cached map payload;
+                  nothing below can be shown honestly without the join.
+                </p>
+              )}
+
+              {/* WHO'S HERE — live from the entity graph, keyed by LGA code.
+                  Each organisation carries the stamp that placed it, so the
+                  list never claims more certainty than the evidence holds. */}
+              {detail && (
+                <div className="mt-4 pt-3 border-t-2 border-bauhaus-black">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-bauhaus-red">
+                    Who&apos;s here
+                  </p>
+                  <p className="text-xs text-gray-600 mt-1 leading-snug">
+                    <span className="font-black">{detail.org_count.toLocaleString()}</span>{' '}
+                    organisations placed in this council,{' '}
+                    <span className="font-black">{detail.cc_count.toLocaleString()}</span> of them
+                    community-controlled — live from the register joins, counted at each
+                    organisation&apos;s registered address.
+                  </p>
+                  {detail.orgs.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      {detail.orgs.map(e => (
+                        <Link
+                          key={e.gs_id}
+                          href={`/entity/${encodeURIComponent(e.gs_id)}`}
+                          className="block text-xs hover:bg-gray-50 px-1 py-1 transition-colors group"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-medium truncate group-hover:text-bauhaus-red transition-colors">
+                              {e.canonical_name}
+                            </span>
+                            {e.power_score !== null && Number(e.power_score) > 0 && (
+                              <span className="font-mono font-bold text-gray-500 shrink-0">
+                                {Number(e.power_score).toFixed(0)}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="text-[9px] px-1.5 py-0.5 bg-gray-100 text-gray-500">{e.entity_type}</span>
+                            {e.is_community_controlled && (
+                              <span className="text-[9px] px-1.5 py-0.5 bg-bauhaus-red/10 text-bauhaus-red">CC</span>
+                            )}
+                          </div>
+                          {/* The placement stamp, in plain words: how we know
+                              this organisation belongs to this council. */}
+                          {e.lga_source && (
+                            <p className="text-[10px] text-gray-400 mt-0.5 leading-snug">
+                              placed: {stampLabel(e.lga_source)}
+                            </p>
+                          )}
+                        </Link>
+                      ))}
+                      {detail.org_count > detail.orgs.length && (
+                        <p className="text-[10px] text-gray-400 leading-snug px-1">
+                          Showing the {detail.orgs.length} with the largest recorded financial
+                          footprint of {detail.org_count.toLocaleString()} placed here.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  {detail.org_count === 0 && (
+                    <p className="text-xs text-gray-500 mt-2 leading-snug">
+                      No organisation in our records is placed in this council. Check the
+                      cannot-place count below before reading that as empty.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* MONEY REACHING HERE — three live joins, each named with its
+                  source and record count. GrantConnect leads because it is
+                  the richest vein; the choropleth's Recorded money reads an
+                  older pipeline and the two are never a sum. */}
+              {detail && (
+                <div className="mt-4 pt-3 border-t-2 border-bauhaus-black">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-bauhaus-red">
+                    Money reaching here
+                  </p>
+                  <div className="mt-2 space-y-1.5">
+                    <div className="flex justify-between items-baseline gap-2">
+                      <span className="text-[11px] text-gray-600">
+                        Federal grants
+                        <span className="text-gray-400"> · {detail.money.grants.records.toLocaleString()} GrantConnect awards</span>
+                      </span>
+                      <span className="text-sm font-black tabular-nums text-green-700">
+                        {money(detail.money.grants.total)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-baseline gap-2">
+                      <span className="text-[11px] text-gray-600">
+                        Justice programs
+                        <span className="text-gray-400"> · {detail.money.justice.records.toLocaleString()} records</span>
+                      </span>
+                      <span className="text-sm font-black tabular-nums text-green-700">
+                        {money(detail.money.justice.total)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-baseline gap-2">
+                      <span className="text-[11px] text-gray-600">
+                        Contracts
+                        <span className="text-gray-400"> · {detail.money.contracts.records.toLocaleString()} on AusTender</span>
+                      </span>
+                      <span className="text-sm font-black tabular-nums text-green-700">
+                        {money(detail.money.contracts.total)}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-gray-400 mt-2 leading-snug">
+                    Live joins to organisations placed here, counted where each recipient is
+                    registered — money for this place can sit recorded elsewhere, and a
+                    program run from here can serve places far beyond it.
+                  </p>
+                </div>
+              )}
+
+              {/* WHAT WORKS HERE — the Australian Living Map of Alternatives.
+                  Zero is a real answer about our linking, said out loud,
+                  never dressed up or hidden. */}
+              {detail && (
+                <div className="mt-4 pt-3 border-t-2 border-bauhaus-black">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-bauhaus-red">
+                    What works here
+                  </p>
+                  {detail.alma_linked > 0 ? (
+                    <p className="text-xs text-gray-600 mt-1 leading-snug">
+                      <span className="font-black">{detail.alma_linked.toLocaleString()}</span>{' '}
+                      {detail.alma_linked === 1 ? 'intervention' : 'interventions'} in the
+                      Australian Living Map of Alternatives{' '}
+                      {detail.alma_linked === 1 ? 'is' : 'are'} linked to organisations placed
+                      here. Counts are linkage, not effectiveness.
+                    </p>
+                  ) : (
+                    <p className="text-xs text-gray-600 mt-1 leading-snug">
+                      No intervention in the Australian Living Map of Alternatives is linked to
+                      an organisation placed here yet. That is a gap in our linking — most
+                      documented interventions are not tied to an organisation yet — not a
+                      verdict on what this community does.
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* How sure are we, for this council: the live reasons, not one
                   red percentage. Counts include every organisation whose
@@ -736,6 +914,32 @@ export default function AtlasClient({
                         Every organisation recorded in this council&apos;s postcodes is placed.
                       </p>
                     )}
+                    {/* And the ones we DID place: the evidence families, so
+                        "placed" is never one flat count either. */}
+                    {(() => {
+                      const families = stampFamilyRows(detail?.stamps);
+                      if (families.length === 0) return null;
+                      return (
+                        <div className="mt-3">
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                            How the placed were placed
+                          </p>
+                          <div className="mt-1.5 space-y-1">
+                            {families.map(f => (
+                              <div key={f.key} className="flex justify-between items-baseline gap-2 text-[11px]">
+                                <span className="text-gray-600">{f.label}</span>
+                                <span className="font-black tabular-nums">{f.n.toLocaleString()}</span>
+                              </div>
+                            ))}
+                          </div>
+                          <p className="text-[10px] text-gray-400 mt-1.5 leading-snug">
+                            Each organisation above carries its exact evidence. An address is
+                            the surest; postcode geometry only says &quot;almost certainly this
+                            council&quot;.
+                          </p>
+                        </div>
+                      );
+                    })()}
                     {beyondParts.length > 0 && (
                       <p className="text-[10px] text-gray-400 mt-2 leading-snug">
                         In {selected.state} records, {beyondParts.join(' and ')} — none of
@@ -754,48 +958,6 @@ export default function AtlasClient({
                   Read the full place page →
                 </Link>
               )}
-
-              {/* Top entities — the same endpoint the boxed /map panel used */}
-              <div className="mt-4 pt-3 border-t border-gray-200">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">
-                  Top entities here
-                </p>
-                {loadingEntities ? (
-                  <div className="flex items-center gap-2 text-gray-400 text-xs">
-                    <span className="inline-block w-3 h-3 border-2 border-gray-300 border-t-bauhaus-red rounded-full animate-spin" />
-                    Loading…
-                  </div>
-                ) : entities.length > 0 ? (
-                  <div className="space-y-1">
-                    {entities.map(e => (
-                      <Link
-                        key={e.gs_id}
-                        href={`/entity/${encodeURIComponent(e.gs_id)}`}
-                        className="block text-xs hover:bg-gray-50 px-1 py-1 transition-colors group"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-medium truncate group-hover:text-bauhaus-red transition-colors">
-                            {e.canonical_name}
-                          </span>
-                          {e.power_score !== null && Number(e.power_score) > 0 && (
-                            <span className="font-mono font-bold text-gray-500 shrink-0">
-                              {Number(e.power_score).toFixed(0)}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="text-[9px] px-1.5 py-0.5 bg-gray-100 text-gray-500">{e.entity_type}</span>
-                          {e.is_community_controlled && (
-                            <span className="text-[9px] px-1.5 py-0.5 bg-bauhaus-red/10 text-bauhaus-red">CC</span>
-                          )}
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-gray-400">No indexed entities placed in this council.</p>
-                )}
-              </div>
 
               {/* Take the data — the caveats travel inside the files */}
               <div className="mt-4 pt-3 border-t border-gray-200">

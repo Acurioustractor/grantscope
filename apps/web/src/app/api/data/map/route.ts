@@ -125,6 +125,22 @@ export async function GET(request: Request) {
         JOIN gs_entities e ON e.id = jf.gs_entity_id
         WHERE e.lga_name IS NOT NULL
         GROUP BY 1, 2
+      ),
+      grants AS MATERIALIZED (
+        SELECT e.lga_name, UPPER(e.state) AS state,
+               SUM(ga.value_aud)::numeric AS grants_total
+        FROM grantconnect_awards ga
+        JOIN gs_entities e ON e.id = ga.gs_entity_id
+        WHERE e.lga_name IS NOT NULL
+        GROUP BY 1, 2
+      ),
+      alma AS MATERIALIZED (
+        SELECT e.lga_name, UPPER(e.state) AS state,
+               COUNT(*)::int AS alma_linked
+        FROM alma_interventions ai
+        JOIN gs_entities e ON e.id = ai.gs_entity_id
+        WHERE e.lga_name IS NOT NULL
+        GROUP BY 1, 2
       )
       SELECT lc.lga_name, lc.state, lc.lat, lc.lng, lc.lga_code,
              COALESCE(dd.remoteness, mr.remoteness) AS remoteness,
@@ -132,6 +148,8 @@ export async function GET(request: Request) {
              dd.indexed_entities, dd.community_controlled_entities,
              dd.total_funding_all_sources, dd.desert_score,
              jt.justice_total AS justice_funding_total,
+             gr.grants_total AS grants_awarded_total,
+             COALESCE(al.alma_linked, 0) AS alma_linked_count,
              COALESCE(un.unplaced, 0) AS unplaced_count,
              un.unplaced_reasons,
              COALESCE(pl.placed, 0) AS placed_count,
@@ -145,6 +163,8 @@ export async function GET(request: Request) {
       LEFT JOIN unplaced un ON un.lga_name = lc.lga_name AND un.state = lc.state
       LEFT JOIN placed pl ON pl.lga_name = lc.lga_name AND pl.state = lc.state
       LEFT JOIN justice jt ON jt.lga_name = lc.lga_name AND jt.state = lc.state
+      LEFT JOIN grants gr ON gr.lga_name = lc.lga_name AND gr.state = lc.state
+      LEFT JOIN alma al ON al.lga_name = lc.lga_name AND al.state = lc.state
       WHERE dd.desert_score IS NOT NULL OR COALESCE(un.unplaced, 0) > 0
       ORDER BY dd.desert_score DESC NULLS LAST`,
       }),
@@ -168,6 +188,10 @@ export async function GET(request: Request) {
       total_funding_all_sources: number | null; lat: number | null; lng: number | null;
       unplaced_count: number; placed_count: number; unplaced_share: number | null;
       justice_funding_total: number | null;
+      // Null means no linked awards held; alma is coalesced to 0 because the
+      // join ran for every council here — zero is a real answer for it.
+      grants_awarded_total: number | null;
+      alma_linked_count: number;
       unplaced_reasons: Record<string, number> | null;
     }>;
 
