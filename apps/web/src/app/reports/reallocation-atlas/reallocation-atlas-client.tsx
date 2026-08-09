@@ -25,6 +25,7 @@ type LgaFeature = {
   unplaced_count: number;
   placed_count: number;
   unplaced_share: number | null;
+  justice_funding_total: number | null;
   lat: number;
   lng: number;
   lga_code: string;

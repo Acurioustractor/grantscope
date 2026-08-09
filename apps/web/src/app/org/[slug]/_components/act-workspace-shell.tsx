@@ -314,7 +314,7 @@ function WorkspaceModeLink({ href, label, active, index, hint }: WorkspaceLink &
 const GOODS_RAIL_SECTIONS: ReadonlyArray<{ label: string; items: ReadonlyArray<readonly [string, string]> }> = [
   { label: 'Work', items: [['today', 'Today'], ['capital', 'Capital'], ['matters', 'Matters'], ['network', 'Network'], ['applications', 'Applications'], ['learning', 'Learning']] },
   { label: 'Money in', items: [['foundations', 'Foundations'], ['foundations/scan', 'Funder Scan'], ['grants', 'Grants'], ['money', 'Money']] },
-  { label: 'Delivery', items: [['funnel', 'Delivery map'], ['communities', 'Communities'], ['channels', 'Channels'], ['buyers', 'Buyers']] },
+  { label: 'Delivery', items: [['funnel', 'Delivery map'], ['map', 'On the map'], ['communities', 'Communities'], ['channels', 'Channels'], ['buyers', 'Buyers']] },
   { label: 'Trust', items: [['model', 'Story & model'], ['proof', 'Evidence'], ['governance', 'Governance']] },
 ];
 

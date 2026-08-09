@@ -10,6 +10,8 @@ import {
   ATLAS_NO_DATA_STYLE,
   type AtlasFeature,
   type AtlasLiveLayer,
+  type AtlasPoint,
+  type AtlasPointLayer,
 } from '@/lib/atlas/layers';
 
 interface AtlasMapProps {
@@ -17,6 +19,10 @@ interface AtlasMapProps {
   layer: AtlasLiveLayer;
   selected: AtlasFeature | null;
   onSelect: (f: AtlasFeature) => void;
+  /** A point-grain layer drawn over the choropleth. Its data arrives from
+   * the surface that is allowed to hold it; this component just draws. */
+  pointLayer?: AtlasPointLayer | null;
+  points?: AtlasPoint[];
 }
 
 const STATE_ABBREV: Record<string, string> = {
@@ -31,14 +37,41 @@ const STATE_ABBREV: Record<string, string> = {
   'Other Territories': 'OT',
 };
 
+// External territories (Christmas Island, Cocos, Norfolk) are real councils
+// and still render, but letting them drive the frame drags the view halfway
+// to Indonesia. The camera fits the mainland box; the data keeps everything.
+function frameCoords(features: AtlasFeature[]): { lats: number[]; lngs: number[] } {
+  const located = features.filter(f => f.lat != null && f.lng != null);
+  const inFrame = located.filter(f => {
+    const lat = Number(f.lat);
+    const lng = Number(f.lng);
+    return lat >= -44.5 && lat <= -9 && lng >= 112 && lng <= 154.5;
+  });
+  const use = inFrame.length > 0 ? inFrame : located;
+  return {
+    lats: use.map(f => Number(f.lat)).filter(v => !isNaN(v)),
+    lngs: use.map(f => Number(f.lng)).filter(v => !isNaN(v)),
+  };
+}
+
+// Docked rails resize the map's container when they open and close; Leaflet
+// has to be told, or it leaves a grey band where the rail used to be.
+function InvalidateOnResize() {
+  const map = useMap();
+  useEffect(() => {
+    const observer = new ResizeObserver(() => map.invalidateSize());
+    observer.observe(map.getContainer());
+    return () => observer.disconnect();
+  }, [map]);
+  return null;
+}
+
 // Fit bounds when the visible set changes
 function FitBounds({ features }: { features: AtlasFeature[] }) {
   const map = useMap();
   useEffect(() => {
     if (features.length === 0) return;
-    const located = features.filter(f => f.lat != null && f.lng != null);
-    const lats = located.map(f => Number(f.lat)).filter(v => !isNaN(v));
-    const lngs = located.map(f => Number(f.lng)).filter(v => !isNaN(v));
+    const { lats, lngs } = frameCoords(features);
     if (lats.length === 0) return;
     const bounds = L.latLngBounds(
       [Math.min(...lats), Math.min(...lngs)],
@@ -49,7 +82,7 @@ function FitBounds({ features }: { features: AtlasFeature[] }) {
   return null;
 }
 
-export default function AtlasMap({ features, layer, selected, onSelect }: AtlasMapProps) {
+export default function AtlasMap({ features, layer, selected, onSelect, pointLayer, points }: AtlasMapProps) {
   const [geoData, setGeoData] = useState<FeatureCollection | null>(null);
   const [geoLoading, setGeoLoading] = useState(true);
 
@@ -150,9 +183,7 @@ export default function AtlasMap({ features, layer, selected, onSelect }: AtlasM
   // Compute center from features
   const center = useMemo<[number, number]>(() => {
     if (features.length === 0) return [-25.5, 134.0];
-    const located = features.filter(f => f.lat != null && f.lng != null);
-    const lats = located.map(f => Number(f.lat)).filter(v => !isNaN(v));
-    const lngs = located.map(f => Number(f.lng)).filter(v => !isNaN(v));
+    const { lats, lngs } = frameCoords(features);
     if (lats.length === 0) return [-25.5, 134.0];
     return [
       (Math.min(...lats) + Math.max(...lats)) / 2,
@@ -174,8 +205,9 @@ export default function AtlasMap({ features, layer, selected, onSelect }: AtlasM
       scrollWheelZoom={true}
       zoomControl={false}
     >
-      {/* Default zoom control sits top-left, which the Atlas overlays occupy */}
-      <ZoomControl position="bottomright" />
+      {/* Top-left holds the Atlas overlays; bottom-right holds the chat
+          bubble and attribution. Bottom-left is the quiet corner. */}
+      <ZoomControl position="bottomleft" />
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
         url="https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png"
@@ -229,7 +261,42 @@ export default function AtlasMap({ features, layer, selected, onSelect }: AtlasM
         );
       })}
 
+      {/* Point-grain layer over the choropleth (e.g. Goods in community,
+          org-side). Radius follows the square root so a big place does not
+          drown a small one. */}
+      {pointLayer && points?.map(p => {
+        const paint = atlasStyleFor(pointLayer, p.value);
+        return (
+          <CircleMarker
+            key={`point-${p.name}`}
+            center={[p.lat, p.lng]}
+            radius={Math.max(6, Math.min(6 + Math.sqrt(p.value) * 1.6, 26))}
+            pathOptions={{
+              fillColor: paint.color,
+              fillOpacity: paint.fillOpacity,
+              color: '#121212',
+              weight: 2,
+            }}
+          >
+            <Tooltip>
+              <div className="text-xs">
+                <strong>{p.name}</strong>
+                <br />
+                {pointLayer.name}: <strong>{pointLayer.format(p.value)}</strong>
+                {p.detail?.map(d => (
+                  <span key={d.label}>
+                    <br />
+                    {d.label}: {d.value}
+                  </span>
+                ))}
+              </div>
+            </Tooltip>
+          </CircleMarker>
+        );
+      })}
+
       <FitBounds features={features} />
+      <InvalidateOnResize />
     </MapContainer>
   );
 }

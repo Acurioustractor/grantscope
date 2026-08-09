@@ -5,12 +5,18 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { money } from '@/lib/format';
 import {
+  ATLAS_GROUP_LABELS,
+  ATLAS_GROUP_ORDER,
   DEFAULT_ATLAS_LAYER_KEY,
   getAtlasLayer,
+  isChoroplethLayer,
   isLiveLayer,
+  isPointLayer,
   visibleAtlasLayers,
   type AtlasFeature,
   type AtlasLiveLayer,
+  type AtlasPoint,
+  type AtlasSurface,
 } from '@/lib/atlas/layers';
 import {
   buildAtlasUrl,
@@ -32,9 +38,6 @@ import {
 // Lazy-load the map to avoid SSR issues with Leaflet
 const AtlasMap = dynamic(() => import('./atlas-map'), { ssr: false });
 
-// This is the public surface: org and withheld layers never reach it.
-const LAYERS = visibleAtlasLayers('public');
-
 const STATES = ['ALL', 'NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'NT', 'ACT'];
 
 /** A council that has a full /place/council/[slug] prose page. */
@@ -42,6 +45,24 @@ export interface CouncilPageLink {
   slug: string;
   lgaName: string;
   state: string | null;
+}
+
+interface AtlasClientProps {
+  councilPages: CouncilPageLink[];
+  /** Which consent tiers render here. 'public' (default) shows public layers
+   * only; 'org' adds org-tier layers. Withheld renders nowhere. */
+  surface?: AtlasSurface;
+  /** Point-layer data, keyed by layer key. Only a server component that sits
+   * behind the right gate may pass this — it is how org data stays org-side. */
+  pointsByLayer?: Partial<Record<string, AtlasPoint[]>>;
+  /** Server-fed lines shown under a layer's caveat (e.g. canon figures that
+   * must not ship in the public registry bundle). */
+  layerNotes?: Partial<Record<string, string>>;
+  /** Layer to open on. Falls back to the default when it is not visible here. */
+  initialLayerKey?: string;
+  /** Escape hatch for chromeless surfaces (the org workspace has no global
+   * nav above the Atlas). */
+  backLink?: { href: string; label: string };
 }
 
 interface RailEntity {
@@ -63,20 +84,39 @@ function downloadFile(name: string, mime: string, text: string) {
   URL.revokeObjectURL(url);
 }
 
-export default function AtlasClient({ councilPages }: { councilPages: CouncilPageLink[] }) {
+export default function AtlasClient({
+  councilPages,
+  surface = 'public',
+  pointsByLayer,
+  layerNotes,
+  initialLayerKey,
+  backLink,
+}: AtlasClientProps) {
+  // The one sanctioned filter: org and withheld layers never reach a public
+  // instance of this component.
+  const LAYERS = useMemo(() => visibleAtlasLayers(surface), [surface]);
+
   const [features, setFeatures] = useState<AtlasFeature[]>([]);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [stateFilter, setStateFilter] = useState('ALL');
   const [selected, setSelected] = useState<AtlasFeature | null>(null);
-  // The layer being read (caveat card) can be declared; the layer being
-  // painted (the map) is always the last live pick.
-  const [activeKey, setActiveKey] = useState(DEFAULT_ATLAS_LAYER_KEY);
+  // The layer being read (caveat card) can be declared or point-grain; the
+  // layer painting the choropleth is always the last choropleth pick.
+  const [activeKey, setActiveKey] = useState(() => {
+    const initial = initialLayerKey ? getAtlasLayer(initialLayerKey) : null;
+    return initial && visibleAtlasLayers(surface).some(l => l.key === initial.key)
+      ? initial.key
+      : DEFAULT_ATLAS_LAYER_KEY;
+  });
   const [mapKey, setMapKey] = useState(DEFAULT_ATLAS_LAYER_KEY);
   const [query, setQuery] = useState('');
   const [entities, setEntities] = useState<RailEntity[]>([]);
   const [loadingEntities, setLoadingEntities] = useState(false);
   const [copied, setCopied] = useState(false);
+  // The right rail docks open and can be hidden; selecting a place reopens
+  // it, because a selection with nowhere to land is a dead click.
+  const [railOpen, setRailOpen] = useState(true);
   // Story mode: index into ATLAS_STORY, or null when browsing freely.
   const [storyIdx, setStoryIdx] = useState<number | null>(null);
   // URL state only starts writing after the inbound URL has been applied.
@@ -104,12 +144,13 @@ export default function AtlasClient({ councilPages }: { councilPages: CouncilPag
   function pickLayer(key: string) {
     setActiveKey(key);
     const layer = getAtlasLayer(key);
-    if (layer && isLiveLayer(layer)) setMapKey(key);
+    if (layer && isChoroplethLayer(layer)) setMapKey(key);
   }
 
   function selectPlace(f: AtlasFeature) {
     setSelected(f);
     setQuery('');
+    setRailOpen(true);
     // A selection hidden by the state filter would be invisible — follow it.
     if (stateFilter !== 'ALL' && f.state !== stateFilter) setStateFilter(f.state);
   }
@@ -238,8 +279,16 @@ export default function AtlasClient({ councilPages }: { councilPages: CouncilPag
   const undrawn = useMemo(() => filtered.filter(f => f.lat === null).length, [filtered]);
 
   const otherLiveLayers = useMemo(
-    () => LAYERS.filter(isLiveLayer).filter(l => l.key !== mapLayer.key),
-    [mapLayer.key]
+    () => LAYERS.filter(isChoroplethLayer).filter(l => l.key !== mapLayer.key),
+    [LAYERS, mapLayer.key]
+  );
+
+  // The active layer's points, when it is point-grain and this surface holds
+  // data for it. A public instance passes no points, so nothing renders.
+  const activePointLayer = isPointLayer(activeLayer) ? activeLayer : null;
+  const activePoints = useMemo(
+    () => (activePointLayer ? pointsByLayer?.[activePointLayer.key] ?? [] : []),
+    [activePointLayer, pointsByLayer]
   );
 
   // Search over every council we hold, not just the filtered view.
@@ -292,8 +341,10 @@ export default function AtlasClient({ councilPages }: { councilPages: CouncilPag
   }
 
   return (
-    <div className="fixed inset-0 z-0 bg-bauhaus-canvas">
-      {/* The map is the page. Everything else overlays it. */}
+    <div className="fixed inset-0 z-0 bg-bauhaus-canvas flex">
+      {/* CENTER — the map between the rails. isolate traps Leaflet's
+          internal z-indexes so the docked rails paint above its edges. */}
+      <div className="relative flex-1 min-w-0 order-2 isolate">
       <div className="absolute inset-0">
         {loading ? (
           <div className="flex items-center justify-center h-full">
@@ -315,56 +366,96 @@ export default function AtlasClient({ councilPages }: { councilPages: CouncilPag
             layer={mapLayer}
             selected={selected}
             onSelect={selectPlace}
+            pointLayer={activePointLayer}
+            points={activePoints}
           />
         )}
       </div>
 
-      {/* Left rail: what you are looking at, and what it contains.
+      {/* Escape hatch for chromeless surfaces (org workspace) */}
+      {backLink && (
+        <Link
+          href={backLink.href}
+          className="absolute right-4 top-4 z-[950] bg-white border-2 border-bauhaus-black px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest hover:bg-bauhaus-black hover:text-white transition-colors"
+        >
+          ← {backLink.label}
+        </Link>
+      )}
+
+      {/* Reopen tab when the right rail is hidden */}
+      {!story && !railOpen && !loading && !failed && (
+        <button
+          onClick={() => setRailOpen(true)}
+          className="absolute right-0 top-24 z-[900] bg-bauhaus-black text-white px-1.5 py-4 text-[10px] font-bold uppercase tracking-widest [writing-mode:vertical-rl] hover:bg-bauhaus-red transition-colors cursor-pointer"
+        >
+          Place rail ◂
+        </button>
+      )}
+      </div>
+
+      {/* LEFT — the locked rail: what you are looking at, what it contains.
           Story mode clears the stage: the paragraph does this job there. */}
       {!story && (
-      <div className="absolute left-4 top-20 z-[900] w-[min(22rem,calc(100vw-2rem))] max-h-[calc(100dvh-6.5rem)] overflow-y-auto space-y-4 pr-1">
+      <aside className="order-1 relative z-10 hidden md:block w-[21rem] shrink-0 bg-white border-r-4 border-bauhaus-black overflow-y-auto pt-20 px-4 pb-6">
         {/* Brand + layer picker */}
-        <div className="bg-white border-4 border-bauhaus-black shadow-[8px_8px_0_0_#121212] p-4">
+        <div>
           <p className="text-[10px] font-bold uppercase tracking-widest text-bauhaus-red">CivicGraph</p>
           <h1 className="text-2xl font-black uppercase tracking-wider leading-none mt-1">The Atlas</h1>
           <p className="text-xs text-gray-500 mt-2">
             Every layer carries what its number contains.
           </p>
 
-          <div className="mt-4 space-y-1.5">
-            {LAYERS.map(layer => {
-              const active = layer.key === activeKey;
-              const declared = !isLiveLayer(layer);
-              return (
-                <button
-                  key={layer.key}
-                  onClick={() => pickLayer(layer.key)}
-                  className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider transition-colors border-2 ${
-                    active
-                      ? 'bg-bauhaus-red border-bauhaus-red text-white'
-                      : declared
-                        ? 'bg-white border-dashed border-gray-300 text-gray-400 hover:border-bauhaus-yellow'
-                        : 'bg-white border-bauhaus-black text-bauhaus-black hover:bg-bauhaus-black hover:text-white'
-                  }`}
-                >
-                  <span>{layer.name}</span>
-                  {declared && (
-                    <span className={`shrink-0 text-[9px] px-1.5 py-0.5 border ${active ? 'border-white/60 text-white' : 'border-bauhaus-yellow bg-bauhaus-yellow/20 text-bauhaus-black'}`}>
-                      Not yet held
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+          <p className="mt-4 mb-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+            Layers · pick one to switch the map
+          </p>
+          {ATLAS_GROUP_ORDER.map(groupKey => {
+            const groupLayers = LAYERS.filter(l => l.group === groupKey);
+            if (groupLayers.length === 0) return null;
+            return (
+              <div key={groupKey} className="mb-2.5">
+                <p className="mb-1 text-[9px] font-bold uppercase tracking-widest text-gray-300">
+                  {ATLAS_GROUP_LABELS[groupKey]}
+                </p>
+                <div className="space-y-1.5">
+                  {groupLayers.map(layer => {
+                    const active = layer.key === activeKey;
+                    const declared = !isLiveLayer(layer);
+                    return (
+                      <button
+                        key={layer.key}
+                        onClick={() => pickLayer(layer.key)}
+                        className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider transition-colors border-2 cursor-pointer ${
+                          active
+                            ? 'bg-bauhaus-red border-bauhaus-red text-white'
+                            : declared
+                              ? 'bg-white border-dashed border-gray-300 text-gray-400 hover:border-bauhaus-yellow'
+                              : 'bg-white border-bauhaus-black text-bauhaus-black hover:bg-bauhaus-black hover:text-white'
+                        }`}
+                      >
+                        <span>{layer.name}</span>
+                        {declared && (
+                          <span className={`shrink-0 text-[9px] px-1.5 py-0.5 border ${active ? 'border-white/60 text-white' : 'border-bauhaus-yellow bg-bauhaus-yellow/20 text-bauhaus-black'}`}>
+                            Not yet held
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
 
           {/* State filter */}
-          <div className="mt-4 flex flex-wrap gap-1">
+          <p className="mt-4 mb-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+            State
+          </p>
+          <div className="flex flex-wrap gap-1">
             {STATES.map(s => (
               <button
                 key={s}
                 onClick={() => { setStateFilter(s); setSelected(null); }}
-                className={`text-[10px] px-2 py-1 font-bold uppercase tracking-wider transition-colors ${
+                className={`text-[10px] px-2 py-1 font-bold uppercase tracking-wider transition-colors cursor-pointer ${
                   stateFilter === s
                     ? 'bg-bauhaus-black text-white'
                     : 'bg-white text-gray-500 border border-gray-200 hover:border-bauhaus-black'
@@ -378,7 +469,7 @@ export default function AtlasClient({ councilPages }: { councilPages: CouncilPag
           {/* The URL always mirrors the view, so the link IS the presentation */}
           <button
             onClick={copyLink}
-            className="mt-4 w-full border-2 border-bauhaus-black px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest hover:bg-bauhaus-black hover:text-white transition-colors"
+            className="mt-4 w-full border-2 border-bauhaus-black px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest hover:bg-bauhaus-black hover:text-white transition-colors cursor-pointer"
           >
             {copied ? 'Link copied' : 'Copy link to this view'}
           </button>
@@ -386,14 +477,14 @@ export default function AtlasClient({ councilPages }: { councilPages: CouncilPag
           {/* The fixed sequence for a room */}
           <button
             onClick={() => enterStory(0)}
-            className="mt-2 w-full border-2 border-bauhaus-blue text-bauhaus-blue px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest hover:bg-bauhaus-blue hover:text-white transition-colors"
+            className="mt-2 w-full border-2 border-bauhaus-blue text-bauhaus-blue px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest hover:bg-bauhaus-blue hover:text-white transition-colors cursor-pointer"
           >
             Story mode · tell it in a room
           </button>
-        </div>
 
-        {/* The caveat, attached to the number — not a help page */}
-        <div className="bg-white border-4 border-bauhaus-black shadow-[8px_8px_0_0_#121212] p-4">
+          {/* The caveat, attached to the number — same card, one explanation
+              (Ben 2026-08-09: separate floating boxes read as clutter) */}
+          <div className="mt-4 pt-4 border-t-2 border-bauhaus-black">
           <p className="text-[10px] font-bold uppercase tracking-widest text-bauhaus-red">
             What this number contains
           </p>
@@ -411,46 +502,78 @@ export default function AtlasClient({ councilPages }: { councilPages: CouncilPag
             </div>
           )}
 
+          {/* Server-fed note: figures that belong to this surface only */}
+          {layerNotes?.[activeLayer.key] && (
+            <p className="mt-3 border-l-4 border-bauhaus-blue pl-3 text-xs text-gray-600">
+              {layerNotes[activeLayer.key]}
+            </p>
+          )}
+
+          {/* The colour scale lives WITH the caveat: what the number contains
+              and what the colours mean are one explanation. */}
+          {(() => {
+            const legendLayer = isLiveLayer(activeLayer) ? activeLayer : mapLayer;
+            return (
+              <div className="mt-3 pt-3 border-t border-gray-200">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">
+                  Colours{legendLayer.key !== activeLayer.key ? ` · still showing ${legendLayer.name.toLowerCase()}` : ''}
+                </p>
+                <div className="space-y-1">
+                  {legendLayer.scale.map(stop => (
+                    <div key={stop.min} className="flex items-center gap-2 text-[11px] text-gray-600">
+                      <span
+                        className="inline-block w-3.5 h-3.5 border border-bauhaus-black/30 shrink-0"
+                        style={{ backgroundColor: stop.color, opacity: 0.85 }}
+                      />
+                      <span>{stop.label}</span>
+                    </div>
+                  ))}
+                  <div className="flex items-center gap-2 text-[11px] text-gray-400">
+                    <span className="inline-block w-3.5 h-3.5 border border-gray-300 shrink-0" style={{ backgroundColor: '#e5e7eb' }} />
+                    <span>{legendLayer.noDataLabel}</span>
+                  </div>
+                </div>
+                {legendLayer.scaleNote && (
+                  <p className="text-[10px] text-gray-400 mt-1.5 leading-snug">{legendLayer.scaleNote}</p>
+                )}
+                {isPointLayer(legendLayer) && (
+                  <p className="text-[10px] text-gray-400 mt-1.5 leading-snug">
+                    Drawn as circles over the {mapLayer.name.toLowerCase()} choropleth.
+                  </p>
+                )}
+                <p className="text-[10px] text-gray-400 mt-1.5 leading-snug">
+                  {filtered.length} councils{undrawn > 0 ? `; ${undrawn} hold no coordinates and render only where a boundary name matches` : ''}.
+                </p>
+              </div>
+            );
+          })()}
+
           <div className="mt-3 pt-3 border-t border-gray-200">
             <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
               Honest at: <span className="text-bauhaus-black">{activeLayer.honestAt}</span> level
             </p>
             <p className="text-xs text-gray-500 mt-1">{activeLayer.honestAtNote}</p>
           </div>
-        </div>
-      </div>
-      )}
-
-      {/* Legend for the painted layer. It stays up in story mode — the room
-          needs to know what the colours mean — but yields on small screens. */}
-      {!loading && !failed && (
-        <div className={`absolute left-4 bottom-4 z-[900] bg-white border-2 border-bauhaus-black p-3 w-[min(15rem,calc(100vw-2rem))] ${story ? 'hidden lg:block' : ''}`}>
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-2">{mapLayer.name}</p>
-          <div className="space-y-1">
-            {mapLayer.scale.map(stop => (
-              <div key={stop.min} className="flex items-center gap-2 text-[11px] text-gray-600">
-                <span className="inline-block w-3.5 h-3.5 border border-bauhaus-black/30 shrink-0" style={{ backgroundColor: stop.color, opacity: 0.85 }} />
-                <span>{stop.label}</span>
-              </div>
-            ))}
-            <div className="flex items-center gap-2 text-[11px] text-gray-400">
-              <span className="inline-block w-3.5 h-3.5 border border-gray-300 shrink-0" style={{ backgroundColor: '#e5e7eb' }} />
-              <span>{mapLayer.noDataLabel}</span>
-            </div>
           </div>
-          <p className="text-[10px] text-gray-400 mt-2 leading-snug">
-            {filtered.length} councils{undrawn > 0 ? `; ${undrawn} hold no coordinates and render only where a boundary name matches` : ''}.
-          </p>
         </div>
+      </aside>
       )}
 
       {/* Right rail: the door to every place. Search when nothing is chosen,
           the place's numbers when something is. On small screens the rail
           appears only for a selection. Story mode clears it. */}
-      {!loading && !failed && !story && (
-        <div className={`absolute right-4 top-20 z-[900] w-[min(20rem,calc(100vw-2rem))] max-h-[calc(100dvh-6.5rem)] overflow-y-auto ${selected ? '' : 'hidden lg:block'}`}>
+      {!loading && !failed && !story && railOpen && (
+        <aside className="order-3 relative z-10 hidden sm:block w-[min(20rem,85vw)] shrink-0 bg-white border-l-4 border-bauhaus-black overflow-y-auto pt-20 px-4 pb-6">
+          <div className="flex justify-end mb-2">
+            <button
+              onClick={() => setRailOpen(false)}
+              className="text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-bauhaus-black transition-colors cursor-pointer"
+            >
+              Hide ▸
+            </button>
+          </div>
           {selected ? (
-            <div className="bg-white border-4 border-bauhaus-black shadow-[8px_8px_0_0_#121212] p-4">
+            <div>
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <h3 className="font-black text-lg uppercase tracking-wider leading-tight">{selected.lga_name}</h3>
@@ -461,7 +584,7 @@ export default function AtlasClient({ councilPages }: { councilPages: CouncilPag
                 <button
                   onClick={() => setSelected(null)}
                   aria-label="Close"
-                  className="shrink-0 w-7 h-7 border-2 border-bauhaus-black font-black hover:bg-bauhaus-black hover:text-white transition-colors"
+                  className="shrink-0 w-7 h-7 border-2 border-bauhaus-black font-black hover:bg-bauhaus-black hover:text-white transition-colors cursor-pointer"
                 >
                   ×
                 </button>
@@ -476,6 +599,14 @@ export default function AtlasClient({ councilPages }: { councilPages: CouncilPag
                   })()}
                 </span>
               </div>
+
+              {/* Uncertainty travels with every number, on every layer */}
+              {Number(selected.unplaced_share) >= 50 && (
+                <p className="mt-2 text-[11px] text-bauhaus-red leading-snug">
+                  Half or more of what might be here cannot be placed — read every
+                  number on this panel gently.
+                </p>
+              )}
 
               <div className="mt-3 space-y-2">
                 {otherLiveLayers.map(layer => {
@@ -575,7 +706,7 @@ export default function AtlasClient({ councilPages }: { councilPages: CouncilPag
                 <div className="flex gap-2">
                   <button
                     onClick={() => downloadFile(`${exportFilename(selected)}.csv`, 'text/csv', councilCsv(selected))}
-                    className="flex-1 border-2 border-bauhaus-black px-2 py-1.5 text-[10px] font-bold uppercase tracking-widest hover:bg-bauhaus-black hover:text-white transition-colors"
+                    className="flex-1 border-2 border-bauhaus-black px-2 py-1.5 text-[10px] font-bold uppercase tracking-widest hover:bg-bauhaus-black hover:text-white transition-colors cursor-pointer"
                   >
                     CSV
                   </button>
@@ -587,7 +718,7 @@ export default function AtlasClient({ councilPages }: { councilPages: CouncilPag
                         JSON.stringify({ generated_at: new Date().toISOString(), ...councilJson(selected) }, null, 2)
                       )
                     }
-                    className="flex-1 border-2 border-bauhaus-black px-2 py-1.5 text-[10px] font-bold uppercase tracking-widest hover:bg-bauhaus-black hover:text-white transition-colors"
+                    className="flex-1 border-2 border-bauhaus-black px-2 py-1.5 text-[10px] font-bold uppercase tracking-widest hover:bg-bauhaus-black hover:text-white transition-colors cursor-pointer"
                   >
                     JSON
                   </button>
@@ -606,7 +737,7 @@ export default function AtlasClient({ councilPages }: { councilPages: CouncilPag
               </p>
             </div>
           ) : (
-            <div className="bg-white border-4 border-bauhaus-black shadow-[8px_8px_0_0_#121212] p-4">
+            <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Find a place</p>
               <input
                 type="text"
@@ -622,7 +753,7 @@ export default function AtlasClient({ councilPages }: { councilPages: CouncilPag
                       <button
                         key={`${f.lga_name}|${f.state}`}
                         onClick={() => selectPlace(f)}
-                        className="w-full flex items-center justify-between gap-2 text-xs px-1 py-1 hover:bg-gray-50 text-left transition-colors"
+                        className="w-full flex items-center justify-between gap-2 text-xs px-1 py-1 hover:bg-gray-50 text-left transition-colors cursor-pointer"
                       >
                         <span className="font-medium truncate">{f.lga_name}</span>
                         <span className="text-gray-400 shrink-0">{f.state}</span>
@@ -645,7 +776,7 @@ export default function AtlasClient({ councilPages }: { councilPages: CouncilPag
                     <button
                       key={`${f.lga_name}|${f.state}`}
                       onClick={() => selectPlace(f)}
-                      className="w-full flex items-center justify-between gap-2 text-xs px-1 py-0.5 hover:bg-gray-50 text-left transition-colors"
+                      className="w-full flex items-center justify-between gap-2 text-xs px-1 py-0.5 hover:bg-gray-50 text-left transition-colors cursor-pointer"
                     >
                       <span className="font-medium truncate">{f.lga_name}</span>
                       <span className="flex items-center gap-2 shrink-0">
@@ -658,7 +789,7 @@ export default function AtlasClient({ councilPages }: { councilPages: CouncilPag
               </div>
             </div>
           )}
-        </div>
+        </aside>
       )}
 
       {/* Story mode: one map state, one paragraph, read aloud. */}
@@ -676,7 +807,7 @@ export default function AtlasClient({ councilPages }: { councilPages: CouncilPag
                 <button
                   onClick={exitStory}
                   aria-label="Exit story mode"
-                  className="shrink-0 w-7 h-7 border-2 border-bauhaus-black font-black hover:bg-bauhaus-black hover:text-white transition-colors"
+                  className="shrink-0 w-7 h-7 border-2 border-bauhaus-black font-black hover:bg-bauhaus-black hover:text-white transition-colors cursor-pointer"
                 >
                   ×
                 </button>
@@ -687,6 +818,16 @@ export default function AtlasClient({ councilPages }: { councilPages: CouncilPag
               {story.title}
             </h2>
             <p className="text-base md:text-lg leading-relaxed mt-3">{story.paragraph}</p>
+
+            {/* What the colours behind this sentence mean */}
+            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
+              {mapLayer.scale.map(stop => (
+                <span key={stop.min} className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-gray-500">
+                  <span className="inline-block w-3 h-3 border border-bauhaus-black/30" style={{ backgroundColor: stop.color, opacity: 0.85 }} />
+                  {stop.label}
+                </span>
+              ))}
+            </div>
 
             {story.cannotSay && (
               <div className="mt-4 border-l-4 border-bauhaus-red pl-3">
@@ -701,7 +842,7 @@ export default function AtlasClient({ councilPages }: { councilPages: CouncilPag
               <button
                 onClick={() => moveStory(-1)}
                 disabled={storyIdx === 0}
-                className="border-2 border-bauhaus-black px-4 py-2 text-[10px] font-bold uppercase tracking-widest disabled:opacity-30 disabled:cursor-default hover:enabled:bg-bauhaus-black hover:enabled:text-white transition-colors"
+                className="border-2 border-bauhaus-black px-4 py-2 text-[10px] font-bold uppercase tracking-widest cursor-pointer disabled:opacity-30 disabled:cursor-default hover:enabled:bg-bauhaus-black hover:enabled:text-white transition-colors"
               >
                 ← Back
               </button>
@@ -711,14 +852,14 @@ export default function AtlasClient({ councilPages }: { councilPages: CouncilPag
               {storyIdx === ATLAS_STORY.length - 1 ? (
                 <button
                   onClick={exitStory}
-                  className="border-2 border-bauhaus-black bg-bauhaus-black text-white px-4 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-white hover:text-bauhaus-black transition-colors"
+                  className="border-2 border-bauhaus-black bg-bauhaus-black text-white px-4 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-white hover:text-bauhaus-black transition-colors cursor-pointer"
                 >
                   Open the Atlas →
                 </button>
               ) : (
                 <button
                   onClick={() => moveStory(1)}
-                  className="border-2 border-bauhaus-black bg-bauhaus-black text-white px-4 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-white hover:text-bauhaus-black transition-colors"
+                  className="border-2 border-bauhaus-black bg-bauhaus-black text-white px-4 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-white hover:text-bauhaus-black transition-colors cursor-pointer"
                 >
                   Next →
                 </button>

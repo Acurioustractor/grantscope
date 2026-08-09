@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ATLAS_GROUP_ORDER,
   ATLAS_LAYERS,
   ATLAS_NO_DATA_STYLE,
   DEFAULT_ATLAS_LAYER_KEY,
   atlasStyleFor,
   getAtlasLayer,
   isLiveLayer,
+  isPointLayer,
   visibleAtlasLayers,
   type AtlasFeature,
   type AtlasLayer,
@@ -26,6 +28,7 @@ function feature(overrides: Partial<AtlasFeature> = {}): AtlasFeature {
     unplaced_count: 40,
     placed_count: 60,
     unplaced_share: 40,
+    justice_funding_total: 2000000,
     lat: -32.1,
     lng: 133.7,
     lga_code: 'LGA00000',
@@ -61,6 +64,18 @@ describe('the registry contract', () => {
     }
   });
 
+  it('the goods layer is org-tier, point-grain, and carries no figures', () => {
+    const goods = getAtlasLayer('goods-delivered');
+    expect(goods).not.toBeNull();
+    expect(goods!.consent).toBe('org');
+    expect(goods!.honestAt).toBe('community');
+    expect(isPointLayer(goods!)).toBe(true);
+    // The registry entry may ship in a public bundle; the numbers may not.
+    // Any digit in the caveat or notes is a Goods figure leaking public.
+    const text = `${goods!.name} ${goods!.unit} ${goods!.caveat} ${goods!.honestAtNote}`;
+    expect(text).not.toMatch(/\d/);
+  });
+
   it('the default layer is live and public', () => {
     const layer = getAtlasLayer(DEFAULT_ATLAS_LAYER_KEY);
     expect(layer).not.toBeNull();
@@ -73,6 +88,7 @@ describe('consent tiers gate surfaces', () => {
   const orgLayer: AtlasLayer = {
     key: 'test-org-layer',
     status: 'declared',
+    group: 'delivery',
     name: 'Org-only test layer',
     unit: 'things',
     caveat: 'A layer that must never appear on the public surface, used to prove the filter holds.',
@@ -102,10 +118,28 @@ describe('consent tiers gate surfaces', () => {
     }
   });
 
-  it('the seeded registry is entirely public today', () => {
-    // When this fails, someone added an org or withheld layer: make sure its
-    // data is stripped server-side before its surface renders, then update.
-    expect(visibleAtlasLayers('public').length).toBe(ATLAS_LAYERS.length);
+  it('the public surface sees exactly the public seed layers', () => {
+    // goods-delivered is org-tier: its points arrive only via the org page's
+    // server fetch, so the public surface never lists it and never holds its
+    // data. If this list grows, check the new layer's data path first.
+    expect(visibleAtlasLayers('public').map(l => l.key)).toEqual([
+      'funding-deserts',
+      'money-recorded',
+      'justice-funding',
+      'renewal-cliff',
+      'seifa-disadvantage',
+      'unplaced-orgs',
+    ]);
+    expect(visibleAtlasLayers('org').map(l => l.key)).toContain('goods-delivered');
+  });
+
+  it('substantive groups lead; uncertainty qualifies from the back', () => {
+    for (const layer of ATLAS_LAYERS) {
+      expect(ATLAS_GROUP_ORDER).toContain(layer.group);
+    }
+    expect(getAtlasLayer('unplaced-orgs')!.group).toBe('data-quality');
+    // data-quality is the LAST group the picker renders.
+    expect(ATLAS_GROUP_ORDER[ATLAS_GROUP_ORDER.length - 1]).toBe('data-quality');
   });
 });
 
@@ -114,12 +148,14 @@ describe('style resolution', () => {
   const unplaced = getAtlasLayer('unplaced-orgs') as AtlasLiveLayer;
 
   it('picks the first stop the value clears, boundaries inclusive', () => {
-    expect(atlasStyleFor(deserts, 250).color).toBe('#D02020');
-    expect(atlasStyleFor(deserts, 200).color).toBe('#D02020');
-    expect(atlasStyleFor(deserts, 150).color).toBe('#E06C18');
-    expect(atlasStyleFor(deserts, 60).color).toBe('#F0C020');
-    expect(atlasStyleFor(deserts, 30).color).toBe('#4CB876');
-    expect(atlasStyleFor(deserts, 5).color).toBe('#1040C0');
+    // Desert stops are quantile breaks (2026-08-09 distribution: median 110,
+    // p90 152, max 205) — re-derive before moving them.
+    expect(atlasStyleFor(deserts, 205).color).toBe('#D02020');
+    expect(atlasStyleFor(deserts, 150).color).toBe('#D02020');
+    expect(atlasStyleFor(deserts, 140).color).toBe('#E06C18');
+    expect(atlasStyleFor(deserts, 120).color).toBe('#F0C020');
+    expect(atlasStyleFor(deserts, 90).color).toBe('#4CB876');
+    expect(atlasStyleFor(deserts, 20).color).toBe('#1040C0');
     expect(atlasStyleFor(unplaced, 80).color).toBe('#D02020');
     expect(atlasStyleFor(unplaced, 12).color).toBe('#4CB876');
     expect(atlasStyleFor(unplaced, 0).color).toBe('#1040C0');
@@ -132,6 +168,31 @@ describe('style resolution', () => {
 
   it('a value below every stop clamps to the lowest stop', () => {
     expect(atlasStyleFor(deserts, -1).color).toBe('#1040C0');
+  });
+});
+
+describe('the substantive layers', () => {
+  const seifa = getAtlasLayer('seifa-disadvantage') as AtlasLiveLayer;
+  const recorded = getAtlasLayer('money-recorded') as AtlasLiveLayer;
+  const justice = getAtlasLayer('justice-funding') as AtlasLiveLayer;
+
+  it('SEIFA runs backwards on purpose: decile 1 is red, decile 10 is blue', () => {
+    expect(atlasStyleFor(seifa, 1).color).toBe('#D02020');
+    expect(atlasStyleFor(seifa, 2).color).toBe('#D02020');
+    expect(atlasStyleFor(seifa, 5).color).toBe('#F0C020');
+    expect(atlasStyleFor(seifa, 10).color).toBe('#1040C0');
+    expect(seifa.value(feature({ avg_irsd_decile: 1 }))).toBe(1);
+  });
+
+  it('money layers use order-of-magnitude bands and read their own fields', () => {
+    expect(atlasStyleFor(recorded, 2_000_000_000).color).toBe('#D02020');
+    expect(atlasStyleFor(recorded, 500_000).color).toBe('#1040C0');
+    expect(recorded.value(feature({ total_funding_all_sources: 4200000 }))).toBe(4200000);
+    expect(atlasStyleFor(justice, 60_000_000).color).toBe('#D02020');
+    expect(justice.value(feature({ justice_funding_total: null }))).toBeNull();
+    expect(justice.value(feature())).toBe(2000000);
+    // Dollar formatting comes from the shared money() helper.
+    expect(recorded.format(4200000)).toMatch(/\$/);
   });
 });
 

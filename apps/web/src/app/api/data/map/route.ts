@@ -106,12 +106,21 @@ export async function GET(request: Request) {
         FROM gs_entities
         WHERE lga_name IS NOT NULL
         GROUP BY 1, 2
+      ),
+      justice AS MATERIALIZED (
+        SELECT e.lga_name, UPPER(e.state) AS state,
+               SUM(jf.amount_dollars)::numeric AS justice_total
+        FROM justice_funding jf
+        JOIN gs_entities e ON e.id = jf.gs_entity_id
+        WHERE e.lga_name IS NOT NULL
+        GROUP BY 1, 2
       )
       SELECT lc.lga_name, lc.state, lc.lat, lc.lng, lc.lga_code,
              COALESCE(dd.remoteness, mr.remoteness) AS remoteness,
              dd.avg_irsd_decile, dd.avg_irsd_score,
              dd.indexed_entities, dd.community_controlled_entities,
              dd.total_funding_all_sources, dd.desert_score,
+             jt.justice_total AS justice_funding_total,
              COALESCE(un.unplaced, 0) AS unplaced_count,
              COALESCE(pl.placed, 0) AS placed_count,
              CASE WHEN COALESCE(un.unplaced, 0) + COALESCE(pl.placed, 0) > 0
@@ -123,6 +132,7 @@ export async function GET(request: Request) {
       LEFT JOIN modal_remoteness mr ON mr.lga_name = lc.lga_name AND mr.state = lc.state
       LEFT JOIN unplaced un ON un.lga_name = lc.lga_name AND un.state = lc.state
       LEFT JOIN placed pl ON pl.lga_name = lc.lga_name AND pl.state = lc.state
+      LEFT JOIN justice jt ON jt.lga_name = lc.lga_name AND jt.state = lc.state
       WHERE dd.desert_score IS NOT NULL OR COALESCE(un.unplaced, 0) > 0
       ORDER BY dd.desert_score DESC NULLS LAST`,
     });
@@ -135,6 +145,7 @@ export async function GET(request: Request) {
       indexed_entities: number | null; community_controlled_entities: number | null;
       total_funding_all_sources: number | null; lat: number | null; lng: number | null;
       unplaced_count: number; placed_count: number; unplaced_share: number | null;
+      justice_funding_total: number | null;
     }>;
 
     // Councils with data but no point coordinates render only where a map

@@ -228,7 +228,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </>
         )}
         <ShortlistBar />
-        <DeferredChatDrawer delayMs={isFastPublicPath ? 2500 : 1000} />
+        {/* The Atlas is a full-viewport map; the chat bubble sat on its
+            bottom corner controls (Ben, 2026-08-09: no AI button there). */}
+        {!pathname.startsWith('/atlas') && (
+          <DeferredChatDrawer delayMs={isFastPublicPath ? 2500 : 1000} />
+        )}
         </ShortlistProvider>
       </body>
     </html>

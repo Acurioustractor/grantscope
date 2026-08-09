@@ -24,6 +24,7 @@ function feature(overrides: Partial<AtlasFeature> = {}): AtlasFeature {
     unplaced_count: 30,
     placed_count: 70,
     unplaced_share: 30,
+    justice_funding_total: 1500000,
     lat: -32.1,
     lng: 133.7,
     lga_code: 'LGA40700',
@@ -121,6 +122,13 @@ describe('taking the data with its caveats', () => {
     expect(row).toContain('Ceduna');
     expect(row).toContain('where it was recorded');
     expect(headers.split(',').length).toBeGreaterThanOrEqual(14);
+  });
+
+  it('CSV headers never collide, even as the registry grows layers', () => {
+    const headers = councilCsv(feature()).split('\n')[0].split(',');
+    expect(new Set(headers).size).toBe(headers.length);
+    expect(headers).toContain('justice_funding');
+    expect(headers).toContain('seifa_disadvantage_contains');
   });
 
   it('CSV escapes commas and quotes properly', () => {
