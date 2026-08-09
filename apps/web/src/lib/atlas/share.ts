@@ -12,6 +12,7 @@ import {
   type AtlasLiveLayer,
   type AtlasSurface,
 } from './layers';
+import { COUNCIL_REASON_COLUMNS } from './reasons';
 
 /** URL-safe slug for a place name. Also the slug of /place/council/[slug] —
  * council-place-report.ts imports this one so the two can never drift. */
@@ -112,6 +113,12 @@ const PLACE_COLUMNS: Array<{ header: string; read(f: AtlasFeature): unknown }> =
   { header: 'recorded_funding', read: f => f.total_funding_all_sources },
   { header: 'unplaced_count', read: f => f.unplaced_count },
   { header: 'placed_count', read: f => f.placed_count },
+  // Why the unplaced cannot be placed, one column per reason that can touch
+  // a council. Null (not zero) when the payload predates the reason codes.
+  ...COUNCIL_REASON_COLUMNS.map(({ code, header }) => ({
+    header,
+    read: (f: AtlasFeature) => (f.unplaced_reasons ? (f.unplaced_reasons[code] ?? 0) : null),
+  })),
 ];
 
 // Only choropleth layers read council features; a point layer's data never

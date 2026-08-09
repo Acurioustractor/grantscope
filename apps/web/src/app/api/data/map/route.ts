@@ -52,8 +52,14 @@ export async function GET(request: Request) {
     // Councils without point coordinates stay in the payload with a null
     // lat/lng: the choropleth paints them by boundary-name match, which needs
     // no centroid. Coordinates only drive bounds-fitting and fallback markers.
-    const { data, error } = await supabase.rpc('exec_sql', {
-      query: `WITH lga_centroids AS (
+    //
+    // The second query is the live "why" tally: every null-lga row carries
+    // exactly one lga_source reason code (the 2026-08 placement migrations
+    // stamped them), grouped per state so the caveat card can scope to the
+    // state filter. State is null for records that hold no state at all.
+    const [councilResult, reasonResult] = await Promise.all([
+      supabase.rpc('exec_sql', {
+        query: `WITH lga_centroids AS (
         SELECT lga_name, MAX(lga_code) AS lga_code, UPPER(state) as state,
                AVG(latitude::float) as lat,
                AVG(longitude::float) as lng
@@ -85,10 +91,10 @@ export async function GET(request: Request) {
                  dd.desert_score DESC
       ),
       unplaced_pc AS MATERIALIZED (
-        SELECT postcode, COUNT(*) AS n
+        SELECT postcode, COALESCE(lga_source, 'unstamped') AS reason, COUNT(*) AS n
         FROM gs_entities
         WHERE lga_name IS NULL AND postcode IS NOT NULL
-        GROUP BY postcode
+        GROUP BY 1, 2
       ),
       council_pc AS MATERIALIZED (
         SELECT DISTINCT lga_name, UPPER(state) AS state, postcode
@@ -96,9 +102,14 @@ export async function GET(request: Request) {
         WHERE lga_name IS NOT NULL
       ),
       unplaced AS MATERIALIZED (
-        SELECT cp.lga_name, cp.state, SUM(u.n)::int AS unplaced
-        FROM council_pc cp
-        JOIN unplaced_pc u USING (postcode)
+        SELECT lga_name, state, SUM(n)::int AS unplaced,
+               jsonb_object_agg(reason, n) AS unplaced_reasons
+        FROM (
+          SELECT cp.lga_name, cp.state, u.reason, SUM(u.n)::int AS n
+          FROM council_pc cp
+          JOIN unplaced_pc u USING (postcode)
+          GROUP BY 1, 2, 3
+        ) by_reason
         GROUP BY 1, 2
       ),
       placed AS MATERIALIZED (
@@ -122,6 +133,7 @@ export async function GET(request: Request) {
              dd.total_funding_all_sources, dd.desert_score,
              jt.justice_total AS justice_funding_total,
              COALESCE(un.unplaced, 0) AS unplaced_count,
+             un.unplaced_reasons,
              COALESCE(pl.placed, 0) AS placed_count,
              CASE WHEN COALESCE(un.unplaced, 0) + COALESCE(pl.placed, 0) > 0
                   THEN ROUND(100.0 * COALESCE(un.unplaced, 0)
@@ -135,17 +147,34 @@ export async function GET(request: Request) {
       LEFT JOIN justice jt ON jt.lga_name = lc.lga_name AND jt.state = lc.state
       WHERE dd.desert_score IS NOT NULL OR COALESCE(un.unplaced, 0) > 0
       ORDER BY dd.desert_score DESC NULLS LAST`,
-    });
+      }),
+      supabase.rpc('exec_sql', {
+        query: `SELECT UPPER(state) AS state,
+               COALESCE(lga_source, 'unstamped') AS reason,
+               COUNT(*)::int AS n
+        FROM gs_entities
+        WHERE lga_name IS NULL
+        GROUP BY 1, 2`,
+      }),
+    ]);
 
-    if (error) throw error;
+    if (councilResult.error) throw councilResult.error;
+    if (reasonResult.error) throw reasonResult.error;
 
-    const features = (data || []) as Array<{
+    const features = (councilResult.data || []) as Array<{
       lga_name: string; state: string; remoteness: string | null;
       avg_irsd_decile: number | null; desert_score: number | null;
       indexed_entities: number | null; community_controlled_entities: number | null;
       total_funding_all_sources: number | null; lat: number | null; lng: number | null;
       unplaced_count: number; placed_count: number; unplaced_share: number | null;
       justice_funding_total: number | null;
+      unplaced_reasons: Record<string, number> | null;
+    }>;
+
+    // The live why-tally rides the summary: (state, reason, n) rows the
+    // client scopes to its state filter. ~40 rows, six reason codes.
+    const unplacedReasons = (reasonResult.data || []) as Array<{
+      state: string | null; reason: string; n: number;
     }>;
 
     // Councils with data but no point coordinates render only where a map
@@ -172,6 +201,7 @@ export async function GET(request: Request) {
         f => Number(f.unplaced_share) >= 50 && Number(f.unplaced_count) >= 50
       ).length,
       undrawn_lgas: undrawnLgas,
+      unplaced_reasons: unplacedReasons,
     };
 
     const response = NextResponse.json({ features, summary, metric });
