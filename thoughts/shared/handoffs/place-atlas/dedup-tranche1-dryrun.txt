@@ -1,0 +1,49 @@
+DROP TABLE
+SELECT 822
+=== tranche size + ladder outcomes ===
+ tranche | survivor_gains_lga | ladder_conflicts 
+---------+--------------------+------------------
+     822 |                270 |               39
+(1 row)
+
+=== ladder: who wins the 46-ish conflicts (twin rank < survivor rank => twin wins) ===
+                          outcome                          | count 
+-----------------------------------------------------------+-------
+ survivor keeps (single_lga_postcode > registry_address)   |    16
+ survivor keeps (poa_ratio_nolocality > registry_address)  |     7
+ twin wins (single_lga_postcode > registry_address)        |     5
+ TIE same rank (registry_address vs registry_address)      |     4
+ survivor keeps (poa_ratio_dominant > registry_address)    |     4
+ twin wins (poa_ratio_nolocality > registry_address)       |     2
+ TIE same rank (single_lga_postcode vs poa_ratio_dominant) |     1
+(7 rows)
+
+=== soft-reference hit counts (only >0 get repoint statements) ===
+=== FK-table hit counts (all get repoint statements regardless; informational) ===
+         tbl          | n  
+----------------------+----
+ gs_relationships_tgt | 13
+ gs_relationships_src |  7
+ foundation_grantees  |  4
+ goods_relationships  |  2
+ alma_interventions   |  1
+(5 rows)
+
+DROP TABLE
+SELECT 822
+CREATE INDEX
+CREATE INDEX
+ANALYZE
+ manifest_rows 
+---------------
+           822
+(1 row)
+
+            tbl             |  n   
+----------------------------+------
+ entity_xref                | 1453
+ justice_funding            |    5
+ justice_funding_clean      |    5
+ goods_procurement_entities |    2
+(4 rows)
+

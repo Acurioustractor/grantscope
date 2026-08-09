@@ -1,0 +1,117 @@
+=== A. verdict x path ===
+      verdict       |      path       | count 
+--------------------+-----------------+-------
+ BEN_nhulunbuy      | sal_dominant    |    12
+ hold_pc_incoherent | sal_dominant    |     7
+ hold_pc_incoherent | town_unique_lga |     1
+ hold_shared_line   | sal_dominant    |    60
+ hold_shared_line   | town_unique_lga |     1
+ not_resolvable     |                 |  1246
+ place              | sal_dominant    |   618
+ place              | town_unique_lga |    26
+
+=== B. place: by stamp and source class ===
+                stamp                |          lga_source           | count 
+-------------------------------------+-------------------------------+-------
+ acnc_street_line+sal_ratio_dominant | unresolved_multi_lga_postcode |   600
+ acnc_street_line+abs_asgs           | registry_address              |    26
+ acnc_street_line+sal_ratio_dominant | registry_address              |     8
+ acnc_street_line+sal_ratio_dominant | postcode_unmapped_in_abs      |     5
+ acnc_street_line+sal_ratio_dominant | unknown_postcode              |     4
+ acnc_street_line+sal_ratio_dominant | state_conflict                |     1
+
+=== C. place: top 20 towns ===
+      town       | st  |            win_name            | count 
+-----------------+-----+--------------------------------+-------
+ BAULKHAM HILLS  | NSW | The Hills Shire                |    48
+ NORWOOD         | SA  | Norwood Payneham and St Peters |    31
+ GUILDFORD       | NSW | Cumberland                     |    24
+ CLAREMONT       | WA  | Claremont                      |    22
+ BASSENDEAN      | WA  | Bassendean                     |    21
+ TULLAMARINE     | VIC | Hume                           |    18
+ BALACLAVA       | VIC | Port Phillip                   |    15
+ EASTWOOD        | SA  | Burnside                       |    15
+ PARKSIDE        | SA  | Unley                          |    14
+ WALKERVILLE     | SA  | Walkerville                    |    14
+ SORRENTO        | WA  | Joondalup                      |    12
+ BLACKWOOD       | SA  | Mitcham                        |    12
+ PEAK HILL       | NSW | Parkes                         |    11
+ QUEENSCLIFF     | VIC | Queenscliffe                   |    11
+ BEDFORD PARK    | SA  | Mitcham                        |    10
+ HIGHFIELDS      | QLD | Toowoomba                      |    10
+ KESWICK         | SA  | West Torrens                   |    10
+ MOUNT CLAREMONT | WA  | Nedlands                       |     9
+ BRIGHTON        | SA  | Holdfast Bay                   |     9
+ NORTH BEACH     | WA  | Stirling                       |     9
+
+=== D. the Nhulunbuy group (Ben verdict) ===
+       gs_id        |                   name                   |                   line1                    | ent_pc |          lga_source           |     path     
+--------------------+------------------------------------------+--------------------------------------------+--------+-------------------------------+--------------
+ AU-ABN-97672343461 | Burarrwanga Gumatj Aboriginal Corporatio | 24 Wuyal Rd                                | 0880   | unresolved_multi_lga_postcode | sal_dominant
+ AU-ABN-65698375092 | Culture College Arnhem Land Aboriginal C | 59 Pandora Circuit                         | 0880   | unresolved_multi_lga_postcode | sal_dominant
+ AU-ABN-95520121809 | Dhimurru  Aboriginal Corporation         | 11 Arnhem Road                             | 0880   | unresolved_multi_lga_postcode | sal_dominant
+ AU-ABN-79807716487 | Djalkiri Foundation Aboriginal Corporati | 11 Arnhem Road                             | 0880   | unresolved_multi_lga_postcode | sal_dominant
+ AU-ABN-36606505695 | Gawalnga Corporation Limited             | 15 Banksia Cl                              | 0880   | unresolved_multi_lga_postcode | sal_dominant
+ AU-ABN-36151846976 | Liya Wanhurr Aboriginal Corporation      | Level 1, 8 Franklyn Street                 | 0880   | unresolved_multi_lga_postcode | sal_dominant
+ AU-ABN-96843428729 | Miwatj Health Aboriginal Corporation     | 1424 Arnhem Road                           | 0880   | unresolved_multi_lga_postcode | sal_dominant
+ AU-ABN-37690427467 | North East Arnhem Land Aboriginal Corpor | Melville Bay Road                          | 0880   | unresolved_multi_lga_postcode | sal_dominant
+ AU-ABN-65294398537 | Nyinyikay Dha Wuba Aboriginal Corporatio | Nyinyikay Community North East Arnhem Land | 0880   | unresolved_multi_lga_postcode | sal_dominant
+ AU-ABN-43875971699 | Oasis Christian Assembly Inc             | 61 Chesterfield Cct                        | 0880   | unresolved_multi_lga_postcode | sal_dominant
+ AU-ABN-78673137230 | TOGATHER AGENCY LTD                      | 11 Traeger Cl                              | 0880   | unresolved_multi_lga_postcode | sal_dominant
+ AU-ABN-45385228127 | Yolngu Nations (Aboriginal Corporation)  | 3 Satral Avenue                            | 0880   | unresolved_multi_lga_postcode | sal_dominant
+
+=== E1. hold_pc_incoherent (town not in postcode AND lga not in postcode) ===
+       gs_id        |                 name                 |    town     | st  | ent_pc |   win_name   
+--------------------+--------------------------------------+-------------+-----+--------+--------------
+ AU-ABN-34169198421 | Kildare Education Ministries Limited | ALBERT PARK | VIC | 3141   | Port Phillip
+ AU-ABN-68711075359 | Karlup Aboriginal Corporation        | CHERMSIDE   | QLD | 6056   | Brisbane
+ AU-ABN-65158242089 | Mind & Body Health Foundation Limite | CLAREMONT   | WA  | 6009   | Claremont
+ AU-ABN-77139965050 | Benjamin Duncan Foundation           | CREMORNE    | VIC | 3141   | Yarra
+ AU-ABN-84707114094 | Uca - Millthorpe Uc Congregation     | MILLTHORPE  | NSW | 2800   | Blayney
+ AU-ABN-26383582737 | Merkos Women Inc.                    | ST KILDA    | VIC | 3183   | Port Phillip
+ AU-ABN-66852809680 | Port Phillip Ecocentre Incorporated  | ST KILDA    | VIC | 3183   | Port Phillip
+ AU-ABN-58478152606 | Roidef Tzedek Charitable Foundation  | ST KILDA    | VIC | 3183   | Port Phillip
+
+=== E2. postcode_geo landmines surfaced (placed per SAL; queue pg repair) ===
+    town     | st  | ent_pc |            sal_says            | cands | postcode_geo_says 
+-------------+-----+--------+--------------------------------+-------+-------------------
+ NORWOOD     | SA  | 5067   | Norwood Payneham and St Peters |    30 | Burnside
+ GUILDFORD   | NSW | 2161   | Cumberland                     |    24 | Fairfield
+ CLAREMONT   | WA  | 6010   | Claremont                      |    22 | Cottesloe
+ BASSENDEAN  | WA  | 6054   | Bassendean                     |    21 | Swan
+ BALACLAVA   | VIC | 3183   | Port Phillip                   |    15 | Glen Eira
+ WALKERVILLE | SA  | 5081   | Walkerville                    |    14 | Prospect
+ PARKSIDE    | SA  | 5063   | Unley                          |    14 | Burnside
+ BLACKWOOD   | SA  | 5051   | Mitcham                        |    12 | Onkaparinga
+ PEAK HILL   | NSW | 2869   | Parkes                         |    11 | Narromine
+ QUEENSCLIFF | VIC | 3225   | Queenscliffe                   |    11 | Greater Geelong
+ HIGHFIELDS  | QLD | 4352   | Toowoomba                      |    10 | Goondiwindi
+ NORTH BEACH | WA  | 6020   | Stirling                       |     9 | Joondalup
+
+=== F. hold_shared_line: top lines ===
+     town     | st  | n_orgs | cands |     sample_line      
+--------------+-----+--------+-------+----------------------
+ FORBES       | NSW |     22 |     1 | 16 Johnson Street
+ PARADISE     | SA  |      7 |     7 | 57 Darley Rd
+ ROSEHILL     | NSW |      6 |     6 | 40 Eleanor St
+ HIGHGATE     | SA  |      5 |     5 | 24 Winchester Street
+ SYDENHAM     | VIC |      5 |     5 | 360 Sydenham Rd
+ BLACKWOOD    | SA  |      4 |     4 | 72 Coromandel Pde
+ ST KILDA     | VIC |      4 |     2 | 12 Chapel Street
+ BALACLAVA    | VIC |      3 |     3 | U 12 285 Carlisle St
+ BEDFORD PARK | SA  |      3 |     3 | 1 Flinders Dr
+ BINNA BURRA  | NSW |      3 |     3 | 1146 Friday Hut Rd
+
+=== G. hold_hub_town ===
+ gs_id | name | town | line1 | ent_pc 
+-------+------+------+-------+--------
+
+=== H. totals ===
+      verdict       | count 
+--------------------+-------
+ not_resolvable     |  1246
+ place              |   644
+ hold_shared_line   |    61
+ BEN_nhulunbuy      |    12
+ hold_pc_incoherent |     8
+

@@ -1,0 +1,25 @@
+19 corporation(s) to look up, 2000ms apart
+
+  PLUMRIDGE LAKES Paupiyala Tjarutja Aboriginal Corporation — postal locality only
+  RAYMOND TERRACE Gumal Indigenous Corporation — postal locality only
+  NAROOMA        Katungul Aboriginal Corporation Regional Health and Community Services — postal locality only
+  RAYMOND TERRACE Wahroonga Aboriginal Corporation Raymond Terrace — postal locality only
+  BREMER BAY     Banjelungup Aboriginal Corporation — postal locality only
+  PAYNES FIND    Pindiddy Aboriginal Corporation — postal locality only
+  SANDILANDS     Ngullingah Jugun (Our Country) Aboriginal Corporation RNTBC — community line beats postal (MALLANGANEE)
+  WEST LEEDERVILLE The Westerman Jilya Institute for Mental Health Indigenous Corporation — postal locality only
+  RAYMOND TERRACE Ngarra Aboriginal Corporation — postal locality only
+  LEGUME         Waringhehn Aboriginal Corporation — postal locality only
+  NEW LAMBTON    Gari Yala Aboriginal Cultural Fundraising Indigenous Corporation — postal locality only
+  WALLAGA LAKE   Little Yuin Pre-School Family Centre Aboriginal Corporation — postal locality only
+  PURGA          Purga Elders & Descendants Aboriginal Corporation — postal locality only
+  NORTH BRUNY    Weetapoona Aboriginal Corporation — postal locality only
+  NABAWA         Naaguja Warangkarri Aboriginal Corporation — postal locality only
+  MIDLAND        Koya Aboriginal Corporation — postal locality only
+  PLUMRIDGE LAKES Pila Nguru (Aboriginal Corporation) RNTBC — postal locality only
+  WARILLA        Shellharbour Aboriginal Community Youth and Family Aboriginal Corporation — postal locality only
+  WANORA         Beyond the Pale Indigenous Corporation — postal locality only
+
+19/19 localities parsed
+
+Dry run. Re-run with --apply to write gs_entities.lga_name.

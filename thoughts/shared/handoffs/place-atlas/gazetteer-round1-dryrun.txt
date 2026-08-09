@@ -1,0 +1,53 @@
+=== 1. Entity placements (fresh, guard: lga_code IS NULL) ===
+       gs_id        |                          name                           | postcode |          cur_source           |                to_lga                 | to_code |              stamp              
+--------------------+---------------------------------------------------------+----------+-------------------------------+---------------------------------------+---------+---------------------------------
+ AU-ABN-19634798520 | KLUTHUTHU CHRISTIAN COLLEGE LTD                         | 4874     | unresolved_multi_lga_postcode | Napranum                              | 35670   | acnc_town_city+gazetteer
+ AU-ABN-36388612170 | Uca-Napranum Uniting Church                             | 4874     | unresolved_multi_lga_postcode | Napranum                              | 35670   | own_name_town+gazetteer
+ AU-ABN-42110700500 | Napranum Pal Group Limited                              | 4874     | unresolved_multi_lga_postcode | Napranum                              | 35670   | own_name_town+gazetteer
+ AU-ABN-50689692877 | HOWARD CHRISTIAN COLLEGE AUSTRALIA LTD                  | 4874     | unresolved_multi_lga_postcode | Napranum                              | 35670   | acnc_town_city+gazetteer
+ AU-ABN-49876891368 | Gebaralgal (Torres Strait Islanders) Corporation RNTBC  | 4875     | unresolved_multi_lga_postcode | Torres Strait Island                  | 36960   | own_name_town+gazetteer
+ AU-ABN-47223656890 | The Trustee For The Western Cape Communities Trust      | 4874     | unresolved_multi_lga_postcode | Weipa                                 | 37300   | acnc_town_city+gazetteer
+ AU-ABN-54650651522 | MOKWIRI NUNG LTD                                        | 4874     | unresolved_multi_lga_postcode | Weipa                                 | 37300   | acnc_town_city+gazetteer
+ AU-ABN-54737842050 | The Trustee For The WCCT Central Sub-Regional Trust     | 4874     | unresolved_multi_lga_postcode | Weipa                                 | 37300   | acnc_town_city+gazetteer
+ AU-ABN-57687065776 | The Trustee For The WCCT Southern Sub-Regional Trust    | 4874     | unresolved_multi_lga_postcode | Weipa                                 | 37300   | acnc_town_city+gazetteer
+ AU-ABN-63549473409 | The Trustee For The Wcct Northern Sub-Regional Trust    | 4874     | unresolved_multi_lga_postcode | Weipa                                 | 37300   | acnc_town_city+gazetteer
+ AU-ORIC-2025       | Pitjantjatjara Yankunytjatjara Education Committee Abor |          | no_postcode                   | Anangu Pitjantjatjara Yankunytjatjara | 40250   | oric_register_address+abs_asgs
+ AU-ABN-44335892243 | Scotdesco Aboriginal Corporation                        | 5690     | unresolved_multi_lga_postcode | Unincorporated SA                     | 49399   | oric_register_address+gazetteer
+ AU-ABN-86778154824 | Thangkenharenge Aboriginal Corporation                  | 0872     | unresolved_multi_lga_postcode | Barkly                                | 70420   | oric_register_address+gazetteer
+ AU-ABN-32494962004 | Kurdiji Aboriginal Corporation                          | 0852     | unresolved_multi_lga_postcode | Central Desert                        | 70620   | oric_register_address+abs_asgs
+ AU-ABN-46909257243 | The Wulaign Homelands Council Aboriginal Corporation    | 0852     | unresolved_multi_lga_postcode | Central Desert                        | 70620   | oric_register_address+abs_asgs
+ AU-ABN-96925664282 | Lajamanu Progress Aboriginal Corporation                | 0852     | unresolved_multi_lga_postcode | Central Desert                        | 70620   | oric_register_address+abs_asgs
+(16 rows)
+
+=== 1b. Guard check: any of the 16 NOT null-lga (would be skipped) ===
+ gs_id | name | lga_code | lga_source 
+-------+------+----------+------------
+(0 rows)
+
+=== 2. Correction: Pukatja Supermarket, Alice 70200 -> APY 40250 (own-name, hub-bias class) ===
+       gs_id        |                          name                           | postcode |   lga_name    | lga_code |       lga_source        
+--------------------+---------------------------------------------------------+----------+---------------+----------+-------------------------
+ AU-ABN-84659701312 | Pukatja Supermarket and Associated Stores Aboriginal Co | 0872     | Alice Springs | 70200    | acnc_town_city+abs_asgs
+(1 row)
+
+=== 3. Excluded on purpose (must NOT appear in any UPDATE) ===
+       gs_id        |                      name                       | lga_code |          lga_source           |                   why                    
+--------------------+-------------------------------------------------+----------+-------------------------------+------------------------------------------
+ AU-ABN-73813255877 | Warnayaka Art & Cultural Aboriginal Corporation |          | unresolved_multi_lga_postcode | Warnayaka: refusal stands (inverted hub)
+(1 row)
+
+=== 4. postcode_geo repairs, current rows ===
+ postcode |      locality       | state |      lga_name      | lga_code 
+----------+---------------------+-------+--------------------+----------
+ 0872     | BARROW CREEK        |       |                    | 
+ 0872     | ERNABELLA           |       |                    | 
+ 0872     | ERNABELLA (PUKATJA) |       |                    | 
+ 4874     | NAPRANUM            | QLD   | Aurukun            | 30250
+ 5690     | BOOKABIE            | SA    | Maralinga Tjarutja | 44000
+(5 rows)
+
+=== 5. Alias rows to insert (collision check: existing rows for these localities) ===
+ locality | state_name | lga_name | lga_code | source 
+----------+------------+----------+----------+--------
+(0 rows)
+
