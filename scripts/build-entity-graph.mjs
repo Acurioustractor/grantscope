@@ -282,6 +282,25 @@ async function buildEntities() {
 
   // 1c. ORIC Corporations — batch upsert
   log('  Loading ORIC corporations...');
+  // Merged AU-ORIC twins live on as their AU-ABN survivor rows (dedup migration
+  // 20260809200000) — re-minting them here silently undoes the dedup, so every
+  // applied dedup tranche appends its manifest table to this list.
+  const DEDUP_MANIFEST_TABLES = ['dedup_tranche1_20260809'];
+  const suppressedGsIds = new Set();
+  for (const manifestTable of DEDUP_MANIFEST_TABLES) {
+    let mOffset = 0;
+    while (true) {
+      const { data: rows, error: mErr } = await supabase
+        .from(manifestTable)
+        .select('oric_gs_id')
+        .range(mOffset, mOffset + batchSize - 1);
+      if (mErr) { log(`  WARN: dedup manifest ${manifestTable} unreadable (${mErr.message}) — no suppression this run`); break; }
+      if (!rows?.length) break;
+      for (const r of rows) if (r.oric_gs_id) suppressedGsIds.add(r.oric_gs_id);
+      mOffset += batchSize;
+    }
+  }
+  if (suppressedGsIds.size) log(`  ORIC dedup suppression: ${suppressedGsIds.size} merged gs_ids will be skipped`);
   offset = 0;
   while (true) {
     const { data: corps, error } = await supabase
@@ -297,6 +316,7 @@ async function buildEntities() {
       for (const c of corps) {
         if (!c.abn && !c.icn) continue;
         const gsId = makeGsId({ abn: c.abn, icn: c.icn });
+        if (suppressedGsIds.has(gsId)) { stats.skipped++; continue; }
         if (!deduped.has(gsId)) {
           deduped.set(gsId, {
             entity_type: 'indigenous_corp',
