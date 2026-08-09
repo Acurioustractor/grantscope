@@ -139,6 +139,22 @@ describe('taking the data with its caveats', () => {
     expect(row.match(/"/g)?.length ?? 0).toBeGreaterThan(2);
   });
 
+  it('CSV carries the why behind unplaced, empty when the payload predates it', () => {
+    const csv = councilCsv(
+      feature({ unplaced_reasons: { unresolved_multi_lga_postcode: 25, state_conflict: 5 } })
+    );
+    const [headerLine, rowLine] = csv.trimEnd().split('\n');
+    const headers = headerLine.split(',');
+    const cells = rowLine.split(',');
+    expect(cells[headers.indexOf('unplaced_unresolved_multi_lga_postcode')]).toBe('25');
+    expect(cells[headers.indexOf('unplaced_state_conflict')]).toBe('5');
+    // Held reasons make an absent code a real zero…
+    expect(cells[headers.indexOf('unplaced_no_state')]).toBe('0');
+    // …but a payload from before the reason codes exports empty, never zero.
+    const oldCells = councilCsv(feature()).trimEnd().split('\n')[1].split(',');
+    expect(oldCells[headers.indexOf('unplaced_no_state')]).toBe('');
+  });
+
   it('null values export as empty cells, never zero', () => {
     const csv = councilCsv(feature({ desert_score: null, total_funding_all_sources: null }));
     const [headerLine, rowLine] = csv.trimEnd().split('\n');

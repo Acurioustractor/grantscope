@@ -40,6 +40,10 @@ export interface AtlasFeature {
   unplaced_count: number;
   placed_count: number;
   unplaced_share: number | null;
+  /** Why the unplaced cannot be placed: lga_source reason code -> count for
+   * this council's postcodes. Optional because a cached payload from before
+   * the field existed may still hydrate a newer client. */
+  unplaced_reasons?: Record<string, number> | null;
   justice_funding_total: number | null;
   /** Null when the council has no point coordinates; it still renders where a
    * boundary matches its name. Coordinates only drive bounds-fitting. */

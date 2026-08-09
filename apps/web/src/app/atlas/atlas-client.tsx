@@ -28,6 +28,13 @@ import {
   resolvePlace,
 } from '@/lib/atlas/share';
 import {
+  beyondCouncilRows,
+  reasonRows,
+  scopeReasonRows,
+  totalOf,
+  type StateReasonCount,
+} from '@/lib/atlas/reasons';
+import {
   ATLAS_STORY,
   ATLAS_STORY_MEASURED_AT,
   getStoryStep,
@@ -97,6 +104,9 @@ export default function AtlasClient({
   const LAYERS = useMemo(() => visibleAtlasLayers(surface), [surface]);
 
   const [features, setFeatures] = useState<AtlasFeature[]>([]);
+  // The live why-tally behind every "cannot place" number: (state, reason,
+  // count) rows, scoped client-side to the state filter or a selection.
+  const [reasonTally, setReasonTally] = useState<StateReasonCount[]>([]);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [stateFilter, setStateFilter] = useState('ALL');
@@ -129,6 +139,7 @@ export default function AtlasClient({
       .then(r => r.json())
       .then(data => {
         setFeatures(data.features || []);
+        setReasonTally(data.summary?.unplaced_reasons || []);
         setLoading(false);
       })
       .catch(() => {
@@ -278,8 +289,13 @@ export default function AtlasClient({
 
   const undrawn = useMemo(() => filtered.filter(f => f.lat === null).length, [filtered]);
 
+  // Unplaced-orgs is excluded from the generic metric rows: its story is the
+  // How-sure breakdown on the place panel, not one more percentage.
   const otherLiveLayers = useMemo(
-    () => LAYERS.filter(isChoroplethLayer).filter(l => l.key !== mapLayer.key),
+    () =>
+      LAYERS.filter(isChoroplethLayer).filter(
+        l => l.key !== mapLayer.key && l.key !== 'unplaced-orgs'
+      ),
     [LAYERS, mapLayer.key]
   );
 
@@ -554,6 +570,40 @@ export default function AtlasClient({
             </p>
             <p className="text-xs text-gray-500 mt-1">{activeLayer.honestAtNote}</p>
           </div>
+
+          {/* The live why behind every number here: not one red percentage
+              but the six reason codes, read from the database and scoped to
+              the state filter. Uncertainty qualifies every layer, so this
+              block travels with all of them. */}
+          {(() => {
+            const scoped = scopeReasonRows(reasonTally, stateFilter);
+            if (scoped.length === 0) return null;
+            return (
+              <div className="mt-3 pt-3 border-t border-gray-200">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                  Cannot be placed{stateFilter !== 'ALL' ? ` · ${stateFilter}` : ''}
+                </p>
+                <p className="text-xs text-gray-600 mt-1 leading-snug">
+                  {totalOf(scoped).toLocaleString()} organisations
+                  {stateFilter !== 'ALL' ? ` recorded in ${stateFilter}` : ''} sit on no
+                  council&apos;s count. Why, counted live:
+                </p>
+                <div className="mt-2 space-y-1">
+                  {scoped.map(r => (
+                    <div key={r.code} className="flex justify-between items-baseline gap-2 text-[11px]">
+                      <span className="text-gray-600">{r.label}</span>
+                      <span className="font-black tabular-nums">{r.n.toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[10px] text-gray-400 mt-1.5 leading-snug">
+                  An organisation with no postcode, or one we do not recognise, can appear
+                  under no council at all. The rest count toward every council sharing
+                  their postcode — never sum them.
+                </p>
+              </div>
+            );
+          })()}
           </div>
         </div>
       </aside>
@@ -600,14 +650,6 @@ export default function AtlasClient({
                 </span>
               </div>
 
-              {/* Uncertainty travels with every number, on every layer */}
-              {Number(selected.unplaced_share) >= 50 && (
-                <p className="mt-2 text-[11px] text-bauhaus-red leading-snug">
-                  Half or more of what might be here cannot be placed — read every
-                  number on this panel gently.
-                </p>
-              )}
-
               <div className="mt-3 space-y-2">
                 {otherLiveLayers.map(layer => {
                   const v = layer.value(selected);
@@ -636,16 +678,73 @@ export default function AtlasClient({
                   <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Community controlled</span>
                   <span className="text-sm font-black">{selected.community_controlled_entities ?? '—'}</span>
                 </div>
-                <div className="flex justify-between items-baseline">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Cannot place</span>
-                  <span className={`text-sm font-black ${Number(selected.unplaced_share) >= 50 ? 'text-bauhaus-red' : ''}`}>
-                    {selected.unplaced_count}
-                    {selected.unplaced_share !== null && (
-                      <span className="text-xs font-bold text-gray-400 ml-1">({Number(selected.unplaced_share).toFixed(0)}%)</span>
-                    )}
-                  </span>
-                </div>
               </div>
+
+              {/* How sure are we, for this council: the live reasons, not one
+                  red percentage. Counts include every organisation whose
+                  postcode touches this council, so the same organisation
+                  counts toward every council sharing it — never summed. */}
+              {(() => {
+                const rows = reasonRows(selected.unplaced_reasons);
+                const total = Number(selected.unplaced_count) || 0;
+                const share =
+                  selected.unplaced_share === null ? null : Number(selected.unplaced_share);
+                const severe = share !== null && share >= 50;
+                const beyond = beyondCouncilRows(reasonTally, selected.state);
+                const beyondParts = beyond.map(r =>
+                  r.code === 'no_postcode'
+                    ? `${r.n.toLocaleString()} hold no postcode`
+                    : r.code === 'unknown_postcode'
+                      ? `${r.n.toLocaleString()} hold a postcode we do not recognise`
+                      : `${r.n.toLocaleString()} ${r.label}`
+                );
+                return (
+                  <div className="mt-4 pt-3 border-t border-gray-200">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                      How sure are we
+                    </p>
+                    {total > 0 ? (
+                      <>
+                        <p
+                          className={`text-xs mt-1 leading-snug ${severe ? 'text-bauhaus-red' : 'text-gray-600'}`}
+                        >
+                          {total.toLocaleString()} organisations that might be here cannot be
+                          tied to one council
+                          {share !== null
+                            ? ` — ${share.toFixed(0)}% of everything this council might hold`
+                            : ''}
+                          .{severe ? ' Read every number on this panel gently.' : ''}
+                        </p>
+                        {rows.length > 0 && (
+                          <div className="mt-2 space-y-1">
+                            {rows.map(r => (
+                              <div
+                                key={r.code}
+                                className="flex justify-between items-baseline gap-2 text-[11px]"
+                              >
+                                <span className="text-gray-600">{r.label}</span>
+                                <span className="font-black tabular-nums">
+                                  {r.n.toLocaleString()}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-xs mt-1 text-gray-600 leading-snug">
+                        Every organisation recorded in this council&apos;s postcodes is placed.
+                      </p>
+                    )}
+                    {beyondParts.length > 0 && (
+                      <p className="text-[10px] text-gray-400 mt-2 leading-snug">
+                        In {selected.state} records, {beyondParts.join(' and ')} — none of
+                        them can appear under any council.
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
 
               {selectedPage && (
                 <Link
