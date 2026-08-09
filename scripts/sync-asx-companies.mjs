@@ -10,7 +10,11 @@ import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { parse } from 'csv-parse/sync';
 
-const ASX_CSV_URL = 'https://www.asx.com.au/asx/research/ASXListedCompanies.csv';
+// The old asx.com.au/asx/research CSV is bot-blocked (Incapsula 'Request
+// Rejected', found 2026-08-09 after 3 failed runs). This is the API their own
+// site's CSV-download button calls; the access token is the public one baked
+// into the ASX website, not a secret of ours.
+const ASX_CSV_URL = 'https://asx.api.markitdigital.com/asx-research/1.0/companies/directory/file?access_token=83ff96335c2d45a094df02a206a39ff4';
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const DRY_RUN = process.argv.includes('--dry-run');
@@ -52,7 +56,7 @@ async function main() {
     .map(r => ({
       asx_code: r['ASX code'].trim(),
       company_name: r['Company name'].trim(),
-      gics_industry_group: r['GICS industry group']?.trim() || null,
+      gics_industry_group: (r['GICS industry group'] ?? r['GICs industry group'])?.trim() || null,
       source_file: 'ASXListedCompanies.csv',
       updated_at: new Date().toISOString(),
     }));

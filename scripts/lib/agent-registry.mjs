@@ -115,7 +115,9 @@ export const AGENTS = {
     displayName: 'Sync Foundation Programs',
     category: 'sync',
     defaultPriority: 4,
-    timeoutMs: 120_000,
+    // 120s produced 13 timeout/failed runs in a week while the 900s Full Sweep
+    // sibling succeeded every time; the priority-only pass needs headroom too.
+    timeoutMs: 600_000,
     dependencies: [],
   },
   'foundation-intelligence-refresh': {
@@ -753,7 +755,9 @@ export const AGENTS = {
     displayName: 'Resolve Donor Entities',
     category: 'graph',
     defaultPriority: 4,
-    timeoutMs: 600_000,
+    // 600s timed out 3x in a week as the donor table grew; the script is
+    // incremental so a longer window finishes rather than repeating.
+    timeoutMs: 1_800_000,
     dependencies: ['build-entity-graph'],
   },
   'dedup-grants': {
