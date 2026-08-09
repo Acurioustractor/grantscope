@@ -60,9 +60,11 @@ export interface CouncilPlaceReport extends CouncilSummary {
   postcodes: string[];
   /**
    * Organisations sharing those postcodes that no council can be worked out
-   * for. Some belong here and some do not. We cannot tell which.
+   * for. Some belong here and some do not. We cannot tell which. gs_id and
+   * postcode travel with each row so advice gathered in the room can be
+   * turned into a keyed verdict later without re-matching by name.
    */
-  unplacedOrgs: Array<{ name: string; communityControlled: boolean }>;
+  unplacedOrgs: Array<{ gsId: string; name: string; postcode: string; communityControlled: boolean }>;
   unplacedTotal: number;
   unplacedCommunityControlled: number;
   /**
@@ -102,6 +104,12 @@ function num(value: unknown): number {
  */
 export const getRemoteCouncils = cache(async function getRemoteCouncils(): Promise<CouncilSummary[]> {
   const db = getServiceSupabase();
+  // Counts cover EVERY organisation placed under the council, whatever its
+  // row-level remoteness — the header "we hold N" must match the Atlas's
+  // who's-here, and a placed row with a missing remoteness field is still
+  // held (Ceduna read 52 vs the register's 53 until this was split, found
+  // 2026-08-10). Remoteness only decides which councils get a page: those
+  // holding at least one remote or very-remote community-controlled org.
   const result = await db.rpc('exec_sql', {
     query: `SELECT lga_name,
                    mode() WITHIN GROUP (ORDER BY state) AS state,
@@ -110,9 +118,11 @@ export const getRemoteCouncils = cache(async function getRemoteCouncils(): Promi
                    count(*) FILTER (WHERE is_community_controlled) AS cc
               FROM gs_entities
              WHERE lga_name IS NOT NULL
-               AND remoteness IN ('Remote Australia','Very Remote Australia')
              GROUP BY lga_name
-            HAVING count(*) FILTER (WHERE is_community_controlled) > 0
+            HAVING count(*) FILTER (
+              WHERE is_community_controlled
+                AND remoteness IN ('Remote Australia','Very Remote Australia')
+            ) > 0
              ORDER BY cc DESC`,
   });
   if (!Array.isArray(result.data)) return [];
@@ -207,7 +217,7 @@ export const getCouncilPlaceReport = cache(async function getCouncilPlaceReport(
     // Community-controlled and Indigenous corporations only. A list of every
     // unplaced business in five postcodes is not a question anyone can answer.
     db.rpc('exec_sql', {
-      query: `SELECT canonical_name, is_community_controlled
+      query: `SELECT gs_id, canonical_name, postcode, is_community_controlled
                 FROM gs_entities
                WHERE lga_name IS NULL AND postcode IN (${inPostcodes})
                  AND (is_community_controlled = true OR entity_type = 'indigenous_corp')
@@ -263,7 +273,9 @@ export const getCouncilPlaceReport = cache(async function getCouncilPlaceReport(
     unplacedOrgs: (Array.isArray(unplacedResult.data) ? unplacedResult.data : []).map(entry => {
       const row = entry as Record<string, unknown>;
       return {
+        gsId: String(row.gs_id ?? ''),
         name: String(row.canonical_name ?? ''),
+        postcode: String(row.postcode ?? ''),
         communityControlled: row.is_community_controlled === true,
       };
     }),

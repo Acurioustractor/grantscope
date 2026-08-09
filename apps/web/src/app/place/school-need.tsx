@@ -6,7 +6,7 @@ import { describeIcsea, type SchoolNeedSignal } from '@/lib/services/school-need
  */
 export function SchoolNeed({ signal, placeLabel }: { signal: SchoolNeedSignal; placeLabel: string }) {
   return (
-    <section aria-labelledby="schools-title" className="border-4 border-bauhaus-blue bg-white p-6">
+    <section aria-labelledby="schools-title" className="border-4 border-bauhaus-blue bg-white p-6 shadow-[8px_8px_0_0_#121212]">
       <p className="font-mono text-[11px] font-black uppercase tracking-widest text-bauhaus-blue">
         The one figure here that is not about money
       </p>

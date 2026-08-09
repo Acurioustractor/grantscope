@@ -5,6 +5,7 @@ import { getSchoolNeedSignal } from '@/lib/services/school-need-signal';
 import { SchoolNeed } from '../../school-need';
 import { PlaceContextPanel } from '../../place-context';
 import { CorrectionForm } from '../../correction-form';
+import { UnplacedAdviceList } from '../../unplaced-advice';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,17 +62,15 @@ export default async function CouncilPage({ params }: { params: Promise<{ slug: 
       </header>
 
       <div className="mx-auto grid max-w-5xl gap-10 px-5 py-10 lg:px-10">
-        {schools ? <SchoolNeed signal={schools} placeLabel={report.lgaName} /> : null}
-
-        <PlaceContextPanel
-          context={report.context}
-          remoteness={report.remoteness}
-          placeLabel={report.lgaName}
-        />
-
         {report.unplacedTotal > 0 ? (
-          <section aria-labelledby="unplaced-title" className="border-4 border-bauhaus-red bg-white p-6">
-            <h2 id="unplaced-title" className="text-2xl font-black uppercase tracking-widest">
+          <section
+            aria-labelledby="unplaced-title"
+            className="border-4 border-bauhaus-red bg-white p-6 shadow-[8px_8px_0_0_#121212]"
+          >
+            <p className="font-mono text-[11px] font-black uppercase tracking-widest text-bauhaus-red">
+              The question only local people can answer
+            </p>
+            <h2 id="unplaced-title" className="mt-2 text-2xl font-black uppercase tracking-widest">
               {report.unplacedTotal.toLocaleString('en-AU')} organisations we could not place
             </h2>
             <p className="mt-3 max-w-3xl text-base leading-7">
@@ -82,37 +81,35 @@ export default async function CouncilPage({ params }: { params: Promise<{ slug: 
               community-controlled.
             </p>
             <p className="mt-3 max-w-3xl text-base leading-7">
-              Some of these belong here. Some belong to a neighbouring council. We cannot tell which,
-              and rather than guess we are showing you the list.
+              Some belong here. Some belong to a neighbouring council. If you know which, tap it —
+              each tap goes to a person for review, with your word as the evidence.
             </p>
 
-            {report.unplacedOrgs.length > 0 ? (
-              <>
-                <ul className="mt-5 grid gap-2 sm:grid-cols-2">
-                  {report.unplacedOrgs.map((org, index) => (
-                    <li
-                      key={`${org.name}-${index}`}
-                      className="flex items-start gap-2 border-b border-bauhaus-black/15 pb-2 text-sm"
-                    >
-                      <span className="mt-1 h-2 w-2 shrink-0 bg-bauhaus-red" aria-hidden="true" />
-                      <span>{org.name}</span>
-                    </li>
-                  ))}
-                </ul>
-                {report.unplacedTotal > report.unplacedOrgs.length ? (
-                  <p className="mt-4 font-mono text-xs">
-                    Showing {report.unplacedOrgs.length} community-controlled and Indigenous
-                    corporations of {report.unplacedTotal.toLocaleString('en-AU')} unplaced
-                    organisations in these postcodes.
-                  </p>
-                ) : null}
-              </>
+            <UnplacedAdviceList
+              orgs={report.unplacedOrgs}
+              lgaName={report.lgaName}
+              pageRoute={`/place/council/${report.slug}`}
+            />
+            {report.unplacedTotal > report.unplacedOrgs.length ? (
+              <p className="mt-4 font-mono text-xs">
+                Showing the {report.unplacedOrgs.length} community-controlled and Indigenous
+                corporations; {report.unplacedTotal.toLocaleString('en-AU')} organisations in these
+                postcodes are unplaced in all. The rest are in the correction form below.
+              </p>
             ) : null}
           </section>
         ) : null}
 
+        {schools ? <SchoolNeed signal={schools} placeLabel={report.lgaName} /> : null}
+
+        <PlaceContextPanel
+          context={report.context}
+          remoteness={report.remoteness}
+          placeLabel={report.lgaName}
+        />
+
         {report.gazetteerGaps.length > 0 ? (
-          <section aria-labelledby="gaps-title" className="border-4 border-bauhaus-black bg-white p-6">
+          <section aria-labelledby="gaps-title" className="border-4 border-bauhaus-black bg-white p-6 shadow-[8px_8px_0_0_#121212]">
             <h2 id="gaps-title" className="text-2xl font-black uppercase tracking-widest">
               Places the map cannot resolve
             </h2>
@@ -136,7 +133,7 @@ export default async function CouncilPage({ params }: { params: Promise<{ slug: 
           </section>
         ) : null}
 
-        <section aria-labelledby="correct-title" className="border-4 border-bauhaus-black bg-bauhaus-yellow p-6">
+        <section aria-labelledby="correct-title" className="border-4 border-bauhaus-black bg-bauhaus-yellow p-6 shadow-[8px_8px_0_0_#121212]">
           <h2 id="correct-title" className="text-2xl font-black uppercase tracking-widest">
             Tell us if we have this wrong
           </h2>

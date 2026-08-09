@@ -24,7 +24,7 @@ export function PlaceContextPanel({
   const crowding = getOvercrowdingForRemoteness(remoteness);
 
   return (
-    <section aria-labelledby="context-title" className="border-4 border-bauhaus-black bg-white p-6">
+    <section aria-labelledby="context-title" className="border-4 border-bauhaus-black bg-white p-6 shadow-[8px_8px_0_0_#121212]">
       <h2 id="context-title" className="text-2xl font-black uppercase tracking-widest">
         The rest of the picture
       </h2>
