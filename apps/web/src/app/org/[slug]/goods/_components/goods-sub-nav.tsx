@@ -5,6 +5,7 @@ import Link from 'next/link';
 // around warmth scores or weighted pipeline values.
 const OPERATING_TABS = [
   ['today', 'Today'],
+  ['portfolio', 'Portfolio'],
   ['capital', 'Capital'],
   ['matters', 'Matters'],
   ['network', 'Network'],
