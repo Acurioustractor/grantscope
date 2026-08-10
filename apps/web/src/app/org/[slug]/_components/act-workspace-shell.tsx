@@ -132,6 +132,11 @@ export function ActWorkspaceShell({
               <span className="truncate font-mono text-[10px] font-semibold uppercase tracking-wide">A Curious Tractor</span>
             </Link>
 
+            {/* The rail scrolls. With Goods expanded the tree is taller than a
+              * laptop viewport, and overflow-hidden made Channels/Buyers
+              * unreachable (Ben, 2026-08-10). Brand stays at the top and the
+              * utility links stay pinned at the bottom; only the middle moves. */}
+            <div className="-mr-1 min-h-0 flex-1 overflow-y-auto pr-1 [scrollbar-color:rgba(255,255,255,0.25)_transparent] [scrollbar-width:thin]">
             <div className="mt-5 px-2 font-mono text-[9px] font-semibold uppercase tracking-widest text-[#8fa196] [@media(max-height:680px)]:mt-3">Where you work</div>
             <nav className="mt-1.5 space-y-1" aria-label="ACT work modes">
               {workModes.map((mode, index) => (
@@ -161,6 +166,7 @@ export function ActWorkspaceShell({
               ))}
               {fieldProjects.length === 0 ? <div className="px-2 py-3 text-xs text-[#aebcb2]">No project fields loaded.</div> : null}
             </nav>
+            </div>
 
             <div className="mt-auto border-t border-white/10 pt-2">
               {utilityLinks.map((link) => <WorkspaceUtilityLink key={link.label} {...link} />)}
@@ -312,10 +318,14 @@ function WorkspaceModeLink({ href, label, active, index, hint }: WorkspaceLink &
 // Rail-owned Goods navigation (Ben's call, 2026-08-05): the rail is the ONE
 // nav. These groups replace the pill rows that lived in the green page header.
 const GOODS_RAIL_SECTIONS: ReadonlyArray<{ label: string; items: ReadonlyArray<readonly [string, string]> }> = [
-  { label: 'Work', items: [['today', 'Today'], ['portfolio', 'Portfolio'], ['capital', 'Capital'], ['matters', 'Matters'], ['network', 'Network'], ['applications', 'Applications'], ['learning', 'Learning']] },
-  { label: 'Money in', items: [['foundations', 'Foundations'], ['foundations/scan', 'Funder Scan'], ['grants', 'Grants'], ['money', 'Money']] },
-  { label: 'Delivery', items: [['funnel', 'Delivery map'], ['map', 'On the map'], ['communities', 'Communities'], ['channels', 'Channels'], ['buyers', 'Buyers']] },
-  { label: 'Trust', items: [['model', 'Story & model'], ['proof', 'Evidence'], ['governance', 'Governance']] },
+  // Eight screens, approved 2026-08-10. Was 26 routes across four sections;
+  // seven of them read the same 306-row goods_relationships table and four read
+  // the same capital workspace. One door per room now — the merged screens link
+  // their siblings from inside.
+  { label: 'Work', items: [['portfolio', 'Portfolio'], ['capital', 'Capital'], ['network', 'Relationships']] },
+  { label: 'Money in', items: [['grants', 'Grants'], ['money', 'Money'], ['foundations', 'Foundations']] },
+  { label: 'Delivery', items: [['communities', 'Communities'], ['buyers', 'Buyers'], ['funnel', 'Delivery']] },
+  { label: 'Trust', items: [['proof', 'Evidence']] },
 ];
 
 /** The desk's lenses live under One Desk on the rail (Ben, 2026-08-05):

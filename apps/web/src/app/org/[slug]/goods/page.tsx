@@ -3,65 +3,43 @@ import { notFound } from 'next/navigation';
 import { ACT_FAST_PROFILE, fastProjectFromWiki, isActSlug, shouldUseFastLocalOrg } from '@/lib/services/fast-local-org';
 import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
 import { getWikiSupportProject } from '@/lib/services/wiki-support-index';
-import { getGoodsFunnel } from '@/lib/services/goods-funnel';
-import { getGoodsMoney } from '@/lib/services/goods-money';
-import { getGoodsBuyerPipeline } from '@/lib/services/goods-buyer-pipeline';
-import { getGoodsChannels } from '@/lib/services/goods-channels';
-import { GoodsSubNav, type GoodsTab } from './_components/goods-sub-nav';
+import { getGoodsGrantsTriage } from '@/lib/services/goods-grants-triage';
+import { COMMUNITY_PATHWAYS, isPortfolioEligible } from '@/lib/services/goods-investment-portfolio';
+import { GoodsSubNav } from './_components/goods-sub-nav';
 import { ActProjectFieldMapScreen } from '../[projectSlug]/act-project-field-map';
-
-/**
- * Goods Command Center — the front door (G1).
- * A "start here" index: one-glance state of the workspace (need / delivered / gap,
- * money received + in play, buyers in pipeline) reusing the same services the tabs
- * use, then signposts into the high-value destinations. Degrades gracefully — a
- * failed service shows a dash, never 500s the page (shared DB can saturate).
- */
 
 export const dynamic = 'force-dynamic';
 
 export async function generateMetadata() {
-  return {
-    title: 'Goods — Command Center',
-    description: 'The Goods field map: needs, relationships, procurement, funding, invitations, and proof in one ACT workspace.',
-  };
+  return { title: 'Goods — This week', description: 'What has a name, an owner and a date against it.' };
 }
 
-const money = (n: number | null | undefined) => `$${Math.round(n || 0).toLocaleString('en-AU')}`;
-const moneyShort = (n: number | null | undefined) => {
-  const v = Number(n) || 0;
-  if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(v % 1_000_000 === 0 ? 0 : 1)}M`;
-  if (v >= 1_000) return `$${Math.round(v / 1_000)}K`;
-  return `$${Math.round(v)}`;
-};
-const num = (n: number | null | undefined) => (n || 0).toLocaleString('en-AU');
+/** Screens reachable from the rail, kept as a plain list so the front door
+ *  stays a worklist rather than a directory of twenty-two tiles. */
+/** The merged-away screens. Still live, still reachable — they just lost their
+ *  nav slot in the 2026-08-10 cull (26 routes → 8 in the rail). The four killed
+ *  ones live in `_archive/2026-08-10-goods-tab-cull/` and are not listed. */
+const MORE_SCREENS: ReadonlyArray<readonly [string, string]> = [
+  ['today', 'Today'],
+  ['matters', 'Matters'],
+  ['applications', 'Applications'],
+  ['learning', 'Learning'],
+  ['engagement', 'Engagement'],
+  ['insight', 'Funder insight'],
+  ['intros', 'Warm intros'],
+  ['signals', 'Signals'],
+  ['timeline', 'Timeline'],
+  ['campaign', 'Campaign'],
+  ['map', 'On the map'],
+  ['channels', 'Channels'],
+  ['governance', 'Governance'],
+];
 
-/** A headline summary cell — big value, small label, optional sub. */
-function Cell({ value, label, sub, accent }: { value: string; label: string; sub?: string; accent?: boolean }) {
-  return (
-    <div className={`border-4 ${accent ? 'border-bauhaus-blue bg-link-light' : 'border-bauhaus-black bg-white'} p-3`}>
-      <div className="text-2xl font-black leading-none text-bauhaus-black">{value}</div>
-      <div className="mt-1 text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">{label}</div>
-      {sub && <div className="mt-0.5 text-[10px] font-bold text-bauhaus-muted">{sub}</div>}
-    </div>
-  );
-}
-
-/** A "start here" destination card — links into a tab, with a one-line job + live stat. */
-function Dest({ slug, tab, title, blurb, stat }: { slug: string; tab: GoodsTab; title: string; blurb: string; stat?: string }) {
-  return (
-    <Link
-      href={`/org/${slug}/goods/${tab}`}
-      className="group flex flex-col border-4 border-bauhaus-black bg-white p-4 transition-shadow hover:shadow-[6px_6px_0_0_var(--bauhaus-black)]"
-    >
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="text-sm font-black uppercase tracking-widest text-bauhaus-black">{title}</span>
-        <span className="text-bauhaus-blue transition-transform group-hover:translate-x-0.5">→</span>
-      </div>
-      <p className="mt-1 text-[13px] leading-snug text-bauhaus-muted">{blurb}</p>
-      {stat && <div className="mt-2 text-[11px] font-black uppercase tracking-widest text-bauhaus-blue">{stat}</div>}
-    </Link>
-  );
+function daysUntil(iso: string | null): number | null {
+  if (!iso) return null;
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return null;
+  return Math.ceil((t - Date.now()) / 86_400_000);
 }
 
 export default async function GoodsHubPage({
@@ -74,10 +52,6 @@ export default async function GoodsHubPage({
   const { slug } = await params;
   const sp = await searchParams;
   const fastNavigation = shouldUseFastLocalOrg(typeof sp.full === 'string' ? sp.full : undefined);
-  // The field-map screen is a different design system from the workspace tabs
-  // beneath this route — showing it as the hub front door made the workspace
-  // feel disconnected (Ben, 2026-08-05). It now renders only for E2E fixtures
-  // (which assert on it credential-free) or when explicitly requested.
   const wantFieldMap = process.env.ACT_E2E_FIXTURES === '1' || typeof sp.fieldmap === 'string';
   if (fastNavigation && isActSlug(slug) && wantFieldMap) {
     const wikiProject = getWikiSupportProject('goods');
@@ -94,158 +68,136 @@ export default async function GoodsHubPage({
   const profile = fastNavigation && isActSlug(slug) ? ACT_FAST_PROFILE : await getOrgProfileBySlug(slug);
   if (!profile) notFound();
 
-  // Reuse the tabs' own services. allSettled so one saturated query can't 500 the front door.
-  const [funnelR, moneyR, buyersR, channelsR] = await Promise.allSettled([
-    getGoodsFunnel(),
-    getGoodsMoney(),
-    getGoodsBuyerPipeline(),
-    getGoodsChannels({}),
-  ]);
-  const f = funnelR.status === 'fulfilled' ? funnelR.value : null;
-  const m = moneyR.status === 'fulfilled' ? moneyR.value : null;
-  const b = buyersR.status === 'fulfilled' ? buyersR.value : null;
-  const ch = channelsR.status === 'fulfilled' ? channelsR.value.summary : null;
+  // Scored Goods fit, not focus_areas overlap. The overlap filter surfaced
+  // Screen Territory and Rural Health rounds — noise that made the page a liar
+  // (2026-08-10). goods_relevance_score is what Grants Triage ranks on.
+  const triageR = await Promise.allSettled([getGoodsGrantsTriage({ minFit: 60, scope: 'closing' })]);
+  const triage = triageR[0].status === 'fulfilled' ? triageR[0].value : null;
 
-  const dash = '—';
+  // Community first: unowned pathways lead, because naming an owner is the only
+  // move that unblocks everything downstream.
+  const pathways = [...COMMUNITY_PATHWAYS].sort((a, b) => {
+    const aBlocked = a.relationshipOwner ? 1 : 0;
+    const bBlocked = b.relationshipOwner ? 1 : 0;
+    return aBlocked - bBlocked;
+  });
+  const unowned = pathways.filter((p) => !p.relationshipOwner);
+
+  // Money with an actual date AND a real fit. Rolling/undated rounds are not
+  // this week's work, and a low-fit round is not Goods money at all.
+  const closing = (triage?.grants ?? [])
+    .map((g) => ({ ...g, days: g.daysToDeadline ?? daysUntil(g.deadline) }))
+    .filter((g) => g.days !== null && g.days >= 0 && g.days <= 60 && (g.goodsScore ?? 0) >= 60)
+    .sort((a, b) => (a.days ?? 0) - (b.days ?? 0))
+    .slice(0, 8);
 
   return (
     <main className="min-h-screen bg-bauhaus-canvas text-bauhaus-black">
       <div className="border-b-4 border-bauhaus-black bg-bauhaus-black text-white">
         <div className="mx-auto max-w-[1760px] px-4 py-8">
-          <nav className="mb-4 flex flex-wrap items-center gap-2 text-sm text-gray-400">
-            <Link href={`/org/${slug}`} className="hover:text-white">{profile.name}</Link>
-            <span>/</span>
-            <span className="text-white">Goods</span>
-          </nav>
-          <h1 className="text-4xl font-black uppercase tracking-widest">Goods Command Center</h1>
-          <p className="mt-2 max-w-3xl text-sm text-gray-300">
-            One workspace for the Goods on Country arm. <strong className="text-white">Work the pipeline</strong> to move
-            procurement and funder relationships forward, and <strong className="text-white">show the evidence</strong> to
-            prove the work to buyers and funders. Start with the state below, then jump in.
-          </p>
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <nav className="flex items-center gap-2 text-[11px] text-white/50">
+              <Link href={`/org/${slug}`} className="hover:text-white">{profile.name}</Link>
+              <span aria-hidden="true">/</span>
+              <span className="text-white/80">Goods</span>
+            </nav>
+            <h1 className="text-xl font-black tracking-tight">This week</h1>
+            <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/45">
+              Name · owner · date, or it is not on this page
+            </span>
+          </div>
           <GoodsSubNav slug={slug} />
         </div>
       </div>
 
-      <div className="mx-auto max-w-[1760px] px-4 py-6">
-        {/* ── THE LOOP — demand → channels → capital ──────────────────── */}
-        <div className="mb-2 text-xs font-black uppercase tracking-widest text-bauhaus-black">The loop</div>
-        <div className="mb-6 grid gap-3 lg:grid-cols-3">
-          <Link href={`/org/${slug}/goods/communities`} className="group border-4 border-bauhaus-black bg-white p-4 transition-shadow hover:shadow-[6px_6px_0_0_var(--bauhaus-black)]">
-            <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-red">1 · Demand</div>
-            <div className="mt-1 text-3xl font-black tabular-nums">{f ? num(f.gap.beds) : dash}</div>
-            <div className="text-[11px] font-bold text-bauhaus-muted">
-              bed gap across {f ? num(f.addressable.communities) : dash} addressable communities
+      <div className="mx-auto max-w-[1480px] px-6 py-6">
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* ---------------------------------------------------------- community */}
+          <section>
+            <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Community</h2>
+            <div className="mt-2 overflow-hidden rounded-xl border border-slate-300 bg-white">
+              {pathways.map((p) => {
+                const blocked = !p.relationshipOwner;
+                return (
+                  <Link
+                    key={p.id}
+                    href={`/org/${slug}/goods/portfolio`}
+                    className="flex items-baseline gap-3 border-t border-slate-200 px-4 py-2.5 text-xs first:border-t-0 hover:bg-slate-50"
+                  >
+                    <span className="w-40 shrink-0 truncate font-semibold text-slate-900">{p.community}</span>
+                    <span className={`w-36 shrink-0 truncate text-[11px] ${blocked ? 'font-bold text-bauhaus-red' : 'text-slate-500'}`}>
+                      {blocked ? 'NOBODY OWNS THIS' : p.relationshipOwner}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-slate-700">
+                      {blocked ? 'Name an owner' : p.nextDecision}
+                    </span>
+                  </Link>
+                );
+              })}
             </div>
-            <p className="mt-2 text-[13px] leading-snug text-bauhaus-muted">Who needs beds and washers, where, and how urgently.</p>
-          </Link>
-          <Link href={`/org/${slug}/goods/channels`} className="group border-4 border-bauhaus-black bg-white p-4 transition-shadow hover:shadow-[6px_6px_0_0_var(--bauhaus-black)]">
-            <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue">2 · Channels</div>
-            <div className="mt-1 text-3xl font-black tabular-nums">{ch ? `${num(ch.in_pipeline)} / ${num(ch.total)}` : dash}</div>
-            <div className="text-[11px] font-bold text-bauhaus-muted">community-controlled channel orgs engaged</div>
-            <p className="mt-2 text-[13px] leading-snug text-bauhaus-muted">Health services, housing logistics, women&apos;s councils and stores that carry goods the last mile.</p>
-          </Link>
-          <Link href={`/org/${slug}/goods/capital`} className="group border-4 border-bauhaus-black bg-white p-4 transition-shadow hover:shadow-[6px_6px_0_0_var(--bauhaus-black)]">
-            <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-black">3 · Capital</div>
-            <div className="mt-1 text-3xl font-black tabular-nums">{m ? moneyShort(m.pipeline.openAskTotal) : dash}</div>
-            <div className="text-[11px] font-bold text-bauhaus-muted">{m ? `in play · ${money(m.lifetimeReceived)} received lifetime` : 'open asks across funders + investors'}</div>
-            <p className="mt-2 text-[13px] leading-snug text-bauhaus-muted">Grants, philanthropy and procurement revenue that fund the loop.</p>
-          </Link>
+            {unowned.length > 0 ? (
+              <p className="mt-2 text-xs text-slate-600">
+                <span className="font-semibold text-bauhaus-red">{unowned.length} of {pathways.length} have no owner.</span>{' '}
+                Until someone is named, no application work on them is real.
+              </p>
+            ) : null}
+          </section>
+
+          {/* -------------------------------------------------------------- money */}
+          <section>
+            <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Money with a date</h2>
+            <div className="mt-2 overflow-hidden rounded-xl border border-slate-300 bg-white">
+              {closing.length === 0 ? (
+                <p className="px-4 py-4 text-xs text-slate-600">
+                  Nothing scoring 60+ for Goods fit closes in the next 60 days.
+                </p>
+              ) : (
+                closing.map((o) => (
+                  <div key={o.id} className="flex items-baseline gap-3 border-t border-slate-200 px-4 py-2.5 text-xs first:border-t-0">
+                    <span className={`w-12 shrink-0 font-mono text-[11px] font-bold ${(o.days ?? 99) <= 14 ? 'text-bauhaus-red' : 'text-slate-500'}`}>
+                      {o.days}d
+                    </span>
+                    <span className="min-w-0 flex-1 truncate font-semibold text-slate-900">{o.name}</span>
+                    <span className="w-32 shrink-0 truncate text-[11px] text-slate-500">{o.provider ?? '—'}</span>
+                    <span className="w-10 shrink-0 text-right font-mono text-[11px] text-slate-600">fit {o.goodsScore ?? '—'}</span>
+                  </div>
+                ))
+              )}
+            </div>
+            <p className="mt-2 text-xs text-slate-600">
+              Deadline-bearing rounds only. <Link href={`/org/${slug}/goods/grants`} className="underline">Grants triage</Link> holds
+              the rolling and undated ones.
+            </p>
+          </section>
         </div>
 
-        {/* ── STATE OF GOODS — one-glance summary ─────────────────────── */}
-        <div className="mb-2 text-xs font-black uppercase tracking-widest text-bauhaus-black">State of Goods</div>
-        <div className="mb-2 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          <Cell
-            value={f ? `${num(f.delivered.beds)}` : dash}
-            label="Beds deployed"
-            sub="On Country to date"
-          />
-          <Cell
-            value={f ? `${num(f.gap.beds)}` : dash}
-            label="Bed gap"
-            sub="Need not yet met — the ask"
-            accent
-          />
-          <Cell
-            value={m ? money(m.lifetimeReceived) : dash}
-            label="Received (lifetime)"
-            sub="All tracks, registry + Xero"
-          />
-          <Cell
-            value={m ? moneyShort(m.pipeline.openAskTotal) : dash}
-            label="In play"
-            sub={m ? `${moneyShort(m.pipeline.weightedPipeline)} stage-weighted` : 'Open funder + investor asks'}
-            accent
-          />
-          <Cell
-            value={b ? `${num(b.summary.total)}` : dash}
-            label="Buyers in pipeline"
-            sub={b ? `${b.summary.open} open · procurement track` : 'Procurement track'}
-          />
-        </div>
-        <p className="mb-6 text-[11px] text-bauhaus-muted">
-          {f
-            ? <>Against an addressable need of {num(f.addressable.beds)} beds across {num(f.addressable.communities)} communities. Procurement (earned revenue) is tracked separately from grant + investment.</>
-            : <span className="text-bauhaus-red">Live workspace data is briefly unavailable — figures will populate on refresh.</span>}
-        </p>
-
-        {/* ── START HERE — high-value destinations ────────────────────── */}
-        <div className="mb-2 mt-8 text-xs font-black uppercase tracking-widest text-bauhaus-black">Work the pipeline</div>
-        <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Dest
-            slug={slug} tab="buyers" title="Buyer Pipeline"
-            blurb="Advance procurement deals — warmth, stage, and the next move per buyer."
-            stat={b ? `${b.summary.total} buyers · ${b.summary.open} open` : undefined}
-          />
-          <Dest
-            slug={slug} tab="money" title="Money"
-            blurb="What Goods has received, what's in play, and what's available to pursue."
-            stat={m ? `${money(m.lifetimeReceived)} in · ${moneyShort(m.pipeline.openAskTotal)} in play` : undefined}
-          />
-          <Dest
-            slug={slug} tab="engagement" title="Warmth Map"
-            blurb="Every relationship by warmth, with the next action to advance it."
-          />
-          <Dest
-            slug={slug} tab="funnel" title="Funnel"
-            blurb="The need-to-delivery model across all three pipelines, on one spine."
-            stat={f ? `${num(f.gap.beds)} bed gap` : undefined}
-          />
+        {/* ------------------------------------------------- the honest blocker */}
+        <div className="mt-6 rounded-xl border border-bauhaus-red/40 bg-[#fff5f4] px-4 py-3">
+          <div className="text-[11px] font-bold uppercase tracking-widest text-bauhaus-red">Why this page is short</div>
+          <p className="mt-1 text-xs leading-5 text-slate-800">
+            All 125 pipeline rows carry <strong>no owner, no next action and no date</strong> — those columns exist in{' '}
+            <code className="font-mono">org_pipeline</code> and are entirely empty. Relationship state lives in GoHighLevel and nothing mirrors it back here, so CivicGraph can
+            report scale but cannot tell you the next move. Fixing that mirror is what would make this page long.
+          </p>
         </div>
 
-        <div className="mb-2 text-xs font-black uppercase tracking-widest text-bauhaus-black">Show the evidence</div>
-        <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          <Dest
-            slug={slug} tab="model" title="Story & model"
-            blurb="Start with a real place, then see the evidence, economics, responsibilities, and next decision."
-            stat="Place first · model second"
-          />
-          <Dest
-            slug={slug} tab="proof" title="Proof Pack"
-            blurb="The evidence we already hold, assembled for philanthropy and lenders. Export-ready."
-            stat={f ? `${num(f.delivered.beds)} beds deployed` : undefined}
-          />
-          <Dest
-            slug={slug} tab="pitch" title="Pitch"
-            blurb="The canonical, claim-labelled proposition. Every deck and email derives from it."
-          />
-          <Dest
-            slug={slug} tab="foundations" title="Foundations"
-            blurb="Aligned foundations and the giving that matches the Goods wheelhouse."
-          />
-          <Dest
-            slug={slug} tab="governance" title="Governance"
-            blurb="Board, belonging, and the connection showcase behind the work."
-          />
-        </div>
-
-        <div className="mt-8 border-4 border-bauhaus-black bg-bauhaus-yellow p-4 text-xs">
-          This is the front door to the Goods workspace. The full set of areas is in the two rows above
-          (<strong>work the pipeline</strong> and <strong>show the evidence</strong>). Figures here are pulled live from the
-          same registries the tabs use — the warmth registry, the finance ledger (Xero is the source of truth for cash),
-          and the Goods asset register.
-        </div>
+        {/* ------------------------------------------------------------ the rest */}
+        <details className="mt-6 rounded-xl border border-slate-300 bg-white">
+          <summary className="cursor-pointer px-4 py-3 text-xs font-semibold text-slate-800 hover:bg-slate-50">
+            Everything else — {MORE_SCREENS.length} more screens
+          </summary>
+          <div className="flex flex-wrap gap-2 border-t border-slate-200 px-4 py-3">
+            {MORE_SCREENS.map(([path, label]) => (
+              <Link
+                key={path}
+                href={`/org/${slug}/goods/${path}`}
+                className="rounded-md border border-slate-300 px-2.5 py-1 text-[11px] text-slate-700 hover:border-slate-400 hover:bg-slate-50"
+              >
+                {label}
+              </Link>
+            ))}
+          </div>
+        </details>
       </div>
     </main>
   );

@@ -27,9 +27,11 @@
   box-shadow: 0 12px 35px rgb(23 53 43 / 12%);
 }
 
+/* Header is a thin orientation bar, not a hero. Vertical space belongs to the
+ * dashboard underneath (Ben, 2026-08-10). */
 .workspace :global(main > div:first-child > div) {
   max-width: 1480px !important;
-  padding: 2.5rem 1.5rem !important;
+  padding: 0.85rem 1.5rem !important;
 }
 
 .workspace :global(h1) {
@@ -120,11 +122,11 @@
 
 @media (max-width: 767px) {
   .workspace :global(main > div:first-child > div) {
-    padding: 2rem 1rem !important;
+    padding: 0.85rem 1rem !important;
   }
 
   .workspace :global(h1) {
-    font-size: 2.25rem !important;
-    line-height: 1.05 !important;
+    font-size: 1.25rem !important;
+    line-height: 1.15 !important;
   }
 }

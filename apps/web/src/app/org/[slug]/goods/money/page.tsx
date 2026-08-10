@@ -71,14 +71,14 @@ export default async function GoodsMoneyPage({ params }: { params: Promise<{ slu
     <main className="min-h-screen bg-bauhaus-canvas text-bauhaus-black">
       <div className="border-b-4 border-bauhaus-black bg-bauhaus-black text-white">
         <div className="mx-auto max-w-[1760px] px-4 py-8">
-          <nav className="mb-4 flex flex-wrap items-center gap-2 text-sm text-gray-400">
+          <nav className="mb-1 flex flex-wrap items-center gap-2 text-xs text-gray-400">
             <Link href={`/org/${slug}`} className="hover:text-white">{profile.name}</Link>
             <span>/</span>
             <Link href={`/org/${slug}/goods`} className="hover:text-white">Goods</Link>
             <span>/</span>
             <span className="text-white">Money</span>
           </nav>
-          <h1 className="text-4xl font-black uppercase tracking-widest">Money — Received &amp; Available</h1>
+          <h1 className="text-xl font-black uppercase tracking-widest">Money — Received &amp; Available</h1>
           <p className="mt-2 max-w-3xl text-sm text-gray-300">
             What Goods has <strong className="text-white">received</strong> (Xero income, lifetime support), what&apos;s
             <strong className="text-white"> in play</strong> (open funder / investor / finance conversations), and what&apos;s

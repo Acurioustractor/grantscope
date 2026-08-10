@@ -72,14 +72,14 @@ export default async function GoodsGrantsTriagePage({
     <main className="min-h-screen bg-bauhaus-canvas text-bauhaus-black">
       <div className="border-b-4 border-bauhaus-black bg-bauhaus-black text-white">
         <div className="mx-auto max-w-[1760px] px-4 py-8">
-          <nav className="mb-4 flex flex-wrap items-center gap-2 text-sm text-gray-400">
+          <nav className="mb-1 flex flex-wrap items-center gap-2 text-xs text-gray-400">
             <Link href={`/org/${slug}`} className="hover:text-white">{profile.name}</Link>
             <span>/</span>
             <Link href={`/org/${slug}/goods`} className="hover:text-white">Goods</Link>
             <span>/</span>
             <span className="text-white">Grants Triage</span>
           </nav>
-          <h1 className="text-4xl font-black uppercase tracking-widest">Grants Triage</h1>
+          <h1 className="text-xl font-black uppercase tracking-widest">Grants Triage</h1>
           <p className="mt-2 max-w-3xl text-sm text-gray-300">
             The <strong className="text-white">live</strong> grant landscape only — {summary.liveTotal.toLocaleString('en-AU')} open,
             ongoing or upcoming opportunities cut from a corpus of {summary.corpusTotal.toLocaleString('en-AU')}, sorted

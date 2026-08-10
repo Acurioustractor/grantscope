@@ -9,7 +9,7 @@ import { ACT_FAST_PROFILE, isActSlug, shouldUseFastLocalOrg } from '@/lib/servic
 import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
 import { getObligationPool, type Obligation } from '@/lib/services/act-obligations';
 import { getServiceSupabase } from '@/lib/supabase';
-import { GoodsWorkspaceHeader } from '../_components/goods-capital-ui';
+import { GoodsWorkspaceHeader } from '../../../_components/goods-capital-ui';
 import { MintObligationForm, ObligationStateButtons, ObligationCommunityPicker } from './we-owe-actions';
 
 export const dynamic = 'force-dynamic';

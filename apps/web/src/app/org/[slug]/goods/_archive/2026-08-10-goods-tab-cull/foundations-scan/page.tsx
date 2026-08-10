@@ -9,7 +9,7 @@ import {
   type FunderScanRow,
   type GhlWarmth,
 } from '@/lib/services/goods-funder-scan';
-import { GoodsSubNav } from '../../_components/goods-sub-nav';
+import { GoodsSubNav } from '../../../_components/goods-sub-nav';
 import { ghlContactUrl } from '@/lib/ghl-links';
 
 export const dynamic = 'force-dynamic';

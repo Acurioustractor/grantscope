@@ -23,19 +23,20 @@ export function GoodsWorkspaceHeader({
   return (
     <div className="border-b-4 border-bauhaus-black bg-bauhaus-black text-white">
       <div className="mx-auto max-w-[1760px] px-4 py-8">
-        <nav className="mb-4 flex flex-wrap items-center gap-2 text-sm text-white/60" aria-label="Breadcrumb">
-          <Link href={`/org/${slug}`} className="hover:text-white">{orgName}</Link>
-          <span aria-hidden="true">/</span>
-          <Link href={`/org/${slug}/goods`} className="hover:text-white">Goods</Link>
-          <span aria-hidden="true">/</span>
-          <span className="text-white">{title}</span>
-        </nav>
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-3xl">
-            <div className="text-[10px] font-black uppercase tracking-[0.22em] text-white/55">{eyebrow}</div>
-            <h1 className="mt-2 text-4xl font-black uppercase tracking-widest">{title}</h1>
-            <div className="mt-3 text-sm leading-6 text-white/75">{description}</div>
-          </div>
+        {/* Compact by design: the header orients you, the dashboard below is the
+         *  work. Title, breadcrumb and the one-line "what this is" ride on a
+         *  single row so vertical space goes to data (Ben, 2026-08-10). */}
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <nav className="flex items-center gap-2 text-[11px] text-white/50" aria-label="Breadcrumb">
+            <Link href={`/org/${slug}`} className="hover:text-white">{orgName}</Link>
+            <span aria-hidden="true">/</span>
+            <Link href={`/org/${slug}/goods`} className="hover:text-white">Goods</Link>
+          </nav>
+          <h1 className="text-xl font-black tracking-tight">{title}</h1>
+          <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/45">{eyebrow}</span>
+        </div>
+        <div className="mt-1.5 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className="max-w-4xl text-xs leading-5 text-white/70">{description}</div>
           {aside ? <div className="shrink-0">{aside}</div> : null}
         </div>
         <GoodsSubNav slug={slug} active={active} />

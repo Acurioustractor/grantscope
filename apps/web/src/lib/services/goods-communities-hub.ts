@@ -74,22 +74,34 @@ export async function getGoodsCommunitiesHub({
 } = {}): Promise<CommunitiesHubResult> {
   const db = getServiceSupabase();
 
-  let q = db
-    .from('goods_communities')
-    .select('id, community_name, state, postcode, region_label, priority, demand_beds, demand_washers, assets_deployed, land_council')
-    .limit(2000);
+  // PostgREST caps every response at 1000 rows regardless of .limit(), so the
+  // old .limit(2000) silently returned 1000 of 1214 active communities and the
+  // header confidently said "Showing 1000" (Ben spotted it, 2026-08-10). Page
+  // through with .range() until a short page comes back.
+  const PAGE = 1000;
+  const rawCommunities: any[] = [];
+  for (let from = 0; ; from += PAGE) {
+    let q = db
+      .from('goods_communities')
+      .select('id, community_name, state, postcode, region_label, priority, demand_beds, demand_washers, assets_deployed, land_council')
+      .order('id', { ascending: true })
+      .range(from, from + PAGE - 1);
 
-  if (scope === 'active') q = q.in('priority', ACTIVE_PRIORITIES);
-  else if (scope === 'lead') q = q.eq('priority', 'lead');
-  else if (scope === 'with_deployments') q = q.gt('assets_deployed', 0);
-  // 'all' = no filter
+    if (scope === 'active') q = q.in('priority', ACTIVE_PRIORITIES);
+    else if (scope === 'lead') q = q.eq('priority', 'lead');
+    else if (scope === 'with_deployments') q = q.gt('assets_deployed', 0);
+    // 'all' = no filter
 
-  if (state) q = q.eq('state', state);
+    if (state) q = q.eq('state', state);
 
-  const { data: rawCommunities, error } = await q;
-  if (error) throw new Error(`communities fetch: ${error.message}`);
+    const { data, error } = await q;
+    if (error) throw new Error(`communities fetch: ${error.message}`);
+    const page = data || [];
+    rawCommunities.push(...page);
+    if (page.length < PAGE) break;
+  }
 
-  let communities = (rawCommunities || []) as any[];
+  let communities = rawCommunities as any[];
   if (search) {
     const s = search.toLowerCase();
     communities = communities.filter(c =>

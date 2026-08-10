@@ -4,60 +4,55 @@ import Link from 'next/link';
 // remain available and map onto these tabs, but no longer define the workspace
 // around warmth scores or weighted pipeline values.
 const OPERATING_TABS = [
-  ['today', 'Today'],
   ['portfolio', 'Portfolio'],
   ['capital', 'Capital'],
-  ['matters', 'Matters'],
-  ['network', 'Network'],
-  ['applications', 'Applications'],
-  ['grants', 'Grants'],
-  ['learning', 'Learning'],
+  ['network', 'Relationships'],
 ] as const;
 
 const DELIVERY_TABS = [
-  ['funnel', 'Delivery map'],
-  ['map', 'On the map'],
-  ['we-owe', 'We owe'],
-  ['communities', 'Demand & communities'],
-  ['channels', 'Channels'],
-  ['buyers', 'Buyer pipeline'],
+  ['communities', 'Communities'],
+  ['buyers', 'Buyers'],
+  ['funnel', 'Delivery'],
 ] as const;
 
 // Money-in surfaces: the funder pipeline is worked here. These were previously
 // buried as "legacy" under Capital — Ben could not find grants/foundations/
 // pipelines from the workspace nav (2026-08-05), so they are first-class now.
 const FUNDING_TABS: ReadonlyArray<readonly [string, string]> = [
-  ['foundations', 'Foundations'],
-  ['foundations/scan', 'Funder Scan'],
+  ['grants', 'Grants'],
   ['money', 'Money'],
+  ['foundations', 'Foundations'],
 ] as const;
 
 const EVIDENCE_TABS = [
-  ['model', 'Story & model'],
   ['proof', 'Evidence'],
-  ['governance', 'Governance'],
 ] as const;
 
-const ALL_TABS = [...OPERATING_TABS, ...DELIVERY_TABS, ...EVIDENCE_TABS] as const;
+const ALL_TABS = [...OPERATING_TABS, ...FUNDING_TABS, ...DELIVERY_TABS, ...EVIDENCE_TABS] as const;
 
-export type GoodsTab = (typeof ALL_TABS)[number][0]
-  | 'money'
-  | 'engagement'
-  | 'insight'
-  | 'signals'
-  | 'timeline'
-  | 'campaign'
-  | 'pitch'
-  | 'intros'
-  | 'foundations';
+/** Merged-away screens keep working and keep a valid `active` key — they are
+ *  reachable from their parent screen and from the hub's "everything else"
+ *  list, they just no longer own a place in the nav (2026-08-10). */
+type MergedTab =
+  | 'money' | 'engagement' | 'insight' | 'signals' | 'timeline' | 'campaign'
+  | 'pitch' | 'intros' | 'foundations' | 'today' | 'matters' | 'applications'
+  | 'learning' | 'map' | 'channels' | 'we-owe' | 'model' | 'governance';
+
+export type GoodsTab = (typeof ALL_TABS)[number][0] | MergedTab;
+
+/** Which nav entry lights up for a screen that no longer has its own tab. */
+const MERGED_INTO: Partial<Record<GoodsTab, GoodsTab>> = {
+  money: 'money',
+  campaign: 'capital', insight: 'capital', today: 'capital',
+  matters: 'capital', applications: 'capital', learning: 'capital',
+  engagement: 'network', signals: 'network', timeline: 'network', intros: 'network',
+  map: 'funnel', channels: 'funnel', 'we-owe': 'funnel',
+  pitch: 'proof', model: 'proof', governance: 'proof',
+};
 
 function isActiveTab(tabKey: GoodsTab, active?: GoodsTab): boolean {
   if (active === tabKey) return true;
-  if (tabKey === 'capital' && ['money', 'campaign', 'insight', 'foundations'].includes(active || '')) return true;
-  if (tabKey === 'network' && ['engagement', 'signals', 'timeline', 'intros'].includes(active || '')) return true;
-  if (tabKey === 'matters' && active === 'funnel') return true;
-  if (tabKey === 'proof' && active === 'pitch') return true;
-  return false;
+  return Boolean(active && MERGED_INTO[active] === tabKey);
 }
 
 function TabLink({ slug, tabKey, label, active }: { slug: string; tabKey: GoodsTab; label: string; active?: GoodsTab }) {

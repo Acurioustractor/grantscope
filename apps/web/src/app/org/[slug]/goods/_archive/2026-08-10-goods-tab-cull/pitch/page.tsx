@@ -15,8 +15,8 @@ import {
   AUDIENCE_SHAPES,
   NEVER_SAY,
 } from '@/lib/services/goods-pitch-content';
-import { GoodsSubNav } from '../_components/goods-sub-nav';
-import { ClaimChip } from '../_components/claim-chip';
+import { GoodsSubNav } from '../../../_components/goods-sub-nav';
+import { ClaimChip } from '../../../_components/claim-chip';
 
 // Static content only — no DB. Safe to render at the edge.
 export const dynamic = 'force-static';

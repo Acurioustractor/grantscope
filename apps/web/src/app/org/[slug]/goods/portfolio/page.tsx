@@ -8,109 +8,90 @@ import {
   STAGE_LABEL,
   isPortfolioEligible,
   type CommunityPathway,
-  type PortfolioDecision,
 } from '@/lib/services/goods-investment-portfolio';
 import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
-import {
-  GoodsWorkspaceHeader,
-  Metric,
-  SectionTitle,
-  StatusPill,
-} from '../_components/goods-capital-ui';
+import { GoodsWorkspaceHeader } from '../_components/goods-capital-ui';
 
 export const revalidate = 300;
 
 export async function generateMetadata() {
   return {
     title: 'Goods — Investment Portfolio',
-    description: 'One row per community pathway: decision, authority, evidence, investment use, money route.',
+    description: 'One line per community pathway: decision, owner, investment use.',
   };
 }
 
-const DECISION_TONE: Record<PortfolioDecision, 'neutral' | 'good' | 'warn' | 'bad' | 'info' | 'dark'> = {
-  listen: 'neutral',
-  scope: 'info',
-  'ready to pursue': 'warn',
-  submitted: 'dark',
-  'funded/delivering': 'good',
-  hold: 'bad',
+/** Short labels for the table. The full sentence lives in the expanded row. */
+const USE_SHORT: Record<CommunityPathway['investmentUse'], string> = {
+  'relationship-and-scoping': 'Scoping',
+  'community-wraparound': 'Wraparound',
+  'production-equipment': 'Production kit',
+  'measured-production-run': 'Measured run',
+  'buyer-delivery': 'Buyer delivery',
+  'shared-network': 'Network',
 };
 
-function PathwayCard({ pathway }: { pathway: CommunityPathway }) {
+const COLS = 'grid grid-cols-[minmax(0,2fr)_84px_minmax(0,1fr)_minmax(0,2.4fr)_120px_20px] items-baseline gap-3';
+
+function PathwayRow({ pathway }: { pathway: CommunityPathway }) {
   const eligible = isPortfolioEligible(pathway);
   const use = INVESTMENT_USES[pathway.investmentUse];
   return (
-    <article className="border-4 border-bauhaus-black bg-white">
-      <header className="flex flex-wrap items-start justify-between gap-3 border-b-4 border-bauhaus-black bg-bauhaus-canvas px-4 py-3">
-        <div>
-          <h3 className="text-lg font-black uppercase tracking-widest text-bauhaus-black">{pathway.community}</h3>
-          <div className="mt-1 text-[11px] leading-5 text-bauhaus-muted">{pathway.authority}</div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <StatusPill tone="neutral">Stage: {STAGE_LABEL[pathway.stage]}</StatusPill>
-          <StatusPill tone={DECISION_TONE[pathway.decision]}>{pathway.decision}</StatusPill>
-          <StatusPill tone={eligible ? 'good' : 'warn'}>
-            {eligible ? 'Investment work OK' : 'Relationship work only'}
-          </StatusPill>
-        </div>
-      </header>
+    <details className="group border-t border-slate-200 first:border-t-0 open:bg-slate-50/60">
+      <summary
+        className={`${COLS} cursor-pointer list-none px-4 py-3 text-xs hover:bg-slate-50 [&::-webkit-details-marker]:hidden`}
+      >
+        <span className="min-w-0 truncate font-semibold text-slate-900">{pathway.community}</span>
+        <span className="text-[11px] text-slate-500">{STAGE_LABEL[pathway.stage]}</span>
+        <span className={`min-w-0 truncate text-[11px] ${pathway.relationshipOwner ? 'text-slate-700' : 'font-semibold text-bauhaus-red'}`}>
+          {pathway.relationshipOwner ?? '— not named'}
+        </span>
+        <span className="min-w-0 truncate text-slate-700">{pathway.nextDecision ?? 'No decision named'}</span>
+        <span className="text-[11px] text-slate-500">{USE_SHORT[pathway.investmentUse]}</span>
+        <span aria-hidden="true" className="text-slate-400 transition-transform group-open:rotate-90">▸</span>
+      </summary>
 
-      <div className="grid gap-0 md:grid-cols-3">
-        <div className="border-b-2 border-bauhaus-black/15 px-4 py-3 md:border-b-0 md:border-r-2">
-          <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue">Next community decision</div>
-          <p className="mt-1 text-xs leading-5 text-bauhaus-black">{pathway.nextDecision ?? 'None named — nothing to pursue yet.'}</p>
-          <div className="mt-3 text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Relationship owner</div>
-          <p className="mt-1 text-xs leading-5 text-bauhaus-black">
-            {pathway.relationshipOwner ?? <span className="text-bauhaus-red font-bold">Not named</span>}
-          </p>
-          {pathway.nextActionDue ? (
-            <>
-              <div className="mt-3 text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Due</div>
-              <p className="mt-1 text-xs leading-5 text-bauhaus-black">{pathway.nextActionDue}</p>
-            </>
+      <div className="grid gap-5 px-4 pb-5 pt-1 text-xs leading-5 md:grid-cols-3">
+        <div>
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Evidence already held</div>
+          <ul className="mt-1 space-y-0.5 text-slate-800">
+            {pathway.evidenceHeld.map((item) => <li key={item}>· {item}</li>)}
+          </ul>
+          <div className="mt-3 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Authority</div>
+          <p className="mt-1 text-slate-700">{pathway.authority}</p>
+        </div>
+        <div>
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Money route</div>
+          <p className="mt-1 text-slate-800">{pathway.moneyRoute}</p>
+          <div className="mt-3 text-[10px] font-semibold uppercase tracking-wider text-slate-500">{use.label} needs</div>
+          <p className="mt-1 text-slate-600">{use.evidenceRequired}</p>
+        </div>
+        <div>
+          <div className="rounded-lg bg-[#fff8df] px-3 py-2">
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-700">Do not do yet</div>
+            <p className="mt-1 text-slate-800">{pathway.doNotYet}</p>
+          </div>
+          {!eligible ? (
+            <p className="mt-2 text-[11px] font-semibold text-bauhaus-red">
+              Relationship work only — needs an owner named before any application work.
+            </p>
+          ) : null}
+          {pathway.links.length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {pathway.links.map((link) => (
+                <Link
+                  key={link.href + link.label}
+                  href={link.href}
+                  className="inline-flex min-h-8 items-center rounded-md border border-slate-300 bg-white px-2.5 text-[11px] font-medium text-slate-700 hover:border-slate-400"
+                >
+                  {link.label} →
+                </Link>
+              ))}
+            </div>
           ) : null}
         </div>
-
-        <div className="border-b-2 border-bauhaus-black/15 px-4 py-3 md:border-b-0 md:border-r-2">
-          <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue">Evidence already held</div>
-          <ul className="mt-1 space-y-1 text-xs leading-5 text-bauhaus-black">
-            {pathway.evidenceHeld.map((item) => (
-              <li key={item}>· {item}</li>
-            ))}
-          </ul>
-          <div className="mt-3 text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Evidence this use requires</div>
-          <p className="mt-1 text-xs leading-5 text-bauhaus-muted">{use.evidenceRequired}</p>
-        </div>
-
-        <div className="px-4 py-3">
-          <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue">Investment use</div>
-          <p className="mt-1 text-xs font-bold leading-5 text-bauhaus-black">{use.label}</p>
-          <div className="mt-3 text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Money route</div>
-          <p className="mt-1 text-xs leading-5 text-bauhaus-black">{pathway.moneyRoute}</p>
-          <div className="mt-3 text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Suitable capital</div>
-          <p className="mt-1 text-xs leading-5 text-bauhaus-muted">{use.suitableCapital}</p>
-        </div>
       </div>
-
-      <div className="border-t-4 border-bauhaus-black bg-bauhaus-yellow px-4 py-3">
-        <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-black">Do not do yet</div>
-        <p className="mt-1 text-xs leading-5 text-bauhaus-black">{pathway.doNotYet}</p>
-      </div>
-
-      {pathway.links.length > 0 ? (
-        <div className="flex flex-wrap gap-2 border-t-2 border-bauhaus-black/15 px-4 py-3">
-          {pathway.links.map((link) => (
-            <Link
-              key={link.href + link.label}
-              href={link.href}
-              className="inline-flex min-h-9 items-center border-2 border-bauhaus-black bg-white px-3 text-[10px] font-black uppercase tracking-widest text-bauhaus-black hover:bg-bauhaus-canvas"
-            >
-              {link.system}: {link.label}
-            </Link>
-          ))}
-        </div>
-      ) : null}
-    </article>
+    </details>
   );
 }
 
@@ -123,8 +104,10 @@ export default async function GoodsInvestmentPortfolioPage({ params }: { params:
 
   const pathways = [...COMMUNITY_PATHWAYS];
   const eligible = pathways.filter(isPortfolioEligible);
-  const listening = pathways.filter((p) => !isPortfolioEligible(p));
-  const submitted = pathways.filter((p) => p.decision === 'submitted').length;
+  const unowned = pathways.filter((p) => !p.relationshipOwner);
+  const emptyLenses = Object.entries(INVESTMENT_USES).filter(
+    ([key]) => !pathways.some((p) => p.investmentUse === key),
+  );
 
   return (
     <main className="min-h-screen bg-bauhaus-canvas text-bauhaus-black">
@@ -136,80 +119,74 @@ export default async function GoodsInvestmentPortfolioPage({ params }: { params:
         title="Investment portfolio"
         description={(
           <>
-            One row per community pathway, not one row per grant. Start with the community decision, check the
-            relationship, then decide whether investment is appropriate. Only after that does grant, buyer or lender
-            work belong on the table.
+            One line per community pathway, not one per grant. {eligible.length} of {pathways.length} carry investment
+            work; the rest are relationship work until someone is named against them.
           </>
-        )}
-        aside={(
-          <div className="border-4 border-white bg-white px-4 py-3 text-bauhaus-black">
-            <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Pathways carrying investment work</div>
-            <div className="mt-1 text-3xl font-black tabular-nums">{eligible.length} / {pathways.length}</div>
-            <div className="mt-1 text-[10px] font-bold text-bauhaus-muted">Needs a named decision and an owner</div>
-          </div>
         )}
       />
 
-      <div className="mx-auto max-w-[1760px] px-4 py-6">
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <Metric label="Community pathways" value={String(pathways.length)} detail="The whole portfolio; one row each" />
-          <Metric label="Investment-eligible" value={String(eligible.length)} detail="Named decision + relationship owner" tone="yellow" />
-          <Metric label="Listening only" value={String(listening.length)} detail="No application work yet" />
-          <Metric label="Submitted" value={String(submitted)} detail="Application in with a funder" tone="dark" />
-        </div>
-
-        <div className="mt-8">
-          <SectionTitle
-            eyebrow="Weekly read"
-            title="Community pathways"
-            description="A pathway becomes eligible for investment work only when it has both a named next community decision and a relationship owner. Nothing here is an ownership claim, and no CRM stage counts as approval."
-          />
-          <div className="space-y-4">
-            {pathways.map((pathway) => (
-              <PathwayCard key={pathway.id} pathway={pathway} />
-            ))}
+      <div className="mx-auto max-w-[1480px] px-6 py-6">
+        <div className="overflow-hidden rounded-2xl border border-slate-300 bg-white">
+          <div className={`${COLS} border-b border-slate-300 bg-slate-50 px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500`}>
+            <span>Community</span>
+            <span>Stage</span>
+            <span>Owner</span>
+            <span>Next community decision</span>
+            <span>Use</span>
+            <span aria-hidden="true" />
           </div>
+          {pathways.map((pathway) => <PathwayRow key={pathway.id} pathway={pathway} />)}
         </div>
 
-        <div className="mt-10">
-          <SectionTitle
-            eyebrow="Six uses"
-            title="Investment lenses"
-            description="Every investment or opportunity must declare one primary use. This is the field that makes grants useful rather than noisy — if an opportunity cannot fund a named use for a named community or the shared network, it stays outside the portfolio."
-          />
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {Object.entries(INVESTMENT_USES).map(([key, use]) => {
-              const count = pathways.filter((p) => p.investmentUse === key).length;
-              return (
-                <div key={key} className="border-4 border-bauhaus-black bg-white p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="text-sm font-black uppercase tracking-widest text-bauhaus-black">{use.label}</h3>
-                    <StatusPill tone={count > 0 ? 'dark' : 'neutral'}>{count} pathway{count === 1 ? '' : 's'}</StatusPill>
-                  </div>
-                  <div className="mt-3 text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Suitable capital</div>
-                  <p className="mt-1 text-xs leading-5 text-bauhaus-black">{use.suitableCapital}</p>
-                  <div className="mt-3 text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Evidence required before pursuit</div>
-                  <p className="mt-1 text-xs leading-5 text-bauhaus-muted">{use.evidenceRequired}</p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="mt-10">
-          <SectionTitle eyebrow="Honesty" title="Known source conflicts" description="Shown here rather than quietly resolved in a number." />
-          <ul className="space-y-2">
-            {PORTFOLIO_DATA_LIMITS.map((limit) => (
-              <li key={limit} className="border-l-4 border-bauhaus-red bg-white px-4 py-3 text-xs leading-5 text-bauhaus-black">
-                {limit}
-              </li>
-            ))}
-          </ul>
-          <p className="mt-4 text-[11px] leading-5 text-bauhaus-muted">
-            Readings sourced from <code className="font-mono">thoughts/shared/handoffs/goods-investment-portfolio-alignment-2026-08-10.md</code>,
-            which cites the Goods Asset Register decision log. Edit{' '}
-            <code className="font-mono">src/lib/services/goods-investment-portfolio.ts</code> to change what this screen says.
+        {unowned.length > 0 ? (
+          <p className="mt-3 text-xs text-slate-600">
+            <span className="font-semibold text-bauhaus-red">{unowned.length} pathways have no relationship owner.</span>{' '}
+            Naming one is the only move that unlocks investment work on them.
           </p>
+        ) : null}
+
+        <div className="mt-8 space-y-2">
+          <details className="rounded-xl border border-slate-300 bg-white">
+            <summary className="cursor-pointer px-4 py-3 text-xs font-semibold text-slate-800 hover:bg-slate-50">
+              Investment lenses — every opportunity declares one use
+              {emptyLenses.length > 0 ? (
+                <span className="ml-2 font-normal text-slate-500">
+                  ({emptyLenses.length} of 6 have no pathway: {emptyLenses.map(([, u]) => u.label).join(', ')})
+                </span>
+              ) : null}
+            </summary>
+            <div className="grid gap-3 border-t border-slate-200 px-4 py-4 md:grid-cols-2 xl:grid-cols-3">
+              {Object.entries(INVESTMENT_USES).map(([key, use]) => {
+                const count = pathways.filter((p) => p.investmentUse === key).length;
+                return (
+                  <div key={key} className="rounded-lg border border-slate-200 p-3 text-xs leading-5">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="font-semibold text-slate-900">{use.label}</span>
+                      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${count > 0 ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-500'}`}>{count}</span>
+                    </div>
+                    <p className="mt-1 text-slate-600">{use.suitableCapital}</p>
+                    <p className="mt-1 text-slate-500">Needs: {use.evidenceRequired}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </details>
+
+          <details className="rounded-xl border border-slate-300 bg-white">
+            <summary className="cursor-pointer px-4 py-3 text-xs font-semibold text-slate-800 hover:bg-slate-50">
+              Known source conflicts
+              <span className="ml-2 font-normal text-slate-500">({PORTFOLIO_DATA_LIMITS.length}) — shown, not resolved into a number</span>
+            </summary>
+            <ul className="space-y-2 border-t border-slate-200 px-4 py-4">
+              {PORTFOLIO_DATA_LIMITS.map((limit) => (
+                <li key={limit} className="border-l-2 border-bauhaus-red pl-3 text-xs leading-5 text-slate-700">{limit}</li>
+              ))}
+            </ul>
+            <p className="border-t border-slate-200 px-4 py-3 text-[11px] leading-5 text-slate-500">
+              Readings from <code className="font-mono">thoughts/shared/handoffs/goods-investment-portfolio-alignment-2026-08-10.md</code>.
+              Edit <code className="font-mono">src/lib/services/goods-investment-portfolio.ts</code> to change what this screen says.
+            </p>
+          </details>
         </div>
       </div>
     </main>
