@@ -312,7 +312,7 @@ function WorkspaceModeLink({ href, label, active, index, hint }: WorkspaceLink &
 // Rail-owned Goods navigation (Ben's call, 2026-08-05): the rail is the ONE
 // nav. These groups replace the pill rows that lived in the green page header.
 const GOODS_RAIL_SECTIONS: ReadonlyArray<{ label: string; items: ReadonlyArray<readonly [string, string]> }> = [
-  { label: 'Work', items: [['today', 'Today'], ['capital', 'Capital'], ['matters', 'Matters'], ['network', 'Network'], ['applications', 'Applications'], ['learning', 'Learning']] },
+  { label: 'Work', items: [['today', 'Today'], ['portfolio', 'Portfolio'], ['capital', 'Capital'], ['matters', 'Matters'], ['network', 'Network'], ['applications', 'Applications'], ['learning', 'Learning']] },
   { label: 'Money in', items: [['foundations', 'Foundations'], ['foundations/scan', 'Funder Scan'], ['grants', 'Grants'], ['money', 'Money']] },
   { label: 'Delivery', items: [['funnel', 'Delivery map'], ['map', 'On the map'], ['communities', 'Communities'], ['channels', 'Channels'], ['buyers', 'Buyers']] },
   { label: 'Trust', items: [['model', 'Story & model'], ['proof', 'Evidence'], ['governance', 'Governance']] },
