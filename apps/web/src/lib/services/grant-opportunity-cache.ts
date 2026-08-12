@@ -1,9 +1,10 @@
 import { unstable_cache } from 'next/cache';
 import { getServiceSupabase } from '@/lib/supabase';
 
-const GRANT_OPPORTUNITY_CACHE_SECONDS = 10 * 60;
-const GRANT_OPPORTUNITY_PAGE_SIZE = 500;
-const GRANT_OPPORTUNITY_MAX_ROWS = 5000;
+const GRANT_OPPORTUNITY_CACHE_SECONDS = 60 * 60;
+const GRANT_OPPORTUNITY_SAMPLE_ROWS = 1000;
+
+const inFlightGrantOpportunityFetches = new Map<string, Promise<unknown[]>>();
 
 export interface GrantCoverageRow {
   source: string | null;
@@ -25,45 +26,55 @@ export interface GrantSourceCoverageRow {
 async function fetchGrantOpportunityRows<T>(
   select: string,
   {
-    maxRows = GRANT_OPPORTUNITY_MAX_ROWS,
-    pageSize = GRANT_OPPORTUNITY_PAGE_SIZE,
+    maxRows = GRANT_OPPORTUNITY_SAMPLE_ROWS,
     excludeDuplicates = true,
   }: {
     maxRows?: number;
-    pageSize?: number;
     excludeDuplicates?: boolean;
   } = {},
 ): Promise<T[]> {
+  const fetchKey = JSON.stringify({ select, maxRows, excludeDuplicates });
+  const inFlight = inFlightGrantOpportunityFetches.get(fetchKey);
+  if (inFlight) return (await inFlight) as T[];
+
+  const promise = fetchGrantOpportunityRowsOnce<T>(select, { maxRows, excludeDuplicates });
+  inFlightGrantOpportunityFetches.set(fetchKey, promise as Promise<unknown[]>);
+
+  try {
+    return await promise;
+  } finally {
+    inFlightGrantOpportunityFetches.delete(fetchKey);
+  }
+}
+
+async function fetchGrantOpportunityRowsOnce<T>(
+  select: string,
+  {
+    maxRows,
+    excludeDuplicates,
+  }: {
+    maxRows: number;
+    excludeDuplicates: boolean;
+  },
+): Promise<T[]> {
   const db = getServiceSupabase();
-  const rows: T[] = [];
+  let query = db
+    .from('grant_opportunities')
+    .select(select)
+    .order('updated_at', { ascending: false, nullsFirst: false })
+    .limit(maxRows);
 
-  for (let offset = 0; offset < maxRows; offset += pageSize) {
-    const end = Math.min(offset + pageSize, maxRows) - 1;
-    let query = db
-      .from('grant_opportunities')
-      .select(select);
-
-    if (excludeDuplicates) {
-      query = query.or('status.is.null,status.neq.duplicate');
-    }
-
-    const { data, error } = await query
-      .order('updated_at', { ascending: false, nullsFirst: false })
-      .range(offset, end);
-    if (error) {
-      console.error('[grant-opportunity-cache] grant_opportunities page failed:', error.message);
-      break;
-    }
-
-    const pageRows = ((data || []) as unknown) as T[];
-    rows.push(...pageRows);
-
-    if (pageRows.length < end - offset + 1) {
-      break;
-    }
+  if (excludeDuplicates) {
+    query = query.or('status.is.null,status.neq.duplicate');
   }
 
-  return rows;
+  const { data, error } = await query;
+  if (error) {
+    console.error('[grant-opportunity-cache] grant_opportunities sample failed:', error.message);
+    return [];
+  }
+
+  return ((data || []) as unknown) as T[];
 }
 
 export const getCachedGrantCoverageRows = unstable_cache(

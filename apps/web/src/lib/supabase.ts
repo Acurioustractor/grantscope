@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { getSupabasePublicKey, getSupabaseSecretKey, getSupabaseUrl } from './supabase-env';
+import { runtimeSupabaseFetch } from './supabase-fetch';
 
 function getUrl() {
   return getSupabaseUrl();
@@ -166,7 +167,9 @@ export function getServiceSupabase() {
 
 export function getDirectServiceSupabase() {
   if (!_serviceSupabase) {
-    _serviceSupabase = createRuntimeSupabaseClient(createClient(getUrl(), getSupabaseSecretKey()));
+    _serviceSupabase = createRuntimeSupabaseClient(createClient(getUrl(), getSupabaseSecretKey(), {
+      global: { fetch: runtimeSupabaseFetch },
+    }));
   }
   return _serviceSupabase;
 }
