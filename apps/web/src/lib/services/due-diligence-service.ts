@@ -202,7 +202,7 @@ export async function assembleDueDiligencePack(gsId: string): Promise<DueDiligen
     safe(supabase.from('mv_gs_entity_stats')
       .select('total_relationships, total_inbound_amount, total_outbound_amount, counterparty_count')
       .eq('id', entity.id)
-      .single()),
+      .maybeSingle()),
 
     // ACNC financials (multi-year)
     entity.abn
