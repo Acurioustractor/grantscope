@@ -1,0 +1,46 @@
+---
+session: fix-load-stability-2026-08-13
+ts: 2026-08-13T06:48:00Z
+branch: goods-worklist-cull
+status: complete
+---
+
+scope: bug
+issue:
+  description: DB-heavy public pages exhausted the process-wide Supabase request queue and transient failures could render false 404 states.
+  evidence:
+    - Production logs showed SupabaseBudgetError on grants, places and due-diligence routes.
+    - Due-diligence launched nine optional queries concurrently.
+    - Place pages launched multiple large Promise.all query waves.
+
+diagnosis:
+  root_cause: Per-page query fan-out exceeded the shared runtime limit of four active and twelve queued Supabase requests during overlapping renders.
+  files:
+    - apps/web/src/lib/services/due-diligence-service.ts
+    - apps/web/src/app/places/[postcode]/page.tsx
+
+fix:
+  approach:
+    - Limit due-diligence optional queries to batches of three.
+    - Coalesce and cache due-diligence packs for five minutes with a 100-entry bound.
+    - Propagate transient entity and postcode lookup failures instead of treating them as missing records.
+    - Split place queries into smaller waves and cache its heaviest public data sections for five minutes.
+  files_modified:
+    - apps/web/src/lib/services/due-diligence-service.ts
+    - apps/web/src/lib/services/due-diligence-service.test.ts
+    - apps/web/src/app/places/[postcode]/page.tsx
+  test_added: apps/web/src/lib/services/due-diligence-service.test.ts
+
+verification:
+  focused_test: pnpm exec vitest run src/lib/services/due-diligence-service.test.ts
+  focused_test_result: 4 passed
+  typecheck: pnpm exec tsc --noEmit --incremental false
+  typecheck_result: passed
+  production_build: vercel build --prod --yes
+  production_build_result: passed; 194 static pages generated
+  live_verification: pending deployment
+
+next:
+  - Commit only the three scoped implementation files and this handoff.
+  - Deploy the committed state without including unrelated dirty-worktree changes.
+  - Recheck production logs and the affected routes after deployment.

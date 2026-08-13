@@ -6,9 +6,36 @@ import { getPlaceBrief } from '@/lib/services/place-brief-service';
 import { getPostcodeFundingPicture } from '@/lib/services/place-intelligence';
 import { getPlaceDataLayers } from '@/lib/services/place-data-service';
 import { notFound } from 'next/navigation';
+import { unstable_cache } from 'next/cache';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
+
+const PLACE_CACHE_SECONDS = 5 * 60;
+
+const getCachedPlaceBrief = unstable_cache(
+  async (postcode: string, locality: string | null, state: string | null) =>
+    getPlaceBrief(getServiceSupabase(), postcode, locality, state),
+  ['place-detail', 'brief-v1'],
+  { revalidate: PLACE_CACHE_SECONDS },
+);
+
+const getCachedPlaceDataLayers = unstable_cache(
+  async (
+    postcode: string,
+    lgaName: string | null,
+    lgaCode: string | null,
+    state: string | null,
+  ) => getPlaceDataLayers(getServiceSupabase(), postcode, lgaName, lgaCode, state),
+  ['place-detail', 'data-layers-v1'],
+  { revalidate: PLACE_CACHE_SECONDS },
+);
+
+const getCachedPostcodeFundingPicture = unstable_cache(
+  async (postcode: string) => getPostcodeFundingPicture(postcode),
+  ['place-detail', 'funding-picture-v1'],
+  { revalidate: PLACE_CACHE_SECONDS },
+);
 
 function formatMoney(amount: number | null): string {
   if (!amount) return '\u2014';
@@ -88,8 +115,10 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
   const supabase = getServiceSupabase();
   const governedProofService = createGovernedProofService();
 
-  // Fetch geo + SEIFA + entities + social enterprises in parallel
-  const [{ data: geoData }, { data: seifaData }, { data: entities }, { data: socialEnterprises }, governedProofBundle, { data: grantData }] = await Promise.all([
+  // Keep each phase below the shared Supabase runtime concurrency limit. The
+  // previous six-way fan-out could fill most of the process-wide queue before a
+  // second request for the same place even started.
+  const [geoResult, { data: seifaData }, { data: entities }] = await Promise.all([
     supabase
       .from('postcode_geo')
       .select('postcode, locality, state, remoteness_2021, sa2_code, sa2_name, sa3_name, lga_name, lga_code')
@@ -111,6 +140,12 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
       .eq('postcode', postcode)
       .order('latest_revenue', { ascending: false, nullsFirst: false })
       .limit(200),
+  ]);
+
+  if (geoResult.error) throw geoResult.error;
+  const geoData = geoResult.data;
+
+  const [{ data: socialEnterprises }, governedProofBundle, { data: grantData }] = await Promise.all([
     supabase
       .from('social_enterprises')
       .select('id, name, abn, org_type, source_primary, certifications, sector, target_beneficiaries, business_model, website')
@@ -182,12 +217,7 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
   let ndisSourceLink: string | null = null;
 
   if (stateCode) {
-    const [
-      { data: ndisStateSupplyData },
-      { data: ndisDistrictData },
-      { data: ndisConcentrationData },
-      { count: stateDisabilityEnterpriseCount },
-    ] = await Promise.all([
+    const [{ data: ndisStateSupplyData }, { data: ndisDistrictData }] = await Promise.all([
       supabase
         .from('v_ndis_provider_supply_summary')
         .select('report_date, state_code, service_district_name, provider_count')
@@ -202,6 +232,12 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
         .neq('service_district_name', 'Other')
         .not('service_district_name', 'ilike', '%Missing%')
         .order('provider_count', { ascending: true }),
+    ]);
+
+    const [
+      { data: ndisConcentrationData },
+      { count: stateDisabilityEnterpriseCount },
+    ] = await Promise.all([
       supabase
         .from('ndis_market_concentration')
         .select('state_code, service_district_name, payment_share_top10_pct, payment_band, source_page_url, source_file_url, source_file_title')
@@ -402,11 +438,11 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
   // Place Data Layers — crime, schools, NDIS participants, DSS payments
   // Federal grants held by organisations registered here. Separate from the
   // gs_relationships totals above, which do not carry GrantConnect at all.
-  const [placeBrief, dataLayers, federalFunding] = await Promise.all([
-    getPlaceBrief(supabase, postcode, geo.locality, geo.state),
-    getPlaceDataLayers(supabase, postcode, geo.lga_name, geo.lga_code, geo.state),
-    getPostcodeFundingPicture(postcode).catch(() => null),
+  const [placeBrief, dataLayers] = await Promise.all([
+    getCachedPlaceBrief(postcode, geo.locality, geo.state),
+    getCachedPlaceDataLayers(postcode, geo.lga_name, geo.lga_code, geo.state),
   ]);
+  const federalFunding = await getCachedPostcodeFundingPicture(postcode).catch(() => null);
 
   // Filter grants relevant to this area (by state match or national scope)
   const now = new Date().toISOString().slice(0, 10);

@@ -174,19 +174,60 @@ export interface DueDiligencePack {
 // Assembly
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-export async function assembleDueDiligencePack(gsId: string): Promise<DueDiligencePack | null> {
+const DUE_DILIGENCE_CACHE_TTL_MS = 5 * 60 * 1000;
+const DUE_DILIGENCE_CACHE_MAX_ENTRIES = 100;
+const DUE_DILIGENCE_QUERY_BATCH_SIZE = 3;
+
+type DueDiligenceCacheEntry = {
+  expiresAt: number;
+  value: DueDiligencePack | null;
+};
+
+const dueDiligenceCache = new Map<string, DueDiligenceCacheEntry>();
+const inFlightDueDiligencePacks = new Map<string, Promise<DueDiligencePack | null>>();
+
+function setDueDiligenceCache(gsId: string, value: DueDiligencePack | null) {
+  if (dueDiligenceCache.has(gsId)) dueDiligenceCache.delete(gsId);
+  dueDiligenceCache.set(gsId, {
+    expiresAt: Date.now() + DUE_DILIGENCE_CACHE_TTL_MS,
+    value,
+  });
+
+  while (dueDiligenceCache.size > DUE_DILIGENCE_CACHE_MAX_ENTRIES) {
+    const oldestKey = dueDiligenceCache.keys().next().value;
+    if (!oldestKey) break;
+    dueDiligenceCache.delete(oldestKey);
+  }
+}
+
+async function runInBatches<T>(
+  tasks: Array<() => Promise<T>>,
+  batchSize: number,
+): Promise<T[]> {
+  const results: T[] = [];
+  for (let index = 0; index < tasks.length; index += batchSize) {
+    results.push(...await Promise.all(tasks.slice(index, index + batchSize).map((task) => task())));
+  }
+  return results;
+}
+
+async function assembleDueDiligencePackUncached(gsId: string): Promise<DueDiligencePack | null> {
   const supabase = getServiceSupabase();
 
   // 1. Fetch entity
-  const { data: entity } = await supabase
+  const { data: entity, error: entityError } = await supabase
     .from('gs_entities')
     .select('id, gs_id, canonical_name, abn, entity_type, sector, state, postcode, remoteness, seifa_irsd_decile, is_community_controlled, lga_name')
     .eq('gs_id', gsId)
-    .single();
+    .maybeSingle();
+
+  if (entityError) throw entityError;
 
   if (!entity) return null;
 
-  // 2. Parallel queries for all data sources
+  // 2. Fetch optional sources in bounded groups. A single dossier used to start
+  // nine Supabase requests at once, so two overlapping renders could exhaust the
+  // shared runtime queue before either request completed.
   const [
     statsResult,
     acncFinancialsResult,
@@ -197,15 +238,15 @@ export async function assembleDueDiligencePack(gsId: string): Promise<DueDiligen
     almaResult,
     placeGeoResult,
     seifaResult,
-  ] = await Promise.all([
+  ] = await runInBatches<unknown>([
     // Entity stats MV
-    safe(supabase.from('mv_gs_entity_stats')
+    () => safe(supabase.from('mv_gs_entity_stats')
       .select('total_relationships, total_inbound_amount, total_outbound_amount, counterparty_count')
       .eq('id', entity.id)
       .maybeSingle()),
 
     // ACNC financials (multi-year)
-    entity.abn
+    () => entity.abn
       ? safe(supabase.from('acnc_ais')
           .select('ais_year, total_revenue, total_expenses, total_assets, net_surplus_deficit, donations_and_bequests, revenue_from_government, staff_fte, charity_size')
           .eq('abn', entity.abn)
@@ -214,7 +255,7 @@ export async function assembleDueDiligencePack(gsId: string): Promise<DueDiligen
       : Promise.resolve(null),
 
     // ACNC charity details
-    entity.abn
+    () => entity.abn
       ? safe(supabase.from('acnc_charities')
           .select('name, charity_size, pbi, hpc, purposes, beneficiaries, operating_states')
           .eq('abn', entity.abn)
@@ -222,7 +263,7 @@ export async function assembleDueDiligencePack(gsId: string): Promise<DueDiligen
       : Promise.resolve(null),
 
     // Justice funding
-    entity.abn
+    () => entity.abn
       ? safe(supabase.from('justice_funding')
           .select('program_name, amount_dollars, state, financial_year, sector')
           .eq('recipient_abn', entity.abn)
@@ -230,7 +271,7 @@ export async function assembleDueDiligencePack(gsId: string): Promise<DueDiligen
       : Promise.resolve(null),
 
     // AusTender contracts
-    entity.abn
+    () => entity.abn
       ? safe(supabase.from('austender_contracts')
           .select('title, contract_value, buyer_name, contract_start, contract_end')
           .eq('supplier_abn', entity.abn)
@@ -239,7 +280,7 @@ export async function assembleDueDiligencePack(gsId: string): Promise<DueDiligen
       : Promise.resolve(null),
 
     // Political donations
-    entity.abn
+    () => entity.abn
       ? safe(supabase.from('political_donations')
           .select('donation_to, amount, financial_year')
           .eq('donor_abn', entity.abn)
@@ -247,13 +288,13 @@ export async function assembleDueDiligencePack(gsId: string): Promise<DueDiligen
       : Promise.resolve(null),
 
     // ALMA interventions with evidence + outcome counts
-    safe(supabase.from('alma_interventions')
+    () => safe(supabase.from('alma_interventions')
       .select('id, name, type, evidence_level, target_cohort, geography, portfolio_score, serves_youth_justice, years_operating, current_funding, website')
       .eq('gs_entity_id', entity.id)
       .neq('data_quality', 'quarantined')),
 
     // Place geo
-    entity.postcode
+    () => entity.postcode
       ? safe(supabase.from('postcode_geo')
           .select('postcode, locality, state, remoteness_2021, lga_name')
           .eq('postcode', entity.postcode)
@@ -261,14 +302,14 @@ export async function assembleDueDiligencePack(gsId: string): Promise<DueDiligen
       : Promise.resolve(null),
 
     // SEIFA
-    entity.postcode
+    () => entity.postcode
       ? safe(supabase.from('seifa_2021')
           .select('score, decile_national')
           .eq('postcode', entity.postcode)
           .eq('index_type', 'IRSD')
           .limit(1))
       : Promise.resolve(null),
-  ]);
+  ], DUE_DILIGENCE_QUERY_BATCH_SIZE);
 
   // 3. Local entity count (if postcode available)
   let localEntityCount = 0;
@@ -505,4 +546,25 @@ export async function assembleDueDiligencePack(gsId: string): Promise<DueDiligen
     ],
     citation: `CivicGraph Due Diligence Pack: ${entity.canonical_name}${entity.abn ? ` (ABN ${entity.abn})` : ''}. Generated ${new Date().toISOString().split('T')[0]}. Data sources: CivicGraph Entity Graph, ACNC, AusTender, AEC, ALMA.`,
   };
+}
+
+export async function assembleDueDiligencePack(gsId: string): Promise<DueDiligencePack | null> {
+  const cached = dueDiligenceCache.get(gsId);
+  if (cached && cached.expiresAt > Date.now()) return cached.value;
+  if (cached) dueDiligenceCache.delete(gsId);
+
+  const inFlight = inFlightDueDiligencePacks.get(gsId);
+  if (inFlight) return inFlight;
+
+  const promise = assembleDueDiligencePackUncached(gsId)
+    .then((value) => {
+      setDueDiligenceCache(gsId, value);
+      return value;
+    })
+    .finally(() => {
+      inFlightDueDiligencePacks.delete(gsId);
+    });
+
+  inFlightDueDiligencePacks.set(gsId, promise);
+  return promise;
 }

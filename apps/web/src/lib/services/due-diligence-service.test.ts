@@ -10,16 +10,20 @@ const entity = {
   id: 'entity-without-stats',
   gs_id: 'AU-ABN-00000000000',
   canonical_name: 'Entity Without Stats',
-  abn: null,
+  abn: '00000000000',
   entity_type: 'organisation',
   sector: null,
   state: null,
-  postcode: null,
+  postcode: '2000',
   remoteness: null,
   seifa_irsd_decile: null,
   is_community_controlled: false,
   lga_name: null,
 };
+
+let entityQueryError: unknown = null;
+let activeQueries = 0;
+let maxConcurrentQueries = 0;
 
 class QueryBuilder implements PromiseLike<{ data: unknown; error: unknown; count?: number }> {
   constructor(
@@ -45,6 +49,12 @@ class QueryBuilder implements PromiseLike<{ data: unknown; error: unknown; count
 
   maybeSingle() {
     this.calls.push(`${this.table}.maybeSingle`);
+    if (this.table === 'gs_entities') {
+      return Promise.resolve({
+        data: entityQueryError ? null : entity,
+        error: entityQueryError,
+      });
+    }
     return Promise.resolve({ data: null, error: null });
   }
 
@@ -53,7 +63,14 @@ class QueryBuilder implements PromiseLike<{ data: unknown; error: unknown; count
     onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
   ): PromiseLike<TResult1 | TResult2> {
     const data = this.table === 'gs_entities' ? [entity] : [];
-    return Promise.resolve({ data, error: null, count: 0 }).then(onfulfilled, onrejected);
+    activeQueries += 1;
+    maxConcurrentQueries = Math.max(maxConcurrentQueries, activeQueries);
+    return new Promise<{ data: unknown; error: unknown; count?: number }>((resolve) => {
+      setTimeout(() => {
+        activeQueries -= 1;
+        resolve({ data, error: null, count: 0 });
+      }, 0);
+    }).then(onfulfilled, onrejected);
   }
 }
 
@@ -62,6 +79,9 @@ describe('assembleDueDiligencePack', () => {
 
   beforeEach(() => {
     calls.length = 0;
+    entityQueryError = null;
+    activeQueries = 0;
+    maxConcurrentQueries = 0;
     vi.mocked(getServiceSupabase).mockReturnValue({
       from: (table: string) => new QueryBuilder(table, calls),
     } as never);
@@ -78,5 +98,30 @@ describe('assembleDueDiligencePack', () => {
     expect(consoleError).not.toHaveBeenCalled();
 
     consoleError.mockRestore();
+  });
+
+  it('coalesces overlapping requests for the same entity', async () => {
+    const gsId = 'AU-ABN-11111111111';
+
+    const [first, second] = await Promise.all([
+      assembleDueDiligencePack(gsId),
+      assembleDueDiligencePack(gsId),
+    ]);
+
+    expect(first).toBe(second);
+    expect(calls.filter((call) => call === 'gs_entities.maybeSingle')).toHaveLength(1);
+  });
+
+  it('does not turn a transient entity query failure into not found', async () => {
+    const error = { message: 'Supabase request budget exhausted' };
+    entityQueryError = error;
+
+    await expect(assembleDueDiligencePack('AU-ABN-22222222222')).rejects.toBe(error);
+  });
+
+  it('limits optional source queries to three concurrent requests', async () => {
+    await assembleDueDiligencePack('AU-ABN-33333333333');
+
+    expect(maxConcurrentQueries).toBeLessThanOrEqual(3);
   });
 });
