@@ -54,4 +54,46 @@ describe('Supabase runtime concurrency', () => {
     await Promise.resolve();
     expect(implementation).toHaveBeenCalledTimes(1);
   });
+
+  it('fails fast when the process request budget is exhausted', async () => {
+    const active = deferredResponse();
+    const implementation = vi
+      .fn((_input: RequestInfo | URL, _init?: RequestInit) => Promise.resolve(new Response()))
+      .mockImplementationOnce(() => active.promise);
+    const limitedFetch = createConcurrencyLimitedFetch(implementation, 1, {
+      maxQueuedRequests: 1,
+    });
+
+    const first = limitedFetch('https://example.test/active');
+    const second = limitedFetch('https://example.test/queued');
+
+    await expect(limitedFetch('https://example.test/rejected')).rejects.toMatchObject({
+      name: 'SupabaseBudgetError',
+    });
+    expect(implementation).toHaveBeenCalledTimes(1);
+
+    active.resolve(new Response('active'));
+    await Promise.all([first, second]);
+  });
+
+  it('aborts a slow active request at the configured deadline', async () => {
+    const implementation = vi.fn((_input: RequestInfo | URL, init?: RequestInit) =>
+      new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => reject(createAbortException()), { once: true });
+      }),
+    );
+    const limitedFetch = createConcurrencyLimitedFetch(implementation, 1, {
+      requestTimeoutMs: 5,
+    });
+
+    await expect(limitedFetch('https://example.test/slow')).rejects.toMatchObject({
+      name: 'AbortError',
+    });
+  });
 });
+
+function createAbortException() {
+  const error = new Error('The operation was aborted');
+  error.name = 'AbortError';
+  return error;
+}

@@ -18,21 +18,40 @@ function safeRedirectPath(value: string | null, fallback = '/home') {
   return value;
 }
 
-// The bare production Vercel alias (not preview-deployment URLs, which still
-// need to work for QA) was taking ~30k req/day in Firewall data — traffic
-// hitting the project directly rather than discovering it via civicgraph.app.
-// Redirecting it to the canonical domain costs nothing and isn't linked from
-// anywhere we control, so this only affects whoever already found it.
-const BARE_VERCEL_PRODUCTION_HOST = 'grantscope.vercel.app';
-const CANONICAL_HOST = 'civicgraph.app';
+function isExpensivePublicPath(pathname: string) {
+  return (
+    /^\/entity\/[^/]+\/?$/.test(pathname) ||
+    /^\/entities\/[^/]+(?:\/due-diligence)?\/?$/.test(pathname) ||
+    /^\/grants(?:\/|$)/.test(pathname) ||
+    pathname === '/foundations/backlog' ||
+    pathname === '/foundations/compare' ||
+    /^\/person\/[^/]+\/?$/.test(pathname) ||
+    /^\/places\/[^/]+\/?$/.test(pathname)
+  );
+}
+
+function isAutomaticPrefetch(request: NextRequest) {
+  return (
+    request.headers.get('next-router-prefetch') === '1' ||
+    request.headers.get('x-middleware-prefetch') === '1' ||
+    request.headers.get('purpose')?.toLowerCase() === 'prefetch' ||
+    request.headers.get('sec-purpose')?.toLowerCase().includes('prefetch') === true
+  );
+}
 
 export async function middleware(request: NextRequest) {
-  if (request.headers.get('host') === BARE_VERCEL_PRODUCTION_HOST) {
-    const url = request.nextUrl.clone();
-    url.hostname = CANONICAL_HOST;
-    url.protocol = 'https';
-    url.port = '';
-    return NextResponse.redirect(url, 308);
+  const { pathname } = request.nextUrl;
+
+  // Large public dossiers can fan out into many database queries. Next.js link
+  // prefetches should never spend that budget before a person opens the page.
+  if (isExpensivePublicPath(pathname) && isAutomaticPrefetch(request)) {
+    return new NextResponse(null, {
+      status: 204,
+      headers: {
+        'cache-control': 'private, no-store',
+        'x-civicgraph-prefetch-skipped': '1',
+      },
+    });
   }
 
   // Expose the pathname to server components so the root layout can
@@ -42,8 +61,6 @@ export async function middleware(request: NextRequest) {
   requestHeaders.set('x-search', request.nextUrl.search);
 
   let supabaseResponse = NextResponse.next({ request: { headers: requestHeaders } });
-
-  const { pathname } = request.nextUrl;
 
   // Solo-dev escape hatch: SKIP_AUTH_LOCAL=1 lets all routes through without
   // any auth check. Hard-guarded against production via NODE_ENV.
@@ -119,10 +136,33 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Run middleware everywhere so x-pathname is set for server components.
-  // Auth gating still only applies to the protected prefixes above.
+  // Keep middleware off public APIs and reports. These prefixes are the only
+  // routes that need auth gating or layout pathname/search headers.
   matcher: [
-    // Skip static files, Next internals, and images
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|svg|webp|ico|css|js)$).*)',
+    '/home/:path*',
+    '/tracker/:path*',
+    '/foundations/tracker/:path*',
+    '/ops/:path*',
+    '/profile/:path*',
+    '/org/:path*',
+    '/settings/:path*',
+    '/briefing/:path*',
+    '/continue/:path*',
+    '/login',
+    '/embed/:path*',
+    '/share/:path*',
+    '/discover/:path*',
+    '/feedback/:path*',
+    '/get-a-report/:path*',
+    '/pricing/:path*',
+    '/changes/:path*',
+    '/account/:path*',
+    '/entity/:path*',
+    '/entities/:path*',
+    '/grants/:path*',
+    '/foundations/backlog',
+    '/foundations/compare',
+    '/person/:path*',
+    '/places/:path*',
   ],
 };

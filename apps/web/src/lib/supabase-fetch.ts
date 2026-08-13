@@ -13,10 +13,23 @@ type QueuedRequest = {
 };
 
 const DEFAULT_MAX_CONCURRENCY = 4;
+const DEFAULT_MAX_QUEUED_REQUESTS = 12;
+const DEFAULT_REQUEST_TIMEOUT_MS = 10_000;
+
+type RuntimeFetchLimits = {
+  maxQueuedRequests?: number;
+  requestTimeoutMs?: number;
+};
 
 function createAbortError() {
   const error = new Error('The operation was aborted');
   error.name = 'AbortError';
+  return error;
+}
+
+function createBudgetError() {
+  const error = new Error('Supabase request budget exhausted');
+  error.name = 'SupabaseBudgetError';
   return error;
 }
 
@@ -29,8 +42,17 @@ function configuredConcurrency() {
 export function createConcurrencyLimitedFetch(
   implementation: RuntimeFetch,
   maxConcurrency: number,
+  limits: RuntimeFetchLimits = {},
 ): RuntimeFetch {
   const limit = Math.max(1, Math.floor(maxConcurrency));
+  const maxQueuedRequests = Math.max(
+    0,
+    Math.floor(limits.maxQueuedRequests ?? DEFAULT_MAX_QUEUED_REQUESTS),
+  );
+  const requestTimeoutMs = Math.max(
+    1,
+    Math.floor(limits.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS),
+  );
   const queue: QueuedRequest[] = [];
   let active = 0;
 
@@ -67,7 +89,19 @@ export function createConcurrencyLimitedFetch(
 
       const request: QueuedRequest = {
         cancelled: false,
-        run: () => implementation(input, init),
+        run: async () => {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), requestTimeoutMs);
+          const onAbort = () => controller.abort();
+          signal?.addEventListener('abort', onAbort, { once: true });
+
+          try {
+            return await implementation(input, { ...init, signal: controller.signal });
+          } finally {
+            clearTimeout(timeout);
+            signal?.removeEventListener('abort', onAbort);
+          }
+        },
         resolve,
         reject,
         signal,
@@ -80,6 +114,12 @@ export function createConcurrencyLimitedFetch(
         };
         signal.addEventListener('abort', onAbort, { once: true });
         request.removeAbortListener = () => signal.removeEventListener('abort', onAbort);
+      }
+
+      if (active >= limit && queue.length >= maxQueuedRequests) {
+        request.removeAbortListener?.();
+        reject(createBudgetError());
+        return;
       }
 
       queue.push(request);
