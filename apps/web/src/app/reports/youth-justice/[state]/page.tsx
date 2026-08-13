@@ -28,7 +28,10 @@ import {
   fmt,
 } from '@/lib/services/report-service';
 
-export const revalidate = 3600;
+// State reports are intentionally omitted from generateStaticParams to keep the
+// production build bounded. Render them dynamically so their runtime data reads
+// are not executed inside an ISR/static generation context.
+export const dynamic = 'force-dynamic';
 
 const STATE_META: Record<string, { name: string; description: string }> = {
   qld: { name: 'Queensland', description: 'Queensland has the highest First Nations overrepresentation (26x) and remand rate (86%) in Australia. $3.5B spent over 10 years with 317 children detained on an average day. This report maps who gets funded, what evidence exists, and who has political connections.' },
