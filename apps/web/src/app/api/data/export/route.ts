@@ -25,6 +25,10 @@ import {
 const ALLOWED_TYPES = ['entities', 'relationships', 'foundations', 'grants', 'social-enterprises', 'money-flows', 'community-orgs', 'government-programs'] as const;
 const FORMATS = ['csv', 'json'] as const;
 const publicExportLimiter = rateLimit({ windowMs: 60_000, max: 20 });
+const DEFAULT_EXPORT_LIMIT = 1000;
+const MAX_PUBLIC_EXPORT_LIMIT = 1000;
+const MAX_AUTHENTICATED_EXPORT_LIMIT = 10000;
+const MAX_EXPORT_OFFSET = 5000;
 
 function toCSV(data: Record<string, unknown>[]): string {
   if (!data.length) return '';
@@ -57,7 +61,7 @@ function safeSearchTerm(value: string) {
 
 function withExportHeaders(response: NextResponse, type: string, format: string, origin: string) {
   withCorsHeaders(response.headers);
-  response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+  response.headers.set('Cache-Control', 'public, s-maxage=1800, stale-while-revalidate=3600');
   response.headers.set('X-CivicGraph-Schema-Version', GIVING_SCHEMA_VERSION);
   response.headers.set('X-CivicGraph-Snapshot-Date', PUBLIC_SNAPSHOT_DATE);
   response.headers.set('X-CivicGraph-Correction-Url', correctionUrl(origin));
@@ -125,8 +129,8 @@ export async function GET(request: Request) {
   const origin = new URL(request.url).origin;
   const type = searchParams.get('type');
   const format = searchParams.get('format') || 'csv';
-  const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '5000', 10), 1), 10000);
-  const offset = Math.max(parseInt(searchParams.get('offset') || '0', 10), 0);
+  const requestedLimit = Number.parseInt(searchParams.get('limit') || String(DEFAULT_EXPORT_LIMIT), 10);
+  const requestedOffset = Number.parseInt(searchParams.get('offset') || '0', 10);
 
   if (!type) {
     return corsJson({
@@ -149,6 +153,9 @@ export async function GET(request: Request) {
         withCorsHeaders(limited.headers);
         return limited;
       }
+
+      const limit = Math.min(Math.max(Number.isFinite(requestedLimit) ? requestedLimit : DEFAULT_EXPORT_LIMIT, 1), MAX_PUBLIC_EXPORT_LIMIT);
+      const offset = Math.min(Math.max(Number.isFinite(requestedOffset) ? requestedOffset : 0, 0), MAX_EXPORT_OFFSET);
 
       if (type === 'data-catalog') {
         const rows = PUBLIC_DATASET_KEYS.map((key) => {
@@ -263,6 +270,9 @@ export async function GET(request: Request) {
         formats: FORMATS,
       }, { status: 400 });
     }
+
+    const limit = Math.min(Math.max(Number.isFinite(requestedLimit) ? requestedLimit : DEFAULT_EXPORT_LIMIT, 1), MAX_AUTHENTICATED_EXPORT_LIMIT);
+    const offset = Math.max(Number.isFinite(requestedOffset) ? requestedOffset : 0, 0);
 
     const tableMap: Record<string, string> = {
       entities: 'gs_entities',

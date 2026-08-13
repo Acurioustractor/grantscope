@@ -5,10 +5,9 @@ import { getServiceSupabase } from '@/lib/supabase';
 // domain (confirmed via Vercel Firewall traffic + direct request). NEXT_PUBLIC_SITE_URL
 // isn't set in production, so this fallback was what every crawler actually received.
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://civicgraph.app';
-const MAX_ENTITIES_IN_SITEMAP = 5000;
+const MAX_ENTITIES_IN_SITEMAP = 1000;
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 3600;
+export const revalidate = 86400;
 
 /**
  * Public sitemap — lets Google, journalist-tooling, and researchers discover

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { generateText } from 'ai';
 import { anthropic } from '@ai-sdk/anthropic';
+import { requireCronBearer } from '@/lib/cron-auth';
 
 export const maxDuration = 120;
 export const dynamic = 'force-dynamic';
@@ -15,11 +16,8 @@ export const dynamic = 'force-dynamic';
  * GET /api/civicscope/digest?period=daily&send_telegram=true
  */
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get('authorization');
-  const expectedSecret = process.env.CRON_SECRET || process.env.API_SECRET_KEY;
-  if (expectedSecret && authHeader !== `Bearer ${expectedSecret}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const unauthorized = requireCronBearer(request);
+  if (unauthorized) return unauthorized;
 
   const period = request.nextUrl.searchParams.get('period') || 'daily';
   const sendTelegram = request.nextUrl.searchParams.get('send_telegram') !== 'false';

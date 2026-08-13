@@ -1,16 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { sendEmail } from '@/lib/gmail';
+import { requireCronBearer } from '@/lib/cron-auth';
 
 const MAX_ATTEMPTS = 5;
-
-function isAuthorizedAutomationRequest(request: NextRequest) {
-  const expectedSecret =
-    process.env.CRON_SECRET
-    || process.env.API_SECRET_KEY;
-  if (!expectedSecret) return false;
-  return request.headers.get('authorization') === `Bearer ${expectedSecret}`;
-}
 
 type OutboxRow = {
   id: string;
@@ -25,9 +18,8 @@ type OutboxRow = {
 };
 
 export async function GET(request: NextRequest) {
-  if (!isAuthorizedAutomationRequest(request)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const unauthorized = requireCronBearer(request);
+  if (unauthorized) return unauthorized;
 
   const serviceDb = getServiceSupabase();
 

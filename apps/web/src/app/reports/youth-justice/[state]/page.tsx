@@ -42,7 +42,7 @@ const STATE_META: Record<string, { name: string; description: string }> = {
 };
 
 export function generateStaticParams() {
-  return Object.keys(STATE_META).map(state => ({ state }));
+  return [];
 }
 
 export function generateMetadata({ params }: { params: Promise<{ state: string }> }) {

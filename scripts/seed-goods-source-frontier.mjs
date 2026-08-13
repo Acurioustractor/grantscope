@@ -232,38 +232,84 @@ const SOURCES = [
     domain: 'centrecorpfoundation.com.au', parser_hint: 'foundation-program-monitor',
     cadence_hours: 168, priority: 8, confidence: 'high',
     metadata: { goods_focus: true, lane: 'indigenous-foundation', notes: 'Existing Goods funder — monitor for new programs' } },
+
+  // LANE 7: Trustee-managed philanthropy and corporate community investment
+  { source_key: 'grant-source:perpetual:impact-philanthropy', source_kind: 'foundation_program_page',
+    source_name: 'Perpetual IMPACT Philanthropy Application Program',
+    target_url: 'https://www.perpetual.com.au/wealth-management/not-for-profits/impact-funding/',
+    domain: 'perpetual.com.au', parser_hint: 'foundation-program-monitor',
+    foundation_id: 'e1f8f068-fc24-4d2b-bc7c-357a371bf20e',
+    cadence_hours: 72, priority: 9, confidence: 'high',
+    metadata: { goods_focus: true, trustee_portal: true, lane: 'trustee-philanthropy', doorway: 'annual_application', notes: 'One annual application can be matched across multiple charitable trusts and endowments' } },
+
+  { source_key: 'grant-source:eqt:community-grants', source_kind: 'foundation_program_page',
+    source_name: 'Equity Trustees Community Grants',
+    target_url: 'https://www.eqt.com.au/our-services/community/grant-funding/community-grants',
+    domain: 'eqt.com.au', parser_hint: 'foundation-program-monitor',
+    foundation_id: 'a4bdfdd2-1cca-4c4f-b5ed-3d3aead21513',
+    cadence_hours: 72, priority: 9, confidence: 'high',
+    metadata: { goods_focus: true, trustee_portal: true, lane: 'trustee-philanthropy', doorway: 'annual_application', notes: 'One application is considered across multiple aligned trusts' } },
+
+  { source_key: 'grant-source:eqt:current-rounds', source_kind: 'foundation_program_page',
+    source_name: 'Equity Trustees Current Grant Rounds',
+    target_url: 'https://equitytrustees.smartygrants.com.au/',
+    domain: 'equitytrustees.smartygrants.com.au', parser_hint: 'smartygrants-round-monitor',
+    foundation_id: 'a4bdfdd2-1cca-4c4f-b5ed-3d3aead21513',
+    cadence_hours: 48, priority: 9, confidence: 'high',
+    metadata: { goods_focus: true, trustee_portal: true, lane: 'trustee-philanthropy', doorway: 'current_rounds' } },
+
+  { source_key: 'grant-source:jemena:first-nations-grants', source_kind: 'grant_source_page',
+    source_name: 'Jemena First Nations Community Grants',
+    target_url: 'https://www.jemena.com.au/media/jemena-expands-first-nations-community-grants-to-support-wellbeing-education-and-employment/',
+    domain: 'jemena.com.au', parser_hint: 'corporate-community-investment-monitor',
+    cadence_hours: 48, priority: 10, confidence: 'high',
+    metadata: { goods_focus: true, corporate_community: true, lane: 'nt-corporate-community', doorway: 'open_grant', geography: 'AU-NT', place: 'Tennant Creek', notes: 'Up to $10,000 for Indigenous-led wellbeing, practical support, training and employment projects' } },
+
+  { source_key: 'grant-source:powerwater:community-partnerships', source_kind: 'grant_source_page',
+    source_name: 'Power and Water Community Partnerships',
+    target_url: 'https://www.powerwater.com.au/about/community/community-partnerships',
+    domain: 'powerwater.com.au', parser_hint: 'corporate-community-investment-monitor',
+    cadence_hours: 72, priority: 8, confidence: 'high',
+    metadata: { goods_focus: true, corporate_community: true, lane: 'nt-corporate-community', doorway: 'annual_grant_and_partnership', geography: 'AU-NT' } },
+
+  { source_key: 'grant-source:newmont:tanami-community-investment', source_kind: 'grant_source_page',
+    source_name: 'Newmont Tanami Community Investment',
+    target_url: 'https://newmont.com/operations-and-projects/global-presence/australia/tanami-au/default.aspx',
+    domain: 'newmont.com', parser_hint: 'corporate-community-investment-monitor',
+    cadence_hours: 168, priority: 7, confidence: 'medium',
+    metadata: { goods_focus: true, corporate_community: true, lane: 'nt-corporate-community', doorway: 'relationship_sponsorship', geography: 'AU-NT', place: 'Tanami', notes: 'Community capacity building, sponsorship grants and in-kind support; no verified public round' } },
+
+  { source_key: 'grant-source:australian-ethical:foundation', source_kind: 'foundation_program_page',
+    source_name: 'Australian Ethical Foundation',
+    target_url: 'https://www.australianethical.com.au/foundation/',
+    domain: 'australianethical.com.au', parser_hint: 'foundation-program-monitor',
+    foundation_id: '386109c6-5cb5-405e-b489-96c698b4cba2',
+    cadence_hours: 168, priority: 7, confidence: 'high',
+    metadata: { goods_focus: true, corporate_community: true, lane: 'catalytic-philanthropy', doorway: 'relationship_research', notes: 'Climate resilience, justice, Indigenous-led approaches and early-stage catalytic models' } },
 ];
 
 async function main() {
   console.log(`=== Seed Goods Source Frontier ===`);
   console.log(`Upserting ${SOURCES.length} sources...\n`);
 
-  let inserted = 0, updated = 0, errors = 0;
-
-  for (const src of SOURCES) {
-    const { data: existing } = await supabase
+  let upserted = 0;
+  const updatedAt = new Date().toISOString();
+  for (let offset = 0; offset < SOURCES.length; offset += 20) {
+    const payload = SOURCES.slice(offset, offset + 20).map(src => ({
+      ...src,
+      enabled: true,
+      updated_at: updatedAt,
+    }));
+    const { error } = await supabase
       .from('source_frontier')
-      .select('id, source_key')
-      .eq('source_key', src.source_key)
-      .maybeSingle();
-
-    const payload = { ...src, enabled: true, updated_at: new Date().toISOString() };
-
-    if (existing) {
-      const { error } = await supabase.from('source_frontier').update(payload).eq('id', existing.id);
-      if (error) { console.log(`  ERR update ${src.source_key}: ${error.message.slice(0,80)}`); errors++; }
-      else { console.log(`  ~  ${src.source_key}`); updated++; }
-    } else {
-      const { error } = await supabase.from('source_frontier').insert(payload);
-      if (error) { console.log(`  ERR insert ${src.source_key}: ${error.message.slice(0,80)}`); errors++; }
-      else { console.log(`  +  ${src.source_key}`); inserted++; }
-    }
+      .upsert(payload, { onConflict: 'source_key' });
+    if (error) throw new Error(`Source upsert failed at offset ${offset}: ${error.message}`);
+    upserted += payload.length;
+    console.log(`  Upserted ${upserted}/${SOURCES.length}`);
   }
 
   console.log(`\n=== SUMMARY ===`);
-  console.log(`Inserted: ${inserted}`);
-  console.log(`Updated:  ${updated}`);
-  console.log(`Errors:   ${errors}`);
+  console.log(`Upserted: ${upserted}`);
 
   // Show lane distribution
   const { data: byLane } = await supabase

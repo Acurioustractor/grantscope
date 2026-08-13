@@ -60,7 +60,7 @@ function hotSiteReasons(site: { trackerCount: number; mirroredCount: number; gap
 }
 
 export function generateStaticParams() {
-  return Object.keys(TRACKER_STATE_META).map((state) => ({ state }));
+  return [];
 }
 
 export function generateMetadata({ params }: { params: Promise<{ state: string }> }) {

@@ -25,16 +25,20 @@ export async function GET(request: NextRequest) {
   const format = params.get('format') || 'json';
 
   const supabase = getServiceSupabase();
+  let response: Response;
 
   if (interventionId) {
-    return buildInterventionPack(supabase, interventionId, format);
+    response = await buildInterventionPack(supabase, interventionId, format);
   } else if (entityId) {
-    return buildEntityPack(supabase, entityId, format);
+    response = await buildEntityPack(supabase, entityId, format);
   } else if (state) {
-    return buildStatePack(supabase, state, format);
+    response = await buildStatePack(supabase, state, format);
+  } else {
+    return NextResponse.json({ error: 'Provide intervention_id, entity_id, or state parameter' }, { status: 400 });
   }
 
-  return NextResponse.json({ error: 'Provide intervention_id, entity_id, or state parameter' }, { status: 400 });
+  response.headers.set('Cache-Control', 'private, max-age=300, stale-while-revalidate=600');
+  return response;
 }
 
 async function buildInterventionPack(supabase: ReturnType<typeof getServiceSupabase>, id: string, format: string) {

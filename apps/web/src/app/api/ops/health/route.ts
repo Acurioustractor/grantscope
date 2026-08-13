@@ -403,8 +403,7 @@ export async function GET() {
       lastUpdated: new Date().toISOString(),
     });
 
-    // Prevent browser/CDN caching stale health data
-    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+    response.headers.set('Cache-Control', 'private, max-age=60, stale-while-revalidate=120');
     return response;
   } catch (err) {
     console.error('[ops/health]', err);

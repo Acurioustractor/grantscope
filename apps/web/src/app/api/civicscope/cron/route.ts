@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
+import { requireCronBearer } from '@/lib/cron-auth';
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
@@ -18,12 +19,8 @@ export const dynamic = 'force-dynamic';
  * Auth: Vercel Cron (CRON_SECRET) or API_SECRET_KEY
  */
 export async function GET(request: NextRequest) {
-  // Verify cron secret
-  const authHeader = request.headers.get('authorization');
-  const expectedSecret = process.env.CRON_SECRET || process.env.API_SECRET_KEY;
-  if (expectedSecret && authHeader !== `Bearer ${expectedSecret}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const unauthorized = requireCronBearer(request);
+  if (unauthorized) return unauthorized;
 
   const mode = request.nextUrl.searchParams.get('mode') || 'all';
   const dryRun = request.nextUrl.searchParams.get('dry_run') === 'true';

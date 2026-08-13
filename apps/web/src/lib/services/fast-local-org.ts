@@ -18,6 +18,10 @@ export const ACT_FAST_PROFILE: OrgProfile = {
   updated_at: null,
 };
 
+// Canonical database ownership for writes made from the unauthenticated local ACT workspace.
+export const ACT_FAST_WRITE_PROFILE_ID = '8b6160a1-7eea-4bd2-8404-71c196381de0';
+export const ACT_FAST_WRITE_USER_ID = '079d5f62-4502-4129-bcda-0e61a914b26d';
+
 export function isActSlug(slug: string) {
   return ['act', 'a-curious-tractor', 'curious-tractor'].includes(slug.toLowerCase());
 }

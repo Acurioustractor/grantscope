@@ -68,6 +68,51 @@ npm run funding:research:goods -- \
   --llm-provider=openai
 ```
 
+Expand from recorded grants to funders that have backed analogous recipients:
+
+```bash
+npm run funding:neighbourhood:goods -- --limit=40
+```
+
+This recipient-neighbourhood pass uses recorded foundation-to-grantee evidence to
+find funders adjacent to the project's explicit funding blocks. It produces a
+ranked report and a source-expansion queue without writing to the opportunity
+store, source frontier, project pipeline or external workspaces.
+
+## Promotion controls
+
+GrantScope is authoritative for canonical identity and source evidence. Notion
+is the reviewed working register. GHL is created or updated only for an approved,
+owned pursuit.
+
+Promotion rules:
+
+1. GrantScope to Notion requires a GrantScope ID, current official source,
+   funding block, receiving entity, and confirmed or likely eligibility with no
+   unresolved hard block.
+2. Exact identity matches use GrantScope ID first, then canonical official URL.
+   Funder/program/round title matches are review candidates, never automatic
+   merges.
+3. Notion to GHL requires an explicit confirmed action, no evidence gaps, an
+   owner, next-action due date, and linked GHL contact.
+4. Before creating GHL work, the handoff checks the GrantScope pipeline linkage
+   and the live target pipeline. Multiple matches block promotion.
+5. Every completed handoff is recorded in `opportunity_promotions`.
+
+Run the exception audit:
+
+```bash
+npm run funding:promotion:audit
+```
+
+Run Notion reconciliation in report-only mode:
+
+```bash
+npm run funding:promotion:reconcile
+```
+
+Use `--apply` only after reviewing the generated conflict and unmatched queues.
+
 Refresh only curated official-source monitors and write them to the observatory:
 
 ```bash

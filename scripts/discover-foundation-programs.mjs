@@ -396,8 +396,7 @@ async function getFoundationsToScan() {
   if (FOUNDATION_ID || FOUNDATION_NAME) {
     let query = supabase
       .from('foundations')
-      .select('id, name, type, website, description, thematic_focus, geographic_focus, total_giving_annual, giving_philosophy, application_tips, open_programs, profile_confidence')
-      .not('website', 'is', null);
+      .select('id, name, type, website, description, thematic_focus, geographic_focus, total_giving_annual, giving_philosophy, application_tips, open_programs, profile_confidence');
 
     if (FOUNDATION_ID) {
       query = query.eq('id', FOUNDATION_ID);
@@ -411,13 +410,13 @@ async function getFoundationsToScan() {
 
     if (error) {
       log(`Error fetching targeted foundation: ${error.message}`);
-      return [];
+      return { foundations: [], fullSweepCursorStart: 0, fullSweepCandidateCount: 0 };
     }
 
     const foundation = data?.[0];
     if (!foundation) {
       log(`No foundation matched ${FOUNDATION_ID ? `id ${FOUNDATION_ID}` : `name "${FOUNDATION_NAME}"`}`);
-      return [];
+      return { foundations: [], fullSweepCursorStart: 0, fullSweepCandidateCount: 0 };
     }
 
     const { data: frontierTargets, error: frontierError } = await supabase

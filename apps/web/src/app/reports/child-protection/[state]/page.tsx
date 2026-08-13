@@ -31,10 +31,8 @@ const STATE_META: Record<string, { name: string; description: string }> = {
   act: { name: 'Australian Capital Territory', description: 'The ACT has the smallest child protection system with around 900 children in care. Focus on therapeutic care and permanency.' },
 };
 
-const STATES = Object.keys(STATE_META);
-
 export function generateStaticParams() {
-  return STATES.map(state => ({ state }));
+  return [];
 }
 
 export function generateMetadata({ params }: { params: Promise<{ state: string }> }) {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
+import { requireCronBearer } from '@/lib/cron-auth';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
@@ -13,11 +14,8 @@ export const maxDuration = 30;
  * Designed to run via Vercel Cron every hour.
  */
 export async function GET(request: NextRequest) {
-  // Verify cron secret
-  const authHeader = request.headers.get('authorization');
-  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const unauthorized = requireCronBearer(request);
+  if (unauthorized) return unauthorized;
 
   const db = getServiceSupabase();
   const oneHourAgo = new Date(Date.now() - 3600000).toISOString();

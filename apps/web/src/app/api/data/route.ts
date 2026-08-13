@@ -15,6 +15,10 @@ import { assessFoundationReview } from '@/lib/foundation-review';
 
 const publicLimiter = rateLimit({ windowMs: 60_000, max: 30 });
 const authenticatedLimiter = rateLimit({ windowMs: 60_000, max: 120 });
+const DEFAULT_PAGE_LIMIT = 100;
+const PUBLIC_MAX_PAGE_LIMIT = 100;
+const AUTHENTICATED_MAX_PAGE_LIMIT = 500;
+const MAX_PUBLIC_OFFSET = 5000;
 
 type PublicRequestContext = {
   apiKeyId: string | null;
@@ -25,7 +29,7 @@ type PublicRequestContext = {
 
 /** Add rate-limit and cache headers + fire usage log */
 function withPublicHeaders(response: NextResponse, context?: PublicRequestContext): NextResponse {
-  response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+  response.headers.set('Cache-Control', 'public, s-maxage=900, stale-while-revalidate=1800');
   response.headers.set('X-RateLimit-Limit', String(context?.rateLimitVal ?? 30));
   response.headers.set('X-RateLimit-Window', '60');
   response.headers.set('X-CivicGraph-Schema-Version', GIVING_SCHEMA_VERSION);
@@ -111,8 +115,11 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const type = searchParams.get('type');
-  const limit = Math.min(parseInt(searchParams.get('limit') || '100', 10), apiKey ? 1000 : 500);
-  const offset = parseInt(searchParams.get('offset') || '0', 10);
+  const requestedLimit = Number.parseInt(searchParams.get('limit') || String(DEFAULT_PAGE_LIMIT), 10);
+  const requestedOffset = Number.parseInt(searchParams.get('offset') || '0', 10);
+  const maxLimit = apiKey ? AUTHENTICATED_MAX_PAGE_LIMIT : PUBLIC_MAX_PAGE_LIMIT;
+  const limit = Math.min(Math.max(Number.isFinite(requestedLimit) ? requestedLimit : DEFAULT_PAGE_LIMIT, 1), maxLimit);
+  const offset = Math.min(Math.max(Number.isFinite(requestedOffset) ? requestedOffset : 0, 0), MAX_PUBLIC_OFFSET);
 
   if (!type) {
     return withPublicHeaders(NextResponse.json({

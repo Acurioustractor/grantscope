@@ -318,14 +318,7 @@ function WorkspaceModeLink({ href, label, active, index, hint }: WorkspaceLink &
 // Rail-owned Goods navigation (Ben's call, 2026-08-05): the rail is the ONE
 // nav. These groups replace the pill rows that lived in the green page header.
 const GOODS_RAIL_SECTIONS: ReadonlyArray<{ label: string; items: ReadonlyArray<readonly [string, string]> }> = [
-  // Eight screens, approved 2026-08-10. Was 26 routes across four sections;
-  // seven of them read the same 306-row goods_relationships table and four read
-  // the same capital workspace. One door per room now — the merged screens link
-  // their siblings from inside.
-  { label: 'Work', items: [['portfolio', 'Portfolio'], ['capital', 'Capital'], ['network', 'Relationships']] },
-  { label: 'Money in', items: [['grants', 'Grants'], ['money', 'Money'], ['foundations', 'Foundations']] },
-  { label: 'Delivery', items: [['communities', 'Communities'], ['buyers', 'Buyers'], ['funnel', 'Delivery']] },
-  { label: 'Trust', items: [['proof', 'Evidence']] },
+  { label: 'Goods', items: [['portfolio', 'Portfolio'], ['grants', 'Funding'], ['capital', 'Capital'], ['network', 'Relationships'], ['funnel', 'Delivery'], ['proof', 'Evidence']] },
 ];
 
 /** The desk's lenses live under One Desk on the rail (Ben, 2026-08-05):
@@ -370,12 +363,21 @@ function DeskRailTree({ slug, activeKind, project }: { slug: string; activeKind:
 
 function GoodsRailTree({ slug, pathname }: { slug: string; pathname: string }) {
   const base = `/org/${slug}/goods`;
+  const legacyParents: Record<string, string> = {
+    money: 'grants', foundations: 'grants',
+    campaign: 'capital', insight: 'capital', today: 'capital', matters: 'capital', applications: 'capital', learning: 'capital',
+    engagement: 'network', signals: 'network', timeline: 'network', intros: 'network',
+    communities: 'funnel', buyers: 'funnel', map: 'funnel', channels: 'funnel', 'we-owe': 'funnel',
+    pitch: 'proof', model: 'proof', governance: 'proof',
+  };
   // Highlight only the deepest matching entry so foundations/scan doesn't also
   // light up foundations.
   const allPaths = GOODS_RAIL_SECTIONS.flatMap((s) => s.items.map(([p]) => p));
-  const best = allPaths
+  const directMatch = allPaths
     .filter((p) => pathname === `${base}/${p}` || pathname.startsWith(`${base}/${p}/`))
     .sort((a, b) => b.length - a.length)[0];
+  const legacySegment = pathname.slice(base.length + 1).split('/')[0];
+  const best = directMatch || legacyParents[legacySegment];
   return (
     <div className="ml-3 border-l border-white/15 pb-1 pl-2">
       {GOODS_RAIL_SECTIONS.map((section) => (

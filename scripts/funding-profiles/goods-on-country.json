@@ -310,6 +310,8 @@
       {"name": "National Australia Bank", "aliases": ["NAB", "NAB Foundation"]},
       {"name": "First Nations Finance", "aliases": ["First Nations Foundation"]},
       {"name": "QBE", "aliases": ["QBE Foundation", "QBE Catalysing Impact"]},
+      {"name": "Rio Tinto", "aliases": ["Rio Tinto Foundation"]},
+      {"name": "Macquarie Group Foundation", "aliases": ["Macquarie Foundation"]},
       {"name": "Foundation for Rural & Regional Renewal", "aliases": ["FRRR"]},
       {"name": "John Villiers Trust", "aliases": ["John Villiers"]},
       {"name": "The Funding Network", "aliases": []},

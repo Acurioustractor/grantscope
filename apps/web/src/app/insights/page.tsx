@@ -1,7 +1,8 @@
+import { unstable_cache } from 'next/cache';
 import { getServiceSupabase } from '@/lib/supabase';
 import Link from 'next/link';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600;
 
 function formatMoney(amount: number | null): string {
   if (!amount) return '\u2014';
@@ -16,7 +17,7 @@ function formatNum(n: number): string {
   return n.toLocaleString();
 }
 
-export default async function InsightsPage() {
+const getInsightsData = unstable_cache(async function getInsightsData() {
   const supabase = getServiceSupabase();
 
   // Parallel queries for all stats
@@ -110,6 +111,52 @@ export default async function InsightsPage() {
   const coverage = coverageStats.data?.[0] || { total: 0, with_abn: 0, with_postcode: 0, with_remoteness: 0, with_seifa: 0, with_lga: 0 };
   const totalMoney = contracts.total_value + justice.total_value + donations.total_value;
 
+  return {
+    entities,
+    relationships,
+    socialEnterprises,
+    seBySource: seBySource.data || [],
+    entityByType: entityByType.data || [],
+    contracts,
+    justice,
+    donations,
+    grants,
+    foundations,
+    enrichedFoundations,
+    ccOrgs,
+    remote,
+    disadvantaged,
+    totalRemote,
+    topLgasBySE: topLgasBySE.data || [],
+    seContracts,
+    coverage,
+    totalMoney,
+  };
+}, ['insights-page-data-v1'], { revalidate: 3600 });
+
+export default async function InsightsPage() {
+  const {
+    entities,
+    relationships,
+    socialEnterprises,
+    seBySource,
+    entityByType,
+    contracts,
+    justice,
+    donations,
+    grants,
+    foundations,
+    enrichedFoundations,
+    ccOrgs,
+    remote,
+    disadvantaged,
+    totalRemote,
+    topLgasBySE,
+    seContracts,
+    coverage,
+    totalMoney,
+  } = await getInsightsData();
+
   return (
     <div className="max-w-5xl">
       <Link href="/" className="text-xs font-black text-bauhaus-muted uppercase tracking-widest hover:text-bauhaus-black">
@@ -183,7 +230,7 @@ export default async function InsightsPage() {
             <h2 className="text-xs font-black uppercase tracking-[0.2em]">Entity Types</h2>
           </div>
           <div className="p-4 space-y-3">
-            {(entityByType.data || []).map((t: { entity_type: string; count: number }) => {
+            {entityByType.map((t: { entity_type: string; count: number }) => {
               const barWidth = entities > 0 ? (t.count / entities) * 100 : 0;
               const colors: Record<string, string> = {
                 charity: 'bg-bauhaus-blue',
@@ -212,7 +259,7 @@ export default async function InsightsPage() {
             <h2 className="text-xs font-black uppercase tracking-[0.2em]">Social Enterprise Sources</h2>
           </div>
           <div className="p-4 space-y-3">
-            {(seBySource.data || []).map((s: { source_primary: string; count: number; with_abn: number }) => {
+            {seBySource.map((s: { source_primary: string; count: number; with_abn: number }) => {
               const barWidth = socialEnterprises > 0 ? (s.count / socialEnterprises) * 100 : 0;
               const abnPct = s.count > 0 ? ((s.with_abn / s.count) * 100).toFixed(0) : '0';
               const labels: Record<string, string> = {
@@ -257,13 +304,13 @@ export default async function InsightsPage() {
       </div>
 
       {/* Top LGAs by social enterprise */}
-      {(topLgasBySE.data || []).length > 0 && (
+      {topLgasBySE.length > 0 && (
         <div className="border-4 border-bauhaus-black mb-8">
           <div className="p-4 bg-bauhaus-canvas border-b-4 border-bauhaus-black">
             <h2 className="text-xs font-black uppercase tracking-[0.2em]">Top LGAs by Social Enterprise Density</h2>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-0">
-            {(topLgasBySE.data || []).map((lga: { lga_name: string; se_count: number }, i: number) => (
+            {topLgasBySE.map((lga: { lga_name: string; se_count: number }, i: number) => (
               <div key={lga.lga_name} className={`p-3 ${i > 0 ? 'border-l-4 border-bauhaus-black' : ''} ${i >= 4 ? 'border-t-4 border-bauhaus-black' : ''}`}>
                 <div className="text-xs font-bold text-bauhaus-muted truncate">{lga.lga_name}</div>
                 <div className="text-lg font-black text-bauhaus-black">{lga.se_count}</div>

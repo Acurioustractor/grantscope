@@ -4,7 +4,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
-  QLD_YJ_DRILLDOWN_RECIPIENTS,
   recipientForSlug,
   getRecipientChain,
 } from '@/lib/services/qld-yj-recipient';
@@ -21,7 +20,7 @@ function money(n: number | null | undefined): string {
 }
 
 export async function generateStaticParams() {
-  return QLD_YJ_DRILLDOWN_RECIPIENTS.map(r => ({ slug: r.slug }));
+  return [];
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {

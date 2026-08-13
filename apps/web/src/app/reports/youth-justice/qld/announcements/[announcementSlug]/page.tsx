@@ -6,14 +6,13 @@ import {
   getQldAnnouncement,
   qldAnnouncementStatusClass,
   qldAnnouncementStatusLabel,
-  qldYouthJusticeAnnouncements,
 } from '@/lib/reports/qld-youth-justice-announcements';
 import { CopyButton } from './copy-button';
 
 export const revalidate = 3600;
 
 export function generateStaticParams() {
-  return qldYouthJusticeAnnouncements.map((announcement) => ({ announcementSlug: announcement.slug }));
+  return [];
 }
 
 function entityStatusLabel(lead: QldAnnouncementProviderLead) {

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { unstable_cache } from 'next/cache';
 import { requireAdminApi } from '@/lib/admin-auth';
 import { PILOT_PAYMENT_INTENTS, PILOT_STAGES } from '@/lib/pilot-participants';
 import { getServiceSupabase } from '@/lib/supabase';
@@ -217,14 +218,10 @@ function pickPilotAttention(pilot: {
   return null;
 }
 
-export async function GET() {
-  const auth = await requireAdminApi();
-  if (auth.error) return auth.error;
-
+const getCachedOpsPayload = unstable_cache(async function getCachedOpsPayload() {
   const db = getServiceSupabase();
 
-  try {
-    const [
+  const [
       grantsTotal,
       grantsEmbedded,
       grantsEnriched,
@@ -247,7 +244,7 @@ export async function GET() {
       validationReviews,
       recentRuns,
       recentProductEvents,
-    ] = await Promise.all([
+  ] = await Promise.all([
       db.from('grant_opportunities').select('*', { count: 'exact', head: true }),
       db.from('grant_opportunities').select('*', { count: 'exact', head: true }).not('embedding', 'is', null),
       db.from('grant_opportunities').select('*', { count: 'exact', head: true }).not('enriched_at', 'is', null),
@@ -292,7 +289,7 @@ export async function GET() {
       db.from('product_events')
         .select('event_type, user_id, created_at, metadata')
         .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()),
-    ]);
+  ]);
 
     const productEventRows = recentProductEvents.data ?? [];
     const usersByEvent = productEventRows.reduce<Record<string, Set<string>>>((acc, row: { event_type: string; user_id: string }) => {
@@ -589,8 +586,8 @@ export async function GET() {
       })
       .slice(0, 8);
 
-    return NextResponse.json({
-      health: {
+  return {
+    health: {
         grants: {
           total: grantsTotal.count ?? 0,
           embedded: grantsEmbedded.count ?? 0,
@@ -622,34 +619,44 @@ export async function GET() {
           reminderClicks30d: usersByEvent.billing_reminder_clicked?.size ?? 0,
           portalOpens30d: usersByEvent.billing_portal_opened?.size ?? 0,
         },
-      },
-      dataReview,
-      dataReviewBenchmarks,
-      dataReviewDecision: {
-        status: dataReviewDecisionStatus,
-        recommendation: dataReviewRecommendation,
-        benchmarkPassCount: dataReviewBenchmarkPassCount,
-        benchmarkTotal: dataReviewBenchmarks.length,
-        reviewIsStale,
-      },
-      productFunnel,
-      pilotSummary,
-      pilotBenchmarks,
-      pilotDecision: {
-        status: pilotDecisionStatus,
-        recommendation: pilotRecommendation,
-        benchmarkPassCount,
-        benchmarkTotal: pilotBenchmarks.length,
-        strongerCohort,
-      },
-      pilotCohorts,
-      pilotAttention,
-      pilots,
-      upgradeSources: upgradeSourceCounts,
-      upcomingBillingProfiles,
-      recentRuns: recentRuns.data ?? [],
-      lastUpdated: new Date().toISOString(),
-    });
+    },
+    dataReview,
+    dataReviewBenchmarks,
+    dataReviewDecision: {
+      status: dataReviewDecisionStatus,
+      recommendation: dataReviewRecommendation,
+      benchmarkPassCount: dataReviewBenchmarkPassCount,
+      benchmarkTotal: dataReviewBenchmarks.length,
+      reviewIsStale,
+    },
+    productFunnel,
+    pilotSummary,
+    pilotBenchmarks,
+    pilotDecision: {
+      status: pilotDecisionStatus,
+      recommendation: pilotRecommendation,
+      benchmarkPassCount,
+      benchmarkTotal: pilotBenchmarks.length,
+      strongerCohort,
+    },
+    pilotCohorts,
+    pilotAttention,
+    pilots,
+    upgradeSources: upgradeSourceCounts,
+    upcomingBillingProfiles,
+    recentRuns: recentRuns.data ?? [],
+    lastUpdated: new Date().toISOString(),
+  };
+}, ['ops-api-payload-v1'], { revalidate: 60 });
+
+export async function GET() {
+  const auth = await requireAdminApi();
+  if (auth.error) return auth.error;
+
+  try {
+    const response = NextResponse.json(await getCachedOpsPayload());
+    response.headers.set('Cache-Control', 'private, max-age=60, stale-while-revalidate=120');
+    return response;
   } catch (err) {
     console.error('[ops]', err);
     return NextResponse.json({ error: 'Failed to load ops data' }, { status: 500 });

@@ -21,6 +21,7 @@ import {
 import {
   createOpportunity,
   findPipelineByName,
+  getOpportunities,
   getPipelines,
   updateOpportunity,
   PIPELINE_NAMES,
@@ -329,6 +330,7 @@ export interface OpportunityActionRequest {
   >;
   note?: string;
   owner?: string;
+  nextActionAt?: string;
   targetSystem?: 'ghl' | 'notion' | 'civicgraph';
   confirmWrite?: boolean;
   orgProfileId?: string;
@@ -2621,6 +2623,14 @@ async function sendRouteToGhl(request: OpportunityActionRequest) {
   const route = request.route;
   if (!route) throw new Error('send_to_ghl requires a route payload');
   if (!request.confirmWrite) throw new Error('send_to_ghl requires confirmWrite=true');
+  const promotionGaps = [
+    ...(route.evidence_gaps ?? []),
+    ...(request.evidenceGaps ?? []),
+  ];
+  if (promotionGaps.length > 0) throw new Error(`GHL promotion blocked by evidence gaps: ${Array.from(new Set(promotionGaps)).join('; ')}`);
+  if (!request.owner?.trim()) throw new Error('GHL promotion requires an owner');
+  if (!request.nextActionAt) throw new Error('GHL promotion requires a next-action due date');
+  if (!route.ghl.contactId) throw new Error('GHL promotion requires a linked GHL contact');
 
   const pipelines = normalisePipelineList(await getPipelines());
   const preferredPipeline =
@@ -2635,8 +2645,31 @@ async function sendRouteToGhl(request: OpportunityActionRequest) {
   if (!preferredStage?.id) throw new Error(`No GHL stage found for ${preferredPipeline.name ?? route.ghl.recommendedPipeline}`);
 
   const monetaryValue = parseMoneyLabel(request.signal?.amount);
+  const expectedName = opportunityName(route);
+  let existingOpportunityId = route.ghl.existingOpportunityId ?? null;
+  if (!existingOpportunityId && request.orgProfileId) {
+    const db = getServiceSupabase();
+    const { data: linkedRows } = await db
+      .from('org_pipeline')
+      .select('ghl_opportunity_id')
+      .eq('org_profile_id', request.orgProfileId)
+      .eq('source_type', route.source)
+      .eq('source_ref', route.sourceRef)
+      .not('ghl_opportunity_id', 'is', null)
+      .limit(2);
+    const linkedIds = Array.from(new Set((linkedRows ?? []).map(row => row.ghl_opportunity_id).filter(Boolean)));
+    if (linkedIds.length > 1) throw new Error(`GHL promotion blocked: source is linked to ${linkedIds.length} existing opportunities`);
+    existingOpportunityId = linkedIds[0] ?? null;
+  }
+  if (!existingOpportunityId) {
+    const livePayload = await getOpportunities(preferredPipeline.id);
+    const liveRows = Array.isArray(livePayload?.opportunities) ? livePayload.opportunities : [];
+    const sameName = liveRows.filter((row: { id?: string; name?: string }) => row.name?.trim().toLowerCase() === expectedName.toLowerCase());
+    if (sameName.length > 1) throw new Error(`GHL promotion blocked: ${sameName.length} live opportunities have the canonical name`);
+    existingOpportunityId = sameName[0]?.id ?? null;
+  }
   let result: unknown;
-  let operation: 'created' | 'updated' = 'created';
+  let operation: 'created' | 'updated' = existingOpportunityId ? 'updated' : 'created';
   const startedAt = new Date();
   const logBase = {
     entity_type: 'opportunity',
@@ -2655,16 +2688,15 @@ async function sendRouteToGhl(request: OpportunityActionRequest) {
   };
 
   try {
-    if (route.ghl.existingOpportunityId) {
-      operation = 'updated';
-      result = await updateOpportunity(route.ghl.existingOpportunityId, {
+    if (existingOpportunityId) {
+      result = await updateOpportunity(existingOpportunityId, {
         pipelineStageId: preferredStage.id,
         status: 'open',
         monetaryValue,
       });
     } else {
       result = await createOpportunity({
-        name: opportunityName(route),
+        name: expectedName,
         stage: route.pathway,
         monetaryValue,
         pipelineId: preferredPipeline.id,
@@ -2678,7 +2710,7 @@ async function sendRouteToGhl(request: OpportunityActionRequest) {
       await recordGhlSyncLog({
         ...logBase,
         operation: operation === 'created' ? 'opportunity_create' : 'opportunity_update',
-        entity_id: route.ghl.existingOpportunityId ?? route.id,
+        entity_id: existingOpportunityId ?? route.id,
         status: 'failed',
         error_message: error instanceof Error ? error.message : 'unknown error',
         records_created: 0,
@@ -2697,7 +2729,7 @@ async function sendRouteToGhl(request: OpportunityActionRequest) {
   const opportunity = (objectResult.opportunity && typeof objectResult.opportunity === 'object')
     ? objectResult.opportunity as Record<string, unknown>
     : objectResult;
-  const opportunityId = String(opportunity.id ?? opportunity._id ?? route.ghl.existingOpportunityId ?? '');
+  const opportunityId = String(opportunity.id ?? opportunity._id ?? existingOpportunityId ?? '');
   if (!opportunityId) throw new Error('GHL did not return an opportunity id');
 
   const logPayload = {
@@ -2719,6 +2751,30 @@ async function sendRouteToGhl(request: OpportunityActionRequest) {
     // Some environments have older ghl_sync_log schemas; the confirmed GHL write remains the primary result.
   }
 
+  try {
+    const db = getServiceSupabase();
+    await db.from('opportunity_promotions').upsert({
+      source_type: route.source,
+      source_ref: route.sourceRef,
+      project_code: route.project_code,
+      deterministic_key: `${route.project_code}|${route.source}|${route.sourceRef}`,
+      target_system: 'ghl',
+      target_record_id: opportunityId,
+      status: operation === 'created' ? 'promoted' : 'linked',
+      gate_snapshot: {
+        owner: request.owner,
+        next_action: route.next_action,
+        next_action_at: request.nextActionAt,
+        contact_id: route.ghl.contactId,
+        evidence_gaps: [],
+      },
+      reviewed_at: new Date().toISOString(),
+      promoted_at: new Date().toISOString(),
+    }, { onConflict: 'source_type,source_ref,project_code,target_system' });
+  } catch {
+    // The confirmed GHL write remains primary; the exception audit reports a missing ledger row.
+  }
+
   if (request.orgProfileId) {
     const db = getServiceSupabase();
     const pipelinePayload = {
@@ -2738,6 +2794,7 @@ async function sendRouteToGhl(request: OpportunityActionRequest) {
       project_code: route.project_code,
       owner_name: request.owner ?? null,
       next_action: route.next_action,
+      next_action_at: request.nextActionAt,
       last_synced_at: new Date().toISOString(),
     };
     const existing = await db

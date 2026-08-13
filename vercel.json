@@ -4,15 +4,15 @@
   "outputDirectory": "apps/web/.next",
   "framework": "nextjs",
   "regions": ["syd1"],
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "grantscope.vercel.app" }],
+      "destination": "https://civicgraph.app/:path*",
+      "permanent": true
+    }
+  ],
   "crons": [
-    {
-      "path": "/api/tender-intelligence/automation/run-due",
-      "schedule": "0 21 * * *"
-    },
-    {
-      "path": "/api/tender-intelligence/automation/deliver-notifications",
-      "schedule": "5 * * * *"
-    },
     {
       "path": "/api/civicscope/cron?mode=statements",
       "schedule": "0 3 * * *"

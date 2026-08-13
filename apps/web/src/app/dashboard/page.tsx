@@ -1,9 +1,9 @@
+import { unstable_cache } from 'next/cache';
 import { getServiceSupabase } from '@/lib/supabase';
-import { getCachedGrantSourceCoverageRows } from '@/lib/services/grant-opportunity-cache';
 import { DashboardCharts } from './charts';
 import { FundingGapMapLoader } from './funding-gap-map-loader';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 900;
 
 function formatMoney(n: number): string {
   if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}B`;
@@ -44,7 +44,7 @@ interface SourceRow {
   count: number;
 }
 
-async function getDashboardData() {
+async function getDashboardDataUncached() {
   const supabase = getServiceSupabase();
 
   const [
@@ -56,6 +56,10 @@ async function getDashboardData() {
     socialEnterprisesResult,
     topFoundationsResult,
     closingSoonResult,
+    sectorResult,
+    geoResult,
+    sourceResult,
+    totalGivingResult,
   ] = await Promise.all([
     supabase.from('grant_opportunities').select('*', { count: 'exact', head: true }),
     supabase.from('foundations').select('*', { count: 'exact', head: true }),
@@ -76,106 +80,20 @@ async function getDashboardData() {
       .lt('closes_at', new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString())
       .order('closes_at', { ascending: true })
       .limit(10),
+    supabase.rpc('dashboard_sector_distribution'),
+    supabase.rpc('dashboard_geographic_distribution'),
+    supabase.rpc('dashboard_source_coverage'),
+    supabase.rpc('dashboard_foundation_total_giving'),
   ]);
 
-  // Sector distribution — query foundations with thematic_focus, aggregate client-side
-  const { data: foundationsWithFocus } = await supabase
-    .from('foundations')
-    .select('thematic_focus, total_giving_annual')
-    .not('thematic_focus', 'is', null)
-    .not('total_giving_annual', 'is', null)
-    .limit(5000);
-
-  const sectorMap = new Map<string, { count: number; total_giving: number }>();
-  for (const f of foundationsWithFocus || []) {
-    for (const sector of (f.thematic_focus as string[]) || []) {
-      const existing = sectorMap.get(sector) || { count: 0, total_giving: 0 };
-      existing.count++;
-      existing.total_giving += (f.total_giving_annual as number) || 0;
-      sectorMap.set(sector, existing);
-    }
-  }
-  const sectors: SectorRow[] = Array.from(sectorMap.entries())
-    .map(([sector, data]) => ({ sector, ...data }))
-    .sort((a, b) => b.total_giving - a.total_giving)
-    .slice(0, 12);
-
-  // Geographic distribution
-  const { data: foundationsWithGeo } = await supabase
-    .from('foundations')
-    .select('geographic_focus, total_giving_annual')
-    .not('geographic_focus', 'is', null)
-    .not('total_giving_annual', 'is', null)
-    .limit(5000);
-
-  const geoMap = new Map<string, { count: number; total_giving: number }>();
-  for (const f of foundationsWithGeo || []) {
-    for (const geo of (f.geographic_focus as string[]) || []) {
-      const existing = geoMap.get(geo) || { count: 0, total_giving: 0 };
-      existing.count++;
-      existing.total_giving += (f.total_giving_annual as number) || 0;
-      geoMap.set(geo, existing);
-    }
-  }
-  // Normalize geo labels and merge duplicates (e.g. "international" → "International")
-  const AU_STATES: Record<string, string> = {
-    'AU-National': 'National (AU)',
-    'AU-NSW': 'New South Wales',
-    'AU-VIC': 'Victoria',
-    'AU-QLD': 'Queensland',
-    'AU-WA': 'Western Australia',
-    'AU-SA': 'South Australia',
-    'AU-TAS': 'Tasmania',
-    'AU-NT': 'Northern Territory',
-    'AU-ACT': 'ACT',
-    'NZ-National': 'New Zealand',
-  };
-  const normalizedGeoMap = new Map<string, { count: number; total_giving: number }>();
-  for (const [raw, data] of geoMap.entries()) {
-    const label = AU_STATES[raw] || (raw.charAt(0).toUpperCase() + raw.slice(1));
-    const existing = normalizedGeoMap.get(label) || { count: 0, total_giving: 0 };
-    existing.count += data.count;
-    existing.total_giving += data.total_giving;
-    normalizedGeoMap.set(label, existing);
-  }
-  const sortedGeo = Array.from(normalizedGeoMap.entries())
-    .map(([geo, data]) => ({ geo, ...data }))
-    .sort((a, b) => b.total_giving - a.total_giving);
-  // Top 10 + aggregate the rest as "Other"
-  const top10 = sortedGeo.slice(0, 10);
-  const rest = sortedGeo.slice(10);
-  if (rest.length > 0) {
-    top10.push({
-      geo: `Other (${rest.length})`,
-      count: rest.reduce((s, r) => s + r.count, 0),
-      total_giving: rest.reduce((s, r) => s + r.total_giving, 0),
-    });
-  }
-  const geography: GeoRow[] = top10;
-
-  // Source coverage
-  const grantSources = await getCachedGrantSourceCoverageRows();
-
-  const sourceMap = new Map<string, number>();
-  for (const g of grantSources || []) {
-    const source = (g.source as string) || 'Unknown';
-    sourceMap.set(source, (sourceMap.get(source) || 0) + 1);
-  }
-  const sources: SourceRow[] = Array.from(sourceMap.entries())
-    .map(([source, count]) => ({ source, count }))
-    .sort((a, b) => b.count - a.count);
-
-  // Total $ tracked from foundations
-  const { data: totalGivingResult } = await supabase
-    .from('foundations')
-    .select('total_giving_annual')
-    .not('total_giving_annual', 'is', null)
-    .limit(10000);
-
-  const totalDollarsTracked = (totalGivingResult || []).reduce(
-    (sum, f) => sum + ((f.total_giving_annual as number) || 0),
-    0
-  );
+  const sectors = ((sectorResult.data || []) as Array<{ sector: string; count: number | string; total_giving: number | string }>)
+    .slice(0, 12)
+    .map((row) => ({ sector: row.sector, count: Number(row.count), total_giving: Number(row.total_giving) }));
+  const geography = ((geoResult.data || []) as Array<{ geo: string; count: number | string; total_giving: number | string }>)
+    .map((row) => ({ geo: row.geo, count: Number(row.count), total_giving: Number(row.total_giving) }));
+  const sources = ((sourceResult.data || []) as Array<{ source: string; count: number | string }>)
+    .map((row) => ({ source: row.source, count: Number(row.count) }));
+  const totalDollarsTracked = Number(totalGivingResult.data || 0);
 
   return {
     stats: {
@@ -194,6 +112,12 @@ async function getDashboardData() {
     sources,
   };
 }
+
+const getDashboardData = unstable_cache(
+  getDashboardDataUncached,
+  ['dashboard-page-data-v1'],
+  { revalidate: 900 },
+);
 
 export default async function DashboardPage() {
   const data = await getDashboardData();

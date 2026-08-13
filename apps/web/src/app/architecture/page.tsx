@@ -1,13 +1,14 @@
+import { unstable_cache } from 'next/cache';
 import { getServiceSupabase } from '@/lib/supabase';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600;
 
 export const metadata = {
   title: 'Architecture — CivicGraph',
   description: 'CivicGraph platform architecture: data sources, pipelines, APIs, and database',
 };
 
-async function getArchStats() {
+const getArchStats = unstable_cache(async function getArchStats() {
   const supabase = getServiceSupabase();
 
   const [grants, foundations, acnc, programs, community, orgProfiles, savedGrants, discoveryRuns, moneyFlows, descriptions, embedded, profiled, seTotal, seEnriched] = await Promise.all([
@@ -43,7 +44,7 @@ async function getArchStats() {
     socialEnterprises: seTotal.count || 0,
     socialEnterprisesEnriched: seEnriched.count || 0,
   };
-}
+}, ['architecture-stats-v1'], { revalidate: 3600 });
 
 function fmt(n: number) {
   return n.toLocaleString('en-AU');

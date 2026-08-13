@@ -1,7 +1,8 @@
+import { unstable_cache } from 'next/cache';
 import { getServiceSupabase } from '@/lib/supabase';
 import { FeedbackForm } from './feedback-form';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600;
 
 const GITHUB_REPO = 'https://github.com/Acurioustractor/grantscope';
 
@@ -55,7 +56,7 @@ interface PipelineStats {
   sources: { source: string; count: number }[];
 }
 
-async function getPipelineStats(): Promise<PipelineStats> {
+const getPipelineStats = unstable_cache(async function getPipelineStats(): Promise<PipelineStats> {
   const supabase = getServiceSupabase();
 
   // Use raw SQL for accurate counts — PostgREST head+count returns nulls on vector/complex filters
@@ -128,7 +129,7 @@ async function getPipelineStats(): Promise<PipelineStats> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     sources: ((sourcesResult as any)?.data as { source: string; count: number }[]) || [],
   };
-}
+}, ['process-pipeline-stats-v1'], { revalidate: 3600 });
 
 function ProgressBar({ label, value, total, color }: { label: string; value: number; total: number; color: string }) {
   const pct = total > 0 ? Math.round((value / total) * 100) : 0;

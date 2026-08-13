@@ -1,10 +1,11 @@
+import { unstable_cache } from 'next/cache';
 import { getServiceSupabase } from '@/lib/supabase';
 import { ArchitectureDiagram } from './diagram';
 import { DataCoverage } from './data-coverage';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600;
 
-async function getLiveStats() {
+const getLiveStats = unstable_cache(async function getLiveStats() {
   try {
     const supabase = getServiceSupabase();
     const [foundations, grants, profiled, programs, communityOrgs, flows, seTotal, seEnriched] = await Promise.all([
@@ -31,9 +32,9 @@ async function getLiveStats() {
   } catch {
     return { foundations: 0, grants: 0, profiled: 0, programs: 0, communityOrgs: 0, moneyFlows: 0, socialEnterprises: 0, socialEnterprisesEnriched: 0 };
   }
-}
+}, ['how-it-works-live-stats-v1'], { revalidate: 3600 });
 
-async function getCoverageStats() {
+const getCoverageStats = unstable_cache(async function getCoverageStats() {
   try {
     const supabase = getServiceSupabase();
     const [acncCharities, foundationsTotal, foundationsProfiled, grantsTotal, communityTotal, aisTotal, flowsTotal, seTotal, seEnriched] = await Promise.all([
@@ -62,7 +63,7 @@ async function getCoverageStats() {
   } catch {
     return { acncRecords: 0, foundations: 0, foundationsProfiled: 0, grants: 0, community: 0, aisRecords: 0, moneyFlows: 0, socialEnterprises: 0, socialEnterprisesEnriched: 0 };
   }
-}
+}, ['how-it-works-coverage-stats-v1'], { revalidate: 3600 });
 
 export default async function HowItWorksPage() {
   const [stats, coverage] = await Promise.all([getLiveStats(), getCoverageStats()]);

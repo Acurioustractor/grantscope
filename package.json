@@ -40,7 +40,10 @@
     "tracker:refresh:nt": "node --env-file=.env scripts/run-tracker-refresh.mjs --domain=youth-justice --jurisdiction=NT",
     "tracker:refresh:portfolio": "node --env-file=.env scripts/run-tracker-refresh.mjs --domain=youth-justice --all-jurisdictions",
     "funding-fit:goods:evaluate": "node scripts/evaluate-project-funding-fit.mjs",
-    "funding:research:goods": "node --env-file=.env scripts/research-project-funding.mjs --profile=scripts/funding-profiles/goods-on-country.json"
+    "funding:research:goods": "node --env-file=.env scripts/research-project-funding.mjs --profile=scripts/funding-profiles/goods-on-country.json",
+    "funding:neighbourhood:goods": "node --env-file=.env scripts/discover-recipient-neighbourhood.mjs --profile=scripts/funding-profiles/goods-on-country.json",
+    "funding:promotion:audit": "node --env-file=.env scripts/audit-opportunity-promotion-health.mjs",
+    "funding:promotion:reconcile": "node --env-file=.env scripts/reconcile-goods-funding-systems.mjs"
   },
   "keywords": [
     "grants",

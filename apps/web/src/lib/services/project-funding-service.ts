@@ -1,4 +1,5 @@
 import { cache } from 'react';
+import { unstable_cache } from 'next/cache';
 import { getServiceSupabase } from '@/lib/supabase';
 import { isActSlug } from '@/lib/services/fast-local-org';
 
@@ -241,7 +242,7 @@ export function buildHybridWeeklyQueue({
     .slice(0, limit);
 }
 
-export const getProjectFundingPortfolio = cache(async function getProjectFundingPortfolio(
+const getCachedProjectFundingPortfolio = unstable_cache(async function getCachedProjectFundingPortfolio(
   slug: string,
 ): Promise<ProjectFundingPortfolio | null> {
   if (!isActSlug(slug)) return null;
@@ -249,9 +250,14 @@ export const getProjectFundingPortfolio = cache(async function getProjectFunding
   const [projectsResult, profilesResult, recommendationsResult, decisionsResult] = await Promise.all([
     db.from('org_projects').select('id, code, name, slug, description').eq('status', 'active').order('sort_order'),
     db.from('project_funding_profiles').select('org_project_id, profile_version, completeness_status, profile').eq('is_current', true),
-    db.from('act_grant_recommendations_current')
+    db.from('act_grant_recommendations')
       .select('project_code, opportunity_id, opportunity_name, funder_name, deadline, max_grant_amount, fit_score, eligibility_score, source_url, application_url')
       .eq('is_strong_fit', true)
+      .eq('verification_status', 'verified')
+      .gte('verified_at', new Date(Date.now() - 7 * 86_400_000).toISOString())
+      .gte('deadline', new Date().toISOString().slice(0, 10))
+      .not('source_url', 'is', null)
+      .not('application_url', 'is', null)
       .order('fit_score', { ascending: false })
       .limit(1000),
     db.from('act_grant_recommendation_decisions').select('project_code, opportunity_id, decision'),
@@ -285,26 +291,17 @@ export const getProjectFundingPortfolio = cache(async function getProjectFunding
   });
   const recommendations = (recommendationsResult.data || []) as RawRecommendation[];
   const decisions = (decisionsResult.data || []) as RawDecision[];
-  const hybridResults = await Promise.all(profiles.map(profile => db.rpc('search_project_funding_hybrid', {
-    p_org_project_id: profile.projectId,
-    p_match_count: 15,
-  })));
-  const hybridMatches: RawHybridMatch[] = [];
-  for (const result of hybridResults) {
-    if (result.error) {
-      console.warn(`[project-funding] Hybrid search unavailable: ${result.error.message}`);
-      continue;
-    }
-    hybridMatches.push(...((result.data || []) as RawHybridMatch[]));
-  }
-  const hybridQueue = buildHybridWeeklyQueue({ matches: hybridMatches, decisions, profiles });
-
   return {
     profiles,
-    weeklyQueue: hybridQueue.length > 0
-      ? hybridQueue
-      : buildWeeklyFundingQueue({ recommendations, decisions, profiles }),
-    candidateCount: hybridMatches.length > 0 ? hybridMatches.length : recommendations.length,
+    // Hybrid retrieval is a discovery-pipeline concern. The request path reads
+    // the materialized recommendation view so opening the control room never
+    // launches one expensive semantic search per active project.
+    weeklyQueue: buildWeeklyFundingQueue({ recommendations, decisions, profiles }),
+    candidateCount: recommendations.length,
     generatedAt: new Date().toISOString(),
   };
-});
+}, ['project-funding-portfolio-v2'], { revalidate: 300, tags: ['project-funding-portfolio'] });
+
+// Deduplicate within a render as well as across requests. Funding discovery runs
+// asynchronously, so a five-minute snapshot is fresher than the human review cycle.
+export const getProjectFundingPortfolio = cache(getCachedProjectFundingPortfolio);

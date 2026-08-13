@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { composeDeskDigest, runDeskDigest } from '@/lib/services/act-desk-digest';
 import { syncGhlTaskBridge } from '@/lib/services/act-ghl-task-bridge';
+import { requireCronBearer } from '@/lib/cron-auth';
 
 // The daily 07:00 Brisbane pass (Vercel cron, 21:00 UTC — Brisbane has no
 // DST): ONE composition of "what's due", two channels out — the email digest
@@ -12,11 +13,8 @@ export const maxDuration = 120;
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
-  const expected = process.env.CRON_SECRET || process.env.API_SECRET_KEY;
-  const supplied = request.headers.get('authorization');
-  if (expected && supplied !== `Bearer ${expected}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const unauthorized = requireCronBearer(request);
+  if (unauthorized) return unauthorized;
   const dryRun = new URL(request.url).searchParams.get('dry') === '1';
 
   try {

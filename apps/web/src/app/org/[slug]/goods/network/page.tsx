@@ -30,6 +30,10 @@ function words(value: string): string {
   return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+function normaliseName(value: string): string {
+  return value.toLocaleLowerCase('en-AU').replace(/\b(the|foundation|trust|limited|ltd)\b/g, ' ').replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
 function evidenceTone(form: GoodsInterestEvidenceForm): 'neutral' | 'good' | 'warn' | 'info' {
   if (form === 'direct_message' || form === 'program_participant') return 'good';
   if (form === 'user_reported') return 'warn';
@@ -64,6 +68,24 @@ export default async function GoodsNetworkPage({ params, searchParams }: {
   const combinedWarning = [workspace.dataWarning, network.dataWarning].filter(Boolean).join(' ') || null;
   const directInbound = network.people.filter((person) => person.evidenceForm === 'direct_message').length;
   const researchedPathways = network.pathways.filter((pathway) => pathway.evidenceForm === 'public_research').length;
+  const query = typeof sp.q === 'string' ? sp.q.trim().toLocaleLowerCase('en-AU') : '';
+  const relationshipView = typeof sp.relationship === 'string' ? sp.relationship : 'all';
+  const relationshipRows = network.pathways.filter((pathway) => {
+    const people = network.people.filter((person) => person.relationshipId === pathway.id);
+    const isDesired = pathway.evidenceForm === 'public_research' || ['identified', 'researching'].includes(pathway.stage);
+    if (relationshipView === 'active' && isDesired) return false;
+    if (relationshipView === 'desired' && !isDesired) return false;
+    if (relationshipView === 'capital' && !['qbe_anchor', 'capital', 'capability', 'support'].includes(pathway.lane)) return false;
+    return !query || [pathway.displayName, pathway.evidenceSummary, pathway.qbeRelevance, pathway.nextAction, ...people.map(person => person.name)]
+      .some(value => value?.toLocaleLowerCase('en-AU').includes(query));
+  });
+  const relationshipHref = (relationship?: string) => {
+    const params = new URLSearchParams();
+    if (relationship && relationship !== 'all') params.set('relationship', relationship);
+    if (query) params.set('q', query);
+    const suffix = params.toString();
+    return suffix ? `/org/${slug}/goods/network?${suffix}` : `/org/${slug}/goods/network`;
+  };
 
   return (
     <main className="min-h-screen bg-bauhaus-canvas text-bauhaus-black">
@@ -83,6 +105,48 @@ export default async function GoodsNetworkPage({ params, searchParams }: {
           <Metric label="Asks evidenced" value={money(workspace.summary.askMadeAud)} detail="A conversation is not an ask" tone="yellow" />
           <Metric label="Committed" value={money(workspace.summary.committedAud)} detail="Written, allocated commitments only" tone="dark" />
         </div>
+
+        <section className="mt-8" aria-labelledby="relationship-portfolio-title">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <SectionTitle
+              eyebrow="Relationship portfolio"
+              title="Who can move the work"
+              description="Current relationships and desired pathways, with the evidence, owner and next action kept separate from any funding claim."
+            />
+            <Link href={`/org/${slug}/funding`} className="border-2 border-bauhaus-black bg-white px-3 py-2 text-[10px] font-black uppercase hover:bg-bauhaus-black hover:text-white">All-project funding</Link>
+          </div>
+          <div className="mt-4 border-4 border-bauhaus-black bg-white p-3">
+            <div className="flex flex-wrap gap-2 text-xs">
+              {[['all', `All ${network.pathways.length}`], ['active', 'Working now'], ['desired', 'Want closer'], ['capital', 'Capital + philanthropy']].map(([value, label]) => (
+                <Link key={value} href={relationshipHref(value)} className={`border-2 border-bauhaus-black px-2 py-1 font-black uppercase ${relationshipView === value ? 'bg-bauhaus-black text-white' : 'bg-white hover:bg-bauhaus-canvas'}`}>{label}</Link>
+              ))}
+            </div>
+            <form action={`/org/${slug}/goods/network`} className="mt-3 flex gap-2">
+              {relationshipView !== 'all' && <input type="hidden" name="relationship" value={relationshipView} />}
+              <input name="q" defaultValue={typeof sp.q === 'string' ? sp.q : ''} placeholder="Search organisation, person, evidence or next action" className="min-h-10 min-w-0 flex-1 border-2 border-bauhaus-black px-3 text-sm" />
+              <button className="border-2 border-bauhaus-black bg-bauhaus-black px-4 text-xs font-black uppercase text-white">Search</button>
+            </form>
+          </div>
+          <div className="overflow-x-auto border-x-4 border-b-4 border-bauhaus-black bg-white">
+            <table className="w-full min-w-[960px] text-xs">
+              <thead className="bg-bauhaus-black text-left text-white"><tr>{['Organisation', 'Relationship', 'Evidence', 'Owner', 'Next action', 'Funding'].map(label => <th key={label} className="px-3 py-2 font-mono text-[9px] font-black uppercase tracking-widest">{label}</th>)}</tr></thead>
+              <tbody>{relationshipRows.map((pathway, index) => {
+                const owners = network.people.filter(person => person.relationshipId === pathway.id);
+                const desired = pathway.evidenceForm === 'public_research' || ['identified', 'researching'].includes(pathway.stage);
+                const dossier = workspace.dossiers.find(item => normaliseName(item.matter.counterpartyName).includes(normaliseName(pathway.displayName)) || normaliseName(pathway.displayName).includes(normaliseName(item.matter.counterpartyName)));
+                const commitment = dossier?.route && ['accepted', 'fulfilled'].includes(dossier.route.commitmentState) ? dossier.route.commitmentAmountAud : null;
+                return <tr key={pathway.id} className={index % 2 ? 'bg-bauhaus-canvas' : ''}>
+                  <td className="border-b border-gray-300 px-3 py-3 align-top"><strong className="block text-sm">{pathway.displayName}</strong><span className="mt-1 block font-mono text-[9px] uppercase text-bauhaus-muted">{goodsNetworkLaneLabel(pathway.lane)}</span></td>
+                  <td className="border-b border-gray-300 px-3 py-3 align-top"><StatusPill tone={desired ? 'neutral' : 'good'}>{desired ? 'Want closer' : words(pathway.stage)}</StatusPill></td>
+                  <td className="max-w-xs border-b border-gray-300 px-3 py-3 align-top"><StatusPill tone={evidenceTone(pathway.evidenceForm)}>{goodsInterestEvidenceLabel(pathway.evidenceForm)}</StatusPill><p className="mt-2 line-clamp-2 leading-5 text-bauhaus-muted">{pathway.evidenceSummary}</p></td>
+                  <td className="border-b border-gray-300 px-3 py-3 align-top">{owners.length ? owners.map(person => person.name).join(', ') : <span className="font-bold text-amber-800">Owner needed</span>}</td>
+                  <td className="max-w-sm border-b border-gray-300 px-3 py-3 align-top"><strong>{pathway.nextAction || 'Set a specific next action.'}</strong>{pathway.nextActionDue && <span className="mt-1 block text-[10px] text-bauhaus-muted">Due {formatWorkspaceDate(pathway.nextActionDue)}</span>}</td>
+                  <td className="border-b border-gray-300 px-3 py-3 align-top"><span className="block font-bold">{commitment ? `${money(commitment)} committed` : dossier?.route?.targetAmountAud ? `${money(dossier.route.targetAmountAud)} target` : 'No support evidenced'}</span><Link href={`/org/${slug}/goods/grants?q=${encodeURIComponent(pathway.displayName)}`} className="mt-2 inline-block font-black text-bauhaus-blue underline">Find opportunities</Link></td>
+                </tr>;
+              })}{relationshipRows.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-bauhaus-muted">No relationship matches this view.</td></tr>}</tbody>
+            </table>
+          </div>
+        </section>
 
         <div className="mt-8">
           <div className="flex flex-wrap items-end justify-between gap-3">

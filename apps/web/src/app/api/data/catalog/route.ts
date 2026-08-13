@@ -88,7 +88,7 @@ export async function GET(request: Request) {
       rows: filtered,
     });
 
-    response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+    response.headers.set('Cache-Control', 'public, s-maxage=1800, stale-while-revalidate=3600');
     response.headers.set('Access-Control-Allow-Origin', '*');
     return response;
   } catch (error) {

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { unstable_cache } from 'next/cache';
 import { requireModule } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
 
@@ -8,10 +9,7 @@ import { getServiceSupabase } from '@/lib/supabase';
  * Live system-wide statistics for the CivicGraph data platform.
  * Powers the /insights page with real-time numbers.
  */
-export async function GET() {
-  const auth = await requireModule('grants');
-  if (auth.error) return auth.error;
-
+const getCachedInsightsPayload = unstable_cache(async () => {
   const supabase = getServiceSupabase();
 
   // Run all queries in parallel
@@ -130,9 +128,14 @@ export async function GET() {
     generated_at: new Date().toISOString(),
   };
 
-  return NextResponse.json(insights, {
-    headers: {
-      'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
-    },
-  });
+  return insights;
+}, ['api-insights-payload-v1'], { revalidate: 900 });
+
+export async function GET() {
+  const auth = await requireModule('grants');
+  if (auth.error) return auth.error;
+
+  const response = NextResponse.json(await getCachedInsightsPayload());
+  response.headers.set('Cache-Control', 'private, max-age=300, stale-while-revalidate=600');
+  return response;
 }

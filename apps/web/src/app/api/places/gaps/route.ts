@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const state = searchParams.get('state');
   const remoteness = searchParams.get('remoteness');
-  const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 500);
+  const limit = Math.min(Math.max(Number.parseInt(searchParams.get('limit') || '20', 10) || 20, 1), 100);
 
   const supabase = getServiceSupabase();
 
@@ -57,7 +57,9 @@ export async function GET(request: NextRequest) {
     return { ...d, lat: geo?.lat || null, lng: geo?.lng || null, locality: geo?.locality || null };
   });
 
-  return NextResponse.json({ postcodes: enriched });
+  const response = NextResponse.json({ postcodes: enriched });
+  response.headers.set('Cache-Control', 'private, max-age=300, stale-while-revalidate=600');
+  return response;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
