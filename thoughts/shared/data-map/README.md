@@ -41,6 +41,30 @@ equality, and place codes — all of which have now been measured rather than as
 | pg_cron jobs | 5 (only one refreshes matviews, and it covers 27 of 98) |
 | database size | 28 GB |
 
+## Graph integrity — added 2026-08-14, after the map
+
+`GRAPH-DEFECT-justice-program-nodes.md` is the full investigation. Headlines:
+
+| layer | state |
+|---|---|
+| `justice_funding` | **144,971 of 857,798 edges resolve (16.9%)** — 712,827 orphans. Source was re-ingested with new uuids; edge layer never rebuilt. Rebuild target 144,901, confirmed independently by two tools. |
+| `grantconnect_awards` | **291,264 rows, ZERO edges.** Never built. The largest awarded-grants source is absent from the graph. |
+| `grant_opportunities` | Self-loops are BY DESIGN (foundation offers grant). 961 of 6,497 orphaned. Opportunities are being modelled as relationships. |
+| `aec_donations`, `austender`, `foundations` | Healthy. |
+| 19 other layers (~780K edges, 23%) | **Unmonitored.** Not covered by any gate. |
+
+Two gates now exist and both are registered to run:
+- `check-graph-completeness.mjs` — counts vs a rebuilt derivation. New `STALE_SEVERE` tier
+  (ratio + a 1,000-edge floor) fails instead of exiting 0. `--dataset=` filter.
+- `check-graph-referential-integrity.mjs` — **new.** Do edges point at rows that still exist?
+  Counts exactly by default; nine datasets reported UNCHECKABLE with reasons rather than skipped.
+
+**Method lesson, learned four times in one day:** three separate readings of this data were
+confidently wrong — "AusTender categories", "10.4× duplicated", "philanthropy layer empty" — and
+each was killed within two minutes of opening the code that produces the number. Read the producer
+before diagnosing the product. Also: `LIMIT n` without `ORDER BY` is not a sample. Two 20,000-row
+"samples" of the same dataset gave 0% and 34.2%; the exact answer was 16.9%.
+
 ## The five things that most need a decision
 
 1. **`xero_payments` (1,536 rows) is readable with the public anon key** — RLS on, anon granted,
