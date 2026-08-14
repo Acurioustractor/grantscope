@@ -95,44 +95,80 @@ Read the producer before diagnosing the product.
 
 ---
 
-# Addendum — the full sweep, 2026-08-14
+# Addendum — the full sweep, 2026-08-14 (corrected)
 
-Once `--dataset=` existed, all five edge datasets were checked individually (the full serial run
-had been dying on pooler drops before reaching most of them).
+Once `--dataset=` existed, all five gate-covered datasets were checked individually.
 
-| dataset | expected | actual | status | coverage of source |
-|---|---|---|---|---|
-| `aec_donations` | 1,038,896 | 1,073,308 | OK | — |
-| `austender` | 668,335 | 699,387 | OK | — |
-| `grant_opportunities` | 5,422 | 6,656 | STALE (22.8%) | 25.7% |
-| **`foundations`** | **24** | **63** | **STALE_SEVERE (2.6×)** | **0.6%** |
-| **`justice_funding`** | **144,901** | **857,798** | **STALE_SEVERE (5.9×)** | 546% |
+| dataset | expected | actual | status |
+|---|---|---|---|
+| `aec_donations` | 1,038,896 | 1,073,308 | OK |
+| `austender` | 668,335 | 699,387 | OK |
+| `grant_opportunities` | 5,422 | 6,656 | STALE 22.8% |
+| `foundations` | 24 | 63 | STALE_SEVERE 2.6× |
+| **`justice_funding`** | **144,901** | **857,798** | **STALE_SEVERE 5.9×** |
 
-**Two of five layers are severely stale.** But `foundations` is the more alarming row, and not for
-the staleness.
+## Correction: the `foundations` alarm was mine, and it was wrong
 
-## The philanthropy layer of the graph barely exists
+An earlier version of this addendum called 24 edges from an 11,159-row table "the philanthropy
+layer barely exists". That was the **third** over-claim in this investigation, and it was wrong for
+the same reason as the first two: I read the number before reading the derivation.
 
-`foundations` holds 11,159 rows. The builder's own set-based derivation produces **24 edges**. Not
-24,000 — twenty-four. Actual is 63, so the layer is both stale *and* empty.
+The `foundations` edge dataset is not "who funds whom". It is `subsidiary_of` — cross-registry
+parent-company links, gated on `parent_company IS NOT NULL`. Measured:
 
-Staleness is a rebuild. This is not: rebuilding `foundations` would replace 63 stale edges with 24
-fresh ones and the philanthropy layer would still be, effectively, absent. The join that produces
-those edges must be matching almost nothing — that is a **coverage defect in the derivation**, and
-it needs the same treatment the justice ABN joins got: measure the match rate, find out which key
-is failing, and fix the join rather than re-running it.
+```
+foundations           11,159
+  has acnc_abn        11,138   (99.8%)
+  has parent_company      84   (0.75%)
+  has both                73
+```
 
-This matters disproportionately. Philanthropy and giving are the first two pillars of the stated
-vision, and `foundations` is the table that carries them into the graph. Every "who funds whom"
-question routes through 63 edges.
+**24 edges from 73 eligible rows is a 33% name-match rate on a genuinely rare field.** It is
+working roughly as designed. The `STALE_SEVERE` flag is technically right (63 actual vs 24 expected)
+but on 39 rows it is noise, not signal — a lesson for the `STALE_FACTOR` tier: it should carry an
+absolute floor so tiny datasets cannot trip it.
 
-`grant_opportunities` at 25.7% coverage is the same class of problem, one order less severe — and
-consistent with the data map's earlier finding that 97.6% of its edges (6,497 of 6,656) are
-self-loops.
+## And philanthropy IS in the graph — via a pipeline the gate does not watch
+
+`foundation_grantees`: **5,734 edges from 6,001 source rows = 95.6% coverage.** Healthy. It is
+simply built somewhere other than `GRAPH_EDGE_DATASETS`, so the gate never sees it.
+
+## The real finding: the gate watches 5 of 24+ datasets
+
+`gs_relationships` carries at least 24 distinct `dataset` values. The completeness gate covers
+**five**. Everything else — `person_roles` (334,982), `acnc_register` (322,163),
+`person_roles_crossmatch` (95,476), `nhmrc_grants`, `foundation_grantees`, `foundation_board`,
+`hms_trust_grants`, `frrr_grants`, `creative_australia`, the three lobbying registers,
+`ian_potter_grants_db`, `arc_grants`, `qld_arts_grants`, `lotterywest_grants`, `wbf_grants`,
+`abr_corporate_groups`, `foundation_charity_match` — is **unmonitored**. Roughly 780,000 edges,
+23% of the graph, could go stale exactly the way justice funding did and nothing would report it.
+
+## And the largest grants dataset in the database has no edges at all
+
+```
+grantconnect_awards          291,264 rows
+edges in gs_relationships          0
+```
+
+Not stale. Never built. This is the same table the opportunity work flagged for ~67,000 recipient
+ABNs that were never created as entities — but the gap is bigger than that: no GrantConnect award
+appears in the graph in any form. For a project whose first two pillars are philanthropy and
+giving, the single largest awarded-grants source is absent from the relationship layer.
 
 ## Revised priority
 
-1. `justice_funding` — rebuild. Mechanism understood, target number known (144,901).
-2. `foundations` — **diagnose the join before rebuilding.** A rebuild here fixes nothing.
-3. `grant_opportunities` — diagnose the self-loops, then rebuild.
-4. `aec_donations` / `austender` — healthy, leave alone.
+1. **`justice_funding`** — rebuild. Mechanism understood, target known (144,901).
+2. **`grantconnect_awards`** — build the edge dataset. 291,264 rows, currently invisible. Likely the
+   highest-value single addition to the graph.
+3. **Extend the gate to all 24 datasets**, or at minimum the six above 10,000 edges. An unwatched
+   layer is how this defect survived.
+4. **Add an absolute floor to `STALE_FACTOR`** so a 39-row discrepancy stops paging.
+5. `grant_opportunities` — diagnose the 97.6% self-loops, then rebuild.
+6. `foundations`, `aec_donations`, `austender` — leave alone.
+
+## Method note, sharpened
+
+Three wrong readings in one investigation: AusTender categories (design workflow), 10.4×
+duplication (mine), philanthropy-layer-empty (mine). Every one came from interpreting a number
+without reading the code that produced it, and every one was killed within two minutes of opening
+the source. The number tells you where to look. It does not tell you what you are looking at.
