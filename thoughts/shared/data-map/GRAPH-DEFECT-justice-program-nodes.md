@@ -1,99 +1,94 @@
-# The justice layer of the graph is a program-node cartesian, 10.4× inflated
+# The justice graph layer is stale, not malformed
 
-Measured 2026-08-14 by direct psql. **Nothing has been changed.** This is a diagnosis.
+Measured 2026-08-14 by direct psql, then **corrected twice**. Nothing has been changed in the
+database. This is a diagnosis, and the correction history matters more than the conclusion.
 
-## One root cause, three symptoms
+## Two wrong readings, then the real one
 
-Three defects were being tracked separately. They are the same bug.
+**Wrong reading 1 (from the design workflow):** *"The two largest nodes in the graph are AusTender
+procurement categories materialised as entities."* — Wrong. They are `justice_funding` **program**
+nodes. Every edge on them is `dataset='justice_funding'`, `relationship_type='grant'`.
 
-| Reported as | Actually |
-|---|---|
-| "Two AusTender procurement categories materialised as entities, contaminating every power score" | Not AusTender. Three (not two) **`justice_funding`** program nodes, and they are the tip of 9,584 |
-| "~700,000 orphaned edges — `gs_relationships` holds 857,798 justice edges against a 157,116-row source table" | Not orphaned rows. The edges are **program→org pairs repeated**, not per-grant rows |
-| "`gs_relationships.source_record_id` is a dead key namespace, 0 of 49,426 resolve" | Correct, and now explained: an edge is not a grant, so it has no grant id to point at |
-
-## The measurements
-
-**Every justice edge in the graph touches a program node.**
+**Wrong reading 2 (mine, committed in `26e0202`):** *"The layer is 10.4× duplicated — 857,798 edges
+collapse to 82,675 distinct pairs."* — Wrong, and wrong in an embarrassing way. Distinct
+`(source, target)` pairs is the wrong denominator. Measured properly:
 
 ```
-jf_edges_total          857,798
-jf_edges_touching_prog  857,794      ← 99.9995%
-jf_edges_clean                4
+edges                    857,798
+distinct source_record_id  857,731
+edges per grant               1.00      ← no duplication whatsoever
+null source_record_id             0
 ```
 
-**The layer is 10.4× duplicated.**
+Many grants legitimately share a (program, recipient) pair — one program pays one organisation
+repeatedly over years. That is correct behaviour, not inflation. I mistook a normal one-to-many for
+a bug because I measured pair-uniqueness instead of record-uniqueness.
 
-```
-edges              857,798
-distinct pairs      82,675      ← 10.4 duplicate edges per (source, target) pair
-distinct sources     6,658      ← program nodes
-distinct targets    39,501      ← real organisations
-```
+## The actual defect
 
-**The worst single node**, `GS-PROG-specialised-supplies-and-services-19dc-qld`:
-330,460 edges — to **181 distinct counterparties**. That is ~1,826 edges per counterparty, and
-more edges from one node than there are rows in the entire `justice_funding` table (157,116).
+**`justice_funding` was re-ingested with regenerated primary keys, and the graph's justice layer was
+never rebuilt.**
 
-**The top of the degree distribution is program nodes, not organisations:**
+- `justice_funding.id` is `uuid`. `gs_relationships.source_record_id` holds `uuid` in the same
+  format. They are the same key space.
+- The graph references **857,731 distinct grant ids**. The table holds **157,116 rows**.
+- **0 of 20,000 sampled edges resolve** to a current `justice_funding.id`.
 
-| gs_id | degree | type |
-|---|---|---|
-| `GS-PROG-specialised-supplies-and-services-19dc-qld` | 330,460 | program |
-| `GS-PROG-specialised-support-services-a6e8-qld` | 274,675 | program |
-| `AU-GOV-...` Department of Defence | 270,864 | government_body |
-| `GS-PROG-specialised-service-and-support-a044-qld` | 63,710 | program |
+So every one of the 857,798 justice edges points at a grant row that no longer exists. This also
+explains the documented April drop from 218,022 rows to 157,116 that nothing alerted on: the table
+has been rewritten at least once, and the edge layer never followed.
 
-Three program nodes hold **668,845 edges = 19.5%** of the entire 3,429,184-edge graph.
-9,584 `GS-PROG-*` entities exist in total.
+## The builder is correct — do not rewrite it
 
-## What is affected
+`scripts/lib/graph-edge-datasets.mjs` (the `justice_funding` entry, ~line 136) already does the
+right thing:
 
-Anything that ranks by connectivity, centrality or counterparty count is reading a graph where
-one in five edges is a duplicated link to a QLD program label. That includes **`mv_entity_power_index`
-and `mv_revolving_door`, which back live surfaces**, plus `mv_gs_entity_stats.total_relationships`,
-`distinct_counterparties` and `top_counterparty_share`.
+- `source` = canonical program node via `jf_prog_map`, `target` = recipient matched by exact ABN
+- **one edge per payment**, with `source_record_id = jf.id::text`
+- an idempotency guard (`COALESCE(y.source_record_id,'') = jf.id::text`) so re-runs add zero duplicates
+- `jf_prog_map` already collapses the two historical `GS-PROG-` id formats to one node per
+  (program, state), specifically to stop edges splitting across node generations
 
-It also means any "most connected entity" list is wrong at the top, and any attempt to draw an
-ego-network from a program node is undrawable for reasons that have nothing to do with the data
-being genuinely dense.
+The design intent is exactly what a drill-through needs. It was simply never re-run after the source
+table was replaced.
 
-## What this is NOT
+## What this changes
 
-Not a classification problem. Reclassifying `entity_type='program'` or filtering those nodes out of
-rankings treats the symptom. The underlying edge set is 10.4× inflated regardless of what the nodes
-are called, and the inflation is inside the pairs, not between them.
+**The fix is much smaller than the previous version of this document claimed.** Not a redesign —
+a rebuild of one slice:
 
-## The likely mechanism (inferred, not proven)
+1. Delete `WHERE dataset='justice_funding'` from `gs_relationships` (857,798 rows).
+2. Re-run the justice phase of `build-entity-graph.mjs`, which runs `JUSTICE_PROGRAM_ENSURE_SQL`
+   then the edge insert. Expect roughly 157,116 edges back, one per payment with a resolving
+   `source_record_id`.
+3. Refresh `mv_gs_entity_stats` → `mv_entity_power_index` → `mv_revolving_door`, in that order.
+   This is precisely the dependency-ordering problem the matview registry migration exists to
+   solve, so land that first.
+4. Add a guard so this cannot recur silently: a check that
+   `count(source_record_id) NOT IN justice_funding.id` is zero, run after any justice ingest.
+   The absence of that guard is the actual root cause — the table can be replaced underneath the
+   graph with nothing noticing.
 
-`build-entity-graph` appears to create one entity per distinct `justice_funding.program_name`, then
-emit an edge per source row joining program → recipient. Because many rows share a
-(program_name, recipient) combination, the same pair is emitted repeatedly — 10.4 times on average,
-1,826 times in the worst case. The edge therefore represents a *program-recipient relationship*,
-not a grant, which is exactly why `source_record_id` resolves to nothing.
+**Drill-through becomes buildable.** CLARITY-SPEC §1.5 rejected "click an edge to see the grant" on
+the grounds that `source_record_id` is a dead key namespace. It is not dead — it is stale. After the
+rebuild it resolves, and that rejection should be revisited.
 
-**This is inferred from the shape of the data. Read the builder before acting on it.**
+## Still true, and still worth acting on
 
-## Recommended fix, in order
+- **Program nodes dominate the degree distribution.** Three `GS-PROG-*` nodes hold 668,845 edges,
+  19.5% of the 3,429,184-edge graph; the largest holds 330,460 to 181 counterparties. That is a
+  *consequence of the design* (program-as-node), not a bug — but it does mean any "most connected
+  entity" ranking is topped by programs rather than organisations, and `mv_entity_power_index` and
+  `mv_revolving_door` are live surfaces reading it. After the rebuild the counts drop ~5×, but the
+  shape stays. Decide separately whether 9,584 `GS-PROG-*` rows belong in `gs_entities` at all or
+  in a `programs` dimension — they are not organisations and they dilute the 609,448 headline.
+- **`AU-ABN-0`** — "112 Trenerry Crescent Pty Ltd", `abn='0'`, 53,193 edges. A zero ABN acting as a
+  catch-all bucket. Separate defect.
+- **"Department of Defence" appears twice** in `gs_entities`, on the third-largest hub. Unverified
+  beyond the name match.
 
-1. **Read `scripts/build-entity-graph*.mjs`** and confirm the mechanism above. Do not skip this —
-   the "AusTender categories" reading was confidently wrong and was arrived at the same way.
-2. **Decide what a justice edge means.** Either one edge per grant (keyed to `justice_funding.id`,
-   which makes `source_record_id` work and drill-through buildable), or one edge per
-   program-recipient pair with `amount` summed and a count. The first is more useful and matches
-   what every other dataset in the graph does.
-3. **Rebuild only the `dataset='justice_funding'` slice.** 857,798 edges out; roughly 157,116
-   (per-grant) or 82,675 (per-pair) back.
-4. **Then** refresh `mv_gs_entity_stats`, `mv_entity_power_index` and `mv_revolving_door`, in that
-   order — and note this is exactly the dependency-ordering problem the matview registry migration
-   exists to solve, so land that first.
-5. Decide separately whether the 9,584 `GS-PROG-*` rows should be entities at all, or a `programs`
-   dimension table. They are not organisations and they dilute every entity count in the product,
-   including the 609,448 headline.
+## Method note
 
-## Also found, not chased
-
-- **`AU-ABN-0`** — "112 Trenerry Crescent Pty Ltd" carries `abn='0'` and 53,193 edges. A zero ABN is
-  behaving as a catch-all bucket. Separate defect, same family.
-- **"Department of Defence" appears twice** in `gs_entities` — a duplicate on the third-largest hub
-  in the graph. Unverified beyond the name match.
+Both wrong readings were produced the same way: inferring a mechanism from the shape of the data
+without reading the code that generates it. The builder took two minutes to read and killed both.
+Read the producer before diagnosing the product.
