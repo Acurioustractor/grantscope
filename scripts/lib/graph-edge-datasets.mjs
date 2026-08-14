@@ -134,6 +134,60 @@ export const GRAPH_EDGE_DATASETS = [
      ORDER BY f.acnc_abn, parent.id`,
   },
   {
+    dataset: 'grantconnect_awards',
+    relationshipType: 'grant',
+    label: 'Commonwealth grant awards (GrantConnect)',
+    sourceTable: 'grantconnect_awards',
+    cols: '(source_entity_id, target_entity_id, relationship_type, amount, year, start_date, end_date, dataset, source_record_id, confidence, properties)',
+    // ADDED 2026-08-14. grantconnect_awards held 291,264 rows and ZERO edges — the largest
+    // awarded-grants source in the database was absent from the relationship layer entirely.
+    // Not stale: never built.
+    //
+    // MEASURED BEFORE WRITING (2026-08-14), because three diagnoses this week were wrong from
+    // guessing at a join instead of measuring it:
+    //   291,264 awards · 210,761 (72.4%) carry gs_entity_id · 100% carry value_aud and a date
+    //   44 distinct agencies, 38 match a gs_entities canonical_name (86%)
+    //   -> 189,590 awards (65.1%) satisfy BOTH sides and will produce an edge
+    //
+    // WHY agency_map: of the 38 matching agency names, 15 match MORE THAN ONE gs_entities row
+    // (worst case 4). gs_entities carries 41 duplicate-name groups among government_body alone.
+    // Joining agency->name directly would multiply those awards by up to 4x — the exact edge
+    // blowup this graph has been wrongly accused of before. DISTINCT ON collapses each agency to
+    // ONE node, preferring a row that carries an ABN, then a government_body, then lowest id.
+    prelude: `CREATE TEMP TABLE gc_agency_map AS
+       SELECT DISTINCT ON (agency_key) agency_key, ent_id
+         FROM (
+           SELECT upper(trim(a.agency)) AS agency_key, e.id AS ent_id,
+                  (e.abn IS NOT NULL) AS has_abn,
+                  (e.entity_type = 'government_body') AS is_gov
+             FROM (SELECT DISTINCT agency FROM grantconnect_awards WHERE agency IS NOT NULL) a
+             JOIN gs_entities e ON upper(trim(e.canonical_name)) = upper(trim(a.agency))
+         ) z
+        ORDER BY agency_key, is_gov DESC, has_abn DESC, ent_id ASC;
+       CREATE INDEX ON gc_agency_map(agency_key);
+       ANALYZE gc_agency_map;`,
+    // source = funding agency (collapsed via gc_agency_map); target = recipient via the
+    // gs_entity_id already stamped on the award. Using the stamp rather than re-matching the ABN
+    // keeps this consistent with whatever linkage pass produced it.
+    // source_record_id = ga_id, the GrantConnect natural key, so an edge resolves back to its award.
+    selectSql: `SELECT
+       m.ent_id AS source_entity_id, g.gs_entity_id AS target_entity_id, 'grant' AS relationship_type,
+       g.value_aud AS amount,
+       extract(year FROM coalesce(g.approval_date, g.start_date))::int AS year,
+       g.start_date, g.end_date,
+       'grantconnect_awards', g.ga_id AS source_record_id, 'registry',
+       jsonb_build_object(
+         'agency',         g.agency,
+         'category',       g.category,
+         'grant_program',  g.grant_program,
+         'recipient_name', g.recipient_name,
+         'delivery_state', g.delivery_state,
+         'purpose',        left(g.purpose, 500))
+     FROM grantconnect_awards g
+     JOIN gc_agency_map m ON m.agency_key = upper(trim(g.agency))
+     WHERE g.gs_entity_id IS NOT NULL AND g.agency IS NOT NULL`,
+  },
+  {
     dataset: 'justice_funding',
     relationshipType: 'grant',
     label: 'Justice funding relationships',
