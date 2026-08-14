@@ -172,3 +172,60 @@ Three wrong readings in one investigation: AusTender categories (design workflow
 duplication (mine), philanthropy-layer-empty (mine). Every one came from interpreting a number
 without reading the code that produced it, and every one was killed within two minutes of opening
 the source. The number tells you where to look. It does not tell you what you are looking at.
+
+---
+
+# Addendum 2 — `grant_opportunities`: the self-loops are deliberate
+
+The data map flagged "97.6% of grant_opportunities edges are self-loops (6,497 of 6,656)" as a
+defect. **It is not a bug — it is a modelling choice, and it is commented as such** in
+`scripts/lib/graph-edge-datasets.mjs`:
+
+```js
+// self-ref edge on the foundation entity (foundation offers grant); amount = max || min.
+f_ent.id AS source_entity_id, f_ent.id AS target_entity_id, 'grant' AS relationship_type,
+```
+
+Source and target are both the foundation. The derivation produces self-loops 100% of the time by
+construction.
+
+## But the modelling choice has real costs
+
+An open grant *opportunity* is an **attribute of a foundation**, not a relationship between two
+entities. Nobody has received anything yet. Encoding it as `relationship_type='grant'` with
+`source = target` means:
+
+- every open opportunity adds 1 to that foundation's degree, so foundations with active grant
+  rounds rank as better-connected than foundations that have actually funded people
+- it is semantically false — the row reads "this foundation granted to itself"
+- graph traversal, centrality and any "who funds whom" query must special-case it
+- it inflates the edge count of the philanthropy layer with non-relationships
+
+This compounds with the earlier finding that `foundation_grantees` (real awards, 5,734 edges) is
+built by a different pipeline the completeness gate does not watch. The graph currently gives
+*opportunities* a first-class edge type and leaves *actual awards* unmonitored.
+
+## The split, measured
+
+| | edges | resolve to `grant_opportunities.id` |
+|---|---|---|
+| self-loop (`source = target`) | 6,497 | 5,536 (85.2%) — **961 orphaned** |
+| not a self-loop | 159 | **159 (100%)** |
+
+The 159 non-self-loop edges — from an older or different builder — are the **only fully healthy
+part of this dataset**. That is the reverse of what I assumed before measuring: I expected the
+legacy rows to be the stale ones.
+
+## Recommendation
+
+1. Stop modelling opportunities as edges. Either drop them from `gs_relationships` and read
+   `grant_opportunities` directly wherever "open rounds" are needed, or give them a distinct
+   `relationship_type` (e.g. `offers_grant`) that every traversal and centrality query excludes
+   by default. The second is cheaper and reversible.
+2. Rebuild to clear the 961 orphans, whichever option is chosen.
+3. Work out what produced the 159 real edges and whether that path should be the primary one.
+4. Add `foundation_grantees` to the completeness gate — real awards should be watched at least as
+   closely as open opportunities.
+
+Not urgent relative to `justice_funding` (712,827 orphans) or the never-built GrantConnect layer
+(291,264 rows), but it is a correctness issue in exactly the pillar the project leads with.
