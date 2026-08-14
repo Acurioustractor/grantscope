@@ -766,6 +766,21 @@ export const AGENTS = {
     timeoutMs: 900_000,
     dependencies: ['build-entity-graph'],
   },
+  'check-graph-attribution': {
+    command: ['node', '--env-file=.env', 'scripts/check-graph-attribution.mjs'],
+    displayName: 'Check Graph Attribution',
+    category: 'graph',
+    // Third gate. Completeness asks "the right NUMBER of edges?", referential-integrity asks
+    // "do they point at rows that EXIST?", this asks "do they point at the right ENTITY?".
+    // aec_donations passed both existing gates while attributing 53,148 donations from 771
+    // distinct donors to a single company. Count and referential integrity do not imply
+    // attribution integrity.
+    defaultPriority: 4,
+    // Reads mv_gs_entity_stats for degree rather than scanning 3.4M edges — needs that matview
+    // fresh to be meaningful, hence the dependency.
+    timeoutMs: 600_000,
+    dependencies: ['build-entity-graph'],
+  },
   'resolve-donor-entities': {
     command: ['node', '--env-file=.env', 'scripts/resolve-donor-entities.mjs'],
     displayName: 'Resolve Donor Entities',
