@@ -11,7 +11,9 @@
  *   expected > actual        → ALERT: edges silently went missing (the #82/#83 bug class).
  *   actual >= expected * N   → STALE_SEVERE: not drift. The source table was replaced and the
  *                              edge layer never rebuilt, so source_record_id points at deleted
- *                              rows. N defaults to 2.0 (--stale-factor= / GRAPH_STALE_FACTOR).
+ *                              rows. N defaults to 2.0 (--stale-factor= / GRAPH_STALE_FACTOR),
+ *                              AND the excess must be >= 1,000 edges (--stale-min-edges=) so a
+ *                              ratio on a tiny dataset cannot page anyone.
  *   actual > expected        → STALE: gs_relationships carries a few % more rows than the current
  *                              build produces (legacy dupes, source rows deleted since the last
  *                              build). Ordinary. Informational.
@@ -69,6 +71,13 @@ if (datasetArg && DATASETS.length === 0) {
 const STALE_FACTOR = Number(
   args.find((a) => a.startsWith('--stale-factor='))?.split('=')[1]
   ?? process.env.GRAPH_STALE_FACTOR ?? 2.0);
+// Absolute floor, added after STALE_FACTOR's first false positive. `foundations` tripped it at
+// 2.6x on 63 actual vs 24 expected — a 39-row difference on a dataset whose join is gated on a
+// field only 84 of 11,159 source rows carry. A ratio alone is meaningless on small numbers, so a
+// dataset must ALSO be over-built by this many edges before it is called severe.
+const STALE_MIN_EDGES = Number(
+  args.find((a) => a.startsWith('--stale-min-edges='))?.split('=')[1]
+  ?? process.env.GRAPH_STALE_MIN_EDGES ?? 1000);
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -126,7 +135,8 @@ async function checkDataset(def) {
   let status;
   if (expected === 0) status = 'EMPTY';
   else if (driftPct > THRESHOLD) status = 'ALERT';                             // under-built (the bug)
-  else if (actual >= expected * STALE_FACTOR) status = 'STALE_SEVERE';         // source replaced, edges orphaned
+  else if (actual >= expected * STALE_FACTOR
+           && (actual - expected) >= STALE_MIN_EDGES) status = 'STALE_SEVERE';  // source replaced, edges orphaned
   else if (-driftPct > THRESHOLD) status = 'STALE';                            // over-built (legacy/stale)
   else status = 'OK';
 
@@ -204,7 +214,7 @@ async function main() {
     });
   }
 
-  if (jsonOut) process.stdout.write(JSON.stringify({ threshold: THRESHOLD, staleFactor: STALE_FACTOR, results }, null, 2) + '\n');
+  if (jsonOut) process.stdout.write(JSON.stringify({ threshold: THRESHOLD, staleFactor: STALE_FACTOR, staleMinEdges: STALE_MIN_EDGES, results }, null, 2) + '\n');
 
   if (alerts.length) {
     log('');
