@@ -750,6 +750,22 @@ export const AGENTS = {
     timeoutMs: 300_000,
     dependencies: ['build-entity-graph'],
   },
+  'check-graph-referential-integrity': {
+    command: ['node', '--env-file=.env', 'scripts/check-graph-referential-integrity.mjs'],
+    displayName: 'Check Graph Referential Integrity',
+    category: 'graph',
+    // Same slot as the completeness gate, and it must run alongside it rather than instead of it.
+    // Completeness compares edge COUNTS against a rebuilt derivation and is structurally blind to
+    // a key-space swap: re-ingest a source with the same row count and new primary keys and it
+    // reports OK while every edge is orphaned. That is how justice_funding sat at 16.9% resolution
+    // for months. This gate checks that source_record_id still points at a live row.
+    defaultPriority: 4,
+    // Exact counting, not sampling — sampling gave 0% and 34.2% on the same dataset because
+    // orphaned and live edges cluster by build generation. ~30s per large dataset, and it walks
+    // every mapped dataset serially on a shared pooler.
+    timeoutMs: 900_000,
+    dependencies: ['build-entity-graph'],
+  },
   'resolve-donor-entities': {
     command: ['node', '--env-file=.env', 'scripts/resolve-donor-entities.mjs'],
     displayName: 'Resolve Donor Entities',
