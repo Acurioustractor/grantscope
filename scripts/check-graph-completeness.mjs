@@ -8,13 +8,22 @@
  * source of truth (scripts/lib/graph-edge-datasets.mjs), so "expected" can never drift
  * from what build-entity-graph actually inserts.
  *
- *   expected > actual  → ALERT: edges silently went missing (the #82/#83 bug class).
- *   actual   > expected → STALE: gs_relationships carries rows the current build no longer
- *                         produces (legacy/dead-code dupes, deleted source rows). Informational.
+ *   expected > actual        → ALERT: edges silently went missing (the #82/#83 bug class).
+ *   actual >= expected * N   → STALE_SEVERE: not drift. The source table was replaced and the
+ *                              edge layer never rebuilt, so source_record_id points at deleted
+ *                              rows. N defaults to 2.0 (--stale-factor= / GRAPH_STALE_FACTOR).
+ *   actual > expected        → STALE: gs_relationships carries a few % more rows than the current
+ *                              build produces (legacy dupes, source rows deleted since the last
+ *                              build). Ordinary. Informational.
  *
  * Writes one row per dataset to gs_graph_completeness_log (the roadmap's "coverage trend")
- * and an agent_runs row. Exits non-zero ONLY on ALERT (under-built) — the actionable bug
- * direction — so a scheduler / CI surfaces it. STALE and OK exit 0.
+ * and an agent_runs row. Exits non-zero on ALERT and on STALE_SEVERE — both actionable — so a
+ * scheduler / CI surfaces them. STALE and OK exit 0.
+ *
+ * Why STALE_SEVERE exists (added 2026-08-14): justice_funding sat at 857,798 actual edges against
+ * ~157,116 expected — 5.5x — with all 857,731 source_record_ids pointing at grants deleted when the
+ * table was re-ingested with regenerated uuids. This gate saw it every run, classified it STALE,
+ * and exited 0. The condition was detected and muted, which is worse than not being checked.
  *
  * Usage:
  *   node --env-file=.env scripts/check-graph-completeness.mjs
@@ -39,6 +48,15 @@ const thresholdArg = args.find((a) => a.startsWith('--threshold='))?.split('=')[
 // Default 5% — comfortably catches the 35% #82 drop while tolerating source rows that have
 // arrived since the last build-entity-graph run (new data not yet built into edges).
 const THRESHOLD = Number(thresholdArg ?? process.env.GRAPH_COMPLETENESS_THRESHOLD ?? 0.05);
+// Over-build severity. A few percent more edges than the current build produces is ordinary
+// drift (legacy rows, source rows deleted since the last build) and stays informational.
+// A MULTIPLE is not drift — it means the source table was replaced underneath the graph and the
+// edge layer never followed. justice_funding sat at 857,798 actual against ~157,116 expected
+// (5.5x) with every source_record_id pointing at a deleted grant, and this gate reported it as
+// STALE and exited 0 every run. Anything at or above this factor is actionable.
+const STALE_FACTOR = Number(
+  args.find((a) => a.startsWith('--stale-factor='))?.split('=')[1]
+  ?? process.env.GRAPH_STALE_FACTOR ?? 2.0);
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -96,6 +114,7 @@ async function checkDataset(def) {
   let status;
   if (expected === 0) status = 'EMPTY';
   else if (driftPct > THRESHOLD) status = 'ALERT';                             // under-built (the bug)
+  else if (actual >= expected * STALE_FACTOR) status = 'STALE_SEVERE';         // source replaced, edges orphaned
   else if (-driftPct > THRESHOLD) status = 'STALE';                            // over-built (legacy/stale)
   else status = 'OK';
 
@@ -158,18 +177,22 @@ async function main() {
   }
 
   const alerts = results.filter((r) => r.status === 'ALERT');
+  const severe = results.filter((r) => r.status === 'STALE_SEVERE');
   const stale = results.filter((r) => r.status === 'STALE');
 
   if (supabase && runId) {
     await logComplete(supabase, runId, {
       items_found: results.reduce((s, r) => s + r.expected_edges, 0),
       items_new: results.reduce((s, r) => s + r.actual_edges, 0),
-      status: alerts.length ? 'partial' : 'success',
-      errors: alerts.map((r) => `${r.dataset} under-built: expected ${r.expected_edges}, actual ${r.actual_edges} (drift ${(r.drift_pct * 100).toFixed(1)}%)`),
+      status: (alerts.length || severe.length) ? 'partial' : 'success',
+      errors: [
+        ...alerts.map((r) => `${r.dataset} under-built: expected ${r.expected_edges}, actual ${r.actual_edges} (drift ${(r.drift_pct * 100).toFixed(1)}%)`),
+        ...severe.map((r) => `${r.dataset} severely over-built: expected ${r.expected_edges}, actual ${r.actual_edges} (${(r.actual_edges / Math.max(r.expected_edges, 1)).toFixed(1)}x) — source likely replaced, edges orphaned`),
+      ],
     });
   }
 
-  if (jsonOut) process.stdout.write(JSON.stringify({ threshold: THRESHOLD, results }, null, 2) + '\n');
+  if (jsonOut) process.stdout.write(JSON.stringify({ threshold: THRESHOLD, staleFactor: STALE_FACTOR, results }, null, 2) + '\n');
 
   if (alerts.length) {
     log('');
@@ -177,6 +200,14 @@ async function main() {
       log(`✗ ALERT ${r.dataset}: ${(r.drift_pct * 100).toFixed(1)}% of expected edges are MISSING (expected ${r.expected_edges.toLocaleString()}, actual ${r.actual_edges.toLocaleString()}). Re-run build-entity-graph --phase=<…> and investigate.`);
     }
     process.exit(1);  // actionable: edges silently went missing
+  }
+  if (severe.length) {
+    log('');
+    for (const r of severe) {
+      const factor = (r.actual_edges / Math.max(r.expected_edges, 1)).toFixed(1);
+      log(`✗ STALE_SEVERE ${r.dataset}: ${factor}x more edges than the current build produces (expected ${r.expected_edges.toLocaleString()}, actual ${r.actual_edges.toLocaleString()}). This is not drift — the source table was almost certainly replaced and the edge layer never rebuilt, so source_record_id will not resolve. Delete WHERE dataset='${r.dataset}' and re-run that build phase.`);
+    }
+    process.exit(1);  // actionable: edges point at source rows that no longer exist
   }
   if (stale.length) {
     log('');
