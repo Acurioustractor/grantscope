@@ -92,3 +92,47 @@ rebuild it resolves, and that rejection should be revisited.
 Both wrong readings were produced the same way: inferring a mechanism from the shape of the data
 without reading the code that generates it. The builder took two minutes to read and killed both.
 Read the producer before diagnosing the product.
+
+---
+
+# Addendum — the full sweep, 2026-08-14
+
+Once `--dataset=` existed, all five edge datasets were checked individually (the full serial run
+had been dying on pooler drops before reaching most of them).
+
+| dataset | expected | actual | status | coverage of source |
+|---|---|---|---|---|
+| `aec_donations` | 1,038,896 | 1,073,308 | OK | — |
+| `austender` | 668,335 | 699,387 | OK | — |
+| `grant_opportunities` | 5,422 | 6,656 | STALE (22.8%) | 25.7% |
+| **`foundations`** | **24** | **63** | **STALE_SEVERE (2.6×)** | **0.6%** |
+| **`justice_funding`** | **144,901** | **857,798** | **STALE_SEVERE (5.9×)** | 546% |
+
+**Two of five layers are severely stale.** But `foundations` is the more alarming row, and not for
+the staleness.
+
+## The philanthropy layer of the graph barely exists
+
+`foundations` holds 11,159 rows. The builder's own set-based derivation produces **24 edges**. Not
+24,000 — twenty-four. Actual is 63, so the layer is both stale *and* empty.
+
+Staleness is a rebuild. This is not: rebuilding `foundations` would replace 63 stale edges with 24
+fresh ones and the philanthropy layer would still be, effectively, absent. The join that produces
+those edges must be matching almost nothing — that is a **coverage defect in the derivation**, and
+it needs the same treatment the justice ABN joins got: measure the match rate, find out which key
+is failing, and fix the join rather than re-running it.
+
+This matters disproportionately. Philanthropy and giving are the first two pillars of the stated
+vision, and `foundations` is the table that carries them into the graph. Every "who funds whom"
+question routes through 63 edges.
+
+`grant_opportunities` at 25.7% coverage is the same class of problem, one order less severe — and
+consistent with the data map's earlier finding that 97.6% of its edges (6,497 of 6,656) are
+self-loops.
+
+## Revised priority
+
+1. `justice_funding` — rebuild. Mechanism understood, target number known (144,901).
+2. `foundations` — **diagnose the join before rebuilding.** A rebuild here fixes nothing.
+3. `grant_opportunities` — diagnose the self-loops, then rebuild.
+4. `aec_donations` / `austender` — healthy, leave alone.
