@@ -56,7 +56,14 @@ export const GRAPH_EDGE_DATASETS = [
      FROM political_donations d
      LEFT JOIN donor_map dm ON dm.key = upper(trim(d.donor_name))
      JOIN gs_entities donor
-       ON donor.gs_id = 'AU-ABN-' || regexp_replace(coalesce(NULLIF(trim(d.donor_abn), ''), dm.matched_abn), '\\s', '', 'g')
+       -- GUARD ADDED 2026-08-14. donor_entity_matches holds 771 rows (of 10,264) whose matched_abn
+       -- is '0'. Without this, all 771 distinct donors collapse onto the single gs_entities row
+       -- that carries abn='0' ("112 Trenerry Crescent Pty Ltd"), producing 53,148 donation edges
+       -- attributed to one company. NULLIF on an all-zero ABN makes the coalesce fall through to
+       -- NULL, so those donations produce NO edge rather than a confidently wrong one.
+       ON donor.gs_id = 'AU-ABN-' || NULLIF(
+            regexp_replace(coalesce(NULLIF(trim(d.donor_abn), ''), dm.matched_abn), '\\s', '', 'g'),
+            repeat('0', length(regexp_replace(coalesce(NULLIF(trim(d.donor_abn), ''), dm.matched_abn), '\\s', '', 'g'))))
      JOIN gs_entities party
        ON party.entity_type = 'political_party'
       AND upper(trim(party.canonical_name)) = upper(trim(d.donation_to))`,
