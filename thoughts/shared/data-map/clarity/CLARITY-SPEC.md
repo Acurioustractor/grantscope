@@ -43,6 +43,20 @@ not on `clarity_object`.
 
 ---
 
+
+> ## ⚠ THE GUARD — read this before anything else
+>
+> Slices 1–2 ship something indistinguishable from a competent data catalog. The half that makes
+> this *different* lands day 9–13. So: **if slice 2 has not shipped within 10 working days of
+> slice 1, the surface has become an inventory and the direction has failed.** That is the test,
+> not a preference.
+>
+> Before seeding the question registry, read `BAR-CHECK-CLOSURE.md`. Three claims this spec
+> renders as fact were measured and corrected: over-representation IS answerable at state level
+> (the refusal card is wrong), media joins at 2.4% (not a pillar — a seam), and the Empathy Ledger
+> bridge is intact for people and absent for organisations (15 of 104,427).
+
+
 ## 1. THE DECISION AND ITS ARGUMENT
 
 ### 1.1 The winner
@@ -77,7 +91,7 @@ about direction:
 2. **"Zero curation debt vs 23 unwritten SQL statements."** Real, and named by the Interrogator
    itself as the strongest argument against it. **Fixed twice over:** slice 1 is the fully-derived
    ledger, so the surface is never a wall of empty cards; and the Atlas's flow matrix is grafted
-   as slice 4, which makes cross-sections **generative** — up to 1,210 automatically computed
+   as slice 4, which makes cross-sections **generative** — **144 populated cells** (measured 2026-08-14; the 1,210 figure is the theoretical maximum, not the actual)
    cells against 26 hand-written questions.
 3. **"Its node caps are measured, not asserted."** True, and the measurements are transplanted
    wholesale (§5).
@@ -123,7 +137,7 @@ recommendation.
 |---|---|---|---|---|
 | G1 | **The persistent left rail owns every filter.** Kill the header chip row. Filters live in the URL and are carried across board → answer → rows → ledger → seams → wants; a filter that cannot apply at the current screen is shown **carried-but-inactive**, never silently dropped | Atlas §4②, §15.2 | `judge-ben` T1: the winner's single named rage-trigger, against the recorded taste rule *"filter chips that read as tabs"*. An afternoon of work | `clarity/layout.tsx` |
 | G2 | **WHAT CHANGED — `clarity_event` + `clarity_delta` + the anomaly rule.** `\|Δ\|/prev > 10%`, a zero crossing, `missing_since` set, or a state change writes a `severity='critical'` event that stays **NO REASON RECORDED**, in red, until a human writes one | Instrument §8.3, §10.3 | All three panels. `justice_funding` went 218,022 → 157,116, minus 28%, and nothing fired [R]. Extended per `judge-insight` I1 to fire on **`clarity_answer.headline` moving >10% with no ingredient row-count change** — semantic drift, the exact failure the winner fears | `/clarity/changes`, slice 3 |
-| G3 | **The flow matrix + `mv_clarity_flow`.** 11 entity types × 11 × 10 relationship types, ≤1,210 cells, one nightly matview | Atlas §10.3 | `judge-insight` A1, *the essential transplant*: it cures the winner's only structural ceiling. A curated registry surfaces the opportunities Ben already wrote down; a matrix surfaces ones nobody wrote down. Cardinality verified independently by two agents [R] | `/clarity/cross`, slice 4 |
+| G3 | **The flow matrix + `mv_clarity_flow`.** 11 entity types × 11 × 10 relationship types, **144 populated cells measured** (1,210 theoretical max), one nightly matview | Atlas §10.3 | `judge-insight` A1, *the essential transplant*: it cures the winner's only structural ceiling. A curated registry surfaces the opportunities Ben already wrote down; a matrix surfaces ones nobody wrote down. Cardinality verified independently by two agents [R] | `/clarity/cross`, slice 4 |
 | G4 | **SEAMS as a ranked table**, sorted by `rows_at_stake × (1 − match_rate)` — by how much data the connection is losing right now. Graph behind a RENDER button | Instrument §7 | All three panels. The four defects that matter are the top four rows and are invisible in a force-directed graph | `/clarity/seams`, slice 5 |
 | G5 | **The ledger moves to slice 1**, ahead of the question board | `judge-ben` structural amendment | Ben literally asked for the list. It is also 100% derived, so it cannot be half-done | slice 1 |
 | G6 | **A HOUSE subject** — the 23 gap metrics registered as questions about ourselves, with targets | `judge-ben` structural amendment | Ben's decision 2 (reconcile the matview registries) is operational work with no home on a question board or a want list. As a HOUSE card, *"71 of 98 matviews are in no refresh registry"* becomes a contested card with an adjudication CTA | slice 6 |
@@ -664,6 +678,11 @@ holes?"*
 ║ RAIL       │ SOURCES 714 │ DERIVED 98 │ LENSES 212 │ ROUTINES 409 │ ALL 1,433   sort FEEDS ▾      ║
 ║            │ ┌────────────────────┬───────┬──────┬─────┬─────┬───┬───┬───┬───┬───┬───┬─────────┐ ║
 ║ KIND       │ │ OBJECT             │  ROWS │ Δ30d │ SIZE│FRESH│FDS│PUR│OWN│JOI│USE│EXP│  BLOCKS │ ║
+║ OWNER APP  │ (facet RESTORED 2026-08-14 per BAR-CHECK A3 — it existed in BUILD-SPEC and was      │ ║
+║ ▢ civicgraph│ silently dropped. owner_app already survives in the ledger SELECT; this is the     │ ║
+║ ▢ justicehub│ missing CONTROL. Values: civicgraph · justicehub · both · neither. `both` is the   │ ║
+║ ▢ both     │ dual-write hazard set — 19 objects, incl. the gs_entities JSONB read-modify-write    │ ║
+║ ▢ neither  │ race from a JusticeHub cron. Flag those rows, do not merely count them.)            │ ║
 ║ ▢ table 714│ ├────────────────────┼───────┼──────┼─────┼─────┼───┼───┼───┼───┼───┼───┼─────────┤ ║
 ║ ▢ matvw 98 │ │ austender_contracts│823,620│▲2,481│2.1GB│  7d │ 4 │ █ │ █ │ █ │ █ │ █ │    1    │ ║
 ║ ▢ view 212 │ │ justice_funding    │157,116│  ·   │1.2GB│  0d │ 6 │ █ │ █ │ █ │ █ │ █ │    1    │ ║
@@ -992,7 +1011,7 @@ and a required caveat, and drops it into the board as `state='draft'`. The regis
 only source of cross-sections; the matrix becomes the machine and the registry becomes the
 magazine.
 
-**Query.** `SELECT * FROM mv_clarity_flow` (**deliverable**, §4.5), ≤1,210 rows, plus the join
+**Query.** `SELECT * FROM mv_clarity_flow` (**deliverable**, §4.5), **144 populated rows measured**, plus the join
 matrix from `clarity_edge` × `clarity_object.domain` (≤196 cells). Both are server-rendered inline
 SVG with no client JavaScript except the cell tooltip.
 
@@ -1510,7 +1529,8 @@ not an invented `edge_key`.
 
 ```sql
 -- Max size: 11 source types × 11 target types × 10 relationship types = 1,210 rows.
--- Must be a matview: the live GROUP BY over 3,429,184 edges was measured at ~40s,
+-- Must be a matview: the live GROUP BY over 3,429,184 edges was RE-measured at 91,257 ms
+-- (91s) on 2026-08-14 — the earlier ~40s figure was relayed, not measured.
 -- which is 5x the 8-second PostgREST ceiling.
 CREATE MATERIALIZED VIEW mv_clarity_flow AS
 SELECT s.entity_type                                AS source_type,
@@ -1626,7 +1646,7 @@ changes once a night); the answer re-run and the rows page are uncached.
 | S4 ledger | 1 | 1,433 × ~34 | **~300 KB inline in the RSC payload** | 400 ms |
 | S5 object | 6 small | ~300 | ~40 KB | 150 ms |
 | S6 seams | 1 | ~1,415 | ~180 KB | 300 ms |
-| S7 cross | 2 | ≤1,210 + ≤196 | ~90 KB | 200 ms |
+| S7 cross | 2 | 144 + ≤196 | ~90 KB | 200 ms |
 | S8 changes | 2 | ≤300 events | ~60 KB | 250 ms |
 | S9 wants | 1 | ≤25 | ~10 KB | 120 ms |
 
@@ -1757,11 +1777,17 @@ while going quietly stale. Slice 4 is what makes it Ben's project rather than a 
 13. **It does not catalogue JusticeHub's 480 routes or its pipelines.** The uncommitted
     `data-observatory` owns sources and pipelines; `/clarity` owns the database. Coordinate before
     slice 0; do not build over it.
-14. **It does not use embeddings for relatedness.** Measured: 11.3 s for a single `gs_entities` ANN
-    search at `probes=1`, on a 2,846 MB index over a column that is 22% populated, and the
-    neighbours are lexical anyway [R]. Relatedness is structural: shared downstream views,
-    co-reference in the same source file, declared joins. Free, exact, and every result carries a
-    citable reason.
+14. **It does not use `gs_entities` embeddings for relatedness — but the rejection is narrower than
+    it first read.** Measured: 11.3 s for a single `gs_entities` ANN search at `probes=1`, on a
+    2,846 MB index over a column that is 22% populated, and the neighbours are lexical anyway [R].
+    **NARROWED 2026-08-14:** that is the worst index in the database, and the original blanket
+    rejection generalised from it. Two others are small and effectively complete —
+    `grant_opportunities` (25,883 of 25,894 = 99.96%) and `knowledge_chunks` (19,413 = 100%) — and
+    are viable for catalog relatedness. `knowledge_chunks` is now `authenticated`-only, so any use
+    is behind the admin gate anyway. Treat as: rejected for the entity spine, open for the two
+    complete small indexes.
+    Default relatedness stays structural: shared downstream views, co-reference in the same source
+    file, declared joins. Free, exact, and every result carries a citable reason.
 15. **It does not promise a number it has not measured.** Everything on every screen comes from a
     snapshot table written by a job whose cost is recorded, and every screen can show the SQL that
     produced it.
