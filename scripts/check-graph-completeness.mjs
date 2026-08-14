@@ -28,6 +28,7 @@
  * Usage:
  *   node --env-file=.env scripts/check-graph-completeness.mjs
  *   node --env-file=.env scripts/check-graph-completeness.mjs --threshold=0.03
+ *   node --env-file=.env scripts/check-graph-completeness.mjs --dataset=justice_funding
  *   node --env-file=.env scripts/check-graph-completeness.mjs --json   # machine-readable (for /health)
  */
 
@@ -54,6 +55,17 @@ const THRESHOLD = Number(thresholdArg ?? process.env.GRAPH_COMPLETENESS_THRESHOL
 // edge layer never followed. justice_funding sat at 857,798 actual against ~157,116 expected
 // (5.5x) with every source_record_id pointing at a deleted grant, and this gate reported it as
 // STALE and exited 0 every run. Anything at or above this factor is actionable.
+// Optional dataset filter. The full sweep runs every dataset serially and takes minutes; on a
+// shared pooler it can lose the connection mid-run. --dataset=a,b lets you check one slice.
+const datasetArg = args.find((a) => a.startsWith('--dataset='))?.split('=')[1];
+const DATASETS = datasetArg
+  ? GRAPH_EDGE_DATASETS.filter((d) => datasetArg.split(',').map((x) => x.trim()).includes(d.dataset))
+  : GRAPH_EDGE_DATASETS;
+if (datasetArg && DATASETS.length === 0) {
+  console.error(`No graph edge dataset matches --dataset=${datasetArg}. Known: ${GRAPH_EDGE_DATASETS.map((d) => d.dataset).join(', ')}`);
+  process.exit(2);
+}
+
 const STALE_FACTOR = Number(
   args.find((a) => a.startsWith('--stale-factor='))?.split('=')[1]
   ?? process.env.GRAPH_STALE_FACTOR ?? 2.0);
@@ -155,7 +167,7 @@ async function main() {
 
   const results = [];
   try {
-    for (const def of GRAPH_EDGE_DATASETS) {
+    for (const def of DATASETS) {
       const r = await checkDataset(def);
       results.push(r);
       log(`  ${def.dataset}: expected ${r.expected_edges.toLocaleString()} · actual ${r.actual_edges.toLocaleString()} · ${r.status}`);
