@@ -42,7 +42,21 @@
 -- ROLLBACK: each DROP is paired with the exact CREATE POLICY that restores it,
 -- in the ROLLBACK block at the foot of this file.
 --
--- APPLY WITH (NOT APPLIED — this file is a deliverable):
+-- ============================ APPLIED 2026-08-14 ============================
+-- Applied to project tednluwflfhxyucgwigh. 48 policies dropped, 1 rewritten
+-- (org_chunks_select re-scoped to authenticated). Verified after apply with the
+-- LIVE publishable key: xero_payments, knowledge_chunks, linkedin_contacts,
+-- founder_intake_messages and project_knowledge all return [] to an anonymous
+-- caller; gs_entities still returns rows, so public civic data is unaffected.
+-- partner_goals and partner_contacts were deliberately HELD (see B3 below) and
+-- their policies are intact. discrimination_reports keeps its anon INSERT.
+-- Pre-apply snapshot of all 659 anon/public read policies:
+--   thoughts/shared/data-map/clarity/policy-snapshot-preapply-2026-08-14.sql
+-- Note: the legacy anon key in .env was disabled 2026-06-29; the live anon path
+-- is NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY. Test with that, not the legacy key.
+-- ===========================================================================
+--
+-- ORIGINAL APPLY COMMAND:
 --   cd /Users/benknight/Code/grantscope && source .env && PGPASSWORD="$DATABASE_PASSWORD" \
 --     psql -h aws-0-ap-southeast-2.pooler.supabase.com -p 5432 \
 --     -U postgres.tednluwflfhxyucgwigh -d postgres \
