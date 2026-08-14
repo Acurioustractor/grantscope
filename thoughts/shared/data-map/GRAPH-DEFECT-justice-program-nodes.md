@@ -229,3 +229,44 @@ legacy rows to be the stale ones.
 
 Not urgent relative to `justice_funding` (712,827 orphans) or the never-built GrantConnect layer
 (291,264 rows), but it is a correctness issue in exactly the pillar the project leads with.
+
+---
+
+# Addendum 3 — the two "unverified" claims, now verified
+
+Both had been sitting in this document flagged unverified. Closed 2026-08-14.
+
+## "Department of Defence appears twice" — TRUE, and it is a pattern
+
+```
+AU-GOV-0ec98ef9e0205da9dcb10135be81bd2b  Department of Defence  government_body  (no abn)  (no state)
+AU-GOV-0ec9911c9e99d1b7bb1b77f4abffc583  Department of Defence  government_body  68706814312  ACT
+```
+
+The ABN-bearing row is the real one and carries 270,864 edges — the third-largest node in the
+graph. The other is an ABN-less, state-less shadow.
+
+**It is not a one-off.** Among `entity_type='government_body'` alone there are **41 duplicate-name
+groups covering 84 rows** — roughly 43 excess entities. Government buyers are the counterparty on
+most of the procurement graph, so a split identity there quietly divides one department's spend
+across two nodes and understates it in every ranking.
+
+Worth a dedup pass keyed on normalised name + ABN-presence, in the same family as the ORIC/ABN
+dedup lane already running.
+
+## "`AU-ABN-0` is a catch-all bucket" — TRUE, but narrower than described
+
+Exactly **one** entity carries `abn='0'`:
+
+```
+AU-ABN-0   112 Trenerry Crescent Pty Ltd   company   abn='0'
+```
+
+So it is not a bucket of many mis-keyed rows. It is a single real company whose ABN was ingested as
+`'0'`, and which has consequently become the **sink for 53,193 edges** — every source row whose ABN
+normalised to zero resolved to this one node. One company is currently wearing tens of thousands of
+other organisations' relationships.
+
+Cheap to fix and worth doing before any centrality or power-score work: null the bogus ABN, break
+the edges that resolved through it, and add a guard rejecting `'0'`, `'00000000000'` and similar
+from ABN normalisation at ingest.
