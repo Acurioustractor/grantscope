@@ -97,27 +97,64 @@ Colors: `bauhaus-black` #121212, `bauhaus-red` #D02020, `bauhaus-blue` #1040C0, 
 
 ## Key Tables Reference
 
+Row counts below are exact `count(*)` measured 2026-08-14. The previous version of this table
+understated most of them by 3–8x and omitted the four largest datasets entirely. Re-measure before
+trusting these again — do not let them rot a second time:
+`node --env-file=.env scripts/gsql.mjs "SELECT count(*) FROM <table>"`
+
+**The database holds 1,024 public-schema relations** (714 tables + 98 matviews + 212 views),
+724 populated, 52.3M rows. This table is the top ~25. The full catalogue lives in
+`thoughts/shared/data-map/` — go there before assuming something does not exist.
+
 | Table | Rows | Key Columns |
 |-------|------|-------------|
-| `gs_entities` | 159K | gs_id, canonical_name, abn, entity_type, sector, postcode, state, remoteness, seifa_irsd_decile, is_community_controlled, lga_name, lga_code |
-| `gs_relationships` | 1.08M | source_entity_id, target_entity_id, relationship_type, amount, year, dataset |
-| `austender_contracts` | 770K | title, contract_value, buyer_name, supplier_name, supplier_abn, contract_start, contract_end |
+| `abr_registry` | 20.0M | the ABN register — largest object in the DB, undocumented until 2026-08-14 |
+| `gs_relationships` | 3.43M | source_entity_id, target_entity_id, relationship_type, amount, year, dataset |
+| `political_donations` | 2.55M | donor_name, donor_abn, donation_to, amount, financial_year, **receipt_type** |
+| `asic_companies` | 2.17M | ASIC company register |
+| `entity_xref` | 1.21M | the REAL graph crosswalk (covers 91.9% of gs_entities). Not `entity_identifiers`. |
+| `austender_contracts` | 824K | title, contract_value, buyer_name, supplier_name, supplier_abn, contract_start, contract_end |
+| `gs_entities` | 609K | gs_id, canonical_name, abn, entity_type, sector, postcode, state, remoteness, seifa_irsd_decile, is_community_controlled, lga_name, lga_code |
+| `acnc_ais` | 360K | ACNC Annual Information Statements (charity financials by year) |
+| `mv_charity_network` | 351K | charity↔charity links via shared directors. Refreshed nightly, read by NO app code. |
+| `person_roles` | 340K | person_name, person_name_normalised, role_type, entity_id, company_acn, confidence, is_nominee_block |
+| `grantconnect_awards` | 291K | awarded Commonwealth grants. NOT empty — an old memory note claiming that is wrong. |
+| `person_identities` | 230K | resolved person identities |
+| `state_tenders` | 200K | **owned and scraped by JusticeHub**, read by GrantScope report pages |
+| `mv_entity_power_index` | 188K | canonical_name, abn, system_count, power_score, in_* flags |
+| `justice_funding` | 157K | recipient_name, recipient_abn, gs_entity_id, program_name, amount_dollars, state, financial_year, sector, topics, **measure_kind** |
+| `organizations` | 104K | JusticeHub's org hub. `gs_entity_id` populated on 99.72% — the GS↔JH bridge. |
 | `acnc_charities` | 66K | abn, name, charity_size, state, postcode, purposes, beneficiaries, is_foundation |
-| `justice_funding` | 71K | recipient_name, recipient_abn, gs_entity_id, program_name, amount_dollars, state, financial_year, sector |
-| `political_donations` | 312K | donor_name, donor_abn, donation_to, amount, financial_year |
-| `ato_tax_transparency` | 24K | entity_name, abn, total_income, taxable_income, tax_payable, report_year |
-| `entity_identifiers` | 31K | entity_id, identifier_type, identifier_value, source |
-| `alma_interventions` | 2.1K | name, type, description, evidence_level, evidence_strength_signal, portfolio_score, gs_entity_id, topics |
-| `alma_evidence` | 570 | id, evidence_type, methodology, sample_size, effect_size — linked to interventions via `alma_intervention_evidence` junction (NO direct intervention_id) |
-| `alma_outcomes` | 506 | id, outcome_type, measurement_method, indicators — linked via `alma_intervention_outcomes` junction (NO direct intervention_id) |
-| `foundations` | 10.8K | name, acnc_abn, total_giving_annual, thematic_focus, geographic_focus |
-| `grant_opportunities` | 18K | name, amount_min, amount_max, deadline, categories, focus_areas |
+| `mv_board_interlocks` | 39.8K | person_name_normalised, person_name_display, board_count, organisations, organisation_abns, entity_ids, interlock_score |
+| `entity_identifiers` | 31K | entity_id, identifier_type, identifier_value, source. **CRM store (LinkedIn/GHL/Xero ids), FK'd to `canonical_entities`, contains ZERO ABNs.** Not the graph crosswalk. |
+| `ato_tax_transparency` | 26K | entity_name, abn, total_income, taxable_income, tax_payable, report_year |
+| `grant_opportunities` | 26K | name, amount_min, amount_max, deadline, categories, focus_areas |
 | `postcode_geo` | 12K | postcode, locality, state, sa2_code, remoteness_2021, lga_name, lga_code |
-| `seifa_2021` | 11K | postcode, index_type, score, decile_national |
-| `org_profiles` | — | user_id, name, abn, stripe_customer_id, subscription_plan |
-| `agent_runs` | — | agent_id, agent_name, status, items_found, items_new, duration_ms |
-| `agent_schedules` | — | agent_id, interval_hours, enabled, last_run_at, priority |
-| `mv_funding_by_postcode` | 2.9K | postcode, state, remoteness, entity_count, total_funding |
+| `foundations` | 11K | name, acnc_abn, total_giving_annual, thematic_focus, geographic_focus |
+| `seifa_2021` | 10.6K | postcode, index_type, score, decile_national |
+| `mv_funding_by_postcode` | 7.2K | postcode, state, remoteness, entity_count, total_funding |
+| `alma_outcomes` | 2.9K | id, outcome_type, measurement_method, indicators — via `alma_intervention_outcomes` junction (NO direct intervention_id) |
+| `alma_interventions` | 2.1K | name, type, description, evidence_level, evidence_strength_signal, portfolio_score, gs_entity_id, topics |
+| `mv_funding_deserts` | 2.0K | LGA disadvantage vs funding. Grain is NOT unique per LGA — 1,130 distinct name\|state over 1,997 rows. |
+| `mv_funding_by_lga` | 1.7K | per-LGA funding aggregates |
+| `alma_evidence` | 631 | id, evidence_type, methodology, sample_size, effect_size — via `alma_intervention_evidence` junction (NO direct intervention_id) |
+| `org_profiles` | 3 | user_id, name, abn, stripe_customer_id, subscription_plan. 24 tables FK to these 3 rows. |
+
+### Two filters that are mandatory, not optional
+
+Both of these columns exist to separate incompatible measures that share one amount column.
+Omitting them does not produce a slightly-off number, it produces a wrong one by an order of magnitude.
+
+```sql
+-- justice_funding: 848 'expenditure_aggregate' rows are WHOLE-OF-STATE BUDGETS ($66.1bn),
+-- not money to any organisation. For funding received by orgs:
+WHERE measure_kind = 'grant'          -- 126,673 rows, $46.1bn
+
+-- political_donations: 'other receipt' is 72% of rows and 85% of dollars and is NOT donations.
+WHERE receipt_type = 'donation received'   -- 506,739 rows, $23.0bn (vs $186.7bn 'other receipt')
+```
+
+Topic tags use HYPHENS: `topics @> ARRAY['youth-justice']`. The underscore form returns zero rows silently.
 
 ## Materialized Views
 

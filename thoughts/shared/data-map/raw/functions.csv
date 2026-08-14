@@ -1,0 +1,411 @@
+proname,args,lanname,prokind
+accept_pending_invitations,"",plpgsql,f
+act_auto_pass_stale_pipeline,"",plpgsql,f
+act_parse_pipeline_deadline,d text,plpgsql,f
+add_new_storyteller,"p_email text, p_full_name text, p_community text, p_bio text",plpgsql,f
+analyze_contact_strategic_value,"",plpgsql,f
+approve_proposal,"proposal_id uuid, reviewer text, notes text",plpgsql,f
+assign_engagement_tier,person_uuid uuid,plpgsql,f
+assign_task_to_agent,"p_task_id uuid, p_agent_id text",plpgsql,f
+auto_approve_high_confidence,"confidence_threshold double precision, dry_run boolean",plpgsql,f
+auto_create_org_membership,"",plpgsql,f
+auto_create_person_identity,"",plpgsql,f
+auto_tag_invoice_income_type,"",plpgsql,f
+award_theme_map,raw text,sql,f
+backfill_all_community_programs_to_alma,"",plpgsql,f
+backfill_community_program_to_alma_intervention,p_program_id uuid,plpgsql,f
+bridge_civicscope_to_act_exact,p_rebuild boolean,plpgsql,f
+bridge_civicscope_to_act_fuzzy,"p_batch_limit integer, p_after_id uuid, p_min_similarity numeric",plpgsql,f
+calculate_api_cost,"p_provider text, p_model text, p_endpoint text, p_input_tokens integer, p_output_tokens integer",plpgsql,f
+calculate_calibration,"p_agent_id text, p_window_days integer",plpgsql,f
+calculate_community_authority_signal,intervention_id uuid,plpgsql,f
+calculate_community_investment_score,p_jurisdiction text,plpgsql,f
+calculate_coverage_metrics,"",plpgsql,f
+calculate_decay_score,"p_last_accessed timestamp with time zone, p_access_count integer, p_confidence double precision, p_importance text",plpgsql,f
+calculate_empowerment_score,analysis_data jsonb,plpgsql,f
+calculate_engagement_score,"session_time integer, page_views integer, interactions integer, collaborations integer",plpgsql,f
+calculate_evidence_signal,intervention_id uuid,plpgsql,f
+calculate_funding_match_score,"p_opportunity_id uuid, p_organization_id uuid",plpgsql,f
+calculate_funding_relevance,opportunity_id uuid,plpgsql,f
+calculate_harm_risk_signal,intervention_id uuid,plpgsql,f
+calculate_health_trend,p_site_id uuid,plpgsql,f
+calculate_implementation_signal,intervention_id uuid,plpgsql,f
+calculate_migration_priority,"sub_amount numeric, sub_metadata jsonb, sub_confidence numeric",plpgsql,f
+calculate_next_scrape,"p_update_frequency text, p_priority_score numeric",plpgsql,f
+calculate_option_value_signal,intervention_id uuid,plpgsql,f
+calculate_portfolio_score,int_id uuid,plpgsql,f
+calculate_portfolio_signals,p_intervention_id uuid,plpgsql,f
+calculate_potential_savings,"p_young_people_diverted integer, p_detention_cost_per_day numeric, p_community_cost_per_day numeric, p_avg_detention_days integer",plpgsql,f
+calculate_project_sovereignty_score,target_project_id uuid,plpgsql,f
+calculate_reading_time,content_text text,plpgsql,f
+calculate_relationship_score,contact_id uuid,plpgsql,f
+calculate_relationship_temperature,"p_days_since_contact integer, p_total_touchpoints integer, p_inbound_count integer, p_outbound_count integer",plpgsql,f
+calculate_service_completeness,service_id_param uuid,plpgsql,f
+calculate_trust_score,"interaction_dates timestamp with time zone[], quality_scores numeric[], base_score numeric, decay_days numeric",plpgsql,f
+can_access_story,"story_id uuid, user_id uuid",plpgsql,f
+can_read_storyteller_data,"",sql,f
+charity_sector_snapshot,"",plpgsql,f
+charity_snapshot_beneficiaries,"",sql,f
+charity_snapshot_by_size,"",sql,f
+charity_snapshot_by_state,"",sql,f
+charity_snapshot_operating_states,"",sql,f
+charity_snapshot_pbi,"",sql,f
+charity_snapshot_purposes,"",sql,f
+charity_snapshot_top_grant_makers,"",sql,f
+charity_snapshot_trends,"",sql,f
+check_action_bounds,"p_action_name text, p_params jsonb",plpgsql,f
+check_consent_compliance,"p_entity_type text, p_entity_id uuid, p_action text",plpgsql,f
+check_coordination_complete,p_parent_id uuid,plpgsql,f
+check_cultural_content,"",plpgsql,f
+check_cultural_restrictions,"p_entity_type text, p_entity_id text",plpgsql,f
+check_daily_spend_alert,p_threshold_usd numeric,plpgsql,f
+civic_meeting_tags_touch_updated_at,"",plpgsql,f
+civic_org_classifications_touch_updated_at,"",plpgsql,f
+civicscope_normalize_org_name,p_name text,sql,f
+claim_next_task,p_concurrency_limit integer,plpgsql,f
+classify_alma_topics,"",plpgsql,f
+classify_justice_funding_topics,"",plpgsql,f
+cleanup_expired_conversations,"",plpgsql,f
+cleanup_expired_proposals,"",plpgsql,f
+cleanup_old_audit_logs,retention_days integer,plpgsql,f
+cleanup_old_integration_events,"",plpgsql,f
+cleanup_old_sync_events,retention_days integer,plpgsql,f
+closing_the_gap_state_summary,"",sql,f
+community_voices_by_location,p_state text,sql,f
+community_voices_for_org,p_org_id uuid,sql,f
+compare_interventions,p_intervention_ids uuid[],plpgsql,f
+complete_ralph_task,"p_task_id uuid, p_run_id uuid, p_success boolean, p_output text, p_error text, p_commit_sha text, p_files_modified jsonb",plpgsql,f
+complete_task,"p_task_id uuid, p_output jsonb, p_reasoning text, p_confidence numeric",plpgsql,f
+contact_matches_region,"contact_location text, region_tags text[]",plpgsql,f
+contact_matches_role,"contact_position text, contact_company text, contact_industry text, contact_skills text[], contact_alignment_tags text[], role_tags text[]",plpgsql,f
+cosine_similarity,"a vector, b vector",plpgsql,f
+counterparty_count,mv_gs_entity_stats,sql,f
+create_decision_outcomes_table,"",plpgsql,f
+create_decisions_table,"",plpgsql,f
+create_empathy_project,"project_name text, organization_name text, organization_email text, creator_user_id uuid, template_id uuid",plpgsql,f
+create_extraction_notifications,"",plpgsql,f
+create_health_alert,"",plpgsql,f
+create_research_session,"p_query text, p_depth text, p_max_consent_level text, p_user_id uuid",plpgsql,f
+create_review_reminders,"",plpgsql,f
+dashboard_foundation_tiers,"",sql,f
+dashboard_foundation_total_giving,"",sql,f
+dashboard_geographic_distribution,"",sql,f
+dashboard_sector_distribution,"",sql,f
+dashboard_source_coverage,"",sql,f
+data_corrections_touch_updated_at,"",plpgsql,f
+decrement_communities_joined,p_user_id uuid,plpgsql,f
+decrement_stories_contributed,p_user_id uuid,plpgsql,f
+delete_old_pulse_events,"",plpgsql,f
+detect_cultural_content,"",plpgsql,f
+detect_repeated_mistakes,"p_agent_id text, p_min_occurrences integer, p_window_days integer",plpgsql,f
+determine_lcaa_stage,"p_temperature integer, p_inbound_count integer, p_outbound_count integer, p_total_touchpoints integer",plpgsql,f
+evaluate_autonomy_change,"p_action_name text, p_window_days integer",plpgsql,f
+exec_agent_sql,query_text text,plpgsql,f
+exec_sql,query text,plpgsql,f
+exhibition_search,"q text, lim integer",plpgsql,f
+expire_old_proposals,"",plpgsql,f
+extract_notion_project_status,"",plpgsql,f
+find_evidence_gaps,"p_jurisdiction text, p_intervention_type text, p_limit integer",plpgsql,f
+find_potential_duplicates,"p_entity_id uuid, p_threshold numeric",plpgsql,f
+find_similar_decisions,"p_input_context jsonb, p_decision_type text, p_limit integer",plpgsql,f
+find_similar_knowledge,"query_embedding vector, match_threshold double precision, match_count integer",plpgsql,f
+flag_low_confidence_executions,"",plpgsql,f
+generate_album_slug,title_text text,plpgsql,f
+generate_event_slug,"",plpgsql,f
+generate_input_hash,"",plpgsql,f
+generate_public_profile_slug,"",plpgsql,f
+generate_short_id,length integer,plpgsql,f
+generate_storage_prefix,"",plpgsql,f
+generate_weekly_report_data,"p_week_start date, p_organization_id uuid",plpgsql,f
+get_agent_health,p_hours integer,plpgsql,f
+get_auto_approval_stats,"",sql,f
+get_business_state_summary,"",plpgsql,f
+get_calendar_events,"p_start_date timestamp with time zone, p_end_date timestamp with time zone, p_project_code text, p_calendar_id text, p_limit integer",plpgsql,f
+get_calendar_stats,"p_start_date timestamp with time zone, p_end_date timestamp with time zone",plpgsql,f
+get_case_for_change,"",plpgsql,f
+get_contacts_needing_attention,days_threshold integer,plpgsql,f
+get_contained_intel_summary,"",sql,f
+get_cost_summary,"p_start_date date, p_end_date date",plpgsql,f
+get_current_platform_organization_id,"",plpgsql,f
+get_decay_stats,"",sql,f
+get_decision_quality_metrics,"p_agent_id text, p_decision_type text, p_days integer",plpgsql,f
+get_decision_recommendations,limit_count integer,plpgsql,f
+get_edge_type_counts,"",sql,f
+get_entity_breakdown,"",sql,f
+get_entity_by_identifier,identifier text,plpgsql,f
+get_feedback_adjusted_score,"p_user_id uuid, p_grant_id uuid, p_base_score double precision",plpgsql,f
+get_foundation_acnc_summary,"",sql,f
+get_foundation_confidence_breakdown,"",sql,f
+get_foundation_program_counts,"",sql,f
+get_funding_by_source,"",sql,f
+get_funding_gaps,"p_state text, p_remoteness text, p_limit integer",sql,f
+get_funding_operating_report,"",sql,f
+get_funding_total,"",sql,f
+get_gmail_accounts_for_sync,"",sql,f
+get_grant_award_history,"p_grant_id uuid, p_winner_limit integer",sql,f
+get_grant_source_breakdown,"",sql,f
+get_gs_relationship_types,"",plpgsql,f
+get_hero_image,"p_link_type text, p_link_id text",plpgsql,f
+get_intervention_comprehensive,p_intervention_id uuid,plpgsql,f
+get_jurisdiction_stats,p_jurisdiction text,plpgsql,f
+get_knowledge_neighbors,"p_node_type text, p_node_id uuid, p_edge_types text[], p_min_strength double precision, p_limit integer",plpgsql,f
+get_knowledge_subgraph,"p_node_type text, p_node_id uuid, p_hops integer, p_min_strength double precision, p_limit integer",plpgsql,f
+get_location_id_by_name,location_name text,sql,f
+get_next_exa_batch,"p_batch_size integer, p_campaign_type text",plpgsql,f
+get_pending_enrichments,p_project_slug text,plpgsql,f
+get_pending_sync_events,"batch_size integer, target_filter text",plpgsql,f
+get_pipeline_stats,"",sql,f
+get_power_holder,"p_abn text, p_gs_id text, p_name text",sql,f
+get_power_map_board_connectors,"top_org_limit integer, min_boards integer, lim integer",sql,f
+get_power_map_control_breakdown,"",sql,f
+get_power_map_stats,"",sql,f
+get_power_map_top_orgs,lim integer,sql,f
+get_project_context,"p_project_code text, p_days integer",plpgsql,f
+get_project_media,"p_link_type text, p_link_id text",plpgsql,f
+get_project_timeline,"p_project_code text, p_limit integer, p_types text[]",plpgsql,f
+get_ralph_next_task,p_prd_id uuid,plpgsql,f
+get_roles_by_category,p_category text,sql,f
+get_sa2_map_data,"",sql,f
+get_sector_top_orgs,"",sql,f
+get_stories_needing_analysis,"",plpgsql,f
+get_storytellers_needing_analysis,"",plpgsql,f
+get_sub_task_results,p_parent_id uuid,plpgsql,f
+get_table_counts,"",sql,f
+get_table_freshness,"",sql,f
+get_timing_windows,"",sql,f
+get_top_justice_funding,"",sql,f
+get_transcript_analysis_for_story,p_story_id uuid,plpgsql,f
+get_unified_services_stats,"",sql,f
+get_user_by_email,email_input text,plpgsql,f
+get_user_feedback_signals,"p_user_id uuid, p_project_profile_id uuid",plpgsql,f
+get_week_start,p_date date,plpgsql,f
+get_yj_orgs_for_browser,"",sql,f
+get_yj_orgs_for_map,"",sql,f
+get_yj_programs_for_browser,"",sql,f
+goods_compute_warmth,"p_stage text, p_last_touch timestamp with time zone, p_total_received numeric, p_alignment numeric, p_has_prior boolean, p_advocacy numeric",plpgsql,f
+goods_relationships_touch_updated_at,"",plpgsql,f
+goods_update_timestamp,"",plpgsql,f
+grant_award_themes,p_grant_id uuid,sql,f
+grant_opportunities_apply_ghl_sync_status,"",plpgsql,f
+gs_make_id,"p_abn text, p_acn text, p_icn text, p_asx_code text, p_buyer_id text, p_fallback_name text",plpgsql,f
+gs_update_timestamp,"",plpgsql,f
+handle_new_user,"",plpgsql,f
+hybrid_memory_search,"query_embedding vector, p_project_code text, p_entity_id uuid, p_include_episodes boolean, p_freshness_weight double precision, p_graph_weight double precision, p_vector_weight double precision, match_threshold double precision, match_count integer",plpgsql,f
+increment_clicks,portrait_uuid uuid,plpgsql,f
+increment_communities_joined,p_user_id uuid,plpgsql,f
+increment_stories_contributed,p_user_id uuid,plpgsql,f
+increment_views,portrait_uuid uuid,plpgsql,f
+insert_community_programs_profile,"",plpgsql,f
+insert_receipt_emails,rows jsonb,plpgsql,f
+is_admin,"",plpgsql,f
+is_org_member,"org uuid, min_role text",sql,f
+jm_rate_check,"p_key text, p_limit integer, p_window_seconds integer",plpgsql,f
+jm_stage_discovery,"p_row jsonb, p_cap integer",plpgsql,f
+jr_approve_outcome,"p_outcome_id uuid, p_actor_id uuid, p_note text",plpgsql,f
+jr_keep_review_decisions_immutable,"",plpgsql,f
+jr_money_by_measure,"",sql,f
+jr_promote_evidence_draft,"p_draft_id uuid, p_actor_id uuid, p_note text",plpgsql,f
+jr_protect_published_snapshot,"",plpgsql,f
+jr_publish_approved_snapshot,"p_site_id uuid, p_actor_id uuid, p_note text",plpgsql,f
+jr_revoke_authority_on_lead_org_change,"",plpgsql,f
+jr_set_updated_at,"",plpgsql,f
+jr_site_authority_is_verified,"p_site_id uuid, p_organization_id uuid",sql,f
+jr_validate_evidence_draft_site,"",plpgsql,f
+jr_validate_outcome_evidence_site,"",plpgsql,f
+jr_validate_review_authority,"",plpgsql,f
+jr_validate_site_authority,"",plpgsql,f
+jr_validate_snapshot_authority,"",plpgsql,f
+jr_withdraw_published_snapshot,"p_site_id uuid, p_actor_id uuid, p_note text",plpgsql,f
+jsonb_object_keys_count,j jsonb,sql,f
+justice_funding_by_sector,p_state text,sql,f
+justice_funding_by_year,p_state text,sql,f
+justice_funding_map_locations,"p_state text, p_q text, p_sector text, p_indigenous_only boolean, p_location text, p_funding_type text, p_source text, p_beneficiary text, p_purpose text, p_charity_size text, p_alma_only boolean",plpgsql,f
+justice_funding_org_profile,p_org_id uuid,sql,f
+justice_funding_organizations,"p_state text, p_q text, p_sector text, p_indigenous_only boolean, p_location text, p_limit integer, p_offset integer, p_funding_type text, p_source text, p_beneficiary text, p_purpose text, p_charity_size text, p_alma_only boolean, p_sort text",plpgsql,f
+justice_funding_organizations,"p_state text, p_q text, p_sector text, p_indigenous_only boolean, p_location text, p_limit integer, p_offset integer",plpgsql,f
+justice_funding_overview,p_state text,sql,f
+justice_funding_power_concentration,p_state text,sql,f
+justice_funding_top_recipients,"p_state text, p_sector text, p_year text, p_indigenous_only boolean, p_limit integer",sql,f
+justice_matrix_hybrid_campaigns,"query_text text, query_embedding vector, match_limit integer, p_cats text[], p_region text, p_country text, p_scope text",plpgsql,f
+justice_matrix_hybrid_cases,"query_text text, query_embedding vector, match_limit integer, p_cats text[], p_outcome text, p_strength text, p_region text, p_country text, p_scope text",plpgsql,f
+justice_matrix_nearest_campaign,"query_embedding vector, max_distance double precision",sql,f
+justice_matrix_nearest_case,"query_embedding vector, max_distance double precision",sql,f
+justice_matrix_record_gap,"p_question text, p_normalized text, p_surface text, p_intent text, p_confidence text, p_citation_count integer, p_best_distance double precision, p_relaxed boolean, p_plan_source text, p_categories text[]",plpgsql,f
+justice_matrix_related_campaigns,"campaign_id uuid, match_limit integer",sql,f
+justice_matrix_related_campaigns_for_case,"case_id uuid, match_limit integer",sql,f
+justice_matrix_related_campaigns_for_evidence,"evidence_id uuid, match_limit integer, max_distance double precision",sql,f
+justice_matrix_related_cases,"case_id uuid, match_limit integer",sql,f
+justice_matrix_related_cases_for_campaign,"campaign_id uuid, match_limit integer",sql,f
+justice_matrix_related_cases_for_evidence,"evidence_id uuid, match_limit integer, max_distance double precision",sql,f
+justice_matrix_related_evidence_for_case,"case_id uuid, match_limit integer, max_distance double precision",sql,f
+justice_matrix_search_campaigns,"query_embedding vector, match_limit integer, max_distance double precision",sql,f
+justice_matrix_search_cases,"query_embedding vector, match_limit integer, max_distance double precision",sql,f
+justice_matrix_search_evidence,"query_embedding vector, match_limit integer, max_distance double precision",sql,f
+log_agent_action,"p_agent_id text, p_action text, p_target_table text, p_target_id text, p_success boolean, p_duration_ms integer, p_error_message text, p_input_summary jsonb, p_output_summary jsonb, p_user_context text",plpgsql,f
+log_alma_usage,"p_entity_type text, p_entity_id uuid, p_action text, p_query_text text",plpgsql,f
+log_api_usage,"p_provider text, p_model text, p_endpoint text, p_input_tokens integer, p_output_tokens integer, p_script_name text, p_cache_hit boolean, p_latency_ms integer, p_agent_id text",plpgsql,f
+log_decision_trace,"p_decision_type text, p_agent_id text, p_input_context jsonb, p_decision jsonb, p_reasoning text, p_confidence numeric, p_retrieved_context jsonb, p_alternatives jsonb",plpgsql,f
+log_goal_update,"",plpgsql,f
+log_research_tool,"p_session_id uuid, p_tool_name text, p_tool_input jsonb, p_tool_output jsonb, p_execution_time_ms integer, p_success boolean, p_error_message text",plpgsql,f
+mark_service_verified,service_id_param uuid,plpgsql,f
+mark_task_for_review,"p_task_id uuid, p_output jsonb, p_reasoning text, p_confidence numeric",plpgsql,f
+match_answer_bank,"p_org_profile_id uuid, p_query_embedding vector, p_match_count integer, p_match_threshold double precision",plpgsql,f
+match_civic_chunks,"query_embedding vector, match_count integer, filter_source text",plpgsql,f
+match_grants_for_org,"org_embedding vector, threshold double precision, match_limit integer",sql,f
+match_knowledge_chunks,"query_embedding vector, match_threshold double precision, match_count integer, filter_source_type text, filter_project_id text",plpgsql,f
+merge_duplicate_organizations,"p_dry_run boolean, p_limit integer",plpgsql,f
+merge_organization_pair,"p_winner uuid, p_loser uuid, p_basis text, p_dry_run boolean",plpgsql,f
+name_similarity,"name1 text, name2 text",plpgsql,f
+normalize_company_name,name text,plpgsql,f
+normalize_email,email text,plpgsql,f
+normalize_location_name,input_name text,plpgsql,f
+normalize_phone,phone text,plpgsql,f
+notify_event_reactor,"",plpgsql,f
+notify_grant_stage_change,"",plpgsql,f
+notify_webhook_sync_event,"",plpgsql,f
+pgrst_watch,"",plpgsql,f
+populate_media_quote_links,"",plpgsql,f
+populate_storyteller_media_links,"",plpgsql,f
+power_page_donations,"p_state text, p_limit integer",plpgsql,f
+power_page_network,"p_state text, p_limit integer",plpgsql,f
+power_page_sankey,p_state text,plpgsql,f
+power_page_top_orgs,"p_state text, p_limit integer",plpgsql,f
+prevent_cultural_sync,"",plpgsql,f
+process_new_transcript,"p_story_id uuid, p_transcript_text text, p_source text",plpgsql,f
+profiles_block_privilege_self_edit,"",plpgsql,f
+queue_campaign_for_enrichment,"p_campaign_id uuid, p_campaign_type text, p_limit integer",plpgsql,f
+queue_community_event_sync,"",plpgsql,f
+queue_for_exa_enrichment,"p_person_id uuid, p_campaign_type text, p_priority integer, p_enrich_network boolean",plpgsql,f
+queue_project_outcome_sync,"",plpgsql,f
+queue_project_sync,"",plpgsql,f
+queue_user_profile_sync,"",plpgsql,f
+rebuild_funder_board_paths,"",plpgsql,f
+rebuild_funder_intelligence,"",plpgsql,f
+rebuild_place_funding_snapshot,"",plpgsql,f
+record_alma_metric,"p_metric_type text, p_value integer, p_period_start date, p_period_end date, p_project_id uuid, p_breakdown jsonb",plpgsql,f
+record_decision_feedback,"p_decision_id uuid, p_feedback text, p_feedback_by text, p_notes text",plpgsql,f
+record_execution_review_feedback,"",plpgsql,f
+record_memory_access,"p_table text, p_id uuid",plpgsql,f
+record_opportunity_review,"p_user_id uuid, p_org_profile_id uuid, p_source_type text, p_source_ref text, p_project_code text, p_pathway text, p_reason text, p_notes text, p_evidence_gaps text[], p_outcome text, p_judgment jsonb, p_supersedes_id uuid",plpgsql,f
+record_rejection_feedback,"",plpgsql,f
+record_research_finding,"p_session_id uuid, p_finding_type text, p_content jsonb, p_entity_type text, p_entity_id uuid, p_confidence numeric, p_sources text[]",plpgsql,f
+refresh_alma_dashboards,"",plpgsql,f
+refresh_civicgraph_mvs,"",plpgsql,f
+refresh_closing_the_gap_state_summary,"",plpgsql,f
+refresh_funding_relevance_scores,"",plpgsql,f
+refresh_goods_intelligence,"",plpgsql,f
+refresh_mv_org_justice_signals,"",plpgsql,f
+refresh_mv_project_quarter_position,"",plpgsql,f
+refresh_portfolio_rankings,"",plpgsql,f
+refresh_sentiment_analytics,"",plpgsql,f
+refresh_trust_scores,"",plpgsql,f
+reject_proposal,"proposal_id uuid, reviewer text, notes text",plpgsql,f
+reset_failed_sync_events,"table_filter text, max_age_hours integer",plpgsql,f
+resolve_entity,"p_source text, p_source_id text, p_name text, p_email text, p_phone text, p_company text, p_entity_type text",plpgsql,f
+retry_missed_reactions,"",plpgsql,f
+run_memory_decay,"",plpgsql,f
+se_registry_stats,"",sql,f
+search_all_entities,"search_term text, max_results integer",plpgsql,f
+search_alma_interventions,"p_query text, p_geography text[], p_type text, p_evidence_level text, p_consent_level text, p_limit integer",plpgsql,f
+search_alma_unified,"query_text text, entity_types text[], jurisdictions text[], limit_results integer",plpgsql,f
+search_entities_fuzzy,"search_name text, min_similarity double precision, max_results integer",sql,f
+search_entities_prefix_fast,"search_term text, max_results integer",plpgsql,f
+search_entities_semantic,"query_embedding vector, match_threshold double precision, match_count integer",sql,f
+search_episodes,"query_embedding vector, p_project_code text, p_episode_types text[], match_threshold double precision, match_count integer",plpgsql,f
+search_foundations_semantic,"query_embedding vector, match_threshold double precision, match_count integer",sql,f
+search_grants_semantic,"query_embedding vector, match_threshold double precision, match_count integer",sql,f
+search_interventions_unified,"p_search_query text, p_geography text[], p_consent_level text, p_min_evidence_level text",plpgsql,f
+search_knowledge,"query_embedding vector, match_threshold double precision, match_count integer, filter_source_type text, filter_project_id text",plpgsql,f
+search_media,"p_search_query text, p_file_type text, p_project_slug text, p_tag text, p_limit integer, p_offset integer",plpgsql,f
+search_org_knowledge,"query_embedding vector, p_org_profile_id uuid, match_threshold double precision, match_count integer",plpgsql,f
+search_project_funding_hybrid,"p_org_project_id uuid, p_query_embedding vector, p_match_count integer",sql,f
+search_project_knowledge,"query_embedding vector, p_project_code text, p_knowledge_types text[], match_threshold double precision, match_count integer",plpgsql,f
+search_suppliers,"p_q text, p_state text, p_limit integer",sql,f
+search_voice_notes,"query_embedding vector, match_threshold double precision, match_count integer, filter_visibility text, filter_user_id uuid",plpgsql,f
+set_album_slug,"",plpgsql,f
+set_alma_funding_search_text,"",plpgsql,f
+set_crm_affiliation_updated_at,"",plpgsql,f
+set_funding_os_updated_at,"",plpgsql,f
+set_platform_organization_context,org_slug text,plpgsql,f
+set_project_funding_profile_current,"",plpgsql,f
+set_updated_at,"",plpgsql,f
+should_promote_to_notion,person_uuid uuid,plpgsql,f
+snapshot_alma_metrics,"",plpgsql,f
+snapshot_data_catalog,"",plpgsql,f
+spawn_sub_task,"p_parent_id uuid, p_parent_agent text, p_target_agent text, p_action_name text, p_params jsonb, p_context jsonb",plpgsql,f
+start_ralph_task,p_task_id uuid,plpgsql,f
+state_foundation_flows,state_code text,sql,f
+sync_linkedin_contacts_from_imports,"",plpgsql,f
+sync_program_intervention_links,"",plpgsql,f
+touch_organization_funding_summaries,"",plpgsql,f
+track_exa_api_usage,"p_requests_used integer, p_request_type text",plpgsql,f
+trigger_calculate_temperature,"",plpgsql,f
+trigger_set_updated_at_pfa,"",plpgsql,f
+update_agent_memory_timestamp,"",plpgsql,f
+update_agent_pattern_timestamp,"",plpgsql,f
+update_album_timestamp,"",plpgsql,f
+update_alma_contexts_search_vector,"",plpgsql,f
+update_alma_evidence_search_vector,"",plpgsql,f
+update_alma_ingestion_jobs_updated_at,"",plpgsql,f
+update_alma_interventions_search_vector,"",plpgsql,f
+update_alma_outcomes_search_vector,"",plpgsql,f
+update_alma_updated_at,"",plpgsql,f
+update_api_key_counters,"",plpgsql,f
+update_article_reading_time,"",plpgsql,f
+update_calendar_events_updated_at,"",plpgsql,f
+update_cel_timestamp,"",plpgsql,f
+update_citation_count,"",plpgsql,f
+update_community_programs_search_vector,"",plpgsql,f
+update_contact_review_timestamp,"",plpgsql,f
+update_content_placements_updated_at,"",plpgsql,f
+update_dream_journal_updated_at,"",plpgsql,f
+update_email_financial_documents_updated_at,"",plpgsql,f
+update_funding_opportunities_timestamp,"",plpgsql,f
+update_funding_opportunity_status,"",plpgsql,f
+update_funding_system0_filter_presets_updated_at,"",plpgsql,f
+update_gmail_sync_state,"p_account_id uuid, p_history_id text, p_items_found integer, p_items_extracted integer, p_status text, p_error_message text",plpgsql,f
+update_goals_2026_updated_at,"",plpgsql,f
+update_knowledge_version_timestamp,"",plpgsql,f
+update_learned_thresholds_updated_at,"",plpgsql,f
+update_media_library_updated_at,"",plpgsql,f
+update_migration_priority,"",plpgsql,f
+update_pel_timestamp,"",plpgsql,f
+update_pk_timestamp,"",plpgsql,f
+update_platform_organization_activity,"",plpgsql,f
+update_platform_updated_at,"",plpgsql,f
+update_profile_appearances_updated_at,"",plpgsql,f
+update_profiles_updated_at,"",plpgsql,f
+update_project_stats,"",plpgsql,f
+update_projects_updated_at,"",plpgsql,f
+update_public_profiles_updated_at,"",plpgsql,f
+update_raw_content_stats,"",plpgsql,f
+update_receipt_attachment,"receipt_id uuid, new_attachment_url text, new_filename text, new_content_type text, new_size_bytes integer",plpgsql,f
+update_receipt_emails_updated_at,"",plpgsql,f
+update_receipt_match,"receipt_id uuid, new_status text, new_xero_transaction_id text, new_xero_bank_transaction_id text, new_match_confidence numeric, new_match_method text, new_project_code text, new_error_message text, new_retry_count integer",plpgsql,f
+update_relationship_health,"",plpgsql,f
+update_relationship_pipeline_updated_at,"",plpgsql,f
+update_research_session,"p_session_id uuid, p_status text, p_plan jsonb, p_scratchpad jsonb, p_results jsonb, p_error_message text",plpgsql,f
+update_site_health_from_check,"",plpgsql,f
+update_source_after_scrape,"p_source_url text, p_success boolean, p_entities_found integer",plpgsql,f
+update_source_document_search_vector,"",plpgsql,f
+update_story_analysis_updated_at,"",plpgsql,f
+update_storyteller_ai_intelligence_updated_at,"",plpgsql,f
+update_storyteller_videos_updated_at,"",plpgsql,f
+update_strategic_updated_at,"",plpgsql,f
+update_subscriptions_timestamp,"",plpgsql,f
+update_sync_event_status,"event_id uuid, new_status text, error_msg text",plpgsql,f
+update_tag_usage_count,"",plpgsql,f
+update_task_timestamp,"",plpgsql,f
+update_transcript_search_vector,"",plpgsql,f
+update_transcripts_updated_at,"",plpgsql,f
+update_updated_at,"",plpgsql,f
+update_updated_at_column,"",plpgsql,f
+update_user_last_active,"",plpgsql,f
+update_xero_invoice_timestamp,"",plpgsql,f
+user_can_access_org,p_org_profile_id uuid,sql,f
+user_can_perform_alma_action,"p_entity_type text, p_entity_id uuid, p_action text",plpgsql,f
+wiki_hybrid_search,"query_text text, query_embedding vector, match_count integer, rrf_k integer",sql,f
+wiki_page_create_version,"",plpgsql,f
+wiki_pages_review_due_trigger,"",plpgsql,f
+wiki_pages_search_trigger,"",plpgsql,f
+wiki_search_index_fts_trigger,"",plpgsql,f

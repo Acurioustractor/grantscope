@@ -9,49 +9,64 @@ const SCHEMA_CONTEXT = `
 You are a SQL query generator for CivicGraph, an Australian community sector data platform.
 You have access to these PostgreSQL tables:
 
-## gs_entities (~159K rows) — the entity graph
+## gs_entities (~609K rows) — the entity graph
 Columns: id (uuid), entity_type (text: charity, company, foundation, indigenous_corp, social_enterprise, government_body, political_party), canonical_name (text), abn (text), gs_id (text), state (text), postcode (text), sector (text), remoteness (text: 'Major Cities of Australia', 'Inner Regional Australia', 'Outer Regional Australia', 'Remote Australia', 'Very Remote Australia'), seifa_irsd_decile (smallint 1-10, 1=most disadvantaged), is_community_controlled (boolean), lga_name (text), lga_code (text), latest_revenue (numeric), latest_assets (numeric)
 
-## gs_relationships (~1.08M rows) — links between entities
+## gs_relationships (~3.43M rows) — links between entities
 Columns: id, source_entity_id (uuid->gs_entities.id), target_entity_id (uuid->gs_entities.id), relationship_type (text: 'contract', 'donation', 'grant', 'subsidiary_of', 'lobbies_for'), amount (numeric), year (integer), dataset (text)
 
-## austender_contracts (~770K rows) — federal government contracts
+## austender_contracts (~824K rows) — federal government contracts
 Columns: id, title, contract_value (numeric), buyer_name, supplier_name, supplier_abn, contract_start (date), contract_end (date), category, procurement_method
 
-## justice_funding (~71K rows) — justice/community sector grants
-Columns: id, recipient_name, recipient_abn, gs_entity_id (uuid), program_name, amount_dollars (numeric), state (text), financial_year (text like '2023-24'), sector, funding_type, location, topics (text[] — indexed array of topic tags)
+## justice_funding (~157K rows) — justice/community sector grants
+Columns: id, recipient_name, recipient_abn, gs_entity_id (uuid), program_name, amount_dollars (numeric), state (text), financial_year (text like '2023-24'), sector, funding_type, location, topics (text[] — indexed array of topic tags), measure_kind (text), is_aggregate (boolean)
 Topic values: 'youth-justice', 'child-protection', 'ndis', 'family-services', 'indigenous', 'legal-services', 'diversion', 'prevention', 'wraparound', 'community-led'
-Use: WHERE topics @> ARRAY['topic-name']::text[] for topic filtering (fast, GIN-indexed)
+Use: WHERE topics @> ARRAY['topic-name']::text[] for topic filtering (fast, GIN-indexed). Topic tags use HYPHENS — 'youth-justice', never 'youth_justice' (the underscore form silently returns zero rows).
+CRITICAL — amount_dollars mixes incompatible measures. measure_kind values:
+  'grant' (126,673 rows, $46.1bn) — money awarded to a named organisation
+  'expenditure_aggregate' (848 rows, $66.1bn) — whole-of-state budget totals from RoGS/AIHW, NOT money to any organisation
+  'contract_value' (29,519 rows, $6.1bn) · 'budget_announcement' (76 rows, $2.2bn)
+When the question is about funding RECEIVED BY ORGANISATIONS, you MUST filter
+WHERE measure_kind = 'grant'. Summing without it mixes state budgets into organisation totals and
+overstates by roughly an order of magnitude (45x on the youth-justice topic).
 
-## political_donations (~312K rows) — AEC political donation disclosures
-Columns: id, donor_name, donor_abn, donation_to (text — party name), amount (numeric), financial_year (text)
+## political_donations (~2.55M rows) — AEC political donation disclosures
+Columns: id, donor_name, donor_abn, donation_to (text — party name), amount (numeric), financial_year (text), receipt_type (text), return_type, donation_date, source_state
+CRITICAL — most rows are NOT donations. receipt_type values:
+  'other receipt' (1,838,739 rows, $186.7bn) — party income that is not a donation
+  'donation received' (506,739 rows, $23.0bn) — actual disclosed donations
+  'public funding' · 'subscription' · 'unspecified' · NULL
+For any question about DONATIONS you MUST filter WHERE receipt_type = 'donation received'.
+Summing all rows overstates donated dollars roughly 8x ('other receipt' is 85.3% of all dollars).
+Note donor_abn is populated on only ~24.8% of rows, so ABN joins silently drop most donations —
+prefer donor_name matching, and say so when reporting coverage.
 
-## alma_interventions (~1,155 rows) — evidence-based interventions (Australian Living Map of Alternatives)
+## alma_interventions (~2,136 rows) — evidence-based interventions (Australian Living Map of Alternatives)
 Columns: id, name, type (text: 'Wraparound Support', 'Cultural Connection', 'Prevention', 'Diversion', 'Community-Led', etc.), description, evidence_level, cultural_authority, target_cohort, geography, portfolio_score (numeric), gs_entity_id (uuid), topics (text[])
 
-## alma_evidence (~570 rows) — evidence records linked to ALMA interventions
+## alma_evidence (~631 rows) — evidence records linked to ALMA interventions
 Columns: id, intervention_id (->alma_interventions.id), evidence_type (text: 'Program evaluation', 'Policy analysis', 'Case study', 'Community-led research', 'Quasi-experimental', 'RCT'), methodology, sample_size, effect_size
 
-## alma_outcomes (~506 rows) — outcomes measured for interventions
+## alma_outcomes (~2,869 rows) — outcomes measured for interventions
 Columns: id, intervention_id (->alma_interventions.id), outcome_type, measurement_method, indicators
 
 ## acnc_charities (~66K rows) — ACNC charity register
 Columns: abn, name, charity_size (text: 'Small', 'Medium', 'Large'), state, postcode, purposes (text), beneficiaries (text)
 
-## foundations (~10.8K rows) — giving foundations
+## foundations (~11.2K rows) — giving foundations
 Columns: id, name, acnc_abn, website, description, total_giving_annual, thematic_focus (text[]), geographic_focus (text[])
 
-## ato_tax_transparency (~24K rows) — ATO corporate tax data
+## ato_tax_transparency (~26K rows) — ATO corporate tax data
 Columns: entity_name, abn, total_income (numeric), taxable_income (numeric), tax_payable (numeric), report_year (int)
 
-## person_roles (~5.4K rows) — board members and officers
+## person_roles (~340K rows) — board members and officers
 Columns: id, person_name, person_name_normalised, role_type (text: director, secretary, officer, chair, ceo, trustee, board_member, etc.), entity_id (uuid), entity_name, company_acn, appointment_date, cessation_date, source, confidence
 
 ## Materialized Views (pre-computed, fast):
-- mv_entity_power_index (~83K rows): id, canonical_name, abn, entity_type, system_count (int 1-7), power_score, in_procurement, in_justice_funding, in_donations, in_charity, in_foundation, in_alma_evidence, in_ato, is_community_controlled
-- mv_funding_deserts (~1.6K rows): lga_name, state, remoteness, avg_irsd_score, min_irsd_decile, avg_irsd_decile, indexed_entities, community_controlled_entities, procurement_entities, justice_entities, alma_entities, ndis_entities, procurement_dollars, justice_dollars, donation_dollars, total_dollar_flow, total_funding_all_sources, avg_system_count, avg_power_score, ndis_participants, desert_score (higher = more underserved)
-- mv_revolving_door (~4.7K rows): id, canonical_name, revolving_door_score, influence_vectors, total_donated, total_contracts, total_funded, parties_funded, is_community_controlled
-- mv_board_interlocks: person_name, entities (text[]), shared_board_count
+- mv_entity_power_index (~188K rows): id, canonical_name, abn, entity_type, system_count (int 1-7), power_score, in_procurement, in_justice_funding, in_donations, in_charity, in_foundation, in_alma_evidence, in_ato, is_community_controlled
+- mv_funding_deserts (~2.0K rows): lga_name, state, remoteness, avg_irsd_score, min_irsd_decile, avg_irsd_decile, indexed_entities, community_controlled_entities, procurement_entities, justice_entities, alma_entities, ndis_entities, procurement_dollars, justice_dollars, donation_dollars, total_dollar_flow, total_funding_all_sources, avg_system_count, avg_power_score, ndis_participants, desert_score (higher = more underserved)
+- mv_revolving_door (~7.0K rows): id, canonical_name, revolving_door_score, influence_vectors, total_donated, total_contracts, total_funded, parties_funded, is_community_controlled
+- mv_board_interlocks (~39.8K rows): person_name_normalised, person_name_display, board_count (int), organisations (text[]), organisation_abns, entity_ids, role_types, sources, total_procurement_dollars, total_justice_dollars, total_donation_dollars, max_entity_system_count, total_power_score, connects_community_controlled, interlock_score
 - v_youth_justice_state_dashboard: financial_year, state, total_expenditure_m, cost_per_detention, recidivism_pct, completion_pct, indigenous_rate_ratio, facility_count, total_beds, facility_indigenous_pct. Use this for state youth justice expenditure/spend questions.
 
 ## Key relationships:
