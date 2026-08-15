@@ -1,7 +1,33 @@
 # Graph repair runbook
 
 Every defect found on 2026-08-14, sequenced, with the exact command and the number to check the
-result against. **Nothing here has been run.** Each step is a Tier-3 data change needing Ben's word.
+result against. Each step is a Tier-3 data change needing Ben's word.
+
+## Execution status
+
+| step | status | result |
+|---|---|---|
+| 1. Rebuild justice layer | **DONE 2026-08-15** | 857,798 → **144,901** edges, resolution 16.9% → **100%**. Predicted 144,901 — hit exactly. |
+| 2. Build GrantConnect | **DONE 2026-08-15** | 0 → **189,590** edges, **100%** resolving. Predicted 189,590 — hit exactly. |
+| 3. Clear zero-ABN donor sink | not started | |
+| 4. Merge split identities (bucket C) | not started | |
+| 5. Reclassify opportunity self-loops | not started | |
+
+Matviews after steps 1–2: `mv_gs_entity_stats` refreshed (the QLD program labels have dropped out
+of the top; Department of Defence is now the most-connected entity, which is what a procurement
+graph should look like). `mv_entity_power_index` and `mv_revolving_door` refreshed separately.
+
+**Pooler note learned during execution:** chaining three `REFRESH MATERIALIZED VIEW CONCURRENTLY`
+statements in one psql invocation loses the connection partway through on this shared pooler, and
+the shell reports exit 0 because that is the echo, not psql. Refresh **one view per invocation**,
+and use TCP keepalives on anything over ~5 minutes:
+
+```
+postgresql://...@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres\
+  ?keepalives=1&keepalives_idle=20&keepalives_interval=10&keepalives_count=6
+```
+
+There is no direct (non-pooler) host on this project — `db.<ref>.supabase.co` does not resolve.
 
 Order matters: steps 1–2 delete or add edges that later steps would otherwise operate on.
 
