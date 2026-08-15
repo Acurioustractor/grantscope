@@ -139,7 +139,9 @@ async function warnDrift() {
       `SELECT mv_name, drift FROM v_mv_refresh_drift WHERE drift <> 'ok'`,
       { timeout: 30, tuplesOnly: true },
     );
-    const rows = stdout.split('\n').filter(Boolean);
+    // filter on '|' for the same reason loadPlan does: runPsql prefixes the statement with SET,
+    // and psql's "SET" acknowledgement lands in stdout, where it read as a drift row.
+    const rows = stdout.split('\n').filter((l) => l.includes('|'));
     if (rows.length) {
       log(`⚠ ${rows.length} registry drift row(s) — matviews with no schedule, or registry rows for dropped matviews:`);
       for (const r of rows.slice(0, 20)) log(`    ${r.replace(/\|/g, '  ')}`);
