@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { getDirectServiceSupabase } from '@/lib/supabase';
 import LedgerClient from './LedgerClient';
+import { parseBaseline, type Baseline } from './changes/types';
 import type { LedgerRow, LedgerStats, ObjectKind, FreshnessProbe } from './types';
 
 export const dynamic = 'force-dynamic';
@@ -56,7 +57,9 @@ interface QuestionRow {
   binding_object: string | null;
 }
 
-async function loadIndex(): Promise<{ rows: LedgerRow[]; stats: LedgerStats }> {
+async function loadIndex(
+  baseline: Baseline,
+): Promise<{ rows: LedgerRow[]; stats: LedgerStats }> {
   // getDirectServiceSupabase, NOT getServiceSupabase — the latter sniffs the call stack for
   // '/app/reports/' and returns a stub resolving every query to { data: null }, i.e. a silent [].
   const supabase = getDirectServiceSupabase();
@@ -97,6 +100,51 @@ async function loadIndex(): Promise<{ rows: LedgerRow[]; stats: LedgerStats }> {
     questions = [];
   }
 
+  // Movement against the selected baseline (slice 3). Objects with no baseline row
+  // are absent from this map on purpose — the ledger renders `?` for them rather
+  // than a zero that would read as "did not move".
+  const moves = new Map<string, number>();
+  let measurable = 0;
+  let moved = 0;
+  try {
+    for (let from = 0; ; from += PAGE) {
+      const { data } = await supabase
+        .from('clarity_delta')
+        .select('object_key,row_delta_pct,baseline_at')
+        .eq('baseline', baseline)
+        .not('baseline_at', 'is', null)
+        .range(from, from + PAGE - 1);
+      if (!data?.length) break;
+      for (const d of data as unknown as {
+        object_key: string;
+        row_delta_pct: number | null;
+      }[]) {
+        measurable += 1;
+        if (d.row_delta_pct === null) continue;
+        const pct = Number(d.row_delta_pct);
+        moves.set(d.object_key, pct);
+        if (Math.abs(pct) > 10) moved += 1;
+      }
+      if (data.length < PAGE) break;
+    }
+  } catch {
+    // The change log is a slice-3 addition. Before its migrations are applied the
+    // ledger is still worth having, so a missing table costs the delta column and
+    // nothing else.
+  }
+
+  let unexplained = 0;
+  try {
+    const { count } = await supabase
+      .from('clarity_event')
+      .select('id', { count: 'exact', head: true })
+      .eq('severity', 'critical')
+      .is('reason', null);
+    unexplained = count ?? 0;
+  } catch {
+    unexplained = 0;
+  }
+
   const objectRows: LedgerRow[] = all.map((o) => ({
     n: o.object_name,
     k: o.object_kind,
@@ -117,6 +165,7 @@ async function loadIndex(): Promise<{ rows: LedgerRow[]; stats: LedgerStats }> {
     v: o.caveat ?? '',
     rls: Boolean(o.rls_enabled),
     an: Boolean(o.anon_readable),
+    dp: moves.get(o.object_name),
   }));
 
   const questionRows: LedgerRow[] = questions.map((q) => ({
@@ -166,17 +215,28 @@ async function loadIndex(): Promise<{ rows: LedgerRow[]; stats: LedgerStats }> {
       anonReadable: objectRows.filter((r) => r.an).length,
       actBusiness: objectRows.filter((r) => r.a).length,
       refreshedAt: all[0]?.refreshed_at ?? null,
+      baseline,
+      moved,
+      unexplained,
+      measurable,
     },
   };
 }
 
-export default async function ClarityPage() {
+export default async function ClarityPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ b?: string }>;
+}) {
+  const { b } = await searchParams;
+  const baseline = parseBaseline(b);
+
   let rows: LedgerRow[] = [];
   let stats: LedgerStats | null = null;
   let error: string | null = null;
 
   try {
-    ({ rows, stats } = await loadIndex());
+    ({ rows, stats } = await loadIndex(baseline));
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
   }
