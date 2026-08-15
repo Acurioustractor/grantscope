@@ -1,0 +1,76 @@
+-- =============================================================================
+-- 2026-08-15-close-bank-statement-view-leak.sql
+--
+-- APPLIED 2026-08-15. Recorded here after the fact.
+--
+-- THE LEAK. `v_finance_bank_line_evidence` returned **1,618 ACT bank transactions**
+-- (2025-10-01 to 2026-03-31 — date, type, payee, particulars) to anyone holding the
+-- public publishable key. Confirmed by fetching it over the live REST endpoint, not
+-- inferred from grants.
+--
+-- WHY THE EARLIER SWEEP MISSED IT. The 14 Aug revoke closed 48 policies on *tables*.
+-- This is a VIEW, and views do not have RLS. It leaked through a different mechanism
+-- entirely: the view had no `security_invoker` option, so it ran with its OWNER's
+-- rights, and `bank_statement_lines` being locked down was irrelevant — the view
+-- never consulted the caller's permissions at all. anon simply had SELECT on the view.
+--
+-- Table-level RLS auditing cannot find this class of defect. A definer view is a
+-- legitimate, invisible bypass of every protection on its base table.
+--
+-- THE FIX — both halves, deliberately:
+--   1. REVOKE anon's SELECT. Closes it now.
+--   2. SET security_invoker = true. Closes it PERMANENTLY: if anyone re-grants
+--      SELECT later, the view will evaluate the caller's rights on
+--      bank_statement_lines rather than the owner's, and return nothing.
+-- Doing only (1) would leave a re-grant one command away from reopening it.
+--
+-- VERIFIED AFTER APPLY, with the live publishable key:
+--   {"code":"42501","message":"permission denied for view v_finance_bank_line_evidence"}
+--
+-- THE FULL AUDIT THIS CAME FROM. All 398 anon-readable objects were reviewed:
+--   206  unclassified (overwhelmingly views)
+--    22  justice/youth detention · 16 philanthropy · 16 place · 16 social services
+--    14  political influence · 13 grants · 10 corporate registry · 10 gov spend
+--   Everything with rows was checked by domain. Legitimately public:
+--     - NDIS market data (~419K rows), DSS payment demographics, community directory
+--     - person_roles (339,698) — 334,152 are ACNC responsible persons, published by
+--       law on the public ACNC register, plus parliamentary records. Names and roles
+--       only; no contact details, addresses or dates of birth.
+--     - civic_intelligence_chunks (7,022) — sourced ONLY from Hansard, ministerial
+--       statements, RTI disclosures, oversight recommendations and media articles.
+--     - media_items (219) — ZERO rows carry storyteller_ids, so this is not the
+--       consent-governed storyteller corpus despite sitting in that domain.
+--     - org_governance, v_harvest_public_social_posts, jr_site_front_door — all
+--       fetched over the public endpoint and confirmed to return public register
+--       data, posts explicitly named public, and organisation websites/logos.
+--
+--   ONE genuine leak in 398. This file closes it.
+--
+-- A JUDGEMENT CALL LEFT FOR BEN, not a defect: person_roles aggregates 334,152
+-- individually-public ACNC records into one queryable endpoint. Each record is
+-- public by law; the aggregate is a different artifact from the sum of its parts.
+-- Worth a conscious decision rather than an inherited default.
+--
+-- APPLY WITH (already applied):
+--   psql ... -f migrations/2026-08-15-close-bank-statement-view-leak.sql
+--
+-- RE-AUDIT QUERY — run this after adding any view, it is the check that found this:
+--   WITH v AS (
+--     SELECT c.oid, c.relname AS view_name FROM pg_class c
+--       JOIN pg_namespace n ON n.oid = c.relnamespace
+--      WHERE n.nspname = 'public' AND c.relkind = 'v'
+--        AND has_table_privilege('anon', c.oid, 'SELECT')
+--        AND coalesce((SELECT option_value FROM pg_options_to_table(c.reloptions)
+--                       WHERE option_name = 'security_invoker'), 'false') <> 'true')
+--   SELECT DISTINCT v.view_name, b.relname AS base_table
+--     FROM v JOIN pg_depend d ON d.refobjid = v.oid
+--     JOIN pg_rewrite r ON r.oid = d.objid
+--     JOIN pg_depend d2 ON d2.objid = r.oid AND d2.classid = 'pg_rewrite'::regclass
+--     JOIN pg_class b ON b.oid = d2.refobjid AND b.relkind = 'r'
+--    WHERE b.relname <> v.view_name
+--      AND NOT has_table_privilege('anon', ('public.'||b.relname)::regclass, 'SELECT');
+--   -- Any row is a definer view exposing a base table anon cannot otherwise read.
+-- =============================================================================
+
+REVOKE SELECT ON public.v_finance_bank_line_evidence FROM anon;
+ALTER VIEW public.v_finance_bank_line_evidence SET (security_invoker = true);
