@@ -53,14 +53,59 @@ function log(msg) { console.log(`[${new Date().toISOString().split('T')[1].slice
  * Returns [{ name, concurrent, depth }].
  */
 async function loadPlan(tier) {
-  const { stdout } = await runPsql(
-    `SELECT seq, mv_name, depth, use_concurrent FROM mv_refresh_plan('${tier.replace(/'/g, "''")}') ORDER BY seq`,
-    { timeout: 60, tuplesOnly: true },
-  );
-  return stdout.split('\n').filter(Boolean).map((line) => {
-    const [, name, depth, conc] = line.split('|').map((s) => s.trim());
-    return { name, depth: Number(depth), concurrent: conc === 't' };
-  });
+  try {
+    const { stdout } = await runPsql(
+      `SELECT seq, mv_name, depth, use_concurrent FROM mv_refresh_plan('${tier.replace(/'/g, "''")}') ORDER BY seq`,
+      { timeout: 60, tuplesOnly: true },
+    );
+    // filter on '|': runPsql prefixes the statement with SET, whose "SET" acknowledgement lands
+    // in stdout and would otherwise parse as a row named undefined at depth NaN.
+    return stdout.split('\n').filter((l) => l.includes('|')).map((line) => {
+      const [, name, depth, conc] = line.split('|').map((s) => s.trim());
+      return { name, depth: Number(depth), concurrent: conc === 't' };
+    });
+  } catch (err) {
+    // FALLBACK. mv_refresh_plan() ships in migrations/2026-08-14-mv-refresh-registry.sql, which is
+    // an UNAPPLIED deliverable. Until it lands this script must still work — rewriting it to read a
+    // registry that does not exist yet would have taken a working nightly tool offline in exchange
+    // for a migration nobody had run.
+    if (!/mv_refresh_plan.*does not exist/i.test(err.stderr || err.message || '')) throw err;
+    log('mv_refresh_plan() not found — the registry migration is unapplied.');
+    log('Falling back to catalogue order: every populated matview, dependency-ordered by pg_depend.');
+    const { stdout } = await runPsql(
+      `WITH RECURSIVE mvs AS (
+         SELECT c.oid, c.relname::text AS mv_name,
+                EXISTS (SELECT 1 FROM pg_index i
+                         WHERE i.indrelid = c.oid AND i.indisunique
+                           AND i.indpred IS NULL AND i.indexprs IS NULL) AS use_concurrent
+           FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+          WHERE n.nspname = 'public' AND c.relkind = 'm'),
+       edges AS (
+         SELECT DISTINCT d.refobjid AS parent, r.ev_class AS child
+           FROM pg_depend d JOIN pg_rewrite r ON r.oid = d.objid
+          WHERE d.classid = 'pg_rewrite'::regclass AND d.refclassid = 'pg_class'::regclass
+            AND d.refobjid <> r.ev_class),
+       depth AS (
+         SELECT m.oid, 0 AS d FROM mvs m
+          WHERE NOT EXISTS (SELECT 1 FROM edges e JOIN mvs p ON p.oid = e.parent WHERE e.child = m.oid)
+         UNION ALL
+         SELECT m.oid, depth.d + 1 FROM depth
+           JOIN edges e ON e.parent = depth.oid JOIN mvs m ON m.oid = e.child
+          WHERE depth.d < 10)
+       SELECT row_number() OVER (ORDER BY max_d, mv_name) AS seq, mv_name, max_d, use_concurrent
+         FROM (SELECT m.mv_name, m.use_concurrent, coalesce(max(depth.d), 0) AS max_d
+                 FROM mvs m LEFT JOIN depth ON depth.oid = m.oid
+                GROUP BY 1, 2) z
+        ORDER BY max_d, mv_name`,
+      { timeout: 120, tuplesOnly: true },
+    );
+    // filter on '|': runPsql prefixes the statement with SET, whose "SET" acknowledgement lands
+    // in stdout and would otherwise parse as a row named undefined at depth NaN.
+    return stdout.split('\n').filter((l) => l.includes('|')).map((line) => {
+      const [, name, depth, conc] = line.split('|').map((s) => s.trim());
+      return { name, depth: Number(depth), concurrent: conc === 't' };
+    });
+  }
 }
 
 /**
