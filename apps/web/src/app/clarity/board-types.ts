@@ -67,6 +67,8 @@ export interface BoardCard {
   ingredient_count: number;
   binding_object: string | null;
   binding_pct: number | null;
+  /** Carried on the card so the answer page needs no second round trip. Binding first. */
+  ingredients: Ingredient[] | null;
   oldest_ingredient_write: string | null;
   spark: { at: string; h: string | null; n: number | null }[] | null;
   run_count: number;
@@ -74,7 +76,6 @@ export interface BoardCard {
 }
 
 export interface Ingredient {
-  question_slug: string;
   object_key: string;
   join_key: string;
   role: 'spine' | 'fact' | 'reference' | 'filter' | 'denominator';

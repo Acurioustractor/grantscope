@@ -319,3 +319,65 @@ a, button {
 
   @page { margin: 1.5cm; size: A4; }
 }
+
+/* ============================================================================
+   CLARITY DARK — the instrument scope
+   ----------------------------------------------------------------------------
+   /clarity is a dense internal instrument, not a public page: 1,455 rows on one
+   screen, read for long stretches, by one or two people. Ben chose dark for it
+   on 2026-08-15 after seeing both side by side. Recorded in DESIGN.md so this
+   is a decision, not a drift.
+
+   Scoped override rather than 388 rewritten class strings, following the exact
+   pattern .ws already establishes above. Every bauhaus-* utility inside
+   .clarity-dark remaps; nothing outside the scope changes.
+   ============================================================================ */
+.clarity-dark {
+  --cd-bg: #0E0E10;          /* page ground */
+  --cd-surface: #17171A;     /* cards, table */
+  --cd-surface-2: #1F1F24;   /* hovers, sunken rows */
+  --cd-border: #2E2E36;
+  --cd-text: #EDEDF0;
+  --cd-muted: #8A8A96;
+  --cd-red: #FF5A4D;         /* lifted off #D02020 — a mid-red vibrates on near-black */
+  --cd-blue: #6E9BFF;
+  --cd-yellow: #F5C542;
+}
+
+.clarity-dark { background-color: var(--cd-bg) !important; color: var(--cd-text); }
+
+/* Borders: 4px/2px Bauhaus slabs become hairlines. At this density the slab IS the noise. */
+.clarity-dark .border-4 { border-width: 1px !important; }
+.clarity-dark .border-\[3px\] { border-width: 1px !important; }
+.clarity-dark .border-2 { border-width: 1px !important; }
+.clarity-dark .border-b-4 { border-bottom-width: 1px !important; }
+.clarity-dark .border-b-2 { border-bottom-width: 1px !important; }
+.clarity-dark .border-r-2 { border-right-width: 1px !important; }
+.clarity-dark .border-t-2 { border-top-width: 1px !important; }
+.clarity-dark .border-l-2 { border-left-width: 1px !important; }
+.clarity-dark .border-b-\[3px\] { border-bottom-width: 1px !important; }
+.clarity-dark .border-r-\[3px\] { border-right-width: 1px !important; }
+
+.clarity-dark .border-bauhaus-black { border-color: var(--cd-border) !important; }
+.clarity-dark .border-bauhaus-muted { border-color: var(--cd-border) !important; }
+.clarity-dark .border-bauhaus-red { border-color: var(--cd-red) !important; }
+.clarity-dark .border-bauhaus-blue { border-color: var(--cd-blue) !important; }
+
+.clarity-dark .text-bauhaus-black { color: var(--cd-text) !important; }
+.clarity-dark .text-bauhaus-muted { color: var(--cd-muted) !important; }
+.clarity-dark .text-bauhaus-red { color: var(--cd-red) !important; }
+.clarity-dark .text-bauhaus-blue { color: var(--cd-blue) !important; }
+.clarity-dark .text-bauhaus-yellow { color: var(--cd-yellow) !important; }
+.clarity-dark .text-bauhaus-canvas { color: var(--cd-bg) !important; }
+
+.clarity-dark .bg-bauhaus-canvas { background-color: var(--cd-bg) !important; }
+.clarity-dark .bg-bauhaus-white { background-color: var(--cd-surface) !important; }
+.clarity-dark .bg-bauhaus-black { background-color: var(--cd-text) !important; color: var(--cd-bg) !important; }
+.clarity-dark .bg-bauhaus-red { background-color: var(--cd-red) !important; }
+.clarity-dark .bg-bauhaus-blue { background-color: var(--cd-blue) !important; }
+.clarity-dark .bg-bauhaus-yellow { background-color: var(--cd-yellow) !important; color: #17171A !important; }
+
+.clarity-dark .hover\:bg-bauhaus-canvas:hover { background-color: var(--cd-surface-2) !important; }
+.clarity-dark .hover\:bg-bauhaus-yellow:hover { background-color: var(--cd-yellow) !important; color: #17171A !important; }
+.clarity-dark .hover\:bg-bauhaus-black:hover { background-color: var(--cd-surface-2) !important; color: var(--cd-text) !important; }
+.clarity-dark .hover\:text-bauhaus-red:hover { color: var(--cd-red) !important; }

@@ -16,6 +16,11 @@ export async function generateMetadata({
   return { title: `Clarity · ${slug}` };
 }
 
+/**
+ * ONE query. The ingredients travel on the card (view column, binding first), because two
+ * sequential PostgREST calls meant the second could lose its connection under pool pressure and
+ * 500 the whole page — which is exactly what happened on 15 Aug.
+ */
 async function load(slug: string): Promise<{ card: BoardCard; ingredients: Ingredient[] } | null> {
   const supabase = getDirectServiceSupabase();
 
@@ -27,16 +32,8 @@ async function load(slug: string): Promise<{ card: BoardCard; ingredients: Ingre
   if (error) throw new Error(`board query failed: ${error.message}`);
   if (!cards?.length) return null;
 
-  const { data: ing, error: ingError } = await supabase
-    .from('clarity_question_ingredient')
-    .select('question_slug,object_key,join_key,role,is_binding,measured_pct')
-    .eq('question_slug', slug);
-  if (ingError) throw new Error(`ingredient query failed: ${ingError.message}`);
-
-  return {
-    card: cards[0] as unknown as BoardCard,
-    ingredients: (ing ?? []) as unknown as Ingredient[],
-  };
+  const card = cards[0] as unknown as BoardCard;
+  return { card, ingredients: card.ingredients ?? [] };
 }
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
@@ -166,10 +163,7 @@ export default async function WorkedAnswerPage({ params }: { params: Promise<{ s
           <div className="space-y-6">
             <Panel title="Provenance">
               <ul className="space-y-3">
-                {ingredients
-                  .slice()
-                  .sort((a, b) => Number(b.is_binding) - Number(a.is_binding))
-                  .map((i) => (
+                {ingredients.map((i) => (
                     <li key={`${i.object_key}|${i.join_key}`} className="border-b-2 border-bauhaus-muted pb-2 last:border-0">
                       <p className="font-mono text-xs font-black text-bauhaus-black">
                         {i.object_key.replace(/^public\./, '')}

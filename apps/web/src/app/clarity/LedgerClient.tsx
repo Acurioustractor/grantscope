@@ -1,9 +1,14 @@
 'use client';
 
 import { Fragment, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { LedgerRow, LedgerStats, FreshnessProbe } from './types';
 
-const SEGMENTS = ['ALL', 'SOURCES', 'DERIVED', 'LENSES', 'ROUTINES'] as const;
+// QUESTIONS sits FIRST and ALL stays the default. A question is the only row here that answers
+// something about the world rather than describing our estate, so it leads the segment list —
+// but it must not become a separate page again, which is how three cards ended up hiding 1,455
+// objects behind them.
+const SEGMENTS = ['ALL', 'QUESTIONS', 'SOURCES', 'DERIVED', 'LENSES', 'ROUTINES'] as const;
 const SORTS = [
   ['importance', 'Ranked'],
   ['rows', 'Rows'],
@@ -52,6 +57,7 @@ function bytes(b: number): string {
 }
 
 export default function LedgerClient({ rows, stats }: { rows: LedgerRow[]; stats: LedgerStats }) {
+  const router = useRouter();
   const [seg, setSeg] = useState<string>('ALL');
   const [sort, setSort] = useState<SortKey>('importance');
   const [q, setQ] = useState('');
@@ -274,25 +280,41 @@ export default function LedgerClient({ rows, stats }: { rows: LedgerRow[]; stats
                     visible.map((r) => {
                       const f = FRESH[r.f] ?? FRESH.not_applicable;
                       const isOpen = open === r.n;
+                      // A question row opens its worked answer. Everything else expands in place —
+                      // the caveat, provenance and permitted phrasing do not fit in a table row
+                      // and must never be summarised away.
+                      const activate = () => {
+                        if (r.qs) router.push(`/clarity/q/${r.qs}`);
+                        else setOpen(isOpen ? null : r.n);
+                      };
                       return (
                         <Fragment key={r.n}>
                           <tr
                             tabIndex={0}
-                            aria-expanded={isOpen}
-                            onClick={() => setOpen(isOpen ? null : r.n)}
+                            aria-expanded={r.qs ? undefined : isOpen}
+                            onClick={activate}
                             onKeyDown={(e) => {
                               if (e.key === 'Enter' || e.key === ' ') {
                                 e.preventDefault();
-                                setOpen(isOpen ? null : r.n);
+                                activate();
                               }
                             }}
                             className="cursor-pointer border-t border-bauhaus-black/10 hover:bg-bauhaus-canvas"
                           >
                             <td className="break-all px-2.5 py-1.5 text-[13px] font-semibold">
                               <span className="font-mono">{r.n}</span>
-                              {r.k !== 'table' ? (
+                              {r.qs ? (
+                                <span className="ml-1.5 border border-bauhaus-blue px-1 text-[9px] font-extrabold uppercase tracking-wider text-bauhaus-blue">
+                                  question
+                                </span>
+                              ) : r.k !== 'table' ? (
                                 <span className="ml-1.5 border border-bauhaus-muted px-1 text-[9px] font-extrabold uppercase tracking-wider text-bauhaus-muted">
                                   {r.k}
+                                </span>
+                              ) : null}
+                              {r.qsub ? (
+                                <span className="mt-0.5 block text-[11px] font-normal text-bauhaus-muted">
+                                  {r.qsub}
                                 </span>
                               ) : null}
                             </td>
@@ -305,8 +327,18 @@ export default function LedgerClient({ rows, stats }: { rows: LedgerRow[]; stats
                             </td>
                             <td className="px-2.5 py-1.5 text-[11.5px]">{nice(r.l) || '\u2014'}</td>
                             <td className="px-2.5 py-1.5 text-right font-mono text-[13px]">
-                              {r.r === null ? '\u2014' : nf.format(r.r)}
-                              {r.e ? <span className="text-bauhaus-muted"> \u2248</span> : null}
+                              {/* A question's answer sits where an object's row count sits. Same
+                                  column, same scan \u2014 the number is what you came for. */}
+                              {r.qh ? (
+                                <b className="text-[15px] font-black text-bauhaus-blue">{r.qh}</b>
+                              ) : r.r === null ? (
+                                '\u2014'
+                              ) : (
+                                <>
+                                  {nf.format(r.r)}
+                                  {r.e ? <span className="text-bauhaus-muted"> \u2248</span> : null}
+                                </>
+                              )}
                             </td>
                             <td className="px-2.5 py-1.5 text-right font-mono text-[13px]">{bytes(r.b)}</td>
                             <td className="px-2.5 py-1.5">

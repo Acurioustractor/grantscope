@@ -6,7 +6,7 @@
  * 724 objects is small by catalog standards — Airbnb's ran against 200,000 tables — which
  * is why shipping the lot beats paginating it. Verified in the prototype at ~500KB.
  */
-export type ObjectKind = 'table' | 'matview' | 'view' | 'function';
+export type ObjectKind = 'table' | 'matview' | 'view' | 'function' | 'question';
 
 /** Freshness has four states and they must never collapse into three. See issue #195. */
 export type FreshnessProbe =
@@ -56,6 +56,20 @@ export interface LedgerRow {
   rls: boolean;
   /** anon_readable */
   an: boolean;
+
+  /**
+   * Question rows.
+   *
+   * A registered question sits in the SAME index as the objects it is computed from, so
+   * searching "watchhouse" returns the two source tables AND the answer built on them. Present
+   * only on question rows; absent on catalog rows.
+   */
+  /** question slug — presence is what makes this a question row */
+  qs?: string;
+  /** headline, e.g. '85.1%' */
+  qh?: string;
+  /** headline_sub, e.g. '662 of 778 organisations' */
+  qsub?: string;
 }
 
 export interface LedgerStats {
