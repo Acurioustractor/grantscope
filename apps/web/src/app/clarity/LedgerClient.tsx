@@ -130,6 +130,12 @@ export default function LedgerClient({ rows, stats }: { rows: LedgerRow[]; stats
                 /clarity/changes so the two screens can never disagree about which
                 window you are looking at. */}
             <Link
+              href="/clarity/seams"
+              className="border-2 border-bauhaus-black bg-bauhaus-white px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.15em] hover:bg-bauhaus-black hover:text-bauhaus-canvas"
+            >
+              The seams
+            </Link>
+            <Link
               href="/clarity/cross"
               className="border-2 border-bauhaus-black bg-bauhaus-white px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.15em] hover:bg-bauhaus-black hover:text-bauhaus-canvas"
             >
