@@ -51,7 +51,18 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse;
   }
 
-  const protectedPrefixes = ['/home', '/tracker', '/foundations/tracker', '/ops', '/profile', '/org'];
+  // /foundations/backlog renders a service-role review queue and fans out 8
+  // concurrent exec_sql calls per hit with no cache. Left ungated it let
+  // anonymous traffic drive service-role queries and starve the shared pool.
+  const protectedPrefixes = [
+    '/home',
+    '/tracker',
+    '/foundations/tracker',
+    '/foundations/backlog',
+    '/ops',
+    '/profile',
+    '/org',
+  ];
   const isProtectedRoute = protectedPrefixes.some(p => pathname.startsWith(p));
   const isLoginRoute = pathname === '/login';
 
