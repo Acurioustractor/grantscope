@@ -101,9 +101,14 @@ async function selectOneJson(sql, timeout = QUERY_TIMEOUT_S) {
 }
 
 async function loadQuestions() {
+  // HOUSE questions are deliberately NOT run here. Their answer_sql is a numerator/denominator
+  // measurement pair, not an answer — it returns no headline. They are computed by
+  // clarity_measure_gaps() and mirrored into clarity_answer by clarity_sync_house(). Running them
+  // through this loop wrote headline-less rows on top of good ones, which is a stale answer that
+  // still renders: the exact failure this script exists to prevent.
   const where = ONLY
     ? `slug = ${q(ONLY)}`
-    : `state IN ('answered','contested') AND answer_sql IS NOT NULL`;
+    : `state IN ('answered','contested') AND answer_sql IS NOT NULL AND subject <> 'HOUSE'`;
   const { stdout } = await runPsql(
     `SELECT json_agg(json_build_object(
        'slug', slug, 'stub', stub, 'answer_sql', answer_sql,
