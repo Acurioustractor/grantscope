@@ -1,5 +1,5 @@
 ---
-date: 2026-08-15T05:30:00Z
+date: 2026-08-15T08:30:00Z
 session_name: clarity-catalog
 branch: main
 status: active
@@ -9,67 +9,95 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-08-15T05:30:00Z
-**Goal:** `/clarity` slice 2 — the question board. Done when the surface leads with cross-sections this database can answer that no public Australian source can, each carrying its coverage and caveat.
+**Updated:** 2026-08-15T08:30:00Z
+**Goal:** `/clarity` slice 2 — the question board. **SHIPPED** (PR #204, `0c19443`). Next goal is slice 3, unscoped.
 **Branch:** `main` — **zero open PRs**, board clear
-**Test:** `cd apps/web && npx tsc --noEmit` · gates: `node --env-file=.env scripts/check-graph-{completeness,referential-integrity,attribution}.mjs`
+**Test:** `cd apps/web && npx tsc --noEmit` (0 errors on merged main) · gates: `node --env-file=.env scripts/check-graph-{completeness,referential-integrity,attribution}.mjs`
+**Pool health:** `psql ... -Atc "SELECT count(*) FILTER (WHERE state='active') FROM pg_stat_activity WHERE datname='postgres'"` — healthy is single digits. **Read 1 active / 49 idle at 08:25.**
 
 ### Now
-[->] **Slice 2: the question board.** The job verification that blocked it is done — jobs 4 and 11 are proven, see below. Nothing else is in the way.
+[->] **Open `/clarity` in a browser and look at it.** Everything below it is verified; the visual result is the only thing left and no agent can reach it (Vercel SSO + admin gate). Then scope slice 3.
 
 ### This Session
-- [x] Mapped the whole shared DB — 1,024 relations, 52.3M rows. `thoughts/shared/data-map/`
-- [x] Rebuilt the justice graph layer: 857,798 edges → 144,901, resolution 16.9% → **100%**
-- [x] Built the GrantConnect layer: 291,264 awards had **zero** edges → 189,590 at 100%
-- [x] Merged 141 shadow entities, 333,960 edges consolidated, 0 orphaned FKs
-- [x] Three graph gates built + registered: completeness, referential-integrity, **attribution**
-- [x] Shipped `/clarity` slice 1, merged as PR #199 (`d6c8081`)
-- [x] Scheduled `clarity_refresh()` nightly — pg_cron job 11, 18:00 UTC
-- [x] Enabled tiered matview cron — job 4 → `CALL ...('nightly')`, job 13 weekly (PR #200, merged `0bff05e`)
-- [x] Audited all 398 anon-readable objects; found and closed a **bank-statement leak** (PR #201, merged `2297ed3`)
-- [x] **Proved job 4 by direct test** — `CALL refresh_civicgraph_mvs_run('nightly')`, 12m24s, **50/50 success, 0 fallbacks**, 38 concurrent / 12 plain. Slowest `mv_entity_power_index` at 368s (looks like a stall; it is not).
-- [x] **Proved job 11 by direct test** — full refresh, `refreshed_at` advanced, 1,039 relations reproduced exactly.
-- [x] Found + closed a grant defect the catalog surfaced on itself (PR #202, merged `9e3c467`) — see Decisions.
+- [x] **Closed the expensive-public-route audit** — the ledger's previous blocking item. Checked all 68 pages using `getServiceSupabase()`, including the six on the firewall rule. **No second exposure bug.** `/entity/`, `/entities/`, `/grants`, `/foundations/compare`, `/person/`, `/places/` are legitimately public and fan out 1–3 queries; gating them would be wrong.
+- [x] **Cached nine public fan-out pages** (PR #206, `b7e37a5`) — `force-dynamic` → `revalidate = 3600` on pages with heavy service-role bursts and no per-request inputs. Worst were `/reports/data-health` (17 queries/hit), `/insights` (12), `/foundations/prf` (9).
+- [x] **Merged slice 2** (PR #204, `0c19443`) — built by a parallel session, found open while the ledger said the board was clear.
+- [x] **Retired slice 2's one "Not verified" claim.** Its author could not confirm the index rendered because of an 8-day PostgREST retry storm. Verified instead at the data layer: all 7 migrations applied, `v_clarity_board{,_cards}` + `v_clarity_ledger` exist as `security_invoker` with `service_role=r` and **no anon grant**; three questions `answered`/`verified`; stored headlines match the PR body exactly (85.1% · 773 · 2.8x); `clarity_object` 1,456 rows. **App read path tested through PostgREST with the service key: both views HTTP 200, first try, no retries.**
 
 ### Next
-- [ ] **Slice 2: the question board.** Ten-working-day guard from slice 1 (shipped 15 Aug)
-- [ ] Job 13 (weekly tier, Sundays 15:00 UTC) has **never run** and is unexercised. Also unchecked: where the four matviews that logged `success-fallback` under the old code now sit — if they are in the weekly tier, job 13 inherits a known-flaky set unwatched. They were `mv_grant_contract_overlap`, `mv_indigenous_procurement_score`, `mv_lga_indigenous_proxy_score`, `mv_abr_name_lookup`.
+- [ ] **Look at `/clarity` in a browser** — dark theme, layout, search/facets, and the local admin bypass. Unreachable by any tool here.
+- [ ] **Scope slice 3.** Slices 1 and 2 are done; 7 total were planned.
+- [ ] **Enable Vercel Web Analytics.** Still off. It is the reason caller attribution failed twice; it would make the next incident diagnosable in minutes.
+- [ ] **Rethink the per-IP rate limit.** The 20/60s `ip`-keyed rule did not hold against a distributed caller. Consider a JA4 key or a lower global cap.
+- [ ] Job 13 (weekly tier, Sundays 15:00 UTC) has **never run**. Also unchecked: whether the four old `success-fallback` matviews sit in the weekly tier — if so job 13 inherits a known-flaky set unwatched. They were `mv_grant_contract_overlap`, `mv_indigenous_procurement_score`, `mv_lga_indigenous_proxy_score`, `mv_abr_name_lookup`.
 - [ ] Deferred, all diagnosed and written up: 19 unwatched edge layers · runbook steps 3 (donor sink, 47,563 misattributed edges) and 5 (opportunity self-loops)
 
 ### Decisions
-- Headline is **1,039 relations**, not 1,455; 416 routines get their own segment. They will never carry a domain, so counting them strands 29% of the list as undescribed. (#193)
-- Coverage denominator is relations → **78%**, not 56% against everything.
+- **The `/foundations/backlog` bug shape splits into two problems, not one.** Exposure (a service-role review queue left public) is a gating problem and was unique to backlog. Uncached fan-out is a caching problem and was widespread. Applying the gating fix to public product surfaces would have been the wrong call. (#206)
+- **`force-dynamic` needs a per-request reason.** Nine pages carried it while reading nightly matviews and taking no `searchParams`, `cookies()` or `headers()`. It bought nothing and cost a service-role query burst per anonymous hit. `/foundations` keeps it — it genuinely reads filter searchParams.
+- A page that uses `getServiceSupabase()` belongs in `protectedPrefixes` **if it is a private surface**; if it is public, it belongs behind a cache. Backlog was the first, the nine were the second. (#205, #206)
+- **Gate, don't cache** — for the private case. Caching backlog would have left anonymous traffic pointed at a service-role page.
+- Mitigation belongs in code, not the firewall. The incident deny rule was removed once #205 was live.
+- Headline is **1,039 relations**, not 1,455; 416 routines get their own segment. (#193) Coverage denominator is relations → **78%**.
 - ACT excluded by default, count permanently on screen, **neutral not yellow** — a scope boundary, not a warning.
-- Freshness has **four states that never collapse**: a date (687), `+` blue = our missing timestamp column (294, an afternoon's work), `?` yellow = too large to probe (58, needs a rebuild), `—` n/a (416). (#195)
-- Admin-gated. Not deference to the April kill — the catalog enumerates which objects are anon-readable, i.e. our own attack surface. (#196)
-- Ranked by default (`clarity_object.importance`), sort controls first-class. Segments kept but **ALL is the default** — opening behind SOURCES hid 60% on arrival.
-- `/api/data/schema-graph` superseded now, deleted after slice 5. Zero consumers were *found*, not proven.
-- `catalog_object_scope` is authoritative for `act_business`, bidirectionally. The old name-prefix regex missed 215 ACT objects and could never un-flag a false positive.
-- **A new function gets its ACL set in the same migration that creates it.** `clarity_apply_act_flag` was created without one and kept PostgreSQL's default of `EXECUTE` to `PUBLIC`, while its four siblings were each explicitly restricted. Impact was contained (`SECURITY INVOKER`; anon holds no grants on `clarity_object`, so a call dies on first write) but it was one `SECURITY DEFINER` away from live. (#202)
+- Freshness has **four states that never collapse**: a date (687), `+` blue = missing timestamp column (294), `?` yellow = too large to probe (58), `—` n/a (416). (#195)
+- Admin-gated, because the catalog enumerates our own anon-readable attack surface. (#196)
+- `catalog_object_scope` is authoritative for `act_business`, bidirectionally.
+- **A new function gets its ACL set in the same migration that creates it.** `clarity_apply_act_flag` kept PostgreSQL's default `EXECUTE` to `PUBLIC` while its four siblings were restricted. (#202)
+- Slice 2's own calls, inherited: the three-card board deleted for the searchable index; DESIGN.md's March "No dark mode" marked **superseded for `/clarity` only**; local admin bypass now requires `NODE_ENV !== 'production'` **and** no `VERCEL`, with `requireAdminApi` deliberately not bypassed.
 
 ### Open Questions
-- RESOLVED 15 Aug: jobs 4 and 11 both **proven by direct test**, not by an overnight run. Job 4's per-matview `COMMIT` is real — rows were readable from a second connection mid-run, with distinct `started_at` and non-zero `duration_ms`. The frozen-`now()` bug is gone and **PR #200's rollback trigger will not fire**. Neither job has still ever fired *via pg_cron itself*; first unattended runs are 17:00 and 18:00 UTC on 15 Aug.
-- UNCONFIRMED: is `/clarity` actually reachable in the deployed app? Vercel deploys on merge but the page has never been opened by a human.
-- UNCONFIRMED: `gs_relationships` read 2,943,598 at one point vs 2,904,091 after the merge — ~39.5K higher. Probably a scheduled ingest; not verified.
-- OPEN, Ben's call: `person_roles` aggregates 334,152 individually-public ACNC records into one anon-readable endpoint. Each is public by law; the aggregate is a different artifact. Not a defect — a decision.
+- **UNCONFIRMED: does `/clarity` look right?** Data, grants and read path are all verified. The rendered page has still never been seen by a human or an agent. Vercel SSO blocks the preview even through the authenticated MCP fetch tool, and the admin gate sits behind that.
+- **LIKELY RESOLVED: who was hammering `exec_sql`?** The 8-day retry storm (~10 req/s, 94% failing) and the pool-saturation incident look like the same anonymous traffic on `/foundations/backlog`. Pool went 41 → 1 connections after #205 and reads clean now. **Not proven** — the caller was never identified, and Postgres only ever saw PostgREST's loopback.
+- OPEN, Ben's call: `person_roles` aggregates 334,152 individually-public ACNC records into one anon-readable endpoint. Each is public by law; the aggregate is a different artifact. A decision, not a defect.
+- RESOLVED 15 Aug: jobs 4 and 11 both proven by direct test. Neither has still ever fired *via pg_cron itself*; first unattended runs were 17:00 and 18:00 UTC on 15 Aug — **worth checking whether they actually fired.**
+- RESOLVED: the stale `.next/types` errors for `clarity/q/[slug]` were a parallel session's files in the working tree, not a fault. Gone since #204 merged.
 
 ### Workflow State
 pattern: wayfinder map (issue #190, 8/8 tickets closed)
-phase: slice 1 complete
+phase: slice 2 complete
 total_phases: 7 slices
 retries: 0
 max_retries: 3
 
 #### Resolved
-- goal: "slice 1 shipped and live" — done
+- goal: "slice 2 shipped and merged" — done
 - resource_allocation: balanced
 
 #### Unknowns
-- job_4_and_11_health: **RESOLVED** — both proven by direct test 15 Aug
+- clarity_visual_result: **UNKNOWN** — never rendered for human eyes
 - job_13_weekly_tier: UNKNOWN — never run, never exercised by hand
+- cron_first_unattended_runs: UNKNOWN — jobs 4 and 11 due 17:00/18:00 UTC 15 Aug
+- backlog_caller_identity: UNKNOWN — storm ended with the fix, caller never named
+- other_route_exposure: **RESOLVED** — 68 pages audited, no second exposure bug
 
 #### Last Failure
 (none)
+
+---
+
+## Incident: shared-pool saturation, 15 Aug 2026
+
+**Symptom.** Every project on the shared Supabase instance (`tednluwflfhxyucgwigh`) intermittently unreachable. Local pool monitor at **blip #902** across 8 days. `pg_stat_activity`: **40-41 active connections, all the same `exec_sql` RPC**, sustained.
+
+**The trail, including the dead ends — they cost the most time:**
+
+1. `pg_stat_activity` identifies *what* (40 concurrent `exec_sql`) but never *who*: every `authenticator` connection reports `client_addr = ::1/128`, because PostgREST runs on the Supabase host. **Attribution is impossible at the DB layer. Go to the HTTP side first next time.**
+2. Killing the local dev server on 3013 changed nothing. Load was not local.
+3. **Vercel runtime logs grouped by `requestPath` cracked it in one call** — `/foundations/backlog` = 10,694 hits in 2h, next busiest path 320. That is the tool that works.
+4. Arithmetic tied it off: ~3.5 req/s × 8 RPCs/request ≈ the 40 observed connections.
+
+**Everything red that session traced to this one cause** — 8 `entity-dossier` integration tests failing on 30s timeouts, and the Vercel build failing on four unrelated prerendered pages (`/atlas` + 3 youth-justice recipients) blowing a 60s ceiling. Both went green on retry once the pool drained. **A saturated pool looks like unrelated flaky failures everywhere.**
+
+**The circular trap.** The fix could not deploy, because the build needed the DB and the DB was starved by the thing the fix would stop. Broken by mitigating *outside* the app: a Vercel Firewall path `deny`, which takes effect at the edge with no build.
+
+**Tooling notes worth keeping:**
+- `vercel firewall` did **not** exist in CLI 50.22.1; it does in **59.1.3**. Upgrade first.
+- `vercel api -X PATCH -d '...'` returns **415** without an explicit `Content-Type: application/json`. Prefer the native `vercel firewall rules add --condition '{...}' --action deny --yes`.
+- Firewall changes **stage as a draft**; nothing is live until `vercel firewall publish`. `vercel firewall diff` before publishing.
+- Production domain is **`civicgraph.app`**. Direct curl probes are unreliable (429 / SSO interception) — verify via Vercel runtime logs grouped by `statusCode` instead.
+
+**Timeline:** publish deny → **pool 41 → 1 active within 60s**. Build retried green in 5m. PR #205 merged `2f3e5fd`, prod deploy Ready 07:57Z. Deny rule removed and published. Post-removal logs: `/foundations/backlog` → `307` (auth redirect), 7 hits in 10 min vs ~2,100 per 10 min at peak.
 
 ---
 
