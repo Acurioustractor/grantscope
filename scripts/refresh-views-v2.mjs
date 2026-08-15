@@ -1,18 +1,29 @@
 #!/usr/bin/env node
 /**
- * refresh-views-v2.mjs — Better MV refresh with auto-fallback, real errors,
- *                       and observability logging.
+ * refresh-views-v2.mjs — MV refresh driven by the database registry.
  *
- * Improvements over refresh-views.mjs:
- *   1. Sequential by default (no pooler contention from parallel REFRESH)
+ * SOURCE OF TRUTH: mv_refresh_registry + mv_refresh_plan() in the database.
+ * This script holds NO list of view names, NO concurrency list and NO heavy
+ * list. It used to hold all three, which is how it drifted 16 views apart from
+ * the pg_cron function that was supposed to run the same schedule.
+ *
+ *   - which views, and in what order  → mv_refresh_plan(tier)   (from pg_depend)
+ *   - CONCURRENTLY or not             → mv_refresh_plan(tier)   (from pg_index)
+ *   - per-view timeout                → measured p90 in mv_refresh_log
+ *
+ * To add a view to the schedule, INSERT it into mv_refresh_registry. Do not
+ * edit this file. See migrations/2026-08-14-mv-refresh-registry.sql.
+ *
+ * Behaviour kept from the previous version:
+ *   1. Sequential (no pooler contention from parallel REFRESH)
  *   2. Auto-fallback CONCURRENTLY → non-concurrent on unique-index error
- *   3. Real psql stderr captured and surfaced (no more "psql error" black-box)
- *   4. Logs every refresh to mv_refresh_log table for trend analysis
- *   5. Per-MV stats: status, duration, error message
- *   6. Summary at end with success/failure count
+ *   3. Real psql stderr captured and surfaced
+ *   4. Logs every refresh to mv_refresh_log
+ *   5. Per-MV status/duration/error, summary at end
  *
  * Usage:
  *   node --env-file=.env scripts/refresh-views-v2.mjs
+ *   node --env-file=.env scripts/refresh-views-v2.mjs --tier weekly
  *   node --env-file=.env scripts/refresh-views-v2.mjs --view mv_name
  *   node --env-file=.env scripts/refresh-views-v2.mjs --skip-heavy
  *   node --env-file=.env scripts/refresh-views-v2.mjs --dry-run
@@ -26,92 +37,120 @@ const DB = 'postgres';
 
 const args = process.argv.slice(2);
 const SINGLE_VIEW = args.includes('--view') ? args[args.indexOf('--view') + 1] : null;
+const TIER = args.includes('--tier') ? args[args.indexOf('--tier') + 1] : 'nightly';
 const SKIP_HEAVY = args.includes('--skip-heavy');
 const DRY_RUN = args.includes('--dry-run');
 const NO_LOG = args.includes('--no-log');
 
-// View ordering by dependency. CONCURRENTLY-friendly views first, ones we know
-// need non-concurrent listed in NEEDS_NON_CONCURRENT below.
-const VIEW_LIST = [
-  // Tier 1: foundational, no dependencies
-  'mv_acnc_latest',
-  'mv_acnc_ais_yearly',
-  'v_grant_stats',
-  'v_grant_focus_areas',
-  'v_grant_provider_summary',
-  'mv_abr_name_lookup',
-  // Tier 2: cross-system aggregates
-  'mv_gs_entity_stats',
-  'mv_gs_donor_contractors',
-  'mv_donor_contract_crossref',
-  'mv_org_justice_signals',
-  'mv_triple_proof_suppliers',
-  'mv_justice_proven_suppliers',
-  'mv_indigenous_proven_suppliers',
-  'mv_justice_charity_financial_health',
-  'mv_funding_by_postcode',
-  'mv_funding_by_lga',
-  'mv_funding_by_disadvantage',
-  'mv_indigenous_funding_by_disadvantage',
-  'v_austender_stats',
-  'v_austender_entity_summary',
-  'v_austender_top_oric',
-  // Tier 3: depend on Tier 2
-  'mv_entity_power_index',
-  'mv_funding_deserts',
-  'mv_revolving_door',
-  'mv_board_interlocks',
-  'mv_person_influence',
-  'mv_person_cross_system',
-  'mv_person_network',
-  // identity-keyed person disambiguation MVs (depend on mv_person_entity_network +
-  // person_identities; network before influence). See migration 20260619130000.
-  'mv_person_identity_network',
-  'mv_person_identity_influence',
-  'mv_foundation_grantees',
-  'mv_lga_place_profile',
-  'mv_donation_contract_timing',
-  'mv_charity_network',
-  // Tier 4: heavy or rarely-needed
-  'mv_disability_landscape',
-  'mv_charity_rankings',
-  'mv_foundation_scores',
-  'mv_foundation_trends',
-  'mv_indigenous_procurement_score',
-  'mv_grant_contract_overlap',
-  'mv_lga_indigenous_proxy_score',
-  // Phase 6 award-history (justice_funding + gs_entities; both have unique PKs → CONCURRENTLY-safe)
-  'mv_award_history_by_theme',
-  'mv_award_winner_by_theme',
-];
-
-// MVs known to lack unique indexes — pre-emptively use non-concurrent.
-// 2026-04-27: mv_donor_contract_crossref + mv_revolving_door now have unique
-// indexes (see scripts/sql/add-mv-unique-indexes.sql) — they can use CONCURRENTLY.
-// mv_funding_by_lga + mv_funding_deserts have duplicate-key data quality issues
-// in the MV definition; until those are deduped, they stay non-concurrent.
-const NEEDS_NON_CONCURRENT = new Set([
-  'mv_funding_by_lga',
-  'mv_funding_deserts',
-  'mv_foundation_grantees',
-  'mv_donation_contract_timing',
-]);
-
-// MVs that need extra timeout (heavy joins, 1M+ row aggregations)
-const HEAVY = new Set([
-  'mv_gs_donor_contractors',
-  'mv_donor_contract_crossref',
-  'mv_entity_power_index',
-  'mv_person_influence',
-  'mv_person_cross_system',
-  'mv_person_network',
-  'mv_charity_network',
-  'mv_abr_name_lookup',
-  'mv_board_interlocks',
-  'mv_person_identity_network',
-]);
+// A view is "heavy" if its measured p90 exceeds this. Derived, not hardcoded.
+const HEAVY_THRESHOLD_S = 60;
 
 function log(msg) { console.log(`[${new Date().toISOString().split('T')[1].slice(0, 8)}] ${msg}`); }
+
+/**
+ * The refresh plan, straight from the database. Order comes from pg_depend,
+ * CONCURRENTLY eligibility from pg_index — neither is maintained here.
+ * Returns [{ name, concurrent, depth }].
+ */
+async function loadPlan(tier) {
+  try {
+    const { stdout } = await runPsql(
+      `SELECT seq, mv_name, depth, use_concurrent FROM mv_refresh_plan('${tier.replace(/'/g, "''")}') ORDER BY seq`,
+      { timeout: 60, tuplesOnly: true },
+    );
+    // filter on '|': runPsql prefixes the statement with SET, whose "SET" acknowledgement lands
+    // in stdout and would otherwise parse as a row named undefined at depth NaN.
+    return stdout.split('\n').filter((l) => l.includes('|')).map((line) => {
+      const [, name, depth, conc] = line.split('|').map((s) => s.trim());
+      return { name, depth: Number(depth), concurrent: conc === 't' };
+    });
+  } catch (err) {
+    // FALLBACK. mv_refresh_plan() ships in migrations/2026-08-14-mv-refresh-registry.sql, which is
+    // an UNAPPLIED deliverable. Until it lands this script must still work — rewriting it to read a
+    // registry that does not exist yet would have taken a working nightly tool offline in exchange
+    // for a migration nobody had run.
+    if (!/mv_refresh_plan.*does not exist/i.test(err.stderr || err.message || '')) throw err;
+    log('mv_refresh_plan() not found — the registry migration is unapplied.');
+    log('Falling back to catalogue order: every populated matview, dependency-ordered by pg_depend.');
+    const { stdout } = await runPsql(
+      `WITH RECURSIVE mvs AS (
+         SELECT c.oid, c.relname::text AS mv_name,
+                EXISTS (SELECT 1 FROM pg_index i
+                         WHERE i.indrelid = c.oid AND i.indisunique
+                           AND i.indpred IS NULL AND i.indexprs IS NULL) AS use_concurrent
+           FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+          WHERE n.nspname = 'public' AND c.relkind = 'm'),
+       edges AS (
+         SELECT DISTINCT d.refobjid AS parent, r.ev_class AS child
+           FROM pg_depend d JOIN pg_rewrite r ON r.oid = d.objid
+          WHERE d.classid = 'pg_rewrite'::regclass AND d.refclassid = 'pg_class'::regclass
+            AND d.refobjid <> r.ev_class),
+       depth AS (
+         SELECT m.oid, 0 AS d FROM mvs m
+          WHERE NOT EXISTS (SELECT 1 FROM edges e JOIN mvs p ON p.oid = e.parent WHERE e.child = m.oid)
+         UNION ALL
+         SELECT m.oid, depth.d + 1 FROM depth
+           JOIN edges e ON e.parent = depth.oid JOIN mvs m ON m.oid = e.child
+          WHERE depth.d < 10)
+       SELECT row_number() OVER (ORDER BY max_d, mv_name) AS seq, mv_name, max_d, use_concurrent
+         FROM (SELECT m.mv_name, m.use_concurrent, coalesce(max(depth.d), 0) AS max_d
+                 FROM mvs m LEFT JOIN depth ON depth.oid = m.oid
+                GROUP BY 1, 2) z
+        ORDER BY max_d, mv_name`,
+      { timeout: 120, tuplesOnly: true },
+    );
+    // filter on '|': runPsql prefixes the statement with SET, whose "SET" acknowledgement lands
+    // in stdout and would otherwise parse as a row named undefined at depth NaN.
+    return stdout.split('\n').filter((l) => l.includes('|')).map((line) => {
+      const [, name, depth, conc] = line.split('|').map((s) => s.trim());
+      return { name, depth: Number(depth), concurrent: conc === 't' };
+    });
+  }
+}
+
+/**
+ * Per-view timeout from measured history rather than a hardcoded HEAVY list.
+ * 4x the p90 (floor 300s, ceiling 1800s) — generous enough to absorb a slow
+ * night, tight enough that a genuinely stuck refresh is cut loose.
+ * Rows with duration_ms = 0 are excluded: every pg_cron row written before
+ * 2026-08-14 has a bogus zero duration (now() is frozen inside a transaction).
+ */
+async function loadTimeouts() {
+  const { stdout } = await runPsql(
+    `SELECT mv_name, ceil(percentile_cont(0.9) WITHIN GROUP (ORDER BY duration_ms)/1000.0)::int
+       FROM mv_refresh_log
+      WHERE status LIKE 'success%' AND duration_ms > 0
+        AND started_at > now() - interval '120 days'
+      GROUP BY mv_name`,
+    { timeout: 60, tuplesOnly: true },
+  );
+  const map = new Map();
+  for (const line of stdout.split('\n').filter(Boolean)) {
+    const [name, p90] = line.split('|').map((s) => s.trim());
+    map.set(name, Number(p90));
+  }
+  return map;
+}
+
+/** Warn loudly about matviews nobody registered — the drift this design exists to prevent. */
+async function warnDrift() {
+  try {
+    const { stdout } = await runPsql(
+      `SELECT mv_name, drift FROM v_mv_refresh_drift WHERE drift <> 'ok'`,
+      { timeout: 30, tuplesOnly: true },
+    );
+    // filter on '|' for the same reason loadPlan does: runPsql prefixes the statement with SET,
+    // and psql's "SET" acknowledgement lands in stdout, where it read as a drift row.
+    const rows = stdout.split('\n').filter((l) => l.includes('|'));
+    if (rows.length) {
+      log(`⚠ ${rows.length} registry drift row(s) — matviews with no schedule, or registry rows for dropped matviews:`);
+      for (const r of rows.slice(0, 20)) log(`    ${r.replace(/\|/g, '  ')}`);
+      log('  Fix by INSERTing into mv_refresh_registry (see migrations/2026-08-14-mv-refresh-registry.sql).');
+    }
+  } catch (e) {
+    log(`  drift check skipped: ${e.message}`);
+  }
+}
 
 async function ensureLogTable() {
   if (NO_LOG) return;
@@ -144,13 +183,14 @@ async function logRefresh({ name, started, finished, status, concurrent, error }
   }
 }
 
-function runPsql(sql, { timeout = 600 } = {}) {
+function runPsql(sql, { timeout = 600, tuplesOnly = false } = {}) {
   return new Promise((resolve, reject) => {
     const fullSql = `SET statement_timeout = '${timeout}s'; ${sql}`;
     const env = { ...process.env, PGPASSWORD: process.env.DATABASE_PASSWORD };
     const proc = spawn('psql', [
       '-h', HOST, '-p', String(PORT), '-U', USER, '-d', DB,
       '-v', 'ON_ERROR_STOP=1',
+      ...(tuplesOnly ? ['-At', '-F', '|'] : []),
       '-c', fullSql,
     ], { env, timeout: (timeout + 30) * 1000 });
 
@@ -182,19 +222,24 @@ function extractPsqlError(stderr) {
   return stderr.split('\n').filter(l => l.trim()).slice(-1)[0]?.slice(0, 200) || null;
 }
 
-async function refreshOne(name) {
+async function refreshOne(item, timeouts) {
+  const { name, concurrent } = item;
+  const p90 = timeouts.get(name);
+  const isHeavy = (p90 ?? 0) >= HEAVY_THRESHOLD_S;
+  // 4x p90, clamped. Unmeasured views get the 300s floor.
+  const timeout = Math.min(1800, Math.max(300, Math.ceil((p90 ?? 0) * 4)));
+
   if (DRY_RUN) {
-    log(`[DRY] would refresh ${name}`);
+    log(`[DRY] would refresh ${name} (depth ${item.depth}, ${concurrent ? 'CONCURRENTLY' : 'non-concurrent'}, ${timeout}s${p90 ? `, p90 ${p90}s` : ', never measured'})`);
     return { name, status: 'dry-run' };
   }
-  if (SKIP_HEAVY && HEAVY.has(name)) {
-    log(`[SKIP] ${name} (heavy + --skip-heavy)`);
+  if (SKIP_HEAVY && isHeavy) {
+    log(`[SKIP] ${name} (p90 ${p90}s >= ${HEAVY_THRESHOLD_S}s + --skip-heavy)`);
     return { name, status: 'skipped' };
   }
 
-  const timeout = HEAVY.has(name) ? 1200 : 300; // 20 min for heavy, 5 min for light
   const started = Date.now();
-  const wantsConcurrent = !NEEDS_NON_CONCURRENT.has(name);
+  const wantsConcurrent = concurrent;
 
   // First attempt
   if (wantsConcurrent) {
@@ -246,15 +291,39 @@ async function main() {
     process.exit(1);
   }
 
-  const targetList = SINGLE_VIEW ? [SINGLE_VIEW] : VIEW_LIST;
-  log(`refresh-views-v2: ${targetList.length} views, sequential mode`);
-
   await ensureLogTable();
+
+  let targetList;
+  if (SINGLE_VIEW) {
+    // Single-view mode still asks the DB whether CONCURRENTLY is legal.
+    const plan = await loadPlan(TIER);
+    targetList = plan.filter((p) => p.name === SINGLE_VIEW);
+    if (!targetList.length) {
+      const { stdout } = await runPsql(
+        `SELECT EXISTS (SELECT 1 FROM pg_index i JOIN pg_class c ON c.oid = i.indrelid
+                        WHERE c.relname = '${SINGLE_VIEW.replace(/'/g, "''")}' AND i.indisunique)`,
+        { timeout: 30, tuplesOnly: true },
+      );
+      targetList = [{ name: SINGLE_VIEW, depth: 0, concurrent: stdout.trim() === 't' }];
+      log(`note: ${SINGLE_VIEW} is not in the '${TIER}' plan — refreshing it anyway`);
+    }
+  } else {
+    targetList = await loadPlan(TIER);
+    if (!targetList.length) {
+      console.error(`No views in tier '${TIER}'. Check mv_refresh_registry.`);
+      process.exit(1);
+    }
+  }
+
+  const timeouts = await loadTimeouts();
+  const maxDepth = Math.max(...targetList.map((t) => t.depth));
+  log(`refresh-views-v2: tier=${TIER}, ${targetList.length} views, dependency depth 0..${maxDepth}, sequential`);
+  if (!SINGLE_VIEW) await warnDrift();
 
   const results = [];
   const t0 = Date.now();
-  for (const name of targetList) {
-    const r = await refreshOne(name);
+  for (const item of targetList) {
+    const r = await refreshOne(item, timeouts);
     results.push(r);
   }
   const totalMin = ((Date.now() - t0) / 60000).toFixed(1);

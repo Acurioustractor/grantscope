@@ -12,6 +12,7 @@
  *   node scripts/build-entity-graph.mjs --phase=contracts  # contracts only
  *   node scripts/build-entity-graph.mjs --phase=links      # cross-registry links
  *   node scripts/build-entity-graph.mjs --phase=justice    # justice funding grant edges
+ *   node scripts/build-entity-graph.mjs --phase=grantconnect # GrantConnect award edges
  *   node scripts/build-entity-graph.mjs --phase=refresh    # refresh materialized views
  *   node scripts/build-entity-graph.mjs --dry-run          # count only, no writes
  */
@@ -753,6 +754,21 @@ async function buildJusticeRelationships() {
   await buildRelationshipsSetBased(d.label, d.cols, d.selectSql + JUSTICE_BUILD_GUARD, d.prelude);
 }
 
+// ─── Phase 2e: GrantConnect awards → relationships ───────────────────────────
+
+async function buildGrantConnectRelationships() {
+  log('\nPhase 2e: GrantConnect award relationships...');
+  // ADDED 2026-08-14. grantconnect_awards held 291,264 rows and ZERO edges — the largest
+  // awarded-grants source in the database was absent from the relationship layer. Not stale:
+  // never built, because no phase existed to build it.
+  //
+  // Expected ~189,590 edges (65.1% of awards satisfy both join sides). The derivation and its
+  // agency-dedup prelude live in graph-edge-datasets.mjs and are validated read-only by
+  // check-graph-completeness --dataset=grantconnect_awards.
+  const d = edgeDataset('grantconnect_awards');
+  await buildRelationshipsSetBased(d.label, d.cols, d.selectSql, d.prelude);
+}
+
 // ─── Phase 3: Refresh materialised views ─────────────────────────────────────
 
 async function refreshViews() {
@@ -804,6 +820,10 @@ async function main() {
 
   if (phase === 'all' || phase === 'justice') {
     await buildJusticeRelationships();
+  }
+
+  if (phase === 'all' || phase === 'grantconnect') {
+    await buildGrantConnectRelationships();
   }
 
   if (phase === 'all' || phase === 'refresh') {
