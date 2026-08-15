@@ -99,3 +99,36 @@ second signal (state, postcode, ACN, source dataset). Low value per unit effort;
 
 Sequence this **after** the `justice_funding` rebuild, which removes 712,827 orphaned edges — some
 of them may sit on shadow nodes, so merging first means merging rows that are about to be deleted.
+
+---
+
+## Addendum, 2026-08-15 — do NOT "fix" the aec_donations party join
+
+After the merge, the residual split list is topped by `political_party` groups
+(Canberra Labor Club, ALP N.S.W. Branch, Labor Holdings). The obvious next move looked like:
+drop `party.entity_type = 'political_party'` from the `aec_donations` derivation so recipients
+resolve to their ABN-bearing entity, then merge the shadows.
+
+**Measured first. The recommendation is wrong.**
+
+```
+distinct donation recipients          2,365
+  match a political_party entity      2,365   (100%)
+  match ANY entity by name            2,365   (100%)
+  match an ABN-BEARING entity           163   (6.9%)
+```
+
+For **93% of donation recipients there is no ABN-bearing entity at all**. The `political_party`
+row is not a shadow — it is the only node that exists. Removing the type filter would resolve
+6.9% of recipients to an ABN and leave the rest matching by name alone, with nothing to
+disambiguate against; the current filter is doing real work.
+
+**So the derivation stays as written.** The 92 split `political_party` groups are the minority
+where both a party-typed node and an ABN-bearing node exist — a genuine but small problem, and the
+fix is *not* deletion. It is to carry the ABN onto the party-typed entity (or record the link
+explicitly), so the donations derivation keeps resolving while the two identities stop competing.
+That is a different and more careful operation than the shadow merge, and it is not scoped here.
+
+This is the second time in this investigation that the residual after a fix pointed at a
+"next obvious step" that measurement then refuted. The pattern is consistent enough to state
+plainly: **the shape of what is left after a repair is not evidence about what should happen next.**
