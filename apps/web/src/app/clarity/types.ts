@@ -70,6 +70,15 @@ export interface LedgerRow {
   qh?: string;
   /** headline_sub, e.g. '662 of 778 organisations' */
   qsub?: string;
+
+  /**
+   * Movement against the selected baseline (slice 3).
+   *
+   * `dp` undefined means we have no baseline for this object that far back, and it
+   * renders `?` — never 0. A baseline we do not hold is not a baseline of zero, and
+   * collapsing the two is exactly how a 28% loss went unnoticed for four months.
+   */
+  dp?: number;
 }
 
 export interface LedgerStats {
@@ -83,4 +92,12 @@ export interface LedgerStats {
   anonReadable: number;
   actBusiness: number;
   refreshedAt: string | null;
+  /** slice 3 — the WHAT CHANGED strip */
+  baseline: string;
+  /** objects whose row count moved more than 10% against the baseline */
+  moved: number;
+  /** critical events with no reason written */
+  unexplained: number;
+  /** objects with a real baseline row, so `?` always has its denominator on screen */
+  measurable: number;
 }

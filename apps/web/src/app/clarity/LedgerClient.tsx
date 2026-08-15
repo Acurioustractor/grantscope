@@ -1,7 +1,9 @@
 'use client';
 
 import { Fragment, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { BASELINES, BASELINE_LABEL, type Baseline } from './changes/types';
 import type { LedgerRow, LedgerStats, FreshnessProbe } from './types';
 
 // QUESTIONS sits FIRST and ALL stays the default. A question is the only row here that answers
@@ -124,10 +126,51 @@ export default function LedgerClient({ rows, stats }: { rows: LedgerRow[]; stats
                 Refreshed {stats.refreshedAt.slice(0, 10)}
               </span>
             ) : null}
+            {/* The baseline is a link, not a toggle: it is a searchParam shared with
+                /clarity/changes so the two screens can never disagree about which
+                window you are looking at. */}
+            <span className="ml-auto flex flex-wrap items-center gap-1.5">
+              <span className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-bauhaus-muted">
+                Baseline
+              </span>
+              <span className="flex border-2 border-bauhaus-black">
+                {BASELINES.map((b) => (
+                  <Link
+                    key={b}
+                    href={b === 'last' ? '/clarity' : `/clarity?b=${b}`}
+                    aria-current={stats.baseline === b ? 'true' : undefined}
+                    className={`border-r-2 border-bauhaus-black px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.12em] last:border-r-0 ${
+                      stats.baseline === b
+                        ? 'bg-bauhaus-black text-bauhaus-canvas'
+                        : 'bg-bauhaus-white'
+                    }`}
+                  >
+                    {BASELINE_LABEL[b as Baseline]}
+                  </Link>
+                ))}
+              </span>
+            </span>
           </div>
           <h1 className="text-4xl font-black uppercase leading-none tracking-wide sm:text-5xl">
             Clarity Ledger
           </h1>
+
+          {/* WHAT CHANGED lives on the front strip, because a change log nobody
+              walks past is a change log nobody reads. An unexplained critical is
+              red and stays red until somebody writes a sentence. */}
+          <Link
+            href={`/clarity/changes?b=${stats.baseline}`}
+            className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 border-2 border-bauhaus-black bg-bauhaus-white px-3 py-2 text-[11.5px] font-bold hover:bg-bauhaus-black hover:text-bauhaus-canvas"
+          >
+            <span>
+              {nf.format(stats.moved)} objects moved more than 10% against{' '}
+              {BASELINE_LABEL[stats.baseline as Baseline].toLowerCase()}
+            </span>
+            <span className={stats.unexplained ? 'text-bauhaus-red' : ''}>
+              · {nf.format(stats.unexplained)} with no reason recorded
+            </span>
+            <span className="ml-auto uppercase tracking-[0.12em]">What changed →</span>
+          </Link>
           <div className="my-5 flex flex-wrap items-end gap-7">
             <div>
               <b className="block text-5xl font-black leading-none tracking-tight">
@@ -257,11 +300,11 @@ export default function LedgerClient({ rows, stats }: { rows: LedgerRow[]; stats
               <table className="w-full min-w-[780px] border-collapse">
                 <thead>
                   <tr className="bg-bauhaus-black text-bauhaus-canvas">
-                    {['Object', 'Domain', 'Lifecycle', 'Rows', 'Size', 'Fresh'].map((h, i) => (
+                    {['Object', 'Domain', 'Lifecycle', 'Rows', '\u0394', 'Size', 'Fresh'].map((h, i) => (
                       <th
                         key={h}
                         className={`px-2.5 py-2 text-[9.5px] font-extrabold uppercase tracking-[0.13em] ${
-                          i === 3 || i === 4 ? 'text-right' : 'text-left'
+                          i >= 3 && i <= 5 ? 'text-right' : 'text-left'
                         }`}
                       >
                         {h}
@@ -272,7 +315,7 @@ export default function LedgerClient({ rows, stats }: { rows: LedgerRow[]; stats
                 <tbody>
                   {visible.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="p-9 text-center text-sm text-bauhaus-muted">
+                      <td colSpan={7} className="p-9 text-center text-sm text-bauhaus-muted">
                         Nothing matches. Clear a filter.
                       </td>
                     </tr>
@@ -340,6 +383,27 @@ export default function LedgerClient({ rows, stats }: { rows: LedgerRow[]; stats
                                 </>
                               )}
                             </td>
+                            {/* No baseline is '?', in yellow, and never 0. */}
+                            <td
+                              className={`px-2.5 py-1.5 text-right font-mono text-[12.5px] ${
+                                r.dp === undefined
+                                  ? 'text-bauhaus-yellow'
+                                  : Math.abs(r.dp) > 10
+                                    ? 'font-bold text-bauhaus-red'
+                                    : 'text-bauhaus-muted'
+                              }`}
+                              title={
+                                r.dp === undefined
+                                  ? 'No baseline this far back — unmeasurable, not zero'
+                                  : undefined
+                              }
+                            >
+                              {r.dp === undefined
+                                ? '?'
+                                : r.dp === 0
+                                  ? '\u2014'
+                                  : `${r.dp > 0 ? '+' : ''}${r.dp.toFixed(1)}%`}
+                            </td>
                             <td className="px-2.5 py-1.5 text-right font-mono text-[13px]">{bytes(r.b)}</td>
                             <td className="px-2.5 py-1.5">
                               {r.f === 'ok' && r.w ? (
@@ -356,7 +420,7 @@ export default function LedgerClient({ rows, stats }: { rows: LedgerRow[]; stats
                           </tr>
                           {isOpen ? (
                             <tr className="border-t-2 border-bauhaus-black bg-bauhaus-canvas">
-                              <td colSpan={6} className="px-4 py-3.5">
+                              <td colSpan={7} className="px-4 py-3.5">
                                 <dl className="grid max-w-[100ch] grid-cols-[104px_1fr] gap-x-3.5 gap-y-1 text-[13px]">
                                   <dt className={DT}>Purpose</dt>
                                   <dd>
