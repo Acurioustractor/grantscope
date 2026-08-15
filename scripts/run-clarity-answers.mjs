@@ -165,28 +165,49 @@ async function probeSentinels(sentinels) {
  * sentinel is still RECORDED on the answer so it stays visible, but it does not block: a guard
  * that refuses every question is a guard that gets switched off.
  */
-function flagsFor(slug, ingredients, probes) {
+function flagsFor(slug, ingredients, probes, exemptions = {}) {
   const out = {};
   const reads = new Set(ingredients ?? []);
   for (const [key, r] of Object.entries(probes)) {
     const named = r.applies_to?.includes(slug) ?? false;
     const guarded = (r.guards_objects ?? []).some((o) => reads.has(o));
     const scoped = Boolean(r.applies_to?.length) || Boolean(r.guards_objects?.length);
+    // An exemption is a written, per-question decision that this defect cannot reach this answer.
+    // It never hides the sentinel — the flag still records that it tripped, and carries the reason
+    // so the card can state it. A guard silently detached is the failure mode this replaces.
+    const exemptReason = exemptions[`${key}|${slug}`] ?? null;
     out[key] = {
       tripped: r.tripped,
       n: r.n ?? null,
       share: r.share ?? null,
       severity: r.severity,
       // blocking is a property of THIS question, not of the sentinel alone
-      blocking: r.severity === 'block' && (named || guarded),
+      blocking: r.severity === 'block' && (named || guarded) && !exemptReason,
       scope: !scoped ? 'unscoped' : (named ? 'named' : (guarded ? 'ingredient' : 'not-applicable')),
+      ...(exemptReason ? { exempt_reason: exemptReason } : {}),
       ...(r.error ? { error: r.error } : {}),
     };
   }
   return out;
 }
 
-async function runOne(question, probes) {
+/**
+ * Per-question sentinel exemptions, keyed `sentinelKey|questionSlug`. The reason is NOT NULL in the
+ * schema and is carried onto the answer, because an exemption nobody can read is indistinguishable
+ * from a guard somebody quietly switched off.
+ */
+async function loadExemptions() {
+  const { stdout } = await runPsql(
+    `SELECT coalesce(json_agg(json_build_object(
+       'k', sentinel_key || '|' || question_slug, 'reason', reason)), '[]'::json)
+     FROM clarity_sentinel_exemption`,
+    { tuplesOnly: true },
+  );
+  const line = stdout.split('\n').map((l) => l.trim()).filter((l) => l.startsWith('[')).pop();
+  return Object.fromEntries((line ? JSON.parse(line) : []).map((e) => [e.k, e.reason]));
+}
+
+async function runOne(question, probes, exemptions) {
   const { slug } = question;
   log(`${slug} …`);
   const started = Date.now();
@@ -221,7 +242,7 @@ async function runOne(question, probes) {
     }
   }
 
-  const flags = flagsFor(slug, question.ingredients, probes);
+  const flags = flagsFor(slug, question.ingredients, probes, exemptions);
   const blocked = Object.entries(flags)
     .filter(([, f]) => f.tripped && f.blocking)
     .map(([k]) => k);
@@ -271,9 +292,11 @@ async function main() {
   const sentinels = await loadSentinels();
   log(`probing ${sentinels.length} sentinel(s)`);
   const probes = await probeSentinels(sentinels);
+  const exemptions = await loadExemptions();
+  if (Object.keys(exemptions).length) log(`${Object.keys(exemptions).length} sentinel exemption(s) in force`);
 
   const results = [];
-  for (const question of questions) results.push(await runOne(question, probes));
+  for (const question of questions) results.push(await runOne(question, probes, exemptions));
 
   const failed = results.filter((r) => !r.ok);
   log(`done — ${results.length - failed.length}/${results.length} ok`

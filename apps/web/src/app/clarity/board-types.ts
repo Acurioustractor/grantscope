@@ -29,6 +29,13 @@ export interface SentinelFlag {
   /** whether this sentinel can block THIS question — see clarity_sentinel.guards_objects */
   blocking?: boolean;
   scope?: 'unscoped' | 'named' | 'ingredient' | 'not-applicable';
+  /**
+   * Written, per-question reason this tripped sentinel does not block. Set from
+   * clarity_sentinel_exemption. Its presence is why `blocking` is false — the flag still records
+   * that the defect is real, because an exemption nobody can read is indistinguishable from a
+   * guard somebody quietly switched off.
+   */
+  exempt_reason?: string;
   error?: string;
 }
 
@@ -50,6 +57,8 @@ export interface BoardCard {
   uniqueness_basis: string | null;
   live_rerun_ok: boolean;
   measured_ms: number | null;
+  /** Prose condition under which this question refuses to render. Only set on form='refused'. */
+  refuses_when: string | null;
 
   /** null until the runner has ever produced an answer. Renders NEVER RUN, never a zero. */
   headline: string | null;
@@ -99,4 +108,30 @@ export function coverageText(card: Pick<BoardCard, 'coverage_num' | 'coverage_de
   if (card.coverage_num == null || card.coverage_den == null || !card.coverage_den) return null;
   const pct = (card.coverage_num / card.coverage_den) * 100;
   return `${card.coverage_num.toLocaleString()} of ${card.coverage_den.toLocaleString()} · ${pct.toFixed(1)}%`;
+}
+
+/**
+ * A refused question renders no chart, no number and no copyable claim. Both the state and the
+ * form carry the fact, and they can disagree: a question can be registered `refused` before its
+ * form is set, and a `refused` form is meaningless on any other state. Either one is enough.
+ */
+export function isRefusedCard(
+  card: Pick<BoardCard, 'form' | 'state'>,
+): boolean {
+  return card.form === 'refused' || card.state === 'refused';
+}
+
+/**
+ * UNVERIFIED and PILOT are stamps that travel with the number. `verified` is the absence of a
+ * stamp, not a badge — stamping the normal case teaches readers to ignore stamps. A missing
+ * verification_stamp is also unstamped: the registry requires the value where it matters, and a
+ * card is not made more trustworthy by a label the author never wrote.
+ */
+export function stampLabel(
+  card: Pick<BoardCard, 'verification_stamp'>,
+): 'UNVERIFIED' | 'PILOT' | null {
+  const v = card.verification_stamp?.toLowerCase();
+  if (v === 'unverified') return 'UNVERIFIED';
+  if (v === 'pilot') return 'PILOT';
+  return null;
 }
