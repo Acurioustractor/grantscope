@@ -10,8 +10,18 @@
  *   A. no member has an ABN         2,225 groups    54,773 edges   needs a second signal
  *
  * Bucket C is the Department of Defence pattern: a real ABN-bearing entity plus shadows created by
- * a name-only ingest path that never resolved to an identifier. Merging recovers ~684,161 edges,
- * about 20% of the graph, under one mechanical rule.
+ * a name-only ingest path that never resolved to an identifier.
+ *
+ * SCOPE CORRECTED 2026-08-15. The original claim — "recovers ~684,161 edges, about 20% of the
+ * graph" — was wrong, and a staged dry-run caught it before anything was written. "One ABN plus
+ * ABN-less shadows" says nothing about WHAT the shadow is, and by type the candidates were:
+ *   person          1,209 groups   merging a PERSON into an organisation on a name match
+ *   program           103 groups   deleting them breaks the justice derivation (jf_prog_map
+ *                                  resolves program nodes BY NAME)
+ *   political_party    92 groups   deleting them breaks aec_donations, which matches recipients
+ *                                  on entity_type='political_party'
+ *   org-like          158 groups   genuinely safe
+ * With the type guard the real scope is 148 groups / 54,753 shadow edges. Smaller, and correct.
  *
  * WHY FKs ARE DISCOVERED AT RUNTIME. 34 foreign-key columns across 32 tables reference
  * gs_entities.id. A hand-written list would miss one the day someone adds a table, and the failure
@@ -99,6 +109,19 @@ function candidates() {
       FROM keeper k
       JOIN gs_entities sh
         ON upper(trim(sh.canonical_name)) = k.nm AND sh.abn IS NULL
+     -- ENTITY-TYPE GUARD, added 2026-08-15 after a staged dry-run caught the original rule being
+     -- far too broad. "One ABN plus ABN-less shadows" says nothing about WHAT the shadow is:
+     --   person          1,209 groups — merging a person into an organisation on a name match
+     --   program           103 groups — deleting these breaks the justice derivation, which
+     --                                  resolves program nodes by name via jf_prog_map
+     --   political_party    92 groups — deleting these breaks the aec_donations derivation, which
+     --                                  matches recipients on entity_type='political_party'
+     -- Excluding any group containing one of those cuts the candidate set from 1,429 groups /
+     -- 604,976 edges to 148 / 54,753. Smaller, and actually safe.
+       AND NOT EXISTS (
+             SELECT 1 FROM gs_entities x
+              WHERE upper(trim(x.canonical_name)) = k.nm AND x.abn IS NULL
+                AND x.entity_type IN ('person', 'program', 'political_party'))
      GROUP BY 1, 2, 3
      ORDER BY k.edges DESC
      ${LIMIT ? `LIMIT ${LIMIT}` : ''};`);
