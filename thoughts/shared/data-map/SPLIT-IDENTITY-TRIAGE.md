@@ -1,3 +1,33 @@
+> **⚠ SCOPE CORRECTED AND EXECUTED 2026-08-15 — read this before the tables below.**
+>
+> The bucket-C figure below (1,455 groups / 684,161 edges, "~20% of the graph") was **wrong by
+> roughly 12×**. A staged dry-run caught it before anything was written.
+>
+> "One ABN plus ABN-less shadows" says nothing about **what the shadow is**. By entity type the
+> 1,429 eligible groups were:
+>
+> | shadow type | groups | merging it would |
+> |---|---|---|
+> | `person` | 1,209 | merge a **person** into an organisation on a name match |
+> | `program` | 103 | break the justice derivation — `jf_prog_map` resolves programs BY NAME |
+> | `political_party` | 92 | break `aec_donations` — it matches recipients on `entity_type='political_party'` |
+> | org-like | 158 | be correct |
+>
+> Two of those would have silently broken derivations rebuilt earlier the same day. Not with an
+> error — the next rebuild would simply have produced fewer edges.
+>
+> **Real scope after the entity-type guard: 148 groups / 54,753 shadow edges.**
+>
+> **EXECUTED 2026-08-15:** 141 groups merged, 0 failed, 0 orphaned FKs. 333,960 edges consolidated
+> onto real entities (Department of Defence alone: 272,179). Entities 609,448 → 609,300;
+> edges 2,905,877 → 2,904,091 (1,786 duplicates deduped). 7 groups skipped on state conflict.
+>
+> The lesson generalises: a merge rule keyed on *identifier presence* must also consider *entity
+> kind*, and any rule that deletes entities must be checked against every derivation that resolves
+> entities **by name** rather than by id.
+
+---
+
 # Split identities — 4,864 groups triaged into three buckets
 
 Measured 2026-08-14. Nothing changed. Surfaced by `scripts/check-graph-attribution.mjs`.
