@@ -14,6 +14,32 @@ Turn `/clarity` from a 1,222-row admin table into an operator's console over the
 estate: a page for every object, one index above them, a row viewer that reaches the actual rows,
 and a findings stream so that working the data compounds instead of evaporating.
 
+## What it is for
+
+Stated by Ben, 2026-08-16, and it governs every trade-off below:
+
+> Keep surfacing what makes sense, what is matched, and what is still not working. Build the
+> process that surfaces all related things **so community can make better decisions** — better
+> relationships with funding, philanthropy and grants — and build the system to see what is
+> actually happening in Australia across justice, child protection, health, so we can build better
+> systems.
+
+Three consequences worth holding on to, because they decide arguments later:
+
+1. **Three states, never two.** What makes sense · what is matched · what is still not working.
+   A console that only shows the working parts is a brochure. The unmeasured, the unfiled, the
+   weak seams and the refusals are first-class content here, not blemishes to be cleaned up before
+   showing anyone.
+2. **Community is the destination, the operator is the first user.** Q2 settled operator-first and
+   that stands — you cannot design a surface for community decisions until you can see the corpus
+   yourself. But "admin-gated" is a stage, not the goal, and it is why the refusal ethos and the
+   consent exception are load-bearing rather than decorative: everything built here should be able
+   to survive being looked at by the people it is about.
+3. **Cross-sector by construction.** Justice, child protection and health are separate domains in
+   the catalogue and the same money, the same organisations and the same people run through all of
+   them. The value is in the linkages, which is why the undiscovered-join detector and the seam
+   match rates matter more than any single domain's completeness.
+
 ---
 
 ## The diagnosis
@@ -206,7 +232,13 @@ Ship first, both computable from data already held:
 1. **Undiscovered join** — two objects share a column name and have no edge between them. Runs off
    `clarity_column` (**16,124 columns catalogued**) against `clarity_edge` (1,367 edges). One query.
 2. **Orphan** — a populated relation that nothing in the app, scripts or migrations references.
-   `clarity_code_ref` (816 refs) already knows.
+   **BLOCKED, corrected 2026-08-16 during slice 1.** `refs_app`, `refs_script` and `refs_migration`
+   are 0 on **all 1,479 rows** — the code scanner that populates them has never run. Only
+   `refs_db_function` (328 objects) and the `db_function`/`trigger` rows in `clarity_code_ref` are
+   real. Shipping this detector today would report **1,151 orphans**, every one of them an artefact
+   of an unrun probe rather than a fact about the corpus — the exact `unmeasured` vs
+   `never_populated` vs `dead` collapse this project already ruled out. **The code scanner is now a
+   prerequisite slice.** Until it runs, the object page renders these UNMEASURED.
 
 Later, in rough value order:
 
@@ -353,7 +385,8 @@ what make it compound. Stopping after 5 leaves something coherent and much bette
 | 4 | **Nouns** — `noun` column, rules propose, human confirms, unfiled counter | First use of `verdict` in anger. |
 | 5 | **Row viewer** — guarded RPC **plus consent refusal in the same slice** | The refusal must never ship a release later than the reader. |
 | 6 | **Fold `seams` and `changes` into the object page**; delete both screens | Keep `wants` (a real work queue) and `cross` (genuinely about many objects). |
-| 7 | **Findings** — `clarity_finding` table, detectors 1 and 2, adjudication, age-out | The compounding layer. |
+| 6b | **Code scanner** — populate `refs_app` / `refs_script` / `refs_migration` | Added 2026-08-16. Prerequisite for the orphan detector; without it slice 7 reports 1,151 false orphans. |
+| 7 | **Findings** — `clarity_finding` table, detector 1 (undiscovered join), adjudication, age-out | The compounding layer. Detector 2 (orphan) only after 6b. |
 | 8 | **`owner_app`** — propose and confirm across all 1,479 | Unlocks the cross-product view. |
 | 9 | **Project codes** — wiki-side declaration, mirror to `clarity_object`, zero-evidence report | Cross-repo: one declaration file in `act-global-infrastructure`. |
 | 10 | **Stories** — story ↔ project link, project-mediated only | Consent-critical. Day shift, human in the loop. |
@@ -408,7 +441,10 @@ All queried 2026-08-16 against `tednluwflfhxyucgwigh`. Re-measure before trustin
 | `act_business_source` | `scope_table` 299, `name_rule` 7 |
 | Largest domain | `platform_ops_auth` 215 |
 | Objects carrying any domain | 812 of 1,479 |
-| `clarity_column` | 16,124 |
+| `clarity_column` | 16,124 — but `null_pct` is NULL on every one; never profiled |
+| Objects with a column catalogue | 1,056 of 1,479 (routines never have one) |
+| `refs_app` / `refs_script` / `refs_migration` > 0 | **0 / 0 / 0** — scanner never run |
+| `refs_db_function` > 0 | 328 |
 | `clarity_edge` | 1,367 |
 | `clarity_code_ref` | 816 |
 | `clarity_answer` | 89 |
