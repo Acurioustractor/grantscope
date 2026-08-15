@@ -3,8 +3,8 @@
 import { Fragment, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { BASELINES, BASELINE_LABEL, type Baseline } from './changes/types';
-import type { LedgerRow, LedgerStats, FreshnessProbe } from './types';
+import { BASELINES, BASELINE_LABEL, type Baseline } from '../changes/types';
+import type { LedgerRow, LedgerStats, FreshnessProbe } from '../types';
 
 // QUESTIONS sits FIRST and ALL stays the default. A question is the only row here that answers
 // something about the world rather than describing our estate, so it leads the segment list —

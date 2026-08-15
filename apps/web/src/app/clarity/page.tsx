@@ -1,286 +1,296 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { getDirectServiceSupabase } from '@/lib/supabase';
-import LedgerClient from './LedgerClient';
-import { parseBaseline, type Baseline } from './changes/types';
-import type { LedgerRow, LedgerStats, ObjectKind, FreshnessProbe } from './types';
+import {
+  NOUN_BLURB,
+  NOUN_LABEL,
+  NOUN_ORDER,
+  SORT_LABEL,
+  UNFILED_NOTE,
+  nounFor,
+  parseSort,
+  unfiledReason,
+  type IndexSort,
+  type Noun,
+} from './nouns';
 
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Clarity',
-  description: 'Everything CivicGraph holds, and the questions it can answer, in one index.',
+  description: 'Everything CivicGraph holds, on one page.',
 };
 
-const SEGMENT: Record<ObjectKind, string> = {
-  table: 'SOURCES',
-  matview: 'DERIVED',
-  view: 'LENSES',
-  function: 'ROUTINES',
-  question: 'QUESTIONS',
-};
+/**
+ * The index — the front door.
+ *
+ * Craigslist's trick is that the whole taxonomy is on one screen and nothing is behind a click.
+ * The previous front door was the object catalogue: a 1,222-row table, 70,614px tall, sorted by an
+ * `importance` score that is tied at 0.0225 for 424 objects. It showed everything and let you see
+ * nothing. That table still exists, demoted to /clarity/catalogue where its filters and its
+ * segment tabs are the right tool.
+ *
+ * Terse links, alphabetical, six nouns and an honest Unfiled group. See ./nouns.ts for why the
+ * mapping is a hand-written table, and `thoughts/shared/plans/clarity-console.md` for the rest.
+ */
 
-interface CatalogRow {
+interface IndexObject {
+  object_key: string;
   object_name: string;
-  object_kind: Exclude<ObjectKind, 'question'>;
+  object_kind: string;
+  domain: string | null;
   row_count: number | null;
   row_count_is_estimate: boolean | null;
-  bytes: number | null;
-  domain: string | null;
-  lifecycle: string | null;
-  freshness_probe: FreshnessProbe | null;
-  last_write_at: string | null;
-  act_business: boolean | null;
   degree: number | null;
-  column_count: number | null;
-  importance: number | null;
   purpose: string | null;
-  join_keys: string | null;
-  caveat: string | null;
-  rls_enabled: boolean | null;
-  anon_readable: boolean | null;
   refreshed_at: string | null;
 }
 
-interface QuestionRow {
-  slug: string;
-  stub: string;
-  question: string;
-  subject: string;
-  state: string;
-  caveat: string;
-  exclusions: string;
-  headline: string | null;
-  headline_sub: string | null;
-  computed_at: string | null;
-  ok: boolean | null;
-  row_count: number | null;
-  binding_object: string | null;
+interface Loaded {
+  byNoun: Map<Noun, IndexObject[]>;
+  total: number;
+  described: number;
+  questionStates: [string, number][];
+  refreshedAt: string | null;
 }
 
-async function loadIndex(
-  baseline: Baseline,
-): Promise<{ rows: LedgerRow[]; stats: LedgerStats }> {
-  // getDirectServiceSupabase, NOT getServiceSupabase — the latter sniffs the call stack for
-  // '/app/reports/' and returns a stub resolving every query to { data: null }, i.e. a silent [].
+const nf = new Intl.NumberFormat('en-AU');
+
+/** Terse by design: 1,024 of these render at once, so `824K` beats `824,978`. */
+function terse(n: number | null, estimate: boolean | null): string {
+  if (n === null) return '';
+  const s =
+    n >= 1_000_000
+      ? `${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1)}M`
+      : n >= 1_000
+        ? `${Math.round(n / 1000)}K`
+        : String(n);
+  return estimate ? `~${s}` : s;
+}
+
+async function load(sort: IndexSort): Promise<Loaded> {
   const supabase = getDirectServiceSupabase();
 
-  // PostgREST caps a page at 1,000 rows and the catalog is ~1,455, so paginate explicitly
-  // rather than silently receiving a truncated ledger that renders as if it were complete.
+  // PostgREST caps a page at 1,000 and the catalogue is ~1,479. Paginate explicitly rather than
+  // silently rendering a truncated index that looks complete — the same trap the ledger documents.
   const PAGE = 1000;
-  const all: CatalogRow[] = [];
+  const all: IndexObject[] = [];
   for (let from = 0; ; from += PAGE) {
     const { data, error } = await supabase
       .from('clarity_object')
       .select(
-        'object_name,object_kind,row_count,row_count_is_estimate,bytes,domain,lifecycle,' +
-          'freshness_probe,last_write_at,act_business,degree,column_count,importance,' +
-          'purpose,join_keys,caveat,rls_enabled,anon_readable,refreshed_at',
+        'object_key,object_name,object_kind,domain,row_count,row_count_is_estimate,degree,purpose,refreshed_at',
       )
-      .order('importance', { ascending: false, nullsFirst: false })
+      .order('object_name')
       .range(from, from + PAGE - 1);
-
-    if (error) throw new Error(`clarity_object query failed: ${error.message}`);
-    if (!data?.length) break;
-    all.push(...(data as unknown as CatalogRow[]));
-    if (data.length < PAGE) break;
+    if (error) throw new Error(`index query failed: ${error.message}`);
+    const page = (data ?? []) as unknown as IndexObject[];
+    all.push(...page);
+    if (page.length < PAGE) break;
   }
 
-  // Questions live in the same index as the objects they are computed from. A failure here must
-  // not blank the catalog — the index is still worth having without them.
-  let questions: QuestionRow[] = [];
-  try {
-    const { data } = await supabase
-      .from('v_clarity_board_cards')
-      .select(
-        'slug,stub,question,subject,state,caveat,exclusions,headline,headline_sub,' +
-          'computed_at,ok,row_count,binding_object',
-      );
-    questions = (data ?? []) as unknown as QuestionRow[];
-  } catch {
-    questions = [];
-  }
+  const byNoun = new Map<Noun, IndexObject[]>();
+  for (const n of NOUN_ORDER) byNoun.set(n, []);
+  for (const o of all) byNoun.get(nounFor(o.domain))!.push(o);
 
-  // Movement against the selected baseline (slice 3). Objects with no baseline row
-  // are absent from this map on purpose — the ledger renders `?` for them rather
-  // than a zero that would read as "did not move".
-  const moves = new Map<string, number>();
-  let measurable = 0;
-  let moved = 0;
+  const cmp: Record<IndexSort, (a: IndexObject, b: IndexObject) => number> = {
+    name: (a, b) => a.object_name.localeCompare(b.object_name),
+    rows: (a, b) => (b.row_count ?? -1) - (a.row_count ?? -1),
+    degree: (a, b) => (b.degree ?? -1) - (a.degree ?? -1),
+  };
+  for (const list of byNoun.values()) list.sort(cmp[sort]);
+
+  // The questions strip degrades to empty rather than taking the front door down with it.
+  let questionStates: [string, number][] = [];
   try {
-    for (let from = 0; ; from += PAGE) {
-      const { data } = await supabase
-        .from('clarity_delta')
-        .select('object_key,row_delta_pct,baseline_at')
-        .eq('baseline', baseline)
-        .not('baseline_at', 'is', null)
-        .range(from, from + PAGE - 1);
-      if (!data?.length) break;
-      for (const d of data as unknown as {
-        object_key: string;
-        row_delta_pct: number | null;
-      }[]) {
-        measurable += 1;
-        if (d.row_delta_pct === null) continue;
-        const pct = Number(d.row_delta_pct);
-        moves.set(d.object_key, pct);
-        if (Math.abs(pct) > 10) moved += 1;
-      }
-      if (data.length < PAGE) break;
+    const { data } = await supabase.from('v_clarity_board_cards').select('state');
+    const counts = new Map<string, number>();
+    for (const r of (data ?? []) as { state: string }[]) {
+      counts.set(r.state, (counts.get(r.state) ?? 0) + 1);
     }
+    questionStates = [...counts.entries()].sort((a, b) => b[1] - a[1]);
   } catch {
-    // The change log is a slice-3 addition. Before its migrations are applied the
-    // ledger is still worth having, so a missing table costs the delta column and
-    // nothing else.
+    questionStates = [];
   }
-
-  let unexplained = 0;
-  try {
-    const { count } = await supabase
-      .from('clarity_event')
-      .select('id', { count: 'exact', head: true })
-      .eq('severity', 'critical')
-      .is('reason', null);
-    unexplained = count ?? 0;
-  } catch {
-    unexplained = 0;
-  }
-
-  const objectRows: LedgerRow[] = all.map((o) => ({
-    n: o.object_name,
-    k: o.object_kind,
-    s: SEGMENT[o.object_kind] ?? 'SOURCES',
-    r: o.row_count,
-    e: Boolean(o.row_count_is_estimate),
-    b: o.bytes ?? 0,
-    d: o.domain ?? '',
-    l: o.lifecycle ?? '',
-    f: o.freshness_probe ?? 'not_applicable',
-    w: o.last_write_at ? o.last_write_at.slice(0, 10) : '',
-    a: Boolean(o.act_business),
-    g: o.degree ?? 0,
-    c: o.column_count ?? 0,
-    i: Number(o.importance ?? 0),
-    p: o.purpose ?? '',
-    j: o.join_keys ?? '',
-    v: o.caveat ?? '',
-    rls: Boolean(o.rls_enabled),
-    an: Boolean(o.anon_readable),
-    dp: moves.get(o.object_name),
-  }));
-
-  const questionRows: LedgerRow[] = questions.map((q) => ({
-    n: q.stub,
-    k: 'question',
-    s: 'QUESTIONS',
-    // The row count of a question is the size of the answer behind it, so "see the 775 rows"
-    // and this column agree rather than telling two different stories.
-    r: q.row_count,
-    e: false,
-    b: 0,
-    d: q.subject.toLowerCase(),
-    l: q.state,
-    f: q.computed_at ? 'ok' : 'not_applicable',
-    w: q.computed_at ? q.computed_at.slice(0, 10) : '',
-    a: false,
-    g: 0,
-    c: 0,
-    // Questions rank above every object on the default sort. They are the only rows here that
-    // answer something about the world; everything else describes our estate.
-    i: 1000,
-    p: q.question,
-    j: q.binding_object ?? '',
-    v: q.caveat,
-    rls: false,
-    an: false,
-    qs: q.slug,
-    qh: q.ok === false ? null : q.headline,
-    qsub: q.ok === false ? 'last run failed' : q.headline_sub,
-  })) as LedgerRow[];
-
-  const rows = [...questionRows, ...objectRows];
-  const relations = objectRows.filter((r) => r.k !== 'function');
-  const described = relations.filter((r) => r.d).length;
 
   return {
-    rows,
-    stats: {
-      catalogued: objectRows.length,
-      relations: relations.length,
-      routines: objectRows.length - relations.length,
-      described,
-      // Denominator is relations, not everything. Routines were never in scope to describe,
-      // so counting them would punish us for a decision we made on purpose. Issue #193.
-      coveragePct: relations.length ? Math.round((described / relations.length) * 100) : 0,
-      noTimestampCol: objectRows.filter((r) => r.f === 'no_column').length,
-      anonReadable: objectRows.filter((r) => r.an).length,
-      actBusiness: objectRows.filter((r) => r.a).length,
-      refreshedAt: all[0]?.refreshed_at ?? null,
-      baseline,
-      moved,
-      unexplained,
-      measurable,
-    },
+    byNoun,
+    total: all.length,
+    described: all.filter((o) => o.purpose).length,
+    questionStates,
+    refreshedAt: all.reduce<string | null>(
+      (max, o) => (o.refreshed_at && (!max || o.refreshed_at > max) ? o.refreshed_at : max),
+      null,
+    ),
   };
 }
 
-export default async function ClarityPage({
+function SortLink({ sort, current }: { sort: IndexSort; current: IndexSort }) {
+  const active = sort === current;
+  return (
+    <Link
+      href={sort === 'name' ? '/clarity' : `/clarity?sort=${sort}`}
+      className={`border-2 px-2 py-0.5 font-mono text-[10px] font-black uppercase tracking-widest ${
+        active
+          ? 'border-bauhaus-black bg-bauhaus-black text-bauhaus-canvas'
+          : 'border-bauhaus-black/25 text-bauhaus-black/60 hover:border-bauhaus-black'
+      }`}
+    >
+      {SORT_LABEL[sort]}
+    </Link>
+  );
+}
+
+export default async function ClarityIndexPage({
   searchParams,
 }: {
-  searchParams: Promise<{ b?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { b } = await searchParams;
-  const baseline = parseBaseline(b);
+  const sp = await searchParams;
+  const sort = parseSort(sp.sort);
+  const { byNoun, total, described, questionStates, refreshedAt } = await load(sort);
 
-  let rows: LedgerRow[] = [];
-  let stats: LedgerStats | null = null;
-  let error: string | null = null;
+  const unfiled = byNoun.get('unfiled')!.length;
 
-  try {
-    ({ rows, stats } = await loadIndex(baseline));
-  } catch (e) {
-    error = e instanceof Error ? e.message : String(e);
-  }
-
-  if (error || !stats) {
-    return (
-      <main className="clarity-dark min-h-screen px-5 py-16">
-        <div className="mx-auto max-w-3xl border-4 border-bauhaus-red bg-bauhaus-white p-8">
-          <h1 className="text-2xl font-black uppercase tracking-widest text-bauhaus-red">
-            Catalog unavailable
-          </h1>
-          <p className="mt-4 text-sm text-bauhaus-black">
-            <code className="font-mono">clarity_object</code> could not be read. The catalog is
-            built by <code className="font-mono">clarity_refresh()</code>; if it has never run,
-            there is nothing to show yet.
-          </p>
-          <pre className="mt-4 overflow-x-auto border-2 border-bauhaus-muted bg-bauhaus-canvas p-3 font-mono text-xs">
-            {error}
-          </pre>
-        </div>
-      </main>
-    );
-  }
-
-  if (!rows.length) {
-    return (
-      <main className="clarity-dark min-h-screen px-5 py-16">
-        <div className="mx-auto max-w-3xl border-4 border-bauhaus-black bg-bauhaus-white p-8">
-          <h1 className="text-2xl font-black uppercase tracking-widest">Catalog is empty</h1>
-          <p className="mt-4 text-sm text-bauhaus-muted">
-            The table exists but holds no rows. Run{' '}
-            <code className="font-mono text-bauhaus-black">SELECT clarity_refresh();</code> and
-            reload — it takes about 37 seconds.
-          </p>
-        </div>
-      </main>
-    );
-  }
-
-  // The dark scope is applied here, not in the client, so the ground is painted server-side and
-  // the page never flashes light on first paint.
   return (
-    <div className="clarity-dark">
-      <LedgerClient rows={rows} stats={stats} />
-    </div>
+    <main className="mx-auto max-w-[1180px] px-4 py-8">
+      <header className="border-4 border-bauhaus-black bg-bauhaus-black p-5 text-bauhaus-canvas">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="border-2 border-bauhaus-canvas/40 px-2 py-0.5 font-mono text-[10px] font-black uppercase tracking-widest">
+            Admin only
+          </span>
+          {refreshedAt ? (
+            <span className="border-2 border-bauhaus-canvas/40 px-2 py-0.5 font-mono text-[10px] font-black uppercase tracking-widest">
+              Refreshed {refreshedAt.slice(0, 10)}
+            </span>
+          ) : null}
+          {(
+            [
+              ['/clarity/catalogue', 'The catalogue'],
+              ['/clarity/seams', 'The seams'],
+              ['/clarity/cross', 'Cross-sections'],
+              ['/clarity/wants', 'The want list'],
+              ['/clarity/changes', 'What changed'],
+            ] as const
+          ).map(([href, label]) => (
+            <Link
+              key={href}
+              href={href}
+              className="border-2 border-bauhaus-canvas/40 px-2 py-0.5 font-mono text-[10px] font-black uppercase tracking-widest hover:border-bauhaus-canvas"
+            >
+              {label}
+            </Link>
+          ))}
+        </div>
+
+        <h1 className="mt-4 font-display text-5xl font-black uppercase tracking-tight">Clarity</h1>
+        <p className="mt-2 max-w-[70ch] text-[14px] text-bauhaus-canvas/70">
+          Everything CivicGraph holds, on one page. {nf.format(total)} objects,{' '}
+          {nf.format(described)} of them described. The count beside each name is rows, from last
+          night&rsquo;s snapshot.
+        </p>
+
+        {questionStates.length > 0 ? (
+          <div className="mt-4 flex flex-wrap items-center gap-2 border-t-2 border-bauhaus-canvas/25 pt-3">
+            <span className="font-mono text-[10px] font-black uppercase tracking-widest text-bauhaus-canvas/60">
+              Questions
+            </span>
+            {questionStates.map(([state, n]) => (
+              <span
+                key={state}
+                className={`border-2 px-2 py-0.5 font-mono text-[10px] font-black uppercase tracking-widest ${
+                  state === 'refused'
+                    ? 'border-bauhaus-red bg-bauhaus-red text-white'
+                    : 'border-bauhaus-canvas/40'
+                }`}
+              >
+                {n} {state}
+              </span>
+            ))}
+          </div>
+        ) : null}
+      </header>
+
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <span className="font-mono text-[10px] font-black uppercase tracking-widest text-bauhaus-black/50">
+          Sort
+        </span>
+        <SortLink sort="name" current={sort} />
+        <SortLink sort="rows" current={sort} />
+        <SortLink sort="degree" current={sort} />
+        <span className="ml-auto font-mono text-[10px] uppercase tracking-widest text-bauhaus-black/50">
+          {nf.format(unfiled)} unfiled
+        </span>
+      </div>
+
+      <div className="mt-4 grid gap-4">
+        {NOUN_ORDER.map((noun) => {
+          const list = byNoun.get(noun)!;
+          if (list.length === 0) return null;
+          const isUnfiled = noun === 'unfiled';
+          return (
+            <section
+              key={noun}
+              className="border-4 border-bauhaus-black bg-bauhaus-white"
+              id={noun}
+            >
+              <h2 className="flex flex-wrap items-baseline gap-x-3 border-b-2 border-bauhaus-black px-4 py-2">
+                <span className="font-display text-lg font-black uppercase tracking-widest">
+                  {NOUN_LABEL[noun]}
+                </span>
+                <span className="font-mono text-[12px] font-black">{nf.format(list.length)}</span>
+                <span className="text-[12px] text-bauhaus-black/50">{NOUN_BLURB[noun]}</span>
+              </h2>
+
+              {isUnfiled ? (
+                <p className="border-b border-bauhaus-black/15 bg-bauhaus-canvas px-4 py-2 text-[12px] text-bauhaus-black/70">
+                  {UNFILED_NOTE}
+                </p>
+              ) : null}
+
+              <ul className="grid gap-x-6 gap-y-0.5 p-4 sm:grid-cols-2 lg:grid-cols-3">
+                {list.map((o) => {
+                  const reason = isUnfiled ? unfiledReason(o.domain) : null;
+                  return (
+                    <li
+                      key={o.object_key}
+                      className="flex items-baseline gap-2 font-mono text-[12.5px] leading-6"
+                    >
+                      <Link
+                        href={`/clarity/o/${encodeURIComponent(o.object_key)}`}
+                        className={`truncate underline decoration-bauhaus-black/20 underline-offset-2 hover:decoration-bauhaus-black ${
+                          o.purpose ? '' : 'text-bauhaus-black/55'
+                        }`}
+                        title={o.purpose ?? reason ?? o.object_name}
+                      >
+                        {o.object_name}
+                      </Link>
+                      {/* The two causes of Unfiled must stay visibly apart. A tooltip is not
+                          apart — it is the same collapse in a costume. Only ~80 objects carry a
+                          sector, so naming it inline costs nothing and makes the group legible. */}
+                      {reason?.startsWith('sector:') ? (
+                        <span className="shrink-0 border border-bauhaus-black/25 px-1 text-[9px] uppercase tracking-wider text-bauhaus-black/50">
+                          {reason.slice(8)}
+                        </span>
+                      ) : null}
+                      <span className="ml-auto shrink-0 text-[11px] text-bauhaus-black/45">
+                        {sort === 'degree'
+                          ? (o.degree ?? 0)
+                          : terse(o.row_count, o.row_count_is_estimate)}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          );
+        })}
+      </div>
+
+      <p className="mt-4 text-[12px] text-bauhaus-black/50">
+        A name in grey has no purpose recorded — {nf.format(total - described)} of{' '}
+        {nf.format(total)} objects. Nothing here is hidden for being undocumented.
+      </p>
+    </main>
   );
 }
