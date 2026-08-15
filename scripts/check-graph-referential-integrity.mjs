@@ -50,6 +50,10 @@ const SOURCE_KEY_MAP = {
   aec_donations:       { table: 'political_donations', key: 'id', cast: '::uuid' },
   grant_opportunities: { table: 'grant_opportunities', key: 'id', cast: '::uuid' },
   foundation_grantees: { table: 'foundation_grantees', key: 'id', cast: '::uuid' },
+  // ga_id is a TEXT natural key, not a uuid — no cast. Added the same day the layer was built:
+  // shipping an edge dataset without its integrity mapping is how a layer becomes unwatched, which
+  // is the defect this whole gate exists to catch.
+  grantconnect_awards: { table: 'grantconnect_awards', key: 'ga_id', cast: '' },
 };
 
 /** Datasets known to be unmappable, with the reason. Keeps the gap visible in the output. */
