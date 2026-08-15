@@ -167,6 +167,12 @@ export default function CrossClient({
             >
               What changed
             </Link>
+            <Link
+              href="/clarity/wants"
+              className="border-2 border-bauhaus-black bg-bauhaus-white px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.15em] hover:bg-bauhaus-black hover:text-bauhaus-canvas"
+            >
+              The want list
+            </Link>
           </div>
           <h1 className="text-4xl font-black uppercase leading-none tracking-wide sm:text-5xl">
             Cross-sections

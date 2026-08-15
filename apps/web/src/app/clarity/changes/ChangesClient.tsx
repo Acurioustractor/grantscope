@@ -139,6 +139,12 @@ export default function ChangesClient({
             >
               ◀ The ledger
             </Link>
+            <Link
+              href="/clarity/wants"
+              className="border-2 border-bauhaus-black bg-bauhaus-white px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.15em] hover:bg-bauhaus-black hover:text-bauhaus-canvas"
+            >
+              The want list
+            </Link>
             {stats.computedAt ? (
               <span className="border-2 border-bauhaus-black bg-bauhaus-white px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.15em]">
                 Deltas computed {stats.computedAt.slice(0, 10)}
