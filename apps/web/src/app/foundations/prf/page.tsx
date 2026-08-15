@@ -1,7 +1,10 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import Link from 'next/link';
 
-export const dynamic = 'force-dynamic';
+// Public, service-role, heavy fan-out and no per-request inputs. Cached hourly so
+// anonymous traffic cannot drive one service-role query fan-out per hit
+// (the /foundations/backlog pool-saturation shape, 2026-08-15).
+export const revalidate = 3600;
 
 const PRF_FOUNDATION_ID = '4ee5baca-c898-4318-ae2b-d79b95379cc7';
 const SNOW_FOUNDATION_ID = 'd242967e-0e68-4367-9785-06cf0ec7485e';

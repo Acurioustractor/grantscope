@@ -3,7 +3,10 @@ import { getServiceSupabase } from '@/lib/report-supabase';
 import Link from 'next/link';
 import { ReportCTA } from '../_components/report-cta';
 
-export const dynamic = 'force-dynamic';
+// Public, service-role, heavy fan-out and no per-request inputs. Cached hourly so
+// anonymous traffic cannot drive one service-role query fan-out per hit
+// (the /foundations/backlog pool-saturation shape, 2026-08-15).
+export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: 'Political Money | CivicGraph Investigation',
