@@ -93,6 +93,7 @@ export default function SeamsClient({ seams }: { seams: SeamRow[] }) {
               ['/clarity', '◀ The ledger'],
               ['/clarity/changes', 'What changed'],
               ['/clarity/cross', 'Cross-sections'],
+              ['/clarity/wants', 'The want list'],
             ].map(([href, label]) => (
               <Link
                 key={href}

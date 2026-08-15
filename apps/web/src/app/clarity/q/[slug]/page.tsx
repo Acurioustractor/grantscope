@@ -4,6 +4,13 @@ import { notFound } from 'next/navigation';
 import { getDirectServiceSupabase } from '@/lib/supabase';
 import { blockingSentinels, coverageText, type BoardCard, type Ingredient } from '../../board-types';
 import CopyClaim from './CopyClaim';
+import {
+  effortLabel,
+  formatMetric,
+  movementLabel,
+  targetLabel,
+  type WantRow,
+} from '../../wants/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +28,9 @@ export async function generateMetadata({
  * sequential PostgREST calls meant the second could lose its connection under pool pressure and
  * 500 the whole page — which is exactly what happened on 15 Aug.
  */
-async function load(slug: string): Promise<{ card: BoardCard; ingredients: Ingredient[] } | null> {
+async function load(
+  slug: string,
+): Promise<{ card: BoardCard; ingredients: Ingredient[]; want: WantRow | null } | null> {
   const supabase = getDirectServiceSupabase();
 
   const { data: cards, error } = await supabase
@@ -33,7 +42,19 @@ async function load(slug: string): Promise<{ card: BoardCard; ingredients: Ingre
   if (!cards?.length) return null;
 
   const card = cards[0] as unknown as BoardCard;
-  return { card, ingredients: card.ingredients ?? [] };
+
+  // Contextual want rendering (G15): a want appears on every question it blocks, not only on the
+  // want list. This is a second round trip, so it degrades to null rather than taking the page
+  // down with it — the answer above is what the reader came for.
+  let want: WantRow | null = null;
+  try {
+    const { data } = await supabase.from('v_clarity_wants').select('*').eq('slug', slug).limit(1);
+    want = (data?.[0] as unknown as WantRow) ?? null;
+  } catch {
+    want = null;
+  }
+
+  return { card, ingredients: card.ingredients ?? [], want };
 }
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
@@ -52,7 +73,7 @@ export default async function WorkedAnswerPage({ params }: { params: Promise<{ s
   const loaded = await load(slug);
   if (!loaded) notFound();
 
-  const { card, ingredients } = loaded;
+  const { card, ingredients, want } = loaded;
   const blocked = blockingSentinels(card);
   const coverage = coverageText(card);
   const flags = Object.entries(card.sentinel_flags ?? {});
@@ -135,10 +156,58 @@ export default async function WorkedAnswerPage({ params }: { params: Promise<{ s
               )}
             </Panel>
 
+            {want ? (
+              <Panel title="What would make this answerable">
+                <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                  <b className="font-mono text-[11px] font-black uppercase tracking-widest text-bauhaus-red">
+                    {effortLabel(want)}
+                  </b>
+                  {want.metric_now !== null ? (
+                    <span className="font-mono text-xs text-bauhaus-black">
+                      now {formatMetric(want.metric_now, want.metric_unit)} · {targetLabel(want)}
+                    </span>
+                  ) : null}
+                  <span className="font-mono text-[11px] text-bauhaus-muted">
+                    {movementLabel(want)}
+                  </span>
+                </div>
+                <p className="mt-3 text-sm leading-relaxed text-bauhaus-black">
+                  {want.unlock_note ??
+                    'Nobody has written down what closing this would take. Until somebody does, it ranks last on the want list and says so.'}
+                </p>
+                {want.blocker_objects.length > 0 && (
+                  <p className="mt-2 font-mono text-[11px] text-bauhaus-muted">
+                    blocked by {want.blocker_objects.map((b) => b.object_name).join(', ')}
+                  </p>
+                )}
+                {want.also_blocks > 0 && (
+                  <p className="mt-2 font-mono text-[11px] font-black uppercase tracking-widest text-bauhaus-black">
+                    Also stalls {want.also_blocks} other question
+                    {want.also_blocks === 1 ? '' : 's'}
+                  </p>
+                )}
+                <Link
+                  href="/clarity/wants"
+                  className="mt-4 inline-block border-2 border-bauhaus-black bg-bauhaus-white px-3 py-1.5 font-mono text-[11px] font-black uppercase tracking-widest hover:bg-bauhaus-yellow"
+                >
+                  The want list →
+                </Link>
+              </Panel>
+            ) : null}
+
             <Panel title="Say it this way">
-              <p className="border-l-4 border-bauhaus-blue pl-3 text-sm text-bauhaus-black">
-                {card.claim_phrasing}
-              </p>
+              {card.claim_phrasing?.trim() ? (
+                <p className="border-l-4 border-bauhaus-blue pl-3 text-sm text-bauhaus-black">
+                  {card.claim_phrasing}
+                </p>
+              ) : (
+                /* Internal questions — the HOUSE subject — carry no publishable phrasing on
+                   purpose. Rendering an empty quote block would read as a missing value. */
+                <p className="border-l-4 border-bauhaus-muted pl-3 text-sm text-bauhaus-muted">
+                  Nothing to quote. This is a question about ourselves, measured against this
+                  database, and it is not a claim about the world.
+                </p>
+              )}
               {card.forbidden_phrasing?.length > 0 && (
                 <ul className="mt-4 space-y-1">
                   {card.forbidden_phrasing.map((f) => (
