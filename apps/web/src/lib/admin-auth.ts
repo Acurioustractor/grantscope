@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { NextResponse } from 'next/server';
 import type { User } from '@supabase/supabase-js';
 import { isAdminEmail } from '@/lib/admin';
+import { isLocalDevBypass, localDevAdminUser } from '@/lib/admin-auth-bypass';
 import { createSupabaseServer } from '@/lib/supabase-server';
 
 type AdminApiSuccess = {
@@ -42,6 +43,12 @@ export async function requireAdminPage(pathname: string, fallback = '/home'): Pr
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  // A real session always wins. The bypass only covers the no-session case, so signing in as a
+  // NON-admin in local dev still redirects to the fallback rather than being silently upgraded.
+  if (!user && isLocalDevBypass()) {
+    return localDevAdminUser();
+  }
 
   if (!user) {
     redirect(`/login?next=${encodeURIComponent(pathname)}`);

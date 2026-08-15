@@ -109,10 +109,26 @@ The workspace theme is a density variant for operational/internal tools. Same fo
 - Typography weight: Satoshi 700 (not 900) for headings, reduced letter-spacing
 - Colors: same palette, mapped through CSS variables
 
+## Clarity Theme (.clarity-dark)
+A dark density variant scoped to `/clarity` only. Same fonts, same zero-radius, hairline borders.
+
+- Applied as a scoped class on the page wrapper, exactly like `.ws` — every `bauhaus-*` utility
+  inside the scope remaps through CSS variables. Nothing outside `/clarity` changes.
+- Borders: 4px/2px slabs become 1px. At 1,455 rows on one screen the slab **is** the noise.
+- Ground `#0E0E10`, surface `#17171A`, text `#EDEDF0`, muted `#8A8A96`.
+- Signal colours are lifted off the light palette because a mid-red vibrates on near-black:
+  red `#FF5A4D` (from `#D02020`), blue `#6E9BFF`, yellow `#F5C542`.
+- The scope class is applied **server-side** on the page wrapper so the ground is painted in the
+  first response and the page never flashes light.
+
+**Do not extend this beyond `/clarity` without a new decision.** It is a reading instrument for
+one or two people, not a second brand.
+
 ## Decisions Log
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-03-26 | Initial design system created | Codified existing Bauhaus identity, upgraded typography from system fonts to Satoshi + DM Sans + JetBrains Mono. Research showed every competitor uses government blue + system fonts — CivicGraph's Bauhaus direction is the key differentiator. |
-| 2026-03-26 | No dark mode | Bauhaus aesthetic requires light canvas for shadow system. Defer until user demand. |
+| 2026-03-26 | ~~No dark mode~~ **superseded 2026-08-15 for `/clarity` only** | Bauhaus aesthetic requires light canvas for shadow system. Defer until user demand. |
+| 2026-08-15 | Dark theme for `/clarity`, and only `/clarity` | Ben compared the light Bauhaus board against a dark dense prototype side by side and chose dark: *"a way better way to showcase what we have and the best overall view I have seen so far."* The original "no dark mode" rationale still holds where it was aimed — the hard-offset shadow system needs a light canvas — but `/clarity` uses no shadows at all. It is a dense internal instrument, admin-gated, read for long stretches, showing every object we hold at once. The 2026-03-26 decision deferred dark "until user demand"; this is that demand, scoped rather than global. |
 | 2026-03-26 | Zero border-radius enforced | Global `border-radius: 0 !important` — sharp corners are the identity, not a bug. |
 | 2026-03-26 | Satoshi over system fonts | System fonts (Avenir Next / Helvetica Neue) undermined the Bauhaus commitment. Satoshi's geometric letterforms complete the vision. |
