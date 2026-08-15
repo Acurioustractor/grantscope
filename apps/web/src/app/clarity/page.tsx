@@ -1,137 +1,153 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { getDirectServiceSupabase } from '@/lib/supabase';
-import LedgerClient from './LedgerClient';
-import type { LedgerRow, LedgerStats, ObjectKind, FreshnessProbe } from './types';
+import { blockingSentinels, coverageText, type BoardCard } from './board-types';
 
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'Clarity Ledger',
-  description: 'Every object in the CivicGraph database, classified and counted.',
+  title: 'Clarity Board',
+  description: 'Questions this database can answer that no public Australian source can.',
 };
 
-const SEGMENT: Record<ObjectKind, string> = {
-  table: 'SOURCES',
-  matview: 'DERIVED',
-  view: 'LENSES',
-  function: 'ROUTINES',
-};
-
-interface CatalogRow {
-  object_name: string;
-  object_kind: ObjectKind;
-  row_count: number | null;
-  row_count_is_estimate: boolean | null;
-  bytes: number | null;
-  domain: string | null;
-  lifecycle: string | null;
-  freshness_probe: FreshnessProbe | null;
-  last_write_at: string | null;
-  act_business: boolean | null;
-  degree: number | null;
-  column_count: number | null;
-  importance: number | null;
-  purpose: string | null;
-  join_keys: string | null;
-  caveat: string | null;
-  rls_enabled: boolean | null;
-  anon_readable: boolean | null;
-  refreshed_at: string | null;
-}
-
-async function loadCatalog(): Promise<{ rows: LedgerRow[]; stats: LedgerStats }> {
+async function loadBoard(): Promise<BoardCard[]> {
   // getDirectServiceSupabase, NOT getServiceSupabase — the latter sniffs the call stack for
-  // '/app/reports/' and returns a stub that resolves every query to { data: null }. This page
-  // is safe today but a future route move would silently blank it.
+  // '/app/reports/' and returns a stub resolving every query to { data: null }, i.e. a silent [].
   const supabase = getDirectServiceSupabase();
+  const { data, error } = await supabase
+    .from('v_clarity_board_cards')
+    .select('*')
+    .order('state', { ascending: true })
+    .order('uniqueness', { ascending: false });
 
-  // PostgREST caps a page at 1,000 rows and the catalog is ~1,455, so paginate explicitly
-  // rather than silently receiving a truncated ledger.
-  const PAGE = 1000;
-  const all: CatalogRow[] = [];
-  for (let from = 0; ; from += PAGE) {
-    const { data, error } = await supabase
-      .from('clarity_object')
-      .select(
-        'object_name,object_kind,row_count,row_count_is_estimate,bytes,domain,lifecycle,' +
-          'freshness_probe,last_write_at,act_business,degree,column_count,importance,' +
-          'purpose,join_keys,caveat,rls_enabled,anon_readable,refreshed_at',
-      )
-      .order('importance', { ascending: false, nullsFirst: false })
-      .range(from, from + PAGE - 1);
-
-    if (error) throw new Error(`clarity_object query failed: ${error.message}`);
-    if (!data?.length) break;
-    // PostgREST's generated types widen an un-typed select to GenericStringError[]; the runtime
-    // shape is the row. Cast through unknown rather than loosening CatalogRow.
-    all.push(...(data as unknown as CatalogRow[]));
-    if (data.length < PAGE) break;
-  }
-
-  const rows: LedgerRow[] = all.map((o) => ({
-    n: o.object_name,
-    k: o.object_kind,
-    s: SEGMENT[o.object_kind] ?? 'SOURCES',
-    r: o.row_count,
-    e: Boolean(o.row_count_is_estimate),
-    b: o.bytes ?? 0,
-    d: o.domain ?? '',
-    l: o.lifecycle ?? '',
-    f: o.freshness_probe ?? 'not_applicable',
-    w: o.last_write_at ? o.last_write_at.slice(0, 10) : '',
-    a: Boolean(o.act_business),
-    g: o.degree ?? 0,
-    c: o.column_count ?? 0,
-    i: Number(o.importance ?? 0),
-    p: o.purpose ?? '',
-    j: o.join_keys ?? '',
-    v: o.caveat ?? '',
-    rls: Boolean(o.rls_enabled),
-    an: Boolean(o.anon_readable),
-  }));
-
-  const relations = rows.filter((r) => r.k !== 'function');
-  const described = relations.filter((r) => r.d).length;
-
-  return {
-    rows,
-    stats: {
-      catalogued: rows.length,
-      relations: relations.length,
-      routines: rows.length - relations.length,
-      described,
-      // Denominator is relations, not everything. Routines were never in scope to describe,
-      // so counting them would punish us for a decision we made on purpose. Issue #193.
-      coveragePct: relations.length ? Math.round((described / relations.length) * 100) : 0,
-      noTimestampCol: rows.filter((r) => r.f === 'no_column').length,
-      anonReadable: rows.filter((r) => r.an).length,
-      actBusiness: rows.filter((r) => r.a).length,
-      refreshedAt: all[0]?.refreshed_at ?? null,
-    },
-  };
+  if (error) throw new Error(`v_clarity_board_cards query failed: ${error.message}`);
+  return (data ?? []) as unknown as BoardCard[];
 }
 
-export default async function ClarityPage() {
-  let rows: LedgerRow[] = [];
-  let stats: LedgerStats | null = null;
+function Chip({ children, tone = 'plain' }: { children: React.ReactNode; tone?: 'plain' | 'red' | 'blue' | 'yellow' }) {
+  const tones = {
+    plain: 'border-bauhaus-black text-bauhaus-black',
+    red: 'border-bauhaus-red text-bauhaus-red',
+    blue: 'border-bauhaus-blue text-bauhaus-blue',
+    yellow: 'border-bauhaus-black bg-bauhaus-yellow text-bauhaus-black',
+  } as const;
+  return (
+    <span className={`border-2 px-2 py-0.5 font-mono text-[10px] font-black uppercase tracking-widest ${tones[tone]}`}>
+      {children}
+    </span>
+  );
+}
+
+function Card({ card }: { card: BoardCard }) {
+  const blocked = blockingSentinels(card);
+  const coverage = coverageText(card);
+  const neverRun = card.run_count === 0 || card.computed_at === null;
+  const errored = card.ok === false;
+
+  return (
+    <article className="border-4 border-bauhaus-black bg-bauhaus-white">
+      {errored && (
+        <div className="border-b-4 border-bauhaus-black bg-bauhaus-red px-4 py-2">
+          <p className="font-mono text-[11px] font-black uppercase tracking-widest text-bauhaus-white">
+            Last run failed
+          </p>
+          <p className="mt-1 font-mono text-[11px] text-bauhaus-white">{card.error_text}</p>
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-center gap-2 border-b-2 border-bauhaus-black px-4 py-2">
+        <Chip>{card.subject}</Chip>
+        <Chip tone={card.state === 'answered' ? 'plain' : 'yellow'}>{card.state}</Chip>
+        <Chip>honest at {card.honest_at}</Chip>
+        <Chip tone={card.publishable === 'internal' ? 'yellow' : 'plain'}>{card.publishable}</Chip>
+        {card.verification_stamp && <Chip tone="blue">{card.verification_stamp}</Chip>}
+      </div>
+
+      <div className="px-4 pb-4 pt-3">
+        <Link href={`/clarity/q/${card.slug}`} className="group block">
+          <h2 className="font-black uppercase tracking-widest text-bauhaus-black group-hover:text-bauhaus-red">
+            {card.stub}
+          </h2>
+          <p className="mt-1 text-sm text-bauhaus-black">{card.question}</p>
+        </Link>
+
+        <div className="mt-4">
+          {neverRun ? (
+            // Never a zero. A question that has not run says so.
+            <p className="font-mono text-2xl font-black uppercase tracking-widest text-bauhaus-blue">
+              Never run
+            </p>
+          ) : blocked.length ? (
+            <div>
+              <p className="font-mono text-4xl font-black text-bauhaus-black line-through">
+                {card.headline}
+              </p>
+              <p className="mt-1 font-mono text-[11px] font-black uppercase tracking-widest text-bauhaus-red">
+                Not shown · {blocked.join(', ')}
+              </p>
+            </div>
+          ) : (
+            <div>
+              <p className="font-mono text-4xl font-black text-bauhaus-black">{card.headline}</p>
+              <p className="mt-1 text-sm text-bauhaus-black">{card.headline_sub}</p>
+            </div>
+          )}
+        </div>
+
+        {coverage && (
+          <p className="mt-3 border-t-2 border-bauhaus-muted pt-2 font-mono text-[11px] text-bauhaus-black">
+            {coverage}
+            <span className="text-bauhaus-muted"> · {card.coverage_label}</span>
+          </p>
+        )}
+
+        {card.binding_object && (
+          // The binding join caps the claim, so it is named rather than left as an unexplained bar.
+          <p className="mt-1 font-mono text-[11px] text-bauhaus-muted">
+            capped by {card.binding_object.replace(/^public\./, '')}
+            {card.binding_pct != null && ` at ${Number(card.binding_pct).toFixed(2)}%`}
+          </p>
+        )}
+
+        <p className="mt-3 border-t-2 border-bauhaus-muted pt-2 text-xs leading-relaxed text-bauhaus-muted">
+          {card.caveat}
+        </p>
+
+        <div className="mt-3 flex flex-wrap items-center gap-3 font-mono text-[10px] uppercase tracking-widest text-bauhaus-muted">
+          {card.computed_at && <span>computed {card.computed_at.slice(0, 16).replace('T', ' ')}</span>}
+          {card.duration_ms != null && <span>{card.duration_ms} ms</span>}
+          <span>{card.ingredient_count} ingredients</span>
+          {card.row_count != null && (
+            <Link href={`/clarity/q/${card.slug}/rows`} className="text-bauhaus-blue hover:underline">
+              see the {card.row_count.toLocaleString()} rows →
+            </Link>
+          )}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+export default async function ClarityBoardPage() {
+  let cards: BoardCard[] = [];
   let error: string | null = null;
 
   try {
-    ({ rows, stats } = await loadCatalog());
+    cards = await loadBoard();
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
   }
 
-  if (error || !stats) {
+  // Never a partial board. One red panel beats numbers that might be half-loaded.
+  if (error) {
     return (
       <main className="min-h-screen bg-bauhaus-canvas px-5 py-16">
-        <div className="mx-auto max-w-3xl border-4 border-bauhaus-black bg-bauhaus-white p-8">
+        <div className="mx-auto max-w-3xl border-4 border-bauhaus-red bg-bauhaus-white p-8">
           <h1 className="text-2xl font-black uppercase tracking-widest text-bauhaus-red">
-            Catalog unavailable
+            Board unavailable
           </h1>
           <p className="mt-4 text-sm text-bauhaus-black">
-            <code className="font-mono">clarity_object</code> could not be read. The catalog is
-            built by <code className="font-mono">clarity_refresh()</code>; if it has never run,
+            The question registry could not be read. If the migrations have not been applied,
             there is nothing to show yet.
           </p>
           <pre className="mt-4 overflow-x-auto border-2 border-bauhaus-muted bg-bauhaus-canvas p-3 font-mono text-xs">
@@ -142,20 +158,46 @@ export default async function ClarityPage() {
     );
   }
 
-  if (!rows.length) {
-    return (
-      <main className="min-h-screen bg-bauhaus-canvas px-5 py-16">
-        <div className="mx-auto max-w-3xl border-4 border-bauhaus-black bg-bauhaus-white p-8">
-          <h1 className="text-2xl font-black uppercase tracking-widest">Catalog is empty</h1>
-          <p className="mt-4 text-sm text-bauhaus-muted">
-            The table exists but holds no rows. Run{' '}
-            <code className="font-mono text-bauhaus-black">SELECT clarity_refresh();</code> and
-            reload — it takes about 37 seconds.
+  return (
+    <main className="min-h-screen bg-bauhaus-canvas px-5 py-10">
+      <div className="mx-auto max-w-6xl">
+        <header className="border-4 border-bauhaus-black bg-bauhaus-white p-6">
+          <p className="font-mono text-[11px] font-black uppercase tracking-widest text-bauhaus-muted">
+            Clarity
           </p>
-        </div>
-      </main>
-    );
-  }
+          <h1 className="mt-1 text-3xl font-black uppercase tracking-widest text-bauhaus-black">
+            The question board
+          </h1>
+          <p className="mt-3 max-w-3xl text-sm text-bauhaus-black">
+            Questions this database can answer that no public Australian source can. Every number
+            carries the filter that produced it, the join that caps it, and the sentence we are
+            allowed to say about it.
+          </p>
+          <p className="mt-4 font-mono text-[11px] uppercase tracking-widest text-bauhaus-muted">
+            {cards.length} registered ·{' '}
+            <Link href="/clarity/data" className="text-bauhaus-blue hover:underline">
+              the ledger →
+            </Link>
+          </p>
+        </header>
 
-  return <LedgerClient rows={rows} stats={stats} />;
+        {cards.length === 0 ? (
+          <div className="mt-6 border-4 border-bauhaus-black bg-bauhaus-white p-8">
+            <h2 className="font-black uppercase tracking-widest">No questions registered</h2>
+            <p className="mt-3 text-sm text-bauhaus-black">
+              The registry is empty. Apply{' '}
+              <code className="font-mono">20260815000400_clarity_question_seed.sql</code>, then run{' '}
+              <code className="font-mono">node --env-file=.env scripts/run-clarity-answers.mjs</code>.
+            </p>
+          </div>
+        ) : (
+          <div className="mt-6 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            {cards.map((c) => (
+              <Card key={c.slug} card={c} />
+            ))}
+          </div>
+        )}
+      </div>
+    </main>
+  );
 }

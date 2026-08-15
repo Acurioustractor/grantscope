@@ -1,0 +1,235 @@
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { getDirectServiceSupabase } from '@/lib/supabase';
+import { blockingSentinels, coverageText, type BoardCard, type Ingredient } from '../../board-types';
+import CopyClaim from './CopyClaim';
+
+export const dynamic = 'force-dynamic';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  return { title: `Clarity · ${slug}` };
+}
+
+async function load(slug: string): Promise<{ card: BoardCard; ingredients: Ingredient[] } | null> {
+  const supabase = getDirectServiceSupabase();
+
+  const { data: cards, error } = await supabase
+    .from('v_clarity_board_cards')
+    .select('*')
+    .eq('slug', slug)
+    .limit(1);
+  if (error) throw new Error(`board query failed: ${error.message}`);
+  if (!cards?.length) return null;
+
+  const { data: ing, error: ingError } = await supabase
+    .from('clarity_question_ingredient')
+    .select('question_slug,object_key,join_key,role,is_binding,measured_pct')
+    .eq('question_slug', slug);
+  if (ingError) throw new Error(`ingredient query failed: ${ingError.message}`);
+
+  return {
+    card: cards[0] as unknown as BoardCard,
+    ingredients: (ing ?? []) as unknown as Ingredient[],
+  };
+}
+
+function Panel({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="border-4 border-bauhaus-black bg-bauhaus-white">
+      <h2 className="border-b-2 border-bauhaus-black px-4 py-2 font-mono text-[11px] font-black uppercase tracking-widest">
+        {title}
+      </h2>
+      <div className="p-4">{children}</div>
+    </section>
+  );
+}
+
+export default async function WorkedAnswerPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const loaded = await load(slug);
+  if (!loaded) notFound();
+
+  const { card, ingredients } = loaded;
+  const blocked = blockingSentinels(card);
+  const coverage = coverageText(card);
+  const flags = Object.entries(card.sentinel_flags ?? {});
+
+  return (
+    <main className="min-h-screen bg-bauhaus-canvas px-5 py-10">
+      <div className="mx-auto max-w-6xl">
+        <header className="border-4 border-bauhaus-black bg-bauhaus-white p-6">
+          <Link
+            href="/clarity"
+            className="font-mono text-[11px] font-black uppercase tracking-widest text-bauhaus-blue hover:underline"
+          >
+            ◀ Clarity
+          </Link>
+          <h1 className="mt-2 text-3xl font-black uppercase tracking-widest text-bauhaus-black">
+            {card.stub}
+          </h1>
+          <p className="mt-2 max-w-3xl text-sm text-bauhaus-black">{card.question}</p>
+
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <CopyClaim
+              claim={card.claim_phrasing}
+              headline={blocked.length ? null : card.headline}
+              headlineSub={blocked.length ? null : card.headline_sub}
+              caveat={card.caveat}
+              exclusions={card.exclusions}
+              coverage={coverage}
+              computedAt={card.computed_at}
+              url={`/clarity/q/${card.slug}`}
+            />
+            {card.row_count != null && (
+              <Link
+                href={`/clarity/q/${card.slug}/rows`}
+                className="border-2 border-bauhaus-black bg-bauhaus-white px-3 py-1.5 font-mono text-[11px] font-black uppercase tracking-widest hover:bg-bauhaus-yellow"
+              >
+                See the {card.row_count.toLocaleString()} rows →
+              </Link>
+            )}
+            <span className="font-mono text-[10px] uppercase tracking-widest text-bauhaus-muted">
+              {card.computed_at
+                ? `computed ${card.computed_at.slice(0, 16).replace('T', ' ')} UTC`
+                : 'never run'}
+              {card.duration_ms != null && ` · ${card.duration_ms} ms`}
+              {` · run #${card.run_count}`}
+            </span>
+          </div>
+        </header>
+
+        <div className="mt-6 grid gap-6 lg:grid-cols-3">
+          <div className="space-y-6 lg:col-span-2">
+            <Panel title="The answer">
+              {card.ok === false ? (
+                <div className="border-2 border-bauhaus-red p-3">
+                  <p className="font-mono text-[11px] font-black uppercase tracking-widest text-bauhaus-red">
+                    Last run failed
+                  </p>
+                  <p className="mt-1 font-mono text-xs text-bauhaus-black">{card.error_text}</p>
+                </div>
+              ) : blocked.length ? (
+                <div>
+                  <p className="font-mono text-5xl font-black text-bauhaus-black line-through">
+                    {card.headline}
+                  </p>
+                  <p className="mt-2 font-mono text-xs font-black uppercase tracking-widest text-bauhaus-red">
+                    Not shown — {blocked.join(', ')}
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <p className="font-mono text-5xl font-black text-bauhaus-black">{card.headline}</p>
+                  <p className="mt-2 text-sm text-bauhaus-black">{card.headline_sub}</p>
+                </div>
+              )}
+
+              {coverage && (
+                <p className="mt-4 border-t-2 border-bauhaus-muted pt-3 font-mono text-[11px] text-bauhaus-black">
+                  {coverage}
+                  <span className="text-bauhaus-muted"> · {card.coverage_label}</span>
+                </p>
+              )}
+            </Panel>
+
+            <Panel title="Say it this way">
+              <p className="border-l-4 border-bauhaus-blue pl-3 text-sm text-bauhaus-black">
+                {card.claim_phrasing}
+              </p>
+              {card.forbidden_phrasing?.length > 0 && (
+                <ul className="mt-4 space-y-1">
+                  {card.forbidden_phrasing.map((f) => (
+                    <li key={f} className="font-mono text-[11px] text-bauhaus-red">
+                      NOT: &ldquo;{f}&rdquo;
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="mt-4 border-t-2 border-bauhaus-muted pt-3 text-xs leading-relaxed text-bauhaus-black">
+                {card.caveat}
+              </p>
+            </Panel>
+
+            <Panel title="Exclusions — deterministic, not a sample">
+              <p className="font-mono text-xs leading-relaxed text-bauhaus-black">
+                {card.exclusions}
+              </p>
+            </Panel>
+          </div>
+
+          <div className="space-y-6">
+            <Panel title="Provenance">
+              <ul className="space-y-3">
+                {ingredients
+                  .slice()
+                  .sort((a, b) => Number(b.is_binding) - Number(a.is_binding))
+                  .map((i) => (
+                    <li key={`${i.object_key}|${i.join_key}`} className="border-b-2 border-bauhaus-muted pb-2 last:border-0">
+                      <p className="font-mono text-xs font-black text-bauhaus-black">
+                        {i.object_key.replace(/^public\./, '')}
+                      </p>
+                      <p className="font-mono text-[10px] uppercase tracking-widest text-bauhaus-muted">
+                        {i.role}
+                        {i.join_key && ` · ${i.join_key}`}
+                        {i.measured_pct != null && ` · ${Number(i.measured_pct).toFixed(2)}%`}
+                      </p>
+                      {i.is_binding && (
+                        <p className="mt-1 font-mono text-[10px] font-black uppercase tracking-widest text-bauhaus-blue">
+                          ◀ binding join — caps this claim
+                        </p>
+                      )}
+                    </li>
+                  ))}
+              </ul>
+            </Panel>
+
+            <Panel title="Sentinels">
+              {flags.length === 0 ? (
+                <p className="font-mono text-[11px] text-bauhaus-muted">None recorded.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {flags.map(([key, f]) => (
+                    <li key={key} className="font-mono text-[11px]">
+                      <span
+                        className={
+                          f.tripped && f.blocking
+                            ? 'text-bauhaus-red'
+                            : f.tripped
+                              ? 'text-bauhaus-black'
+                              : 'text-bauhaus-muted'
+                        }
+                      >
+                        {f.tripped ? (f.blocking ? '✕' : '•') : '✓'} {key}
+                      </span>
+                      {/* A tripped-but-not-blocking sentinel is stated plainly rather than hidden:
+                          the contamination is real, it just is not in this question's path. */}
+                      {f.tripped && !f.blocking && (
+                        <span className="text-bauhaus-muted"> — tripped, not in this question&rsquo;s path</span>
+                      )}
+                      {f.n != null && <span className="text-bauhaus-muted"> · n={f.n.toLocaleString()}</span>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Panel>
+
+            <Panel title="Why nowhere else">
+              <p className="text-xs leading-relaxed text-bauhaus-black">
+                {card.uniqueness_basis ?? 'Not stated.'}
+              </p>
+              <p className="mt-2 font-mono text-[10px] uppercase tracking-widest text-bauhaus-muted">
+                uniqueness {Number(card.uniqueness).toFixed(2)} · hand-set, declared curation debt
+              </p>
+            </Panel>
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}
