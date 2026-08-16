@@ -1,11 +1,16 @@
 import Link from 'next/link';
+import { unstable_cache } from 'next/cache';
 import { Money, Buildings, LinkSimple, Files } from '@phosphor-icons/react/dist/ssr';
 import { getDirectServiceSupabase } from '@/lib/supabase';
 import { themeMoney, money, type ThemeMoney } from '@/lib/justice-money';
 import { VIEW_REGISTRY } from '@/lib/view-registry';
+import { financialYearVocab, topicVocab, topicLabel } from '@/lib/vocab';
+import { ShellFilters } from '@/components/shell/shell-filters';
+import { allThemes } from '@/app/reports/theme/themes';
 
-/** Hourly is fresh enough for counts that change nightly; themeMoney is built for this cadence. */
-export const revalidate = 3600;
+// Reading searchParams makes this page dynamic, so the hourly cadence moves from page-level
+// `revalidate` to unstable_cache around each data loader — one DB scan per (topic, year)
+// combination per hour, never one per hit (the August pooler-saturation pattern).
 
 interface RemotenessBucket {
   label: string;
@@ -59,19 +64,57 @@ async function count(table: string): Promise<number | null> {
   return error ? null : n;
 }
 
-export default async function DashboardPage() {
-  const [yj, remoteness, entityCount, contractCount] = await Promise.all([
-    themeMoney(['youth-justice']),
-    fundingByRemoteness(),
-    count('gs_entities'),
-    count('austender_contracts'),
+const cachedRemoteness = unstable_cache(fundingByRemoteness, ['dash-remoteness'], {
+  revalidate: 3600,
+});
+const cachedCount = unstable_cache(count, ['dash-count'], { revalidate: 3600 });
+const cachedTopicVocab = unstable_cache(topicVocab, ['dash-topic-vocab'], { revalidate: 3600 });
+const cachedYearVocab = unstable_cache(financialYearVocab, ['dash-year-vocab'], {
+  revalidate: 3600,
+});
+const cachedThemeMoney = unstable_cache(
+  (topic: string, fy: string) =>
+    themeMoney([topic], 15, { financialYear: fy === '' ? undefined : fy }),
+  ['dash-theme-money'],
+  { revalidate: 3600 },
+);
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ topic?: string; fy?: string }>;
+}) {
+  const params = await searchParams;
+  const [topics, years] = await Promise.all([cachedTopicVocab(), cachedYearVocab()]);
+
+  // Params are only honoured when they exist in the DB vocabulary — an unknown value falls back
+  // rather than feeding themeMoney a filter that silently matches nothing.
+  const topic =
+    params.topic && topics.some((t) => t.value === params.topic) ? params.topic : 'youth-justice';
+  const fy = params.fy && years.some((y) => y.value === params.fy) ? params.fy : null;
+
+  const [selected, remoteness, entityCount, contractCount] = await Promise.all([
+    cachedThemeMoney(topic, fy ?? ''),
+    cachedRemoteness(),
+    cachedCount('gs_entities'),
+    cachedCount('austender_contracts'),
   ]);
 
-  const tiles = buildTiles(yj, entityCount, contractCount);
+  const topicName = topicLabel(topic);
+  const theme = allThemes().find((t) => t.topicTags.includes(topic));
+  const tiles = buildTiles(selected, entityCount, contractCount, topicName, fy);
   const maxDollars = Math.max(...remoteness.buckets.map((b) => b.dollars), 1);
 
   return (
     <div className="flex flex-col gap-5">
+      {(topics.length > 0 || years.length > 0) && (
+        <div className="flex items-center gap-3">
+          <ShellFilters topics={topics} years={years} activeTopic={topic} activeYear={fy} />
+          <span className="text-xs" style={{ color: 'var(--shell-muted)' }}>
+            Scopes the money tiles and top recipients. Options come from the data, not a list.
+          </span>
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         {tiles.map((t) => (
           <div key={t.label} className="shell-card flex flex-col gap-2 px-4.5 py-4">
@@ -132,14 +175,21 @@ export default async function DashboardPage() {
 
         <section className="shell-card flex w-full flex-col px-5 py-4 xl:w-[420px]">
           <div className="flex items-center gap-2">
-            <h2 className="font-display text-[15px] font-bold">Top recipients — youth justice</h2>
+            <h2 className="font-display text-[15px] font-bold">
+              Top recipients — {topicName.toLowerCase()}
+              {fy ? ` · ${fy}` : ''}
+            </h2>
             <div className="flex-1" />
-            <Link href="/reports/theme/youth-justice" className="text-[12.5px] font-semibold" style={{ color: '#1040C0' }}>
+            <Link
+              href={theme ? `/reports/theme/${theme.slug}` : '/reports/theme'}
+              className="text-[12.5px] font-semibold"
+              style={{ color: '#1040C0' }}
+            >
               See all →
             </Link>
           </div>
           <div className="mt-2 flex flex-col">
-            {(yj?.top ?? []).slice(0, 6).map((r) => (
+            {(selected?.top ?? []).slice(0, 6).map((r) => (
               <div
                 key={r.name}
                 className="flex items-center gap-2.5 py-2.5"
@@ -166,9 +216,10 @@ export default async function DashboardPage() {
                 <span className="font-mono text-[13px]">{money(r.dollars)}</span>
               </div>
             ))}
-            {!yj && (
+            {!selected && (
               <p className="py-4 text-sm" style={{ color: 'var(--shell-muted)' }}>
-                Youth justice money is unavailable right now.
+                No {topicName.toLowerCase()} grants{fy ? ` in ${fy}` : ''}, or the query failed —
+                nothing is shown rather than a stale figure.
               </p>
             )}
           </div>
@@ -194,22 +245,28 @@ export default async function DashboardPage() {
   );
 }
 
-function buildTiles(yj: ThemeMoney | null, entityCount: number | null, contractCount: number | null) {
+function buildTiles(
+  selected: ThemeMoney | null,
+  entityCount: number | null,
+  contractCount: number | null,
+  topicName: string,
+  fy: string | null,
+) {
   return [
     {
-      label: 'Youth justice grants',
-      value: yj ? money(yj.total) : '—',
-      sub: yj
-        ? `${yj.firstYear ?? '?'}–${yj.lastYear ?? '?'} · ${money(yj.excludedDollars)} of aggregates excluded`
+      label: `${topicName} grants`,
+      value: selected ? money(selected.total) : '—',
+      sub: selected
+        ? `${fy ?? `${selected.firstYear ?? '?'}–${selected.lastYear ?? '?'}`} · ${money(selected.excludedDollars)} of aggregates excluded`
         : 'unavailable',
       colour: '#D02020',
       icon: Money,
     },
     {
       label: 'ACCO share',
-      value: yj ? `${yj.accoPctOfLinked}%` : '—',
-      sub: yj
-        ? `${money(yj.accoDollars)} of ${money(yj.linkedDollars)} linked youth justice money`
+      value: selected ? `${selected.accoPctOfLinked}%` : '—',
+      sub: selected
+        ? `${money(selected.accoDollars)} of ${money(selected.linkedDollars)} linked ${topicName.toLowerCase()} money`
         : 'unavailable',
       colour: '#F0C020',
       icon: Buildings,

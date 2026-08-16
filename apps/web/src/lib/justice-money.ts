@@ -138,7 +138,11 @@ interface RawRow {
  * topic is `child-protection` at 16,418 rows; at four columns that is a few hundred KB, fetched
  * hourly per theme. If a theme ever needs sub-second freshness this becomes a matview.
  */
-export async function themeMoney(topics: readonly string[], topN = 15): Promise<ThemeMoney | null> {
+export async function themeMoney(
+  topics: readonly string[],
+  topN = 15,
+  opts: { financialYear?: string } = {},
+): Promise<ThemeMoney | null> {
   if (topics.length === 0) return null;
 
   const supabase = getDirectServiceSupabase();
@@ -154,7 +158,7 @@ export async function themeMoney(topics: readonly string[], topN = 15): Promise<
 
   for (const topic of topics) {
     for (let from = 0; ; from += PAGE) {
-      const { data, error } = await supabase
+      let query = supabase
         .from('justice_funding')
         .select('id,recipient_name,amount_dollars,financial_year,gs_entity_id')
         .eq('measure_kind', 'grant')
@@ -164,8 +168,11 @@ export async function themeMoney(topics: readonly string[], topN = 15): Promise<
         // other, so both are required. Nationally this is the difference between $38.01bn and
         // $33.98bn; on the youth-justice theme it moves $1,044.8m to $1,044.2m.
         .not('is_aggregate', 'is', true)
-        .contains('topics', [topic])
-        .range(from, from + PAGE - 1);
+        .contains('topics', [topic]);
+      // Only ever a value from the v_vocab_financial_years vocabulary — a free-text year here
+      // would silently return zero rows and render as "no money", so callers must validate first.
+      if (opts.financialYear) query = query.eq('financial_year', opts.financialYear);
+      const { data, error } = await query.range(from, from + PAGE - 1);
       if (error) throw new Error(`justice money query failed: ${error.message}`);
       const page = (data ?? []) as unknown as RawRow[];
       for (const r of page) byId.set(r.id, r);
