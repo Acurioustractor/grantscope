@@ -33,7 +33,7 @@ export const VIEW_REGISTRY: RegisteredView[] = [
   {
     id: 'youth-justice-money',
     name: 'Youth justice money',
-    question: 'Where youth justice grant money went, filtered clean ($915.7M FY2018–24).',
+    question: 'Where youth justice grant money went, filtered clean. The headline figure and span come from the live query, never this blurb.',
     href: '/dashboard/views/youth-justice-money',
     deepHref: '/reports/theme/youth-justice',
     colour: 'yellow',
@@ -43,7 +43,7 @@ export const VIEW_REGISTRY: RegisteredView[] = [
   {
     id: 'acco-share',
     name: 'ACCO share',
-    question: 'How much of youth justice money reaches community-controlled organisations (11.5%).',
+    question: 'How much of youth justice money reaches community-controlled organisations.',
     href: '/dashboard/views/acco-share',
     deepHref: '/reports/youth-justice',
     colour: 'blue',
@@ -62,7 +62,7 @@ export const VIEW_REGISTRY: RegisteredView[] = [
   {
     id: 'power-concentration',
     name: 'Power: top 1%',
-    question: 'Cross-system power concentration — the top 1% of entities hold 86.9% of $1.287T.',
+    question: 'Cross-system power concentration — how much the top 1% of entities hold.',
     href: '/dashboard/views/power-concentration',
     deepHref: '/power',
     colour: 'red',

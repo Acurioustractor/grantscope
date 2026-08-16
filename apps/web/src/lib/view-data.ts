@@ -83,7 +83,13 @@ async function youthJusticeMoney(): Promise<ViewData> {
       value: money(r.dollars),
       meta: `${r.grants} grant${r.grants === 1 ? '' : 's'}`,
     })),
-    note: `${m.excludedRows} aggregate-shaped rows worth ${money(m.excludedDollars)} excluded (recipients literally named "Total" or "Various"). ${m.linkedPct}% of grants resolve to a graph entity; unlinked names are shown unlinked.`,
+    // A filter that removed nothing is not worth a sentence (polish F3) — the exclusion line
+    // appears only when it fired; the linkage line is a measurement and always shows.
+    note: `${
+      m.excludedRows > 0
+        ? `${m.excludedRows} aggregate-shaped rows worth ${money(m.excludedDollars)} excluded (recipients literally named "Total" or "Various"). `
+        : ''
+    }${m.linkedPct}% of grants resolve to a graph entity; unlinked names are shown unlinked.`,
   };
 }
 

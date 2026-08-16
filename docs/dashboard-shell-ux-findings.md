@@ -34,9 +34,10 @@ Major cities ($1004bn) vs Very remote ($11.5bn): four of five bars are slivers. 
 treatment (or excluding the dominant bucket with a stated reason) would actually show the
 distribution the chart exists to show.
 
-### F6 (S) — No active state for /dashboard/docs in the rail
-On `/dashboard/docs` the rail still highlights "Dashboard"; docs is reachable only through the help
-menu and has no you-are-here marker.
+### F6 (S) — RECLASSIFIED on fix-pass 1: section-level active is defensible
+The rail highlighting "Dashboard" on `/dashboard/docs` is section-level active state — a standard
+pattern. The residual question is IA, not styling: should "The data" be a rail entry rather than
+help-menu-only? That's Ben's call; no code change made.
 
 ### F7 (S, watch) — The /clarity chip row is nearing a label stack
 Now 10 chips (findings, owners, projects, stories added this week), wrapping to two lines above the
@@ -56,3 +57,13 @@ reads as a deliberate Bauhaus object contained by the soft shell, not a clash; t
 under it are light; the double-nav (shell rail + clarity chips) is acceptable as section sub-nav.
 Recommend: accept the framing, which un-gates the dark shell variant. But this is the taste verdict
 the ledger reserves for Ben — this paragraph is input, not the verdict.
+
+
+## Fix pass 1 (2026-08-17, branch shell-polish-fixes-1)
+- **F1 FIXED** — figures stripped from registry blurbs; the loader owns every number and span.
+- **F2 FIXED (labelling)** — chart retitled "Where ALL money sits" + caption states the filters do
+  not scope it. The full fix (a topic-scoped remoteness query) is real data work, left open.
+- **F3 FIXED** — zero-valued exclusion clauses suppressed on the tile and the view caveat.
+- **F4 FIXED** — the cause was styling, not missing hrefs: linked rows were visually identical to
+  plain text. Links now carry the accent colour + hover underline.
+- **F5 / F7 / dark-inside-light** — open, Ben's taste calls.

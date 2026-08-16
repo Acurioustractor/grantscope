@@ -140,10 +140,10 @@ export default async function DashboardPage({
       <div className="flex flex-col gap-4 xl:flex-row">
         <section className="shell-card flex min-w-0 flex-1 flex-col gap-4 px-5 py-4">
           <div className="flex items-center gap-3">
-            <h2 className="font-display text-[15px] font-bold">Where the money sits — by remoteness</h2>
+            <h2 className="font-display text-[15px] font-bold">Where ALL money sits — by remoteness</h2>
             <div className="flex-1" />
             <span className="text-xs" style={{ color: 'var(--shell-muted)' }}>
-              All funding on the graph, grouped by postcode remoteness
+              Every dollar on the graph, all topics and years — the filters above do not scope this chart
             </span>
           </div>
           <div className="flex h-64 items-end gap-6 px-2">
@@ -256,8 +256,14 @@ function buildTiles(
     {
       label: `${topicName} grants`,
       value: selected ? money(selected.total) : '—',
+      // Zero-valued filter notes are noise (polish F3): the exclusion clause appears only when
+      // the aggregate filter actually removed dollars for this scope.
       sub: selected
-        ? `${fy ?? `${selected.firstYear ?? '?'}–${selected.lastYear ?? '?'}`} · ${money(selected.excludedDollars)} of aggregates excluded`
+        ? `${fy ?? `${selected.firstYear ?? '?'}–${selected.lastYear ?? '?'}`}${
+            selected.excludedDollars > 0
+              ? ` · ${money(selected.excludedDollars)} of aggregates excluded`
+              : ''
+          }`
         : 'unavailable',
       colour: '#D02020',
       icon: Money,
