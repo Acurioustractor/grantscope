@@ -89,7 +89,13 @@ export default async function ViewPage({ params }: { params: Promise<{ id: strin
                   style={{ borderTop: '1px solid var(--shell-line)' }}
                 >
                   {r.href ? (
-                    <Link href={r.href} className="min-w-0 flex-1 truncate text-[13.5px] font-semibold">
+                    // A link that looks like plain text is a dead end in disguise (polish F4):
+                    // linked rows carry the accent colour so the drill-in is visible.
+                    <Link
+                      href={r.href}
+                      className="min-w-0 flex-1 truncate text-[13.5px] font-semibold hover:underline"
+                      style={{ color: '#1040C0' }}
+                    >
                       {r.label}
                     </Link>
                   ) : (
