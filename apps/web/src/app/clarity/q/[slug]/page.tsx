@@ -35,9 +35,22 @@ export async function generateMetadata({
  * sequential PostgREST calls meant the second could lose its connection under pool pressure and
  * 500 the whole page — which is exactly what happened on 15 Aug.
  */
+interface PinnedAnswer {
+  id: number;
+  computed_at: string;
+  ok: boolean;
+  headline: string | null;
+  row_count: number | null;
+}
+
 async function load(
   slug: string,
-): Promise<{ card: BoardCard; ingredients: Ingredient[]; want: WantRow | null } | null> {
+): Promise<{
+  card: BoardCard;
+  ingredients: Ingredient[];
+  want: WantRow | null;
+  answers: PinnedAnswer[];
+} | null> {
   const supabase = getDirectServiceSupabase();
 
   const { data: cards, error } = await supabase
@@ -61,7 +74,21 @@ async function load(
     want = null;
   }
 
-  return { card, ingredients: card.ingredients ?? [], want };
+  // Pinned answers → citable claim URLs (slice J). Degrades to empty like the want query.
+  let answers: PinnedAnswer[] = [];
+  try {
+    const { data } = await supabase
+      .from('clarity_answer')
+      .select('id, computed_at, ok, headline, row_count')
+      .eq('question_slug', slug)
+      .order('computed_at', { ascending: false })
+      .limit(20);
+    answers = (data ?? []) as unknown as PinnedAnswer[];
+  } catch {
+    answers = [];
+  }
+
+  return { card, ingredients: card.ingredients ?? [], want, answers };
 }
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
@@ -80,7 +107,9 @@ export default async function WorkedAnswerPage({ params }: { params: Promise<{ s
   const loaded = await load(slug);
   if (!loaded) notFound();
 
-  const { card, ingredients, want } = loaded;
+  const { card, ingredients, want, answers } = loaded;
+  const citable =
+    (card.publishable === 'public' || card.publishable === 'shareable') && !card.defamation_sensitive;
   const blocked = blockingSentinels(card);
   const isRefused = isRefusedCard(card);
   // UNVERIFIED and PILOT are stamps, not footnotes. A number carrying either one travels with it.
@@ -322,6 +351,34 @@ export default async function WorkedAnswerPage({ params }: { params: Promise<{ s
                   ))}
               </ul>
             </Panel>
+
+            {answers.length > 0 ? (
+              <Panel title="Pinned answers — citable URLs">
+                <p className="mb-3 text-[12px] text-bauhaus-black/60">
+                  {citable
+                    ? 'Each run is pinned and addressable: /claim/[id] states what the database said that day and will not change.'
+                    : 'Pinned, but NOT publicly citable — this question is internal or names individuals, so /claim/[id] renders a withheld notice.'}
+                </p>
+                <ul className="space-y-1.5">
+                  {answers.map((a) => (
+                    <li key={a.id} className="flex items-baseline gap-2 font-mono text-[12px]">
+                      <Link
+                        href={`/claim/${a.id}`}
+                        className="font-black text-bauhaus-blue hover:underline"
+                      >
+                        /claim/{a.id}
+                      </Link>
+                      <span className="text-bauhaus-black/60">{a.computed_at.slice(0, 10)}</span>
+                      {a.ok ? (
+                        <span className="truncate text-bauhaus-black/80">{a.headline ?? ''}</span>
+                      ) : (
+                        <span className="font-black text-bauhaus-red">FAILED</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </Panel>
+            ) : null}
 
             <Panel title="Sentinels">
               {flags.length === 0 ? (

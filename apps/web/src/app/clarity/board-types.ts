@@ -48,6 +48,7 @@ export interface BoardCard {
   form: FormKind;
   honest_at: string;
   publishable: Publishable;
+  defamation_sensitive: boolean;
   verification_stamp: string | null;
   caveat: string;
   exclusions: string;
