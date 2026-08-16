@@ -1,0 +1,84 @@
+/**
+ * The saved-views registry: the typed list of named views pinned to the shell rail.
+ *
+ * A view = a named, scoped query the dashboard can render and the rail can pin.
+ * Registry-in-code first (like the Atlas layer registry); user-created persistence can
+ * come later without changing consumers.
+ *
+ * Grounding: thoughts/shared/data-map/DASHBOARD-VIEW-MAP.md — only views verified
+ * runnable in the 2026-08-14 opportunity map belong here. Every money view MUST go
+ * through justice-money.ts helpers; person views are count-only (no dollar rollups).
+ */
+
+export type ViewColour = 'red' | 'blue' | 'yellow' | 'green' | 'ink';
+
+export interface RegisteredView {
+  id: string;
+  /** Short rail/card label, plain words. */
+  name: string;
+  /** One-sentence answer this view gives. */
+  question: string;
+  /** Where clicking through lands. */
+  href: string;
+  colour: ViewColour;
+  /** Caveat that must ship with the number, verbatim from the data map. Never render the view without it. */
+  caveat?: string;
+  /** Pinned to the rail by default. */
+  pinned?: boolean;
+}
+
+export const VIEW_REGISTRY: RegisteredView[] = [
+  {
+    id: 'youth-justice-money',
+    name: 'Youth justice money',
+    question: 'Where youth justice grant money went, filtered clean ($915.7M FY2018–24).',
+    href: '/themes/youth-justice',
+    colour: 'yellow',
+    caveat: 'Grants only: excludes state budget aggregates and source-spreadsheet total rows.',
+    pinned: true,
+  },
+  {
+    id: 'acco-share',
+    name: 'ACCO share',
+    question: 'How much of youth justice money reaches community-controlled organisations (11.5%).',
+    href: '/themes/youth-justice?lens=acco',
+    colour: 'blue',
+    pinned: true,
+  },
+  {
+    id: 'money-without-evidence',
+    name: 'Money vs evidence',
+    question: 'Funding to organisations with no recorded evidence of what works, by topic.',
+    href: '/clarity?q=evidence-gap',
+    colour: 'green',
+    caveat: 'Evidence link = ALMA register presence; absence of evidence is not evidence of absence.',
+    pinned: true,
+  },
+  {
+    id: 'power-concentration',
+    name: 'Power: top 1%',
+    question: 'Cross-system power concentration — the top 1% of entities hold 86.9% of $1.287T.',
+    href: '/power',
+    colour: 'red',
+    caveat: 'Entity-level only. Person-level influence is shown as counts, never dollars.',
+    pinned: true,
+  },
+  {
+    id: 'funding-deserts',
+    name: 'Funding deserts',
+    question: 'High-disadvantage LGAs receiving the least funding.',
+    href: '/reports/funding-deserts',
+    colour: 'ink',
+    caveat: 'Desert grain is not unique per LGA — deduplicated by name and state.',
+  },
+  {
+    id: 'board-interlocks',
+    name: 'Interlocked boards',
+    question: 'Organisations governed by people who sit on multiple boards.',
+    href: '/people',
+    colour: 'ink',
+    caveat: 'Banded by board count, capped at 10 — above that is the nominee-block artefact.',
+  },
+];
+
+export const pinnedViews = () => VIEW_REGISTRY.filter((v) => v.pinned);
