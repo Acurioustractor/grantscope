@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getDirectServiceSupabase } from '@/lib/supabase';
+import { allThemes, reportsForTheme } from '../reports/theme/themes';
 import {
   NOUN_BLURB,
   NOUN_LABEL,
@@ -51,6 +52,7 @@ interface Loaded {
   total: number;
   described: number;
   questionStates: [string, number][];
+  questionSubjects: Map<string, number>;
   refreshedAt: string | null;
 }
 
@@ -102,11 +104,13 @@ async function load(sort: IndexSort): Promise<Loaded> {
 
   // The questions strip degrades to empty rather than taking the front door down with it.
   let questionStates: [string, number][] = [];
+  const questionSubjects = new Map<string, number>();
   try {
-    const { data } = await supabase.from('v_clarity_board_cards').select('state');
+    const { data } = await supabase.from('v_clarity_board_cards').select('state, subject');
     const counts = new Map<string, number>();
-    for (const r of (data ?? []) as { state: string }[]) {
+    for (const r of (data ?? []) as { state: string; subject: string | null }[]) {
       counts.set(r.state, (counts.get(r.state) ?? 0) + 1);
+      if (r.subject) questionSubjects.set(r.subject, (questionSubjects.get(r.subject) ?? 0) + 1);
     }
     questionStates = [...counts.entries()].sort((a, b) => b[1] - a[1]);
   } catch {
@@ -118,6 +122,7 @@ async function load(sort: IndexSort): Promise<Loaded> {
     total: all.length,
     described: all.filter((o) => o.purpose).length,
     questionStates,
+    questionSubjects,
     refreshedAt: all.reduce<string | null>(
       (max, o) => (o.refreshed_at && (!max || o.refreshed_at > max) ? o.refreshed_at : max),
       null,
@@ -148,9 +153,20 @@ export default async function ClarityIndexPage({
 }) {
   const sp = await searchParams;
   const sort = parseSort(sp.sort);
-  const { byNoun, total, described, questionStates, refreshedAt } = await load(sort);
+  const { byNoun, total, described, questionStates, questionSubjects, refreshedAt } =
+    await load(sort);
 
   const unfiled = byNoun.get('unfiled')!.length;
+
+  // Slice G — themes above the noun index. The 13 report sections are the only taxonomy written
+  // in the language a human uses about the world; the six nouns are the plumbing. The plumbing
+  // stays on the front door (completeness at the index layer) but it no longer leads.
+  const themes = allThemes().map((t) => ({
+    slug: t.slug,
+    title: t.title,
+    reportCount: reportsForTheme(t.slug).length,
+    questionCount: t.questionSubjects.reduce((n, s) => n + (questionSubjects.get(s) ?? 0), 0),
+  }));
 
   return (
     <main className="mx-auto max-w-[1180px] px-4 py-8">
@@ -210,6 +226,31 @@ export default async function ClarityIndexPage({
           </div>
         ) : null}
       </header>
+
+      <section className="mt-4 border-4 border-bauhaus-black bg-bauhaus-white" id="themes">
+        <h2 className="flex flex-wrap items-baseline gap-x-3 border-b-2 border-bauhaus-black px-4 py-2">
+          <span className="font-display text-lg font-black uppercase tracking-widest">Themes</span>
+          <span className="font-mono text-[12px] font-black">{themes.length}</span>
+          <span className="text-[12px] text-bauhaus-black/50">
+            the world&rsquo;s language first; the schema below
+          </span>
+        </h2>
+        <ul className="grid gap-x-6 gap-y-0.5 p-4 sm:grid-cols-2 lg:grid-cols-3">
+          {themes.map((t) => (
+            <li key={t.slug} className="flex items-baseline gap-2 text-[13px] leading-6">
+              <Link
+                href={`/reports/theme/${t.slug}`}
+                className="truncate font-bold underline decoration-bauhaus-black/20 underline-offset-2 hover:decoration-bauhaus-black"
+              >
+                {t.title}
+              </Link>
+              <span className="ml-auto shrink-0 font-mono text-[11px] text-bauhaus-black/45">
+                {t.reportCount} reports{t.questionCount > 0 ? ` · ${t.questionCount} q` : ''}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </section>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <span className="font-mono text-[10px] font-black uppercase tracking-widest text-bauhaus-black/50">
