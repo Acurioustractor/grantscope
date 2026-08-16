@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-29T02:02:46.140Z",
+  "generatedAt": "2026-08-16T06:07:11.903Z",
   "source": "live-db",
   "refreshCommand": "npm run report:youth-justice:refresh",
   "pipelineRefreshCommands": [
@@ -22,7 +22,7 @@
     "almaServesYouthJustice": 989,
     "lgaCrossSystemRows": 361,
     "ndisOverlayRows": 179,
-    "youthJusticeDashboardRows": 8,
+    "youthJusticeDashboardRows": 32,
     "ctgRows": 64,
     "austenderContracts": 99,
     "austenderContractDollars": 139312407,
@@ -1525,83 +1525,6 @@
     ],
     "grants": [
       {
-        "recipient_name": "Department of Youth Justice and Victim Support",
-        "state": "QLD",
-        "gs_id": null,
-        "total": 11397825690,
-        "grants": 67
-      },
-      {
-        "recipient_name": "Department of Justice and Community Safety",
-        "state": "VIC",
-        "gs_id": "AU-ABN-98636852025",
-        "total": 10029145347,
-        "grants": 69
-      },
-      {
-        "recipient_name": "Department of Communities and Justice",
-        "state": "NSW",
-        "gs_id": "AU-GOV-adf83f6717d370fcb08ea2d8d6192d76",
-        "total": 9161174435,
-        "grants": 68
-      },
-      {
-        "recipient_name": "Department of Justice",
-        "state": "WA",
-        "gs_id": "AU-ABN-11005693553",
-        "total": 4036320078,
-        "grants": 67
-      },
-      {
-        "recipient_name": "Territory Families, Housing and Communities",
-        "state": "NT",
-        "gs_id": null,
-        "total": 3155482834,
-        "grants": 68
-      },
-      {
-        "recipient_name": "Department of Human Services",
-        "state": "SA",
-        "gs_id": "AU-ABN-90794605008",
-        "total": 1868969579,
-        "grants": 68
-      },
-      {
-        "recipient_name": "Department of Justice",
-        "state": "TAS",
-        "gs_id": "AU-ABN-11005693553",
-        "total": 1024657134,
-        "grants": 68
-      },
-      {
-        "recipient_name": "Community Services Directorate",
-        "state": "ACT",
-        "gs_id": "AU-GOV-1e451d2278b352b31b9792daf7cf21b7",
-        "total": 986194612,
-        "grants": 68
-      },
-      {
-        "recipient_name": "Department of Youth Justice",
-        "state": "QLD",
-        "gs_id": "AU-ABN-11005693553",
-        "total": 452550000,
-        "grants": 2
-      },
-      {
-        "recipient_name": "Total",
-        "state": "QLD",
-        "gs_id": null,
-        "total": 314773837,
-        "grants": 2
-      },
-      {
-        "recipient_name": "Total",
-        "state": "QLD",
-        "gs_id": "AU-ABN-45600378005",
-        "total": 303105131,
-        "grants": 2
-      },
-      {
         "recipient_name": "Lifeline Community Care",
         "state": "QLD",
         "gs_id": "AU-ABN-84675001493",
@@ -1616,13 +1539,6 @@
         "grants": 4
       },
       {
-        "recipient_name": "The Corporation of the Synod of the Diocese of Brisbane",
-        "state": "QLD",
-        "gs_id": "AU-ABN-32025287736",
-        "total": 22832236,
-        "grants": 8
-      },
-      {
         "recipient_name": "Mission Australia",
         "state": "QLD",
         "gs_id": "AU-ABN-15000002522",
@@ -1630,32 +1546,11 @@
         "grants": 6
       },
       {
-        "recipient_name": "The Ted Noffs Foundation",
-        "state": "QLD",
-        "gs_id": "AU-ABN-49018049971",
-        "total": 16634362,
-        "grants": 4
-      },
-      {
-        "recipient_name": "Shine For Kids Limited",
-        "state": "QLD",
-        "gs_id": "AU-ABN-60662072775",
-        "total": 13308276,
-        "grants": 2
-      },
-      {
         "recipient_name": "YouthLink",
         "state": "QLD",
         "gs_id": "AU-ABN-58239250649",
         "total": 13074243,
         "grants": 16
-      },
-      {
-        "recipient_name": "Life Without Barriers",
-        "state": "QLD",
-        "gs_id": "AU-ABN-15101252171",
-        "total": 12747262,
-        "grants": 8
       },
       {
         "recipient_name": "UnitingCare Community",
@@ -1670,13 +1565,6 @@
         "gs_id": null,
         "total": 11405987,
         "grants": 4
-      },
-      {
-        "recipient_name": "Bridges Health & Community Care Ltd",
-        "state": "QLD",
-        "gs_id": "AU-ABN-45402866190",
-        "total": 11218954,
-        "grants": 5
       },
       {
         "recipient_name": "Australian Red Cross Society",
@@ -1784,20 +1672,6 @@
         "grants": 4
       },
       {
-        "recipient_name": "Save The Children Australia",
-        "state": "QLD",
-        "gs_id": "AU-ABN-99008610035",
-        "total": 7099943,
-        "grants": 9
-      },
-      {
-        "recipient_name": "Gallang Place Aboriginal and Torres Strait Islanders Corporation",
-        "state": "QLD",
-        "gs_id": "AU-ABN-71168539263",
-        "total": 7040877,
-        "grants": 6
-      },
-      {
         "recipient_name": "Domestic Violence Prevention Centre Gold Coast Inc",
         "state": "QLD",
         "gs_id": "AU-ABN-31476338009",
@@ -1824,20 +1698,6 @@
         "gs_id": "AU-ABN-86317183343",
         "total": 6567873,
         "grants": 4
-      },
-      {
-        "recipient_name": "Fearless Towards Success Ltd",
-        "state": "QLD",
-        "gs_id": "AU-ABN-67649238648",
-        "total": 6486884,
-        "grants": 1
-      },
-      {
-        "recipient_name": "Kurbingui Youth Development Limited",
-        "state": "QLD",
-        "gs_id": "AU-ABN-47298315697",
-        "total": 6471860,
-        "grants": 3
       },
       {
         "recipient_name": "Queensland Youth Services Inc",
@@ -1875,34 +1735,6 @@
         "grants": 7
       },
       {
-        "recipient_name": "Youth Insearch Foundation (Aust) Inc",
-        "state": "QLD",
-        "gs_id": "AU-ABN-31886363881",
-        "total": 5549496,
-        "grants": 1
-      },
-      {
-        "recipient_name": "Kokoda Youth Foundation",
-        "state": "QLD",
-        "gs_id": "AU-ABN-39367906920",
-        "total": 5546924,
-        "grants": 2
-      },
-      {
-        "recipient_name": "Youth Advocacy Centre Inc",
-        "state": "QLD",
-        "gs_id": "AU-ABN-11746358763",
-        "total": 5350119,
-        "grants": 10
-      },
-      {
-        "recipient_name": "Yabun Panjoo Aboriginal Corporation",
-        "state": "QLD",
-        "gs_id": "AU-ABN-78396852698",
-        "total": 5259189,
-        "grants": 2
-      },
-      {
         "recipient_name": "TAIHS Youth Support Services (TYSS)",
         "state": "QLD",
         "gs_id": "AU-ABN-66010113603",
@@ -1924,13 +1756,6 @@
         "grants": 4
       },
       {
-        "recipient_name": "Darumbal Community Youth Service Inc",
-        "state": "QLD",
-        "gs_id": "AU-ABN-55066537031",
-        "total": 4998229,
-        "grants": 7
-      },
-      {
         "recipient_name": "Queensland Police Citizens Youth Welfare Association",
         "state": "QLD",
         "gs_id": "AU-ABN-58009666193",
@@ -1943,6 +1768,181 @@
         "gs_id": "AU-ABN-26143496221",
         "total": 4757644,
         "grants": 4
+      },
+      {
+        "recipient_name": "Regional Youth Support Service",
+        "state": "QLD",
+        "gs_id": "AU-ABN-55066537031",
+        "total": 4754543,
+        "grants": 15
+      },
+      {
+        "recipient_name": "Inala Youth Care Community Inc",
+        "state": "QLD",
+        "gs_id": "AU-ABN-43289699774",
+        "total": 4666258,
+        "grants": 6
+      },
+      {
+        "recipient_name": "Youth Support Program",
+        "state": "QLD",
+        "gs_id": "AU-ABN-83967756338",
+        "total": 4423881,
+        "grants": 18
+      },
+      {
+        "recipient_name": "Darumbal Community Youth Service Inc",
+        "state": "QLD",
+        "gs_id": "AU-ABN-55066537031",
+        "total": 4422711,
+        "grants": 5
+      },
+      {
+        "recipient_name": "Health and Community Services Workforce Council Inc",
+        "state": "QLD",
+        "gs_id": null,
+        "total": 4364933,
+        "grants": 4
+      },
+      {
+        "recipient_name": "Indigenous Youth Service",
+        "state": "QLD",
+        "gs_id": "AU-ABN-40084136508",
+        "total": 4212811,
+        "grants": 8
+      },
+      {
+        "recipient_name": "ATSICHS Youth Service",
+        "state": "QLD",
+        "gs_id": "AU-ABN-22009943435",
+        "total": 4195165,
+        "grants": 4
+      },
+      {
+        "recipient_name": "Youth Empowering Strength (YES) Program",
+        "state": "QLD",
+        "gs_id": "AU-ABN-35424394822",
+        "total": 4125939,
+        "grants": 13
+      },
+      {
+        "recipient_name": "Young People's Kinnections",
+        "state": "QLD",
+        "gs_id": "AU-ABN-34797758772",
+        "total": 4099331,
+        "grants": 17
+      },
+      {
+        "recipient_name": "Lifeline Darling Downs and South West Queensland Ltd",
+        "state": "QLD",
+        "gs_id": "AU-ABN-97075403959",
+        "total": 3824187,
+        "grants": 4
+      },
+      {
+        "recipient_name": "Juwarki Kapu-Lug Ltd",
+        "state": "QLD",
+        "gs_id": "AU-ABN-55044502854",
+        "total": 3817610,
+        "grants": 3
+      },
+      {
+        "recipient_name": "Cairns and Yarrabah Youth Bail Support Service (CYYBSS)",
+        "state": "QLD",
+        "gs_id": "AU-ABN-34797758772",
+        "total": 3694297,
+        "grants": 5
+      },
+      {
+        "recipient_name": "Hervey Bay/ Maryborough Youth Housing and Reintegration Service including After Care Service (YHARS)",
+        "state": "QLD",
+        "gs_id": "AU-ABN-50169561394",
+        "total": 3676975,
+        "grants": 8
+      },
+      {
+        "recipient_name": "SWAP Bail Support Service",
+        "state": "QLD",
+        "gs_id": "AU-ABN-43289699774",
+        "total": 3641054,
+        "grants": 5
+      },
+      {
+        "recipient_name": "Indigenous Youth Health Service",
+        "state": "QLD",
+        "gs_id": "AU-ABN-40084136508",
+        "total": 3546693,
+        "grants": 3
+      },
+      {
+        "recipient_name": "Ipswich Women's Centre Against Domestic Violence Inc",
+        "state": "QLD",
+        "gs_id": "AU-ABN-91593855217",
+        "total": 3222627,
+        "grants": 4
+      },
+      {
+        "recipient_name": "Brisbane Youth Service Inc",
+        "state": "QLD",
+        "gs_id": "AU-ABN-83967756338",
+        "total": 3197948,
+        "grants": 5
+      },
+      {
+        "recipient_name": "The Aboriginal and Islander Community Health Service Brisbane Ltd",
+        "state": "QLD",
+        "gs_id": null,
+        "total": 3197158,
+        "grants": 3
+      },
+      {
+        "recipient_name": "Western Region Youth Service",
+        "state": "QLD",
+        "gs_id": "AU-ABN-76088159335",
+        "total": 3177275,
+        "grants": 14
+      },
+      {
+        "recipient_name": "Gold Coast Youth Service Inc",
+        "state": "QLD",
+        "gs_id": "AU-ABN-98544197890",
+        "total": 3154564,
+        "grants": 5
+      },
+      {
+        "recipient_name": "Working Against Violence Support Service Inc",
+        "state": "QLD",
+        "gs_id": null,
+        "total": 3105805,
+        "grants": 4
+      },
+      {
+        "recipient_name": "Caboolture Regional Domestic Violence Service Inc",
+        "state": "QLD",
+        "gs_id": "AU-ABN-35347896046",
+        "total": 3070275,
+        "grants": 4
+      },
+      {
+        "recipient_name": "KYC - Youth Access Moreton Bay Initiative - (YAMBI)",
+        "state": "QLD",
+        "gs_id": "AU-ABN-46119227986",
+        "total": 3064438,
+        "grants": 11
+      },
+      {
+        "recipient_name": "Bravehearts Inc",
+        "state": "QLD",
+        "gs_id": "AU-ABN-41496913890",
+        "total": 3061808,
+        "grants": 4
+      },
+      {
+        "recipient_name": "South Burnett Youth Services (FUSION)",
+        "state": "QLD",
+        "gs_id": "AU-ABN-85399349965",
+        "total": 3017485,
+        "grants": 18
       }
     ],
     "ndisOverlay": [
@@ -2166,8 +2166,41 @@
         "cost_per_day": 2234,
         "recidivism_pct": 72,
         "indigenous_rate_ratio": 26.8,
-        "facility_count": 3,
-        "total_beds": 220,
+        "facility_count": 4,
+        "total_beds": 382,
+        "detention_indigenous_pct": 65,
+        "ctg_detention_rate": 41.1
+      },
+      {
+        "state": "QLD",
+        "total_expenditure_m": 455,
+        "cost_per_day": 2234,
+        "recidivism_pct": 72,
+        "indigenous_rate_ratio": 26.8,
+        "facility_count": 4,
+        "total_beds": 382,
+        "detention_indigenous_pct": 65,
+        "ctg_detention_rate": 41.1
+      },
+      {
+        "state": "QLD",
+        "total_expenditure_m": 455,
+        "cost_per_day": 2234,
+        "recidivism_pct": 72,
+        "indigenous_rate_ratio": 26.8,
+        "facility_count": 4,
+        "total_beds": 382,
+        "detention_indigenous_pct": 65,
+        "ctg_detention_rate": 41.1
+      },
+      {
+        "state": "QLD",
+        "total_expenditure_m": 455,
+        "cost_per_day": 2234,
+        "recidivism_pct": 72,
+        "indigenous_rate_ratio": 26.8,
+        "facility_count": 4,
+        "total_beds": 382,
         "detention_indigenous_pct": 65,
         "ctg_detention_rate": 41.1
       },
@@ -2178,7 +2211,40 @@
         "recidivism_pct": 57,
         "indigenous_rate_ratio": 10.8,
         "facility_count": 2,
-        "total_beds": 240,
+        "total_beds": 100,
+        "detention_indigenous_pct": 17,
+        "ctg_detention_rate": 7.3
+      },
+      {
+        "state": "VIC",
+        "total_expenditure_m": 360,
+        "cost_per_day": 8066,
+        "recidivism_pct": 57,
+        "indigenous_rate_ratio": 10.8,
+        "facility_count": 2,
+        "total_beds": 100,
+        "detention_indigenous_pct": 17,
+        "ctg_detention_rate": 7.3
+      },
+      {
+        "state": "VIC",
+        "total_expenditure_m": 360,
+        "cost_per_day": 8066,
+        "recidivism_pct": 57,
+        "indigenous_rate_ratio": 10.8,
+        "facility_count": 2,
+        "total_beds": 100,
+        "detention_indigenous_pct": 17,
+        "ctg_detention_rate": 7.3
+      },
+      {
+        "state": "VIC",
+        "total_expenditure_m": 360,
+        "cost_per_day": 8066,
+        "recidivism_pct": 57,
+        "indigenous_rate_ratio": 10.8,
+        "facility_count": 2,
+        "total_beds": 100,
         "detention_indigenous_pct": 17,
         "ctg_detention_rate": 7.3
       },
@@ -2189,7 +2255,40 @@
         "recidivism_pct": 40,
         "indigenous_rate_ratio": 24.2,
         "facility_count": 6,
-        "total_beds": 333,
+        "total_beds": 288,
+        "detention_indigenous_pct": 54,
+        "ctg_detention_rate": 18.6
+      },
+      {
+        "state": "NSW",
+        "total_expenditure_m": 352,
+        "cost_per_day": 2919,
+        "recidivism_pct": 40,
+        "indigenous_rate_ratio": 24.2,
+        "facility_count": 6,
+        "total_beds": 288,
+        "detention_indigenous_pct": 54,
+        "ctg_detention_rate": 18.6
+      },
+      {
+        "state": "NSW",
+        "total_expenditure_m": 352,
+        "cost_per_day": 2919,
+        "recidivism_pct": 40,
+        "indigenous_rate_ratio": 24.2,
+        "facility_count": 6,
+        "total_beds": 288,
+        "detention_indigenous_pct": 54,
+        "ctg_detention_rate": 18.6
+      },
+      {
+        "state": "NSW",
+        "total_expenditure_m": 352,
+        "cost_per_day": 2919,
+        "recidivism_pct": 40,
+        "indigenous_rate_ratio": 24.2,
+        "facility_count": 6,
+        "total_beds": 288,
         "detention_indigenous_pct": 54,
         "ctg_detention_rate": 18.6
       },
@@ -2199,7 +2298,40 @@
         "cost_per_day": 3278,
         "recidivism_pct": 53,
         "indigenous_rate_ratio": 28.8,
-        "facility_count": 1,
+        "facility_count": 2,
+        "total_beds": 240,
+        "detention_indigenous_pct": 74,
+        "ctg_detention_rate": 28.1
+      },
+      {
+        "state": "WA",
+        "total_expenditure_m": 163,
+        "cost_per_day": 3278,
+        "recidivism_pct": 53,
+        "indigenous_rate_ratio": 28.8,
+        "facility_count": 2,
+        "total_beds": 240,
+        "detention_indigenous_pct": 74,
+        "ctg_detention_rate": 28.1
+      },
+      {
+        "state": "WA",
+        "total_expenditure_m": 163,
+        "cost_per_day": 3278,
+        "recidivism_pct": 53,
+        "indigenous_rate_ratio": 28.8,
+        "facility_count": 2,
+        "total_beds": 240,
+        "detention_indigenous_pct": 74,
+        "ctg_detention_rate": 28.1
+      },
+      {
+        "state": "WA",
+        "total_expenditure_m": 163,
+        "cost_per_day": 3278,
+        "recidivism_pct": 53,
+        "indigenous_rate_ratio": 28.8,
+        "facility_count": 2,
         "total_beds": 240,
         "detention_indigenous_pct": 74,
         "ctg_detention_rate": 28.1
@@ -2211,9 +2343,75 @@
         "recidivism_pct": 70,
         "indigenous_rate_ratio": 33.2,
         "facility_count": 1,
-        "total_beds": 60,
+        "total_beds": null,
         "detention_indigenous_pct": 97,
         "ctg_detention_rate": 36.2
+      },
+      {
+        "state": "NT",
+        "total_expenditure_m": 120,
+        "cost_per_day": 3744,
+        "recidivism_pct": 70,
+        "indigenous_rate_ratio": 33.2,
+        "facility_count": 1,
+        "total_beds": null,
+        "detention_indigenous_pct": 97,
+        "ctg_detention_rate": 36.2
+      },
+      {
+        "state": "NT",
+        "total_expenditure_m": 120,
+        "cost_per_day": 3744,
+        "recidivism_pct": 70,
+        "indigenous_rate_ratio": 33.2,
+        "facility_count": 1,
+        "total_beds": null,
+        "detention_indigenous_pct": 97,
+        "ctg_detention_rate": 36.2
+      },
+      {
+        "state": "NT",
+        "total_expenditure_m": 120,
+        "cost_per_day": 3744,
+        "recidivism_pct": 70,
+        "indigenous_rate_ratio": 33.2,
+        "facility_count": 1,
+        "total_beds": null,
+        "detention_indigenous_pct": 97,
+        "ctg_detention_rate": 36.2
+      },
+      {
+        "state": "SA",
+        "total_expenditure_m": 60,
+        "cost_per_day": 4130,
+        "recidivism_pct": 43,
+        "indigenous_rate_ratio": 20.3,
+        "facility_count": 1,
+        "total_beds": 76,
+        "detention_indigenous_pct": 63,
+        "ctg_detention_rate": 17
+      },
+      {
+        "state": "SA",
+        "total_expenditure_m": 60,
+        "cost_per_day": 4130,
+        "recidivism_pct": 43,
+        "indigenous_rate_ratio": 20.3,
+        "facility_count": 1,
+        "total_beds": 76,
+        "detention_indigenous_pct": 63,
+        "ctg_detention_rate": 17
+      },
+      {
+        "state": "SA",
+        "total_expenditure_m": 60,
+        "cost_per_day": 4130,
+        "recidivism_pct": 43,
+        "indigenous_rate_ratio": 20.3,
+        "facility_count": 1,
+        "total_beds": 76,
+        "detention_indigenous_pct": 63,
+        "ctg_detention_rate": 17
       },
       {
         "state": "SA",
@@ -2236,6 +2434,72 @@
         "total_beds": 40,
         "detention_indigenous_pct": 72,
         "ctg_detention_rate": 28.6
+      },
+      {
+        "state": "ACT",
+        "total_expenditure_m": 38,
+        "cost_per_day": 5085,
+        "recidivism_pct": 46,
+        "indigenous_rate_ratio": 14.5,
+        "facility_count": 1,
+        "total_beds": 40,
+        "detention_indigenous_pct": 72,
+        "ctg_detention_rate": 28.6
+      },
+      {
+        "state": "ACT",
+        "total_expenditure_m": 38,
+        "cost_per_day": 5085,
+        "recidivism_pct": 46,
+        "indigenous_rate_ratio": 14.5,
+        "facility_count": 1,
+        "total_beds": 40,
+        "detention_indigenous_pct": 72,
+        "ctg_detention_rate": 28.6
+      },
+      {
+        "state": "ACT",
+        "total_expenditure_m": 38,
+        "cost_per_day": 5085,
+        "recidivism_pct": 46,
+        "indigenous_rate_ratio": 14.5,
+        "facility_count": 1,
+        "total_beds": 40,
+        "detention_indigenous_pct": 72,
+        "ctg_detention_rate": 28.6
+      },
+      {
+        "state": "TAS",
+        "total_expenditure_m": 36,
+        "cost_per_day": 4508,
+        "recidivism_pct": 64,
+        "indigenous_rate_ratio": 3.7,
+        "facility_count": 1,
+        "total_beds": 51,
+        "detention_indigenous_pct": 58,
+        "ctg_detention_rate": 8.3
+      },
+      {
+        "state": "TAS",
+        "total_expenditure_m": 36,
+        "cost_per_day": 4508,
+        "recidivism_pct": 64,
+        "indigenous_rate_ratio": 3.7,
+        "facility_count": 1,
+        "total_beds": 51,
+        "detention_indigenous_pct": 58,
+        "ctg_detention_rate": 8.3
+      },
+      {
+        "state": "TAS",
+        "total_expenditure_m": 36,
+        "cost_per_day": 4508,
+        "recidivism_pct": 64,
+        "indigenous_rate_ratio": 3.7,
+        "facility_count": 1,
+        "total_beds": 51,
+        "detention_indigenous_pct": 58,
+        "ctg_detention_rate": 8.3
       },
       {
         "state": "TAS",
@@ -9118,53 +9382,53 @@
     "accoGap": [
       {
         "org_type": "Community Controlled",
-        "orgs": 135,
-        "total_funding": 121560205,
-        "avg_per_recipient": 900446,
-        "avg_grant": 344363,
-        "funding_rows": 353,
-        "funding_share_pct": 12
+        "orgs": 124,
+        "total_funding": 96186251,
+        "avg_per_recipient": 775696,
+        "avg_grant": 284575,
+        "funding_rows": 338,
+        "funding_share_pct": 11.5
       },
       {
         "org_type": "Other service providers",
-        "orgs": 1130,
-        "total_funding": 894576131,
-        "avg_per_recipient": 791660,
-        "avg_grant": 227338,
-        "funding_rows": 3935,
-        "funding_share_pct": 88
+        "orgs": 974,
+        "total_funding": 737482085,
+        "avg_per_recipient": 757168,
+        "avg_grant": 216652,
+        "funding_rows": 3404,
+        "funding_share_pct": 88.5
       }
     ],
     "remoteness": [
       {
         "remoteness": "Major Cities of Australia",
-        "orgs": 755,
-        "total": 17643450094,
-        "grants": 2740
-      },
-      {
-        "remoteness": "Inner Regional Australia",
-        "orgs": 226,
-        "total": 450403729,
-        "grants": 730
+        "orgs": 601,
+        "total": 487234652,
+        "grants": 1977
       },
       {
         "remoteness": "Outer Regional Australia",
-        "orgs": 225,
-        "total": 183165569,
-        "grants": 769
+        "orgs": 211,
+        "total": 168614924,
+        "grants": 743
+      },
+      {
+        "remoteness": "Inner Regional Australia",
+        "orgs": 205,
+        "total": 124182017,
+        "grants": 683
       },
       {
         "remoteness": "Very Remote Australia",
-        "orgs": 46,
-        "total": 24011628,
-        "grants": 201
+        "orgs": 47,
+        "total": 24016128,
+        "grants": 202
       },
       {
         "remoteness": "Remote Australia",
-        "orgs": 38,
-        "total": 23855160,
-        "grants": 136
+        "orgs": 35,
+        "total": 21300845,
+        "grants": 134
       }
     ],
     "statePrograms": [
@@ -9185,9 +9449,9 @@
       {
         "state": "QLD",
         "program_name": "Community, Youth Justice Services and Women",
-        "grants": 432,
-        "total": 176877894,
-        "orgs": 432
+        "grants": 431,
+        "total": 176877371,
+        "orgs": 431
       },
       {
         "state": "QLD",
@@ -9195,20 +9459,6 @@
         "grants": 445,
         "total": 160584855,
         "orgs": 445
-      },
-      {
-        "state": "QLD",
-        "program_name": "Social Services",
-        "grants": 67,
-        "total": 150560656,
-        "orgs": 33
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "grants": 415,
-        "total": 28233589,
-        "orgs": 138
       },
       {
         "state": "QLD",
@@ -9240,34 +9490,6 @@
       },
       {
         "state": "QLD",
-        "program_name": "Kickstarter Grants",
-        "grants": 12,
-        "total": 3797300,
-        "orgs": 12
-      },
-      {
-        "state": "QLD",
-        "program_name": "YJ_CON_10592 South West Bail Support Service 400483 FS",
-        "grants": 1,
-        "total": 2564052,
-        "orgs": 1
-      },
-      {
-        "state": "QLD",
-        "program_name": "YJ_CON_10562 Cairns and Yarrabah Youth Bail Support Service (CYYBSS) FS",
-        "grants": 1,
-        "total": 2524184,
-        "orgs": 1
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "grants": 72,
-        "total": 2442481,
-        "orgs": 50
-      },
-      {
-        "state": "QLD",
         "program_name": "Youth Justice Family Led Decision Making trial",
         "grants": 10,
         "total": 2045345,
@@ -9289,22 +9511,15 @@
       },
       {
         "state": "QLD",
-        "program_name": "Intensive Bail Initiative",
-        "grants": 1,
-        "total": 1940000,
+        "program_name": "Mens Bail Support Program",
+        "grants": 3,
+        "total": 1840909,
         "orgs": 1
       },
       {
         "state": "QLD",
         "program_name": "QCS 148.1819 Mens Bail Support Program",
         "grants": 1,
-        "total": 1840909,
-        "orgs": 1
-      },
-      {
-        "state": "QLD",
-        "program_name": "Mens Bail Support Program",
-        "grants": 3,
         "total": 1840909,
         "orgs": 1
       },
@@ -9317,44 +9532,9 @@
       },
       {
         "state": "QLD",
-        "program_name": "YJ_ CON_10549 Walali Bili Mentoring & Bail Support Service FS",
-        "grants": 1,
-        "total": 1532564,
-        "orgs": 1
-      },
-      {
-        "state": "QLD",
         "program_name": "Alcohol and Other Drugs — Alcohol and Other Drugs Residential Treatment (Young People)",
         "grants": 1,
         "total": 1473851,
-        "orgs": 1
-      },
-      {
-        "state": "QLD",
-        "program_name": "YJ_ CON_10650 Intensive Bail Support - Brisbane North FS",
-        "grants": 1,
-        "total": 1288452,
-        "orgs": 1
-      },
-      {
-        "state": "QLD",
-        "program_name": "YJ_CON_10590 Toowoomba and Remote South West Bail Support Service FS",
-        "grants": 1,
-        "total": 1282028,
-        "orgs": 1
-      },
-      {
-        "state": "QLD",
-        "program_name": "YJ_CON_10597 MY JUST Bail Support Service (Mt Isa) 400488 FS",
-        "grants": 1,
-        "total": 1263080,
-        "orgs": 1
-      },
-      {
-        "state": "QLD",
-        "program_name": "YJ_ CON_10583 Mercy Community Services Cherbourg and South Burnett Youth Bail Support FS",
-        "grants": 1,
-        "total": 1122288,
         "orgs": 1
       },
       {
@@ -9363,20 +9543,6 @@
         "grants": 3,
         "total": 1086439,
         "orgs": 2
-      },
-      {
-        "state": "QLD",
-        "program_name": "YJ_ CON_10598 MY JUST Bail Support Service (Mackay) FS",
-        "grants": 1,
-        "total": 1052564,
-        "orgs": 1
-      },
-      {
-        "state": "QLD",
-        "program_name": "YJ_CON_10594 Bridge's U18 Bail Support Service 400485 FS",
-        "grants": 1,
-        "total": 1010464,
-        "orgs": 1
       },
       {
         "state": "QLD",
@@ -9440,13 +9606,6 @@
         "grants": 2,
         "total": 27785,
         "orgs": 2
-      },
-      {
-        "state": "QLD",
-        "program_name": "DYJVS Contract",
-        "grants": 1,
-        "total": 10107,
-        "orgs": 1
       },
       {
         "state": "QLD",
@@ -10318,10 +10477,10 @@
         "state": "QLD",
         "program_name": "Community & Youth Justice Services & Aboriginal & Torres Strait Islander Services",
         "recipient_name": "Hervey Bay Neighbourhood Centre Inc",
-        "recipient_abn": null,
+        "recipient_abn": "34683873965",
         "total": 1328139,
         "grants": 1,
-        "gs_id": null,
+        "gs_id": "AU-ABN-34683873965",
         "is_community_controlled": false
       },
       {
@@ -11378,10 +11537,10 @@
         "state": "QLD",
         "program_name": "Community & Youth Justice Services & Aboriginal & Torres Strait Islander Services",
         "recipient_name": "NAMTEC Inc",
-        "recipient_abn": null,
+        "recipient_abn": "61482645004",
         "total": 276694,
         "grants": 1,
-        "gs_id": null,
+        "gs_id": "AU-ABN-61482645004",
         "is_community_controlled": false
       },
       {
@@ -11988,11 +12147,11 @@
         "state": "QLD",
         "program_name": "Community & Youth Justice Services & Aboriginal & Torres Strait Islander Services",
         "recipient_name": "Brisbane Indigenous Media Association Inc",
-        "recipient_abn": null,
+        "recipient_abn": "88685970963",
         "total": 166243,
         "grants": 1,
-        "gs_id": null,
-        "is_community_controlled": false
+        "gs_id": "AU-ABN-88685970963",
+        "is_community_controlled": true
       },
       {
         "state": "QLD",
@@ -13221,7 +13380,7 @@
         "recipient_abn": null,
         "total": 64888,
         "grants": 1,
-        "gs_id": "AU-GOV-357bdb7d108c3c958d8e80c0fc0883a0",
+        "gs_id": null,
         "is_community_controlled": false
       },
       {
@@ -13258,11 +13417,11 @@
         "state": "QLD",
         "program_name": "Community & Youth Justice Services & Aboriginal & Torres Strait Islander Services",
         "recipient_name": "Bamanga Bubu Ngadimunku Inc",
-        "recipient_abn": null,
+        "recipient_abn": "26904810679",
         "total": 62500,
         "grants": 1,
-        "gs_id": null,
-        "is_community_controlled": false
+        "gs_id": "AU-ABN-26904810679",
+        "is_community_controlled": true
       },
       {
         "state": "QLD",
@@ -13588,10 +13747,10 @@
         "state": "QLD",
         "program_name": "Community & Youth Justice Services & Aboriginal & Torres Strait Islander Services",
         "recipient_name": "Ethnic Communities Council of Queensland Ltd",
-        "recipient_abn": null,
+        "recipient_abn": "55010151256",
         "total": 22853,
         "grants": 1,
-        "gs_id": null,
+        "gs_id": "AU-ABN-55010151256",
         "is_community_controlled": false
       },
       {
@@ -14068,10 +14227,10 @@
         "state": "QLD",
         "program_name": "Community & Youth Justice Services & Aboriginal & Torres Strait Islander Services",
         "recipient_name": "Australian Tongan Association Inc",
-        "recipient_abn": null,
+        "recipient_abn": "47836528811",
         "total": 4608,
         "grants": 1,
-        "gs_id": null,
+        "gs_id": "AU-ABN-47836528811",
         "is_community_controlled": false
       },
       {
@@ -14088,10 +14247,10 @@
         "state": "QLD",
         "program_name": "Community & Youth Justice Services & Aboriginal & Torres Strait Islander Services",
         "recipient_name": "Maranoa and Regional Support Services Inc",
-        "recipient_abn": null,
+        "recipient_abn": "39134992613",
         "total": 4500,
         "grants": 1,
-        "gs_id": null,
+        "gs_id": "AU-ABN-39134992613",
         "is_community_controlled": false
       },
       {
@@ -14268,10 +14427,10 @@
         "state": "QLD",
         "program_name": "Community & Youth Justice Services & Aboriginal & Torres Strait Islander Services",
         "recipient_name": "Seniornet Association Inc",
-        "recipient_abn": null,
+        "recipient_abn": "95360623241",
         "total": 2701,
         "grants": 1,
-        "gs_id": null,
+        "gs_id": "AU-ABN-95360623241",
         "is_community_controlled": false
       },
       {
@@ -15718,10 +15877,10 @@
         "state": "QLD",
         "program_name": "Community and Youth Justice Services and Aboriginal and Torres Strait Islander Services",
         "recipient_name": "NAMTEC Inc",
-        "recipient_abn": null,
+        "recipient_abn": "61482645004",
         "total": 571732,
         "grants": 2,
-        "gs_id": null,
+        "gs_id": "AU-ABN-61482645004",
         "is_community_controlled": false
       },
       {
@@ -16058,7 +16217,7 @@
         "state": "QLD",
         "program_name": "Community and Youth Justice Services and Aboriginal and Torres Strait Islander Services",
         "recipient_name": "Hervey Bay Neighbourhood Centre Inc",
-        "recipient_abn": null,
+        "recipient_abn": "34683873965",
         "total": 420082,
         "grants": 1,
         "gs_id": "AU-ABN-85163573388",
@@ -16508,7 +16667,7 @@
         "state": "QLD",
         "program_name": "Community and Youth Justice Services and Aboriginal and Torres Strait Islander Services",
         "recipient_name": "Human Ventures Ltd",
-        "recipient_abn": null,
+        "recipient_abn": "66652024952",
         "total": 322705,
         "grants": 1,
         "gs_id": null,
@@ -18028,10 +18187,10 @@
         "state": "QLD",
         "program_name": "Community and Youth Justice Services and Aboriginal and Torres Strait Islander Services",
         "recipient_name": "Al-Nisa' Youth Group Inc",
-        "recipient_abn": null,
+        "recipient_abn": "26972166511",
         "total": 128205,
         "grants": 1,
-        "gs_id": null,
+        "gs_id": "AU-ABN-26972166511",
         "is_community_controlled": false
       },
       {
@@ -18158,7 +18317,7 @@
         "state": "QLD",
         "program_name": "Community and Youth Justice Services and Aboriginal and Torres Strait Islander Services",
         "recipient_name": "Brisbane Indigenous Media Association Inc",
-        "recipient_abn": null,
+        "recipient_abn": "88685970963",
         "total": 118745,
         "grants": 1,
         "gs_id": "AU-ABN-32774030585",
@@ -18708,11 +18867,11 @@
         "state": "QLD",
         "program_name": "Community and Youth Justice Services and Aboriginal and Torres Strait Islander Services",
         "recipient_name": "Brisbane Indigenous Media Association Inc",
-        "recipient_abn": null,
+        "recipient_abn": "88685970963",
         "total": 71498,
         "grants": 1,
-        "gs_id": null,
-        "is_community_controlled": false
+        "gs_id": "AU-ABN-88685970963",
+        "is_community_controlled": true
       },
       {
         "state": "QLD",
@@ -18828,11 +18987,11 @@
         "state": "QLD",
         "program_name": "Community and Youth Justice Services and Aboriginal and Torres Strait Islander Services",
         "recipient_name": "Bamanga Bubu Ngadimunku Inc",
-        "recipient_abn": null,
+        "recipient_abn": "26904810679",
         "total": 62500,
         "grants": 1,
-        "gs_id": null,
-        "is_community_controlled": false
+        "gs_id": "AU-ABN-26904810679",
+        "is_community_controlled": true
       },
       {
         "state": "QLD",
@@ -18988,7 +19147,7 @@
         "state": "QLD",
         "program_name": "Community and Youth Justice Services and Aboriginal and Torres Strait Islander Services",
         "recipient_name": "Queensland Children�s Services Library",
-        "recipient_abn": null,
+        "recipient_abn": "18261125670",
         "total": 54857,
         "grants": 1,
         "gs_id": null,
@@ -19028,7 +19187,7 @@
         "state": "QLD",
         "program_name": "Community and Youth Justice Services and Aboriginal and Torres Strait Islander Services",
         "recipient_name": "Queensland Chamber of Commerce and Industry Ltd",
-        "recipient_abn": null,
+        "recipient_abn": "55009662060",
         "total": 50000,
         "grants": 1,
         "gs_id": "AU-ABN-33530875096",
@@ -19368,10 +19527,10 @@
         "state": "QLD",
         "program_name": "Community and Youth Justice Services and Aboriginal and Torres Strait Islander Services",
         "recipient_name": "Kids Corner Canungra Association Inc",
-        "recipient_abn": null,
+        "recipient_abn": "19147616292",
         "total": 29883,
         "grants": 1,
-        "gs_id": null,
+        "gs_id": "AU-ABN-19147616292",
         "is_community_controlled": false
       },
       {
@@ -20068,10 +20227,10 @@
         "state": "QLD",
         "program_name": "Community and Youth Justice Services and Aboriginal and Torres Strait Islander Services",
         "recipient_name": "Gold Coast Multicultural Festival Association Inc",
-        "recipient_abn": null,
+        "recipient_abn": "81551039786",
         "total": 10000,
         "grants": 1,
-        "gs_id": null,
+        "gs_id": "AU-ABN-81551039786",
         "is_community_controlled": false
       },
       {
@@ -20118,7 +20277,7 @@
         "state": "QLD",
         "program_name": "Community and Youth Justice Services and Aboriginal and Torres Strait Islander Services",
         "recipient_name": "Zillmere Multicultural Festival Association Inc",
-        "recipient_abn": null,
+        "recipient_abn": "14748162965",
         "total": 10000,
         "grants": 1,
         "gs_id": "AU-ABN-14748162965",
@@ -20218,10 +20377,10 @@
         "state": "QLD",
         "program_name": "Community and Youth Justice Services and Aboriginal and Torres Strait Islander Services",
         "recipient_name": "Rupertswood Progress and Sporting Association Inc",
-        "recipient_abn": null,
+        "recipient_abn": "63788164139",
         "total": 8950,
         "grants": 1,
-        "gs_id": null,
+        "gs_id": "AU-ABN-63788164139",
         "is_community_controlled": false
       },
       {
@@ -20378,7 +20537,7 @@
         "state": "QLD",
         "program_name": "Community and Youth Justice Services and Aboriginal and Torres Strait Islander Services",
         "recipient_name": "Pacific Youth Association Qld Inc",
-        "recipient_abn": null,
+        "recipient_abn": "40697044792",
         "total": 7000,
         "grants": 1,
         "gs_id": "AU-ABN-40697044792",
@@ -20388,10 +20547,10 @@
         "state": "QLD",
         "program_name": "Community and Youth Justice Services and Aboriginal and Torres Strait Islander Services",
         "recipient_name": "Saule Ltd",
-        "recipient_abn": null,
+        "recipient_abn": "84009675209",
         "total": 7000,
         "grants": 1,
-        "gs_id": null,
+        "gs_id": "AU-ABN-84009675209",
         "is_community_controlled": false
       },
       {
@@ -20538,10 +20697,10 @@
         "state": "QLD",
         "program_name": "Community and Youth Justice Services and Aboriginal and Torres Strait Islander Services",
         "recipient_name": "Seniornet Association Inc",
-        "recipient_abn": null,
+        "recipient_abn": "95360623241",
         "total": 5150,
         "grants": 2,
-        "gs_id": null,
+        "gs_id": "AU-ABN-95360623241",
         "is_community_controlled": false
       },
       {
@@ -20928,7 +21087,7 @@
         "state": "QLD",
         "program_name": "Community and Youth Justice Services and Aboriginal and Torres Strait Islander Services",
         "recipient_name": "Sudanese Community Association of Queensland Inc",
-        "recipient_abn": null,
+        "recipient_abn": "89269237237",
         "total": 3000,
         "grants": 1,
         "gs_id": "AU-ABN-27944779718",
@@ -21178,7 +21337,7 @@
         "state": "QLD",
         "program_name": "Community and Youth Justice Services and Aboriginal and Torres Strait Islander Services",
         "recipient_name": "Mackay Maltese Club Incorporated",
-        "recipient_abn": null,
+        "recipient_abn": "98591078697",
         "total": 2357,
         "grants": 1,
         "gs_id": "AU-ABN-98591078697",
@@ -21348,10 +21507,10 @@
         "state": "QLD",
         "program_name": "Community and Youth Justice Services and Aboriginal and Torres Strait Islander Services",
         "recipient_name": "Avoca Outside School Hours Care Inc",
-        "recipient_abn": null,
+        "recipient_abn": "15349586793",
         "total": 1534,
         "grants": 1,
-        "gs_id": null,
+        "gs_id": "AU-ABN-15349586793",
         "is_community_controlled": false
       },
       {
@@ -21838,7 +21997,7 @@
         "state": "QLD",
         "program_name": "Community, Youth Justice Services and Women",
         "recipient_name": "Hervey Bay Neighbourhood Centre Inc",
-        "recipient_abn": null,
+        "recipient_abn": "34683873965",
         "total": 1205688,
         "grants": 1,
         "gs_id": "AU-ABN-85163573388",
@@ -22858,10 +23017,10 @@
         "state": "QLD",
         "program_name": "Community, Youth Justice Services and Women",
         "recipient_name": "NAMTEC Inc",
-        "recipient_abn": null,
+        "recipient_abn": "61482645004",
         "total": 285794,
         "grants": 1,
-        "gs_id": null,
+        "gs_id": "AU-ABN-61482645004",
         "is_community_controlled": false
       },
       {
@@ -24328,10 +24487,10 @@
         "state": "QLD",
         "program_name": "Community, Youth Justice Services and Women",
         "recipient_name": "Ethnic Communities Council of Queensland Ltd",
-        "recipient_abn": null,
+        "recipient_abn": "55010151256",
         "total": 94838,
         "grants": 1,
-        "gs_id": null,
+        "gs_id": "AU-ABN-55010151256",
         "is_community_controlled": false
       },
       {
@@ -25708,10 +25867,10 @@
         "state": "QLD",
         "program_name": "Community, Youth Justice Services and Women",
         "recipient_name": "Seniornet Association Inc",
-        "recipient_abn": null,
+        "recipient_abn": "95360623241",
         "total": 2802,
         "grants": 1,
-        "gs_id": null,
+        "gs_id": "AU-ABN-95360623241",
         "is_community_controlled": false
       },
       {
@@ -25856,32 +26015,12 @@
       },
       {
         "state": "QLD",
-        "program_name": "Community, Youth Justice Services and Women",
-        "recipient_name": "2",
-        "recipient_abn": null,
-        "total": 523,
-        "grants": 1,
-        "gs_id": null,
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
         "program_name": "DJAG 592.1718 Women Bail Support Program",
         "recipient_name": "Sisters Inside Ic.",
         "recipient_abn": "94859410728",
         "total": 1639501,
         "grants": 2,
         "gs_id": "AU-ABN-94859410728",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "DYJVS Contract",
-        "recipient_name": "DELL AUSTRALIA PTY LTD",
-        "recipient_abn": "",
-        "total": 10107,
-        "grants": 1,
-        "gs_id": "AU-ABN-46003855561",
         "is_community_controlled": false
       },
       {
@@ -26346,1886 +26485,6 @@
       },
       {
         "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "SIMPLY PERFECT WHOLESALE",
-        "recipient_abn": "42099367336",
-        "total": 291500,
-        "grants": 1,
-        "gs_id": "AU-ABN-42099367336",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "BYLOED PTY LTD",
-        "recipient_abn": "40608855739",
-        "total": 214458,
-        "grants": 7,
-        "gs_id": "AU-ABN-40608855739",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "HOMESTYLE BAKERIES PTY LTD",
-        "recipient_abn": "94151732395",
-        "total": 197500,
-        "grants": 1,
-        "gs_id": "AU-ABN-94151732395",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "CATHOLIC CARE CENTRAL QUEENSLAND",
-        "recipient_abn": "90507529241",
-        "total": 165000,
-        "grants": 1,
-        "gs_id": "AU-ABN-90507529241",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "WFS AUSTRALIA PTY LIMITED",
-        "recipient_abn": "82101255387",
-        "total": 141713,
-        "grants": 4,
-        "gs_id": "AU-ABN-82101255387",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "CS ENERGY LTD",
-        "recipient_abn": "54078848745",
-        "total": 104191,
-        "grants": 3,
-        "gs_id": "AU-ABN-54078848745",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "AVANADE AUSTRALIA PTY LTD",
-        "recipient_abn": "58093925207",
-        "total": 69935,
-        "grants": 1,
-        "gs_id": "AU-ABN-58093925207",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "DATA #3 LTD",
-        "recipient_abn": "31010545267",
-        "total": 59265,
-        "grants": 2,
-        "gs_id": "AU-ABN-31010545267",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "EVINACT PTY LTD",
-        "recipient_abn": "78154924393",
-        "total": 57750,
-        "grants": 1,
-        "gs_id": "AU-ABN-78154924393",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "BARBER B PTY LTD",
-        "recipient_abn": "76835721841",
-        "total": 53361,
-        "grants": 1,
-        "gs_id": "AU-ABN-76835721841",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "KINNECT PTY LTD",
-        "recipient_abn": "31114691860",
-        "total": 49975,
-        "grants": 2,
-        "gs_id": "AU-ABN-31114691860",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "IPA BY SYNERGIE PTY LTD",
-        "recipient_abn": "22674660685",
-        "total": 49500,
-        "grants": 1,
-        "gs_id": "AU-ABN-22674660685",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "RDO EQUIPMENT PTY LTD",
-        "recipient_abn": "58060286759",
-        "total": 48047,
-        "grants": 1,
-        "gs_id": "AU-ABN-58060286759",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "LEADERSHIP LEARNING ACADEMY",
-        "recipient_abn": "93634946240",
-        "total": 46200,
-        "grants": 1,
-        "gs_id": "AU-ABN-93634946240",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "HAYS SPECIALIST RECRUITMENT",
-        "recipient_abn": "47001407281",
-        "total": 44000,
-        "grants": 1,
-        "gs_id": "AU-ABN-47001407281",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "PEAK USABILITY PTY LTD",
-        "recipient_abn": "33018701610",
-        "total": 43972,
-        "grants": 2,
-        "gs_id": "AU-ABN-33018701610",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "BURLEIGH MARR DISTRIBUTIONS PTY LTD",
-        "recipient_abn": "88009966465",
-        "total": 42917,
-        "grants": 4,
-        "gs_id": "AU-ABN-88009966465",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "KOBEL PTY LTD",
-        "recipient_abn": "63920718560",
-        "total": 38277,
-        "grants": 3,
-        "gs_id": "AU-ABN-63920718560",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "ABECCA HEALTHCARE LTD",
-        "recipient_abn": "81911904647",
-        "total": 37381,
-        "grants": 1,
-        "gs_id": "AU-ABN-81911904647",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "WINC AUSTRALIA PTY LIMITED",
-        "recipient_abn": "94000728398",
-        "total": 37152,
-        "grants": 1,
-        "gs_id": "AU-ABN-94000728398",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "ALIGNED CORPORATE RESIDENCES",
-        "recipient_abn": "45198377462",
-        "total": 36150,
-        "grants": 2,
-        "gs_id": "AU-ABN-45198377462",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "CASTLE CREST MOTEL",
-        "recipient_abn": "11610093700",
-        "total": 33320,
-        "grants": 1,
-        "gs_id": "AU-ABN-11610093700",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "BUSINESS ASPECT GROUP PTY LTD",
-        "recipient_abn": "73149208131",
-        "total": 32929,
-        "grants": 1,
-        "gs_id": "AU-ABN-11112888785",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "COMMEX COMMUNICATIONS CORP P/L",
-        "recipient_abn": "30010905718",
-        "total": 32188,
-        "grants": 1,
-        "gs_id": "AU-ABN-30010905718",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "T SHIRT SUPPLY",
-        "recipient_abn": "45955161099",
-        "total": 31625,
-        "grants": 1,
-        "gs_id": "AU-ABN-45955161099",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "BLUE KNOT FOUNDATION",
-        "recipient_abn": "49072260005",
-        "total": 30668,
-        "grants": 2,
-        "gs_id": "AU-ABN-49072260005",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "EMPLOYER BRANDING AUSTRALIA PTY LTD",
-        "recipient_abn": "19624326370",
-        "total": 29920,
-        "grants": 1,
-        "gs_id": "AU-ABN-19624326370",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "AEDANNA PTY LTD",
-        "recipient_abn": "15640339242",
-        "total": 29051,
-        "grants": 1,
-        "gs_id": "AU-ABN-15640339242",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "THE AUSTRALIA AND NEW ZEALAND",
-        "recipient_abn": "69102908118",
-        "total": 28623,
-        "grants": 1,
-        "gs_id": "AU-ABN-69102908118",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "COMPLETE BROADBAND NETWORKS",
-        "recipient_abn": "24652146820",
-        "total": 28053,
-        "grants": 1,
-        "gs_id": "AU-ABN-24652146820",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "SHIFTWORK SOLUTIONS PTY LTD",
-        "recipient_abn": "74083056240",
-        "total": 26793,
-        "grants": 1,
-        "gs_id": "AU-ABN-74083056240",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "TOWNSVILLE CLEANING CONTRACTORS",
-        "recipient_abn": "42470964961",
-        "total": 26400,
-        "grants": 1,
-        "gs_id": "AU-ABN-42470964961",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "RPS AAP CONSULTING PTY LTD",
-        "recipient_abn": "97117883173",
-        "total": 23480,
-        "grants": 1,
-        "gs_id": "AU-ABN-97117883173",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "QTK GROUP PTY LTD",
-        "recipient_abn": "18163502332",
-        "total": 22404,
-        "grants": 1,
-        "gs_id": "AU-ABN-18163502332",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "COMPASS SEMINARS PTY LTD",
-        "recipient_abn": "47143889203",
-        "total": 21620,
-        "grants": 2,
-        "gs_id": "AU-ABN-47143889203",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "TACTICAL DISTRIBUTORS PTY LTD",
-        "recipient_abn": "85667244144",
-        "total": 21284,
-        "grants": 1,
-        "gs_id": "AU-ABN-85667244144",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "COMPLETE OFFICE SUPPLIES PTY LTD",
-        "recipient_abn": "92001634715",
-        "total": 20039,
-        "grants": 1,
-        "gs_id": "AU-ABN-92001634715",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "QUEENSLAND ABORIGINAL & TORRES",
-        "recipient_abn": "21132666525",
-        "total": 20000,
-        "grants": 1,
-        "gs_id": "AU-ABN-21132666525",
-        "is_community_controlled": true
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "SCENIC RIM EVENT CATERING",
-        "recipient_abn": "70653746517",
-        "total": 18451,
-        "grants": 1,
-        "gs_id": "AU-ABN-70653746517",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "RANDSTAD PTY LTD",
-        "recipient_abn": "28080275378",
-        "total": 18070,
-        "grants": 1,
-        "gs_id": "AU-ABN-28080275378",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "INSTITUTE OF MANAGERS & LEADERS LTD",
-        "recipient_abn": "31163376921",
-        "total": 13464,
-        "grants": 1,
-        "gs_id": "AU-ABN-31163376921",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "LUMINARY CONSULTING GROUP PTY LTD",
-        "recipient_abn": "84631651913",
-        "total": 13200,
-        "grants": 1,
-        "gs_id": "AU-ABN-84631651913",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "MACARTHUR & ASSOCIATES PTY LTD",
-        "recipient_abn": "20105116336",
-        "total": 12870,
-        "grants": 1,
-        "gs_id": "AU-ABN-20105116336",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "ISCARIOT MEDIA PTY LTD",
-        "recipient_abn": "32606647438",
-        "total": 12716,
-        "grants": 1,
-        "gs_id": "AU-ABN-32606647438",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "KIRSTEN MARY MACGREGOR",
-        "recipient_abn": "57215224911",
-        "total": 12540,
-        "grants": 1,
-        "gs_id": "AU-ABN-57215224911",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "ORIGIN ENERGY SERVICES LTD",
-        "recipient_abn": "22078868425",
-        "total": 11503,
-        "grants": 1,
-        "gs_id": "AU-ABN-22078868425",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "O'CONNOR MARSDEN & ASSOCIATES",
-        "recipient_abn": "94135783792",
-        "total": 11338,
-        "grants": 1,
-        "gs_id": "AU-ABN-94135783792",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "COMSEC TR PTY LTD",
-        "recipient_abn": "40051658569",
-        "total": 11005,
-        "grants": 1,
-        "gs_id": "AU-ABN-40051658569",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "CABCHARGE PAYMENTS PTY LTD",
-        "recipient_abn": "22615032427",
-        "total": 10645,
-        "grants": 1,
-        "gs_id": "AU-ABN-22615032427",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods & Services",
-        "recipient_name": "KENT RELOCATION SERVICES",
-        "recipient_abn": "54712591719",
-        "total": 10040,
-        "grants": 1,
-        "gs_id": "AU-ABN-54712591719",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "AMERICAN EXPRESS AUSTRALIA LTD",
-        "recipient_abn": "92108952085",
-        "total": 2282381,
-        "grants": 16,
-        "gs_id": "AU-ABN-92108952085",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "DATA #3 LTD",
-        "recipient_abn": "31010545267",
-        "total": 2049846,
-        "grants": 19,
-        "gs_id": "AU-ABN-31010545267",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "OHANA EDUCATION LTD",
-        "recipient_abn": "86633799124",
-        "total": 1650000,
-        "grants": 1,
-        "gs_id": "AU-ABN-86633799124",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "PROTECT ALL CHILDREN TODAY INC",
-        "recipient_abn": "38133812087",
-        "total": 1568208,
-        "grants": 2,
-        "gs_id": "AU-ABN-38133812087",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "BIDFOOD RICHLANDS",
-        "recipient_abn": "88009966465",
-        "total": 1409289,
-        "grants": 2,
-        "gs_id": "AU-ABN-88009966465",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "DFP RECRUITMENT SERVICES PTY LTD",
-        "recipient_abn": "66394749447",
-        "total": 1347094,
-        "grants": 3,
-        "gs_id": "AU-ABN-66394749447",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "ALLEGIS GLOBAL SOLUTIONS",
-        "recipient_abn": "70600569784",
-        "total": 1204530,
-        "grants": 14,
-        "gs_id": "AU-ABN-70600569784",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "EVINACT PTY LTD",
-        "recipient_abn": "78154924393",
-        "total": 1097118,
-        "grants": 1,
-        "gs_id": "AU-ABN-78154924393",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "QUEENSLAND HOMICIDE VICTIMS SUPPORT",
-        "recipient_abn": "88536686758",
-        "total": 1078169,
-        "grants": 2,
-        "gs_id": "AU-ABN-88536686758",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "ANGLISS TOOWOOMBA PTY LTD",
-        "recipient_abn": "51075259157",
-        "total": 976690,
-        "grants": 2,
-        "gs_id": "AU-ABN-51075259157",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "T SHIRT SUPPLY",
-        "recipient_abn": "45955161099",
-        "total": 928436,
-        "grants": 9,
-        "gs_id": "AU-ABN-45955161099",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "HUDSON GLOBAL RESOURCES (AUST)",
-        "recipient_abn": "21002888762",
-        "total": 780325,
-        "grants": 13,
-        "gs_id": "AU-ABN-21002888762",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "JINIBARA PEOPLE ABORIGINAL",
-        "recipient_abn": "58910751482",
-        "total": 722201,
-        "grants": 4,
-        "gs_id": "AU-ABN-58910751482",
-        "is_community_controlled": true
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "BUSINESS ASPECT GROUP PTY LTD",
-        "recipient_abn": "73149208131",
-        "total": 642176,
-        "grants": 7,
-        "gs_id": "AU-ABN-11112888785",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "CS ENERGY LTD",
-        "recipient_abn": "54078848745",
-        "total": 632659,
-        "grants": 20,
-        "gs_id": "AU-ABN-54078848745",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "WWILD - SEXUAL VIOLENCE PREVENTION",
-        "recipient_abn": "54632973121",
-        "total": 552152,
-        "grants": 2,
-        "gs_id": "AU-ABN-54632973121",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "COMSEC TR PTY LTD",
-        "recipient_abn": "40051658569",
-        "total": 517089,
-        "grants": 8,
-        "gs_id": "AU-ABN-40051658569",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "RESOLVE SOFTWARE GROUP PTY LTD",
-        "recipient_abn": "87063320696",
-        "total": 408125,
-        "grants": 2,
-        "gs_id": "AU-ABN-87063320696",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "FORTIO ITO PTY LTD",
-        "recipient_abn": "32685150592",
-        "total": 397974,
-        "grants": 13,
-        "gs_id": "AU-ABN-32685150592",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "HARRY'S SHOES PLUS",
-        "recipient_abn": "42005057572",
-        "total": 357500,
-        "grants": 2,
-        "gs_id": "AU-ABN-42005057572",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "AXON PUBLIC SAFETY AUSTRALIA PTY LT",
-        "recipient_abn": "34610970342",
-        "total": 336572,
-        "grants": 4,
-        "gs_id": "AU-ABN-34610970342",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "ROBERT WALTERS PTY LTD",
-        "recipient_abn": "18079521618",
-        "total": 291289,
-        "grants": 20,
-        "gs_id": "AU-ABN-18079521618",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "FORTIO ITO",
-        "recipient_abn": "32685150592",
-        "total": 277944,
-        "grants": 10,
-        "gs_id": "AU-ABN-32685150592",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "WINC AUSTRALIA PTY LIMITED",
-        "recipient_abn": "94000728398",
-        "total": 225454,
-        "grants": 6,
-        "gs_id": "AU-ABN-94000728398",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "CASTLE CREST MOTEL",
-        "recipient_abn": "11610093700",
-        "total": 212688,
-        "grants": 6,
-        "gs_id": "AU-ABN-11610093700",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "HOMESTYLE BAKERIES PTY LTD",
-        "recipient_abn": "94151732395",
-        "total": 201300,
-        "grants": 1,
-        "gs_id": "AU-ABN-94151732395",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "VML AUSTRALIA PTY LIMITED",
-        "recipient_abn": "67117645708",
-        "total": 201163,
-        "grants": 2,
-        "gs_id": "AU-ABN-67117645708",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "INFOXCHANGE",
-        "recipient_abn": "74457506140",
-        "total": 189175,
-        "grants": 8,
-        "gs_id": "AU-ABN-74457506140",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "KINNECT PTY LTD",
-        "recipient_abn": "31114691860",
-        "total": 189160,
-        "grants": 9,
-        "gs_id": "AU-ABN-31114691860",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "SIMBA TEXTILE MILLS PTY LTD",
-        "recipient_abn": "79006336723",
-        "total": 180700,
-        "grants": 3,
-        "gs_id": "AU-ABN-79006336723",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "MULTI-HEALTH SYSTEMS INC",
-        "recipient_abn": "N/A",
-        "total": 178384,
-        "grants": 1,
-        "gs_id": "AU-ABN-N/A",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "LOGBOOK ME PTY LTD",
-        "recipient_abn": "23165232520",
-        "total": 178200,
-        "grants": 1,
-        "gs_id": "AU-ABN-23165232520",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "BURLEIGH MARR DISTRIBUTIONS PTY LTD",
-        "recipient_abn": "88009966465",
-        "total": 165887,
-        "grants": 15,
-        "gs_id": "AU-ABN-88009966465",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "CATHOLIC CARE CENTRAL QUEENSLAND",
-        "recipient_abn": "90507529241",
-        "total": 165000,
-        "grants": 1,
-        "gs_id": "AU-ABN-90507529241",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "TRIPLE B INDUSTRIES PTY LTD",
-        "recipient_abn": "21125545815",
-        "total": 161040,
-        "grants": 7,
-        "gs_id": "AU-ABN-21125545815",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "LACTALIS AUSTRALIA PTY LTD",
-        "recipient_abn": "56072928879",
-        "total": 151201,
-        "grants": 2,
-        "gs_id": "AU-ABN-56072928879",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "SKYNET SATELLITE COMMUNICATIONS",
-        "recipient_abn": "29101529702",
-        "total": 148955,
-        "grants": 1,
-        "gs_id": "AU-ABN-29101529702",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "JIM JOHNSTON AGENCIES",
-        "recipient_abn": "78431650757",
-        "total": 135432,
-        "grants": 4,
-        "gs_id": "AU-ABN-78431650757",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "GRIFFITH UNIVERSITY",
-        "recipient_abn": "78106094461",
-        "total": 123516,
-        "grants": 5,
-        "gs_id": "AU-ABN-78106094461",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "GSA MANAGEMENT CONSULTING PTY LTD",
-        "recipient_abn": "67633143414",
-        "total": 120375,
-        "grants": 2,
-        "gs_id": "AU-ABN-67633143414",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "CABCHARGE PAYMENTS PTY LTD",
-        "recipient_abn": "22615032427",
-        "total": 115510,
-        "grants": 6,
-        "gs_id": "AU-ABN-22615032427",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "AUSTRALIAN INDIGENOUS GOVERNANCE",
-        "recipient_abn": "87158627386",
-        "total": 113058,
-        "grants": 2,
-        "gs_id": "AU-ABN-87158627386",
-        "is_community_controlled": true
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "BDO SERVICES PTY LTD",
-        "recipient_abn": "45134242434",
-        "total": 111641,
-        "grants": 4,
-        "gs_id": "AU-ABN-45134242434",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "APPLE PTY LIMITED",
-        "recipient_abn": "46002510054",
-        "total": 110008,
-        "grants": 7,
-        "gs_id": "AU-ABN-46002510054",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "NOUS GROUP PTY LTD",
-        "recipient_abn": "66086210344",
-        "total": 106975,
-        "grants": 4,
-        "gs_id": "AU-ABN-66086210344",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "O'CONNOR MARSDEN & ASSOCIATES",
-        "recipient_abn": "94135783792",
-        "total": 105269,
-        "grants": 8,
-        "gs_id": "AU-ABN-94135783792",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "KOBEL PTY LTD",
-        "recipient_abn": "63920718560",
-        "total": 101175,
-        "grants": 8,
-        "gs_id": "AU-ABN-63920718560",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "THE UNIVERSITY OF QUEENSLAND",
-        "recipient_abn": "63942912684",
-        "total": 99037,
-        "grants": 3,
-        "gs_id": "AU-ABN-63942912684",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "THE DISTRIBUTORS BRISBANE",
-        "recipient_abn": "21339602307",
-        "total": 98450,
-        "grants": 1,
-        "gs_id": "AU-ABN-21339602307",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "EMPLOYER BRANDING AUSTRALIA PTY LTD",
-        "recipient_abn": "19624326370",
-        "total": 95535,
-        "grants": 1,
-        "gs_id": "AU-ABN-19624326370",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "THESOCO PTY LTD",
-        "recipient_abn": "87166205287",
-        "total": 93673,
-        "grants": 2,
-        "gs_id": "AU-ABN-87166205287",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "RPS AAP CONSULTING PTY LTD",
-        "recipient_abn": "97117883173",
-        "total": 86927,
-        "grants": 1,
-        "gs_id": "AU-ABN-97117883173",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "DELL AUSTRALIA PTY LTD",
-        "recipient_abn": "46003855561",
-        "total": 79662,
-        "grants": 1,
-        "gs_id": "AU-ABN-46003855561",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "DENSTOCK AUSTRALIA PTY LTD",
-        "recipient_abn": "91139103067",
-        "total": 71996,
-        "grants": 3,
-        "gs_id": "AU-ABN-91139103067",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "PREMIER CONTACT POINT PTY LTD",
-        "recipient_abn": "25639746464",
-        "total": 68297,
-        "grants": 1,
-        "gs_id": "AU-ABN-25639746464",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "ERNST & YOUNG",
-        "recipient_abn": "75288172749",
-        "total": 66380,
-        "grants": 4,
-        "gs_id": "AU-ABN-75288172749",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "ENVIRO-FOAM QUEENSLAND",
-        "recipient_abn": "51843079789",
-        "total": 66238,
-        "grants": 3,
-        "gs_id": "AU-ABN-51843079789",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "INCORPORATE SPACE",
-        "recipient_abn": "73117227764",
-        "total": 64051,
-        "grants": 2,
-        "gs_id": "AU-ABN-73117227764",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "COMPLETE OFFICE SUPPLIES PTY LTD",
-        "recipient_abn": "92001634715",
-        "total": 60217,
-        "grants": 4,
-        "gs_id": "AU-ABN-92001634715",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "ALIGNED CORPORATE RESIDENCES",
-        "recipient_abn": "45198377462",
-        "total": 60000,
-        "grants": 2,
-        "gs_id": "AU-ABN-45198377462",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "SIMPLY PERFECT WHOLESALE",
-        "recipient_abn": "42099367336",
-        "total": 56980,
-        "grants": 1,
-        "gs_id": "AU-ABN-42099367336",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "AUSTRALIA POST",
-        "recipient_abn": "28864970579",
-        "total": 56713,
-        "grants": 3,
-        "gs_id": "AU-ABN-28864970579",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "ORIGIN ENERGY SERVICES LTD",
-        "recipient_abn": "22078868425",
-        "total": 53332,
-        "grants": 3,
-        "gs_id": "AU-ABN-22078868425",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "DIGGERMAN TRAINING",
-        "recipient_abn": "35111341621",
-        "total": 51040,
-        "grants": 1,
-        "gs_id": "AU-ABN-35111341621",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "COMMEX COMMUNICATIONS CORP P/L",
-        "recipient_abn": "30010905718",
-        "total": 50146,
-        "grants": 2,
-        "gs_id": "AU-ABN-30010905718",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "HAYS SPECIALIST RECRUITMENT",
-        "recipient_abn": "47001407281",
-        "total": 49500,
-        "grants": 1,
-        "gs_id": "AU-ABN-47001407281",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "WFS AUSTRALIA PTY LIMITED",
-        "recipient_abn": "82101255387",
-        "total": 49500,
-        "grants": 1,
-        "gs_id": "AU-ABN-82101255387",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "LIQUID LEARNING GROUP PTY LTD",
-        "recipient_abn": "78108415354",
-        "total": 47174,
-        "grants": 1,
-        "gs_id": "AU-ABN-78108415354",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "COMPASS SEMINARS PTY LTD",
-        "recipient_abn": "47143889203",
-        "total": 45936,
-        "grants": 1,
-        "gs_id": "AU-ABN-47143889203",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "PEAK USABILITY PTY LTD",
-        "recipient_abn": "33018701610",
-        "total": 44254,
-        "grants": 2,
-        "gs_id": "AU-ABN-33018701610",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "AUSTRALIAN INSTITUTE OF COMPANY",
-        "recipient_abn": "11008484197",
-        "total": 44088,
-        "grants": 1,
-        "gs_id": "AU-ABN-11008484197",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "ACUMENTIS PTY LTD",
-        "recipient_abn": "30109670671",
-        "total": 44000,
-        "grants": 1,
-        "gs_id": "AU-ABN-30109670671",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "STOWE AUSTRALIA PTY LTD",
-        "recipient_abn": "27002556603",
-        "total": 43450,
-        "grants": 1,
-        "gs_id": "AU-ABN-27002556603",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "MINTER ELLISON",
-        "recipient_abn": "91556716819",
-        "total": 42056,
-        "grants": 2,
-        "gs_id": "AU-ABN-91556716819",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "J J RICHARDS & SONS PTY LTD",
-        "recipient_abn": "40000805425",
-        "total": 41543,
-        "grants": 4,
-        "gs_id": "AU-ABN-40000805425",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "PSYCHOLOGICAL ASSESSMENTS PTY LTD",
-        "recipient_abn": "46634350673",
-        "total": 38500,
-        "grants": 2,
-        "gs_id": "AU-ABN-46634350673",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "LUMINARY CONSULTING GROUP PTY LTD",
-        "recipient_abn": "84631651913",
-        "total": 37730,
-        "grants": 3,
-        "gs_id": "AU-ABN-84631651913",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "ST JOHN AMBULANCE AUSTRALIA",
-        "recipient_abn": "74264019231",
-        "total": 35129,
-        "grants": 1,
-        "gs_id": "AU-ABN-74264019231",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "CHRISTIE SYSTEMS SERVICES PTY LTD",
-        "recipient_abn": "91216872161",
-        "total": 34973,
-        "grants": 1,
-        "gs_id": "AU-ABN-91216872161",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "AIREY ELECTRICAL PTY LTD",
-        "recipient_abn": "91090716993",
-        "total": 34474,
-        "grants": 1,
-        "gs_id": "AU-ABN-91090716993",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "PROMINENCE PTY LTD",
-        "recipient_abn": "18105997715",
-        "total": 33880,
-        "grants": 1,
-        "gs_id": "AU-ABN-18105997715",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "IPA BY SYNERGIE PTY LTD",
-        "recipient_abn": "22674660685",
-        "total": 33000,
-        "grants": 1,
-        "gs_id": "AU-ABN-22674660685",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "OUR COMMUNITY PTY LTD",
-        "recipient_abn": "24094608705",
-        "total": 32850,
-        "grants": 1,
-        "gs_id": "AU-ABN-24094608705",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "ALLIANCE REHABILITATION PTY LTD",
-        "recipient_abn": "72610810921",
-        "total": 31845,
-        "grants": 2,
-        "gs_id": "AU-ABN-72610810921",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "HELLO MONDAY PTY LTD",
-        "recipient_abn": "48627853758",
-        "total": 30393,
-        "grants": 2,
-        "gs_id": "AU-ABN-48627853758",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "STRIVE OCCUPATIONAL REHABILITATION",
-        "recipient_abn": "74110180240",
-        "total": 29330,
-        "grants": 1,
-        "gs_id": "AU-ABN-74110180240",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "MACARTHUR & ASSOCIATES PTY LTD",
-        "recipient_abn": "20105116336",
-        "total": 29150,
-        "grants": 2,
-        "gs_id": "AU-ABN-20105116336",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "MERIT SOLUTIONS PTY LTD",
-        "recipient_abn": "76995128987",
-        "total": 27687,
-        "grants": 1,
-        "gs_id": "AU-ABN-76995128987",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "SHIFTWORK SOLUTIONS PTY LTD",
-        "recipient_abn": "74083056240",
-        "total": 27607,
-        "grants": 1,
-        "gs_id": "AU-ABN-74083056240",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "BEYOND THE PALE INDIGENOUS CORP",
-        "recipient_abn": "89376950238",
-        "total": 27500,
-        "grants": 1,
-        "gs_id": "AU-ABN-89376950238",
-        "is_community_controlled": true
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "GO YELLOW PTY LTD",
-        "recipient_abn": "52602519746",
-        "total": 27500,
-        "grants": 1,
-        "gs_id": "AU-ABN-52602519746",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "BYLOED PTY LTD",
-        "recipient_abn": "40608855739",
-        "total": 27230,
-        "grants": 1,
-        "gs_id": "AU-ABN-40608855739",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "HOCAEIT FAMILY TRUST NO 2",
-        "recipient_abn": "80835359303",
-        "total": 27170,
-        "grants": 1,
-        "gs_id": "AU-ABN-80835359303",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "INSTITUTE OF MANAGERS & LEADERS LTD",
-        "recipient_abn": "31163376921",
-        "total": 26928,
-        "grants": 2,
-        "gs_id": "AU-ABN-31163376921",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "PETER O'CONNOR",
-        "recipient_abn": "19577552904",
-        "total": 26447,
-        "grants": 1,
-        "gs_id": "AU-ABN-19577552904",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "FRONTLINE MENTAL HEALTH PTY LTD",
-        "recipient_abn": "14665516932",
-        "total": 26345,
-        "grants": 1,
-        "gs_id": "AU-ABN-14665516932",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "SMOKE CREATIVE PTY LTD",
-        "recipient_abn": "38114779814",
-        "total": 25534,
-        "grants": 2,
-        "gs_id": "AU-ABN-38114779814",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "ISCARIOT MEDIA PTY LTD",
-        "recipient_abn": "32606647438",
-        "total": 25432,
-        "grants": 1,
-        "gs_id": "AU-ABN-32606647438",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "MCGRATHNICOL ADVISORY PARTNERSHIP",
-        "recipient_abn": "34824776937",
-        "total": 25355,
-        "grants": 1,
-        "gs_id": "AU-ABN-34824776937",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "MOTOROLA SOLUTIONS PTY LTD",
-        "recipient_abn": "16004742312",
-        "total": 24955,
-        "grants": 1,
-        "gs_id": "AU-ABN-16004742312",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "ERGON ENERGY",
-        "recipient_abn": "11121177802",
-        "total": 24203,
-        "grants": 2,
-        "gs_id": "AU-ABN-11121177802",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "THE AUSTRALIA AND NEW ZEALAND",
-        "recipient_abn": "69102908118",
-        "total": 22990,
-        "grants": 1,
-        "gs_id": "AU-ABN-69102908118",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "COMMUNITY CATERING PEOPLE P/L",
-        "recipient_abn": "36657183303",
-        "total": 22753,
-        "grants": 2,
-        "gs_id": "AU-ABN-36657183303",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "QTK GROUP PTY LTD",
-        "recipient_abn": "18163502332",
-        "total": 22404,
-        "grants": 1,
-        "gs_id": "AU-ABN-18163502332",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "AVANADE AUSTRALIA PTY LTD",
-        "recipient_abn": "58093925207",
-        "total": 20946,
-        "grants": 1,
-        "gs_id": "AU-ABN-58093925207",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "WORKFOCUS AUSTRALIA PTY LTD",
-        "recipient_abn": "87085105657",
-        "total": 20900,
-        "grants": 1,
-        "gs_id": "AU-ABN-87085105657",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "DEAKIN UNIVERSITY",
-        "recipient_abn": "56721584203",
-        "total": 19030,
-        "grants": 1,
-        "gs_id": "AU-ABN-56721584203",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "IPAA QUEENSLAND",
-        "recipient_abn": "74210810471",
-        "total": 18150,
-        "grants": 1,
-        "gs_id": "AU-ABN-74210810471",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "2M LANGUAGE SERVICES",
-        "recipient_abn": "75120503764",
-        "total": 17160,
-        "grants": 1,
-        "gs_id": "AU-ABN-75120503764",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "RAPP AUSTRALIA PTY LTD",
-        "recipient_abn": "35054189365",
-        "total": 16885,
-        "grants": 1,
-        "gs_id": "AU-ABN-35054189365",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "COOGEE QCA PTY LTD",
-        "recipient_abn": "54009985326",
-        "total": 16500,
-        "grants": 1,
-        "gs_id": "AU-ABN-54009985326",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "RDO EQUIPMENT PTY LTD",
-        "recipient_abn": "58060286759",
-        "total": 16500,
-        "grants": 1,
-        "gs_id": "AU-ABN-58060286759",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "THE TRUSTEE FOR HAWA DANE UNIT TRUS",
-        "recipient_abn": "33268623611",
-        "total": 16500,
-        "grants": 1,
-        "gs_id": "AU-ABN-33268623611",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "CEE'Z BARBERSHOP",
-        "recipient_abn": "33167421136",
-        "total": 15246,
-        "grants": 1,
-        "gs_id": "AU-ABN-33167421136",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "LEADERSHIP LEARNING ACADEMY",
-        "recipient_abn": "93634946240",
-        "total": 15000,
-        "grants": 1,
-        "gs_id": "AU-ABN-93634946240",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "THE TERVO COMPANY PTY LTD",
-        "recipient_abn": "16681046239",
-        "total": 14708,
-        "grants": 1,
-        "gs_id": "AU-ABN-16681046239",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "PINKERTON",
-        "recipient_abn": "54623798925",
-        "total": 14298,
-        "grants": 1,
-        "gs_id": "AU-ABN-54623798925",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "FORKS 4 U PTY LTD",
-        "recipient_abn": "27090869828",
-        "total": 14206,
-        "grants": 1,
-        "gs_id": "AU-ABN-27090869828",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "ABECCA HEALTHCARE LTD",
-        "recipient_abn": "81911904647",
-        "total": 13814,
-        "grants": 1,
-        "gs_id": "AU-ABN-81911904647",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "STRATEGIC MANAGEMENT",
-        "recipient_abn": "64072631559",
-        "total": 13613,
-        "grants": 1,
-        "gs_id": "AU-ABN-64072631559",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "KIRSTEN MARY MACGREGOR",
-        "recipient_abn": "57215224911",
-        "total": 13283,
-        "grants": 1,
-        "gs_id": "AU-ABN-57215224911",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "BPROMO",
-        "recipient_abn": "46153432154",
-        "total": 12513,
-        "grants": 1,
-        "gs_id": "AU-ABN-46153432154",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "YARN CORPORATE",
-        "recipient_abn": "46153432154",
-        "total": 12513,
-        "grants": 1,
-        "gs_id": "AU-ABN-46153432154",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "KSQ KEYWATCH SYSTEMS QUEENSLAND",
-        "recipient_abn": "58668113595",
-        "total": 12474,
-        "grants": 1,
-        "gs_id": "AU-ABN-58668113595",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "DEZIGNA IMPRESSION PTY LTD",
-        "recipient_abn": "42602543564",
-        "total": 12425,
-        "grants": 1,
-        "gs_id": "AU-ABN-42602543564",
-        "is_community_controlled": true
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "ASHDALE WORKPLACE SOLUTIONS",
-        "recipient_abn": "70106152103",
-        "total": 12321,
-        "grants": 1,
-        "gs_id": "AU-ABN-70106152103",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "USHER & SON SIGNS PTY LTD",
-        "recipient_abn": "73165995979",
-        "total": 12023,
-        "grants": 1,
-        "gs_id": "AU-ABN-73165995979",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "WELLBEING OPTIONS PSYCHOLOGY",
-        "recipient_abn": "26760803226",
-        "total": 11908,
-        "grants": 1,
-        "gs_id": "AU-ABN-26760803226",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "STEWART & HEATON CLOTHING CO",
-        "recipient_abn": "49282169771",
-        "total": 11632,
-        "grants": 1,
-        "gs_id": "AU-ABN-49282169771",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "SCENIC RIM EVENT CATERING",
-        "recipient_abn": "70653746517",
-        "total": 11432,
-        "grants": 1,
-        "gs_id": "AU-ABN-70653746517",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "TOWNSVILLE CLEANING CONTRACTORS",
-        "recipient_abn": "42470964961",
-        "total": 11314,
-        "grants": 1,
-        "gs_id": "AU-ABN-42470964961",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "TELUS HEALTH (AUSTRALIA) PTY LTD",
-        "recipient_abn": "45134449059",
-        "total": 11298,
-        "grants": 1,
-        "gs_id": "AU-ABN-45134449059",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "COOKERS BULK OIL SYSTEM PTY LTD",
-        "recipient_abn": "95351586097",
-        "total": 11000,
-        "grants": 1,
-        "gs_id": "AU-ABN-95351586097",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "FORENSIC CLINICAL PSYCHOLOGY CENTRE",
-        "recipient_abn": "98169867304",
-        "total": 11000,
-        "grants": 1,
-        "gs_id": "AU-ABN-98169867304",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "CONCENTRIC CONCEPTS",
-        "recipient_abn": "73140564723",
-        "total": 10614,
-        "grants": 1,
-        "gs_id": "AU-ABN-73140564723",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "NATIONAL ON SITE TRAINING",
-        "recipient_abn": "39089292375",
-        "total": 10098,
-        "grants": 1,
-        "gs_id": "AU-ABN-39089292375",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "ATOMIC IRRIGATION",
-        "recipient_abn": "51496617464",
-        "total": 10054,
-        "grants": 1,
-        "gs_id": "AU-ABN-51496617464",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "General Goods and Services",
-        "recipient_name": "BAYSIDE BELTS",
-        "recipient_abn": "62097295273",
-        "total": 3735,
-        "grants": 1,
-        "gs_id": "AU-ABN-62097295273",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
         "program_name": "GraffitiSTOP Clean Up Program 2014/15 — Community and Youth Justice Graffiti Clean-Up Trailer",
         "recipient_name": "Ipswich City Council",
         "recipient_abn": "61461981077",
@@ -28242,136 +26501,6 @@
         "total": 295665,
         "grants": 1,
         "gs_id": "AU-ABN-24622159264",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "Intensive Bail Initiative",
-        "recipient_name": "CatholicCare Social Services",
-        "recipient_abn": "77677848725",
-        "total": 1940000,
-        "grants": 1,
-        "gs_id": "AU-ABN-77677848725",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "Kickstarter Grants",
-        "recipient_name": "Central Queensland Indigenous Development",
-        "recipient_abn": "60110812489",
-        "total": 900000,
-        "grants": 1,
-        "gs_id": "AU-ABN-60110812489",
-        "is_community_controlled": true
-      },
-      {
-        "state": "QLD",
-        "program_name": "Kickstarter Grants",
-        "recipient_name": "Aspire Cairns Community Limited",
-        "recipient_abn": "15651164082",
-        "total": 300000,
-        "grants": 1,
-        "gs_id": "AU-ABN-15651164082",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "Kickstarter Grants",
-        "recipient_name": "Bori Muy LTD",
-        "recipient_abn": "43682387300",
-        "total": 300000,
-        "grants": 1,
-        "gs_id": "AU-ABN-43682387300",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "Kickstarter Grants",
-        "recipient_name": "Indigenous Mana Academy",
-        "recipient_abn": "82679578977",
-        "total": 300000,
-        "grants": 1,
-        "gs_id": "AU-ABN-82679578977",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "Kickstarter Grants",
-        "recipient_name": "Jabalbina Yalanji Aboriginal Corporation",
-        "recipient_abn": "79611886178",
-        "total": 300000,
-        "grants": 1,
-        "gs_id": "AU-ABN-79611886178",
-        "is_community_controlled": true
-      },
-      {
-        "state": "QLD",
-        "program_name": "Kickstarter Grants",
-        "recipient_name": "Prosocial Skills Development",
-        "recipient_abn": "26635173635",
-        "total": 290365,
-        "grants": 1,
-        "gs_id": "AU-ABN-26635173635",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "Kickstarter Grants",
-        "recipient_name": "Thrive and Connect",
-        "recipient_abn": "69677779029",
-        "total": 290000,
-        "grants": 1,
-        "gs_id": "AU-ABN-69677779029",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "Kickstarter Grants",
-        "recipient_name": "Desert Pea Association Inc",
-        "recipient_abn": "38854047029",
-        "total": 285223,
-        "grants": 1,
-        "gs_id": "AU-ABN-38854047029",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "Kickstarter Grants",
-        "recipient_name": "Brodie Germaine Fitness Aboriginal Corporation",
-        "recipient_abn": "94770726134",
-        "total": 280000,
-        "grants": 1,
-        "gs_id": "AU-ABN-94770726134",
-        "is_community_controlled": true
-      },
-      {
-        "state": "QLD",
-        "program_name": "Kickstarter Grants",
-        "recipient_name": "The Silver Lining Foundation",
-        "recipient_abn": "92625056108",
-        "total": 275000,
-        "grants": 1,
-        "gs_id": "AU-ABN-92625056108",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "Kickstarter Grants",
-        "recipient_name": "NQ Ummah Care",
-        "recipient_abn": "95636275075",
-        "total": 145712,
-        "grants": 1,
-        "gs_id": "AU-ABN-95636275075",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "Kickstarter Grants",
-        "recipient_name": "Lookout 07",
-        "recipient_abn": "87666455661",
-        "total": 131000,
-        "grants": 1,
-        "gs_id": "AU-ABN-87666455661",
         "is_community_controlled": false
       },
       {
@@ -28396,432 +26525,12 @@
       },
       {
         "state": "QLD",
-        "program_name": "Social Services",
-        "recipient_name": "The Corporation of the Synod of the Diocese of Brisbane",
-        "recipient_abn": "39906010979",
-        "total": 21595553,
-        "grants": 7,
-        "gs_id": "AU-ABN-32025287736",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "Social Services",
-        "recipient_name": "The Ted Noffs Foundation",
-        "recipient_abn": "49018049971",
-        "total": 16634362,
-        "grants": 4,
-        "gs_id": "AU-ABN-49018049971",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "Social Services",
-        "recipient_name": "Shine For Kids Limited",
-        "recipient_abn": "60662072775",
-        "total": 13308276,
-        "grants": 2,
-        "gs_id": "AU-ABN-60662072775",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "Social Services",
-        "recipient_name": "Life Without Barriers",
-        "recipient_abn": "15101252171",
-        "total": 12193996,
-        "grants": 2,
-        "gs_id": "AU-ABN-15101252171",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "Social Services",
-        "recipient_name": "Bridges Health & Community Care Ltd",
-        "recipient_abn": "45402866190",
-        "total": 11218954,
-        "grants": 5,
-        "gs_id": "AU-ABN-45402866190",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "Social Services",
-        "recipient_name": "Fearless Towards Success Ltd",
-        "recipient_abn": "67649238648",
-        "total": 6486884,
-        "grants": 1,
-        "gs_id": "AU-ABN-67649238648",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "Social Services",
-        "recipient_name": "Kurbingui Youth Development Limited",
-        "recipient_abn": "47298315697",
-        "total": 6471860,
-        "grants": 3,
-        "gs_id": "AU-ABN-47298315697",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "Social Services",
-        "recipient_name": "Save The Children Australia",
-        "recipient_abn": "99008610035",
-        "total": 6395051,
-        "grants": 7,
-        "gs_id": "AU-ABN-99008610035",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "Social Services",
-        "recipient_name": "Youth Insearch Foundation (Aust) Inc",
-        "recipient_abn": "31886363881",
-        "total": 5549496,
-        "grants": 1,
-        "gs_id": "AU-ABN-31886363881",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "Social Services",
-        "recipient_name": "Kokoda Youth Foundation",
-        "recipient_abn": "39367906920",
-        "total": 5546924,
-        "grants": 1,
-        "gs_id": "AU-ABN-39367906920",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "Social Services",
-        "recipient_name": "Gallang Place Aboriginal and Torres Strait Islanders Corporation",
-        "recipient_abn": "71168539263",
-        "total": 5407836,
-        "grants": 2,
-        "gs_id": "AU-ABN-71168539263",
-        "is_community_controlled": true
-      },
-      {
-        "state": "QLD",
-        "program_name": "Social Services",
-        "recipient_name": "Yabun Panjoo Aboriginal Corporation",
-        "recipient_abn": "78396852698",
-        "total": 5259189,
-        "grants": 1,
-        "gs_id": "AU-ABN-78396852698",
-        "is_community_controlled": true
-      },
-      {
-        "state": "QLD",
-        "program_name": "Social Services",
-        "recipient_name": "Central Queensland Indigenous Development Ltd",
-        "recipient_abn": "60110812489",
-        "total": 4615002,
-        "grants": 1,
-        "gs_id": "AU-ABN-60110812489",
-        "is_community_controlled": true
-      },
-      {
-        "state": "QLD",
-        "program_name": "Social Services",
-        "recipient_name": "Cairns Regional Community Development & Employment  ATSI Corporation",
-        "recipient_abn": "33400628824",
-        "total": 4109608,
-        "grants": 1,
-        "gs_id": "AU-ABN-33400628824",
-        "is_community_controlled": true
-      },
-      {
-        "state": "QLD",
-        "program_name": "Social Services",
-        "recipient_name": "UQ Health Care Ltd",
-        "recipient_abn": "42145286862",
-        "total": 4000000,
-        "grants": 1,
-        "gs_id": "AU-ABN-42145286862",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "Social Services",
-        "recipient_name": "Children Australia Incorporated",
-        "recipient_abn": "90680959928",
-        "total": 3243442,
-        "grants": 1,
-        "gs_id": "AU-ABN-90680959928",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "Social Services",
-        "recipient_name": "VILLAGE SUPPORT LTD",
-        "recipient_abn": "30682255643",
-        "total": 2590555,
-        "grants": 1,
-        "gs_id": "AU-ABN-30682255643",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "Social Services",
-        "recipient_name": "Youth Advocacy Centre Inc",
-        "recipient_abn": "11746358763",
-        "total": 2583396,
-        "grants": 3,
-        "gs_id": "AU-ABN-11746358763",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "Social Services",
-        "recipient_name": "JABALBINA YALANJI ABORIGINAL CORPORATION RNTBC",
-        "recipient_abn": "79611886178",
-        "total": 2099315,
-        "grants": 1,
-        "gs_id": "AU-ABN-79611886178",
-        "is_community_controlled": true
-      },
-      {
-        "state": "QLD",
-        "program_name": "Social Services",
-        "recipient_name": "Namu Collective Pty Ltd",
-        "recipient_abn": "32685061929",
-        "total": 2099315,
-        "grants": 1,
-        "gs_id": "AU-ABN-32685061929",
-        "is_community_controlled": true
-      },
-      {
-        "state": "QLD",
-        "program_name": "Social Services",
-        "recipient_name": "South Burnett C.T.C. Inc.",
-        "recipient_abn": "85399349965",
-        "total": 1943280,
-        "grants": 3,
-        "gs_id": "AU-ABN-85399349965",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "Social Services",
-        "recipient_name": "Silver Lining Foundation Australia Ltd",
-        "recipient_abn": "92625056108",
-        "total": 1317000,
-        "grants": 1,
-        "gs_id": "AU-ABN-92625056108",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "Social Services",
-        "recipient_name": "Lifeline Darling Downs And South West Queensland Limited",
-        "recipient_abn": "97075403959",
-        "total": 1073215,
-        "grants": 2,
-        "gs_id": "AU-ABN-97075403959",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "Social Services",
-        "recipient_name": "Youth Empowered Towards Independence Inc",
-        "recipient_abn": "34797758772",
-        "total": 1068568,
-        "grants": 2,
-        "gs_id": "AU-ABN-34797758772",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "Social Services",
-        "recipient_name": "Inspire Youth and Family Services",
-        "recipient_abn": "43289699774",
-        "total": 876301,
-        "grants": 2,
-        "gs_id": "AU-ABN-43289699774",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "Social Services",
-        "recipient_name": "Townsville Aboriginal and Torres Strait Islander Corporation for Health Services",
-        "recipient_abn": "66010113603",
-        "total": 671246,
-        "grants": 1,
-        "gs_id": "AU-ABN-66010113603",
-        "is_community_controlled": true
-      },
-      {
-        "state": "QLD",
-        "program_name": "Social Services",
-        "recipient_name": "Village Connect Ltd",
-        "recipient_abn": "46634770264",
-        "total": 649625,
-        "grants": 1,
-        "gs_id": "AU-ABN-46634770264",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "Social Services",
-        "recipient_name": "Darumbal Community Youth Service Inc",
-        "recipient_abn": "55066537031",
-        "total": 575518,
-        "grants": 2,
-        "gs_id": "AU-ABN-55066537031",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "Social Services",
-        "recipient_name": "Community Gro Inc",
-        "recipient_abn": "51227701438",
-        "total": 311107,
-        "grants": 1,
-        "gs_id": "AU-ABN-51227701438",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "Social Services",
-        "recipient_name": "Act for Kids Limited",
-        "recipient_abn": "98142986767",
-        "total": 246737,
-        "grants": 2,
-        "gs_id": "AU-ABN-98142986767",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "Social Services",
-        "recipient_name": "Redcliffe Area Youth Space Incorporated",
-        "recipient_abn": "17724640741",
-        "total": 195965,
-        "grants": 2,
-        "gs_id": "AU-ABN-17724640741",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "Social Services",
-        "recipient_name": "Sisters Inside Inc",
-        "recipient_abn": "94859410728",
-        "total": 149845,
-        "grants": 1,
-        "gs_id": "AU-ABN-94859410728",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "Social Services",
-        "recipient_name": "selectability Ltd",
-        "recipient_abn": "27174635449",
-        "total": 73235,
-        "grants": 1,
-        "gs_id": "AU-ABN-27174635449",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
         "program_name": "Women Bail Support Program",
         "recipient_name": "Sisters Inside Inc",
         "recipient_abn": "94859410728",
         "total": 840250,
         "grants": 3,
         "gs_id": "AU-ABN-94859410728",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "YJ_ CON_10549 Walali Bili Mentoring & Bail Support Service FS",
-        "recipient_name": "Darumbal Community Youth Service Inc",
-        "recipient_abn": "55066537031",
-        "total": 1532564,
-        "grants": 1,
-        "gs_id": "AU-ABN-55066537031",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "YJ_ CON_10583 Mercy Community Services Cherbourg and South Burnett Youth Bail Support FS",
-        "recipient_name": "Mercy Community Services SEQ Limited",
-        "recipient_abn": "51166477318",
-        "total": 1122288,
-        "grants": 1,
-        "gs_id": "AU-ABN-51166477318",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "YJ_ CON_10598 MY JUST Bail Support Service (Mackay) FS",
-        "recipient_name": "Save The Children Australia",
-        "recipient_abn": "99008610035",
-        "total": 1052564,
-        "grants": 1,
-        "gs_id": "AU-ABN-99008610035",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "YJ_ CON_10650 Intensive Bail Support - Brisbane North FS",
-        "recipient_name": "Youth Advocacy Centre Inc",
-        "recipient_abn": "11746358763",
-        "total": 1288452,
-        "grants": 1,
-        "gs_id": "AU-ABN-11746358763",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "YJ_CON_10562 Cairns and Yarrabah Youth Bail Support Service (CYYBSS) FS",
-        "recipient_name": "Youth Empowered Towards Independence Inc",
-        "recipient_abn": "34797758772",
-        "total": 2524184,
-        "grants": 1,
-        "gs_id": "AU-ABN-34797758772",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "YJ_CON_10590 Toowoomba and Remote South West Bail Support Service FS",
-        "recipient_name": "The Corporation of the Roman Catholic Diocese of Toowoomba CatholicCare Social Services",
-        "recipient_abn": "78793694389",
-        "total": 1282028,
-        "grants": 1,
-        "gs_id": "AU-ABN-78793694389",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "YJ_CON_10592 South West Bail Support Service 400483 FS",
-        "recipient_name": "Inspire Youth and Family Services",
-        "recipient_abn": "43289699774",
-        "total": 2564052,
-        "grants": 1,
-        "gs_id": "AU-ABN-43289699774",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "YJ_CON_10594 Bridge's U18 Bail Support Service 400485 FS",
-        "recipient_name": "Bridges Health & Community Care Ltd",
-        "recipient_abn": "45402866190",
-        "total": 1010464,
-        "grants": 1,
-        "gs_id": "AU-ABN-45402866190",
-        "is_community_controlled": false
-      },
-      {
-        "state": "QLD",
-        "program_name": "YJ_CON_10597 MY JUST Bail Support Service (Mt Isa) 400488 FS",
-        "recipient_name": "Save The Children Australia",
-        "recipient_abn": "99008610035",
-        "total": 1263080,
-        "grants": 1,
-        "gs_id": "AU-ABN-99008610035",
         "is_community_controlled": false
       },
       {
@@ -32968,7 +30677,7 @@
         "state": "SA",
         "program_name": "Aboriginal Visitors Scheme (AVS) Child and Young People Justice",
         "recipient_name": "Aboriginal Legal Rights Movement",
-        "recipient_abn": null,
+        "recipient_abn": "32942723464",
         "total": 19828,
         "grants": 1,
         "gs_id": "AU-ABN-32942723464",
@@ -32988,7 +30697,7 @@
         "state": "SA",
         "program_name": "Equipping Adventure Services to support at risk and/or disadvantaged young people",
         "recipient_name": "Baptist Care (SA) Incorporated",
-        "recipient_abn": null,
+        "recipient_abn": "81257754846",
         "total": 14249,
         "grants": 1,
         "gs_id": "AU-ABN-81257754846",
@@ -32998,17 +30707,17 @@
         "state": "SA",
         "program_name": "ExploreAbility Camps for Young People",
         "recipient_name": "disAbility Living Inc",
-        "recipient_abn": null,
+        "recipient_abn": "48028049217",
         "total": 5000,
         "grants": 1,
-        "gs_id": null,
+        "gs_id": "AU-ABN-48028049217",
         "is_community_controlled": false
       },
       {
         "state": "SA",
         "program_name": "Increasing capacity to support young people, volunteers and outreach work",
         "recipient_name": "Whitelion Youth Agency Ltd",
-        "recipient_abn": null,
+        "recipient_abn": "15347659323",
         "total": 13894,
         "grants": 1,
         "gs_id": "AU-ABN-15347659323",
@@ -33018,7 +30727,7 @@
         "state": "SA",
         "program_name": "Indigenous resources to entertain and provide cultural connection for at-risk Aboriginal children and young people",
         "recipient_name": "Baptist Care (SA) Incorporated",
-        "recipient_abn": null,
+        "recipient_abn": "81257754846",
         "total": 1600,
         "grants": 1,
         "gs_id": "AU-ABN-81257754846",
@@ -33074,35 +30783,11 @@
       },
       {
         "state": "QLD",
-        "recipient_name": "The Corporation of the Synod of the Diocese of Brisbane",
-        "recipient_abn": "39906010979",
-        "grants": 7,
-        "total": 21595553,
-        "gs_id": "AU-ABN-32025287736"
-      },
-      {
-        "state": "QLD",
         "recipient_name": "Mission Australia",
         "recipient_abn": "15000002522",
         "grants": 6,
         "total": 20078666,
         "gs_id": "AU-ABN-15000002522"
-      },
-      {
-        "state": "QLD",
-        "recipient_name": "The Ted Noffs Foundation",
-        "recipient_abn": "49018049971",
-        "grants": 4,
-        "total": 16634362,
-        "gs_id": "AU-ABN-49018049971"
-      },
-      {
-        "state": "QLD",
-        "recipient_name": "Shine For Kids Limited",
-        "recipient_abn": "60662072775",
-        "grants": 2,
-        "total": 13308276,
-        "gs_id": "AU-ABN-60662072775"
       },
       {
         "state": "QLD",
@@ -33114,27 +30799,11 @@
       },
       {
         "state": "QLD",
-        "recipient_name": "Life Without Barriers",
-        "recipient_abn": "15101252171",
-        "grants": 7,
-        "total": 12747262,
-        "gs_id": "AU-ABN-15101252171"
-      },
-      {
-        "state": "QLD",
         "recipient_name": "UnitingCare Community",
         "recipient_abn": "28728322186",
         "grants": 1,
         "total": 12664874,
         "gs_id": "AU-ABN-28728322186"
-      },
-      {
-        "state": "QLD",
-        "recipient_name": "Bridges Health & Community Care Ltd",
-        "recipient_abn": "45402866190",
-        "grants": 6,
-        "total": 12229418,
-        "gs_id": "AU-ABN-45402866190"
       },
       {
         "state": "QLD",
@@ -33159,14 +30828,6 @@
         "grants": 9,
         "total": 10430277,
         "gs_id": "AU-ABN-28746881862"
-      },
-      {
-        "state": "QLD",
-        "recipient_name": "Save The Children Australia",
-        "recipient_abn": "99008610035",
-        "grants": 11,
-        "total": 9415587,
-        "gs_id": "AU-ABN-99008610035"
       },
       {
         "state": "QLD",
@@ -33274,14 +30935,6 @@
       },
       {
         "state": "QLD",
-        "recipient_name": "Gallang Place Aboriginal and Torres Strait Islanders Corporation",
-        "recipient_abn": "71168539263",
-        "grants": 6,
-        "total": 7040877,
-        "gs_id": "AU-ABN-71168539263"
-      },
-      {
-        "state": "QLD",
         "recipient_name": "Domestic Violence Prevention Centre Gold Coast Inc",
         "recipient_abn": "31476338009",
         "grants": 4,
@@ -33306,43 +30959,11 @@
       },
       {
         "state": "QLD",
-        "recipient_name": "Youth Advocacy Centre Inc",
-        "recipient_abn": "11746358763",
-        "grants": 10,
-        "total": 6638571,
-        "gs_id": "AU-ABN-11746358763"
-      },
-      {
-        "state": "QLD",
         "recipient_name": "Yumba-Meta Housing Association Ltd",
         "recipient_abn": "86317183343",
         "grants": 4,
         "total": 6567873,
         "gs_id": "AU-ABN-86317183343"
-      },
-      {
-        "state": "QLD",
-        "recipient_name": "Darumbal Community Youth Service Inc",
-        "recipient_abn": "55066537031",
-        "grants": 8,
-        "total": 6530793,
-        "gs_id": "AU-ABN-55066537031"
-      },
-      {
-        "state": "QLD",
-        "recipient_name": "Fearless Towards Success Ltd",
-        "recipient_abn": "67649238648",
-        "grants": 1,
-        "total": 6486884,
-        "gs_id": "AU-ABN-67649238648"
-      },
-      {
-        "state": "QLD",
-        "recipient_name": "Kurbingui Youth Development Limited",
-        "recipient_abn": "47298315697",
-        "grants": 3,
-        "total": 6471860,
-        "gs_id": "AU-ABN-47298315697"
       },
       {
         "state": "QLD",
@@ -33383,30 +31004,6 @@
         "grants": 7,
         "total": 5558331,
         "gs_id": "AU-ABN-57035448677"
-      },
-      {
-        "state": "QLD",
-        "recipient_name": "Youth Insearch Foundation (Aust) Inc",
-        "recipient_abn": "31886363881",
-        "grants": 1,
-        "total": 5549496,
-        "gs_id": "AU-ABN-31886363881"
-      },
-      {
-        "state": "QLD",
-        "recipient_name": "Kokoda Youth Foundation",
-        "recipient_abn": "39367906920",
-        "grants": 1,
-        "total": 5546924,
-        "gs_id": "AU-ABN-39367906920"
-      },
-      {
-        "state": "QLD",
-        "recipient_name": "Yabun Panjoo Aboriginal Corporation",
-        "recipient_abn": "78396852698",
-        "grants": 1,
-        "total": 5259189,
-        "gs_id": "AU-ABN-78396852698"
       },
       {
         "state": "QLD",
@@ -33457,6 +31054,118 @@
         "gs_id": "AU-ABN-55066537031"
       },
       {
+        "state": "QLD",
+        "recipient_name": "Inala Youth Care Community Inc",
+        "recipient_abn": "43289699774",
+        "grants": 6,
+        "total": 4666258,
+        "gs_id": "AU-ABN-43289699774"
+      },
+      {
+        "state": "QLD",
+        "recipient_name": "Youth Support Program",
+        "recipient_abn": "83967756338",
+        "grants": 18,
+        "total": 4423881,
+        "gs_id": "AU-ABN-83967756338"
+      },
+      {
+        "state": "QLD",
+        "recipient_name": "Darumbal Community Youth Service Inc",
+        "recipient_abn": "55066537031",
+        "grants": 5,
+        "total": 4422711,
+        "gs_id": "AU-ABN-55066537031"
+      },
+      {
+        "state": "QLD",
+        "recipient_name": "Health and Community Services Workforce Council Inc",
+        "recipient_abn": null,
+        "grants": 4,
+        "total": 4364933,
+        "gs_id": null
+      },
+      {
+        "state": "QLD",
+        "recipient_name": "Indigenous Youth Service",
+        "recipient_abn": "40084136508",
+        "grants": 8,
+        "total": 4212811,
+        "gs_id": "AU-ABN-40084136508"
+      },
+      {
+        "state": "QLD",
+        "recipient_name": "ATSICHS Youth Service",
+        "recipient_abn": "22009943435",
+        "grants": 4,
+        "total": 4195165,
+        "gs_id": "AU-ABN-22009943435"
+      },
+      {
+        "state": "QLD",
+        "recipient_name": "Youth Empowering Strength (YES) Program",
+        "recipient_abn": "35424394822",
+        "grants": 13,
+        "total": 4125939,
+        "gs_id": "AU-ABN-35424394822"
+      },
+      {
+        "state": "QLD",
+        "recipient_name": "Young People's Kinnections",
+        "recipient_abn": "34797758772",
+        "grants": 17,
+        "total": 4099331,
+        "gs_id": "AU-ABN-34797758772"
+      },
+      {
+        "state": "QLD",
+        "recipient_name": "Lifeline Darling Downs and South West Queensland Ltd",
+        "recipient_abn": "97075403959",
+        "grants": 4,
+        "total": 3824187,
+        "gs_id": "AU-ABN-97075403959"
+      },
+      {
+        "state": "QLD",
+        "recipient_name": "Juwarki Kapu-Lug Ltd",
+        "recipient_abn": "55044502854",
+        "grants": 3,
+        "total": 3817610,
+        "gs_id": "AU-ABN-55044502854"
+      },
+      {
+        "state": "QLD",
+        "recipient_name": "Cairns and Yarrabah Youth Bail Support Service (CYYBSS)",
+        "recipient_abn": "34797758772",
+        "grants": 5,
+        "total": 3694297,
+        "gs_id": "AU-ABN-34797758772"
+      },
+      {
+        "state": "QLD",
+        "recipient_name": "Hervey Bay/ Maryborough Youth Housing and Reintegration Service including After Care Service (YHARS)",
+        "recipient_abn": "50169561394",
+        "grants": 8,
+        "total": 3676975,
+        "gs_id": "AU-ABN-50169561394"
+      },
+      {
+        "state": "QLD",
+        "recipient_name": "SWAP Bail Support Service",
+        "recipient_abn": "43289699774",
+        "grants": 5,
+        "total": 3641054,
+        "gs_id": "AU-ABN-43289699774"
+      },
+      {
+        "state": "QLD",
+        "recipient_name": "Indigenous Youth Health Service",
+        "recipient_abn": "40084136508",
+        "grants": 3,
+        "total": 3546693,
+        "gs_id": "AU-ABN-40084136508"
+      },
+      {
         "state": "SA",
         "recipient_name": "Sammy D Foundation",
         "recipient_abn": "26788461065",
@@ -33467,7 +31176,7 @@
       {
         "state": "SA",
         "recipient_name": "Aboriginal Legal Rights Movement",
-        "recipient_abn": null,
+        "recipient_abn": "32942723464",
         "grants": 1,
         "total": 19828,
         "gs_id": "AU-ABN-32942723464"
@@ -33483,7 +31192,7 @@
       {
         "state": "SA",
         "recipient_name": "Baptist Care (SA) Incorporated",
-        "recipient_abn": null,
+        "recipient_abn": "81257754846",
         "grants": 2,
         "total": 15849,
         "gs_id": "AU-ABN-81257754846"
@@ -33491,7 +31200,7 @@
       {
         "state": "SA",
         "recipient_name": "Whitelion Youth Agency Ltd",
-        "recipient_abn": null,
+        "recipient_abn": "15347659323",
         "grants": 1,
         "total": 13894,
         "gs_id": "AU-ABN-15347659323"
@@ -33499,10 +31208,10 @@
       {
         "state": "SA",
         "recipient_name": "disAbility Living Inc",
-        "recipient_abn": null,
+        "recipient_abn": "48028049217",
         "grants": 1,
         "total": 5000,
-        "gs_id": null
+        "gs_id": "AU-ABN-48028049217"
       },
       {
         "state": "SA",
