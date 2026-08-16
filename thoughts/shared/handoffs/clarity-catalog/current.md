@@ -1,7 +1,7 @@
 ---
-date: 2026-08-16T01:00:00Z
+date: 2026-08-16T02:00:00Z
 session_name: clarity-catalog
-branch: main
+branch: clarity-console-slice-b
 status: active
 ---
 
@@ -9,85 +9,116 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-08-16T01:00:00Z
-**Goal:** The `/clarity` **console rebuild**. Issue #190 (the 26-question registry) is DONE and merged. The work stream turned over this session: two design grillings produced two plans, and three slices shipped against them.
-**Branch:** `main` at `75521d7`. PRs #215, #216, #217 all merged; board clear.
-**Test:** `cd apps/web && npx tsc --noEmit` · `npx vitest run src/app/clarity src/lib/visibility.test.ts` (50 tests, 7 files)
-**Local:** dev server on 3013 (`--turbopack`). `/clarity` needs no login locally — `admin-auth-bypass.ts` covers it. **Vercel preview does NOT bypass**, and Ben's sign-in on preview failed with "Invalid login credentials" (unresolved, see Open Questions).
+**Updated:** 2026-08-16T02:00:00Z
+**Goal:** The `/clarity` **console rebuild**. Issue #190 (the 26-question registry) is DONE. Two design grillings produced two plans; four slices shipped; a data audit found a $12.12bn correction.
+**Branch:** `clarity-console-slice-b` at `299e5f0` (PR #218, CI running). main is at `75521d7`.
+**Test:** `cd apps/web && npx tsc --noEmit` · `npx vitest run` (731 pass, 79 files) · `node --env-file=.env scripts/run-clarity-answers.mjs --dry-run` (**17/19 ok**, up from 16/19)
+**Local:** dev server on 3013 (`--turbopack`). `/clarity` needs no login locally (`admin-auth-bypass.ts`). **Vercel preview does NOT bypass** and Ben's sign-in there failed — unresolved, see Open Questions.
 
 ### Now
-[->] **Slice B — theme pages at `/reports/[section]`.** In progress. Slice E merged (#217).
+[->] **PR #218 is open with CI running.** It contains FIVE MIGRATIONS THAT ARE ALREADY APPLIED to production — the database has moved and main has not. Merge decision is Ben's.
 
-### This Session
-- [x] **Merged PR #215**, closing issue #190. Registry complete at 26 questions.
-- [x] **Grilling 1 → `thoughts/shared/plans/clarity-console.md`.** 12 slices. Diagnosis: `clarity_object` carries ~60 curated fields per object and there was **no page for an object** — an encyclopedia shipped as a spreadsheet.
-- [x] **Slice 1 — `/clarity/o/[key]`, a page for every object.** Columns, link graph with seam rates, what-uses-it, questions built on it, shape, freshness, access, provenance. Renders curated markdown (467 caveats, 84 purposes contain it).
-- [x] **Slice 3 — the index becomes the front door.** All 1,479 objects on one page, terse links, six nouns. **15,052px, down from 70,614, showing 257 MORE objects.** Old ledger demoted to `/clarity/catalogue`. **Merged as PR #216 (`3c784a5`).**
-- [x] **Grilling 2 → `thoughts/shared/plans/clarity-console-part-2.md`.** Slices A–K. Triggered by Ben: *"very code tech speak… wanna see real data and how it all connects."*
-- [x] **Slice E — one visibility vocabulary.** `public → org → operator → withheld`, generalising `/atlas`. PR #217, pushed, unmerged.
-
-### The reframe from grilling 2 — the single most important thing in this ledger
-Three times I went looking for something to build and found it already built:
+### The reframe — most important thing in this ledger
+Grilling 2 was triggered by Ben's verdict on the shipped console: *"very code tech speak… wanna see real data and how it all connects."* Going looking for what to build, three times the answer was **it already exists**:
 
 | Looked for | Found |
 |---|---|
-| A real-data surface | **54 report dirs in 13 themes** — `qld-youth-justice`, `child-protection`, `donor-contractors`, `who-runs-australia` |
+| A real-data surface | **54 report dirs in 13 themes** — qld-youth-justice, child-protection, donor-contractors, who-runs-australia |
 | A way to show connection | **`/entity/[gsId]`, 958 lines, 16 parallel cross-system queries** |
 | A search | **`unified-search.tsx`, 495 lines**, already grouped by kind |
 | An ACT workspace | **62 pages under `/org/[slug]`** |
 
-**276 page routes exist. `/clarity` indexes 1,479 DB objects and zero of them.** This is a navigation and coherence problem, not a build problem. Part 2 is mostly connection and deletion.
+**276 page routes exist. `/clarity` indexed 1,479 DB objects and zero of them.** Navigation and coherence problem, not a build problem. Part 2 is mostly connection and deletion.
+
+### This Session
+- [x] **Merged #215, #216, #217.** Issue #190 closed; slices 1, 3 and E on main.
+- [x] **Slice 1 — `/clarity/o/[key]`**, a page for every object. ~60 curated fields that had nowhere to be read.
+- [x] **Slice 3 — the index becomes the front door.** 1,479 objects, six nouns, **15,052px down from 70,614 showing 257 MORE objects.** Old ledger → `/clarity/catalogue`. 747 unfiled, two causes kept visibly apart.
+- [x] **Slice E — one visibility vocabulary.** `public → org → operator → withheld`, generalising `/atlas`.
+- [x] **Slice B — theme pages** at `/reports/theme/[slug]`. Accountability & Power is count-only (10 of 20 review-status reports live there and it names individuals).
+- [x] **Slice C — real money.** Youth Justice: **$1.04bn, 4,665 grants, 1,404 organisations**, each linking to its entity page.
+- [x] **Audit + 5 applied migrations** (see below).
+
+### THE DATA FINDING — carry this forward
+`measure_kind = 'grant'`, documented in CLAUDE.md as *the* mandatory filter, is incomplete.
+
+| filter | rows | total |
+|---|---|---|
+| `measure_kind='grant'` | 126,673 | **$46.10bn** |
+| …minus aggregate-shaped recipient names | 126,627 | $38.01bn |
+| …**and `is_aggregate IS NOT TRUE`** | **125,300** | **$33.98bn** |
+
+**26% off the headline.** I corrected it twice in two hours — the first correction was itself wrong. `measure_kind` and `is_aggregate` are independent; neither implies the other (1,358 rows are grant AND aggregate, $12.06bn; 330 expenditure_aggregate rows are is_aggregate=false, $17.39bn).
+
+**Coverage:** 47 views read `justice_funding`, **4** reference `measure_kind`. 100 app files reference it, **2** do.
+
+- **`justice_funding_clean` reports $117.47bn vs an honest $33.98bn** — 3.1x. It did not expose `measure_kind`, so no caller *could* fix it. Now fixed (migration 20260816020000).
+- **462 of 848 whole-of-state budget rows carry a `gs_entity_id`, $37.49bn** — they land on six government departments.
+- **`mv_entity_total_funding.justice_total` lists QUEENSLAND RAIL as the #2 recipient of justice funding in Australia, $4.1bn.** 13 rows, correctly labelled grants, actually Transport Service Contracts and a Rail Concession Scheme. **`measure_kind` would NOT catch this — only topic scoping does.** 28-file blast radius. **STILL UNFIXED.**
+
+Full audit: `thoughts/shared/data-map/justice-funding-filter-audit.md`
+
+### Migrations applied this session (production, on explicit instruction)
+| | |
+|---|---|
+| `20260816020000` | `measure_kind` + `is_aggregate` on `justice_funding_clean`. Additive; no number moved (still 151,866 / $117.47bn). |
+| `20260816030000` | Register `justice-money-to-orgs` ($33.98bn) + `measure_kind_contamination` sentinel. |
+| `20260816040000` | Exemption for the new question. |
+| `20260816050000` | `is_aggregate` added to 3 questions; 4th exempted. |
+
+**The sentinel caught a 40% error within minutes of being applied.** It is `block` severity and permanently tripped by design (71.81% of dollars in the table are not money to an organisation), so every question must filter or write an exemption. `youth-justice-total` went **$1,534.2m → $0.916bn**; the 21 rows carrying $618.5m were the qld-historical-grants column totals. `evidence-gap` 778→777 orgs. All four exemptions written NARROWER than the sentinel so none can justify an unscoped justice figure later.
 
 ### Next
-- [ ] **Merge #217**, or say why not.
-- [ ] **Slice B — theme pages at `/reports/[section]`.** Biggest legibility win, no new data.
-- [ ] **Slice C — real money on sector theme pages.** Topic tags already exist (`child-protection` 16,418, `youth-justice` 5,580). Aggregates + top recipients linking to entity pages. **`measure_kind = 'grant'` MANDATORY** or $46.1bn reads as $66.1bn. This is where the tech-speak ends.
-- [ ] Then D (`/search`), F (report status at links), G (themes above the noun index), H–K.
-- [ ] **From part 1, still open:** slice 2 (inline edit for the 667 stubs), slice 4 (nouns propose/confirm), slice 5 (row viewer + consent), 6b (code scanner).
-- [ ] `/insights` (323 lines) still unread, still unjudged.
+- [ ] **Merge #218.**
+- [ ] **Fix `mv_entity_total_funding.justice_total`** — the Queensland Rail answer. Biggest remaining blast radius (28 files) and the only publicly-visible wrong answer left.
+- [ ] Then part 2: **D** (`/search`, reconcile the two existing components, extend 3 kinds → 8), **F** (report status at every link), **G** (themes above the noun index), **H–K**.
+- [ ] From part 1: slice 2 (inline edit for 667 stubs), 4 (nouns propose/confirm), 5 (row viewer + consent), 6b (code scanner — **prerequisite for the orphan detector**, which would otherwise report 1,151 false orphans).
+- [ ] Decide per-view whether each of the 35 unfiltered money views is wrong FOR ITS PURPOSE. A "state expenditure" view SHOULD include budget rows.
 
 ### Decisions
-- **Completeness at the index layer, refusal at the claim layer.** Reconciles "see it all" with the refusal ethos. Settles every hard case.
-- **A screen may be stricter than its data, never looser.** The asymmetry is the safety property. Data declares a floor; `mostRestrictive()` makes a page inherit the worst of what it reads.
-- **Absence is always stated, never silent.** Now a rule, not three coincidences. Exception: a count of 1 in a small community is a name (`SMALL_COUNT_THRESHOLD = 5`).
-- **Findings first, plumbing last**, on every surface.
-- **Unfiled is rendered, never guessed.** 747 of 1,479. Two causes kept visibly apart (667 no-domain; ~80 sector-filed) — a tooltip is the same collapse in a costume.
-- **Key numbers on public theme pages come ONLY from registered questions.** No lifting figures from report prose; 20 reports are flagged as needing figure review.
-- **Accountability & Power review-status reports are counted, not linked.** 10 of the 20 live there and they name individuals and board seats. Same reasoning that refused ministerial-diaries.
+- **Completeness at the index layer, refusal at the claim layer.**
+- **A screen may be stricter than its data, never looser.** Data declares a floor; `mostRestrictive()` makes a page inherit the worst of what it reads. Testable.
+- **Absence is always stated, never silent.** Exception: a count of 1 in a small community is a name (`SMALL_COUNT_THRESHOLD = 5`).
+- **Findings first, plumbing last**, every surface.
+- **Key numbers on public pages come ONLY from registered questions.** No lifting figures from report prose.
+- **Accountability & Power review reports are counted, not linked.**
 - **Stories link to projects, never to data.** Project-mediation is the only version that cannot re-identify.
-- **No free-text querying.** Saved parameterised queries + the row viewer. The difference is that these carry their caveats with them.
-- **ACT extends `/org/act` (62 pages).** Not a fourth front door. Admin auth until a second person needs in.
-- **The visibility vocabulary is NOT the commercial `Tier` ladder.** Paid-for vs allowed-to-see. Different axes.
+- **No free-text querying.** Saved parameterised queries + the row viewer; they carry their caveats with them.
+- **ACT extends `/org/act` (62 pages)**, not a fourth front door.
+- Visibility vocabulary is **NOT** the commercial `Tier` ladder. Paid-for vs allowed-to-see.
+- **Withheld beats promoted, always.** If an object is in both lists, that is a bug and it resolves towards consent.
 
-### Traps confirmed by query this session
-- `clarity_object.object_key` and `clarity_edge.src/tgt_object` are **bare**; `clarity_question_ingredient.object_key` is **`public.`-prefixed** and CHECK-constrained. Wrong form returns nothing rather than erroring.
-- **`refs_app`/`refs_script`/`refs_migration` are 0 on all 1,479** — scanner never ran. The orphan detector would report **1,151 false orphans**. Blocked on slice 6b.
-- `owner_app` = `'neither'` on all 1,479. `verdict` null on all 1,479. `null_pct` null on all 16,124 columns.
-- `importance` is tied at `0.0225` for **424 objects** — it cannot rank, which is why the old "RANKED" sort felt arbitrary.
-- **`history` contains `story`.** A `/story/` pattern withholds five history tables and still misses `quotes`. Consent floors are an explicit list, not a pattern.
-- **A domain-only consent rule leaks**: `story_analysis`, `transcript_analysis` (`ai_agents_pipeline`), `tour_stories` (`media_narrative`), `partner_storytellers_v` (no domain).
-- Public home `app/page.tsx` has **5 broken HTML entities inside JS string literals** (lines 175, 183, 213, 244, 246) rendering as literal `&rsquo;`. Pre-existing on main, unfixed, visible on the live home page.
+### Traps confirmed by query
+- `clarity_object.object_key` / `clarity_edge.src|tgt_object` are **bare**; `clarity_question_ingredient.object_key` is **`public.`-prefixed** and CHECK-constrained. Wrong form returns nothing rather than erroring.
+- **Postgres sorts NULLs FIRST in `DESC`** — a naive "top recipients" query returns the rows with no amount.
+- **Topic tags overlap**: youth-justice ∩ diversion = 98 rows; child-protection ∩ family-services = 2. Dedupe by `id`.
+- **`history` contains `story`** — a `/story/` pattern withholds 5 history tables and misses `quotes`. Consent floors are an explicit list.
+- **A domain-only consent rule leaks**: `story_analysis`, `transcript_analysis` (ai_agents_pipeline), `tour_stories` (media_narrative), `partner_storytellers_v` (no domain).
+- `refs_app`/`refs_script`/`refs_migration` are 0 on all 1,479 — scanner never ran. `owner_app` = 'neither' on all. `null_pct` null on all 16,124 columns.
+- `importance` tied at `0.0225` for 424 objects — cannot rank.
+- **Before any `gh pr merge --delete-branch`, run `git log origin/<branch>..HEAD`** and push what it lists. A ledger commit was stranded this way and had to be recovered from a dangling commit.
+- Public home `app/page.tsx` has **5 broken HTML entities in JS string literals** (lines 175, 183, 213, 244, 246) rendering as literal `&rsquo;`. Pre-existing, unfixed, live.
 
 ### Open Questions
-- **UNRESOLVED: Ben cannot sign in to the Vercel preview.** "Invalid login credentials" for `benjamin@act.place`, which IS in `ADMIN_EMAILS` and DOES exist in `auth.users` on `tednluwflfhxyucgwigh` (confirmed, has signed in before). Either the password, or **preview env vars point at a different Supabase project**. Vercel SSO blocked me from checking. Check Vercel → Settings → Environment Variables, Preview vs Production `NEXT_PUBLIC_SUPABASE_URL`.
-- **Consent on `transcripts` is FIVE independent flags**, not one boolean: `consent_for_ai_analysis`, `_quote_extraction`, `_theme_analysis`, `_story_creation`. `floorFor()` is binary — safe direction, but **slice 5's row viewer must read them per row, not call `floorFor()`**.
+- **UNRESOLVED: Ben cannot sign in to the Vercel preview.** "Invalid login credentials" for `benjamin@act.place`, which IS in `ADMIN_EMAILS` and DOES exist in `auth.users` on `tednluwflfhxyucgwigh`. Either the password or **preview env vars point at a different Supabase project**. Vercel SSO blocked me from checking. Compare Preview vs Production `NEXT_PUBLIC_SUPABASE_URL`.
+- **Consent on `transcripts` is FIVE independent flags**, not one boolean: `consent_for_ai_analysis`, `_quote_extraction`, `_theme_analysis`, `_story_creation`. `floorFor()` is binary — safe direction, but **slice 5's row viewer must read them per row**.
 - Whether the Accountability & Power count-only rule survives Ben seeing it applied.
-- Which of the 276 routes are genuinely dead. B–D will reveal more than guessing.
-- The commercial `Tier` ladder has not been reconciled with the visibility vocabulary. Must be before anything is sold.
-- **Six `/clarity` rendering defects remain unfixed by design** (duplicate React key on the catalogue, "1 objects moved", triplicated refusal paragraph, a leaked `▸ none + finer framing` placeholder, `NEVER RUN · RUN #0` on a refusal). Slices B–G delete most of the surfaces they live on. Fix only what survives.
-- Still open from before: `person_roles` aggregate exposure is Ben's call; the `/foundations/backlog` caller was never identified; three unexplained criticals on the change board (2026-04-02); 9,607 duplicate canonical names (sentinel now warns).
+- Whether each of the 35 unfiltered money views is wrong for its purpose — per-view judgement, not a sweep.
+- The commercial `Tier` ladder is unreconciled with the visibility vocabulary. Must be before anything is sold.
+- Six `/clarity` rendering defects remain unfixed **by design** — slices B–G delete most of the surfaces they live on.
+- Still open from before: `person_roles` aggregate exposure; the `/foundations/backlog` caller; three unexplained criticals (2026-04-02); 9,607 duplicate canonical names.
 
 ### Workflow State
 pattern: console rebuild, two plans
-phase: part 1 slices 1+3 merged; part 2 slice E in review
+phase: part 1 slices 1/3/E merged; part 2 slices B/C in PR #218
 retries: 0
 
 #### Resolved
-- issue #190 / the 26-question registry — **DONE**, PR #215 merged
-- "does /clarity look right" — **ANSWERED, and the answer was no.** It read as tech-speak. That feedback produced grilling 2 and part 2.
+- issue #190 / the 26-question registry — DONE
+- "does /clarity look right" — **ANSWERED, and the answer was no.** It read as tech-speak. That produced grilling 2 and part 2.
+- "is the documented money filter correct" — **NO.** 26% overstated. Corrected in CLAUDE.md, in code, and in the registry.
 
 #### Unknowns
-- **preview_login: BLOCKED** — see Open Questions. Ben has not yet seen any of this on a deployed URL.
-- **theme_pages: NOT STARTED** — slice B, the next thing.
-- clarity_visual_result: partially resolved. Ben saw `/clarity` locally and judged it interesting but too technical. The object page and the index have been eyeballed by me; the withheld state has been eyeballed by me.
-- http_write_paths: still UNKNOWN — the three `/api/clarity` routes have still never served a request.
+- **preview_login: BLOCKED.** Ben has still not seen any of this on a deployed URL.
+- **mv_entity_total_funding: KNOWN WRONG.** Queensland Rail as #2 justice recipient. Unfixed.
+- http_write_paths: the three `/api/clarity` routes have still never served a request.
