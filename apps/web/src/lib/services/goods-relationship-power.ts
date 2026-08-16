@@ -26,7 +26,11 @@ type ViewRow = {
   power_score: number | string | null;
   system_count: number | string | null;
   in_procurement: number | null;
-  in_recorded_grants: number | null;
+  // Still the OLD name on purpose: this reads v_goods_relationship_power, whose output column
+  // was not renamed in the dual-name step — only mv_entity_power_index's own columns were.
+  // Renaming here before the view changes makes the 'justice funding' vector silently vanish
+  // (select('*') hides the mismatch). Flips when/if the dependent views' outputs are renamed.
+  in_justice_funding: number | null;
   in_political_donations: number | null;
   in_charity_registry: number | null;
   in_foundation: number | null;
@@ -49,7 +53,7 @@ const num = (v: number | string | null | undefined): number => {
 function systemsOf(r: ViewRow): string[] {
   const out: string[] = [];
   if (r.in_procurement) out.push('procurement');
-  if (r.in_recorded_grants) out.push('justice funding');
+  if (r.in_justice_funding) out.push('justice funding');
   if (r.in_political_donations) out.push('donations');
   if (r.in_charity_registry) out.push('charity');
   if (r.in_foundation) out.push('foundation');
