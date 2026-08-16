@@ -9,12 +9,33 @@ function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [oauthLoading, setOauthLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectPath = resolveAuthRedirect(searchParams);
   const localDev = process.env.NODE_ENV !== 'production';
   const localRedirectPath = redirectPath === '/continue' ? '/org/act/goods' : redirectPath;
+
+  async function handleGoogle() {
+    setError('');
+    setOauthLoading(true);
+    const supabase = createSupabaseBrowser();
+    // PKCE: Google bounces back to /auth/callback, which exchanges the code server-side.
+    // On Vercel previews this needs the preview domain pattern in the Supabase auth
+    // redirect allowlist; password login is the reliable path there.
+    const { error: authError } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirectPath)}`,
+      },
+    });
+    if (authError) {
+      setError(authError.message);
+      setOauthLoading(false);
+    }
+    // On success the browser navigates away — no state to reset.
+  }
 
   function continueLocally() {
     router.push(localRedirectPath);
@@ -60,6 +81,11 @@ function LoginForm() {
           </div>
 
           <form onSubmit={handleLogin} className="p-6 space-y-4">
+            {!error && searchParams.get('error') === 'oauth' && (
+              <div className="bg-danger-light border-4 border-bauhaus-red p-3 text-sm font-bold text-bauhaus-red">
+                Google sign-in didn&apos;t complete. Try again, or use your password.
+              </div>
+            )}
             {error && (
               <div className="bg-danger-light border-4 border-bauhaus-red p-3 text-sm font-bold text-bauhaus-red">
                 {error}
@@ -98,6 +124,15 @@ function LoginForm() {
               className="w-full bg-bauhaus-red text-white font-black uppercase tracking-widest py-3 text-sm border-4 border-bauhaus-black hover:bg-bauhaus-black disabled:opacity-50 bauhaus-shadow-sm"
             >
               {loading ? 'Signing in...' : 'Sign In'}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleGoogle}
+              disabled={oauthLoading}
+              className="w-full bg-white text-bauhaus-black font-black uppercase tracking-widest py-3 text-sm border-4 border-bauhaus-black hover:bg-bauhaus-canvas disabled:opacity-50 bauhaus-shadow-sm"
+            >
+              {oauthLoading ? 'Redirecting…' : 'Sign in with Google'}
             </button>
 
             {localDev && (
