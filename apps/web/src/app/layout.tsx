@@ -228,7 +228,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                       <li><a href="/reports" className="text-bauhaus-muted hover:text-white transition-colors">All Reports</a></li>
                       <li><a href="/reports/big-philanthropy" className="text-bauhaus-muted hover:text-white transition-colors">Big Philanthropy</a></li>
                       <li><a href="/reports/power-dynamics" className="text-bauhaus-muted hover:text-white transition-colors">Power Dynamics</a></li>
-                      <li><a href="/ask" className="text-bauhaus-muted hover:text-white transition-colors">Ask CivicGraph</a></li>
                     </ul>
                   </div>
                   <div>

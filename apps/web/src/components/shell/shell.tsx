@@ -5,29 +5,10 @@ import { getDirectServiceSupabase } from '@/lib/supabase';
 import { createSupabaseServer, hasSupabaseServerEnv } from '@/lib/supabase-server';
 import { isAdminEmail } from '@/lib/admin';
 import { ShellHeader } from './shell-header';
+import { RailNav } from './rail-nav';
 import type { DataEvent } from './shell-menus';
-import {
-  SquaresFour,
-  MagnifyingGlass,
-  Eye,
-  Tag,
-  Buildings,
-  Users,
-  MapPin,
-  FileText,
-  Database,
-} from '@phosphor-icons/react/dist/ssr';
+import { Database } from '@phosphor-icons/react/dist/ssr';
 
-const NAV = [
-  { href: '/dashboard', label: 'Dashboard', icon: SquaresFour },
-  { href: '/search', label: 'Search', icon: MagnifyingGlass },
-  { href: '/clarity', label: 'Clarity', icon: Eye },
-  { href: '/reports/theme', label: 'Themes', icon: Tag },
-  { href: '/entities', label: 'Entities', icon: Buildings },
-  { href: '/person', label: 'People', icon: Users },
-  { href: '/atlas', label: 'Places', icon: MapPin },
-  { href: '/reports', label: 'Reports', icon: FileText },
-];
 
 const VIEW_DOT: Record<string, string> = {
   red: '#D02020',
@@ -85,13 +66,14 @@ async function currentUser(): Promise<{ email: string | null; isAdmin: boolean }
 
 export interface ShellProps {
   title: string;
-  /** Which NAV entry renders as active; matches the entry's href. */
-  activeHref: string;
+  /** Deprecated (phase 2): the rail derives its own active entry from the pathname. Kept so
+   *  existing call sites keep compiling; the value is ignored. */
+  activeHref?: string;
   children: ReactNode;
 }
 
 /** The softened-Bauhaus app shell: dark rail + header. DESIGN.md `.shell` theme, 2026-08-16. */
-export async function Shell({ title, activeHref, children }: ShellProps) {
+export async function Shell({ title, children }: ShellProps) {
   const [events, user] = await Promise.all([recentDataEvents(), currentUser()]);
 
   return (
@@ -110,31 +92,7 @@ export async function Shell({ title, activeHref, children }: ShellProps) {
           </span>
         </Link>
         <div className="h-5" />
-        {NAV.map(({ href, label, icon: Icon }) => {
-          const active = href === activeHref;
-          return (
-            <Link
-              key={href}
-              href={href}
-              className="flex items-center gap-2.5 px-2.5 py-2 text-sm"
-              style={{
-                borderRadius: 'var(--shell-r-sm)',
-                background: active ? 'var(--shell-rail-hover)' : undefined,
-                color: active ? '#FFFFFF' : 'var(--shell-rail-text)',
-                fontWeight: active ? 600 : 500,
-              }}
-            >
-              <Icon size={16} weight="bold" />
-              {label}
-              {active && (
-                <span
-                  className="ml-auto inline-block h-1.5 w-1.5"
-                  style={{ background: '#D02020', borderRadius: 3 }}
-                />
-              )}
-            </Link>
-          );
-        })}
+        <RailNav />
         <div className="h-6" />
         <div className="px-2.5 text-[10px] font-bold uppercase tracking-[0.15em] text-[#7A7A7A]">
           Saved views

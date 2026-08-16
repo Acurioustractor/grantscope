@@ -35,6 +35,29 @@ status: active
 - [x] `justice_funding.financial_year` normalisation APPLIED (migration `migrations/2026-08-16-justice-fy-normalise.sql`): the mess was not formatting — 41 rows were multi-year spans / `YYYY-ongoing` / bare `2024`, incl. `2021-25` = a 2021→2025 PRF span that LOOKS canonical. New parsed cols `fy_start`/`fy_end`/`fy_open_ended` on all 157,116 rows (zero unparsed), maintained by trigger `trg_justice_funding_parse_fy`; raw strings kept as provenance except `2026-2027`→`2026-27` (2 rows, single-FY either way); `v_vocab_financial_years` now requires `fy_end = fy_start + 1` → dropdown is 19 clean FYs (2008-09…2026-27). Filter by `fy_*`, never by string shape.
 - Vocab views live: 9 topics (child-protection 7,481 rows → prevention 313), 19 financial years. Dropdowns appear as each surface's hourly vocab cache refreshes.
 
+### Phase 2 directive (Ben, 2026-08-17)
+"See any screen we've got on this new dashboard and make sure it aligns to the new design system;
+searchable queries; keep thinking about which parts of the data go where. Make sure the dashboard
+and all links go to the right style UX/UI, then make sure all the data is linked the right way, and
+use the clarity tool to understand what data goes into which user's experience."
+Work order: 1) chrome crawl from /dashboard (pattern-collapsed) → map every reachable screen's
+visual family vs intent (root layout isChromeless list is the code's intent, layout.tsx:93) →
+convert stragglers to shell; 2) data→surface mapping via clarity (visibility floor + owner_app +
+nouns feeding a per-surface data contract).
+- [x] CRAWL DONE 2026-08-17: 47 screens, ZERO broken chrome — clean two-family split (shell:
+  dashboard+views+docs+search+18 clarity surfaces; public Bauhaus: everything else). One 404
+  (/ask footer link, removed). Ben's rulings: shell-native noun pages (rail never exits the
+  shell) + ops tools (/ops/health /alerts /tracker /foundations/tracker) move into the shell.
+- [x] Five shell-native noun pages BUILT (branch shell-native-noun-pages): /dashboard/{themes,
+  reports,entities,people,places} reusing themes registry / reportSections / mv_entity_power_index
+  / mv_board_interlocks (**MAX_PLAUSIBLE_BOARDS cap applied read-side — unfiltered top "person"
+  sits on 745 estate trusts**) / mv_funding_by_postcode. Detail pages still open the public atlas,
+  stated on every page. Rail is now pathname-aware (`rail-nav.tsx` client component, longest-prefix
+  active; TRAP: component refs can't cross the server→client boundary as props — NAV must live in
+  the client file). Shell.activeHref deprecated-ignored.
+- [ ] Ops tools into the shell (second PR of this stream).
+- [ ] Then: clarity-driven data→surface contract (visibility floor + owner + noun per surface).
+
 ### Next
 - [ ] Ben's taste verdicts: deployed shell overall + `/clarity` dark-inside-light framing (gates the dark shell variant); also eyeball /dashboard/views/* and /dashboard/docs
 - [ ] Older backlog still open: Slice 5 row viewer (transcripts have FIVE independent consent flags), person-influence lane (last SEVERE money-view fixes), mv_justice_proven_suppliers GRANT ALL posture question, benjamin@act.place password reset
