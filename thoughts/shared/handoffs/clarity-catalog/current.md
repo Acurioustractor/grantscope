@@ -16,7 +16,7 @@ status: active
 **Local:** dev server on 3013 (`--turbopack`). `/clarity` needs no login locally (`admin-auth-bypass.ts`). **Vercel preview does NOT bypass** and Ben's sign-in there failed — unresolved, see Open Questions.
 
 ### Now
-[->] **The justice_funding correctness lane is CLOSED end to end** — rule, view, sentinel, both matviews, seven app queries, and the labels. Nothing is in flight. Next: either the `justice_*` DB column rename (dual-name transition, another nine-object rebuild + 33 files), or back to part 2 of the console plan (slice D, `/search`).
+[->] **Slice D (`/search`) is BUILT and committed locally (`1dfdc05`), not yet pushed.** One page, nine groups (reports · questions · themes · entities · people · places · grants · foundations · data objects), shareable `?q=` URL. Small kinds ship to the client (`app/search/search-index.ts`); live kinds via `/api/global-search?scope=full` (new people lane from `mv_board_interlocks`, places lane from `postcode_geo` with junk-locality suppression). ⌘K modal + homepage box hand off via Enter-with-no-hit and an all-results row. Defamation-sensitive questions withheld from the index. tsc + 731 tests green; SSR + both live lanes smoke-tested on 3013. Next: push + PR, then F (report status at links) or the `justice_*` column rename.
 
 ### The reframe — most important thing in this ledger
 Grilling 2 was triggered by Ben's verdict on the shipped console: *"very code tech speak… wanna see real data and how it all connects."* Going looking for what to build, three times the answer was **it already exists**:
