@@ -55,16 +55,30 @@ export async function getPlaceBrief(
   // Fetch transcripts + ALMA interventions in parallel
   const patterns = locationPatterns(postcode, locality, state);
 
-  // Build transcript query — match by location ILIKE patterns
+  // Build transcript query — match by location ILIKE patterns.
+  //
+  // CONSENT GATE (2026-08-17, found via /clarity/surfaces): el_transcripts carries NO consent
+  // columns and its status vocabulary contains no 'published' — the old status filter matched
+  // nothing and a "try without status filter" fallback then rendered EVERY transcript's name +
+  // verbatim excerpt + place on a public page. The consent basis is the storyteller's:
+  // quote_sharing_consent (verbatim excerpts are quotes) AND consent_given, unexpired. A
+  // transcript with no storyteller_id has no consent basis and is never rendered.
   let transcripts: PlaceTranscript[] = [];
   if (patterns.length > 0) {
-    // Try each pattern until we get results
-    for (const pattern of patterns) {
+    const { data: consented } = await db
+      .from('storytellers')
+      .select('id')
+      .eq('consent_given', true)
+      .eq('quote_sharing_consent', true)
+      .or('consent_expiry.is.null,consent_expiry.gt.now()');
+    const consentedIds = (consented ?? []).map((s: { id: string }) => s.id);
+
+    for (const pattern of consentedIds.length > 0 ? patterns : []) {
       const { data } = await db
         .from('el_transcripts')
-        .select('id, title, content, storyteller_name, word_count, has_video, themes')
+        .select('id, title, content, storyteller_name, storyteller_id, word_count, has_video, themes')
         .ilike('location', pattern)
-        .eq('status', 'published')
+        .in('storyteller_id', consentedIds)
         .order('word_count', { ascending: false })
         .limit(20);
 
@@ -81,32 +95,8 @@ export async function getPlaceBrief(
         break;
       }
     }
-
-    // If no published transcripts found, try without status filter
-    if (transcripts.length === 0) {
-      for (const pattern of patterns) {
-        const { data } = await db
-          .from('el_transcripts')
-          .select('id, title, content, storyteller_name, word_count, has_video, themes')
-          .ilike('location', pattern)
-          .order('word_count', { ascending: false })
-          .limit(20);
-
-        if (data && data.length > 0) {
-          transcripts = data.map((t) => ({
-            id: t.id,
-            title: t.title || 'Untitled',
-            storyteller_name: t.storyteller_name || 'Anonymous',
-            word_count: t.word_count || 0,
-            has_video: t.has_video || false,
-            themes: t.themes,
-            excerpt: extractExcerpt(t.content, 200),
-          }));
-          break;
-        }
-      }
-    }
   }
+
 
   // Fetch ALMA interventions for this area
   // geography is text[] — cast to text for ILIKE

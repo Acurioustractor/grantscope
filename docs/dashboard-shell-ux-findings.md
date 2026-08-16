@@ -67,3 +67,33 @@ the ledger reserves for Ben — this paragraph is input, not the verdict.
 - **F4 FIXED** — the cause was styling, not missing hrefs: linked rows were visually identical to
   plain text. Links now carry the accent colour + hover underline.
 - **F5 / F7 / dark-inside-light** — open, Ben's taste calls.
+
+
+## Surfaces walkthrough — consent review, pass 1 (2026-08-17)
+
+Chased all 27 consent-object references on public-family code (from /clarity/surfaces) to their
+actual lines.
+
+### SEVERE, FIXED (branch consent-gate-place-voice)
+`/places/[postcode]` RENDERED consent-governed content, and the gate was broken twice over:
+1. **The "Community Voice" transcript section's only filter was `status='published'` — a status
+   that does not exist in el_transcripts** (the vocabulary is 'completed' only), so the primary
+   query always matched nothing and a "try without status filter" fallback rendered EVERY
+   transcript's storyteller name + verbatim excerpt, anchored to the place. Place is a
+   quasi-identifier; this is the exact re-identification pattern the story↔project design forbids.
+   el_transcripts carries NO consent columns of its own.
+2. **Storyteller cards (name + bio + photo, up to 6) checked no consent flag** — 11 of 227
+   storyteller rows lack consent_given and were renderable.
+
+Fix: excerpts now require the storyteller's `quote_sharing_consent` AND `consent_given`,
+unexpired, via the storyteller_id join (41 of 52 transcripts qualify); a transcript with no
+storyteller_id has no consent basis and never renders. Storyteller cards gained the same
+consent_given + expiry gate. The API brief route and the PDF reuse the same service — fixed once.
+
+### Benign (verified, no action)
+- `/reports/yj/[state]/sector`: the word "transcripts" in Hansard-caveat prose.
+- `/snow-foundation`: external links to Empathy Ledger, no data rendered.
+- `stories`/`quotes` word-matches across 20 files: overwhelmingly the English words in copy, or
+  reads of the PUBLISHED-status stories table (its own gate). Spot-checked, none render
+  consent-governed rows.
+- `photos` on /goods-on-country: Goods' own photo assets, not storyteller photos.

@@ -337,6 +337,10 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
         .from('storytellers')
         .select('id, full_name, bio, profile_image_url, location_id')
         .not('full_name', 'is', null)
+        // Consent gate (2026-08-17): name + bio + photo on a public page needs consent_given,
+        // unexpired. 11 of 227 storyteller rows lack it and were previously renderable.
+        .eq('consent_given', true)
+        .or('consent_expiry.is.null,consent_expiry.gt.now()')
         .limit(200),
       [] as Array<Storyteller & { location_id: string | null }>,
     );
