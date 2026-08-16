@@ -3,6 +3,14 @@ import Link from 'next/link';
 import { getDirectServiceSupabase } from '@/lib/supabase';
 import { allThemes, reportsForTheme } from '../reports/theme/themes';
 import IndexExplorer, { type ExplorerObject } from './IndexExplorer';
+import {
+  buildAttention,
+  buildSurfaceHealth,
+  type AttentionItem,
+  type HealthObject,
+  type SurfaceHealth,
+} from './system-health';
+import { floorFor } from './visibility-floor';
 import { NOUN_ORDER, unfiledReason, type Noun } from './nouns';
 
 export const dynamic = 'force-dynamic';
@@ -56,6 +64,8 @@ function firstSentence(purpose: string | null): string | null {
 
 interface Loaded {
   explorer: ExplorerObject[];
+  surfaceHealth: SurfaceHealth[];
+  attention: AttentionItem[];
   total: number;
   described: number;
   questionStates: [string, number][];
@@ -115,6 +125,45 @@ async function load(): Promise<Loaded> {
     // lenses degrade to empty, the index still renders
   }
 
+  // The consequence layer: which app files read which object -> which screens each object feeds.
+  const appRefs: { object_key: string; file_path: string }[] = [];
+  try {
+    for (let from = 0; ; from += PAGE) {
+      const { data } = await supabase
+        .from('clarity_code_ref')
+        .select('object_key,file_path')
+        .eq('ref_class', 'app')
+        .eq('repo', 'civicgraph')
+        .like('file_path', 'apps/web/src/app/%')
+        .order('id')
+        .range(from, from + PAGE - 1);
+      appRefs.push(...((data ?? []) as { object_key: string; file_path: string }[]));
+      if ((data ?? []).length < PAGE) break;
+    }
+  } catch {
+    // consequence sections degrade to absent; the inventory still renders
+  }
+  const healthMap = new Map<string, HealthObject>(
+    all.map((o) => [
+      o.object_key,
+      {
+        key: o.object_key,
+        name: o.object_name,
+        purpose: o.purpose,
+        rowCount: o.row_count,
+        lastWrite: o.last_write_at?.slice(0, 10) ?? null,
+        orphan: orphans.has(o.object_key),
+        joinGap: linkGaps.has(o.object_key),
+        withheld: floorFor(o) === 'withheld',
+      },
+    ]),
+  );
+  const now = new Date();
+  const surfaceHealth = buildSurfaceHealth(appRefs, healthMap, now);
+  // The ops Data-health rot is an ADJUDICATED finding from the 2026-08-17 sweep, not a live
+  // measurement; clear this flag when its queries are repaired.
+  const attention = buildAttention(appRefs, healthMap, surfaceHealth, true);
+
   const explorer: ExplorerObject[] = all.map((o) => {
     const reason = o.noun ? null : unfiledReason(o.domain);
     return {
@@ -153,6 +202,8 @@ async function load(): Promise<Loaded> {
 
   return {
     explorer,
+    surfaceHealth,
+    attention,
     total: all.length,
     described: all.filter((o) => o.purpose).length,
     questionStates,
@@ -171,7 +222,7 @@ export default async function ClarityIndexPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   await searchParams; // sort/filter moved client-side into the explorer
-  const { explorer, total, described, questionStates, questionSubjects, refreshedAt } =
+  const { explorer, surfaceHealth, attention, total, described, questionStates, questionSubjects, refreshedAt } =
     await load();
 
   // Slice G — themes above the noun index. The 13 report sections are the only taxonomy written
@@ -272,6 +323,60 @@ export default async function ClarityIndexPage({
           ))}
         </ul>
       </section>
+
+      {/* THE ANSWER FIRST (Ben, 2026-08-17): what's healthy, what's not, what it influences.
+          Screens people use, each judged by what feeds it; then the ranked worklist where every
+          item names its consequence. The inventory follows — it is the reference, not the point. */}
+      {surfaceHealth.length > 0 ? (
+        <section className="mt-4 border-4 border-bauhaus-black bg-bauhaus-white">
+          <h2 className="flex items-baseline gap-3 border-b-2 border-bauhaus-black px-4 py-2 font-display text-[14px] font-bold">
+            How the system is doing, screen by screen
+            <span className="font-mono text-[10px] font-normal uppercase tracking-widest text-bauhaus-black/45">
+              judged by what feeds each screen · quiet data is named, not alarmed
+            </span>
+          </h2>
+          <ul className="grid gap-x-8 p-4 lg:grid-cols-2">
+            {surfaceHealth.map((s) => (
+              <li key={s.surface} className="flex items-baseline gap-2 border-b border-bauhaus-black/10 py-1.5 last:border-b-0">
+                <span
+                  className="inline-block h-2 w-2 shrink-0 rounded-full"
+                  style={{ background: s.ok ? '#1E8E3E' : '#C77700' }}
+                />
+                <span className="w-[168px] shrink-0 text-[13px] font-semibold">{s.label}</span>
+                <span className="min-w-0 flex-1 text-[12px] text-bauhaus-black/60">
+                  {s.objectCount} data sources
+                  {s.oldestWrite ? ` · oldest write ${s.oldestWrite.date} (${s.oldestWrite.key})` : ''}
+                  {s.problems.length > 0 ? ` · ${s.problems.join('; ')}` : ' · all sources current'}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {attention.length > 0 ? (
+        <section className="mt-4 border-4 border-bauhaus-red bg-bauhaus-white">
+          <h2 className="border-b-2 border-bauhaus-red px-4 py-2 font-display text-[14px] font-bold text-bauhaus-red">
+            Needs attention — each item says what it influences
+          </h2>
+          <ul>
+            {attention.map((a, i) => (
+              <li key={i} className="flex items-baseline gap-2.5 border-b border-bauhaus-black/10 px-4 py-2 last:border-b-0">
+                <span
+                  className="inline-block h-2 w-2 shrink-0 rounded-full"
+                  style={{ background: a.severity === 'red' ? '#D02020' : '#C77700' }}
+                />
+                <Link href={a.href} className="min-w-0 flex-1 text-[13px] leading-relaxed hover:underline">
+                  {a.what}
+                  {a.influences.length > 0 ? (
+                    <span className="text-bauhaus-black/50"> — touches {a.influences.join(', ')}</span>
+                  ) : null}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <IndexExplorer objects={explorer} />
 
