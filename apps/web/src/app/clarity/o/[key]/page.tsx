@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getDirectServiceSupabase } from '@/lib/supabase';
+import { VISIBILITY_MEANING, canRender, type Surface } from '@/lib/visibility';
+import { floorFor, floorReason } from '../../visibility-floor';
 import {
   formatBytes,
   formatCount,
@@ -187,6 +189,30 @@ export default async function ObjectPage({ params }: { params: Promise<{ key: st
   const usage = usageMeasurement(o);
   const isRoutine = o.object_kind === 'function';
 
+  // /clarity is an operator surface. The floor decides what an operator may see of THIS object.
+  //
+  // WHERE THE LINE SITS, and why it moved once.
+  //
+  // Metadata is visible at every tier: that the object exists, its shape, its columns, its grain,
+  // its freshness, its access posture. ROWS are the contents, and rows are what the floor
+  // governs. A storyteller consented to their story being used a particular way, not to it being
+  // browsable by whoever holds the admin session.
+  //
+  // This first shipped withholding the COLUMN CATALOGUE too, and that was wrong twice over. It
+  // contradicted the written design in clarity-console.md ("shows its row count, its grain, its
+  // freshness, its RLS posture — and refuses the rows"), and it did not even work: column names
+  // also arrive through `grain`, `join_keys` and `clarity_edge.src_column`/`tgt_column`, so
+  // `transcripts` still shipped `storyteller_id` and `transcript_text` in its payload. A guard
+  // that blocks one of four paths is worse than no guard, because it reads as protection.
+  //
+  // If a future object has a column name that is itself disclosive (a diagnosis, a status), that
+  // is an argument for withholding THAT object's metadata explicitly — not for a blanket rule
+  // enforced in one place out of four.
+  const SURFACE: Surface = 'operator';
+  const floor = floorFor(o);
+  const rowsVisible = canRender(floor, SURFACE);
+  const withheldBecause = floorReason(o);
+
   return (
     <main className="mx-auto max-w-[1180px] px-4 py-8">
       <Link
@@ -225,7 +251,21 @@ export default async function ObjectPage({ params }: { params: Promise<{ key: st
               missing since {o.missing_since.slice(0, 10)}
             </span>
           ) : null}
+          {!rowsVisible ? (
+            <span className="border-2 border-bauhaus-black bg-bauhaus-black px-2 py-0.5 font-mono text-[10px] font-black uppercase tracking-widest text-bauhaus-canvas">
+              rows withheld
+            </span>
+          ) : null}
         </div>
+
+        {!rowsVisible ? (
+          <p className="mt-4 border-l-4 border-bauhaus-black bg-bauhaus-canvas p-3 text-[14px] leading-relaxed">
+            <strong>The rows of this object are withheld.</strong> {withheldBecause}.{' '}
+            {VISIBILITY_MEANING[floor]} Everything <em>about</em> it is below — what it is, its
+            shape, how fresh, who may reach it — because knowing that a thing exists is not the
+            same as reading what is inside it. Admin access is not a consent basis.
+          </p>
+        ) : null}
 
         {stub ? (
           <p className="mt-4 border-l-4 border-neutral-400 pl-3 text-[14px] text-neutral-600">
