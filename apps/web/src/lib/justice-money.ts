@@ -116,6 +116,12 @@ export async function themeMoney(topics: readonly string[], topN = 15): Promise<
         .from('justice_funding')
         .select('id,recipient_name,amount_dollars,financial_year,gs_entity_id')
         .eq('measure_kind', 'grant')
+        // `is_aggregate` is NOT implied by measure_kind and cuts both ways: 1,358 rows are
+        // measure_kind='grant' AND is_aggregate — $12.06bn of grant-shaped aggregates — while 330
+        // expenditure_aggregate rows are is_aggregate=false. Neither column is a superset of the
+        // other, so both are required. Nationally this is the difference between $38.01bn and
+        // $33.98bn; on the youth-justice theme it moves $1,044.8m to $1,044.2m.
+        .not('is_aggregate', 'is', true)
         .contains('topics', [topic])
         .range(from, from + PAGE - 1);
       if (error) throw new Error(`justice money query failed: ${error.message}`);
