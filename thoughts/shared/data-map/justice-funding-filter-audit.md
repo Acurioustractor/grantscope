@@ -155,6 +155,37 @@ These are correctly labelled grants. They are simply not justice. **Filter 1 alo
 caught this — only filter 3 does.** That is the argument for the object caveat's rule: never assume
 the whole table is justice.
 
+### `mv_entity_power_index` — FIXED 2026-08-16, nine-object rebuild
+
+Migration `20260816080000` applied. It does NOT derive from `mv_entity_total_funding`; it reads the
+base tables directly and carried both defects independently, at **four** sites — two dollar sums
+and two PRESENCE flags.
+
+| | before | after |
+|---|---|---|
+| `justice_dollars` | $83.53bn | **$32.20bn** |
+| `donation_dollars` | $77.99bn | **$12.00bn** |
+| rows | 188,189 | 185,265 |
+
+**$117.32bn removed**, and 2,924 entities that only ever appeared via aggregate or non-donation
+rows have left the power rankings. `power_score` is a ranking read across 28 app files, so the
+presence filters changed the order, not just the magnitudes.
+
+Gone from the index: **Australian Electoral Commission** (was $1.04bn of "donations" — the
+regulator that publishes the data) and **Sino Iron** (was $8.1bn). Queensland Rail remains at
+$4.10bn justice / $0 donations, as designed — see the naming decision.
+
+Required rebuilding all nine objects in dependency order: `mv_entity_power_index` →
+`mv_funding_deserts` → `mv_board_interlocks` → `v_goods_relationship_power` →
+`mv_disability_landscape` → `mv_foundation_need_alignment` → `mv_foundation_scores` →
+`mv_foundation_readiness` → `v_goods_warm_intros`. All populated afterwards and matching documented
+baselines (`mv_funding_deserts` 1,997, `mv_board_interlocks` 39,757), so the public Atlas is
+unaffected. All 19 grants restored.
+
+**Trap:** matview grants live in `pg_class.relacl`, NOT `information_schema.role_table_grants`.
+The latter returns zero grants for every matview and would have silently stripped `service_role`
+and `agent_readonly` on rebuild.
+
 ## What is NOT affected
 
 - **The clarity console theme pages (slice C).** They apply all three filters and report $1.04bn
@@ -179,6 +210,7 @@ the whole table is justice.
 2. ~~Register a question with a sentinel~~ — **DONE**, `20260816030000`/`40000`/`50000`. It caught a
    40% overstatement in `youth-justice-total` within minutes.
 3. ~~Fix `mv_entity_total_funding`~~ — **DONE**, `20260816060000`. Both columns, $111.48bn.
+3b. ~~Fix `mv_entity_power_index`~~ — **DONE**, `20260816080000`, nine-object rebuild. $117.32bn.
 4. **Decide the `justice_total` naming.** It is not a justice figure and cannot become one by
    filtering. Either rename it across 28 call sites, or scope the table by source (`qgip` is 81% of
    grant rows and is a whole-of-government register, not a justice one).
