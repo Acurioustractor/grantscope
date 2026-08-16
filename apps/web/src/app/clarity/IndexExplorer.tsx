@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import ObjectDrawer from './ObjectDrawer';
 import { NOUN_BLURB, NOUN_LABEL, NOUN_ORDER, UNFILED_NOTE, type Noun } from './nouns';
 
 /**
@@ -67,6 +68,7 @@ function passesLenses(o: ExplorerObject, active: Set<LensId>): boolean {
 
 export default function IndexExplorer({ objects }: { objects: ExplorerObject[] }) {
   const [query, setQuery] = useState('');
+  const [drawerKey, setDrawerKey] = useState<string | null>(null);
   const [lenses, setLenses] = useState<Set<LensId>>(new Set());
   const [sort, setSort] = useState<SortId>('name');
 
@@ -175,9 +177,11 @@ export default function IndexExplorer({ objects }: { objects: ExplorerObject[] }
               <ul className="grid gap-x-8 gap-y-1 p-4 lg:grid-cols-2">
                 {list.map((o) => (
                   <li key={o.key} className="flex items-baseline gap-2 leading-6">
-                    <Link
-                      href={`/clarity/o/${encodeURIComponent(o.key)}`}
-                      className="min-w-0 flex-1 truncate"
+                    {/* The row opens the overview drawer in place (Ben's ruling: interrogate
+                        without leaving the screen). The full page stays one click away inside it. */}
+                    <button
+                      onClick={() => setDrawerKey(o.key)}
+                      className="min-w-0 flex-1 truncate text-left"
                       title={o.purpose ?? o.name}
                     >
                       {o.purpose ? (
@@ -194,7 +198,7 @@ export default function IndexExplorer({ objects }: { objects: ExplorerObject[] }
                           {o.name}
                         </span>
                       )}
-                    </Link>
+                    </button>
                     {o.sector ? (
                       <span className="shrink-0 border border-bauhaus-black/25 px-1 text-[9px] uppercase tracking-wider text-bauhaus-black/50">
                         {o.sector}
@@ -225,6 +229,13 @@ export default function IndexExplorer({ objects }: { objects: ExplorerObject[] }
           );
         })}
       </div>
+      {drawerKey ? (
+        <ObjectDrawer
+          objectKey={drawerKey}
+          onClose={() => setDrawerKey(null)}
+          onOpen={(k) => setDrawerKey(k)}
+        />
+      ) : null}
     </>
   );
 }
