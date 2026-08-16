@@ -22,9 +22,9 @@ const NAV = [
   { href: '/dashboard', label: 'Dashboard', icon: SquaresFour },
   { href: '/search', label: 'Search', icon: MagnifyingGlass },
   { href: '/clarity', label: 'Clarity', icon: Eye },
-  { href: '/themes', label: 'Themes', icon: Tag },
+  { href: '/reports/theme', label: 'Themes', icon: Tag },
   { href: '/entities', label: 'Entities', icon: Buildings },
-  { href: '/people', label: 'People', icon: Users },
+  { href: '/person', label: 'People', icon: Users },
   { href: '/atlas', label: 'Places', icon: MapPin },
   { href: '/reports', label: 'Reports', icon: FileText },
 ];
