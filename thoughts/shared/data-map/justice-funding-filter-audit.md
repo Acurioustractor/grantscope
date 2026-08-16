@@ -107,7 +107,29 @@ Mitigating: all six are government departments, and a department genuinely does 
 budget. Not mitigating: mixed into a "funding received" figure, it puts departments above every
 community organisation in the country.
 
-### `mv_entity_total_funding.justice_total` — the visible harm
+### `mv_entity_total_funding.justice_total` — FIXED 2026-08-16 (partly)
+
+Migration `20260816060000` applied. It violated **both** documented filters, not one:
+
+| column | was | now |
+|---|---|---|
+| `justice_total` | $77.08bn | **$31.59bn** |
+| `donations_total` | $77.99bn | **$12.00bn** |
+
+The donations defect was missing `receipt_type = 'donation received'` — found while fixing the
+justice one. $111.48bn of phantom money across the two columns.
+
+Top entities after the fix: Queensland Rail $4.10bn · Legal Aid Queensland $1.15bn · TAFE
+Queensland Brisbane $0.94bn · Brisbane City Council $0.84bn · Life Without Barriers $0.78bn ·
+Blue Care $0.62bn · UnitingCare Community $0.52bn. The two government departments carrying budget
+rows ($10.03bn and $1.87bn) are gone.
+
+**Queensland Rail remains, and is now #1.** It is not fixable by filtering — see below. It is a
+naming defect, and the fact that Queensland Rail, TAFE and a city council sit among genuine service
+providers is now the clearest possible signal that this column means "money from the
+justice_funding table", not "justice funding".
+
+### `mv_entity_total_funding.justice_total` — the original finding
 
 This is what the 28-file `mv_entity_power_index` chain rests on. Top entities by `justice_total`:
 
@@ -153,10 +175,12 @@ the whole table is justice.
 
 ## Recommended order
 
-1. **Add `measure_kind` to `justice_funding_clean`** — one migration, unblocks every downstream
-   caller. Does not change any current number.
-2. **Register a question with a sentinel** on the honest total, so a regression is caught rather
-   than rediscovered.
-3. **Fix `mv_entity_total_funding.justice_total`** — the 28-file blast radius, and the one with a
-   publicly visible wrong answer.
-4. Then work the remaining views by whether they claim money-received.
+1. ~~Add `measure_kind` to `justice_funding_clean`~~ — **DONE**, migration `20260816020000`.
+2. ~~Register a question with a sentinel~~ — **DONE**, `20260816030000`/`40000`/`50000`. It caught a
+   40% overstatement in `youth-justice-total` within minutes.
+3. ~~Fix `mv_entity_total_funding`~~ — **DONE**, `20260816060000`. Both columns, $111.48bn.
+4. **Decide the `justice_total` naming.** It is not a justice figure and cannot become one by
+   filtering. Either rename it across 28 call sites, or scope the table by source (`qgip` is 81% of
+   grant rows and is a whole-of-government register, not a justice one).
+5. Then work the remaining 34 views by whether they claim money-received. **A view answering "total
+   state expenditure" should keep the budget rows** — this is per-view judgement, not a sweep.
