@@ -1,4 +1,6 @@
 -- Vocab views for shell dropdowns — real vocabularies, never hardcoded lists.
+-- NOTE: v_vocab_financial_years superseded by 2026-08-16-justice-fy-normalise.sql
+-- (adds `AND fy_end = fy_start + 1` so multi-year spans never enter the dropdown).
 -- Apply: source .env && PGPASSWORD="$DATABASE_PASSWORD" psql -h aws-0-ap-southeast-2.pooler.supabase.com -p 5432 -U "postgres.tednluwflfhxyucgwigh" -d postgres -f migrations/2026-08-16-vocab-views.sql
 --
 -- Both views carry the two DB-side grant filters (measure_kind + is_aggregate) so the

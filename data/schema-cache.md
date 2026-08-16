@@ -111,6 +111,14 @@ node --env-file=.env scripts/preflight.mjs --refresh
 | alma_organization_id | uuid |  |
 | created_at | timestamp with time zone |  |
 | updated_at | timestamp with time zone |  |
+| fy_start | smallint |  |
+| fy_end | smallint |  |
+| fy_open_ended | boolean | NOT NULL |
+
+`fy_*` are parsed from `financial_year` by trigger `trg_justice_funding_parse_fy`
+(2026-08-16). `financial_year` keeps raw source strings — multi-year spans
+(`2021-25` = 2021→2025!) and `YYYY-ongoing` exist. Single FY ⇔ `fy_end = fy_start + 1`;
+`v_vocab_financial_years` already applies that. Filter years via `fy_*`, not string shape.
 
 ## foundations (11K rows)
 | Column | Type | Nullable |

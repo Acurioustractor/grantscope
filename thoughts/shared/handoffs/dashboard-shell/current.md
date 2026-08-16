@@ -31,12 +31,12 @@ status: active
 - [x] Year/topic dropdowns fed by real vocabularies (PR #223): `v_vocab_financial_years` + `v_vocab_topics` (migration APPLIED by Ben 2026-08-16); `lib/vocab.ts` returns [] → dropdown absent, never invented; `themeMoney` gained `financialYear` opt; /dashboard `?topic=&fy=` validated against vocab; page revalidate → unstable_cache per loader (searchParams made it dynamic)
 - [x] Per-view pages (PR #224): `/dashboard/views/[id]` for all six registry views; `lib/view-data.ts` loaders never throw / never silently empty — every no-data outcome states WHY; registry hrefs → view pages, old targets kept as `deepHref`
 - [x] Public docs surface (PR #225): `/dashboard/docs` — the safety pass is STRUCTURAL: `lib/data-docs.ts` is a hand-typed allowlist of 13 civic datasets (rule in module header forbids generating from thoughts/shared/data-map, which names ACT private systems + token tables); row counts via PostgREST `estimated` count (planner stats, verified within a few % of measured; gs_entities worst at ~8% low), hourly refresh so nothing rots; Known Limits section; linked from help menu ("The data we hold")
-- FINDING: `justice_funding.financial_year` formats are MIXED — `2025-26` alongside `2026-2027` and multi-year `2026-2030` (32 distinct values). Dropdown shows actuals by design; normalising is a justice_funding cleaning task, not a dropdown bug.
-- Vocab views live: 9 topics (child-protection 7,481 rows → prevention 313), 32 financial years. Dropdowns appear as each surface's hourly vocab cache refreshes.
+- FINDING (RESOLVED 2026-08-16): `justice_funding.financial_year` formats were MIXED — see next entry.
+- [x] `justice_funding.financial_year` normalisation APPLIED (migration `migrations/2026-08-16-justice-fy-normalise.sql`): the mess was not formatting — 41 rows were multi-year spans / `YYYY-ongoing` / bare `2024`, incl. `2021-25` = a 2021→2025 PRF span that LOOKS canonical. New parsed cols `fy_start`/`fy_end`/`fy_open_ended` on all 157,116 rows (zero unparsed), maintained by trigger `trg_justice_funding_parse_fy`; raw strings kept as provenance except `2026-2027`→`2026-27` (2 rows, single-FY either way); `v_vocab_financial_years` now requires `fy_end = fy_start + 1` → dropdown is 19 clean FYs (2008-09…2026-27). Filter by `fy_*`, never by string shape.
+- Vocab views live: 9 topics (child-protection 7,481 rows → prevention 313), 19 financial years. Dropdowns appear as each surface's hourly vocab cache refreshes.
 
 ### Next
 - [ ] Ben's taste verdicts: deployed shell overall + `/clarity` dark-inside-light framing (gates the dark shell variant); also eyeball /dashboard/views/* and /dashboard/docs
-- [ ] `justice_funding.financial_year` normalisation (data-cleaning lane, see FINDING above)
 - [ ] Older backlog still open: Slice 5 row viewer (transcripts have FIVE independent consent flags), person-influence lane (last SEVERE money-view fixes), mv_justice_proven_suppliers GRANT ALL posture question, benjamin@act.place password reset
 
 ### Decisions
