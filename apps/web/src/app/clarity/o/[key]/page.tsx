@@ -4,6 +4,8 @@ import { notFound } from 'next/navigation';
 import { getDirectServiceSupabase } from '@/lib/supabase';
 import { VISIBILITY_MEANING, canRender, type Surface } from '@/lib/visibility';
 import { floorFor, floorReason } from '../../visibility-floor';
+import EditableCurated from './EditableCurated';
+import { Prose } from './prose';
 import {
   formatBytes,
   formatCount,
@@ -125,33 +127,6 @@ function Panel({
   );
 }
 
-/**
- * The curated prose is written in markdown — 467 caveats and 84 purposes contain `**bold**` or
- * backtick code. Rendered as plain text it reads as broken formatting, which is how it looked the
- * first time this page was opened. Only two inline forms are supported on purpose: no dependency,
- * no `dangerouslySetInnerHTML`, and nothing here can inject markup.
- */
-function Prose({ text, className }: { text: string; className?: string }) {
-  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
-  return (
-    <p className={className}>
-      {parts.map((part, i) => {
-        if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
-          return <strong key={i}>{part.slice(2, -2)}</strong>;
-        }
-        if (part.startsWith('`') && part.endsWith('`') && part.length > 2) {
-          return (
-            <code key={i} className="bg-bauhaus-canvas px-1 font-mono text-[0.92em]">
-              {part.slice(1, -1)}
-            </code>
-          );
-        }
-        return <span key={i}>{part}</span>;
-      })}
-    </p>
-  );
-}
-
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="border-b border-neutral-200 py-2 last:border-b-0">
@@ -269,24 +244,25 @@ export default async function ObjectPage({ params }: { params: Promise<{ key: st
 
         {stub ? (
           <p className="mt-4 border-l-4 border-neutral-400 pl-3 text-[14px] text-neutral-600">
-            This object has no purpose, grain or join keys recorded. It is one of{' '}
-            <strong>667 stubs</strong> in a catalogue of 1,479 — described objects carry all three
-            fields, so nothing here is half-written. Everything below is measured rather than
-            curated.
+            This object has no purpose, grain or join keys recorded — one of the{' '}
+            <strong>667 stubs</strong> the inline editor below exists to whittle down. Everything
+            further down is measured rather than curated.
           </p>
-        ) : (
-          <>
-            {o.purpose ? (
-              <Prose text={o.purpose} className="mt-4 text-[15px] leading-relaxed" />
-            ) : null}
-            {o.caveat ? (
-              <Prose
-                text={o.caveat}
-                className="mt-3 border-l-4 border-bauhaus-red pl-3 text-[14px] leading-relaxed"
-              />
-            ) : null}
-          </>
-        )}
+        ) : null}
+        <EditableCurated
+          objectKey={key}
+          field="purpose"
+          initial={o.purpose}
+          variant="prose"
+          className="mt-4 text-[15px] leading-relaxed"
+        />
+        <EditableCurated
+          objectKey={key}
+          field="caveat"
+          initial={o.caveat}
+          variant="prose"
+          className="mt-3 border-l-4 border-bauhaus-red pl-3 text-[14px] leading-relaxed"
+        />
       </header>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
@@ -466,9 +442,16 @@ export default async function ObjectPage({ params }: { params: Promise<{ key: st
                   <span className="text-neutral-500"> · {o.nullable_columns} nullable</span>
                 ) : null}
               </Field>
-              <Field label="Grain">{o.grain ?? <span className="text-neutral-400">—</span>}</Field>
+              <Field label="Grain">
+                <EditableCurated objectKey={key} field="grain" initial={o.grain} variant="mono" />
+              </Field>
               <Field label="Join keys">
-                {o.join_keys ?? <span className="text-neutral-400">—</span>}
+                <EditableCurated
+                  objectKey={key}
+                  field="join_keys"
+                  initial={o.join_keys}
+                  variant="mono"
+                />
               </Field>
               <Field label="Degree">
                 {o.degree ?? '—'}
@@ -596,6 +579,16 @@ export default async function ObjectPage({ params }: { params: Promise<{ key: st
               </Field>
               <Field label="State">{o.state ?? '—'}</Field>
               <Field label="Catalogue refreshed">{o.refreshed_at?.slice(0, 10) ?? '—'}</Field>
+              <Field label="Curated">
+                {o.curated_at ? (
+                  <>
+                    {o.curated_at.slice(0, 10)}
+                    {o.curated_by ? <span className="text-neutral-500"> · {o.curated_by}</span> : null}
+                  </>
+                ) : (
+                  <span className="text-neutral-500">never edited inline</span>
+                )}
+              </Field>
             </dl>
           </Panel>
         </div>
