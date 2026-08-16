@@ -3,8 +3,8 @@
 import { Fragment, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { BASELINES, BASELINE_LABEL, type Baseline } from './changes/types';
-import type { LedgerRow, LedgerStats, FreshnessProbe } from './types';
+import { BASELINES, BASELINE_LABEL, type Baseline } from '../changes/types';
+import type { LedgerRow, LedgerStats, FreshnessProbe } from '../types';
 
 // QUESTIONS sits FIRST and ALL stays the default. A question is the only row here that answers
 // something about the world rather than describing our estate, so it leads the segment list —
@@ -362,8 +362,24 @@ export default function LedgerClient({ rows, stats }: { rows: LedgerRow[]; stats
                             }}
                             className="cursor-pointer border-t border-bauhaus-black/10 hover:bg-bauhaus-canvas"
                           >
-                            <td className="break-all px-2.5 py-1.5 text-[13px] font-semibold">
-                              <span className="font-mono">{r.n}</span>
+                            {/* break-words, not break-all: break-all was shredding the human
+                                question titles mid-word (`OBJECTS WITH A WRITTEN PURPOS / E`).
+                                snake_case object names still wrap fine on the underscores. */}
+                            <td className="break-words px-2.5 py-1.5 text-[13px] font-semibold">
+                              {r.qs ? (
+                                <span className="font-mono">{r.n}</span>
+                              ) : (
+                                // The row still expands on click; the name is the way through to
+                                // the object's own page. Until this existed, a click on
+                                // `austender_contracts` went nowhere.
+                                <Link
+                                  href={`/clarity/o/${encodeURIComponent(r.n)}`}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="font-mono underline decoration-bauhaus-black/25 underline-offset-2 hover:decoration-bauhaus-black"
+                                >
+                                  {r.n}
+                                </Link>
+                              )}
                               {r.qs ? (
                                 <span className="ml-1.5 border border-bauhaus-blue px-1 text-[9px] font-extrabold uppercase tracking-wider text-bauhaus-blue">
                                   question
