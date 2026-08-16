@@ -18,8 +18,10 @@ export interface RegisteredView {
   name: string;
   /** One-sentence answer this view gives. */
   question: string;
-  /** Where clicking through lands. */
+  /** Where clicking through lands: the view's own page in the shell. */
   href: string;
+  /** The deeper report/page this view summarises, linked from the view page. */
+  deepHref?: string;
   colour: ViewColour;
   /** Caveat that must ship with the number, verbatim from the data map. Never render the view without it. */
   caveat?: string;
@@ -32,7 +34,8 @@ export const VIEW_REGISTRY: RegisteredView[] = [
     id: 'youth-justice-money',
     name: 'Youth justice money',
     question: 'Where youth justice grant money went, filtered clean ($915.7M FY2018–24).',
-    href: '/reports/theme/youth-justice',
+    href: '/dashboard/views/youth-justice-money',
+    deepHref: '/reports/theme/youth-justice',
     colour: 'yellow',
     caveat: 'Grants only: excludes state budget aggregates and source-spreadsheet total rows.',
     pinned: true,
@@ -41,7 +44,8 @@ export const VIEW_REGISTRY: RegisteredView[] = [
     id: 'acco-share',
     name: 'ACCO share',
     question: 'How much of youth justice money reaches community-controlled organisations (11.5%).',
-    href: '/reports/youth-justice',
+    href: '/dashboard/views/acco-share',
+    deepHref: '/reports/youth-justice',
     colour: 'blue',
     pinned: true,
   },
@@ -49,7 +53,8 @@ export const VIEW_REGISTRY: RegisteredView[] = [
     id: 'money-without-evidence',
     name: 'Money vs evidence',
     question: 'Funding to organisations with no recorded evidence of what works, by topic.',
-    href: '/clarity?q=evidence-gap',
+    href: '/dashboard/views/money-without-evidence',
+    deepHref: '/clarity?q=evidence-gap',
     colour: 'green',
     caveat: 'Evidence link = ALMA register presence; absence of evidence is not evidence of absence.',
     pinned: true,
@@ -58,7 +63,8 @@ export const VIEW_REGISTRY: RegisteredView[] = [
     id: 'power-concentration',
     name: 'Power: top 1%',
     question: 'Cross-system power concentration — the top 1% of entities hold 86.9% of $1.287T.',
-    href: '/power',
+    href: '/dashboard/views/power-concentration',
+    deepHref: '/power',
     colour: 'red',
     caveat: 'Entity-level only. Person-level influence is shown as counts, never dollars.',
     pinned: true,
@@ -67,7 +73,8 @@ export const VIEW_REGISTRY: RegisteredView[] = [
     id: 'funding-deserts',
     name: 'Funding deserts',
     question: 'High-disadvantage LGAs receiving the least funding.',
-    href: '/reports/funding-deserts',
+    href: '/dashboard/views/funding-deserts',
+    deepHref: '/reports/funding-deserts',
     colour: 'ink',
     caveat: 'Desert grain is not unique per LGA — deduplicated by name and state.',
   },
@@ -75,7 +82,8 @@ export const VIEW_REGISTRY: RegisteredView[] = [
     id: 'board-interlocks',
     name: 'Interlocked boards',
     question: 'Organisations governed by people who sit on multiple boards.',
-    href: '/reports/board-interlocks',
+    href: '/dashboard/views/board-interlocks',
+    deepHref: '/reports/board-interlocks',
     colour: 'ink',
     caveat: 'Banded by board count, capped at 10 — above that is the nominee-block artefact.',
   },
