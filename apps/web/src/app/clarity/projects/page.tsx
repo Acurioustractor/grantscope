@@ -29,7 +29,12 @@ function repoActive(r: CodeRow): boolean {
   return Date.now() - new Date(r.repo_last_commit).getTime() < 183 * 24 * 60 * 60 * 1000;
 }
 
-async function load(): Promise<CodeRow[]> {
+export interface StoryStrip {
+  titles: { title: string; slug: string | null }[];
+  hidden: number; // links whose story may not be shown: transcripts, or unpublished stories
+}
+
+async function load(): Promise<{ rows: CodeRow[]; storiesByCode: Map<string, StoryStrip> }> {
   const supabase = getDirectServiceSupabase();
   const { data, error } = await supabase
     .from('clarity_project_code')
@@ -37,7 +42,39 @@ async function load(): Promise<CodeRow[]> {
     .order('code')
     .limit(200);
   if (error) throw new Error(`clarity_project_code query failed: ${error.message}`);
-  return (data ?? []) as unknown as CodeRow[];
+  const rows = (data ?? []) as unknown as CodeRow[];
+
+  // Slice 10: the story strip. Titles come ONLY from published stories — a linked transcript or
+  // unpublished story is a COUNT, never a title. The strip degrades to empty on failure.
+  const storiesByCode = new Map<string, StoryStrip>();
+  try {
+    const { data: links } = await supabase
+      .from('clarity_story_project_link')
+      .select('story_table,story_id,project_code');
+    const linkRows = (links ?? []) as { story_table: string; story_id: string; project_code: string }[];
+    const publishedIds = linkRows.filter((l) => l.story_table === 'stories').map((l) => l.story_id);
+    const titleById = new Map<string, { title: string; slug: string | null }>();
+    if (publishedIds.length) {
+      const { data: pub } = await supabase
+        .from('stories')
+        .select('id,title,slug')
+        .eq('status', 'published')
+        .in('id', publishedIds);
+      for (const s of (pub ?? []) as { id: string; title: string; slug: string | null }[]) {
+        titleById.set(s.id, { title: s.title, slug: s.slug });
+      }
+    }
+    for (const l of linkRows) {
+      const strip = storiesByCode.get(l.project_code) ?? { titles: [], hidden: 0 };
+      const t = l.story_table === 'stories' ? titleById.get(l.story_id) : undefined;
+      if (t) strip.titles.push(t);
+      else strip.hidden += 1;
+      storiesByCode.set(l.project_code, strip);
+    }
+  } catch {
+    // strip stays empty
+  }
+  return { rows, storiesByCode };
 }
 
 /**
@@ -48,11 +85,43 @@ async function load(): Promise<CodeRow[]> {
  * scripts/sync-project-evidence.mjs — the claim "these tables evidence Goods" belongs to the
  * work, not to a button here.
  */
+/** What we say about the project, next to what the data says. Published titles only; every
+ *  other linked story (a transcript, an unpublished draft) is a count — never a title. */
+function Stories({ strip }: { strip: StoryStrip | undefined }) {
+  if (!strip || (strip.titles.length === 0 && strip.hidden === 0)) return null;
+  return (
+    <p className="mt-0.5 text-[13px]">
+      <span className="font-mono text-[10px] font-black uppercase tracking-widest text-neutral-500">
+        stories:{' '}
+      </span>
+      {strip.titles.map((t, i) => (
+        <span key={i}>
+          {i > 0 ? ' · ' : ''}
+          {t.slug ? (
+            <a href={`/stories/${t.slug}`} className="text-bauhaus-blue underline">
+              {t.title}
+            </a>
+          ) : (
+            t.title
+          )}
+        </span>
+      ))}
+      {strip.hidden > 0 ? (
+        <span className="text-neutral-500">
+          {strip.titles.length > 0 ? ' · ' : ''}
+          {strip.hidden} not shown (consent-governed or unpublished)
+        </span>
+      ) : null}
+    </p>
+  );
+}
+
 export default async function ProjectsPage() {
   let rows: CodeRow[] = [];
+  let storiesByCode = new Map<string, StoryStrip>();
   let error: string | null = null;
   try {
-    rows = await load();
+    ({ rows, storiesByCode } = await load());
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
   }
@@ -117,6 +186,7 @@ export default async function ProjectsPage() {
                 {r.summary ? (
                   <p className="mt-0.5 max-w-[85ch] text-[13px] text-neutral-600">{r.summary}</p>
                 ) : null}
+                <Stories strip={storiesByCode.get(r.code)} />
                 <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
                   {r.evidence_object_keys.map((k) => (
                     <Link
@@ -157,6 +227,7 @@ export default async function ProjectsPage() {
                 {r.summary ? (
                   <p className="mt-0.5 max-w-[85ch] text-[13px] text-neutral-600">{r.summary}</p>
                 ) : null}
+                <Stories strip={storiesByCode.get(r.code)} />
               </li>
             ))}
           </ul>
