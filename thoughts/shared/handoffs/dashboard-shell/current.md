@@ -44,6 +44,19 @@ Work order: 1) chrome crawl from /dashboard (pattern-collapsed) → map every re
 visual family vs intent (root layout isChromeless list is the code's intent, layout.tsx:93) →
 convert stragglers to shell; 2) data→surface mapping via clarity (visibility floor + owner_app +
 nouns feeding a per-surface data contract).
+- [x] CRAWL DONE 2026-08-17: 47 screens, ZERO broken chrome — clean two-family split (shell:
+  dashboard+views+docs+search+18 clarity surfaces; public Bauhaus: everything else). One 404
+  (/ask footer link, removed). Ben's rulings: shell-native noun pages (rail never exits the
+  shell) + ops tools (/ops/health /alerts /tracker /foundations/tracker) move into the shell.
+- [x] Five shell-native noun pages BUILT (branch shell-native-noun-pages): /dashboard/{themes,
+  reports,entities,people,places} reusing themes registry / reportSections / mv_entity_power_index
+  / mv_board_interlocks (**MAX_PLAUSIBLE_BOARDS cap applied read-side — unfiltered top "person"
+  sits on 745 estate trusts**) / mv_funding_by_postcode. Detail pages still open the public atlas,
+  stated on every page. Rail is now pathname-aware (`rail-nav.tsx` client component, longest-prefix
+  active; TRAP: component refs can't cross the server→client boundary as props — NAV must live in
+  the client file). Shell.activeHref deprecated-ignored.
+- [ ] Ops tools into the shell (second PR of this stream).
+- [ ] Then: clarity-driven data→surface contract (visibility floor + owner + noun per surface).
 
 ### Next
 - [ ] Ben's taste verdicts: deployed shell overall + `/clarity` dark-inside-light framing (gates the dark shell variant); also eyeball /dashboard/views/* and /dashboard/docs
