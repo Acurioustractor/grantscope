@@ -33,10 +33,30 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 
 const REPO = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
-const SCAN_SETS = [
-  { refClass: 'app', dirs: ['apps/web/src'] },
-  { refClass: 'script', dirs: ['scripts'] },
-  { refClass: 'migration', dirs: ['supabase/migrations', 'migrations'] },
+// Repo-aware since slice 8: the same database serves CivicGraph and JusticeHub, so ownership is
+// measurable only if both codebases are scanned. clarity_code_ref.repo's CHECK constraint
+// ('civicgraph'|'justicehub'|'database') anticipated exactly this. A missing JusticeHub checkout
+// is skipped with a loud line, not an error — but then refs and owner proposals are
+// CivicGraph-only and owner_app proposals must not be trusted from that run.
+const REPOS = [
+  {
+    repo: 'civicgraph',
+    root: REPO,
+    sets: [
+      { refClass: 'app', dirs: ['apps/web/src'] },
+      { refClass: 'script', dirs: ['scripts'] },
+      { refClass: 'migration', dirs: ['supabase/migrations', 'migrations'] },
+    ],
+  },
+  {
+    repo: 'justicehub',
+    root: `${process.env.HOME}/Code/JusticeHub`,
+    sets: [
+      { refClass: 'app', dirs: ['src'] },
+      { refClass: 'script', dirs: ['scripts'] },
+      { refClass: 'migration', dirs: ['supabase/migrations'] },
+    ],
+  },
 ];
 // Names this short are English words or SQL noise; a whole-word grep for them measures prose,
 // not usage. They stay UNSCANNED (no row, counters recomputed to whatever real rows exist).
@@ -66,13 +86,13 @@ function bareName(objectKey) {
   return objectKey.includes('(') ? objectKey.slice(0, objectKey.indexOf('(')).trim() : objectKey;
 }
 
-function scan(names, dirs) {
+function scan(names, root, dirs) {
   // One rg pass per source set: fixed-string whole-word alternation over every name.
   const patternFile = join(mkdtempSync(join(tmpdir(), 'clarity-scan-')), 'patterns.txt');
   writeFileSync(patternFile, [...names].join('\n'));
   const existing = dirs.filter((d) => {
     try {
-      execSync(`test -d ${JSON.stringify(join(REPO, d))}`);
+      execSync(`test -d ${JSON.stringify(join(root, d))}`);
       return true;
     } catch {
       return false;
@@ -84,8 +104,11 @@ function scan(names, dirs) {
   try {
     out = execFileSync(
       'rg',
-      ['-oFw', '--no-heading', '--with-filename', '-f', patternFile, ...existing],
-      { cwd: REPO, maxBuffer: 512 * 1024 * 1024, encoding: 'utf8' },
+      // Generated Supabase type mirrors name EVERY table in the shared DB (JusticeHub's
+      // database.types.ts alone matched 1,234 catalogued names) — that is the schema reflected
+      // back at us, not usage. Excluded, or every object looks used by every repo.
+      ['-oFw', '--no-heading', '--with-filename', '-g', '!**/database.types.ts', '-g', '!**/*.generated.*', '-f', patternFile, ...existing],
+      { cwd: root, maxBuffer: 512 * 1024 * 1024, encoding: 'utf8' },
     );
   } catch (e) {
     if (e.status === 1) return new Map(); // rg exit 1 = no matches
@@ -124,20 +147,27 @@ async function main() {
   console.log(`objects: ${objectKeys.length}, scannable names: ${nameToKeys.size}`);
 
   const inserts = [];
-  for (const { refClass, dirs } of SCAN_SETS) {
-    const tally = scan(nameToKeys.keys(), dirs);
-    let files = 0;
-    for (const [name, fileHits] of tally) {
-      for (const key of nameToKeys.get(name) ?? []) {
-        for (const [file, hits] of fileHits) {
-          inserts.push(
-            `(${sqlLiteral(key)}, ${sqlLiteral(refClass)}, 'civicgraph', ${sqlLiteral(file)}, ${hits}, now())`,
-          );
-          files += 1;
+  for (const { repo, root, sets } of REPOS) {
+    let repoSeen = false;
+    for (const { refClass, dirs } of sets) {
+      const tally = scan(nameToKeys.keys(), root, dirs);
+      let files = 0;
+      for (const [name, fileHits] of tally) {
+        for (const key of nameToKeys.get(name) ?? []) {
+          for (const [file, hits] of fileHits) {
+            inserts.push(
+              `(${sqlLiteral(key)}, ${sqlLiteral(refClass)}, ${sqlLiteral(repo)}, ${sqlLiteral(file)}, ${hits}, now())`,
+            );
+            files += 1;
+          }
         }
       }
+      if (files > 0) repoSeen = true;
+      console.log(`${repo}/${refClass}: ${tally.size} names referenced across ${files} file entries`);
     }
-    console.log(`${refClass}: ${tally.size} names referenced across ${files} file entries`);
+    if (!repoSeen && repo === 'justicehub') {
+      console.log('WARNING: no JusticeHub matches — checkout missing? owner_app proposals from this run are one-eyed.');
+    }
   }
 
   const batches = [];
