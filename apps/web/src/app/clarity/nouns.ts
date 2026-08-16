@@ -103,6 +103,14 @@ export const SECTOR_DOMAINS = new Set([
   'unknown',
 ]);
 
+/**
+ * SINCE SLICE 4 the `clarity_object.noun` COLUMN is authoritative and the index reads it, not
+ * this function. DOMAIN_TO_NOUN above was mirrored into the column by
+ * migrations/2026-08-16-clarity-noun.sql (noun_source='domain_rule'); humans file the rest via
+ * /clarity/unfiled → /api/clarity/nouns (noun_source='human'). This function remains as the
+ * documented rule and its tests keep the SQL mirror honest — if you edit the mapping, edit the
+ * migration's CASE too.
+ */
 export function nounFor(domain: string | null | undefined): Noun {
   if (!domain) return 'unfiled';
   return DOMAIN_TO_NOUN[domain] ?? 'unfiled';
