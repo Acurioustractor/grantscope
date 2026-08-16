@@ -1,4 +1,5 @@
 import { ReportCTA } from './_components/report-cta';
+import { ReportStatusTag } from './_components/report-status-tag';
 import { reportSections, reportStatusMeta, type NavItem, type ReportStatus } from './_components/sidebar-nav-data';
 
 type FlatReport = NavItem & { section: string };
@@ -95,31 +96,31 @@ export default function ReportsPage() {
         <ol className="space-y-2 text-sm font-medium text-bauhaus-black/80">
           <li className="flex gap-2">
             <span className="text-bauhaus-red font-black">1.</span>
-            <span><a href="/reports/big-philanthropy" className="font-bold text-bauhaus-blue hover:text-bauhaus-red">$222 Billion</a> &mdash; Where does Australia&apos;s charity money actually go?</span>
+            <span><a href="/reports/big-philanthropy" className="font-bold text-bauhaus-blue hover:text-bauhaus-red">$222 Billion</a><ReportStatusTag href="/reports/big-philanthropy" /> &mdash; Where does Australia&apos;s charity money actually go?</span>
           </li>
           <li className="flex gap-2">
             <span className="text-bauhaus-red font-black">2.</span>
-            <span><a href="/reports/community-parity" className="font-bold text-bauhaus-blue hover:text-bauhaus-red">Community Parity</a> &mdash; Who benefits, who misses out, and why</span>
+            <span><a href="/reports/community-parity" className="font-bold text-bauhaus-blue hover:text-bauhaus-red">Community Parity</a><ReportStatusTag href="/reports/community-parity" /> &mdash; Who benefits, who misses out, and why</span>
           </li>
           <li className="flex gap-2">
             <span className="text-bauhaus-red font-black">3.</span>
-            <span><a href="/reports/funding-equity" className="font-bold text-bauhaus-blue hover:text-bauhaus-red">Funding Equity</a> &mdash; The most disadvantaged postcodes get 12.9% of charity income. The least get 46%.</span>
+            <span><a href="/reports/funding-equity" className="font-bold text-bauhaus-blue hover:text-bauhaus-red">Funding Equity</a><ReportStatusTag href="/reports/funding-equity" /> &mdash; The most disadvantaged postcodes get 12.9% of charity income. The least get 46%.</span>
           </li>
           <li className="flex gap-2">
             <span className="text-bauhaus-red font-black">4.</span>
-            <span><a href="/reports/power-dynamics" className="font-bold text-bauhaus-blue hover:text-bauhaus-red">Power Dynamics</a> &mdash; Concentration, inequality, and who controls the levers</span>
+            <span><a href="/reports/power-dynamics" className="font-bold text-bauhaus-blue hover:text-bauhaus-red">Power Dynamics</a><ReportStatusTag href="/reports/power-dynamics" /> &mdash; Concentration, inequality, and who controls the levers</span>
           </li>
           <li className="flex gap-2">
             <span className="text-bauhaus-red font-black">5.</span>
-            <span><a href="/reports/community-power" className="font-bold text-bauhaus-blue hover:text-bauhaus-red">Community Power Playbook</a> &mdash; The alternative: what communities are building</span>
+            <span><a href="/reports/community-power" className="font-bold text-bauhaus-blue hover:text-bauhaus-red">Community Power Playbook</a><ReportStatusTag href="/reports/community-power" /> &mdash; The alternative: what communities are building</span>
           </li>
           <li className="flex gap-2">
             <span className="text-bauhaus-red font-black">6.</span>
-            <span><a href="/reports/social-enterprise" className="font-bold text-bauhaus-blue hover:text-bauhaus-red">Social Enterprise in Australia</a> &mdash; The invisible $21 billion sector and the register that doesn&apos;t exist</span>
+            <span><a href="/reports/social-enterprise" className="font-bold text-bauhaus-blue hover:text-bauhaus-red">Social Enterprise in Australia</a><ReportStatusTag href="/reports/social-enterprise" /> &mdash; The invisible $21 billion sector and the register that doesn&apos;t exist</span>
           </li>
           <li className="flex gap-2">
             <span className="text-bauhaus-red font-black">7.</span>
-            <span><a href="/reports/philanthropy" className="font-bold text-bauhaus-blue hover:text-bauhaus-red">Foundation Intelligence</a> &mdash; Who funds what, who watches, and what works</span>
+            <span><a href="/reports/philanthropy" className="font-bold text-bauhaus-blue hover:text-bauhaus-red">Foundation Intelligence</a><ReportStatusTag href="/reports/philanthropy" /> &mdash; Who funds what, who watches, and what works</span>
           </li>
         </ol>
       </div>
@@ -127,7 +128,7 @@ export default function ReportsPage() {
       <section className="mb-6">
         <a href="/reports/civicgraph-thesis" className="group block">
           <div className="bg-white border-4 border-bauhaus-black p-8 transition-all group-hover:-translate-y-1" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-red)' }}>
-            <div className="text-xs font-black text-bauhaus-red mb-2 uppercase tracking-widest">Company Memo — New</div>
+            <div className="text-xs font-black text-bauhaus-red mb-2 uppercase tracking-widest">Company Memo — New<ReportStatusTag href="/reports/civicgraph-thesis" /></div>
             <h3 className="text-2xl font-black text-bauhaus-black mb-3">The CivicGraph Investor Memo</h3>
             <p className="text-base text-bauhaus-muted leading-relaxed mb-4 max-w-3xl">
               A shorter 2–3 page case for why CivicGraph can become the intelligence layer for grants,
@@ -147,7 +148,7 @@ export default function ReportsPage() {
       <section className="mb-6">
         <a href="/reports/why-grant-search-is-not-enough" className="group block">
           <div className="bg-bauhaus-canvas border-4 border-bauhaus-black p-8 transition-all group-hover:-translate-y-1" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-blue)' }}>
-            <div className="text-xs font-black text-bauhaus-blue mb-2 uppercase tracking-widest">Broad Essay — New</div>
+            <div className="text-xs font-black text-bauhaus-blue mb-2 uppercase tracking-widest">Broad Essay — New<ReportStatusTag href="/reports/why-grant-search-is-not-enough" /></div>
             <h3 className="text-2xl font-black text-bauhaus-black mb-3">Why Grant Search Is Not Enough</h3>
             <p className="text-base text-bauhaus-muted leading-relaxed mb-4 max-w-3xl">
               A broader article on why the next useful category is an intelligence layer for funding,
@@ -260,7 +261,7 @@ export default function ReportsPage() {
       <section className="mb-6">
         <a href="/reports/reallocation-atlas" className="group block">
           <div className="border-4 border-bauhaus-black bg-white p-8 transition-all group-hover:-translate-y-1" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-blue)' }}>
-            <div className="mb-2 text-xs font-black uppercase tracking-widest text-bauhaus-blue">Place × Power × Action — NEW FLAGSHIP</div>
+            <div className="mb-2 text-xs font-black uppercase tracking-widest text-bauhaus-blue">Place × Power × Action — NEW FLAGSHIP<ReportStatusTag href="/reports/reallocation-atlas" /></div>
             <h3 className="mb-3 text-2xl font-black text-bauhaus-black">The Reallocation Atlas</h3>
             <p className="mb-4 text-base leading-relaxed text-bauhaus-muted">
               A place-first operating surface for Australia. See where money is thin, who captures the flow,
@@ -281,7 +282,7 @@ export default function ReportsPage() {
       <section className="mb-6">
         <a href="/reports/convergence" className="group block">
           <div className="bg-bauhaus-red border-4 border-bauhaus-black p-8 transition-all group-hover:-translate-y-1" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-black)' }}>
-            <div className="text-xs font-black text-bauhaus-yellow mb-2 uppercase tracking-widest">Cross-System Investigation &mdash; FLAGSHIP</div>
+            <div className="text-xs font-black text-bauhaus-yellow mb-2 uppercase tracking-widest">Cross-System Investigation &mdash; FLAGSHIP<ReportStatusTag href="/reports/convergence" /></div>
             <h3 className="text-2xl font-black text-white mb-3">One Child. Five Systems. Zero Coordination.</h3>
             <p className="text-base text-white/80 leading-relaxed mb-4">
               The same communities appear in every government system &mdash; child protection, youth justice,
@@ -303,7 +304,7 @@ export default function ReportsPage() {
       <section className="mb-6">
         <a href="/reports/philanthropy" className="group block">
           <div className="bg-bauhaus-black border-4 border-bauhaus-black p-8 transition-all group-hover:-translate-y-1" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-yellow, #f5a623)' }}>
-            <div className="text-xs font-black text-bauhaus-yellow mb-2 uppercase tracking-widest">Foundation Intelligence &mdash; NEW</div>
+            <div className="text-xs font-black text-bauhaus-yellow mb-2 uppercase tracking-widest">Foundation Intelligence &mdash; NEW<ReportStatusTag href="/reports/philanthropy" /></div>
             <h3 className="text-2xl font-black text-white mb-3">Who Funds What. Who Watches. What Works.</h3>
             <p className="text-base text-white/80 leading-relaxed mb-4">
               2,466 Australian foundations scored on transparency, need alignment, evidence-backed
@@ -324,7 +325,7 @@ export default function ReportsPage() {
       <section className="mb-6">
         <a href="/reports/grant-frontier" className="group block">
           <div className="bg-white border-4 border-bauhaus-black p-8 transition-all group-hover:-translate-y-1" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-blue)' }}>
-            <div className="text-xs font-black text-bauhaus-blue mb-2 uppercase tracking-widest">Operations Surface — NEW</div>
+            <div className="text-xs font-black text-bauhaus-blue mb-2 uppercase tracking-widest">Operations Surface — NEW<ReportStatusTag href="/reports/grant-frontier" /></div>
             <h3 className="text-2xl font-black text-bauhaus-black mb-3">Grant Source Control Surface</h3>
             <p className="text-base text-bauhaus-muted leading-relaxed mb-4">
               The live ingestion rail behind CivicGraph grants. See which grant feeds dominate, which foundation queues are still cold,
@@ -345,7 +346,7 @@ export default function ReportsPage() {
       <section className="mb-6">
         <a href="/reports/triple-play" className="group block">
           <div className="bg-bauhaus-black border-4 border-bauhaus-black p-8 transition-all group-hover:-translate-y-1" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-red)' }}>
-            <div className="text-xs font-black text-bauhaus-yellow mb-2 uppercase tracking-widest">Cross-Dataset Investigation — NEW</div>
+            <div className="text-xs font-black text-bauhaus-yellow mb-2 uppercase tracking-widest">Cross-Dataset Investigation — NEW<ReportStatusTag href="/reports/triple-play" /></div>
             <h3 className="text-2xl font-black text-white mb-3">Donate. Lobby. Win. Pay No Tax.</h3>
             <p className="text-base text-white/80 leading-relaxed mb-4">
               The Triple Play: entities that donate to political parties, lobby government ministers,
@@ -367,7 +368,7 @@ export default function ReportsPage() {
       <section className="mb-6">
         <a href="/reports/ipp-scoreboard" className="group block">
           <div className="bg-white border-4 border-bauhaus-black p-8 transition-all group-hover:-translate-y-1" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-red)' }}>
-            <div className="text-xs font-black text-bauhaus-red mb-2 uppercase tracking-widest">Procurement Investigation &mdash; NEW</div>
+            <div className="text-xs font-black text-bauhaus-red mb-2 uppercase tracking-widest">Procurement Investigation &mdash; NEW<ReportStatusTag href="/reports/ipp-scoreboard" /></div>
             <h3 className="text-2xl font-black text-bauhaus-black mb-3">The IPP Scoreboard</h3>
             <p className="text-base text-bauhaus-muted leading-relaxed mb-4">
               Indigenous Procurement Policy was set in 2015 with a 3% target. In 2025, only 33 of 278
@@ -389,7 +390,7 @@ export default function ReportsPage() {
       <section className="mb-6">
         <a href="/reports/double-dippers" className="group block">
           <div className="bg-white border-4 border-bauhaus-black p-8 transition-all group-hover:-translate-y-1" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-blue)' }}>
-            <div className="text-xs font-black text-bauhaus-blue mb-2 uppercase tracking-widest">Cross-Channel Investigation &mdash; NEW</div>
+            <div className="text-xs font-black text-bauhaus-blue mb-2 uppercase tracking-widest">Cross-Channel Investigation &mdash; NEW<ReportStatusTag href="/reports/double-dippers" /></div>
             <h3 className="text-2xl font-black text-bauhaus-black mb-3">The Double-Dippers</h3>
             <p className="text-base text-bauhaus-muted leading-relaxed mb-4">
               4,218 Australian entities receive both government grants AND government contracts.
@@ -411,7 +412,7 @@ export default function ReportsPage() {
       <section className="mb-6">
         <a href="/reports/procurement-oligopoly" className="group block">
           <div className="bg-white border-4 border-bauhaus-black p-8 transition-all group-hover:-translate-y-1" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-red)' }}>
-            <div className="text-xs font-black text-bauhaus-red mb-2 uppercase tracking-widest">Procurement Investigation &mdash; NEW</div>
+            <div className="text-xs font-black text-bauhaus-red mb-2 uppercase tracking-widest">Procurement Investigation &mdash; NEW<ReportStatusTag href="/reports/procurement-oligopoly" /></div>
             <h3 className="text-2xl font-black text-bauhaus-black mb-3">The Procurement Oligopoly</h3>
             <p className="text-base text-bauhaus-muted leading-relaxed mb-4">
               100 entities (0.18% of all suppliers) receive 59% of all federal procurement dollars.
@@ -433,7 +434,7 @@ export default function ReportsPage() {
       <section className="mb-6">
         <a href="/reports/power-concentration" className="group block">
           <div className="bg-bauhaus-black border-4 border-bauhaus-black p-8 transition-all group-hover:-translate-y-1" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-blue)' }}>
-            <div className="text-xs font-black text-bauhaus-yellow mb-2 uppercase tracking-widest">Cross-System Investigation — NEW</div>
+            <div className="text-xs font-black text-bauhaus-yellow mb-2 uppercase tracking-widest">Cross-System Investigation — NEW<ReportStatusTag href="/reports/power-concentration" /></div>
             <h3 className="text-2xl font-black text-white mb-3">Cross-System Power Concentration</h3>
             <p className="text-base text-white/80 leading-relaxed mb-4">
               82,967 entities scored across 7 public datasets. Who appears everywhere,
@@ -455,7 +456,7 @@ export default function ReportsPage() {
       <section className="mb-6">
         <a href="/reports/tax-transparency" className="group block">
           <div className="bg-white border-4 border-bauhaus-black p-8 transition-all group-hover:-translate-y-1" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-red)' }}>
-            <div className="text-xs font-black text-bauhaus-red mb-2 uppercase tracking-widest">Cross-Dataset Investigation &mdash; NEW</div>
+            <div className="text-xs font-black text-bauhaus-red mb-2 uppercase tracking-widest">Cross-Dataset Investigation &mdash; NEW<ReportStatusTag href="/reports/tax-transparency" /></div>
             <h3 className="text-2xl font-black text-bauhaus-black mb-3">Tax Transparency: Contracts vs Tax</h3>
             <p className="text-base text-bauhaus-muted leading-relaxed mb-4">
               Who gets government contracts &mdash; and how much tax do they pay?
@@ -477,7 +478,7 @@ export default function ReportsPage() {
       <section className="mb-6">
         <a href="/reports/timing" className="group block">
           <div className="bg-white border-4 border-bauhaus-black p-8 transition-all group-hover:-translate-y-1" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-blue)' }}>
-            <div className="text-xs font-black text-bauhaus-red mb-2 uppercase tracking-widest">Temporal Analysis — NEW</div>
+            <div className="text-xs font-black text-bauhaus-red mb-2 uppercase tracking-widest">Temporal Analysis — NEW<ReportStatusTag href="/reports/timing" /></div>
             <h3 className="text-2xl font-black text-bauhaus-black mb-3">Donate Today, Win Tomorrow.</h3>
             <p className="text-base text-bauhaus-muted leading-relaxed mb-4">
               Statistical correlation of political donation timing against government contract awards.
@@ -499,7 +500,7 @@ export default function ReportsPage() {
       <section className="mb-6">
         <a href="/reports/political-money" className="group block">
           <div className="bg-bauhaus-red border-4 border-bauhaus-black p-8 transition-all group-hover:-translate-y-1" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-black)' }}>
-            <div className="text-xs font-black text-bauhaus-yellow mb-2 uppercase tracking-widest">Cross-Dataset Investigation — NEW</div>
+            <div className="text-xs font-black text-bauhaus-yellow mb-2 uppercase tracking-widest">Cross-Dataset Investigation — NEW<ReportStatusTag href="/reports/political-money" /></div>
             <h3 className="text-2xl font-black text-white mb-3">Political Money</h3>
             <p className="text-base text-white/80 leading-relaxed mb-4">
               Who funds Australian politics &mdash; and what do they get in return?
@@ -521,7 +522,7 @@ export default function ReportsPage() {
       <section className="mb-12">
         <a href="/reports/donor-contractors" className="group block">
           <div className="bg-bauhaus-red border-4 border-bauhaus-black p-8 transition-all group-hover:-translate-y-1" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-black)' }}>
-            <div className="text-xs font-black text-bauhaus-yellow mb-2 uppercase tracking-widest">Entity Graph Investigation</div>
+            <div className="text-xs font-black text-bauhaus-yellow mb-2 uppercase tracking-widest">Entity Graph Investigation<ReportStatusTag href="/reports/donor-contractors" /></div>
             <h3 className="text-2xl font-black text-white mb-3">Donate. Win Contracts. Repeat.</h3>
             <p className="text-base text-white/80 leading-relaxed mb-4">
               1,442 entities donate to political parties AND hold government contracts.
@@ -549,7 +550,7 @@ export default function ReportsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <a href="/reports/big-philanthropy" className="group block sm:col-span-2">
             <div className="bg-bauhaus-black border-4 border-bauhaus-black p-6 transition-all group-hover:-translate-y-1" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-red)' }}>
-              <div className="text-xs font-black text-bauhaus-yellow mb-2 uppercase tracking-widest">Data Investigation</div>
+              <div className="text-xs font-black text-bauhaus-yellow mb-2 uppercase tracking-widest">Data Investigation<ReportStatusTag href="/reports/big-philanthropy" /></div>
               <h3 className="text-xl font-black text-white mb-2">Where Does Australia&apos;s $222 Billion Go?</h3>
               <p className="text-sm text-bauhaus-muted leading-relaxed">
                 An investigation into 359,678 charity financial records across 7 years, revealing
@@ -560,7 +561,7 @@ export default function ReportsPage() {
 
           <a href="/reports/community-parity" className="group block sm:col-span-2">
             <div className="bg-bauhaus-red border-4 border-bauhaus-black p-6 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm">
-              <div className="text-xs font-black text-bauhaus-yellow mb-2 uppercase tracking-widest">New Investigation</div>
+              <div className="text-xs font-black text-bauhaus-yellow mb-2 uppercase tracking-widest">New Investigation<ReportStatusTag href="/reports/community-parity" /></div>
               <h3 className="text-xl font-black text-white mb-2">Big Philanthropy &amp; Community Parity</h3>
               <p className="text-sm text-white/80 leading-relaxed">
                 0.5% to First Nations. 12% to women &amp; girls. 94% to the top 10%.
@@ -571,7 +572,7 @@ export default function ReportsPage() {
 
           <a href="/reports/power-dynamics" className="group block">
             <div className="bg-white border-4 border-bauhaus-black p-6 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-black group-hover:text-white">
-              <div className="text-xs font-black text-purple mb-2 uppercase tracking-widest group-hover:text-bauhaus-yellow">Live</div>
+              <div className="text-xs font-black text-purple mb-2 uppercase tracking-widest group-hover:text-bauhaus-yellow">Live<ReportStatusTag href="/reports/power-dynamics" /></div>
               <h3 className="text-xl font-black text-bauhaus-black mb-2 group-hover:text-white">Power Dynamics</h3>
               <p className="text-sm text-bauhaus-muted leading-relaxed group-hover:text-white/80">
                 Who controls Australia&apos;s philanthropy? HHI concentration,
@@ -582,7 +583,7 @@ export default function ReportsPage() {
 
           <a href="/reports/philanthropy-power" className="group block">
             <div className="bg-white border-4 border-bauhaus-black p-6 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-red group-hover:text-white">
-              <div className="text-xs font-black text-bauhaus-red mb-2 uppercase tracking-widest group-hover:text-bauhaus-yellow">New</div>
+              <div className="text-xs font-black text-bauhaus-red mb-2 uppercase tracking-widest group-hover:text-bauhaus-yellow">New<ReportStatusTag href="/reports/philanthropy-power" /></div>
               <h3 className="text-xl font-black text-bauhaus-black mb-2 group-hover:text-white">Philanthropy Gatekeepers</h3>
               <p className="text-sm text-bauhaus-muted leading-relaxed group-hover:text-white/80">
                 Which foundations are actually approachable, which keep capital opaque, and where theme and geography discipline concentrate philanthropic power.
@@ -592,7 +593,7 @@ export default function ReportsPage() {
 
           <a href="/reports/funding-equity" className="group block sm:col-span-2">
             <div className="bg-bauhaus-yellow border-4 border-bauhaus-black p-6 transition-all group-hover:-translate-y-1" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-red)' }}>
-              <div className="text-xs font-black text-bauhaus-black mb-2 uppercase tracking-widest">New Investigation</div>
+              <div className="text-xs font-black text-bauhaus-black mb-2 uppercase tracking-widest">New Investigation<ReportStatusTag href="/reports/funding-equity" /></div>
               <h3 className="text-xl font-black text-bauhaus-black mb-2">Funding Equity: Who Gets What</h3>
               <p className="text-sm text-bauhaus-black/70 leading-relaxed">
                 12.9% of charity income reaches the most disadvantaged postcodes.
@@ -604,7 +605,7 @@ export default function ReportsPage() {
 
           <a href="/reports/access-gap" className="group block">
             <div className="bg-white border-4 border-bauhaus-black p-6 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-yellow">
-              <div className="text-xs font-black text-bauhaus-yellow mb-2 uppercase tracking-widest group-hover:text-bauhaus-black">Live</div>
+              <div className="text-xs font-black text-bauhaus-yellow mb-2 uppercase tracking-widest group-hover:text-bauhaus-black">Live<ReportStatusTag href="/reports/access-gap" /></div>
               <h3 className="text-xl font-black text-bauhaus-black mb-2">The Access Gap</h3>
               <p className="text-sm text-bauhaus-muted leading-relaxed group-hover:text-bauhaus-black/70">
                 Small orgs spend 40% on admin. Large orgs spend 15%.
@@ -615,7 +616,7 @@ export default function ReportsPage() {
 
           <a href="/charities/insights" className="group block">
             <div className="bg-white border-4 border-bauhaus-black p-6 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-black group-hover:text-white">
-              <div className="text-xs font-black text-money mb-2 uppercase tracking-widest group-hover:text-bauhaus-yellow">New</div>
+              <div className="text-xs font-black text-money mb-2 uppercase tracking-widest group-hover:text-bauhaus-yellow">New<ReportStatusTag href="/charities/insights" /></div>
               <h3 className="text-xl font-black text-bauhaus-black mb-2 group-hover:text-white">Charity Sector Insights</h3>
               <p className="text-sm text-bauhaus-muted leading-relaxed group-hover:text-white/80">
                 The anatomy of {(64988).toLocaleString()} charities. Size pyramid, geography,
@@ -626,7 +627,7 @@ export default function ReportsPage() {
 
           <a href="/reports/money-flow" className="group block">
             <div className="bg-white border-4 border-bauhaus-black p-6 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-blue group-hover:text-white">
-              <div className="text-xs font-black text-bauhaus-blue mb-2 uppercase tracking-widest group-hover:text-bauhaus-yellow">Live</div>
+              <div className="text-xs font-black text-bauhaus-blue mb-2 uppercase tracking-widest group-hover:text-bauhaus-yellow">Live<ReportStatusTag href="/reports/money-flow" /></div>
               <h3 className="text-xl font-black text-bauhaus-black mb-2 group-hover:text-white">Follow the Dollar</h3>
               <p className="text-sm text-bauhaus-muted leading-relaxed group-hover:text-white/80">
                 Trace funding flows from taxpayer to outcome across all domains.
@@ -647,7 +648,7 @@ export default function ReportsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <a href="/reports/youth-justice" className="group block">
             <div className="bg-white border-4 border-bauhaus-black p-6 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-red group-hover:text-white">
-              <div className="text-xs font-black text-bauhaus-red mb-2 uppercase tracking-widest group-hover:text-bauhaus-yellow">Flagship</div>
+              <div className="text-xs font-black text-bauhaus-red mb-2 uppercase tracking-widest group-hover:text-bauhaus-yellow">Flagship<ReportStatusTag href="/reports/youth-justice" /></div>
               <h3 className="text-xl font-black text-bauhaus-black mb-2 group-hover:text-white">Youth Justice: 5 Cities</h3>
               <p className="text-sm text-bauhaus-muted leading-relaxed group-hover:text-white/80">
                 $9.2B on youth justice across QLD, NSW, NT, SA, WA. Detention gets 2x community budgets.
@@ -658,7 +659,7 @@ export default function ReportsPage() {
 
           <a href="/reports/ndis-market" className="group block">
             <div className="bg-white border-4 border-bauhaus-black p-6 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-blue group-hover:text-white">
-              <div className="text-xs font-black text-bauhaus-blue mb-2 uppercase tracking-widest group-hover:text-bauhaus-yellow">New</div>
+              <div className="text-xs font-black text-bauhaus-blue mb-2 uppercase tracking-widest group-hover:text-bauhaus-yellow">New<ReportStatusTag href="/reports/ndis-market" /></div>
               <h3 className="text-xl font-black text-bauhaus-black mb-2 group-hover:text-white">NDIS Market Power</h3>
               <p className="text-sm text-bauhaus-muted leading-relaxed group-hover:text-white/80">
                 10,335 active providers. Thin regional supply. Heavy payment concentration in remote Core markets.
@@ -669,7 +670,7 @@ export default function ReportsPage() {
 
           <a href="/reports/child-protection" className="group block">
             <div className="bg-white border-4 border-bauhaus-black p-6 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-red group-hover:text-white">
-              <div className="text-xs font-black text-bauhaus-red mb-2 uppercase tracking-widest group-hover:text-bauhaus-yellow">New</div>
+              <div className="text-xs font-black text-bauhaus-red mb-2 uppercase tracking-widest group-hover:text-bauhaus-yellow">New<ReportStatusTag href="/reports/child-protection" /></div>
               <h3 className="text-xl font-black text-bauhaus-black mb-2 group-hover:text-white">Child Protection</h3>
               <p className="text-sm text-bauhaus-muted leading-relaxed group-hover:text-white/80">
                 $4.1B+ in child protection, out-of-home care, and child safety funding mapped.
@@ -690,7 +691,7 @@ export default function ReportsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <a href="/reports/community-power" className="group block sm:col-span-2">
             <div className="bg-bauhaus-blue border-4 border-bauhaus-black p-6 transition-all group-hover:-translate-y-1" style={{ boxShadow: '8px 8px 0px 0px var(--color-bauhaus-yellow)' }}>
-              <div className="text-xs font-black text-bauhaus-yellow mb-2 uppercase tracking-widest">New Report</div>
+              <div className="text-xs font-black text-bauhaus-yellow mb-2 uppercase tracking-widest">New Report<ReportStatusTag href="/reports/community-power" /></div>
               <h3 className="text-xl font-black text-white mb-2">Community Power Playbook</h3>
               <p className="text-sm text-white/80 leading-relaxed">
                 Cooperatives, revolving funds, social enterprise, timebanking, and the models that
@@ -702,7 +703,7 @@ export default function ReportsPage() {
 
           <a href="/reports/social-enterprise" className="group block sm:col-span-2">
             <div className="bg-white border-4 border-bauhaus-black p-6 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-red group-hover:text-white">
-              <div className="text-xs font-black text-bauhaus-red mb-2 uppercase tracking-widest group-hover:text-bauhaus-yellow">New Report</div>
+              <div className="text-xs font-black text-bauhaus-red mb-2 uppercase tracking-widest group-hover:text-bauhaus-yellow">New Report<ReportStatusTag href="/reports/social-enterprise" /></div>
               <h3 className="text-xl font-black text-bauhaus-black mb-2 group-hover:text-white">Social Enterprise in Australia</h3>
               <p className="text-sm text-bauhaus-muted leading-relaxed group-hover:text-white/80">
                 20,000 businesses trading for purpose. $21 billion in revenue. 300,000 jobs.
@@ -730,7 +731,7 @@ export default function ReportsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <a href="/reports/data-quality" className="group block">
             <div className="bg-white border-4 border-bauhaus-black p-6 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-black group-hover:text-white">
-              <div className="text-xs font-black text-green-600 mb-2 uppercase tracking-widest group-hover:text-bauhaus-yellow">Live</div>
+              <div className="text-xs font-black text-green-600 mb-2 uppercase tracking-widest group-hover:text-bauhaus-yellow">Live<ReportStatusTag href="/reports/data-quality" /></div>
               <h3 className="text-xl font-black text-bauhaus-black mb-2 group-hover:text-white">Data Quality Scorecard</h3>
               <p className="text-sm text-bauhaus-muted leading-relaxed group-hover:text-white/80">
                 Live completeness metrics and cross-reference linkage rates across
@@ -741,7 +742,7 @@ export default function ReportsPage() {
 
           <a href="/reports/power-map" className="group block">
             <div className="bg-white border-4 border-bauhaus-black p-6 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-blue group-hover:text-white">
-              <div className="text-xs font-black text-bauhaus-blue mb-2 uppercase tracking-widest group-hover:text-bauhaus-yellow">Deep Research</div>
+              <div className="text-xs font-black text-bauhaus-blue mb-2 uppercase tracking-widest group-hover:text-bauhaus-yellow">Deep Research<ReportStatusTag href="/reports/power-map" /></div>
               <h3 className="text-xl font-black text-bauhaus-black mb-2 group-hover:text-white">Australia&apos;s Power Map</h3>
               <p className="text-sm text-bauhaus-muted leading-relaxed group-hover:text-white/80">
                 How open data can reshape who holds power. The concentration of economic

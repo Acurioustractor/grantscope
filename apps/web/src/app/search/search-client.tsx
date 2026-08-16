@@ -262,7 +262,7 @@ function Group({ title, count, loading, error, children }: {
   );
 }
 
-function Row({ href, title, right, sub }: { href: string; title: string; right?: string; sub: (string | null | undefined)[] }) {
+function Row({ href, title, right, rightClass, sub }: { href: string; title: string; right?: string; rightClass?: string; sub: (string | null | undefined)[] }) {
   const subText = sub.filter(Boolean).join(' · ');
   return (
     <Link href={href} className="block px-4 py-3 hover:bg-bauhaus-canvas transition-colors">
@@ -271,14 +271,31 @@ function Row({ href, title, right, sub }: { href: string; title: string; right?:
           <div className="font-bold text-bauhaus-black truncate">{title}</div>
           {subText && <div className="text-[11px] text-bauhaus-muted font-medium truncate">{subText}</div>}
         </div>
-        {right && <span className="text-xs font-black text-bauhaus-black shrink-0">{right}</span>}
+        {right && <span className={`shrink-0 ${rightClass ?? 'text-xs font-black text-bauhaus-black'}`}>{right}</span>}
       </div>
     </Link>
   );
 }
 
+// Status visible at the link (slice F) — same palette as the report sidebar, so a
+// review-status investigation never reads as current evidence in search results.
+const REPORT_STATUS_CLASS: Record<string, string> = {
+  current: 'border-bauhaus-blue text-bauhaus-blue bg-blue-50',
+  reference: 'border-gray-300 text-gray-500 bg-white',
+  review: 'border-bauhaus-red text-bauhaus-red bg-red-50',
+  archive: 'border-gray-400 text-gray-500 bg-gray-100',
+};
+
 function ReportRow({ r }: { r: IndexedReport }) {
-  return <Row href={r.href} title={r.label} right={r.status ?? undefined} sub={[r.section]} />;
+  return (
+    <Row
+      href={r.href}
+      title={r.label}
+      right={r.status ?? undefined}
+      rightClass={r.status ? `border px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest ${REPORT_STATUS_CLASS[r.status]}` : undefined}
+      sub={[r.section]}
+    />
+  );
 }
 
 function QuestionRow({ r }: { r: IndexedQuestion }) {
