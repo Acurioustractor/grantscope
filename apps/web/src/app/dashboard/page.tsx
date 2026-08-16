@@ -134,7 +134,7 @@ export default async function DashboardPage() {
           <div className="flex items-center gap-2">
             <h2 className="font-display text-[15px] font-bold">Top recipients — youth justice</h2>
             <div className="flex-1" />
-            <Link href="/themes/youth-justice" className="text-[12.5px] font-semibold" style={{ color: '#1040C0' }}>
+            <Link href="/reports/theme/youth-justice" className="text-[12.5px] font-semibold" style={{ color: '#1040C0' }}>
               See all →
             </Link>
           </div>
