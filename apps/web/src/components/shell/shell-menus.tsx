@@ -106,6 +106,7 @@ export function ShellMenus({ events, userEmail, isAdmin }: ShellMenusProps) {
         <Popover title="Help">
           <MenuLink href="/dashboard/help" label="Why our numbers differ" />
           <MenuLink href="/dashboard/help#caveats" label="Caveats on every view" />
+          <MenuLink href="/dashboard/docs" label="The data we hold" />
           <MenuLink href="/clarity" label="The question registry" />
           <MenuLink href="/methodology" label="Methodology" />
         </Popover>
