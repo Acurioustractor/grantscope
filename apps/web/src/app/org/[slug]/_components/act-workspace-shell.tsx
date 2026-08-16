@@ -160,6 +160,18 @@ export function ActWorkspaceShell({
                 </div>
               ))}
               {fieldProjects.length === 0 ? <div className="px-2 py-3 text-xs text-[#aebcb2]">No project fields loaded.</div> : null}
+              {/* The cross-project view (slice H): the rail shows the top 7 projects; this is the
+                  one page where all of them sit side by side. */}
+              <Link
+                href={`/org/${slug}/projects`}
+                className={`mt-0.5 block rounded px-2 py-1.5 text-xs font-semibold ${
+                  pathname.startsWith(`/org/${slug}/projects`)
+                    ? 'bg-white/10 text-white'
+                    : 'text-[#aebcb2] hover:bg-white/5 hover:text-white'
+                }`}
+              >
+                All projects →
+              </Link>
             </nav>
 
             <div className="mt-auto border-t border-white/10 pt-2">
