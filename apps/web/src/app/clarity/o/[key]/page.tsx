@@ -447,6 +447,17 @@ export default async function ObjectPage({ params }: { params: Promise<{ key: st
                     estimate
                   </span>
                 ) : null}
+                {/* The link exists whether or not the floor allows rows — the RPC is the guard,
+                    and a withheld object's rows page renders the refusal with its consent census.
+                    Linking to the refusal is the design, not a leak. */}
+                {!isRoutine ? (
+                  <Link
+                    href={`/clarity/o/${encodeURIComponent(key)}/rows`}
+                    className="ml-3 font-black text-bauhaus-blue underline"
+                  >
+                    {rowsVisible ? 'browse →' : 'why withheld →'}
+                  </Link>
+                ) : null}
               </Field>
               <Field label="Size">{formatBytes(o.bytes)}</Field>
               <Field label="Columns">
