@@ -83,7 +83,9 @@ export async function generateMetadata({ params }: { params: Promise<{ gsId: str
 
 const SYSTEMS = [
   { key: 'in_procurement', label: 'Procurement', color: 'bg-blue-500' },
-  { key: 'in_justice_funding', label: 'Justice', color: 'bg-amber-500' },
+  // Not 'Justice'. This flag is presence in the justice_funding TABLE, which is 81% a
+  // whole-of-Queensland-government grants register (source qgip) and only 19.7% topic-tagged.
+  { key: 'in_justice_funding', label: 'Grants', color: 'bg-amber-500' },
   { key: 'in_political_donations', label: 'Donations', color: 'bg-red-500' },
   { key: 'in_charity_registry', label: 'Charity', color: 'bg-green-500' },
   { key: 'in_foundation', label: 'Foundation', color: 'bg-purple-500' },
@@ -100,9 +102,17 @@ export default async function EntityPage({ params }: { params: Promise<{ gsId: s
 
   const [funding, contracts, donations, relationships, alma, acnc, power, ato, board, revolvingDoor, impactReports, mmrStats, anaoCompliance, outcomeMetrics, policyEvents, charityRanking] = await Promise.all([
     entity.abn ? safe(supabase.rpc('exec_sql', {
+      // The three mandatory justice_funding filters. Without them this figure disagreed with
+      // mv_entity_power_index on the same page from 2026-08-16, when the matview was fixed and
+      // this query was not. measure_kind excludes whole-of-state budget rows; is_aggregate is NOT
+      // implied by it (1,358 rows are both grant AND aggregate); the name list excludes
+      // source-spreadsheet totals. See CLAUDE.md and the filter audit.
       query: `SELECT program_name, SUM(amount_dollars)::bigint as total, COUNT(*)::int as records,
                 MIN(financial_year) as from_fy, MAX(financial_year) as to_fy
          FROM justice_funding WHERE recipient_abn = '${entity.abn}'
+           AND measure_kind = 'grant'
+           AND is_aggregate IS NOT TRUE
+           AND lower(btrim(recipient_name)) <> ALL (ARRAY['total','totals','grand total','subtotal','sub-total','various','n/a','na','unknown','tbc','other'])
          GROUP BY program_name ORDER BY total DESC`,
     })) as Promise<FundingRow[] | null> : null,
     entity.abn ? safe(supabase.rpc('exec_sql', {
@@ -111,8 +121,11 @@ export default async function EntityPage({ params }: { params: Promise<{ gsId: s
          ORDER BY contract_value DESC LIMIT 20`,
     })) as Promise<ContractRow[] | null> : null,
     entity.abn ? safe(supabase.rpc('exec_sql', {
+      // 'other receipt' is 72% of rows and 85% of dollars in political_donations and is NOT
+      // donations. Without this, the Australian Electoral Commission reads as a $1.04bn donor.
       query: `SELECT donation_to, SUM(amount)::bigint as total, COUNT(*)::int as count
          FROM political_donations WHERE donor_abn = '${entity.abn}'
+           AND receipt_type = 'donation received'
          GROUP BY donation_to ORDER BY total DESC LIMIT 20`,
     })) as Promise<DonationRow[] | null> : null,
     safe(supabase.rpc('exec_sql', {
@@ -250,7 +263,7 @@ export default async function EntityPage({ params }: { params: Promise<{ gsId: s
   // Count sections with data for the "data coverage" display
   const sections = [
     { name: 'Procurement', has: totalContracts > 0 },
-    { name: 'Justice Funding', has: totalFunding > 0 },
+    { name: 'Recorded Grants', has: totalFunding > 0 },
     { name: 'Political Donations', has: totalDonations > 0 },
     { name: 'ACNC', has: !!acncData },
     { name: 'ALMA Evidence', has: (alma?.length ?? 0) > 0 },
@@ -395,7 +408,7 @@ export default async function EntityPage({ params }: { params: Promise<{ gsId: s
           )}
           {totalFunding > 0 && (
             <div className="bg-white border border-gray-200 shadow-sm p-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Justice Funding</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Recorded Grants</p>
               <p className="text-2xl font-black mt-1 text-green-700">{money(totalFunding)}</p>
               <p className="text-xs text-gray-400 mt-1">{funding?.length} programs</p>
             </div>
@@ -463,7 +476,7 @@ export default async function EntityPage({ params }: { params: Promise<{ gsId: s
               )}
               {Number(powerData.justice_dollars) > 0 && (
                 <div className="bg-white border border-gray-200 shadow-sm p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Justice Funding</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Recorded Grants</p>
                   <p className="text-xl font-black text-green-700 mt-1">{money(Number(powerData.justice_dollars))}</p>
                 </div>
               )}

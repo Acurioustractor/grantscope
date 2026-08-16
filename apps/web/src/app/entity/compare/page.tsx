@@ -393,7 +393,7 @@ export default function ComparePage() {
                     { label: 'Systems', key: 'system_count', fmt: (v: number) => `${v}/7` },
                     { label: 'Total Dollar Flow', key: 'total_dollar_flow', fmt: (v: number) => money(v) },
                     { label: 'Procurement $', key: 'procurement_dollars', fmt: (v: number) => money(v) },
-                    { label: 'Justice Funding $', key: 'justice_dollars', fmt: (v: number) => money(v) },
+                    { label: 'Recorded Grants $', key: 'justice_dollars', fmt: (v: number) => money(v) },
                     { label: 'Political Donations $', key: 'donation_dollars', fmt: (v: number) => money(v) },
                     { label: 'Contracts', key: 'contract_count', fmt: (v: number) => v.toLocaleString() },
                     { label: 'Govt Buyers', key: 'distinct_govt_buyers', fmt: (v: number) => v.toLocaleString() },

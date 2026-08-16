@@ -121,7 +121,7 @@ export function KeyStats({
 
 const SYSTEM_LABELS: Record<string, { label: string; color: string }> = {
   in_procurement: { label: 'Procurement', color: 'bg-blue-100 text-blue-800 border-blue-300' },
-  in_justice_funding: { label: 'Justice Funding', color: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
+  in_justice_funding: { label: 'Recorded Grants', color: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
   in_political_donations: { label: 'Donations', color: 'bg-red-100 text-red-800 border-red-300' },
   in_charity_registry: { label: 'Charity', color: 'bg-purple-100 text-purple-800 border-purple-300' },
   in_foundation: { label: 'Foundation', color: 'bg-amber-100 text-amber-800 border-amber-300' },
@@ -149,7 +149,7 @@ export function PowerScoreSection({ powerIndex, slug }: { powerIndex: PowerIndex
   // System presence as a simple horizontal bar chart
   const systemEntries: Array<{ key: string; label: string; color: string; dollars: number }> = [
     { key: 'in_procurement', label: 'Procurement', color: 'bg-blue-500', dollars: Number(powerIndex.procurement_dollars) },
-    { key: 'in_justice_funding', label: 'Justice Funding', color: 'bg-emerald-500', dollars: Number(powerIndex.justice_dollars) },
+    { key: 'in_justice_funding', label: 'Recorded Grants', color: 'bg-emerald-500', dollars: Number(powerIndex.justice_dollars) },
     { key: 'in_political_donations', label: 'Donations', color: 'bg-red-500', dollars: Number(powerIndex.donation_dollars) },
     { key: 'in_charity_registry', label: 'Charity', color: 'bg-purple-500', dollars: 0 },
     { key: 'in_foundation', label: 'Foundation', color: 'bg-amber-500', dollars: Number(powerIndex.foundation_giving) },
