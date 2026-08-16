@@ -139,6 +139,47 @@ h1, h2, h3, h4 {
   border-radius: var(--shell-r-sm);
 }
 
+/* ── Bauhaus-inside-shell bridge (Ben's ruling 2026-08-17: ONE language in the admin) ──
+   ~20 admin routes were built in the hard-Bauhaus vocabulary (border-4, black hairlines,
+   zero radius) and render inside the soft shell. Rather than hand-editing hundreds of
+   class sites, the shell scope re-reads that vocabulary softly: thick borders become
+   hairlines with radius, black borders become the shell line colour, canvas fills become
+   the shell canvas. Signal colours (red, blue) keep their hue and lose only their weight.
+   Dark chips/buttons stay dark: they are accents, not surfaces. Scoped to .shell only;
+   the public Bauhaus site is untouched. */
+.shell {
+  --shell-r: var(--shell-r-md); /* legacy alias: some shell pages reference var(--shell-r) */
+}
+.shell .border-4 {
+  border-width: 1px;
+  border-radius: var(--shell-r-md);
+}
+.shell .border-2 {
+  border-width: 1px;
+  border-radius: var(--shell-r-sm);
+}
+.shell .border-b-2 {
+  border-bottom-width: 1px;
+  border-radius: 0;
+}
+.shell .border-t-2 {
+  border-top-width: 1px;
+  border-radius: 0;
+}
+.shell .border-l-4 {
+  border-left-width: 3px;
+  border-radius: 0;
+}
+.shell [class*='border-bauhaus-black'] {
+  border-color: var(--shell-line);
+}
+.shell .bg-bauhaus-canvas {
+  background-color: var(--shell-canvas);
+}
+.shell .bg-bauhaus-white {
+  background-color: var(--shell-surface);
+}
+
 /* ── Workspace theme (editorial style for operational tools) ── */
 .ws {
   --ws-surface-0: #FDFCFB;

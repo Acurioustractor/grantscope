@@ -186,7 +186,7 @@ export default async function ClarityIndexPage({
 
   return (
     <main className="mx-auto max-w-[1180px] px-4 py-8">
-      <header className="border-4 border-bauhaus-black bg-bauhaus-black p-5 text-bauhaus-canvas">
+      <header className="shell-card p-5">
         <div className="flex flex-wrap items-center gap-2">
           <span className="border-2 border-bauhaus-canvas/40 px-2 py-0.5 font-mono text-[10px] font-black uppercase tracking-widest">
             Admin only
@@ -213,23 +213,23 @@ export default async function ClarityIndexPage({
             <Link
               key={href}
               href={href}
-              className="border-2 border-bauhaus-canvas/40 px-2 py-0.5 font-mono text-[10px] font-black uppercase tracking-widest hover:border-bauhaus-canvas"
+              className="border-2 border-bauhaus-black/25 px-2 py-0.5 font-mono text-[10px] font-black uppercase tracking-widest hover:border-bauhaus-black"
             >
               {label}
             </Link>
           ))}
         </div>
 
-        <h1 className="mt-4 font-display text-5xl font-black uppercase tracking-tight">Clarity</h1>
-        <p className="mt-2 max-w-[70ch] text-[14px] text-bauhaus-canvas/70">
+        <h1 className="mt-4 font-display text-3xl font-extrabold tracking-tight">Clarity</h1>
+        <p className="mt-2 max-w-[70ch] text-[14px] text-bauhaus-black/60">
           Everything CivicGraph holds, on one page. {nf.format(total)} objects,{' '}
           {nf.format(described)} of them described. The count beside each name is rows, from last
           night&rsquo;s snapshot.
         </p>
 
         {questionStates.length > 0 ? (
-          <div className="mt-4 flex flex-wrap items-center gap-2 border-t-2 border-bauhaus-canvas/25 pt-3">
-            <span className="font-mono text-[10px] font-black uppercase tracking-widest text-bauhaus-canvas/60">
+          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-bauhaus-black/15 pt-3">
+            <span className="font-mono text-[10px] font-black uppercase tracking-widest text-bauhaus-black/50">
               Questions
             </span>
             {questionStates.map(([state, n]) => (
