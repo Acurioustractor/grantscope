@@ -8,7 +8,6 @@ import {
   NOUN_ORDER,
   SORT_LABEL,
   UNFILED_NOTE,
-  nounFor,
   parseSort,
   unfiledReason,
   type IndexSort,
@@ -40,6 +39,7 @@ interface IndexObject {
   object_name: string;
   object_kind: string;
   domain: string | null;
+  noun: Noun | null;
   row_count: number | null;
   row_count_is_estimate: boolean | null;
   degree: number | null;
@@ -81,7 +81,7 @@ async function load(sort: IndexSort): Promise<Loaded> {
     const { data, error } = await supabase
       .from('clarity_object')
       .select(
-        'object_key,object_name,object_kind,domain,row_count,row_count_is_estimate,degree,purpose,refreshed_at',
+        'object_key,object_name,object_kind,domain,noun,row_count,row_count_is_estimate,degree,purpose,refreshed_at',
       )
       .order('object_name')
       .range(from, from + PAGE - 1);
@@ -93,7 +93,9 @@ async function load(sort: IndexSort): Promise<Loaded> {
 
   const byNoun = new Map<Noun, IndexObject[]>();
   for (const n of NOUN_ORDER) byNoun.set(n, []);
-  for (const o of all) byNoun.get(nounFor(o.domain))!.push(o);
+  // The COLUMN is authoritative since slice 4 — filing is data with provenance (domain_rule or
+  // human via /api/clarity/nouns), not a render-time function call. A proposal never files.
+  for (const o of all) byNoun.get(o.noun ?? 'unfiled')!.push(o);
 
   const cmp: Record<IndexSort, (a: IndexObject, b: IndexObject) => number> = {
     name: (a, b) => a.object_name.localeCompare(b.object_name),
@@ -286,7 +288,10 @@ export default async function ClarityIndexPage({
 
               {isUnfiled ? (
                 <p className="border-b border-bauhaus-black/15 bg-bauhaus-canvas px-4 py-2 text-[12px] text-bauhaus-black/70">
-                  {UNFILED_NOTE}
+                  {UNFILED_NOTE}{' '}
+                  <Link href="/clarity/unfiled" className="font-black text-bauhaus-blue underline">
+                    File them →
+                  </Link>
                 </p>
               ) : null}
 
