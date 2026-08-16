@@ -116,6 +116,24 @@ export async function Shell({ title, children }: ShellProps) {
         <RailNav />
         <div className="h-6" />
         <div className="px-2.5 text-[10px] font-bold uppercase tracking-[0.15em] text-[#7A7A7A]">
+          Browse
+        </div>
+        {[
+          ['/dashboard/browse/foundations', 'Foundations'],
+          ['/dashboard/browse/social-enterprises', 'Social enterprises'],
+          ['/dashboard/browse/charities', 'Charities'],
+        ].map(([href, label]) => (
+          <Link
+            key={href}
+            href={href}
+            className="flex items-center px-2.5 py-1.5 text-[13px]"
+            style={{ borderRadius: 'var(--shell-r-sm)', color: 'var(--shell-rail-text)' }}
+          >
+            {label}
+          </Link>
+        ))}
+        <div className="h-4" />
+        <div className="px-2.5 text-[10px] font-bold uppercase tracking-[0.15em] text-[#7A7A7A]">
           Saved views
         </div>
         {pinnedViews().map((v) => (
