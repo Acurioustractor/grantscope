@@ -115,16 +115,16 @@ export async function GET(request: Request) {
         state: string | null; remoteness: string | null; lga_name: string | null;
         is_community_controlled: boolean;
         system_count: number; power_score: number;
-        in_procurement: number; in_justice_funding: number; in_political_donations: number;
+        in_procurement: number; in_recorded_grants: number; in_political_donations: number;
         in_charity_registry: number; in_foundation: number; in_alma_evidence: number; in_ato_transparency: number;
-        procurement_dollars: number; justice_dollars: number; donation_dollars: number;
+        procurement_dollars: number; recorded_grants_dollars: number; donation_dollars: number;
         total_dollar_flow: number; distinct_govt_buyers: number; distinct_parties_funded: number;
       }>(supabase,
         `SELECT pi.id, pi.canonical_name, pi.entity_type, pi.state, pi.remoteness, pi.lga_name,
                 pi.is_community_controlled, pi.system_count, pi.power_score,
-                pi.in_procurement, pi.in_justice_funding, pi.in_political_donations,
+                pi.in_procurement, pi.in_recorded_grants, pi.in_political_donations,
                 pi.in_charity_registry, pi.in_foundation, pi.in_alma_evidence, pi.in_ato_transparency,
-                pi.procurement_dollars, pi.justice_dollars, pi.donation_dollars,
+                pi.procurement_dollars, pi.recorded_grants_dollars, pi.donation_dollars,
                 pi.total_dollar_flow, pi.distinct_govt_buyers, pi.distinct_parties_funded
          FROM mv_entity_power_index pi
          WHERE pi.system_count >= ${minSystems} ${stateFilter}
@@ -171,7 +171,7 @@ export async function GET(request: Request) {
       const systems = (e: typeof powerEntities[0]) => {
         const s: string[] = [];
         if (e.in_procurement) s.push('procurement');
-        if (e.in_justice_funding) s.push('justice');
+        if (e.in_recorded_grants) s.push('justice');
         if (e.in_political_donations) s.push('donations');
         if (e.in_charity_registry) s.push('charity');
         if (e.in_foundation) s.push('foundation');
@@ -192,7 +192,7 @@ export async function GET(request: Request) {
         power_score: Number(e.power_score),
         systems: systems(e),
         procurement_dollars: Number(e.procurement_dollars),
-        justice_dollars: Number(e.justice_dollars),
+        recorded_grants_dollars: Number(e.recorded_grants_dollars),
         donation_dollars: Number(e.donation_dollars),
         total_dollar_flow: Number(e.total_dollar_flow),
         distinct_govt_buyers: Number(e.distinct_govt_buyers),
@@ -312,7 +312,7 @@ export async function GET(request: Request) {
           interlock_score: Number(person.interlock_score),
           role_types: person.role_types,
           procurement_dollars: Number(person.total_procurement_dollars),
-          justice_dollars: Number(person.total_justice_dollars),
+          recorded_grants_dollars: Number(person.total_justice_dollars),
           donation_dollars: Number(person.total_donation_dollars),
           max_system_count: Number(person.max_entity_system_count),
           total_power_score: Number(person.total_power_score),

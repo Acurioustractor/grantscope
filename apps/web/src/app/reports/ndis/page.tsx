@@ -145,7 +145,7 @@ async function getData() {
     q(`SELECT
         COUNT(*) FILTER (WHERE in_ndis_provider = 1) as ndis_providers,
         COUNT(*) FILTER (WHERE in_ndis_provider = 1 AND system_count >= 2) as multi_system,
-        COUNT(*) FILTER (WHERE in_ndis_provider = 1 AND in_justice_funding = 1) as also_justice,
+        COUNT(*) FILTER (WHERE in_ndis_provider = 1 AND in_recorded_grants = 1) as also_justice,
         COUNT(*) FILTER (WHERE in_ndis_provider = 1 AND in_procurement = 1) as also_procurement,
         COUNT(*) FILTER (WHERE in_ndis_provider = 1 AND is_community_controlled) as community_controlled
       FROM mv_entity_power_index`),

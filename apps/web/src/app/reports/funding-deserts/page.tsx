@@ -354,7 +354,7 @@ export default async function FundingDesertsReport() {
                   const tags = [
                     o.in_charity_registry ? 'Charity' : null,
                     o.in_procurement ? 'Contracts' : null,
-                    o.in_justice_funding ? 'Justice' : null,
+                    o.in_recorded_grants ? 'Grants' : null,
                   ].filter(Boolean) as string[];
                   return (
                     <tr key={`${o.gs_id ?? o.canonical_name}-${i}`} className={i % 2 === 0 ? 'bg-white' : 'bg-red-50/30'}>

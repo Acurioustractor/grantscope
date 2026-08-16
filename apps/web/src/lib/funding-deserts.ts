@@ -16,7 +16,7 @@ export interface DesertCommunityOrg {
   system_count: number;
   total_dollar_flow: number;
   in_procurement: number;
-  in_justice_funding: number;
+  in_recorded_grants: number;
   in_charity_registry: number;
 }
 
@@ -30,7 +30,7 @@ export const DESERT_COMMUNITY_ORGS_SQL = `WITH deserts AS (
 )
 SELECT e.gs_id, e.canonical_name, e.entity_type, e.abn, e.lga_name, e.state,
   w.remoteness, w.desert_score, e.system_count, e.total_dollar_flow,
-  e.in_procurement, e.in_justice_funding, e.in_charity_registry
+  e.in_procurement, e.in_recorded_grants, e.in_charity_registry
 FROM mv_entity_power_index e
 JOIN worst w ON e.lga_name = w.lga_name AND e.state = w.state
 WHERE e.is_community_controlled
@@ -49,7 +49,7 @@ export function mapDesertCommunityOrgs(rows: unknown): DesertCommunityOrg[] {
     system_count: Number(o.system_count) || 0,
     total_dollar_flow: Number(o.total_dollar_flow) || 0,
     in_procurement: Number(o.in_procurement) || 0,
-    in_justice_funding: Number(o.in_justice_funding) || 0,
+    in_recorded_grants: Number(o.in_recorded_grants) || 0,
     in_charity_registry: Number(o.in_charity_registry) || 0,
   }));
 }

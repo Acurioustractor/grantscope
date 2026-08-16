@@ -101,7 +101,7 @@ export async function GET(request: Request) {
       // Anomaly detection: entities with unusual patterns
       safe(supabase.rpc('exec_sql', {
         query: `SELECT power_score, system_count, total_dollar_flow,
-                  procurement_dollars, justice_dollars, donation_dollars,
+                  procurement_dollars, recorded_grants_dollars, donation_dollars,
                   distinct_govt_buyers, distinct_parties_funded
            FROM mv_entity_power_index WHERE id = '${e.id}' LIMIT 1`,
       })),

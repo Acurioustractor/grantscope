@@ -21,7 +21,7 @@ interface GraphNode {
   power_score?: number;
   systems?: string[];
   procurement_dollars?: number;
-  justice_dollars?: number;
+  recorded_grants_dollars?: number;
   donation_dollars?: number;
   total_dollar_flow?: number;
   distinct_govt_buyers?: number;
@@ -2105,9 +2105,9 @@ export default function GraphPage() {
                     Linked procurement: ${((selectedNode.procurement_dollars ?? 0) / 1e6).toFixed(1)}M
                   </p>
                 )}
-                {(selectedNode.justice_dollars ?? 0) > 0 && (
+                {(selectedNode.recorded_grants_dollars ?? 0) > 0 && (
                   <p className="text-[9px] text-[#4ade80] font-mono">
-                    Linked justice: ${((selectedNode.justice_dollars ?? 0) / 1e6).toFixed(1)}M
+                    Linked justice: ${((selectedNode.recorded_grants_dollars ?? 0) / 1e6).toFixed(1)}M
                   </p>
                 )}
               </div>
@@ -2128,9 +2128,9 @@ export default function GraphPage() {
                     {(selectedNode.distinct_govt_buyers ?? 0) > 0 && ` · ${selectedNode.distinct_govt_buyers} buyers`}
                   </p>
                 )}
-                {(selectedNode.justice_dollars ?? 0) > 0 && (
+                {(selectedNode.recorded_grants_dollars ?? 0) > 0 && (
                   <p className="text-[9px] text-[#4ade80] font-mono">
-                    Justice funding: ${((selectedNode.justice_dollars ?? 0) / 1e6).toFixed(1)}M
+                    Justice funding: ${((selectedNode.recorded_grants_dollars ?? 0) / 1e6).toFixed(1)}M
                   </p>
                 )}
                 {(selectedNode.donation_dollars ?? 0) > 0 && (

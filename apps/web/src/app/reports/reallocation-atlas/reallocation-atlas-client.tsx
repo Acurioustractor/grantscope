@@ -71,7 +71,7 @@ type AtlasData = {
     power_score: number;
     total_dollar_flow: number;
     procurement_dollars: number;
-    justice_dollars: number;
+    recorded_grants_dollars: number;
     donation_dollars: number;
     is_community_controlled: boolean;
   }>;
@@ -635,7 +635,7 @@ export function ReallocationAtlasClient({ atlasData }: { atlasData: AtlasData })
                 <div className="mt-3 flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-widest">
                   <span className="border border-bauhaus-black px-2 py-1">{holder.system_count} systems</span>
                   <span className="border border-bauhaus-black px-2 py-1">{money(holder.procurement_dollars)} procurement</span>
-                  <span className="border border-bauhaus-black px-2 py-1">{money(holder.justice_dollars)} justice</span>
+                  <span className="border border-bauhaus-black px-2 py-1">{money(holder.recorded_grants_dollars)} justice</span>
                   <span className="border border-bauhaus-black px-2 py-1">{money(holder.donation_dollars)} donations</span>
                 </div>
               </div>

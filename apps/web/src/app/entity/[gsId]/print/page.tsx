@@ -27,7 +27,7 @@ export default async function PrintEntityPage({ params }: { params: Promise<{ gs
 
   const [power, funding, contracts, donations, board, revDoor] = await Promise.all([
     safe(supabase.rpc('exec_sql', {
-      query: `SELECT power_score, system_count, total_dollar_flow, procurement_dollars, justice_dollars, donation_dollars, distinct_govt_buyers, distinct_parties_funded
+      query: `SELECT power_score, system_count, total_dollar_flow, procurement_dollars, recorded_grants_dollars, donation_dollars, distinct_govt_buyers, distinct_parties_funded
          FROM mv_entity_power_index WHERE id = '${e.id}' LIMIT 1`,
     })),
     e.abn ? safe(supabase.rpc('exec_sql', {
@@ -56,7 +56,7 @@ export default async function PrintEntityPage({ params }: { params: Promise<{ gs
     })),
   ]);
 
-  type PowerRow = { power_score: number; system_count: number; total_dollar_flow: number; procurement_dollars: number; justice_dollars: number; donation_dollars: number; distinct_govt_buyers: number; distinct_parties_funded: number };
+  type PowerRow = { power_score: number; system_count: number; total_dollar_flow: number; procurement_dollars: number; recorded_grants_dollars: number; donation_dollars: number; distinct_govt_buyers: number; distinct_parties_funded: number };
   type RevDoorRow = { influence_vectors: number; revolving_door_score: number; lobbies: boolean; donates: boolean; contracts: boolean; receives_funding: boolean };
 
   const p = (power as PowerRow[] | null)?.[0] ?? null;

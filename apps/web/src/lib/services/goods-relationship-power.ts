@@ -26,7 +26,7 @@ type ViewRow = {
   power_score: number | string | null;
   system_count: number | string | null;
   in_procurement: number | null;
-  in_justice_funding: number | null;
+  in_recorded_grants: number | null;
   in_political_donations: number | null;
   in_charity_registry: number | null;
   in_foundation: number | null;
@@ -49,7 +49,7 @@ const num = (v: number | string | null | undefined): number => {
 function systemsOf(r: ViewRow): string[] {
   const out: string[] = [];
   if (r.in_procurement) out.push('procurement');
-  if (r.in_justice_funding) out.push('justice funding');
+  if (r.in_recorded_grants) out.push('justice funding');
   if (r.in_political_donations) out.push('donations');
   if (r.in_charity_registry) out.push('charity');
   if (r.in_foundation) out.push('foundation');

@@ -51,9 +51,9 @@ interface MmrRow { mmr_contracts: number; mmr_value: number; total_contracts: nu
 interface AnaoRow { portfolio: string; exemption_rate: number; exempted_value_aud: number; compliance_rate: number | null }
 interface PowerRow {
   power_score: number; system_count: number;
-  in_procurement: number; in_justice_funding: number; in_political_donations: number;
+  in_procurement: number; in_recorded_grants: number; in_political_donations: number;
   in_charity_registry: number; in_foundation: number; in_alma_evidence: number; in_ato_transparency: number;
-  procurement_dollars: number; justice_dollars: number; donation_dollars: number;
+  procurement_dollars: number; recorded_grants_dollars: number; donation_dollars: number;
   total_dollar_flow: number; distinct_govt_buyers: number; distinct_parties_funded: number;
 }
 interface RankingRow {
@@ -85,7 +85,7 @@ const SYSTEMS = [
   { key: 'in_procurement', label: 'Procurement', color: 'bg-blue-500' },
   // Not 'Justice'. This flag is presence in the justice_funding TABLE, which is 81% a
   // whole-of-Queensland-government grants register (source qgip) and only 19.7% topic-tagged.
-  { key: 'in_justice_funding', label: 'Grants', color: 'bg-amber-500' },
+  { key: 'in_recorded_grants', label: 'Grants', color: 'bg-amber-500' },
   { key: 'in_political_donations', label: 'Donations', color: 'bg-red-500' },
   { key: 'in_charity_registry', label: 'Charity', color: 'bg-green-500' },
   { key: 'in_foundation', label: 'Foundation', color: 'bg-purple-500' },
@@ -152,9 +152,9 @@ export default async function EntityPage({ params }: { params: Promise<{ gsId: s
     // Power index
     safe(supabase.rpc('exec_sql', {
       query: `SELECT power_score, system_count,
-                in_procurement, in_justice_funding, in_political_donations,
+                in_procurement, in_recorded_grants, in_political_donations,
                 in_charity_registry, in_foundation, in_alma_evidence, in_ato_transparency,
-                procurement_dollars, justice_dollars, donation_dollars,
+                procurement_dollars, recorded_grants_dollars, donation_dollars,
                 total_dollar_flow, distinct_govt_buyers, distinct_parties_funded
          FROM mv_entity_power_index WHERE id = '${entity.id}' LIMIT 1`,
     })) as Promise<PowerRow[] | null>,
@@ -474,10 +474,10 @@ export default async function EntityPage({ params }: { params: Promise<{ gsId: s
                   <p className="text-xs text-gray-400 mt-1">{powerData.distinct_govt_buyers} govt buyers</p>
                 </div>
               )}
-              {Number(powerData.justice_dollars) > 0 && (
+              {Number(powerData.recorded_grants_dollars) > 0 && (
                 <div className="bg-white border border-gray-200 shadow-sm p-4">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Recorded Grants</p>
-                  <p className="text-xl font-black text-green-700 mt-1">{money(Number(powerData.justice_dollars))}</p>
+                  <p className="text-xl font-black text-green-700 mt-1">{money(Number(powerData.recorded_grants_dollars))}</p>
                 </div>
               )}
               {Number(powerData.donation_dollars) > 0 && (

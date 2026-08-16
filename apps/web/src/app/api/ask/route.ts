@@ -63,7 +63,7 @@ Columns: entity_name, abn, total_income (numeric), taxable_income (numeric), tax
 Columns: id, person_name, person_name_normalised, role_type (text: director, secretary, officer, chair, ceo, trustee, board_member, etc.), entity_id (uuid), entity_name, company_acn, appointment_date, cessation_date, source, confidence
 
 ## Materialized Views (pre-computed, fast):
-- mv_entity_power_index (~188K rows): id, canonical_name, abn, entity_type, system_count (int 1-7), power_score, in_procurement, in_justice_funding, in_donations, in_charity, in_foundation, in_alma_evidence, in_ato, is_community_controlled
+- mv_entity_power_index (~188K rows): id, canonical_name, abn, entity_type, system_count (int 1-7), power_score, in_procurement, in_recorded_grants, in_donations, in_charity, in_foundation, in_alma_evidence, in_ato, is_community_controlled
 - mv_funding_deserts (~2.0K rows): lga_name, state, remoteness, avg_irsd_score, min_irsd_decile, avg_irsd_decile, indexed_entities, community_controlled_entities, procurement_entities, justice_entities, alma_entities, ndis_entities, procurement_dollars, justice_dollars, donation_dollars, total_dollar_flow, total_funding_all_sources, avg_system_count, avg_power_score, ndis_participants, desert_score (higher = more underserved)
 - mv_revolving_door (~7.0K rows): id, canonical_name, revolving_door_score, influence_vectors, total_donated, total_contracts, total_funded, parties_funded, is_community_controlled
 - mv_board_interlocks (~39.8K rows): person_name_normalised, person_name_display, board_count (int), organisations (text[]), organisation_abns, entity_ids, role_types, sources, total_procurement_dollars, total_justice_dollars, total_donation_dollars, max_entity_system_count, total_power_score, connects_community_controlled, interlock_score
@@ -115,7 +115,7 @@ type PowerScoreRow = {
   system_count: number | string | null;
   power_score: number | string | null;
   procurement_dollars: number | string | null;
-  justice_dollars: number | string | null;
+  recorded_grants_dollars: number | string | null;
   donation_dollars: number | string | null;
   total_dollar_flow: number | string | null;
 };
@@ -128,8 +128,8 @@ type JusticeFundingRankRow = {
   postcode: string | null;
   remoteness: string | null;
   is_community_controlled: boolean | null;
-  justice_dollars: number | string | null;
-  justice_record_count: number | string | null;
+  recorded_grants_dollars: number | string | null;
+  recorded_grants_count: number | string | null;
 };
 
 const STATE_ALIASES: Record<string, string> = {
@@ -166,7 +166,7 @@ const TOP_POWER_SCORE_SNAPSHOT = [
     system_count: 6,
     total_dollar_flow: 64988171,
     procurement_dollars: 62866817,
-    justice_dollars: 545638,
+    recorded_grants_dollars: 545638,
     donation_dollars: 1575716,
   },
   {
@@ -180,7 +180,7 @@ const TOP_POWER_SCORE_SNAPSHOT = [
     system_count: 6,
     total_dollar_flow: 31037100,
     procurement_dollars: 28359970,
-    justice_dollars: 194314,
+    recorded_grants_dollars: 194314,
     donation_dollars: 2482816,
   },
   {
@@ -194,7 +194,7 @@ const TOP_POWER_SCORE_SNAPSHOT = [
     system_count: 6,
     total_dollar_flow: 60527361,
     procurement_dollars: 58298993,
-    justice_dollars: 22076,
+    recorded_grants_dollars: 22076,
     donation_dollars: 2206292,
   },
   {
@@ -208,7 +208,7 @@ const TOP_POWER_SCORE_SNAPSHOT = [
     system_count: 6,
     total_dollar_flow: 55451979,
     procurement_dollars: 52434202,
-    justice_dollars: 1821443,
+    recorded_grants_dollars: 1821443,
     donation_dollars: 1196334,
   },
   {
@@ -222,7 +222,7 @@ const TOP_POWER_SCORE_SNAPSHOT = [
     system_count: 5,
     total_dollar_flow: 42724002,
     procurement_dollars: 40669245,
-    justice_dollars: 542159,
+    recorded_grants_dollars: 542159,
     donation_dollars: 1512598,
   },
   {
@@ -236,7 +236,7 @@ const TOP_POWER_SCORE_SNAPSHOT = [
     system_count: 5,
     total_dollar_flow: 79655706,
     procurement_dollars: 74227723,
-    justice_dollars: 3588923,
+    recorded_grants_dollars: 3588923,
     donation_dollars: 1839060,
   },
   {
@@ -250,7 +250,7 @@ const TOP_POWER_SCORE_SNAPSHOT = [
     system_count: 5,
     total_dollar_flow: 188511713,
     procurement_dollars: 152889243,
-    justice_dollars: 32688217,
+    recorded_grants_dollars: 32688217,
     donation_dollars: 2934254,
   },
   {
@@ -264,7 +264,7 @@ const TOP_POWER_SCORE_SNAPSHOT = [
     system_count: 5,
     total_dollar_flow: 50506063,
     procurement_dollars: 48252222,
-    justice_dollars: 754451,
+    recorded_grants_dollars: 754451,
     donation_dollars: 1499390,
   },
   {
@@ -278,7 +278,7 @@ const TOP_POWER_SCORE_SNAPSHOT = [
     system_count: 5,
     total_dollar_flow: 98812992,
     procurement_dollars: 96069170,
-    justice_dollars: 849454,
+    recorded_grants_dollars: 849454,
     donation_dollars: 1894368,
   },
   {
@@ -292,7 +292,7 @@ const TOP_POWER_SCORE_SNAPSHOT = [
     system_count: 5,
     total_dollar_flow: 103468505,
     procurement_dollars: 82844214,
-    justice_dollars: 19145861,
+    recorded_grants_dollars: 19145861,
     donation_dollars: 1478430,
   },
 ] as const;
@@ -421,12 +421,12 @@ async function answerJusticeFundingRankingQuestion(question: string) {
   const supabase = getServiceSupabase();
   let query = supabase
     .from('mv_entity_power_index')
-    .select('gs_id, canonical_name, entity_type, state, postcode, remoteness, is_community_controlled, justice_dollars, justice_record_count')
-    .gt('justice_dollars', 0)
-    .order('justice_dollars', { ascending: false })
+    .select('gs_id, canonical_name, entity_type, state, postcode, remoteness, is_community_controlled, recorded_grants_dollars, recorded_grants_count')
+    .gt('recorded_grants_dollars', 0)
+    .order('recorded_grants_dollars', { ascending: false })
     .limit(limit);
 
-  const whereParts = ['justice_dollars > 0'];
+  const whereParts = ['recorded_grants_dollars > 0'];
   if (state) {
     query = query.eq('state', state);
     whereParts.push(`state = '${state}'`);
@@ -451,10 +451,10 @@ async function answerJusticeFundingRankingQuestion(question: string) {
     return NextResponse.json({
       question,
       generated_sql: `SELECT gs_id, canonical_name, entity_type, state, postcode, remoteness, is_community_controlled,
-       justice_dollars::bigint AS total_justice_funding, justice_record_count::int AS records
+       recorded_grants_dollars::bigint AS total_justice_funding, recorded_grants_count::int AS records
 FROM mv_entity_power_index
 WHERE ${whereParts.join('\n  AND ')}
-ORDER BY justice_dollars DESC
+ORDER BY recorded_grants_dollars DESC
 LIMIT ${limit}`,
       results: [],
       count: 0,
@@ -471,8 +471,8 @@ LIMIT ${limit}`,
     postcode: row.postcode,
     remoteness: row.remoteness,
     is_community_controlled: row.is_community_controlled,
-    total_justice_funding: Math.round(formatNumber(row.justice_dollars) || 0),
-    records: Math.round(formatNumber(row.justice_record_count) || 0),
+    total_justice_funding: Math.round(formatNumber(row.recorded_grants_dollars) || 0),
+    records: Math.round(formatNumber(row.recorded_grants_count) || 0),
   }));
 
   const top = results[0];
@@ -486,10 +486,10 @@ LIMIT ${limit}`,
   return NextResponse.json({
     question,
     generated_sql: `SELECT gs_id, canonical_name, entity_type, state, postcode, remoteness, is_community_controlled,
-       justice_dollars::bigint AS total_justice_funding, justice_record_count::int AS records
+       recorded_grants_dollars::bigint AS total_justice_funding, recorded_grants_count::int AS records
 FROM mv_entity_power_index
 WHERE ${whereParts.join('\n  AND ')}
-ORDER BY justice_dollars DESC
+ORDER BY recorded_grants_dollars DESC
 LIMIT ${limit}`,
     results,
     count: results.length,
@@ -517,7 +517,7 @@ async function answerPowerScoreQuestion(question: string) {
       question,
       generated_sql: `-- April 2026 verified homepage snapshot.
 SELECT gs_id, canonical_name, entity_type, state, lga_name, system_count, power_score,
-       procurement_dollars, justice_dollars, donation_dollars, total_dollar_flow
+       procurement_dollars, recorded_grants_dollars, donation_dollars, total_dollar_flow
 FROM mv_entity_power_index
 WHERE system_count >= 1
 ORDER BY power_score DESC NULLS LAST
@@ -531,7 +531,7 @@ LIMIT ${limit}`,
   const supabase = getServiceSupabase();
   const { data, error } = await supabase
     .from('mv_entity_power_index')
-    .select('gs_id,canonical_name,entity_type,abn,state,lga_name,system_count,power_score,procurement_dollars,justice_dollars,donation_dollars,total_dollar_flow')
+    .select('gs_id,canonical_name,entity_type,abn,state,lga_name,system_count,power_score,procurement_dollars,recorded_grants_dollars,donation_dollars,total_dollar_flow')
     .gte('system_count', 1)
     .order('power_score', { ascending: false })
     .limit(limit);
@@ -552,7 +552,7 @@ LIMIT ${limit}`,
     system_count: formatNumber(row.system_count),
     total_dollar_flow: Math.round(formatNumber(row.total_dollar_flow) || 0),
     procurement_dollars: Math.round(formatNumber(row.procurement_dollars) || 0),
-    justice_dollars: Math.round(formatNumber(row.justice_dollars) || 0),
+    recorded_grants_dollars: Math.round(formatNumber(row.recorded_grants_dollars) || 0),
     donation_dollars: Math.round(formatNumber(row.donation_dollars) || 0),
   }));
 
@@ -564,7 +564,7 @@ LIMIT ${limit}`,
   return NextResponse.json({
     question,
     generated_sql: `SELECT gs_id, canonical_name, entity_type, abn, state, lga_name, system_count, power_score,
-       procurement_dollars, justice_dollars, donation_dollars, total_dollar_flow
+       procurement_dollars, recorded_grants_dollars, donation_dollars, total_dollar_flow
 FROM mv_entity_power_index
 WHERE system_count >= 1
 ORDER BY power_score DESC NULLS LAST

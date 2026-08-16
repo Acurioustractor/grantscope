@@ -17,14 +17,14 @@ interface CompareEntity {
   system_count: number;
   power_score: number;
   in_procurement: number;
-  in_justice_funding: number;
+  in_recorded_grants: number;
   in_political_donations: number;
   in_charity_registry: number;
   in_foundation: number;
   in_alma_evidence: number;
   in_ato_transparency: number;
   procurement_dollars: number;
-  justice_dollars: number;
+  recorded_grants_dollars: number;
   donation_dollars: number;
   total_dollar_flow: number;
   contract_count: number;
@@ -58,7 +58,7 @@ interface SearchResult {
 
 const SYSTEMS = [
   { key: 'in_procurement', label: 'Procurement', color: 'bg-blue-500' },
-  { key: 'in_justice_funding', label: 'Justice', color: 'bg-amber-500' },
+  { key: 'in_recorded_grants', label: 'Justice', color: 'bg-amber-500' },
   { key: 'in_political_donations', label: 'Donations', color: 'bg-red-500' },
   { key: 'in_charity_registry', label: 'Charity', color: 'bg-green-500' },
   { key: 'in_foundation', label: 'Foundation', color: 'bg-purple-500' },
@@ -393,7 +393,7 @@ export default function ComparePage() {
                     { label: 'Systems', key: 'system_count', fmt: (v: number) => `${v}/7` },
                     { label: 'Total Dollar Flow', key: 'total_dollar_flow', fmt: (v: number) => money(v) },
                     { label: 'Procurement $', key: 'procurement_dollars', fmt: (v: number) => money(v) },
-                    { label: 'Recorded Grants $', key: 'justice_dollars', fmt: (v: number) => money(v) },
+                    { label: 'Recorded Grants $', key: 'recorded_grants_dollars', fmt: (v: number) => money(v) },
                     { label: 'Political Donations $', key: 'donation_dollars', fmt: (v: number) => money(v) },
                     { label: 'Contracts', key: 'contract_count', fmt: (v: number) => v.toLocaleString() },
                     { label: 'Govt Buyers', key: 'distinct_govt_buyers', fmt: (v: number) => v.toLocaleString() },

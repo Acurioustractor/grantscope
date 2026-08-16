@@ -273,19 +273,19 @@ export interface PowerIndex {
   power_score: number;
   total_dollar_flow: number;
   in_procurement: number;
-  in_justice_funding: number;
+  in_recorded_grants: number;
   in_political_donations: number;
   in_charity_registry: number;
   in_foundation: number;
   in_alma_evidence: number;
   in_ato_transparency: number;
   procurement_dollars: number;
-  justice_dollars: number;
+  recorded_grants_dollars: number;
   donation_dollars: number;
   foundation_giving: number;
   ato_income: number;
   contract_count: number;
-  justice_record_count: number;
+  recorded_grants_count: number;
   donation_count: number;
   alma_intervention_count: number;
   board_connections: number;
@@ -1443,15 +1443,15 @@ export async function getOrgPowerIndex(abn: string | string[]): Promise<PowerInd
     query: `SELECT id, gs_id, canonical_name, system_count,
               power_score::bigint as power_score,
               total_dollar_flow::bigint as total_dollar_flow,
-              in_procurement, in_justice_funding, in_political_donations,
+              in_procurement, in_recorded_grants, in_political_donations,
               in_charity_registry, in_foundation, in_alma_evidence, in_ato_transparency,
               procurement_dollars::bigint as procurement_dollars,
-              justice_dollars::bigint as justice_dollars,
+              recorded_grants_dollars::bigint as recorded_grants_dollars,
               donation_dollars::bigint as donation_dollars,
               foundation_giving::bigint as foundation_giving,
               ato_income::bigint as ato_income,
               contract_count::int as contract_count,
-              justice_record_count::int as justice_record_count,
+              recorded_grants_count::int as recorded_grants_count,
               donation_count::int as donation_count,
               alma_intervention_count::int as alma_intervention_count,
               board_connections::int as board_connections

@@ -152,9 +152,9 @@ export async function POST(request: NextRequest) {
                          ge.is_community_controlled, ge.seifa_irsd_decile,
                          ge.latest_revenue, ge.latest_assets,
                          pi.power_score, pi.system_count,
-                         pi.in_procurement, pi.in_justice_funding, pi.in_political_donations,
+                         pi.in_procurement, pi.in_recorded_grants, pi.in_political_donations,
                          pi.in_charity_registry, pi.in_foundation, pi.in_alma_evidence, pi.in_ato_transparency,
-                         pi.procurement_dollars, pi.justice_dollars, pi.donation_dollars,
+                         pi.procurement_dollars, pi.recorded_grants_dollars, pi.donation_dollars,
                          pi.total_dollar_flow, pi.contract_count, pi.distinct_govt_buyers
                   FROM gs_entities ge
                   LEFT JOIN mv_entity_power_index pi ON pi.id = ge.id
@@ -193,7 +193,7 @@ export async function POST(request: NextRequest) {
         const { data, error } = await supabase.rpc('exec_sql', {
           query: `SELECT gs_id, canonical_name, entity_type, abn, state,
                          is_community_controlled, system_count, power_score,
-                         procurement_dollars, justice_dollars, donation_dollars,
+                         procurement_dollars, recorded_grants_dollars, donation_dollars,
                          total_dollar_flow
                   FROM mv_entity_power_index
                   WHERE system_count >= ${min_systems} ${stateFilter}

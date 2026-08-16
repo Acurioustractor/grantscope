@@ -62,7 +62,7 @@ async function getData() {
     // Cross-system NDIS entities
     q(`SELECT COUNT(*) as total, COUNT(*) FILTER (WHERE in_ndis_provider = 1) as ndis,
         COUNT(*) FILTER (WHERE in_ndis_provider = 1 AND system_count >= 2) as multi,
-        COUNT(*) FILTER (WHERE in_ndis_provider = 1 AND in_justice_funding = 1) as justice,
+        COUNT(*) FILTER (WHERE in_ndis_provider = 1 AND in_recorded_grants = 1) as justice,
         COUNT(*) FILTER (WHERE in_ndis_provider = 1 AND in_procurement = 1) as procurement,
         COUNT(*) FILTER (WHERE in_ndis_provider = 1 AND in_alma_evidence = 1) as alma,
         COUNT(*) FILTER (WHERE in_ndis_provider = 1 AND is_community_controlled) as community,

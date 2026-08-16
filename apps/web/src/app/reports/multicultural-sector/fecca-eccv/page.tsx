@@ -168,7 +168,7 @@ type PowerRow = {
   system_count: number | null;
   in_procurement: number | null;
   in_charity_registry: number | null;
-  in_justice_funding: number | null;
+  in_recorded_grants: number | null;
   in_political_donations: number | null;
   has_board_links: number | null;
   contract_count: number | null;
@@ -369,7 +369,7 @@ async function getReport() {
                power_score::int,
                system_count::int,
                in_procurement::int, in_charity_registry::int,
-               in_justice_funding::int, in_political_donations::int,
+               in_recorded_grants::int, in_political_donations::int,
                has_board_links::int,
                contract_count::int,
                procurement_dollars::bigint,
@@ -1119,7 +1119,7 @@ export default async function FeccaEccvPage() {
                   <div className="flex flex-wrap gap-1 mb-4">
                     {[
                       { hit: row.in_procurement, label: 'Procurement' },
-                      { hit: row.in_justice_funding, label: 'Justice $' },
+                      { hit: row.in_recorded_grants, label: 'Justice $' },
                       { hit: row.in_political_donations, label: 'Donations' },
                       { hit: row.in_charity_registry, label: 'ACNC' },
                       { hit: row.has_board_links, label: 'Board Links' },

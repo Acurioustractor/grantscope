@@ -12,7 +12,7 @@ export async function GET() {
         supabase
           .from('mv_entity_power_index')
           .select(
-            'gs_id, canonical_name, entity_type, state, is_community_controlled, power_score, system_count, total_dollar_flow, procurement_dollars, justice_dollars, donation_dollars, contract_count, distinct_govt_buyers, distinct_parties_funded, charity_size'
+            'gs_id, canonical_name, entity_type, state, is_community_controlled, power_score, system_count, total_dollar_flow, procurement_dollars, recorded_grants_dollars, donation_dollars, contract_count, distinct_govt_buyers, distinct_parties_funded, charity_size'
           )
           .order('power_score', { ascending: false })
           .limit(50)

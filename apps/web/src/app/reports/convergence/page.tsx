@@ -139,10 +139,10 @@ async function getData() {
       query: `SELECT
          is_community_controlled,
          COUNT(*)::int as org_count,
-         SUM(justice_dollars)::bigint as total_funding,
+         SUM(recorded_grants_dollars)::bigint as total_funding,
          0 as grant_count
        FROM mv_entity_power_index
-       WHERE in_justice_funding = 1 AND justice_dollars > 0
+       WHERE in_recorded_grants = 1 AND recorded_grants_dollars > 0
        GROUP BY is_community_controlled`,
     }), 'money-split') as Promise<MoneySplit[] | null>,
 

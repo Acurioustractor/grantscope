@@ -20,7 +20,7 @@ type Row = {
   lga_name: string | null;
   is_community_controlled: boolean | null;
   in_procurement: number;
-  in_justice_funding: number;
+  in_recorded_grants: number;
   in_political_donations: number;
   in_charity_registry: number;
   in_foundation: number;
@@ -28,12 +28,12 @@ type Row = {
   in_ndis_provider: number;
   system_count: number;
   procurement_dollars: number | null;
-  justice_dollars: number | null;
+  recorded_grants_dollars: number | null;
   donation_dollars: number | null;
   foundation_giving: number | null;
   total_dollar_flow: number | null;
   contract_count: number | null;
-  justice_record_count: number | null;
+  recorded_grants_count: number | null;
   donation_count: number | null;
   power_score: number | null;
   charity_size: string | null;
@@ -104,7 +104,7 @@ export default async function PipelinePage({
   let query = supabase
     .from('mv_entity_power_index')
     .select(
-      'gs_id, canonical_name, entity_type, abn, state, lga_name, is_community_controlled, in_procurement, in_justice_funding, in_political_donations, in_charity_registry, in_foundation, in_alma_evidence, in_ndis_provider, system_count, procurement_dollars, justice_dollars, donation_dollars, foundation_giving, total_dollar_flow, contract_count, justice_record_count, donation_count, power_score, charity_size',
+      'gs_id, canonical_name, entity_type, abn, state, lga_name, is_community_controlled, in_procurement, in_recorded_grants, in_political_donations, in_charity_registry, in_foundation, in_alma_evidence, in_ndis_provider, system_count, procurement_dollars, recorded_grants_dollars, donation_dollars, foundation_giving, total_dollar_flow, contract_count, recorded_grants_count, donation_count, power_score, charity_size',
       { count: 'exact' },
     );
 
@@ -394,7 +394,7 @@ export default async function PipelinePage({
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
                       <SystemChip active={r.in_procurement} letter="P" title="Procurement (AusTender)" />
-                      <SystemChip active={r.in_justice_funding} letter="J" title="Justice funding" />
+                      <SystemChip active={r.in_recorded_grants} letter="J" title="Justice funding" />
                       <SystemChip active={r.in_political_donations} letter="D" title="Political donations" />
                       <SystemChip active={r.in_charity_registry} letter="C" title="ACNC charity" />
                       <SystemChip active={r.in_foundation} letter="F" title="Foundation" />
@@ -407,7 +407,7 @@ export default async function PipelinePage({
                   </td>
                   <td className="px-4 py-3 text-right font-mono font-bold">{fmtMoney(r.total_dollar_flow)}</td>
                   <td className="px-4 py-3 text-right font-mono text-xs">{fmtNum(r.contract_count)}</td>
-                  <td className="px-4 py-3 text-right font-mono text-xs">{fmtNum(r.justice_record_count)}</td>
+                  <td className="px-4 py-3 text-right font-mono text-xs">{fmtNum(r.recorded_grants_count)}</td>
                   <td className="px-4 py-3 text-right font-mono text-xs">{fmtNum(r.donation_count)}</td>
                   <td className="px-4 py-3 text-right">
                     <Link

@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 const limiter = rateLimit();
 
 const STATES = ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'] as const;
-const SORTS = ['power_score', 'total_dollar_flow', 'system_count', 'procurement_dollars', 'justice_dollars', 'donation_dollars'] as const;
+const SORTS = ['power_score', 'total_dollar_flow', 'system_count', 'procurement_dollars', 'recorded_grants_dollars', 'donation_dollars'] as const;
 const SYSTEMS = ['procurement', 'justice', 'donations', 'charity', 'foundation', 'alma', 'ato'] as const;
 
 const schema = z.object({
@@ -43,7 +43,7 @@ export async function GET(request: Request) {
     if (safeSystem) {
       const systemCol: Record<string, string> = {
         procurement: 'in_procurement',
-        justice: 'in_justice_funding',
+        justice: 'in_recorded_grants',
         donations: 'in_political_donations',
         charity: 'in_charity_registry',
         foundation: 'in_foundation',
@@ -64,9 +64,9 @@ export async function GET(request: Request) {
       query: `SELECT gs_id, canonical_name, entity_type, abn, state, remoteness,
                 is_community_controlled, lga_name,
                 system_count, power_score,
-                in_procurement, in_justice_funding, in_political_donations,
+                in_procurement, in_recorded_grants, in_political_donations,
                 in_charity_registry, in_foundation, in_alma_evidence, in_ato_transparency,
-                procurement_dollars, justice_dollars, donation_dollars,
+                procurement_dollars, recorded_grants_dollars, donation_dollars,
                 total_dollar_flow, contract_count, distinct_govt_buyers, distinct_parties_funded,
                 charity_size
          FROM mv_entity_power_index

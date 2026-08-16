@@ -34,7 +34,7 @@ type AtlasPowerRow = {
   power_score: number | null;
   total_dollar_flow: number | null;
   procurement_dollars: number | null;
-  justice_dollars: number | null;
+  recorded_grants_dollars: number | null;
   donation_dollars: number | null;
   is_community_controlled: boolean | null;
 };
@@ -138,7 +138,7 @@ async function getAtlasData() {
       async () => {
         const { data, error } = await supabase.rpc('exec_sql', {
           query: `SELECT canonical_name, entity_type, state, system_count, power_score,
-                         total_dollar_flow, procurement_dollars, justice_dollars,
+                         total_dollar_flow, procurement_dollars, recorded_grants_dollars,
                          donation_dollars, is_community_controlled
                   FROM mv_entity_power_index
                   WHERE canonical_name IS NOT NULL
@@ -205,7 +205,7 @@ async function getAtlasData() {
       power_score: Number(row.power_score || 0),
       total_dollar_flow: Number(row.total_dollar_flow || 0),
       procurement_dollars: Number(row.procurement_dollars || 0),
-      justice_dollars: Number(row.justice_dollars || 0),
+      recorded_grants_dollars: Number(row.recorded_grants_dollars || 0),
       donation_dollars: Number(row.donation_dollars || 0),
       is_community_controlled: Boolean(row.is_community_controlled),
     })),

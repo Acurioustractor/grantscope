@@ -39,14 +39,14 @@ interface PowerEntity {
   is_community_controlled: boolean;
   remoteness: string;
   in_procurement: boolean;
-  in_justice_funding: boolean;
+  in_recorded_grants: boolean;
   in_political_donations: boolean;
   in_charity_registry: boolean;
   in_foundation: boolean;
   in_alma_evidence: boolean;
   in_ato_transparency: boolean;
   procurement_dollars: number;
-  justice_dollars: number;
+  recorded_grants_dollars: number;
   donation_dollars: number;
   total_dollar_flow: number;
   distinct_govt_buyers: number;
@@ -119,7 +119,7 @@ async function getData() {
     // Top power entities (4+ systems)
     supabase
       .from('mv_entity_power_index')
-      .select('gs_id, canonical_name, entity_type, abn, state, system_count, power_score, is_community_controlled, remoteness, in_procurement, in_justice_funding, in_political_donations, in_charity_registry, in_foundation, in_alma_evidence, in_ato_transparency, procurement_dollars, justice_dollars, donation_dollars, total_dollar_flow, distinct_govt_buyers, distinct_parties_funded')
+      .select('gs_id, canonical_name, entity_type, abn, state, system_count, power_score, is_community_controlled, remoteness, in_procurement, in_recorded_grants, in_political_donations, in_charity_registry, in_foundation, in_alma_evidence, in_ato_transparency, procurement_dollars, recorded_grants_dollars, donation_dollars, total_dollar_flow, distinct_govt_buyers, distinct_parties_funded')
       .gte('system_count', 3)
       .order('power_score', { ascending: false })
       .limit(30),
@@ -139,7 +139,7 @@ async function getData() {
     // Top community-controlled entities
     supabase
       .from('mv_entity_power_index')
-      .select('gs_id, canonical_name, entity_type, state, system_count, power_score, remoteness, procurement_dollars, justice_dollars, total_dollar_flow')
+      .select('gs_id, canonical_name, entity_type, state, system_count, power_score, remoteness, procurement_dollars, recorded_grants_dollars, total_dollar_flow')
       .eq('is_community_controlled', true)
       .gte('system_count', 2)
       .order('power_score', { ascending: false })
@@ -206,7 +206,7 @@ async function getData() {
 
 const SYSTEM_LABELS: Record<string, string> = {
   in_procurement: 'Procurement',
-  in_justice_funding: 'Justice Funding',
+  in_recorded_grants: 'Recorded Grants',
   in_political_donations: 'Donations',
   in_charity_registry: 'Charity',
   in_foundation: 'Foundation',
@@ -216,7 +216,7 @@ const SYSTEM_LABELS: Record<string, string> = {
 
 const SYSTEM_COLORS: Record<string, string> = {
   in_procurement: 'bg-blue-600',
-  in_justice_funding: 'bg-amber-500',
+  in_recorded_grants: 'bg-amber-500',
   in_political_donations: 'bg-red-600',
   in_charity_registry: 'bg-green-600',
   in_foundation: 'bg-purple-600',

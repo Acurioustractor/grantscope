@@ -55,7 +55,7 @@ export async function GET(request: Request) {
 
     if (view === 'summary') {
       const { data: byType, error: e1 } = await supabase.rpc('exec_sql', {
-        query: `SELECT entity_type, COUNT(*) as entities, ROUND(AVG(system_count),2) as avg_systems, ROUND(AVG(power_score),2) as avg_power, ROUND(SUM(procurement_dollars)/1e9,2) as procurement_b, ROUND(SUM(justice_dollars)/1e9,2) as justice_b, ROUND(SUM(donation_dollars)/1e6,2) as donations_m FROM mv_entity_power_index GROUP BY entity_type ORDER BY avg_power DESC`,
+        query: `SELECT entity_type, COUNT(*) as entities, ROUND(AVG(system_count),2) as avg_systems, ROUND(AVG(power_score),2) as avg_power, ROUND(SUM(procurement_dollars)/1e9,2) as procurement_b, ROUND(SUM(recorded_grants_dollars)/1e9,2) as justice_b, ROUND(SUM(donation_dollars)/1e6,2) as donations_m FROM mv_entity_power_index GROUP BY entity_type ORDER BY avg_power DESC`,
       });
       if (e1) throw new Error(e1.message);
 
@@ -92,12 +92,12 @@ export async function GET(request: Request) {
     const sort = searchParams.get('sort') || 'power_score';
     const limit = Math.min(parseInt(searchParams.get('limit') || '100', 10), 1000);
 
-    const validSorts = ['power_score', 'system_count', 'total_dollar_flow', 'procurement_dollars', 'donation_dollars', 'justice_dollars'];
+    const validSorts = ['power_score', 'system_count', 'total_dollar_flow', 'procurement_dollars', 'donation_dollars', 'recorded_grants_dollars'];
     const sortField = validSorts.includes(sort) ? sort : 'power_score';
 
     let query = supabase
       .from('mv_entity_power_index')
-      .select('id, gs_id, canonical_name, entity_type, abn, state, lga_name, remoteness, is_community_controlled, system_count, power_score, in_procurement, in_justice_funding, in_political_donations, in_charity_registry, in_foundation, in_alma_evidence, in_ato_transparency, procurement_dollars, justice_dollars, donation_dollars, total_dollar_flow, contract_count, justice_record_count, donation_count, distinct_govt_buyers, distinct_parties_funded, charity_size, parties_funded')
+      .select('id, gs_id, canonical_name, entity_type, abn, state, lga_name, remoteness, is_community_controlled, system_count, power_score, in_procurement, in_recorded_grants, in_political_donations, in_charity_registry, in_foundation, in_alma_evidence, in_ato_transparency, procurement_dollars, recorded_grants_dollars, donation_dollars, total_dollar_flow, contract_count, recorded_grants_count, donation_count, distinct_govt_buyers, distinct_parties_funded, charity_size, parties_funded')
       .gte('system_count', minSystems)
       .order(sortField, { ascending: false })
       .limit(limit);
