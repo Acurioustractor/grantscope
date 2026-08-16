@@ -439,12 +439,6 @@ function OrgSupportHub({
             >
               Open wiki doc
             </Link>
-            <Link
-              href="/start"
-              className="w-fit border border-gray-300 bg-white px-3 py-2 text-[11px] font-black uppercase tracking-widest text-bauhaus-black hover:bg-bauhaus-canvas"
-            >
-              Capture new notes
-            </Link>
           </div>
         </div>
         <div className="grid gap-3 lg:grid-cols-[1.4fr_0.8fr]">

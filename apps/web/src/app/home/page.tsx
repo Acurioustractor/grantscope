@@ -12,7 +12,6 @@ import { createSupabaseServer } from '@/lib/supabase-server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { classifyReviewSweep, type ReviewSweepGrantRow } from '@/lib/review-pre-sweep';
 import { HomeClient } from './home-client';
-import { IntakeClaimer } from './intake-claimer';
 import type { GrantItem, FoundationItem, AgentRun, AlertActivityItem, AlertLearningItem, ScenarioFocus, SourceFreshnessStatus, PreSweepRunResult, ActRecommendationItem, ActProjectLens } from './home-client';
 
 export const dynamic = 'force-dynamic';
@@ -845,7 +844,6 @@ export default async function HomePage({
   return (
     <>
       <Suspense>
-        <IntakeClaimer />
       </Suspense>
       <HomeClient
         greeting={greeting}

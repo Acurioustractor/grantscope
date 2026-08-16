@@ -54,7 +54,7 @@ export default async function PricingPage({ searchParams }: { searchParams: Prom
             <p className="text-xs text-bauhaus-black font-medium leading-relaxed mb-3">
               The work serves wildly different audiences: foundations, ACCOs, journalists, peaks, oversight bodies, individual researchers. Pricing one of them prices the rest out of reach. We&apos;d rather hear what would actually shift your decisions, then propose something that fits.
             </p>
-            <Link href="/discover" className="inline-block text-xs font-black uppercase tracking-widest text-bauhaus-black border-2 border-bauhaus-black px-3 py-2 bg-white hover:bg-bauhaus-canvas">
+            <Link href="/reports" className="inline-block text-xs font-black uppercase tracking-widest text-bauhaus-black border-2 border-bauhaus-black px-3 py-2 bg-white hover:bg-bauhaus-canvas">
               See the reports →
             </Link>
           </div>

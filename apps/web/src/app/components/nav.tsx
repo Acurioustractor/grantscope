@@ -16,7 +16,7 @@ const GlobalSearch = dynamic(
 /* ─── Public (logged-out) nav ─────────────────────────────── */
 
 const publicLinks = [
-  { href: '/start', label: 'Start' },
+  { href: '/search', label: 'Search' },
   { href: '/grants', label: 'Funding' },
   { href: '/giving', label: 'Data' },
   { href: '/power', label: 'Power' },
@@ -50,7 +50,6 @@ const megaMenuSections = [
     links: [
       { href: '/reports', label: 'Investigations', desc: 'Read the stronger public argument emerging from the live graph' },
       { href: '/reports/civicgraph-thesis', label: 'CivicGraph Thesis', desc: 'See the broader product and category case' },
-      { href: '/start', label: 'Innovation Guide', desc: 'Start with the guided flow and move toward a real organisation or plan' },
       { href: '/ask', label: 'Ask CivicGraph', desc: 'Query the broader intelligence graph in natural language' },
     ],
   },

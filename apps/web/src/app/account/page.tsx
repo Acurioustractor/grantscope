@@ -62,7 +62,7 @@ export default async function AccountPage() {
   return (
     <div>
       <div className="mb-10">
-        <Link href="/discover" className="text-xs font-black text-bauhaus-muted uppercase tracking-widest hover:text-bauhaus-black">← Discover</Link>
+        <Link href="/reports" className="text-xs font-black text-bauhaus-muted uppercase tracking-widest hover:text-bauhaus-black">← Reports</Link>
         <div className="text-xs font-black text-bauhaus-yellow mt-4 mb-1 uppercase tracking-widest">Your account</div>
         <h1 className="text-4xl sm:text-5xl font-black text-bauhaus-black mb-3 uppercase tracking-tight leading-tight">
           Welcome back
@@ -79,7 +79,7 @@ export default async function AccountPage() {
           <div className="font-black text-bauhaus-black uppercase tracking-tight text-sm leading-tight">What&apos;s changing on CivicGraph →</div>
           <p className="text-xs text-bauhaus-muted font-medium mt-2">Watchhouse refreshes, ingestion runs, recent reports.</p>
         </Link>
-        <Link href="/discover" className="block border-4 border-bauhaus-black p-5 bg-bauhaus-yellow hover:bg-bauhaus-canvas">
+        <Link href="/reports" className="block border-4 border-bauhaus-black p-5 bg-bauhaus-yellow hover:bg-bauhaus-canvas">
           <div className="text-xs font-black uppercase tracking-widest text-bauhaus-black mb-2">Reports</div>
           <div className="font-black text-bauhaus-black uppercase tracking-tight text-sm leading-tight">Browse featured reports →</div>
           <p className="text-xs text-bauhaus-black/70 font-medium mt-2">QLD Youth Justice live · FECCA &amp; ECCV worked example.</p>

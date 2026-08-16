@@ -102,7 +102,7 @@ export default async function ChangesPage() {
   return (
     <div>
       <div className="mb-10">
-        <Link href="/discover" className="text-xs font-black text-bauhaus-muted uppercase tracking-widest hover:text-bauhaus-black">← Discover</Link>
+        <Link href="/reports" className="text-xs font-black text-bauhaus-muted uppercase tracking-widest hover:text-bauhaus-black">← Reports</Link>
         <div className="text-xs font-black text-bauhaus-yellow mt-4 mb-1 uppercase tracking-widest">Live Data Feed</div>
         <h1 className="text-4xl sm:text-5xl font-black text-bauhaus-black mb-3 uppercase tracking-tight leading-tight">
           What&apos;s changing on CivicGraph
