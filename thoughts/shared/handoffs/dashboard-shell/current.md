@@ -55,7 +55,7 @@ nouns feeding a per-surface data contract).
   stated on every page. Rail is now pathname-aware (`rail-nav.tsx` client component, longest-prefix
   active; TRAP: component refs can't cross the server→client boundary as props — NAV must live in
   the client file). Shell.activeHref deprecated-ignored.
-- [ ] Ops tools into the shell (second PR of this stream).
+- [x] Ops tools into the shell (branch shell-ops-tools): /ops/health, /alerts, /tracker, /foundations/tracker each get a Shell layout + isChromeless entries — contained-Bauhaus-inside-shell, the accepted /clarity pattern. VERIFIED no auth regression: LAYOUT_AUTH_PREFIXES only controlled whether the old chrome fetched the user for nav display; no redirect existed, pages were never server-gated.
 - [ ] Then: clarity-driven data→surface contract (visibility floor + owner + noun per surface).
 
 ### Next

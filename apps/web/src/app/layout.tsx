@@ -101,6 +101,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     || pathname.startsWith('/pricing')
     || pathname.startsWith('/changes')
     || pathname.startsWith('/account')
+    // Phase-2 ruling (2026-08-17): operator tools live in the shell beside /clarity.
+    || pathname.startsWith('/ops/health')
+    || pathname.startsWith('/alerts')
+    || pathname.startsWith('/tracker')
+    || pathname.startsWith('/foundations/tracker')
     || isActWorkspacePath;
   const requiresLayoutAuth = needsLayoutAuth(pathname);
   const isFastPublicPath = !requiresLayoutAuth;
