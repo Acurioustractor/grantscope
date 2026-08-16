@@ -1,4 +1,10 @@
 /**
+ * THE WRITING RULE (Ben, 2026-08-17): purposes are written in real-work language, for someone
+ * outside the building. Say what a row is or what question it answers in the world (money,
+ * boards, places, evidence, consent), never in database terms. The technical name is already
+ * on screen as small print; the purpose is the human half. A purpose that needs a glossary
+ * has failed.
+ *
  * The curated fields inline edit can write, and nothing else. Everything measured (row counts,
  * refs, freshness, access) is written by probes and scanners; letting the edit path near those
  * would let documentation overwrite measurement. The four prose fields are the 667-stub gap the
